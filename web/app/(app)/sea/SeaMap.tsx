@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import RenownPanel from '@/components/RenownPanel'
 import Minimap from './Minimap'
+import SeaCampaignPanel from './SeaCampaignPanel'
 import MarkProbe from './MarkProbe'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
@@ -2869,6 +2870,8 @@ export default function SeaMap({
   /** Cells uncovered since the last flush, sent with the next position save. */
   const fogPending = useRef<Set<number>>(new Set())
   const [mapOpen, setMapOpen] = useState(false)
+  /** The campaign's story tree, opened from the pennant in the HUD row. */
+  const [campaignOpen, setCampaignOpen] = useState(false)
 
   /** The renown panel, opened from the level bar's chip while the rod is out. */
   const [renownOpen, setRenownOpen] = useState(false)
@@ -3811,6 +3814,7 @@ export default function SeaMap({
       if (trawlOpen) { setTrawlOpen(false); return }
       if (ordersOpen) { setOrdersOpen(false); setOrdersAshore(false); return }
       if (bountiesOpen) { setBountiesOpen(false); return }
+      if (campaignOpen) { setCampaignOpen(false); return }
       if (trawlsPeek) { setTrawlsPeek(false); return }
       if (finnOpen) { setFinnOpen(false); setFinnLines(null); return }
       if (finnTalk) { setFinnTalk(null); return }
@@ -3830,7 +3834,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, shipSheet, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, campaignOpen, shipSheet, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -4456,15 +4460,21 @@ export default function SeaMap({
     // expeditions, where the left corner belongs to the crew. It was pushed
     // here unconditionally before and drawn only on the fishing side, so the
     // expedition row started at slot one with a disc-width hole in front of it.
+    // ── THE JOURNEY HOLDS THE CORNER, ON BOTH HALVES OF THE GAME ────
+    //
+    // FIRST, because it is the most important door up here: it is the one that
+    // says what you are doing and where you are in it, and on a row read left
+    // to right the thing you consult most often should not be third.
+    //
+    // ONE SLOT AND ONE GLYPH, and the CONTENT switches with the side. The Salt
+    // Road and the campaign were two discs with two icons in two corners,
+    // which said they were two different kinds of thing. They are not: they
+    // are the same role — this is your story, here is where it has got to —
+    // told about the two halves of the game, so a captain learns one mark and
+    // it means the same thing wherever they are sailing.
+    if (!fishingIn || wide) on.push('journey')
     if (!inAnchorage) on.push('clock')
     if (inAnchorage && (!fishingIn || wide)) on.push('crew')
-    // THE CAMPAIGN, and it is a disc like every other door up here rather than
-    // a card of its own. It was a card carrying the next stop and a bearing,
-    // which is more than this row's job: the row is DOORS, one glyph each, and
-    // a panel three times the height of the discs beside it reads as an alert
-    // rather than as a fixture. What it knows goes into its dot and its
-    // tooltip, and the chart it opens is where the answer is drawn.
-    if (inAnchorage && (!fishingIn || wide)) on.push('campaign')
     if (!fishingIn || wide) on.push('chart')
     // THE BOOK, on the fishing side only. It is a reference about FISH, and out
     // past the reef there are none — a door to it standing in the campaign's
@@ -4473,7 +4483,7 @@ export default function SeaMap({
     if (!inAnchorage && (!fishingIn || wide)) on.push('almanac')
     if (!inAnchorage && orders && orders.challenges.length > 0 && (!fishingIn || wide)) on.push('orders')
     if (!inAnchorage && (trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide)) on.push('trawls')
-    if (!inAnchorage && (!fishingIn || wide)) on.push('folk')
+
     return on
   }, [fishingIn, wide, inAnchorage, orders, trawlsOut.length, trawlsReady, fightOn])
   useEffect(() => {
@@ -7860,60 +7870,6 @@ hullRef={hullRefFor(t.key)} />
         </button>
       )}
 
-      {/* THE CAMPAIGN. The expedition side's Salt Road: a permanent door in
-          the row, never hidden, whether or not there is anything waiting.
-
-          IT OPENS THE CHART rather than the next node's own sheet, and that is
-          a rule about the campaign rather than a shortcut not taken. A node's
-          sheet is where you ACT on it, and acting on a boss from the far side
-          of the sea would hand you the fight without the voyage — the whole
-          reason the campaign is out here on the water instead of on a page of
-          cards. So this says where, and you still have to sail it. */}
-      {inAnchorage && (!fishingIn || wide) && !fightOn && (
-        <button
-          type="button"
-          onClick={e => { e.stopPropagation(); vibrate(10); setMapOpen(true) }}
-          aria-label={nextStop
-            ? `The campaign. Next: ${nextStop.verb} ${nextStop.node.label}. Opens the chart.`
-            : 'The campaign. Opens the chart.'}
-          // THE WHOLE ANSWER, ON HOVER. A disc cannot carry a sentence, and on
-          // a desktop it does not have to: the row's other discs name
-          // themselves here and this one names the errand.
-          title={nextStop
-            ? `${nextStop.chapter.coda ? nextStop.chapter.title : `Chapter ${nextStop.chapter.romanNumeral}`}`
-              + ` — ${nextStop.verb} ${nextStop.node.label}`
-            : 'The campaign'}
-          style={{
-            position: 'absolute', top: 18, left: hudAt('campaign'), zIndex: Z.hud,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: hudSize, height: hudSize, borderRadius: '50%', padding: 0,
-            background: nextStop ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
-            border: `1px solid ${nextStop ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
-            cursor: 'pointer',
-          }}>
-          {/* A PENNANT ON A STAFF. Not a map (the chart beside it is the map),
-              not a compass (the compass is the thing round the edge of the
-              screen): a standard, which is what a campaign is followed under. */}
-          <svg width={Math.round(hudSize * 0.54)} height={Math.round(hudSize * 0.54)}
-            viewBox="0 0 24 24" fill="none"
-            stroke={nextStop ? '#f0c040' : 'rgba(214,232,240,0.8)'}
-            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M6 21V3" />
-            <path d="M6 4h11l-2.6 3.6L17 11H6z" />
-          </svg>
-          {/* SOMETHING IS WAITING ON YOU. The same amber dot the crew disc and
-              Finn's both use, and it means the same thing on all three. */}
-          {nextStop && (
-            <span aria-hidden style={{
-              position: 'absolute', top: -2, right: -2,
-              width: 11, height: 11, borderRadius: 999,
-              background: '#f0c040', border: '1px solid rgba(20,14,4,0.8)',
-              boxShadow: '0 0 10px rgba(240,192,64,0.6)',
-            }} />
-          )}
-        </button>
-      )}
-
       {/* THE CHART BUTTON, beside the light and on the same row.
           A real button, so the map's own `closest('button')` guard exempts it
           from steering on both the pointer and the click path without needing
@@ -8308,46 +8264,70 @@ hullRef={hullRefFor(t.key)} />
 
           Not while the rod is out on a phone, same rule as the rest of the
           HUD: reading about people is not what you are doing mid-cast. */}
-      {!inAnchorage && (!fishingIn || wide) && (
-        <button
-          type="button"
-          onClick={e => { e.stopPropagation(); vibrate(8); setFolkOpen(true) }}
-          aria-label="The Salt Road"
-          title="The Salt Road"
-          data-no-steer
-          // BLINKS ONLY WHEN HE IS HOLDING YOUR PAY. Not for a beat waiting,
-          // not for a regular with a word for you: those get the quiet dot.
-          // The HUD is otherwise completely still, so the one thing that moves
-          // up there has to mean one thing, and this is the only state worth
-          // interrupting somebody mid-sail for.
-          className={finn?.questReady ? 'hud-blink' : undefined}
-          style={{
-            position: 'absolute', top: 18, left: hudAt('folk'), zIndex: Z.hud,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: hudSize, height: hudSize, padding: 0,
-            borderRadius: 999, cursor: 'pointer',
-            background: finnWaiting ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
-            border: `1px solid ${finnWaiting ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
-          }}>
-          {/* Two figures in conversation: the people of the sea, not one
-              person. Stroked like every other icon up here. */}
-          <svg width={Math.round(hudSize * 0.5)} height={Math.round(hudSize * 0.5)}
-            viewBox="0 0 24 24" fill="none"
-            stroke={finnWaiting ? '#f0c040' : 'rgba(214,232,240,0.8)'}
-            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="8.5" cy="8" r="2.6" /><path d="M4 19v-1.4A4.1 4.1 0 0 1 8.5 14a4.1 4.1 0 0 1 4.1 3.6V19" />
-            <circle cx="16.8" cy="9.6" r="2.1" /><path d="M14 19v-1a3.4 3.4 0 0 1 6-2.2" />
-          </svg>
-          {finnWaiting && (
-            <span aria-hidden style={{
-              position: 'absolute', top: -2, right: -2,
-              width: 11, height: 11, borderRadius: 999,
-              background: '#f0c040', border: '1px solid rgba(20,14,4,0.8)',
-              boxShadow: '0 0 10px rgba(240,192,64,0.6)',
-            }} />
-          )}
-        </button>
-      )}
+      {/* ── THE JOURNEY ─────────────────────────────────────────────────
+          One disc, one glyph, and the side decides what is behind it: the Salt
+          Road in the fishing grounds, the campaign out past the reef. See the
+          note in hudRow for why they are one thing.
+
+          A PERMANENT DOOR EITHER WAY, never hidden for having nothing to say.
+          The dot is what carries urgency — Finn holding your pay on one side,
+          a stop waiting on the other — and it is the same amber dot the crew
+          disc uses, meaning the same thing. */}
+      {(!fishingIn || wide) && !fightOn && (() => {
+        const lit = inAnchorage ? !!nextStop : finnWaiting
+        const label = inAnchorage ? 'The Campaign' : 'The Salt Road'
+        const sub = inAnchorage
+          ? (nextStop ? `${nextStop.chapter.coda ? nextStop.chapter.title : `Chapter ${nextStop.chapter.romanNumeral}`} — ${nextStop.verb} ${nextStop.node.label}` : label)
+          : (finn?.questReady ? `${label} — ${FINN_NAME} is waiting on you` : label)
+        return (
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation(); vibrate(8)
+              if (inAnchorage) setCampaignOpen(true)
+              else setFolkOpen(true)
+            }}
+            aria-label={sub}
+            title={sub}
+            data-no-steer
+            // BLINKS ONLY FOR PAY IN HAND. Not for a beat waiting, not for a
+            // regular with a word for you, and not for the campaign's next
+            // stop: those get the quiet dot. The HUD is otherwise completely
+            // still, so the one thing that moves up there has to mean one
+            // thing, and a finished job of Finn's is the only state worth
+            // interrupting somebody mid-sail for.
+            className={!inAnchorage && finn?.questReady ? 'hud-blink' : undefined}
+            style={{
+              position: 'absolute', top: 18, left: hudAt('journey'), zIndex: Z.hud,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: hudSize, height: hudSize, padding: 0,
+              borderRadius: 999, cursor: 'pointer',
+              background: lit ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
+              border: `1px solid ${lit ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
+            }}>
+            {/* A PENNANT ON A STAFF. Not a map (the chart is beside it), not a
+                compass (that is round the edge of the screen), not two figures
+                (the people were only ever half of what the Salt Road is): a
+                standard, which is the thing a journey is followed under, and
+                it means the same on both halves of the sea. */}
+            <svg width={Math.round(hudSize * 0.54)} height={Math.round(hudSize * 0.54)}
+              viewBox="0 0 24 24" fill="none"
+              stroke={lit ? '#f0c040' : 'rgba(214,232,240,0.8)'}
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M6 21V3" />
+              <path d="M6 4h11l-2.6 3.6L17 11H6z" />
+            </svg>
+            {lit && (
+              <span aria-hidden style={{
+                position: 'absolute', top: -2, right: -2,
+                width: 11, height: 11, borderRadius: 999,
+                background: '#f0c040', border: '1px solid rgba(20,14,4,0.8)',
+                boxShadow: '0 0 10px rgba(240,192,64,0.6)',
+              }} />
+            )}
+          </button>
+        )
+      })()}
 
       <FolkPanel open={folkOpen} onClose={() => { setFolkOpen(false); refreshMet() }} finn={finn} />
 
@@ -8384,6 +8364,17 @@ hullRef={hullRefFor(t.key)} />
             onClose={() => setSheetNode(null)} />
         ) : null
       })()}
+
+      {/* THE STORY SO FAR. Wrapped, like every sheet over this map: the chart
+          steers on click and starts a heading on pointerdown, so without it a
+          tap on the backdrop to dismiss also puts the helm over. */}
+      <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+        <SeaCampaignPanel
+          open={campaignOpen}
+          onClose={() => setCampaignOpen(false)}
+          status={liveStatus}
+          nextId={nextStop?.node.id ?? null} />
+      </div>
 
       <CrewHub
         open={crewHubOpen}

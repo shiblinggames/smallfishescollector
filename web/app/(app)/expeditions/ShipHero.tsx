@@ -20,7 +20,7 @@ import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRank
 import { getShipClass, SHIP_CLASS_LINES, aggregateShipClasses, shipRefitCost, type ShipClassId } from '@/lib/shipClasses'
 import { navLevelReqForShip } from '@/lib/gearGating'
 import { SHIPS, MAX_SHIP_TIER, getShip, nextShip as nextHull, shipTierByName } from '@/lib/ships'
-import { SHIP_SKINS } from '@/lib/shipSkins'
+import { SHIP_SKINS, shipSkinImage, shipSkinFilter, skinsFitHull, MANOWAR_SHIP_TIER } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
@@ -1248,8 +1248,8 @@ export default function ShipHero({
   // imageByTier skins swap the sprite outright for the player's
   // current tier (e.g. Finndicate Hull). Falls back to ship default.
   const skinDef     = equippedSkin ? SHIP_SKINS.find(s => s.id === equippedSkin) : undefined
-  const skinFilter  = skinDef?.filter ?? 'none'
-  const shipImgSrc  = skinDef?.imageByTier?.[shipTierForSlots] ?? shipStats.image
+  const skinFilter  = shipSkinFilter(equippedSkin, shipTierForSlots)
+  const shipImgSrc  = shipSkinImage(equippedSkin, shipTierForSlots, shipStats.image)
   // The Ship Management hero draws from public/ship-hero/, where every hull has
   // been trimmed to its own edges and re-exported at one width (normalize-ships.mjs).
   // The originals carry huge, uneven transparent margins baked in (a rowboat
@@ -3365,7 +3365,17 @@ export default function ShipHero({
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
             style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 420, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(156,196,255,0.35)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(156,196,255,0.16)' }}>
             <CloseButton onClick={() => setSkinsOpen(false)} style={{ position: 'absolute', top: 8, right: 10, zIndex: 6 }} />
-            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#9cc4ff', marginBottom: 12 }}>Ship Skins</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#9cc4ff', marginBottom: 4 }}>Ship Skins</p>
+            {/* THE RULE, SAID BEFORE THE GRID RATHER THAN DISCOVERED IN IT.
+                A skin that equips and changes nothing is the worst version of
+                this: the player has done everything right and the game has
+                quietly ignored them. So it is stated once, at the top, in
+                plain words, and again on every tile that cannot be worn. */}
+            <p className="font-karla" style={{ fontSize: '0.68rem', color: skinsFitHull(shipTierForSlots) ? 'rgba(214,232,240,0.62)' : '#f0c040', lineHeight: 1.4, marginBottom: 12 }}>
+              {skinsFitHull(shipTierForSlots)
+                ? 'Every skin is painted for the Man-o-War, and only shows on the Man-o-War.'
+                : 'Skins only fit the Man-o-War. Yours will be kept until you are sailing one.'}
+            </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
               {(() => {
                 const isEquipped = equippedSkin === null
@@ -3381,10 +3391,15 @@ export default function ShipHero({
               })()}
               {SHIP_SKINS.map(skin => {
                 const owned = ownedSkins.includes(skin.id)
-                const tierLocked = skin.requiresShipTier != null && shipTierForSlots < skin.requiresShipTier
+                // ONE GATE. The hull, and nothing else — see skinsFitHull.
+                const tierLocked = !skinsFitHull(shipTierForSlots)
+                  || (skin.requiresShipTier != null && shipTierForSlots < skin.requiresShipTier)
                 const isEquipped = equippedSkin === skin.id
                 const equippable = owned && !isEquipped && !tierLocked
-                const skinImg = skin.imageByTier?.[shipTierForSlots] ?? (skin.requiresShipTier != null ? skin.imageByTier?.[skin.requiresShipTier] : undefined) ?? shipStats.image
+                // THE TILE ALWAYS SHOWS THE MAN-O-WAR PAINT, whatever you are
+                // sailing. It is a picture of what you would be wearing, and
+                // there is only one hull it is ever worn on.
+                const skinImg = skin.imageByTier?.[MANOWAR_SHIP_TIER] ?? shipStats.image
                 return (
                   <button key={skin.id} onClick={equippable ? () => handleEquipSkin(skin.id) : undefined} disabled={!equippable}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? `${skin.color}1f` : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? skin.color + '90' : owned && !tierLocked ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`, boxShadow: isEquipped ? `0 0 12px ${skin.color}33` : 'none', cursor: equippable ? 'pointer' : 'default', opacity: owned && !tierLocked ? 1 : 0.6 }}>
@@ -3396,7 +3411,7 @@ export default function ShipHero({
                     ) : !owned ? (
                       <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#7a7674', textAlign: 'center', lineHeight: 1.25 }}>{skin.source}</span>
                     ) : tierLocked ? (
-                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{getShip(skin.requiresShipTier!).name} only</span>
+                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{getShip(Math.max(MANOWAR_SHIP_TIER, skin.requiresShipTier ?? 0)).name} only</span>
                     ) : (
                       <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
                     )}

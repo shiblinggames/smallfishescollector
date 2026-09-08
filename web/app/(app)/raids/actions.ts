@@ -12,7 +12,7 @@ import { getActiveEffects, dedupeRaidItems, RAID_ITEMS } from '@/lib/raidItems'
 import { finnItemLevel } from '@/lib/finnItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
-import { getShipSkin } from '@/lib/shipSkins'
+import { getShipSkin, shipSkinImage } from '@/lib/shipSkins'
 import { computeRaidMap } from '@/lib/raidMap'
 import { buildClearedSet } from '@/lib/raidProgress'
 import { getRaidConfigById, raidUniqueLootIds, rollRaidCurrency, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
@@ -221,7 +221,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     // Skin can swap the ship sprite outright via imageByTier (Finndicate
     // Hull → enemychapter1[tier]); falls back to the default ship art.
     // Any skin's CSS filter is resolved client-side on the rendered <img>.
-    shipImageUrl:     getShipSkin((profile?.equipped_ship_skin as string | null) ?? '')?.imageByTier?.[shipTier] ?? ship.image,
+    shipImageUrl:     shipSkinImage((profile?.equipped_ship_skin as string | null) ?? null, shipTier, ship.image),
     shipName:         (profile?.ship_name as string | null) ?? ship.name,
     username:         (profile?.username as string | null) ?? null,
     characterColor:   (profile?.character_color as string | null) ?? null,

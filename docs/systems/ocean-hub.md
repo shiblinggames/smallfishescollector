@@ -1480,20 +1480,32 @@ and without the arrow the answer to "where do I go" is a search pattern.
 
 ## The campaign in the corner
 
-Out on the expedition side the HUD row carries a **campaign disc** — a pennant on a staff,
-beside the crew and the chart. It is the expedition half's Salt Road: one glyph, always
-there, on the same showing rule as the discs either side of it.
+**One disc holds the corner on both halves of the game.** `journey` is FIRST in the HUD row,
+a pennant on a staff, and the SIDE decides what is behind it: the Salt Road in the fishing
+grounds, `SeaCampaignPanel` out past the reef. They were two discs with two icons in two
+corners, which said they were two different kinds of thing. They are not — they are the same
+role, *this is your story and here is where it has got to*, told about the two halves — so a
+captain learns one mark and it means the same thing wherever they are sailing. It is first
+because on a row read left to right, the door you consult most often should not be third.
 
 It was a card at first, carrying the chapter, the next stop, a verb and a bearing. That is
-more than this row's job — the row is DOORS, one glyph each, and a panel three times the
+more than this row's job: the row is doors, one glyph each, and a panel three times the
 height of its neighbours reads as an alert rather than as a fixture. What it knows is in its
-**dot** (the same amber one the crew disc and Finn's both use, lit whenever the chain has
-something available) and its **tooltip**, which names the chapter and the errand.
+**dot** — the same amber one the crew disc uses, lit for a stop waiting on one side and for
+Finn holding your pay on the other — and its **tooltip**, which names the chapter and the
+errand. Only a finished job of Finn's blinks; the HUD is otherwise completely still, so the
+one thing that moves has to mean one thing.
 
-**It opens the chart, not the next node's sheet**, and that is a rule rather than a shortcut
-not taken: a node's sheet is where you ACT on it, and acting on a boss from the far side of
-the sea would hand you the fight without the voyage, which is the whole reason the campaign
-is out on the water instead of on a page of cards. The disc says where; you still sail it.
+**`SeaCampaignPanel` is a READ, not a hub.** Chapter rows that expand to a spine of stops,
+the one you are on lit and carrying its art and its line of voice. Two rules:
+
+- **It keeps the water's secrets.** The sea hides every node the chain has not reached, and
+  a list that spelled the chapter out would hand all of that back in one tap. It names what
+  you have done and what you are on, then says *"N more, still dark"*. A chapter you have not
+  started does not even show its subtitle.
+- **It never lets you act.** /expeditions has the interactive version; entering a raid from a
+  list here would put the page of cards back on top of the ocean that replaced it. Every stop
+  is somewhere on the water, and the panel says so at the foot: *sail to it*.
 "Next" is the same rule the Expeditions hub lights its spine with, the first node in chain
 order that is `available` and not a side branch, resolved against the water through
 `ENCOUNTERS`, `BEATS` and `CACHES` for a position (`nextStop`). Tapping the card opens the

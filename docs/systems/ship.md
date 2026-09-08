@@ -102,3 +102,28 @@ pay-to-win by our own pillar.
 
 - [raids-campaign.md](raids-campaign.md) — class math and mounts apply there.
 - [crew.md](crew.md) — berth count = party seats. [forge.md](forge.md) — mounted items.
+
+## Ship skins are a Man-o-War thing
+
+One rule, and it holds everywhere: **a skin only shows on the Man-o-War** (tier 6). Twelve of
+the thirteen carry bespoke art at that tier and the thirteenth is a tint written for that
+silhouette, so letting them ride a rowboat meant either drawing every skin seven times or
+showing a captain a sprite never meant for their hull. The drops that pay for one come off
+the deep end of the campaign, where a Man-o-War is what you are sailing anyway: it is a
+trophy for the last hull, so it hangs on the last hull.
+
+`shipSkinAt` / `shipSkinImage` / `shipSkinFilter` in `lib/shipSkins.ts` are THE resolvers and
+every render site goes through them — the raid stats, the hub, the ship hero, both profiles,
+the gauntlet and the practice fight. A skin resolved anywhere else is a place the rule does
+not hold, which is how a cosmetic ends up half applied: right in a fight, wrong on a profile.
+`canEquipShipSkin` folds the hull gate in, so a per-skin `requiresShipTier` can only ever be
+stricter and never binds today.
+
+**The picker says it out loud** rather than letting a captain discover it by equipping
+something and seeing nothing change: a line under the title that changes wording when you are
+not in a Man-o-War, and *"Man-o-War only"* on every tile that cannot be worn. Tiles always
+show the Man-o-War paint, because that is what you would be wearing.
+
+**Known gap:** the sea's own top-down hull (`ships.ts` `seaImageUrl`) cannot wear a swapped
+sprite, because skins only carry side-on hero art. Showing one out there needs a top-down
+sprite per skin.

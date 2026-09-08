@@ -7,7 +7,8 @@ import { awardPracticeKill } from './practiceActions'
 import { markRaidTutorialSeen } from '../tutorialActions'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
-import { getShipSkin } from '@/lib/shipSkins'
+import { getShipSkin, shipSkinFilter } from '@/lib/shipSkins'
+import { shipTierByName } from '@/lib/ships'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import RaidCombat from '../RaidCombat'
 import { raidDamageProfile } from '@/lib/expeditions'
@@ -339,7 +340,7 @@ export default function PracticeRaidGame({
 }) {
   const router = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
-  const shipFilter        = shipSkinDef?.filter ?? 'none'
+  const shipFilter        = shipSkinFilter(equippedShipSkin, shipTierByName(shipName))
   const dodgeBonus        = totalDodge * 5
   const playerActionMs    = Math.max(700, 2000 - shipSpeed * 100)
   const dodgeCooldownUse  = Math.max(500, 1600 - dodgeBonus)

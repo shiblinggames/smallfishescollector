@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, raidDamageProfile } from '@/lib/expeditions'
 import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
 import { classSlotBonuses } from '@/lib/shipClasses'
-import { getShipSkin } from '@/lib/shipSkins'
+import { shipSkinImage } from '@/lib/shipSkins'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { getXPProgress, navLevelBonuses } from '@/lib/expeditionLevel'
 import RaidsSection from './RaidsSection'
@@ -317,7 +317,7 @@ async function RaidsMapSection() {
   // pages) — class-pick nodes show this instead of a generic glyph.
   const shipTier = (profile?.ship_tier as number | null) ?? 0
   const baseShip = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
-  const playerShipImage = getShipSkin((profile?.equipped_ship_skin as string | null) ?? '')?.imageByTier?.[shipTier] ?? baseShip.image
+  const playerShipImage = shipSkinImage((profile?.equipped_ship_skin as string | null) ?? null, shipTier, baseShip.image)
   return (
     <RaidsSection
       views={raidMap.views}

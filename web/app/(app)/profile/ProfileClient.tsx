@@ -29,7 +29,7 @@ import { getRod, rodGlowClass } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getHook, hookGlowClass } from '@/lib/hooks'
 import { getShip } from '@/lib/ships'
-import { getShipSkin } from '@/lib/shipSkins'
+import { getShipSkin, shipSkinImage } from '@/lib/shipSkins'
 import { SPECIAL_ITEMS, effectiveSpecialDef, type SpecialItemId } from '@/lib/specialItems'
 import PopupShell from '@/components/PopupShell'
 import { fishImageUrl } from '@/lib/fishArt'
@@ -916,7 +916,7 @@ export default function ProfileClient({
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
             <img
-              src={shipSkinDef?.imageByTier?.[shipTier] ?? ship.imageUrl}
+              src={shipSkinImage(equippedShipSkin, shipTier, ship.imageUrl ?? '')}
               alt={ship.name}
               loading="lazy"
               decoding="async"

@@ -11,15 +11,60 @@ export interface ShipSkinDef {
    *  CSS filter stays available alongside it for skins that want to
    *  ALSO tint the swapped image. */
   imageByTier?: Record<number, string>
-  /** Minimum ship tier required to EQUIP this skin. Late-game prestige skins
-   *  are painted for one specific hull, so they only fit that tier or above —
-   *  e.g. 6 = Man-o-War only. Undefined = equippable on any ship. As the game
-   *  approaches its endgame, more skins will be Man-o-War-only via this gate. */
+  /**
+   * Legacy per-skin tier gate, kept because a few skins are painted for a
+   * particular hull and the number is still true of them.
+   *
+   * IT IS NO LONGER WHAT DECIDES ANYTHING. Every skin is Man-o-War only now —
+   * see the rule below — so this is at most a second, stricter opinion and in
+   * practice never binds.
+   */
   requiresShipTier?: number
 }
 
 /** The Man-o-War is the top hull (ship tier 6). */
 export const MANOWAR_SHIP_TIER = 6
+
+/**
+ * ── SKINS ARE A MAN-O-WAR THING, AND ONLY A MAN-O-WAR THING ────────────────
+ *
+ * One rule, stated once, enforced in one place, and said out loud on the
+ * picker so nobody has to discover it by equipping something and seeing
+ * nothing change.
+ *
+ * WHY. A skin is a painted hull, and every one of these is painted as a
+ * Man-o-War: twelve of the thirteen carry bespoke art at tier 6 and the
+ * thirteenth is a tint written for that silhouette. Letting them ride a
+ * rowboat meant either drawing every skin seven times or showing a captain a
+ * sprite that was never meant for the hull they are in — and the drop that
+ * pays for one comes off the deep end of the campaign, where a Man-o-War is
+ * what you are sailing anyway. It is a trophy for the last hull, so it hangs
+ * on the last hull.
+ *
+ * EVERY RENDER SITE GOES THROUGH `shipSkinAt`. A skin resolved anywhere else
+ * is a place this rule does not hold, which is how a cosmetic ends up half
+ * applied: right in a fight, wrong on a profile.
+ */
+export function skinsFitHull(shipTier: number): boolean {
+  return shipTier >= MANOWAR_SHIP_TIER
+}
+
+/** The skin actually in effect on this hull, or null. THE one resolver. */
+export function shipSkinAt(skinId: string | null | undefined, shipTier: number): ShipSkinDef | null {
+  if (!skinId || !skinsFitHull(shipTier)) return null
+  return getShipSkin(skinId) ?? null
+}
+
+/** The sprite to draw for a hull, skin applied if one fits and it carries art
+ *  for this tier. `fallback` is the ship's own image. */
+export function shipSkinImage(skinId: string | null | undefined, shipTier: number, fallback: string): string {
+  return shipSkinAt(skinId, shipTier)?.imageByTier?.[shipTier] ?? fallback
+}
+
+/** And the CSS filter, for the skins that tint rather than swap. */
+export function shipSkinFilter(skinId: string | null | undefined, shipTier: number): string {
+  return shipSkinAt(skinId, shipTier)?.filter ?? 'none'
+}
 
 export const SHIP_SKINS: ShipSkinDef[] = [
   {
@@ -252,6 +297,11 @@ export function getShipSkin(id: string): ShipSkinDef | undefined {
 /** Whether a ship of the given tier can equip this skin (respects its
  *  requiresShipTier gate). Undefined tier gate = any hull. */
 export function canEquipShipSkin(skin: ShipSkinDef, shipTier: number): boolean {
+  // THE HULL GATE IS THE WHOLE GATE NOW. A skin's own `requiresShipTier` can
+  // only be stricter than this and never is, so it is folded in rather than
+  // dropped — if a future skin wants a hull ABOVE the Man-o-War, it still
+  // works without anybody having to remember this line exists.
+  if (!skinsFitHull(shipTier)) return false
   return skin.requiresShipTier == null || shipTier >= skin.requiresShipTier
 }
 

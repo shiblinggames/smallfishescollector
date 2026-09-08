@@ -11,7 +11,7 @@ import { getHook, hookGlowClass } from '@/lib/hooks'
 import { getRod, rodGlowClass } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getShip } from '@/lib/ships'
-import { getShipSkin } from '@/lib/shipSkins'
+import { getShipSkin, shipSkinImage } from '@/lib/shipSkins'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { getCharacterSprites } from '@/lib/characters'
 import { getBoat, boatGlowClass } from '@/lib/boats'
@@ -538,7 +538,7 @@ export default function ProfileClient({ username, ancientsCaught, ancientVigil, 
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
             <img
-              src={shipSkin?.imageByTier?.[gear.shipTier] ?? ship.imageUrl}
+              src={shipSkinImage(gear.equippedShipSkin ?? null, gear.shipTier, ship.imageUrl ?? '')}
               alt={ship.name}
               loading="lazy"
               decoding="async"

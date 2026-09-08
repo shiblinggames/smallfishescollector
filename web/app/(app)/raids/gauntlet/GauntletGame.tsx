@@ -21,7 +21,7 @@ import RaidCombat, { RAID_COL_MAX, RAID_COL_PAD } from '../RaidCombat'
 import GauntletArena, { type ArenaHandle, type ArenaTheme, type Mood } from './GauntletArena'
 import { getShip, shipTierByName } from '@/lib/ships'
 import GauntletSlipway, { type SlipwayPlace } from './GauntletSlipway'
-import { getShipSkin } from '@/lib/shipSkins'
+import { getShipSkin, shipSkinFilter } from '@/lib/shipSkins'
 import type { RaidMods } from '@/lib/expeditions'
 import { fortuneLootMult } from '@/lib/expeditions'
 import type { RaidCrewMember } from '../actions'
@@ -383,7 +383,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   const gauntletFace = isDonG ? 'Don Finleone' : 'Davy Jones'
   const AC = isDonG ? KRAKEN : TEAL
   const atmoGlow = isDonG ? KRAKEN_DEEP : '#ef4444'
-  const shipFilter = props.equippedShipSkin ? getShipSkin(props.equippedShipSkin)?.filter ?? 'none' : 'none'
+  // The hull gate lives in shipSkins, so the gauntlet cannot disagree with the
+  // hub about whether a skin is on.
+  const shipFilter = shipSkinFilter(props.equippedShipSkin, shipTierByName(props.shipName))
   // Locker run-upgrades, mirrored into local state. The server-loaded prop only
   // refreshes on a fresh page render (tab switch / navigation), so a player who
   // BUYS an upgrade and immediately starts a run would otherwise fight with the
