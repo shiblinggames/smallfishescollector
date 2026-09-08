@@ -285,6 +285,66 @@ export const PLACES: Place[] = [
   },
   {
     /**
+     * ── THE POSTING HOUSE ────────────────────────────────────────────────
+     *
+     * WEST OF THE CREW HALL, and the expedition side's answer to the Tally
+     * House. The two are the same institution on the two halves of the game:
+     * somewhere you sail to that counts the day's work and pays for it. One
+     * settles up trawl orders, this one settles up hunts.
+     *
+     * Bounties were a card on a hub, which is the thing every place out here
+     * used to be. The rule the anchorage is built on is that expeditions'
+     * management should be somewhere you go, not a tab you open, and the
+     * bounty board is the last piece of it that was still a tab.
+     *
+     * Its door carries a query, not a route of its own: the board is a modal on
+     * the hub because it wants the hub's own state, so `?open=bounties` opens
+     * it on arrival (see HubCards). A second route rendering the same modal
+     * would be a door in front of a door.
+     */
+    id: 'posting_house', name: 'The Posting House', blurb: 'The day\u2019s hunts, and what they pay',
+    href: '/expeditions?open=bounties', x: -2150, y: -4400, r: 280,
+    art: '/page-bounties.jpg',
+    kind: 'port', minLevel: 0,
+    buildings: [
+      // STAND-IN. This is the Tally House's own building until the Posting
+      // House's plate is painted, which is deliberate rather than lazy: the two
+      // are meant to read as the same institution, and they are 4,000px and a
+      // reef apart, so they are never on screen together.
+      { art: '/sea/harbour.png', x: 52, y: 58, scale: 0.28 },
+    ],
+  },
+  {
+    /**
+     * ── THE FORGE ────────────────────────────────────────────────────────
+     *
+     * EAST OF THE CREW HALL, opposite the Posting House, and the two of them
+     * flank the hall the way the Gunwharf and the Charterhouse flank the
+     * throat: what you did (hunts, paid) on one side, what you make of it
+     * (relics, fused) on the other.
+     *
+     * WHAT STANDS ON IT IS WHAT YOU HAVE WON. The Forge, the Abyssal Forge and
+     * the Accelerator are three rungs of one Locker upgrade, and the island
+     * shows whichever rung the captain holds — the same shallow swap the
+     * Homestead and the Crew Hall already use, in `forgeIsleFor`. What is
+     * written here is the cold forge, because that is what a captain who has
+     * never won it sees, and it is what scripts/check-islands measures.
+     *
+     * ITS BERTH IS ON THE WEST SHORE, like the Charterhouse's and for the same
+     * reason: the channel anybody is actually sailing runs between it and the
+     * hall, and a berth on the far side would be round the back.
+     */
+    id: 'forge_isle', name: 'The Forge', blurb: 'Two relics in, one out',
+    href: '/expeditions/forge', x: 620, y: -4400, r: 280,
+    art: '/forge-bg.jpg',
+    kind: 'port', minLevel: 0,
+    berth: { dx: -280 * 0.85, dy: 280 * 0.6 },
+    buildings: [
+      { art: '/forge/forge.png', x: 51, y: 60, scale: 0.30 },
+    ],
+  },
+  {
+    /**
      * ── THE GUNWHARF ─────────────────────────────────────────────────────
      *
      * West of the throat. Where your ship lives: armed, berthed, and taken out

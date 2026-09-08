@@ -35,7 +35,9 @@ import { dealtToday } from './traderActions'
 import { getDiscoveries } from './isleActions'
 import { getDigState } from './digActions'
 import { getHomestead } from '../home/actions'
-import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
+import {
+  gauntletAutoCatchMaxRarity, hasForge, hasAbyssalForge, hasAbyssalAccelerator,
+} from '@/lib/gauntletUpgrades'
 import { getCachedFishSpecies } from '@/lib/fishSpecies'
 import { vigilFor } from '@/lib/ancientVigil'
 import { getTrawlState } from '../fishing/trawls/actions'
@@ -308,6 +310,13 @@ export default async function SeaPage() {
         drill: Number(profile?.crew_drill_level ?? 1),
         stores: Number(profile?.crew_stores_level ?? 1),
       }}
+      // AND WHAT STANDS ON THE FORGE'S. Read through the same three helpers
+      // /expeditions reads, so the island and the bench can never disagree
+      // about which rung this captain has won.
+      forgeTier={(() => {
+        const up = profile?.gauntlet_upgrades as string[] | null
+        return hasAbyssalAccelerator(up) ? 3 : hasAbyssalForge(up) ? 2 : hasForge(up) ? 1 : 0
+      })()}
       // WHICH STRAITS ARE OPEN, as the campaign nodes already cleared.
       //
       // `buildClearedSet` is the SAME function /expeditions reads to draw the

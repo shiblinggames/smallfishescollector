@@ -1,0 +1,16 @@
+{
+  "prompt": "2D hand-painted game asset of a single small stone-and-timber BOUNTY POSTING HOUSE, drawn in the exact same house style as a warm cream-plastered harbour warehouse with a dark timber-shingled pitched roof: soft painterly brushwork, visible hand-drawn ink linework of uneven weight, muted earthy palette of sand-cream walls, weathered chocolate-brown timber and slate-grey stone, warm amber lamplight glowing from small paned windows. Three-quarter view from slightly above, the building turned so its long front wall faces left of camera and its gable end faces right, exactly as an isometric map building would sit. It is a squat one-storey guardhouse: rough stone lower courses giving way to cream plaster above, a heavy dark timber door with iron strap hinges, two small warm-lit windows, and a shallow porch roof on two posts. The identifying feature is a WANTED BOARD: a broad plank noticeboard mounted on the front wall under the porch, papered with several curling weathered parchment notices, each showing a small crude ink portrait and a line of illegible scratchy handwriting, one notice torn at the corner and one hanging by a single nail. A wrought-iron lantern on a bracket beside the door throws warm light across the notices. A cutlass and a coil of rope lean against the wall. Small pirate-fantasy world, storybook illustration, no photographic realism, no 3D render look, no cel-shaded anime. The building fills the frame with a small margin of empty space around it. FULLY TRANSPARENT BACKGROUND, no ground, no grass, no shadow cast onto a surface, no scenery behind it, nothing but the building itself on transparency. No text that reads as real words, no logos, no watermark, no border, no frame, no drop shadow on the canvas.",
+  "negative_prompt": "photorealistic, 3D render, CGI, octane, unreal engine, cel shaded, anime, vector flat design, sticker outline, thick uniform outline, background scenery, sky, clouds, grass, dirt ground, ground plane, cast shadow on ground, white background, solid background, gradient background, checkerboard, drop shadow, border, frame, text, readable words, logo, watermark, signature, people, characters, multiple buildings, town, village, cluttered composition, harsh saturated colours, neon, plastic, glossy",
+  "api_parameters": {
+    "resolution": "2K",
+    "output_format": "png",
+    "aspect_ratio": "1:1"
+  },
+  "settings": {
+    "style": "2D hand-painted storybook game asset, pirate fantasy",
+    "lighting": "warm amber lantern light on a cool overcast key, soft painterly falloff",
+    "camera_angle": "three-quarter view from slightly above, isometric map-building framing",
+    "depth_of_field": "none, everything in focus",
+    "quality": "clean transparent alpha, crisp edges, consistent line weight"
+  }
+}

@@ -1310,7 +1310,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, clearedNodes, nodeStatus, dealtToday, isAdmin = false,
+  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, dealtToday, isAdmin = false,
   auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
 }: {
   fishingXP: number
@@ -1406,6 +1406,9 @@ export default function SeaMap({
   /** What stands on the Crew Hall's island: the tiers this captain has bought.
    *  Hall, drill yard, stores, each 1..6. */
   crewTiers: { hall: number; drill: number; stores: number }
+  /** Which rung of the Forge this captain holds, so its island shows the right
+   *  one. 0 cold, 1 the Forge, 2 the Abyssal Forge, 3 the Accelerator. */
+  forgeTier: number
   /** Campaign nodes already cleared, from the same `buildClearedSet` the node
    *  map reads. Drives which straits out in the raid water are open. */
   clearedNodes: string[]
@@ -4240,6 +4243,7 @@ export default function SeaMap({
       // are the thing to keep in step.
       .map(p => homeFor(p, visiting?.homestead ?? homestead, visiting?.username))
       .map(p => crewHallFor(p, crewTiers))
+      .map(p => forgeIsleFor(p, forgeTier))
       .filter(p => p.kind !== 'water' && p.buildings && p.buildings.length > 0)
       .map(p => ({
         id: p.id, x: p.x, y: p.y, r: p.r, locked: locked(p),
@@ -4251,7 +4255,7 @@ export default function SeaMap({
     // with — the same staleness the projection itself was suffering from, moved
     // one level out.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locked, homestead, visiting, crewTiers])
+  }, [locked, homestead, visiting, crewTiers, forgeTier])
 
 
   /**
@@ -4458,7 +4462,7 @@ export default function SeaMap({
     // home and for the same reason: a portal you are floating in outranks
     // everything you merely sailed past.
     if (nearGate) {
-      return { act: 'Step through the Wargate', hold: null }
+      return { act: 'Sail through the Wargate', hold: null }
     }
 
     // THE WAY HOME, when you are floating in one. Above the campaign: nothing
@@ -7070,7 +7074,7 @@ export default function SeaMap({
           <PortBerth key={`berth:${p.id}`} p={p} active={near?.id === p.id} />
         ))}
         {PLACES.map(p => (
-          <PlaceIsland key={p.id} place={crewHallFor(homeFor(p, visiting?.homestead ?? homestead, visiting?.username), crewTiers)} locked={locked(p)}
+          <PlaceIsland key={p.id} place={forgeIsleFor(crewHallFor(homeFor(p, visiting?.homestead ?? homestead, visiting?.username), crewTiers), forgeTier)} locked={locked(p)}
             // CREW WAITING ON THE DOCK. The island says so itself rather than a
             // banner saying it for them: it is a fact about a PLACE, and the
             // chart is where facts about places belong. Nothing moves, nothing
@@ -12254,6 +12258,36 @@ function crewHallFor(p: Place, tiers: { hall: number; drill: number; stores: num
       { art: `/crew/drill_${t(tiers.drill)}.png`, x: 36, y: 60, scale: 0.12 },
       { art: `/crew/stores_${t(tiers.stores)}.png`, x: 73, y: 60, scale: 0.11 },
     ],
+  }
+}
+
+/**
+ * THE FORGE ISLAND WEARS THE RUNG YOU HOLD.
+ *
+ * The Forge, the Abyssal Forge and the Accelerator are three rungs of one
+ * Davy's Locker upgrade, and a captain who has ground all the way to the
+ * Accelerator should see it from the water rather than find out on a tab. Same
+ * shape as `crewHallFor`: the coordinates are the ones written in chart.ts,
+ * because check-islands measures those, and only the plate and the words
+ * change.
+ *
+ * Tier 0 is a captain who has not won it yet. The island still stands — it is
+ * a thing to sail past and want — and it says so.
+ */
+function forgeIsleFor(p: Place, tier: number): Place {
+  if (p.id !== 'forge_isle') return p
+  const rung = tier >= 3
+    ? { art: '/forge/accelerator.png', name: 'The Accelerator', blurb: 'One epic relic, one day, one legendary' }
+    : tier >= 2
+      ? { art: '/forge/abyssal_forge.png', name: 'The Abyssal Forge', blurb: 'Forged relics, fused into Abyssal mounts' }
+      : tier >= 1
+        ? { art: '/forge/forge.png', name: 'The Forge', blurb: 'Two relics in, one out' }
+        : { art: '/forge/forge.png', name: 'The Forge', blurb: 'Cold, until you win it out of the Locker' }
+  return {
+    ...p,
+    name: rung.name,
+    blurb: rung.blurb,
+    buildings: [{ art: rung.art, x: 51, y: 60, scale: 0.30 }],
   }
 }
 

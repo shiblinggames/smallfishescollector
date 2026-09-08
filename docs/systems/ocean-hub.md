@@ -1174,8 +1174,26 @@ forty of them.
 ## The anchorage, and the way out of it
 
 The water north of the reef. Reached through the arch on the fishing boat, and it holds the
-places expeditions is run FROM: the Crew Hall now, the voyage board and the recruiter and
-the forge in time. Things you moor at, not things you fight.
+places expeditions is run FROM. Things you moor at, not things you fight.
+
+**Five islands, and the middle three are a row.** The Crew Hall sits at (-900, -4400) with
+**The Posting House** 1,250 west of it and **The Forge** 1,520 east, so the hall is flanked
+the way the throat is flanked by the Gunwharf and the Charterhouse. What you did on one side,
+what you make of it on the other.
+
+- **The Posting House** (`posting_house`) is the expedition side's Tally House: the same
+  institution on the other half of the game, one settling trawl orders and one settling
+  hunts. Bounties were the last piece of expeditions management that was still a tab. Its
+  `href` carries a query rather than owning a route, `/expeditions?open=bounties`, because
+  the board is a modal that wants the hub's own state; `HubCards` opens it once on arrival
+  and leaves the URL alone, so closing it does not reopen it.
+- **The Forge** (`forge_isle`) shows the rung you hold. `forgeIsleFor` in SeaMap swaps its
+  plate, name and blurb across cold / the Forge / the Abyssal Forge / the Accelerator, off a
+  `forgeTier` the sea page reads through the same three `gauntletUpgrades` helpers
+  /expeditions reads, so the island and the bench cannot disagree. Same shape as
+  `crewHallFor` and `homeFor`, and like both of them the COORDINATES stay in chart.ts because
+  that is what `check-islands` measures. Its berth is on the west shore, like the
+  Charterhouse's: the channel runs between it and the hall.
 
 **It is 3,600 across and walled all the way round.** It was 5,200 with an invisible rim, and
 both halves of that were wrong: the extra water made it a sea to cross rather than a harbour

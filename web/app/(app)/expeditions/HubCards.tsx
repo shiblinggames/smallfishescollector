@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { vibrate } from '@/lib/haptics'
 import ResetCountdown from '@/components/ResetCountdown'
 import PopupShell from '@/components/PopupShell'
@@ -135,6 +135,24 @@ export default function HubCards({
 }: Props) {
   const router = useRouter()
   const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'bounties' | 'gauntlets'>(null)
+
+  // ARRIVING WITH A DOOR ALREADY CHOSEN. The Posting House out in the
+  // anchorage (see chart.ts) is the bounty board's place on the water, and the
+  // board is a modal on this hub rather than a route of its own because it
+  // wants the hub's own state. So mooring there pushes `?open=bounties` and
+  // this opens it, instead of landing the captain on the hub to hunt for the
+  // card they already sailed to.
+  //
+  // Once only: the query is not the modal's state, it is how you arrived, so
+  // closing the modal must not reopen it and the URL is left alone.
+  const params = useSearchParams()
+  const opening = params.get('open')
+  const [openedFromUrl, setOpenedFromUrl] = useState(false)
+  useEffect(() => {
+    if (openedFromUrl || opening !== 'bounties' || !bountiesOpen) return
+    setOpenedFromUrl(true)
+    setModal('bounties')
+  }, [opening, bountiesOpen, openedFromUrl])
 
   // ORDERS FINISHED BUT NOT PAID. A bounty you have already done sits on the
   // board waiting to be collected, and the hub had no way of saying so: the
