@@ -307,11 +307,11 @@ export const PLACES: Place[] = [
     art: '/page-bounties.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
-      // STAND-IN. This is the Tally House's own building until the Posting
-      // House's plate is painted, which is deliberate rather than lazy: the two
-      // are meant to read as the same institution, and they are 4,000px and a
-      // reef apart, so they are never on screen together.
-      { art: '/sea/harbour.png', x: 52, y: 58, scale: 0.28 },
+      // The Tally House's own building, answered: same cream plaster, same dark
+      // shingle, same warm windows, and a wanted board of curling notices where
+      // the harbour's crane and ledger sheet are. The two read as one
+      // institution on the two halves of the game, which is the point of it.
+      { art: '/sea/posting-house.png', x: 52, y: 58, scale: 0.28 },
     ],
   },
   {

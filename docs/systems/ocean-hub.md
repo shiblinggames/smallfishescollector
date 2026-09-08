@@ -1183,7 +1183,9 @@ what you make of it on the other.
 
 - **The Posting House** (`posting_house`) is the expedition side's Tally House: the same
   institution on the other half of the game, one settling trawl orders and one settling
-  hunts. Bounties were the last piece of expeditions management that was still a tab. Its
+  hunts. Its plate answers the Tally House's building deliberately, same cream plaster and
+  dark shingle and warm windows, with a wanted board of curling notices where the harbour
+  has its crane and its ledger sheet. Bounties were the last piece of expeditions management that was still a tab. Its
   `href` carries a query rather than owning a route, `/expeditions?open=bounties`, because
   the board is a modal that wants the hub's own state; `HubCards` opens it once on arrival
   and leaves the URL alone, so closing it does not reopen it.
