@@ -57,10 +57,32 @@ export type GlowPatch = {
   beat: number
   /** How far the breath carries, as a fraction of the radius. */
   swell: number
+  /**
+   * HOW ALIVE IT IS, 0..1.
+   *
+   * The bloom says a patch is HERE; this says something is IN it. A shoal at 1
+   * has specks flitting through it and a slow stir under them; a worked dig
+   * site at 0 has neither, because a scar is not alive.
+   */
+  life: number
 }
 
 let discTex: Texture | null = null
 let ringTex: Texture | null = null
+let moteTex: Texture | null = null
+let swirlTex: Texture | null = null
+
+/**
+ * HOW MANY MOTES A PATCH CARRIES.
+ *
+ * The bloom says a patch is here; these say something is IN it. A shoal without
+ * anything moving in it is a coloured stain, and the whole reason a captain
+ * crosses water for one is that it is alive.
+ *
+ * Per patch, and only for patches on screen — a field of hotspots is four or
+ * five at a time and one is usually the only one you can see.
+ */
+const MOTES = 7
 
 /** The bloom. A long falloff with nothing resembling an edge in it, so the
  *  patch fades into the sea rather than sitting on it. */
@@ -104,7 +126,69 @@ function ringTexture(PIXI: typeof import('pixi.js')): Texture {
   return ringTex
 }
 
-type Built = { p: GlowPatch; disc: Sprite; ring: Sprite | null }
+/** A speck of light, for the things moving inside a patch. */
+function moteTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (moteTex) return moteTex
+  const S = 32
+  const c = document.createElement('canvas')
+  c.width = S; c.height = S
+  const g = c.getContext('2d')!
+  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+  grad.addColorStop(0, 'rgba(255,255,255,1)')
+  grad.addColorStop(0.35, 'rgba(255,255,255,0.45)')
+  grad.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, S, S)
+  moteTex = PIXI.Texture.from(c)
+  return moteTex
+}
+
+/**
+ * ── THE TURN INSIDE IT ──────────────────────────────────────────────────────
+ *
+ * Four soft arms on a disc, rotated slowly under the bloom. On its own it is
+ * almost invisible, which is the point: what it does is stop the middle of a
+ * patch being one flat value, so the surface reads as water being stirred
+ * rather than as a circle of paint.
+ *
+ * Arms rather than a ring, because a ring turning is a ring and gives the
+ * rotation away. Four lobes at this softness read as a slow current.
+ */
+function swirlTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (swirlTex) return swirlTex
+  const S = 256
+  const c = document.createElement('canvas')
+  c.width = S; c.height = S
+  const g = c.getContext('2d')!
+  g.translate(S / 2, S / 2)
+  for (let i = 0; i < 4; i++) {
+    g.save()
+    g.rotate((i / 4) * Math.PI * 2)
+    const grad = g.createRadialGradient(0, 0, 0, 0, 0, S / 2)
+    grad.addColorStop(0, 'rgba(255,255,255,0)')
+    grad.addColorStop(0.45, 'rgba(255,255,255,0.5)')
+    grad.addColorStop(1, 'rgba(255,255,255,0)')
+    g.fillStyle = grad
+    g.beginPath()
+    g.moveTo(0, 0)
+    // A wedge with a curved trailing edge, which is what makes it read as
+    // being dragged round rather than as a slice of pie.
+    g.arc(0, 0, S / 2, -0.42, 0.42)
+    g.closePath()
+    g.fill()
+    g.restore()
+  }
+  swirlTex = PIXI.Texture.from(c)
+  return swirlTex
+}
+
+type Built = {
+  p: GlowPatch
+  disc: Sprite
+  ring: Sprite | null
+  swirl: Sprite | null
+  motes: Sprite[]
+}
 
 export type Glow = {
   view: Container
@@ -136,6 +220,25 @@ export function makeGlow(PIXI: typeof import('pixi.js')): Glow {
     disc.anchor.set(0.5)
     disc.blendMode = 'add'
     view.addChild(disc)
+    // THE STIR AND THE SPECKS RIDE ON `life`, not on the rim. A dig hint has no
+    // rim because an edge would be the game drawing a circle round the answer,
+    // and it has nothing moving in it either, because a suspicion about the
+    // seabed is not alive. A hotspot is both.
+    let swirl: Sprite | null = null
+    const motes: Sprite[] = []
+    if (p.life > 0) {
+      swirl = new PIXI.Sprite(swirlTexture(PIXI))
+      swirl.anchor.set(0.5)
+      swirl.blendMode = 'add'
+      view.addChild(swirl)
+      for (let i = 0; i < MOTES; i++) {
+        const m: Sprite = new PIXI.Sprite(moteTexture(PIXI))
+        m.anchor.set(0.5)
+        m.blendMode = 'add'
+        view.addChild(m)
+        motes.push(m)
+      }
+    }
     let ring: Sprite | null = null
     if (p.rim > 0) {
       ring = new PIXI.Sprite(ringTexture(PIXI))
@@ -143,7 +246,7 @@ export function makeGlow(PIXI: typeof import('pixi.js')): Glow {
       ring.blendMode = 'add'
       view.addChild(ring)
     }
-    return { p, disc, ring }
+    return { p, disc, ring, swirl, motes }
   }
 
   return {
@@ -155,6 +258,8 @@ export function makeGlow(PIXI: typeof import('pixi.js')): Glow {
         if (keep.has(k)) continue
         b.disc.destroy()
         b.ring?.destroy()
+        b.swirl?.destroy()
+        for (const m of b.motes) m.destroy()
         byKey.delete(k)
       }
       for (const p of list) {
@@ -178,6 +283,8 @@ export function makeGlow(PIXI: typeof import('pixi.js')): Glow {
           && Math.abs(p.y - camY) < halfH + p.r * 1.4
         disc.visible = on
         if (ring) ring.visible = on
+        if (b.swirl) b.swirl.visible = on
+        for (const m of b.motes) m.visible = on
         if (!on) continue
 
         // The breath. Seeded off the patch's own key so two spots side by side
@@ -204,6 +311,40 @@ export function makeGlow(PIXI: typeof import('pixi.js')): Glow {
           ring.height = w * GROUND
           ring.tint = p.color
           ring.alpha = p.rim * (0.8 + wave * 0.2)
+        }
+
+        // ── THE STIR ──────────────────────────────────────────────────
+        // Slow, and against the breath rather than with it: two things moving
+        // in step read as one thing, and the whole job here is to make the
+        // middle stop looking flat.
+        if (b.swirl) {
+          b.swirl.position.set(p.x, p.y)
+          b.swirl.width = p.r * 1.7
+          b.swirl.height = p.r * 1.7 * GROUND
+          b.swirl.rotation = ph + t * 0.055
+          b.swirl.tint = p.color
+          b.swirl.alpha = p.life * p.fill * 0.5 * (1 - wave * 0.25)
+        }
+
+        // ── AND WHAT IS MOVING IN IT ──────────────────────────────────
+        //
+        // Each speck runs its own slow orbit at its own radius, drifting in and
+        // out and fading at both ends of the loop so none of them ever pops.
+        // Flat on the plane, because they are just under the surface.
+        for (let m = 0; m < b.motes.length; m++) {
+          const sp = b.motes[m]
+          const mp = ph + m * 0.897
+          const f = ((t * 0.09 + m / b.motes.length) % 1)
+          const ang = mp + f * Math.PI * 2 * (m % 2 === 0 ? 1 : -1)
+          const rad = p.r * (0.18 + (m % 4) * 0.17) * (0.85 + Math.sin(t * 0.31 + mp) * 0.15)
+          sp.position.set(p.x + Math.cos(ang) * rad, p.y + Math.sin(ang) * rad * GROUND)
+          const sz = p.r * 0.055 * (0.7 + (m % 3) * 0.2)
+          sp.width = sz
+          sp.height = sz
+          sp.tint = p.color
+          // In and out over the loop, so a speck arrives and leaves rather than
+          // circling forever like a satellite.
+          sp.alpha = p.life * 0.8 * Math.sin(f * Math.PI) * (0.6 + Math.sin(t * 1.7 + mp) * 0.4)
         }
       }
     },

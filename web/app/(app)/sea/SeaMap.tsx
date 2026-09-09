@@ -3894,6 +3894,11 @@ export default function SeaMap({
         // notice the day they moved onto the canvas.
         beat: 11 - h.tier * 2,
         swell: 0.01 + h.tier * 0.03,
+        // HOW ALIVE IT LOOKS, and it climbs with the tier. A Scattered Shoal is
+        // a suggestion of fish; a Boiling one should be plainly full of them,
+        // and the specks moving in it are the only part of the drawing that
+        // says which of the two you are looking at from a distance.
+        life: 0.45 + h.tier * 0.22,
       })
     }
     if (hintDig) {
@@ -3913,6 +3918,10 @@ export default function SeaMap({
         // And a worked one does not breathe. See GlowPatch.beat.
         beat: done ? 0 : over ? 3.2 : 5,
         swell: done ? 0 : 0.02,
+        // NOTHING MOVES IN IT, ever. A dig hint is a suspicion about the
+        // seabed, not something living: specks flitting through it would say
+        // there are fish here, which is the other system's sentence.
+        life: 0,
       })
     }
     return out
