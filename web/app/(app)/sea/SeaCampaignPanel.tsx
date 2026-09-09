@@ -116,7 +116,8 @@ export default function SeaCampaignPanel({ open, onClose, status, nextId }: {
           // shrank on every tap, which drags the close button and half the
           // chapters to a new place mid-read and makes the panel feel like it
           // is arguing with you. The list scrolls; the frame is still.
-          height: 'min(80vh, 680px)',
+          // Never taller than the room the shell left — see CrewHub's note.
+          height: 'min(80vh, 680px)', maxHeight: '100%',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
           background: 'linear-gradient(180deg, rgba(10,16,26,0.985) 0%, rgba(5,9,16,0.99) 100%)',
           border: '1px solid rgba(196,169,106,0.3)', borderRadius: 20,

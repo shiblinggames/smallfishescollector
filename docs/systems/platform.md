@@ -79,6 +79,19 @@ otherwise made of 560px panels: you would close a modal on the sea and land on a
 twice as wide saying the same kind of thing. The class only moves the ceiling; `.page-col`
 keeps the padding and the centring.
 
+**A modal is never taller than the room the shell left it.** Cap height with `100%` alongside
+any `vh`: `maxHeight: 'min(84vh, 100%)'`. `vh` is the LARGE viewport on a phone — the one with
+the browser's toolbars hidden — and `PopupShell` has already reserved the top for the header and
+the bottom for the tab bar and the home indicator, so a card measured against the whole window
+ignores both and runs off underneath them. The `100%` IS that padded box.
+
+**And a scroll container must never be `pointer-events: none`.** It is a tempting way to let a
+tap on the empty space around a card reach the scrim behind it, and it also hands every wheel
+and every touch to whatever is underneath — so the one element with `overflowY: auto` on it
+never sees a scroll gesture, and the sheet stops dead at the fold (this is exactly what happened
+to the Wargate). Close on `e.target === e.currentTarget` instead, which is what "tap the empty
+space" actually means and costs the sheet nothing.
+
 **Two things do not take it:**
 
 - **Art moments.** A crate opening, a legendary skin, an ancient's rank-up, a rescued boat:

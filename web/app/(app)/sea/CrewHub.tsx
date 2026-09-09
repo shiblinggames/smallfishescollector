@@ -241,7 +241,20 @@ export default function CrewHub({
                 background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
                 border: '1px solid rgba(196,169,106,0.34)',
                 boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
-                maxHeight: '84vh', display: 'flex', flexDirection: 'column',
+                // ── AND NEVER TALLER THAN THE ROOM IT IS IN ──────────
+                //
+                // `vh` is the LARGE viewport on a phone — the one you get with
+                // the browser's toolbars hidden — so a card capped in vh can be
+                // taller than what is actually on screen. And PopupShell has
+                // already reserved the top for the header and the bottom for
+                // the tab bar and the home indicator; a card measured against
+                // the whole window ignores both and runs off under them, which
+                // is where the foot of this panel was going.
+                //
+                // `100%` here IS that padded box. The vh cap keeps it from
+                // filling a tall desktop window; the percentage keeps it inside
+                // the space the shell actually left.
+                maxHeight: 'min(84vh, 100%)', display: 'flex', flexDirection: 'column',
               }}>
 
               {/* ── THE HEADER, WHICH KNOWS WHERE YOU ARE ─────────────────

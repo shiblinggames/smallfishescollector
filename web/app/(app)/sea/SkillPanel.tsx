@@ -243,7 +243,8 @@ export default function SkillPanel({ open, onClose, skill, xp, renown, onOpenRen
         transition={{ duration: 0.16 }}
         style={{
           position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
-          maxHeight: 'min(80vh, 620px)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          // Never taller than the room the shell left — see CrewHub's note.
+          maxHeight: 'min(80vh, 620px, 100%)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
           borderRadius: 20,
           background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
           border: '1px solid rgba(196,169,106,0.34)',

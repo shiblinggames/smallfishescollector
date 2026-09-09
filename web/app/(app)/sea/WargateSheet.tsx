@@ -79,16 +79,30 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
         background: 'radial-gradient(ellipse at 50% 30%, rgba(20,32,50,0.88) 0%, rgba(2,5,10,0.96) 70%)',
         backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
       }} />
-      <div style={{
-        position: 'absolute', inset: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        // The sheet sits over the nav, so there is nothing to clear but the
-        // status bar: the title goes just under the safe area. Anything more
-        // is a blank band that reads as a broken header.
-        padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 14px 40px',
-        pointerEvents: 'none',
-      }}>
-        <div style={{ width: 'min(720px, 100%)', pointerEvents: 'auto' }}>
+      {/* ── THE SCROLLER, AND WHY IT COULD NOT SCROLL ──────────────────
+          This carried `pointerEvents: 'none'` so that a tap on the empty water
+          either side of the column reached the scrim behind it and closed the
+          sheet. It also means the browser hands every wheel and every touch to
+          whatever is underneath — so the one element with `overflowY: auto` on
+          it never saw a single scroll gesture, and a gate with more bosses than
+          fit the window simply stopped at the fold.
+
+          The tap still closes. It closes the way PopupShell's does: only when
+          the press landed on this element ITSELF rather than on the column
+          inside it, which is the same thing "tap the empty space" means and
+          does not cost the sheet its scroll. */}
+      <div
+        onClick={e => { if (e.target === e.currentTarget) onClose() }}
+        style={{
+          position: 'absolute', inset: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          // The sheet sits over the nav, so there is nothing to clear but the
+          // status bar: the title goes just under the safe area. Anything more
+          // is a blank band that reads as a broken header.
+          padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 14px 40px',
+        }}>
+        <div style={{ width: 'min(720px, 100%)' }}>
           {/* THE HEADER ROW. Title on the left, the close on the right. The
               scrim still closes too, but on a phone the column fills the
               width and there is no scrim to tap, which is how a sheet ends up
