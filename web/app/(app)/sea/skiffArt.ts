@@ -121,7 +121,25 @@ export function texture(
     img.src = url
     await img.decode()
     images.set(url, img)
-    return PIXI.Texture.from(img)
+    // ── MIPMAPPED, AND THAT IS WHAT STOPS THE SHIMMER ────────────────────
+    //
+    // `Texture.from(img)` leaves autoGenerateMipmaps false, and almost
+    // everything drawn through this loader is MINIFIED: measured across the
+    // chart's towns, the buildings land between 0.27x and 0.63x of their source
+    // resolution on a phone. Sampling a detailed texture below one texel per
+    // pixel with no mip chain is textbook aliasing — and because the sample
+    // grid only slides across the texels while the camera is moving, it shows
+    // up as the roofs shimmering as you sail and settling the moment you stop.
+    //
+    // That is exactly the shape of the report it was found by, and it is why
+    // none of the layer, cull or tint flags touched it: nothing was wrong with
+    // what was being drawn or when. It was how it was being sampled.
+    //
+    // The DOM chart never had it because an <img> is downscaled by the browser
+    // with its own filtering, on a layer it rasterises once and then only
+    // translates.
+    const source = new PIXI.ImageSource({ resource: img, autoGenerateMipmaps: true })
+    return new PIXI.Texture({ source })
   })()
   textures.set(url, job)
   return job
