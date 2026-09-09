@@ -127,226 +127,88 @@ export const FIRST_VOYAGE: Beat[] = [
     ...D,
     // The steering line teaches the input they actually have. A fine pointer
     // means a mouse, and a mouse usually means keys under the other hand.
-    //
-    // BOTH INPUTS ON DESKTOP. Naming only the keys made the mouse look like it
-    // did nothing, and clicking a spot on the water is the first thing a person
-    // with a mouse tries — so the tour was teaching the harder half and staying
-    // quiet about the one they had already guessed.
     text: typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches
       ? 'Welcome aboard, Captain. This is the whole sea. Hold *WASD* to steer her, or just click where you want to go.'
       : 'Welcome aboard, Captain. This is the whole sea. Drag anywhere to steer her.',
     until: 'next',
+    target: 'helm',
   },
   {
-    ...K,
-    // NOT "past the shallows". A new captain starts in the Mainland's berth at
-    // radius 617 and the Shallows do not begin until 1400, so they are sailing
-    // OUT TO them — telling somebody to go past the first water they will
-    // reach sends them through it and out the other side.
-    text: 'Head south, out to the *Shallows*. Follow the lights to the ring.',
-    // Waits until she is actually IN it. "Next" here would let a captain read
-    // the instruction, dismiss it, and be told about the Cast button while
-    // still tied to the dock where it does not exist.
+    ...D,
+    text: 'Head south, out to the *Shallows*. Follow the lights to the ring and I will show you the rest there.',
     until: 'reach',
     path: 'shallows',
   },
-
-  // ── THE FIRST CAST ────────────────────────────────────────────────────
-  //
-  // THIS USED TO SKIP A STEP AND DESCRIBE THE WRONG SCREEN. It said the Cast
-  // button comes up once you are over open water, and that fish are wherever
-  // you drop a line — but at that moment there is no Cast button anywhere. The
-  // helm reads "Hold to fish The Shallows", and the rod does not come out until
-  // you do that. So the tour named a control that was not on screen, waited for
-  // a cast that could not happen, and left the captain looking for a button
-  // while the one they needed sat under their thumb saying what to do.
-  //
-  // Two beats now, in the order the game actually happens in: get into fishing
-  // first, THEN cast.
+  // ── THE CATCH ─────────────────────────────────────────────────────────
   {
-    ...K,
-    text: 'Hold the *helm* to fish the Shallows. That drops you in and gets the rod out.',
+    ...D,
+    text: 'Hold the helm to fish the Shallows. That drops you in and gets your line wet.',
     until: 'cast',
-    target: 'helm',
+    holdCast: true,
     path: 'shallows',
   },
   {
     ...K,
-    // ONE BEAT, NOT TWO. Splitting "now cast" from the dial advice put two
-    // beats in a row both waiting on `catch` — and one fish answers both, so
-    // the second would be marked done by the same catch that finished the
-    // first and flash past having never been read. This is up for the whole
-    // cast, which is exactly when the aiming advice is worth anything.
-    //
-    // "LAND IT" IS NOT A WORD ANYBODY USES. You catch a fish. And the old line
-    // sold the gold on price, which is the smaller half of what it is worth:
-    // Perfects chain into a STREAK, the streak pays bonus XP, and it grows the
-    // longer it runs. That is a reason to aim gold on every cast rather than a
-    // footnote about this one paying a bit better.
     text: 'Now *Cast*, and watch the needle. Stopping it in the *gold* is a Perfect. String those together and the streak pays bonus XP, more of it the longer you keep it going. The *green* still catches.',
     until: 'catch',
+    holdCast: true,
     target: 'cast',
   },
   {
-    ...D,
-    // ARRIVES AFTER THE FISH DOES. It used to fire the instant the catch
-    // registered, over the top of the fish still flying into the hold — so the
-    // line "it sits in the hold" was spoken while the thing it described had
-    // not visibly got there yet. See `afterMs`.
+    ...K,
     text: 'There’s your first. Watch it drop into the *hold*, where your catch sits until you sell it.',
     until: 'next',
+    holdCast: true,
     afterMs: 900,
-    holdCast: true,
   },
   {
-    ...D,
-    // WHY CATCHING IS WORTH DOING BEYOND THE COIN. Nothing in the tour said
-    // that fish pay XP, that XP is the bar along the top, or that the bar is
-    // what opens the tackle shop's better half. A captain who does not know
-    // levelling exists has no reason to prefer a good cast to a lucky one.
-    text: 'Every fish pays *XP* too. That is the bar along the top: fill it and you level up.',
+    ...K,
+    // MERGED. The XP bar and what levels buy were two beats saying one thing:
+    // keep fishing and the game opens up. One is enough, at the moment the bar
+    // has just moved for the first time.
+    text: 'Every fish pays *XP* too. Fill the bar along the top and you level up, and levels open better rods, reels and hooks.',
     until: 'next',
+    holdCast: true,
+    // THE BAR, not the disc. The sentence is about the thing that just moved;
+    // the disc behind it gets its own cue the first time a rank is actually
+    // gained. See sea/SeaCue.
     target: 'level',
-    holdCast: true,
   },
+  // ── AND WHAT IT IS FOR ────────────────────────────────────────────────
   {
     ...D,
-    text: 'Levels open better rods, reels and hooks, and every one of them makes the next fish easier. That is the whole climb.',
-    until: 'next',
-    holdCast: true,
-  },
-
-  // ── AND WHAT IT IS WORTH ──────────────────────────────────────────────
-  //
-  // The whole loop, closed, before anything else is mentioned. A captain who
-  // has caught a fish and sold it has done the thing the game is; every other
-  // building on the chart is a variation on it, and none of them can be
-  // explained to somebody who has not.
-  {
-    ...D,
-    text: 'A fish in the hold is worth nothing. Take her home to the *Mainland*, where the market pays full price.',
+    text: 'A fish in the hold is worth nothing. Take her home to the *Mainland* and I will show you what it is worth.',
     until: 'moor',
     at: 'mainland',
     path: 'mainland',
     holdCast: true,
   },
   {
-    ...K,
-    text: 'Tie up and go *ashore*.',
+    ...D,
+    text: 'Tie up and go ashore.',
     until: 'ashore',
     at: 'mainland',
     holdCast: true,
   },
   {
-    ...K,
+    ...D,
     text: 'The *Market*. That’s where the hold turns into coin.',
     until: 'sold',
     target: 'market',
+    holdCast: true,
   },
   {
     ...D,
-    text: 'That’s the whole trade, Captain. Catch, sell, buy better tackle, catch more.',
-    until: 'next',
-  },
-
-  // ── AND WHAT ELSE IS OUT THERE ────────────────────────────────────────
-  {
-    ...D,
-    text: 'Now have a look around. Every island out here is somewhere you can tie up.',
-    until: 'next',
-  },
-  {
-    ...K,
-    text: 'The *Homestead* is yours. It isn’t much yet. It gets better.',
-    until: 'look',
-    at: 'home',
-  },
-  {
-    ...D,
-    text: 'The *Shipyard*. Your rack, your loadout, and every upgrade you’ll ever buy her.',
-    until: 'look',
-    at: 'shipyard',
-  },
-  {
-    ...K,
-    text: 'The *Tally House* posts the day’s orders. Fish somebody wants, and what they’ll pay.',
-    until: 'look',
-    at: 'trawl_docks',
-  },
-  {
-    ...K,
-    text: 'And the *Crew Hall*, up north. You’ll want hands aboard before long.',
-    until: 'look',
-    at: 'crew_hall',
-  },
-  // ── AND THE ROW ALONG THE TOP ─────────────────────────────────────────
-  //
-  // Named ONE AT A TIME, with the real disc lit under the card. A single beat
-  // saying "there are some buttons up there" is a beat nobody can act on: four
-  // marks in a row, at twenty-six pixels on a phone, are four unlabelled
-  // circles until something says which is which.
-  //
-  // It sits here, after the flyover, because that stretch already holds the rod
-  // stowed (see holdCast) and the row is hidden on a phone while the rod is
-  // out. Teaching a control that is not on screen is teaching nothing.
-  {
-    ...K,
-    text: 'One more thing, Captain. That row along the top of the chart is the rest of the game, and every one of them opens where you are floating.',
-    until: 'next',
-  },
-  {
-    ...D,
-    text: 'The *pennant* is your story. Where Finn’s business has got to, and who else out here is worth knowing.',
-    until: 'next',
-    target: 'hud-journey',
-  },
-  {
-    ...D,
-    text: 'The *rod* beside it is your fishing level. What every rank has bought you, and where your renown goes when you have some.',
-    until: 'next',
-    target: 'hud-skill',
-  },
-  {
-    ...K,
-    text: 'The *chart* is the whole sea at a glance. Everything you have sailed is on it, and nothing you have not.',
-    until: 'next',
-    target: 'chart',
-  },
-  {
-    ...K,
-    text: 'And the *book* is every fish in these waters, with the ones you have landed filled in. The rest are blank until you catch them.',
-    until: 'next',
-    target: 'hud-almanac',
-  },
-  // ── AND THE PEOPLE ON IT ──────────────────────────────────────────────
-  //
-  // Said LAST, and said at all because nothing else in the game does. The
-  // regulars are the one system a captain can sail past for a week without
-  // discovering: the boats are scenery until you learn that hailing one is a
-  // thing, and the rapport behind them only starts paying once you have talked
-  // to somebody more than once.
-  //
-  // It is also the other half of what the cast beat does. That beat stops the
-  // helm offering to hail anyone, so the tour has quietly taught them that
-  // people are not something you interact with. This is where that is taken
-  // back.
-  {
-    ...K,
-    text: 'And you’re not the only one out here. *Hail* any boat you pass, and keep passing them.',
-    until: 'next',
-  },
-  {
-    ...K,
-    text: 'Some buy your catch on the spot. Some just like the company, and they warm to you the more you stop.',
-    until: 'next',
-  },
-  {
-    ...D,
-    text: 'That’s the sea, Captain. She’s yours to sail.',
+    // THE LAST WORD IS A DOOR, NOT A SUMMARY.
+    //
+    // This used to be beat ten of twenty-four, and the fourteen after it named
+    // four islands the captain could not use and four discs they had no reason
+    // to press. Every one of those is a cue now, fired where the thing is —
+    // see sea/SeaCue and sea/SeaLandfallHint.
+    text: 'That’s the whole trade, Captain. Catch, sell, buy better tackle, go further out. The rest you will find on your own, and I will be here when you do.',
     until: 'next',
   },
 ]
-
 /**
  * ── THE SECOND ARRIVAL ──────────────────────────────────────────────────────
  *
@@ -380,79 +242,12 @@ export const GATE_TOUR: Beat[] = [
   },
   {
     ...D,
-    // FIRST, because nothing else up here works without her. A captain who
-    // learns the Charterhouse before the Gunwharf books a voyage they have no
-    // hull to sail.
-    text: 'The *Gunwharf*. Your warship sits there. Tie up and take her out, and your fishing boat waits at the quay till you are back.',
+    // FIRST AND ALMOST ALONE, because nothing up here happens without her. The
+    // other six islands introduce themselves when you tie up at them.
+    text: 'The *Gunwharf*. Your warship sits there. Take her out before you go north, and your fishing boat waits at the quay till you are back.',
     until: 'look',
     at: 'gunwharf',
   },
-  {
-    ...K,
-    text: 'The *Crew Hall*. Sign hands on, drill them, bunk them. Nothing out here sails empty.',
-    until: 'look',
-    at: 'crew_hall',
-  },
-  {
-    ...K,
-    text: 'The *Charterhouse* posts voyages. Your crew sail those without you and come back paid, whether you are aboard or ashore.',
-    until: 'look',
-    at: 'charterhouse',
-  },
-  {
-    ...K,
-    text: 'The *Posting House* has the day’s hunts, and pays in gems. The *Forge* melts two relics into one. You will find the rest.',
-    until: 'look',
-    at: 'posting_house',
-  },
-  // ── AND THE MARK THAT SAYS AN ISLAND HAS SOMETHING FOR YOU ─────────────
-  //
-  // Said out loud because the alternative is a captain learning it by
-  // accident weeks later. It is one glyph covering five islands and it is the
-  // only thing on this water that tells you a job finished while you were
-  // somewhere else.
-  {
-    ...K,
-    text: 'When an island has something waiting on you, it flies a *gold mark*. That is the whole of the notice you get, and it is enough.',
-    until: 'next',
-  },
-  // ── THE ROW UP HERE IS A DIFFERENT ROW ────────────────────────────────
-  //
-  // Two of these discs are the SAME SLOT the fishing side taught, holding
-  // something else: the pennant is the campaign rather than the Salt Road, and
-  // the spine disc is Navigation rather than Fishing. That is worth saying out
-  // loud. A captain who learned "the pennant is Finn" and finds a chapter list
-  // behind it has been taught a thing that is now wrong.
-  {
-    ...D,
-    text: 'The row along the top changed with the water. Same *pennant*, different story: up here it is the campaign, and the one stop it wants next.',
-    until: 'next',
-    target: 'hud-journey',
-  },
-  {
-    ...D,
-    text: 'The *wheel* beside it is your Navigation level. That is the one that counts out here, and it has its own renown to spend.',
-    until: 'next',
-    target: 'hud-skill',
-  },
-  {
-    ...K,
-    text: 'The *crew* disc: who is aboard, who is out on a voyage, and who is asleep in the hall. Seat your raid party there before you go north.',
-    until: 'next',
-    target: 'hud-crew',
-  },
-  {
-    ...K,
-    text: 'And the *slots* are your battle loadout. Six mounts on that hull, and what you bolt into them is half of any fight.',
-    until: 'next',
-    target: 'hud-loadout',
-  },
-  // ── THE GATE ──────────────────────────────────────────────────────────
-  //
-  // Its own beat, and the camera goes to it. It was one clause in a line about
-  // the campaign, which is the wrong weight for the only door between the two
-  // halves of the game: a captain has to be able to find it, and "north of
-  // here" on a chart this size is not a direction.
   {
     ...D,
     text: 'Now look north. That ring of light is the *Sea Gate*, and it is the only way out of this harbour.',
@@ -461,32 +256,12 @@ export const GATE_TOUR: Beat[] = [
   },
   {
     ...D,
-    text: 'Take your warship out of the Gunwharf first. She is the one that crosses, and your fishing boat stays tied up until you are home.',
-    until: 'next',
-  },
-  {
-    ...D,
-    text: 'Past it is the campaign. Real water, Captain, not a list. You sail up to a fight and take it on where you find it.',
-    until: 'next',
-  },
-  // ── THE FOG, WHICH IS THE ONE RULE THEY CANNOT GUESS ───────────────────
-  //
-  // Everything else up here can be worked out by sailing into it. This cannot:
-  // a captain who opens the chart, sees four chapters of blank paper and
-  // concludes the game has not loaded is a captain the tour failed.
-  {
-    ...D,
-    text: 'None of it is on your chart yet. That water fills in as you sail it and not one league before, so go and look.',
+    text: 'Past it is the campaign. Real water, not a list: you sail up to a fight and take it on where you find it. None of it is on your chart until you have sailed it, so go and look.',
     until: 'next',
   },
   {
     ...K,
-    text: 'Beat a thing out there and the *Wargate* remembers it. Step through and it puts you back on its water whenever you want another go.',
-    until: 'next',
-  },
-  {
-    ...D,
-    text: 'That is the whole of it. Take her out, Captain.',
+    text: 'The rest of this harbour introduces itself as you tie up at it. Take her out, Captain.',
     until: 'next',
   },
 ]

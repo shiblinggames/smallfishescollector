@@ -174,6 +174,7 @@ import FolkPanel from './FolkPanel'
 import SeaFirstVoyage from './SeaFirstVoyage'
 import SeaGateTour from './SeaGateTour'
 import SeaLandfallHint from './SeaLandfallHint'
+import SeaCue from './SeaCue'
 import { pendingPacts } from './pactActions'
 import { heldGolden } from '../fishing/actions'
 import { coastClip, coastline } from '@/lib/islandShape'
@@ -10079,6 +10080,44 @@ hullRef={hullRefFor(t.key)} />
         hasSeen={tour.gateSeen} startAt={tour.gateStep}
         inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam} />
       {!hudOff && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
+
+      {/* ── AND THE REST OF THE TEACHING, WHEN IT IS EARNED ──────────────
+          Everything the two tours used to list before the captain had touched
+          any of it. Each condition here is one the chart already computes for
+          its own reasons; SeaCue holds the copy, the order and the latch.
+
+          QUIET WHILE A TOUR IS SPEAKING. The first voyage owns the screen until
+          it is done, and the gate tour owns it while a captain is being shown
+          the anchorage — a cue over either is two cards at once. */}
+      {!hudOff && (
+        <SeaCue
+          seen={tour.hints}
+          quiet={!tour.seen || (inAnchorage && !tour.gateSeen)}
+          live={{
+            // A rank gained. The bar has just moved, so the disc that explains
+            // what it bought is the only thing worth saying.
+            level: !inAnchorage && level >= 2,
+            // A few in the book. Not the first fish — that beat is in the tour
+            // and the almanac means nothing with one row filled in.
+            almanac: !inAnchorage && caughtTick >= 4,
+            // Genuinely somewhere. Far enough out that "where am I" is a real
+            // question rather than a thing to say in the harbour.
+            chart: !inAnchorage && Math.hypot(pos.current.x, pos.current.y) > 7000,
+            // Somebody in reach. The tour used to promise this three beats
+            // before it could happen; here it is the boat in front of you.
+            hail: !!nearTrader || nearFinn,
+            // Finn has business. The pennant is his before it is anything else.
+            journey: !inAnchorage && finn?.questReady === true,
+            // ── AND THE EXPEDITION SIDE ─────────────────────────────
+            crew: inAnchorage,
+            loadout: inAnchorage,
+            nav: inAnchorage,
+            // An island actually flying one. Said at the moment there is a mark
+            // on screen to look at, which is the only moment it means anything.
+            call: trawlsReady > 0 || ordersReady || crewWaiting || voyageBack || bountyReady,
+            wargate: nearGate,
+          }} />
+      )}
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.
           It asked you to confirm before sailing out of water you had the rod

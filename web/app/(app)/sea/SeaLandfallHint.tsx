@@ -2,10 +2,19 @@
 
 // ONE LINE, THE FIRST TIME YOU TIE UP SOMEWHERE.
 //
-// The arrival tour teaches the five things you cannot sail without. This is the
-// rest of it, delivered where it is usable: a captain moored at the Trawl Docks
+// The arrival tour teaches the things you cannot sail without. This is the rest
+// of it, delivered where it is usable: a captain moored at the Trawl Docks
 // needs one sentence about trawls, and the same sentence at minute zero is
 // about a building they have never seen, half a chart away.
+//
+// ── AND THE TOURS CAME BACK TO THIS ─────────────────────────────────────────
+//
+// The rule above is the oldest one here and both tours had drifted a long way
+// off it: the first voyage grew to twenty-four beats, ten of which named four
+// islands and four HUD discs that a captain on their first minute has no reason
+// to press, and the anchorage tour opened at sixteen doing the same thing for
+// seven more islands. They are ten and five now, and every island cut out of
+// them is a row in this table instead. See lib/seaOnboarding.
 //
 // Fires on APPROACH rather than on entering the building, so it explains what
 // the place is BEFORE the decision to go in — which is the question a new
@@ -33,6 +42,35 @@ const HINTS: Record<string, { portrait: string; speaker: string; text: string }>
   home: {
     ...GUIDES.doby,
     text: 'Your *Homestead*. Build it up, furnish the inside, and put up a portal so you can come home from anywhere on the water.',
+  },
+  // ── THE ANCHORAGE'S SEVEN ─────────────────────────────────────────────
+  //
+  // All of these were `look` beats in the gate tour, flown past in a row before
+  // the captain had a warship to use any of them with. A captain who has just
+  // tied up at the Crew Hall has exactly one question, and this is the answer
+  // to it.
+  //
+  // The Gunwharf is NOT here: it is the one island the gate tour still names,
+  // because nothing else up there works until the warship is out.
+  crew_hall: {
+    ...GUIDES.kat,
+    text: 'The *Crew Hall*. Sign hands on, drill them, and bunk them to train. Nothing out here sails empty.',
+  },
+  charterhouse: {
+    ...GUIDES.kat,
+    text: 'The *Charterhouse* posts voyages. Your crew sail those without you and come back paid, whether you are aboard or ashore.',
+  },
+  posting_house: {
+    ...GUIDES.kat,
+    text: 'The *Posting House*. The day’s hunts, posted every morning and paid in gems.',
+  },
+  forge_isle: {
+    ...GUIDES.doby,
+    text: 'The *Forge*. Two relics in, one out, carrying both sets of effects. It opens once you have won it out of the Locker.',
+  },
+  trawl_fleet: {
+    ...GUIDES.kat,
+    text: 'The *Trawl Harbour*. Send a crew out to fish a water on their own, and come back for them when the haul is in.',
   },
 }
 
