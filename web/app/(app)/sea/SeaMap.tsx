@@ -4504,7 +4504,7 @@ export default function SeaMap({
     bossReadRef.current = true
     // Both halves of the wait, started together: the code and the answer.
     void import('./BossCardSheet')
-    void import('@/app/(app)/expeditions/RaidsSection')
+    void import('@/app/(app)/expeditions/BossFightModal')
     bossCardState().then(
       r => { if (!('error' in r)) setBossData(r) },
       // A FAILURE IS NOT WORTH SAYING HERE. Nothing has been asked for yet; the

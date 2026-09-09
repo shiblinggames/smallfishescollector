@@ -30,7 +30,7 @@ import { bossCardState, type BossCardState } from './bossCardActions'
 import type { RaidNodeView } from '@/lib/raidMap'
 
 const BossFightModal = dynamic(
-  () => import('@/app/(app)/expeditions/RaidsSection').then(m => m.BossFightModal),
+  () => import('@/app/(app)/expeditions/BossFightModal').then(m => m.BossFightModal),
   { ssr: false },
 )
 
