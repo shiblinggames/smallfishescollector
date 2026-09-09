@@ -326,6 +326,24 @@ interface Props {
    * This is that one number. Everything else about focus mode is unchanged.
    */
   boxed?: boolean
+  /**
+   * ── ONLY THE TILES ─────────────────────────────────────────────────────
+   *
+   * The ship tab is four things stacked: the stats hero, the hull upgrade, the
+   * Refits/Armament/Look strip, and the tiles that strip chooses between. That
+   * is the right page and the wrong PANEL — the sea's ship modal draws its own
+   * stats, its own upgrade and its own three painted doors in the language the
+   * rest of the chart uses, and mounting this whole screen inside it put a
+   * second header, a second upgrade and a second tab bar under the first.
+   *
+   * `bare` renders the tiles and nothing above them. The tiles keep every sheet
+   * they open, which is the reason to mount this at all rather than rewrite six
+   * purchase flows.
+   */
+  bare?: boolean
+  /** Which of the three the host has chosen. Controlled, so the panel's cards
+   *  and this component cannot disagree about what is showing. */
+  shipSection?: 'refits' | 'armament' | 'appearance'
   /** WHERE THE BACK ARROW GOES, when this screen is not on a route. The chart
    *  opens the ship and the forge over the water now (see sea/ShipSheet), and
    *  there a link to /expeditions would sail you off the sea to get out of a
@@ -570,6 +588,8 @@ export default function ShipHero({
   hasSixthMount = false,
   focus,
   boxed = false,
+  bare = false,
+  shipSection,
   onBack,
   isAdmin = false,
   navRenownAlloc = null,
@@ -777,7 +797,10 @@ export default function ShipHero({
   // Ship screen sub-tabs. The seven refits used to sit in one flat 2-column
   // grid where the HULL, the upgrade the whole screen exists for, was a tile
   // like any other. Hull is now its own centred CTA above these.
-  const [shipTab, setShipTab] = useState<'refits' | 'armament' | 'appearance'>('refits')
+  const [shipTab, setShipTab] = useState<'refits' | 'armament' | 'appearance'>(shipSection ?? 'refits')
+  // A prop feeding state needs a resync: the panel swaps sections while this
+  // component stays mounted, and a useState initialiser only runs once.
+  useEffect(() => { if (shipSection) setShipTab(shipSection) }, [shipSection])
   const [loadoutTab, setLoadoutTab] = useState<'loadout' | 'ship' | 'forge'>(focus === 'items' ? 'loadout' : focus === 'forge' ? 'forge' : focus === 'ship' ? 'ship' : 'loadout')
 
   // Ship name state
@@ -2273,6 +2296,10 @@ export default function ShipHero({
                 }
                 return (
                   <>
+                    {/* NOT IN A PANEL. See `bare`: the sea's ship modal draws
+                        the stats, the upgrade and the three doors itself, and
+                        this whole block would be a second set of all three. */}
+                    {!bare && <>
                     {/* ── THE SHIP, AND WHAT YOU HAVE DONE TO IT ──────────────
                         Three things, in the order they matter:
 
@@ -2409,6 +2436,8 @@ export default function ShipHero({
                         )
                       })}
                     </div>
+
+                    </>}
 
                     <div className="ship-tile-grid" style={{
                       marginBottom: '1.4rem',
