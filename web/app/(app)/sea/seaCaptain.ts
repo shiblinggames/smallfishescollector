@@ -34,8 +34,6 @@ import {
 /** Everything about how one captain looks. Flat and primitive on purpose: it is
  *  compared field by field to decide whether a captain needs rebuilding, and an
  *  object in here would make every frame look like a change of outfit. */
-let soakTex: Texture | null = null
-
 export type CaptainLook = {
   characterColor: string
   boatId: string | null
@@ -99,41 +97,69 @@ const HOOK_AT: Record<Frame, Placement> = {
 /**
  * ── THE WATER CLOSING OVER HER FOOT ─────────────────────────────────────────
  *
- * A vertical band: nothing at the top, the sea at the bottom.
- *
  * Every rock, wreck, rig and buoy on this chart is drawn as TWO copies — a wet
  * half and a dry half, split on a waterline placed by eye. Boats were drawn as
  * one, with a hard cut at the bottom of the hull, which is why they read as
- * gliding ON the water rather than sailing THROUGH it. The bottom of the boat
- * was on top of the sea at all times.
+ * gliding ON the water rather than sailing THROUGH it.
  *
- * They cannot be split the same way, because the difference is in the ART: a
- * rock's plate is painted down past the water and the mark bakes the part below
- * the line separately, while a hull's plate is CROPPED at the water and has no
- * underwater half to find. So instead of splitting her, the water is brought up
- * over her — a soft band laid on the bottom of the hull, so the edge of the
- * boat stops being an edge.
+ * They cannot be split the same way, and the reason is in the ART: a rock's
+ * plate is painted down past the water so the mark can bake the part below the
+ * line, while a hull's plate is CROPPED at the water and has no underwater half
+ * to find. So instead of splitting her, the water is brought up over her.
  *
- * White, so the caller can tint it to whatever water she is actually in.
+ * ── AND IT IS THE HULL'S OWN SHAPE ─────────────────────────────────────────
+ *
+ * The first cut was a plain gradient rectangle laid across the bottom of the
+ * boat, and it read as exactly that: a flat line ruled under her, with the
+ * water standing in mid-air either side of a hull that curves away from it.
+ *
+ * This takes the hull's OWN alpha and keeps it, replacing only the colour. Draw
+ * the plate, then fill through it with `source-in` and a vertical gradient: what
+ * comes out is hull-shaped, transparent up top and solid along the keel, so the
+ * water meets the boat on the boat's own curve.
+ *
+ * White, so the caller can tint it to whatever water she is actually in. Cached
+ * per image and size, like every other bake here — a pose change re-cuts it and
+ * coming back to a pose is a lookup.
  */
-function soakTexture(PIXI: typeof import('pixi.js')): Texture {
-  if (soakTex) return soakTex
-  const H = 64
+const soakPlates = new Map<string, Texture>()
+
+function soakPlate(
+  PIXI: typeof import('pixi.js'),
+  img: CanvasImageSource,
+  key: string,
+  w: number, h: number,
+): Texture | null {
+  if (w < 2 || h < 2) return null
+  const id = `${key}|${Math.round(w)}x${Math.round(h)}`
+  const hit = soakPlates.get(id)
+  if (hit) return hit
+
   const c = document.createElement('canvas')
-  c.width = 4
-  c.height = H
-  const g = c.getContext('2d')!
-  const grad = g.createLinearGradient(0, 0, 0, H)
-  // Slow at the top and quick at the bottom: water does not creep evenly up a
-  // hull, it takes the last inch all at once.
-  grad.addColorStop(0.0, 'rgba(255,255,255,0)')
-  grad.addColorStop(0.45, 'rgba(255,255,255,0.16)')
-  grad.addColorStop(0.78, 'rgba(255,255,255,0.46)')
-  grad.addColorStop(1.0, 'rgba(255,255,255,0.72)')
+  c.width = Math.max(2, Math.round(w))
+  c.height = Math.max(2, Math.round(h))
+  const g = c.getContext('2d')
+  if (!g) return null
+  g.drawImage(img, 0, 0, c.width, c.height)
+
+  // KEEP THE ALPHA, REPLACE THE PAINT. source-in draws the gradient only where
+  // the hull already is, which is the whole trick: the shape comes from the
+  // art and the fade comes from here.
+  g.globalCompositeOperation = 'source-in'
+  const grad = g.createLinearGradient(0, 0, 0, c.height)
+  // Nothing for the top two thirds — she is not awash — then slow, then quick.
+  // Water does not creep evenly up a hull; it takes the last inch all at once.
+  grad.addColorStop(0.00, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.62, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.80, 'rgba(255,255,255,0.22)')
+  grad.addColorStop(0.93, 'rgba(255,255,255,0.58)')
+  grad.addColorStop(1.00, 'rgba(255,255,255,0.82)')
   g.fillStyle = grad
-  g.fillRect(0, 0, 4, H)
-  soakTex = PIXI.Texture.from(c)
-  return soakTex
+  g.fillRect(0, 0, c.width, c.height)
+
+  const t = PIXI.Texture.from(c)
+  soakPlates.set(id, t)
+  return t
 }
 
 export type Captain = {
@@ -392,35 +418,51 @@ export async function makeCaptain(
 
   // ── AND THE WATER COMES UP HER SIDE ───────────────────────────────────────
   //
-  // See soakTexture. Added last so it lies over the hull rather than under it,
-  // and sized off the hull's own box so a cosmetic of a different shape gets
-  // the band its own waterline wants.
-  const soak: Sprite = new PIXI.Sprite(soakTexture(PIXI))
-  soak.anchor.set(0.5, 1)
+  // See soakPlate. Added last so it lies over the hull rather than under it,
+  // and cut from the hull's own alpha so the water meets the boat on the boat's
+  // own curve rather than on a ruled line.
+  const soak: Sprite = new PIXI.Sprite()
   soak.visible = false
   skiff.view.addChild(soak)
 
-  /** The band at rest, and how much of it the heave is worth, both as a share
-   *  of the hull's height. She settles into a trough and rides out on a crest,
-   *  which is the whole of the difference between floating and gliding. */
-  const SOAK_REST = 0.15
-  const SOAK_SWING = 0.075
+  /** How much the water shows at rest, and how much the heave is worth on top.
+   *  She settles into a trough and rides out on a crest, which is the whole of
+   *  the difference between floating and gliding. */
+  const SOAK_REST = 0.78
+  const SOAK_SWING = 0.34
 
-  function placeSoak(bob: number) {
+  /** Re-cut for the pose, like the shadow and the mirror: the hull is a
+   *  different shape at a different angle in the cast, and water standing
+   *  against last pose's keel is worse than none. */
+  function cutSoak() {
     const part: Sprite | undefined = skiff.parts.boat
-    if (!part || !part.texture) { soak.visible = false; return }
+    const pose = part ? skiff.poseOf('boat') : null
+    const img = pose?.image ?? imageFor(char.rest)
+    const key = pose?.key ?? char.rest
+    if (!img || !part || !part.texture) { soak.visible = false; return }
     const w = part.texture.width * Math.abs(part.scale.x)
     const h = part.texture.height * Math.abs(part.scale.y)
-    const water = part.y + (1 - part.anchor.y) * h
-    // Down in a trough, up on a crest. Clamped, because a squall's heave is
-    // bigger than the swell this was measured against and a band taller than
-    // the hull would swallow her.
-    const k = Math.max(-1, Math.min(1, -bob / 5.5))
+    const plate = soakPlate(PIXI, img, `soak|${key}`, w, h)
+    if (!plate) { soak.visible = false; return }
     soak.visible = true
-    soak.width = w * 1.02
-    soak.height = h * (SOAK_REST + k * SOAK_SWING)
-    soak.position.set(part.x, water)
+    soak.texture = plate
+    // Sat exactly on top of the hull, in its own anchor, so the shape lines up
+    // pixel for pixel with the boat under it.
+    soak.anchor.set(part.anchor.x, part.anchor.y)
+    soak.scale.set(1, 1)
+    soak.position.set(part.x, part.y)
+    soak.rotation = part.rotation
   }
+
+  function placeSoak(bob: number) {
+    // THE SHAPE IS BAKED; THE HEAVE IS ALPHA. The band cannot grow taller
+    // without stretching the hull's own outline, which would slide the water
+    // off the curve it is supposed to be meeting. So she shows more of it in a
+    // trough and less on a crest instead — same reading, and it costs nothing.
+    const k = Math.max(-1, Math.min(1, -bob / 5.5))
+    soak.alpha = Math.max(0, SOAK_REST + k * SOAK_SWING)
+  }
+  cutSoak()
   placeSoak(0)
 
   // ── WHAT THEY GLOW WITH ───────────────────────────────────────────────────
@@ -450,9 +492,11 @@ export async function makeCaptain(
   // every aura is re-pointed when the pose changes. Cheap on a pose it has seen
   // before: the bakes and the outline are cached per image.
   skiff.onFrame = () => {
-    // The hull moved, so what it throws AND what it throws back moved with it.
+    // The hull moved, so what it throws, what it throws back and the water
+    // standing against it all moved with it.
     alignShadow()
     alignMirror()
+    cutSoak()
     for (const w of worn) {
       // A PART THAT IS NOT DRAWN DOES NOT GLOW. The hook is hidden on the wait
       // pose because it is in the WATER, and an aura that is not told simply
@@ -635,15 +679,19 @@ export async function makeShip(
   // cropped at the water, so there is no wet half to draw and the bottom edge
   // was a hard cut sitting on the surface. A ship of the line is heavier and
   // sits deeper, so she takes a little more of it.
-  const soak: Sprite = new PIXI.Sprite(soakTexture(PIXI))
-  soak.anchor.set(0.5, 1)
+  const soakT = img ? soakPlate(PIXI, img, `soak|${ship.url}`, W, h) : null
+  const soak: Sprite = new PIXI.Sprite(soakT ?? undefined)
+  soak.visible = !!soakT
+  soak.anchor.set(0.5)
+  // The same mirror the hull takes, or the water stands against the wrong side
+  // of a hull that is drawn facing the other way.
+  soak.scale.set(ship.flip ? -1 : 1, 1)
   view.addChild(soak)
 
   function placeSoak(bob: number) {
     const k = Math.max(-1, Math.min(1, -bob / 5.5))
-    soak.width = W * 1.02
-    soak.height = h * (0.18 + k * 0.075)
-    soak.position.set(0, h / 2)
+    // A ship of the line is heavier and sits deeper, so she carries more of it.
+    soak.alpha = Math.max(0, 0.88 + k * 0.3)
   }
   placeSoak(0)
 
