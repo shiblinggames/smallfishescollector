@@ -181,6 +181,7 @@ import { coastClip, coastline } from '@/lib/islandShape'
 // for why it moved and why the move is a pure one.
 import { GROUND, ISLAND_LIFT, bakeIsland, requestGround } from './islandArt'
 import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './SeaIslandsGPU'
+import { type GlowPatch } from './seaGlow'
 import { type CaptainLook } from './seaCaptain'
 import { type WakeKind } from './seaWake'
 import { type BerthSpec } from './seaBerth'
@@ -2379,6 +2380,9 @@ export default function SeaMap({
   /** The GPU island layer's camera, filled in when it mounts. Null whenever the
    *  flag is off, which is why every call below is optional. */
   const gpuRef = useRef<GpuHandle | null>(null)
+  /** The glow list, for the loop's first hand-over — see where it is pushed. */
+  const glowRef = useRef<GlowPatch[]>([])
+  const glowSent = useRef(false)
   /** Every piece of land on the chart, ports and isles alike, in one list.
    *  Static: the ids, radii and positions are all chart data. */
   /**
@@ -3858,6 +3862,89 @@ export default function SeaMap({
   const [nearDig, setNearDig] = useState<DigSite | null>(null)
   /** Close enough that the water should look wrong. */
   const [hintDig, setHintDig] = useState<DigSite | null>(null)
+
+  /**
+   * ── EVERY PATCH OF SEA THAT IS WORTH SOMETHING, IN ONE LIST ───────────
+   *
+   * Hotspots and the dig hint, described in the terms the renderer takes (see
+   * seaGlow) rather than in the terms the tables hold. This is where the two
+   * systems meet and it is the only place they do: the layer knows nothing
+   * about fish or buried chests, and the tables know nothing about sprites.
+   *
+   * REBUILT ON CHANGE, NOT PER FRAME. The spot list turns over on a fifteen
+   * second timer and the dig hint changes when the boat comes within sight of
+   * one, so this is a handful of rebuilds a minute against a layer that redraws
+   * sixty times a second off what it was last given.
+   */
+  const glowPatches = useMemo<GlowPatch[]>(() => {
+    const out: GlowPatch[] = []
+    for (const h of spots) {
+      const g = TIER_GLOW[h.tier]
+      out.push({
+        key: h.key,
+        x: h.x, y: h.y, r: h.r,
+        // The tables hold '#rrggbb' because that is what CSS wanted; a tint is
+        // a number. Parsed here rather than in the layer, which has no business
+        // knowing the palette is written down as text.
+        color: parseInt(HOTSPOT_DEFS[h.kind].color.slice(1), 16),
+        fill: g.fill,
+        rim: g.rim,
+        // The three CSS pulses were 9s, 7s and 5s with a widening swell. Kept
+        // to the frame: a captain who has watched these for a month should not
+        // notice the day they moved onto the canvas.
+        beat: 11 - h.tier * 2,
+        swell: 0.01 + h.tier * 0.03,
+      })
+    }
+    if (hintDig) {
+      const done = dug.has(hintDig.id)
+      const over = nearDig?.id === hintDig.id
+      out.push({
+        key: `dig:${hintDig.id}`,
+        x: hintDig.x, y: hintDig.y, r: DIG_HINT_RANGE,
+        // Warmer and paler than the water round it, as though the bottom were
+        // closer here. Grey and nearly gone once the hole has been dug: a
+        // worked site keeps a scar, not an invitation.
+        color: done ? 0x788c96 : over ? 0xd6c48e : 0xc4ba96,
+        fill: done ? 0.10 : over ? 0.20 : 0.10,
+        // NO RIM, ever. A dig hint is a suspicion about the seabed and an edge
+        // on it would be the game drawing a circle round the answer.
+        rim: 0,
+        // And a worked one does not breathe. See GlowPatch.beat.
+        beat: done ? 0 : over ? 3.2 : 5,
+        swell: done ? 0 : 0.02,
+      })
+    }
+    return out
+  }, [spots, hintDig, nearDig, dug])
+  glowRef.current = glowPatches
+  // PUSHED FROM AN EFFECT, not the loop: the list is rebuilt by a memo and the
+  // layer only needs telling when it actually changes. The loop's own line is
+  // the first hand-over, for the frames before the handle exists.
+  useEffect(() => { gpuRef.current?.glow(glowPatches) }, [glowPatches])
+
+  /**
+   * ── AND THE TWO THINGS THE CHART SAYS OUT LOUD ────────────────────────
+   *
+   * The heading after a clear, and the way-home column while it charges. Both
+   * are state that flips a handful of times a session, so both are pushed on
+   * change rather than every frame — the layer holds them and animates itself.
+   *
+   * The heading carries its KEY across, because a second heading to a stop you
+   * were already being sent to has to restart the run rather than be ignored as
+   * "the same one".
+   */
+  useEffect(() => {
+    gpuRef.current?.heading(heading && !fightOn
+      ? { key: heading.key, from: heading.from, to: heading.to }
+      : null)
+  }, [heading, fightOn])
+  useEffect(() => {
+    const t = PORTAL_TIERS.find(pt => pt.tier === portalTier) ?? PORTAL_TIERS[0]
+    gpuRef.current?.beam(portalCharge && !inAnchorage
+      ? { x: PORTAL.x, y: PORTAL.y, r: PORTAL.r, color: parseInt(t.accent.slice(1), 16) }
+      : null)
+  }, [portalCharge, inAnchorage, portalTier])
 
   /** Whatever the last find turned up: a fragment, a bearing, or a haul. */
   const [find, setFind] = useState<
@@ -7217,6 +7304,11 @@ export default function SeaMap({
         // the handle is null for the first frames, binding is one assignment,
         // and a bind that is missed is a chart with no fog on it at all.
         gpuRef.current.fog(xfogAlpha.current)
+        // THE GLOW LIST, on change only. Unlike the two above this ALLOCATES on
+        // the way in, so it is pushed from an effect rather than from here —
+        // this line is only the first hand-over, for the frames before that
+        // effect has a handle to push to.
+        if (!glowSent.current) { glowSent.current = true; gpuRef.current.glow(glowRef.current) }
       }
       // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
       // own tile so the offsets stay small however far you sail, and the two
@@ -7957,8 +8049,9 @@ export default function SeaMap({
         {!inAnchorage && <PortalName tier={portalTier} stone={portalStone} />}
         {/* The charge stands on the RING, not the hull: the painted band is
             the cylinder's footprint, so the ring itself is what flares. */}
+        {/* ON THE CANVAS NOW (see seaGuideFx). This is the ?gpu=0 fallback. */}
         <AnimatePresence>
-          {portalCharge && !inAnchorage && <PortalBeam tier={portalTier} />}
+          {!GPU_ISLANDS && portalCharge && !inAnchorage && <PortalBeam tier={portalTier} />}
         </AnimatePresence>
         {/* Your ship, lying in the Gunwharf's berth until you come for her.
             Only from inside the harbour she is in, like the sign. */}
@@ -7966,7 +8059,7 @@ export default function SeaMap({
 
         {/* WHERE SOMETHING IS BURIED. Only ever the patch you are already
             standing near, and never on the minimap — see lib/seaDigs. */}
-        {hintDig && <DigWater site={hintDig} over={nearDig?.id === hintDig.id} done={dug.has(hintDig.id)} />}
+        {!GPU_ISLANDS && hintDig && <DigWater site={hintDig} over={nearDig?.id === hintDig.id} done={dug.has(hintDig.id)} />}
 
         {/* OTHER PEOPLE. Drawn with the SAME composite as your own boat, so a
             friend arrives with their actual hull, hat, rod, reel, hook and pet
@@ -8030,13 +8123,15 @@ export default function SeaMap({
         {/* THE WAY ON. In the world layer, so it lies on the water and moves
             with it rather than floating over the glass — and under the marks,
             because it is a line pointing AT something, not a thing itself. */}
-        {heading && !fightOn && (
+        {!GPU_ISLANDS && heading && !fightOn && (
           <NextHeading key={heading.key} from={heading.from} to={heading.to} />
         )}
 
         {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
-            water — a patch of it that is worth being in. */}
-        {spots.map(h => <HotspotRing key={h.key} h={h} />)}
+            water — a patch of it that is worth being in.
+
+            ON THE CANVAS NOW (see seaGlow), so this is the ?gpu=0 fallback. */}
+        {!GPU_ISLANDS && spots.map(h => <HotspotRing key={h.key} h={h} />)}
 
         {/* WHAT BREAKS THE SURFACE. A flat list in absolute world coordinates
             now that the waters are bands — a ring has no box for an offset to

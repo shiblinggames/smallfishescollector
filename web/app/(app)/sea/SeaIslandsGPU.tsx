@@ -62,6 +62,8 @@ import { makePortalWell, type PortalWell, type PortalWellSpec } from './seaPorta
 import { WARGATE, WARGATE_REACH } from './raidWaters'
 import { makeTowns, type Towns, type GpuTown } from './seaTown'
 import { makeFog, type Fog } from './seaFog'
+import { makeGlow, type Glow, type GlowPatch } from './seaGlow'
+import { makeGuideFx, type GuideFx } from './seaGuideFx'
 import { makePath, type SeaPath } from './seaPath'
 import { BOATS } from '@/lib/boats'
 import type { Frame } from './skiffArt'
@@ -90,6 +92,19 @@ export type GpuHandle = {
    * passing the array is cheaper than an event per change and cannot go stale.
    */
   fog(alpha: Float32Array): void
+  /**
+   * THE PATCHES OF SEA THAT ARE WORTH SOMETHING — hotspots and dig hints.
+   *
+   * Pushed rather than bound, unlike the fog: this list changes on a fifteen
+   * second timer and when the boat comes within sight of a dig, not per frame,
+   * and it is rebuilt from tables the chart owns. See seaGlow.
+   */
+  glow(list: GlowPatch[]): void
+  /** A run of chevrons toward the campaign's next stop, or null to clear it.
+   *  The key restarts a run to a place you were already being sent. */
+  heading(h: { key: number; from: { x: number; y: number }; to: { x: number; y: number } } | null): void
+  /** The way-home column while it charges, or null. */
+  beam(b: { x: number; y: number; r: number; color: number } | null): void
   /** How much lantern the captain has bought, 0.34 to 1 — see lanternGlow.
    *  Its own call rather than a night() argument: the hour changes every frame
    *  and this changes when somebody buys something. */
@@ -665,6 +680,18 @@ export default function SeaIslandsGPU({
       //
       // In the WORLD rather than the screen, because fog is at a place. Sail
       // north and it stays where it was.
+      // ON THE WATER AND UNDER EVERYTHING THAT FLOATS. A hotspot is a
+      // property of the sea, so a hull crossing one passes in front of it —
+      // added before the wake and the boats, and well before the fog, which
+      // covers water you cannot see into at all.
+      const glow: Glow = makeGlow(PIXI)
+      world.addChildAt(glow.view, 1)
+      // OVER THE WATER AND THE HULLS BOTH. These are the chart SPEAKING —
+      // a heading and a charging portal — and neither is allowed to end up
+      // behind the boat it is talking to. Under the fog, because there is no
+      // point pointing into water nobody can see.
+      const guideFx: GuideFx = makeGuideFx(PIXI)
+      world.addChild(guideFx.view)
       const fog: Fog = makeFog(PIXI)
       world.addChild(fog.view)
 
@@ -1166,6 +1193,8 @@ export default function SeaIslandsGPU({
           a.screen.width / 2 + hullOff.current.x,
           a.screen.height / 2 + hullOff.current.y, t, dt)
         squalls.advance(camX, camY, halfW, halfH, dt)
+        glow.advance(camX, camY, halfW, halfH, t)
+        guideFx.advance(t, dt)
         fog.advance(camX, camY, halfW, halfH, t)
         // The sky. Needs the screen as well as the world, because half of it is
         // drawn in screen space — that is what the parallax IS.
@@ -1302,6 +1331,9 @@ export default function SeaIslandsGPU({
       handle.current = {
         lantern(glow) { lights.lantern(glow) },
         fog(alpha) { fog.bind(alpha) },
+        glow(list) { glow.set(list) },
+        heading(h) { guideFx.heading(h) },
+        beam(b) { guideFx.beam(b) },
 
         night(d, w) {
           dark = d
