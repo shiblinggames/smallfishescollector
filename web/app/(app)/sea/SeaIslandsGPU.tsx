@@ -37,6 +37,38 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { GROUND, islandLift, liftAt, grassTint, bakeIsland, requestGround, evictIslandsExcept } from './islandArt'
+
+/**
+ * ── THE RENDER-BUG BISECT ───────────────────────────────────────────────────
+ *
+ * `?hide=` further down turns off whole LAYERS. These two turn off the only
+ * two things that are written to a town's sprites after they are built, which
+ * is what you reach for once the layers are ruled out.
+ *
+ * A building on the canvas is placed once, at bake time, and never moves again.
+ * The only per-frame writes it sees are `visible`, from the cull, and `tint`,
+ * from the day/night pass. If a static sprite is misbehaving and no overlay is
+ * responsible, it is one of those two or it is the renderer itself — and these
+ * say which in one reload each.
+ *
+ *   /sea?nocull=1    the town cull never runs; every town stays visible
+ *   /sea?nonight=1   the day/night tint is never written to a building
+ *
+ * Diagnostics, not settings. Neither is in the UI and neither persists.
+ */
+const DIAG = {
+  nocull: false,
+  nonight: false,
+}
+if (typeof window !== 'undefined') {
+  try {
+    const q = new URLSearchParams(window.location.search)
+    DIAG.nocull = q.get('nocull') === '1'
+    DIAG.nonight = q.get('nonight') === '1'
+  } catch {
+    // A malformed query string must not cost anybody the chart.
+  }
+}
 import { makeGrass, makeGrassTexture, type Grass } from './seaGrass'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
@@ -1383,7 +1415,7 @@ export default function SeaIslandsGPU({
         // The sky. Needs the screen as well as the world, because half of it is
         // drawn in screen space — that is what the parallax IS.
         clouds.advance(t, camX, camY, halfW, halfH, camZoom, a.screen.width, a.screen.height)
-        townLayer?.cull(camX, camY, halfW, halfH)
+        if (!DIAG.nocull) townLayer?.cull(camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
         // module works out for itself which of them are under way and which are
@@ -1601,7 +1633,7 @@ export default function SeaIslandsGPU({
           // they are standing on it. The second number is the town's own lights
           // coming up, which is the one thing on the chart that gets BRIGHTER
           // after dark.
-          townLayer?.night(tint, d)
+          if (!DIAG.nonight) townLayer?.night(tint, d)
         },
         palette(stops) {
           if (!water || stops.length < 3) return
