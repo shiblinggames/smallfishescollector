@@ -294,76 +294,28 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     router.refresh()
   }
 
-  const mobileLinks = [
-    // THE TAVERN IS NOT A TAB. It is a building on the Mainland, and the only
-    // way in is to sail there and go ashore — see the Mainland's `href` in
-    // sea/chart. A link here would be a second door into a place whose whole
-    // point is that reaching it is a trip, which is the same argument that
-    // retired quick-sell and moved the Daily Haul onto the water.
-    // ── EXPEDITIONS IS NOT A TAB EITHER ──────────────────────────────
-    //
-    // Same argument as the Tavern above, and it took longer to reach because
-    // /expeditions was a real page rather than a building. Everything it held
-    // is on the water now — the campaign is water you sail, voyages are the
-    // Charterhouse, bounties are the Posting House, the gauntlets are two
-    // maelstroms, the ship and the loadout are discs in the HUD — so a tab to
-    // it would be a second door into places whose whole point is that reaching
-    // them is a trip. The route survives as a redirect for old links.
-    //
-    // ITS VOYAGE DOT CAME WITH IT. A finished voyage is claimed at the
-    // Charterhouse, which is out here, so the dot belongs on this tab.
-    { href: '/sea', label: 'Seas', badge: voyageBadge || null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 4l4 4"/>
-          <path d="M8 8c2-2 5-3 8-1s4 5 2 8-5 3-8 1"/>
-          <path d="M8 8L4 20"/>
-          <circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/>
-        </svg>
-      )
-    },
-    { href: '/leaderboard', label: 'Ranks', badge: null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="14" width="5" height="7" rx="1"/>
-          <rect x="9.5" y="9" width="5" height="12" rx="1"/>
-          <rect x="17" y="4" width="5" height="17" rx="1"/>
-        </svg>
-      )
-    },
-  ]
 
-  // Mobile hamburger menu — the secondary destinations that don't fit in
-  // the 5-slot bottom tab bar. Order: leaderboard, market, social.
+  // ── THE MOBILE MENU IS ALMOST EMPTY, AND THAT IS THE POINT ─────────────
   //
-  // Crew is deliberately NOT here. It belongs to the expedition loop and is
-  // reached from the hub's Crew/Ship/Items/Forge bar, next to the ship it
-  // crews and the raids it fights. A second door in a global menu made it
-  // look like a top-level destination of its own.
-  // The Captain's Log is not here, and is not anywhere now: it has no link in
-  // the shell at all. The page is still there to be reached directly.
+  // It was where the destinations that would not fit in the bottom bar went,
+  // back when there were more destinations than slots. There are not: the bar
+  // is the sea and three things about your play, and every one of those is a
+  // tab. What was in here has gone the same way one at a time —
+  //
+  //   SOCIAL, which was the problem it was solving. A follow list on its own
+  //   page, one link from a Tavern that was a cupboard: two doors to two halves
+  //   of one thing. The tavern IS the social room now and the list is in it.
+  //
+  //   THE SEA, which lived here because five tabs was already the width of a
+  //   phone. It is the first tab now.
+  //
+  //   THE LEADERBOARD, which moved onto the bar in the slot Expeditions left.
+  //   Leaving it here as well would be the same two-doors problem again.
+  //
+  // Crew is deliberately NOT here either: it is a disc on the chart, beside the
+  // ship it crews. The Captain's Log is not here and is not anywhere — the page
+  // stands, nothing in the shell links to it.
   const mobileMenuLinks = [
-    { href: '/leaderboard', label: 'Leaderboard', badge: false,
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="14" width="5" height="7" rx="1"/>
-          <rect x="9.5" y="9" width="5" height="12" rx="1"/>
-          <rect x="17" y="4" width="5" height="17" rx="1"/>
-        </svg>
-      )
-    },
-    // SOCIAL WAS HERE, AND IT WAS THE PROBLEM IT WAS SOLVING. A follow list on
-    // its own page, behind a menu, one link away from a Tavern that was a
-    // cupboard — two doors to two halves of the same thing. The tavern IS the
-    // social room now and the list is inside it, so a second entry pointing at
-    // the same place would only ask people to choose between them.
-    // Admin-only — gated on profiles.is_admin (kingkong, mikel).
-    // The Sea is the painted ocean hub, still being felt out. It lives here
-    // rather than on the tab bar because five tabs is already the width of a
-    // phone, and a sixth would shrink every label to test one prototype.
-    // THE ONLY DOOR ON A PHONE. The bottom bar has five slots and every one
-    // is spoken for, so this menu is how a phone reaches the sea at all —
-    // which is why it stopped being admin-only the moment the beta opened.
     ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin Stats', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">

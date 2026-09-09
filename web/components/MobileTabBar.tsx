@@ -10,28 +10,37 @@ import { BADGE_MAP } from '@/lib/badges'
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
   ['/sea',         'rgba(14,116,144,0.10)'],
-  ['/expeditions', 'rgba(30,60,120,0.12)'],
 ]
 
-// Order: fishing, expeditions, badges, profile. "Badges" (the
-// goals / trophy shelf at /badges) sits before Profile. Leaderboard moved off
-// the bar; market + social live in the mobile hamburger menu (in Nav.tsx).
+// Order: Seas, Badges, Leaderboard, Profile.
 //
-// The Captain's Log used to be reachable from the Badges page header and the
-// desktop nav. Both are gone: the page stands, nothing links to it.
+// ── ONE DESTINATION IN THE GAME, AND THREE ABOUT IT ─────────────────────────
+//
+// THE TAVERN IS NOT A TAB. It is a building on the Mainland and the only way in
+// is to sail there and go ashore.
+//
+// AND NEITHER IS EXPEDITIONS, since 2026-09. /expeditions is a redirect to the
+// chart now: the campaign is water you sail, voyages are the Charterhouse,
+// bounties the Posting House, the gauntlets two maelstroms, the ship the
+// Gunwharf. A tab to it would be a second door into places whose whole point is
+// that reaching them is a trip.
+//
+// So the bar is the SEA and then three things that are ABOUT your play rather
+// than part of it — what you have earned, where you stand, and who you are.
+// Leaderboard comes back onto the bar in the slot Expeditions vacated; it was
+// pushed into the hamburger when there were five destinations competing.
+//
+// The Captain's Log is reachable from nothing. The page stands; no link points
+// at it.
 const LINKS = [
-  // THE TAVERN IS NOT A TAB ANY MORE. It is a building on the Mainland and the
-  // only way in is to sail there and go ashore. Four tabs rather than five, and
-  // Fishing is the first one — which is also the honest order: the sea is where
-  // the game is, and the tavern is one of the places it leads to.
   { href: '/sea', label: 'Seas',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4l4 4"/><path d="M8 8c2-2 5-3 8-1s4 5 2 8-5 3-8 1"/><path d="M8 8L4 20"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/></svg>,
   },
-  { href: '/expeditions', label: 'Expeditions',
-    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/><line x1="10" y1="12" x2="10" y2="4"/><path d="M10 4L17 9 10 12"/></svg>,
-  },
   { href: '/badges', label: 'Badges',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="9" r="6"/><path d="M9 14.5L7.5 22l4.5-2.5L16.5 22 15 14.5"/></svg>,
+  },
+  { href: '/leaderboard', label: 'Leaderboard',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="14" width="5" height="7" rx="1"/><rect x="9.5" y="9" width="5" height="12" rx="1"/><rect x="17" y="4" width="5" height="17" rx="1"/></svg>,
   },
   { href: '/profile', label: 'Profile',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>,
@@ -46,14 +55,16 @@ export default function MobileTabBar() {
   // (a Rules-of-Hooks violation). All hooks first, conditional return last.
   // Pending-voyage rows, cached. This used to refetch from Supabase on
   // EVERY pathname change — a network roundtrip per tab tap just to
-  // re-run time math. Voyages only change on the /expeditions surfaces,
-  // so: network on first mount and around /expeditions visits, pure
-  // local recompute (created_at + duration_ms vs now) everywhere else.
+  // re-run time math. Voyages are sent and claimed on the WATER now (the
+  // Charterhouse), so: network on first mount and around /sea visits, pure
+  // local recompute (created_at + duration_ms vs now) everywhere else. It
+  // keyed on /expeditions, which is a redirect and therefore a path nobody
+  // ever sits on — so the rows went stale the moment the hub was retired.
   // A voyage that ripens mid-session still lights up on the next tab
   // tap because readiness is derived at render time from cached rows.
   const [pendingVoyages, setPendingVoyages] = useState<{ created_at: string; duration_ms: number | null }[]>([])
   const fetchedOnceRef   = useRef(false)
-  const wasExpeditionsRef = useRef(false)
+  const wasSeaRef        = useRef(false)
   // Active trawls (crew passive fishing) — same cached-rows + derive-readiness
   // pattern as voyages: network on first mount + around /fishing, pure local
   // time math everywhere else. Lets the Fishing tab pulse when a haul is ready.
@@ -68,9 +79,9 @@ export default function MobileTabBar() {
   const wasBadgesRef     = useRef(false)
 
   useEffect(() => {
-    const inExpeditions = pathname.startsWith('/expeditions')
-    const needFetch = !fetchedOnceRef.current || wasExpeditionsRef.current || inExpeditions
-    wasExpeditionsRef.current = inExpeditions
+    const inSea = pathname.startsWith('/sea')
+    const needFetch = !fetchedOnceRef.current || wasSeaRef.current || inSea
+    wasSeaRef.current = inSea
     if (!needFetch) return
     fetchedOnceRef.current = true
     const { createClient } = require('@/lib/supabase/client')
@@ -203,8 +214,11 @@ export default function MobileTabBar() {
     >
       {LINKS.map(({ href, label, icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
+        // A CREW IS BACK. The dot was on the Expeditions tab, because that
+        // is where a voyage used to be claimed; it is claimed at the
+        // Charterhouse now, which is out on the water.
         const badge = href === '/badges' && unclaimedBadges > 0 ? unclaimedBadges
-                    : href === '/expeditions' && voyageBadge ? true
+                    : href === '/sea' && voyageBadge ? true
                     : null
         const pulse = href === '/sea' && trawlReady
         return (
