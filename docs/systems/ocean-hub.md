@@ -499,15 +499,14 @@ Docks). Splitting them across two screens would need explaining; one rule — th
 where the crew are — needs none. On `/fishing` the panel is read-only: it shows the
 countdowns and says **"Waiting at the Docks"** on a ready card.
 
-That only works because the chart tells you. **The Docks island carries a warm bloom and a
-"2 crew back" line above its name plate whenever somebody is waiting**, and the compass
+That only works because the chart tells you. **The Docks island carries a gold "!" above it
+and a "2 crew back" line above its name plate whenever somebody is waiting**, and the compass
 promotes it over the nearest port — proximity is what you need to get home, but a dock with
 a haul on it is the thing nothing else on the screen would mention.
 
 It costs no polling: the page hands down the ISO moment each running trawl comes due, and the
 map counts how many have matured on a 5s tick. A crew finishing while you are halfway to the
-Abyss lights the island up on its own. The bloom is slower and gentler than a hotspot's on
-purpose — a haul does not spoil, so it is a "whenever you get round to it", not a summons.
+Abyss lights the island up on its own.
 
 This is a **design gate, not a security one**, and it is client-side on purpose: the server
 has no trustworthy notion of where the boat is (`profiles.sea_x/sea_y` is client-written and
@@ -1751,8 +1750,21 @@ together.
 ## An island says what is finished on it
 
 **Every island that can hold something for you carries the call** (`PlaceIsland`'s `call`): a
-warm bloom on the land plus a line of plain words above the name. It existed already and only
-the Trawl Harbour ever used it, with "2 crew back" hardcoded around a number.
+gold **"!"** floating above the island plus a line of plain words above the name. It existed
+already and only the Trawl Harbour ever used it, with "2 crew back" hardcoded around a number.
+
+**The mark is `QuestMark kind="offer"`**, the same disc the campaign's next stop and Finn's
+jobs hang over their marks — and the bang rather than the query on purpose. The genre's own
+split is exactly right here: **"?" is a thing you go and finish, "!" is a thing being held out
+to you**, and every island call is the second kind. The campaign keeps the "?" so the two
+never mean the same thing. It is sized off the island's radius (`clamp 40..72` at `r * 0.24`)
+because these run from a 210px isle to a 500px one, and counter-squashed like the name plate:
+a sign stands up off the plane, it does not lie on it.
+
+**It was a warm radial bloom three island-widths across and that was wrong.** A soft gold wash
+the size of the whole place reads as weather, not signage — at chart zoom it is a large vague
+brightness you have to interpret, and it swallowed the island's own art and the water round it
+to say one small thing. Do not put it back.
 
 - Trawl Harbour: `N crew back` · Tally House: `Orders ready` · Crew Hall: `Hands to sign`
 - Charterhouse: `Voyage in` · Posting House: `Bounty paid out`

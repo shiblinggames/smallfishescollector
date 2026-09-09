@@ -30,6 +30,21 @@ composition, not in the voyage itself.
   risk with its Fortune target, and the drops — and the button on it sends the crew.
   Anything true of ALL routes (the crew's Power/Fortune/Nav, the 1-in-100, a trawl
   conflict) is stated once above them rather than five times over.
+- **One frame, not five.** Each route owns a hue in `ROUTE_CONFIGS`, and the card used to
+  wear it four times over — edge, outer glow, a wash behind the name, and the Set Sail
+  button. Five cards is twenty coloured elements in five different families, none of them
+  saying anything the words do not, and all of them competing to be looked at first. The
+  hue now survives in ONE place, the risk pill on the band, where it is really the danger
+  tier wearing a colour; everything structural is the board's warm neutral and every Set
+  Sail is the same tinted gold. **Red stays red** — losing a hand is permanent, and that
+  is the one thing on the card worth an alarm colour.
+- **Two columns wherever the SHELL is wide enough**, and it is a CONTAINER query
+  (`.voyage-routes` in globals.css), not a viewport one: the panel mounts in the hub and
+  in the Charterhouse modal, and those are two different widths on one monitor. **The
+  Shrouded Reach spans both columns** — it is last in `ROUTE_CONFIGS` and the odd one out
+  in kind as well as count, the only route that pays in fishing lures instead of coin.
+  The sea's shell is 820 wide for this (not `--modal-w`): it is a wall of postings you
+  compare across, not a panel you read.
 - **Where it opens from.** The expeditions hub's Voyages card, and mooring at the
   Charterhouse on `/sea` (`sea/VoyageBoard.tsx`, fed by `sea/voyageBoardActions.ts`). Both
   mount the SAME `DailyVoyagePanel` — a second board would drift, and the one thing it must
