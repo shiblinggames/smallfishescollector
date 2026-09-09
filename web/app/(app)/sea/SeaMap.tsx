@@ -29,6 +29,10 @@ import MarkProbe from './MarkProbe'
 import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
+import {
+  decodeXfog, xfogHas, xfogReveal, xfogSet, seedXfog, inExpWater,
+  XFOG_CELL, XFOG_W, XFOG_H, XFOG_X0, XFOG_Y0,
+} from '@/lib/seaExploreExp'
 import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
@@ -1382,7 +1386,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, navXP, renownNav, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
+  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, exploredExpRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, navXP, renownNav, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
   auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, raidItems, raidSeats, itemMounts, portal, startSide,
   seenChapterUnlocks = [], seenUltimateUnlock = false,
 }: {
@@ -1481,6 +1485,9 @@ export default function SeaMap({
   renown: RenownState | null
   /** Base64 fog bitfield as stored. See lib/seaExplore. */
   exploredRaw: string | null
+  /** The campaign side's own fog mask. Its own grid, its own column — see
+   *  lib/seaExploreExp for why it could not be one bigger fishing grid. */
+  exploredExpRaw: string | null
   /** Isles this captain has already been ashore at. Ids from lib/seaIsles. */
   discovered: string[]
   /** Dig bearings held, and which of those are already up. */
@@ -2814,9 +2821,15 @@ export default function SeaMap({
       : shipRef.current ? 'moored'
         : sideRef.current ? 'anchorage' : 'fishing', [])
 
+  /** Both masks travel together. The campaign's cells are drained here rather
+   *  than at each call site, because there are six of them and the one that
+   *  forgot would leak a captain's exploration on every flush it made. */
   const saveSeaPosition = useCallback(
-    (x: number, y: number, fog: number[]) =>
-      persistSeaPosition(x, y, fog, sideNow()),
+    (x: number, y: number, fog: number[]) => {
+      const exp = [...xfogPending.current]
+      xfogPending.current.clear()
+      return persistSeaPosition(x, y, fog, exp, sideNow())
+    },
     [sideNow])
 
   /** Step through: all stop at the far side, then the sheet. */
@@ -2957,6 +2970,39 @@ export default function SeaMap({
    * which is a handful of times per crossing, not eight times a second.
    */
   const fogRef = useRef<Uint8Array>(decodeFog(exploredRaw))
+  /**
+   * ── AND THE CAMPAIGN'S OWN ────────────────────────────────────────────
+   *
+   * SEEDED ON A FIRST SIGHT. Fog is new up here, so every captain's mask starts
+   * empty — including the ones three chapters deep, who would log in to find
+   * the water they conquered gone dark. So an empty mask is filled in from what
+   * they have already CLEARED before the first frame: fog has to arrive as
+   * something covering where they have not been, never as an erasure of where
+   * they have.
+   *
+   * Only when it is EMPTY. A captain who has genuinely explored nothing is also
+   * a captain who has cleared nothing, so the seed is a no-op for them, and a
+   * captain part-way through keeps whatever the column already says.
+   */
+  const xfogPending = useRef<Set<number>>(new Set())
+  const xfogRef = useRef<Uint8Array>((() => {
+    const bits = decodeXfog(exploredExpRaw)
+    if (!exploredExpRaw) {
+      seedXfog(bits, ENCOUNTERS
+        .filter(e => (nodeStatus[e.node] ?? 'locked') === 'cleared')
+        .map(e => encounterAt(e))
+        .filter((p): p is { x: number; y: number } => !!p))
+      // ── AND THE SEED IS QUEUED, NOT JUST DRAWN ────────────────────
+      //
+      // Otherwise it is lost the first time anything flushes. The column is
+      // null, so the seed runs; you sail one cell; the flush writes that ONE
+      // cell and the column stops being null — and the next load, with nothing
+      // to re-seed from, puts every chapter you had conquered back under fog.
+      // Queueing it means the first flush carries the whole of it.
+      for (let i = 0; i < bits.length * 8; i++) if (xfogHas(bits, i)) xfogPending.current.add(i)
+    }
+    return bits
+  })())
   const [fogVersion, setFogVersion] = useState(0)
   /** Cells uncovered since the last flush, sent with the next position save. */
   const fogPending = useRef<Set<number>>(new Set())
@@ -7408,11 +7454,25 @@ export default function SeaMap({
         // UNCOVER THE CHART. Cheap: nine index computations and nine bit
         // tests, and it only touches React when a cell genuinely flips.
         let lit = false
-        for (const ci of fogReveal(pos.current.x, pos.current.y)) {
-          if (fogHas(fogRef.current, ci)) continue
-          fogSet(fogRef.current, ci)
-          fogPending.current.add(ci)
-          lit = true
+        // ── ONE GRID OR THE OTHER, NEVER BOTH ─────────────────────────
+        // They cover different halves of the world and their indices mean
+        // different things, so the side decides which mask is being written.
+        // Feeding a northern position to `fogReveal` gets -1 nine times, which
+        // is harmless and also eight wasted index computations per frame.
+        if (inExpWater(pos.current.y)) {
+          for (const ci of xfogReveal(pos.current.x, pos.current.y)) {
+            if (xfogHas(xfogRef.current, ci)) continue
+            xfogSet(xfogRef.current, ci)
+            xfogPending.current.add(ci)
+            lit = true
+          }
+        } else {
+          for (const ci of fogReveal(pos.current.x, pos.current.y)) {
+            if (fogHas(fogRef.current, ci)) continue
+            fogSet(fogRef.current, ci)
+            fogPending.current.add(ci)
+            lit = true
+          }
         }
         if (lit) setFogVersion(v => v + 1)
 
@@ -7674,6 +7734,15 @@ export default function SeaMap({
 
       {/* THE WORLD. One transformed layer, so the camera is a single write. */}
       <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', zIndex: Z.world, willChange: 'transform' }}>
+        {/* ── AND WHAT YOU HAVE NOT SEEN, OVER ALL OF IT ────────────────
+            First in the document and lifted by z-index rather than last in it,
+            because everything below is a long list and a reader looking for
+            "what covers the chart" should not have to reach the bottom of it to
+            find out. It covers the campaign's water only; the fishing sea has
+            never had fog on the chart and this does not give it any. */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none' }}>
+          <ChartFog bits={xfogRef.current} version={fogVersion} />
+        </div>
         {/* The berths first, so an island always paints over its own ring. */}
         {PLACES.filter(p => p.kind === 'port').map(p => (
           <PortBerth key={`berth:${p.id}`} p={p} active={near?.id === p.id} />
@@ -9582,6 +9651,7 @@ hullRef={hullRefFor(t.key)} />
         cleared={liveCleared}
         onClose={() => setMapOpen(false)}
         fog={fogRef.current}
+        xfog={xfogRef.current}
         at={pos}
         side={onSeaGate ? 'seagate' : inAnchorage ? 'expeditions' : 'fishing'}
         seaAt={p => seaAt(p, 0).solid}
@@ -11931,6 +12001,77 @@ const NextHeading = memo(function NextHeading({ from, to }: {
         )
       })}
     </div>
+  )
+})
+
+/**
+ * ── THE WATER YOU HAVE NOT SAILED ───────────────────────────────────────────
+ *
+ * The campaign's fog, on the chart itself. One canvas, ONE PIXEL PER CELL —
+ * fifty-three by twenty-five — stretched to the full width of the campaign's
+ * water by CSS. That stretch is the whole trick: a 700x bilinear upscale turns
+ * a hard checkerboard of set and unset bits into a soft front with a
+ * seven-hundred-pixel gradient across every edge, for the cost of a 1,325 pixel
+ * bitmap and no per-cell DOM at all.
+ *
+ * It sits INSIDE the world layer, so it takes the camera, the zoom and the
+ * plane's squash without being told about any of them — fog lies on the water
+ * like everything else out here.
+ *
+ * ── AND IT CANNOT COVER YOUR OWN HULL ───────────────────────────────────────
+ *
+ * Which is the one thing that would be unforgivable, and it is free: the
+ * player's boat lives on the SCREEN layer and never passes through this one
+ * (see the note beside the friend hulls). It could not reach the boat even if
+ * the boat were standing in fog, and the boat never is — you clear the cell you
+ * are in and the ring around it.
+ *
+ * ── BLANK PAPER, NOT A HOLE ─────────────────────────────────────────────────
+ *
+ * The same near-black paper colour the minimap has always used for unexplored
+ * water, with the same per-cell tooth, because a captain has already learned
+ * what that means on the other half of the game. A chart you have not filled in
+ * is blank, not missing.
+ */
+const ChartFog = memo(function ChartFog({ bits, version }: {
+  bits: Uint8Array
+  /** Bumped when a cell flips. The bitfield is a ref and mutating it is
+   *  invisible to React by design, so this is what says "redraw". */
+  version: number
+}) {
+  const ref = useRef<HTMLCanvasElement | null>(null)
+  useEffect(() => {
+    const c = ref.current
+    if (!c) return
+    const ctx = c.getContext('2d')
+    if (!ctx) return
+    const img = ctx.createImageData(XFOG_W, XFOG_H)
+    for (let i = 0; i < XFOG_W * XFOG_H; i++) {
+      const o = i * 4
+      if (xfogHas(bits, i)) { img.data[o + 3] = 0; continue }
+      // Deterministic per-cell jitter, so a wall of fog has some tooth and does
+      // not read as one flat rectangle. The same hash the minimap uses.
+      const n = ((i * 2654435761) % 17) / 17
+      img.data[o] = 22 + n * 7
+      img.data[o + 1] = 28 + n * 8
+      img.data[o + 2] = 36 + n * 9
+      img.data[o + 3] = 245
+    }
+    ctx.putImageData(img, 0, 0)
+  }, [bits, version])
+
+  return (
+    <canvas
+      ref={ref} width={XFOG_W} height={XFOG_H} aria-hidden
+      style={{
+        position: 'absolute',
+        left: XFOG_X0, top: XFOG_Y0,
+        width: XFOG_W * XFOG_CELL, height: XFOG_H * XFOG_CELL,
+        pointerEvents: 'none',
+        // The default. Stated because the whole design depends on it: with
+        // `pixelated` this would be a grid of 700px squares.
+        imageRendering: 'auto',
+      }} />
   )
 })
 

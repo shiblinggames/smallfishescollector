@@ -25,6 +25,9 @@ import {
   FOG_CELL, FOG_W, FOG_X0, FOG_Y0, FOG_CELLS,
   fogCentre, fogHas, fogProgress,
 } from '@/lib/seaExplore'
+import {
+  XFOG_CELL, XFOG_CELLS, xfogCentre, xfogHas,
+} from '@/lib/seaExploreExp'
 import { vibrate } from '@/lib/haptics'
 
 /** Padding inside the canvas, so the outermost band is not flush to the edge
@@ -170,7 +173,7 @@ function diamond(ctx: CanvasRenderingContext2D, x: number, y: number, r: number)
 }
 
 export default function Minimap({
-  open, onClose, fog, at, seaAt, found, bearings, dug, friends, finn, side = 'fishing',
+  open, onClose, fog, xfog, at, seaAt, found, bearings, dug, friends, finn, side = 'fishing',
   cleared = [], next = null, shown,
 }: {
   /** Whether a campaign node is on the water for this captain. The chart must
@@ -190,6 +193,8 @@ export default function Minimap({
   side?: 'fishing' | 'expeditions' | 'seagate'
   /** The live bitfield. Read, never written — the map owns it. */
   fog: Uint8Array
+  /** The campaign side's mask. Its own grid — see lib/seaExploreExp. */
+  xfog: Uint8Array
   /** The boat, read at draw time. */
   at: React.RefObject<{ x: number; y: number }>
   /** The same blend the chart itself uses, so a stretch of water is the colour
@@ -319,9 +324,17 @@ export default function Minimap({
     // chapters' waters lying off it as discs of their own colour, and the way
     // back to the harbour marked. NO STRAITS AND NO ROCK across anything: the
     // water is open sea now, and a shut chapter is a dim disc with SHUT on
-    // it rather than a bar. Not fogged. The bays are the campaign, and a
-    // campaign you cannot find is not a campaign, which is the same reason
-    // the ports are never fogged either.
+    // it rather than a bar.
+    //
+    // ── AND IT IS FOGGED AFTER ALL (2026-09) ─────────────────────────────
+    //
+    // It was not, and the argument was that a campaign you cannot find is not a
+    // campaign. That was right about the ROUTE and wrong about the water: the
+    // way home, the next stop and the harbour are all still drawn over the top
+    // of the fog, so the chart still answers where am I, which way is back and
+    // where am I going. What the fog takes away is the part that was never
+    // earned — the shape and the colour of four chapters you have not sailed,
+    // handed over on a first visit for nothing.
     if (side !== 'fishing') {
       // THE WAY HOME, first and underneath everything. A dashed run from the
       // junction down to the sea gate and on to the harbour: the one line on this
@@ -448,6 +461,31 @@ export default function Minimap({
           ctx.fillStyle = 'rgba(196,169,106,0.34)'
           ctx.font = '700 8px Karla, system-ui, sans-serif'
           ctx.fillText(`CHAPTER ${b.chapter}`, bx, by + 3)
+        }
+      }
+
+      // ── AND THE WATER YOU HAVE NOT SAILED ────────────────────────────
+      //
+      // Laid over the bays and their ships rather than under them, which is
+      // what makes this one short pass do the whole job: a chapter you have
+      // never crossed the gate for is covered, and so is everything standing in
+      // it, without a single one of the draws above having to ask.
+      //
+      // BLANK PAPER, NOT A HOLE — the same colour and the same per-cell tooth
+      // the fishing side uses, because a captain has already learned what that
+      // means on the other half of the game.
+      //
+      // NAVIGATION SURVIVES IT. The way home, the harbour ring, the sea gate,
+      // the maelstroms and the next stop are all drawn AFTER this, on purpose:
+      // fog should cost you the map, never the way back.
+      {
+        const cs = XFOG_CELL * s + 1
+        for (let i = 0; i < XFOG_CELLS; i++) {
+          if (xfogHas(xfog, i)) continue
+          const c = xfogCentre(i)
+          const n = ((i * 2654435761) % 17) / 17
+          ctx.fillStyle = `rgb(${22 + n * 7}, ${28 + n * 8}, ${36 + n * 9})`
+          ctx.fillRect(tx(c.x - XFOG_CELL / 2), ty(c.y - XFOG_CELL / 2), cs, cs)
         }
       }
 

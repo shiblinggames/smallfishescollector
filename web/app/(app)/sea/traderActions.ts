@@ -26,6 +26,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { traderFromKey, seaDay, DEALS_PER_DAY } from '@/lib/seaTraders'
 import { PLACES, RESIDENTS } from '@/app/(app)/sea/chart'
 import { decodeFog, encodeFog, fogSet } from '@/lib/seaExplore'
+import { decodeXfog, encodeXfog, xfogSet } from '@/lib/seaExploreExp'
 import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
 
@@ -393,6 +394,9 @@ export async function saveSeaPosition(
   x: number, y: number,
   /** Fog cells uncovered since the last flush. Merged with OR — see below. */
   seen: number[] = [],
+  /** The same, for the CAMPAIGN's grid. Two masks, two columns, because the two
+   *  grids have different origins — see lib/seaExploreExp. */
+  seenExp: number[] = [],
   /**
    * WHICH SEA THIS POSITION IS IN.
    *
@@ -442,12 +446,22 @@ export async function saveSeaPosition(
   //
   // That is the whole reason this is a bitfield and not a list: a list would
   // need dedup and ordering and could lose entries; a bitfield cannot.
-  if (seen.length) {
+  if (seen.length || seenExp.length) {
     const { data: row } = await admin
-      .from('profiles').select('sea_explored').eq('id', user.id).single()
-    const bits = decodeFog(row?.sea_explored as string | null)
-    for (const i of seen) fogSet(bits, i)
-    patch.sea_explored = encodeFog(bits)
+      .from('profiles').select('sea_explored, sea_explored_exp').eq('id', user.id).single()
+    if (seen.length) {
+      const bits = decodeFog(row?.sea_explored as string | null)
+      for (const i of seen) fogSet(bits, i)
+      patch.sea_explored = encodeFog(bits)
+    }
+    // The campaign's own mask, on its own column and its own grid. Same OR, same
+    // reasoning: the worst a lost update can do is leave water foggy that has
+    // already been sailed, and it will be sailed again.
+    if (seenExp.length) {
+      const bits = decodeXfog(row?.sea_explored_exp as string | null)
+      for (const i of seenExp) xfogSet(bits, i)
+      patch.sea_explored_exp = encodeXfog(bits)
+    }
   }
 
   await admin.from('profiles').update(patch).eq('id', user.id)

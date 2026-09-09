@@ -407,6 +407,7 @@ export default async function SeaPage({ searchParams }: {
       // ambiguous, which is why one was never saved at all.
       startSide={((profile?.sea_side as string | null) ?? 'fishing') as 'fishing' | 'anchorage' | 'moored' | 'open'}
       // A door named in the URL, opened on arrival, and which of its rooms.
+      exploredExpRaw={(profile?.sea_explored_exp as string | null) ?? null}
       openDoor={
         openDoor === 'crew' ? 'crew'
           : openDoor === 'loadout' ? 'loadout'
