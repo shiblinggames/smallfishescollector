@@ -805,6 +805,10 @@ export default function SeaIslandsGPU({
       // side of the chart is not worth a texture because it might one day be
       // passed closely.
       const front = new PIXI.Container()
+      // SAME RULE AS THE WORLD'S MARKS: base further south goes in front. These
+      // are built on FIRST NEED, so without it the order is whenever each rock
+      // was first sailed past, which is arbitrary and sticks for the session.
+      front.sortableChildren = true
       a.stage.addChild(front)
       const nearBuilt = new Map<number, import('pixi.js').Container>()
       const nearWanted = new Set<number>()
@@ -816,6 +820,10 @@ export default function SeaIslandsGPU({
         if (!m) return null
         const node = new PIXI.Container()
         node.visible = false
+        // The WORLD base, even though this copy is positioned in screen space.
+        // Depth is a fact about where the rock is, not about which pass is
+        // drawing it.
+        node.zIndex = m.y
         front.addChild(node)
         nearBuilt.set(i, node)
         const sub = SUBMERGE[m.art.split('/').pop()!.replace('.png', '')]

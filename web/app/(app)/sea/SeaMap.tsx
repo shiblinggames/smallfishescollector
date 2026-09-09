@@ -7652,6 +7652,51 @@ export default function SeaMap({
           if (o.y - pos.current.y > o.size * 2 + 260) continue
           inFront.push(k)
         }
+        // ── AND ANYTHING IN FRONT OF WHAT WE JUST PROMOTED ─────────────
+        //
+        // The near pass draws over EVERYTHING, because its whole job is to put
+        // a rock in front of a hull the renderer keeps at the screen's centre.
+        // That makes the set above a promise: whatever is in it jumps a layer,
+        // so anything genuinely in front of a promoted rock has to jump with
+        // it — otherwise the promoted one pops in over a neighbour that is
+        // nearer the camera than it is, which is what a captain sees when they
+        // come up on a cluster.
+        //
+        // The seed is bounded to rocks that could cover HER, and it is empty in
+        // open water, so this loop costs one length check almost all the time.
+        // Closed to a fixed point, because the neighbour's neighbour is the
+        // same problem one rock along; three rounds is more depth than any
+        // formation on this chart has.
+        if (inFront.length > 0) {
+          const chosen = new Set(inFront)
+          for (let round = 0; round < 3; round++) {
+            const add: number[] = []
+            for (let k = 0; k < OCCLUDERS.length; k++) {
+              if (chosen.has(k)) continue
+              const o = OCCLUDERS[k]
+              // Behind her is the world layer's business and it sorts correctly
+              // there; promoting it would be the same bug pointing the other way.
+              if (o.y <= pos.current.y + 8) continue
+              for (const j of chosen) {
+                const p = OCCLUDERS[j]
+                if (o.y <= p.y) continue
+                if (Math.abs(o.x - p.x) > (o.size + p.size) * 0.5) continue
+                if (o.y - p.y > p.size * 2 + 260) continue
+                add.push(k)
+                break
+              }
+            }
+            if (add.length === 0) break
+            for (const k of add) chosen.add(k)
+          }
+          if (chosen.size !== inFront.length) {
+            inFront.length = 0
+            for (const k of chosen) inFront.push(k)
+          }
+          // SORTED BY BASE, for the DOM fallback, which has no z-order of its
+          // own and paints in array order. The canvas sorts itself.
+          inFront.sort((a, b) => OCCLUDERS[a].y - OCCLUDERS[b].y)
+        }
         // THE SAME ANSWER, TO WHICHEVER RENDERER IS DRAWING HER. The canvas is
         // told every proximity tick and does not need the deadband — a set that
         // has not changed costs it a loop over a list that is almost always
