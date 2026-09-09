@@ -63,6 +63,16 @@ export type CrewHubState = {
   hall: { tier: number; drill: number; stores: number }
   /** How many faces are waiting on the recruit board. */
   recruitsWaiting: number
+  /**
+   * FINISHED STINTS NOBODY HAS COLLECTED.
+   *
+   * A hand holds their bunk until the XP is CLAIMED, not merely until the timer
+   * runs out, so a done-but-uncollected stint is a real errand with a real
+   * address: the hall, ashore. This is the ONLY thing the Crew Hall island can
+   * be waiting on — recruiting happens in the crew panel, which is a disc, not
+   * a place you tie up at.
+   */
+  bunksReady: number
   /** The voyage that is out, or back and unread. */
   voyage: { route: string; ready: boolean } | null
 }
@@ -122,6 +132,8 @@ export async function crewHub(): Promise<CrewHubState | { error: string }> {
     onBunk.set(Number(b.crew_id), { endsAt, ready: stintDone(b.since, Date.now(), cap) })
   }
 
+  const bunksReady = [...onBunk.values()].filter(b => b.ready).length
+
   const crew: HubCrew[] = roster.map(c => {
     const t = onTrawl.get(c.id)
     const bunk = onBunk.get(c.id)
@@ -170,6 +182,7 @@ export async function crewHub(): Promise<CrewHubState | { error: string }> {
     capacity: crewCapacity(getLevelFromXP(Number(p.expedition_xp ?? 0)), hall.tier),
     hall,
     recruitsWaiting,
+    bunksReady,
     voyage: live && routeName ? { route: routeName, ready: voyageReady } : null,
   }
 }

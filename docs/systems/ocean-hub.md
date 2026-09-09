@@ -1877,8 +1877,15 @@ the size of the whole place reads as weather, not signage — at chart zoom it i
 brightness you have to interpret, and it swallowed the island's own art and the water round it
 to say one small thing. Do not put it back.
 
-- Trawl Harbour: `N crew back` · Tally House: `Orders ready` · Crew Hall: `Hands to sign`
+- Trawl Harbour: `N crew back` · Tally House: `Orders ready` · Crew Hall: `Training done`
 - Charterhouse: `Voyage in` · Posting House: `Bounty paid out`
+
+**The Crew Hall's call is a FINISHED BUNK, not a waiting recruit**, and it was the second
+for a while. That was wrong twice: the recruit board is in the crew PANEL, which is a disc,
+so the mark sent you to an island that could not settle it — and the board rolls three faces
+every morning, so it was lit nearly all day, every day. A mark that is always on is
+decoration. A finished stint happened at the hall, is collected at the hall, and goes out
+the moment you take it. Its sheet re-polls on close for exactly that reason.
 
 **Each names its OWN errand**, because those are five different journeys a thousand pixels
 apart and a shared badge is a light with no address. That is also why `crewHub`'s one "recruits

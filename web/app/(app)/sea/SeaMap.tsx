@@ -3885,6 +3885,8 @@ export default function SeaMap({
    * over both would send you to the wrong one half the time.
    */
   const [voyageBack, setVoyageBack] = useState(false)
+  /** A stint finished and not collected. The hall's OWN errand — see below. */
+  const [hallReady, setHallReady] = useState(false)
   const crewPolled = useRef(false)
   const pollCrew = useCallback(() => {
     void crewHub().then(
@@ -3892,6 +3894,7 @@ export default function SeaMap({
         if ('error' in r) return
         setCrewWaiting(r.recruitsWaiting > 0)
         setVoyageBack(r.voyage?.ready === true)
+        setHallReady(r.bunksReady > 0)
       },
       () => {})
   }, [])
@@ -7699,7 +7702,28 @@ export default function SeaMap({
             call={
               p.id === 'trawl_fleet' ? (trawlsReady > 0 ? `${trawlsReady} crew back` : null)
               : p.id === 'trawl_docks' ? (ordersReady ? 'Orders ready' : null)
-              : p.id === 'crew_hall' ? (crewWaiting ? 'Hands to sign' : null)
+              // ── THE HALL SAYS WHAT IS AT THE HALL ──────────────────
+              //
+              // This was "Hands to sign", off `recruitsWaiting`, and it was
+              // wrong twice over.
+              //
+              // WRONG ADDRESS: the recruit board is in the crew PANEL, which is
+              // a disc in the HUD. Going ashore at the hall opens the building
+              // — its tier, its Drills and Stores ladder, its bunks — and there
+              // is nothing to sign in it. A mark that sends you to an island
+              // that cannot settle it is the "light with no address" this whole
+              // mechanism exists to avoid.
+              //
+              // AND ALWAYS LIT: the board rolls three faces every morning and
+              // most captains take none or one, so `recruitsWaiting > 0` was
+              // true nearly all day, every day. A mark that is always on is not
+              // a signal, it is decoration — and it kept saying "hands to sign"
+              // after a captain had signed the hand and put them in a bunk,
+              // which is what it was reported as.
+              //
+              // A finished STINT is the hall's real errand: it happened here,
+              // it is collected here, and it goes out the moment you take it.
+              : p.id === 'crew_hall' ? (hallReady ? 'Training done' : null)
               : p.id === 'charterhouse' ? (voyageBack ? 'Voyage in' : null)
               : p.id === 'posting_house' ? (bountyReady ? 'Bounty paid out' : null)
               : null
@@ -8633,7 +8657,11 @@ hullRef={hullRefFor(t.key)} />
       {/* THE LOCKER, over the water you are moored in. */}
       <ShipyardSheet open={yardOpen} onClose={() => setYardOpen(false)} />
       <ShipSheet open={shipSheet !== null} focus={shipSheet ?? 'ship'} onClose={() => setShipSheet(null)} />
-      <HallSheet open={hallSheet} onClose={() => setHallSheet(false)} />
+      {/* RE-READ ON THE WAY OUT. Collecting a finished stint happens INSIDE
+          this sheet, and the island's "Training done" is what says there is one
+          — so without this the mark stays lit over a hall you just emptied.
+          Same contract the crew panel's close already signs. */}
+      <HallSheet open={hallSheet} onClose={() => { setHallSheet(false); pollCrew() }} />
 
       {/* AND THE FIGHT, over the water it is happening on. `router.refresh()`
           on the way out is what re-reads nodeStatus, so a boss you just sank
