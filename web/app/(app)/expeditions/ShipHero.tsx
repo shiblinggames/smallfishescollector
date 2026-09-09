@@ -2549,7 +2549,11 @@ export default function ShipHero({
                         )
                       })()}
                       {/* Appearance / Ship Skins */}
-                      {shipTab === 'appearance' && <ShipTile
+                      {/* NO TILE FOR LOOK IN A PANEL. The skins ARE the room —
+                          see the note on the grid below. On the route the tile
+                          stays, because there the room is a tab and the tile is
+                          how you reach the sheet. */}
+                      {shipTab === 'appearance' && !bare && <ShipTile
                         accent="#9cc4ff"
                         title="Appearance"
                         icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9cc4ff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v9"/><path d="M12 5l6 6-6 1"/><path d="M4 14h16l-1.6 4.2a2 2 0 0 1-1.9 1.3H7.5a2 2 0 0 1-1.9-1.3z"/></svg>}
@@ -3374,6 +3378,71 @@ export default function ShipHero({
       </PopupShell>
 
       {/* Appearance — Ship Skins picker modal. */}
+      {/* ── THE SKINS, WHEREVER THEY ARE ASKED FOR ─────────────────────────
+          On the route this is a sheet you open off a tile. In the sea's ship
+          panel it IS the room — "Look" is one subject, and a card you press to
+          reach the only thing behind it is a door into a corridor. Same body
+          either way, so the two cannot drift.
+
+          `bare` means the panel has already given it a header, a way back and a
+          ground; all that is left to draw is the rule and the grid. */}
+      {bare && shipTab === 'appearance' ? (
+        <div style={{ paddingBottom: '1rem' }}>
+            {/* THE RULE, SAID BEFORE THE GRID RATHER THAN DISCOVERED IN IT.
+                A skin that equips and changes nothing is the worst version of
+                this: the player has done everything right and the game has
+                quietly ignored them. So it is stated once, at the top, in
+                plain words, and again on every tile that cannot be worn. */}
+            <p className="font-karla" style={{ fontSize: '0.68rem', color: skinsFitHull(shipTierForSlots) ? 'rgba(214,232,240,0.62)' : '#f0c040', lineHeight: 1.4, marginBottom: 12 }}>
+              {skinsFitHull(shipTierForSlots)
+                ? 'Every skin is painted for the Man-o-War, and only shows on the Man-o-War.'
+                : 'Skins only fit the Man-o-War. Yours will be kept until you are sailing one.'}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+              {(() => {
+                const isEquipped = equippedSkin === null
+                return (
+                  <button onClick={() => { if (!isEquipped) handleEquipSkin(null) }} disabled={isEquipped}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? 'rgba(255,255,255,0.06)' : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.09)'}`, cursor: isEquipped ? 'default' : 'pointer' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={shipStats.image} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain' }} />
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Default</p>
+                    <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: isEquipped ? '#e0ddd8' : '#7a7674' }}>{isEquipped ? '✓ Equipped' : 'Original'}</span>
+                  </button>
+                )
+              })()}
+              {SHIP_SKINS.map(skin => {
+                const owned = ownedSkins.includes(skin.id)
+                // ONE GATE. The hull, and nothing else — see skinsFitHull.
+                const tierLocked = !skinsFitHull(shipTierForSlots)
+                  || (skin.requiresShipTier != null && shipTierForSlots < skin.requiresShipTier)
+                const isEquipped = equippedSkin === skin.id
+                const equippable = owned && !isEquipped && !tierLocked
+                // THE TILE ALWAYS SHOWS THE MAN-O-WAR PAINT, whatever you are
+                // sailing. It is a picture of what you would be wearing, and
+                // there is only one hull it is ever worn on.
+                const skinImg = skin.imageByTier?.[MANOWAR_SHIP_TIER] ?? shipStats.image
+                return (
+                  <button key={skin.id} onClick={equippable ? () => handleEquipSkin(skin.id) : undefined} disabled={!equippable}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? `${skin.color}1f` : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? skin.color + '90' : owned && !tierLocked ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`, boxShadow: isEquipped ? `0 0 12px ${skin.color}33` : 'none', cursor: equippable ? 'pointer' : 'default', opacity: owned && !tierLocked ? 1 : 0.6 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={skinImg} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain', filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)', transition: 'filter 0.25s' }} />
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: owned && !tierLocked ? '#f0ede8' : '#a8a3a0', lineHeight: 1.1, textAlign: 'center' }}>{skin.name}</p>
+                    {isEquipped ? (
+                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: skin.color }}>✓ Equipped</span>
+                    ) : !owned ? (
+                      <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#7a7674', textAlign: 'center', lineHeight: 1.25 }}>{skin.source}</span>
+                    ) : tierLocked ? (
+                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{getShip(Math.max(MANOWAR_SHIP_TIER, skin.requiresShipTier ?? 0)).name} only</span>
+                    ) : (
+                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+        </div>
+      ) : (
       <PopupShell open={skinsOpen} onClose={() => setSkinsOpen(false)}>
         {skinsOpen && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
@@ -3436,6 +3505,7 @@ export default function ShipHero({
           </motion.div>
         )}
       </PopupShell>
+      )}
 
       {/* Captain's-class detail — the tiers you own in this line + their combined
           effect. Opened from a class card on the Ship tab. */}
