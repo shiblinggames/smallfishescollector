@@ -39,7 +39,7 @@
 // reads as windows throwing light onto the ground they stand on.
 
 import type { Container, Sprite, Texture } from 'pixi.js'
-import { GROUND } from './islandArt'
+import { GROUND, ISLAND_LIFT } from './islandArt'
 import { texture } from './skiffArt'
 
 export type GpuBuilding = {
@@ -133,7 +133,9 @@ export async function makeTowns(
       // counter-squashed, because it is light on the ground.
       s.width = d * 0.78
       s.height = d * 0.52
-      s.y = -spec.r + d * 0.52
+      // On the top face with the buildings it is lighting, not at the
+      // waterline under them.
+      s.y = -spec.r + d * 0.52 - ISLAND_LIFT / GROUND
       s.tint = GLOW
       s.alpha = 0
       s.blendMode = 'add'
@@ -162,7 +164,23 @@ export async function makeTowns(
       s.scale.set(k, k / GROUND)
       // The percentage is of the island's BOX, whose top-left is one radius up
       // and to the left of the island's centre — which is where this node is.
-      s.position.set(-spec.r + (b.x / 100) * d, -spec.r + (b.y / 100) * d)
+      //
+      // ── AND RAISED ONTO THE LAND ─────────────────────────────────────────
+      //
+      // An island is drawn as a raised disc: `bakeIsland` drops a cliff by
+      // ISLAND_LIFT and puts the top face the same distance ABOVE the island's
+      // nominal plane. So the land a building stands on is not at y=0, it is
+      // one lift up, and a building placed without it has its feet buried in
+      // the cliff face rather than standing on the grass.
+      //
+      // The DOM chart has always done this. The Pixi port did not, and it is
+      // the whole of "the buildings do not match the island's perspective":
+      // every roof on every island was sunk by twenty-six world pixels, which
+      // reads as the island being a flat decal slid under them.
+      s.position.set(
+        -spec.r + (b.x / 100) * d,
+        -spec.r + (b.y / 100) * d - ISLAND_LIFT / GROUND,
+      )
       s.tint = spec.locked ? LOCKED : 0xffffff
       node.addChild(s)
       sprites.push(s)
