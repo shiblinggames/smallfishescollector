@@ -1716,6 +1716,8 @@ export default function SeaIslandsGPU({
             // the outer one. Same field, so a crest rolls a group of them in
             // turn rather than all at once.
             c.holder.rotation = (swellHeel(e.x, e.y, ts) * Math.PI) / 180
+            // And the water comes up their sides on the same heave.
+            c.cap.setSoak(swellAt(e.x, e.y, ts))
             // scaleY undoes the plane's squash, and the facing rides on x —
             // the same ±1 mirror the DOM writes.
             c.holder.scale.set(e.scale * e.facing, e.scale / GROUND)
@@ -1759,6 +1761,10 @@ export default function SeaIslandsGPU({
           c.inner.rotation = (sk.heel * Math.PI) / 180
           c.cap.setFrame(sk.frame)
           c.cap.setStage(sk.stage)
+          // HOW DEEP SHE IS SITTING. The same number that just lifted her: a
+          // hull in a trough is further into the water, and the band on her
+          // side is how that reads at all. See soakTexture.
+          c.cap.setSoak(sk.bob)
         },
         islands(next) { reconcile(next) },
         scatter(x, y) { shoals.scatter(x, y) },

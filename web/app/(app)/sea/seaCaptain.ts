@@ -20,7 +20,7 @@
 // ORIGIN is the point the captain should stand on. Everything upstream then
 // only has to say where that point is.
 
-import type { Container, Sprite } from 'pixi.js'
+import type { Container, Sprite, Texture } from 'pixi.js'
 import { BOATS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
@@ -34,6 +34,8 @@ import {
 /** Everything about how one captain looks. Flat and primitive on purpose: it is
  *  compared field by field to decide whether a captain needs rebuilding, and an
  *  object in here would make every frame look like a change of outfit. */
+let soakTex: Texture | null = null
+
 export type CaptainLook = {
   characterColor: string
   boatId: string | null
@@ -94,6 +96,46 @@ const HOOK_AT: Record<Frame, Placement> = {
   cast: { top: 40.5, left: -73, width: 204.5, rotate: 66.5 },
 }
 
+/**
+ * ── THE WATER CLOSING OVER HER FOOT ─────────────────────────────────────────
+ *
+ * A vertical band: nothing at the top, the sea at the bottom.
+ *
+ * Every rock, wreck, rig and buoy on this chart is drawn as TWO copies — a wet
+ * half and a dry half, split on a waterline placed by eye. Boats were drawn as
+ * one, with a hard cut at the bottom of the hull, which is why they read as
+ * gliding ON the water rather than sailing THROUGH it. The bottom of the boat
+ * was on top of the sea at all times.
+ *
+ * They cannot be split the same way, because the difference is in the ART: a
+ * rock's plate is painted down past the water and the mark bakes the part below
+ * the line separately, while a hull's plate is CROPPED at the water and has no
+ * underwater half to find. So instead of splitting her, the water is brought up
+ * over her — a soft band laid on the bottom of the hull, so the edge of the
+ * boat stops being an edge.
+ *
+ * White, so the caller can tint it to whatever water she is actually in.
+ */
+function soakTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (soakTex) return soakTex
+  const H = 64
+  const c = document.createElement('canvas')
+  c.width = 4
+  c.height = H
+  const g = c.getContext('2d')!
+  const grad = g.createLinearGradient(0, 0, 0, H)
+  // Slow at the top and quick at the bottom: water does not creep evenly up a
+  // hull, it takes the last inch all at once.
+  grad.addColorStop(0.0, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.16)')
+  grad.addColorStop(0.78, 'rgba(255,255,255,0.46)')
+  grad.addColorStop(1.0, 'rgba(255,255,255,0.72)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 4, H)
+  soakTex = PIXI.Texture.from(c)
+  return soakTex
+}
+
 export type Captain = {
   /** Origin is the point the captain stands on. Put this where they are. */
   view: Container
@@ -108,6 +150,15 @@ export type Captain = {
    *  embers, and fill rate is the one cost here that is not free. */
   setIntensity(k: number): void
   update(dt: number): void
+  /**
+   * HOW DEEP SHE IS SITTING, in the same bob units the chart lifts her by.
+   *
+   * Negative is a trough, and a hull in a trough is further into the water.
+   * Passed in rather than worked out here because a captain does not know where
+   * it is on the chart — the caller already has the number, having just used it
+   * to lift her.
+   */
+  setSoak(bob: number): void
   destroy(): void
 }
 
@@ -339,6 +390,39 @@ export async function makeCaptain(
   }
   alignMirror()
 
+  // ── AND THE WATER COMES UP HER SIDE ───────────────────────────────────────
+  //
+  // See soakTexture. Added last so it lies over the hull rather than under it,
+  // and sized off the hull's own box so a cosmetic of a different shape gets
+  // the band its own waterline wants.
+  const soak: Sprite = new PIXI.Sprite(soakTexture(PIXI))
+  soak.anchor.set(0.5, 1)
+  soak.visible = false
+  skiff.view.addChild(soak)
+
+  /** The band at rest, and how much of it the heave is worth, both as a share
+   *  of the hull's height. She settles into a trough and rides out on a crest,
+   *  which is the whole of the difference between floating and gliding. */
+  const SOAK_REST = 0.15
+  const SOAK_SWING = 0.075
+
+  function placeSoak(bob: number) {
+    const part: Sprite | undefined = skiff.parts.boat
+    if (!part || !part.texture) { soak.visible = false; return }
+    const w = part.texture.width * Math.abs(part.scale.x)
+    const h = part.texture.height * Math.abs(part.scale.y)
+    const water = part.y + (1 - part.anchor.y) * h
+    // Down in a trough, up on a crest. Clamped, because a squall's heave is
+    // bigger than the swell this was measured against and a band taller than
+    // the hull would swallow her.
+    const k = Math.max(-1, Math.min(1, -bob / 5.5))
+    soak.visible = true
+    soak.width = w * 1.02
+    soak.height = h * (SOAK_REST + k * SOAK_SWING)
+    soak.position.set(part.x, water)
+  }
+  placeSoak(0)
+
   // ── WHAT THEY GLOW WITH ───────────────────────────────────────────────────
   //
   // One aura per glowing part, each built on that part's own image. The glow
@@ -413,6 +497,11 @@ export async function makeCaptain(
       // than forgotten. Held by reference because the shadow now sits under it
       // and an index would quietly tint the wrong thing.
       base.tint = tint
+      // The band is WATER, so it takes the sea's own colour rather than the
+      // hull's: a shade of the deep, darkened by the hour like everything else.
+      soak.tint = ((((tint >> 16) & 255) * 0.32) << 16)
+        | ((((tint >> 8) & 255) * 0.46) << 8)
+        | (((tint & 255) * 0.5) | 0)
       for (const s of lit) {
         // Charcoal's hull carries a standing darken of its own, and overwriting
         // it with the hour would undo the thing that makes it charcoal. Its
@@ -422,6 +511,7 @@ export async function makeCaptain(
       }
     },
     setIntensity: k => { for (const w of worn) w.aura.setIntensity(k) },
+    setSoak: placeSoak,
     update(dt) {
       for (const w of worn) w.aura.update(dt)
       // ── THE ONE THING THAT STOPS IT BEING A SECOND BOAT ────────────
@@ -539,6 +629,24 @@ export async function makeShip(
   hull.scale.set(ship.flip ? -k : k, k)
   view.addChild(hull)
 
+  // ── AND THE WATER COMES UP HER SIDE ───────────────────────────────
+  //
+  // The same band the fishing captain gets, and the same reason: her plate is
+  // cropped at the water, so there is no wet half to draw and the bottom edge
+  // was a hard cut sitting on the surface. A ship of the line is heavier and
+  // sits deeper, so she takes a little more of it.
+  const soak: Sprite = new PIXI.Sprite(soakTexture(PIXI))
+  soak.anchor.set(0.5, 1)
+  view.addChild(soak)
+
+  function placeSoak(bob: number) {
+    const k = Math.max(-1, Math.min(1, -bob / 5.5))
+    soak.width = W * 1.02
+    soak.height = h * (0.18 + k * 0.075)
+    soak.position.set(0, h / 2)
+  }
+  placeSoak(0)
+
   let wob = 0
   const phase = Math.random() * 6.28
 
@@ -546,8 +654,15 @@ export async function makeShip(
     view,
     setFrame() {},
     setStage() {},
-    setNight(tint) { hull.tint = tint; back.tint = tint },
+    setNight(tint) {
+      hull.tint = tint
+      back.tint = tint
+      soak.tint = ((((tint >> 16) & 255) * 0.32) << 16)
+        | ((((tint >> 8) & 255) * 0.46) << 8)
+        | (((tint & 255) * 0.5) | 0)
+    },
     setIntensity() {},
+    setSoak: placeSoak,
     update(dt) {
       // The shear that stops it being an upside-down ship. See the note on the
       // captain's — skew rather than rotation, so the waterline edge stays put.
