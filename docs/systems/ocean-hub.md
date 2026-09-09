@@ -1640,6 +1640,36 @@ renders. Add a new node kind to `raidMap` and the check fails until the sheet le
   land when the guns stop rather than on the next page load. Both surfaces read and write
   the SAME two profile columns, so a parchment dismissed on either stays dismissed on both.
 
+## The campaign's water has fog now
+
+**Two fog grids, and they must stay two.** `lib/seaExplore` covers the fishing sea; its
+origin is the reef and it runs SOUTH, so `fogIndex` returns -1 for every point north of it
+— which is why the campaign had no fog at all until 2026-09. `lib/seaExploreExp` is the
+campaign's own grid on its own column (`profiles.sea_explored_exp`).
+
+**Do NOT "fix" this by extending the fishing grid north.** A cell's index is `cy * W + cx`
+from the origin, so moving the origin shifts every bit already stored, and every captain's
+fishing chart would decode as somebody else's. The only way out would be a migration over
+every profile row to re-index a mask about fog.
+
+- The campaign grid is measured off `BAYS` and `HUB` themselves, so a re-laid chapter
+  cannot fall outside it. It stops at the **Sea Gate** — the anchorage is management, and
+  fogging a place nobody has ever failed to find is noise.
+- **On the chart**: `ChartFog` in SeaMap. One canvas at ONE PIXEL PER CELL (53×25) stretched
+  to the campaign's full width by CSS; the 700× bilinear upscale is what turns a
+  checkerboard of bits into a soft front. It lives in the world layer so it takes the
+  camera, zoom and plane squash for free, and it cannot cover the player's hull because
+  that is on the screen layer.
+- **On the minimap**: one pass laid OVER the bays and their ships, so a chapter you have not
+  sailed is covered along with everything in it, without any draw above it having to ask.
+  **This reverses an older note** that said the bays must never be fogged. That was right
+  about the route and wrong about the water — the way home, the harbour, the gate, the
+  maelstroms and the next stop are all still drawn over the top of the fog.
+- **It never takes anything away.** An empty mask is seeded from cleared encounters before
+  the first frame, and **the seed is queued into `xfogPending`** — without that, the first
+  flush would write one cell, stop the column being null, and put every conquered chapter
+  back under fog on the next load.
+
 ## /expeditions is retired: this is the only door
 
 **The hub page is a redirect to `/sea`** (2026-09-09), and so are `/expeditions/ship`,
