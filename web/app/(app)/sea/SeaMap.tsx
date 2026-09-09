@@ -180,7 +180,7 @@ import { heldGolden } from '../fishing/actions'
 import { coastClip, coastline } from '@/lib/islandShape'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
-import { GROUND, islandLift, bakeIsland, requestGround } from './islandArt'
+import { GROUND, islandLift, liftAt, liftAtPoint, bakeIsland, requestGround } from './islandArt'
 import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './SeaIslandsGPU'
 import { type GlowPatch } from './seaGlow'
 import { type CaptainLook } from './seaCaptain'
@@ -13238,7 +13238,7 @@ const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
           and these are supposed to have been left. */}
       <div style={{
         position: 'absolute', left: '50%', top: '54%', width: propW,
-        transform: `translate(-50%, -100%) translateY(${-islandLift(isle.id, isle.r * 2) / GROUND}px) scaleY(${1 / GROUND})`,
+        transform: `translate(-50%, -100%) translateY(${-liftAt(isle.id, isle.r * 2, Math.PI / 2) / GROUND}px) scaleY(${1 / GROUND})`,
         transformOrigin: 'bottom center',
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -13697,7 +13697,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, call = null }: {
                 // was doing this for BUILDINGS — the isle prop above had it and
                 // nothing else did — and it is most of why the islands read as
                 // decals slid under the houses.
-                transform: `translate(-50%, -100%) translateY(${-islandLift(place.id, d) / GROUND}px) scaleY(${1 / GROUND})`,
+                transform: `translate(-50%, -100%) translateY(${-liftAtPoint(place.id, d, b.x, b.y) / GROUND}px) scaleY(${1 / GROUND})`,
                 transformOrigin: 'bottom center',
                 // NIGHT, ON A BOUNDED BOX. A building is a small element and
                 // filtering it costs a small buffer; the crash came from

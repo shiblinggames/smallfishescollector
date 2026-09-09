@@ -55,9 +55,19 @@ const ISLAND_LIFT = 15
  * pixels of drop it stops reading as land with some height and starts reading
  * as a wall.
  *
- * So: 2.5%, which leaves the big islands with about half again the edge they
- * had — enough that the Mainland no longer reads flatter than a cay — and
- * leaves the small ones almost exactly where they were.
+ * So it went to 2.5%, which was safe and did not do very much.
+ *
+ * ── AND THEN THE CLIFF STOPPED BEING UNIFORM ────────────────────────────────
+ *
+ * `liftAt` puts the height on ONE SIDE and shelves the other to a lip, and the
+ * side it shelves is the one the berth is on. That changes what this number is
+ * allowed to be: it is the height of a HEADLAND now, seen across the island,
+ * not the height of the wall you tie up against. The berth sees about a sixth
+ * of it whatever it says.
+ *
+ * 3.5%. The Mainland gets a seventy-eight pixel headland and a fourteen pixel
+ * beach where you moor. Still barely half the hundred and forty that was
+ * rejected, and none of it is at the shore that was the complaint.
  *
  * AND SEEDED, gently. Ten islands at one proportion is ten of the same island
  * at different scales, but this is a tenth of the swing the first pass used:
@@ -65,8 +75,57 @@ const ISLAND_LIFT = 15
  */
 export function islandLift(id: string, d: number): number {
   const seed = (seedOf(id) % 1000) / 1000
-  const base = Math.min(34, Math.max(13, d * 0.025))
+  const base = Math.min(46, Math.max(15, d * 0.035))
   return Math.round(base * (0.85 + seed * 0.3))
+}
+
+/**
+ * ── WHERE THE BERTH IS, AS A BEARING ────────────────────────────────────────
+ *
+ * `berthOf` puts the mooring circle at (+0.85r, +0.60r) from an island's
+ * centre, which is east-south-east. Written here rather than imported because
+ * chart.ts imports FROM this file's neighbours and the cycle is not worth one
+ * arctangent.
+ */
+const BERTH_A = Math.atan2(0.60, 0.85)
+
+/**
+ * ── HOW HIGH THE LAND STANDS, AT ONE BEARING ────────────────────────────────
+ *
+ * A CLIFF ON ONE SIDE, A BEACH ON THE OTHER. This is the whole of what the
+ * uniform lift could not do, and the reason it could not: an extrusion that is
+ * the same height all the way round is a cliff EVERYWHERE, so every pixel of
+ * height is also a pixel of wall at the place you moor. Taking it out again
+ * fixed the docking and left the island flat.
+ *
+ * Varying it fixes both at once. The land rises to a headland on one side and
+ * shelves to nothing on the other, which is what a coast actually looks like —
+ * and it means the island can carry real vertical mass on the side you SEE it
+ * from without putting any of it where you arrive.
+ *
+ * ── THE LOW SIDE IS THE BERTH SIDE, AND THAT IS NOT A COINCIDENCE ───────────
+ *
+ * The one place every captain approaches an island is its mooring circle, so
+ * that is the one bearing guaranteed to be a beach. The high side is opposite
+ * it, jittered per island so ten coasts do not all lean the same way, and the
+ * jitter is bounded well short of reaching the berth.
+ *
+ * Never quite zero: 16% keeps a lip of rock at the waterline even at the
+ * beach, because land that meets the sea at exactly nothing has no edge and
+ * goes back to reading as a decal.
+ */
+export function liftAt(id: string, d: number, angle: number): number {
+  const L = islandLift(id, d)
+  const jit = ((((seedOf(id) >>> 5) % 1000) / 1000) - 0.5) * 1.1
+  const hi = BERTH_A + Math.PI + jit
+  const k = (1 + Math.cos(angle - hi)) / 2
+  return L * (0.16 + 0.84 * k)
+}
+
+/** The lift at a point given as a percentage of the island's box — which is how
+ *  chart.ts places every building. */
+export function liftAtPoint(id: string, d: number, xPct: number, yPct: number): number {
+  return liftAt(id, d, Math.atan2(yPct - 50, xPct - 50))
 }
 
 /**
@@ -309,22 +368,32 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
   land.width = cv.width; land.height = cv.height
   const lg = land.getContext('2d')!
   lg.scale(dpr, dpr)
-  const lift = LIFT / GROUND
+  // The MEAN lift, for the soft passes — the crown wash, the rim light and the
+  // inset shadow. Those are broad gradients placed roughly against the top
+  // face; giving each of them its own per-bearing profile would be arithmetic
+  // nobody could see. The two things whose SHAPE is the land — the cliff and
+  // the face — take the profile itself. See liftAt.
+  const lift = (LIFT * 0.58) / GROUND
 
-  const traceL = (scale: number, dy = 0) => {
+  /**
+   * Trace the coast at a scale, displaced vertically by a PROFILE rather than a
+   * constant — `up` is how far this bearing's land stands above the plane, and
+   * the sign is the caller's (the cliff hangs below, the face sits above).
+   */
+  const traceL = (scale: number, sign: number) => {
     lg.beginPath()
     for (let i = 0; i < rs.length; i++) {
       const a = (Math.PI * 2 * i) / rs.length
       const r = (rs[i] / 100) * d * scale
       const x = C + Math.cos(a) * r
-      const y = C + dy + Math.sin(a) * r
+      const y = C + sign * (liftAt(id, d, a) / GROUND) + Math.sin(a) * r
       if (i === 0) lg.moveTo(x, y); else lg.lineTo(x, y)
     }
     lg.closePath()
   }
 
-  // the cliff, dropped
-  traceL(0.74, lift)
+  // the cliff, dropped — deep under the headland, barely there at the beach
+  traceL(0.74, 1)
   lg.fillStyle = grad165(lg, 0.74, [[0, '#3b3226'], [0.55, '#2a2419'], [1, '#191509']])
   lg.fill()
 
@@ -334,10 +403,10 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
 
   // the face, lifted, everything inside clipped to it
   lg.save()
-  traceL(0.74, -lift)
+  traceL(0.74, -1)
   lg.clip()
   const face = (scale: number, fill: string | CanvasGradient) => {
-    traceL(0.74 * scale, -lift)
+    traceL(0.74 * scale, -1)
     lg.fillStyle = fill
     lg.fill()
   }
@@ -431,7 +500,7 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
   lg.lineWidth = 64
   lg.strokeStyle = 'rgba(0,0,0,0.34)'
   lg.filter = 'blur(0px)'
-  traceL(0.74, -lift)
+  traceL(0.74, -1)
   lg.stroke()
   lg.lineWidth = 26
   lg.strokeStyle = 'rgba(0,0,0,0.22)'

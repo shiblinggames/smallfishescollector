@@ -39,7 +39,7 @@
 // reads as windows throwing light onto the ground they stand on.
 
 import type { Container, Sprite, Texture } from 'pixi.js'
-import { GROUND, islandLift } from './islandArt'
+import { GROUND, islandLift, liftAt, liftAtPoint } from './islandArt'
 import { texture } from './skiffArt'
 
 export type GpuBuilding = {
@@ -122,9 +122,12 @@ export async function makeTowns(
     view.addChild(node)
 
     const d = spec.r * 2
-    // How far this island's top face stands above its own plane. Per island
-    // now, not one number for all ten — see islandLift.
-    const lift = islandLift(spec.id, d) / GROUND
+    // The MEAN lift, for the town's window glow — a broad wash that is not
+    // standing anywhere in particular. Each BUILDING takes the lift at its own
+    // bearing instead, because the land is a headland on one side and a beach
+    // on the other now and a single number would float half of them. See
+    // liftAt.
+    const lift = (islandLift(spec.id, d) * 0.58) / GROUND
     let glow: Sprite | null = null
 
     // UNDER THE BUILDINGS, and added first for exactly that reason.
@@ -180,9 +183,12 @@ export async function makeTowns(
       // the whole of "the buildings do not match the island's perspective":
       // every roof on every island was sunk by twenty-six world pixels, which
       // reads as the island being a flat decal slid under them.
+      // ITS OWN GROUND, not the island's average. A cottage up on the
+      // headland stands high; the same cottage down by the mooring stands
+      // almost at the water.
       s.position.set(
         -spec.r + (b.x / 100) * d,
-        -spec.r + (b.y / 100) * d - lift,
+        -spec.r + (b.y / 100) * d - liftAtPoint(spec.id, d, b.x, b.y) / GROUND,
       )
       s.tint = spec.locked ? LOCKED : 0xffffff
       node.addChild(s)
