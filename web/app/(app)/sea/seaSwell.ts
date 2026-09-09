@@ -84,20 +84,74 @@ export const WIND_Y = 0.5679
  * a theoretical 3.7x, which is close enough that the long swell overtakes the
  * chop the way it ought to instead of the whole field marching in lockstep.
  */
-export type SwellWave = { len: number; amp: number; speed: number; skew: number }
+export type SwellWave = {
+  len: number
+  amp: number
+  speed: number
+  skew: number
+  /**
+   * WHERE THIS TRAIN IS IN ITS CYCLE AT THE WORLD ORIGIN.
+   *
+   * The first set had none, which means every train crossed zero at the same
+   * point and they summed into one coherent interference pattern — a moiré with
+   * visible large-scale structure marching across the water. A sea is not
+   * phase-locked to its own coordinate system. These are arbitrary and
+   * deliberately not related to each other.
+   */
+  phase: number
+  /**
+   * WHETHER THE WATER IS SHADED BY IT, as opposed to only lifted by it.
+   *
+   * A train whose wavelength is most of a screen has a normal that barely
+   * changes across the frame, so shading by it does not draw a wave — it draws
+   * a smooth ramp from light to dark across the whole sea. That is what the
+   * long trains were doing and it read exactly as what it was: a gradient laid
+   * over the water.
+   *
+   * This is not a fudge to hide them. A photograph of real ocean does not show
+   * the long swell as a band of light either; you see the long swell through
+   * the SHORT waves riding on it, changing their spacing and their glint. The
+   * heave is felt, not seen — and the only thing on this chart that reads
+   * height is a hull sitting on it.
+   *
+   * So the long trains lift the boats and paint nothing, and the short ones do
+   * all the drawing. One field, two jobs, split where the physics splits it.
+   */
+  seen: boolean
+}
 
 export const SWELL: SwellWave[] = [
-  // THE HEAVE. Half a screen across, so it is barely a shape on the water — it
-  // is here for the boats, and it is most of what lifts them.
-  { len: 1500, amp: 3.4, speed: 0.34, skew: 0 },
-  // The set behind it, crossing at about twenty degrees.
-  { len: 760, amp: 1.9, speed: 0.50, skew: 0.38 },
-  // AND FROM HERE DOWN IS WHAT YOU ACTUALLY SEE. Two to five crests in frame,
-  // steep enough to catch the light on one face and lose it on the other.
-  { len: 395, amp: 1.15, speed: 0.66, skew: -0.26 },
-  { len: 205, amp: 0.62, speed: 0.88, skew: 0.62 },
-  // The wind chop riding over all of it.
-  { len: 112, amp: 0.3, speed: 1.12, skew: -0.48 },
+  // ── THE HEAVE. Felt, never drawn. ────────────────────────────────
+  // Both of these are most of a screen across, so shading by them paints a
+  // ramp rather than a wave. They lift the boats and nothing else.
+  { len: 1500, amp: 3.4, speed: 0.34, skew: 0, phase: 0, seen: false },
+  { len: 760, amp: 1.9, speed: 0.50, skew: 0.38, phase: 0.61, seen: false },
+
+  // ── AND THE WAVES YOU SEE ────────────────────────────────────────
+  //
+  // SPREAD WIDE, AND SPREAD ON THE SCREEN RATHER THAN IN THE WORLD.
+  //
+  // The first set put every bearing inside seventy degrees of the wind, which
+  // sums to five near-parallel gratings and draws exactly that: lines ruled
+  // across the water, with the specular picking them out in bright bars.
+  //
+  // But "spread them out" is not as simple as it sounds on a squashed plane,
+  // and this is the 2.5D bit. A world bearing does NOT arrive on screen at the
+  // same angle: y is compressed by GROUND, so the whole fan of directions is
+  // squeezed toward the horizontal. Two trains ninety degrees apart in the
+  // world can land fourteen degrees apart on screen — which is what the second
+  // attempt did, and it would have banded all over again.
+  //
+  // So these skews were solved BACKWARDS from the angles wanted on screen:
+  // crest lines at roughly 20, 70 and 120 degrees from horizontal, evenly
+  // spread through the half-circle, so they genuinely cross. Solve it the other
+  // way and the arithmetic lies to you.
+  //
+  // Their heights fall away as their slopes stay up: small and steep is what
+  // catches light on one face and loses it on the other.
+  { len: 395, amp: 1.15, speed: 0.66, skew: -0.812, phase: 2.13, seen: true },
+  { len: 205, amp: 0.62, speed: 0.88, skew: -1.615, phase: 4.02, seen: true },
+  { len: 112, amp: 0.3, speed: 1.12, skew: -0.281, phase: 5.47, seen: true },
 ]
 
 /** Each train's unit bearing, precomputed. */
@@ -119,7 +173,7 @@ export function swellAt(x: number, y: number, t: number): number {
   let h = 0
   for (let i = 0; i < SWELL.length; i++) {
     const w = SWELL[i], d = DIRS[i]
-    h += w.amp * Math.sin(((x * d.x + y * d.y) / w.len - t * w.speed) * TAU)
+    h += w.amp * Math.sin(((x * d.x + y * d.y) / w.len - t * w.speed) * TAU + w.phase)
   }
   return h
 }
@@ -137,7 +191,7 @@ export function swellSlope(x: number, y: number, t: number): number {
   for (let i = 0; i < SWELL.length; i++) {
     const w = SWELL[i], d = DIRS[i]
     g += w.amp * (TAU / w.len) * d.x
-      * Math.cos(((x * d.x + y * d.y) / w.len - t * w.speed) * TAU)
+      * Math.cos(((x * d.x + y * d.y) / w.len - t * w.speed) * TAU + w.phase)
   }
   return g
 }
@@ -166,23 +220,28 @@ export function swellSlope(x: number, y: number, t: number): number {
  * same three terms with cos for sin and a factor of 2*pi/wavelength.
  */
 export function swellGradGlsl(): string {
-  const total = SWELL.reduce((n, w) => n + w.amp, 0)
-  const terms = SWELL.map((w, i) => {
-    const d = DIRS[i]
+  const shown = SWELL.map((w, i) => ({ w, d: DIRS[i] })).filter(e => e.w.seen)
+  const total = shown.reduce((n, e) => n + e.w.amp, 0)
+  const terms = shown.map(({ w, d }) => {
     const k = (w.amp / total) * (TAU / w.len)
     return `  g += ${k.toExponential(5)} * vec2(${d.x.toFixed(6)}, ${d.y.toFixed(6)})`
       + ` * cos((dot(world, vec2(${d.x.toFixed(6)}, ${d.y.toFixed(6)}))`
-      + ` / ${w.len.toFixed(1)} - time * ${w.speed.toFixed(4)}) * 6.2831853);`
+      + ` / ${w.len.toFixed(1)} - time * ${w.speed.toFixed(4)}) * 6.2831853`
+      + ` + ${w.phase.toFixed(4)});`
   })
   return `vec2 swellGrad(vec2 world, float time) {\n  vec2 g = vec2(0.0);\n${terms.join('\n')}\n  return g;\n}`
 }
 
 export function swellGlsl(): string {
-  const total = SWELL.reduce((n, w) => n + w.amp, 0)
-  const terms = SWELL.map((w, i) => {
-    const d = DIRS[i]
+  // ONLY WHAT IS SEEN, and normalised against that subset so the shader's own
+  // constant keeps meaning what it meant. The trains the boats ride are not in
+  // here at all — see `seen`.
+  const shown = SWELL.map((w, i) => ({ w, d: DIRS[i] })).filter(e => e.w.seen)
+  const total = shown.reduce((n, e) => n + e.w.amp, 0)
+  const terms = shown.map(({ w, d }) => {
     return `  h += ${(w.amp / total).toFixed(5)} * sin((dot(world, vec2(${d.x.toFixed(6)}, ${d.y.toFixed(6)}))`
-      + ` / ${w.len.toFixed(1)} - time * ${w.speed.toFixed(4)}) * 6.2831853);`
+      + ` / ${w.len.toFixed(1)} - time * ${w.speed.toFixed(4)}) * 6.2831853`
+      + ` + ${w.phase.toFixed(4)});`
   })
   return `float swellHeight(vec2 world, float time) {\n  float h = 0.0;\n${terms.join('\n')}\n  return h;\n}`
 }

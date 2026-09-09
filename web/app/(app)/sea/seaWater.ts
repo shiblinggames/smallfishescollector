@@ -377,13 +377,25 @@ void main(void) {
   vec3 n = normalize(vec3(-sg * 160.0, 1.0));
   vec2 lightDir = normalize(uLight);
   float lit = dot(n.xy, lightDir);
-  shade += lit * 0.14;
+  shade += lit * 0.10;
 
-  // AND THE GLINT OFF THE FACES SQUARE TO IT. A wave is not just lighter on one
-  // side; the water that is turned most directly at the light throws back a
-  // hard, narrow flash, and that specular is most of what separates a sea from
-  // a painted gradient of one. Narrow on purpose — a broad one is a haze.
-  shade += pow(max(0.0, lit), 5.0) * 0.13 * uSwell;
+  // ── AND A GLINT, KEPT ON A SHORT LEASH ───────────────────────────
+  //
+  // This was pow(lit, 5.0) * 0.13, and on the set of trains that shipped with
+  // it — five bearings inside seventy degrees, none of them phase-shifted —
+  // it did not read as glitter on a sea. It read as BARS: a narrow highlight
+  // laid over a grating draws the grating in bright lines the width of the
+  // screen.
+  //
+  // The trains are spread and phase-broken now, which is the real fix, but the
+  // lesson stands and is worth leaving here. A specular does not make water
+  // look like water on its own; it AMPLIFIES whatever structure the normals
+  // already have. Point it at something regular and it will find the regularity
+  // and paint it brighter than anything else on the screen.
+  //
+  // So: narrower, and less than half the weight. It should catch the eye on a
+  // crest here and there, never draw a line you can follow across the water.
+  shade += pow(max(0.0, lit), 8.0) * 0.055 * uSwell;
   col *= shade;
 
   // ── THE SHORE IS NOT DRAWN HERE ──────────────────────────────────
