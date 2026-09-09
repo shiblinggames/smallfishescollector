@@ -1920,6 +1920,24 @@ export default function SeaMap({
    *  the helm centres, which reads as a twitch rather than as weight. */
   const lastHeadRef = useRef(0)
   const leanRef = useRef(0)
+  /**
+   * ── HER OWN WEIGHT ────────────────────────────────────────────────────────
+   *
+   * The height and the roll she is EASING TOWARD the surface, rather than the
+   * surface's own values.
+   *
+   * A hull has mass. It cannot follow the water instantly and it does not try:
+   * it lags, and the shorter the wave the less of it the boat takes up at all.
+   * Reading the surface raw skipped that entirely — every ripple went straight
+   * into the sprite, and at a cruise you meet the shortest train more than once
+   * a second, which is not a heave, it is chatter.
+   *
+   * A third of a second of lag leaves the three-second heave almost untouched
+   * and takes most of the fast stuff out, which is exactly what a hull does to
+   * a sea and exactly what was wanted.
+   */
+  const bobRef = useRef(0)
+  const rollRef = useRef(0)
   // The two rates, each the bought ladder times the boat's own trim. The trim
   // still trades speed for nimbleness; the ladders are what money buys.
   const handlingRef = useRef(1)
@@ -7465,10 +7483,15 @@ export default function SeaMap({
         // THE SEA'S OWN HEIGHT WHERE SHE IS FLOATING, times what the weather is
         // doing to it. The shape of the motion is the swell's; `gust` only says
         // how big. See seaSwell for why this is a field and not a clock.
-        const bob = swellAt(pos.current.x, pos.current.y, t) * (1 + gust * 1.35)
+        // WHAT THE WATER IS DOING, and then what SHE does about it. The ease
+        // below is her mass; see bobRef.
+        const seaNow = swellAt(pos.current.x, pos.current.y, t) * (1 + gust * 1.35)
           // A second, slower heave that only exists in weather: a swell has a
           // longer period than a chop and it is what makes a sea look big.
           + Math.sin(t * 0.72) * 7.5 * gust
+        const settle = 1 - Math.exp(-dt / 0.32)
+        bobRef.current += (seaNow - bobRef.current) * settle
+        const bob = bobRef.current
         // ── THE BOW LIFTS, WHICHEVER WAY SHE IS POINTING ──────────────
         //
         // This was `vel.x / SPEED`, a SIGNED number, and the rotate below sits
@@ -7516,7 +7539,12 @@ export default function SeaMap({
         // field that lifts her. She rolls down the face of a wave and rights
         // herself over the crest, in calm water as much as in a squall, and two
         // boats on the same crest roll together.
-        const roll = swellHeel(pos.current.x, pos.current.y, t)
+        // Eased on the same lag as the heave, and for the same reason: a hull
+        // rolls with its own weight behind it rather than tracking every slope
+        // the surface presents.
+        rollRef.current += (swellHeel(pos.current.x, pos.current.y, t) - rollRef.current)
+          * (1 - Math.exp(-dt / 0.32))
+        const roll = rollRef.current
 
         // ── AND SHE LEANS INTO THE HELM ───────────────────────────────────
         //

@@ -66,21 +66,40 @@ export type SwellWave = {
 }
 
 /**
- * Sized for HOW A BOAT MOVES, not for how many crests fit on a screen. That was
- * the drawn version's problem and it is not this one's.
+ * ── NOTHING SHORTER THAN THE BOAT ───────────────────────────────────────────
  *
- * The long trains carry it — 3.4 and 1.9 against 1.15, 0.62 and 0.3 — so a hull
- * does a slow three-second heave with a little chop on top rather than
- * juddering. Speeds follow the lengths the way deep water does, as roughly the
- * square root of wavelength, so the long swell overtakes the chop instead of
+ * There were five trains and the shortest two were 205 and 112 world pixels.
+ * They were chosen when this field still fed the shader, where the job was to
+ * fit six to ten crests on a screen. Nothing draws it now, and against a HULL
+ * they were doing real harm.
+ *
+ * Two reasons, and the second is the one that was reported.
+ *
+ * A hull does not feel a wave shorter than itself. It bridges it: bow on one
+ * crest, stern on the next, and the boat barely moves. A skiff here is about a
+ * hundred and fifty pixels long, so a 112px train is a wave it should ignore
+ * completely and a 205px one is a wave it should barely notice.
+ *
+ * And a hull's motion is at the ENCOUNTER frequency, not the wave's. Standing
+ * still you meet a train at its own period; at a three hundred pixel a second
+ * cruise you meet a 112px train nearly three times a second. That is not a
+ * heave, it is a judder, and it is exactly what "constantly bobbing up and
+ * down" is. The old time-only bob never had this problem because it did not
+ * know where the boat was — which was its whole fault, and also, accidentally,
+ * why it was smooth.
+ *
+ * So: three trains, none shorter than 395, and the total amplitude back to 5.55
+ * where the old pair peaked. At cruise the fastest of them is met well under
+ * once a second.
+ *
+ * Speeds still follow the lengths the way deep water does, as roughly the
+ * square root of wavelength, so the long swell overtakes the short instead of
  * the whole field marching in lockstep.
  */
 export const SWELL: SwellWave[] = [
-  { len: 1500, amp: 3.4, speed: 0.34, skew: 0, phase: 0 },
-  { len: 760, amp: 1.9, speed: 0.50, skew: 0.38, phase: 0.61 },
-  { len: 395, amp: 1.15, speed: 0.66, skew: -0.812, phase: 2.13 },
-  { len: 205, amp: 0.62, speed: 0.88, skew: -1.615, phase: 4.02 },
-  { len: 112, amp: 0.3, speed: 1.12, skew: -0.281, phase: 5.47 },
+  { len: 1500, amp: 3.0, speed: 0.34, skew: 0, phase: 0 },
+  { len: 760, amp: 1.7, speed: 0.50, skew: 0.38, phase: 0.61 },
+  { len: 395, amp: 0.85, speed: 0.66, skew: -0.812, phase: 2.13 },
 ]
 
 /** Each train's unit bearing, precomputed. */
@@ -116,18 +135,18 @@ export function swellAt(x: number, y: number, t: number): number {
  * WEATHER, so in ordinary water the hull held one fixed angle and never moved.
  * A boat at a constant lean is a boat on rails.
  *
- * The constant is measured against the field rather than guessed. Sampled over
- * forty thousand points, 110 gives a typical roll of about 1.9 degrees with
- * peaks near four, and the clamp catches the 0.3% of moments when every train
- * lines up at once.
+ * Measured against the field rather than guessed, and re-measured after the two
+ * short trains came out: the slope they carried was the highest in the set and
+ * also the fastest-changing, so losing them takes the twitch out of the roll as
+ * well as out of the heave.
  *
- * Small on purpose, even so. A hull that rolls a long way does not look like a
- * boat in a swell, it looks like a boat in trouble — the reason this reads at
- * all is that it never stops and never repeats, not that it is large.
+ * Small on purpose. A hull that rolls a long way does not look like a boat in a
+ * swell, it looks like a boat in trouble — what makes this read at all is that
+ * it never stops and never repeats, not that it is large.
  */
 export function swellHeel(x: number, y: number, t: number): number {
   const g = swellSlope(x, y, t) * 110
-  return Math.max(-6, Math.min(6, g))
+  return Math.max(-5, Math.min(5, g))
 }
 
 /**
