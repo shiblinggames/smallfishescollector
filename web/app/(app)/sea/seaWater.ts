@@ -90,7 +90,7 @@ const SHELF_OUT = Math.max(...PLACES.map(p => p.outer ?? 0))
 // source is its own, taken from the library rather than from memory. All this
 // file provides is the fragment.
 
-import { swellGlsl } from './seaSwell'
+import { swellGlsl, swellGradGlsl } from './seaSwell'
 
 const VERT = `
 in vec2 aPosition;
@@ -177,6 +177,8 @@ vec2 alongWind(vec2 p, float k) {
 // Without it they ride a wave that is not drawn, which is the same bug as
 // before wearing better clothes.
 ${swellGlsl()}
+
+${swellGradGlsl()}
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -315,7 +317,11 @@ void main(void) {
   // the field anything floating knows about. Modest on purpose — it wants to
   // be a swell you can follow with your eye, not corduroy. One number, and at
   // zero the water is exactly what it was before.
-  swell += swellHeight(world, uTime) * 0.11;
+  //
+  // SMALL, because height is the WRONG cue and this is only here to tie the
+  // trains into the noise's own light and dark. The waves themselves are lit
+  // from the gradient, forty lines down. See THE FACES.
+  swell += swellHeight(world, uTime) * 0.05;
 
   // ── THE SHELF ─────────────────────────────────────────────────────
   //
@@ -346,8 +352,38 @@ void main(void) {
   // the far half of every screen, which is a lot of the reason the sea read as
   // washed out even after the palettes were richer.
   shade *= 1.0 - shelf * 0.14;
-  float facing = dot(normalize(vec2(swell, swell * 0.6) + vec2(0.0001)), normalize(uLight));
-  shade += facing * 0.035 * uSwell;
+  // ── THE FACES, AND THIS IS WHAT MAKES IT WATER ───────────────────
+  //
+  // What was here shaded by HEIGHT: normalize of vec2(swell, swell * 0.6),
+  // which is a fixed direction multiplied by the SIGN of the height. It is not
+  // a normal and it never was — it flips between two values as the height
+  // crosses zero, so what it drew was a band edge, and a field of band edges is
+  // corduroy. That is the whole of why this sea has never read as waves.
+  //
+  // A surface is seen through its NORMAL. Every crest has a face turned toward
+  // the light and a face turned away, and that PAIR is what the eye reads as a
+  // wave — not a bright line where the water happens to be high.
+  //
+  // The gradient is exact and free: an analytic field has an analytic
+  // derivative, and seaSwell generates it from the same three trains the boats
+  // are floating on. So the face that lights up is the face of the wave that is
+  // lifting them.
+  //
+  // 160 turns a gradient of about 0.008 at the steepest into a normal tilted
+  // some fifty degrees, which is a swell rather than a millpond or a mountain
+  // range. It lies down with distance for the same reason everything else does:
+  // at a shallow angle a wave shows you its top and not its face.
+  vec2 sg = swellGrad(world, uTime) * uSwell * (1.0 - recede * 0.55);
+  vec3 n = normalize(vec3(-sg * 160.0, 1.0));
+  vec2 lightDir = normalize(uLight);
+  float lit = dot(n.xy, lightDir);
+  shade += lit * 0.14;
+
+  // AND THE GLINT OFF THE FACES SQUARE TO IT. A wave is not just lighter on one
+  // side; the water that is turned most directly at the light throws back a
+  // hard, narrow flash, and that specular is most of what separates a sea from
+  // a painted gradient of one. Narrow on purpose — a broad one is a haze.
+  shade += pow(max(0.0, lit), 5.0) * 0.13 * uSwell;
   col *= shade;
 
   // ── THE SHORE IS NOT DRAWN HERE ──────────────────────────────────

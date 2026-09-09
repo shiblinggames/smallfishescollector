@@ -115,7 +115,31 @@ export function swellSlope(x: number, y: number, t: number): number {
  *
  * Amplitudes are handed over as a FRACTION of the sum, not in bob units: on the
  * water it is a shade of light and dark, and how dark is the shader's business.
+ *
+ * ── AND THE GRADIENT MATTERS MORE THAN THE HEIGHT ───────────────────────────
+ *
+ * `swellGradGlsl` writes the derivative, and it is the one that makes water
+ * look like water. Shading a surface by its HEIGHT gives you light where it is
+ * high and dark where it is low — smooth bands, corduroy, which is exactly what
+ * the first cut of this looked like. A surface is seen through its NORMAL: each
+ * crest gets a face turned toward the light and a face turned away, and that
+ * pair is what the eye reads as a wave.
+ *
+ * Free here, because an analytic field has an analytic derivative. It is the
+ * same three terms with cos for sin and a factor of 2*pi/wavelength.
  */
+export function swellGradGlsl(): string {
+  const total = SWELL.reduce((n, w) => n + w.amp, 0)
+  const terms = SWELL.map((w, i) => {
+    const d = DIRS[i]
+    const k = (w.amp / total) * (TAU / w.len)
+    return `  g += ${k.toExponential(5)} * vec2(${d.x.toFixed(6)}, ${d.y.toFixed(6)})`
+      + ` * cos((dot(world, vec2(${d.x.toFixed(6)}, ${d.y.toFixed(6)}))`
+      + ` / ${w.len.toFixed(1)} - time * ${w.speed.toFixed(4)}) * 6.2831853);`
+  })
+  return `vec2 swellGrad(vec2 world, float time) {\n  vec2 g = vec2(0.0);\n${terms.join('\n')}\n  return g;\n}`
+}
+
 export function swellGlsl(): string {
   const total = SWELL.reduce((n, w) => n + w.amp, 0)
   const terms = SWELL.map((w, i) => {
