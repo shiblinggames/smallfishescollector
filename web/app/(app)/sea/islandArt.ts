@@ -212,7 +212,49 @@ const islandCache = new Map<string, HTMLCanvasElement>()
  * the texture, exactly as it does today, and when the files land the cache is
  * dropped and every mounted island repaints itself once.
  */
-const GROUND_TEX: { turf?: HTMLImageElement; rock?: HTMLImageElement; done?: boolean } = {}
+const GROUND_TEX: {
+  turf?: HTMLImageElement; rock?: HTMLImageElement; done?: boolean
+  turfG?: HTMLCanvasElement; rockG?: HTMLCanvasElement
+} = {}
+
+/**
+ * ── A TEXTURE THAT CARRIES GRAIN AND NOT COLOUR ─────────────────────────────
+ *
+ * `ground-turf.png` is a fully opaque painting with a mean of (185,185,121),
+ * and it was going on `source-atop` at 0.42 — which does not texture the land,
+ * it REPLACES 42% of it with one shared yellow-green. Every island, the same
+ * 42%. Measured across the ten ports, the authored separation between palettes
+ * in the green band ran 2 to 91 and what reached the screen was 1 to 50: half
+ * the difference thrown away, and the dark palettes — basalt, jungle, redstone
+ * — crushed into each other, because the darker a colour is the more a fixed
+ * blend toward a light one dominates it.
+ *
+ * That is why five whole palettes still looked like one. It was not the
+ * palettes.
+ *
+ * So the texture is desaturated and pulled toward mid grey once, and laid on in
+ * `soft-light` instead. Grey soft-light contributes NO hue at all: it modulates
+ * what is underneath, light where the paint is light and dark where it is dark,
+ * and a chalk island stays chalk while a jungle island stays jungle. Pulling it
+ * toward mid first is what keeps it a modulation rather than a bleach — a
+ * texture whose mean sits well above mid lightens everything it touches.
+ */
+function greyed(img: HTMLImageElement): HTMLCanvasElement {
+  const c = document.createElement('canvas')
+  c.width = img.width; c.height = img.height
+  const g = c.getContext('2d')!
+  g.drawImage(img, 0, 0)
+  // saturation-0 over the top keeps luminance and drops the hue entirely
+  g.globalCompositeOperation = 'saturation'
+  g.fillStyle = 'hsl(0,0%,50%)'
+  g.fillRect(0, 0, c.width, c.height)
+  // and half way to mid, so soft-light neither blows out nor crushes
+  g.globalCompositeOperation = 'source-over'
+  g.globalAlpha = 0.5
+  g.fillStyle = '#808080'
+  g.fillRect(0, 0, c.width, c.height)
+  return c
+}
 const groundWaiters = new Set<() => void>()
 
 export function requestGround(repaint: () => void) {
@@ -225,6 +267,8 @@ export function requestGround(repaint: () => void) {
   const settle = () => {
     if (--left > 0) return
     GROUND_TEX.done = true
+    if (GROUND_TEX.turf?.width) GROUND_TEX.turfG = greyed(GROUND_TEX.turf)
+    if (GROUND_TEX.rock?.width) GROUND_TEX.rockG = greyed(GROUND_TEX.rock)
     // Everything baked before the paint arrived was baked without it.
     islandCache.clear()
     for (const again of groundWaiters) again()
@@ -291,8 +335,8 @@ const PALETTES: IslePalette[] = [
     wet: ['#8a8378', '#6e6960', '#4e4a44'],
     sand: ['#9c968b', '#857f75'],
     pale: ['#aaa49a', '#948e84'],
-    scrub: ['#6d8452', '#566b3e'],
-    green: ['#416e3a', '#2f5430', '#244126'],
+    scrub: ['#5f8060', '#496548'],
+    green: ['#357063', '#255449', '#1b3f37'],
     rock: ['#3b4148', '#14181d'],
     beach: ['#a39c92', '#6f6a62'],
   },
@@ -311,8 +355,8 @@ const PALETTES: IslePalette[] = [
     wet: ['#b98354', '#9c6a40', '#78502f'],
     sand: ['#cb9a6c', '#b8834f'],
     pale: ['#d9ae83', '#c4955f'],
-    scrub: ['#a89a4e', '#8a7c39'],
-    green: ['#6f8a3c', '#55702e', '#445c26'],
+    scrub: ['#b0a054', '#948232'],
+    green: ['#8a8b39', '#6e6f2a', '#585921'],
     rock: ['#6b3f2c', '#2e1710'],
     beach: ['#d5a877', '#a87b4c'],
   },
@@ -321,8 +365,8 @@ const PALETTES: IslePalette[] = [
     wet: ['#bd9d6e', '#9c7c4c', '#775c35'],
     sand: ['#cdb387', '#b99b68'],
     pale: ['#dbc59b', '#c7ad7d'],
-    scrub: ['#7fa347', '#648833'],
-    green: ['#4e8a3a', '#336026', '#24471d'],
+    scrub: ['#69a03d', '#4d8029'],
+    green: ['#2f8034', '#175a22', '#0d4019'],
     rock: ['#453a29', '#1c160d'],
     beach: ['#d6bd93', '#a88a5c'],
   },
@@ -354,12 +398,15 @@ function seedOf(id: string): number {
 /** Lay one texture over whatever is already on `g`, confined to the pixels
  *  that are already opaque. `seed` turns it so no two islands match. */
 function paintGround(
-  g: CanvasRenderingContext2D, img: HTMLImageElement | undefined,
+  g: CanvasRenderingContext2D, img: HTMLCanvasElement | undefined,
   D: number, seed: number, alpha: number,
 ) {
   if (!img || !img.width) return
   g.save()
-  g.globalCompositeOperation = 'source-atop'
+  // SOFT-LIGHT, on a grey plate. See `greyed` for why this is not source-atop:
+  // an opaque texture laid over the land was replacing its colour rather than
+  // giving it a surface, and it was doing it identically on all ten islands.
+  g.globalCompositeOperation = 'soft-light'
   g.globalAlpha = alpha
   g.translate(D / 2, D / 2)
   g.rotate((seed % 360) * Math.PI / 180)
@@ -442,8 +489,10 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
    * looked like.
    *
    * PALETTES does the work now, and this only separates two islands that drew
-   * the SAME palette. Halved from what it was for that reason: inside a family
-   * it wants to be the difference between two beaches, not between two coasts.
+   * the SAME palette — inside a family it wants to be the difference between
+   * two beaches, not between two coasts. It was halved for that when PALETTES
+   * arrived and that went too far: the two basalt ports came out two units
+   * apart, which is no difference at all. Back most of the way up.
    *
    * Applied to every band and to the rock together, so an island still reads as
    * one place rather than as a green top on a grey bottom.
@@ -453,10 +502,10 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
     let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
     // Toward cool: red down, blue up, everything a shade darker.
     const k = (warmCool - 0.5) * 2
-    r = Math.round(Math.min(255, Math.max(0, r * (1 - k * 0.055))))
-    g = Math.round(Math.min(255, Math.max(0, g * (1 - k * 0.015))))
-    b = Math.round(Math.min(255, Math.max(0, b * (1 + k * 0.07))))
-    const dim = 1 - k * 0.035
+    r = Math.round(Math.min(255, Math.max(0, r * (1 - k * 0.085))))
+    g = Math.round(Math.min(255, Math.max(0, g * (1 - k * 0.025))))
+    b = Math.round(Math.min(255, Math.max(0, b * (1 + k * 0.11))))
+    const dim = 1 - k * 0.055
     r = Math.round(r * dim); g = Math.round(g * dim); b = Math.round(b * dim)
     return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
   }
@@ -724,7 +773,7 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
   // texture is there to break the flat brown rather than to be read. Inside
   // the waterline clip now: source-atop alone would have laid it over the
   // reflection too, and a reflection with rock grain in it is a rock.
-  paintGround(lg, GROUND_TEX.rock, D, seedOf(id) * 7, 0.3)
+  paintGround(lg, GROUND_TEX.rockG, D, seedOf(id) * 7, 0.85)
   lg.restore()
 
   // the face, lifted, everything inside clipped to it
@@ -747,7 +796,7 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
   // its own texture. The crown, the woods and the rim light are drawn after
   // this and keep sitting on top, which is the whole reason it goes on here
   // rather than last.
-  paintGround(lg, GROUND_TEX.turf, D, seedOf(id), 0.42)
+  paintGround(lg, GROUND_TEX.turfG, D, seedOf(id), 0.9)
 
   // ── THE CROWN — higher ground catching the light ─────────────────
   //

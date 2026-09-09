@@ -864,6 +864,24 @@ sand, scrub, canopy AND rock, because a chalk island with a basalt cliff is two 
 wearing one coat. An island draws one off its seed and the dial runs INSIDE it, halved, to
 separate two islands that drew the same family. Across the ten ports all five are in use.
 
+**And the texture was eating all of it.** Five whole palettes shipped and the islands still
+looked identical, which was not the palettes' fault. `ground-turf.png` is a fully opaque
+painting with a mean of (185,185,121) and it was going on `source-atop` at 0.42 - that does
+not texture the land, it REPLACES 42% of it with one shared yellow-green, the same 42% on
+every island. Measured across the ten ports: authored separation in the green band ran 2 to
+91, what reached the screen was 1 to 50. Half the difference thrown away, and the dark
+palettes crushed into each other, because the darker a colour is the more a fixed blend toward
+a light one dominates it. The plate is desaturated and pulled half way to mid grey once, then
+laid on in **soft-light**, which contributes no hue at all: it modulates what is underneath
+and a chalk island stays chalk. Same measurement after: **3 to 111**. Pulling the plate toward
+mid first is what keeps it a modulation rather than a bleach - a texture whose mean sits well
+above mid lightens everything it touches.
+
+**The lesson is worth more than the fix.** An opaque texture composited `source-atop` is not a
+surface, it is a second colour, and it will quietly average away every colour decision made
+underneath it. Anywhere a shared plate goes over per-thing colour, it has to be grey and it
+has to be a blend mode.
+
 **The landing is a notch, not a half of the island.** The first cut of the height profile was
 one cosine, high opposite the berth and low at it. That fixes the docking and flattens far
 more coast than it needs to - and because the base outline sits inside the face outline at the
