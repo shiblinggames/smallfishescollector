@@ -22,7 +22,7 @@
 //
 // Once each, latched on a profile column. Never repeats.
 
-import { useEffect, useRef, useState, startTransition } from 'react'
+import { useEffect, useState, startTransition } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import { SEA_ACCENT } from '@/lib/seaOnboarding'
@@ -30,6 +30,30 @@ import { markSeaHintSeen } from './tourActions'
 
 /** Keyed by the place id in chart.ts. Anywhere not listed simply has no hint,
  *  which is how the Mainland stays quiet — its buildings speak for themselves. */
+/**
+ * ── WHAT THIS TAB HAS ALREADY SAID, ACROSS MOUNTS ───────────────────────────
+ *
+ * MODULE SCOPE, and it has to be. This component is rendered as
+ * `{!hudOff && <... />}`, and `hudOff` is `!!fishingIn || fightOn` — so
+ * dropping a line or taking a fight UNMOUNTS it, and coming back mounts a
+ * fresh one.
+ *
+ * The latch used to be `useRef(new Set(seen))`, which rebuilds on every one of
+ * those mounts out of `seen` — a SERVER prop, read once when the page rendered
+ * and never updated while you sail. So everything latched this session was
+ * forgotten the moment you went fishing, and said itself again on the way back.
+ * Three times over, for anyone who fishes twice.
+ *
+ * The row in the database was right the whole time; it was the copy in memory
+ * that kept resetting. A latch has to outlive the thing it is latching.
+ *
+ * Seeded from `seen` on every mount and never cleared, so a real page load
+ * starts from the database and everything after that accumulates. A different
+ * captain in the same tab would inherit this set, which is fine: signing in is
+ * a full navigation, and this module goes with it.
+ */
+const shown = new Set<string>()
+
 const HINTS: Record<string, { portrait: string; speaker: string; text: string }> = {
   shipyard: {
     ...GUIDES.doby,
@@ -83,18 +107,18 @@ export default function SeaLandfallHint({
   seen: string[]
 }) {
   const [showing, setShowing] = useState<string | null>(null)
-  /** Grows as hints fire, so one does not repeat within a session before the
-   *  server round-trip has landed. */
-  const done = useRef(new Set(seen))
 
   useEffect(() => {
+    // Same story as the cues: this component unmounts every time you drop a
+    // line, so the latch lives outside it. See `shown`.
+    for (const s of seen) shown.add(s)
     if (!nearId) return
     if (!HINTS[nearId]) return
-    if (done.current.has(nearId)) return
-    done.current.add(nearId)
+    if (shown.has(nearId)) return
+    shown.add(nearId)
     setShowing(nearId)
     startTransition(() => { void markSeaHintSeen(nearId) })
-  }, [nearId])
+  }, [nearId, seen])
 
   // AND IT GOES WHEN YOU DO. Sailing off is an answer — the captain has decided
   // they are not interested — and a tip that outlives the thing it points at is

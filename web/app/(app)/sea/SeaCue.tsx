@@ -109,6 +109,30 @@ const CUES: {
   },
 ]
 
+/**
+ * ── WHAT THIS TAB HAS ALREADY SAID, ACROSS MOUNTS ───────────────────────────
+ *
+ * MODULE SCOPE, and it has to be. This component is rendered as
+ * `{!hudOff && <... />}`, and `hudOff` is `!!fishingIn || fightOn` — so
+ * dropping a line or taking a fight UNMOUNTS it, and coming back mounts a
+ * fresh one.
+ *
+ * The latch used to be `useRef(new Set(seen))`, which rebuilds on every one of
+ * those mounts out of `seen` — a SERVER prop, read once when the page rendered
+ * and never updated while you sail. So everything latched this session was
+ * forgotten the moment you went fishing, and said itself again on the way back.
+ * Three times over, for anyone who fishes twice.
+ *
+ * The row in the database was right the whole time; it was the copy in memory
+ * that kept resetting. A latch has to outlive the thing it is latching.
+ *
+ * Seeded from `seen` on every mount and never cleared, so a real page load
+ * starts from the database and everything after that accumulates. A different
+ * captain in the same tab would inherit this set, which is fine: signing in is
+ * a full navigation, and this module goes with it.
+ */
+const shown = new Set<string>()
+
 /** How long the screen stays quiet after a cue before the next may speak. */
 const BREATH_MS = 2600
 
@@ -125,21 +149,21 @@ export default function SeaCue({ seen, live, quiet }: {
   quiet: boolean
 }) {
   const [showing, setShowing] = useState<string | null>(null)
-  /** Grows as cues fire, so one cannot repeat inside a session before the
-   *  server round trip has landed. */
-  const done = useRef(new Set(seen))
   /** When the last one went, so the next waits a breath. */
   const lastAt = useRef(0)
 
   useEffect(() => {
+    // The database first, every time: this mount may be the first of the
+    // session or the fourth, and either way what the server knows goes in.
+    for (const s of seen) shown.add(s)
     if (quiet || showing) return
     if (Date.now() - lastAt.current < BREATH_MS) return
-    const next = CUES.find(c => live[c.id] && !done.current.has(`cue:${c.id}`))
+    const next = CUES.find(c => live[c.id] && !shown.has(`cue:${c.id}`))
     if (!next) return
-    done.current.add(`cue:${next.id}`)
+    shown.add(`cue:${next.id}`)
     setShowing(next.id)
     startTransition(() => { void markSeaHintSeen(`cue:${next.id}`) })
-  }, [live, quiet, showing])
+  }, [live, quiet, showing, seen])
 
   // A tour starting mid-cue takes the screen back. The cue is spent either way
   // — it has been latched — and two cards at once is the thing this avoids.
