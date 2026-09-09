@@ -1737,6 +1737,32 @@ Three things this cost, all of them repaired:
   "where does this go if anything falls through", and naming a redirect back here would
   have been a round trip to the water you are floating on.
 
+## How the sea teaches: two tours, then cues
+
+**The tour teaches what you cannot sail without. Everything else is delivered where it is
+usable.** That rule lives at the top of `SeaLandfallHint` and is the oldest one here; both
+tours had drifted a long way off it (24 and 16 beats) before being pulled back to **10 and
+5** in 2026-09.
+
+- **`FIRST_VOYAGE` (10)** — steer, sail south, cast, catch, the hold, XP, sail home, go
+  ashore, sell, and a closing line. Every beat is something the captain is *doing*.
+- **`GATE_TOUR` (5)** — past the reef, the Gunwharf, the gate, what is beyond it, go. The
+  Gunwharf is the one island it names, because nothing up there happens without the warship.
+- **`SeaLandfallHint`** — one line the first time you tie up at a port. All seven anchorage
+  islands live here, plus the Shipyard, Trawl Docks and Homestead.
+- **`SeaCue`** — one line the first time anything else becomes true: a rank gained lights the
+  spine disc, four fish brings up the almanac, 7,000px out brings up the chart, a boat in
+  reach explains hailing, an island flying a gold mark explains gold marks, the Wargate
+  explains itself in range.
+
+**Adding teaching?** Ask whether a captain can act on it *right now*. If not, it is a cue or
+a landfall hint, not a beat. The failure mode this prevents is ten screens about places you
+have no ship, no crew and no campaign for.
+
+**Cues queue and never talk over a tour.** Crossing into the anchorage makes three true at
+once. They are latched in `sea_hints_seen` under a `cue:` prefix — same column as the port
+hints, no migration, no way to collide with a port id.
+
 ## Neither of the hub's teaching surfaces comes out here
 
 **Captain's Orders was built onto the campaign panel and REMOVED the same day** (2026-09-09,
