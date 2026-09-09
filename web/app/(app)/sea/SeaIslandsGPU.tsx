@@ -921,6 +921,27 @@ export default function SeaIslandsGPU({
       // the islands and boats and every particle system in it, is never
       // touched by a rock going off the edge of the screen.
       const marks = new PIXI.Container()
+      // ── THE PAINTER'S ALGORITHM, AND IT WAS MISSING ──────────────────
+      //
+      // A rock standing in water is drawn over the rock BEHIND it, and behind
+      // is up-screen on this plane. Every mark is anchored at its base and
+      // positioned at it, so the rule is exactly one line: whichever base is
+      // further down the screen goes in front.
+      //
+      // Nothing was enforcing it. Order came from `addChild`, and `addChild`
+      // ran inside `bakeMark(...).then` — so the paint order was the order the
+      // textures happened to finish decoding in. Effectively random, different
+      // every load, and the reef came out as a heap rather than a run: rocks
+      // from the far row punched through rocks from the near one, which takes
+      // the depth out of the only thing on this chart whose whole job is to
+      // read as distance.
+      //
+      // Two levels, because marks live in cells:
+      //   the CELL sorts by its row, and a cell's rows never overlap, so a
+      //   whole cell is either in front of another or behind it;
+      //   the MARKS inside it sort by their own base y.
+      // Together that is a total order by base y across the whole chart.
+      marks.sortableChildren = true
       world.addChild(marks)
       type MarkCell = {
         view: import('pixi.js').Container
@@ -936,6 +957,12 @@ export default function SeaIslandsGPU({
         if (!c) {
           const view = new PIXI.Container()
           view.isRenderGroup = true
+          // The cell's own depth is its ROW. Cells are 3,500 apart and their
+          // rows do not overlap, so every mark in a lower row is south of every
+          // mark in a higher one and the coarse sort is exact.
+          view.zIndex = Math.floor(y / 3500)
+          // And the fine sort, inside it, by each mark's base.
+          view.sortableChildren = true
           marks.addChild(view)
           c = { view, list: [], minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, near: true }
           markCells.set(k, c)
@@ -1066,6 +1093,9 @@ export default function SeaIslandsGPU({
           inner.pivot.set(0, -h * 0.08)
           inner.position.set(0, -h * 0.08)
 
+          // ITS BASE IS ITS DEPTH. `node.y` is the base — the sprites under it
+          // are anchored bottom-centre — so this is the whole of the sort.
+          node.zIndex = m.y
           const cell = cellFor(m.x, m.y)
           cell.view.addChild(node)
           // A mark whose bake lands after its cell has already gone to sleep
