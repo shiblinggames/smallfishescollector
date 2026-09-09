@@ -7018,39 +7018,54 @@ export default function SeaMap({
       // one boolean, and out. When it IS running it walks 1,325 floats and
       // writes a 53x25 bitmap, which is less work than the string concatenation
       // three lines above it.
+      // ── THE FOG, EASED DOWN ───────────────────────────────────────────
+      //
+      // THE EASING ONLY. What it looks like is seaFog's, on the sea's own
+      // canvas, reading these floats every frame. A cell's MASK bit flips the
+      // instant the hull is near enough; its opacity walks down to zero from
+      // here over about a second, and that gap is the whole feature — a
+      // seven-hundred-pixel cell switching off in one frame is a slab
+      // disappearing, which is what "it skips as it clears" was describing.
+      //
+      // Frame-rate independent, so it takes the same second on a 120Hz phone as
+      // on a 30fps one: `1 - exp(-k dt)` rather than a fixed step, the same
+      // easing the camera above uses.
+      //
+      // It costs nothing when nothing is clearing, which is nearly always: one
+      // boolean, and out.
       if (xfogFading.current) {
-        const cv = xfogCanvas.current
-        const ctx = cv?.getContext('2d')
-        if (ctx) {
-          const a = xfogAlpha.current
-          const k = 1 - Math.exp(-2.6 * dt)
-          let live = false
-          const img = xfogImage.current ??= ctx.createImageData(XFOG_W, XFOG_H)
-          for (let i = 0; i < XFOG_CELLS; i++) {
-            const target = xfogOpen(xfogRef.current, i) ? 0 : 1
-            if (a[i] !== target) {
-              a[i] += (target - a[i]) * k
-              // Snap the last sliver. An exponential never actually arrives,
-              // and a canvas that repaints forever to move an alpha from 0.004
-              // to 0.003 is a loop that never goes back to sleep.
-              if (Math.abs(target - a[i]) < 0.004) a[i] = target
-              else live = true
+        const a = xfogAlpha.current
+        const k = 1 - Math.exp(-2.6 * dt)
+        let live = false
+        for (let i = 0; i < XFOG_CELLS; i++) {
+          const target = xfogOpen(xfogRef.current, i) ? 0 : 1
+          if (a[i] === target) continue
+          a[i] += (target - a[i]) * k
+          // Snap the last sliver. An exponential never actually arrives, and a
+          // layer that redraws forever to move an alpha from 0.004 to 0.003 is
+          // a loop that never goes back to sleep.
+          if (Math.abs(target - a[i]) < 0.004) a[i] = target
+          else live = true
+        }
+        xfogFading.current = live
+        // THE FALLBACK'S OWN PAINT. On the GPU chart seaFog has been handed
+        // this same array and is drawing it on the ticker; this is the flat
+        // canvas for ?gpu=0.
+        if (!GPU_ISLANDS) {
+          const ctx = xfogCanvas.current?.getContext('2d')
+          if (ctx) {
+            const img = xfogImage.current ??= ctx.createImageData(XFOG_W, XFOG_H)
+            for (let i = 0; i < XFOG_CELLS; i++) {
+              const o = i * 4
+              if (a[i] <= 0) { img.data[o + 3] = 0; continue }
+              const n = ((i * 2654435761) % 17) / 17
+              img.data[o] = 22 + n * 7
+              img.data[o + 1] = 28 + n * 8
+              img.data[o + 2] = 36 + n * 9
+              img.data[o + 3] = a[i] * 245
             }
-            // Cleared cells are written transparent rather than skipped: the
-            // buffer is reused, so anything not written keeps last frame's fog.
-            if (a[i] <= 0) { img.data[i * 4 + 3] = 0; continue }
-            // Deterministic per-cell jitter, so a wall of fog has some tooth and
-            // does not read as one flat rectangle. The same hash the minimap
-            // uses, so the two halves of the chart look like one idea.
-            const n = ((i * 2654435761) % 17) / 17
-            const o = i * 4
-            img.data[o] = 22 + n * 7
-            img.data[o + 1] = 28 + n * 8
-            img.data[o + 2] = 36 + n * 9
-            img.data[o + 3] = a[i] * 245
+            ctx.putImageData(img, 0, 0)
           }
-          ctx.putImageData(img, 0, 0)
-          xfogFading.current = live
         }
       }
       // The sea recoloured under the boat. One style write per frame, and the
@@ -7198,6 +7213,10 @@ export default function SeaMap({
         // The setter is one assignment. Doing it every frame costs nothing and
         // cannot miss.
         gpuRef.current.lantern(lanternGlow(lanternTier))
+        // AND THE FOG'S BUFFER, for the same reason and by the same argument:
+        // the handle is null for the first frames, binding is one assignment,
+        // and a bind that is missed is a chart with no fog on it at all.
+        gpuRef.current.fog(xfogAlpha.current)
       }
       // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
       // own tile so the offsets stay small however far you sail, and the two
@@ -7846,9 +7865,11 @@ export default function SeaMap({
             "what covers the chart" should not have to reach the bottom of it to
             find out. It covers the campaign's water only; the fishing sea has
             never had fog on the chart and this does not give it any. */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none' }}>
-          <ChartFog innerRef={xfogCanvas} />
-        </div>
+        {!GPU_ISLANDS && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none' }}>
+            <ChartFog innerRef={xfogCanvas} />
+          </div>
+        )}
         {/* The berths first, so an island always paints over its own ring. */}
         {PLACES.filter(p => p.kind === 'port').map(p => (
           <PortBerth key={`berth:${p.id}`} p={p} active={near?.id === p.id} />
@@ -12135,31 +12156,24 @@ const NextHeading = memo(function NextHeading({ from, to }: {
 /**
  * ── THE WATER YOU HAVE NOT SAILED ───────────────────────────────────────────
  *
- * The campaign's fog, on the chart itself. One canvas, ONE PIXEL PER CELL —
- * fifty-three by twenty-five — stretched to the full width of the campaign's
- * water by CSS. That stretch is the whole trick: a 700x bilinear upscale turns
- * a hard checkerboard of set and unset bits into a soft front with a
- * seven-hundred-pixel gradient across every edge, for the cost of a 1,325 pixel
- * bitmap and no per-cell DOM at all.
+ * ── THE ?gpu=0 FALLBACK ONLY ────────────────────────────────────────────────
  *
- * It sits INSIDE the world layer, so it takes the camera, the zoom and the
- * plane's squash without being told about any of them — fog lies on the water
- * like everything else out here.
+ * The real fog is a Pixi layer on the sea's own canvas — see sea/seaFog, which
+ * has the bank, the drifting edge and the reasoning. This is the flat version
+ * for the DOM chart, and it exists for the same reason `WargateMark` does: the
+ * fallback has to stay whole.
  *
- * ── AND IT CANNOT COVER YOUR OWN HULL ───────────────────────────────────────
+ * ── AND THE ARGUMENT THAT PUT IT HERE FIRST WAS WRONG ───────────────────────
  *
- * Which is the one thing that would be unforgivable, and it is free: the
- * player's boat lives on the SCREEN layer and never passes through this one
- * (see the note beside the friend hulls). It could not reach the boat even if
- * the boat were standing in fog, and the boat never is — you clear the cell you
- * are in and the ring around it.
+ * The first pass drew fog in the DOM for every captain, and the reason written
+ * down was that encounter marks and isles are DOM elements above the canvas, so
+ * a Pixi fog could not paint over them. True, and not a reason: a rock you have
+ * not found should never be in the document at all. Fog joins `shown()` — the
+ * predicate that already hides everything the campaign has not revealed — and
+ * the engine draws the weather, which is what the engine is for.
  *
- * ── BLANK PAPER, NOT A HOLE ─────────────────────────────────────────────────
- *
- * The same near-black paper colour the minimap has always used for unexplored
- * water, with the same per-cell tooth, because a captain has already learned
- * what that means on the other half of the game. A chart you have not filled in
- * is blank, not missing.
+ * One canvas, ONE PIXEL PER CELL, stretched by CSS. The upscale is what turns a
+ * checkerboard of bits into a soft front.
  */
 const ChartFog = memo(function ChartFog({ innerRef }: {
   innerRef: React.RefObject<HTMLCanvasElement | null>

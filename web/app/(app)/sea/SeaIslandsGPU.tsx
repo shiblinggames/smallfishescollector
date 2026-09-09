@@ -61,6 +61,7 @@ import { makeBerths, type Berths, type BerthSpec } from './seaBerth'
 import { makePortalWell, type PortalWell, type PortalWellSpec } from './seaPortalWell'
 import { WARGATE, WARGATE_REACH } from './raidWaters'
 import { makeTowns, type Towns, type GpuTown } from './seaTown'
+import { makeFog, type Fog } from './seaFog'
 import { makePath, type SeaPath } from './seaPath'
 import { BOATS } from '@/lib/boats'
 import type { Frame } from './skiffArt'
@@ -81,6 +82,14 @@ export type GpuHandle = {
    *  sprite on this canvas — see nightTint for why this is a tint and
    *  emphatically not a filter. */
   night(dark: number, warm: number): void
+  /**
+   * THE FOG OF WAR'S ALPHA BUFFER, handed over once.
+   *
+   * One float per cell, owned and eased by the chart's own loop. Bound rather
+   * than pushed: the loop is already walking those floats to fade them, so
+   * passing the array is cheaper than an event per change and cannot go stale.
+   */
+  fog(alpha: Float32Array): void
   /** How much lantern the captain has bought, 0.34 to 1 — see lanternGlow.
    *  Its own call rather than a night() argument: the hour changes every frame
    *  and this changes when somebody buys something. */
@@ -647,6 +656,17 @@ export default function SeaIslandsGPU({
       // hull crossing in front of one is right.
       const surf: Surf = makeSurf(PIXI)
       world.addChildAt(surf.view, 0)
+      // ── AND THE FOG, OVER ALL OF IT ───────────────────────────────
+      //
+      // Last in the world, so it covers the water, the shoals, the islands, the
+      // towns standing on them and every mark this canvas draws. It is weather
+      // and it is opaque: anything under it is water nobody has sailed, and the
+      // point is that they cannot see it.
+      //
+      // In the WORLD rather than the screen, because fog is at a place. Sail
+      // north and it stays where it was.
+      const fog: Fog = makeFog(PIXI)
+      world.addChild(fog.view)
 
       // ── WHAT IS IN THE AIR ────────────────────────────────────────
       //
@@ -1146,6 +1166,7 @@ export default function SeaIslandsGPU({
           a.screen.width / 2 + hullOff.current.x,
           a.screen.height / 2 + hullOff.current.y, t, dt)
         squalls.advance(camX, camY, halfW, halfH, dt)
+        fog.advance(camX, camY, halfW, halfH, t)
         // The sky. Needs the screen as well as the world, because half of it is
         // drawn in screen space — that is what the parallax IS.
         clouds.advance(t, camX, camY, halfW, halfH, camZoom, a.screen.width, a.screen.height)
@@ -1280,6 +1301,7 @@ export default function SeaIslandsGPU({
 
       handle.current = {
         lantern(glow) { lights.lantern(glow) },
+        fog(alpha) { fog.bind(alpha) },
 
         night(d, w) {
           dark = d
@@ -1296,6 +1318,9 @@ export default function SeaIslandsGPU({
           clouds.night(d)
           maelstroms.night(d)
           const tint = nightTint(d, w)
+          // Fog is water vapour: it is whatever colour the light is, and at
+          // night it is the same near-black the sea goes.
+          fog.night(tint)
           if (tint === lastTint) return
           lastTint = tint
           for (const b of baked) b.sprite.tint = tint
