@@ -204,12 +204,22 @@ export const FIRST_VOYAGE: Beat[] = [
   // is the one you press when you do NOT know, and a captain who has not been
   // told where that lives has nothing to do but sail about.
   //
-  // It was a cue for a day, fired the first time Finn had a job finished — and
-  // that is the wrong trigger for exactly this one, because it can be hours
+  // It was a cue for a day, fired the first time a job of Finn's was finished —
+  // and that is the wrong trigger for exactly this one, because it can be hours
   // away and the question it answers arrives in the first ten minutes.
+  //
+  // ── AND IT NAMES NOBODY ─────────────────────────────────────────────────
+  //
+  // It used to say whose business the pennant was tracking, which hands a
+  // captain the most important name on this water before they have met him.
+  // Everyone out here is somebody you FIND: you sail up, you hail, and the
+  // panel fills in behind you. A tour that reads the cast list out first takes
+  // that away, and it is the one thing on this sea that cannot be given back.
+  //
+  // Describe what the disc HOLDS, never who is in it.
   {
     ...K,
-    text: 'One thing before you go, Captain. The *pennant* up there is your story: where Finn’s business has got to, and everyone out here worth knowing. When you are not sure what to do next, that is the disc to press.',
+    text: 'One thing before you go, Captain. The *pennant* up there is your story: everyone you have met out on this water, and whatever they want from you. When you are not sure what to do next, that is the disc to press.',
     until: 'next',
     target: 'hud-journey',
   },
