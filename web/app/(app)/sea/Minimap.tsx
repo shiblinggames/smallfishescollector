@@ -483,6 +483,15 @@ export default function Minimap({
         for (let i = 0; i < XFOG_CELLS; i++) {
           if (xfogHas(xfog, i)) continue
           const c = xfogCentre(i)
+          // ── AND IT IS THE MAP'S SHAPE, NOT THE GRID'S ──────────────
+          //
+          // The grid is a RECTANGLE and this map is a half-disc. Painted
+          // uncorrected, the fog squared off the chart — a grey box with a
+          // dashed semicircle drawn inside it, which reads as the map being
+          // broken rather than as water nobody has sailed. The fishing side has
+          // culled the same way since it shipped; this pass had not caught up.
+          if (Math.hypot(c.x - hf.cx, c.y - hf.cy) > hf.r) continue
+          if (hf.dir === 1 ? c.y < hf.flat : c.y > hf.flat) continue
           const n = ((i * 2654435761) % 17) / 17
           ctx.fillStyle = `rgb(${22 + n * 7}, ${28 + n * 8}, ${36 + n * 9})`
           ctx.fillRect(tx(c.x - XFOG_CELL / 2), ty(c.y - XFOG_CELL / 2), cs, cs)

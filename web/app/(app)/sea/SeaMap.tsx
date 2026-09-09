@@ -31,7 +31,7 @@ import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
 import {
   decodeXfog, xfogHas, xfogReveal, xfogSet, seedXfog, inExpWater,
-  XFOG_CELL, XFOG_W, XFOG_H, XFOG_X0, XFOG_Y0,
+  XFOG_CELL, XFOG_W, XFOG_H, XFOG_X0, XFOG_Y0, XFOG_CELLS,
 } from '@/lib/seaExploreExp'
 import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
@@ -2967,7 +2967,10 @@ export default function SeaMap({
    * that tick stopped calling setState.
    *
    * `fogVersion` is the render signal, bumped only when a cell ACTUALLY flips —
-   * which is a handful of times per crossing, not eight times a second.
+   * which is a handful of times per crossing, not eight times a second — AND
+   * only while the minimap is open, because that panel is the only thing that
+   * reads it. The chart's own fog is painted by the frame loop and never
+   * re-renders anything. See the note where it is bumped.
    */
   const fogRef = useRef<Uint8Array>(decodeFog(exploredRaw))
   /**
@@ -3003,10 +3006,45 @@ export default function SeaMap({
     }
     return bits
   })())
+  /**
+   * ── WHAT THE FOG IS CURRENTLY DRAWN AT ─────────────────────────────────
+   *
+   * A float per cell, eased toward the mask every frame. The MASK is the truth
+   * and it is binary; this is the picture of it, and the picture is allowed to
+   * be halfway.
+   *
+   * WHY IT IS NOT JUST THE MASK. A cell is seven hundred pixels across, so a
+   * mask painted straight to the canvas cleared the sea in seven-hundred-pixel
+   * steps: sail, nothing, sail, a slab vanishes. Reported as skipping frames,
+   * and it was — not dropped frames, but a picture that only had two values and
+   * changed between them all at once.
+   *
+   * PAINTED FROM THE rAF LOOP, NEVER FROM REACT. The first pass rebuilt the
+   * bitmap in an effect keyed on a version counter, which meant every cell that
+   * flipped re-rendered a fourteen-thousand-line component to move some pixels
+   * on a canvas. That is the actual hitch a captain sees, and it is the reason
+   * every other moving thing on this chart is written by the loop through a ref.
+   */
+  const xfogAlpha = useRef<Float32Array>((() => {
+    const a = new Float32Array(XFOG_CELLS)
+    for (let i = 0; i < XFOG_CELLS; i++) a[i] = xfogHas(xfogRef.current, i) ? 0 : 1
+    return a
+  })())
+  const xfogCanvas = useRef<HTMLCanvasElement | null>(null)
+  /** Set when any cell is mid-fade. The loop does nothing at all when it is
+   *  clear, which is almost always. */
+  const xfogFading = useRef(true)
+  /** The pixel buffer, allocated once. A fresh ImageData per frame is five
+   *  kilobytes of garbage per frame for the whole of a fade, in the one
+   *  function on this chart that must not make any. */
+  const xfogImage = useRef<ImageData | null>(null)
   const [fogVersion, setFogVersion] = useState(0)
   /** Cells uncovered since the last flush, sent with the next position save. */
   const fogPending = useRef<Set<number>>(new Set())
   const [mapOpen, setMapOpen] = useState(false)
+  /** For the frame loop, which is built at mount and cannot read the state. */
+  const mapOpenRef = useRef(false)
+  mapOpenRef.current = mapOpen
   /** The campaign's story tree, opened from the pennant in the HUD row. */
   const [campaignOpen, setCampaignOpen] = useState(false)
 
@@ -6958,6 +6996,58 @@ export default function SeaMap({
         // tavern off its own island. Null only on the ?gpu=0 fallback.
         gpuRef.current?.camera(camAt.current.x, camAt.current.y, zoomRef.current)
       }
+
+      // ── THE FOG, EASED DOWN ───────────────────────────────────────────
+      //
+      // A cell's MASK bit flips the instant the hull is near enough; its
+      // opacity walks down to zero over about a second from here. That gap is
+      // the whole feature: a seven-hundred-pixel cell switching off in one
+      // frame is a slab disappearing, which is what "it skips as it clears"
+      // was describing.
+      //
+      // Frame-rate independent, so it takes the same second on a 120Hz phone as
+      // on a 30fps one — `1 - exp(-k dt)` rather than a fixed step per frame,
+      // the same easing the camera above uses.
+      //
+      // AND IT COSTS NOTHING WHEN NOTHING IS CLEARING, which is nearly always:
+      // one boolean, and out. When it IS running it walks 1,325 floats and
+      // writes a 53x25 bitmap, which is less work than the string concatenation
+      // three lines above it.
+      if (xfogFading.current) {
+        const cv = xfogCanvas.current
+        const ctx = cv?.getContext('2d')
+        if (ctx) {
+          const a = xfogAlpha.current
+          const k = 1 - Math.exp(-2.6 * dt)
+          let live = false
+          const img = xfogImage.current ??= ctx.createImageData(XFOG_W, XFOG_H)
+          for (let i = 0; i < XFOG_CELLS; i++) {
+            const target = xfogHas(xfogRef.current, i) ? 0 : 1
+            if (a[i] !== target) {
+              a[i] += (target - a[i]) * k
+              // Snap the last sliver. An exponential never actually arrives,
+              // and a canvas that repaints forever to move an alpha from 0.004
+              // to 0.003 is a loop that never goes back to sleep.
+              if (Math.abs(target - a[i]) < 0.004) a[i] = target
+              else live = true
+            }
+            // Cleared cells are written transparent rather than skipped: the
+            // buffer is reused, so anything not written keeps last frame's fog.
+            if (a[i] <= 0) { img.data[i * 4 + 3] = 0; continue }
+            // Deterministic per-cell jitter, so a wall of fog has some tooth and
+            // does not read as one flat rectangle. The same hash the minimap
+            // uses, so the two halves of the chart look like one idea.
+            const n = ((i * 2654435761) % 17) / 17
+            const o = i * 4
+            img.data[o] = 22 + n * 7
+            img.data[o + 1] = 28 + n * 8
+            img.data[o + 2] = 36 + n * 9
+            img.data[o + 3] = a[i] * 245
+          }
+          ctx.putImageData(img, 0, 0)
+          xfogFading.current = live
+        }
+      }
       // The sea recoloured under the boat. One style write per frame, and the
       // reason there are no zone edges anywhere on the chart.
       // THE BACKDROP, RECOLOURED ONLY WHEN IT CHANGES.
@@ -7464,6 +7554,9 @@ export default function SeaMap({
             if (xfogHas(xfogRef.current, ci)) continue
             xfogSet(xfogRef.current, ci)
             xfogPending.current.add(ci)
+            // The mask flips at once; the PICTURE of it eases down over the
+            // next second. See xfogAlpha.
+            xfogFading.current = true
             lit = true
           }
         } else {
@@ -7474,7 +7567,15 @@ export default function SeaMap({
             lit = true
           }
         }
-        if (lit) setFogVersion(v => v + 1)
+        // ── ONLY WHEN SOMEBODY IS LOOKING AT THE MAP ─────────────────
+        //
+        // `fogVersion` exists to remount the minimap so it redraws, and the
+        // minimap already redraws on open. Bumping it while the map is SHUT
+        // re-rendered this whole component to update a canvas nobody could see,
+        // once per cell, which is a hitch in the middle of sailing paid for
+        // nothing. The chart's own fog does not need it at all now — it is
+        // painted by the loop.
+        if (lit && mapOpenRef.current) setFogVersion(v => v + 1)
 
         // FROM THE LIST WE ALREADY HAVE. `hotspotAt` re-derives the whole set
         // from the clock on every call — filtering the bands, hashing, building
@@ -7741,7 +7842,7 @@ export default function SeaMap({
             find out. It covers the campaign's water only; the fishing sea has
             never had fog on the chart and this does not give it any. */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none' }}>
-          <ChartFog bits={xfogRef.current} version={fogVersion} />
+          <ChartFog innerRef={xfogCanvas} />
         </div>
         {/* The berths first, so an island always paints over its own ring. */}
         {PLACES.filter(p => p.kind === 'port').map(p => (
@@ -12033,36 +12134,12 @@ const NextHeading = memo(function NextHeading({ from, to }: {
  * what that means on the other half of the game. A chart you have not filled in
  * is blank, not missing.
  */
-const ChartFog = memo(function ChartFog({ bits, version }: {
-  bits: Uint8Array
-  /** Bumped when a cell flips. The bitfield is a ref and mutating it is
-   *  invisible to React by design, so this is what says "redraw". */
-  version: number
+const ChartFog = memo(function ChartFog({ innerRef }: {
+  innerRef: React.RefObject<HTMLCanvasElement | null>
 }) {
-  const ref = useRef<HTMLCanvasElement | null>(null)
-  useEffect(() => {
-    const c = ref.current
-    if (!c) return
-    const ctx = c.getContext('2d')
-    if (!ctx) return
-    const img = ctx.createImageData(XFOG_W, XFOG_H)
-    for (let i = 0; i < XFOG_W * XFOG_H; i++) {
-      const o = i * 4
-      if (xfogHas(bits, i)) { img.data[o + 3] = 0; continue }
-      // Deterministic per-cell jitter, so a wall of fog has some tooth and does
-      // not read as one flat rectangle. The same hash the minimap uses.
-      const n = ((i * 2654435761) % 17) / 17
-      img.data[o] = 22 + n * 7
-      img.data[o + 1] = 28 + n * 8
-      img.data[o + 2] = 36 + n * 9
-      img.data[o + 3] = 245
-    }
-    ctx.putImageData(img, 0, 0)
-  }, [bits, version])
-
   return (
     <canvas
-      ref={ref} width={XFOG_W} height={XFOG_H} aria-hidden
+      ref={innerRef} width={XFOG_W} height={XFOG_H} aria-hidden
       style={{
         position: 'absolute',
         left: XFOG_X0, top: XFOG_Y0,
