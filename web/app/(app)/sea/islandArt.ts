@@ -427,6 +427,28 @@ export function toneHex(hex: string, warmCool: number): string {
   ).toString(16).padStart(6, '0')}`
 }
 
+/**
+ * THIS ISLAND'S GRASS, as a Pixi tint.
+ *
+ * The tuft plate in seaGrass is greyscale and the mesh multiplies by this, so
+ * one plate is basalt grass on one island and jungle grass on the next with no
+ * second texture anywhere.
+ *
+ * Lifted a little toward white first, because the plate is dark at the root and
+ * a multiply only ever darkens — tinting with the band colour itself grows
+ * grass darker than the ground it stands on, which reads as a shadow lying on
+ * the meadow rather than as the meadow. Only a little: the first cut lifted it
+ * a quarter of the way and the tufts came out as pale wisps.
+ *
+ * Goes through `toneHex`, which is where the whole chart went down once. Read
+ * the note on it.
+ */
+export function grassTint(id: string): number {
+  const pal = paletteOf(id)
+  return parseInt(
+    toneHex(mixHex(pal.green[0], '#ffffff', 0.12), paletteChr(id)).slice(1), 16)
+}
+
 /** Blend two `#rrggbb` by t. */
 function mixHex(a: string, b: string, t: number): string {
   const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16)

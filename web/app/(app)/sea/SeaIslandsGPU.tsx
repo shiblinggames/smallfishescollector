@@ -36,7 +36,8 @@
 // (zoom, zoom * GROUND) and positioned at (w/2 - zoom*x, h/2 - zoom*GROUND*y).
 
 import { useEffect, useRef, useState } from 'react'
-import { GROUND, islandLift, bakeIsland, requestGround, evictIslandsExcept } from './islandArt'
+import { GROUND, islandLift, liftAt, grassTint, bakeIsland, requestGround, evictIslandsExcept } from './islandArt'
+import { makeGrass, makeGrassTexture, type Grass } from './seaGrass'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeClouds } from './seaClouds'
@@ -919,7 +920,17 @@ export default function SeaIslandsGPU({
       const land = new PIXI.Container()
       world.addChild(land)
 
+      // ── AND THE MEADOWS, ONE LAYER UP ────────────────────────────
+      //
+      // Above the islands so the tufts stand on the land rather than under it,
+      // and below the town layer, which is added later when its art resolves —
+      // grass in front of a cottage would be a hedge.
+      const meadow = new PIXI.Container()
+      world.addChild(meadow)
+      const grassTex = makeGrassTexture(PIXI)
+
       const foams: { f: Foam; x: number; y: number; r: number }[] = []
+      const grasses: { g: Grass; x: number; y: number; r: number }[] = []
       const baked: { isle: GpuIsland; sprite: import('pixi.js').Sprite; pad: number }[] = []
       const place = (isle: GpuIsland) => {
         const d = isle.r * 2
@@ -950,6 +961,24 @@ export default function SeaIslandsGPU({
         f.mesh.y = isle.y
         world.addChildAt(f.mesh, 0)
         foams.push({ f, x: isle.x, y: isle.y, r: isle.r })
+
+        // THE MEADOW. Parented to the island's own position like the surf is,
+        // so there is no camera in it either. A locked island gets none: it is
+        // painted grey and greyed-out grass waving cheerfully at you reads as a
+        // bug rather than as a place you cannot go yet.
+        if (!isle.locked) {
+          const gr = makeGrass(
+            PIXI, coastline(isle.id), d, grassTint(isle.id), grassTex,
+            (a) => liftAt(isle.id, d, a) / GROUND,
+            Math.imul(isle.x | 0, 0x9e3779b1) ^ (isle.y | 0),
+          )
+          if (gr) {
+            gr.mesh.x = isle.x
+            gr.mesh.y = isle.y
+            meadow.addChild(gr.mesh)
+            grasses.push({ g: gr, x: isle.x, y: isle.y, r: isle.r })
+          }
+        }
       }
       for (const isle of listRef.current) place(isle)
 
@@ -1053,6 +1082,8 @@ export default function SeaIslandsGPU({
           baked.splice(k, 1)
           const fi = foams.findIndex(f => f.x === b.isle.x && f.y === b.isle.y)
           if (fi >= 0) { foams[fi].f.mesh.destroy(); foams.splice(fi, 1) }
+          const gi = grasses.findIndex(g => g.x === b.isle.x && g.y === b.isle.y)
+          if (gi >= 0) { grasses[gi].g.destroy(); grasses.splice(gi, 1) }
         }
         const have = new Set(baked.map(b => b.isle.id))
         for (const isle of next) if (!have.has(isle.id)) place(isle)
@@ -1232,6 +1263,21 @@ export default function SeaIslandsGPU({
         for (const f of foams) {
           if (Math.abs(f.x - camX) < halfW + f.r * 1.6
             && Math.abs(f.y - camY) < halfH + f.r * 1.6) f.f.advance(t)
+        }
+        // Same cull, and it matters more here: a meadow is a couple of thousand
+        // vertices rewritten and uploaded, against the surf's few hundred, and
+        // an island you cannot see does not need its grass moved.
+        // AND A HARD CEILING ON TOP OF THE CULL. The bounds test is generous
+        // (r * 1.6 either side), and a tight cluster of isles in a campaign bay
+        // could put more meadows on screen than anyone is looking at. A count
+        // rather than a sort: the list is in placement order, which is near
+        // enough, and a sort every frame to save a few buffer uploads is the
+        // trade the wrong way round.
+        let blowing = 0
+        for (const g of grasses) {
+          if (blowing >= 6) break
+          if (Math.abs(g.x - camX) < halfW + g.r * 1.6
+            && Math.abs(g.y - camY) < halfH + g.r * 1.6) { g.g.advance(t); blowing++ }
         }
         for (const l of laps) {
           if (Math.abs(l.x - camX) < halfW + l.half * 2
