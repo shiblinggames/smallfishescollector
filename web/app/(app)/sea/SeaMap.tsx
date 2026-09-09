@@ -10727,7 +10727,7 @@ const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering }: {
               READY IS STILL THE LOUDER OF THE TWO, in size and in the beat it
               floats on. An offer is an invitation and can wait; a finished job
               is your pay sitting in his boat. */}
-          <div className={ready ? 'finn-quest-mark finn-quest-ready' : 'finn-quest-mark'} style={{
+          <div className={ready ? 'sea-quest-mark sea-quest-ready' : 'sea-quest-mark'} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 46, height: 46,
           }}>
@@ -11967,15 +11967,24 @@ const NodeGlyph = memo(function NodeGlyph({ kind, lift }: {
 }) {
   const next = kind === 'next'
   return (
+    // ── TWO DIVS, AND IT HAS TO BE TWO ────────────────────────────────────
+    //
+    // The outer one places it; the inner one moves. A CSS animation's transform
+    // REPLACES an inline transform rather than composing with it, so with both
+    // on one element the `translate(-50%)` was dropped the instant the float
+    // started and the mark sat half its own width to the right of the thing it
+    // is pointing at. Finn's mark has been built this way since it shipped; the
+    // other two had not caught up.
     <div aria-hidden style={{
       position: 'absolute', left: '50%', bottom: '100%',
       transform: 'translate(-50%, 0)', marginBottom: lift,
       pointerEvents: 'none', zIndex: 2,
-      // The float, and only on the one that is asking. A tick is a record, and
-      // a record that bobs is asking for attention it does not want.
-      animation: next ? 'questFloat 2.4s ease-in-out infinite' : undefined,
     }}>
-      <QuestMark kind={next ? 'turnin' : 'done'} size={next ? 34 : 26} />
+      {/* The wave, and only on the one that is asking. A tick is a record, and
+          a record that bobs is asking for attention it does not want. */}
+      <div className={next ? 'sea-quest-mark' : undefined} style={{ display: 'flex' }}>
+        <QuestMark kind={next ? 'turnin' : 'done'} size={next ? 34 : 26} />
+      </div>
     </div>
   )
 })
@@ -13244,15 +13253,27 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, call = null }: {
         // warmed, and this was still sitting at noon brightness over the top of
         // them. That is most of what "pasted on" looks like, and it was the
         // only thing above an island not taking the light.
+        // ── THE SAME OBJECT AS THE ONE OVER FINN ────────────────────
+        //
+        // Two divs, and it has to be two. The outer places it and STANDS IT UP
+        // off the plane; the inner waves. A CSS animation's transform replaces
+        // an inline one outright, so with both on the same element this lost
+        // its `scaleY(1 / GROUND)` the instant the float started — the disc was
+        // being squashed to 58% by the world layer with nothing undoing it, and
+        // shifted half its width right by the dropped `translate(-50%)`. A
+        // flattened circle sitting off to one side, which is precisely "flat"
+        // and "tilted". Finn's mark has always been built this way and has
+        // always looked right; this is that structure, and now that same wave.
         <div aria-hidden className="sea-lit" style={{
           position: 'absolute', left: '50%', bottom: '100%',
           transform: `translate(-50%, 0) scaleY(${1 / GROUND})`,
           transformOrigin: 'bottom center',
           marginBottom: place.r * 0.1,
           pointerEvents: 'none',
-          animation: 'questFloat 2.4s ease-in-out infinite',
         }}>
-          <QuestMark kind="offer" size={Math.round(Math.min(72, Math.max(40, place.r * 0.24)))} />
+          <div className="sea-quest-mark" style={{ display: 'flex' }}>
+            <QuestMark kind="offer" size={Math.round(Math.min(72, Math.max(40, place.r * 0.24)))} />
+          </div>
         </div>
       )}
 
