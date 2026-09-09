@@ -811,6 +811,46 @@ export default function SeaIslandsGPU({
       // was first sailed past, which is arbitrary and sticks for the session.
       front.sortableChildren = true
       a.stage.addChild(front)
+
+      /**
+       * ── ?hide=, FOR FINDING OUT WHICH LAYER IS DOING IT ─────────────────
+       *
+       * Every one of these sits on the STAGE, above the world, so every one of
+       * them paints over the islands, the towns and everything else on the
+       * water. When something down there misbehaves and the thing itself is
+       * provably static — a building sprite is positioned once at bake time and
+       * only ever has `visible` and `tint` written to it — the fault is an
+       * overlay, and the fastest way to find out WHICH is to turn them off.
+       *
+       *   /sea?hide=clouds            one at a time
+       *   /sea?hide=clouds,gulls      or several
+       *   /sea?hide=all               everything on this list
+       *
+       * Names: clouds, haze, gulls, lights, squalls, front, fog.
+       *
+       * A diagnostic, not a setting. It is deliberately not in the UI and it
+       * does not persist: bisecting a render bug is the whole of what it is
+       * for, and anything that reaches for it in earnest is a bug report.
+       */
+      try {
+        const hide = new URLSearchParams(window.location.search).get('hide')
+        if (hide) {
+          const off = new Set(hide.split(',').map(s => s.trim().toLowerCase()))
+          const all = off.has('all')
+          const maybe = (name: string, node: { visible: boolean }) => {
+            if (all || off.has(name)) node.visible = false
+          }
+          maybe('clouds', clouds.air)
+          maybe('haze', haze)
+          maybe('gulls', gulls.view)
+          maybe('lights', lights.screen)
+          maybe('squalls', squalls.air)
+          maybe('front', front)
+          maybe('fog', fog.view)
+        }
+      } catch {
+        // A malformed query string must not cost anybody the chart.
+      }
       const nearBuilt = new Map<number, import('pixi.js').Container>()
       const nearWanted = new Set<number>()
 

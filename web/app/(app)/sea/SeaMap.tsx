@@ -7722,6 +7722,45 @@ export default function SeaMap({
             inFront.length = 0
             for (const k of chosen) inFront.push(k)
           }
+          // ── AND NOTHING JUMPS PAST A BUILDING THAT IS IN FRONT OF IT ──
+          //
+          // The near pass lives on the STAGE, above the whole world, because
+          // the hull it exists to stand in front of is on the stage too. So a
+          // promoted rock does not merely get in front of HER — it gets in
+          // front of every island and every building on the chart, whatever
+          // their base says. Sail past a town with a rock off the bow and its
+          // roofs blink out behind a rock that is a long way behind them.
+          //
+          // ── IT IS A CYCLE, AND THIS PICKS THE CHEAPER SIDE OF IT ──────
+          //
+          // If a building stands in front of a rock, and the rock stands in
+          // front of her, then the building stands in front of her as well —
+          // but buildings live in the world and the world is under the hull, so
+          // a building can never cover her. Rock over hull, building over rock,
+          // hull over building: there is no order that satisfies all three
+          // while the player is drawn on a different layer from the land.
+          //
+          // Given a cycle, break it where it shows least. A rock left in the
+          // world sorts correctly against the town and loses only to the hull,
+          // for the moment she is actually on top of it. A rock promoted paints
+          // over a whole town. The first is a frame nobody notices; the second
+          // is what you see from across the water.
+          for (const k of Array.from(chosen)) {
+            const o = OCCLUDERS[k]
+            for (const f of TOWN_FEET) {
+              // Behind the rock: it is correct for the rock to cover it.
+              if (f.y <= o.y) continue
+              if (Math.abs(f.x - o.x) > (o.size + f.w) * 0.5) continue
+              // Too far south to be overlapped by it at all — the same reach
+              // test the promotion above uses.
+              if (f.y - o.y > o.size * 2 + 260) continue
+              chosen.delete(k)
+              break
+            }
+          }
+          inFront.length = 0
+          for (const k of chosen) inFront.push(k)
+
           // SORTED BY BASE, for the DOM fallback, which has no z-order of its
           // own and paints in array order. The canvas sorts itself.
           inFront.sort((a, b) => OCCLUDERS[a].y - OCCLUDERS[b].y)
@@ -11031,6 +11070,32 @@ const OCCLUDERS: { art: string; x: number; y: number; size: number }[] =
   [...LANDMARKS, ...REEF, ...ANCHORAGE_WALL]
     .filter(m => m.size >= 300)
     .map(m => ({ art: m.art, x: m.x, y: m.y, size: m.size }))
+
+/**
+ * ── WHERE EVERY BUILDING'S FEET ARE, IN WORLD PIXELS ────────────────────────
+ *
+ * The chart places buildings as a percentage of their island's BOX, whose
+ * top-left corner is one radius up and left of the island's centre. This walks
+ * that back out to world coordinates once, at module load, because the towns
+ * never move.
+ *
+ * It exists for the near pass. See the demotion below.
+ */
+const TOWN_FEET: { x: number; y: number; w: number }[] = (() => {
+  const out: { x: number; y: number; w: number }[] = []
+  for (const p of PLACES) {
+    if (p.inner !== undefined) continue
+    const d = p.r * 2
+    for (const b of p.buildings ?? []) {
+      out.push({
+        x: p.x - p.r + (b.x / 100) * d,
+        y: p.y - p.r + (b.y / 100) * d,
+        w: d * b.scale,
+      })
+    }
+  }
+  return out
+})()
 
 
 
