@@ -5039,9 +5039,16 @@ export default function SeaMap({
         const e = nearEnc
         const n = RAID_MAP.find(x => x.id === e.node)
         const st = n ? liveStatus[n.id] ?? 'locked' : 'locked'
+        // ── A GOAL YOU ARE ALLOWED TO GO AND LOOK AT ──────────────
+        //
+        // `previewWhenLocked` is a node saying its wares ARE the reason to come
+        // back — the Ghost is holding every Cache item you passed up, and
+        // sealing him shut hides the carrot behind the stick. The card refuses
+        // the entry itself (`enterBlocked`), so this only opens it.
+        const peek = st === 'locked' && n?.previewWhenLocked === true
         // A LOCKED ONE STILL SAYS ITS NAME. A boss you can see, sail up to and
         // get nothing from reads as broken rather than as not yet.
-        if (n && st === 'locked') holdLabel ??= `${n.label} — not yet`
+        if (n && st === 'locked' && !peek) holdLabel ??= `${n.label} — not yet`
         // NO ROUTE, NO VERB. A button captioned with a boss's name that does
         // nothing when pressed is worse than no button.
         else if (n && !n.route) holdLabel ??= n.label
@@ -5049,7 +5056,9 @@ export default function SeaMap({
           const fight = n.type === 'raid' || n.type === 'skirmish'
           reach.push({
             id: `enc:${n.id}`,
-            label: fight
+            label: peek
+              ? `Look at ${n.label}`
+              : fight
               ? (st === 'cleared' ? `Take on ${n.label} again` : `Take on ${n.label}`)
               : (st === 'cleared' ? `Read ${n.label} again` : n.label),
             run: () => {

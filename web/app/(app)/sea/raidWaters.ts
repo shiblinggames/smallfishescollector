@@ -695,6 +695,24 @@ export const ENCOUNTERS: Encounter[] = [
   { node: 'skirmish', bay: 'thread', along: 4775, across: -3285 },
   { node: 'pete', bay: 'thread', along: 6803, across: -2705 },
   { node: 'krust', bay: 'thread', along: 2801, across: 2721 },
+  // ── AND THE ONE THAT IS NOT ON THE ROAD ────────────────────────────────
+  //
+  // The Quartermaster's Ghost. He is not a stop in Chapter III's chain — he is
+  // what is left after it, gated on beating the Quartermaster's CHALLENGE, and
+  // he is the only fight in the game you are told to run as often as you like:
+  // half his clears hand back a Cache item you passed up or forged away.
+  //
+  // So he is placed by hand rather than laid with `layBay`. Adding him to that
+  // list would spread him into the chain in sailing order and shift every rock
+  // and hull in the chapter to make room, which would say he is the next thing
+  // to do. He is a wreck haunting the water where the man went down: off the
+  // road, deeper toward the shore, about twelve hundred pixels from his own
+  // living hull — close enough to read as his, far enough that the helm never
+  // has to choose between them.
+  //
+  // A way home and a Wargate berth both come free: RETURN_PORTALS derives from
+  // this list, and the portal search finds its own clear water.
+  { node: 'the_quartermasters_ghost', bay: 'the_coffers', along: 3900, across: 3500 },
   // And the three laid bays, in chapter order. See layBay.
   ...LAID.flatMap(l => l.ships),
 ]
