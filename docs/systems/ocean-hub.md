@@ -855,6 +855,25 @@ the same corner every other highlight on the chart is lit from, so the scene agr
 where the sun is. Then soft dark clumps for woods: not trees (a tree is two pixels here) but
 the massed shadow a stand of them throws.
 
+**Five coasts, not one coast on a dial.** Every island drew the same five hardcoded bands -
+one sand ramp, one green ramp - with a warm-to-cool shift laid over the lot. That was not
+enough and could not have been: a dial makes ONE place at two temperatures, so ten islands on
+one dial are ten copies of a coast at ten temperatures, which is exactly how they read. There
+are five whole palettes now (dune, basalt, chalk, redstone, jungle), each carrying its own
+sand, scrub, canopy AND rock, because a chalk island with a basalt cliff is two islands
+wearing one coat. An island draws one off its seed and the dial runs INSIDE it, halved, to
+separate two islands that drew the same family. Across the ten ports all five are in use.
+
+**The landing is a notch, not a half of the island.** The first cut of the height profile was
+one cosine, high opposite the berth and low at it. That fixes the docking and flattens far
+more coast than it needs to - and because the base outline sits inside the face outline at the
+far side, the wall only ever SHOWS on the near shore, so the half it flattened was the only
+half you could see. The islands read as flat again with all their height hidden behind them.
+The beach is a gaussian notch centred on the mooring circle now, over a two-fold ridge with
+headlands at both ends of a seeded line. Measured across the ten ports: 0.08-0.13 of full
+height at the berth, 0.5-1.0 by the south-west. Land where you land, cliff along the rest of
+the way in.
+
 **The wall knows where the waterline is.** The extrusion is three outlines: the top face a
 lift above the plane, the waterline on it, the cliff base a lift below. That last one was
 painted the same dark brown as the wall and painted OPAQUE, so the biggest islands sat on a
@@ -867,9 +886,16 @@ bands of alpha so it reads as a surface with swell on it rather than as a shadow
 a crescent on the SOUTH shore, which is geometry rather than a choice: at due north the base
 outline sits inside the face and is covered, east and west the two cross, and only on the near
 side does the base clear — which is the one place a reflection would be visible anyway. Above
-the line the wall keeps its own opaque gradient plus **strata**, curves traced at fractions of
-the lift so they run parallel to the shore all the way round, pale because they are ledges
-catching sky and dark ones read as cracks.
+the line the wall is walked as **quads, one per pair of the coastline's 160 points**, each
+filled by its own height: a single fill cannot know that this quarter of the coast shelves and
+that one does not, which is why the landing used to be painted the same dark rock as the
+headland. `shoreness` drives the colour from the palette's `beach` to its `rock` and the
+strength of the reflection with it - a beach reflects almost nothing, having almost nothing
+above the water to reflect. Each quad is stroked in its own fill as well as filled, or canvas
+antialiases both sides of every shared seam and leaves a hairline of background between them.
+**Strata** go on the same way, segment by segment: curves traced at fractions of the lift so
+they run parallel to the shore, faded out where the wall shelves, pale because they are ledges
+catching sky and dark ones read as cracks. Sand has no bedding planes in it.
 
 **Surf** is two collars hugging the coast, breathing slowly and **out of phase** — in phase
 they read as one ring pulsing, which is a UI element; out of phase they read as swell

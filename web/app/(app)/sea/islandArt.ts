@@ -103,23 +103,51 @@ const BERTH_A = Math.atan2(0.60, 0.85)
  * and it means the island can carry real vertical mass on the side you SEE it
  * from without putting any of it where you arrive.
  *
- * ── THE LOW SIDE IS THE BERTH SIDE, AND THAT IS NOT A COINCIDENCE ───────────
+ * ── A LANDING IS A NOTCH, NOT A HALF OF THE ISLAND ──────────────────────────
  *
- * The one place every captain approaches an island is its mooring circle, so
- * that is the one bearing guaranteed to be a beach. The high side is opposite
- * it, jittered per island so ten coasts do not all lean the same way, and the
- * jitter is bounded well short of reaching the berth.
+ * The first cut of this was one cosine: high opposite the berth, low at it.
+ * That does fix the docking, and it flattens far more coast than it needs to.
+ * A cosine is half the island low — and because of how the extrusion draws
+ * (the base outline sits inside the face outline at the far side, so the wall
+ * only ever SHOWS on the near shore) the half it flattens is the only half you
+ * can see. The islands went back to reading as flat, and the height was still
+ * there; it was just all behind the land.
  *
- * Never quite zero: 16% keeps a lip of rock at the waterline even at the
- * beach, because land that meets the sea at exactly nothing has no edge and
- * goes back to reading as a decal.
+ * So the beach is a NOTCH now, a gaussian about a quarter of the way round,
+ * centred on the mooring circle and jittered per island. Land where you land,
+ * cliff along the rest of the near shore, which is what you actually want to
+ * sail past on the way in.
+ *
+ * Under it, a TWO-FOLD RIDGE: high at both ends of a seeded line, low at both
+ * flanks. Two headlands is what an island stretched along an axis has, and the
+ * axis it is stretched along comes off the same kind of seed in `coastline`.
+ *
+ * Never quite zero at the notch. A shore that meets the sea at exactly nothing
+ * has no edge and goes back to reading as a decal — it wants a lip of wet sand,
+ * which is what the wall paints there now. See PALETTES.
  */
 export function liftAt(id: string, d: number, angle: number): number {
   const L = islandLift(id, d)
-  const jit = ((((seedOf(id) >>> 5) % 1000) / 1000) - 0.5) * 1.1
-  const hi = BERTH_A + Math.PI + jit
-  const k = (1 + Math.cos(angle - hi)) / 2
-  return L * (0.16 + 0.84 * k)
+  const seed = seedOf(id)
+
+  // the ridge: two headlands, on a line of this island's own
+  const crest = (((seed >>> 11) % 1000) / 1000) * Math.PI
+  const ridge = 0.60 + 0.40 * ((1 + Math.cos(2 * (angle - crest))) / 2)
+
+  // the landing, cut into it
+  const jit = ((((seed >>> 5) % 1000) / 1000) - 0.5) * 0.9
+  let da = angle - (BERTH_A + jit * 0.35)
+  while (da > Math.PI) da -= Math.PI * 2
+  while (da < -Math.PI) da += Math.PI * 2
+  const shore = Math.exp(-(da * da) / (2 * 0.72 * 0.72))
+
+  return L * ridge * (1 - 0.88 * shore)
+}
+
+/** The wall's height at a bearing as a FRACTION of the island's own tallest —
+ *  0.07ish on the landing, 1 at a headland. What the wall is painted by. */
+export function shoreness(id: string, d: number, angle: number): number {
+  return liftAt(id, d, angle) / Math.max(1, islandLift(id, d))
 }
 
 /** The lift at a point given as a percentage of the island's box — which is how
@@ -218,6 +246,105 @@ export function requestGround(repaint: () => void) {
 
 /** The same string hash `coastline` uses, so an island's turf is turned by the
  *  same number that shaped its coast. */
+/**
+ * ── TEN ISLANDS, ONE SET OF COLOURS ─────────────────────────────────────────
+ *
+ * Every island was five hardcoded bands: one sand ramp, one green ramp, ten
+ * times over. A warm-to-cool dial went on top of that and it was not enough,
+ * because a dial cannot make two DIFFERENT places — it makes one place at two
+ * temperatures, and ten islands at ten temperatures still read as ten copies.
+ *
+ * These are five whole coasts instead, each with its own sand, its own scrub,
+ * its own canopy and its own rock. An island draws one of them off its seed and
+ * then the dial runs INSIDE it, so two Dunes still differ without either of
+ * them straying out of the family.
+ *
+ * `rock` is the cliff wall, top to base. `beach` is what the wall becomes where
+ * the land shelves down to the landing — see liftAt. Both are part of the
+ * palette rather than one shared brown, because a chalk island with a basalt
+ * cliff is two islands wearing one coat.
+ */
+type IslePalette = {
+  name: string
+  wet: [string, string, string]
+  sand: [string, string]
+  pale: [string, string]
+  scrub: [string, string]
+  green: [string, string, string]
+  rock: [string, string]
+  beach: [string, string]
+}
+
+const PALETTES: IslePalette[] = [
+  { // warm limestone and dry olive scrub — the coast every island used to be
+    name: 'dune',
+    wet: ['#c0a276', '#a78452', '#85693f'],
+    sand: ['#d0b792', '#bf9e71'],
+    pale: ['#dbc6a4', '#c7ab7f'],
+    scrub: ['#afb65f', '#909b45'],
+    green: ['#7a9c44', '#5c7d36', '#4c6b2d'],
+    rock: ['#4a3f30', '#221c12'],
+    beach: ['#d9c19a', '#ab8f63'],
+  },
+  { // black sand and wet green over basalt, somewhere a long way north
+    name: 'basalt',
+    wet: ['#8a8378', '#6e6960', '#4e4a44'],
+    sand: ['#9c968b', '#857f75'],
+    pale: ['#aaa49a', '#948e84'],
+    scrub: ['#6d8452', '#566b3e'],
+    green: ['#416e3a', '#2f5430', '#244126'],
+    rock: ['#3b4148', '#14181d'],
+    beach: ['#a39c92', '#6f6a62'],
+  },
+  { // bleached chalk, pale sand, bright turf on top
+    name: 'chalk',
+    wet: ['#cfc7b2', '#b6ad97', '#948c78'],
+    sand: ['#e0d7c1', '#cbc1a8'],
+    pale: ['#ece4d2', '#dad1bb'],
+    scrub: ['#b9c06a', '#9aa350'],
+    green: ['#86ab4e', '#6a8e3d', '#587a33'],
+    rock: ['#8f8d82', '#4e4d46'],
+    beach: ['#eae1cb', '#b8ae94'],
+  },
+  { // iron in the rock, terracotta and ochre, green only where it can hold on
+    name: 'redstone',
+    wet: ['#b98354', '#9c6a40', '#78502f'],
+    sand: ['#cb9a6c', '#b8834f'],
+    pale: ['#d9ae83', '#c4955f'],
+    scrub: ['#a89a4e', '#8a7c39'],
+    green: ['#6f8a3c', '#55702e', '#445c26'],
+    rock: ['#6b3f2c', '#2e1710'],
+    beach: ['#d5a877', '#a87b4c'],
+  },
+  { // dark loam under a canopy that has never been cut back
+    name: 'jungle',
+    wet: ['#bd9d6e', '#9c7c4c', '#775c35'],
+    sand: ['#cdb387', '#b99b68'],
+    pale: ['#dbc59b', '#c7ad7d'],
+    scrub: ['#7fa347', '#648833'],
+    green: ['#4e8a3a', '#336026', '#24471d'],
+    rock: ['#453a29', '#1c160d'],
+    beach: ['#d6bd93', '#a88a5c'],
+  },
+]
+
+/** Which coast this island is. Its own mix of the hash: the low bits already
+ *  carry the lift jitter and the crest bearing, and reusing them would tie an
+ *  island's colour to its shape for no reason. */
+function paletteOf(id: string): IslePalette {
+  const h = Math.imul(seedOf(id) ^ 0x5bf03635, 2246822519) >>> 0
+  return PALETTES[h % PALETTES.length]
+}
+
+/** Blend two `#rrggbb` by t. */
+function mixHex(a: string, b: string, t: number): string {
+  const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16)
+  const k = Math.min(1, Math.max(0, t))
+  const c = (sh: number) => Math.round(
+    ((A >> sh) & 255) + (((B >> sh) & 255) - ((A >> sh) & 255)) * k)
+  return `#${((c(16) << 16) | (c(8) << 8) | c(0)).toString(16).padStart(6, '0')}`
+}
+
 function seedOf(id: string): number {
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
@@ -297,9 +424,43 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
   const rs = coastline(id)
   const C = pad + d / 2
   const LIFT = islandLift(id, d)
-  /** The island's own character, 0..1, off the same hash as everything else
-   *  about it. Drives the palette below. */
+  /** WHICH COAST THIS IS — one of five whole palettes, sand and scrub and
+   *  canopy and rock together. See PALETTES. */
+  const PAL = paletteOf(id)
+
+  /** And where inside that family it sits, 0..1, off the same hash as
+   *  everything else about the island. */
   const chr = ((seedOf(id) >>> 9) % 1000) / 1000
+
+  /**
+   * ── THE DIAL, NOW THAT IT IS ONLY A DIAL ────────────────────────────────
+   *
+   * This used to be the whole of an island's colour: five hardcoded bands with
+   * a warm-to-cool shift over them. It was not enough and could not have been.
+   * A dial makes ONE place at two temperatures, so ten islands on one dial are
+   * ten copies of a coast at ten temperatures, which is exactly what they
+   * looked like.
+   *
+   * PALETTES does the work now, and this only separates two islands that drew
+   * the SAME palette. Halved from what it was for that reason: inside a family
+   * it wants to be the difference between two beaches, not between two coasts.
+   *
+   * Applied to every band and to the rock together, so an island still reads as
+   * one place rather than as a green top on a grey bottom.
+   */
+  const tone = (hex: string, warmCool: number) => {
+    const n = parseInt(hex.slice(1), 16)
+    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+    // Toward cool: red down, blue up, everything a shade darker.
+    const k = (warmCool - 0.5) * 2
+    r = Math.round(Math.min(255, Math.max(0, r * (1 - k * 0.055))))
+    g = Math.round(Math.min(255, Math.max(0, g * (1 - k * 0.015))))
+    b = Math.round(Math.min(255, Math.max(0, b * (1 + k * 0.07))))
+    const dim = 1 - k * 0.035
+    r = Math.round(r * dim); g = Math.round(g * dim); b = Math.round(b * dim)
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
+  }
+  const T = (hex: string) => tone(hex, chr)
 
   /** Trace the coast at a scale of the island box, optionally offset. */
   const trace = (g: CanvasRenderingContext2D, scale: number, cx = C, cy = C) => {
@@ -416,9 +577,52 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
    * side does the base clear the face. Which is the one place a reflection
    * would be visible anyway — the water in FRONT of the island.
    */
-  const rSouth = (rs[Math.floor(rs.length / 4)] / 100) * d * 0.74
-  const yWater = C + rSouth
+  /**
+   * ── AND IT IS PAINTED PER BEARING, NOT AS ONE SHAPE ─────────────────────
+   *
+   * The wall used to be a single polygon under a single gradient, which is why
+   * the landing was the same dark rock as the headland: one fill cannot know
+   * that this quarter of the coast shelves and that one does not.
+   *
+   * So it is walked as quads, one per pair of the coastline's 160 points, each
+   * one filled by ITS OWN height. `shoreness` is the wall's height there as a
+   * fraction of the island's tallest — near zero at the landing, 1 at a
+   * headland — and it drives the colour from `beach` to `rock` and the strength
+   * of the reflection with it. A beach reflects almost nothing, because a beach
+   * has almost nothing standing above the water to reflect.
+   *
+   * Each quad is stroked in its own fill as well as filled. Adjacent quads of
+   * slightly different colours leave a hairline of background between them
+   * otherwise — canvas antialiases both edges of a shared seam and neither
+   * covers it.
+   */
+  const N = rs.length
+  const bearing = (i: number) => (Math.PI * 2 * (i % N)) / N
+  const radius = (i: number) => (rs[i % N] / 100) * d * 0.74
+  const wx = (i: number) => C + Math.cos(bearing(i)) * radius(i)
+  const wy = (i: number, sign: number) =>
+    C + sign * (liftAt(id, d, bearing(i)) / GROUND) + Math.sin(bearing(i)) * radius(i)
+  const quad = (i: number, s0: number, s1: number) => {
+    lg.beginPath()
+    lg.moveTo(wx(i), wy(i, s0))
+    lg.lineTo(wx(i + 1), wy(i + 1, s0))
+    lg.lineTo(wx(i + 1), wy(i + 1, s1))
+    lg.lineTo(wx(i), wy(i, s1))
+    lg.closePath()
+  }
+  /** The waterline and the cliff base at due SOUTH — the one bearing where the
+   *  whole band is on show, and what the ripple pass is measured against. */
+  const yWater = C + (rs[Math.floor(N / 4)] / 100) * d * 0.74
   const yBase = yWater + liftAt(id, d, Math.PI / 2) / GROUND
+
+  const paintQuad = (i: number, s0: number, s1: number, fill: string | CanvasGradient) => {
+    quad(i, s0, s1)
+    lg.fillStyle = fill
+    lg.fill()
+    lg.strokeStyle = fill
+    lg.lineWidth = 1
+    lg.stroke()
+  }
 
   // ── BELOW THE WATERLINE: A REFLECTION, NOT A BASEMENT ────────────
   //
@@ -432,16 +636,20 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
   // nearest the water) and lightening downward toward what the top of the wall
   // reflects, then gone. Steep, like the landmarks' mirrors — a reflection that
   // survives all the way down reads as a second island.
-  traceL(0.74, 1)
-  {
-    const g = lg.createLinearGradient(0, yWater, 0, yBase)
-    g.addColorStop(0, 'rgba(26,23,16,0.70)')
-    g.addColorStop(0.40, 'rgba(52,45,33,0.40)')
-    g.addColorStop(0.78, 'rgba(64,58,44,0.16)')
+  for (let i = 0; i < N; i++) {
+    const h = (shoreness(id, d, bearing(i)) + shoreness(id, d, bearing(i + 1))) / 2
+    const k = Math.min(1, Math.max(0, (h - 0.14) / 0.46))
+    if (k < 0.02) continue
+    const y0 = (wy(i, 0) + wy(i + 1, 0)) / 2
+    const y1 = (wy(i, 1) + wy(i + 1, 1)) / 2
+    if (y1 - y0 < 0.5) continue
+    const g = lg.createLinearGradient(0, y0, 0, y1)
+    g.addColorStop(0, `rgba(26,23,16,${(0.70 * k).toFixed(3)})`)
+    g.addColorStop(0.40, `rgba(52,45,33,${(0.40 * k).toFixed(3)})`)
+    g.addColorStop(0.78, `rgba(64,58,44,${(0.16 * k).toFixed(3)})`)
     g.addColorStop(1, 'rgba(70,66,52,0)')
-    lg.fillStyle = g
+    paintQuad(i, 0, 1, g)
   }
-  lg.fill()
 
   // ── AND THE RIPPLE THAT PROVES IT IS WATER ───────────────────────
   //
@@ -465,15 +673,26 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
     lg.restore()
   }
 
-  // ── ABOVE THE WATERLINE: THE WALL ────────────────────────────────
+  // ── ABOVE THE WATERLINE: THE WALL, ROCK TO SAND ──────────────────
   //
-  // Opaque, and a shade off the old browns. This face points down the page,
-  // away from the light in the upper left, so it stays in shadow — but it is
-  // catching sky, not sitting in a cave, and at 3.5% of the island it is now
-  // big enough that the difference is visible.
-  traceL(0.74, 0)
-  lg.fillStyle = grad165(lg, 0.74, [[0, '#4a3f30'], [0.55, '#332b1f'], [1, '#221c12']])
-  lg.fill()
+  // Opaque. This face points down the page, away from the light in the upper
+  // left, so it stays in shadow — but it is catching sky, not sitting in a
+  // cave, and at 3.5% of the island it is big enough for that to show.
+  //
+  // AND IT SHELVES. Where the land drops to the landing the wall is a few
+  // pixels of wet sand, not a few pixels of cliff — which is the whole reason
+  // this is a loop. You moor on a beach; you should be able to see that you are
+  // mooring on a beach.
+  for (let i = 0; i < N; i++) {
+    const h = (shoreness(id, d, bearing(i)) + shoreness(id, d, bearing(i + 1))) / 2
+    const t = Math.min(1, Math.max(0, (h - 0.10) / 0.45))
+    const y0 = (wy(i, -1) + wy(i + 1, -1)) / 2
+    const y1 = (wy(i, 0) + wy(i + 1, 0)) / 2
+    const g = lg.createLinearGradient(0, y0, 0, y1)
+    g.addColorStop(0, T(mixHex(PAL.beach[0], PAL.rock[0], t)))
+    g.addColorStop(1, T(mixHex(PAL.beach[1], PAL.rock[1], t)))
+    paintQuad(i, -1, 0, g)
+  }
 
   lg.save()
   traceL(0.74, 0)
@@ -486,9 +705,19 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
   // rim light comes from, and dark ones read as cracks.
   lg.lineWidth = Math.max(1, d * 0.0035)
   for (const [sign, a] of [[-0.30, 0.15], [-0.58, 0.10], [-0.80, 0.06]] as [number, number][]) {
-    traceL(0.74, sign)
-    lg.strokeStyle = `rgba(255,242,218,${a})`
-    lg.stroke()
+    // Segment by segment, so a ledge fades out as the wall shelves. Run as one
+    // stroke round the whole coast it draws three pale lines across the landing
+    // as well, and sand has no bedding planes in it.
+    for (let i = 0; i < N; i++) {
+      const h = (shoreness(id, d, bearing(i)) + shoreness(id, d, bearing(i + 1))) / 2
+      const t = Math.min(1, Math.max(0, (h - 0.22) / 0.45))
+      if (t < 0.04) continue
+      lg.beginPath()
+      lg.moveTo(wx(i), wy(i, sign))
+      lg.lineTo(wx(i + 1), wy(i + 1, sign))
+      lg.strokeStyle = `rgba(255,242,218,${(a * t).toFixed(3)})`
+      lg.stroke()
+    }
   }
 
   // Rock over the wall, gently — it is in shadow and mostly edge, so the
@@ -507,39 +736,11 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
     lg.fillStyle = fill
     lg.fill()
   }
-  // ── AND NOT ALL THE SAME LAND ────────────────────────────────────
-  //
-  // Every island was these exact five bands: one sand, one green, ten times
-  // over. Read as one island at ten sizes, which is most of what "they all
-  // look the same" is — the silhouettes differ more than the surfaces do.
-  //
-  // `chr` swings the whole ramp between two coasts, and the shift is applied to
-  // ALL FIVE BANDS TOGETHER so a single island still reads as one place. Warm
-  // and pale at 0 (limestone and dry scrub, a Mediterranean rock); cool and
-  // dark at 1 (basalt and wet green, somewhere further north).
-  //
-  // SMALL ON PURPOSE. These are hand-painted assets in a fixed house style and
-  // a big hue swing would put an island outside it. The most this moves any
-  // channel is about a sixth, which is the difference between two beaches
-  // rather than between two games.
-  const tone = (hex: string, warmCool: number) => {
-    const n = parseInt(hex.slice(1), 16)
-    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
-    // Toward cool: red down, blue up, everything a shade darker.
-    const k = (warmCool - 0.5) * 2
-    r = Math.round(Math.min(255, Math.max(0, r * (1 - k * 0.10))))
-    g = Math.round(Math.min(255, Math.max(0, g * (1 - k * 0.03))))
-    b = Math.round(Math.min(255, Math.max(0, b * (1 + k * 0.13))))
-    const dim = 1 - k * 0.06
-    r = Math.round(r * dim); g = Math.round(g * dim); b = Math.round(b * dim)
-    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
-  }
-  const T = (hex: string) => tone(hex, chr)
-  face(10, grad165(lg, 0.74, [[0, T('#c0a276')], [0.55, T('#a78452')], [1, T('#85693f')]]))
-  face(0.97, grad165(lg, 0.72, [[0, T('#d0b792')], [1, T('#bf9e71')]]))
-  face(0.90, grad165(lg, 0.67, [[0, T('#dbc6a4')], [1, T('#c7ab7f')]]))
-  face(0.81, grad165(lg, 0.60, [[0, T('#afb65f')], [1, T('#909b45')]]))
-  face(0.70, grad165(lg, 0.52, [[0, T('#7a9c44')], [0.62, T('#5c7d36')], [1, T('#4c6b2d')]]))
+  face(10, grad165(lg, 0.74, [[0, T(PAL.wet[0])], [0.55, T(PAL.wet[1])], [1, T(PAL.wet[2])]]))
+  face(0.97, grad165(lg, 0.72, [[0, T(PAL.sand[0])], [1, T(PAL.sand[1])]]))
+  face(0.90, grad165(lg, 0.67, [[0, T(PAL.pale[0])], [1, T(PAL.pale[1])]]))
+  face(0.81, grad165(lg, 0.60, [[0, T(PAL.scrub[0])], [1, T(PAL.scrub[1])]]))
+  face(0.70, grad165(lg, 0.52, [[0, T(PAL.green[0])], [0.62, T(PAL.green[1])], [1, T(PAL.green[2])]]))
 
   // TURF OVER ALL FIVE BANDS AT ONCE, inside the face clip that is still open,
   // so the beach reads as sand and the middle as grass without either needing
