@@ -42,18 +42,31 @@ const ISLAND_LIFT = 15
  * tall on land with thirty pixels of edge, and no amount of painting on the top
  * face fixes a shape with no side to it.
  *
- * A FRACTION OF ITS OWN SIZE, then. Clamped at both ends: below the old 15 a
- * cliff stops being visible at chart zoom, and past 70 an island starts to read
- * as a mesa rather than as land.
+ * A FRACTION OF ITS OWN SIZE, then — but a SMALL one, and the first attempt at
+ * this got that badly wrong. It went to 5.5% of the box, which put a hundred
+ * and forty pixels of sheer drop round the Mainland, and the whole chart turned
+ * into mesas: every island a plateau, and mooring at one felt like tying up
+ * against a cliff face. Reported exactly that way.
  *
- * AND SEEDED, because ten islands at one proportion is ten of the same island
- * at different scales. The spread runs from a low sandy flat to a proper rocky
- * rise, off the same hash everything else about an island comes from.
+ * THE EXTRUSION IS THE SAME HEIGHT ALL THE WAY ROUND, and that is the thing
+ * that does not scale. A real island is a cliff on one side and a beach you can
+ * walk up on the other; a uniform ring of rock is a cliff EVERYWHERE, so every
+ * pixel added to it is added to the shore you arrive at. Past about forty
+ * pixels of drop it stops reading as land with some height and starts reading
+ * as a wall.
+ *
+ * So: 2.5%, which leaves the big islands with about half again the edge they
+ * had — enough that the Mainland no longer reads flatter than a cay — and
+ * leaves the small ones almost exactly where they were.
+ *
+ * AND SEEDED, gently. Ten islands at one proportion is ten of the same island
+ * at different scales, but this is a tenth of the swing the first pass used:
+ * character, not a different landform.
  */
 export function islandLift(id: string, d: number): number {
   const seed = (seedOf(id) % 1000) / 1000
-  const base = Math.min(70, Math.max(ISLAND_LIFT, d * 0.055))
-  return Math.round(base * (0.72 + seed * 0.62))
+  const base = Math.min(34, Math.max(13, d * 0.025))
+  return Math.round(base * (0.85 + seed * 0.3))
 }
 
 /**
