@@ -11,6 +11,29 @@ ships in the tackle economy — same word, different system.
 - Ultimate weapon: `web/lib/ultimateBuild.ts`; Armory expansion + repair kits:
   `web/lib/repairKits.ts`, `web/app/(app)/expeditions/ArmoryExpansionPanel.tsx`
 - Hero display: `web/app/(app)/expeditions/ShipHero.tsx`
+- The sea's doors into it: `web/app/(app)/sea/ShipSheet.tsx`
+
+## Three doors on the sea, one shell
+
+`sea/ShipSheet.tsx` is the panel every ship screen opens in out on the water. One
+component because all three landings are ONE server read (`getShipHeroProps`) and one
+card; `focus` says which door asked:
+
+- **`ship`** — the Gunwharf's "Manage Her". Her stats, the one upgrade, and three painted
+  plates (Refits / Armament / Look) whose bodies are `ShipHero`'s tiles.
+- **`forge`** — the Forge ISLAND, and nothing about the hull. You sailed to a building.
+- **`items`** — the **Battle Loadout** disc in the expedition side's HUD row, beside the
+  crew. It was `/expeditions/items` (now a redirect to `/sea?open=loadout`) plus a drawer
+  behind "Manage Ship" on the hub. What you mount is a between-fights decision and between
+  fights you are on the water. Not on the fishing side: a raid relic does not touch a rod.
+
+**Everything behind those doors is still `ShipHero`, mounted `bare`** — the tiles, the
+slot grid, the picker, the item sheets, the effects breakdown, six purchase flows. `bare`
+drops what belongs to a full-screen route and would be drawn twice inside a card: the
+painted `sectionBg` plate, the navy ground under it, `ShipHero`'s own focus header, and
+(since the loadout landed) the `.page-col` gutter and the 6rem phone-nav-bar tail. Do not
+rewrite these bodies to change how a card looks — that trades a day of risk for a border
+radius, and it is why the conversions have all been shells.
 
 ## Naming law: berth ≠ bunk
 
