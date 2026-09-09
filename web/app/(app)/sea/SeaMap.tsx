@@ -8673,6 +8673,7 @@ hullRef={hullRefFor(t.key)} />
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(10); setCrewHubOpen(true) }}
           aria-label="Your crew"
+          data-coach="hud-crew"
           title="Your crew"
           style={{
             position: 'absolute', top: 18, left: hudAt('crew'), zIndex: Z.hud,
@@ -8744,6 +8745,7 @@ hullRef={hullRefFor(t.key)} />
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(10); setAlmanacOpen(true) }}
           aria-label="Open the almanac"
+          data-coach="hud-almanac"
           title="The almanac"
           style={{
             position: 'absolute', top: 18, left: hudAt('almanac'), zIndex: Z.hud,
@@ -9149,6 +9151,7 @@ hullRef={hullRefFor(t.key)} />
             }}
             aria-label={sub}
             title={sub}
+            data-coach="hud-journey"
             data-no-steer
             // BLINKS ONLY FOR PAY IN HAND. Not for a beat waiting, not for a
             // regular with a word for you, and not for the campaign's next
@@ -9205,6 +9208,7 @@ hullRef={hullRefFor(t.key)} />
           onClick={e => { e.stopPropagation(); vibrate(8); setShipSheet('items') }}
           aria-label="Battle Loadout"
           title="Battle Loadout"
+          data-coach="hud-loadout"
           data-no-steer
           style={{
             position: 'absolute', top: 18, left: hudAt('loadout'), zIndex: Z.hud,
@@ -9240,6 +9244,7 @@ hullRef={hullRefFor(t.key)} />
             onClick={e => { e.stopPropagation(); vibrate(8); setSkillOpen(true) }}
             aria-label={label}
             title={pts > 0 ? `${label} — ${pts} renown to spend` : label}
+            data-coach="hud-skill"
             data-no-steer
             style={{
               position: 'absolute', top: 18, left: hudAt('skill'), zIndex: Z.hud,
@@ -9924,17 +9929,6 @@ hullRef={hullRefFor(t.key)} />
           of its beats are ABOUT fishing and one of them explains the dial while
           the dial is on screen, which was the whole reason the retired fishing
           hub had an intro scene of its own. */}
-      {/* ── AND THE OTHER HALF, WHEN THEY REACH IT ────────────────────
-          Fires on the first crossing of the reef rather than at signup: on beat
-          one a captain has no warship, no crew and no campaign, so this would
-          have been ten screens about places they cannot use. It shares the
-          first voyage's camera ref, which is safe because the two can never be
-          up at once — that one is about the water south of the reef and this
-          one only plays north of it. */}
-      <SeaGateTour
-        hasSeen={tour.gateSeen} startAt={tour.gateStep}
-        inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam} />
-
       <SeaFirstVoyage hasSeen={tour.seen} startAt={tour.step} fishing={!!fishingIn}
         caught={caughtTick} nearId={near?.id ?? null} ashore={ashore}
         // The same two gates FishingHere puts on the Cast button. If it will
@@ -9942,6 +9936,23 @@ hullRef={hullRefFor(t.key)} />
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
         cam={tourCam} goal={tourGoal} holdCast={tourHoldCast}
         fishOnly={tourFishOnly} stowRod={stowRod} at={pos} />
+
+      {/* ── AND THE OTHER HALF, WHEN THEY REACH IT ────────────────────
+          Fires on the first crossing of the reef rather than at signup: on beat
+          one a captain has no warship, no crew and no campaign, so this would
+          have been ten screens about places they cannot use.
+
+          AFTER the first voyage in the tree, and it has to be. The two share
+          `tourCam`, and a finished first voyage still runs its camera effect
+          once on mount with no beat to point at — which writes null. Effects
+          run in tree order, so mounted first this tour would set the camera and
+          have it cleared out from under it on the very frame a `look` beat was
+          current. Nothing else about the order matters: the two can never both
+          be up, one being about the water south of the reef and this one only
+          playing north of it. */}
+      <SeaGateTour
+        hasSeen={tour.gateSeen} startAt={tour.gateStep}
+        inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam} />
       {!hudOff && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.

@@ -33,7 +33,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { GATE_TOUR, SEA_ACCENT } from '@/lib/seaOnboarding'
-import { PLACES } from './chart'
+import { PLACES, SEA_GATE } from './chart'
 import { markGateTourSeen, setGateTourStep } from './tourActions'
 
 export default function SeaGateTour({ hasSeen, startAt, inAnchorage, fighting, cam }: {
@@ -80,10 +80,39 @@ export default function SeaGateTour({ hasSeen, startAt, inAnchorage, fighting, c
       cam.current = null
       return
     }
+    // THE GATE IS NOT A PLACE. It is a pair of constants in chart.ts — no
+    // island, no berth, no row in PLACES — and it is the one thing on this half
+    // a captain most needs pointed at. Named here rather than given a fake
+    // entry in PLACES, which would put a landable port on the water.
+    if (beat.at === 'sea_gate') { cam.current = { ...SEA_GATE }; return () => { cam.current = null } }
     const place = PLACES.find(p => p.id === beat.at)
     cam.current = place ? { x: place.x, y: place.y } : null
     return () => { cam.current = null }
   }, [beat, inAnchorage, fighting, cam])
+
+  // ── AND THE DISC ITSELF, LIT UP ───────────────────────────────────────────
+  //
+  // Found by DOM lookup, because every one of these is in a sibling component.
+  // A beat that says "the wheel is your Navigation level" over four identical
+  // circles has named nothing; the flash is what makes it an instruction.
+  //
+  // Retried for a moment: the row hides in a fight and while the rod is out, so
+  // the disc a beat points at can arrive a frame or two after the card does.
+  useEffect(() => {
+    const want = beat?.target
+    const clear = () => document.querySelectorAll('.coach-flash')
+      .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
+    clear()
+    if (!want || !inAnchorage || fighting) return
+    let tries = 0
+    const find = () => {
+      const el = document.querySelector(`[data-coach="${want}"]`)
+      if (el) { el.classList.add('coach-flash', 'coach-flash-gold'); return }
+      if (++tries < 20) window.setTimeout(find, 120)
+    }
+    find()
+    return clear
+  }, [beat, inAnchorage, fighting])
 
   // WAITS RATHER THAN PLAYS, anywhere but here. A captain who crosses the reef
   // and turns straight round should meet the same beat when they come back, not

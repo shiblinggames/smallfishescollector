@@ -279,6 +279,45 @@ export const FIRST_VOYAGE: Beat[] = [
     until: 'look',
     at: 'crew_hall',
   },
+  // ── AND THE ROW ALONG THE TOP ─────────────────────────────────────────
+  //
+  // Named ONE AT A TIME, with the real disc lit under the card. A single beat
+  // saying "there are some buttons up there" is a beat nobody can act on: four
+  // marks in a row, at twenty-six pixels on a phone, are four unlabelled
+  // circles until something says which is which.
+  //
+  // It sits here, after the flyover, because that stretch already holds the rod
+  // stowed (see holdCast) and the row is hidden on a phone while the rod is
+  // out. Teaching a control that is not on screen is teaching nothing.
+  {
+    ...K,
+    text: 'One more thing, Captain. That row along the top of the chart is the rest of the game, and every one of them opens where you are floating.',
+    until: 'next',
+  },
+  {
+    ...D,
+    text: 'The *pennant* is your story. Where Finn’s business has got to, and who else out here is worth knowing.',
+    until: 'next',
+    target: 'hud-journey',
+  },
+  {
+    ...D,
+    text: 'The *rod* beside it is your fishing level. What every rank has bought you, and where your renown goes when you have some.',
+    until: 'next',
+    target: 'hud-skill',
+  },
+  {
+    ...K,
+    text: 'The *chart* is the whole sea at a glance. Everything you have sailed is on it, and nothing you have not.',
+    until: 'next',
+    target: 'chart',
+  },
+  {
+    ...K,
+    text: 'And the *book* is every fish in these waters, with the ones you have landed filled in. The rest are blank until you catch them.',
+    until: 'next',
+    target: 'hud-almanac',
+  },
   // ── AND THE PEOPLE ON IT ──────────────────────────────────────────────
   //
   // Said LAST, and said at all because nothing else in the game does. The
@@ -377,9 +416,57 @@ export const GATE_TOUR: Beat[] = [
     text: 'When an island has something waiting on you, it flies a *gold mark*. That is the whole of the notice you get, and it is enough.',
     until: 'next',
   },
+  // ── THE ROW UP HERE IS A DIFFERENT ROW ────────────────────────────────
+  //
+  // Two of these discs are the SAME SLOT the fishing side taught, holding
+  // something else: the pennant is the campaign rather than the Salt Road, and
+  // the spine disc is Navigation rather than Fishing. That is worth saying out
+  // loud. A captain who learned "the pennant is Finn" and finds a chapter list
+  // behind it has been taught a thing that is now wrong.
   {
     ...D,
-    text: 'North of here is the *Sea Gate*, and past it the campaign. Real water, Captain, not a list. You sail to a fight and take it on where you find it.',
+    text: 'The row along the top changed with the water. Same *pennant*, different story: up here it is the campaign, and the one stop it wants next.',
+    until: 'next',
+    target: 'hud-journey',
+  },
+  {
+    ...D,
+    text: 'The *wheel* beside it is your Navigation level. That is the one that counts out here, and it has its own renown to spend.',
+    until: 'next',
+    target: 'hud-skill',
+  },
+  {
+    ...K,
+    text: 'The *crew* disc: who is aboard, who is out on a voyage, and who is asleep in the hall. Seat your raid party there before you go north.',
+    until: 'next',
+    target: 'hud-crew',
+  },
+  {
+    ...K,
+    text: 'And the *slots* are your battle loadout. Six mounts on that hull, and what you bolt into them is half of any fight.',
+    until: 'next',
+    target: 'hud-loadout',
+  },
+  // ── THE GATE ──────────────────────────────────────────────────────────
+  //
+  // Its own beat, and the camera goes to it. It was one clause in a line about
+  // the campaign, which is the wrong weight for the only door between the two
+  // halves of the game: a captain has to be able to find it, and "north of
+  // here" on a chart this size is not a direction.
+  {
+    ...D,
+    text: 'Now look north. That ring of light is the *Sea Gate*, and it is the only way out of this harbour.',
+    until: 'look',
+    at: 'sea_gate',
+  },
+  {
+    ...D,
+    text: 'Take your warship out of the Gunwharf first. She is the one that crosses, and your fishing boat stays tied up until you are home.',
+    until: 'next',
+  },
+  {
+    ...D,
+    text: 'Past it is the campaign. Real water, Captain, not a list. You sail up to a fight and take it on where you find it.',
     until: 'next',
   },
   // ── THE FOG, WHICH IS THE ONE RULE THEY CANNOT GUESS ───────────────────
