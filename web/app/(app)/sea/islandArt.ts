@@ -392,14 +392,111 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
     lg.closePath()
   }
 
-  // the cliff, dropped — deep under the headland, barely there at the beach
+  /**
+   * ── THE THREE OUTLINES, AND WHERE THE WATER IS ──────────────────────────
+   *
+   *   traceL(s, -1)  the TOP FACE, raised a lift above the plane
+   *   traceL(s,  0)  the WATERLINE — the island's actual footprint on the sea
+   *   traceL(s, +1)  the CLIFF BASE, a lift below it
+   *
+   * The wall is everything between the first and the last, and until now it was
+   * ONE gradient across the whole of it: the same dark brown above the water
+   * and below, painted opaque over the sea. Which is why the biggest islands
+   * looked like they were sitting on a dark plinth. The wall was the only
+   * vertical surface on the chart that did not know where the waterline was.
+   *
+   * The offsets are symmetric — the base is exactly as far below the plane as
+   * the face is above it — so the submerged band is, to the pixel, WHERE THE
+   * REFLECTION OF THE WALL GOES. It was already the right shape. It was just
+   * painted as rock.
+   *
+   * The band is a crescent on the SOUTH shore and that is geometry, not a
+   * choice: at due north the base outline sits inside the face outline and the
+   * face covers it, at due east and west the two cross, and only on the near
+   * side does the base clear the face. Which is the one place a reflection
+   * would be visible anyway — the water in FRONT of the island.
+   */
+  const rSouth = (rs[Math.floor(rs.length / 4)] / 100) * d * 0.74
+  const yWater = C + rSouth
+  const yBase = yWater + liftAt(id, d, Math.PI / 2) / GROUND
+
+  // ── BELOW THE WATERLINE: A REFLECTION, NOT A BASEMENT ────────────
+  //
+  // TRANSLUCENT, and that is most of the point. The old fill was opaque, so it
+  // covered the shore bands and the surf that the water shader draws right up
+  // to the coast — the sea stopped at the island instead of running under it.
+  // Everything here is rgba and the water reads through all of it.
+  //
+  // The ramp is the wall's own, MIRRORED: darkest where it meets the line
+  // (that is the foot of the cliff, the darkest part of the wall, and it is
+  // nearest the water) and lightening downward toward what the top of the wall
+  // reflects, then gone. Steep, like the landmarks' mirrors — a reflection that
+  // survives all the way down reads as a second island.
   traceL(0.74, 1)
-  lg.fillStyle = grad165(lg, 0.74, [[0, '#3b3226'], [0.55, '#2a2419'], [1, '#191509']])
+  {
+    const g = lg.createLinearGradient(0, yWater, 0, yBase)
+    g.addColorStop(0, 'rgba(26,23,16,0.70)')
+    g.addColorStop(0.40, 'rgba(52,45,33,0.40)')
+    g.addColorStop(0.78, 'rgba(64,58,44,0.16)')
+    g.addColorStop(1, 'rgba(70,66,52,0)')
+    lg.fillStyle = g
+  }
   lg.fill()
 
-  // Rock over the cliff, gently — it is in shadow and mostly edge, so the
-  // texture is there to break the flat brown rather than to be read.
+  // ── AND THE RIPPLE THAT PROVES IT IS WATER ───────────────────────
+  //
+  // A reflection with a clean edge is a shadow. Alternating bands of alpha
+  // taken back out with destination-out cut it into horizontal slivers, which
+  // is what a surface with any swell on it does to the thing it reflects.
+  //
+  // Safe as a full-canvas operation because this layer holds NOTHING else yet:
+  // `land` was made two dozen lines ago and the fill above is the first thing
+  // on it. The shoal, the surf and the contact shadow are all on `cv`.
+  {
+    const g = lg.createLinearGradient(0, yWater, 0, yBase)
+    const bands = 7
+    for (let k = 0; k <= bands; k++) {
+      g.addColorStop(k / bands, k % 2 ? 'rgba(0,0,0,0.34)' : 'rgba(0,0,0,0)')
+    }
+    lg.save()
+    lg.globalCompositeOperation = 'destination-out'
+    lg.fillStyle = g
+    lg.fillRect(0, 0, D, D)
+    lg.restore()
+  }
+
+  // ── ABOVE THE WATERLINE: THE WALL ────────────────────────────────
+  //
+  // Opaque, and a shade off the old browns. This face points down the page,
+  // away from the light in the upper left, so it stays in shadow — but it is
+  // catching sky, not sitting in a cave, and at 3.5% of the island it is now
+  // big enough that the difference is visible.
+  traceL(0.74, 0)
+  lg.fillStyle = grad165(lg, 0.74, [[0, '#4a3f30'], [0.55, '#332b1f'], [1, '#221c12']])
+  lg.fill()
+
+  lg.save()
+  traceL(0.74, 0)
+  lg.clip()
+
+  // STRATA. Curves at fractions of the lift are the coastline offset by a
+  // fraction of the wall's height, so they run parallel to the shore all the
+  // way round — which is exactly what a bedding plane in an extruded headland
+  // does. Pale rather than dark: these are ledges catching the same sky the
+  // rim light comes from, and dark ones read as cracks.
+  lg.lineWidth = Math.max(1, d * 0.0035)
+  for (const [sign, a] of [[-0.30, 0.15], [-0.58, 0.10], [-0.80, 0.06]] as [number, number][]) {
+    traceL(0.74, sign)
+    lg.strokeStyle = `rgba(255,242,218,${a})`
+    lg.stroke()
+  }
+
+  // Rock over the wall, gently — it is in shadow and mostly edge, so the
+  // texture is there to break the flat brown rather than to be read. Inside
+  // the waterline clip now: source-atop alone would have laid it over the
+  // reflection too, and a reflection with rock grain in it is a rock.
   paintGround(lg, GROUND_TEX.rock, D, seedOf(id) * 7, 0.3)
+  lg.restore()
 
   // the face, lifted, everything inside clipped to it
   lg.save()

@@ -855,6 +855,22 @@ the same corner every other highlight on the chart is lit from, so the scene agr
 where the sun is. Then soft dark clumps for woods: not trees (a tree is two pixels here) but
 the massed shadow a stand of them throws.
 
+**The wall knows where the waterline is.** The extrusion is three outlines: the top face a
+lift above the plane, the waterline on it, the cliff base a lift below. That last one was
+painted the same dark brown as the wall and painted OPAQUE, so the biggest islands sat on a
+plinth and the shore bands and surf the water shader draws right up to the coast stopped dead
+at the island instead of running under it. Because the two offsets are symmetric, the
+submerged band is to the pixel where the reflection of the wall goes — it was already the
+right shape, it was just painted as rock. It is translucent now, on the wall's own ramp
+mirrored (darkest at the line, lightening downward, gone), cut into slivers by alternating
+bands of alpha so it reads as a surface with swell on it rather than as a shadow. It shows as
+a crescent on the SOUTH shore, which is geometry rather than a choice: at due north the base
+outline sits inside the face and is covered, east and west the two cross, and only on the near
+side does the base clear — which is the one place a reflection would be visible anyway. Above
+the line the wall keeps its own opaque gradient plus **strata**, curves traced at fractions of
+the lift so they run parallel to the shore all the way round, pale because they are ledges
+catching sky and dark ones read as cracks.
+
 **Surf** is two collars hugging the coast, breathing slowly and **out of phase** — in phase
 they read as one ring pulsing, which is a UI element; out of phase they read as swell
 arriving. Water hitting a shore is the most recognisable thing about a shore, and without it
