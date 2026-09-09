@@ -130,22 +130,11 @@ const ORDERS: Order[] = [
   },
 ]
 
-export default function CaptainsOrders({ state, onAction, alreadyDone, onHref }: {
+export default function CaptainsOrders({ state, onAction, alreadyDone }: {
   state: OrdersState
   onAction: (a: OrderAction) => void
   /** profiles.captains_orders_done. Once latched, never shown again. */
   alreadyDone: boolean
-  /**
-   * TAKE THE ERRAND WITHOUT TAKING THE ROUTE.
-   *
-   * Two of these orders point at `/crew?tab=...`, which is a real URL and the
-   * right answer on a page. On the SEA it is not: that route redirects back
-   * onto the chart, so following it unloads the whole ocean and rebuilds it to
-   * open a panel that was already one disc away. The sea hands this in and
-   * opens the panel itself; anything it does not recognise it returns false
-   * for, and the link is followed as normal.
-   */
-  onHref?: (href: string) => boolean
 }) {
   const next = alreadyDone ? undefined : ORDERS.find(o => !o.done(state))
   const allDone = !alreadyDone && !next
@@ -215,10 +204,7 @@ export default function CaptainsOrders({ state, onAction, alreadyDone, onHref }:
   return (
     <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
       {href
-        ? onHref
-          ? <button type="button" onClick={() => { if (!onHref(href)) window.location.href = href }}
-              className="tap" style={{ ...shell, background: shell.background as string }}>{body}</button>
-          : <Link href={href} className="tap" style={shell}>{body}</Link>
+        ? <Link href={href} className="tap" style={shell}>{body}</Link>
         : <button type="button" onClick={go} className="tap" style={{ ...shell, border: `1px solid ${ACCENT}55`, background: shell.background as string }}>{body}</button>}
     </motion.div>
   )

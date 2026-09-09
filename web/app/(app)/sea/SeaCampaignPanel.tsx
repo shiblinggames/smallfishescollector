@@ -15,17 +15,6 @@
 // it. A panel that let you enter a raid from a list would put the page of cards
 // back on top of the ocean that replaced it.
 //
-// ── AND IT CARRIES THE ONE INSTRUCTION A NEW CAPTAIN NEEDS ──────────────────
-//
-// Captain's Orders sits at the top of it until every order is done once. That
-// card is the same role this panel already has — "here is where you are, here
-// is the next thing" — told to somebody who has not learned the shape of the
-// game yet, and it lived only on /expeditions, which is the surface a captain
-// who starts on the water never opens. It is a LIVE checklist rather than a
-// tour: it reads the roster and the ship every time it is drawn, so it can help
-// two days later when somebody is stuck, and it latches shut for good the first
-// time every order is met.
-//
 // ── AND IT KEEPS THE SAME SECRETS THE WATER DOES ────────────────────────────
 //
 // The sea hides every node the chain has not reached. A list that spelled out
@@ -33,13 +22,11 @@
 // been no point hiding it. So this shows what you have done, what you are on,
 // and then says how much is left without saying what it is.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
 import { RAID_MAP, RAID_CHAPTERS, isCombatNode, type RaidNode, type RaidChapter } from '@/lib/raidMap'
-import CaptainsOrders, { type OrderAction } from '@/app/(app)/expeditions/CaptainsOrders'
-import { captainsOrders, type CaptainsOrdersState } from './ordersActions'
 import { RAID_BOSS_BG, RAID_LOCATION_BG } from '@/lib/bossRaids'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 
@@ -57,12 +44,9 @@ function kindOf(n: RaidNode): string {
   return 'Stop'
 }
 
-export default function SeaCampaignPanel({ open, onClose, status, nextId, onOrder }: {
+export default function SeaCampaignPanel({ open, onClose, status, nextId }: {
   open: boolean
   onClose: () => void
-  /** Where an order sends you. The chart owns every one of these doors, so it
-   *  runs them; this panel only knows that one was pressed. */
-  onOrder?: (a: OrderAction | 'recruit' | 'assign') => void
   /** The LIVE status map — the chart's own, so this and the water can never
    *  disagree about what is open. */
   status: Record<string, string>
@@ -83,22 +67,6 @@ export default function SeaCampaignPanel({ open, onClose, status, nextId, onOrde
    * note in bossRaids: horizon high, lower two thirds open water), which is
    * exactly the shape a banner wants.
    */
-  /**
-   * THE CHECKLIST'S NUMBERS, READ ON EVERY OPEN.
-   *
-   * Not once, and not from a page prop: the whole value of this card is that it
-   * is live. You sign a hand on, come back, and the order has moved on. A
-   * payload kept from the first open would keep telling you to do a thing you
-   * did an hour ago, which is the one failure a checklist cannot survive.
-   */
-  const [orders, setOrders] = useState<CaptainsOrdersState | null>(null)
-  useEffect(() => {
-    if (!open) return
-    let live = true
-    captainsOrders().then(r => { if (live && !('error' in r)) setOrders(r) }, () => {})
-    return () => { live = false }
-  }, [open])
-
   const chapters = useMemo(() => {
     const out: { ch: RaidChapter; nodes: RaidNode[]; art: string | null }[] = []
     let i = 0
@@ -170,27 +138,6 @@ export default function SeaCampaignPanel({ open, onClose, status, nextId, onOrde
             scroll: it grows to its content and pushes the box open instead,
             which is the exact failure this layout is here to prevent. */}
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 0.75rem 0.9rem' }}>
-          {/* ── THE ONE THING TO DO NEXT ──────────────────────────────────
-              Above the chapters, because it outranks them: a captain who has
-              not seated a raid crew does not need to know where Chapter III
-              got to. It draws nothing once the checklist has latched, which is
-              most captains most of the time. */}
-          {orders && !orders.done && onOrder && (
-            <CaptainsOrders
-              alreadyDone={orders.done}
-              state={orders}
-              onAction={a => { onClose(); onOrder(a) }}
-              onHref={href => {
-                // The two crew errands. Both are panels on this chart, and
-                // following their route would unload the ocean to reach one.
-                const card = href.includes('tab=recruits') ? 'recruit'
-                  : href.includes('tab=assign') ? 'assign' : null
-                if (!card) return false
-                onClose()
-                onOrder(card)
-                return true
-              }} />
-          )}
           {chapters.map(({ ch, nodes, art }) => {
             const done = nodes.every(n => st(n.id) === 'cleared')
             const started = nodes.some(n => st(n.id) !== 'locked')

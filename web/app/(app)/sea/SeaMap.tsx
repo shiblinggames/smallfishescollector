@@ -3864,10 +3864,6 @@ export default function SeaMap({
    * every few seconds is a dot that is not worth having.
    */
   const [crewHubOpen, setCrewHubOpen] = useState(openDoor === 'crew')
-  /** Which crew card to land on, when something sent you there with an errand
-   *  rather than an address. Cleared on close so the four cards are what a
-   *  plain open shows. */
-  const [crewCard, setCrewCard] = useState<'assign' | 'recruits' | 'roster' | 'wardrobe' | null>(openCard ?? null)
   const [crewWaiting, setCrewWaiting] = useState(false)
   /**
    * ── WHAT IS FINISHED, PER ISLAND ───────────────────────────────────────
@@ -9153,26 +9149,13 @@ hullRef={hullRefFor(t.key)} />
           open={campaignOpen}
           onClose={() => setCampaignOpen(false)}
           status={liveStatus}
-          nextId={nextStop?.node.id ?? null}
-          // ── WHERE AN ORDER SENDS YOU ────────────────────────────────
-          //
-          // Every door here is the chart's own, which is the point: on
-          // /expeditions these five errands are five routes, and out here they
-          // are four discs and a heading. "Open the campaign" is the one with
-          // no door to open — you are looking at it, and the next stop is
-          // already marked on the water with a chevron pointing at it.
-          onOrder={a => {
-            if (a === 'recruit') { setCrewCard('recruits'); setCrewHubOpen(true) }
-            else if (a === 'assign') { setCrewCard('assign'); setCrewHubOpen(true) }
-            else if (a === 'voyages') setVoyageOpen(true)
-            else if (a === 'loadout') setShipSheet('items')
-          }} />
+          nextId={nextStop?.node.id ?? null} />
       </div>
 
       <CrewHub
-        openCard={crewCard}
+        openCard={openCard ?? null}
         open={crewHubOpen}
-        onClose={() => { setCrewHubOpen(false); setCrewCard(null); pollCrew() }} />
+        onClose={() => { setCrewHubOpen(false); pollCrew() }} />
 
       <CrewPanel
         open={crewOpen}

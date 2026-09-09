@@ -1640,23 +1640,25 @@ renders. Add a new node kind to `raidMap` and the check fails until the sheet le
   land when the guns stop rather than on the next page load. Both surfaces read and write
   the SAME two profile columns, so a parchment dismissed on either stays dismissed on both.
 
-## Captain's Orders is on the water too
+## Neither of the hub's teaching surfaces comes out here
 
-The live onboarding checklist sits at the top of the campaign panel until it latches —
-above the chapters, because a captain who has not seated a raid crew does not need to know
-where Chapter III got to. It is `/expeditions`' own `CaptainsOrders`: same orders, same
-order, same latch, with `sea/ordersActions.ts` gathering the eight numbers on every open
-(it must be LIVE, or it tells you to do a thing you did an hour ago).
+**Captain's Orders was built onto the campaign panel and REMOVED the same day** (2026-09-09,
+by request): *"unnecessary now that we have the quest/campaign guide"*. It is a written-down
+decision rather than a thing nobody got to, so do not re-propose it.
 
-**Where an order sends you is the only difference.** On the hub the five errands are five
-routes; out here they are four discs and a heading. Two point at `/crew?tab=...`, which
-would unload the whole ocean and rebuild it to reach a panel one disc away, so the card
-takes an optional `onHref` that lets a caller claim an errand instead of following it.
-"Open the campaign" has no door — closing the panel IS the answer, because the chart
-already draws a chevron at the next stop.
+The reasoning is that the water already teaches by pointing. A checklist card is what you
+need when the next thing to do is buried in a page of tiles; out here **the `?` hangs over
+the one stop the chain wants, cleared stops wear a green tick, the compass carries the next
+stop as its top mark, a chevron heading is laid on the water after every clear, and the
+island holding something for you floats a `!`**. That is the same job done in the language
+of the place rather than in a card laid over it — and a captain following a mark on the sea
+has learned where things are, which a captain following a card has not.
 
-**The `/expeditions` tour is deliberately not ported.** It teaches that page's layout, and
-that layout is not on the water. Captain's Orders is the part that carries over.
+**The `/expeditions` tour is not ported either**, for the plainer reason: it teaches that
+page's layout, and that layout is not out here.
+
+`CaptainsOrders` still runs on `/expeditions`, which is where it was built for and where
+none of the above exists.
 
 **Finding it** is the compass, which takes the next stop as its highest-priority mark —
 ahead of even a finished job of Finn's. That is not a flourish: the water deliberately hides

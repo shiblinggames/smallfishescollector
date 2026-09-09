@@ -184,16 +184,6 @@ export default function CrewHub({
   // room still gets it: `openCard` only survives the first open, which is the
   // one the link paid for.
   useEffect(() => { if (!open) { setSection(null); setRollOpen(false) } }, [open])
-  /**
-   * AND AN ERRAND ARRIVING AFTER THE MOUNT.
-   *
-   * `openCard` was read once, at mount, which was right while its only source
-   * was a URL the page loaded with. Captain's Orders sends one from inside the
-   * session — "go and sign somebody on" — and this panel is always mounted, so
-   * a card set at that moment would never have been seen. Keyed on the value
-   * changing, so walking back to the four cards inside one visit stays put.
-   */
-  useEffect(() => { if (open && openCard) setSection(openCard) }, [open, openCard])
 
   // The clocks, once a minute. Nothing in here is measured finer than that.
   useEffect(() => {
