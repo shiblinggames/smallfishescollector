@@ -222,6 +222,74 @@ export async function makeCaptain(
   }
   alignShadow()
 
+  /**
+   * ── AND WHAT SHE THROWS BACK ───────────────────────────────────────────────
+   *
+   * The rocks got a reflection, the islands got one, and the boats never did —
+   * which is exactly the kind of inconsistency the eye catches without being
+   * able to name. A hull sitting on water that reflects everything except hulls
+   * reads as a sticker on the sea.
+   *
+   * ── THE HULL ONLY, LIKE THE SHADOW ─────────────────────────────────────────
+   *
+   * Same argument as the shadow directly above: reflecting the whole composite
+   * would put the captain, the hat and two hundred per cent of a fishing line
+   * in the water. What a small boat throws back at this size is its own hull,
+   * and nothing else in the picture is close enough to the surface to matter.
+   *
+   * Its OWN colours rather than a silhouette, because that is what separates a
+   * reflection from a second shadow — the rocks' mirrors carry their paint and
+   * these should too.
+   *
+   * ── MIRRORED ABOUT THE WATERLINE, AND SQUASHED ─────────────────────────────
+   *
+   * The waterline is the bottom of the opaque hull: the sheet is drawn with the
+   * boat cut off at the water, so the sprite's lower edge IS where it floats.
+   * Taken from the hull's own box rather than from a constant, so a cosmetic
+   * hull of a different shape reflects from its own waterline instead of the
+   * default one's.
+   *
+   * Then compressed. A hull STANDS UP out of the plane and is counter-squashed
+   * to do it; a reflection LIES IN the plane, so it is foreshortened like
+   * anything else lying flat. Same reasoning the landmarks' mirrors use, and
+   * the same rough factor.
+   */
+  const mirror: Sprite = new PIXI.Sprite()
+  mirror.visible = false
+  // FAINT. Water gives back a fraction of what falls on it, and the number that
+  // matters is how little: at anything approaching solid this stops being a
+  // reflection and becomes a second boat hanging upside down off the first.
+  mirror.alpha = 0.26
+  // Over the shadow and under everything else: a shadow is cast ON the water
+  // and a reflection is IN it, so the darker mark is the lower one.
+  skiff.view.addChildAt(mirror, 1)
+
+  /** How much of its own height a reflection keeps. */
+  const LIE = 0.55
+  /** How far under the hull it starts, as a share of the hull's height. Without
+   *  it the reflection touches the lowest painted pixel, and a hull whose paint
+   *  runs a little past the water gets a seam. */
+  const SINK = 0.04
+
+  function alignMirror() {
+    const part: Sprite | undefined = skiff.parts.boat
+    if (!part || !part.texture) { mirror.visible = false; return }
+    const h = part.texture.height * Math.abs(part.scale.y)
+    const water = part.y + (1 - part.anchor.y) * h - h * SINK
+
+    mirror.visible = true
+    mirror.texture = part.texture
+    mirror.anchor.set(part.anchor.x, part.anchor.y)
+    mirror.scale.set(part.scale.x, -part.scale.y * LIE)
+    mirror.x = part.x
+    // Reflect the sprite's origin about the waterline and bring it in by the
+    // same factor the art is squashed by, or the image and its anchor part
+    // company and the reflection floats away from the hull.
+    mirror.y = water + (water - part.y) * LIE
+    mirror.rotation = -part.rotation
+  }
+  alignMirror()
+
   // ── WHAT THEY GLOW WITH ───────────────────────────────────────────────────
   //
   // One aura per glowing part, each built on that part's own image. The glow
@@ -249,8 +317,9 @@ export async function makeCaptain(
   // every aura is re-pointed when the pose changes. Cheap on a pose it has seen
   // before: the bakes and the outline are cached per image.
   skiff.onFrame = () => {
-    // The hull moved, so what it throws moved with it.
+    // The hull moved, so what it throws AND what it throws back moved with it.
     alignShadow()
+    alignMirror()
     for (const w of worn) {
       // A PART THAT IS NOT DRAWN DOES NOT GLOW. The hook is hidden on the wait
       // pose because it is in the WATER, and an aura that is not told simply
@@ -277,6 +346,11 @@ export async function makeCaptain(
   // was already in is the kind of waste that only shows up on a fleet.
   let frame: Frame = opts?.frame ?? 'rest'
 
+  /** The reflection's own clock, and a per-captain offset so a fleet of boats
+   *  does not shear in unison. */
+  let wob = 0
+  const phase = Math.random() * 6.28
+
   return {
     view,
     setFrame(f) {
@@ -290,6 +364,9 @@ export async function makeCaptain(
       // than forgotten. Held by reference because the shadow now sits under it
       // and an index would quietly tint the wrong thing.
       base.tint = tint
+      // The water darkens with everything else, and a reflection that stayed
+      // bright after dark would be the only lit thing on a night sea.
+      mirror.tint = tint
       for (const s of lit) {
         // Charcoal's hull carries a standing darken of its own, and overwriting
         // it with the hour would undo the thing that makes it charcoal. Its
@@ -299,7 +376,22 @@ export async function makeCaptain(
       }
     },
     setIntensity: k => { for (const w of worn) w.aura.setIntensity(k) },
-    update(dt) { for (const w of worn) w.aura.update(dt) },
+    update(dt) {
+      for (const w of worn) w.aura.update(dt)
+      // ── THE ONE THING THAT STOPS IT BEING A SECOND BOAT ────────────
+      //
+      // A reflection with a hard, still outline is an upside-down hull. What
+      // makes it read as an image IN something is that the something moves:
+      // a slow shear, so the shape leans one way and then the other while the
+      // hull above it does not.
+      //
+      // Skew rather than rotation, because a rotation swings the whole thing
+      // about its anchor and detaches it from the hull it belongs to. A shear
+      // keeps the waterline edge where it is and moves everything below.
+      wob += dt
+      mirror.skew.x = Math.sin(wob * 1.15 + phase) * 0.055
+        + Math.sin(wob * 1.9 + phase * 2.1) * 0.025
+    },
     destroy() {
       for (const w of worn) w.aura.destroy()
       view.destroy({ children: true })
