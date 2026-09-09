@@ -183,7 +183,7 @@ export const FIRST_VOYAGE: Beat[] = [
     // Perfects chain into a STREAK, the streak pays bonus XP, and it grows the
     // longer it runs. That is a reason to aim gold on every cast rather than a
     // footnote about this one paying a bit better.
-    text: 'Now *Cast*, and watch the needle. Stopping it in the *gold* is a Perfect — string those together and the streak pays bonus XP, more of it the longer you keep it going. The *green* still catches.',
+    text: 'Now *Cast*, and watch the needle. Stopping it in the *gold* is a Perfect. String those together and the streak pays bonus XP, more of it the longer you keep it going. The *green* still catches.',
     until: 'catch',
     target: 'cast',
   },
@@ -193,7 +193,7 @@ export const FIRST_VOYAGE: Beat[] = [
     // registered, over the top of the fish still flying into the hold — so the
     // line "it sits in the hold" was spoken while the thing it described had
     // not visibly got there yet. See `afterMs`.
-    text: 'There’s your first. Watch it drop into the *hold* — that is where your catch sits until you sell it.',
+    text: 'There’s your first. Watch it drop into the *hold*, where your catch sits until you sell it.',
     until: 'next',
     afterMs: 900,
     holdCast: true,
@@ -204,7 +204,7 @@ export const FIRST_VOYAGE: Beat[] = [
     // that fish pay XP, that XP is the bar along the top, or that the bar is
     // what opens the tackle shop's better half. A captain who does not know
     // levelling exists has no reason to prefer a good cast to a lucky one.
-    text: 'Every fish pays *XP* too — that is the bar along the top. Fill it and you level up.',
+    text: 'Every fish pays *XP* too. That is the bar along the top: fill it and you level up.',
     until: 'next',
     target: 'level',
     holdCast: true,
@@ -304,6 +304,102 @@ export const FIRST_VOYAGE: Beat[] = [
   {
     ...D,
     text: 'That’s the sea, Captain. She’s yours to sail.',
+    until: 'next',
+  },
+]
+
+/**
+ * ── THE SECOND ARRIVAL ──────────────────────────────────────────────────────
+ *
+ * The first voyage teaches the fishing sea and plays at signup. This plays the
+ * first time a captain crosses the reef into the ANCHORAGE, which may be an
+ * hour later or a week, and it teaches the other half of the game.
+ *
+ * ── WHY IT IS NOT MORE BEATS ON THE END OF THE FIRST ONE ────────────────────
+ *
+ * Because none of it can be done yet. On beat one a captain has no warship, no
+ * crew, no voyage and no campaign, so a tour of the anchorage at signup is ten
+ * screens about places they cannot use for things they cannot do — which is
+ * precisely what the retired hub's onboarding card was, and precisely why it
+ * was retired. A tour arrives when the thing it is about does.
+ *
+ * ── AND IT NAMES PLACES, NOT SCREENS ────────────────────────────────────────
+ *
+ * Every door on this half is an island or a disc, so every beat here either
+ * flies the camera to a shore or points at a mark. There is nothing to teach
+ * about menus because there are not any: that was the whole point of moving the
+ * hub onto the water.
+ *
+ * IT ENDS POINTING NORTH. The campaign is the reason the anchorage exists, and
+ * the last thing a captain should be looking at is the gate.
+ */
+export const GATE_TOUR: Beat[] = [
+  {
+    ...D,
+    text: 'Past the reef, Captain. This is the *anchorage*, the quiet water where the fighting half of your outfit is run from.',
+    until: 'next',
+  },
+  {
+    ...D,
+    // FIRST, because nothing else up here works without her. A captain who
+    // learns the Charterhouse before the Gunwharf books a voyage they have no
+    // hull to sail.
+    text: 'The *Gunwharf*. Your warship sits there. Tie up and take her out, and your fishing boat waits at the quay till you are back.',
+    until: 'look',
+    at: 'gunwharf',
+  },
+  {
+    ...K,
+    text: 'The *Crew Hall*. Sign hands on, drill them, bunk them. Nothing out here sails empty.',
+    until: 'look',
+    at: 'crew_hall',
+  },
+  {
+    ...K,
+    text: 'The *Charterhouse* posts voyages. Your crew sail those without you and come back paid, whether you are aboard or ashore.',
+    until: 'look',
+    at: 'charterhouse',
+  },
+  {
+    ...K,
+    text: 'The *Posting House* has the day’s hunts, and pays in gems. The *Forge* melts two relics into one. You will find the rest.',
+    until: 'look',
+    at: 'posting_house',
+  },
+  // ── AND THE MARK THAT SAYS AN ISLAND HAS SOMETHING FOR YOU ─────────────
+  //
+  // Said out loud because the alternative is a captain learning it by
+  // accident weeks later. It is one glyph covering five islands and it is the
+  // only thing on this water that tells you a job finished while you were
+  // somewhere else.
+  {
+    ...K,
+    text: 'When an island has something waiting on you, it flies a *gold mark*. That is the whole of the notice you get, and it is enough.',
+    until: 'next',
+  },
+  {
+    ...D,
+    text: 'North of here is the *Sea Gate*, and past it the campaign. Real water, Captain, not a list. You sail to a fight and take it on where you find it.',
+    until: 'next',
+  },
+  // ── THE FOG, WHICH IS THE ONE RULE THEY CANNOT GUESS ───────────────────
+  //
+  // Everything else up here can be worked out by sailing into it. This cannot:
+  // a captain who opens the chart, sees four chapters of blank paper and
+  // concludes the game has not loaded is a captain the tour failed.
+  {
+    ...D,
+    text: 'None of it is on your chart yet. That water fills in as you sail it and not one league before, so go and look.',
+    until: 'next',
+  },
+  {
+    ...K,
+    text: 'Beat a thing out there and the *Wargate* remembers it. Step through and it puts you back on its water whenever you want another go.',
+    until: 'next',
+  },
+  {
+    ...D,
+    text: 'That is the whole of it. Take her out, Captain.',
     until: 'next',
   },
 ]

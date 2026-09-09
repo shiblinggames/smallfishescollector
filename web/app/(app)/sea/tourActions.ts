@@ -103,3 +103,38 @@ export async function markSeaHintSeen(portId: string): Promise<void> {
   await admin.from('profiles')
     .update({ sea_hints_seen: [...seen, id] }).eq('id', user.id)
 }
+
+/**
+ * ── AND THE SAME TWO, FOR THE ANCHORAGE'S TOUR ──────────────────────────────
+ *
+ * Its own latch and its own step rather than more values in the first voyage's,
+ * because they are two tours fired at two different moments: one at signup, one
+ * the first time a captain crosses the reef, which may be a week apart. Sharing
+ * a step counter would mean a captain part-way through the first voyage could
+ * not start the second, and finishing either would shut both.
+ *
+ * No `revalidatePath` on these. The first voyage needs it because it LEAVES the
+ * chart — it walks a captain into the market to sell a fish, and comes back to
+ * a cached payload carrying a stale step. This one never leaves the water, so
+ * its step is only ever read on a genuine load.
+ */
+export async function markGateTourSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient()
+    .from('profiles').update({ has_seen_gate_tour: true }).eq('id', user.id)
+}
+
+/** Only ever forwards, same as the first voyage's. */
+export async function setGateTourStep(step: number): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const n = Math.max(0, Math.min(99, Math.floor(step)))
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('profiles').select('gate_tour_step').eq('id', user.id).single()
+  if ((data?.gate_tour_step ?? 0) >= n) return
+  await admin.from('profiles').update({ gate_tour_step: n }).eq('id', user.id)
+}

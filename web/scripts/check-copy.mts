@@ -36,6 +36,7 @@ import { FRAGMENTS } from '../lib/seaBottles'
 import { PERSONAS } from '../lib/seaTraders'
 import { GOSSIP } from '../lib/tavernGossip'
 import { HOUSE, FURNITURE, ROOMS } from '../lib/homestead'
+import { FIRST_VOYAGE, GATE_TOUR } from '../lib/seaOnboarding'
 
 let findings = 0
 const fail = (where: string, why: string, text?: string) => {
@@ -74,6 +75,12 @@ const SOURCES: Src[] = [
   // largest single body of prose in the game and the newest, so the likeliest
   // place for a stray dash to get in.
   { label: 'sea NPC', strings: PERSONAS.flatMap(p => [p.mood, ...p.lines]) },
+  // ── THE TWO TOURS ──────────────────────────────────────────────────────
+  // The first thing a new captain reads, and the first thing they read on the
+  // other half of the game. Somehow not in this list until the second one was
+  // written: they are the most-read prose in the game by a distance, and they
+  // are the ONE place a stray dash is seen by every single player.
+  { label: 'onboarding', strings: [...FIRST_VOYAGE, ...GATE_TOUR].map(b => b.text) },
   // The homestead: every rung of the house and every furnishing.
   { label: 'homestead', strings: [
     ...HOUSE.flatMap(b => [b.name, b.blurb, b.adds]),

@@ -238,6 +238,11 @@ export default async function SeaPage({ searchParams }: {
         // so it has to resume rather than restart.
         step: Number(profile?.sea_tour_step ?? 0),
         hints: (profile?.sea_hints_seen as string[] | null) ?? [],
+        // AND THE SECOND ONE, played the first time they cross the reef. Its
+        // own latch and its own step — see tourActions for why they are not
+        // the same two values.
+        gateSeen: profile?.has_seen_gate_tour === true,
+        gateStep: Number(profile?.gate_tour_step ?? 0),
       }}
       characterColor={(profile?.character_color as string | null) ?? 'default'}
       boatId={(profile?.equipped_boat as string | null) ?? null}

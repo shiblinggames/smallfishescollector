@@ -172,6 +172,7 @@ function folkRodSlug(folkId: string): string | null {
 }
 import FolkPanel from './FolkPanel'
 import SeaFirstVoyage from './SeaFirstVoyage'
+import SeaGateTour from './SeaGateTour'
 import SeaLandfallHint from './SeaLandfallHint'
 import { pendingPacts } from './pactActions'
 import { heldGolden } from '../fishing/actions'
@@ -1396,7 +1397,11 @@ export default function SeaMap({
   userId: string
   /** What the captain has already been taught. Both latch on profile columns,
    *  so neither replays on another device or after a reinstall. */
-  tour: { seen: boolean; step: number; hints: string[] }
+  tour: {
+    seen: boolean; step: number; hints: string[]
+    /** The anchorage walkthrough's own latch and resume point. */
+    gateSeen: boolean; gateStep: number
+  }
   /** The player's own loadout, so the thing crossing the ocean is the captain
    *  they dressed in the boat they bought — not a marker. */
   characterColor: string
@@ -9919,6 +9924,17 @@ hullRef={hullRefFor(t.key)} />
           of its beats are ABOUT fishing and one of them explains the dial while
           the dial is on screen, which was the whole reason the retired fishing
           hub had an intro scene of its own. */}
+      {/* ── AND THE OTHER HALF, WHEN THEY REACH IT ────────────────────
+          Fires on the first crossing of the reef rather than at signup: on beat
+          one a captain has no warship, no crew and no campaign, so this would
+          have been ten screens about places they cannot use. It shares the
+          first voyage's camera ref, which is safe because the two can never be
+          up at once — that one is about the water south of the reef and this
+          one only plays north of it. */}
+      <SeaGateTour
+        hasSeen={tour.gateSeen} startAt={tour.gateStep}
+        inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam} />
+
       <SeaFirstVoyage hasSeen={tour.seen} startAt={tour.step} fishing={!!fishingIn}
         caught={caughtTick} nearId={near?.id ?? null} ashore={ashore}
         // The same two gates FishingHere puts on the Cast button. If it will
