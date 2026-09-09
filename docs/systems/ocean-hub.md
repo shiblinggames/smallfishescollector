@@ -1653,18 +1653,41 @@ fishing chart would decode as somebody else's. The only way out would be a migra
 every profile row to re-index a mask about fog.
 
 - The campaign grid is measured off `BAYS` and `HUB` themselves, so a re-laid chapter
-  cannot fall outside it. It stops at the **Sea Gate** — the anchorage is management, and
-  fogging a place nobody has ever failed to find is noise.
-- **On the chart**: `ChartFog` in SeaMap. One canvas at ONE PIXEL PER CELL (53×25) stretched
-  to the campaign's full width by CSS; the 700× bilinear upscale is what turns a
-  checkerboard of bits into a soft front. It lives in the world layer so it takes the
-  camera, zoom and plane squash for free, and it cannot cover the player's hull because
-  that is on the screen layer.
+  cannot fall outside it. It runs down to the **reef** with the anchorage cut out of it, so
+  the fog's southern edge is the harbour's own curve rather than a straight line ruled
+  across the world. Three kinds of cell are never fogged (`FREE` in seaExploreExp): the
+  anchorage, the fishing sea south of the reef, and anything past `RAID_EDGE`.
+- **On the chart**: `seaFog.ts`, **a Pixi layer on the sea's own canvas**, last in the world
+  container so it covers the water, the islands and the towns on them. Two parts — a BANK
+  (the mask as a 53×32 texture stretched across the campaign; the GPU's bilinear filter is
+  what makes the front soft) and a BOIL (sixty drifting puffs on the frontier, because a fog
+  edge that holds still is a stencil). It takes the night tint like everything else there.
+  `ChartFog` in SeaMap is the `?gpu=0` fallback only.
+- **The chart's loop owns the EASING**, not the look: one float per cell walking toward the
+  mask over about a second, handed to the layer as an array. A 700px cell switching off in
+  one frame is a slab disappearing, which is what "it skips as it clears" was.
 - **On the minimap**: one pass laid OVER the bays and their ships, so a chapter you have not
   sailed is covered along with everything in it, without any draw above it having to ask.
   **This reverses an older note** that said the bays must never be fogged. That was right
   about the route and wrong about the water — the way home, the harbour, the gate, the
   maelstroms and the next stop are all still drawn over the top of the fog.
+- **Fog hides TERRAIN; `shown()` hides MARKS.** Two mechanisms, two subjects, no overlap.
+  Everything the campaign has not reached is already absent from the document, so there is
+  nothing under the fog to cover. What survives both is your NEXT stop, and that is correct:
+  it is the one mark whose entire job is to say which way to go.
+
+### The rule this settled
+
+**Anything that is a VISUAL on the water belongs on the Pixi canvas.** Weather, wells,
+wakes, surf, splashes, gunsmoke, fog. The DOM world layer is for what is genuinely
+DOM-shaped: labels, name plates, buttons and signage that has to stay crisp and selectable.
+
+A DOM element cannot be argued for on the grounds that it sits above the canvas and can
+therefore paint over marks the canvas cannot reach. That argument was made for the fog and
+it was wrong twice: the marks in question are already hidden by `shown()`, and hiding a
+thing is the correct answer anyway — a rock you have not found should not be in the document
+at all. **If a visual seems to need the DOM so it can cover something, the something is what
+needs fixing.**
 - **It never takes anything away.** An empty mask is seeded from cleared encounters before
   the first frame, and **the seed is queued into `xfogPending`** — without that, the first
   flush would write one cell, stop the column being null, and put every conquered chapter
