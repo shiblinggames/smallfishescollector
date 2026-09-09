@@ -28,7 +28,7 @@ routes; read the matching doc BEFORE working in a system. Do not inline these as
 - ship classes, augments, berth, ultimate → docs/systems/ship.md — combat ship (berth ≠ bunk)
 - crew, recruits, hall, bunks, skins, assign → docs/systems/crew.md — before ANY crew change
 - bounties, ranks → docs/systems/bounties.md — daily hunts, medallions
-- expeditions hub, score ladder → docs/systems/expeditions-hub.md — /expeditions surface
+- expeditions hub, score ladder → docs/systems/expeditions-hub.md — /expeditions is RETIRED, redirects to /sea
 - tavern, blackjack, slots, tide run, chips → docs/systems/tavern.md — casino wallet law
 - trivia, Parlor, Pirate King → docs/systems/trivia.md — trivia work
 - chart room, puzzles, world chart → docs/systems/chart-room.md — weekly puzzles

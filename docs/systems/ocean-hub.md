@@ -1640,6 +1640,29 @@ renders. Add a new node kind to `raidMap` and the check fails until the sheet le
   land when the guns stop rather than on the next page load. Both surfaces read and write
   the SAME two profile columns, so a parchment dismissed on either stays dismissed on both.
 
+## /expeditions is retired: this is the only door
+
+**The hub page is a redirect to `/sea`** (2026-09-09), and so are `/expeditions/ship`,
+`/forge` and `/items`. The Expeditions tab is off the Nav. Every tile that page held is a
+place on this chart — see [expeditions-hub.md](expeditions-hub.md) for the full mapping and
+for what survived the deletion.
+
+**The `expeditions/` DIRECTORY stays.** The sea imports twenty-odd modules from it, because
+the water reaches the hub's own components rather than reimplementing them — that is why
+the two never drifted, and it is why the folder outlived the page.
+
+Three things this cost, all of them repaired:
+
+- **Thirteen raid exits** pointed at the hub — both gauntlets, the practice skirmish, the
+  Ghost, the two Sunken Hand gates, and `RaidGame`'s generic leave when no `onLeave` is
+  passed. They land on the water now.
+- **`BountyRungUnlock`** announced a new bounty rung on the hub's page load and had nowhere
+  left to fire. It rides the bounty poll the chart already runs, at the two moments the
+  answer can change (crossing into the anchorage, and closing the Posting House).
+- **The chart's island `href`s** now name `/sea` itself. They were the honest answer to
+  "where does this go if anything falls through", and naming a redirect back here would
+  have been a round trip to the water you are floating on.
+
 ## Neither of the hub's teaching surfaces comes out here
 
 **Captain's Orders was built onto the campaign panel and REMOVED the same day** (2026-09-09,
