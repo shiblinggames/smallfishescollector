@@ -313,7 +313,11 @@ export const PLACES: Place[] = [
       // shingle, same warm windows, and a wanted board of curling notices where
       // the harbour's crane and ledger sheet are. The two read as one
       // institution on the two halves of the game, which is the point of it.
-      { art: '/sea/posting-house.png', x: 52, y: 58, scale: 0.28 },
+      // x 52 sat it on the island's east shoulder — dead centre by the
+      // number, off-centre by eye, because this coastline is seeded and its
+      // east side runs further out than its west. 44 is where it LOOKS
+      // centred, which is the only measure a captain applies.
+      { art: '/sea/posting-house.png', x: 44, y: 58, scale: 0.28 },
     ],
   },
   {

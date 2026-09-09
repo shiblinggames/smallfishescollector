@@ -13023,19 +13023,42 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, call = null }: {
           which is exactly the map-not-place feeling the blend was undoing. The
           water tells you where you are by its colour, and the banner at the top
           says it in words when you cross. */}
-      {/* SOMEBODY IS WAITING HERE.
-          A warm bloom on the island itself, so it reads at the distance you
-          actually see the chart from — long before the name plate is legible.
-          Inside the world layer and unsquashed on purpose: it is light lying on
-          a place, and it should foreshorten with the plane like the shore does. */}
+      {/* ── SOMEBODY IS WAITING HERE ────────────────────────────────────
+          A BANG OVER THE ISLAND, not a light on it.
+
+          This was a warm radial bloom three island-widths across, laid over the
+          shore itself. It read as weather rather than signage: a soft gold wash
+          the size of the whole place, which at chart zoom is a large vague
+          brightness you have to interpret, and which swallowed the island's own
+          art and the water around it to say one small thing.
+
+          A mark is the opposite trade. It is a few dozen pixels, it points at
+          exactly one island, and it is the language the rest of this sea
+          already speaks — `QuestMark`, the same disc the campaign's next stop
+          and Finn's jobs hang over their marks.
+
+          ── AND IT IS THE BANG, NOT THE QUERY ──────────────────────────────
+          The genre's own split, and it happens to be exactly right here: "?" is
+          a thing you go and finish, "!" is a thing being held out to you. Every
+          call on this chart is the second kind — orders paid, hands signed, a
+          voyage in, crew back on the dock. The campaign keeps the "?" so the
+          two never mean the same thing.
+
+          SIZED OFF THE ISLAND, because these run from a 210px isle to a 500px
+          one and a fixed glyph would be a pin on the small ones and a speck on
+          the big. Counter-squashed like the name plate under it: a sign stands
+          up off the plane, it does not lie on it. */}
       {call && (
-        <div aria-hidden className="sea-dock-ready" style={{
-          position: 'absolute', left: '50%', top: '50%',
-          width: place.r * 3, height: place.r * 3,
-          marginLeft: -place.r * 1.5, marginTop: -place.r * 1.5,
-          borderRadius: '50%', pointerEvents: 'none',
-          background: 'radial-gradient(circle, rgba(240,192,64,0.30) 0%, rgba(240,192,64,0.13) 42%, rgba(240,192,64,0.04) 66%, transparent 76%)',
-        }} />
+        <div aria-hidden style={{
+          position: 'absolute', left: '50%', bottom: '100%',
+          transform: `translate(-50%, 0) scaleY(${1 / GROUND})`,
+          transformOrigin: 'bottom center',
+          marginBottom: place.r * 0.1,
+          pointerEvents: 'none',
+          animation: 'questFloat 2.4s ease-in-out infinite',
+        }}>
+          <QuestMark kind="offer" size={Math.round(Math.min(72, Math.max(40, place.r * 0.24)))} />
+        </div>
       )}
 
       {!isWater && (

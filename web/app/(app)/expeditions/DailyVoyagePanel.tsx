@@ -211,8 +211,20 @@ function RouteCard({
       // A SOLID base. These sit on the modal's painted dusk-sea plate, and a
       // translucent card over art reads as a smear.
       background: '#0a0704',
-      border: `1px solid ${locked ? 'rgba(160,120,60,0.22)' : `${rco.color}3d`}`,
-      boxShadow: locked ? 'none' : `0 0 18px ${rco.color}12`,
+      // ── ONE FRAME, NOT FIVE ───────────────────────────────────────────
+      //
+      // Every route owns a hue — green, gold, violet, rose, slate — and the
+      // card used to wear it four times over: the edge, an outer glow, a wash
+      // behind the name and the button. Five cards down a board that is twenty
+      // coloured elements in five different families, none of which is telling
+      // you anything the words are not, and all of which are competing to be
+      // looked at first.
+      //
+      // The hue survives in ONE place, the risk pill on the band, which is
+      // where it is doing work: it is really the route's danger tier wearing a
+      // colour. Everything structural is the board's own warm neutral, so the
+      // five cards read as five of the same thing — which is what they are.
+      border: `1px solid ${locked ? 'rgba(160,120,60,0.22)' : 'rgba(200,170,106,0.26)'}`,
       opacity: locked ? 0.72 : 1,
     }}>
       {/* ── The band ──
@@ -243,7 +255,7 @@ function RouteCard({
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 0.85rem 0.45rem' }}>
           <p className="font-cinzel font-800" style={{
             fontSize: '1.12rem', lineHeight: 1.1, color: '#fff',
-            textShadow: `0 2px 12px rgba(0,0,0,0.92), 0 0 22px ${rco.color}33`,
+            textShadow: '0 2px 12px rgba(0,0,0,0.92)',
           }}>{rco.name}</p>
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b0a08a', lineHeight: 1.35, marginTop: 2 }}>
             {rco.tagline}
@@ -260,7 +272,11 @@ function RouteCard({
               ~{est.lootMin.toLocaleString()}–{est.lootMax.toLocaleString()} ⟡
             </span>
             <span aria-hidden style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.66rem' }}>·</span>
-            <span className="font-karla" style={{ fontSize: '0.8rem', color: '#5a7aaa' }}>
+            {/* Parchment, not cornflower. ⟡ keeps its gold because the glyph
+                IS gold everywhere in the game; the XP figure beside it was a
+                second bright hue on the same line saying nothing the word "XP"
+                does not already say. */}
+            <span className="font-karla" style={{ fontSize: '0.8rem', color: '#96876e' }}>
               {est.xpMin.toLocaleString()}–{est.xpMax.toLocaleString()} XP
             </span>
             <span aria-hidden style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.66rem' }}>·</span>
@@ -268,7 +284,7 @@ function RouteCard({
               <IconHourglass size={10} /> {formatDuration(estMs)}
             </span>
             {voyageSpeedMult < 1 && (
-              <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#46c0a0' }}>Swift Sails</span>
+              <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#c8aa6a' }}>Swift Sails</span>
             )}
           </div>
         )}
@@ -283,7 +299,12 @@ function RouteCard({
                 beat with it, so the number and the way out of it are one line. */}
             <span className="font-karla font-700" style={{
               fontSize: '0.72rem',
-              color: safeVoyages ? '#4ade80' : riskPct >= 8 ? riskColor : riskPct > 0 ? '#c8aa6a' : '#6a8a6a',
+              // RED STAYS RED. Losing a hand is permanent, and that is the one
+              // thing on this card worth a colour of its own. Everything below
+              // the danger line goes to the board's neutral — a green "Safe
+              // Passage" and a green "no crew risk" were two more hues earning
+              // an alarm colour for the absence of an alarm.
+              color: !safeVoyages && riskPct >= 8 ? riskColor : 'rgba(214,200,172,0.6)',
             }}>
               {safeVoyages ? 'Safe Passage'
                 : riskPct > 0 ? `${riskPct}% crew risk · safe at ${rco.minLevel} Fortune`
@@ -351,16 +372,20 @@ function RouteCard({
               // nowhere to rest. Reported as distracting, which is the polite
               // word for it.
               //
-              // The route colour stays — it is how you tell one card from
-              // another — but as a tint and an edge rather than a fill. That is
-              // the house rule for gold and it holds for every other hue on the
-              // same reasoning: a translucent tint reads as "this belongs to
-              // that route", a solid fill reads as "press me before the others".
-              // They are five equal choices and they should look it.
+              // ── AND ONE HUE, NOT FIVE ────────────────────────────────
+              //
+              // Tinting was half the fix; the other half is that the tint was
+              // still a DIFFERENT colour on each card. Five Set Sails in five
+              // families, stacked, is five buttons that each look like a
+              // different kind of action — and they are the same action.
+              //
+              // Gold, because gold is what "do the thing" looks like everywhere
+              // else in this game. Tinted, never filled: that is the house rule
+              // and it is why these read as five equal choices.
               ...(ready
-                ? { background: `${rco.color}1f`, border: `1px solid ${rco.color}88`, color: rco.color, cursor: 'pointer' }
+                ? { background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', cursor: 'pointer' }
                 : sending
-                  ? { background: `${rco.color}14`, border: `1px solid ${rco.color}55`, color: `${rco.color}aa`, cursor: 'default' }
+                  ? { background: 'rgba(240,192,64,0.07)', border: '1px solid rgba(240,192,64,0.3)', color: 'rgba(240,192,64,0.6)', cursor: 'default' }
                   : { background: 'rgba(80,100,120,0.10)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.34)', cursor: 'default' }),
             }}
           >
@@ -752,7 +777,21 @@ export default function DailyVoyagePanel({
                 <p className="font-karla" style={{ fontSize: '0.84rem', color: '#f87171', marginBottom: '0.5rem' }}>{error}</p>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.9rem' }}>
+              {/* ── THE BOARD, IN AS MANY COLUMNS AS IT FITS ──────────────
+                  A CONTAINER query, not a viewport one. This panel is mounted
+                  in two different shells — the hub's card and the Charterhouse
+                  modal on the sea — and they are different widths on the same
+                  monitor. A `min-width: 900px` media query would put a wide
+                  board in a narrow modal and a single column in a wide one,
+                  because the screen was never the thing that decided.
+
+                  THE SHROUD SPANS. Five cards in two columns leaves the last
+                  one alone in the left column, which reads as a layout that ran
+                  out rather than a route that stands apart — and the Shrouded
+                  Reach DOES stand apart: it is the only one that pays in
+                  fishing lures rather than coin. Full width says so. */}
+              <div className="voyage-routes-host" style={{ marginBottom: '0.9rem' }}>
+              <div className="voyage-routes">
                 {(Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => (
                   <RouteCard
                     key={routeKey}
@@ -769,6 +808,7 @@ export default function DailyVoyagePanel({
                     onSail={() => handleSend(routeKey)}
                   />
                 ))}
+              </div>
               </div>
             </>
           )}

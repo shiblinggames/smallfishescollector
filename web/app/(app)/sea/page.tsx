@@ -325,8 +325,21 @@ export default async function SeaPage({ searchParams }: {
       // AND WHAT STANDS ON THE FORGE'S. Read through the same three helpers
       // /expeditions reads, so the island and the bench can never disagree
       // about which rung this captain has won.
+      //
+      // ── BOTH LOCKERS, OR THE ISLAND NEVER LEAVES RUNG ONE ─────────
+      // The Forge is a Davy's Locker upgrade and lives in
+      // `gauntlet_upgrades`; the Abyssal Forge and the Accelerator are the
+      // DON'S, and every one of his account perks lives in its own column.
+      // Reading one column asked three questions of a list that could only
+      // ever answer the first, so a captain who had ground all the way to the
+      // Accelerator sailed past a cold forge. Every other reader of these
+      // three unions the two — /expeditions, shipHeroData, the loadout — and
+      // this was the one that did not.
       forgeTier={(() => {
-        const up = profile?.gauntlet_upgrades as string[] | null
+        const up = [
+          ...((profile?.gauntlet_upgrades as string[] | null) ?? []),
+          ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
+        ]
         return hasAbyssalAccelerator(up) ? 3 : hasAbyssalForge(up) ? 2 : hasForge(up) ? 1 : 0
       })()}
       // WHICH STRAITS ARE OPEN, as the campaign nodes already cleared.

@@ -77,7 +77,15 @@ export default function VoyageBoard({ open, onClose }: { open: boolean; onClose:
             // it was a column the width of a phone stranded in the middle of a
             // monitor, with every card wrapping to three lines it did not need
             // to. The phone is unaffected: the shell's padding caps it there.
-            margin: 'auto', width: '100%', maxWidth: 680,
+            //
+            // 820 NOW, because the routes lay themselves out in two columns
+            // wherever their host is wide enough (see .voyage-routes). At 680
+            // that was two 310px cards, which is a phone column twice — the
+            // exact shape 680 was chosen to escape. This is the width the
+            // two-column board actually wants, and it is deliberately past the
+            // --modal-w standard: that number is for panels you READ, and this
+            // is a wall of postings you compare across.
+            margin: 'auto', width: '100%', maxWidth: 820,
             background: 'linear-gradient(180deg, rgba(6,12,22,0.34) 0%, rgba(6,11,20,0.48) 45%, rgba(5,9,16,0.44) 100%), url(/voyages-modal-bg.jpg) center / cover no-repeat',
             border: '1px solid rgba(240,192,64,0.28)',
             borderRadius: 20,

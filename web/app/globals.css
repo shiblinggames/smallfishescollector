@@ -3290,19 +3290,6 @@ body.hardcore-gauntlet::after {
 }
 
 
-/* Crew standing on a dock with a haul. Slower and gentler than a hotspot: this
-   is a "whenever you get round to it", not a "come here now" — the haul does
-   not spoil and nothing is lost by finishing the run you are on first. */
-.sea-dock-ready {
-  animation: sea-dock-ready 4.5s ease-in-out infinite;
-  will-change: transform, opacity;
-}
-@keyframes sea-dock-ready {
-  0%, 100% { transform: scale(0.96); opacity: 0.72; }
-  50%      { transform: scale(1.04); opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) { .sea-dock-ready { animation: none; } }
-
 
 /* ── SURF ────────────────────────────────────────────────────────────────────
    Water hitting a shore. Two collars around each island, breathing slowly and
@@ -3495,4 +3482,21 @@ body.hardcore-gauntlet::after {
 @keyframes questFloat {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-7px); }
+}
+
+/* ── THE VOYAGE BOARD'S ROUTES ─────────────────────────────────────────────
+   One column by default; two wherever the SHELL is wide enough, which is a
+   different question from whether the screen is. This panel is mounted both in
+   the expeditions hub and in the Charterhouse modal out on the sea, and those
+   are two widths on one monitor — a viewport media query would have got one of
+   them wrong every time.
+
+   The Shrouded Reach spans both columns. It is last in ROUTE_CONFIGS and it is
+   the odd one out in kind as well as in count: the only route that pays in
+   fishing lures instead of coin. */
+.voyage-routes-host { container-type: inline-size; }
+.voyage-routes { display: grid; grid-template-columns: 1fr; gap: 0.6rem; }
+@container (min-width: 620px) {
+  .voyage-routes { grid-template-columns: 1fr 1fr; }
+  .voyage-routes > :last-child { grid-column: 1 / -1; }
 }

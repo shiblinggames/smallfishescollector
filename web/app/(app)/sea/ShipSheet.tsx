@@ -156,7 +156,16 @@ export default function ShipSheet({ open, focus, onClose }: {
             ) : forgeOnly ? (
               // THE ISLAND'S OWN ROOM. No plates above it and no way back to
               // them: this door is the forge, and the way out is the way in.
-              <ShipHero {...state} focus="forge" boxed onBack={onClose} />
+              //
+              // ── AND IT BRINGS NOTHING OF ITS OWN ────────────────────
+              // `bare` for the same two reasons the ship's rooms take it. The
+              // painted berth plate and the navy ground under it belong to a
+              // full-screen route; laid inside this card they are a second,
+              // bluer rectangle sitting in the card's warm base, which is the
+              // "why is the forge navy" you can see from across the room. And
+              // its own focus header prints the forge's name a second time,
+              // directly under the header three lines up that already says it.
+              <ShipHero {...state} focus="forge" boxed bare onBack={onClose} />
             ) : room ? (
               // THE ROOM ITSELF, tiles only. Everything they open still works
               // because it is still ShipHero doing the opening.
