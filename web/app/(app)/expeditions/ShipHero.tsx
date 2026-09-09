@@ -1813,8 +1813,16 @@ export default function ShipHero({
                   stretched across the whole monitor and every tuned number was
                   wrong at once. `.page-col` is the app-wide measure; see
                   globals.css. */}
-              <div className={focus ? 'page-col' : undefined} style={focus
-                ? { paddingBottom: '6rem' }
+              {/* ── AND IN A PANEL, NEITHER ─────────────────────────────
+                  `bare` means a card is already holding this: it brought its
+                  own scroller, its own 1.05rem gutters and its own bottom
+                  padding. `.page-col` on top of that is a SECOND gutter — 2.5rem
+                  of inset on a desktop card — and the 6rem tail is a route's
+                  clearance for the phone nav bar, which is not under a modal.
+                  Both were showing as a narrow column with a long dead space
+                  under it. */}
+              <div className={focus && !bare ? 'page-col' : undefined} style={focus
+                ? { paddingBottom: bare ? '0.25rem' : '6rem' }
                 : { flex: 1, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '1rem 1rem 6rem' }}>
 
               {/* Launch-mode banner — only shows when the drawer was

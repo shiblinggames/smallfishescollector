@@ -407,7 +407,7 @@ export default async function SeaPage({ searchParams }: {
       // ambiguous, which is why one was never saved at all.
       startSide={((profile?.sea_side as string | null) ?? 'fishing') as 'fishing' | 'anchorage' | 'moored' | 'open'}
       // A door named in the URL, opened on arrival, and which of its rooms.
-      openDoor={openDoor === 'crew' ? 'crew' : null}
+      openDoor={openDoor === 'crew' ? 'crew' : openDoor === 'loadout' ? 'loadout' : null}
       openCard={openCard === 'assign' || openCard === 'recruits' || openCard === 'roster' || openCard === 'wardrobe'
         ? openCard : null}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])

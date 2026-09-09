@@ -1408,7 +1408,7 @@ export default function SeaMap({
   equippedShipSkin: string | null
   /** A panel to open the moment the chart is up, named in the URL. The retired
    *  /crew route lands here; nothing else uses it yet. */
-  openDoor?: 'crew' | null
+  openDoor?: 'crew' | 'loadout' | null
   /** And which room inside it — `/crew?tab=recruits` was an errand, not an
    *  address, so the errand is carried across. */
   openCard?: 'assign' | 'recruits' | 'roster' | 'wardrobe' | null
@@ -3264,7 +3264,8 @@ export default function SeaMap({
   const [yardOpen, setYardOpen] = useState(false)
   /** The ship screen, opened over the water. 'ship' from the Gunwharf's
    *  "Manage her", 'forge' from mooring at the Forge island. Null is shut. */
-  const [shipSheet, setShipSheet] = useState<null | 'ship' | 'forge'>(null)
+  const [shipSheet, setShipSheet] = useState<null | 'ship' | 'forge' | 'items'>(
+    openDoor === 'loadout' ? 'items' : null)
   /** Ashore at the Crew Hall — the building, the ladder and the bunks. */
   const [hallSheet, setHallSheet] = useState(false)
   /** The raid being fought over the chart, by raidId. */
@@ -4788,6 +4789,13 @@ export default function SeaMap({
     // because the two spines are never both live — see skillOpen.
     if (!fishingIn || wide) on.push('skill')
     if (inAnchorage && (!fishingIn || wide)) on.push('crew')
+    // ── AND WHAT SHE CARRIES ──────────────────────────────────────────
+    //
+    // Beside the crew, and on the expedition side only: the two questions you
+    // settle between fights are who is aboard and what is mounted, and they
+    // should be next to each other. On the fishing side there is nothing to
+    // mount — raid relics do not touch a rod — so the slot is not there.
+    if (inAnchorage && (!fishingIn || wide)) on.push('loadout')
     if (!fishingIn || wide) on.push('chart')
     // THE BOOK, on the fishing side only. It is a reference about FISH, and out
     // past the reef there are none — a door to it standing in the campaign's
@@ -8863,6 +8871,42 @@ hullRef={hullRefFor(t.key)} />
           </button>
         )
       })()}
+
+      {/* ── THE LOADOUT DISC ──────────────────────────────────────────
+          What is mounted on the hull, on the half of the game where it
+          matters. It was a page at /expeditions/items and a drawer behind
+          "Manage Ship" on the hub — two doors to one room, in the old
+          language, on a surface you have to leave the sea to reach.
+
+          FOUR SLOTS, ONE FILLED. Every other glyph up here is the THING it
+          opens (a wheel, a rod, a chart, a pennant); this one is the shape of
+          the screen behind it, because the thing itself is six unrelated
+          relics and no single one of them stands for the rest. */}
+      {inAnchorage && (!fishingIn || wide) && !fightOn && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); vibrate(8); setShipSheet('items') }}
+          aria-label="Battle Loadout"
+          title="Battle Loadout"
+          data-no-steer
+          style={{
+            position: 'absolute', top: 18, left: hudAt('loadout'), zIndex: Z.hud,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: hudSize, height: hudSize, padding: 0,
+            borderRadius: 999, cursor: 'pointer',
+            background: 'rgba(6,12,18,0.7)',
+            border: '1px solid rgba(180,214,232,0.22)',
+          }}>
+          <svg width={Math.round(hudSize * 0.54)} height={Math.round(hudSize * 0.54)}
+            viewBox="0 0 24 24" fill="none" stroke="rgba(214,232,240,0.8)"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="3.2" y="3.2" width="7.6" height="7.6" rx="1.8" fill="rgba(214,232,240,0.75)" stroke="none" />
+            <rect x="13.2" y="3.2" width="7.6" height="7.6" rx="1.8" />
+            <rect x="3.2" y="13.2" width="7.6" height="7.6" rx="1.8" />
+            <rect x="13.2" y="13.2" width="7.6" height="7.6" rx="1.8" />
+          </svg>
+        </button>
+      )}
 
       {/* ── THE SPINE DISC ────────────────────────────────────────────
           A rod on the fishing side and a ship's wheel out past the reef: two

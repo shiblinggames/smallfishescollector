@@ -26,6 +26,14 @@
 // second door from the wharf would make the island scenery. Crew has its own
 // painted panel on this HUD. Both were doors here once; both were two doors to
 // one room, which is the thing every one of these conversions has been undoing.
+//
+// ── THREE LANDINGS, ONE SHELL ───────────────────────────────────────────────
+//
+// `focus` says which door asked, and all three arrive here because all three
+// are ONE server read (`getShipHeroProps`) and one card. The Battle Loadout is
+// the newest: it was a page at /expeditions/items and a drawer on the hub, and
+// out on the water it is a disc in the HUD row — because what you mount on the
+// hull is a between-fights decision, and between fights you are on the sea.
 
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -64,12 +72,13 @@ export default function ShipSheet({ open, focus, onClose }: {
    * The Gunwharf opens the ship: her stats, her upgrade, her three rooms. The
    * Forge ISLAND opens the forge and nothing else — you sailed to a specific
    * building, and being handed a panel about your hull with the forge listed on
-   * it is answering a question you settled by mooring.
+   * it is answering a question you settled by mooring. The LOADOUT disc opens
+   * what is mounted on the hull, and nothing about the hull itself.
    *
-   * One component because it is one query and one shell; two landings because
-   * they are two places.
+   * One component because it is one query and one shell; three landings because
+   * they are three places.
    */
-  focus: 'ship' | 'forge'
+  focus: 'ship' | 'forge' | 'items'
   onClose: () => void
 }) {
   const router = useRouter()
@@ -102,6 +111,9 @@ export default function ShipSheet({ open, focus, onClose }: {
   const then = next ? EXPEDITION_SHIP_STATS[tier + 1] : null
   const canBuy = !!next && !!state && state.doubloons >= next.cost
   const forgeOnly = focus === 'forge'
+  /** A door that lands IN a room. No plates above it, and no way back to them:
+   *  you came through a specific door and the way out is the way in. */
+  const roomOnly = focus !== 'ship'
 
   return (
     // The map STEERS on click and starts a heading on pointerdown, so every
@@ -125,7 +137,7 @@ export default function ShipSheet({ open, focus, onClose }: {
           }}>
 
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '1.05rem 1.05rem 0.8rem', paddingRight: 44 }}>
-            {room && !forgeOnly && (
+            {room && !roomOnly && (
               <button type="button" onClick={() => { vibrate(8); setRoom(null) }} aria-label="Back to the ship"
                 className="tap" style={{
                   flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -137,9 +149,11 @@ export default function ShipSheet({ open, focus, onClose }: {
               </button>
             )}
             <p className="font-cinzel font-700" style={{ fontSize: '1.26rem', color: '#f4ecd8', margin: 0, flex: 1, minWidth: 0 }}>
-              {forgeOnly ? 'The Forge' : room ? TITLES[room] : 'Your Ship'}
+              {focus === 'forge' ? 'The Forge'
+                : focus === 'items' ? 'Battle Loadout'
+                : room ? TITLES[room] : 'Your Ship'}
             </p>
-            {!room && !forgeOnly && now && (
+            {!room && !roomOnly && now && (
               <p className="font-karla font-600" style={{
                 fontSize: '0.78rem', color: 'rgba(196,169,106,0.85)', margin: 0, flexShrink: 0,
               }}>{now.name}</p>
@@ -153,6 +167,21 @@ export default function ShipSheet({ open, focus, onClose }: {
                 style={{ fontSize: '0.62rem', color: err ? '#f87171' : '#8fb8cf', padding: '2.5rem 0', textAlign: 'center' }}>
                 {err ?? 'Opening the wharf…'}
               </p>
+            ) : focus === 'items' ? (
+              // ── WHAT SHE CARRIES INTO A FIGHT ────────────────────────
+              //
+              // `bare` for the same reasons the other two rooms take it: the
+              // painted plate and the navy ground under it belong to a
+              // full-screen route, and inside this card they are a second,
+              // bluer rectangle in the card's warm base. Its own focus header
+              // ("Battle Loadout", with a mounted count) would print directly
+              // under the header three lines up that already says it.
+              //
+              // NOTHING ELSE IS TOUCHED. The slots, the picker, the item
+              // sheets, the effects breakdown and the forged rims are
+              // ShipHero's and they work; this is a different shell around
+              // them, not a second implementation of them.
+              <ShipHero {...state} focus="items" boxed bare onBack={onClose} />
             ) : forgeOnly ? (
               // THE ISLAND'S OWN ROOM. No plates above it and no way back to
               // them: this door is the forge, and the way out is the way in.
