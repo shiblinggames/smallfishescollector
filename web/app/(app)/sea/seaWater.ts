@@ -410,75 +410,25 @@ void main(void) {
   // moves with the island because it is AT the island, the same way the
   // contact shadow is, and no camera enters into it.
 
-  // ── CAUSTICS ──────────────────────────────────────────────────────
+  // ── THE CAUSTICS ARE GONE, AND WHY ────────────────────────────────
   //
-  // The bright filaments light makes on a shallow bottom. RIDGED noise, not
-  // ordinary noise: 1 - abs(2n-1) folds the field at its midpoint so what was a
-  // smooth hill becomes a crease, and creases are what a caustic is. Two
-  // octaves crossing at different rates so the web moves without repeating.
+  // A ridged noise field, combed hard along the wind and raised to the fifth
+  // and eighth power, meant to read as sunlight focused on a shallow bottom.
   //
-  // SHALLOW WATER ONLY, and that is the whole point of having them. They are
-  // strongest at the coast and gone by the Deep, which makes the shelf above
-  // legible in a second way: the near water is not just brighter, it is
-  // patterned, and the far water is plain.
+  // What it actually drew was BARS. alongWind(cw, 0.44) compresses the
+  // cross-wind axis before sampling, which stretches every filament along the
+  // PERPENDICULAR — 124 degrees in the world, and with y squashed by GROUND
+  // that lands at about 140 on screen. So the sea had steep diagonal streaks
+  // ruled across it, scrolling, and the high powers made them narrow and bright
+  // enough to be the first thing the eye found. They were confined to shallow
+  // water, which is why they showed around the islands and stopped over the
+  // deep — and that shelf test is what identified them.
   //
-  // And they need the sun. A caustic is refracted sunlight, so it goes out
-  // with the light rather than lingering into the night, and it stands down at
-  // speed with everything else fine-grained.
-  //
-  // ── AND THEY ARE A NETWORK, NOT A MARBLING ────────────────────────
-  //
-  // This used to be the PRODUCT of two ridged noise fields. A ridge field is
-  // bright along the mid-level set of the noise, and the mid-level set of value
-  // noise is a family of CLOSED CURVES — so multiplying two of them lit only
-  // the places where one loop happened to cross another, and the sea came out
-  // as a field of pale worms with the water showing between them. Reported as
-  // looking weird, and it was: it read as marbled paper or a contour map, which
-  // are both things made of closed curves, and never as light.
-  //
-  // Three changes, and each fixes a different half of that:
-  //
-  //   ADDED, NOT MULTIPLIED. A sum of ridges is a CONNECTED network with
-  //   junctions and dead ends, which is what a caustic actually is. A product
-  //   is an intersection, which is what a plaid actually is.
-  //
-  //   WARPED BY THE SWELL. Caustics are sunlight bent by the surface, so they
-  //   have to be a function of the surface. Dragging the sample by the swell
-  //   ties every filament to the wave that is making it — and it breaks the
-  //   loops, because the field is no longer a clean noise with clean level
-  //   sets.
-  //
-  //   AND STRETCHED, along the same prevailing wind the swell now runs with.
-  //   An isotropic ridge field has no direction at all, which is most of why
-  //   the old one read as a pattern rather than as water. See WIND.
-  float caust = 0.0;
-  if (shelf < 0.62 && uDark < 0.9) {
-    vec2 cw = w * 3.1 + vec2(swell * 1.5, swell * -0.9);
-    // Harder than the swell's stretch: the ripple that focuses light is finer
-    // and more strongly combed than the swell carrying it.
-    vec2 cwa = alongWind(cw, 0.44);
+  // Removed rather than softened, on the report. If light on the shallows is
+  // wanted back it should not come back like this: the combing is the whole
+  // problem, and a caustic that is stretched into parallel lines is a comb, not
+  // a network. Isotropic, low-contrast, and nowhere near pow 8.
 
-    float c1 = vnoise(cwa + vec2(uTime * 0.035, uTime * 0.021));
-    float c2 = vnoise(cwa * 2.1 + vec2(c1 * 0.9 - uTime * 0.026, uTime * 0.033));
-    float r1 = 1.0 - abs(c1 * 2.0 - 1.0);
-    float r2 = 1.0 - abs(c2 * 2.0 - 1.0);
-    // Two widths. The coarse one carries the shape and the fine one puts the
-    // bright cusps on it, which is the part that reads as focused light.
-    float ridged = pow(r1, 5.0) * 0.70 + pow(r2, 8.0) * 0.55;
-    // NOT EVERY FILAMENT IS THE SAME BRIGHTNESS. A network at one value is a
-    // diagram of a caustic; the real thing has stretches that are barely there
-    // and cusps that are almost white.
-    float vary = 0.40 + 0.60 * vnoise(cw * 0.55 - vec2(uTime * 0.013, uTime * 0.008));
-    caust = ridged * vary
-      * (1.0 - smoothstep(0.10, 0.62, shelf))
-      * (1.0 - uDark)
-      // 0.85, not 0.92. Caustics are the one fine detail that is worth keeping
-      // some of under way: they are LOW contrast and they say where the shelf
-      // is, so losing nearly all of them at speed took the shallows' whole
-      // character out of the water you were actually crossing.
-      * (1.0 - 0.85 * uRush);
-    col += caust * vec3(0.72, 0.92, 0.86) * 0.20 * uSwell;
-  }
 
   // ── THE MOON'S PATH ───────────────────────────────────────────────
   //
