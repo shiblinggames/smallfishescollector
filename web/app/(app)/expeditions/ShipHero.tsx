@@ -461,9 +461,54 @@ const HERO_TIER_SCALE: Record<number, number> = {
 const shipPanelBg = (tint?: string) =>
   tint ? `linear-gradient(${tint}, ${tint}), ${SHIP_PANEL}` : SHIP_PANEL
 
-function ShipTile({ accent, title, value, sub, cta, icon, onClick }: {
-  accent: string; title: string; value: string; sub?: string; cta: string; icon: React.ReactNode; onClick: () => void
+/**
+ * ── A REFIT, AND THE SHUT VERSION OF ONE ────────────────────────────────────
+ *
+ * `locked` renders the same tile with the middle taken out: the name stays, the
+ * numbers and the verb go, and it says it is not open yet.
+ *
+ * IT IS STILL DRAWN, and that is the point. These used to be absent until their
+ * gate was met, so a captain who had not cleared the Blockade opened Refits and
+ * found one tile in an empty grid — which reads as a room with nothing in it
+ * rather than a room with things to come. Drawn shut, the grid says how big the
+ * ship gets.
+ *
+ * AND IT DOES NOT SAY WHAT OPENS IT. Naming the boss is the same spoiler the
+ * chart and the campaign panel already refuse to give: you find out by getting
+ * there. "Not yet" is the whole message.
+ */
+function ShipTile({ accent, title, value, sub, cta, icon, onClick, locked = false }: {
+  accent: string; title: string; value: string; sub?: string; cta: string
+  icon: React.ReactNode; onClick: () => void; locked?: boolean
 }) {
+  if (locked) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left',
+        padding: '0.75rem 0.7rem', borderRadius: 13, minHeight: 98,
+        background: shipPanelBg('rgba(255,255,255,0.02)'),
+        border: '1px dashed rgba(255,255,255,0.14)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 3 }}>
+          <span style={{
+            flexShrink: 0, width: 30, height: 30, borderRadius: 8,
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            opacity: 0.35, filter: 'grayscale(1)',
+          }}>{icon}</span>
+          <span aria-hidden style={{ flexShrink: 0, color: 'rgba(255,255,255,0.3)', display: 'flex' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+            </svg>
+          </span>
+        </div>
+        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.34)' }}>{title}</p>
+        <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.34)', lineHeight: 1.25, fontStyle: 'italic', marginTop: 2 }}>
+          Not yet unlocked
+        </p>
+      </div>
+    )
+  }
   return (
     <button type="button" onClick={onClick}
       style={{ display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left', padding: '0.75rem 0.7rem', borderRadius: 13, background: shipPanelBg(`${accent}1c`), border: `1px solid ${accent}4a`, cursor: 'pointer', minHeight: 98 }}>
@@ -2305,11 +2350,11 @@ export default function ShipHero({
                 // computed from what THIS captain has unlocked rather than
                 // hardcoded, so an early player is not staring at reserved space
                 // for refits they cannot buy yet.
-                const tabTileCounts = [
-                  1 + ((blockadeCleared || hasSixthBerth) ? 1 : 0) + ((throneCleared || hasArmoryExpansion) ? 1 : 0),
-                  (showUltimate ? 1 : 0) + 1,
-                  1,
-                ]
+                // AND THE COUNTS ARE FIXED NOW. A gated refit is DRAWN when it
+                // is shut rather than left out (see ShipTile), so the tabs hold
+                // three, two and one whoever is looking — which is what the
+                // reservation was reaching for in the first place.
+                const tabTileCounts = [3, 2, 1]
                 // Reserved height at BOTH column counts, because the grid is
                 // 2-across on a phone and 3-across on a desktop and CSS cannot
                 // count the tiles to work the rows out for itself.
@@ -2469,6 +2514,11 @@ export default function ShipHero({
                       '--tiles-h-wide': `${reserve(3)}px`,
                     } as React.CSSProperties}>
                       {/* Ultimate Weapon */}
+                      {shipTab === 'armament' && !showUltimate && (
+                        <ShipTile locked accent="#f0c040" title="Ultimate Weapon" value="" cta=""
+                          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>}
+                          onClick={() => {}} />
+                      )}
                       {shipTab === 'armament' && showUltimate && (() => {
                         const activeAug = initialManowarAugment ? getShipAugment(initialManowarAugment) : null
                         const buildAug  = manowarBuild ? getShipAugment(manowarBuild.id) : null
@@ -2487,7 +2537,14 @@ export default function ShipHero({
                           />
                         )
                       })()}
-                      {/* Sixth Berth — same unlock gate as the panel (Raid 7 / owned). */}
+                      {/* Sixth Berth — same unlock gate as the panel (Raid 7 /
+                          owned), and drawn shut rather than absent when it is
+                          not met. See ShipTile's note. */}
+                      {shipTab === 'refits' && !(blockadeCleared || hasSixthBerth) && (
+                        <ShipTile locked accent="#ffd56b" title="Sixth Berth" value="" cta=""
+                          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffd56b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="3"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="M19 8v6M22 11h-6"/></svg>}
+                          onClick={() => {}} />
+                      )}
                       {shipTab === 'refits' && (blockadeCleared || hasSixthBerth) && (
                         <ShipTile
                           accent="#ffd56b"
@@ -2500,6 +2557,11 @@ export default function ShipHero({
                         />
                       )}
                       {/* Expanded Armory — same unlock gate as the panel (Raid 8 / owned). */}
+                      {shipTab === 'refits' && !(throneCleared || hasArmoryExpansion) && (
+                        <ShipTile locked accent="#c084fc" title="Expanded Armory" value="" cta=""
+                          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/></svg>}
+                          onClick={() => {}} />
+                      )}
                       {shipTab === 'refits' && (throneCleared || hasArmoryExpansion) && (
                         <ShipTile
                           accent="#a78bfa"
