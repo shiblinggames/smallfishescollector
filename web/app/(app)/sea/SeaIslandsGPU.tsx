@@ -70,6 +70,7 @@ if (typeof window !== 'undefined') {
   }
 }
 import { makeGrass, makeGrassTexture, type Grass } from './seaGrass'
+import { swellAt } from './seaSwell'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeClouds } from './seaClouds'
@@ -1689,11 +1690,24 @@ export default function SeaIslandsGPU({
           lights.lamps(list.map(f => ({ x: f.cx, y: f.cy })))
           const seen = crewRef.current
           for (const c of seen.values()) c.holder.visible = false
+          // ── AND EVERYBODY ELSE FLOATS ─────────────────────────────
+          //
+          // Nothing out here bobbed at all: the player heaved on her own sine
+          // and every other captain on the water sat perfectly still, which is
+          // the single most obviously wrong thing about a chart full of small
+          // boats. They read the same swell she does now, at their own
+          // position, so a crest travels through a group of them.
+          //
+          // Divided by GROUND because this offset is in WORLD units inside a
+          // container scaled by (zoom, zoom * GROUND), and her bob is applied
+          // in screen pixels. Without it they would heave at 58% of her stroke
+          // in the same water.
+          const ts = performance.now() / 1000
           for (const e of list) {
             const c = seen.get(e.key)
             if (!c) continue
             c.holder.visible = true
-            c.holder.position.set(e.x, e.y)
+            c.holder.position.set(e.x, e.y - swellAt(e.x, e.y, ts) / GROUND)
             // scaleY undoes the plane's squash, and the facing rides on x —
             // the same ±1 mirror the DOM writes.
             c.holder.scale.set(e.scale * e.facing, e.scale / GROUND)

@@ -90,6 +90,8 @@ const SHELF_OUT = Math.max(...PLACES.map(p => p.outer ?? 0))
 // source is its own, taken from the library rather than from memory. All this
 // file provides is the fragment.
 
+import { swellGlsl } from './seaSwell'
+
 const VERT = `
 in vec2 aPosition;
 out vec2 vTextureCoord;
@@ -164,6 +166,17 @@ const vec2 WIND = vec2(0.8231, 0.5679);
 vec2 alongWind(vec2 p, float k) {
   return vec2(dot(p, WIND), dot(p, vec2(-WIND.y, WIND.x)) * k);
 }
+
+// ── THE SHARED SWELL, GENERATED FROM seaSwell.ts ────────────────────
+//
+// Three directional sine trains, written out of the SAME numbers the CPU sums
+// to decide how high every hull is floating. Not a copy kept in step by hand:
+// the literals live in one file and this string is built from them.
+//
+// It exists here so the crests that lift the boats are crests you can SEE.
+// Without it they ride a wave that is not drawn, which is the same bug as
+// before wearing better clothes.
+${swellGlsl()}
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -295,6 +308,14 @@ void main(void) {
   // was even standing still — see the note on the amplitudes below.
   float fine = 0.21 * (1.0 - 0.85 * uRush);
   float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
+  // ── AND THE TRAINS THE BOATS ARE ON ──────────────────────────────
+  //
+  // Laid over the noise rather than replacing it: the noise is texture and it
+  // is good at that, while this is the long heave, and it is the only part of
+  // the field anything floating knows about. Modest on purpose — it wants to
+  // be a swell you can follow with your eye, not corduroy. One number, and at
+  // zero the water is exactly what it was before.
+  swell += swellHeight(world, uTime) * 0.11;
 
   // ── THE SHELF ─────────────────────────────────────────────────────
   //

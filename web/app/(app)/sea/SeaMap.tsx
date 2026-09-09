@@ -230,6 +230,7 @@ if (typeof window !== 'undefined') {
 }
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK, FINN_MOORING } from '@/lib/seaFinn'
+import { swellAt } from './seaSwell'
 /**
  * WHERE FINN IS, RIGHT NOW.
  *
@@ -3624,7 +3625,9 @@ export default function SeaMap({
     const fxX = pfx ? pfx.x : 0
     const fxY = pfx ? pfx.y : 0
     const fxRot = pfx ? pfx.rot : 0
-    const bob = Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1
+    // ON THE WATER SHE IS ACTUALLY IN. This was a sine of time alone, so the
+    // swell went past underneath and she did not rise on it. See seaSwell.
+    const bob = swellAt(pos.current.x, pos.current.y, t)
     const offX = (pos.current.x - camAt.current.x) * z
     const offY = (pos.current.y - camAt.current.y) * z * GROUND
 
@@ -6945,8 +6948,11 @@ export default function SeaMap({
             // and should not loom; a friend is a peer, and at scale 1 inside
             // the zoomed world layer they come out exactly the size your own
             // boat is on screen. You see them as you see yourself.
-            const bobF = Math.sin(now / 1000 * 1.7 + at.bob) * 3.4
-              + Math.sin(now / 1000 * 2.6 + at.bob + 1.1) * 2.1
+            // NO PER-BOAT PHASE. `at.bob` was a random offset per hull, which
+            // is what a sea looks like when every boat keeps its own time —
+            // two of them side by side heaving opposite ways. Where they are is
+            // the phase now, so a crest travels THROUGH a group of them.
+            const bobF = swellAt(at.shown.x, at.shown.y, now / 1000)
             hull.style.transform =
               `translate(-50%, -50%) scaleY(${1 / GROUND}) scaleX(${at.face}) translateY(${bobF}px)`
           }
@@ -7449,7 +7455,10 @@ export default function SeaMap({
         const wx = squallAt(pos.current.x, pos.current.y, epoch)
         rough.current += ((wx?.deep ?? 0) - rough.current) * Math.min(1, dt * 0.55)
         const gust = rough.current
-        const bob = (Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1) * (1 + gust * 1.35)
+        // THE SEA'S OWN HEIGHT WHERE SHE IS FLOATING, times what the weather is
+        // doing to it. The shape of the motion is the swell's; `gust` only says
+        // how big. See seaSwell for why this is a field and not a clock.
+        const bob = swellAt(pos.current.x, pos.current.y, t) * (1 + gust * 1.35)
           // A second, slower heave that only exists in weather: a swell has a
           // longer period than a chop and it is what makes a sea look big.
           + Math.sin(t * 0.72) * 7.5 * gust
