@@ -20,10 +20,20 @@
 //
 // SAME COMPONENT, unchanged: `CrewClient` in embedded mode with its hall
 // section showing. One crew hall with two doors, not two crew halls.
+//
+// ── AND IT IS A PANEL, NOT A TAKEOVER ───────────────────────────────────────
+//
+// It was a full-bleed sheet, edge to edge and top to bottom, which is a page
+// wearing a portal's clothes. Every other thing this chart opens is a panel at
+// `--modal-w`, and the hall is the same kind of thing they are: somewhere you
+// look at for a minute while your boat sits at the shore you tied it to. You
+// can see the water around it now.
 
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
+import { motion } from 'framer-motion'
+import PopupShell from '@/components/PopupShell'
+import CloseButton from '@/components/CloseButton'
 import { getCrewState, type CrewState } from '@/app/(app)/crew/actions'
 
 const CrewClient = dynamic(() => import('@/app/(app)/crew/CrewClient'), { ssr: false })
@@ -50,56 +60,49 @@ export default function HallSheet({ open, onClose }: {
     return () => { live = false }
   }, [open])
 
-  if (!open || typeof document === 'undefined') return null
-
-  return createPortal(
+  return (
     // The map STEERS on click and starts a heading on pointerdown, so every
-    // sheet over it needs this or dismissing also puts the helm over.
+    // panel over it needs this or dismissing also puts the helm over.
     <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-      <div className="fixed left-0 right-0 top-[var(--nav-h)] bottom-[60px] sm:bottom-0"
-        style={{
-          // THE HALL'S OWN PAINTING, which the page had all along — /crew's
-          // entry in ClientBackground. The page is gone and the backdrop is not:
-          // an interior you have sailed to should look like an interior, and a
-          // flat dark panel would make the one crew room you have to travel for
-          // the plainest of the five.
-          background: 'linear-gradient(rgba(0,0,0,0.74) 0%, rgba(0,0,0,0.84) 50%, rgba(0,0,0,0.95) 100%), url(/crew-bg.jpg) center / cover no-repeat fixed',
-          zIndex: 112, overflowY: 'auto', overscrollBehavior: 'contain',
-        }}>
-        {/* The way out. Ashore is somewhere you leave, and the sheet has no
-            other edge to press — the chart underneath is covered. */}
-        <div style={{
-          position: 'sticky', top: 0, zIndex: 3,
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '0.7rem 0.9rem',
-          background: 'linear-gradient(180deg, rgba(6,6,8,0.96) 60%, rgba(6,6,8,0))',
-        }}>
-          <button type="button" onClick={onClose} aria-label="Back to the sea" className="tap"
-            style={{
-              flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 32, height: 32, borderRadius: '50%', padding: 0, cursor: 'pointer',
-              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)',
-              color: '#e0ddd8',
-            }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
-          <p className="font-pirata" style={{ fontSize: '1.5rem', letterSpacing: '0.03em', color: '#f0ede8', margin: 0 }}>
-            The Crew Hall
-          </p>
-        </div>
-
-        <div style={{ padding: '0 0.9rem 2.5rem' }}>
-          {state ? (
-            <CrewClient initial={state} embedded section="hall" />
-          ) : (
-            <p className="font-karla font-600 uppercase tracking-[0.16em]"
-              style={{ fontSize: '0.62rem', color: err ? '#f87171' : '#c8ab7d', padding: '2rem 0', textAlign: 'center' }}>
-              {err ?? 'Opening the hall…'}
+      <PopupShell open={open} onClose={onClose} zIndex={118}>
+        <motion.div
+          role="dialog" aria-modal onClick={e => e.stopPropagation()}
+          // Opacity only — CrewClient opens its own fixed sheets, and a
+          // transform here would resolve their `position: fixed` against this
+          // card instead of the viewport.
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: 0.16 }}
+          style={{
+            position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
+            maxHeight: 'min(84vh, 100%)', display: 'flex', flexDirection: 'column',
+            borderRadius: 20, overflow: 'hidden',
+            // THE HALL'S OWN PAINTING, which the page had all along — /crew's
+            // entry in ClientBackground. An interior you have sailed to should
+            // look like an interior, and a flat dark panel would make the one
+            // crew room you have to travel for the plainest of the five.
+            background: 'linear-gradient(rgba(6,8,12,0.86) 0%, rgba(4,6,10,0.93) 55%, rgba(3,4,7,0.97) 100%), url(/crew-bg.jpg) center / cover no-repeat',
+            border: '1px solid rgba(196,169,106,0.3)',
+            boxShadow: '0 18px 50px rgba(0,0,0,0.65)',
+          }}>
+          <div style={{ flexShrink: 0, padding: '1rem 1.05rem 0.7rem' }}>
+            <p className="font-pirata" style={{ fontSize: '1.5rem', letterSpacing: '0.03em', color: '#f0ede8', margin: 0, paddingRight: 34 }}>
+              The Crew Hall
             </p>
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body,
+          </div>
+          <CloseButton onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, zIndex: 6 }} />
+
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '0 1.05rem 1rem' }}>
+            {state ? (
+              <CrewClient initial={state} embedded section="hall" />
+            ) : (
+              <p className="font-karla font-600 uppercase tracking-[0.16em]"
+                style={{ fontSize: '0.62rem', color: err ? '#f87171' : '#c8ab7d', padding: '2rem 0', textAlign: 'center' }}>
+                {err ?? 'Opening the hall…'}
+              </p>
+            )}
+          </div>
+        </motion.div>
+      </PopupShell>
+    </div>
   )
 }

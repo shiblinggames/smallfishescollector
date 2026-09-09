@@ -314,6 +314,18 @@ interface Props {
   /** Render ONE screen as a whole page instead of the hub: the Ship, Items or
    *  Forge routes. Undefined on the hub itself, where this is a section. */
   focus?: 'ship' | 'items' | 'forge'
+  /**
+   * DRAWN INSIDE A PANEL, not as a page.
+   *
+   * `focus` already makes the loadout drawer BE the screen — it drops the
+   * scrim, the handle and the slide-up, and stands the drawer in the flow. What
+   * it also does is force it to `calc(100dvh - 44px)`, which is right for a
+   * route (fill the window) and wrong inside a modal card, where it makes every
+   * panel a full viewport tall however little is in it.
+   *
+   * This is that one number. Everything else about focus mode is unchanged.
+   */
+  boxed?: boolean
   /** WHERE THE BACK ARROW GOES, when this screen is not on a route. The chart
    *  opens the ship and the forge over the water now (see sea/ShipSheet), and
    *  there a link to /expeditions would sail you off the sea to get out of a
@@ -557,6 +569,7 @@ export default function ShipHero({
   hasArmoryExpansion = false,
   hasSixthMount = false,
   focus,
+  boxed = false,
   onBack,
   isAdmin = false,
   navRenownAlloc = null,
@@ -1585,7 +1598,7 @@ export default function ShipHero({
               {...(focus ? {} : drawerDragProps(closeLoadout, loadoutDragControls))}
               style={{
                 ...(focus
-                  ? { position: 'relative' as const, minHeight: 'calc(100dvh - 44px)' }
+                  ? { position: 'relative' as const, minHeight: boxed ? 0 : 'calc(100dvh - 44px)' }
                   : { position: 'fixed' as const,
                       top: 'max(80px, env(safe-area-inset-top, 0px) + 20px)',
                       bottom: 0,
