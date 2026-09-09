@@ -90,8 +90,6 @@ const SHELF_OUT = Math.max(...PLACES.map(p => p.outer ?? 0))
 // source is its own, taken from the library rather than from memory. All this
 // file provides is the fragment.
 
-import { swellGlsl, swellGradGlsl } from './seaSwell'
-
 const VERT = `
 in vec2 aPosition;
 out vec2 vTextureCoord;
@@ -166,19 +164,6 @@ const vec2 WIND = vec2(0.8231, 0.5679);
 vec2 alongWind(vec2 p, float k) {
   return vec2(dot(p, WIND), dot(p, vec2(-WIND.y, WIND.x)) * k);
 }
-
-// ── THE SHARED SWELL, GENERATED FROM seaSwell.ts ────────────────────
-//
-// Three directional sine trains, written out of the SAME numbers the CPU sums
-// to decide how high every hull is floating. Not a copy kept in step by hand:
-// the literals live in one file and this string is built from them.
-//
-// It exists here so the crests that lift the boats are crests you can SEE.
-// Without it they ride a wave that is not drawn, which is the same bug as
-// before wearing better clothes.
-${swellGlsl()}
-
-${swellGradGlsl()}
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -310,18 +295,6 @@ void main(void) {
   // was even standing still — see the note on the amplitudes below.
   float fine = 0.21 * (1.0 - 0.85 * uRush);
   float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
-  // ── AND THE TRAINS THE BOATS ARE ON ──────────────────────────────
-  //
-  // Laid over the noise rather than replacing it: the noise is texture and it
-  // is good at that, while this is the long heave, and it is the only part of
-  // the field anything floating knows about. Modest on purpose — it wants to
-  // be a swell you can follow with your eye, not corduroy. One number, and at
-  // zero the water is exactly what it was before.
-  //
-  // SMALL, because height is the WRONG cue and this is only here to tie the
-  // trains into the noise's own light and dark. The waves themselves are lit
-  // from the gradient, forty lines down. See THE FACES.
-  swell += swellHeight(world, uTime) * 0.05;
 
   // ── THE SHELF ─────────────────────────────────────────────────────
   //
@@ -352,50 +325,8 @@ void main(void) {
   // the far half of every screen, which is a lot of the reason the sea read as
   // washed out even after the palettes were richer.
   shade *= 1.0 - shelf * 0.14;
-  // ── THE FACES, AND THIS IS WHAT MAKES IT WATER ───────────────────
-  //
-  // What was here shaded by HEIGHT: normalize of vec2(swell, swell * 0.6),
-  // which is a fixed direction multiplied by the SIGN of the height. It is not
-  // a normal and it never was — it flips between two values as the height
-  // crosses zero, so what it drew was a band edge, and a field of band edges is
-  // corduroy. That is the whole of why this sea has never read as waves.
-  //
-  // A surface is seen through its NORMAL. Every crest has a face turned toward
-  // the light and a face turned away, and that PAIR is what the eye reads as a
-  // wave — not a bright line where the water happens to be high.
-  //
-  // The gradient is exact and free: an analytic field has an analytic
-  // derivative, and seaSwell generates it from the same three trains the boats
-  // are floating on. So the face that lights up is the face of the wave that is
-  // lifting them.
-  //
-  // 160 turns a gradient of about 0.008 at the steepest into a normal tilted
-  // some fifty degrees, which is a swell rather than a millpond or a mountain
-  // range. It lies down with distance for the same reason everything else does:
-  // at a shallow angle a wave shows you its top and not its face.
-  vec2 sg = swellGrad(world, uTime) * uSwell * (1.0 - recede * 0.55);
-  vec3 n = normalize(vec3(-sg * 160.0, 1.0));
-  vec2 lightDir = normalize(uLight);
-  float lit = dot(n.xy, lightDir);
-  shade += lit * 0.10;
-
-  // ── AND A GLINT, KEPT ON A SHORT LEASH ───────────────────────────
-  //
-  // This was pow(lit, 5.0) * 0.13, and on the set of trains that shipped with
-  // it — five bearings inside seventy degrees, none of them phase-shifted —
-  // it did not read as glitter on a sea. It read as BARS: a narrow highlight
-  // laid over a grating draws the grating in bright lines the width of the
-  // screen.
-  //
-  // The trains are spread and phase-broken now, which is the real fix, but the
-  // lesson stands and is worth leaving here. A specular does not make water
-  // look like water on its own; it AMPLIFIES whatever structure the normals
-  // already have. Point it at something regular and it will find the regularity
-  // and paint it brighter than anything else on the screen.
-  //
-  // So: narrower, and less than half the weight. It should catch the eye on a
-  // crest here and there, never draw a line you can follow across the water.
-  shade += pow(max(0.0, lit), 8.0) * 0.055 * uSwell;
+  float facing = dot(normalize(vec2(swell, swell * 0.6) + vec2(0.0001)), normalize(uLight));
+  shade += facing * 0.035 * uSwell;
   col *= shade;
 
   // ── THE SHORE IS NOT DRAWN HERE ──────────────────────────────────
@@ -410,25 +341,75 @@ void main(void) {
   // moves with the island because it is AT the island, the same way the
   // contact shadow is, and no camera enters into it.
 
-  // ── THE CAUSTICS ARE GONE, AND WHY ────────────────────────────────
+  // ── CAUSTICS ──────────────────────────────────────────────────────
   //
-  // A ridged noise field, combed hard along the wind and raised to the fifth
-  // and eighth power, meant to read as sunlight focused on a shallow bottom.
+  // The bright filaments light makes on a shallow bottom. RIDGED noise, not
+  // ordinary noise: 1 - abs(2n-1) folds the field at its midpoint so what was a
+  // smooth hill becomes a crease, and creases are what a caustic is. Two
+  // octaves crossing at different rates so the web moves without repeating.
   //
-  // What it actually drew was BARS. alongWind(cw, 0.44) compresses the
-  // cross-wind axis before sampling, which stretches every filament along the
-  // PERPENDICULAR — 124 degrees in the world, and with y squashed by GROUND
-  // that lands at about 140 on screen. So the sea had steep diagonal streaks
-  // ruled across it, scrolling, and the high powers made them narrow and bright
-  // enough to be the first thing the eye found. They were confined to shallow
-  // water, which is why they showed around the islands and stopped over the
-  // deep — and that shelf test is what identified them.
+  // SHALLOW WATER ONLY, and that is the whole point of having them. They are
+  // strongest at the coast and gone by the Deep, which makes the shelf above
+  // legible in a second way: the near water is not just brighter, it is
+  // patterned, and the far water is plain.
   //
-  // Removed rather than softened, on the report. If light on the shallows is
-  // wanted back it should not come back like this: the combing is the whole
-  // problem, and a caustic that is stretched into parallel lines is a comb, not
-  // a network. Isotropic, low-contrast, and nowhere near pow 8.
+  // And they need the sun. A caustic is refracted sunlight, so it goes out
+  // with the light rather than lingering into the night, and it stands down at
+  // speed with everything else fine-grained.
+  //
+  // ── AND THEY ARE A NETWORK, NOT A MARBLING ────────────────────────
+  //
+  // This used to be the PRODUCT of two ridged noise fields. A ridge field is
+  // bright along the mid-level set of the noise, and the mid-level set of value
+  // noise is a family of CLOSED CURVES — so multiplying two of them lit only
+  // the places where one loop happened to cross another, and the sea came out
+  // as a field of pale worms with the water showing between them. Reported as
+  // looking weird, and it was: it read as marbled paper or a contour map, which
+  // are both things made of closed curves, and never as light.
+  //
+  // Three changes, and each fixes a different half of that:
+  //
+  //   ADDED, NOT MULTIPLIED. A sum of ridges is a CONNECTED network with
+  //   junctions and dead ends, which is what a caustic actually is. A product
+  //   is an intersection, which is what a plaid actually is.
+  //
+  //   WARPED BY THE SWELL. Caustics are sunlight bent by the surface, so they
+  //   have to be a function of the surface. Dragging the sample by the swell
+  //   ties every filament to the wave that is making it — and it breaks the
+  //   loops, because the field is no longer a clean noise with clean level
+  //   sets.
+  //
+  //   AND STRETCHED, along the same prevailing wind the swell now runs with.
+  //   An isotropic ridge field has no direction at all, which is most of why
+  //   the old one read as a pattern rather than as water. See WIND.
+  float caust = 0.0;
+  if (shelf < 0.62 && uDark < 0.9) {
+    vec2 cw = w * 3.1 + vec2(swell * 1.5, swell * -0.9);
+    // Harder than the swell's stretch: the ripple that focuses light is finer
+    // and more strongly combed than the swell carrying it.
+    vec2 cwa = alongWind(cw, 0.44);
 
+    float c1 = vnoise(cwa + vec2(uTime * 0.035, uTime * 0.021));
+    float c2 = vnoise(cwa * 2.1 + vec2(c1 * 0.9 - uTime * 0.026, uTime * 0.033));
+    float r1 = 1.0 - abs(c1 * 2.0 - 1.0);
+    float r2 = 1.0 - abs(c2 * 2.0 - 1.0);
+    // Two widths. The coarse one carries the shape and the fine one puts the
+    // bright cusps on it, which is the part that reads as focused light.
+    float ridged = pow(r1, 5.0) * 0.70 + pow(r2, 8.0) * 0.55;
+    // NOT EVERY FILAMENT IS THE SAME BRIGHTNESS. A network at one value is a
+    // diagram of a caustic; the real thing has stretches that are barely there
+    // and cusps that are almost white.
+    float vary = 0.40 + 0.60 * vnoise(cw * 0.55 - vec2(uTime * 0.013, uTime * 0.008));
+    caust = ridged * vary
+      * (1.0 - smoothstep(0.10, 0.62, shelf))
+      * (1.0 - uDark)
+      // 0.85, not 0.92. Caustics are the one fine detail that is worth keeping
+      // some of under way: they are LOW contrast and they say where the shelf
+      // is, so losing nearly all of them at speed took the shallows' whole
+      // character out of the water you were actually crossing.
+      * (1.0 - 0.85 * uRush);
+    col += caust * vec3(0.72, 0.92, 0.86) * 0.20 * uSwell;
+  }
 
   // ── THE MOON'S PATH ───────────────────────────────────────────────
   //

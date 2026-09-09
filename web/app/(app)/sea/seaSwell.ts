@@ -1,37 +1,44 @@
-// ── ONE SWELL, READ BY THE WATER AND BY EVERYTHING FLOATING ON IT ───────────
+// ── THE SWELL EVERYTHING FLOATING READS ─────────────────────────────────────
 //
-// The sea has always had a swell and the boats have never known about it. The
-// water shader draws a travelling field of crests stretched along the wind;
-// every hull on the chart bobbed on `sin(t * 1.7) * 3.4 + sin(t * 2.6 + 1.1)`,
-// a free-running function of TIME ALONE with a per-boat phase offset. So the
-// waves went past underneath and nothing rose on them, and two boats floating
-// side by side heaved in opposite directions because their offsets differed.
+// Every hull bobbed on sin(t * 1.7) * 3.4 + sin(t * 2.6 + 1.1) * 2.1 — a
+// free-running function of TIME ALONE, with a random phase per boat. So two
+// boats side by side heaved in opposite directions, and the canvas NPCs did not
+// bob at all: the player heaved and everyone else sat perfectly still. This is
+// the field they read instead. A hull's height is a fact about WHERE IT IS, so
+// a crest travels through a group of them.
 //
-// This is the field both sides read. A hull's height is now a fact about WHERE
-// IT IS, which is what makes a crest travel through a group of boats instead of
-// each one keeping its own time.
+// ── IT DOES NOT DRAW ANYTHING, AND THAT IS THE SECOND VERSION OF THIS FILE ──
 //
-// ── WHY IT IS SINES AND NOT THE SHADER'S OWN NOISE ──────────────────────────
+// The first one also fed the water shader, on the reasoning that a boat ought
+// to ride a wave you can SEE. The reasoning is right; the execution was not. A
+// sum of pure sine trains is, mathematically, a striped pattern — three of them
+// at three bearings is a plaid. It shipped and it drew exactly that: full
+// screen zebra stripes over the whole sea, worse than the flatness it was meant
+// to fix. Spreading the bearings, breaking the phases and narrowing the
+// specular each only rearranged the stripes, because the periodicity was never
+// in the tuning, it was in the choice of function.
 //
-// The obvious move is to transliterate `vnoise` out of seaWater and sample the
-// exact field being drawn. It does not work, and the reason is worth keeping.
-// That noise is built on `fract(sin(dot(p, k)) * 43758.5453123)` — a hash whose
-// entire output lives in the bits that a float32 multiply THROWS AWAY. The GPU
-// computes it at 32 bits with a hardware sine; JavaScript computes at 64 with a
-// different one. The two do not merely round differently, they disagree
-// completely, and there is no amount of Math.fround that fixes it.
+// The shader already draws waves out of ridged and value noise, and noise has
+// no periodicity to give itself away. That is the whole difference. If the
+// drawn sea is ever to agree with what the boats are doing, this field has to
+// be WARPED BY NOISE first so its crests meander and terminate — a phase-locked
+// sine has infinite straight crests by definition and no amount of lighting
+// hides it.
 //
-// So the shared field is ANALYTIC: three directional sine trains, which is both
-// exactly reproducible on either side of the fence and what a real swell is —
-// a few long trains from a few bearings, summed. The noise stays where it is,
-// on the GPU, doing what it is good at, which is texture.
+// So the shader went back to what it was, and this drives things that FLOAT.
+// The hull motion was the uncontroversial half: boats near each other rise
+// together, which is what a sea does and what a per-boat clock never can.
 //
-// ── AND THE GLSL COMES OUT OF THIS FILE ─────────────────────────────────────
+// ── AND SINES ARE STILL RIGHT FOR THIS JOB ──────────────────────────────────
 //
-// `swellGlsl()` writes the shader's copy from the same numbers the TypeScript
-// runs on. Not a comment asking the next person to keep two lists in step: the
-// literals exist once and the shader is generated from them. Change a
-// wavelength here and both sides move together or neither does.
+// Transliterating the shader's own noise so the CPU could sample the exact
+// drawn field does not work either. It is built on
+// fract(sin(dot(p, k)) * 43758.5453123), a hash whose whole output lives in the
+// bits a float32 multiply throws away. The GPU computes it at 32 bits with a
+// hardware sine and JavaScript at 64 with a different one; they do not round
+// differently, they disagree completely. For a height under a boat, where
+// nothing is drawn and only the agreement between neighbours matters, summed
+// trains are exactly right.
 
 /** The prevailing wind, as seaWater and seaGrass have it. */
 export const WIND_X = 0.8231
@@ -39,119 +46,41 @@ export const WIND_Y = 0.5679
 
 /**
  * A train: how long the wave is in world pixels, how high it lifts a hull, how
- * fast it travels in lengths per second, and how far its bearing is turned off
- * the prevailing wind in radians.
+ * fast it travels in lengths per second, how far its bearing is turned off the
+ * prevailing wind in radians, and where it sits in its cycle at the origin.
  *
  * `amp` is in the same units the old bob was — screen pixels before the zoom —
- * so nothing downstream had to be rescaled. The three of them sum to about
- * seven, against the old pair's five and a half: a shade more heave, and it is
- * now heave rather than jitter.
+ * so nothing downstream had to be rescaled.
  *
- * THE SKEWS ARE NOT MULTIPLES OF EACH OTHER, and neither are the lengths. Trains
- * on related bearings and related periods produce a pattern that repeats on a
- * short cycle, and a sea that visibly repeats is a machine.
- *
- * ── THE FIRST SET WAS SIZED AGAINST THE WRONG THING ─────────────────────────
- *
- * It ran 1450, 620 and 300, chosen by thinking about how far a BOAT travels
- * between crests. Nobody watches a boat travel; they watch a screen. Measured
- * against the water actually on one:
- *
- *   desktop   1400 CSS / 0.82 zoom  =  1700 world px of sea
- *   phone      390 CSS / 0.50 zoom  =   780 world px of sea
- *
- * A 1450px train is ONE CREST across a desktop and HALF A CREST across a phone.
- * One crest is a gradient, and a gradient is exactly what "it looks flat" is.
- * No amount of normal lighting rescues a field with no repeating structure in
- * the frame — which is why two passes at the shading changed nothing.
- *
- * ── AND THE SPECTRUM IS NOW THE RIGHT WAY UP ────────────────────────────────
- *
- * Five trains, and the important part is how amplitude falls with length. Short
- * waves are SMALL but STEEP; long swell is TALL but SHALLOW. Slope is what you
- * SEE, because a surface is lit by its normal — height is what you FEEL, and
- * the only thing that reads height here is a hull sitting on it.
- *
- * So the slopes rise toward the short end (0.014 up to 0.019) and the heights
- * fall (3.4 down to 0.3). The eye gets four to nine crests in the frame from
- * the 205 and 112 trains; the boats get their heave almost entirely from the
- * 1500, which crosses in about three seconds. One field, doing two jobs,
- * because that is what a real sea does.
- *
- * SPEEDS FOLLOW THE LENGTHS. In deep water a wave travels as the square root of
- * its wavelength, and `speed` here is lengths per second, so it should scale as
- * 1/sqrt(len). Across this set the lengths span 13x and the speeds 3.3x against
- * a theoretical 3.7x, which is close enough that the long swell overtakes the
- * chop the way it ought to instead of the whole field marching in lockstep.
+ * THE PHASES MATTER even with nothing drawn. Without them every train crosses
+ * zero at the same point, which puts a stationary node in the sea at the world
+ * origin and gives the whole field a centre. These are arbitrary and
+ * deliberately unrelated to each other.
  */
 export type SwellWave = {
   len: number
   amp: number
   speed: number
   skew: number
-  /**
-   * WHERE THIS TRAIN IS IN ITS CYCLE AT THE WORLD ORIGIN.
-   *
-   * The first set had none, which means every train crossed zero at the same
-   * point and they summed into one coherent interference pattern — a moiré with
-   * visible large-scale structure marching across the water. A sea is not
-   * phase-locked to its own coordinate system. These are arbitrary and
-   * deliberately not related to each other.
-   */
   phase: number
-  /**
-   * WHETHER THE WATER IS SHADED BY IT, as opposed to only lifted by it.
-   *
-   * A train whose wavelength is most of a screen has a normal that barely
-   * changes across the frame, so shading by it does not draw a wave — it draws
-   * a smooth ramp from light to dark across the whole sea. That is what the
-   * long trains were doing and it read exactly as what it was: a gradient laid
-   * over the water.
-   *
-   * This is not a fudge to hide them. A photograph of real ocean does not show
-   * the long swell as a band of light either; you see the long swell through
-   * the SHORT waves riding on it, changing their spacing and their glint. The
-   * heave is felt, not seen — and the only thing on this chart that reads
-   * height is a hull sitting on it.
-   *
-   * So the long trains lift the boats and paint nothing, and the short ones do
-   * all the drawing. One field, two jobs, split where the physics splits it.
-   */
-  seen: boolean
 }
 
+/**
+ * Sized for HOW A BOAT MOVES, not for how many crests fit on a screen. That was
+ * the drawn version's problem and it is not this one's.
+ *
+ * The long trains carry it — 3.4 and 1.9 against 1.15, 0.62 and 0.3 — so a hull
+ * does a slow three-second heave with a little chop on top rather than
+ * juddering. Speeds follow the lengths the way deep water does, as roughly the
+ * square root of wavelength, so the long swell overtakes the chop instead of
+ * the whole field marching in lockstep.
+ */
 export const SWELL: SwellWave[] = [
-  // ── THE HEAVE. Felt, never drawn. ────────────────────────────────
-  // Both of these are most of a screen across, so shading by them paints a
-  // ramp rather than a wave. They lift the boats and nothing else.
-  { len: 1500, amp: 3.4, speed: 0.34, skew: 0, phase: 0, seen: false },
-  { len: 760, amp: 1.9, speed: 0.50, skew: 0.38, phase: 0.61, seen: false },
-
-  // ── AND THE WAVES YOU SEE ────────────────────────────────────────
-  //
-  // SPREAD WIDE, AND SPREAD ON THE SCREEN RATHER THAN IN THE WORLD.
-  //
-  // The first set put every bearing inside seventy degrees of the wind, which
-  // sums to five near-parallel gratings and draws exactly that: lines ruled
-  // across the water, with the specular picking them out in bright bars.
-  //
-  // But "spread them out" is not as simple as it sounds on a squashed plane,
-  // and this is the 2.5D bit. A world bearing does NOT arrive on screen at the
-  // same angle: y is compressed by GROUND, so the whole fan of directions is
-  // squeezed toward the horizontal. Two trains ninety degrees apart in the
-  // world can land fourteen degrees apart on screen — which is what the second
-  // attempt did, and it would have banded all over again.
-  //
-  // So these skews were solved BACKWARDS from the angles wanted on screen:
-  // crest lines at roughly 20, 70 and 120 degrees from horizontal, evenly
-  // spread through the half-circle, so they genuinely cross. Solve it the other
-  // way and the arithmetic lies to you.
-  //
-  // Their heights fall away as their slopes stay up: small and steep is what
-  // catches light on one face and loses it on the other.
-  { len: 395, amp: 1.15, speed: 0.66, skew: -0.812, phase: 2.13, seen: true },
-  { len: 205, amp: 0.62, speed: 0.88, skew: -1.615, phase: 4.02, seen: true },
-  { len: 112, amp: 0.3, speed: 1.12, skew: -0.281, phase: 5.47, seen: true },
+  { len: 1500, amp: 3.4, speed: 0.34, skew: 0, phase: 0 },
+  { len: 760, amp: 1.9, speed: 0.50, skew: 0.38, phase: 0.61 },
+  { len: 395, amp: 1.15, speed: 0.66, skew: -0.812, phase: 2.13 },
+  { len: 205, amp: 0.62, speed: 0.88, skew: -1.615, phase: 4.02 },
+  { len: 112, amp: 0.3, speed: 1.12, skew: -0.281, phase: 5.47 },
 ]
 
 /** Each train's unit bearing, precomputed. */
@@ -165,9 +94,9 @@ const TAU = Math.PI * 2
 /**
  * HOW HIGH THE WATER IS AT A POINT, in bob units.
  *
- * `t` is seconds. Cheap on purpose: three sines, no allocation, no branching —
- * it is called once per hull per frame and there can be a couple of dozen
- * hulls.
+ * `t` is seconds. Cheap on purpose: five sines, no allocation, no branching —
+ * it is called once per hull per frame and there can be a couple of dozen hulls
+ * on screen.
  */
 export function swellAt(x: number, y: number, t: number): number {
   let h = 0
@@ -183,8 +112,11 @@ export function swellAt(x: number, y: number, t: number): number {
  *
  * A hull sitting on the face of a wave leans down it, and that lean is the
  * derivative of the height along the boat's beam. Returned in bob units per
- * world pixel; the caller decides how much of a heel that is worth, because
- * how far a hull rolls is about the hull and not about the sea.
+ * world pixel; the caller decides how much of a heel that is worth, because how
+ * far a hull rolls is about the hull and not about the sea.
+ *
+ * Nothing reads this yet. It is here because a heel is the obvious next thing a
+ * floating boat wants, and the derivative of an analytic field is free.
  */
 export function swellSlope(x: number, y: number, t: number): number {
   let g = 0
@@ -194,54 +126,4 @@ export function swellSlope(x: number, y: number, t: number): number {
       * Math.cos(((x * d.x + y * d.y) / w.len - t * w.speed) * TAU + w.phase)
   }
   return g
-}
-
-/**
- * THE SAME FIELD, AS GLSL, generated rather than copied.
- *
- * Returns the body of `float swellHeight(vec2 world, float time)` with this
- * file's numbers baked in. The shader adds it as a shading term so the crests
- * that lift the boats are crests you can see — without it the hulls ride a
- * wave that is not drawn, which is a different bug wearing the same clothes.
- *
- * Amplitudes are handed over as a FRACTION of the sum, not in bob units: on the
- * water it is a shade of light and dark, and how dark is the shader's business.
- *
- * ── AND THE GRADIENT MATTERS MORE THAN THE HEIGHT ───────────────────────────
- *
- * `swellGradGlsl` writes the derivative, and it is the one that makes water
- * look like water. Shading a surface by its HEIGHT gives you light where it is
- * high and dark where it is low — smooth bands, corduroy, which is exactly what
- * the first cut of this looked like. A surface is seen through its NORMAL: each
- * crest gets a face turned toward the light and a face turned away, and that
- * pair is what the eye reads as a wave.
- *
- * Free here, because an analytic field has an analytic derivative. It is the
- * same three terms with cos for sin and a factor of 2*pi/wavelength.
- */
-export function swellGradGlsl(): string {
-  const shown = SWELL.map((w, i) => ({ w, d: DIRS[i] })).filter(e => e.w.seen)
-  const total = shown.reduce((n, e) => n + e.w.amp, 0)
-  const terms = shown.map(({ w, d }) => {
-    const k = (w.amp / total) * (TAU / w.len)
-    return `  g += ${k.toExponential(5)} * vec2(${d.x.toFixed(6)}, ${d.y.toFixed(6)})`
-      + ` * cos((dot(world, vec2(${d.x.toFixed(6)}, ${d.y.toFixed(6)}))`
-      + ` / ${w.len.toFixed(1)} - time * ${w.speed.toFixed(4)}) * 6.2831853`
-      + ` + ${w.phase.toFixed(4)});`
-  })
-  return `vec2 swellGrad(vec2 world, float time) {\n  vec2 g = vec2(0.0);\n${terms.join('\n')}\n  return g;\n}`
-}
-
-export function swellGlsl(): string {
-  // ONLY WHAT IS SEEN, and normalised against that subset so the shader's own
-  // constant keeps meaning what it meant. The trains the boats ride are not in
-  // here at all — see `seen`.
-  const shown = SWELL.map((w, i) => ({ w, d: DIRS[i] })).filter(e => e.w.seen)
-  const total = shown.reduce((n, e) => n + e.w.amp, 0)
-  const terms = shown.map(({ w, d }) => {
-    return `  h += ${(w.amp / total).toFixed(5)} * sin((dot(world, vec2(${d.x.toFixed(6)}, ${d.y.toFixed(6)}))`
-      + ` / ${w.len.toFixed(1)} - time * ${w.speed.toFixed(4)}) * 6.2831853`
-      + ` + ${w.phase.toFixed(4)});`
-  })
-  return `float swellHeight(vec2 world, float time) {\n  float h = 0.0;\n${terms.join('\n')}\n  return h;\n}`
 }
