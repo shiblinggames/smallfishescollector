@@ -1667,7 +1667,13 @@ export default function ShipHero({
                 //
                 // Forge keeps the open wash. It is a single object on a plate
                 // rather than a list, so the art is not in the way there.
-                backgroundImage: `linear-gradient(180deg, ${
+                // ── NO PAINTING BEHIND A ROOM IN A PANEL ──────────────
+                // The wash exists to hold type up over `sectionBg`. With no
+                // backdrop it is a near-opaque slab laid over the panel's own
+                // base — a second, slightly different dark rectangle inside the
+                // first. The panel already brought a background; this brings
+                // none.
+                backgroundImage: bare ? 'none' : `linear-gradient(180deg, ${
                   loadoutTab === 'loadout' ? 'rgba(6,9,15,0.90) 0%, rgba(4,7,12,0.95) 42%, rgba(2,4,8,0.98)'
                   : loadoutTab === 'ship'  ? 'rgba(6,10,18,0.84) 0%, rgba(5,8,14,0.92) 42%, rgba(3,5,9,0.97)'
                   : 'rgba(6,10,18,0.44) 0%, rgba(5,8,14,0.78) 42%, rgba(3,5,9,0.94)'
@@ -1684,6 +1690,10 @@ export default function ShipHero({
               {!focus && <DrawerHandle controls={loadoutDragControls} />}
               {/* Sticky header — outside the scroll container so the close
                   button never scrolls off-screen. */}
+              {/* NOT IN A PANEL. "Ship Management" with a back chevron under
+                  a header that already says REFITS with a back arrow is the
+                  same row twice, and the lower one is the page's. */}
+              {!bare && (
               <div className={focus ? 'page-col' : undefined} style={{
                 flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1739,6 +1749,7 @@ export default function ShipHero({
                 </button>
                 )}
               </div>
+              )}
               {/* overflowX MUST be stated. With only overflowY set, CSS computes
                   the other axis to 'auto' rather than 'visible', so the
                   inventory rail's edge-to-edge bleed (a negative margin, wider
@@ -1798,7 +1809,15 @@ export default function ShipHero({
               {/* Hero — ship portrait + name (inline rename). Upgrade, class,
                   and repair all moved into the Ship tab so the header is a clean
                   identity strip and each concern has its own home. */}
-              {(loadoutTab === 'ship' || loadoutMode !== null) && (() => {
+              {/* ── AND ONLY WHERE IT IS THE SUBJECT ────────────────────
+                  Her portrait and her name belong to LOOK: that room is about
+                  what she looks like, and the picture is the thing being
+                  changed. In Refits and Armament she is a full-width painting
+                  of a ship above a list of things that are not her, and in a
+                  panel that already shows her on its front page it is the same
+                  hull drawn twice, two screens apart. */}
+              {(loadoutTab === 'ship' || loadoutMode !== null)
+                && (!bare || shipTab === 'appearance') && (() => {
                 return (
                   <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                     {/* The old 78% / 230px was measured against art that only

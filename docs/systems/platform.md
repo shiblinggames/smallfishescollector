@@ -54,14 +54,19 @@ The non-game knowledge: how the app is built, shipped, and kept safe.
 ## The modal width is `--modal-w`
 
 ```css
-:root { --modal-w: clamp(360px, 46vw, 560px); }
+:root { --modal-w-base: min(560px, 100%); --modal-w: var(--modal-w-base); }
 ```
 
-**One width for every panel that opens over a page**, and a clamp rather than a number: 46vw
-so a modal grows with the window, floored at 360 so it never gets silly on a small laptop,
-capped at 560 so a line of text stays readable on a wide monitor. Use it as
-`maxWidth: 'var(--modal-w)'` **alongside `width: '100%'`** — on a phone the shell's own
-padding decides and the clamp never binds.
+**One width for every panel that opens over a page.** 560 is the cap — enough that a line of
+text stays readable on a wide monitor — and on anything narrower it is simply the room the
+shell has. Use it as `maxWidth: 'var(--modal-w)'` **alongside `width: '100%'`**.
+
+It was `clamp(360px, 46vw, 560px)` first and **the floor was a bug**: on a phone 46vw is about
+200px, so every modal fell to the 360 floor, which on a 430px handset left fifty pixels of dead
+margin down both sides and made every panel narrower than the page it opened over. Modals had
+always been `width: 100%` capped at 440-480 — on a phone, full width less the shell's margin —
+and that is what they should have stayed. The `100%` resolves against the shell's padded box,
+so a nested modal measures its own space rather than the window's.
 
 This section used to say the house width was 480, and it was never true. Every dialog in the
 game had picked its own somewhere between 280 and 520 — a hundred of them — so opening two

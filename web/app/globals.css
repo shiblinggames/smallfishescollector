@@ -2521,7 +2521,19 @@ body.hardcore-gauntlet::after {
      `--modal-w` for its children, and `--modal-w: calc(var(--modal-w) - 32px)`
      on one element is a cycle and resolves to nothing. It computes from the
      base instead, which never changes. See PopupShell's ModalDepth. */
-  --modal-w-base: clamp(360px, 46vw, 560px);
+  /* ── AND ON A PHONE IT IS THE WHOLE WIDTH ────────────────────────────────
+     This was `clamp(360px, 46vw, 560px)` and the floor was the bug. On a phone
+     46vw is about 200px, so every modal fell to the 360 FLOOR — which on a
+     430px handset left fifty pixels of dead margin down both sides and made
+     every panel narrower than the page it opened over. Modals used to be
+     `width: 100%` capped at 440-480, which on a phone is simply full width
+     less the shell's own margin, and that is what it should have stayed.
+
+     `min(560px, 100%)` says exactly that: the cap on a desktop, the room it has
+     on a phone. The percentage resolves against the shell's padded box, so a
+     nested modal — whose box is already inset — measures its own space rather
+     than the window's. */
+  --modal-w-base: min(560px, 100%);
   --modal-w: var(--modal-w-base);
 }
 
