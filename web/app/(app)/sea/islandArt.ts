@@ -380,22 +380,6 @@ function paletteOf(id: string): IslePalette {
   return PALETTES[h % PALETTES.length]
 }
 
-/** The dial itself. At module scope because the grass is tinted through it
- *  too, and an island whose meadow is a different family from its own bands is
- *  two islands. */
-function toneHex(hex: string, warmCool: number): string {
-  const n = parseInt(hex.slice(1), 16)
-  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
-  // Toward cool: red down, blue up, everything a shade darker.
-  const k = (warmCool - 0.5) * 2
-  r = Math.round(Math.min(255, Math.max(0, r * (1 - k * 0.085))))
-  g = Math.round(Math.min(255, Math.max(0, g * (1 - k * 0.025))))
-  b = Math.round(Math.min(255, Math.max(0, b * (1 + k * 0.11))))
-  const dim = 1 - k * 0.055
-  r = Math.round(r * dim); g = Math.round(g * dim); b = Math.round(b * dim)
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
-}
-
 /** Blend two `#rrggbb` by t. */
 function mixHex(a: string, b: string, t: number): string {
   const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16)
@@ -409,24 +393,6 @@ function seedOf(id: string): number {
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
   return h
-}
-
-/**
- * THIS ISLAND'S GRASS, as a Pixi tint.
- *
- * The tuft plate in seaGrass is greyscale and the mesh multiplies by this, so
- * one plate is basalt grass on one island and jungle grass on the next with no
- * second texture anywhere.
- *
- * Lifted toward white before tinting. The plate is dark at the root and a
- * multiply only ever darkens, so tinting with the band colour itself grows
- * grass darker than the ground it stands on — which reads as a shadow lying on
- * the meadow rather than as the meadow.
- */
-export function grassTint(id: string): number {
-  const pal = paletteOf(id)
-  const chr = ((seedOf(id) >>> 9) % 1000) / 1000
-  return parseInt(toneHex(mixHex(pal.green[0], '#ffffff', 0.24), chr).slice(1), 16)
 }
 
 /** Lay one texture over whatever is already on `g`, confined to the pixels
@@ -531,7 +497,19 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
    * Applied to every band and to the rock together, so an island still reads as
    * one place rather than as a green top on a grey bottom.
    */
-  const T = (hex: string) => toneHex(hex, chr)
+  const tone = (hex: string, warmCool: number) => {
+    const n = parseInt(hex.slice(1), 16)
+    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+    // Toward cool: red down, blue up, everything a shade darker.
+    const k = (warmCool - 0.5) * 2
+    r = Math.round(Math.min(255, Math.max(0, r * (1 - k * 0.085))))
+    g = Math.round(Math.min(255, Math.max(0, g * (1 - k * 0.025))))
+    b = Math.round(Math.min(255, Math.max(0, b * (1 + k * 0.11))))
+    const dim = 1 - k * 0.055
+    r = Math.round(r * dim); g = Math.round(g * dim); b = Math.round(b * dim)
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
+  }
+  const T = (hex: string) => tone(hex, chr)
 
   /** Trace the coast at a scale of the island box, optionally offset. */
   const trace = (g: CanvasRenderingContext2D, scale: number, cx = C, cy = C) => {
