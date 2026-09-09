@@ -64,7 +64,7 @@ export type Squall = {
    *  the dark and the heel, so one number is the whole severity of it. */
   power: number
   /**
-   * A TEMPEST: the big weather, out past the sortie.
+   * A TEMPEST: the big weather, out past the sea gate.
    *
    * Only these get lightning. It is a flag rather than a power threshold
    * because "is this the kind of storm that has lightning in it" is a fact
@@ -172,7 +172,7 @@ function fishingSqualls(now: number): Squall[] {
 }
 
 /**
- * ── AND THE BIG WEATHER, NORTH OF THE SORTIE ────────────────────────────────
+ * ── AND THE BIG WEATHER, NORTH OF THE SEA_GATE ────────────────────────────────
  *
  * The expedition side is where you take a warship out to fight somebody, and
  * it should not have the same weather as the water people learn to fish in. A

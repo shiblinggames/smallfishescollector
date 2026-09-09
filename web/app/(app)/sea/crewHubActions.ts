@@ -3,7 +3,7 @@
 // ── EVERYTHING YOUR CREW IS DOING, IN ONE READ ──────────────────────────────
 //
 // The crew is spread across four surfaces — the hall assigns them, the trawl
-// docks send them fishing, the voyage board sails them, and the sortie takes
+// docks send them fishing, the voyage board sails them, and the sea gate takes
 // them into a raid — and there has never been one place that answers "where is
 // everybody". You had to visit all four and hold the answer in your head.
 //

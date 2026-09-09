@@ -400,7 +400,7 @@ export async function saveSeaPosition(
    * at all: a coordinate past the reef, restored with no idea which side it
    * belonged to, would put a captain beyond a wall they can only cross at the
    * gate. The chart's answer was to refuse, and the cost was that the anchorage
-   * and the sortie evaporated on every remount — switch tabs, come back, and
+   * and the sea gate evaporated on every remount — switch tabs, come back, and
    * you are in the fishing grounds on the fishing boat, having been silently
    * taken off your own ship.
    *

@@ -1,7 +1,7 @@
 // ── THE SHADOWS UNDER THE EXPEDITION SEA ────────────────────────────────────
 //
 // Something very large passes beneath you on the long crossings north of the
-// sortie. It is never drawn as a creature: it is a darkening in the shape of
+// sea gate. It is never drawn as a creature: it is a darkening in the shape of
 // one, rising until you could almost name it and sounding again.
 //
 // ── IT MULTIPLIES. IT DOES NOT PAINT. ───────────────────────────────────────

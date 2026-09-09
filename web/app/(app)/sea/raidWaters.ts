@@ -1,6 +1,6 @@
 // ── THE CAMPAIGN'S WATER ────────────────────────────────────────────────────
 //
-// Past the sortie the sea is OPEN. All of it. Four named waters lie off the
+// Past the sea gate the sea is OPEN. All of it. Four named waters lie off the
 // junction, each a chapter's worth of the campaign scattered through it, and
 // the coda's small water due north past everything; between them and around
 // them there is nothing but sea, and you can sail any of it from any heading.
@@ -41,14 +41,14 @@
 // strait's width and length are still on the bay for the same reason; nothing
 // draws them and nothing collides with them.
 
-import { SORTIE } from './chart'
+import { SEA_GATE } from './chart'
 import { RAID_CHAPTERS, RAID_MAP } from '@/lib/raidMap'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 
 /**
  * THE JUNCTION.
  *
- * A short run north of the sortie so coming through the arch puts you in open
+ * A short run north of the sea gate so coming through the arch puts you in open
  * water rather than at a crossing before the game has started, and BIG — 7,600
  * across, twice the anchorage. It has no wall of its own on purpose. Every
  * boundary out here belongs to a bay; the middle is just sea, and it should
@@ -740,7 +740,7 @@ export const ISLE_BY_ID: Record<string, RaidIsle> =
  * ── THE WAY HOME, ONCE THE BOSS IS DOWN ─────────────────────────────────────
  *
  * A bay is a long way out. The furthest of them is eighteen thousand pixels
- * from the harbour, down a strait, across a junction and through the sortie —
+ * from the harbour, down a strait, across a junction and through the sea gate —
  * which is the right shape for SAILING OUT to a chapter, and the wrong shape
  * entirely for coming back from one you have already finished. The trip home
  * has no decisions in it: you have beaten the thing you came for, and every
@@ -825,7 +825,7 @@ export function portalOpen(pt: ReturnPortal, cleared: Set<string> | string[]): b
 /**
  * ── THE WARGATE ─────────────────────────────────────────────────────────────
  *
- * A standing portal just north of the sortie: the campaign's own door. Step in
+ * A standing portal just north of the sea gate: the campaign's own door. Step in
  * and it shows every boss you have BESTED, with their card — the drops, the
  * records — and instead of "enter the raid" it opens on their water: the gate
  * drops you at their mooring, out in whichever bay they hold. A boss you have
@@ -1203,9 +1203,9 @@ export function bayWaterCss(b: Bay): string {
     + `${b.sea[2]} 0%, ${b.sea[1]} 24%, ${b.sea[0]} 60%, ${dim(b.sea[0], 0.62)} 100%)`
 }
 
-/** Kept so callers do not have to know the sortie owns the way in. */
+/** Kept so callers do not have to know the sea gate owns the way in. */
 export function hubEntry(): { x: number; y: number } {
-  return { x: SORTIE.x, y: SORTIE.y }
+  return { x: SEA_GATE.x, y: SEA_GATE.y }
 }
 
 // ── THE DUEL'S FRAMING, SHARED ──────────────────────────────────────────────

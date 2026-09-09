@@ -41,7 +41,7 @@ export const LEVIATHAN_WINDOW_MS = 9 * 60_000
  * EIGHT, AND THE NUMBER IS ARITHMETIC RATHER THAN TASTE. The raid water is a
  * disc twenty thousand across and a viewport is about three by two, so a
  * handful of shapes spread over the whole of it is not rare, it is never: at
- * three, simulating the actual run from the sortie out to each bay put a
+ * three, simulating the actual run from the sea gate out to each bay put a
  * shadow on one crossing in six. The crossings are also SHORT — half a minute
  * at speed — so there is not much time for one to wander into view.
  *

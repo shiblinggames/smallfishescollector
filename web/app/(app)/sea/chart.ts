@@ -357,7 +357,7 @@ export const PLACES: Place[] = [
      * from here.
      *
      * IT WAS A JETTY, AND A JETTY WAS THE WRONG OBJECT. Two horizontal decks on
-     * piles flanked the sortie, and they read as furniture floating in the
+     * piles flanked the sea gate, and they read as furniture floating in the
      * middle of a harbour — a plank of art laid on the water with nothing
      * underneath it and nothing around it. Every other destination on this
      * chart is an ISLAND: land, a shore, a berth off it, buildings standing on
@@ -372,7 +372,7 @@ export const PLACES: Place[] = [
      *
      * POSITION IS DERIVED, NOT CHOSEN. See the guard under EXP_EDGE: these two
      * are placed off the anchorage rim exactly as the old docks were, far
-     * enough back that neither narrows the sortie's mouth and far enough in
+     * enough back that neither narrows the sea gate's mouth and far enough in
      * that a hull can still work round the outside of them.
      */
     id: 'gunwharf', name: 'The Gunwharf', blurb: 'Your ship, armed and berthed',
@@ -845,7 +845,7 @@ export function inGate(x: number): boolean {
  *
  * 3,600 leaves about 1,000 of clear water past the Crew Hall's shore and still
  * fits three or four more islands at the separation the chart demands. The sail
- * from the arch to the sortie is 5,100, which is a leg, not a voyage.
+ * from the arch to the sea gate is 5,100, which is a leg, not a voyage.
  *
  * IT IS WALLED, all the way round, in the same rock as the reef — see
  * `anchorageRocks`. That is what makes it a harbour rather than a disc: the
@@ -854,13 +854,13 @@ export function inGate(x: number): boolean {
  *
  * WHAT IS BEYOND IT is raid water, and that is where the ship you actually own
  * takes over from the fishing boat. That boundary is THIS RIM, and the way out
- * through it is the Sortie — see below.
+ * through it is the Sea Gate — see below.
  */
 export const EXP_ORIGIN = { x: 0, y: NORTH_WALL - 1500 }
 export const EXP_EDGE = 3600
 
 /**
- * THE SORTIE — the one way out of the anchorage, and the only place on the
+ * THE SEA_GATE — the one way out of the anchorage, and the only place on the
  * chart where the boat under you changes.
  *
  * DUE NORTH, dead opposite the arch. The two openings on the anchorage's two
@@ -876,12 +876,12 @@ export const EXP_EDGE = 3600
  * own — so it asks first. A crossing that changes what you are sailing should
  * never happen because you drifted.
  */
-export const SORTIE = { x: EXP_ORIGIN.x, y: EXP_ORIGIN.y - EXP_EDGE }
+export const SEA_GATE = { x: EXP_ORIGIN.x, y: EXP_ORIGIN.y - EXP_EDGE }
 
-/** Half the sortie's mouth, measured along the rim. Wider than the arch's 430
+/** Half the sea gate's mouth, measured along the rim. Wider than the arch's 430
  *  because you meet this one head-on at speed rather than lining up for a gap
  *  in a wall you can see. */
-export const SORTIE_HALF = 620
+export const SEA_GATE_HALF = 620
 
 /**
  * WHERE THE ANCHORAGE'S WALL RUNS, as an angle sweep.
@@ -902,11 +902,11 @@ export function anchorageArc(): { from: number; to: number } {
   return { from: Math.PI - a, to: 2 * Math.PI + a }
 }
 
-/** Is this point in the mouth of the sortie? Measured as a distance from the
+/** Is this point in the mouth of the sea gate? Measured as a distance from the
  *  gap's centre rather than an angle, because an angular window subtends a
  *  different width at every radius and the mouth should be one size. */
-export function inSortie(x: number, y: number): boolean {
-  return Math.hypot(x - SORTIE.x, y - SORTIE.y) < SORTIE_HALF
+export function inSeaGate(x: number, y: number): boolean {
+  return Math.hypot(x - SEA_GATE.x, y - SEA_GATE.y) < SEA_GATE_HALF
 }
 
 /**
@@ -930,7 +930,7 @@ export function inSortie(x: number, y: number): boolean {
  * WHAT IS STILL DERIVED IS WHERE THEY STAND. PLACES is a literal, and it is
  * built before EXP_ORIGIN and EXP_EDGE exist, so the two coordinates are
  * written down and CHECKED here rather than computed there. Moving the rim
- * moves the sortie; if it stops agreeing with these two, this throws at module
+ * moves the sea gate; if it stops agreeing with these two, this throws at module
  * load rather than shipping a harbour whose islands have quietly drifted into
  * the mouth they are supposed to flank.
  */
@@ -956,8 +956,8 @@ const ISLAND_SETBACK = 740
     }
     // AND IT MUST NOT CROWD THE GATE. The whole reason they sit this far back
     // is that an island in the throat is a harbour with no way out of it.
-    const clear = Math.hypot(p.x - SORTIE.x, p.y - SORTIE.y) - p.r - SORTIE_HALF
-    if (clear < 200) throw new Error(`chart: ${id} leaves only ${Math.round(clear)}px beside the sortie`)
+    const clear = Math.hypot(p.x - SEA_GATE.x, p.y - SEA_GATE.y) - p.r - SEA_GATE_HALF
+    if (clear < 200) throw new Error(`chart: ${id} leaves only ${Math.round(clear)}px beside the sea gate`)
     // Nor sit in the harbour wall.
     const toRim = EXP_EDGE - Math.hypot(p.x - EXP_ORIGIN.x, p.y - EXP_ORIGIN.y) - p.r
     if (toRim < 250) throw new Error(`chart: ${id} leaves only ${Math.round(toRim)}px to the rim`)
@@ -985,7 +985,7 @@ export const CHARTERHOUSE = PLACES.find(p => p.id === 'charterhouse')!
  * furthest basin's far rim now reaches 19,100, so this is 20,000.
  *
  * It is a CONSTANT rather than a call to `raidReach()`, and deliberately: this
- * module is the bottom of the import graph and raidWaters reads SORTIE from it,
+ * module is the bottom of the import graph and raidWaters reads SEA_GATE from it,
  * so importing back would be a cycle. Instead `npm run check` asserts that this
  * number still covers what the basin table asks for. Same shape as the salvage
  * manifest — two tables that must agree, and a checker that fails when they do

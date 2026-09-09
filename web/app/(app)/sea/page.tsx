@@ -273,7 +273,7 @@ export default async function SeaPage({ searchParams }: {
       // The hull tier only ever changes how fast you cross the chart.
       hullSpeed={hullSpeed(Number(profile?.hull_speed_tier ?? 0))}
       // THE SHIP YOU OWN, for the water beyond the anchorage. Not the fishing
-      // boat: past the sortie the hull under you is the one the expedition
+      // boat: past the sea gate the hull under you is the one the expedition
       // ladder sells, which is the whole point of the crossing.
       shipTier={Number(profile?.ship_tier ?? MIN_SHIP_TIER)}
       // AND WHAT SHE IS PAINTED AS. Man-o-War only, enforced in shipSkins —
@@ -289,7 +289,7 @@ export default async function SeaPage({ searchParams }: {
       raidSeats={raidSeats}
       itemMounts={itemMounts}
       // Sailing a sunk ship is refused at the raid screen; the DOCK is where
-      // that should be discovered, not past the sortie.
+      // that should be discovered, not past the sea gate.
       // THE HOMESTEAD PORTAL. Only the tier: which stones this captain holds is
       // derived on the chart from the discoveries it is already handed, so there
       // is nothing here for the two to disagree about.

@@ -30,7 +30,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  NORTH_WALL, EXP_ORIGIN, EXP_EDGE, RAID_EDGE, SORTIE, PLACES,
+  NORTH_WALL, EXP_ORIGIN, EXP_EDGE, RAID_EDGE, SEA_GATE, PLACES,
 } from '../../chart'
 import {
   HUB, HUB_R, BAYS, bayCentre, mouthOf, entryOf, straitLen,
@@ -419,8 +419,8 @@ export default function ChartBench() {
             </text>
           </g>
         ))}
-        <circle cx={SORTIE.x} cy={SORTIE.y} r={220} fill="#f0c040" />
-        <text x={SORTIE.x} y={SORTIE.y - 420} fill="#f6dfa0" fontSize={380} textAnchor="middle">the sortie</text>
+        <circle cx={SEA_GATE.x} cy={SEA_GATE.y} r={220} fill="#f0c040" />
+        <text x={SEA_GATE.x} y={SEA_GATE.y - 420} fill="#f6dfa0" fontSize={380} textAnchor="middle">the sea gate</text>
 
         {/* THE JUNCTION. */}
         <circle cx={hub.x} cy={hub.y} r={hub.r}

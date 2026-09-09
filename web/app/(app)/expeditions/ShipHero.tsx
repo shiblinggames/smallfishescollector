@@ -1654,7 +1654,12 @@ export default function ShipHero({
                 // 0.28 / 0.12 before picking.
                 //
                 // Solid colour fallback while the image loads.
-                backgroundColor: '#060c14',
+                // ── AND NO GROUND EITHER, IN A PANEL ──────────────────
+                // The navy is this drawer's own floor, which it needs when it
+                // is a sheet sliding over a page. Inside the ship panel it is a
+                // second, bluer rectangle laid inside the card's warm base —
+                // the thing you actually see as "why is this tab navy".
+                backgroundColor: bare ? 'transparent' : '#060c14',
                 // The scrim is per-tab now, because these three screens want
                 // different amounts of picture.
                 //

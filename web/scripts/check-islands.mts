@@ -172,7 +172,7 @@ if (bad) process.exitCode = 1
 //      is a way from an open chapter into a shut one without passing its mouth
 //      — the one thing a linear campaign cannot have, and the easiest thing to
 //      introduce by nudging a bearing.
-//   3. The junction and the sortie have to be OUTSIDE every chapter's water, or
+//   3. The junction and the sea gate have to be OUTSIDE every chapter's water, or
 //      you arrive already through a wall and its gate means nothing.
 //   4. A strait must actually REACH its bay. It is derived, so this can only go
 //      wrong by someone making a bay bigger than the run out to it — but that
@@ -185,7 +185,7 @@ if (bad) process.exitCode = 1
     HUB, HUB_R, BAY_AT, BAYS, bayCentre, mouthOf, entryOf, straitLen, raidReach,
     opensBay, inChapterWater, toStrait,
   } = await import('../app/(app)/sea/raidWaters')
-  const { RAID_EDGE, EXP_ORIGIN, SORTIE } = await import('../app/(app)/sea/chart')
+  const { RAID_EDGE, EXP_ORIGIN, SEA_GATE } = await import('../app/(app)/sea/chart')
   const { RAID_CHAPTERS, RAID_MAP } = await import('../lib/raidMap')
 
   type B = (typeof BAYS)[number]
@@ -274,7 +274,7 @@ if (bad) process.exitCode = 1
 
   for (const b of BAYS) {
     if (inChapterWater(b, HUB.x, HUB.y)) { console.error(`  ✗ the junction is inside ${b.name}`); bad++ }
-    if (inChapterWater(b, SORTIE.x, SORTIE.y)) { console.error(`  ✗ the sortie is inside ${b.name}`); bad++ }
+    if (inChapterWater(b, SEA_GATE.x, SEA_GATE.y)) { console.error(`  ✗ the sea gate is inside ${b.name}`); bad++ }
   }
   const back = BAYS.map(b => -toStrait(b, HUB.x, HUB.y).along)
   console.log(`    ok    the junction's middle is ${Math.min(...back).toFixed(0)}px off the nearest mouth`)

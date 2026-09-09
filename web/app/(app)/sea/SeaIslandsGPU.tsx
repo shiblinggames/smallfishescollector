@@ -279,7 +279,7 @@ export default function SeaIslandsGPU({
    *  see the effect below, which compares by VALUE because a captain is
    *  expensive to assemble and cheap to steer. */
   captain: CaptainLook | null
-  /** The expedition hull, past the sortie. Mutually exclusive with `captain`:
+  /** The expedition hull, past the sea gate. Mutually exclusive with `captain`:
    *  the crossing REPLACES what is at the centre of the screen rather than
    *  dressing it up, so there is one slot and two things that can fill it. */
   ship: { url: string; flip: boolean; scale?: number } | null
@@ -1549,7 +1549,7 @@ export default function SeaIslandsGPU({
       const look = lookRef.current
       const hull = shipRef.current
       if (!PIXI || !boats) return
-      // One slot. Past the sortie it is not your fishing boat, and the ship is
+      // One slot. Past the sea gate it is not your fishing boat, and the ship is
       // built through the same door so the loop that steers her does not have
       // to know which of the two it is holding.
       const built = look ? await makeCaptain(PIXI, look)

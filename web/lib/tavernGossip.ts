@@ -71,7 +71,7 @@ export const GOSSIP: Overheard[] = [
     from: 'by the fire',
   },
   {
-    say: ["Fishing boat won't go past the sortie. Won't and can't. They tell you at the gate."],
+    say: ["Fishing boat won't go past the sea gate. Won't and can't. They tell you at the gate."],
     from: 'somewhere behind you',
   },
   {

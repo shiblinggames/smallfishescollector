@@ -10,7 +10,7 @@ export interface ShipDef {
   color: string
   imageUrl?: string
   /**
-   * The hull as it appears ON THE WATER, past the sortie.
+   * The hull as it appears ON THE WATER, past the sea gate.
    *
    * A separate field rather than a name-to-filename rule. The ship screen
    * already derives its art that way and carries a guard comment about the 404

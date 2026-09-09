@@ -246,6 +246,19 @@ export default function ShipSheet({ open, focus, onClose }: {
                         transition={{ duration: 0.18, ease: 'easeOut' }}
                         style={{ overflow: 'hidden' }}>
                         <div style={{ padding: '0 0.75rem 0.7rem' }}>
+                          {/* AND WHAT SHE LOOKS LIKE. The four numbers say what
+                              she is worth and none of them says what you are
+                              buying: this is the largest purchase in the game
+                              and it was being made off a name and a price. Her
+                              own plate, the same art the front page draws the
+                              current hull with, so the two can be held against
+                              each other. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={then.image} alt="" aria-hidden decoding="async" style={{
+                            display: 'block', width: '100%', maxWidth: 260, margin: '0 auto 0.5rem',
+                            height: 108, objectFit: 'contain',
+                            filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.65))',
+                          }} />
                           {/* WHAT THE MONEY BUYS, in the same four numbers she
                               is already described by. A price with no answer to
                               "and then what" is a number to be afraid of. */}

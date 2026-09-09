@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PLACES, YOON, RESIDENTS, SOCIALS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE, SORTIE } from './chart'
+import { PLACES, YOON, RESIDENTS, SOCIALS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE, SEA_GATE } from './chart'
 import {
   HUB, HUB_R, BAYS, bayCentre, bayOpen,
   ENCOUNTERS, encounterAt, MAELSTROMS,
@@ -101,13 +101,13 @@ const gutter = (roomy: boolean) =>
  * arc and the chord round without a second copy of the drawing code.
  */
 type Half = { cx: number; cy: number; r: number; flat: number; dir: 1 | -1 }
-const HALVES: Record<'fishing' | 'expeditions' | 'sortie', Half> = {
+const HALVES: Record<'fishing' | 'expeditions' | 'seagate', Half> = {
   fishing:     { cx: 0, cy: 0,            r: OUTER_EDGE, flat: NORTH_WALL, dir: 1 },
   expeditions: { cx: EXP_ORIGIN.x, cy: EXP_ORIGIN.y, r: EXP_EDGE, flat: NORTH_WALL, dir: -1 },
-  // Past the sortie it is the SAME disc drawn wider — same centre, same flat
+  // Past the sea gate it is the SAME disc drawn wider — same centre, same flat
   // side, bigger radius. A captain out there is off the anchorage chart
   // entirely, and a map that cannot show where its own boat is is not a map.
-  sortie:      { cx: EXP_ORIGIN.x, cy: EXP_ORIGIN.y, r: RAID_EDGE, flat: NORTH_WALL, dir: -1 },
+  seagate:      { cx: EXP_ORIGIN.x, cy: EXP_ORIGIN.y, r: RAID_EDGE, flat: NORTH_WALL, dir: -1 },
 }
 const worldW = (h: Half) => h.r * 2
 const worldH = (h: Half) => h.dir === 1 ? (h.cy + h.r) - h.flat : h.flat - (h.cy - h.r)
@@ -187,7 +187,7 @@ export default function Minimap({
   open: boolean
   onClose: () => void
   /** Which half of the world to draw. See HALVES. */
-  side?: 'fishing' | 'expeditions' | 'sortie'
+  side?: 'fishing' | 'expeditions' | 'seagate'
   /** The live bitfield. Read, never written — the map owns it. */
   fog: Uint8Array
   /** The boat, read at draw time. */
@@ -309,7 +309,7 @@ export default function Minimap({
 
     // ── THE CAMPAIGN'S WATER ─────────────────────────────────────────────
     //
-    // Out past the sortie the fog grid does not reach — it stops at the reef —
+    // Out past the sea gate the fog grid does not reach — it stops at the reef —
     // so this half of the world was drawn as a dashed rim, a boat, and nothing
     // else at all. A captain three bays deep could not see where she was, which
     // of the four roads she had come up, or which way home was, and those are
@@ -324,14 +324,14 @@ export default function Minimap({
     // the ports are never fogged either.
     if (side !== 'fishing') {
       // THE WAY HOME, first and underneath everything. A dashed run from the
-      // junction down to the sortie and on to the harbour: the one line on this
+      // junction down to the sea gate and on to the harbour: the one line on this
       // map that answers "which way is back".
       ctx.strokeStyle = 'rgba(240,192,64,0.30)'
       ctx.lineWidth = 1.4
       ctx.setLineDash([5, 5])
       ctx.beginPath()
       ctx.moveTo(tx(HUB.x), ty(HUB.y))
-      ctx.lineTo(tx(SORTIE.x), ty(SORTIE.y))
+      ctx.lineTo(tx(SEA_GATE.x), ty(SEA_GATE.y))
       ctx.lineTo(tx(EXP_ORIGIN.x), ty(EXP_ORIGIN.y))
       ctx.stroke()
       ctx.setLineDash([])
@@ -493,16 +493,16 @@ export default function Minimap({
         ctx.beginPath(); ctx.arc(mx, my, Math.max(1.5, m.r * s * 0.2), 0, Math.PI * 2); ctx.fill()
       }
 
-      // THE SORTIE, named. It is the one gap in the harbour wall and therefore
+      // THE SEA_GATE, named. It is the one gap in the harbour wall and therefore
       // the whole answer to "how do I get home" — a mark that is not labelled
       // is a mark you have to already know.
-      const sx = tx(SORTIE.x), sy = ty(SORTIE.y)
+      const sx = tx(SEA_GATE.x), sy = ty(SEA_GATE.y)
       ctx.fillStyle = INK.port
       ctx.beginPath(); ctx.arc(sx, sy, 3, 0, Math.PI * 2); ctx.fill()
       ctx.fillStyle = 'rgba(244,236,216,0.9)'
       ctx.font = '600 10px Karla, system-ui, sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText('The Sortie — home', sx, sy + 14)
+      ctx.fillText('The Sea Gate · home', sx, sy + 14)
     }
 
     // ── THE PORTS, always ────────────────────────────────────────────────

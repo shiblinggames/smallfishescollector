@@ -32,7 +32,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SEA_GATE, SEA_GATE_HALF, inSeaGate, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
 import { getShip } from '@/lib/ships'
 import { shipSkinSeaImage, shipSkinSeaScale } from '@/lib/shipSkins'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
@@ -1399,7 +1399,7 @@ export default function SeaMap({
   /** Admins pass every gate the expedition page passes them through — the
    *  maelstroms read the same rule. */
   isAdmin?: boolean
-  /** The expedition hull you own. Only ever drawn beyond the sortie — inside
+  /** The expedition hull you own. Only ever drawn beyond the sea gate — inside
    *  the anchorage and the fishing grounds you are on the fishing boat. */
   shipTier: number
   /** The skin she is painted in, if any. Only ever shows on a Man-o-War; the
@@ -1411,7 +1411,7 @@ export default function SeaMap({
   /** And which room inside it — `/crew?tab=recruits` was an errand, not an
    *  address, so the errand is carried across. */
   openCard?: 'assign' | 'recruits' | 'roster' | 'wardrobe' | null
-  /** How many crew are in raid seats. The sortie's confirm says who is coming,
+  /** How many crew are in raid seats. The sea gate's confirm says who is coming,
    *  and "nobody" is a thing it has to be able to say. */
   /** The raid party as it would actually board: names and card art, from the
    *  same loader every raid uses. The dock is where the muster is confirmed. */
@@ -1423,7 +1423,7 @@ export default function SeaMap({
   raidSeats: number
   itemMounts: number
   /** Owed repairs. Sailing a sunk ship is refused at the raid screen; the dock
-   *  is where that should be discovered, not past the sortie. */
+   *  is where that should be discovered, not past the sea gate. */
   /** The Homestead Portal: highest tier owned, and components in hand —
    *  cache chests opened minus components already spent. */
   /** The portal, as this captain has built it: how far the band ladder
@@ -1438,7 +1438,7 @@ export default function SeaMap({
   /** Where the boat was when you last left. Null = never sailed. */
   start: Vec | null
   /** WHICH SEA that position is in. Restored together with it, so a captain
-   *  who logged off in the anchorage or out on the sortie comes back there on
+   *  who logged off in the anchorage or out on the sea gate comes back there on
    *  the right hull rather than being quietly returned to the fishing grounds. */
   startSide: 'fishing' | 'anchorage' | 'moored' | 'open'
   /** Everything the collection log reads. See SeaLog. */
@@ -1521,12 +1521,12 @@ export default function SeaMap({
   useEffect(() => { collectLevelRewards() }, [collectLevelRewards])
 
   /**
-   * OUT ON THE SORTIE — past the anchorage rim, on the ship you own.
+   * OUT ON THE SEA_GATE — past the anchorage rim, on the ship you own.
    *
    * The same ref-plus-state pair as the anchorage and for the same reason: the
    * frame loop reads a ref sixty times a second and the chrome reads a state
    * when it changes. What differs is that this one is not something you can
-   * drift into. `sortieAsk` holds the confirm open while the boat sits in the
+   * drift into. `sea gateAsk` holds the confirm open while the boat sits in the
    * mouth, and nothing changes until it is answered.
    *
    * IT PERSISTS, and the first cut of this did not. Both northern states lived
@@ -1560,8 +1560,8 @@ export default function SeaMap({
   useEffect(() => { setBoatId(boatId0) }, [boatId0])
   useEffect(() => { setHatId(hatId0) }, [hatId0])
 
-  const [onSortie, setOnSortie] = useState(startSide === 'open')
-  const sortieRef = useRef(startSide === 'open')
+  const [onSeaGate, setOnSeaGate] = useState(startSide === 'open')
+  const seaGateRef = useRef(startSide === 'open')
   /** Which shut water is refusing her, if any (a bay id). A ref beside the
    *  state so the loop can tell a change from a repeat without reading state
    *  it does not own. */
@@ -1714,10 +1714,10 @@ export default function SeaMap({
    *
    * The swap happens at a dock rather than at the gate, so the expedition ship
    * exists inside the anchorage: tied up, or crossing the harbour toward the
-   * sortie. `onSortie` only says whether you are past the rim.
+   * sea gate. `onSeaGate` only says whether you are past the rim.
    *
    * The two rules that make the docks mean anything both hang off this:
-   * a fishing boat may not pass the sortie, and a warship may not go back down
+   * a fishing boat may not pass the sea gate, and a warship may not go back down
    * through the reef.
    */
   const [onShip, setOnShip] = useState(startSide === 'moored' || startSide === 'open')
@@ -2703,9 +2703,9 @@ export default function SeaMap({
    * WHAT IS UNDER YOU, in the three numbers the frame loop needs.
    *
    * The loop draws a wake, a waterline and a heel, and every one of them was
-   * written for the fishing boat. Past the sortie the thing on the water is
+   * written for the fishing boat. Past the sea gate the thing on the water is
    * two to three times the size with its keel in a different place, so rather
-   * than sprinkling `onSortie ?` through the hot path, the hull answers for
+   * than sprinkling `onSeaGate ?` through the hot path, the hull answers for
    * itself here and the loop just reads numbers.
    *
    * `scale` is a ratio of DRAWN WIDTHS, both measured. The fishing boat's
@@ -2716,7 +2716,7 @@ export default function SeaMap({
   const hull = useMemo(() => {
     if (!onShip) return {
       scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX, weight: 0,
-      // Never actually read: a fight happens past the sortie, where the thing
+      // Never actually read: a fight happens past the sea gate, where the thing
       // on the water is a warship. Here so both hulls answer the same
       // questions and the loop never has to ask which one it is holding.
       beamW: FISHING_HULL_W,
@@ -2770,7 +2770,7 @@ export default function SeaMap({
    * captain beyond a wall they can only cross at the gate.
    *
    * The refusal had a cost nobody paid until there was something up there worth
-   * keeping: the anchorage and the sortie survived only as long as the
+   * keeping: the anchorage and the sea gate survived only as long as the
    * component did. Switching tabs and coming back reset both, so a captain who
    * had taken their Man-o-War out was silently put back in the fishing grounds
    * on the fishing boat.
@@ -2783,7 +2783,7 @@ export default function SeaMap({
    *  encodings of the same fact is how the position and the side ended up
    *  travelling by different routes and arriving disagreeing. */
   const sideNow = useCallback((): 'fishing' | 'anchorage' | 'moored' | 'open' =>
-    sortieRef.current ? 'open'
+    seaGateRef.current ? 'open'
       : shipRef.current ? 'moored'
         : sideRef.current ? 'anchorage' : 'fishing', [])
 
@@ -4281,7 +4281,7 @@ export default function SeaMap({
    * THE PLAYER, FOR THE CANVAS.
    *
    * Null when the canvas is not drawing her: with the flag off, or past the
-   * sortie, where the hull changes outright and the Warship is still a DOM
+   * sea gate, where the hull changes outright and the Warship is still a DOM
    * sprite of its own. A null look tears the captain down, and `skipper()`
    * quietly stops doing anything, so there is never a moment where two of her
    * are on the water.
@@ -4622,18 +4622,18 @@ export default function SeaMap({
    */
   const finnBearing = useMemo(() => {
     // Not in the anchorage — he is moored out in the Shallows — and not past
-    // the sortie, where an arrow to him would point across a reef at a chart he
+    // the sea gate, where an arrow to him would point across a reef at a chart he
     // is not on. It does NOT drop out as you close on him: the compass already
     // hides a mark once its place is on screen, and an arrow that vanishes the
     // moment you get near is the one thing that would make it untrustworthy.
-    if (!finn || inAnchorage || onSortie) return null
+    if (!finn || inAnchorage || onSeaGate) return null
     return {
       ...(() => { const a = finnNow(); return { x: a.x, y: a.y } })(),
       state: finn.questReady ? 'ready' as const
         : finn.quest ? 'working' as const
         : 'offering' as const,
     }
-  }, [finn, inAnchorage, onSortie])
+  }, [finn, inAnchorage, onSeaGate])
 
   /**
    * ── WHAT THE CAMPAIGN WANTS FROM YOU NEXT ────────────────────────────
@@ -5232,8 +5232,8 @@ export default function SeaMap({
     shipRef.current = ship
     setOnShip(ship)
     const out = p.side === 'open'
-    sortieRef.current = out
-    setOnSortie(out)
+    seaGateRef.current = out
+    setOnSeaGate(out)
   }, [])
 
   /**
@@ -6049,7 +6049,7 @@ export default function SeaMap({
       // A WARSHIP DOES NOT GO DOWN THROUGH THE REEF. The fishing grounds are
       // for the fishing boat; the whole point of leaving her at the dock is
       // that you took something else out. Held at the line with a word, the
-      // same way the sortie holds the fishing boat.
+      // same way the sea gate holds the fishing boat.
       if (shipRef.current && inGate(pos.current.x) && isNorth !== wasNorth && !isNorth) {
         pos.current.y = NORTH_WALL - REEF_MARGIN
         vel.current.y = 0
@@ -6097,17 +6097,17 @@ export default function SeaMap({
       // and the reef itself is the flat side of both — already handled above,
       // so all this has to do is stop you sailing off the round part.
       const home = sideRef.current ? EXP_ORIGIN : { x: 0, y: 0 }
-      // THE ANCHORAGE RIM MOVES OUT once you are on the sortie. Same centre,
+      // THE ANCHORAGE RIM MOVES OUT once you are on the sea gate. Same centre,
       // bigger radius, so "am I past the edge" stays one subtraction and the
       // raid water is simply more of the same disc rather than a third
       // coordinate system bolted to the side of two.
       // THE HARBOUR WALL IS THE SAME SHAPE OF PROBLEM as the reef, and takes
       // the same answer: stop at the band's inner face, except in the one gap.
-      // Inside the sortie's mouth the rim is the real rim, so the ship can
+      // Inside the sea gate's mouth the rim is the real rim, so the ship can
       // reach it and cross, and the fishing boat can reach it and be told no.
       const rim = sideRef.current
-        ? (sortieRef.current ? RAID_EDGE
-          : inSortie(pos.current.x, pos.current.y) ? EXP_EDGE : EXP_EDGE - REEF_FACE)
+        ? (seaGateRef.current ? RAID_EDGE
+          : inSeaGate(pos.current.x, pos.current.y) ? EXP_EDGE : EXP_EDGE - REEF_FACE)
         : OUTER_EDGE
 
       // ── THE EDGE OF THE CHART ──────────────────────────────────────
@@ -6126,7 +6126,7 @@ export default function SeaMap({
       // rim is somewhere you might want to follow round.
       const R = Math.hypot(pos.current.x - home.x, pos.current.y - home.y)
 
-      // ── THE SORTIE ─────────────────────────────────────────────────
+      // ── THE SEA_GATE ─────────────────────────────────────────────────
       //
       // The rim is a wall everywhere except one mouth, exactly like the reef.
       // What is different is that this crossing changes the hull under you, so
@@ -6138,13 +6138,13 @@ export default function SeaMap({
       // Coming BACK needs no confirm and gets none. Returning to harbour is not
       // a decision, and a captain who has just been beaten out there should not
       // have to agree to come home.
-      if (sideRef.current && !sortieRef.current && R > rim - 40 && inSortie(pos.current.x, pos.current.y)) {
+      if (sideRef.current && !seaGateRef.current && R > rim - 40 && inSeaGate(pos.current.x, pos.current.y)) {
         if (shipRef.current) {
           // ON THE SHIP, so the gate is yours. Straight through, no asking —
           // the decision was made at the dock, and being asked twice for one
           // crossing is how a gate becomes a chore.
-          sortieRef.current = true
-          setOnSortie(true)
+          seaGateRef.current = true
+          setOnSeaGate(true)
           vibrate([14, 30, 18])
         } else if (now - refusedAt.current > 2600) {
           // ON THE FISHING BOAT. The rim clamp below is what actually stops
@@ -6159,15 +6159,15 @@ export default function SeaMap({
       // ship and back on the fishing boat, wherever on the rim you did it —
       // the mouth is a way OUT of a wall, and there is no wall from outside.
       //
-      // The margin is not decoration. Accepting the sortie leaves the boat
+      // The margin is not decoration. Accepting the sea gate leaves the boat
       // sitting exactly ON the rim, where R < EXP_EDGE is a coin-flip on the
       // next float, and losing it would put the captain back on the fishing
       // boat in the same frame they left it.
       // BACK INSIDE THE RIM. Still on the ship — she is only left at the dock,
       // and the dock is a long way from here.
-      if (sortieRef.current && R < EXP_EDGE - 90) {
-        sortieRef.current = false
-        setOnSortie(false)
+      if (seaGateRef.current && R < EXP_EDGE - 90) {
+        seaGateRef.current = false
+        setOnSeaGate(false)
         vibrate([14, 30, 18])
       }
 
@@ -7544,7 +7544,7 @@ export default function SeaMap({
         <GateSign to={inAnchorage ? 'Fishing' : 'Expeditions'} />
         {/* Only from inside the harbour it belongs to. From the fishing
             grounds it would be a sign for a door behind a wall. */}
-        {inAnchorage && <SortieSign />}
+        {inAnchorage && <SeaGateSign />}
         {/* The Homestead Portal, wearing the deepest band it can reach. */}
         {/* PortalRing LIVED HERE. The portal is a place on the water now,
             drawn with the berths in seaPortalWell — see its header for why a
@@ -8038,11 +8038,11 @@ hullRef={hullRefFor(t.key)} />
           position: 'absolute', left: '50%', top: '50%', zIndex: Z.boat,
           willChange: 'transform', pointerEvents: 'none',
         }}>
-        {/* PAST THE SORTIE IT IS NOT YOUR FISHING BOAT. The whole point of
+        {/* PAST THE SEA_GATE IT IS NOT YOUR FISHING BOAT. The whole point of
             the crossing is that the hull changes, so the captain-and-tackle
             sprite is replaced outright rather than dressed up. */}
         {/* SHE IS ON THE CANVAS UNDER THE FLAG. The wrapper stays either way —
-            the loop writes her bob and heel to it, and past the sortie it is
+            the loop writes her bob and heel to it, and past the sea gate it is
             still carrying the Warship, which has not moved yet. */}
         {GPU_ISLANDS ? null
           : onShip
@@ -8173,7 +8173,7 @@ hullRef={hullRefFor(t.key)} />
       </AnimatePresence>
 
       {/* ── THE BERTH SHEET, at the Gunwharf ────────────────────────────
-          Where the hull under you changes. It used to happen at the sortie's
+          Where the hull under you changes. It used to happen at the sea gate's
           mouth, in open water, on a boat that was drifting — the most
           consequential thing you can do on this chart and you could fall into
           it. Now you go ashore and are asked, and the hull you are not sailing
@@ -8699,7 +8699,7 @@ hullRef={hullRefFor(t.key)} />
           finn={finnBearing}
           // WHICH SEA'S HEADINGS TO GIVE — see the note on the prop. Past the
           // rim the harbour is behind you and the bays are the whole world.
-          side={onSortie ? 'bays' : inAnchorage ? 'anchorage' : 'fishing'}
+          side={onSeaGate ? 'bays' : inAnchorage ? 'anchorage' : 'fishing'}
           // ONLY OUT PAST THE REEF, and only while there is something waiting.
           // On the fishing side the campaign is somewhere else entirely and an
           // arrow pointing over the horizon at it would be noise.
@@ -9288,12 +9288,12 @@ hullRef={hullRefFor(t.key)} />
         onClose={() => setMapOpen(false)}
         fog={fogRef.current}
         at={pos}
-        side={onSortie ? 'sortie' : inAnchorage ? 'expeditions' : 'fishing'}
+        side={onSeaGate ? 'seagate' : inAnchorage ? 'expeditions' : 'fishing'}
         seaAt={p => seaAt(p, 0).solid}
         // The rival, and whether he is holding a finished job. Only on the
         // fishing half: he is moored in the Shallows and drawing him on the
         // expeditions chart would be a pin pointing through a reef.
-        finn={finn && !inAnchorage && !onSortie
+        finn={finn && !inAnchorage && !onSeaGate
           ? { ...(() => { const a = finnNow(); return { x: a.x, y: a.y } })(), ready: finn.questReady }
           : null}
         found={found}
@@ -10126,7 +10126,7 @@ const REEF = reefRocks()
  * THE ANCHORAGE'S WALL.
  *
  * The harbour used to be a disc with an invisible edge. You slid along it
- * without ever being told there was anything there, and the sortie — the one
+ * without ever being told there was anything there, and the sea gate — the one
  * place the edge means something — looked exactly like the rest of it.
  *
  * So it gets a shore, in the same rock as the reef and by the same rules: two
@@ -10154,7 +10154,7 @@ function anchorageRocks() {
     x: EXP_ORIGIN.x + Math.cos(th) * (EXP_EDGE + off),
     y: EXP_ORIGIN.y + Math.sin(th) * (EXP_EDGE + off),
   })
-  /** The sortie sits at the middle of the arc, due north. */
+  /** The sea gate sits at the middle of the arc, due north. */
   const mid = (from + to) / 2
   /** Arc distances as angles, so a stride means the same thing all the way
    *  round rather than only where the curve happens to be flattest. */
@@ -10164,7 +10164,7 @@ function anchorageRocks() {
   // Same 520 of clearance the reef uses, for the same reason: the widest
   // boulder is 820 across and jitters, so anything tighter drops half a rock
   // into the mouth.
-  const skip = ang(SORTIE_HALF + 520)
+  const skip = ang(SEA_GATE_HALF + 520)
   for (const row of [0, 1]) {
     const step = ang(REEF_STEP)
     for (let th = from + (row * step) / 2; th < to; th += step) {
@@ -10184,14 +10184,14 @@ function anchorageRocks() {
   // NOT MIRRORED and not swapped: the art is lit from the upper left, and the
   // west stone stays west. Flipping one to tidy the silhouette would flip its
   // light and break the run it stands in.
-  const gate = ang(SORTIE_HALF + 370)
+  const gate = ang(SEA_GATE_HALF + 370)
   const w = at(mid - gate, 40), e = at(mid + gate, 40)
   out.push({ art: '/sea/rock-gate-w.png', x: w.x, y: w.y, size: 760 })
   out.push({ art: '/sea/rock-gate-e.png', x: e.x, y: e.y, size: 760 })
   // One boulder behind each, so they grow out of the wall rather than reading
   // as two towers parked on the end of it.
   for (const side of [-1, 1]) {
-    const p = at(mid + side * ang(SORTIE_HALF + 640), -140)
+    const p = at(mid + side * ang(SEA_GATE_HALF + 640), -140)
     out.push({ art: '/sea/rock-crag.png', x: p.x, y: p.y, size: 520 })
   }
 
@@ -10199,7 +10199,7 @@ function anchorageRocks() {
   // Coverage and scale, exactly as on the reef: the boulders leave bare
   // patches the eye reads as a way through, and rock with nothing small in it
   // has no size to it.
-  const pebbleSkip = ang(SORTIE_HALF + 300)
+  const pebbleSkip = ang(SEA_GATE_HALF + 300)
   const pstep = ang(PEBBLE_STEP)
   for (let th = from; th < to; th += pstep) {
     if (Math.abs(th - mid) < pebbleSkip) continue
@@ -10826,14 +10826,14 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
  * a label was never lying on the water.
  */
 /**
- * THE SIGN OVER THE SORTIE, and the placeholder standing in for whatever
+ * THE SIGN OVER THE SEA_GATE, and the placeholder standing in for whatever
  * eventually marks it.
  *
  * Same idiom as the arch's sign: drawn in the WORLD, counter-squashed, lifted
  * clear of the plane. It grows and shrinks with the camera because it is on the
  * gap rather than being a caption about the gap.
  *
- * Two markers flank the mouth at exactly SORTIE_HALF, so the opening's width is
+ * Two markers flank the mouth at exactly SEA_GATE_HALF, so the opening's width is
  * a thing you can SEE rather than a number you discover by bumping into rock.
  * The arch does not need this — it is a literal hole in a literal reef — but
  * the anchorage rim is invisible water, and an invisible wall with an invisible
@@ -11015,10 +11015,10 @@ const PortalBeam = memo(function PortalBeam({ tier }: { tier: number }) {
   )
 })
 
-const SortieSign = memo(function SortieSign() {
+const SeaGateSign = memo(function SeaGateSign() {
   return (
     <div aria-hidden style={{
-      position: 'absolute', left: SORTIE.x, top: SORTIE.y - 150,
+      position: 'absolute', left: SEA_GATE.x, top: SEA_GATE.y - 150,
       transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
       transformOrigin: 'bottom center', whiteSpace: 'nowrap', pointerEvents: 'none',
     }}>
@@ -11036,9 +11036,9 @@ const SortieSign = memo(function SortieSign() {
         color: 'rgba(255,226,170,0.9)', margin: 0,
         textAlign: 'center', marginRight: '-0.24em',
         textShadow: '0 2px 16px rgba(0,0,0,0.98), 0 0 34px rgba(0,0,0,0.8)',
-      }}>The Sortie</p>
+      }}>The Sea Gate</p>
       <div style={{
-        height: 1, width: SORTIE_HALF, margin: '7px auto 0',
+        height: 1, width: SEA_GATE_HALF, margin: '7px auto 0',
         background: 'linear-gradient(90deg, transparent, rgba(255,214,140,0.5), transparent)',
       }} />
       <p className="font-karla font-600" style={{
@@ -13427,7 +13427,7 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
    *
    * THREE VALUES AND NOT TWO, because the expedition half has an inside and an
    * outside. In the anchorage the reef's gap is the way back to fishing; out in
-   * a bay the sortie is between you and that gap, and what you actually want
+   * a bay the sea gate is between you and that gap, and what you actually want
    * pointing at is the harbour itself.
    */
   side: 'fishing' | 'anchorage' | 'bays'
@@ -13600,8 +13600,8 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
   //
   // AND NONE AT ALL FROM A BAY. The hall, the forge and the posting house are
   // all inside the harbour, so from out here every one of them is really the
-  // same heading — the sortie — printed three times under three names. The
-  // sortie itself is pushed below, once.
+  // same heading — the sea gate — printed three times under three names. The
+  // sea gate itself is pushed below, once.
   const ports = (side === 'bays' ? [] : PLACES.filter(p => p.kind === 'port' && (p.y < NORTH_WALL) === north))
     .map(p => ({ p, ...project(p.x, p.y) }))
     // CREW WAITING OUTRANKS PROXIMITY. The nearest port is the one you need to
@@ -13662,7 +13662,7 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
   // AND IT IS THE WAY BACK TOO. From the anchorage the same gap is the only
   // road to the fishing grounds and is just as unfindable by sweeping, so the
   // mark stays and only its name changes. Not offered from a BAY: out there the
-  // sortie is between you and it, and an arrow pointing through a wall at
+  // sea gate is between you and it, and an arrow pointing through a wall at
   // something four crossings away is a lie about how far you have to go.
   if (!north || inExpHub) {
     const g = project(GATE_X, NORTH_WALL)
@@ -13672,16 +13672,16 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
     })
   }
 
-  // ── AND THE SORTIE, FROM OUT IN THE BAYS ─────────────────────────────
+  // ── AND THE SEA_GATE, FROM OUT IN THE BAYS ─────────────────────────────
   //
   // The mouth of the anchorage, which is where everything you do between
   // voyages is: the hall, the forge, the posting house, the berth. Out in a bay
   // it is the way in to all of them and there is nothing on the water pointing
   // at it.
   if (north && !inExpHub) {
-    const g = project(SORTIE.x, SORTIE.y)
+    const g = project(SEA_GATE.x, SEA_GATE.y)
     marks.push({
-      id: 'sortie', name: 'The Anchorage', dim: false, dist: true,
+      id: 'seagate', name: 'The Anchorage', dim: false, dist: true,
       sx: g.sx, sy: g.sy, world: g.world,
     })
   }

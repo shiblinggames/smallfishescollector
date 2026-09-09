@@ -2,7 +2,7 @@
 
 // ── THE WARGATE'S LEDGER ────────────────────────────────────────────────────
 //
-// What the standing portal north of the sortie shows when you step in: every
+// What the standing portal north of the sea gate shows when you step in: every
 // boss on the water, in campaign order, as the same cards the expedition map
 // deals — the drops, the records, all of it — with one difference of verb.
 // Pressing the card does not enter the raid; it SAILS you there. The gate

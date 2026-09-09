@@ -308,7 +308,7 @@ export async function makeCaptain(
 }
 
 /**
- * THE EXPEDITION HULL, past the sortie.
+ * THE EXPEDITION HULL, past the sea gate.
  *
  * Not a captain at all: one sprite, centred, with a shadow under it. The whole
  * point of the crossing is that the hull CHANGES rather than being dressed up,
