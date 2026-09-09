@@ -26,7 +26,7 @@ import {
   fogCentre, fogHas, fogProgress,
 } from '@/lib/seaExplore'
 import {
-  XFOG_CELL, XFOG_CELLS, xfogCentre, xfogHas,
+  XFOG_CELL, XFOG_CELLS, xfogCentre, xfogOpen,
 } from '@/lib/seaExploreExp'
 import { vibrate } from '@/lib/haptics'
 
@@ -481,7 +481,7 @@ export default function Minimap({
       {
         const cs = XFOG_CELL * s + 1
         for (let i = 0; i < XFOG_CELLS; i++) {
-          if (xfogHas(xfog, i)) continue
+          if (xfogOpen(xfog, i)) continue
           const c = xfogCentre(i)
           // ── AND IT IS THE MAP'S SHAPE, NOT THE GRID'S ──────────────
           //

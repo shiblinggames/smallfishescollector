@@ -30,7 +30,7 @@ import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
 import {
-  decodeXfog, xfogHas, xfogReveal, xfogSet, seedXfog, inExpWater,
+  decodeXfog, xfogHas, xfogOpen, xfogReveal, xfogSet, seedXfog, inExpWater,
   XFOG_CELL, XFOG_W, XFOG_H, XFOG_X0, XFOG_Y0, XFOG_CELLS,
 } from '@/lib/seaExploreExp'
 import type { RenownState } from '@/app/(app)/actions/renown'
@@ -3032,7 +3032,7 @@ export default function SeaMap({
    */
   const xfogAlpha = useRef<Float32Array>((() => {
     const a = new Float32Array(XFOG_CELLS)
-    for (let i = 0; i < XFOG_CELLS; i++) a[i] = xfogHas(xfogRef.current, i) ? 0 : 1
+    for (let i = 0; i < XFOG_CELLS; i++) a[i] = xfogOpen(xfogRef.current, i) ? 0 : 1
     return a
   })())
   const xfogCanvas = useRef<HTMLCanvasElement | null>(null)
@@ -7027,7 +7027,7 @@ export default function SeaMap({
           let live = false
           const img = xfogImage.current ??= ctx.createImageData(XFOG_W, XFOG_H)
           for (let i = 0; i < XFOG_CELLS; i++) {
-            const target = xfogHas(xfogRef.current, i) ? 0 : 1
+            const target = xfogOpen(xfogRef.current, i) ? 0 : 1
             if (a[i] !== target) {
               a[i] += (target - a[i]) * k
               // Snap the last sliver. An exponential never actually arrives,

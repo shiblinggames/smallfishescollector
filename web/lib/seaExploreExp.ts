@@ -26,7 +26,7 @@
 // parts they have NOT been rather than as an erasure of the parts they have.
 
 import { HUB, HUB_R, BAYS, bayCentre } from '@/app/(app)/sea/raidWaters'
-import { SEA_GATE } from '@/app/(app)/sea/chart'
+import { EXP_ORIGIN, EXP_EDGE, RAID_EDGE, NORTH_WALL } from '@/app/(app)/sea/chart'
 
 /** World pixels per cell. The same size the fishing side uses: it is tuned to
  *  how much of the sea a viewport shows, and that does not change up here. */
@@ -44,9 +44,22 @@ export const XFOG_REVEAL = 1
  * with the old extent would quietly stop covering the new water. Padded by a
  * cell so a hull sitting on the outermost rim still has somewhere to stand.
  *
- * The SOUTH edge is the Sea Gate. South of that is the anchorage, which is
- * management — you are in it constantly and fogging it would be noise about a
- * place you have never once been unable to find.
+ * ── AND THE SOUTH EDGE IS THE REEF, NOT THE GATE ───────────────────────────
+ *
+ * It was the gate, which drew a straight horizontal cut across the world at
+ * that latitude: fog to the north of it, nothing to the south, and a hard line
+ * between them running the full width of the chart. That line is not any real
+ * boundary. The anchorage is a DISC and the gate is one point on its rim, so
+ * the water lying east and west of the harbour at the same latitude is open sea
+ * nobody has sailed and it was being handed over for free.
+ *
+ * So the grid runs all the way down to the reef and the ANCHORAGE ITSELF is cut
+ * out of it (see `FREE`). The fog's edge is that harbour's own curve, which is
+ * the shape the boundary actually has.
+ *
+ * Growing it southward is safe: `XFOG_Y0` is the NORTHERN edge and an index is
+ * measured from there, so adding rows at the bottom leaves every bit already
+ * stored exactly where it was.
  */
 const bounds = (() => {
   let x0 = HUB.x - HUB_R, x1 = HUB.x + HUB_R
@@ -57,7 +70,7 @@ const bounds = (() => {
     y0 = Math.min(y0, c.y - b.r)
   }
   const pad = XFOG_CELL
-  return { x0: x0 - pad, x1: x1 + pad, y0: y0 - pad, y1: SEA_GATE.y + pad }
+  return { x0: x0 - pad, x1: x1 + pad, y0: y0 - pad, y1: NORTH_WALL }
 })()
 
 export const XFOG_X0 = bounds.x0
@@ -66,9 +79,56 @@ export const XFOG_W = Math.ceil((bounds.x1 - bounds.x0) / XFOG_CELL)
 export const XFOG_H = Math.ceil((bounds.y1 - bounds.y0) / XFOG_CELL)
 export const XFOG_CELLS = XFOG_W * XFOG_H
 
-/** Is this point on the campaign's half of the world at all? */
+/** Is this point on the campaign's half of the world at all? North of the reef
+ *  is the whole of the test: the anchorage is in here too, and is simply never
+ *  fogged (see FREE). */
 export function inExpWater(y: number): boolean {
   return y <= bounds.y1
+}
+
+/**
+ * ── THE CELLS THAT ARE NEVER FOG ────────────────────────────────────────────
+ *
+ * Three kinds, marked once at module load and read by both things that draw:
+ *
+ *   THE ANCHORAGE. Management water. You are in it constantly, it has never
+ *   once been hard to find, and covering it would be a grey disc over the seven
+ *   islands a captain uses most. Its rim is the fog's southern edge, and that
+ *   is the whole point of cutting it out: the boundary is the HARBOUR'S OWN
+ *   CURVE rather than a straight line ruled across the world.
+ *
+ *   THE FISHING SEA, south of the reef. The grid is a rectangle and it has to
+ *   reach down past the harbour to get round the sides of it, which puts its
+ *   bottom rows over the other half of the game. That sea has its own fog and
+ *   its own rules and this one has no business painting on it.
+ *
+ *   OFF THE CHART. Past RAID_EDGE there is no water at all. Fog there advertises
+ *   a sea that does not exist, and somebody would spend an evening sailing at
+ *   it. Same reason the minimap has always culled its own corners.
+ *
+ * A SET rather than a test at each draw, because there are two drawers and they
+ * must not disagree about where the harbour ends — and because the answer never
+ * changes, so recomputing it per cell per frame is work with a known result.
+ */
+const FREE = (() => {
+  const f = new Uint8Array(XFOG_W * XFOG_H)
+  for (let i = 0; i < f.length; i++) {
+    const cx = XFOG_X0 + ((i % XFOG_W) + 0.5) * XFOG_CELL
+    const cy = XFOG_Y0 + (Math.floor(i / XFOG_W) + 0.5) * XFOG_CELL
+    const d = Math.hypot(cx - EXP_ORIGIN.x, cy - EXP_ORIGIN.y)
+    // Generous by half a cell on the harbour, so its rim is clear water rather
+    // than a ring of half-lit squares.
+    if (d <= EXP_EDGE + XFOG_CELL * 0.5) f[i] = 1
+    else if (cy > NORTH_WALL) f[i] = 1
+    else if (d > RAID_EDGE) f[i] = 1
+  }
+  return f
+})()
+
+/** Seen, or never fogged in the first place. THE ONE QUESTION BOTH DRAWERS ASK
+ *  — `xfogHas` alone is the stored mask and would put fog over the harbour. */
+export function xfogOpen(bits: Uint8Array, i: number): boolean {
+  return i >= 0 && (FREE[i] === 1 || xfogHas(bits, i))
 }
 
 /** Cell index for a world point, or -1 if it is off this grid. */
