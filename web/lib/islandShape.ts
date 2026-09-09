@@ -81,111 +81,26 @@ const N = 160
  * The coastline radii for an island, in percent of its box, one per Nth of a
  * turn. Seeded off the id so it is stable and different for every island.
  *
- * ── SIX OF TEN ISLANDS WERE THE SAME SHAPE, AND IT WAS ARITHMETIC ──────────
- *
- * The old generator was five octaves plus a lobe term at period ONE OR TWO. A
- * period-one term is `sin(a + phase)`, and a shape built on it has the property
- * that opposite radii always sum to the same number — every diameter identical,
- * a curve of constant width. Measured across the chart, six islands came out at
- * an aspect of exactly 1.000 and the other four at 1.4 to 1.55. Two families,
- * one of them perfect blobs, and no amount of texture on top fixes a silhouette
- * that is mathematically a circle.
- *
- * So the shape is built from three things now, each seeded independently:
- *
- *   AN AXIS. Every island is stretched along a bearing of its own. This is the
- *   term that was missing entirely — it is what makes one island long and
- *   another squat, and it cannot be produced by adding octaves, because a
- *   period-two term is the only octave that changes aspect and it was sharing a
- *   slot with a period-one term that does not.
- *
- *   A HEADLAND, of its own strength rather than a fixed 0.095. Some coasts push
- *   one side a long way out; some barely at all.
- *
- *   AND A BAY, on about half of them. A gaussian bitten out of one bearing —
- *   the only feature here that is not a smooth harmonic, and the only one that
- *   gives a coast something a captain can name.
- *
- * ── AND THE LIMIT IS SOFT, WHICH IS NOT A DETAIL ───────────────────────────
- *
- * Three independent terms stack, and unclamped an island whose bay lands on the
- * narrow end of its own stretch pinches to almost nothing — which puts a
- * building on that bearing in the water.
- *
- * A HARD clamp fixes that and ruins the coast: measured, it pinned twenty-six
- * of the Mainland's hundred and sixty vertices to the floor, and a run of
- * vertices at one radius is a circular ARC — a smooth machined curve in the
- * middle of a hand-drawn coastline, which is more obviously wrong than the
- * pinch was.
- *
- * `tanh` compresses instead. Everything lands inside the band, extremes give up
- * more than the middle does, and nothing is ever flat. The band is what
- * `scripts/check-islands` measures every building against.
+ * Five octaves plus a slow LOBE term that pulls one or two whole sides out into
+ * headlands. Tuned against measurements rather than by eye: across all four
+ * islands the radius stays between 30% and 63%, and the biggest step between
+ * neighbours is 2.4%.
  */
 export function coastline(id: string): number[] {
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
   const rnd = (n: number) => ((h >>> (n * 3)) % 1000) / 1000
-  /** A properly mixed draw. `rnd` shifts the hash by 3n and runs out of bits
-   *  past n=7 — at n=10 there are two left and every island gets the same
-   *  answer. Everything added below uses this instead. */
-  const mix = (n: number) =>
-    ((Math.imul(h ^ Math.imul(n + 1, 0x9e3779b1), 2654435761) >>> 0) % 1000) / 1000
-
   const rug = 0.70 + rnd(1) * 0.35
-
-  /** How far from round, and along which bearing. A two-fold term repeats at
-   *  half a turn, so the axis only needs half of one. */
-  const ecc = 0.08 + mix(1) * 0.16
-  const axis = mix(2) * Math.PI
-
-  /** The headland: its reach, and whether the coast has one of them or two. */
-  const head = 0.05 + mix(3) * 0.12
-  const heads = 1 + Math.floor(mix(4) * 2)
-
-  /**
-   * ── THE BAY, AND WHY IT IS ALWAYS ON THE SEAWARD SIDE ─────────────────────
-   *
-   * Bearings here are screen bearings: 0 is east, and because y runs DOWN the
-   * page, 90 degrees is SOUTH. The south face of every island is the settled
-   * one — it is the face the camera looks at, it is where the berth ring sits
-   * (east-south-east), and it is where every building table on the chart puts
-   * its houses, all of them below the centre line.
-   *
-   * A gaussian bay is the deepest single bite this generator takes, and left
-   * free it lands wherever the hash says. On the first cut it took the
-   * Mainland's south face down to 17.9% of the box while the north-west stood
-   * at 37.9% — so the town was hanging over the water, and the same bite caught
-   * the Estate and the Crew Hall's stores.
-   *
-   * Moving three buildings would have fixed those three. Putting the bay on the
-   * seaward half fixes the rule: a coast wears its drama on the side you sail
-   * PAST, and keeps its harbour side whole. That is also just where a
-   * settlement goes — you build on the sheltered face, not in the surf.
-   */
-  const bayAt = Math.PI + mix(6) * Math.PI
-  const bayW = 0.45 + mix(7) * 0.45
-  const bayD = mix(5) > 0.45 ? 4 + mix(8) * 5 : 0
-
   const out: number[] = []
   for (let i = 0; i < N; i++) {
     const a = (Math.PI * 2 * i) / N
     const wobble =
-      head * Math.sin(a * heads + rnd(3) * 6.28) +
+      0.095 * Math.sin(a * (1 + Math.floor(rnd(2) * 2)) + rnd(3) * 6.28) +
       0.055 * Math.sin(a * 3 + rnd(4) * 6.28) +
       0.028 * Math.cos(a * 5 - rnd(5) * 6.28) +
       0.012 * Math.sin(a * 9 + rnd(6) * 6.28) +
       0.004 * Math.cos(a * 17 + rnd(7) * 6.28)
-    let r = (46 + wobble * rug * 100) * (1 + ecc * Math.cos(2 * (a - axis)))
-    if (bayD > 0) {
-      let da = a - bayAt
-      while (da > Math.PI) da -= Math.PI * 2
-      while (da < -Math.PI) da += Math.PI * 2
-      r -= bayD * Math.exp(-(da * da) / (2 * bayW * bayW))
-    }
-    // Soft limit: see the note above. 48 is the middle of the band and 21 its
-    // half-width, so tanh flattens toward 27 and 69 without ever reaching them.
-    out.push(48 + 21 * Math.tanh((r - 48) / 21))
+    out.push(46 + wobble * rug * 100)
   }
   return out
 }

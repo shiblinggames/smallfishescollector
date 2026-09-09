@@ -809,43 +809,6 @@ all four outlines distinct, and land still present at the innermost terrain band
 because at 26 the straight segments were visible on the big islands and read as a polygon —
 which is exactly what makes a shape look drawn rather than surveyed.
 
-**Then six of the ten came out as the same island, and it was arithmetic.** The lobe term
-above ran at a period of ONE OR TWO. A period-one term is `sin(a + phase)`, and a shape built
-on one has the property that opposite radii always sum to the same number: every diameter
-identical, a curve of constant width. Measured across the chart, six islands sat at an aspect
-of exactly **1.000** and the other four between 1.4 and 1.55. Two families, one of them
-perfect blobs, and no amount of texture painted on top fixes a silhouette that is
-mathematically a circle. Octaves cannot fix it either, because period two is the only octave
-that changes aspect at all and it was sharing a slot with a period-one term that does not.
-
-So the outline is three seeded things now, on top of the octaves: **an axis**, so each island
-is stretched along a bearing of its own; **a headland** with its own reach rather than a fixed
-one; and **a bay** on about half of them, a gaussian bitten out of one bearing and the only
-feature here that is not a smooth harmonic.
-
-**The bay is always on the seaward side, and that is an invariant.** Bearings on the chart are
-screen bearings, so with y running down the page **90 degrees is south** — and the south face
-of every island is the settled one. It is the face the camera looks at, the berth ring sits
-east-south-east of it, and every building table on the chart puts its houses below the centre
-line. The bay is the deepest single bite the generator takes, and left free it took the
-Mainland's south face down to **17.9%** of the box while its north-west stood at **38%**: the
-town was over the water, and the same bite caught the Estate and the Crew Hall's stores.
-Moving three buildings would have fixed those three placements. Restricting the bay to the
-seaward half fixed the rule, and it is what a coast does anyway — the drama goes on the side
-you sail past, the harbour side stays whole.
-
-**A soft limiter, not a clamp.** Three independent terms stack, so the radius needs a floor
-and a ceiling or a bay landing on the narrow end of a stretch pinches the island to nothing.
-A hard `min`/`max` pinned **26 of the Mainland's 160 vertices** to the floor, which is a
-circular arc sitting in a hand-drawn coastline and reads instantly as machine-made. It is
-`48 + 21 * tanh((r - 48) / 21)` instead: the band is approached and never reached, so nothing
-is ever flat. Aspect now runs **1.04 to 1.30** with radii from 30% to 67%, biggest neighbour
-step 1.2 to 2.8%.
-
-**`check-islands` is the gate on all of this** and it caught every one of the three overhangs
-the moment the land moved. Anything that changes `coastline()` gets re-run against it, and a
-building that fails is re-placed rather than the check being relaxed.
-
 **The terrain is bands that follow the coast.** It was one flat radial gradient of brown; a
 single colour with a vignette is a shape, not a place. Each band is the *same* polygon on a
 smaller box, so its clip scales with it and every ring parallels the shore instead of being a
@@ -854,66 +817,6 @@ dry sand, scrub, grass, and a lighter crown where the ground rises — the crown
 the same corner every other highlight on the chart is lit from, so the scene agrees about
 where the sun is. Then soft dark clumps for woods: not trees (a tree is two pixels here) but
 the massed shadow a stand of them throws.
-
-**Five coasts, not one coast on a dial.** Every island drew the same five hardcoded bands -
-one sand ramp, one green ramp - with a warm-to-cool shift laid over the lot. That was not
-enough and could not have been: a dial makes ONE place at two temperatures, so ten islands on
-one dial are ten copies of a coast at ten temperatures, which is exactly how they read. There
-are five whole palettes now (dune, basalt, chalk, redstone, jungle), each carrying its own
-sand, scrub, canopy AND rock, because a chalk island with a basalt cliff is two islands
-wearing one coat. An island draws one off its seed and the dial runs INSIDE it, halved, to
-separate two islands that drew the same family. Across the ten ports all five are in use.
-
-**And the texture was eating all of it.** Five whole palettes shipped and the islands still
-looked identical, which was not the palettes' fault. `ground-turf.png` is a fully opaque
-painting with a mean of (185,185,121) and it was going on `source-atop` at 0.42 - that does
-not texture the land, it REPLACES 42% of it with one shared yellow-green, the same 42% on
-every island. Measured across the ten ports: authored separation in the green band ran 2 to
-91, what reached the screen was 1 to 50. Half the difference thrown away, and the dark
-palettes crushed into each other, because the darker a colour is the more a fixed blend toward
-a light one dominates it. The plate is desaturated and pulled half way to mid grey once, then
-laid on in **soft-light**, which contributes no hue at all: it modulates what is underneath
-and a chalk island stays chalk. Same measurement after: **3 to 111**. Pulling the plate toward
-mid first is what keeps it a modulation rather than a bleach - a texture whose mean sits well
-above mid lightens everything it touches.
-
-**The lesson is worth more than the fix.** An opaque texture composited `source-atop` is not a
-surface, it is a second colour, and it will quietly average away every colour decision made
-underneath it. Anywhere a shared plate goes over per-thing colour, it has to be grey and it
-has to be a blend mode.
-
-**The landing is a notch, not a half of the island.** The first cut of the height profile was
-one cosine, high opposite the berth and low at it. That fixes the docking and flattens far
-more coast than it needs to - and because the base outline sits inside the face outline at the
-far side, the wall only ever SHOWS on the near shore, so the half it flattened was the only
-half you could see. The islands read as flat again with all their height hidden behind them.
-The beach is a gaussian notch centred on the mooring circle now, over a two-fold ridge with
-headlands at both ends of a seeded line. Measured across the ten ports: 0.08-0.13 of full
-height at the berth, 0.5-1.0 by the south-west. Land where you land, cliff along the rest of
-the way in.
-
-**The wall knows where the waterline is.** The extrusion is three outlines: the top face a
-lift above the plane, the waterline on it, the cliff base a lift below. That last one was
-painted the same dark brown as the wall and painted OPAQUE, so the biggest islands sat on a
-plinth and the shore bands and surf the water shader draws right up to the coast stopped dead
-at the island instead of running under it. Because the two offsets are symmetric, the
-submerged band is to the pixel where the reflection of the wall goes — it was already the
-right shape, it was just painted as rock. It is translucent now, on the wall's own ramp
-mirrored (darkest at the line, lightening downward, gone), cut into slivers by alternating
-bands of alpha so it reads as a surface with swell on it rather than as a shadow. It shows as
-a crescent on the SOUTH shore, which is geometry rather than a choice: at due north the base
-outline sits inside the face and is covered, east and west the two cross, and only on the near
-side does the base clear — which is the one place a reflection would be visible anyway. Above
-the line the wall is walked as **quads, one per pair of the coastline's 160 points**, each
-filled by its own height: a single fill cannot know that this quarter of the coast shelves and
-that one does not, which is why the landing used to be painted the same dark rock as the
-headland. `shoreness` drives the colour from the palette's `beach` to its `rock` and the
-strength of the reflection with it - a beach reflects almost nothing, having almost nothing
-above the water to reflect. Each quad is stroked in its own fill as well as filled, or canvas
-antialiases both sides of every shared seam and leaves a hairline of background between them.
-**Strata** go on the same way, segment by segment: curves traced at fractions of the lift so
-they run parallel to the shore, faded out where the wall shelves, pale because they are ledges
-catching sky and dark ones read as cracks. Sand has no bedding planes in it.
 
 **Surf** is two collars hugging the coast, breathing slowly and **out of phase** — in phase
 they read as one ring pulsing, which is a UI element; out of phase they read as swell
