@@ -1417,6 +1417,7 @@ export default function SeaIslandsGPU({
         // drawn in screen space — that is what the parallax IS.
         clouds.advance(t, camX, camY, halfW, halfH, camZoom, a.screen.width, a.screen.height)
         if (!DIAG.nocull) townLayer?.cull(camX, camY, halfW, halfH)
+        townLayer?.advance(dt, camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
         // module works out for itself which of them are under way and which are

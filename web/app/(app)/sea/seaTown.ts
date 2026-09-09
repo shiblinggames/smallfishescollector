@@ -41,6 +41,7 @@
 import type { Container, Sprite, Texture } from 'pixi.js'
 import { GROUND, islandLift, liftAt, liftAtPoint } from './islandArt'
 import { texture } from './skiffArt'
+import { makeSmoke, type Chimney, type Smoke } from './seaSmoke'
 
 export type GpuBuilding = {
   /** Percent of the island's box. */
@@ -106,6 +107,8 @@ export type Towns = {
   /** Hide whatever is not on screen. A town off the edge of the view costs
    *  nothing to have, which is most of the point of moving it here. */
   cull(camX: number, camY: number, halfW: number, halfH: number): void
+  /** The chimneys. One frame; see seaSmoke. */
+  advance(dt: number, camX: number, camY: number, halfW: number, halfH: number): void
   destroy(): void
 }
 
@@ -115,6 +118,7 @@ export async function makeTowns(
 ): Promise<Towns> {
   const view: Container = new PIXI.Container()
   const built: Built[] = []
+  const chimneys: Chimney[] = []
 
   for (const spec of towns) {
     const node: Container = new PIXI.Container()
@@ -193,13 +197,57 @@ export async function makeTowns(
       s.tint = spec.locked ? LOCKED : 0xffffff
       node.addChild(s)
       sprites.push(s)
+
+      // ── AND WHERE ITS CHIMNEYS ARE ───────────────────────────────
+      //
+      // Nothing in the chart's data says where a roof's pot is, and adding a
+      // coordinate per building to every table would be a lot of typing for
+      // something nobody would ever tune. So it is derived: a chimney sits high
+      // on the painted mass, and how many there are follows how wide the
+      // building is. One for a shed, three for a whole painted town.
+      //
+      // `up` is the sprite's own height in the node's units — the art's aspect
+      // at this width, un-squashed the same way the sprite itself is, because
+      // the top of a building drawn standing up is that far above its feet.
+      //
+      // A LOCKED island has cold hearths. Nobody is home yet.
+      if (!spec.locked && w >= 46) {
+        const up = (w * (tex.height / tex.width)) / GROUND
+        const pots = Math.max(1, Math.min(3, Math.round(w / 240)))
+        // The forge is not a kitchen: it works harder and it burns dirtier.
+        const forge = b.art.includes('forge') || b.art.includes('gunwharf')
+        for (let k = 0; k < pots; k++) {
+          // Spread across the middle of the roofline rather than the full
+          // width, so a pot never hangs off the end of the painting.
+          const across = pots === 1 ? 0 : (k / (pots - 1) - 0.5) * 0.52
+          chimneys.push({
+            x: spec.x + s.position.x + across * w,
+            y: spec.y + s.position.y - up * 0.84,
+            heat: forge ? 1.7 : 0.85 + ((k * 7 + w) % 5) * 0.08,
+            tint: forge ? 0x6d6257 : 0xb9b3a8,
+          })
+        }
+      }
     }
 
     built.push({ spec, node, sprites, glow })
   }
 
+  // ── THE SMOKE GOES IN WITH THE TOWNS ─────────────────────────────
+  //
+  // Inside this view rather than as its own layer on the world, and added after
+  // every building, which settles its z-order for free: a plume is in front of
+  // the roof it comes off and behind nothing, because the towns are already the
+  // last thing in the world.
+  const smoke: Smoke = makeSmoke(PIXI, chimneys)
+  view.addChild(smoke.view)
+
   return {
     view,
+
+    advance(dt, camX, camY, halfW, halfH) {
+      smoke.advance(dt, camX, camY, halfW, halfH)
+    },
 
     night(tint, dark) {
       for (const b of built) {
