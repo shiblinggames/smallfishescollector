@@ -143,6 +143,28 @@ uniform vec2  uShelf;
 // like it is standing up out of the water rather than lying on it.
 const float GROUND = 0.58;
 
+// ── THE PREVAILING WIND ─────────────────────────────────────────────
+//
+// Open water is not isotropic and never looks it. Wind builds a train of
+// crests running across it, so the swell is LONG in one direction and short in
+// the other, and the caustics under it inherit that because they are made by
+// the same surface.
+//
+// The old field had no direction at all: two octaves of round value noise, so
+// the sea came out as a cloudy mottle and the pale filaments on top of it came
+// out as marbling. A direction is most of what separates weather from texture.
+//
+// FIXED, and deliberately not the light's axis. The sun crosses the sky and the
+// wind does not follow it; tying the two would have the whole sea slowly rotate
+// through the day, which is the one thing that would look more wrong than no
+// direction at all.
+const vec2 WIND = vec2(0.8231, 0.5679);
+// Stretch a world sample along the wind. The second argument is how short the
+// cross-wind axis is: 1.0 is round, 0.4 is a long swell.
+vec2 alongWind(vec2 p, float k) {
+  return vec2(dot(p, WIND), dot(p, vec2(-WIND.y, WIND.x)) * k);
+}
+
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
@@ -252,8 +274,12 @@ void main(void) {
 
   // Two octaves, the second dragged around by the first. One drifts across the
   // swell and the other along it, so the pattern never repeats visibly.
-  float d1 = vnoise(w + vec2(uTime * 0.020, uTime * -0.013));
-  float d2 = vnoise(w * 2.7 + vec2(d1 * 1.6 - uTime * 0.031, d1 * -1.2));
+  // STRETCHED ALONG THE WIND, both octaves. 0.62 is a mild train: crests about
+  // half again as long as they are wide, which reads as open water with weather
+  // on it. Lower and it combs; at 1.0 it is the cloudy mottle this replaced.
+  vec2 wa = alongWind(w, 0.62);
+  float d1 = vnoise(wa + vec2(uTime * 0.020, uTime * -0.013));
+  float d2 = vnoise(wa * 2.7 + vec2(d1 * 1.6 - uTime * 0.031, d1 * -1.2));
   // ── THE FINE OCTAVE STANDS DOWN AT SPEED ─────────────────────────
   //
   // A short exposure of something moving fast is BLURRED, and blur is exactly
@@ -330,13 +356,51 @@ void main(void) {
   // And they need the sun. A caustic is refracted sunlight, so it goes out
   // with the light rather than lingering into the night, and it stands down at
   // speed with everything else fine-grained.
+  //
+  // ── AND THEY ARE A NETWORK, NOT A MARBLING ────────────────────────
+  //
+  // This used to be the PRODUCT of two ridged noise fields. A ridge field is
+  // bright along the mid-level set of the noise, and the mid-level set of value
+  // noise is a family of CLOSED CURVES — so multiplying two of them lit only
+  // the places where one loop happened to cross another, and the sea came out
+  // as a field of pale worms with the water showing between them. Reported as
+  // looking weird, and it was: it read as marbled paper or a contour map, which
+  // are both things made of closed curves, and never as light.
+  //
+  // Three changes, and each fixes a different half of that:
+  //
+  //   ADDED, NOT MULTIPLIED. A sum of ridges is a CONNECTED network with
+  //   junctions and dead ends, which is what a caustic actually is. A product
+  //   is an intersection, which is what a plaid actually is.
+  //
+  //   WARPED BY THE SWELL. Caustics are sunlight bent by the surface, so they
+  //   have to be a function of the surface. Dragging the sample by the swell
+  //   ties every filament to the wave that is making it — and it breaks the
+  //   loops, because the field is no longer a clean noise with clean level
+  //   sets.
+  //
+  //   AND STRETCHED, along the same prevailing wind the swell now runs with.
+  //   An isotropic ridge field has no direction at all, which is most of why
+  //   the old one read as a pattern rather than as water. See WIND.
   float caust = 0.0;
   if (shelf < 0.62 && uDark < 0.9) {
-    vec2 cw = w * 3.1;
-    float c1 = vnoise(cw + vec2(uTime * 0.035, uTime * 0.021));
-    float c2 = vnoise(cw * 1.7 - vec2(uTime * 0.026, uTime * -0.033));
-    float ridged = (1.0 - abs(c1 * 2.0 - 1.0)) * (1.0 - abs(c2 * 2.0 - 1.0));
-    caust = pow(ridged, 3.4)
+    vec2 cw = w * 3.1 + vec2(swell * 1.5, swell * -0.9);
+    // Harder than the swell's stretch: the ripple that focuses light is finer
+    // and more strongly combed than the swell carrying it.
+    vec2 cwa = alongWind(cw, 0.44);
+
+    float c1 = vnoise(cwa + vec2(uTime * 0.035, uTime * 0.021));
+    float c2 = vnoise(cwa * 2.1 + vec2(c1 * 0.9 - uTime * 0.026, uTime * 0.033));
+    float r1 = 1.0 - abs(c1 * 2.0 - 1.0);
+    float r2 = 1.0 - abs(c2 * 2.0 - 1.0);
+    // Two widths. The coarse one carries the shape and the fine one puts the
+    // bright cusps on it, which is the part that reads as focused light.
+    float ridged = pow(r1, 5.0) * 0.70 + pow(r2, 8.0) * 0.55;
+    // NOT EVERY FILAMENT IS THE SAME BRIGHTNESS. A network at one value is a
+    // diagram of a caustic; the real thing has stretches that are barely there
+    // and cusps that are almost white.
+    float vary = 0.40 + 0.60 * vnoise(cw * 0.55 - vec2(uTime * 0.013, uTime * 0.008));
+    caust = ridged * vary
       * (1.0 - smoothstep(0.10, 0.62, shelf))
       * (1.0 - uDark)
       // 0.85, not 0.92. Caustics are the one fine detail that is worth keeping
@@ -344,7 +408,7 @@ void main(void) {
       // is, so losing nearly all of them at speed took the shallows' whole
       // character out of the water you were actually crossing.
       * (1.0 - 0.85 * uRush);
-    col += caust * vec3(0.72, 0.92, 0.86) * 0.18 * uSwell;
+    col += caust * vec3(0.72, 0.92, 0.86) * 0.20 * uSwell;
   }
 
   // ── THE MOON'S PATH ───────────────────────────────────────────────
