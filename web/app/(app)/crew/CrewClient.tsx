@@ -1791,8 +1791,10 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
               </button>
             )
           })()}
-          {/* Back to the hub — matches the Ship / Items / Forge routes. */}
-          {!embedded && <Link href="/expeditions" aria-label="Back to expeditions"
+          {/* Back to the water. This said "back to the hub" and pointed at
+              /expeditions, which is a redirect to the chart now — and the chart
+              is where a captain came from anyway. */}
+          {!embedded && <Link href="/sea" aria-label="Back to the sea"
             style={{ marginLeft: 'auto', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', color: '#e0ddd8', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', textDecoration: 'none' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
           </Link>}

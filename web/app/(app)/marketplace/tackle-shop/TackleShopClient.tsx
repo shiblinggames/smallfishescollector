@@ -639,7 +639,7 @@ export default function TackleShopClient({
                     })}
                   </div>
                 ) : (
-                  <Link href="/expeditions" style={{ textDecoration: 'none', display: 'block', marginTop: 'auto', padding: '0.45rem 0.5rem', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.13)', textAlign: 'center', position: 'relative' }}>
+                  <Link href="/sea" style={{ textDecoration: 'none', display: 'block', marginTop: 'auto', padding: '0.45rem 0.5rem', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.13)', textAlign: 'center', position: 'relative' }}>
                     <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#c3bcae' }}>
                       {bait.acquisition.includes('fathoms') ? 'Voyages, or buy with Fathoms in the Locker →' : 'Earned from voyages →'}
                     </span>

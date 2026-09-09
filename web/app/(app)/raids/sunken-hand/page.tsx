@@ -23,7 +23,7 @@ export default async function SunkenHandRaidPage() {
 
   // The gate the map advertises, enforced server-side too: all six giants.
   const ancientsCaught = ((profile?.ancient_catches as number[] | null) ?? []).length
-  if (ancientsCaught < 6) redirect('/expeditions')
+  if (ancientsCaught < 6) redirect('/sea')
 
 
   return (

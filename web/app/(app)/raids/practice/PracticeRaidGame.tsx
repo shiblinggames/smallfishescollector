@@ -899,7 +899,7 @@ export default function PracticeRaidGame({
             killReward={{ gold: e.killGold, xp: e.killXP }}
             onEnemyDefeated={handleEnemyDefeated}
             onPlayerDefeated={handlePlayerDefeated}
-            onLeave={() => router.push('/expeditions')}
+            onLeave={() => router.push('/sea')}
           />
         </div>
 
@@ -1054,7 +1054,7 @@ export default function PracticeRaidGame({
                 Fight Another
               </motion.button>
               <motion.button
-                onPointerDown={() => router.push('/expeditions')}
+                onPointerDown={() => router.push('/sea')}
                 whileTap={{ scale: 0.97 }}
                 className="font-karla font-700 uppercase tracking-[0.1em]"
                 style={{
@@ -1111,7 +1111,7 @@ export default function PracticeRaidGame({
               </p>
             </motion.div>
             <motion.button
-              onPointerDown={() => router.push('/expeditions')}
+              onPointerDown={() => router.push('/sea')}
               whileTap={{ scale: 0.97 }}
               className="font-cinzel font-700 uppercase tracking-[0.12em]"
               style={{

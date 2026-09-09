@@ -42,7 +42,7 @@ export default async function QuartermastersGhostRaidPage() {
     .eq('raid_id', 'the_quartermaster_challenge')
     .limit(1)
     .maybeSingle()
-  if (!beatenAlive) redirect('/expeditions')
+  if (!beatenAlive) redirect('/sea')
 
   return (
     <>

@@ -413,10 +413,15 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
    * take a captain off the water they are floating on to a menu about it.
    *
    * One function, so a road out added later cannot forget which mount it is in.
+   *
+   * AND THE FALLBACK IS THE WATER NOW. It was the expeditions hub, which is the
+   * right answer only while that hub is somewhere a captain wants to be put
+   * down. It is a redirect to the chart now, so pushing it would have been one
+   * hop with a page build in the middle of it.
    */
   const leaveRaid = useCallback(() => {
     if (onLeave) { onLeave(); return }
-    router.push('/expeditions')
+    router.push('/sea')
   }, [onLeave, router])
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
   const shipFilter        = shipSkinDef?.filter ?? 'none'

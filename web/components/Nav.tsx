@@ -15,7 +15,6 @@ import TickingNumber from './TickingNumber'
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
   ['/sea',         'rgba(14,116,144,0.10)'],
-  ['/expeditions', 'rgba(30,60,120,0.12)'],
 ]
 
 function navBg(tint: string | undefined) {
@@ -301,22 +300,25 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     // sea/chart. A link here would be a second door into a place whose whole
     // point is that reaching it is a trip, which is the same argument that
     // retired quick-sell and moved the Daily Haul onto the water.
-    { href: '/sea', label: 'Seas', badge: null,
+    // ── EXPEDITIONS IS NOT A TAB EITHER ──────────────────────────────
+    //
+    // Same argument as the Tavern above, and it took longer to reach because
+    // /expeditions was a real page rather than a building. Everything it held
+    // is on the water now — the campaign is water you sail, voyages are the
+    // Charterhouse, bounties are the Posting House, the gauntlets are two
+    // maelstroms, the ship and the loadout are discs in the HUD — so a tab to
+    // it would be a second door into places whose whole point is that reaching
+    // them is a trip. The route survives as a redirect for old links.
+    //
+    // ITS VOYAGE DOT CAME WITH IT. A finished voyage is claimed at the
+    // Charterhouse, which is out here, so the dot belongs on this tab.
+    { href: '/sea', label: 'Seas', badge: voyageBadge || null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 4l4 4"/>
           <path d="M8 8c2-2 5-3 8-1s4 5 2 8-5 3-8 1"/>
           <path d="M8 8L4 20"/>
           <circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/>
-        </svg>
-      )
-    },
-    { href: '/expeditions', label: 'Expeditions', badge: voyageBadge || null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/>
-          <line x1="10" y1="12" x2="10" y2="4"/>
-          <path d="M10 4L17 9 10 12"/>
         </svg>
       )
     },
@@ -380,31 +382,18 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     { href: '/badges', label: 'Badges', badge: claimableBadges || null },
   ]
 
-  // Desktop top-bar inline links. Canonical order: fishing, expeditions,
+  // Desktop top-bar inline links. Canonical order: fishing, the seas,
   // leaderboard, market — then badges from
   // desktopOnlyLinks. Profile is the avatar button on the far right,
   // so it doesn't appear here.
   const links = [
-    { href: '/sea', label: 'Seas', badge: null,
+    { href: '/sea', label: 'Seas', badge: voyageBadge || null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 4l4 4"/>
           <path d="M8 8c2-2 5-3 8-1s4 5 2 8-5 3-8 1"/>
           <path d="M8 8L4 20"/>
           <circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/>
-        </svg>
-      )
-    },
-    // THE OCEAN HUB, for captains who have it. Sits directly after Fishing
-    // because that is what it is going to replace, which is also where anyone
-    // looking for it will look. Filtered out below rather than rendered
-    // disabled: a tab you cannot use is worse than no tab.
-    { href: '/expeditions', label: 'Expeditions', badge: voyageBadge || null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/>
-          <line x1="10" y1="12" x2="10" y2="4"/>
-          <path d="M10 4L17 9 10 12"/>
         </svg>
       )
     },

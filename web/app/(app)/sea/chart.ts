@@ -301,11 +301,17 @@ export const PLACES: Place[] = [
      * pins the board up where you are floating, the same way the Tally House
      * settles trawl orders and the Shipyard opens its rack. Sailing here should
      * not cost you the sea: a route would unload the whole chart to show one
-     * panel and reload it on the way back. `/expeditions` is the honest answer
-     * to "where does this go" if anything ever falls through to it.
+     * panel and reload it on the way back.
+     *
+     * SO IT POINTS AT THE CHART ITSELF. These used to name their old routes —
+     * /expeditions and its two children — as the honest answer to "where does
+     * this go" if anything ever fell through. Those are redirects back here
+     * now, so naming one would send a captain on a round trip to the water they
+     * are already floating on. The truthful answer is that there is nowhere
+     * else: the door is a panel, and it opens where you are.
      */
     id: 'posting_house', name: 'The Posting House', blurb: 'The day’s hunts, and what they pay',
-    href: '/expeditions', x: -2150, y: -4400, r: 280,
+    href: '/sea', x: -2150, y: -4400, r: 280,
     art: '/page-bounties.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
@@ -345,7 +351,7 @@ export const PLACES: Place[] = [
      * "where does this go" and what a captain gets from the hub.
      */
     id: 'forge_isle', name: 'The Forge', blurb: 'Two relics in, one out',
-    href: '/expeditions/forge', x: 620, y: -4400, r: 280,
+    href: '/sea', x: 620, y: -4400, r: 280,
     art: '/forge-bg.jpg',
     kind: 'port', minLevel: 0,
     berth: { dx: -280 * 0.85, dy: 280 * 0.6 },
@@ -383,7 +389,7 @@ export const PLACES: Place[] = [
     // Never followed. The chart intercepts this island by id and opens its own
     // two-door chooser, because one of the doors is not a page at all — it is
     // changing the hull you are sailing.
-    href: '/expeditions/ship', x: -898, y: -5715, r: 340, art: '/sea/gunwharf.png',
+    href: '/sea', x: -898, y: -5715, r: 340, art: '/sea/gunwharf.png',
     kind: 'port', minLevel: 0,
     buildings: [
       { art: '/sea/gunwharf.png', x: 53, y: 59, scale: 0.36 },
@@ -409,7 +415,7 @@ export const PLACES: Place[] = [
     // cards so the captain can find the one that opens it is a door in front of
     // a door. `href` is the honest answer to "where does this go" if anything
     // ever falls through to it.
-    href: '/expeditions', x: 898, y: -5715, r: 340, art: '/sea/charterhouse.png',
+    href: '/sea', x: 898, y: -5715, r: 340, art: '/sea/charterhouse.png',
     kind: 'port', minLevel: 0,
     berth: { dx: -340 * 0.85, dy: 340 * 0.6 },
     buildings: [

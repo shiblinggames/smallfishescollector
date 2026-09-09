@@ -27,7 +27,7 @@ export default async function DonsGauntletPage() {
 
   // Gated on finishing the campaign (beat Don Finleone). Admins always, everyone
   // else only once DONS_GAUNTLET_LIVE flips.
-  if (!donsGauntletUnlocked({ isAdmin: profile?.is_admin, throneCleared: !!throneRes.data })) redirect('/expeditions')
+  if (!donsGauntletUnlocked({ isAdmin: profile?.is_admin, throneCleared: !!throneRes.data })) redirect('/sea')
 
   // Show the switcher only if Davy's Gauntlet is ALSO unlocked (cleared Ch2).
   const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []

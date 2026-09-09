@@ -293,6 +293,9 @@ const ChapterUnlockOverlay = dynamic(
 const UltimateUnlockOverlay = dynamic(
   () => import('@/app/(app)/expeditions/UnlockOverlays').then(m => m.UltimateUnlockOverlay),
   { ssr: false })
+/** "New orders on the board." A rung earned and not yet announced. */
+const BountyRungUnlock = dynamic(
+  () => import('@/app/(app)/expeditions/BountyRungUnlock'), { ssr: false })
 /** THE FIGHT, over the water it is happening on. Dynamic and enormous — the
  *  whole combat engine hangs off it — so nothing of it is fetched until a
  *  captain actually takes something on. */
@@ -1426,7 +1429,7 @@ export default function SeaMap({
   equippedShipSkin: string | null
   /** A panel to open the moment the chart is up, named in the URL. The retired
    *  /crew route lands here; nothing else uses it yet. */
-  openDoor?: 'crew' | 'loadout' | null
+  openDoor?: 'crew' | 'loadout' | 'ship' | 'forge' | null
   /** Chapters whose parchment this captain has already dismissed, and whether
    *  the Quartermaster's plans have been announced. Both are the celebration's
    *  ONLY memory — see the note where they are read. */
@@ -3287,8 +3290,15 @@ export default function SeaMap({
   const [yardOpen, setYardOpen] = useState(false)
   /** The ship screen, opened over the water. 'ship' from the Gunwharf's
    *  "Manage her", 'forge' from mooring at the Forge island. Null is shut. */
+  // ── A DOOR NAMED IN THE URL ───────────────────────────────────────────
+  // The three ship rooms had routes of their own once (/expeditions/ship,
+  // /forge, /items). Those are redirects onto this chart now, and they carry
+  // the room they were for so an old bookmark still lands where it meant to
+  // rather than in the middle of the sea.
   const [shipSheet, setShipSheet] = useState<null | 'ship' | 'forge' | 'items'>(
-    openDoor === 'loadout' ? 'items' : null)
+    openDoor === 'loadout' ? 'items'
+      : openDoor === 'ship' ? 'ship'
+        : openDoor === 'forge' ? 'forge' : null)
   /**
    * ── WHO JUST BECAME RECRUITABLE ────────────────────────────────────────
    *
@@ -3950,9 +3960,26 @@ export default function SeaMap({
    */
   const [bountyReady, setBountyReady] = useState(false)
   const bountyPolled = useRef(false)
+  /**
+   * ── AND A RUNG NOBODY HAS BEEN TOLD ABOUT ──────────────────────────────
+   *
+   * The board opens at the end of Chapter I and grows a rung every chapter
+   * after it, and the hub used to announce that on its own page load. The hub
+   * is gone, and without this a fourth order simply appears one morning and
+   * reads as a bug rather than as the reward for putting a boss down.
+   *
+   * It rides the poll that was already here, which fires at the two moments
+   * the answer can have changed: crossing into the anchorage, and closing the
+   * Posting House.
+   */
+  const [rungNews, setRungNews] = useState<
+    { chapter: number; title: string; boss: string; orders: number; gems: number; first: boolean } | null>(null)
   const pollBounties = useCallback(() => {
     void getBountyBoard().then(
-      b => setBountyReady(b.unlocked && b.bounties.some(x => !x.claimed && x.progress >= x.target)),
+      b => {
+        setBountyReady(b.unlocked && b.bounties.some(x => !x.claimed && x.progress >= x.target))
+        if (b.news) setRungNews(b.news)
+      },
       () => {})
   }, [])
   useEffect(() => {
@@ -9060,6 +9087,18 @@ hullRef={hullRefFor(t.key)} />
           standing on it. Tap anywhere to dismiss. */}
       {unlockedLegendary && (
         <LegendaryUnlockOverlay crew={unlockedLegendary} onClose={() => setUnlockedLegendary(null)} />
+      )}
+
+      {/* ── NEW ORDERS ON THE BOARD ───────────────────────────────────
+          Marks itself seen on ARRIVAL rather than on dismissal — see its own
+          note — so a captain who closes the app mid-overlay is not shown it
+          again. `onOpen` is what to do about it, and out here that is the
+          Posting House's own board, pinned where you are floating. */}
+      {rungNews && (
+        <BountyRungUnlock
+          chapter={rungNews.chapter} title={rungNews.title} boss={rungNews.boss}
+          orders={rungNews.orders} gems={rungNews.gems} first={rungNews.first}
+          onOpen={() => { setRungNews(null); setBountiesOpen(true) }} />
       )}
 
       {/* ── THE PARCHMENT ─────────────────────────────────────────────

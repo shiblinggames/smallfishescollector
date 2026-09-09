@@ -53,6 +53,24 @@ export type BountyBoard = {
   rung: { chapter: number; title: string; boss: string } | null
   /** What the next rung adds, and who is standing in the way of it. */
   next: { chapter: number; title: string; boss: string; gems: number } | null
+  /**
+   * A RUNG EARNED AND NOT YET ANNOUNCED.
+   *
+   * Bounties open at the end of Chapter I and grow a rung with every chapter
+   * after it, and none of that is worth anything if a captain never learns it
+   * happened — a fourth order appearing weeks later reads as a bug rather than
+   * a reward. `bounty_rung_seen` is the last one we told them about, so any gap
+   * is an announcement owed.
+   *
+   * IT RIDES THE BOARD because the board is already read at exactly the right
+   * moment: the chart polls it on crossing into the anchorage and again when
+   * the Posting House closes. The hub used to announce this on its own page
+   * load, and the hub is gone.
+   *
+   * A captain who cleared two chapters between visits is told about the one
+   * they LANDED on, not the one they passed through.
+   */
+  news: { chapter: number; title: string; boss: string; orders: number; gems: number; first: boolean } | null
   /** The slow ladder under the daily gems. */
   points: number
   /** Milestones collected so far. */
@@ -68,7 +86,7 @@ export type BountyBoard = {
 const SHUT: BountyBoard = {
   unlocked: false, lockReason: 'Clear Chapter I to open the bounty board',
   bounties: [], gems: 0, rerollUsed: false, remaining: 0,
-  rungMax: 0, dailyMax: BOUNTY_DAILY_MAX, rung: null, next: null,
+  rungMax: 0, dailyMax: BOUNTY_DAILY_MAX, rung: null, next: null, news: null,
   points: 0, milestonesClaimed: 0, milestonesReady: 0, nextMilestone: null, pointsToday: 0,
 }
 
@@ -175,12 +193,21 @@ async function clearedRaids(admin: Admin, uid: string): Promise<Set<string>> {
   return new Set(((data ?? []) as { raid_id: string }[]).map(r => r.raid_id))
 }
 
-function rungFacts(rung: BountyRung) {
+function rungFacts(rung: BountyRung, seen: number) {
   const nx = nextRung(rung)
   return {
     rung: { chapter: rung.chapter, title: rung.title, boss: rung.boss },
     next: nx ? { chapter: nx.chapter, title: nx.title, boss: nx.boss, gems: rungGems(nx.slots) } : null,
     rungMax: rungGems(rung.slots),
+    // The rung is derived from raid clears; `seen` is the last one announced.
+    // Any gap is an announcement owed. See BountyBoard.news.
+    news: rung.chapter > seen
+      ? {
+          chapter: rung.chapter, title: rung.title, boss: rung.boss,
+          orders: rung.slots.length, gems: rungGems(rung.slots),
+          first: rung.chapter === 1,
+        }
+      : null,
   }
 }
 
@@ -214,7 +241,9 @@ export async function getBountyBoard(): Promise<BountyBoard> {
   const cleared = await clearedRaids(admin, uid)
   const rung = rungFor(cleared)
   if (!rung) return SHUT
-  const facts = rungFacts(rung)
+  const { data: seenRow } = await admin
+    .from('profiles').select('bounty_rung_seen').eq('id', uid).single()
+  const facts = rungFacts(rung, Number(seenRow?.bounty_rung_seen ?? 0))
 
   const today = bountyToday()
   const { data: row } = await admin.from('bounty_progress').select('*').eq('user_id', uid).single()

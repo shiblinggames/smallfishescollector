@@ -26,7 +26,7 @@ export default async function GauntletPage() {
 
   // Locked until GAUNTLET_LIVE flips (then: cleared Chapter 2). Admins always.
   const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
-  if (!gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes })) redirect('/expeditions')
+  if (!gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes })) redirect('/sea')
 
   // Show the switcher only if Don's Gauntlet is ALSO unlocked for this player.
   const donsUnlocked = donsGauntletUnlocked({ isAdmin: profile?.is_admin, throneCleared: !!throneRes.data })

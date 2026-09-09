@@ -1,13 +1,7 @@
-import { Suspense } from 'react'
-import ShipHeroSection from '../ShipHeroSection'
+import { redirect } from 'next/navigation'
 
-// Its own route rather than a tab, so it gets a URL, a back button, and does
-// not pull the whole hub in behind it. The section fetches exactly what the
-// hub's ship screen fetches, so the two can never drift.
+// Her stats, her upgrade and her three rooms are the Gunwharf's panel on the
+// chart (sea/ShipSheet, focus="ship"). See ../page.tsx.
 export default function Page() {
-  return (
-    <Suspense fallback={null}>
-      <ShipHeroSection focus="ship" />
-    </Suspense>
-  )
+  redirect('/sea?open=ship')
 }

@@ -407,7 +407,11 @@ export default async function SeaPage({ searchParams }: {
       // ambiguous, which is why one was never saved at all.
       startSide={((profile?.sea_side as string | null) ?? 'fishing') as 'fishing' | 'anchorage' | 'moored' | 'open'}
       // A door named in the URL, opened on arrival, and which of its rooms.
-      openDoor={openDoor === 'crew' ? 'crew' : openDoor === 'loadout' ? 'loadout' : null}
+      openDoor={
+        openDoor === 'crew' ? 'crew'
+          : openDoor === 'loadout' ? 'loadout'
+            : openDoor === 'ship' ? 'ship'
+              : openDoor === 'forge' ? 'forge' : null}
       // WHICH CELEBRATIONS ARE STILL OWED. The same two columns /expeditions
       // reads, so a parchment dismissed on one surface stays dismissed on the
       // other — they are one memory, not two.

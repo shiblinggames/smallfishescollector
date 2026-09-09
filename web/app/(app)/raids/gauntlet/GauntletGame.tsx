@@ -909,7 +909,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
     const onPop = () => {
       window.history.pushState(null, '', window.location.href)   // re-arm; stay put
-      signal(() => router.push('/expeditions'))
+      signal(() => router.push('/sea'))
     }
     const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
     document.addEventListener('click', onClickCapture, true)
@@ -2205,7 +2205,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       onStay={() => { pendingNavRef.current = null; setConfirmLeave(false) }}
       onAbandon={() => {
         setConfirmLeave(false)
-        const go = pendingNavRef.current ?? (() => router.push('/expeditions'))
+        const go = pendingNavRef.current ?? (() => router.push('/sea'))
         pendingNavRef.current = null
         resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0, buildRunSnapshot()).finally(go)
       }}
@@ -7928,7 +7928,7 @@ function Title({ children, sub }: { children: React.ReactNode; sub?: string }) {
 
 function BackLink({ router, label, primary, onClick }: { router: ReturnType<typeof useRouter>; label: string; primary?: boolean; onClick?: () => void }) {
   return (
-    <button onClick={onClick ?? (() => router.push('/expeditions'))} className="font-karla font-600"
+    <button onClick={onClick ?? (() => router.push('/sea'))} className="font-karla font-600"
       style={{
         marginTop: 16, width: '100%', padding: primary ? '0.85rem' : '0.7rem', borderRadius: 12, fontSize: '0.85rem',
         background: primary ? 'rgba(255,255,255,0.05)' : 'transparent',
