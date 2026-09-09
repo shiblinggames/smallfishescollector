@@ -230,7 +230,7 @@ if (typeof window !== 'undefined') {
 }
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK, FINN_MOORING } from '@/lib/seaFinn'
-import { swellAt } from './seaSwell'
+import { swellAt, swellHeel } from './seaSwell'
 /**
  * WHERE FINN IS, RIGHT NOW.
  *
@@ -1914,6 +1914,12 @@ export default function SeaMap({
    * the drift.
    */
   const headRef = useRef(0)
+  /** Last frame's heading and the eased lean it produced. A boat leans INTO a
+   *  turn and comes back up slowly afterwards, so the lean is a state rather
+   *  than a function of this frame's rate — read raw it snaps back the instant
+   *  the helm centres, which reads as a twitch rather than as weight. */
+  const lastHeadRef = useRef(0)
+  const leanRef = useRef(0)
   // The two rates, each the bought ladder times the boat's own trim. The trim
   // still trades speed for nimbleness; the ladders are what money buys.
   const handlingRef = useRef(1)
@@ -6955,6 +6961,7 @@ export default function SeaMap({
             const bobF = swellAt(at.shown.x, at.shown.y, now / 1000)
             hull.style.transform =
               `translate(-50%, -50%) scaleY(${1 / GROUND}) scaleX(${at.face}) translateY(${bobF}px)`
+              + ` rotate(${(swellHeel(at.shown.x, at.shown.y, now / 1000) * at.face).toFixed(2)}deg)`
           }
         }
       }
@@ -7498,7 +7505,44 @@ export default function SeaMap({
         // AND SHE LEANS INTO IT. A slow roll on top of the drive's heel, so a
         // hull sitting still in a squall is still working, which a heel that
         // only came from speed could never say.
-        const heel = mag * facing.current + Math.sin(t * 0.9) * 3.4 * gust
+        // ── AND SHE ROLLS ON THE WATER SHE IS IN ──────────────────────────
+        //
+        // The roll above only existed in weather: `gust` is near zero in
+        // ordinary water, so a hull under way held ONE FIXED ANGLE and never
+        // moved. Constant lean, constant heading, constant everything — which
+        // is why sailing read as skating.
+        //
+        // This is the surface's own slope where she is floating, off the same
+        // field that lifts her. She rolls down the face of a wave and rights
+        // herself over the crest, in calm water as much as in a squall, and two
+        // boats on the same crest roll together.
+        const roll = swellHeel(pos.current.x, pos.current.y, t)
+
+        // ── AND SHE LEANS INTO THE HELM ───────────────────────────────────
+        //
+        // The other half of skating: the model turns properly — a heading rate,
+        // thrust along the bow, way carried through the turn — and NONE OF IT
+        // showed on the hull, which only ever mirrored left or right. A boat
+        // that answers the helm without leaning is a boat on rails.
+        //
+        // Off the heading's own rate, normalised by the base turn rate so a
+        // nimble hull does not lean further than a slow one for the same order.
+        // Eased both ways, because coming out of a turn is slower than going in
+        // and a lean that snaps back reads as a twitch.
+        let dh = headRef.current - lastHeadRef.current
+        while (dh > Math.PI) dh -= Math.PI * 2
+        while (dh < -Math.PI) dh += Math.PI * 2
+        lastHeadRef.current = headRef.current
+        const rate = dh / Math.max(dt, 1e-4)
+        const want = Math.max(-1, Math.min(1, rate / BASE_TURN_RAD)) * 5.5
+        leanRef.current += (want - leanRef.current) * Math.min(1, dt * 4.5)
+
+        // The mirror sits OUTSIDE the rotation in this transform, so a positive
+        // angle comes out reversed on a hull facing the other way. Everything
+        // that wants a fixed SCREEN tilt is multiplied through by the facing —
+        // which is what `mag` was already doing and the reason it looked right.
+        const heel = (mag + roll + leanRef.current) * facing.current
+          + Math.sin(t * 0.9) * 3.4 * gust
         // ── AND WHAT THE FIGHT IS DOING TO HER ────────────────────────────
         //
         // Recoil when she fires, a shake when she is hit, a list as she goes

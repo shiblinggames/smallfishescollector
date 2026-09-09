@@ -70,7 +70,7 @@ if (typeof window !== 'undefined') {
   }
 }
 import { makeGrass, makeGrassTexture, type Grass } from './seaGrass'
-import { swellAt } from './seaSwell'
+import { swellAt, swellHeel } from './seaSwell'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeClouds } from './seaClouds'
@@ -1709,6 +1709,13 @@ export default function SeaIslandsGPU({
             if (!c) continue
             c.holder.visible = true
             c.holder.position.set(e.x, e.y - swellAt(e.x, e.y, ts) / GROUND)
+            // AND THEY ROLL ON IT. Pixi composes a node as translate·rotate·
+            // scale, so the rotation is applied OUTSIDE the mirror here and a
+            // screen tilt is a screen tilt whichever way the hull faces — no
+            // facing correction, unlike the DOM's transform where the mirror is
+            // the outer one. Same field, so a crest rolls a group of them in
+            // turn rather than all at once.
+            c.holder.rotation = (swellHeel(e.x, e.y, ts) * Math.PI) / 180
             // scaleY undoes the plane's squash, and the facing rides on x —
             // the same ±1 mirror the DOM writes.
             c.holder.scale.set(e.scale * e.facing, e.scale / GROUND)
