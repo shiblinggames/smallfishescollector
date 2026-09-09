@@ -1676,6 +1676,27 @@ every profile row to re-index a mask about fog.
   nothing under the fog to cover. What survives both is your NEXT stop, and that is correct:
   it is the one mark whose entire job is to say which way to go.
 
+### What is on the canvas, and what is not
+
+**On the Pixi canvas** — the water, the swell, islands and the towns on them, shoals, surf,
+drift, wakes, splashes, gunsmoke, ability FX, clouds, squalls, maelstroms, lanterns, berth
+rings, portal wells and the Wargate, every hull but the player's, **the fog** (`seaFog`),
+**hotspots and dig hints** (`seaGlow`), and **the heading chevrons and the portal beam**
+(`seaGuideFx`).
+
+**Still DOM, and correctly so** — name plates, water banners, the helm pill, quest glyphs
+and ticks, and every panel. Text and signage want to stay crisp and selectable.
+
+**Still DOM and arguably shouldn't be** — the floating bottle and the moored fishing boat
+(static sprites), and the chest/post sprites on campaign rocks. Low value: they do not
+animate beyond a bob, and the marks are already gated out of the document by `shown()`.
+
+**Deliberately left in CSS** — the warship's heave rings (`.sea-heave-*`). They are pinned
+to the hull in SCREEN space, so they never move relative to the viewport; four elements on
+pure-compositor keyframes with no per-frame JS is genuinely cheaper than a Pixi layer that
+would have to track the hull's offset every frame to draw the same picture. The one thing it
+costs is compositing with the swell rather than over it.
+
 ### The rule this settled
 
 **Anything that is a VISUAL on the water belongs on the Pixi canvas.** Weather, wells,
