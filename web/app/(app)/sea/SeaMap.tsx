@@ -229,7 +229,7 @@ if (typeof window !== 'undefined') {
   } catch { /* an address we cannot parse is one we do not act on */ }
 }
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
-import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
+import { finnHaunt, FINN_REACH, FINN_LOOK, FINN_MOORING } from '@/lib/seaFinn'
 /**
  * WHERE FINN IS, RIGHT NOW.
  *
@@ -3125,6 +3125,9 @@ export default function SeaMap({
   const [finn, setFinn] = useState<FinnSeaState | null>(null)
   const finnRef = useRef<FinnSeaState | null>(null)
   finnRef.current = finn
+  /** His marker node, so the loop can nudge it the way it nudges the traders. */
+  const finnElRef = useRef<HTMLDivElement | null>(null)
+  const finnElFor = useCallback((el: HTMLDivElement | null) => { finnElRef.current = el }, [])
   const [nearFinn, setNearFinn] = useState(false)
   /** The helm is asking which of several things in reach you meant. */
   const [choosing, setChoosing] = useState(false)
@@ -6995,13 +6998,29 @@ export default function SeaMap({
             cy: at.y + (WATERLINE_Y * 0.94) / GROUND,
           })
         }
-        // Finn barely moves and never turns: he is not passing through.
-        const f = finnRef.current
-        if (f) list.push({
-          key: 'finn', x: f.at.x, y: f.at.y, facing: 1, scale: 0.98, dim: 1, ang: 0,
-          cx: f.at.x + WATERLINE_X * 0.98,
-          cy: f.at.y + (WATERLINE_Y * 0.98) / GROUND,
-        })
+        // ── FINN, OFF THE SAME CLOCK AS HIS OWN NAME PLATE ────────────
+        //
+        // This used to read `finnRef.current.at`, which is a SERVER snapshot
+        // carried on FinnSeaState and refreshed only when finnState() runs.
+        // Everything else about him — the plate under him, his hail range, the
+        // compass bearing to him — comes from `finnNow()`, the live ellipse he
+        // laps in ninety-six seconds.
+        //
+        // Two sources of truth for one boat, so the hull slid away from its own
+        // name plate over the course of a lap and sat beside it. Every other
+        // captain out here has ONE source, `traderPos`, read every frame by the
+        // canvas and by the DOM both, which is exactly why they were all fine
+        // and he was not.
+        //
+        // He never turns: he is not passing through.
+        if (finnRef.current) {
+          const fa = finnNow()
+          list.push({
+            key: 'finn', x: fa.x, y: fa.y, facing: 1, scale: 0.98, dim: 1, ang: 0,
+            cx: fa.x + WATERLINE_X * 0.98,
+            cy: fa.y + (WATERLINE_Y * 0.98) / GROUND,
+          })
+        }
         // THE PEOPLE YOU KNOW, from the eased positions the block above just
         // settled. Read from `friendAt` rather than recomputed: where a friend
         // is on screen is a smoothing decision, made once, up there.
@@ -7021,6 +7040,16 @@ export default function SeaMap({
 
       // THE PATROLS. Every trader on screen nudged along its own slow circle,
       // and turned to face the way it is going.
+      // FINN'S PLATE, ON THE SAME NUDGE THE TRADERS GET. His marker renders at
+      // his MOORING and is translated to wherever he is now, so it tracks him
+      // between React renders instead of standing where he was when the tree
+      // last happened to re-render. Same node, same trick, same reason.
+      if (finnElRef.current) {
+        const fa = finnNow()
+        finnElRef.current.style.transform =
+          `translate3d(${fa.x - FINN_MOORING.x}px, ${fa.y - FINN_MOORING.y}px, 0)`
+      }
+
       if (hullRefs.current.size) {
         const ts = now / 1000
         for (const t of allTradersRef.current) {
@@ -8213,7 +8242,7 @@ hullRef={hullRefFor(t.key)} />
             his own component rather than a TraderBoat because the plate under
             him has to say what he is, and what he is is not a kind of trade. */}
         {finn && !fishingIn && (
-          <FinnBoat at={finnNow()} isNear={nearFinn}
+          <FinnBoat at={finnNow()} hullRef={finnElFor} isNear={nearFinn}
             ready={finn.questReady}
             // He has something TO GIVE, which is exactly "no job outstanding":
             // with one open he hands out nothing until it comes back, so a ?
@@ -11146,8 +11175,10 @@ const FinnBet = memo(function FinnBet({ bet, progress }: {
  * Counter-squashed like everything else with height — he stands ON the plane,
  * he is not painted onto it.
  */
-const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering }: {
+const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering, hullRef }: {
   at: { x: number; y: number }
+  /** The node itself, for the loop. See finnElFor. */
+  hullRef?: (el: HTMLDivElement | null) => void
   isNear: boolean
   /** A job of his is finished and waiting to be handed back. */
   ready?: boolean
@@ -11155,8 +11186,19 @@ const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering }: {
   offering?: boolean
 }) {
   return (
-    <div style={{
-      position: 'absolute', left: at.x, top: at.y,
+    // ── ANCHORED AT THE MOORING, NUDGED TO WHERE HE IS ────────────────
+    //
+    // `left`/`top` are the fixed mooring and the transform carries the lap, so
+    // the 60fps loop can overwrite that transform without having to know what
+    // React last rendered. The same shape the trader markers use, and the
+    // reason theirs never came adrift from their hulls.
+    //
+    // The `at` prop still places him correctly on the very first paint, before
+    // the loop has run once.
+    <div ref={hullRef} style={{
+      position: 'absolute', left: FINN_MOORING.x, top: FINN_MOORING.y,
+      transform: `translate3d(${at.x - FINN_MOORING.x}px, ${at.y - FINN_MOORING.y}px, 0)`,
+      willChange: 'transform',
       pointerEvents: 'none', zIndex: 3,
     }}>
       <div className="sea-lit" style={{ transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.98)` }}>
