@@ -819,7 +819,7 @@ export default function SeaIslandsGPU({
         front.addChild(node)
         nearBuilt.set(i, node)
         const sub = SUBMERGE[m.art.split('/').pop()!.replace('.png', '')]
-        bakeMark(m.art, sub).then(({ wet, dry }) => {
+        bakeMark(m.art, sub).then(({ wet, dry, mirror, waterline }) => {
           if (dead) return
           // A mark above the waterline has no wet half, and that null is the
           // answer rather than a missing one.
@@ -846,6 +846,46 @@ export default function SeaIslandsGPU({
             // A sprite built after dusk starts at the current tint; the loop
             // below in night() keeps the ones already standing.
             sp.tint = lastTint < 0 ? 0xffffff : lastTint
+            node.addChild(sp)
+          }
+          // ── WHAT THE WATER GIVES BACK ─────────────────────────────
+          //
+          // The rock's own image, upside down, under it. Added FIRST so it is
+          // behind everything, and it is the single strongest cue that a thing
+          // is standing IN water rather than on a painting of it.
+          //
+          // NOT A SHADOW. This chart has thrown out a contact shape under an
+          // object six times and the objection was right every time — a
+          // discrete blob beneath a thing says "above", whatever tint it wears.
+          // A reflection is the object's OWN image in the surface, which says
+          // the surface is there and the object is in it.
+          //
+          // ── THE ARITHMETIC, BECAUSE IT IS NOT OBVIOUS ─────────────
+          //
+          // The sprites are anchored at the BOTTOM OF THE PAINTING, and the
+          // bottom of a rock is well under the surface — so a reflection
+          // mirrored about the anchor would hang a second rock off the seabed.
+          // It has to be mirrored about the WATERLINE, which is `waterline`
+          // (the mean of the hand-drawn polyline, as a fraction from the top).
+          //
+          // The pixels are already flipped in the bake, so its content sits in
+          // the LOWER `f` of the canvas and its waterline edge is at `-f*h*c`
+          // from the anchor. Putting that edge on the real waterline
+          // `-h*(1-f)` gives the offset below.
+          //
+          // `c` compresses it. Inside `node` everything is counter-squashed by
+          // 1/GROUND to stand up; a reflection LIES IN the surface, so most of
+          // that is taken back out — 0.62 against a 0.58 plane leaves it a
+          // shade taller than dead flat, which is what a real one is.
+          if (mirror && dry) {
+            const mk = m.size / mirror.width
+            const mh = mirror.height * mk
+            const c = 0.62
+            const sp = new PIXI.Sprite(PIXI.Texture.from(mirror))
+            sp.anchor.set(0.5, 1)
+            sp.scale.set(mk, (mk * c) / GROUND)
+            sp.position.y = (-mh * (1 - waterline) + waterline * mh * c) / GROUND
+            sp.alpha = 0.3
             node.addChild(sp)
           }
           put(wet)
@@ -1045,7 +1085,7 @@ export default function SeaIslandsGPU({
 
       for (const m of marksRef.current) {
         const sub = SUBMERGE[m.art.split('/').pop()!.replace('.png', '')]
-        bakeMark(m.art, sub).then(({ wet, dry }) => {
+        bakeMark(m.art, sub).then(({ wet, dry, mirror, waterline }) => {
           if (dead) return
 
           // Anchored bottom-centre and stood up out of the plane, which is the
@@ -1054,6 +1094,22 @@ export default function SeaIslandsGPU({
           const node = new PIXI.Container()
           node.x = m.x
           node.y = m.y
+
+          // ── THE REFLECTION ────────────────────────────────────────
+          // On `node` rather than `inner`, so the sway above it does not drag
+          // it about: a rock leaning in the breeze does not swing its own
+          // reflection across the water. See the arithmetic at the near pass.
+          if (mirror && dry) {
+            const mk = m.size / mirror.width
+            const mh = mirror.height * mk
+            const c = 0.62
+            const sp = new PIXI.Sprite(PIXI.Texture.from(mirror))
+            sp.anchor.set(0.5, 1)
+            sp.scale.set(mk, mk * c)
+            sp.position.y = -mh * (1 - waterline) + waterline * mh * c
+            sp.alpha = 0.3
+            node.addChild(sp)
+          }
 
           const inner = new PIXI.Container()
           node.addChild(inner)

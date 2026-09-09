@@ -25,7 +25,35 @@
 
 import type { Submerge } from './submerge'
 
-export type MarkArt = { wet: HTMLCanvasElement; dry: HTMLCanvasElement | null }
+export type MarkArt = {
+  wet: HTMLCanvasElement
+  dry: HTMLCanvasElement | null
+  /**
+   * ── WHAT THE WATER GIVES BACK ─────────────────────────────────────────────
+   *
+   * The dry half, flipped, and faded out as it goes down. Laid under the rock
+   * and mirrored about the waterline, it is the single strongest cue that a
+   * thing is standing IN water rather than on top of a picture of it — and this
+   * chart had none of it anywhere.
+   *
+   * NOT A SHADOW, and the distinction is the one this file's neighbour spent
+   * six attempts learning: a shape underneath says "above". A reflection is the
+   * object's OWN image, upside down, in the surface — it says the surface is
+   * there and the object is in it, which is the opposite claim.
+   *
+   * Baked rather than done with a mask at draw time, for the same reason the
+   * other two are: ten paintings, forty-two landmarks, and the fade is a
+   * property of the art rather than of any one rock.
+   */
+  mirror: HTMLCanvasElement | null
+  /**
+   * WHERE THE WATER CROSSES THIS PAINTING, as a fraction of its height from the
+   * top. The mean of the polyline, which is what a reflection has to be
+   * mirrored about — the sprites are anchored at the BOTTOM of the art and the
+   * bottom of a rock is well under the surface.
+   */
+  waterline: number
+}
 
 const cache = new Map<string, Promise<MarkArt>>()
 
@@ -102,7 +130,34 @@ export function bakeMark(art: string, sub: Submerge | undefined): Promise<MarkAr
       dg.fill()
     }
 
-    return { wet, dry }
+    // ── AND THE REFLECTION ────────────────────────────────────────────
+    //
+    // The dry copy flipped about its own middle, then faded downward so it
+    // dissolves into the water instead of ending. The fade is steep on purpose:
+    // a reflection that survives all the way down reads as a second rock.
+    let mirror: HTMLCanvasElement | null = null
+    let waterline = 1
+    if (sub && dry) {
+      waterline = sub.pts.reduce((n, p) => n + p[1], 0) / sub.pts.length / 100
+      mirror = make()
+      const mg = mirror.getContext('2d')!
+      mg.translate(0, h)
+      mg.scale(1, -1)
+      mg.drawImage(dry, 0, 0)
+      mg.setTransform(1, 0, 0, 1, 0, 0)
+      // Flipped, so the rock's waterline edge is now at the BOTTOM of this
+      // canvas and its top is at the top. The fade therefore runs the other
+      // way: strong where it meets the line, gone a short way from it.
+      const grad = mg.createLinearGradient(0, h, 0, 0)
+      grad.addColorStop(0, 'rgba(0,0,0,0.55)')
+      grad.addColorStop(0.34, 'rgba(0,0,0,0.16)')
+      grad.addColorStop(0.62, 'rgba(0,0,0,0)')
+      mg.globalCompositeOperation = 'destination-in'
+      mg.fillStyle = grad
+      mg.fillRect(0, 0, w, h)
+    }
+
+    return { wet, dry, mirror, waterline }
   })()
 
   cache.set(key, job)
