@@ -75,6 +75,7 @@ import FishingHere, { type FishingMods } from './FishingHere'
 import TrawlIndicator from '../fishing/TrawlIndicator'
 import DailyOrders from '../trawl-docks/DailyOrders'
 import BountyBoardModal from '../expeditions/BountyBoardModal'
+import { getBountyBoard } from '../expeditions/bountyActions'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import LevelRewardsGrant, { type Granted } from './LevelRewardsGrant'
@@ -3785,10 +3786,24 @@ export default function SeaMap({
    */
   const [crewHubOpen, setCrewHubOpen] = useState(openDoor === 'crew')
   const [crewWaiting, setCrewWaiting] = useState(false)
+  /**
+   * ── WHAT IS FINISHED, PER ISLAND ───────────────────────────────────────
+   *
+   * The same read the crew disc already does, split by WHERE you would go to
+   * collect it. It was one boolean covering "recruits or a voyage", which is
+   * the right shape for a dot on a disc and the wrong one for a chart: those
+   * two things are settled at two islands a thousand pixels apart, and a mark
+   * over both would send you to the wrong one half the time.
+   */
+  const [voyageBack, setVoyageBack] = useState(false)
   const crewPolled = useRef(false)
   const pollCrew = useCallback(() => {
     void crewHub().then(
-      r => { if (!('error' in r)) setCrewWaiting(r.recruitsWaiting > 0 || r.voyage?.ready === true) },
+      r => {
+        if ('error' in r) return
+        setCrewWaiting(r.recruitsWaiting > 0)
+        setVoyageBack(r.voyage?.ready === true)
+      },
       () => {})
   }, [])
   useEffect(() => {
@@ -3845,6 +3860,27 @@ export default function SeaMap({
    *  House's orders and the Shipyard's rack: you sailed here, so the panel
    *  comes to the water rather than the water unloading for a page. */
   const [bountiesOpen, setBountiesOpen] = useState(false)
+  /**
+   * A HUNT THAT IS DONE AND NOT PAID.
+   *
+   * Read once on crossing into the anchorage and again whenever the board
+   * closes, exactly like the crew poll beside it: those are the two moments the
+   * answer can have changed, and neither of them is a timer. Bounties tick over
+   * while you are out on the water — you clear the depth, land the fish, sink
+   * the hull — and the island is the only thing that can tell you.
+   */
+  const [bountyReady, setBountyReady] = useState(false)
+  const bountyPolled = useRef(false)
+  const pollBounties = useCallback(() => {
+    void getBountyBoard().then(
+      b => setBountyReady(b.unlocked && b.bounties.some(x => !x.claimed && x.progress >= x.target)),
+      () => {})
+  }, [])
+  useEffect(() => {
+    if (!inAnchorage || bountyPolled.current) return
+    bountyPolled.current = true
+    pollBounties()
+  }, [inAnchorage, pollBounties])
   /** Opened by mooring at the Tally House rather than from the HUD disc, which
    *  is the whole difference between reading the day's orders and being paid
    *  for them. See DailyOrders' note on canClaim. */
@@ -7527,7 +7563,25 @@ export default function SeaMap({
             // WHERE THE CREWS ACTUALLY LAND. Not the Tally House: that is the
             // day's orders now, and a "2 crew back" badge there would walk
             // somebody a thousand pixels the wrong way.
-            waiting={p.id === 'trawl_fleet' ? trawlsReady : 0} />
+            // ── WHAT IS WAITING, WHEREVER IT IS WAITING ─────────────
+            //
+            // The bloom and the line were the Trawl Harbour's alone, and every
+            // other island that can finish something — a challenge claimed, a
+            // recruit signed, a voyage in, a bounty paid — said nothing at all.
+            // A chart you have to remember to check is a chart you check by
+            // visiting, which out here is a thousand pixels a guess.
+            //
+            // Each one names its OWN errand: "2 crew back" and "Orders ready"
+            // are different journeys, and a shared badge would be a light with
+            // no address.
+            call={
+              p.id === 'trawl_fleet' ? (trawlsReady > 0 ? `${trawlsReady} crew back` : null)
+              : p.id === 'trawl_docks' ? (ordersReady ? 'Orders ready' : null)
+              : p.id === 'crew_hall' ? (crewWaiting ? 'Hands to sign' : null)
+              : p.id === 'charterhouse' ? (voyageBack ? 'Voyage in' : null)
+              : p.id === 'posting_house' ? (bountyReady ? 'Bounty paid out' : null)
+              : null
+            } />
         ))}
         {/* THE TOP OF THE CHART. Rocks, not architecture — see reefRocks. The
             same SeaMark every other landmark goes through, so they get the
@@ -9255,7 +9309,7 @@ hullRef={hullRefFor(t.key)} />
           tap on the backdrop to dismiss would also put the helm over. */}
       {bountiesOpen && (
         <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-          <BountyBoardModal open onClose={() => setBountiesOpen(false)} />
+          <BountyBoardModal open onClose={() => { setBountiesOpen(false); pollBounties() }} />
         </div>
       )}
 
@@ -12805,11 +12859,18 @@ function homeFor(p: Place, h: Homestead, guest?: string): Place {
   }
 }
 
-const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
+const PlaceIsland = memo(function PlaceIsland({ place, locked, call = null }: {
   place: Place; locked: boolean
-  /** Crew standing on this dock with a haul. Only the Trawl Docks ever pass a
-   *  non-zero value; every other island ignores it. */
-  waiting?: number
+  /**
+   * SOMETHING FINISHED HERE, in its own words.
+   *
+   * It was a NUMBER, and only the Trawl Docks ever passed one — "2 crew back"
+   * was hardcoded around it. Every island that can finish something says its
+   * own errand now, because "2 crew back", "Orders ready" and "Voyage in" are
+   * three different journeys and a shared badge would be a light with no
+   * address.
+   */
+  call?: string | null
 }) {
   const isWater = place.kind === 'water'
   const d = place.r * 2
@@ -12967,7 +13028,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
           actually see the chart from — long before the name plate is legible.
           Inside the world layer and unsquashed on purpose: it is light lying on
           a place, and it should foreshorten with the plane like the shore does. */}
-      {waiting > 0 && (
+      {call && (
         <div aria-hidden className="sea-dock-ready" style={{
           position: 'absolute', left: '50%', top: '50%',
           width: place.r * 3, height: place.r * 3,
@@ -12990,12 +13051,12 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
           {/* THE COUNT, above the name. Plain words rather than a bare number
               on a pip: "2 crew back" is a thing that happened, "2" is a badge
               you have to remember the meaning of. */}
-          {waiting > 0 && (
+          {call && (
             <p className="font-karla font-700 uppercase" style={{
               fontSize: '1rem', letterSpacing: '0.1em', marginBottom: 3,
               color: '#f0c040', textShadow: '0 1px 10px rgba(0,0,0,0.95)',
             }}>
-              {waiting} crew back
+              {call}
             </p>
           )}
           {/* ── SIZED FOR THE ZOOM IT IS READ AT ─────────────────────────

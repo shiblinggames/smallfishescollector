@@ -1748,6 +1748,25 @@ left to add up from its padding and whatever the tallest thing in the row happen
 36px mail bell held it at 53 once already). Change the number here and the shell moves
 together.
 
+## An island says what is finished on it
+
+**Every island that can hold something for you carries the call** (`PlaceIsland`'s `call`): a
+warm bloom on the land plus a line of plain words above the name. It existed already and only
+the Trawl Harbour ever used it, with "2 crew back" hardcoded around a number.
+
+- Trawl Harbour: `N crew back` · Tally House: `Orders ready` · Crew Hall: `Hands to sign`
+- Charterhouse: `Voyage in` · Posting House: `Bounty paid out`
+
+**Each names its OWN errand**, because those are five different journeys a thousand pixels
+apart and a shared badge is a light with no address. That is also why `crewHub`'s one "recruits
+or a voyage" boolean was split: the two are settled at two different islands, so one mark over
+both would send you to the wrong one half the time.
+
+**Polled on crossing and on closing, never on a timer.** Bounties tick over while you are out
+on the water — you clear a depth, land a fish, sink a hull — so the read happens when you enter
+the anchorage and again when the board shuts, which are the two moments the answer can have
+changed. A dot that costs a round trip every few seconds is a dot not worth having.
+
 ## The settings disc
 
 **Top right, alone, away from the run of discs down the left.** Those are places you are going;
