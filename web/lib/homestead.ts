@@ -145,7 +145,9 @@ export const HOUSE: Build[] = [
     adds: 'A brazier up on the headland, and a boathouse below it.',
   },
   {
-    name: 'The Estate', cost: 2_400_000, art: '/sea/home-isle-5.png', x: 54, y: 66, scale: 0.50,
+    // In and up a shade from 54,66 — the widest rung of the house on the
+    // narrowest bearing of its isle was the one that overhung.
+    name: 'The Estate', cost: 2_400_000, art: '/sea/home-isle-5.png', x: 52, y: 65, scale: 0.50,
     blurb: 'Nobody mistakes it for anywhere else.',
     adds: 'A working lighthouse. They can see you coming from the Abyss.',
   },

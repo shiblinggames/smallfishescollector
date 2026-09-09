@@ -206,7 +206,11 @@ export const PLACES: Place[] = [
       // cottage and wrong for a port. A town is built out to the water it
       // exists for. At scrub width this came out as a village marooned in the
       // middle of a green field.
-      { art: '/sea/mainland-town.png', x: 48, y: 66, scale: 0.65, toShore: true },
+      // Up the slope from 66. The coastline generator gives every island an
+      // axis and a headland now, and the Mainland's narrowest bearing is its
+      // south face — which is where the town was, and where check-islands
+      // caught it hanging over the water.
+      { art: '/sea/mainland-town.png', x: 48, y: 62, scale: 0.65, toShore: true },
     ],
   },
   {
@@ -280,7 +284,8 @@ export const PLACES: Place[] = [
     buildings: [
       { art: '/crew/hall_1.png', x: 54, y: 67, scale: 0.28 },
       { art: '/crew/drill_1.png', x: 36, y: 60, scale: 0.12 },
-      { art: '/crew/stores_1.png', x: 73, y: 60, scale: 0.11 },
+      // In from 73: the hall's east side is its short one now.
+      { art: '/crew/stores_1.png', x: 71, y: 60, scale: 0.11 },
     ],
   },
   {

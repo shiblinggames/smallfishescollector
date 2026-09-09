@@ -809,6 +809,43 @@ all four outlines distinct, and land still present at the innermost terrain band
 because at 26 the straight segments were visible on the big islands and read as a polygon —
 which is exactly what makes a shape look drawn rather than surveyed.
 
+**Then six of the ten came out as the same island, and it was arithmetic.** The lobe term
+above ran at a period of ONE OR TWO. A period-one term is `sin(a + phase)`, and a shape built
+on one has the property that opposite radii always sum to the same number: every diameter
+identical, a curve of constant width. Measured across the chart, six islands sat at an aspect
+of exactly **1.000** and the other four between 1.4 and 1.55. Two families, one of them
+perfect blobs, and no amount of texture painted on top fixes a silhouette that is
+mathematically a circle. Octaves cannot fix it either, because period two is the only octave
+that changes aspect at all and it was sharing a slot with a period-one term that does not.
+
+So the outline is three seeded things now, on top of the octaves: **an axis**, so each island
+is stretched along a bearing of its own; **a headland** with its own reach rather than a fixed
+one; and **a bay** on about half of them, a gaussian bitten out of one bearing and the only
+feature here that is not a smooth harmonic.
+
+**The bay is always on the seaward side, and that is an invariant.** Bearings on the chart are
+screen bearings, so with y running down the page **90 degrees is south** — and the south face
+of every island is the settled one. It is the face the camera looks at, the berth ring sits
+east-south-east of it, and every building table on the chart puts its houses below the centre
+line. The bay is the deepest single bite the generator takes, and left free it took the
+Mainland's south face down to **17.9%** of the box while its north-west stood at **38%**: the
+town was over the water, and the same bite caught the Estate and the Crew Hall's stores.
+Moving three buildings would have fixed those three placements. Restricting the bay to the
+seaward half fixed the rule, and it is what a coast does anyway — the drama goes on the side
+you sail past, the harbour side stays whole.
+
+**A soft limiter, not a clamp.** Three independent terms stack, so the radius needs a floor
+and a ceiling or a bay landing on the narrow end of a stretch pinches the island to nothing.
+A hard `min`/`max` pinned **26 of the Mainland's 160 vertices** to the floor, which is a
+circular arc sitting in a hand-drawn coastline and reads instantly as machine-made. It is
+`48 + 21 * tanh((r - 48) / 21)` instead: the band is approached and never reached, so nothing
+is ever flat. Aspect now runs **1.04 to 1.30** with radii from 30% to 67%, biggest neighbour
+step 1.2 to 2.8%.
+
+**`check-islands` is the gate on all of this** and it caught every one of the three overhangs
+the moment the land moved. Anything that changes `coastline()` gets re-run against it, and a
+building that fails is re-placed rather than the check being relaxed.
+
 **The terrain is bands that follow the coast.** It was one flat radial gradient of brown; a
 single colour with a vignette is a shape, not a place. Each band is the *same* polygon on a
 smaller box, so its clip scales with it and every ring parallels the shore instead of being a
