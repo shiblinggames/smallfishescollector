@@ -39,7 +39,7 @@
 // reads as windows throwing light onto the ground they stand on.
 
 import type { Container, Sprite, Texture } from 'pixi.js'
-import { GROUND, ISLAND_LIFT } from './islandArt'
+import { GROUND, islandLift } from './islandArt'
 import { texture } from './skiffArt'
 
 export type GpuBuilding = {
@@ -122,6 +122,9 @@ export async function makeTowns(
     view.addChild(node)
 
     const d = spec.r * 2
+    // How far this island's top face stands above its own plane. Per island
+    // now, not one number for all ten — see islandLift.
+    const lift = islandLift(spec.id, d) / GROUND
     let glow: Sprite | null = null
 
     // UNDER THE BUILDINGS, and added first for exactly that reason.
@@ -135,7 +138,7 @@ export async function makeTowns(
       s.height = d * 0.52
       // On the top face with the buildings it is lighting, not at the
       // waterline under them.
-      s.y = -spec.r + d * 0.52 - ISLAND_LIFT / GROUND
+      s.y = -spec.r + d * 0.52 - lift
       s.tint = GLOW
       s.alpha = 0
       s.blendMode = 'add'
@@ -179,7 +182,7 @@ export async function makeTowns(
       // reads as the island being a flat decal slid under them.
       s.position.set(
         -spec.r + (b.x / 100) * d,
-        -spec.r + (b.y / 100) * d - ISLAND_LIFT / GROUND,
+        -spec.r + (b.y / 100) * d - lift,
       )
       s.tint = spec.locked ? LOCKED : 0xffffff
       node.addChild(s)

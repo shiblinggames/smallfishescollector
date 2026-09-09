@@ -36,7 +36,7 @@
 // (zoom, zoom * GROUND) and positioned at (w/2 - zoom*x, h/2 - zoom*GROUND*y).
 
 import { useEffect, useRef, useState } from 'react'
-import { GROUND, bakeIsland, requestGround, evictIslandsExcept } from './islandArt'
+import { GROUND, islandLift, bakeIsland, requestGround, evictIslandsExcept } from './islandArt'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeClouds } from './seaClouds'
@@ -923,8 +923,12 @@ export default function SeaIslandsGPU({
       const baked: { isle: GpuIsland; sprite: import('pixi.js').Sprite; pad: number }[] = []
       const place = (isle: GpuIsland) => {
         const d = isle.r * 2
-        // The chart's own padding: the widest shoal wash plus the blur's spill.
-        const pad = Math.round(d * 0.08) + 24
+        // The chart's own padding: the widest shoal wash plus the blur's
+        // spill, plus room for the CLIFF, which now varies per island and on
+        // the biggest of them is over a hundred world pixels of drop. Without
+        // the third term the tallest islands lose the bottom of their own
+        // cliff to the edge of the texture.
+        const pad = Math.round(d * 0.08) + 24 + Math.round((islandLift(isle.id, d) / GROUND) * 0.5)
         const s = new PIXI.Sprite(PIXI.Texture.from(bakeIsland(isle.id, d, isle.locked, pad)))
         // Placed by CSS size, not by pixel size: the canvas is baked at DPR.
         s.width = d + pad * 2

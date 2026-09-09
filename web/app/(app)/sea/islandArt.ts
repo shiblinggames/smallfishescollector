@@ -23,10 +23,38 @@ import { coastline } from '@/lib/islandShape'
  *  sense of being a surface rather than a map comes from this one number. */
 export const GROUND = 0.58
 
-export /** How far an island stands out of the water, in SCREEN pixels. Everything
- *  with height divides by GROUND to convert that into the squashed layer's own
- *  units, so the lift stays the same on screen however the plane is tilted. */
+export /** The old flat lift, kept only as the floor `islandLift` clamps to. */
 const ISLAND_LIFT = 15
+
+/**
+ * ── HOW FAR AN ISLAND STANDS OUT OF THE WATER ───────────────────────────────
+ *
+ * In SCREEN pixels. Everything with height divides by GROUND to convert that
+ * into the squashed layer's own units, so a lift stays the same on screen
+ * however the plane is tilted.
+ *
+ * ── IT USED TO BE 15 FOR EVERYTHING, AND THAT IS THE BUG ────────────────────
+ *
+ * One number, from a 420px cay to the 1000px Mainland. Thirty screen pixels of
+ * cliff either way: seven percent of the cay's width and THREE of the
+ * Mainland's — so the bigger an island got, the flatter it read, which is
+ * exactly backwards. A house on the Mainland stands a hundred and fifty pixels
+ * tall on land with thirty pixels of edge, and no amount of painting on the top
+ * face fixes a shape with no side to it.
+ *
+ * A FRACTION OF ITS OWN SIZE, then. Clamped at both ends: below the old 15 a
+ * cliff stops being visible at chart zoom, and past 70 an island starts to read
+ * as a mesa rather than as land.
+ *
+ * AND SEEDED, because ten islands at one proportion is ten of the same island
+ * at different scales. The spread runs from a low sandy flat to a proper rocky
+ * rise, off the same hash everything else about an island comes from.
+ */
+export function islandLift(id: string, d: number): number {
+  const seed = (seedOf(id) % 1000) / 1000
+  const base = Math.min(70, Math.max(ISLAND_LIFT, d * 0.055))
+  return Math.round(base * (0.72 + seed * 0.62))
+}
 
 /**
  * ── THE ISLAND BAKERY ──────────────────────────────────────────────────────
@@ -196,6 +224,10 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
 
   const rs = coastline(id)
   const C = pad + d / 2
+  const LIFT = islandLift(id, d)
+  /** The island's own character, 0..1, off the same hash as everything else
+   *  about it. Drives the palette below. */
+  const chr = ((seedOf(id) >>> 9) % 1000) / 1000
 
   /** Trace the coast at a scale of the island box, optionally offset. */
   const trace = (g: CanvasRenderingContext2D, scale: number, cx = C, cy = C) => {
@@ -253,7 +285,7 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
 
   // ── contact shadow, thrown toward the light's opposite ───────────
   blurred((g) => {
-    trace(g, 0.78, C + ISLAND_LIFT * 0.34, C + ISLAND_LIFT * 0.5)
+    trace(g, 0.78, C + LIFT * 0.34, C + LIFT * 0.5)
     g.fillStyle = 'rgba(2,10,18,0.42)'
     g.fill()
   }, 9)
@@ -264,7 +296,7 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
   land.width = cv.width; land.height = cv.height
   const lg = land.getContext('2d')!
   lg.scale(dpr, dpr)
-  const lift = ISLAND_LIFT / GROUND
+  const lift = LIFT / GROUND
 
   const traceL = (scale: number, dy = 0) => {
     lg.beginPath()
@@ -296,11 +328,39 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
     lg.fillStyle = fill
     lg.fill()
   }
-  face(10, grad165(lg, 0.74, [[0, '#c0a276'], [0.55, '#a78452'], [1, '#85693f']]))
-  face(0.97, grad165(lg, 0.72, [[0, '#d0b792'], [1, '#bf9e71']]))
-  face(0.90, grad165(lg, 0.67, [[0, '#dbc6a4'], [1, '#c7ab7f']]))
-  face(0.81, grad165(lg, 0.60, [[0, '#afb65f'], [1, '#909b45']]))
-  face(0.70, grad165(lg, 0.52, [[0, '#7a9c44'], [0.62, '#5c7d36'], [1, '#4c6b2d']]))
+  // ── AND NOT ALL THE SAME LAND ────────────────────────────────────
+  //
+  // Every island was these exact five bands: one sand, one green, ten times
+  // over. Read as one island at ten sizes, which is most of what "they all
+  // look the same" is — the silhouettes differ more than the surfaces do.
+  //
+  // `chr` swings the whole ramp between two coasts, and the shift is applied to
+  // ALL FIVE BANDS TOGETHER so a single island still reads as one place. Warm
+  // and pale at 0 (limestone and dry scrub, a Mediterranean rock); cool and
+  // dark at 1 (basalt and wet green, somewhere further north).
+  //
+  // SMALL ON PURPOSE. These are hand-painted assets in a fixed house style and
+  // a big hue swing would put an island outside it. The most this moves any
+  // channel is about a sixth, which is the difference between two beaches
+  // rather than between two games.
+  const tone = (hex: string, warmCool: number) => {
+    const n = parseInt(hex.slice(1), 16)
+    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+    // Toward cool: red down, blue up, everything a shade darker.
+    const k = (warmCool - 0.5) * 2
+    r = Math.round(Math.min(255, Math.max(0, r * (1 - k * 0.10))))
+    g = Math.round(Math.min(255, Math.max(0, g * (1 - k * 0.03))))
+    b = Math.round(Math.min(255, Math.max(0, b * (1 + k * 0.13))))
+    const dim = 1 - k * 0.06
+    r = Math.round(r * dim); g = Math.round(g * dim); b = Math.round(b * dim)
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
+  }
+  const T = (hex: string) => tone(hex, chr)
+  face(10, grad165(lg, 0.74, [[0, T('#c0a276')], [0.55, T('#a78452')], [1, T('#85693f')]]))
+  face(0.97, grad165(lg, 0.72, [[0, T('#d0b792')], [1, T('#bf9e71')]]))
+  face(0.90, grad165(lg, 0.67, [[0, T('#dbc6a4')], [1, T('#c7ab7f')]]))
+  face(0.81, grad165(lg, 0.60, [[0, T('#afb65f')], [1, T('#909b45')]]))
+  face(0.70, grad165(lg, 0.52, [[0, T('#7a9c44')], [0.62, T('#5c7d36')], [1, T('#4c6b2d')]]))
 
   // TURF OVER ALL FIVE BANDS AT ONCE, inside the face clip that is still open,
   // so the beach reads as sand and the middle as grass without either needing
@@ -309,10 +369,23 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
   // rather than last.
   paintGround(lg, GROUND_TEX.turf, D, seedOf(id), 0.42)
 
-  // the crown — higher ground catching the light
+  // ── THE CROWN — higher ground catching the light ─────────────────
+  //
+  // OFF CENTRE, AND SOMEWHERE DIFFERENT ON EACH ISLAND. It sat at a fixed small
+  // offset up and left on every one, which reads as a target: a disc with a
+  // bright ring in the middle of it. Real high ground is to one END of an
+  // island, and which end is the first thing that makes two islands look like
+  // two places rather than one shape drawn twice.
+  //
+  // Pushed out to 40% of the crown's own radius, on a seeded bearing, and kept
+  // biased upward — the light comes from the upper left and high ground that
+  // catches it should be on the side facing it.
   {
     const R = d * 0.74 * 0.48 * 0.63
-    const cx = C - R * 0.2, cy = C - lift - R * 0.55
+    const bearing = ((seedOf(id) >>> 17) % 1000) / 1000 * Math.PI * 2
+    const off = R * 0.40
+    const cx = C - R * 0.2 + Math.cos(bearing) * off
+    const cy = C - lift - R * 0.55 + Math.sin(bearing) * off * 0.7
     const rg = lg.createRadialGradient(cx, cy, 0, cx, cy, R * 1.35)
     rg.addColorStop(0, 'rgba(190,206,140,0.55)')
     rg.addColorStop(0.48, 'rgba(150,176,105,0.22)')

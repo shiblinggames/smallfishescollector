@@ -180,7 +180,7 @@ import { heldGolden } from '../fishing/actions'
 import { coastClip, coastline } from '@/lib/islandShape'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
-import { GROUND, ISLAND_LIFT, bakeIsland, requestGround } from './islandArt'
+import { GROUND, islandLift, bakeIsland, requestGround } from './islandArt'
 import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './SeaIslandsGPU'
 import { type GlowPatch } from './seaGlow'
 import { type CaptainLook } from './seaCaptain'
@@ -11354,8 +11354,10 @@ const Landmass = memo(function Landmass({ id, r, locked = false }: {
   locked?: boolean
 }) {
   const d = r * 2
-  // Room for the widest shoal wash (inset -6%) plus the blur's own spill.
-  const pad = Math.round(d * 0.08) + 24
+  // Room for the widest shoal wash (inset -6%), the blur's own spill, and the
+  // CLIFF, which varies per island now and on the biggest is over a hundred
+  // world pixels of drop. See the GPU copy.
+  const pad = Math.round(d * 0.08) + 24 + Math.round((islandLift(id, d) / GROUND) * 0.5)
 
   // Drawn via ref callback rather than an effect so the island is painted in
   // the same frame it mounts — an effect leaves one frame of open water where
@@ -13236,7 +13238,7 @@ const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
           and these are supposed to have been left. */}
       <div style={{
         position: 'absolute', left: '50%', top: '54%', width: propW,
-        transform: `translate(-50%, -100%) translateY(${-ISLAND_LIFT / GROUND}px) scaleY(${1 / GROUND})`,
+        transform: `translate(-50%, -100%) translateY(${-islandLift(isle.id, isle.r * 2) / GROUND}px) scaleY(${1 / GROUND})`,
         transformOrigin: 'bottom center',
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -13688,7 +13690,14 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, call = null }: {
               <div style={{
                 position: 'absolute', left: `${b.x}%`, top: `${b.y}%`,
                 width: d * b.scale,
-                transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+                // ── RAISED ONTO THE LAND ──────────────────────────────
+                // The top face is drawn one lift above the island's own plane,
+                // so a building placed at a flat percentage of the box has its
+                // feet in the cliff rather than on the grass. Neither renderer
+                // was doing this for BUILDINGS — the isle prop above had it and
+                // nothing else did — and it is most of why the islands read as
+                // decals slid under the houses.
+                transform: `translate(-50%, -100%) translateY(${-islandLift(place.id, d) / GROUND}px) scaleY(${1 / GROUND})`,
                 transformOrigin: 'bottom center',
                 // NIGHT, ON A BOUNDED BOX. A building is a small element and
                 // filtering it costs a small buffer; the crash came from
