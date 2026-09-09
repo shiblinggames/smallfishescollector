@@ -34,7 +34,31 @@
 //   </PopupShell>
 
 import { motion, AnimatePresence } from 'framer-motion'
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
+
+/**
+ * ── HOW DEEP THIS ONE IS ────────────────────────────────────────────────────
+ *
+ * Every modal in the game is the same width now (`--modal-w`), which was the
+ * point — and it broke nesting. A confirm opened from inside a panel used to be
+ * 300px against the panel's 480, so on a phone it sat visibly inside its host.
+ * At one width they are the same width, and a sheet over a sheet at identical
+ * edges does not read as ON it, it reads as having REPLACED it.
+ *
+ * So depth insets. Each shell tells its children how deep they are and adds a
+ * step of side padding per level, which narrows anything inside it without any
+ * modal having to know it is nested — a component that opens from two places
+ * cannot know, and asking it to would put the answer in the wrong file.
+ *
+ * `PopupShell` does not portal, so a nested one is a real DOM descendant and
+ * the context reaches it. A hand-rolled overlay is on its own.
+ */
+const ModalDepth = createContext(0)
+
+/** How much narrower each level goes, per side. Enough to read as an edge at a
+ *  phone's width without a third-level dialog becoming a slot. */
+const DEPTH_STEP = 16
+const DEPTH_MAX = 2
 
 export interface PopupShellProps {
   open: boolean
@@ -65,6 +89,8 @@ export default function PopupShell({
   paddingBottom = 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
   children,
 }: PopupShellProps) {
+  const depth = useContext(ModalDepth)
+  const inset = Math.min(depth, DEPTH_MAX) * DEPTH_STEP
   return (
     <AnimatePresence>
       {open && (
@@ -108,15 +134,24 @@ export default function PopupShell({
               position: 'fixed', inset: 0, zIndex,
               display: 'flex',
               paddingTop,
-              paddingLeft: '1rem',
-              paddingRight: '1rem',
+              // ── INSET BY DEPTH ────────────────────────────────────────
+              // See ModalDepth. The base rem is the phone's own margin; the
+              // step is what makes a modal-over-a-modal look like one.
+              paddingLeft: `calc(1rem + ${inset}px)`,
+              paddingRight: `calc(1rem + ${inset}px)`,
+              // AND THE CARD ITSELF STEPS IN, which is what makes nesting read
+              // on a DESKTOP: a phone is bound by the padding above, but at 560
+              // inside 560 the two edges land on each other. Computed from
+              // `--modal-w-base` rather than from `--modal-w`, because a custom
+              // property that reads itself is a cycle and resolves to nothing.
+              ...(inset > 0 ? { ['--modal-w' as string]: `calc(var(--modal-w-base) - ${inset * 2}px)` } : null),
               paddingBottom,
               overflowY: 'auto',
               WebkitOverflowScrolling: 'touch',
               overscrollBehavior: 'contain',
             }}
           >
-            {children}
+            <ModalDepth.Provider value={depth + 1}>{children}</ModalDepth.Provider>
           </motion.div>
         </>
       )}

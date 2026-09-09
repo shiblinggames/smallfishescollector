@@ -79,6 +79,17 @@ otherwise made of 560px panels: you would close a modal on the sea and land on a
 twice as wide saying the same kind of thing. The class only moves the ceiling; `.page-col`
 keeps the padding and the centring.
 
+**A modal inside a modal steps in.** One width for everything was the point, and it broke
+nesting: a confirm opened from a panel used to be 300px against the panel's 480, so on a phone
+it sat visibly inside its host — at one width they share edges, and a sheet over a sheet at
+identical edges does not read as ON it, it reads as having REPLACED it. `PopupShell` carries a
+`ModalDepth` context and each level adds 16px of side padding AND narrows `--modal-w` by the
+same amount, so a nested modal insets on a phone (bound by the padding) and on a desktop (bound
+by the width), without any modal having to know it is nested — a component opened from two
+places cannot know. The step is computed from `--modal-w-base`, never from `--modal-w`: a
+custom property that reads itself is a cycle and resolves to nothing. Two levels, then it
+stops; a third-level dialog would be a slot.
+
 **A modal is never taller than the room the shell left it.** Cap height with `100%` alongside
 any `vh`: `maxHeight: 'min(84vh, 100%)'`. `vh` is the LARGE viewport on a phone — the one with
 the browser's toolbars hidden — and `PopupShell` has already reserved the top for the header and

@@ -2516,7 +2516,14 @@ body.hardcore-gauntlet::after {
    keep their tuned widths: a crate opening or a legendary reveal is a
    composition around a picture, and widening it scales the moment rather than
    giving it more room. */
-:root { --modal-w: clamp(360px, 46vw, 560px); }
+:root {
+  /* The base, and the live value. TWO names on purpose: a nested shell narrows
+     `--modal-w` for its children, and `--modal-w: calc(var(--modal-w) - 32px)`
+     on one element is a cycle and resolves to nothing. It computes from the
+     base instead, which never changes. See PopupShell's ModalDepth. */
+  --modal-w-base: clamp(360px, 46vw, 560px);
+  --modal-w: var(--modal-w-base);
+}
 
 /* ── THE FIGHT'S LEVEL BAR SITS ON THE CHART'S OWN HUD LINE ─────────────────
    The sea surface starts below the site header and hangs its HUD icons 18 into
