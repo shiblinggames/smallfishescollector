@@ -26,6 +26,7 @@ import RenownPanel from '@/components/RenownPanel'
 import Minimap from './Minimap'
 import SeaCampaignPanel from './SeaCampaignPanel'
 import MarkProbe from './MarkProbe'
+import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
 import type { RenownState } from '@/app/(app)/actions/renown'
@@ -58,7 +59,9 @@ import {
   WARSHIP_W, FIGHT_CAM_LIFT, zoomFor,
   type Bay, type Encounter, type Cache, type Beat,
 } from './raidWaters'
-import { RAID_MAP, RAID_CHAPTERS, chapterForNode, computeRaidMap, type RaidNode } from '@/lib/raidMap'
+import { RAID_MAP, RAID_CHAPTERS, chapterForNode, computeRaidMap, type RaidNode, type RaidChapter } from '@/lib/raidMap'
+import { markChapterUnlockSeen } from '@/app/(app)/expeditions/raidMapActions'
+import { markUltimateUnlockSeen } from '@/app/(app)/expeditions/actions'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
@@ -276,6 +279,20 @@ const ShipyardSheet = dynamic(() => import('./ShipyardSheet'), { ssr: false })
 // pulls in the whole loadout / forge / armoury tree, and most sails never open
 // it. See sea/ShipSheet.
 const ShipSheet = dynamic(() => import('./ShipSheet'), { ssr: false })
+/** The reveal a gate beat fires. Dynamic because most sessions never see one,
+ *  and it drags the whole cutscene kit in with it. */
+const LegendaryUnlockOverlay = dynamic(
+  () => import('@/app/(app)/expeditions/LegendaryUnlockOverlay').then(m => m.LegendaryUnlockOverlay),
+  { ssr: false })
+/** The parchment and the forge: a chapter opening, and the Quartermaster's
+ *  plans. Once per account each, so they load when they are owed and never
+ *  otherwise. */
+const ChapterUnlockOverlay = dynamic(
+  () => import('@/app/(app)/expeditions/UnlockOverlays').then(m => m.ChapterUnlockOverlay),
+  { ssr: false })
+const UltimateUnlockOverlay = dynamic(
+  () => import('@/app/(app)/expeditions/UnlockOverlays').then(m => m.UltimateUnlockOverlay),
+  { ssr: false })
 /** THE FIGHT, over the water it is happening on. Dynamic and enormous — the
  *  whole combat engine hangs off it — so nothing of it is fetched until a
  *  captain actually takes something on. */
@@ -1364,6 +1381,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 export default function SeaMap({
   fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, navXP, renownNav, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
   auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, raidItems, raidSeats, itemMounts, portal, startSide,
+  seenChapterUnlocks = [], seenUltimateUnlock = false,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
@@ -1409,6 +1427,11 @@ export default function SeaMap({
   /** A panel to open the moment the chart is up, named in the URL. The retired
    *  /crew route lands here; nothing else uses it yet. */
   openDoor?: 'crew' | 'loadout' | null
+  /** Chapters whose parchment this captain has already dismissed, and whether
+   *  the Quartermaster's plans have been announced. Both are the celebration's
+   *  ONLY memory — see the note where they are read. */
+  seenChapterUnlocks?: string[]
+  seenUltimateUnlock?: boolean
   /** And which room inside it — `/crew?tab=recruits` was an errand, not an
    *  address, so the errand is carried across. */
   openCard?: 'assign' | 'recruits' | 'roster' | 'wardrobe' | null
@@ -3266,6 +3289,20 @@ export default function SeaMap({
    *  "Manage her", 'forge' from mooring at the Forge island. Null is shut. */
   const [shipSheet, setShipSheet] = useState<null | 'ship' | 'forge' | 'items'>(
     openDoor === 'loadout' ? 'items' : null)
+  /**
+   * ── WHO JUST BECAME RECRUITABLE ────────────────────────────────────────
+   *
+   * A gate beat adds a legendary to the recruit pool the moment it is read, and
+   * the reveal is staged for it. SeaStory unmounts on the read, so it announces
+   * on the window and this holds the overlay — the same shape RaidsSection uses
+   * for the same event, so both surfaces fire the same celebration.
+   */
+  const [unlockedLegendary, setUnlockedLegendary] = useState<UnlockedLegendary | null>(null)
+  useEffect(() => {
+    const on = (e: Event) => setUnlockedLegendary((e as CustomEvent).detail as UnlockedLegendary)
+    window.addEventListener('legendary-unlocked', on)
+    return () => window.removeEventListener('legendary-unlocked', on)
+  }, [])
   /** Ashore at the Crew Hall — the building, the ladder and the bunks. */
   const [hallSheet, setHallSheet] = useState(false)
   /** The raid being fought over the chart, by raidId. */
@@ -3303,6 +3340,47 @@ export default function SeaMap({
   const bossReadRef = useRef(false)
   /** The same fact, for the render: the HUD stands down in a fight. */
   const fightOn = fightId !== null || bossCard !== null
+
+  /**
+   * ── AND THE TWO BIG ONES ───────────────────────────────────────────────
+   *
+   * A chapter opening and the Quartermaster's plans. Both are STATE-BASED, not
+   * events: "the previous chapter's main path is all cleared and you have never
+   * dismissed this one's parchment" is a question you can ask at any moment,
+   * which is why it survives a reload, a crash and a device swap. The same read
+   * /expeditions makes, against the same two columns.
+   *
+   * IT MATTERS THAT IT IS HERE. The last node of a chapter is a boss you now
+   * fight from the deck, and the moment it went down the chart just went quiet:
+   * the parchment was waiting on /expeditions for whenever you next opened it,
+   * which is a celebration arriving hours late and in the wrong room.
+   *
+   * `liveStatus` rather than the server prop, because the chart re-resolves the
+   * map itself the instant something clears — so this fires when the guns stop,
+   * not on the next page load.
+   */
+  const [seenChapters, setSeenChapters] = useState<string[]>(seenChapterUnlocks)
+  const [celebratingChapter, setCelebratingChapter] = useState<RaidChapter | null>(null)
+  useEffect(() => {
+    if (fightOn) return
+    const seen = new Set(seenChapters)
+    for (let i = 1; i < RAID_CHAPTERS.length; i++) {
+      const curr = RAID_CHAPTERS[i]
+      if (seen.has(curr.id)) continue
+      const prev = RAID_CHAPTERS[i - 1]
+      // Side branches and coming-soon stubs are not the main path. A challenge
+      // variant nobody has run must not hold a whole chapter's door shut.
+      const prevMain = RAID_MAP.filter(n =>
+        chapterForNode(n.id).id === prev.id && !n.sideBranch && !n.comingSoon)
+      if (prevMain.length > 0 && prevMain.every(n => (liveStatus[n.id] ?? 'locked') === 'cleared')) {
+        setCelebratingChapter(curr)
+        break
+      }
+    }
+  }, [liveStatus, seenChapters, fightOn])
+  const [seenUltimate, setSeenUltimate] = useState(seenUltimateUnlock)
+  const ultimateDue = !seenUltimate && !fightOn
+    && (liveStatus['the_quartermaster'] ?? 'locked') === 'cleared'
   // ── THE FIGHT IS THESE TWO HULLS ─────────────────────────────────────────
   //
   // Not a scene of them. The chart is already drawing your man-o-war and the
@@ -8968,6 +9046,49 @@ hullRef={hullRefFor(t.key)} />
           setSkillOpen(false)
           setRenownOpen(true)
         }} />
+
+      {/* Portals itself to the body at z 1300, over the chart and everything
+          standing on it. Tap anywhere to dismiss. */}
+      {unlockedLegendary && (
+        <LegendaryUnlockOverlay crew={unlockedLegendary} onClose={() => setUnlockedLegendary(null)} />
+      )}
+
+      {/* ── THE PARCHMENT ─────────────────────────────────────────────
+          Dismissed locally AND on the server: the local half closes it now, the
+          server half stops it coming back tomorrow. Fire-and-forget, because a
+          failed write costs one repeat and a blocking one costs the moment. */}
+      {celebratingChapter && (
+        <ChapterUnlockOverlay
+          key={celebratingChapter.id}
+          chapter={celebratingChapter}
+          previousChapter={(() => {
+            const i = RAID_CHAPTERS.findIndex(c => c.id === celebratingChapter.id)
+            return i > 0 ? RAID_CHAPTERS[i - 1] : null
+          })()}
+          onDismiss={() => {
+            const id = celebratingChapter.id
+            setSeenChapters(prev => [...prev, id])
+            setCelebratingChapter(null)
+            markChapterUnlockSeen(id).catch(() => {})
+          }} />
+      )}
+
+      {/* ── AND THE FORGE ─────────────────────────────────────────────
+          "Build her" leaves the sea, which is the one place that is right: the
+          Man-o-War build is a long screen of gates and it belongs to the ship's
+          own room. */}
+      {ultimateDue && (
+        <UltimateUnlockOverlay
+          onBuild={() => {
+            setSeenUltimate(true)
+            markUltimateUnlockSeen().catch(() => {})
+            setShipSheet('ship')
+          }}
+          onLater={() => {
+            setSeenUltimate(true)
+            markUltimateUnlockSeen().catch(() => {})
+          }} />
+      )}
 
       <FolkPanel open={folkOpen} onClose={() => { setFolkOpen(false); refreshMet() }} finn={finn} />
 

@@ -22,7 +22,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import StoryScene from '@/app/(app)/expeditions/StoryScene'
-import { markStoryNodeRead, claimMilestoneNode } from '@/app/(app)/expeditions/raidMapActions'
+import { markStoryNodeRead, claimMilestoneNode, claimScoutDebt } from '@/app/(app)/expeditions/raidMapActions'
 import { SCENE_BACKDROPS, type RaidNode } from '@/lib/raidMap'
 import { nodeSheet } from './nodeSheetActions'
 import { vibrate } from '@/lib/haptics'
@@ -58,11 +58,35 @@ export default function SeaStory({ node, cleared, intro = false, onDone, onClear
     // it. In both cases the only thing left to do here is close.
     if (cleared || intro) { onDone(); return }
     startTransition(async () => {
-      const res = await markStoryNodeRead(node.id)
+      // ── A PAYOFF BEAT IS CLAIMED, NOT MERELY READ ──────────────────
+      //
+      // `scout_debt` is a story node carrying a `payoff`: mercy shown at an
+      // earlier fork pays back here in coin and Nav XP. Its action is
+      // `claimScoutDebt`, and this called `markStoryNodeRead` for every story
+      // node alike — which marks it cleared and grants NOTHING. The claim is
+      // idempotent on an already-cleared node, so reading that beat from the
+      // deck did not defer the payoff, it forfeited it permanently. The map
+      // has always branched here; the water never learned to.
+      const res = node.payoff ? await claimScoutDebt(node.id) : await markStoryNodeRead(node.id)
       if (res && 'error' in res) { setErr(res.error); return }
-      // THE CHART HAS TO HEAR ABOUT IT. `nodeStatus` is a server prop, so
-      // without this the post stays lit, the next post stays locked, and a gate
-      // that this beat just opened stays shut until a reload.
+      // The purse changed under the header on every other surface.
+      if ('newDoubloons' in res && res.doubloonsDelta !== 0) {
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+      }
+      // ── AND SOMEBODY JUST JOINED THE POOL ──────────────────────────
+      //
+      // A gate beat adds its legendary to the recruit board as you read it, and
+      // the reveal is the whole reason the beat is staged. This return value
+      // was being dropped on the floor out here: the crew was unlocked and
+      // nothing said so, so a captain met their new legendary by scrolling past
+      // an unfamiliar face on the recruit card weeks later.
+      //
+      // Dispatched rather than rendered, because this component unmounts on the
+      // very next line. Same event name /expeditions uses, so the two surfaces
+      // cannot celebrate differently.
+      if ('unlockedLegendary' in res && res.unlockedLegendary) {
+        window.dispatchEvent(new CustomEvent('legendary-unlocked', { detail: res.unlockedLegendary }))
+      }
       onCleared?.(node.id)
       router.refresh()
       onDone()

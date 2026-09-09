@@ -408,6 +408,11 @@ export default async function SeaPage({ searchParams }: {
       startSide={((profile?.sea_side as string | null) ?? 'fishing') as 'fishing' | 'anchorage' | 'moored' | 'open'}
       // A door named in the URL, opened on arrival, and which of its rooms.
       openDoor={openDoor === 'crew' ? 'crew' : openDoor === 'loadout' ? 'loadout' : null}
+      // WHICH CELEBRATIONS ARE STILL OWED. The same two columns /expeditions
+      // reads, so a parchment dismissed on one surface stays dismissed on the
+      // other — they are one memory, not two.
+      seenChapterUnlocks={(profile?.seen_chapter_unlocks as string[] | null) ?? []}
+      seenUltimateUnlock={profile?.seen_ultimate_unlock === true}
       openCard={openCard === 'assign' || openCard === 'recruits' || openCard === 'roster' || openCard === 'wardrobe'
         ? openCard : null}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
