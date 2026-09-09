@@ -12555,10 +12555,10 @@ const WargateMark = memo(function WargateMark({ isNear }: { isNear: boolean }) {
  * milestone or an event the scene is an intro and the claim after it is the real
  * clear. So this is the exact set whose whole interaction is "read it".
  *
- * Everything else on a rock out here is named and sent to the sheet that can
- * finish it. Teaching this surface those sheets is the next piece of work; until
- * then, offering a verb that runs a cutscene and then cannot record it would be
- * worse than the trip to the map.
+ * Everything else on a rock out here is named and sent to the sheet, which can
+ * now finish all of it: the tolls, the caches, the class picks, the puzzle
+ * boards, the bones, the aim-bar gate, the event choices, the musters, the
+ * refit terms and Finn's spoils. See SeaNodeSheet.
  */
 function readableAtSea(n: { type: string; scene?: unknown }): boolean {
   return !!n.scene && (n.type === 'story' || n.type === 'berth')
@@ -12576,6 +12576,17 @@ function verbFor(n: RaidNode, status: string): string {
   if (n.type === 'milestone') return 'Settle with'
   if (n.choice) return 'Open the'
   if (n.classPick) return 'Make'
+  // ── AND THE SEVEN THE WATER JUST LEARNED ──────────────────────────────
+  // Each one names what it actually is. "Read The Wax Cipher" was true while
+  // the sheet could only print its flavour and close; it is a lock you crack
+  // now, and the helm is the last thing read before the thumb moves.
+  if (n.puzzle) return 'Crack'
+  if (n.dice) return 'Throw at'
+  if (n.dpsCheck) return 'Run'
+  if (n.event) return 'Make the call at'
+  if (n.muster) return 'Stand'
+  if (n.berth || n.armory) return 'Hear the yard at'
+  if (n.spoils) return 'Divide'
   return 'Read'
 }
 

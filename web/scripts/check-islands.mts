@@ -599,6 +599,42 @@ if (bad) process.exitCode = 1
       + ` ${nearest.toFixed(0)}px off ${who}`)
   }
 
+  // -- AND EVERY STOP OUT THERE CAN ACTUALLY BE FINISHED ------------------
+  //
+  // Placing a node on the water and having no sheet that can settle it is the
+  // worst of the two failures available here: a captain sails up, gets its name
+  // and its flavour and a close button, and learns the chart is a diorama. That
+  // shipped for fifteen stops - six puzzles, two throws, two musters, two sets
+  // of terms, a gate, an event and Finn's spoils - and nothing said a word,
+  // because every one of them type-checks and renders.
+  //
+  // A stop is finishable if it is a scene the water can read (see
+  // `readableAtSea` in SeaMap) or it carries a field SeaNodeSheet knows how to
+  // draw. Add a new node KIND to raidMap and this fails until the sheet learns
+  // it, which is the whole point.
+  {
+    const { RAID_MAP: MAP } = await import('../lib/raidMap')
+    const { ENCOUNTERS: E, CACHES: C, BEATS: B } = await import('../app/(app)/sea/raidWaters')
+    const fights = new Set(E.map(x => x.node))
+    const onRocks = new Set([...C.map(x => x.node), ...B.map(x => x.node)])
+    const dead: string[] = []
+    for (const n of MAP) {
+      if (fights.has(n.id) || !onRocks.has(n.id)) continue
+      const readable = !!n.scene && (n.type === 'story' || n.type === 'berth')
+      const drawn = n.type === 'milestone' || !!n.choice || !!n.classPick
+        || !!n.puzzle || !!n.dice || !!n.dpsCheck || !!n.event || !!n.muster
+        || !!n.berth || !!n.armory || !!n.spoils
+      if (!readable && !drawn) dead.push(`${n.id} (${n.type})`)
+    }
+    if (dead.length > 0) {
+      bad++
+      console.error(`  x ${dead.length} stop(s) on the water that nothing out there can finish:`)
+      for (const d of dead) console.error(`      ${d} - SeaNodeSheet has no body for it`)
+    } else {
+      console.log(`    ok   sheets  all ${onRocks.size} rock(s) can be settled from the deck`)
+    }
+  }
+
   console.log(`\n  In the water: ${bad === 0 ? 'all placed cleanly' : `${bad} problem(s)`}.`)
   if (bad) process.exit(1)
 }
