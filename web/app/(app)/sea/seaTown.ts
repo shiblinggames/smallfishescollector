@@ -43,6 +43,25 @@ import { GROUND, islandLift, liftAt, liftAtPoint } from './islandArt'
 import { texture } from './skiffArt'
 import { makeSmoke, type Chimney, type Smoke } from './seaSmoke'
 
+/**
+ * ── WHICH ROOFS HAVE A FIRE LIT ─────────────────────────────────────────────
+ *
+ * Named, not derived. The first cut put a pot on anything wider than 46px,
+ * which is a rule about PAINTINGS, and it lit thirteen of them — including the
+ * hall's stores, a drill yard and a trawl shed, none of which are places
+ * anybody is sitting indoors.
+ *
+ * Who has a fire going is a fact about the place. A town, a forge, a
+ * charterhouse full of clerks and a gunwharf: four buildings, and every one of
+ * them is somewhere work is being done under a roof.
+ */
+const SMOKING = new Set([
+  'mainland-town.png',
+  'forge.png',
+  'charterhouse.png',
+  'gunwharf.png',
+])
+
 export type GpuBuilding = {
   /** Percent of the island's box. */
   x: number
@@ -200,18 +219,18 @@ export async function makeTowns(
 
       // ── AND WHERE ITS CHIMNEYS ARE ───────────────────────────────
       //
-      // Nothing in the chart's data says where a roof's pot is, and adding a
-      // coordinate per building to every table would be a lot of typing for
-      // something nobody would ever tune. So it is derived: a chimney sits high
-      // on the painted mass, and how many there are follows how wide the
-      // building is. One for a shed, three for a whole painted town.
+      // WHICH buildings smoke is named above. WHERE the pot sits is derived,
+      // because nothing in the chart's data says, and a coordinate per building
+      // would be a lot of typing for something nobody would ever tune: a
+      // chimney sits high on the painted mass, and how many there are follows
+      // how wide the building is. One for a forge, three for a whole town.
       //
       // `up` is the sprite's own height in the node's units — the art's aspect
       // at this width, un-squashed the same way the sprite itself is, because
       // the top of a building drawn standing up is that far above its feet.
       //
       // A LOCKED island has cold hearths. Nobody is home yet.
-      if (!spec.locked && w >= 46) {
+      if (!spec.locked && SMOKING.has(b.art.split('/').pop() ?? '')) {
         const up = (w * (tex.height / tex.width)) / GROUND
         const pots = Math.max(1, Math.min(3, Math.round(w / 240)))
         // The forge is not a kitchen: it works harder and it burns dirtier.
