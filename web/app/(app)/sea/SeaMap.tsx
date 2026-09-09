@@ -13234,7 +13234,17 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, call = null }: {
           the big. Counter-squashed like the name plate under it: a sign stands
           up off the plane, it does not lie on it. */}
       {call && (
-        <div aria-hidden style={{
+        // ── AND IT OBEYS THE HOUR ─────────────────────────────────────
+        //
+        // `sea-lit` is not decoration here, it is the difference between a mark
+        // that is IN the scene and one laid on top of it. The night grade on
+        // this chart is applied per element, not as a filter over the world
+        // layer, so anything that does not carry it simply does not get dark:
+        // at dusk every island, building and hull has come down about 42% and
+        // warmed, and this was still sitting at noon brightness over the top of
+        // them. That is most of what "pasted on" looks like, and it was the
+        // only thing above an island not taking the light.
+        <div aria-hidden className="sea-lit" style={{
           position: 'absolute', left: '50%', bottom: '100%',
           transform: `translate(-50%, 0) scaleY(${1 / GROUND})`,
           transformOrigin: 'bottom center',
