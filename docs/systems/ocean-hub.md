@@ -1572,6 +1572,92 @@ would rise out of the sea at once on load. It happens where the thing IS rather 
 banner: a chapter is twenty small openings, and twenty full-screen announcements is not a
 chapter, it is an interruption.
 
+## Every campaign stop can be finished from the deck
+
+**55 of the 64 nodes in `RAID_MAP` are placed on the water.** The other nine are the
+challenge variants, which are a difficulty switch on a boss you already have rather than a
+stop on the road — the boss card carries them (see `BossCardSheet`).
+
+**And every placed one can be SETTLED out there**, which is a different claim and was not
+true until 2026-09. Fifteen stops were laid on the chart with nothing behind them: you
+sailed up to the Wax Cipher and got its name, its flavour and a close button. Six puzzles,
+two throws of the bones, two musters, two sets of refit terms, the Harbor Gate, the
+Cartographer's choice and Finn's spoils — at least one per chapter, so sailing the campaign
+meant being bounced back to `/expeditions` two or three times a chapter.
+
+`SeaNodeSheet` draws them all now:
+
+| kind | body |
+|---|---|
+| `milestone` | the toll (`claimMilestoneNode`) |
+| `choice` | the Quartermaster's cache |
+| `classPick` | the Captain's Choice |
+| `puzzle` | one of the five boards, then the reveal (`solvePuzzleNode`) |
+| `dice` | `DiceRollNode` |
+| `dpsCheck` | `DpsCheckNode` |
+| `event` | the choice cards (`pickRaidEventChoice`) |
+| `muster` | the manifest checklist + Stand (`standForMuster`) |
+| `berth` / `armory` | the terms (`markStoryNodeRead`); the till stays in Manage Ship |
+| `spoils` | `SpoilsBoard` |
+
+**None of it is a second implementation.** Every interaction is the component the campaign
+map already mounts, given the same props and the same server actions; what is written in
+`SeaNodeSheet` is the SHELL, which is the only part that should ever differ between a page
+of cards and a panel over open water. They are `dynamic()` — a captain opens ONE of these
+at a stop and most stops are none of them.
+
+**The muster is the one deliberate divergence.** The map plays its read-off as a cutscene,
+the crew ticking the manifest off aloud. Out here it is the checklist and the verb, because
+that is what a captain standing off Muster Bank needs. `musterReport` is pure and is the
+same function `standForMuster` re-runs, so a green row can never become a refusal on the
+press.
+
+**`nodeSheet()` reads through `getRaidMapView`** — the same load `/expeditions` makes. It
+was a three-column select of its own, which was right while the water could finish three
+things and is exactly how two surfaces start disagreeing about whether you passed an
+inspection.
+
+**`check-islands` fails if any rock on the water has no body that can settle it.** All
+fifteen shipped broken and nothing said a word, because every one of them type-checks and
+renders. Add a new node kind to `raidMap` and the check fails until the sheet learns it.
+
+## The three celebrations, and the beat that was forfeiting its payoff
+
+- **`scout_debt` was destroying its own reward.** It is a story node carrying a `payoff`
+  (mercy at an earlier fork pays back in coin and Nav XP) and its action is
+  `claimScoutDebt`. `SeaStory` called `markStoryNodeRead` for every story node alike, which
+  marks it cleared and grants nothing — and the claim is idempotent on an already-cleared
+  node, so reading it from the deck did not defer the payoff, it destroyed it. **Any story
+  node with a `payoff` must be claimed, not read.**
+- **The legendary reveal** was being dropped on the floor: a gate beat adds its crew to the
+  recruit pool as you read it and the reveal is the whole reason the beat is staged.
+  `SeaStory` announces `legendary-unlocked` on the window (it unmounts on the read) under
+  the same event name `/expeditions` uses.
+- **The chapter parchment and the Quartermaster's plans** lived inside `RaidsSection`, a
+  3,500-line campaign map, so the only surface that could fire them was that map — and the
+  last node of a chapter is a boss you fight from the deck. Both are in
+  `expeditions/UnlockOverlays.tsx` now and fire from the chart off `liveStatus`, so they
+  land when the guns stop rather than on the next page load. Both surfaces read and write
+  the SAME two profile columns, so a parchment dismissed on either stays dismissed on both.
+
+## Captain's Orders is on the water too
+
+The live onboarding checklist sits at the top of the campaign panel until it latches —
+above the chapters, because a captain who has not seated a raid crew does not need to know
+where Chapter III got to. It is `/expeditions`' own `CaptainsOrders`: same orders, same
+order, same latch, with `sea/ordersActions.ts` gathering the eight numbers on every open
+(it must be LIVE, or it tells you to do a thing you did an hour ago).
+
+**Where an order sends you is the only difference.** On the hub the five errands are five
+routes; out here they are four discs and a heading. Two point at `/crew?tab=...`, which
+would unload the whole ocean and rebuild it to reach a panel one disc away, so the card
+takes an optional `onHref` that lets a caller claim an errand instead of following it.
+"Open the campaign" has no door — closing the panel IS the answer, because the chart
+already draws a chevron at the next stop.
+
+**The `/expeditions` tour is deliberately not ported.** It teaches that page's layout, and
+that layout is not on the water. Captain's Orders is the part that carries over.
+
 **Finding it** is the compass, which takes the next stop as its highest-priority mark —
 ahead of even a finished job of Finn's. That is not a flourish: the water deliberately hides
 what you have not reached, so in a fresh bay there is no rock, no road and no coast to read,

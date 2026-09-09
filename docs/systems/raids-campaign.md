@@ -2,6 +2,23 @@
 
 Turn-based ship combat along a chaptered node chain. The other half of Expeditions.
 
+## Two surfaces, one campaign
+
+`/expeditions` has the node map (`RaidsSection`); `/sea` has the water the same nodes are
+laid on. **`lib/raidMap.ts` is the source of truth for both** — what a node is, what it
+costs, what it drops — and the water is a second way to REACH those nodes, never a second
+definition of them.
+
+Everything a node needs to be finished now exists on both. See
+[ocean-hub.md](ocean-hub.md) for the table of node kinds and their sea bodies, the
+celebration overlays, and Captain's Orders. Two rules that came out of building it:
+
+- **Any story node with a `payoff` must be CLAIMED (`claimScoutDebt`), not read.**
+  `markStoryNodeRead` marks it cleared and grants nothing, and the claim is idempotent on a
+  cleared node — so reading a payoff beat destroys its reward silently.
+- **A new node kind means a new body in `SeaNodeSheet`.** `check-islands` fails until it
+  has one; fifteen kinds shipped placed-but-unfinishable and nothing said a word.
+
 ## Files
 
 - **`web/lib/raidMap.ts` — the campaign spine.** Node chain, story nodes, gates. Story
