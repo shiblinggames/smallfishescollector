@@ -915,6 +915,51 @@ antialiases both sides of every shared seam and leaves a hairline of background 
 they run parallel to the shore, faded out where the wall shelves, pale because they are ledges
 catching sky and dark ones read as cracks. Sand has no bedding planes in it.
 
+## The grass moves
+
+The green was a gradient band with a texture over it: a colour, not a surface, and the last
+thing on the water that was completely still. The sea swells, the surf breaks, the fog rolls,
+the chimneys smoke, and the meadow they all sat around did not move a pixel.
+
+`seaGrass.ts` is a few thousand **tufts** per island in ONE mesh, parented to the island's own
+position the way the surf is, so there is no camera in it either. Measured over the ten ports:
+253 tufts on the smallest, 1391 on the Mainland, 7015 in total.
+
+**No GLSL, and that is deliberate.** The obvious build is a vertex shader bending each tuft in
+the vertex stage. `shoreFoam.ts` is the argument against and is worth reading first: two
+attempts at the surf were shader work, both drew foam in the middle of the open ocean, and
+that file says plainly that hand-written shader plumbing is what broke them. It scrolls a UV
+buffer on the CPU and has never been wrong since. The grass rewrites its top two vertices per
+tuft per frame the same way.
+
+**The wind is a field, not a per-tuft sum.** The naive version gives every tuft its own sine
+of its own position and time - a sine per tuft per frame, and worse, the arithmetic in the
+wrong place. What you want is not ten thousand independent wobbles but ONE wind crossing the
+water that everything standing in it leans away from together; grass where each blade decides
+for itself reads as static, not as weather. So the wind is a 128-entry table sampled along the
+prevailing bearing, rebuilt once a frame - 256 sines however many tufts are on screen. A
+tuft's index into it is fixed at build time, because the tuft does not move; **the gust travels
+because the table travels**. Two tables at different wavelengths, because one is a wave and two
+is weather.
+
+Roots stay put and only the tips travel, which is the difference between grass bending and
+grass sliding, and a tuft shortens as it leans because a blade does not stretch. Tufts sort by
+root y, the same painter's rule the rocks follow. Density thins through the scrub and stops
+before the sand - a hard edge on a meadow is a lawn - and clumps on value noise, because even
+random scatter over an area reads as a stipple, which is a texture, which is the thing this
+exists to stop being.
+
+**One greyscale plate, tinted per island.** `grassTint` in islandArt runs the palette's green
+through the same dial the bands go through, and `Container.tint` multiplies, so one plate is
+basalt grass here and jungle grass there with no second texture and no shader. It is lifted
+toward white first: the plate is dark at the root and a multiply only darkens, so tinting with
+the band colour itself grows grass darker than the ground it stands on, which reads as a
+shadow lying on the meadow rather than as the meadow.
+
+Locked islands get none - they are painted grey, and greyed-out grass waving cheerfully at you
+reads as a bug rather than as somewhere you cannot go yet. GPU path only; `?gpu=0` keeps the
+painted band.
+
 **Surf** is two collars hugging the coast, breathing slowly and **out of phase** — in phase
 they read as one ring pulsing, which is a UI element; out of phase they read as swell
 arriving. Water hitting a shore is the most recognisable thing about a shore, and without it
