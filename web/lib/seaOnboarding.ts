@@ -197,6 +197,22 @@ export const FIRST_VOYAGE: Beat[] = [
     target: 'market',
     holdCast: true,
   },
+  // ── AND WHERE "WHAT NOW" IS ANSWERED ──────────────────────────────────
+  //
+  // THE ONE DISC THAT IS WORTH A BEAT, on both halves of the game. Everything
+  // else on that row is a place you go when you already know you want it; this
+  // is the one you press when you do NOT know, and a captain who has not been
+  // told where that lives has nothing to do but sail about.
+  //
+  // It was a cue for a day, fired the first time Finn had a job finished — and
+  // that is the wrong trigger for exactly this one, because it can be hours
+  // away and the question it answers arrives in the first ten minutes.
+  {
+    ...K,
+    text: 'One thing before you go, Captain. The *pennant* up there is your story: where Finn’s business has got to, and everyone out here worth knowing. When you are not sure what to do next, that is the disc to press.',
+    until: 'next',
+    target: 'hud-journey',
+  },
   {
     ...D,
     // THE LAST WORD IS A DOOR, NOT A SUMMARY.
@@ -258,6 +274,16 @@ export const GATE_TOUR: Beat[] = [
     ...D,
     text: 'Past it is the campaign. Real water, not a list: you sail up to a fight and take it on where you find it. None of it is on your chart until you have sailed it, so go and look.',
     until: 'next',
+  },
+  {
+    ...D,
+    // SAID HERE RATHER THAN LEFT TO A CUE, and said with the same words the
+    // fishing side used for the same disc. A captain has learned "the pennant
+    // is where the story is"; this is that promise being kept on the other half
+    // of the game, and out here it is the whole of the progression.
+    text: 'Same *pennant*, different story. Out here it holds the campaign: every chapter, and the one stop it wants from you next. That is your answer to "what now" on this water.',
+    until: 'next',
+    target: 'hud-journey',
   },
   {
     ...K,

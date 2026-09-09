@@ -10106,8 +10106,6 @@ hullRef={hullRefFor(t.key)} />
             // Somebody in reach. The tour used to promise this three beats
             // before it could happen; here it is the boat in front of you.
             hail: !!nearTrader || nearFinn,
-            // Finn has business. The pennant is his before it is anything else.
-            journey: !inAnchorage && finn?.questReady === true,
             // ── AND THE EXPEDITION SIDE ─────────────────────────────
             crew: inAnchorage,
             loadout: inAnchorage,

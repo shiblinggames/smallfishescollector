@@ -1744,10 +1744,17 @@ usable.** That rule lives at the top of `SeaLandfallHint` and is the oldest one 
 tours had drifted a long way off it (24 and 16 beats) before being pulled back to **10 and
 5** in 2026-09.
 
-- **`FIRST_VOYAGE` (10)** — steer, sail south, cast, catch, the hold, XP, sail home, go
-  ashore, sell, and a closing line. Every beat is something the captain is *doing*.
-- **`GATE_TOUR` (5)** — past the reef, the Gunwharf, the gate, what is beyond it, go. The
-  Gunwharf is the one island it names, because nothing up there happens without the warship.
+- **`FIRST_VOYAGE` (11)** — steer, sail south, cast, catch, the hold, XP, sail home, go
+  ashore, sell, **the pennant**, and a closing line. Every beat is something the captain is
+  *doing*, bar one.
+- **`GATE_TOUR` (6)** — past the reef, the Gunwharf, the gate, what is beyond it, **the
+  pennant**, go. The Gunwharf is the one island it names, because nothing up there happens
+  without the warship.
+- **THE PENNANT IS THE EXCEPTION, in both tours and on purpose.** Every other disc is a
+  place you go when you already know you want it; the pennant is the one you press when you
+  do NOT know what to do, and out past the gate it is the whole of the progression. It was a
+  cue for a day, fired on Finn finishing a job — hours after the question first comes up. A
+  signpost that arrives once you are lost is not a signpost.
 - **`SeaLandfallHint`** — one line the first time you tie up at a port. All seven anchorage
   islands live here, plus the Shipyard, Trawl Docks and Homestead.
 - **`SeaCue`** — one line the first time anything else becomes true: a rank gained lights the

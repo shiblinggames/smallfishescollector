@@ -9,13 +9,21 @@
 // ── WHY THESE ARE NOT IN THE TOUR ───────────────────────────────────────────
 //
 // They were. The first voyage ran to twenty-four beats and the anchorage tour
-// to sixteen, and between them they named four islands, seven more islands and
-// eight HUD discs before the captain had touched any of it. That is a manual,
-// and a manual read at minute zero is a manual nobody remembers at minute forty.
+// to sixteen, and between them they named eleven islands and eight HUD discs
+// before the captain had touched any of it. That is a manual, and a manual read
+// at minute zero is a manual nobody remembers at minute forty.
 //
 // A cue costs nothing until the moment it is about, and at that moment it is
 // the only sentence on screen. The captain has already noticed the thing — the
 // bar moved, the boat is there, the island lit up — and this names it.
+//
+// ── EXCEPT THE PENNANT, WHICH IS IN BOTH TOURS ──────────────────────────────
+//
+// It was a cue here for a day and that was wrong. Every other disc is a place
+// you go when you already know you want it; the pennant is the one you press
+// when you do NOT know what to do, and its cue fired on Finn finishing a job,
+// which can be hours after the question first comes up. A signpost that arrives
+// after you are lost is not a signpost. See lib/seaOnboarding.
 //
 // ── ONE AT A TIME, AND NEVER WHILE A TOUR IS SPEAKING ───────────────────────
 //
@@ -69,12 +77,6 @@ const CUES: {
     id: 'hail',
     ...GUIDES.doby,
     text: 'You are not the only one out here. *Hail* anyone you pass. Some buy your catch on the spot, some just like the company, and they all warm to you the more you stop.',
-  },
-  {
-    id: 'journey',
-    ...GUIDES.doby,
-    text: 'The *pennant* is your story. Where Finn’s business has got to, and who else out here is worth knowing.',
-    target: 'hud-journey',
   },
   // ── AND THE EXPEDITION SIDE'S OWN ─────────────────────────────────────
   {
