@@ -230,16 +230,34 @@ export async function makeCaptain(
    * able to name. A hull sitting on water that reflects everything except hulls
    * reads as a sticker on the sea.
    *
-   * ── THE HULL ONLY, LIKE THE SHADOW ─────────────────────────────────────────
+   * ── ALL OF HER, NOT THE HULL ───────────────────────────────────────────────
    *
-   * Same argument as the shadow directly above: reflecting the whole composite
-   * would put the captain, the hat and two hundred per cent of a fishing line
-   * in the water. What a small boat throws back at this size is its own hull,
-   * and nothing else in the picture is close enough to the surface to matter.
+   * The first cut mirrored the boat sprite alone, borrowing the shadow's
+   * argument directly above: the shadow is the hull only because a hard black
+   * line of fishing line lying across the water is not something a fishing line
+   * does.
    *
-   * Its OWN colours rather than a silhouette, because that is what separates a
-   * reflection from a second shadow — the rocks' mirrors carry their paint and
-   * these should too.
+   * That reasoning does not carry over. A shadow is an absence of light and a
+   * long thin one is a mistake; a REFLECTION is a picture, and a picture of a
+   * boat with nobody in it is a stranger thing than a picture with a rod in it.
+   * Whatever you have equipped is the whole reason to look at your own boat,
+   * and it was the one part not making it into the water.
+   *
+   * ── SO: TWINS, IN A BOX THAT IS FLIPPED ────────────────────────────────────
+   *
+   * One mirror Sprite per source Sprite, sharing its texture — no second
+   * composite built, no render-to-texture per hull per frame, no extra pixels
+   * in memory. The twins copy their sources' local transforms VERBATIM and the
+   * mirroring is done once, on the container holding them.
+   *
+   * That is the whole trick and it is why this is cheap: put the flip on the
+   * box and every child is reflected correctly for free, including the ones
+   * that move (a rod swings through the cast) and the ones that come and go
+   * (the hook is hidden while it is in the water).
+   *
+   * Auras are left out. A glow is a particle system, not a sprite, and a
+   * reflected emitter would be a second one — twice the sparks for a thing that
+   * should be dimmer, not busier.
    *
    * ── MIRRORED ABOUT THE WATERLINE, AND SQUASHED ─────────────────────────────
    *
@@ -249,20 +267,20 @@ export async function makeCaptain(
    * hull of a different shape reflects from its own waterline instead of the
    * default one's.
    *
-   * Then compressed. A hull STANDS UP out of the plane and is counter-squashed
-   * to do it; a reflection LIES IN the plane, so it is foreshortened like
-   * anything else lying flat. Same reasoning the landmarks' mirrors use, and
-   * the same rough factor.
+   * Then compressed. A captain STANDS UP out of the plane and is
+   * counter-squashed to do it; a reflection LIES IN the plane, so it is
+   * foreshortened like anything else lying flat.
    */
-  const mirror: Sprite = new PIXI.Sprite()
-  mirror.visible = false
+  const mirrorBox: Container = new PIXI.Container()
   // FAINT. Water gives back a fraction of what falls on it, and the number that
   // matters is how little: at anything approaching solid this stops being a
   // reflection and becomes a second boat hanging upside down off the first.
-  mirror.alpha = 0.26
+  mirrorBox.alpha = 0.26
   // Over the shadow and under everything else: a shadow is cast ON the water
   // and a reflection is IN it, so the darker mark is the lower one.
-  skiff.view.addChildAt(mirror, 1)
+  skiff.view.addChildAt(mirrorBox, 1)
+
+  const twins: Sprite[] = []
 
   /** How much of its own height a reflection keeps. */
   const LIE = 0.55
@@ -272,21 +290,52 @@ export async function makeCaptain(
   const SINK = 0.04
 
   function alignMirror() {
+    // WHERE THE WATER IS, in the composite's own space.
     const part: Sprite | undefined = skiff.parts.boat
-    if (!part || !part.texture) { mirror.visible = false; return }
-    const h = part.texture.height * Math.abs(part.scale.y)
-    const water = part.y + (1 - part.anchor.y) * h - h * SINK
+    let water: number
+    if (part && part.texture) {
+      const h = part.texture.height * Math.abs(part.scale.y)
+      water = part.y + (1 - part.anchor.y) * h - h * SINK
+    } else {
+      // No hull cosmetic: the sheet's own bottom is the waterline, which is
+      // what the sheet is drawn to.
+      water = skiff.h * (1 - SINK)
+    }
 
-    mirror.visible = true
-    mirror.texture = part.texture
-    mirror.anchor.set(part.anchor.x, part.anchor.y)
-    mirror.scale.set(part.scale.x, -part.scale.y * LIE)
-    mirror.x = part.x
-    // Reflect the sprite's origin about the waterline and bring it in by the
-    // same factor the art is squashed by, or the image and its anchor part
-    // company and the reflection floats away from the hull.
-    mirror.y = water + (water - part.y) * LIE
-    mirror.rotation = -part.rotation
+    // A child at local y lands at P - LIE * y. It should land at
+    // water + (water - y) * LIE, so P is water * (1 + LIE). One line, and
+    // every twin below inherits it without any mirroring maths of its own.
+    mirrorBox.position.set(0, water * (1 + LIE))
+    mirrorBox.scale.set(1, -LIE)
+
+    // IN THE SAME ORDER THEY ARE DRAWN. Walking the live child list rather
+    // than a remembered set of parts, so anything the pose or a cosmetic adds
+    // is reflected too, and the layering in the water matches the layering
+    // above it.
+    let n = 0
+    for (const c of skiff.view.children) {
+      if (c === shadow || c === mirrorBox) continue
+      if (!(c instanceof PIXI.Sprite)) continue
+      const src = c as Sprite
+      let t = twins[n]
+      if (!t) {
+        t = new PIXI.Sprite()
+        twins.push(t)
+        mirrorBox.addChild(t)
+      }
+      t.visible = src.visible
+      t.texture = src.texture
+      t.anchor.set(src.anchor.x, src.anchor.y)
+      t.position.set(src.x, src.y)
+      t.scale.set(src.scale.x, src.scale.y)
+      t.rotation = src.rotation
+      t.alpha = src.alpha
+      // The hour is copied off the source, so the reflection darkens with the
+      // thing it reflects and nothing has to remember to tint it.
+      t.tint = src.tint
+      n++
+    }
+    for (let k = n; k < twins.length; k++) twins[k].visible = false
   }
   alignMirror()
 
@@ -364,9 +413,6 @@ export async function makeCaptain(
       // than forgotten. Held by reference because the shadow now sits under it
       // and an index would quietly tint the wrong thing.
       base.tint = tint
-      // The water darkens with everything else, and a reflection that stayed
-      // bright after dark would be the only lit thing on a night sea.
-      mirror.tint = tint
       for (const s of lit) {
         // Charcoal's hull carries a standing darken of its own, and overwriting
         // it with the hour would undo the thing that makes it charcoal. Its
@@ -388,8 +434,14 @@ export async function makeCaptain(
       // Skew rather than rotation, because a rotation swings the whole thing
       // about its anchor and detaches it from the hull it belongs to. A shear
       // keeps the waterline edge where it is and moves everything below.
+      // EVERY FRAME, not only on a pose change. A rod swings through the
+      // cast, a hook appears and disappears, and the hour repaints every
+      // sprite — a reflection that only re-read its sources when the POSE
+      // changed would hold the last pose's rod in the water through the whole
+      // animation. It is a dozen transform copies on a handful of sprites.
+      alignMirror()
       wob += dt
-      mirror.skew.x = Math.sin(wob * 1.15 + phase) * 0.055
+      mirrorBox.skew.x = Math.sin(wob * 1.15 + phase) * 0.055
         + Math.sin(wob * 1.9 + phase * 2.1) * 0.025
     },
     destroy() {
@@ -458,18 +510,51 @@ export async function makeShip(
     }
   }
 
+  // ── AND WHAT SHE THROWS BACK ──────────────────────────────────────
+  //
+  // The same reflection the fishing captain gets, and simpler, because a
+  // warship IS one sprite: no parts to walk, no pose to follow, nothing that
+  // appears and disappears. One twin of the hull, flipped about the waterline
+  // and lying down in the plane.
+  //
+  // The waterline is her own bottom edge less a shade, exactly as it is over
+  // there — these plates are drawn cropped at the water too.
+  //
+  // Added BEFORE the hull so it is under her, and after the shadow so a
+  // reflection is in the water rather than beneath the mark she casts on it.
+  const LIE = 0.55
+  const SINK = 0.04
+  const water = h / 2 - h * SINK
+  const back: Sprite = new PIXI.Sprite(tex)
+  back.anchor.set(0.5)
+  back.scale.set(ship.flip ? -k : k, -k * LIE)
+  // Anchored at the centre, so reflecting the centre about the waterline is
+  // the whole of the placement.
+  back.position.set(0, water * (1 + LIE))
+  back.alpha = 0.26
+  view.addChild(back)
+
   const hull: Sprite = new PIXI.Sprite(tex)
   hull.anchor.set(0.5)
   hull.scale.set(ship.flip ? -k : k, k)
   view.addChild(hull)
 
+  let wob = 0
+  const phase = Math.random() * 6.28
+
   return {
     view,
     setFrame() {},
     setStage() {},
-    setNight(tint) { hull.tint = tint },
+    setNight(tint) { hull.tint = tint; back.tint = tint },
     setIntensity() {},
-    update() {},
+    update(dt) {
+      // The shear that stops it being an upside-down ship. See the note on the
+      // captain's — skew rather than rotation, so the waterline edge stays put.
+      wob += dt
+      back.skew.x = Math.sin(wob * 0.95 + phase) * 0.045
+        + Math.sin(wob * 1.6 + phase * 2.1) * 0.02
+    },
     destroy() { view.destroy({ children: true }) },
   }
 }
