@@ -206,6 +206,49 @@ export function openSeaPresence(opts: {
    */
   const ready = supabase.realtime.setAuth().catch(() => {})
 
+  /**
+   * ── A REFUSED CHANNEL HAS TO BE ABLE TO COME BACK ───────────────────────
+   *
+   * It could not. A channel that errored stayed in its map, and every path
+   * that opens one skips a key it already holds, so one failure was permanent
+   * for the life of the page. That is not a rare corner: it swallows a token
+   * that had not landed yet, a policy fixed while somebody had the tab open, a
+   * tunnel, a laptop lid, a phone changing cell. All of them presented as
+   * "multiplayer just does not work" with no way back but a reload, and no
+   * reason to think a reload was what it wanted.
+   *
+   * So a failure drops the channel and tries again, backing off 1s, 2s, 4s to
+   * a 30s ceiling and resetting the moment anything succeeds. `setAuth` runs
+   * before each retry because the most likely cause is a JWT the socket does
+   * not have yet, and it is a no-op when the token has not changed.
+   */
+  const tries = new Map<string, number>()
+  const timers = new Map<string, ReturnType<typeof setTimeout>>()
+  const BACKOFF_MAX = 30_000
+
+  function retry(key: string, open: () => void) {
+    if (closed || timers.has(key)) return
+    const n = (tries.get(key) ?? 0) + 1
+    tries.set(key, n)
+    const wait = Math.min(BACKOFF_MAX, 1000 * Math.pow(2, n - 1))
+    log('retrying', key, `in ${wait}ms (attempt ${n})`)
+    timers.set(key, setTimeout(() => {
+      timers.delete(key)
+      if (closed) return
+      // The token first. It is the likeliest thing to have been wrong and the
+      // cheapest thing to put right.
+      void supabase.realtime.setAuth().catch(() => {}).then(() => {
+        if (!closed) open()
+      })
+    }, wait))
+  }
+
+  function settled(key: string) {
+    tries.delete(key)
+    const t = timers.get(key)
+    if (t) { clearTimeout(t); timers.delete(key) }
+  }
+
   /** Open your own channel and everything you have been asked to listen to.
    *  Safe to call more than once; existing channels are left alone. */
   function subscribeAll() {
@@ -220,10 +263,17 @@ export function openSeaPresence(opts: {
       mine.subscribe(status => {
         mineReady = status === 'SUBSCRIBED'
         log('own channel', `sea:${opts.userId}`, status)
+        if (status === 'SUBSCRIBED') settled('mine')
         // A refused join is the failure mode this whole comment is about. Say
-        // so, rather than going quiet and looking like "presence is broken".
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[sea] could not open your own channel:', status)
+        // so, rather than going quiet and looking like "presence is broken",
+        // and then GO AND TRY AGAIN.
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          if (status !== 'CLOSED') console.warn('[sea] could not open your own channel:', status)
+          const dead = mine
+          mine = null
+          mineReady = false
+          if (dead) void supabase.removeChannel(dead)
+          retry('mine', () => { if (!mine) subscribeAll() })
         }
       })
     }
@@ -239,7 +289,14 @@ export function openSeaPresence(opts: {
   const { data: authSub } = supabase.auth.onAuthStateChange((event) => {
     if (closed) return
     if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
-      void supabase.realtime.setAuth()
+      // AND RE-OPEN WHATEVER IS DOWN. A fresh token is the one event most
+      // likely to turn a refused join into a working one, so it is the worst
+      // possible moment to be sitting on a backoff.
+      void supabase.realtime.setAuth().catch(() => {}).then(() => {
+        if (closed) return
+        for (const key of [...timers.keys()]) settled(key)
+        subscribeAll()
+      })
     }
   })
 
@@ -279,8 +336,15 @@ export function openSeaPresence(opts: {
     })
     ch.subscribe(status => {
       log('listening to', `sea:${id}`, status)
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.warn(`[sea] could not listen to ${id}:`, status)
+      if (status === 'SUBSCRIBED') settled(id)
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        if (status !== 'CLOSED') console.warn(`[sea] could not listen to ${id}:`, status)
+        const dead = listening.get(id)
+        listening.delete(id)
+        if (dead) void supabase.removeChannel(dead)
+        // Only chase somebody we still want to hear. A channel closed because
+        // they went offline must not be reopened forever.
+        retry(id, () => { if (wanted.has(id) && !listening.has(id)) listen(id) })
       }
     })
     listening.set(id, ch)
@@ -295,6 +359,11 @@ export function openSeaPresence(opts: {
           void supabase.removeChannel(ch)
           listening.delete(id)
         }
+      }
+      // And stop chasing anybody who has gone: a pending retry for a captain
+      // who logged off would otherwise reopen a channel nobody wants.
+      for (const key of [...timers.keys()]) {
+        if (key !== 'mine' && !wanted.has(key)) settled(key)
       }
       // Only opens anything once the JWT is on the socket. Before that this
       // records who to listen to and subscribeAll picks it up.
@@ -334,6 +403,9 @@ export function openSeaPresence(opts: {
 
     close() {
       closed = true
+      for (const t of timers.values()) clearTimeout(t)
+      timers.clear()
+      tries.clear()
       authSub?.subscription.unsubscribe()
       for (const ch of listening.values()) void supabase.removeChannel(ch)
       listening.clear()

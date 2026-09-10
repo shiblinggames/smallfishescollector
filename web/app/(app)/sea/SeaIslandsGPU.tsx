@@ -2159,23 +2159,36 @@ export default function SeaIslandsGPU({
       const crew = crewRef.current
       const want = new Map(fleetRef.current.map(f => [f.key, f]))
 
-      // Gone, or wearing something else.
       const sigOf = (f: { look: CaptainLook; ship?: ShipLook | null }) =>
         f.ship ? `S${f.ship.url}@${f.ship.scale ?? 1}+${f.ship.aura ?? ''}` : lookKey(f.look)
+
+      // GONE. Immediate and awaits nothing, so somebody who logged off stops
+      // being drawn on this frame rather than after a texture decode.
       for (const [key, held] of [...crew]) {
-        const w = want.get(key)
-        if (w && sigOf(w) === held.sig) continue
+        if (want.has(key)) continue
         held.cap.destroy()
         held.holder.destroy({ children: true })
         crew.delete(key)
       }
 
-      // New. Awaited one at a time on purpose: the textures are shared, so the
+      // ── NEW, OR WEARING SOMETHING ELSE: BUILT BEFORE THE OLD ONE GOES ──
+      //
+      // This used to destroy the changed captain up here and rebuild her in
+      // the loop below, with an await in between — so a friend who stepped
+      // onto her warship BLINKED OUT for as long as the hull took to decode,
+      // which on a phone on mobile data is not a frame or two. The chart has
+      // spent all week being reported as boats disappearing, and this was one
+      // more way to do it that nobody had got to yet.
+      //
+      // Build first, swap second, and the old sprite stays on the water until
+      // there is something to put in its place.
+      //
+      // Awaited one at a time on purpose: the textures are shared, so the
       // second captain in the same hat pays nothing, and forty parallel image
       // decodes on a phone is how you drop the frame they were supposed to
       // arrive on.
       for (const [key, f] of want) {
-        if (crew.has(key)) continue
+        if (crew.get(key)?.sig === sigOf(f)) continue
         // HER SHIP IF SHE IS ON IT, her boat otherwise. The two builders
         // return the same Captain contract, which is the whole reason this is
         // a ternary and not a second code path — everything below steers
@@ -2188,6 +2201,13 @@ export default function SeaIslandsGPU({
         // this is not a once-at-load correction — it is most of how a trader
         // ever gets the right light on them. See hourRef.
         cap.setNight(hourRef.current.crew)
+        // AND NOW the one she is replacing, if there was one.
+        const old = crew.get(key)
+        if (old) {
+          old.cap.destroy()
+          old.holder.destroy({ children: true })
+          crew.delete(key)
+        }
         const holder = new PIXI.Container()
         holder.addChild(cap.view)
         // Hidden until the loop places them, or a boat appears at the origin

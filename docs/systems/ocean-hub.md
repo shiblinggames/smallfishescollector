@@ -614,6 +614,40 @@ Diagnosing it needed `?seadebug=1` (or the admin's Presence log switch in the Se
 because everything about a refused join is invisible: whether a private channel joined is a
 status on a callback, and whether a beat left is nothing at all.
 
+### The audit (2026-09-10), after four separate fixes had not settled it
+
+Every fault below presented identically — "multiplayer does not work" — which is why they were
+found one at a time. Written down so the next one is not.
+
+**Fixed, and each was sufficient on its own to break it:**
+
+1. **A policy's subqueries run as the caller** (above). Nobody could ever listen. The big one.
+2. **Two clocks.** The frame loop's `now` is the rAF timestamp, milliseconds since page load;
+   every beat time is `Date.now()`, milliseconds since 1970. Ageing a beat with the wrong one
+   is an error of 1.76e12, and the extrapolation multiplies a boat's velocity by it — she was
+   thrown a trillion pixels off the chart the instant she moved and came back when she stopped,
+   because stopping let the poll clear the pair. **Anything comparing against a beat uses
+   `Date.now()`. The swell keeps the rAF clock: it is a phase, not an event.**
+3. **A refused channel never retried.** It stayed in its map and every path that opens one skips
+   a key it already holds, so one failure was permanent for the life of the page — a token that
+   had not landed, a policy fixed while a tab was open, a tunnel, a lid, a cell handover. It
+   backs off 1/2/4s to 30s now, re-runs `setAuth` first (the likeliest cause), resets on any
+   success, and a fresh token clears every pending backoff at once.
+4. **Destroy-before-build.** A friend stepping onto her warship was destroyed and then rebuilt
+   with a texture decode in between, so she blinked out. Built first, swapped second.
+5. **Extrapolation clamped the gap and kept the delta**, inventing a velocity ten times anything
+   a hull can do out of two beats that straddled a gap in transmission. Stale pairs are discarded
+   and fresh ones clamped to `MAX_BEAT_SPEED`.
+
+**Verified sound, so nobody re-checks them:** `dt` is seconds and clamped to 50ms; NaN is guarded
+at both entry points (socket payload and poll row); the poll never stomps a live beat, and a
+polled row clears the velocity pair because a twenty-second-old position is not a speed;
+teardown clears channels, timers and refs; `setCrew` cancels retries for captains who left.
+
+**Accepted, by design:** it can take up to one poll (20s) to notice a friend has come into range,
+because the poll is the discovery mechanism and beats only start inside `NEAR_ENOUGH`; your own
+dial freezes your view of them; nothing goes on the wire beyond 2,600px.
+
 ### And you can watch them fish (2026-09)
 
 A beat carries a POSE as well as a position: `p` is 0/1/2 for the three captain frames
