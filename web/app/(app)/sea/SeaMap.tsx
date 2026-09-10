@@ -7497,7 +7497,10 @@ export default function SeaMap({
               // hull that keeps sailing on a guess has to be taken back.
               aimX = c.x; aimY = c.y
             } else {
-              const u = (rt - a.t) / Math.max(1, c.t - a.t)
+              // Clamped. The branches above should make this impossible, and
+              // an unclamped fraction here would quietly turn interpolation
+              // back into extrapolation the one time they did not.
+              const u = Math.max(0, Math.min(1, (rt - a.t) / Math.max(1, c.t - a.t)))
               aimX = a.x + (c.x - a.x) * u
               aimY = a.y + (c.y - a.y) * u
             }
@@ -10501,7 +10504,7 @@ hullRef={hullRefFor(t.key)} />
       {/* THE PRESENCE READOUT, when it is asked for. See SeaDebugPanel: the
           console was not reachable on either device that mattered. */}
       {SEA_DEBUG && (
-        <SeaDebugPanel read={() => ({
+        <SeaDebugPanel lag={RENDER_LAG} read={() => ({
           me: { x: pos.current.x, y: pos.current.y },
           friends: [...friendAt.current].map(([name, at]) => ({
             name,

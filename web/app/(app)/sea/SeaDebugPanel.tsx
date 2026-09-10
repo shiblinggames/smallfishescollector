@@ -19,7 +19,23 @@
 // to show them would change the thing being measured.
 
 import { useEffect, useRef } from 'react'
-import { presenceStats } from '@/lib/seaPresence'
+import { presenceStats, BEAT_MS } from '@/lib/seaPresence'
+
+/**
+ * WHICH BUILD IS ACTUALLY RUNNING.
+ *
+ * Vercel exposes the commit on every deploy and Next inlines it at build time,
+ * so this is the SHA of the code in the browser rather than the SHA of the code
+ * in the repository. Those have not always been the same thing during this,
+ * and telling them apart by squinting at behaviour has cost more than one round
+ * of fixes aimed at a version that was never being tested.
+ *
+ * Shown next to the two numbers that identify the ALGORITHM as well, because a
+ * SHA only helps if you know what to expect from it: the beat interval, and how
+ * far in the past another captain is drawn. Zero lag means the build is
+ * extrapolating; a quarter of a second means it is interpolating.
+ */
+const BUILD = (process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? 'dev').slice(0, 7)
 
 export type DebugFriend = {
   name: string
@@ -44,10 +60,13 @@ export type DebugFriend = {
   frames: number
 }
 
-export default function SeaDebugPanel({ read }: {
+export default function SeaDebugPanel({ read, lag }: {
   /** Called on the panel's own timer. Returns the live friend rows plus your
    *  own position, straight off the refs the frame loop uses. */
   read: () => { me: { x: number; y: number }; friends: DebugFriend[] }
+  /** How far back another captain is drawn, so the readout says which
+   *  algorithm is live rather than leaving it to be inferred. */
+  lag: number
 }) {
   const box = useRef<HTMLPreElement | null>(null)
 
@@ -66,6 +85,7 @@ export default function SeaDebugPanel({ read }: {
 
         const { me, friends } = read()
         const lines: string[] = []
+        lines.push(`build ${BUILD}   beat ${BEAT_MS}ms   draw lag ${lag}ms`)
         lines.push(`SEND  ${presenceStats.own}${presenceStats.blocked ? `  BLOCKED: ${presenceStats.blocked}` : ''}`)
         lines.push(`out ${outRate}/s (${presenceStats.out})   in ${inRate}/s (${presenceStats.in})`)
         lines.push(`me ${Math.round(me.x)},${Math.round(me.y)}`)
@@ -95,7 +115,7 @@ export default function SeaDebugPanel({ read }: {
     }
     tick()
     return () => { alive = false }
-  }, [read])
+  }, [read, lag])
 
   return (
     <pre ref={box} aria-hidden style={{
