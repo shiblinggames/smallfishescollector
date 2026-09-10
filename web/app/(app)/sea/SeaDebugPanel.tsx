@@ -63,7 +63,12 @@ export type DebugFriend = {
 export default function SeaDebugPanel({ read, lag }: {
   /** Called on the panel's own timer. Returns the live friend rows plus your
    *  own position, straight off the refs the frame loop uses. */
-  read: () => { me: { x: number; y: number }; friends: DebugFriend[] }
+  read: () => {
+    me: { x: number; y: number }
+    friends: DebugFriend[]
+    /** The composed zoom and its factors. See the fit in SeaMap. */
+    zoom?: { z: number; w: number; fit: number; wheel: number; fish: number; arrive: number }
+  }
   /** How far back another captain is drawn, so the readout says which
    *  algorithm is live rather than leaving it to be inferred. */
   lag: number
@@ -83,9 +88,15 @@ export default function SeaDebugPanel({ read, lag }: {
         const inRate = ((presenceStats.in - last.in) / dt).toFixed(1)
         last = { out: presenceStats.out, in: presenceStats.in, at: now }
 
-        const { me, friends } = read()
+        const { me, friends, zoom } = read()
         const lines: string[] = []
         lines.push(`build ${BUILD}   beat ${BEAT_MS}ms   draw lag ${lag}ms`)
+        if (zoom) {
+          lines.push(
+            `zoom ${zoom.z.toFixed(3)} = fit ${zoom.fit.toFixed(2)} (w ${Math.round(zoom.w)})`
+            + ` x wheel ${zoom.wheel.toFixed(2)} x fish ${zoom.fish.toFixed(2)} x arrive ${zoom.arrive.toFixed(2)}`,
+          )
+        }
         lines.push(`SEND  ${presenceStats.own}${presenceStats.blocked ? `  BLOCKED: ${presenceStats.blocked}` : ''}`)
         lines.push(`out ${outRate}/s (${presenceStats.out})   in ${inRate}/s (${presenceStats.in})`)
         lines.push(`me ${Math.round(me.x)},${Math.round(me.y)}`)

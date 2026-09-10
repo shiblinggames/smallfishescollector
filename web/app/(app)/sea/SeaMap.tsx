@@ -2441,7 +2441,25 @@ export default function SeaMap({
   const wantsArrival = !tour.seen && tour.step === 0
   const [arrived, setArrived] = useState(!wantsArrival)
   useEffect(() => {
-    if (arrived || arriveT.current >= 0) return
+    // ── WHEN THE TIMER SAYS IT IS OVER, IT IS OVER ───────────────────────
+    // The loop eases the factor home on its own `dt`, and the timer below
+    // releases the tour after the same two seconds; they should agree to the
+    // frame. But the factor is a multiplier on EVERY zoom the chart will ever
+    // show, so it cannot be allowed to depend on the loop having got there:
+    // a frame loop that was paused, throttled or not yet started for any part
+    // of those two seconds leaves the whole sea drawn at a third of its size,
+    // with the wheel's closest setting landing about where its farthest used
+    // to. The timer runs on the wall clock regardless, so it puts the factor
+    // home itself and refits. Idempotent when the loop already did.
+    if (arrived) {
+      if (arriveT.current >= 0 || arriveZoom.current !== 1) {
+        arriveT.current = -1
+        arriveZoom.current = 1
+        fitRef.current()
+      }
+      return
+    }
+    if (arriveT.current >= 0) return
     // Out first, in one frame, so the shot starts from the wide view rather
     // than easing out to it and back.
     arriveZoom.current = ARRIVE_FROM
@@ -2452,7 +2470,10 @@ export default function SeaMap({
   }, [arrived])
   useEffect(() => {
     const fit = () => {
-      const z = zoomFor(wrapRef.current?.getBoundingClientRect().width ?? window.innerWidth)
+      // `||`, not `??`: an element measured before layout reports 0, and 0 is
+      // not nullish, so it went straight into zoomFor and fitted the chart to
+      // the phone floor. The window is the right answer for both cases.
+      const z = zoomFor(wrapRef.current?.getBoundingClientRect().width || window.innerWidth)
       zoomRef.current = z * wheelZoom.current * fishZoom.current * arriveZoom.current
     }
     fitRef.current = fit
@@ -10624,6 +10645,14 @@ hullRef={hullRefFor(t.key)} />
       {SEA_DEBUG && (
         <SeaDebugPanel lag={RENDER_LAG} read={() => ({
           me: { x: pos.current.x, y: pos.current.y },
+          // The four factors and what they multiply to, so "the zoom feels
+          // wrong" can be answered with which number is wrong.
+          zoom: {
+            z: zoomRef.current,
+            w: wrapRef.current?.getBoundingClientRect().width ?? -1,
+            fit: zoomFor(wrapRef.current?.getBoundingClientRect().width || window.innerWidth),
+            wheel: wheelZoom.current, fish: fishZoom.current, arrive: arriveZoom.current,
+          },
           friends: [...friendAt.current].map(([name, at]) => ({
             name,
             target: { x: at.target.x, y: at.target.y },
