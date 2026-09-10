@@ -7287,6 +7287,23 @@ export default function SeaMap({
         // The correction ease. See the note in the loop: with the aim
         // extrapolated this is only closing a small error, so it is quick.
         const kf3 = 1 - Math.exp(-9 * dt)
+        // ── TWO CLOCKS, AND ONLY ONE OF THEM IS THE WALL ────────────────
+        //
+        // `now` in this loop is the rAF timestamp: milliseconds since the page
+        // loaded, so a number in the tens of thousands. Every beat time on a
+        // friend is `Date.now()`, which is milliseconds since 1970 — about
+        // 1.76e12. Subtracting one from the other is not a small error, it is
+        // minus one and three quarter TRILLION, and multiplying a boat's
+        // velocity by that puts her that many pixels off the chart. She
+        // vanished the instant she moved and came back the moment she stopped,
+        // because stopping let the poll clear the pair and switch the
+        // extrapolation off. Reported exactly that way.
+        //
+        // One wall clock, read once a frame, for everything that compares
+        // against a beat. The swell below keeps the rAF clock on purpose: it
+        // is a continuous phase and has nothing to do with when a message
+        // arrived.
+        const nowMs = Date.now()
         for (const [name, at] of friendAt.current) {
           const el = friendRefs.current.get(name)
           if (!el) continue
@@ -7338,7 +7355,7 @@ export default function SeaMap({
               const k = MAX_BEAT_SPEED / sp
               vx *= k; vy *= k
             }
-            const age = Math.min(now - at.tgtT, span * 1.4)
+            const age = Math.min(nowMs - at.tgtT, span * 1.4)
             aimX += vx * age
             aimY += vy * age
           }
@@ -7364,7 +7381,11 @@ export default function SeaMap({
           // second, and inferring one from a half-second easing delta would
           // fight it — at these step sizes the guess flickers, which is exactly
           // the case the wire value exists to fix.
-          const guessing = !at.live || now - at.live > 4_000
+          // Same clock, and this one has been comparing the two since it went
+          // in — harmlessly, because it only ever evaluated false and false is
+          // "trust the wire", which is what you want while beats are arriving.
+          // It is still wrong, and it is where the habit came from.
+          const guessing = !at.live || nowMs - at.live > 4_000
           if (guessing && Math.abs(dxf) > 12) at.face = dxf < 0 ? -1 : 1
           el.style.transform = `translate3d(${at.shown.x}px, ${at.shown.y}px, 0)`
           const hull = el.firstElementChild as HTMLElement | null
