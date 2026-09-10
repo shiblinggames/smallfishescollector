@@ -40,6 +40,29 @@
 // saved for two things — the core in the eye, and the strike — so that when
 // the lightning comes it comes out of the dark.
 //
+// ── AND IT HAS A THROAT ─────────────────────────────────────────────────────
+//
+// The keystone lays the mouth on the water at an angle, but a mouth is still a
+// surface: however dark the middle was painted, the eye was on the same plane
+// as the rim, and the thing read as a stain that turned rather than a hole
+// that went down. So under the mouth there is now a stack of TERRACES, each a
+// dark ring and a turning band, and each one smaller than the last, dropped
+// further BELOW the plane, and darker for being deeper. Depth on this chart is
+// a screen measurement inside a squashed layer, so "below" is +y/GROUND, the
+// exact inverse of how a hull or a mast stands up: the eye at the bottom of
+// the throat sits nearer the viewer than the centre of the rim, which is where
+// the bottom of a bowl is when you look into one from a deck.
+//
+// The darks MULTIPLY and they STACK: every terrace darkens the water inside
+// it, so the throat goes to black by accumulation and never by a painted
+// disc, and the sea's own surface runs all the way down the wall. The bands
+// turn faster the deeper they are, because that is what a vortex does, and
+// the whole throat LEANS toward the camera as it closes, which is the one
+// parallax a hole in the ground has and a stain does not. The eye, its core,
+// the beam and the spirits all live at the bottom of this now: the spirits
+// fall down it or climb out of it, and the light comes up from where the
+// floor is.
+//
 // Culled by camera distance: a maelstrom nobody can see renders nothing, not
 // even its texture.
 
@@ -219,6 +242,45 @@ const SPIRIT_N = 40
 const FAR_W = 0.72, FAR_H = 0.80
 const NEAR_W = 1.0, NEAR_H = 1.05
 
+/**
+ * THE THROAT'S SHAPE, in units of the world radius.
+ *
+ * How far down the floor is, as a SCREEN measurement: the eye's centre lands
+ * this far below the rim's centre before the squash is divided out. Held
+ * under the mouth's near edge (0.5 x GROUND = 0.29r) with room for the eye,
+ * so the floor is always seen THROUGH the mouth and never below it.
+ */
+const DEPTH = 0.2
+/** How much of the radius the wall gives up between the rim and the floor. */
+const NARROW = 0.82
+const TERRACES = 6
+/** How far the throat slides toward the camera at full lean, per unit of
+ *  depth. A hole in the ground shows you more of its far wall the closer you
+ *  stand; a stain shows you the same thing from everywhere. */
+const LEAN = 0.5
+
+/** A terrace's radius and its drop below the plane (node space, already
+ *  divided by GROUND), 0 at the rim and 1 at the floor. The drop is steep
+ *  near the bottom and the radius falls fast near the top: a funnel, not a
+ *  cone. */
+const throatR = (u: number, r: number) => r * (1 - NARROW * Math.pow(u, 0.9))
+const throatY = (u: number, r: number) => (r * DEPTH * Math.pow(u, 1.6)) / GROUND
+
+/**
+ * THE SAME KEYSTONE THE MOUTH IS DRAWN THROUGH, for a ring that is NOT in the
+ * flat composition. The terraces are world objects under the mesh, so without
+ * this they would be plain circles inside a keystoned hole — rounder than the
+ * mouth they sit in, which is the tell that they are a separate thing stacked
+ * under it rather than the same bowl continuing down.
+ *
+ * A ring of radius r spans the mesh's far edge to its near one, so it keeps
+ * the mean of the two widths, loses what the far edge gives up in height, and
+ * its centre sits below the middle by half the difference.
+ */
+const KEY_W = (FAR_W + NEAR_W) / 2
+const KEY_H = (FAR_H + NEAR_H) / 2
+const KEY_DROP = (NEAR_H - FAR_H) / 2
+
 export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Renderer, opts?: {
   /** Draw the keeper as himself rather than as a projection. True inside his
    *  own gauntlet, where you are standing in the room with him. */
@@ -242,9 +304,12 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     node: Container
     flatDark: Container; flatLight: Container
     rtDark: RenderTexture; rtLight: RenderTexture
-    storm: Sprite; funnel: Sprite; hole: Sprite
+    storm: Sprite; funnel: Sprite
     arms: Sprite; mid: Sprite; wisps: Sprite; eye: Sprite; core: Sprite; strike: Sprite
     beam: Sprite; holo: Sprite
+    /** The throat: terraces from the rim (u near 0) to the floor (u = 1). */
+    terraces: { u: number; dark: Sprite; band: Sprite }[]
+    floor: Sprite; wall: Sprite
     foam: Foam[]; spirits: Spirit[]
     seen: boolean
     nextStrike: number; strikeLeft: number
@@ -276,8 +341,10 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     // painted, and the funnel's job is to be the shoulder of the throat, not a
     // second black disc: the falloff is what sits it in the water.
     const funnel = sprite(holeTex!, R * 2.1, 0x000000, 0.56)
-    const hole = sprite(holeTex!, R * 0.5, 0x000000, 0.9)
-    flatDark.addChild(storm, funnel, hole)
+    // No flat hole in the middle any more. The black at the centre is the
+    // throat's, below, and it is black because it is deep, not because it was
+    // painted so.
+    flatDark.addChild(storm, funnel)
 
     const flatLight: Container = new PIXI.Container()
     flatLight.position.set(TEX / 2, TEX / 2)
@@ -333,7 +400,37 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     // the funnel, and only the deepest part of the throat goes to black.
     meshDark.blendMode = 'multiply'
     meshLight.blendMode = 'add'
-    node.addChild(meshDark, meshLight, eye, core)
+    node.addChild(meshDark, meshLight)
+
+    // ── THE THROAT ────────────────────────────────────────────────────
+    //
+    // Sized and placed every frame (see advance): here they are only made,
+    // in the order they must paint. A terrace's dark goes down before its
+    // band so the band is darkened by every terrace deeper than it, which is
+    // how a turning streak far down the wall ends up dimmer than one near the
+    // lip without anybody grading it.
+    const terraces: One['terraces'] = []
+    for (let i = 1; i <= TERRACES; i++) {
+      const u = i / TERRACES
+      const dark = sprite(holeTex!, 1, 0x000000, 0.3)
+      dark.blendMode = 'multiply'
+      // Two spiral cuts alternated down the wall, so the bands of one terrace
+      // do not line up with the next and the throat reads as ribbed, not as
+      // one picture shrinking.
+      const band = sprite(i % 2 ? midTex! : wispTex!, 1, i % 2 ? th.mid : th.wisp, 0.2)
+      band.blendMode = 'add'
+      band.rotation = Math.random() * Math.PI * 2
+      node.addChild(dark, band)
+      terraces.push({ u, dark, band })
+    }
+    // The floor, and the far wall catching what light there is. The wall is
+    // an additive glow sat high in the throat, where the inner face of the far
+    // side would take the sky; the near wall is the one you cannot see.
+    const floor = sprite(holeTex!, 1, 0x000000, 0.8)
+    floor.blendMode = 'multiply'
+    const wall = sprite(discTex!, 1, th.mid, 0.12)
+    wall.blendMode = 'add'
+    node.addChild(floor, wall, eye, core)
 
     // ── THE PROJECTION ──────────────────────────────────────────────
     //
@@ -397,7 +494,8 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     view.addChild(node)
     return {
       m, th, node, flatDark, flatLight, rtDark, rtLight,
-      storm, funnel, hole, arms, mid, wisps, eye, core, strike, beam, holo,
+      storm, funnel, arms, mid, wisps, eye, core, strike, beam, holo,
+      terraces, floor, wall,
       foam, spirits, seen: false,
       nextStrike: 4 + Math.random() * 8, strikeLeft: 0,
     }
@@ -448,18 +546,71 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         o.wisps.rotation += dt * spd * 2.2
         const breathe = 1 + 0.035 * Math.sin(t * 0.9)
         o.funnel.scale.set((R * 2.1 / 256) * breathe)
-        o.funnel.alpha = 0.7 + 0.22 * gg
+        // Lighter than it was: the throat below now carries the dark.
+        o.funnel.alpha = 0.48 + 0.2 * gg
+
+        // ── THE THROAT, DROPPED AND LEANED ──────────────────────────────
+        //
+        // Every terrace sits at its own depth, and slides toward the camera
+        // in proportion to it, so the floor moves most and the lip not at
+        // all. The lean is the camera's offset from the eye over a couple of
+        // radii, clamped: from across the junction the throat is level, and
+        // it tips to meet you as you come alongside. The heave is the
+        // funnel's own breath, so the hole and its skirt swell together.
+        const lx = Math.max(-1, Math.min(1, (camX - m.x) / (m.r * 2.5)))
+        const ly = Math.max(-1, Math.min(1, (camY - m.y) / (m.r * 2.5)))
+        const heave = 1 + 0.06 * Math.sin(t * 0.9)
+        const at = (u: number): [number, number, number] => {
+          const y = throatY(u, m.r) * heave
+          return [lx * y * GROUND * LEAN, y + ly * y * LEAN * 0.6, throatR(u, m.r)]
+        }
+        /** A ring at depth u, laid through the mouth's own keystone. */
+        const ring = (sp: Sprite, u: number, w: number) => {
+          const [x, y, r] = at(u)
+          sp.position.set(x, y + r * KEY_DROP)
+          sp.width = r * 2 * w * KEY_W
+          sp.height = r * 2 * w * KEY_H
+        }
+        for (const tr of o.terraces) {
+          // Wider than the ring it darkens, because holeTex fades from half
+          // its radius: the solid centre is the terrace and the falloff is
+          // the wall between it and the next one up.
+          ring(tr.dark, tr.u, 1.15)
+          tr.dark.alpha = 0.2 + 0.14 * tr.u + 0.1 * gg
+          ring(tr.band, tr.u, 1.02)
+          // Faster the deeper. All one way, with the arms: one vortex.
+          tr.band.rotation += dt * spd * (1 + 2.6 * tr.u)
+          tr.band.alpha = (0.1 + 0.16 * tr.u + 0.12 * gg) * lit
+        }
+        const [fx0, fy0, fr] = at(1)
+        const fx = fx0, fy = fy0 + fr * KEY_DROP
+        ring(o.floor, 1, 1.3)
+        o.floor.alpha = 0.66 + 0.2 * gg
+        {
+          // The far wall: an additive glow high on the mid terrace, where its
+          // inner face would take the sky. Sat up by a share of its radius
+          // so it is on the wall and not on the floor.
+          const [wx, wy, wr] = at(0.5)
+          o.wall.position.set(wx, wy - wr * 0.5)
+          o.wall.width = wr * 2.2 * KEY_W; o.wall.height = wr * 1.3 * KEY_H
+          o.wall.alpha = (0.08 + 0.12 * gg) * lit
+        }
         o.arms.alpha = (0.26 + 0.22 * gg) * lit
         o.mid.alpha = (0.2 + 0.18 * gg) * lit
         o.wisps.alpha = (0.18 + 0.26 * gg + 0.05 * Math.sin(t * 1.4 + 1)) * lit
 
         // THE EYE BEATS, faster and harder the closer you stand.
+        // AT THE FLOOR, not on the plane. Sized against the throat's bottom
+        // rather than the mouth, because that is the water they are the light
+        // in now.
         const beat = Math.sin(t * (1.6 + 2.4 * gg))
+        o.eye.position.set(fx, fy)
+        o.core.position.set(fx, fy)
         o.eye.alpha = (0.28 + 0.15 * beat + 0.2 * gg) * lit
         o.core.alpha = (0.25 + 0.3 * Math.max(0, beat) + 0.3 * gg) * lit
-        o.core.scale.set((m.r * 0.22 / 256) * (1 + 0.25 * Math.max(0, beat)))
+        o.core.scale.set((fr * 1.1 / 256) * (1 + 0.25 * Math.max(0, beat)))
         o.core.scale.y *= 1 / GROUND
-        o.eye.scale.set(m.r * 0.66 / 256)
+        o.eye.scale.set(fr * 2.6 / 256)
         o.eye.scale.y *= 1 / GROUND
 
         // ── THE PROJECTION ──────────────────────────────────────────────
@@ -480,6 +631,9 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         // mounted. The bob is in screen pixels, so it is divided by GROUND
         // like every other height on this chart.
         o.holo.y = -((m.r * 0.10) + 10 * Math.sin(t * 0.8)) / GROUND
+        // The light comes up from the floor, and he stands over the mouth in
+        // it: the beam is rooted where the eye is and rises from there.
+        o.beam.position.set(fx, fy - (m.r * 0.16) / GROUND)
         o.beam.alpha = (0.12 + 0.3 * gg) * jitter * dropout * lit
 
         // ── THE STRIKE ──────────────────────────────────────────────────
@@ -518,7 +672,9 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           const k = R / Math.max(f.r, 12)
           f.ang += dt * spd * 1.4 * k
           f.r -= dt * (6 + 22 * (1 - f.r / R)) * (1 + 0.6 * gg)
-          if (f.r < R * 0.2) { f.r = R * (0.94 + Math.random() * 0.12); f.ang = Math.random() * Math.PI * 2 }
+          // Recycled at the lip rather than at the old flat eye: foam on the
+          // surface cannot be over the throat, because there is no surface there.
+          if (f.r < R * 0.3) { f.r = R * (0.94 + Math.random() * 0.12); f.ang = Math.random() * Math.PI * 2 }
           const near = 1 - f.r / R
           f.p.x = Math.cos(f.ang) * f.r
           f.p.y = Math.sin(f.ang) * f.r
@@ -556,9 +712,15 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
             s.p.alpha = (0.25 + 0.55 * Math.max(0, Math.sin(t * 7 + s.ang * 3))) * Math.sin(u * Math.PI) * lit
           }
           const [px, py] = keystone(Math.cos(s.ang) * s.r, Math.sin(s.ang) * s.r, m.r)
-          s.p.x = px
+          // DOWN THE THROAT. How deep a spirit is follows from how far in it
+          // is: the ones sinking fall as the wall takes them, and the ones
+          // rising start at the floor and climb out of the hole, not off the
+          // plane. Same lean as the terraces, so they stay on the wall.
+          const su = Math.max(0, Math.min(1, 1 - s.r / (m.r * 1.05)))
+          const [dx, dy] = at(su)
+          s.p.x = px * (1 - su * NARROW * 0.5) + dx
           // Height is a screen measurement inside a squashed layer.
-          s.p.y = py - s.h / GROUND
+          s.p.y = py * (1 - su * NARROW * 0.5) + dy - s.h / GROUND
           s.p.scaleX = s.size / 32; s.p.scaleY = s.size / 32
         }
       }

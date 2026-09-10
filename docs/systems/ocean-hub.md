@@ -1404,6 +1404,19 @@ edge, and an edge is what the eye reads as a decal:
   funnel and hole were eased when they moved to multiply, because under multiply they bite
   harder than they did painted.
 
+## The maelstrom has a throat
+
+The keystone laid the mouth on the water at an angle, but the eye was still on the rim's
+plane, so it read as a stain that turned. Since 2026-09 (`seaMaelstrom.ts`, "AND IT HAS A
+THROAT") the mouth sits over a stack of six **terraces**: each a multiply ring and an additive
+turning band, each smaller than the last, dropped BELOW the plane (+y/GROUND, the inverse of
+how a mast stands up) and darker for stacking. The eye, core, beam and spirits live at the
+floor; spirits fall down the wall or climb out of the hole. The whole throat **leans toward
+the camera** in proportion to depth (`LEAN`), which is the parallax a hole has and a stain
+does not. `DEPTH` (0.2r, screen) is held under the mouth's near edge so the floor is always
+seen through the mouth. The flat `hole` sprite is gone: the black in the middle is depth, not
+paint. Both gauntlet Slipways host this same renderer and inherit all of it.
+
 ## The anchorage, and the way out of it
 
 The water north of the reef. Reached through the arch on the fishing boat, and it holds the
