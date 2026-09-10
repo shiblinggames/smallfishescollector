@@ -323,6 +323,7 @@ const PortalMap = dynamic(() => import('./PortalMap'), { ssr: false })
 // of destinations down the left. Dynamic, like everything else the chart does
 // not need in order to draw a sea.
 const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
+const SeaCrew = dynamic(() => import('./SeaCrew'), { ssr: false })
 // The Daily Haul, which used to be a page under the Tavern. See sea/SeaBonus.
 const SeaBonus = dynamic(() => import('./SeaBonus'), { ssr: false })
 // The door to Tide Run, which used to be a card in the Tavern. See seaSmuggler.
@@ -5738,9 +5739,19 @@ export default function SeaMap({
   useEffect(() => {
     let alive = true
     let timer: ReturnType<typeof setTimeout>
+    /** Polls since the pact count was last read. A request arriving mid-session
+     *  has to be able to light the crew disc, or the count only ever tells you
+     *  what was true when the chart loaded — but somebody asking to sail is not
+     *  urgent to the second, so it rides every third poll rather than doubling
+     *  the server actions this screen makes. */
+    let sinceAsk = 99
     const pull = () => {
       pullNow.current = pull
       if (document.visibilityState !== 'hidden') {
+        if (++sinceAsk >= 3) {
+          sinceAsk = 0
+          void pendingPacts().then(n => { if (alive) setPendingAsk(n) }, () => {})
+        }
         void friendsAtSea().then(f => {
           if (!alive) return
           setFriends(f)
@@ -10023,8 +10034,22 @@ hullRef={hullRefFor(t.key)} />
 
           Laid out from the corner inwards, and the gear keeps the corner
           because it is the one that was already there — a control that moves
-          when a badge appears next to it is a control people mis-tap. */}
-      {!hudOff && <SeaBonus size={hudSize} top={18} right={12 + hudSize + 8} />}
+          when a badge appears next to it is a control people mis-tap.
+
+          THREE NOW: gear, crew, haul. The crew disc went in the MIDDLE rather
+          than on the end because the two either side of it are the two that
+          were already placed, and the gear in particular must not move for the
+          reason directly above. The haul shifts one slot inward, which is the
+          one move this costs and it keeps the corner honest. */}
+      {!hudOff && <SeaBonus size={hudSize} top={18} right={12 + (hudSize + 8) * 2} />}
+      {/* THE WAY TO ARRANGE SAILING WITH SOMEBODY, and for a while there was
+          no way at all: the panel below was mounted with nothing able to open
+          it. See SeaCrew. The count is people waiting on an answer from you,
+          re-read whenever the panel closes. */}
+      {!hudOff && (
+        <SeaCrew size={hudSize} top={18} right={12 + hudSize + 8}
+          count={pendingAsk} onOpen={() => setCrewOpen(true)} />
+      )}
       {!hudOff && <SeaSettings size={hudSize} top={18} />}
 
       {/* THE SOUNDTRACK. Starts on the first press rather than on mount, both
