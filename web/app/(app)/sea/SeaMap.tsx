@@ -3530,6 +3530,10 @@ export default function SeaMap({
    * and one in a bay cannot fish.
    */
   const [skillOpen, setSkillOpen] = useState(false)
+  /** Which spine the panel is showing. Seeded from the side of the reef you
+   *  are on every time the disc is pressed; the panel's own switch can flip it
+   *  after that. */
+  const [skillView, setSkillView] = useState<'fishing' | 'nav'>('fishing')
   /** Which allocator the renown door opens. Set when the panel asks. */
   const [renownSkill, setRenownSkill] = useState<'fishing' | 'nav'>('fishing')
   // Straight off the state — `available` is computed server-side when it is
@@ -10643,6 +10647,8 @@ hullRef={hullRefFor(t.key)} />
             type="button"
             onClick={e => {
               e.stopPropagation(); vibrate(8)
+              // The side you are on is the spine you get. Flip inside if you want the other.
+              setSkillView(nav ? 'nav' : 'fishing')
               // PRESSED WHILE PULSING: the level first, then the spine. If
               // nothing is owed after all -- a stow already collected it -- the
               // spine opens straight away, which is what the press asked for.
@@ -10700,18 +10706,15 @@ hullRef={hullRefFor(t.key)} />
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               justifyContent: 'center', lineHeight: 1, gap: 1,
             }}>
-              <svg width={Math.round(hudSize * 0.30)} height={Math.round(hudSize * 0.30)}
-                viewBox="0 0 24 24" fill="none"
-                stroke={hot ? '#f0c040' : 'rgba(214,232,240,0.72)'}
-                strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                {nav
-                  // A ship's wheel: the spine that is about sailing.
-                  ? <><circle cx="12" cy="12" r="8.4" /><circle cx="12" cy="12" r="2.6" />
-                    <path d="M12 3.6v5.8M12 14.6v5.8M3.6 12h5.8M14.6 12h5.8" /></>
-                  // A rod and line: the spine that is about fishing.
-                  : <><path d="M4 20.2 15.4 6.4" /><path d="M14 4.6 18.6 8.4" />
-                    <path d="M16.4 7.6c1.3 2.6 1 5-1.6 6.6" /><path d="M14.8 14.2v3.2" /></>}
-              </svg>
+              {/* "LV", not a rod or a wheel. The two glyphs were two marks for
+                  one slot and neither said LEVEL, which is the only thing this
+                  disc is. It reads the side you are on: fishing south of the
+                  reef, navigation north of it, and the panel it opens says
+                  which and lets you flip. */}
+              <span className="font-karla font-800 uppercase" aria-hidden style={{
+                fontSize: Math.round(hudSize * 0.22), letterSpacing: '0.12em', lineHeight: 1,
+                color: hot ? '#f0c040' : 'rgba(214,232,240,0.72)',
+              }}>LV</span>
               <span className="font-karla font-700" aria-hidden style={{
                 fontSize: Math.round(hudSize * 0.42),
                 fontVariantNumeric: 'tabular-nums',
@@ -10733,12 +10736,13 @@ hullRef={hullRefFor(t.key)} />
       <SkillPanel
         open={skillOpen}
         onClose={() => setSkillOpen(false)}
-        skill={inAnchorage ? 'nav' : 'fishing'}
-        xp={inAnchorage ? navXP : xpLive}
-        renown={inAnchorage ? renownNavState : renownState}
+        skill={skillView}
+        onSwitch={setSkillView}
+        xp={skillView === 'nav' ? navXP : xpLive}
+        renown={skillView === 'nav' ? renownNavState : renownState}
         hallTier={crewTiers?.hall ?? 1}
         onOpenRenown={() => {
-          setRenownSkill(inAnchorage ? 'nav' : 'fishing')
+          setRenownSkill(skillView)
           setSkillOpen(false)
           setRenownOpen(true)
         }} />

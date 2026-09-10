@@ -204,10 +204,13 @@ function navRows(level: number, hallTier: number): { stats: Stat[]; ahead: Event
   return { stats, ahead }
 }
 
-export default function SkillPanel({ open, onClose, skill, xp, renown, onOpenRenown, hallTier }: {
+export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown, onOpenRenown, hallTier }: {
   open: boolean
   onClose: () => void
   skill: Skill
+  /** The other spine is one tap away. The disc opens on the side you are on;
+   *  this is how you look at the other one without sailing there. */
+  onSwitch?: (skill: Skill) => void
   /** Raw XP for this spine. The level and the bar are both derived from it. */
   xp: number
   /** Null when the server has not read it (or the captain is not at the cap). */
@@ -262,6 +265,27 @@ export default function SkillPanel({ open, onClose, skill, xp, renown, onOpenRen
           }}>
             {fishing ? 'Fishing Level' : 'Navigation Level'}
           </h2>
+          {/* ── THE OTHER SPINE, ONE TAP AWAY ──────────────────────────
+              One disc on the HUD now serves both, showing whichever side of
+              the reef you are on; this is the flip. Two tabs in the panel's
+              own tint, the live one lit. */}
+          {onSwitch && (
+            <div role="tablist" aria-label="Which level" style={{ display: 'inline-flex', gap: 4, marginTop: 8, padding: 3, borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(196,169,106,0.22)' }}>
+              {([['fishing', 'Fishing'], ['nav', 'Navigation']] as [Skill, string][]).map(([k, label]) => {
+                const on = skill === k
+                return (
+                  <button key={k} type="button" role="tab" aria-selected={on} onClick={() => onSwitch(k)}
+                    className="font-karla font-700 uppercase tracking-[0.1em]"
+                    style={{
+                      fontSize: '0.58rem', padding: '0.32rem 0.7rem', borderRadius: 999, cursor: on ? 'default' : 'pointer',
+                      background: on ? 'rgba(196,169,106,0.2)' : 'transparent',
+                      border: `1px solid ${on ? 'rgba(196,169,106,0.6)' : 'transparent'}`,
+                      color: on ? GOLD : 'rgba(214,232,240,0.6)',
+                    }}>{label}</button>
+                )
+              })}
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginTop: 4 }}>
             <span className="font-cinzel font-800" style={{ fontSize: '2.2rem', lineHeight: 1, color: GOLD }}>
               {level}

@@ -92,3 +92,12 @@ slow turn of the badge wall's rays. If a water opened it is the first line, in t
 What it paid is a row of gold chips, what it opened in the shop is a row of tiles with the gear's
 own art, and the two per-level numbers (catch zone, bite speed) are a footnote. Fires on the
 crossing (the chart's live level), over whatever is on screen.
+
+## One level disc
+
+The HUD's level disc reads **LV** and the number, no glyph. It shows the spine for the side of
+the reef you are on — fishing south, navigation north — and pressing it opens `SkillPanel` on that
+spine (`skillView` in SeaMap, re-seeded from the side on every press). The panel header carries a
+Fishing / Navigation switch (`onSwitch`) so the other spine is one tap away without sailing there;
+XP, renown and the renown door all follow the switch. The rod and wheel glyphs it used to wear were
+two marks for one slot and neither said "level".
