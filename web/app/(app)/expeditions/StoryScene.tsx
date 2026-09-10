@@ -177,7 +177,9 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
     return (
       <motion.div
         key={`${side}-${c.speaker}`}
-        initial={{ opacity: 0, x: side === 'left' ? -46 : 46, scale: 0.9 }}
+        // Up and in, not across. The slide from the side read as the bust
+        // arriving from off stage every time the speaker changed.
+        initial={{ opacity: 0, x: 0, y: 12, scale: 0.97 }}
         animate={{
           opacity: insertActive ? 0 : lit ? 1 : closeupActive ? 0.06 : 0.4,
           x: shake && lit ? [0, -6, 5, -3, 0] : 0,

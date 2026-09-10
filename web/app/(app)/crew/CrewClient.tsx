@@ -218,17 +218,24 @@ const ROSTER_PANEL_BG = PANEL_BG
 const ROSTER_PANEL_BORDER = PANEL_BORDER
 
 // Shared action-button look: gradient fill, soft shadow, uppercase label.
+// ── A BUTTON, NOT A BAR ─────────────────────────────────────────────────────
+// These were width: 100%, which under a 300px card is a bar and under a
+// 560px sheet is a plank. A button is as wide as its word plus room to press
+// it, sits in the middle, and answers the pointer -- see .crew-act in
+// globals.css for the hover and the press.
 const BTN_BASE: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%',
-  padding: '0.6rem 0.7rem', borderRadius: 9, fontSize: '0.84rem',
-  letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
-  boxShadow: '0 2px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)',
-  transition: 'filter 0.15s',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  width: 'auto', minWidth: 172, margin: '0 auto',
+  padding: '0.68rem 1.35rem', borderRadius: 12, fontSize: '0.8rem',
+  letterSpacing: '0.09em', textTransform: 'uppercase', cursor: 'pointer',
+  boxShadow: '0 3px 10px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.12)',
+  transition: 'filter 0.15s, transform 0.12s, box-shadow 0.15s',
 }
 const BTN_RECRUIT: React.CSSProperties = {
   ...BTN_BASE,
-  background: 'linear-gradient(180deg, rgba(74,200,130,0.36) 0%, rgba(46,140,92,0.2) 100%)',
-  border: '1px solid rgba(122,226,162,0.6)', color: '#dcf8e7', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+  background: 'linear-gradient(180deg, rgba(74,200,130,0.34) 0%, rgba(46,140,92,0.2) 100%)',
+  border: '1px solid rgba(122,226,162,0.62)', color: '#dcf8e7', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+  boxShadow: '0 3px 10px rgba(0,0,0,0.42), 0 0 18px rgba(74,200,130,0.16), inset 0 1px 0 rgba(255,255,255,0.14)',
 }
 const BTN_STATIC: React.CSSProperties = { ...BTN_BASE, cursor: 'default', boxShadow: 'none' }
 
@@ -1007,6 +1014,22 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
   // active tab isn't available for the viewed crew (e.g. Skins on a non-skin
   // crew). Reset on modal close.
   const [detailTab, setDetailTab] = useState<'stats' | 'ability' | 'skins'>('stats')
+  /**
+   * ── STATS AND ABILITY SIDE BY SIDE, WHERE THERE IS ROOM ─────────────────
+   * The sheet was a phone column with three tabs, and on a monitor the two
+   * things a captain wants to weigh -- what a hand does and what they are
+   * good at -- were behind a tab from each other, on a card mostly empty.
+   * Above 900px the sheet is wider and the two sit together; Skins keeps its
+   * own tab because it is a shop, not a stat.
+   */
+  const [wideDetail, setWideDetail] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia?.('(min-width: 900px)')
+    if (!mq) return
+    const sync = () => setWideDetail(mq.matches)
+    sync(); mq.addEventListener?.('change', sync)
+    return () => mq.removeEventListener?.('change', sync)
+  }, [])
   const [rosterSort, setRosterSort] = useState<RosterSort>('overall')
   // The tie-break, chosen rather than hard-coded. Overall on its own answers
   // "who is strongest", and the second key is what turns that into a decision:
@@ -1442,7 +1465,20 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
   // without this, picking a second card would leave the first section drawn.
   useEffect(() => { if (section) setActiveTab(section) }, [section])
   // And the header's pill, asking for the sheet that explains the cap.
-  useEffect(() => { if (openCapacity) setCapacityOpen(true) }, [openCapacity])
+  // ── ONLY WHEN IT IS PRESSED, NOT WHENEVER THIS MOUNTS ───────────────────
+  // `openCapacity` is a counter the hub bumps when its berth pill is pressed.
+  // This component is mounted afresh for every room, and it opened the sheet
+  // whenever the counter was non-zero -- so once the pill had been pressed
+  // once, every room a captain opened for the rest of the session opened the
+  // Crew Limit sheet over it. It answers a CHANGE now, and remembers the
+  // value it last answered.
+  const capacityAnswered = useRef(openCapacity)
+  useEffect(() => {
+    if (openCapacity && openCapacity !== capacityAnswered.current) {
+      capacityAnswered.current = openCapacity
+      setCapacityOpen(true)
+    }
+  }, [openCapacity])
 
   /**
    * VIEWING THE ROSTER IS THE ACKNOWLEDGEMENT.
@@ -1646,7 +1682,11 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     startTransition(async () => {
       const res = await recruitCrew(id)
       if ('error' in res) { setErr(res.error); setState(s => ({ ...s, board: snapshot })) }
-      else setState(res.state)
+      else {
+        setState(res.state)
+        // The hub above re-reads on this, and so does the badge watcher.
+        window.dispatchEvent(new Event('crew-changed'))
+      }
     })
   }
 
@@ -1705,12 +1745,17 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     const recruit = (e: React.MouseEvent) => {
       e.stopPropagation()
       vibrate(14)
-      run(() => recruitCrew(c.id), c.id, onDone)
+      run(() => recruitCrew(c.id), c.id, () => {
+        window.dispatchEvent(new Event('crew-changed'))
+        onDone?.()
+      })
     }
     if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
     if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>
     return (
-      <button onClick={recruit} disabled={pending} className="font-karla font-700" style={{ ...BTN_RECRUIT, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
+      <button onClick={recruit} disabled={pending} data-coach="recruit"
+        className="font-cinzel font-700 crew-act"
+        style={{ ...BTN_RECRUIT, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
         <AnchorIcon /><span>{busyId === c.id ? 'Recruiting…' : 'Recruit'}</span>
       </button>
     )
@@ -2297,6 +2342,18 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   {phase
                     ? <BoardReveal card={c} phase={phase} onTap={() => reveal.tapCard(c)} bloodied={reveal.bloodied}>{panel}</BoardReveal>
                     : swipeCard}
+                  {/* ── THE BUTTON, ON THE CARD ─────────────────────────
+                      Recruiting was a swipe, which is touch-only, or a tap
+                      into the sheet and a button at the foot of it. On a mouse
+                      that is a card you have to open to find out how to sign
+                      it. The same button sits under the card now, for every
+                      pointer; the sheet keeps its copy for the captain who
+                      wants to read first. */}
+                  {!phase && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+                      {renderRecruitAction(c)}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -3472,12 +3529,21 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
           // tab isn't valid for this crew.
           const hasAbility = !!classForSlug(it.slug)
           const hasSkins = !!dm && skinList.length > 0
-          const detailTabs = [
-            { id: 'stats' as const, label: 'Stats' },
-            ...(hasAbility ? [{ id: 'ability' as const, label: 'Ability' }] : []),
-            ...(hasSkins ? [{ id: 'skins' as const, label: 'Skins' }] : []),
-          ]
+          // Two-up: Stats and Ability share the body, and the strip only has
+          // to exist if Skins is there to switch to.
+          const twoUpAble = wideDetail && hasAbility
+          const detailTabs = twoUpAble
+            ? [
+                { id: 'stats' as const, label: 'Overview' },
+                ...(hasSkins ? [{ id: 'skins' as const, label: 'Skins' }] : []),
+              ]
+            : [
+                { id: 'stats' as const, label: 'Stats' },
+                ...(hasAbility ? [{ id: 'ability' as const, label: 'Ability' }] : []),
+                ...(hasSkins ? [{ id: 'skins' as const, label: 'Skins' }] : []),
+              ]
           const activeTab = detailTabs.some(t => t.id === detailTab) ? detailTab : 'stats'
+          const twoUp = twoUpAble && activeTab === 'stats'
           const equippedSkinId = dm ? (state.equippedCrewSkins[dm.slug] ?? null) : null
           const shownSkinId = previewSkin === undefined ? equippedSkinId : previewSkin
           const portraitFilename = dm
@@ -3525,7 +3591,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   // the body around 194. The trait is visible without scrolling
                   // and the Skins grid gets a usable window. Taller tabs still
                   // scroll, which is what the scroll region is for.
-                  width: '100%', maxWidth: 'var(--modal-w)', height: 'min(82vh, 500px)',
+                  width: '100%', maxWidth: wideDetail ? 760 : 'var(--modal-w)', height: wideDetail ? 'min(84vh, 600px)' : 'min(82vh, 500px)',
                   position: 'relative',
                   display: 'flex', flexDirection: 'column', overflow: 'hidden',
                   borderRadius: 14,
@@ -3765,14 +3831,14 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
 
                 {/* Tab body — flexes to each tab's own content so actions sit
                     right under it (no dead space padding the modal to a fixed
-                    height). */}
-                <div>
+                    height). Two columns on a desktop: stats left, ability right. */}
+                <div style={twoUp ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '0.9rem', alignItems: 'start' } : undefined}>
 
                 {/* ── ABILITY tab — species-locked active ability surfaced in raid
                     combat through the Special chooser. Sub-Lv-10 crew get an
                     "Unlocks at Lv 10" hint instead of an effect line. */}
-                {activeTab === 'ability' && (
-                <motion.div key="tab-ability" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} style={{ marginTop: '0.7rem' }}>
+                {(activeTab === 'ability' || twoUp) && (
+                <motion.div key="tab-ability" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} style={{ marginTop: '0.7rem', order: 2 }}>
                 {(() => {
                   const cls = classForSlug(it.slug)
                   if (!cls) return null

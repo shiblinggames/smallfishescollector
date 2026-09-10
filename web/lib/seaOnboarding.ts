@@ -86,6 +86,9 @@ export type Beat = {
    *               captain who already has some.
    */
   until: 'next' | 'fish' | 'bite' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait' | 'almanac'
+    // The anchorage tour's own, all about the crew panel: the panel opened,
+    // its Recruit room opened, a hand signed on, the panel closed again.
+    | 'crewOpen' | 'recruitBoard' | 'recruited' | 'crewClosed'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
@@ -304,6 +307,40 @@ export const GATE_TOUR: Beat[] = [
     ...D,
     text: 'Past the reef, Captain. This is the *anchorage*, the quiet water where the fighting half of your outfit is run from.',
     until: 'next',
+  },
+  // ── THE HUD CHANGED SIDES ─────────────────────────────────────────────
+  {
+    ...D,
+    text: 'Look top left. Out here the discs are the fighting half: your *crew*, your loadout, and your Navigation level in the same slot your fishing level had.',
+    until: 'next',
+    target: 'hud-crew',
+  },
+  // ── AND THE FIRST THING IS HANDS ──────────────────────────────────────
+  // Nothing up here sails empty. Before the gunwharf, before the gate, a
+  // captain signs on one hand, and the tour waits at each step for the thing
+  // it asked for.
+  {
+    ...D,
+    text: 'First, hands. Open *Your Crew*.',
+    until: 'crewOpen',
+    target: 'hud-crew',
+  },
+  {
+    ...D,
+    text: 'Go to *Recruit*. Three new faces are posted there every day.',
+    until: 'recruitBoard',
+    target: 'crew-recruits',
+  },
+  {
+    ...D,
+    text: 'Pick one and *Recruit* them. Your first hand.',
+    until: 'recruited',
+    target: 'recruit',
+  },
+  {
+    ...K,
+    text: 'That’s your first crew. They fight beside you, sail voyages while you fish, and trawl the water you point them at. Close the hall and I’ll show you the rest.',
+    until: 'crewClosed',
   },
   {
     ...D,

@@ -2747,3 +2747,20 @@ out here" hail cue is removed.
 The `level` ("That is a level, Captain") and `almanac` ("You have a few in the book now") cues are
 removed too: the first voyage introduces both with the thing itself on screen, and the level card
 now fires on the crossing. Their `live` conditions in SeaMap are inert without an entry to fire.
+
+### The anchorage tour is a real tour now
+
+`GATE_TOUR` opens with the HUD changing sides, then **crew first**: open *Your Crew* (`crewOpen`),
+go to *Recruit* (`recruitBoard`, from the hub's `crew-hub-section` event), sign on a hand
+(`recruited`, from `crew-changed`), close the hall (`crewClosed`) — then the Gunwharf, the Sea Gate,
+the campaign and the pennant as before. `SeaGateTour` reports `onBeat`/`onDone` like the first
+voyage; `gateLock = inAnchorage && !gateDone && arrived` joins `tourLock` into `anyLock`, which
+drives the wrap's lock class and the reach filter. Cards are anchored (`anchor={target}`) and lift
+to z 120 for the beats inside the crew panel. The flash polls for the life of the beat because two
+targets live inside a panel the captain opens themselves.
+
+**The arrival waits for the chart to be warm.** It armed on mount, under the curtain, while sprites
+were still arriving, so the curtain lifted onto a chart dropping frames. Both the shot and the
+curtain now wait for `spritesReady`; the shot multiplies a base zoom cached at its start instead of
+calling `fit()` (a layout read) every frame; the curve is cubic in-out over 4.4 s. The story scene's
+bust rises into place instead of sliding in from the side.

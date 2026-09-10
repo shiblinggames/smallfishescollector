@@ -129,3 +129,21 @@ Everything: [trawls.md](trawls.md), [voyages.md](voyages.md),
 [raids-campaign.md](raids-campaign.md), [gauntlets.md](gauntlets.md),
 [story-universe.md](story-universe.md) (legendary recruits),
 [cosmetics-and-art.md](cosmetics-and-art.md) (skins).
+
+## 2026-09-10: two bugs in the hub, and the desktop
+
+- **The hub re-reads on `crew-changed`.** Both of its reads (`crewHub`, `getCrewState`) ran on open
+  and never again, so a hand signed on in Recruit was missing from the front page's `x / N`, and the
+  board handed to the room on the *next* visit still showed them unsigned — press Recruit again and
+  the server said "Already recruited". `CrewClient` fires `crew-changed` after a recruit (board swipe
+  and sheet button both); the hub reads again on it. The badge watcher already listened for the
+  same event.
+- **The Crew Limit sheet answered a mount, not a press.** `openCapacity` is a counter the hub bumps
+  from the berth pill; `CrewClient` remounts per room and opened the sheet whenever the counter was
+  non-zero, so after one press every room opened the sheet over itself. It answers a *change* now.
+- **Recruit is a button on the card**, for every pointer, not only a swipe (touch) or a tap into the
+  sheet. The button is a button, not a bar: auto width, centred, `.crew-act` hover/press.
+- **The sheet is two-up above 900px**: 760 wide, Stats left and Ability right under an "Overview"
+  tab; Skins keeps its tab because it is a shop.
+- **Doors carry `data-coach="crew-<id>"`** and the hub announces its room (`crew-hub-section`) so the
+  anchorage tour can point at Recruit and stand the other doors down.

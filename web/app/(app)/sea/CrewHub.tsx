@@ -184,6 +184,27 @@ export default function CrewHub({
   // room still gets it: `openCard` only survives the first open, which is the
   // one the link paid for.
   useEffect(() => { if (!open) { setSection(null); setRollOpen(false) } }, [open])
+  // Which room is showing, told to the chart: the anchorage tour waits on it.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('crew-hub-section', { detail: { section: open ? section : null } }))
+  }, [open, section])
+  // ── RE-READ WHEN THE CREW CHANGES ───────────────────────────────────────
+  // Both reads happened on open and never again, so a hand signed on in the
+  // Recruit room was not on the front page's count when you came back to it,
+  // and the board handed to the room on the NEXT visit still showed them
+  // unsigned: press Recruit again and the server said "already recruited".
+  // The room fires `crew-changed` on every change it makes; the hub reads
+  // again on it, so what the front page says and what the room starts from
+  // are the crew as they are.
+  useEffect(() => {
+    if (!open) return
+    const again = () => {
+      crewHub().then(r => { if (!('error' in r)) setState(r) }, () => {})
+      getCrewState().then(r => { if (r) setHall(r) }, () => {})
+    }
+    window.addEventListener('crew-changed', again)
+    return () => window.removeEventListener('crew-changed', again)
+  }, [open])
 
   // The clocks, once a minute. Nothing in here is measured finer than that.
   useEffect(() => {
@@ -518,6 +539,9 @@ export default function CrewHub({
                             : card.blurb
                         return (
                           <button key={card.id} type="button" className="tap"
+                            // Named, so a tour can light one door and the
+                            // lock can stand the other three down.
+                            data-coach={`crew-${card.id}`}
                             onClick={() => {
                               vibrate(10)
                               if (card.id === 'recruits') setBoardSeen(true)

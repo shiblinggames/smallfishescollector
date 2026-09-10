@@ -2158,6 +2158,12 @@ body.hardcore-gauntlet::after {
 /* Warm/gold flash variant — used on the expeditions page. */
 .coach-flash-gold { --coach-color: 240, 192, 64; --coach-hi: 255, 224, 140; }
 
+/* ── THE CREW'S ACTION BUTTONS ANSWER THE POINTER ─────────────────────────
+   Inline styles cannot say hover. A lift and a brighter face on hover, a
+   press on active, so signing a hand on feels like pressing something. */
+.crew-act:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
+.crew-act:active:not(:disabled) { transform: translateY(0) scale(0.97); filter: brightness(0.96); }
+
 /* ── THE MARKET ON A DESKTOP ──────────────────────────────────────────────
    Hero and hold stack on a phone and sit side by side on a monitor: the hero
    in a column on the left, sticky under the nav so the Sell All never scrolls

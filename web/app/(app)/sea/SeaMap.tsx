@@ -1193,7 +1193,7 @@ const FAR_MS = 20_000
  * because the first voyage has not started yet and there is nothing to do.
  */
 const ARRIVE_FROM = 0.26
-const ARRIVE_S = 3.6
+const ARRIVE_S = 4.4
 /** The same number the loop eases over, in the milliseconds React counts in.
  *  One source, so the tour cannot be released early or late. */
 const ARRIVE_MS = ARRIVE_S * 1000
@@ -1213,7 +1213,9 @@ const ARRIVE_OFF = { x: -260, y: 820 }
  * rest just as slowly, so the hull settles into frame instead of arriving.
  */
 function arriveEase(t: number): number {
-  return t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2
+  // Cubic in-out. The quintic held longer and then covered the middle of the
+  // move at nearly twice the speed, which read as a rush after a pause.
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 }
 /**
  * AND HOW OFTEN TO ASK WHEN NOBODY COULD POSSIBLY ANSWER.
@@ -2516,6 +2518,11 @@ export default function SeaMap({
   const arriveT = useRef(-1)
   /** How the loop tells React the shot has landed. */
   const arriveDone = useRef<() => void>(() => {})
+  /** The fitted zoom at the moment the shot started. The shot multiplies THIS
+   *  rather than calling fit() every frame: fit() measures the wrap, and a
+   *  layout read on every frame of the one shot that has to be smooth is a
+   *  forced reflow sixty times a second. */
+  const arriveBase = useRef(1)
   /**
    * WHETHER THE SHOT HAS FINISHED. Only a captain who has never sailed gets it,
    * and only from the top of the tour -- a resumed first voyage is not a first
@@ -2540,6 +2547,26 @@ export default function SeaMap({
   const [tourBeat, setTourBeat] = useState<{ until: string; at?: string; target?: string } | null>(null)
   const tourLock = !tourDone
   const tourLockRef = useRef(tourLock); tourLockRef.current = tourLock
+  /**
+   * AND THE ANCHORAGE'S OWN TOUR HOLDS THE WHEEL THE SAME WAY. It runs on
+   * the first crossing, which may be a week later, and while it does the
+   * captain does what it asks -- open the crew panel, sign on a hand -- and
+   * nothing else. `gateLock` is composed below, after `inAnchorage` exists.
+   */
+  const [gateDone, setGateDone] = useState(tour.gateSeen)
+  const [gateBeat, setGateBeat] = useState<{ until: string; at?: string; target?: string } | null>(null)
+  /** What the crew panel is doing, for the tour: which room, and how many
+   *  hands have been signed on this session. Both arrive as window events
+   *  from the panel, which is a different tree. */
+  const [crewSection, setCrewSection] = useState<string | null>(null)
+  const [recruitTick, setRecruitTick] = useState(0)
+  useEffect(() => {
+    const onSection = (e: Event) => setCrewSection((e as CustomEvent<{ section: string | null }>).detail?.section ?? null)
+    const onCrew = () => setRecruitTick(n => n + 1)
+    window.addEventListener('crew-hub-section', onSection)
+    window.addEventListener('crew-changed', onCrew)
+    return () => { window.removeEventListener('crew-hub-section', onSection); window.removeEventListener('crew-changed', onCrew) }
+  }, [])
   useEffect(() => {
     // ── WHEN THE TIMER SAYS IT IS OVER, IT IS OVER ───────────────────────
     // The loop eases the factor home on its own `dt`, and the timer below
@@ -2564,9 +2591,17 @@ export default function SeaMap({
       return
     }
     if (arriveT.current !== -1) return
+    // ── NOT UNTIL THE CHART IS WARM ───────────────────────────────────────
+    // The shot used to arm on mount, under the curtain, while sprites and
+    // textures were still arriving -- so the curtain lifted onto a chart that
+    // was dropping frames and the descent stuttered through its first second.
+    // It waits for the sprites now, and so does the curtain (below), so the
+    // first thing seen is a chart that can already hold a frame.
+    if (!spritesReady) return
     // Out first, in one frame, so the shot starts from the wide view rather
     // than easing out to it and back.
     arriveZoom.current = ARRIVE_FROM
+    arriveBase.current = zoomFor(wrapRef.current?.getBoundingClientRect().width || window.innerWidth)
     // ARMED, NOT STARTED. The loop starts the clock on its first frame.
     arriveT.current = -2
     // The camera starts off the boat as well as above it. Placed directly,
@@ -2589,7 +2624,7 @@ export default function SeaMap({
     arriveDone.current = () => setArrived(true)
     const id = setTimeout(() => setArrived(true), ARRIVE_MS + 6000)
     return () => clearTimeout(id)
-  }, [arrived])
+  }, [arrived, spritesReady])
   /**
    * THE CURTAIN. Black over everything on the frame the chart mounts, lifting
    * as the shot starts, with a letterbox that stays for the length of it and
@@ -2599,12 +2634,13 @@ export default function SeaMap({
    */
   const [curtain, setCurtain] = useState<'dark' | 'lit' | 'gone'>(wantsArrival ? 'dark' : 'gone')
   useEffect(() => {
-    if (curtain !== 'dark') return
+    // The curtain lifts when the chart is warm, not when the page mounts.
+    if (curtain !== 'dark' || !spritesReady) return
     // Two frames, so the black is painted once before it starts to go.
     let raf2 = 0
     const raf1 = requestAnimationFrame(() => { raf2 = requestAnimationFrame(() => setCurtain('lit')) })
     return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2) }
-  }, [curtain])
+  }, [curtain, spritesReady])
   useEffect(() => {
     if (!arrived || curtain === 'gone') return
     const id = setTimeout(() => setCurtain('gone'), 900)
@@ -3069,6 +3105,9 @@ export default function SeaMap({
    *  sea is slightly heavier would undo the whole reason that loop exists. */
   const rough = useRef(0)
   const [inAnchorage, setInAnchorage] = useState(startSide !== 'fishing')
+  /** See gateDone. Only north of the reef, only once the chart has arrived. */
+  const gateLock = inAnchorage && !gateDone && arrived
+  const anyLock = tourLock || gateLock
   const sideRef = useRef(startSide !== 'fishing')
   /** THE BERTH SHEET, and the second half of the Gunwharf's chooser: the
    *  muster, the mounts, and the confirm that actually changes the hull. */
@@ -6007,8 +6046,8 @@ export default function SeaMap({
   // ashore at the Mainland is the only reach action the tour ever needs; the
   // rest -- a hail, a landing, a dig, a portal, a fight -- would take a new
   // captain out of the voyage before it had taught them the water.
-  if (tourLock) {
-    const b = tourBeat
+  if (anyLock) {
+    const b = tourLock ? tourBeat : gateBeat
     const allowAshore = !!b && (b.until === 'ashore' || b.until === 'sold') && b.at === 'mainland'
     for (let i = reach.length - 1; i >= 0; i--) {
       if (!(allowAshore && reach[i].id === 'port:mainland')) reach.splice(i, 1)
@@ -7099,7 +7138,8 @@ export default function SeaMap({
           x: pos.current.x + ARRIVE_OFF.x * (1 - e),
           y: pos.current.y + ARRIVE_OFF.y * (1 - e),
         }
-        fitRef.current()
+        // The cached base, not fit(): no layout read inside the shot.
+        zoomRef.current = arriveBase.current * wheelZoom.current * fishZoom.current * arriveZoom.current
         if (t >= 1) {
           arriveT.current = -1; arriveZoom.current = 1; tourCam.current = null
           arriveDone.current()
@@ -9151,7 +9191,7 @@ export default function SeaMap({
       // same claim on the main thread.
       // AND HELD FOR THE FIRST VOYAGE. `.sea-tour-lock` stands every control
       // down except the one the tour is pointing at. See tourLock.
-      className={`sea-surface${dialUp || fightOn ? ' sea-frozen' : ''}${tourLock ? ' sea-tour-lock' : ''}`}
+      className={`sea-surface${dialUp || fightOn ? ' sea-frozen' : ''}${anyLock ? ' sea-tour-lock' : ''}`}
     >
       {/* THE WATER'S COLOUR, on a layer of its own.
           Under everything and containing nothing, so repainting it repaints one
@@ -11259,7 +11299,9 @@ hullRef={hullRefFor(t.key)} />
       {/* AND THIS ONE TOO, so nothing speaks over the arrival. */}
       {arrived && <SeaGateTour
         hasSeen={tour.gateSeen} startAt={tour.gateStep}
-        inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam} />}
+        inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam}
+        crewOpen={crewHubOpen} crewSection={crewSection} recruits={recruitTick}
+        onBeat={setGateBeat} onDone={() => setGateDone(true)} />}
       {!hudOff && arrived && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* ── AND THE REST OF THE TEACHING, WHEN IT IS EARNED ──────────────
