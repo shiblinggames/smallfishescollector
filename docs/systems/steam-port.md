@@ -39,6 +39,45 @@ of three games to ship, and the answer changes the DESIGN, not the checkout code
   and mutual follows were built because the web had no friends list. Steam has one.
 - **Achievements.** 249 badges with a registry, tiers and conditions already in one file.
 
+## Where development happens, and when it moves
+
+**Development stays on the web until the game is content complete.** Decided 2026-09-10 with
+the port itself.
+
+The reason is the iteration loop and it is worth more than it looks. A push is live in three
+minutes and a tester on any device sees it; a Steam build is a binary, an upload, a download
+and a restart. Fifteen fixes in an afternoon — which is a real day on this project — is not
+possible on the second one, and you cannot hot-fix a broken session while two people are
+sitting in it. A game still finding its shape should not trade that away, and the current
+testers are friends who tolerate breakage where a Steam playtest audience forms durable
+impressions of an unfinished thing.
+
+**But three of the phases below are not wrapper work, they change the GAME, and those happen
+now, on the web, where the loop is fast:**
+
+1. **Phase 1, taking the money out.** The most important thing on this page. It changes the
+   BALANCE, so it needs months of play, not a week before submission. Finishing the web game
+   with a premium economy and stripping it at the end means having balanced a game you are not
+   shipping, and shipping an economy nobody has tested.
+2. **Phase 4, controller support.** A design constraint dressed as a port task. Some panels
+   will need rethinking rather than adapting, and that is cheap to find out now and expensive
+   after another forty are built on the same assumptions.
+3. **Retiring pacts** (part of phase 6). Steam friends replace them. No hurry, but do not build
+   anything new on top of them.
+
+Everything else — the shell, Steam auth, achievements, the networking swap — is mechanical,
+gains nothing from early testing, and slows the loop if done early. The networking especially:
+it replaces something that only just started working, and there is no reason to touch it twice.
+
+**The risk is drift.** "We will port when it is done" runs forever. Two guards: write down what
+content complete actually means, and spend about a week on a SHELL SPIKE soon — Tauri plus
+Steamworks bindings, one window, auth working, nothing else. Not to adopt it; to prove the path
+and surface the surprises while they are still free.
+
+**What would change this:** if controller support turns out to force real UI redesigns rather
+than adaptations, then the wrapper IS changing the game, and the shell should come early so the
+design is aimed at the real target instead of guessing at it.
+
 ## The order to do it in
 
 Each phase is safe to stop after. Nothing below starts until the phase above is done, because
