@@ -87,8 +87,8 @@ export type Beat = {
    */
   until: 'next' | 'fish' | 'bite' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait' | 'almanac'
     // The anchorage tour's own, all about the crew panel: the panel opened,
-    // its Recruit room opened, a hand signed on, the panel closed again.
-    | 'crewOpen' | 'recruitBoard' | 'recruited' | 'crewClosed'
+    // its Recruit room opened, a hand signed on.
+    | 'crewOpen' | 'recruitBoard' | 'recruited'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
@@ -130,6 +130,32 @@ export type Beat = {
    * it and skipping ahead is unaffected.
    */
   afterMs?: number
+  /**
+   * ── SILENT UNTIL THEY ARE THERE ─────────────────────────────────────────
+   *
+   * The beat is CURRENT but draws nothing until this is true; then it shows
+   * and behaves like any `next` beat -- it waits to be read and dismissed.
+   *
+   * For the half of a tour that is about PLACES. Flying the camera to a shore
+   * and narrating it is a slideshow of somewhere you are not; a line that
+   * arrives as you tie up is about the thing under you. And once it has
+   * shown it STAYS, through sailing off again, until it is answered: a card
+   * that vanishes because you moved is a card you have to go back for.
+   *
+   * A tour holds no locks past its first gated beat -- a captain cannot be
+   * asked to sail somewhere with the helm's own offers dimmed. See
+   * GATE_FORCED_THROUGH.
+   */
+  showWhen?: {
+    /** Tied up at this chart id. */
+    moor?: string
+    /** Within hail of this landmark. Only 'sea_gate' today, which is a pair
+     *  of constants rather than a place you can moor at. */
+    near?: 'sea_gate'
+  }
+  /** Drawn above the crew panel. The panel is a PopupShell at 111 and these
+   *  beats are about things inside it. */
+  overPanel?: true
 }
 
 const D = GUIDES.doby
@@ -306,66 +332,67 @@ export const GATE_TOUR: Beat[] = [
   // ── THE BOAT CHANGED UNDER THEM, AND IT IS SAID FIRST ─────────────────
   {
     ...D,
-    text: 'Past the reef, Captain, and feel that: the boat under you changed. This is your *expedition ship*, and she is the one that fights. Cross back south and your fishing boat is waiting.',
+    text: 'Can’t go battling it out on a fishing boat! This is your *expedition ship*. Don’t worry, crossing back through the gap brings back your fishing boat.',
     until: 'next',
   },
   {
     ...D,
-    text: 'This is the *anchorage*, the quiet water where the fighting half of your outfit is run from.',
+    text: 'This is the *anchorage*...your home base for any expeditions. Be sure to get familiar with everything here if you want the most battle-tested ship out there.',
     until: 'next',
   },
   // ── THE HUD CHANGED SIDES ─────────────────────────────────────────────
   {
     ...D,
-    text: 'Look top left. Out here the discs are the fighting half: your *crew*, your loadout, and your Navigation level in the same slot your fishing level had.',
+    text: 'You’ll notice up top that your *menu options* change based on whether you’re in the expedition zone or fishing zone.',
     until: 'next',
     target: 'hud-crew',
   },
   // ── AND THE FIRST THING IS HANDS ──────────────────────────────────────
-  // Nothing up here sails empty. Before the gunwharf, before the gate, a
+  // Nothing up here sails empty. Before the Gunwharf, before the gate, a
   // captain signs on one hand, and the tour waits at each step for the thing
-  // it asked for.
+  // it asked for. These four are the forced half; see GATE_FORCED_THROUGH.
   {
     ...D,
-    text: 'First, hands. Open *Your Crew*.',
+    text: 'To get started...you’ll need a crew. Open the *Crew* menu.',
     until: 'crewOpen',
     target: 'hud-crew',
   },
   {
     ...D,
-    text: 'Go to *Recruit*. Three new faces are posted there every day.',
+    text: 'Select *Recruit* to see who’s available. Recruits change out each day, but you can also pay gems to re-roll the draft. Who knows, you could hit it big!',
     until: 'recruitBoard',
     target: 'crew-recruits',
+    overPanel: true,
   },
   {
     ...D,
-    text: 'Pick one and *Recruit* them. Your first hand.',
+    text: 'Pick one and *Recruit* them. Congrats on your first hand.',
     until: 'recruited',
     target: 'recruit',
+    overPanel: true,
   },
   {
     ...K,
-    text: 'That’s your first crew. They fight beside you, sail voyages while you fish, and trawl the water you point them at. Close the hall and I’ll show you the rest.',
-    until: 'crewClosed',
-  },
-  {
-    ...D,
-    // FIRST AND ALMOST ALONE, because nothing up here happens without her. The
-    // other six islands introduce themselves when you tie up at them.
-    text: 'The *Gunwharf*. That is where she is refitted and armed. Moor there when you want to work on her.',
-    until: 'look',
-    at: 'gunwharf',
-  },
-  {
-    ...D,
-    text: 'Now look north. That ring of light is the *Sea Gate*, and it is the only way out of this harbour.',
-    until: 'look',
-    at: 'sea_gate',
-  },
-  {
-    ...D,
-    text: 'Past it is the campaign. Real water, not a list: you sail up to a fight and take it on where you find it. None of it is on your chart until you have sailed it, so go and look.',
+    text: 'That’s your crew. Crews have *stats and abilities*. Train them up and they get much, much stronger.',
     until: 'next',
+    overPanel: true,
+  },
+  // ── AND THE REST ARRIVES WHERE IT IS ABOUT ────────────────────────────
+  //
+  // Everything from here is a PLACE, so everything from here waits until the
+  // captain is standing at it. The tour stops holding the wheel at this line:
+  // it is asking them to go somewhere, and it cannot dim the helm to do it.
+  {
+    ...D,
+    text: 'The *Gunwharf*. This is where she’s refitted and armed — every hull upgrade you buy gets bolted on here.',
+    until: 'next',
+    showWhen: { moor: 'gunwharf' },
+  },
+  {
+    ...D,
+    text: 'That ring of light is the *Sea Gate*, and it’s the only way out of this harbour. Past it is the campaign: real water, not a list. You sail up to a fight and take it on where you find it.',
+    until: 'next',
+    showWhen: { near: 'sea_gate' },
   },
   {
     ...D,
@@ -383,6 +410,18 @@ export const GATE_TOUR: Beat[] = [
     until: 'next',
   },
 ]
+
+/**
+ * THE LAST BEAT THAT HOLDS THE WHEEL.
+ *
+ * Everything up to and including this one is forced: the captain does what it
+ * asks and nothing else. Past it the tour is asking them to SAIL somewhere,
+ * and a lock that dims the helm's own offers cannot coexist with that.
+ *
+ * Derived from the script rather than written down, so moving a beat cannot
+ * silently leave the lock on for one it was never meant to cover.
+ */
+export const GATE_FORCED_THROUGH = GATE_TOUR.findIndex(b => b.showWhen) - 1
 
 /** The beat that waits on a sale. The MARKET advances past this one — it is on
  *  a different route from the chart, and it is the only surface that knows a

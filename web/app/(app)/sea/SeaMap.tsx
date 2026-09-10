@@ -2571,7 +2571,7 @@ export default function SeaMap({
    * nothing else. `gateLock` is composed below, after `inAnchorage` exists.
    */
   const [gateDone, setGateDone] = useState(tour.gateSeen)
-  const [gateBeat, setGateBeat] = useState<{ until: string; at?: string; target?: string } | null>(null)
+  const [gateBeat, setGateBeat] = useState<{ until: string; at?: string; target?: string; lock: boolean } | null>(null)
   /** What the crew panel is doing, for the tour: which room, and how many
    *  hands have been signed on this session. Both arrive as window events
    *  from the panel, which is a different tree. */
@@ -3121,8 +3121,10 @@ export default function SeaMap({
    *  sea is slightly heavier would undo the whole reason that loop exists. */
   const rough = useRef(0)
   const [inAnchorage, setInAnchorage] = useState(startSide !== 'fishing')
-  /** See gateDone. Only north of the reef, only once the chart has arrived. */
-  const gateLock = inAnchorage && !gateDone && arrived
+  /** See gateDone. Only north of the reef, only once the chart has arrived,
+   *  and only through the tour's forced half -- past that it is asking the
+   *  captain to sail to the Gunwharf, which a dimmed helm cannot do. */
+  const gateLock = inAnchorage && !gateDone && arrived && gateBeat?.lock === true
   const anyLock = tourLock || gateLock
   const sideRef = useRef(startSide !== 'fishing')
   /** THE BERTH SHEET, and the second half of the Gunwharf's chooser: the
@@ -11319,6 +11321,7 @@ hullRef={hullRefFor(t.key)} />
         hasSeen={tour.gateSeen} startAt={tour.gateStep}
         inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam}
         crewOpen={crewHubOpen} crewSection={crewSection} recruits={recruitTick}
+        nearId={near?.id ?? null} at={pos}
         onBeat={setGateBeat} onDone={() => setGateDone(true)} />}
       {!hudOff && arrived && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 

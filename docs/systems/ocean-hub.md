@@ -2805,3 +2805,26 @@ at the Gunwharf that changes hulls. Everything above that says "take her out", "
 - The anchorage tour's first beat is the change of boat: "feel that: the boat under you changed.
   This is your expedition ship…". The Gunwharf look beat now says it is where she is refitted and
   armed.
+
+### The anchorage tour: forced, then arrived at
+
+`GATE_TOUR` is in two halves.
+
+**Forced (0–6, through `GATE_FORCED_THROUGH`).** The boat changed under you, the anchorage, the HUD
+changing sides, then the crew chain: open Your Crew → Recruit → sign a hand → what a crew is. The
+wheel is held for all of it, exactly as the first voyage holds it.
+
+**Arrived at (7+).** Every remaining beat is about a PLACE, so it is **current but silent** until
+the captain is standing at it (`showWhen: { moor: 'gunwharf' }`, `{ near: 'sea_gate' }`). Flying the
+camera to a shore and narrating it is a slideshow of somewhere you are not; a line that arrives as
+you tie up is about the thing under you. **The lock ends at the first `showWhen` beat** — the tour
+is asking the captain to sail somewhere and cannot dim the helm's own offers to do it, which is why
+`GATE_FORCED_THROUGH` is derived from the script rather than written down.
+
+**A revealed card stays revealed.** `shown` in `SeaGateTour` only climbs, so a card that has
+appeared survives sailing off again and is answered with Next like any other — a card that vanishes
+because you moved is a card you have to go back for.
+
+`overPanel: true` marks the beats drawn above the crew panel (z 120); it replaced a hard-coded list
+of `until` values, which broke the moment a crew beat became a plain `next`. `crewClosed` is gone
+with it.
