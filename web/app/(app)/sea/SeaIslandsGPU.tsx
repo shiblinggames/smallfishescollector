@@ -70,6 +70,7 @@ if (typeof window !== 'undefined') {
   }
 }
 import { makeGrass, makeGrassTexture, type Grass } from './seaGrass'
+import { makeTownGlow, type TownGlow } from './seaTownGlow'
 import { swellAt, swellHeel } from './seaSwell'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
@@ -991,6 +992,17 @@ export default function SeaIslandsGPU({
       // shore it is drawn against). A bay's isles arriving late through
       // reconcile land in the same layer as the rest, under the rock.
       const land = new PIXI.Container()
+      // ── THE TOWNS' LAMPLIGHT, ON THE WATER ───────────────────────
+      //
+      // Added BEFORE the land, which is the whole of how it is shaped: the pool
+      // is a circle centred off the near shore, so part of it falls on the
+      // island — and light spilling over the beach and across the fields behind
+      // it is a lamp floating in the air. The island sprites cover that half,
+      // and what survives is the half on the water with the coastline as its
+      // own edge. Exact, free, and it follows whatever shape the island is.
+      const townGlow: TownGlow = makeTownGlow(PIXI, townRef.current)
+      world.addChild(townGlow.view)
+
       world.addChild(land)
 
       // ── AND THE MEADOWS, ONE LAYER UP ────────────────────────────
@@ -1418,6 +1430,7 @@ export default function SeaIslandsGPU({
         clouds.advance(t, camX, camY, halfW, halfH, camZoom, a.screen.width, a.screen.height)
         if (!DIAG.nocull) townLayer?.cull(camX, camY, halfW, halfH)
         townLayer?.advance(dt, camX, camY, halfW, halfH)
+        townGlow.advance(t)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
         // module works out for itself which of them are under way and which are
@@ -1636,6 +1649,10 @@ export default function SeaIslandsGPU({
           // coming up, which is the one thing on the chart that gets BRIGHTER
           // after dark.
           if (!DIAG.nonight) townLayer?.night(tint, d)
+          // The same hour, on the water rather than on the land. See
+          // seaTownGlow for why this is the town's LIGHT and not its
+          // reflection.
+          townGlow.night(d)
         },
         palette(stops) {
           if (!water || stops.length < 3) return
