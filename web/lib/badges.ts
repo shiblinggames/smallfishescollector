@@ -383,6 +383,47 @@ export const BADGES: Badge[] = [
   { id: 'struck_in_gold',   name: 'Struck in Gold',     description: 'Take an Ancient to Vigil Rank V',                 imageUrl: '/badges/struck_in_gold.png',   difficulty: 'master'      },
   { id: 'deep_remembers',   name: 'The Deep Remembers', description: 'Reach 20 total Vigil',                            imageUrl: '/badges/deep_remembers.png',   difficulty: 'master'      },
   { id: 'the_long_vigil',   name: 'The Long Vigil',     description: 'Master all six Ancients at Rank V',               imageUrl: '/badges/the_long_vigil.png',   difficulty: 'grandmaster' },
+  // ── Sheet 29-33 — THE OCEAN HUB. Everything the chart itself asks of you:
+  // the nine people who work this water, the island you build on, the rocks you
+  // land on, the fog you burn off and the caches you dig up. All of it derives
+  // from real durable state, so every one of these self-grants on the next
+  // Badges visit for anybody already there.
+  //
+  // ── The Salt Road ────────────────────────────────────────────────────────
+  { id: 'known_face',        name: 'Known Face',          description: 'Become a known face to one of the regulars',        imageUrl: '/badges/known_face.png',        difficulty: 'rookie'      },
+  { id: 'whole_road',        name: 'The Whole Road',      description: 'Meet all nine regulars out on the water',           imageUrl: '/badges/whole_road.png',        difficulty: 'seasoned'    },
+  { id: 'you_remembered',    name: 'You Remembered',      description: 'Bring a regular the one fish they actually want',   imageUrl: '/badges/you_remembered.png',    difficulty: 'seasoned'    },
+  { id: 'bearing_gifts',     name: 'Bearing Gifts',       description: 'Hand over 25 gifts',                                imageUrl: '/badges/bearing_gifts.png',     difficulty: 'seasoned'    },
+  { id: 'good_company',      name: 'Good Company',        description: 'Be good company to five regulars',                  imageUrl: '/badges/good_company.png',      difficulty: 'seasoned'    },
+  { id: 'trusted_three',     name: 'Trusted Three',       description: 'Be trusted by three regulars',                      imageUrl: '/badges/trusted_three.png',     difficulty: 'veteran'     },
+  { id: 'open_hand',         name: 'Open Hand',           description: 'Hand over 100 gifts',                               imageUrl: '/badges/open_hand.png',         difficulty: 'veteran'     },
+  { id: 'thick_as_thieves',  name: 'Thick as Thieves',    description: 'Reach the top standing with a regular',             imageUrl: '/badges/thick_as_thieves.png',  difficulty: 'veteran'     },
+  { id: 'salt_of_the_earth', name: 'Salt of the Earth',   description: 'Reach the top standing with all nine regulars',     imageUrl: '/badges/salt_of_the_earth.png', difficulty: 'grandmaster' },
+  // ── The homestead ────────────────────────────────────────────────────────
+  { id: 'roof_of_your_own',  name: 'A Roof of Your Own',  description: 'Build the cottage on your island',                  imageUrl: '/badges/roof_of_your_own.png',  difficulty: 'rookie'      },
+  { id: 'name_on_the_chart', name: 'Name on the Chart',   description: 'Give your homestead a name of your own',            imageUrl: '/badges/name_on_the_chart.png', difficulty: 'rookie'      },
+  { id: 'the_longhouse',     name: 'The Longhouse',       description: 'Build the longhouse',                               imageUrl: '/badges/the_longhouse.png',     difficulty: 'seasoned'    },
+  { id: 'furnished',         name: 'Furnished',           description: 'Own 10 furnishings',                                imageUrl: '/badges/furnished.png',         difficulty: 'seasoned'    },
+  { id: 'gallery_hung',      name: 'Gallery Hung',        description: 'Hang six badges in your gallery',                   imageUrl: '/badges/gallery_hung.png',      difficulty: 'seasoned'    },
+  { id: 'the_great_hall',    name: 'The Great Hall',      description: 'Build the great hall',                              imageUrl: '/badges/the_great_hall.png',    difficulty: 'veteran'     },
+  { id: 'the_estate',        name: 'The Estate',          description: 'Build the Estate, the last rung of the house',      imageUrl: '/badges/the_estate.png',        difficulty: 'master'      },
+  { id: 'every_comfort',     name: 'Every Comfort',       description: 'Own every furnishing there is',                     imageUrl: '/badges/every_comfort.png',     difficulty: 'master'      },
+  // ── The isles ────────────────────────────────────────────────────────────
+  { id: 'first_ashore',      name: 'First Ashore',        description: 'Go ashore on your first isle',                      imageUrl: '/badges/first_ashore.png',      difficulty: 'rookie'      },
+  { id: 'beachcomber',       name: 'Beachcomber',         description: 'Land on 10 isles',                                  imageUrl: '/badges/beachcomber.png',       difficulty: 'seasoned'    },
+  { id: 'others_came_before', name: 'Others Came Before', description: 'Read all nine notes left on the rocks',             imageUrl: '/badges/others_came_before.png', difficulty: 'veteran'    },
+  { id: 'far_rocks',         name: 'The Far Rocks',       description: 'Land on 20 isles',                                  imageUrl: '/badges/far_rocks.png',         difficulty: 'veteran'     },
+  { id: 'every_last_rock',   name: 'Every Last Rock',     description: 'Land on all 27 isles',                              imageUrl: '/badges/every_last_rock.png',   difficulty: 'master'      },
+  // ── Charting the sea ─────────────────────────────────────────────────────
+  { id: 'wake_behind_you',   name: 'Wake Behind You',     description: 'Chart a quarter of the fishing sea',                imageUrl: '/badges/wake_behind_you.png',   difficulty: 'rookie'      },
+  { id: 'home_waters',       name: 'Home Waters',         description: 'Chart three fifths of the fishing sea',             imageUrl: '/badges/home_waters.png',       difficulty: 'seasoned'    },
+  { id: 'into_the_fog',      name: 'Into the Fog',        description: 'Chart half the campaign water',                     imageUrl: '/badges/into_the_fog.png',      difficulty: 'seasoned'    },
+  { id: 'no_blank_spaces',   name: 'No Blank Spaces',     description: 'Chart nine tenths of the fishing sea',              imageUrl: '/badges/no_blank_spaces.png',   difficulty: 'master'      },
+  { id: 'fog_burned_off',    name: 'The Fog Burned Off',  description: 'Chart nine tenths of the campaign water',           imageUrl: '/badges/fog_burned_off.png',    difficulty: 'master'      },
+  // ── The digs ─────────────────────────────────────────────────────────────
+  { id: 'first_spade',       name: 'First Spade',         description: 'Dig up your first buried cache',                    imageUrl: '/badges/first_spade.png',       difficulty: 'rookie'      },
+  { id: 'six_feet_down',     name: 'Six Feet Down',       description: 'Dig up 6 buried caches',                            imageUrl: '/badges/six_feet_down.png',     difficulty: 'seasoned'    },
+  { id: 'salted_away',       name: 'Salted Away',         description: 'Dig up all 12 buried caches',                       imageUrl: '/badges/salted_away.png',       difficulty: 'veteran'     },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
@@ -410,6 +451,41 @@ export function badgePoints(id: string): number {
 // Longer "what it takes" blurb shown in the badge detail modal — a sentence or
 // two of context/tips beyond the one-line description.
 export const BADGE_DETAIL: Record<string, string> = {
+  // ── The Salt Road ────────────────────────────────────────────────────────
+  known_face:        'Reach the second standing with any one of the nine regulars. Talking is worth a point a day and a fish is worth more, so this is a few days of pulling alongside somebody.',
+  whole_road:        'Speak to all nine regulars at least once. Five keep a shop in their own water, three keep no shop at all, and Yoon is where Yoon is. Finding them is the whole of it.',
+  you_remembered:    'Give a regular the one species they actually want. Each of the nine has exactly one, it is worth three times an ordinary gift, and it stays hidden until you know them a little.',
+  bearing_gifts:     'Hand over 25 gifts across every regular. One gift each per day, so this is a week or so of turning up with something in the hold.',
+  good_company:      'Reach the third standing with five different regulars. Spreading yourself is slower than working on one, and it opens five sets of lines instead of one.',
+  trusted_three:     'Reach the fourth standing with three regulars. Trusted is where people start telling you what happened to the captain before you.',
+  open_hand:         'Hand over 100 gifts across every regular. There is no way to rush it: nine regulars, one gift each per day.',
+  thick_as_thieves:  'Reach the top standing with one regular. Roughly eighteen days of a chat and the fish they love every single day, and longer at any pace a person actually plays at.',
+  salt_of_the_earth: 'Reach the top standing with all nine regulars. The longest road on the chart and there is no shortcut down it. Nothing decays while you are away.',
+  // ── The homestead ────────────────────────────────────────────────────────
+  roof_of_your_own:  'Build the cottage, the first rung above the lean-to you start with. Sixty thousand doubloons and the island stops looking abandoned.',
+  name_on_the_chart: 'Name your homestead. Anybody sailing past sees it, which is what makes an island yours rather than a building you paid for.',
+  the_longhouse:     'Build the longhouse, the third rung. It opens the gallery, where your badges hang.',
+  furnished:         'Own 10 furnishings. Furniture is permanent once bought, so putting an old piece back costs nothing and nothing here is ever wasted.',
+  gallery_hung:      'Fill all six of the gallery slots with badges hung large. You need the gallery open first, which means the longhouse.',
+  the_great_hall:    'Build the great hall, the fourth rung. Nine hundred thousand doubloons, and it opens the menagerie for your pets.',
+  the_estate:        'Build the Estate, the last rung there is. Two and a half million on its own, and better than three and a half million across the whole ladder.',
+  every_comfort:     'Own every furnishing in every slot. Ten come free with the rooms; the rest are bought one at a time.',
+  // ── The isles ────────────────────────────────────────────────────────────
+  first_ashore:      'Go ashore on any of the 27 small isles ringed round the bands. They are the reason to sail sideways rather than only out.',
+  beachcomber:       'Land on 10 different isles. Each one pays exactly once, ever, so this is 10 separate landfalls.',
+  others_came_before: 'Land on all nine isles that hold a note instead of coin. Near water carries chart hints; far water carries logs from crews who sailed further than they should have.',
+  far_rocks:         'Land on 20 different isles. By this point you are working the outer bands, where the caches are worth the most.',
+  every_last_rock:   'Land on all 27 isles. Every band, every bearing, and the far side of water most captains only cross once.',
+  // ── Charting the sea ─────────────────────────────────────────────────────
+  wake_behind_you:   'Burn the fog off a quarter of the fishing sea. It lifts wherever you sail, so this is simply distance covered.',
+  home_waters:       'Burn the fog off three fifths of the fishing sea. Measured against the water only, so the empty corners of the chart are not counted against you.',
+  into_the_fog:      'Burn the fog off half the campaign water north of the reef. It is its own chart with its own fog and none of your fishing miles count toward it.',
+  no_blank_spaces:   'Burn the fog off nine tenths of the fishing sea. Sailing the bands is not enough; this is the edges as well.',
+  fog_burned_off:    'Burn the fog off nine tenths of the campaign water. The junction, the straits and the far side of every bay you have earned.',
+  // ── The digs ─────────────────────────────────────────────────────────────
+  first_spade:       'Dig up your first buried cache. You hold a bearing first, then sail to it and dig.',
+  six_feet_down:     'Dig up 6 buried caches, half of everything buried out there.',
+  salted_away:       'Dig up all 12 buried caches. Each is one payout and no more, so this is every last bearing on the chart run down.',
   prestige_i:       'Prestige a zone by maxing its catalogue, then resetting it for a permanent sell bonus. Your first prestige proves you have fully worked a fishing ground.',
   trophy_catch:     'Every cast rolls a size, and roughly 1 in 30 lands in the top Trophy band. Keep fishing and one of the giants is yours.',
   unbroken:         'String together 10 perfect reel-ins with no misses between them. A single slip resets the count to zero.',

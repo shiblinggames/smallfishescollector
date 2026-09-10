@@ -182,6 +182,30 @@ export function xfogDisc(x: number, y: number, r: number): number[] {
 // the count as an argument would be one call site away from writing a fishing
 // bit into a campaign mask. Twenty lines is a cheaper safeguard than that.
 
+/**
+ * THE CELLS THAT CAN ACTUALLY BE FOGGED, worked out once.
+ *
+ * Anything in FREE was never fogged in the first place — the anchorage, the
+ * fishing sea, everything past RAID_EDGE — so scoring against the whole grid
+ * would cap a captain who has burned off every last puff at about 80% and read
+ * as a bug. Same reasoning as WATER_CELLS on the fishing side, and the same
+ * reason it is precomputed: the badges score every player on the board.
+ */
+export const FOGGABLE_CELLS: number[] = (() => {
+  const out: number[] = []
+  for (let i = 0; i < XFOG_W * XFOG_H; i++) if (FREE[i] !== 1) out.push(i)
+  return out
+})()
+
+/** How much of the campaign's water a captain has actually sailed into,
+ *  measured against the cells that were ever fogged. */
+export function xfogProgress(bits: Uint8Array): { seen: number; total: number; pct: number } {
+  let seen = 0
+  for (const i of FOGGABLE_CELLS) if (xfogHas(bits, i)) seen++
+  const total = FOGGABLE_CELLS.length
+  return { seen, total, pct: total ? seen / total : 0 }
+}
+
 export function emptyXfog(): Uint8Array {
   return new Uint8Array(Math.ceil(XFOG_CELLS / 8))
 }

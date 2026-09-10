@@ -25,6 +25,12 @@ import { raidItemSlotsForTier } from './expeditions'
 import { CREW_SKINS } from './crewSkins'
 import { BUYABLE_ROD_TIERS } from './rods'
 import { SHIP_SKINS } from './shipSkins'
+import { FOLK, TIER_AT } from './seaFolk'
+import { ISLES } from './seaIsles'
+import { DIG_SITES } from './seaDigs'
+import { HOUSE, FURNITURE, PINNED_MAX } from './homestead'
+import { decodeFog, fogProgress } from './seaExplore'
+import { decodeXfog, xfogProgress } from './seaExploreExp'
 
 // Chase-skin ids (the animated legendary skins) — for "The Chase".
 export const CHASE_SKIN_IDS = new Set(CREW_SKINS.filter(s => s.chase).map(s => s.id))
@@ -70,7 +76,101 @@ export const CONFLUENCE_COUNT = 30
 // renamed to Tundra Hull / Volcanic Hull when their art landed).
 export const SUNKEN_HAND_HULLS = ['sunken_hand_hull', 'drowned_giant_hull', 'last_cast_hull']
 
+// ── THE OCEAN HUB'S OWN STATE ───────────────────────────────────────────────
+//
+// Four systems out on the chart keep their state in their own tables rather
+// than on the profile row: the Salt Road (`sea_rapport`), the homestead
+// (`homesteads`), the isles you have landed on (`sea_discoveries`) and the
+// caches you have dug up (`sea_digs`). Every one of these is REAL, DURABLE
+// state, so all of it is derivable and none of it needs a counter of its own.
+//
+// Everything below is imported rather than written down twice. The rapport
+// curve in particular has been retuned once already (4/10/18/30 became
+// 4/14/34/70); a badge holding its own copy of the old thresholds would have
+// gone on paying out at the old friendship and nobody would have noticed.
+
+/** Every regular rapport can attach to. Wanderers are hashed out of (cell, day)
+ *  and Finn is excluded on purpose — see docs/systems/sea-npcs.md. */
+export const SEA_REGULARS = FOLK.length
+/** Points for "a known face" / "good company" / "trusted" / "thick as thieves". */
+export const RAPPORT_KNOWN = TIER_AT[1]
+export const RAPPORT_COMPANY = TIER_AT[2]
+export const RAPPORT_TRUSTED = TIER_AT[3]
+export const RAPPORT_THICK = TIER_AT[4]
+/** The rocks: 27 in all, nine of which hold a note instead of coin. */
+export const ISLE_COUNT = ISLES.length
+export const NOTE_ISLE_IDS = ISLES.filter(i => i.kind === 'note').map(i => i.id)
+/** Buried caches. Finite and one payout each, so "all of them" is a real end. */
+export const DIG_COUNT = DIG_SITES.length
+/** The top rung of the house ladder (The Estate), and every furnishing there is. */
+export const HOUSE_TOP = HOUSE.length - 1
+export const FURNISHING_COUNT = FURNITURE.reduce((n, slot) => n + slot.options.length, 0)
+
+/**
+ * WHERE A CAPTAIN STANDS OUT ON THE WATER, folded into the handful of numbers
+ * the badges actually ask about.
+ *
+ * One fold, shared by all four callers, for the same reason `exchangeStatsFrom`
+ * is shared: four definitions of "a friendship" living in four files is how
+ * they drift, and the badges page showing a different number from the one that
+ * granted the badge is the bug that reads as the badge being broken.
+ */
+export interface SeaStats {
+  /** Points with each regular MET. Length is how many you have spoken to. */
+  rapport: number[]
+  /** Gifts handed over, lifetime, across every regular. */
+  gifts: number
+  /** House rung, 0 (a lean-to) to 4 (The Estate). */
+  house: number
+  /** They have named the place something of their own. */
+  named: boolean
+  /** Furnishings paid for, whether they are out in a room or not. */
+  furnishings: number
+  /** Badges hung large in the gallery. */
+  pinned: number
+  /** Isle ids landed on. */
+  isles: string[]
+  /** Caches actually dug up (a bearing held but not dug does not count). */
+  digs: number
+}
+
+export type RapportRow = { points: number | null; gifts_given: number | null }
+export type HomesteadRow = { house: number | null; name: string | null; owned: string[] | null; pinned: string[] | null } | null
+
+/** A captain who has never left the harbour. */
+export const NO_SEA: SeaStats = {
+  rapport: [], gifts: 0, house: 0, named: false, furnishings: 0, pinned: 0, isles: [], digs: 0,
+}
+
+export function seaStatsFrom(input: {
+  rapport: RapportRow[]
+  homestead: HomesteadRow
+  isles: string[]
+  digs: number
+}): SeaStats {
+  const h = input.homestead
+  return {
+    rapport: input.rapport.map(r => Number(r.points ?? 0)),
+    gifts: input.rapport.reduce((n, r) => n + Number(r.gifts_given ?? 0), 0),
+    house: Math.max(0, Number(h?.house ?? 0)),
+    // A blank string is not a name. The column is nullable and the input trims
+    // to empty, so both have to read as unnamed or the badge pays for a space.
+    named: !!(h?.name ?? '').trim(),
+    furnishings: (h?.owned ?? []).length,
+    pinned: (h?.pinned ?? []).length,
+    isles: input.isles,
+    digs: input.digs,
+  }
+}
+
 export interface BadgeProfileFields {
+  /** The two fog masks. Encoded bitfields, decoded here — see seaExplore and
+   *  seaExploreExp. They are deliberately TWO grids on two columns and must
+   *  stay so: the fishing one is indexed off the reef and the campaign one off
+   *  the bays, and re-indexing either would decode every captain's chart as
+   *  somebody else's. */
+  sea_explored?: string | null
+  sea_explored_exp?: string | null
   fishing_xp?: number | null
   expedition_xp?: number | null
   highest_perfect_streak?: number | null
@@ -179,6 +279,12 @@ export interface BadgeJoinData {
     staked: number        // lifetime, settled contracts only
     returned: number      // lifetime, settled contracts only
   }
+  /** The ocean hub: the Salt Road, the homestead, the isles and the digs.
+   *  REQUIRED, like `crew.effects` and for the same reason — four callers
+   *  build this object, and a field they are allowed to leave out is a field
+   *  three of them will forget, which silently makes every badge behind it
+   *  unearnable. Pass NO_SEA if a caller genuinely has nothing. */
+  sea: SeaStats
 }
 
 /** One row of exchange_bets, as the badges need it. */
@@ -256,6 +362,15 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   const vigilPoints = vigilTotal(vigilState)
   const vigilTopRank = Math.max(0, ...Object.values(vigilState).map(v => v.rank))
   const vigilAtLarge = Object.values(vigilState).filter(v => v.released).length
+
+  // ── THE OCEAN HUB ──────────────────────────────────────────────────────
+  // How many regulars stand at or above a given tier, and the two fog masks
+  // decoded and scored. Both fog readings measure against the cells that were
+  // ever fogged, so a completionist reads as complete rather than as 80%.
+  const rapportAt = (points: number) => j.sea.rapport.filter(n => n >= points).length
+  const isleSet = new Set(j.sea.isles)
+  const fishFog = fogProgress(decodeFog(p.sea_explored ?? null))
+  const expFog = xfogProgress(decodeXfog(p.sea_explored_exp ?? null))
 
   const ownsEye = p.has_anglers_patience === true
   const ownsMaw = raidItems.some(id => baseItemId(id) === 'borrowed_jaw')
@@ -581,6 +696,56 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     colours_of_the_hand:  SUNKEN_HAND_HULLS.every(id => (p.ship_skins ?? []).includes(id)),
     // first_convergence / ultimate_only / weight_of_green / untouched are HOOKS
     // (GauntletGame draft + cashOutGauntlet) — not derivable, so not listed here.
+
+    // ── THE SALT ROAD ──────────────────────────────────────────────────────
+    // Standing with the nine regulars. Thresholds come off TIER_AT rather than
+    // being written down again, so a retuned curve retunes these with it.
+    known_face:        rapportAt(RAPPORT_KNOWN) >= 1,
+    whole_road:        j.sea.rapport.length >= SEA_REGULARS,
+    good_company:      rapportAt(RAPPORT_COMPANY) >= 5,
+    trusted_three:     rapportAt(RAPPORT_TRUSTED) >= 3,
+    thick_as_thieves:  rapportAt(RAPPORT_THICK) >= 1,
+    salt_of_the_earth: rapportAt(RAPPORT_THICK) >= SEA_REGULARS,
+    bearing_gifts:     j.sea.gifts >= 25,
+    open_hand:         j.sea.gifts >= 100,
+    // you_remembered is a HOOK (folkActions, on the favourite landing) — the
+    // gift counter cannot say WHICH fish it was after the fact.
+
+    // ── THE HOMESTEAD ──────────────────────────────────────────────────────
+    roof_of_your_own:  j.sea.house >= 1,
+    the_longhouse:     j.sea.house >= 2,
+    the_great_hall:    j.sea.house >= 3,
+    the_estate:        j.sea.house >= HOUSE_TOP,
+    name_on_the_chart: j.sea.named,
+    furnished:         j.sea.furnishings >= 10,
+    every_comfort:     j.sea.furnishings >= FURNISHING_COUNT,
+    gallery_hung:      j.sea.pinned >= PINNED_MAX,
+
+    // ── THE ISLES ──────────────────────────────────────────────────────────
+    first_ashore:      j.sea.isles.length >= 1,
+    beachcomber:       j.sea.isles.length >= 10,
+    far_rocks:         j.sea.isles.length >= 20,
+    every_last_rock:   j.sea.isles.length >= ISLE_COUNT,
+    // The nine rocks that hold a note instead of coin. Implied by finding all
+    // 27, and that is fine: it is the milestone on the way, and it is the one
+    // that says you read them.
+    others_came_before: NOTE_ISLE_IDS.every(id => isleSet.has(id)),
+
+    // ── CHARTING THE SEA ───────────────────────────────────────────────────
+    // Measured against the cells that are WATER, not against the whole grid.
+    // Capped at 90% rather than 100% on purpose: a cell can sit under an
+    // island, and a badge that needs a square nobody can sail into is a badge
+    // nobody can finish.
+    wake_behind_you:   fishFog.pct >= 0.25,
+    home_waters:       fishFog.pct >= 0.60,
+    no_blank_spaces:   fishFog.pct >= 0.90,
+    into_the_fog:      expFog.pct >= 0.50,
+    fog_burned_off:    expFog.pct >= 0.90,
+
+    // ── THE DIGS ───────────────────────────────────────────────────────────
+    first_spade:       j.sea.digs >= 1,
+    six_feet_down:     j.sea.digs >= 6,
+    salted_away:       j.sea.digs >= DIG_COUNT,
   }
 }
 
@@ -593,7 +758,7 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, crew_drill_level, crew_stores_level, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, ancient_vigil, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, daily_challenge_sweeps, voyage_booty_hauls, daily_master_cleared, bounties_claimed, bounty_boards_cleared, bounty_elites_claimed, bounty_gems_earned'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, crew_drill_level, crew_stores_level, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, ancient_vigil, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, daily_challenge_sweeps, voyage_booty_hauls, daily_master_cleared, bounties_claimed, bounty_boards_cleared, bounty_elites_claimed, bounty_gems_earned, sea_explored, sea_explored_exp'
 
 // EVERY FIELD A CONDITION READS MUST BE LISTED ABOVE. A missing column does not
 // error: the field comes back undefined, `?? 0` turns it into zero, and the

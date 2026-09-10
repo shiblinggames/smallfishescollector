@@ -133,14 +133,26 @@ export function decodeFog(raw: string | null | undefined): Uint8Array {
  *  as a bug. */
 export function fogProgress(bits: Uint8Array): { seen: number; total: number; pct: number } {
   let seen = 0
-  let total = 0
+  for (const i of WATER_CELLS) if (fogHas(bits, i)) seen++
+  return { seen, total: WATER_CELLS.length, pct: WATER_CELLS.length ? seen / WATER_CELLS.length : 0 }
+}
+
+/**
+ * WHICH CELLS ARE WATER, worked out once.
+ *
+ * This used to be a trig pass over all 2,275 cells inside fogProgress, which
+ * was fine while the only caller was the minimap drawing for one captain. The
+ * charting badges score every player on the achievement-points board, so the
+ * same constant answer was about to be recomputed per captain per read. The
+ * grid never moves; the list is built at import and read forever after.
+ */
+export const WATER_CELLS: number[] = (() => {
+  const out: number[] = []
   for (let i = 0; i < FOG_CELLS; i++) {
     const c = fogCentre(i)
     if (c.y <= 0) continue
-    const R = Math.hypot(c.x, c.y)
-    if (R > OUTER) continue
-    total++
-    if (fogHas(bits, i)) seen++
+    if (Math.hypot(c.x, c.y) > OUTER) continue
+    out.push(i)
   }
-  return { seen, total, pct: total ? seen / total : 0 }
-}
+  return out
+})()

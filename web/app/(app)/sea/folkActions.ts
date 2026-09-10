@@ -14,6 +14,7 @@ import {
   type FolkId, type FolkTier,
 } from '@/lib/seaFolk'
 import { RODS } from '@/lib/rods'
+import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 
 /** UTC date string, the same convention lib/dailyChallenges and lib/bounties
  *  use, so every daily thing in the game turns over together. */
@@ -235,6 +236,21 @@ export async function giftToFolk(folkId: string, fishId: number): Promise<FolkGi
       })
       .eq('user_id', user.id).eq('folk_id', folk.id)
     return { error: 'That is not in your hold any more.' }
+  }
+
+  // ── YOU REMEMBERED ──────────────────────────────────────────────────
+  //
+  // The one badge on the Salt Road that cannot be derived. `gifts_given` counts
+  // presents and nothing records WHICH fish each one was, so by tomorrow the
+  // row cannot say whether anybody ever worked out what somebody liked. A hook
+  // at the moment it happens is the only place the answer exists.
+  //
+  // After the fish is confirmed taken, never before: everything above this line
+  // can still hand the day back and fail, and a badge granted for a gift that
+  // was reverted is a badge for nothing. Best-effort, like every other hook —
+  // the gift is the thing that matters and it has already landed.
+  if (worth.how === 'loved') {
+    try { await unlockBadge('you_remembered') } catch { /* best-effort */ }
   }
 
   return {

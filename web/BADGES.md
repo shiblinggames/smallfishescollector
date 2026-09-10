@@ -202,8 +202,12 @@ Consider a broadcast mail for a sizable batch (get copy approval first — see t
 - **Hook badges aren't retroactive.** If you need to backfill past achievers, that's a separate
   one-off — the hook only fires on the next occurrence.
 - **New column? Add it to `BADGE_PROFILE_COLUMNS`** or the leaderboard/reconcile won't select it.
-- **Three historical hook-only ids** can't be derived and rely on stored state: `trophy_catch`,
-  `catfish_jackpot`, `full_collection`. The `union` in the leaderboard is what keeps them counted.
+- **Hook-only ids** can't be derived and rely on stored state: `trophy_catch`,
+  `catfish_jackpot`, `full_collection`, and `you_remembered` (nothing records WHICH fish a gift
+  was). The `union` in the leaderboard is what keeps them counted.
+- **`BadgeJoinData` has five required blocks**, and `sea` is the newest: the ocean hub's four
+  tables, folded by the shared `seaStatsFrom()`. Adding a field to it makes tsc walk you round
+  all four callers, which is the point — never make one optional.
 - **Copy voice:** no em-dashes, no AI-sounding filler, pirate charm; serious-but-fun names. No emoji
   as icons (the 🏅 fallback is temporary art only).
 - **Commit the sliced PNGs**, never the source `badgebatch*.png` (gitignored).

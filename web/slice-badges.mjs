@@ -261,6 +261,41 @@ const PLAN = [
   [37, 1, 0, 'struck_in_gold'],
   [37, 1, 1, 'deep_remembers'],
   [37, 1, 2, 'the_long_vigil'],
+  // ── batch 38 — The Salt Road I ──
+  [38, 0, 0, 'known_face'],
+  [38, 0, 1, 'whole_road'],
+  [38, 0, 2, 'you_remembered'],
+  [38, 1, 0, 'bearing_gifts'],
+  [38, 1, 1, 'good_company'],
+  [38, 1, 2, 'trusted_three'],
+  // ── batch 39 — The Salt Road II + the homestead ──
+  [39, 0, 0, 'open_hand'],
+  [39, 0, 1, 'thick_as_thieves'],
+  [39, 0, 2, 'salt_of_the_earth'],
+  [39, 1, 0, 'roof_of_your_own'],
+  [39, 1, 1, 'name_on_the_chart'],
+  [39, 1, 2, 'the_longhouse'],
+  // ── batch 40 — The homestead II ──
+  [40, 0, 0, 'furnished'],
+  [40, 0, 1, 'gallery_hung'],
+  [40, 0, 2, 'the_great_hall'],
+  [40, 1, 0, 'the_estate'],
+  [40, 1, 1, 'every_comfort'],
+  [40, 1, 2, 'first_ashore'],
+  // ── batch 41 — The isles + the digs ──
+  [41, 0, 0, 'beachcomber'],
+  [41, 0, 1, 'others_came_before'],
+  [41, 0, 2, 'far_rocks'],
+  [41, 1, 0, 'every_last_rock'],
+  [41, 1, 1, 'first_spade'],
+  [41, 1, 2, 'six_feet_down'],
+  // ── batch 42 — Charting the sea ──
+  [42, 0, 0, 'salted_away'],
+  [42, 0, 1, 'wake_behind_you'],
+  [42, 0, 2, 'home_waters'],
+  [42, 1, 0, 'into_the_fog'],
+  [42, 1, 1, 'no_blank_spaces'],
+  [42, 1, 2, 'fog_burned_off'],
 ]
 
 // Optional: `ONLY=30 node slice-badges.mjs` slices just that sheet (so re-running

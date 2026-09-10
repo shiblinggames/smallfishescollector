@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stampBadges } from '@/lib/badgeGrant'
 import { BADGES, BADGE_MAP, BADGE_REWARD, BADGE_GEM_REWARD, badgeReward, badgeGemReward, MAX_EQUIPPED_BADGES } from '@/lib/badges'
-import { earnedBadgeIds, BADGE_PROFILE_COLUMNS, type BadgeProfileFields, exchangeStatsFrom, type ExchangePositionRow } from '@/lib/badgeConditions'
+import { earnedBadgeIds, BADGE_PROFILE_COLUMNS, type BadgeProfileFields, exchangeStatsFrom, type ExchangePositionRow, seaStatsFrom, type RapportRow, type HomesteadRow } from '@/lib/badgeConditions'
 
 /** Grant every badge whose condition is met but not yet recorded. Derives
  *  from existing data (no per-feature hook needed), so it self-heals any
@@ -19,7 +19,7 @@ export async function reconcileBadges(): Promise<string[]> {
   if (!user) return []
 
   const admin = createAdminClient()
-  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }, { data: exchangeRows }] = await Promise.all([
+  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }, { data: exchangeRows }, { data: rapportRows }, { data: homeRow }, { data: isleRows }, { data: digRows }] = await Promise.all([
     admin.from('profiles').select(`unlocked_badges, badge_unlocked_at, ${BADGE_PROFILE_COLUMNS}`).eq('id', user.id).single(),
     admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', user.id),
     admin.from('user_crew').select('xp, died_at, effects, cards(slug)').eq('user_id', user.id),
@@ -28,6 +28,10 @@ export async function reconcileBadges(): Promise<string[]> {
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
     admin.from('shiny_catches').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     admin.from('exchange_bets').select('status, stake, payout').eq('user_id', user.id),
+      admin.from('sea_rapport').select('points, gifts_given').eq('user_id', user.id),
+      admin.from('homesteads').select('house, name, owned, pinned').eq('user_id', user.id).maybeSingle(),
+      admin.from('sea_discoveries').select('isle_id').eq('user_id', user.id),
+      admin.from('sea_digs').select('site_id').eq('user_id', user.id).not('dug_at', 'is', null),
   ])
   if (!profile) return []
 
@@ -44,6 +48,12 @@ export async function reconcileBadges(): Promise<string[]> {
     rodTiers: ((rodRows ?? []) as { rod_tier: number }[]).map(r => r.rod_tier),
     goldenCount: goldenCount ?? 0,
     exchange: exchangeStatsFrom((exchangeRows ?? []) as ExchangePositionRow[]),
+    sea: seaStatsFrom({
+      rapport: (rapportRows ?? []) as RapportRow[],
+      homestead: (homeRow ?? null) as HomesteadRow,
+      isles: ((isleRows ?? []) as { isle_id: string }[]).map(r => r.isle_id),
+      digs: (digRows ?? []).length,
+    }),
   })
 
   const toGrant = derived.filter(id => !have.has(id))

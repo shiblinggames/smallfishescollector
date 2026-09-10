@@ -34,6 +34,30 @@ the rationale and the traps around it.
   ancestor, so one animating parent could trap it inside a card) at z 100010, above the
   app's previous ceiling of 100000.
 
+## The ocean hub's four tables (2026-09)
+
+Thirty badges cover the Salt Road, the homestead, the isles, the digs and the fog. Four of
+those five keep their state in their OWN tables (`sea_rapport`, `homesteads`,
+`sea_discoveries`, `sea_digs`), not on the profile row, so `BadgeJoinData` gained a required
+`sea: SeaStats` field folded by one shared `seaStatsFrom()` — the same pattern
+`exchangeStatsFrom` set, and required for the same reason `crew.effects` is: four callers
+build that object and the compiler has to find the one that forgets.
+
+- **Thresholds are imported, never copied.** `TIER_AT` (the rapport curve), `ISLES`,
+  `DIG_SITES`, `HOUSE` and `FURNITURE` all come from their own modules. The rapport curve has
+  already been retuned once (4/10/18/30 became 4/14/34/70); a badge holding its own copy would
+  have gone on paying out at the old friendship.
+- **The fog badges cap at 90%, not 100%.** A grid cell can sit under an island, so a badge
+  needing every last square could be unfinishable. Both masks score against the cells that
+  were ever fogged (`WATER_CELLS`, `FOGGABLE_CELLS`) rather than the whole rectangle, or a
+  completionist reads as 40%/80% and it looks like a bug.
+- Both mask columns are precomputed at import because the points board decodes them for
+  **every** player; do not put the trig back inside the per-player loop.
+- `you_remembered` is the only hook of the thirty: `gifts_given` counts presents and nothing
+  records which fish each was, so the answer only exists at the moment it happens. It fires in
+  `folkActions` AFTER the fish is confirmed taken, because everything above that line can
+  still hand the day back.
+
 ## Art
 
 Badge sheets are generated from the reusable 6-per-sheet prompt (house style; never draw

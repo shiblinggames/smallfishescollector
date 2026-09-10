@@ -18,7 +18,13 @@ import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS, RAID_ITEMS, baseItemId } from '@/lib/raidItems'
 import { finnItemLevel, FINN_ITEM_MAX_LEVEL } from '@/lib/finnItems'
 import { raidItemSlotsForTier } from '@/lib/expeditions'
-import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS, CHALLENGE_RAID_IDS_ALL, SUNKEN_HAND_HULLS, exchangeStatsFrom, type ExchangePositionRow } from '@/lib/badgeConditions'
+import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS, CHALLENGE_RAID_IDS_ALL, SUNKEN_HAND_HULLS, exchangeStatsFrom, type ExchangePositionRow,
+  seaStatsFrom, NOTE_ISLE_IDS, ISLE_COUNT, DIG_COUNT, HOUSE_TOP, FURNISHING_COUNT,
+  RAPPORT_KNOWN, RAPPORT_COMPANY, RAPPORT_TRUSTED, RAPPORT_THICK, SEA_REGULARS,
+  type RapportRow, type HomesteadRow } from '@/lib/badgeConditions'
+import { decodeFog, fogProgress } from '@/lib/seaExplore'
+import { decodeXfog, xfogProgress } from '@/lib/seaExploreExp'
+import { PINNED_MAX } from '@/lib/homestead'
 import { BUYABLE_ROD_TIERS } from '@/lib/rods'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 
@@ -35,7 +41,7 @@ export default async function BadgesPage() {
   // Profile via the request-scoped cached loader (lib/userData.ts).
   // reconcileBadges runs first-class so any newly-met condition is granted on
   // visit (and its return is the authoritative unlocked list).
-  const [profile, collectionRes, speciesRes, voyageCountRes, unlocked, raidComplRes, crewRes, rodRes, rarityRes, goldenRes, exchangeRes] = await Promise.all([
+  const [profile, collectionRes, speciesRes, voyageCountRes, unlocked, raidComplRes, crewRes, rodRes, rarityRes, goldenRes, exchangeRes, rapportRes, homeRes, isleRes, digRes] = await Promise.all([
     getCurrentProfile(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     admin.from('fish_species').select('id, habitat'),
@@ -51,6 +57,13 @@ export default async function BadgesPage() {
     // Every contract this captain has ever opened. The Exchange badges are all
     // aggregates over this, which is why none of them needed a counter.
     admin.from('exchange_bets').select('status, stake, payout').eq('user_id', user.id),
+    // THE OCEAN HUB'S FOUR TABLES. Folded by the same seaStatsFrom the grant
+    // path uses, so the bar on this page and the badge that gets granted can
+    // never be reading two different numbers.
+    admin.from('sea_rapport').select('points, gifts_given').eq('user_id', user.id),
+    admin.from('homesteads').select('house, name, owned, pinned').eq('user_id', user.id).maybeSingle(),
+    admin.from('sea_discoveries').select('isle_id').eq('user_id', user.id),
+    admin.from('sea_digs').select('site_id').eq('user_id', user.id).not('dug_at', 'is', null),
   ])
 
   // ── Derive everything from existing data — no new columns ────────────────
@@ -99,6 +112,21 @@ export default async function BadgesPage() {
   const bountyBoards = Number(profile?.bounty_boards_cleared ?? 0)
   const bountyElites = Number(profile?.bounty_elites_claimed ?? 0)
   const bountyGems = Number(profile?.bounty_gems_earned ?? 0)
+
+  // ── The ocean hub ─────────────────────────────────────────────────────────
+  const sea = seaStatsFrom({
+    rapport: (rapportRes.data ?? []) as RapportRow[],
+    homestead: (homeRes.data ?? null) as HomesteadRow,
+    isles: ((isleRes.data ?? []) as { isle_id: string }[]).map(r => r.isle_id),
+    digs: (digRes.data ?? []).length,
+  })
+  const rapportAtLeast = (points: number) => sea.rapport.filter((n: number) => n >= points).length
+  const isleSet = new Set(sea.isles)
+  const notesRead = NOTE_ISLE_IDS.filter((id: string) => isleSet.has(id)).length
+  // The two fog masks, decoded and scored against the cells that were ever
+  // fogged. Percentages are shown as whole points so a bar can move.
+  const fishFogPct = Math.round(fogProgress(decodeFog(profile?.sea_explored as string | null)).pct * 100)
+  const expFogPct = Math.round(xfogProgress(decodeXfog(profile?.sea_explored_exp as string | null)).pct * 100)
 
   const crewHallTier = Number(profile?.crew_hall_tier ?? 0)
   const recruits = Number(profile?.lifetime_recruits ?? 0)
@@ -563,6 +591,64 @@ export default async function BadgesPage() {
         badgeGoal('deep_pockets', 'Deep Pockets', 'Hold 1,000,000 doubloons at once', doubloons, 1_000_000, '/sea'),
         badgeGoal('bilge_baron', 'Bilge Baron', 'Hold 2,500,000 doubloons at once', doubloons, 2_500_000, '/sea'),
         badgeGoal('captains_colors', "Captain's Colors", 'Become a Captain', isPremium ? 1 : 0, 1, '/profile', { binary: true }),
+      ],
+    },
+    {
+      title: 'The Salt Road',
+      flavor: 'The nine regulars who work this water, and how well they know you.',
+      accent: '#8fd6c4',
+      goals: [
+        badgeGoal('known_face', 'Known Face', 'Become a known face to one of the regulars', rapportAtLeast(RAPPORT_KNOWN) >= 1 ? 1 : 0, 1, '/sea', { binary: true }),
+        badgeGoal('whole_road', 'The Whole Road', 'Meet all nine regulars out on the water', sea.rapport.length, SEA_REGULARS, '/sea'),
+        badgeGoal('you_remembered', 'You Remembered', 'Bring a regular the one fish they actually want', has('you_remembered') ? 1 : 0, 1, '/sea', { binary: true }),
+        badgeGoal('bearing_gifts', 'Bearing Gifts', 'Hand over 25 gifts', sea.gifts, 25, '/sea'),
+        badgeGoal('good_company', 'Good Company', 'Be good company to five regulars', rapportAtLeast(RAPPORT_COMPANY), 5, '/sea'),
+        badgeGoal('trusted_three', 'Trusted Three', 'Be trusted by three regulars', rapportAtLeast(RAPPORT_TRUSTED), 3, '/sea'),
+        badgeGoal('open_hand', 'Open Hand', 'Hand over 100 gifts', sea.gifts, 100, '/sea'),
+        badgeGoal('thick_as_thieves', 'Thick as Thieves', 'Reach the top standing with a regular', rapportAtLeast(RAPPORT_THICK) >= 1 ? 1 : 0, 1, '/sea', { binary: true }),
+        badgeGoal('salt_of_the_earth', 'Salt of the Earth', 'Reach the top standing with all nine regulars', rapportAtLeast(RAPPORT_THICK), SEA_REGULARS, '/sea'),
+      ],
+    },
+    {
+      title: 'The Homestead',
+      flavor: 'The island with your name on it, and everything you put on it.',
+      accent: '#e0b978',
+      goals: [
+        badgeGoal('roof_of_your_own', 'A Roof of Your Own', 'Build the cottage on your island', sea.house >= 1 ? 1 : 0, 1, '/home', { binary: true }),
+        badgeGoal('name_on_the_chart', 'Name on the Chart', 'Give your homestead a name of your own', sea.named ? 1 : 0, 1, '/home', { binary: true }),
+        badgeGoal('the_longhouse', 'The Longhouse', 'Build the longhouse', sea.house >= 2 ? 1 : 0, 1, '/home', { binary: true }),
+        badgeGoal('furnished', 'Furnished', 'Own 10 furnishings', sea.furnishings, 10, '/home'),
+        badgeGoal('gallery_hung', 'Gallery Hung', 'Hang six badges in your gallery', sea.pinned, PINNED_MAX, '/home'),
+        badgeGoal('the_great_hall', 'The Great Hall', 'Build the great hall', sea.house >= 3 ? 1 : 0, 1, '/home', { binary: true }),
+        badgeGoal('the_estate', 'The Estate', 'Build the Estate, the last rung of the house', sea.house >= HOUSE_TOP ? 1 : 0, 1, '/home', { binary: true }),
+        badgeGoal('every_comfort', 'Every Comfort', 'Own every furnishing there is', sea.furnishings, FURNISHING_COUNT, '/home'),
+      ],
+    },
+    {
+      title: 'The Isles',
+      flavor: 'The small rocks ringed round the bands, and what is buried on them.',
+      accent: '#9fc98a',
+      goals: [
+        badgeGoal('first_ashore', 'First Ashore', 'Go ashore on your first isle', sea.isles.length, 1, '/sea'),
+        badgeGoal('beachcomber', 'Beachcomber', 'Land on 10 isles', sea.isles.length, 10, '/sea'),
+        badgeGoal('others_came_before', 'Others Came Before', 'Read all nine notes left on the rocks', notesRead, NOTE_ISLE_IDS.length, '/sea'),
+        badgeGoal('far_rocks', 'The Far Rocks', 'Land on 20 isles', sea.isles.length, 20, '/sea'),
+        badgeGoal('every_last_rock', 'Every Last Rock', 'Land on all 27 isles', sea.isles.length, ISLE_COUNT, '/sea'),
+        badgeGoal('first_spade', 'First Spade', 'Dig up your first buried cache', sea.digs, 1, '/sea'),
+        badgeGoal('six_feet_down', 'Six Feet Down', 'Dig up 6 buried caches', sea.digs, 6, '/sea'),
+        badgeGoal('salted_away', 'Salted Away', 'Dig up all 12 buried caches', sea.digs, DIG_COUNT, '/sea'),
+      ],
+    },
+    {
+      title: 'Charting the Sea',
+      flavor: 'Fog lifts wherever you sail. Two seas, two charts, and neither counts for the other.',
+      accent: '#a8c4e0',
+      goals: [
+        badgeGoal('wake_behind_you', 'Wake Behind You', 'Chart a quarter of the fishing sea', fishFogPct, 25, '/sea'),
+        badgeGoal('home_waters', 'Home Waters', 'Chart three fifths of the fishing sea', fishFogPct, 60, '/sea'),
+        badgeGoal('into_the_fog', 'Into the Fog', 'Chart half the campaign water', expFogPct, 50, '/sea'),
+        badgeGoal('no_blank_spaces', 'No Blank Spaces', 'Chart nine tenths of the fishing sea', fishFogPct, 90, '/sea'),
+        badgeGoal('fog_burned_off', 'The Fog Burned Off', 'Chart nine tenths of the campaign water', expFogPct, 90, '/sea'),
       ],
     },
   ]
