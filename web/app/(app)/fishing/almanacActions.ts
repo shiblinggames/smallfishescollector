@@ -52,6 +52,8 @@ export type AlmanacEntry = {
   everCaught: boolean
   /** Has a golden of this species EVER been landed (the row survives selling). */
   everGolden: boolean
+  /** First landed since the book was last opened. See almanac_viewed_at. */
+  isNew: boolean
   pbLength: number | null
   pbAt: string | null
 }
@@ -109,6 +111,8 @@ export type AlmanacData = {
   /** Whether this cycle's completion reward has been taken, per zone. Resets
    *  with the prestige, because the next cycle pays again. */
   zoneRewardsClaimed: Record<string, boolean>
+  /** How many species are newly logged since the book was last opened. */
+  newCount: number
   stats: AlmanacStats
 }
 
@@ -140,7 +144,7 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
       .eq('user_id', uid)
       .order('caught_at', { ascending: false }),
     admin.from('profiles')
-      .select('fishing_casts, total_perfects, highest_perfect_streak, trophy_size_catches, fishing_crates_opened, fishing_double_catches, fishing_jackpots, fishing_snags, fish_sold_doubloons, fishing_xp, unlocked_pets, ancient_catches, ancient_vigil, prestige_levels, crate_opens, bait_used, biggest_fish_sale, fish_sold_count, zone_golden_boost, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded')
+      .select('fishing_casts, total_perfects, highest_perfect_streak, trophy_size_catches, fishing_crates_opened, fishing_double_catches, fishing_jackpots, fishing_snags, fish_sold_doubloons, fishing_xp, unlocked_pets, ancient_catches, ancient_vigil, prestige_levels, crate_opens, bait_used, biggest_fish_sale, fish_sold_count, zone_golden_boost, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, almanac_viewed_at')
       .eq('id', uid)
       .maybeSingle(),
     // The Vigil's gate. Self-enforcing: One Last Ride carries
@@ -160,6 +164,9 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
   const ancientIds = new Set(((profile.data?.ancient_catches as number[] | null) ?? []))
   // A prestiged zone was, by definition, fully collected at least once.
   const prestige = (profile.data?.prestige_levels as Record<string, number> | null) ?? {}
+  // When the book was last opened. Nothing is new to a captain who has never
+  // opened it... except that everything is, which is what null means here.
+  const viewedAt = profile.data?.almanac_viewed_at ? Date.parse(profile.data.almanac_viewed_at as string) : null
 
   const col = new Map((collection.data ?? []).map(r => [r.fish_id as number, r]))
   const life = new Map((lifetime.data ?? []).map(r => [r.fish_id as number, r]))
@@ -196,6 +203,11 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
         ancientIds.has(s.id as number) ? 1 : 0,
       ),
       firstCaughtAt: (l?.first_caught_at as string | null) ?? (c?.first_caught_at as string | null) ?? null,
+      isNew: (() => {
+        const first = (l?.first_caught_at as string | null) ?? (c?.first_caught_at as string | null) ?? null
+        if (!first) return false
+        return viewedAt == null || Date.parse(first) > viewedAt
+      })(),
       lastCaughtAt: (l?.last_caught_at as string | null) ?? (c?.last_caught_at as string | null) ?? null,
       cycleCount: (c?.catch_count as number | null) ?? 0,
       everCaught: ((l?.catches as number | null) ?? (c?.catch_count as number | null) ?? 0) > 0
@@ -233,6 +245,7 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
     vigilUnlocked,
     prestige: (p?.prestige_levels as Record<string, number> | null) ?? {},
     goldenBoosts: (p?.zone_golden_boost as Record<string, number> | null) ?? {},
+    newCount: entries.filter(e => e.isNew).length,
     zoneRewardsClaimed: {
       shallows: p?.zone_shallows_rewarded === true,
       open_waters: p?.zone_open_waters_rewarded === true,
@@ -256,4 +269,18 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
       fishSoldCount: p?.fish_sold_count ?? 0,
     },
   }
+}
+
+/**
+ * THE BOOK HAS BEEN READ. Stamped when it closes, not when it opens, so the
+ * NEW marks stay up for the whole of the visit they are there to guide -- the
+ * same rule the old drawer kept. Fire and forget from the client; a missed
+ * stamp costs one visit of marks that should have been gone.
+ */
+export async function markAlmanacViewed(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  const uid = session?.user?.id
+  if (!uid) return
+  await createAdminClient().from('profiles').update({ almanac_viewed_at: new Date().toISOString() }).eq('id', uid)
 }

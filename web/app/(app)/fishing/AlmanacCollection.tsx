@@ -39,10 +39,13 @@ const GOLD = '#f0c040'
 // question you just asked, and without it "Most Caught" is a list in an order
 // you have to take on faith.
 
-type ViewKey = 'water' | 'missing' | 'trophies' | 'goldens' | 'most' | 'biggest' | 'valuable' | 'rarest' | 'newest'
+type ViewKey = 'water' | 'new' | 'missing' | 'trophies' | 'goldens' | 'most' | 'biggest' | 'valuable' | 'rarest' | 'newest'
 
 const VIEWS: { key: ViewKey; label: string }[] = [
   { key: 'water',    label: 'By Water' },
+  // What has gone into the book since you last opened it. The one view a log
+  // has to have, or it is a list.
+  { key: 'new',      label: 'Newly Logged' },
   { key: 'missing',  label: 'Still Missing' },
   { key: 'trophies', label: 'Trophies' },
   { key: 'goldens',  label: 'Goldens' },
@@ -138,6 +141,12 @@ export default function AlmanacCollection({ data, onChanged }: {
   const flat = useMemo((): { list: AlmanacEntry[]; note: (e: AlmanacEntry) => string } => {
     const caught = collectable.filter(e => e.everCaught)
     switch (view) {
+      case 'new':
+        return {
+          list: collectable.filter(e => e.isNew)
+            .sort((a, b) => (Date.parse(b.firstCaughtAt ?? '') || 0) - (Date.parse(a.firstCaughtAt ?? '') || 0)),
+          note: e => (e.firstCaughtAt ? shortDate(e.firstCaughtAt) : ''),
+        }
       case 'missing':
         return {
           list: collectable.filter(e => !e.everCaught)
@@ -234,6 +243,7 @@ export default function AlmanacCollection({ data, onChanged }: {
         const isBusy = busy === zone
         const asking = confirm === zone
         const label = ZONE_LABEL[zone]
+        const fresh = list.filter(e => e.isNew).length
 
         return (
           <div key={zone} style={{ marginBottom: '1.5rem' }}>
@@ -248,8 +258,17 @@ export default function AlmanacCollection({ data, onChanged }: {
                 <p className="font-cinzel font-800" style={{ fontSize: '1.24rem', color: '#f2ecdd', lineHeight: 1.1 }}>
                   {ZONE_LABEL[zone]}
                 </p>
-                <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: done ? GOLD : color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                  {done ? "✦ all charted" : `${got} / ${list.length}`}
+                <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, whiteSpace: 'nowrap' }}>
+                  {/* NEW SINCE YOU LOOKED. The same green the rod's Log button
+                      uses for the same fact, so it is one signal in two places. */}
+                  {fresh > 0 && (
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#4ade80', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.4)', borderRadius: 999, padding: '0.14rem 0.45rem' }}>
+                      {fresh} new
+                    </span>
+                  )}
+                  <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: done ? GOLD : color, fontVariantNumeric: 'tabular-nums' }}>
+                    {done ? "✦ all charted" : `${got} / ${list.length}`}
+                  </span>
                 </span>
               </div>
               {/* The rule doubles as the progress bar: it fills in the zone's
@@ -360,7 +379,9 @@ export default function AlmanacCollection({ data, onChanged }: {
             <p className="font-karla font-400 italic" style={{ fontSize: '0.72rem', color: '#8a83ad', lineHeight: 1.5, padding: '1.5rem 0' }}>
               {view === 'missing'
                 ? 'Nothing missing. Every fish in every water is in the book.'
-                : 'Nothing here yet. Go and land some.'}
+                : view === 'new'
+                  ? 'Nothing new since you last looked.'
+                  : 'Nothing here yet. Go and land some.'}
             </p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: '0.35rem 0.2rem' }}>
@@ -454,6 +475,14 @@ function SpeciesCard({ entry, goldMounted, note, onOpen }: { entry: AlmanacEntry
       }}>
 
       <div style={{ position: 'relative', width: '100%', height: 74, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* Newly logged. Top corner, small, the log's green. */}
+        {entry.isNew && (
+          <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{
+            position: 'absolute', top: 2, left: 4, zIndex: 1,
+            fontSize: '0.46rem', color: '#4ade80', background: 'rgba(8,14,10,0.9)',
+            border: '1px solid rgba(74,222,128,0.5)', borderRadius: 999, padding: '0.1rem 0.36rem',
+          }}>New</span>
+        )}
         {caught && (
           <span aria-hidden style={{
             position: 'absolute', left: '50%', top: '48%', transform: 'translate(-50%, -50%)',

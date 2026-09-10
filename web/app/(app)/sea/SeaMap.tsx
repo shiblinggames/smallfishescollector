@@ -11248,7 +11248,7 @@ hullRef={hullRefFor(t.key)} />
           problem -- Doby speaking under the setup modal -- is gone at the
           source: this chart is not built while a captain is being set up. */}
       {arrived && <SeaFirstVoyage hasSeen={tour.seen} startAt={tour.step} fishing={!!fishingIn}
-        hooked={hookedTick} caught={caughtTick} nearId={near?.id ?? null} ashore={ashore}
+        hooked={hookedTick} caught={caughtTick} nearId={near?.id ?? null} ashore={ashore} almanac={almanacOpen}
         // The same two gates FishingHere puts on the Cast button. If it will
         // not let them cast, the tour has to stop asking them to.
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}

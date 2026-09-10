@@ -1152,7 +1152,19 @@ export default function MarketClient({
               </Link>
             </div>
           ) : (
-            <div style={{ background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.85rem' }}>
+            <div style={{
+              background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.85rem',
+              // ── COLUMNS ON A DESKTOP ────────────────────────────────
+              // The rows were laid out for a phone: a name, a count and a
+              // price with a button on the end, across a 400px screen. On a
+              // 980px page column each one became a bar the width of the
+              // room with its two ends a long way apart, and a hold of twenty
+              // species was twenty of them. The row keeps its shape; the LIST
+              // wraps into as many columns of it as fit. `min(400px, 100%)`
+              // so a phone narrower than the minimum still gets one column
+              // rather than an overflow.
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(400px, 100%), 1fr))', columnGap: '1.5rem',
+            }}>
               {portfolio.map(entry => (
                 // Swipe-left to sell the whole stack at market price — the shared
                 // crew-card gesture. Coexists with the inline Sell button and the
@@ -1238,7 +1250,11 @@ export default function MarketClient({
               )}
             </div>
 
-            <div style={{ background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.75rem' }}>
+            <div style={{
+              background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.75rem',
+              // Same columns as the holdings above, for the same reason.
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(400px, 100%), 1fr))', columnGap: '1.5rem',
+            }}>
               {browseList.length === 0
                 ? <p className="font-karla font-400 text-center" style={{ fontSize: '0.72rem', color: '#6a6764', padding: '1.25rem 0' }}>No species match.</p>
                 : browseList.map(entry => <BrowseRow key={entry.fish_id} entry={entry} />)}

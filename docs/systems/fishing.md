@@ -137,3 +137,19 @@ The vigil release the drawer also offered was already in the Giants room; the ro
 `AncientRelease` mount, which only the drawer could trigger, went with the drawer. Note the old
 full-screen prestige ceremony (`PrestigeCeremonyOverlay`) had already been lost with the retired
 fishing page; the sea's prestige showed nothing before this change and shows the stars fill now.
+
+### Newly logged
+
+`profiles.almanac_viewed_at` is stamped by `markAlmanacViewed()` when the Almanac **closes** (not
+opens, so the marks stay up for the visit they guide — the old drawer's rule). A species whose
+first catch is after the stamp is `isNew`; null means never opened, so everything ever caught is
+new, which is true. Surfaced as: a green `New` pill on the species card, `N new` beside each
+water's count in By Water, a **Newly Logged** view, and `· N new` on the Collection tab's badge.
+The rod's session-only "N new" pill on the Log button is the same signal from the other side.
+
+### The Almanac beat
+
+Right after "Every fish goes into your *hold*" the first voyage says the fish is in the Almanac
+too and lights the Log button (`data-coach="log"`). `until: 'almanac'` advances when the book
+opens, and Next works as well, because looking is optional. The chart passes `almanacOpen` to the
+tour for it.

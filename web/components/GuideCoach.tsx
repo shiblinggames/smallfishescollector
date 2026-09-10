@@ -7,12 +7,13 @@
 // A × dismisses it manually; autoHideMs fades it after a while so it never
 // lingers. Character-driven but plain: say exactly what to do in one line.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { renderEmphasis } from '@/components/cutscene'
 
 export default function GuideCoach({
   show, portrait, speaker, text, accent = '#5eb0e0', placement = 'bottom', offset, onClose, autoHideMs, onNext, nextLabel, z = 70,
+  anchor,
 }: {
   show: boolean
   portrait: string
@@ -33,11 +34,56 @@ export default function GuideCoach({
   /** For a stepped walkthrough: shows a "Next →" button that advances. */
   onNext?: () => void
   nextLabel?: string
+  /**
+   * ── NEXT TO THE THING IT IS ABOUT ──────────────────────────────────────
+   *
+   * `data-coach` names, space separated; the first one on screen wins. The
+   * card sits just below that element if it is in the top half of the
+   * screen and just above it if it is in the bottom half, centred on it and
+   * kept inside the viewport, with a small caret pointing at it. A line about
+   * the Daily Haul disc used to read from the bottom of the screen while the
+   * disc flashed in the top corner, and the eye had to go and find the thing
+   * the words were about. Falls back to `placement` when nothing is found.
+   */
+  anchor?: string
 }) {
   const top = placement === 'top'
   const edge = offset ?? (top
     ? 'calc(env(safe-area-inset-top, 0px) + 96px)'
     : 'calc(env(safe-area-inset-bottom, 0px) + 128px)')
+
+  // Where the anchored element is, measured on a short poll rather than once:
+  // the elements these cards point at come and go with the game's own state
+  // (a button inside a sheet, a chip inside the fishing overlay).
+  const [at, setAt] = useState<{ x: number; y: number; below: boolean } | null>(null)
+  useEffect(() => {
+    if (!anchor || !show) { setAt(null); return }
+    const names = anchor.split(' ').filter(Boolean)
+    const measure = () => {
+      for (const n of names) {
+        const el = document.querySelector(`[data-coach="${n}"]`)
+        if (!el) continue
+        const r = el.getBoundingClientRect()
+        if (!r.width && !r.height) continue
+        const below = r.top + r.height / 2 < window.innerHeight * 0.5
+        const next = { x: r.left + r.width / 2, y: below ? r.bottom : r.top, below }
+        setAt(prev => (prev && Math.abs(prev.x - next.x) < 1 && Math.abs(prev.y - next.y) < 1 && prev.below === next.below) ? prev : next)
+        return
+      }
+      setAt(null)
+    }
+    measure()
+    const id = window.setInterval(measure, 250)
+    window.addEventListener('resize', measure)
+    return () => { window.clearInterval(id); window.removeEventListener('resize', measure) }
+  }, [anchor, show])
+
+  // The anchored geometry, worked out once per render. `window` is only read
+  // once `at` exists, which is only ever on the client.
+  const vw = at ? window.innerWidth : 0
+  const cardW = at ? Math.min(430, vw - 24) : 0
+  const left = at ? Math.max(12, Math.min(vw - cardW - 12, at.x - cardW / 2)) : 0
+  const rises = at ? at.below : top
 
   // Auto-hide timer. onClose is read through a ref so an inline arrow from the
   // parent doesn't reset the timer every render.
@@ -55,7 +101,12 @@ export default function GuideCoach({
     // and the next one arrives, which is what a tour that moves through beats
     // should look like. `wait` so the two never stack in one slot.
     <div
-      style={{
+      style={at ? {
+        position: 'fixed', zIndex: z, pointerEvents: 'none',
+        left, width: cardW,
+        ...(at.below ? { top: at.y + 14 } : { bottom: window.innerHeight - at.y + 14 }),
+        display: 'flex', justifyContent: 'center',
+      } : {
         position: 'fixed', left: 0, right: 0, zIndex: z,
         [top ? 'top' : 'bottom']: edge,
         display: 'flex', justifyContent: 'center', padding: '0 0.9rem',
@@ -66,9 +117,9 @@ export default function GuideCoach({
         {show && (
           <motion.div
             key={text}
-            initial={{ opacity: 0, y: top ? -12 : 14, scale: 0.98 }}
+            initial={{ opacity: 0, y: rises ? -12 : 14, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: top ? -8 : 8, transition: { duration: 0.18 } }}
+            exit={{ opacity: 0, y: rises ? -8 : 8, transition: { duration: 0.18 } }}
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
             style={{
               position: 'relative',
@@ -82,6 +133,18 @@ export default function GuideCoach({
               boxShadow: `0 12px 34px rgba(0,0,0,0.55), 0 0 20px ${accent}18`,
             }}
           >
+            {/* THE CARET, when the card is pointing at something. Cut from the
+                card's own colour so it reads as part of it, on the edge that
+                faces the element, under the element's centre. */}
+            {at && (
+              <span aria-hidden style={{
+                position: 'absolute', width: 12, height: 12, transform: 'rotate(45deg)',
+                left: Math.max(10, Math.min(cardW - 22, at.x - left - 6)),
+                ...(at.below
+                  ? { top: -7, background: 'rgba(10,17,26,0.96)', borderLeft: `1px solid ${accent}55`, borderTop: `1px solid ${accent}55` }
+                  : { bottom: -7, background: 'rgba(7,12,19,0.97)', borderRight: `1px solid ${accent}55`, borderBottom: `1px solid ${accent}55` }),
+              }} />
+            )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={portrait} alt="" loading="lazy" decoding="async"
               style={{ width: 54, height: 54, borderRadius: 12, objectFit: 'cover', flexShrink: 0, border: `1px solid ${accent}66`, background: 'rgba(0,0,0,0.3)' }} />

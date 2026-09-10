@@ -77,12 +77,15 @@ export type Beat = {
    *   'sold'    — waits until the hold has been emptied at the market. That
    *               happens on ANOTHER ROUTE, which is why the tour's step is a
    *               profile column rather than component state.
+   *   'almanac' — waits until the Almanac is open, OR Next. The line invites
+   *               the captain to open the book; it does not insist, because
+   *               the collection is theirs to look at when they want to.
    *   'bait'    — waits until there is bait on the hook. A new account has
    *               none, and the free worms are in the Daily Haul, so this is
    *               the beat that sends them there. Skipped outright for a
    *               captain who already has some.
    */
-  until: 'next' | 'fish' | 'bite' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait'
+  until: 'next' | 'fish' | 'bite' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait' | 'almanac'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
@@ -200,6 +203,17 @@ export const FIRST_VOYAGE: Beat[] = [
     target: 'hold',
     holdCast: true,
     afterMs: 1600,
+  },
+  // ── AND INTO THE BOOK ────────────────────────────────────────────────
+  // The Log button opens the Almanac. Said here, right after the hold, so the
+  // two places a fish goes are named in the same breath; opening it advances
+  // the beat, and so does Next, because looking is optional.
+  {
+    ...K,
+    text: 'It is written into your *Almanac* as well, along with every fish you will ever land. Open the Log and start your collection.',
+    until: 'almanac',
+    target: 'log',
+    holdCast: true,
   },
   {
     ...K,

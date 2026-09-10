@@ -68,7 +68,7 @@ function destination(id: string): { x: number; y: number; r: number } | null {
 
 export default function SeaFirstVoyage({
   hasSeen, startAt, fishing, hooked, caught, nearId, ashore, blocked, cam, goal,
-  holdCast, fishOnly, stowRod, at,
+  holdCast, fishOnly, stowRod, at, almanac,
 }: {
   hasSeen: boolean
   /** Where the tour got to. It leaves the chart to sell a fish at the market,
@@ -87,6 +87,8 @@ export default function SeaFirstVoyage({
    * repeating an instruction the game will not accept.
    */
   blocked: 'bait' | 'hold' | null
+  /** Whether the Almanac is open. Advances the `almanac` beat. */
+  almanac: boolean
   /** Rises by one every time something takes the line, and never falls.
    *  Advances the `bite` beat: the reel line arrives on the bite. */
   hooked: number
@@ -276,6 +278,12 @@ export default function SeaFirstVoyage({
     if (wantBait && blocked !== 'bait') next()
   }, [wantBait, blocked, next])
 
+  // The book, opened. Next works too; this is the other way through.
+  const wantAlmanac = beat?.until === 'almanac'
+  useEffect(() => {
+    if (wantAlmanac && almanac) next()
+  }, [wantAlmanac, almanac, next])
+
   const wantFish = beat?.until === 'fish'
   useEffect(() => {
     if (wantFish && fishing) next()
@@ -344,7 +352,7 @@ export default function SeaFirstVoyage({
   // Anything the captain has to DO has no button: the button is the thing they
   // were asked to do. `sold` is the extreme case — the market advances it from
   // another route entirely, and this card is what they carry through the door.
-  const waiting = beat.until !== 'next' && beat.until !== 'look'
+  const waiting = beat.until !== 'next' && beat.until !== 'look' && beat.until !== 'almanac'
 
   // Said INSTEAD of the instruction, not after it: an instruction the game will
   // refuse is worse than no instruction, because the captain tries it and
@@ -363,6 +371,9 @@ export default function SeaFirstVoyage({
       text={text}
       accent={SEA_ACCENT}
       onClose={() => setHidden(step)}
+      // NEXT TO THE THING. The same names the flash uses, so the card and the
+      // ring agree about what is being talked about.
+      anchor={stuck === 'bait' ? 'haul haul-bait' : beat.target}
       onNext={waiting ? undefined : next}
       nextLabel={step === FIRST_VOYAGE.length - 1 ? 'Aye' : undefined}
       // ABOVE THE SHEET while the instruction is about something inside one.

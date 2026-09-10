@@ -17,7 +17,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { getAlmanacData, type AlmanacData } from './almanacActions'
+import { getAlmanacData, markAlmanacViewed, type AlmanacData } from './almanacActions'
 import AlmanacCollection from './AlmanacCollection'
 import AlmanacGoldens from './AlmanacGoldens'
 import AlmanacGiants from './AlmanacGiants'
@@ -93,12 +93,18 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
   }, [])
   useEffect(() => { if (open) reload() }, [open, reload])
 
+  // Closing is reading. The NEW marks come down on the next open.
+  const close = useCallback(() => {
+    if (data) void markAlmanacViewed().catch(() => {})
+    onClose()
+  }, [data, onClose])
+
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, close])
 
   if (!open || !mounted) return null
 
@@ -113,7 +119,8 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
   const giantsGot = giants.filter(e => e.everCaught).length
 
   const TABS: { key: Room; label: string; badge: string }[] = [
-    { key: 'collection', label: 'Collection', badge: data ? `${caught}/${total}` : '' },
+    // The count, and how many of them are new since you last looked.
+    { key: 'collection', label: 'Collection', badge: data ? (data.newCount > 0 ? `${caught}/${total} · ${data.newCount} new` : `${caught}/${total}`) : '' },
     { key: 'goldens', label: 'Goldens', badge: data ? `${data.goldens.length}` : '' },
     { key: 'giants', label: 'Giants', badge: data ? `${giantsGot}/${giants.length}` : '' },
     { key: 'pets', label: 'Pets', badge: data ? `${data.unlockedPets.length}/${PETS.length}` : '' },
@@ -157,7 +164,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
             <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.6rem', color: `${ACCENT}b8`, marginBottom: 1 }}>Fishing</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#efe9ff' }}>The Angler's Almanac</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close"
+          <button type="button" onClick={close} aria-label="Close"
             style={{ width: 34, height: 34, borderRadius: '50%', padding: 0, flexShrink: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>

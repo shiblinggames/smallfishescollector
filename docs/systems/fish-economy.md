@@ -93,3 +93,11 @@ the profile, same call as the sea's sound switches. It defaults to simple for ev
 including existing players: grandfathering would mean a flag, a migration and two
 behaviours to reason about forever, to save one tap once for the players most able to find
 a toggle.
+
+### The market on a desktop
+
+The holdings and browse rows were laid out for a phone — a name, a count, a price and a button
+across 400px — and on the 980px page column each became a bar the width of the room with its two
+ends a long way apart. The rows keep their shape; the **lists** are grids
+(`repeat(auto-fill, minmax(min(400px, 100%), 1fr))`), so a desktop gets two columns of the same
+row and a phone still gets one.

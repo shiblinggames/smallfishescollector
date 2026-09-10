@@ -2674,3 +2674,13 @@ click back inward. The `EdgeOfChart` line is reserved for the real edge.
 A step through puts the boat down inside the far ring, so the helm immediately offered "Step
 through the portal" to a captain who had just done exactly that. `portalArmed` is cleared by the
 warp and set again the first frame the boat is out of any mouth; the offer requires it.
+
+### The coach card sits next to the thing it is about
+
+`GuideCoach` takes `anchor` — `data-coach` names, space separated, first on screen wins — and
+places the card just below that element if it is in the top half of the screen, just above it if
+in the bottom half, centred on it, kept inside the viewport, with a caret pointing at it. It
+measures on a short poll, because the elements these cards point at come and go with the game's
+own state (a card inside a sheet, a chip inside the fishing overlay). No anchor, or nothing found,
+and it falls back to the old bottom/top placement. The first voyage passes the same names it
+flashes, so the ring and the card always agree about what is being talked about.

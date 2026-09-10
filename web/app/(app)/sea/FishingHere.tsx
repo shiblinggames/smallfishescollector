@@ -2601,6 +2601,8 @@ export default function FishingHere({
         <button
           // Opening the log counts as seeing it: the NEW pill goes out here.
           onClick={e => { e.stopPropagation(); vibrate(8); setUncheckedNew(new Set()); onOpenAlmanac() }}
+          // Named so the first voyage can light it and sit its card beside it.
+          data-coach="log"
           style={MENU_BTN}>
           <span className="font-karla font-700 uppercase" style={MENU_KEY}>Log</span>
           <span className="font-karla font-700" style={{
