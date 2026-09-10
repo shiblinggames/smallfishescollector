@@ -4254,15 +4254,28 @@ export default function SeaMap({
    *  is the whole difference between reading the day's orders and being paid
    *  for them. See DailyOrders' note on canClaim. */
   const [ordersAshore, setOrdersAshore] = useState(false)
-  /** The trawls readout. Never claims anything; the fleet does that. */
-  const [trawlsPeek, setTrawlsPeek] = useState(false)
+  /**
+   * ── THE TRAWLS HAD THEIR OWN DISC, AND SHOULD NOT HAVE ────────────────────
+   *
+   * Fifth in the HUD row, and a readout: what is out and how long. It came off
+   * for a reason worth keeping, because it applies to the next thing somebody
+   * wants a disc for.
+   *
+   * A disc is a PLACE YOU GO. Every other one in that row opens something you
+   * act on. The trawls disc opened a list you could only read, about crew who
+   * are collected somewhere else entirely — so the one thing it told you was
+   * "it is worth the sail now", and it told you that from a corner of the
+   * screen while the thing that could actually say it, the compass, sat there
+   * pointing at ports and saying nothing about any of them.
+   *
+   * So the answer to "is it worth the sail" is on the arrow that points at the
+   * sail. See `waitingAt`.
+   */
   const readOrders = useCallback(() => {
     void getDailyChallenge().then(setOrders).catch(() => { /* the icon just stays quiet */ })
   }, [])
   useEffect(() => { readOrders() }, [readOrders])
 
-  /** Still out. Distinct from ready: one is a clock, the other is a haul. */
-  const trawlsWorking = trawls.length - trawlsReady
 
   /** Something finished and not yet collected — the dot on the icon. */
   const ordersReady = !!orders && orders.challenges.some(
@@ -4324,7 +4337,6 @@ export default function SeaMap({
       if (choosing) { setChoosing(false); return }
       if (bountiesOpen) { setBountiesOpen(false); return }
       if (campaignOpen) { setCampaignOpen(false); return }
-      if (trawlsPeek) { setTrawlsPeek(false); return }
       if (finnOpen) { setFinnOpen(false); setFinnLines(null); return }
       if (finnTalk) { setFinnTalk(null); return }
       if (kipOpen) { setKipOpen(false); return }
@@ -4343,7 +4355,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, campaignOpen, choosing, shipSheet, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, campaignOpen, choosing, shipSheet, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -5171,7 +5183,6 @@ export default function SeaMap({
     // of the game.
     if (!inAnchorage && (!fishingIn || wide)) on.push('almanac')
     if (!inAnchorage && orders && orders.challenges.length > 0 && (!fishingIn || wide)) on.push('orders')
-    if (!inAnchorage && (trawls.length > 0 || trawlsReady > 0) && (!fishingIn || wide)) on.push('trawls')
 
     return on
   }, [fishingIn, wide, inAnchorage, orders, trawls.length, trawlsReady, fightOn])
@@ -9124,8 +9135,15 @@ hullRef={hullRefFor(t.key)} />
           <svg width={Math.round(hudSize * 0.55)} height={Math.round(hudSize * 0.55)}
             viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M12 6.5C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 2 1.5-1.5 3.5-2 8-2v-13c-4.5 0-6.5.5-8 2z" />
-            <path d="M12 6.5v13" />
+            {/* A FISH, NOT A BOOK. It was an open book: a rectangle with a
+                line down the middle, sitting two discs from the chart, which is
+                a folded map — a rectangle with a line down the middle. At
+                twenty-six pixels those are the same picture, and no amount of
+                redrawing either one separates two things that are the same
+                shape. The almanac is about FISH, so it is a fish. */}
+            <path d="M3.4 12c3-3.6 6.2-5.4 9.4-5.4 3.2 0 5.8 1.8 7.8 5.4-2 3.6-4.6 5.4-7.8 5.4-3.2 0-6.4-1.8-9.4-5.4z" />
+            <path d="M3.4 12 1.6 8.4M3.4 12l-1.8 3.6" />
+            <circle cx="16.4" cy="10.6" r="0.9" fill="currentColor" stroke="none" />
           </svg>
         </button>
       )}
@@ -9453,7 +9471,24 @@ hullRef={hullRefFor(t.key)} />
             : null}
           // The harbour IS a place now, so the compass can raise it again when
           // a crew is in — which is the whole reason the compass sorts by this.
-          waitingAt={id => (id === 'trawl_fleet' ? trawlsReady : 0)} />
+          // ── WHAT IS WAITING, AND WHERE ────────────────────────────
+          //
+          // Every island that can finish something, not just the fleet. The
+          // compass already sorted by this and already knew how to draw an
+          // urgent mark — Finn has had one for a finished job all along — and
+          // it was only ever told about trawls.
+          //
+          // This is what replaced the trawls disc. An arrow that points at the
+          // port AND says there is something on it is one thing to read; a disc
+          // in the corner saying a port has something on it, next to a compass
+          // pointing at the port and saying nothing, is two.
+          waitingAt={id =>
+            id === 'trawl_fleet' ? trawlsReady
+            : id === 'trawl_docks' ? (ordersReady ? 1 : 0)
+            : id === 'crew_hall' ? (hallReady ? 1 : 0)
+            : id === 'charterhouse' ? (voyageBack ? 1 : 0)
+            : id === 'posting_house' ? (bountyReady ? 1 : 0)
+            : 0} />
       )}
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
@@ -9612,8 +9647,10 @@ hullRef={hullRefFor(t.key)} />
           <button
             type="button"
             onClick={e => { e.stopPropagation(); vibrate(8); setSkillOpen(true) }}
-            aria-label={label}
-            title={pts > 0 ? `${label} — ${pts} renown to spend` : label}
+            aria-label={`${label}, level ${nav ? navLevel : level}`}
+            title={pts > 0
+              ? `${label} · level ${nav ? navLevel : level} · ${pts} renown to spend`
+              : `${label} · level ${nav ? navLevel : level}`}
             data-coach="hud-skill"
             data-no-steer
             style={{
@@ -9624,18 +9661,38 @@ hullRef={hullRefFor(t.key)} />
               background: pts > 0 ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
               border: `1px solid ${pts > 0 ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
             }}>
-            <svg width={Math.round(hudSize * 0.54)} height={Math.round(hudSize * 0.54)}
-              viewBox="0 0 24 24" fill="none"
-              stroke={pts > 0 ? '#f0c040' : 'rgba(214,232,240,0.8)'}
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              {nav
-                // A ship's wheel: the spine that is about sailing.
-                ? <><circle cx="12" cy="12" r="8.4" /><circle cx="12" cy="12" r="2.6" />
-                  <path d="M12 3.6v5.8M12 14.6v5.8M3.6 12h5.8M14.6 12h5.8" /></>
-                // A rod and line: the spine that is about fishing.
-                : <><path d="M4 20.2 15.4 6.4" /><path d="M14 4.6 18.6 8.4" />
-                  <path d="M16.4 7.6c1.3 2.6 1 5-1.6 6.6" /><path d="M14.8 14.2v3.2" /></>}
-            </svg>
+            {/* ── IT SAYS THE NUMBER ──────────────────────────────────
+                A rod and a ship's wheel are good marks for "fishing" and
+                "sailing" and neither of them says LEVEL, which is the one thing
+                this disc is. Two glyphs in a row of eight glyphs, and a captain
+                had no way to know that this particular circle was their rank.
+
+                So the rank is the disc: the number large in the middle, the
+                spine's own mark small above it. The mark still says WHICH
+                spine — that part was never the problem — and the number says
+                what kind of thing it is without anybody having to be told. */}
+            <span style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', lineHeight: 1, gap: 1,
+            }}>
+              <svg width={Math.round(hudSize * 0.30)} height={Math.round(hudSize * 0.30)}
+                viewBox="0 0 24 24" fill="none"
+                stroke={pts > 0 ? '#f0c040' : 'rgba(214,232,240,0.72)'}
+                strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                {nav
+                  // A ship's wheel: the spine that is about sailing.
+                  ? <><circle cx="12" cy="12" r="8.4" /><circle cx="12" cy="12" r="2.6" />
+                    <path d="M12 3.6v5.8M12 14.6v5.8M3.6 12h5.8M14.6 12h5.8" /></>
+                  // A rod and line: the spine that is about fishing.
+                  : <><path d="M4 20.2 15.4 6.4" /><path d="M14 4.6 18.6 8.4" />
+                    <path d="M16.4 7.6c1.3 2.6 1 5-1.6 6.6" /><path d="M14.8 14.2v3.2" /></>}
+              </svg>
+              <span className="font-karla font-700" aria-hidden style={{
+                fontSize: Math.round(hudSize * 0.42),
+                fontVariantNumeric: 'tabular-nums',
+                color: pts > 0 ? '#f0c040' : '#dfeaf2',
+              }}>{nav ? navLevel : level}</span>
+            </span>
             {pts > 0 && (
               <span aria-hidden style={{
                 position: 'absolute', top: -2, right: -2,
@@ -9847,177 +9904,6 @@ hullRef={hullRefFor(t.key)} />
           fetch nobody should pay for opening the chart to look at it. The track
           follows the water the boat is in. */}
       <SeaAudio />
-
-      {/* ── THE TRAWLS ──────────────────────────────────────────────────
-          Fifth in the row, and a READOUT: what is out, and how long. Sending
-          and collecting both happen at the fleet, because the whole point of
-          moving them onto the water was that a crew is a place you sail to.
-          What this fixes is not knowing, from anywhere, whether it is worth
-          the sail yet. */}
-      {!inAnchorage && (trawls.length > 0 || trawlsReady > 0) && (!fishingIn || wide) && (
-        <button
-          type="button"
-          onClick={e => { e.stopPropagation(); vibrate(8); setTrawlsPeek(true) }}
-          aria-label="Trawls"
-          title="Trawls"
-          data-no-steer
-          style={{
-            position: 'absolute', top: 18, left: hudAt('trawls'), zIndex: Z.hud,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: hudSize, height: hudSize, padding: 0,
-            borderRadius: 999, cursor: 'pointer',
-            background: trawlsReady > 0 ? 'rgba(26,22,8,0.86)' : trawlsWorking > 0 ? 'rgba(8,18,24,0.82)' : 'rgba(6,12,18,0.7)',
-            border: `1px solid ${trawlsReady > 0 ? 'rgba(240,192,64,0.55)' : trawlsWorking > 0 ? 'rgba(103,212,232,0.4)' : 'rgba(180,214,232,0.22)'}`,
-          }}>
-          {/* A net. */}
-          <svg width={Math.round(hudSize * 0.46)} height={Math.round(hudSize * 0.46)}
-            viewBox="0 0 24 24" fill="none"
-            stroke={trawlsReady > 0 ? '#f0c040' : trawlsWorking > 0 ? '#67d4e8' : 'rgba(214,232,240,0.8)'}
-            strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M4 4h16l-2 6a6 6 0 0 1-12 0z" />
-            <path d="M8 4l1.5 12M16 4l-1.5 12M5 8h14" />
-          </svg>
-
-          {/* ── TWO STATES, AND THEY ARE NOT THE SAME NEWS ────────────────
-              A crew still working is a thing to know; a crew standing on the
-              deck with a haul is a thing to DO. One dot for both said "there
-              is a trawl" and left you to sail out and find out which.
-
-              Gold and steady means come and get it. Cool blue and breathing
-              means they are still out there — the pulse is the tell that it is
-              a clock rather than a prompt, and it is slow enough not to nag. */}
-          {trawlsReady > 0 ? (
-            <span aria-hidden style={{
-              position: 'absolute', top: 2, right: 2,
-              width: 9, height: 9, borderRadius: '50%',
-              background: '#f0c040', border: '2px solid rgba(4,10,18,1)',
-              boxShadow: '0 0 7px rgba(240,192,64,0.85)',
-            }} />
-          ) : trawlsWorking > 0 ? (
-            <span aria-hidden className="trawl-working" style={{
-              position: 'absolute', top: 3, right: 3,
-              width: 7, height: 7, borderRadius: '50%',
-              background: '#67d4e8', border: '2px solid rgba(4,10,18,1)',
-            }} />
-          ) : null}
-        </button>
-      )}
-
-      {trawlsPeek && (() => {
-        const now = Date.now()
-        // Soonest back first, so the top of the list is the next reason to sail.
-        const rows = trawls
-          .map(t => ({ ...t, end: new Date(t.endsAt).getTime() }))
-          .sort((a, b) => a.end - b.end)
-        return (
-          <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-            <PopupShell open onClose={() => setTrawlsPeek(false)}>
-              <div onClick={e => e.stopPropagation()} style={{
-                margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
-                borderRadius: 20, padding: '1.1rem 1.05rem 1rem',
-                background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
-                border: '1px solid rgba(196,169,106,0.34)',
-                boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.26rem', color: '#f4ecd8' }}>Trawls</p>
-                  <button type="button" onClick={() => setTrawlsPeek(false)} aria-label="Close"
-                    style={{
-                      width: 30, height: 30, borderRadius: '50%', padding: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
-                      color: '#cfcabf', cursor: 'pointer',
-                    }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
-                  </button>
-                </div>
-
-                <div style={{ marginTop: 10 }}>
-                  {rows.length === 0 ? (
-                    <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: 'rgba(190,212,228,0.6)', lineHeight: 1.55 }}>
-                      No crews out. Sail to the fleet to send one.
-                    </p>
-                  ) : rows.map((r, i) => {
-                    const left = r.end - now
-                    const back = left <= 0
-                    const mins = Math.max(0, Math.ceil(left / 60_000))
-                    return (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '0.42rem 0', borderBottom: '1px solid rgba(255,255,255,0.07)',
-                      }}>
-                        {/* WHOSE CREW. You picked a specific hand for this water
-                            — their savvy and fortune are what the haul is worth
-                            — so a list that names the zone and not the person
-                            is only half the decision you made. */}
-                        <span aria-hidden style={{
-                          flexShrink: 0, width: 34, height: 34, borderRadius: '50%',
-                          overflow: 'hidden', position: 'relative',
-                          background: 'rgba(255,255,255,0.05)',
-                          border: `1px solid ${back ? 'rgba(240,192,64,0.6)' : 'rgba(180,214,232,0.25)'}`,
-                        }}>
-                          {r.art && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={crewArt(r.art)} alt="" draggable={false} style={{
-                              // The card art is a full portrait; the head sits
-                              // in its upper middle, so it is scaled up and
-                              // pushed down to land a FACE in the circle rather
-                              // than a letterboxed body.
-                              position: 'absolute', left: '50%', top: '6%',
-                              width: '150%', transform: 'translateX(-50%)',
-                              display: 'block',
-                            }} />
-                          )}
-                        </span>
-                        <span style={{ flex: 1, minWidth: 0 }}>
-                          <span className="font-cinzel font-700 block" style={{
-                            fontSize: '0.88rem', color: back ? '#f6e6bd' : '#e6e2dc',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>{r.crew}</span>
-                          {/* THE WATER THEY ARE IN, under the name. */}
-                          <span className="font-karla font-600 block" style={{
-                            fontSize: '0.72rem', color: 'rgba(190,212,228,0.55)',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>{r.zone}</span>
-                        </span>
-                        <span className="font-karla font-700" style={{
-                          fontSize: '0.84rem', fontVariantNumeric: 'tabular-nums',
-                          color: back ? '#f0c040' : 'rgba(190,212,228,0.6)',
-                        }}>
-                          {back ? 'Back' : mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {/* WHERE THE WORK HAPPENS, said plainly and every time. This
-                    panel can do nothing but tell you things, and a readout that
-                    does not say where the buttons are is a dead end. */}
-                <div style={{
-                  marginTop: 12, padding: '0.7rem 0.8rem', borderRadius: 12,
-                  background: 'rgba(240,192,64,0.09)',
-                  border: '1px solid rgba(240,192,64,0.3)',
-                }}>
-                  <p className="font-cinzel font-700" style={{
-                    fontSize: '0.9rem', color: '#f0c040', textAlign: 'center', lineHeight: 1.35,
-                  }}>
-                    {trawlsReady > 0 ? 'Sail to the trawl fleet to bring them in' : 'Sail to the trawl fleet to send a crew'}
-                  </p>
-                  <p className="font-karla font-600" style={{
-                    fontSize: '0.75rem', color: 'rgba(190,212,228,0.6)', textAlign: 'center',
-                    marginTop: 3, lineHeight: 1.45,
-                  }}>
-                    The boats moored south of the Tally House. Sending and
-                    collecting both happen there.
-                  </p>
-                </div>
-              </div>
-            </PopupShell>
-          </div>
-        )
-      })()}
 
       {/* ── THE DAY'S ORDERS ────────────────────────────────────────────
           Fourth in the HUD row. Nothing here claims anything: it is a readout,
@@ -14669,8 +14555,17 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
     .sort((a, b) => (waitingAt(b.p.id) - waitingAt(a.p.id)) || (a.world - b.world))
   const nearestPort = ports[0]
   if (nearestPort) {
+    // AND IT SAYS SO. The same gold and the same breath Finn wears when he is
+    // holding a finished job, because it means the same thing: there is
+    // something on that dock and it is waiting for you. The count rides in the
+    // name, so "2 crew back" reads at a glance rather than needing a tap.
+    const owed = waitingAt(nearestPort.p.id)
     marks.push({
-      id: nearestPort.p.id, name: nearestPort.p.name, dim: locked(nearestPort.p),
+      id: nearestPort.p.id,
+      name: owed > 1 ? `${nearestPort.p.name} · ${owed}` : nearestPort.p.name,
+      dim: locked(nearestPort.p),
+      accent: owed > 0 ? '#f0c040' : undefined,
+      urgent: owed > 0,
       dist: true, sx: nearestPort.sx, sy: nearestPort.sy, world: nearestPort.world,
     })
   }
