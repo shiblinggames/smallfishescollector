@@ -2764,3 +2764,19 @@ were still arriving, so the curtain lifted onto a chart dropping frames. Both th
 curtain now wait for `spritesReady`; the shot multiplies a base zoom cached at its start instead of
 calling `fit()` (a layout read) every frame; the curve is cubic in-out over 4.4 s. The story scene's
 bust rises into place instead of sliding in from the side.
+
+### The tab's own snapshot obeys the same rule as the row
+
+`rememberPos`/`recallPos` keep the boat's position in **sessionStorage**, written synchronously on
+the way out so it beats the fire-and-forget server write (see the note on the recall effect). It is
+per tab and it outlives everything else: the profile row, the auth session, a reset.
+
+So it defeated the `neverSailed` guard on `page.tsx`. A test account wiped with its tab still open
+came back through setup and landed in the anchorage at the coordinates it had been wiped from — the
+row said `fishing`/null, the page honoured that, and the recall's `useLayoutEffect` overwrote
+`pos`, `sideRef` and `inAnchorage` a moment later. The heartbeat then wrote the restored position
+back to the fresh row, which is why the row read `anchorage` seconds after a clean reset.
+
+**The row and the snapshot answer the question the same way now**: `neverSailed`
+(`!tour.seen && tour.step === 0`) skips the recall entirely and calls `forgetPos()`, so a stale
+snapshot is not waiting for the next reload either.

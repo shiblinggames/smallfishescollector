@@ -2530,7 +2530,16 @@ export default function SeaMap({
    * build this chart at all until setup is done (see page.tsx), so by the time
    * this mounts there is a named, coloured captain to arrive as.
    */
-  const wantsArrival = !tour.seen && tour.step === 0
+  /**
+   * ── HAS NEVER SAILED ────────────────────────────────────────────────────
+   *
+   * The first voyage's own step, which is written by the tour and by nothing
+   * else. Two things hang off it: the arrival shot plays for such a captain,
+   * and NOTHING is restored for them -- not the server's row (see page.tsx)
+   * and not the tab's own snapshot (see the recall below).
+   */
+  const neverSailed = !tour.seen && tour.step === 0
+  const wantsArrival = neverSailed
   const [arrived, setArrived] = useState(!wantsArrival)
   /**
    * ── THE FIRST VOYAGE HOLDS THE WHEEL ────────────────────────────────────
@@ -6237,6 +6246,18 @@ export default function SeaMap({
    * drawn at the old spot and you see the jump you came here to prevent.
    */
   useLayoutEffect(() => {
+    // ── AND NOT AT ALL FOR A CAPTAIN WHO HAS NEVER SAILED ───────────────
+    //
+    // This snapshot is per TAB and outlives everything else: the profile row,
+    // the session, a reset. A test account wiped while its tab was open came
+    // back through setup, and this put it straight back in the anchorage at
+    // the coordinates it had been wiped from -- the server row said `fishing`
+    // and null, page.tsx honoured that, and this overwrote it a layout effect
+    // later. The row and the snapshot have to answer this question the same
+    // way, so the same rule governs both. Cleared as well as ignored: a stale
+    // snapshot has nothing to say to anybody and should not be waiting for
+    // the next reload either.
+    if (neverSailed) { forgetPos(); return }
     const p = recallPos()
     if (!p) return
     // ONTO THE SNAPSHOT'S OWN SIDE. The old line clamped y to the wall
@@ -12573,6 +12594,12 @@ function rememberPos(p: { x: number; y: number }, side: SeaSide) {
   try {
     sessionStorage.setItem(POS_KEY, JSON.stringify({ x: p.x, y: p.y, side, t: Date.now() }))
   } catch { /* private mode. The server copy still works, just less precisely. */ }
+}
+
+/** Throw the snapshot away. For a captain who has never sailed: see the
+ *  recall effect in SeaMap. */
+function forgetPos() {
+  try { sessionStorage.removeItem(POS_KEY) } catch { /* private mode */ }
 }
 
 function recallPos(): { x: number; y: number; side: SeaSide } | null {
