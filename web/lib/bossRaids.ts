@@ -676,7 +676,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       // Charges: 0→1→0→1→0
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.025,
-      image: '/enemychapter1rowboat_v2.png',
+      image: '/ship-hero/sloop_v3.png',
       portrait: ENEMY_IMG_BASE + 'reefraider.png',
     },
     sniper: {
@@ -689,7 +689,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       // Charges: 0→1→1→0→1→2→3→0
       pattern: ['reload', 'dodge', 'fire', 'reload', 'reload', 'reload', 'volley'],
       critChance: 0.10,
-      image: '/enemychapter1dinghy_v2.png',
+      image: '/ship-hero/sloop_v3.png',
       portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png',
     },
     corsair: {
@@ -705,7 +705,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       // Charges: 0→1→0→1→1→2→3→0→1→0
       pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley', 'reload', 'fire'],
       critChance: 0.05,
-      image: '/enemychapter1sloop_v2.png',
+      image: '/ship-hero/sloop_v3.png',
       portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png',
     },
     pete: {
@@ -730,7 +730,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       // Charges: 0→1→1→2→2→3→3→0→1→0→1→2→3→0
       pattern: ['reload', 'dodge', 'reload', 'dodge', 'reload', 'dodge', 'volley', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley'],
       critChance: 0.075,
-      image: '/enemychapter1schooner_v2.png',
+      image: '/ship-hero/schooner_v3.png',
       portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
     },
   },
@@ -801,7 +801,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       // Charges: 0→1→0→1→0
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.03,
-      image: '/enemychapter1sloop_v2.png',
+      image: '/ship-hero/sloop_v3.png',
       portrait: '/krust_worker.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
@@ -814,7 +814,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       // Charges: 0→1→0→1→1→2→1
       pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'fire'],
       critChance: 0.06,
-      image: '/enemychapter1sloop_v2.png',
+      image: '/ship-hero/sloop_v3.png',
       portrait: '/krust_soldier.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
@@ -827,7 +827,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       // Charges: 0→1→1→2→1→1→2→1
       pattern: ['reload', 'dodge', 'reload', 'fire', 'dodge', 'reload', 'fire'],
       critChance: 0.05,
-      image: '/enemychapter1schooner_v2.png',
+      image: '/ship-hero/schooner_v3.png',
       portrait: '/krust_brute.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
@@ -844,7 +844,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       // Charges: 0→1→0→1→0→0→1→0→0
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge', 'reload', 'fire', 'dodge'],
       critChance: 0.10,
-      image: '/enemychapter1schooner_v2.png',
+      image: '/ship-hero/schooner_v3.png',
       portrait: '/krust_overseer.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
@@ -860,7 +860,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       // Charges: 0→1→2→1→1→2→3→2→2
       pattern: ['reload', 'reload', 'fire', 'dodge', 'reload', 'reload', 'fire', 'dodge'],
       critChance: 0.09,
-      image: '/enemychapter1brigantine_v2.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/Captainkrust.png',
       damageReduction: 0.20, abilityName: 'Carapace',
     },
@@ -947,7 +947,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Charges: 0→1→0→1→0
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.05,
-      image: '/enemychapter2sloop_v2.png',
+      image: '/ship-hero/sloop_v3.png',
       portrait: ENEMY_IMG_BASE + 'driftscout.png',
       aimFogDensity: 0.40, aimFogName: 'Mist Veil',
     },
@@ -969,7 +969,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Charges: 0→1→2→3→2→0→0
       pattern: ['reload', 'reload', 'reload', 'fire', 'volley', 'dodge'],
       critChance: 0.07,
-      image: '/enemychapter2schooner_v2.png',
+      image: '/ship-hero/schooner_v3.png',
       portrait: ENEMY_IMG_BASE + 'soundinghand.png',
       aimFogDensity: 0.45, aimFogName: 'Mist Veil',
     },
@@ -989,7 +989,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Charges: 0→1→2→0→0→1→0→0
       pattern: ['reload', 'reload', 'volley', 'dodge', 'reload', 'fire', 'dodge'],
       critChance: 0.06,
-      image: '/enemychapter2schooner_v2.png',
+      image: '/ship-hero/schooner_v3.png',
       portrait: ENEMY_IMG_BASE + 'wakebreaker.png',
       aimFogDensity: 0.45, aimFogName: 'Mist Veil',
     },
@@ -1013,7 +1013,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Charges: 0→1→2→1→0→1→2→0→0
       pattern: ['reload', 'reload', 'fire', 'fire', 'reload', 'reload', 'volley', 'dodge'],
       critChance: 0.11,
-      image: '/enemychapter2brigantine_v2.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: ENEMY_IMG_BASE + 'thesurveyor.png',
       aimFogDensity: 0.55, aimFogName: 'Mist Veil',
     },
@@ -1041,7 +1041,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Charges: 0→1→2→3→2→1→2→0→0
       pattern: ['reload', 'reload', 'reload', 'fire', 'fire', 'reload', 'volley', 'dodge'],
       critChance: 0.10,
-      image: '/enemychapter2brigantine_v2.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: ENEMY_IMG_BASE + 'thecartographer.png',
       aimFogDensity: 0.70, aimFogName: 'Mist Veil',
       parryChance: 0.30, parryDamagePct: 0.25, parryName: 'Riposte',
@@ -1140,7 +1140,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
       pattern: ['fire', 'reload', 'reload', 'fire', 'fire', 'dodge'],
       critChance: 0.06,
       startCharges: 1,
-      image: '/enemychapter2sloop_v2.png',
+      image: '/ship-hero/sloop_v3.png',
       portrait: '/raid4_silverdart.png',
     },
     reg: {
@@ -1151,7 +1151,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
       // 0→1→2→3→volley(0)→fire/fire (self-correct as charges allow)→dodge
       pattern: ['reload', 'reload', 'reload', 'volley', 'fire', 'fire', 'dodge'],
       critChance: 0.08,
-      image: '/enemychapter2schooner_v2.png',
+      image: '/ship-hero/schooner_v3.png',
       portrait: '/raid4_snapjaw.png',
     },
     brute: {
@@ -1163,7 +1163,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
       // Charges: 0→1→2→3→volley(0)→dodge→1→2→volley(self-corrects to 3)
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
       critChance: 0.06,
-      image: '/enemychapter2brigantine_v2.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/raid4_gulletmaw.png',
     },
     elite: {
@@ -1176,7 +1176,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
       pattern: ['fire', 'reload', 'reload', 'fire', 'fire', 'reload', 'volley', 'dodge'],
       critChance: 0.12,
       startCharges: 1,
-      image: '/enemychapter2brigantine_v2.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/raid4_theexactor.png',
     },
     spet: {
@@ -1191,7 +1191,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
       pattern: ['fire', 'fire', 'reload', 'reload', 'reload', 'volley', 'fire', 'dodge'],
       critChance: 0.11,
       startCharges: 2,
-      image: '/enemychapter2brigantine_v2.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/raid4_tollmasterspet.png',
     },
   },
@@ -1269,7 +1269,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       // automatic. The zone's base pace scales with shipSpeed, so slow brutes
       // need a bigger mult to reach a comparable challenge.
       zoneSpeedMult: 1.6,
-      image: '/enemychapter3schooner.png',
+      image: '/ship-hero/schooner_v3.png',
       portrait: '/raid5_feint.png',
     },
     reg: {
@@ -1279,7 +1279,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       critChance: 0.08,
       decoyCount: 1, decoyName: 'False Colors',   // tier 1
       zoneSpeedMult: 1.9,
-      image: '/enemychapter3brigantine.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/raid5_sham.png',
     },
     brute: {
@@ -1289,7 +1289,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       critChance: 0.06,
       decoyCount: 2, decoyName: 'False Colors',   // tier 2. Bigger spread
       zoneSpeedMult: 2.6,
-      image: '/enemychapter3galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid5_bulwark.png',
     },
     elite: {
@@ -1299,7 +1299,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       critChance: 0.13,
       decoyCount: 2, decoyName: 'False Colors',   // tier 2
       zoneSpeedMult: 1.6,
-      image: '/enemychapter3galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid5_mirage.png',
     },
     admiral: {
@@ -1317,7 +1317,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
         dialogueLine: "Enough games. Run out the real guns.",
       },
       zoneSpeedMult: 1.9,
-      image: '/enemychapter3galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid5_admiralruse.png',
     },
   },
@@ -1508,7 +1508,7 @@ export const THE_QUARTERMASTERS_GHOST: BossRaidConfig = {
             consequence: { kind: 'damagePctMaxHp', value: 0.45 },
           } },
       ],
-      image: '/enemychapter4galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/quartermasterghost.png',
     },
   },
@@ -1591,7 +1591,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       // it is genuinely hard (you have to catch a fast, narrow window). Already a
       // fast ship (10); a big mult on top of the shipSpeed base makes the zone fly.
       zoneSpeedMult: 2.7,
-      image: '/enemychapter3schooner.png',
+      image: '/ship-hero/schooner_v3.png',
       portrait: '/raid6_theleech.png',
     },
     reg: {
@@ -1605,7 +1605,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       critChance: 0.06,
       affix: 'ironclad',
       zoneSpeedMult: 3.0,
-      image: '/enemychapter3brigantine.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/raid6_thebreaker.png',
     },
     quartermaster: {
@@ -1660,7 +1660,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           } },
       ],
       zoneSpeedMult: 2.0,
-      image: '/enemychapter3galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid6_thequartermaster.png',
     },
   },
@@ -1738,7 +1738,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['fire', 'reload', 'dodge', 'fire', 'reload', 'fire', 'dodge', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.2,
-      image: '/enemychapter4brigantine.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/raid7_thescute.png',
     },
     bosun: {
@@ -1754,7 +1754,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['reload', 'fire', 'special', 'reload', 'volley', 'reload', 'fire', 'dodge'],
       critChance: 0.11,
       zoneSpeedMult: 2.3,
-      image: '/enemychapter4brigantine.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/raid7_thebank.png',
     },
     netter: {
@@ -1770,7 +1770,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'volley', 'dodge', 'reload', 'fire'],
       critChance: 0.10,
       zoneSpeedMult: 2.4,
-      image: '/enemychapter4brigantine.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/raid7_themangrove.png',
     },
     chainman: {
@@ -1786,7 +1786,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['reload', 'fire', 'special', 'reload', 'fire', 'volley', 'dodge', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
-      image: '/enemychapter4galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid7_therasp.png',
     },
     cracksman: {
@@ -1801,7 +1801,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['reload', 'reload', 'special', 'volley', 'reload', 'fire', 'volley', 'dodge'],
       critChance: 0.10,
       zoneSpeedMult: 2.6,
-      image: '/enemychapter4galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid7_thewedge.png',
     },
     purser: {
@@ -1817,7 +1817,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['special', 'reload', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
       critChance: 0.12,
       zoneSpeedMult: 2.6,
-      image: '/enemychapter4galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid7_oldscar.png',
     },
     muzzle: {
@@ -1833,7 +1833,7 @@ export const THE_BLOCKADE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'reload', 'dodge'],
       critChance: 0.14,
       zoneSpeedMult: 2.7,
-      image: '/enemychapter4galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid7_themuzzle.png',
     },
     saltie: {
@@ -1952,7 +1952,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'reload', 'ultimate', 'dodge', 'reload', 'fire'],
       critChance: 0.12,
       zoneSpeedMult: 2.3,
-      image: '/enemychapter4brigantine.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/raid8_theripper.png',
     },
     the_mirage: {
@@ -1965,7 +1965,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'dodge', 'fire', 'special', 'reload'],
       critChance: 0.12,
       zoneSpeedMult: 2.5,
-      image: '/enemychapter4brigantine.png',
+      image: '/ship-hero/brigantine_v3.png',
       portrait: '/raid8_therender.png',
     },
     the_doorman: {
@@ -1978,7 +1978,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'fire', 'volley', 'reload', 'special', 'fire'],
       critChance: 0.10,
       zoneSpeedMult: 2.2,
-      image: '/enemychapter4galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid8_thegnash.png',
     },
     the_stormcaller: {
@@ -1991,7 +1991,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'fire', 'reload', 'fire', 'volley', 'dodge', 'reload'],
       critChance: 0.14,
       zoneSpeedMult: 2.6,
-      image: '/enemychapter4galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid8_thegorge.png',
     },
     the_left_hand: {
@@ -2005,7 +2005,7 @@ export const THE_THRONE: BossRaidConfig = {
       pattern: ['reload', 'special', 'reload', 'reload', 'ultimate', 'fire', 'dodge', 'reload'],
       critChance: 0.14,
       zoneSpeedMult: 2.7,
-      image: '/enemychapter4galleon.png',
+      image: '/ship-hero/galleon_v3.png',
       portrait: '/raid8_thereaper.png',
     },
     the_consigliere: {

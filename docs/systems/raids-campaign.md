@@ -139,3 +139,31 @@ use the N-phase engine; phases are data, not forks of the combat file.
 - [story-universe.md](story-universe.md) — the chain IS the story delivery.
 - [crew.md](crew.md) — party stats and abilities. [gauntlets.md](gauntlets.md) — reuses
   RaidCombat wholesale. [forge.md](forge.md) + [ship.md](ship.md) — the loadout.
+
+## One fleet, both sides (2026-09)
+
+Enemy hulls below a Man-o-War are the PLAYER'S OWN v3 ships now
+(`/ship-hero/{sloop,schooner,brigantine,galleon}_v3.png`), not the per-chapter
+`enemychapterN*` paintings. An enemy schooner is the schooner you can buy.
+
+- **Baseline is the Sloop, matching the player.** The ship ladder starts at tier 2 for a
+  captain, so it starts there for everybody: the two enemies that were a rowboat and a dinghy
+  (Reef Raider and Crow's Nest Marksman, both in Pete's raid) are sloops. Nothing in the game
+  is below a sloop any more.
+- **The Man-o-War is the exception and keeps its own art.** Three enemies use it (Sal
+  Brackwater, The Closer, Don Finleone) and all three stay on `enemychapter4man-o-war.png`.
+  There is a second reason beyond taste: every v3 hull below the Man-o-War is authored
+  bow-RIGHT and needs `seaFlip` for the player, which is the same orientation the enemy art
+  uses under RaidCombat's `scaleX(-1)`. The Man-o-War v3 has no `seaFlip` — it is authored
+  bow-left, so as an enemy it would face away from the player.
+- **Finn's ship is untouched.** It is not a class hull.
+- `ENC_ART_INK` gained four PER-CLASS rows measured with sharp's trim (0.528 / 0.623 / 0.723 /
+  0.870). The chapter rows underneath are one number for a whole chapter and always were an
+  approximation — chapter one's sloop is really 0.383 against the 0.52 that row claims. The v3
+  rows do not inherit that.
+- **The plates are SQUARE (640x640) where the old enemy art was wide (600x335).** At the
+  fight's fixed container width that makes the sprite's box taller and the visible hull about
+  a third bigger. Worth an eye on the framing of a fight; if it wants correcting, it is the
+  container in RaidCombat rather than this mapping.
+- The rowboat in `components/cutscene.tsx` is deliberately left alone: it is a story beat
+  about a little boat that ends up empty, not an encounter.

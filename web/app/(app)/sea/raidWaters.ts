@@ -1151,6 +1151,26 @@ const ENC_TYPE_HULL: [RegExp, number][] = [
   [/rowboat|dinghy/, 125],
 ]
 const ENC_ART_INK: [RegExp, number][] = [
+  // ── THE V3 FLEET, MEASURED PER CLASS ────────────────────────────────────
+  //
+  // The enemy hulls below a Man-o-War are the PLAYER'S OWN v3 ships now (see
+  // the note on the fleet in bossRaids): one ladder for both sides, so an
+  // enemy schooner is the schooner you can buy rather than a different
+  // painting of one.
+  //
+  // These four are sharp's trim() on the real files and they are PER CLASS,
+  // not per chapter, because that is how they actually measure — a v3 sloop is
+  // 53% ink and a v3 galleon is 87%. The chapter rows below are one number
+  // covering a whole chapter, which was always an approximation: chapter one's
+  // sloop is really 0.383 against the 0.52 that row claims, so every small hull
+  // in chapters one and two has been drawn a little under its true size. The
+  // v3 rows do not inherit that.
+  [/sloop_v3/, 0.528],
+  [/schooner_v3/, 0.623],
+  [/brigantine_v3/, 0.723],
+  [/galleon_v3/, 0.870],
+  // AND THE OLD SET, still live for the three Man-o-Wars that keep their own
+  // art and for Finn's ship.
   [/finnship/, 0.66],
   [/chapter4/, 0.65],
   [/chapter3/, 0.64],
