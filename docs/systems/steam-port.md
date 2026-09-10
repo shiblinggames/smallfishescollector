@@ -78,6 +78,49 @@ and surface the surprises while they are still free.
 than adaptations, then the wrapper IS changing the game, and the shell should come early so the
 design is aimed at the real target instead of guessing at it.
 
+## Rhythm without a calendar
+
+The target feel is Terraria and Stardew, and the single thing those two have in common is
+worth stating plainly because it decides a dozen smaller questions:
+
+**Neither of them has one mechanic keyed to the real-world calendar.** Stardew is FULL of
+time — days, seasons, festivals, crops — and every bit of it is in-game time that only moves
+while you play. Put the game down for two years and you have lost nothing. Terraria has day
+and night, blood moons and invasions, and no daily reset anywhere. They have enormous rhythm
+and zero calendar, and that is exactly why people trust them enough to sink hundreds of hours
+into them.
+
+This game currently keys almost everything to UTC: the daily challenges, the bounty board, the
+free recruit, the gauntlet's one run, the trader rotation, even the sea's day and night. That
+is a live-service shape. It is also in quiet tension with the house rule, which has always said
+evergreen and player-paced and never FOMO — a daily that expires is a small FOMO mechanic, and
+it is only there because free-to-play retention wanted it.
+
+**So: move the rhythm out of the wall clock and into the session.** In value order:
+
+1. **Boards restock by PLAYING, not by date.** Clear the daily challenges or the bounty board
+   and a new one comes up. Same content, same loop, nothing missed, no reset. Mostly deleting
+   date logic, and it is the highest-value change on this page after the money.
+2. **The gauntlet's daily run becomes a resource you earn.** Roguelikes gate runs with supplies
+   or a key, not with a calendar. The push-your-luck stake stays — a run still costs something
+   — without the something being "come back tomorrow".
+3. **The free recruit becomes a token you earn.** Same reasoning.
+4. **Trawls and voyages are real-time timers**, which is a mobile mechanic. Stardew's crops grow
+   over in-game days that pass in fourteen real minutes. Shorten them a lot, or tie them to
+   play time.
+
+**And one bigger prize, with a trap, which is why it goes LAST.** The sea's day and night
+follows the real clock, so a captain who plays at two in the afternoon only ever sees
+afternoon: there is a whole night palette most players will never see. Stardew gives you the
+entire day arc every session and it is most of why it feels alive. Moving to session time would
+show off art that is already built.
+
+The trap is that sea traders are hashed off `(cell, day)` deterministically so that everybody
+sees the same people on the same day. Untie time from the wall clock and that property breaks.
+It matters less in a game where you sail with one friend rather than a shared world, but it is
+a real coupling: read sea-npcs.md before touching the clock, and treat it as its own piece of
+work rather than part of the boards.
+
 ## The order to do it in
 
 Each phase is safe to stop after. Nothing below starts until the phase above is done, because
