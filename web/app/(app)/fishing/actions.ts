@@ -2553,13 +2553,19 @@ export async function setCompletionistEffects(
 // PAID for, which makes it idempotent: call it twice and the second call pays nothing.
 export async function claimFishingLevelRewards(): Promise<{
   granted: { level: number; reward: LevelReward }[]
+  /** The levels this call covered: everything in (from, to]. `to > from` is a
+   *  level earned whether or not it paid anything, and the chart shows the
+   *  card on that, not on `granted` -- most levels pay nothing and every one
+   *  of them is still a level. */
+  from: number
+  to: number
   newDoubloons: number
   newGems: number
   newHoldTier: number
 }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const empty = { granted: [], newDoubloons: 0, newGems: 0, newHoldTier: 0 }
+  const empty = { granted: [], from: 0, to: 0, newDoubloons: 0, newGems: 0, newHoldTier: 0 }
   if (!user) return empty
 
   const admin = createAdminClient()
@@ -2574,8 +2580,19 @@ export async function claimFishingLevelRewards(): Promise<{
   const claimed = (profile.claimed_fishing_levels as number | null) ?? 1
   const owed    = rewardsOwed(claimed, level)
   if (owed.length === 0) {
+    // NOTHING TO PAY, BUT PERHAPS SOMETHING TO SAY. Only fifteen levels carry
+    // coin, and this used to return here without moving the watermark, so a
+    // level that paid nothing was never a level the chart heard about: no
+    // card, no notice, the number on the disc simply different next time you
+    // looked. The watermark moves regardless now, and the chart is told the
+    // span, so every level gets its moment and no level gets it twice.
+    if (level > claimed) {
+      await admin.from('profiles').update({ claimed_fishing_levels: level }).eq('id', user.id)
+    }
     return {
       granted: [],
+      from: claimed,
+      to: Math.max(claimed, level),
       newDoubloons: profile.doubloons ?? 0,
       newGems: profile.gems ?? 0,
       newHoldTier: (profile.fish_hold_tier as number | null) ?? 0,
@@ -2617,7 +2634,7 @@ export async function claimFishingLevelRewards(): Promise<{
     }),
   ])
 
-  return { granted: owed, newDoubloons: doubloons, newGems: gems, newHoldTier: holdTier }
+  return { granted: owed, from: claimed, to: level, newDoubloons: doubloons, newGems: gems, newHoldTier: holdTier }
 }
 
 /**

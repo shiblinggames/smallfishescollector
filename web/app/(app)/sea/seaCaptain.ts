@@ -471,6 +471,20 @@ export async function makeCaptain(
 
   /** How much of its own height a reflection keeps. */
   const LIE = 0.55
+  /**
+   * HOW MUCH OF THE HULL'S BOB THE REFLECTION TAKES.
+   *
+   * The twins are children of the node the chart lifts, so they rode every
+   * pixel of it: hull up, reflection up, the pair moving as one cut-out. A
+   * reflection is in the WATER, and the water is the thing that is not
+   * moving here -- the plane is flat and the hull rides over it -- so most of
+   * that motion is wrong on it. Not none: pinned dead still it opens a gap
+   * at the keel on every crest and the boat looks lifted out. Four tenths
+   * keeps the seam and loses the bounce.
+   */
+  const MIRROR_RIDE = 0.4
+  /** Where the mirror sits at rest, kept so the bob can be taken off it. */
+  let mirrorBase = 0
   /** How far under the hull it starts, as a share of the hull's height. Without
    *  it the reflection touches the lowest painted pixel, and a hull whose paint
    *  runs a little past the water gets a seam. */
@@ -492,7 +506,8 @@ export async function makeCaptain(
     // A child at local y lands at P - LIE * y. It should land at
     // water + (water - y) * LIE, so P is water * (1 + LIE). One line, and
     // every twin below inherits it without any mirroring maths of its own.
-    mirrorBox.position.set(0, water * (1 + LIE))
+    mirrorBase = water * (1 + LIE)
+    mirrorBox.position.set(0, mirrorBase)
     mirrorBox.scale.set(1, -LIE)
 
     // IN THE SAME ORDER THEY ARE DRAWN. Walking the live child list rather
@@ -571,6 +586,10 @@ export async function makeCaptain(
     // trough and less on a crest instead — same reading, and it costs nothing.
     const k = Math.max(-1, Math.min(1, -bob / 5.5))
     soak.alpha = Math.max(0, SOAK_REST + k * SOAK_SWING)
+    // AND THE REFLECTION STAYS MOSTLY IN THE WATER. The lift is applied to
+    // the node above in the same units, so taking most of it back off here
+    // leaves the twin riding MIRROR_RIDE of it. See the constant.
+    mirrorBox.position.y = mirrorBase - bob * (1 - MIRROR_RIDE)
   }
   cutSoak()
   placeSoak(0)
@@ -781,7 +800,8 @@ export async function makeShip(
   back.scale.set(ship.flip ? -k : k, -k * LIE)
   // Anchored at the centre, so reflecting the centre about the waterline is
   // the whole of the placement.
-  back.position.set(0, water * (1 + LIE))
+  const backBase = water * (1 + LIE)
+  back.position.set(0, backBase)
   back.alpha = 0.26
   view.addChild(back)
 
@@ -842,6 +862,8 @@ export async function makeShip(
     const k = Math.max(-1, Math.min(1, -bob / 5.5))
     // A ship of the line is heavier and sits deeper, so she carries more of it.
     soak.alpha = Math.max(0, 0.88 + k * 0.3)
+    // Same as the skiff's twin: the reflection rides four tenths of the bob.
+    back.position.y = backBase - bob * 0.6
   }
 
   placeSoak(0)

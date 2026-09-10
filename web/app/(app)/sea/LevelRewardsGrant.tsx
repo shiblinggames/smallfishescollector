@@ -23,13 +23,16 @@ import { fishingGearUnlockedBetween } from '@/lib/gearUnlocks'
 
 export type Granted = { level: number; reward: LevelReward }[]
 
-export default function LevelRewardsGrant({ granted, onDone }: {
+export default function LevelRewardsGrant({ granted, from, to, onDone }: {
   granted: Granted
+  /** The span this covers: the card is for every level in (from, to], paid or
+   *  not. `granted` is only the ones that paid. */
+  from: number
+  to: number
   onDone: () => void
 }) {
-  const top = granted[granted.length - 1]?.level ?? 0
-  const from = (granted[0]?.level ?? 1) - 1
-  const many = granted.length > 1
+  const top = to
+  const many = to - from > 1
   // WHAT THE LEVEL OPENED, not just what it paid. A level-up that lists coin
   // and says nothing about the water it just unlocked has buried the headline:
   // the reward is spendable, the zone is a place you can now go.
@@ -63,7 +66,7 @@ export default function LevelRewardsGrant({ granted, onDone }: {
           }}>
           <p className="font-karla font-700 uppercase" style={{
             fontSize: '0.7rem', letterSpacing: '0.18em', color: 'rgba(240,192,64,0.8)',
-          }}>{many ? `${granted.length} levels earned` : 'Level earned'}</p>
+          }}>{many ? `${to - from} levels earned` : 'Level earned'}</p>
 
           <p className="font-cinzel font-700" style={{
             fontSize: '1.6rem', color: '#f4ecd8', marginTop: 4, lineHeight: 1.1,

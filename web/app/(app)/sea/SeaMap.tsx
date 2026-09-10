@@ -1695,7 +1695,33 @@ export default function SeaMap({
   tideTurner: { has: boolean; left: number }
 }) {
   const router = useRouter()
-  const level = useMemo(() => getLevelFromXP(fishingXP), [fishingXP])
+  /**
+   * ── THE LEVEL, LIVE ──────────────────────────────────────────────────────
+   *
+   * It was derived from the page's XP, which is a snapshot: a captain who
+   * levelled on their third cast kept the old number on the disc until they
+   * left the sea and came back. The rod reports its bar now, so the disc
+   * changes the moment the level does -- and the moment it does is worth
+   * pointing at.
+   */
+  const [xpLive, setXpLive] = useState(fishingXP)
+  useEffect(() => { setXpLive(fishingXP) }, [fishingXP])
+  const level = useMemo(() => getLevelFromXP(xpLive), [xpLive])
+  /**
+   * A LEVEL HAS HAPPENED AND NOBODY HAS LOOKED YET. Raised when the live level
+   * rises, cleared when the disc is pressed or the level card shows -- whichever
+   * first. The disc pulses while it is up, which is the notice the level-up
+   * itself never had.
+   */
+  const [levelNew, setLevelNew] = useState(false)
+  const levelWas = useRef(level)
+  useEffect(() => {
+    if (level > levelWas.current) setLevelNew(true)
+    levelWas.current = level
+  }, [level])
+  /** Open the spine once the level card is put down: pressed the pulsing disc,
+   *  read what the level paid, then the spine it belongs to. */
+  const skillAfterGrant = useRef(false)
 
   /**
    * WHAT LEVELLING OWES YOU, COLLECTED.
@@ -1711,18 +1737,26 @@ export default function SeaMap({
    * is state-based rather than an event, the first call pays out everything a
    * captain has been owed since the sea opened.
    */
-  const [levelGrant, setLevelGrant] = useState<Granted | null>(null)
-  const collectLevelRewards = useCallback(() => {
-    void claimFishingLevelRewards().then(res => {
-      if (!res.granted.length) return
-      setLevelGrant(res.granted)
-      // The purse in the nav reads these events; without them the doubloons
-      // land in the database and the number on screen stays where it was.
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
-      window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGems }))
-    }).catch(() => { /* a missed collection is picked up next time */ })
+  const [levelGrant, setLevelGrant] = useState<{ granted: Granted; from: number; to: number } | null>(null)
+  /** Resolves to whether a card went up. */
+  const collectLevelRewards = useCallback((): Promise<boolean> => {
+    return claimFishingLevelRewards().then(res => {
+      // ON THE SPAN, NOT THE PAYOUT. Most levels pay nothing and every one of
+      // them is still a level; the action moves its watermark either way now,
+      // so this fires once per level and never again for the same one.
+      if (res.to <= res.from) return false
+      setLevelGrant({ granted: res.granted, from: res.from, to: res.to })
+      setLevelNew(false)
+      if (res.granted.length) {
+        // The purse in the nav reads these events; without them the doubloons
+        // land in the database and the number on screen stays where it was.
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+        window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGems }))
+      }
+      return true
+    }).catch(() => false /* a missed collection is picked up next time */)
   }, [])
-  useEffect(() => { collectLevelRewards() }, [collectLevelRewards])
+  useEffect(() => { void collectLevelRewards() }, [collectLevelRewards])
 
   /**
    * OUT ON THE SEA_GATE — past the anchorage rim, on the ship you own.
@@ -5392,7 +5426,11 @@ export default function SeaMap({
   const stowRod = useCallback(() => {
     setFishingIn(null)
     setFrame('rest')
-  }, [])
+    // The same hand-over the rod's own close does. The first voyage stows the
+    // rod through here, and a level earned on the first catch was never shown
+    // because this path skipped it.
+    void collectLevelRewards()
+  }, [collectLevelRewards])
 
   const startFishing = useCallback(() => {
     // THE FIRST VOYAGE CAN HOLD THE ROD DOWN. Once that first fish is landed
@@ -8469,6 +8507,8 @@ export default function SeaMap({
           // screen px at the size the hull actually reads, and scaling it
           // again would make a recoil grow every time the camera pushed in.
           `translate(-50%, -50%) translate(${fxX}px, ${fxY}px) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel + fxRot}deg)`
+        // The reflection takes most of that bob back off. See MIRROR_RIDE.
+        boat.style.setProperty('--mirror-ride', `${(-bob * (1 - MIRROR_RIDE)).toFixed(2)}px`)
         // THE SAME NUMBERS, HANDED TO THE CANVAS. Not recomputed: how she is
         // riding is one decision and it is made here. Null unless the flag is
         // on and she is the one being drawn, in which case the DOM sprite above
@@ -10475,10 +10515,28 @@ hullRef={hullRefFor(t.key)} />
         const nav = inAnchorage
         const pts = (nav ? renownNavState : renownState)?.available ?? 0
         const label = nav ? 'Your Navigation' : 'Your Fishing'
+        // Lit for either reason the disc has to interrupt: renown to spend,
+        // or a level nobody has looked at. Same gold, one state.
+        const fresh = !nav && levelNew
+        const hot = pts > 0 || fresh
         return (
           <button
             type="button"
-            onClick={e => { e.stopPropagation(); vibrate(8); setSkillOpen(true) }}
+            onClick={e => {
+              e.stopPropagation(); vibrate(8)
+              // PRESSED WHILE PULSING: the level first, then the spine. If
+              // nothing is owed after all -- a stow already collected it -- the
+              // spine opens straight away, which is what the press asked for.
+              if (fresh) {
+                setLevelNew(false)
+                skillAfterGrant.current = true
+                void collectLevelRewards().then(shown => {
+                  if (!shown) { skillAfterGrant.current = false; setSkillOpen(true) }
+                })
+                return
+              }
+              setSkillOpen(true)
+            }}
             aria-label={`${label}, level ${nav ? navLevel : level}`}
             title={pts > 0
               ? `${label} · level ${nav ? navLevel : level} · ${pts} renown to spend`
@@ -10490,9 +10548,25 @@ hullRef={hullRefFor(t.key)} />
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: hudSize, height: hudSize, padding: 0,
               borderRadius: 999, cursor: 'pointer',
-              background: pts > 0 ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
-              border: `1px solid ${pts > 0 ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
+              background: hot ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
+              border: `1px solid ${hot ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
             }}>
+            {/* THE PULSE. The Daily Haul's ring, on the one other disc whose
+                answer is an event: a level just happened, and this is where to
+                see what it bought. On the ring only, so the number stays put. */}
+            <AnimatePresence>
+              {fresh && (
+                <motion.span aria-hidden
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0.6, 0, 0.6], scale: [1, 1.55, 1] }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 2.2, repeat: Infinity, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute', inset: -2, borderRadius: '50%',
+                    border: '1px solid #f0c040', pointerEvents: 'none',
+                  }} />
+              )}
+            </AnimatePresence>
             {/* ── IT SAYS THE NUMBER ──────────────────────────────────
                 A rod and a ship's wheel are good marks for "fishing" and
                 "sailing" and neither of them says LEVEL, which is the one thing
@@ -10509,7 +10583,7 @@ hullRef={hullRefFor(t.key)} />
             }}>
               <svg width={Math.round(hudSize * 0.30)} height={Math.round(hudSize * 0.30)}
                 viewBox="0 0 24 24" fill="none"
-                stroke={pts > 0 ? '#f0c040' : 'rgba(214,232,240,0.72)'}
+                stroke={hot ? '#f0c040' : 'rgba(214,232,240,0.72)'}
                 strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 {nav
                   // A ship's wheel: the spine that is about sailing.
@@ -10522,7 +10596,7 @@ hullRef={hullRefFor(t.key)} />
               <span className="font-karla font-700" aria-hidden style={{
                 fontSize: Math.round(hudSize * 0.42),
                 fontVariantNumeric: 'tabular-nums',
-                color: pts > 0 ? '#f0c040' : '#dfeaf2',
+                color: hot ? '#f0c040' : '#dfeaf2',
               }}>{nav ? navLevel : level}</span>
             </span>
             {pts > 0 && (
@@ -10541,7 +10615,7 @@ hullRef={hullRefFor(t.key)} />
         open={skillOpen}
         onClose={() => setSkillOpen(false)}
         skill={inAnchorage ? 'nav' : 'fishing'}
-        xp={inAnchorage ? navXP : fishingXP}
+        xp={inAnchorage ? navXP : xpLive}
         renown={inAnchorage ? renownNavState : renownState}
         hallTier={crewTiers?.hall ?? 1}
         onOpenRenown={() => {
@@ -11041,6 +11115,7 @@ hullRef={hullRefFor(t.key)} />
           }}
           onBusy={setDialUp}
           onHooked={() => setHookedTick(n => n + 1)}
+          onXp={setXpLive}
           onCanLeave={setCanLeaveFishing}
           spritesReady={spritesReady}
           onClose={() => { setFishingIn(null); setFrame('rest'); collectLevelRewards(); readOrders() }}
@@ -11050,7 +11125,10 @@ hullRef={hullRefFor(t.key)} />
       {/* WHAT LEVELLING OWED YOU. A hand-over rather than a notification: the
           coin is already in the purse and the number in the nav has moved. */}
       {levelGrant && (
-        <LevelRewardsGrant granted={levelGrant} onDone={() => setLevelGrant(null)} />
+        <LevelRewardsGrant {...levelGrant} onDone={() => {
+          setLevelGrant(null)
+          if (skillAfterGrant.current) { skillAfterGrant.current = false; setSkillOpen(true) }
+        }} />
       )}
 
       <SmugglerTalk open={kipOpen} onClose={() => setKipOpen(false)} />
@@ -11329,6 +11407,15 @@ function Layer({ frame, src, at, hiddenOn, origin, className, style }: {
 const MIRROR_ALPHA = 0.26
 const MIRROR_LIE = 0.55
 const MIRROR_SINK = 0.04
+/**
+ * HOW MUCH OF THE HULL'S BOB THE REFLECTION TAKES. It is a child of the node
+ * the loop lifts, so it rode all of it, and hull and reflection bounced as one
+ * cut-out. A reflection is in the water and the water is not the thing moving.
+ * The loop writes the correction as a custom property on the boat node and the
+ * mirror reads it -- no ref through two memo boundaries for one number. Same
+ * figure as the captain's twin, in seaCaptain.
+ */
+const MIRROR_RIDE = 0.4
 
 const WarshipMirror = memo(function WarshipMirror({ src, tier }: { src: string; tier: number }) {
   const { keel } = shipSeat(tier)
@@ -11342,7 +11429,7 @@ const WarshipMirror = memo(function WarshipMirror({ src, tier }: { src: string; 
         position: 'absolute', left: 0, top: 0, width: '100%', display: 'block',
         pointerEvents: 'none', opacity: MIRROR_ALPHA,
         transformOrigin: `50% ${k.toFixed(1)}%`,
-        transform: `translateY(${MIRROR_SINK * 100}%) scaleX(${getShip(tier).seaFlip ? -1 : 1}) scaleY(${-MIRROR_LIE})`,
+        transform: `translateY(var(--mirror-ride, 0px)) translateY(${MIRROR_SINK * 100}%) scaleX(${getShip(tier).seaFlip ? -1 : 1}) scaleY(${-MIRROR_LIE})`,
         WebkitMaskImage: mask, maskImage: mask,
         // Water does not hold an edge.
         filter: 'blur(0.7px)',

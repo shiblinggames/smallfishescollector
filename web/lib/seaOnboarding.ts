@@ -155,7 +155,7 @@ export const FIRST_VOYAGE: Beat[] = [
   // the worms to actually land; a captain who already has bait never sees it.
   {
     ...D,
-    text: 'Oof almost forgot. Ya need worms, kid. How you gonna catch anything without bait? Check the *Daily Haul* up there. You get freebies each day. Go and collect your worms.',
+    text: 'Oof almost forgot. Ya need worms, kid. How you gonna catch anything without bait? Check the *Daily Haul*, the chest icon in the top right corner. You get freebies each day. Go and collect your worms.',
     until: 'bait',
     target: 'haul haul-bait',
   },
@@ -238,16 +238,17 @@ export const FIRST_VOYAGE: Beat[] = [
     until: 'next',
   },
   {
-    ...D,
-    text: 'You’re all set cap’n. Catch, sell, upgrade your gear and ship. Explore...there’s a lot more past the Expedition gate north of here too. Be sure to check the *map* to see where everything is.',
-    until: 'next',
-    target: 'chart',
-  },
-  {
     ...K,
     text: 'You can always check your fishing *level* and milestones here as well.',
     until: 'next',
     target: 'hud-skill',
+  },
+  // DOBY HAS THE LAST WORD. He opened the voyage; he closes it.
+  {
+    ...D,
+    text: 'You’re all set cap’n. Catch, sell, upgrade your gear and ship. Explore...there’s a lot more past the Expedition gate north of here too. Be sure to check the *map* to see where everything is.',
+    until: 'next',
+    target: 'chart',
   },
 ]
 /**

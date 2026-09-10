@@ -2610,8 +2610,8 @@ The script is the owner's; the copy in `lib/seaOnboarding.ts` is verbatim and is
 | 9 | Doby | dock and go ashore | door chooser open | |
 | 10 | Doby | the Market | hold sold (advanced by the market) | market card |
 | 11 | Kat | find Finn, talk to everyone, treasure all around | Next | |
-| 12 | Doby | catch, sell, upgrade; more past the gate; check the map | Next | chart disc |
-| 13 | Kat | fishing level and milestones | Aye | fishing-level disc |
+| 12 | Kat | fishing level and milestones | Next | fishing-level disc |
+| 13 | Doby | catch, sell, upgrade; more past the gate; check the map | Aye | chart disc |
 
 Two new `until`s: **`fish`** (rod out; the old `cast`) and **`bite`** (`FishingHere` fires `onHooked` on
 the bite; the chart counts them and the tour latches the count the way it latches catches). A new
@@ -2634,3 +2634,27 @@ so a new beat leaves and arrives rather than rewriting in place.
 and settles as slowly), and it **drifts**: the camera opens on open water south-west of the boat
 (`ARRIVE_OFF`) and slides onto her through the same override the look beats use, so the Mainland
 enters the top of the frame as the hull enters the middle.
+
+### Levels are events, and the disc says so
+
+`claimFishingLevelRewards` used to return early, **without moving `claimed_fishing_levels`**, when
+the levels earned paid nothing — and only fifteen levels pay. So a level that paid nothing was never
+a level the chart heard about: no card, no notice, the number on the disc simply different the next
+time you looked. The action now moves the watermark regardless and returns the span `(from, to]`; the
+chart shows `LevelRewardsGrant` on `to > from`, not on `granted.length`, so every level gets its
+moment and none gets it twice.
+
+The chart's `level` is **live**: `FishingHere` reports its bar (`onXp`) after each catch, the chart
+derives the level from that, and the disc changes the moment the level does. When it rises,
+`levelNew` is raised and the disc wears the Daily Haul's pulse ring until it is pressed or a level
+card shows. Pressing it while pulsing collects the level (card first) and then opens the spine;
+if a stow already collected it, the spine opens straight away. `stowRod` — the tour's path — now
+collects too, which is why a level earned on the first catch was never shown before.
+
+### Reflections ride four tenths of the bob
+
+Both boats' reflections are children of the node the chart lifts, so they rode every pixel of the
+bob and hull-plus-reflection bounced as one cut-out. A reflection is in the water, and the water is
+the thing not moving. `MIRROR_RIDE = 0.4` (seaCaptain for the GPU twins, SeaMap for the DOM
+warship mirror via a `--mirror-ride` custom property the loop writes on the boat node): the
+reflection keeps the seam at the keel and loses the bounce.

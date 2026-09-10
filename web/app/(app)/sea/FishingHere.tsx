@@ -371,7 +371,7 @@ export default function FishingHere({
   seaPhase, baitBag, onBaitChange, rack, look, onLookChange, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onReel,
   onBaitSpent, onPose, onBusy, onCanLeave, onLanded, onGolden, goldenPending,
-  onHooked,
+  onHooked, onXp,
   spritesReady, onClose,
 }: {
   zone: string
@@ -473,6 +473,9 @@ export default function FishingHere({
   /** SOMETHING TOOK THE LINE. Fired on the bite, before the reel is offered.
    *  The first voyage's reel line waits on exactly this moment. */
   onHooked?: () => void
+  /** THE BAR MOVED. The live XP total after each catch, so the chart's level
+   *  disc can change the moment the level does rather than on the next page. */
+  onXp?: (xp: number) => void
   /**
    * SOMETHING CAME UP. Fired the instant the needle is judged a catch, not
    * when the card lands: the map puts a fish through the surface out on the
@@ -688,6 +691,10 @@ export default function FishingHere({
    */
   const [xp, setXp] = useState(fishingXP)
   useEffect(() => { setXp(fishingXP) }, [fishingXP])
+  // Reported through a ref so an inline handler on the chart does not re-run
+  // this on every render of the chart.
+  const onXpRef = useRef(onXp); onXpRef.current = onXp
+  useEffect(() => { onXpRef.current?.(xp) }, [xp])
 
   /**
    * RENOWN, PAST 100. One banked point per level crossed, and the overlay that
