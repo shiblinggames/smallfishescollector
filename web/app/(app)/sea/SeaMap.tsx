@@ -977,6 +977,22 @@ const FISHING_HULL_W = 210 * 0.55
  *   keelY   sprite centre to keel, in SCREEN px (divide by GROUND in the world)
  *   weight  how heavy she reads, 0 at the Sloop and 1 at the Man-o-War
  */
+/**
+ * HOW MUCH OF THE SWELL A WARSHIP TAKES, 1 being a fishing boat's share.
+ *
+ * The chop that lifts a rowboat does not lift a ship of the line, and this was
+ * the one place that had not been told: `heel` has divided itself by the beam
+ * ratio since it went in ("a big hull does not snap... mass is exactly what a
+ * warship should look like it has") and the vertical lift went on using the
+ * fishing boat's full stroke for every hull on the ladder. A Man-o-War heaved
+ * exactly as hard as the dinghy she replaced, which reads as a cork.
+ *
+ * Same divisor as the heel, so the two halves of how she rides agree.
+ */
+function shipLift(tier: number): number {
+  return 1 / shipSeat(tier).scale
+}
+
 function shipSeat(tier: number) {
   const d = getShip(tier)
   const beam = d.seaBeam ?? 0.6
@@ -2884,7 +2900,7 @@ export default function SeaMap({
    */
   const hull = useMemo(() => {
     if (!onShip) return {
-      scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX, weight: 0,
+      scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX, weight: 0, lift: 1,
       // Never actually read: a fight happens past the sea gate, where the thing
       // on the water is a warship. Here so both hulls answer the same
       // questions and the loop never has to ask which one it is holding.
@@ -2914,6 +2930,9 @@ export default function SeaMap({
       // it has. Divided by the beam ratio, so the bigger she is the less she
       // moves, and the number stays one idea rather than a second table.
       heel: HEEL_MAX / ((WARSHIP_W * beam) / FISHING_HULL_W),
+      // AND SHE DOES NOT HEAVE LIKE A DINGHY EITHER. The other half of the
+      // same fact, and it was missing: see shipLift.
+      lift: 1 / scale,
       // HOW HEAVY SHE READS, 0 at the Sloop and 1 at the Man-o-War. Not the
       // same thing as `scale`: the water at a standstill should not merely be
       // BIGGER on a bigger ship, it should be slower and darker, and this is
@@ -4136,6 +4155,13 @@ export default function SeaMap({
    */
   const friendAt = useRef<Map<string, {
     shown: Vec; target: Vec; face: number; bob: number
+    /** The beat BEFORE the current one, and when each arrived. Two samples is
+     *  a velocity, and a velocity is the difference between a boat sailing and
+     *  a boat being dragged toward a point twice a second. See the loop. */
+    prev: Vec; prevT: number; tgtT: number
+    /** How much of the swell this hull takes. A ship of the line is not thrown
+     *  about by the chop that lifts a rowboat — same reasoning as `heel`. */
+    lift: number
     /** When this boat was last heard from over the wire, 0 for never. Guards
      *  the stale poll from stomping a live position. */
     live: number
@@ -4622,6 +4648,9 @@ export default function SeaMap({
     /** Which of the three captain frames to draw them in. Only friends ever
      *  send one; traders and Finn are always at rest. */
     frame?: Frame
+    /** How much of the swell this hull takes. Only a friend on a warship sends
+     *  one; everybody else is in a fishing boat and takes all of it. */
+    lift?: number
     /** Where the HULL sits, as opposed to where the sprite is centred. The
      *  sheet reserves a large empty region up and to the left for the rod, so
      *  the boat is well below the middle of it — rings drawn at the centre
@@ -5886,9 +5915,18 @@ export default function SeaMap({
     if (!name) return
     const at = friendAt.current.get(name)
     if (!at) return
+    // TWO SAMPLES, KEPT. The one that was current becomes the one before, so
+    // the loop can work out how fast they are actually going. Without this
+    // there is only ever a point to be pulled toward, and being pulled toward
+    // a point that jumps twice a second is what makes a boat surge.
+    const nowMs = Date.now()
+    at.prev.x = at.target.x
+    at.prev.y = at.target.y
+    at.prevT = at.tgtT
     at.target.x = b.x
     at.target.y = b.y
-    at.live = Date.now()
+    at.tgtT = nowMs
+    at.live = nowMs
     // ── AND WHAT THEY ARE DOING ────────────────────────────────────────
     //
     // Held on the ref for the frame loop, which reads it sixty times a second,
@@ -5973,10 +6011,23 @@ export default function SeaMap({
       // twenty seconds ago, twice a minute, which reads as rubber-banding.
       if (had) {
         const fresher = had.live && Date.now() - had.live < 4_000
-        if (!fresher) { had.target.x = f.x; had.target.y = f.y }
+        if (!fresher) {
+          // A POLLED ROW CARRIES NO VELOCITY. It is up to twenty seconds old,
+          // so the gap between it and whatever came before is meaningless as a
+          // speed — collapse the pair onto itself and let them sit still until
+          // a real beat gives them a direction again.
+          had.target.x = f.x; had.target.y = f.y
+          had.prev.x = f.x; had.prev.y = f.y
+          had.prevT = 0; had.tgtT = 0
+        }
+        // How heavily she rides, whichever boat she is in today.
+        had.lift = f.onShip ? shipLift(f.shipTier) : 1
       }
       else friendAt.current.set(f.username, {
         shown: { x: f.x, y: f.y }, target: { x: f.x, y: f.y }, face: 1, live: 0,
+        // No velocity yet: one sample is a position, not a motion.
+        prev: { x: f.x, y: f.y }, prevT: 0, tgtT: 0,
+        lift: f.onShip ? shipLift(f.shipTier) : 1,
         // Nobody is fishing until they say so. A friend found by the poll is a
         // position and nothing else.
         pose: 'rest' as const,
@@ -7200,21 +7251,58 @@ export default function SeaMap({
       // linearly like a cursor. Frame-rate independent for the same reason.
       if (friendRefs.current.size) {
         const kf2 = 1 - Math.exp(-3.2 * dt)
+        // The correction ease. See the note in the loop: with the aim
+        // extrapolated this is only closing a small error, so it is quick.
+        const kf3 = 1 - Math.exp(-9 * dt)
         for (const [name, at] of friendAt.current) {
           const el = friendRefs.current.get(name)
           if (!el) continue
-          const dxf = at.target.x - at.shown.x
-          const dyf = at.target.y - at.shown.y
+          // ── WHERE THEY WOULD BE BY NOW ──────────────────────────────
+          //
+          // Beats land twice a second, which at cruising speed is two hundred
+          // pixels apart. Easing toward the newest one meant the hull lunged
+          // the instant it arrived and then coasted to a stop waiting for the
+          // next — a surge, twice a second, for the whole time you sailed
+          // beside somebody. Reported as "very janky, not smooth", and it is
+          // the exponential-toward-a-stepped-target artifact rather than
+          // anything to do with the network.
+          //
+          // So carry their VELOCITY instead of chasing their position. Two
+          // beats is a speed and a heading; run it forward from the last one
+          // and you get the boat where it would actually be now, moving at the
+          // rate it is actually moving.
+          //
+          // Capped at a beat and a bit past the last sample, so a hull that
+          // stops, turns or drops off the wire coasts to a halt rather than
+          // sailing on forever — and the cap is measured in THEIR gap, not a
+          // constant, so it is right whether beats are arriving every half
+          // second or every three.
+          const gap = at.prevT && at.tgtT > at.prevT
+            ? Math.min(1500, at.tgtT - at.prevT)
+            : 0
+          let aimX = at.target.x
+          let aimY = at.target.y
+          if (gap > 0) {
+            const age = Math.min(now - at.tgtT, gap * 1.4)
+            aimX += ((at.target.x - at.prev.x) / gap) * age
+            aimY += ((at.target.y - at.prev.y) / gap) * age
+          }
+          const dxf = aimX - at.shown.x
+          const dyf = aimY - at.shown.y
           // A LONG WAY OFF IS NOT A JOURNEY. Somebody who has just come back
           // after an hour, or used the stones, is somewhere else entirely and
           // easing them across the whole chart would draw a boat crossing water
           // it never sailed. Past a screen or two, put them where they are.
           if (Math.hypot(dxf, dyf) > 3200) {
-            at.shown.x = at.target.x
-            at.shown.y = at.target.y
+            at.shown.x = aimX
+            at.shown.y = aimY
           } else {
-            at.shown.x += dxf * kf2
-            at.shown.y += dyf * kf2
+            // FASTER THAN IT WAS, because it is no longer doing the travelling.
+            // The extrapolation above puts the aim where the boat should be;
+            // this only has to swallow the correction when a beat lands a
+            // little off the guess, and a slow ease there is just lag.
+            at.shown.x += dxf * kf3
+            at.shown.y += dyf * kf3
           }
           // Face the way they are going, the same flip the player's boat uses.
           // ONLY WHILE GUESSING. A live boat sends its real facing twice a
@@ -7247,7 +7335,7 @@ export default function SeaMap({
             // is what a sea looks like when every boat keeps its own time —
             // two of them side by side heaving opposite ways. Where they are is
             // the phase now, so a crest travels THROUGH a group of them.
-            const bobF = swellAt(at.shown.x, at.shown.y, now / 1000)
+            const bobF = swellAt(at.shown.x, at.shown.y, now / 1000) * at.lift
             hull.style.transform =
               `translate(-50%, -50%) scaleY(${1 / GROUND}) scaleX(${at.face}) translateY(${bobF}px)`
               + ` rotate(${(swellHeel(at.shown.x, at.shown.y, now / 1000) * at.face).toFixed(2)}deg)`
@@ -7340,6 +7428,10 @@ export default function SeaMap({
             // mid-cast would otherwise stand there holding the pose for as
             // long as they stayed on the chart.
             frame: (at.live && Date.now() - at.live < 6_000) ? at.pose : 'rest',
+            // A warship does not heave like the dinghy she replaced. Traders
+            // and Finn leave it out and take the full stroke, which is right:
+            // every one of them is in the same fishing boat.
+            lift: at.lift,
           })
         }
         gpuRef.current.fleet(list)
@@ -7761,10 +7853,13 @@ export default function SeaMap({
         // how big. See seaSwell for why this is a field and not a clock.
         // WHAT THE WATER IS DOING, and then what SHE does about it. The ease
         // below is her mass; see bobRef.
-        const seaNow = swellAt(pos.current.x, pos.current.y, t) * (1 + gust * 1.35)
+        const seaNow = (swellAt(pos.current.x, pos.current.y, t) * (1 + gust * 1.35)
           // A second, slower heave that only exists in weather: a swell has a
           // longer period than a chop and it is what makes a sea look big.
-          + Math.sin(t * 0.72) * 7.5 * gust
+          + Math.sin(t * 0.72) * 7.5 * gust)
+          // HOW MUCH OF IT SHE ACTUALLY TAKES. 1 in the fishing boat and a
+          // third of that at the Man-o-War — see shipLift.
+          * hullRef.current.lift
         const settle = 1 - Math.exp(-dt / 0.32)
         bobRef.current += (seaNow - bobRef.current) * settle
         const bob = bobRef.current

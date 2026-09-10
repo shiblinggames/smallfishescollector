@@ -327,6 +327,9 @@ export type GpuHandle = {
      *  you fishing rather than by a second animation kept in step by hand.
      *  Traders and Finn pass 'rest' and never change. */
     frame?: Frame
+    /** How much of the swell this hull takes, 1 being a fishing boat's share.
+     *  See shipLift in SeaMap. */
+    lift?: number
   }[]): void
   skipper(s: {
     bob: number
@@ -1938,7 +1941,8 @@ export default function SeaIslandsGPU({
             const c = seen.get(e.key)
             if (!c) continue
             c.holder.visible = true
-            c.holder.position.set(e.x, e.y - swellAt(e.x, e.y, ts) / GROUND)
+            const heave = swellAt(e.x, e.y, ts) * (e.lift ?? 1)
+            c.holder.position.set(e.x, e.y - heave / GROUND)
             // AND THEY ROLL ON IT. Pixi composes a node as translate·rotate·
             // scale, so the rotation is applied OUTSIDE the mirror here and a
             // screen tilt is a screen tilt whichever way the hull faces — no
@@ -1951,7 +1955,7 @@ export default function SeaIslandsGPU({
             // wrong way is the same mistake made forty times.
             c.cap.setHeel(roll)
             // And the water comes up their sides on the same heave.
-            c.cap.setSoak(swellAt(e.x, e.y, ts))
+            c.cap.setSoak(heave)
             // AND WHAT THEY ARE DOING WITH THEIR HANDS. Idempotent inside the
             // composite — setting the frame it is already on does nothing — so
             // this is safe to write every frame for every hull on the water.
