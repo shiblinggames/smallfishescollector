@@ -581,6 +581,35 @@ and nothing goes on the wire at all otherwise. This replaced a poll that stepped
 seconds when a friend was near — 600-1000px between samples, which no amount of easing
 makes look like a boat.
 
+### And you can watch them fish (2026-09)
+
+A beat carries a POSE as well as a position: `p` is 0/1/2 for the three captain frames
+(`rest` / `wait` / `cast`), one digit rather than the frame's name because it rides a message
+that goes out twice a second. It is the frame `onPose` already hands the chart from
+`FishingHere`, so what a friend sees you doing is what your own captain is doing, from one
+source that cannot drift. The friend hull is a full `makeCaptain` composite, so `cap.setFrame`
+draws them casting and working the reel with **their own rod** — no second animation to keep
+in step.
+
+- **A change of pose always beats the move gate.** Somebody working a rod is standing still by
+  definition, so the gate that stops a moored boat costing anything would have swallowed every
+  frame of it. Costs about three sends across a catch that lasts most of a minute.
+- **Landing one is its own event** (`fish`, not `pos`): a moment rather than a state, so it
+  must not wait for the next position beat. It fires from the same `onLanded` callback that
+  draws your own splash, and the watcher gets that splash off the friend's EASED position, not
+  the reported one, or the water breaks half a screen ahead of the hull.
+- **Going quiet returns them to idle.** Beats stop when you are no longer near, so a friend who
+  wandered off mid-cast is put back to `rest` after 6 seconds rather than holding the pose.
+- **Your own dial freezes your map loop** (see the `dialUpRef` early-out) so the minigame gets
+  the main thread, which means a friend's hull holds still while your dial is up. Accepted, and
+  the canvas keeps running, so their catch splash still lands. Do not "fix" this by running the
+  loop through the dial.
+- Only the `?gpu=0` fallback needs React state for the pose; the canvas reads the ref in the
+  frame loop, so the default path pays nothing for it.
+
+Nothing here is shared state. Two captains fishing side by side are playing two separate games
+that can see each other: separate rolls, separate holds, separate fog, separate everything.
+
 ### One channel per captain, never one big room
 
 Supabase bills fan-out. From their pricing docs, verbatim: *"Each broadcast message counts

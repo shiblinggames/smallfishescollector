@@ -312,6 +312,11 @@ export type GpuHandle = {
     /** Where the HULL sits, for the rings they make at rest. Not the same as
      *  where the sprite is centred: the boat is drawn low in its sheet. */
     cx: number; cy: number
+    /** WHAT THEY ARE DOING. The same three frames the player's own captain
+     *  uses, so a friend fishing beside you is drawn by the code that draws
+     *  you fishing rather than by a second animation kept in step by hand.
+     *  Traders and Finn pass 'rest' and never change. */
+    frame?: Frame
   }[]): void
   skipper(s: {
     bob: number
@@ -1927,6 +1932,10 @@ export default function SeaIslandsGPU({
             c.holder.rotation = (swellHeel(e.x, e.y, ts) * Math.PI) / 180
             // And the water comes up their sides on the same heave.
             c.cap.setSoak(swellAt(e.x, e.y, ts))
+            // AND WHAT THEY ARE DOING WITH THEIR HANDS. Idempotent inside the
+            // composite — setting the frame it is already on does nothing — so
+            // this is safe to write every frame for every hull on the water.
+            c.cap.setFrame(e.frame ?? 'rest')
             // scaleY undoes the plane's squash, and the facing rides on x —
             // the same ±1 mirror the DOM writes.
             c.holder.scale.set(e.scale * e.facing, e.scale / GROUND)

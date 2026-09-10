@@ -228,7 +228,8 @@ if (typeof window !== 'undefined') {
     GPU_ISLANDS = new URLSearchParams(window.location.search).get('gpu') !== '0'
   } catch { /* an address we cannot parse is one we do not act on */ }
 }
-import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
+import { openSeaPresence, BEAT_MS, POSE_CODE, POSE_FRAME, type SeaPresence } from '@/lib/seaPresence'
+import type { Frame } from './skiffArt'
 import { finnHaunt, FINN_REACH, FINN_LOOK, FINN_MOORING } from '@/lib/seaFinn'
 import { swellAt, swellHeel } from './seaSwell'
 import { getTrawlState } from '../fishing/trawls/actions'
@@ -4090,6 +4091,9 @@ export default function SeaMap({
   // socket — and twenty seconds of sailing is about a screen, which is close
   // enough to steer by and closes every time either of you flushes.
   const [friends, setFriends] = useState<FriendAtSea[]>([])
+  /** What each friend is doing, by name. Mirrors the ref the loop reads, and
+   *  exists so the DOM fallback re-renders their sprite when they cast. */
+  const [friendPoses, setFriendPoses] = useState<Record<string, Frame>>({})
   /** One node per friend, moved by the frame loop. React is told when somebody
    *  arrives or leaves, never that they moved. */
   const friendRefs = useRef<Map<string, HTMLElement>>(new Map())
@@ -4106,6 +4110,9 @@ export default function SeaMap({
     /** When this boat was last heard from over the wire, 0 for never. Guards
      *  the stale poll from stomping a live position. */
     live: number
+    /** What they are doing with their hands, off the last beat. The loop reads
+     *  this every frame; `friendPoses` mirrors it for the DOM fallback. */
+    pose: Frame
   }>>(new Map())
   /** True while a friend is close enough to be worth drawing well. Drives the
    *  flush and the poll — see NEAR_ENOUGH. */
@@ -4579,6 +4586,9 @@ export default function SeaMap({
    *  frame; the canvas reads this and is done with it before the next one. */
   const fleetAt = useRef<{
     key: string; x: number; y: number; facing: number; scale: number; dim: number; ang: number
+    /** Which of the three captain frames to draw them in. Only friends ever
+     *  send one; traders and Finn are always at rest. */
+    frame?: Frame
     /** Where the HULL sits, as opposed to where the sprite is centred. The
      *  sheet reserves a large empty region up and to the left for the rod, so
      *  the boat is well below the middle of it — rings drawn at the centre
@@ -5777,7 +5787,7 @@ export default function SeaMap({
    * loop already reads, so a live position and a polled one are the same kind
    * of fact and nothing downstream can tell them apart.
    */
-  const onBeat = useCallback((id: string, b: { x: number; y: number; f: number }) => {
+  const onBeat = useCallback((id: string, b: { x: number; y: number; f: number; p?: 0 | 1 | 2 }) => {
     const name = crewNames.current.get(id)
     if (!name) return
     const at = friendAt.current.get(name)
@@ -5785,11 +5795,45 @@ export default function SeaMap({
     at.target.x = b.x
     at.target.y = b.y
     at.live = Date.now()
+    // ── AND WHAT THEY ARE DOING ────────────────────────────────────────
+    //
+    // Held on the ref for the frame loop, which reads it sixty times a second,
+    // and pushed into React state ONLY when it actually changes. A pose changes
+    // three or four times across a catch that lasts most of a minute, so this
+    // is a handful of renders an outing rather than two a second — and it is
+    // what lets the DOM fallback draw the same thing the canvas does.
+    const pose = POSE_FRAME[b.p ?? 0]
+    if (at.pose !== pose) {
+      at.pose = pose
+      // ONLY THE DOM FALLBACK NEEDS THE RENDER. On the canvas the frame loop
+      // reads the ref above sixty times a second and React never has to hear
+      // about it, so the default path pays nothing for this at all.
+      if (!GPU_ISLANDS) setFriendPoses(m => ({ ...m, [name]: pose }))
+    }
     // FACING COMES OVER THE WIRE rather than being inferred here. The loop
     // guesses it from the easing delta, which is fine at a 20s poll where every
     // step is hundreds of pixels, and wrong at close quarters where the steps
     // are small enough that a boat sitting still flickers.
     at.face = b.f
+  }, [])
+
+  /**
+   * THEY LANDED ONE, and you see it happen.
+   *
+   * The same splash their own screen just drew, off their own bow, on the
+   * frame their rod snapped up. That is the whole of "watching somebody fish":
+   * the pose says they are working a fish and this says they got it.
+   *
+   * Off the eased position rather than the reported one, so the water breaks
+   * where the hull is actually drawn rather than half a screen ahead of it at
+   * the target the easing is still travelling to.
+   */
+  const onFriendLanded = useCallback((id: string, perfect: boolean) => {
+    const name = crewNames.current.get(id)
+    const at = name ? friendAt.current.get(name) : null
+    if (!at) return
+    gpuRef.current?.splash(
+      at.shown.x + at.face * 150, at.shown.y + 70, at.face, perfect)
   }, [])
 
   /**
@@ -5823,7 +5867,7 @@ export default function SeaMap({
       presence.current?.close()
       presence.current = null
     } else {
-      if (!presence.current) presence.current = openSeaPresence({ userId, onBeat })
+      if (!presence.current) presence.current = openSeaPresence({ userId, onBeat, onLanded: onFriendLanded })
       presence.current.setCrew(friends.map(f => f.id))
     }
 
@@ -5839,6 +5883,9 @@ export default function SeaMap({
       }
       else friendAt.current.set(f.username, {
         shown: { x: f.x, y: f.y }, target: { x: f.x, y: f.y }, face: 1, live: 0,
+        // Nobody is fishing until they say so. A friend found by the poll is a
+        // position and nothing else.
+        pose: 'rest' as const,
         // A PHASE OFF THEIR NAME, so two friends riding the same swell are not
         // pumping in lockstep — which reads as one animation on two sprites
         // rather than two boats on water. Derived from the name so it is stable
@@ -5847,7 +5894,7 @@ export default function SeaMap({
         bob: [...f.username].reduce((a, c) => a + c.charCodeAt(0), 0) % 628 / 100,
       })
     }
-  }, [friends, userId, onBeat])
+  }, [friends, userId, onBeat, onFriendLanded])
 
   /**
    * THE LIVE WATER.
@@ -5907,6 +5954,10 @@ export default function SeaMap({
       if (document.visibilityState === 'hidden') return
       presence.current?.send({
         x: Math.round(me.x), y: Math.round(me.y), f: facing.current,
+        // The frame the fishing screen already hands back through onPose, so
+        // what your friend sees you doing is what your own captain is doing —
+        // one source, and it cannot drift.
+        p: POSE_CODE[frameRef.current],
       })
     }, BEAT_MS)
     return () => clearInterval(id)
@@ -7190,6 +7241,11 @@ export default function SeaMap({
             ang: Math.atan2(at.target.y - at.shown.y, at.target.x - at.shown.x),
             cx: at.shown.x + WATERLINE_X,
             cy: at.shown.y + WATERLINE_Y / GROUND,
+            // GONE QUIET MEANS GONE BACK TO IDLE. Beats stop the moment you
+            // are no longer near each other, so a friend who wandered off
+            // mid-cast would otherwise stand there holding the pose for as
+            // long as they stayed on the chart.
+            frame: (at.live && Date.now() - at.live < 6_000) ? at.pose : 'rest',
           })
         }
         gpuRef.current.fleet(list)
@@ -8396,7 +8452,8 @@ export default function SeaMap({
             rather than a stand-in. The sea traders get a cut-down look because
             they are scenery; somebody you sailed out to meet is not. */}
         {friends.map(f => (
-          <FriendBoat key={f.username} friend={f} refs={friendRefs} />
+          <FriendBoat key={f.username} friend={f} refs={friendRefs}
+            pose={friendPoses[f.username] ?? 'rest'} />
         ))}
 
         {/* WHAT THE TIDE BROUGHT. */}
@@ -10204,9 +10261,16 @@ hullRef={hullRefFor(t.key)} />
           // to plainly be on your line.
           onGolden={setGolden}
           goldenPending={golden !== null}
-          onLanded={perfect => gpuRef.current?.splash(
-            pos.current.x + facing.current * 150, pos.current.y + 70,
-            facing.current, perfect)}
+          onLanded={perfect => {
+            gpuRef.current?.splash(
+              pos.current.x + facing.current * 150, pos.current.y + 70,
+              facing.current, perfect)
+            // AND ANYBODY ALONGSIDE SEES IT. The same instant, off the same
+            // callback, so what a friend watches is the moment your rod came
+            // up rather than a card they cannot see resolving a second later.
+            // A no-op when the socket is down, which is most of the time.
+            presence.current?.landed(perfect)
+          }}
           onBusy={setDialUp}
           onCanLeave={setCanLeaveFishing}
           spritesReady={spritesReady}
@@ -12078,9 +12142,14 @@ const GateSign = memo(function GateSign({ to }: { to: string }) {
  * point — you see what they see, so the hull they saved for and the hat they
  * picked are the hull and hat you meet on the water.
  */
-const FriendBoat = memo(function FriendBoat({ friend, refs }: {
+const FriendBoat = memo(function FriendBoat({ friend, refs, pose }: {
   friend: FriendAtSea
   refs: React.RefObject<Map<string, HTMLElement>>
+  /** What they are doing with their hands. Comes down as a prop rather than
+   *  off the loop's ref because this path is React-rendered: the canvas reads
+   *  the ref sixty times a second, and this re-renders on the handful of
+   *  occasions across a catch when the pose actually changes. */
+  pose: Frame
 }) {
   return (
     <div
@@ -12108,7 +12177,7 @@ const FriendBoat = memo(function FriendBoat({ friend, refs }: {
             boatId={friend.boatId}
             hatId={friend.hatId}
             gear={friend.gear}
-            frame="rest"
+            frame={pose}
           />
         )}
       </div>

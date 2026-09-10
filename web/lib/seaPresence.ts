@@ -63,7 +63,23 @@ export type Beat = {
   y: number
   /** Which way the hull is pointed, -1 or 1. */
   f: number
+  /**
+   * WHAT THEY ARE DOING WITH THEIR HANDS: 0 idle, 1 waiting on a bite, 2 casting
+   * or working the reel. One digit rather than the frame's name, because this
+   * rides along on a message that goes out twice a second and 'rest' is four
+   * times the bytes of 0 for the same three states.
+   *
+   * The frames are the ones every captain composite already has, so a friend
+   * fishing beside you is drawn by exactly the same code that draws you fishing
+   * — no second animation, no stand-in pose, nothing to keep in step.
+   */
+  p?: Pose
 }
+
+/** rest / wait / cast, as they go over the wire. */
+export type Pose = 0 | 1 | 2
+export const POSE_FRAME = ['rest', 'wait', 'cast'] as const
+export const POSE_CODE = { rest: 0, wait: 1, cast: 2 } as const
 
 /**
  * HOW OFTEN A BOAT REPORTS ITSELF while somebody is watching.
@@ -113,6 +129,8 @@ export type SeaPresence = {
   /** Report where you are. Cheap to call and does nothing if the channel is
    *  not up yet, so callers never have to check. */
   send: (b: Beat) => void
+  /** You landed one. Fires once, immediately, outside the move gate. */
+  landed: (perfect: boolean) => void
   close: () => void
 }
 
@@ -125,6 +143,11 @@ export type SeaPresence = {
 export function openSeaPresence(opts: {
   userId: string
   onBeat: (friendId: string, b: Beat) => void
+  /** THEY LANDED ONE. A separate event because it is a MOMENT rather than a
+   *  state: it happens once, it must not be missed, and it must not wait for
+   *  the next position beat to be worth sending. Costs one message per catch
+   *  per watcher, which against 2Hz of position is a rounding error. */
+  onLanded?: (friendId: string, perfect: boolean) => void
 }): SeaPresence {
   const supabase = createClient()
   const listening = new Map<string, RealtimeChannel>()
@@ -132,7 +155,7 @@ export function openSeaPresence(opts: {
   let mineReady = false
   let closed = false
   /** The last beat actually put on the wire, for the move gate. */
-  let sent: { x: number; y: number; f: number; at: number } | null = null
+  let sent: { x: number; y: number; f: number; p: Pose; at: number } | null = null
   /** Who we have been told to listen to, whether or not the socket is up yet. */
   let wanted = new Set<string>()
 
@@ -214,7 +237,15 @@ export function openSeaPresence(opts: {
       // NaN and the boat would vanish with no error anywhere. Cheap to check,
       // impossible to debug if it ever happened.
       if (!Number.isFinite(x) || !Number.isFinite(y)) return
-      opts.onBeat(id, { x, y, f: b.f === -1 ? -1 : 1 })
+      // The pose is cosmetic and comes off another player's browser, so it is
+      // clamped to the three frames that exist rather than trusted. Anything
+      // else reads as idle.
+      const p: Pose = b.p === 1 ? 1 : b.p === 2 ? 2 : 0
+      opts.onBeat(id, { x, y, f: b.f === -1 ? -1 : 1, p })
+    })
+    ch.on('broadcast', { event: 'fish' }, msg => {
+      const m = msg.payload as { perfect?: unknown } | null
+      opts.onLanded?.(id, m?.perfect === true)
     })
     ch.subscribe(status => {
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -242,14 +273,28 @@ export function openSeaPresence(opts: {
     send(b: Beat) {
       if (closed || !mine || !mineReady) return
       // THE MOVE GATE. Cheap to call every beat and mostly says no.
-      if (sent) {
+      //
+      // A CHANGE OF POSE ALWAYS GETS THROUGH, and that exception is the whole
+      // reason fishing is visible at all: somebody working a rod is standing
+      // still by definition, so the gate that exists to stop a moored boat
+      // costing anything would have swallowed every frame of it. Casting,
+      // hooking and landing are three sends across a catch that lasts the best
+      // part of a minute, which is cheaper than the position beats the same
+      // captain sends while merely sailing past.
+      const posed = (b.p ?? 0)
+      if (sent && posed === sent.p) {
         const moved = Math.hypot(b.x - sent.x, b.y - sent.y)
         const stale = Date.now() - sent.at > IDLE_MS
         const same = moved < 0.5 && b.f === sent.f
         if (moved < MOVE_MIN && !(stale && !same)) return
       }
-      sent = { x: b.x, y: b.y, f: b.f, at: Date.now() }
+      sent = { x: b.x, y: b.y, f: b.f, p: posed, at: Date.now() }
       void mine.send({ type: 'broadcast', event: 'pos', payload: b })
+    },
+
+    landed(perfect: boolean) {
+      if (closed || !mine || !mineReady) return
+      void mine.send({ type: 'broadcast', event: 'fish', payload: { perfect } })
     },
 
     close() {
