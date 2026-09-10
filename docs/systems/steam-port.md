@@ -205,8 +205,25 @@ and it does not care what carries it. See ocean-hub.md.
 
 ### 7. Compliance and the store
 
-- **AI-generated content must be declared.** The art comes out of nano-banana and Kie.ai. This
-  is a hard requirement at submission, not a formality.
+- **AI-generated content must be declared, and this is a RECEPTION risk rather than a
+  paperwork one.** An earlier draft of this page filed it under compliance, which
+  under-weighted it badly. Valve has required disclosure since early 2024 and it appears
+  PUBLICLY on the store page, so every prospective buyer sees it before clicking. Games have
+  been review-bombed over exactly that line, and the hostility concentrates among the people
+  who write reviews and post on forums — which is the audience that decides a launch.
+
+  It weighs against porting at all, and for this game more than most: the art is a large part
+  of the appeal and there is a great deal of it — 249 badges, 75 crew skins, the fish, the
+  hulls, the islands, all generated. Replacing it wholesale is not realistic at that volume.
+
+  If it ever does come up, the affordable version is the useful thing to know: **what gets
+  judged is the store capsule, the trailer and the first screenshots**, not badge icons nobody
+  sees before buying. Commissioning hero art for the storefront while the generated long tail
+  stays is the only version of this that costs a sane amount. Disclosure would still be
+  required and still be visible; the thing people react to first would be real work.
+
+  None of this applies on the web, which has no disclosure requirement and no review system to
+  bomb. It is one more reason the parking decision was the right one.
 - **Audit the casino before rating.** Blackjack, roulette, slots and a chip purse. Chips are
   bought with doubloons, which are earned — but trace every path from a PURCHASED currency to
   a chip and make sure none exists. Under premium buy-once there is no purchased currency at
