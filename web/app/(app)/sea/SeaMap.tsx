@@ -585,6 +585,54 @@ const Z = {
  * small enough that being turned back does not look like being thrown back.
  */
 const REEF_MARGIN = 40
+
+/**
+ * ── HOW FAR IN OR OUT THE WHEEL MAY GO ──────────────────────────────────────
+ *
+ * Pulled back to 0.55 of the fitted zoom and leaned in to 1.6. Named because
+ * three things have to agree on them: the wheel that sets the number, the
+ * clamp that reads it back off the last visit, and anything that ever asks
+ * whether a stored value is still one this build allows.
+ */
+const WHEEL_MIN = 0.55
+const WHEEL_MAX = 1.6
+
+/**
+ * ── AND IT IS REMEMBERED ────────────────────────────────────────────────────
+ *
+ * The wheel zoom reset to 1 on every mount, so a captain who likes the chart
+ * pulled back set it again on every visit -- and on a desktop, where the wheel
+ * is the only way to set it, that is every single time they open the sea.
+ *
+ * localStorage, and deliberately NOT a profile column. This is a per-DEVICE
+ * preference in the strictest sense: a number tuned on a twenty-seven inch
+ * monitor is the wrong number on a phone, so syncing it across devices would
+ * make the account's most recent screen wrong for every other one. The same
+ * reasoning the audio mutes and the market's colour mode already use.
+ *
+ * Clamped on the way in as well as the way out: a stored value from a build
+ * with different bounds is not a reason to draw an unusable chart.
+ */
+const ZOOM_KEY = 'sea_wheel_zoom'
+
+function recallWheelZoom(): number {
+  try {
+    const n = Number(localStorage.getItem(ZOOM_KEY))
+    if (!Number.isFinite(n) || n <= 0) return 1
+    return Math.max(WHEEL_MIN, Math.min(WHEEL_MAX, n))
+  } catch { return 1 }
+}
+
+/** Written on the settle, not on every notch: a single wheel gesture is dozens
+ *  of events, and localStorage is synchronous -- writing inside the gesture
+ *  would put a main-thread write between the frames the zoom is animating on. */
+let zoomWrite: ReturnType<typeof setTimeout> | null = null
+function rememberWheelZoom(z: number) {
+  if (zoomWrite) clearTimeout(zoomWrite)
+  zoomWrite = setTimeout(() => {
+    try { localStorage.setItem(ZOOM_KEY, String(z)) } catch { /* private mode */ }
+  }, 400)
+}
 /** The ring the anchorage tour's guiding path draws around the campaign's
  *  next stop, and how close counts as having arrived at it. A node is a rock
  *  with a beat on it; this is comfortably outside one, so the path closes as
@@ -2692,6 +2740,10 @@ export default function SeaMap({
     return () => clearTimeout(id)
   }, [arrived, curtain])
   useEffect(() => {
+    // WHERE THEY LEFT IT. Seeded here rather than in the ref's initialiser,
+    // which React evaluates on every render; this runs once, on the client,
+    // and lands before the first fit() below.
+    wheelZoom.current = recallWheelZoom()
     const fit = () => {
       // `||`, not `??`: an element measured before layout reports 0, and 0 is
       // not nullish, so it went straight into zoomFor and fitted the chart to
@@ -2736,9 +2788,10 @@ export default function SeaMap({
       // user setting this must not eat. Taking both is the lesser evil: the
       // chart itself has nothing of its own to scroll.
       e.preventDefault()
-      wheelZoom.current = Math.max(0.55, Math.min(1.6,
+      wheelZoom.current = Math.max(WHEEL_MIN, Math.min(WHEEL_MAX,
         wheelZoom.current * Math.exp(-e.deltaY * 0.0012)))
       fit()
+      rememberWheelZoom(wheelZoom.current)
     }
     const el = wrapRef.current
     el?.addEventListener('wheel', onWheel, { passive: false })
