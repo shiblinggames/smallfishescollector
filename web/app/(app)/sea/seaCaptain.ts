@@ -122,6 +122,73 @@ const HOOK_AT: Record<Frame, Placement> = {
  * per image and size, like every other bake here — a pose change re-cuts it and
  * coming back to a pose is a lookup.
  */
+/**
+ * ── WHERE THE PAINT ACTUALLY IS IN THE PLATE ────────────────────────────────
+ *
+ * The top and bottom of the opaque pixels, as fractions of the plate's height.
+ *
+ * This exists because a plate is not a picture of a boat, it is a BOX with a
+ * picture in it, and how much of the box the picture fills is up to whoever
+ * exported it. The fishing sheet is cropped hard at the water, so its bottom
+ * edge IS the waterline and everything that assumed so was right. The sea
+ * hulls are 640 by 640 squares with the ship floating in the middle:
+ *
+ *     sloop_v3        paint ends at 69% of the plate
+ *     schooner_v3     74%
+ *     brigantine_v3   76%
+ *     galleon_v3      86%
+ *     man-o-war_v3    92%
+ *     the skins       100%
+ *
+ * So a reflection mirrored about the plate's bottom edge is thrown up to a
+ * third of a plate too low - which is exactly what it looked like, a ship with
+ * its image detached and swimming somewhere underneath it.
+ *
+ * Measured once per image and cached. Scanned at a reduced width because only
+ * the ROWS matter: a 64 pixel wide draw answers the same question for a
+ * fortieth of the pixels.
+ */
+const paintRows = new Map<string, { top: number; bot: number }>()
+
+function paintBand(img: CanvasImageSource, key: string): { top: number; bot: number } {
+  const hit = paintRows.get(key)
+  if (hit) return hit
+  const fallback = { top: 0, bot: 1 }
+  const iw = (img as HTMLImageElement).naturalWidth || (img as HTMLCanvasElement).width || 0
+  const ih = (img as HTMLImageElement).naturalHeight || (img as HTMLCanvasElement).height || 0
+  if (!iw || !ih) return fallback
+
+  const W = 64
+  const H = Math.max(2, Math.round((ih / iw) * W))
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const g = c.getContext('2d', { willReadFrequently: true })
+  if (!g) return fallback
+  g.drawImage(img, 0, 0, W, H)
+
+  let data: Uint8ClampedArray
+  try {
+    data = g.getImageData(0, 0, W, H).data
+  } catch {
+    // A tainted canvas cannot be read. The whole plate is the cautious answer
+    // and it is what everything did before this existed.
+    return fallback
+  }
+
+  const ink = (y: number) => {
+    for (let x = 0; x < W; x++) if (data[(y * W + x) * 4 + 3] > 16) return true
+    return false
+  }
+  let top = 0
+  let bot = H - 1
+  while (top < H && !ink(top)) top++
+  while (bot > top && !ink(bot)) bot--
+  const out = top >= bot ? fallback : { top: top / H, bot: (bot + 1) / H }
+  paintRows.set(key, out)
+  return out
+}
+
 const soakPlates = new Map<string, Texture>()
 
 function soakPlate(
@@ -146,7 +213,13 @@ function soakPlate(
   // the hull already is, which is the whole trick: the shape comes from the
   // art and the fade comes from here.
   g.globalCompositeOperation = 'source-in'
-  const grad = g.createLinearGradient(0, 0, 0, c.height)
+  // OVER THE PAINT, NOT OVER THE BOX. On a plate with a third of its height
+  // empty below the hull, a ramp measured from the plate's edges puts its whole
+  // wet end in the transparent margin and leaves the boat dry.
+  const band = paintBand(img, key)
+  const y0 = band.top * c.height
+  const y1 = band.bot * c.height
+  const grad = g.createLinearGradient(0, y0, 0, y1)
   // Nothing for the top two thirds — she is not awash — then slow, then quick.
   // Water does not creep evenly up a hull; it takes the last inch all at once.
   grad.addColorStop(0.00, 'rgba(255,255,255,0)')
@@ -658,7 +731,12 @@ export async function makeShip(
   // reflection is in the water rather than beneath the mark she casts on it.
   const LIE = 0.55
   const SINK = 0.04
-  const water = h / 2 - h * SINK
+  // HER OWN WATERLINE, not the plate's bottom edge. See paintBand: these hulls
+  // sit in a square with a lot of nothing under them, and mirroring about the
+  // box threw the reflection a third of a plate too low.
+  const band = img ? paintBand(img, ship.url) : { top: 0, bot: 1 }
+  const paintH = h * (band.bot - band.top)
+  const water = (band.bot - 0.5) * h - paintH * SINK
   const back: Sprite = new PIXI.Sprite(tex)
   back.anchor.set(0.5)
   back.scale.set(ship.flip ? -k : k, -k * LIE)
@@ -693,6 +771,7 @@ export async function makeShip(
     // A ship of the line is heavier and sits deeper, so she carries more of it.
     soak.alpha = Math.max(0, 0.88 + k * 0.3)
   }
+
   placeSoak(0)
 
   let wob = 0
