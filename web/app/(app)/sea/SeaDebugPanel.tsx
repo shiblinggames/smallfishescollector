@@ -31,6 +31,17 @@ export type DebugFriend = {
   span: number
   /** Extrapolated speed in world px per second, as the loop computed it. */
   speed: number
+  /** THE DRAWN MOTION, frame to frame, over the last second: the smallest and
+   *  largest step the sprite took and how many frames that covers.
+   *
+   *  This is the row that settles where jitter lives. Even steps and a frame
+   *  count near 60 mean the maths is smooth and the loop is running — anything
+   *  still juddering is below this. Wildly uneven steps mean the position
+   *  itself is jumping. A low frame count means the loop is not running at all,
+   *  and nothing above it matters. */
+  stepMin: number
+  stepMax: number
+  frames: number
 }
 
 export default function SeaDebugPanel({ read }: {
@@ -71,6 +82,11 @@ export default function SeaDebugPanel({ read }: {
           lines.push(
             `${f.name}: beat ${age}  span ${Math.round(f.span)}ms  ${Math.round(f.speed)}px/s`
             + `  drawn ${off}px off  ${away}px from me`,
+          )
+          // The motion itself. Steps should sit near speed/fps and be even.
+          lines.push(
+            `  step ${f.stepMin.toFixed(1)}..${f.stepMax.toFixed(1)}px over ${f.frames}fr`
+            + `  (even = smooth maths)`,
           )
         }
         el.textContent = lines.join('\n')

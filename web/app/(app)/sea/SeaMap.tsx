@@ -4199,6 +4199,13 @@ export default function SeaMap({
     /** Whatever the loop last worked out, for the readout. Written every frame
      *  and read only while debugging — see SeaDebugPanel. */
     dbgSpan: number; dbgSpeed: number
+    /** THE DRAWN MOTION ITSELF, frame to frame: the smallest and largest step
+     *  the sprite has taken recently, and how many frames it has been counted
+     *  over. Even steps mean the maths is smooth and any remaining jitter is
+     *  further down; alternating big and small steps mean it is not. This is
+     *  the measurement that settles which half to look in. */
+    dbgStepMin: number; dbgStepMax: number; dbgFrames: number; dbgAt: number
+    dbgLastX: number; dbgLastY: number
     /** How much of the swell this hull takes. A ship of the line is not thrown
      *  about by the chop that lifts a rowboat — same reasoning as `heel`. */
     lift: number
@@ -5993,10 +6000,22 @@ export default function SeaMap({
       const ry = (b.y - at.target.y) / span
       const sp = Math.hypot(rx, ry)
       const k = sp > MAX_BEAT_SPEED ? MAX_BEAT_SPEED / sp : 1
-      // SMOOTHED, not replaced. One stretched gap should bend the estimate,
-      // not become it: a single late packet would otherwise halve the speed
-      // for a beat and the hull would visibly hesitate.
-      const a = (at.vx || at.vy) ? 0.45 : 1
+      // ── BARELY SMOOTHED, AND THAT IS A CHANGE ────────────────────────
+      //
+      // This was 0.45, which at five beats a second is a lag of about two
+      // beats. That was worth paying while the speed was being measured
+      // against ARRIVAL times and was consequently noisy — but the sender's
+      // own stamp took the noise out, and what the smoothing costs is now the
+      // only thing it does: when somebody TURNS, the old heading keeps being
+      // extrapolated for two beats before the estimate comes round, so the
+      // hull runs on past the corner and then snaps back. Steering is most of
+      // what anybody does out here, so that is a jolt every time they touch
+      // the helm.
+      //
+      // Nearly all of the new reading now. Enough weight on the old one that a
+      // single late packet bends the estimate rather than becoming it, and no
+      // more than that.
+      const a = (at.vx || at.vy) ? 0.8 : 1
       at.vx += (rx * k - at.vx) * a
       at.vy += (ry * k - at.vy) * a
     } else if (span > 1200) {
@@ -6113,6 +6132,8 @@ export default function SeaMap({
         // No velocity yet: one sample is a position, not a motion.
         prev: { x: f.x, y: f.y }, prevT: 0, tgtT: 0, srcT: 0, vx: 0, vy: 0,
         dbgSpan: 0, dbgSpeed: 0,
+        dbgStepMin: 0, dbgStepMax: 0, dbgFrames: 0, dbgAt: 0,
+        dbgLastX: f.x, dbgLastY: f.y,
         lift: f.onShip ? shipLift(f.shipTier) : 1,
         // Nobody is fishing until they say so. A friend found by the poll is a
         // position and nothing else.
@@ -7420,6 +7441,20 @@ export default function SeaMap({
           const aimY = at.target.y + at.vy * age
           at.dbgSpeed = Math.hypot(at.vx, at.vy) * 1000
           at.dbgSpan = at.prevT > 0 ? at.tgtT - at.prevT : 0
+          if (SEA_DEBUG) {
+            // How far the sprite actually travelled since the last frame.
+            // Reset each second so the window is recent rather than lifetime.
+            const step = Math.hypot(at.shown.x - at.dbgLastX, at.shown.y - at.dbgLastY)
+            at.dbgLastX = at.shown.x; at.dbgLastY = at.shown.y
+            if (nowMs - at.dbgAt > 1000) {
+              at.dbgAt = nowMs; at.dbgFrames = 0
+              at.dbgStepMin = step; at.dbgStepMax = step
+            } else {
+              at.dbgFrames++
+              if (step < at.dbgStepMin) at.dbgStepMin = step
+              if (step > at.dbgStepMax) at.dbgStepMax = step
+            }
+          }
           const dxf = aimX - at.shown.x
           const dyf = aimY - at.shown.y
           // A LONG WAY OFF IS NOT A JOURNEY. Somebody who has just come back
@@ -10410,6 +10445,7 @@ hullRef={hullRefFor(t.key)} />
             target: { x: at.target.x, y: at.target.y },
             shown: { x: at.shown.x, y: at.shown.y },
             live: at.live, span: at.dbgSpan, speed: at.dbgSpeed,
+            stepMin: at.dbgStepMin, stepMax: at.dbgStepMax, frames: at.dbgFrames,
           })),
         })} />
       )}
