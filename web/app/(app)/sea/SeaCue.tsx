@@ -169,6 +169,38 @@ export default function SeaCue({ seen, live, quiet }: {
   // — it has been latched — and two cards at once is the thing this avoids.
   useEffect(() => { if (quiet && showing) setShowing(null) }, [quiet, showing])
 
+  /**
+   * ── AND THE THING IT IS TALKING ABOUT LIGHTS UP ────────────────────────────
+   *
+   * Every cue here names a disc — "the disc up there", "the *crew* disc", "the
+   * *slots*" — and `target` has been on the type since these were written, and
+   * populated on six of them. NOTHING EVER READ IT. So the card pointed at a
+   * row of eight identical circles and left the captain to work out which.
+   *
+   * A cue that says "that is a level" while the level disc sits unlit is worse
+   * than no cue: it teaches that the game refers to things you cannot find.
+   *
+   * Same flash both tours use, and the same retry with it. The HUD row hides in
+   * a fight and while the rod is out, so the disc a card points at can arrive a
+   * frame or two after the card does — without the retry the first cue after
+   * reeling in would point at nothing.
+   */
+  useEffect(() => {
+    const want = CUES.find(c => c.id === showing)?.target
+    const clear = () => document.querySelectorAll('.coach-flash')
+      .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
+    clear()
+    if (!want) return
+    let tries = 0
+    const find = () => {
+      const el = document.querySelector(`[data-coach="${want}"]`)
+      if (el) { el.classList.add('coach-flash', 'coach-flash-gold'); return }
+      if (++tries < 20) window.setTimeout(find, 120)
+    }
+    find()
+    return clear
+  }, [showing])
+
   if (!showing) return null
   const cue = CUES.find(c => c.id === showing)
   if (!cue) return null

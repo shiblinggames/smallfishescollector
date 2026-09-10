@@ -2584,7 +2584,7 @@ export default function FishingHere({
               See components/DialButton; the materials come from FishingDial so
               the instrument and its controls cannot drift apart. */}
           {(phase === 'idle' || phase === 'result') && (
-            <DialButton motionKey="cast" size={HELM_D}
+            <DialButton motionKey="cast" size={HELM_D} coach="cast"
               accent="#67d4e8" glow="rgba(14,116,144,0.4)"
               disabled={!canCast}
               onPress={() => { if (phase === 'result') castAgain(); else cast() }}
@@ -2677,6 +2677,10 @@ export default function FishingHere({
           // frame the server answered.
           animate={landedKey > 0 ? { scale: [1, 1.14, 1] } : {}}
           key={`holdchip-${landedKey}`}
+          // THE TOUR POINTS HERE. "Watch it drop into the hold" named a chip
+          // the captain had never been shown, on a row of five that all look
+          // alike. See seaOnboarding.
+          data-coach="hold"
           transition={{ duration: 0.34, ease: [0.34, 1.56, 0.64, 1] }}
           style={{
             ...MENU_BTN,

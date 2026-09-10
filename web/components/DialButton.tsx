@@ -40,8 +40,18 @@ import { motion } from 'framer-motion'
 import { DIAL_MATERIAL } from './FishingDial'
 
 export default function DialButton({
-  size, accent, glow, label, onPress, disabled = false, motionKey,
+  size, accent, glow, label, onPress, disabled = false, motionKey, coach,
 }: {
+  /**
+   * `data-coach` handle, for a tour that needs to flash this control.
+   *
+   * The first voyage's third beat is "Now *Cast*, and watch the needle", and it
+   * has asked for `cast` since it was written — at a button that had no handle,
+   * so the one instruction in the tour that names a control lit nothing. A
+   * captain being told to press something is exactly the moment to show them
+   * WHICH something.
+   */
+  coach?: string
   /** Matched to the helm on the chart, so a swap of two controls is one control
    *  changing role and the thumb never moves. */
   size: number
@@ -69,7 +79,7 @@ export default function DialButton({
   const ring = bezel + 1
   const face = size - ring * 2
   return (
-    <motion.button key={motionKey}
+    <motion.button key={motionKey} data-coach={coach}
       onPointerDown={e => { e.preventDefault(); onPress() }}
       className="font-karla font-700 uppercase flex items-center justify-center"
       initial={{ opacity: 0, scale: 0.92 }}

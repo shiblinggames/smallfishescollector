@@ -158,6 +158,10 @@ export const FIRST_VOYAGE: Beat[] = [
     ...K,
     text: 'There’s your first. Watch it drop into the *hold*, where your catch sits until you sell it.',
     until: 'next',
+    // NAMED, SO SHOWN. The hold is one chip in a row of five that all look
+    // alike, and a beat that says "the hold" without lighting it is asking a
+    // captain to guess.
+    target: 'hold',
     holdCast: true,
     afterMs: 900,
   },
