@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { motion } from 'framer-motion'
 import StepTourModal, { type TourStep } from '@/components/StepTourModal'
 import GuideScene from '@/components/GuideScene'
 import { GUIDES } from '@/lib/onboardingScenes'
@@ -16,9 +17,9 @@ interface BeforeInstallPromptEvent extends Event {
 // browser, not a PWA) the "add to home screen" step. Finishing grants the
 // welcome pack + marks has_seen_welcome.
 const WELCOME_SCENE: SceneLine[] = [
-  { ...GUIDES.doby, text: "Welcome aboard, Captain. The sea out there is yours to sail." },
-  { ...GUIDES.kat,  text: "The plan is simple: catch fish, sell them for coin, and build up a crew." },
-  { ...GUIDES.doby, text: "We'll walk you through it. Let's get you on the water." },
+  { ...GUIDES.doby, text: "Welcome aboard Captain! The sea is yours to sail!" },
+  { ...GUIDES.kat,  text: "Hold on Doby, let's get them catching some fish first." },
+  { ...GUIDES.doby, text: "Let's get'er done. We'll walk...I mean sail you through it." },
 ]
 
 export default function WelcomeModal() {
@@ -26,6 +27,8 @@ export default function WelcomeModal() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [env, setEnv] = useState<{ standalone: boolean; ios: boolean; chromeIOS: boolean; mobile: boolean } | null>(null)
   const [phase, setPhase] = useState<'scene' | 'install' | 'done'>('scene')
+  /** Going dark on the way out. See grantAndClose. */
+  const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
     const standalone =
@@ -60,9 +63,13 @@ export default function WelcomeModal() {
   }, [])
 
   function grantAndClose() {
-    setPhase('done')
+    // FADE TO BLACK, THEN GO. The reload that follows is a cut either way;
+    // this makes it a cut on purpose, and the chart on the far side opens from
+    // the same black, so the welcome and the sea join up as one shot. The
+    // scene stays mounted under the fade rather than vanishing first.
+    setLeaving(true)
     startTransition(async () => {
-      await claimWelcomePack()
+      await Promise.all([claimWelcomePack(), new Promise(r => setTimeout(r, 560))])
       // STRAIGHT TO THE WATER, AND A REAL LOAD OF IT. The sea page shows a dark
       // field rather than a chart while a captain is still being set up, so
       // the chart has to be built now, from a profile that now has a name, a
@@ -93,20 +100,34 @@ export default function WelcomeModal() {
       : undefined,
   } : null
 
-  if (phase === 'done') return null
+  const curtain = leaving ? (
+    <motion.div aria-hidden
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, ease: 'easeIn' }}
+      style={{ position: 'fixed', inset: 0, background: '#04090f', zIndex: 1400, pointerEvents: 'none' }} />
+  ) : null
+
+  if (phase === 'done') return curtain
 
   if (phase === 'scene') {
     return (
-      <GuideScene
-        title="Welcome"
-        lines={WELCOME_SCENE}
-        ctaLabel="Let's Go →"
-        accent="#60a5fa"
-        onDone={() => { if (installStep) setPhase('install'); else grantAndClose() }}
-      />
+      <>
+        <GuideScene
+          title="Welcome"
+          lines={WELCOME_SCENE}
+          ctaLabel="Let's Go →"
+          accent="#60a5fa"
+          onDone={() => { if (installStep) setPhase('install'); else grantAndClose() }}
+        />
+        {curtain}
+      </>
     )
   }
 
   // phase === 'install'
-  return <StepTourModal steps={installStep ? [installStep] : []} onDone={grantAndClose} />
+  return (
+    <>
+      <StepTourModal steps={installStep ? [installStep] : []} onDone={grantAndClose} />
+      {curtain}
+    </>
+  )
 }

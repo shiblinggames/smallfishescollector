@@ -140,9 +140,10 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
     })
   }
 
-  if (done && showWelcomeAfter) return <WelcomeModal />
-  if (done) return null
-
+  // The shell stays mounted and CLOSES, so it fades out while the welcome
+  // scene fades in over it, instead of being torn out of the tree the frame
+  // before the scene arrives. When there is no welcome the shell simply
+  // closes and the page reloads under it.
   return (
     /* ── ON THE SHELL EVERY OTHER MODAL USES ─────────────────────────────
        This centred a card in a fixed box with no scroller, which is fine until
@@ -156,7 +157,9 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
        the fixed Nav and the bottom for the mobile tab bar and the home
        indicator. `onClose` is a no-op because this one is not dismissible --
        there is no game behind it to go back to. */
-    <PopupShell open onClose={() => {}}>
+    <>
+    {done && showWelcomeAfter && <WelcomeModal />}
+    <PopupShell open={!done} onClose={() => {}}>
       <AnimatePresence mode="wait">
         {step === 'username' && (
           <motion.div
@@ -466,6 +469,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
         )}
       </AnimatePresence>
     </PopupShell>
+    </>
   )
 }
 

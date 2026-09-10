@@ -62,10 +62,13 @@ export type Beat = {
    * What has to happen before the beat is done.
    *
    *   'next'    — the captain reads it and taps Next.
-   *   'cast'    — waits until the rod is actually out. The line before it says
-   *               to sail out and cast, and nothing advances until they do:
-   *               a tour that walks itself past the one instruction it gave is
-   *               a tour that taught nothing.
+   *   'fish'    — waits until the rod is actually out. The line says to enter
+   *               fishing mode, and nothing advances until they do: a tour
+   *               that walks itself past the one instruction it gave is a tour
+   *               that taught nothing.
+   *   'bite'    — waits until something is on the line. The cast line stays up
+   *               through the cast and the wait, and the reel line arrives on
+   *               the bite, which is the moment it is about.
    *   'catch'   — waits for a fish in the hold.
    *   'look'    — the camera flies somewhere and holds while they read.
    *   'reach'   — waits until they have sailed into the ring the path draws.
@@ -79,7 +82,7 @@ export type Beat = {
    *               the beat that sends them there. Skipped outright for a
    *               captain who already has some.
    */
-  until: 'next' | 'cast' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait'
+  until: 'next' | 'fish' | 'bite' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
@@ -94,6 +97,16 @@ export type Beat = {
    * step and a button that mysteriously stopped working.
    */
   holdCast?: true
+  /**
+   * BRING THE ROD IN when this beat comes up.
+   *
+   * The catch used to stow the rod on the spot, and that was a beat too early:
+   * the two lines after it point at the hold and the XP bar, both of which are
+   * INSIDE the fishing overlay, so they were pointing at things that had just
+   * been taken off the screen. The rod comes in on the beat that sends them
+   * somewhere else instead.
+   */
+  stowRod?: true
   /** Draw the guiding path to this place. Naming somewhere says WHAT; on a
    *  chart this size a new captain also needs WHICH WAY, and an instruction
    *  they cannot follow is worse than none. */
@@ -130,135 +143,111 @@ export const FIRST_VOYAGE: Beat[] = [
   {
     ...D,
     // The steering line teaches the input they actually have. A fine pointer
-    // means a mouse, and a mouse usually means keys under the other hand.
+    // means a mouse and keys; anything else means the thumb box.
     text: typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches
-      ? 'Welcome aboard, Captain. This is the whole sea. Hold *WASD* to steer her, or just click where you want to go.'
-      : 'Welcome aboard, Captain. This is the whole sea. Drag anywhere to steer her.',
+      ? 'Here it is...the open sea. Majestic isn’t it? You can move around by clicking, or with *WASD*.'
+      : 'Here it is...the open sea. Majestic isn’t it? You can move around by dragging the *joystick*.',
     until: 'next',
     target: 'helm',
   },
   // ── THE BAIT ──────────────────────────────────────────────────────────
-  //
-  // A new account has no bait at all, and casting is gated on having some. The
-  // tour used to find that out at the cast beat, three beats and a sail later,
-  // and say so in a line that sent the captain to a Daily Bonus "in the Tavern,
-  // on the Mainland" -- a page that had been folded into a disc on this HUD
-  // long before. So the very first thing a new captain did was get told to go
-  // somewhere that did not exist.
-  //
-  // Now it is a beat of its own, up front, pointing at the disc. It waits for
-  // the worms to actually land, and a captain who already has bait never sees
-  // it: the chart skips it the moment it comes up.
+  // A new account has none, and casting is gated on having some. Waits for
+  // the worms to actually land; a captain who already has bait never sees it.
   {
     ...D,
-    text: 'Before we sail, open your *Daily Haul*, top right. There are free worms in it every day, and a bare hook catches nothing.',
+    text: 'Oof almost forgot. Ya need worms, kid. How you gonna catch anything without bait? Check the *Daily Haul* up there. You get freebies each day. Go and collect your worms.',
     until: 'bait',
     target: 'haul haul-bait',
   },
   {
     ...D,
-    text: 'Head south, out to the *Shallows*. Follow the lights to the ring and I will show you the rest there.',
+    text: 'Fish nearby in the *Shallows* by sailing south of here. Follow the light.',
     until: 'reach',
     path: 'shallows',
   },
   // ── THE CATCH ─────────────────────────────────────────────────────────
+  // NO holdCast HERE. It was on this beat, and startFishing refuses while it
+  // is up, so the tour deadlocked on the one instruction it could not take
+  // back: "fish", refused, silently, for ever. The rod is held down AFTER the
+  // catch, which is the only thing that flag was ever for.
   {
     ...D,
-    text: 'Hold the helm to fish the Shallows. That drops you in and gets your line wet.',
-    until: 'cast',
-    holdCast: true,
+    text: typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches
+      ? 'Click *Fish* to enter fishing mode.'
+      : 'Hold the *helm* to enter fishing mode.',
+    until: 'fish',
+    target: 'fish helm',
     path: 'shallows',
   },
   {
     ...K,
-    text: 'Now *Cast*, and watch the needle. Stopping it in the *gold* is a Perfect. String those together and the streak pays bonus XP, more of it the longer you keep it going. The *green* still catches.',
-    until: 'catch',
-    holdCast: true,
+    text: 'Cast your line!',
+    until: 'bite',
     target: 'cast',
   },
   {
     ...K,
-    text: 'There’s your first. Watch it drop into the *hold*, where your catch sits until you sell it.',
-    until: 'next',
-    // NAMED, SO SHOWN. The hold is one chip in a row of five that all look
-    // alike, and a beat that says "the hold" without lighting it is asking a
-    // captain to guess.
-    target: 'hold',
-    holdCast: true,
-    afterMs: 900,
+    text: 'You’ve caught something! Click *Reel In* to catch it. Hit the green to catch it. But hit the gold and get a perfect catch for bonus XP!',
+    until: 'catch',
+    target: 'reel',
   },
   {
     ...K,
-    // MERGED. The XP bar and what levels buy were two beats saying one thing:
-    // keep fishing and the game opens up. One is enough, at the moment the bar
-    // has just moved for the first time.
-    text: 'Every fish pays *XP* too. Fill the bar along the top and you level up, and levels open better rods, reels and hooks.',
+    text: 'Every fish goes into your *hold*.',
     until: 'next',
+    // Held back until the fish has actually got there. The flight to the hold
+    // is HOLD_PERFECT_MS at most in FishingHere; this clears it with room.
+    target: 'hold',
     holdCast: true,
-    // THE BAR, not the disc. The sentence is about the thing that just moved;
-    // the disc behind it gets its own cue the first time a rank is actually
-    // gained. See sea/SeaCue.
+    afterMs: 1600,
+  },
+  {
+    ...K,
+    text: 'Every fish gives *XP*. If you string perfect catches together, you’ll get lots more XP!',
+    until: 'next',
     target: 'level',
+    holdCast: true,
   },
   // ── AND WHAT IT IS FOR ────────────────────────────────────────────────
   {
     ...D,
-    text: 'A fish in the hold is worth nothing. Take her home to the *Mainland* and I will show you what it is worth.',
+    text: 'Let’s go to the *Mainland* to sell this for some cold, hard...doubloons.',
     until: 'moor',
     at: 'mainland',
     path: 'mainland',
     holdCast: true,
+    stowRod: true,
   },
   {
     ...D,
-    text: 'Tie up and go ashore.',
+    text: 'Dock here and go ashore.',
     until: 'ashore',
     at: 'mainland',
     holdCast: true,
   },
   {
     ...D,
-    text: 'The *Market*. That’s where the hold turns into coin.',
+    text: 'The *Market* is where it’s at.',
     until: 'sold',
     target: 'market',
     holdCast: true,
   },
-  // ── AND WHERE "WHAT NOW" IS ANSWERED ──────────────────────────────────
-  //
-  // THE ONE DISC THAT IS WORTH A BEAT, on both halves of the game. Everything
-  // else on that row is a place you go when you already know you want it; this
-  // is the one you press when you do NOT know, and a captain who has not been
-  // told where that lives has nothing to do but sail about.
-  //
-  // It was a cue for a day, fired the first time a job of Finn's was finished —
-  // and that is the wrong trigger for exactly this one, because it can be hours
-  // away and the question it answers arrives in the first ten minutes.
-  //
-  // ── AND IT NAMES NOBODY ─────────────────────────────────────────────────
-  //
-  // It used to say whose business the pennant was tracking, which hands a
-  // captain the most important name on this water before they have met him.
-  // Everyone out here is somebody you FIND: you sail up, you hail, and the
-  // panel fills in behind you. A tour that reads the cast list out first takes
-  // that away, and it is the one thing on this sea that cannot be given back.
-  //
-  // Describe what the disc HOLDS, never who is in it.
   {
     ...K,
-    text: 'One thing before you go, Captain. The *pennant* up there is your story: everyone you have met out on this water, and whatever they want from you. When you are not sure what to do next, that is the disc to press.',
+    text: 'Not sure what to do next? I recommend finding *Finn*...I’ve heard he always has tasks. Make sure you go around the sea to talk to all the captains out there. There’s treasure all around!',
     until: 'next',
-    target: 'hud-journey',
   },
   {
     ...D,
-    // THE LAST WORD IS A DOOR, NOT A SUMMARY.
-    //
-    // This used to be beat ten of twenty-four, and the fourteen after it named
-    // four islands the captain could not use and four discs they had no reason
-    // to press. Every one of those is a cue now, fired where the thing is —
-    // see sea/SeaCue and sea/SeaLandfallHint.
-    text: 'That’s the whole trade, Captain. Catch, sell, buy better tackle, go further out. The rest you will find on your own, and I will be here when you do.',
+    text: 'You’re all set cap’n. Catch, sell, upgrade your gear and ship. Explore...there’s a lot more past the Expedition gate north of here too. Be sure to check the *map* to see where everything is.',
     until: 'next',
+    target: 'chart',
+  },
+  {
+    ...K,
+    text: 'You can always check your fishing *level* and milestones here as well.',
+    until: 'next',
+    target: 'hud-skill',
   },
 ]
 /**

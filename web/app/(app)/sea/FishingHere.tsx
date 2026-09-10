@@ -371,6 +371,7 @@ export default function FishingHere({
   seaPhase, baitBag, onBaitChange, rack, look, onLookChange, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onReel,
   onBaitSpent, onPose, onBusy, onCanLeave, onLanded, onGolden, goldenPending,
+  onHooked,
   spritesReady, onClose,
 }: {
   zone: string
@@ -469,6 +470,9 @@ export default function FishingHere({
    */
   onReel?: (r: { perfectStreak: number; caught: number }) => void
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
+  /** SOMETHING TOOK THE LINE. Fired on the bite, before the reel is offered.
+   *  The first voyage's reel line waits on exactly this moment. */
+  onHooked?: () => void
   /**
    * SOMETHING CAME UP. Fired the instant the needle is judged a catch, not
    * when the card lands: the map puts a fish through the surface out on the
@@ -1179,6 +1183,7 @@ export default function FishingHere({
           lockedStage: res.lockedStage,
         })
         setPhase('hooked')
+        onHooked?.()
         vibrate([0, 26, 40, 18])
       }, wait)
       // Lightsaber Lightspeed cue, fired at the CAST rather than the bite —
@@ -2616,7 +2621,7 @@ export default function FishingHere({
                     : phase === 'result' ? <>Cast<br />Again</> : 'Cast'} />
           )}
           {phase === 'hooked' && (
-            <DialButton motionKey="reel" size={HELM_D}
+            <DialButton motionKey="reel" size={HELM_D} coach="reel"
               accent="#f0c040" glow="rgba(240,192,64,0.3)"
               onPress={() => strike()}
               label="Reel In" />

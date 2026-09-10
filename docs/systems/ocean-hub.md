@@ -2590,3 +2590,47 @@ upserts the bag and, if that type is on the hook **or the hook was bare**, loads
 count. The bare-hook case matters for Captains: the page defaults an empty bag to `worm`, and they
 claim chum. The bag re-seeds from the prop keyed on content, not identity, because the prop is a
 fresh array every render and identity would reset it on every one.
+
+### The first voyage, as designed 2026-09-10
+
+The script is the owner's; the copy in `lib/seaOnboarding.ts` is verbatim and is not to be
+"improved". What the engine had to grow to play it:
+
+| # | Who | Beat | Advances when | Lights |
+|---|---|---|---|---|
+| 0 | Doby | the open sea, how to move (per device) | Next | helm |
+| 1 | Doby | worms from the Daily Haul | bait lands (skipped if they have some) | haul disc + worms card |
+| 2 | Doby | sail south to the Shallows | in the ring | path |
+| 3 | Doby | enter fishing mode (Click *Fish* / hold the helm) | rod out | fish button / helm |
+| 4 | Kat | cast your line | **a bite** | cast |
+| 5 | Kat | reel in, green catches, gold is perfect | fish landed | reel |
+| 6 | Kat | it goes into your hold | Next, 1.6 s after the landing | hold |
+| 7 | Kat | XP, streaks pay more | Next | level bar |
+| 8 | Doby | to the Mainland to sell | moored there; **rod comes in here** | path |
+| 9 | Doby | dock and go ashore | door chooser open | |
+| 10 | Doby | the Market | hold sold (advanced by the market) | market card |
+| 11 | Kat | find Finn, talk to everyone, treasure all around | Next | |
+| 12 | Doby | catch, sell, upgrade; more past the gate; check the map | Next | chart disc |
+| 13 | Kat | fishing level and milestones | Aye | fishing-level disc |
+
+Two new `until`s: **`fish`** (rod out; the old `cast`) and **`bite`** (`FishingHere` fires `onHooked` on
+the bite; the chart counts them and the tour latches the count the way it latches catches). A new
+beat flag **`stowRod`** brings the rod in on the beat that carries it. The catch used to stow the rod
+on the spot, which was a beat too early: the hold chip and the XP bar are *inside* the fishing
+overlay, so the two lines pointing at them were pointing at things just taken off the screen.
+
+**The deadlock that was in the old script.** "Hold the helm to fish" carried `holdCast: true`, and
+`startFishing` refuses while that is up — so the tour refused the one instruction it had just given,
+silently, for ever. `holdCast` is only on beats 6–10 now, after the catch, which is the only thing it
+was ever for.
+
+**Transitions.** Setup's shell closes (fades) while the welcome scene fades in over it. The welcome
+fades to black before the reload, and the chart opens from that same black: a curtain over the
+first painted frame lifts over 1.4 s as the arrival starts, a 9vh letterbox holds for the shot and
+slides off as the hull lands, the HUD is hidden until then, and the coach card is keyed by its text
+so a new beat leaves and arrives rather than rewriting in place.
+
+**The arrival** is 3.6 s from 0.26× on a quintic in-out (it holds on the wide view before it moves,
+and settles as slowly), and it **drifts**: the camera opens on open water south-west of the boat
+(`ARRIVE_OFF`) and slides onto her through the same override the look beats use, so the Mainland
+enters the top of the frame as the hull enters the middle.

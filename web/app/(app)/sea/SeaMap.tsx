@@ -1192,11 +1192,29 @@ const FAR_MS = 20_000
  * short enough that it never has to be skippable: nothing is being withheld,
  * because the first voyage has not started yet and there is nothing to do.
  */
-const ARRIVE_FROM = 0.32
-const ARRIVE_S = 2.0
+const ARRIVE_FROM = 0.26
+const ARRIVE_S = 3.6
 /** The same number the loop eases over, in the milliseconds React counts in.
  *  One source, so the tour cannot be released early or late. */
 const ARRIVE_MS = ARRIVE_S * 1000
+/**
+ * AND IT DRIFTS, not just shrinks. A zoom about a fixed point reads as a
+ * camera lens; a zoom that also travels reads as a camera. It opens looking at
+ * open water a little south and west of the boat and slides onto her as it
+ * comes down, so the Mainland comes into the top of the frame as the hull
+ * comes into the middle. World px, and at the opening zoom that is about a
+ * tenth of the screen -- felt, not noticed.
+ */
+const ARRIVE_OFF = { x: -260, y: 820 }
+/**
+ * The curve. Quintic in-out rather than the cubic-out the first cut used: it
+ * HOLDS on the wide view for a beat before it moves, which is what makes the
+ * first sight of the sea a sight rather than a transition, and it comes to
+ * rest just as slowly, so the hull settles into frame instead of arriving.
+ */
+function arriveEase(t: number): number {
+  return t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2
+}
 /**
  * AND HOW OFTEN TO ASK WHEN NOBODY COULD POSSIBLY ANSWER.
  *
@@ -2457,6 +2475,10 @@ export default function SeaMap({
         arriveZoom.current = 1
         fitRef.current()
       }
+      // And the camera is the boat's again. The loop snaps it there the frame
+      // the override goes; by now the drift has all but landed, so the snap is
+      // a pixel or two at most.
+      tourCam.current = null
       return
     }
     if (arriveT.current >= 0) return
@@ -2464,10 +2486,36 @@ export default function SeaMap({
     // than easing out to it and back.
     arriveZoom.current = ARRIVE_FROM
     arriveT.current = 0
+    // The camera starts off the boat as well as above it. Placed directly,
+    // not through the override: the override is CHASED, and chasing it from
+    // the boat would ease the camera out to the offset and back again.
+    camAt.current.x = pos.current.x + ARRIVE_OFF.x
+    camAt.current.y = pos.current.y + ARRIVE_OFF.y
+    tourCam.current = { x: camAt.current.x, y: camAt.current.y }
     fitRef.current()
     const id = setTimeout(() => setArrived(true), ARRIVE_MS)
     return () => clearTimeout(id)
   }, [arrived])
+  /**
+   * THE CURTAIN. Black over everything on the frame the chart mounts, lifting
+   * as the shot starts, with a letterbox that stays for the length of it and
+   * slides off as the hull lands. The reload out of the welcome is a cut to
+   * black either way; this makes it a cut to black on purpose, and the bars
+   * are the difference between "the map loaded" and "here is the sea".
+   */
+  const [curtain, setCurtain] = useState<'dark' | 'lit' | 'gone'>(wantsArrival ? 'dark' : 'gone')
+  useEffect(() => {
+    if (curtain !== 'dark') return
+    // Two frames, so the black is painted once before it starts to go.
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => { raf2 = requestAnimationFrame(() => setCurtain('lit')) })
+    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2) }
+  }, [curtain])
+  useEffect(() => {
+    if (!arrived || curtain === 'gone') return
+    const id = setTimeout(() => setCurtain('gone'), 900)
+    return () => clearTimeout(id)
+  }, [arrived, curtain])
   useEffect(() => {
     const fit = () => {
       // `||`, not `??`: an element measured before layout reports 0, and 0 is
@@ -4985,11 +5033,15 @@ export default function SeaMap({
    * broadside is the same thing: the guns are out, the helm is dropped, and the
    * only things that should be on screen are the fight's own.
    */
-  const hudOff = !!fishingIn || fightOn
+  // AND NOT DURING THE ARRIVAL. The discs come up as the hull lands, which is
+  // the difference between a sea with an interface on it and an interface.
+  const hudOff = !!fishingIn || fightOn || !arrived
   /** For the keyboard handler, which binds once: while the rod is out, the
    *  chart's space/E stand down and FishingHere's own handler works the rod. */
   const fishingInRef = useRef<Place | null>(null)
   fishingInRef.current = fishingIn
+  /** Bites, counted. The first voyage's reel line waits on one. */
+  const [hookedTick, setHookedTick] = useState(0)
   const [baitLeft, setBaitLeft] = useState(baitQty)
   /** WHICH BAIT IS ON THE HOOK. Fixed for the whole session before, at whatever
    *  the page happened to pick; the bait row can change it now. */
@@ -6891,10 +6943,16 @@ export default function SeaMap({
       if (arriveT.current >= 0) {
         arriveT.current += dt
         const t = Math.min(1, arriveT.current / ARRIVE_S)
-        const e = 1 - Math.pow(1 - t, 3)
+        const e = arriveEase(t)
         arriveZoom.current = ARRIVE_FROM + (1 - ARRIVE_FROM) * e
+        // The drift rides the same curve, through the camera override the
+        // look beats use, so it is chased with the same ease they get.
+        tourCam.current = {
+          x: pos.current.x + ARRIVE_OFF.x * (1 - e),
+          y: pos.current.y + ARRIVE_OFF.y * (1 - e),
+        }
         fitRef.current()
-        if (t >= 1) { arriveT.current = -1; arriveZoom.current = 1 }
+        if (t >= 1) { arriveT.current = -1; arriveZoom.current = 1; tourCam.current = null }
       }
 
       const dx = target.current.x - pos.current.x
@@ -9309,6 +9367,9 @@ hullRef={hullRefFor(t.key)} />
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 480, damping: 26 }}
                 data-no-steer
+                // Named so the first voyage can light it: on a mouse this IS
+                // "enter fishing mode".
+                data-coach="fish"
                 onClick={e => { e.stopPropagation(); if (!helmActRef.current()) startFishing() }}
                 className="font-cinzel font-700"
                 style={{
@@ -10687,6 +10748,30 @@ hullRef={hullRefFor(t.key)} />
       )}
       {!hudOff && <SeaSettings size={hudSize} top={18} isAdmin={isAdmin} />}
 
+      {/* THE CURTAIN AND THE LETTERBOX. See the arrival effect. Under the
+          PopupShell layer and over the HUD, which is hidden for the shot
+          anyway. Pointer-events none: a captain who reaches for the helm mid
+          shot gets the helm. */}
+      {curtain !== 'gone' && (
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 95, pointerEvents: 'none' }}>
+          <div style={{
+            position: 'absolute', inset: 0, background: '#04090f',
+            opacity: curtain === 'dark' ? 1 : 0,
+            transition: 'opacity 1400ms ease-out',
+          }} />
+          <div style={{
+            position: 'absolute', left: 0, right: 0, top: 0, height: '9vh', background: '#000',
+            transform: arrived ? 'translateY(-100%)' : 'none',
+            transition: 'transform 720ms cubic-bezier(0.6, 0, 0.4, 1)',
+          }} />
+          <div style={{
+            position: 'absolute', left: 0, right: 0, bottom: 0, height: '9vh', background: '#000',
+            transform: arrived ? 'translateY(100%)' : 'none',
+            transition: 'transform 720ms cubic-bezier(0.6, 0, 0.4, 1)',
+          }} />
+        </div>
+      )}
+
       {/* THE PRESENCE READOUT, when it is asked for. See SeaDebugPanel: the
           console was not reachable on either device that mattered. */}
       {SEA_DEBUG && (
@@ -10955,6 +11040,7 @@ hullRef={hullRefFor(t.key)} />
             presence.current?.landed(perfect)
           }}
           onBusy={setDialUp}
+          onHooked={() => setHookedTick(n => n + 1)}
           onCanLeave={setCanLeaveFishing}
           spritesReady={spritesReady}
           onClose={() => { setFishingIn(null); setFrame('rest'); collectLevelRewards(); readOrders() }}
@@ -11007,7 +11093,7 @@ hullRef={hullRefFor(t.key)} />
           problem -- Doby speaking under the setup modal -- is gone at the
           source: this chart is not built while a captain is being set up. */}
       {arrived && <SeaFirstVoyage hasSeen={tour.seen} startAt={tour.step} fishing={!!fishingIn}
-        caught={caughtTick} nearId={near?.id ?? null} ashore={ashore}
+        hooked={hookedTick} caught={caughtTick} nearId={near?.id ?? null} ashore={ashore}
         // The same two gates FishingHere puts on the Cast button. If it will
         // not let them cast, the tour has to stop asking them to.
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}

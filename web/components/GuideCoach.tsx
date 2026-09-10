@@ -50,17 +50,22 @@ export default function GuideCoach({
   }, [show, autoHideMs])
 
   return (
-    <AnimatePresence>
-      {show && (
-        <div
-          style={{
-            position: 'fixed', left: 0, right: 0, zIndex: z,
-            [top ? 'top' : 'bottom']: edge,
-            display: 'flex', justifyContent: 'center', padding: '0 0.9rem',
-            pointerEvents: 'none',   // taps fall through to the game
-          }}
-        >
+    // The slot is always there; the CARD is what comes and goes. Keyed by its
+    // text, so a new line does not rewrite the old card in place -- it leaves,
+    // and the next one arrives, which is what a tour that moves through beats
+    // should look like. `wait` so the two never stack in one slot.
+    <div
+      style={{
+        position: 'fixed', left: 0, right: 0, zIndex: z,
+        [top ? 'top' : 'bottom']: edge,
+        display: 'flex', justifyContent: 'center', padding: '0 0.9rem',
+        pointerEvents: 'none',   // taps fall through to the game
+      }}
+    >
+      <AnimatePresence mode="wait">
+        {show && (
           <motion.div
+            key={text}
             initial={{ opacity: 0, y: top ? -12 : 14, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: top ? -8 : 8, transition: { duration: 0.18 } }}
@@ -105,8 +110,8 @@ export default function GuideCoach({
               </button>
             )}
           </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }

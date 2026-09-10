@@ -2,10 +2,9 @@
 
 // ── THE FIRST VOYAGE ────────────────────────────────────────────────────────
 //
-// Doby and Kat take a brand-new captain from the dock to their first fish, and
-// then fly the camera round the chart to name every island on it. The script,
-// and the reasoning about its order, live in lib/seaOnboarding — this is the
-// thing that plays it.
+// Doby and Kat take a brand-new captain from the dock to their first fish and
+// then home to sell it. The script, and the reasoning about its order, live in
+// lib/seaOnboarding — this is the thing that plays it.
 //
 // ── IT WAITS FOR THE CAPTAIN, NOT A TIMER ───────────────────────────────────
 //
@@ -68,7 +67,7 @@ function destination(id: string): { x: number; y: number; r: number } | null {
 }
 
 export default function SeaFirstVoyage({
-  hasSeen, startAt, fishing, caught, nearId, ashore, blocked, cam, goal,
+  hasSeen, startAt, fishing, hooked, caught, nearId, ashore, blocked, cam, goal,
   holdCast, fishOnly, stowRod, at,
 }: {
   hasSeen: boolean
@@ -88,6 +87,9 @@ export default function SeaFirstVoyage({
    * repeating an instruction the game will not accept.
    */
   blocked: 'bait' | 'hold' | null
+  /** Rises by one every time something takes the line, and never falls.
+   *  Advances the `bite` beat: the reel line arrives on the bite. */
+  hooked: number
   /** Rises by one every time a fish is landed, and never falls. Deliberately
    *  NOT the hold count: that is clamped to the hold's capacity, so a full hold
    *  catches a fish without the number moving, and it drops when you sell. */
@@ -125,7 +127,7 @@ export default function SeaFirstVoyage({
   // stuck; anywhere else the bait box is nobody's business yet. Worked out up
   // here because the highlight below and the card at the bottom both hang off
   // it.
-  const stuck = beat?.until === 'cast' ? blocked : null
+  const stuck = beat?.until === 'fish' || beat?.until === 'bite' ? blocked : null
 
   // ── AND NEVER BACKWARDS ───────────────────────────────────────────────────
   //
@@ -274,10 +276,25 @@ export default function SeaFirstVoyage({
     if (wantBait && blocked !== 'bait') next()
   }, [wantBait, blocked, next])
 
-  const wantCast = beat?.until === 'cast'
+  const wantFish = beat?.until === 'fish'
   useEffect(() => {
-    if (wantCast && fishing) next()
-  }, [wantCast, fishing, next])
+    if (wantFish && fishing) next()
+  }, [wantFish, fishing, next])
+
+  // Something on the line. Latched like the catch below, so a bite that
+  // happened before the tour got here does not skip the line about reeling.
+  const hookMark = useRef(hooked)
+  const wantBite = beat?.until === 'bite'
+  useEffect(() => { if (!wantBite) hookMark.current = hooked }, [wantBite, hooked])
+  useEffect(() => {
+    if (wantBite && hooked > hookMark.current) next()
+  }, [wantBite, hooked, next])
+
+  // The rod comes in on the beat that asks for it, not on the catch: the two
+  // beats after the catch point at things inside the fishing overlay.
+  useEffect(() => {
+    if (beat?.stowRod) stowRod()
+  }, [beat, stowRod])
 
   // Latched against the count as it was when the beat came up, so a fish landed
   // before the tour got here does not skip the beat that explains the dial.
@@ -286,12 +303,8 @@ export default function SeaFirstVoyage({
   useEffect(() => { if (!wantCatch) mark.current = caught }, [wantCatch, caught])
   useEffect(() => {
     if (!wantCatch || caught <= mark.current) return
-    // IN COMES THE ROD. She has what she was sent for, and the next thing to do
-    // is somewhere else — a captain left staring at the water will cast again,
-    // and the card telling them where to go is behind the fishing overlay.
-    stowRod()
     next()
-  }, [wantCatch, caught, next, stowRod])
+  }, [wantCatch, caught, next])
 
   // The chart reads this every time somebody reaches for Cast.
   useEffect(() => {
@@ -305,7 +318,7 @@ export default function SeaFirstVoyage({
   // Only while the cast is actually being ASKED for. It ends the moment the
   // rod is out, so the sea is a normal sea again for the whole of the catch.
   useEffect(() => {
-    fishOnly.current = beat?.until === 'cast' && step !== hidden
+    fishOnly.current = beat?.until === 'fish' && step !== hidden
     return () => { fishOnly.current = false }
   }, [beat, step, hidden, fishOnly])
 
