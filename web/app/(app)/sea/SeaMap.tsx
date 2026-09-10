@@ -4376,6 +4376,10 @@ export default function SeaMap({
    * cadence every other social surface in the game runs at.
    */
   const [pendingAsk, setPendingAsk] = useState(0)
+  /** Push my own position NOW. Owned by the flush effect below; the poll calls
+   *  it when the tab comes back, because a friend's chart cannot show me where
+   *  I am until I have told the server. */
+  const flushNow = useRef<(() => void) | null>(null)
   useEffect(() => { void pendingPacts().then(setPendingAsk, () => {}) }, [])
   /** The poll, callable on demand — see the crew panel's onChanged. */
   const pullNow = useRef<() => void>(() => {})
@@ -5676,6 +5680,12 @@ export default function SeaMap({
       void saveSeaPosition(p.x, p.y, fog)
     }
     const onHide = () => { if (document.visibilityState === 'hidden') flush(true) }
+    // THE POLL ASKS FOR THIS when the tab comes back — see onShow. `leaving`
+    // is true because a return is exactly as much of an event as a departure:
+    // the point is to write the row NOW rather than at the next heartbeat, and
+    // the visibility guard inside `flush` would otherwise be racing the very
+    // event that just fired.
+    flushNow.current = () => flush(true)
     // ── FASTER WHEN SOMEBODY IS WATCHING ──────────────────────────────
     //
     // Twenty seconds is the right heartbeat for a boat nobody can see: it is
@@ -5825,7 +5835,37 @@ export default function SeaMap({
       timer = setTimeout(pull, FAR_MS)
     }
     pull()
-    return () => { alive = false; clearTimeout(timer) }
+
+    // ── AND THE MOMENT YOU LOOK AT IT AGAIN ─────────────────────────────
+    //
+    // A hidden tab skips the work above and reschedules, which is right: a
+    // chart nobody is looking at does not need to know where anyone is. What
+    // was missing is the other half — coming BACK. The timer carried on ticking
+    // into a hidden tab doing nothing, so switching to this one could leave you
+    // looking at a friend's twenty-second-old position for up to another twenty
+    // seconds before anything asked the server.
+    //
+    // That is most of a minute of a boat sitting still on a chart you are
+    // actively watching, and it is exactly what two accounts in two tabs of the
+    // same browser produce: whichever one you are not looking at is hidden, and
+    // hidden means silent. Reported as "there is a huge delay in player
+    // positioning" while testing precisely that way.
+    //
+    // So: ask again the instant the tab comes back, and flush your own position
+    // with it, because the other side is in the same hole and their next poll
+    // is the only thing that will see you moved.
+    const onShow = () => {
+      if (document.visibilityState !== 'visible') return
+      clearTimeout(timer)
+      pull()
+      flushNow.current?.()
+    }
+    document.addEventListener('visibilitychange', onShow)
+    return () => {
+      alive = false
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onShow)
+    }
   }, [])
 
   /**
