@@ -1,9 +1,14 @@
 // ── THE LAMPS REACH THE WATER ───────────────────────────────────────────────
 //
-// A town already gets a glow after dark, and it lies on the island's TOP FACE
-// with the buildings it is lighting. That is right as far as it goes and it
-// stops at the beach: a lit harbour beside water throws light ONTO the water,
-// and the sea off a town at night was as black as the sea off an empty rock.
+// A town already lights up after dark: a run of lamps around its promenade, up
+// on the island's TOP FACE with the buildings they stand among. That is right
+// as far as it goes and it stops at the beach — a lit harbour beside water
+// throws light ONTO the water, and the sea off a town at night was as black as
+// the sea off an empty rock.
+//
+// So this is those same lamps carried past the shore. One pool for the whole
+// town rather than one per lamp, because light that has crossed a beach and
+// spread over open water has long since stopped being separate lamps.
 //
 // ── AND IT IS NOT A REFLECTION ──────────────────────────────────────────────
 //

@@ -33,13 +33,25 @@
 // ── AND THE TOWN LIGHTS UP ──────────────────────────────────────────────────
 //
 // The hour takes the whole world down. This is the one thing that comes UP, and
-// it is what turns a dimmer into nightfall: a warm pool over the buildings that
-// is nothing at noon and full by the middle of the night. It sits UNDER them on
-// purpose — light painted over a building washes the art out; behind it, it
-// reads as windows throwing light onto the ground they stand on.
+// it is what turns a dimmer into nightfall.
+//
+// IT USED TO BE ONE WASH: a single soft ellipse, 78% by 52% of the island's
+// box, faded up under the buildings. On paper that is windows throwing light on
+// the ground they stand on. On the chart it was a warm blob lying across half
+// the island with no source anywhere in it — brightest over open grass, dark
+// over the actual town, and the same shape on every island. Light with nothing
+// making it does not read as night, it reads as a smudge on the lens.
+//
+// So the town is lit by LAMPS, which is how a harbour is lit: a run of them
+// around the promenade, each a small hard point with its own pool on the sand
+// around it. The point is the source and the pool is what it reaches, and both
+// come up together out of nothing at dusk. Same amber, same falloff and same
+// idea as the lights on a berth ring, because a captain reading the water at
+// night should be reading ONE language of light.
 
 import type { Container, Sprite, Texture } from 'pixi.js'
-import { GROUND, islandLift, liftAt, liftAtPoint } from './islandArt'
+import { GROUND, liftAtPoint } from './islandArt'
+import { coastline, grassAt, GRASS } from '@/lib/islandShape'
 import { texture } from './skiffArt'
 import { makeSmoke, type Chimney, type Smoke } from './seaSmoke'
 
@@ -87,35 +99,85 @@ export type GpuTown = {
  *  not a darker number here. */
 const LOCKED = 0x4a4a52
 
-/** Harbour-window amber, and the alphas the DOM pitched for what survives the
- *  night grade. Nothing survives a grade here — the tint IS the grade — so
- *  these are what they look like. */
-const GLOW = 0xffb060
+/** Harbour amber. The berths' exact warm, because these are the same lamps a
+ *  little further inland and two ambers on one shore is two towns. */
+const GLOW = 0xffc478
 
-let glowTex: Texture | null = null
+/** How far out the run of lamps stands, as a fraction of the coastline.
+ *
+ *  BUILDABLE is 0.599 of it and the painted land ends at 0.74, so this is the
+ *  sand-and-scrub ring between the last cottage and the cliff edge: outside
+ *  everything anybody builds on, inside everything that is land. That band is
+ *  the promenade whether or not it is drawn as one, and a lamp on it can never
+ *  be standing in the sea or on a roof. */
+const PROM = 0.66
 
-function glowTexture(PIXI: typeof import('pixi.js')): Texture {
-  if (glowTex) return glowTex
-  const S = 256
+/** How tall a lamp stands, as a fraction of the island's radius. Height maps
+ *  straight to screen y on this plane, so this is also the gap you see between
+ *  the light and the pool it casts — which is the whole of what says post. */
+const POST = 0.052
+
+/** How bright at the middle of the night. The pool is deliberately meek: it is
+ *  the light REACHING the sand, and sand at night is not lit, it is glimpsed. */
+const CORE_PEAK = 0.9
+const POOL_PEAK = 0.3
+
+let coreTex: Texture | null = null
+let poolTex: Texture | null = null
+
+/** The lamp itself: a hard bright middle and a short halo. Small on screen, so
+ *  most of its range goes on the first fifth — anything softer than this stops
+ *  being a light and starts being a stain. */
+function coreTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (coreTex) return coreTex
+  const S = 64
   const c = document.createElement('canvas')
   c.width = c.height = S
   const g = c.getContext('2d')!
   const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
-  grad.addColorStop(0.00, 'rgba(255,255,255,0.66)')
-  grad.addColorStop(0.42, 'rgba(255,255,255,0.32)')
-  grad.addColorStop(0.72, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.00, 'rgba(255,255,255,1)')
+  grad.addColorStop(0.18, 'rgba(255,255,255,0.72)')
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.2)')
   grad.addColorStop(1.00, 'rgba(255,255,255,0)')
   g.fillStyle = grad
   g.fillRect(0, 0, S, S)
-  glowTex = PIXI.Texture.from(c)
-  return glowTex
+  coreTex = PIXI.Texture.from(c)
+  return coreTex
+}
+
+/** And what it throws on the ground. Bright under the lamp and gone well before
+ *  the next one: a run of lamps has DARK BETWEEN THEM, and losing that is how
+ *  you end up back at one wash with extra steps. */
+function poolTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (poolTex) return poolTex
+  const S = 128
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')!
+  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+  grad.addColorStop(0.00, 'rgba(255,255,255,0.85)')
+  grad.addColorStop(0.30, 'rgba(255,255,255,0.42)')
+  grad.addColorStop(0.62, 'rgba(255,255,255,0.12)')
+  grad.addColorStop(1.00, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, S, S)
+  poolTex = PIXI.Texture.from(c)
+  return poolTex
+}
+
+/** One lamp: the light, the ground it reaches, and a phase of its own so a run
+ *  of them breathes out of step rather than pulsing as one bar. */
+type Lamp = {
+  core: Sprite
+  pool: Sprite
+  phase: number
 }
 
 type Built = {
   spec: GpuTown
   node: Container
   sprites: Sprite[]
-  glow: Sprite | null
+  lamps: Lamp[]
 }
 
 export type Towns = {
@@ -145,31 +207,72 @@ export async function makeTowns(
     view.addChild(node)
 
     const d = spec.r * 2
-    // The MEAN lift, for the town's window glow — a broad wash that is not
-    // standing anywhere in particular. Each BUILDING takes the lift at its own
-    // bearing instead, because the land is a headland on one side and a beach
-    // on the other now and a single number would float half of them. See
-    // liftAt.
-    const lift = (islandLift(spec.id, d) * 0.58) / GROUND
-    let glow: Sprite | null = null
+    const lamps: Lamp[] = []
 
-    // UNDER THE BUILDINGS, and added first for exactly that reason.
-    if (spec.buildings.length) {
-      const s: Sprite = new PIXI.Sprite(glowTexture(PIXI))
-      s.anchor.set(0.5)
-      // 78% by 52% of the box, centred a little below the middle — the same
-      // ellipse the DOM draws, and left lying ON the plane rather than
-      // counter-squashed, because it is light on the ground.
-      s.width = d * 0.78
-      s.height = d * 0.52
-      // On the top face with the buildings it is lighting, not at the
-      // waterline under them.
-      s.y = -spec.r + d * 0.52 - lift
-      s.tint = GLOW
-      s.alpha = 0
-      s.blendMode = 'add'
-      node.addChild(s)
-      glow = s
+    // ── THE RUN OF LAMPS ─────────────────────────────────────────────────
+    //
+    // UNDER THE BUILDINGS, and added first for exactly that reason: the town
+    // is drawn back to front over the top of this, so a lamp behind a roof is
+    // covered by it and a lamp south of the town is not — which is the same
+    // occlusion the buildings already give each other, for free, and the
+    // reason a lamp is a thing standing ON the island rather than a decal
+    // floating over the picture of one.
+    //
+    // A LOCKED island stays dark. Nobody is home, which is the same reason its
+    // chimneys are cold.
+    if (spec.buildings.length && !spec.locked) {
+      const rs = coastline(spec.id)
+      /** The coastline's own radius at a bearing, in box-percent. `grassAt` is
+       *  the only interpolator the shape exports and it bakes the grass band
+       *  in, so this takes it back out rather than walking the ring twice. */
+      const coastAt = (a: number) => grassAt(rs, a) / GRASS
+
+      // ONE PER SO MANY PIXELS OF SHORE, not a fixed count. The Mainland is
+      // 4.6x a single-purpose port, and nine lamps around it is a lit town
+      // while nine around the Shipyard is a runway.
+      const n = Math.max(4, Math.min(12, Math.round(spec.r / 58)))
+      let h = 0
+      for (let i = 0; i < spec.id.length; i++) h = (h * 31 + spec.id.charCodeAt(i)) >>> 0
+
+      for (let i = 0; i < n; i++) {
+        // Evenly spread and then knocked off it. A perfect ring reads as
+        // machinery; half a step of slop reads as lamps somebody put up.
+        const jit = ((Math.imul(h ^ Math.imul(i + 1, 0x9e3779b1), 2654435761) >>> 0) % 1000) / 1000
+        const a = ((i + 0.5) / n) * Math.PI * 2 + (jit - 0.5) * (Math.PI * 2 / n) * 0.55
+        const p = coastAt(a) * PROM
+        const bx = 50 + Math.cos(a) * p
+        const by = 50 + Math.sin(a) * p
+        // The same three lines every building here uses: box-percent to node
+        // units, then up onto the land at ITS OWN bearing. A lamp that skipped
+        // the lift would be buried in the cliff face like the buildings were.
+        const lx = -spec.r + (bx / 100) * d
+        const ly = -spec.r + (by / 100) * d - liftAtPoint(spec.id, d, bx, by) / GROUND
+
+        const pool: Sprite = new PIXI.Sprite(poolTexture(PIXI))
+        pool.anchor.set(0.5)
+        // Lying ON the plane, so it is squashed rather than counter-squashed:
+        // this is light on the ground, not a thing standing on it.
+        pool.width = spec.r * 0.6
+        pool.height = spec.r * 0.6 * GROUND
+        pool.position.set(lx, ly)
+        pool.tint = GLOW
+        pool.alpha = 0
+        pool.blendMode = 'add'
+        node.addChild(pool)
+
+        const core: Sprite = new PIXI.Sprite(coreTexture(PIXI))
+        core.anchor.set(0.5)
+        core.width = core.height = Math.max(10, spec.r * 0.05)
+        // Up the post. Height is screen y on this plane, and the gap between
+        // the light and its pool is the only thing drawing the post.
+        core.position.set(lx, ly - spec.r * POST)
+        core.tint = GLOW
+        core.alpha = 0
+        core.blendMode = 'add'
+        node.addChild(core)
+
+        lamps.push({ core, pool, phase: jit * 6.28 })
+      }
     }
 
     const sprites: Sprite[] = []
@@ -249,7 +352,7 @@ export async function makeTowns(
       }
     }
 
-    built.push({ spec, node, sprites, glow })
+    built.push({ spec, node, sprites, lamps })
   }
 
   // ── THE SMOKE GOES IN WITH THE TOWNS ─────────────────────────────
@@ -261,18 +364,46 @@ export async function makeTowns(
   const smoke: Smoke = makeSmoke(PIXI, chimneys)
   view.addChild(smoke.view)
 
+  /** How far into the night, held from `night` so the breath below knows
+   *  whether there is anything lit to breathe. */
+  let dark = 0
+  let clock = 0
+
   return {
     view,
 
     advance(dt, camX, camY, halfW, halfH) {
       smoke.advance(dt, camX, camY, halfW, halfH)
+      // NOTHING AT NOON. Every lamp on the chart is alpha 0 in daylight, so
+      // this is one comparison and out.
+      if (dark <= 0.01) return
+      clock += dt
+      for (const b of built) {
+        // And nothing off screen: `cull` has already put the node down, and a
+        // lamp nobody can see does not need to flicker.
+        if (!b.node.visible) continue
+        for (const l of b.lamps) {
+          // A flame in a glass box is never quite still. Slow and shallow —
+          // this is a lamp guttering, not a light being switched.
+          const u = Math.sin(clock * 1.7 + l.phase) * 0.5 + Math.sin(clock * 0.61 + l.phase * 2.3) * 0.5
+          l.core.alpha = dark * CORE_PEAK * (1 + u * 0.1)
+          l.pool.alpha = dark * POOL_PEAK * (1 + u * 0.14)
+        }
+      }
     },
 
-    night(tint, dark) {
+    night(tint, dark_) {
+      dark = dark_
       for (const b of built) {
         if (!b.spec.locked) for (const s of b.sprites) s.tint = tint
-        // Nothing at noon, full by the middle of the night.
-        if (b.glow) b.glow.alpha = dark
+        // Nothing at noon, full by the middle of the night. Set here as well as
+        // in the breath, because the hour can turn while the chart is still —
+        // and because `advance` returns early in daylight, which is what has to
+        // put them out when it gets there.
+        for (const l of b.lamps) {
+          l.core.alpha = dark * CORE_PEAK
+          l.pool.alpha = dark * POOL_PEAK
+        }
       }
     },
 
