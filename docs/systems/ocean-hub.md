@@ -2828,3 +2828,20 @@ because you moved is a card you have to go back for.
 `overPanel: true` marks the beats drawn above the crew panel (z 120); it replaced a hard-coded list
 of `until` values, which broke the moment a crew beat became a plain `next`. `crewClosed` is gone
 with it.
+
+### Clean slate north of the reef
+
+Everything the game says unprompted on the expedition side has been removed, back to the seven
+beats of `GATE_TOUR` (the boat changed, the anchorage, the HUD, and the crew chain through "that's
+your crew"). Cut with it:
+
+- the tour's own tail — the Gunwharf, the Sea Gate, the campaign, the pennant and the send-off;
+- the five expedition cues in `SeaCue` — `crew`, `loadout`, `nav`, `call`, `wargate` (`chart` stays:
+  it fires on the fishing side too);
+- the five northern landfall hints in `SeaLandfallHint` — Crew Hall, Charterhouse, Posting House,
+  Forge, Trawl Harbour. The southern four (Shipyard, Tally House, Homestead) are untouched.
+
+**The `showWhen` mechanism is kept and is now unused.** It is the shape the next section's place
+beats will take: a beat that is current but silent until the captain is standing at the thing it is
+about, and stays once shown. `GATE_FORCED_THROUGH` falls back to the whole script when nothing is
+gated, which is where the anchorage stands today — all seven beats hold the wheel.

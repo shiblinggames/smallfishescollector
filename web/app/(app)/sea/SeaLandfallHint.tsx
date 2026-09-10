@@ -75,27 +75,6 @@ const HINTS: Record<string, { portrait: string; speaker: string; text: string }>
   // to it.
   //
   // The Gunwharf is NOT here: it is the one island the gate tour still names,
-  // because nothing else up there works until the warship is out.
-  crew_hall: {
-    ...GUIDES.kat,
-    text: 'The *Crew Hall*. Sign hands on, drill them, and bunk them to train. Nothing out here sails empty.',
-  },
-  charterhouse: {
-    ...GUIDES.kat,
-    text: 'The *Charterhouse* posts voyages. Your crew sail those without you and come back paid, whether you are aboard or ashore.',
-  },
-  posting_house: {
-    ...GUIDES.kat,
-    text: 'The *Posting House*. The day’s hunts, posted every morning and paid in gems.',
-  },
-  forge_isle: {
-    ...GUIDES.doby,
-    text: 'The *Forge*. Two relics in, one out, carrying both sets of effects. It opens once you have won it out of the Locker.',
-  },
-  trawl_fleet: {
-    ...GUIDES.kat,
-    text: 'The *Trawl Harbour*. Send a crew out to fish a water on their own, and come back for them when the haul is in.',
-  },
 }
 
 export default function SeaLandfallHint({

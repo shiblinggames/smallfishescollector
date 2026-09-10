@@ -145,6 +145,10 @@ export type Beat = {
    * A tour holds no locks past its first gated beat -- a captain cannot be
    * asked to sail somewhere with the helm's own offers dimmed. See
    * GATE_FORCED_THROUGH.
+   *
+   * NOTHING USES THIS TODAY. The anchorage's tour ends on the crew, and the
+   * rest of that half is being written from a clean slate; this is the shape
+   * the place beats will take when it is.
    */
   showWhen?: {
     /** Tied up at this chart id. */
@@ -377,51 +381,24 @@ export const GATE_TOUR: Beat[] = [
     until: 'next',
     overPanel: true,
   },
-  // ── AND THE REST ARRIVES WHERE IT IS ABOUT ────────────────────────────
-  //
-  // Everything from here is a PLACE, so everything from here waits until the
-  // captain is standing at it. The tour stops holding the wheel at this line:
-  // it is asking them to go somewhere, and it cannot dim the helm to do it.
-  {
-    ...D,
-    text: 'The *Gunwharf*. This is where she’s refitted and armed — every hull upgrade you buy gets bolted on here.',
-    until: 'next',
-    showWhen: { moor: 'gunwharf' },
-  },
-  {
-    ...D,
-    text: 'That ring of light is the *Sea Gate*, and it’s the only way out of this harbour. Past it is the campaign: real water, not a list. You sail up to a fight and take it on where you find it.',
-    until: 'next',
-    showWhen: { near: 'sea_gate' },
-  },
-  {
-    ...D,
-    // SAID HERE RATHER THAN LEFT TO A CUE, and said with the same words the
-    // fishing side used for the same disc. A captain has learned "the pennant
-    // is where the story is"; this is that promise being kept on the other half
-    // of the game, and out here it is the whole of the progression.
-    text: 'Same *pennant*, different story. Out here it holds the campaign: every chapter, and the one stop it wants from you next. That is your answer to "what now" on this water.',
-    until: 'next',
-    target: 'hud-journey',
-  },
-  {
-    ...K,
-    text: 'The rest of this harbour introduces itself as you tie up at it. Take her out, Captain.',
-    until: 'next',
-  },
 ]
 
 /**
  * THE LAST BEAT THAT HOLDS THE WHEEL.
  *
  * Everything up to and including this one is forced: the captain does what it
- * asks and nothing else. Past it the tour is asking them to SAIL somewhere,
- * and a lock that dims the helm's own offers cannot coexist with that.
+ * asks and nothing else. Past it a tour is asking them to SAIL somewhere, and
+ * a lock that dims the helm's own offers cannot coexist with that.
  *
  * Derived from the script rather than written down, so moving a beat cannot
- * silently leave the lock on for one it was never meant to cover.
+ * silently leave the lock on for one it was never meant to cover. With no
+ * gated beat in the script -- which is where the anchorage stands today, the
+ * tour ending on the crew -- the whole of it is forced.
  */
-export const GATE_FORCED_THROUGH = GATE_TOUR.findIndex(b => b.showWhen) - 1
+export const GATE_FORCED_THROUGH = (() => {
+  const i = GATE_TOUR.findIndex(b => b.showWhen)
+  return i < 0 ? GATE_TOUR.length - 1 : i - 1
+})()
 
 /** The beat that waits on a sale. The MARKET advances past this one — it is on
  *  a different route from the chart, and it is the only surface that knows a

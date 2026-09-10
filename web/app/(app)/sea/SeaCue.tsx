@@ -61,35 +61,6 @@ const CUES: {
     text: 'You are a fair way out. The *chart* is the whole sea at a glance, and it fills in as you sail it.',
     target: 'chart',
   },
-  // ── AND THE EXPEDITION SIDE'S OWN ─────────────────────────────────────
-  {
-    id: 'crew',
-    ...GUIDES.kat,
-    text: 'The *crew* disc: who is aboard, who is out on a voyage, and who is asleep in the hall. Seat your raid party there before you go north.',
-    target: 'hud-crew',
-  },
-  {
-    id: 'loadout',
-    ...GUIDES.kat,
-    text: 'And the *slots* are your battle loadout. Six mounts on that hull, and what you bolt into them is half of any fight.',
-    target: 'hud-loadout',
-  },
-  {
-    id: 'nav',
-    ...GUIDES.doby,
-    text: 'Same slot, different spine. Out here that disc is your *Navigation* level, and it has its own renown to spend.',
-    target: 'hud-skill',
-  },
-  {
-    id: 'call',
-    ...GUIDES.kat,
-    text: 'That island is flying a *gold mark*. It does that when something on it is finished and waiting on you, and it is the whole of the notice you get.',
-  },
-  {
-    id: 'wargate',
-    ...GUIDES.doby,
-    text: 'The *Wargate*. Anything you have put down out here, it remembers — step through and it puts you back on that boss’s water whenever you want another go.',
-  },
 ]
 
 /**
