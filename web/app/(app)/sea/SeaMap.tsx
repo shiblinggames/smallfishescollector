@@ -394,6 +394,9 @@ const GoldenChoice = dynamic(() => import('@/components/GoldenChoice'), { ssr: f
  *  marks somebody you are actually sailing with share this one green so the
  *  connection reads as one thing across the chart. */
 const CREW_GREEN = 'rgba(143,214,196,0.95)'
+/** The same green as a hex, for the borders and glows that concatenate
+ *  an alpha onto it the way every other plate on this chart does. */
+const CREW_GREEN_HEX = '#8fd6c4'
 const SPEED = BASE_SPEED_PX
 /**
  * THE FASTEST A HULL CAN BE GOING, in world px per MILLISECOND, with room over
@@ -12571,26 +12574,46 @@ const FriendBoat = memo(function FriendBoat({ friend, refs, pose }: {
           ))}
       </div>
 
-      {/* THEIR NAME, over the boat and counter-squashed like every other label
-          on this chart. Without it two friends in the same water are two boats
-          and you have to guess. */}
+      {/* ── THEIR PLATE, UNDER THE HULL ──────────────────────────────────
+          Where every other person on this water carries theirs. It hung ABOVE
+          the boat, alone among the marks on the chart, which is most of why a
+          friend read as a HUD element rather than as somebody out there — the
+          traders, the regulars and Finn all name themselves below the waterline
+          and a person you actually know should not be the exception.
+
+          Same box, same offset, same counter-squash as TraderBoat's, in the
+          crew green rather than the shop's amber: this is the one plate out
+          here that belongs to a player, and it is lit the same colour as their
+          arrow on the compass and the disc that says you are connected. One
+          colour for "somebody you are sailing with", wherever it appears. */}
       <div style={{
-        position: 'absolute', left: 0, top: -96,
-        transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
-        transformOrigin: 'bottom center', whiteSpace: 'nowrap',
+        position: 'absolute', left: 0, top: HULL_BOTTOM + 2,
+        transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+        transformOrigin: 'top center',
+        textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
+        padding: '3px 9px 4px', borderRadius: 9,
+        background: 'rgba(6,12,18,0.86)',
+        border: `1px solid ${CREW_GREEN_HEX}7a`,
+        boxShadow: `0 0 14px ${CREW_GREEN_HEX}26`,
       }}>
         <p className="font-cinzel font-700" style={{
-          fontSize: '0.98rem', color: '#dfeaf2', margin: 0,
-          textShadow: '0 2px 12px rgba(0,0,0,0.95)',
+          fontSize: '0.888rem', color: '#e6eef4',
+          textShadow: '0 2px 12px rgba(0,0,0,0.9)',
         }}>{friend.username}</p>
-        {/* Only once they have gone quiet. A number that is always there reads
-            as a warning; one that appears after a minute reads as information. */}
-        {friend.ago > 60 && (
-          <p className="font-karla" style={{
-            fontSize: '0.72rem', margin: 0, textAlign: 'center',
-            color: 'rgba(198,216,230,0.6)', textShadow: '0 1px 9px rgba(0,0,0,0.95)',
-          }}>last seen {Math.round(friend.ago / 60)}m ago</p>
-        )}
+        {/* WHAT THEY HAVE DONE, not how long ago they said it.
+            "Last seen four minutes ago" is a status line about the plumbing:
+            it answers a question nobody sailing up to somebody is asking, and
+            it only ever appeared when something was slightly wrong. Their
+            LEVEL is the thing you actually want to know about another captain,
+            and which of the two it is follows the boat they are in — the ship
+            is the expedition half of the game and the skiff is the fishing
+            half, so the number matches whatever they are out here doing. */}
+        <p className="font-karla font-600" style={{
+          fontSize: '0.696rem', marginTop: 1, color: CREW_GREEN_HEX,
+          textShadow: '0 1px 9px rgba(0,0,0,0.9)',
+        }}>{friend.onShip
+          ? `Navigation ${friend.navLevel}`
+          : `Fishing ${friend.fishingLevel}`}</p>
       </div>
     </div>
   )

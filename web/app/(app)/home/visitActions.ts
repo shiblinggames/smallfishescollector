@@ -27,6 +27,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { EMPTY_HOMESTEAD, builtAt, houseTier, type Homestead, type FurnitureSlot } from '@/lib/homestead'
 import { PINNED_MAX } from '@/lib/homestead'
 import { isPremiumActive } from '@/lib/premium'
+import { getLevelFromXP as fishLevel } from '@/lib/fishingLevel'
+import { getLevelFromXP as navLevel } from '@/lib/expeditionLevel'
 import { getEffectiveRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getHook } from '@/lib/hooks'
@@ -236,6 +238,10 @@ export type FriendAtSea = {
   onShip: boolean
   shipTier: number
   shipSkin: string | null
+  /** Both, because which one belongs on their name plate is decided by which
+   *  boat they are sitting in — see FriendBoat. */
+  fishingLevel: number
+  navLevel: number
   boatId: string | null
   hatId: string | null
   gear: {
@@ -333,7 +339,7 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
     // from the literal text of this argument; joining two strings gives it an
     // expression it cannot read, and the whole result silently degrades to an
     // error type that only shows up as a confusing cast failure downstream.
-    .select('id, username, sea_x, sea_y, sea_seen_at, character_color, equipped_boat, equipped_hat, rod_tier, reel_tier, hook_tier, equipped_pet, completionist_effects, is_premium, premium_expires_at, sea_side, ship_tier, equipped_ship_skin')
+    .select('id, username, sea_x, sea_y, sea_seen_at, character_color, equipped_boat, equipped_hat, rod_tier, reel_tier, hook_tier, equipped_pet, completionist_effects, is_premium, premium_expires_at, sea_side, ship_tier, equipped_ship_skin, fishing_xp, expedition_xp')
     .in('id', canSee)
     .gte('sea_seen_at', cutoff)
 
@@ -345,6 +351,7 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
     rod_tier: number | null; reel_tier: number | null; hook_tier: number | null
     equipped_pet: string | null; completionist_effects: number[] | null
     sea_side: string | null; ship_tier: number | null; equipped_ship_skin: string | null
+    fishing_xp: number | null; expedition_xp: number | null
   }
 
   const now = Date.now()
@@ -381,6 +388,11 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
         onShip,
         shipTier: Number(r.ship_tier ?? 0),
         shipSkin: r.equipped_ship_skin ?? null,
+        // BOTH LEVELS, and the plate picks. Which one is worth showing depends
+        // on which boat they are in, and that is a rendering decision — it can
+        // change the moment they step aboard without asking the server again.
+        fishingLevel: fishLevel(Number(r.fishing_xp ?? 0)),
+        navLevel: navLevel(Number(r.expedition_xp ?? 0)),
         ago: Math.max(0, Math.round((now - new Date(r.sea_seen_at).getTime()) / 1000)),
         characterColor: r.character_color ?? 'default',
         boatId: r.equipped_boat ?? null,
