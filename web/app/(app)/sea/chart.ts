@@ -328,7 +328,12 @@ export const PLACES: Place[] = [
       // number, off-centre by eye, because this coastline is seeded and its
       // east side runs further out than its west. 44 is where it LOOKS
       // centred, which is the only measure a captain applies.
-      { art: '/sea/posting-house.png', x: 44, y: 58, scale: 0.28 },
+      // 0.28 -> 0.34. `scale` is a fraction of the ISLAND's diameter, and
+      // this island is r 280 against the Gunwharf's 340 -- so an equal-looking
+      // number drew a visibly smaller building: 157px against 245. This is
+      // the Charterhouse's 0.34 on a smaller isle, which reads as a building
+      // of the same institution rather than a model of one.
+      { art: '/sea/posting-house.png', x: 44, y: 58, scale: 0.34 },
     ],
   },
   {

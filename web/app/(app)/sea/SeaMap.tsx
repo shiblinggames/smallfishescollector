@@ -82,6 +82,7 @@ import FishingHere, { type FishingMods } from './FishingHere'
 import TrawlIndicator from '../fishing/TrawlIndicator'
 import DailyOrders from '../trawl-docks/DailyOrders'
 import BountiesPanel from '../expeditions/BountiesPanel'
+import BountyBoardModal from '../expeditions/BountyBoardModal'
 import { getBountyBoard } from '../expeditions/bountyActions'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
@@ -6751,9 +6752,13 @@ export default function SeaMap({
     // card on the Expeditions hub, and routing there would have made mooring at
     // the island a redirect off the chart: the sea unloaded, the hub rendered,
     // one modal opened over it, and the whole chart rebuilt on the way back.
-    // Same component the hub uses (BountyBoardModal), opened here.
-    // And the posting house opens the Navigation level with the board under it.
-    if (p.id === 'posting_house') { setSkillView('nav'); setSkillOpen(true); return }
+    // ── AND THE POSTING HOUSE OPENS ITS OWN BOARD ─────────────────────
+    // The board is a section of the Navigation level as well, and mooring
+    // here used to open that whole panel -- your level, your renown, your
+    // road ahead, and the notices somewhere down it. A captain who sailed to
+    // an island called the Posting House came for the notices. Same board,
+    // same clothes as that section, on its own. See BountyBoardModal.
+    if (p.id === 'posting_house') { setBountiesOpen(true); return }
     // AND THE FORGE LIGHTS WHERE YOU MOOR. Same trade as the Posting House:
     // the bench is one screen you dip into, and a route spends the whole chart
     // to show it. See ShipSheet.
@@ -10799,6 +10804,16 @@ hullRef={hullRefFor(t.key)} />
           </button>
         )
       })()}
+
+      {/* THE BOUNTY BOARD, over the water you sailed to read it on. The
+          wrapper is the one every sheet over this map needs: the chart STEERS
+          on click and starts a heading on pointerdown, so without it a tap on
+          the backdrop to dismiss would also put the helm over. */}
+      {bountiesOpen && (
+        <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+          <BountyBoardModal open onClose={() => { setBountiesOpen(false); pollBounties() }} />
+        </div>
+      )}
 
       <SkillPanel
         open={skillOpen}
