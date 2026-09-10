@@ -1236,6 +1236,10 @@ export default function SeaIslandsGPU({
             sp.scale.set(mk, mk * c)
             sp.position.y = -mh * (1 - waterline) + waterline * mh * c
             sp.alpha = 0.3
+            // The image of a rock is as dark as the rock. Same reason as `add`
+            // below, and this one sits outside `inner` so the night walk has to
+            // reach it separately — see night().
+            sp.tint = lastTint < 0 ? 0xffffff : lastTint
             node.addChild(sp)
           }
 
@@ -1247,6 +1251,20 @@ export default function SeaIslandsGPU({
             const k = m.size / cv.width
             sp.scale.set(k, k)
             sp.anchor.set(0.5, 1)
+            // ── IT STARTS AT WHATEVER HOUR IT IS ──────────────────
+            //
+            // `night()` returns early when the tint has not CHANGED, which is
+            // right for a walk over every sprite on the chart and wrong for
+            // anything built afterwards. Marks bake asynchronously, cell by
+            // cell, as you sail into them — so a rock that came out of the oven
+            // at midnight was never told, and stood there at full noon until
+            // the clock happened to move the tint again. Which is minutes.
+            //
+            // That is why the reef was blazing on a black sea: not a tint that
+            // was too weak, a tint that never arrived. The near pass has had
+            // this line for a while; the world copies, which are the ones you
+            // actually look at, never got it.
+            sp.tint = lastTint < 0 ? 0xffffff : lastTint
             inner.addChild(sp)
             return sp
           }
@@ -1590,6 +1608,14 @@ export default function SeaIslandsGPU({
           for (const sw of swayers) {
             for (const child of sw.holder.children) {
               (child as import('pixi.js').Sprite).tint = tint
+            }
+            // AND THE NODE'S OWN CHILDREN, which is where the reflection lives:
+            // it hangs off the mark rather than off the swaying holder, so that
+            // a rock rocking does not send its image swinging about underneath
+            // it. Outside the holder means outside the walk above, and it was.
+            for (const child of sw.node.children) {
+              const sp = child as import('pixi.js').Sprite
+              if (sp !== sw.holder && sp.tint !== undefined) sp.tint = tint
             }
           }
           // THE NEAR PASS TOO. It is the same rock as the world copy under it,
