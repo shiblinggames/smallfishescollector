@@ -2158,6 +2158,25 @@ body.hardcore-gauntlet::after {
 /* Warm/gold flash variant — used on the expeditions page. */
 .coach-flash-gold { --coach-color: 240, 192, 64; --coach-hi: 255, 224, 140; }
 
+/* ── THE FIRST VOYAGE HOLDS THE WHEEL ─────────────────────────────────────
+   While the first voyage is running, everything on the chart that is not the
+   current beat's target stands down: dimmed, and inert to the pointer. The
+   target is whatever the tour is flashing, so the rule and the ring cannot
+   disagree about what a new captain may touch. Two exemptions, and they are
+   the point: the helm, because every beat needs the boat to move, and the
+   desktop action button, because it only ever shows an action the tour has
+   already let through (see the reach filter in SeaMap). The XP bar is a
+   display, not a control, and stays lit.
+
+   `!important` on the pointer, because the discs set `pointer-events: auto`
+   inline to reach through the HUD's own pass-through wrappers. */
+.sea-tour-lock [data-coach]:not(.coach-flash):not([data-coach="helm"]):not([data-coach="fish"]):not([data-coach="level"]) {
+  pointer-events: none !important;
+  opacity: 0.3;
+  filter: saturate(0.5);
+  transition: opacity 240ms ease, filter 240ms ease;
+}
+
 /* Captain's Log journal — illuminated-manuscript drop cap on the lead
    paragraph of the freshest story entry. Parchment-gold, Cinzel, floated
    so the body text wraps around it like an old logbook page. */

@@ -2684,3 +2684,34 @@ measures on a short poll, because the elements these cards point at come and go 
 own state (a card inside a sheet, a chip inside the fishing overlay). No anchor, or nothing found,
 and it falls back to the old bottom/top placement. The first voyage passes the same names it
 flashes, so the ring and the card always agree about what is being talked about.
+
+### Later the same day: two beats moved, one cut
+
+The table above is the script as first designed. Since then: the **Almanac beat** was added right
+after the hold beat (see fishing.md), the **XP beat** ("every fish gives XP, string perfects for
+more") was **cut** as redundant with the level card, which now fires on the crossing itself and
+says the same thing with the water's own painting on it, and Kat's fishing-level line moved ahead
+of Doby's closing line so Doby has the last word. `lib/seaOnboarding.ts` is the truth; the table is
+the shape.
+
+### The first voyage holds the wheel
+
+Until Doby's last card is answered, a new captain may do what the current beat asks and nothing
+else. Three things enforce it, and they share one source of truth — the tour's own flash:
+
+- **The class.** `SeaMap`'s wrap carries `sea-tour-lock` while the voyage runs. The rule in
+  `globals.css` dims and disables every `[data-coach]` control that is not currently `.coach-flash`
+  — i.e. everything the tour is not pointing at. Exempt: the helm (every beat needs the boat to
+  move), the desktop action button (it only shows actions the reach filter let through), and the
+  XP bar (a display). Every HUD disc, the rod's Loadout/Bait/Log/Hold buttons, the cast and reel
+  buttons, the Daily Haul disc and the ashore doors all carry a `data-coach` for this; the crew and
+  settings discs got theirs for it.
+- **The reach filter.** Where the helm's offers are built, the list is cut to `port:mainland` on the
+  ashore/sold beats and nothing otherwise — no hail, landing, dig, portal or fight mid-voyage.
+- **The reef.** Crossing north would start the anchorage's own tour over this one; the loop holds
+  the boat at the line with a refusal line until the voyage is done.
+
+`SeaFirstVoyage` reports its beat (`onBeat`) and its end (`onDone`); the chart keeps `tourDone` /
+`tourBeat` and derives the lock. The market page already collapses to its simple sell view on the
+sell beat. What the lock does not cover: the app's own nav bar and tab bar, which are outside the
+chart — the tour's step persists, so leaving and coming back resumes rather than breaks.

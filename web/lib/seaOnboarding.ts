@@ -215,13 +215,10 @@ export const FIRST_VOYAGE: Beat[] = [
     target: 'log',
     holdCast: true,
   },
-  {
-    ...K,
-    text: 'Every fish gives *XP*. If you string perfect catches together, you’ll get lots more XP!',
-    until: 'next',
-    target: 'level',
-    holdCast: true,
-  },
+  // NO XP BEAT. There was one here -- "every fish gives XP, string perfects
+  // for more" -- and it came up in the same breath as the level card, which
+  // says the same thing with a picture. Two voices on one moment. The card
+  // has it.
   // ── AND WHAT IT IS FOR ────────────────────────────────────────────────
   {
     ...D,

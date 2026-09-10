@@ -180,7 +180,7 @@ export default function SeaSettings({ size, top, isAdmin = false }: {
     <div ref={wrap} data-no-steer
       onPointerDown={e => e.stopPropagation()}
       style={{ position: 'absolute', top, right: 12, zIndex: 40 }}>
-      <button type="button" aria-label="Settings" title="Settings"
+      <button type="button" data-coach="hud-settings" aria-label="Settings" title="Settings"
         onClick={() => { vibrate(8); setOpen(o => !o) }}
         style={{
           width: size, height: size, borderRadius: '50%', padding: 0, cursor: 'pointer',

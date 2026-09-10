@@ -67,7 +67,7 @@ export default function SeaCrew({ size, top, right, count, linked = false, onOpe
     <div data-no-steer
       onPointerDown={e => e.stopPropagation()}
       style={{ position: 'absolute', top, right, zIndex: 40 }}>
-      <button type="button"
+      <button type="button" data-coach="hud-social"
         aria-label={waiting
           ? `Your crew, ${count} asking to sail with you`
           : linked ? 'Your crew, sailing with somebody now'

@@ -2522,6 +2522,21 @@ export default function SeaMap({
    */
   const wantsArrival = !tour.seen && tour.step === 0
   const [arrived, setArrived] = useState(!wantsArrival)
+  /**
+   * ── THE FIRST VOYAGE HOLDS THE WHEEL ────────────────────────────────────
+   *
+   * Until Doby's last card is answered, a new captain may do what the current
+   * beat asks and nothing else. Three things enforce it: a class on the wrap
+   * that dims and disables every `data-coach` control the tour is not
+   * flashing (globals.css), a filter on the reach list so the helm only ever
+   * offers the beat's own action (below, where the list is built), and a wall
+   * at the reef so the anchorage cannot start its own tour over this one (in
+   * the loop). The tour reports its beat and its end; the chart does the rest.
+   */
+  const [tourDone, setTourDone] = useState(tour.seen)
+  const [tourBeat, setTourBeat] = useState<{ until: string; at?: string; target?: string } | null>(null)
+  const tourLock = !tourDone
+  const tourLockRef = useRef(tourLock); tourLockRef.current = tourLock
   useEffect(() => {
     // ── WHEN THE TIMER SAYS IT IS OVER, IT IS OVER ───────────────────────
     // The loop eases the factor home on its own `dt`, and the timer below
@@ -5969,6 +5984,19 @@ export default function SeaMap({
    * to tell. It asks only when it is genuinely ambiguous: one thing in reach
    * still acts on one tap, which is every ordinary moment on this sea.
    */
+  // ── THE FIRST VOYAGE HOLDS THE WHEEL ────────────────────────────────────
+  // Everything the helm could offer, cut to what the beat asks for. Going
+  // ashore at the Mainland is the only reach action the tour ever needs; the
+  // rest -- a hail, a landing, a dig, a portal, a fight -- would take a new
+  // captain out of the voyage before it had taught them the water.
+  if (tourLock) {
+    const b = tourBeat
+    const allowAshore = !!b && (b.until === 'ashore' || b.until === 'sold') && b.at === 'mainland'
+    for (let i = reach.length - 1; i >= 0; i--) {
+      if (!(allowAshore && reach[i].id === 'port:mainland')) reach.splice(i, 1)
+    }
+  }
+
   const helmLabel: { act: string | null; hold: string | null } = {
     act: reach.length > 1 ? `${reach.length} things in reach` : reach[0]?.label ?? null,
     hold: reach.length > 0 && !holdHard ? null : holdLabel,
@@ -7207,7 +7235,20 @@ export default function SeaMap({
       // for the fishing boat; the whole point of leaving her at the dock is
       // that you took something else out. Held at the line with a word, the
       // same way the sea gate holds the fishing boat.
-      if (shipRef.current && inGate(pos.current.x) && isNorth !== wasNorth && !isNorth) {
+      // ── THE FIRST VOYAGE STAYS SOUTH OF THE REEF ──────────────────────
+      // The anchorage has a tour of its own that starts on the crossing, and
+      // two tours at once is nobody's first hour. Held at the line, with a
+      // word, until Doby has finished.
+      if (tourLockRef.current && !wasNorth && inGate(pos.current.x) && pos.current.y < NORTH_WALL + REEF_MARGIN) {
+        pos.current.y = NORTH_WALL + REEF_MARGIN
+        if (vel.current.y < 0) vel.current.y = 0
+        if (target.current.y < pos.current.y) target.current = { ...pos.current }
+        if (now - refusedAt.current > 2600) {
+          refusedAt.current = now
+          setRefused('Finish Doby’s voyage first. The north can wait.')
+          vibrate(12)
+        }
+      } else if (shipRef.current && inGate(pos.current.x) && isNorth !== wasNorth && !isNorth) {
         pos.current.y = NORTH_WALL - REEF_MARGIN
         vel.current.y = 0
         if (now - refusedAt.current > 2600) {
@@ -9080,7 +9121,9 @@ export default function SeaMap({
       // the chart — the heave rings, the hull bobs, the mark wobbles. With the
       // rod out that is most of why fishing is smooth, and a broadside has the
       // same claim on the main thread.
-      className={`sea-surface${dialUp || fightOn ? ' sea-frozen' : ''}`}
+      // AND HELD FOR THE FIRST VOYAGE. `.sea-tour-lock` stands every control
+      // down except the one the tour is pointing at. See tourLock.
+      className={`sea-surface${dialUp || fightOn ? ' sea-frozen' : ''}${tourLock ? ' sea-tour-lock' : ''}`}
     >
       {/* THE WATER'S COLOUR, on a layer of its own.
           Under everything and containing nothing, so repainting it repaints one
@@ -11253,7 +11296,8 @@ hullRef={hullRefFor(t.key)} />
         // not let them cast, the tour has to stop asking them to.
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
         cam={tourCam} goal={tourGoal} holdCast={tourHoldCast}
-        fishOnly={tourFishOnly} stowRod={stowRod} at={pos} />}
+        fishOnly={tourFishOnly} stowRod={stowRod} at={pos}
+        onBeat={setTourBeat} onDone={() => setTourDone(true)} />}
 
       {/* ── AND THE OTHER HALF, WHEN THEY REACH IT ────────────────────
           Fires on the first crossing of the reef rather than at signup: on beat

@@ -82,3 +82,13 @@ the side you are on. The disc wears the amber dot when either spine has points b
 ## Connects to
 
 Every gate in the game points here. [badges.md](badges.md) reads the same counters.
+
+## The level card
+
+`LevelRewardsGrant` (sea) is a moment, not a receipt. The top of the card is the **plate of the
+water the level belongs to** — the one it just unlocked if it did, else the deepest one open at that
+level (`ZONE_MIN_LEVEL`) — faded into the card, with the level number set into it in gold under a
+slow turn of the badge wall's rays. If a water opened it is the first line, in that water's colour.
+What it paid is a row of gold chips, what it opened in the shop is a row of tiles with the gear's
+own art, and the two per-level numbers (catch zone, bite speed) are a footnote. Fires on the
+crossing (the chart's live level), over whatever is on screen.

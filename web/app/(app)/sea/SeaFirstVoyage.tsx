@@ -68,7 +68,7 @@ function destination(id: string): { x: number; y: number; r: number } | null {
 
 export default function SeaFirstVoyage({
   hasSeen, startAt, fishing, hooked, caught, nearId, ashore, blocked, cam, goal,
-  holdCast, fishOnly, stowRod, at, almanac,
+  holdCast, fishOnly, stowRod, at, almanac, onBeat, onDone,
 }: {
   hasSeen: boolean
   /** Where the tour got to. It leaves the chart to sell a fish at the market,
@@ -89,6 +89,11 @@ export default function SeaFirstVoyage({
   blocked: 'bait' | 'hold' | null
   /** Whether the Almanac is open. Advances the `almanac` beat. */
   almanac: boolean
+  /** Which beat is up, so the chart can decide what is allowed while the
+   *  voyage holds the wheel. Null once it is over. */
+  onBeat?: (b: { until: string; at?: string; target?: string } | null) => void
+  /** The last card has been answered. The chart lets go of the wheel. */
+  onDone?: () => void
   /** Rises by one every time something takes the line, and never falls.
    *  Advances the `bite` beat: the reel line arrives on the bite. */
   hooked: number
@@ -155,6 +160,12 @@ export default function SeaFirstVoyage({
   /** The beat whose card has been waved away. Cleared by moving on, so the
    *  next one arrives normally. */
   const [hidden, setHidden] = useState(-1)
+
+  // Told outward, for the lock. See tourLock in SeaMap.
+  useEffect(() => {
+    onBeat?.(done || !beat ? null : { until: beat.until, at: beat.at, target: beat.target })
+  }, [beat, done, onBeat])
+  useEffect(() => { if (done) onDone?.() }, [done, onDone])
 
   /**
    * ── A BEAT THAT WAITS FOR THE MOMENT IT IS ABOUT ─────────────────────────

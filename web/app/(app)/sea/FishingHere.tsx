@@ -2579,7 +2579,7 @@ export default function FishingHere({
         {/* LOADOUT. Not a locker any more — gear is equipped at the Shipyard,
             so out here this reads your kit and swaps between the rods you
             actually brought. */}
-        <button
+        <button data-coach="loadout"
           onClick={e => { e.stopPropagation(); vibrate(8); setLoadoutOpen(true) }}
           style={MENU_BTN}>
           <span className="font-karla font-700 uppercase" style={MENU_KEY}>Loadout</span>
@@ -2588,7 +2588,7 @@ export default function FishingHere({
           </span>
         </button>
 
-        <button
+        <button data-coach="bait"
           onClick={e => { e.stopPropagation(); if (canSwapBait) { vibrate(8); setTackleOpen(true) } }}
           disabled={!canSwapBait}
           style={{ ...MENU_BTN, cursor: canSwapBait ? 'pointer' : 'default', opacity: canSwapBait ? 1 : 0.55 }}>
