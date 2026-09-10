@@ -2530,3 +2530,16 @@ different clocks and mixing them would put the shot's progress somewhere around 
 
 Only a captain who has never sailed gets it, and only from the top of the tour (`!seen && step === 0`):
 a resumed first voyage is not a first sight of the sea.
+
+### Where a new captain actually starts
+
+`sea_x`/`sea_y` are NULL and `sea_side` defaults to `'fishing'`, so the chart falls back to `HOME`
+(260, 560) on the fishing boat. The Mainland is at the origin with `r = 500`, which puts that spawn
+about 117px off its edge — right off the Mainland, which is the intent.
+
+**If a captain appears to start on the expedition ship at the Gunwharf, suspect a stale row rather
+than the spawn.** This was reported once and it was an account that had been reset with its own tab
+still open: the sea heartbeat wrote `sea_side = 'moored'` and a northern position straight back over
+the reset, so the account came up on the far side of the reef at the Gunwharf (−898, −5715), which
+is nothing like the Mainland. Both halves of the report — wrong boat AND wrong place — came from
+that one write. See the beta-wipe doc; a reset needs the session gone first.

@@ -27,7 +27,7 @@ export default function WelcomeModal() {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
-  const [env, setEnv] = useState<{ standalone: boolean; ios: boolean; chromeIOS: boolean } | null>(null)
+  const [env, setEnv] = useState<{ standalone: boolean; ios: boolean; chromeIOS: boolean; mobile: boolean } | null>(null)
   const [phase, setPhase] = useState<'scene' | 'install' | 'done'>('scene')
 
   useEffect(() => {
@@ -36,7 +36,23 @@ export default function WelcomeModal() {
       ('standalone' in window.navigator && (window.navigator as { standalone?: boolean }).standalone === true)
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window)
     const chromeIOS = ios && /CriOS/.test(navigator.userAgent)
-    setEnv({ standalone, ios, chromeIOS })
+    // ── IS THERE A HOME SCREEN TO ADD IT TO ────────────────────────────
+    //
+    // This step was gated on "not already installed", which every desktop
+    // browser in the world also satisfies -- so a captain on a monitor was
+    // offered "Add to home screen · plays full-screen, feels like a real game"
+    // for a home screen they do not have.
+    //
+    // Not gated on the install prompt either: desktop Chrome fires
+    // `beforeinstallprompt` perfectly happily, so that would have kept showing
+    // it on exactly the machines it makes no sense on. The question is whether
+    // this is a PHONE, so that is the question asked.
+    //
+    // An iPad on iPadOS 13+ reports itself as a Mac and is caught by the touch
+    // points, which no real Mac reports more than one of.
+    const ipad = /Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1
+    const mobile = ios || ipad || /Android|Mobile/.test(navigator.userAgent)
+    setEnv({ standalone, ios: ios || ipad, chromeIOS, mobile })
     if (standalone) return
     function handlePrompt(e: Event) {
       e.preventDefault()
@@ -72,7 +88,7 @@ export default function WelcomeModal() {
     : env?.ios
       ? ' Tap Share in Safari, then Add to Home Screen.'
       : ' Find it in the menu under "Install the App".'
-  const installStep: TourStep | null = env && !env.standalone ? {
+  const installStep: TourStep | null = env && env.mobile && !env.standalone ? {
     color: '#5ab4c8',
     title: 'Add to home screen',
     placement: 'center',
