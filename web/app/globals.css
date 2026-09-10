@@ -2808,8 +2808,18 @@ body.hardcore-gauntlet::after {
   50%      { transform: rotate(0.8deg); }
 }
 
+/* YOUR SHIP AT THE GUNWHARF, riding at her mooring. The bays' warships hold
+   station on encBob and she wears the same one, so she moves like a ship of
+   the line at anchor and not like a buoy. Delay is set inline off her
+   position — see ShipAtBerth. */
+.sea-berth-bob {
+  transform-origin: bottom center;
+  animation: encBob 5.5s ease-in-out infinite;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .mark-bob, .mark-rock { animation: none; }
+  .mark-bob, .mark-rock, .sea-berth-bob { animation: none; }
 }
 
 /* The hail mark over a trader you are close enough to talk to. It bobs rather

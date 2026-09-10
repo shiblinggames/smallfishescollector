@@ -175,6 +175,16 @@ export type GpuHandle = {
     /** How heavily she sits, 0 to 1. Drives the trough and the collar. */
     heave: number
   } | null): void
+  /**
+   * YOUR SHIP, LYING AT THE GUNWHARF. Not `wake` — that is the hull you are
+   * steering — but a hull on the water all the same, and the water under her
+   * has to say so: the dish a heavy hull presses into the sea and the slow,
+   * close rings it makes at rest, off the same code the helm gets, because ten
+   * seconds after boarding she IS the helm. She was a bare sprite before this,
+   * and a sprite with nothing happening under it is a sticker on the water.
+   * Null when she is out, or when you are on her.
+   */
+  berthed(s: { x: number; y: number; scale: number; heave: number } | null): void
   /** Which pieces of tall scenery are standing in front of the hull right now,
    *  as indices into `occluders`. Empty almost always. */
   front(list: number[]): void
@@ -1406,6 +1416,7 @@ export default function SeaIslandsGPU({
       /** The player's contact and the fleet's last positions, held between the
        *  handle calls that set them and the ticker that uses them. */
       let mine: Contact | null = null
+      let berthed: Contact | null = null
       let fleetAt: {
         key: string; x: number; y: number; facing: number; scale: number; dim: number
         ang: number; cx: number; cy: number
@@ -1526,6 +1537,7 @@ export default function SeaIslandsGPU({
         // written through.
         contacts.length = 0
         if (mine) contacts.push(mine)
+        if (berthed) contacts.push(berthed)
         for (const e of fleetAt) {
           const c = crewRef.current.get(e.key)
           if (!c) continue
@@ -1841,6 +1853,14 @@ export default function SeaIslandsGPU({
         },
         wake(w) {
           mine = w ? { id: 'me', ...w } : null
+        },
+        berthed(s) {
+          // At rest by definition: the cutwater and the seat are one point, and
+          // the force is a plain zero, which is what tells the wake to ring
+          // rather than trail. Warships leave a plain wake at the helm too.
+          berthed = s
+            ? { id: 'berthed', x: s.x, y: s.y, cx: s.x, cy: s.y, ang: 0, force: 0, scale: s.scale, heave: s.heave, kind: 'plain' }
+            : null
         },
         guide(from, to, radius) { guide.set(from, to, radius) },
         berth(id) { berthLayer.setActive(id) },

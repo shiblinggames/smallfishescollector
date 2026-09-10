@@ -941,6 +941,29 @@ const SKIPPER_W = 210
 /** How wide the fishing boat's hull actually draws: the boat overlay is 55% of
  *  the 210px Skipper sprite. The denominator of every hull comparison. */
 const FISHING_HULL_W = 210 * 0.55
+
+/**
+ * HOW A WARSHIP SITS IN THE WATER, off the two numbers measured on her art.
+ * One place for it, because the same hull is drawn twice — at the helm and
+ * lying at the Gunwharf — and the water under her must be the same water in
+ * both: the same seat, the same dish, the same weight. Two copies of this
+ * arithmetic would be two ships.
+ *
+ *   scale   drawn-width ratio against the fishing boat, for the wake
+ *   keelY   sprite centre to keel, in SCREEN px (divide by GROUND in the world)
+ *   weight  how heavy she reads, 0 at the Sloop and 1 at the Man-o-War
+ */
+function shipSeat(tier: number) {
+  const d = getShip(tier)
+  const beam = d.seaBeam ?? 0.6
+  const keel = d.seaKeel ?? 0.75
+  return {
+    beam, keel,
+    scale: (WARSHIP_W * beam) / FISHING_HULL_W,
+    keelY: WARSHIP_W * (keel - 0.5),
+    weight: Math.min(1, Math.max(0, (beam - 0.53) / (0.97 - 0.53))),
+  }
+}
 /** The box a warship is drawn in. One width for all five — see Warship. */
 /** The bow's lift under full power, in degrees, on the FISHING boat. Bigger
  *  hulls divide this down; see hullRef. */
@@ -2840,10 +2863,9 @@ export default function SeaMap({
       bowTilt: (FISHING_BOW_TILT * Math.PI) / 180,
     }
     const d = getShip(shipTier)
-    const beam = d.seaBeam ?? 0.6
-    const keel = d.seaKeel ?? 0.75
+    const { beam, keel, scale, keelY, weight } = shipSeat(shipTier)
     return {
-      scale: (WARSHIP_W * beam) / FISHING_HULL_W,
+      scale,
       // HOW MUCH SHIP THERE ACTUALLY IS, in world px. WARSHIP_W is the box the
       // art is drawn in; this is the hull inside it, which is what a fight
       // needs to know to hang its effects on her at the right size.
@@ -2851,7 +2873,7 @@ export default function SeaMap({
       // From the sprite's centre down to the keel. The sprite is drawn centred
       // on the boat node, so this is the distance from where the camera is
       // looking to where the water actually is.
-      keelY: WARSHIP_W * (keel - 0.5),
+      keelY,
       // ── A BIG HULL DOES NOT SNAP ───────────────────────────────────
       // The tilt reads as acceleration, and on the fishing boat 7 degrees is
       // a small craft answering the throttle. The same 7 on a ship of the line
@@ -2863,7 +2885,7 @@ export default function SeaMap({
       // same thing as `scale`: the water at a standstill should not merely be
       // BIGGER on a bigger ship, it should be slower and darker, and this is
       // the number that says how far along that ladder a hull sits.
-      weight: Math.min(1, Math.max(0, (beam - 0.53) / (0.97 - 0.53))),
+      weight,
       // seaBow and seaBowTilt are measured on the art AS DELIVERED; a hull
       // rendered mirrored (seaFlip) mirrors them here, in the one place the
       // conversion can live, so the bench keeps tuning raw images.
@@ -2875,6 +2897,30 @@ export default function SeaMap({
   // Mirrored into a ref for the frame loop, which must not read a prop.
   const hullRef = useRef(hull)
   hullRef.current = hull
+  /**
+   * THE SHIP AT THE GUNWHARF, for the water. She is drawn by ShipAtBerth and
+   * she used to be drawn by nothing else: a sprite lying on the sea with no
+   * dish under her and no rings off her, which is exactly what "she looks like
+   * she is just there" means. Laid into the canvas's wake list from here as a
+   * hull at rest, so the trough and the slow heavy rings the helm gets come
+   * off the same code — same seat, same weight, from shipSeat — and the ship
+   * you see at the berth is the ship you are standing on ten seconds later.
+   * Null on exactly the frames ShipAtBerth is not drawn.
+   */
+  const berthedHull = useMemo(() => {
+    if (!inAnchorage || onShip) return null
+    const seat = shipSeat(shipTier)
+    return {
+      x: GUNWHARF.x + SHIP_BERTH_OFF.dx + WATERLINE_X,
+      // The sprite is centred on the berth point and the water is at her keel;
+      // a screen measurement inside the squashed layer, like keelY at the helm.
+      y: GUNWHARF.y + SHIP_BERTH_OFF.dy + seat.keelY / GROUND,
+      scale: seat.scale,
+      heave: seat.weight,
+    }
+  }, [inAnchorage, onShip, shipTier])
+  const berthedHullRef = useRef(berthedHull)
+  berthedHullRef.current = berthedHull
   /**
    * WHERE THE BOAT IS, SAVED — NOW INCLUDING WHICH SEA.
    *
@@ -6830,6 +6876,10 @@ export default function SeaMap({
           heave: h.weight,
           kind: wakeKindRef.current,
         })
+        // AND THE ONE LYING AT THE GUNWHARF, every frame for the same reason:
+        // the canvas draws water under the hulls it is told about this frame
+        // and no others. A reference, not a new object, so this costs nothing.
+        gpuRef.current.berthed(berthedHullRef.current)
       }
 
       // A PAIR AT A TIME, port and starboard. The gate is lower than it was
@@ -11702,21 +11752,48 @@ const SHIP_BERTH_OFF = { dx: 300, dy: -320 }
 
 const ShipAtBerth = memo(function ShipAtBerth({ shipTier, skin }: { shipTier: number; skin: string | null }) {
   const b = { x: GUNWHARF.x + SHIP_BERTH_OFF.dx, y: GUNWHARF.y + SHIP_BERTH_OFF.dy }
+  const seat = shipSeat(shipTier)
+  // Phased off her position like every hull holding station on this chart,
+  // so she and whatever else is riding nearby are never rising together.
+  const phase = ((Math.abs(b.x) + Math.abs(b.y)) % 1000) / 1000
   return (
-    <div style={{
-      position: 'absolute', left: b.x, top: b.y,
-      transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
-      pointerEvents: 'none', opacity: 0.95,
-    }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={shipSkinSeaImage(skin, shipTier, getShip(shipTier).seaImageUrl ?? '')} alt="" draggable={false} decoding="async"
-        width={640} height={640} style={{
-          width: WARSHIP_W * shipSkinSeaScale(skin, shipTier), height: 'auto', display: 'block',
-          filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
-          // The berth shows her exactly as the helm will.
-          ...(getShip(shipTier).seaFlip ? { transform: 'scaleX(-1)' } : null),
-        }} />
-    </div>
+    <>
+      {/* ?gpu=0 ONLY. On the canvas the water under her is the wake module's,
+          off the `berthed` contact SeaMap lays every frame — the same dish and
+          rings the helm gets. The DOM fallback has no wake module, so it gets
+          the helm's DOM trough instead, at her keel, counter-squashed the way
+          the sprite is so the ellipse is the one the stylesheet drew. */}
+      {!GPU_ISLANDS && (
+        <div aria-hidden style={{
+          position: 'absolute', left: b.x + WATERLINE_X, top: b.y + seat.keelY / GROUND,
+          width: 0, height: 0, pointerEvents: 'none',
+          transform: `scaleY(${1 / GROUND})`,
+          ['--heave' as string]: seat.weight,
+        }}>
+          <div className="sea-heave-trough" />
+        </div>
+      )}
+      <div style={{
+        position: 'absolute', left: b.x, top: b.y,
+        transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
+        pointerEvents: 'none', opacity: 0.95,
+      }}>
+        {/* SHE RIDES AT HER MOORING. A hull that does not move at all is not
+            floating, it is placed. The bays' warships hold station on encBob;
+            she wears the same one, on her own wrapper because the outer node's
+            transform is the counter-squash and the image's is the mirror. */}
+        <div className="sea-berth-bob" style={{ animationDelay: `${(-phase * 5.5).toFixed(2)}s` }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={shipSkinSeaImage(skin, shipTier, getShip(shipTier).seaImageUrl ?? '')} alt="" draggable={false} decoding="async"
+            width={640} height={640} style={{
+              width: WARSHIP_W * shipSkinSeaScale(skin, shipTier), height: 'auto', display: 'block',
+              filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
+              // The berth shows her exactly as the helm will.
+              ...(getShip(shipTier).seaFlip ? { transform: 'scaleX(-1)' } : null),
+            }} />
+        </div>
+      </div>
+    </>
   )
 })
 

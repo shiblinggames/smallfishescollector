@@ -1541,6 +1541,15 @@ sailing up; a default berth on this one would be round the back, facing the harb
 **Your ship is drawn lying in the Gunwharf's berth** whenever she is not out. Without her the
 swap would be a menu state — you would be told she was waiting and have to take it on trust.
 
+**And she sits IN the water there, not on it** (2026-09). The sprite alone read as a sticker:
+no dish under her, no rings off her, nothing moving. SeaMap now lays her into the canvas's
+wake list every frame as a hull at rest (`gpu.berthed(...)`, next to the helm's own `wake`
+call), so the wake module gives her the same trough and slow heavy rings the helm gets, from
+the same seat and weight — `shipSeat(tier)` in SeaMap is the one source for both, and must
+stay so. On top she rides the bays' `encBob` on her own wrapper (`.sea-berth-bob`), phased off
+her position. The `?gpu=0` fallback draws the helm's DOM `.sea-heave-trough` at her keel
+instead. Anything that moves `SHIP_BERTH_OFF` moves all of it.
+
 ### Sizing it
 
 Any change to `EXP_EDGE` has to clear the Crew Hall, whose shore reaches 2,124 from the
