@@ -677,10 +677,29 @@ export function rgb3(hex: string): Float32Array {
 export function nightTint(dark: number, warm = 0): number {
   const k = Math.max(0, Math.min(1, dark))
   const w = Math.max(0, Math.min(1, warm))
-  // Night: dim, and cool harder than it dims.
-  let r = 1 - k * 0.48
-  let g = 1 - k * 0.44
-  let b = 1 - k * 0.34
+  // ── NIGHT: DIM, AND COOL HARDER THAN IT DIMS ─────────────────────────────
+  //
+  // These were 0.48, 0.44 and 0.34, which left a sprite HALF LIT at midnight,
+  // and the trouble is that the water does not dim at all - it LERPS, 78% of
+  // the way toward (6, 11, 22). A multiply can only scale what is already
+  // there, so the two can never meet however deep the tint goes.
+  //
+  // Measured at midnight against a mid-teal sea, which lands at luma 26:
+  //
+  //     dry sand      luma 111    4.3x the water
+  //     boulder        luma 81    3.1x
+  //     grass          luma 79    3.1x
+  //
+  // Four times the brightness of the sea it is sitting in is not a lit island,
+  // it is a lamp. Deepened until the same surfaces come out at 1.3 to 1.9x -
+  // still readable as land, no longer the brightest thing on a night chart.
+  //
+  // The blue is held furthest up of the three on purpose, which is the whole
+  // "cools harder than it dims" idea: what is left of a rock after dark should
+  // be the blue of the sky it is under, not a grey version of its daylight.
+  let r = 1 - k * 0.78
+  let g = 1 - k * 0.76
+  let b = 1 - k * 0.62
   // Golden hour: the same light that is leaving turns amber on the way out, so
   // the land goes warm as it goes dark rather than simply grey. Red is held up
   // and blue pulled down, which is the opposite of what night does — and doing

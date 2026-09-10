@@ -1604,12 +1604,18 @@ export default function SeaIslandsGPU({
           // DOM did with `nightGrade(dark, 0.55)`: the boat you are steering
           // stays readable after dark while the world around it does not.
           capRef.current?.cap.setNight(nightTint(d * 0.55, w))
-          // Other captains take the hour at FULL strength, like the islands
-          // and unlike the player. That is what `.sea-lit` does to them in the
-          // DOM, and it is the right call: the boat you are steering staying
-          // readable after dark is a concession to the person steering it, not
-          // a fact about the light.
-          for (const c of crewRef.current.values()) c.cap.setNight(tint)
+          // Other captains take it at four fifths: harder than the player, who
+          // gets just over half, and short of the full strength the land takes.
+          //
+          // They used to take it full, on the argument that the player staying
+          // readable is a concession to the person steering rather than a fact
+          // about the light - which is right, and stopped being harmless when
+          // the tint was deepened to stop the islands glowing. At full strength
+          // a trader after dark is a silhouette, and a trader you cannot find
+          // is one you cannot hail. Their name plates are DOM and untinted, so
+          // this is about seeing the boat, not the label.
+          const crewTint = nightTint(d * 0.8, w)
+          for (const c of crewRef.current.values()) c.cap.setNight(crewTint)
           drift.night(tint)
           // Underwater, so it takes the hour HARDER than the surface does: the
           // last thing to still be visible after dark is not the thing below it.
