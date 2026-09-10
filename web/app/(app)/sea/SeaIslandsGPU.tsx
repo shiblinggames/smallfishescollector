@@ -398,6 +398,26 @@ export default function SeaIslandsGPU({
   useEffect(() => { rebuildHomesRef.current?.() }, [homesKey])
   const fleetRef = useRef(fleet)
   fleetRef.current = fleet
+  /**
+   * ── WHAT HOUR IT IS, WHERE A BUILDER CAN READ IT ───────────────────────
+   *
+   * The day/night pass is INCREMENTAL: it walks the chart when the tint
+   * changes and does nothing at all when it has not, which is right for a
+   * thousand sprites and wrong for anything assembled afterwards. Islands,
+   * marks and towns are all built asynchronously and all had to be handed the
+   * hour at the moment they arrived; a captain is the same object and was the
+   * one that never got it.
+   *
+   * She is worse than the rest, too, because a captain is REBUILT — every time
+   * a trader changes their kit, a friend sails in or out, or the roster turns
+   * over — so she is not merely late to the first pass, she can be born at any
+   * hour of any day into a chart whose tint may not move again for minutes.
+   * Stamped from here at build, corrected from `night` after.
+   *
+   * Two numbers because a captain does not take the hour at the world's
+   * strength: the boat you steer takes 0.55 of it and everybody else 0.8.
+   */
+  const hourRef = useRef({ mine: 0xffffff, crew: 0xffffff })
   const crewRef = useRef(new Map<string, {
     holder: import('pixi.js').Container
     cap: Captain
@@ -1596,6 +1616,11 @@ export default function SeaIslandsGPU({
       })
 
       let lastTint = -1
+      /** The captains' own last hours. See where they are applied: they are
+       *  three different curves off one clock, and gating two of them on
+       *  whether the third has moved is a rounding step away from a bug. */
+      let lastMine = -1
+      let lastCrew = -1
       // ── AND WHAT IS BUILT ON THEM ─────────────────────────────────
       //
       // A town is a container of its own, added to the world AFTER the islands
@@ -1668,6 +1693,48 @@ export default function SeaIslandsGPU({
           // Fog is water vapour: it is whatever colour the light is, and at
           // night it is the same near-black the sea goes.
           fog.night(tint)
+
+          // ── THE PEOPLE ON THE WATER TAKE THE HOUR FIRST ────────────────
+          //
+          // ABOVE THE EARLY RETURN, and tracked on their own numbers.
+          //
+          // A captain is not tinted at the world's strength — she takes 0.55
+          // of the hour and the fleet takes 0.8 — so these are three separate
+          // curves off one clock, and both of these were sitting BELOW a
+          // return that fires when the third one has not moved. Whatever ran
+          // last while the light was still going is what a captain then wears
+          // until the tint happens to change again, which after dawn is not
+          // until dusk. Which is exactly what it looked like: a fleet still
+          // carrying the evening at noon, on a chart where the land, the water
+          // and the boat you steer had all come back up.
+          const mineTint = nightTint(d * 0.55, w)
+          const crewTint = nightTint(d * 0.8, w)
+          hourRef.current.mine = mineTint
+          hourRef.current.crew = crewTint
+          if (mineTint !== lastMine) {
+            lastMine = mineTint
+            // She takes the hour at just over half strength, which is what the
+            // DOM did with `nightGrade(dark, 0.55)`: the boat you are steering
+            // stays readable after dark while the world around it does not.
+            capRef.current?.cap.setNight(mineTint)
+          }
+          if (crewTint !== lastCrew) {
+            lastCrew = crewTint
+            // Other captains take it at four fifths: harder than the player,
+            // who gets just over half, and short of the full strength the land
+            // takes.
+            //
+            // They used to take it full, on the argument that the player
+            // staying readable is a concession to the person steering rather
+            // than a fact about the light - which is right, and stopped being
+            // harmless when the tint was deepened to stop the islands glowing.
+            // At full strength a trader after dark is a silhouette, and a
+            // trader you cannot find is one you cannot hail. Their name plates
+            // are DOM and untinted, so this is about seeing the boat, not the
+            // label.
+            for (const c of crewRef.current.values()) c.cap.setNight(crewTint)
+          }
+
           if (tint === lastTint) return
           lastTint = tint
           for (const b of baked) b.sprite.tint = tint
@@ -1692,22 +1759,6 @@ export default function SeaIslandsGPU({
               if (sp.tint !== undefined) sp.tint = tint
             }
           }
-          // She takes the hour at just over half strength, which is what the
-          // DOM did with `nightGrade(dark, 0.55)`: the boat you are steering
-          // stays readable after dark while the world around it does not.
-          capRef.current?.cap.setNight(nightTint(d * 0.55, w))
-          // Other captains take it at four fifths: harder than the player, who
-          // gets just over half, and short of the full strength the land takes.
-          //
-          // They used to take it full, on the argument that the player staying
-          // readable is a concession to the person steering rather than a fact
-          // about the light - which is right, and stopped being harmless when
-          // the tint was deepened to stop the islands glowing. At full strength
-          // a trader after dark is a silhouette, and a trader you cannot find
-          // is one you cannot hail. Their name plates are DOM and untinted, so
-          // this is about seeing the boat, not the label.
-          const crewTint = nightTint(d * 0.8, w)
-          for (const c of crewRef.current.values()) c.cap.setNight(crewTint)
           drift.night(tint)
           // Underwater, so it takes the hour HARDER than the surface does: the
           // last thing to still be visible after dark is not the thing below it.
@@ -1987,6 +2038,9 @@ export default function SeaIslandsGPU({
       // a boat that arrives a frame late.
       outer.visible = false
       boats.addChild(outer)
+      // AT WHATEVER HOUR SHE WAS BUILT. See hourRef: the night pass is
+      // incremental and will not mention the hour again until it changes.
+      built.setNight(hourRef.current.mine)
       capRef.current = { outer, inner, cap: built }
     })().catch(() => {
       // A captain who will not assemble must not take the chart with her.
@@ -2033,6 +2087,11 @@ export default function SeaIslandsGPU({
         if (crew.has(key)) continue
         const cap = await makeCaptain(PIXI, f.look)
         if (dead || !crewLayerRef.current) { cap.destroy(); return }
+        // AT WHATEVER HOUR THEY ARRIVED, before anything of them is shown.
+        // A fleet is torn down and rebuilt whenever anybody's kit changes, so
+        // this is not a once-at-load correction — it is most of how a trader
+        // ever gets the right light on them. See hourRef.
+        cap.setNight(hourRef.current.crew)
         const holder = new PIXI.Container()
         holder.addChild(cap.view)
         // Hidden until the loop places them, or a boat appears at the origin
