@@ -79,3 +79,10 @@ public/badgebatch*.png
 # Nano-banana prompt sources for generated art. The PNG/JPG that comes out is
 # committed; the prompt that made it is kept locally so a regeneration starts
 # from the same words rather than from memory.
+
+# Nano-banana SHEET sources for the crew ladders. One generation is a 3x2 grid
+# at 2K; art/cut-crew-sheets.mjs cuts it into the six plates in public/crew/,
+# and those are what ship. The sheets are a few MB each and never served, so
+# they stay local the way the badge plates do.
+art/raw/
+art/backup/
