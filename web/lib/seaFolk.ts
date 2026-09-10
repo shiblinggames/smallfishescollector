@@ -512,10 +512,13 @@ export const FOLK: Folk[] = [
       "Bro. Seems like just a few days ago we met but now we're friends forever on the open waters. See you in Valhalla!",
     ],
     // MATTY'S LINES COME FROM MATTY. He is a real person and everything he
-    // says out here is his, verbatim. These are the three that exist; the pools
-    // are ready for more the moment there are more, and nobody else writes them.
+    // says out here is his, verbatim - punctuation, capitals and all. Nobody
+    // else writes them and nobody tidies them.
     onLoved: [
       "YOOOOO. Dude. What. That's a bluefin. That's crazy.",
+      "dude. you didn't have to. appreciate it man",
+      "this is almost as nice as hitting a 10 bagger",
+      "I can't believe you got me one of these. you're the goat.",
     ],
     onPlain: [
       "Yooooo, nice. That's a solid hold. Solid.",
@@ -833,6 +836,9 @@ export const FOLK: Folk[] = [
     // YOON'S LINES COME FROM YOON. Same rule as Matty and Dennis.
     onLoved: [
       "Gyattt. You hauled this all the way out here for me? Sit down. I'm gonna tell you how it's caught properly.",
+      "this way too much dip on my chip brotha. ty. ty.",
+      "you are doing way too much, but i am thankful",
+      "bet.",
     ],
     onPlain: [
       "Good fish, clean handling. Gucci.",
@@ -938,6 +944,9 @@ export const FOLK: Folk[] = [
     // DENNIS'S LINES COME FROM DENNIS. Same rule as Matty and Yoon.
     onLoved: [
       "No. No way. You did not. Ten thousand casts and you just, you just brought one over? I need to sit down. I'm going to be talking about this for a year. Longer. You've made a huge mistake and I love you for it.",
+      "wow. wow. you got another one for me? i haven't even had enough time to get over the last one!",
+      "im honestly shocked at how quickly you're able to get these over to me. you must be one of the greatest fishers on the sea.",
+      "how are you catching these?? i've spent years out on these seas and I can barely get any. but here you are just pulling these out of thin air. If I could invest in you I would!",
     ],
     onPlain: [
       "Oh, that's a good one. That's a really good one. I'm going to log it and then I'm going to tell you a story about it, fair warning.",
