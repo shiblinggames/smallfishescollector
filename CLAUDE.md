@@ -37,4 +37,5 @@ routes; read the matching doc BEFORE working in a system. Do not inline these as
 - skins, pets, avatars, art prompts, slicers → docs/systems/cosmetics-and-art.md — any art
 - doubloons/gems, Captain, mail, packs → docs/systems/economy-membership.md — money pipes
 - deploy, security, RLS, code traps, copy rules → docs/systems/platform.md — infra/DB work
+- beta wipe, account reset, exiting beta → docs/systems/beta-wipe.md — before touching wipe_account
 - Steam, port, premium, shell, controller → docs/systems/steam-port.md — PARKED idea; the game is web-based
