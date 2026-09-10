@@ -4693,6 +4693,9 @@ export default function SeaMap({
     /** How much of the swell this hull takes. Only a friend on a warship sends
      *  one; everybody else is in a fishing boat and takes all of it. */
     lift?: number
+    /** How hard they are driving, 0..1. Sent for anybody whose speed we know
+     *  for a fact; left out for traders, whose wake measures it instead. */
+    force?: number
     /** Where the HULL sits, as opposed to where the sprite is centred. The
      *  sheet reserves a large empty region up and to the left for the rod, so
      *  the boat is well below the middle of it — rings drawn at the centre
@@ -7549,9 +7552,25 @@ export default function SeaMap({
           list.push({
             key: `friend:${name}`, x: at.shown.x, y: at.shown.y,
             facing: at.face, scale: 1, dim: 1,
-            // Their heading is the direction they are easing in. A boat that
-            // has arrived leaves no wake, which is correct.
-            ang: Math.atan2(at.target.y - at.shown.y, at.target.x - at.shown.x),
+            // ── THEIR HEADING, OFF THEIR VELOCITY ──────────────────────
+            //
+            // This was the direction the EASE was travelling — the gap between
+            // where they are drawn and where the last beat put them. That gap
+            // used to be most of a step and pointed roughly the right way; with
+            // the aim extrapolated it is a few pixels of correction and points
+            // wherever the last packet happened to land. So the wake was being
+            // handed a heading made of noise, and a V laid across a boat's path
+            // instead of behind it does not read as a wake at all.
+            //
+            // Their velocity is the one thing here that IS their heading, and
+            // it is smoothed across beats. Use it.
+            ang: Math.atan2(at.vy, at.vx),
+            // AND HOW HARD THEY ARE DRIVING. The wake can measure this itself
+            // from how far a hull moved between frames, and for a trader on a
+            // patrol that is the honest answer. For somebody on the wire we
+            // know it outright, and measuring an eased position instead just
+            // adds the ease's lag to the foam.
+            force: Math.min(1, (Math.hypot(at.vx, at.vy) * 1000) / SPEED),
             cx: at.shown.x + WATERLINE_X,
             cy: at.shown.y + WATERLINE_Y / GROUND,
             // GONE QUIET MEANS GONE BACK TO IDLE. Beats stop the moment you

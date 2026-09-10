@@ -330,6 +330,9 @@ export type GpuHandle = {
     /** How much of the swell this hull takes, 1 being a fishing boat's share.
      *  See shipLift in SeaMap. */
     lift?: number
+    /** How hard they are driving, 0..1, when the caller knows it outright.
+     *  Omitted for traders, whose speed the wake measures for itself. */
+    force?: number
   }[]): void
   skipper(s: {
     bob: number
@@ -1449,6 +1452,9 @@ export default function SeaIslandsGPU({
       let fleetAt: {
         key: string; x: number; y: number; facing: number; scale: number; dim: number
         ang: number; cx: number; cy: number
+        /** Present only for hulls whose speed and ride we know outright — a
+         *  friend on the wire. See the fleet handle. */
+        lift?: number; force?: number; frame?: Frame
       }[] = []
       const contacts: Contact[] = []
       /** Backing store for the above. Grows once to the size of the busiest
@@ -1578,6 +1584,10 @@ export default function SeaIslandsGPU({
           slot.x = e.x; slot.y = e.y; slot.ang = e.ang
           slot.cx = e.cx; slot.cy = e.cy
           slot.scale = e.scale; slot.kind = c.kind
+          // ALWAYS ASSIGNED, even when undefined. These slots are pooled and
+          // written through, so a force left over from whoever held this index
+          // last frame would make a moored trader trail foam.
+          slot.force = e.force
           contacts.push(slot)
         }
         wake.lay(contacts)

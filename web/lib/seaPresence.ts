@@ -111,17 +111,35 @@ export const POSE_CODE = { rest: 0, wait: 1, cast: 2 } as const
  * receiving it. That is 8 a second, about 28,800 an hour:
  *
  *     rate     per pair-hour     free 2M/mo      pro 5M/mo
+ *     5 Hz          72,000         27 hours       69 hours
  *     4 Hz          57,600         35 hours       87 hours
  *     2 Hz          28,800         69 hours      174 hours
  *     1 Hz          14,400        139 hours     347 hours
  *
- * Overage is $2.50 per million, so at this rate $2.50 buys another ~35 hours of
- * two people deliberately sailing side by side. Zero the rest of the time.
+ * Overage is $2.50 per million, so $2.50 buys another ~28 hours of two people
+ * deliberately sailing side by side at this rate. Zero the rest of the time.
  *
- * 4Hz was the first draft and 2Hz is the same picture for half the money —
- * against easing this fine the difference is not visible.
+ * ── WHY IT WENT UP, HAVING ONCE GONE DOWN ───────────────────────────────────
+ *
+ * This was 2Hz, and the note here said 4Hz was "the same picture for half the
+ * money — against easing this fine the difference is not visible". That was
+ * true of what the chart did then, which was ease toward the newest position:
+ * at that point the rate only decided how often the target moved, and the ease
+ * blurred the difference either way.
+ *
+ * It is not true of what it does now. The far end extrapolates along a measured
+ * velocity, so between beats a hull sailing straight is drawn exactly right at
+ * any rate at all — and the rate instead decides how long a TURN takes to be
+ * noticed. At 2Hz that is half a second of a boat confidently continuing the
+ * way it was already going, and steering is most of what anybody does on this
+ * chart. It read as bursts.
+ *
+ * THE COST ONLY LANDS WHILE SOMEBODY IS ACTUALLY SAILING. The move gate below
+ * drops a beat from a hull that has not gone anywhere, so a faster interval
+ * costs nothing at all for two captains moored side by side fishing, which is
+ * the other most likely way for two people to be near each other for an hour.
  */
-export const BEAT_MS = 500
+export const BEAT_MS = 200
 
 /**
  * HOW FAR YOU HAVE TO HAVE MOVED for a beat to be worth sending.
