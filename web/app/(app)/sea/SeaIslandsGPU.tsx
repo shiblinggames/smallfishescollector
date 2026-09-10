@@ -91,6 +91,15 @@ import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
 import { makeCaptain, makeShip, lookKey, type Captain, type CaptainLook } from './seaCaptain'
 import type { EffectName } from './auraSpecs'
+
+/** A warship somebody else is sailing, as the canvas needs her. Same shape the
+ *  player's own hull is built from — see makeShip. */
+export type ShipLook = {
+  url: string; flip: boolean; scale?: number; aura?: EffectName | null
+  /** What she trails. Her skin's, so somebody sailing alongside sees the wake
+   *  she sees. */
+  wake?: WakeKind
+}
 import { makeDrift, type Drift } from './seaDrift'
 import { makeWake, type Contact, type Wake, type WakeKind } from './seaWake'
 import { makeBerths, type Berths, type BerthSpec } from './seaBerth'
@@ -379,7 +388,13 @@ export default function SeaIslandsGPU({
   towns: GpuTown[]
   /** Everyone else, and how they look. Rebuilt only when somebody's outfit
    *  actually changes — see the effect below. */
-  fleet: { key: string; look: CaptainLook }[]
+  /**
+   * EVERY OTHER HULL ON THE WATER. A trader or a friend in their fishing boat
+   * carries a `look`; a friend out past the sea gate carries a `ship` instead,
+   * because a warship is a different object rather than a captain with a
+   * bigger hat. Exactly one of the two, and `ship` wins where both are set.
+   */
+  fleet: { key: string; look: CaptainLook; ship?: ShipLook | null }[]
   /** Filled in on mount so the loop can steer this without a re-render. */
   handle: { current: GpuHandle | null }
 }) {
@@ -2121,7 +2136,14 @@ export default function SeaIslandsGPU({
   // A look change means a different hat sprite, a different hull, possibly a
   // different rod, and reaching into a built captain to swap those is a second
   // way of doing what makeCaptain already does.
-  const fleetKey = fleet.map(f => `${f.key}~${lookKey(f.look)}`).join(',')
+  // A FRIEND WHO BOARDS HER SHIP IS A DIFFERENT OBJECT, and the key is what
+  // notices. Keyed on the ship as well as the look, so stepping onto a
+  // Man-o-War tears down the fishing boat and builds the hull — without this
+  // she would keep whichever of the two she happened to be in when you first
+  // saw her, for as long as you both stayed on the water.
+  const fleetKey = fleet
+    .map(f => `${f.key}~${f.ship ? `S${f.ship.url}@${f.ship.scale ?? 1}+${f.ship.aura ?? ''}` : lookKey(f.look)}`)
+    .join(',')
   useEffect(() => {
     let dead = false
     ;(async () => {
@@ -2132,9 +2154,11 @@ export default function SeaIslandsGPU({
       const want = new Map(fleetRef.current.map(f => [f.key, f]))
 
       // Gone, or wearing something else.
+      const sigOf = (f: { look: CaptainLook; ship?: ShipLook | null }) =>
+        f.ship ? `S${f.ship.url}@${f.ship.scale ?? 1}+${f.ship.aura ?? ''}` : lookKey(f.look)
       for (const [key, held] of [...crew]) {
         const w = want.get(key)
-        if (w && lookKey(w.look) === held.sig) continue
+        if (w && sigOf(w) === held.sig) continue
         held.cap.destroy()
         held.holder.destroy({ children: true })
         crew.delete(key)
@@ -2146,7 +2170,12 @@ export default function SeaIslandsGPU({
       // arrive on.
       for (const [key, f] of want) {
         if (crew.has(key)) continue
-        const cap = await makeCaptain(PIXI, f.look)
+        // HER SHIP IF SHE IS ON IT, her boat otherwise. The two builders
+        // return the same Captain contract, which is the whole reason this is
+        // a ternary and not a second code path — everything below steers
+        // whichever one came back without knowing which it is holding, exactly
+        // as the player's own slot does.
+        const cap = f.ship ? await makeShip(PIXI, f.ship) : await makeCaptain(PIXI, f.look)
         if (dead || !crewLayerRef.current) { cap.destroy(); return }
         // AT WHATEVER HOUR THEY ARRIVED, before anything of them is shown.
         // A fleet is torn down and rebuilt whenever anybody's kit changes, so
@@ -2161,8 +2190,11 @@ export default function SeaIslandsGPU({
         layer.addChild(holder)
         const hull = f.look.boatId ? BOATS.find(b => b.id === f.look.boatId) : null
         crew.set(key, {
-          holder, cap, sig: lookKey(f.look),
-          kind: (hull?.wake as WakeKind | undefined) ?? 'plain',
+          holder, cap, sig: sigOf(f),
+          // A friend on her warship trails her SKIN'S wake, the same one she is
+          // leaving on her own screen. `wake` on the slot carries it so this
+          // does not have to reach back into the skin tables per frame.
+          kind: f.ship?.wake ?? (hull?.wake as WakeKind | undefined) ?? 'plain',
         })
       }
     })().catch(() => {

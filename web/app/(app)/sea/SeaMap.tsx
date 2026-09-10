@@ -162,6 +162,27 @@ function captainFromFriend(f: FriendAtSea): CaptainLook {
   }
 }
 
+/**
+ * A FRIEND'S WARSHIP, as the canvas needs her.
+ *
+ * The chart used to be told only what somebody was WEARING, so a captain out
+ * past the sea gate on a Man-o-War appeared on your water in her little fishing
+ * boat with a rod in her hand. Built from exactly the same four facts the
+ * player's own hull is built from (see gpuShip), so the ship your friend is
+ * steering and the ship you are looking at cannot disagree.
+ */
+function shipFromFriend(f: FriendAtSea): ShipLook | null {
+  const h = getShip(f.shipTier)
+  if (!h.seaImageUrl) return null
+  return {
+    url: shipSkinSeaImage(f.shipSkin, f.shipTier, h.seaImageUrl),
+    flip: !!h.seaFlip,
+    scale: shipSkinSeaScale(f.shipSkin, f.shipTier),
+    aura: shipEffect(f.shipSkin),
+    wake: shipWake(f.shipSkin),
+  }
+}
+
 /** The sprite for the rod a regular sells, when they sell one. One place, so
  *  the man on the water and the offer in his panel cannot show different
  *  tackle. */
@@ -181,7 +202,7 @@ import { coastClip, coastline } from '@/lib/islandShape'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
 import { GROUND, islandLift, liftAt, liftAtPoint, bakeIsland, requestGround } from './islandArt'
-import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './SeaIslandsGPU'
+import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark, type ShipLook } from './SeaIslandsGPU'
 import { type GlowPatch } from './seaGlow'
 import { type CaptainLook } from './seaCaptain'
 import { shipWake, type WakeKind } from './seaWake'
@@ -4725,13 +4746,25 @@ export default function SeaMap({
 
   const gpuFleet = useMemo(() => {
     if (!GPU_ISLANDS) return []
-    const out = [yoon, smuggler, ...residents, ...socials, ...traders]
-      .map(t => ({ key: t.key, look: captainFromTrader(t.look) }))
+    // ANNOTATED, because the shape is wider than the first thing pushed into
+    // it: traders never carry a ship and friends sometimes do, and inference
+    // off the map() alone would lock the array to the narrower of the two.
+    const out: { key: string; look: CaptainLook; ship?: ShipLook | null }[] =
+      [yoon, smuggler, ...residents, ...socials, ...traders]
+        .map(t => ({ key: t.key, look: captainFromTrader(t.look) }))
     if (finn) out.push({ key: 'finn', look: captainFromTrader(FINN_LOOK) })
     // AND THE PEOPLE YOU ACTUALLY KNOW. Same builder, same slot: a friend's
     // boat is not a different kind of thing from a trader's, it is the same
     // thing with better tackle on it.
-    for (const f of friends) out.push({ key: `friend:${f.username}`, look: captainFromFriend(f) })
+    for (const f of friends) {
+      // HER SHIP IF SHE IS ON IT. The look goes along regardless — it costs
+      // nothing, and it is what she goes back to the moment she steps off.
+      out.push({
+        key: `friend:${f.username}`,
+        look: captainFromFriend(f),
+        ship: f.onShip ? shipFromFriend(f) : null,
+      })
+    }
     return out
   }, [yoon, residents, socials, traders, finn, friends])
   /** The water we have the rod out in. Null means sailing. */
@@ -12206,15 +12239,20 @@ const FriendBoat = memo(function FriendBoat({ friend, refs, pose }: {
       }}>
         {/* ON THE CANVAS UNDER THE FLAG. The wrapper stays: it carries their
             name, and the loop still eases the position into it. */}
-        {!GPU_ISLANDS && (
-          <Skipper
-            characterColor={friend.characterColor}
-            boatId={friend.boatId}
-            hatId={friend.hatId}
-            gear={friend.gear}
-            frame={pose}
-          />
-        )}
+        {!GPU_ISLANDS && (friend.onShip
+          // HER WARSHIP, not her fishing boat. The same split the canvas makes
+          // above, and it has to be made twice or the two renderers disagree
+          // about what somebody is sailing.
+          ? <Warship tier={friend.shipTier} skin={friend.shipSkin} />
+          : (
+            <Skipper
+              characterColor={friend.characterColor}
+              boatId={friend.boatId}
+              hatId={friend.hatId}
+              gear={friend.gear}
+              frame={pose}
+            />
+          ))}
       </div>
 
       {/* THEIR NAME, over the boat and counter-squashed like every other label

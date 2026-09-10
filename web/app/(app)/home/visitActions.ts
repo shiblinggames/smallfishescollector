@@ -230,6 +230,12 @@ export type FriendAtSea = {
    *  worth steering toward for a little while. */
   ago: number
   characterColor: string
+  /** SHE IS ON THE WARSHIP, not in the fishing boat. True past the sea gate
+   *  ('moored' or 'open'), the same two sides SeaMap tests for its own hull.
+   *  The chart draws a different object entirely for this — see gpuFleet. */
+  onShip: boolean
+  shipTier: number
+  shipSkin: string | null
   boatId: string | null
   hatId: string | null
   gear: {
@@ -327,7 +333,7 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
     // from the literal text of this argument; joining two strings gives it an
     // expression it cannot read, and the whole result silently degrades to an
     // error type that only shows up as a confusing cast failure downstream.
-    .select('id, username, sea_x, sea_y, sea_seen_at, character_color, equipped_boat, equipped_hat, rod_tier, reel_tier, hook_tier, equipped_pet, completionist_effects, is_premium, premium_expires_at')
+    .select('id, username, sea_x, sea_y, sea_seen_at, character_color, equipped_boat, equipped_hat, rod_tier, reel_tier, hook_tier, equipped_pet, completionist_effects, is_premium, premium_expires_at, sea_side, ship_tier, equipped_ship_skin')
     .in('id', canSee)
     .gte('sea_seen_at', cutoff)
 
@@ -338,6 +344,7 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
     character_color: string | null; equipped_boat: string | null; equipped_hat: string | null
     rod_tier: number | null; reel_tier: number | null; hook_tier: number | null
     equipped_pet: string | null; completionist_effects: number[] | null
+    sea_side: string | null; ship_tier: number | null; equipped_ship_skin: string | null
   }
 
   const now = Date.now()
@@ -356,10 +363,24 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
       // then also have to be handed.
       const rod = getEffectiveRod(Number(r.rod_tier ?? 0), r.completionist_effects ?? null)
       const pet = r.equipped_pet ? PETS.find(x => x.species === r.equipped_pet) ?? null : null
+      // ── WHICH BOAT SHE IS ACTUALLY IN ──────────────────────────────────
+      //
+      // This shipped carrying a fishing outfit and nothing else, so a friend
+      // out past the sea gate on a Man-o-War was drawn on your chart in her
+      // little fishing boat with a rod in her hand. The chart already knows the
+      // difference for YOUR hull — `sea_side` is what it reads — and it was the
+      // one fact about somebody else it was never told.
+      //
+      // 'moored' and 'open' are the two sides that mean the warship, matching
+      // the test SeaMap makes of its own `startSide`.
+      const onShip = r.sea_side === 'moored' || r.sea_side === 'open'
       return {
         id: r.id,
         username: r.username as string,
         x: Number(r.sea_x), y: Number(r.sea_y),
+        onShip,
+        shipTier: Number(r.ship_tier ?? 0),
+        shipSkin: r.equipped_ship_skin ?? null,
         ago: Math.max(0, Math.round((now - new Date(r.sea_seen_at).getTime()) / 1000)),
         characterColor: r.character_color ?? 'default',
         boatId: r.equipped_boat ?? null,
