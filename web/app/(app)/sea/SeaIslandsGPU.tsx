@@ -1613,6 +1613,22 @@ export default function SeaIslandsGPU({
         if (dead) { t.destroy(); return }
         townLayer = t
         world.addChild(t.view)
+        // ── AND IT STARTS AT WHATEVER HOUR IT IS ─────────────────────────
+        //
+        // `night` below returns early when the tint has not CHANGED, and the
+        // town layer is told the hour AFTER that return. A town takes a couple
+        // of hundred milliseconds to decode forty buildings, so it routinely
+        // finishes after the first night pass has already run and set
+        // `lastTint` — and then nothing calls it again until the clock moves
+        // the tint, which at a settled hour is minutes.
+        //
+        // For as long as that was only a tint, it was a town that stayed at
+        // noon brightness for a while and quietly caught up. Now it is also
+        // the town's LAMPS, which are alpha 0 until something tells them the
+        // hour, and a lamp that is only lit if you sit still long enough is a
+        // lamp nobody ever sees. Marks have carried this exact line for the
+        // same exact reason since the reef was blazing on a black sea.
+        t.night(lastTint < 0 ? 0xffffff : lastTint, dark)
       }).catch(() => {
         // An island with no buildings on it is still an island.
       })

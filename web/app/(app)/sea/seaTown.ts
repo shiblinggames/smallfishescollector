@@ -250,10 +250,14 @@ export async function makeTowns(
 
         const pool: Sprite = new PIXI.Sprite(poolTexture(PIXI))
         pool.anchor.set(0.5)
-        // Lying ON the plane, so it is squashed rather than counter-squashed:
-        // this is light on the ground, not a thing standing on it.
-        pool.width = spec.r * 0.6
-        pool.height = spec.r * 0.6 * GROUND
+        // ROUND HERE, an ellipse on screen. The WORLD is what carries the
+        // plane's squash — it is scaled (zoom, zoom * GROUND), which is why a
+        // building has to counter-squash to stand up — so a flat thing is
+        // simply drawn round and let alone. Writing the ellipse here squared
+        // with the world's and laid the pool out flatter than the ground it
+        // is lying on.
+        pool.width = spec.r * 0.66
+        pool.height = spec.r * 0.66
         pool.position.set(lx, ly)
         pool.tint = GLOW
         pool.alpha = 0
@@ -262,10 +266,15 @@ export async function makeTowns(
 
         const core: Sprite = new PIXI.Sprite(coreTexture(PIXI))
         core.anchor.set(0.5)
-        core.width = core.height = Math.max(10, spec.r * 0.05)
-        // Up the post. Height is screen y on this plane, and the gap between
-        // the light and its pool is the only thing drawing the post.
-        core.position.set(lx, ly - spec.r * POST)
+        // AND THIS ONE COUNTER-SQUASHES, because a lamp is not lying on the
+        // ground, it is a light in the air facing you. Same 1 / GROUND every
+        // building on the island uses to stand up.
+        core.width = Math.max(12, spec.r * 0.062)
+        core.height = core.width / GROUND
+        // Up the post. A height in world units is GROUND times that on screen,
+        // so a post you actually want to see is divided by it — the same
+        // division the island's own lift goes through two lines above.
+        core.position.set(lx, ly - (spec.r * POST) / GROUND)
         core.tint = GLOW
         core.alpha = 0
         core.blendMode = 'add'
