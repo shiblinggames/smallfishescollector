@@ -4994,6 +4994,53 @@ export default function SeaMap({
   /** WHICH BAIT IS ON THE HOOK. Fixed for the whole session before, at whatever
    *  the page happened to pick; the bait row can change it now. */
   const [activeBait, setActiveBait] = useState(bait)
+  /**
+   * ── THE BAG IS STATE, BECAUSE IT CHANGES WHILE YOU ARE OUT HERE ──────────
+   *
+   * It was read straight off the prop, which is a snapshot of the row at the
+   * moment the page rendered. The Daily Haul puts twenty worms in that row
+   * from a sheet ON THIS CHART, and nothing here could hear it: a captain who
+   * had just claimed bait was still told they had none until they changed
+   * page and came back. The bait beat of the first voyage waits on exactly
+   * this count, so it would have waited for ever.
+   *
+   * Re-seeded when the server's copy actually changes -- keyed on content,
+   * because the prop is a fresh array every render and keying on identity
+   * would reset the bag on every one, throwing away the very update this is
+   * for. The server is still the authority; this is how its answer arrives.
+   */
+  const [bag, setBag] = useState(baitBag)
+  const bagKey = JSON.stringify(baitBag)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setBag(baitBag) }, [bagKey])
+  // Mirrored for the listener below, which binds once and must not close over
+  // a stale count.
+  const bagRef = useRef(bag); bagRef.current = bag
+  const activeBaitRef = useRef(activeBait); activeBaitRef.current = activeBait
+  const baitLeftRef = useRef(baitLeft); baitLeftRef.current = baitLeft
+  useEffect(() => {
+    const onBait = (e: Event) => {
+      const d = (e as CustomEvent<{ baitType?: string; added?: number }>).detail
+      const type = d?.baitType
+      const added = Number(d?.added ?? 0)
+      if (!type || !(added > 0)) return
+      const had = bagRef.current.find(b => b.type === type)?.quantity ?? 0
+      const total = had + added
+      setBag(prev => prev.some(b => b.type === type)
+        ? prev.map(b => (b.type === type ? { ...b, quantity: total } : b))
+        : [...prev, { type, quantity: total }])
+      // ONTO THE HOOK if it is the bait already there, or if the hook was
+      // bare. A Captain claims chum while the page picked "worm" as a default
+      // for an empty bag; leaving worm selected at zero would keep them out
+      // of bait with twenty chum in the bag.
+      if (activeBaitRef.current === type || baitLeftRef.current <= 0) {
+        setActiveBait(type)
+        setBaitLeft(total)
+      }
+    }
+    window.addEventListener('bait-changed', onBait)
+    return () => window.removeEventListener('bait-changed', onBait)
+  }, [])
   /** WHICH ROD IS IN HAND, out of the rack. Purely a sea-side choice — it does
    *  not change what is equipped ashore, because the rack is what you brought
    *  and swapping between them is the whole point of having brought them. */
@@ -10855,7 +10902,7 @@ hullRef={hullRefFor(t.key)} />
           auto={auto}
           tideTurner={tideTurner}
           seaPhase={phase}
-          baitBag={baitBag}
+          baitBag={bag}
           rack={rack}
           look={{
             characterColor,
@@ -10888,7 +10935,7 @@ hullRef={hullRefFor(t.key)} />
             // bait actually on the hook rather than the one the page picked at
             // load and never revisited.
             setActiveBait(t)
-            setBaitLeft(baitBag.find(b => b.type === t)?.quantity ?? 0)
+            setBaitLeft(bag.find(b => b.type === t)?.quantity ?? 0)
           }}
           onPose={setFrame}
           // OUT IN FRONT OF THE BOW, not under the hull: the line went out
@@ -12162,35 +12209,31 @@ const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering, hullRef }
           the whole visual claim being made: he is a person you can talk to,
           and he is not one of the others.
 
-          WHEN A JOB IS DONE IT SHOWS FROM ANYWHERE, not only in hail range. He
-          is the campaign's forward gear and a captain who has finished the work
-          has to be able to SEE that from across the water, or the reward for
-          doing it is remembering to go and check. Bigger, brighter, a tick
-          rather than an exclamation, and it pulses. */}
-      {(isNear || ready) && (
+          ONLY WHEN NOTHING ELSE IS OVER HIS HEAD. A job on offer or a job done
+          puts the quest lamp up above the mast, and this sat under it as well,
+          so a captain pulling alongside Finn with work waiting saw two
+          exclamation marks on one man -- a muted one on his head and a bright
+          one above it. The lamp already says "come and talk", from further away
+          and louder, so while it is up this one stands down. The finished-job
+          state this used to carry (bigger, a tick, seen from anywhere) is the
+          lamp's `turnin` now and was for a while; that copy of it here was the
+          second mark. */}
+      {isNear && !offering && !ready && (
         <div aria-hidden style={{
-          position: 'absolute', left: 0, top: HEAD_TOP - (ready ? 40 : 32),
+          position: 'absolute', left: 0, top: HEAD_TOP - 32,
           transform: `translateX(-50%) scaleY(${1 / GROUND})`,
           transformOrigin: 'bottom center', pointerEvents: 'none',
         }}>
-          <div className={ready ? 'sea-hail finn-ready' : 'sea-hail'} style={{
+          <div className="sea-hail" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: ready ? 34 : 26, height: ready ? 34 : 26, borderRadius: '50%',
-            background: ready ? 'rgba(52,34,4,0.96)' : 'rgba(30,18,6,0.94)',
-            border: `${ready ? 2 : 1}px solid rgba(255,206,110,0.98)`,
-            boxShadow: ready
-              ? '0 0 30px rgba(255,190,80,0.95), 0 0 60px rgba(255,168,60,0.5)'
-              : '0 0 20px rgba(255,168,60,0.7)',
+            width: 26, height: 26, borderRadius: '50%',
+            background: 'rgba(30,18,6,0.94)',
+            border: '1px solid rgba(255,206,110,0.98)',
+            boxShadow: '0 0 20px rgba(255,168,60,0.7)',
           }}>
-            {ready ? (
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
-                stroke="#ffd07a" strokeWidth="3.2" strokeLinecap="round"
-                strokeLinejoin="round" aria-hidden><path d="M4.5 12.5l5 5 10-11" /></svg>
-            ) : (
-              <span className="font-cinzel font-700" style={{
-                fontSize: '1.032rem', lineHeight: 1, color: '#ffd07a', marginTop: -1,
-              }}>!</span>
-            )}
+            <span className="font-cinzel font-700" style={{
+              fontSize: '1.032rem', lineHeight: 1, color: '#ffd07a', marginTop: -1,
+            }}>!</span>
           </div>
         </div>
       )}

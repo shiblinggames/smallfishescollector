@@ -691,3 +691,13 @@ state and that is now a snapshot — exact when he sat on a pixel, stale the mom
 so SeaMap calls `finnHaunt` itself (`finnNow()`) for the boat, the proximity test, the
 compass and the minimap. Safe because nothing about the hail is verified against a
 coordinate: the agreement check between client and server is the encounter count.
+
+### Finn wears one mark
+
+Two things hang over Finn: the quest lamp above the mast (`QuestMark`, `offer`/`turnin`, shown
+whenever he has a job to give or take back) and the hail mark on his head (a trader's mark in a
+warmer colour, shown in hail range). Both were showing at once, so a captain pulling alongside Finn
+with work waiting saw two exclamation marks on one man. The hail mark now stands down whenever the
+lamp is up: `isNear && !offering && !ready`. The finished-job state it used to carry (bigger, a
+tick, visible from anywhere) had already moved to the lamp's `turnin`; the copy left on the hail
+mark was the second mark.

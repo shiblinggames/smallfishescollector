@@ -2566,3 +2566,27 @@ Captain" ended up on screen behind the setup modal.
 Ignoring the row costs nothing, because for a captain who has not been set up there is genuinely
 nothing on it to lose, and it means no amount of stale writing can strand a new captain in the
 anchorage. See the beta-wipe doc as well; a reset still wants the session gone first.
+
+### The bait beat, and why the bag is state
+
+A new account has **no bait**, and casting is gated on having some. The first voyage used to find
+that out at the cast beat, three beats and a sail later, and say so in a line that sent the captain
+to "the Daily Bonus in the Tavern, on the Mainland" — a page folded into the Daily Haul disc on the
+HUD long before. So the first thing a new captain was told was to go somewhere that did not exist.
+
+It is a beat of its own now, right after the welcome (`until: 'bait'`): Doby points at the disc,
+the disc and the worms card inside the sheet both flash (`data-coach="haul"` / `"haul-bait"`), and
+the beat advances the moment bait lands. A captain who already has bait never sees it. The coach
+card lifts to `z 120` for that beat and for a bait-stuck cast beat, because the sheet is a
+`PopupShell` at 111 and the line saying "claim your worms" would otherwise vanish behind the scrim
+the moment they did as it said. Target flashing is a quarter-second poll for the life of the beat
+rather than a burst of retries, because the worms card mounts whenever the captain opens the sheet.
+
+**The bag is `SeaMap` state, not a prop.** It was read straight off the prop — a snapshot of the row
+at render — so the Daily Haul putting twenty worms in that row from a sheet on this very chart could
+not be heard: a captain who had just claimed bait was still "out of bait" until they changed page.
+`DailyHaul` fires `bait-changed` (`{ baitType, added }`, same shape as `gems-changed`); the chart
+upserts the bag and, if that type is on the hook **or the hook was bare**, loads it and sets the
+count. The bare-hook case matters for Captains: the page defaults an empty bag to `worm`, and they
+claim chum. The bag re-seeds from the prop keyed on content, not identity, because the prop is a
+fresh array every render and identity would reset it on every one.

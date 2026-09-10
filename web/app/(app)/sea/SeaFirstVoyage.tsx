@@ -121,6 +121,12 @@ export default function SeaFirstVoyage({
   const beat = FIRST_VOYAGE[step]
   const done = step >= FIRST_VOYAGE.length
 
+  // WHY SHE CANNOT CAST, as it applies to THIS beat. Only the cast beat can be
+  // stuck; anywhere else the bait box is nobody's business yet. Worked out up
+  // here because the highlight below and the card at the bottom both hang off
+  // it.
+  const stuck = beat?.until === 'cast' ? blocked : null
+
   // ── AND NEVER BACKWARDS ───────────────────────────────────────────────────
   //
   // `startAt` comes from the server render, which can be a CACHED payload: the
@@ -207,21 +213,33 @@ export default function SeaFirstVoyage({
   // Retried for a moment: a beat that highlights the Market card comes up in
   // the same breath as the chooser it is inside, and the first query can easily
   // run before the modal has mounted.
+  //
+  // POLLED FOR THE LIFE OF THE BEAT, not retried for a moment. The bait beat
+  // names two targets: the Daily Haul disc on the HUD, and the worms card
+  // INSIDE the sheet that disc opens -- which mounts whenever the captain
+  // chooses to open it, not within any number of retries of the beat coming
+  // up. A quarter-second poll on a selector is nothing, and it means the card
+  // lights the instant the sheet appears.
+  //
+  // A stuck cast beat borrows the same two targets: "you are out of bait" is
+  // the same instruction as the bait beat, said later.
   useEffect(() => {
-    const want = beat?.target
+    const want = stuck === 'bait' ? 'haul haul-bait' : beat?.target
     const clear = () => document.querySelectorAll('.coach-flash')
       .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
     clear()
     if (!want) return
-    let tries = 0
+    const names = want.split(' ')
     const find = () => {
-      const el = document.querySelector(`[data-coach="${want}"]`)
-      if (el) { el.classList.add('coach-flash', 'coach-flash-gold'); return }
-      if (++tries < 20) window.setTimeout(find, 120)
+      for (const n of names) {
+        document.querySelectorAll(`[data-coach="${n}"]`)
+          .forEach(el => el.classList.add('coach-flash', 'coach-flash-gold'))
+      }
     }
     find()
-    return clear
-  }, [beat])
+    const id = window.setInterval(find, 250)
+    return () => { window.clearInterval(id); clear() }
+  }, [beat, stuck])
 
   // ── THE WAY THERE ─────────────────────────────────────────────────────────
   //
@@ -248,6 +266,14 @@ export default function SeaFirstVoyage({
   }, [wantReach, beat, next, at])
 
   // ── THE BEATS THAT WAIT ───────────────────────────────────────────────────
+  // Bait on the hook. Advances the moment there is some, which for a captain
+  // who already had it is the same render the beat came up on: they never see
+  // it, and that is the design.
+  const wantBait = beat?.until === 'bait'
+  useEffect(() => {
+    if (wantBait && blocked !== 'bait') next()
+  }, [wantBait, blocked, next])
+
   const wantCast = beat?.until === 'cast'
   useEffect(() => {
     if (wantCast && fishing) next()
@@ -310,9 +336,8 @@ export default function SeaFirstVoyage({
   // Said INSTEAD of the instruction, not after it: an instruction the game will
   // refuse is worse than no instruction, because the captain tries it and
   // concludes the game is broken rather than that they are missing something.
-  const stuck = beat.until === 'cast' && blocked
   const text = stuck === 'bait'
-    ? 'You are out of *bait*, Captain. Claim your free worms from the Daily Bonus in the Tavern, on the Mainland.'
+    ? 'You’re out of bait, Captain. Open the *Daily Haul*, top right, and claim your free worms.'
     : stuck === 'hold'
       ? 'Your *hold* is full. Nothing else fits until you sell what is in it — the market on the Mainland pays best.'
       : beat.text
@@ -327,6 +352,11 @@ export default function SeaFirstVoyage({
       onClose={() => setHidden(step)}
       onNext={waiting ? undefined : next}
       nextLabel={step === FIRST_VOYAGE.length - 1 ? 'Aye' : undefined}
+      // ABOVE THE SHEET while the instruction is about something inside one.
+      // The Daily Haul opens in a PopupShell at 111 and this card sits at 70,
+      // so the line saying "claim your worms" would vanish behind the scrim
+      // the moment they did as it said. Lifted for those two cases only.
+      z={beat.until === 'bait' || stuck === 'bait' ? 120 : undefined}
     />
   )
 }

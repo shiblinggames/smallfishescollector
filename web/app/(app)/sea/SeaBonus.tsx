@@ -75,6 +75,8 @@ export default function SeaBonus({ size, top, right }: {
         onPointerDown={e => e.stopPropagation()}
         style={{ position: 'absolute', top, right, zIndex: 40 }}>
         <button type="button"
+          // Named so the first voyage can light it. See the bait beat.
+          data-coach="haul"
           aria-label={waiting ? 'Daily haul, unclaimed' : 'Daily haul'}
           title="Daily haul"
           onClick={() => { vibrate(8); setOpen(true) }}

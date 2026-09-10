@@ -80,6 +80,14 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
     const r = await claimDailyBait()
     if (r.claimed) {
       setBaitClaimed(true)
+      // TELL THE CHART. The sea keeps the bait count in its own state and had
+      // no way of hearing about this, so a captain who claimed worms was still
+      // "out of bait" until they changed page. Same shape as gems-changed.
+      if (r.baitType && r.quantity) {
+        window.dispatchEvent(new CustomEvent('bait-changed', {
+          detail: { baitType: r.baitType, added: r.quantity },
+        }))
+      }
       onClaimed?.(gemsClaimed && crateClaimed)
     }
     setLoading(null)
@@ -135,6 +143,8 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
         />
 
         <ClaimCard
+          // Named so the first voyage can light it. See the bait beat.
+          coach="haul-bait"
           accent={BAIT} eyebrow="Daily Bait" title={`+20 ${baitName}`}
           sub={isPremium ? 'Premium chum to draw the big ones.' : 'Captains get chum instead.'}
           claimed={baitClaimed} claimedSub={<ResetCountdown prefix="Resets in" />} loading={loading === 'bait'} onClaim={claimBait}
@@ -162,13 +172,15 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
   )
 }
 
-function ClaimCard({ accent, eyebrow, title, sub, claimed, claimedSub, loading, onClaim, img, glyph }: {
+function ClaimCard({ accent, eyebrow, title, sub, claimed, claimedSub, loading, onClaim, img, glyph, coach }: {
   accent: string; eyebrow: string; title: string; sub: string
   claimed: boolean; claimedSub: React.ReactNode; loading: boolean; onClaim: () => void
   img?: string; glyph?: React.ReactNode
+  /** A `data-coach` name, so a tour can flash this card. */
+  coach?: string
 }) {
   return (
-    <div style={{
+    <div data-coach={coach} style={{
       background: claimed ? 'rgba(8,8,6,0.7)' : 'linear-gradient(180deg, rgba(14,16,22,0.94) 0%, rgba(7,9,12,0.97) 100%)',
       border: `1px solid ${claimed ? 'rgba(255,255,255,0.08)' : `${accent}44`}`,
       borderRadius: 16, padding: '0.95rem 1rem',

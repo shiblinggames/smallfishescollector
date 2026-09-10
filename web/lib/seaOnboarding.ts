@@ -74,8 +74,12 @@ export type Beat = {
    *   'sold'    — waits until the hold has been emptied at the market. That
    *               happens on ANOTHER ROUTE, which is why the tour's step is a
    *               profile column rather than component state.
+   *   'bait'    — waits until there is bait on the hook. A new account has
+   *               none, and the free worms are in the Daily Haul, so this is
+   *               the beat that sends them there. Skipped outright for a
+   *               captain who already has some.
    */
-  until: 'next' | 'cast' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold'
+  until: 'next' | 'cast' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
@@ -132,6 +136,24 @@ export const FIRST_VOYAGE: Beat[] = [
       : 'Welcome aboard, Captain. This is the whole sea. Drag anywhere to steer her.',
     until: 'next',
     target: 'helm',
+  },
+  // ── THE BAIT ──────────────────────────────────────────────────────────
+  //
+  // A new account has no bait at all, and casting is gated on having some. The
+  // tour used to find that out at the cast beat, three beats and a sail later,
+  // and say so in a line that sent the captain to a Daily Bonus "in the Tavern,
+  // on the Mainland" -- a page that had been folded into a disc on this HUD
+  // long before. So the very first thing a new captain did was get told to go
+  // somewhere that did not exist.
+  //
+  // Now it is a beat of its own, up front, pointing at the disc. It waits for
+  // the worms to actually land, and a captain who already has bait never sees
+  // it: the chart skips it the moment it comes up.
+  {
+    ...D,
+    text: 'Before we sail, open your *Daily Haul*, top right. There are free worms in it every day, and a bare hook catches nothing.',
+    until: 'bait',
+    target: 'haul haul-bait',
   },
   {
     ...D,
