@@ -1036,6 +1036,16 @@ export default function SeaIslandsGPU({
 
       const foams: { f: Foam; x: number; y: number; r: number }[] = []
       const grasses: { g: Grass; x: number; y: number; r: number }[] = []
+      /**
+       * WHAT HOUR THE LAND IS AT, up here where `place` can read it.
+       *
+       * `lastTint` is the same number and is declared a long way below this,
+       * after the near pass — which is fine for the marks, because they read it
+       * from inside a `.then`, and would be a ReferenceError here: islands are
+       * placed synchronously in the loop right under this line. Written by
+       * `night`, read by every meadow as it is built.
+       */
+      let landTint = 0xffffff
       const baked: { isle: GpuIsland; sprite: import('pixi.js').Sprite; pad: number }[] = []
       const place = (isle: GpuIsland) => {
         const d = isle.r * 2
@@ -1078,6 +1088,11 @@ export default function SeaIslandsGPU({
             Math.imul(isle.x | 0, 0x9e3779b1) ^ (isle.y | 0),
           )
           if (gr) {
+            // AT WHATEVER HOUR IT WAS SOWN. An island can be added to the chart
+            // long after dusk — the campaign hands over a new list as it opens
+            // water — and the night pass only walks the chart when the tint
+            // MOVES, which at a settled hour is not for a good while.
+            gr.night(landTint)
             gr.mesh.x = isle.x
             gr.mesh.y = isle.y
             meadow.addChild(gr.mesh)
@@ -1737,7 +1752,15 @@ export default function SeaIslandsGPU({
 
           if (tint === lastTint) return
           lastTint = tint
+          landTint = tint
           for (const b of baked) b.sprite.tint = tint
+          // THE GRASS IS ON THE LAND, so it takes what the land takes. It was
+          // taking nothing at all: a meadow's tint is its island's own green,
+          // set once when it was sown, and nothing here had ever written to it.
+          // Every other surface on the chart went down at dusk and the grass
+          // stayed at noon, which past a certain depth of tint reads as the
+          // fields being lit from underneath.
+          for (const g of grasses) g.g.night(tint)
           for (const sw of swayers) {
             for (const child of sw.holder.children) {
               (child as import('pixi.js').Sprite).tint = tint

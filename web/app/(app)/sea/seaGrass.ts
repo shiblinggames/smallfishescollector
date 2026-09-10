@@ -77,7 +77,32 @@ export type Grass = {
   mesh: import('pixi.js').Mesh<import('pixi.js').MeshGeometry>
   /** Leans everything into the wind at `time`. Called once a frame. */
   advance(time: number): void
+  /**
+   * ── AND IT GETS DARK ──────────────────────────────────────────────────
+   *
+   * The hour, as the same tint every sprite standing on the land takes.
+   *
+   * A meadow already OWNS its tint — it is the island's own green, and it is
+   * the only colour the mesh has, because a MeshSimple carries position and UV
+   * and nothing else. So the hour cannot simply be written over it the way it
+   * is written over a sprite: that would throw away which island this is and
+   * paint every meadow on the chart the same colour after dark.
+   *
+   * It multiplies onto the green instead, which is what a tint IS, and which is
+   * why this had to be a method rather than a field somebody sets. Nobody did
+   * set it, and grass was the last thing on the chart still lit at midnight.
+   */
+  night(hour: number): void
   destroy(): void
+}
+
+/** Two tints, one tint. Channel by channel, because a tint is a multiply and
+ *  there is no other way to say it. */
+function mulTint(a: number, b: number): number {
+  const r = (((a >> 16) & 255) * ((b >> 16) & 255)) / 255
+  const g = (((a >> 8) & 255) * ((b >> 8) & 255)) / 255
+  const bl = ((a & 255) * (b & 255)) / 255
+  return ((r | 0) << 16) | ((g | 0) << 8) | (bl | 0)
 }
 
 /** The atlas: this many different tufts, laid out in a grid. */
@@ -322,7 +347,9 @@ export function makeGrass(
   }
 
   const mesh = new PIXI.MeshSimple({ texture, vertices: verts, uvs, indices: idx })
-  mesh.tint = tint
+  /** The island's own colour, kept so the hour has something to multiply. */
+  const own = tint
+  mesh.tint = own
   // ── AND IT DOES NOT RE-UPLOAD ITSELF ─────────────────────────────
   //
   // MeshSimple sets `autoUpdate = true` in its constructor and hangs an
@@ -342,6 +369,7 @@ export function makeGrass(
 
   return {
     mesh,
+    night(hour) { mesh.tint = hour === 0xffffff ? own : mulTint(own, hour) },
     advance(time) {
       // ── THE WIND, ONCE, FOR EVERY TUFT ON THIS ISLAND ──────────
       //
