@@ -1633,6 +1633,18 @@ second `<img>` of the same file flipped about the keel row (`seaKeel`) at the sk
 hull so it lies over the drop shadow. The Warship and ShipAtBerth both render it; a hull
 drawn anywhere else without it will read as a sticker next to them.
 
+**A REFLECTION LEANS THE OTHER WAY** (`Captain.setHeel`, 2026-09). Mirroring a rotated object
+about the waterline gives you the object rotated the other way round: reflect(rotate(h, t)) is
+rotate(reflect(h), -t). Both Pixi twins live inside the node the caller rotates, so they were
+picking up +t where they needed -t and sitting a full 2t out, leaning WITH the hull instead of
+against it. `setHeel(deg)` applies -2t locally so the net is -t; the helm passes `sk.heel` and
+the fleet passes each hull's swell roll. It is invisible at a degree of swell and impossible to
+miss on a Man-o-War under a maelstrom's pull, which is where it was caught.
+
+The vertical scale is deliberately NOT foreshortened by GROUND: the Pixi captain's twin has
+always been 0.55 in screen space, and the DOM mirror matches it. Do not "fix" one without the
+other or the two hulls stop agreeing about the same water.
+
 ### Sizing it
 
 Any change to `EXP_EDGE` has to clear the Crew Hall, whose shore reaches 2,124 from the

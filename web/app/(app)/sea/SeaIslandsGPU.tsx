@@ -1930,7 +1930,11 @@ export default function SeaIslandsGPU({
             // facing correction, unlike the DOM's transform where the mirror is
             // the outer one. Same field, so a crest rolls a group of them in
             // turn rather than all at once.
-            c.holder.rotation = (swellHeel(e.x, e.y, ts) * Math.PI) / 180
+            const roll = swellHeel(e.x, e.y, ts)
+            c.holder.rotation = (roll * Math.PI) / 180
+            // Their twins too. A bay full of moored hulls all reflecting the
+            // wrong way is the same mistake made forty times.
+            c.cap.setHeel(roll)
             // And the water comes up their sides on the same heave.
             c.cap.setSoak(swellAt(e.x, e.y, ts))
             // AND WHAT THEY ARE DOING WITH THEIR HANDS. Idempotent inside the
@@ -1978,6 +1982,10 @@ export default function SeaIslandsGPU({
           c.outer.scale.set(sk.zoom)
           c.inner.scale.x = sk.facing
           c.inner.rotation = (sk.heel * Math.PI) / 180
+          // AND HER REFLECTION LEANS THE OTHER WAY. The line above turns the
+          // node that holds both her and her twin; a mirror has to take the
+          // opposite angle. See Captain.setHeel.
+          c.cap.setHeel(sk.heel)
           c.cap.setFrame(sk.frame)
           c.cap.setStage(sk.stage)
           // HOW DEEP SHE IS SITTING. The same number that just lifted her: a

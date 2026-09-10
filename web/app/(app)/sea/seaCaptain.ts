@@ -248,6 +248,21 @@ export type Captain = {
    *  down with distance — a captain three screens away does not need sixty
    *  embers, and fill rate is the one cost here that is not free. */
   setIntensity(k: number): void
+  /**
+   * HOW FAR SHE IS LEANING, in screen degrees — the same number the caller
+   * just rotated her by.
+   *
+   * ONLY THE REFLECTION USES IT, and it exists because a reflection is the one
+   * part of a hull that must not turn with her. Mirroring a rotated object
+   * about the waterline gives you the object rotated the OTHER way: reflect
+   * (rotate(h, t)) is rotate(reflect(h), -t). The twin lives inside the node
+   * the caller rotates, so it was picking up +t when it needed -t and sitting
+   * a full 2t out — leaning with the hull instead of against it.
+   *
+   * Invisible at a degree of swell and impossible to miss on a ship of the
+   * line under a maelstrom's pull, which is where it was spotted.
+   */
+  setHeel(deg: number): void
   update(dt: number): void
   /**
    * HOW DEEP SHE IS SITTING, in the same bob units the chart lifts her by.
@@ -609,6 +624,8 @@ export async function makeCaptain(
       skiff.setFrame(f)
     },
     setStage: s => { for (const w of worn) w.aura.setStage(s) },
+    // MINUS TWICE, so the net comes out at minus once. See setHeel.
+    setHeel(deg) { mirrorBox.rotation = (-2 * deg * Math.PI) / 180 },
     setNight(tint) {
       // The character sprite is not in `parts`, so it is tinted by hand rather
       // than forgotten. Held by reference because the shadow now sits under it
@@ -805,6 +822,9 @@ export async function makeShip(
     view,
     setFrame() {},
     setStage() {},
+    // The same correction the captain's twin takes, and it shows far more
+    // here: this hull is three times the size and she leans further.
+    setHeel(deg) { back.rotation = (-2 * deg * Math.PI) / 180 },
     setNight(tint) {
       hull.tint = tint
       back.tint = tint
