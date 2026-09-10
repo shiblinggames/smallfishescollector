@@ -4,8 +4,14 @@ Converting Seas the Booty from a Vercel-hosted web game into a Steam game. Nothi
 built yet. Read this before starting any of it, and read the system doc for whatever you are
 touching alongside it.
 
-**The decision, taken 2026-09-10: PREMIUM BUY-ONCE.** One Steam price, everything unlocked,
-gems earned only. No purchases inside the game at all.
+**The decision, taken 2026-09-10: PREMIUM BUY-ONCE, AND STEAM ONLY.** One Steam price,
+everything unlocked, gems earned only, no purchases inside the game at all. The web version
+retires at launch and the iOS/Capacitor shell is not built. One client, one economy, one
+place the game lives.
+
+That makes this a conversion rather than a second SKU, which removes the two hardest things
+about a port: there is no account-linking to maintain forever, and no second economy to keep
+balanced against the first.
 
 ## Why that decision is the one that gates the rest
 
@@ -47,10 +53,10 @@ The biggest design change and the one everything else sits on. Not the last step
 - Audit every gem sink against earn-only rates. This is a real balance pass, not a search and
   replace.
 - Strip the Stripe and Shopify checkout surfaces and webhooks from the client and the API.
-- **Existing paying customers.** People bought a LIFETIME membership. Decide what they get and
-  say so publicly before the store page goes up. A Steam key is the honest answer and the cost
-  is a rounding error against the goodwill of not having sold a lifetime of something that then
-  ended.
+- **Nobody paid.** Every membership on the live table was GRANTED, not bought, so there is no
+  refund, no goodwill debt and no Steam keys to hand out. Stripe and Shopify can be deleted
+  outright rather than disabled behind a flag: there is no purchase history to preserve and no
+  webhook that must keep answering. Confirm the table before deleting, then delete.
 
 ### 2. Identity
 
@@ -58,7 +64,15 @@ Steam auth to Supabase session: the client gets an auth ticket from Steamworks, 
 verifies it with Valve, and mints a Supabase JWT. Everything behind it is unchanged, because
 every value mutation already runs service-role behind RLS and does not care how you signed in.
 
-Decide here whether existing web accounts migrate, and if so, the linking flow.
+**The one thing here that is a real decision: what happens to the players who already exist.**
+The web retires, so roughly eighty accounts with fish, crew, badges and homesteads either come
+across or do not. A one-time claim — sign in once with the old email, bind that row to a
+SteamID — is cheap to build and is the kind thing to do for people who tested this for a year.
+The alternative is that everybody starts again, which is defensible for a Steam launch and
+should then be said out loud rather than discovered.
+
+Note that this is the ONLY place old accounts matter. Everything else about identity gets
+simpler: no linking to maintain, because after the claim window there is one way in.
 
 ### 3. The shell
 
@@ -69,6 +83,11 @@ are all server actions and it is online-only by construction.
 **The review risk is that it reads as a website in a box.** Native window, no browser chrome,
 real fullscreen, bundled assets wherever possible, and honest failure states when the network
 drops. Say "online only" on the store page rather than letting a reviewer discover it.
+
+With the web retiring there is no longer a reason for the shell to point at a public URL at
+all. Worth revisiting once phases 1 and 2 are done: assets can ship in the binary and only the
+server actions need the network, which is a better product and a much better first impression
+than a loading spinner over a browser.
 
 ### 4. Input, and the Deck
 
@@ -110,5 +129,11 @@ by the port. This is a distribution and shell change with one design change at t
 ## Still open
 
 - The price.
-- The web version's fate: retire at launch, run both, or freeze it.
-- Whether Steam becomes the only client or the iOS plan continues beside it.
+- Whether the eighty existing accounts get a one-time claim onto a SteamID, or everybody starts
+  again. See phase 2.
+
+## Settled, so nobody reopens them
+
+- **Premium buy-once.** No shop, no membership, no purchased gems.
+- **Steam only.** The web version retires at launch. The iOS/Capacitor shell is not built, and
+  the plan for it is superseded by this document.
