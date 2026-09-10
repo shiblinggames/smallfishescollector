@@ -1436,6 +1436,22 @@ the mouth takes them at the lip. And the hull HEELS toward the eye (`maelLeanRef
 second when a fight starts or she sails clear). The lean is a screen tilt and therefore lives
 inside the `* facing.current` group with the drive heel and the turn lean.
 
+**And the lip breaks.** A hard thin band at the top of the throat (u = 0, the rim the terraces
+start from), breathing with the funnel so the edge and the hole are never a pixel apart,
+shimmering on two out-of-step sines because a band pulsing on one is a band pulsing. Twenty-six
+specks of spray come off it per door, thrown on a parabola so they leave the water and return
+to it, carried round with the rim and drifting INWARD while they are up — what comes off this
+lip is being taken, not escaping. Spray is the only thing in the bowl that is airborne, so its
+height is divided by GROUND per particle like the spirits'.
+
+**Sizing (2026-09).** The doors moved to (+/-2800, -10100): 500 further north, 800 further
+apart, with the nearest strait mouth still 1,600 from either eye and the eyes still inside the
+junction rim. Re-run those numbers in the `MAELSTROMS` header comment if either one moves
+again, because the straits are placed by bearing from `HUB` and a bay moving moves a mouth.
+`STREAM_OUT` came down from 2.6r to 1.95r at the same time: the sea was visibly falling in
+from sixteen hundred pixels out, which made an already large thing read larger. The radius
+itself is unchanged, so the grip and `MAELSTROM_REACH` are what they were.
+
 ## The anchorage, and the way out of it
 
 The water north of the reef. Reached through the arch on the fishing boat, and it holds the

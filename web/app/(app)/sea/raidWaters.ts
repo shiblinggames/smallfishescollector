@@ -867,13 +867,31 @@ export const WARGATE_REACH = 340
  * for the Don's), read from the same cleared list, so the water cannot open a
  * door the page keeps shut.
  *
- * Verified clear water: the nearest strait mouth is sixteen hundred pixels
- * from either eye, so a 640 radius leaves the straits untouched.
+ * ── WHERE THEY SIT, AND WHY IT MOVED (2026-09) ─────────────────────────────
+ *
+ * They were at (+/-2400, -9600): a little north of the junction's middle and
+ * 4,800 apart. At 640 radius apiece, with a storm skirt and a sea that streams
+ * into them, that is two very large doors sitting close together in the middle
+ * of the crossing. Pushed 500 further north and 800 further apart, to
+ * (+/-2800, -10100), which is 5,600 between the eyes and leaves the mouth of
+ * the junction to the Wargate.
+ *
+ * MEASURED, not eyed, because this water is crowded and everything in it is
+ * derived from a bearing:
+ *
+ *   davy   nearest mouth (A Bigger Fish)      1,594   edge to it   954
+ *   don    nearest mouth (The Last Fathom)    1,625   edge to it   985
+ *   both   from the junction's centre         2,941   its rim    3,800
+ *
+ * So the nearest strait mouth is still sixteen hundred pixels from either eye,
+ * exactly as it was, and the eyes with their radius still sit a clear 200
+ * inside the junction. Move either one again and re-run those three numbers:
+ * the straits are placed by bearing from HUB, so a bay moving moves a mouth.
  */
 export type Maelstrom = { id: 'davy' | 'don'; x: number; y: number; r: number; name: string }
 export const MAELSTROMS: Maelstrom[] = [
-  { id: 'davy', x: -2400, y: -9600, r: 640, name: 'The Davy Jones Gauntlet' },
-  { id: 'don', x: 2400, y: -9600, r: 640, name: "Don's Gauntlet" },
+  { id: 'davy', x: -2800, y: -10100, r: 640, name: 'The Davy Jones Gauntlet' },
+  { id: 'don', x: 2800, y: -10100, r: 640, name: "Don's Gauntlet" },
 ]
 /** How close to the eye you have to be to descend. Inside the funnel proper. */
 export const MAELSTROM_REACH = 430

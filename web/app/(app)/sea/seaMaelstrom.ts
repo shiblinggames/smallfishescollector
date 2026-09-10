@@ -138,6 +138,31 @@ let discTex: Texture | null = null
 let holeTex: Texture | null = null
 let moteTex: Texture | null = null
 let ringTex: Texture | null = null
+let lipTex: Texture | null = null
+
+/**
+ * THE LIP: a hard, thin band, and deliberately not the soft ring above it.
+ * The ring is a crest travelling across open water; this is the edge the sea
+ * actually tips over, and the two want different shapes rather than one alpha
+ * turned up. Bright and narrow with a short inner shoulder, because the water
+ * piles up on the way in and drops away on the far side of the edge.
+ */
+function lipTexture(PIXI: typeof import('pixi.js')): Texture {
+  const S = 512
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')!
+  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+  grad.addColorStop(0.00, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.84, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.91, 'rgba(255,255,255,0.45)')
+  grad.addColorStop(0.955, 'rgba(255,255,255,1)')
+  grad.addColorStop(0.985, 'rgba(255,255,255,0.30)')
+  grad.addColorStop(1.00, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, S, S)
+  return PIXI.Texture.from(c)
+}
 
 /** A thin bright band at the edge of its own circle: one crest, seen from
  *  above. The same shape the portal wells draw their inward rings with. */
@@ -270,8 +295,18 @@ const FOAM_N = 120
 const SPIRIT_N = 40
 /** Crests racing in across the skirt. */
 const STREAM_N = 5
-/** Where they come from and where the mouth takes them, in world radii. */
-const STREAM_OUT = 2.6, STREAM_IN = 1.02
+/**
+ * Where they come from and where the mouth takes them, in world radii.
+ *
+ * OUT was 2.6, which on a 640 door is water visibly falling in from sixteen
+ * hundred pixels away — the whole crossing was being drawn down and it made an
+ * already large thing read larger still. Pulled in to just under two radii: the
+ * sea starts going with it near the storm skirt rather than out in open water,
+ * and the fall is shorter and therefore quicker to read.
+ */
+const STREAM_OUT = 1.95, STREAM_IN = 1.02
+/** Specks thrown off the lip where it breaks. */
+const SPRAY_N = 26
 
 /**
  * THE KEYSTONE, in units of the world radius. The flat texture spans 2.4R
@@ -337,8 +372,12 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
   holeTex ??= radial(PIXI, [[0, 'rgba(0,0,0,1)'], [0.5, 'rgba(0,0,0,0.9)'], [1, 'rgba(0,0,0,0)']])
   moteTex ??= radial(PIXI, [[0, 'rgba(255,255,255,1)'], [0.4, 'rgba(255,255,255,0.6)'], [1, 'rgba(255,255,255,0)']], 32)
   ringTex ??= ringTexture(PIXI)
+  lipTex ??= lipTexture(PIXI)
 
   type Foam = { p: Particle; ang: number; r: number; size: number }
+  /** One speck thrown off the breaking lip: where it left, how high it got,
+   *  and how long it has been in the air. */
+  type Spray = { p: Particle; ang: number; rr: number; hi: number; age: number; life: number; size: number }
   type Spirit = { p: Particle; ang: number; r: number; h: number; age: number; life: number; size: number }
   type One = {
     m: Maelstrom; th: Theme
@@ -354,6 +393,8 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     /** The skirt streaming in: crests racing inward, and the drag over them. */
     streams: { s: Sprite; q: number }[]
     drag: Sprite
+    /** Where the sea tips over the edge, and what comes off it. */
+    lip: Sprite; spray: Spray[]
     foam: Foam[]; spirits: Spirit[]
     seen: boolean
     nextStrike: number; strikeLeft: number
@@ -494,7 +535,32 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     floor.blendMode = 'multiply'
     const wall = sprite(discTex!, 1, th.mid, 0.12)
     wall.blendMode = 'add'
-    node.addChild(floor, wall, eye, core)
+
+    // ── THE LIP, AND WHAT COMES OFF IT ────────────────────────────────
+    //
+    // Over the throat, because foam at the rim is the last thing the light
+    // touches on the way down: a terrace's dark multiplying over it would put
+    // the wall's shadow on top of the water breaking above it.
+    const lipS = sprite(lipTex!, 1, th.foam, 0)
+    lipS.blendMode = 'add'
+    // AIRBORNE, and the only thing here that is. Everything else in this
+    // bowl lies in the plane; a speck thrown off the lip leaves it, so its
+    // height is divided by GROUND per particle exactly as the spirits' is.
+    const sprayLayer: ParticleContainer = new PIXI.ParticleContainer({
+      dynamicProperties: { position: true, rotation: false, vertex: true, color: true },
+    })
+    sprayLayer.blendMode = 'add'
+    const spray: Spray[] = []
+    for (let i = 0; i < SPRAY_N; i++) {
+      const p: Particle = new PIXI.Particle({ texture: moteTex! })
+      p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
+      p.tint = th.foam
+      sprayLayer.addParticle(p)
+      // Staggered into the run so the first second is not one burst.
+      spray.push({ p, ang: Math.random() * Math.PI * 2, rr: m.r, hi: 0, age: Math.random(), life: 0.7 + Math.random() * 0.7, size: 5 + Math.random() * 8 })
+    }
+
+    node.addChild(floor, wall, lipS, sprayLayer, eye, core)
 
     // ── THE PROJECTION ──────────────────────────────────────────────
     //
@@ -568,7 +634,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     return {
       m, th, node, flatDark, flatLight, rtDark, rtLight,
       storm, funnel, arms, mid, wisps, eye, core, strike, beam, holo,
-      terraces, floor, wall, streams, drag,
+      terraces, floor, wall, streams, drag, lip: lipS, spray,
       foam, spirits, seen: false,
       nextStrike: 4 + Math.random() * 8, strikeLeft: 0,
     }
@@ -678,7 +744,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         // AND THE WHOLE PATCH TURNS. One broad spiral over the skirt, slower
         // than the arms because it is open sea being dragged rather than the
         // vortex itself.
-        flatRing(o.drag, m.r * 1.85)
+        flatRing(o.drag, m.r * 1.45)
         o.drag.rotation += dt * spd * 0.42
         o.drag.alpha = (0.04 + 0.07 * gg) * lit
         for (const tr of o.terraces) {
@@ -704,6 +770,46 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           o.wall.position.set(wx, wy - wr * 0.5)
           o.wall.width = wr * 2.2 * KEY_W; o.wall.height = wr * 1.3 * KEY_H
           o.wall.alpha = (0.08 + 0.12 * gg) * lit
+        }
+
+        // ── AND THE LIP BREAKS ──────────────────────────────────────────
+        //
+        // Where the flat sea stops being a surface. It sits at the top of the
+        // throat by construction — u = 0 is the rim the terraces start from —
+        // and breathes with the funnel, so the edge and the hole under it are
+        // never a pixel apart.
+        //
+        // TWO OUT-OF-STEP SINES on the shimmer, because a band pulsing on one
+        // is a band pulsing, and foam does not do that. Kept off nothing at
+        // distance for the same reason the storm skirt is: a maelstrom on the
+        // horizon still has water breaking at its edge.
+        ring(o.lip, 0, breathe)
+        o.lip.alpha = (0.1 + 0.22 * gg)
+          * (0.72 + 0.18 * Math.sin(t * 2.3) + 0.14 * Math.sin(t * 3.7 + 1.2)) * lit
+
+        // THE SPRAY. Thrown off the edge, carried round with it, and drifting
+        // INWARD while it is up — what comes off this lip is not escaping, it
+        // is being taken. A parabola, so it leaves the water and returns to it
+        // rather than fading out in mid-air.
+        for (const sp of o.spray) {
+          sp.age += dt
+          if (sp.age >= sp.life) {
+            sp.age = 0
+            sp.life = 0.7 + Math.random() * 0.7
+            sp.ang = Math.random() * Math.PI * 2
+            sp.rr = m.r * (0.94 + Math.random() * 0.1)
+            sp.size = 5 + Math.random() * 8
+            // How hard the bowl is working decides how far it throws.
+            sp.hi = (26 + Math.random() * 54) * (0.45 + 0.85 * gg)
+          }
+          const u = sp.age / sp.life
+          sp.ang += dt * spd * 0.8
+          sp.rr -= dt * m.r * 0.08
+          const h = sp.hi * 4 * u * (1 - u)
+          sp.p.x = Math.cos(sp.ang) * sp.rr * KEY_W
+          sp.p.y = Math.sin(sp.ang) * sp.rr * KEY_H + sp.rr * KEY_DROP - h / GROUND
+          sp.p.scaleX = sp.size / 32; sp.p.scaleY = sp.size / 32
+          sp.p.alpha = Math.pow(Math.sin(u * Math.PI), 0.7) * (0.16 + 0.5 * gg) * lit
         }
         o.arms.alpha = (0.26 + 0.22 * gg) * lit
         o.mid.alpha = (0.2 + 0.18 * gg) * lit
