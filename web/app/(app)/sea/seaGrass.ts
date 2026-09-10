@@ -80,22 +80,45 @@ export type Grass = {
   destroy(): void
 }
 
+/** The atlas: this many different tufts, laid out in a grid. */
+export const TUFT_COLS = 4
+export const TUFT_ROWS = 2
+export const TUFT_KINDS = TUFT_COLS * TUFT_ROWS
+
 /**
- * ── THE TUFT PLATE ──────────────────────────────────────────────────────────
+ * ── EIGHT TUFTS, NOT ONE ────────────────────────────────────────────────────
  *
- * GREYSCALE, and that is the whole reason each island can have its own grass
- * for free: the mesh is tinted, tint multiplies, so one plate becomes basalt
- * grass or jungle grass or chalk grass with no second texture and no shader.
+ * The first plate was a single tuft, and a meadow was that one picture stamped
+ * fourteen hundred times. Worse, it was stamped in ONE COLOUR: a MeshSimple
+ * carries position and UV and nothing else, so a single mesh tint means every
+ * blade of grass on an island is pixel-identical to every other. That is not a
+ * field, it is a wallpaper, and no amount of reshaping one tuft fixes it —
+ * because the fault was never the tuft, it was that there is only one.
  *
- * Dark at the root and bright at the tips, so the multiply leaves depth in it
- * rather than a flat silhouette in one green. Blades of unequal height and
- * lean, because a fan of identical blades is a comb.
+ * UVs are the one per-quad channel a MeshSimple has, so the variety has to live
+ * in the texture and be SELECTED by them. Eight cells, and each tuft picks one.
+ *
+ * They differ in three ways on purpose, because differing in one is still a
+ * pattern:
+ *
+ *   SHAPE — seven blades to fourteen, narrow and upright through wide and
+ *   spilling, so a clump can be a spray or a mat.
+ *
+ *   HEIGHT — some barely clear the ground. A meadow that is all one height is
+ *   mown, and the short ones are what make the tall ones read as tall.
+ *
+ *   AND TONE — each cell is drawn at its own brightness, from a little over
+ *   half up to full. The mesh tint MULTIPLIES, so a dim cell comes out as a
+ *   darker green of the same family: the per-tuft colour variation that the
+ *   vertex format cannot carry, smuggled in through the one channel it can.
+ *
+ * Greyscale still, so an island's palette decides what green it all is.
  */
 export function makeGrassTexture(PIXI: typeof import('pixi.js')) {
-  const S = 64
+  const CELL = 64
   const cv = document.createElement('canvas')
-  cv.width = S
-  cv.height = S
+  cv.width = CELL * TUFT_COLS
+  cv.height = CELL * TUFT_ROWS
   const g = cv.getContext('2d')!
 
   // A cheap fixed hash, so the plate is the same every session.
@@ -105,31 +128,45 @@ export function makeGrassTexture(PIXI: typeof import('pixi.js')) {
     return (h % 10000) / 10000
   }
 
-  const blades = 11
-  for (let i = 0; i < blades; i++) {
-    // Rooted along the bottom, fanning out from the middle.
-    // Rooted right across the base and leaning further out, so the clump
-    // closes up instead of leaving daylight between every blade.
-    const rootX = S * (0.5 + (i / (blades - 1) - 0.5) * 0.86 + (rnd() - 0.5) * 0.05)
-    const height = S * (0.58 + rnd() * 0.42)
-    const lean = (rootX / S - 0.5) * S * 1.25 + (rnd() - 0.5) * S * 0.16
-    const half = S * (0.038 + rnd() * 0.026)
+  for (let cell = 0; cell < TUFT_KINDS; cell++) {
+    const ox = (cell % TUFT_COLS) * CELL
+    const oy = Math.floor(cell / TUFT_COLS) * CELL
 
-    const tipX = rootX + lean
-    const tipY = S - height
-    // One quadratic each way round a spine, so the blade tapers to a point.
-    const grad = g.createLinearGradient(0, S, 0, tipY)
-    const root = 0.42 + rnd() * 0.14
-    grad.addColorStop(0, `rgba(255,255,255,${root.toFixed(2)})`)
-    grad.addColorStop(0.55, 'rgba(255,255,255,0.86)')
-    grad.addColorStop(1, 'rgba(255,255,255,1)')
-    g.fillStyle = grad
-    g.beginPath()
-    g.moveTo(rootX - half, S)
-    g.quadraticCurveTo(rootX - half * 0.7 + lean * 0.35, S - height * 0.55, tipX, tipY)
-    g.quadraticCurveTo(rootX + half * 0.7 + lean * 0.35, S - height * 0.55, rootX + half, S)
-    g.closePath()
-    g.fill()
+    // Every cell its own build. Spread deliberately rather than randomly: eight
+    // rolls of the same dice would land on eight similar tufts about as often
+    // as not, and this is the one thing that must not happen here.
+    const t = cell / (TUFT_KINDS - 1)
+    const blades = 7 + Math.round(rnd() * 7)
+    const spread = 0.52 + t * 0.5 + (rnd() - 0.5) * 0.12
+    const tall = 0.34 + (1 - t) * 0.46 + rnd() * 0.24
+    const tone = 0.56 + ((cell * 5) % TUFT_KINDS) / (TUFT_KINDS - 1) * 0.44
+
+    for (let i = 0; i < blades; i++) {
+      const rootX = ox + CELL * (0.5 + (i / Math.max(1, blades - 1) - 0.5) * spread
+        + (rnd() - 0.5) * 0.05)
+      const height = CELL * tall * (0.62 + rnd() * 0.62)
+      // Leaning outward from the middle of the clump, and clamped inside the
+      // cell: a blade that crosses into its neighbour's square would be sampled
+      // by whichever tuft draws that cell, which is a stray leaf appearing in
+      // the middle of an unrelated clump.
+      const lean = ((rootX - ox) / CELL - 0.5) * CELL * 0.9 + (rnd() - 0.5) * CELL * 0.14
+      const half = CELL * (0.032 + rnd() * 0.028)
+      const tipX = Math.max(ox + 3, Math.min(ox + CELL - 3, rootX + lean))
+      const tipY = oy + CELL - height
+
+      const grad = g.createLinearGradient(0, oy + CELL, 0, tipY)
+      const root = (0.40 + rnd() * 0.14) * tone
+      grad.addColorStop(0, `rgba(255,255,255,${root.toFixed(3)})`)
+      grad.addColorStop(0.55, `rgba(255,255,255,${(0.84 * tone).toFixed(3)})`)
+      grad.addColorStop(1, `rgba(255,255,255,${tone.toFixed(3)})`)
+      g.fillStyle = grad
+      g.beginPath()
+      g.moveTo(rootX - half, oy + CELL)
+      g.quadraticCurveTo(rootX - half * 0.7 + lean * 0.35, oy + CELL - height * 0.55, tipX, tipY)
+      g.quadraticCurveTo(rootX + half * 0.7 + lean * 0.35, oy + CELL - height * 0.55, rootX + half, oy + CELL)
+      g.closePath()
+      g.fill()
+    }
   }
 
   const source = new PIXI.CanvasSource({ resource: cv })
@@ -189,7 +226,15 @@ export function makeGrass(
     return (h % 100000) / 100000
   }
 
-  type Tuft = { x: number; y: number; hw: number; ht: number; kL: number; kS: number; sway: number }
+  type Tuft = {
+    x: number; y: number; hw: number; ht: number
+    kL: number; kS: number; sway: number
+    /** Which of the eight it is, and whether it is mirrored. */
+    cell: number; flip: boolean
+    /** A standing lean, so a clump is not perfectly upright before the wind
+     *  touches it. Carried here because `advance` rewrites the tips. */
+    tilt: number
+  }
   const tufts: Tuft[] = []
 
   // Rejection sampling over the box. Cheaper than it sounds — the grass fills
@@ -231,6 +276,14 @@ export function makeGrass(
       kL: Math.floor(((px * WIND_X + py * WIND_Y) / LONG_WAVE) * FIELD),
       kS: Math.floor(((px * WIND_X + py * WIND_Y) / SHORT_WAVE) * FIELD),
       sway: 0.7 + rnd() * 0.6,
+      cell: Math.floor(rnd() * TUFT_KINDS) % TUFT_KINDS,
+      // Mirrored on half of them, which doubles eight tufts into sixteen for
+      // the price of swapping two numbers.
+      flip: rnd() < 0.5,
+      // AND NOT ALL UPRIGHT. Grass that has grown in a prevailing wind leans
+      // before the wind gets to it, and a field of perfectly vertical clumps is
+      // the other half of what reads as stamped.
+      tilt: (rnd() - 0.5) * TUFT_H * 0.42,
     })
   }
   if (tufts.length < 24) return null
@@ -251,10 +304,18 @@ export function makeGrass(
     verts[v + 2] = x + hw; verts[v + 3] = y        // root right
     verts[v + 4] = x + hw; verts[v + 5] = y - ht   // tip right
     verts[v + 6] = x - hw; verts[v + 7] = y - ht   // tip left
-    uvs[v] = 0; uvs[v + 1] = 1
-    uvs[v + 2] = 1; uvs[v + 3] = 1
-    uvs[v + 4] = 1; uvs[v + 5] = 0
-    uvs[v + 6] = 0; uvs[v + 7] = 0
+    // THE CELL, AND THE MIRROR. Half a texel in from each edge: at linear
+    // filtering a UV sitting exactly on a cell boundary samples its neighbour,
+    // which puts a sliver of the next tuft down the side of this one.
+    const cx = tufts[t].cell % TUFT_COLS, cy = Math.floor(tufts[t].cell / TUFT_COLS)
+    const inset = 0.5 / (64 * TUFT_COLS)
+    let u0 = cx / TUFT_COLS + inset, u1 = (cx + 1) / TUFT_COLS - inset
+    if (tufts[t].flip) { const sw = u0; u0 = u1; u1 = sw }
+    const v0 = cy / TUFT_ROWS + inset, v1 = (cy + 1) / TUFT_ROWS - inset
+    uvs[v] = u0; uvs[v + 1] = v1
+    uvs[v + 2] = u1; uvs[v + 3] = v1
+    uvs[v + 4] = u1; uvs[v + 5] = v0
+    uvs[v + 6] = u0; uvs[v + 7] = v0
     const b = t * 4, e = t * 6
     idx[e] = b; idx[e + 1] = b + 1; idx[e + 2] = b + 2
     idx[e + 3] = b; idx[e + 4] = b + 2; idx[e + 5] = b + 3
@@ -299,7 +360,7 @@ export function makeGrass(
         const tu = tufts[t]
         const w = long[((tu.kL % FIELD) + FIELD) % FIELD]
           + short[((tu.kS % FIELD) + FIELD) % FIELD] * 0.38
-        const bend = w * tu.sway * gust * BEND * tu.ht
+        const bend = tu.tilt + w * tu.sway * gust * BEND * tu.ht
         const v = t * 8
         // Roots stay put. Only the tips travel — which is the difference
         // between grass bending and grass sliding.
