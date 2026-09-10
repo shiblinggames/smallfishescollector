@@ -1102,38 +1102,67 @@ export default function SeaIslandsGPU({
       // the depth out of the only thing on this chart whose whole job is to
       // read as distance.
       //
-      // Two levels, because marks live in cells:
-      //   the CELL sorts by its row, and a cell's rows never overlap, so a
-      //   whole cell is either in front of another or behind it;
+      // Two levels, because marks live in ROWS:
+      //   the ROW sorts by its band, and two bands never overlap, so every
+      //   mark in a lower row is south of every mark in a higher one;
       //   the MARKS inside it sort by their own base y.
       // Together that is a total order by base y across the whole chart.
+      //
+      // ── AND WHY IT IS ROWS AND NOT A GRID ─────────────────────────────
+      //
+      // This was a 3,500px GRID, keyed on x AND y, and that is a depth bug
+      // with a perf argument in front of it. Ordering is between SIBLINGS, so
+      // two cells side by side in the same band carry the same zIndex, and
+      // Pixi settles the tie on the order the cells happened to be created —
+      // which is the order the marks' textures finished decoding. Every 3,500
+      // pixels along the reef there was an invisible seam, and a rock a few
+      // yards west of it drew over a rock east of it that was plainly nearer
+      // the camera. No sort key can fix that while the partition cuts across
+      // x: two rocks either side of a vertical seam interleave in y, so no
+      // single number put on their two containers can order them both.
+      //
+      // So the CONTAINERS partition by y only, which is the one axis the sort
+      // runs along, and the sweep's x buckets go back to being what they
+      // always should have been: plain lists, with no bearing on paint order.
       marks.sortableChildren = true
       world.addChild(marks)
-      type MarkCell = {
-        view: import('pixi.js').Container
+      /** A bucket of marks with a shared reach. Culling only — see the row. */
+      type MarkCol = {
         list: Swayer[]
         minX: number; maxX: number; minY: number; maxY: number
-        /** Whether the frame loop was iterating this cell last frame. */
+        /** Whether the frame loop was iterating this column last frame. */
         near: boolean
       }
-      const markCells = new Map<string, MarkCell>()
+      type MarkRow = {
+        view: import('pixi.js').Container
+        /** Keyed on the column's x band. Buckets for the sweep, not layers. */
+        cols: Map<number, MarkCol>
+        minY: number; maxY: number
+        /** Whether any of its columns is in reach. */
+        near: boolean
+      }
+      const markRows = new Map<number, MarkRow>()
       const cellFor = (x: number, y: number) => {
-        const k = `${Math.floor(x / 3500)}:${Math.floor(y / 3500)}`
-        let c = markCells.get(k)
-        if (!c) {
+        const ry = Math.floor(y / 3500)
+        let r = markRows.get(ry)
+        if (!r) {
           const view = new PIXI.Container()
           view.isRenderGroup = true
-          // The cell's own depth is its ROW. Cells are 3,500 apart and their
-          // rows do not overlap, so every mark in a lower row is south of every
-          // mark in a higher one and the coarse sort is exact.
-          view.zIndex = Math.floor(y / 3500)
+          // The row's own depth IS its band.
+          view.zIndex = ry
           // And the fine sort, inside it, by each mark's base.
           view.sortableChildren = true
           marks.addChild(view)
-          c = { view, list: [], minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, near: true }
-          markCells.set(k, c)
+          r = { view, cols: new Map(), minY: Infinity, maxY: -Infinity, near: true }
+          markRows.set(ry, r)
         }
-        return c
+        const cx = Math.floor(x / 3500)
+        let c = r.cols.get(cx)
+        if (!c) {
+          c = { list: [], minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, near: true }
+          r.cols.set(cx, c)
+        }
+        return { row: r, col: c }
       }
 
       /**
@@ -1298,26 +1327,29 @@ export default function SeaIslandsGPU({
           // ITS BASE IS ITS DEPTH. `node.y` is the base — the sprites under it
           // are anchored bottom-centre — so this is the whole of the sort.
           node.zIndex = m.y
-          const cell = cellFor(m.x, m.y)
-          cell.view.addChild(node)
-          // A mark whose bake lands after its cell has already gone to sleep
-          // must not sit visible out there until the cell next wakes.
-          if (!cell.near) node.visible = false
+          const { row, col } = cellFor(m.x, m.y)
+          row.view.addChild(node)
+          // A mark whose bake lands after its column has already gone to sleep
+          // must not sit visible out there until the column next wakes.
+          if (!col.near) node.visible = false
           const sw: Swayer = {
             node, holder: inner, sway: m.sway,
             phase: (m.i * 0.77) % 3,
             x: m.x, y: m.y, half: m.size,
           }
           swayers.push(sw)
-          cell.list.push(sw)
-          // The cell's reach, grown as marks arrive: a mark stands up to three
-          // times its size above its anchor, which is the same margin the cull
-          // test below uses, so a cell is "near" exactly when one of its
+          col.list.push(sw)
+          // The column's reach, grown as marks arrive: a mark stands up to
+          // three times its size above its anchor, which is the same margin the
+          // cull test below uses, so a column is "near" exactly when one of its
           // marks could be on screen.
-          cell.minX = Math.min(cell.minX, m.x - m.size * 2)
-          cell.maxX = Math.max(cell.maxX, m.x + m.size * 2)
-          cell.minY = Math.min(cell.minY, m.y - m.size * 3)
-          cell.maxY = Math.max(cell.maxY, m.y + m.size * 3)
+          col.minX = Math.min(col.minX, m.x - m.size * 2)
+          col.maxX = Math.max(col.maxX, m.x + m.size * 2)
+          col.minY = Math.min(col.minY, m.y - m.size * 3)
+          col.maxY = Math.max(col.maxY, m.y + m.size * 3)
+          // And the row's, which is only ever asked about north and south.
+          row.minY = Math.min(row.minY, col.minY)
+          row.maxY = Math.max(row.maxY, col.maxY)
         }).catch(() => {
           // One painting that will not decode must not cost the other forty.
         })
@@ -1490,57 +1522,75 @@ export default function SeaIslandsGPU({
         // reach, and the loop only walks the handful of cells around the
         // camera. That turns a sixteen-hundred-mark sweep into a couple of
         // hundred.
-        for (const cell of markCells.values()) {
-          // HYSTERESIS, or a cell on the edge flaps. Waking and sleeping are
+        for (const row of markRows.values()) {
+          // HYSTERESIS, or a band on the edge flaps. Waking and sleeping are
           // each a structure change on the WORLD — a walk over everything in
-          // it — so a cell whose reach sits right at the viewport's edge must
+          // it — so a row whose reach sits right at the viewport's edge must
           // not toggle every few frames as the camera breathes. It wakes the
           // moment it could be seen and sleeps only once it is a good way
           // past that: a sailing camera crosses the wake line once per
           // approach and the sleep line once per departure, never both.
-          const slack = cell.near ? 1400 : 0
-          const nearNow = cell.maxX > camX - halfW - slack && cell.minX < camX + halfW + slack
-            && cell.maxY > camY - halfH - slack && cell.minY < camY + halfH + slack
-          if (!nearNow) {
-            if (cell.near) {
-              // Going out of reach: one pass to put the cell to sleep, and
+          const rowSlack = row.near ? 1400 : 0
+          if (!(row.maxY > camY - halfH - rowSlack && row.minY < camY + halfH + rowSlack)) {
+            if (row.near) {
+              // Going out of reach: one pass to put the row to sleep, and
               // then it STOPS BEING A RENDER GROUP. Pixi's per-frame group
               // pass has no renderable check — every group gets its
               // transform pass, its validate and its batch upload whether or
-              // not anything in it can be seen — so thirty sleeping cells
-              // were thirty uploads a frame for nothing. As a plain invisible
-              // container inside the world's group a far cell costs zero:
+              // not anything in it can be seen — so a dozen sleeping rows
+              // were a dozen uploads a frame for nothing. As a plain invisible
+              // container inside the world's group a far row costs zero:
               // nothing in it moves, nothing in it is written, nothing walks
               // it. The toggle is one structure change on the world, and it
               // happens a few times a minute at most.
-              for (const sw of cell.list) sw.node.visible = false
-              cell.view.isRenderGroup = false
-              cell.near = false
+              for (const col of row.cols.values()) {
+                if (!col.near) continue
+                for (const sw of col.list) sw.node.visible = false
+                col.near = false
+              }
+              row.view.isRenderGroup = false
+              row.near = false
             }
             continue
           }
-          if (!cell.near) {
+          if (!row.near) {
             // Back in reach: a group again, so the flips below stay local.
-            cell.view.isRenderGroup = true
-            cell.near = true
+            row.view.isRenderGroup = true
+            row.near = true
           }
-          for (const sw of cell.list) {
-          // Generous margins: a landmark is anchored at its base and stands
-          // well above it, so culling on the anchor alone pops the tall ones.
-          const on = Math.abs(sw.x - camX) < halfW + sw.half * 2
-            && Math.abs(sw.y - camY) < halfH + sw.half * 3
-          sw.node.visible = on
-          if (!on || !sw.sway || reduce) continue
-          if (sw.sway === 'bob') {
-            // markBob: 3.6s, translateY 0 to -5, rotate -3.2 to 3.2.
-            const u = Math.sin(((t + sw.phase) / 3.6) * Math.PI * 2)
-            sw.holder.rotation = (3.2 * Math.PI / 180) * u
-            sw.holder.y = -sw.half * 0.08 - 2.5 * (u + 1)
-          } else {
-            // A wreck is thousands of tons of waterlogged timber: slower, less.
-            const u = Math.sin(((t + sw.phase) / 9) * Math.PI * 2)
-            sw.holder.rotation = (1.1 * Math.PI / 180) * u
-          }
+          // The row is 45,000px of reef and the screen is 1,400 of it, so the
+          // columns still do the work they always did — they just do it to
+          // lists now, and touch nothing about what draws over what.
+          for (const col of row.cols.values()) {
+            const slack = col.near ? 1400 : 0
+            const nearNow = col.maxX > camX - halfW - slack && col.minX < camX + halfW + slack
+              && col.maxY > camY - halfH - slack && col.minY < camY + halfH + slack
+            if (!nearNow) {
+              if (col.near) {
+                for (const sw of col.list) sw.node.visible = false
+                col.near = false
+              }
+              continue
+            }
+            col.near = true
+            for (const sw of col.list) {
+              // Generous margins: a landmark is anchored at its base and stands
+              // well above it, so culling on the anchor alone pops the tall ones.
+              const on = Math.abs(sw.x - camX) < halfW + sw.half * 2
+                && Math.abs(sw.y - camY) < halfH + sw.half * 3
+              sw.node.visible = on
+              if (!on || !sw.sway || reduce) continue
+              if (sw.sway === 'bob') {
+                // markBob: 3.6s, translateY 0 to -5, rotate -3.2 to 3.2.
+                const u = Math.sin(((t + sw.phase) / 3.6) * Math.PI * 2)
+                sw.holder.rotation = (3.2 * Math.PI / 180) * u
+                sw.holder.y = -sw.half * 0.08 - 2.5 * (u + 1)
+              } else {
+                // A wreck is thousands of tons of waterlogged timber: slower, less.
+                const u = Math.sin(((t + sw.phase) / 9) * Math.PI * 2)
+                sw.holder.rotation = (1.1 * Math.PI / 180) * u
+              }
+            }
           }
         }
       })
