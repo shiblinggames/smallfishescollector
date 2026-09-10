@@ -193,6 +193,7 @@ function folkRodSlug(folkId: string): string | null {
 }
 import FolkPanel from './FolkPanel'
 import SeaFirstVoyage from './SeaFirstVoyage'
+import { onFirstRunDone } from '@/lib/firstRun'
 import SeaGateTour from './SeaGateTour'
 import SeaLandfallHint from './SeaLandfallHint'
 import SeaCue from './SeaCue'
@@ -1181,6 +1182,23 @@ const NEAR_ENOUGH = 2600
  *  moved to Realtime and this went back to being a plain heartbeat. */
 const FAR_MS = 20_000
 /**
+ * THE ARRIVAL SHOT: how far out it starts, and how long it takes to come down.
+ *
+ * A multiplier on the fitted zoom, so 0.32 is roughly three times as much sea
+ * as the chart normally shows -- far enough that the captain's own boat reads
+ * as a speck on an ocean, which is the point of it, and not so far that the
+ * water turns into texture.
+ *
+ * Two seconds is the whole move. Long enough to be a shot rather than a jump,
+ * short enough that it never has to be skippable: nothing is being withheld,
+ * because the first voyage has not started yet and there is nothing to do.
+ */
+const ARRIVE_FROM = 0.32
+const ARRIVE_S = 2.0
+/** The same number the loop eases over, in the milliseconds React counts in.
+ *  One source, so the tour cannot be released early or late. */
+const ARRIVE_MS = ARRIVE_S * 1000
+/**
  * AND HOW OFTEN TO ASK WHEN NOBODY COULD POSSIBLY ANSWER.
  *
  * The poll ran at FAR_MS for every captain with the chart open, whether or not
@@ -1528,6 +1546,9 @@ export default function SeaMap({
     seen: boolean; step: number; hints: string[]
     /** The anchorage walkthrough's own latch and resume point. */
     gateSeen: boolean; gateStep: number
+    /** Setup or the welcome is still on the screen above this chart. The first
+     *  voyage waits for it, and the arrival shot plays when it lifts. */
+    firstRun: boolean
   }
   /** The player's own loadout, so the thing crossing the ocean is the captain
    *  they dressed in the boat they bought — not a marker. */
@@ -2394,10 +2415,53 @@ export default function SeaMap({
    */
   const fishZoom = useRef(1)
   const fishZoomTarget = useRef(1)
+  /**
+   * ── THE FIRST TIME THEY EVER SEE THE WATER ──────────────────────────────
+   *
+   * A fourth factor on the same zoom, for the same reason the push-in is one:
+   * it composes with the fitted zoom and the wheel instead of fighting them,
+   * and the frame loop keeps reading one number.
+   *
+   * The chart opens a long way out -- the whole sea, the captain's boat a speck
+   * on it -- and comes down onto the boat over about two seconds. Nothing else
+   * moves. It is the world arriving rather than the boat arriving, so there is
+   * no splash and nothing to land: a captain who has just spent three screens
+   * choosing a face gets to see where they are before anybody talks to them.
+   *
+   * Eased on the loop's own `dt` rather than a wall clock. The rAF timestamp
+   * and Date.now() are different clocks and mixing them here would put the
+   * shot's progress somewhere around minus a trillion.
+   */
+  const arriveZoom = useRef(1)
+  /** Seconds into the shot, or -1 when it is not playing. */
+  const arriveT = useRef(-1)
+  /**
+   * WHETHER THE SETUP MODALS ARE STILL UP, and whether the shot has finished.
+   *
+   * Seeded from the server for the load that lands a brand new captain here,
+   * then released by the event, because setup finishes on the client and the
+   * server's copy of the profile never hears about it. See lib/firstRun.
+   */
+  const [firstRunOpen, setFirstRunOpen] = useState(tour.firstRun)
+  /** Only a captain who has never sailed gets the shot, and only from the top
+   *  of the tour -- a resumed first voyage is not a first sight of the sea. */
+  const wantsArrival = !tour.seen && tour.step === 0
+  const [arrived, setArrived] = useState(!wantsArrival)
+  useEffect(() => onFirstRunDone(() => setFirstRunOpen(false)), [])
+  useEffect(() => {
+    if (firstRunOpen || arrived || arriveT.current >= 0) return
+    // Out first, in one frame, so the shot starts from the wide view rather
+    // than easing out to it and back.
+    arriveZoom.current = ARRIVE_FROM
+    arriveT.current = 0
+    fitRef.current()
+    const id = setTimeout(() => setArrived(true), ARRIVE_MS)
+    return () => clearTimeout(id)
+  }, [firstRunOpen, arrived])
   useEffect(() => {
     const fit = () => {
       const z = zoomFor(wrapRef.current?.getBoundingClientRect().width ?? window.innerWidth)
-      zoomRef.current = z * wheelZoom.current * fishZoom.current
+      zoomRef.current = z * wheelZoom.current * fishZoom.current * arriveZoom.current
     }
     fitRef.current = fit
     /**
@@ -6759,6 +6823,20 @@ export default function SeaMap({
         fitRef.current()
       }
 
+      // ── AND THE ARRIVAL COMES DOWN ────────────────────────────────
+      // A fixed-length shot on an ease-out, not an exponential chase: this one
+      // has to be OVER at a known moment, because the first voyage is waiting
+      // on it. An exponential never quite lands, and Doby would either speak
+      // over the tail of the move or wait through a second of nothing.
+      if (arriveT.current >= 0) {
+        arriveT.current += dt
+        const t = Math.min(1, arriveT.current / ARRIVE_S)
+        const e = 1 - Math.pow(1 - t, 3)
+        arriveZoom.current = ARRIVE_FROM + (1 - ARRIVE_FROM) * e
+        fitRef.current()
+        if (t >= 1) { arriveT.current = -1; arriveZoom.current = 1 }
+      }
+
       const dx = target.current.x - pos.current.x
       const dy = target.current.y - pos.current.y
       const d = Math.hypot(dx, dy)
@@ -10857,13 +10935,18 @@ hullRef={hullRefFor(t.key)} />
           of its beats are ABOUT fishing and one of them explains the dial while
           the dial is on screen, which was the whole reason the retired fishing
           hub had an intro scene of its own. */}
-      <SeaFirstVoyage hasSeen={tour.seen} startAt={tour.step} fishing={!!fishingIn}
+      {/* NOT WHILE THEY ARE STILL BEING SET UP, and not until the chart has
+          finished arriving. Doby used to open his mouth at the bottom of the
+          screen while the captain was three steps deep in choosing a name,
+          because these modals hang off the app shell and this chart mounts
+          underneath them. */}
+      {arrived && <SeaFirstVoyage hasSeen={tour.seen} startAt={tour.step} fishing={!!fishingIn}
         caught={caughtTick} nearId={near?.id ?? null} ashore={ashore}
         // The same two gates FishingHere puts on the Cast button. If it will
         // not let them cast, the tour has to stop asking them to.
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
         cam={tourCam} goal={tourGoal} holdCast={tourHoldCast}
-        fishOnly={tourFishOnly} stowRod={stowRod} at={pos} />
+        fishOnly={tourFishOnly} stowRod={stowRod} at={pos} />}
 
       {/* ── AND THE OTHER HALF, WHEN THEY REACH IT ────────────────────
           Fires on the first crossing of the reef rather than at signup: on beat
@@ -10881,7 +10964,7 @@ hullRef={hullRefFor(t.key)} />
       <SeaGateTour
         hasSeen={tour.gateSeen} startAt={tour.gateStep}
         inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam} />
-      {!hudOff && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
+      {!hudOff && arrived && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* ── AND THE REST OF THE TEACHING, WHEN IT IS EARNED ──────────────
           Everything the two tours used to list before the captain had touched
@@ -10891,7 +10974,7 @@ hullRef={hullRefFor(t.key)} />
           QUIET WHILE A TOUR IS SPEAKING. The first voyage owns the screen until
           it is done, and the gate tour owns it while a captain is being shown
           the anchorage — a cue over either is two cards at once. */}
-      {!hudOff && (
+      {!hudOff && arrived && (
         <SeaCue
           seen={tour.hints}
           quiet={!tour.seen || (inAnchorage && !tour.gateSeen)}

@@ -27,6 +27,20 @@ interface Props {
 const NAV_OFFSET = '5rem'   // below the nav bar
 const BOTTOM_OFFSET = '7rem' // above the mobile tab bar
 
+// ── THIS COMPONENT IS TWO THINGS ────────────────────────────────────────────
+//
+// `center` is a MODAL -- a card in the middle of a dimmed screen, and the one a
+// brand new captain meets on the "add to home screen" step, straight after
+// setup. Everything else is a COACH MARK: a small card pinned near the thing it
+// is pointing at, with an arrow.
+//
+// They were built as one shape, so the modal inherited the coach mark's
+// measurements: 400 wide against the app's 560, a 14px radius against 18, and
+// no shadow, which is why it did not look like the panel that had just closed
+// in front of it. The two now share a surface and part company on the things
+// that actually differ -- width, radius, and which edge carries the accent.
+const SURFACE = 'rgba(8,14,24,0.98)'
+
 function cardStyle(placement: TourPlacement): React.CSSProperties {
   switch (placement) {
     case 'top':         return { position: 'fixed', top: NAV_OFFSET, left: '1rem', right: '1rem' }
@@ -35,14 +49,15 @@ function cardStyle(placement: TourPlacement): React.CSSProperties {
     case 'bottom':      return { position: 'fixed', bottom: BOTTOM_OFFSET, left: '1rem', right: '1rem' }
     case 'bottom-left': return { position: 'fixed', bottom: BOTTOM_OFFSET, left: '1rem', maxWidth: 320 }
     case 'bottom-right':return { position: 'fixed', bottom: BOTTOM_OFFSET, right: '1rem', maxWidth: 320 }
-    default:            return { position: 'fixed', top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)', maxWidth: 400, margin: '0 auto' }
+    // THE MODAL. `--modal-w` is the app's one panel width; see globals.css.
+    default:            return { position: 'fixed', top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)', maxWidth: 'var(--modal-w)', margin: '0 auto' }
   }
 }
 
 function Arrow({ placement, color }: { placement: TourPlacement; color: string }) {
   const base: React.CSSProperties = {
     position: 'absolute', width: 10, height: 10,
-    background: '#0a1828',
+    background: SURFACE,
     transform: 'rotate(45deg)',
   }
 
@@ -92,11 +107,17 @@ export default function StepTourModal({ steps, onDone }: Props) {
           style={{
             ...cardStyle(placement),
             zIndex: 51,
-            background: '#0a1828',
+            background: SURFACE,
             border: '1px solid rgba(255,255,255,0.1)',
-            borderLeft: `3px solid ${current.color}`,
-            borderRadius: 14,
+            // The accent goes on TOP for the modal, matching the setup cards it
+            // follows, and stays on the LEFT for a coach mark, where the top
+            // edge may be carrying the arrow.
+            ...(placement === 'center'
+              ? { borderTop: `3px solid ${current.color}` }
+              : { borderLeft: `3px solid ${current.color}` }),
+            borderRadius: 18,
             padding: '1.1rem 1.25rem',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.62)',
           }}
           onClick={e => e.stopPropagation()}
         >

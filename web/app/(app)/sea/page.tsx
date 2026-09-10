@@ -250,6 +250,12 @@ export default async function SeaPage({ searchParams }: {
         // the same two values.
         gateSeen: profile?.has_seen_gate_tour === true,
         gateStep: Number(profile?.gate_tour_step ?? 0),
+        // ── ARE THEY STILL BEING SET UP ────────────────────────────────
+        // The setup and welcome modals hang off the app shell, so they open
+        // OVER this chart rather than before it. Doby's first line was landing
+        // at the bottom of the screen while the captain was still choosing
+        // their name. The chart holds the tour until they are done with both.
+        firstRun: profile?.has_seen_setup !== true || profile?.has_seen_welcome !== true,
       }}
       characterColor={(profile?.character_color as string | null) ?? 'default'}
       boatId={(profile?.equipped_boat as string | null) ?? null}

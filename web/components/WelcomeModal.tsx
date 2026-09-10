@@ -7,6 +7,7 @@ import GuideScene from '@/components/GuideScene'
 import { GUIDES } from '@/lib/onboardingScenes'
 import type { SceneLine } from '@/lib/raidMap'
 import { claimWelcomePack } from '@/app/actions/firstRun'
+import { announceFirstRunDone } from '@/lib/firstRun'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -47,6 +48,9 @@ export default function WelcomeModal() {
 
   function grantAndClose() {
     setPhase('done')
+    // THE LAST OF THE FIRST-RUN MODALS. The chart has been holding Doby back
+    // and waiting for this; see lib/firstRun.
+    announceFirstRunDone()
     startTransition(async () => {
       await claimWelcomePack()
       // STRAIGHT TO THE WATER. The scene above tells a new captain the plan is

@@ -108,6 +108,26 @@ never sees a scroll gesture, and the sheet stops dead at the fold (this is exact
 to the Wargate). Close on `e.target === e.currentTarget` instead, which is what "tap the empty
 space" actually means and costs the sheet nothing.
 
+**The first-run path takes it too.** It was the last corner that did not, and it was the worst
+place for it: setup was three separately styled cards, so the very first panel in the game
+resized under the captain as they filled it in — step one took `--modal-w` (up to 560), steps
+two and three were hard-coded to 400, and step three changed the padding as well. Nothing chose
+those numbers; the token landed on the first card when modals were standardised and the other
+two were missed. Across the first minute a captain met six widths (360/400/430/540/560), four
+radii (14/16/18/20) and no `PopupShell` at all.
+
+`SetupModal` is now one card object spread by all three steps, on the shell. That last part is
+not cosmetic: the old wrapper centred a card in a fixed box with no scroller, so on a short
+screen the avatar step — a live preview, two rows of twelve swatches and a button — overflowed
+equally off the top and the bottom with nothing to scroll, and **setup could not be completed on
+that device at all**. `StepTourModal` is two components in one trench coat: its `center`
+placement is a modal and takes the width, the radius and the shadow; its anchored placements are
+coach marks and keep theirs. `GuideCoach` stays a 430px HUD strip with no backdrop — it is a
+coach mark, not a modal, and `PopupShell` is explicitly not for those.
+
+A guide's accent colour follows the SPEAKER, not the step. Doby was `#60a5fa` on the first setup
+screen and `#c8a870` on the second: one character in two colours, on two consecutive screens.
+
 **Two things do not take it:**
 
 - **Art moments.** A crate opening, a legendary skin, an ancient's rank-up, a rescued boat:

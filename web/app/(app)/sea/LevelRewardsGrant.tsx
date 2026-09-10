@@ -54,7 +54,7 @@ export default function LevelRewardsGrant({ granted, onDone }: {
           initial={{ y: 18, scale: 0.97 }} animate={{ y: 0, scale: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 26 }}
           style={{
-            width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 20, padding: '1.25rem 1.15rem 1.1rem',
+            width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, padding: '1.25rem 1.15rem 1.1rem',
             textAlign: 'center',
             // An opaque floor. This sits over the chart, which is painted.
             background: 'linear-gradient(180deg, rgba(30,44,26,0.6) 0%, rgba(10,18,14,0.7) 100%), rgba(8,14,20,0.98)',

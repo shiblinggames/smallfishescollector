@@ -9,6 +9,49 @@ import { AVATAR_PALETTE, NONE_VALUE } from '@/lib/avatarColors'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import WelcomeModal from './WelcomeModal'
 import { GUIDES } from '@/lib/onboardingScenes'
+import PopupShell from '@/components/PopupShell'
+import { announceFirstRunDone } from '@/lib/firstRun'
+
+// ── ONE CARD, THREE STEPS ───────────────────────────────────────────────────
+//
+// Setup was three separately styled cards and a captain watched the panel
+// resize under them as they filled it in: step one took the app's modal width
+// (up to 560), steps two and three were hard-coded to 400, and step three
+// changed the padding as well. Nothing chose those numbers -- the width token
+// landed on the first card when modals were standardised and the other two were
+// missed -- so the first thing the game ever did was jump.
+//
+// It is one object now, spread by all three, and the only thing a step picks is
+// whose line it is.
+const CARD = {
+  // AUTO-CENTRED, because PopupShell's wrapper is the scroller. See below.
+  margin: 'auto', flexShrink: 0,
+  width: '100%', maxWidth: 'var(--modal-w)',
+  // The app's modal surface, so the first panel a captain ever sees is made of
+  // the same thing as every panel after it.
+  background: 'rgba(8,14,24,0.98)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 18,
+  padding: '1.6rem 1.5rem 1.5rem',
+  boxShadow: '0 24px 60px rgba(0,0,0,0.62)',
+} as const
+
+// The step transition, likewise identical across the three.
+const SWAP = {
+  initial: { opacity: 0, y: 16, scale: 0.97 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -12, scale: 0.97 },
+  transition: { duration: 0.2 },
+} as const
+
+// ── A GUIDE HAS A COLOUR ────────────────────────────────────────────────────
+// Doby was #60a5fa on the first step and #c8a870 on the second, which is one
+// character in two colours across two consecutive screens. The accent belongs
+// to whoever is speaking, so it is looked up rather than typed at each call.
+const VOICE = {
+  doby: { portrait: GUIDES.doby.portrait, speaker: 'Doby', accent: '#60a5fa' },
+  kat: { portrait: GUIDES.kat.portrait, speaker: 'Kat', accent: '#f0c040' },
+} as const
 
 // A character bust + one plain guiding line, in place of the generic eyebrow +
 // title, so Doby/Kat walk the new captain through setup.
@@ -87,6 +130,9 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
       await updateAvatarColors({ bgColor: avatarBg, borderColor: avatarBorder })
       await markSetupSeen()
       setDone(true)
+      // ONLY IF NOTHING FOLLOWS. When there is a welcome to play, the chart has
+      // to keep waiting through it -- WelcomeModal announces instead.
+      if (!showWelcomeAfter) announceFirstRunDone()
     })
   }
 
@@ -94,25 +140,27 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
   if (done) return null
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+    /* ── ON THE SHELL EVERY OTHER MODAL USES ─────────────────────────────
+       This centred a card in a fixed box with no scroller, which is fine until
+       the avatar step -- a live preview, two rows of twelve swatches and a
+       button -- meets a short phone in landscape. Then the card is taller than
+       the box, `alignItems: center` overflows it equally off the top and the
+       bottom, and there is nothing to scroll: the finish button is simply not
+       reachable and setup cannot be completed on that device at all.
+
+       PopupShell's wrapper IS the scroller, and it already reserves the top for
+       the fixed Nav and the bottom for the mobile tab bar and the home
+       indicator. `onClose` is a no-op because this one is not dismissible --
+       there is no game behind it to go back to. */
+    <PopupShell open onClose={() => {}}>
       <AnimatePresence mode="wait">
         {step === 'username' && (
           <motion.div
             key="username"
-            initial={{ opacity: 0, y: 16, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.97 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              width: '100%', maxWidth: 'var(--modal-w)',
-              background: '#060e1a',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderTop: '3px solid #60a5fa',
-              borderRadius: 18,
-              padding: '2rem 1.75rem',
-            }}
+            {...SWAP}
+            style={{ ...CARD, borderTop: `3px solid ${VOICE.doby.accent}` }}
           >
-            <GuideHeader portrait={GUIDES.doby.portrait} speaker="Doby" accent="#60a5fa" line="Welcome aboard, Captain! First, what should we call you?" />
+            <GuideHeader {...VOICE.doby} line="Welcome aboard, Captain! First, what should we call you?" />
             <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#9aa0a6', marginBottom: '1.5rem', lineHeight: 1.55 }}>
               This is how other captains will see you — on the leaderboards, in raids, and around the tavern.
             </p>
@@ -183,20 +231,10 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
         {step === 'color' && (
           <motion.div
             key="color"
-            initial={{ opacity: 0, y: 16, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.97 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              width: '100%', maxWidth: 400,
-              background: '#060e1a',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderTop: '3px solid #c8a870',
-              borderRadius: 18,
-              padding: '2rem 1.75rem',
-            }}
+            {...SWAP}
+            style={{ ...CARD, borderTop: `3px solid ${VOICE.doby.accent}` }}
           >
-            <GuideHeader portrait={GUIDES.doby.portrait} speaker="Doby" accent="#c8a870" line="Now pick your look." />
+            <GuideHeader {...VOICE.doby} line="Now pick your look." />
             <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#6a6764', marginBottom: '1.5rem', lineHeight: 1.5 }}>
               Unlock more colors as you play.
             </p>
@@ -292,20 +330,10 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
         {step === 'avatar' && (
           <motion.div
             key="avatar"
-            initial={{ opacity: 0, y: 16, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.97 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              width: '100%', maxWidth: 400,
-              background: '#060e1a',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderTop: '3px solid #f0c040',
-              borderRadius: 18,
-              padding: '1.6rem 1.5rem 1.5rem',
-            }}
+            {...SWAP}
+            style={{ ...CARD, borderTop: `3px solid ${VOICE.kat.accent}` }}
           >
-            <GuideHeader portrait={GUIDES.kat.portrait} speaker="Kat" accent="#f0c040" line="One last thing: your avatar colors." />
+            <GuideHeader {...VOICE.kat} line="One last thing: your avatar colors." />
             <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#6a6764', marginBottom: '1.1rem', lineHeight: 1.5 }}>
               Background and border around your character. Shows up everywhere you do.
             </p>
@@ -444,7 +472,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PopupShell>
   )
 }
 

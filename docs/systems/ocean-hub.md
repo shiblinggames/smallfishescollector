@@ -2495,3 +2495,38 @@ character the chart refuses to show is not mysterious, only missing.
 
 The key is grouped into Places / People / The chart, and every swatch is drawn through the
 same shape helpers the canvas uses so the two cannot drift.
+
+## The first sight of the sea
+
+A brand new captain is dropped straight onto `/sea` — the chart took the startup slot. `SetupModal`
+and `WelcomeModal` hang off the `(app)` layout because they belong to the account rather than to a
+page, so they open **over** this chart rather than before it, and `SeaMap` mounts underneath them.
+
+That is why Doby's first line used to appear along the bottom of the screen while the captain was
+still being asked their name: `SeaFirstVoyage` had already started. `SeaLandfallHint` could join it,
+because a new captain is moored at the Gunwharf and that is a landfall.
+
+**The chart waits for both modals, then plays the arrival, then lets the tour start.**
+
+The wait cannot be a server read. `markSetupSeen` writes the column and the modal hides itself with
+local state — nothing revalidates — so the server's copy of the profile stays stale for the rest of
+the session and a captain gated on `has_seen_setup` would never see the tour start at all. So the
+end of onboarding is **announced**: `lib/firstRun.ts` fires one window event, in the same shape the
+membership popup already uses to cross the tree, from whichever modal is genuinely last
+(`WelcomeModal` when there is a welcome, `SetupModal` when there is not). `page.tsx` seeds the
+starting state from the profile for the load that lands them here; the event releases it.
+
+**The arrival shot** is a fourth factor on the same zoom as the wheel and the casting push-in
+(`ARRIVE_FROM = 0.32`, `ARRIVE_S = 2.0`), so it composes with the fitted zoom instead of fighting it
+and the frame loop keeps reading one number. The chart opens on about three times the usual sea,
+with the captain's boat a speck on it, and comes down over two seconds. Nothing else moves — the
+world arrives, not the boat, so there is no splash and nothing to land.
+
+It is a fixed-length ease-out rather than the exponential chase the push-in uses, because this one
+has to be **over at a known moment**: the first voyage is waiting on it, and an exponential never
+quite lands, so Doby would either speak over the tail of the move or wait through a second of
+nothing. The loop eases on its own `dt`, never a wall clock — the rAF timestamp and `Date.now()` are
+different clocks and mixing them would put the shot's progress somewhere around minus a trillion.
+
+Only a captain who has never sailed gets it, and only from the top of the tour (`!seen && step === 0`):
+a resumed first voyage is not a first sight of the sea.
