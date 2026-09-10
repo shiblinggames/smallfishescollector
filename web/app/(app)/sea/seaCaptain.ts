@@ -196,9 +196,21 @@ function soakPlate(
   img: CanvasImageSource,
   key: string,
   w: number, h: number,
+  /**
+   * HOW FAR UP HER SIDE THE WATER COMES, as a fraction of the whole sprite,
+   * measured DOWN FROM THE WATERLINE.
+   *
+   * Omit it and the band is 38% of the PAINTED height, which is what the
+   * fishing boat has always done and still does. That measure is wrong for
+   * anything with rigging: most of a warship's painting is mast, so a fixed
+   * share of it starts the water a third of the way up a Man-o-War and she
+   * reads as swamped. Measured on the real plates — 16% of the sprite above
+   * the water is wet on a Sloop and 30% on a Man-o-War, for the same number.
+   */
+  depth?: number,
 ): Texture | null {
   if (w < 2 || h < 2) return null
-  const id = `${key}|${Math.round(w)}x${Math.round(h)}`
+  const id = `${key}|${Math.round(w)}x${Math.round(h)}|${depth ?? 'paint'}`
   const hit = soakPlates.get(id)
   if (hit) return hit
 
@@ -217,15 +229,25 @@ function soakPlate(
   // empty below the hull, a ramp measured from the plate's edges puts its whole
   // wet end in the transparent margin and leaves the boat dry.
   const band = paintBand(img, key)
-  const y0 = band.top * c.height
   const y1 = band.bot * c.height
+  // ANCHORED AT THE WATERLINE EITHER WAY. `band.bot` is the lowest painted row
+  // and these plates are cropped at the water, so it IS the waterline —
+  // measured, it lands within a percent of every hull's own seaKeel.
+  const y0 = depth != null
+    ? y1 - depth * c.height
+    : band.top * c.height
   const grad = g.createLinearGradient(0, y0, 0, y1)
-  // Nothing for the top two thirds — she is not awash — then slow, then quick.
+  // Nothing at the top of the band — she is not awash — then slow, then quick.
   // Water does not creep evenly up a hull; it takes the last inch all at once.
+  // The stops shift with the anchor: over a paint-relative band the dry two
+  // thirds are part of the measure, and over an explicit one the whole band IS
+  // the wet part, so the ramp starts at its top instead of two thirds down.
+  const dry = depth != null ? 0.0 : 0.62
+  const span = 1 - dry
   grad.addColorStop(0.00, 'rgba(255,255,255,0)')
-  grad.addColorStop(0.62, 'rgba(255,255,255,0)')
-  grad.addColorStop(0.80, 'rgba(255,255,255,0.22)')
-  grad.addColorStop(0.93, 'rgba(255,255,255,0.58)')
+  grad.addColorStop(dry, 'rgba(255,255,255,0)')
+  grad.addColorStop(dry + span * 0.47, 'rgba(255,255,255,0.22)')
+  grad.addColorStop(dry + span * 0.82, 'rgba(255,255,255,0.58)')
   grad.addColorStop(1.00, 'rgba(255,255,255,0.82)')
   g.fillStyle = grad
   g.fillRect(0, 0, c.width, c.height)
@@ -798,7 +820,16 @@ export async function makeShip(
   // cropped at the water, so there is no wet half to draw and the bottom edge
   // was a hard cut sitting on the surface. A ship of the line is heavier and
   // sits deeper, so she takes a little more of it.
-  const soakT = img ? soakPlate(PIXI, img, `soak|${ship.url}`, W, h) : null
+  /**
+   * HOW DEEP HER WET BAND IS, as a share of the sprite.
+   *
+   * Taken from the Sloop, which reads correctly today: her water starts 16% of
+   * the sprite above her waterline. Every hull on the ladder gets the same
+   * share, so the band grows with the ship on screen (they are all drawn into
+   * one box and scaled by beam) without growing with her RIGGING, which is what
+   * went wrong — a Man-o-War was wet to 30% and looked half sunk.
+   */
+  const soakT = img ? soakPlate(PIXI, img, `soak|${ship.url}`, W, h, 0.165) : null
   const soak: Sprite = new PIXI.Sprite(soakT ?? undefined)
   soak.visible = !!soakT
   soak.anchor.set(0.5)
