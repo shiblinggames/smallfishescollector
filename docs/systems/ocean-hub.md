@@ -2537,9 +2537,17 @@ a resumed first voyage is not a first sight of the sea.
 (260, 560) on the fishing boat. The Mainland is at the origin with `r = 500`, which puts that spawn
 about 117px off its edge — right off the Mainland, which is the intent.
 
-**If a captain appears to start on the expedition ship at the Gunwharf, suspect a stale row rather
-than the spawn.** This was reported once and it was an account that had been reset with its own tab
-still open: the sea heartbeat wrote `sea_side = 'moored'` and a northern position straight back over
-the reset, so the account came up on the far side of the reef at the Gunwharf (−898, −5715), which
-is nothing like the Mainland. Both halves of the report — wrong boat AND wrong place — came from
-that one write. See the beta-wipe doc; a reset needs the session gone first.
+**A first-run captain's saved position and side are not trusted at all.** Someone who has not
+finished setup has by definition never sailed, so a position on their row is not theirs, it is
+wreckage. `page.tsx` passes `start={null}` and `startSide='fishing'` whenever `firstRun` is true.
+
+This is not hypothetical. A reset test account came up in its warship beside the Crew Hall at
+(-372, -3996), 205px off that island's shore and half the chart from the Mainland, because its own
+tab was still open and the sea heartbeat wrote `sea_side='moored'` and the old position straight
+back over the reset, twice. Both halves of the report, wrong boat AND wrong place, came out of that
+one write, and a northern side also starts the anchorage tour, which is how Doby's "Past the reef,
+Captain" ended up on screen behind the setup modal.
+
+Ignoring the row costs nothing, because for a captain who has not been set up there is genuinely
+nothing on it to lose, and it means no amount of stale writing can strand a new captain in the
+anchorage. See the beta-wipe doc as well; a reset still wants the session gone first.
