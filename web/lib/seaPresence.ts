@@ -156,8 +156,16 @@ export type SeaPresence = {
  * Prints: every channel's subscribe status, every beat sent with why it was not
  * skipped, and every beat received.
  */
-const DEBUG = typeof window !== 'undefined'
-  && new URLSearchParams(window.location.search).get('seadebug') === '1'
+/**
+ * TWO WAYS IN, because an installed PWA has no address bar. `?seadebug=1` is
+ * the one-off on a desktop browser; the stored key is the one an admin can
+ * flip from the Settings disc and have survive every navigation inside the app,
+ * which is the only way to reach this from a phone at all.
+ */
+const DEBUG = typeof window !== 'undefined' && (() => {
+  if (new URLSearchParams(window.location.search).get('seadebug') === '1') return true
+  try { return window.localStorage.getItem('seadebug') === '1' } catch { return false }
+})()
 const log = (...a: unknown[]) => { if (DEBUG) console.log('[sea]', ...a) }
 
 export function openSeaPresence(opts: {

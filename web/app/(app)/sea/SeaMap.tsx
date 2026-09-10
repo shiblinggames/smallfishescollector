@@ -10133,7 +10133,7 @@ hullRef={hullRefFor(t.key)} />
         <SeaCrew size={hudSize} top={18} right={12 + hudSize + 8}
           count={pendingAsk} onOpen={() => setCrewOpen(true)} />
       )}
-      {!hudOff && <SeaSettings size={hudSize} top={18} />}
+      {!hudOff && <SeaSettings size={hudSize} top={18} isAdmin={isAdmin} />}
 
       {/* THE SOUNDTRACK. Starts on the first press rather than on mount, both
           because no browser will play it before one and because it is a 1.6MB

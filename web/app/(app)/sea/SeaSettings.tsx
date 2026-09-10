@@ -117,17 +117,33 @@ function useOtherAudio(): [boolean, () => void] {
   return [allow, flip]
 }
 
-export default function SeaSettings({ size, top }: {
+export default function SeaSettings({ size, top, isAdmin = false }: {
   /** The HUD's disc size, so this matches the run on the other side. */
   size: number
   /** Same vertical as that run. */
   top: number
+  /** Admin only, and only the presence debug switch is behind it. */
+  isAdmin?: boolean
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [s, setS] = useState(() => allSettings())
   const [otherAudio, flipOtherAudio] = useOtherAudio()
   const [leaving, setLeaving] = useState(false)
+  // ── THE PRESENCE LOG ──────────────────────────────────────────────────
+  //
+  // Admin only, and it is a diagnostic rather than a setting: it makes the
+  // socket say out loud what it is doing (see lib/seaPresence). It lives here
+  // because an installed PWA has no address bar, so `?seadebug=1` is unreachable
+  // on a phone and this is the only door.
+  //
+  // Read once, on mount, because the value it controls is read at module load
+  // and a reload is what makes a change take. Not in allSettings: everything in
+  // there defaults ON and stores "off", and this is the opposite of both.
+  const [seaDebug, setSeaDebug] = useState(false)
+  useEffect(() => {
+    try { setSeaDebug(window.localStorage.getItem('seadebug') === '1') } catch { /* private mode */ }
+  }, [])
   const wrap = useRef<HTMLDivElement | null>(null)
 
   // Read again on open. Nothing else writes these today, but the panel is the
@@ -216,6 +232,24 @@ export default function SeaSettings({ size, top }: {
             <Switch label="Let other apps play music"
               note="Silences the game so Spotify, a podcast or anything else can keep playing."
               on={otherAudio} onToggle={flipOtherAudio} />
+
+            {/* ADMIN ONLY, and a diagnostic rather than a setting. Turning it on
+                reloads, because the flag it sets is read once when the presence
+                module loads and a live toggle would not take. */}
+            {isAdmin && (
+              <Switch label="Presence log"
+                note="Prints what the multiplayer socket is doing to the console. Reloads the chart."
+                on={seaDebug}
+                onToggle={() => {
+                  const next = !seaDebug
+                  setSeaDebug(next)
+                  try {
+                    if (next) window.localStorage.setItem('seadebug', '1')
+                    else window.localStorage.removeItem('seadebug')
+                  } catch { /* private mode */ }
+                  window.location.reload()
+                }} />
+            )}
 
             {/* ── THE WAY OUT ──────────────────────────────────────────────
                 Last, alone, and deliberately not a switch. It was at the foot
