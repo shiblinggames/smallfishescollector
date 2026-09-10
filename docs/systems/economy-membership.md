@@ -51,3 +51,17 @@ coin, no progress, so the no-pay-to-win rule is untouched.
 Enforced in RLS on `realtime.messages` via `public.is_captain(uuid)`, not just in the
 client. See [ocean-hub.md](ocean-hub.md) for the full presence architecture and what it
 costs to run.
+
+## The ledger is a record of a grant, never the grant
+
+`doubloon_transactions` has **no trigger** and nothing reads it back into `profiles.doubloons`.
+Two actions (`digHere`, `goAshore`) were written on the belief that "the ledger IS the grant" and
+wrote only the ledger row — so every dig and every island landing logged a payout that nobody
+received. A tester sat at 109 ⟡ with 1,900 ⟡ in the ledger.
+
+The gem side always had `increment_gems`; `increment_doubloons(user_id, amount) → integer` is its
+twin (SECURITY DEFINER, service role only, atomic, returns the new balance). The rule for any
+payout action is three steps, in this order: **grant** via the RPC, **log** the ledger row, and
+**return the new balances** so the client can fire `doubloons-changed` / `gems-changed` and the nav
+moves in the same breath as the card. A payout the nav does not show is a payout the player does
+not believe.

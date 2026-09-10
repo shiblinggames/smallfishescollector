@@ -29,6 +29,8 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 
 export type AshoreResult =
   | { ok: true; already: false; name: string; gems: number; doubloons: number; note: IsleNote | null
+      /** The purse after the grant, so the nav can show the right number now. */
+      newDoubloons: number; newGems: number
       /** A furnishing that was in the chest. The only way to own one. */
       salvage: { id: string; name: string } | null
       /**
@@ -135,12 +137,20 @@ export async function goAshore(isleId: string): Promise<AshoreResult> {
     await admin.rpc('increment_gems', { user_id: user.id, amount: gems })
   }
   if (doubloons > 0) {
-    // The ledger IS the grant for doubloons, and it is what makes the payout
-    // auditable later — an isle that turns out to be paying twice shows up here
-    // as two rows with the same reason.
+    // THE GRANT, THEN THE LEDGER. This used to write only the ledger row, on
+    // the theory that the ledger IS the grant. Nothing reads that table back
+    // into the purse and nothing ever did, so every landing paid into a
+    // record and no captain. The row is still written, because it is what
+    // makes the payout auditable -- an isle paying twice shows up as two rows
+    // with the same reason -- but it is a record of a grant, not the grant.
+    await admin.rpc('increment_doubloons', { user_id: user.id, amount: doubloons })
     await admin.from('doubloon_transactions')
       .insert({ user_id: user.id, amount: doubloons, reason: `Ashore: ${isle.name}` })
   }
+  // What the purse holds now, for the nav. One read, both numbers.
+  const { data: purse } = await admin.from('profiles').select('doubloons, gems').eq('id', user.id).single()
+  const newDoubloons = Number(purse?.doubloons ?? 0)
+  const newGems = Number(purse?.gems ?? 0)
 
   // ── AND WHAT WAS ACTUALLY IN THE CHEST ────────────────────────────────
   //
@@ -186,5 +196,5 @@ export async function goAshore(isleId: string): Promise<AshoreResult> {
     if (opened.length === 1) stone = { tier: rung.tier, name: rung.name }
   }
 
-  return { ok: true, already: false, name: isle.name, gems, doubloons, note: isle.note ?? null, salvage, stone }
+  return { ok: true, already: false, name: isle.name, gems, doubloons, note: isle.note ?? null, salvage, stone, newDoubloons, newGems }
 }

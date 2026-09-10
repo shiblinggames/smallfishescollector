@@ -29,7 +29,9 @@ export type BottleResult =
   | { ok: false; error: string }
 
 export type DigResult =
-  | { ok: true; name: string; gems: number; doubloons: number; found: string }
+  | { ok: true; name: string; gems: number; doubloons: number; found: string
+      /** The purse after the grant, so the nav can show the right number now. */
+      newDoubloons: number; newGems: number }
   | { ok: false; error: string }
 
 /** Bearings held, and which of those are already dug. */
@@ -181,9 +183,22 @@ export async function digHere(siteId: string): Promise<DigResult> {
     return { ok: false, error: 'This one is already up. The hole is still here.' }
   }
 
+  // ── THE GRANT, THEN THE LEDGER ──────────────────────────────────────
+  //
+  // This wrote the ledger row and stopped, on the theory that the ledger IS
+  // the grant. It is not: nothing reads doubloon_transactions back into the
+  // purse, and never did. Every dig paid into a table nobody was paid from,
+  // and a tester sat at 109 doubloons with 1,900 logged. The gems worked
+  // because they had increment_gems; this is its twin.
+  await admin.rpc('increment_doubloons', { user_id: user.id, amount: site.doubloons })
   await admin.rpc('increment_gems', { user_id: user.id, amount: site.gems })
   await admin.from('doubloon_transactions')
     .insert({ user_id: user.id, amount: site.doubloons, reason: `Dug up: ${site.name}` })
+  // And what the purse holds now, for the nav. One read, both numbers.
+  const { data: purse } = await admin.from('profiles').select('doubloons, gems').eq('id', user.id).single()
 
-  return { ok: true, name: site.name, gems: site.gems, doubloons: site.doubloons, found: site.found }
+  return {
+    ok: true, name: site.name, gems: site.gems, doubloons: site.doubloons, found: site.found,
+    newDoubloons: Number(purse?.doubloons ?? 0), newGems: Number(purse?.gems ?? 0),
+  }
 }

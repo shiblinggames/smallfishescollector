@@ -2658,3 +2658,19 @@ bob and hull-plus-reflection bounced as one cut-out. A reflection is in the wate
 the thing not moving. `MIRROR_RIDE = 0.4` (seaCaptain for the GPU twins, SeaMap for the DOM
 warship mirror via a `--mirror-ride` custom property the loop writes on the boat node): the
 reflection keeps the seam at the keel and loses the bounce.
+
+### A water above your level is a wall
+
+The bands' levels used to gate only the **cast**: you could sail the Abyss at level one, you just
+could not fish it, which read as a lock that was not locked. `levelWall` (SeaMap) is the innermost
+ring the captain is not yet good enough for; its `inner` radius becomes the fishing side's rim in
+the same sliding clamp the chart's edge uses (`rim = min(OUTER_EDGE, levelWall.rim)`), and pressing
+it raises the campaign's own `heldBy` refusal line: "Need level N fishing to fish in these waters."
+The course is cut only when it was set past the wall, so a captain pressed against it can still
+click back inward. The `EdgeOfChart` line is reserved for the real edge.
+
+### The portal offers once you have left it
+
+A step through puts the boat down inside the far ring, so the helm immediately offered "Step
+through the portal" to a captain who had just done exactly that. `portalArmed` is cleared by the
+warp and set again the first frame the boat is out of any mouth; the offer requires it.

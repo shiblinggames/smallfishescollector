@@ -1708,6 +1708,25 @@ export default function SeaMap({
   useEffect(() => { setXpLive(fishingXP) }, [fishingXP])
   const level = useMemo(() => getLevelFromXP(xpLive), [xpLive])
   /**
+   * ── THE FIRST WATER THEY HAVE NOT EARNED ─────────────────────────────────
+   *
+   * The bands are concentric rings round the Mainland and each has a level.
+   * The level used to gate the CAST -- you could sail the Abyss at level one,
+   * you just could not fish it -- which read as a lock that was not locked:
+   * nothing stopped you, nothing said why, and the one thing you were there
+   * to do refused with no line. The lock is on the water now. The rim of the
+   * innermost ring you are not yet good enough for is a wall, in the same
+   * clamp the chart's own edge uses, and it says what it wants.
+   *
+   * Null once every ring is open, and the chart's edge is the only rim left.
+   */
+  const levelWall = useMemo(() => {
+    const shut = PLACES.find(p => p.kind === 'water' && level < p.minLevel)
+    const inner = shut ? Number((shut as { inner?: number }).inner ?? NaN) : NaN
+    return shut && Number.isFinite(inner) ? { rim: inner, need: shut.minLevel, name: shut.name } : null
+  }, [level])
+  const levelWallRef = useRef(levelWall); levelWallRef.current = levelWall
+  /**
    * A LEVEL HAS HAPPENED AND NOBODY HAS LOOKED YET. Raised when the live level
    * rises, cleared when the disc is pressed or the level card shows -- whichever
    * first. The disc pulses while it is up, which is the notice the level-up
@@ -2927,7 +2946,14 @@ export default function SeaMap({
         fogPending.current.clear()
       } catch { /* the claim answers for itself */ }
       const result = await digHere(site.id)
-      if (result.ok) setDug(prev => new Set(prev).add(site.id))
+      if (result.ok) {
+        setDug(prev => new Set(prev).add(site.id))
+        // ONTO THE PURSE IN THE NAV, NOW. The card says what came up; the two
+        // numbers at the top are what make it true. Same events the level
+        // grant and the Daily Haul fire.
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+        window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.newGems }))
+      }
       setFind({ kind: 'dig', result })
     } catch {
       setFind({ kind: 'dig', result: { ok: false, error: 'The spade turned nothing up. Try again.' } })
@@ -2964,7 +2990,14 @@ export default function SeaMap({
         fogPending.current.clear()
       } catch { /* fall through and let the claim answer for itself */ }
       const result = await goAshore(isle.id)
-      if (result.ok) setFound(prev => new Set(prev).add(isle.id))
+      if (result.ok) {
+        setFound(prev => new Set(prev).add(isle.id))
+        // Onto the purse in the nav, now. See the dig above.
+        if (!result.already) {
+          window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+          window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.newGems }))
+        }
+      }
       setLanded({ isle, result })
     } catch {
       setLanded({ isle, result: { ok: false, error: 'The sea took that one. Try again.' } })
@@ -3026,6 +3059,15 @@ export default function SeaMap({
    */
   const [warping, setWarping] = useState<{ x: number; y: number; accent: string } | null>(null)
   const portalIn = useRef(false)
+  /**
+   * ARMED BY LEAVING. A step through puts the boat down INSIDE the far ring,
+   * so on the very next frame it was in a portal's mouth again and the helm
+   * offered "Step through the portal" to a captain who had just done exactly
+   * that. Disarmed by the warp and re-armed the first frame she is out of any
+   * mouth, so the far portal only offers once you have actually left it and
+   * come back.
+   */
+  const portalArmed = useRef(true)
   /** The same fact, where the helm can read it. */
   const [inPortalNow, setInPortalNow] = useState(false)
   /** Seconds held inside the eye. Reset by leaving it, and by being taken. */
@@ -3237,6 +3279,8 @@ export default function SeaMap({
     target.current = { x, y }
     vel.current = { x: 0, y: 0 }
     portalIn.current = false
+    portalArmed.current = false
+    setInPortalNow(false)
     setPortalOpen(false)
     vibrate([16, 40, 24])
     void saveSeaPosition(x, y, [...fogPending.current])
@@ -7208,7 +7252,9 @@ export default function SeaMap({
       const rim = sideRef.current
         ? (seaGateRef.current ? RAID_EDGE
           : inSeaGate(pos.current.x, pos.current.y) ? EXP_EDGE : EXP_EDGE - REEF_FACE)
-        : OUTER_EDGE
+        // ON THE FISHING SIDE, the nearer of the chart's edge and the first
+        // water above your level. See levelWall.
+        : Math.min(OUTER_EDGE, levelWallRef.current?.rim ?? OUTER_EDGE)
 
       // ── THE EDGE OF THE CHART ──────────────────────────────────────
       //
@@ -7294,9 +7340,12 @@ export default function SeaMap({
       //
       // So: the whole mouth counts, and it offers. See the helm.
       const inMouth = inPortal(pos.current.x, pos.current.y)
-      if (inMouth !== portalIn.current) {
-        portalIn.current = inMouth
-        setInPortalNow(inMouth)
+      // Out of every mouth once since the last warp: the offer is live again.
+      if (!inMouth) portalArmed.current = true
+      const offered = inMouth && portalArmed.current
+      if (offered !== portalIn.current) {
+        portalIn.current = offered
+        setInPortalNow(offered)
       }
 
       // THE WATER STILL ANSWERS, it just does not take you. Standing in the
@@ -7313,7 +7362,8 @@ export default function SeaMap({
           vel.current.x -= nx2 * outward
           vel.current.y -= ny2 * outward
         }
-        if (!edgeRef.current) { edgeRef.current = true; setAtEdge(true) }
+        // The chart's edge is drawn as one; a level wall is said, not drawn.
+        if (!edgeRef.current && (sideRef.current || rim >= OUTER_EDGE)) { edgeRef.current = true; setAtEdge(true) }
       } else if (edgeRef.current && R < rim - 400) {
         // Hysteresis, so following the rim does not strobe the line.
         edgeRef.current = false
@@ -7366,6 +7416,19 @@ export default function SeaMap({
         }
       }
       // Only when it CHANGES. This runs every frame and setState does not.
+      // ── AND A WATER ABOVE YOUR LEVEL HOLDS YOU THE SAME WAY ────────
+      //
+      // The rim clamp above has already stopped her; this is the line that
+      // says why, through the same refusal the campaign's shut bays use, so
+      // it is one voice. The course is cut only when it was set PAST the
+      // wall: a captain pressed against it who clicks back inward must be
+      // able to leave, and cutting the course every frame would pin them.
+      const wall = levelWallRef.current
+      if (!held && !sideRef.current && wall && R > wall.rim - 160) {
+        const tR = Math.hypot(target.current.x - home.x, target.current.y - home.y)
+        if (tR > wall.rim) target.current = { ...pos.current }
+        held = { bay: 'level', shut: `Need level ${wall.need} fishing to fish in these waters.` }
+      }
       if ((held?.bay ?? null) !== gateRef.current) {
         gateRef.current = held?.bay ?? null
         setHeldBy(held)
