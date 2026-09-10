@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { isClean, PROFANITY_MESSAGE } from '@/lib/profanity'
 import { CHARACTER_COLORS, earnedLevelColors, earnedAchievementColors, ACHIEVEMENT_COLORS } from '@/lib/characters'
 import { earnedAchievementBoats, ACHIEVEMENT_BOAT_IDS } from '@/lib/boats'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
@@ -19,6 +20,13 @@ export async function updateUsername(username: string): Promise<{ error?: string
 
   const clean = username.trim().toLowerCase()
   if (!/^[a-z0-9_]{3,20}$/.test(clean)) return { error: 'Username must be 3–20 characters: letters, numbers, underscores only.' }
+  // ── AND IT IS A NAME OTHER PEOPLE HAVE TO READ ────────────────────────
+  // Leaderboards, the badge wall, the mail, and another captain's chart when
+  // the two of you sail together. Checked HERE rather than in the form,
+  // because the form is not the only caller and a client check is a
+  // suggestion. See lib/profanity for why it is a list and how it avoids
+  // taking `bass` down with it.
+  if (!isClean(clean)) return { error: PROFANITY_MESSAGE }
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('username_changed').eq('id', user.id).single()
@@ -37,6 +45,11 @@ export async function updateUsername(username: string): Promise<{ error?: string
 export async function checkUsername(username: string): Promise<{ available: boolean }> {
   const clean = username.trim().toLowerCase()
   if (!/^[a-z0-9_]{3,20}$/.test(clean)) return { available: false }
+  // Reported as unavailable rather than as blocked. The live checker runs on
+  // every keystroke, so a distinct answer here would be a way to binary-search
+  // the word list a letter at a time; `updateUsername` gives the real message
+  // once, on submit.
+  if (!isClean(clean)) return { available: false }
   const admin = createAdminClient()
   const { data } = await admin.from('profiles').select('id').ilike('username', clean).single()
   return { available: !data }

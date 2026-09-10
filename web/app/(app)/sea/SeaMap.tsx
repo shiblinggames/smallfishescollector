@@ -10961,9 +10961,14 @@ hullRef={hullRefFor(t.key)} />
           current. Nothing else about the order matters: the two can never both
           be up, one being about the water south of the reef and this one only
           playing north of it. */}
-      <SeaGateTour
+      {/* AND THIS ONE TOO. Gated with the other three and for the same
+          reason: a stale `moored` side on a row put "Past the reef, Captain"
+          on the screen while the captain was still being asked their name. The
+          side is no longer trusted during first run (see page.tsx), so this is
+          the belt to that pair of braces. */}
+      {arrived && <SeaGateTour
         hasSeen={tour.gateSeen} startAt={tour.gateStep}
-        inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam} />
+        inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam} />}
       {!hudOff && arrived && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* ── AND THE REST OF THE TEACHING, WHEN IT IS EARNED ──────────────

@@ -235,6 +235,16 @@ export default async function SeaPage({ searchParams }: {
   const equippedPet = (profile?.equipped_pet as string | null) ?? null
   const pet = PETS.find(p => p.id === equippedPet) ?? null
 
+  /**
+   * THEY HAVE NOT STARTED PLAYING YET.
+   *
+   * Setup and the welcome hang off the app shell, so they open OVER this chart
+   * rather than before it. Three things below hang off this: the tour waits for
+   * it, and neither the saved position nor the saved side is trusted while it
+   * is true. See lib/firstRun and the ocean-hub doc.
+   */
+  const firstRun = profile?.has_seen_setup !== true || profile?.has_seen_welcome !== true
+
   return (
     <SeaMap
       fishingXP={Number(profile?.fishing_xp ?? 0)}
@@ -255,7 +265,7 @@ export default async function SeaPage({ searchParams }: {
         // OVER this chart rather than before it. Doby's first line was landing
         // at the bottom of the screen while the captain was still choosing
         // their name. The chart holds the tour until they are done with both.
-        firstRun: profile?.has_seen_setup !== true || profile?.has_seen_welcome !== true,
+        firstRun,
       }}
       characterColor={(profile?.character_color as string | null) ?? 'default'}
       boatId={(profile?.equipped_boat as string | null) ?? null}
@@ -422,12 +432,33 @@ export default async function SeaPage({ searchParams }: {
       // written as you sail the southern chart — so it means nothing on the far
       // side of the reef. Arriving there puts you just north of the arch you
       // came through, facing open water, which is also the way back.
-      start={profile?.sea_x != null && profile?.sea_y != null
+      // ── AND NOT AT ALL IF THEY HAVE NOT STARTED YET ─────────────────
+      // A captain who has not finished setup has, by definition, never sailed,
+      // so a saved position on their row is not theirs -- it is wreckage. It
+      // happens: the sea heartbeat writes position and side every few seconds,
+      // so an account reset with its own tab still open has both written
+      // straight back over the reset, and the row comes back up carrying a
+      // moored side and a berth on the far side of the reef.
+      //
+      // That is not a hypothetical. A reset test account came up in its warship
+      // beside the Crew Hall at (-372, -3996) -- 205px off that island's shore,
+      // half the chart from the Mainland -- because the position survived and
+      // the reset did not. Both halves of "wrong boat, wrong place" came out of
+      // that one write.
+      //
+      // The row is not trusted for a captain who has not been set up. Nothing
+      // is lost by ignoring it, because there is genuinely nothing there to
+      // lose, and it means no amount of stale writing can strand a new captain
+      // in the anchorage.
+      start={!firstRun && profile?.sea_x != null && profile?.sea_y != null
         ? { x: Number(profile.sea_x), y: Number(profile.sea_y) }
         : null}
       // Which sea that position is in. Without it a saved northern position is
       // ambiguous, which is why one was never saved at all.
-      startSide={((profile?.sea_side as string | null) ?? 'fishing') as 'fishing' | 'anchorage' | 'moored' | 'open'}
+      // Likewise the side. `moored` on a captain who has not picked a name yet
+      // is what put Doby's "Past the reef, Captain" on the screen behind the
+      // setup modal: a northern side starts the anchorage tour.
+      startSide={(firstRun ? 'fishing' : ((profile?.sea_side as string | null) ?? 'fishing')) as 'fishing' | 'anchorage' | 'moored' | 'open'}
       // A door named in the URL, opened on arrival, and which of its rooms.
       exploredExpRaw={(profile?.sea_explored_exp as string | null) ?? null}
       openDoor={

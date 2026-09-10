@@ -107,7 +107,10 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
   function handleUsernameNext(e: React.FormEvent) {
     e.preventDefault()
     const val = usernameInput.trim()
-    if (!val) { setStep('color'); return }
+    // The button is disabled while the box is empty, so this is the keyboard
+    // path only. It used to advance to the next step on an empty box, which was
+    // the skip link wearing a different hat.
+    if (!val) { setUsernameError('Every captain needs a name.'); return }
     setUsernameError('')
     startUsernameTx(async () => {
       const res = await updateUsername(val)
@@ -185,10 +188,16 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#4a4845', marginBottom: '1.25rem' }}>
                 3–20 characters · letters, numbers, underscores
               </p>
-              {/* Continue is now the full-width primary CTA. Skip drops
-                  to a small text link below so it reads as "I'll come
-                  back to this," not as an equal-weight alternative —
-                  highly suggests picking a name without forcing it. */}
+              {/* ── AND THERE IS NO SKIPPING IT ─────────────────────────
+                  There was a "skip for now" link under this, on the reasoning
+                  that it suggested a name without forcing one. What it actually
+                  did was let a captain past with the auto-assigned username
+                  their account was created with -- which they never chose,
+                  cannot tell is temporary, and CANNOT CHANGE LATER, because
+                  updateUsername is a one-time lock and skipping does not spend
+                  it but the first rename does.
+                  So the one screen in the game that exists to ask this question
+                  asks it. It is three fields long and none of it is work. */}
               <button
                 type="submit"
                 disabled={usernamePending || !usernameInput.trim()}
@@ -205,23 +214,6 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               >
                 {usernamePending ? '…' : 'Continue →'}
               </button>
-              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.7rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setStep('color')}
-                  className="font-karla font-600"
-                  style={{
-                    background: 'none', border: 'none', padding: '0.3rem 0.6rem',
-                    cursor: 'pointer',
-                    fontSize: '0.66rem', color: '#5a5550',
-                    textDecoration: 'underline',
-                    textUnderlineOffset: 3,
-                    textDecorationColor: 'rgba(255,255,255,0.18)',
-                  }}
-                >
-                  Skip for now
-                </button>
-              </div>
             </form>
 
             <p className="font-karla font-400 text-center" style={{ fontSize: '0.58rem', color: '#3a3835', marginTop: '1.25rem' }}>Step {stepIndex} of {totalSteps}</p>
