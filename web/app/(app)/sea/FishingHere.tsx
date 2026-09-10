@@ -951,6 +951,44 @@ export default function FishingHere({
    * attributes and the next crossing repaints them within ~150ms.
    */
   const frameDur = useRef(16.7)
+
+  /**
+   * ── THE CROSSING PAINT ──────────────────────────────────────────────────
+   *
+   * The wedge under the needle at full strength, perfects half-lit so they
+   * stay findable, everything else dimmed — and the needle wearing the colour
+   * of the wedge it is in. Only writes on an actual crossing.
+   *
+   * TAKES THE ANGLE rather than reading one, because it is called from two
+   * places that must not be allowed to drift: the frame tick, and the FREEZE.
+   * It used to be inlined in the tick alone, which meant the last thing you
+   * saw was painted at the last frame boundary and the needle then stopped
+   * wherever the tap resolved — a fraction of a degree further on, which over
+   * a six degree band is the whole difference. The needle stopped gold on the
+   * near side of the edge and the score, correctly, said catch.
+   */
+  const paintCrossing = useCallback((at: number) => {
+    const zs = zonesRef.current
+    if (zs.length === 0) return
+    const rel = (((at - zoneRotRef.current) % 360) + 360) % 360
+    const zNow = zs.find(z => rel >= z.from && rel < z.to) ?? zs[0]
+    if (zNow.from === lastZoneFromRef.current) return
+    lastZoneFromRef.current = zNow.from
+    const ng = needleEl.current
+    if (ng) {
+      ng.querySelectorAll('line').forEach(l => l.setAttribute('stroke', zNow.color))
+      ng.querySelector('circle')?.setAttribute('fill', zNow.color)
+    }
+    const zg = zonesGroupEl.current
+    if (!zg) return
+    zg.querySelectorAll<SVGPathElement>('path[data-zone-arc]').forEach((pth, i) => {
+      const z = zs[i]
+      if (!z) return
+      const op = z.from === zNow.from ? 1.0 : z.type === 'perfect' ? 0.50 : z.type === 'penalty' ? 0.45 : 0.28
+      pth.setAttribute('fill-opacity', String(op))
+    })
+  }, [])
+
   useEffect(() => {
     if (phase !== 'hooked') return
     let raf = 0
@@ -963,32 +1001,7 @@ export default function FishingHere({
       }
       last = t
 
-      // ── THE CROSSING PAINT ──────────────────────────────────────────
-      // Same weights as FishingGame's: the wedge under the needle at full
-      // strength, perfects half-lit so they stay findable, everything else
-      // dimmed. Only writes on an actual crossing.
-      const zs = zonesRef.current
-      if (zs.length > 0) {
-        const rel = (((resolveAngle() - zoneRotRef.current) % 360) + 360) % 360
-        const zNow = zs.find(z => rel >= z.from && rel < z.to) ?? zs[0]
-        if (zNow.from !== lastZoneFromRef.current) {
-          lastZoneFromRef.current = zNow.from
-          const ng = needleEl.current
-          if (ng) {
-            ng.querySelectorAll('line').forEach(l => l.setAttribute('stroke', zNow.color))
-            ng.querySelector('circle')?.setAttribute('fill', zNow.color)
-          }
-          const zg = zonesGroupEl.current
-          if (zg) {
-            zg.querySelectorAll<SVGPathElement>('path[data-zone-arc]').forEach((pth, i) => {
-              const z = zs[i]
-              if (!z) return
-              const op = z.from === zNow.from ? 1.0 : z.type === 'perfect' ? 0.50 : z.type === 'penalty' ? 0.45 : 0.28
-              pth.setAttribute('fill-opacity', String(op))
-            })
-          }
-        }
-      }
+      paintCrossing(resolveAngle())
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -1232,6 +1245,12 @@ export default function FishingHere({
     // sitting underneath it.
     const nEl = needleEl.current
     if (nEl) nEl.style.transform = `rotate(${at}deg)`
+    // AND THE PAINT COMES WITH IT. The needle stops at `at`, so the wedge lit
+    // under it and the colour it wears are the ones at `at` — not the ones
+    // from the last frame boundary. Where those two differ is precisely where
+    // this reads as robbery: a needle left gold, sitting a fraction past the
+    // edge of the band that is still lit behind it.
+    paintCrossing(at)
     setAngle(at)
     spinRef.current?.cancel()
     spinRef.current = null

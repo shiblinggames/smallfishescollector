@@ -371,6 +371,30 @@ export function DialSVG({
             <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
             <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
             <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
+            {/* ── THE POINT THAT DECIDES ──────────────────────────────────
+                A hand that stopped short of the ring, and a round tip wider
+                than the band it was aiming at. Measured:
+
+                  the perfect band          6 degrees of arc
+                  the tip cap, r=5 at r=58  9.8 degrees
+                  the gap to the band       8 units, never crossed
+
+                So the thing you line up is a blob half again as wide as the
+                target, floating a little way inside it, and the eye has to
+                extrapolate the last eight units itself. A needle whose CENTRE
+                is two degrees clear of a perfect still covers the whole of it,
+                which is exactly what "it read gold and paid a catch" is: not a
+                scoring bug, a pointer that cannot be read to the degree it is
+                being judged to.
+
+                A one-unit blade carries the centreline across the gap and a
+                little way into the band. It decides NOTHING — the score has
+                always been the centre angle and still is — it just lets you
+                see which side of the edge that centre is on. At the ring it is
+                about a degree wide against the band's six. */}
+            <line x1={CX} y1={needleTipY} x2={CX} y2={CY - (INNER_R + 7)}
+              stroke={liveNeedleColor} strokeWidth={perfectFlash ? 1.8 : 1.3}
+              strokeLinecap="butt" strokeOpacity="0.92" />
           </g>
           )}
         </svg>
