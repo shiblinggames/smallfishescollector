@@ -21,6 +21,7 @@
 // have to read the other's file to do it.
 
 import { BOATS, AURA_HULL_IDS } from '@/lib/boats'
+import { SHIP_SKINS } from '@/lib/shipSkins'
 
 // ── TIMELINES ───────────────────────────────────────────────────────────────
 
@@ -730,6 +731,60 @@ if (process.env.NODE_ENV !== 'production') {
       `aura: AURA_HULL_IDS disagrees with hullEffect(). `
       + `lit=[${lit.join(',')}] declared=[${declared.join(',')}]`,
     )
+  }
+}
+
+/**
+ * ── AND WHAT A SHIP SKIN THROWS OFF ─────────────────────────────────────────
+ *
+ * `makeShip` never built an aura, so the endgame hull was the one thing on the
+ * water that could not glow — a Volcanic Hull sat there as cold as bare wood
+ * while a fishing boat two bands south threw embers.
+ *
+ * EVERY ROW REUSES AN EXISTING SPEC, and that is deliberate rather than lazy:
+ * the ones above are tuned, and the right violet for the Galaxy Hull is the
+ * violet the galaxy rod already uses. Matched by PALETTE against each skin's
+ * own `color`, not by the name reading well:
+ *
+ *   golden_gauntlet #f0c040  ->  gilt      #f5d26e
+ *   galaxy          #9d7bff  ->  galaxy    #9b7cff
+ *   bad_blood       #c0303a  ->  cursed    #a01818
+ *   dons_ghost      #3fbf82  ->  forge     #34d399
+ *
+ * One namespace across rods, hooks and hulls (see ALL), so a hook's gilding
+ * and a rod's starfield are available here without being copied.
+ */
+const SHIP_EFFECTS: Record<string, EffectName> = {
+  last_cast_hull: 'ember',          // Volcanic
+  corsair_hull: 'mythic',           // rust and fire
+  drowned_giant_hull: 'frost',      // Tundra
+  golden_gauntlet_hull: 'gilt',
+  coffers_hull: 'gilded',           // the quieter gold of the two
+  pitch_black_hull: 'voidhull',     // dark, and composites normally
+  last_fathom_hull: 'abyss',
+  finndicate_hull: 'ash',
+  galaxy_hull: 'galaxy',
+  dons_ghost_hull: 'forge',         // the ghost fleet's drowned green
+  bad_blood_hull: 'cursed',
+  sunken_hand_hull: 'saber',        // the finale's red
+  chartmaker_hull: 'chromed',       // polished instruments, and nothing more
+}
+
+/** The aura a warship wears for her skin, or null for her own paint. */
+export function shipEffect(skinId: string | null | undefined): EffectName | null {
+  return (skinId && SHIP_EFFECTS[skinId]) || null
+}
+
+// AND THE KEYS ARE REAL SKINS. A skin id is a stable database value and
+// renaming one is a thing people do; the failure if they do is that the hull
+// quietly stops glowing, which nobody reports because nothing is broken, it is
+// merely absent. Same reasoning as the AURA_HULL_IDS check above, and it fails
+// at import rather than on the water.
+if (process.env.NODE_ENV !== 'production') {
+  const real = new Set(SHIP_SKINS.map(s => s.id))
+  const ghosts = Object.keys(SHIP_EFFECTS).filter(id => !real.has(id))
+  if (ghosts.length) {
+    throw new Error(`aura: SHIP_EFFECTS names skins that do not exist: ${ghosts.join(', ')}`)
   }
 }
 

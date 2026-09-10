@@ -184,7 +184,8 @@ import { GROUND, islandLift, liftAt, liftAtPoint, bakeIsland, requestGround } fr
 import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './SeaIslandsGPU'
 import { type GlowPatch } from './seaGlow'
 import { type CaptainLook } from './seaCaptain'
-import { type WakeKind } from './seaWake'
+import { shipWake, type WakeKind } from './seaWake'
+import { shipEffect } from './auraSpecs'
 import { type BerthSpec } from './seaBerth'
 import { type GpuTown } from './seaTown'
 
@@ -1819,9 +1820,15 @@ export default function SeaMap({
    *  deliberately derived from the same two facts, so the two renderers cannot
    *  disagree about which wake a hull leaves. */
   const wakeKind = useMemo<WakeKind>(() => {
-    if (shipRef.current) return 'plain'
+    // ── AND THE WARSHIP LEAVES HER SKIN'S OWN WAKE ──────────────────────
+    //
+    // This was a flat `return 'plain'`, which meant every prestige hull in the
+    // game trailed the same white foam a starter dinghy trails while the
+    // fishing boats underneath them had six wakes between them. The table is
+    // shipWake in seaWake, beside the styles it names.
+    if (shipRef.current) return shipWake(equippedShipSkin)
     return (BOATS.find(b => b.id === boatId)?.wake as WakeKind | undefined) ?? 'plain'
-  }, [boatId, onShip])
+  }, [boatId, onShip, equippedShipSkin])
   const wakeKindRef = useRef(wakeKind)
   wakeKindRef.current = wakeKind
   // Each mark remembers the hull that made it. Reading the CURRENT hull when
@@ -4786,6 +4793,9 @@ export default function SeaMap({
         // chart's own hull art carries almost none, so drawn to the same width
         // she came out two thirds the size. See SKIN_SEA_SCALE.
         scale: shipSkinSeaScale(equippedShipSkin, shipTier),
+        // WHAT HER PAINT THROWS OFF. Null in her own colours — a warship with
+        // no skin is bare timber and should look it.
+        aura: shipEffect(equippedShipSkin),
       }
       : null
   }, [onShip, shipTier, equippedShipSkin])

@@ -672,7 +672,7 @@ export async function makeCaptain(
  */
 export async function makeShip(
   PIXI: typeof import('pixi.js'),
-  ship: { url: string; flip: boolean; scale?: number },
+  ship: { url: string; flip: boolean; scale?: number; aura?: EffectName | null },
 ): Promise<Captain> {
   const tex = await texture(PIXI, ship.url)
   const view: Container = new PIXI.Container()
@@ -751,6 +751,30 @@ export async function makeShip(
   hull.scale.set(ship.flip ? -k : k, k)
   view.addChild(hull)
 
+  // ── AND WHAT HER PAINT DOES ───────────────────────────────────────
+  //
+  // A warship could not glow. Every prestige hull in the game sat on the water
+  // as cold as bare timber while a fishing boat two bands south threw embers
+  // off its gunwale, because this builder never made an aura and the captain's
+  // did. Built from the HULL'S OWN SILHOUETTE like every other aura here, so
+  // the light traces her sheer and the sparks leave her outline rather than
+  // being a lamp parked on her deck.
+  //
+  // Under the hull and over it both, exactly as the captain's parts are: the
+  // glow below so she sits on top of her own light, the sparks above so she is
+  // inside her effect rather than behind it. Which effect is `shipEffect` in
+  // auraSpecs — matched by palette against each skin's own colour.
+  //
+  // NO setPose. A warship is one sprite at one angle: there is no rest/wait/
+  // cast to follow, which is the whole reason this is four lines and the
+  // captain's is a walk of the child list.
+  let aura: Aura | null = null
+  if (ship.aura && img) {
+    aura = makeAura(PIXI, { part: hull, image: img, name: ship.aura, key: `ship|${ship.url}` })
+    view.addChildAt(aura.under, view.getChildIndex(hull))
+    view.addChild(aura.over)
+  }
+
   // ── AND THE WATER COMES UP HER SIDE ───────────────────────────────
   //
   // The same band the fishing captain gets, and the same reason: her plate is
@@ -788,9 +812,14 @@ export async function makeShip(
         | ((((tint >> 8) & 255) * 0.46) << 8)
         | (((tint & 255) * 0.5) | 0)
     },
-    setIntensity() {},
+    // FILL RATE IS THE ONE THING OUT HERE THAT IS NOT FREE, and this is the
+    // hull that gets drawn biggest. Passed straight through, so a warship far
+    // from the camera stops emitting and lets her tail burn out exactly as
+    // every other captain on the water does.
+    setIntensity(kk) { aura?.setIntensity(kk) },
     setSoak: placeSoak,
     update(dt) {
+      aura?.update(dt)
       // The shear that stops it being an upside-down ship. See the note on the
       // captain's — skew rather than rotation, so the waterline edge stays put.
       wob += dt

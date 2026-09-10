@@ -51,8 +51,15 @@
 
 import type { Container, Particle, ParticleContainer, Sprite, Texture } from 'pixi.js'
 import { GROUND } from './islandArt'
+import { SHIP_SKINS } from '@/lib/shipSkins'
 
-export type WakeKind = 'plain' | 'gold' | 'ember' | 'frost' | 'void' | 'ash' | 'spirit'
+export type WakeKind =
+  | 'plain' | 'gold' | 'ember' | 'frost' | 'void' | 'ash' | 'spirit'
+  // ── AND THREE THE WARSHIP BROUGHT ───────────────────────────────────────
+  // The first six were written for the fishing boats and cover their palette.
+  // The Man-o-War's prestige hulls are three colours that set has no answer
+  // for: a crimson, a violet starfield and the ghost fleet's drowned green.
+  | 'blood' | 'astral' | 'wraith'
 
 type Shape = 'streak' | 'ember' | 'crack' | 'smoke'
 
@@ -116,6 +123,84 @@ const STYLES: Record<WakeKind, Style> = {
     shape: 'streak', blend: 'add', colors: [0xfcfaff, 0xd6c6ff, 0xa892ff],
     alpha: 0.34, along: 112, across: 26, life: 2400, spread: 1, churn: 1.1,
   },
+  // ── THE WARSHIP'S THREE ───────────────────────────────────────────────
+  //
+  // Sized against the six above rather than invented: a ship of the line
+  // shoves three times the water a fishing boat does and the wake module
+  // already scales every mark by the hull, so these are the same numbers a
+  // small boat would use and the SIZE comes from her.
+  //
+  // Blood — the Bad Blood and Sunken Hand hulls. Crimson, and SHORT: blood in
+  // water does not trail cleanly, it breaks up and goes dark. Churn is high
+  // for the same reason.
+  blood: {
+    shape: 'ember', blend: 'add', colors: [0xffd9dc, 0xff6b74, 0xd8323e, 0xa01818],
+    alpha: 0.40, along: 70, across: 32, life: 1500, spread: 0.95, churn: 1.3,
+  },
+  // Astral — the Galaxy Hull. Not a trail but a SCATTER: the ember shape
+  // breaking up into specks is what makes it read as stars left on the water
+  // rather than as a violet streak, which is spirit's job and already taken.
+  astral: {
+    shape: 'ember', blend: 'add', colors: [0xffffff, 0xe8dcff, 0xc9b8ff, 0x9b7cff, 0x7c5cff],
+    alpha: 0.42, along: 58, across: 30, life: 2200, spread: 1.1, churn: 1.2,
+  },
+  // Wraith — Don's Ghost Hull. The drowned green of Finleone's fleet, and the
+  // longest-lived of the three, because a thing that is already dead does not
+  // dissipate in a hurry.
+  wraith: {
+    shape: 'streak', blend: 'add', colors: [0xe8fff4, 0x7fe8b8, 0x3fbf82, 0x1f7a52],
+    alpha: 0.33, along: 104, across: 24, life: 2500, spread: 1, churn: 0.95,
+  },
+}
+
+/**
+ * ── WHICH WAKE A SHIP SKIN LEAVES ───────────────────────────────────────────
+ *
+ * The Man-o-War was hardcoded to `plain` — every prestige hull in the game
+ * left the same white foam a starter dinghy leaves, while the fishing boats
+ * underneath them had six wakes between them. This is the table that was
+ * missing, not a new feature.
+ *
+ * Kept HERE rather than on the skin defs in lib/, matching the rule auraSpecs
+ * already states for effects: the canvas can give a hull a wake without
+ * editing a cosmetic table, and there is one place to look when something
+ * trails colour that should not.
+ *
+ * A skin with no row leaves plain foam, which is the right default: a coloured
+ * wake on every hull is the same as one on none.
+ */
+const SKIN_WAKE: Record<string, WakeKind> = {
+  last_cast_hull: 'ember',        // Volcanic
+  corsair_hull: 'ember',          // rust red, bought with bounty points
+  drowned_giant_hull: 'frost',    // Tundra
+  golden_gauntlet_hull: 'gold',   // the Locker's chase
+  coffers_hull: 'gold',           // tarnished, off Chapter III
+  pitch_black_hull: 'void',       // takes light away rather than adding it
+  last_fathom_hull: 'void',       // the deepest, darkest water on the chart
+  finndicate_hull: 'ash',         // the colours of the gang you sank
+  galaxy_hull: 'astral',
+  dons_ghost_hull: 'wraith',
+  bad_blood_hull: 'blood',
+  sunken_hand_hull: 'blood',
+  // chartmaker_hull leaves plain foam on purpose: a cartographer's hull is the
+  // one in this set with no element behind it, and it should read as the plain
+  // competent thing it is.
+}
+
+/** What a warship trails, given the skin she is wearing. */
+export function shipWake(skinId: string | null | undefined): WakeKind {
+  return (skinId && SKIN_WAKE[skinId]) || 'plain'
+}
+
+// AND THE KEYS ARE REAL SKINS, for the reason the same check in auraSpecs
+// gives: a renamed skin id would drop its hull back to plain foam and nothing
+// anywhere would say so.
+if (process.env.NODE_ENV !== 'production') {
+  const real = new Set(SHIP_SKINS.map(s => s.id))
+  const ghosts = Object.keys(SKIN_WAKE).filter(id => !real.has(id))
+  if (ghosts.length) {
+    throw new Error(`wake: SKIN_WAKE names skins that do not exist: ${ghosts.join(', ')}`)
+  }
 }
 
 // ── THE SHAPES ──────────────────────────────────────────────────────────────

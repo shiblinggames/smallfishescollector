@@ -90,6 +90,7 @@ import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
 import { makeCaptain, makeShip, lookKey, type Captain, type CaptainLook } from './seaCaptain'
+import type { EffectName } from './auraSpecs'
 import { makeDrift, type Drift } from './seaDrift'
 import { makeWake, type Contact, type Wake, type WakeKind } from './seaWake'
 import { makeBerths, type Berths, type BerthSpec } from './seaBerth'
@@ -356,7 +357,7 @@ export default function SeaIslandsGPU({
   /** The expedition hull, past the sea gate. Mutually exclusive with `captain`:
    *  the crossing REPLACES what is at the centre of the screen rather than
    *  dressing it up, so there is one slot and two things that can fill it. */
-  ship: { url: string; flip: boolean; scale?: number } | null
+  ship: { url: string; flip: boolean; scale?: number; aura?: EffectName | null } | null
   /** Where a boat can be tied up. Static, so read once. */
   berths: BerthSpec[]
   /** The homestead portal, as a place on the water. One per chart. */
@@ -2059,7 +2060,7 @@ export default function SeaIslandsGPU({
   // sixty times a second — the same trap that made the skiff bench flicker
   // between poses. Assembling a captain loads a dozen images and bakes a glow;
   // steering one is arithmetic.
-  const key = `${lookKey(captain)}#${ship ? `${ship.url}${ship.flip ? '~f' : ''}@${ship.scale ?? 1}` : ''}`
+  const key = `${lookKey(captain)}#${ship ? `${ship.url}${ship.flip ? '~f' : ''}@${ship.scale ?? 1}+${ship.aura ?? ''}` : ''}`
   useEffect(() => {
     let dead = false
     ;(async () => {

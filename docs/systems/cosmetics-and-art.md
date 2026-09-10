@@ -102,3 +102,36 @@ the first pass.
 
 The hull TIER upgrade (`lib/shipyard.ts`) is untouched and multiplies on top: that is the
 ladder everyone climbs, this is the boat you climb it in.
+
+## Ship skins wear their colours on the water (2026-09)
+
+The Man-o-War was hardcoded to the `plain` white wake — `wakeKind` in SeaMap opened with
+`if (shipRef.current) return 'plain'`, so every prestige hull trailed what a starter dinghy
+trails while the fishing boats under them had six wakes between them. And `makeShip` never
+built an aura, only `makeCaptain` did, so the endgame hull was the one thing on the chart that
+could not glow.
+
+Both tables live in the SEA layer, not on the skin defs in `lib/`, following the rule
+`auraSpecs` already states: the canvas can give a hull a wake or an effect without editing a
+cosmetic table, and there is one place to look when something trails colour that should not.
+
+- **`shipWake(skinId)`** in `seaWake.ts`, beside the styles it names. Three new `WakeKind`s
+  were needed for colours the fishing set has no answer for: `blood` (crimson, short and
+  broken up, because blood in water does not trail cleanly), `astral` (a violet scatter, using
+  the ember shape so it reads as stars rather than as spirit's streak) and `wraith` (the ghost
+  fleet's drowned green, the longest-lived of the three).
+- **`shipEffect(skinId)`** in `auraSpecs.ts`. **Every row reuses an existing tuned spec** and
+  is matched by PALETTE against the skin's own `color`, not by the name reading well —
+  golden_gauntlet `#f0c040` → `gilt` `#f5d26e`, galaxy `#9d7bff` → `galaxy` `#9b7cff`,
+  bad_blood `#c0303a` → `cursed` `#a01818`, dons_ghost `#3fbf82` → `forge` `#34d399`. Rods,
+  hooks and hulls share one namespace (see `ALL`), so a hook's gilding is available to a ship.
+- `chartmaker_hull` leaves **plain foam on purpose**: it is the one skin in the set with no
+  element behind it. A coloured wake on every hull is the same as one on none.
+- The aura is built from the hull's own silhouette and needs **no `setPose`** — a warship is
+  one sprite at one angle, which is why it is four lines against the captain's walk of the
+  child list. `setIntensity` passes through, so a distant warship stops emitting like everyone
+  else.
+- The GPU rebuild key includes the aura, or swapping between two skins sharing a plate would
+  not rebuild.
+- **Both tables assert their keys are real skin ids at import in dev.** A renamed skin would
+  otherwise drop its hull back to plain foam with nothing anywhere saying so.
