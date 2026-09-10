@@ -2500,21 +2500,36 @@ same shape helpers the canvas uses so the two cannot drift.
 
 A brand new captain is dropped straight onto `/sea` — the chart took the startup slot. `SetupModal`
 and `WelcomeModal` hang off the `(app)` layout because they belong to the account rather than to a
-page, so they open **over** this chart rather than before it, and `SeaMap` mounts underneath them.
+page, so they open **over** whatever page the session lands on, and the session lands here.
 
-That is why Doby's first line used to appear along the bottom of the screen while the captain was
-still being asked their name: `SeaFirstVoyage` had already started. `SeaLandfallHint` could join it,
-because a new captain is moored at the Gunwharf and that is a landfall.
+**While a captain is being set up there is no sea.** `page.tsx` returns a dark field
+(`#0b1a24`, the chart's own base) instead of `SeaMap` whenever `has_seen_setup` or
+`has_seen_welcome` is false. The chart used to mount underneath the modals, and that was three bugs
+at once:
 
-**The chart waits for both modals, then plays the arrival, then lets the tour start.**
+- Doby's first line appeared along the bottom of the screen while the captain was still being asked
+  their name — `SeaFirstVoyage` had already started, and `SeaLandfallHint` could join it.
+- The heartbeat wrote a position and a side for a boat nobody had launched.
+- The character on the water was drawn in the default colour, because the one being chosen did not
+  exist yet.
 
-The wait cannot be a server read. `markSetupSeen` writes the column and the modal hides itself with
-local state — nothing revalidates — so the server's copy of the profile stays stale for the rest of
-the session and a captain gated on `has_seen_setup` would never see the tour start at all. So the
-end of onboarding is **announced**: `lib/firstRun.ts` fires one window event, in the same shape the
-membership popup already uses to cross the tree, from whichever modal is genuinely last
-(`WelcomeModal` when there is a welcome, `SetupModal` when there is not). `page.tsx` seeds the
-starting state from the profile for the load that lands them here; the event releases it.
+Not mounting it ends all three at the source. The last modal (`WelcomeModal`, or `SetupModal` when
+there is no welcome to play) finishes with `window.location.assign('/sea')` — a **full load**, not
+`router.push`: the route is the one we are already on, and a soft navigation may reuse what it has,
+while a full load reads the finished profile — name, colour, avatar — and builds the chart once,
+correctly. There used to be a window event announcing the end of setup so a mounted chart could
+release the tour; with no chart mounted there is nothing to tell, and it is gone.
+
+**Where the first load places the boat is decided by `neverSailed`, not `has_seen_setup`.** The
+setup flag closes the moment the welcome does, and the very next read of the row is the one that
+places the boat — so a second session on the same account (an old tab, another device) writing its
+own position every few seconds wins that read every time. That is exactly how a freshly reset account
+came up in its warship beside the Crew Hall, twice, after two resets that had both put the row right.
+The first voyage's own step (`!has_seen_sea_tour && sea_tour_step === 0`) is the honest signal: it is
+written by the tour and nothing else, so until beat one is taken the captain has never been anywhere
+and the row is ignored — `start={null}`, `startSide='fishing'`, which is `HOME` on the fishing boat.
+Past beat one the row is trusted, because the tour leaves the chart for the market and has to come
+back to where it was.
 
 **The arrival shot** is a fourth factor on the same zoom as the wheel and the casting push-in
 (`ARRIVE_FROM = 0.32`, `ARRIVE_S = 2.0`), so it composes with the fitted zoom instead of fighting it
@@ -2537,9 +2552,9 @@ a resumed first voyage is not a first sight of the sea.
 (260, 560) on the fishing boat. The Mainland is at the origin with `r = 500`, which puts that spawn
 about 117px off its edge — right off the Mainland, which is the intent.
 
-**A first-run captain's saved position and side are not trusted at all.** Someone who has not
-finished setup has by definition never sailed, so a position on their row is not theirs, it is
-wreckage. `page.tsx` passes `start={null}` and `startSide='fishing'` whenever `firstRun` is true.
+**A captain who has never sailed has no saved position, whatever the row says.** `page.tsx` passes
+`start={null}` and `startSide='fishing'` whenever `neverSailed` is true — see "The first sight of the
+sea" above for why that is the tour's step and not the setup flag.
 
 This is not hypothetical. A reset test account came up in its warship beside the Crew Hall at
 (-372, -3996), 205px off that island's shore and half the chart from the Mainland, because its own

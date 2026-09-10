@@ -1,13 +1,11 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import StepTourModal, { type TourStep } from '@/components/StepTourModal'
 import GuideScene from '@/components/GuideScene'
 import { GUIDES } from '@/lib/onboardingScenes'
 import type { SceneLine } from '@/lib/raidMap'
 import { claimWelcomePack } from '@/app/actions/firstRun'
-import { announceFirstRunDone } from '@/lib/firstRun'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -24,7 +22,6 @@ const WELCOME_SCENE: SceneLine[] = [
 ]
 
 export default function WelcomeModal() {
-  const router = useRouter()
   const [, startTransition] = useTransition()
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [env, setEnv] = useState<{ standalone: boolean; ios: boolean; chromeIOS: boolean; mobile: boolean } | null>(null)
@@ -64,19 +61,17 @@ export default function WelcomeModal() {
 
   function grantAndClose() {
     setPhase('done')
-    // THE LAST OF THE FIRST-RUN MODALS. The chart has been holding Doby back
-    // and waiting for this; see lib/firstRun.
-    announceFirstRunDone()
     startTransition(async () => {
       await claimWelcomePack()
-      // STRAIGHT TO THE WATER. The scene above tells a new captain the plan is
-      // to catch fish and sell them, then this used to close onto the Tavern:
-      // the densest page in the game, and the one place that plan cannot be
-      // acted on. "Let's Go" now goes somewhere. Awaited so the welcome pack is
-      // in the hold before /fishing reads the profile, and safe to fire blind
-      // because has_seen_welcome gates the whole modal -- it can never redirect
-      // a returning captain who chose to land here.
-      router.push('/sea')
+      // STRAIGHT TO THE WATER, AND A REAL LOAD OF IT. The sea page shows a dark
+      // field rather than a chart while a captain is still being set up, so
+      // the chart has to be built now, from a profile that now has a name, a
+      // colour and an avatar on it. A soft navigation to the route we are
+      // already on may reuse what it has; a full load cannot. Awaited so the
+      // welcome pack is on the row before the page reads it, and safe to fire
+      // blind because has_seen_welcome gates the whole modal -- it can never
+      // redirect a returning captain who chose to land elsewhere.
+      window.location.assign('/sea')
     })
   }
 

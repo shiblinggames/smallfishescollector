@@ -10,7 +10,6 @@ import CharacterAvatar from '@/components/CharacterAvatar'
 import WelcomeModal from './WelcomeModal'
 import { GUIDES } from '@/lib/onboardingScenes'
 import PopupShell from '@/components/PopupShell'
-import { announceFirstRunDone } from '@/lib/firstRun'
 
 // ── ONE CARD, THREE STEPS ───────────────────────────────────────────────────
 //
@@ -133,9 +132,11 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
       await updateAvatarColors({ bgColor: avatarBg, borderColor: avatarBorder })
       await markSetupSeen()
       setDone(true)
-      // ONLY IF NOTHING FOLLOWS. When there is a welcome to play, the chart has
-      // to keep waiting through it -- WelcomeModal announces instead.
-      if (!showWelcomeAfter) announceFirstRunDone()
+      // When there is no welcome to play this IS the end of setup, and the sea
+      // page has been showing a dark field until now. Same full load the
+      // welcome does, for the same reason: the chart gets built from the
+      // finished profile, once.
+      if (!showWelcomeAfter) window.location.assign('/sea')
     })
   }
 

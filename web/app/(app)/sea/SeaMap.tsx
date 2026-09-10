@@ -193,7 +193,6 @@ function folkRodSlug(folkId: string): string | null {
 }
 import FolkPanel from './FolkPanel'
 import SeaFirstVoyage from './SeaFirstVoyage'
-import { onFirstRunDone } from '@/lib/firstRun'
 import SeaGateTour from './SeaGateTour'
 import SeaLandfallHint from './SeaLandfallHint'
 import SeaCue from './SeaCue'
@@ -1546,9 +1545,6 @@ export default function SeaMap({
     seen: boolean; step: number; hints: string[]
     /** The anchorage walkthrough's own latch and resume point. */
     gateSeen: boolean; gateStep: number
-    /** Setup or the welcome is still on the screen above this chart. The first
-     *  voyage waits for it, and the arrival shot plays when it lifts. */
-    firstRun: boolean
   }
   /** The player's own loadout, so the thing crossing the ocean is the captain
    *  they dressed in the boat they bought — not a marker. */
@@ -2436,20 +2432,16 @@ export default function SeaMap({
   /** Seconds into the shot, or -1 when it is not playing. */
   const arriveT = useRef(-1)
   /**
-   * WHETHER THE SETUP MODALS ARE STILL UP, and whether the shot has finished.
-   *
-   * Seeded from the server for the load that lands a brand new captain here,
-   * then released by the event, because setup finishes on the client and the
-   * server's copy of the profile never hears about it. See lib/firstRun.
+   * WHETHER THE SHOT HAS FINISHED. Only a captain who has never sailed gets it,
+   * and only from the top of the tour -- a resumed first voyage is not a first
+   * sight of the sea. Nothing here waits for setup any more: the page does not
+   * build this chart at all until setup is done (see page.tsx), so by the time
+   * this mounts there is a named, coloured captain to arrive as.
    */
-  const [firstRunOpen, setFirstRunOpen] = useState(tour.firstRun)
-  /** Only a captain who has never sailed gets the shot, and only from the top
-   *  of the tour -- a resumed first voyage is not a first sight of the sea. */
   const wantsArrival = !tour.seen && tour.step === 0
   const [arrived, setArrived] = useState(!wantsArrival)
-  useEffect(() => onFirstRunDone(() => setFirstRunOpen(false)), [])
   useEffect(() => {
-    if (firstRunOpen || arrived || arriveT.current >= 0) return
+    if (arrived || arriveT.current >= 0) return
     // Out first, in one frame, so the shot starts from the wide view rather
     // than easing out to it and back.
     arriveZoom.current = ARRIVE_FROM
@@ -2457,7 +2449,7 @@ export default function SeaMap({
     fitRef.current()
     const id = setTimeout(() => setArrived(true), ARRIVE_MS)
     return () => clearTimeout(id)
-  }, [firstRunOpen, arrived])
+  }, [arrived])
   useEffect(() => {
     const fit = () => {
       const z = zoomFor(wrapRef.current?.getBoundingClientRect().width ?? window.innerWidth)
@@ -10935,11 +10927,9 @@ hullRef={hullRefFor(t.key)} />
           of its beats are ABOUT fishing and one of them explains the dial while
           the dial is on screen, which was the whole reason the retired fishing
           hub had an intro scene of its own. */}
-      {/* NOT WHILE THEY ARE STILL BEING SET UP, and not until the chart has
-          finished arriving. Doby used to open his mouth at the bottom of the
-          screen while the captain was three steps deep in choosing a name,
-          because these modals hang off the app shell and this chart mounts
-          underneath them. */}
+      {/* NOT UNTIL THE CHART HAS FINISHED ARRIVING. The other half of the old
+          problem -- Doby speaking under the setup modal -- is gone at the
+          source: this chart is not built while a captain is being set up. */}
       {arrived && <SeaFirstVoyage hasSeen={tour.seen} startAt={tour.step} fishing={!!fishingIn}
         caught={caughtTick} nearId={near?.id ?? null} ashore={ashore}
         // The same two gates FishingHere puts on the Cast button. If it will
@@ -10961,11 +10951,7 @@ hullRef={hullRefFor(t.key)} />
           current. Nothing else about the order matters: the two can never both
           be up, one being about the water south of the reef and this one only
           playing north of it. */}
-      {/* AND THIS ONE TOO. Gated with the other three and for the same
-          reason: a stale `moored` side on a row put "Past the reef, Captain"
-          on the screen while the captain was still being asked their name. The
-          side is no longer trusted during first run (see page.tsx), so this is
-          the belt to that pair of braces. */}
+      {/* AND THIS ONE TOO, so nothing speaks over the arrival. */}
       {arrived && <SeaGateTour
         hasSeen={tour.gateSeen} startAt={tour.gateStep}
         inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam} />}
