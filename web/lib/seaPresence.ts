@@ -140,6 +140,26 @@ export type SeaPresence = {
  * `onBeat` is handed the FRIEND'S ID from the channel the message arrived on,
  * never anything out of the payload — see `listen`.
  */
+/**
+ * ── TELL ME WHAT THE SOCKET IS ACTUALLY DOING ───────────────────────────────
+ *
+ * Off unless you ask for it with `?seadebug=1` on /sea, so this costs a boolean
+ * read at import and nothing else in normal play.
+ *
+ * It exists because everything about this system is invisible when it fails.
+ * The database can say two captains are both Captains, follow each other, hold
+ * an accepted pact and are three hundred pixels apart — every gate green — and
+ * the water still not move, because whether a private channel actually JOINED
+ * is a status on a callback and whether a beat actually LEFT is nothing at all.
+ * Diagnosing that from the outside is guessing, and I did some.
+ *
+ * Prints: every channel's subscribe status, every beat sent with why it was not
+ * skipped, and every beat received.
+ */
+const DEBUG = typeof window !== 'undefined'
+  && new URLSearchParams(window.location.search).get('seadebug') === '1'
+const log = (...a: unknown[]) => { if (DEBUG) console.log('[sea]', ...a) }
+
 export function openSeaPresence(opts: {
   userId: string
   onBeat: (friendId: string, b: Beat) => void
@@ -191,6 +211,7 @@ export function openSeaPresence(opts: {
       })
       mine.subscribe(status => {
         mineReady = status === 'SUBSCRIBED'
+        log('own channel', `sea:${opts.userId}`, status)
         // A refused join is the failure mode this whole comment is about. Say
         // so, rather than going quiet and looking like "presence is broken".
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -241,6 +262,7 @@ export function openSeaPresence(opts: {
       // clamped to the three frames that exist rather than trusted. Anything
       // else reads as idle.
       const p: Pose = b.p === 1 ? 1 : b.p === 2 ? 2 : 0
+      log('beat IN from', id.slice(0, 8), x, y, 'pose', p)
       opts.onBeat(id, { x, y, f: b.f === -1 ? -1 : 1, p })
     })
     ch.on('broadcast', { event: 'fish' }, msg => {
@@ -248,6 +270,7 @@ export function openSeaPresence(opts: {
       opts.onLanded?.(id, m?.perfect === true)
     })
     ch.subscribe(status => {
+      log('listening to', `sea:${id}`, status)
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.warn(`[sea] could not listen to ${id}:`, status)
       }
@@ -271,7 +294,10 @@ export function openSeaPresence(opts: {
     },
 
     send(b: Beat) {
-      if (closed || !mine || !mineReady) return
+      if (closed || !mine || !mineReady) {
+        log('beat BLOCKED', closed ? 'closed' : !mine ? 'no channel' : 'channel not subscribed')
+        return
+      }
       // THE MOVE GATE. Cheap to call every beat and mostly says no.
       //
       // A CHANGE OF POSE ALWAYS GETS THROUGH, and that exception is the whole
@@ -289,6 +315,7 @@ export function openSeaPresence(opts: {
         if (moved < MOVE_MIN && !(stale && !same)) return
       }
       sent = { x: b.x, y: b.y, f: b.f, p: posed, at: Date.now() }
+      log('beat OUT', b.x, b.y, 'pose', posed)
       void mine.send({ type: 'broadcast', event: 'pos', payload: b })
     },
 
