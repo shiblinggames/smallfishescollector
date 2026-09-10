@@ -349,7 +349,14 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
               Background
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12,
+              // CAPPED. The swatches were a sixth of the card each, and the card
+              // is 560 on a desktop, so two rows of them were two rows of
+              // eighty-pixel tiles and this step stood a head taller than the
+              // two before it. Three hundred keeps them the size of a thumb.
+              maxWidth: 300, marginLeft: 'auto', marginRight: 'auto',
+            }}>
               {AVATAR_PALETTE.map(c => {
                 const isActive = avatarBg === c.hex || (avatarBg === null && c.hex === NONE_VALUE)
                 const isNone = c.hex === NONE_VALUE
@@ -392,7 +399,14 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
               Border
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12,
+              // CAPPED. The swatches were a sixth of the card each, and the card
+              // is 560 on a desktop, so two rows of them were two rows of
+              // eighty-pixel tiles and this step stood a head taller than the
+              // two before it. Three hundred keeps them the size of a thumb.
+              maxWidth: 300, marginLeft: 'auto', marginRight: 'auto',
+            }}>
               {AVATAR_PALETTE.map(c => {
                 const isActive = avatarBorder === c.hex || (avatarBorder === null && c.hex === NONE_VALUE)
                 const isNone = c.hex === NONE_VALUE

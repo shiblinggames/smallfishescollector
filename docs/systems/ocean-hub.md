@@ -2721,3 +2721,29 @@ chart — the tour's step persists, so leaving and coming back resumes rather th
 A beat after the sold beat, before Kat's Finn line: Doby says the sale landed and points at the
 purse in the nav (`data-coach="purse"` on the doubloon pill, both layouts). The tour's lock is
 scoped to the chart's wrap, so the nav pill is a target and never dimmed.
+
+### The coach card owns its spot, and the arrival keeps the frame clock
+
+**GuideCoach.** The first anchored version kept the position on the wrapper and swapped cards inside
+it, and a tester saw all three consequences: a card born at the bottom that hopped to its target a
+beat later (a flash, then the card), a card that crept while nobody touched anything (the flash ring
+scales its target and the measurement moved with it), and a leaving card dragged to the *next*
+card's spot for its fade. Each card owns its position now — measured before first paint, kept for
+its whole life including the fade, moved only for a resize or a real move past an 8px deadband. The
+card animates on opacity and y only; a scaling card is rasterised at its first size and the bust
+inside it came out soft (the portraits are 1152×928, the softness was the layer). The tour keeps
+the coach mounted and passes `show`, so the last "Aye" fades instead of cutting.
+
+**The arrival.** The tour was released on a wall-clock timer while the loop eased on summed `dt`,
+which is clamped per frame — and the first seconds after a load are the heaviest the chart runs, so
+the loop's clock ran slow against the wall and the timer snapped the second half of the shot. The
+shot keeps rAF time now (`arriveT` is the start timestamp; `-2` means armed), the loop calls
+`arriveDone` when it lands, and the timer is only a net six seconds past the shot. The letterbox is
+gone: it covered the top and bottom of the very picture the shot exists to show.
+
+Also: the ashore beat targets the go-ashore action (`fish helm`), and the "you are not the only one
+out here" hail cue is removed.
+
+The `level` ("That is a level, Captain") and `almanac` ("You have a few in the book now") cues are
+removed too: the first voyage introduces both with the thing itself on screen, and the level card
+now fires on the crossing. Their `live` conditions in SeaMap are inert without an entry to fire.

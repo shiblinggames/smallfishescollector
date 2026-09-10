@@ -355,7 +355,15 @@ export default function SeaFirstVoyage({
 
   // `held` is the afterMs pause: the beat is live, its card just is not up
   // yet, so the moment it comments on gets to happen first.
-  if (done || !beat || step === hidden || held) return null
+  // ── THE CARD STAYS MOUNTED SO IT CAN LEAVE ───────────────────────────
+  // This used to return null the moment the voyage was over or a card was
+  // waved away, which tore the card out of the tree before its fade could
+  // run: the last "Aye" cut the card off mid-frame, and a hidden card blinked
+  // rather than went. The coach is always rendered now and told whether to
+  // show; the last beat's words are kept under it so the fade has something
+  // to fade.
+  const visible = !(done || !beat || step === hidden || held)
+  const b = beat ?? FIRST_VOYAGE[FIRST_VOYAGE.length - 1]
 
   // A `look` beat holds while the camera flies and the captain reads; the two
   // waiting beats have no button at all, because the button IS the thing they
@@ -363,7 +371,7 @@ export default function SeaFirstVoyage({
   // Anything the captain has to DO has no button: the button is the thing they
   // were asked to do. `sold` is the extreme case — the market advances it from
   // another route entirely, and this card is what they carry through the door.
-  const waiting = beat.until !== 'next' && beat.until !== 'look' && beat.until !== 'almanac'
+  const waiting = b.until !== 'next' && b.until !== 'look' && b.until !== 'almanac'
 
   // Said INSTEAD of the instruction, not after it: an instruction the game will
   // refuse is worse than no instruction, because the captain tries it and
@@ -372,26 +380,26 @@ export default function SeaFirstVoyage({
     ? 'You’re out of bait, Captain. Open the *Daily Haul*, top right, and claim your free worms.'
     : stuck === 'hold'
       ? 'Your *hold* is full. Nothing else fits until you sell what is in it — the market on the Mainland pays best.'
-      : beat.text
+      : b.text
 
   return (
     <GuideCoach
-      show
-      portrait={beat.portrait}
-      speaker={beat.speaker}
+      show={visible}
+      portrait={b.portrait}
+      speaker={b.speaker}
       text={text}
       accent={SEA_ACCENT}
       onClose={() => setHidden(step)}
       // NEXT TO THE THING. The same names the flash uses, so the card and the
       // ring agree about what is being talked about.
-      anchor={stuck === 'bait' ? 'haul haul-bait' : beat.target}
+      anchor={stuck === 'bait' ? 'haul haul-bait' : b.target}
       onNext={waiting ? undefined : next}
       nextLabel={step === FIRST_VOYAGE.length - 1 ? 'Aye' : undefined}
       // ABOVE THE SHEET while the instruction is about something inside one.
       // The Daily Haul opens in a PopupShell at 111 and this card sits at 70,
       // so the line saying "claim your worms" would vanish behind the scrim
       // the moment they did as it said. Lifted for those two cases only.
-      z={beat.until === 'bait' || stuck === 'bait' ? 120 : undefined}
+      z={b.until === 'bait' || stuck === 'bait' ? 120 : undefined}
     />
   )
 }

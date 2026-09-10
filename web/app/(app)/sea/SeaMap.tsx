@@ -2511,8 +2511,11 @@ export default function SeaMap({
    * shot's progress somewhere around minus a trillion.
    */
   const arriveZoom = useRef(1)
-  /** Seconds into the shot, or -1 when it is not playing. */
+  /** The shot's clock. -1: not playing. -2: armed, waiting for the loop's
+   *  first frame. Otherwise the rAF timestamp the shot started on. */
   const arriveT = useRef(-1)
+  /** How the loop tells React the shot has landed. */
+  const arriveDone = useRef<() => void>(() => {})
   /**
    * WHETHER THE SHOT HAS FINISHED. Only a captain who has never sailed gets it,
    * and only from the top of the tour -- a resumed first voyage is not a first
@@ -2549,7 +2552,7 @@ export default function SeaMap({
     // to. The timer runs on the wall clock regardless, so it puts the factor
     // home itself and refits. Idempotent when the loop already did.
     if (arrived) {
-      if (arriveT.current >= 0 || arriveZoom.current !== 1) {
+      if (arriveT.current !== -1 || arriveZoom.current !== 1) {
         arriveT.current = -1
         arriveZoom.current = 1
         fitRef.current()
@@ -2560,11 +2563,12 @@ export default function SeaMap({
       tourCam.current = null
       return
     }
-    if (arriveT.current >= 0) return
+    if (arriveT.current !== -1) return
     // Out first, in one frame, so the shot starts from the wide view rather
     // than easing out to it and back.
     arriveZoom.current = ARRIVE_FROM
-    arriveT.current = 0
+    // ARMED, NOT STARTED. The loop starts the clock on its first frame.
+    arriveT.current = -2
     // The camera starts off the boat as well as above it. Placed directly,
     // not through the override: the override is CHASED, and chasing it from
     // the boat would ease the camera out to the offset and back again.
@@ -2572,7 +2576,18 @@ export default function SeaMap({
     camAt.current.y = pos.current.y + ARRIVE_OFF.y
     tourCam.current = { x: camAt.current.x, y: camAt.current.y }
     fitRef.current()
-    const id = setTimeout(() => setArrived(true), ARRIVE_MS)
+    // ── THE LOOP SAYS WHEN IT HAS LANDED ─────────────────────────────────
+    // The first cut released the tour on a wall-clock timer while the loop
+    // eased on its own summed `dt`, and `dt` is clamped per frame. The first
+    // seconds after a load are the heaviest the chart ever runs -- textures
+    // and sprites still arriving, frames at a fraction of the rate -- so the
+    // loop's clock ran SLOW against the wall: at 3.6 seconds of wall time the
+    // shot was maybe halfway down, and the timer snapped the rest. That is the
+    // hasty cut the tester saw. The shot keeps rAF time now, the loop calls
+    // this when it lands, and the timer is only a net in case the loop never
+    // runs at all.
+    arriveDone.current = () => setArrived(true)
+    const id = setTimeout(() => setArrived(true), ARRIVE_MS + 6000)
     return () => clearTimeout(id)
   }, [arrived])
   /**
@@ -7069,9 +7084,13 @@ export default function SeaMap({
       // has to be OVER at a known moment, because the first voyage is waiting
       // on it. An exponential never quite lands, and Doby would either speak
       // over the tail of the move or wait through a second of nothing.
-      if (arriveT.current >= 0) {
-        arriveT.current += dt
-        const t = Math.min(1, arriveT.current / ARRIVE_S)
+      if (arriveT.current !== -1) {
+        // The clock starts on the first frame the loop actually draws, and it
+        // is the frame clock, so a slow first second costs frames, not
+        // trajectory: however few frames land, each is drawn where that
+        // moment of the shot belongs.
+        if (arriveT.current === -2) arriveT.current = now
+        const t = Math.min(1, (now - arriveT.current) / ARRIVE_MS)
         const e = arriveEase(t)
         arriveZoom.current = ARRIVE_FROM + (1 - ARRIVE_FROM) * e
         // The drift rides the same curve, through the camera override the
@@ -7081,7 +7100,10 @@ export default function SeaMap({
           y: pos.current.y + ARRIVE_OFF.y * (1 - e),
         }
         fitRef.current()
-        if (t >= 1) { arriveT.current = -1; arriveZoom.current = 1; tourCam.current = null }
+        if (t >= 1) {
+          arriveT.current = -1; arriveZoom.current = 1; tourCam.current = null
+          arriveDone.current()
+        }
       }
 
       const dx = target.current.x - pos.current.x
@@ -10955,28 +10977,18 @@ hullRef={hullRefFor(t.key)} />
       )}
       {!hudOff && <SeaSettings size={hudSize} top={18} isAdmin={isAdmin} />}
 
-      {/* THE CURTAIN AND THE LETTERBOX. See the arrival effect. Under the
-          PopupShell layer and over the HUD, which is hidden for the shot
-          anyway. Pointer-events none: a captain who reaches for the helm mid
-          shot gets the helm. */}
+      {/* THE CURTAIN. See the arrival effect. Under the PopupShell layer and
+          over the HUD, which is hidden for the shot anyway. Pointer-events
+          none: a captain who reaches for the helm mid shot gets the helm.
+          There was a letterbox here too, and it covered the top and bottom of
+          the very picture the shot exists to show; the fade is the whole of
+          the curtain now. */}
       {curtain !== 'gone' && (
-        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 95, pointerEvents: 'none' }}>
-          <div style={{
-            position: 'absolute', inset: 0, background: '#04090f',
-            opacity: curtain === 'dark' ? 1 : 0,
-            transition: 'opacity 1400ms ease-out',
-          }} />
-          <div style={{
-            position: 'absolute', left: 0, right: 0, top: 0, height: '9vh', background: '#000',
-            transform: arrived ? 'translateY(-100%)' : 'none',
-            transition: 'transform 720ms cubic-bezier(0.6, 0, 0.4, 1)',
-          }} />
-          <div style={{
-            position: 'absolute', left: 0, right: 0, bottom: 0, height: '9vh', background: '#000',
-            transform: arrived ? 'translateY(100%)' : 'none',
-            transition: 'transform 720ms cubic-bezier(0.6, 0, 0.4, 1)',
-          }} />
-        </div>
+        <div aria-hidden style={{
+          position: 'fixed', inset: 0, zIndex: 95, pointerEvents: 'none', background: '#04090f',
+          opacity: curtain === 'dark' ? 1 : 0,
+          transition: 'opacity 1400ms ease-out',
+        }} />
       )}
 
       {/* THE PRESENCE READOUT, when it is asked for. See SeaDebugPanel: the

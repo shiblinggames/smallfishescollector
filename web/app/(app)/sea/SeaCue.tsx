@@ -56,27 +56,10 @@ const CUES: {
   // sitting is four things to remember; a disc explained the first time it has
   // something to say is one thing to do.
   {
-    id: 'level',
-    ...GUIDES.kat,
-    text: 'That is a *level*, Captain. The disc up there is your fishing spine: what each rank bought you, and where your renown goes when you have some.',
-    target: 'hud-skill',
-  },
-  {
-    id: 'almanac',
-    ...GUIDES.kat,
-    text: 'You have a few in the book now. The *almanac* holds every fish in these waters, with the ones you have landed filled in and the rest left blank.',
-    target: 'hud-almanac',
-  },
-  {
     id: 'chart',
     ...GUIDES.doby,
     text: 'You are a fair way out. The *chart* is the whole sea at a glance, and it fills in as you sail it.',
     target: 'chart',
-  },
-  {
-    id: 'hail',
-    ...GUIDES.doby,
-    text: 'You are not the only one out here. *Hail* anyone you pass. Some buy your catch on the spot, some just like the company, and they all warm to you the more you stop.',
   },
   // ── AND THE EXPEDITION SIDE'S OWN ─────────────────────────────────────
   {

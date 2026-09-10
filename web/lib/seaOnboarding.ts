@@ -234,6 +234,8 @@ export const FIRST_VOYAGE: Beat[] = [
     text: 'Dock here and go ashore.',
     until: 'ashore',
     at: 'mainland',
+    // The action itself: the desktop button, or the helm you hold on a phone.
+    target: 'fish helm',
     holdCast: true,
   },
   {
