@@ -162,6 +162,33 @@ export type SeaPresence = {
  * flip from the Settings disc and have survive every navigation inside the app,
  * which is the only way to reach this from a phone at all.
  */
+/**
+ * ── WHAT THE SOCKET IS DOING, WHERE YOU CAN SEE IT ──────────────────────────
+ *
+ * A counter block rather than a log, because a console is not reachable on the
+ * device that matters: the phone is the one sailing, and the desktop account
+ * is not an admin so it cannot reach the Settings switch either. Read by the
+ * on-screen readout in SeaMap when the debug flag is on, and untouched
+ * otherwise.
+ *
+ * Mutated in place on purpose. It is read once a frame by a panel that is only
+ * mounted while debugging, and allocating a fresh object per beat to hand to
+ * React would be the one part of this that could itself cost frames.
+ */
+export const presenceStats = {
+  /** Subscribe status of your own channel, the one you SEND on. */
+  own: 'idle' as string,
+  /** Subscribe status per friend id, the channels you LISTEN on. */
+  listens: {} as Record<string, string>,
+  /** Beats put on the wire, and beats taken off it, since the page loaded. */
+  out: 0,
+  in: 0,
+  /** Why the last send did nothing, when it did nothing. */
+  blocked: '' as string,
+  /** When the last beat arrived from each friend, wall clock. */
+  lastIn: {} as Record<string, number>,
+}
+
 const DEBUG = typeof window !== 'undefined' && (() => {
   if (new URLSearchParams(window.location.search).get('seadebug') === '1') return true
   try { return window.localStorage.getItem('seadebug') === '1' } catch { return false }
@@ -263,6 +290,7 @@ export function openSeaPresence(opts: {
       mine.subscribe(status => {
         mineReady = status === 'SUBSCRIBED'
         log('own channel', `sea:${opts.userId}`, status)
+        presenceStats.own = status
         if (status === 'SUBSCRIBED') settled('mine')
         // A refused join is the failure mode this whole comment is about. Say
         // so, rather than going quiet and looking like "presence is broken",
@@ -328,6 +356,8 @@ export function openSeaPresence(opts: {
       // else reads as idle.
       const p: Pose = b.p === 1 ? 1 : b.p === 2 ? 2 : 0
       log('beat IN from', id.slice(0, 8), x, y, 'pose', p)
+      presenceStats.in++
+      presenceStats.lastIn[id] = Date.now()
       opts.onBeat(id, { x, y, f: b.f === -1 ? -1 : 1, p })
     })
     ch.on('broadcast', { event: 'fish' }, msg => {
@@ -336,6 +366,7 @@ export function openSeaPresence(opts: {
     })
     ch.subscribe(status => {
       log('listening to', `sea:${id}`, status)
+      presenceStats.listens[id] = status
       if (status === 'SUBSCRIBED') settled(id)
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         if (status !== 'CLOSED') console.warn(`[sea] could not listen to ${id}:`, status)
@@ -372,7 +403,8 @@ export function openSeaPresence(opts: {
 
     send(b: Beat) {
       if (closed || !mine || !mineReady) {
-        log('beat BLOCKED', closed ? 'closed' : !mine ? 'no channel' : 'channel not subscribed')
+        presenceStats.blocked = closed ? 'closed' : !mine ? 'no channel' : 'not subscribed'
+        log('beat BLOCKED', presenceStats.blocked)
         return
       }
       // THE MOVE GATE. Cheap to call every beat and mostly says no.
@@ -392,6 +424,8 @@ export function openSeaPresence(opts: {
         if (moved < MOVE_MIN && !(stale && !same)) return
       }
       sent = { x: b.x, y: b.y, f: b.f, p: posed, at: Date.now() }
+      presenceStats.out++
+      presenceStats.blocked = ''
       log('beat OUT', b.x, b.y, 'pose', posed)
       void mine.send({ type: 'broadcast', event: 'pos', payload: b })
     },

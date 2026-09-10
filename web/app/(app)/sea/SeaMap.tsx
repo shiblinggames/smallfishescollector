@@ -206,6 +206,7 @@ import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark, type ShipL
 import { type GlowPatch } from './seaGlow'
 import { type CaptainLook } from './seaCaptain'
 import { shipWake, type WakeKind } from './seaWake'
+import SeaDebugPanel from './SeaDebugPanel'
 import { shipEffect } from './auraSpecs'
 import { type BerthSpec } from './seaBerth'
 import { type GpuTown } from './seaTown'
@@ -244,6 +245,15 @@ import { type GpuTown } from './seaTown'
  * only mismatch possible is for somebody who typed `?gpu=0`, which is a person
  * debugging rather than a person playing.
  */
+/** The presence readout, asked for with ?seadebug=1 or the admin switch. Read
+ *  once: it decides whether a panel mounts, not something that changes. */
+let SEA_DEBUG = false
+if (typeof window !== 'undefined') {
+  try {
+    SEA_DEBUG = new URLSearchParams(window.location.search).get('seadebug') === '1'
+      || window.localStorage.getItem('seadebug') === '1'
+  } catch { SEA_DEBUG = false }
+}
 let GPU_ISLANDS = true
 if (typeof window !== 'undefined') {
   try {
@@ -4173,6 +4183,9 @@ export default function SeaMap({
      *  a velocity, and a velocity is the difference between a boat sailing and
      *  a boat being dragged toward a point twice a second. See the loop. */
     prev: Vec; prevT: number; tgtT: number
+    /** Whatever the loop last worked out, for the readout. Written every frame
+     *  and read only while debugging — see SeaDebugPanel. */
+    dbgSpan: number; dbgSpeed: number
     /** How much of the swell this hull takes. A ship of the line is not thrown
      *  about by the chop that lifts a rowboat — same reasoning as `heel`. */
     lift: number
@@ -6045,7 +6058,7 @@ export default function SeaMap({
       else friendAt.current.set(f.username, {
         shown: { x: f.x, y: f.y }, target: { x: f.x, y: f.y }, face: 1, live: 0,
         // No velocity yet: one sample is a position, not a motion.
-        prev: { x: f.x, y: f.y }, prevT: 0, tgtT: 0,
+        prev: { x: f.x, y: f.y }, prevT: 0, tgtT: 0, dbgSpan: 0, dbgSpeed: 0,
         lift: f.onShip ? shipLift(f.shipTier) : 1,
         // Nobody is fishing until they say so. A friend found by the poll is a
         // position and nothing else.
@@ -7358,7 +7371,11 @@ export default function SeaMap({
             const age = Math.min(nowMs - at.tgtT, span * 1.4)
             aimX += vx * age
             aimY += vy * age
+            at.dbgSpeed = Math.hypot(vx, vy) * 1000
+          } else {
+            at.dbgSpeed = 0
           }
+          at.dbgSpan = span
           const dxf = aimX - at.shown.x
           const dyf = aimY - at.shown.y
           // A LONG WAY OFF IS NOT A JOURNEY. Somebody who has just come back
@@ -10313,6 +10330,20 @@ hullRef={hullRefFor(t.key)} />
           count={pendingAsk} linked={linked} onOpen={() => setCrewOpen(true)} />
       )}
       {!hudOff && <SeaSettings size={hudSize} top={18} isAdmin={isAdmin} />}
+
+      {/* THE PRESENCE READOUT, when it is asked for. See SeaDebugPanel: the
+          console was not reachable on either device that mattered. */}
+      {SEA_DEBUG && (
+        <SeaDebugPanel read={() => ({
+          me: { x: pos.current.x, y: pos.current.y },
+          friends: [...friendAt.current].map(([name, at]) => ({
+            name,
+            target: { x: at.target.x, y: at.target.y },
+            shown: { x: at.shown.x, y: at.shown.y },
+            live: at.live, span: at.dbgSpan, speed: at.dbgSpeed,
+          })),
+        })} />
+      )}
 
       {/* THE SOUNDTRACK. Starts on the first press rather than on mount, both
           because no browser will play it before one and because it is a 1.6MB
