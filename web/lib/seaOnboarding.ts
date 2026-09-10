@@ -243,6 +243,16 @@ export const FIRST_VOYAGE: Beat[] = [
     target: 'market',
     holdCast: true,
   },
+  // ── THE SALE, SEEN TO LAND ───────────────────────────────────────────
+  // The market advances the sold beat on another route; this is the first
+  // card back on the chart, and it points at the purse, so the money the
+  // captain just made is the next thing they look at.
+  {
+    ...D,
+    text: 'That’s a *sale*, cap’n. The doubloons went straight to your purse, top right, where your balance shows.',
+    until: 'next',
+    target: 'purse',
+  },
   {
     ...K,
     text: 'Not sure what to do next? I recommend finding *Finn*...I’ve heard he always has tasks. Make sure you go around the sea to talk to all the captains out there. There’s treasure all around!',

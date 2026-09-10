@@ -101,3 +101,15 @@ across 400px — and on the 980px page column each became a bar the width of the
 ends a long way apart. The rows keep their shape; the **lists** are grids
 (`repeat(auto-fill, minmax(min(400px, 100%), 1fr))`), so a desktop gets two columns of the same
 row and a phone still gets one.
+
+### The hero beside the hold, and a sale that lands at once
+
+On a monitor the Hold Value hero — one number and the Sell All — was the full width of the page
+column. `.market-lay` (globals.css) puts it in a 340px sticky column on the left above 900px with
+the hold running down the right; on a phone the two stack as before. The hold's row grid then has
+room for one column, which is the phone's row at the phone's width.
+
+`handleSell` is optimistic all the way now: the row shrinks, the purse ticks, the toast lands and
+the haptic fires on the press, from the price printed on the row; the server's figure replaces the
+estimate when it arrives (the same unless a tick landed between), and an error puts everything
+back. It is no longer wrapped in a transition, so nothing about it is deferred.

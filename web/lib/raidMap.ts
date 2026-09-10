@@ -1026,7 +1026,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "Neutral thugs who own the Bilge Strait. No flag, no loyalty, just a toll, and C.K.'s cargo sails right through their water.",
     bridge: "Past the strait the water turns Finndicate. C.K.'s moving cargo somewhere ahead, and a fence up there already knows your name.",
     requiresNode: 'syndicate',
-    requiresNavLevel: 10,
     milestone: { amount: 1000, spend: true },
     image: '/bilge_eel.png',
     scene: [
@@ -1113,7 +1112,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "Captain Krust's freight runs the cold water past the Bilge Strait. Sink the consignment and the Finndicate feels every lost crate.",
     bridge: "Krust goes down and his manifest goes over the side with him. No kingpin either, this one. Right to the end he kept muttering that someone above him would want it all back.",
     requiresNode: 'krust_reveal',
-    requiresNavLevel: 20,
     route: '/raids/krust',
     raidId: CAPTAIN_KRUST.raidId,
     image: CAPTAIN_KRUST.enemies.krust.portrait,

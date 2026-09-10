@@ -412,6 +412,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
           {displayDoubloons !== undefined && (
             <span
               data-doubloon-pill
+              data-coach="purse"
               className="font-cinzel font-700 text-[#f0c040]"
               style={{ fontSize: '0.78rem' }}
             >
@@ -466,6 +467,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
           {displayDoubloons !== undefined && (
             <span
               data-doubloon-pill
+              data-coach="purse"
               className="font-cinzel font-700 text-[#f0c040]"
               style={{ fontSize: '0.8rem' }}
             >

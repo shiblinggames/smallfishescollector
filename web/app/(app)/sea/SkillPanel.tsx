@@ -47,7 +47,7 @@
 // to think about a level, so it is where the points you get for finishing one
 // belong. The allocator itself is unchanged (`RenownPanel`) — this opens it.
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
@@ -204,13 +204,23 @@ function navRows(level: number, hallTier: number): { stats: Stat[]; ahead: Event
   return { stats, ahead }
 }
 
-export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown, onOpenRenown, hallTier }: {
+export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown, onOpenRenown, hallTier, extra, extraTitle }: {
   open: boolean
   onClose: () => void
   skill: Skill
   /** The other spine is one tap away. The disc opens on the side you are on;
    *  this is how you look at the other one without sailing there. */
   onSwitch?: (skill: Skill) => void
+  /**
+   * ── WHAT THIS SPINE HAS FOR YOU TODAY ────────────────────────────────
+   *
+   * The day's orders under Fishing, the bounty board under Navigation. Each
+   * had a disc of its own on the HUD, which was a row of eight discs for a
+   * screen that is meant to be water. The level is where a captain goes to
+   * see how they are doing; today's work belongs on the same page.
+   */
+  extra?: ReactNode
+  extraTitle?: string
   /** Raw XP for this spine. The level and the bar are both derived from it. */
   xp: number
   /** Null when the server has not read it (or the captain is not at the cap). */
@@ -429,6 +439,15 @@ export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown,
                   </div>
                 ))}
               </div>
+            </>
+          )}
+
+          {extra && (
+            <>
+              <p className="font-karla font-800 uppercase" style={{
+                margin: '1.1rem 0 0.5rem', fontSize: '0.5rem', letterSpacing: '0.2em', color: `${GOLD}cc`,
+              }}>{extraTitle}</p>
+              <div>{extra}</div>
             </>
           )}
         </div>

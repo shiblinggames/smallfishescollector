@@ -730,25 +730,45 @@ export default function MarketClient({
   function handleSell(fishId: number, qty: number) {
     if (selling !== null) return
     setSelling(fishId)
-    // Optimistic: the stack shrinks/leaves the instant you commit (snapshot
-    // restored on error); the payout toast + purse tick wait for the server's
-    // real number (market price is authoritative there).
+    // ── ALL OF IT IS OPTIMISTIC NOW ──────────────────────────────────
+    // The stack shrank the instant you pressed Sell, and then the toast, the
+    // purse and the haptic waited for the server, which on a slow link is
+    // most of a second of nothing after the one thing that changed on
+    // screen was the fish vanishing. The price is known here -- it is the
+    // number printed on the row -- so the purse ticks and the toast lands at
+    // once, and the server's figure replaces the estimate when it arrives.
+    // It is the same figure unless a tick landed between; then the truth
+    // wins and the nav corrects by a coin or two. An error puts everything
+    // back: the stack, the purse, the words.
     const snapshot = portfolio
+    const purseBefore = doubloons
+    const entry = portfolio.find(e => e.fish_id === fishId)
+    const expect = entry ? Math.floor(entry.sell_value * entry.multiplier * fee) * qty : 0
     setTradeFish(null)
     setPortfolio(prev =>
       prev.map(e => e.fish_id === fishId ? { ...e, quantity: e.quantity - qty } : e)
           .filter(e => e.quantity > 0)
     )
-    startTransition(async () => {
-      const res = await marketSellFish(fishId, qty)
+    setDoubloons(purseBefore + expect)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: purseBefore + expect }))
+    hapticReward()
+    showToast(`+${expect.toLocaleString()} ⟡`)
+    // Not a transition: nothing about this should be deferred behind other
+    // renders. The row is already gone; this is the bookkeeping.
+    void (async () => {
+      const res = await marketSellFish(fishId, qty).catch(() => ({ error: 'The sale did not go through.' } as const))
       setSelling(null)
-      if ('error' in res) { showToast(res.error); setPortfolio(snapshot); return }
+      if ('error' in res) {
+        showToast(res.error)
+        setPortfolio(snapshot)
+        setDoubloons(purseBefore)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: purseBefore }))
+        return
+      }
       setDoubloons(res.doubloons)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-      hapticReward()
-      showToast(`+${res.earned.toLocaleString()} ⟡`)
       sellBeatDone()
-    })
+    })()
   }
 
   const [browseExpanded, setBrowseExpanded] = useState(false)
@@ -1005,13 +1025,21 @@ export default function MarketClient({
         </div>
 
         </>)}
+        {/* ── THE HERO AND THE HOLD, SIDE BY SIDE ON A DESKTOP ───────
+            The hero -- one number and the Sell All under it -- was the full
+            width of the page column, which on a monitor is a banner nine
+            hundred pixels wide holding one number in its top-left corner. On a
+            wide screen it is a card in a column on the left, sticky, and the
+            hold runs down the right beside it. On a phone the two stack, as
+            they always did. See .market-lay in globals.css. */}
+        <div className="market-lay">
         {/* ── Portfolio hero ── */}
         {portfolio.length > 0 && (
           <div style={{
             background: 'linear-gradient(165deg, rgba(60,48,16,0.92) 0%, rgba(11,13,18,0.97) 55%)',
             border: '1px solid rgba(240,192,64,0.22)', borderTop: '1px solid rgba(240,192,64,0.45)',
             borderRadius: 16, padding: '1.1rem 1.15rem 0.95rem', overflow: 'hidden',
-          }}>
+          }} className="market-hero">
             <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#b8a06a' }}>Hold Value</p>
             <p className="font-karla font-700" style={{ fontSize: '2.4rem', color: '#fff', lineHeight: 1.05, ...TNUM }}>
               {totalMarketValue.toLocaleString()} <span style={{ fontSize: '1.1rem', color: '#9a9488' }}>⟡</span>
@@ -1188,6 +1216,7 @@ export default function MarketClient({
               ))}
             </div>
           )}
+        </div>
         </div>
 
         {/* ── THE REST OF THE TERMINAL ───────────────────────────────

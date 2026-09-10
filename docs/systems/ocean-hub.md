@@ -2715,3 +2715,9 @@ else. Three things enforce it, and they share one source of truth — the tour's
 `tourBeat` and derives the lock. The market page already collapses to its simple sell view on the
 sell beat. What the lock does not cover: the app's own nav bar and tab bar, which are outside the
 chart — the tour's step persists, so leaving and coming back resumes rather than breaks.
+
+### Doby calls the sale
+
+A beat after the sold beat, before Kat's Finn line: Doby says the sale landed and points at the
+purse in the nav (`data-coach="purse"` on the doubloon pill, both layouts). The tour's lock is
+scoped to the chart's wrap, so the nav pill is a target and never dimmed.

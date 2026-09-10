@@ -682,10 +682,13 @@ function BountyCard({ b, rerollUsed, busy, celebrate, onClaim, onSwap }: {
 }
 
 
-export default function BountiesPanel({ onGems, onClose }: {
+export default function BountiesPanel({ onGems, onClose, embedded = false }: {
   onGems?: (n: number) => void
   /** The panel owns the title row now, so it owns the close button with it. */
   onClose: () => void
+  /** Drawn inside another panel that already has a title and a close (the
+   *  Navigation level). The board keeps everything but its own header. */
+  embedded?: boolean
 }) {
   const [board, setBoard] = useState<BountyBoard | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -717,7 +720,7 @@ export default function BountiesPanel({ onGems, onClose }: {
   if (!board) {
     return (
       <>
-        <BoardHeader title="Bounties" burst={0} onClose={onClose} />
+        {!embedded && (<BoardHeader title="Bounties" burst={0} onClose={onClose} />)}
         <p className="font-karla font-600 uppercase tracking-[0.16em]"
           style={{ fontSize: '0.66rem', color: '#8d7f66', padding: '2.5rem 0', textAlign: 'center' }}>
           Reading the board…
@@ -729,7 +732,7 @@ export default function BountiesPanel({ onGems, onClose }: {
   if (!board.unlocked) {
     return (
       <>
-      <BoardHeader title="Bounties" burst={0} onClose={onClose} />
+      {!embedded && (<BoardHeader title="Bounties" burst={0} onClose={onClose} />)}
       <div style={{ textAlign: 'center', padding: '1.5rem 1.5rem 2.5rem' }}>
         <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#c9b68a', marginBottom: 8 }}>
           The board is empty
@@ -801,7 +804,7 @@ export default function BountiesPanel({ onGems, onClose }: {
 
   return (
     <div style={{ padding: '0 0.15rem 0.3rem' }}>
-      <BoardHeader
+      {!embedded && (<BoardHeader
         title="Bounties"
         claimed={board.rungMax - board.remaining}
         total={board.rungMax}
@@ -810,7 +813,7 @@ export default function BountiesPanel({ onGems, onClose }: {
         burst={burst}
         onPoints={() => setLadderOpen(true)}
         onClose={onClose}
-      />
+      />)}
 
       {/* Full width and short. Two columns gave each notice about 190px to
           carry a tier, a prize, a title, a description, a bar and two controls,

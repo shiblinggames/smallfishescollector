@@ -81,7 +81,7 @@ import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
 import TrawlIndicator from '../fishing/TrawlIndicator'
 import DailyOrders from '../trawl-docks/DailyOrders'
-import BountyBoardModal from '../expeditions/BountyBoardModal'
+import BountiesPanel from '../expeditions/BountiesPanel'
 import { getBountyBoard } from '../expeditions/bountyActions'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
@@ -5706,7 +5706,6 @@ export default function SeaMap({
     // water would be the busiest thing in that corner and about the other half
     // of the game.
     if (!inAnchorage && (!fishingIn || wide)) on.push('almanac')
-    if (!inAnchorage && orders && orders.challenges.length > 0 && (!fishingIn || wide)) on.push('orders')
 
     return on
   }, [fishingIn, wide, inAnchorage, orders, trawls.length, trawlsReady, fightOn])
@@ -6672,13 +6671,16 @@ export default function SeaMap({
     // The rule it exists to protect is untouched: read anywhere, settle up
     // ashore. You still have to sail here. What changed is that arriving hands
     // you the panel instead of a URL.
-    if (p.id === 'trawl_docks') { setOrdersAshore(true); setOrdersOpen(true); return }
+    // The docks open the Fishing level with today's orders under it, claiming
+    // enabled because you are standing on the docks. See the SkillPanel mount.
+    if (p.id === 'trawl_docks') { setOrdersAshore(true); setSkillView('fishing'); setSkillOpen(true); return }
     // AND THE POSTING HOUSE PINS ITS BOARD UP WHERE YOU FLOAT. Bounties were a
     // card on the Expeditions hub, and routing there would have made mooring at
     // the island a redirect off the chart: the sea unloaded, the hub rendered,
     // one modal opened over it, and the whole chart rebuilt on the way back.
     // Same component the hub uses (BountyBoardModal), opened here.
-    if (p.id === 'posting_house') { setBountiesOpen(true); return }
+    // And the posting house opens the Navigation level with the board under it.
+    if (p.id === 'posting_house') { setSkillView('nav'); setSkillOpen(true); return }
     // AND THE FORGE LIGHTS WHERE YOU MOOR. Same trade as the Posting House:
     // the bench is one screen you dip into, and a route spends the whole chart
     // to show it. See ShipSheet.
@@ -10735,9 +10737,17 @@ hullRef={hullRefFor(t.key)} />
 
       <SkillPanel
         open={skillOpen}
-        onClose={() => setSkillOpen(false)}
+        onClose={() => { setSkillOpen(false); setOrdersAshore(false); pollBounties() }}
         skill={skillView}
         onSwitch={setSkillView}
+        // TODAY'S WORK, ON THE SAME PAGE AS THE LEVEL. The orders sheet and the
+        // bounty board each had a disc and a sheet of their own; they are a
+        // section of the level they belong to now. Claiming an order still
+        // wants the Trawl Docks under you (ordersAshore), as it always did.
+        extraTitle={skillView === 'fishing' ? 'Today’s Orders' : 'Bounties'}
+        extra={skillView === 'fishing'
+          ? (orders ? <DailyOrders initial={orders} canClaim={ordersAshore} onChange={setOrders} /> : null)
+          : <BountiesPanel embedded onClose={() => setSkillOpen(false)} />}
         xp={skillView === 'nav' ? navXP : xpLive}
         renown={skillView === 'nav' ? renownNavState : renownState}
         hallTier={crewTiers?.hall ?? 1}
@@ -10998,90 +11008,8 @@ hullRef={hullRefFor(t.key)} />
           follows the water the boat is in. */}
       <SeaAudio />
 
-      {/* ── THE DAY'S ORDERS ────────────────────────────────────────────
-          Fourth in the HUD row. Nothing here claims anything: it is a readout,
-          and the dot is the only thing it ever asks of you. */}
-      {!inAnchorage && orders && orders.challenges.length > 0 && (!fishingIn || wide) && (
-        <button
-          type="button"
-          onClick={e => { e.stopPropagation(); vibrate(8); setOrdersOpen(true) }}
-          aria-label="Today's orders"
-          title="Today's orders"
-          data-no-steer
-          style={{
-            position: 'absolute', top: 18, left: hudAt('orders'), zIndex: Z.hud,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: hudSize, height: hudSize, padding: 0,
-            borderRadius: 999, cursor: 'pointer',
-            background: ordersReady ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
-            border: `1px solid ${ordersReady ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
-          }}>
-          {/* A pinned sheet of orders. */}
-          <svg width={Math.round(hudSize * 0.46)} height={Math.round(hudSize * 0.46)}
-            viewBox="0 0 24 24" fill="none"
-            stroke={ordersReady ? '#f0c040' : 'rgba(214,232,240,0.8)'}
-            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M6 3h9l3 3v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-            <path d="M9 9h6M9 13h6M9 17h3" />
-          </svg>
-          {ordersReady && (
-            <span aria-hidden style={{
-              position: 'absolute', top: 2, right: 2,
-              width: 9, height: 9, borderRadius: '50%',
-              background: '#f0c040', border: '2px solid rgba(4,10,18,1)',
-              boxShadow: '0 0 7px rgba(240,192,64,0.85)',
-            }} />
-          )}
-        </button>
-      )}
 
-      {/* THE ORDERS SHEET. Same stopPropagation wrapper as everything else that
-          floats over the chart: the map steers on click, so a tap on the
-          backdrop to dismiss would otherwise also put the helm over. */}
-      {ordersOpen && (
-        <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-          <PopupShell open onClose={() => { setOrdersOpen(false); setOrdersAshore(false) }}>
-            <div onClick={e => e.stopPropagation()} style={{
-              margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
-              borderRadius: 20, padding: '1.1rem 1.05rem 1rem',
-              // An opaque floor: this sits over painted water.
-              background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
-              border: '1px solid rgba(196,169,106,0.34)',
-              boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
-              maxHeight: '80vh', overflowY: 'auto',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-                <button type="button" onClick={() => { setOrdersOpen(false); setOrdersAshore(false) }} aria-label="Close"
-                  style={{
-                    width: 30, height: 30, borderRadius: '50%', padding: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
-                    color: '#cfcabf', cursor: 'pointer',
-                  }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
-                </button>
-              </div>
-              {/* onChange, because this sheet UNMOUNTS on close. Without it the
-                  chart kept the snapshot it fetched on load, so reopening the
-                  Tally House showed every finished order as Ready again and the
-                  gold dot stayed lit on the HUD after everything was paid. */}
-              <DailyOrders initial={orders} canClaim={ordersAshore} onChange={setOrders} />
-            </div>
-          </PopupShell>
-        </div>
-      )}
 
-      {/* THE BOUNTY BOARD, over the water you sailed to read it on.
-
-          The wrapper is the same one every sheet over this map needs: the chart
-          STEERS on click and starts a heading on pointerdown, so without it a
-          tap on the backdrop to dismiss would also put the helm over. */}
-      {bountiesOpen && (
-        <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-          <BountyBoardModal open onClose={() => { setBountiesOpen(false); pollBounties() }} />
-        </div>
-      )}
 
       {/* THE TRAWL PANEL, over the water it is sending crews into.
 

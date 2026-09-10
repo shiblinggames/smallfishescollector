@@ -167,3 +167,9 @@ Enemy hulls below a Man-o-War are the PLAYER'S OWN v3 ships now
   container in RaidCombat rather than this mapping.
 - The rowboat in `components/cutscene.tsx` is deliberately left alone: it is a story beat
   about a little boat that ends up empty, not an encounter.
+
+## Chapter I asks nothing of your level
+
+`requiresNavLevel` is gone from every Chapter I node (`bilge_milestone` was Nav 10, `krust` was
+Nav 20). A new captain can play the whole of The Loose Thread on story and clears alone. Later
+chapters keep their gates (Ch II from `cartographer_reveal` at 25 onward).

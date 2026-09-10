@@ -2158,6 +2158,17 @@ body.hardcore-gauntlet::after {
 /* Warm/gold flash variant — used on the expeditions page. */
 .coach-flash-gold { --coach-color: 240, 192, 64; --coach-hi: 255, 224, 140; }
 
+/* ── THE MARKET ON A DESKTOP ──────────────────────────────────────────────
+   Hero and hold stack on a phone and sit side by side on a monitor: the hero
+   in a column on the left, sticky under the nav so the Sell All never scrolls
+   away from a long hold, and the hold running down the right. The hold's own
+   grid (MarketClient) then finds it has room for one column of rows, which is
+   the phone's row at the phone's width -- the shape it was drawn for. */
+@media (min-width: 900px) {
+  .market-lay { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+  .market-lay > .market-hero { position: sticky; top: calc(var(--nav-h, 56px) + 12px); }
+}
+
 /* ── THE FIRST VOYAGE HOLDS THE WHEEL ─────────────────────────────────────
    While the first voyage is running, everything on the chart that is not the
    current beat's target stands down: dimmed, and inert to the pointer. The

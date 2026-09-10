@@ -101,3 +101,13 @@ spine (`skillView` in SeaMap, re-seeded from the side on every press). The panel
 Fishing / Navigation switch (`onSwitch`) so the other spine is one tap away without sailing there;
 XP, renown and the renown door all follow the switch. The rod and wheel glyphs it used to wear were
 two marks for one slot and neither said "level".
+
+## Today's work lives under the level
+
+The day's orders and the bounty board each had a disc and a sheet of their own on the HUD. They are
+a section of the level they belong to now: **Today's Orders** under Fishing, **Bounties** under
+Navigation (`SkillPanel.extra` / `extraTitle`, fed from SeaMap by `skillView`). Mooring at the Trawl
+Docks opens the Fishing level with claiming enabled (`ordersAshore`, as before); mooring at the
+Posting House opens the Navigation level. `BountiesPanel` takes `embedded` and keeps everything but
+its own header. The orders disc is gone from the HUD row; the old orders sheet and bounty modal
+mounts on the chart are gone with it.
