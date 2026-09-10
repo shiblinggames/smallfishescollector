@@ -303,19 +303,25 @@ export type Folk = {
    */
   rodTier?: number
   /**
-   * Their reaction. TWO outcomes, because there are two grades of gift: the one
-   * fish they want, and everything else.
+   * ── THEIR REACTION, AS TWO POOLS ──────────────────────────────────────────
    *
-   * `onLiked` and `onPlain` are a POOL for that second case rather than two
-   * grades of it. They were written when a fish from the regular's own water
-   * scored higher than a stranger's, and when that middle tier was removed the
-   * warmer line had nothing left to fire on. Keeping both as a pair costs
-   * nothing, keeps nine good lines in the game, and means handing somebody an
-   * ordinary fish twice does not read back the identical sentence.
+   * Two outcomes and only ever two, because `giftWorth` grades a gift as the
+   * one fish they want or everything else. There is no middle: a fish from a
+   * regular's own water used to score higher and that tier was removed.
+   *
+   * BOTH ARE POOLS NOW, and the loved one is the reason. It used to be a single
+   * string, which meant the RAREST and most deliberate thing a captain can do
+   * out here — go and catch a particular somebody's particular fish — read back
+   * word for word identical the second time they did it. The ordinary case had
+   * two lines to shuffle between and the special case had one, which is exactly
+   * the wrong way round.
+   *
+   * The old `onLiked` field is folded into `onPlain`: it was written for the
+   * removed middle tier and had been firing on a coin flip against `onPlain`
+   * ever since, which is what a pool is. Now it is one.
    */
-  onLoved: string
-  onLiked: string
-  onPlain: string
+  onLoved: string[]
+  onPlain: string[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -396,9 +402,17 @@ export const FOLK: Folk[] = [
       "I will tell you something I do not tell the harbour: I set my rate by the captain, not the catch. Yours has been the good one for a while.",
       "You are one of mine now. That is not a discount, it is better than one.",
     ],
-    onLoved: "Now that is a fish. I will not weigh this one, I will keep it.",
-    onLiked: "Kind of you. It will not go to waste, I promise you that.",
-    onPlain: "For me? Go on then. I will find a use for it.",
+    onLoved: [
+      "Now that is a fish. I will not weigh this one, I will keep it.",
+      "Largemouth. You went and found one on purpose, did you. Thirty years and people still manage it.",
+      "That is the one. I will not thank you twice, so hear it properly the once: thank you.",
+    ],
+    onPlain: [
+      "Kind of you. It will not go to waste, I promise you that.",
+      "For me? Go on then. I will find a use for it.",
+      "I have been handed better by people who wanted something. You want nothing. Noted.",
+      "Straight off the deck and still cold. That is the right way to hand somebody a fish.",
+    ],
   },
   {
     // THE ID IS THE STORAGE KEY. He was Bent Pell until 2026-09, and every
@@ -497,9 +511,16 @@ export const FOLK: Folk[] = [
       "Alright I'll give you some more advice on stocks. Buy low. Sell high.",
       "Bro. Seems like just a few days ago we met but now we're friends forever on the open waters. See you in Valhalla!",
     ],
-    onLoved: "YOOOOO. Dude. What. That's a bluefin. That's crazy.",
-    onLiked: "Yooooo, nice. That's a solid hold. Solid.",
-    onPlain: "Thanks dude.",
+    // MATTY'S LINES COME FROM MATTY. He is a real person and everything he
+    // says out here is his, verbatim. These are the three that exist; the pools
+    // are ready for more the moment there are more, and nobody else writes them.
+    onLoved: [
+      "YOOOOO. Dude. What. That's a bluefin. That's crazy.",
+    ],
+    onPlain: [
+      "Yooooo, nice. That's a solid hold. Solid.",
+      "Thanks dude.",
+    ],
   },
   {
     id: 'marlow', name: 'Old Marlow', short: 'Marlow', zoneId: 'deep', buys: false,
@@ -562,9 +583,17 @@ export const FOLK: Folk[] = [
       "I do not usually talk while I weigh. With you I have noticed I do.",
       "You have my trust, which is worth nothing, and my company, which out here is worth a great deal more.",
     ],
-    onLoved: "Well now. I have not held one of these in years. I am not going to weigh it and you cannot make me.",
-    onLiked: "Generous. I will eat well and think better of you than I already do.",
-    onPlain: "You did not have to. I will remember that you did.",
+    onLoved: [
+      "Well now. I have not held one of these in years. I am not going to weigh it and you cannot make me.",
+      "A marlin. On my deck. I have nothing prepared to say about that, and I am usually prepared.",
+      "You will have heard I do not go after these any more. You will notice I never said I stopped wanting one.",
+    ],
+    onPlain: [
+      "Generous. I will eat well and think better of you than I already do.",
+      "You did not have to. I will remember that you did.",
+      "I sit still and things come to me. Rarely this politely.",
+      "Set it down there. And sit down yourself, you have been standing since you tied up.",
+    ],
   },
   {
     id: 'fitch', name: 'Quiet Fitch', short: 'Fitch', zoneId: 'abyss', buys: false,
@@ -631,9 +660,17 @@ export const FOLK: Folk[] = [
       "I have started expecting you. That is new for me.",
       "You are the one I would tell, if there were ever anything worth telling.",
     ],
-    onLoved: "Ah. You brought it up alive. Good.",
-    onLiked: "Thank you. Truly.",
-    onPlain: "That was kind. I do not have much to say to kind.",
+    onLoved: [
+      "Ah. You brought it up alive. Good.",
+      "Its light still works. Most of them come up dark.",
+      "Mm. That is the one. You knew that.",
+    ],
+    onPlain: [
+      "Thank you. Truly.",
+      "That was kind. I do not have much to say to kind.",
+      "Mm. Good.",
+      "I will eat this. That is more than I say about most things.",
+    ],
   },
   {
     id: 'nance', name: 'Grey Nance', short: 'Nance', zoneId: 'ancient_deep', buys: false,
@@ -699,9 +736,17 @@ export const FOLK: Folk[] = [
       "I trust you with this water. There is nobody else I would say that to.",
       "You are the one who comes back. Of everyone I have weighed for, you are the one who comes back.",
     ],
-    onLoved: "You brought this to me first. Ahead of the harbour, ahead of the coin. I will not forget it.",
-    onLiked: "From the old water, and you gave it away. You are a strange captain and I like you for it.",
-    onPlain: "Thank you. It is a long way to carry a gift.",
+    onLoved: [
+      "You brought this to me first. Ahead of the harbour, ahead of the coin. I will not forget it.",
+      "Sixty-six million years it managed without any of us, and you carried it up here in a wet sack. For me.",
+      "I keep a count of who goes down and comes back. I am going to need a second list.",
+    ],
+    onPlain: [
+      "From the old water, and you gave it away. You are a strange captain and I like you for it.",
+      "Thank you. It is a long way to carry a gift.",
+      "You went down, you came back, and you thought of somebody on the way up. That is the rare part.",
+      "This goes on the ice and your name goes in the book. Both of them keep.",
+    ],
   },
   {
     id: 'yoon', name: 'Yoon', short: 'Yoon', zoneId: 'ancient_deep', buys: false,
@@ -785,9 +830,14 @@ export const FOLK: Folk[] = [
       "Gyattt. I'll talk about the making with you. Betty johnson. I don't do that with buyers.",
       "Rod's yours whenever you've got the coin, and it was yours the day you stopped asking the price. Sheeeeesh. Took you long enough.",
     ],
-    onLoved: "Gyattt. You hauled this all the way out here for me? Sit down. I'm gonna tell you how it's caught properly.",
-    onLiked: "Good fish, clean handling. Gucci.",
-    onPlain: "Betty johnson. I'll take it. I don't eat much out here anyway.",
+    // YOON'S LINES COME FROM YOON. Same rule as Matty and Dennis.
+    onLoved: [
+      "Gyattt. You hauled this all the way out here for me? Sit down. I'm gonna tell you how it's caught properly.",
+    ],
+    onPlain: [
+      "Good fish, clean handling. Gucci.",
+      "Betty johnson. I'll take it. I don't eat much out here anyway.",
+    ],
   },
 
   // ── THE THREE WHO KEEP NO SHOP ─────────────────────────────────────────
@@ -885,9 +935,14 @@ export const FOLK: Folk[] = [
       "I'm going to tell you stuff I don't tell the harbour. Not because it's secret. Because the harbour walks off. You don't walk off.",
       "You're on the short list. It's a short list. Honestly it's you and a bosun who doesn't know he's on it.",
     ],
-    onLoved: "No. No way. You did not. Ten thousand casts and you just, you just brought one over? I need to sit down. I'm going to be talking about this for a year. Longer. You've made a huge mistake and I love you for it.",
-    onLiked: "Oh, that's a good one. That's a really good one. I'm going to log it and then I'm going to tell you a story about it, fair warning.",
-    onPlain: "For me? Thank you. Genuinely. Nobody brings me things, I'm usually the one bringing things. This is nice. This is a nice change.",
+    // DENNIS'S LINES COME FROM DENNIS. Same rule as Matty and Yoon.
+    onLoved: [
+      "No. No way. You did not. Ten thousand casts and you just, you just brought one over? I need to sit down. I'm going to be talking about this for a year. Longer. You've made a huge mistake and I love you for it.",
+    ],
+    onPlain: [
+      "Oh, that's a good one. That's a really good one. I'm going to log it and then I'm going to tell you a story about it, fair warning.",
+      "For me? Thank you. Genuinely. Nobody brings me things, I'm usually the one bringing things. This is nice. This is a nice change.",
+    ],
   },
   {
     id: 'turbot', name: 'Cass Turbot', short: 'Cass', zoneId: 'open_waters', buys: false,
@@ -950,9 +1005,17 @@ export const FOLK: Folk[] = [
       "I have started saving the good stories for you, which is a bad habit and I am not stopping.",
       "There are two of us who know what is behind that door now. Sleep well.",
     ],
-    onLoved: "Out of the current, that one. You had to work for it. I can see you had to work for it.",
-    onLiked: "Fresh food out here is worth more than salvage. I am not exaggerating.",
-    onPlain: "That is decent of you. I eat what I find, mostly, and what I find is usually rope.",
+    onLoved: [
+      "Out of the current, that one. You had to work for it. I can see you had to work for it.",
+      "Cobia. They hang about the wrecks like they are paying rent down there. Did you have to shoo it off something of mine?",
+      "I have come up empty from better water than that. Do not repeat that anywhere.",
+    ],
+    onPlain: [
+      "Fresh food out here is worth more than salvage. I am not exaggerating.",
+      "That is decent of you. I eat what I find, mostly, and what I find is usually rope.",
+      "Right. That is dinner, and I did not have to hold my breath for it.",
+      "You have no idea how much of my diet is a guess. This is not a guess.",
+    ],
   },
   {
     id: 'ream', name: 'Rue Bream', short: 'Rue', zoneId: 'deep', buys: false,
@@ -1015,9 +1078,17 @@ export const FOLK: Folk[] = [
       "You get the real news now, not the harbour version.",
       "You are the last name on the list and the only one who ever asked how I was.",
     ],
-    onLoved: "You remembered. I mentioned this once, months ago, and you remembered.",
-    onLiked: "Kind. I will eat it somewhere between here and the Abyss and think well of you.",
-    onPlain: "A gift for the messenger. That does not happen. Thank you.",
+    onLoved: [
+      "You remembered. I mentioned this once, months ago, and you remembered.",
+      "Cod. Plain as anything, and not one person has ever brought me one. That is rather the whole of me, is it not.",
+      "I carry what everybody says and nobody asks what I would want. You asked, once. Here it is.",
+    ],
+    onPlain: [
+      "Kind. I will eat it somewhere between here and the Abyss and think well of you.",
+      "A gift for the messenger. That does not happen. Thank you.",
+      "I will have told three people about this before nightfall. Occupational hazard.",
+      "Something for me, for once. I will not make a thing of it. I will mention it, but I will not make a thing of it.",
+    ],
   },
 ]
 

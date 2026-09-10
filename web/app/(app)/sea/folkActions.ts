@@ -157,6 +157,12 @@ export async function talkToFolk(folkId: string): Promise<FolkTalk | { error: st
  * should not be told they picked the wrong one, so the worst case is still a
  * point and a warm line.
  */
+/** One line out of a pool. Never empty: every pool ships with at least one, and
+ *  a folk whose lines are still being written has exactly one. */
+function pickLine(pool: string[]): string {
+  return pool[Math.floor(Math.random() * pool.length)] ?? pool[0] ?? ''
+}
+
 export async function giftToFolk(folkId: string, fishId: number): Promise<FolkGift | { error: string }> {
   const user = await me()
   if (!user) return { error: 'Unauthorized' }
@@ -232,11 +238,10 @@ export async function giftToFolk(folkId: string, fishId: number): Promise<FolkGi
   }
 
   return {
-    // The non-favourite pool, picked per gift so the same ordinary fish
-    // handed over twice does not produce the same sentence.
-    line: worth.how === 'loved'
-      ? folk.onLoved
-      : (Math.random() < 0.5 ? folk.onLiked : folk.onPlain),
+    // BOTH GRADES ARE POOLS. The loved one used to be a single string, so
+    // the rarest thing a captain can do out here — go and catch one particular
+    // person's one particular fish — read back word for word the second time.
+    line: pickLine(worth.how === 'loved' ? folk.onLoved : folk.onPlain),
     how: worth.how,
     points,
     tier,
