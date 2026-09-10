@@ -1417,6 +1417,15 @@ does not. `DEPTH` (0.2r, screen) is held under the mouth's near edge so the floo
 seen through the mouth. The flat `hole` sprite is gone: the black in the middle is depth, not
 paint. Both gauntlet Slipways host this same renderer and inherit all of it.
 
+**The keeper stands IN the throat.** Davy and the Don used to hang at a fixed height over the
+middle of the mouth, which is all there was to stand on. They are rooted at the floor now and
+climb it as you approach (`fy * (1 - 0.85 * gg)`): far off, the foot fade baked into
+`holoTexture` dissolves them to the chest, so what you see over a distant maelstrom is a head
+and shoulders coming up out of the dark; alongside, they are all but standing in the mouth.
+They ride the throat's lean with the floor, so they leave the centre of the hole only when the
+hole does. Do not re-pin them to the rim: the fade is cut for a figure whose lower third is
+below the waterline.
+
 ## The anchorage, and the way out of it
 
 The water north of the reef. Reached through the arch on the fishing boat, and it holds the

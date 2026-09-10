@@ -434,11 +434,20 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
 
     // ── THE PROJECTION ──────────────────────────────────────────────
     //
-    // Light coming up out of the hole, and the man standing in it. Both are
-    // in the world and pinned to the centre: they do not turn with the arms
-    // and they are not laid on the keystone. A face that swirled with the
-    // water would be part of the weather; this is the thing the weather is
+    // Light coming up out of the hole, and the man RISING OUT OF IT. Both are
+    // in the world and pinned to the throat's centre: they do not turn with
+    // the arms and they are not laid on the keystone. A face that swirled with
+    // the water would be part of the weather; this is the thing the weather is
     // about, so it holds still while everything else moves.
+    //
+    // He is rooted at the FLOOR, not at the rim. He used to hang over the
+    // middle of the mouth at a fixed height, which was the only place to put
+    // him while the middle of the mouth was all there was — and it read as a
+    // portrait pinned above the water. Now that the hole has a bottom he
+    // stands on it, and the foot fade baked into the texture does the rest:
+    // his lower third dissolves into the dark, which is very nearly the depth
+    // of the throat, so what you see is a man from the waterline up with the
+    // rest of him still down in it.
     const beam = sprite(discTex!, m.r * 0.5, th.core, 0)
     beam.blendMode = 'add'
     // Standing up out of the plane rather than lying on it: the world
@@ -627,10 +636,22 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         const jitter = solidKeeper ? 1 : 0.86 + 0.14 * Math.sin(t * 23.7) * Math.sin(t * 7.3)
         const dropout = solidKeeper ? 1 : (Math.sin(t * 0.7) > 0.985 ? 0.35 : 1)
         o.holo.alpha = solidKeeper ? lit : (0.2 + 0.55 * gg) * jitter * dropout * lit
-        // It breathes on the spot. No turning: see the note where it is
-        // mounted. The bob is in screen pixels, so it is divided by GROUND
-        // like every other height on this chart.
-        o.holo.y = -((m.r * 0.10) + 10 * Math.sin(t * 0.8)) / GROUND
+        // ── AND HE COMES UP AS YOU COME IN ──────────────────────────────
+        //
+        // His feet are on the FLOOR of the throat when nobody is near: down at
+        // the bottom of the hole, dissolved to the chest by the foot fade, so
+        // what stands over a maelstrom seen across the junction is a head and
+        // a pair of shoulders coming up out of the dark. Close the distance
+        // and he climbs the throat — at a full bowl he is all but standing in
+        // the mouth of it. The same dial as everything else here, and it turns
+        // the one static thing on the door into the door's own answer to being
+        // approached.
+        //
+        // He rides the lean with the floor he is standing on, so he leaves the
+        // centre of the hole only when the hole does. The bob is in screen
+        // pixels, so it is divided by GROUND like every other height here.
+        o.holo.x = fx
+        o.holo.y = fy * (1 - 0.85 * gg) - (10 * Math.sin(t * 0.8)) / GROUND
         // The light comes up from the floor, and he stands over the mouth in
         // it: the beam is rooted where the eye is and rises from there.
         o.beam.position.set(fx, fy - (m.r * 0.16) / GROUND)
