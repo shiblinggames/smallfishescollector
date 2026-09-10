@@ -231,6 +231,7 @@ if (typeof window !== 'undefined') {
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK, FINN_MOORING } from '@/lib/seaFinn'
 import { swellAt, swellHeel } from './seaSwell'
+import { getTrawlState } from '../fishing/trawls/actions'
 /**
  * WHERE FINN IS, RIGHT NOW.
  *
@@ -2355,17 +2356,60 @@ export default function SeaMap({
    * once an hour per crew — a second-accurate "ready" is a countdown, and this
    * is not one.
    */
+  /**
+   * ── WHO IS OUT, AS THIS TAB LAST HEARD IT ──────────────────────────────────
+   *
+   * `trawlsOut` is a SERVER prop, read once when the page rendered. Collecting a
+   * trawl does not change it, and `collectTrawl` does not revalidate — for a
+   * good reason spelled out in its own file: a Server Action that revalidates
+   * makes the router refetch the RSC payload for the route you are ON, and that
+   * would be a full re-render of the chart every time a crew came in.
+   *
+   * So the mark on the Trawl Harbour and the disc in the HUD both counted crew
+   * who had already been collected, and went on counting them until the page
+   * was reloaded. The trawl panel on this chart is the SAME TrawlIndicator the
+   * fishing screen uses, and it already announces itself — nothing here was
+   * listening.
+   *
+   * This listens, and re-reads only the trawl state rather than the page: one
+   * targeted server call against a full chart refresh, which is the trade the
+   * no-revalidate note was protecting in the first place.
+   */
+  const [trawls, setTrawls] = useState(trawlsOut)
+  // The prop wins on a real navigation — see the prop-sync rule. Without this
+  // the state would keep whatever the first payload said for the session.
+  useEffect(() => { setTrawls(trawlsOut) }, [trawlsOut])
+
+  useEffect(() => {
+    let dead = false
+    const pull = () => {
+      void getTrawlState().then(st => {
+        if (dead || 'error' in st) return
+        setTrawls(st.zones
+          .filter(z => z.trawl?.endsAt)
+          .map(z => ({
+            zone: z.label,
+            endsAt: z.trawl!.endsAt as string,
+            crew: z.trawl!.crew.name,
+            art: z.trawl!.crew.filename,
+          })))
+      }).catch(() => {})
+    }
+    window.addEventListener('trawls-changed', pull)
+    return () => { dead = true; window.removeEventListener('trawls-changed', pull) }
+  }, [])
+
   const [trawlsReady, setTrawlsReady] = useState(
     () => trawlsOut.filter(t => new Date(t.endsAt).getTime() <= Date.now()).length)
   useEffect(() => {
     const tick = () => {
-      const n = trawlsOut.filter(t => new Date(t.endsAt).getTime() <= Date.now()).length
+      const n = trawls.filter(t => new Date(t.endsAt).getTime() <= Date.now()).length
       setTrawlsReady(prev => (prev === n ? prev : n))
     }
     tick()
     const id = setInterval(tick, 5_000)
     return () => clearInterval(id)
-  }, [trawlsOut])
+  }, [trawls])
 
   const [spots, setSpots] = useState<Hotspot[]>(() => hotspotsAt())
   const [inSpot, setInSpot] = useState<Hotspot | null>(null)
@@ -4218,7 +4262,7 @@ export default function SeaMap({
   useEffect(() => { readOrders() }, [readOrders])
 
   /** Still out. Distinct from ready: one is a clock, the other is a haul. */
-  const trawlsWorking = trawlsOut.length - trawlsReady
+  const trawlsWorking = trawls.length - trawlsReady
 
   /** Something finished and not yet collected — the dot on the icon. */
   const ordersReady = !!orders && orders.challenges.some(
@@ -5127,10 +5171,10 @@ export default function SeaMap({
     // of the game.
     if (!inAnchorage && (!fishingIn || wide)) on.push('almanac')
     if (!inAnchorage && orders && orders.challenges.length > 0 && (!fishingIn || wide)) on.push('orders')
-    if (!inAnchorage && (trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide)) on.push('trawls')
+    if (!inAnchorage && (trawls.length > 0 || trawlsReady > 0) && (!fishingIn || wide)) on.push('trawls')
 
     return on
-  }, [fishingIn, wide, inAnchorage, orders, trawlsOut.length, trawlsReady, fightOn])
+  }, [fishingIn, wide, inAnchorage, orders, trawls.length, trawlsReady, fightOn])
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width: 900px)')
     if (!mq) return
@@ -9804,7 +9848,7 @@ hullRef={hullRefFor(t.key)} />
           moving them onto the water was that a crew is a place you sail to.
           What this fixes is not knowing, from anywhere, whether it is worth
           the sail yet. */}
-      {!inAnchorage && (trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide) && (
+      {!inAnchorage && (trawls.length > 0 || trawlsReady > 0) && (!fishingIn || wide) && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(8); setTrawlsPeek(true) }}
@@ -9856,7 +9900,7 @@ hullRef={hullRefFor(t.key)} />
       {trawlsPeek && (() => {
         const now = Date.now()
         // Soonest back first, so the top of the list is the next reason to sail.
-        const rows = trawlsOut
+        const rows = trawls
           .map(t => ({ ...t, end: new Date(t.endsAt).getTime() }))
           .sort((a, b) => a.end - b.end)
         return (
