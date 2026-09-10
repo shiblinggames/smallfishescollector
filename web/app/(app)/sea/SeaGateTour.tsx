@@ -42,7 +42,8 @@ const GATE_HAIL = 1100
 import { markGateTourSeen, setGateTourStep } from './tourActions'
 
 export default function SeaGateTour({
-  hasSeen, startAt, inAnchorage, fighting, cam, crewOpen, crewSection, recruits, nearId, at, onBeat, onDone,
+  hasSeen, startAt, inAnchorage, fighting, cam, goal, crewOpen, crewSection, recruits,
+  hasCaptain, pastGate, nextAt, nearId, at, onBeat, onDone,
 }: {
   hasSeen: boolean
   /** The crew panel: open or not, and which of its rooms is showing. The
@@ -53,8 +54,19 @@ export default function SeaGateTour({
   recruits: number
   /** Where she is tied up, if anywhere. Reveals a `showWhen.moor` beat. */
   nearId: string | null
-  /** Where she is, live. Reveals a `showWhen.near` beat. */
+  /** Where she is, live. Reveals a `showWhen.near` beat, and answers `reach`. */
   at: { current: { x: number; y: number } }
+  /** Somebody is seated in the raid party. Advances the `assigned` beat, and
+   *  is what the Sea Gate itself checks. */
+  hasCaptain: boolean
+  /** Out through the Sea Gate, on the campaign's water. */
+  pastGate: boolean
+  /** What the campaign wants next, and where. Drives the `route` line and the
+   *  `reach` wait. Null when there is nothing open. */
+  nextAt: { x: number; y: number; r: number } | null
+  /** The chart's guiding path. Written while a `route` beat is up and given
+   *  back the moment it is not -- the same contract the camera takes. */
+  goal: React.MutableRefObject<{ x: number; y: number; r: number } | null>
   /** Which beat is up, and when it is over -- for the lock. Same contract as
    *  the first voyage. */
   onBeat?: (b: { until: string; at?: string; target?: string; lock: boolean } | null) => void
@@ -110,6 +122,7 @@ export default function SeaGateTour({
         const d = Math.hypot(at.current.x - SEA_GATE.x, at.current.y - SEA_GATE.y)
         if (d < GATE_HAIL) setShown(step)
       }
+      if (w.pastGate && pastGate) setShown(step)
     }
     check()
     // The position is a ref the frame loop writes; arriving somewhere is not a
@@ -117,7 +130,17 @@ export default function SeaGateTour({
     // rest of the proximity UI uses.
     const id = window.setInterval(check, 300)
     return () => window.clearInterval(id)
-  }, [gated, beat, step, nearId, at])
+  }, [gated, beat, step, nearId, at, pastGate])
+
+  // ── THE WAY THERE ─────────────────────────────────────────────────────
+  // Set while a `route` beat is showing, given back the moment it is not, so
+  // a path never outlives the instruction that drew it.
+  const routing = !!beat?.route && !gated
+  useEffect(() => {
+    if (!routing || !nextAt) { goal.current = null; return }
+    goal.current = nextAt
+    return () => { goal.current = null }
+  }, [routing, nextAt, goal])
   useEffect(() => { if (done) onDone?.() }, [done, onDone])
 
   const next = useCallback(() => {
@@ -180,6 +203,19 @@ export default function SeaGateTour({
   const want = beat?.until
   useEffect(() => { if (live && want === 'crewOpen' && crewOpen) next() }, [live, want, crewOpen, next])
   useEffect(() => { if (live && want === 'recruitBoard' && crewOpen && crewSection === 'recruits') next() }, [live, want, crewOpen, crewSection, next])
+  useEffect(() => { if (live && want === 'assignBoard' && crewOpen && crewSection === 'assign') next() }, [live, want, crewOpen, crewSection, next])
+  useEffect(() => { if (live && want === 'assigned' && hasCaptain) next() }, [live, want, hasCaptain, next])
+  useEffect(() => { if (live && want === 'crewClosed' && !crewOpen) next() }, [live, want, crewOpen, next])
+
+  // Sailed into the ring the path drew.
+  const wantReach = beat?.until === 'reach'
+  useEffect(() => {
+    if (!live || !wantReach || gated || !nextAt) return
+    const id = window.setInterval(() => {
+      if (Math.hypot(at.current.x - nextAt.x, at.current.y - nextAt.y) < nextAt.r) next()
+    }, 250)
+    return () => window.clearInterval(id)
+  }, [live, wantReach, gated, nextAt, at, next])
   // Latched against the count as it was when the beat came up, so a hand
   // signed on before the tour got here does not skip the beat that asks.
   const recruitMark = useRef(recruits)

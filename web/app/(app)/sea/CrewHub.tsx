@@ -348,7 +348,10 @@ export default function CrewHub({
                   </button>
                 )}
               </div>
-              <CloseButton onClick={onClose} style={{ position: 'absolute', top: 12, right: 12 }} />
+              {/* Named so the tour can point at the way out. */}
+              <span data-coach="crew-close" style={{ position: 'absolute', top: 12, right: 12, borderRadius: 999 }}>
+                <CloseButton onClick={onClose} />
+              </span>
 
               {err && !section && (
                 <p className="font-karla" style={{ fontSize: '0.82rem', color: '#e6a0a0', margin: '0.8rem 0 0' }}>{err}</p>

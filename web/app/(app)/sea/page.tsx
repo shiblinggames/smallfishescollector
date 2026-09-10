@@ -330,6 +330,10 @@ export default async function SeaPage({ searchParams }: {
       // The party and the mounts, for the dock's confirm. Names and art only:
       // the chart shows the muster, the raid screens do the maths.
       raidParty={raidPartyRows.map(c => ({ name: c.name, art: c.filename }))}
+      // ANYBODY AT ALL IN THE SEATS. The Sea Gate refuses an empty ship, and
+      // `loadDeployedParty` already returns only live, seated, unreserved
+      // crew -- so one row is the whole question.
+      hasCaptain={raidPartyRows.length > 0}
       raidItems={((profile?.equipped_raid_items as string[] | null) ?? [])
         .map(id => getRaidItem(id))
         .filter((d): d is NonNullable<typeof d> => !!d)

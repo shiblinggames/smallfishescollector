@@ -89,8 +89,25 @@ export default function AssignPicker({
     .sort((a, b) => (sort === 'level' ? b.level - a.level : b.eff[sort] - a.eff[sort]))
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(2,6,12,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 'var(--modal-w)', maxHeight: '84vh', display: 'flex', flexDirection: 'column', background: 'rgba(10,15,23,0.99)', borderTop: `2px solid ${accent}`, borderRadius: '18px 18px 0 0', boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
+    // ── A PANEL IN THE MIDDLE, NOT A DRAWER OFF THE FLOOR ──────────────────
+    // It came up from the bottom of the screen with a flat top edge and a
+    // 2px accent bar, which is a phone gesture drawn on a desktop: on a wide
+    // window it was a sheet glued to the bottom of a mostly empty screen,
+    // nothing like the assign board it opens FROM. Centred, fully rounded,
+    // and in the crew panel's own colours, so picking a hand looks like part
+    // of the same screen rather than a different app's tray.
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(2,6,12,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 'var(--modal-w)',
+        // `100%` alongside the vh, so it can never be taller than the room
+        // the padding above left it. See the modal-height rule in platform.md.
+        maxHeight: 'min(84vh, 100%)',
+        display: 'flex', flexDirection: 'column',
+        background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
+        border: `1px solid ${accent}59`,
+        borderRadius: 20,
+        boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '1rem 1rem 0.8rem' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: accent }}>Fill an open seat</p>

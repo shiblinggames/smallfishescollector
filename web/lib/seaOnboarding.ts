@@ -86,9 +86,10 @@ export type Beat = {
    *               captain who already has some.
    */
   until: 'next' | 'fish' | 'bite' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait' | 'almanac'
-    // The anchorage tour's own, all about the crew panel: the panel opened,
-    // its Recruit room opened, a hand signed on.
-    | 'crewOpen' | 'recruitBoard' | 'recruited'
+    // The anchorage tour's own: the crew panel opened, its Recruit room
+    // opened, a hand signed on, the Assign room opened, a captain seated,
+    // the panel closed again.
+    | 'crewOpen' | 'recruitBoard' | 'recruited' | 'assignBoard' | 'assigned' | 'crewClosed'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
@@ -156,7 +157,18 @@ export type Beat = {
     /** Within hail of this landmark. Only 'sea_gate' today, which is a pair
      *  of constants rather than a place you can moor at. */
     near?: 'sea_gate'
+    /** Out through the Sea Gate and on the campaign's water. */
+    pastGate?: true
   }
+  /**
+   * DRAW THE WAY TO THE NEXT STOP.
+   *
+   * The guiding path the fishing side uses for the Shallows, pointed at
+   * whatever the campaign wants next -- so a captain coming out of the gate
+   * for the first time has a light on the water rather than a compass and a
+   * guess. The chart owns which node that is; this only asks for the line.
+   */
+  route?: true
   /** Drawn above the crew panel. The panel is a PopupShell at 111 and these
    *  beats are about things inside it. */
   overPanel?: true
@@ -380,6 +392,49 @@ export const GATE_TOUR: Beat[] = [
     text: 'That’s your crew. Crews have *stats and abilities*. Train them up and they get much, much stronger.',
     until: 'next',
     overPanel: true,
+  },
+  // ── AND SHE NEEDS SOMEBODY ON HER ─────────────────────────────────────
+  // The Sea Gate refuses an empty ship (see the crossing in SeaMap), so this
+  // is not a suggestion: it is the last thing standing between a new captain
+  // and the campaign.
+  {
+    ...D,
+    text: 'Now we need to assign your crew to your ship so you can go do some expeditions!',
+    until: 'next',
+    overPanel: true,
+  },
+  {
+    ...D,
+    text: 'Click *Assign*.',
+    until: 'assignBoard',
+    target: 'crew-assign',
+    overPanel: true,
+  },
+  {
+    ...D,
+    text: 'Click on your just hired crew to assign to your ship.',
+    until: 'assigned',
+    target: 'captain-seat',
+    overPanel: true,
+  },
+  {
+    ...K,
+    text: 'There you go! Now you’re ready for some adventure!',
+    until: 'crewClosed',
+    target: 'crew-close',
+    overPanel: true,
+  },
+  // ── AND OUT THROUGH THE GATE ──────────────────────────────────────────
+  // Silent until they are actually out on the campaign's water, then a line,
+  // the pennant lit, and a lit path to whatever the campaign wants next --
+  // which on a fresh captain is A Loose Thread.
+  {
+    ...D,
+    text: 'Looks like we’ve got someone to deal with already. Let’s head over and see what’s happening.',
+    until: 'reach',
+    showWhen: { pastGate: true },
+    target: 'hud-journey',
+    route: true,
   },
 ]
 

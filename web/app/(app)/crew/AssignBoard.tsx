@@ -361,6 +361,9 @@ export default function AssignBoard({
                 if (!crew) {
                   return (
                     <button key={i} type="button" onClick={() => onPickSeat(t.key, i)}
+                      // The tour points at the captain's seat on the raid
+                      // party: it is the one seat the Sea Gate cares about.
+                      data-coach={captain && t.key === 'raid' ? 'captain-seat' : undefined}
                       aria-label={`Open seat ${i + 1} on the ${t.label}. Tap to assign a crew.`}
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,

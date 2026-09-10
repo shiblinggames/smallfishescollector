@@ -1671,6 +1671,19 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     })
   }
 
+  /**
+   * ── SOMEBODY IS IN THE SEATS ────────────────────────────────────────────
+   *
+   * Announced outward, because the Sea Gate refuses an empty ship and the
+   * chart is a different tree. Fires on every change of the answer, including
+   * the first render, so a chart that has just mounted this panel learns the
+   * truth without asking the server for it again.
+   */
+  const captainSeated = state.roster.some(c => c.raidSlot != null)
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('crew-assigned', { detail: { captain: captainSeated } }))
+  }, [captainSeated])
+
   // Optimistic recruit for the swipe gesture — mark the board candidate aboard
   // the instant they tap (dims the card, disables the swipe) so it feels
   // immediate, then let the server add the crew + return the real roster.

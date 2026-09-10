@@ -139,6 +139,19 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
               if (last && last.bay.id === bay.id) last.items.push(x)
               else chapters.push({ bay, items: [x] })
             }
+            // NOTHING PUT DOWN YET. The sheet used to open on an empty
+            // column with a title over it, which reads as broken rather than
+            // as early. It is a promise now: this is what the room is FOR.
+            if (chapters.length === 0) {
+              return (
+                <p className="font-karla font-600" style={{
+                  fontSize: '0.82rem', lineHeight: 1.6, color: 'rgba(214,232,240,0.62)',
+                  textAlign: 'center', padding: '2.5rem 1rem',
+                }}>
+                  Defeat bosses to unlock portals to get back to them.
+                </p>
+              )
+            }
             return chapters.map(({ bay, items }) => (
               <div key={bay.id} style={{ marginBottom: 18 }}>
                 <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: 'rgba(196,169,106,0.85)', paddingBottom: 6, marginBottom: 10, borderBottom: '1px solid rgba(196,169,106,0.18)' }}>

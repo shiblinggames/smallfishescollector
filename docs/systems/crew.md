@@ -154,3 +154,9 @@ hung it below the card, which reads as a button floating beside a card rather th
 act on. `renderRecruitAction(c, onDone, compact)` takes a compact form for in-card use (no 172px
 floor, tighter padding) because the info column is much narrower than the detail sheet. Hidden
 while that card's reveal is playing.
+
+**`AssignPicker` is a centred panel, not a bottom drawer.** It came up off the floor with a flat top
+edge and a 2px accent bar — a phone gesture drawn on a desktop, where it read as a tray glued to the
+bottom of a mostly empty screen, nothing like the assign board it opens *from*. It now takes the
+crew panel's own shell (centred, radius 20, the same ground and hairline, `maxHeight: min(84vh,
+100%)`).

@@ -2845,3 +2845,36 @@ your crew"). Cut with it:
 beats will take: a beat that is current but silent until the captain is standing at the thing it is
 about, and stays once shown. `GATE_FORCED_THROUGH` falls back to the whole script when nothing is
 gated, which is where the anchorage stands today — all seven beats hold the wheel.
+
+### The Sea Gate wants somebody aboard
+
+**An empty ship does not go out.** Past the gate is the campaign, and every fight out there is
+fought by the crew in the seats; sailing through with nobody aboard arrives at the first boss with
+a hull and no hands, which is a dead end a captain cannot read. The crossing now refuses unless
+somebody is seated in the raid party, with the rim clamp doing the stopping and a line saying why.
+
+`hasCaptain` is seeded from the page (`raidPartyRows.length > 0` — `loadDeployedParty` already
+returns only live, seated, unreserved crew) and kept live by `CrewClient`, which dispatches
+`crew-assigned` `{ captain }` on every change of the answer including its first render. The chart is
+a different tree and this has to be right the frame after a seat is filled.
+
+*Simplification worth knowing:* the barrier is "anybody in the raid party", not literally slot 0.
+The tour drives the captain's seat (slot 0, the one labelled CAPTAIN) and `DeployedCrewRow` does not
+carry its slot, so an exact seat-0 test would mean a second read for a distinction nobody can
+currently reach — the board offers seat 0 first.
+
+### The anchorage tour, in full
+
+Eleven beats. **0–10 hold the wheel**; the last is gated and free.
+
+0–6 as before (the boat changed, the anchorage, the HUD, the crew chain). Then: assign the crew
+(`next`) → "Click *Assign*" (`assignBoard`, flashes the Assign door) → "Click on your just hired
+crew…" (`assigned`, flashes `captain-seat` on the raid party's seat 0) → "There you go!"
+(`crewClosed`, flashes `crew-close`) → and, once they are **out through the gate**
+(`showWhen: { pastGate: true }`), a line, the pennant lit, and `route: true` draws the chart's
+guiding path to whatever the campaign wants next — which on a fresh captain is *A Loose Thread*.
+That beat ends on `reach`, when they arrive.
+
+Also: "Sail through the Wargate" is **"Use the Wargate"**, and the Wargate sheet with nothing put
+down says *"Defeat bosses to unlock portals to get back to them."* rather than opening on an empty
+column under a title.

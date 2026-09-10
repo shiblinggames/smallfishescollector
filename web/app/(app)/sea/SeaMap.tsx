@@ -585,6 +585,11 @@ const Z = {
  * small enough that being turned back does not look like being thrown back.
  */
 const REEF_MARGIN = 40
+/** The ring the anchorage tour's guiding path draws around the campaign's
+ *  next stop, and how close counts as having arrived at it. A node is a rock
+ *  with a beat on it; this is comfortably outside one, so the path closes as
+ *  the isle fills the screen rather than at the moment of touching it. */
+const NODE_REACH = 520
 
 /**
  * HOW FAR OUT THE CAMERA SITS, by screen width.
@@ -1553,7 +1558,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, exploredExpRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, navXP, renownNav, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
-  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, raidItems, raidSeats, itemMounts, portal, startSide, hasPact = false,
+  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, hasCaptain: hasCaptain0, raidItems, raidSeats, itemMounts, portal, startSide, hasPact = false,
   seenChapterUnlocks = [], seenUltimateUnlock = false,
 }: {
   fishingXP: number
@@ -1620,6 +1625,9 @@ export default function SeaMap({
   /** The raid party as it would actually board: names and card art, from the
    *  same loader every raid uses. The dock is where the muster is confirmed. */
   raidParty: { name: string; art: string }[]
+  /** Anybody at all seated in the raid party. The Sea Gate refuses an empty
+   *  ship, and the anchorage tour waits on it. */
+  hasCaptain: boolean
   /** What is mounted, names and images resolved server-side. */
   raidItems: { name: string; image: string | null }[]
   /** How many seats and mounts the ship HAS, so the muster can show the empty
@@ -2577,12 +2585,32 @@ export default function SeaMap({
    *  from the panel, which is a different tree. */
   const [crewSection, setCrewSection] = useState<string | null>(null)
   const [recruitTick, setRecruitTick] = useState(0)
+  /**
+   * IS THERE ANYBODY ON THE SHIP.
+   *
+   * Seeded from the page and kept live by the crew panel, which announces it
+   * whenever its roster changes -- the panel is a different tree and this has
+   * to be right the frame after a seat is filled, because the Sea Gate is
+   * reading it.
+   */
+  const [hasCaptain, setHasCaptain] = useState(hasCaptain0)
+  useEffect(() => { setHasCaptain(hasCaptain0) }, [hasCaptain0])
+  const hasCaptainRef = useRef(hasCaptain); hasCaptainRef.current = hasCaptain
   useEffect(() => {
     const onSection = (e: Event) => setCrewSection((e as CustomEvent<{ section: string | null }>).detail?.section ?? null)
     const onCrew = () => setRecruitTick(n => n + 1)
+    const onAssigned = (e: Event) => {
+      const d = (e as CustomEvent<{ captain?: boolean }>).detail
+      if (typeof d?.captain === 'boolean') setHasCaptain(d.captain)
+    }
     window.addEventListener('crew-hub-section', onSection)
     window.addEventListener('crew-changed', onCrew)
-    return () => { window.removeEventListener('crew-hub-section', onSection); window.removeEventListener('crew-changed', onCrew) }
+    window.addEventListener('crew-assigned', onAssigned)
+    return () => {
+      window.removeEventListener('crew-hub-section', onSection)
+      window.removeEventListener('crew-changed', onCrew)
+      window.removeEventListener('crew-assigned', onAssigned)
+    }
   }, [])
   useEffect(() => {
     // ── WHEN THE TIMER SAYS IT IS OVER, IT IS OVER ───────────────────────
@@ -5888,7 +5916,7 @@ export default function SeaMap({
       if (nearGate) {
         reach.push({
           id: 'wargate',
-          label: 'Sail through the Wargate',
+          label: 'Use the Wargate',
           run: () => {
             vibrate([12, 40, 20])
             // Standing still while the ledger is open; stepping through is a
@@ -7421,7 +7449,20 @@ export default function SeaMap({
       // a decision, and a captain who has just been beaten out there should not
       // have to agree to come home.
       if (sideRef.current && !seaGateRef.current && R > rim - 40 && inSeaGate(pos.current.x, pos.current.y)) {
-        if (shipRef.current) {
+        if (!hasCaptainRef.current) {
+          // ── AN EMPTY SHIP DOES NOT GO OUT ──────────────────────────
+          // Past this gate is the campaign, and every fight out there is
+          // fought by the crew in the seats. A captain who sails through with
+          // nobody aboard arrives at the first boss with a hull and no hands,
+          // which is not a difficulty setting, it is a dead end they cannot
+          // read. The rim clamp below is what actually stops her; this says
+          // why, and the anchorage tour walks them through fixing it.
+          if (now - refusedAt.current > 2600) {
+            refusedAt.current = now
+            setRefused('She sails with nobody aboard. Seat a captain in Your Crew before you go out.')
+            vibrate(12)
+          }
+        } else if (shipRef.current) {
           // ON THE SHIP, so the gate is yours. Straight through, no asking —
           // the decision was made at the dock, and being asked twice for one
           // crossing is how a gate becomes a chore.
@@ -11320,7 +11361,10 @@ hullRef={hullRefFor(t.key)} />
       {arrived && <SeaGateTour
         hasSeen={tour.gateSeen} startAt={tour.gateStep}
         inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam}
+        goal={tourGoal}
         crewOpen={crewHubOpen} crewSection={crewSection} recruits={recruitTick}
+        hasCaptain={hasCaptain} pastGate={onSeaGate}
+        nextAt={nextStop?.at ? { ...nextStop.at, r: NODE_REACH } : null}
         nearId={near?.id ?? null} at={pos}
         onBeat={setGateBeat} onDone={() => setGateDone(true)} />}
       {!hudOff && arrived && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
