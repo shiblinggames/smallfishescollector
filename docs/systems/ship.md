@@ -174,3 +174,11 @@ skins use — so combat was always consistent and must not be touched. The `/shi
 the odd one out. Every skin plate in the table today measures 0.650–0.652, which is one
 export pipeline; if a future skin is cropped differently, measure it rather than nudging the
 constant.
+
+## The reef changes the boat (2026-09-10)
+
+There is no "take her out" any more. Crossing the reef north puts the warship under the captain;
+crossing south puts the fishing boat back; the Gunwharf is strictly the yard (`ShipSheet('ship')`
+opens on mooring). `ShipAtBerth` and the Gunwharf's two-door chooser are deleted. See
+[ocean-hub.md](ocean-hub.md) "North of the reef IS the ship" for the mechanics; the berth ≠ bunk
+naming law and everything about augments, refits and classes is unchanged.

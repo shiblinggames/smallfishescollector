@@ -303,9 +303,15 @@ export const FIRST_VOYAGE: Beat[] = [
  * the last thing a captain should be looking at is the gate.
  */
 export const GATE_TOUR: Beat[] = [
+  // ── THE BOAT CHANGED UNDER THEM, AND IT IS SAID FIRST ─────────────────
   {
     ...D,
-    text: 'Past the reef, Captain. This is the *anchorage*, the quiet water where the fighting half of your outfit is run from.',
+    text: 'Past the reef, Captain, and feel that: the boat under you changed. This is your *expedition ship*, and she is the one that fights. Cross back south and your fishing boat is waiting.',
+    until: 'next',
+  },
+  {
+    ...D,
+    text: 'This is the *anchorage*, the quiet water where the fighting half of your outfit is run from.',
     until: 'next',
   },
   // ── THE HUD CHANGED SIDES ─────────────────────────────────────────────
@@ -346,7 +352,7 @@ export const GATE_TOUR: Beat[] = [
     ...D,
     // FIRST AND ALMOST ALONE, because nothing up here happens without her. The
     // other six islands introduce themselves when you tie up at them.
-    text: 'The *Gunwharf*. Your warship sits there. Take her out before you go north, and your fishing boat waits at the quay till you are back.',
+    text: 'The *Gunwharf*. That is where she is refitted and armed. Moor there when you want to work on her.',
     until: 'look',
     at: 'gunwharf',
   },

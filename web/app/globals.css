@@ -2158,6 +2158,17 @@ body.hardcore-gauntlet::after {
 /* Warm/gold flash variant — used on the expeditions page. */
 .coach-flash-gold { --coach-color: 240, 192, 64; --coach-hi: 255, 224, 140; }
 
+/* ── THE CHANGE OF BOAT AT THE REEF ───────────────────────────────────────
+   A brightness flash on the boat node while the hull under it changes, so
+   the swap reads as a transformation under light rather than a sprite that
+   was one thing and is now another. See crossHull in SeaMap. */
+@keyframes sea-hull-swap {
+  0%   { filter: brightness(1); }
+  22%  { filter: brightness(2.4) saturate(0.6); }
+  100% { filter: brightness(1); }
+}
+.sea-hull-swap { animation: sea-hull-swap 620ms ease-out; }
+
 /* ── THE CREW'S ACTION BUTTONS ANSWER THE POINTER ─────────────────────────
    Inline styles cannot say hover. A lift and a brighter face on hover, a
    press on active, so signing a hand on feels like pressing something. */

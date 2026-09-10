@@ -380,7 +380,9 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
       //
       // 'moored' and 'open' are the two sides that mean the warship, matching
       // the test SeaMap makes of its own `startSide`.
-      const onShip = r.sea_side === 'moored' || r.sea_side === 'open'
+      // North of the reef is the ship, as of the reef-crossing change; an old
+      // `anchorage` row reads the same way, which is where that captain is.
+      const onShip = r.sea_side !== 'fishing'
       return {
         id: r.id,
         username: r.username as string,

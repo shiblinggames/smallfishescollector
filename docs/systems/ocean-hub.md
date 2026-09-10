@@ -2780,3 +2780,28 @@ back to the fresh row, which is why the row read `anchorage` seconds after a cle
 **The row and the snapshot answer the question the same way now**: `neverSailed`
 (`!tour.seen && tour.step === 0`) skips the recall entirely and calls `forgetPos()`, so a stale
 snapshot is not waiting for the next reload either.
+
+## North of the reef IS the ship (2026-09-10)
+
+**The reef is the change of boat.** Cross it north and the warship is under you; cross back south
+and the fishing boat is. There is no longer a third state — north on the fishing boat — and no door
+at the Gunwharf that changes hulls. Everything above that says "take her out", "tie her up",
+"your ship lies at the berth" or "the Gunwharf's two doors" is superseded by this section.
+
+- `onShip` / `shipRef` initialise from `startSide !== 'fishing'`; the sessionStorage recall does the
+  same (`ship = north`). `sideNow()` writes `moored` for north and never `anchorage`; the word stays
+  in the `SeaSide` type so an old row still reads, and it reads as aboard.
+- **`crossHull(toShip)`** is called from the reef-crossing arm the moment `isNorth` flips (via
+  `crossHullRef`, since the loop closes once). It flips the hull, keeps way on, and plays the
+  portal arrival's three beats — light under the hull (gold north, sea-blue south), the water
+  giving, the swell — plus a brightness flash on the boat node (`.sea-hull-swap`). The canvas takes
+  the hull from the `ship` prop, so the drawn ship follows `onShip` with no extra plumbing.
+- The "warship does not go down through the reef" hold is gone; so is the `GunwharfAshore`
+  two-door chooser and `swapHull`. Mooring at the Gunwharf opens `ShipSheet('ship')` directly, and
+  the reach label reads "See to your ship at the Gunwharf".
+- `ShipAtBerth`, `SHIP_BERTH_OFF`, `berthedHull` and the per-frame `gpu.berthed(...)` are gone;
+  the canvas is told `berthed(null)` every frame because nothing lies at the quay.
+- Friends: `visitActions.friendsAtSea` derives `onShip = sea_side !== 'fishing'`.
+- The anchorage tour's first beat is the change of boat: "feel that: the boat under you changed.
+  This is your expedition ship…". The Gunwharf look beat now says it is where she is refitted and
+  armed.
