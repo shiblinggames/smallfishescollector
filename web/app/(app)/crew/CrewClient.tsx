@@ -1741,7 +1741,15 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
   // Recruit button for the DETAIL MODAL. Board items only: roster crew get the
   // Swap / Promote / Remove / Dismiss row instead, which owns its own confirm
   // step, so nothing reaches this with a CrewMember any more.
-  function renderRecruitAction(c: BoardCandidate, onDone?: () => void) {
+  /**
+   * @param compact drawn INSIDE the card, in its footer slot, where the
+   *   info column is a good deal narrower than a sheet. Same button, sized
+   *   to the room it is in rather than a fixed 172.
+   */
+  function renderRecruitAction(c: BoardCandidate, onDone?: () => void, compact = false) {
+    const fit: React.CSSProperties = compact
+      ? { minWidth: 0, padding: '0.5rem 1rem', fontSize: '0.74rem', letterSpacing: '0.07em' }
+      : {}
     const recruit = (e: React.MouseEvent) => {
       e.stopPropagation()
       vibrate(14)
@@ -1750,12 +1758,12 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
         onDone?.()
       })
     }
-    if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
-    if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>
+    if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, ...fit, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
+    if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, ...fit, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>
     return (
       <button onClick={recruit} disabled={pending} data-coach="recruit"
         className="font-cinzel font-700 crew-act"
-        style={{ ...BTN_RECRUIT, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
+        style={{ ...BTN_RECRUIT, ...fit, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
         <AnchorIcon /><span>{busyId === c.id ? 'Recruiting…' : 'Recruit'}</span>
       </button>
     )
@@ -2310,7 +2318,22 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   xp={c.startXp}
                   hint={c.effects.length > 0 && !c.recruited && !viewed.has(`board:${c.id}`)}
                   aboard={c.recruited}
-                  onClick={() => openDetail('board', c)} />
+                  onClick={() => openDetail('board', c)}>
+                  {/* ── THE BUTTON, IN THE CARD ──────────────────────────
+                      The card has a footer slot in its info column built for
+                      exactly this, and the column has the room. Signing a
+                      hand on used to be a swipe (touch only) or a tap into
+                      the sheet; the first pass at fixing that hung the button
+                      UNDER the card, which is a button floating beside a card
+                      rather than a card you can act on.
+
+                      Not while the reveal is playing: a live Recruit on a
+                      card still flipping is a card offering something it has
+                      not finished being. */}
+                  {!reveal.phases[c.id] && !reveal.climaxActive
+                    ? renderRecruitAction(c, undefined, true)
+                    : null}
+                </CrewPanel>
               )
               const phase = reveal.phases[c.id]
               // Climax: dim/desaturate the rest of the board and spotlight the
@@ -2342,18 +2365,6 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   {phase
                     ? <BoardReveal card={c} phase={phase} onTap={() => reveal.tapCard(c)} bloodied={reveal.bloodied}>{panel}</BoardReveal>
                     : swipeCard}
-                  {/* ── THE BUTTON, ON THE CARD ─────────────────────────
-                      Recruiting was a swipe, which is touch-only, or a tap
-                      into the sheet and a button at the foot of it. On a mouse
-                      that is a card you have to open to find out how to sign
-                      it. The same button sits under the card now, for every
-                      pointer; the sheet keeps its copy for the captain who
-                      wants to read first. */}
-                  {!phase && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-                      {renderRecruitAction(c)}
-                    </div>
-                  )}
                 </div>
               )
             })}

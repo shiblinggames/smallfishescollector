@@ -147,3 +147,10 @@ Everything: [trawls.md](trawls.md), [voyages.md](voyages.md),
   tab; Skins keeps its tab because it is a shop.
 - **Doors carry `data-coach="crew-<id>"`** and the hub announces its room (`crew-hub-section`) so the
   anchorage tour can point at Recruit and stand the other doors down.
+
+**The Recruit button lives in the card's footer slot**, not under it. `CrewPanel` has a `children`
+row at the foot of its info column built for an action; the first pass at giving desktop a button
+hung it below the card, which reads as a button floating beside a card rather than a card you can
+act on. `renderRecruitAction(c, onDone, compact)` takes a compact form for in-card use (no 172px
+floor, tighter padding) because the info column is much narrower than the detail sheet. Hidden
+while that card's reveal is playing.
