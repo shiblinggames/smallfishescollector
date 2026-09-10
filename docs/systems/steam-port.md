@@ -1,17 +1,29 @@
-# The Steam port — PLAN
+# The Steam port — PARKED IDEA, NOT A PLAN
 
-Converting Seas the Booty from a Vercel-hosted web game into a Steam game. Nothing here is
-built yet. Read this before starting any of it, and read the system doc for whatever you are
-touching alongside it.
+**Status: parked 2026-09-10, the same day it was written. THE GAME STAYS WEB-BASED.**
 
-**The decision, taken 2026-09-10: PREMIUM BUY-ONCE, AND STEAM ONLY.** One Steam price,
-everything unlocked, gems earned only, no purchases inside the game at all. The web version
-retires at launch and the iOS/Capacitor shell is not built. One client, one economy, one
-place the game lives.
+Nothing here is decided and nothing is being built. This is a worked-through idea kept because
+the analysis in it cost something to produce and is still true — the scaling arithmetic, the
+monetisation constraint, the phase ordering — and because it will be the starting point if this
+ever comes back. Read it as "here is what we found when we looked at it", not as a set of
+choices anybody made.
 
-That makes this a conversion rather than a second SKU, which removes the two hardest things
-about a port: there is no account-linking to maintain forever, and no second economy to keep
-balanced against the first.
+**Why it is parked.** A great deal of work has gone into making this a mobile and online
+experience: the PWA, the touch chart, the phone layouts, the iOS plan, and a live multiplayer
+presence system that only just started working properly. A Steam port throws most of that
+away, and does it in exchange for problems the game does not have yet — the message bill that
+motivated the whole conversation only bites at ten thousand players, and there are eighty
+accounts today.
+
+**What the port WOULD have required, if it ever happens.** These read like decisions below
+because they were reasoned as decisions on the day. They are not in force:
+
+- Premium buy-once, because Steam requires in-game purchases to go through Steam and the two
+  Stripe pipes cannot survive a Steam build.
+- Steam only, with the web retiring, because a second SKU means two economies and an
+  account-linking flow to maintain forever.
+- Which means the game design changes BEFORE the shell does. That ordering is the single most
+  useful thing on this page and it is what makes the whole idea expensive.
 
 ## Why that decision is the one that gates the rest
 
@@ -214,8 +226,19 @@ by the port. This is a distribution and shell change with one design change at t
 - Whether the eighty existing accounts get a one-time claim onto a SteamID, or everybody starts
   again. See phase 2.
 
-## Settled, so nobody reopens them
+## What is NOT decided
 
-- **Premium buy-once.** No shop, no membership, no purchased gems.
-- **Steam only.** The web version retires at launch. The iOS/Capacitor shell is not built, and
-  the plan for it is superseded by this document.
+Everything above. In particular, and stated flatly because the earlier draft of this document
+said the opposite:
+
+- **The web version is not retiring.** It is the game.
+- **The iOS/Capacitor plan is not cancelled.** It is still the live plan for mobile.
+- **Nothing about the monetisation is settled.** The Captain membership and the gem packs are
+  live and stay live.
+
+## The one finding here that is NOT about Steam
+
+The gem audit stands on its own and is a live balance question either way. All 75 crew skins
+cost 113,750 gems against roughly 13,500 gems of one-off income, so the collection is only
+reachable today because gems are PURCHASABLE. That is worth looking at as a balance matter
+whatever platform this ships on. See economy-membership.md.
