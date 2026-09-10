@@ -60,7 +60,6 @@ import dynamic from 'next/dynamic'
  * vigilPetGranted and the trophy flags, and this screen was receiving them and
  * dropping them on the floor.
  */
-const AncientRelease = dynamic(() => import('../fishing/AncientRelease'), { ssr: false })
 const AncientSlain = dynamic(() => import('../fishing/AncientSlainCinematic'), { ssr: false })
 const FinnScene = dynamic(() => import('../fishing/FinnScene'), { ssr: false })
 const AncientRankUp = dynamic(() => import('../fishing/AncientRankUp'), { ssr: false })
@@ -83,8 +82,6 @@ import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { holdContents } from '../fishing/holdActions'
 import { setAutoFishing } from '../fishing/actions'
-import FishCollectionDrawer from '@/app/(app)/fishing/FishCollectionDrawer'
-import { claimZoneReward, prestigeZone, releaseAncient } from '@/app/(app)/fishing/actions'
 import { markFinnRevealSeen } from '@/app/(app)/fishing/finnActions'
 import { finnAncientBeat, type FinnAncientBeat } from '@/lib/finn'
 import { ANCIENT_IDS } from '@/lib/ancientVigil'
@@ -371,7 +368,7 @@ export default function FishingHere({
   seaPhase, baitBag, onBaitChange, rack, look, onLookChange, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onReel,
   onBaitSpent, onPose, onBusy, onCanLeave, onLanded, onGolden, goldenPending,
-  onHooked, onXp,
+  onHooked, onXp, onOpenAlmanac,
   spritesReady, onClose,
 }: {
   zone: string
@@ -476,6 +473,11 @@ export default function FishingHere({
   /** THE BAR MOVED. The live XP total after each catch, so the chart's level
    *  disc can change the moment the level does rather than on the next page. */
   onXp?: (xp: number) => void
+  /** THE LOG IS THE ALMANAC. The Log button used to open a drawer of its own
+   *  with the same collection in it; it opens the book now, the same one the
+   *  HUD's almanac disc opens, so there is one collection and one place it is
+   *  read. The book lives on the chart, hence the callback. */
+  onOpenAlmanac: () => void
   /**
    * SOMETHING CAME UP. Fired the instant the needle is judged a catch, not
    * when the card lands: the map puts a fish through the surface out on the
@@ -792,34 +794,25 @@ export default function FishingHere({
   // The drawer is the fishing page's own, extracted. Everything it mutates is
   // held here, seeded from the server read, so a claim or a prestige lands on
   // the screen without a round trip through the page.
-  const [logOpen, setLogOpen] = useState(false)
   const [caughtIds, setCaughtIds] = useState(() => new Set(log.caughtFishIds))
-  const [expandedZone, setExpandedZone] = useState<string | null>(null)
   const [uncheckedNew, setUncheckedNew] = useState<Set<number>>(new Set())
-
-  /**
-   * OPENING THE LOG COUNTS AS SEEING IT.
-   *
-   * The drawer only ever cleared an id when the captain tapped that individual
-   * fish's card, which nobody intuits — so the zone's "3 NEW" pill and the
-   * green dot on the Log button stayed lit forever, through opening the drawer,
-   * reading the zone, and closing it again. A notification that will not go out
-   * stops being a notification and becomes decoration.
-   *
-   * Cleared on the open -> CLOSED transition rather than on open, so the pills
-   * are still there to guide you while you are actually looking at the list —
-   * they are how you know which zone to expand. The fishing screen resolved
-   * this the same way and this port simply never carried the effect over.
-   */
-  const wasLogOpen = useRef(false)
+  // A PRESTIGE WIPES A WATER'S LOG, and it happens in the Almanac now, which
+  // is a different tree. This is how the rod hears about it, so the NEW pill
+  // comes back for species in a water that has just been emptied.
   useEffect(() => {
-    if (wasLogOpen.current && !logOpen) setUncheckedNew(new Set())
-    wasLogOpen.current = logOpen
-  }, [logOpen])
-  const [claimedZones, setClaimedZones] = useState(log.zoneRewardsClaimed)
-  const [claimingZone, setClaimingZone] = useState<string | null>(null)
-  const mountedSet = useMemo(() => new Set(log.mountedFishIds), [log.mountedFishIds])
-  const ancientSet = useMemo(() => new Set(log.ancientCatches), [log.ancientCatches])
+    const on = (e: Event) => {
+      const zone = (e as CustomEvent<{ zone?: string }>).detail?.zone
+      if (!zone) return
+      setCaughtIds(prev => {
+        const next = new Set(prev)
+        for (const f of log.allFishSpecies) if (f.habitat === zone) next.delete(f.id)
+        return next
+      })
+    }
+    window.addEventListener('zone-prestiged', on)
+    return () => window.removeEventListener('zone-prestiged', on)
+  }, [log.allFishSpecies])
+
   /**
    * THE TROPHY WALL'S RANKS, held locally so a release lands immediately.
    *
@@ -828,8 +821,6 @@ export default function FishingHere({
    * release that happens after it.
    */
   const [vigil, setVigil] = useState(log.ancientVigil)
-  /** The giant being let go, if any. */
-  const [releasing, setReleasing] = useState<FishSpeciesBasic | null>(null)
   /** The landing ceremony, in the order it plays. */
   const [slain, setSlain] = useState<{
     fish: FishSpecies; count: number; total: number; isMegalodon: boolean
@@ -840,10 +831,6 @@ export default function FishingHere({
   const [capstone, setCapstone] = useState(false)
   /** Trophies landed, local so the "N of 6" count is right on the sixth. */
   const [trophies, setTrophies] = useState<Set<number>>(() => new Set(log.ancientCatches))
-  const [prestigeLevels, setPrestigeLevels] = useState(log.prestigeLevels)
-  const [goldenBoosts, setGoldenBoosts] = useState(log.goldenBoosts)
-  const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
-  const [confirmPrestigeZone, setConfirmPrestigeZone] = useState<string | null>(null)
 
   /** A fish you have just landed is a fish you have logged. Without this the
    *  drawer disagrees with the result card you are still looking at. */
@@ -852,33 +839,6 @@ export default function FishingHere({
     setUncheckedNew(prev => (prev.has(fishId) ? prev : new Set(prev).add(fishId)))
   }, [])
 
-  async function claimZone(zone: string) {
-    if (claimingZone) return
-    setClaimingZone(zone)
-    const res = await claimZoneReward(zone).catch(() => null)
-    if (res && !('error' in res)) {
-      setClaimedZones(prev => ({ ...prev, [zone]: true }))
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-    }
-    setClaimingZone(null)
-  }
-
-  async function doPrestige(zone: string) {
-    if (prestigingZone) return
-    setPrestigingZone(zone); setConfirmPrestigeZone(null)
-    const res = await prestigeZone(zone).catch(() => null)
-    if (res && !('error' in res)) {
-      setPrestigeLevels(prev => ({ ...prev, [zone]: res.prestigeLevel }))
-      if (res.goldenBoost != null) setGoldenBoosts(prev => ({ ...prev, [zone]: res.goldenBoost as number }))
-      // A prestige WIPES the zone's collection, so the drawer has to forget it
-      // or every species in that zone still reads as logged.
-      const wiped = new Set(caughtIds)
-      for (const f of log.allFishSpecies) if (f.habitat === zone) wiped.delete(f.id)
-      setCaughtIds(wiped)
-      setClaimedZones(prev => ({ ...prev, [zone]: false }))
-    }
-    setPrestigingZone(null)
-  }
 
   const activeBaitDef = getBait(bait)
   /** Bait cannot change with a line already in the water: the fish has been
@@ -2309,41 +2269,6 @@ export default function FishingHere({
       {/* THE TACKLE BOX. Opens over the rod, closes when you have picked, and
           is not on screen the rest of the time. */}
       <AnimatePresence>
-        {logOpen && (
-          <FishCollectionDrawer
-            allFishSpecies={log.allFishSpecies}
-            fishingXP={fishingXP}
-            caughtFishIds={caughtIds}
-            mountedFishIds={mountedSet}
-            personalBests={log.personalBests}
-            ancientCatches={ancientSet}
-            ancientVigil={vigil}
-            vigilUnlocked={log.vigilUnlocked}
-            prestigeLevels={prestigeLevels}
-            goldenBoosts={goldenBoosts}
-            claimedZones={claimedZones}
-            claimingZone={claimingZone}
-            prestigingZone={prestigingZone}
-            expandedZone={expandedZone}
-            setExpandedZone={setExpandedZone}
-            setTappedFishId={() => {}}
-            uncheckedNewFishIds={uncheckedNew}
-            setUncheckedNewFishIds={setUncheckedNew}
-            confirmPrestigeZone={confirmPrestigeZone}
-            setConfirmPrestigeZone={setConfirmPrestigeZone}
-            handleClaimZoneReward={z => void claimZone(z)}
-            handlePrestige={z => void doPrestige(z)}
-            // ── THIS WAS A DEAD BUTTON ────────────────────────────────
-            // It used to be `() => {}`, with a comment saying releasing an
-            // ancient belonged ashore on the fishing page. But the drawer
-            // renders "Release for Rank N" UNCONDITIONALLY — so out here the
-            // control was fully drawn, styled, focusable and tappable, and did
-            // nothing at all. Not a feature living elsewhere: a button that
-            // lies. The wall is here, so the act belongs here.
-            setReleasingAncient={setReleasing}
-            onClose={() => setLogOpen(false)}
-          />
-        )}
 
         {/* ── BAIT ────────────────────────────────────────────────────
             The rack used to live in here too, under a "Tackle box" title, which
@@ -2554,20 +2479,6 @@ export default function FishingHere({
         />
       )}
 
-      {/* LETTING ONE GO. Its own scene, mounted here beside the drawer that
-          offers it — the wall is at sea, so the act is too. */}
-      {releasing && (
-        <AncientRelease
-          name={releasing.name}
-          fishId={releasing.id}
-          rank={vigil[String(releasing.id)]?.rank ?? 1}
-          onConfirm={async () => {
-            const res = await releaseAncient(releasing.id)
-            if ('ok' in res) setVigil(res.vigil)
-          }}
-          onClose={() => setReleasing(null)}
-        />
-      )}
 
       {/* ── THE ACTION SLOT — the same position in every phase ─────────────
           88px square, always, whatever is in it. The fishing screen holds this
@@ -2684,7 +2595,8 @@ export default function FishingHere({
         </button>
 
         <button
-          onClick={e => { e.stopPropagation(); vibrate(8); setLogOpen(true) }}
+          // Opening the log counts as seeing it: the NEW pill goes out here.
+          onClick={e => { e.stopPropagation(); vibrate(8); setUncheckedNew(new Set()); onOpenAlmanac() }}
           style={MENU_BTN}>
           <span className="font-karla font-700 uppercase" style={MENU_KEY}>Log</span>
           <span className="font-karla font-700" style={{

@@ -19,6 +19,8 @@ import PopupShell from '@/components/PopupShell'
 import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
 import { RARITY_LABEL, RARITY_COLOR, fishArt, isGiant, shortDate } from '@/lib/almanac'
 import { tierForLength, TIER_LABEL, TIER_COLOR, formatFishLength } from '@/lib/fishSize'
+import { PRESTIGE_MAX, goldenBoostPct, zoneRewardDoubloons } from '@/lib/zoneRewards'
+import { claimZoneReward, prestigeZone } from './actions'
 import type { AlmanacData, AlmanacEntry } from './almanacActions'
 
 const GOLD = '#f0c040'
@@ -59,9 +61,55 @@ function sizePct(e: AlmanacEntry): number {
   return (e.pbLength - e.lengthMin) / (e.lengthMax - e.lengthMin)
 }
 
-export default function AlmanacCollection({ data }: { data: AlmanacData }) {
+export default function AlmanacCollection({ data, onChanged }: {
+  data: AlmanacData
+  /** The room changed the book (a prestige wiped a water). Asks the shell
+   *  to read it again. */
+  onChanged?: () => void
+}) {
   const [detail, setDetail] = useState<AlmanacEntry | null>(null)
   const [view, setView] = useState<ViewKey>('water')
+
+  // ── WHAT A WATER PAYS, AND THE PRESTIGE ──────────────────────────────────
+  //
+  // This lived in the fish collection drawer under the rod, which was the one
+  // other place the collection was drawn. The drawer is gone -- Log opens this
+  // book now -- so the payout and the prestige come with it, drawn in this
+  // book's own type rather than the drawer's boxes.
+  //
+  // Claimed is held here, optimistically, because a claim is one number in
+  // the nav and should not wait for a full re-read of the book. A prestige
+  // DOES re-read, through onChanged: it wipes a water's log and the shelves
+  // under the heading have to empty.
+  const [claimed, setClaimed] = useState(data.zoneRewardsClaimed)
+  useEffect(() => { setClaimed(data.zoneRewardsClaimed) }, [data.zoneRewardsClaimed])
+  const [busy, setBusy] = useState<string | null>(null)
+  const [confirm, setConfirm] = useState<string | null>(null)
+
+  const claim = async (zone: string) => {
+    if (busy) return
+    setBusy(zone)
+    const res = await claimZoneReward(zone).catch(() => null)
+    if (res && !('error' in res)) {
+      setClaimed(prev => ({ ...prev, [zone]: true }))
+      // Into the purse in the nav, now. Same event every payout fires.
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+    }
+    setBusy(null)
+  }
+  const prestige = async (zone: string) => {
+    if (busy) return
+    setBusy(zone); setConfirm(null)
+    const res = await prestigeZone(zone).catch(() => null)
+    if (res && !('error' in res)) {
+      setClaimed(prev => ({ ...prev, [zone]: false }))
+      // The rod keeps its own idea of what is logged, for the NEW pill on a
+      // catch. A wiped water has to be forgotten there too.
+      window.dispatchEvent(new CustomEvent('zone-prestiged', { detail: { zone } }))
+      onChanged?.()
+    }
+    setBusy(null)
+  }
 
   // Species you hold a MOUNTED golden of. Not entry.everGolden, which stays
   // true after you sell the fish: the mark says the golden is on your wall,
@@ -173,6 +221,20 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
         const done = got === list.length
         const pct = got / list.length
 
+        // The prestige side of the heading. `done` above is EVER charted and
+        // drives the rule; the payout is about THIS cycle, which a prestige
+        // has emptied, so it reads the cycle count instead.
+        const lvl = data.prestige[zone] ?? 0
+        const boost = data.goldenBoosts[zone] ?? 0
+        const atMax = lvl >= PRESTIGE_MAX
+        const reward = zoneRewardDoubloons(zone, lvl)
+        const pays = reward > 0 && zone !== 'ancient_deep'
+        const cycleDone = list.every(e => e.cycleCount > 0)
+        const isClaimed = !!claimed[zone]
+        const isBusy = busy === zone
+        const asking = confirm === zone
+        const label = ZONE_LABEL[zone]
+
         return (
           <div key={zone} style={{ marginBottom: '1.5rem' }}>
 
@@ -198,6 +260,83 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
                   transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                   style={{ position: 'absolute', left: 0, top: 0, bottom: 0, background: done ? GOLD : color, boxShadow: `0 0 8px ${done ? GOLD : color}88` }} />
               </div>
+
+              {/* ── THE PRESTIGE LINE ──────────────────────────────────
+                  Under the rule, in the same type as the rest of the heading:
+                  the stars you have earned here, the golden boost if any, and
+                  on the right the one thing this water is offering you now.
+                  A line of type and a small tinted button, never a boxed
+                  strip -- this is a page in a book, not a drawer. */}
+              {pays && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    {/* Five stars, filled to the level. Gold once every one is. */}
+                    <span aria-label={atMax ? 'Max Prestige' : `Prestige ${lvl}`} style={{ display: 'inline-flex', gap: 2, fontSize: '0.72rem', lineHeight: 1, letterSpacing: '0.04em' }}>
+                      {Array.from({ length: PRESTIGE_MAX }).map((_, i) => (
+                        <span key={i} style={{ color: i < lvl ? (atMax ? GOLD : color) : 'rgba(255,255,255,0.16)', textShadow: i < lvl ? `0 0 8px ${atMax ? GOLD : color}66` : 'none' }}>★</span>
+                      ))}
+                    </span>
+                    {atMax && (
+                      <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: GOLD }}>Max Prestige</span>
+                    )}
+                    {boost > 0 && (
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: GOLD, background: `${GOLD}16`, border: `1px solid ${GOLD}44`, borderRadius: 999, padding: '0.16rem 0.5rem', whiteSpace: 'nowrap' }}>
+                        ✦ +{goldenBoostPct(boost)}% goldens
+                      </span>
+                    )}
+                  </div>
+
+                  {/* The offer. In order: nothing to claim yet, a reward to
+                      take, or, with the reward taken and the water still
+                      complete, the prestige. */}
+                  {!cycleDone ? (
+                    <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#a49dc0', whiteSpace: 'nowrap' }}>
+                      {isClaimed ? 'Reward claimed' : `${reward.toLocaleString()} ⟡ when every fish is charted`}
+                    </span>
+                  ) : !isClaimed ? (
+                    <button type="button" disabled={isBusy} onClick={() => void claim(zone)}
+                      className="font-karla font-700 uppercase tracking-[0.1em]"
+                      style={{ fontSize: '0.6rem', padding: '0.42rem 0.8rem', borderRadius: 9, cursor: isBusy ? 'default' : 'pointer', background: `${color}22`, border: `1px solid ${color}77`, color: '#efe9ff', opacity: isBusy ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+                      {isBusy ? '…' : `Claim ${reward.toLocaleString()} ⟡`}
+                    </button>
+                  ) : !asking ? (
+                    <button type="button" disabled={isBusy} onClick={() => setConfirm(zone)}
+                      className="font-karla font-700 uppercase tracking-[0.1em]"
+                      style={{ fontSize: '0.6rem', padding: '0.42rem 0.8rem', borderRadius: 9, cursor: 'pointer', background: atMax ? `${GOLD}1c` : `${color}22`, border: `1px solid ${atMax ? GOLD : color}77`, color: atMax ? GOLD : '#efe9ff', whiteSpace: 'nowrap' }}>
+                      {atMax ? `✦ Wipe for +${goldenBoostPct(1)}% goldens` : `★ Prestige ${lvl + 1}`}
+                    </button>
+                  ) : null}
+                </div>
+              )}
+
+              {/* The question, asked in full before anything is wiped. */}
+              {pays && asking && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                  style={{ marginTop: 10, padding: '0.8rem 0.9rem', borderRadius: 12, background: 'rgba(10,9,13,0.55)', border: `1px solid ${atMax ? GOLD : color}44` }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: atMax ? GOLD : color, marginBottom: 6 }}>
+                    {atMax ? 'Wipe for gold' : `Prestige ${lvl + 1}`}
+                  </p>
+                  <p className="font-karla font-500" style={{ fontSize: '0.74rem', color: '#d9d3ea', lineHeight: 1.5 }}>
+                    {atMax ? (
+                      <>Your {label} log is wiped. Your <span style={{ color: '#f5c451', fontWeight: 700 }}>golden trophies stay</span>. In return, a permanent <span style={{ color: GOLD, fontWeight: 700 }}>+{goldenBoostPct(1)}% golden catch chance</span> here, on top of your +{goldenBoostPct(boost)}%.</>
+                    ) : (
+                      <>Your {label} log is wiped. Your <span style={{ color: '#f5c451', fontWeight: 700 }}>golden trophies stay</span>. In return, a permanent <span style={{ color, fontWeight: 700 }}>+{(lvl + 1) * 10}% XP</span> on every catch here{lvl + 1 >= PRESTIGE_MAX ? '. This is the last one: Max Prestige.' : ', up to +50% at Max Prestige.'} Chart it again and it pays again.</>
+                    )}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
+                    <button type="button" onClick={() => setConfirm(null)}
+                      className="font-karla font-700 uppercase tracking-[0.1em]"
+                      style={{ fontSize: '0.6rem', padding: '0.42rem 0.8rem', borderRadius: 9, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.18)', color: '#a49dc0' }}>
+                      Not yet
+                    </button>
+                    <button type="button" disabled={isBusy} onClick={() => void prestige(zone)}
+                      className="font-karla font-700 uppercase tracking-[0.1em]"
+                      style={{ fontSize: '0.6rem', padding: '0.42rem 0.8rem', borderRadius: 9, cursor: isBusy ? 'default' : 'pointer', background: atMax ? `${GOLD}22` : `${color}22`, border: `1px solid ${atMax ? GOLD : color}88`, color: atMax ? GOLD : '#efe9ff', opacity: isBusy ? 0.6 : 1 }}>
+                      {isBusy ? '…' : atMax ? 'Yes, wipe for gold' : 'Yes, prestige'}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
             </div>
 
             {/* minmax(0, 1fr), NOT 1fr. A 1fr track has an auto MINIMUM, so a

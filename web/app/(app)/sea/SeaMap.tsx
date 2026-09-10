@@ -11179,6 +11179,7 @@ hullRef={hullRefFor(t.key)} />
           onBusy={setDialUp}
           onHooked={() => setHookedTick(n => n + 1)}
           onXp={setXpLive}
+          onOpenAlmanac={() => setAlmanacOpen(true)}
           onCanLeave={setCanLeaveFishing}
           spritesReady={spritesReady}
           onClose={() => { setFishingIn(null); setFrame('rest'); collectLevelRewards(); readOrders() }}

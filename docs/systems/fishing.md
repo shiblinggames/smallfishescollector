@@ -109,3 +109,31 @@ systems already multiply it down and the old bases predate most of them.
 - [fish-economy.md](fish-economy.md) — everything caught flows to the hold and market.
 - [progression.md](progression.md) — fishing level gates zones and gear; renown past cap.
 - [trawls.md](trawls.md) — crew fish zones passively; separate from the dial entirely.
+
+## The Log is the Almanac
+
+The **Log** button on the rod used to open `FishCollectionDrawer`, a second drawing of the same
+collection the Almanac already holds, with the zone-completion payout and the prestige folded into
+it. The drawer is deleted. Log opens the Almanac, the same book the HUD's almanac disc opens, so
+there is one collection and one place it is read. `FishingHere` gets `onOpenAlmanac` from the
+chart, which owns the book; opening it clears the NEW pill (opening the log counts as seeing it).
+
+**The payout and the prestige live in the Almanac's Collection room now**, under each water's
+heading in By Water: five stars filled to the prestige level (gold at Max), the golden-boost chip,
+and on the right the one thing that water is offering — "N ⟡ when every fish is charted", a
+`Claim N ⟡` button once this cycle is complete, then `★ Prestige N+1` (or `✦ Wipe for +10% goldens`
+at Max) with an inline confirm. Same server actions as before (`claimZoneReward`, `prestigeZone`);
+the room fires `doubloons-changed` on a claim and `zone-prestiged` on a prestige, which the rod
+listens for to forget that water's logged species so the NEW pill comes back. `AlmanacData` grew
+`goldenBoosts` and `zoneRewardsClaimed` for it. "Ever charted" drives the rule and the count;
+"this cycle" (`cycleCount`) drives the payout, because a prestige empties the cycle.
+
+**The Almanac reads on every open now.** It loaded once and kept the copy, on the reasoning that
+a catch made in between would be picked up on the next page load; with Log opening it, a captain
+who lands a fish and taps Log expects to find it. The last copy stays on screen while the fresh one
+arrives, so it is still instant to the eye, and a generation counter drops a late answer.
+
+The vigil release the drawer also offered was already in the Giants room; the rod's own
+`AncientRelease` mount, which only the drawer could trigger, went with the drawer. Note the old
+full-screen prestige ceremony (`PrestigeCeremonyOverlay`) had already been lost with the retired
+fishing page; the sea's prestige showed nothing before this change and shows the stars fill now.

@@ -14,7 +14,7 @@
 // Data loads ON OPEN (see almanacActions.ts), so the fishing page pays
 // nothing for a room most visits never enter.
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { getAlmanacData, type AlmanacData } from './almanacActions'
@@ -68,19 +68,30 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
     return () => mq.removeEventListener?.('change', sync)
   }, [])
 
-  // Load once per open. Kept after close so reopening in the same session is
-  // instant; a catch made in between is picked up on the next page load, which
-  // is the same freshness the collection log always had.
-  useEffect(() => {
-    if (!open || data) return
-    let alive = true
+  // ── READ ON EVERY OPEN ──────────────────────────────────────────────────
+  //
+  // This loaded once and kept the copy, on the reasoning that a catch made in
+  // between would be picked up on the next page load -- "the same freshness
+  // the collection log always had". The collection log IS this now: the Log
+  // button on the rod opens the Almanac, and a captain who lands a fish and
+  // taps Log expects to find it. So it reads every time it opens, and keeps
+  // the last copy on screen while the new one comes, so reopening is still
+  // instant to the eye. The generation counter drops a late answer to an
+  // earlier open.
+  //
+  // `reload` is also how a room asks for a re-read after it changes the book
+  // itself: a prestige wipes a water's log, and the Collection has to show it
+  // wiped.
+  const gen = useRef(0)
+  const reload = useCallback(() => {
+    const my = ++gen.current
     getAlmanacData().then(res => {
-      if (!alive) return
+      if (my !== gen.current) return
       if ('error' in res) setError(res.error)
-      else setData(res)
-    })
-    return () => { alive = false }
-  }, [open, data])
+      else { setData(res); setError('') }
+    }).catch(() => {})
+  }, [])
+  useEffect(() => { if (open) reload() }, [open, reload])
 
   useEffect(() => {
     if (!open) return
@@ -215,7 +226,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
                 <motion.div key={room}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   transition={{ duration: 0.18 }}>
-                  {room === 'collection' && <AlmanacCollection data={data} />}
+                  {room === 'collection' && <AlmanacCollection data={data} onChanged={reload} />}
                   {room === 'goldens' && <AlmanacGoldens data={data} />}
                   {room === 'giants' && <AlmanacGiants data={data} giants={giants} />}
                   {room === 'pets' && <AlmanacPets data={data} />}

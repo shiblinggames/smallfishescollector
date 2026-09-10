@@ -104,6 +104,11 @@ export type AlmanacData = {
   /** Whether the Vigil is unlocked at all (One Last Ride cleared). */
   vigilUnlocked: boolean
   prestige: Record<string, number>
+  /** Wipes past Max Prestige, per zone: each is +10% to that water's golden odds. */
+  goldenBoosts: Record<string, number>
+  /** Whether this cycle's completion reward has been taken, per zone. Resets
+   *  with the prestige, because the next cycle pays again. */
+  zoneRewardsClaimed: Record<string, boolean>
   stats: AlmanacStats
 }
 
@@ -135,7 +140,7 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
       .eq('user_id', uid)
       .order('caught_at', { ascending: false }),
     admin.from('profiles')
-      .select('fishing_casts, total_perfects, highest_perfect_streak, trophy_size_catches, fishing_crates_opened, fishing_double_catches, fishing_jackpots, fishing_snags, fish_sold_doubloons, fishing_xp, unlocked_pets, ancient_catches, ancient_vigil, prestige_levels, crate_opens, bait_used, biggest_fish_sale, fish_sold_count')
+      .select('fishing_casts, total_perfects, highest_perfect_streak, trophy_size_catches, fishing_crates_opened, fishing_double_catches, fishing_jackpots, fishing_snags, fish_sold_doubloons, fishing_xp, unlocked_pets, ancient_catches, ancient_vigil, prestige_levels, crate_opens, bait_used, biggest_fish_sale, fish_sold_count, zone_golden_boost, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded')
       .eq('id', uid)
       .maybeSingle(),
     // The Vigil's gate. Self-enforcing: One Last Ride carries
@@ -227,6 +232,13 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
     vigil: vigilUnlocked ? vigilFor(p?.ancient_vigil, (p?.ancient_catches as number[] | null)) : {},
     vigilUnlocked,
     prestige: (p?.prestige_levels as Record<string, number> | null) ?? {},
+    goldenBoosts: (p?.zone_golden_boost as Record<string, number> | null) ?? {},
+    zoneRewardsClaimed: {
+      shallows: p?.zone_shallows_rewarded === true,
+      open_waters: p?.zone_open_waters_rewarded === true,
+      deep: p?.zone_deep_rewarded === true,
+      abyss: p?.zone_abyss_rewarded === true,
+    },
     stats: {
       casts: p?.fishing_casts ?? 0,
       perfects: p?.total_perfects ?? 0,
