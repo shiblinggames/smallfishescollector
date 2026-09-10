@@ -408,6 +408,19 @@ const SPEED = BASE_SPEED_PX
  * horizon. See the loop.
  */
 const MAX_BEAT_SPEED = (SPEED * 2.5) / 1000
+/**
+ * HOW FAR IN THE PAST ANOTHER CAPTAIN IS DRAWN.
+ *
+ * One beat plus a margin. The hull is rendered between the two beats that
+ * bracket this moment, so there has to be a beat on BOTH sides of it — which
+ * means holding the picture back by at least the interval, plus enough slack
+ * that ordinary jitter does not leave the near side empty.
+ *
+ * 250ms against a 200ms beat. Small enough to be invisible next to the wire's
+ * own latency, large enough to ride out a late packet without the hull ever
+ * having to guess.
+ */
+const RENDER_LAG = 250
 /** Low is heavy. A boat should take a moment to get going. */
 const ACCEL = BASE_ACCEL
 
@@ -4192,6 +4205,9 @@ export default function SeaMap({
     /** Their own stamp on the last beat, for measuring how long the boat took
      *  rather than how long the wire took. */
     srcT: number
+    /** THE LAST FEW BEATS, with when each arrived. The hull is drawn BETWEEN
+     *  two of these rather than ahead of the newest — see the loop. */
+    buf: { x: number; y: number; t: number }[]
     /** World px per millisecond, smoothed across beats. This is the number the
      *  loop extrapolates with; it is worked out once when a beat lands rather
      *  than sixty times a second from a pair that has not changed. */
@@ -6023,6 +6039,11 @@ export default function SeaMap({
       at.vx = 0; at.vy = 0
     }
     at.srcT = b.t ?? 0
+    // ── KEPT, IN ORDER ──────────────────────────────────────────────────
+    // A handful is plenty: the hull is drawn a quarter of a second back, so
+    // anything older than about a second can never be looked at again.
+    at.buf.push({ x: b.x, y: b.y, t: nowMs })
+    while (at.buf.length > 8 || (at.buf.length > 2 && nowMs - at.buf[0].t > 2000)) at.buf.shift()
     at.prev.x = at.target.x
     at.prev.y = at.target.y
     at.prevT = at.tgtT
@@ -6123,6 +6144,8 @@ export default function SeaMap({
           had.prev.x = f.x; had.prev.y = f.y
           had.prevT = 0; had.tgtT = 0; had.srcT = 0
           had.vx = 0; had.vy = 0
+          // A polled row is not a sample on the same timeline as the beats.
+          had.buf.length = 0
         }
         // How heavily she rides, whichever boat she is in today.
         had.lift = f.onShip ? shipLift(f.shipTier) : 1
@@ -6130,7 +6153,7 @@ export default function SeaMap({
       else friendAt.current.set(f.username, {
         shown: { x: f.x, y: f.y }, target: { x: f.x, y: f.y }, face: 1, live: 0,
         // No velocity yet: one sample is a position, not a motion.
-        prev: { x: f.x, y: f.y }, prevT: 0, tgtT: 0, srcT: 0, vx: 0, vy: 0,
+        prev: { x: f.x, y: f.y }, prevT: 0, tgtT: 0, srcT: 0, vx: 0, vy: 0, buf: [],
         dbgSpan: 0, dbgSpeed: 0,
         dbgStepMin: 0, dbgStepMax: 0, dbgFrames: 0, dbgAt: 0,
         dbgLastX: f.x, dbgLastY: f.y,
@@ -7432,27 +7455,53 @@ export default function SeaMap({
           // make, because the cost of being wrong here is a ship vanishing and
           // the cost of being cautious is that a boost looks a touch slow for
           // half a second.
-          // ── RUN IT FORWARD, BUT NOT FAR ─────────────────────────────
+          // ── DRAWN BETWEEN TWO BEATS THAT REALLY HAPPENED ────────────
           //
-          // The speed is settled when a beat lands (see onBeat); all this does
-          // is carry it between them. The cap was 900ms, which was sized for a
-          // two-beat-per-second wire and is now four and a half beats of
-          // guessing — at half a thousand pixels a second that is most of a
-          // screen of invention. Beats arrive every 200ms, so a quarter of a
-          // second covers a missed one and nothing beyond that is worth
-          // pretending about.
+          // This used to EXTRAPOLATE: take the newest beat, take a velocity,
+          // and run it forward to now. That is the right trade when beats are
+          // scarce, and it was — at two a second, interpolating would have
+          // meant rendering half a second in the past.
           //
-          // AND THE GUESS BLEEDS OFF rather than running at full confidence to
-          // the cap. Past one beat's silence something has changed — they
-          // stopped, they turned, the wire hiccuped — and the honest response
-          // is to stop insisting, so the hull glides to a halt instead of
-          // sailing on and being yanked back. Between them these turn the stop
-          // from a lurch into a settle even when the stop beat is late.
-          const quiet = nowMs - at.tgtT
-          const age = Math.min(quiet, 250)
-          const faith = quiet <= 220 ? 1 : Math.max(0, 1 - (quiet - 220) / 300)
-          const aimX = at.target.x + at.vx * age * faith
-          const aimY = at.target.y + at.vy * age * faith
+          // It is the wrong trade at five. Extrapolation INVENTS the positions
+          // between beats, and an invention is wrong every time the guess and
+          // the boat disagree — which is every turn, every touch of the
+          // throttle, and every stop. The correction then lands as a pull-back
+          // at beat frequency, which is precisely the chop that survived all
+          // the tuning: the step sizes measured even and the speed measured
+          // sane, because the maths was smooth. It was smoothly wrong.
+          //
+          // So the hull is drawn a quarter of a second in the PAST, between
+          // the two buffered beats that bracket that moment. Nothing is
+          // invented: every position on screen is a straight line between two
+          // places the boat actually was. Turns are exact because both ends of
+          // the turn are real samples. Stopping is exact, so there is nothing
+          // to snap back from. What it costs is 250ms of lag, which at five
+          // beats a second is a beat and a bit and is not something you can
+          // see — and it is the same trade every networked game makes.
+          const rt = nowMs - RENDER_LAG
+          const buf = at.buf
+          let aimX = at.target.x
+          let aimY = at.target.y
+          if (buf.length === 1 || (buf.length && rt <= buf[0].t)) {
+            // Not enough history yet, or the buffer starts after the moment we
+            // want. The oldest thing we hold is the best answer.
+            aimX = buf[0].x; aimY = buf[0].y
+          } else if (buf.length > 1) {
+            let i = buf.length - 2
+            while (i > 0 && buf[i].t > rt) i--
+            const a = buf[i], c = buf[i + 1]
+            if (rt >= c.t) {
+              // STARVED: the wire has gone quiet and there is nothing newer to
+              // aim at. Hold at the last real position rather than carrying on
+              // — a hull that stops because nobody is talking is honest, and a
+              // hull that keeps sailing on a guess has to be taken back.
+              aimX = c.x; aimY = c.y
+            } else {
+              const u = (rt - a.t) / Math.max(1, c.t - a.t)
+              aimX = a.x + (c.x - a.x) * u
+              aimY = a.y + (c.y - a.y) * u
+            }
+          }
           at.dbgSpeed = Math.hypot(at.vx, at.vy) * 1000
           at.dbgSpan = at.prevT > 0 ? at.tgtT - at.prevT : 0
           if (SEA_DEBUG) {
