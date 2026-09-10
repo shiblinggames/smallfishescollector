@@ -9460,7 +9460,13 @@ hullRef={hullRefFor(t.key)} />
       <GunwharfAshore open={wharf} onClose={() => setWharf(false)} onShip={onShip}
         shipTier={shipTier} skin={equippedShipSkin} onSail={() => { setWharf(false); swapHull(!onShip) }}
         onManage={() => { setWharf(false); setShipSheet('ship') }} />
-      <VoyageBoard open={voyageOpen} onClose={() => setVoyageOpen(false)} />
+      {/* AND ASK THE HALL AGAIN ON THE WAY OUT.
+          `voyageBack` lights the Charterhouse, and it comes from the crewHub
+          POLL rather than from a server prop — so the router.refresh() this
+          board fires on a claim cannot clear it, and the island went on saying
+          "Voyage in" after the voyage had been taken. Every other panel that
+          settles something re-polls on close; this was the one that did not. */}
+      <VoyageBoard open={voyageOpen} onClose={() => { setVoyageOpen(false); pollCrew() }} />
 
       {/* ── THE GOLDEN CHOICE ──────────────────────────────────────────
           Above everything, dismissable by nothing, and asked again on the next
