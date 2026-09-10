@@ -3817,7 +3817,10 @@ export default function SeaMap({
     const fxRot = pfx ? pfx.rot : 0
     // ON THE WATER SHE IS ACTUALLY IN. This was a sine of time alone, so the
     // swell went past underneath and she did not rise on it. See seaSwell.
-    const bob = swellAt(pos.current.x, pos.current.y, t)
+    // HER OWN SHARE OF IT, here as well. This loop is the chart standing down
+    // for a fight and it had been left on the fishing boat's full stroke, so a
+    // Man-o-War heaved like a rowboat for exactly as long as her guns were out.
+    const bob = swellAt(pos.current.x, pos.current.y, t) * hullRef.current.lift
     const offX = (pos.current.x - camAt.current.x) * z
     const offY = (pos.current.y - camAt.current.y) * z * GROUND
 
@@ -7988,7 +7991,16 @@ export default function SeaMap({
           // HOW MUCH OF IT SHE ACTUALLY TAKES. 1 in the fishing boat and a
           // third of that at the Man-o-War — see shipLift.
           * hullRef.current.lift
-        const settle = 1 - Math.exp(-dt / 0.32)
+        // ── AND SHE TAKES HER TIME ABOUT IT ──────────────────────────
+        //
+        // Amplitude was only half of it. This time constant was 0.32s for
+        // every hull on the ladder, so a Man-o-War rose and fell at a rowboat's
+        // FREQUENCY — a third of the height and exactly the same hurry, which
+        // still reads as a cork because what says "heavy" is the lag, not the
+        // size of the stroke. Divided by her share of the swell, so the hull
+        // that takes a third of the lift takes three times as long to take it:
+        // 0.32s in the fishing boat, 0.91s at the Man-o-War.
+        const settle = 1 - Math.exp(-dt / (0.32 / hullRef.current.lift))
         bobRef.current += (seaNow - bobRef.current) * settle
         const bob = bobRef.current
         // ── THE BOW LIFTS, WHICHEVER WAY SHE IS POINTING ──────────────

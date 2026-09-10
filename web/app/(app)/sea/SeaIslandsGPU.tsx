@@ -456,6 +456,10 @@ export default function SeaIslandsGPU({
     holder: import('pixi.js').Container
     cap: Captain
     sig: string
+    /** How high this hull is riding, eased. Their own state, because a boat's
+     *  answer to the water is a thing with memory — see the note where it is
+     *  advanced. */
+    bob: number
     /** What this hull leaves behind. Read once when they are built rather than
      *  sent every frame: a trader does not change boats mid-patrol. */
     kind: WakeKind
@@ -1441,6 +1445,7 @@ export default function SeaIslandsGPU({
        *  handle calls that set them and the ticker that uses them. */
       let mine: Contact | null = null
       let berthed: Contact | null = null
+      let lastFleetAt = performance.now()
       let fleetAt: {
         key: string; x: number; y: number; facing: number; scale: number; dim: number
         ang: number; cx: number; cy: number
@@ -1918,6 +1923,13 @@ export default function SeaIslandsGPU({
         },
         fleet(list) {
           fleetAt = list
+          // How long since the last hand-over. The fleet is given to us once a
+          // frame by the chart's own loop, so this is that loop's dt without
+          // having to be told it. Clamped like every other dt here, so a tab
+          // coming back does not resolve a whole minute of swell in one step.
+          const fnow = performance.now()
+          const fdt = Math.min(0.05, Math.max(0, (fnow - lastFleetAt) / 1000))
+          lastFleetAt = fnow
           // A LAMP PER BOAT, off the same list the hulls come from, so a light
           // can never burn where there is nobody. `cx`/`cy` is where the hull
           // actually sits, which is what the rings at rest use too.
@@ -1941,7 +1953,18 @@ export default function SeaIslandsGPU({
             const c = seen.get(e.key)
             if (!c) continue
             c.holder.visible = true
-            const heave = swellAt(e.x, e.y, ts) * (e.lift ?? 1)
+            // ── AND THEY ANSWER IT WITH THEIR OWN WEIGHT ──────────────
+            //
+            // This read the field raw, so every other hull on the water snapped
+            // to the surface the instant it moved while YOURS lagged behind it
+            // — the one boat with mass in a fleet of corks, and a friend's
+            // Man-o-War twitching where your own rode. Same ease and the same
+            // tonnage-scaled time constant the player's bob uses, so a hull
+            // rides identically whether it is yours or somebody else's.
+            const lift = e.lift ?? 1
+            const want = swellAt(e.x, e.y, ts) * lift
+            c.bob += (want - c.bob) * (1 - Math.exp(-fdt / (0.32 / lift)))
+            const heave = c.bob
             c.holder.position.set(e.x, e.y - heave / GROUND)
             // AND THEY ROLL ON IT. Pixi composes a node as translate·rotate·
             // scale, so the rotation is applied OUTSIDE the mirror here and a
@@ -2216,7 +2239,7 @@ export default function SeaIslandsGPU({
         layer.addChild(holder)
         const hull = f.look.boatId ? BOATS.find(b => b.id === f.look.boatId) : null
         crew.set(key, {
-          holder, cap, sig: sigOf(f),
+          holder, cap, sig: sigOf(f), bob: 0,
           // A friend on her warship trails her SKIN'S wake, the same one she is
           // leaving on her own screen. `wake` on the slot carries it so this
           // does not have to reach back into the skin tables per frame.
