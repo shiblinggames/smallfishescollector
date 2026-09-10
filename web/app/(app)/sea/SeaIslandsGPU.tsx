@@ -459,10 +459,11 @@ export default function SeaIslandsGPU({
     holder: import('pixi.js').Container
     cap: Captain
     sig: string
-    /** How high this hull is riding, eased. Their own state, because a boat's
-     *  answer to the water is a thing with memory — see the note where it is
-     *  advanced. */
+    /** How high this hull is riding, and how far over it is leaning, both
+     *  eased. Their own state, because a boat's answer to the water is a thing
+     *  with memory — see the notes where they are advanced. */
     bob: number
+    roll: number
     /** What this hull leaves behind. Read once when they are built rather than
      *  sent every frame: a trader does not change boats mid-patrol. */
     kind: WakeKind
@@ -1798,7 +1799,23 @@ export default function SeaIslandsGPU({
             // trader you cannot find is one you cannot hail. Their name plates
             // are DOM and untinted, so this is about seeing the boat, not the
             // label.
-            for (const c of crewRef.current.values()) c.cap.setNight(crewTint)
+            // ── A FRIEND TAKES YOUR OWN LIGHT, NOT THE FLEET'S ────────
+            //
+            // Other captains are dimmed to four fifths so a sea full of them
+            // does not compete with the boat you are steering. That is right
+            // for scenery and wrong for a person: this chart already makes the
+            // same distinction about SIZE — a trader is scenery and should not
+            // loom, a friend is a peer drawn at your own scale so you see them
+            // as you see yourself — and the light is the other half of it.
+            //
+            // It showed on the hull that had least to spare. A Pitch Black
+            // Man-o-War tinted a fifth darker than her owner sees her leaves
+            // her own violet aura glowing off a blacker hull, so the same ship
+            // read as a deep purple glow on somebody else's screen and as
+            // black paint on her captain's.
+            for (const [k, c] of crewRef.current) {
+              c.cap.setNight(k.startsWith('friend:') ? hourRef.current.mine : crewTint)
+            }
           }
 
           if (tint === lastTint) return
@@ -1982,13 +1999,25 @@ export default function SeaIslandsGPU({
             // facing correction, unlike the DOM's transform where the mirror is
             // the outer one. Same field, so a crest rolls a group of them in
             // turn rather than all at once.
+            // ── AND THEY LEAN INTO IT WITH THE SAME WEIGHT ────────────
+            //
             // Their tonnage decides how far the same slope tips them, exactly
-            // as it decides how far it lifts them. See shipLift in SeaMap.
-            const roll = swellHeel(e.x, e.y, ts) * (e.lift ?? 1)
-            c.holder.rotation = (roll * Math.PI) / 180
+            // as it decides how far it lifts them (see shipLift) — and, like
+            // the lift, HOW LONG THEY TAKE ABOUT IT. This read the slope raw
+            // while the player's roll has always been eased, so every other
+            // hull on the water snapped to the surface's angle while yours
+            // leaned into it. Against a Man-o-War that reads as a boat swaying
+            // twice as hard as the one you are standing on, which is what it
+            // was reported as.
+            //
+            // Same ease and the same tonnage-scaled constant the bob above
+            // uses, off the same frame delta.
+            const wantRoll = swellHeel(e.x, e.y, ts) * lift
+            c.roll += (wantRoll - c.roll) * (1 - Math.exp(-fdt / (0.32 / lift)))
+            c.holder.rotation = (c.roll * Math.PI) / 180
             // Their twins too. A bay full of moored hulls all reflecting the
             // wrong way is the same mistake made forty times.
-            c.cap.setHeel(roll)
+            c.cap.setHeel(c.roll)
             // And the water comes up their sides on the same heave.
             c.cap.setSoak(heave)
             // AND WHAT THEY ARE DOING WITH THEIR HANDS. Idempotent inside the
@@ -2249,7 +2278,7 @@ export default function SeaIslandsGPU({
         layer.addChild(holder)
         const hull = f.look.boatId ? BOATS.find(b => b.id === f.look.boatId) : null
         crew.set(key, {
-          holder, cap, sig: sigOf(f), bob: 0,
+          holder, cap, sig: sigOf(f), bob: 0, roll: 0,
           // A friend on her warship trails her SKIN'S wake, the same one she is
           // leaving on her own screen. `wake` on the slot carries it so this
           // does not have to reach back into the skin tables per frame.

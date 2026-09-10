@@ -6134,7 +6134,22 @@ export default function SeaMap({
       // would drag a friend you are sailing beside back to where they were
       // twenty seconds ago, twice a minute, which reads as rubber-banding.
       if (had) {
-        const fresher = had.live && Date.now() - had.live < 4_000
+        // ── WHICHEVER OF THE TWO IS ACTUALLY FRESHER ──────────────────
+        //
+        // This asked "has a beat landed in the last four seconds", which is a
+        // question about the SOCKET rather than about the two positions. A
+        // polled row is up to twenty seconds old, so any time a beat happened
+        // to be four seconds stale — a moored captain sends one every three,
+        // and the wire only has to breathe once — the chart would replace a
+        // position that was seconds old with one that could be twenty, jump
+        // the hull to where they used to be, and then put it back the moment
+        // the next beat arrived. That is the hop.
+        //
+        // `ago` is how old the polled row is and we already have it, so ask
+        // the question that actually matters: which of these two do I have a
+        // more recent reading from.
+        const beatAge = had.live ? Date.now() - had.live : Infinity
+        const fresher = beatAge <= f.ago * 1000
         if (!fresher) {
           // A POLLED ROW CARRIES NO VELOCITY. It is up to twenty seconds old,
           // so the gap between it and whatever came before is meaningless as a
