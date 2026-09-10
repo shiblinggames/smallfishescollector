@@ -1944,6 +1944,9 @@ export default function SeaMap({
    *  the helm centres, which reads as a twitch rather than as weight. */
   const lastHeadRef = useRef(0)
   const leanRef = useRef(0)
+  /** How far a maelstrom has her over, in screen degrees. Eased, and eased
+   *  back to nothing the moment she is out of the grip — see the pull. */
+  const maelLeanRef = useRef(0)
   /**
    * ── HER OWN WEIGHT ────────────────────────────────────────────────────────
    *
@@ -6790,6 +6793,19 @@ export default function SeaMap({
       // a second at the eye against a hull that sails at 470, so a captain
       // who wants out simply sails out. Not while the guns are out; a fight
       // holds station by its own rule.
+      //
+      // AND SHE LEANS INTO IT, which is the half that was missing. The drag
+      // moved her position and nothing else: a current strong enough to carry
+      // a ship of the line sideways, with the hull sitting dead level on top
+      // of it. She goes over toward the eye instead, hardest where the pull is
+      // hardest, so the door is something the helm has to hold against rather
+      // than a number quietly editing her coordinates.
+      //
+      // A SCREEN tilt, off the eye's screen-x: over to the left when the hole
+      // is to the left, whichever way her bow happens to be pointing. Summed
+      // across maelstroms rather than taken from the nearest, so the junction
+      // between two of them is the two of them.
+      let mLean = 0
       if (!fightOnRef.current) {
         for (const m of MAELSTROMS) {
           const mdx = m.x - pos.current.x, mdy = m.y - pos.current.y
@@ -6801,8 +6817,13 @@ export default function SeaMap({
           const mux = mdx / md, muy = mdy / md
           pos.current.x += mux * pull - muy * pull * 0.55
           pos.current.y += muy * pull + mux * pull * 0.55
+          mLean += mux * 7 * k
         }
       }
+      // Eased, and eased OUT here rather than inside the loop above, so a
+      // fight starting or a hull leaving the grip rights her over the same
+      // half second she went over in instead of snapping level.
+      maelLeanRef.current += (mLean - maelLeanRef.current) * Math.min(1, dt * 2.6)
 
       for (const o of nearObs.current) {
         // Capsule-aware: the normal comes off the segment's closest point, so
@@ -7674,7 +7695,7 @@ export default function SeaMap({
         // angle comes out reversed on a hull facing the other way. Everything
         // that wants a fixed SCREEN tilt is multiplied through by the facing —
         // which is what `mag` was already doing and the reason it looked right.
-        const heel = (mag + roll + leanRef.current) * facing.current
+        const heel = (mag + roll + leanRef.current + maelLeanRef.current) * facing.current
           + Math.sin(t * 0.9) * 3.4 * gust
         // ── AND WHAT THE FIGHT IS DOING TO HER ────────────────────────────
         //

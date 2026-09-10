@@ -63,6 +63,24 @@
 // fall down it or climb out of it, and the light comes up from where the
 // floor is.
 //
+// ── AND THE SEA FALLS INTO IT ───────────────────────────────────────────────
+//
+// The hull has always been dragged toward the eye inside the grip (see the
+// pull in SeaMap), and the water it was being dragged across said nothing at
+// all: outside the mouth the skirt darkened, and that was the whole of it. A
+// current you can feel and cannot see is the chart contradicting itself.
+//
+// So the surface streams. Rings race INWARD across the skirt and shrink as
+// they go, fading in out of open water and out again at the lip rather than
+// switching on and arriving somewhere — water falling into a hole makes rings
+// that travel toward it, which is the difference between a drain and a splash
+// (the portal wells have carried this since tier 3; this is that idea at the
+// scale of a whirlpool). Over the top of them one broad spiral turns across
+// the whole patch, so the sea out there is not merely falling in, it is going
+// round. Both are additive and faint with a floor under them, because a crest
+// on dark water catches light and a maelstrom on the horizon must still sit in
+// troubled sea.
+//
 // Culled by camera distance: a maelstrom nobody can see renders nothing, not
 // even its texture.
 
@@ -119,6 +137,24 @@ let wispTex: Texture | null = null
 let discTex: Texture | null = null
 let holeTex: Texture | null = null
 let moteTex: Texture | null = null
+let ringTex: Texture | null = null
+
+/** A thin bright band at the edge of its own circle: one crest, seen from
+ *  above. The same shape the portal wells draw their inward rings with. */
+function ringTexture(PIXI: typeof import('pixi.js')): Texture {
+  const S = 512
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')!
+  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+  grad.addColorStop(0.00, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.88, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.95, 'rgba(255,255,255,1)')
+  grad.addColorStop(1.00, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, S, S)
+  return PIXI.Texture.from(c)
+}
 
 /** A logarithmic spiral with `arms` bands, white, thin and hot at the eye,
  *  broad and soft at the rim, fading at both ends. */
@@ -232,6 +268,10 @@ export type Maelstroms = {
 
 const FOAM_N = 120
 const SPIRIT_N = 40
+/** Crests racing in across the skirt. */
+const STREAM_N = 5
+/** Where they come from and where the mouth takes them, in world radii. */
+const STREAM_OUT = 2.6, STREAM_IN = 1.02
 
 /**
  * THE KEYSTONE, in units of the world radius. The flat texture spans 2.4R
@@ -296,6 +336,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
   discTex ??= radial(PIXI, [[0, 'rgba(255,255,255,0.95)'], [0.4, 'rgba(255,255,255,0.4)'], [1, 'rgba(255,255,255,0)']])
   holeTex ??= radial(PIXI, [[0, 'rgba(0,0,0,1)'], [0.5, 'rgba(0,0,0,0.9)'], [1, 'rgba(0,0,0,0)']])
   moteTex ??= radial(PIXI, [[0, 'rgba(255,255,255,1)'], [0.4, 'rgba(255,255,255,0.6)'], [1, 'rgba(255,255,255,0)']], 32)
+  ringTex ??= ringTexture(PIXI)
 
   type Foam = { p: Particle; ang: number; r: number; size: number }
   type Spirit = { p: Particle; ang: number; r: number; h: number; age: number; life: number; size: number }
@@ -310,6 +351,9 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     /** The throat: terraces from the rim (u near 0) to the floor (u = 1). */
     terraces: { u: number; dark: Sprite; band: Sprite }[]
     floor: Sprite; wall: Sprite
+    /** The skirt streaming in: crests racing inward, and the drag over them. */
+    streams: { s: Sprite; q: number }[]
+    drag: Sprite
     foam: Foam[]; spirits: Spirit[]
     seen: boolean
     nextStrike: number; strikeLeft: number
@@ -400,6 +444,26 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     // the funnel, and only the deepest part of the throat goes to black.
     meshDark.blendMode = 'multiply'
     meshLight.blendMode = 'add'
+
+    // ── THE SKIRT, STREAMING ──────────────────────────────────────────
+    //
+    // UNDER the mouth, because these are the open sea outside it: the mesh
+    // paints over them where the two meet, so a crest is taken by the hole
+    // rather than ending on top of it. Flat on the plane, laid through the
+    // same keystone as everything else so the lip is one continuous surface.
+    const drag = sprite(wispTex!, 1, th.foam, 0)
+    drag.blendMode = 'add'
+    node.addChild(drag)
+    const streams: One['streams'] = []
+    for (let i = 0; i < STREAM_N; i++) {
+      const sp = sprite(ringTex!, 1, th.foam, 0)
+      sp.blendMode = 'add'
+      node.addChild(sp)
+      // Spread down the run so they arrive one after another rather than as a
+      // set of rings breathing together.
+      streams.push({ s: sp, q: i / STREAM_N })
+    }
+
     node.addChild(meshDark, meshLight)
 
     // ── THE THROAT ────────────────────────────────────────────────────
@@ -504,7 +568,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     return {
       m, th, node, flatDark, flatLight, rtDark, rtLight,
       storm, funnel, arms, mid, wisps, eye, core, strike, beam, holo,
-      terraces, floor, wall,
+      terraces, floor, wall, streams, drag,
       foam, spirits, seen: false,
       nextStrike: 4 + Math.random() * 8, strikeLeft: 0,
     }
@@ -529,8 +593,12 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
       const lit = 1 - dark * 0.3
       for (const o of ones) {
         const { m, th } = o
-        const on = Math.abs(m.x - camX) < halfW + m.r * 1.8
-          && Math.abs(m.y - camY) < halfH + m.r * 1.8
+        // WIDE ENOUGH FOR THE OUTERMOST CREST. The skirt now streams from
+        // STREAM_OUT, well past the 1.8 the mouth alone needed, and a margin
+        // cut to the mouth pops a ring in and out at the edge of the screen.
+        const cull = m.r * (STREAM_OUT + 0.2)
+        const on = Math.abs(m.x - camX) < halfW + cull
+          && Math.abs(m.y - camY) < halfH + cull
         if (on !== o.seen) { o.node.visible = on; o.seen = on }
         if (!on) continue
 
@@ -580,6 +648,39 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           sp.width = r * 2 * w * KEY_W
           sp.height = r * 2 * w * KEY_H
         }
+        /** The same, for a ring lying ON the surface at a plain world radius:
+         *  no depth, so no lean, but the keystone all the same or the skirt
+         *  would be rounder than the hole it runs into. */
+        const flatRing = (sp: Sprite, r: number) => {
+          sp.position.set(0, r * KEY_DROP)
+          sp.width = r * 2 * KEY_W
+          sp.height = r * 2 * KEY_H
+        }
+
+        // ── THE SEA FALLS IN ────────────────────────────────────────────
+        //
+        // Crests racing inward and shrinking as they go, each fading in out of
+        // open water and out again as the mouth takes it. They turn as they
+        // travel, faster the tighter they get, because water drawn toward a
+        // spinning hole does not come straight in.
+        for (const st of o.streams) {
+          st.q += dt * (0.1 + 0.14 * gg)
+          if (st.q >= 1) st.q -= 1
+          const q = st.q
+          const rr = m.r * (STREAM_OUT + (STREAM_IN - STREAM_OUT) * q)
+          flatRing(st.s, rr)
+          st.s.rotation += dt * spd * (0.3 + 1.5 * q)
+          // Both ends, so nothing switches on in clean water or piles up at
+          // the lip. The floor is the same reasoning as the storm skirt's:
+          // one seen across the junction still sits in moving water.
+          st.s.alpha = (0.05 + 0.11 * gg) * Math.sin(q * Math.PI) * lit
+        }
+        // AND THE WHOLE PATCH TURNS. One broad spiral over the skirt, slower
+        // than the arms because it is open sea being dragged rather than the
+        // vortex itself.
+        flatRing(o.drag, m.r * 1.85)
+        o.drag.rotation += dt * spd * 0.42
+        o.drag.alpha = (0.04 + 0.07 * gg) * lit
         for (const tr of o.terraces) {
           // Wider than the ring it darkens, because holeTex fades from half
           // its radius: the solid centre is the terrace and the falloff is

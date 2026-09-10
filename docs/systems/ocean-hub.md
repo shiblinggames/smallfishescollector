@@ -1426,6 +1426,16 @@ They ride the throat's lean with the floor, so they leave the centre of the hole
 hole does. Do not re-pin them to the rim: the fade is cut for a figure whose lower third is
 below the waterline.
 
+**The skirt streams, and she leans into it.** The pull in SeaMap has always dragged the hull
+toward the eye; nothing on the water or on the ship agreed with it. Now five crests race
+inward across the skirt (2.6r to 1.02r), shrinking and turning faster as they close, fading in
+and out at both ends, with one broad spiral turning over the whole patch — all additive, all
+with a floor so a maelstrom on the horizon still sits in moving water, all under the mesh so
+the mouth takes them at the lip. And the hull HEELS toward the eye (`maelLeanRef`, up to about
+7 degrees at the centre of the grip, summed across maelstroms, eased out over the same half
+second when a fight starts or she sails clear). The lean is a screen tilt and therefore lives
+inside the `* facing.current` group with the drive heel and the turn lean.
+
 ## The anchorage, and the way out of it
 
 The water north of the reef. Reached through the arch on the fishing boat, and it holds the
