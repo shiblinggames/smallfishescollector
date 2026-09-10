@@ -34,6 +34,7 @@ import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
 import { getDiscoveries } from './isleActions'
 import { getDigState } from './digActions'
+import { hasAcceptedPact } from './pactActions'
 import { getHomestead } from '../home/actions'
 import {
   gauntletAutoCatchMaxRarity, hasForge, hasAbyssalForge, hasAbyssalAccelerator,
@@ -103,7 +104,7 @@ export default async function SeaPage({ searchParams }: {
   const [
     allSpecies, { data: collectionRows }, { data: pbRows }, raidPartyRows,
     { data: baitRows }, dealt, discovered, digs, homestead, renown, renownNav, trawlState,
-    { data: finaleRow }, { data: holdRows },
+    { data: finaleRow }, { data: holdRows }, hasPact,
   ] = await Promise.all([
     getCachedFishSpecies(),
     admin.from('fish_collection').select('fish_id, is_golden').eq('user_id', user.id),
@@ -126,6 +127,12 @@ export default async function SeaPage({ searchParams }: {
     // THE LONG VIGIL's gate, for the collection log's Ancient Deep block.
     admin.from('raid_completions').select('id').eq('user_id', user.id).eq('raid_id', 'the_sunken_hand').limit(1).maybeSingle(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
+    // ONE ROW, AND IT DECIDES A HUNDRED AND EIGHTY SERVER ACTIONS AN HOUR.
+    // Whether anybody could be on the water for you at all — see the poll
+    // in SeaMap, which was asking that question every twenty seconds for the
+    // life of the tab regardless of the answer. Free here: this batch is
+    // already in flight and waits on its slowest member.
+    hasAcceptedPact(),
   ])
 
   // Bait: whatever they have most of, which is almost always what they would
@@ -362,6 +369,10 @@ export default async function SeaPage({ searchParams }: {
       // a copy that knows about three of the four is wrong in a way nobody
       // notices until somebody is standing off a boss that will not open.
       isAdmin={profile?.is_admin === true}
+      // WHETHER THERE IS ANY POINT ASKING WHO IS OUT THERE. See the poll in
+      // SeaMap: without a pact there is nobody it could ever return, and it
+      // was asking every twenty seconds regardless for the life of the tab.
+      hasPact={hasPact}
       // ── AND THE THREE NUMBERS THE RESOLVER RUNS ON ────────────────
       //
       // The chart re-runs `computeRaidMap` itself the moment something is

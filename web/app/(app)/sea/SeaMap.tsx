@@ -196,7 +196,7 @@ import SeaFirstVoyage from './SeaFirstVoyage'
 import SeaGateTour from './SeaGateTour'
 import SeaLandfallHint from './SeaLandfallHint'
 import SeaCue from './SeaCue'
-import { pendingPacts } from './pactActions'
+import { pendingPacts, hasAcceptedPact } from './pactActions'
 import { heldGolden } from '../fishing/actions'
 import { coastClip, coastline } from '@/lib/islandShape'
 // The island painting itself, which used to live in this file. See islandArt
@@ -1180,6 +1180,26 @@ const NEAR_ENOUGH = 2600
  *  who is out there. One rate for both, and no longer adaptive — the close-up
  *  moved to Realtime and this went back to being a plain heartbeat. */
 const FAR_MS = 20_000
+/**
+ * AND HOW OFTEN TO ASK WHEN NOBODY COULD POSSIBLY ANSWER.
+ *
+ * The poll ran at FAR_MS for every captain with the chart open, whether or not
+ * they had a single pact — and a pact is the only thing that can put a boat in
+ * its answer. On the live table that is two accepted pacts against twenty-odd
+ * Captains, so very nearly every player was spending a hundred and eighty
+ * server actions an hour, each about five queries, to be told "nobody", for as
+ * long as they left the tab open.
+ *
+ * It still asks, because a pact can be ACCEPTED while you are sailing and
+ * nothing else would tell you, but it asks at a rate that suits a question
+ * whose answer changes about twice a year rather than one whose answer is a
+ * moving boat. Two minutes, so a new pact lands within two minutes, at a
+ * twelfth of the cost.
+ *
+ * The moment there IS one — from the page's own load, or because the crew panel
+ * just made one — it goes to FAR_MS and stays there.
+ */
+const NOPACT_MS = 120_000
 
 const SEA_STEP = 96
 
@@ -1495,7 +1515,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, exploredExpRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, navXP, renownNav, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
-  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, raidItems, raidSeats, itemMounts, portal, startSide,
+  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, raidItems, raidSeats, itemMounts, portal, startSide, hasPact = false,
   seenChapterUnlocks = [], seenUltimateUnlock = false,
 }: {
   fishingXP: number
@@ -1537,6 +1557,9 @@ export default function SeaMap({
   /** Admins pass every gate the expedition page passes them through — the
    *  maelstroms read the same rule. */
   isAdmin?: boolean
+  /** You hold at least one accepted sailing pact. Decides how often the chart
+   *  asks who is on the water — see the poll. */
+  hasPact?: boolean
   /** The expedition hull you own. Only ever drawn beyond the sea gate — inside
    *  the anchorage and the fishing grounds you are on the fishing boat. */
   shipTier: number
@@ -4465,6 +4488,10 @@ export default function SeaMap({
    * cadence every other social surface in the game runs at.
    */
   const [pendingAsk, setPendingAsk] = useState(0)
+  /** Whether anybody could be on the water for you at all. Drives the poll's
+   *  rate; see NOPACT_MS. Seeded by the page and re-read whenever the crew
+   *  panel closes, because that is the one surface that can change it. */
+  const pactedRef = useRef(hasPact)
   /** SOMEBODY IS ACTUALLY ON THE WIRE. True while a beat has landed inside the
    *  last few seconds, which is the only honest definition: the pact, the
    *  membership and the poll can all be in order while the socket is refused,
@@ -5932,7 +5959,10 @@ export default function SeaMap({
       // was close, because the poll was the only way to find out where they
       // were. Realtime carries that now, so asking faster would buy nothing and
       // cost a server action every two seconds.
-      timer = setTimeout(pull, FAR_MS)
+      // AT WHATEVER RATE THE QUESTION DESERVES. Re-read every time rather
+      // than captured once: accepting a pact has to speed this up without
+      // waiting for a remount, and it does, on the tick after the panel closes.
+      timer = setTimeout(pull, pactedRef.current ? FAR_MS : NOPACT_MS)
     }
     pull()
 
@@ -10439,6 +10469,9 @@ hullRef={hullRefFor(t.key)} />
         onClose={() => {
           setCrewOpen(false)
           void pendingPacts().then(setPendingAsk, () => {})
+          // A pact may have just been made or ended in there, and it decides
+          // how often this chart asks who is out. One query, on a panel close.
+          void hasAcceptedPact().then(v => { pactedRef.current = v }, () => {})
         }}
         atSea={new Set(friends.map(f => f.username))}
         // A PACT CHANGED — ask the sea again NOW rather than at the next tick.

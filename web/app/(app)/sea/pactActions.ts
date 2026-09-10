@@ -210,6 +210,30 @@ export async function endPactWith(otherId: string): Promise<{ ok: boolean }> {
  * never — the asker sat unanswered for days and read it as the feature being
  * broken rather than as silence. The crew button wears this as a badge.
  */
+/**
+ * DO YOU HOLD AN ACCEPTED PACT WITH ANYBODY AT ALL.
+ *
+ * One indexed row lookup, and it decides whether the chart polls for boats at
+ * all — see the note on the poll in SeaMap. Deliberately does NOT check the
+ * memberships or the follows the way `friendsAtSea` does: this is the question
+ * "is there any point looking", and a lapsed Captain or a dropped follow is
+ * caught by the real gate on the read itself. Being wrong here costs one poll
+ * that returns nothing; being CLEVER here costs the two queries this exists to
+ * avoid.
+ */
+export async function hasAcceptedPact(): Promise<boolean> {
+  const user = await me()
+  if (!user) return false
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('sea_pacts')
+    .select('id')
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+    .limit(1)
+  return !!data?.length
+}
+
 export async function pendingPacts(): Promise<number> {
   const user = await me()
   if (!user) return 0
