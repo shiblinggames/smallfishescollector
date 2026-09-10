@@ -245,7 +245,7 @@ export function openSeaPresence(opts: {
   let mineReady = false
   let closed = false
   /** The last beat actually put on the wire, for the move gate. */
-  let sent: { x: number; y: number; f: number; p: Pose; at: number } | null = null
+  let sent: { x: number; y: number; f: number; p: Pose; at: number; moving: boolean } | null = null
   /** Who we have been told to listen to, whether or not the socket is up yet. */
   let wanted = new Set<string>()
 
@@ -455,13 +455,27 @@ export function openSeaPresence(opts: {
       // part of a minute, which is cheaper than the position beats the same
       // captain sends while merely sailing past.
       const posed = (b.p ?? 0)
+      const moved = sent ? Math.hypot(b.x - sent.x, b.y - sent.y) : Infinity
+      const movingNow = moved >= MOVE_MIN
       if (sent && posed === sent.p) {
-        const moved = Math.hypot(b.x - sent.x, b.y - sent.y)
         const stale = Date.now() - sent.at > IDLE_MS
         const same = moved < 0.5 && b.f === sent.f
-        if (moved < MOVE_MIN && !(stale && !same)) return
+        // ── AND ONE MORE THE MOMENT YOU STOP ────────────────────────────
+        //
+        // The gate below drops a beat from a hull that has not gone anywhere,
+        // which is what makes two people moored side by side cost nothing. It
+        // also meant that COMING TO A STOP was silent: the last thing the far
+        // end heard was a boat under way, and it went on running that velocity
+        // forward for as long as it took the three-second idle heartbeat to
+        // mention otherwise. So a hull sailed on past where it had actually
+        // stopped and then snapped back when the truth arrived. Reported
+        // exactly that way, and it is the loudest thing left in this.
+        //
+        // Stopping is news. One beat on the transition says so, and it costs a
+        // single message per stop rather than a rate.
+        if (!movingNow && !sent.moving && !(stale && !same)) return
       }
-      sent = { x: b.x, y: b.y, f: b.f, p: posed, at: Date.now() }
+      sent = { x: b.x, y: b.y, f: b.f, p: posed, at: Date.now(), moving: movingNow }
       presenceStats.out++
       presenceStats.blocked = ''
       log('beat OUT', b.x, b.y, 'pose', posed)

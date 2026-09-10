@@ -7432,13 +7432,27 @@ export default function SeaMap({
           // make, because the cost of being wrong here is a ship vanishing and
           // the cost of being cautious is that a boost looks a touch slow for
           // half a second.
-          // The speed is settled when a beat lands — see onBeat. All this has
-          // to do is run it forward from the last one, capped so a hull that
-          // stops, turns or goes quiet coasts to a halt rather than sailing on
-          // for ever.
-          const age = Math.min(nowMs - at.tgtT, 900)
-          const aimX = at.target.x + at.vx * age
-          const aimY = at.target.y + at.vy * age
+          // ── RUN IT FORWARD, BUT NOT FAR ─────────────────────────────
+          //
+          // The speed is settled when a beat lands (see onBeat); all this does
+          // is carry it between them. The cap was 900ms, which was sized for a
+          // two-beat-per-second wire and is now four and a half beats of
+          // guessing — at half a thousand pixels a second that is most of a
+          // screen of invention. Beats arrive every 200ms, so a quarter of a
+          // second covers a missed one and nothing beyond that is worth
+          // pretending about.
+          //
+          // AND THE GUESS BLEEDS OFF rather than running at full confidence to
+          // the cap. Past one beat's silence something has changed — they
+          // stopped, they turned, the wire hiccuped — and the honest response
+          // is to stop insisting, so the hull glides to a halt instead of
+          // sailing on and being yanked back. Between them these turn the stop
+          // from a lurch into a settle even when the stop beat is late.
+          const quiet = nowMs - at.tgtT
+          const age = Math.min(quiet, 250)
+          const faith = quiet <= 220 ? 1 : Math.max(0, 1 - (quiet - 220) / 300)
+          const aimX = at.target.x + at.vx * age * faith
+          const aimY = at.target.y + at.vy * age * faith
           at.dbgSpeed = Math.hypot(at.vx, at.vy) * 1000
           at.dbgSpan = at.prevT > 0 ? at.tgtT - at.prevT : 0
           if (SEA_DEBUG) {
