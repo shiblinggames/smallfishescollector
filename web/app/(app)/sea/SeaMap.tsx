@@ -1734,10 +1734,6 @@ export default function SeaMap({
    */
   const [levelNew, setLevelNew] = useState(false)
   const levelWas = useRef(level)
-  useEffect(() => {
-    if (level > levelWas.current) setLevelNew(true)
-    levelWas.current = level
-  }, [level])
   /** Open the spine once the level card is put down: pressed the pulsing disc,
    *  read what the level paid, then the spine it belongs to. */
   const skillAfterGrant = useRef(false)
@@ -1776,6 +1772,21 @@ export default function SeaMap({
     }).catch(() => false /* a missed collection is picked up next time */)
   }, [])
   useEffect(() => { void collectLevelRewards() }, [collectLevelRewards])
+  /**
+   * ── AND ON THE CROSSING ITSELF ───────────────────────────────────────────
+   *
+   * The card came up when the rod was stowed, or when the pulsing disc was
+   * pressed, which is two ways of saying "later". A level is the moment the
+   * bar fills; the card belongs to that moment, over whatever is on screen,
+   * and the disc's pulse is only the fallback if this somehow does not show.
+   */
+  useEffect(() => {
+    if (level > levelWas.current) {
+      setLevelNew(true)
+      void collectLevelRewards()
+    }
+    levelWas.current = level
+  }, [level, collectLevelRewards])
 
   /**
    * OUT ON THE SEA_GATE — past the anchorage rim, on the ship you own.
@@ -3662,7 +3673,9 @@ export default function SeaMap({
       }
       setFinnLines(v => ({ lines: res.lines, nonce: (v?.nonce ?? 0) + 1 }))
       if (res.reward > 0) {
-        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: undefined }))
+        // WITH THE NUMBER. The nav ignores this event without one, on purpose:
+        // an empty detail used to crash it. So it was firing, and doing nothing.
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
       }
       const f = await finnState()
       if (f) setFinn(f)

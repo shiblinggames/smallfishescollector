@@ -1374,6 +1374,10 @@ export default function FishingHere({
         // number that went in rather than the number that was rolled.
         onCaught(res.catchQty ?? 1)
         onReel?.({ perfectStreak: res.perfectStreak ?? 0, caught: res.catchQty ?? 1 })
+        // The badge watcher only looks when something tells it to, and a
+        // catch told it nothing: every catch badge was granted on the server
+        // and celebrated whenever some unrelated event next happened to fire.
+        window.dispatchEvent(new Event('badges-may-have-changed'))
         // Into the log immediately. Without this the drawer disagrees with the
         // result card still on screen: the card says NEW SPECIES and the log
         // has never heard of it.

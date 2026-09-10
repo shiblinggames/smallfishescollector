@@ -65,3 +65,32 @@ payout action is three steps, in this order: **grant** via the RPC, **log** the 
 **return the new balances** so the client can fire `doubloons-changed` / `gems-changed` and the nav
 moves in the same breath as the card. A payout the nav does not show is a payout the player does
 not believe.
+
+## The purse is live
+
+The two numbers in the nav used to be a **copy, kept by hand**: moved only by a `doubloons-changed`
+/ `gems-changed` window event that the granting call site remembered to fire, with a numeric
+`detail` (the nav ignores anything else, because an empty detail once crashed the page). A Finn job
+fired it with no value. A dig and a landing fired nothing. A trawl collected elsewhere arrived on
+the next load. Each looked like its own bug.
+
+`components/ProfileLive.tsx`, mounted in the root layout, subscribes to the captain's **own
+`profiles` row** over Realtime (`postgres_changes`, `UPDATE`, `filter: id=eq.<uid>`). Realtime
+evaluates the table's RLS for the subscriber, and "profiles own read" (`auth.uid() = id`) is what
+makes own-row-only a rule rather than a courtesy. On each update it fires the same events the call
+sites fire — `doubloons-changed` / `gems-changed` with the new balances when they moved, and
+`badges-may-have-changed` when `unlocked_badges` grew — so nothing downstream changed, and every
+grant anywhere in the game reaches the nav whether or not its call site remembered. The direct
+fires stay: they are instant, and the subscription is a round trip. `profiles` is the first (only)
+table on the `supabase_realtime` publication (`profiles_live_purse` migration).
+
+**Rules for a payout action still stand**: grant via RPC, log the ledger row, return the new
+balances, fire the event with the number. The subscription is the net under that, not a
+replacement for it.
+
+**The level card fires on the crossing.** It used to come up when the rod was stowed or the
+pulsing disc was pressed. The chart's level is live (`FishingHere.onXp`), so the moment it rises
+`collectLevelRewards()` runs and the card shows over whatever is on screen; the disc's pulse is
+the fallback. **A catch now fires `badges-may-have-changed`** — the badge watcher only reconciles
+on its trigger events, and a catch fired none, so catch badges were celebrated whenever some
+unrelated event next happened to fire.

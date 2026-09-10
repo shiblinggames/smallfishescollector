@@ -440,6 +440,8 @@ async function nextRung(
  */
 export async function turnInFinnQuest(): Promise<{
   reward: number; lines: string[]; questsDone: string[]
+  /** The purse after the pay, so the nav can show the right number now. */
+  newDoubloons: number
 } | { error: string } | null> {
   const user = await me()
   if (!user) return null
@@ -484,10 +486,15 @@ export async function turnInFinnQuest(): Promise<{
     })
   }
 
+  // The purse as it stands. The chart used to fire the nav's event with no
+  // value here and the nav, rightly, ignored it -- so a job paid and the
+  // number did not move until the next page.
+  const { data: after } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
   return {
     reward: quest.reward,
     lines: [quest.done, ...rung.lines],
     questsDone: newDone,
+    newDoubloons: Number(after?.doubloons ?? 0),
   }
 }
 

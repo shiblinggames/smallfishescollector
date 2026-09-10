@@ -7,6 +7,7 @@ import PageTransition from '@/components/PageTransition'
 import ClientBackground from '@/components/ClientBackground'
 import MobileTabBar from '@/components/MobileTabBar'
 import BadgeWatcher from '@/components/BadgeWatcher'
+import ProfileLive from '@/components/ProfileLive'
 import BackgroundAnimationPauser from '@/components/BackgroundAnimationPauser'
 import DragScrollRows from '@/components/DragScrollRows'
 import KeyboardAdvance from '@/components/KeyboardAdvance'
@@ -72,6 +73,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </PageTransition>
 <MobileTabBar />
+        {/* Before the badge watcher in the tree only for reading order; the
+            two talk through window events, not props. See ProfileLive. */}
+        <ProfileLive />
         <BadgeWatcher />
         <PendingSalesWatcher />
         <FishingAudioPrimer />
