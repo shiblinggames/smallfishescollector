@@ -581,6 +581,39 @@ and nothing goes on the wire at all otherwise. This replaced a poll that stepped
 seconds when a friend was near — 600-1000px between samples, which no amount of easing
 makes look like a boat.
 
+### A POLICY'S SUBQUERIES RUN AS THE CALLER (2026-09, and it broke everything)
+
+Realtime presence never worked. Not "worked badly" — **no captain could ever subscribe to
+another captain's channel**, from the day it shipped, and the chart silently fell back to its
+twenty-second poll. It was reported as "a huge delay in player positioning".
+
+`public.crew` has RLS **enabled with no policies**, which denies every read to `authenticated`.
+Every server action reads crew through the service role, which bypasses RLS, so nothing ever
+complained. But the listen policy on `realtime.messages` carried a raw
+`EXISTS (SELECT 1 FROM crew a JOIN crew b ...)`, and **a policy's subqueries execute as the
+caller, not as the policy's owner**. That EXISTS returned zero rows for everybody, forever, so
+the mutual-crew clause was permanently false and every join came back `CHANNEL_ERROR`.
+
+SENDING was never affected, and that asymmetry is the fingerprint: the INSERT policy tests only
+the topic and `is_captain` and touches no RLS'd table. The console said `could not listen to
+<uuid>` and never `could not open your own channel`.
+
+The fix is `app_private.is_mutual_crew(a, b)`, SECURITY DEFINER, exactly as
+`app_private.is_captain` already was — and `is_captain` exists for THIS SAME REASON, because
+`profiles` is own-read-only and a policy cannot read somebody else's premium either. The
+pattern was established and crew simply did not get it.
+
+**The rule: any table a policy reads must either be readable by `authenticated`, or reached
+through a SECURITY DEFINER helper in `app_private`.** On this database, where the house
+convention is service-role-only and most tables have RLS on with no policies, that means
+essentially every cross-table test in a policy needs a definer. `sea_pacts` is the exception
+and is left inline: it has a real own-rows SELECT policy, which is exactly the set the EXISTS
+filters to.
+
+Diagnosing it needed `?seadebug=1` (or the admin's Presence log switch in the Settings disc),
+because everything about a refused join is invisible: whether a private channel joined is a
+status on a callback, and whether a beat left is nothing at all.
+
 ### And you can watch them fish (2026-09)
 
 A beat carries a POSE as well as a position: `p` is 0/1/2 for the three captain frames
