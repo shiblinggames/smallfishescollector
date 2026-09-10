@@ -76,11 +76,20 @@ export default function HallSheet({ open, onClose }: {
             position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
             maxHeight: 'min(84vh, 100%)', display: 'flex', flexDirection: 'column',
             borderRadius: 20, overflow: 'hidden',
-            // THE HALL'S OWN PAINTING, which the page had all along — /crew's
-            // entry in ClientBackground. An interior you have sailed to should
-            // look like an interior, and a flat dark panel would make the one
-            // crew room you have to travel for the plainest of the five.
-            background: 'linear-gradient(rgba(6,8,12,0.86) 0%, rgba(4,6,10,0.93) 55%, rgba(3,4,7,0.97) 100%), url(/crew-bg.jpg) center / cover no-repeat',
+            // ── NO PAINTING OF ITS OWN ─────────────────────────────────
+            //
+            // It carried /crew-bg.jpg, on the reasoning that an interior you
+            // sailed to should look like an interior. What it actually did was
+            // read as a MODAL INSIDE A MODAL: this sheet already floats over
+            // the chart, which is a painted sea, so a second painting behind
+            // the panel put two backgrounds between the reader and the content
+            // and made the card look like a window onto another window.
+            //
+            // The sea's own modal language instead, which every other sheet out
+            // here wears: a solid dark base with a warm wash over it. See the
+            // note on opaque panel bases - a card floating on art needs a floor,
+            // and that floor should be flat.
+            background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
             border: '1px solid rgba(196,169,106,0.3)',
             boxShadow: '0 18px 50px rgba(0,0,0,0.65)',
           }}>

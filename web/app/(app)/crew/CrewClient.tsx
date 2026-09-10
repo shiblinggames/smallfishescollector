@@ -1963,7 +1963,12 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
               transition={pop?.what === 'hall'
                 ? { duration: 0.66, times: [0, 0.66, 1], ease: 'easeOut' }
                 : { duration: 0.25 }}
-              style={{ width: 176, height: 176, objectFit: 'contain', filter: `drop-shadow(0 6px 18px ${hall.accent}66)` }}
+              // 116, DOWN FROM 176. The building was taking a third of the
+              // sheet before a single word of what it does, which is a lot of
+              // room for a picture that says the same thing the name, the pips
+              // and the border already say. The plates are 200px native, so
+              // this is still drawn under its own resolution.
+              style={{ width: 116, height: 116, objectFit: 'contain', filter: `drop-shadow(0 5px 14px ${hall.accent}66)` }}
               onError={e => {
                 const img = e.target as HTMLImageElement
                 if (img.dataset.fellBack) { img.style.visibility = 'hidden'; return }
