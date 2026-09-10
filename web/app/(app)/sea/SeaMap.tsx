@@ -10443,6 +10443,55 @@ function Layer({ frame, src, at, hiddenOn, origin, className, style }: {
  * No counter-squash. The wrapper that carries it is the screen-layer boat node,
  * which was never on the tilted ground plane in the first place.
  */
+/**
+ * ── WHAT SHE THROWS BACK ────────────────────────────────────────────────────
+ *
+ * The rocks reflect, the islands reflect, the fishing boat reflects (see
+ * seaCaptain's mirrorBox, whose numbers these are), and the warship never did,
+ * at the helm or at the berth. A hull on water that reflects everything except
+ * hulls is the thing the eye catches without naming: it reads as a sticker.
+ *
+ * The same picture again, under her. One more <img> sharing the file already
+ * decoded for the hull, flipped about HER waterline rather than about the box:
+ * the transform origin is the keel row measured on the art, so the row where
+ * she meets the water stays where it is and everything above it lands below,
+ * compressed to a little over half its height because a reflection lies IN
+ * the plane while the ship stands up out of it. Sunk a few percent so a hull
+ * whose paint runs a touch past the water never shows a seam.
+ *
+ * Faint, and fainter with depth: the masts and rigging are the furthest from
+ * the surface and give back the least, which is what the mask says. Masked
+ * in the image's own space, before the flip, so "past the keel" is simply
+ * "past the keel".
+ *
+ * It is drawn AFTER the hull. The hull's drop shadow is cast ON the water and
+ * the reflection is IN it, so the reflection paints over the shadow, and the
+ * two never overlap the hull itself because the mirror starts at the keel.
+ */
+const MIRROR_ALPHA = 0.26
+const MIRROR_LIE = 0.55
+const MIRROR_SINK = 0.04
+
+const WarshipMirror = memo(function WarshipMirror({ src, tier }: { src: string; tier: number }) {
+  const { keel } = shipSeat(tier)
+  const k = keel * 100
+  const mask = `linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) ${(k - 32).toFixed(1)}%, black ${k.toFixed(1)}%, transparent ${(k + 0.6).toFixed(1)}%)`
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img aria-hidden src={src} alt="" draggable={false} decoding="async"
+      width={640} height={640}
+      style={{
+        position: 'absolute', left: 0, top: 0, width: '100%', display: 'block',
+        pointerEvents: 'none', opacity: MIRROR_ALPHA,
+        transformOrigin: `50% ${k.toFixed(1)}%`,
+        transform: `translateY(${MIRROR_SINK * 100}%) scaleX(${getShip(tier).seaFlip ? -1 : 1}) scaleY(${-MIRROR_LIE})`,
+        WebkitMaskImage: mask, maskImage: mask,
+        // Water does not hold an edge.
+        filter: 'blur(0.7px)',
+      }} />
+  )
+})
+
 const Warship = memo(function Warship({ tier, skin }: { tier: number; skin: string | null }) {
   const hull = getShip(tier)
   const hullArt = shipSkinSeaImage(skin, tier, hull.seaImageUrl ?? '')
@@ -10458,18 +10507,20 @@ const Warship = memo(function Warship({ tier, skin }: { tier: number; skin: stri
       // horizontally 50.0% on every hull, vertically 47-53%. The node above
       // already centres the box, so correcting again would push the ship half
       // its own width off the point the camera is following.
-      filter: 'drop-shadow(0 14px 22px rgba(0,0,0,0.6))',
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={hullArt} alt="" draggable={false}
         width={640} height={640} decoding="async"
         style={{
           width: '100%', display: 'block',
+          // On the hull and not the box, so the reflection below casts none.
+          filter: 'drop-shadow(0 14px 22px rgba(0,0,0,0.6))',
           // Into the chart's bow-left convention. Composes with the loop's own
           // scaleX(facing) multiplicatively, so neither needs to know about
           // the other.
           ...(hull.seaFlip ? { transform: 'scaleX(-1)' } : null),
         }} />
+      <WarshipMirror src={hullArt} tier={tier} />
     </div>
   )
 })
@@ -11753,6 +11804,7 @@ const SHIP_BERTH_OFF = { dx: 300, dy: -320 }
 const ShipAtBerth = memo(function ShipAtBerth({ shipTier, skin }: { shipTier: number; skin: string | null }) {
   const b = { x: GUNWHARF.x + SHIP_BERTH_OFF.dx, y: GUNWHARF.y + SHIP_BERTH_OFF.dy }
   const seat = shipSeat(shipTier)
+  const art = shipSkinSeaImage(skin, shipTier, getShip(shipTier).seaImageUrl ?? '')
   // Phased off her position like every hull holding station on this chart,
   // so she and whatever else is riding nearby are never rising together.
   const phase = ((Math.abs(b.x) + Math.abs(b.y)) % 1000) / 1000
@@ -11783,14 +11835,18 @@ const ShipAtBerth = memo(function ShipAtBerth({ shipTier, skin }: { shipTier: nu
             she wears the same one, on her own wrapper because the outer node's
             transform is the counter-squash and the image's is the mirror. */}
         <div className="sea-berth-bob" style={{ animationDelay: `${(-phase * 5.5).toFixed(2)}s` }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={shipSkinSeaImage(skin, shipTier, getShip(shipTier).seaImageUrl ?? '')} alt="" draggable={false} decoding="async"
-            width={640} height={640} style={{
-              width: WARSHIP_W * shipSkinSeaScale(skin, shipTier), height: 'auto', display: 'block',
-              filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
-              // The berth shows her exactly as the helm will.
-              ...(getShip(shipTier).seaFlip ? { transform: 'scaleX(-1)' } : null),
-            }} />
+          <div style={{ position: 'relative', width: WARSHIP_W * shipSkinSeaScale(skin, shipTier) }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={art} alt="" draggable={false} decoding="async"
+              width={640} height={640} style={{
+                width: '100%', height: 'auto', display: 'block',
+                filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
+                // The berth shows her exactly as the helm will.
+                ...(getShip(shipTier).seaFlip ? { transform: 'scaleX(-1)' } : null),
+              }} />
+            {/* And she is in the water here the same way she is at the helm. */}
+            <WarshipMirror src={art} tier={shipTier} />
+          </div>
         </div>
       </div>
     </>

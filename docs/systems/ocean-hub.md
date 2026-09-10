@@ -1550,6 +1550,12 @@ stay so. On top she rides the bays' `encBob` on her own wrapper (`.sea-berth-bob
 her position. The `?gpu=0` fallback draws the helm's DOM `.sea-heave-trough` at her keel
 instead. Anything that moves `SHIP_BERTH_OFF` moves all of it.
 
+**And she has a reflection**, at the helm and at the berth alike: `WarshipMirror` in SeaMap, a
+second `<img>` of the same file flipped about the keel row (`seaKeel`) at the skiff's numbers
+(alpha 0.26, kept at 0.55 of its height, sunk 4%), masked to fade with depth, drawn after the
+hull so it lies over the drop shadow. The Warship and ShipAtBerth both render it; a hull
+drawn anywhere else without it will read as a sticker next to them.
+
 ### Sizing it
 
 Any change to `EXP_EDGE` has to clear the Crew Hall, whose shore reaches 2,124 from the
