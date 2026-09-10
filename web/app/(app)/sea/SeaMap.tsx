@@ -380,7 +380,21 @@ const GoldenChoice = dynamic(() => import('@/components/GoldenChoice'), { ssr: f
 // to print "10.0 m/s" on a tile; when they lived in this file it was doing that
 // against numbers it could not see, so the yard could have advertised a speed
 // the sea does not sail at and nothing would ever have disagreed out loud.
+/** A PERSON, not a place. The compass, the crew disc and anything else that
+ *  marks somebody you are actually sailing with share this one green so the
+ *  connection reads as one thing across the chart. */
+const CREW_GREEN = 'rgba(143,214,196,0.95)'
 const SPEED = BASE_SPEED_PX
+/**
+ * THE FASTEST A HULL CAN BE GOING, in world px per MILLISECOND, with room over
+ * the top for every boost in the game.
+ *
+ * Only the friend extrapolation uses it, and only as a sanity rail: two beats
+ * that imply a boat doing ten times the speed of light are two beats that do
+ * not belong together, and believing them is how a sprite ends up over the
+ * horizon. See the loop.
+ */
+const MAX_BEAT_SPEED = (SPEED * 2.5) / 1000
 /** Low is heavy. A boat should take a moment to get going. */
 const ACCEL = BASE_ACCEL
 
@@ -4402,6 +4416,11 @@ export default function SeaMap({
    * cadence every other social surface in the game runs at.
    */
   const [pendingAsk, setPendingAsk] = useState(0)
+  /** SOMEBODY IS ACTUALLY ON THE WIRE. True while a beat has landed inside the
+   *  last few seconds, which is the only honest definition: the pact, the
+   *  membership and the poll can all be in order while the socket is refused,
+   *  and that is exactly the state that cost an afternoon to find. */
+  const [linked, setLinked] = useState(false)
   /** Push my own position NOW. Owned by the flush effect below; the poll calls
    *  it when the tab comes back, because a friend's chart cannot show me where
    *  I am until I have told the server. */
@@ -6093,6 +6112,20 @@ export default function SeaMap({
         if (Math.hypot(at.target.x - me.x, at.target.y - me.y) < NEAR_ENOUGH) { near = true; break }
       }
       closeRef.current = near
+      // ── AND WHETHER ANYBODY IS ACTUALLY THERE ─────────────────────
+      //
+      // Off the freshest beat rather than off `near`: being close to somebody
+      // is geometry, and being CONNECTED to them is a message having arrived.
+      // Six seconds is a dozen missed beats, long enough to ride out a stall
+      // and short enough that the light goes out when they do.
+      //
+      // setState only on the flip, so this costs nothing on the 2Hz tick it
+      // rides on.
+      let live = false
+      for (const at of friendAt.current.values()) {
+        if (at.live && Date.now() - at.live < 6_000) { live = true; break }
+      }
+      setLinked(was => (was === live ? was : live))
 
       if (!near) return
       // A tab nobody is looking at is a boat nobody is steering.
@@ -7277,15 +7310,37 @@ export default function SeaMap({
           // sailing on forever — and the cap is measured in THEIR gap, not a
           // constant, so it is right whether beats are arriving every half
           // second or every three.
-          const gap = at.prevT && at.tgtT > at.prevT
-            ? Math.min(1500, at.tgtT - at.prevT)
-            : 0
+          // ── AND THE PAIR HAS TO BE WORTH READING ────────────────────
+          //
+          // This CLAMPED the gap and kept the delta, which is the one way to
+          // turn two honest samples into a lie. Beats stop the moment somebody
+          // sails out of range, so the next pair can straddle twenty seconds of
+          // sailing — and dividing that distance by a gap pinned to 1.5s gave a
+          // velocity ten times anything a boat can do. Run forward for a beat
+          // and a half, that put the aim thousands of pixels away, which tripped
+          // the long-way-off snap below and TELEPORTED the hull off the chart.
+          // Reported as "their entire ship just disappears", and it is: it is
+          // over the horizon.
+          //
+          // So a stale pair is not a slow boat, it is no information. Discard
+          // it. And even a fresh pair is clamped to a speed a hull can actually
+          // make, because the cost of being wrong here is a ship vanishing and
+          // the cost of being cautious is that a boost looks a touch slow for
+          // half a second.
+          const span = at.prevT > 0 ? at.tgtT - at.prevT : 0
           let aimX = at.target.x
           let aimY = at.target.y
-          if (gap > 0) {
-            const age = Math.min(now - at.tgtT, gap * 1.4)
-            aimX += ((at.target.x - at.prev.x) / gap) * age
-            aimY += ((at.target.y - at.prev.y) / gap) * age
+          if (span > 0 && span <= 1200) {
+            let vx = (at.target.x - at.prev.x) / span
+            let vy = (at.target.y - at.prev.y) / span
+            const sp = Math.hypot(vx, vy)
+            if (sp > MAX_BEAT_SPEED) {
+              const k = MAX_BEAT_SPEED / sp
+              vx *= k; vy *= k
+            }
+            const age = Math.min(now - at.tgtT, span * 1.4)
+            aimX += vx * age
+            aimY += vy * age
           }
           const dxf = aimX - at.shown.x
           const dyf = aimY - at.shown.y
@@ -7338,7 +7393,7 @@ export default function SeaMap({
             const bobF = swellAt(at.shown.x, at.shown.y, now / 1000) * at.lift
             hull.style.transform =
               `translate(-50%, -50%) scaleY(${1 / GROUND}) scaleX(${at.face}) translateY(${bobF}px)`
-              + ` rotate(${(swellHeel(at.shown.x, at.shown.y, now / 1000) * at.face).toFixed(2)}deg)`
+              + ` rotate(${(swellHeel(at.shown.x, at.shown.y, now / 1000) * at.lift * at.face).toFixed(2)}deg)`
           }
         }
       }
@@ -7913,7 +7968,15 @@ export default function SeaMap({
         // Eased on the same lag as the heave, and for the same reason: a hull
         // rolls with its own weight behind it rather than tracking every slope
         // the surface presents.
-        rollRef.current += (swellHeel(pos.current.x, pos.current.y, t) - rollRef.current)
+        // ── AND SHE ROLLS LIKE HER OWN TONNAGE ────────────────────────
+        //
+        // The surface's slope is the surface's slope, but what a hull DOES
+        // about it is a question of how much hull there is. This took the full
+        // five degrees on every boat on the ladder, so a Man-o-War rocked
+        // through the same arc as the rowboat she replaced and read as a flat
+        // paper cut-out being waggled. Same divisor as the bob and the drive
+        // heel — see shipLift — so all three halves of how she rides agree.
+        rollRef.current += (swellHeel(pos.current.x, pos.current.y, t) * hullRef.current.lift - rollRef.current)
           * (1 - Math.exp(-dt / 0.32))
         const roll = rollRef.current
 
@@ -10226,7 +10289,7 @@ hullRef={hullRefFor(t.key)} />
           re-read whenever the panel closes. */}
       {!hudOff && (
         <SeaCrew size={hudSize} top={18} right={12 + hudSize + 8}
-          count={pendingAsk} onOpen={() => setCrewOpen(true)} />
+          count={pendingAsk} linked={linked} onOpen={() => setCrewOpen(true)} />
       )}
       {!hudOff && <SeaSettings size={hudSize} top={18} isAdmin={isAdmin} />}
 
@@ -15019,6 +15082,10 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
     marks.push({
       id: `friend:${f.username}`, name: f.username, dim: false, dist: true,
       sx: at.sx, sy: at.sy, world: at.world,
+      // GREEN, because a person is not a place. Everything else on this
+      // compass is somewhere to go and shares one colour; a name in that
+      // column reads as another island until it is told apart.
+      accent: CREW_GREEN,
     })
   }
 

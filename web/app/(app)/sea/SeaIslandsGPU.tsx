@@ -1949,7 +1949,9 @@ export default function SeaIslandsGPU({
             // facing correction, unlike the DOM's transform where the mirror is
             // the outer one. Same field, so a crest rolls a group of them in
             // turn rather than all at once.
-            const roll = swellHeel(e.x, e.y, ts)
+            // Their tonnage decides how far the same slope tips them, exactly
+            // as it decides how far it lifts them. See shipLift in SeaMap.
+            const roll = swellHeel(e.x, e.y, ts) * (e.lift ?? 1)
             c.holder.rotation = (roll * Math.PI) / 180
             // Their twins too. A bay full of moored hulls all reflecting the
             // wrong way is the same mistake made forty times.

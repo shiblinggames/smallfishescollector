@@ -35,8 +35,10 @@ const SEA = 'rgba(180,214,232'
  *  side by side lighting up in the same colour read as one alert with two
  *  halves rather than as two different things wanting different answers. */
 const ASK = 'rgba(143,214,196'
+/** Somebody is on the wire right now. */
+const LIVE = 'rgba(110,224,150'
 
-export default function SeaCrew({ size, top, right, count, onOpen }: {
+export default function SeaCrew({ size, top, right, count, linked = false, onOpen }: {
   size: number
   top: number
   /** Where its right edge sits. The caller lays the run out from the corner
@@ -44,9 +46,23 @@ export default function SeaCrew({ size, top, right, count, onOpen }: {
   right: number
   /** How many captains have asked to sail with you and are still waiting. */
   count: number
+  /** A beat has landed in the last few seconds: you are genuinely on the wire
+   *  with somebody, as opposed to merely being near them. */
+  linked?: boolean
   onOpen: () => void
 }) {
   const waiting = count > 0
+  // ── THE LIGHT ─────────────────────────────────────────────────────────
+  //
+  // Green means a live connection, and nothing else on this disc means that.
+  // A pact can be signed, both memberships can be in order and the poll can be
+  // returning somebody while the socket itself is refused — that state looked
+  // identical to a working one for the whole life of the feature, and this is
+  // the light that would have said so in a second.
+  //
+  // An ASK still wins the colour. Somebody waiting on an answer is a thing to
+  // do; a connection is a thing that is fine.
+  const tone = waiting ? ASK : linked ? LIVE : null
   return (
     <div data-no-steer
       onPointerDown={e => e.stopPropagation()}
@@ -54,6 +70,7 @@ export default function SeaCrew({ size, top, right, count, onOpen }: {
       <button type="button"
         aria-label={waiting
           ? `Your crew, ${count} asking to sail with you`
+          : linked ? 'Your crew, sailing with somebody now'
           : 'Your crew'}
         title="Your crew"
         onClick={() => { vibrate(8); onOpen() }}
@@ -61,11 +78,20 @@ export default function SeaCrew({ size, top, right, count, onOpen }: {
           position: 'relative',
           width: size, height: size, borderRadius: '50%', padding: 0, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: waiting ? 'rgba(14,34,30,0.86)' : 'rgba(8,16,24,0.72)',
-          border: `1px solid ${waiting ? `${ASK},0.55)` : `${SEA},0.22)`}`,
-          color: waiting ? `${ASK},0.95)` : `${SEA},0.72)`,
+          background: tone ? 'rgba(14,34,30,0.86)' : 'rgba(8,16,24,0.72)',
+          border: `1px solid ${tone ? `${tone},0.55)` : `${SEA},0.22)`}`,
+          color: tone ? `${tone},0.95)` : `${SEA},0.72)`,
           backdropFilter: 'blur(2px)',
         }}>
+        {/* A LIVE LINK IS STEADY. The ask below pulses because it wants an
+            answer; a connection wants nothing, so it is a ring that simply is.
+            Two things breathing on one disc is a disc nobody can read. */}
+        {!waiting && linked && (
+          <span aria-hidden style={{
+            position: 'absolute', inset: -2, borderRadius: '50%',
+            border: `1px solid ${LIVE},0.5)`, pointerEvents: 'none',
+          }} />
+        )}
         {/* THE PULSE, on the ring only — the same treatment the haul uses, for
             the same reason: the icon inside stays legible and the disc never
             changes size and shoves the gear about. Transform and opacity, so
