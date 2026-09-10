@@ -74,6 +74,23 @@ export type Beat = {
    * — no second animation, no stand-in pose, nothing to keep in step.
    */
   p?: Pose
+  /**
+   * WHEN THE SENDER SAMPLED IT, off their own wall clock.
+   *
+   * Their clock is not ours and we do not care: only the DIFFERENCE between
+   * two of their stamps is ever used, and any fixed offset between the two
+   * machines cancels out of a subtraction.
+   *
+   * It exists because deriving a speed from ARRIVAL times is deriving it from
+   * network jitter. The distance between two beats is clean — it is however
+   * far the boat actually sailed between two samples — but the gap between
+   * their arrivals is that interval plus whatever the wire did, which on a
+   * phone is tens of milliseconds either way. Dividing a clean number by a
+   * noisy one gives a noisy speed, and a noisy speed makes the extrapolated
+   * aim jump at every beat. That is the jank: the socket is healthy, the
+   * positions are right, and the SPEED is being measured with a rubber ruler.
+   */
+  t?: number
 }
 
 /** rest / wait / cast, as they go over the wire. */
@@ -355,10 +372,13 @@ export function openSeaPresence(opts: {
       // clamped to the three frames that exist rather than trusted. Anything
       // else reads as idle.
       const p: Pose = b.p === 1 ? 1 : b.p === 2 ? 2 : 0
+      // Their stamp, or nothing. An older client sends no `t` and the reader
+      // falls back to arrival times, which is what it did before this.
+      const st = Number(b.t)
       log('beat IN from', id.slice(0, 8), x, y, 'pose', p)
       presenceStats.in++
       presenceStats.lastIn[id] = Date.now()
-      opts.onBeat(id, { x, y, f: b.f === -1 ? -1 : 1, p })
+      opts.onBeat(id, { x, y, f: b.f === -1 ? -1 : 1, p, t: Number.isFinite(st) ? st : undefined })
     })
     ch.on('broadcast', { event: 'fish' }, msg => {
       const m = msg.payload as { perfect?: unknown } | null
@@ -427,7 +447,10 @@ export function openSeaPresence(opts: {
       presenceStats.out++
       presenceStats.blocked = ''
       log('beat OUT', b.x, b.y, 'pose', posed)
-      void mine.send({ type: 'broadcast', event: 'pos', payload: b })
+      // STAMPED AT THE MOMENT IT LEAVES, so the far end can measure how long
+      // the boat actually took to cover the ground rather than how long the
+      // network took to say so.
+      void mine.send({ type: 'broadcast', event: 'pos', payload: { ...b, t: Date.now() } })
     },
 
     landed(perfect: boolean) {

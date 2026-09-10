@@ -4183,6 +4183,13 @@ export default function SeaMap({
      *  a velocity, and a velocity is the difference between a boat sailing and
      *  a boat being dragged toward a point twice a second. See the loop. */
     prev: Vec; prevT: number; tgtT: number
+    /** Their own stamp on the last beat, for measuring how long the boat took
+     *  rather than how long the wire took. */
+    srcT: number
+    /** World px per millisecond, smoothed across beats. This is the number the
+     *  loop extrapolates with; it is worked out once when a beat lands rather
+     *  than sixty times a second from a pair that has not changed. */
+    vx: number; vy: number
     /** Whatever the loop last worked out, for the readout. Written every frame
      *  and read only while debugging — see SeaDebugPanel. */
     dbgSpan: number; dbgSpeed: number
@@ -5942,7 +5949,7 @@ export default function SeaMap({
    * loop already reads, so a live position and a polled one are the same kind
    * of fact and nothing downstream can tell them apart.
    */
-  const onBeat = useCallback((id: string, b: { x: number; y: number; f: number; p?: 0 | 1 | 2 }) => {
+  const onBeat = useCallback((id: string, b: { x: number; y: number; f: number; p?: 0 | 1 | 2; t?: number }) => {
     const name = crewNames.current.get(id)
     if (!name) return
     const at = friendAt.current.get(name)
@@ -5952,6 +5959,42 @@ export default function SeaMap({
     // there is only ever a point to be pulled toward, and being pulled toward
     // a point that jumps twice a second is what makes a boat surge.
     const nowMs = Date.now()
+    // ── HOW FAST THEY ARE ACTUALLY GOING ───────────────────────────────
+    //
+    // Measured across the SENDER'S OWN stamps. Their clock is not ours and it
+    // does not need to be: only the difference between two of their stamps is
+    // ever used, so any offset between the two machines cancels.
+    //
+    // What that buys is a speed that does not carry the network's jitter. The
+    // DISTANCE between two beats is clean — it is however far the boat really
+    // sailed between two samples — but the gap between their ARRIVALS is that
+    // interval plus whatever the wire did, which on a phone is tens of
+    // milliseconds either way. Dividing a clean number by a noisy one gives a
+    // noisy speed, the extrapolated aim jumps at every beat, and that is the
+    // jank: the socket healthy, the positions right, and the speed measured
+    // with a rubber ruler.
+    //
+    // Falls back to arrival times when a beat carries no stamp, which is what
+    // this did before and what an older client still produces.
+    const srcSpan = b.t != null && at.srcT > 0 ? b.t - at.srcT : 0
+    const arrSpan = at.tgtT > 0 ? nowMs - at.tgtT : 0
+    const span = srcSpan > 0 ? srcSpan : arrSpan
+    if (span > 0 && span <= 1200) {
+      const rx = (b.x - at.target.x) / span
+      const ry = (b.y - at.target.y) / span
+      const sp = Math.hypot(rx, ry)
+      const k = sp > MAX_BEAT_SPEED ? MAX_BEAT_SPEED / sp : 1
+      // SMOOTHED, not replaced. One stretched gap should bend the estimate,
+      // not become it: a single late packet would otherwise halve the speed
+      // for a beat and the hull would visibly hesitate.
+      const a = (at.vx || at.vy) ? 0.45 : 1
+      at.vx += (rx * k - at.vx) * a
+      at.vy += (ry * k - at.vy) * a
+    } else if (span > 1200) {
+      // They were away. Whatever they were doing before this is not news.
+      at.vx = 0; at.vy = 0
+    }
+    at.srcT = b.t ?? 0
     at.prev.x = at.target.x
     at.prev.y = at.target.y
     at.prevT = at.tgtT
@@ -6050,7 +6093,8 @@ export default function SeaMap({
           // a real beat gives them a direction again.
           had.target.x = f.x; had.target.y = f.y
           had.prev.x = f.x; had.prev.y = f.y
-          had.prevT = 0; had.tgtT = 0
+          had.prevT = 0; had.tgtT = 0; had.srcT = 0
+          had.vx = 0; had.vy = 0
         }
         // How heavily she rides, whichever boat she is in today.
         had.lift = f.onShip ? shipLift(f.shipTier) : 1
@@ -6058,7 +6102,8 @@ export default function SeaMap({
       else friendAt.current.set(f.username, {
         shown: { x: f.x, y: f.y }, target: { x: f.x, y: f.y }, face: 1, live: 0,
         // No velocity yet: one sample is a position, not a motion.
-        prev: { x: f.x, y: f.y }, prevT: 0, tgtT: 0, dbgSpan: 0, dbgSpeed: 0,
+        prev: { x: f.x, y: f.y }, prevT: 0, tgtT: 0, srcT: 0, vx: 0, vy: 0,
+        dbgSpan: 0, dbgSpeed: 0,
         lift: f.onShip ? shipLift(f.shipTier) : 1,
         // Nobody is fishing until they say so. A friend found by the poll is a
         // position and nothing else.
@@ -7357,25 +7402,15 @@ export default function SeaMap({
           // make, because the cost of being wrong here is a ship vanishing and
           // the cost of being cautious is that a boost looks a touch slow for
           // half a second.
-          const span = at.prevT > 0 ? at.tgtT - at.prevT : 0
-          let aimX = at.target.x
-          let aimY = at.target.y
-          if (span > 0 && span <= 1200) {
-            let vx = (at.target.x - at.prev.x) / span
-            let vy = (at.target.y - at.prev.y) / span
-            const sp = Math.hypot(vx, vy)
-            if (sp > MAX_BEAT_SPEED) {
-              const k = MAX_BEAT_SPEED / sp
-              vx *= k; vy *= k
-            }
-            const age = Math.min(nowMs - at.tgtT, span * 1.4)
-            aimX += vx * age
-            aimY += vy * age
-            at.dbgSpeed = Math.hypot(vx, vy) * 1000
-          } else {
-            at.dbgSpeed = 0
-          }
-          at.dbgSpan = span
+          // The speed is settled when a beat lands — see onBeat. All this has
+          // to do is run it forward from the last one, capped so a hull that
+          // stops, turns or goes quiet coasts to a halt rather than sailing on
+          // for ever.
+          const age = Math.min(nowMs - at.tgtT, 900)
+          const aimX = at.target.x + at.vx * age
+          const aimY = at.target.y + at.vy * age
+          at.dbgSpeed = Math.hypot(at.vx, at.vy) * 1000
+          at.dbgSpan = at.prevT > 0 ? at.tgtT - at.prevT : 0
           const dxf = aimX - at.shown.x
           const dyf = aimY - at.shown.y
           // A LONG WAY OFF IS NOT A JOURNEY. Somebody who has just come back
