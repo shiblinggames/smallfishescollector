@@ -50,7 +50,7 @@ import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
-import RoomCard, { FaceRow, Rotator } from '@/components/RoomCard'
+import RoomCard, { AssignLoop, CrewFan, CrewWedge, Showcase } from '@/components/RoomCard'
 import { vibrate } from '@/lib/haptics'
 import { crewHub, type CrewHubState, type HubCrew } from './crewHubActions'
 import { getCrewState } from '@/app/(app)/crew/actions'
@@ -253,37 +253,38 @@ export default function CrewHub({
   }
 
   function doorArt(id: Section) {
+    if (!hall) return null
     if (id === 'assign') {
-      if (!hall) return null
-      // The assignment board in miniature: who is on the bench, and how many
-      // places are still open. Shrunk when the hull seats more than four, so a
-      // Man-o-War's six still fit a phone.
-      const size = seats > 4 ? 40 : 50
-      return <FaceRow size={size}
-        srcs={seated.slice(0, 6).map(c => artSrc(c.filename))}
-        rings={seated.slice(0, 6).map(c => ring(c.rarity))}
-        empty={Math.max(0, Math.min(seats, 6) - seated.length)} />
+      // THE VERB, not the noun. Benches along the bottom with the hands you
+      // have seated on them, and above the first empty one a hand coming down
+      // into it, over and over, out of the ones sitting idle.
+      const idle = hall.roster.filter(c => c.raidSlot === null && c.voyageSlot === null)
+      return <AssignLoop seats={seats}
+        seated={seated.map(c => artSrc(c.filename))}
+        idle={idle.map(c => artSrc(c.filename))} />
     }
     if (id === 'recruits') {
-      if (!hall || hall.board.length === 0) return null
-      // TODAY'S FACES, and the ones already signed on greyed out -- which is
-      // the whole of what "board taken for today" means, said in pictures.
-      return <FaceRow size={54}
+      if (hall.board.length === 0) return null
+      // Today's faces fanned like a hand dealt, the ones already signed on
+      // greyed and dropped back -- which is what "board taken for today" means,
+      // said in pictures.
+      return <CrewFan
         srcs={hall.board.map(b => artSrc(b.filename))}
-        rings={hall.board.map(b => ring(b.rarity))}
-        dims={hall.board.map(b => b.recruited)} />
+        dims={hall.board.map(b => b.recruited)}
+        tints={hall.board.map(b => ring(b.rarity))} />
     }
     if (id === 'roster') {
-      if (!hall || hall.roster.length === 0) return null
-      return <Rotator size={96} srcs={hall.roster.map(c => artSrc(c.filename))} />
+      if (hall.roster.length === 0) return null
+      return <CrewWedge
+        srcs={hall.roster.map(c => artSrc(c.filename))}
+        tints={hall.roster.map(c => ring(c.rarity))} />
     }
-    // The coats you own, turning over. With none, three off the rack, greyed:
-    // an empty trunk that shows nothing says the room is broken rather than
+    // The coats you own, on a turntable. With none, the rack itself behind the
+    // glass: an empty trunk that shows nothing reads as broken rather than
     // empty.
-    if (!hall) return null
     return ownedSkins.length > 0
-      ? <Rotator size={96} srcs={ownedSkins.map(k => artSrc(k.filename))} />
-      : <FaceRow size={48} dim srcs={CREW_SKINS.slice(0, 3).map(k => artSrc(k.filename))} />
+      ? <Showcase srcs={ownedSkins.map(k => artSrc(k.filename))} />
+      : <Showcase srcs={CREW_SKINS.slice(0, 4).map(k => artSrc(k.filename))} />
   }
 
   const back = useCallback(() => { vibrate(8); setSection(null) }, [])

@@ -107,52 +107,281 @@ export default function RoomCard({
 }
 
 /**
- * A ROW OF FACES, AND THE SEATS NOBODY IS IN.
+ * ── A BUST, WHICH IS NOT A PROFILE PICTURE ──────────────────────────────────
  *
- * The assignment board in miniature: who is sitting there, and how many places
- * are still open. An empty seat drawn as an empty seat is the whole reason this
- * is better than a painting of a deck -- the door itself says you have three
- * benches going to waste.
+ * Every crew on these doors used to be a circle with a coloured ring, four of
+ * them in a row. That is the avatar idiom off a settings screen, and a row of
+ * them is a contact list: it makes a legendary painting into a 44px badge and
+ * repeating it four times makes the panel look assembled rather than drawn.
+ *
+ * A bust instead. The art at the size it was painted for, cropped tall, and
+ * faded out at the bottom rather than cut -- so it is a figure standing in the
+ * card's own dark, with no frame, no ring, and no edge where the picture stops.
+ * Everything on these doors is built from this one shape.
  */
-export function FaceRow({ srcs, empty = 0, size = 44, dim = false, dims, rings }: {
-  srcs: string[]
-  /** Seats with nobody in them, drawn after the faces. */
-  empty?: number
-  size?: number
-  /** Greyed, all of them. */
-  dim?: boolean
-  /** Greyed, one by one: a recruit board with one hand already signed on has
-   *  to say which one is gone. */
-  dims?: boolean[]
-  /** Per-face ring colours, e.g. rarity. Falls back to a neutral gold. */
-  rings?: string[]
+function Bust({ src, w, h, dim = false, opacity = 1, round = 10 }: {
+  src: string; w: number; h: number; dim?: boolean; opacity?: number; round?: number
 }) {
-  const overlap = Math.round(size * 0.22)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingLeft: overlap }}>
-      {srcs.map((src, i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={`${src}-${i}`} src={src} alt="" aria-hidden loading="lazy" decoding="async"
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" aria-hidden loading="lazy" decoding="async"
+      style={{
+        display: 'block', width: w, height: h, opacity,
+        objectFit: 'cover', objectPosition: 'top center',
+        borderTopLeftRadius: round, borderTopRightRadius: round,
+        // THE BOTTOM DOES NOT END, IT LEAVES. A hard edge under a figure is a
+        // sticker; this is the same fade the chart's reflections use.
+        WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 62%, rgba(0,0,0,0.35) 86%, transparent 100%)',
+        maskImage: 'linear-gradient(to bottom, #000 0%, #000 62%, rgba(0,0,0,0.35) 86%, transparent 100%)',
+        filter: dim
+          ? 'grayscale(0.85) brightness(0.5) drop-shadow(0 8px 14px rgba(0,0,0,0.7))'
+          : 'drop-shadow(0 10px 18px rgba(0,0,0,0.75))',
+      }} />
+  )
+}
+
+/**
+ * ── THE ROSTER, IN A WEDGE ──────────────────────────────────────────────────
+ *
+ * Three of your own, in the formation a crew actually stands in: one in front
+ * and two half a step back, smaller, dimmer, further into the dark. It reads as
+ * a company rather than a list, and it says "there are more of these" without
+ * drawing a single one of the other fourteen.
+ *
+ * The line moves. All three change together on the turn, so the wedge is a
+ * different three every few seconds and a roster of seventeen gets seen.
+ */
+export function CrewWedge({ srcs, tints, h = 104, every = 3200 }: {
+  srcs: string[]
+  /** Rarity, as LIGHT rather than as a ring: the one in front throws a little
+   *  of their own colour onto the card behind them. A legendary should be
+   *  legible as a legendary without wearing a badge for it. */
+  tints?: string[]
+  h?: number; every?: number
+}) {
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    if (srcs.length < 2) return
+    const t = setInterval(() => setI(n => (n + 1) % srcs.length), every)
+    return () => clearInterval(t)
+  }, [srcs.length, every])
+  if (srcs.length === 0) return null
+
+  const w = Math.round(h * 0.74)
+  const idx = (k: number) => ((i + k) % srcs.length + srcs.length) % srcs.length
+  const at = (k: number) => srcs[idx(k)]
+  const frontTint = tints?.[idx(0)]
+  // WHO IS EVEN THERE. Two hands make a pair, not a wedge, and one makes a
+  // portrait -- so the flanks only appear when there is somebody to put in
+  // them, rather than the same face being drawn three times.
+  const wings = srcs.length >= 3 ? [-1, 1] : srcs.length === 2 ? [1] : []
+
+  return (
+    <div style={{ position: 'relative', width: w * 2.1, height: h + 10 }}>
+      {frontTint && (
+        <motion.span aria-hidden key={frontTint + idx(0)}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
           style={{
-            width: size, height: size, borderRadius: '50%', marginLeft: -overlap,
-            objectFit: 'cover', objectPosition: 'top center', flexShrink: 0,
-            // TOP OF THE PLATE, like every other crew circle in the game: these
-            // are full card illustrations and a centred crop is somebody's
-            // chest.
-            border: `2px solid ${rings?.[i] ?? 'rgba(240,192,64,0.75)'}`,
-            background: 'rgba(6,10,16,0.92)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
-            filter: (dim || dims?.[i]) ? 'grayscale(0.75) brightness(0.65)' : undefined,
+            position: 'absolute', left: '50%', bottom: -6, width: w * 1.9, height: h * 0.95,
+            transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 0,
+            background: `radial-gradient(ellipse at 50% 70%, ${frontTint} 0%, rgba(0,0,0,0) 66%)`,
+            opacity: 0.5, filter: 'blur(2px)',
           }} />
+      )}
+      {wings.map(side => (
+        <div key={side} style={{
+          position: 'absolute', left: '50%', bottom: 10, zIndex: 1,
+          transform: `translateX(calc(-50% + ${side * w * 0.58}px)) scale(0.78)`,
+          transformOrigin: 'bottom center',
+        }}>
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div key={at(side)}
+              initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.7, ease: 'easeInOut' }}
+              style={{ position: 'absolute', bottom: 0, left: -w / 2, filter: 'blur(0.6px)' }}>
+              <Bust src={at(side)} w={w} h={h} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
       ))}
-      {Array.from({ length: empty }, (_, i) => (
-        <span key={`e${i}`} aria-hidden style={{
-          width: size, height: size, borderRadius: '50%', marginLeft: -overlap, flexShrink: 0,
-          border: '2px dashed rgba(190,212,228,0.3)',
-          background: 'rgba(8,14,22,0.8)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+      <div style={{ position: 'absolute', left: '50%', bottom: 0, zIndex: 2, transform: 'translateX(-50%)' }}>
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.div key={at(0)}
+            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.6, ease: 'easeInOut' }}
+            style={{ position: 'absolute', bottom: 0, left: -w / 2 }}>
+            <Bust src={at(0)} w={w} h={h} />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * ── THE ASSIGNMENT, HAPPENING ───────────────────────────────────────────────
+ *
+ * Not a picture of a crew: a picture of the VERB. Benches along the bottom, the
+ * ones you have filled with the hand that is in them, and above the first empty
+ * one a hand coming down into it -- over and over, a different hand each time,
+ * out of the ones you have sitting idle.
+ *
+ * It is the only door of the four that is about doing something rather than
+ * having something, and a loop is the shortest way to say so. When every bench
+ * is full the loop stops of its own accord and the wedge of seated crew just
+ * stands there, which is exactly the difference the card is there to show.
+ */
+export function AssignLoop({ seated, idle, seats, h = 100 }: {
+  /** Art for the hands already on the bench, in slot order. */
+  seated: string[]
+  /** Art for hands with nowhere to be. The ones the loop drops in. */
+  idle: string[]
+  /** How many benches this hull has. */
+  seats: number
+  h?: number
+}) {
+  const shown = Math.max(1, Math.min(seats, 5))
+  const open = Math.max(0, shown - seated.length)
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    if (open === 0 || idle.length === 0) return
+    const t = setInterval(() => setTick(n => n + 1), 2600)
+    return () => clearInterval(t)
+  }, [open, idle.length])
+
+  const bw = Math.round(h * 0.42)
+  const bh = Math.round(h * 0.56)
+  const dropping = open > 0 && idle.length > 0 ? idle[tick % idle.length] : null
+
+  return (
+    <div style={{ position: 'relative', height: h, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 6 }}>
+      {Array.from({ length: shown }, (_, k) => {
+        const who = seated[k]
+        const isTarget = !who && k === seated.length
+        return (
+          <div key={k} style={{
+            position: 'relative', width: bw, height: bh, borderRadius: 9,
+            // A BENCH, not a slot in a form. Lit from above, sunk into the
+            // card, and dashed only while nobody is on it.
+            background: who
+              ? 'linear-gradient(180deg, rgba(126,214,196,0.14) 0%, rgba(8,14,22,0.9) 100%)'
+              : 'rgba(8,14,22,0.75)',
+            border: `1px ${who ? 'solid rgba(126,214,196,0.45)' : 'dashed rgba(190,212,228,0.26)'}`,
+            boxShadow: who ? '0 4px 14px rgba(0,0,0,0.5)' : 'inset 0 3px 10px rgba(0,0,0,0.55)',
+            overflow: 'visible',
+          }}>
+            {who && (
+              <div style={{ position: 'absolute', left: '50%', bottom: 0, transform: 'translateX(-50%)' }}>
+                <Bust src={who} w={bw} h={Math.round(bh * 1.5)} round={8} />
+              </div>
+            )}
+            {/* THE ONE COMING DOWN. Keyed on the tick so each pass is a new
+                face falling in, and it lands with a settle rather than a stop
+                -- somebody sitting down, not a tile snapping to a grid. */}
+            {isTarget && dropping && (
+              <AnimatePresence mode="wait">
+                <motion.div key={tick}
+                  initial={{ opacity: 0, y: -Math.round(h * 0.5) }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ type: 'spring', stiffness: 210, damping: 17, opacity: { duration: 0.3 } }}
+                  style={{ position: 'absolute', left: '50%', bottom: 0, transform: 'translateX(-50%)' }}>
+                  <Bust src={dropping} w={bw} h={Math.round(bh * 1.5)} round={8} />
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * ── THE BOARD, AS A HAND DEALT ──────────────────────────────────────────────
+ *
+ * Today's faces fanned like cards on a table, because that is what a recruit
+ * board is: three of them, pick one. The middle one stands proud and the
+ * outside two lean away, and a hand already signed on goes grey and drops back
+ * into the fan -- taken, still on the board, no longer a choice.
+ */
+export function CrewFan({ srcs, dims, tints, h = 96 }: {
+  srcs: string[]; dims?: boolean[]
+  /** Rarity as light, the same as the wedge. What is on the board tonight is
+   *  most of why you would open the room, and colour says it at a glance. */
+  tints?: string[]
+  h?: number
+}) {
+  if (srcs.length === 0) return null
+  const w = Math.round(h * 0.7)
+  const mid = (srcs.length - 1) / 2
+  return (
+    <div style={{ position: 'relative', width: w * 2.2, height: h + 8 }}>
+      {srcs.map((src, i) => {
+        const off = i - mid
+        const taken = dims?.[i] === true
+        return (
+          <motion.div key={`${src}-${i}`}
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.06 * i, duration: 0.3, ease: 'easeOut' }}
+            style={{
+              position: 'absolute', left: '50%', bottom: taken ? 4 : 0,
+              zIndex: taken ? 1 : 3 - Math.abs(off),
+              transform: `translateX(calc(-50% + ${(off * w * 0.52).toFixed(1)}px)) rotate(${(off * 7).toFixed(1)}deg) scale(${taken ? 0.9 : 1 - Math.abs(off) * 0.06})`,
+              transformOrigin: 'bottom center',
+            }}>
+            {tints?.[i] && !taken && (
+              <span aria-hidden style={{
+                position: 'absolute', left: '50%', bottom: -4, width: w * 1.5, height: h * 0.8,
+                transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: -1,
+                background: `radial-gradient(ellipse at 50% 72%, ${tints[i]} 0%, rgba(0,0,0,0) 68%)`,
+                opacity: 0.42, filter: 'blur(2px)',
+              }} />
+            )}
+            <Bust src={src} w={w} h={h} dim={taken} />
+          </motion.div>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * ── ONE COAT, ON A TURNTABLE ────────────────────────────────────────────────
+ *
+ * A wardrobe is not a crowd. One at a time, big, with a slow pass of light
+ * across it -- the same sheen the chase skins wear in the hall, at a tenth of
+ * the strength, because this is a door and not the reveal.
+ */
+export function Showcase({ srcs, h = 108, every = 3000 }: { srcs: string[]; h?: number; every?: number }) {
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    if (srcs.length < 2) return
+    const t = setInterval(() => setI(n => (n + 1) % srcs.length), every)
+    return () => clearInterval(t)
+  }, [srcs.length, every])
+  if (srcs.length === 0) return null
+  const w = Math.round(h * 0.76)
+  const src = srcs[Math.min(i, srcs.length - 1)]
+  return (
+    <div style={{ position: 'relative', width: w, height: h, overflow: 'hidden' }}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div key={src}
+          initial={{ opacity: 0, scale: 1.05 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: 0.6, ease: 'easeInOut' }}
+          style={{ position: 'absolute', inset: 0 }}>
+          <Bust src={src} w={w} h={h} />
+        </motion.div>
+      </AnimatePresence>
+      <motion.span aria-hidden
+        initial={{ x: '-160%' }} animate={{ x: '260%' }}
+        transition={{ duration: 1.6, ease: 'easeInOut', repeat: Infinity, repeatDelay: 2.4 }}
+        style={{
+          position: 'absolute', top: 0, bottom: 0, width: '45%',
+          background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0) 100%)',
+          transform: 'skewX(-16deg)', mixBlendMode: 'screen', pointerEvents: 'none',
         }} />
-      ))}
     </div>
   )
 }
