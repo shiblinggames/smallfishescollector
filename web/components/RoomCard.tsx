@@ -119,24 +119,35 @@ export default function RoomCard({
  * card's own dark, with no frame, no ring, and no edge where the picture stops.
  * Everything on these doors is built from this one shape.
  */
-function Bust({ src, w, h, dim = false, opacity = 1, round = 10 }: {
-  src: string; w: number; h: number; dim?: boolean; opacity?: number; round?: number
+function Bust({ src, w, h, dim = false, round = 10 }: {
+  src: string; w: number; h: number; dim?: boolean; round?: number
 }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt="" aria-hidden loading="lazy" decoding="async"
-      style={{
-        display: 'block', width: w, height: h, opacity,
-        objectFit: 'cover', objectPosition: 'top center',
-        borderTopLeftRadius: round, borderTopRightRadius: round,
-        // THE BOTTOM DOES NOT END, IT LEAVES. A hard edge under a figure is a
-        // sticker; this is the same fade the chart's reflections use.
-        WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 62%, rgba(0,0,0,0.35) 86%, transparent 100%)',
-        maskImage: 'linear-gradient(to bottom, #000 0%, #000 62%, rgba(0,0,0,0.35) 86%, transparent 100%)',
-        filter: dim
-          ? 'grayscale(0.85) brightness(0.5) drop-shadow(0 8px 14px rgba(0,0,0,0.7))'
-          : 'drop-shadow(0 10px 18px rgba(0,0,0,0.75))',
+    <span style={{ position: 'relative', display: 'block', width: w, height: h }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" aria-hidden loading="lazy" decoding="async"
+        style={{
+          display: 'block', width: w, height: h,
+          objectFit: 'cover', objectPosition: 'top center',
+          borderTopLeftRadius: round, borderTopRightRadius: round,
+          // DIM IS A COLOUR CHANGE, NOT A SHADOW. `grayscale` and `brightness`
+          // are per-pixel and cheap; a `drop-shadow` on a masked image is an
+          // offscreen buffer the size of the source art, and there are a dozen
+          // of these on screen at once over a live WebGL chart. See the note on
+          // the fade below.
+          filter: dim ? 'grayscale(0.85) brightness(0.5)' : undefined,
+        }} />
+      {/* THE BOTTOM DOES NOT END, IT LEAVES -- and it leaves by having the
+          card's own dark laid over it rather than by masking the image.
+          `-webkit-mask-image` on a 1024px painting costs a full extra layer
+          per figure, and enough of those over the chart's canvas is what takes
+          an iPhone's renderer down. A gradient is free. */}
+      <span aria-hidden style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, height: Math.round(h * 0.42),
+        background: 'linear-gradient(180deg, rgba(7,12,20,0) 0%, rgba(7,12,20,0.72) 58%, rgba(7,12,20,1) 100%)',
+        pointerEvents: 'none',
       }} />
+    </span>
   )
 }
 
@@ -151,6 +162,10 @@ function Bust({ src, w, h, dim = false, opacity = 1, round = 10 }: {
  * The line moves. All three change together on the turn, so the wedge is a
  * different three every few seconds and a roster of seventeen gets seen.
  */
+/* NO `mode="popLayout"` ANYWHERE IN HERE. Every crossfade below has both
+ * copies absolutely positioned on top of each other, which is the plain
+ * default mode's behaviour; popLayout adds a measuring wrapper and a
+ * flushSync per swap to hold a place in a flow these do not use. */
 export function CrewWedge({ srcs, tints, h = 104, every = 3200 }: {
   srcs: string[]
   /** Rarity, as LIGHT rather than as a ring: the one in front throws a little
@@ -185,8 +200,10 @@ export function CrewWedge({ srcs, tints, h = 104, every = 3200 }: {
           style={{
             position: 'absolute', left: '50%', bottom: -6, width: w * 1.9, height: h * 0.95,
             transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 0,
+            // A radial gradient is already soft; a blur on top of one is a
+            // whole compositing layer spent on nothing anybody can see.
             background: `radial-gradient(ellipse at 50% 70%, ${frontTint} 0%, rgba(0,0,0,0) 66%)`,
-            opacity: 0.5, filter: 'blur(2px)',
+            opacity: 0.45,
           }} />
       )}
       {wings.map(side => (
@@ -195,18 +212,21 @@ export function CrewWedge({ srcs, tints, h = 104, every = 3200 }: {
           transform: `translateX(calc(-50% + ${side * w * 0.58}px)) scale(0.78)`,
           transformOrigin: 'bottom center',
         }}>
-          <AnimatePresence mode="popLayout" initial={false}>
+          <AnimatePresence initial={false}>
             <motion.div key={at(side)}
               initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.7, ease: 'easeInOut' }}
-              style={{ position: 'absolute', bottom: 0, left: -w / 2, filter: 'blur(0.6px)' }}>
+              // SET BACK BY OPACITY AND SIZE, which is how distance reads
+              // anyway. The half-pixel of blur that used to say "further away"
+              // cost a layer per wing.
+              style={{ position: 'absolute', bottom: 0, left: -w / 2 }}>
               <Bust src={at(side)} w={w} h={h} />
             </motion.div>
           </AnimatePresence>
         </div>
       ))}
       <div style={{ position: 'absolute', left: '50%', bottom: 0, zIndex: 2, transform: 'translateX(-50%)' }}>
-        <AnimatePresence mode="popLayout" initial={false}>
+        <AnimatePresence initial={false}>
           <motion.div key={at(0)}
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.6, ease: 'easeInOut' }}
@@ -325,10 +345,16 @@ export function CrewFan({ srcs, dims, tints, h = 96 }: {
           <motion.div key={`${src}-${i}`}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.06 * i, duration: 0.3, ease: 'easeOut' }}
+            // THE FAN IS SET IN MOTION VALUES, NOT IN A STYLE TRANSFORM.
+            // framer-motion writes `transform` itself, so a transform in
+            // `style` is overwritten the moment `y` animates -- and all three
+            // cards would slide into one stack. See [[feedback-framer-motion-gotchas]].
             style={{
               position: 'absolute', left: '50%', bottom: taken ? 4 : 0,
               zIndex: taken ? 1 : 3 - Math.abs(off),
-              transform: `translateX(calc(-50% + ${(off * w * 0.52).toFixed(1)}px)) rotate(${(off * 7).toFixed(1)}deg) scale(${taken ? 0.9 : 1 - Math.abs(off) * 0.06})`,
+              x: -w / 2 + off * w * 0.52,
+              rotate: off * 7,
+              scale: taken ? 0.9 : 1 - Math.abs(off) * 0.06,
               transformOrigin: 'bottom center',
             }}>
             {tints?.[i] && !taken && (
@@ -336,7 +362,7 @@ export function CrewFan({ srcs, dims, tints, h = 96 }: {
                 position: 'absolute', left: '50%', bottom: -4, width: w * 1.5, height: h * 0.8,
                 transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: -1,
                 background: `radial-gradient(ellipse at 50% 72%, ${tints[i]} 0%, rgba(0,0,0,0) 68%)`,
-                opacity: 0.42, filter: 'blur(2px)',
+                opacity: 0.4,
               }} />
             )}
             <Bust src={src} w={w} h={h} dim={taken} />
@@ -366,7 +392,7 @@ export function Showcase({ srcs, h = 108, every = 3000 }: { srcs: string[]; h?: 
   const src = srcs[Math.min(i, srcs.length - 1)]
   return (
     <div style={{ position: 'relative', width: w, height: h, overflow: 'hidden' }}>
-      <AnimatePresence mode="popLayout" initial={false}>
+      <AnimatePresence initial={false}>
         <motion.div key={src}
           initial={{ opacity: 0, scale: 1.05 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: 'easeInOut' }}
@@ -374,14 +400,15 @@ export function Showcase({ srcs, h = 108, every = 3000 }: { srcs: string[]; h?: 
           <Bust src={src} w={w} h={h} />
         </motion.div>
       </AnimatePresence>
-      <motion.span aria-hidden
-        initial={{ x: '-160%' }} animate={{ x: '260%' }}
-        transition={{ duration: 1.6, ease: 'easeInOut', repeat: Infinity, repeatDelay: 2.4 }}
-        style={{
-          position: 'absolute', top: 0, bottom: 0, width: '45%',
-          background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0) 100%)',
-          transform: 'skewX(-16deg)', mixBlendMode: 'screen', pointerEvents: 'none',
-        }} />
+      {/* A STANDING HIGHLIGHT, not a sweep. The sweep was a blend-mode layer
+          animating for ever over a page that is already running a WebGL chart,
+          and `mix-blend-mode` forces its own compositing group on top of that.
+          The light on the coat is a gradient that sits still; the turn is
+          already the movement on this card. */}
+      <span aria-hidden style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'linear-gradient(112deg, rgba(255,255,255,0) 34%, rgba(255,255,255,0.12) 48%, rgba(255,255,255,0) 62%)',
+      }} />
     </div>
   )
 }
@@ -421,7 +448,7 @@ export function Rotator({ srcs, shape = 'face', size = 78, every = 2800, filters
       width: shape === 'plate' ? '86%' : size,
       height: size,
     }}>
-      <AnimatePresence mode="popLayout" initial={false}>
+      <AnimatePresence initial={false}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <motion.img key={`${src}-${at}`} src={src} alt="" aria-hidden decoding="async"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
