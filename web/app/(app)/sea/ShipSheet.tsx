@@ -164,17 +164,18 @@ export default function ShipSheet({ open, focus, onClose }: {
     return own
   })()
 
-  function roomNote(id: Room): string | null {
+  /** The count, and what the count means. Same plate the crew doors wear. */
+  function roomLine(id: Room): { stat?: string; note: string } | null {
     if (!state || !now) return null
     switch (id) {
       case 'refits':
-        return `${now.crewSlots} berths · ${mounted.length} of ${mounts} mounted · ${kit?.name ?? 'no kit'}`
+        return { stat: `${mounted.length}/${mounts}`, note: `Mounts filled · ${now.crewSlots} berths · ${kit?.name ?? 'no repair kit'}` }
       case 'armament':
         return classNames.length
-          ? `${classNames.join(', ')}${augment ? ` · ${augment.name}` : ''}`
-          : 'No class yet. Clear a chapter.'
+          ? { stat: augment ? 'Armed' : undefined, note: `${classNames.join(', ')}${augment ? ` · ${augment.name}` : ''}` }
+          : { note: 'No class yet. Clear a chapter and pick one.' }
       case 'appearance':
-        return `${state.shipSkins.length} of ${SHIP_SKINS.length} paints`
+        return { stat: `${state.shipSkins.length}/${SHIP_SKINS.length}`, note: 'Paints in her locker' }
     }
   }
 
@@ -185,7 +186,7 @@ export default function ShipSheet({ open, focus, onClose }: {
       // her mounts, with the empty mounts drawn empty. An unfitted ship says so
       // without being told.
       const srcs = [kit?.image, ...mounted.map(i => getRaidItem(i)?.image)].filter(Boolean) as string[]
-      return <ObjectRow size={44} srcs={srcs} empty={Math.max(0, mounts - mounted.length)} />
+      return <ObjectRow size={40} accent="#ffd56b" srcs={srcs} empty={Math.max(0, mounts - mounted.length)} />
     }
     if (id === 'armament') {
       // HER OWN HULL, in her own paint. The class and the ultimate have no art
@@ -194,11 +195,11 @@ export default function ShipSheet({ open, focus, onClose }: {
       const hull = EXPEDITION_SHIP_STATS[tier]?.image
       if (!hull) return null
       const paint = shipSkinAt(state.equippedShipSkin, tier)
-      return <Rotator shape="plate" size={96} srcs={[paint?.imageByTier?.[tier] ?? hull]} filters={[paint?.filter ?? 'none']} />
+      return <Rotator shape="plate" size={82} accent="#c084fc" srcs={[paint?.imageByTier?.[tier] ?? hull]} filters={[paint?.filter ?? 'none']} />
     }
     // The paints, turning over. Her own first, so a captain with none still
     // sees a ship rather than an empty frame.
-    return <Rotator shape="plate" size={96} every={2400}
+    return <Rotator shape="plate" size={82} every={2400} accent="#7ed6c4"
       srcs={paints.map(p => p.src)} filters={paints.map(p => p.filter)} />
   }
 
@@ -448,16 +449,22 @@ export default function ShipSheet({ open, focus, onClose }: {
                   Stacked, wide: three does not divide into a grid, and a wide
                   door has room for the whole rack rather than a crop of it. */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {CARDS.map(card => (
-                  <RoomCard key={card.id}
-                    title={card.title}
-                    note={roomNote(card.id) ?? card.blurb}
-                    accent={card.accent}
-                    ratio="16 / 6.6"
-                    onClick={() => setRoom(card.id)}>
-                    {roomArt(card.id)}
-                  </RoomCard>
-                ))}
+                {CARDS.map((card, i) => {
+                  const line = roomLine(card.id)
+                  return (
+                    <RoomCard key={card.id}
+                      title={card.title}
+                      stat={line?.stat}
+                      note={line?.note ?? card.blurb}
+                      accent={card.accent}
+                      ratio="16 / 6"
+                      layout="split"
+                      index={i}
+                      onClick={() => setRoom(card.id)}>
+                      {roomArt(card.id)}
+                    </RoomCard>
+                  )
+                })}
               </div>
 
               <p className="font-karla" style={{
