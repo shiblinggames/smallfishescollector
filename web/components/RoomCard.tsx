@@ -66,22 +66,28 @@ export default function RoomCard({
           background: `radial-gradient(ellipse 120% 90% at 50% 28%, ${accent}1f 0%, rgba(7,12,20,0) 72%), linear-gradient(180deg, rgba(16,24,34,0.9) 0%, rgba(7,12,20,1) 100%)`,
         }} />
 
-        {/* WHAT IS BEHIND THE DOOR. Lifted off the foot so the scrim and the
-            title never sit on top of a face. */}
+        {/* WHAT IS BEHIND THE DOOR.
+            `zIndex: 0` IS LEAD, NOT BALLAST. It makes this box its own stacking
+            context, which pins everything the art does inside it. Without one
+            the box is `z-index: auto`, and a positioned child carrying its own
+            z-index -- the front of the wedge, the middle card of the fan --
+            climbs OUT of it into the card's stacking context and paints over
+            the title, which is where the crew were standing on their own
+            names. */}
         <div style={{
-          position: 'absolute', inset: 0, display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
+          position: 'absolute', inset: 0, zIndex: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '0.35rem 0.5rem 2.1rem',
         }}>
           {children}
         </div>
 
         <div aria-hidden style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
+          position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
           background: 'linear-gradient(180deg, rgba(4,8,14,0) 42%, rgba(4,8,14,0.72) 74%, rgba(4,8,14,0.96) 100%)',
         }} />
 
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0.4rem 0.6rem 0.5rem' }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 2, padding: '0.4rem 0.6rem 0.5rem' }}>
           <span className="font-cinzel font-700" style={{
             display: 'block', fontSize: '0.98rem', lineHeight: 1.1, color: '#f6f1e6',
             textShadow: '0 2px 12px rgba(0,0,0,0.95)',
@@ -95,7 +101,7 @@ export default function RoomCard({
 
         {waiting && (
           <span aria-hidden style={{
-            position: 'absolute', top: 7, right: 7,
+            position: 'absolute', top: 7, right: 7, zIndex: 3,
             width: 10, height: 10, borderRadius: 999,
             background: GOLD, border: '1px solid rgba(20,14,4,0.8)',
             boxShadow: '0 0 10px rgba(240,192,64,0.6)',
@@ -414,23 +420,20 @@ export function Showcase({ srcs, h = 108, every = 3000 }: { srcs: string[]; h?: 
 }
 
 /**
- * YOUR OWN, ONE AT A TIME.
+ * ── THE HULL, TURNING ───────────────────────────────────────────────────────
  *
- * A roster of seventeen and a trunk of eighty skins cannot be a row, and a row
- * of the first four is a worse lie than a painting. So it turns: each one held
- * long enough to be looked at, crossfading rather than cutting, and it stops
- * dead at one entry because a rotation of one is a flicker.
+ * The ship's own doors, in the language the crew's use: her art standing in the
+ * card's dark, the foot of her faded into it rather than cut, a light lying
+ * across her, and her paints turning over one at a time. Wide where a bust is
+ * tall, because that is the shape of a ship.
  */
-export function Rotator({ srcs, shape = 'face', size = 78, every = 2800, filters }: {
+export function HullTurn({ srcs, filters, w = 168, h = 86, every = 2800 }: {
   srcs: string[]
-  /** A face is cropped to a circle; a plate is shown whole. */
-  shape?: 'face' | 'plate'
-  size?: number
-  every?: number
-  /** Per-entry CSS filter. Half the ship skins are a TINT of her own art
-   *  rather than a second painting, so the picture and the paint have to
-   *  travel together or every one of those turns up as the bare hull. */
+  /** Per-entry CSS tint. Half the ship skins are a TINT of her own art rather
+   *  than a second painting, so the picture and the paint travel together or
+   *  every one of those turns up as the bare hull. */
   filters?: string[]
+  w?: number; h?: number; every?: number
 }) {
   const [i, setI] = useState(0)
   useEffect(() => {
@@ -441,28 +444,50 @@ export function Rotator({ srcs, shape = 'face', size = 78, every = 2800, filters
   if (srcs.length === 0) return null
   const at = Math.min(i, srcs.length - 1)
   const src = srcs[at]
-  const tint = filters?.[at] && filters[at] !== 'none' ? `${filters[at]} ` : ''
+  const tint = filters?.[at] && filters[at] !== 'none' ? filters[at] : undefined
+
   return (
-    <div style={{
-      position: 'relative',
-      width: shape === 'plate' ? '86%' : size,
-      height: size,
-    }}>
+    <div style={{ position: 'relative', width: 'min(100%, ' + w + 'px)', height: h }}>
+      {/* The water she sits in: one soft ellipse, so she is not a cut-out
+          hanging in the air. */}
+      <span aria-hidden style={{
+        position: 'absolute', left: '50%', bottom: -2, width: '92%', height: 14,
+        transform: 'translateX(-50%)', borderRadius: '50%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 72%)',
+      }} />
       <AnimatePresence initial={false}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <motion.img key={`${src}-${at}`} src={src} alt="" aria-hidden decoding="async"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          transition={{ duration: 0.55, ease: 'easeInOut' }}
+          initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: 0.6, ease: 'easeInOut' }}
           style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: shape === 'plate' ? 'contain' : 'cover',
-            objectPosition: shape === 'plate' ? 'center' : 'top center',
-            borderRadius: shape === 'plate' ? 0 : '50%',
-            border: shape === 'plate' ? undefined : '2px solid rgba(240,192,64,0.7)',
-            background: shape === 'plate' ? undefined : 'rgba(6,10,16,0.92)',
-            filter: `${tint}drop-shadow(0 8px 18px rgba(0,0,0,0.7))`,
+            objectFit: 'contain', filter: tint,
           }} />
       </AnimatePresence>
+      {/* A light lying across her, and the same standing highlight the wardrobe
+          card wears. No blend mode, no sweep: see the note in Showcase. */}
+      <span aria-hidden style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'linear-gradient(106deg, rgba(255,255,255,0) 38%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0) 60%)',
+      }} />
+      {srcs.length > 1 && (
+        <div aria-hidden style={{
+          position: 'absolute', left: '50%', bottom: -9, transform: 'translateX(-50%)',
+          display: 'flex', gap: 4,
+        }}>
+          {Array.from({ length: Math.min(srcs.length, 7) }, (_, p) => {
+            const lit = srcs.length <= 7 ? p === at : p === at % 7
+            return (
+              <span key={p} style={{
+                width: lit ? 9 : 4, height: 3, borderRadius: 999,
+                background: lit ? 'rgba(240,192,64,0.9)' : 'rgba(214,232,240,0.22)',
+                transition: 'width 0.3s ease, background 0.3s ease',
+              }} />
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -474,22 +499,38 @@ export function Rotator({ srcs, shape = 'face', size = 78, every = 2800, filters
  * size you can tell one from another. Nothing owned draws the empty mounts, so
  * an unfitted ship says so.
  */
-export function ObjectRow({ srcs, empty = 0, size = 52 }: { srcs: string[]; empty?: number; size?: number }) {
+export function ObjectRow({ srcs, empty = 0, size = 46, accent = GOLD }: {
+  srcs: string[]; empty?: number; size?: number; accent?: string
+}) {
+  const box = Math.round(size * 1.2)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
       {srcs.map((src, i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={`${src}-${i}`} src={src} alt="" aria-hidden loading="lazy" decoding="async"
+        <motion.span key={`${src}-${i}`}
+          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 * i, duration: 0.28, ease: 'easeOut' }}
           style={{
-            width: size, height: size, objectFit: 'contain', flexShrink: 0,
-            filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.7))',
-          }} />
+            width: box, height: box, borderRadius: 12, flexShrink: 0,
+            display: 'grid', placeItems: 'center',
+            // A MOUNT, lit from above and sunk into the card, so a fitted one
+            // and an empty one are the same fitting with something in it or
+            // without. Gradients and a box-shadow only: no filters on a door
+            // that opens over the chart. See the note on Bust.
+            background: `radial-gradient(circle at 50% 28%, ${accent}1f 0%, rgba(8,14,22,0.9) 72%)`,
+            border: `1px solid ${accent}40`,
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 6px 16px rgba(0,0,0,0.55)',
+          }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="" aria-hidden loading="lazy" decoding="async"
+            style={{ width: '76%', height: '76%', objectFit: 'contain' }} />
+        </motion.span>
       ))}
       {Array.from({ length: empty }, (_, i) => (
         <span key={`e${i}`} aria-hidden style={{
-          width: size * 0.72, height: size * 0.72, borderRadius: 10, flexShrink: 0,
-          border: '1px dashed rgba(190,212,228,0.28)',
-          background: 'rgba(255,255,255,0.02)',
+          width: box, height: box, borderRadius: 12, flexShrink: 0,
+          border: '1px dashed rgba(190,212,228,0.24)',
+          background: 'rgba(255,255,255,0.015)',
+          boxShadow: 'inset 0 3px 12px rgba(0,0,0,0.5)',
         }} />
       ))}
     </div>

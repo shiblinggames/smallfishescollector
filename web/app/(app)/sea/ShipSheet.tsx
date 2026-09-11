@@ -40,7 +40,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
-import RoomCard, { ObjectRow, Rotator } from '@/components/RoomCard'
+import RoomCard, { HullTurn, ObjectRow } from '@/components/RoomCard'
 import { vibrate } from '@/lib/haptics'
 import ShipHero from '@/app/(app)/expeditions/ShipHero'
 import { getShipHeroProps } from '@/app/(app)/expeditions/shipHeroData'
@@ -185,7 +185,7 @@ export default function ShipSheet({ open, focus, onClose }: {
       // her mounts, with the empty mounts drawn empty. An unfitted ship says so
       // without being told.
       const srcs = [kit?.image, ...mounted.map(i => getRaidItem(i)?.image)].filter(Boolean) as string[]
-      return <ObjectRow size={44} srcs={srcs} empty={Math.max(0, mounts - mounted.length)} />
+      return <ObjectRow size={44} accent="#ffd56b" srcs={srcs} empty={Math.max(0, mounts - mounted.length)} />
     }
     if (id === 'armament') {
       // HER OWN HULL, in her own paint. The class and the ultimate have no art
@@ -194,11 +194,13 @@ export default function ShipSheet({ open, focus, onClose }: {
       const hull = EXPEDITION_SHIP_STATS[tier]?.image
       if (!hull) return null
       const paint = shipSkinAt(state.equippedShipSkin, tier)
-      return <Rotator shape="plate" size={96} srcs={[paint?.imageByTier?.[tier] ?? hull]} filters={[paint?.filter ?? 'none']} />
+      return <HullTurn w={190} h={92}
+        srcs={[paint?.imageByTier?.[tier] ?? hull]}
+        filters={[paint?.filter ?? 'none']} />
     }
     // The paints, turning over. Her own first, so a captain with none still
     // sees a ship rather than an empty frame.
-    return <Rotator shape="plate" size={96} every={2400}
+    return <HullTurn w={190} h={92} every={2600}
       srcs={paints.map(p => p.src)} filters={paints.map(p => p.filter)} />
   }
 
