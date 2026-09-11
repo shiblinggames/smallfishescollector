@@ -40,10 +40,16 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
+import RoomCard, { ObjectRow, Rotator } from '@/components/RoomCard'
 import { vibrate } from '@/lib/haptics'
 import ShipHero from '@/app/(app)/expeditions/ShipHero'
 import { getShipHeroProps } from '@/app/(app)/expeditions/shipHeroData'
 import { shipTierByName, nextShip as nextHull } from '@/lib/ships'
+import { SHIP_SKINS, shipSkinAt } from '@/lib/shipSkins'
+import { getRaidItem } from '@/lib/raidItems'
+import { getRepairKit } from '@/lib/repairKits'
+import { SHIP_CLASS_LINES, getShipClass, type ShipClassId } from '@/lib/shipClasses'
+import { getShipAugment } from '@/lib/shipAugments'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
 import { buyShip } from '@/app/shipyard/actions'
 
@@ -56,10 +62,21 @@ const SEA = 'rgba(180,214,232'
  *  cannot drift; the plate calls it Look, which is what it is. */
 type Room = 'refits' | 'armament' | 'appearance'
 
-const CARDS: { id: Room; title: string; blurb: string; art: string }[] = [
-  { id: 'refits', title: 'Refits', blurb: 'Berths, armory, repair kit', art: '/ship/cards/refits.jpg' },
-  { id: 'armament', title: 'Armament', blurb: "Her class, and the ultimate", art: '/ship/cards/armament.jpg' },
-  { id: 'appearance', title: 'Look', blurb: 'The colours she flies', art: '/ship/cards/look.jpg' },
+/**
+ * HER THREE ROOMS, DRAWN FROM WHAT IS IN THEM.
+ *
+ * They were three commissioned paintings of a hold, a gun deck and a paint
+ * locker. The gun deck of a Sloop and the gun deck of a Man-o-War were the same
+ * picture, which is the trouble with a painting: it cannot know what you own.
+ *
+ * What is in these rooms has art already -- the kit on her deck, the relics on
+ * her mounts, the paints in her locker -- so that art is the door. `blurb` is
+ * the line for a room with nothing in it yet.
+ */
+const CARDS: { id: Room; title: string; blurb: string; accent: string }[] = [
+  { id: 'refits', title: 'Refits', blurb: 'Berths, armory, repair kit', accent: '#ffd56b' },
+  { id: 'armament', title: 'Armament', blurb: "Her class, and the ultimate", accent: '#c084fc' },
+  { id: 'appearance', title: 'Look', blurb: 'The colours she flies', accent: '#7ed6c4' },
 ]
 
 const TITLES: Record<Room, string> = { refits: 'Refits', armament: 'Armament', appearance: 'Look' }
@@ -114,6 +131,76 @@ export default function ShipSheet({ open, focus, onClose }: {
   /** A door that lands IN a room. No plates above it, and no way back to them:
    *  you came through a specific door and the way out is the way in. */
   const roomOnly = focus !== 'ship'
+
+  // ── WHAT IS IN EACH ROOM ────────────────────────────────────────────
+  //
+  // Read off the same payload the rooms themselves are drawn from, so a door
+  // cannot disagree with what is behind it.
+  const mounts = raidItemSlotsForTier(tier)
+  const mounted = (state?.equippedRaidItems ?? []).filter(id => getRaidItem(id)?.image)
+  const kit = getRepairKit(state?.equippedRepairKit ?? 'basic_repair_kit')
+  /** The top of each class line she has picked up. Same walk the Armament tile
+   *  makes, so the door and the tile name the same classes. */
+  const classNames = (() => {
+    const owned = new Set(Object.values(state?.shipClasses ?? {}))
+    return SHIP_CLASS_LINES
+      .map(line => line.filter(id => owned.has(id)) as ShipClassId[])
+      .filter(l => l.length > 0)
+      .map(l => getShipClass(l[l.length - 1])?.name ?? '')
+      .filter(Boolean)
+  })()
+  const augment = state?.manowarAugment ? getShipAugment(state.manowarAugment) : null
+  /** Her paints: the ones she owns that FIT this hull, as a picture each. A
+   *  skin is either its own painting for this tier or a tint of her own. */
+  const paints = (() => {
+    if (!state) return [] as { src: string; filter: string }[]
+    const hull = EXPEDITION_SHIP_STATS[tier]?.image ?? ''
+    const own = [{ src: hull, filter: 'none' }]
+    for (const id of state.shipSkins) {
+      const def = shipSkinAt(id, tier)
+      if (!def) continue
+      own.push({ src: def.imageByTier?.[tier] ?? hull, filter: def.filter })
+    }
+    return own
+  })()
+
+  function roomNote(id: Room): string | null {
+    if (!state || !now) return null
+    switch (id) {
+      case 'refits':
+        return `${now.crewSlots} berths · ${mounted.length} of ${mounts} mounted · ${kit?.name ?? 'no kit'}`
+      case 'armament':
+        return classNames.length
+          ? `${classNames.join(', ')}${augment ? ` · ${augment.name}` : ''}`
+          : 'No class yet. Clear a chapter.'
+      case 'appearance':
+        return `${state.shipSkins.length} of ${SHIP_SKINS.length} paints`
+    }
+  }
+
+  function roomArt(id: Room) {
+    if (!state || !now) return null
+    if (id === 'refits') {
+      // WHAT IS ACTUALLY BOLTED TO HER: the kit on her deck and the relics on
+      // her mounts, with the empty mounts drawn empty. An unfitted ship says so
+      // without being told.
+      const srcs = [kit?.image, ...mounted.map(i => getRaidItem(i)?.image)].filter(Boolean) as string[]
+      return <ObjectRow size={44} srcs={srcs} empty={Math.max(0, mounts - mounted.length)} />
+    }
+    if (id === 'armament') {
+      // HER OWN HULL, in her own paint. The class and the ultimate have no art
+      // in this game -- they are icons and numbers -- and the thing they are
+      // all bolted to does.
+      const hull = EXPEDITION_SHIP_STATS[tier]?.image
+      if (!hull) return null
+      const paint = shipSkinAt(state.equippedShipSkin, tier)
+      return <Rotator shape="plate" size={96} srcs={[paint?.imageByTier?.[tier] ?? hull]} filters={[paint?.filter ?? 'none']} />
+    }
+    // The paints, turning over. Her own first, so a captain with none still
+    // sees a ship rather than an empty frame.
+    return <Rotator shape="plate" size={96} every={2400}
+      srcs={paints.map(p => p.src)} filters={paints.map(p => p.filter)} />
+  }
 
   return (
     // The map STEERS on click and starts a heading on pointerdown, so every
@@ -359,36 +446,17 @@ export default function ShipSheet({ open, focus, onClose }: {
 
               {/* ── HER THREE ROOMS ──────────────────────────────────────
                   Stacked, wide: three does not divide into a grid, and a wide
-                  plate at this width shows the whole room rather than a crop. */}
+                  door has room for the whole rack rather than a crop of it. */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {CARDS.map(card => (
-                  <button key={card.id} type="button" className="tap"
-                    onClick={() => { vibrate(10); setRoom(card.id) }}
-                    style={{
-                      position: 'relative', display: 'block', padding: 0, width: '100%',
-                      borderRadius: 14, overflow: 'hidden', textAlign: 'left', cursor: 'pointer',
-                      background: '#070c14', border: '1px solid rgba(255,255,255,0.1)',
-                    }}>
-                    <div style={{ position: 'relative', aspectRatio: '16 / 6.6' }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={card.art} alt="" aria-hidden loading="lazy" decoding="async"
-                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%' }} />
-                      <div aria-hidden style={{
-                        position: 'absolute', inset: 0,
-                        background: 'linear-gradient(180deg, rgba(4,8,14,0.05) 0%, rgba(4,8,14,0.5) 55%, rgba(4,8,14,0.94) 100%)',
-                      }} />
-                      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0.45rem 0.7rem 0.55rem' }}>
-                        <span className="font-cinzel font-700" style={{
-                          display: 'block', fontSize: '1.02rem', lineHeight: 1.1, color: '#f6f1e6',
-                          textShadow: '0 2px 12px rgba(0,0,0,0.95)',
-                        }}>{card.title}</span>
-                        <span className="font-karla" style={{
-                          display: 'block', fontSize: '0.64rem', lineHeight: 1.3, marginTop: 2,
-                          color: 'rgba(214,232,240,0.62)',
-                        }}>{card.blurb}</span>
-                      </div>
-                    </div>
-                  </button>
+                  <RoomCard key={card.id}
+                    title={card.title}
+                    note={roomNote(card.id) ?? card.blurb}
+                    accent={card.accent}
+                    ratio="16 / 6.6"
+                    onClick={() => setRoom(card.id)}>
+                    {roomArt(card.id)}
+                  </RoomCard>
                 ))}
               </div>
 

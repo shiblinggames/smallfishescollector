@@ -15,14 +15,22 @@
 // and then being taken off the sea to press buttons about it is two games
 // stitched together. The crew was the last big room still ashore.
 //
-// ── FOUR DOORS, PAINTED ─────────────────────────────────────────────────────
+// ── FOUR DOORS, MADE OF WHAT IS BEHIND THEM ─────────────────────────────────
 //
 // Not a tab bar. A tab bar is five words in a row and it makes five equal
-// things out of four rooms that feel nothing alike — and it was already
-// carrying so much that the page needed a guided tour to explain itself. Four
-// paintings of four places aboard one ship say what each is without a word:
-// the muster deck with its empty benches, the gangplank and the signing table,
-// the hammocks and the ledger, the open chest of coats.
+// things out of four rooms that feel nothing alike.
+//
+// They were four commissioned paintings of four places aboard one ship: the
+// muster deck, the gangplank, the hammocks, a chest of coats. One set, one
+// ship, one hour -- and the cost of painting them as a set is that they looked
+// like each other. You learned which door was which off the word at the foot,
+// and stopped seeing the picture on the second visit, because it never changed
+// and it was never about you.
+//
+// Every door is made of what is actually behind it now, out of art this game
+// already owns: the seats you have filled and the ones going to waste, the
+// faces on today's board, your own roster turning over one at a time, the coats
+// you have collected. It moves as you play, and all of it is yours.
 //
 // ── AND THE ROLL CALL STAYS ON TOP ──────────────────────────────────────────
 //
@@ -42,6 +50,7 @@ import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
+import RoomCard, { FaceRow, Rotator } from '@/components/RoomCard'
 import { vibrate } from '@/lib/haptics'
 import { crewHub, type CrewHubState, type HubCrew } from './crewHubActions'
 import { getCrewState } from '@/app/(app)/crew/actions'
@@ -90,15 +99,16 @@ type Section = 'assign' | 'roster' | 'recruits' | 'wardrobe'
 /**
  * THE FOUR DOORS.
  *
- * One painted plate each, all four of the same ship at the same hour by the
- * same lamp, so they read as a set rather than as four illustrations that
- * happen to be next to each other. `/public/crew/cards`.
+ * A colour each, because the art on them is the player's own and cannot be
+ * relied on to tell them apart at a glance: the ground behind the faces is the
+ * thing that stays put. `blurb` is the fallback line for a room with nothing to
+ * count yet.
  */
-const CARDS: { id: Section; title: string; blurb: string; art: string }[] = [
-  { id: 'assign', title: 'Assign', blurb: 'Seat your raid and voyage parties', art: '/crew/cards/assign.jpg' },
-  { id: 'recruits', title: 'Recruit', blurb: 'Sign new hands on', art: '/crew/cards/recruit.jpg' },
-  { id: 'roster', title: 'Roster', blurb: 'Every hand you have, and the fallen', art: '/crew/cards/roster.jpg' },
-  { id: 'wardrobe', title: 'Skins', blurb: 'Coats and colours for your legends', art: '/crew/cards/skins.jpg' },
+const CARDS: { id: Section; title: string; blurb: string; accent: string }[] = [
+  { id: 'assign', title: 'Assign', blurb: 'Seat your raid and voyage parties', accent: '#7ed6c4' },
+  { id: 'recruits', title: 'Recruit', blurb: 'Sign new hands on', accent: '#f0c040' },
+  { id: 'roster', title: 'Roster', blurb: 'Every hand you have, and the fallen', accent: '#8fb8dc' },
+  { id: 'wardrobe', title: 'Skins', blurb: 'Coats and colours for your legends', accent: '#c084fc' },
 ]
 
 const TITLES: Record<Section, string> = {
@@ -214,6 +224,67 @@ export default function CrewHub({
   }, [open])
 
   const rows = (g: HubCrew['doing']) => (state?.crew ?? []).filter(c => c.doing === g)
+
+  // ── WHAT EACH DOOR IS MADE OF ────────────────────────────────────────
+  //
+  // Both of these read the hall's own state, which is already fetched for the
+  // rooms themselves, so a door costs nothing extra to draw. Both return null
+  // until it lands -- an empty frame for half a second beats a painting of
+  // somebody else's crew for ever.
+  const seats = hall?.shipCrewSlots ?? 0
+  const seated = (hall?.roster ?? []).filter(c => c.raidSlot !== null)
+    .sort((a, b) => (a.raidSlot ?? 0) - (b.raidSlot ?? 0))
+  const voyaging = (hall?.roster ?? []).filter(c => c.voyageSlot !== null)
+  const ownedSkins = CREW_SKINS.filter(k => hall?.ownedCrewSkins.includes(k.id))
+  const ring = (rarity: number) => RARITY[Math.min(3, Math.max(0, rarity - 1))]
+
+  function doorNote(id: Section): string | null {
+    if (!state) return null
+    switch (id) {
+      // THE EMPTY SEATS ARE THE POINT. A captain with three hands sitting in
+      // the hall and two benches open on the raid party is losing a fight they
+      // have not had yet, and this is the only place that says so before they
+      // open the room.
+      case 'assign': return hall ? `${seated.length} of ${seats} seated for the raid` : null
+      case 'recruits': return state.recruitsWaiting > 0 ? `${state.recruitsWaiting} on the board` : 'board taken for today'
+      case 'roster': return `${state.crew.length} of ${state.capacity} aboard`
+      case 'wardrobe': return hall ? `${ownedSkins.length} of ${CREW_SKINS.length} collected` : null
+    }
+  }
+
+  function doorArt(id: Section) {
+    if (id === 'assign') {
+      if (!hall) return null
+      // The assignment board in miniature: who is on the bench, and how many
+      // places are still open. Shrunk when the hull seats more than four, so a
+      // Man-o-War's six still fit a phone.
+      const size = seats > 4 ? 40 : 50
+      return <FaceRow size={size}
+        srcs={seated.slice(0, 6).map(c => artSrc(c.filename))}
+        rings={seated.slice(0, 6).map(c => ring(c.rarity))}
+        empty={Math.max(0, Math.min(seats, 6) - seated.length)} />
+    }
+    if (id === 'recruits') {
+      if (!hall || hall.board.length === 0) return null
+      // TODAY'S FACES, and the ones already signed on greyed out -- which is
+      // the whole of what "board taken for today" means, said in pictures.
+      return <FaceRow size={54}
+        srcs={hall.board.map(b => artSrc(b.filename))}
+        rings={hall.board.map(b => ring(b.rarity))}
+        dims={hall.board.map(b => b.recruited)} />
+    }
+    if (id === 'roster') {
+      if (!hall || hall.roster.length === 0) return null
+      return <Rotator size={96} srcs={hall.roster.map(c => artSrc(c.filename))} />
+    }
+    // The coats you own, turning over. With none, three off the rack, greyed:
+    // an empty trunk that shows nothing says the room is broken rather than
+    // empty.
+    if (!hall) return null
+    return ownedSkins.length > 0
+      ? <Rotator size={96} srcs={ownedSkins.map(k => artSrc(k.filename))} />
+      : <FaceRow size={48} dim srcs={CREW_SKINS.slice(0, 3).map(k => artSrc(k.filename))} />
+  }
 
   const back = useCallback(() => { vibrate(8); setSection(null) }, [])
 
@@ -525,8 +596,7 @@ export default function CrewHub({
                     )}
 
                     {/* ── THE FOUR DOORS ──────────────────────────────────
-                        Two by two, painted, with the words at the foot where
-                        every plate is already dark. */}
+                        Two by two, and each one made of what is behind it. */}
                     <div style={{
                       display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem',
                       marginTop: '0.85rem',
@@ -537,60 +607,21 @@ export default function CrewHub({
                         // means the same thing, which is that there is
                         // something here you have not dealt with.
                         const waiting = card.id === 'recruits' && !boardSeen && (state?.recruitsWaiting ?? 0) > 0
-                        const note = card.id === 'recruits' && state
-                          ? (state.recruitsWaiting > 0 ? `${state.recruitsWaiting} on the board` : 'board taken for today')
-                          : card.id === 'roster' && state
-                            ? `${state.crew.length} aboard`
-                            : card.blurb
                         return (
-                          <button key={card.id} type="button" className="tap"
+                          <RoomCard key={card.id}
+                            title={card.title}
+                            note={doorNote(card.id) ?? card.blurb}
+                            accent={card.accent}
+                            waiting={waiting}
                             // Named, so a tour can light one door and the
                             // lock can stand the other three down.
-                            data-coach={`crew-${card.id}`}
+                            coach={`crew-${card.id}`}
                             onClick={() => {
-                              vibrate(10)
                               if (card.id === 'recruits') setBoardSeen(true)
                               setSection(card.id)
-                            }}
-                            style={{
-                              position: 'relative', display: 'block', padding: 0, width: '100%',
-                              borderRadius: 14, overflow: 'hidden', cursor: 'pointer', textAlign: 'left',
-                              background: '#070c14',
-                              border: `1px solid ${waiting ? 'rgba(240,192,64,0.55)' : 'rgba(255,255,255,0.1)'}`,
-                              boxShadow: waiting ? '0 0 18px rgba(240,192,64,0.18)' : 'none',
                             }}>
-                            <div style={{ position: 'relative', aspectRatio: '4 / 3' }}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={card.art} alt="" aria-hidden loading="lazy" decoding="async"
-                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                              {/* The scrim, weighted to the foot. The plates are
-                                  painted with a dark lower third for exactly
-                                  this, so it has very little work to do. */}
-                              <div aria-hidden style={{
-                                position: 'absolute', inset: 0,
-                                background: 'linear-gradient(180deg, rgba(4,8,14,0.05) 0%, rgba(4,8,14,0.5) 58%, rgba(4,8,14,0.94) 100%)',
-                              }} />
-                              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0.4rem 0.55rem 0.5rem' }}>
-                                <span className="font-cinzel font-700" style={{
-                                  display: 'block', fontSize: '0.98rem', lineHeight: 1.1, color: '#f6f1e6',
-                                  textShadow: '0 2px 12px rgba(0,0,0,0.95)',
-                                }}>{card.title}</span>
-                                <span className="font-karla" style={{
-                                  display: 'block', fontSize: '0.6rem', lineHeight: 1.3, marginTop: 2,
-                                  color: waiting ? '#f0c040' : 'rgba(214,232,240,0.6)',
-                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                }}>{note}</span>
-                              </div>
-                              {waiting && (
-                                <span aria-hidden style={{
-                                  position: 'absolute', top: 7, right: 7,
-                                  width: 10, height: 10, borderRadius: 999,
-                                  background: '#f0c040', border: '1px solid rgba(20,14,4,0.8)',
-                                  boxShadow: '0 0 10px rgba(240,192,64,0.6)',
-                                }} />
-                              )}
-                            </div>
-                          </button>
+                            {doorArt(card.id)}
+                          </RoomCard>
                         )
                       })}
                     </div>
