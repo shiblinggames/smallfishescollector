@@ -55,7 +55,7 @@ import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inBay, inChapterWater, bayOpen,
   bayShutLine, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
-  encounterNear, cacheNear, hullFor, encArt, DOCK, dockAt, ENCOUNTER_REACH,
+  encounterNear, cacheNear, hullFor, portraitFor, encArt, DOCK, dockAt, ENCOUNTER_REACH,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
   WARGATE, WARGATE_REACH, MAELSTROMS, MAELSTROM_REACH, type Maelstrom,
   // The duel's framing lives with the raid water now, so the gauntlet's arena
@@ -2150,6 +2150,9 @@ export default function SeaMap({
   const tourCam = useRef<{ x: number; y: number } | null>(null)
   /** And where it is telling her to sail, for the guiding path. */
   const tourGoal = useRef<{ x: number; y: number; r: number } | null>(null)
+  /** The campaign's next stop, for the lit road out past the gate. Written
+   *  from the memo below; the loop must not read a prop. */
+  const campaignGoalRef = useRef<{ x: number; y: number; r: number } | null>(null)
   /** Raised by the tour while the rod should stay stowed. */
   const tourHoldCast = useRef(false)
   /**
@@ -2641,6 +2644,13 @@ export default function SeaMap({
    * to be right the frame after a seat is filled, because the Sea Gate is
    * reading it.
    */
+  /** THE CAPTAIN'S FACE. `raidParty` comes back ordered by slot, so the first
+   *  row is whoever is nearest the captain's seat. Card art lives in the same
+   *  bucket every portrait in this game does. */
+  const captainFace = useMemo(() => {
+    const art = raidParty[0]?.art
+    return art ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${art}` : null
+  }, [raidParty])
   const [hasCaptain, setHasCaptain] = useState(hasCaptain0)
   useEffect(() => { setHasCaptain(hasCaptain0) }, [hasCaptain0])
   const hasCaptainRef = useRef(hasCaptain); hasCaptainRef.current = hasCaptain
@@ -3206,6 +3216,7 @@ export default function SeaMap({
    *  and only through the tour's forced half -- past that it is asking the
    *  captain to sail to the Gunwharf, which a dimmed helm cannot do. */
   const gateLock = inAnchorage && !gateDone && arrived && gateBeat?.lock === true
+
   const anyLock = tourLock || gateLock
   const sideRef = useRef(startSide !== 'fishing')
   /** THE BERTH SHEET, and the second half of the Gunwharf's chooser: the
@@ -5743,6 +5754,15 @@ export default function SeaMap({
       verb: fight ? 'Take on' : cache ? 'Open' : verbFor(n, 'available'),
     }
   }, [liveStatus])
+
+  // ── THE CAMPAIGN'S NEXT STOP, WHERE THE LOOP CAN READ IT ──────────────
+  // Only past the gate: inside the harbour the road would point through the
+  // reef at water the captain cannot reach from here.
+  useEffect(() => {
+    campaignGoalRef.current = onSeaGate && nextStop?.at
+      ? { x: nextStop.at.x, y: nextStop.at.y, r: NODE_REACH }
+      : null
+  }, [onSeaGate, nextStop])
 
   /**
    * ── AND WHEN SOMETHING OPENS, THE WATER SAYS WHICH WAY ────────────────
@@ -8802,6 +8822,11 @@ export default function SeaMap({
           `translate(-50%, -50%) translate(${fxX}px, ${fxY}px) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel + fxRot}deg)`
         // The reflection takes most of that bob back off. See MIRROR_RIDE.
         boat.style.setProperty('--mirror-ride', `${(-bob * (1 - MIRROR_RIDE)).toFixed(2)}px`)
+        // AND WHICH WAY SHE IS POINTED, for anything inside the node that must
+        // NOT turn with her. The transform above mirrors the whole wrapper;
+        // a face is not a hull and reads backwards mirrored, so the captain's
+        // bust applies this again to cancel it. See the bust below.
+        boat.style.setProperty('--facing', String(facing.current))
         // THE SAME NUMBERS, HANDED TO THE CANVAS. Not recomputed: how she is
         // riding is one decision and it is made here. Null unless the flag is
         // on and she is the one being drawn, in which case the DOM sprite above
@@ -8816,8 +8841,17 @@ export default function SeaMap({
         boat.style.marginTop = `${offY}px`
         // THE WAY THERE, from wherever she actually is. Recomputed every frame
         // rather than set once, because the near end of it is the hull.
-        gpuRef.current?.guide(
-          tourGoal.current ? pos.current : null, tourGoal.current, tourGoal.current?.r)
+        // ── THE WAY TO THE NEXT THING, LIT ───────────────────────────
+        //
+        // A tour's own goal first, because it is asking for something
+        // specific. Failing that, and only out past the Sea Gate, the
+        // campaign's next stop: out there the sea is deliberately dark until
+        // you have sailed it, the bays are thousands of pixels across, and a
+        // compass arrow with a distance on it is a bearing rather than a
+        // route. This is the road, and it is on whenever there is somewhere
+        // to be -- not only while a tour happens to be running.
+        const lit = tourGoal.current ?? campaignGoalRef.current
+        gpuRef.current?.guide(lit ? pos.current : null, lit, lit?.r)
         gpuRef.current?.skipper({
           // THE SAME BLOWS, ON THE CANVAS HULL. `heel` and the offset are
           // already this call's language, so a fight's list and recoil are
@@ -9973,6 +10007,41 @@ hullRef={hullRefFor(t.key)} />
                 rodColor: rodNow?.color ?? gear.rodColor,
               }}
               frame={frame} />}
+
+        {/* ── WHO IS SAILING HER ───────────────────────────────────────
+            The captain's own face beside the hull, out on the water where the
+            fights are. Every enemy carries one now (see EncounterMark), and a
+            duel drawn between a named face and an anonymous ship is only half
+            a duel -- this is the other half, and it is the hand the captain
+            actually seated, so the seat they filled in the Crew Hall is
+            visible on the sea.
+
+            NOT on the fishing side: down there nothing fights, the hull is a
+            dinghy with the captain already painted on it, and a second face
+            beside her would be one face too many.
+
+            `--facing` undoes the wrapper's own mirror. Applying a scaleX of
+            the same sign twice is the identity, so the bust stays the right
+            way round on both headings while riding the bob and the heel with
+            the hull, which is what keeps it ON the boat. */}
+        {inAnchorage && captainFace && (
+          <div aria-hidden style={{
+            position: 'absolute', left: '50%', bottom: WARSHIP_W * 0.30,
+            marginLeft: WARSHIP_W * 0.22,
+            width: WARSHIP_W * 0.26, height: WARSHIP_W * 0.26,
+            transform: `scaleX(var(--facing, 1)) scaleY(${1 / GROUND})`,
+            transformOrigin: 'bottom center',
+            pointerEvents: 'none',
+          }}>
+            <img src={captainFace} alt="" draggable={false} decoding="async" style={{
+              width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+              borderRadius: '50%', maxWidth: 'none',
+              border: '2px solid rgba(126,214,196,0.8)',
+              background: 'rgba(6,10,16,0.9)',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.75)',
+            }} />
+          </div>
+        )}
       </div>
 
       {/* ── THE NEAR PASS ───────────────────────────────────────────────
@@ -14072,6 +14141,9 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext,
   // encArt puts each enemy on the SAME ladder the player's classes climb, then
   // divides out its own painting's ink fraction.
   const w = encArt(hull).box
+  // WHO IS ON HER. Null for a node with no fight behind it, and for a locked
+  // one the face is withheld with everything else.
+  const face = locked ? null : portraitFor(enc)
 
   // The bob, phased off its own position so a bay full of hulls is never in
   // step. Ships rising and falling together read as one object.
@@ -14100,6 +14172,52 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext,
           ? 'radial-gradient(ellipse, rgba(6,12,18,0.55) 0%, transparent 70%)'
           : 'radial-gradient(ellipse, rgba(6,12,18,0.44) 0%, transparent 72%)',
       }} />
+
+      {/* ── AND HER REFLECTION, so she is IN the sea ────────────────────
+          Every hull on this chart has one -- the player's, her twin on the
+          canvas, the warship at the DOM fallback -- except these, which had a
+          contact shadow and nothing else and read as ships hanging an inch
+          above the water. Same numbers as the player's mirror (MIRROR_LIE,
+          MIRROR_ALPHA): flipped, foreshortened to a little over half height
+          because a reflection LIES IN the plane, faint because water gives
+          back a fraction of what falls on it, and faded out downward so it
+          has no far edge. */}
+      <img aria-hidden src={hull} alt="" draggable={false} decoding="async" style={{
+        position: 'absolute', left: '50%', top: '100%',
+        width: w, maxWidth: 'none',
+        transform: `translate(-50%, 0) scaleY(${-MIRROR_LIE})`,
+        transformOrigin: 'top center',
+        opacity: locked ? 0.12 : MIRROR_ALPHA,
+        filter: 'blur(0.7px)',
+        WebkitMaskImage: 'linear-gradient(to top, transparent 0%, rgba(0,0,0,0.55) 55%, black 100%)',
+        maskImage: 'linear-gradient(to top, transparent 0%, rgba(0,0,0,0.55) 55%, black 100%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* ── WHOSE SHIP THIS IS ──────────────────────────────────────────
+          A bust beside the hull, on the side away from the player's approach.
+          Every enemy on this water is a silhouette in the same idiom, so the
+          ship alone never says who you are about to fight -- and the card that
+          does say it only opens once you are already committed. Counter-
+          squashed like everything else that STANDS on this plane. */}
+      {face && (
+        <div aria-hidden style={{
+          position: 'absolute', left: '50%', bottom: w * 0.52,
+          marginLeft: w * 0.30,
+          width: w * 0.30, height: w * 0.30,
+          transform: `scaleY(${1 / GROUND})`, transformOrigin: 'bottom center',
+          pointerEvents: 'none',
+        }}>
+          <img src={face} alt="" draggable={false} decoding="async" style={{
+            width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+            borderRadius: '50%', maxWidth: 'none',
+            border: `2px solid ${cleared ? 'rgba(150,206,172,0.75)' : 'rgba(240,192,64,0.75)'}`,
+            background: 'rgba(6,10,16,0.9)',
+            boxShadow: '0 6px 18px rgba(0,0,0,0.75)',
+            filter: cleared ? 'grayscale(0.6) brightness(0.8)' : undefined,
+          }} />
+        </div>
+      )}
 
       {/* WHICH ONE OF THESE IS THE CAMPAIGN. Outside the fight layer below, so
           the shudder and the long roll of a sinking ship never carry it. The

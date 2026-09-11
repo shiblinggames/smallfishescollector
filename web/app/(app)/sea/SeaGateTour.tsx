@@ -203,6 +203,7 @@ export default function SeaGateTour({
   const want = beat?.until
   useEffect(() => { if (live && want === 'crewOpen' && crewOpen) next() }, [live, want, crewOpen, next])
   useEffect(() => { if (live && want === 'recruitBoard' && crewOpen && crewSection === 'recruits') next() }, [live, want, crewOpen, crewSection, next])
+  useEffect(() => { if (live && want === 'crewDoors' && crewOpen && crewSection === null) next() }, [live, want, crewOpen, crewSection, next])
   useEffect(() => { if (live && want === 'assignBoard' && crewOpen && crewSection === 'assign') next() }, [live, want, crewOpen, crewSection, next])
   useEffect(() => { if (live && want === 'assigned' && hasCaptain) next() }, [live, want, hasCaptain, next])
   useEffect(() => { if (live && want === 'crewClosed' && !crewOpen) next() }, [live, want, crewOpen, next])

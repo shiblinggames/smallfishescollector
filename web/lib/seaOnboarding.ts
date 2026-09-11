@@ -89,7 +89,7 @@ export type Beat = {
     // The anchorage tour's own: the crew panel opened, its Recruit room
     // opened, a hand signed on, the Assign room opened, a captain seated,
     // the panel closed again.
-    | 'crewOpen' | 'recruitBoard' | 'recruited' | 'assignBoard' | 'assigned' | 'crewClosed'
+    | 'crewOpen' | 'recruitBoard' | 'recruited' | 'crewDoors' | 'assignBoard' | 'assigned' | 'crewClosed'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
@@ -401,6 +401,16 @@ export const GATE_TOUR: Beat[] = [
     ...D,
     text: 'Now we need to assign your crew to your ship so you can go do some expeditions!',
     until: 'next',
+    overPanel: true,
+  },
+  // BACK OUT OF THE RECRUIT ROOM FIRST. Assign is one of the four doors, and
+  // the captain is standing inside a different one -- "Click Assign" with no
+  // Assign on the screen is an instruction that cannot be followed.
+  {
+    ...D,
+    text: 'Head back to the crew menu.',
+    until: 'crewDoors',
+    target: 'crew-back',
     overPanel: true,
   },
   {

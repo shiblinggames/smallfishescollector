@@ -285,6 +285,8 @@ export default function CrewHub({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', paddingRight: 34 }}>
                 {section && (
                   <button type="button" onClick={back} aria-label="Back to the crew"
+                    // Named so the tour can point at the way back to the doors.
+                    data-coach="crew-back"
                     className="tap" style={{
                       flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: 28, height: 28, borderRadius: '50%', padding: 0, cursor: 'pointer',

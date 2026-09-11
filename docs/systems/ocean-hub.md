@@ -2878,3 +2878,38 @@ That beat ends on `reach`, when they arrive.
 Also: "Sail through the Wargate" is **"Use the Wargate"**, and the Wargate sheet with nothing put
 down says *"Defeat bosses to unlock portals to get back to them."* rather than opening on an empty
 column under a title.
+
+### Enemy hulls sit in the water, and say who is on them
+
+Every hull on this chart had a reflection — the player's, her canvas twin, the DOM warship — except
+the campaign's, which carried a contact shadow and nothing else and read as ships hanging an inch
+above the sea. `EncounterMark` now draws the same mirror the player's does (`MIRROR_LIE`,
+`MIRROR_ALPHA`: flipped, foreshortened, faint, faded out downward so it has no far edge).
+
+And a **bust beside the hull** (`portraitFor(enc)` — the raid's boss, or for a skirmish the first
+enemy of the fight it leads into). Every enemy out there is a silhouette in the same idiom, so the
+ship alone never said who you were about to fight, and the card that does say it only opens once
+you are committed. Withheld on a locked node with everything else; greyed once cleared.
+
+### The lit road is the campaign's, not the tour's
+
+`guide()` takes the tour's own goal first — it is asking for something specific — and otherwise, out
+past the Sea Gate, the campaign's next stop. Out there the sea is deliberately dark until it has
+been sailed, the bays are thousands of pixels across, and the compass arrow is a bearing rather than
+a route. The road is on whenever there is somewhere to be, not only while a tour happens to be
+running.
+
+### The tour goes back out of Recruit before it says "Click Assign"
+
+Assign is one of the four doors and the captain was standing inside a different one, so the beat
+asked for something that was not on the screen. A `crewDoors` beat (flashing `crew-back`) sends them
+out to the doors first.
+
+**And the player's captain wears one too.** The hand in the captain's seat is drawn beside the hull
+on the expedition side (`raidParty[0]`, which `loadDeployedParty` returns first because it orders by
+slot). A duel drawn between a named face and an anonymous ship is only half a duel. Not on the
+fishing side: nothing fights down there and the dinghy already has the captain painted on it. The
+bust cancels the wrapper's own mirror with a `--facing` custom property the loop publishes beside
+`--mirror-ride` — applying a scaleX of the same sign twice is the identity — so it stays the right
+way round on both headings while still riding the bob and the heel, which is what keeps it *on* the
+boat rather than floating beside it.

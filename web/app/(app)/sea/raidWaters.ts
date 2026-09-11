@@ -1190,6 +1190,34 @@ export function encArt(art: string): { hull: number; box: number } {
   return { hull: Math.round(hull), box: Math.round(hull / ink) }
 }
 
+/**
+ * WHOSE SHIP THAT IS.
+ *
+ * The same walk `hullFor` makes, for the portrait rather than the hull: a
+ * raid's boss, or for a skirmish the first enemy of the fight it leads into.
+ * A hull on the water is a silhouette every enemy shares; the face beside it
+ * is the only thing that says who you are about to fight.
+ */
+export function portraitFor(e: Encounter): string | null {
+  const node = RAID_MAP.find(n => n.id === e.node)
+  if (!node) return null
+  if (node.raidId) {
+    const cfg = getRaidConfigById(node.raidId)
+    return cfg?.enemies[cfg.bossId]?.portrait ?? null
+  }
+  if (node.type === 'skirmish') {
+    const ahead = ENCOUNTERS
+      .filter(x => x.bay === e.bay && x.along > e.along)
+      .sort((a, b) => a.along - b.along)
+    for (const x of ahead) {
+      const n = RAID_MAP.find(m => m.id === x.node)
+      const cfg = n?.raidId ? getRaidConfigById(n.raidId) : null
+      if (cfg) return cfg.enemies[cfg.sequence[0]]?.portrait ?? null
+    }
+  }
+  return null
+}
+
 export function hullFor(e: Encounter): string | null {
   const node = RAID_MAP.find(n => n.id === e.node)
   if (!node) return null
