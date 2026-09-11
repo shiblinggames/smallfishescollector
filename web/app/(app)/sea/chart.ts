@@ -842,6 +842,21 @@ export const GATE_X = -900
  *  section of it. The boat is 210 across. */
 export const GATE_HALF = 430
 
+/**
+ * WHERE THE SIGN HANGS OVER THE MOUTH, and where the boat changes under you.
+ *
+ * North of the reef by a couple of hundred, which is INSIDE the passage: the
+ * headlands either side are 760 across and straddle the wall, so this is the
+ * middle of the gap rather than the near lip of it.
+ *
+ * One number for the two things because they are one moment. The reef is the
+ * border and the hull swap is what the border DOES, and doing it at the wall
+ * meant the fishing boat became a ship of the line while the sign was still
+ * ahead of you -- the change happened before you had finished reading the
+ * instruction for it. Under the sign, the words and the event land together.
+ */
+export const GATE_SIGN_Y = NORTH_WALL - 210
+
 /** Is this point in the arch's mouth? */
 export function inGate(x: number): boolean {
   return Math.abs(x - GATE_X) < GATE_HALF

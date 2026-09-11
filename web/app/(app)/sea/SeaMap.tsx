@@ -37,7 +37,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SEA_GATE, SEA_GATE_HALF, inSeaGate, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, GATE_SIGN_Y, inGate, EXP_ORIGIN, EXP_EDGE, SEA_GATE, SEA_GATE_HALF, inSeaGate, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
 import { getShip, SHIP_CAPTAIN_SLOT, SHIP_CREW_FACE, MIN_SHIP_TIER } from '@/lib/ships'
 import { getSetting, SEA_SETTINGS_EVENT } from '@/lib/seaSettings'
 import { shipSkinSeaImage, shipSkinSeaScale } from '@/lib/shipSkins'
@@ -3237,6 +3237,21 @@ export default function SeaMap({
 
   const anyLock = tourLock || gateLock
   const sideRef = useRef(startSide !== 'fishing')
+  /**
+   * AND WHICH BOAT IS UNDER HER, which is NOT the same line.
+   *
+   * `sideRef` is the border: it governs the reef's clamps, and it has to sit on
+   * the rock because that is where the rock is. The hull changes further in,
+   * under the sign (see GATE_SIGN_Y) -- so the swap happens where the words
+   * telling you to sail through are, rather than a boat-length before them.
+   */
+  const hullSideRef = useRef(startSide !== 'fishing')
+  /** Has the loop reconciled the hull with where the boat actually IS yet? The
+   *  save records which SIDE she was on, and the two lines are not the same:
+   *  quit in the mouth between the reef and the sign and the seed is a side
+   *  ahead of the hull. The first pass settles that silently -- a swap
+   *  animation for a crossing nobody just made is a bug with a flourish. */
+  const hullSettled = useRef(false)
   /** THE BERTH SHEET, and the second half of the Gunwharf's chooser: the
    *  muster, the mounts, and the confirm that actually changes the hull. */
   /**
@@ -7463,14 +7478,9 @@ export default function SeaMap({
           vibrate(12)
         }
       } else if (inGate(pos.current.x)) {
-        // THROUGH THE ARCH AND STRAIGHT ON, AND ON A DIFFERENT BOAT. No page,
-        // no loading: the anchorage on the far side is a short sail, and the
-        // one thing that changes on the line is the hull under you -- the
-        // ship going north, the fishing boat coming south. See crossHull.
-        if (isNorth !== wasNorth) {
-          crossHullRef.current(isNorth)
-          setInAnchorage(isNorth)
-        }
+        // THROUGH THE ARCH AND STRAIGHT ON. No page and no loading: the
+        // anchorage on the far side is a short sail. The BOAT changes too, but
+        // not here and not on this line -- see the swap below.
         sideRef.current = isNorth
       } else if (!inGate(pos.current.x)) {
         // ── HELD AT THE BAND'S FACE, NOT ON ITS CENTRELINE ─────────────
@@ -7490,10 +7500,51 @@ export default function SeaMap({
           if (wasNorth ? vel.current.y > 0 : vel.current.y < 0) vel.current.y = 0
         }
       }
-      // NOTHING FOLLOWS. The two arms above are `inGate` and `!inGate`, which
-      // between them cover every position there is — an arm after them would be
-      // unreachable, and an unreachable arm that looks like a rule is worse than
-      // no rule. The old "put it back on the line" clamp lived here.
+      // NOTHING FOLLOWS THAT IS ABOUT THE REEF. The two arms above are
+      // `inGate` and `!inGate`, which between them cover every position there
+      // is — an arm after them would be unreachable, and an unreachable arm
+      // that looks like a rule is worse than no rule. The old "put it back on
+      // the line" clamp lived here.
+
+      // ── AND THE BOAT CHANGES UNDER THE SIGN ────────────────────────
+      //
+      // No page, no loading: the one thing that changes on the crossing is the
+      // hull under you, the ship going north and the fishing boat coming
+      // south. See crossHull.
+      //
+      // NOT ON THE BORDER. The reef's line has to sit on the rock, and swapping
+      // there put you on a ship of the line while the sign telling you to sail
+      // through the gap was still ahead of you: the crossing had already
+      // happened by the time you read the instruction for it. GATE_SIGN_Y is
+      // where the words hang, a couple of hundred further in, and that is a
+      // better place for the boat to change than the lip of the passage.
+      //
+      // Outside the mouth the hull simply follows the side, because out there
+      // the side is the only thing it can be: you cannot be north of the reef
+      // anywhere but the gate, and a boat pushed off the mouth by the rocks
+      // must not be left holding the wrong hull.
+      {
+        const hullNorth = inGate(pos.current.x)
+          // The same Schmitt trigger the border uses, about the sign's line:
+          // you keep the boat you have until you are properly past it.
+          ? (hullSideRef.current
+              ? pos.current.y < GATE_SIGN_Y + REEF_MARGIN
+              : pos.current.y < GATE_SIGN_Y - REEF_MARGIN)
+          : sideRef.current
+        if (hullNorth !== hullSideRef.current) {
+          hullSideRef.current = hullNorth
+          if (hullSettled.current) {
+            crossHullRef.current(hullNorth)
+          } else {
+            // Seeded wrong by a save taken inside the mouth. Put the right boat
+            // under her without announcing it.
+            shipRef.current = hullNorth
+            setOnShip(hullNorth)
+          }
+          setInAnchorage(hullNorth)
+        }
+        hullSettled.current = true
+      }
 
       // ── THE EDGE, WHICHEVER SEA YOU ARE IN ─────────────────────────
       //
@@ -13253,7 +13304,9 @@ const SeaGateSign = memo(function SeaGateSign() {
 const GateSign = memo(function GateSign({ to }: { to: string }) {
   return (
     <div aria-hidden style={{
-      position: 'absolute', left: GATE_X, top: NORTH_WALL - 210,
+      // THE SAME LINE THE BOAT CHANGES ON. See GATE_SIGN_Y: the sign and the
+      // crossing are one moment and they are pinned to one number.
+      position: 'absolute', left: GATE_X, top: GATE_SIGN_Y,
       transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
       transformOrigin: 'bottom center', whiteSpace: 'nowrap', pointerEvents: 'none',
     }}>
