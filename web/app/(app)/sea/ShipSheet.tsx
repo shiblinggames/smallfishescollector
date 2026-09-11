@@ -150,6 +150,9 @@ export default function ShipSheet({ open, focus, onClose }: {
       .filter(Boolean)
   })()
   const augment = state?.manowarAugment ? getShipAugment(state.manowarAugment) : null
+  /** What she looks like RIGHT NOW: the skin she is actually wearing, if it
+   *  fits this hull. Null means her own colours. */
+  const herPaint = state ? shipSkinAt(state.equippedShipSkin, tier) : null
   /** Her paints: the ones she owns that FIT this hull, as a picture each. A
    *  skin is either its own painting for this tier or a tint of her own. */
   const paints = (() => {
@@ -185,22 +188,36 @@ export default function ShipSheet({ open, focus, onClose }: {
       // her mounts, with the empty mounts drawn empty. An unfitted ship says so
       // without being told.
       const srcs = [kit?.image, ...mounted.map(i => getRaidItem(i)?.image)].filter(Boolean) as string[]
-      return <ObjectRow size={44} accent="#ffd56b" srcs={srcs} empty={Math.max(0, mounts - mounted.length)} />
+      return <ObjectRow size={32} accent="#ffd56b" srcs={srcs} empty={Math.max(0, mounts - mounted.length)} />
     }
     if (id === 'armament') {
-      // HER OWN HULL, in her own paint. The class and the ultimate have no art
-      // in this game -- they are icons and numbers -- and the thing they are
-      // all bolted to does.
-      const hull = EXPEDITION_SHIP_STATS[tier]?.image
-      if (!hull) return null
-      const paint = shipSkinAt(state.equippedShipSkin, tier)
-      return <HullTurn w={190} h={92}
-        srcs={[paint?.imageByTier?.[tier] ?? hull]}
-        filters={[paint?.filter ?? 'none']} />
+      // TWO FITTINGS, NOT A THIRD PICTURE OF THE SAME SHIP. Her hull is already
+      // the top of this panel and the whole of the Look card; a third one here
+      // would make the rack read as one boat drawn three times.
+      //
+      // What is actually in this room is a class and an ultimate, and neither
+      // has art in this game -- they are a star and a bolt on their own tiles.
+      // So they get the same mount the relics next door sit in: lit when you
+      // have it, an empty socket when you do not, which is the one thing the
+      // door has to say.
+      const star = (
+        <svg key="class" width="54%" height="54%" viewBox="0 0 24 24" fill="none" stroke="#e6ccff"
+          strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-3.5L6 21l1.5-7L2 9.5 9 9z" />
+        </svg>
+      )
+      const bolt = (
+        <svg key="ult" width="54%" height="54%" viewBox="0 0 24 24" fill="none" stroke="#f6dfa0"
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+        </svg>
+      )
+      const held = [classNames.length ? star : null, augment ? bolt : null].filter(Boolean)
+      return <ObjectRow size={40} accent="#c084fc" glyphs={held} empty={2 - held.length} />
     }
     // The paints, turning over. Her own first, so a captain with none still
     // sees a ship rather than an empty frame.
-    return <HullTurn w={190} h={92} every={2600}
+    return <HullTurn w={136} h={64} every={2600}
       srcs={paints.map(p => p.src)} filters={paints.map(p => p.filter)} />
   }
 
@@ -289,51 +306,62 @@ export default function ShipSheet({ open, focus, onClose }: {
               // because it is still ShipHero doing the opening.
               <ShipHero {...state} focus="ship" boxed bare shipSection={room} onBack={() => setRoom(null)} />
             ) : (<>
-              {/* ── HER, AND WHAT SHE IS ─────────────────────────────────
-                  The hull's own plate over her numbers. Not a hero band: one
-                  strip, the art doing the work a heading would otherwise do. */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 12, marginBottom: '0.75rem',
-                padding: '0.6rem 0.7rem', borderRadius: 14,
-                background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)',
-              }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={now.image} alt="" aria-hidden decoding="async" style={{
-                  width: 96, height: 68, flexShrink: 0, objectFit: 'contain',
-                  filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))',
-                }} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  {state.shipName && (
-                    <p className="font-cinzel font-700" style={{
-                      margin: 0, fontSize: '0.95rem', color: '#f4efe4', lineHeight: 1.15,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>{state.shipName}</p>
-                  )}
-                  <p className="font-karla font-700 uppercase" style={{
-                    margin: state.shipName ? '2px 0 0' : 0, fontSize: '0.54rem',
-                    letterSpacing: '0.16em', color: `${SEA},0.55)`,
-                  }}>{now.name}</p>
-                </div>
-              </div>
+              {/* ── HER, AND HER NUMBERS, IN ONE BLOCK ───────────────────
+                  Two full-width bars before: a strip with her portrait and two
+                  thirds of it empty, then a rank of four numbers under it. A
+                  ship is a WIDE shape and a stat is a SMALL one, so the four
+                  numbers go beside her in a square and the row that was empty
+                  is the row that holds them.
 
-              <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6,
-                marginBottom: '0.9rem',
-              }}>
-                {([
-                  ['Hull', now.durability],
-                  ['Guns', now.minDamage],
-                  ['Speed', now.speed],
-                  ['Crew', now.crewSlots],
-                ] as const).map(([k, v]) => (
-                  <div key={k} style={{
-                    padding: '0.45rem 0.3rem', borderRadius: 11, textAlign: 'center',
-                    background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)',
-                  }}>
-                    <p className="font-cinzel font-800" style={{ margin: 0, fontSize: '1.05rem', color: '#f6dfa0', fontVariantNumeric: 'tabular-nums' }}>{v}</p>
-                    <p className="font-karla font-700 uppercase" style={{ margin: '1px 0 0', fontSize: '0.48rem', letterSpacing: '0.14em', color: `${SEA},0.5)` }}>{k}</p>
+                  IN HER OWN PAINT. The plate up here is what she looks like
+                  right now, skin and all, so the wardrobe below is a choice
+                  against something rather than a catalogue on its own. */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: '0.8rem' }}>
+                <div style={{
+                  flex: '0 0 42%', minWidth: 0, borderRadius: 14, padding: '0.5rem',
+                  display: 'grid', placeItems: 'center',
+                  background: 'radial-gradient(ellipse 110% 80% at 50% 34%, rgba(240,192,64,0.09) 0%, rgba(7,12,20,0) 70%), rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={herPaint?.imageByTier?.[tier] ?? now.image} alt="" aria-hidden decoding="async" style={{
+                    width: '100%', height: 82, objectFit: 'contain',
+                    filter: herPaint?.filter && herPaint.filter !== 'none' ? herPaint.filter : undefined,
+                  }} />
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ minWidth: 0 }}>
+                    {state.shipName && (
+                      <p className="font-cinzel font-700" style={{
+                        margin: 0, fontSize: '0.95rem', color: '#f4efe4', lineHeight: 1.15,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{state.shipName}</p>
+                    )}
+                    <p className="font-karla font-700 uppercase" style={{
+                      margin: state.shipName ? '2px 0 0' : 0, fontSize: '0.54rem',
+                      letterSpacing: '0.16em', color: `${SEA},0.55)`,
+                    }}>{now.name}</p>
                   </div>
-                ))}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                    {([
+                      ['Hull', now.durability],
+                      ['Guns', now.minDamage],
+                      ['Speed', now.speed],
+                      ['Crew', now.crewSlots],
+                    ] as const).map(([k, v]) => (
+                      <div key={k} style={{
+                        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 4,
+                        padding: '0.28rem 0.45rem', borderRadius: 9,
+                        background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)',
+                      }}>
+                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', color: `${SEA},0.5)` }}>{k}</span>
+                        <span className="font-cinzel font-800" style={{ fontSize: '0.92rem', color: '#f6dfa0', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* ── THE UPGRADE, WHICH IS WHY THIS PANEL EXISTS ──────────
@@ -350,9 +378,16 @@ export default function ShipSheet({ open, focus, onClose }: {
                     onClick={() => { vibrate(8); setBuyErr(null); setArmed(a => !a) }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                      padding: '0.65rem 0.75rem', background: 'none', border: 'none',
+                      padding: '0.5rem 0.7rem', background: 'none', border: 'none',
                       cursor: 'pointer', textAlign: 'left',
                     }}>
+                    {/* WHAT YOU WOULD BE BUYING, in the empty half of the row.
+                        This bar was a label, a name and a price with a hand's
+                        width of nothing between them. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={then.image} alt="" aria-hidden decoding="async" style={{
+                      width: 54, height: 34, flexShrink: 0, objectFit: 'contain',
+                    }} />
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span className="font-karla font-800 uppercase" style={{ display: 'block', fontSize: '0.48rem', letterSpacing: '0.18em', color: `${GOLD}cc` }}>
                         Next hull
@@ -382,9 +417,8 @@ export default function ShipSheet({ open, focus, onClose }: {
                               each other. */}
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={then.image} alt="" aria-hidden decoding="async" style={{
-                            display: 'block', width: '100%', maxWidth: 260, margin: '0 auto 0.5rem',
-                            height: 108, objectFit: 'contain',
-                            filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.65))',
+                            display: 'block', width: '100%', maxWidth: 210, margin: '0 auto 0.45rem',
+                            height: 78, objectFit: 'contain',
                           }} />
                           {/* WHAT THE MONEY BUYS, in the same four numbers she
                               is already described by. A price with no answer to
@@ -446,26 +480,40 @@ export default function ShipSheet({ open, focus, onClose }: {
                 }}>The finest hull in the water. Nothing left to buy.</p>
               )}
 
-              {/* ── HER THREE ROOMS ──────────────────────────────────────
-                  Stacked, wide: three does not divide into a grid, and a wide
-                  door has room for the whole rack rather than a crop of it. */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {CARDS.map(card => (
+              {/* ── HER THREE ROOMS, ACROSS ──────────────────────────────
+                  They were three wide bars stacked: six hundred pixels of card
+                  to say three words, and most of each one empty ground either
+                  side of a small picture. Side by side they are a rack of
+                  three -- the whole set is one look, and the panel ends on the
+                  screen it started on.
+
+                  `auto-fit` rather than a fixed three, because this same card is
+                  560px on a desktop and the width of a phone: three across
+                  where there is room for three, two and a wrap where there is
+                  not, and never a 90px door with a boat in it. */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(138px, 1fr))',
+                gap: '0.55rem',
+              }}>
+                {CARDS.map((card, i) => (
                   <RoomCard key={card.id}
                     title={card.title}
                     note={roomNote(card.id) ?? card.blurb}
                     accent={card.accent}
-                    ratio="16 / 6.6"
+                    index={i}
                     onClick={() => setRoom(card.id)}>
                     {roomArt(card.id)}
                   </RoomCard>
                 ))}
               </div>
 
+              {/* THE FORGE IS NOT IN HERE, and the relic count belongs to the
+                  Refits door, which now says it. What is left is the one thing
+                  a captain looking for the forge in this panel needs told. */}
               <p className="font-karla" style={{
-                margin: '0.85rem 0 0', fontSize: '0.62rem', color: `${SEA},0.4)`, textAlign: 'center', lineHeight: 1.45,
+                margin: '0.7rem 0 0', fontSize: '0.6rem', color: `${SEA},0.38)`, textAlign: 'center',
               }}>
-                {raidItemSlotsForTier(tier)} relic {raidItemSlotsForTier(tier) === 1 ? 'mount' : 'mounts'} on this hull.
                 The forge is on its own island.
               </p>
             </>)}

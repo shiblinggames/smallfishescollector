@@ -29,7 +29,7 @@ const GOLD = '#f0c040'
 
 export default function RoomCard({
   title, note, onClick, children,
-  accent = GOLD, ratio = '4 / 3', waiting = false, coach, noteColor,
+  accent = GOLD, ratio = '4 / 3', waiting = false, coach, noteColor, index = 0,
 }: {
   title: string
   /** The live summary. What is actually in this room, right now, in numbers. */
@@ -45,9 +45,18 @@ export default function RoomCard({
   /** data-coach hook, so a tour can light one door. */
   coach?: string
   noteColor?: string
+  /** Position in its set: a rack of doors arrives one after another rather
+   *  than all at once. */
+  index?: number
 }) {
   return (
-    <button type="button" className="tap" data-coach={coach}
+    // OPACITY ONLY IN THE STAGGER. A `y` would leave framer-motion's own
+    // `transform` inline on the button once it settles, and an inline transform
+    // beats `.tap:active`'s press scale -- the whole rack would stop
+    // acknowledging taps. See [[feedback-framer-motion-gotchas]].
+    <motion.button type="button" className="tap" data-coach={coach}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      transition={{ delay: 0.03 + index * 0.05, duration: 0.26 }}
       onClick={() => { vibrate(10); onClick() }}
       style={{
         position: 'relative', display: 'block', padding: 0, width: '100%',
@@ -108,7 +117,7 @@ export default function RoomCard({
           }} />
         )}
       </div>
-    </button>
+    </motion.button>
   )
 }
 
@@ -499,14 +508,28 @@ export function HullTurn({ srcs, filters, w = 168, h = 86, every = 2800 }: {
  * size you can tell one from another. Nothing owned draws the empty mounts, so
  * an unfitted ship says so.
  */
-export function ObjectRow({ srcs, empty = 0, size = 46, accent = GOLD }: {
-  srcs: string[]; empty?: number; size?: number; accent?: string
+export function ObjectRow({ srcs = [], glyphs = [], empty = 0, size = 46, accent = GOLD }: {
+  srcs?: string[]
+  /** Mounts whose contents are not a picture. The class and the ultimate are
+   *  the whole of the Armament room and neither has art in this game -- they
+   *  are a star and a bolt, and a lit fitting says "you have this one" exactly
+   *  as well as a painting would. */
+  glyphs?: React.ReactNode[]
+  empty?: number; size?: number; accent?: string
 }) {
   const box = Math.round(size * 1.2)
+  const held: React.ReactNode[] = [
+    ...srcs.map((src, i) => (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img key={`i${i}`} src={src} alt="" aria-hidden loading="lazy" decoding="async"
+        style={{ width: '76%', height: '76%', objectFit: 'contain' }} />
+    )),
+    ...glyphs,
+  ]
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-      {srcs.map((src, i) => (
-        <motion.span key={`${src}-${i}`}
+      {held.map((node, i) => (
+        <motion.span key={`m${i}`}
           initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 * i, duration: 0.28, ease: 'easeOut' }}
           style={{
@@ -520,9 +543,7 @@ export function ObjectRow({ srcs, empty = 0, size = 46, accent = GOLD }: {
             border: `1px solid ${accent}40`,
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 6px 16px rgba(0,0,0,0.55)',
           }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt="" aria-hidden loading="lazy" decoding="async"
-            style={{ width: '76%', height: '76%', objectFit: 'contain' }} />
+          {node}
         </motion.span>
       ))}
       {Array.from({ length: empty }, (_, i) => (
