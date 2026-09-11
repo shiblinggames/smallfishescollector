@@ -30,16 +30,16 @@
 // what the chart will draw; the numbers never change, only the view.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { SHIPS, MIN_SHIP_TIER, MAX_SHIP_TIER, getShip } from '@/lib/ships'
+import { SHIPS, MIN_SHIP_TIER, MAX_SHIP_TIER, getShip, SHIP_CREW_FACE } from '@/lib/ships'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 
 /** How wide the hull is drawn on the bench. Big enough to place a face on a
  *  deck; the numbers are fractions, so this is a viewing choice and nothing
  *  more. */
 const HULL_W = 560
-/** The portrait's own size, as a share of the hull — the same figure the chart
- *  uses, so what you place here is the size that will be drawn. */
-const FACE = 0.16
+/** The portrait's own size, as a share of the hull — the chart's own figure,
+ *  so what you place here is the size that will be drawn. */
+const FACE = SHIP_CREW_FACE
 
 type Slot = { x: number; y: number }
 

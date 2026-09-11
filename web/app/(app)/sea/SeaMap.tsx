@@ -38,7 +38,7 @@ import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
 import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SEA_GATE, SEA_GATE_HALF, inSeaGate, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
-import { getShip } from '@/lib/ships'
+import { getShip, SHIP_CAPTAIN_SLOT, SHIP_CREW_FACE, MIN_SHIP_TIER } from '@/lib/ships'
 import { shipSkinSeaImage, shipSkinSeaScale } from '@/lib/shipSkins'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
@@ -10046,11 +10046,24 @@ hullRef={hullRefFor(t.key)} />
             AND NO COUNTER-SQUASH. This wrapper is in screen space, not in
             the squashed plane, so the 1/GROUND that stands things up out on
             the water only stretched this into an oval. */}
-        {inAnchorage && !fightOn && captainFace && (
+        {inAnchorage && !fightOn && captainFace && (() => {
+          // ON THE DECK, NOT BESIDE THE HULL. This was hung off the ship's
+          // flank by a pair of guessed numbers, which put her in the water on
+          // some hulls and up a mast on others. SHIP_CAPTAIN_SLOT is the seat
+          // placed by eye against each painting (see /sea/calibrate/crew), in
+          // fractions of the hull's own width from its middle -- so it rides
+          // the zoom, and the flip, and lands on the deck of whichever ship is
+          // under her.
+          const seat = SHIP_CAPTAIN_SLOT[shipTier] ?? SHIP_CAPTAIN_SLOT[MIN_SHIP_TIER]
+          const size = WARSHIP_W * SHIP_CREW_FACE
+          // EVERYONE ELSE ABOARD, AS A NUMBER. raidParty[0] is the captain.
+          const others = Math.max(0, raidParty.length - 1)
+          return (
           <div aria-hidden style={{
-            position: 'absolute', left: '50%', bottom: WARSHIP_W * 0.22,
-            marginLeft: WARSHIP_W * 0.12,
-            width: WARSHIP_W * 0.16, height: WARSHIP_W * 0.16,
+            position: 'absolute', left: '50%', top: '50%',
+            width: size, height: size,
+            marginLeft: seat.x * WARSHIP_W - size / 2,
+            marginTop: seat.y * WARSHIP_W - size / 2,
             transform: 'scaleX(var(--facing, 1)) rotate(calc(var(--heel, 0) * -1deg))',
             transformOrigin: 'center center',
             pointerEvents: 'none',
@@ -10062,8 +10075,27 @@ hullRef={hullRefFor(t.key)} />
               background: 'rgba(6,10,16,0.9)',
               boxShadow: '0 6px 18px rgba(0,0,0,0.75)',
             }} />
+            {/* AND THE REST OF THE HANDS. Every assigned crew could stand on
+                the deck -- the seats exist for it -- but five faces on a sloop
+                is a hull you can no longer see. One face, and a count for the
+                watch below. */}
+            {others > 0 && (
+              <span className="font-karla font-800" style={{
+                position: 'absolute', right: -size * 0.1, bottom: -size * 0.04,
+                minWidth: size * 0.42, height: size * 0.42,
+                padding: '0 ' + (size * 0.1) + 'px',
+                borderRadius: 999,
+                display: 'grid', placeItems: 'center',
+                fontSize: size * 0.26, lineHeight: 1,
+                color: '#0a1118',
+                background: 'linear-gradient(180deg, #f6dc94, #d8ae4a)',
+                border: '1px solid rgba(10,17,24,0.55)',
+                boxShadow: '0 3px 10px rgba(0,0,0,0.7)',
+              }}>+{others}</span>
+            )}
           </div>
-        )}
+          )
+        })()}
       </div>
 
       {/* ── THE NEAR PASS ───────────────────────────────────────────────

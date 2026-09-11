@@ -122,6 +122,35 @@ export interface ShipDef {
 export const MIN_SHIP_TIER = 2
 export const MAX_SHIP_TIER = 6
 
+/**
+ * WHERE THE CAPTAIN STANDS, ON EACH HULL.
+ *
+ * Fractions of the ship art's own WIDTH, measured from the middle of it, y
+ * positive downward -- so one pair of numbers places a face on a deck whatever
+ * size the hull happens to be drawn at, on the chart or on a bench. Placed by
+ * eye against each painting at /sea/calibrate/crew, which prints this table.
+ *
+ * ONE SEAT, NOT A CREW. Every assigned hand could stand on the deck and it was
+ * built to -- but five faces on a sloop is a hull you can no longer see, and
+ * the art is the thing worth looking at. The captain is who the ship is, and
+ * the rest of the hands are a +N beside them.
+ *
+ * Stored UNMIRRORED. The chart flips the whole boat on the other tack and the
+ * seat rides inside that flip, which is the point: the captain stays where she
+ * is standing on the deck rather than sliding across it.
+ */
+export const SHIP_CAPTAIN_SLOT: Record<number, { x: number; y: number }> = {
+  2: { x: -0.122, y: 0.043 },   // Sloop
+  3: { x: -0.154, y: 0.089 },   // Schooner
+  4: { x: -0.151, y: 0.138 },   // Brigantine
+  5: { x: -0.201, y: 0.212 },   // Galleon
+  6: { x: 0.008,  y: 0.232 },   // Man-o-War
+}
+
+/** How big a face on a deck is drawn, as a share of the hull's width. Shared
+ *  with the bench so what is placed there is the size that gets drawn. */
+export const SHIP_CREW_FACE = 0.16
+
 export const SHIPS: ShipDef[] = [
   {
     // Free, because it is where everyone starts now. Its stats are unchanged
