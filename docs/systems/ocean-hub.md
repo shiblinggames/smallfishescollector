@@ -2913,3 +2913,12 @@ bust cancels the wrapper's own mirror with a `--facing` custom property the loop
 `--mirror-ride` — applying a scaleX of the same sign twice is the identity — so it stays the right
 way round on both headings while still riding the bob and the heel, which is what keeps it *on* the
 boat rather than floating beside it.
+
+**Bust sizing, and the two counter-transforms that were wrong.** Both busts shipped with a
+`scaleY(1 / GROUND)` they should never have had: `EncounterMark`'s wrapper already stands its
+contents up, and the player's boat node is in screen space rather than the squashed plane — so the
+extra counter-squash stretched every face into an oval, which was most of why they read as too
+large. Sizes are 0.17 of the hull box (enemy) and 0.16 of `WARSHIP_W` (captain), sat closer in.
+The captain's bust cancels the hull's mirror AND its heel (`--facing`, `--heel`, both published by
+the loop): mirrored a face reads backwards, tilted it looks like it is falling off. The bob is
+deliberately left in — that is what keeps it *on* the boat.

@@ -8827,6 +8827,9 @@ export default function SeaMap({
         // a face is not a hull and reads backwards mirrored, so the captain's
         // bust applies this again to cancel it. See the bust below.
         boat.style.setProperty('--facing', String(facing.current))
+        // AND HOW FAR SHE IS LEANING, for the same reason. A face tilted with
+        // the heel looks like it is falling off her.
+        boat.style.setProperty('--heel', (heel + fxRot).toFixed(2))
         // THE SAME NUMBERS, HANDED TO THE CANVAS. Not recomputed: how she is
         // riding is one decision and it is made here. Null unless the flag is
         // on and she is the one being drawn, in which case the DOM sprite above
@@ -10020,23 +10023,31 @@ hullRef={hullRefFor(t.key)} />
             dinghy with the captain already painted on it, and a second face
             beside her would be one face too many.
 
-            `--facing` undoes the wrapper's own mirror. Applying a scaleX of
-            the same sign twice is the identity, so the bust stays the right
-            way round on both headings while riding the bob and the heel with
-            the hull, which is what keeps it ON the boat. */}
+            IT RIDES THE BOAT BUT DOES NOT LEAN WITH HER. The wrapper mirrors
+            and rotates, and a face does neither well: mirrored it reads
+            backwards, and tilted with the heel it looks like it is falling
+            off. `--facing` and `--heel` are published by the loop beside
+            `--mirror-ride` and applied again here, which cancels both --
+            scaleX of the same sign twice is the identity, and a rotation
+            plus its negative is nothing. What survives is the bob, which is
+            what keeps it ON the boat rather than floating beside her.
+
+            AND NO COUNTER-SQUASH. This wrapper is in screen space, not in
+            the squashed plane, so the 1/GROUND that stands things up out on
+            the water only stretched this into an oval. */}
         {inAnchorage && captainFace && (
           <div aria-hidden style={{
-            position: 'absolute', left: '50%', bottom: WARSHIP_W * 0.30,
-            marginLeft: WARSHIP_W * 0.22,
-            width: WARSHIP_W * 0.26, height: WARSHIP_W * 0.26,
-            transform: `scaleX(var(--facing, 1)) scaleY(${1 / GROUND})`,
-            transformOrigin: 'bottom center',
+            position: 'absolute', left: '50%', bottom: WARSHIP_W * 0.22,
+            marginLeft: WARSHIP_W * 0.12,
+            width: WARSHIP_W * 0.16, height: WARSHIP_W * 0.16,
+            transform: 'scaleX(var(--facing, 1)) rotate(calc(var(--heel, 0) * -1deg))',
+            transformOrigin: 'center center',
             pointerEvents: 'none',
           }}>
             <img src={captainFace} alt="" draggable={false} decoding="async" style={{
               width: '100%', height: '100%', objectFit: 'cover', display: 'block',
               borderRadius: '50%', maxWidth: 'none',
-              border: '2px solid rgba(126,214,196,0.8)',
+              border: '1.5px solid rgba(126,214,196,0.8)',
               background: 'rgba(6,10,16,0.9)',
               boxShadow: '0 6px 18px rgba(0,0,0,0.75)',
             }} />
@@ -14200,18 +14211,21 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext,
           ship alone never says who you are about to fight -- and the card that
           does say it only opens once you are already committed. Counter-
           squashed like everything else that STANDS on this plane. */}
+      {/* NO COUNTER-SQUASH HERE. The node's own wrapper above is already
+          `scaleY(1 / GROUND)` -- everything inside it is standing up by the
+          time it gets here -- so a second one stretched every face into an
+          oval and was most of why they read as too big. */}
       {face && (
         <div aria-hidden style={{
-          position: 'absolute', left: '50%', bottom: w * 0.52,
-          marginLeft: w * 0.30,
-          width: w * 0.30, height: w * 0.30,
-          transform: `scaleY(${1 / GROUND})`, transformOrigin: 'bottom center',
+          position: 'absolute', left: '50%', bottom: w * 0.40,
+          marginLeft: w * 0.15,
+          width: w * 0.17, height: w * 0.17,
           pointerEvents: 'none',
         }}>
           <img src={face} alt="" draggable={false} decoding="async" style={{
             width: '100%', height: '100%', objectFit: 'cover', display: 'block',
             borderRadius: '50%', maxWidth: 'none',
-            border: `2px solid ${cleared ? 'rgba(150,206,172,0.75)' : 'rgba(240,192,64,0.75)'}`,
+            border: `1.5px solid ${cleared ? 'rgba(150,206,172,0.75)' : 'rgba(240,192,64,0.75)'}`,
             background: 'rgba(6,10,16,0.9)',
             boxShadow: '0 6px 18px rgba(0,0,0,0.75)',
             filter: cleared ? 'grayscale(0.6) brightness(0.8)' : undefined,
