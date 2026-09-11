@@ -11,7 +11,7 @@
 // stays farmable.
 
 import { RAID_BOSS_BG, RAID_LOCATION_BG, ENEMY_IMG_BASE } from '@/lib/bossRaids'
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_BLOCKADE, THE_THRONE, THE_SUNKEN_HAND, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { REEF_SKIRMISH, CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST, THE_BLOCKADE, THE_THRONE, THE_SUNKEN_HAND, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
 import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST, SPOILS_PRICE } from '@/lib/shipBerth'
 import type { RaidMuster, MusterReport } from '@/lib/crewMuster'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE, THE_SUNKEN_HAND_CHALLENGE } from '@/lib/raidChallenge'
@@ -904,7 +904,12 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "Pete keeps his own hands clean and his Reef Raiders busy. Time to start putting them on the seabed.",
     bridge: "Thin out his Raiders and you thin out his nerve. Sink enough and the old corsair rows out himself to see who's been counting.",
     requiresNode: 'intro',
-    route: '/raids/practice',
+    // A REAL RAID, ONE BATTLE. It ran on /raids/practice -- the tutorial
+    // wrapper, with its own enemy table and its own chrome -- so the first
+    // real fight in the game was the one fight that looked like nothing else
+    // in it. Same screen as every raid now; see REEF_SKIRMISH.
+    route: '/raids/skirmish',
+    raidId: REEF_SKIRMISH.raidId,
     image: CORSAIRS_RECKONING.enemies.brute.portrait,
     detail: {
       description:

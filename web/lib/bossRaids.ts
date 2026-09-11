@@ -511,6 +511,18 @@ export interface BossRaidConfig {
   bossId: string
   loot: RaidLootItem[]
   killRewards: Record<string, { gold: number; xp: number }>
+  /**
+   * NO CRATE AT THE END OF THIS ONE.
+   *
+   * A raid's win screen IS the loot stage: the boss goes down and the chest
+   * comes up. That is right for a raid, which is a run of fights you commit
+   * an afternoon to, and wrong for a single skirmish -- a chest for one mob
+   * makes the crate mean less everywhere else, and `loot: []` is not a way to
+   * say it (the stage reads `loot[slotFinal]` and would crash on an empty
+   * list). This says it properly: no roll, no chest, and a win screen that is
+   * the tally of what the kill paid.
+   */
+  noCrate?: true
   /** Battle-stage atmosphere. Each raid gets its own backdrop palette so
    *  fights read as different places, not the same dusk seascape repeated.
    *  Undefined falls back to 'dusk' (the original look) so any pre-existing
@@ -773,6 +785,37 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     { speaker: 'crew', ...CREW_SPEAKER.kat, text: "He does love the sound of himself. Put a ball through his mainmast, captain, and let us all get on with our day." },
     { speaker: 'boss', text: "Ready your guns. *This is where your story ends.*", pause: 600, fx: 'shake' },
   ],
+}
+
+/**
+ * ── THE REEF SKIRMISH ───────────────────────────────────────────────────────
+ *
+ * One battle, one Reef Raider, no chest. It is the campaign's first fight and
+ * it used to run on the practice screen -- the tutorial wrapper, with its own
+ * enemy table and its own chrome -- so the first real fight in the game looked
+ * like nothing else in the game. Same RaidGame as every raid now; what makes
+ * it a skirmish rather than a raid is the size of it, not the furniture.
+ *
+ * The Raider is borrowed from Pete's own fleet rather than copied, so thinning
+ * his Raiders here and meeting the same hull in his raid later is literally
+ * the same ship.
+ */
+export const REEF_SKIRMISH: BossRaidConfig = {
+  raidId: 'reef_skirmish',
+  raidTitle: 'Reef Skirmish',
+  bossDefeatedText: 'Reef Raider Sunk',
+  // Pete's coast at golden hour: this is his water, and the raid it leads
+  // into wears the same light.
+  atmosphere: 'sunset',
+  zone: 'shallows',
+  enemies: { brute: CORSAIRS_RECKONING.enemies.brute },
+  // NOTHING BEFORE THE BOSS. `sequence` is the run of mobs a raid walks
+  // through on the way in; a skirmish is the one hull and nothing else.
+  sequence: [],
+  bossId: 'brute',
+  loot: [],
+  noCrate: true,
+  killRewards: { brute: CORSAIRS_RECKONING.killRewards.brute },
 }
 
 export const CAPTAIN_KRUST: BossRaidConfig = {

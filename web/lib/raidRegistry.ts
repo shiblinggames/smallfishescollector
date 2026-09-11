@@ -13,6 +13,7 @@ import { isUniqueLoot } from './bossRaids'
 // is exhaustive by construction: a raidId that is not in here did not come from a
 // real raid screen, and claimRaidLoot rejects it outright.
 import {
+  REEF_SKIRMISH,
   CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER,
   THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST,
   THE_BLOCKADE, THE_THRONE, THE_SUNKEN_HAND, type BossRaidConfig,
@@ -24,6 +25,7 @@ import {
 } from './raidChallenge'
 
 export const ALL_RAIDS: BossRaidConfig[] = [
+  REEF_SKIRMISH,
   CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER,
   THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_QUARTERMASTERS_GHOST,
   THE_BLOCKADE, THE_THRONE, THE_SUNKEN_HAND,

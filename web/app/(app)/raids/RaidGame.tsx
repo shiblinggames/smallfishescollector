@@ -1255,7 +1255,12 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
         setWinGold(gold); setWinXP(xp)
         // Roll loot + dollar amount up front so the stage can pre-position
         // the slot before the player taps Loot Chest.
-        const crate = rollCrate(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult, isChallengeRaid(config.raidId))
+        // NOTHING TO ROLL when the raid carries no crate. `rollCrate` over an
+        // empty table has no currency row to land on, so this is a branch
+        // rather than an empty list. See BossRaidConfig.noCrate.
+        const crate = config.noCrate
+          ? { itemIdxs: [] as number[], currencyIdx: -1 }
+          : rollCrate(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult, isChallengeRaid(config.raidId))
         // The reel lands on the RAREST item that dropped, so the headline is the
         // best thing in the crate rather than whichever index happened to sort
         // first. With no items it lands on the currency, which now always pays.
@@ -2089,6 +2094,7 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
         </div>
         <div style={{ width: '100%', padding: '0 0.5rem', flexShrink: 0 }}>
           <RaidLootStage
+            noCrate={config.noCrate === true}
             boss={bossEnemy}
             clearTimeMs={clearTimeMs}
             clearTimes={clearTimes}

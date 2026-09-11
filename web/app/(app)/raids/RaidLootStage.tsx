@@ -54,6 +54,9 @@ interface Props {
   /** Called when the player taps Return to Port — the parent runs the
    *  claimRaidLoot server action + routes to /expeditions. */
   onClaim: () => void
+  /** No crate was rolled: the boss went down and that is the whole of it.
+   *  The stage opens straight on the tally. See BossRaidConfig.noCrate. */
+  noCrate?: boolean
   /** Whether the parent is currently saving the claim. Disables the button. */
   claiming?: boolean
   /** Per-crew XP accumulated across THE ENTIRE RAID (not just the boss kill). */
@@ -159,20 +162,24 @@ export default function RaidLootStage(props: Props) {
     clearTimeMs, clearTimes,
     loot, slotFinal, itemIdxs = [], lootAmount, fortuneMult, lootFortuneMult = 1, clearBonusXp = 0,
     shipImageUrl,
-    onClaim, claiming = false,
+    onClaim, claiming = false, noCrate = false,
     crewXP = [],
   } = props
 
   const [opening, setOpening]   = useState(false)
-  const [opened, setOpened]     = useState(false)
-  const [counting, setCounting] = useState(false)
+  // STRAIGHT TO THE TALLY when there is no chest to crack. `opened` is what
+  // the stage calls "past the crate"; with none there is nothing to be before.
+  const [opened, setOpened]     = useState(noCrate)
+  const [counting, setCounting] = useState(noCrate)
 
-  const finalItem = loot[slotFinal]
+  const finalItem = loot[slotFinal] as RaidLootItem | undefined
   // Anything beyond the headline. A crate used to hold exactly one row, so this
   // is always empty until two uniques land in the same crate.
   const extraItems = itemIdxs.filter(i => i !== slotFinal).map(i => loot[i])
-  const accent = RARITY_COLOR[finalItem.rarity]
-  const tier = RARITY_TIER[finalItem.rarity] ?? 1
+  // The stage is tinted by what dropped. With nothing dropped it takes the
+  // gold every reward line already wears.
+  const accent = finalItem ? RARITY_COLOR[finalItem.rarity] : GOLD
+  const tier = finalItem ? RARITY_TIER[finalItem.rarity] ?? 1 : 1
   const grand = tier >= 4
   const totalDoubloons = killGold + lootAmount
 
@@ -184,7 +191,7 @@ export default function RaidLootStage(props: Props) {
   // gems outright; for coin the honest thing to print is the figure actually
   // granted rather than the row's nominal one. Uniques and gem rows keep their
   // own labels, which are true.
-  const headlineLabel = !isUniqueLoot(finalItem) && lootGems <= 0
+  const headlineLabel = !finalItem ? '' : !isUniqueLoot(finalItem) && lootGems <= 0
     ? `+${lootAmount.toLocaleString()} ⟡`
     : finalItem.label
   const totalNavXp = killXP + clearBonusXp
@@ -342,7 +349,18 @@ export default function RaidLootStage(props: Props) {
                   style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 30px ${accent}66)` }} />
               </div>
 
+              {/* THE KILL ITSELF, when there is no crate to announce. The
+                  stage's headline is normally the drop; with none, the thing
+                  that happened is the sinking. */}
+              {noCrate && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
+                  className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.3em', color: GOLD }}>
+                  You sank {boss.name}
+                </motion.p>
+              )}
+
               {/* The item — the headline drop, rising out with an overshoot pop */}
+              {finalItem && (<>
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
                 className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.3em', color: accent }}>
                 {RARITY_LABEL[finalItem.rarity] ?? finalItem.rarity} Find
@@ -378,6 +396,7 @@ export default function RaidLootStage(props: Props) {
                   })}
                 </motion.div>
               )}
+              </>)}
 
               {(fortuneMult > 1 || lootFortuneMult > 1) && (
                 <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
