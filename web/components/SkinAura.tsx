@@ -30,6 +30,51 @@ const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`
 const rgba = (c: number, a: number) =>
   `rgba(${(c >> 16) & 255}, ${(c >> 8) & 255}, ${c & 255}, ${a.toFixed(3)})`
 
+/**
+ * ── THE GLOW ITSELF, FOR ONE HULL ───────────────────────────────────────────
+ *
+ * The halo below is a still frame of the pulse, which is the right trade for a
+ * grid of twenty tiles. It is the wrong trade for the ONE hull the room is
+ * about: that one should do what it does on the water.
+ *
+ * So this hands back the real timeline as CSS. Every keyframe of the effect
+ * becomes a stack of `drop-shadow()`s -- the same radii, the same colours, the
+ * same alphas, the same duration -- for framer-motion to run on a single
+ * element. Which is exactly what the fishing side already does with its boat,
+ * rod and hook glows: those are `drop-shadow` keyframes in globals.css, and
+ * `auraSpecs` was ported FROM them. This is the same picture taking the same
+ * road back.
+ *
+ * EVERY FRAME CARRIES THE SAME NUMBER OF SHADOWS, padded with transparent ones
+ * where a keyframe uses fewer. A filter list that changes length between
+ * keyframes cannot be interpolated and snaps instead.
+ */
+export function skinGlow(skinId: string | null | undefined, base?: string): {
+  filter: string[]; times: number[]; dur: number; linear: boolean
+} | null {
+  const name = shipEffect(skinId)
+  if (!name) return null
+  const { glow } = effect(name)
+  const width = Math.max(...glow.stops.map(s => s.layers.length))
+  const head = base && base !== 'none' ? `${base} ` : ''
+  // The depth shadow the preview already wore, kept in every frame so it does
+  // not flicker in and out as the glow breathes.
+  const tail = ' drop-shadow(0 8px 18px rgba(0,0,0,0.85))'
+  const filter = glow.stops.map(s => {
+    const layers = Array.from({ length: width }, (_, i) => {
+      const l = s.layers[i]
+      return l
+        ? `drop-shadow(0 0 ${l.r}px ${rgba(l.c, l.a)})`
+        : 'drop-shadow(0 0 0px rgba(0,0,0,0))'
+    })
+    return head + layers.join(' ') + tail
+  })
+  // Some of these run LINEAR in the stylesheet they came from (the electric
+  // and prismatic families). Carried through, or a glow that was written to
+  // step would breathe instead.
+  return { filter, times: glow.stops.map(s => s.t), dur: glow.dur, linear: !!glow.linear }
+}
+
 export default function SkinAura({ skinId, motes = false, inset = '-22%' }: {
   /** The skin being worn or previewed. Null is her own paint, which throws
    *  nothing on the water either. */

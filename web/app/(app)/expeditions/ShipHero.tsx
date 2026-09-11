@@ -33,7 +33,7 @@ import { getShipAugment, type ShipAugmentId } from '@/lib/shipAugments'
 import { bonusChargeSlots, hasForge, hasAbyssalForge, hasAbyssalAccelerator } from '@/lib/gauntletUpgrades'
 import { ABYSSAL_ACCEL_GEM_COST, isConversionReady, type AbyssalConversion } from '@/lib/abyssalAccelerator'
 import PopupShell from '@/components/PopupShell'
-import SkinAura from '@/components/SkinAura'
+import SkinAura, { skinGlow } from '@/components/SkinAura'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
@@ -1907,17 +1907,45 @@ export default function ShipHero({
                           the hull you will be sailing rather than a recolour of
                           the bare one. Sparks on this one only: see SkinAura. */}
                       <SkinAura skinId={equippedSkin} motes />
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={shipHeroSrc}
-                        alt={shipName ?? shipStats.name}
-                        loading="lazy"
-                        decoding="async"
-                        // Drop-shadow APPENDED to the skin's own filter, never
-                        // replacing it: a skin that recolours the hull still has
-                        // to recolour it. Static, so it rasterises once.
-                        style={{ position: 'relative', zIndex: 1, width: '100%', height: 'auto', objectFit: 'contain', display: 'block', filter: `${skinFilter === 'none' ? '' : skinFilter + ' '}drop-shadow(0 8px 18px rgba(0,0,0,0.85)) drop-shadow(0 0 3px rgba(0,0,0,0.7))`, transition: 'filter 0.3s ease' }}
-                      />
+                      {/* ── AND SHE BREATHES THE WAY SHE DOES OUT THERE ────
+                          `skinGlow` is the effect's own timeline as CSS: same
+                          radii, colours, alphas and duration the canvas runs,
+                          on the one hull this room is about. The fishing side
+                          has done exactly this for its boat, rod and hook since
+                          the beginning -- `auraSpecs` was ported FROM those
+                          keyframes -- so this is the same picture taking the
+                          same road back.
+
+                          ONE ELEMENT. An animated multi-layer drop-shadow is
+                          not cheap; the twenty tiles below wear a still
+                          gradient instead. See SkinAura. */}
+                      {(() => {
+                        const glow = skinGlow(equippedSkin, skinFilter)
+                        const rest = `${skinFilter === 'none' ? '' : skinFilter + ' '}drop-shadow(0 8px 18px rgba(0,0,0,0.85)) drop-shadow(0 0 3px rgba(0,0,0,0.7))`
+                        const common = {
+                          src: shipHeroSrc,
+                          alt: shipName ?? shipStats.name,
+                          loading: 'lazy' as const,
+                          decoding: 'async' as const,
+                        }
+                        const box: React.CSSProperties = {
+                          position: 'relative', zIndex: 1, width: '100%', height: 'auto',
+                          objectFit: 'contain', display: 'block',
+                        }
+                        return glow ? (
+                          // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+                          <motion.img {...common}
+                            animate={{ filter: glow.filter }}
+                            transition={{ duration: glow.dur, times: glow.times, repeat: Infinity, ease: glow.linear ? 'linear' : 'easeInOut' }}
+                            style={box} />
+                        ) : (
+                          // Drop-shadow APPENDED to the skin's own filter, never
+                          // replacing it: a skin that recolours the hull still
+                          // has to recolour it. Static, so it rasterises once.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img {...common} style={{ ...box, filter: rest, transition: 'filter 0.3s ease' }} />
+                        )
+                      })()}
                     </div>
 
                     {/* Name + inline rename (pencil implies it; no helper text). */}
