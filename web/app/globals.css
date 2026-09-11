@@ -3423,6 +3423,22 @@ body.hardcore-gauntlet::after {
 /* The enemy's own face, held over their ship. It floats; it does not roll --
    a portrait is not a hull, and the moment it tips with the swell it reads as
    a sticker stuck to the mast rather than the man standing behind the fight. */
+/* A spark off a ship skin's hull, in a preview. `transform` and `opacity`
+   only: the canvas does this properly with a particle pool, and this is the
+   DOM's cheapest honest impression of it. The rise is per-mote, because a
+   smoke effect settles where an ember climbs. */
+@keyframes skinMote {
+  0%   { transform: translateY(0) scale(0.7); opacity: 0; }
+  18%  { opacity: 0.95; }
+  70%  { opacity: 0.55; }
+  100% { transform: translateY(var(--mote-rise, -26px)) scale(0.35); opacity: 0; }
+}
+.skin-mote {
+  animation-name: skinMote;
+  animation-timing-function: ease-out;
+  animation-iteration-count: infinite;
+}
+
 @keyframes encFace {
   0%, 100% { transform: translate(-50%, 0); }
   50%      { transform: translate(-50%, -7px); }

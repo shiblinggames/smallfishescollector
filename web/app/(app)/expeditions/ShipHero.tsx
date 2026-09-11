@@ -33,6 +33,7 @@ import { getShipAugment, type ShipAugmentId } from '@/lib/shipAugments'
 import { bonusChargeSlots, hasForge, hasAbyssalForge, hasAbyssalAccelerator } from '@/lib/gauntletUpgrades'
 import { ABYSSAL_ACCEL_GEM_COST, isConversionReady, type AbyssalConversion } from '@/lib/abyssalAccelerator'
 import PopupShell from '@/components/PopupShell'
+import SkinAura from '@/components/SkinAura'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
@@ -1900,6 +1901,12 @@ export default function ShipHero({
                         background: 'radial-gradient(ellipse 62% 58% at 50% 52%, rgba(255,214,150,0.20) 0%, rgba(120,160,210,0.10) 42%, transparent 72%)',
                         pointerEvents: 'none',
                       }} />
+                      {/* ── AND WHAT SHE THROWS OFF ────────────────────────
+                          The skin's own aura out of `auraSpecs` -- the rows the
+                          chart's canvas reads -- so the hull in this room is
+                          the hull you will be sailing rather than a recolour of
+                          the bare one. Sparks on this one only: see SkinAura. */}
+                      <SkinAura skinId={equippedSkin} motes />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={shipHeroSrc}
@@ -1909,7 +1916,7 @@ export default function ShipHero({
                         // Drop-shadow APPENDED to the skin's own filter, never
                         // replacing it: a skin that recolours the hull still has
                         // to recolour it. Static, so it rasterises once.
-                        style={{ position: 'relative', width: '100%', height: 'auto', objectFit: 'contain', display: 'block', filter: `${skinFilter === 'none' ? '' : skinFilter + ' '}drop-shadow(0 8px 18px rgba(0,0,0,0.85)) drop-shadow(0 0 3px rgba(0,0,0,0.7))`, transition: 'filter 0.3s ease' }}
+                        style={{ position: 'relative', zIndex: 1, width: '100%', height: 'auto', objectFit: 'contain', display: 'block', filter: `${skinFilter === 'none' ? '' : skinFilter + ' '}drop-shadow(0 8px 18px rgba(0,0,0,0.85)) drop-shadow(0 0 3px rgba(0,0,0,0.7))`, transition: 'filter 0.3s ease' }}
                       />
                     </div>
 
@@ -2368,6 +2375,14 @@ export default function ShipHero({
                 // count the tiles to work the rows out for itself.
                 const maxTiles = Math.max(...tabTileCounts)
                 const reserve = (cols: number) => {
+                  // AND NOT WHEN THERE ARE NO TABS TO SWITCH BETWEEN. The
+                  // reservation buys one thing: the page not jumping under a
+                  // thumb already reaching for the next tab. In the sea's ship
+                  // panel each room is its own screen reached from a door, the
+                  // tab strip is not drawn at all, and Look holds NO tiles --
+                  // so the reservation was two hundred pixels of nothing
+                  // between the hull and the skins that pay for it.
+                  if (bare) return 0
                   const rows = Math.ceil(maxTiles / cols)
                   return rows * 98 + (rows - 1) * 10
                 }
@@ -2517,7 +2532,8 @@ export default function ShipHero({
                     </>}
 
                     <div className="ship-tile-grid" style={{
-                      marginBottom: '1.4rem',
+                      // Nothing under it in Look, so nothing to clear.
+                      marginBottom: bare && shipTab === 'appearance' ? 0 : '1.4rem',
                       '--tiles-h-narrow': `${reserve(2)}px`,
                       '--tiles-h-wide': `${reserve(3)}px`,
                     } as React.CSSProperties}>
@@ -3495,8 +3511,17 @@ export default function ShipHero({
                 return (
                   <button key={skin.id} onClick={equippable ? () => handleEquipSkin(skin.id) : undefined} disabled={!equippable}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? `${skin.color}1f` : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? skin.color + '90' : owned && !tierLocked ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`, boxShadow: isEquipped ? `0 0 12px ${skin.color}33` : 'none', cursor: equippable ? 'pointer' : 'default', opacity: owned && !tierLocked ? 1 : 0.6 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={skinImg} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain', filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)', transition: 'filter 0.25s' }} />
+                    {/* HER AURA, ON THE TILE. A skin is a glow and a stream of
+                        sparks on the water, not a recolour, and a picker that
+                        shows only the recolour is selling the wrong thing. The
+                        glow is a gradient and it is still: twenty animated ones
+                        in a grid is a page that will not settle, and the sparks
+                        are drawn for the big preview above only. See SkinAura. */}
+                    <span style={{ position: 'relative', display: 'block', width: 38, height: 38 }}>
+                      {owned && !tierLocked && <SkinAura skinId={skin.id} inset="-40%" />}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={skinImg} alt="" loading="lazy" decoding="async" style={{ position: 'relative', zIndex: 1, width: 38, height: 38, objectFit: 'contain', filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)', transition: 'filter 0.25s' }} />
+                    </span>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: owned && !tierLocked ? '#f0ede8' : '#a8a3a0', lineHeight: 1.1, textAlign: 'center' }}>{skin.name}</p>
                     {isEquipped ? (
                       <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: skin.color }}>✓ Equipped</span>
@@ -3556,8 +3581,17 @@ export default function ShipHero({
                 return (
                   <button key={skin.id} onClick={equippable ? () => handleEquipSkin(skin.id) : undefined} disabled={!equippable}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? `${skin.color}1f` : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? skin.color + '90' : owned && !tierLocked ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`, boxShadow: isEquipped ? `0 0 12px ${skin.color}33` : 'none', cursor: equippable ? 'pointer' : 'default', opacity: owned && !tierLocked ? 1 : 0.6 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={skinImg} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain', filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)', transition: 'filter 0.25s' }} />
+                    {/* HER AURA, ON THE TILE. A skin is a glow and a stream of
+                        sparks on the water, not a recolour, and a picker that
+                        shows only the recolour is selling the wrong thing. The
+                        glow is a gradient and it is still: twenty animated ones
+                        in a grid is a page that will not settle, and the sparks
+                        are drawn for the big preview above only. See SkinAura. */}
+                    <span style={{ position: 'relative', display: 'block', width: 38, height: 38 }}>
+                      {owned && !tierLocked && <SkinAura skinId={skin.id} inset="-40%" />}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={skinImg} alt="" loading="lazy" decoding="async" style={{ position: 'relative', zIndex: 1, width: 38, height: 38, objectFit: 'contain', filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)', transition: 'filter 0.25s' }} />
+                    </span>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: owned && !tierLocked ? '#f0ede8' : '#a8a3a0', lineHeight: 1.1, textAlign: 'center' }}>{skin.name}</p>
                     {isEquipped ? (
                       <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: skin.color }}>✓ Equipped</span>
