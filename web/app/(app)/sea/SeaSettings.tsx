@@ -229,6 +229,14 @@ export default function SeaSettings({ size, top, isAdmin = false }: {
               on={s.sfx} onToggle={() => flip('sfx')} />
             <Switch label="Bite timer" note="The running count while you wait on a bite."
               on={s.biteTimer} onToggle={() => flip('biteTimer')} />
+            {/* SOMETIMES YOU JUST WANT THE SHIP. The captain standing on the
+                deck is the seat you filled, made visible out where the fights
+                are -- and it is also a face over a painting somebody paid for
+                and may want to look at. Enemy portraits are untouched: those
+                say who you are about to fight, which is information rather than
+                decoration. */}
+            <Switch label="Captain on deck" note="Your captain's portrait standing on your ship."
+              on={s.crewFaces} onToggle={() => flip('crewFaces')} />
             <Switch label="Let other apps play music"
               note="Silences the game so Spotify, a podcast or anything else can keep playing."
               on={otherAudio} onToggle={flipOtherAudio} />

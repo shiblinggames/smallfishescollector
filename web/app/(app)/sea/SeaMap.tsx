@@ -39,6 +39,7 @@ import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
 import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SEA_GATE, SEA_GATE_HALF, inSeaGate, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
 import { getShip, SHIP_CAPTAIN_SLOT, SHIP_CREW_FACE, MIN_SHIP_TIER } from '@/lib/ships'
+import { getSetting, SEA_SETTINGS_EVENT } from '@/lib/seaSettings'
 import { shipSkinSeaImage, shipSkinSeaScale } from '@/lib/shipSkins'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
@@ -2651,6 +2652,23 @@ export default function SeaMap({
     const art = raidParty[0]?.art
     return art ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${art}` : null
   }, [raidParty])
+  // ── IS THE CAPTAIN DRAWN ON THE DECK ──────────────────────────────────
+  //
+  // A switch in the settings disc, off by nobody's default. Somebody who has
+  // bought a hull and a skin for it is entitled to look at the hull, and a
+  // portrait standing on the quarterdeck is the one thing on this chart that
+  // covers part of it.
+  //
+  // Read on mount rather than at module load (localStorage is not there during
+  // the server render) and again on the settings event, so flipping it while
+  // the panel is open takes on the same frame rather than on the next reload.
+  const [crewFaces, setCrewFaces] = useState(true)
+  useEffect(() => {
+    const read = () => setCrewFaces(getSetting('crewFaces'))
+    read()
+    window.addEventListener(SEA_SETTINGS_EVENT, read)
+    return () => window.removeEventListener(SEA_SETTINGS_EVENT, read)
+  }, [])
   const [hasCaptain, setHasCaptain] = useState(hasCaptain0)
   useEffect(() => { setHasCaptain(hasCaptain0) }, [hasCaptain0])
   const hasCaptainRef = useRef(hasCaptain); hasCaptainRef.current = hasCaptain
@@ -10046,7 +10064,7 @@ hullRef={hullRefFor(t.key)} />
             AND NO COUNTER-SQUASH. This wrapper is in screen space, not in
             the squashed plane, so the 1/GROUND that stands things up out on
             the water only stretched this into an oval. */}
-        {inAnchorage && !fightOn && captainFace && (() => {
+        {inAnchorage && !fightOn && crewFaces && captainFace && (() => {
           // ON THE DECK, NOT BESIDE THE HULL. This was hung off the ship's
           // flank by a pair of guessed numbers, which put her in the water on
           // some hulls and up a mast on others. SHIP_CAPTAIN_SLOT is the seat

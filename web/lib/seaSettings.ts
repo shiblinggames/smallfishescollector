@@ -25,7 +25,7 @@
 // private window all land on the same answer, which is the one somebody who has
 // never opened the settings would expect.
 
-export type SeaSetting = 'music' | 'sfx' | 'biteTimer'
+export type SeaSetting = 'music' | 'sfx' | 'biteTimer' | 'crewFaces'
 
 const KEY: Record<SeaSetting, string> = {
   // SFX keeps its original key and its original INVERTED sense, because
@@ -34,6 +34,7 @@ const KEY: Record<SeaSetting, string> = {
   sfx: 'fishingSfxMuted',
   music: 'seaMusicOff',
   biteTimer: 'seaBiteTimerOff',
+  crewFaces: 'seaCrewFacesOff',
 }
 
 /** Fired whenever anything here changes, so a panel and whatever the setting
@@ -57,7 +58,12 @@ export function setSetting(s: SeaSetting, on: boolean): void {
   try { window.dispatchEvent(new CustomEvent(SEA_SETTINGS_EVENT, { detail: { setting: s, on } })) } catch { /* noop */ }
 }
 
-/** Read all three at once, for a panel that draws them together. */
+/** Read them all at once, for a panel that draws them together. */
 export function allSettings(): Record<SeaSetting, boolean> {
-  return { music: getSetting('music'), sfx: getSetting('sfx'), biteTimer: getSetting('biteTimer') }
+  return {
+    music: getSetting('music'),
+    sfx: getSetting('sfx'),
+    biteTimer: getSetting('biteTimer'),
+    crewFaces: getSetting('crewFaces'),
+  }
 }
