@@ -100,18 +100,16 @@ export default async function TavernPage() {
               nobody opens for it. It is a disc on the sea chart now, and it
               flashes while something is unclaimed. See sea/SeaBonus. */}
           <ContestsHubCard hasNew={profile?.has_seen_contests !== true} />
-          {/* TIDE RUN IS NOT HERE ANY MORE. The old note said this was its only
-              entrance and that an orphaned minigame is worse than a slightly
-              wider group, which was right at the time — but a card under a
-              heading about things that reset is not an entrance, it is a
-              filing. You tapped it and became a boat fleeing something, with no
-              idea who you were or why the rocks mattered.
+          {/* TIDE RUN IS NOT IN THIS GAME AT ALL ANY MORE. It was a card here,
+              then a man on the water, and now it is its own app on its own
+              store. The route, the boats, the seas, its board, its six badges
+              and its contest are deleted, and so are the columns that fed them.
+              See docs/systems/tavern.md for what came out and where the
+              players' distances were archived to.
 
-              It starts with Kip Ledger now: a smuggler moored east of the
-              Mainland who tells you what he is carrying and what the beacons
-              are. See lib/seaSmuggler. Deliberately the only door, because two
-              doors would mean one of them skips the story AND skips the way
-              back to the water. */}
+              Kip Ledger stayed. He is still moored east of the Mainland and he
+              trades in what he knows about the harbour now, which is what the
+              Captain's register gets you. See lib/seaSmuggler. */}
         </Group>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>

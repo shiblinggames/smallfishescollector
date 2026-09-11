@@ -39,13 +39,12 @@ async function fetchTop(view: string): Promise<TopRow> {
 
 async function loadHighlights(): Promise<LeaderboardHighlight[]> {
   // Six boards in parallel. Order in the returned array drives the
-  // rotation order; Tide Run leads because it's the most-engaged
+  // rotation order; fishing leads because it's the most-engaged
   // board today. The three Den boards are all lifetime net winnings,
   // so their labels read signed (+N ⟡); fetchTop's score <= 0 filter
   // means a board whose current top is net-down just sits out the
   // rotation rather than headlining a loser.
-  const [tideRun, fishing, expedition, fishSlots, blackjack, roulette] = await Promise.all([
-    fetchTop('leaderboard_tide_run'),
+  const [fishing, expedition, fishSlots, blackjack, roulette] = await Promise.all([
     fetchTop('leaderboard_fishing'),
     fetchTop('leaderboard_expedition'),
     fetchTop('leaderboard_fish_slots'),
@@ -53,7 +52,6 @@ async function loadHighlights(): Promise<LeaderboardHighlight[]> {
     fetchTop('leaderboard_roulette'),
   ])
   const out: LeaderboardHighlight[] = []
-  if (tideRun)    out.push({ board: 'Tide Run',  username: tideRun.username,    scoreLabel: `${tideRun.score.toLocaleString()}m` })
   if (fishing)    out.push({ board: 'Fishing',   username: fishing.username,    scoreLabel: `Lv ${getLevelFromXP(fishing.score)}` })
   if (expedition) out.push({ board: 'Navigator', username: expedition.username, scoreLabel: `Lv ${getExpeditionLevel(expedition.score)}` })
   if (fishSlots)  out.push({ board: 'Fish Slots', username: fishSlots.username, scoreLabel: `+${fishSlots.score.toLocaleString()} ⟡` })

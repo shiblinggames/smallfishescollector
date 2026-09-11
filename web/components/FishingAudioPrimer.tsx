@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import { resumeFishingAudioIfReady } from '@/lib/fishingMusic'
-import { resumeTideRunAudioIfReady } from '@/lib/tideRunAudio'
 
 /** Mounts at the app shell. On every user gesture (pointerdown / touchstart)
  *  anywhere in the app, resumes any audio contexts that have already been
@@ -29,7 +28,6 @@ export default function FishingAudioPrimer() {
       // Now Playing widget doesn't get re-armed by a tap outside
       // the game.
       resumeFishingAudioIfReady()
-      resumeTideRunAudioIfReady()
     }
     window.addEventListener('pointerdown', onGesture, { capture: true, passive: true })
     window.addEventListener('touchstart', onGesture, { capture: true, passive: true })

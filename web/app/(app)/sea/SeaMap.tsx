@@ -360,7 +360,7 @@ const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
 const SeaCrew = dynamic(() => import('./SeaCrew'), { ssr: false })
 // The Daily Haul, which used to be a page under the Tavern. See sea/SeaBonus.
 const SeaBonus = dynamic(() => import('./SeaBonus'), { ssr: false })
-// The door to Tide Run, which used to be a card in the Tavern. See seaSmuggler.
+// Kip, who trades in what he knows about the harbour. See seaSmuggler.
 const SmugglerTalk = dynamic(() => import('./SmugglerTalk'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
 // SeaAudio: it starts on the first press, not on mount.
@@ -5137,10 +5137,10 @@ export default function SeaMap({
       hook: null,
     },
     deal: 'talk' as const, topic: 'chat' as const,
-    // NOT "An old hand", which is what KIND_LABEL calls every talker. He is the
-    // only door into a game mode and the plate should say so.
-    roleLabel: 'Tide Run',
-    mood: 'Tide Run', lines: [KIP.line],
+    // NOT "An old hand", which is what KIND_LABEL calls every talker. He is
+    // one man with one thing to tell you and the plate should say which.
+    roleLabel: 'A word with you',
+    mood: 'A word with you', lines: [KIP.line],
   }), [])
 
   // Mirrored for the loop, which must not be re-created every time the list

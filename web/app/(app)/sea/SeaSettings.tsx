@@ -108,7 +108,6 @@ function useOtherAudio(): [boolean, () => void] {
         // playback session, and a flag alone would not let go of it until the
         // player left the page. Whoever they were listening to comes back now.
         void import('@/lib/fishingMusic').then(m => m.fadeOutFishingMusic(0)).catch(() => {})
-        void import('@/lib/tideRunAudio').then(m => m.teardownTideRunAudio()).catch(() => {})
       }
       return next
     })

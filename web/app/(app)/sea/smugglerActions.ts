@@ -1,46 +1,50 @@
 'use server'
 
-// ── LEAVING FOR THE RUN, AND COMING BACK TO THE SAME PATCH OF WATER ─────────
+// ── WHAT KIP NEEDS TO KNOW BEFORE HE OPENS HIS MOUTH ────────────────────────
 //
-// Tide Run is a different route on a different page, so taking it means the
-// chart unmounts. The chart already writes `profiles.sea_x/sea_y` as you sail
-// and reads it back on load, which is most of the way there — but "most" is the
-// problem. That write is a periodic sync, so where you are when you leave and
-// what is in the column can be a few seconds apart, and a captain who walked
-// away from Kip mid-sync would come back somewhere down the coast wondering
-// what happened to the man they were talking to.
+// One question: is this captain already on the register.
 //
-// So the trip is stamped explicitly, and it is stamped to HIS coordinates
-// rather than to the boat's. You were alongside him when you left; you should
-// be alongside him when you get back, close enough that the hail is already
-// there and you can hand him the distance and go again.
+// It matters more than it looks. He exists to tell you what a Captain gets, and
+// there is no worse thing to say to somebody who has already paid for it. A
+// pitch aimed at a paying player is the game admitting it has not read its own
+// records, and it is the kind of thing that makes a purchase feel unrecorded.
+//
+// This file used to park the boat beside him on the way to Tide Run, because
+// that run was a different route and the chart unmounted to reach it. Tide Run
+// is a separate product now and nothing here leaves the water: the membership
+// card is mounted in the app shell and opens over the chart where you are.
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { KIP } from '@/lib/seaSmuggler'
+import { isPremiumActive } from '@/lib/premium'
 
 /**
- * Park the boat next to Kip so the sea is where you left it when the run ends.
+ * Is the caller a Captain?
  *
- * Returns nothing worth acting on: a failure here costs the player a slightly
- * wrong starting position on a page they are about to leave, and blocking the
- * run on it would be trading a whole game mode for a cosmetic.
+ * Reads the caller's own row and nothing else, and answers a boolean rather
+ * than handing back the membership columns: the only thing the card on the
+ * water does with this is choose which of two speeches to give.
+ *
+ * Never throws. If the read fails he gives the pitch, which is the harmless
+ * side of the mistake — the till behind the button checks properly and refuses
+ * a second sale ("already a Captain") on its own.
  */
-export async function moorBesideSmuggler(): Promise<void> {
+export async function smugglerStanding(): Promise<{ isCaptain: boolean }> {
   const supabase = await createClient()
-  // getSession, not getUser: this only writes the caller's own two columns and
+  // getSession, not getUser: this reads two columns of the caller's own row and
   // the session names them. See the note in lib/supabase.
   const { data: { session } } = await supabase.auth.getSession()
   const uid = session?.user?.id
-  if (!uid) return
+  if (!uid) return { isCaptain: false }
 
-  // OFF HIS BOW, NOT ON TOP OF HIM. Dropping the player exactly on his
-  // coordinates puts two hulls in the same pixel, which reads as a rendering
-  // fault rather than as a mooring. A short offset south-west is a boat pulled
-  // alongside, and it is well inside his hail either way.
   const admin = createAdminClient()
-  await admin
+  const { data } = await admin
     .from('profiles')
-    .update({ sea_x: KIP.x - 120, sea_y: KIP.y + 90 })
+    .select('is_premium, premium_expires_at')
     .eq('id', uid)
+    .maybeSingle()
+
+  // THE SHARED TEST, not `is_premium` on its own: a lapsed membership is a flag
+  // that is still true with a date behind it. See lib/premium.
+  return { isCaptain: isPremiumActive(data) }
 }

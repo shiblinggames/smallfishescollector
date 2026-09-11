@@ -147,8 +147,6 @@ export default async function BadgesPage() {
   const bootyHauls   = Number(profile?.voyage_booty_hauls ?? 0)
   const snags = Number(profile?.fishing_snags ?? 0)
   const jackpots = Number(profile?.fishing_jackpots ?? 0)
-  const beacons = Number(profile?.tide_run_beacons_smashed ?? 0)
-  const tideTotal = Number(profile?.tide_run_total_distance ?? 0)
   const isPremium = !!profile?.is_premium
   const petsOwned = ((profile?.unlocked_pets as string[] | null) ?? []).length
   const shipTier = Number(profile?.ship_tier ?? 0)
@@ -266,7 +264,6 @@ export default async function BadgesPage() {
 
   const voyagesDone = voyageCountRes.count ?? 0
   const streakBest = profile?.highest_perfect_streak ?? 0
-  const tideBest = profile?.tide_run_best_distance ?? 0
   const doubloons = profile?.doubloons ?? 0
   const claimed = new Set<string>((profile?.claimed_badge_rewards as string[] | null) ?? [])
 
@@ -572,12 +569,6 @@ export default async function BadgesPage() {
         badgeGoal('unstoppable', 'Unstoppable', 'Win 5 blackjack hands in a row', has('unstoppable') ? 1 : 0, 1, '/tavern/blackjack', { binary: true }),
         badgeGoal('stacked_deck', 'Stacked Deck', 'Dealer pulls blackjack two hands running', has('stacked_deck') ? 1 : 0, 1, '/tavern/blackjack', { binary: true }),
         badgeGoal('called_it', 'Called It', 'Win a straight-up single-number roulette bet', has('called_it') ? 1 : 0, 1, '/tavern/roulette', { binary: true }),
-        badgeGoal('tide_runner', 'Tide Runner', 'Reach 300m in a single Tide Run', tideBest, 300, '/tavern/tide-run', { record: true }),
-        badgeGoal('tide_champion', 'Tide Champion', 'Reach 450m in a single Tide Run', tideBest, 450, '/tavern/tide-run', { record: true }),
-        badgeGoal('tide_master', 'Tide Master', 'Reach 600m in a single Tide Run', tideBest, 600, '/tavern/tide-run', { record: true }),
-        badgeGoal('beacon_breaker', 'Beacon Breaker', 'Smash 500 beacons across all Tide Runs', beacons, 500, '/tavern/tide-run'),
-        badgeGoal('wrecking_crew', 'Wrecking Crew', 'Smash 2,000 beacons across all Tide Runs', beacons, 2000, '/tavern/tide-run'),
-        badgeGoal('long_haul', 'The Long Haul', 'Swim 100,000m total across Tide Runs', tideTotal, 100_000, '/tavern/tide-run'),
       ],
     },
     {

@@ -84,22 +84,6 @@ export const CONTESTS: ContestDef[] = [
     },
   },
   {
-    id: 'tide_champion',
-    name: 'Tide Champion',
-    tagline: 'A sprint into the deep current. Push your run further than any captain before you.',
-    goalLabel: 'First to 500m in Tide Run',
-    prize: 'A special customization reward',
-    prizeCode: 'TIDE-CHAMPION-500',
-    status: 'active',
-    accent: '#38bdf8',
-    board: {
-      statColumn: 'tide_run_best_distance',
-      tiebreakColumn: 'tide_run_best_distance_set_at',
-      goal: 500,
-      unit: 'm',
-    },
-  },
-  {
     id: 'first_fishing_75',
     name: 'Deep Angler',
     tagline: 'The long climb to Fishing Level 75. The first captain to the top earned a one-of-a-kind hull.',
@@ -110,11 +94,6 @@ export const CONTESTS: ContestDef[] = [
     accent: '#f0c040',
   },
 ]
-
-/** The Tide Champion goal — referenced by the win hook in tide-run/actions. */
-export const TIDE_CHAMPION_CONTEST_ID = 'tide_champion'
-export const TIDE_CHAMPION_GOAL_M = 500
-export const TIDE_CHAMPION_PRIZE_CODE = 'TIDE-CHAMPION-500'
 
 /** The Deepest Descent contest — referenced by the standings hook in
  *  raids/gauntlet/actions (cashOutGauntlet updates gauntlet_contest_depth while

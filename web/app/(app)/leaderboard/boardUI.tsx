@@ -28,7 +28,7 @@ export interface LeaderboardEntry {
 }
 
 export type BoardKey =
-  | 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'chartingPoints'
+  | 'fishingLevel' | 'perfectStreak' | 'chartingPoints'
   | 'fishSlots' | 'blackjack' | 'roulette' | 'expedition' | 'raidProgress'
   | 'gauntletDepth' | 'gauntletHardcore' | 'gauntletBigHit' | 'gauntletDonsDepth' | 'gauntletDonsHardcore' | 'achievementPoints'
   | 'parlorPoints' | 'exchangeNet' | 'exchangeWeek'
@@ -56,7 +56,6 @@ export const BOARD_META: Record<BoardKey, {
 }> = {
   fishingLevel:  { label: 'Fishing Level',  accent: '#f0c040', unit: n => `Lv ${getLevelFromXP(n)}`,     subUnit: n => `${n.toLocaleString()} XP` },
   perfectStreak: { label: 'Perfect Streak', accent: '#fb923c', unit: n => `${n}×`,                       subUnit: () => 'perfect', showZone: true },
-  tideRun:       { label: 'Tide Run',       accent: '#5da7d4', unit: n => `${n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m`, subUnit: () => 'best run' },
   // The three Den boards all read identically: lifetime net across every
   // hand/spin, signed, with winners green and losers red.
   fishSlots:     {
@@ -127,7 +126,6 @@ export const LEADERBOARD_SECTIONS: { label: string; boards: BoardKey[] }[] = [
   { label: 'Expeditions',  boards: ['raidProgress', 'expedition', 'bountyPoints', 'gauntletDepth', 'gauntletHardcore', 'gauntletDonsDepth', 'gauntletDonsHardcore', 'gauntletBigHit'] },
   { label: 'Charting',     boards: ['chartingPoints'] },
   { label: 'The Parlor',   boards: ['parlorPoints'] },
-  { label: 'Tavern',       boards: ['tideRun'] },
   { label: 'The Den',      boards: ['blackjack', 'fishSlots', 'roulette'] },
   { label: 'The Exchange', boards: ['exchangeWeek', 'exchangeNet'] },
 ]

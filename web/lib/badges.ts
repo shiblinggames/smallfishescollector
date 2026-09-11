@@ -149,9 +149,6 @@ export const BADGES: Badge[] = [
 
   // ── The Den & records ────────────────────────────────────────────────────
   { id: 'catfish_jackpot', name: 'Catfish Jackpot',   description: 'Win the slots Catfish Jackpot',                   imageUrl: '/badges/catfish_jackpot.png', difficulty: 'seasoned' },
-  { id: 'tide_runner',    name: 'Tide Runner',        description: 'Reach 300m in a single Tide Run',                 imageUrl: '/badges/tide_runner.png',    difficulty: 'rookie'   },
-  { id: 'tide_champion',  name: 'Tide Champion',      description: 'Reach 450m in a single Tide Run',                 imageUrl: '/badges/tide_champion.png',  difficulty: 'veteran'  },
-  { id: 'tide_master',    name: 'Tide Master',        description: 'Reach 600m in a single Tide Run',                 imageUrl: '/badges/tide_master.png',    difficulty: 'master'   },
 
   // ── Wealth ───────────────────────────────────────────────────────────────
   { id: 'baby_steps',     name: 'Baby Steps',         description: 'Hold 100,000 doubloons at once',                  imageUrl: '/badges/baby_steps.png',     difficulty: 'rookie'   },
@@ -168,8 +165,6 @@ export const BADGES: Badge[] = [
   { id: 'old_sea_dog',    name: 'Old Sea Dog',        description: 'Complete 50 voyages',                             imageUrl: '/badges/old_sea_dog.png',    difficulty: 'seasoned' },
   { id: 'hundred_fins',   name: 'A Hundred Fins',     description: 'Catch 100 fish species',                          imageUrl: '/badges/hundred_fins.png',   difficulty: 'veteran'  },
   { id: 'three_legends',  name: 'The Three Legends',  description: 'Own 3 legendary crew at once',                    imageUrl: '/badges/three_legends.png',  difficulty: 'veteran'  },
-  { id: 'beacon_breaker', name: 'Beacon Breaker',     description: 'Smash 500 beacons across all Tide Runs',          imageUrl: '/badges/beacon_breaker.png', difficulty: 'seasoned' },
-  { id: 'long_haul',      name: 'The Long Haul',      description: 'Swim 100,000m total across Tide Runs',            imageUrl: '/badges/long_haul.png',      difficulty: 'veteran'  },
   { id: 'captains_colors', name: "Captain's Colors",  description: 'Become a Captain',                                imageUrl: '/badges/captains_colors.png', difficulty: 'rookie'  },
 
   // ── 2026-06 expansion II (batches 11–12) ─────────────────────────────────
@@ -187,7 +182,6 @@ export const BADGES: Badge[] = [
   { id: 'stacked_deck',   name: 'Stacked Deck',       description: 'Watch the dealer pull blackjack two hands running', imageUrl: '/badges/stacked_deck.png', difficulty: 'seasoned' },
   { id: 'called_it',      name: 'Called It',          description: 'Win a straight-up single-number roulette bet',    imageUrl: '/badges/called_it.png',      difficulty: 'seasoned' },
   { id: 'ship_of_the_line', name: 'Ship of the Line', description: 'Own the Man-o-War',                               imageUrl: '/badges/ship_of_the_line.png', difficulty: 'veteran' },
-  { id: 'wrecking_crew',  name: 'Wrecking Crew',      description: 'Smash 2,000 beacons across all Tide Runs',        imageUrl: '/badges/wrecking_crew.png',  difficulty: 'master'   },
   { id: 'first_haul',     name: 'First Haul',         description: 'Collect your first trawl',                        imageUrl: '/badges/first_haul.png',     difficulty: 'rookie'   },
   { id: 'steady_nets',    name: 'Steady Nets',        description: 'Collect 25 trawls',                               imageUrl: '/badges/steady_nets.png',    difficulty: 'seasoned' },
   { id: 'deep_trawler',   name: 'Deep Trawler',       description: 'Collect 100 trawls',                              imageUrl: '/badges/deep_trawler.png',   difficulty: 'veteran'  },
@@ -551,9 +545,6 @@ export const BADGE_DETAIL: Record<string, string> = {
   clean_manifest:   'Stow all four holds (Skiff, Galleon, Dreadnought, and Man-o-War) in a single week.',
   master_cartographer: 'Chart the entire World Chart, all thirteen landmarks. The whole sea is yours, Master Cartographer.',
   catfish_jackpot:  'Hit the global Catfish Jackpot on the slots. Three catfish on one spin, and the whole pot is yours.',
-  tide_runner:      'Reach 300m in a single Tide Run.',
-  tide_champion:    'Reach 450m in a single Tide Run. Contest-winning distance.',
-  tide_master:      'Reach 600m in a single Tide Run, out past anyone’s record.',
   baby_steps:       'Hold 100,000 doubloons at once. Your first real nest egg.',
   deep_pockets:     'Hold 1,000,000 doubloons at once.',
   bilge_baron:      'Hold 2,500,000 doubloons at once. The hold is fit to burst.',
@@ -566,8 +557,6 @@ export const BADGE_DETAIL: Record<string, string> = {
   old_sea_dog:      'Complete 50 voyages. Patience, a steady fleet, and a lot of time at the wheel.',
   hundred_fins:     'Catch 100 different fish species. The logbook is starting to look serious.',
   three_legends:    'Have any three legendary crew aboard at the same time. The start of a truly rare muster.',
-  beacon_breaker:   'Smash 500 beacons across all your Tide Runs. Every run chips away at the total.',
-  long_haul:        'Cover 100,000 meters in total across every Tide Run you have ever made. The long, steady grind of the open channel.',
   captains_colors:  'Become a Captain and back the studio. The badge worn by those who keep the seas afloat.',
   crowned:          'Answer every rung of the weekly Pirate King ladder and take the crown. One wrong answer ends the run, so a clean climb to the top is a rare feat.',
   throne_in_sight:  'Climb to the seventh rung of the Pirate King ladder. The crown is within reach, if your nerve holds.',
@@ -583,7 +572,6 @@ export const BADGE_DETAIL: Record<string, string> = {
   stacked_deck:     'Sit through the dealer drawing a natural blackjack two hands running. Brutal luck, but a story worth a badge.',
   called_it:        'Win a straight-up bet on a single roulette number. One number, full odds, dead on.',
   ship_of_the_line: 'Own the Man-o-War, the mightiest hull money can buy. A true ship of the line.',
-  wrecking_crew:    'Smash 2,000 beacons across every Tide Run you have ever made. A long trail of wreckage.',
   first_haul:       'Send a crew member out to trawl a zone and collect the haul they bring back. Passive fishing, your first catch of many.',
   steady_nets:      'Collect 25 trawls. The nets are always out, and the doubloons keep coming in.',
   deep_trawler:     'Collect 100 trawls. A steady second income hauled up one cycle at a time.',

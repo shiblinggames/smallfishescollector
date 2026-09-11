@@ -15,7 +15,6 @@ type Admin = ReturnType<typeof createAdminClient>
 
 const VIEW_BY_KEY: Partial<Record<BoardKey, string>> = {
   fishingLevel: 'leaderboard_fishing',
-  tideRun:      'leaderboard_tide_run',
   fishSlots:    'leaderboard_fish_slots',
   blackjack:    'leaderboard_blackjack',
   roulette:     'leaderboard_roulette',
@@ -46,7 +45,7 @@ async function fetchViewBoard(admin: Admin, view: string, userId: string) {
     admin.from(view).select('user_id, username, score').order('score', { ascending: false }).order('created_at', { ascending: true }).limit(50),
     admin.from(view).select('score').eq('user_id', userId).single(),
   ])
-  // Coerce score → number. The tide-run view exposes numeric(10,1) and
+  // Coerce score → number. Some views expose numeric and
   // PostgREST serializes numeric as a string by default; downstream
   // formatters (toLocaleString, arithmetic) would silently break on a
   // string. The other views' scores are integers but Number() is a no-op

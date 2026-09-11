@@ -55,9 +55,6 @@ const PLAN = [
   [7, 0, 0, 'quartermaster'],
   [7, 0, 1, 'den_magnate'],
   [7, 0, 2, 'catfish_jackpot'],
-  [7, 1, 0, 'tide_runner'],
-  [7, 1, 1, 'tide_champion'],
-  [7, 1, 2, 'tide_master'],
   // ── batch 8 — Wealth (top row) + Fishing feats (bottom row) ──
   [8, 0, 0, 'baby_steps'],
   [8, 0, 1, 'deep_pockets'],
@@ -76,8 +73,6 @@ const PLAN = [
   [10, 0, 0, 'old_sea_dog'],
   [10, 0, 1, 'hundred_fins'],
   [10, 0, 2, 'three_legends'],
-  [10, 1, 0, 'beacon_breaker'],
-  [10, 1, 1, 'long_haul'],
   [10, 1, 2, 'captains_colors'],
   // ── batch 11 — expansion II (parlor + den) ──
   [11, 0, 0, 'crowned'],
@@ -89,7 +84,6 @@ const PLAN = [
   // ── batch 12 — expansion II (fishing pet / ship / tide / trawling) ──
   [12, 0, 0, 'friend_at_sea'],
   [12, 0, 1, 'ship_of_the_line'],
-  [12, 0, 2, 'wrecking_crew'],
   [12, 1, 0, 'first_haul'],
   [12, 1, 1, 'steady_nets'],
   [12, 1, 2, 'deep_trawler'],

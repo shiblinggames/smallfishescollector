@@ -15,7 +15,6 @@ interface MyScores {
   // boards) means they have a rank and the "you" tile renders.
   fishing: number | null
   perfectStreak: number | null
-  tideRun: number | null
   chartingPoints: number | null
   parlorPoints: number | null
   fishSlots: number | null
@@ -33,7 +32,6 @@ interface MyScores {
 interface MyRanks {
   fishing: number | null
   perfectStreak: number | null
-  tideRun: number | null
   chartingPoints: number | null
   parlorPoints: number | null
   fishSlots: number | null
@@ -51,7 +49,6 @@ interface MyRanks {
 interface Props {
   fishing: LeaderboardEntry[]
   perfectStreak: LeaderboardEntry[]
-  tideRun: LeaderboardEntry[]
   chartingPoints: LeaderboardEntry[]
   parlorPoints: LeaderboardEntry[]
   fishSlots: LeaderboardEntry[]
@@ -75,18 +72,17 @@ interface Props {
 // LEADERBOARD_SECTIONS, and it appears here automatically).
 const AVAILABLE_BOARDS: BoardKey[] = [
   'achievementPoints', 'perfectStreak', 'fishingLevel', 'raidProgress',
-  'expedition', 'chartingPoints', 'parlorPoints', 'tideRun', 'blackjack', 'fishSlots', 'roulette',
+  'expedition', 'chartingPoints', 'parlorPoints', 'blackjack', 'fishSlots', 'roulette',
   'species', 'trophies', 'fishSold', 'bountyPoints',
 ]
 
-export default function LeaderboardClient({ fishing, perfectStreak, tideRun, chartingPoints, parlorPoints, fishSlots, blackjack, roulette, expedition, raidProgress, achievementPoints, species, fishSold, trophies, bountyPoints, myScores, myRanks, currentUserId, avatars }: Props) {
+export default function LeaderboardClient({ fishing, perfectStreak, chartingPoints, parlorPoints, fishSlots, blackjack, roulette, expedition, raidProgress, achievementPoints, species, fishSold, trophies, bountyPoints, myScores, myRanks, currentUserId, avatars }: Props) {
   const [activeTab, setActiveTab] = useState<BoardKey>('achievementPoints')
 
   // BoardKey → its data array + the player's score/rank for that board.
   const dataOf = (k: BoardKey): LeaderboardEntry[] =>
     k === 'fishingLevel' ? fishing
     : k === 'perfectStreak' ? perfectStreak
-    : k === 'tideRun' ? tideRun
     : k === 'chartingPoints' ? chartingPoints
     : k === 'parlorPoints' ? parlorPoints
     : k === 'fishSlots' ? fishSlots
@@ -102,7 +98,6 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, cha
   const scoreOf = (k: BoardKey): number | null =>
     k === 'fishingLevel' ? myScores.fishing
     : k === 'perfectStreak' ? myScores.perfectStreak
-    : k === 'tideRun' ? myScores.tideRun
     : k === 'chartingPoints' ? myScores.chartingPoints
     : k === 'parlorPoints' ? myScores.parlorPoints
     : k === 'fishSlots' ? myScores.fishSlots
@@ -118,7 +113,6 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, cha
   const rankOf = (k: BoardKey): number | null =>
     k === 'fishingLevel' ? myRanks.fishing
     : k === 'perfectStreak' ? myRanks.perfectStreak
-    : k === 'tideRun' ? myRanks.tideRun
     : k === 'chartingPoints' ? myRanks.chartingPoints
     : k === 'parlorPoints' ? myRanks.parlorPoints
     : k === 'fishSlots' ? myRanks.fishSlots

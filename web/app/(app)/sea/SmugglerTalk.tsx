@@ -1,62 +1,58 @@
 'use client'
 
-// ── TALKING TO KIP, AND CASTING OFF ─────────────────────────────────────────
+// ── TALKING TO KIP ──────────────────────────────────────────────────────────
 //
-// The door to Tide Run. It used to be a card in the Tavern under a heading
-// about things that reset; now it is a frightened man on the water who tells
-// you what he is carrying and what will get you both caught.
+// He was the door to Tide Run. Tide Run has left this game for a store of its
+// own, and rather than delete a good character to delete a minigame, he kept
+// the water and changed his trade: he is a fixer who knows how the harbour
+// works, and what he tells you now is what the harbour gives its Captains.
 //
-// ── THE WARNING IS ITS OWN BEAT ─────────────────────────────────────────────
+// ── THE TERMS ARE THEIR OWN BEAT, AND THEY ARE FLAT ─────────────────────────
 //
-// The scene is two steps, not one long speech, and the split is deliberate.
-// Everything in the first step is colour: who he is, what he took, what he
-// wants. The second step is a CONTROL INSTRUCTION — rocks you jump, beacons you
-// smash — and it is the only thing on either card that changes how somebody
-// plays rather than how they feel.
+// Two steps, and the split is the same one the smuggler's card used to make.
+// The first step is a person talking and can be skimmed. The second is the
+// OFFER: what you get, what it costs, how long it lasts. Real money sits at the
+// end of this conversation, so that half is written the way a mechanic is
+// written anywhere in this game -- plainly, literally, with no charm standing
+// between the player and the facts.
 //
-// Folded into the story it would read as more atmosphere and be skipped with
-// it, and the player would lose their first run to precisely the reflex the
-// beacon is designed to punish. On its own card, with the rule stated flat at
-// the bottom, it survives the skimming.
+// The perks are not written here. They come from MembershipModal's own table,
+// so the man on the water and the card that takes the money cannot end up
+// describing two different offers.
 //
-// ── AND HE DOES NOT REPEAT HIMSELF ──────────────────────────────────────────
+// ── AND HE DOES NOT PITCH A CAPTAIN ─────────────────────────────────────────
 //
-// Second visit onward he says two short lines and gets out of the way. A story
-// you cannot skip is a story you resent by the fourth run, and the run is the
-// point of coming back.
+// Somebody who has already paid gets told so and gets let go. A sales pitch
+// aimed at a paying player is the clearest possible way of saying that nothing
+// in the game is reading what they bought.
 
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import PopupShell from '@/components/PopupShell'
+import { openMembership, PERKS } from '@/components/MembershipModal'
 import { vibrate } from '@/lib/haptics'
-import { KIP, KIP_INTRO, KIP_WARNING, KIP_AGAIN, KIP_CAST_OFF } from '@/lib/seaSmuggler'
-import { moorBesideSmuggler } from './smugglerActions'
-import { getTopTideRunHolder, getPlayerTideRunRank } from '@/app/(app)/tavern/tide-run/actions'
+import { KIP, KIP_INTRO, KIP_TERMS, KIP_AGAIN, KIP_ALREADY } from '@/lib/seaSmuggler'
+import { smugglerStanding } from './smugglerActions'
 
-/** His colour. Cold and low-contrast on purpose: everything else that opens a
- *  mode out here is gold, and he is a man actively trying not to be looked at. */
+/** His colour. Cold and low-contrast on purpose: he is a man actively trying
+ *  not to be looked at. The offer itself is gold, like every other place in
+ *  this game where the Captain's register comes up. */
 const KIP_ACCENT = '#8fb3c4'
+const GOLD = '#f0c040'
 const SEA = 'rgba(190,212,228'
 
-/** Remembers only whether the story has been heard, on the DEVICE.
+/** Remembers only whether the pitch has been heard, on the DEVICE.
  *
  *  The house rule sends one-time flags to a profile column so a phone and a
- *  laptop agree — that rule is about things a PLAYER has seen, like a tour. This
- *  is closer to a skip button: getting the full story again on a new device
- *  costs one extra tap, and it is not worth a migration and a column to save it.
- *  If it ever needs to be per-player it becomes `has_met_smuggler` and nothing
- *  else here changes. */
+ *  laptop agree — that rule is about things a PLAYER has seen, like a tour.
+ *  This is closer to a skip button: hearing him out again on a new device costs
+ *  one extra tap, and it is not worth a migration and a column to save it. */
 const MET_KEY = 'seaMetSmuggler'
 
-/** One line of him talking, arriving after the one above it.
- *
- *  NOT the cutscene kit's TypedBody: that types a single line under an external
- *  `useTypewriter` clock and is built for a full-screen scene that owns the
- *  screen. This is a modal on the water with four short paragraphs in it, and a
- *  stagger says "he is still talking" without holding the player behind a
- *  character-by-character reveal they will tap through anyway. */
+/** One line of him talking, arriving after the one above it. A stagger says
+ *  "he is still talking" without holding the player behind a typewriter they
+ *  will tap through anyway. */
 function Line({ text, i, style }: { text: string; i: number; style?: React.CSSProperties }) {
   return (
     <motion.p className="font-karla font-600"
@@ -73,64 +69,34 @@ export default function SmugglerTalk({ open, onClose }: {
   open: boolean
   onClose: () => void
 }) {
-  const router = useRouter()
   const [step, setStep] = useState(0)
-  const [busy, setBusy] = useState(false)
   const [met, setMet] = useState(false)
-  /**
-   * THE TWO NUMBERS THAT MAKE A REPEAT RUN A DECISION.
-   *
-   * Tide Run is a distance you are trying to beat, and the door to it said
-   * nothing about distance at all — so a captain deciding whether to go had the
-   * story, which they had already heard, and nothing else. Your best is the
-   * target you are actually chasing; the board's best is why the target moves.
-   *
-   * Fetched when the card opens rather than with the chart, and drawn only when
-   * they arrive: a scoreboard is worth showing and never worth making somebody
-   * wait for, and the run is one tap away the whole time.
-   */
-  const [scores, setScores] = useState<{ mine: number; top: number; topName: string } | null>(null)
+  /** Null while the answer is still in the post. The card opens on his first
+   *  line either way; only the last step waits on this, and by then it has
+   *  landed. */
+  const [captain, setCaptain] = useState<boolean | null>(null)
 
   useEffect(() => {
     if (!open) return
     setStep(0)
-    setBusy(false)
     try { setMet(window.localStorage.getItem(MET_KEY) === 'true') } catch { setMet(false) }
     let alive = true
-    void Promise.all([getPlayerTideRunRank(), getTopTideRunHolder()])
-      .then(([mine, top]) => {
-        if (!alive || !top) return
-        setScores({
-          mine: Number(mine?.yourDistance ?? 0),
-          top: Number(top.distance ?? 0),
-          topName: top.username,
-        })
-      })
-      .catch(() => {})
+    void smugglerStanding()
+      .then(r => { if (alive) setCaptain(r.isCaptain) })
+      .catch(() => { if (alive) setCaptain(false) })
     return () => { alive = false }
   }, [open])
 
-  const lines = useMemo(() => (met ? KIP_AGAIN : KIP_INTRO), [met])
-  // A returning captain gets one card and the button; a first-timer gets the
-  // story, then the warning, then the button.
-  const lastStep = met ? 0 : 1
-
-  const castOff = async () => {
-    if (busy) return
-    setBusy(true)
-    vibrate([0, 18, 40, 26])
-    try { window.localStorage.setItem(MET_KEY, 'true') } catch { /* private mode */ }
-    // MOOR FIRST, THEN GO. The chart is about to unmount and its periodic
-    // position sync may be seconds stale; this pins the return to his bow so
-    // the run ends where the conversation started. Never blocking: a failed
-    // write costs a slightly wrong start position, and refusing to launch over
-    // that would trade a whole game mode for a cosmetic.
-    await moorBesideSmuggler().catch(() => {})
-    router.push('/tavern/tide-run?from=sea')
-  }
+  const lines = useMemo(
+    () => (captain ? KIP_ALREADY : met ? KIP_AGAIN : KIP_INTRO),
+    [captain, met],
+  )
+  /** A Captain gets one card and a way out. Everyone else gets him, then the
+   *  offer. */
+  const lastStep = captain ? 0 : 1
 
   return (
-    <PopupShell open={open} onClose={busy ? () => {} : onClose}>
+    <PopupShell open={open} onClose={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -142,23 +108,24 @@ export default function SmugglerTalk({ open, onClose }: {
           // OPAQUE. It floats over painted, moving water like every other panel
           // out here, and a translucent card over the sea reads as a smear.
           background: 'rgba(7,11,16,0.98)',
-          border: `1px solid ${KIP_ACCENT}3d`,
+          border: `1px solid ${step > 0 ? `${GOLD}3d` : `${KIP_ACCENT}3d`}`,
           borderRadius: 18, padding: '1.15rem 1.05rem 1.2rem',
           boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
         }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flexShrink: 0 }}>
-            <CharacterAvatar characterColor={KIP.look.characterColor} equippedHat={KIP.look.hatId} size={54} ringColor={KIP_ACCENT} />
+            <CharacterAvatar characterColor={KIP.look.characterColor} equippedHat={KIP.look.hatId} size={54} ringColor={step > 0 ? GOLD : KIP_ACCENT} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p className="font-cinzel font-800" style={{
               fontSize: '1.16rem', color: '#eef4f8', lineHeight: 1.1,
             }}>{KIP.name}</p>
             <p className="font-karla font-700 uppercase" style={{
-              fontSize: '0.54rem', letterSpacing: '0.2em', color: KIP_ACCENT, marginTop: 3,
-            }}>{step > 0 ? 'Telling you the one rule'
-              : met ? 'Tide Run'
+              fontSize: '0.54rem', letterSpacing: '0.2em',
+              color: step > 0 ? GOLD : KIP_ACCENT, marginTop: 3,
+            }}>{step > 0 ? "The Captain's register"
+              : captain ? 'Nothing to sell you'
               : 'Keeping his head down'}</p>
           </div>
         </div>
@@ -171,104 +138,92 @@ export default function SmugglerTalk({ open, onClose }: {
           {step === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {lines.map((l, i) => (
-                <Line key={`${met ? 'again' : 'intro'}-${i}`} text={l} i={i} />
+                <Line key={`${captain ? 'cap' : met ? 'again' : 'intro'}-${i}`} text={l} i={i} />
               ))}
             </div>
           ) : (
             <>
               <p className="font-cinzel font-800" style={{
-                fontSize: '1rem', color: '#f0c040', marginBottom: 8,
-              }}>{KIP_WARNING.title}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                {KIP_WARNING.body.map((l, i) => (
-                  <Line key={`warn-${i}`} text={l} i={i} style={{ fontSize: '0.84rem' }} />
+                fontSize: '1rem', color: GOLD, marginBottom: 9,
+              }}>{KIP_TERMS.title}</p>
+              {/* THE MEMBERSHIP'S OWN LIST. Not a retelling of it: see PERKS. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {PERKS.map(([perk, sub], i) => (
+                  <motion.div key={perk}
+                    initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.05 + i * 0.05, duration: 0.24 }}
+                    style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span aria-hidden style={{
+                      flexShrink: 0, width: 5, height: 5, borderRadius: 999,
+                      background: GOLD, transform: 'translateY(-2px)',
+                    }} />
+                    <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.45, color: '#e8eef3' }}>
+                      <span className="font-700">{perk}</span>
+                      <span style={{ color: `${SEA},0.55)` }}>, {sub}</span>
+                    </p>
+                  </motion.div>
                 ))}
               </div>
-              {/* THE RULE, FLAT. Everything above it is a person talking and can
-                  be skimmed; this is the instruction, and it is written the way
-                  the house rule says a mechanic is written — literally, with no
-                  cleverness in the way of it. */}
+              {/* WHAT IT COSTS AND HOW LONG IT LASTS, flat. Everything above is
+                  a list of good things; this is the part somebody is entitled
+                  to have stated without any charm on it at all. */}
               <p className="font-karla font-700" style={{
                 marginTop: 12, padding: '0.6rem 0.7rem', borderRadius: 10,
                 background: 'rgba(240,192,64,0.09)',
                 border: '1px solid rgba(240,192,64,0.28)',
                 fontSize: '0.8rem', lineHeight: 1.5, color: '#f2dda0',
-              }}>{KIP_WARNING.rule}</p>
+              }}>{KIP_TERMS.terms}</p>
             </>
           )}
         </div>
 
-        {/* ── HOW FAR ANYONE HAS GOT ──────────────────────────────────
-            Only once the numbers are in, and never a reserved empty box: a
-            placeholder for a scoreboard is worse than no scoreboard, because it
-            says something is missing rather than that something is coming. */}
-        {scores && (
-          <div style={{
-            display: 'flex', marginTop: 12, borderRadius: 12, overflow: 'hidden',
-            background: 'rgba(255,255,255,0.035)',
-            border: '1px solid rgba(255,255,255,0.09)',
-          }}>
-            {[
-              { k: 'Your best', v: scores.mine, c: '#f0c040' },
-              { k: `Best afloat · ${scores.topName}`, v: scores.top, c: KIP_ACCENT },
-            ].map((row, i) => (
-              <div key={row.k} style={{
-                flex: 1, minWidth: 0, textAlign: 'center', padding: '0.5rem 0.3rem',
-                borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.08)',
-              }}>
-                <p className="font-cinzel font-800" style={{
-                  fontSize: '1.05rem', lineHeight: 1.05, color: row.c,
-                  fontVariantNumeric: 'tabular-nums',
-                }}>{row.v.toFixed(1)}<span style={{ fontSize: '0.66rem', opacity: 0.7 }}> m</span></p>
-                <p className="font-karla font-700 uppercase truncate" style={{
-                  fontSize: '0.48rem', letterSpacing: '0.12em',
-                  color: `${SEA},0.42)`, marginTop: 2,
-                }}>{row.k}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          <button type="button" data-no-steer disabled={busy}
+          <button type="button" data-no-steer
             onClick={e => { e.stopPropagation(); onClose() }}
             className="tap font-karla font-700 uppercase tracking-[0.12em]"
             style={{
               flex: 1, padding: '0.72rem', borderRadius: 12, fontSize: '0.74rem',
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.16)',
-              color: `${SEA},0.7)`, cursor: busy ? 'default' : 'pointer',
+              color: `${SEA},0.7)`, cursor: 'pointer',
             }}>
-            Not now
+            {captain ? 'Fair winds' : 'Not now'}
           </button>
-          <button type="button" data-no-steer disabled={busy}
-            onClick={e => {
-              e.stopPropagation()
-              vibrate(8)
-              if (step < lastStep) { setStep(s => s + 1); return }
-              void castOff()
-            }}
-            className="tap font-karla font-700 uppercase tracking-[0.12em]"
-            style={{
-              flex: 1.5, padding: '0.72rem', borderRadius: 12, fontSize: '0.78rem',
-              background: 'rgba(240,192,64,0.16)',
-              border: '1px solid rgba(240,192,64,0.5)',
-              color: '#f0c040', cursor: busy ? 'default' : 'pointer',
-              opacity: busy ? 0.65 : 1,
-            }}>
-            {/* IT SAYS WHERE IT GOES. "Take the wheel" is a nice line and a
-                poor button: the thing on the other side of it is called Tide
-                Run, and a returning captain is picking a mode rather than
-                accepting an offer. The story beat keeps its "Go on". */}
-            {busy ? 'Casting off…' : step < lastStep ? 'Go on' : 'Tide Run'}
-          </button>
+          {!captain && (
+            <button type="button" data-no-steer
+              onClick={e => {
+                e.stopPropagation()
+                vibrate(8)
+                if (step < lastStep) { setStep(s => s + 1); return }
+                try { window.localStorage.setItem(MET_KEY, 'true') } catch { /* private mode */ }
+                // THE REAL TILL, not a second one. `openMembership` is the same
+                // event every "Become a Captain" button in the game fires, and
+                // the modal it opens is mounted in the app shell — so the chart
+                // stays where it is and nobody is routed off the water to buy
+                // something.
+                onClose()
+                openMembership()
+              }}
+              className="tap font-karla font-700 uppercase tracking-[0.12em]"
+              style={{
+                flex: 1.5, padding: '0.72rem', borderRadius: 12, fontSize: '0.78rem',
+                background: 'rgba(240,192,64,0.16)',
+                border: '1px solid rgba(240,192,64,0.5)',
+                color: GOLD, cursor: 'pointer',
+              }}>
+              {/* IT SAYS WHERE IT GOES. The thing behind this button asks for
+                  money, and a button that hides that is the one kind of button
+                  this game does not ship. */}
+              {step < lastStep ? 'Go on' : 'Become a Captain'}
+            </button>
+          )}
         </div>
 
-        {step === lastStep && !busy && (
+        {step === lastStep && !captain && (
           <p className="font-karla" style={{
             fontSize: '0.68rem', color: `${SEA},0.42)`, textAlign: 'center',
             marginTop: 9, lineHeight: 1.45,
-          }}>{KIP_CAST_OFF}</p>
+          }}>{KIP_TERMS.aside}</p>
         )}
       </motion.div>
     </PopupShell>

@@ -168,7 +168,6 @@ export default async function DevStatsPage() {
     { label: 'Voyages completed',      value: s.voyages?.completed ?? 0 },
     { label: 'Raids cleared',          value: s.raids?.cleared ?? 0 },
     { label: 'Crew recruited',         value: s.recruits?.lifetime ?? 0 },
-    { label: 'Tide Run beacons',       value: s.tideRun?.beacons ?? 0 },
     { label: 'Deepest Gauntlet descent', value: deepestBanked ? `Depth ${deepestBanked.gauntlet_best_depth}` : '—', by: deepestBanked?.username ?? null },
     {
       label: 'Biggest fish landed',
@@ -245,15 +244,6 @@ export default async function DevStatsPage() {
         { label: 'Fathoms in circulation', value: fmt(fathomsHeld) },
         { label: 'Locker upgrades owned', value: upgradesOwned },
         ...(topUpgrade ? [{ label: 'Most-bought upgrade', value: upgradeName(topUpgrade[0]), by: `${topUpgrade[1]} captains` }] : []),
-      ],
-    },
-    {
-      title: 'Tide Run', accent: '#22d3ee',
-      stats: [
-        { label: 'Total distance',  value: `${fmt(s.tideRun?.distance ?? 0)} m` },
-        { label: 'Longest run',     value: `${fmt(s.tideRun?.longest ?? 0)} m`, by: byIf(s.tideRun?.longest ?? 0, s.tideRun?.longestBy) },
-        { label: 'Beacons smashed', value: s.tideRun?.beacons ?? 0 },
-        { label: 'Most beacons',    value: s.tideRun?.mostBeacons ?? 0, by: byIf(s.tideRun?.mostBeacons ?? 0, s.tideRun?.mostBeaconsBy) },
       ],
     },
     {

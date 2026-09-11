@@ -31,7 +31,7 @@ async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: str
     admin.from(view).select('user_id, username, score').order('score', { ascending: false }).order('created_at', { ascending: true }).limit(50),
     admin.from(view).select('score').eq('user_id', userId).single(),
   ])
-  // Coerce score → number. The tide-run view exposes numeric(10,1) and
+  // Coerce score → number. Some views expose numeric and
   // PostgREST serializes numeric as a string; downstream formatters
   // (toLocaleString) would silently break on a string. Integer views
   // pass through Number() unchanged.
@@ -129,11 +129,10 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, perfectStreakData, tideRunData, chartingPointsData, parlorPointsData, fishSlotsData, blackjackData, rouletteData, expeditionData, raidProgressData, achievementPointsData, speciesData, fishSoldData, trophiesData, bountyPointsData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData, chartingPointsData, parlorPointsData, fishSlotsData, blackjackData, rouletteData, expeditionData, raidProgressData, achievementPointsData, speciesData, fishSoldData, trophiesData, bountyPointsData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchPerfectStreakBoard(admin, user.id),
-    fetchBoard(admin, 'leaderboard_tide_run', user.id),
     fetchChartingPointsBoard(admin, user.id),
     fetchParlorPointsBoard(admin, user.id),
     fetchBoard(admin, 'leaderboard_fish_slots', user.id),
@@ -155,7 +154,6 @@ export default async function LeaderboardPage() {
   const displayedUserIds = new Set<string>([
     ...fishingData.top.map(e => e.user_id),
     ...perfectStreakData.top.map(e => e.user_id),
-    ...tideRunData.top.map(e => e.user_id),
     ...chartingPointsData.top.map(e => e.user_id),
     ...parlorPointsData.top.map(e => e.user_id),
     ...fishSlotsData.top.map(e => e.user_id),
@@ -206,7 +204,6 @@ export default async function LeaderboardPage() {
           <LeaderboardClient
             fishing={fishingData.top}
             perfectStreak={perfectStreakData.top}
-            tideRun={tideRunData.top}
             chartingPoints={chartingPointsData.top}
             parlorPoints={parlorPointsData.top}
             fishSlots={fishSlotsData.top}
@@ -222,7 +219,6 @@ export default async function LeaderboardPage() {
             myScores={{
               fishing: fishingData.myScore,
               perfectStreak: perfectStreakData.myScore,
-              tideRun: tideRunData.myScore,
               chartingPoints: chartingPointsData.myScore,
               parlorPoints: parlorPointsData.myScore,
               fishSlots: fishSlotsData.myScore,
@@ -239,7 +235,6 @@ export default async function LeaderboardPage() {
             myRanks={{
               fishing: fishingData.myRank,
               perfectStreak: perfectStreakData.myRank,
-              tideRun: tideRunData.myRank,
               chartingPoints: chartingPointsData.myRank,
               parlorPoints: parlorPointsData.myRank,
               fishSlots: fishSlotsData.myRank,

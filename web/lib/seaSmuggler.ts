@@ -1,36 +1,33 @@
-// ── KIP LEDGER, AND THE RUN HE NEEDS HELP WITH ──────────────────────────────
+// ── KIP LEDGER, AND THE ONE THING HE STILL DEALS IN ─────────────────────────
 //
 // Plain module, NOT 'use server' — that directive silently drops non-async
 // exports and every export here is pure.
 //
-// ── TIDE RUN HAD NO REASON TO EXIST ─────────────────────────────────────────
+// ── HE USED TO BE THE DOOR TO TIDE RUN ──────────────────────────────────────
 //
-// It was a card in the Tavern's "The day" group, under a heading about things
-// that reset, next to a login bonus. You tapped it and you were suddenly a boat
-// running from something, at speed, dodging rocks, with no idea who you were or
-// what you were carrying or why the rocks mattered. A very good minigame with
-// nothing in front of it.
+// Tide Run has left this game. It is its own thing now, on its own store, and
+// everything that served it went with it: the run, the boats, the seas, the
+// board, six badges and a contest.
 //
-// So it starts with a person now. He is east of the Mainland, he is carrying
-// something he should not have, and he needs to get it as far from where he
-// stole it as he can. You go as far as you can for him. That is the whole
-// framing and it costs nothing mechanically: the run is the run.
+// Kip did not go with it, and that is deliberate. He is a good character in a
+// good spot -- a real leg east of the Mainland, close enough that a new captain
+// finds him -- and deleting a person to delete a minigame is throwing out the
+// half that was working. What he needed was something to be about.
 //
-// ── THE BEACONS WERE ALREADY THE STORY ──────────────────────────────────────
+// ── SO HE TRADES IN WHAT HE KNOWS ───────────────────────────────────────────
 //
-// This is the part worth writing down, because it was sitting in the code the
-// whole time. From TideRunGame:
+// He is done moving crates. What he has left is the thing a fixer always has
+// left, which is knowing how the harbour actually works, and the piece of that
+// worth telling a captain is what the harbour gives its Captains.
 //
-//   "Beacons — disguised detection devices that look like rocks. Smash through
-//    grounded to disable the beacon and stay hidden; jumping over it lets the
-//    signal go off and your ship is spotted."
-//
-// A signature mechanic that tricks the see-rock-jump reflex, built entirely
-// around not being SEEN, in a game where nobody had ever said who was looking.
-// Kip is who they are looking for. His warning is not flavour bolted onto a
-// mechanic, it is the mechanic explained by the only person who would know —
-// which is also the house rule about mechanics copy being plain and literal
-// while the flavour stays charming.
+// THE PITCH IS HONEST, AND THAT IS A RULE RATHER THAN A PREFERENCE. Real money
+// is at the end of this conversation. Kip can keep his voice down and his
+// charm, but every line about what the thing IS -- what you get, what it
+// costs, how long it lasts -- is plain, literal and true, the same way a
+// mechanic is explained anywhere else in this game. The perks themselves are
+// not written here at all: they are read from the membership modal, so the man
+// on the water and the card that takes the money can never end up describing
+// two different offers.
 
 /** WHERE HE IS. East of the Mainland, which sits at the origin with r=500.
  *
@@ -50,14 +47,14 @@ export const KIP = {
   //
   // 1700, 925. Solved rather than picked: 2150,900 was the eyeballed guess and
   // the check caught it 89px INSIDE Sandy Sole's hail, which would have meant
-  // the action bar offering her instead of him and Tide Run being unreachable
-  // with nothing on screen to explain it. This spot has 293px of slack on the
-  // nearest prompt and sits 1,486px from home — a real leg out, not a drift.
+  // the action bar offering her instead of him. This spot has 293px of slack on
+  // the nearest prompt and sits 1,486px from home — a real leg out, not a
+  // drift.
   x: 1700,
   y: 925,
   /** Drawn from the same cosmetic tables everyone out here is drawn from, so he
    *  looks like somebody who sails rather than like a quest marker. Dark hull
-   *  and a midnight bandana: he is trying not to be seen. */
+   *  and a midnight bandana: old habits. */
   look: {
     characterColor: 'gray',
     boatId: 'charcoal',
@@ -74,8 +71,8 @@ export const KIP = {
  * HOW CLOSE YOU HAVE TO BE TO HAIL HIM.
  *
  * Finn's reach, not a trader's, and for Finn's reason: a trader is one of
- * dozens and you will pass another, whereas Kip is the only door to a whole
- * game mode. Missing him by a boat length means sailing the leg again.
+ * dozens and you will pass another, whereas Kip is the only person out here who
+ * will tell you this. Missing him by a boat length means sailing the leg again.
  *
  * Expressed as a multiple of the number it is a multiple OF — see the note on
  * FINN_REACH about ratios kept in prose drifting the moment either side moves.
@@ -85,56 +82,55 @@ export const KIP_REACH_MULT = 1.5
 /**
  * ── WHAT HE SAYS, THE FIRST TIME ────────────────────────────────────────────
  *
- * Told in the order a frightened person tells it: what is wrong, then what he
- * has, then what he wants, then the one thing that will kill you.
+ * Told in the order a fixer tells it: why he is whispering, what he used to do,
+ * what he does instead, and then the thing he is actually here to say.
  *
- * The beacon line is deliberately the LAST thing and deliberately the plainest.
- * Everything above it can be charming because it is colour; that line is a
- * control instruction wearing a coat, and a player who mis-reads it loses a run
- * to the exact reflex the mechanic is built to punish.
+ * The last line hands over to the list, and the list is the membership's own.
  */
 export const KIP_INTRO: string[] = [
   "Do not wave. Do not point. Just drift alongside like we are talking about the weather.",
-  "I came out of the Brine Reach three nights ago with a hold I did not pay for. Crates of it. I am not going to tell you what is in them and you are not going to ask.",
-  "They know it is gone. They do not yet know it is me. That gap is the only thing I own.",
-  "I cannot outrun them forever, but I do not have to. I only have to get FAR. Far enough that the trail goes cold and the crates come ashore somewhere they have never heard of me.",
-  "That is what I am asking. Take the wheel and run her out as far as she will go.",
+  "I used to move crates I did not pay for. That is finished. I got old and the Brine Reach got patient.",
+  "What I deal in now is what I know, and I have spent twenty years learning exactly how this harbour works.",
+  "So here is the one piece worth your time. The harbour keeps a register, and the names on it are called Captains. It is not a rank you earn off anybody. You put your name down and the harbour starts treating you differently the same day.",
 ]
 
 /**
- * THE WARNING, kept apart from the story above.
+ * WHAT IT IS, PLAINLY, and this is the part that is not charming on purpose.
  *
- * Its own step in the scene with its own weight on screen, because this is the
- * one thing on the card that changes how somebody plays rather than how they
- * feel. Plain and literal, per the copy rule: no metaphor, no cleverness, and
- * the instruction stated as an instruction.
+ * Money is at the end of this conversation, so the terms are stated the way a
+ * mechanic is stated: flat, literal, and no cleverness standing between the
+ * player and the facts. The perk LIST is not here — it comes from the
+ * membership modal, so there is exactly one description of the offer in the
+ * codebase and Kip cannot drift from the till.
  */
-export const KIP_WARNING = {
-  title: 'Watch for the beacons',
-  body: [
-    "They seeded the shallows with beacons. They are made to look like rocks and they are very good at it. Rust in the cracks, a little antenna, an amber light that pulses if you know to look.",
-    "Your instinct when you see a rock is to jump it. Do that to a beacon and it sees you go over, and it tells them where you are, and that is the end of the run.",
-    "So you do the thing that feels wrong. Stay down and go straight through it. Smash it while your hull is in the water and it never gets the signal out.",
-  ],
-  /** The rule as one line, for anyone who skipped the paragraphs. */
-  rule: 'Rocks you jump. Beacons you smash. Never jump a beacon.',
+export const KIP_TERMS = {
+  title: 'What the register gets you',
+  /** Said under the list. One payment, kept for good: see MembershipModal. */
+  terms: 'One payment of $9.99. It is not a subscription and it does not lapse. Buy it once and it is yours for good.',
+  /** The nudge under the button, in his voice rather than the shop's. */
+  aside: 'I take nothing out of this. I just know which captains get the better end of the harbour, and I would rather it was you.',
 } as const
+
+/**
+ * WHAT HE SAYS TO SOMEBODY WHO ALREADY HAS IT.
+ *
+ * A pitch aimed at a Captain is the clearest way to tell a paying player that
+ * nothing in the game is reading what they bought. He notices, he says so, and
+ * he gets out of the way.
+ */
+export const KIP_ALREADY: string[] = [
+  "Ah. You are on the register already.",
+  "Then you know what it is worth and I am wasting good whispering. Take care of yourself out here.",
+]
 
 /**
  * WHAT HE SAYS ON EVERY VISIT AFTER THE FIRST.
  *
- * Two lines and a question. He has told you the story and he is not telling it
- * again while people are watching — and by the third run you are not there for
- * the story, you are there to go. A speech you cannot skip is a speech you
- * resent by the fourth time, and the run is the point of coming back.
- *
- * It ends on the ASK, so the buttons under it are an answer rather than a
- * menu: another run, or not now.
+ * Two lines. He has made his case and he is not making it again word for word
+ * while people are watching, but the offer stands and the button under him is
+ * the same one.
  */
 export const KIP_AGAIN: string[] = [
   "Still here. Still nervous.",
-  "Another run? The further out you get her, the colder the trail.",
+  "The register is still open, if you have thought about it.",
 ]
-
-/** The last thing before the run starts. */
-export const KIP_CAST_OFF = "Right. Head down, hands steady, and do not look back at me."

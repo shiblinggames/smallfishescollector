@@ -2,15 +2,15 @@
 // iOS's playback session, so Spotify / Apple Music / Podcasts can keep
 // playing while Small Fishes is open.
 //
-// The cost: the game's `<audio>`-element session keeper (see fishingMusic.ts
-// and tideRunAudio.ts) is what keeps SFX audible on iOS PWA. Releasing the
+// The cost: the game's `<audio>`-element session keeper (see fishingMusic.ts)
+// is what keeps SFX audible on iOS PWA. Releasing the
 // session means SFX won't sound on iOS standalone PWA — same trade Apple
 // forces every web app to make. Non-iOS browsers + non-standalone Safari
 // still play normally; this setting just keeps us from claiming the session
 // when we don't have to.
 //
-// Both fishingMusic.ts and tideRunAudio.ts import getLetOtherAudioPlay() and
-// early-return from their unlock / start / play entry points when it's true.
+// fishingMusic.ts imports getLetOtherAudioPlay() and early-returns from its
+// unlock / start / play entry points when it's true.
 // setLetOtherAudioPlay(true) also actively tears down any in-flight session
 // keepers so existing music stops the moment the player flips the switch.
 

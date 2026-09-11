@@ -26,7 +26,7 @@ filing cabinet with a fireplace.
 | **Overheard** | the room talking: 3 of 81 snatches, turning over on the hour |
 | **Your crew** | counts, a row of faces, anyone waiting on an answer → `/social` |
 | **The Salt Road** | where you stand with the nine, read-only, top three only |
-| **The day** | the tot, the races, Tide Run — everything that resets, and it is LAST |
+| **The day** | the tot and the races — everything that resets, and it is LAST |
 
 **The rule: the tavern says how things STAND and links to where they are MANAGED.** The
 full follow list and the full pact board live on `/social`, which kept its page and lost
@@ -132,9 +132,6 @@ this purse — never its own balance, never doubloons directly.
   winnings. `wager * matches` shipped once and silently confiscated stakes.
 - **Fish Slots**: pay table tuned against the RTP script; the Catfish Jackpot is a
   long-odds side pot. Retune with `slots-rtp.mjs`, not by eye.
-- **Tide Run**: canvas endless runner (`tavern/tide-run/TideRunGame.tsx` is the spec —
-  constants at the top). Hazard sweeps must gate by VIEWPORT with lookahead spawn, or
-  fast runs outrun the spawner. Native iOS port brief: `ios/PORT_BRIEF.md`.
 - **Contests** ("first to X" races): the winner is decided atomically via a primary-key
   insert — first insert wins, everyone else conflicts. Don't replace with read-check.
 
@@ -143,28 +140,37 @@ this purse — never its own balance, never doubloons directly.
 - [trivia.md](trivia.md), [chart-room.md](chart-room.md) — separate systems behind
   tavern doors. [fish-economy.md](fish-economy.md) — the Exchange ticker lives here too.
 
-## Tide Run starts with a person (2026-09-01)
+## Tide Run has left the game (2026-09-11)
 
-Tide Run is **no longer reachable from the Tavern**. Its hub card is deleted and
-`app/(app)/tavern/TideRunCard.tsx` is gone. The route still lives at
-`/tavern/tide-run`, which is now an implementation detail rather than a place.
+**Tide Run ships as its own iOS app and is gone from here entirely.** The route, the
+game, the boats, the seas, the audio, the board, six badges and the Tide Champion contest
+are all deleted, and the DB went with them: `leaderboard_tide_run`, `bump_tide_run_stats`
+and eight `profiles` columns are dropped, and the six badge ids are stripped out of
+`unlocked_badges`, `claimed_badge_rewards` and `badge_unlocked_at`.
 
-The entrance is **Kip Ledger**, a smuggler moored east of the Mainland at 1700,925 —
-`web/lib/seaSmuggler.ts` for who he is and what he says, `sea/SmugglerTalk.tsx` for the
-scene, `scripts/check-smuggler.mts` (in `npm run check`) for the assertion that his hail
-is clear of every other prompt on the chart. He is the only door on purpose: a second one
-would skip both the story and the way back to the water.
+Nothing was thrown away. `app_private.tide_run_archive` holds the 44 captains who ran it:
+best distance and when it was set, lifetime distance, beacons, boat, sea, and which of the
+badges they had. Taken before a single drop ran.
 
-**The beacons were always the story.** `TideRunGame` describes them as disguised detection
-devices you must smash grounded rather than jump, built to trick the see-rock-jump reflex —
-a whole mechanic about not being SEEN in a game where nobody had said who was looking. Kip
-is who they are looking for, and his warning is that mechanic explained by the one person
-who would know it.
+**`has_tide_turner` and `tide_turner_*` are NOT part of this.** The Tide Turner is a
+fishing special that drops off a voyage and shares nothing with the run but the word.
 
-Leaving: `SmugglerTalk` stamps `profiles.sea_x/sea_y` to his bow via `moorBesideSmuggler`
-before routing to `/tavern/tide-run?from=sea`, and that flag is the only thing the run does
-differently — it puts a "Back to Kip" exit on the wreck screen, which otherwise restarts on
-a tap anywhere and has no way out.
+### Kip Ledger stayed
+
+He is a good character in a well-checked spot, and deleting a person to delete a minigame
+throws out the half that was working. He is still moored east of the Mainland at 1700,925
+(`scripts/check-smuggler.mts` still asserts his hail is clear of every other prompt), and
+what he trades in now is what he knows about the harbour: he tells you what the Captain's
+register gets you and opens the membership card.
+
+**His pitch reads the membership's own perk table.** `MembershipModal` exports `PERKS` and
+`SmugglerTalk` renders it — a man describing an offer from memory while the till describes
+it from a table is how a game ends up promising something it does not sell.
+
+**And he does not pitch a Captain.** `smugglerStanding()` answers one boolean off
+`isPremiumActive`, and someone who has already paid gets told so and let go. The terms are
+stated flat (one payment, $9.99, does not lapse) because real money is at the end of that
+conversation, and the button says "Become a Captain" for the same reason.
 
 ## The Tavern is not a tab (2026-09-01)
 

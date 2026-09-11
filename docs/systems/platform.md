@@ -13,7 +13,8 @@ The non-game knowledge: how the app is built, shipped, and kept safe.
   --noEmit -p tsconfig.json`, then `npm run check` (campaign/copy/badge scripts), then
   `npm run build` for anything structural.
 - Local setup: `web/SETUP.md`. iOS wrapper: `web/CAPACITOR_IOS.md` (remote-URL shell;
-  IAP is the App Store gate). Native Tide Run port: `ios/PORT_BRIEF.md`.
+  IAP is the App Store gate). Tide Run is its OWN iOS app now and is out of this
+  codebase entirely: `ios/PORT_BRIEF.md`, and see tavern.md for what came out.
 
 ## Security posture (the convention that holds everything)
 

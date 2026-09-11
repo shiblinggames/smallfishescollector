@@ -41,7 +41,13 @@ class CheckoutBoundary extends Component<{ onError: () => void; children: ReactN
   render() { return this.state.failed ? null : this.props.children }
 }
 
-const PERKS = [
+/** ── WHAT A CAPTAIN GETS, AND THE ONLY LIST OF IT ─────────────────────────
+ *
+ * Exported because Kip pitches this out on the water now (see SmugglerTalk),
+ * and a man describing an offer from memory while the till describes it from a
+ * table is how a game ends up promising something it does not sell. One list,
+ * two places that read it. */
+export const PERKS = [
   ['150 gems a day', '3× the free haul'],
   ['Premium chum bait', 'every day'],
   ['A gold crate', 'every week'],
