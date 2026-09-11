@@ -3420,50 +3420,6 @@ body.hardcore-gauntlet::after {
   50%      { transform: translateY(-6px)  rotate(0.7deg); }
 }
 
-/* ── THE DOORS IN THE CREW AND SHIP PANELS ──────────────────────────────────
-   See components/RoomCard.tsx. Inline styles cannot carry a hover, and every
-   one of these states is a hover or a press, so they live here. `--rc-accent`
-   is written by the card: one rule, four colours.
-
-   The lift is small and the shadow does most of the work. A card that leaps
-   under the pointer is a card you flinch at on the way to the one next to it. */
-.room-card {
-  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.3, 1),
-              border-color 0.2s ease,
-              box-shadow 0.2s ease;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
-}
-.room-card .rc-glow,
-.room-card .rc-art {
-  transition: opacity 0.28s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
-}
-.room-card .rc-glow { opacity: 0.82; }
-
-@media (hover: hover) {
-  .room-card:hover {
-    transform: translateY(-3px);
-    border-color: color-mix(in srgb, var(--rc-accent, #f0c040) 55%, transparent);
-    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55),
-                0 0 26px color-mix(in srgb, var(--rc-accent, #f0c040) 18%, transparent);
-  }
-  /* THE ROOM LIGHTS UP AND THE ART LEANS IN. Both are the same gesture:
-     something behind the door noticing you. */
-  .room-card:hover .rc-glow { opacity: 1; }
-  .room-card:hover .rc-art { transform: scale(1.04); }
-}
-/* No :active rule here on purpose: these carry `.tap`, which is the whole
-   app's press, and a second one would only fight it. */
-
-/* The waiting pip, breathing. Same amber and the same meaning as the HUD's. */
-.room-card .rc-pip {
-  animation: rcPip 2.4s ease-in-out infinite;
-  box-shadow: 0 0 10px rgba(240, 192, 64, 0.6);
-}
-@keyframes rcPip {
-  0%, 100% { box-shadow: 0 0 8px rgba(240, 192, 64, 0.45); }
-  50%      { box-shadow: 0 0 16px rgba(240, 192, 64, 0.95); }
-}
-
 /* The enemy's own face, held over their ship. It floats; it does not roll --
    a portrait is not a hull, and the moment it tips with the swell it reads as
    a sticker stuck to the mast rather than the man standing behind the fight. */

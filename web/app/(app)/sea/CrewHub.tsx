@@ -238,25 +238,17 @@ export default function CrewHub({
   const ownedSkins = CREW_SKINS.filter(k => hall?.ownedCrewSkins.includes(k.id))
   const ring = (rarity: number) => RARITY[Math.min(3, Math.max(0, rarity - 1))]
 
-  /** The count, and what the count means: the plate sets one in a chip and the
-   *  other in words under the room's name. */
-  function doorLine(id: Section): { stat?: string; note: string } | null {
+  function doorNote(id: Section): string | null {
     if (!state) return null
     switch (id) {
       // THE EMPTY SEATS ARE THE POINT. A captain with three hands sitting in
       // the hall and two benches open on the raid party is losing a fight they
       // have not had yet, and this is the only place that says so before they
       // open the room.
-      case 'assign': return hall
-        ? { stat: `${seated.length}/${seats}`, note: voyaging.length ? `seated · ${voyaging.length} on the voyage` : 'seated for the raid' }
-        : null
-      case 'recruits': return state.recruitsWaiting > 0
-        ? { stat: `${state.recruitsWaiting}`, note: 'waiting on the board' }
-        : { note: 'board taken for today' }
-      case 'roster': return { stat: `${state.crew.length}/${state.capacity}`, note: 'hands aboard' }
-      case 'wardrobe': return hall
-        ? { stat: `${ownedSkins.length}/${CREW_SKINS.length}`, note: 'coats collected' }
-        : null
+      case 'assign': return hall ? `${seated.length} of ${seats} seated for the raid` : null
+      case 'recruits': return state.recruitsWaiting > 0 ? `${state.recruitsWaiting} on the board` : 'board taken for today'
+      case 'roster': return `${state.crew.length} of ${state.capacity} aboard`
+      case 'wardrobe': return hall ? `${ownedSkins.length} of ${CREW_SKINS.length} collected` : null
     }
   }
 
@@ -283,14 +275,14 @@ export default function CrewHub({
     }
     if (id === 'roster') {
       if (!hall || hall.roster.length === 0) return null
-      return <Rotator size={96} accent="#8fb8dc" srcs={hall.roster.map(c => artSrc(c.filename))} />
+      return <Rotator size={96} srcs={hall.roster.map(c => artSrc(c.filename))} />
     }
     // The coats you own, turning over. With none, three off the rack, greyed:
     // an empty trunk that shows nothing says the room is broken rather than
     // empty.
     if (!hall) return null
     return ownedSkins.length > 0
-      ? <Rotator size={96} accent="#c084fc" srcs={ownedSkins.map(k => artSrc(k.filename))} />
+      ? <Rotator size={96} srcs={ownedSkins.map(k => artSrc(k.filename))} />
       : <FaceRow size={48} dim srcs={CREW_SKINS.slice(0, 3).map(k => artSrc(k.filename))} />
   }
 
@@ -609,21 +601,18 @@ export default function CrewHub({
                       display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem',
                       marginTop: '0.85rem',
                     }}>
-                      {CARDS.map((card, i) => {
+                      {CARDS.map(card => {
                         // WHAT IS WAITING BEHIND EACH DOOR. A count, not a
                         // banner: the dot is the same amber the HUD uses and
                         // means the same thing, which is that there is
                         // something here you have not dealt with.
                         const waiting = card.id === 'recruits' && !boardSeen && (state?.recruitsWaiting ?? 0) > 0
-                        const line = doorLine(card.id)
                         return (
                           <RoomCard key={card.id}
                             title={card.title}
-                            stat={line?.stat}
-                            note={line?.note ?? card.blurb}
+                            note={doorNote(card.id) ?? card.blurb}
                             accent={card.accent}
                             waiting={waiting}
-                            index={i}
                             // Named, so a tour can light one door and the
                             // lock can stand the other three down.
                             coach={`crew-${card.id}`}
