@@ -215,7 +215,9 @@ export default function SeaFirstVoyage({
   // away, or the component goes for any other reason. A camera left pointed at
   // an island by a tour that is no longer running is a boat nobody can find.
   useEffect(() => {
-    if (!beat || beat.until !== 'look' || !beat.at) { cam.current = null; return }
+    // NOT OURS, NOT OURS TO CLEAR -- the anchorage tour writes this same ref
+    // and is mounted beside this one. The cleanup below hands the camera back.
+    if (!beat || beat.until !== 'look' || !beat.at) return
     const place = PLACES.find(p => p.id === beat.at)
     cam.current = place ? { x: place.x, y: place.y } : null
     return () => { cam.current = null }
@@ -240,10 +242,12 @@ export default function SeaFirstVoyage({
   // the same instruction as the bait beat, said later.
   useEffect(() => {
     const want = stuck === 'bait' ? 'haul haul-bait' : beat?.target
+    // Guard before the sweep: `clear()` takes every `.coach-flash` on the page
+    // and the anchorage tour's marks are on the same page.
+    if (!want) return
     const clear = () => document.querySelectorAll('.coach-flash')
       .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
     clear()
-    if (!want) return
     const names = want.split(' ')
     const find = () => {
       for (const n of names) {
@@ -261,7 +265,7 @@ export default function SeaFirstVoyage({
   // Same shape as the camera: set while a beat wants it, given back the moment
   // it does not, so a path never outlives the instruction that drew it.
   useEffect(() => {
-    if (!beat?.path) { goal.current = null; return }
+    if (!beat?.path) return
     goal.current = destination(beat.path)
     return () => { goal.current = null }
   }, [beat, goal])

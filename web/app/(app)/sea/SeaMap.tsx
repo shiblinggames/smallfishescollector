@@ -5788,6 +5788,19 @@ export default function SeaMap({
     }
   }, [liveStatus])
 
+  /**
+   * THE RING THE ANCHORAGE TOUR'S ROUTE BEAT DRAWS, AS ONE OBJECT.
+   *
+   * Memoised, and that is not a saved multiply. It is handed to SeaGateTour,
+   * which sets `tourGoal` from it in an effect keyed on it -- so rebuilt inline
+   * it was a new object on every render of this chart, and that effect re-ran
+   * (and re-wrote a shared ref) on every one of them.
+   */
+  const gateNextAt = useMemo(
+    () => (nextStop?.at ? { x: nextStop.at.x, y: nextStop.at.y, r: NODE_REACH } : null),
+    [nextStop],
+  )
+
   // ── THE CAMPAIGN'S NEXT STOP, WHERE THE LOOP CAN READ IT ──────────────
   // Only past the gate: inside the harbour the road would point through the
   // reef at water the captain cannot reach from here.
@@ -11609,7 +11622,7 @@ hullRef={hullRefFor(t.key)} />
         goal={tourGoal}
         crewOpen={crewHubOpen} crewSection={crewSection} recruits={recruitTick}
         hasCaptain={hasCaptain} pastGate={onSeaGate}
-        nextAt={nextStop?.at ? { ...nextStop.at, r: NODE_REACH } : null}
+        nextAt={gateNextAt}
         nearId={near?.id ?? null} at={pos}
         onBeat={setGateBeat} onDone={() => setGateDone(true)} />}
       {!hudOff && arrived && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}

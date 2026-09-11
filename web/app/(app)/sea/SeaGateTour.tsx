@@ -133,11 +133,28 @@ export default function SeaGateTour({
   }, [gated, beat, step, nearId, at, pastGate])
 
   // ── THE WAY THERE ─────────────────────────────────────────────────────
-  // Set while a `route` beat is showing, given back the moment it is not, so
-  // a path never outlives the instruction that drew it.
+  //
+  // Set while a `route` beat is showing, given back the moment it is not, so a
+  // path never outlives the instruction that drew it. THE CLEANUP IS WHAT GIVES
+  // IT BACK, and that is the whole of why this returns early instead of writing
+  // null on the way past.
+  //
+  // `tourGoal` is SHARED with the first voyage, and this component is mounted
+  // the entire time that one is running -- both live under `arrived`, because
+  // neither may speak over the chart's arrival. A `goal.current = null` in the
+  // "not my turn" branch therefore reached across and put out the light the
+  // fishing tour had just lit: the road south to the Shallows, and the ring
+  // around the water it asks you to cast in. It did not even need a race to do
+  // it, because `nextAt` is rebuilt every render up in SeaMap, so this effect
+  // re-ran and re-nulled on every single one.
+  //
+  // React's own cleanup already does this correctly: the previous run's
+  // teardown fires before the next body, so the frame this stops being a
+  // routing beat is the frame the path goes out. Nothing has to be nulled by
+  // hand, and nothing that belongs to the other tour gets touched.
   const routing = !!beat?.route && !gated
   useEffect(() => {
-    if (!routing || !nextAt) { goal.current = null; return }
+    if (!routing || !nextAt) return
     goal.current = nextAt
     return () => { goal.current = null }
   }, [routing, nextAt, goal])
@@ -161,10 +178,10 @@ export default function SeaGateTour({
   // so the chart returns to the hull on its own. A camera left pointed at an
   // island by a tour that is no longer running is a boat nobody can find.
   useEffect(() => {
-    if (!beat || beat.until !== 'look' || !beat.at || !inAnchorage || fighting) {
-      cam.current = null
-      return
-    }
+    // NOT OURS, NOT OURS TO CLEAR. `tourCam` is shared with the first voyage
+    // exactly as `tourGoal` is -- see the note there. The cleanup below is what
+    // returns the camera to the hull.
+    if (!beat || beat.until !== 'look' || !beat.at || !inAnchorage || fighting) return
     // THE GATE IS NOT A PLACE. It is a pair of constants in chart.ts — no
     // island, no berth, no row in PLACES — and it is the one thing on this half
     // a captain most needs pointed at. Named here rather than given a fake
@@ -183,10 +200,15 @@ export default function SeaGateTour({
   // it, which is not within any number of retries of the beat coming up.
   useEffect(() => {
     const want = beat?.target
+    // THE GUARD COMES FIRST. `clear()` is a document-wide sweep of every
+    // `.coach-flash` on the page, and the first voyage's marks are on the same
+    // page -- so clearing before checking whether this tour has anything to say
+    // put out the other tour's highlight on every render. Same fault as the
+    // goal above, in a third place.
+    if (!want || !inAnchorage || fighting) return
     const clear = () => document.querySelectorAll('.coach-flash')
       .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
     clear()
-    if (!want || !inAnchorage || fighting) return
     const names = want.split(' ')
     const find = () => {
       for (const n of names) {
