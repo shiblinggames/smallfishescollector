@@ -13,7 +13,8 @@
 //   (A TRAIL was here and is gone. A wake behind the needle sounded right and
 //   read wrong: it draws the eye to where the needle HAS BEEN, and this
 //   instrument is entirely about where it is about to be. It also smeared the
-//   one hard edge a player is timing against.)
+//   one hard edge a player is timing against. It grew back by accident once --
+//   see the needle glow at the foot of the frame -- and the lesson held.)
 //
 //   THE TARGET BREATHES. The zone was a static block; it now carries a soft
 //   bloom in its own colour with a hotter core at the crit seam, so the thing
@@ -226,11 +227,22 @@ export default function AimBarFx({ active, read, handleRef }: {
         ctx.drawImage(imgs[s.tint], s.x - d / 2, s.y - d / 2, d, d)
       }
 
-      // A GLOW UNDER THE NEEDLE, which is the only part of the needle drawn
-      // here — and it is not the needle, it is the light it throws. The mark
-      // itself stays on the compositor where nothing here can stutter it.
-      ctx.globalAlpha = 0.5
-      ctx.drawImage(imgs[near > 0.55 ? 1 : 0], px - 15, y - 15, 30, 30)
+      // ── A GLOW UNDER THE NEEDLE, AND NOT MUCH OF ONE ─────────────────────
+      //
+      // The only part of the needle drawn here, and it is not the needle: it is
+      // the light it throws. The mark itself stays on the compositor where
+      // nothing on this thread can stutter it.
+      //
+      // IT USED TO READ AS A TRAIL. A 30px blob at half alpha is wider than the
+      // 4px mark it sits under, so any disagreement at all between where this
+      // thinks the needle is and where the compositor has actually drawn it
+      // comes out as a smear hanging off the back of the sweep. The read is
+      // honest now (see aimFxRead, which asks the compositor's own clock), and
+      // this is small enough and faint enough that the last frame of slack has
+      // nowhere to show. It reads as the mark being lit rather than as
+      // something following it.
+      ctx.globalAlpha = near > 0.55 ? 0.3 : 0.2
+      ctx.drawImage(imgs[near > 0.55 ? 1 : 0], px - 8.5, y - 8.5, 17, 17)
 
       ctx.globalAlpha = 1
       ctx.globalCompositeOperation = 'source-over'

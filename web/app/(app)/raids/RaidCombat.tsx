@@ -1932,13 +1932,36 @@ export default function RaidCombat({
    */
   const aimFxRef = useRef<AimBarFxHandle | null>(null)
   const aimFxRead = useCallback(() => ({
-    pos: firePosRef.current,
+    // ── WHERE THE NEEDLE ACTUALLY IS, NOT WHERE THIS THREAD THINKS IT IS ──
+    //
+    // `firePosRef` is integrated here, frame by frame, off `dt`. The needle the
+    // player is looking at is a WAAPI sweep on the COMPOSITOR, which keeps its
+    // own clock and does not miss frames when this one does. Drop a few frames
+    // in a busy fight and the two quietly disagree -- and every pixel of that
+    // disagreement came out as a glow hanging off the back of the mark, which
+    // is the "trail" this instrument is not supposed to have.
+    //
+    // So ask the compositor's own clock while it is the thing driving: same
+    // triangle wave, same epoch, same period. `firePosRef` is still the answer
+    // when nothing is playing (a locked shot freezes the sweep, and a squall
+    // gusts the needle from this thread because a fixed-duration animation
+    // cannot gust).
+    pos: (() => {
+      const anim = needleAnimRef.current
+      if (!anim || anim.playState !== 'running' || !needlePeriodRef.current) return firePosRef.current
+      // The DOCUMENT TIMELINE, which is the clock the sweep is pinned to and
+      // the one lockShot judges against -- inside a frame it is that frame's
+      // own timestamp, so the glow is painted for the picture the compositor is
+      // drawing rather than for a moment slightly after it.
+      const tl = document.timeline?.currentTime
+      return needleAt(typeof tl === 'number' ? tl : performance.now())
+    })(),
     zone: zonePosRef.current,
     // The seam, when Rolling Plate is drifting it inside the band — the glow
     // should answer the thing that actually crits, not the middle of the zone.
     critW: liveCritWRef.current,
     band: aimHitWRef.current + aimGrazeWRef.current,
-  }), [])
+  }), [needleAt])
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
   // False Colors curse — drifting DECOY bands the player must NOT lock onto.
