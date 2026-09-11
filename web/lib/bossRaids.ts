@@ -512,17 +512,28 @@ export interface BossRaidConfig {
   loot: RaidLootItem[]
   killRewards: Record<string, { gold: number; xp: number }>
   /**
-   * NO CRATE AT THE END OF THIS ONE.
+   * THIS IS A SKIRMISH, NOT A RAID.
    *
-   * A raid's win screen IS the loot stage: the boss goes down and the chest
-   * comes up. That is right for a raid, which is a run of fights you commit
-   * an afternoon to, and wrong for a single skirmish -- a chest for one mob
-   * makes the crate mean less everywhere else, and `loot: []` is not a way to
-   * say it (the stage reads `loot[slotFinal]` and would crash on an empty
-   * list). This says it properly: no roll, no chest, and a win screen that is
-   * the tally of what the kill paid.
+   * It runs on the raid screen because it IS a fight and should look like
+   * every other fight, but it is one hull and nothing else, so none of the
+   * furniture a raid puts around its boss belongs on it:
+   *
+   *  - NO CHEST. A raid's win screen is the loot stage, right for a run you
+   *    commit an afternoon to and wrong for one mob -- a chest for a single
+   *    kill makes the crate mean less everywhere else. (`loot: []` is not a
+   *    way to say it either: the stage reads `loot[slotFinal]` and would
+   *    crash on an empty list.) No roll, no chest, no crate doubloons; the
+   *    win screen is the tally of what the kill itself paid.
+   *  - NOT A BOSS. `sequence: []` makes every round the boss round, which is
+   *    how the run knows it is over after one fight, but the enemy is a
+   *    common Reef Raider and is presented as one: no boss nameplate, no
+   *    boss-only mechanic check, no "X Sunk" callout over the wreck.
+   *  - ITS CLEAR IS NOT A RAID CLEAR. It records to the skirmish's own
+   *    profile flag rather than raid_completions, which is the raid records
+   *    table, the raid bounty meter and the "clear any raid" badges. See
+   *    recordSkirmishClear.
    */
-  noCrate?: true
+  skirmish?: true
   /** Battle-stage atmosphere. Each raid gets its own backdrop palette so
    *  fights read as different places, not the same dusk seascape repeated.
    *  Undefined falls back to 'dusk' (the original look) so any pre-existing
@@ -803,7 +814,11 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
 export const REEF_SKIRMISH: BossRaidConfig = {
   raidId: 'reef_skirmish',
   raidTitle: 'Reef Skirmish',
-  bossDefeatedText: 'Reef Raider Sunk',
+  // NO DEFEAT CALLOUT. A Reef Raider going down is not an event the screen
+  // announces; the fight simply ends. Required by the type, empty by intent
+  // (and unreachable anyway -- see skirmish, which hands RaidCombat isBoss
+  // false, and the banner is a boss-only beat).
+  bossDefeatedText: '',
   // Pete's coast at golden hour: this is his water, and the raid it leads
   // into wears the same light.
   atmosphere: 'sunset',
@@ -814,7 +829,7 @@ export const REEF_SKIRMISH: BossRaidConfig = {
   sequence: [],
   bossId: 'brute',
   loot: [],
-  noCrate: true,
+  skirmish: true,
   killRewards: { brute: CORSAIRS_RECKONING.killRewards.brute },
 }
 

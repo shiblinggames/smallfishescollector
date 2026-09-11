@@ -173,3 +173,55 @@ Enemy hulls below a Man-o-War are the PLAYER'S OWN v3 ships now
 `requiresNavLevel` is gone from every Chapter I node (`bilge_milestone` was Nav 10, `krust` was
 Nav 20). A new captain can play the whole of The Loose Thread on story and clears alone. Later
 chapters keep their gates (Ch II from `cartographer_reveal` at 25 onward).
+
+
+## The Reef Skirmish is a fight, not a raid (2026-09-11)
+
+It ran on `/raids/practice` — the raid TUTORIAL wrapper, with its own enemy table and its own
+chrome — so the campaign's first real fight was the one fight in the game that looked like
+nothing else in it. It is a `BossRaidConfig` now (`REEF_SKIRMISH`, registered in `ALL_RAIDS`),
+fought through the same `RaidGame` as every other node: on the chart through `RaidSheet` when the
+player sails up to it, on `/raids/skirmish` for anything that still routes by URL.
+
+`skirmish: true` on the config is the whole of what makes it a skirmish rather than a raid, and it
+says three things:
+
+- **No chest.** `RaidGame` skips `rollCrate` and never calls `claimRaidLoot` (neither at the kill
+  nor on the Collect fallback), so there is no crate purse either — the 300-600 ⟡ on a raid's win
+  screen is the crate's own money. `RaidLootStage` opens straight on the tally with `opened` and
+  `counting` already true. A chest for one mob makes the crate mean less everywhere else.
+  (`loot: []` alone is not a way to say it: the stage reads `loot[slotFinal]`.)
+- **Not a boss.** `sequence: []` makes every round the boss round — that is how the run knows it
+  ends after one fight — but `RaidCombat` is handed `isBoss={isBoss && !config.skirmish}`, so the
+  Reef Raider is fought as the common enemy it is: no boss nameplate, no boss-only mechanic check,
+  no stiffer flee roll, and no "X Sunk" callout over the wreck (`bossDefeatedText` is empty).
+- **Its clear is not a raid clear.** `recordSkirmishClear()` writes
+  `profiles.has_completed_practice_raid`; it does NOT insert a `raid_completions` row. That table is
+  the raid speed board, the raid bounty meters and the "clear any raid in under a minute" badge, and
+  a repeatable one-mob fight would walk through all three — plus `recordRaidClear` has a 20-second
+  plausibility floor an honest skirmish can duck under. The flag is what `buildClearedSet` has
+  always read the `skirmish` node off, so the node clears and the next one opens the way every other
+  node does (`router.refresh()` on fight close re-reads it).
+
+The node keeps `raidId: REEF_SKIRMISH.raidId` because that is how `straightIn` knows which config to
+compose on the water. It clears through the flag, not through that id, because no row will ever
+carry it.
+
+The Reef Raider is borrowed from Pete's own fleet (`CORSAIRS_RECKONING.enemies.brute`) rather than
+copied, so thinning his Raiders here and meeting the same hull in his raid later is literally the
+same ship. `/raids/practice` is untouched and still reachable; nothing in the campaign routes to it.
+
+## Whose ship that is: the enemy's portrait on the chart
+
+Every hull on the anchorage side is the same silhouette, and the card that says who is on her only
+opens once you are already committed. `EncounterMark` draws the enemy's portrait art whole —
+cut out, no frame, no crop, floating just above the masthead with its own shadow under it, the same
+idiom the gauntlet uses for Davy and the Don. It was briefly a cropped bust in a gold ring, which
+read as a UI chip pinned to a ship.
+
+The player's captain keeps the ring, and that asymmetry is deliberate: enemy portraits are cut out
+with nothing behind them, crew art is a CARD painted to its own edges, and a card hung over a ship
+is a rectangle floating in the sky.
+
+Both disappear the moment the fight starts (`!hullRef` for the enemy, `!fightOn` for the captain):
+once the cannons are out the screen belongs to the ships.

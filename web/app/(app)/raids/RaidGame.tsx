@@ -5,7 +5,7 @@ import CloseButton from '@/components/CloseButton'
 import type { DialAimBonus } from '@/lib/dialAim'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimRaidLoot, recordRaidHit, recordRaidClear, startRaidRun, type RaidClearTimes } from './actions'
+import { claimRaidLoot, recordRaidHit, recordRaidClear, recordSkirmishClear, startRaidRun, type RaidClearTimes } from './actions'
 import { awardRaidKill } from './raidXPActions'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -1255,10 +1255,10 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
         setWinGold(gold); setWinXP(xp)
         // Roll loot + dollar amount up front so the stage can pre-position
         // the slot before the player taps Loot Chest.
-        // NOTHING TO ROLL when the raid carries no crate. `rollCrate` over an
-        // empty table has no currency row to land on, so this is a branch
-        // rather than an empty list. See BossRaidConfig.noCrate.
-        const crate = config.noCrate
+        // NOTHING TO ROLL for a skirmish. `rollCrate` over an empty table has
+        // no currency row to land on, so this is a branch rather than an empty
+        // list. See BossRaidConfig.skirmish.
+        const crate = config.skirmish
           ? { itemIdxs: [] as number[], currencyIdx: -1 }
           : rollCrate(config.loot, ownedUniqueIds, config.uniqueShare, legendaryLootMult, lootFortuneMult, isChallengeRaid(config.raidId))
         // The reel lands on the RAREST item that dropped, so the headline is the
@@ -1275,7 +1275,10 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
         const tideDoubloons = activeTideEffects
           .filter((e): e is Extract<TideEffect, { kind: 'doubloonsAtRaidEnd' }> => e.kind === 'doubloonsAtRaidEnd')
           .reduce((s, e) => s + e.n, 0)
-        const total = Math.max(0, Math.floor(base * fortuneMult) + tideDoubloons)
+        // A SKIRMISH PAYS ITS KILL AND NOTHING MORE. The 300-600 above is the
+        // crate's own purse, and there is no crate here; the gold for the
+        // Raider is the killRewards line awarded below, like any other kill.
+        const total = config.skirmish ? 0 : Math.max(0, Math.floor(base * fortuneMult) + tideDoubloons)
         setSlotFinal(final)
         setLootItemIdxs(crate.itemIdxs)
         setLootBase(base)
@@ -1323,10 +1326,21 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
         // guarded by clearRecordedRef so we never insert twice for
         // the same run.
         const clearElapsedMs = performance.now() - raidStartTimeRef.current
-        setClearTimeMs(clearElapsedMs)   // this run's time, for the victory screen
+        // No clock on a skirmish: one mob is not a run to race, and the time
+        // block on the win screen is the raid records panel.
+        if (!config.skirmish) setClearTimeMs(clearElapsedMs)
         if (!clearRecordedRef.current) {
           clearRecordedRef.current = true
-          recordRaidClear(config.raidId, clearElapsedMs, runTokenRef.current ?? undefined)
+          // THE SKIRMISH CLEARS THROUGH ITS OWN FLAG. A raid_completions row
+          // is the raid records table, the raid bounty meter and the "clear
+          // any raid in under a minute" badges, and a one-mob fight walks
+          // straight through all three. has_completed_practice_raid is what
+          // buildClearedSet has always read the skirmish node off, so the
+          // node opens the way every other node opens.
+          const record = config.skirmish
+            ? recordSkirmishClear().then(() => null)
+            : recordRaidClear(config.raidId, clearElapsedMs, runTokenRef.current ?? undefined)
+          record
             .then(t => { if (t) setClearTimes(t) })
             .catch(() => {
               // If the insert fails, clear the guard so the loot-claim
@@ -1342,7 +1356,7 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
         // failure the guard resets so the Collect button retries as a fallback.
         // The purse-update event is deferred to Collect (from lootResultRef) so
         // the Nav total ticks up in sync with the reveal, not mid-animation.
-        if (!lootGrantedRef.current) {
+        if (!config.skirmish && !lootGrantedRef.current) {
           lootGrantedRef.current = true
           const lootElapsedMs = performance.now() - raidStartTimeRef.current
           claimRaidLoot(total, crate.itemIdxs.map(i => config.loot[i].id), lootElapsedMs, playerHPMax - playerHP, config.raidId)
@@ -1781,7 +1795,12 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
                 onFightFx={onFightFx}
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
-                isBoss={isBoss}
+                // A SKIRMISH HAS NO BOSS. `sequence: []` makes every round a
+                // boss round -- that is how the run knows it ends after one
+                // fight -- but the Raider is a common enemy and is fought as
+                // one: no gold nameplate, no boss-only mechanic check, no
+                // stiffer flee roll, no defeat callout. See config.skirmish.
+                isBoss={isBoss && !config.skirmish}
                 // WHICH RUN THIS IS, said on screen. Derived from the raidId
                 // rather than passed down from whoever opened the fight, so a
                 // challenge entered from the sea, from the node map or from its
@@ -2094,7 +2113,7 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
         </div>
         <div style={{ width: '100%', padding: '0 0.5rem', flexShrink: 0 }}>
           <RaidLootStage
-            noCrate={config.noCrate === true}
+            noCrate={config.skirmish === true}
             boss={bossEnemy}
             clearTimeMs={clearTimeMs}
             clearTimes={clearTimes}
@@ -2131,7 +2150,10 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
               // reached the loot screen.
               if (!clearRecordedRef.current) {
                 clearRecordedRef.current = true
-                recordRaidClear(config.raidId, elapsedMs).catch(() => { clearRecordedRef.current = false })
+                const retry = config.skirmish
+                  ? recordSkirmishClear()
+                  : recordRaidClear(config.raidId, elapsedMs)
+                retry.catch(() => { clearRecordedRef.current = false })
               }
               // The crate loot was already granted at boss-kill, so Collect just
               // fires the purse-update event from the stored result and routes —
@@ -2139,7 +2161,9 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
               // failed (lootGrantedRef reset), claim once here, capped so a stuck
               // network can't pin the player on "Saving…" (the claim still
               // finishes server-side; routing is expected once they've tapped).
-              if (!lootGrantedRef.current) {
+              // Nothing to claim for a skirmish: no crate was rolled and the
+              // kill paid itself. See BossRaidConfig.skirmish.
+              if (!config.skirmish && !lootGrantedRef.current) {
                 lootGrantedRef.current = true
                 try {
                   const res = await Promise.race([

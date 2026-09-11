@@ -6053,8 +6053,9 @@ export default function SeaMap({
               // A raid with a config opens as a SHEET over the chart: you
               // sailed up to that hull and the guns open where you are, the
               // same shape fishing has always had. See RaidSheet. Anything
-              // WITHOUT a config — the practice skirmish — keeps its route,
-              // because there is no config for the sheet to fight.
+              // WITHOUT a config keeps its route, because there is no config
+              // for the sheet to fight. Nothing in the campaign is in that
+              // state any more; the skirmish was the last one.
               if (n.raidId && getRaidConfigById(n.raidId)) {
                 // WHICH HULL YOU ARE FIGHTING. The fight hangs everything it
                 // draws on this ship's place on the chart, so it is recorded
@@ -6068,7 +6069,11 @@ export default function SeaMap({
                 fightFastRef.current = false
                 wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
                 // THE CARD FIRST, and the guns after it. Which run you are
-                // taking on is chosen on that card and nowhere else.
+                // taking on is chosen on that card and nowhere else — unless
+                // there is nothing to choose. See straightIn: a skirmish is
+                // one hull, so its card would be a box between the captain and
+                // a button they have already pressed.
+                if (n.straightIn) { setFightId(n.raidId); return }
                 setBossCard(n.id)
                 return
               }
@@ -10013,11 +10018,17 @@ hullRef={hullRefFor(t.key)} />
 
         {/* ── WHO IS SAILING HER ───────────────────────────────────────
             The captain's own face beside the hull, out on the water where the
-            fights are. Every enemy carries one now (see EncounterMark), and a
-            duel drawn between a named face and an anonymous ship is only half
-            a duel -- this is the other half, and it is the hand the captain
-            actually seated, so the seat they filled in the Crew Hall is
-            visible on the sea.
+            fights are. Every enemy shows theirs over their own ship now (see
+            EncounterMark), and a duel drawn between a named face and an
+            anonymous ship is only half a duel -- this is the other half, and
+            it is the hand the captain actually seated, so the seat they
+            filled in the Crew Hall is visible on the sea.
+
+            A RING, WHERE THE ENEMY GETS THE WHOLE PAINTING. Enemy portraits
+            are cut out with nothing behind them, so their art can stand over
+            the masts unframed; crew art is a CARD, painted to its own edges,
+            and a card hung over a ship is a rectangle floating in the sky.
+            Cropped to a disc it is a face on the deck, which is what it is.
 
             NOT on the fishing side: down there nothing fights, the hull is a
             dinghy with the captain already painted on it, and a second face
@@ -10035,7 +10046,7 @@ hullRef={hullRefFor(t.key)} />
             AND NO COUNTER-SQUASH. This wrapper is in screen space, not in
             the squashed plane, so the 1/GROUND that stands things up out on
             the water only stretched this into an oval. */}
-        {inAnchorage && captainFace && (
+        {inAnchorage && !fightOn && captainFace && (
           <div aria-hidden style={{
             position: 'absolute', left: '50%', bottom: WARSHIP_W * 0.22,
             marginLeft: WARSHIP_W * 0.12,
@@ -14205,32 +14216,41 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext,
         pointerEvents: 'none',
       }} />
 
-      {/* ── WHOSE SHIP THIS IS ──────────────────────────────────────────
-          A bust beside the hull, on the side away from the player's approach.
-          Every enemy on this water is a silhouette in the same idiom, so the
-          ship alone never says who you are about to fight -- and the card that
-          does say it only opens once you are already committed. Counter-
-          squashed like everything else that STANDS on this plane. */}
-      {/* NO COUNTER-SQUASH HERE. The node's own wrapper above is already
+      {/* ── WHO IS WAITING ON HER ───────────────────────────────────────
+          THE PAINTING ITSELF, standing over the ship. Every enemy on this
+          water is the same silhouette, so the hull alone never says who you
+          are about to fight, and the card that does say it only opens once
+          you are already committed.
+
+          A cropped bust in a gold ring said it, but said it as a UI chip
+          pinned to a ship. This is the idiom the gauntlet already uses for
+          Davy and the Don: the art whole, cut out, no frame, no crop, held
+          above the masts with its own shadow under it. The enemy's face IS
+          the mark on the chart.
+
+          Held just over the masthead: the hull's ink tops out around three
+          quarters of its box above the waterline (see encArt), so this sits
+          a shade above that and overlaps nothing.
+
+          NO COUNTER-SQUASH. The node's own wrapper above is already
           `scaleY(1 / GROUND)` -- everything inside it is standing up by the
-          time it gets here -- so a second one stretched every face into an
-          oval and was most of why they read as too big. */}
-      {face && (
-        <div aria-hidden style={{
-          position: 'absolute', left: '50%', bottom: w * 0.40,
-          marginLeft: w * 0.15,
-          width: w * 0.17, height: w * 0.17,
+          time it gets here -- so a second one only stretches the face.
+
+          Gone during the fight (`!hullRef`): once the cannons are out, the
+          screen belongs to the ships. */}
+      {face && !hullRef && (
+        <img aria-hidden src={face} alt="" draggable={false} decoding="async" style={{
+          position: 'absolute', left: '50%', bottom: w * 0.74,
+          width: w * 0.46, height: w * 0.46,
+          objectFit: 'contain', maxWidth: 'none',
+          transform: 'translate(-50%, 0)',
+          animation: `encFace 6.8s ease-in-out ${(-phase * 6.8).toFixed(2)}s infinite`,
+          filter: cleared
+            ? 'grayscale(0.7) brightness(0.72) drop-shadow(0 8px 18px rgba(0,0,0,0.6))'
+            : 'drop-shadow(0 10px 22px rgba(0,0,0,0.75))',
+          opacity: cleared ? 0.7 : 1,
           pointerEvents: 'none',
-        }}>
-          <img src={face} alt="" draggable={false} decoding="async" style={{
-            width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-            borderRadius: '50%', maxWidth: 'none',
-            border: `1.5px solid ${cleared ? 'rgba(150,206,172,0.75)' : 'rgba(240,192,64,0.75)'}`,
-            background: 'rgba(6,10,16,0.9)',
-            boxShadow: '0 6px 18px rgba(0,0,0,0.75)',
-            filter: cleared ? 'grayscale(0.6) brightness(0.8)' : undefined,
-          }} />
-        </div>
+        }} />
       )}
 
       {/* WHICH ONE OF THESE IS THE CAMPAIGN. Outside the fight layer below, so

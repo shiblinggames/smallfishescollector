@@ -405,6 +405,29 @@ export async function recordRaidClear(raidId: string, elapsedMs: number, token?:
   return { yourBestMs, globalBestMs, globalBestUsername, isPersonalBest, isGlobalBest }
 }
 
+/**
+ * Record the Reef Skirmish clear.
+ *
+ * The skirmish runs on the raid screen but is not a raid (see
+ * BossRaidConfig.skirmish), and its clear must not go into raid_completions:
+ * that table is the raid records board, the raid bounty meters and the "clear
+ * any raid in under a minute" badge, and one common Reef Raider -- repeatable,
+ * over in a handful of turns -- would walk through all three. It also sits
+ * under a 20-second plausibility floor that an honest skirmish can duck under.
+ *
+ * has_completed_practice_raid is the flag buildClearedSet has always read the
+ * 'skirmish' node off, so writing it opens the next campaign node exactly the
+ * way every other node opens. Idempotent, grants nothing, and the same flag the
+ * old practice raid set -- anyone who cleared that keeps their node.
+ */
+export async function recordSkirmishClear(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ has_completed_practice_raid: true }).eq('id', user.id)
+}
+
 /** Record a single hit the player landed, keeping profiles.highest_raid_damage
  *  as the all-time max. Fired per new run-best from RaidGame (win OR loss), so
  *  "Biggest Hit" reflects the largest blow ever dealt, not just on clears.

@@ -55,7 +55,7 @@ interface Props {
    *  claimRaidLoot server action + routes to /expeditions. */
   onClaim: () => void
   /** No crate was rolled: the boss went down and that is the whole of it.
-   *  The stage opens straight on the tally. See BossRaidConfig.noCrate. */
+   *  The stage opens straight on the tally. See BossRaidConfig.skirmish. */
   noCrate?: boolean
   /** Whether the parent is currently saving the claim. Disables the button. */
   claiming?: boolean
@@ -355,7 +355,7 @@ export default function RaidLootStage(props: Props) {
               {noCrate && (
                 <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
                   className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.3em', color: GOLD }}>
-                  You sank {boss.name}
+                  {boss.name} sunk
                 </motion.p>
               )}
 

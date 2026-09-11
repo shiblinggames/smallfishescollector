@@ -546,6 +546,15 @@ export interface RaidNode {
    *  every action that mutates the node refuses with "Coming soon" so
    *  a hand-crafted client request can't sneak through. */
   comingSoon?: boolean
+  /**
+   * NO BRIEF. THE GUNS OPEN WHERE YOU ARE.
+   *
+   * A fight normally opens a card first, because a raid is a decision: which
+   * run you are taking on, against what, with a crate at the end of it. A
+   * skirmish is one hull and no choice, so the card is a box between the
+   * captain and a button they have already pressed.
+   */
+  straightIn?: true
   /** class_pick node: one-time chapter-end ship-class pick. The
    *  chapterId is the RAID_CHAPTERS.id this pick contributes to (so
    *  the picker writes into profiles.ship_classes[chapterId]).
@@ -909,7 +918,19 @@ export const RAID_MAP: RaidNode[] = [
     // real fight in the game was the one fight that looked like nothing else
     // in it. Same screen as every raid now; see REEF_SKIRMISH.
     route: '/raids/skirmish',
+    // WHICH FIGHT THIS IS -- the config the chart composes when you sail up
+    // to it, and the only thing straightIn has to go on.
+    //
+    // It does NOT clear this node. `raidId` is also what buildClearedSet reads
+    // a clear off (a raid_completions row carrying it), and the skirmish never
+    // writes one: a one-mob fight in the raid records table would sit on the
+    // speed board, tick the raid bounty meters and hand over "clear any raid
+    // in under a minute" for free. It clears through
+    // has_completed_practice_raid instead, which is the flag this node has
+    // always been read off. See recordSkirmishClear.
     raidId: REEF_SKIRMISH.raidId,
+    // One hull, no choice to make: see straightIn.
+    straightIn: true,
     image: CORSAIRS_RECKONING.enemies.brute.portrait,
     detail: {
       description:
