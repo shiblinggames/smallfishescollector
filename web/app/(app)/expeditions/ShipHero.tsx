@@ -1890,23 +1890,20 @@ export default function ShipHero({
                       width: `${80 * (HERO_TIER_SCALE[shipTierForSlots] ?? 1)}%`,
                       maxWidth: 258 * (HERO_TIER_SCALE[shipTierForSlots] ?? 1),
                     }}>
-                      {/* A LIGHT BEHIND THE HULL. The backdrop is a lamplit berth
-                          and the ship models are dark timber, so the ship was a
-                          dark shape on a dark shape. This is a lantern pool
-                          behind it: it separates the hull without putting a
-                          plate or a box around it, and it belongs in a boathouse.
-                          Static gradient, no animation, costs nothing. */}
-                      <div aria-hidden style={{
-                        position: 'absolute', left: '-18%', right: '-18%', top: '-10%', bottom: '-16%',
-                        background: 'radial-gradient(ellipse 62% 58% at 50% 52%, rgba(255,214,150,0.20) 0%, rgba(120,160,210,0.10) 42%, transparent 72%)',
-                        pointerEvents: 'none',
-                      }} />
-                      {/* ── AND WHAT SHE THROWS OFF ────────────────────────
-                          The skin's own aura out of `auraSpecs` -- the rows the
-                          chart's canvas reads -- so the hull in this room is
-                          the hull you will be sailing rather than a recolour of
-                          the bare one. Sparks on this one only: see SkinAura. */}
-                      <SkinAura skinId={equippedSkin} motes />
+                      {/* ── NO POOL OF LIGHT BEHIND HER ────────────────────
+                          There was a lantern-pool gradient here, to separate a
+                          dark hull from a dark backdrop. It is an OVAL, and the
+                          hull is not: with the real glow now tracing her
+                          silhouette -- masts, sheer and all -- the oval behind
+                          it only announced that something in this picture was
+                          not shaped like the ship. The glow separates her from
+                          the ground on its own, which is what a glow is for.
+
+                          ── AND WHAT SHE THROWS OFF ────────────────────────
+                          The skin's own sparks out of `auraSpecs`, the rows the
+                          chart's canvas reads. `halo={false}` for the same
+                          reason the pool went: this hull has the real thing. */}
+                      <SkinAura skinId={equippedSkin} motes halo={false} />
                       {/* ── AND SHE BREATHES THE WAY SHE DOES OUT THERE ────
                           `skinGlow` is the effect's own timeline as CSS: same
                           radii, colours, alphas and duration the canvas runs,

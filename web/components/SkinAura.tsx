@@ -75,12 +75,22 @@ export function skinGlow(skinId: string | null | undefined, base?: string): {
   return { filter, times: glow.stops.map(s => s.t), dur: glow.dur, linear: !!glow.linear }
 }
 
-export default function SkinAura({ skinId, motes = false, inset = '-22%' }: {
+export default function SkinAura({ skinId, motes = false, halo = true, inset = '-22%' }: {
   /** The skin being worn or previewed. Null is her own paint, which throws
    *  nothing on the water either. */
   skinId: string | null | undefined
   /** Draw the sparks as well as the glow. One hull at a time, please. */
   motes?: boolean
+  /**
+   * THE POOL OF LIGHT, WHICH IS AN OVAL AND NOT A SHIP.
+   *
+   * It is the right answer on a 38px tile, where a still gradient is all the
+   * glow anybody is going to see. It is the wrong answer next to a hull that is
+   * running its real timeline: `skinGlow` traces the SILHOUETTE -- masts, sheer
+   * and all -- and an oval behind that only announces that something here is
+   * not shaped like the ship. Off wherever the real glow is on.
+   */
+  halo?: boolean
   /** How far the glow spills past the picture. */
   inset?: string
 }) {
@@ -106,10 +116,12 @@ export default function SkinAura({ skinId, motes = false, inset = '-22%' }: {
 
   return (
     <>
-      <span aria-hidden style={{
-        position: 'absolute', inset, pointerEvents: 'none', zIndex: 0,
-        background: `radial-gradient(ellipse 58% 52% at 50% 52%, ${ramp}, ${rgba(layers[0]?.c ?? 0xffffff, 0)} 78%)`,
-      }} />
+      {halo && (
+        <span aria-hidden style={{
+          position: 'absolute', inset, pointerEvents: 'none', zIndex: 0,
+          background: `radial-gradient(ellipse 58% 52% at 50% 52%, ${ramp}, ${rgba(layers[0]?.c ?? 0xffffff, 0)} 78%)`,
+        }} />
+      )}
       {motes && <Motes fx={fx} />}
     </>
   )
