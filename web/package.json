@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "check": "tsx scripts/check-campaign.mts && tsx scripts/check-copy.mts && tsx scripts/check-badge-goals.mts && tsx scripts/check-islands.mts && tsx scripts/check-palettes.mts && tsx scripts/check-shaders.mts && tsx scripts/check-coach.mts && tsx scripts/check-finn.mts && tsx scripts/check-smuggler.mts && tsx scripts/check-traders.mts",
-    "prebuild": "tsx scripts/check-campaign.mts && tsx scripts/check-copy.mts && tsx scripts/check-badge-goals.mts"
+    "prebuild": "npm run check"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

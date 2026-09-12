@@ -1,0 +1,74 @@
+# ── THE GATE ────────────────────────────────────────────────────────────────
+#
+# Runs on every push to master and on every pull request. Three questions, and
+# a red answer to any of them is a failed run:
+#
+#   1. Does it type-check?
+#   2. Do the ten invariant checks still hold? (scripts/check-*.mts — the
+#      campaign chain connects, the copy rules hold, every badge is on the
+#      page, no island sits on another, every coach mark points at something
+#      that exists, Finn/Kip/the traders can all be reached.)
+#   3. Does it build?
+#
+# ── WHY THIS EXISTS AT ALL ──────────────────────────────────────────────────
+#
+# The checks were already written and already good. They were run by hand,
+# which meant they were run when someone remembered, which meant they sat RED
+# for weeks with three broken coach marks in them and nobody noticed. A check
+# nobody runs is not a check. This is the robot that always remembers.
+#
+# ── NO SECRETS, ON PURPOSE ──────────────────────────────────────────────────
+#
+# Steps 1 and 2 are static analysis over the source and need no keys at all.
+# The build is given PLACEHOLDER Supabase values: Next needs the variables to
+# exist to compile, not to be real, because nothing here talks to the database.
+# So this workflow holds no production credentials and a compromised action
+# cannot leak any. Vercel does the real build with the real keys.
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# A second push while the first is still running makes the first pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # `ci`, not `install`: it installs exactly the lockfile and fails if the
+      # lockfile and package.json disagree, which is its own useful check.
+      - name: Install
+        run: npm ci
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      - name: Invariants
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+        env:
+          # Placeholders. See the note at the top: present, not real.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          NEXT_TELEMETRY_DISABLED: "1"
