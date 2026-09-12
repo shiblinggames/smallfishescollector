@@ -856,7 +856,6 @@ export default function SeaIslandsGPU({
       // there. Put the other way round the distant sky stayed crisp over
       // hazed water, which reads as the haze being a filter on the sea rather
       // than air in the world.
-      a.stage.addChild(clouds.air)
       a.stage.addChild(haze)
 
       a.stage.addChild(gulls.view)
@@ -904,6 +903,18 @@ export default function SeaIslandsGPU({
       // was first sailed past, which is arbitrary and sticks for the session.
       front.sortableChildren = true
       a.stage.addChild(front)
+
+      // ── AND THE SKY LAST OF ALL ───────────────────────────────────
+      //
+      // Clouds are the frontmost thing on this chart: added after the haze, the
+      // gulls, the lanterns, the weather, every hull and the near rocks, so one
+      // going past passes in FRONT of all of it rather than behind the boat.
+      //
+      // That is a choice about what a cloud is for here rather than about where
+      // the sky is. They are small, they are faint, and a wisp crossing the view
+      // reads as air between you and the sea -- which only works if nothing is
+      // drawn on top of it. See seaClouds.
+      a.stage.addChild(clouds.air)
 
       /**
        * ── ?hide=, FOR FINDING OUT WHICH LAYER IS DOING IT ─────────────────

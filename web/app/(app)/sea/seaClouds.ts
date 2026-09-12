@@ -29,10 +29,13 @@
 // anything around it. Normal blending means these ride along in the same batch
 // as their neighbours.
 //
-// MIPMAPS, via the shared `texture()` helper. A 1,144px cloud drawn at 300
+// MIPMAPS, via the shared `texture()` helper. A 600px cloud drawn at 300
 // samples one pixel in four without them and crawls with tiny sparkles as it
 // moves. This is the single biggest reason to use the loader everything else
 // uses rather than `Texture.from`.
+//
+// AND THE SHEET IS SIZED FOR THE JOB. See SHEET: the painted original is 43 MB
+// once decoded, which is not a thing to hand a phone for eight small clouds.
 //
 // A POOL, NOT ALLOCATION. Four sprites are made once and reused: a cloud that
 // has drifted away has its `texture` swapped and is put back at the other edge.
@@ -53,26 +56,49 @@ import type { Container, Sprite, Texture } from 'pixi.js'
 import { GROUND } from './islandArt'
 import { texture } from './skiffArt'
 
-/** The strip the frames are cut from. Already used by the fishing overlay. */
-const SHEET = '/clouds1.webp'
+/**
+ * ── THE SHEET, AND WHY IT IS NOT THE ONE THE FISHING SCREEN USES ────────────
+ *
+ * `/clouds1.webp` is the painted original: sixteen clouds across 8000x1408. It
+ * is 230 KB on the wire, which is why it looks harmless, and **43 MB decoded**
+ * -- the largest image in this project by a factor of two, and larger than
+ * everything the chart draws put together.
+ *
+ * Uploading that to the GPU to draw eight clouds at 600 px was a straight
+ * trade of forty megabytes of an iPhone's texture budget for nothing, on a
+ * screen that was already being reported as crashing. The file size hid it
+ * completely.
+ *
+ * So this is the same eight clouds, cut out, scaled to the size they are
+ * actually drawn at, and packed: 1216x911, 79 KB, **4.2 MB decoded**. A tenth
+ * of the memory for a picture nobody can tell apart, since a cloud here is
+ * drawn at most 760 world px wide and at a fifth of full opacity.
+ *
+ * The fishing screen keeps the original -- it is a CSS background there, tiled
+ * across a scrolling strip, and it is a different job.
+ */
+const SHEET = '/sea-clouds.webp'
 
 /**
- * EIGHT CLOUDS OUT OF THE SIXTEEN ON THE SHEET, as [x, y, w, h].
+ * WHERE EACH CLOUD SITS ON THE SHEET, as [x, y, w, h].
  *
- * Measured by flood-filling the alpha channel and taking each component's
- * bounding box, then picking a spread: two big cumulus, some mid, a couple of
- * thin banks. Hard-coded because the sheet is a fixed asset and scanning it at
- * runtime would be a second of work to rediscover a constant.
+ * Cut from the original by flood-filling its alpha channel and taking each
+ * component's bounding box, so every rectangle is one whole cloud and no part
+ * of its neighbour, then packed with a four-pixel gutter -- enough that a mip
+ * level cannot pull a neighbour's pixels into an edge.
+ *
+ * Hard-coded because the sheet is a fixed asset: scanning it at runtime would
+ * be a second of work to rediscover a constant.
  */
 const FRAMES: readonly [number, number, number, number][] = [
-  [2736, 296, 1144, 512],
-  [80, 312, 1032, 360],
-  [1096, 552, 1048, 328],
-  [6272, 288, 712, 360],
-  [3904, 664, 1360, 280],
-  [4368, 280, 712, 208],
-  [2176, 784, 760, 184],
-  [1640, 312, 392, 152],
+  [0, 0, 600, 269],
+  [604, 0, 600, 209],
+  [0, 273, 600, 188],
+  [604, 273, 600, 303],
+  [0, 580, 600, 124],
+  [604, 580, 600, 175],
+  [0, 759, 600, 145],
+  [604, 759, 392, 152],
 ]
 
 /** How many may be in the sky at once. Two, and often none: the gap between
@@ -84,20 +110,29 @@ const MAX_ALOFT = 2
  *  a fine day. */
 const GAP = { min: 16, max: 46 }
 
-/** How wide a cloud is drawn, in WORLD px. The warship is 340 across and an
- *  island runs to a few thousand, so this is a big object without being the
- *  sky itself. */
-const WIDTH = { min: 950, max: 1900 }
+/**
+ * HOW WIDE A CLOUD IS DRAWN, in WORLD px, and it is SMALL on purpose.
+ *
+ * The warship is 340 across. At 950-1900 a cloud was three to six boats wide
+ * and sat in the same size class as an island, which put it in the middle
+ * distance -- near enough to be an object in the scene, and the scene is the
+ * sea. A cloud belongs to the sky, and the sky is further away than anything
+ * else on this chart.
+ */
+const WIDTH = { min: 380, max: 760 }
 
 /**
  * HOW MUCH OF THE CAMERA'S TRAVEL A CLOUD TAKES, per cloud.
  *
- * 1.0 is painted on the water, 0 is painted on the lens. High enough to read as
- * another distance, low enough to still belong to the piece of sea it is over.
- * Varied a little per cloud so the sky is not one rigid sheet sliding about:
- * they share a wind, not a height.
+ * 1.0 is painted on the water, 0 is painted on the lens, and LOWER IS FURTHER
+ * AWAY: a thing on the horizon barely moves when you walk, which is why a
+ * distant range seems to follow you. At 0.80-0.92 these tracked the sea almost
+ * exactly and read as being at mast height.
+ *
+ * Varied per cloud so the sky is not one rigid sheet sliding about: they share
+ * a wind, not a height.
  */
-const PARALLAX = { min: 0.80, max: 0.92 }
+const PARALLAX = { min: 0.55, max: 0.72 }
 
 /** World px per second the wind moves them. One wind, so every cloud takes it. */
 const WIND = { x: 9, y: -4 }
@@ -173,7 +208,15 @@ export function makeClouds(PIXI: typeof import('pixi.js')): Clouds {
     c.sprite.texture = tex
     c.w = rand(WIDTH.min, WIDTH.max)
     c.parallax = rand(PARALLAX.min, PARALLAX.max)
-    c.alpha = rand(0.62, 0.9)
+    // FAINT, AND THAT IS THE POINT OF THEM. They are drawn over every other
+    // thing on the chart (see the stage order in SeaIslandsGPU), so any real
+    // weight here would be a sheet pulled across the game -- which is what the
+    // old ones were. At this alpha a cloud passing over the boat veils her for
+    // a moment and never hides her.
+    //
+    // AIR GETS IN THE WAY OF A DISTANT THING, so the bigger and nearer of them
+    // are the stronger, by a little.
+    c.alpha = rand(0.20, 0.38) * (1 - (WIDTH.max - c.w) / (WIDTH.max - WIDTH.min) * 0.22)
     c.age = 0
     c.live = true
 
@@ -184,7 +227,10 @@ export function makeClouds(PIXI: typeof import('pixi.js')): Clouds {
     const halfW = screenW / 2 / zoom / c.parallax
     const halfH = screenH / 2 / zoom / GROUND / c.parallax
     c.x = camX - Math.sign(WIND.x || 1) * (halfW + c.w)
-    c.y = camY + rand(-halfH * 0.7, halfH * 0.5)
+    // UP-SCREEN, WHICH IS WHERE FAR IS. The plane recedes upward -- that is what
+    // GROUND means -- so a cloud placed above the camera lands in the top of
+    // the view where the horizon is, rather than hanging beside the boat.
+    c.y = camY - rand(halfH * 0.15, halfH * 0.95)
     c.sprite.visible = true
   }
 
