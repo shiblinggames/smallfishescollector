@@ -723,18 +723,15 @@ export default function SeaIslandsGPU({
       // under an island would be falling behind it.
       const squalls: Squalls = makeSqualls(PIXI)
       /**
-       * FAIR-WEATHER CLOUD. Two layers and they go to two different places:
-       * the shadows onto the PLANE with everything else that lies on it, and
-       * the bodies onto the STAGE, above the world, because they are between
-       * the camera and the sea. See seaClouds — the split is the whole point,
-       * and it is what makes the parallax honest rather than a sliding
-       * texture.
-       *
-       * Under the squalls, so real weather always wins: a fair-weather puff
-       * has no business lightening a storm.
+       * FAIR-WEATHER CLOUD. ONE layer now, and it goes on the STAGE, because a
+       * cloud is between the camera and the sea. It used to be two: painted
+       * bodies up here and a multiplied shadow down on the plane, seven of each
+       * at all times, which meant the water was permanently dimmed by something
+       * permanently overhead. Nothing is cast on the sea any more -- see
+       * seaClouds, which is now a few painted clouds going past now and then
+       * with clear sky in between.
        */
       const clouds = makeClouds(PIXI)
-      world.addChild(clouds.water)
 
       world.addChild(squalls.water)
 
@@ -1559,7 +1556,7 @@ export default function SeaIslandsGPU({
         fog.advance(camX, camY, halfW, halfH, t)
         // The sky. Needs the screen as well as the world, because half of it is
         // drawn in screen space — that is what the parallax IS.
-        clouds.advance(t, camX, camY, halfW, halfH, camZoom, a.screen.width, a.screen.height)
+        clouds.advance(t, dt, camX, camY, camZoom, a.screen.width, a.screen.height)
         if (!DIAG.nocull) townLayer?.cull(camX, camY, halfW, halfH)
         townLayer?.advance(dt, camX, camY, halfW, halfH)
         townGlow.advance(t)

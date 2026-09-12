@@ -2122,7 +2122,6 @@ export default function SeaMap({
    *  knots is not sitting in its own rings. */
   const rippleRef = useRef<HTMLDivElement | null>(null)
 
-  /** The cloud bank, which parallaxes at a fraction of the camera. */
   /** The sky, recoloured every frame to match the water under it. */
   const skyRef = useRef<HTMLDivElement | null>(null)
 

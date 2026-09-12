@@ -1,239 +1,261 @@
-// ── FAIR-WEATHER CLOUD, AND WHAT IT DOES TO THE WATER ───────────────────────
+// ── CLOUDS THAT GO PAST, AND NOTHING ELSE ───────────────────────────────────
 //
-// The last of the depth work, and the only piece of it that is about HEIGHT.
+// There were seven of them, always, everywhere, made of five radial gradients
+// each, and every one dragged a multiplied grey shadow across the water it was
+// over. Seven clouds up to 4,600 world px wide in a field two viewports across
+// means one was permanently overhead and its shadow permanently on the sea. It
+// did not read as weather. It read as a filter on the game -- a muddy wash that
+// never lifted, which is exactly what a captain called it.
 //
-// Tier one gave the plane a receding surface and air in front of the far water.
-// Tier two made things smaller as they go away. Both of those are cues about
-// DISTANCE ACROSS the plane, and a chart can have every one of them and still
-// read as a single sheet — because nothing in it was ever anywhere but on that
-// sheet. Parallax is the cue that says there is a somewhere else to be.
+// It is a handful of PAINTED clouds now, drifting past now and then, with
+// stretches of clear sky in between. Nothing is cast on the water at all.
 //
-// ── TWO LAYERS, BECAUSE THEY ARE TWO DIFFERENT FACTS ────────────────────────
+// ── THE ART WAS ALREADY IN THE REPOSITORY ───────────────────────────────────
 //
-// THE SHADOW is ON the water. It is a real place on the plane, it moves exactly
-// as the plane moves, and it is squashed by GROUND like every other flat thing
-// on this chart. A shadow that parallaxed would be a shadow floating off the
-// thing it is cast on.
+// `/clouds1.webp` is a hand-painted strip of sixteen clouds on transparent
+// ground, drawn for the fishing screen's overlay. It is the house style, it is
+// already downloaded by most players, and it is a far better cloud than
+// anything five stacked gradients will ever produce. FRAMES below are eight of
+// them, measured off the alpha channel by connected component rather than
+// eyeballed, so each rectangle is one whole cloud and no part of its neighbour.
 //
-// THE CLOUD is ABOVE it, between the camera and the sea, and THAT is what
-// parallaxes: it is drawn in screen space and slid at a fraction of the
-// camera's own travel, which is exactly what something high up does when you
-// move underneath it. That fraction is the whole illusion, and it is the only
-// place in this file where anything is faked.
+// ── WHAT PIXI IS DOING FOR US ───────────────────────────────────────────────
 //
-// The two are tied together: each cloud's shadow is its own body, offset along
-// the light. Untie them and you have a grey blob wandering the sea with nothing
-// making it.
+// ONE TEXTURE, EIGHT FRAMES. Every sprite is a window onto the same uploaded
+// bitmap, so the GPU binds one texture and draws the lot in a single batch.
+// Separate images would be eight uploads and eight binds for three sprites.
+//
+// NO BLEND MODE. The old shadow layer was `multiply`, which cannot batch with
+// anything around it. Normal blending means these ride along in the same batch
+// as their neighbours.
+//
+// MIPMAPS, via the shared `texture()` helper. A 1,144px cloud drawn at 300
+// samples one pixel in four without them and crawls with tiny sparkles as it
+// moves. This is the single biggest reason to use the loader everything else
+// uses rather than `Texture.from`.
+//
+// A POOL, NOT ALLOCATION. Four sprites are made once and reused: a cloud that
+// has drifted away has its `texture` swapped and is put back at the other edge.
+// No sprite is created or destroyed while sailing.
+//
+// `scale.set`, NOT `width`/`height`. Assigning width makes Pixi divide by the
+// texture's own width to derive a scale, every frame, per sprite. We know the
+// scale we want; setting it directly skips the arithmetic and the property
+// setter behind it.
 //
 // ── IT IS NOT WEATHER ───────────────────────────────────────────────────────
 //
 // `seaSqualls` draws weather: a squall is a PLACE, derived from lib/seaWeather,
-// the same for every captain, and it rains on you. This is not that. This is
-// the fair-weather cloud that is always somewhere overhead, belongs to nobody,
-// affects nothing, and exists so that the sky is a thing the sea is under.
-// Nothing here is persisted, seeded or synchronised, and nothing may ever gate
-// on it.
+// the same for every captain, and it rains on you. This is the fair-weather sky
+// that belongs to nobody, affects nothing, and may never be gated on.
 
 import type { Container, Sprite, Texture } from 'pixi.js'
 import { GROUND } from './islandArt'
+import { texture } from './skiffArt'
 
-/** How many are in the sky at once. Enough that one is usually somewhere near,
- *  few enough that the sea is not overcast — this is a fine day with clouds in
- *  it, not a grey afternoon. */
-const COUNT = 7
-
-/** The box they live in, as a multiple of the viewport. Wider than the screen
- *  so one is always drifting on rather than popping in at the edge. */
-const FIELD = 2.2
+/** The strip the frames are cut from. Already used by the fishing overlay. */
+const SHEET = '/clouds1.webp'
 
 /**
- * HOW MUCH OF THE CAMERA'S TRAVEL THE CLOUD LAYER TAKES.
+ * EIGHT CLOUDS OUT OF THE SIXTEEN ON THE SHEET, as [x, y, w, h].
  *
- * 1.0 is on the water. 0 is painted on the lens. 0.86 is high enough to read as
- * a different distance and low enough that a cloud still belongs to the piece
- * of sea it is over — below about 0.7 they detach and slide about like a
- * scratched slide, which is the failure this number exists to avoid.
+ * Measured by flood-filling the alpha channel and taking each component's
+ * bounding box, then picking a spread: two big cumulus, some mid, a couple of
+ * thin banks. Hard-coded because the sheet is a fixed asset and scanning it at
+ * runtime would be a second of work to rediscover a constant.
  */
-const PARALLAX = 0.86
+const FRAMES: readonly [number, number, number, number][] = [
+  [2736, 296, 1144, 512],
+  [80, 312, 1032, 360],
+  [1096, 552, 1048, 328],
+  [6272, 288, 712, 360],
+  [3904, 664, 1360, 280],
+  [4368, 280, 712, 208],
+  [2176, 784, 760, 184],
+  [1640, 312, 392, 152],
+]
 
-/** Where the sun is, as a fraction of a cloud's own width. The shadow lands
- *  down-light of the body; on this chart the light comes from up-screen, so
- *  the shadow falls toward the viewer. */
-const SUN = { x: 0.10, y: 0.34 }
+/** How many may be in the sky at once. Two, and often none: the gap between
+ *  them is the point of the rewrite. */
+const MAX_ALOFT = 2
 
-/** World px per second the whole sky drifts. Slow: a cloud crossing the screen
- *  in ten seconds is a bird. */
-const DRIFT = { x: 7, y: -3 }
+/** Seconds between one leaving and the next arriving, picked in this range.
+ *  Long. A cloud every twenty seconds is a busy sky; a cloud now and then is
+ *  a fine day. */
+const GAP = { min: 16, max: 46 }
+
+/** How wide a cloud is drawn, in WORLD px. The warship is 340 across and an
+ *  island runs to a few thousand, so this is a big object without being the
+ *  sky itself. */
+const WIDTH = { min: 950, max: 1900 }
+
+/**
+ * HOW MUCH OF THE CAMERA'S TRAVEL A CLOUD TAKES, per cloud.
+ *
+ * 1.0 is painted on the water, 0 is painted on the lens. High enough to read as
+ * another distance, low enough to still belong to the piece of sea it is over.
+ * Varied a little per cloud so the sky is not one rigid sheet sliding about:
+ * they share a wind, not a height.
+ */
+const PARALLAX = { min: 0.80, max: 0.92 }
+
+/** World px per second the wind moves them. One wind, so every cloud takes it. */
+const WIND = { x: 9, y: -4 }
+
+/** Seconds of fade at each end of a pass, so nothing pops into being. */
+const FADE = 2.6
 
 type Cloud = {
-  body: Sprite
-  shade: Sprite
-  /** Its place in the drifting field, in world units. */
+  sprite: Sprite
+  /** Where it is, in WORLD px. Not a fraction of the viewport -- see advance. */
   x: number
   y: number
-  r: number
-  /** Its own opacity, so the sky is not seven copies of one cloud. */
-  a: number
+  w: number
+  parallax: number
+  /** Peak opacity for this pass. */
+  alpha: number
+  /** Seconds it has been up. */
+  age: number
+  live: boolean
 }
 
 export type Clouds = {
-  /** The shadows. Goes in the WORLD container, under the boats, over the
-   *  water — they are on the plane and belong with everything else on it. */
-  water: Container
   /** The bodies. Goes on the STAGE, above the world: they are between the
-   *  camera and the sea and nothing on the sea can be in front of them. */
+   *  camera and the sea, and nothing on the sea can be in front of them. */
   air: Container
-  advance(t: number, camX: number, camY: number, halfW: number, halfH: number,
+  advance(t: number, dt: number, camX: number, camY: number,
     zoom: number, screenW: number, screenH: number): void
-  /** Darkness, 0 to 1. Clouds are lit by the sun; after dark there is no sun
-   *  and a shadow with nothing casting it is a stain. */
+  /** Darkness, 0 to 1. The sky goes navy and the clouds go with it. */
   night(dark: number): void
 }
 
-let puffTex: Texture | null = null
-
-/**
- * ONE PUFF, BUILT FROM FIVE. A single radial blob is a smoke ring; a cloud is
- * lumpy, and the lumps are most of what makes it read as one at a glance. Drawn
- * once and shared — seven sprites of the same texture, at different sizes and
- * rotations, is a sky.
- */
-function puffTexture(PIXI: typeof import('pixi.js')): Texture {
-  if (puffTex) return puffTex
-  const S = 256
-  const c = document.createElement('canvas')
-  c.width = c.height = S
-  const g = c.getContext('2d')!
-  const lumps: [number, number, number][] = [
-    [0.42, 0.54, 0.30],
-    [0.60, 0.48, 0.24],
-    [0.30, 0.50, 0.20],
-    [0.52, 0.62, 0.22],
-    [0.70, 0.58, 0.16],
-  ]
-  for (const [lx, ly, lr] of lumps) {
-    const grad = g.createRadialGradient(lx * S, ly * S, 0, lx * S, ly * S, lr * S)
-    grad.addColorStop(0.0, 'rgba(255,255,255,0.95)')
-    grad.addColorStop(0.55, 'rgba(255,255,255,0.55)')
-    // A LONG SKIRT, like the squall's. A cloud has no edge either.
-    grad.addColorStop(1.0, 'rgba(255,255,255,0)')
-    g.fillStyle = grad
-    g.fillRect(0, 0, S, S)
-  }
-  puffTex = PIXI.Texture.from(c)
-  return puffTex
-}
-
 export function makeClouds(PIXI: typeof import('pixi.js')): Clouds {
-  const water: Container = new PIXI.Container()
   const air: Container = new PIXI.Container()
-  // SUBTRACTED, NOT WASHED ON. Same reason the squall's shadow multiplies: a
-  // grey wash over dark water lifts it toward grey, and a cloud shadow makes
-  // water DARKER, not flatter.
-  water.blendMode = 'multiply'
-  water.eventMode = 'none'
   air.eventMode = 'none'
+  // Nothing in here is ever a hit target and the container is never sorted;
+  // saying so lets Pixi skip both passes over it.
+  air.interactiveChildren = false
 
-  const tex = puffTexture(PIXI)
   const clouds: Cloud[] = []
+  let frames: Texture[] = []
   let dark = 0
+  /** When the next one may arrive. Starts a little in so the first thing a
+   *  captain sees on opening the chart is sky rather than a cloud. */
+  let nextAt = 6
 
-  for (let i = 0; i < COUNT; i++) {
-    const body: Sprite = new PIXI.Sprite(tex)
-    body.anchor.set(0.5)
-    body.tint = 0xf2f6fb
-    air.addChild(body)
+  // THE POOL, made before the art lands. The sprites exist immediately with no
+  // texture and are simply invisible until there is something to show; this
+  // way nothing is allocated on the frame a cloud is wanted.
+  for (let i = 0; i < MAX_ALOFT + 2; i++) {
+    const sprite: Sprite = new PIXI.Sprite()
+    sprite.anchor.set(0.5)
+    sprite.visible = false
+    air.addChild(sprite)
+    clouds.push({ sprite, x: 0, y: 0, w: 0, parallax: 0.86, alpha: 0, age: 0, live: false })
+  }
 
-    const shade: Sprite = new PIXI.Sprite(tex)
-    shade.anchor.set(0.5)
-    // The colour a cloud shadow actually is on water: a cool grey, not black.
-    shade.tint = 0x8fa4bd
-    water.addChild(shade)
+  void texture(PIXI, SHEET).then(base => {
+    // ONE BASE, EIGHT WINDOWS ONTO IT. `frame` is a rectangle in the source
+    // bitmap; every sprite below shares the uploaded texture and the GPU binds
+    // it once for all of them.
+    frames = FRAMES.map(([x, y, w, h]) => new PIXI.Texture({
+      source: base.source,
+      frame: new PIXI.Rectangle(x, y, w, h),
+    }))
+  })
 
-    clouds.push({
-      body, shade,
-      // Scattered on a hash of the index rather than Math.random, so the sky
-      // is the same sky on a reload — a cloud field that reshuffles itself
-      // every time the page loads is a cloud field nobody can learn.
-      x: ((i * 2654435761) % 1000) / 1000,
-      y: ((i * 40503) % 1000) / 1000,
-      r: 900 + (((i * 2246822519) % 1000) / 1000) * 1400,
-      a: 0.26 + (((i * 3266489917) % 1000) / 1000) * 0.24,
-    })
+  const rand = (lo: number, hi: number) => lo + Math.random() * (hi - lo)
+
+  /** Put one just off the up-wind edge, in world units, and let it drift. */
+  function launch(c: Cloud, camX: number, camY: number, zoom: number, screenW: number, screenH: number) {
+    const tex = frames[(Math.random() * frames.length) | 0]
+    if (!tex) return
+    c.sprite.texture = tex
+    c.w = rand(WIDTH.min, WIDTH.max)
+    c.parallax = rand(PARALLAX.min, PARALLAX.max)
+    c.alpha = rand(0.62, 0.9)
+    c.age = 0
+    c.live = true
+
+    // Just outside the view, up-wind, in WORLD px. The apparent half-width is
+    // what the screen covers divided by the zoom, widened by the parallax:
+    // a cloud that moves at 0.86 of the camera has to start further out to
+    // still take a moment to arrive.
+    const halfW = screenW / 2 / zoom / c.parallax
+    const halfH = screenH / 2 / zoom / GROUND / c.parallax
+    c.x = camX - Math.sign(WIND.x || 1) * (halfW + c.w)
+    c.y = camY + rand(-halfH * 0.7, halfH * 0.5)
+    c.sprite.visible = true
   }
 
   return {
-    water,
     air,
     night(d) { dark = d },
-    advance(t, camX, camY, halfW, halfH, zoom, screenW, screenH) {
-      // AFTER DARK THERE IS NO SUN, so there is nothing casting anything. Not
-      // switched off — faded, or the last cloud of the day would vanish on a
-      // frame. A little is left at night: a moon casts too, faintly.
-      const lit = 1 - dark * 0.82
-      if (lit <= 0.02) {
-        water.visible = false
-        air.visible = false
-        return
-      }
-      water.visible = true
-      air.visible = true
 
-      const fw = halfW * 2 * FIELD
-      const fh = halfH * 2 * FIELD
+    advance(t, dt, camX, camY, zoom, screenW, screenH) {
+      // AFTER DARK THE SKY IS NOT WHITE. Not switched off -- a moonlit cloud is
+      // a real thing and the sea reads flat without one -- but dimmed hard and
+      // cooled, so it stops being the brightest object on a night chart.
+      const lit = 1 - dark * 0.72
+      const aloft = clouds.reduce((n, c) => n + (c.live ? 1 : 0), 0)
+      if (frames.length && aloft < MAX_ALOFT && t >= nextAt) {
+        const free = clouds.find(c => !c.live)
+        if (free) {
+          launch(free, camX, camY, zoom, screenW, screenH)
+          nextAt = t + rand(GAP.min, GAP.max)
+        }
+      }
 
       for (const c of clouds) {
-        // ── WHERE IT IS, in a field that wraps around the camera ──
-        //
-        // The same trick the shoals use: the field is anchored on the camera
-        // and each cloud sits at a fixed fraction of it, so sailing never runs
-        // out of sky and nothing has to be respawned. The drift is added to the
-        // fraction, so the whole sky moves as one body — clouds on a fair day
-        // travel together, because there is one wind.
-        const fx = (c.x + (t * DRIFT.x) / fw) % 1
-        const fy = (c.y + (t * DRIFT.y) / fh) % 1
-        const wx = camX + ((fx + 1) % 1 - 0.5) * fw
-        const wy = camY + ((fy + 1) % 1 - 0.5) * fh
+        if (!c.live) continue
+        c.age += dt
+        // ONE WIND, IN WORLD UNITS. This is the whole fix for the zoom lurch:
+        // the old field was sized in VIEWPORT units, so zooming in shrank the
+        // field, which moved every cloud in it and changed the drift rate at
+        // the same time. Going into fishing mode therefore fired the sky across
+        // the screen. A cloud is somewhere now, and a zoom only changes how
+        // much of the world fits on the glass.
+        c.x += WIND.x * dt
+        c.y += WIND.y * dt
 
-        // ── THE SHADOW: on the plane, at 1:1, offset down-light ──
-        c.shade.x = wx + c.r * SUN.x
-        c.shade.y = wy + c.r * SUN.y
-        c.shade.width = c.r * 2
-        c.shade.height = c.r * 2
-        c.shade.alpha = c.a * lit
+        // A world point lands at `centre + zoom * (world - camera)`, squashed by
+        // GROUND going up-screen. Taking a FRACTION of the camera offset is the
+        // same mapping with the camera moved less, which is what something high
+        // above you does when you walk underneath it. That fraction is the only
+        // fake in this file.
+        const sx = screenW / 2 + zoom * (c.x - camX) * c.parallax
+        const sy = screenH / 2 + zoom * GROUND * (c.y - camY) * c.parallax
+        const drawW = c.w * zoom
+        // NOT squashed by GROUND. A cloud is not lying on the water; it is in
+        // the air, and the whole point of it being up there is that it does not
+        // take the plane's foreshortening.
+        const drawH = drawW * (c.sprite.texture.height / c.sprite.texture.width)
 
-        // ── THE BODY: in screen space, at a fraction of the travel ──
-        //
-        // This is the parallax and the only fake in the file. A world point is
-        // `centre + zoom * (wx - camX, GROUND * (wy - camY))`; taking a
-        // FRACTION of the camera offset is the same mapping with the camera
-        // moved less, which is what a thing high above you does when you walk
-        // under it.
-        c.body.x = screenW / 2 + zoom * (wx - camX) * PARALLAX
-        c.body.y = screenH / 2 + zoom * GROUND * (wy - camY) * PARALLAX
-        // NOT squashed by GROUND. A cloud is not lying on the water; it is a
-        // thing in the air seen from below the level it is at, and the whole
-        // point of it being up there is that it does not take the plane's
-        // foreshortening.
-        c.body.width = c.r * 2 * zoom
-        c.body.height = c.r * 2 * zoom
-        /**
-         * 0.12, DOWN FROM 0.42, AND THE ARITHMETIC IS WHY.
-         *
-         * A body is `r * 2 * zoom` across and `r` runs to 2300, so one cloud is
-         * up to 4600 world px wide — larger than the screen at any normal zoom.
-         * At 0.42 its peak alpha was 0.21, which is not a cloud passing over,
-         * it is a white film laid across the whole window. Seven of them meant
-         * one was almost always overhead, so the film never lifted: a permanent
-         * haze that read as a filter on the game rather than as weather.
-         *
-         * The SHADOWS are the parallax cue and they are untouched. They are on
-         * the water, they are the size of a shadow, and they were what this
-         * layer was added for. The bodies exist so the shadows have something
-         * casting them, and at this weight they still do that without being the
-         * brightest thing on screen.
-         */
-        c.body.alpha = c.a * 0.12 * lit
+        // Gone when it is a full body clear of the glass on any side. Checked
+        // in SCREEN space because that is where "out of sight" means anything:
+        // a fast boat can leave a cloud behind as easily as the wind can carry
+        // it off.
+        if (sx < -drawW * 1.2 || sx > screenW + drawW * 1.2
+          || sy < -drawH * 2 || sy > screenH + drawH * 2) {
+          c.live = false
+          c.sprite.visible = false
+          continue
+        }
+
+        c.sprite.position.set(sx, sy)
+        // scale, not width/height: we know the number, so there is no reason to
+        // make the setter divide by the texture size to find it again.
+        c.sprite.scale.set(drawW / c.sprite.texture.width)
+        // In and out on a fade, so a cloud arrives rather than appears. The
+        // out-fade rides the same clock: there is no known end to a pass, so it
+        // simply never gets one and the edge test above does the retiring.
+        const fadeIn = Math.min(1, c.age / FADE)
+        c.sprite.alpha = c.alpha * fadeIn * lit
+        // Cooled with the hour rather than recoloured: white at noon, a dim
+        // slate at midnight, and the tint is a single uniform rather than a
+        // second texture.
+        const cool = Math.round(0xff - dark * 0x62)
+        c.sprite.tint = (cool << 16) | (cool << 8) | Math.round(0xff - dark * 0x3a)
       }
     },
   }
