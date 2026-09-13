@@ -2233,21 +2233,49 @@ export default function RaidCombat({
    * the call, on the compositor, with no render anywhere.
    */
   const impactFlashRef = useRef<HTMLDivElement | null>(null)
+  const impactFlashSeq = useRef(0)
   const fireImpactFlash = useCallback((strong: boolean) => {
     const el = impactFlashRef.current
     if (!el || typeof el.animate !== 'function') return
+    /**
+     * ── IT IS `display: none` BETWEEN FLASHES, AND THAT IS NOT TIDINESS ──────
+     *
+     * This element carries `mix-blend-mode: screen`, which is what makes the
+     * flash brighten the scene instead of whiting it out. A blended element
+     * forces the browser to keep what is UNDERNEATH it in its own buffer and
+     * composite the two — and it does that for as long as the element is in the
+     * tree, not for as long as it is visible. At `opacity: 0` it looks like
+     * nothing and costs like a full-stage blend, every frame of every fight.
+     *
+     * The rule is written in this file already, on a different effect: "no
+     * blur/mixBlendMode (persistent-element perf rule)". Making this one
+     * always-mounted to save a render broke it, and swapped two renders per
+     * crit for a compositing tax on all of them.
+     *
+     * So it is out of the rendering path entirely until it fires, and put back
+     * the moment it is done. The sequence guard is for overlapping hits: a
+     * second flash inside the first must not be hidden by the first's ending.
+     */
+    const n = ++impactFlashSeq.current
     // The gradient is the only thing that differs between a heavy landing and
     // an ordinary one, and it is a paint rather than a transform — so it is
     // written once here instead of being interpolated.
     el.style.background = strong
       ? 'radial-gradient(ellipse at center, rgba(255,255,255,0.92), rgba(255,214,150,0.5) 46%, transparent 78%)'
       : 'radial-gradient(ellipse at center, rgba(255,255,255,0.82), transparent 72%)'
+    el.style.display = 'block'
+    const done = () => {
+      if (impactFlashSeq.current !== n) return
+      el.style.display = 'none'
+      el.style.opacity = '0'
+    }
     try {
-      el.animate(
+      const a = el.animate(
         [{ opacity: strong ? 0.5 : 0.32 }, { opacity: 0 }],
         { duration: strong ? 240 : 150, easing: 'ease-out' },
       )
-    } catch { /* no flash is better than a thrown frame */ }
+      a.finished.then(done).catch(done)
+    } catch { done() }
   }, [])
   // Center-screen callout for a boon PROC (Counter-Battery). Same lane as the
   // check flash but themed to the boon's color.
@@ -7868,7 +7896,7 @@ export default function RaidCombat({
         {/* ALWAYS MOUNTED, ALWAYS AT ZERO. See fireImpactFlash: it is animated
             imperatively so a critical hit costs no render at all. */}
         <div ref={impactFlashRef} aria-hidden
-          style={{ position: 'absolute', inset: 0, zIndex: 9, opacity: 0, pointerEvents: 'none', mixBlendMode: 'screen' }} />
+          style={{ position: 'absolute', inset: 0, zIndex: 9, opacity: 0, display: 'none', pointerEvents: 'none', mixBlendMode: 'screen' }} />
         {/* ── Atmospheric backdrop ─────────────────────────────────────────
             Sun/sky/clouds/water all swap based on `atmosphere`. Each
             variant is a self-contained fragment so the parts (sun

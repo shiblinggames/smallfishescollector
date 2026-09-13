@@ -180,10 +180,26 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       await app.init({
         backgroundAlpha: 0,
         resizeTo: el,
-        antialias: true,
+        // ── NO MULTISAMPLING. ───────────────────────────────────────────
+        //
+        // The chart asks for it because it draws islands: hard-edged geometry
+        // with long diagonals, which is exactly what MSAA is for. This arena
+        // draws a sea painted by a fragment shader, two soft-edged ship
+        // paintings and a few hundred alpha-blended particles. There is not a
+        // polygon edge in it for MSAA to smooth, so the whole cost — a bigger
+        // framebuffer and a resolve pass every frame, on a phone, full screen —
+        // buys a difference nobody can see.
+        //
+        // It matters here more than it would anywhere else because the aim
+        // bar's needle and target band are COMPOSITOR animations, and a
+        // saturated GPU stutters those even when the main thread is idle.
+        antialias: false,
         // The chart's own reasoning: full retina costs fill rate for a picture
         // nobody reads at that density. A shade over one is the honest floor.
-        resolution: Math.min(1.5, window.devicePixelRatio || 1),
+        // LOWER THAN THE CHART'S, and for the same reason as the line above:
+        // the chart is a map you read, this is water behind a fight. 1.25
+        // against 1.5 is a third of the fragment work back.
+        resolution: Math.min(1.25, window.devicePixelRatio || 1),
         autoDensity: true,
         preference: 'webgl',
       })
