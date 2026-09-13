@@ -417,8 +417,42 @@ Boons, shrines, merchant and contracts surface in the arena.
 *Risk:* highest, because it touches run flow. Last, and on its own.
 
 **Phase 4 — the Don's variant and hardcore dressing.**
-The Anchorhold, Terms at the gibbet, Contracts at the table, the Drowned Ledger
-as a monument.
+The Anchorhold, Terms at the gibbet, Contracts at the table.
+
+**SHIPPED out of phase 4: the floor.** `gauntletScenery` drew five things and
+not one of them had geometry — a glow, an eye, light shafts, motes, a vignette
+— so every screen in the gauntlet was a dark field with lamps in it and the
+shafts swept across nothing. There is a field of scenery on the bottom now, in
+`far` UNDER the additive light so the water column washes it the way a water
+column does, fixed in place (an earlier attempt scrolled two tiling bands
+sideways and read as a painting on a roller), tinted to the deep-water stop
+rather than black, and dissolving at its top edge so nothing has a cutout's
+hard upper outline. It streams up past you on a fall, near pieces faster than
+far, which is the only cue in the descent that says how fast you are going
+down.
+
+**Four pieces per door, and the kinds are ROLES rather than objects** — the big
+horizontal mass, the repeated uprights, the single tall thing, the ground —
+which is what lets one placement loop dress both floors from a width table and
+four drawings. Davy's Locker is the wreck-field the file always claimed: a hull
+over on her bilge, open ribs, a mast in its own heap, spoil. The Don's is the
+sunken court: an arch drowned to its haunches, a colonnade broken off at the
+knees, one column still up, masonry. Adding a third door is a table row and
+four canvas drawings, not a system.
+
+**AND THE DROWNED LEDGER IS DELETED, not moved.** It was the gauntlet's old home
+page kept behind a button when the water became the lobby, "rather than
+rebuilt" — a hedge, and a second front door that duplicates the first is only
+somewhere to get lost. Every card on it had a mooring already. The two things
+it held alone moved to the hub's HUD: the deepest-depth line taps through to
+that run's recap, and the other gauntlet is a swap chip. Do not build it a
+monument; do not build it back.
+
+**The moorings are PRESSABLE.** They were `pointer-events: none` — labels
+painted on a sea you steer by dragging, which is a screen with no visible way
+in. Pressing one takes the helm and sails there. The Descent is a button in the
+run's own colour rather than a caption reading "sail into the eye"; sailing in
+still opens the same chooser.
 
 ---
 

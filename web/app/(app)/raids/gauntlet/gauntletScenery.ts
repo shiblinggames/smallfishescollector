@@ -8,12 +8,16 @@
 //
 // ── WHAT IT DRAWS, BOTTOM TO TOP ────────────────────────────────────────────
 //
-//   THE FIELD     what is lying on the bottom. Davy's is a drowned
-//                 wreck-field: hulks over on their bilges, open ribs, a
-//                 leaning mast, and the spoil heaps between them. It is the
-//                 only thing in the whole gauntlet with geometry, and it is
-//                 what the shafts have to sweep ACROSS for the light to read
-//                 as light rather than as a gradient.
+//   THE FIELD     what is lying on the bottom, and the only thing in the
+//                 whole gauntlet with geometry. It is what the shafts have to
+//                 sweep ACROSS for the light to read as light rather than as
+//                 a gradient — and it is what makes the two doors different
+//                 places rather than the same water under a different gel.
+//                 Davy's is a drowned wreck-field: hulks over on their
+//                 bilges, open ribs, a leaning mast, spoil between them. The
+//                 Don's is a sunken court: a half-drowned arch, a colonnade
+//                 broken off at the knees, one column still up, and the
+//                 masonry of the rest of it lying about.
 //   THE DEEP      a slow pulse of light at the foot of the arena — the thing
 //                 under you. At a boss depth it OPENS: an eye, the run's own
 //                 colour, that watches the fight from under the water.
@@ -73,10 +77,22 @@ export type Scenery = {
 const MOTE_N = 140
 const BURST_N = 64
 const SHAFT_N = 6
-/** How many pieces of wreck are on the bottom. Sixteen is enough to reach
- *  across a wide screen with the far ones thinning out, and few enough that
- *  the whole field is sixteen sprite writes a frame. */
+/** How many pieces are on the bottom. Sixteen is enough to reach across a wide
+ *  screen with the far ones thinning out, and few enough that the whole field
+ *  is sixteen sprite writes a frame. */
 const FIELD_N = 16
+
+/**
+ * HOW BIG EACH ROLE IS AT THE NEAREST DEPTH, in units of the viewport's short
+ * side. Per door, because a fallen arch and a hull on her bilge are not the
+ * same size even though they hold the same place in the composition — and
+ * because the column has to be narrow where the mast is wide, or the one
+ * upright in the room reads as a wall.
+ */
+const FIELD_WIDE: Record<SceneVariant, readonly number[]> = {
+  davy: [0.44, 0.34, 0.3, 0.4],
+  don: [0.4, 0.38, 0.26, 0.36],
+}
 
 // ── TEXTURES ─────────────────────────────────────────────────────────────────
 //
@@ -185,15 +201,18 @@ function edge(PIXI: typeof import('pixi.js')) {
 /**
  * ── WHAT IS LYING ON THE BOTTOM ─────────────────────────────────────────────
  *
- * Four pieces of a drowned wreck-field, drawn white and tinted into the deep
- * water by whoever hosts them. Between them they make a floor: a hull over on
- * her bilge with her stern bitten out, the open ribs of another, a mast still
- * standing in its own heap, and the spoil that everything is sitting in.
+ * Four pieces per door, drawn white and tinted into the deep water by whoever
+ * hosts them. Between them they make a floor. Davy's: a hull over on her bilge
+ * with her stern bitten out, the open ribs of another, a mast still standing in
+ * its own heap, and the spoil everything is sitting in. The Don's: an arch
+ * drowned to its haunches, a colonnade broken off at the knees, one column
+ * still up, and the masonry of the rest of it lying about.
  *
  * THEY ARE DELIBERATELY CRUDE. These are seen through a water column at a
  * third to a half of their nearest size and at alpha 0.5 at best. Detail at
  * that distance is mud; what reads is the outline, and the outline has to be
- * unmistakable at a glance — a dome, a ribcage, a diagonal, a lump.
+ * unmistakable at a glance — a dome, a ribcage, a diagonal, a lump; an arch, a
+ * row of stumps, an upright, a heap of blocks.
  *
  * EVERY ONE FADES OUT AT THE TOP, and that is not decoration. A shape with a
  * hard upper edge is a cutout stuck on the picture. The thing that says "this
@@ -203,14 +222,99 @@ function edge(PIXI: typeof import('pixi.js')) {
  */
 const FIELD_W = 512, FIELD_H = 256
 
-function wreck(PIXI: typeof import('pixi.js'), kind: number): Texture {
-  return cached('wreck' + kind, () => {
+/**
+ * FOUR PIECES, AND THE TWO DOORS ANSWER THEM ONE FOR ONE.
+ *
+ * The kinds are ROLES rather than objects, which is what lets one placement
+ * loop dress both floors: 0 is the big horizontal mass that anchors a stretch
+ * of bottom, 1 is the repeated uprights, 2 is the single tall thing that gives
+ * the room its height, and 3 is the ground everything else is resting in. A
+ * hulk and a fallen arch do the same job; so do a ribcage and a colonnade.
+ *
+ * That is also why the Don's floor took a table and four drawings rather than a
+ * second system: the weighting, the depth ladder, the sway, the parallax on a
+ * fall and the tint are all the same, because what is down there is the only
+ * thing that should differ between his door and Davy's.
+ */
+function fieldTex(PIXI: typeof import('pixi.js'), variant: SceneVariant, kind: number): Texture {
+  return cached(`field-${variant}-${kind}`, () => {
     const W = FIELD_W, H = FIELD_H
     const { c, g } = canvas(W, H)
     g.fillStyle = '#fff'; g.strokeStyle = '#fff'
     g.lineCap = 'round'; g.lineJoin = 'round'
 
-    if (kind === 0) {
+    if (variant === 'don') {
+      if (kind === 0) {
+        // ── AN ARCH, DROWNED TO ITS HAUNCHES ──────────────────────────
+        // The one shape that says "this was built" from any distance at all,
+        // and the Don's answer to a hull lying over: same long low mass, same
+        // job, and nobody could mistake one for the other.
+        g.lineWidth = 24
+        g.beginPath()
+        g.moveTo(W * 0.3, H * 0.99)
+        g.lineTo(W * 0.3, H * 0.6)
+        g.arc(W * 0.5, H * 0.6, W * 0.2, Math.PI, 0)
+        g.lineTo(W * 0.7, H * 0.99)
+        g.stroke()
+        // The impost blocks where the span meets the piers — the detail that
+        // stops it reading as a croquet hoop.
+        g.fillRect(W * 0.24, H * 0.55, W * 0.12, H * 0.09)
+        g.fillRect(W * 0.64, H * 0.55, W * 0.12, H * 0.09)
+        // And a bite out of one haunch, because nothing down here is whole.
+        g.globalCompositeOperation = 'destination-out'
+        g.beginPath(); g.ellipse(W * 0.72, H * 0.34, W * 0.07, H * 0.2, -0.4, 0, Math.PI * 2); g.fill()
+        g.globalCompositeOperation = 'source-over'
+      } else if (kind === 1) {
+        // ── A COLONNADE, BROKEN OFF AT THE KNEES ──────────────────────
+        // Six shafts on a stylobate, every one snapped at a different height.
+        // The rhythm is the whole read: evenly spaced uprights of uneven
+        // height is architecture, and nothing else on a seabed is.
+        g.fillRect(W * 0.08, H * 0.88, W * 0.84, H * 0.12)
+        for (let k = 0; k <= 5; k++) {
+          const u = k / 5
+          const x = W * (0.14 + u * 0.72)
+          const h = H * (0.2 + 0.48 * Math.abs(Math.sin(k * 2.1)))
+          const wid = W * 0.055
+          g.fillRect(x - wid / 2, H * 0.88 - h, wid, h)
+          // A drum still capped, on two of them.
+          if (k % 3 === 1) g.fillRect(x - wid * 0.85, H * 0.88 - h - H * 0.05, wid * 1.7, H * 0.05)
+        }
+      } else if (kind === 2) {
+        // ── ONE COLUMN STILL STANDING ─────────────────────────────────
+        // Leaning, capital gone, footed in its own wreckage. Everything else
+        // on this floor is low, and a room with nothing upright has no height;
+        // this is the piece that gives the court a ceiling to imply.
+        g.save()
+        g.translate(W * 0.42, H * 0.96)
+        g.rotate(0.13)
+        g.fillRect(-W * 0.045, -H * 0.92, W * 0.09, H * 0.92)
+        // The fluting, as two shadow lines — enough to say "carved" at size.
+        g.globalCompositeOperation = 'destination-out'
+        g.lineWidth = 3
+        g.beginPath(); g.moveTo(-W * 0.012, -H * 0.9); g.lineTo(-W * 0.012, -H * 0.06); g.stroke()
+        g.beginPath(); g.moveTo(W * 0.016, -H * 0.9); g.lineTo(W * 0.016, -H * 0.06); g.stroke()
+        g.globalCompositeOperation = 'source-over'
+        g.restore()
+        // The broken drum at its foot, and the rubble it stands in.
+        g.beginPath(); g.ellipse(W * 0.44, H * 1.02, W * 0.17, H * 0.15, 0, Math.PI, 0); g.fill()
+        g.save(); g.translate(W * 0.68, H * 0.9); g.rotate(-0.35)
+        g.fillRect(-W * 0.07, -H * 0.09, W * 0.14, H * 0.18)
+        g.restore()
+      } else {
+        // ── THE MASONRY OF EVERYTHING ELSE ────────────────────────────
+        // Davy's ground is silt; his is BLOCKS. Same humble job — without it
+        // the arch and the columns are objects at various heights rather than
+        // things resting on a floor — but a court does not silt up, it falls
+        // down.
+        for (const b of [[0.2, 0.9, 0.17, 0.12, -0.12], [0.47, 0.96, 0.22, 0.16, 0.06], [0.74, 0.92, 0.14, 0.1, -0.3]]) {
+          g.save()
+          g.translate(W * b[0], H * b[1])
+          g.rotate(b[4])
+          g.fillRect(-W * b[2] / 2, -H * b[3], W * b[2], H * b[3] * 2)
+          g.restore()
+        }
+      }
+    } else if (kind === 0) {
       // ── A HULL OVER ON HER BILGE ──────────────────────────────────
       // A long dome, which is what the underside of a ship lying over looks
       // like from any distance at all. Her stern is bitten out, because an
@@ -337,7 +441,7 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
 
   let scene: Scene = { variant: 'davy', hardcore: false, boss: false, apex: false, deep: 0, mood: 'fight', key: 0x9cf0ff, deepColor: 0x04121a }
 
-  // ── THE FLOOR OF THE LOCKER ────────────────────────────────────────
+  // ── THE FLOOR OF WHICHEVER ROOM THIS IS ────────────────────────────
   //
   // FIRST, so everything else is in the water in FRONT of it. That ordering is
   // the whole atmospheric trick: the deep's glow and the shafts are additive
@@ -358,12 +462,15 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
   far.addChild(fieldLayer)
   type Piece = {
     s: Sprite
+    /** Which of the four roles it is. See fieldTex: the role is what both
+     *  doors agree on, and the drawing is what they do not. */
+    kind: number
     /** Across the frame, 0..1. Fixed for the life of the field. */
     u: number
     /** 0 nearest — low, big, dark. 1 farthest — high, small, nearly gone. */
     d: number
-    /** How wide it is in units of the SHORT side, at the nearest depth. */
-    w: number
+    /** Its own departure from its role's width, so no two are stamped. */
+    jitter: number
     /** Its own phase in the current. */
     ph: number
     /** Half of them face the other way. A field of identically-handed wrecks
@@ -375,22 +482,22 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
     // Deterministic: the same wreck-field is on the bottom every visit, so it
     // is a place you come back to rather than a shuffle.
     const r = rng(0x5ea1ed)
-    const wreckT = [wreck(PIXI, 0), wreck(PIXI, 1), wreck(PIXI, 2), wreck(PIXI, 3)]
-    /** Spoil is commonest because it is the ground; the mast is rarest because
-     *  one upright reads as a landmark and four read as a fence. */
+    /** The GROUND is commonest, because it is the ground; the single upright is
+     *  rarest, because one of them reads as a landmark and four read as a
+     *  fence. The same weighting suits both doors — see fieldTex on why the
+     *  kinds are roles rather than objects. */
     const PICK = [3, 3, 3, 1, 1, 0, 0, 2]
-    const WIDE = [0.44, 0.34, 0.3, 0.4]
     for (let i = 0; i < FIELD_N; i++) {
       const kind = PICK[Math.floor(r() * PICK.length)]
-      const sp: Sprite = new PIXI.Sprite(wreckT[kind])
+      const sp: Sprite = new PIXI.Sprite(fieldTex(PIXI, 'davy', kind))
       sp.anchor.set(0.5, 1)
       field.push({
-        s: sp, u: (i + r() * 0.85) / FIELD_N,
+        s: sp, kind, u: (i + r() * 0.85) / FIELD_N,
         // Square-rooted, so the far half of the range gets most of the pieces
         // and the field THINS OUT into the murk instead of being a row of
         // things at one distance.
         d: Math.sqrt(r()),
-        w: WIDE[kind] * (0.78 + r() * 0.55),
+        jitter: 0.78 + r() * 0.55,
         ph: r() * 6.28,
         flip: r() < 0.5 ? -1 : 1,
       })
@@ -493,12 +600,19 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
     for (const m of motes) m.p.tint = moteTint
     const edgeTint = scene.hardcore ? 0x1a0206 : scene.variant === 'don' ? 0x02100a : 0x02080e
     for (const e of edges) e.tint = edgeTint
-    // THE WRECKAGE IS THE DEEP WATER, TAKEN DOWN. Not black: a black
-    // silhouette on a coloured sea is a hole cut in the picture, and that is
-    // precisely how the first attempt at scenery here read. The same hue,
-    // darker, at half alpha, is something a long way off in murk.
-    const wreckTint = shade(scene.deepColor, 0.8)
-    for (const p of field) p.s.tint = wreckTint
+    // THE FLOOR IS THE DEEP WATER, TAKEN DOWN. Not black: a black silhouette
+    // on a coloured sea is a hole cut in the picture, and that is precisely
+    // how the first attempt at scenery here read. The same hue, darker, at
+    // half alpha, is something a long way off in murk.
+    const fieldTint = shade(scene.deepColor, 0.8)
+    // AND IT IS THE OTHER DOOR'S FURNITURE WHEN YOU ARE AT THE OTHER DOOR.
+    // Done here because this already runs on a variant change, and because
+    // swapping four textures is the whole of the difference between a drowned
+    // wreck-field and a sunken court.
+    for (const p of field) {
+      p.s.tint = fieldTint
+      p.s.texture = fieldTex(PIXI, scene.variant, p.kind)
+    }
   }
   retint()
 
@@ -609,12 +723,11 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
       // third of a fight is the log and the guns, and in the hub it is the
       // moorings and the helm; the top is the HUD. The field lives in the band
       // between them, which is the band that had nothing in it at all.
-      const fieldOn = scene.variant === 'davy' ? 1 : 0
       const U = Math.min(W, H)
+      const wideOf = FIELD_WIDE[scene.variant] ?? FIELD_WIDE.davy
       for (const p of field) {
-        if (!fieldOn) { if (p.s.alpha) p.s.alpha = 0; continue }
         const k = 1 - p.d
-        const wide = U * p.w * (0.4 + 0.6 * k)
+        const wide = U * wideOf[p.kind] * p.jitter * (0.4 + 0.6 * k)
         p.s.width = wide
         p.s.height = wide * (FIELD_H / FIELD_W)
         // The width setter writes a positive scale, so the handedness has to
