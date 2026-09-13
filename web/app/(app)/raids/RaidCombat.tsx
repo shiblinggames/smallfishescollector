@@ -8115,7 +8115,7 @@ export default function RaidCombat({
           type="button"
           onClick={() => setShowEnemyStats(true)}
           aria-label={`${enemy.name} — view stats`}
-          className={enemyPhase >= 2 ? 'rc-phase2-pulse' : undefined}
+          className={`rc-enemy-plate${enemyPhase >= 2 ? ' rc-phase2-pulse' : ''}`}
           animate={enemyNameplateAnim}
           ref={enemyPlateRef}
           style={{
@@ -8123,7 +8123,6 @@ export default function RaidCombat({
             // the corner is where it sits on a /raids/* route, and where it
             // starts here before the first frame places it.
             position: 'absolute', top: 10, left: 10, zIndex: 4,
-            padding: '0.45rem 0.6rem 0.5rem 0.45rem',
             background: 'rgba(6,12,20,0.9)',
             // Phase 2 overrides the normal boss-gold (or elite-violet)
             // accent with crimson — same intensity as elite, deeper red so
@@ -8140,15 +8139,27 @@ export default function RaidCombat({
               : isElite ? '0 0 14px rgba(167,139,250,0.32)'
               : undefined,
             display: 'flex', alignItems: 'center', gap: 8,
-            minWidth: 160,
+            // ── THE WIDTH AND THE PORTRAIT ARE IN CSS, NOT HERE ──────────
+            //
+            // `.rc-enemy-plate` in globals.css carries the minimum width, the
+            // padding, the portrait's size and the name's type, and a phone
+            // over the sea takes a smaller set of all four. They cannot stay
+            // inline: an inline style beats a media query outright, so the
+            // rule would need `!important` on every line to reach them.
+            //
+            // It is a phone problem specifically. 160 wide with a 54px round
+            // portrait is a reasonable card on a monitor and a fifth of the
+            // glass on a 390px screen — and over the sea it is docked in the
+            // top-left corner under the depth bar, so the two of them together
+            // were most of what you saw before you saw any water.
             textAlign: 'left',
             cursor: 'pointer',
             font: 'inherit', color: 'inherit',
           }}
         >
           {enemy.portrait && (
-            <div style={{
-              flexShrink: 0, width: 54, height: 54, borderRadius: '50%',
+            <div className="rc-enemy-portrait" style={{
+              flexShrink: 0, borderRadius: '50%',
               border: `2px solid ${
                 enemyPhase >= 2 ? '#ef4444'
                 : isBoss ? '#fbbf24'
@@ -8170,7 +8181,7 @@ export default function RaidCombat({
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p className="rc-enemy-name font-cinzel font-700" style={{ color: '#ffffff', lineHeight: 1, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {enemy.name}
               </p>
               {/* Has-abilities tell — ONE inline glyph whenever the enemy carries

@@ -142,6 +142,34 @@ html, body {
   }
 }
 
+/* ── The gauntlet's depth bar, and the enemy's card, on a phone ──
+   Both live in the top-left of a fight over the sea, one under the other, and
+   both were sized for a monitor. On a 390px screen they were most of what you
+   saw before you saw any water.
+
+   THE BAR keeps its one immovable row at every width (a header that can wrap
+   shifts the combat stage down mid-fight, which is the bug the grid was built
+   to prevent). So the words go instead of the layout: `db-word` marks the two
+   eyebrows that a phone can do without, because the big gold number in the
+   corner of a depth bar needs no caption and ⟡ already says what the pot is.
+   UNCHARTED is not marked — it is a state rather than a label.
+
+   THE CARD carries its size here rather than inline so this media query can
+   reach it at all: an inline style beats a media query outright, and the rule
+   would otherwise need !important on every line. */
+.rc-enemy-plate { min-width: 160px; padding: 0.45rem 0.6rem 0.5rem 0.45rem; }
+.rc-enemy-portrait { width: 54px; height: 54px; }
+.rc-enemy-name { font-size: 0.9rem; }
+
+@media (max-width: 430px) {
+  .gauntlet-depthbar .db-word { display: none; }
+  /* Only over the sea. On a /raids/* route the card sits in the corner of its
+     own stage with nothing stacked above it, and there it can have its room. */
+  .raid-oversea-stage .rc-enemy-plate { min-width: 118px; padding: 0.34rem 0.46rem 0.38rem 0.34rem; }
+  .raid-oversea-stage .rc-enemy-portrait { width: 38px; height: 38px; }
+  .raid-oversea-stage .rc-enemy-name { font-size: 0.78rem; }
+}
+
 .font-cinzel { font-family: var(--font-cinzel), serif; }
 .font-karla  { font-family: var(--font-karla), system-ui, sans-serif; }
 .font-pirata { font-family: var(--font-pirata), serif; }

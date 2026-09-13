@@ -7993,6 +7993,36 @@ function BackLink({ router, label, primary, onClick }: { router: ReturnType<type
   )
 }
 
+/**
+ * ── A COUNTER WITH NO WORD ON IT ────────────────────────────────────────────
+ *
+ * CURSED, PRESSURE and MARKS were each spelled out in tiny uppercase beside
+ * their number, and on a phone that did not fit. Measured on a 390px screen:
+ * the bar's inner width is about 342, the right-hand group needed roughly 305
+ * of it on its own, and the left-hand group needs 120 more. There was no
+ * overflow guard on that column either — `whiteSpace: nowrap` with nothing to
+ * clip it — so on a Don's hardcore run carrying curses, pressure and marks at
+ * once the counters simply ran back over the depth number.
+ *
+ * The WORD is the part that costs the room and the part doing the least work.
+ * A hexed ring, two arrows pressing in, and a shark's fin are unmistakable at
+ * a glance and take a third of the space. Everything spelled out is one tap
+ * away in the detail panel, which is where it always was — and `title` plus
+ * `aria-label` keep the words for a pointer and for a screen reader.
+ */
+function Tally({ n, color, label, filled, children }: {
+  n: number; color: string; label: string; filled?: boolean; children: React.ReactNode
+}) {
+  return (
+    <span className="flex items-center" style={{ gap: 3, flexShrink: 0 }} title={`${label}: ${n}`} aria-label={`${label}: ${n}`}>
+      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden
+        fill={filled ? color : 'none'} stroke={filled ? 'none' : color}
+        strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color, lineHeight: 1 }}>{n}</span>
+    </span>
+  )
+}
+
 function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted, pressure = 0, signedTerms = {}, contract = null, marks = [] }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean; pressure?: number; signedTerms?: SignedTerms; contract?: ContractOffer | null; marks?: ChosenMark[] }) {
   const sharkMarks = marks.filter(m => m.type === 'shark').length
   const whaleMarks = marks.filter(m => m.type === 'whale').length
@@ -8020,13 +8050,18 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
         // holds the hardcore skull so it sits EXACTLY mid-bar; both side
         // columns clip rather than wrap.
         style={{
-          display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', columnGap: 8,
+          display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', columnGap: 6,
           background: '#050b13', border: isHardcore ? '1px solid rgba(220,38,38,0.55)' : `1px solid ${GOLD}28`,
-          borderRadius: 14, padding: '0.4rem 0.8rem', cursor: 'pointer',
+          borderRadius: 14, padding: '0.4rem 0.6rem', cursor: 'pointer',
           boxShadow: isHardcore ? '0 0 16px rgba(200,20,32,0.32), inset 0 0 10px rgba(120,10,18,0.3)' : undefined,
         }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden' }}>
-          <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: GOLD + 'bb', letterSpacing: '0.1em', textShadow: uncharted ? `0 0 8px ${GOLD}88` : undefined }}>{uncharted ? 'UNCHARTED' : 'DEPTH'}</span>
+          {/* `db-word` goes only on the ordinary eyebrow: a phone drops it (see
+              globals.css) and the big gold number in the top-left corner of a
+              depth bar needs no label. UNCHARTED is a STATE, not a label, so it
+              keeps its place at every width. */}
+          <span className={uncharted ? 'font-karla font-600' : 'db-word font-karla font-600'}
+            style={{ fontSize: '0.46rem', color: GOLD + 'bb', letterSpacing: '0.1em', textShadow: uncharted ? `0 0 8px ${GOLD}88` : undefined }}>{uncharted ? 'UNCHARTED' : 'DEPTH'}</span>
           <span className="font-cinzel font-800" style={{ fontSize: '1rem', color: GOLD, lineHeight: 1 }}>{depth}</span>
           {tag && <span className="font-cinzel font-700" style={{ fontSize: '0.56rem', color: tagColor, letterSpacing: '0.06em' }}>{tag}</span>}
           {/* Active job — a pulsing briefcase so a taken contract reads at a glance
@@ -8049,50 +8084,70 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, minWidth: 0, whiteSpace: 'nowrap' }}>
+        {/* OVERFLOW HIDDEN, AND THAT IS NOT BELT-AND-BRACES. This column is
+            `1fr` with `minWidth: 0`, so the grid is entitled to make it
+            narrower than its contents — and `nowrap` with nothing to clip it
+            means the surplus paints straight over the depth number instead of
+            going anywhere. With the tallies below it should never come to
+            this; if it ever does, it clips at the edge rather than making a
+            mess of the other half of the bar. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 7, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden' }}>
           {curses > 0 && (
-            <span className="flex items-baseline gap-1">
-              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', color: '#f8717199', letterSpacing: '0.08em' }}>CURSED</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f87171', lineHeight: 1 }}>{curses}</span>
-            </span>
+            // A hexed ring: a bolt through a circle. See Tally for why none of
+            // these three carry their word any more.
+            <Tally n={curses} color="#f87171" label="Curses">
+              <circle cx="12" cy="12" r="9" /><path d="M13.4 5.2 10 11.4l4 1.5-3.4 6.1" />
+            </Tally>
           )}
           {/* The Terms you signed, carried for the whole dive so you never forget
               what you agreed to (or what it's paying you). */}
           {pressure > 0 && (
-            <span className="flex items-baseline gap-1">
-              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', color: '#f0c04099', letterSpacing: '0.08em' }}>PRESSURE</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0c040', lineHeight: 1 }}>{pressure}</span>
-            </span>
+            // Two arrows pressing in on the same point, which is the thing
+            // itself rather than a symbol for it.
+            <Tally n={pressure} color="#f0c040" label="Pressure">
+              <path d="M12 3v6" /><path d="M8.5 6.5 12 10l3.5-3.5" />
+              <path d="M12 21v-6" /><path d="M8.5 17.5 12 14l3.5 3.5" />
+            </Tally>
           )}
           {/* Don's Marks earned this run — a count here, the shark/whale breakdown
               + every buff in the tap panel below (was a separate banner). */}
           {marks.length > 0 && (
-            <span className="flex items-baseline gap-1">
-              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', color: '#e0a94a99', letterSpacing: '0.08em' }}>MARKS</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e0a94a', lineHeight: 1 }}>{marks.length}</span>
-            </span>
+            // The same fin the Mark choice is drawn with, so the count and the
+            // thing it counts are visibly one idea.
+            <Tally n={marks.length} color="#e0a94a" label="Don's Marks" filled>
+              <path d="M3 20 C 10 20, 14 19, 16 16 C 19 10, 20 5, 19 2 C 16 7, 11 13, 3 20 Z" />
+            </Tally>
           )}
-          <span className="flex items-baseline gap-1" style={{ position: 'relative' }}>
-            <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#9a948a', letterSpacing: '0.08em' }}>POT</span>
+          <span className="flex items-baseline gap-1" style={{ flexShrink: 0 }}>
+            {/* The glyph already says what the number is. On a phone the word
+                goes and the ⟡ carries it. */}
+            <span className="db-word font-karla font-600" style={{ fontSize: '0.46rem', color: '#9a948a', letterSpacing: '0.08em' }}>POT</span>
             {/* keyed by the gain so each kill re-pops the number */}
             <motion.span key={potGain?.key ?? 'pot'} initial={{ scale: potGain ? 1.22 : 1 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 18 }}
               className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e8dfc8', display: 'inline-block' }}>{potShort} ⟡</motion.span>
-            {/* "+N ⟡" float — every kill feeds the pot visibly; boss hauls run gold. */}
-            <AnimatePresence>
-              {potGain && (
-                <motion.span key={`gain-${potGain.key}`}
-                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: [0, 1, 1, 0], y: -16 }} exit={{ opacity: 0 }}
-                  transition={{ duration: 1.15, times: [0, 0.15, 0.7, 1] }}
-                  className="font-cinzel font-700"
-                  style={{ position: 'absolute', right: 0, top: -14, fontSize: potGain.boss ? '0.78rem' : '0.66rem', color: potGain.boss ? GOLD : '#cbbd9a', whiteSpace: 'nowrap', pointerEvents: 'none', textShadow: potGain.boss ? `0 0 10px ${GOLD}88` : undefined }}>
-                  +{fmt(potGain.amount)} ⟡
-                </motion.span>
-              )}
-            </AnimatePresence>
           </span>
           <svg aria-hidden width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7a746a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : undefined }}><path d="M6 9l6 6 6-6" /></svg>
         </div>
       </div>
+
+      {/* ── "+N ⟡" — EVERY KILL FEEDS THE POT, VISIBLY ──────────────────────
+          OUTSIDE THE BAR, not inside the pot's own cell. It rises fourteen
+          pixels ABOVE wherever it starts, and the cell it used to live in is
+          now clipped (see the note on the right-hand column) — so in there it
+          would be cut off at the moment it is meant to be read. Hung off the
+          DepthBar's own wrapper instead, which clips nothing, and sat over the
+          right-hand end where the pot is. */}
+      <AnimatePresence>
+        {potGain && (
+          <motion.span key={`gain-${potGain.key}`}
+            initial={{ opacity: 0, y: 4 }} animate={{ opacity: [0, 1, 1, 0], y: -16 }} exit={{ opacity: 0 }}
+            transition={{ duration: 1.15, times: [0, 0.15, 0.7, 1] }}
+            className="font-cinzel font-700"
+            style={{ position: 'absolute', right: 24, top: -10, zIndex: 21, fontSize: potGain.boss ? '0.78rem' : '0.66rem', color: potGain.boss ? GOLD : '#cbbd9a', whiteSpace: 'nowrap', pointerEvents: 'none', textShadow: potGain.boss ? `0 0 10px ${GOLD}88` : undefined }}>
+            +{fmt(potGain.amount)} ⟡
+          </motion.span>
+        )}
+      </AnimatePresence>
 
       {/* Tap-for-details panel — everything the one-row bar elides. Anchored
           under the sticky bar; tapping it (or the bar) closes it. */}
