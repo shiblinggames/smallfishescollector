@@ -2218,16 +2218,37 @@ export default function RaidCombat({
   // Hit-stop: a white impact-flash over the whole stage on a heavy landing (crit
   // / Mega / kill). Punctuates the ~70ms still-hold already baked into the crit
   // shake so the blow reads with real weight.
-  const [impactFlash, setImpactFlash] = useState<{ key: number; strong: boolean } | null>(null)
-  const impactFlashKeyRef = useRef(0)
-  const impactFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /**
+   * ── A CRIT MUST NOT BE THE HEAVIEST FRAME IN THE FIGHT ────────────────────
+   *
+   * This was `useState` plus a `setTimeout` to clear it: TWO passes over this
+   * file's eight hundred elements, fired at the exact instant a critical lands.
+   * A crit already spends that frame on a hit-stop, a camera shake, a big
+   * hitsplat and a spark burst, and this sat on top of it. It is the reason a
+   * crit felt heavier than an ordinary hit in the wrong way.
+   *
+   * It is a full-stage white flash that lives for a fifth of a second and
+   * nothing reads it back. It does not need React at all: the element is always
+   * mounted at opacity 0 and the flash is a WAAPI animation run straight off
+   * the call, on the compositor, with no render anywhere.
+   */
+  const impactFlashRef = useRef<HTMLDivElement | null>(null)
   const fireImpactFlash = useCallback((strong: boolean) => {
-    impactFlashKeyRef.current += 1
-    setImpactFlash({ key: impactFlashKeyRef.current, strong })
-    if (impactFlashTimerRef.current) clearTimeout(impactFlashTimerRef.current)
-    impactFlashTimerRef.current = setTimeout(() => setImpactFlash(null), strong ? 220 : 150)
+    const el = impactFlashRef.current
+    if (!el || typeof el.animate !== 'function') return
+    // The gradient is the only thing that differs between a heavy landing and
+    // an ordinary one, and it is a paint rather than a transform — so it is
+    // written once here instead of being interpolated.
+    el.style.background = strong
+      ? 'radial-gradient(ellipse at center, rgba(255,255,255,0.92), rgba(255,214,150,0.5) 46%, transparent 78%)'
+      : 'radial-gradient(ellipse at center, rgba(255,255,255,0.82), transparent 72%)'
+    try {
+      el.animate(
+        [{ opacity: strong ? 0.5 : 0.32 }, { opacity: 0 }],
+        { duration: strong ? 240 : 150, easing: 'ease-out' },
+      )
+    } catch { /* no flash is better than a thrown frame */ }
   }, [])
-  useEffect(() => () => { if (impactFlashTimerRef.current) clearTimeout(impactFlashTimerRef.current) }, [])
   // Center-screen callout for a boon PROC (Counter-Battery). Same lane as the
   // check flash but themed to the boon's color.
   const [boonFlash, setBoonFlash] = useState<{ label: string; sub?: string; color: string; key: number } | null>(null)
@@ -2662,6 +2683,17 @@ export default function RaidCombat({
       el.style.bottom = 'auto'
       el.style.width = `${a.box}px`
       el.style.maxWidth = 'none'
+      // ── HOW MUCH OF THIS PAINTING IS ACTUALLY SHIP ──────────────────
+      //
+      // The box is the whole canvas, transparent water and all: a chapter-1
+      // hull is 52% of its own frame. Everything laid OVER the sprite — the
+      // burn, the rime, the ward — wants the SHIP, not the frame, or the fire
+      // starts a third of a hull out in open water on either side.
+      //
+      // Published as a custom property so the effects can inset themselves in
+      // CSS. Unset on a /raids/* route, where `place` never runs and 1 keeps
+      // the behaviour those effects were tuned against.
+      el.style.setProperty('--ink', a.box > 0 ? (a.w / a.box).toFixed(3) : '1')
     }
 
     /**
@@ -7833,16 +7865,10 @@ export default function RaidCombat({
         {/* Hit-stop impact flash — a quick white bloom over the stage on a heavy
             landing (crit / Mega / kill), lit via 'screen' so it brightens the
             scene rather than whiting it out. Sells the frozen beat of the hit. */}
-        {impactFlash && (
-          <motion.div key={`impact-${impactFlash.key}`} aria-hidden
-            initial={{ opacity: impactFlash.strong ? 0.5 : 0.32 }}
-            animate={{ opacity: 0 }}
-            transition={{ duration: impactFlash.strong ? 0.24 : 0.15, ease: 'easeOut' }}
-            style={{ position: 'absolute', inset: 0, zIndex: 9, pointerEvents: 'none', mixBlendMode: 'screen',
-              background: impactFlash.strong
-                ? 'radial-gradient(ellipse at center, rgba(255,255,255,0.92), rgba(255,214,150,0.5) 46%, transparent 78%)'
-                : 'radial-gradient(ellipse at center, rgba(255,255,255,0.82), transparent 72%)' }} />
-        )}
+        {/* ALWAYS MOUNTED, ALWAYS AT ZERO. See fireImpactFlash: it is animated
+            imperatively so a critical hit costs no render at all. */}
+        <div ref={impactFlashRef} aria-hidden
+          style={{ position: 'absolute', inset: 0, zIndex: 9, opacity: 0, pointerEvents: 'none', mixBlendMode: 'screen' }} />
         {/* ── Atmospheric backdrop ─────────────────────────────────────────
             Sun/sky/clouds/water all swap based on `atmosphere`. Each
             variant is a self-contained fragment so the parts (sun
@@ -12009,7 +12035,14 @@ function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen:
       `}</style>
 
       {burning && (
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        <div style={{
+          // ON THE SHIP, NOT ON THE PAINTING. See `--ink` where it is written:
+          // the sprite's box is mostly transparent water on some hulls, and a
+          // fire tuned to the box burns the sea either side of her.
+          position: 'absolute', top: 0, bottom: 0,
+          left: 'calc(50% - 50% * var(--ink, 1))', width: 'calc(100% * var(--ink, 1))',
+          pointerEvents: 'none', zIndex: 0,
+        }}>
           {/* Base heat pool at the waterline */}
           <div aria-hidden style={{ position: 'absolute', inset: '-8% -4% -2%', borderRadius: '46%', background: 'radial-gradient(ellipse at 50% 84%, rgba(255,140,40,0.62) 0%, rgba(220,70,20,0.26) 44%, transparent 70%)', animation: paused ? 'none' : 'rc-heat 1.9s ease-in-out infinite', opacity: paused ? 0.3 : undefined }} />
           {/* Three flame tongues along the hull, each on its own rhythm and
@@ -12036,7 +12069,16 @@ function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen:
       )}
 
       {frozen && (
-        <div style={{ position: 'absolute', inset: '-6%', zIndex: 3, pointerEvents: 'none', overflow: 'hidden' }}>
+        <div style={{
+          // Same inset as the fire, and NO `overflow: hidden`. That clip was
+          // cutting the rime's own glow off against a hard square edge a few
+          // per cent outside the hull — a bloom with a straight line through
+          // it, which is the one thing a glow must never have. The frost dust
+          // falls a little past her now, which is what frost does.
+          position: 'absolute', top: '-6%', bottom: '-6%',
+          left: 'calc(50% - 53% * var(--ink, 1))', width: 'calc(106% * var(--ink, 1))',
+          zIndex: 3, pointerEvents: 'none',
+        }}>
           {/* THE RIME, at the waterline. The fire's answering layer is its heat
               pool, and ice needs the same: something at the foot of the hull
               that says the cold is coming FROM the water she is sitting in
@@ -13853,6 +13895,36 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
 // caption text is transparent — it's only there to reserve the same
 // vertical space CircleBtn's "Dodge"/"Fire" labels would have.
 function InlineLockButton({ onLock }: { onLock: () => void }) {
+  /**
+   * ── THE PRESS HAS TO LAND ─────────────────────────────────────────────────
+   *
+   * This is the single most important input in the game and its entire
+   * feedback was a 4% scale on a flat green slab. A shot going off should be
+   * felt, and the button is the thing under your thumb at the moment it does.
+   *
+   * The burst is a WAAPI animation on a ring that is otherwise invisible, run
+   * straight off the pointer event. NOT React state: a lock already causes one
+   * pass over this file's eight hundred elements, and adding a keyed element
+   * to it would make that pass do more work at the exact instant that must not
+   * hitch. Nothing here re-renders; the ring is told to go and it goes, on the
+   * compositor.
+   */
+  const ringRef = useRef<HTMLSpanElement | null>(null)
+  const press = () => {
+    const el = ringRef.current
+    if (el && typeof el.animate === 'function') {
+      try {
+        el.animate(
+          [
+            { transform: 'scale(0.94)', opacity: 0.7 },
+            { transform: 'scale(1.3)', opacity: 0 },
+          ],
+          { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+        )
+      } catch { /* a ring nobody sees is not worth an exception */ }
+    }
+    onLock()
+  }
   return (
     // zIndex + own compositing layer: the button sits directly under the heavy
     // framer-motion battle stage (+ the RAF-animated aim bar). On iOS WebKit
@@ -13866,7 +13938,7 @@ function InlineLockButton({ onLock }: { onLock: () => void }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
           <motion.button
-            whileTap={{ scale: 0.96 }}
+            whileTap={{ scale: 0.955 }}
             // Desktop keyboard: Space locks too (lib/spaceAction dispatcher,
             // installed for the combat's lifetime below RaidCombat's state).
             data-space-action
@@ -13874,20 +13946,44 @@ function InlineLockButton({ onLock }: { onLock: () => void }) {
             // after the finger lands, which on a precision timing tap
             // reads as the aim bar "robbing" the player. Mirrors the
             // fishing Reel In / Cast buttons.
-            onPointerDown={(e) => { e.preventDefault(); onLock() }}
+            onPointerDown={(e) => { e.preventDefault(); press() }}
             className="font-cinzel font-700 uppercase tracking-[0.14em]"
             style={{
               width: '100%', height: 58,
               borderRadius: 14,
-              background: '#4ade80', color: '#0a1422',
-              border: 'none', fontSize: '0.95rem', cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(74,222,128,0.35), inset 0 -3px 0 rgba(0,0,0,0.15)',
+              // ── CUT INTO THE DECK, NOT PAINTED ON IT ────────────────
+              //
+              // It was one flat `#4ade80` fill with a hard inner line under
+              // it, which is a button from a settings page. The deck, the aim
+              // bar and the fight's own controls all read as objects with a lit
+              // top edge and a shadowed foot; this is the same language, in the
+              // one colour that means "this is the shot".
+              background: 'linear-gradient(180deg, #6bf09f 0%, #43cf79 54%, #2da75d 100%)',
+              color: '#06210f',
+              border: '1px solid rgba(198,255,219,0.5)',
+              fontSize: '0.95rem', cursor: 'pointer',
+              boxShadow: '0 6px 20px rgba(74,222,128,0.34), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -5px 12px rgba(0,44,22,0.32)',
               touchAction: 'manipulation',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
               // Own compositing layer so iOS hit-tests the button where it's drawn.
               willChange: 'transform', position: 'relative', zIndex: 20,
             }}
           >
-            Lock Shot <span className="key-hint" style={{ verticalAlign: 2 }}>SPACE</span>
+            {/* THE BURST. Sits outside the button's edge and is invisible until
+                the press fires it — see `press`. */}
+            <span ref={ringRef} aria-hidden style={{
+              position: 'absolute', inset: -3, borderRadius: 17, opacity: 0,
+              border: '2px solid rgba(214,255,228,0.95)',
+              boxShadow: '0 0 20px rgba(120,255,180,0.7)',
+              pointerEvents: 'none',
+            }} />
+            {/* A MARK, THEN THE WORD. The fight's own idiom everywhere else is
+                a circle with a mark in it and a word beneath; this row cannot
+                change height, so the mark comes alongside instead. */}
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden style={{ opacity: 0.9 }}>
+              <circle cx="12" cy="12" r="7" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" />
+            </svg>
+            <span>Lock Shot <span className="key-hint" style={{ verticalAlign: 2 }}>SPACE</span></span>
           </motion.button>
           {/* Invisible caption — matches CircleBtn's label slot so the
               column's natural height equals an ActionMenu column's. */}

@@ -8,9 +8,10 @@
 //
 // ── WHAT IT DRAWS, BOTTOM TO TOP ────────────────────────────────────────────
 //
-//   THE DEEP      a slow pulse of light at the foot of the arena — the thing
-//                 under you. At a boss depth it OPENS: an eye, the run's own
-//                 colour, that watches the fight from under the water.
+//   THE DEEP      a slow pulse of light in the open water — the thing under
+//                 you. LIGHT ONLY. It used to open an EYE at a boss depth (an
+//                 iris, a ring and a drawn slit) and that was canvas art
+//                 pretending to be a creature: see the note where it was cut.
 //   SHAFTS        light coming down through the water in slow sweeping
 //                 columns — or up, in hardcore, because there the light has
 //                 a source and it is not the sun.
@@ -172,19 +173,6 @@ function edge(PIXI: typeof import('pixi.js')) {
   }, PIXI)
 }
 
-/** The pupil of the thing under the water: a dark slit with a soft rim. */
-function pupil(PIXI: typeof import('pixi.js')) {
-  return cached('pupil', () => {
-    const S = 256
-    const { c, g } = canvas(S, S)
-    g.fillStyle = '#000'
-    g.beginPath(); g.ellipse(S / 2, S / 2, S * 0.11, S * 0.42, 0, 0, Math.PI * 2); g.fill()
-    const out = canvas(S, S)
-    out.g.filter = 'blur(4px)'; out.g.drawImage(c, 0, 0)
-    return out.c
-  }, PIXI)
-}
-
 // ── THE GRADE ────────────────────────────────────────────────────────────────
 //
 // What each screen of the run does to the light. One number for the water and
@@ -215,7 +203,7 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
   const near: Container = new PIXI.Container()
   far.eventMode = 'none'; near.eventMode = 'none'
 
-  const dotT = dot(PIXI), glowT = glow(PIXI), shaftT = shaft(PIXI), ringT = ring(PIXI), edgeT = edge(PIXI), pupilT = pupil(PIXI)
+  const dotT = dot(PIXI), glowT = glow(PIXI), shaftT = shaft(PIXI), ringT = ring(PIXI), edgeT = edge(PIXI)
 
   let scene: Scene = { variant: 'davy', hardcore: false, boss: false, apex: false, deep: 0, mood: 'fight', key: 0x9cf0ff, deepColor: 0x04121a }
 
@@ -223,18 +211,19 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
   const deepGlow: Sprite = new PIXI.Sprite(glowT)
   deepGlow.anchor.set(0.5); deepGlow.blendMode = 'add'; deepGlow.alpha = 0
   far.addChild(deepGlow)
-  // The eye: an iris of light with a slit through it, under a lid that opens.
-  const eye: Container = new PIXI.Container()
-  const iris: Sprite = new PIXI.Sprite(glowT)
-  iris.anchor.set(0.5); iris.blendMode = 'add'
-  const irisRing: Sprite = new PIXI.Sprite(ringT)
-  irisRing.anchor.set(0.5); irisRing.blendMode = 'add'
-  const slit: Sprite = new PIXI.Sprite(pupilT)
-  slit.anchor.set(0.5)
-  eye.addChild(iris, irisRing, slit)
-  eye.alpha = 0
-  far.addChild(eye)
-  let lid = 0 // 0 shut, 1 open
+  // ── NO EYE. ────────────────────────────────────────────────────────
+  //
+  // A boss depth used to OPEN one under the fight: an additive iris, a blurred
+  // ring for its rim, and a drawn vertical slit for the pupil, on a lid that
+  // eased open and shut. The intent was "something is watching you fight",
+  // which is a good intent. The execution was three canvas gradients arranged
+  // to suggest an eye, and it read as exactly that — a diagram of an eye laid
+  // over the water, competing with the painted backdrop and the fight's own
+  // effects rather than adding to them. Same fault as the wreck-field below,
+  // and cut for the same reason.
+  //
+  // A boss still darkens the room and lifts the deep's glow. If the thing
+  // under the water should ever be SEEN, it needs painting, not compositing.
 
   // ── NO SCENERY ON THE BOTTOM. TWICE NOW. ───────────────────────────
   //
@@ -325,7 +314,6 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
 
   function retint() {
     deepGlow.tint = scene.key
-    iris.tint = scene.key; irisRing.tint = scene.key
     for (const sh of shafts) sh.s.tint = scene.hardcore ? 0xff5a4a : scene.key
     const moteTint = scene.hardcore ? 0xff8a4a : scene.variant === 'don' ? 0xffd88a : 0xbfffff
     for (const m of motes) m.p.tint = moteTint
@@ -405,27 +393,6 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
       const dg = Math.max(W, H) * (1.0 + 0.16 * Math.sin(t * 0.5))
       deepGlow.width = dg; deepGlow.height = dg * 0.6
       deepGlow.alpha = (hc ? 0.16 : 0.07) + deep * 0.08 + (scene.boss ? 0.06 : 0) + flare * 0.02
-
-      // THE EYE opens at a boss depth and shuts when the boss is gone.
-      const wantLid = scene.boss ? 1 : 0
-      lid += (wantLid - lid) * Math.min(1, dt * 0.7)
-      eye.alpha = lid * (0.62 + 0.1 * Math.sin(t * 1.3))
-      if (eye.alpha > 0.005) {
-        // The eye watches from UNDER the fight, between the two hulls, where
-        // the water is open and both ships are in its gaze. Big enough that
-        // its rim reaches past them: the fight happens inside it.
-        const R = Math.min(W, H) * 0.5
-        eye.x = W * 0.5 + Math.sin(t * 0.23) * W * 0.05
-        eye.y = H * 0.47
-        iris.width = R * 2.6; iris.height = R * 1.1
-        irisRing.width = R * 1.5; irisRing.height = R * 0.62 * lid
-        slit.width = R * 0.9; slit.height = R * 0.62 * lid
-        slit.x = Math.sin(t * 0.37) * R * 0.18
-        slit.alpha = 0.9
-        // The Don's eye is a crown's worth of gold; Davy's is cold; hardcore's is red.
-        const c = scene.apex ? 0xffd970 : hc ? 0xff4a3a : scene.key
-        iris.tint = c; irisRing.tint = c
-      }
 
       // During a fall everything tears upward, like the weather's rise.
       const rise = fall * fall * 260

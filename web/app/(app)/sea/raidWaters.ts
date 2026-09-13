@@ -1183,7 +1183,7 @@ const ENC_ART_INK: [RegExp, number][] = [
  * put her back on the dinghy scale this table exists to fix. Applied to hull
  * and box together, so a ward still wraps exactly the ship that is painted.
  */
-const ENC_FAR = 0.87
+const ENC_FAR = 0.8
 
 /**
  * AND SHE IS OVER HERE, WHICH IS THE OTHER HALF OF THE SAME FACT.
@@ -1195,16 +1195,19 @@ const ENC_FAR = 0.87
  * from every raid config, Man-o-Wars included) that left her looking like the
  * smaller ship in her own fight.
  *
- * 1.15 against the enemy's 0.87 puts about a third of a class between them for
- * standing where they stand, which is what a plane with any depth in it should
- * do. It does NOT touch the ladder: which of you is the bigger ship is still
- * decided by seaBeam against ENC_TYPE_HULL, and a Sloop meeting a Man-o-War
- * still meets something much bigger than her.
+ * 1.3 against the enemy's 0.8. The first pass at this was 1.15 against 0.87 and
+ * it was not enough to be felt — the two together now put the better part of a
+ * class between them for standing where they stand, and the enemy reads about
+ * 30% smaller against the player than she did before either number existed.
+ *
+ * NEITHER TOUCHES THE LADDER: which of you is the bigger ship is still decided
+ * by seaBeam against ENC_TYPE_HULL, and a Sloop meeting a Man-o-War still meets
+ * something much bigger than her. These two only say which of you is NEARER.
  *
  * Applied to hull and box together, so a ward still wraps exactly the ship that
  * is painted.
  */
-const PLAYER_NEAR = 1.15
+const PLAYER_NEAR = 1.3
 export function encArt(art: string): { hull: number; box: number } {
   const hull = (ENC_TYPE_HULL.find(([re]) => re.test(art))?.[1] ?? 245) * ENC_FAR
   const ink = ENC_ART_INK.find(([re]) => re.test(art))?.[1] ?? 0.6

@@ -2767,41 +2767,50 @@ export default function GauntletGame(props: GauntletGameProps) {
           const hex = hexOf(pl.color)
           const meta = PLACE_META[pl.id]
           if (pl.portal) return (
-            /* ── THE WAY DOWN, AS A THING YOU PRESS ────────────────────
-               This was two lines of text under the bowl, and it said "Sail
-               into the eye to descend" — which is true, and was the only way
-               in, and is a sentence rather than a control. Standing on a
-               painted sea being told to hold a course is not how anyone
-               expects to start a run, and it is the FIRST thing a captain
-               has to work out on this screen.
-               So it is a button, and the loudest thing on the water: the
-               run's own colour, breathing, with the descent's own double
-               chevron on it. Sailing into the eye still opens exactly the
-               same chooser for anyone who would rather arrive than press. */
-            <motion.button key={pl.id} type="button"
+            /* ── THE WAY DOWN IS THE DOOR ITSELF ───────────────────────
+               First it was two lines of text under the bowl, which said what
+               to do and gave you nothing to do it with. Then it was a card,
+               which gave you something to press and put a slab of chrome over
+               the middle of a phone.
+               It is neither now. The keeper turning over the eye IS the
+               control: a tap target laid over him, drawing nothing but a ring
+               that breathes, so what you are pressing is the art rather than a
+               box in front of the art. Sailing into the eye still opens the
+               same chooser, and the ring is centred on the same point the boat
+               is steering for. */
+            <button key={pl.id} type="button"
+              aria-label="The Descent — begin the dive"
               onClick={() => { vibrate([0, 16]); setModeChoiceOpen(true) }}
               className="tap"
-              animate={{ boxShadow: [
-                `0 10px 30px rgba(0,0,0,0.6), 0 0 0px ${hex}00`,
-                `0 10px 30px rgba(0,0,0,0.6), 0 0 26px ${hex}66`,
-                `0 10px 30px rgba(0,0,0,0.6), 0 0 0px ${hex}00`,
-              ] }}
-              transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
               style={{
-                position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy + 0.27),
-                transform: 'translate(-50%, 0)', zIndex: 5, cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                padding: '0.62rem 1.35rem 0.7rem', borderRadius: 16, whiteSpace: 'nowrap',
-                background: `linear-gradient(180deg, ${hex}2a, rgba(5,10,18,0.94))`,
-                border: `1px solid ${hex}99`,
-                color: '#f4efe4',
+                position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy),
+                transform: 'translate(-50%, -50%)', zIndex: 5, cursor: 'pointer',
+                width: 'min(46vw, 46vh)', height: 'min(46vw, 26vh)',
+                display: 'grid', placeItems: 'center',
+                background: 'none', border: 'none', padding: 0,
               }}>
-              <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.86rem', letterSpacing: '0.14em', textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>{pl.label}</span>
-              <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: hex }}>Tap to begin the dive</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hex} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ marginTop: 1 }}>
-                <path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" />
-              </svg>
-            </motion.button>
+              {/* The ring, breathing on the eye's own beat. It is the only
+                  thing drawn: everything inside it is the maelstrom. */}
+              <motion.span aria-hidden
+                animate={{ opacity: [0.22, 0.6, 0.22], scale: [0.94, 1.04, 0.94] }}
+                transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                style={{
+                  position: 'absolute', inset: '14% 8%', borderRadius: '50%',
+                  border: `1.5px solid ${hex}`,
+                  boxShadow: `0 0 22px ${hex}55, inset 0 0 26px ${hex}33`,
+                }} />
+              {/* And the words, low enough to sit on the rim rather than over
+                  his face, small enough not to be furniture. */}
+              <span style={{ position: 'absolute', left: '50%', bottom: -6, transform: 'translateX(-50%)', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '0.18em', color: '#f4efe4', textShadow: `0 2px 10px rgba(0,0,0,0.98), 0 0 18px ${hex}66` }}>{pl.label}</span>
+                <motion.span className="font-karla font-800 uppercase"
+                  animate={{ opacity: [0.45, 1, 0.45] }}
+                  transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ display: 'block', fontSize: '0.48rem', letterSpacing: '0.22em', color: hex, marginTop: 2, textShadow: '0 1px 8px rgba(0,0,0,0.95)' }}>
+                  Tap to descend
+                </motion.span>
+              </span>
+            </button>
           )
           return (
             // ── A MOORING'S CARD, DRIVEN BY THE BOAT ────────────────────
