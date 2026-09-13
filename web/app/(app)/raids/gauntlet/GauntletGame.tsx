@@ -2681,24 +2681,13 @@ export default function GauntletGame(props: GauntletGameProps) {
                   </button>
                 )
               })()}
-              {/* ── AND THE OTHER DOOR ───────────────────────────────────
-                  Two gauntlets, so this is a swap rather than a menu: the
-                  Ledger's picker was a dropdown with key art in it because it
-                  was choosing from a page. From the water it only ever has one
-                  answer. */}
-              {props.otherGauntletUnlocked && (
-                <button type="button" className="tap"
-                  onClick={() => { vibrate([0, 14]); router.push(isDonG ? '/raids/gauntlet' : '/raids/dons-gauntlet') }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 7, padding: '0.2rem 0.56rem 0.2rem 0.5rem', borderRadius: 999, cursor: 'pointer',
-                    background: 'rgba(8,13,22,0.82)', border: '1px solid rgba(194,188,174,0.3)', color: '#c2bcae' }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M4 8h13l-3-3" /><path d="M20 16H7l3 3" />
-                  </svg>
-                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.14em' }}>
-                    {isDonG ? "Davy's Gauntlet" : "The Don's Gauntlet"}
-                  </span>
-                </button>
-              )}
+              {/* ── AND NO DOOR TO THE OTHER DOOR ────────────────────────
+                  The Ledger had a picker that jumped straight from one
+                  gauntlet into the other, and a swap chip briefly stood in for
+                  it here. Both are gone on purpose: these are two different
+                  places on the chart, and the way to the Don's water is to
+                  SAIL to the Don's water. A shortcut between them makes them
+                  two tabs of one screen. */}
             </div>
             <div style={{ display: 'flex', gap: 7 }}>
               <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?" className="active:scale-95"
