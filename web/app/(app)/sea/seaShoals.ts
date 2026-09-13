@@ -227,6 +227,28 @@ export type Shoals = {
 const BOW_REACH = 330
 const BOW_PUSH = 120
 const BOW_SPEED = 260
+/**
+ * HOW FAST THEY GET OUT OF THE WAY, as a share of the full push per second.
+ *
+ * This was missing entirely and it was the whole problem. The displacement was
+ * set the instant a fish came inside the reach, so a fish did not SWIM aside --
+ * it was somewhere else on the next frame. A teleport reads as a glitch even
+ * when the distance is small, and it reads as a glitch at any push value, which
+ * is why making the push gentler did not help.
+ *
+ * At 1.1 a fish takes about a second to reach full displacement, which is a
+ * fish deciding to move rather than a fish being deleted and redrawn. It is
+ * still faster than the school's own swimming, because it is meant to be a
+ * bolt.
+ *
+ * THE HOOK IS NOT EASED. `scatter` still sets its bolt outright: a splash
+ * landing among them IS sudden, and that difference is the point of having
+ * both.
+ */
+const BOW_EASE = 1.1
+/** How quickly a fish re-aims as the hull moves past. Slow enough that the
+ *  direction turns rather than snapping from one side to the other. */
+const BOW_TURN = 2.4
 
 export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
   const view: ParticleContainer = new PIXI.ParticleContainer({
@@ -382,11 +404,19 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
           const near = 1 - dd / reach
           const n = dd < 1 ? Math.random() * Math.PI * 2 : Math.atan2(dy, dx)
           const push = near * wash * BOW_PUSH
-          f.bx = Math.cos(n) * push
-          f.by = Math.sin(n) * push * 0.7
-          // Topped up, never cut: a fish already bolting from a cast is not
-          // calmed down by a boat arriving.
-          f.bolt = Math.max(f.bolt, Math.min(1, near * 1.3))
+          // THE AIM TURNS, IT DOES NOT JUMP. Re-pointed every frame as she goes
+          // past, so a fish that has been shouldered aside keeps being pushed
+          // away from wherever she is now -- but eased, or the vector snaps
+          // across the fish as the hull draws level with it.
+          const k = Math.min(1, d * BOW_TURN)
+          f.bx += (Math.cos(n) * push - f.bx) * k
+          f.by += (Math.sin(n) * push * 0.7 - f.by) * k
+          // AND THE MOVE ITSELF EASES IN. See BOW_EASE: this used to be an
+          // assignment, so the fish was simply somewhere else on the next
+          // frame. Topped up rather than set, and never cut -- a fish already
+          // bolting from a cast is not calmed down by a boat arriving.
+          const want = Math.min(1, near * 1.15)
+          if (want > f.bolt) f.bolt = Math.min(want, f.bolt + d * BOW_EASE)
         }
       }
 
@@ -408,7 +438,10 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
         const slot = (f.ph / (Math.PI * 2))
         const on = sc.lit > slot * 1.6
 
-        if (f.bolt > 0) f.bolt = Math.max(0, f.bolt - d * 1.1)
+        // Coming back is slower than going, which is how a fish behaves and
+        // also what keeps the lane open behind a hull for a beat instead of
+        // slamming shut on her stern.
+        if (f.bolt > 0) f.bolt = Math.max(0, f.bolt - d * 0.75)
 
         const wob = Math.sin(t * 2.2 + f.ph * 5) * f.amp
         const ax = Math.cos(sc.ang), ay = Math.sin(sc.ang)
