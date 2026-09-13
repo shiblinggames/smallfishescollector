@@ -1723,12 +1723,38 @@ export default function RaidCombat({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nameplateFxKey])
   const [resolveLog, setResolveLog] = useState<string[]>([])
-  const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean; volley?: boolean } | null>(null)
-  const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean; volley?: boolean } | null>(null)
+  /**
+   * ── A DAMAGE NUMBER MUST NOT RE-RENDER THE FIGHT ──────────────────────────
+   *
+   * These were `useState` on THIS component, and this component renders about
+   * eight hundred elements out of a hundred and three pieces of state. Every
+   * hitsplat was two full passes over that tree — one to show the number and
+   * one to clear it — and a volley is three of them inside half a second, a
+   * barrage four. That is the hitch you feel exactly when the numbers pop,
+   * because it IS the numbers popping.
+   *
+   * The number is a leaf. It knows nothing, nothing reads it back (grep: these
+   * were touched in the render and nowhere else), and it lives for half a
+   * second. So it holds its own state, in its own component, and the fight
+   * pokes it through a ref — the same arrangement the aim bar's effects layer
+   * already uses, and for the same reason.
+   *
+   * EVERY CALL SITE IS UNCHANGED. `setPHitsplat` still takes exactly what it
+   * took, including updater functions and `null` to clear, so the forty-odd
+   * places that fire one did not have to learn anything. Only where the state
+   * LIVES has moved.
+   */
+  const pSplatRef = useRef<SplatSlotHandle | null>(null)
+  const eSplatRef = useRef<SplatSlotHandle | null>(null)
+  const setPHitsplat = useCallback((v: React.SetStateAction<Splat | null>) => { pSplatRef.current?.set(v) }, [])
+  const setEHitsplat = useCallback((v: React.SetStateAction<Splat | null>) => { eSplatRef.current?.set(v) }, [])
   // Per-shot floating numbers for the Frenzy barrage — each shot gets its own,
   // scattered across the hull, so the whole volley's numbers rack up (the single
   // eHitsplat can only show one at a time).
-  const [barrageSplats, setBarrageSplats] = useState<{ key: number; text: string; dx: number; crit?: boolean; color?: string }[]>([])
+  /** The same arrangement for the scattered per-sub-hit numbers — see above.
+   *  A four-shot barrage was eight passes over the tree. */
+  const barrageRef = useRef<BarrageSlotHandle | null>(null)
+  const setBarrageSplats = useCallback((v: React.SetStateAction<BSplat[]>) => { barrageRef.current?.set(v) }, [])
   // Bespoke chase-skin ability-effect FX over the enemy hull (e.g. Mako's Tempest
   // lightning storm during Blitz). Mounted for the ability's duration, then null.
   const [enemyStrikeFx, setEnemyStrikeFx] = useState<{ key: number; kind: 'tempest' | 'leviathan' | 'requiem' | 'oracle'; color: string; shots?: number; interval?: number } | null>(null)
@@ -8552,10 +8578,10 @@ export default function RaidCombat({
             {/* Man-o-War Mega FX (Railgun beam lives at stage level, below) */}
             {nukeBlast && <NukeBlast   key={`nb-${nukeBlast.key}`} color={nukeBlast.color} />}
             <AnimatePresence>
-              {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} volley={eHitsplat.volley} />}
+              <SplatSlot handleRef={eSplatRef} />
             </AnimatePresence>
             {/* Frenzy barrage — each shot's own floating number, scattered. */}
-            {barrageSplats.map(s => <BarrageSplat key={s.key} text={s.text} dx={s.dx} crit={s.crit} color={s.color} />)}
+            <BarrageSlot handleRef={barrageRef} />
           </motion.div>
         </motion.div>
 
@@ -8773,7 +8799,7 @@ export default function RaidCombat({
               )}
             </motion.div>
             <AnimatePresence>
-              {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} volley={pHitsplat.volley} />}
+              <SplatSlot handleRef={pSplatRef} />
             </AnimatePresence>
           </motion.div>
           {/* Railgun — a hyper beam erupting across the stage from the player's
@@ -11382,6 +11408,42 @@ function ChargesRow({ charges, max, small, hidden = false, readyGlow = null }: {
       })}
     </div>
   )
+}
+
+type Splat = { key: number; text: string; color: string; big?: boolean; volley?: boolean }
+type BSplat = { key: number; text: string; dx: number; crit?: boolean; color?: string }
+type SplatSlotHandle = { set: React.Dispatch<React.SetStateAction<Splat | null>> }
+type BarrageSlotHandle = { set: React.Dispatch<React.SetStateAction<BSplat[]>> }
+
+/**
+ * ── WHERE A DAMAGE NUMBER'S STATE LIVES ─────────────────────────────────────
+ *
+ * Here, rather than on the fight. See the note on `pSplatRef`: this is the
+ * whole of what stops a hitsplat costing a pass over the fight's eight hundred
+ * elements, twice.
+ *
+ * It hands its own setter out through the ref and nothing else, so the caller's
+ * side is `setState` with a different address. The key still remounts
+ * `HitsplatOverlay` per hit, which is what its own throw-once ref relies on.
+ */
+function SplatSlot({ handleRef }: { handleRef: React.MutableRefObject<SplatSlotHandle | null> }) {
+  const [s, setS] = useState<Splat | null>(null)
+  useEffect(() => {
+    handleRef.current = { set: setS }
+    return () => { handleRef.current = null }
+  }, [handleRef])
+  if (!s) return null
+  return <HitsplatOverlay key={s.key} text={s.text} color={s.color} big={s.big} volley={s.volley} />
+}
+
+/** The same, for the scattered numbers a barrage or a Mega throws. */
+function BarrageSlot({ handleRef }: { handleRef: React.MutableRefObject<BarrageSlotHandle | null> }) {
+  const [list, setList] = useState<BSplat[]>([])
+  useEffect(() => {
+    handleRef.current = { set: setList }
+    return () => { handleRef.current = null }
+  }, [handleRef])
+  return <>{list.map(b => <BarrageSplat key={b.key} text={b.text} dx={b.dx} crit={b.crit} color={b.color} />)}</>
 }
 
 function HitsplatOverlay({ text, color, big, volley }: { text: string; color: string; big?: boolean; volley?: boolean }) {
