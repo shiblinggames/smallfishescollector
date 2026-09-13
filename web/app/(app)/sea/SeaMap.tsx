@@ -11841,10 +11841,15 @@ const MIRROR_SINK = 0.04
  * the loop lifts, so it rode all of it, and hull and reflection bounced as one
  * cut-out. A reflection is in the water and the water is not the thing moving.
  * The loop writes the correction as a custom property on the boat node and the
- * mirror reads it -- no ref through two memo boundaries for one number. Same
- * figure as the captain's twin, in seaCaptain.
+ * mirror reads it -- no ref through two memo boundaries for one number.
+ *
+ * KEEP THIS EQUAL TO seaCaptain's. Two constants, two files, one fact: the
+ * canvas draws the hull on the GPU chart and this draws her on the DOM
+ * fallback, and a captain switching between them should not see the reflection
+ * change its mind. Both are 0.25 -- see the long note over there for why it
+ * came down from 0.4.
  */
-const MIRROR_RIDE = 0.4
+const MIRROR_RIDE = 0.25
 
 const WarshipMirror = memo(function WarshipMirror({ src, tier }: { src: string; tier: number }) {
   const { keel } = shipSeat(tier)

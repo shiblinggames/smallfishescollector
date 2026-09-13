@@ -34,6 +34,27 @@ import {
 /** Everything about how one captain looks. Flat and primitive on purpose: it is
  *  compared field by field to decide whether a captain needs rebuilding, and an
  *  object in here would make every frame look like a change of outfit. */
+/**
+ * ── HOW MUCH A REFLECTION IS ALLOWED TO MOVE ────────────────────────────────
+ *
+ * Twice reduced and reduced again, which is the tell: the amount of motion that
+ * looks right while you are tuning it is roughly double the amount that looks
+ * right while you are playing. Staring at a reflection to judge it is exactly
+ * the wrong way to judge it -- it is furniture, seen out of the corner of the
+ * eye for hours, and anything a reflection does that the eye can NAME is too
+ * much.
+ *
+ * SHEAR is the radians of lean at the peak of the wobble. It was 0.055 plus a
+ * second harmonic at 0.025 -- about four and a half degrees of the twin
+ * swinging under a hull that is barely rocking. The water on this chart is
+ * flat; a mirror in flat water shivers, it does not sway.
+ *
+ * RATE is how fast that happens, and slowing it matters as much as shrinking
+ * it: a small fast wobble reads as jitter, which is worse than a large slow one.
+ */
+const MIRROR_SHEAR = 0.021
+const MIRROR_RATE = 0.78
+
 export type CaptainLook = {
   characterColor: string
   boatId: string | null
@@ -479,10 +500,14 @@ export async function makeCaptain(
    * reflection is in the WATER, and the water is the thing that is not
    * moving here -- the plane is flat and the hull rides over it -- so most of
    * that motion is wrong on it. Not none: pinned dead still it opens a gap
-   * at the keel on every crest and the boat looks lifted out. Four tenths
-   * keeps the seam and loses the bounce.
+   * at the keel on every crest and the boat looks lifted out.
+   *
+   * FOUR TENTHS WAS STILL A BOUNCE. A quarter is the least that keeps the seam
+   * shut, and the seam is the only thing this number is for -- every pixel
+   * above that is the reflection pumping up and down with a hull it is
+   * supposed to be the still image of.
    */
-  const MIRROR_RIDE = 0.4
+  const MIRROR_RIDE = 0.25
   /** Where the mirror sits at rest, kept so the bob can be taken off it. */
   let mirrorBase = 0
   /** How far under the hull it starts, as a share of the hull's height. Without
@@ -706,8 +731,10 @@ export async function makeCaptain(
       // animation. It is a dozen transform copies on a handful of sprites.
       alignMirror()
       wob += dt
-      mirrorBox.skew.x = Math.sin(wob * 1.15 + phase) * 0.055
-        + Math.sin(wob * 1.9 + phase * 2.1) * 0.025
+      // SMALLER AND SLOWER THAN IT LOOKS LIKE IT SHOULD BE. See MIRROR_SHEAR:
+      // the eye reads a reflection as wrong long before it reads it as still.
+      mirrorBox.skew.x = Math.sin(wob * MIRROR_RATE + phase) * MIRROR_SHEAR
+        + Math.sin(wob * MIRROR_RATE * 1.63 + phase * 2.1) * MIRROR_SHEAR * 0.45
     },
     destroy() {
       for (const w of worn) w.aura.destroy()
@@ -895,9 +922,11 @@ export async function makeShip(
       aura?.update(dt)
       // The shear that stops it being an upside-down ship. See the note on the
       // captain's — skew rather than rotation, so the waterline edge stays put.
+      // A ship of the line is heavier and her reflection works less than a
+      // dinghy's, so she takes four fifths of the same numbers.
       wob += dt
-      back.skew.x = Math.sin(wob * 0.95 + phase) * 0.045
-        + Math.sin(wob * 1.6 + phase * 2.1) * 0.02
+      back.skew.x = Math.sin(wob * MIRROR_RATE * 0.82 + phase) * MIRROR_SHEAR * 0.8
+        + Math.sin(wob * MIRROR_RATE * 1.34 + phase * 2.1) * MIRROR_SHEAR * 0.36
     },
     destroy() { view.destroy({ children: true }) },
   }
