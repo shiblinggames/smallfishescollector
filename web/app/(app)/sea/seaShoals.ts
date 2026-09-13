@@ -136,6 +136,9 @@ type Fish = {
   ph: number
   amp: number
   size: number
+  /** Length against width, from its school's build and jittered a little so a
+   *  school is not one fish copied thirteen times. */
+  stretch: number
   /** 0 while swimming, 1 while bolting. Decays. */
   bolt: number
   bx: number
@@ -157,103 +160,94 @@ type School = {
 }
 
 /**
- * ── FOUR KINDS OF FISH, AND A SCHOOL IS ONE OF THEM ─────────────────────────
+ * ── ONE FISH, IN DIFFERENT SIZES AND BUILDS ─────────────────────────────────
  *
- * There was one silhouette, drawn at different sizes. Two hundred and sixty
- * copies of the same shape at slightly different scales is not a sea with fish
- * in it, it is a texture, and it is exactly as much information as an empty
- * ocean -- which is to say none, because nothing is distinguishable from
- * anything else.
+ * There was one silhouette drawn at one proportion, and two hundred and sixty
+ * copies of a single shape is a texture rather than a sea. The first answer to
+ * that was four different silhouettes -- a deep-bodied slab, a thin ribbon, a
+ * tailless blob -- and it was the wrong answer: the shape was already right.
+ * What it needed was range, not replacement.
  *
- * A SCHOOL IS ONE KIND. That is how it works in the water and it is also the
- * thing that makes this read: a shoal of darts and a pair of slow slabs are two
- * events, and you can tell them apart across half a screen. Mixing kinds within
- * a school would put the variety in the wrong place and cancel it out.
+ * So it is the same fish throughout, and a school is a BUILD of it: how big,
+ * how long against its own width, how fast, how far apart, how hard it wags.
+ * A shoal of small quick ones and a few long slow ones are plainly different
+ * things on the water and plainly the same animal, which is what a sea looks
+ * like.
  *
- * The shapes are silhouettes rather than fish drawings. At this size a detailed
- * sprite is mud; what survives is the OUTLINE and the way it moves.
+ * PER SCHOOL, not per fish. That is how it works in the water, and it is the
+ * thing that makes the difference legible: mixed within one school it would be
+ * variety in the wrong place, cancelling itself out. Individual fish still vary
+ * inside their school's build, so no two are identical either.
+ *
+ * AND IT IS ALL ONE TEXTURE, which is why this costs nothing. Size and
+ * elongation are `scaleX` and `scaleY` on a particle that never changes its
+ * frame -- no atlas, no second bind, and the container's texture coordinates
+ * can stay static the way they were built to be.
  */
 type Kind = {
-  /** Which cell of the atlas. */
-  frame: number
   /** Multiplies the fish's own random size. */
   scale: number
-  /** World px per second. A dart hurries, a slab does not. */
+  /** Length against width. Over 1 is a longer, leaner fish; under 1 is a
+   *  stubbier one. The silhouette is the same either way. */
+  stretch: number
+  /** World px per second. A small fish hurries; a big one does not. */
   swim: number
   /** How far its members spread from the school's centre, across and along. */
   spread: [number, number]
-  /** How hard it wags. A long fish rolls; a small one flickers. */
+  /** How hard it wags. A big fish rolls; a small one flickers. */
   amp: [number, number]
-  /** Under water everything is blue-green. These are small departures from it
-   *  and they are all the colour there is at this alpha. */
+  /** Under water everything is blue-green. These are small departures from it,
+   *  and at this alpha they are all the colour there is. */
   tint: number
 }
 
 const KINDS: readonly Kind[] = [
-  // Darts. The default fish: small, quick, packed, everywhere.
-  { frame: 0, scale: 0.9, swim: 30, spread: [190, 120], amp: [5, 14], tint: 0xdfeef6 },
-  // Slabs. Deep-bodied and unhurried, a handful to a school, and the one that
-  // reads as a BIG fish going past.
-  { frame: 1, scale: 1.9, swim: 17, spread: [240, 150], amp: [3, 7], tint: 0xc9dfe8 },
-  // Ribbons. Long, thin and slow, strung out in a line rather than a body.
-  { frame: 2, scale: 1.5, swim: 21, spread: [330, 70], amp: [6, 16], tint: 0xd2e8dc },
-  // Fry. Tiny, tight, and a cloud rather than a formation.
-  { frame: 3, scale: 0.52, swim: 24, spread: [120, 80], amp: [7, 18], tint: 0xeef6fa },
+  // The ordinary fish of this sea, and most of what you should see.
+  { scale: 0.95, stretch: 1.0, swim: 30, spread: [190, 120], amp: [5, 14], tint: 0xdfeef6 },
+  // Big and unhurried. A handful to a school, and the one that reads as
+  // something worth catching going past underneath you.
+  { scale: 1.85, stretch: 1.12, swim: 17, spread: [250, 155], amp: [3, 8], tint: 0xc9dfe8 },
+  // Long and lean. Same fish, drawn out, travelling in a looser line.
+  { scale: 1.3, stretch: 1.6, swim: 23, spread: [320, 90], amp: [6, 15], tint: 0xd2e8dc },
+  // Small fry, tight and quick: a cloud rather than a formation.
+  { scale: 0.55, stretch: 0.92, swim: 26, spread: [130, 85], amp: [7, 18], tint: 0xeef6fa },
 ]
 
-let atlas: Texture[] | null = null
+let fishTex: Texture | null = null
 
 /**
- * THE FOUR, BAKED INTO ONE BITMAP.
- *
- * One canvas, four cells, four frames onto the same uploaded texture -- which
- * is what lets them stay in a ParticleContainer. That container is the reason
- * two hundred and sixty fish cost what they cost, and it takes particles that
- * share a source; four separate textures would be four batches and four binds.
+ * ONE FISH, SEEN FROM ABOVE THROUGH WATER. A soft tapered blob, not a fish
+ * drawing: at the size these are on screen a detailed sprite is mud, and the
+ * shape that reads is a fat head narrowing to a tail.
  */
-function fishAtlas(PIXI: typeof import('pixi.js')): Texture[] {
-  if (atlas) return atlas
+function fishTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (fishTex) return fishTex
   const W = 64, H = 32
   const c = document.createElement('canvas')
-  c.width = W; c.height = H * KINDS.length
+  c.width = W; c.height = H
   const g = c.getContext('2d')!
-
-  /** A soft tapered body: an ellipse with no hard edge, and a wedge of a tail
-   *  which is the only part that says which way it is pointing. */
-  const draw = (row: number, long: number, fat: number, tail: number, tailW: number) => {
-    const y0 = row * H
-    const grad = g.createRadialGradient(W * 0.4, y0 + H / 2, 0, W * 0.4, y0 + H / 2, W * long)
-    grad.addColorStop(0.0, 'rgba(255,255,255,1)')
-    grad.addColorStop(0.5, 'rgba(255,255,255,0.55)')
-    grad.addColorStop(1.0, 'rgba(255,255,255,0)')
-    g.fillStyle = grad
-    g.save()
-    g.translate(W * 0.4, y0 + H / 2)
-    g.scale(1, fat)
-    g.beginPath(); g.arc(0, 0, W * long, 0, Math.PI * 2); g.fill()
-    g.restore()
-    if (tail <= 0) return
-    g.beginPath()
-    g.moveTo(W * tail, y0 + H / 2)
-    g.lineTo(W * 0.98, y0 + H / 2 - H * tailW)
-    g.lineTo(W * 0.98, y0 + H / 2 + H * tailW)
-    g.closePath()
-    g.fillStyle = 'rgba(255,255,255,0.5)'
-    g.fill()
-  }
-
-  //     row  length  fatness  tail from  tail half-height
-  draw(0, 0.42, 0.44, 0.72, 0.26)   // dart: the original
-  draw(1, 0.40, 0.76, 0.76, 0.30)   // slab: deep-bodied, short tail
-  draw(2, 0.48, 0.20, 0.80, 0.14)   // ribbon: long and thin
-  draw(3, 0.30, 0.62, 0, 0)         // fry: a blob, no tail worth drawing
-
-  const base = PIXI.Texture.from(c)
-  atlas = KINDS.map((_, i) => new PIXI.Texture({
-    source: base.source,
-    frame: new PIXI.Rectangle(0, i * H, W, H),
-  }))
-  return atlas
+  // The body: an ellipse fading out at both ends so it has no hard edge.
+  const grad = g.createRadialGradient(W * 0.4, H / 2, 0, W * 0.4, H / 2, W * 0.42)
+  grad.addColorStop(0.0, 'rgba(255,255,255,1)')
+  grad.addColorStop(0.5, 'rgba(255,255,255,0.55)')
+  grad.addColorStop(1.0, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.save()
+  g.translate(W * 0.4, H / 2)
+  g.scale(1, 0.44)
+  g.beginPath(); g.arc(0, 0, W * 0.42, 0, Math.PI * 2); g.fill()
+  g.restore()
+  // The tail: a soft wedge off the back, which is the only part that says
+  // which way it is pointing.
+  g.beginPath()
+  g.moveTo(W * 0.72, H / 2)
+  g.lineTo(W * 0.98, H * 0.24)
+  g.lineTo(W * 0.98, H * 0.76)
+  g.closePath()
+  g.fillStyle = 'rgba(255,255,255,0.5)'
+  g.fill()
+  fishTex = PIXI.Texture.from(c)
+  return fishTex
 }
 
 /**
@@ -375,16 +369,14 @@ const BOW_TURN = 2.4
 
 export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
   const view: ParticleContainer = new PIXI.ParticleContainer({
-    // `uvs` IS NOT DECORATION. A ParticleContainer uploads static properties
-    // once and dynamic ones every frame, and texture coordinates default to
-    // STATIC -- which was correct while every fish was the same silhouette and
-    // is a silent bug the moment a school changes kind: the UVs would stay on
-    // whatever frame was uploaded first and every fish in the sea would be a
-    // dart wearing another fish's size. One more small buffer a frame, and it
-    // is the difference between four kinds of fish and one.
-    dynamicProperties: { position: true, rotation: true, vertex: true, color: true, uvs: true },
+    // `uvs` STAYS STATIC, and that is a deliberate saving rather than an
+    // oversight: every fish in the sea is one frame of one texture, so the
+    // coordinates are uploaded once and never touched again. A moment of this
+    // file had four silhouettes in an atlas and needed them dynamic; the builds
+    // replaced that, and this is one of the things it bought back.
+    dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
   })
-  const frames = fishAtlas(PIXI)
+  const tex = fishTexture(PIXI)
 
   const schools: School[] = Array.from({ length: SCHOOLS }, () => ({
     x: 0, y: 0, ang: Math.random() * Math.PI * 2,
@@ -393,7 +385,7 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
 
   const fish: Fish[] = []
   for (let i = 0; i < COUNT; i++) {
-    const p: Particle = new PIXI.Particle({ texture: frames[0] })
+    const p: Particle = new PIXI.Particle({ texture: tex })
     p.anchorX = 0.5
     p.anchorY = 0.5
     p.alpha = 0
@@ -402,7 +394,7 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
       p, s: i % SCHOOLS,
       ox: 0, oy: 0,
       ph: Math.random() * Math.PI * 2,
-      amp: 8, size: 0.8,
+      amp: 8, size: 0.8, stretch: 1,
       bolt: 0, bx: 0, by: 0,
     })
   }
@@ -417,8 +409,11 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
     const k = KINDS[schools[si].kind]
     for (const f of fish) {
       if (f.s !== si) continue
-      f.p.texture = frames[k.frame]
+      // NO TEXTURE SWAP. Same fish, different build -- see the note on Kind.
       f.p.tint = k.tint
+      // A tenth either way on top of the school's own build, so the biggest in
+      // a shoal is visibly the biggest and none of them are twins.
+      f.stretch = k.stretch * (0.92 + Math.random() * 0.16)
       // Spread across the heading more than along it, so a shoal reads as a
       // body of fish rather than a queue -- except the ribbons, whose table
       // says the opposite and means it.
@@ -657,8 +652,13 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
         // allowed to grow them: a bigger fish means a bigger fish.
         const vis = Math.min(1, sc.lit)
         const k = f.size * (0.5 + vis * 0.22) * (1 + f.bolt * 0.15)
-        f.p.scaleX = k
-        f.p.scaleY = k
+        // LENGTH AND WIDTH SEPARATELY, which is the whole of the variety: the
+        // sprite is one fish and `stretch` decides whether it is a short thick
+        // one or a long lean one. Split either side of the ratio so a stretched
+        // fish gains length and loses girth rather than simply getting bigger.
+        const long = Math.sqrt(f.stretch)
+        f.p.scaleX = k * long
+        f.p.scaleY = k / long
         // ITS OWN COLOUR, THROUGH THE HOUR'S. `tint` is the night multiply
         // every sprite on the chart takes; the kind's own colour is multiplied
         // into it rather than overwriting it, or a fish would be the only
