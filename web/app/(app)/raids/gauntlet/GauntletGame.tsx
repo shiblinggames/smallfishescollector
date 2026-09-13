@@ -468,14 +468,35 @@ export default function GauntletGame(props: GauntletGameProps) {
    */
   const phaseNowRef = useRef<Phase>(phase)
   phaseNowRef.current = phase
-  const setPhase = useCallback((next: Phase) => {
+  /**
+   * ── AND `also` IS NOT A CONVENIENCE ───────────────────────────────────────
+   *
+   * Anything that clears the state THE CURRENT SCREEN IS RENDERED FROM has to
+   * happen inside the veil, with the phase change, or the screen is pulled out
+   * from under itself while it is still the screen.
+   *
+   * That is not hypothetical. Taking a boon ran `setPendingBoons(null)` and
+   * then `setPhase('between')` — and setPhase does not change the phase for
+   * 200ms, it starts a fade. So for those 200ms the phase was still 'boon' with
+   * no boons, every branch guard failed, the view fell through to `return null`
+   * and the ENTIRE run subtree unmounted: the cards vanished instead of fading,
+   * the keyed arena went with them (a whole WebGL Application torn down and
+   * rebuilt on every boon and every curse), and the app-level /raids page
+   * image showed through the hole for a fifth of a second. That flash of the
+   * practice-raid background is what it looked like from outside.
+   *
+   * The long note further down about the arena being one mount per run is the
+   * same lesson; it was defeated by a branch guard rather than by a wrapper.
+   */
+  const setPhase = useCallback((next: Phase, also?: () => void) => {
     const cur = phaseNowRef.current
-    if (cur === next) return
+    if (cur === next) { also?.(); return }
     const commit = () => {
       // Land at the top while the screen is invisible. The effect that resets
       // scroll on a phase change runs after the new screen has painted, so a
       // tall screen opened scrolled and then jumped.
       window.scrollTo(0, 0)
+      also?.()
       setPhaseRaw(next)
     }
     if (RUN_PHASES.has(cur) && RUN_PHASES.has(next)) {
@@ -1884,10 +1905,11 @@ export default function GauntletGame(props: GauntletGameProps) {
     setCurseTiers(next)
     // Dead Hands: lock the freshly-silenced crew into the used set right away.
     if (offer.silenceCrew) reconcileSilence()
-    setPendingCurse(null)
+    // CLEARED INSIDE THE VEIL, not before it — see setPhase. This screen is
+    // rendered from `pendingCurse` and is still on screen for the fade.
     // If a boon was drawn for this same depth (Calm Before lands a curse on a
     // boon depth), show it next instead of dropping straight to the breather.
-    setPhase(pendingBoons ? 'boon' : 'between')
+    setPhase(pendingBoons ? 'boon' : 'between', () => setPendingCurse(null))
   }
 
   // Claim a drafted boon — its effect rides the active-effect channel (run-wide,
@@ -1921,10 +1943,13 @@ export default function GauntletGame(props: GauntletGameProps) {
     // (handled at the next draw). So taking a boon only bumps its own tier.
     const nextTiers = { ...boonTiers, [offer.id]: offer.tier }
     setBoonTiers(nextTiers)
-    setPendingBoons(null)
-    setPendingConfluence(null)   // forwent the synergy card this draft
-    setPendingReprieve(null)     // chose the boon over the relief
-    setPhase('between')
+    // INSIDE THE VEIL — see setPhase. The draft is what this screen is drawn
+    // from, so clearing it here would take the cards out mid-fade.
+    setPhase('between', () => {
+      setPendingBoons(null)
+      setPendingConfluence(null)   // forwent the synergy card this draft
+      setPendingReprieve(null)     // chose the boon over the relief
+    })
   }
 
   // The synergy slot each draft can offer: a CONVERGENCE (Don's meta-tier) takes
@@ -1951,7 +1976,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     if (offer.isConvergence) {
       const cv = CONVERGENCES.find(x => x.id === offer.id)
       setConvergencesTaken(prev => (prev.includes(offer.id) ? prev : [...prev, offer.id]))
-      setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null)
       if (cv) {
         setConfluenceBanner({ name: cv.name, desc: convergenceDescAt(cv, offer.level), level: offer.level, isNew: true, discovered: false, isConvergence: true, image: cv.image, key: Date.now() })
         vibrate([0, 55, 40, 90, 40, 150])
@@ -1959,14 +1983,12 @@ export default function GauntletGame(props: GauntletGameProps) {
       }
       // "The Convergence" badge — forging any convergence (a Don's-only meta synergy).
       if (props.variant === 'don') unlockBadge('first_convergence').catch(() => {})
-      setPhase('between')
+      // The draft clears INSIDE the veil — see setPhase.
+      setPhase('between', () => { setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null) })
       return
     }
     const c = CONFLUENCES.find(x => x.id === offer.id)
     setConfluencesTaken(prev => (prev.includes(offer.id) ? prev : [...prev, offer.id]))
-    setPendingBoons(null)
-    setPendingConfluence(null)
-    setPendingReprieve(null)
     if (c) {
       setConfluenceUnlocked(c)
       const discovered = !seenConfluences.includes(c.id)
@@ -1978,7 +2000,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       vibrate([0, 45, 40, 80, 40, 130])
       import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
     }
-    setPhase('between')
+    // The draft clears INSIDE the veil — see setPhase.
+    setPhase('between', () => { setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null) })
   }
 
   // Second Cast: throw the offered boons back and draw three fresh ones (the
@@ -2062,9 +2085,10 @@ export default function GauntletGame(props: GauntletGameProps) {
         vibrate([0, 40, 50, 70])
       }
     }
-    setPendingReprieve(null)
-    setPendingBoons(null)
-    setPhase('between')
+    setPhase('between', () => {
+      setPendingReprieve(null)
+      setPendingBoons(null)
+    })
   }
 
   // Snapshot the run's boons + curses for the deepest-run recap. The server
