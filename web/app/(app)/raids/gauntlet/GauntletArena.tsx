@@ -271,7 +271,7 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       // Anchors are read by the fight EVERY FRAME through a ref, so neither
       // side re-renders to keep a hitsplat over a hull.
       const anchors: { current: { player: ShipAnchor; enemy: ShipAnchor } | null } = {
-        current: { player: { x: 0, y: 0, w: 0 }, enemy: { x: 0, y: 0, w: 0 } },
+        current: { player: { x: 0, y: 0, w: 0, box: 0 }, enemy: { x: 0, y: 0, w: 0, box: 0 } },
       }
       const pose = { player: null as ShipFx | null, enemy: null as ShipFx | null }
 
@@ -453,6 +453,11 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         A.enemy.x = box.left + enemy.node.x
         A.enemy.y = box.top + enemy.node.y
         A.enemy.w = f.enemy.hull
+        // AND THE BOXES THE SPRITES ABOVE ARE ACTUALLY DRAWN AT, which is what
+        // the fight's own hidden stand-ins have to match or every aura laid
+        // over them sits somewhere the ship is not.
+        A.player.box = f.player.box
+        A.enemy.box = f.enemy.box
 
         // The wards and the conditions ride the same measurements, around the
         // hulls' middles.

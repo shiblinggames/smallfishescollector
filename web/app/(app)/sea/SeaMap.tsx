@@ -4343,7 +4343,7 @@ export default function SeaMap({
       // not change — and the reader on the other side only ever looks at the
       // fields.
       const A = anchorsRef.current ?? (anchorsRef.current = {
-        player: { x: 0, y: 0, w: 0 }, enemy: { x: 0, y: 0, w: 0 },
+        player: { x: 0, y: 0, w: 0, box: 0 }, enemy: { x: 0, y: 0, w: 0, box: 0 },
       })
       A.player.x = cx + offX
       A.player.y = cy + offY
@@ -4351,6 +4351,11 @@ export default function SeaMap({
       A.enemy.x = cx + (hull.at.x - camAt.current.x) * z
       A.enemy.y = cy + (hull.at.y - camAt.current.y) * z * GROUND
       A.enemy.w = hull.encW * z
+      // AND THE PAINTINGS THEY ARE DRAWN IN. WARSHIP_W is the box the warship
+      // art occupies; `beamW` is the hull inside it. See ShipAnchor for why
+      // the fight needs both.
+      A.player.box = WARSHIP_W * z
+      A.enemy.box = hull.encBox * z
       // ── THE WARDS, EVERY FRAME ────────────────────────────────────────
       //
       // A shield is a state rather than an event (see seaAbilityFx), so it is
@@ -4394,7 +4399,7 @@ export default function SeaMap({
   const fightStation = useRef<{ x: number; y: number } | null>(null)
   /** The enemy's place and drawn width, resolved once. Both are fixed for the
    *  length of a fight, and the frame loop should not be re-deriving them. */
-  const fightHullRef = useRef<{ at: { x: number; y: number }; encW: number } | null>(null)
+  const fightHullRef = useRef<{ at: { x: number; y: number }; encW: number; encBox: number } | null>(null)
 
   /**
    * ── FINDING SOMEWHERE TO STAND ──────────────────────────────────────────
@@ -5609,7 +5614,11 @@ export default function SeaMap({
     // EncounterMark derives its box from, so a ward wraps the ship that is
     // actually painted rather than the transparent frame around her.
     const encHull = hullFor(enc!)
-    fightHullRef.current = { at, encW: encHull ? encArt(encHull).hull : 245 }
+    // BOTH WIDTHS. `encW` is the ship; `encBox` is the painting she is inside,
+    // which is nearly twice as wide at the low end and is what the fight's own
+    // hidden stand-in has to match — see ShipAnchor.
+    const encSize = encHull ? encArt(encHull) : { hull: 245, box: 408 }
+    fightHullRef.current = { at, encW: encSize.hull, encBox: encSize.box }
     const station = pickStation(at.x, at.y)
     fightStation.current = station
     // THE CAMERA FRAMES THE PAIR, not the captain. Held on the midpoint between
@@ -9014,17 +9023,18 @@ export default function SeaMap({
           // out rather than here. Neither changes during a fight, and this was
           // scanning all of RAID_MAP and re-projecting the encounter on every
           // frame to arrive at the same two numbers it had last frame.
-          const { at, encW } = fightHullRef.current
+          const { at, encW, encBox } = fightHullRef.current
           if (box) {
             const z = zoomRef.current
             const cx = box.left + box.width / 2
             const cy = box.top + box.height / 2
             anchorsRef.current = {
-              player: { x: cx + offX, y: cy + offY, w: hullNow.beamW * z },
+              player: { x: cx + offX, y: cy + offY, w: hullNow.beamW * z, box: WARSHIP_W * z },
               enemy: {
                 x: cx + (at.x - camAt.current.x) * z,
                 y: cy + (at.y - camAt.current.y) * z * GROUND,
                 w: encW * z,
+                box: encBox * z,
               },
             }
             // AND THE BLOWS THE ENEMY TAKES. Its hull is a DOM mark in both

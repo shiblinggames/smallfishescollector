@@ -419,11 +419,34 @@ export interface CombatStatDelta {
 }
 
 /**
- * WHERE A HULL IS ON SCREEN, in viewport px. `w` is how wide the ship reads at
- * the current zoom, so an effect hung on it stays the right size relative to
- * the ship rather than to the window.
+ * WHERE A HULL IS ON SCREEN, in viewport px.
+ *
+ * TWO WIDTHS, AND THEY ARE NOT THE SAME NUMBER. A ship painting is a ship with
+ * transparent water around it: the chapter-1 fleet is 600x335 with about 52%
+ * of that width actually being hull. So there is
+ *
+ *   `w`   — how wide the SHIP reads. What an effect hung on the hull is scaled
+ *           by, and what a ward is cut to, so a skiff's shell and a flagship's
+ *           are different shapes.
+ *   `box` — how wide the PAINTING is drawn. Nearly twice `w` at the low end.
+ *
+ * The stand-in <img> in this file has to be the BOX, because it IS the same
+ * painting the renderer is drawing and everything laid over it — the burn, the
+ * rime, the aegis ring, the muzzle flash — is positioned as a percentage of
+ * it, tuned against the visible image on a /raids route.
+ *
+ * It was the hull, and being the hull it was both too narrow and, because the
+ * lift is a fraction of the same number, far too low: the enemy's box came out
+ * at a bit over half the painting's width with its foot BELOW the waterline, so
+ * a burning ship burned in the open water under her keel.
  */
-export type ShipAnchor = { x: number; y: number; w: number }
+export type ShipAnchor = {
+  x: number
+  y: number
+  w: number
+  /** The width the ART is drawn at, padding and all. */
+  box: number
+}
 
 /**
  * WHAT A HULL IS DOING, for a renderer that is not this one.
@@ -2545,24 +2568,43 @@ export default function RaidCombat({
     const onResize = () => { box = stage.getBoundingClientRect(); measurePlates() }
     window.addEventListener('resize', onResize)
 
-    /** Put one anchor on one hull. Left/top and width only: the transform is
-     *  framer-motion's, and every animation in this file rides it. */
-    const place = (el: HTMLElement | null, a: ShipAnchor | undefined, lift: number) => {
+    /**
+     * Put one anchor on one hull. Left/top and width only: the transform is
+     * framer-motion's, and every animation in this file rides it.
+     *
+     * `seat` is where the anchor's point sits in the PAINTING, top to bottom:
+     * the two anchors do not mean the same thing. The player's is her sprite's
+     * CENTRE, because the boat is drawn centred on her position, so she seats
+     * at 0.5. The enemy's is her WATERLINE — her mark is anchored at its foot —
+     * so she seats at 1 and the painting hangs entirely above it.
+     *
+     * The height comes from the art's own aspect rather than a constant, so a
+     * painting with a different shape lands right without a second table.
+     */
+    const place = (el: HTMLElement | null, a: ShipAnchor | undefined, seat: number, aspect: number) => {
       if (!el || !a) return
-      el.style.left = `${a.x - box.left - a.w / 2}px`
-      // LIFTED BY WHAT THE ANCHOR MEANS, per side. The old halving by WIDTH
-      // pushed the box — and every aura, ring, burst and glow inside it — a
-      // fifth of a ship-length off the hull, which is exactly where Kat's
-      // shield ring was floating. The two anchors are not the same point:
-      // the player's is her sprite's CENTRE (the boat is drawn centred on her
-      // position), the enemy's is her WATERLINE (the mark is anchored at its
-      // foot). The container is the art's box, about 0.56 as tall as wide, so
-      // the player lifts half that and the enemy lifts nearly all of it.
-      el.style.top = `${a.y - box.top - a.w * lift}px`
+      el.style.left = `${a.x - box.left - a.box / 2}px`
+      el.style.top = `${a.y - box.top - a.box * aspect * seat}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
-      el.style.width = `${a.w}px`
+      el.style.width = `${a.box}px`
       el.style.maxWidth = 'none'
+    }
+
+    /**
+     * HOW TALL EACH PAINTING IS AGAINST ITS OWN WIDTH.
+     *
+     * Read off the images themselves. `naturalWidth` costs nothing (it forces
+     * no layout) but it is zero until the file has decoded, so it is taken
+     * alongside the plates on the same slow beat rather than in a frame, and
+     * it starts at the fleet's own 600x335 so the first frames are not wrong.
+     */
+    const aspect = { p: 335 / 600, e: 335 / 600 }
+    const readAspect = () => {
+      const pi = playerShipRef.current?.querySelector('img')
+      const ei = enemyShipRef.current?.querySelector('img')
+      if (pi?.naturalWidth) aspect.p = pi.naturalHeight / pi.naturalWidth
+      if (ei?.naturalWidth) aspect.e = ei.naturalHeight / ei.naturalWidth
     }
 
     /**
@@ -2584,6 +2626,7 @@ export default function RaidCombat({
       // no longer sits on the bottom of the window — on a phone it stops above
       // the tab bar — so measuring up from the window put the card inside it.
       dim.deckTop = actionPanelRef.current?.getBoundingClientRect().top ?? dim.deckTop
+      readAspect()
     }
     measurePlates()
     // Twice a second is far more often than a nameplate changes shape and far
@@ -2676,8 +2719,8 @@ export default function RaidCombat({
         }
       }
       if (at && moved) {
-        place(playerShipRef.current, at.player, 0.28)
-        place(enemyShipRef.current, at.enemy, 0.52)
+        place(playerShipRef.current, at.player, 0.5, aspect.p)
+        place(enemyShipRef.current, at.enemy, 1, aspect.e)
         dockEnemyPlate()
         dockPlayerPlate()
       }
@@ -8350,6 +8393,12 @@ export default function RaidCombat({
           style={{
             position: 'absolute', right: wide ? '-9%' : '7%', top: '42%', zIndex: 2,
             width: '38%', maxWidth: 185, transformOrigin: 'bottom center',
+            // NOTHING TO TAP. Over the sea this box is a stand-in for a hull
+            // the chart is painting, and it is now the width of the whole
+            // PAINTING rather than the ship inside it — so an empty
+            // transparent div a third of the screen wide would be sitting over
+            // open water swallowing presses.
+            ...(overSea ? { pointerEvents: 'none' as const } : null),
           }}
         >
           <motion.div animate={enemyShakeCtrl}
@@ -8469,6 +8518,12 @@ export default function RaidCombat({
           style={{
             position: 'absolute', left: wide ? '-13%' : '0%', bottom: '4%', zIndex: 3,
             width: '68%', maxWidth: 340, transformOrigin: 'bottom center',
+            // NOTHING TO TAP. Over the sea this box is a stand-in for a hull
+            // the chart is painting, and it is now the width of the whole
+            // PAINTING rather than the ship inside it — so an empty
+            // transparent div a third of the screen wide would be sitting over
+            // open water swallowing presses.
+            ...(overSea ? { pointerEvents: 'none' as const } : null),
           }}
         >
           <motion.div animate={playerShakeCtrl}
