@@ -8,6 +8,12 @@
 //
 // ── WHAT IT DRAWS, BOTTOM TO TOP ────────────────────────────────────────────
 //
+//   THE FIELD     what is lying on the bottom. Davy's is a drowned
+//                 wreck-field: hulks over on their bilges, open ribs, a
+//                 leaning mast, and the spoil heaps between them. It is the
+//                 only thing in the whole gauntlet with geometry, and it is
+//                 what the shafts have to sweep ACROSS for the light to read
+//                 as light rather than as a gradient.
 //   THE DEEP      a slow pulse of light at the foot of the arena — the thing
 //                 under you. At a boss depth it OPENS: an eye, the run's own
 //                 colour, that watches the fight from under the water.
@@ -67,6 +73,10 @@ export type Scenery = {
 const MOTE_N = 140
 const BURST_N = 64
 const SHAFT_N = 6
+/** How many pieces of wreck are on the bottom. Sixteen is enough to reach
+ *  across a wide screen with the far ones thinning out, and few enough that
+ *  the whole field is sixteen sprite writes a frame. */
+const FIELD_N = 16
 
 // ── TEXTURES ─────────────────────────────────────────────────────────────────
 //
@@ -172,6 +182,114 @@ function edge(PIXI: typeof import('pixi.js')) {
   }, PIXI)
 }
 
+/**
+ * ── WHAT IS LYING ON THE BOTTOM ─────────────────────────────────────────────
+ *
+ * Four pieces of a drowned wreck-field, drawn white and tinted into the deep
+ * water by whoever hosts them. Between them they make a floor: a hull over on
+ * her bilge with her stern bitten out, the open ribs of another, a mast still
+ * standing in its own heap, and the spoil that everything is sitting in.
+ *
+ * THEY ARE DELIBERATELY CRUDE. These are seen through a water column at a
+ * third to a half of their nearest size and at alpha 0.5 at best. Detail at
+ * that distance is mud; what reads is the outline, and the outline has to be
+ * unmistakable at a glance — a dome, a ribcage, a diagonal, a lump.
+ *
+ * EVERY ONE FADES OUT AT THE TOP, and that is not decoration. A shape with a
+ * hard upper edge is a cutout stuck on the picture. The thing that says "this
+ * is under water" is that its outline stops being certain the further it gets
+ * from the floor, because that is more water between it and you. The whole
+ * plate is blurred for the same reason before the fade goes on.
+ */
+const FIELD_W = 512, FIELD_H = 256
+
+function wreck(PIXI: typeof import('pixi.js'), kind: number): Texture {
+  return cached('wreck' + kind, () => {
+    const W = FIELD_W, H = FIELD_H
+    const { c, g } = canvas(W, H)
+    g.fillStyle = '#fff'; g.strokeStyle = '#fff'
+    g.lineCap = 'round'; g.lineJoin = 'round'
+
+    if (kind === 0) {
+      // ── A HULL OVER ON HER BILGE ──────────────────────────────────
+      // A long dome, which is what the underside of a ship lying over looks
+      // like from any distance at all. Her stern is bitten out, because an
+      // unbroken hull on the seabed reads as a whale.
+      g.beginPath(); g.ellipse(W * 0.5, H * 1.02, W * 0.4, H * 0.55, 0, Math.PI, 0); g.fill()
+      g.globalCompositeOperation = 'destination-out'
+      g.beginPath(); g.ellipse(W * 0.84, H * 0.46, W * 0.11, H * 0.42, 0.3, 0, Math.PI * 2); g.fill()
+      g.globalCompositeOperation = 'source-over'
+      // The keel, a ridge along the top of her.
+      g.lineWidth = 7
+      g.beginPath(); g.moveTo(W * 0.18, H * 0.62); g.quadraticCurveTo(W * 0.46, H * 0.40, W * 0.7, H * 0.52); g.stroke()
+    } else if (kind === 1) {
+      // ── THE OPEN RIBS OF ANOTHER ──────────────────────────────────
+      // Her planking is long gone. The keel is in the silt and the frames
+      // stand off it, tallest amidships, leaning the way she went down.
+      g.lineWidth = 9
+      g.beginPath(); g.moveTo(W * 0.13, H * 0.95); g.lineTo(W * 0.87, H * 0.9); g.stroke()
+      g.lineWidth = 7
+      for (let k = 0; k <= 6; k++) {
+        const u = k / 6
+        const x = W * (0.17 + u * 0.66)
+        const h = H * (0.26 + Math.sin(u * Math.PI) * 0.5)
+        const lean = (u - 0.35) * W * 0.13
+        g.beginPath()
+        g.moveTo(x, H * 0.93)
+        g.quadraticCurveTo(x + lean * 0.5, H * 0.93 - h * 0.62, x + lean, H * 0.93 - h)
+        g.stroke()
+      }
+    } else if (kind === 2) {
+      // ── A MAST STILL STANDING ─────────────────────────────────────
+      // The one vertical in the field, and the reason it is here: everything
+      // else on this floor is horizontal, and a room with no uprights has no
+      // height. It leans, carries one yard and one line still hanging off it,
+      // and stands in its own heap so it is not a stick planted in nothing.
+      g.beginPath(); g.ellipse(W * 0.34, H * 1.03, W * 0.16, H * 0.16, 0, Math.PI, 0); g.fill()
+      g.lineWidth = 11
+      g.beginPath(); g.moveTo(W * 0.34, H * 0.97); g.lineTo(W * 0.52, H * 0.08); g.stroke()
+      // The yard crosses her, both sides. Hung off one side it reads as a
+      // branch, and the cross is the whole reason this shape says "ship".
+      g.lineWidth = 7
+      g.beginPath(); g.moveTo(W * 0.24, H * 0.63); g.lineTo(W * 0.68, H * 0.49); g.stroke()
+      g.lineWidth = 4
+      g.beginPath(); g.moveTo(W * 0.6, H * 0.53); g.quadraticCurveTo(W * 0.67, H * 0.78, W * 0.57, H * 0.96); g.stroke()
+    } else {
+      // ── THE SPOIL EVERYTHING SITS IN ──────────────────────────────
+      // The commonest piece, and the humblest. Without it the wrecks are
+      // objects floating at various heights; with it they are things resting
+      // on a bottom.
+      for (const m of [[0.26, 0.23, 0.2], [0.55, 0.29, 0.29], [0.81, 0.19, 0.15]]) {
+        g.beginPath(); g.ellipse(W * m[0], H * 1.03, W * m[1], H * m[2], 0, Math.PI, 0); g.fill()
+      }
+    }
+
+    // Murk, then the dissolve. In that order: blurring after the fade would
+    // smear the transparency back up into a haze with an edge of its own.
+    const out = canvas(W, H)
+    out.g.filter = 'blur(3px)'
+    out.g.drawImage(c, 0, 0)
+    out.g.filter = 'none'
+    out.g.globalCompositeOperation = 'destination-in'
+    const fade = out.g.createLinearGradient(0, 0, 0, H)
+    fade.addColorStop(0, 'rgba(255,255,255,0.1)')
+    fade.addColorStop(0.5, 'rgba(255,255,255,0.66)')
+    fade.addColorStop(1, 'rgba(255,255,255,1)')
+    out.g.fillStyle = fade
+    out.g.fillRect(0, 0, W, H)
+    return out.c
+  }, PIXI)
+}
+
+/** A colour taken down, channel by channel. Never toward black as a colour:
+ *  toward a darker version of ITSELF, which is the whole reason the wreckage
+ *  does not read as a hole cut in the sea. */
+function shade(c: number, k: number): number {
+  return (Math.round(((c >> 16) & 255) * k) << 16)
+    | (Math.round(((c >> 8) & 255) * k) << 8)
+    | Math.round((c & 255) * k)
+}
+
 /** The pupil of the thing under the water: a dark slit with a soft rim. */
 function pupil(PIXI: typeof import('pixi.js')) {
   return cached('pupil', () => {
@@ -218,6 +336,70 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
   const dotT = dot(PIXI), glowT = glow(PIXI), shaftT = shaft(PIXI), ringT = ring(PIXI), edgeT = edge(PIXI), pupilT = pupil(PIXI)
 
   let scene: Scene = { variant: 'davy', hardcore: false, boss: false, apex: false, deep: 0, mood: 'fight', key: 0x9cf0ff, deepColor: 0x04121a }
+
+  // ── THE FLOOR OF THE LOCKER ────────────────────────────────────────
+  //
+  // FIRST, so everything else is in the water in FRONT of it. That ordering is
+  // the whole atmospheric trick: the deep's glow and the shafts are additive
+  // and land on top, which is exactly what a water column between you and a
+  // distant thing does — it washes it out and it takes its colour. Drawn over
+  // the light instead, the same shapes would be cardboard held up to a lamp.
+  //
+  // ── AND IT DOES NOT DRIFT ──────────────────────────────────────────
+  //
+  // There were two tiling bands of dark shapes scrolling across here once, and
+  // they were cut on sight, correctly: things sliding sideways past a static
+  // camera is a side-scroller backdrop, and it told you the room was a
+  // painting on a roller. A floor is FIXED. The only things that move it are
+  // the current, which is a lean of under a degree, and a fall — where it
+  // streams up past you and the near pieces go faster than the far, because
+  // that is the one moment when you are genuinely moving through the room.
+  const fieldLayer: Container = new PIXI.Container()
+  far.addChild(fieldLayer)
+  type Piece = {
+    s: Sprite
+    /** Across the frame, 0..1. Fixed for the life of the field. */
+    u: number
+    /** 0 nearest — low, big, dark. 1 farthest — high, small, nearly gone. */
+    d: number
+    /** How wide it is in units of the SHORT side, at the nearest depth. */
+    w: number
+    /** Its own phase in the current. */
+    ph: number
+    /** Half of them face the other way. A field of identically-handed wrecks
+     *  reads as a repeated stamp, which is what it is. */
+    flip: number
+  }
+  const field: Piece[] = []
+  {
+    // Deterministic: the same wreck-field is on the bottom every visit, so it
+    // is a place you come back to rather than a shuffle.
+    const r = rng(0x5ea1ed)
+    const wreckT = [wreck(PIXI, 0), wreck(PIXI, 1), wreck(PIXI, 2), wreck(PIXI, 3)]
+    /** Spoil is commonest because it is the ground; the mast is rarest because
+     *  one upright reads as a landmark and four read as a fence. */
+    const PICK = [3, 3, 3, 1, 1, 0, 0, 2]
+    const WIDE = [0.44, 0.34, 0.3, 0.4]
+    for (let i = 0; i < FIELD_N; i++) {
+      const kind = PICK[Math.floor(r() * PICK.length)]
+      const sp: Sprite = new PIXI.Sprite(wreckT[kind])
+      sp.anchor.set(0.5, 1)
+      field.push({
+        s: sp, u: (i + r() * 0.85) / FIELD_N,
+        // Square-rooted, so the far half of the range gets most of the pieces
+        // and the field THINS OUT into the murk instead of being a row of
+        // things at one distance.
+        d: Math.sqrt(r()),
+        w: WIDE[kind] * (0.78 + r() * 0.55),
+        ph: r() * 6.28,
+        flip: r() < 0.5 ? -1 : 1,
+      })
+    }
+    // FARTHEST FIRST. They are added in draw order, so a near hulk is never
+    // stacked behind something half its size and twice its distance.
+    field.sort((a, b) => b.d - a.d)
+    for (const p of field) fieldLayer.addChild(p.s)
+  }
 
   // ── THE DEEP ───────────────────────────────────────────────────────
   const deepGlow: Sprite = new PIXI.Sprite(glowT)
@@ -311,6 +493,12 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
     for (const m of motes) m.p.tint = moteTint
     const edgeTint = scene.hardcore ? 0x1a0206 : scene.variant === 'don' ? 0x02100a : 0x02080e
     for (const e of edges) e.tint = edgeTint
+    // THE WRECKAGE IS THE DEEP WATER, TAKEN DOWN. Not black: a black
+    // silhouette on a coloured sea is a hole cut in the picture, and that is
+    // precisely how the first attempt at scenery here read. The same hue,
+    // darker, at half alpha, is something a long way off in murk.
+    const wreckTint = shade(scene.deepColor, 0.8)
+    for (const p of field) p.s.tint = wreckTint
   }
   retint()
 
@@ -409,6 +597,42 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
 
       // During a fall everything tears upward, like the weather's rise.
       const rise = fall * fall * 260
+
+      // ── THE FLOOR ────────────────────────────────────────────────
+      //
+      // Placed between two lines of the frame rather than on a horizon: the
+      // near pieces sit at 0.61 of the height and the far ones at 0.27, and
+      // everything in between reads as distance because it is smaller, higher
+      // and fainter all at once.
+      //
+      // BOTH ENDS OF THE FRAME ARE SPOKEN FOR and neither is this. The bottom
+      // third of a fight is the log and the guns, and in the hub it is the
+      // moorings and the helm; the top is the HUD. The field lives in the band
+      // between them, which is the band that had nothing in it at all.
+      const fieldOn = scene.variant === 'davy' ? 1 : 0
+      const U = Math.min(W, H)
+      for (const p of field) {
+        if (!fieldOn) { if (p.s.alpha) p.s.alpha = 0; continue }
+        const k = 1 - p.d
+        const wide = U * p.w * (0.4 + 0.6 * k)
+        p.s.width = wide
+        p.s.height = wide * (FIELD_H / FIELD_W)
+        // The width setter writes a positive scale, so the handedness has to
+        // go back on after it, every frame.
+        p.s.scale.x = Math.abs(p.s.scale.x) * p.flip
+        p.s.x = W * (-0.06 + p.u * 1.12)
+        // The fall is parallax: the near ones tear up past you and the far
+        // ones barely move, which is the only cue in the whole descent that
+        // says how fast you are going down.
+        p.s.y = H * (0.27 + 0.34 * k) - rise * (0.3 + 0.7 * k)
+        // A lean, not a drift. Under a degree, anchored at the foot, so the
+        // tops of the masts and ribs breathe with the current and nothing
+        // ever leaves the spot it is standing on.
+        p.s.rotation = Math.sin(t * 0.17 + p.ph) * 0.014 * k
+        // Fainter with distance, fainter as the water gets deeper and murkier,
+        // and fainter still under a curse — the room goes with the light.
+        p.s.alpha = (0.1 + 0.42 * k) * (1 - gradeDark * 0.7) * (1 - deep * 0.28)
+      }
 
       // ── THE SHAFTS ───────────────────────────────────────────────
       flare = Math.max(0, flare - dt * 1.4)
