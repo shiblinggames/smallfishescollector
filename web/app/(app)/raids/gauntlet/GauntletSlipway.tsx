@@ -128,7 +128,7 @@ function glow(PIXI: typeof import('pixi.js')): Texture {
   return (glowTex = PIXI.Texture.from(c))
 }
 
-export default function GauntletSlipway({ theme, variant, places, shipUrl, cards, onNear, onEnterPortal }: {
+export default function GauntletSlipway({ theme, variant, places, shipUrl, cards, sail, onNear, onEnterPortal }: {
   theme: SlipwayTheme
   /** Whose door this is: which maelstrom, whose hologram, which wreck-field. */
   variant: 'davy' | 'don'
@@ -151,6 +151,17 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
    * component to fade a label, sixty times a second.
    */
   cards?: React.MutableRefObject<Map<string, HTMLElement | null>>
+  /**
+   * ── SEND HER TO A PLACE ───────────────────────────────────────────────────
+   *
+   * Filled in by this component for the parent to call. The hub is a thing you
+   * SAIL, and that is the point of it — but a card riding a mooring still has
+   * to be a thing you can press, because a first-time captain looking at a
+   * painted sea with five labels on it has no reason to believe any of them are
+   * controls. Pressing one takes the helm and steers there; the water does the
+   * rest exactly as if you had steered yourself.
+   */
+  sail?: React.MutableRefObject<((id: string) => void) | null>
   /** The place the hull is alongside, or null. Drives the helm button. */
   onNear: (id: string | null) => void
   /** She sailed into the eye. */
@@ -161,6 +172,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
   const placesRef = useRef(places); placesRef.current = places
   const onNearRef = useRef(onNear); onNearRef.current = onNear
   const cardsRef = useRef(cards); cardsRef.current = cards
+  const sailRef = useRef(sail); sailRef.current = sail
   const onPortalRef = useRef(onEnterPortal); onPortalRef.current = onEnterPortal
   const variantRef = useRef(variant); variantRef.current = variant
 
@@ -323,6 +335,19 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
         target.x = e.clientX - r.left
         target.y = e.clientY - r.top
       }
+      // THE HELM, FOR THE CARDS. See the `sail` prop.
+      const handle = sailRef.current
+      if (handle) {
+        handle.current = (id: string) => {
+          const p = placesRef.current.find(x => x.id === id)
+          if (!p) return
+          const W = app.screen.width, H = app.screen.height
+          const u = Math.min(W, H)
+          target.x = W / 2 + p.ox * u
+          target.y = H / 2 + p.oy * u
+        }
+      }
+
       let down = false
       const onDown = (e: PointerEvent) => { down = true; toLocal(e) }
       const onMove = (e: PointerEvent) => { if (down) toLocal(e) }
@@ -523,6 +548,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
       })
 
       cleanup = () => {
+        if (handle) handle.current = null
         el.removeEventListener('pointerdown', onDown)
         el.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)

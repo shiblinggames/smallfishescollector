@@ -9,7 +9,7 @@
 // The pot is only banked on cash-out; a wipe loses everything.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { createPortal } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -129,11 +129,31 @@ const screenLayer: { current: HTMLElement | null } = { current: null }
 let swapAnim: Animation | null = null
 
 function ramp(el: HTMLElement, from: number, to: number, duration: number, easing: string) {
+  /**
+   * ── THE HELD VALUE LIVES ON THE ELEMENT, NOT IN THE ANIMATION ────────────
+   *
+   * Cancelling the old ramp only after creating the new one does NOT close the
+   * gap, which is what this used to rely on. A freshly created animation has an
+   * UNRESOLVED start time until the next frame: it is pending, it contributes
+   * nothing, and the instant the old one is cancelled the element drops to its
+   * BASE opacity — which is 1.
+   *
+   * So the in-ramp released a full-strength frame every single screen change.
+   * If React had not yet painted the phase that was committed a moment earlier,
+   * that frame showed the screen you had just left: click Dive deeper, watch it
+   * fade, and see the three choices flash back for a frame before the descent.
+   *
+   * Writing the opacity inline first means there is always a value underneath
+   * the animation, and it is the one the ramp is starting FROM. Nothing can be
+   * released onto.
+   */
+  el.style.opacity = String(from)
   const next = el.animate([{ opacity: from }, { opacity: to }], { duration, easing, fill: 'forwards' })
-  // The old one is cancelled AFTER the new one exists, so the held value is
-  // never released for a frame onto the element's base opacity.
   swapAnim?.cancel()
   swapAnim = next
+  // And when it lands, the inline value becomes the destination — so the same
+  // guarantee holds for the NEXT ramp, whenever it comes.
+  next.finished.then(() => { if (swapAnim === next) el.style.opacity = String(to) }).catch(() => {})
 }
 
 function canAnimate(): boolean {
@@ -152,7 +172,15 @@ function playSwap(commit: () => void): boolean {
   if (!el || !canAnimate()) return false
   ramp(el, 1, 0, SWAP_OUT_MS, 'cubic-bezier(0.4, 0, 1, 1)')
   window.setTimeout(() => {
-    commit()
+    // ── COMMITTED SYNCHRONOUSLY, WHILE IT CANNOT BE SEEN ──────────────────
+    //
+    // The whole point of this timeout is that the swap happens behind a veil.
+    // A normal setState here is scheduled, not applied: React is free to finish
+    // the render in a later task, and on a busy phone that can be after the two
+    // frames below have already started bringing the screen back up — so the
+    // veil lifts on the OLD screen. Flushing makes "while it cannot be seen"
+    // true rather than likely.
+    flushSync(commit)
     const now = screenLayer.current
     if (!now) return
     // Two frames, so the incoming screen has laid out and painted at zero
@@ -681,7 +709,6 @@ export default function GauntletGame(props: GauntletGameProps) {
   const fenceSpentRef = useRef(0)
   const [fenceSpent, setFenceSpent] = useState(0)
   // Intro-only gauntlet switcher (shown when the OTHER gauntlet is also unlocked).
-  const [switcherOpen, setSwitcherOpen] = useState(false)
   // Banked Fathoms, mirrored so a shrine wager can update it live without a
   // refetch (Fathoms only change here or at cashout/Locker, all of which resync).
   const [fathomsNow, setFathomsNow] = useState(props.fathoms)
@@ -814,12 +841,19 @@ export default function GauntletGame(props: GauntletGameProps) {
   /**
    * ── THE SLIPWAY ──────────────────────────────────────────────────────────
    *
-   * The lobby is the water now. `slipNear` is whichever place the hull is
-   * alongside, which is the only thing the helm button needs to know, and
-   * `ledgerOpen` holds the old card stack, kept whole, one tap behind the sea.
+   * The lobby is the water. `slipNear` is whichever place the hull is
+   * alongside, which is the only thing the helm button needs to know.
+   *
+   * THE LEDGER IS GONE. It was the gauntlet's old home page — the ranks, the
+   * records, the rules and the descent cards, stacked — and when the water
+   * became the lobby it was kept behind a button "rather than rebuilt". That
+   * was a hedge. Everything on it has a mooring now: the Records, the two
+   * shops, the way home, and the eye you dive into. A second front door that
+   * duplicates the first is only somewhere to get lost, so the two things it
+   * still held alone — switching gauntlets, and last run's recap — moved out
+   * onto the HUD, and the rest went with it.
    */
   const [slipNear, setSlipNear] = useState<string | null>(null)
-  const [ledgerOpen, setLedgerOpen] = useState(false)
   /**
    * THE MOORING CARDS' NODES, handed down to the Slipway's frame loop so it can
    * fade and lift each one by how close she actually is. `slipNear` is a single
@@ -828,6 +862,8 @@ export default function GauntletGame(props: GauntletGameProps) {
    * matters enough to reach across like this.
    */
   const slipCards = useRef(new Map<string, HTMLElement | null>())
+  /** Takes the helm on the Slipway's behalf — see its `sail` prop. */
+  const slipSail = useRef<((id: string) => void) | null>(null)
 
   // Fun run telemetry — folded from RaidCombat's onStat deltas across the dive.
   const runStatsRef = useRef<GauntletRunStats>(emptyRunStats())
@@ -2568,6 +2604,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           variant={props.variant ?? 'davy'}
           places={slipPlaces}
           cards={slipCards}
+          sail={slipSail}
           shipUrl={props.shipImageUrl}
           onNear={setSlipNear}
           onEnterPortal={() => setModeChoiceOpen(true)}
@@ -2582,19 +2619,19 @@ export default function GauntletGame(props: GauntletGameProps) {
             rather than a button of ours that opens it. `LeaderboardModal`
             renders its trigger and owns its open state, so styling that
             trigger as the helm is the whole integration. */}
-        {!ledgerOpen && slipNear === 'records' && (
+        {slipNear === 'records' && (
           <LeaderboardModal
             boards={isDonG ? ['gauntletDonsDepth', 'gauntletDonsHardcore', 'gauntletBigHit'] : ['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']}
             title={gauntletTitle} label="The Records" triggerStyle={helmStyle} />
         )}
-        {!ledgerOpen && slipLabel && slipNear !== 'portal' && slipNear !== 'records' && (
+        {slipLabel && slipNear !== 'portal' && slipNear !== 'records' && (
           <button type="button" onClick={moor} className="tap" style={{ ...helmStyle, display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
             <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.84rem', letterSpacing: '0.05em' }}>{slipLabel}</span>
             <span className="font-karla font-700 uppercase" style={{ marginLeft: 'auto', fontSize: '0.52rem', letterSpacing: '0.16em', color: `${AC}cc` }}>{slipNear === 'leave' ? 'Sail' : 'Moor'}</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
           </button>
         )}
-        {!ledgerOpen && slipNear === 'portal' && (
+        {slipNear === 'portal' && (
           <div aria-hidden style={{ ...helmStyle, cursor: 'default', textAlign: 'center', border: `1px solid ${AC}44` }}>
             <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: `${AC}dd` }}>Hold course into the eye</span>
           </div>
@@ -2607,8 +2644,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             can carry a banner whose height is not ours to know, and a fixed
             HUD at a guessed offset lands on top of it. Flowing costs nothing
             here because the water behind is fixed and full-bleed anyway. */}
-        {!ledgerOpen && (
-          <div style={{ position: 'relative', zIndex: 6, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, padding: '10px 12px 0' }}>
+        <div style={{ position: 'relative', zIndex: 6, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, padding: '10px 12px 0' }}>
           <div style={{ display: 'grid', gap: 8, justifyItems: 'start', minWidth: 0 }}>
             <div>
               <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: `${AC}cc`, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
@@ -2617,10 +2653,52 @@ export default function GauntletGame(props: GauntletGameProps) {
               <h1 className="font-cinzel font-800" style={{ fontSize: '1.42rem', color: '#f3ead2', lineHeight: 1.04, marginTop: 2, textShadow: '0 2px 12px rgba(0,0,0,0.95), 0 0 24px rgba(0,0,0,0.6)' }}>
                 {gauntletTitle}
               </h1>
-              <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#b9c6c9', marginTop: 4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
-                {props.deepest > 0 ? <>Your deepest <span className="font-cinzel font-800" style={{ color: '#f0e6cc' }}>{props.deepest}</span></> : 'Uncharted. Your first dive awaits.'}
-                {props.topDescender && <> · Top {props.topDescender.name} <span className="font-cinzel font-800" style={{ color: '#f0e6cc' }}>{props.topDescender.depth}</span></>}
-              </p>
+              {/* ── YOUR MARK, AND THE WAY BACK INTO IT ──────────────────
+                  A tap opens the full recap of that dive — every boon, curse
+                  and tide of it. It hung off the Ledger's hero before, which
+                  is the one thing on that page worth keeping, so it comes with
+                  the number it is about. */}
+              {(() => {
+                const line = (
+                  <>
+                    {props.deepest > 0 ? <>Your deepest <span className="font-cinzel font-800" style={{ color: '#f0e6cc' }}>{props.deepest}</span></> : 'Uncharted. Your first dive awaits.'}
+                    {props.topDescender && <> · Top {props.topDescender.name} <span className="font-cinzel font-800" style={{ color: '#f0e6cc' }}>{props.topDescender.depth}</span></>}
+                  </>
+                )
+                const style: CSSProperties = { fontSize: '0.62rem', color: '#b9c6c9', marginTop: 4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }
+                if (!props.deepestRun || props.deepest <= 0) {
+                  return <p className="font-karla font-700" style={style}>{line}</p>
+                }
+                return (
+                  <button type="button" className="tap font-karla font-700"
+                    aria-label="View your deepest run"
+                    onClick={() => { vibrate([0, 12]); setRecapRun({ hardcore: false }) }}
+                    style={{ ...style, display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
+                    {line}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" />
+                    </svg>
+                  </button>
+                )
+              })()}
+              {/* ── AND THE OTHER DOOR ───────────────────────────────────
+                  Two gauntlets, so this is a swap rather than a menu: the
+                  Ledger's picker was a dropdown with key art in it because it
+                  was choosing from a page. From the water it only ever has one
+                  answer. */}
+              {props.otherGauntletUnlocked && (
+                <button type="button" className="tap"
+                  onClick={() => { vibrate([0, 14]); router.push(isDonG ? '/raids/gauntlet' : '/raids/dons-gauntlet') }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 7, padding: '0.2rem 0.56rem 0.2rem 0.5rem', borderRadius: 999, cursor: 'pointer',
+                    background: 'rgba(8,13,22,0.82)', border: '1px solid rgba(194,188,174,0.3)', color: '#c2bcae' }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M4 8h13l-3-3" /><path d="M20 16H7l3 3" />
+                  </svg>
+                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.14em' }}>
+                    {isDonG ? "Davy's Gauntlet" : "The Don's Gauntlet"}
+                  </span>
+                </button>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 7 }}>
               <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?" className="active:scale-95"
@@ -2645,8 +2723,6 @@ export default function GauntletGame(props: GauntletGameProps) {
             {([
               { id: 'codex', label: 'Codex', color: '#b98bff', onClick: () => setSynergiesOpen(true),
                 icon: <><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></> },
-              { id: 'ledger', label: 'Ledger', color: '#c2bcae', onClick: () => setLedgerOpen(true),
-                icon: <><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19v16H5.5A1.5 1.5 0 0 1 4 18.5z" /><path d="M8 8h7" /><path d="M8 12h7" /></> },
             ] as const).map(b => (
               <button key={b.id} type="button" onClick={b.onClick} className="tap" aria-label={b.label}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: 54, padding: '7px 0 5px', borderRadius: 13, cursor: 'pointer', color: b.color,
@@ -2657,7 +2733,6 @@ export default function GauntletGame(props: GauntletGameProps) {
             ))}
           </div>
           </div>
-        )}
 
         {/* ── THE PLACES, AS CARDS ─────────────────────────────────────────
             A mooring on the water says "tie up here" and nothing else, so
@@ -2665,15 +2740,45 @@ export default function GauntletGame(props: GauntletGameProps) {
             The card lifts and lights as she comes alongside. The eye gets a
             caption under the bowl rather than a card, because it is not a
             thing you moor at. */}
-        {!ledgerOpen && slipPlaces.map(pl => {
+        {slipPlaces.map(pl => {
           const hex = hexOf(pl.color)
           const meta = PLACE_META[pl.id]
           if (pl.portal) return (
-            <div key={pl.id} aria-hidden
-              style={{ position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy + 0.27), transform: 'translate(-50%, 0)', zIndex: 4, pointerEvents: 'none', textAlign: 'center', transition: 'opacity 0.3s', opacity: slipNear === pl.id ? 1 : 0.85 }}>
-              <p className="font-cinzel font-800 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.16em', color: '#f4efe4', textShadow: `0 2px 10px rgba(0,0,0,0.98), 0 0 18px ${hex}66` }}>{pl.label}</p>
-              <p className="font-karla font-700" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', color: `${hex}dd`, marginTop: 2, textShadow: '0 1px 8px rgba(0,0,0,0.95)' }}>{meta.sub}</p>
-            </div>
+            /* ── THE WAY DOWN, AS A THING YOU PRESS ────────────────────
+               This was two lines of text under the bowl, and it said "Sail
+               into the eye to descend" — which is true, and was the only way
+               in, and is a sentence rather than a control. Standing on a
+               painted sea being told to hold a course is not how anyone
+               expects to start a run, and it is the FIRST thing a captain
+               has to work out on this screen.
+               So it is a button, and the loudest thing on the water: the
+               run's own colour, breathing, with the descent's own double
+               chevron on it. Sailing into the eye still opens exactly the
+               same chooser for anyone who would rather arrive than press. */
+            <motion.button key={pl.id} type="button"
+              onClick={() => { vibrate([0, 16]); setModeChoiceOpen(true) }}
+              className="tap"
+              animate={{ boxShadow: [
+                `0 10px 30px rgba(0,0,0,0.6), 0 0 0px ${hex}00`,
+                `0 10px 30px rgba(0,0,0,0.6), 0 0 26px ${hex}66`,
+                `0 10px 30px rgba(0,0,0,0.6), 0 0 0px ${hex}00`,
+              ] }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy + 0.27),
+                transform: 'translate(-50%, 0)', zIndex: 5, cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                padding: '0.62rem 1.35rem 0.7rem', borderRadius: 16, whiteSpace: 'nowrap',
+                background: `linear-gradient(180deg, ${hex}2a, rgba(5,10,18,0.94))`,
+                border: `1px solid ${hex}99`,
+                color: '#f4efe4',
+              }}>
+              <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.86rem', letterSpacing: '0.14em', textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>{pl.label}</span>
+              <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: hex }}>Tap to begin the dive</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hex} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ marginTop: 1 }}>
+                <path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" />
+              </svg>
+            </motion.button>
           )
           return (
             // ── A MOORING'S CARD, DRIVEN BY THE BOAT ────────────────────
@@ -2693,7 +2798,10 @@ export default function GauntletGame(props: GauntletGameProps) {
             // `--k` is that distance as a 0..1 presence, and the glow, the rim
             // and the sub line all read it in CSS. One number written per
             // frame, four things answering it.
-            <div key={pl.id} aria-hidden
+            <button key={pl.id} type="button"
+              className="tap"
+              aria-label={`${pl.label} — ${meta.sub}`}
+              onClick={() => { vibrate([0, 10]); slipSail.current?.(pl.id) }}
               ref={el => {
                 slipCards.current.set(pl.id, el)
                 if (el && !el.style.transform) {
@@ -2703,7 +2811,13 @@ export default function GauntletGame(props: GauntletGameProps) {
               }}
               style={{
                 position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy),
-                zIndex: 4, pointerEvents: 'none', willChange: 'transform, opacity',
+                // PRESSABLE. It was pointer-events:none — a label painted on
+                // the water. Five labels that cannot be touched, over a sea you
+                // steer by dragging, is a screen with no visible way in.
+                // Pressing one takes the helm and sails there; see the
+                // Slipway's `sail` prop.
+                zIndex: 4, cursor: 'pointer', willChange: 'transform, opacity',
+                textAlign: 'left', font: 'inherit',
                 display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px 7px 8px', borderRadius: 13,
                 background: 'linear-gradient(180deg, rgba(14,20,32,0.94), rgba(5,9,16,0.94))',
                 // The pool of light under it comes up WITH her instead of
@@ -2739,7 +2853,14 @@ export default function GauntletGame(props: GauntletGameProps) {
                   opacity: 'var(--k, 0)',
                 }}>{meta.sub}</span>
               </span>
-            </div>
+              {/* THE MARK THAT SAYS IT IS A CONTROL. Always there, at every
+                  distance, because the thing it has to answer is "can I touch
+                  this" and that question is asked from across the water. */}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={hex} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+                style={{ flexShrink: 0, marginLeft: 1, opacity: 0.75 }}>
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </button>
           )
         })}
 
@@ -2753,375 +2874,6 @@ export default function GauntletGame(props: GauntletGameProps) {
             rebuilt: the ranks, the records, the rules, the descent cards. The
             sea is the front door and this is still the room behind it, so
             nothing in here had to change for the water to become primary. */}
-        {ledgerOpen && (
-        <div
-          className="pb-10 sm:pb-6"
-          style={{
-            position: 'fixed', inset: 0, zIndex: 20, overflowY: 'auto',
-            background: 'linear-gradient(180deg, rgba(4,8,14,0.96), rgba(2,5,9,0.985))',
-            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)',
-            paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
-          }}>
-          <div style={{ maxWidth: wide ? 720 : 460, margin: '0 auto' }}>
-          <button type="button" onClick={() => setLedgerOpen(false)} className="tap"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto',
-              padding: '0.34rem 0.72rem', borderRadius: 999, cursor: 'pointer',
-              background: 'rgba(12,20,32,0.9)', border: '1px solid rgba(194,188,174,0.34)', color: '#c2bcae' }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 6l-6 6 6 6" /></svg>
-            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.14em' }}>Back to the water</span>
-          </button>
-          {/* Title — a rich picker when the player has BOTH gauntlets unlocked,
-              otherwise a plain heading. */}
-          {props.otherGauntletUnlocked ? (
-            <div style={{ position: 'relative', display: 'inline-block', marginTop: 8 }}>
-              <button type="button" onClick={() => { vibrate([0, 12]); setSwitcherOpen(o => !o) }} className="tap"
-                aria-haspopup="menu" aria-expanded={switcherOpen}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>
-                <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, textShadow: '0 2px 10px rgba(0,0,0,0.9), 0 0 22px rgba(240,192,64,0.3)' }}>
-                  {gauntletTitle}
-                </h1>
-                {/* a themed control chip so the title clearly reads as switchable */}
-                <motion.span aria-hidden
-                  animate={switcherOpen ? {} : { boxShadow: [`0 0 0px ${AC}00`, `0 0 12px ${AC}55`, `0 0 0px ${AC}00`] }}
-                  transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', background: `${AC}1c`, border: `1px solid ${AC}66` }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"
-                    style={{ transform: switcherOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </motion.span>
-              </button>
-              <AnimatePresence>
-                {switcherOpen && (() => {
-                  const GS = [
-                    { id: 'davy', name: 'Davy Jones Gauntlet', route: '/raids/gauntlet',      img: MAW_IMG,          ac: TEAL,   tag: 'The original descent' },
-                    { id: 'don',  name: "Don's Gauntlet",      route: '/raids/dons-gauntlet', img: '/donsgauntlet.png', ac: KRAKEN, tag: 'The endgame descent' },
-                  ]
-                  const currentId = isDonG ? 'don' : 'davy'
-                  return (
-                    <>
-                      {/* outside-tap backdrop */}
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        onClick={() => setSwitcherOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(3,6,10,0.55)', backdropFilter: 'blur(2px)' }} />
-                      {/* centering wrapper stays static so the menu's own scale/opacity
-                          animation never clobbers the translateX(-50%). */}
-                      <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 10, zIndex: 41 }}>
-                        <motion.div role="menu"
-                          initial={{ opacity: 0, y: -10, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.94 }}
-                          transition={{ type: 'spring', stiffness: 440, damping: 30 }}
-                          style={{ transformOrigin: 'top center', width: 296, padding: 9, borderRadius: 18,
-                            background: 'linear-gradient(180deg, rgba(15,21,28,0.99), rgba(8,11,15,0.99))', border: `1px solid ${AC}44`, boxShadow: `0 20px 48px rgba(0,0,0,0.66), 0 0 0 1px rgba(255,255,255,0.02)` }}>
-                          <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#8a948e', textAlign: 'center', margin: '2px 0 9px' }}>Choose your gauntlet</p>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {GS.map((g, i) => {
-                              const here = g.id === currentId
-                              return (
-                                <motion.button key={g.id} type="button"
-                                  initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: stagger(i, STAGGER, 0.05) }}
-                                  onClick={here ? undefined : () => { vibrate([0, 16]); setSwitcherOpen(false); router.push(g.route) }}
-                                  disabled={here}
-                                  whileTap={here ? undefined : { scale: 0.97 }}
-                                  className="tap"
-                                  style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', padding: '0.62rem 0.7rem', borderRadius: 13, cursor: here ? 'default' : 'pointer',
-                                    background: here ? `${g.ac}16` : 'rgba(255,255,255,0.028)', border: `1px solid ${here ? `${g.ac}66` : 'rgba(255,255,255,0.09)'}` }}>
-                                  {/* hero portrait with a themed glow ring */}
-                                  <span style={{ position: 'relative', flexShrink: 0, width: 48, height: 48, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <span aria-hidden style={{ position: 'absolute', inset: -3, borderRadius: '50%', background: `radial-gradient(circle, ${g.ac}4d, transparent 70%)` }} />
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={g.img} alt="" loading="lazy" decoding="async" style={{ position: 'relative', width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${g.ac}99`, background: 'rgba(0,0,0,0.35)' }} />
-                                  </span>
-                                  <span style={{ flex: 1, minWidth: 0 }}>
-                                    <span className="font-cinzel font-700 truncate" style={{ display: 'block', fontSize: '0.94rem', color: here ? '#f3ead2' : '#e4ece8', lineHeight: 1.1 }}>{g.name}</span>
-                                    <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.62rem', color: `${g.ac}cc`, marginTop: 2 }}>{g.tag}</span>
-                                  </span>
-                                  {here ? (
-                                    <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.48rem', color: g.ac, background: `${g.ac}20`, border: `1px solid ${g.ac}55`, borderRadius: 999, padding: '0.18rem 0.45rem' }}>Here</span>
-                                  ) : (
-                                    <motion.span aria-hidden animate={{ x: [0, 3, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ flexShrink: 0, display: 'flex', color: g.ac }}>
-                                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                                    </motion.span>
-                                  )}
-                                </motion.button>
-                              )
-                            })}
-                          </div>
-                        </motion.div>
-                      </div>
-                    </>
-                  )
-                })()}
-              </AnimatePresence>
-            </div>
-          ) : (
-            <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 2px 10px rgba(0,0,0,0.9), 0 0 22px rgba(240,192,64,0.3)' }}>
-              {gauntletTitle}
-            </h1>
-          )}
-
-          {/* The maw — the hole you drop into. Depth-ping rings pulse out of it
-              and the whole thing breathes, so it reads as alive and pulling you
-              down rather than a static crest. */}
-          <div style={{ position: 'relative', width: 162, height: 162, margin: '14px auto 4px' }}>
-            {/* sonar rings emanating from the deep */}
-            {[0, 1.4, 2.8].map((d, i) => (
-              <span key={i} aria-hidden style={{ position: 'absolute', left: '50%', top: '50%', width: 128, height: 128, marginLeft: -64, marginTop: -64, borderRadius: '50%', border: `1.5px solid ${AC}`, boxShadow: `0 0 12px ${AC}55`, opacity: 0, animation: `gauntRing 4.2s ${d}s ease-out infinite` }} />
-            ))}
-            {/* ambient glow */}
-            <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: `radial-gradient(circle, rgba(240,192,64,0.26) 0%, ${isDonG ? 'rgba(63,191,130,0.14)' : 'rgba(94,234,212,0.12)'} 42%, transparent 70%)`, animation: 'gauntPulse 4.2s ease-in-out infinite' }} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={heroImg} alt="" loading="eager" decoding="async"
-              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 32px rgba(0,0,0,0.75))', animation: 'gauntMaw 6s ease-in-out infinite' }} />
-          </div>
-
-          {/* Hero stat — how deep you've gone. The personal mark the whole screen
-              is really about, right under the maw. Taps to the full run recap
-              (boons, curses, tides) when a deepest run is on record. */}
-          {(() => {
-            const canRecap = !!props.deepestRun && props.deepest > 0
-            const inner = (
-              <>
-                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: AC, textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>Your deepest descent</p>
-                {props.deepest > 0
-                  ? <>
-                      <p className="font-cinzel font-800" style={{ fontSize: '1.7rem', lineHeight: 1.05, color: '#f3ead2', marginTop: 1 }}>
-                        <span style={{ fontSize: '0.72rem', color: '#8a857c', letterSpacing: '0.04em' }}>DEPTH </span>
-                        <span style={{ color: AC, textShadow: `0 2px 8px rgba(0,0,0,0.9), 0 0 20px ${AC}66` }}>{props.deepest}</span>
-                      </p>
-                      {canRecap && (
-                        <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.5rem', color: `${AC}cc`, marginTop: 3 }}>
-                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
-                          View run
-                        </span>
-                      )}
-                    </>
-                  : <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#b3ac9e', marginTop: 3, fontStyle: 'italic', textShadow: '0 1px 6px rgba(0,0,0,0.75)' }}>Uncharted. Your first dive awaits.</p>}
-              </>
-            )
-            return canRecap ? (
-              <button type="button" onClick={() => { vibrate([0, 12]); setRecapRun({ hardcore: false }) }}
-                aria-label="View your deepest run" className="tap"
-                style={{ marginTop: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
-                {inner}
-              </button>
-            ) : (
-              <div style={{ marginTop: 2 }}>{inner}</div>
-            )
-          })()}
-
-          {/* ── TIER 1 · The one action ───────────────────────────
-              Compact currencies then Descend, so starting a run sits
-              right under the maw with nothing competing above it. */}
-          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
-            <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?"
-              className="active:scale-95"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: `linear-gradient(180deg, ${AC}22, rgba(6,10,16,0.6))`, border: `1px solid ${AC}55`, cursor: 'pointer', transition: 'transform 0.08s' }}>
-              {/* Anchor = Fathoms (depth). */}
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
-              <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: AC, lineHeight: 1 }}>{fmt(fathomsNow)}</span>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.55 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
-            </button>
-            {/* Blood Gems — shown once Hardcore is unlocked (discoverable at 0)
-                or whenever the player holds any. */}
-            {(bloodGemsNow > 0 || props.hardcoreUnlocked) && (
-              <button onClick={() => setInfoCurrency('blood')} title="What are Blood Gems?"
-                className="active:scale-95"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: 'linear-gradient(180deg, rgba(192,56,74,0.18), rgba(120,20,32,0.12))', border: '1px solid rgba(220,38,38,0.55)', boxShadow: '0 0 12px rgba(192,56,74,0.22)', cursor: 'pointer', transition: 'transform 0.08s' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden style={{ filter: 'drop-shadow(0 0 2.5px rgba(220,38,38,0.7))' }}><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#d1394b" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
-                <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#f2536a', lineHeight: 1, textShadow: '0 0 10px rgba(220,38,38,0.6)' }}>{fmt(bloodGemsNow)}</span>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f2536a" strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.6 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
-              </button>
-            )}
-          </div>
-
-          {/* Descend — the two mode cards ARE the descent buttons. Normal starts
-              a run immediately; Hardcore opens the "send them down" confirm (its
-              own gating shown inline). No separate mode-choice modal on the way
-              in. Each card also shows that mode's deepest diver — the mark to
-              beat. */}
-          <div style={{ marginTop: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9, padding: '0 0.15rem' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                <span aria-hidden style={{ width: 14, height: 2, borderRadius: 2, background: `${AC}aa` }} />
-                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.2em', color: '#c2bcae', textShadow: '0 1px 5px rgba(0,0,0,0.7)' }}>Choose Your Descent</span>
-              </span>
-              {/* Both towers offer the same THREE boards: standard depth, hardcore
-                  depth, and Biggest Hit. Don's used to offer only its depth board,
-                  so its hardcore ladder was unreachable in the UI despite the view
-                  existing. Biggest Hit is deliberately on both screens because it
-                  is ONE board (profiles.gauntlet_big_hit) fed by every gauntlet
-                  fight, Don's included. */}
-              <LeaderboardModal boards={isDonG ? ['gauntletDonsDepth', 'gauntletDonsHardcore', 'gauntletBigHit'] : ['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title={isDonG ? "Don's Gauntlet" : 'The Gauntlet'} label="Full ranks"
-                triggerStyle={{ background: 'none', border: 'none', color: '#9a948a', padding: 0, fontSize: '0.55rem', letterSpacing: '0.04em' }} />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {(() => {
-                const canHc = props.hardcoreUnlocked
-                const comingSoon = !canHc && !props.hardcoreLive
-                const cards = [
-                  {
-                    key: 'normal' as const, color: AC, label: 'Normal', rec: props.topDescender,
-                    mine: props.deepest, recap: (props.deepestRun && props.deepest > 0) ? props.deepestRun : null,
-                    enabled: !starting,
-                    onClick: () => begin(false),
-                    disabledNote: starting ? 'Descending…' : null as string | null,
-                  },
-                  {
-                    key: 'hardcore' as const, color: '#e0555a', label: 'Hardcore', rec: props.hardcoreTop,
-                    mine: props.hcDeepest, recap: (props.hcDeepestRun && props.hcDeepest > 0) ? props.hcDeepestRun : null,
-                    enabled: canHc && !starting && props.hcRunsLeft > 0,
-                    onClick: () => setHcConfirmOpen(true),
-                    disabledNote: comingSoon ? 'Coming soon' : !canHc ? `Reach depth ${HC_UNLOCK_DEPTH}` : props.hcRunsLeft <= 0 ? 'No runs left today' : starting ? 'Descending…' : null,
-                  },
-                ]
-                // Card = a wrapper with a descend button (the pulsing down-arrow IS
-                // the tap-to-dive indicator; no CTA text) and a deepest footer as
-                // siblings. Footer shows YOUR best above the global #1; Normal taps
-                // to the detailed recap.
-                return cards.map(c => (
-                  <div key={c.key} style={{
-                    position: 'relative', display: 'flex', flexDirection: 'column', minWidth: 0, borderRadius: 15, overflow: 'hidden',
-                    // A doorway into the dark: accent light up top pooling into a
-                    // black shaft at the bottom you're about to drop through. Kept
-                    // solid enough through the middle/bottom that the label + depth
-                    // stats read over the painted abyss behind (was ~55% at the
-                    // base, which the busy backdrop washed out).
-                    background: `radial-gradient(ellipse 130% 78% at 50% 118%, rgba(0,0,0,0.66), transparent 56%), linear-gradient(180deg, ${c.color}2a 0%, rgba(8,13,22,0.74) 46%, rgba(5,9,16,0.92) 100%)`,
-                    border: `1px solid ${c.color}${c.enabled ? '5a' : '22'}`,
-                    boxShadow: c.enabled ? `0 0 22px ${c.color}1e, inset 0 1px 0 ${c.color}33` : 'none',
-                    opacity: c.enabled ? 1 : 0.6,
-                  }}>
-                    {/* faint threshold line at the top of the doorway */}
-                    <span aria-hidden style={{ position: 'absolute', top: 0, left: '14%', right: '14%', height: 1, background: `linear-gradient(90deg, transparent, ${c.color}${c.enabled ? '88' : '44'}, transparent)` }} />
-                    <motion.button
-                      onClick={c.enabled ? c.onClick : undefined}
-                      disabled={!c.enabled}
-                      whileTap={c.enabled ? { scale: 0.97 } : undefined}
-                      className="tap"
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '1.1rem 0.55rem 0.9rem', background: 'none', border: 'none', textAlign: 'center', minWidth: 0, cursor: c.enabled ? 'pointer' : 'default', color: 'inherit' }}>
-                      {/* Descend indicator — a bobbing double-chevron in a glowing
-                          well that reads as the mouth you drop through */}
-                      <motion.div aria-hidden
-                        animate={c.enabled ? { y: [0, 4, 0] } : {}}
-                        transition={c.enabled ? { duration: 1.7, repeat: Infinity, ease: 'easeInOut' } : undefined}
-                        style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', background: `radial-gradient(circle at 50% 38%, ${c.color}66, ${c.color}0c 70%)`, border: `1.5px solid ${c.color}${c.enabled ? 'c0' : '55'}`, boxShadow: c.enabled ? `0 0 26px ${c.color}55, inset 0 0 14px ${c.color}22` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color }}>
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6M6 12l6 6 6-6" /></svg>
-                      </motion.div>
-                      <span className="font-cinzel font-800 uppercase" style={{ fontSize: '1.05rem', letterSpacing: '0.05em', color: c.color, lineHeight: 1, textShadow: c.enabled ? `0 0 16px ${c.color}44` : 'none' }}>{c.label}</span>
-                      {!c.enabled && c.disabledNote && (
-                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: `${c.color}cc` }}>{c.disabledNote}</span>
-                      )}
-                    </motion.button>
-                    {/* Deepest footer — your best above the global #1, aligned for
-                        readability. Normal taps to the recap. */}
-                    <button
-                      onClick={c.recap ? () => setRecapRun({ hardcore: c.key === 'hardcore' }) : undefined}
-                      className={c.recap ? 'tap' : undefined}
-                      aria-label={c.recap ? 'Recap your deepest run' : undefined}
-                      style={{ width: '100%', marginTop: 'auto', padding: '0.52rem 0.6rem 0.55rem', background: c.recap ? `${c.color}0d` : 'none', border: 'none', borderTop: `1px solid ${c.color}22`, cursor: c.recap ? 'pointer' : 'default', minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
-                        <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.48rem', letterSpacing: '0.12em', color: `${c.color}cc` }}>You</span>
-                        {c.mine > 0
-                          ? <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f2ede3', whiteSpace: 'nowrap' }}>Depth {c.mine}{c.recap ? ' ↻' : ''}</span>
-                          : <span className="font-karla" style={{ fontSize: '0.62rem', color: '#8a857c' }}>Uncharted</span>}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginTop: 4, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                        <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.48rem', letterSpacing: '0.12em', color: '#6a665e' }}>#1</span>
-                        {c.rec
-                          ? <span className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#a8a296', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.rec.name} · {c.rec.depth}</span>
-                          : <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a665e' }}>Unclaimed</span>}
-                      </div>
-                    </button>
-                  </div>
-                ))
-              })()}
-            </div>
-            {/* ── Reference band — the three things worth reading before a dive,
-                promoted out of the old tiny text links. Synergies especially is a
-                core mechanic, not a footnote; Rewards folds both mode loot guides
-                into one card (toggle lives inside). ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 10 }}>
-              {([
-                { key: 'syn', title: 'Synergies', sub: 'Boons that fuse', color: '#b98bff', glow: true, onClick: () => setSynergiesOpen(true),
-                  icon: <><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></> },
-                { key: 'loot', title: 'Rewards', sub: 'Items · skins · odds', color: GOLD, glow: false, onClick: () => setLootMode('normal'),
-                  icon: <><path d="M3 9.5 4 7a1.6 1.6 0 0 1 1.5-1h13A1.6 1.6 0 0 1 20 7l1 2.5" /><rect x="3" y="9.5" width="18" height="9.5" rx="1.6" /><path d="M3 13.2h18" /></> },
-                { key: 'how', title: 'How it works', sub: 'The rules', color: '#8fb8b0', glow: false, onClick: () => setIntroOpen(true),
-                  icon: <><circle cx="12" cy="12" r="9" /><path d="M9.6 9a2.4 2.4 0 1 1 3.4 2.2c-.7.4-1 .8-1 1.6" /><path d="M12 17h.01" /></> },
-              ] as const).map(c => (
-                <button key={c.key} onClick={c.onClick} className="tap"
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '0.7rem 0.35rem 0.6rem', borderRadius: 13, cursor: 'pointer', minWidth: 0,
-                    background: `linear-gradient(180deg, ${c.color}1c 0%, rgba(8,12,20,0.66) 100%)`,
-                    border: `1px solid ${c.color}${c.glow ? '6e' : '3a'}`,
-                    boxShadow: c.glow ? `0 0 16px ${c.color}22` : 'none' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: `${c.color}1e`, border: `1px solid ${c.color}55`, color: c.color }}>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{c.icon}</svg>
-                  </span>
-                  <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.02em', color: '#f2ede2', lineHeight: 1.08, textAlign: 'center' }}>{c.title}</span>
-                  <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#9a948a', lineHeight: 1.15, textAlign: 'center' }}>{c.sub}</span>
-                </button>
-              ))}
-            </div>
-            {GAUNTLET_COOLDOWN_HOURS > 0 && (
-              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#a29c90', marginTop: 8, textAlign: 'center', textShadow: '0 1px 5px rgba(0,0,0,0.7)' }}>
-                Each descent starts the {GAUNTLET_COOLDOWN_HOURS}-hour cooldown.
-              </p>
-            )}
-          </div>
-
-          {/* ── TIER 3 · The Locker — shops + guides, one weight down ──
-              Two shops as tiles, then muted guide links. Nothing here
-              competes with Descend. */}
-          <div style={{ marginTop: 20, textAlign: 'left' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9, paddingLeft: 2 }}>
-              <span aria-hidden style={{ width: 14, height: 2, borderRadius: 2, background: `${GOLD}aa` }} />
-              <span className="font-karla font-800 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.2em', color: '#c2bcae', textShadow: '0 1px 5px rgba(0,0,0,0.7)' }}>The Locker</span>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <ActionTile
-                color="#c4a0e8"
-                onClick={() => setShopSection('run')}
-                label="Run Upgrades"
-                line="For the descent"
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l6 6 6-6" /><path d="M6 12l6 6 6-6" /></svg>}
-              />
-              <ActionTile
-                color={GOLD}
-                onClick={() => setShopSection('shore')}
-                label="Permanent Upgrades"
-                line="Voyages, raids, fishing"
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v15" /><path d="M5 11l7-4 7 4" /><path d="M4 14c1.6 2.5 4.5 4 8 4s6.4-1.5 8-4" /><path d="M9 5.5h6" /></svg>}
-              />
-            </div>
-
-            {/* Active run perks — gauntlet-scoped upgrades in effect this dive.
-                Permanent Upgrades apply out in the world, so they'd only
-                confuse here. */}
-            {(() => {
-              // Tiered chains (Deep Lungs I/II/III): show only the TOP owned tier
-              // — a perk is superseded if an owned upgrade `requires` it.
-              const owned = upgradesForVariant(props.variant ?? 'davy').filter(u =>
-                u.scope === 'gauntlet' && activeUpgrades.includes(u.id)
-                && !activeUpgrades.some(o => getGauntletUpgrade(o)?.requires === u.id))
-              if (owned.length === 0) return null
-              return (
-                <div style={{ marginTop: 14 }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#7a8e8a', marginBottom: 7 }}>Active Run Perks · {owned.length}</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {owned.map(u => (
-                      <span key={u.id} title={u.description} className="font-karla font-700" style={{ fontSize: '0.56rem', color: `${AC}dd`, background: `${AC}12`, border: `1px solid ${AC}30`, borderRadius: 999, padding: '0.2rem 0.6rem' }}>
-                        ✓ {u.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )
-            })()}
-          </div>
-
-          <BackLink router={router} label="Not today" />
-          </div>
-        </div>
-        )}
         {introOpen && <GauntletIntroModal variant={props.variant} onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {lootMode && <LootModal mode={lootMode} don={isDonG} totalFortune={props.totalFortune} onClose={() => setLootMode(null)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} don={isDonG} onClose={() => setInfoCurrency(null)} />}
