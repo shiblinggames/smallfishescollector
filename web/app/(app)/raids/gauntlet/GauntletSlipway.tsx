@@ -334,6 +334,20 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
       weather.theme({ key: themeRef.current.key, pale: 0xcfe6f0 })
       maelstroms.night(0.35)
 
+      // The water's colours, parsed once per palette rather than three times a
+      // frame — `rgb3` parses a hex string and allocates. See the same note in
+      // the arena; `water.set` copies out of whatever it is handed.
+      const pal = { key: '', deep: rgb3('#000000'), mid: rgb3('#000000'), shallow: rgb3('#000000') }
+      const palette = (deep: string, mid: string, shallow: string) => {
+        const k = `${deep}|${mid}|${shallow}`
+        if (pal.key !== k) {
+          pal.key = k
+          pal.deep = rgb3(deep); pal.mid = rgb3(mid); pal.shallow = rgb3(shallow)
+        }
+        return pal
+      }
+      const uRes = new Float32Array(2)
+
       let t = 0
       app.ticker.add(() => {
         const dt = Math.min(0.05, app.ticker.deltaMS / 1000)
@@ -347,10 +361,12 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
         const at = (p: { ox: number; oy: number }) => ({ x: cx + p.ox * u, y: cy + p.oy * u })
         const REACH = REACH_U * u
 
+        uRes[0] = W; uRes[1] = H
+        const pc = palette(th.sea[0], th.sea[1], th.sea[2])
         water?.set({
           uTime: t,
-          uRes: new Float32Array([W, H]),
-          uShallow: rgb3(th.sea[2]), uMid: rgb3(th.sea[1]), uDeep: rgb3(th.sea[0]),
+          uRes,
+          uShallow: pc.shallow, uMid: pc.mid, uDeep: pc.deep,
           uDark: th.dark + scenery.grade(),
         })
         water?.size(W, H)

@@ -3351,16 +3351,18 @@ export default function RaidCombat({
       // animation's own clock, so `needleAt` keeps describing the needle that
       // is actually on the glass rather than the one that would have been there
       // had it never stopped.
-      {
-        const anim = needleAnimRef.current
-        if (anim && anim.playState === 'paused') {
-          const at = typeof anim.currentTime === 'number' ? anim.currentTime : 0
-          const tl = document.timeline?.currentTime
-          needleT0Ref.current = (typeof tl === 'number' ? tl : now) - at
-          anim.play()
-        }
-      }
+      // (The sweep is never left PAUSED any more. A lock cancels it outright
+      // and commits the frozen picture to the element's own style, so there is
+      // no stopped animation for a re-aim to have to restart — see lockShot.)
       const frames = dt / 16.67
+
+      /**
+       * ── IS THE COMPOSITOR DRIVING THE NEEDLE RIGHT NOW ────────────────────
+       *
+       * Live rather than a constant, because a lock cancels the sweep and the
+       * RAF has to take it back for a re-aim.
+       */
+      const comp = compositor && needlePeriodRef.current > 0 && needleAnimRef.current !== null
 
       // Squall (raid-8 affliction, Kingmaker's Gale): the needle's sweep speed
       // surges and dies on a slow sine, so timing by rhythm alone fails — you
@@ -3369,14 +3371,30 @@ export default function RaidCombat({
       // the gusts read as trackable rather than a whip (was landing too hard on
       // top of The Gorge's 2.6x zone speed).
       const gust = squallActive ? 1 + 0.38 * Math.sin(now / 440 + squallPhaseRef.current) : 1
-      firePosRef.current += NEEDLE_SPEED * gust * frames * fireDirRef.current
-      // BOUNCE, on the dial too. The needle sweeps a full revolution and then
-      // REVERSES, mirroring the aim bar hitting its end, and 0/1 are the same
-      // point on a circle so both ends land on one line at 12 o'clock. That
-      // line is drawn on the face (see turnMark) so the reversal is a read the
-      // player can make, not a surprise.
-      if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
-      if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
+      if (comp) {
+        // ── TAKEN FROM THE SWEEP, NOT INTEGRATED ALONGSIDE IT ─────────
+        //
+        // This used to add up its own needle out of `dt` while the compositor
+        // drew a different one, and the two drifted apart on every frame this
+        // thread missed. Everything downstream of `firePosRef` was then
+        // describing a needle that is not on the glass: the colour band under
+        // it, the decoy hit-test, and the transform written below, which is
+        // the one that SHOWS if the animation is ever taken off the element.
+        //
+        // `now` is the frame's own timestamp, which is the same clock the
+        // sweep is pinned to, so this is the needle the player is looking at
+        // to the pixel.
+        firePosRef.current = needleAt(now)
+      } else {
+        firePosRef.current += NEEDLE_SPEED * gust * frames * fireDirRef.current
+        // BOUNCE, on the dial too. The needle sweeps a full revolution and then
+        // REVERSES, mirroring the aim bar hitting its end, and 0/1 are the same
+        // point on a circle so both ends land on one line at 12 o'clock. That
+        // line is drawn on the face (see turnMark) so the reversal is a read the
+        // player can make, not a surprise.
+        if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
+        if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
+      }
 
       zonePosRef.current += ZONE_SPEED * frames * zoneDirRef.current
       // THE BAND BOUNCES TOO, off the same marked line the needle turns on,
@@ -3423,7 +3441,12 @@ export default function RaidCombat({
       }
 
       if (indicatorRef.current) {
-        paintNeedle(indicatorRef.current, firePosRef.current)
+        // NOT WHILE THE COMPOSITOR HAS IT. A running animation outranks an
+        // inline style, so this write was invisible every frame it happened —
+        // it only ever mattered as the value the needle would snap to if the
+        // animation went away. It is written once, at the lock, where it can
+        // be the judged position exactly.
+        if (!comp) paintNeedle(indicatorRef.current, firePosRef.current)
         let zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current, aimHitWRef.current, aimGrazeWRef.current)
         // Rolling Plate: the gold tell tracks the SEAM, not the zone center.
         if (seamDrift > 0) {
@@ -4410,12 +4433,51 @@ export default function RaidCombat({
     // commits after this render, which let the tick run 1–2 more frames and
     // drift the painted needle past the spot being judged.
     critFreezeRef.current = true
-    // AND THE COMPOSITOR STOPS TOO. Freezing the RAF stops the maths, but the
-    // sweep is not being drawn by the RAF any more — pausing the animation is
-    // what actually stops the needle on the glass, and without it the frozen
-    // badge would sit beside a needle that had sailed on past the spot it is
-    // describing. Paused rather than cancelled: the picture has to HOLD.
-    needleAnimRef.current?.pause()
+    /**
+     * ── STOP THE SWEEP, AND TAKE THE ANSWER FROM THE THING THAT STOPPED ────
+     *
+     * Freezing the RAF stops the maths, but the RAF is not what is drawing the
+     * needle — the compositor is, off its own clock. So the animation is
+     * stopped first, and the judged position is read from ITS currentTime,
+     * which is the instant the press actually landed.
+     *
+     * It used to be read from `document.timeline.currentTime`, and that is the
+     * timestamp of the last RENDERING UPDATE rather than of now: up to a whole
+     * frame of travel between the needle you saw and the number that was
+     * scored, every shot, and more when this thread was busy. That gap is the
+     * whole of "it does not feel precise".
+     *
+     * THEN THE PICTURE IS COMMITTED AND THE ANIMATION LET GO. Pausing held the
+     * needle, but it left a stopped animation sitting on the element outranking
+     * its inline style — and the moment anything took that animation off (the
+     * bar unmounting at the end of the turn, a re-aim), the element fell back
+     * to whatever transform was underneath. Which, while the compositor was
+     * driving, was never written at all: no transform, translate 0, the needle
+     * on the far left. That is the teleport.
+     *
+     * Writing the judged position first and cancelling second means the base
+     * style IS the frozen picture, so there is nothing left to snap to and the
+     * frozen needle is exactly the spot that was scored.
+     */
+    const anim = needleAnimRef.current
+    anim?.pause()
+    const locked = (() => {
+      const period = needlePeriodRef.current
+      if (!anim || !period) return firePosRef.current
+      const at = anim.currentTime
+      if (typeof at !== 'number') return firePosRef.current
+      const phase = ((at / period) % 1 + 1) % 1
+      return phase < 0.5 ? phase * 2 : 2 - phase * 2
+    })()
+    firePosRef.current = locked
+    paintNeedle(indicatorRef.current, locked)
+    if (anim) {
+      anim.cancel()
+      needleAnimRef.current = null
+      // The RAF takes the needle back from here, which is what a re-aim needs:
+      // it carries on from the locked spot instead of finding a dead sweep.
+      needlePeriodRef.current = 0
+    }
     // The lock ITSELF gets a tick, synchronous with the freeze — the single
     // most important input in combat should be felt the instant it lands,
     // distinct from the bigger result haptics that follow the judgment.
@@ -4454,16 +4516,9 @@ export default function RaidCombat({
     // as painted this frame, no rewind and no projection. The freeze
     // below repaints needle + zone at this same geometry with the result
     // color, so the frozen picture can never disagree with the badge.
-    // READ AT THE TAP, from the clock the compositor is drawing against, so the
-    // judgment is where the needle is at the instant of the press rather than
-    // where the last frame left it. Falls back to the painted value on the
-    // gusting bar, which is still integrated by the RAF.
-    const pos = needlePeriodRef.current
-      ? needleAt(typeof document.timeline?.currentTime === 'number'
-        ? document.timeline.currentTime as number
-        : performance.now())
-      : firePosRef.current
-    firePosRef.current = pos
+    // READ WHEN THE SWEEP STOPPED, above — the needle that is frozen on the
+    // glass and the number being scored are the same one by construction.
+    const pos = firePosRef.current
     const zoneCenter = zonePosRef.current
     // THE BURST GOES OFF AT THE TAP, not after the judgment resolves. The
     // colour is decided a few lines down; this is fired there. What matters

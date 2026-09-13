@@ -1327,15 +1327,19 @@ export const FIGHT_ZOOM = 1.5
  * desktop's framing shown on a phone.
  *
  * So the push eases with the screen. At 900 and up it is the full 1.5 and
- * nothing about a desktop changes; at 390 it is 1.12, which draws those same
- * hulls at 119 and 114 with 141 between them — about 25px of open water in the
- * gap and the duel sitting on three fifths of the glass rather than four
- * fifths. The hulls keep their sizes relative to each other, because which of
- * you is the bigger ship is a thing the fight is about.
+ * nothing about a desktop changes; at 390 it is 1.3, which draws those hulls at
+ * 138 and 133 with 163 between them — the pair of them on about three quarters
+ * of the glass instead of seven eighths, with open water in the gap.
+ *
+ * IT WENT TO 1.12 FIRST AND THAT WAS TOO FAR: it fixed the enemy and shrank the
+ * player's own ship out from under her, which is the one hull on screen that
+ * should never feel small. The hulls keep their sizes relative to each other
+ * either way — which of you is the bigger ship is a thing the fight is about —
+ * so this number only ever decides how much sea is around the pair of them.
  */
 export function fightZoom(width: number): number {
   const k = Math.max(0, Math.min(1, (width - 390) / 510))
-  return 1.12 + (FIGHT_ZOOM - 1.12) * k
+  return 1.3 + (FIGHT_ZOOM - 1.3) * k
 }
 
 /** The chart's fitted zoom for a viewport this wide. */

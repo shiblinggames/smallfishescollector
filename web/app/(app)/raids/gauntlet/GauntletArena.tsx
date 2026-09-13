@@ -275,6 +275,43 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       }
       const pose = { player: null as ShipFx | null, enemy: null as ShipFx | null }
 
+      /**
+       * ── WHERE THE CANVAS IS ON THE GLASS, MEASURED ONCE ─────────────
+       *
+       * This was read EVERY FRAME, and reading a rect forces the browser to
+       * lay the page out THERE AND THEN before it can answer. Sixty forced
+       * layouts a second, on the main thread, beside an aim bar the player is
+       * judging by eye — which is the exact cost RaidCombat's own anchor loop
+       * is written to avoid, with a long note saying why. This loop did the
+       * thing that note warns about, in the same fight, for a number that
+       * cannot change without a resize: the holder is `position: fixed;
+       * inset: 0`.
+       */
+      let box = el.getBoundingClientRect()
+      const remeasure = () => { box = el.getBoundingClientRect() }
+      const ro = new ResizeObserver(remeasure)
+      ro.observe(el)
+      window.addEventListener('resize', remeasure)
+
+      /**
+       * AND THE WATER'S COLOURS, PARSED ONCE PER PALETTE.
+       *
+       * `rgb3` parses a hex string and allocates a Float32Array. Three of them
+       * a frame, a hundred and eighty a second, for three values that are the
+       * same until the mood or the depth changes. `water.set` copies out of
+       * whatever it is handed, so one array each can be reused forever.
+       */
+      const pal = { key: '', deep: rgb3('#000000'), mid: rgb3('#000000'), shallow: rgb3('#000000') }
+      const palette = (deep: string, mid: string, shallow: string) => {
+        const k = `${deep}|${mid}|${shallow}`
+        if (pal.key !== k) {
+          pal.key = k
+          pal.deep = rgb3(deep); pal.mid = rgb3(mid); pal.shallow = rgb3(shallow)
+        }
+        return pal
+      }
+      const uRes = new Float32Array(2)
+
       /** Where the two hulls stand, in screen pixels, from the chart's duel. */
       const frame = () => {
         const W = app.screen.width, H = app.screen.height
@@ -369,12 +406,14 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
           deepColor: parseInt(th2.sea[0].replace('#', ''), 16),
         })
 
+        uRes[0] = W; uRes[1] = H
+        const pc = palette(th2.sea[0], th2.sea[1], th2.sea[2])
         water?.set({
           uTime: t,
-          uRes: new Float32Array([W, H]),
-          uShallow: rgb3(th2.sea[2]),
-          uMid: rgb3(th2.sea[1]),
-          uDeep: rgb3(th2.sea[0]),
+          uRes,
+          uShallow: pc.shallow,
+          uMid: pc.mid,
+          uDeep: pc.deep,
           // The mood grades the water: a curse is a darker room.
           uDark: Math.min(0.95, th2.dark + scenery.grade()),
           uSwell: th2.swell,
@@ -444,8 +483,7 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         // AND WHERE THEY ARE, for the fight to aim at. The box is the canvas's
         // own, so the numbers are in the same screen space the fight's overlays
         // are laid out in. Widths are the HULLS, not the boxes, exactly as the
-        // chart reports them.
-        const box = el.getBoundingClientRect()
+        // chart reports them. `box` is the cached rect — see above.
         const A = anchors.current!
         A.player.x = box.left + player.node.x
         A.player.y = box.top + player.node.y
@@ -476,6 +514,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
 
       cleanup = () => {
         handle.current = null
+        ro.disconnect()
+        window.removeEventListener('resize', remeasure)
         weather.destroy()
         scenery.destroy()
         guns.destroy()
