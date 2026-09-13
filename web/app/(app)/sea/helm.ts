@@ -40,6 +40,33 @@ export const HELM_BOTTOM = 92
  *  read as a course. */
 export const HELM_DEADZONE = 14
 
+/**
+ * ── HOW FAR THE THUMB TRAVELS FOR FULL HELM ─────────────────────────────────
+ *
+ * The stick is measured from WHERE THE THUMB LANDED rather than from the
+ * wheel's centre, so this is a distance of travel and not a place on the glass.
+ * See the note on `stickVec` for why that distinction is the whole feel of it.
+ *
+ * 46px is about a comfortable thumb roll without moving the hand, and it is
+ * deliberately smaller than the wheel's own 56px radius: full helm should be
+ * reachable INSIDE the ring you can see, because past the edge is where the
+ * thumb stops being sure where it is.
+ */
+export const HELM_STICK_R = 46
+
+/**
+ * THE SLOWEST THE HELM WILL DRIVE HER, as a share of full.
+ *
+ * Deflection used to mean nothing: any push at all ran the boat flat out, so
+ * the stick had one speed and the only way to move gently was to tap the helm
+ * over and over. Now a small push is a slow bell and the rim is full ahead.
+ *
+ * The floor is high because a stick that can be nudged to a crawl is a stick
+ * you have to be careful with, and nobody wants to be careful with a helm. A
+ * third of full is "easing alongside", not "barely moving".
+ */
+export const HELM_SLOW = 0.34
+
 /** How long a still thumb rests before the rod goes in. Long enough that a slow
  *  tap is never mistaken for it, short enough to be a gesture and not a wait. */
 export const HELM_HOLD_MS = 480

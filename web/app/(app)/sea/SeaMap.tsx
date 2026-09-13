@@ -92,7 +92,7 @@ import { claimFishingLevelRewards } from '../fishing/actions'
 // A LEAF, not SeaMap's own exports. The cast button is this same control in its
 // other role and needs these numbers — and FishingHere importing back from here
 // is a cycle that killed the page on load. See app/(app)/sea/helm.ts.
-import { HELM_R, HELM_D, HELM_BOTTOM, HELM_DEADZONE, HELM_HOLD_MS } from './helm'
+import { HELM_R, HELM_D, HELM_BOTTOM, HELM_DEADZONE, HELM_HOLD_MS, HELM_STICK_R, HELM_SLOW } from './helm'
 import { seaClock } from '@/lib/seaClock'
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { squallAt } from '@/lib/seaWeather'
@@ -2317,18 +2317,50 @@ export default function SeaMap({
 
   /** Client point to a world bearing, or null inside the deadzone. Normalised
    *  to the helm's half-extents, so the rim is reachable in every direction. */
-  const boxVec = useCallback((p: Vec): { x: number; y: number; mag: number } | null => {
-    const el = boxRef.current
-    if (!el) return null
-    const r = el.getBoundingClientRect()
-    // Normalised to the box's half-extents, so the CORNERS are reachable — the
-    // box is much wider than it is tall, and using raw pixels would make east
-    // several times harder to ask for than north.
-    const nx = (p.x - (r.left + r.width / 2)) / (r.width / 2)
-    const ny = (p.y - (r.top + r.height / 2)) / (r.height / 2)
-    const d = Math.hypot(nx, ny)
-    if (d < 0.12) return null
-    return { x: nx / d, y: ny / d, mag: Math.min(1, d) }
+  /**
+   * ── THE STICK IS MEASURED FROM WHERE THE THUMB LANDED ───────────────────
+   *
+   * It used to be measured from the CENTRE OF THE WHEEL, and that is the whole
+   * of what was wrong with steering on a phone.
+   *
+   * You cannot see the wheel while your thumb is on it. You land twenty or
+   * thirty pixels off centre without knowing -- and the moment the press became
+   * a steer, the heading was taken from the middle of the ring, so the boat set
+   * off in the direction of an offset you never chose. Worse, to go EAST from a
+   * landing west of centre you had to drag your thumb across the whole wheel
+   * before the boat would even stop turning west. The control was asking where
+   * your thumb IS; the only question a stick should ask is where it has MOVED.
+   *
+   * So zero is the landing point, and this reads the offset from it. The first
+   * millimetre now means exactly what it looks like it means.
+   *
+   * AND THE ORIGIN IS STICKY. Drag beyond full deflection and the origin is
+   * pulled along behind, kept exactly one radius away -- so a thumb that has
+   * wandered up the glass can still steer back the other way without being
+   * lifted. Without it, a long drag strands the zero somewhere off the wheel
+   * and half the compass becomes unreachable.
+   */
+  const helmOrigin = useRef<Vec | null>(null)
+  const stickVec = useCallback((p: Vec): { x: number; y: number; mag: number } | null => {
+    const o = helmOrigin.current
+    if (!o) return null
+    let dx = p.x - o.x, dy = p.y - o.y
+    let d = Math.hypot(dx, dy)
+    if (d > HELM_STICK_R) {
+      // Sticky: haul the zero along so it stays within reach behind the thumb.
+      const k = (d - HELM_STICK_R) / d
+      o.x += dx * k
+      o.y += dy * k
+      dx = p.x - o.x; dy = p.y - o.y
+      d = HELM_STICK_R
+    }
+    if (d < 2) return null
+    // The magnitude is eased rather than linear: most of a thumb's travel
+    // happens near the middle, and a linear stick spends its useful range in
+    // the first few pixels. Squared-ish gives a wide band of gentle way on and
+    // keeps full ahead at the rim.
+    const m = d / HELM_STICK_R
+    return { x: dx / d, y: dy / d, mag: HELM_SLOW + (1 - HELM_SLOW) * m * m }
   }, [])
 
   const dragFrom = useRef<Vec | null>(null)
@@ -7244,9 +7276,14 @@ export default function SeaMap({
       // A HELD BOX BEARING OUTRANKS EVERYTHING, and is re-read every frame so
       // sliding your thumb around inside the box turns the boat under it.
       if (boxHeld.current) {
-        const v = boxVec(boxHeld.current)
+        const v = stickVec(boxHeld.current)
         if (v) {
           cmdDir.current = { x: v.x, y: v.y / GROUND }
+          // THE THROW STAYS FULL. Deflection is a throttle further down, where
+          // it scales the max speed directly (see "HOW FAR OUT YOU PUSH"), and
+          // shortening the thrown target as well would apply it twice: a half
+          // push would come out a quarter, and the stick would feel like it was
+          // sticking.
           target.current = {
             x: pos.current.x + v.x * THROW,
             y: pos.current.y + (v.y / GROUND) * THROW,
@@ -7256,7 +7293,7 @@ export default function SeaMap({
 
       // THE KEYBOARD RANKS WITH THE STICK. Held keys are a bearing, re-read
       // every frame like the thumb is, and composed so W+D is a true diagonal.
-      // The y component is divided by GROUND for the same reason boxVec's is:
+      // The y component is divided by GROUND for the same reason stickVec's is:
       // the key means "down the SCREEN", and the plane is squashed, so a screen
       // direction costs more world-y than world-x.
       if (keysRef.current.size > 0) {
@@ -7332,13 +7369,20 @@ export default function SeaMap({
         const t = Math.min(1, (d - ARRIVE) / (SLOW - ARRIVE))
         want = SPEED * hullSpeed * speedRef.current * (t * t * (3 - 2 * t))
       }
-      // A HALF-PUSHED STICK IS HALF SPEED. Without this the stick is a
-      // direction-only control and every nudge is full sail, which makes
-      // pulling alongside a trader or easing along a coast impossible.
-      // HOW FAR OUT YOU PUSH IS HOW FAST YOU GO. Without it every touch is full
-      // sail and easing alongside a trader is impossible.
+      // ── HOW FAR OUT YOU PUSH IS HOW FAST YOU GO ───────────────────
+      //
+      // The one throttle. Without it every touch is full sail and easing
+      // alongside a trader is impossible.
+      //
+      // The number it reads changed with the stick: it used to be the distance
+      // from the WHEEL'S CENTRE, so where you happened to land decided your
+      // speed before you had asked for any -- a press near the rim was full
+      // ahead the instant it became a steer, and a press dead centre could not
+      // get above a crawl however far you then dragged. It is the distance
+      // TRAVELLED from the landing point now, eased and floored, so the
+      // throttle answers the gesture rather than the grip. See stickVec.
       if (boxHeld.current) {
-        const v = boxVec(boxHeld.current)
+        const v = stickVec(boxHeld.current)
         if (v) want *= v.mag
       }
       const wx = d > 0.001 ? (dx / d) * want : 0
@@ -9870,6 +9914,9 @@ hullRef={hullRefFor(t.key)} />
             // setting it here is exactly the bug: the boat left before the
             // thumb did. It is set the moment the press is ruled a steer.
             helmDown.current = { x: e.clientX, y: e.clientY, at: performance.now() }
+            // ZERO IS HERE. See stickVec: the stick reads the offset from the
+            // landing point, not from the middle of the wheel.
+            helmOrigin.current = { x: e.clientX, y: e.clientY }
             helmSteering.current = false
             setHelmOn(true)
             vibrate(6)
@@ -9904,15 +9951,31 @@ hullRef={hullRefFor(t.key)} />
             }
             if (!helmSteering.current) return
             boxHeld.current = { x: e.clientX, y: e.clientY }
-            const v = boxVec(boxHeld.current)
+            const v = stickVec(boxHeld.current)
             // At the MOVE, not at the next frame — a flick of the thumb can
             // begin and end between two steps of the loop. Same reason as the
             // key press above.
             if (v) cmdDir.current = { x: v.x, y: v.y / GROUND }
-            if (knobRef.current) {
-              knobRef.current.style.transform = v
-                ? `translate3d(${v.x * v.mag * (HELM_R - 22)}px, ${v.y * v.mag * (HELM_R - 22)}px, 0)`
-                : 'translate3d(0,0,0)'
+            // THE KNOB SITS UNDER THE THUMB, which it could not do while the
+            // stick was measured from the middle of the wheel: it used to be
+            // drawn at the offset from CENTRE, so it lagged behind the finger
+            // by however far off-centre the press had landed. Drawn from the
+            // origin, it is exactly where the thumb is, which is the only
+            // honest thing for it to be.
+            if (knobRef.current && helmOrigin.current) {
+              const o = helmOrigin.current
+              const el = boxRef.current
+              const r = el?.getBoundingClientRect()
+              const cx = r ? r.left + r.width / 2 : 0
+              const cy = r ? r.top + r.height / 2 : 0
+              // Clamped to the ring so the knob never leaves the wheel, however
+              // far the thumb has gone.
+              let kx = o.x + (boxHeld.current.x - o.x) - cx
+              let ky = o.y + (boxHeld.current.y - o.y) - cy
+              const kd = Math.hypot(kx, ky)
+              const lim = HELM_R - 22
+              if (kd > lim) { kx = (kx / kd) * lim; ky = (ky / kd) * lim }
+              knobRef.current.style.transform = `translate3d(${kx}px, ${ky}px, 0)`
             }
           }}
           onPointerUp={e => {
@@ -9929,6 +9992,7 @@ hullRef={hullRefFor(t.key)} />
             // is the honest answer rather than a lurch.
             if (!wasSteering && pending) {
               boxHeld.current = null
+            helmOrigin.current = null
               setHelmOn(false)
               if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
               try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
@@ -9941,6 +10005,7 @@ hullRef={hullRefFor(t.key)} />
             target.current = runOutTarget(pos.current, vel.current, cmdDir.current, 0.5)
             cmdDir.current = null
             boxHeld.current = null
+            helmOrigin.current = null
             setHelmOn(false)
             if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
             try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
@@ -9951,6 +10016,7 @@ hullRef={hullRefFor(t.key)} />
             helmSteering.current = false
             setHelmHold(0)
             boxHeld.current = null
+            helmOrigin.current = null
             setHelmOn(false)
             if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
           }}
