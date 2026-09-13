@@ -268,26 +268,57 @@ function fishTexture(PIXI: typeof import('pixi.js')): Texture {
  * at all rather than a thin scattering, because a few fish everywhere is what
  * we are trying to stop being.
  */
-const CELL = 2600
+const CELL = 1500
 /**
- * MEASURED RATHER THAN PICKED, over 8,000 samples of the real chart.
+ * MEASURED RATHER THAN PICKED -- and measured by RUNNING THIS CODE, which is
+ * the part that went wrong the first time. The original numbers came out of a
+ * model of this function written in another language, and that model quietly
+ * had different arithmetic from the thing that ships (see cellNoise), so it
+ * reported a sea that was 37% empty while the real one was nearly all empty.
  *
- * At 0.45 with a straight ramp, 48% of the sea was empty AND the median of what
- * was left came out at 0.37 -- half the ocean barren and most of the rest thin,
- * which trades one uniform sea for another uniform sea with less in it.
+ * These are from the shipping functions, over six thousand camera positions
+ * scattered across the real chart:
  *
- * 0.38 with the ramp on a square root gives 37% genuinely empty water and a
- * median of 0.61 where there is anything at all. Barren stretches run to about
- * three screens across, which is a real crossing: long enough to notice, short
- * enough that it is a passage rather than a desert.
+ *   a third of the water is barren, which is what "there should be empty ocean"
+ *   asked for
+ *   6% of screens hold no fish at all -- you cross empty water, you do not live
+ *   in it
+ *   the median screen has 27 fish on it, and the tenth percentile has 3
+ *
+ * The cell size matters as much as the floor. At 2,600 a barren patch was
+ * several screens across and the empty water stopped being a passage and
+ * started being the map; 1,500 puts grounds and barrens within sight of each
+ * other, which is what makes either of them mean anything.
  */
-const BARREN = 0.38
+const BARREN = 0.40
 
+/**
+ * ── INTEGER HASH, AND IT HAS TO BE `Math.imul` ──────────────────────────────
+ *
+ * Cheap, stable, and no seeded generator to thread about. But written the
+ * obvious way it is quietly broken, and it emptied the ocean:
+ *
+ *     h = (h ^ (h >> 13)) * 1274126177     // WRONG
+ *
+ * `*` on two integers in JavaScript is FLOATING POINT. That product runs to
+ * about 2^61, a double holds 53 bits of mantissa, and the low bits -- which are
+ * the entire output of a hash -- are rounded away. The result was not merely
+ * biased, it was CAPPED: measured over 1,681 cells it never once exceeded 0.5,
+ * with a median of 0.25. Against a 0.38 barren floor that made three quarters
+ * of the sea empty by arithmetic, and the bilinear smoothing pulled most of the
+ * rest under too. Almost no fish anywhere.
+ *
+ * `Math.imul` is the 32-bit multiply, exact and wrapping, which is what every
+ * hash of this shape assumes it is getting. With it the output is flat across
+ * 0..1: quartiles at 0.26, 0.50 and 0.75.
+ *
+ * AND THE SHIFTS ARE UNSIGNED. `>>` drags the sign bit down and folds the top
+ * half of the range onto itself; `>>>` does not.
+ */
 function cellNoise(ix: number, iy: number): number {
-  // Integer hash. Cheap, stable, and no seeded generator to thread about.
-  let h = ix * 374761393 + iy * 668265263
-  h = (h ^ (h >> 13)) * 1274126177
-  return ((h ^ (h >> 16)) >>> 0) / 4294967295
+  let h = Math.imul(ix, 374761393) ^ Math.imul(iy, 668265263)
+  h = Math.imul(h ^ (h >>> 13), 1274126177)
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967295
 }
 
 function patchAt(x: number, y: number): number {
@@ -608,15 +639,20 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
         // fish clearly seen, not a whole shoal of ghosts. Each fish has a fixed
         // slot in its school and only shows once the density reaches it.
         //
-        // THE SLOT SPAN IS 1.6, NOT 1, and that number is the whole gradient.
-        // At 1 the count saturated by the Deep, so the Abyss, the Ancient Deep
-        // and a hotspot were all thirteen fish and differed only in alpha —
-        // which is exactly the thing this is supposed to make visible. Measured
-        // rather than guessed: 1.6 gives 4 fish in the Shallows, 5 in the Open
-        // Waters, 7 in the Deep, 8 in the dark bands, and the full school only
-        // inside a shoal patch.
+        // THE SLOT SPAN IS THE GRADIENT. At 1 the count saturates by the Deep,
+        // so the Abyss, the Ancient Deep and a hotspot are all thirteen fish
+        // and differ only in alpha, which is exactly the thing this exists to
+        // make visible.
+        //
+        // IT CAME DOWN FROM 1.6 WHEN THE PATCHINESS WENT IN, and that is
+        // arithmetic rather than taste: `lit` used to be the band's own density
+        // and is now that density TIMES the patch noise, so the same span would
+        // have thinned every shoal in the sea by however fishy its water
+        // happened to be. 1.15 puts a school in good water back where 1.6 put
+        // it before, and leaves the barrens to the noise, which is the thing
+        // that should be deciding them.
         const slot = (f.ph / (Math.PI * 2))
-        const on = sc.lit > slot * 1.6
+        const on = sc.lit > slot * 1.15
 
         // Coming back is slower than going, which is how a fish behaves and
         // also what keeps the lane open behind a hull for a beat instead of
