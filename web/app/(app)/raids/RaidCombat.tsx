@@ -1948,6 +1948,44 @@ export default function RaidCombat({
     const phase = (((t - needleT0Ref.current) / period) % 1 + 1) % 1
     return phase < 0.5 ? phase * 2 : 2 - phase * 2
   }, [])
+  /**
+   * ── AND THE TARGET IS ON THE SAME CLOCK ─────────────────────────────────
+   *
+   * The needle went to the compositor because main-thread jank must not be
+   * able to make it skip. The BAND it is judged against stayed on the RAF, and
+   * that is half a fix: the player is not aiming at the bar, they are aiming at
+   * the gold, and the two have to be the same instrument.
+   *
+   * IT IS AN ACCURACY BUG BEFORE IT IS A SMOOTHNESS ONE. At the lock the needle
+   * is read to the instant of the press and the band was read from wherever the
+   * last RAF frame left it — one frame stale, more if a frame was dropped. The
+   * crit half-width is 0.012 of the bar. A fast target (a quick hull, a Racing
+   * Tide, a Yawing affix) moves up to 0.034 of the bar in a frame. So a shot
+   * locked dead in the gold could be judged from a band nearly three crit-widths
+   * from where it was painted, and the faster the fight the worse it got —
+   * which is exactly backwards.
+   *
+   * Same construction as the needle: a triangle wave with a known period, so
+   * where the band IS can be computed from the clock the compositor is drawing
+   * it against. The one difference is that the band does not start at an end —
+   * it opens somewhere random and going either way — so the epoch is
+   * phase-matched to where it already was rather than pinned to now.
+   */
+  const zoneAnimRef = useRef<Animation | null>(null)
+  const zoneT0Ref = useRef(0)
+  const zonePeriodRef = useRef(0)
+  /** The band's travel, which is the bar less its own half-width at each end. */
+  const zoneLoRef = useRef(0)
+  const zoneSpanRef = useRef(1)
+  const zoneTri = useCallback((phase: number) => {
+    const v = phase < 0.5 ? phase * 2 : 2 - phase * 2
+    return zoneLoRef.current + v * zoneSpanRef.current
+  }, [])
+  const zoneAt = useCallback((t: number) => {
+    const period = zonePeriodRef.current
+    if (!period) return zonePosRef.current
+    return zoneTri((((t - zoneT0Ref.current) / period) % 1 + 1) % 1)
+  }, [zoneTri])
   const paintNeedle = useCallback((el: HTMLDivElement | null, pos: number) => {
     if (onDial) { if (el) el.style.transform = `rotate(${pos * 360}deg)`; return }
     // The TRACK moves, not the needle. See the note where it is rendered: it is
@@ -2021,12 +2059,21 @@ export default function RaidCombat({
       const tl = document.timeline?.currentTime
       return needleAt(typeof tl === 'number' ? tl : performance.now())
     })(),
-    zone: zonePosRef.current,
+    // AND THE BAND, FROM ITS OWN CLOCK TOO. This canvas runs its own frame
+    // loop, which can land either side of the combat tick that writes
+    // `zonePosRef` — so reading the ref would put the glow a frame off the
+    // band it is meant to be sitting on, half the time, at random.
+    zone: (() => {
+      const a = zoneAnimRef.current
+      if (!a || a.playState !== 'running' || !zonePeriodRef.current) return zonePosRef.current
+      const tl = document.timeline?.currentTime
+      return zoneAt(typeof tl === 'number' ? tl : performance.now())
+    })(),
     // The seam, when Rolling Plate is drifting it inside the band — the glow
     // should answer the thing that actually crits, not the middle of the zone.
     critW: liveCritWRef.current,
     band: aimHitWRef.current + aimGrazeWRef.current,
-  }), [needleAt])
+  }), [needleAt, zoneAt])
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
   // False Colors curse — drifting DECOY bands the player must NOT lock onto.
@@ -3358,6 +3405,43 @@ export default function RaidCombat({
       } else {
         needlePeriodRef.current = 0
       }
+
+      // ── AND THE BAND, PHASE-MATCHED TO WHERE IT ALREADY IS ──────────
+      //
+      // `edge` is read once here rather than per frame. It is the band's own
+      // half-width, it comes from gear, and it cannot change inside an aiming
+      // session — and a fixed-duration animation has to be able to assume that.
+      const zEl = zoneTrackRef.current
+      const lo = aimHitWRef.current + aimGrazeWRef.current
+      const span = Math.max(0.0001, (1 - lo) - lo)
+      zoneLoRef.current = lo
+      zoneSpanRef.current = span
+      zonePeriodRef.current = (2 * span / ZONE_SPEED) * (1000 / 60)
+      if (zEl && typeof zEl.animate === 'function') {
+        try {
+          // The track carries the band's own offset, exactly as paintZone does.
+          const off = -(HIT_W + GRAZE_W)
+          const at = (p: number) => ({ transform: `translate3d(${(p + off) * 100}%, 0, 0)` })
+          const anim = zEl.animate([at(lo), at(1 - lo), at(lo)],
+            { duration: zonePeriodRef.current, iterations: Infinity, easing: 'linear' })
+          // WHERE IT ALREADY WAS, AND WHICH WAY. The band opens at a random
+          // spot going a random way, so unlike the needle it cannot simply
+          // start at phase zero — that would teleport it to the left-hand end
+          // the instant the session began.
+          const v0 = Math.min(1, Math.max(0, (zonePosRef.current - lo) / span))
+          const ph0 = zoneDirRef.current > 0 ? v0 / 2 : 1 - v0 / 2
+          const t0 = document.timeline?.currentTime
+          const base = typeof t0 === 'number' ? t0 : performance.now()
+          zoneT0Ref.current = base - ph0 * zonePeriodRef.current
+          if (typeof t0 === 'number') anim.startTime = zoneT0Ref.current
+          zoneAnimRef.current = anim
+        } catch {
+          zoneAnimRef.current = null
+          zonePeriodRef.current = 0
+        }
+      } else {
+        zonePeriodRef.current = 0
+      }
     }
 
     function tick(now: number) {
@@ -3389,6 +3473,7 @@ export default function RaidCombat({
        * RAF has to take it back for a re-aim.
        */
       const comp = compositor && needlePeriodRef.current > 0 && needleAnimRef.current !== null
+      const compZone = compositor && zonePeriodRef.current > 0 && zoneAnimRef.current !== null
 
       // Squall (raid-8 affliction, Kingmaker's Gale): the needle's sweep speed
       // surges and dies on a slow sine, so timing by rhythm alone fails — you
@@ -3422,15 +3507,20 @@ export default function RaidCombat({
         if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
       }
 
-      zonePosRef.current += ZONE_SPEED * frames * zoneDirRef.current
-      // THE BAND BOUNCES TOO, off the same marked line the needle turns on,
-      // exactly as the aim bar's target bounces off its two ends. Clamped by
-      // the band's OWN half-width so its outer edge just kisses the line
-      // instead of half the band disappearing past it.
-      //
-      // One clamp for both instruments: off the dial aimHitW/aimGrazeW ARE
-      // HIT_W/GRAZE_W (scale 1, no gear bonus), so the bar is unchanged.
-      {
+      if (compZone) {
+        // Off the same clock the band is being DRAWN against — see zoneAt. The
+        // seam, the decoys and the needle's colour all read this, and so does
+        // the judgment at the lock.
+        zonePosRef.current = zoneAt(now)
+      } else {
+        zonePosRef.current += ZONE_SPEED * frames * zoneDirRef.current
+        // THE BAND BOUNCES TOO, off the same marked line the needle turns on,
+        // exactly as the aim bar's target bounces off its two ends. Clamped by
+        // the band's OWN half-width so its outer edge just kisses the line
+        // instead of half the band disappearing past it.
+        //
+        // One clamp for both instruments: off the dial aimHitW/aimGrazeW ARE
+        // HIT_W/GRAZE_W (scale 1, no gear bonus), so the bar is unchanged.
         const edge = aimHitWRef.current + aimGrazeWRef.current
         if (zonePosRef.current >= 1 - edge) { zonePosRef.current = 1 - edge; zoneDirRef.current = -1 }
         if (zonePosRef.current <= edge)     { zonePosRef.current = edge;     zoneDirRef.current = 1 }
@@ -3487,14 +3577,28 @@ export default function RaidCombat({
                  : 'rgba(255,255,255,0.4)'
         paintNeedleColor(indicatorRef.current, bg)
       }
-      if (onDial || zoneRef.current) {
+      // NOT WHILE THE COMPOSITOR HAS IT, for the same reason the needle is not
+      // painted from here: a running animation outranks an inline style, so
+      // this write would be invisible every frame it happened. The dial has no
+      // animation and always paints.
+      if (!compZone && (onDial || zoneRef.current)) {
         paintZone(zoneRef.current, zonePosRef.current)
       }
 
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
+    return () => {
+      cancelAnimationFrame(rafRef.current)
+      // AND THE TWO SWEEPS GO WITH IT. They were left on their elements to be
+      // collected when the bar unmounted, which is true for the end of a turn
+      // and NOT true when this effect re-runs — a changed tide multiplier or a
+      // new enemy speed would have stacked a second sweep on the same element,
+      // both running, the newer one winning and the older one still being
+      // ticked by the compositor for the rest of the fight.
+      needleAnimRef.current?.cancel(); needleAnimRef.current = null; needlePeriodRef.current = 0
+      zoneAnimRef.current?.cancel(); zoneAnimRef.current = null; zonePeriodRef.current = 0
+    }
   }, [subPhase, enemy.shipSpeed, enemy.aimSpeedMult, enemy.zoneSpeedMult, totalNavigation, tide.aimSpeedMult, tide.zoneSpeedMult, affix?.zoneSpeedMult])
 
   // LAZ'S WARD, his side of it. While it holds he cannot be put below 1 HP, so
@@ -4485,24 +4589,48 @@ export default function RaidCombat({
      * style IS the frozen picture, so there is nothing left to snap to and the
      * frozen needle is exactly the spot that was scored.
      */
+    // BOTH INSTRUMENTS, IN THE SAME BREATH. The needle and the band are two
+    // compositor animations, and the shot is a comparison between them — so
+    // they are stopped microseconds apart and each is asked where IT was,
+    // rather than both being asked what time it is. Asking the clock gives you
+    // the last rendering update; asking the animation gives you the press.
     const anim = needleAnimRef.current
+    const zAnim = zoneAnimRef.current
     anim?.pause()
-    const locked = (() => {
-      const period = needlePeriodRef.current
-      if (!anim || !period) return firePosRef.current
-      const at = anim.currentTime
-      if (typeof at !== 'number') return firePosRef.current
-      const phase = ((at / period) % 1 + 1) % 1
-      return phase < 0.5 ? phase * 2 : 2 - phase * 2
-    })()
+    zAnim?.pause()
+    const phaseOf = (a: Animation | null, period: number): number | null => {
+      if (!a || !period) return null
+      const at = a.currentTime
+      if (typeof at !== 'number') return null
+      return ((at / period) % 1 + 1) % 1
+    }
+    const nPh = phaseOf(anim, needlePeriodRef.current)
+    const locked = nPh == null ? firePosRef.current : (nPh < 0.5 ? nPh * 2 : 2 - nPh * 2)
+    const zPh = phaseOf(zAnim, zonePeriodRef.current)
+    const lockedZone = zPh == null ? zonePosRef.current : zoneTri(zPh)
     firePosRef.current = locked
+    zonePosRef.current = lockedZone
+    // The frozen picture IS the judged geometry, for both of them — see the
+    // note above on why the base style has to be written before the animation
+    // is let go.
     paintNeedle(indicatorRef.current, locked)
+    paintZone(zoneRef.current, lockedZone)
     if (anim) {
       anim.cancel()
       needleAnimRef.current = null
       // The RAF takes the needle back from here, which is what a re-aim needs:
       // it carries on from the locked spot instead of finding a dead sweep.
       needlePeriodRef.current = 0
+    }
+    if (zAnim) {
+      zAnim.cancel()
+      zoneAnimRef.current = null
+      zonePeriodRef.current = 0
+      // AND THE BAND'S DIRECTION IS HANDED BACK, or a re-aim would resume it
+      // travelling whichever way it happened to be going when the animation
+      // took over. The phase says: the first half of the cycle runs left to
+      // right.
+      if (zPh != null) zoneDirRef.current = zPh < 0.5 ? 1 : -1
     }
     // The lock ITSELF gets a tick, synchronous with the freeze — the single
     // most important input in combat should be felt the instant it lands,
