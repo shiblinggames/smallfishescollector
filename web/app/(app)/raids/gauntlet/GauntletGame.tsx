@@ -653,6 +653,40 @@ export default function GauntletGame(props: GauntletGameProps) {
   // A qualifying confluence offered as a card in this draft (replaces one boon
   // slot — the Hades-duo opportunity cost). Null when none is offered.
   const [pendingConfluence, setPendingConfluence] = useState<ConfluenceOffer | null>(null)
+  /**
+   * ── THE ART IS FETCHED BEFORE THE CARD TURNS, NOT AS IT TURNS ─────────────
+   *
+   * Every reveal card carried `loading="lazy"`, and on a card that is SEALED
+   * until you flip it that is the worst possible instruction: the browser is
+   * being told to hold the fetch until the image is visible, and the image
+   * becomes visible at the exact instant of the reveal. So the fetch and the
+   * decode both landed inside the flip, and the art arrived a beat after the
+   * card it belongs to. That is the lag on a boon.
+   *
+   * They are eager now, and this primes them one step earlier still: the offer
+   * exists a screen-swap before the cards are drawn, so the bytes are usually
+   * home before anything is rendered at all. Three 192px images, ~20KB each —
+   * primed per offer rather than as a pool, because forty of them decoded is
+   * six megabytes and this game has been bitten by that before.
+   */
+  useEffect(() => {
+    const urls: string[] = []
+    for (const b of pendingBoons ?? []) {
+      const fam = GAUNTLET_BOONS.find(f => f.id === b.id)
+      if (fam?.image) urls.push(fam.image)
+    }
+    if (pendingCurse?.image) urls.push(pendingCurse.image)
+    if (pendingConfluence) {
+      const syn = (pendingConfluence.isConvergence ? CONVERGENCES : CONFLUENCES)
+        .find(x => x.id === pendingConfluence.id)
+      if (syn?.image) urls.push(syn.image)
+    }
+    for (const u of urls) {
+      const im = new Image()
+      im.decoding = 'async'
+      im.src = u
+    }
+  }, [pendingBoons, pendingCurse, pendingConfluence])
   // How many BOON cards a draft shows. A confluence offer takes one of the slots,
   // so it is always one fewer. Derived from the Term (Scarce Powder) rather than
   // hardcoded, or a 2-pick draft would still show 2 boons alongside a confluence
@@ -4072,7 +4106,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             <div style={{ position: 'absolute', inset: -24, borderRadius: '50%', background: `radial-gradient(circle, ${CRIM}3c 0%, transparent 64%)`, animation: 'gauntPulse 3s ease-in-out infinite' }} />
             {c.image ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={c.image} alt="" loading="lazy" decoding="async"
+              <img src={c.image} alt="" loading="eager" decoding="async" fetchPriority="high"
                 style={{ position: 'relative', width: 150, height: 150, objectFit: 'contain', filter: `drop-shadow(0 8px 24px ${CRIM}66) drop-shadow(0 0 10px ${CRIM}55)` }} />
             ) : (
               <svg width="150" height="150" viewBox="0 0 24 24" fill={CRIM} style={{ position: 'relative', filter: `drop-shadow(0 8px 28px ${CRIM}66)` }} aria-hidden>
@@ -4324,7 +4358,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                         {boonImg
                           ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={boonImg} alt="" loading="lazy" decoding="async"
+                            <img src={boonImg} alt="" loading="eager" decoding="async" fetchPriority="high"
                               style={{ width: size * 0.79, height: size * 0.79, objectFit: 'contain', filter: `drop-shadow(0 2px 5px rgba(0,0,0,0.6)) drop-shadow(0 0 7px ${rm.color}66)` }} />
                           )
                           : <span aria-hidden style={{ fontSize: size * 0.36, color: rm.color, lineHeight: 1 }}>✦</span>}
@@ -4605,7 +4639,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                       {synImg
                         ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={synImg} alt="" loading="lazy" decoding="async"
+                          <img src={synImg} alt="" loading="eager" decoding="async" fetchPriority="high"
                             style={{ width: 50, height: 50, objectFit: 'contain', filter: `drop-shadow(0 2px 5px rgba(0,0,0,0.6)) drop-shadow(0 0 7px ${AC}66)` }} />
                         )
                         : <span aria-hidden style={{ fontSize: '1.5rem', color: AC, lineHeight: 1 }}>✦</span>}

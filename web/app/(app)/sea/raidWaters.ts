@@ -1184,6 +1184,27 @@ const ENC_ART_INK: [RegExp, number][] = [
  * and box together, so a ward still wraps exactly the ship that is painted.
  */
 const ENC_FAR = 0.87
+
+/**
+ * AND SHE IS OVER HERE, WHICH IS THE OTHER HALF OF THE SAME FACT.
+ *
+ * The enemy stands up-screen and draws a shade under her class for it. The
+ * player stands DOWN-screen — nearer the camera — and drew at exactly her class
+ * size, so the whole of the distance between the two hulls was being paid for
+ * by one of them. Against the enemies a gauntlet actually sends (they are drawn
+ * from every raid config, Man-o-Wars included) that left her looking like the
+ * smaller ship in her own fight.
+ *
+ * 1.15 against the enemy's 0.87 puts about a third of a class between them for
+ * standing where they stand, which is what a plane with any depth in it should
+ * do. It does NOT touch the ladder: which of you is the bigger ship is still
+ * decided by seaBeam against ENC_TYPE_HULL, and a Sloop meeting a Man-o-War
+ * still meets something much bigger than her.
+ *
+ * Applied to hull and box together, so a ward still wraps exactly the ship that
+ * is painted.
+ */
+const PLAYER_NEAR = 1.15
 export function encArt(art: string): { hull: number; box: number } {
   const hull = (ENC_TYPE_HULL.find(([re]) => re.test(art))?.[1] ?? 245) * ENC_FAR
   const ink = ENC_ART_INK.find(([re]) => re.test(art))?.[1] ?? 0.6
@@ -1387,7 +1408,11 @@ export function duelFrame(W: number, H: number, cx: number, cy: number, seaBeam:
   const enc = encArt(enemyArt)
   return {
     z,
-    player: { x: cx + px * z, y: cy + py * z * ground, box: WARSHIP_W * z, hull: WARSHIP_W * seaBeam * z },
+    player: {
+      x: cx + px * z, y: cy + py * z * ground,
+      box: WARSHIP_W * PLAYER_NEAR * z,
+      hull: WARSHIP_W * seaBeam * PLAYER_NEAR * z,
+    },
     enemy: { x: cx + ex * z, y: cy + ey * z * ground, box: enc.box * z, hull: enc.hull * z },
   }
 }
