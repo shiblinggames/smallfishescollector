@@ -122,17 +122,29 @@ const GAP = { min: 16, max: 46 }
 const WIDTH = { min: 380, max: 760 }
 
 /**
- * HOW MUCH OF THE CAMERA'S TRAVEL A CLOUD TAKES, per cloud.
+ * ── HOW MUCH OF THE CAMERA'S TRAVEL A CLOUD TAKES, AND IT IS OVER 1 ─────────
  *
- * 1.0 is painted on the water, 0 is painted on the lens, and LOWER IS FURTHER
- * AWAY: a thing on the horizon barely moves when you walk, which is why a
- * distant range seems to follow you. At 0.80-0.92 these tracked the sea almost
- * exactly and read as being at mast height.
+ * This was backwards, and it is why no amount of making them smaller, fainter
+ * or higher up ever made them read as sky.
  *
- * Varied per cloud so the sky is not one rigid sheet sliding about: they share
- * a wind, not a height.
+ * 1.0 means a thing moves exactly with the water: it IS on the water. 0 means
+ * it does not move with the camera at all, which is a smear on the lens --
+ * infinitely close. So everything between 0 and 1 is BETWEEN the camera and
+ * the sea, and the lower the number the nearer the glass.
+ *
+ * The instinct is the side-scroller's: distant hills move slowly, so slower
+ * must mean further. That holds when the far thing is BEHIND the scene. This
+ * camera looks DOWN at the water, and a cloud is not behind the sea, it is in
+ * front of it -- between the lens and the plane. A nearer thing sweeps past
+ * FASTER, which is the entire experience of driving under one.
+ *
+ * At 0.55-0.72 a cloud crawled while the sea it was over ran past underneath.
+ * The eye has one reading for something that moves less than the ground: it is
+ * further away than the ground. Which puts it under the sea.
+ *
+ * Over 1 it sweeps, and the sweep is the altitude.
  */
-const PARALLAX = { min: 0.55, max: 0.72 }
+const PARALLAX = { min: 1.14, max: 1.42 }
 
 /** World px per second the wind moves them. One wind, so every cloud takes it. */
 const WIND = { x: 9, y: -4 }
@@ -140,8 +152,18 @@ const WIND = { x: 9, y: -4 }
 /** Seconds of fade at each end of a pass, so nothing pops into being. */
 const FADE = 2.6
 
+/** Where the sun is, as a share of the cloud's own width. The shadow lands
+ *  down-light of the body, and on this chart the light comes from up-screen. */
+const SUN = { x: 0.12, y: 0.40 }
+
+/** How dark a shadow gets at its heart. A tenth: it is a passing dimming of
+ *  the water, and anything you would call grey is the thing that was removed. */
+const SHADE = 0.12
+
 type Cloud = {
   sprite: Sprite
+  /** Its own shadow, on the plane. Same frame, same world position. */
+  shade: Sprite
   /** Where it is, in WORLD px. Not a fraction of the viewport -- see advance. */
   x: number
   y: number
@@ -155,6 +177,23 @@ type Cloud = {
 }
 
 export type Clouds = {
+  /**
+   * THE SHADOWS. Goes in the WORLD container, on the plane with everything
+   * else that lies on it.
+   *
+   * This came out when seven permanent clouds were dimming the whole sea, and
+   * it has to come back, because it is the one thing on the screen that says a
+   * cloud is between the sun and the water. Two small faint patches that pass
+   * is not the thing that was removed: that was seven, always, at up to 4,600
+   * px across.
+   *
+   * AND THE SHADOW IS THE DEPTH CUE, not the body. Both have the same world
+   * position; the shadow is drawn ON the plane at 1.0 and the body in the air
+   * at over 1. So the cloud slides against its own shadow as the camera moves,
+   * and that separation is the altitude. A cloud pinned to its shadow is a
+   * sticker on the sea, which is what this looked like.
+   */
+  water: Container
   /** The bodies. Goes on the STAGE, above the world: they are between the
    *  camera and the sea, and nothing on the sea can be in front of them. */
   air: Container
@@ -165,6 +204,13 @@ export type Clouds = {
 }
 
 export function makeClouds(PIXI: typeof import('pixi.js')): Clouds {
+  const water: Container = new PIXI.Container()
+  // SUBTRACTED, NOT WASHED ON. A grey wash over dark water lifts it toward
+  // grey; a cloud shadow makes water DARKER, not flatter. Same reason the
+  // squall's shadow multiplies.
+  water.blendMode = 'multiply'
+  water.eventMode = 'none'
+  water.interactiveChildren = false
   const air: Container = new PIXI.Container()
   air.eventMode = 'none'
   // Nothing in here is ever a hit target and the container is never sorted;
@@ -186,7 +232,13 @@ export function makeClouds(PIXI: typeof import('pixi.js')): Clouds {
     sprite.anchor.set(0.5)
     sprite.visible = false
     air.addChild(sprite)
-    clouds.push({ sprite, x: 0, y: 0, w: 0, parallax: 0.86, alpha: 0, age: 0, live: false })
+    const shade: Sprite = new PIXI.Sprite()
+    shade.anchor.set(0.5)
+    shade.visible = false
+    // The colour a cloud shadow actually is on water: a cool grey, never black.
+    shade.tint = 0x93a8bf
+    water.addChild(shade)
+    clouds.push({ sprite, shade, x: 0, y: 0, w: 0, parallax: 1.2, alpha: 0, age: 0, live: false })
   }
 
   void texture(PIXI, SHEET).then(base => {
@@ -206,6 +258,7 @@ export function makeClouds(PIXI: typeof import('pixi.js')): Clouds {
     const tex = frames[(Math.random() * frames.length) | 0]
     if (!tex) return
     c.sprite.texture = tex
+    c.shade.texture = tex
     c.w = rand(WIDTH.min, WIDTH.max)
     c.parallax = rand(PARALLAX.min, PARALLAX.max)
     // FAINT, AND THAT IS THE POINT OF THEM. They are drawn over every other
@@ -232,9 +285,11 @@ export function makeClouds(PIXI: typeof import('pixi.js')): Clouds {
     // the view where the horizon is, rather than hanging beside the boat.
     c.y = camY - rand(halfH * 0.15, halfH * 0.95)
     c.sprite.visible = true
+    c.shade.visible = true
   }
 
   return {
+    water,
     air,
     night(d) { dark = d },
 
@@ -285,6 +340,7 @@ export function makeClouds(PIXI: typeof import('pixi.js')): Clouds {
           || sy < -drawH * 2 || sy > screenH + drawH * 2) {
           c.live = false
           c.sprite.visible = false
+          c.shade.visible = false
           continue
         }
 
@@ -302,6 +358,20 @@ export function makeClouds(PIXI: typeof import('pixi.js')): Clouds {
         // second texture.
         const cool = Math.round(0xff - dark * 0x62)
         c.sprite.tint = (cool << 16) | (cool << 8) | Math.round(0xff - dark * 0x3a)
+
+        // ── AND ITS SHADOW, DOWN ON THE PLANE ───────────────────────
+        //
+        // Same world position, drawn at 1.0 instead of the body's parallax, so
+        // the two separate as the camera moves and the gap between them is the
+        // height. Squashed by GROUND like everything else lying on the water --
+        // the body is not, because the body is in the air.
+        //
+        // It is in the WORLD container, so it takes the world's own transform:
+        // position is world px, and nothing here converts to screen.
+        c.shade.position.set(c.x + c.w * SUN.x, c.y + c.w * SUN.y)
+        c.shade.scale.set(c.w / c.shade.texture.width, (c.w / c.shade.texture.width) * GROUND)
+        // AFTER DARK THERE IS ALMOST NOTHING CASTING. A moon throws a little.
+        c.shade.alpha = SHADE * fadeIn * lit
       }
     },
   }

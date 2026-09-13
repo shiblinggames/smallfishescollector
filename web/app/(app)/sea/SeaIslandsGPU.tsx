@@ -723,15 +723,22 @@ export default function SeaIslandsGPU({
       // under an island would be falling behind it.
       const squalls: Squalls = makeSqualls(PIXI)
       /**
-       * FAIR-WEATHER CLOUD. ONE layer now, and it goes on the STAGE, because a
-       * cloud is between the camera and the sea. It used to be two: painted
-       * bodies up here and a multiplied shadow down on the plane, seven of each
-       * at all times, which meant the water was permanently dimmed by something
-       * permanently overhead. Nothing is cast on the sea any more -- see
-       * seaClouds, which is now a few painted clouds going past now and then
-       * with clear sky in between.
+       * FAIR-WEATHER CLOUD, in two places, because it is two facts.
+       *
+       * The SHADOWS go here on the plane, with everything else that lies on it.
+       * The BODIES go on the stage, last of all, because a cloud is between the
+       * camera and the sea and nothing on the sea may be drawn in front of one.
+       *
+       * The split is the depth: both halves share a world position, the shadow
+       * is drawn at 1.0 and the body at over 1, so a cloud slides against its
+       * own shadow as the camera moves and the gap between them is the height.
+       *
+       * This was removed for a while, when seven permanent clouds up to 4,600px
+       * across were dimming the whole sea. Two small faint patches that pass is
+       * not that. See seaClouds.
        */
       const clouds = makeClouds(PIXI)
+      world.addChild(clouds.water)
 
       world.addChild(squalls.water)
 
@@ -944,7 +951,10 @@ export default function SeaIslandsGPU({
           const maybe = (name: string, node: { visible: boolean }) => {
             if (all || off.has(name)) node.visible = false
           }
+          // Both halves, or ?hide=clouds leaves the shadows of clouds that
+          // are not there.
           maybe('clouds', clouds.air)
+          maybe('clouds', clouds.water)
           maybe('haze', haze)
           maybe('gulls', gulls.view)
           maybe('lights', lights.screen)
