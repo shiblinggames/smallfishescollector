@@ -43,6 +43,7 @@ import { makeMaelstroms, type Maelstroms } from '@/app/(app)/sea/seaMaelstrom'
 import { MAELSTROMS } from '@/app/(app)/sea/raidWaters'
 import { GROUND } from '@/app/(app)/sea/islandArt'
 import { texture } from '@/app/(app)/sea/skiffArt'
+import { makeWake, type Wake } from '@/app/(app)/sea/seaWake'
 import { makeWeather, type Weather } from './gauntletWeather'
 import { makeScenery, type Scenery } from './gauntletScenery'
 
@@ -127,12 +128,29 @@ function glow(PIXI: typeof import('pixi.js')): Texture {
   return (glowTex = PIXI.Texture.from(c))
 }
 
-export default function GauntletSlipway({ theme, variant, places, shipUrl, onNear, onEnterPortal }: {
+export default function GauntletSlipway({ theme, variant, places, shipUrl, cards, onNear, onEnterPortal }: {
   theme: SlipwayTheme
   /** Whose door this is: which maelstrom, whose hologram, which wreck-field. */
   variant: 'davy' | 'don'
   places: SlipwayPlace[]
   shipUrl: string
+  /**
+   * ── THE CARDS THAT RIDE THE MOORINGS ──────────────────────────────────────
+   *
+   * They are DOM, drawn by the parent, and this loop writes their opacity and
+   * transform every frame from how close she actually is.
+   *
+   * `onNear` cannot do it. It carries ONE id and it carries it as state, so the
+   * five cards had exactly two appearances between them — the near one and the
+   * other four — and every card sat at near-full strength the whole time. Five
+   * lit labels over a painted sea is a menu with a picture behind it: the eye
+   * has nowhere to rest, and the water, which is the thing that was actually
+   * built here, ends up as wallpaper.
+   *
+   * Through React state it would also be a re-render of an eight thousand line
+   * component to fade a label, sixty times a second.
+   */
+  cards?: React.MutableRefObject<Map<string, HTMLElement | null>>
   /** The place the hull is alongside, or null. Drives the helm button. */
   onNear: (id: string | null) => void
   /** She sailed into the eye. */
@@ -142,6 +160,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
   const themeRef = useRef(theme); themeRef.current = theme
   const placesRef = useRef(places); placesRef.current = places
   const onNearRef = useRef(onNear); onNearRef.current = onNear
+  const cardsRef = useRef(cards); cardsRef.current = cards
   const onPortalRef = useRef(onEnterPortal); onPortalRef.current = onEnterPortal
   const variantRef = useRef(variant); variantRef.current = variant
 
@@ -237,10 +256,40 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
         return { p, node, pool, rings, ph: i * 1.7 }
       })
 
+      // ── WHAT SHE LEAVES BEHIND ──────────────────────────────────────
+      //
+      // The lobby had no wake at all, and that is most of why this water read
+      // as a painted floor: she crossed it and it did not notice. The chart
+      // already owns the real thing — the V, the churn at the stern, and the
+      // standing rings a hull sits in when it stops — so it is hosted here
+      // rather than reinvented.
+      //
+      // IT WANTS A SQUASHED WORLD. Everything in `seaWake` is written for the
+      // chart's container, which carries `scaleY(GROUND)`, and it divides by
+      // GROUND on the way in so its rings land as ellipses on the glass. The
+      // Slipway's world is flat screen space, so the wake gets a host with that
+      // squash and is fed positions divided by GROUND, exactly as the chart
+      // feeds it. Without the host every ring would be a perfect circle, which
+      // reads as a hole rather than as water.
+      const wakeHost = new PIXI.Container()
+      wakeHost.scale.set(1, GROUND)
+      const wake: Wake = makeWake(PIXI)
+      wakeHost.addChild(wake.view)
+      world.addChild(wakeHost)
+      // Foam in a drowned place is not white. Taken down toward the water so
+      // the brightest thing on this sea stays the door.
+      wake.night(0x9fbac8)
+
       // ── THE SHIP ────────────────────────────────────────────────────
       const boat = new PIXI.Container()
+      // ── A DARK DISH, NOT A LAMP ─────────────────────────────────────
+      //
+      // This was an ADDITIVE pale-blue blob, which is the exact mistake the
+      // wake module warns about in its own notes: light added at the waterline
+      // makes a hull look like it is hovering over a bulb. Light TAKEN AWAY
+      // says the water is deeper where she sits. Same sprite, multiplied.
       const shade = new PIXI.Sprite(glowT)
-      shade.anchor.set(0.5); shade.tint = 0xbfe4ee; shade.alpha = 0.22; shade.blendMode = 'add'
+      shade.anchor.set(0.5); shade.tint = 0x5c7080; shade.alpha = 0.5; shade.blendMode = 'multiply'
       const hull = new PIXI.Sprite(PIXI.Texture.EMPTY)
       hull.anchor.set(0.5)
       boat.addChild(shade, hull)
@@ -253,6 +302,19 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
       const pos = { x: app.screen.width * 0.5, y: app.screen.height * 0.5 + u0 * 0.26 }
       const target = { x: pos.x, y: pos.y }
       let facing = 1
+      /** Eased toward `facing`, so she COMES ABOUT instead of being mirrored
+       *  between two frames. She narrows to her beam through the turn and opens
+       *  out on the new tack, which is what a hull swinging round actually
+       *  looks like from above. */
+      let face = 1
+      /** How hard she is driving, 0..1, smoothed. Feeds the wake's force and
+       *  the lift of her bow: a boat under way sits differently from one
+       *  drifting, and that difference is most of "she is sailing". */
+      let drive = 0
+      /** Held rather than derived, because the heading of a stopped boat is
+       *  atan2(0, 0) and her wake would snap to due east the moment she
+       *  settled. */
+      let heading = Math.PI
       let nearNow: string | null = null
       let entered = false
 
@@ -312,24 +374,66 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
         // ── SHE SAILS ─────────────────────────────────────────────────
         const dx = target.x - pos.x, dy = target.y - pos.y
         const d = Math.hypot(dx, dy)
+        const top = u * 0.62
+        let vx = 0, vy = 0
         if (d > 4) {
-          const speed = Math.min(d * 2.4, u * 0.62)
-          pos.x += (dx / d) * speed * dt
-          pos.y += (dy / d) * speed * dt
+          const speed = Math.min(d * 2.4, top)
+          vx = (dx / d) * speed
+          vy = (dy / d) * speed
+          pos.x += vx * dt
+          pos.y += vy * dt
+          heading = Math.atan2(vy, vx)
           if (Math.abs(dx) > 12) facing = dx < 0 ? 1 : -1
         }
+        // Both of these are eased, and neither was. A hull has mass: full speed
+        // on the first frame of a press, a dead stop on the last and a mirror
+        // flip in between is a cursor, not a boat.
+        drive += (Math.hypot(vx, vy) / top - drive) * Math.min(1, dt * 4)
+        face += (facing - face) * Math.min(1, dt * 6.5)
+
         const bob = Math.sin(t * 1.6) * 3 + Math.sin(t * 2.4 + 1) * 1.8
         boat.x = pos.x
         boat.y = pos.y + bob
+        const beam = Math.min(320, u * 0.36)
         if (hull.texture.width > 2) {
-          const w = Math.min(320, u * 0.36)
-          hull.width = w
-          hull.height = w * (hull.texture.height / hull.texture.width)
-          shade.width = w * 0.58
-          shade.height = w * 0.17
+          hull.width = beam
+          hull.height = beam * (hull.texture.height / hull.texture.width)
+          shade.width = beam * 0.72
+          shade.height = beam * 0.22
           shade.y = hull.height * 0.29 - bob
         }
-        hull.scale.x = Math.abs(hull.scale.x) * facing
+        // THE TURN, DRAWN. `face` crosses zero as she comes about; the floor
+        // keeps her from vanishing outright at the crossing.
+        const sgn = face < 0 ? -1 : 1
+        hull.scale.x = Math.abs(hull.scale.x) * sgn * Math.max(0.22, Math.abs(face))
+        // AND HER BOW COMES UP WITH THE THROTTLE. Small on purpose: at this
+        // size a few degrees is the difference between a boat and a sticker,
+        // and any more is a toy being waggled.
+        hull.rotation = drive * 0.06 * face
+
+        // ── AND THE WATER ANSWERS ─────────────────────────────────────
+        // The cutwater is forward of her centre and a little below it; where
+        // she SITS is under the middle of her, which is where the standing
+        // rings come from once she stops. Divided by GROUND on the way in,
+        // because the host carries the squash — see wakeHost.
+        if (hull.texture.width > 2) {
+          const keel = hull.height * 0.29
+          wake.lay([{
+            id: 'me',
+            x: pos.x - sgn * beam * 0.3,
+            y: (pos.y + keel * 0.7) / GROUND,
+            cx: pos.x,
+            cy: (pos.y + keel) / GROUND,
+            ang: heading,
+            // Under this she is drifting rather than driving, and a drifting
+            // hull should be standing in rings, not trailing foam.
+            force: drive > 0.08 ? Math.min(1, drive) : 0,
+            scale: beam / 210,
+            heave: 0,
+            kind: 'plain',
+          }])
+        }
+        wake.advance(dt)
 
         // ── THE MOORINGS BREATHE, AND THE NEAREST ONE ANSWERS ─────────
         let found: string | null = null
@@ -339,16 +443,42 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
           m.node.x = mx; m.node.y = my
           const dd = Math.hypot(pos.x - mx, pos.y - my)
           if (dd < bestD) { bestD = dd; found = m.p.id }
-          const near = dd < REACH * 1.6
+          // ── HOW MUCH THIS MOORING IS THE ONE SHE IS AT ──────────────
+          //
+          // Continuous, not a threshold. A light that switches on at a radius
+          // is a trigger volume; one that comes up as you approach is a place
+          // answering. Squared, so the far ones sit right back and nearly all
+          // of the brightening happens in the last boat-length.
+          const k = Math.max(0, Math.min(1, 1 - dd / (REACH * 2.6))) ** 2
           const pulse = 0.5 + 0.5 * Math.sin(t * 1.4 + m.ph)
-          m.pool.width = u * (0.35 + 0.055 * pulse)
+          // ── AND IT IS A POOL, NOT A FLOOD ───────────────────────────
+          //
+          // These were 0.35 of the short side ACROSS, four of them, additive,
+          // and never dimmer than 0.26. At the spacing the places sit at they
+          // overlapped into one wash of light over the whole floor, which is
+          // what made this water look flat and muddy: nothing was dark, so
+          // nothing was lit. Half the size, a third of the resting brightness,
+          // and the lit one is unmistakable because the others are not.
+          m.pool.width = u * (0.17 + 0.02 * pulse) * (1 + 0.42 * k)
           m.pool.height = m.pool.width * 0.42
-          m.pool.alpha = (near ? 0.5 : 0.26) + 0.08 * pulse
-          for (let k = 0; k < m.rings.length; k++) {
-            const uu = ((t * (near ? 0.55 : 0.36) + m.ph * 0.13 + k * 0.5) % 1)
-            const s = u * (0.08 + uu * 0.22)
-            m.rings[k].width = s; m.rings[k].height = s * 0.42
-            m.rings[k].alpha = (1 - uu) * (near ? 0.55 : 0.28)
+          m.pool.alpha = 0.11 + 0.4 * k + 0.05 * pulse * (0.3 + k)
+          for (let j = 0; j < m.rings.length; j++) {
+            // The ripples quicken as she comes alongside rather than stepping
+            // from one rate to another.
+            const uu = ((t * (0.34 + 0.24 * k) + m.ph * 0.13 + j * 0.5) % 1)
+            const s = u * (0.055 + uu * (0.12 + 0.1 * k))
+            m.rings[j].width = s; m.rings[j].height = s * 0.42
+            m.rings[j].alpha = (1 - uu) * (0.1 + 0.46 * k)
+          }
+          // ── AND ITS CARD, WHICH IS DOM ──────────────────────────────
+          // One number written per frame; the sub line, the lift, the scale
+          // and the glow all read it. See the `cards` prop.
+          const el = cardsRef.current?.current.get(m.p.id)
+          if (el) {
+            el.style.opacity = (0.26 + 0.74 * k).toFixed(3)
+            // The lift was SIX PIXELS, which is a card that does not move.
+            el.style.transform = `translate(-50%, ${(32 - 15 * k).toFixed(1)}px) scale(${(0.88 + 0.12 * k).toFixed(3)})`
+            el.style.setProperty('--k', k.toFixed(3))
           }
         }
         // The eye itself is a place the helm can name.
@@ -380,6 +510,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
         el.removeEventListener('pointerdown', onDown)
         el.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
+        wake.destroy()
         maelstroms.destroy()
         scenery.destroy()
         weather.destroy()

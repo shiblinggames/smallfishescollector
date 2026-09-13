@@ -820,6 +820,14 @@ export default function GauntletGame(props: GauntletGameProps) {
    */
   const [slipNear, setSlipNear] = useState<string | null>(null)
   const [ledgerOpen, setLedgerOpen] = useState(false)
+  /**
+   * THE MOORING CARDS' NODES, handed down to the Slipway's frame loop so it can
+   * fade and lift each one by how close she actually is. `slipNear` is a single
+   * id and a piece of state; presence is a number per card, sixty times a
+   * second. See the `cards` prop on GauntletSlipway for why that difference
+   * matters enough to reach across like this.
+   */
+  const slipCards = useRef(new Map<string, HTMLElement | null>())
 
   // Fun run telemetry — folded from RaidCombat's onStat deltas across the dive.
   const runStatsRef = useRef<GauntletRunStats>(emptyRunStats())
@@ -2559,6 +2567,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           }}
           variant={props.variant ?? 'davy'}
           places={slipPlaces}
+          cards={slipCards}
           shipUrl={props.shipImageUrl}
           onNear={setSlipNear}
           onEnterPortal={() => setModeChoiceOpen(true)}
@@ -2657,34 +2666,78 @@ export default function GauntletGame(props: GauntletGameProps) {
             caption under the bowl rather than a card, because it is not a
             thing you moor at. */}
         {!ledgerOpen && slipPlaces.map(pl => {
-          const near = slipNear === pl.id
           const hex = hexOf(pl.color)
           const meta = PLACE_META[pl.id]
           if (pl.portal) return (
             <div key={pl.id} aria-hidden
-              style={{ position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy + 0.27), transform: 'translate(-50%, 0)', zIndex: 4, pointerEvents: 'none', textAlign: 'center', transition: 'opacity 0.3s', opacity: near ? 1 : 0.85 }}>
+              style={{ position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy + 0.27), transform: 'translate(-50%, 0)', zIndex: 4, pointerEvents: 'none', textAlign: 'center', transition: 'opacity 0.3s', opacity: slipNear === pl.id ? 1 : 0.85 }}>
               <p className="font-cinzel font-800 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.16em', color: '#f4efe4', textShadow: `0 2px 10px rgba(0,0,0,0.98), 0 0 18px ${hex}66` }}>{pl.label}</p>
               <p className="font-karla font-700" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', color: `${hex}dd`, marginTop: 2, textShadow: '0 1px 8px rgba(0,0,0,0.95)' }}>{meta.sub}</p>
             </div>
           )
           return (
+            // ── A MOORING'S CARD, DRIVEN BY THE BOAT ────────────────────
+            //
+            // NO `opacity` AND NO `transform` IN THIS STYLE OBJECT. The
+            // Slipway's frame loop owns both and writes them from her actual
+            // distance to this mooring, and React would stamp its own values
+            // back over that work on every re-render — which includes the
+            // re-render caused by coming alongside, so the flicker would land
+            // exactly where the card is meant to be blooming. A property React
+            // never declares is a property React never touches.
+            //
+            // The far-away pose is therefore set once, on the node itself, and
+            // only while it has none: without it a card would exist at full
+            // strength for the frame between mounting and the first tick.
+            //
+            // `--k` is that distance as a 0..1 presence, and the glow, the rim
+            // and the sub line all read it in CSS. One number written per
+            // frame, four things answering it.
             <div key={pl.id} aria-hidden
+              ref={el => {
+                slipCards.current.set(pl.id, el)
+                if (el && !el.style.transform) {
+                  el.style.transform = 'translate(-50%, 32px) scale(0.88)'
+                  el.style.opacity = '0.26'
+                }
+              }}
               style={{
                 position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy),
-                transform: `translate(-50%, ${near ? 24 : 30}px)`, zIndex: 4, pointerEvents: 'none',
+                zIndex: 4, pointerEvents: 'none', willChange: 'transform, opacity',
                 display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px 7px 8px', borderRadius: 13,
                 background: 'linear-gradient(180deg, rgba(14,20,32,0.94), rgba(5,9,16,0.94))',
-                border: `1px solid ${hex}${near ? 'cc' : '55'}`,
-                boxShadow: near ? `0 10px 28px rgba(0,0,0,0.6), 0 0 22px ${hex}44` : '0 6px 18px rgba(0,0,0,0.55)',
-                transition: 'transform 0.25s, border-color 0.25s, box-shadow 0.25s',
+                // The pool of light under it comes up WITH her instead of
+                // switching on at a radius. Across the water that second shadow
+                // has no blur at all, so it costs nothing to leave declared.
+                border: `1px solid ${hex}44`,
+                boxShadow: `0 6px 18px rgba(0,0,0,0.55), 0 0 calc(26px * var(--k, 0)) ${hex}55`,
                 whiteSpace: 'nowrap',
               }}>
+              {/* THE RIM THAT LIGHTS, as its own layer rather than as a
+                  brightening border. A border colour cannot be interpolated
+                  from a custom property without `color-mix`, which is newer
+                  than some of the phones this runs on, and a `color-mix` that
+                  is not understood throws the whole border declaration away —
+                  leaving the card with no edge at all. A ring drawn over the
+                  top and faded by opacity says the same thing everywhere. */}
+              <span aria-hidden style={{
+                position: 'absolute', inset: -1, borderRadius: 14, pointerEvents: 'none',
+                border: `1px solid ${hex}`, opacity: 'calc(0.7 * var(--k, 0))',
+              }} />
               <span style={{ display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 9, background: `${hex}22`, border: `1px solid ${hex}66`, color: hex, flexShrink: 0 }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{meta.icon}</svg>
               </span>
               <span style={{ display: 'grid', gap: 1 }}>
                 <span className="font-cinzel font-800" style={{ fontSize: '0.7rem', color: '#f3ead2', lineHeight: 1.05 }}>{pl.label}</span>
-                <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: near ? '#d7d0c2' : '#9a948a', lineHeight: 1.1 }}>{meta.sub}</span>
+                {/* WHAT IT IS FOR, ONLY ONCE SHE IS THERE. Five of these at
+                    once is a page of small print laid over a painted sea; one
+                    of them, as you come alongside, is the mooring telling you
+                    what it is. The NAME stays legible the whole way in — that
+                    is the part you steer by. */}
+                <span className="font-karla font-700" style={{
+                  fontSize: '0.52rem', color: '#d7d0c2', lineHeight: 1.1,
+                  opacity: 'var(--k, 0)',
+                }}>{meta.sub}</span>
               </span>
             </div>
           )
