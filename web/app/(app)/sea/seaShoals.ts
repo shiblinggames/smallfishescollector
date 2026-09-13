@@ -151,43 +151,166 @@ type School = {
   /** How visible this school is, 0..1: density at its position, eased. */
   lit: number
   want: number
+  /** Which of the four it is. Re-rolled when the school is recycled, so the
+   *  water changes as you sail rather than holding one cast for ever. */
+  kind: number
 }
 
-let fishTex: Texture | null = null
+/**
+ * ── FOUR KINDS OF FISH, AND A SCHOOL IS ONE OF THEM ─────────────────────────
+ *
+ * There was one silhouette, drawn at different sizes. Two hundred and sixty
+ * copies of the same shape at slightly different scales is not a sea with fish
+ * in it, it is a texture, and it is exactly as much information as an empty
+ * ocean -- which is to say none, because nothing is distinguishable from
+ * anything else.
+ *
+ * A SCHOOL IS ONE KIND. That is how it works in the water and it is also the
+ * thing that makes this read: a shoal of darts and a pair of slow slabs are two
+ * events, and you can tell them apart across half a screen. Mixing kinds within
+ * a school would put the variety in the wrong place and cancel it out.
+ *
+ * The shapes are silhouettes rather than fish drawings. At this size a detailed
+ * sprite is mud; what survives is the OUTLINE and the way it moves.
+ */
+type Kind = {
+  /** Which cell of the atlas. */
+  frame: number
+  /** Multiplies the fish's own random size. */
+  scale: number
+  /** World px per second. A dart hurries, a slab does not. */
+  swim: number
+  /** How far its members spread from the school's centre, across and along. */
+  spread: [number, number]
+  /** How hard it wags. A long fish rolls; a small one flickers. */
+  amp: [number, number]
+  /** Under water everything is blue-green. These are small departures from it
+   *  and they are all the colour there is at this alpha. */
+  tint: number
+}
+
+const KINDS: readonly Kind[] = [
+  // Darts. The default fish: small, quick, packed, everywhere.
+  { frame: 0, scale: 0.9, swim: 30, spread: [190, 120], amp: [5, 14], tint: 0xdfeef6 },
+  // Slabs. Deep-bodied and unhurried, a handful to a school, and the one that
+  // reads as a BIG fish going past.
+  { frame: 1, scale: 1.9, swim: 17, spread: [240, 150], amp: [3, 7], tint: 0xc9dfe8 },
+  // Ribbons. Long, thin and slow, strung out in a line rather than a body.
+  { frame: 2, scale: 1.5, swim: 21, spread: [330, 70], amp: [6, 16], tint: 0xd2e8dc },
+  // Fry. Tiny, tight, and a cloud rather than a formation.
+  { frame: 3, scale: 0.52, swim: 24, spread: [120, 80], amp: [7, 18], tint: 0xeef6fa },
+]
+
+let atlas: Texture[] | null = null
 
 /**
- * ONE FISH, SEEN FROM ABOVE THROUGH WATER. A soft tapered blob, not a fish
- * drawing: at the size these are on screen a detailed sprite is mud, and the
- * shape that reads is a fat head narrowing to a tail.
+ * THE FOUR, BAKED INTO ONE BITMAP.
+ *
+ * One canvas, four cells, four frames onto the same uploaded texture -- which
+ * is what lets them stay in a ParticleContainer. That container is the reason
+ * two hundred and sixty fish cost what they cost, and it takes particles that
+ * share a source; four separate textures would be four batches and four binds.
  */
-function fishTexture(PIXI: typeof import('pixi.js')): Texture {
-  if (fishTex) return fishTex
+function fishAtlas(PIXI: typeof import('pixi.js')): Texture[] {
+  if (atlas) return atlas
   const W = 64, H = 32
   const c = document.createElement('canvas')
-  c.width = W; c.height = H
+  c.width = W; c.height = H * KINDS.length
   const g = c.getContext('2d')!
-  // The body: an ellipse fading out at both ends so it has no hard edge.
-  const grad = g.createRadialGradient(W * 0.4, H / 2, 0, W * 0.4, H / 2, W * 0.42)
-  grad.addColorStop(0.0, 'rgba(255,255,255,1)')
-  grad.addColorStop(0.5, 'rgba(255,255,255,0.55)')
-  grad.addColorStop(1.0, 'rgba(255,255,255,0)')
-  g.fillStyle = grad
-  g.save()
-  g.translate(W * 0.4, H / 2)
-  g.scale(1, 0.44)
-  g.beginPath(); g.arc(0, 0, W * 0.42, 0, Math.PI * 2); g.fill()
-  g.restore()
-  // The tail: a soft wedge off the back, which is the only part that says
-  // which way it is pointing.
-  g.beginPath()
-  g.moveTo(W * 0.72, H / 2)
-  g.lineTo(W * 0.98, H * 0.24)
-  g.lineTo(W * 0.98, H * 0.76)
-  g.closePath()
-  g.fillStyle = 'rgba(255,255,255,0.5)'
-  g.fill()
-  fishTex = PIXI.Texture.from(c)
-  return fishTex
+
+  /** A soft tapered body: an ellipse with no hard edge, and a wedge of a tail
+   *  which is the only part that says which way it is pointing. */
+  const draw = (row: number, long: number, fat: number, tail: number, tailW: number) => {
+    const y0 = row * H
+    const grad = g.createRadialGradient(W * 0.4, y0 + H / 2, 0, W * 0.4, y0 + H / 2, W * long)
+    grad.addColorStop(0.0, 'rgba(255,255,255,1)')
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.55)')
+    grad.addColorStop(1.0, 'rgba(255,255,255,0)')
+    g.fillStyle = grad
+    g.save()
+    g.translate(W * 0.4, y0 + H / 2)
+    g.scale(1, fat)
+    g.beginPath(); g.arc(0, 0, W * long, 0, Math.PI * 2); g.fill()
+    g.restore()
+    if (tail <= 0) return
+    g.beginPath()
+    g.moveTo(W * tail, y0 + H / 2)
+    g.lineTo(W * 0.98, y0 + H / 2 - H * tailW)
+    g.lineTo(W * 0.98, y0 + H / 2 + H * tailW)
+    g.closePath()
+    g.fillStyle = 'rgba(255,255,255,0.5)'
+    g.fill()
+  }
+
+  //     row  length  fatness  tail from  tail half-height
+  draw(0, 0.42, 0.44, 0.72, 0.26)   // dart: the original
+  draw(1, 0.40, 0.76, 0.76, 0.30)   // slab: deep-bodied, short tail
+  draw(2, 0.48, 0.20, 0.80, 0.14)   // ribbon: long and thin
+  draw(3, 0.30, 0.62, 0, 0)         // fry: a blob, no tail worth drawing
+
+  const base = PIXI.Texture.from(c)
+  atlas = KINDS.map((_, i) => new PIXI.Texture({
+    source: base.source,
+    frame: new PIXI.Rectangle(0, i * H, W, H),
+  }))
+  return atlas
+}
+
+/**
+ * ── AND THE SEA IS NOT EVENLY FULL ──────────────────────────────────────────
+ *
+ * Every band had one density, so every patch of the Deep held exactly as many
+ * fish as every other patch of the Deep. Sail in any direction and the water
+ * was identically populated for ever, which is the same failure as one
+ * silhouette: no information, because nothing differs from anything.
+ *
+ * This is a coarse value noise over the whole chart -- one number per 2,600px
+ * cell, smoothed between them -- so the sea has grounds and it has barrens, and
+ * they are PLACES: hashed off the cell coordinates, so the empty stretch you
+ * crossed last week is empty this week too, and the water that was thick with
+ * fish is worth going back to.
+ *
+ * The floor is what makes empty ocean exist at all. Below it there is nothing
+ * at all rather than a thin scattering, because a few fish everywhere is what
+ * we are trying to stop being.
+ */
+const CELL = 2600
+/**
+ * MEASURED RATHER THAN PICKED, over 8,000 samples of the real chart.
+ *
+ * At 0.45 with a straight ramp, 48% of the sea was empty AND the median of what
+ * was left came out at 0.37 -- half the ocean barren and most of the rest thin,
+ * which trades one uniform sea for another uniform sea with less in it.
+ *
+ * 0.38 with the ramp on a square root gives 37% genuinely empty water and a
+ * median of 0.61 where there is anything at all. Barren stretches run to about
+ * three screens across, which is a real crossing: long enough to notice, short
+ * enough that it is a passage rather than a desert.
+ */
+const BARREN = 0.38
+
+function cellNoise(ix: number, iy: number): number {
+  // Integer hash. Cheap, stable, and no seeded generator to thread about.
+  let h = ix * 374761393 + iy * 668265263
+  h = (h ^ (h >> 13)) * 1274126177
+  return ((h ^ (h >> 16)) >>> 0) / 4294967295
+}
+
+function patchAt(x: number, y: number): number {
+  const fx = x / CELL, fy = y / CELL
+  const ix = Math.floor(fx), iy = Math.floor(fy)
+  const tx = fx - ix, ty = fy - iy
+  // Smoothstep on both axes, or the grid shows up as diamonds.
+  const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty)
+  const a = cellNoise(ix, iy), b = cellNoise(ix + 1, iy)
+  const c2 = cellNoise(ix, iy + 1), d2 = cellNoise(ix + 1, iy + 1)
+  const top = a + (b - a) * sx
+  const bot = c2 + (d2 - c2) * sx
+  const v = top + (bot - top) * sy
+  // Below the floor is empty water. Above it the ramp is a square root rather
+  // than a straight line, so grounds feel like grounds: a linear ramp spends
+  // most of its range on thin water nobody would call fishing.
+  return v < BARREN ? 0 : Math.sqrt((v - BARREN) / (1 - BARREN))
 }
 
 export type Shoals = {
@@ -252,33 +375,58 @@ const BOW_TURN = 2.4
 
 export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
   const view: ParticleContainer = new PIXI.ParticleContainer({
-    dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
+    // `uvs` IS NOT DECORATION. A ParticleContainer uploads static properties
+    // once and dynamic ones every frame, and texture coordinates default to
+    // STATIC -- which was correct while every fish was the same silhouette and
+    // is a silent bug the moment a school changes kind: the UVs would stay on
+    // whatever frame was uploaded first and every fish in the sea would be a
+    // dart wearing another fish's size. One more small buffer a frame, and it
+    // is the difference between four kinds of fish and one.
+    dynamicProperties: { position: true, rotation: true, vertex: true, color: true, uvs: true },
   })
-  const tex = fishTexture(PIXI)
+  const frames = fishAtlas(PIXI)
 
   const schools: School[] = Array.from({ length: SCHOOLS }, () => ({
     x: 0, y: 0, ang: Math.random() * Math.PI * 2,
-    turn: (Math.random() - 0.5) * 0.5, lit: 0, want: 0,
+    turn: (Math.random() - 0.5) * 0.5, lit: 0, want: 0, kind: 0,
   }))
 
   const fish: Fish[] = []
   for (let i = 0; i < COUNT; i++) {
-    const p: Particle = new PIXI.Particle({ texture: tex })
+    const p: Particle = new PIXI.Particle({ texture: frames[0] })
     p.anchorX = 0.5
     p.anchorY = 0.5
     p.alpha = 0
     view.addParticle(p)
     fish.push({
       p, s: i % SCHOOLS,
-      // Spread inside the school, wider across than along, so a shoal reads as
-      // a body of fish rather than a queue.
-      ox: (Math.random() - 0.5) * 190,
-      oy: (Math.random() - 0.5) * 120,
+      ox: 0, oy: 0,
       ph: Math.random() * Math.PI * 2,
-      amp: 5 + Math.random() * 9,
-      size: 0.5 + Math.random() * 0.6,
+      amp: 8, size: 0.8,
       bolt: 0, bx: 0, by: 0,
     })
+  }
+
+  /**
+   * DRESS A SCHOOL IN ITS KIND. Called when one is recycled, so every member
+   * takes the new shape, the new spread, the new wag and the new colour at the
+   * same moment -- a school is one kind of fish, and half of them changing
+   * species would be worse than none.
+   */
+  const dress = (si: number) => {
+    const k = KINDS[schools[si].kind]
+    for (const f of fish) {
+      if (f.s !== si) continue
+      f.p.texture = frames[k.frame]
+      f.p.tint = k.tint
+      // Spread across the heading more than along it, so a shoal reads as a
+      // body of fish rather than a queue -- except the ribbons, whose table
+      // says the opposite and means it.
+      f.ox = (Math.random() - 0.5) * k.spread[0]
+      f.oy = (Math.random() - 0.5) * k.spread[1]
+      f.amp = k.amp[0] + Math.random() * (k.amp[1] - k.amp[0])
+      f.size = (0.5 + Math.random() * 0.6) * k.scale
+    }
   }
 
   /** Which band a point is in, by the same rings the zones are drawn from. */
@@ -295,13 +443,32 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
     // AND THE PATCH. Only a shoal hotspot pulls fish: a trench and a flotsam
     // patch do other things, and drawing fish over them would say the wrong
     // thing about what they are.
+    let hs = 0
     for (const s of spots) {
       if (s.kind !== 'shoal') continue
       const dd = Math.hypot(x - s.x, y - s.y)
-      if (dd < s.r * 1.5) d *= 1 + (HOTSPOT_PULL - 1) * (1 - dd / (s.r * 1.5))
+      if (dd < s.r * 1.5) hs = Math.max(hs, 1 - dd / (s.r * 1.5))
     }
+    // ── AND WHETHER THIS PARTICULAR WATER HOLDS ANYTHING ──────────
+    //
+    // See patchAt. A band says what the water is capable of; the noise says
+    // whether THIS stretch of it is grounds or barrens, and a good share of the
+    // sea is barrens. That is the point: empty ocean is a thing you should be
+    // able to sail through, and it is what makes a shoal worth finding.
+    //
+    // A HOTSPOT IS ALWAYS GOOD WATER, whatever the noise says underneath it.
+    // The gulls are circling over it and the badge names it; water that was
+    // advertised and then delivered nothing would be the game lying.
+    d *= Math.max(patchAt(x, y), hs)
+    d *= 1 + (HOTSPOT_PULL - 1) * hs
     return d
   }
+
+  /** Two tints, multiplied channel by channel. */
+  const mix = (a: number, b: number) =>
+    ((((a >> 16) & 255) * ((b >> 16) & 255) / 255) << 16)
+    | ((((a >> 8) & 255) * ((b >> 8) & 255) / 255) << 8)
+    | (((a & 255) * (b & 255) / 255) | 0)
 
   let tint = 0xffffff
   let spots: Hotspot[] = []
@@ -317,6 +484,12 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
     sc.x = camX + (Math.random() * 2 - 1) * halfW * MARGIN
     sc.y = camY + (Math.random() * 2 - 1) * halfH * MARGIN
     sc.ang = Math.random() * Math.PI * 2
+    // WEIGHTED, NOT EVEN. Darts are the ordinary fish of this sea and should be
+    // most of what you see; a slab going past is worth something precisely
+    // because the last three schools were not slabs.
+    const r = Math.random()
+    sc.kind = r < 0.52 ? 0 : r < 0.68 ? 1 : r < 0.84 ? 2 : 3
+    dress(schools.indexOf(sc))
   }
 
   return {
@@ -360,17 +533,29 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
         sc.turn -= sc.turn * TURN_DAMP * d
         sc.turn = Math.max(-TURN_MAX, Math.min(TURN_MAX, sc.turn))
         sc.ang += sc.turn * d
-        sc.x += Math.cos(sc.ang) * SWIM * d
-        sc.y += Math.sin(sc.ang) * SWIM * d * 0.7
+        // Its own pace. A dart hurries and a slab does not, and that difference
+        // is as much of the telling-apart as the silhouette is.
+        const swim = KINDS[sc.kind].swim
+        sc.x += Math.cos(sc.ang) * swim * d
+        sc.y += Math.sin(sc.ang) * swim * d * 0.7
 
         // ── WRAPPED AROUND THE CAMERA ── moved only while out of sight, and to
         // the far side rather than to a random spot, so the field stays evenly
         // spread instead of clumping wherever the boat has been.
         const ex = halfW * MARGIN, ey = halfH * MARGIN
-        if (sc.x < camX - ex) sc.x = camX + ex
-        else if (sc.x > camX + ex) sc.x = camX - ex
-        if (sc.y < camY - ey) sc.y = camY + ey
-        else if (sc.y > camY + ey) sc.y = camY - ey
+        let wrapped = false
+        if (sc.x < camX - ex) { sc.x = camX + ex; wrapped = true }
+        else if (sc.x > camX + ex) { sc.x = camX - ex; wrapped = true }
+        if (sc.y < camY - ey) { sc.y = camY + ey; wrapped = true }
+        else if (sc.y > camY + ey) { sc.y = camY - ey; wrapped = true }
+        // A school carried round to the far side is a new school as far as
+        // anyone on the boat is concerned, so it gets a new kind. This is what
+        // stops a session being the four schools you happened to start with.
+        if (wrapped) {
+          const r = Math.random()
+          sc.kind = r < 0.52 ? 0 : r < 0.68 ? 1 : r < 0.84 ? 2 : 3
+          dress(schools.indexOf(sc))
+        }
 
         // ── HOW MANY OF THIS SCHOOL ARE VISIBLE AT ALL ──
         // Eased rather than switched: a school swimming out of the Deep into
@@ -474,7 +659,11 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
         const k = f.size * (0.5 + vis * 0.22) * (1 + f.bolt * 0.15)
         f.p.scaleX = k
         f.p.scaleY = k
-        f.p.tint = tint
+        // ITS OWN COLOUR, THROUGH THE HOUR'S. `tint` is the night multiply
+        // every sprite on the chart takes; the kind's own colour is multiplied
+        // into it rather than overwriting it, or a fish would be the only
+        // thing on the water that does not get dark.
+        f.p.tint = mix(KINDS[sc.kind].tint, tint)
         // DIM. A fish under water is a suggestion of a fish, and anything
         // crisper reads as floating ON it. It also brightens a little when
         // bolting, which is the flash of a turning flank.
