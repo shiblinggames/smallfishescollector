@@ -13688,9 +13688,14 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
 
           So the needle lives OUTSIDE the clip, in a wrapper that draws nothing,
           laid over the bar at the same size. It never needed clipping anyway:
-          it travels 0 to 100% of the bar's own width and stops there. Everything
-          that DOES need clipping — the fog band, the flash, the decoys, the
-          target zone — stays inside. */}
+          it travels 0 to 100% of the bar's own width and stops there.
+
+          THE TARGET BAND WAS LEFT BEHIND, and this note used to name it among
+          the things that need clipping. They do not — see the note under the
+          bar. The decoys are what is left inside, and they are positioned with
+          `left` rather than a transform, so they are laying out and painting
+          every frame regardless and the clip costs them nothing they were not
+          already paying. */}
       <div style={{ position: 'relative' }}>
       <div style={{
         position: 'relative', height: 44, borderRadius: 10, overflow: 'hidden',
@@ -13705,17 +13710,43 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
         border: '1px solid rgba(255,255,255,0.16)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -8px 16px rgba(0,0,0,0.5)',
       }}>
-        <div ref={flashRef} style={{
-          position: 'absolute', inset: 0, opacity: 0, background: 'transparent',
-          // zIndex 5 sits above the Mist Veil fog (zIndex 4) so the
-          // punch-on-lock flash always reads cleanly, even when the
-          // fog is at its densest. Was 3; bumped 2026-05-29 when fog
-          // landed.
-          pointerEvents: 'none', zIndex: 5,
-        }} />
-        {/* Same track trick for the target band: it drifts every frame on most
-            raids, and its width is built out of constants and never changes. */}
-        <div ref={zoneTrackRef} aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '100%', pointerEvents: 'none', zIndex: 1, willChange: 'transform' }}>
+        {/* False Colors — drifting DECOY bands (narrower than the real target,
+            crimson/danger). The RAF positions each via decoyElRefs; locking on
+            one duds the shot. Hidden until the RAF places it. */}
+        {Array.from({ length: Math.max(0, Math.min(2, decoyCount ?? 0)) }).map((_, i) => (
+          <div key={`decoy-${i}`} aria-hidden
+            ref={el => { if (decoyElRefs) decoyElRefs.current[i] = el }}
+            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: `${DECOY_HALF * 2 * 100}%`, zIndex: 1, pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', inset: '4px 0', background: 'rgba(239,68,68,0.2)', borderRadius: 4 }} />
+            <div style={{ position: 'absolute', top: '4px', bottom: '4px', left: '24%', width: '52%', background: 'rgba(239,68,68,0.5)', borderRadius: 2 }} />
+            <div style={{ position: 'absolute', top: '22%', bottom: '22%', left: 'calc(50% - 1px)', width: 2, background: '#fca5a5' }} />
+          </div>
+        ))}
+      </div>
+      {/* ── AND THE TARGET IS NOT INSIDE THE BAR EITHER ──────────────────
+          The note above worked out exactly why a rounded clip ruins a thing
+          that moves every frame, moved the needle out for it, and then listed
+          "the target zone" among the things that DO need clipping. It does
+          not. The band is clamped so its outer edge lands exactly on each end
+          of the bar and stops -- that clamp is the whole reason it exists --
+          which is word for word the argument made for the needle. So it sat
+          under a rounded clip being re-rasterised sixty times a second while
+          the needle beside it glided, and it looked precisely like the comment
+          says it looks: one element running at half the frame rate while
+          everything around it is fine.
+
+          The three overlays that are MEANT to cover the band come with it, or
+          Mist Veil would stop veiling and Inkfall would stop blacking out. Each
+          carries its own rounded corner now instead of borrowing the bar's,
+          and the fog keeps its own square clip for the gradient that drifts
+          inside it.
+
+          A SECOND THING FALLS OUT OF THIS. Inside the bar the track spanned the
+          bar's CONTENT box; the needle, already outside, spans the wrapper --
+          two pixels wider. The needle and the band were being measured in
+          slightly different spaces, and the shot is a comparison between them.
+          Now they share one. */}
+      <div ref={zoneTrackRef} aria-hidden style={{ position: 'absolute', top: 1, bottom: 1, left: 0, width: '100%', pointerEvents: 'none', zIndex: 1, willChange: 'transform' }}>
         <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: `${(HIT_W + GRAZE_W) * 2 * 100}%` }}>
           <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(148,163,184,0.15)', borderRadius: 4 }} />
           <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(74,222,128,0.22)' }} />
@@ -13729,18 +13760,6 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
           </div>
         </div>
         </div>
-        {/* False Colors — drifting DECOY bands (narrower than the real target,
-            crimson/danger). The RAF positions each via decoyElRefs; locking on
-            one duds the shot. Hidden until the RAF places it. */}
-        {Array.from({ length: Math.max(0, Math.min(2, decoyCount ?? 0)) }).map((_, i) => (
-          <div key={`decoy-${i}`} aria-hidden
-            ref={el => { if (decoyElRefs) decoyElRefs.current[i] = el }}
-            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: `${DECOY_HALF * 2 * 100}%`, zIndex: 1, pointerEvents: 'none' }}>
-            <div style={{ position: 'absolute', inset: '4px 0', background: 'rgba(239,68,68,0.2)', borderRadius: 4 }} />
-            <div style={{ position: 'absolute', top: '4px', bottom: '4px', left: '24%', width: '52%', background: 'rgba(239,68,68,0.5)', borderRadius: 2 }} />
-            <div style={{ position: 'absolute', top: '22%', bottom: '22%', left: 'calc(50% - 1px)', width: 2, background: '#fca5a5' }} />
-          </div>
-        ))}
         {/* Mist Veil overlay — The Cartographer's raid ability. A semi-opaque
             fog band drifts back-and-forth across the bar, briefly
             covering the gold critical center. Sits above the zone
@@ -13749,7 +13768,7 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
             by the fog). pointerEvents:none keeps taps falling through
             to the parent panel. */}
         {hasFog && (
-          <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none', overflow: 'hidden' }}>
+          <div aria-hidden style={{ position: 'absolute', inset: 1, zIndex: 4, pointerEvents: 'none', overflow: 'hidden', borderRadius: 9 }}>
             <div style={{
               position: 'absolute', top: -2, bottom: -2,
               width: '38%',
@@ -13772,12 +13791,21 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
             needle, under the lock-flash at 5) that pulses dark on the keyframe. */}
         {hasInk && (
           <div aria-hidden style={{
-            position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
-            borderRadius: 10, background: '#02060c',
+            position: 'absolute', inset: 1, zIndex: 4, pointerEvents: 'none',
+            borderRadius: 9, background: '#02060c',
             animation: 'rc-inkfall 3.4s ease-in-out infinite',
           }} />
         )}
-      </div>
+      <div ref={flashRef} style={{
+          position: 'absolute', inset: 1, borderRadius: 9, opacity: 0, background: 'transparent',
+          // zIndex 5 sits above the Mist Veil fog (zIndex 4) so the
+          // punch-on-lock flash always reads cleanly, even when the
+          // fog is at its densest. Was 3; bumped 2026-05-29 when fog
+          // landed.
+          pointerEvents: 'none', zIndex: 5,
+        }} />
+        {/* Same track trick for the target band: it drifts every frame on most
+            raids, and its width is built out of constants and never changes. */}
       {/* THE JUICE. In the wrapper rather than the bar, so a lock burst falls
           off the edges instead of being cut off square by the rounded clip —
           and so it is never an ancestor of, or clipped with, the needle. */}
