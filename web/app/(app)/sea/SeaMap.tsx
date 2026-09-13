@@ -61,7 +61,7 @@ import {
   WARGATE, WARGATE_REACH, MAELSTROMS, MAELSTROM_REACH, type Maelstrom,
   // The duel's framing lives with the raid water now, so the gauntlet's arena
   // composes its fights from the same numbers this chart does.
-  WARSHIP_W, FIGHT_CAM_LIFT, zoomFor,
+  WARSHIP_W, FIGHT_CAM_LIFT, zoomFor, fightZoom,
   type Bay, type Encounter, type Cache, type Beat,
 } from './raidWaters'
 import { RAID_MAP, RAID_CHAPTERS, chapterForNode, computeRaidMap, type RaidNode, type RaidChapter } from '@/lib/raidMap'
@@ -5577,7 +5577,13 @@ export default function SeaMap({
 
   const engaging = fightId ?? bossCard
   useEffect(() => {
-    fishZoomTarget.current = fishingIn ? 1.42 : engaging ? 1.5 : 1
+    // THE SAME PUSH-IN THE GAUNTLET'S ARENA USES, from the one function, so
+    // the chart's broadside and the arena's are the same shot. It eases with
+    // the viewport: a desktop keeps the full 1.5 and a phone pulls back to
+    // 1.12, because the two hulls were running gunwale to gunwale on a small
+    // screen. See fightZoom.
+    const w = wrapRef.current?.getBoundingClientRect().width || window.innerWidth
+    fishZoomTarget.current = fishingIn ? 1.42 : engaging ? fightZoom(w) : 1
   }, [fishingIn, engaging])
 
   /**

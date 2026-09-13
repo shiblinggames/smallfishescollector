@@ -1309,6 +1309,35 @@ export const FIGHT_CAM_LIFT = 75
 /** The cinematic push-in a broadside adds to the fitted zoom. */
 export const FIGHT_ZOOM = 1.5
 
+/**
+ * ── HOW FAR THE CAMERA PUSHES IN FOR A BROADSIDE ────────────────────────────
+ *
+ * One number for two very different framings, and on a phone it was the wrong
+ * one. The fitted zoom already scales with the viewport, but it FLOORS at 0.45
+ * and a 390px screen sits at 0.5 while a wide screen is capped at 0.82 — so
+ * the same 1.5 push put the duel's 252 world px of stand-off into 48% of a
+ * phone's width against 22% of a desktop's.
+ *
+ * Measured on a 390px screen at the old 1.5: the enemy's hull drew 160px and
+ * the player's 153, with their centres 189 apart. Their half-widths come to
+ * 156 of that — the two hulls ran very nearly gunwale to gunwale, with the
+ * pair of them filling four fifths of the glass and no water anywhere. That is
+ * what "the enemy ships are too big" is: not the ladder the hulls are sized on
+ * (they are on the same one the player's classes climb, deliberately) but a
+ * desktop's framing shown on a phone.
+ *
+ * So the push eases with the screen. At 900 and up it is the full 1.5 and
+ * nothing about a desktop changes; at 390 it is 1.12, which draws those same
+ * hulls at 119 and 114 with 141 between them — about 25px of open water in the
+ * gap and the duel sitting on three fifths of the glass rather than four
+ * fifths. The hulls keep their sizes relative to each other, because which of
+ * you is the bigger ship is a thing the fight is about.
+ */
+export function fightZoom(width: number): number {
+  const k = Math.max(0, Math.min(1, (width - 390) / 510))
+  return 1.12 + (FIGHT_ZOOM - 1.12) * k
+}
+
 /** The chart's fitted zoom for a viewport this wide. */
 export function zoomFor(width: number): number {
   // CAPPED AT 0.82, NOT 1.0.
@@ -1339,12 +1368,12 @@ export type DuelFrame = {
  * Exactly the chart's construction: she stands STAND_X/STAND_Y off the enemy
  * (three quarters of the mooring's stand-off, low and to the left), the camera
  * holds the midpoint lifted by FIGHT_CAM_LIFT, and the world is drawn at the
- * fitted zoom pushed in by FIGHT_ZOOM under the GROUND squash. `cx`/`cy` is the
+ * fitted zoom pushed in by `fightZoom` under the GROUND squash. `cx`/`cy` is the
  * centre of the water's box, which on the chart is the viewport less the nav
  * and the tab bar.
  */
 export function duelFrame(W: number, H: number, cx: number, cy: number, seaBeam: number, enemyArt: string, ground: number): DuelFrame {
-  const z = zoomFor(W) * FIGHT_ZOOM
+  const z = zoomFor(W) * fightZoom(W)
   const standX = DOCK.x * 0.74
   const standY = DOCK.y * 0.78
   // World offsets from the camera: the enemy is at -STAND/2, she is at +STAND/2,

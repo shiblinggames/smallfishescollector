@@ -17,7 +17,7 @@ import {
   PHASE_INITIAL, PHASE_ENTER, PHASE_EXIT,
   ENTER, EXIT, POP, CEREMONY, STAGGER, STAGGER_SLOW, stagger,
 } from '@/lib/gauntletMotion'
-import RaidCombat, { RAID_COL_MAX, RAID_COL_PAD } from '../RaidCombat'
+import RaidCombat from '../RaidCombat'
 import GauntletArena, { type ArenaHandle, type ArenaTheme, type Mood } from './GauntletArena'
 import { getShip, shipTierByName } from '@/lib/ships'
 import GauntletSlipway, { type SlipwayPlace } from './GauntletSlipway'
@@ -5171,18 +5171,17 @@ export default function GauntletGame(props: GauntletGameProps) {
           <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none',
             background: `radial-gradient(ellipse 116% 96% at 50% 44%, transparent 56%, rgba(${gloomHue},${gloom}) 100%)` }} />
         )}
-        {/* ON THE FIGHT'S OWN COLUMN. It spanned the whole display, so on a
-            desktop the run's header was a banner across the window while the
-            deck under it, the enemy's card and yours all lived inside 720. The
-            padding matches the deck's, so the bar's left edge is exactly where
-            the enemy's card and the log panel's edge are. */}
-        <div className="gauntlet-depthbar" style={{
-          width: '100%', maxWidth: RAID_COL_MAX + RAID_COL_PAD * 2,
-          paddingLeft: RAID_COL_PAD, paddingRight: RAID_COL_PAD, boxSizing: 'border-box',
-          marginLeft: 'auto', marginRight: 'auto',
-          flexShrink: 0, marginBottom: 2,
-        }}>
-          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} contract={contractChip} marks={marks} />
+        {/* ON THE FIGHT'S OWN COLUMN — and now literally, rather than nearly.
+            The width, the padding and the cap live in globals.css with the
+            rest of this bar's geometry, because it is FIXED to the viewport
+            the way the stage is: in the page's flow it inherited the page's
+            side padding and came out narrower than the deck at the foot of
+            the same fight, and it started 24px lower than it should have,
+            which is what put it on top of the leave button. */}
+        <div className="gauntlet-depthbar">
+          <div>
+            <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} contract={contractChip} marks={marks} />
+          </div>
         </div>
         {/* Everything the run carries (job, Don's Marks, terms, curses) now lives
             IN the DepthBar header + its tap-for-details panel, so nothing above the
@@ -5192,6 +5191,12 @@ export default function GauntletGame(props: GauntletGameProps) {
             key={`gauntlet-r${fight.depth}`}
             enemy={fight.enemy}
             atmosphere={atmosphereForDepth(fight.depth)}
+            // HOW FAR THE DEPTH BAR REACHES INTO THE STAGE. 6 of padding
+            // above it, about 35 of bar, and 10 of air under it — so the
+            // leave button starts below the bar instead of underneath it.
+            // Both are measured from the nav, because both are fixed to the
+            // same box. See globals.css for the bar's own geometry.
+            hudTop={51}
             zoneBg="/abyss.jpg"
             zoneFilter={hardcoreRun ? undefined : GAUNTLET_ABYSS_FILTER}
             // ── FOUGHT ON THE WATER ──────────────────────────────────────

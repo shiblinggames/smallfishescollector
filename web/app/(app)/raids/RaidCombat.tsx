@@ -774,6 +774,22 @@ export interface RaidCombatProps {
    */
   overSea?: boolean
   /**
+   * ── WHERE THIS STAGE'S TOP FURNITURE MAY BEGIN ────────────────────────────
+   *
+   * In stage coordinates, which over the sea start at the nav: the whole fight
+   * is a fixed box from there down. The leave button sits on this line, in the
+   * right-hand corner, and 18 is where the chart hangs its own HUD.
+   *
+   * A GAUNTLET PUTS ITS OWN BAR THERE. The depth/pot header is fixed to the
+   * same box and reaches about 41 into it, spanning the full column — so the
+   * leave button was underneath it and unreachable. The host is the only thing
+   * that knows how far its own furniture comes down, so it says.
+   *
+   * The enemy's card needs no equivalent: it docks at 60, under where the
+   * chart hangs its level bar, and a bar that ends at 41 clears it already.
+   */
+  hudTop?: number
+  /**
    * Where the chart's two hulls are right now, in viewport px: the centre of
    * each, and how wide it reads at the current zoom so effects scale with the
    * ship rather than with the window.
@@ -854,7 +870,7 @@ export default function RaidCombat({
   contractsWon = [],
   aimStyle = 'bar',
   dialAim,
-  overSea = false, anchors, onShipFx, onFightFx,
+  overSea = false, hudTop = 18, anchors, onShipFx, onFightFx,
   onPhaseBg,
   critStreakCfg,
   defeatSequence,
@@ -7990,7 +8006,7 @@ export default function RaidCombat({
               // smallest target on the screen.
               position: 'absolute', zIndex: 5,
               ...(overSea
-                ? { top: 18, right: 12, width: 38, height: 38 }
+                ? { top: hudTop, right: 12, width: 38, height: 38 }
                 : { top: 10, right: 10, width: 32, height: 32 }),
               borderRadius: '50%',
               background: 'rgba(6,12,20,0.78)',
