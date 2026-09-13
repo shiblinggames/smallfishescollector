@@ -1471,6 +1471,9 @@ export default function SeaIslandsGPU({
       const pooled: Contact[] = []
       const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
+      // Reused every frame rather than allocated: this is handed to two layers
+      // sixty times a second and neither keeps a reference past the call.
+      const boatAt = { x: 0, y: 0 }
       a.ticker.add(() => {
         const t = performance.now() / 1000
         const dt = a.ticker.deltaMS / 1000
@@ -1542,10 +1545,23 @@ export default function SeaIslandsGPU({
         capRef.current?.cap.update(dt)
         for (const c of crewRef.current.values()) c.cap.update(dt)
         water?.frame(t, camX, camY, camZoom, dark, warm, rush)
+        // ── WHERE THE HULL ACTUALLY IS, IN THE WORLD ──────────────────
+        //
+        // Not the camera. The camera leaves her to look at an island during a
+        // tour and frames the engagement rather than the captain in a fight,
+        // and the things that react to a ship have to react to the ship.
+        //
+        // `hullOff` is her offset from screen centre in SCREEN px, written
+        // where she is drawn; undoing the projection gives her back in world
+        // units. It carries her bob, which is a few pixels of vertical wobble
+        // -- harmless here, and smoothed out of the speed that reads it.
+        boatAt.x = camX + hullOff.current.x / camZoom
+        boatAt.y = camY + hullOff.current.y / (camZoom * GROUND)
+
         drift.advance(camX, camY, halfW, halfH, t, dt)
-        shoals.advance(camX, camY, halfW, halfH, t, dt)
+        shoals.advance(camX, camY, halfW, halfH, t, dt, boatAt)
         leviathans.advance(camX, camY, halfW, halfH)
-        gulls.advance(camX, camY, halfW, halfH, t, dt)
+        gulls.advance(camX, camY, halfW, halfH, t, dt, boatAt)
         // ADVANCED ON PIXI'S OWN TICKER, which is the whole reason this works.
         // The chart's rAF loop returns early while the dial is up, so nothing
         // driven from there animates during a catch; this one is not.

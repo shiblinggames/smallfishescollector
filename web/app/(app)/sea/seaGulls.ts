@@ -48,6 +48,20 @@ const SPOTS = 3
 const COUNT = PER_SPOT * SPOTS
 
 /** How high they work, in SCREEN pixels. Divided by GROUND on the way in. */
+/**
+ * ── WHAT A SHIP COMING THROUGH DOES TO A FLOCK ──────────────────────────────
+ *
+ * SCARE is how far outside the patch she has to be before they notice, on top
+ * of the patch's own radius. Generous: a flock feeding on the surface has seen
+ * you coming for a while.
+ *
+ * LIFT is how much higher they fly while she is among them, in world px, on
+ * top of their own resting altitude. Enough to read clearly against the water
+ * and not so much that they leave the picture.
+ */
+const SCARE = 420
+const LIFT = 70
+
 const ALT_LO = 46
 const ALT_HI = 104
 
@@ -117,7 +131,10 @@ type Gull = {
 
 export type Gulls = {
   view: Container
-  advance(camX: number, camY: number, halfW: number, halfH: number, t: number, dt: number): void
+  /** `boat` is the hull, which is not the camera -- see the same note on
+   *  Shoals. Birds lift for a ship, not for a point of view. */
+  advance(camX: number, camY: number, halfW: number, halfH: number, t: number, dt: number,
+    boat?: { x: number; y: number }): void
   night(tint: number): void
   destroy(): void
 }
@@ -165,11 +182,14 @@ export function makeGulls(PIXI: typeof import('pixi.js')): Gulls {
   /** Eased per slot, so a patch expiring lets its birds fade off rather than
    *  deleting them mid-air. */
   const lit = new Array<number>(SPOTS).fill(0)
+  /** How alarmed each patch's flock is, 0 to 1, eased the same way. A boat
+   *  arriving puts them up; a boat leaving lets them down. */
+  const alarm = new Array<number>(SPOTS).fill(0)
 
   return {
     view,
 
-    advance(camX, camY, halfW, halfH, t, dt) {
+    advance(camX, camY, halfW, halfH, t, dt, boat) {
       const d = Math.min(dt, 0.05)
       const now = Date.now()
       if (now - spotsAt > 4000) {
@@ -187,6 +207,21 @@ export function makeGulls(PIXI: typeof import('pixi.js')): Gulls {
           && Math.abs(s.x - camX) < halfW + s.r * 2.5
           && Math.abs(s.y - camY) < halfH + s.r * 2.5
         lit[k] += ((near ? 1 : 0) - lit[k]) * Math.min(1, d * 2.2)
+
+        // ── AND WHETHER THERE IS A SHIP IN THE MIDDLE OF THEM ──────
+        //
+        // Birds working a patch of water do not stay on it while a hull comes
+        // through. They go up, they spread, and they come back down once she
+        // is past -- which is the whole of this: `want` is distance to the
+        // boat, eased so the flock rises and settles rather than snapping.
+        //
+        // UP FAST, DOWN SLOW. A flock leaves the water all at once and takes
+        // its time deciding to come back, and those two rates being different
+        // is most of what makes it read as birds rather than as a slider.
+        const want = s && boat
+          ? Math.max(0, 1 - Math.hypot(s.x - boat.x, (s.y - boat.y) / GROUND) / (s.r + SCARE))
+          : 0
+        alarm[k] += (want - alarm[k]) * Math.min(1, d * (want > alarm[k] ? 3.4 : 0.7))
       }
 
       for (const g of gulls) {
@@ -194,8 +229,11 @@ export function makeGulls(PIXI: typeof import('pixi.js')): Gulls {
         const on = lit[g.slot]
         if (!s || on < 0.01) { g.bird.alpha = 0; g.shade.alpha = 0; continue }
 
-        g.ph += g.rate * d
-        const rr = s.r * g.rad
+        const up = alarm[g.slot]
+        // Turning faster and wider while she is through them: a flock that has
+        // just come off the water is not circling the way it was.
+        g.ph += g.rate * d * (1 + up * 1.5)
+        const rr = s.r * g.rad * (1 + up * 0.55)
         const x = s.x + Math.cos(g.ph) * rr
         // The orbit itself is flattened, because a circle on this plane is an
         // ellipse and a bird's circuit is on the plane like everything else.
@@ -208,14 +246,18 @@ export function makeGulls(PIXI: typeof import('pixi.js')): Gulls {
         g.shade.scaleX = sk
         g.shade.scaleY = sk * GROUND
         // Higher is fainter and wider, which is the only cue for how high.
-        g.shade.alpha = on * (0.2 - (g.alt - ALT_LO) / (ALT_HI - ALT_LO) * 0.09)
+        // Higher is fainter and wider, which is the only cue for how high --
+        // so a bird that has just gone up throws almost nothing.
+        g.shade.alpha = on * (0.2 - (g.alt - ALT_LO) / (ALT_HI - ALT_LO) * 0.09) * (1 - up * 0.55)
 
         // ── AND THE BIRD, above it ──
         // Divided by GROUND so the world's vertical squash cancels: eighty
         // world px up would read as forty-six on screen, and altitude is a
         // screen fact.
         g.bird.x = x
-        g.bird.y = yOnWater - g.alt / GROUND
+        // LIFTED. Altitude is the whole tell, and it is the same divide by
+        // GROUND as the resting height: up is a screen fact on this plane.
+        g.bird.y = yOnWater - (g.alt + up * LIFT) / GROUND
         // Facing the way it is going, and banking slightly into the turn.
         const heading = Math.cos(g.ph + Math.PI / 2) * (g.rate > 0 ? 1 : -1)
         const k = g.size
@@ -223,7 +265,9 @@ export function makeGulls(PIXI: typeof import('pixi.js')): Gulls {
         // THE FLAP is a vertical squash of the same silhouette, which is what
         // a gull's wingbeat looks like from underneath. Never all the way flat:
         // a wing edge-on for a frame reads as the bird vanishing.
-        g.bird.scaleY = k * (0.52 + 0.48 * Math.abs(Math.sin(t * g.flap + g.ph * 3)))
+        // Beating harder with her underneath them, which is the other half of
+        // saying they have just been put up.
+        g.bird.scaleY = k * (0.52 + 0.48 * Math.abs(Math.sin(t * g.flap * (1 + up * 0.8) + g.ph * 3)))
         g.bird.rotation = Math.sin(g.ph) * 0.16
         g.bird.tint = tint
         g.bird.alpha = on * 0.85

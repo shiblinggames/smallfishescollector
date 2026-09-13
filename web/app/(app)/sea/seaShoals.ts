@@ -192,9 +192,16 @@ function fishTexture(PIXI: typeof import('pixi.js')): Texture {
 
 export type Shoals = {
   view: Container
-  /** `halfW`/`halfH` are the half-viewport in WORLD units, the same numbers the
-   *  landmark cull and the drift field use. */
-  advance(camX: number, camY: number, halfW: number, halfH: number, t: number, dt: number): void
+  /**
+   * `halfW`/`halfH` are the half-viewport in WORLD units, the same numbers the
+   * landmark cull and the drift field use.
+   *
+   * `boat` is where the hull actually is, which is NOT the camera: the camera
+   * leaves her to look at an island during a tour and frames the engagement in
+   * a fight. Fish part for a ship, not for a point of view.
+   */
+  advance(camX: number, camY: number, halfW: number, halfH: number, t: number, dt: number,
+    boat?: { x: number; y: number }): void
   /**
    * SOMETHING HIT THE WATER HERE. Every fish within reach bolts.
    *
@@ -206,6 +213,20 @@ export type Shoals = {
   night(tint: number): void
   destroy(): void
 }
+
+/**
+ * ── WHAT A PASSING HULL DOES TO A SCHOOL ────────────────────────────────────
+ *
+ * REACH is generous and PUSH is not. Fish should open a lane around the boat
+ * and close it behind her; they should not be fired across the chart like a
+ * hook landing, which is what `scatter` is for and which is twice this.
+ *
+ * SPEED is the knots at which the effect is full. Below it the lane narrows,
+ * and at anchor there is none: the school swims back over her.
+ */
+const BOW_REACH = 330
+const BOW_PUSH = 120
+const BOW_SPEED = 260
 
 export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
   const view: ParticleContainer = new PIXI.ParticleContainer({
@@ -263,6 +284,9 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
   let tint = 0xffffff
   let spots: Hotspot[] = []
   let spotsAt = 0
+  /** Where the hull was last frame, and how fast she is going. See advance. */
+  const lastBoat = { x: 0, y: 0 }
+  let speed = 0
   /** Where each school was last placed, so a school is only ever moved while it
    *  is off screen. */
   let seeded = false
@@ -276,8 +300,27 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
   return {
     view,
 
-    advance(camX, camY, halfW, halfH, t, dt) {
+    advance(camX, camY, halfW, halfH, t, dt, boat) {
       const d = Math.min(dt, 0.05)
+
+      // ── HOW FAST SHE IS GOING, AND WHY IT IS MEASURED HERE ──────────
+      //
+      // A hull under way pushes water ahead of it and the fish feel that long
+      // before they see anything. A hull sitting at anchor does not, and a
+      // school should close over a moored boat rather than treating her as a
+      // rock for ever.
+      //
+      // Derived from her own movement rather than asked for, because the only
+      // thing this needs to know is whether she is travelling and the chart
+      // already tells us where she is. Smoothed hard: `boat` carries her bob,
+      // which is a few pixels of screen-space wobble that would otherwise read
+      // as a boat permanently doing two knots.
+      if (boat) {
+        const bx = boat.x - lastBoat.x, by = boat.y - lastBoat.y
+        lastBoat.x = boat.x; lastBoat.y = boat.y
+        const inst = Math.hypot(bx, by) / Math.max(d, 0.001)
+        speed += (inst - speed) * Math.min(1, d * 2.2)
+      }
       // The hotspot set moves every ten minutes and asking for it is a hash, not
       // a fetch, but there is no reason to run it sixty times a second.
       const now = Date.now()
@@ -312,6 +355,39 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
         // the Open Waters should thin out, not vanish on a ring.
         sc.want = densityAt(sc.x, sc.y, spots)
         sc.lit += (sc.want - sc.lit) * Math.min(1, d * 1.6)
+      }
+
+      // ── AND THEY GET OUT OF THE WAY ─────────────────────────────────
+      //
+      // The one thing this whole layer was missing. Every school on the chart
+      // wrapped politely around the camera and none of them had ever heard of
+      // the boat: you could put a bowsprit through the middle of a shoal and
+      // they would carry on swimming through the hull.
+      //
+      // Not a second mechanism. `scatter` already throws a fish outward and
+      // eases it back, for a hook landing among them; this is the same push,
+      // held for as long as she is alongside rather than fired once. A fish
+      // inside the reach has its bolt topped up and its direction re-aimed
+      // every frame, so the school PARTS around a moving hull and closes again
+      // behind her -- and the moment she stops, the top-up stops with her and
+      // they drift back in.
+      const wash = boat ? Math.min(1, speed / BOW_SPEED) : 0
+      if (boat && wash > 0.05) {
+        const reach = BOW_REACH * (0.55 + wash * 0.45)
+        for (const f of fish) {
+          if (f.p.alpha <= 0) continue
+          const dx = f.p.x - boat.x, dy = (f.p.y - boat.y) / PLANE
+          const dd = Math.hypot(dx, dy)
+          if (dd > reach) continue
+          const near = 1 - dd / reach
+          const n = dd < 1 ? Math.random() * Math.PI * 2 : Math.atan2(dy, dx)
+          const push = near * wash * BOW_PUSH
+          f.bx = Math.cos(n) * push
+          f.by = Math.sin(n) * push * 0.7
+          // Topped up, never cut: a fish already bolting from a cast is not
+          // calmed down by a boat arriving.
+          f.bolt = Math.max(f.bolt, Math.min(1, near * 1.3))
+        }
       }
 
       for (const f of fish) {
