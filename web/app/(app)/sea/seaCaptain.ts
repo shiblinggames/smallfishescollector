@@ -539,9 +539,38 @@ export async function makeCaptain(
     // than a remembered set of parts, so anything the pose or a cosmetic adds
     // is reflected too, and the layering in the water matches the layering
     // above it.
+    /**
+     * ── WHAT IS REFLECTED, AND WHAT IS NOT ─────────────────────────────
+     *
+     * Everything the captain is WEARING, in the order it is painted: the
+     * character, the hat, the hull, the rod, the reel, the pet, the hook. The
+     * list is walked live rather than from a remembered set of parts, so a
+     * cosmetic nobody thought of when this was written reflects for free.
+     *
+     * THREE THINGS ARE HELD BACK, and each for its own reason:
+     *
+     *   the shadow — it is cast ON the water, not floating in it, and a
+     *                reflection of a shadow is a hole.
+     *   the auras  — a glow is a particle system rather than a sprite, so the
+     *                `instanceof Sprite` test excludes them without being asked.
+     *                A reflected emitter would be a SECOND one: twice the
+     *                sparks for a thing that should be dimmer, not busier.
+     *   the SOAK   — and this one was not held back, which was a bug. It is the
+     *                water standing against her side, cut from the hull's own
+     *                alpha, and it was being copied into the reflection like a
+     *                piece of kit. Water does not reflect the water on a hull;
+     *                it was a pale hull-shaped plate lying over the reflected
+     *                boat, lifting it away from everything around it.
+     *
+     * NOT COPIED, DELIBERATELY: `filters`. Nothing in a captain carries one
+     * today, and if anything ever does, the answer is not to hang a second
+     * filter on the twin (that is a second render pass per captain per frame,
+     * on a chart that can hold a fleet) — it is to bake the effect into the
+     * texture the twin already shares.
+     */
     let n = 0
     for (const c of skiff.view.children) {
-      if (c === shadow || c === mirrorBox) continue
+      if (c === shadow || c === mirrorBox || c === soak) continue
       if (!(c instanceof PIXI.Sprite)) continue
       const src = c as Sprite
       let t = twins[n]
@@ -555,8 +584,15 @@ export async function makeCaptain(
       t.anchor.set(src.anchor.x, src.anchor.y)
       t.position.set(src.x, src.y)
       t.scale.set(src.scale.x, src.scale.y)
+      // SKEW AND PIVOT TOO. Neither is used by any part today — the layers are
+      // placed with anchor, position, scale and rotation — but a twin that
+      // copies four of a sprite's six transform channels is a trap set for
+      // whoever adds the fifth, and they cost two assignments.
+      t.skew.set(src.skew.x, src.skew.y)
+      t.pivot.set(src.pivot.x, src.pivot.y)
       t.rotation = src.rotation
       t.alpha = src.alpha
+      t.blendMode = src.blendMode
       // The hour is copied off the source, so the reflection darkens with the
       // thing it reflects and nothing has to remember to tint it.
       t.tint = src.tint
@@ -564,7 +600,10 @@ export async function makeCaptain(
     }
     for (let k = n; k < twins.length; k++) twins[k].visible = false
   }
-  alignMirror()
+  // NOT CALLED HERE. It reads `soak`, which is declared below — and a `const`
+  // read before its initialiser is a ReferenceError, not an undefined. The
+  // first alignment happens right after that sprite exists; nothing between
+  // here and there looks at the mirror.
 
   // ── AND THE WATER COMES UP HER SIDE ───────────────────────────────────────
   //
@@ -616,6 +655,7 @@ export async function makeCaptain(
     // leaves the twin riding MIRROR_RIDE of it. See the constant.
     mirrorBox.position.y = mirrorBase - bob * (1 - MIRROR_RIDE)
   }
+  alignMirror()
   cutSoak()
   placeSoak(0)
 
