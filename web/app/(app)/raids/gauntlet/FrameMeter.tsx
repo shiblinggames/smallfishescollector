@@ -4,31 +4,44 @@
 //
 // An instrument, not a feature. "It feels laggy" is a real report and a useless
 // bug: it cannot tell you whether the main thread is busy, the GPU is saturated,
-// or a compositor animation has been quietly demoted. Five rounds of reading
-// code found five real defects and still did not answer the question, so this
-// answers it instead.
+// or a compositor animation has been quietly demoted. Rounds of reading code
+// found real defects and still did not answer the question, so this answers it.
 //
-// ── WHAT IT MEASURES, AND WHAT EACH NUMBER MEANS ────────────────────────────
+// ── THE ONE QUESTION IT EXISTS TO SETTLE ────────────────────────────────────
 //
-//   FPS      frames actually presented over the last second.
-//   FRAME    the median gap between frames, in ms. 16.7 is a clean 60.
-//   WORST    the longest gap in the last second. This is the number that
-//            "feels laggy" usually IS: a 60fps average with one 90ms stall a
-//            second reads as broken, and an average cannot see it.
-//   LONG     how many frames in the last second took over 24ms — a dropped
-//            frame at 60Hz. The shape of the problem: many small overruns is
-//            steady overload, a handful of big ones is something firing.
-//   TASK     the worst long-task the browser reported, from PerformanceObserver.
-//            THIS IS THE DIAGNOSIS. A long task is MAIN-THREAD work: a render,
-//            a layout, a parse. If WORST is high and TASK is not, the main
-//            thread was idle and the time went somewhere else — which on this
-//            screen means the GPU, and points at fill rate rather than at any
-//            amount of React.
+// When a frame takes too long, WHO took the time?
 //
-// It costs one rAF that does arithmetic and one style write a second. It is not
-// in the tree at all unless an admin turned it on.
+//   DELAY   how late our own callback ran inside the frame. The browser calls
+//           rAF callbacks at the start of a frame and hands each one the
+//           frame's timestamp; the gap between that timestamp and the clock
+//           when we actually get control is time the MAIN THREAD spent on
+//           something else first — a React render, a layout, a parse.
+//
+//           This is the signal that works everywhere. `longtask` does not
+//           exist in Safari, which is most of this game's players, so a meter
+//           that relied on it would go blind on the device that matters.
+//
+//   WORST   the longest gap between frames.
+//
+// Put together they separate the two causes, and the separation is the whole
+// point of the tool:
+//
+//   WORST high, DELAY high  → the MAIN THREAD. Renders, layout, script.
+//   WORST high, DELAY low   → everything else: fill rate, compositing, paint.
+//                             No amount of React work will touch it.
+//
+// ── AND IT HOLDS THE PEAK ───────────────────────────────────────────────────
+//
+// A one-second window is unreadable during a fight: the bad frame is over
+// before you have looked down. So every number is kept twice — the live second,
+// and the worst seen since RESET. Lock a shot, land a crit, then read it off at
+// your leisure.
+//
+// It costs one rAF doing arithmetic and one style write a second. It is not in
+// the tree at all unless an admin turned it on.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
+import { renderTally } from '../renderTally'
 
 /** Survives a remount and a reload, so a session of testing is one toggle. */
 const KEY = 'gauntletFrameMeter'
@@ -43,7 +56,7 @@ export function setFrameMeterOn(on: boolean): void {
 
 export default function FrameMeter({ onClose }: { onClose: () => void }) {
   const lineRef = useRef<HTMLPreElement | null>(null)
-  const [, force] = useState(0)
+  const resetRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     let raf = 0
@@ -52,54 +65,93 @@ export default function FrameMeter({ onClose }: { onClose: () => void }) {
     const gaps = new Float32Array(240)
     let n = 0
     let windowStart = last
-    let worstTask = 0
+    let taskNow = 0
 
-    // Long tasks are the browser's own account of main-thread blocking, which
-    // is the one thing a frame counter cannot infer for itself. Not every
-    // engine reports them (Safari does not, at time of writing) — hence the
-    // dash rather than a zero, so a missing number is never read as a good one.
+    // Held since RESET.
+    let peakFrame = 0
+    let peakDelay = 0
+    let peakTask = 0
+    let peakLong = 0
+    let peakRender = 0
+    let lastTally = renderTally.n
+
+    // Long tasks where they exist. Kept because when it IS reported it names
+    // the duration outright, which DELAY can only imply.
     let obs: PerformanceObserver | null = null
     let taskSupported = false
     try {
       obs = new PerformanceObserver(list => {
-        for (const e of list.getEntries()) worstTask = Math.max(worstTask, e.duration)
+        for (const e of list.getEntries()) taskNow = Math.max(taskNow, e.duration)
       })
       obs.observe({ entryTypes: ['longtask'] })
       taskSupported = true
     } catch { obs = null }
 
-    const tick = (now: number) => {
+    let delayNow = 0
+
+    const tick = (stamp: number) => {
       raf = requestAnimationFrame(tick)
-      const gap = now - last
-      last = now
+      // HOW LATE WE ARE INSIDE THIS FRAME. See the note at the top: this is the
+      // main-thread signal, and unlike `longtask` it works in Safari.
+      delayNow = Math.max(delayNow, performance.now() - stamp)
+
+      const gap = stamp - last
+      last = stamp
       if (n < gaps.length) gaps[n++] = gap
 
-      if (now - windowStart < 1000) return
-      // ── ONE STYLE WRITE A SECOND ──────────────────────────────────────
+      if (stamp - windowStart < 1000) return
+
       const slice = Array.from(gaps.subarray(0, n)).sort((a, b) => a - b)
       const median = slice[Math.floor(slice.length / 2)] ?? 0
       const worst = slice[slice.length - 1] ?? 0
       const long = slice.filter(g => g > 24).length
-      const fps = Math.round((n * 1000) / (now - windowStart))
+      const fps = Math.round((n * 1000) / (stamp - windowStart))
+
+      peakFrame = Math.max(peakFrame, worst)
+      peakDelay = Math.max(peakDelay, delayNow)
+      peakTask = Math.max(peakTask, taskNow)
+      peakLong = Math.max(peakLong, long)
+      // RENDERS OF THE FIGHT in this second. If the main thread is busy and
+      // this number is large at the same moment, the answer is not a mystery.
+      const renders = renderTally.n - lastTally
+      lastTally = renderTally.n
+      peakRender = Math.max(peakRender, renders)
+
       const el = lineRef.current
       if (el) {
+        const task = taskSupported ? `${peakTask.toFixed(0)}ms` : 'n/a'
+        // The verdict, spelled out, so the number does not have to be
+        // interpreted in the middle of a fight.
+        const blame = peakFrame < 24 ? '—'
+          : peakDelay > peakFrame * 0.5 ? 'MAIN'
+          : 'GPU/PAINT'
         el.textContent =
+          `      now    peak\n` +
           `FPS   ${String(fps).padStart(4)}\n` +
-          `FRAME ${median.toFixed(1).padStart(6)} ms\n` +
-          `WORST ${worst.toFixed(1).padStart(6)} ms\n` +
-          `LONG  ${String(long).padStart(4)}  (>24ms)\n` +
-          `TASK  ${taskSupported ? `${worstTask.toFixed(0).padStart(4)}  ms` : '   —  n/a'}`
-        // Red when a frame was missed badly, amber when it was missed at all.
-        el.style.color = worst > 50 ? '#ff8a8a' : worst > 24 ? '#f0c040' : '#9ff0c0'
+          `FRAME ${median.toFixed(1).padStart(5)}  ${peakFrame.toFixed(0).padStart(5)}ms\n` +
+          `DELAY ${delayNow.toFixed(1).padStart(5)}  ${peakDelay.toFixed(0).padStart(5)}ms\n` +
+          `LONG  ${String(long).padStart(5)}  ${String(peakLong).padStart(5)}\n` +
+          `RNDR  ${String(renders).padStart(5)}  ${String(peakRender).padStart(5)}\n` +
+          `TASK  ${task.padStart(12)}\n` +
+          `BLAME ${blame.padStart(12)}`
+        el.style.color = peakFrame > 50 ? '#ff8a8a' : peakFrame > 24 ? '#f0c040' : '#9ff0c0'
       }
       n = 0
-      worstTask = 0
-      windowStart = now
+      taskNow = 0
+      delayNow = 0
+      windowStart = stamp
     }
     raf = requestAnimationFrame(tick)
-    force(1)
-    return () => { cancelAnimationFrame(raf); obs?.disconnect() }
+
+    resetRef.current = () => { peakFrame = 0; peakDelay = 0; peakTask = 0; peakLong = 0; peakRender = 0 }
+    return () => { cancelAnimationFrame(raf); obs?.disconnect(); resetRef.current = null }
   }, [])
+
+  const btn: React.CSSProperties = {
+    flex: 1, padding: '3px 0', borderRadius: 5, cursor: 'pointer',
+    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(140,170,200,0.3)',
+    color: '#b9c6c9', font: 'inherit', letterSpacing: '0.1em',
+  }
 
   return (
     <div
@@ -107,20 +159,15 @@ export default function FrameMeter({ onClose }: { onClose: () => void }) {
         position: 'fixed', left: 8, bottom: 'calc(env(safe-area-inset-bottom, 0px) + 68px)',
         zIndex: 2000, pointerEvents: 'auto',
         padding: '6px 9px 7px', borderRadius: 9,
-        background: 'rgba(3,7,13,0.86)', border: '1px solid rgba(140,170,200,0.35)',
+        background: 'rgba(3,7,13,0.88)', border: '1px solid rgba(140,170,200,0.35)',
         font: '10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace',
         whiteSpace: 'pre', letterSpacing: '0.02em',
       }}>
       <pre ref={lineRef} style={{ margin: 0, color: '#9ff0c0' }}>measuring…</pre>
-      <button type="button"
-        onClick={() => { setFrameMeterOn(false); onClose() }}
-        style={{
-          marginTop: 5, width: '100%', padding: '2px 0', borderRadius: 5, cursor: 'pointer',
-          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(140,170,200,0.3)',
-          color: '#b9c6c9', font: 'inherit', letterSpacing: '0.1em',
-        }}>
-        HIDE
-      </button>
+      <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
+        <button type="button" onClick={() => resetRef.current?.()} style={btn}>RESET</button>
+        <button type="button" onClick={() => { setFrameMeterOn(false); onClose() }} style={btn}>HIDE</button>
+      </div>
     </div>
   )
 }
