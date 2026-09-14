@@ -2243,31 +2243,35 @@ export default function RaidCombat({
     const el = impactFlashRef.current
     if (!el || typeof el.animate !== 'function') return
     /**
-     * ── IT IS `display: none` BETWEEN FLASHES, AND THAT IS NOT TIDINESS ──────
+     * ── MEASURED, THEN STRIPPED ──────────────────────────────────────────────
      *
-     * This element carries `mix-blend-mode: screen`, which is what makes the
-     * flash brighten the scene instead of whiting it out. A blended element
-     * forces the browser to keep what is UNDERNEATH it in its own buffer and
-     * composite the two — and it does that for as long as the element is in the
-     * tree, not for as long as it is visible. At `opacity: 0` it looks like
-     * nothing and costs like a full-stage blend, every frame of every fight.
+     * The frame meter settled this. A crit cost a 104ms frame with DELAY at
+     * 4ms — the browser handed this thread the frame on time and the cost was
+     * somewhere else entirely, which rules out every render in this file and
+     * every idea I had about splitting it.
      *
-     * The rule is written in this file already, on a different effect: "no
-     * blur/mixBlendMode (persistent-element perf rule)". Making this one
-     * always-mounted to save a render broke it, and swapped two renders per
-     * crit for a compositing tax on all of them.
+     * This element was the outlier: `mix-blend-mode: screen` across the WHOLE
+     * stage. A blended element forces the browser to isolate everything beneath
+     * it into its own buffer and composite the two — and beneath this one is a
+     * full-viewport WebGL canvas. Building that group and tearing it down again
+     * is exactly the kind of work that costs a hundred milliseconds on a phone
+     * and touches the main thread for none of it.
      *
-     * So it is out of the rendering path entirely until it fires, and put back
-     * the moment it is done. The sequence guard is for overlapping hits: a
-     * second flash inside the first must not be hidden by the first's ending.
+     * The blend is gone. A bright radial at the same opacity over a dark sea
+     * looks all but identical; `screen` was buying a little extra lift on the
+     * lit parts and charging a full-viewport isolation for it.
+     *
+     * It is still out of the tree between flashes. `display: none` costs
+     * nothing and cannot be wrong. The sequence guard is for overlapping hits:
+     * a second flash inside the first must not be hidden by the first ending.
      */
     const n = ++impactFlashSeq.current
     // The gradient is the only thing that differs between a heavy landing and
     // an ordinary one, and it is a paint rather than a transform — so it is
     // written once here instead of being interpolated.
     el.style.background = strong
-      ? 'radial-gradient(ellipse at center, rgba(255,255,255,0.92), rgba(255,214,150,0.5) 46%, transparent 78%)'
-      : 'radial-gradient(ellipse at center, rgba(255,255,255,0.82), transparent 72%)'
+      ? 'radial-gradient(ellipse at center, rgba(255,255,255,0.96), rgba(255,222,168,0.62) 46%, transparent 78%)'
+      : 'radial-gradient(ellipse at center, rgba(255,255,255,0.88), transparent 72%)'
     el.style.display = 'block'
     const done = () => {
       if (impactFlashSeq.current !== n) return
@@ -7901,7 +7905,7 @@ export default function RaidCombat({
         {/* ALWAYS MOUNTED, ALWAYS AT ZERO. See fireImpactFlash: it is animated
             imperatively so a critical hit costs no render at all. */}
         <div ref={impactFlashRef} aria-hidden
-          style={{ position: 'absolute', inset: 0, zIndex: 9, opacity: 0, display: 'none', pointerEvents: 'none', mixBlendMode: 'screen' }} />
+          style={{ position: 'absolute', inset: 0, zIndex: 9, opacity: 0, display: 'none', pointerEvents: 'none' }} />
         {/* ── Atmospheric backdrop ─────────────────────────────────────────
             Sun/sky/clouds/water all swap based on `atmosphere`. Each
             variant is a self-contained fragment so the parts (sun
@@ -9424,8 +9428,16 @@ export default function RaidCombat({
                     style={{
                       fontSize: isHit ? '1.55rem' : '1.3rem',
                       color: '#fff',
+                      // TWO GLOWS, NOT THREE, AND THE BIG ONE IS HALVED. A
+                      // text-shadow is rasterised over the text's box grown by
+                      // the blur radius in every direction, so a 56px bloom is
+                      // a surface many times the size of the word it is on —
+                      // built fresh at the moment of the lock, which is the one
+                      // frame in the fight that must not stall. See the note on
+                      // fireImpactFlash: the meter says this frame's cost is
+                      // paint, not script.
                       textShadow: isHit
-                        ? `0 0 12px ${accent}, 0 0 28px ${accent}, 0 0 56px ${accent}55`
+                        ? `0 0 10px ${accent}, 0 0 26px ${accent}aa`
                         : `0 0 8px ${accent}, 0 0 18px ${accent}99`,
                     }}>
                     {label}
