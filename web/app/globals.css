@@ -188,6 +188,20 @@ html, body {
    badge-and-a-row layout it replaces showed a 54px circle of the figure's
    middle and left the fight looking like a fight against an empty ship. */
 .rc-enemy-art { aspect-ratio: 1 / 1; }
+/* THE BOSS'S CARD. Wider, gilt corners on the art (two small lozenges, the
+   kind a frame-maker puts on a plate), and a gold hairline under the name.
+   The frame and the ground are inline on the card; see the note there. */
+.rc-enemy-plate.is-boss { width: 176px; }
+.rc-enemy-plate.is-boss .rc-enemy-art::before,
+.rc-enemy-plate.is-boss .rc-enemy-art::after {
+  content: ''; position: absolute; top: 9px; width: 7px; height: 7px; z-index: 1;
+  transform: rotate(45deg);
+  border: 1px solid rgba(251,191,36,0.75); background: rgba(12,9,6,0.85);
+  box-shadow: 0 0 6px rgba(251,191,36,0.45);
+}
+.rc-enemy-plate.is-boss .rc-enemy-art::before { left: 9px; }
+.rc-enemy-plate.is-boss .rc-enemy-art::after { right: 9px; }
+.rc-enemy-plate.is-boss .rc-enemy-name { padding-bottom: 3px; border-bottom: 1px solid rgba(217,164,65,0.5); }
 .rc-enemy-info { padding: 0 0.55rem 0.5rem; }
 .rc-enemy-name { font-size: 0.84rem; }
 
@@ -196,6 +210,7 @@ html, body {
   /* Only over the sea. On a /raids/* route the card sits in the corner of its
      own stage with nothing stacked above it, and there it can have its room. */
   .raid-oversea-stage .rc-enemy-plate { width: 126px; }
+  .raid-oversea-stage .rc-enemy-plate.is-boss { width: 140px; }
   .raid-oversea-stage .rc-enemy-info { padding: 0 0.42rem 0.4rem; }
   .raid-oversea-stage .rc-enemy-name { font-size: 0.72rem; }
 }

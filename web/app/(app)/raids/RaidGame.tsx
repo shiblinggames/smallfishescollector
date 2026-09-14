@@ -466,6 +466,19 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
   // position:fixed lock (lib/bodyScrollLock), NOT overflow:hidden — on iOS the
   // overflow lock still let chained/rubber-band drags scroll the document mid-
   // fight, visually carrying the fixed header away while hit-testing stayed put.
+  // EVERY FACE IN THE RAID, at the start of it. The enemy card is the portrait,
+  // and the sequence is known from the first shot; fetching each painting as
+  // its fight came up had the card opening empty for a beat.
+  useEffect(() => {
+    for (const e of Object.values(config.enemies)) {
+      if (!e.portrait) continue
+      const im = new Image()
+      im.decoding = 'async'
+      im.src = e.portrait
+      im.decode?.().catch(() => {})
+    }
+  }, [config])
+
   useEffect(() => {
     const standalone =
       window.matchMedia?.('(display-mode: standalone)').matches ||

@@ -1621,6 +1621,15 @@ export default function RaidCombat({
       img.decode?.().catch(() => {})
     }
   }, [crewMembers])
+  // And the enemy's own face. The hosts prime it earlier than this (a
+  // descent or a raid ahead); this is the floor, for any host that does not.
+  useEffect(() => {
+    if (!enemy.portrait) return
+    const img = new Image()
+    img.decoding = 'async'
+    img.src = enemy.portrait
+    img.decode?.().catch(() => {})
+  }, [enemy.portrait])
   const [enemyHp, setEnemyHp]         = useState(() => Math.max(1, Math.round(enemy.hpBase * tide.enemyHpScaleMult)))
   // The enemy's ACTUAL max HP this fight = base × any enemyHpScale (Barnacled
   // Hull curse, half-HP tides). Drives the HP bar denominator + stat sheet so
@@ -8486,7 +8495,7 @@ export default function RaidCombat({
           type="button"
           onClick={() => setShowEnemyStats(true)}
           aria-label={`${enemy.name} — view stats`}
-          className={`rc-enemy-plate${enemyPhase >= 2 ? ' rc-phase2-pulse' : ''}`}
+          className={`rc-enemy-plate${isBoss ? ' is-boss' : ''}${enemyPhase >= 2 ? ' rc-phase2-pulse' : ''}`}
           animate={enemyNameplateAnim}
           ref={enemyPlateRef}
           style={{
@@ -8494,19 +8503,27 @@ export default function RaidCombat({
             // the corner is where it sits on a /raids/* route, and where it
             // starts here before the first frame places it.
             position: 'absolute', top: 10, left: 10, zIndex: 4,
-            background: 'rgba(6,12,20,0.92)',
+            // THE BOSS'S CARD IS NOT THE SAME CARD IN GOLD. Warmer and darker
+            // ground, a gilt line standing off the border (a dark gap between
+            // them, which is what makes it a frame rather than a thick edge),
+            // and, in globals.css, a wider card with gilt corners on the art
+            // and a hairline under the name.
+            background: isBoss
+              ? 'linear-gradient(180deg, rgba(30,21,9,0.95) 0%, rgba(12,9,6,0.96) 100%)'
+              : 'rgba(6,12,20,0.92)',
             // Phase 2 overrides the normal boss-gold (or elite-violet)
             // accent with crimson — same intensity as elite, deeper red so
             // it reads as "wounded and dangerous" not just "boss".
             border: `1px solid ${
               enemyPhase >= 2 ? '#ef4444'
-              : isBoss ? '#fbbf24'
+              : isBoss ? '#d9a441'
               : isElite ? '#a78bfa'
               : '#2a3548'
             }`,
             borderRadius: 14,
             boxShadow:
-              enemyPhase >= 2 ? '0 0 18px rgba(239,68,68,0.5)'
+              enemyPhase >= 2 ? '0 0 0 3px rgba(12,6,6,0.95), 0 0 0 4px rgba(239,68,68,0.6), 0 0 22px rgba(239,68,68,0.5)'
+              : isBoss ? '0 0 0 3px rgba(10,8,5,0.95), 0 0 0 4px rgba(217,164,65,0.6), 0 0 24px rgba(251,191,36,0.28), 0 8px 22px rgba(0,0,0,0.5)'
               : isElite ? '0 0 14px rgba(167,139,250,0.32)'
               : '0 6px 18px rgba(0,0,0,0.45)',
             // A COLUMN: the art on top, the words under it, the art clipped
@@ -8555,7 +8572,7 @@ export default function RaidCombat({
           )}
           <div className="rc-enemy-info" style={{ position: 'relative', minWidth: 0, marginTop: enemy.portrait ? -16 : 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-              <p className="rc-enemy-name font-cinzel font-700" style={{ color: '#ffffff', lineHeight: 1, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p className="rc-enemy-name font-cinzel font-700" style={{ color: isBoss ? '#fde68a' : '#ffffff', lineHeight: 1, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {enemy.name}
               </p>
               {/* Has-abilities tell — ONE inline glyph whenever the enemy carries
@@ -10614,10 +10631,13 @@ function EnemyStatsPopup({
           // Same as the player's Ledger: 380 was measured on a phone.
           width: '100%', maxWidth: 'clamp(380px, 48vw, 620px)',
           background: 'linear-gradient(180deg, #1a0c0c 0%, #0c0606 100%)',
-          border: `1px solid ${isBoss ? 'rgba(251,191,36,0.34)' : 'rgba(239,68,68,0.22)'}`,
+          border: `1px solid ${isBoss ? 'rgba(217,164,65,0.7)' : 'rgba(239,68,68,0.22)'}`,
           borderRadius: 20,
           padding: '1.1rem 1rem 1.2rem',
-          boxShadow: '0 18px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset',
+          // The boss's sheet wears the same standing gilt line as her card.
+          boxShadow: isBoss
+            ? '0 0 0 3px rgba(10,8,5,0.95), 0 0 0 4px rgba(217,164,65,0.55), 0 18px 60px rgba(0,0,0,0.55)'
+            : '0 18px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset',
         }}
       >
         {/* Close — X top-right, matching PlayerStatsPopup. */}

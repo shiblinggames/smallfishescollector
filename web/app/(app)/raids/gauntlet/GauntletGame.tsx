@@ -739,6 +739,23 @@ export default function GauntletGame(props: GauntletGameProps) {
       im.src = u
     }
   }, [pendingBoons, pendingCurse, pendingConfluence])
+  // ── THE ENEMY'S FACE, FETCHED BEFORE THE CARD ───────────────────────────
+  //
+  // The card is the portrait now, and a portrait that arrives a beat after
+  // the card is a card that opens empty. A fight is rolled at the top of the
+  // descent (and the Sounding Line pre-rolls the next one at the breather), so
+  // the painting is fetched and decoded here, a full descent before it is
+  // asked for.
+  useEffect(() => {
+    for (const f of [fight, peekFight]) {
+      const u = f?.enemy.portrait
+      if (!u) continue
+      const im = new Image()
+      im.decoding = 'async'
+      im.src = u
+      im.decode?.().catch(() => {})
+    }
+  }, [fight, peekFight])
   // How many BOON cards a draft shows. A confluence offer takes one of the slots,
   // so it is always one fewer. Derived from the Term (Scarce Powder) rather than
   // hardcoded, or a 2-pick draft would still show 2 boons alongside a confluence
