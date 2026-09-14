@@ -2775,11 +2775,16 @@ export default function RaidCombat({
     // The plates' own sizes, and the deck's height. These change when a status
     // chip appears or a name gets longer — not on a frame — so they are read
     // when something might have changed and cached in between.
-    const dim = { ew: 160, eh: 48, pw: 160, ph: 48, deckTop: window.innerHeight }
+    const dim = { ew: 160, eh: 48, pw: 160, ph: 48, deckTop: window.innerHeight, barBottom: null as number | null }
     const measurePlates = () => {
       const e = enemyPlateRef.current
       const p = playerPlateRef.current
       if (e) { dim.ew = e.offsetWidth || dim.ew; dim.eh = e.offsetHeight || dim.eh }
+      // WHAT STANDS ABOVE THE ENEMY'S CARD: a gauntlet's depth bar. Measured
+      // rather than assumed, so the card sits the same ten pixels under it
+      // that your own sits above the deck — the constant it replaced put it
+      // a good deal further down than that.
+      dim.barBottom = document.querySelector('.gauntlet-depthbar > *')?.getBoundingClientRect().bottom ?? null
       if (p) { dim.pw = p.offsetWidth || dim.pw; dim.ph = p.offsetHeight || dim.ph }
       // WHERE THE DECK'S TOP EDGE IS, not how tall it is. Over the sea the deck
       // no longer sits on the bottom of the window — on a phone it stops above
@@ -2823,7 +2828,9 @@ export default function RaidCombat({
       // bar directly above it.
       const line = (window.innerWidth >= 640 ? 60 : 44) + 18
       el.style.left = `${raidColumn().left - box.left}px`
-      el.style.top = `${line + 42 - box.top}px`
+      // Ten under the bar when there is one — the gap your own card keeps
+      // above the deck — and the old line when there is not.
+      el.style.top = `${(dim.barBottom != null ? dim.barBottom + 10 : line + 42) - box.top}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
     }

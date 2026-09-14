@@ -1632,7 +1632,14 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     startTransition(async () => {
       const res = await action()
       if ('error' in res) setErr(res.error)
-      else setState(res.state)
+      else {
+        setState(res.state)
+        // THE HUB ABOVE RE-READS ON THIS. It fired on a recruit and on nothing
+        // else, so seating a hand — the tour's own "make somebody captain" —
+        // left the hub's benches empty until something else happened to
+        // refresh them. Every change through here is a change the hub shows.
+        window.dispatchEvent(new Event('crew-changed'))
+      }
       setBusyId(null)
       onDone?.()
     })
@@ -1646,7 +1653,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     startTransition(async () => {
       const res = await clearParty(track)
       if ('error' in res) setErr(res.error)
-      else setState(res.state)
+      else { setState(res.state); window.dispatchEvent(new Event('crew-changed')) }
       setClearingTrack(null)
       // Closed HERE, not on the tap, so the sheet holds its busy state until
       // the seats are actually empty and a refusal lands on a screen the

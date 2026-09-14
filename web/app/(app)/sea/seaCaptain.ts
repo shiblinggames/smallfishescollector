@@ -795,6 +795,70 @@ export async function makeCaptain(
  * step. Everything a ship has no opinion about is a no-op: it has no poses, no
  * streak and no auras.
  */
+/**
+ * ── THE WATER'S HALF OF A PLAIN HULL ─────────────────────────────────────────
+ *
+ * makeShip builds a warship with her reflection and the water standing against
+ * her side, and that pair is most of what makes her read as IN the sea. The
+ * gauntlet draws its two hulls as bare sprites it sizes itself, every frame,
+ * from the fight's own framing — and bare is how they looked: two cut-outs on
+ * a picture of water. This is the same reflection and the same wet band for a
+ * sprite somebody else owns and sizes. `fit` lays both against the sprite as
+ * it stands right now (anchor, size, mirror), so the caller runs it after
+ * sizing; the plates are cached by size, so a settled frame costs assignments.
+ */
+export type HullWater = {
+  /** Under the hull. */
+  back: Sprite
+  /** Over it. */
+  soak: Sprite
+  fit(sp: Sprite): void
+}
+export function hullWater(PIXI: typeof import('pixi.js'), url: string): HullWater | null {
+  const img = imageFor(url)
+  if (!img) return null
+  const band = paintBand(img, url)
+  const LIE = 0.55
+  const SINK = 0.04
+  const back: Sprite = new PIXI.Sprite()
+  back.anchor.set(0.5)
+  back.alpha = 0.26
+  back.visible = false
+  const soak: Sprite = new PIXI.Sprite()
+  soak.alpha = 0.88
+  // The day tint makeShip's setNight gives the band at noon: a muted teal, so
+  // the white plate reads as water rather than as frost.
+  soak.tint = 0x527580
+  soak.visible = false
+  return {
+    back, soak,
+    fit(sp) {
+      const kx = Math.abs(sp.scale.x), ky = Math.abs(sp.scale.y)
+      const W = sp.texture.width * kx, H = sp.texture.height * ky
+      if (W < 2 || H < 2) { back.visible = false; soak.visible = false; return }
+      const sx = sp.scale.x < 0 ? -1 : 1
+      // The hull's centre in the parent's space, whatever her anchor.
+      const cx = sp.x + (0.5 - sp.anchor.x) * W * sx
+      const cy = sp.y + (0.5 - sp.anchor.y) * H
+      // HER OWN WATERLINE, not the plate's bottom edge — the same measure
+      // makeShip takes, for the same reason.
+      const paintH = H * (band.bot - band.top)
+      const water = (band.bot - 0.5) * H - paintH * SINK
+      back.visible = true
+      back.texture = sp.texture
+      back.scale.set(kx * sx, -ky * LIE)
+      back.position.set(cx, cy + water * (1 + LIE))
+      const plate = soakPlate(PIXI, img, `soak|${url}`, W, H, 0.165)
+      if (!plate) { soak.visible = false; return }
+      soak.visible = true
+      soak.texture = plate
+      soak.anchor.set(sp.anchor.x, sp.anchor.y)
+      soak.scale.set(sx, 1)
+      soak.position.set(sp.x, sp.y)
+    },
+  }
+}
+
 export async function makeShip(
   PIXI: typeof import('pixi.js'),
   ship: { url: string; flip: boolean; scale?: number; aura?: EffectName | null },

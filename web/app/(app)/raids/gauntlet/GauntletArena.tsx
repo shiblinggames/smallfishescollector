@@ -69,6 +69,7 @@
 import { useEffect, useRef } from 'react'
 import { makeWater, rgb3 } from '@/app/(app)/sea/seaWater'
 import { makeGunFx, type GunFx, type ImpactKind } from '@/app/(app)/sea/seaGunFx'
+import { hullWater, type HullWater } from '@/app/(app)/sea/seaCaptain'
 import { makeAbilityFx, type AbilityFx } from '@/app/(app)/sea/seaAbilityFx'
 import { GROUND } from '@/app/(app)/sea/islandArt'
 import { texture } from '@/app/(app)/sea/skiffArt'
@@ -310,12 +311,25 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         sp.anchor.set(0.5, anchorY)
         node.addChild(sp)
         world.addChild(node)
-        return { node, sp, url: '' }
+        return { node, sp, url: '', water: null as HullWater | null }
       }
-      const load = (h: { sp: import('pixi.js').Sprite; url: string }, url: string) => {
+      // ── AND THE WATER SHE IS IN ────────────────────────────────────────
+      // Her reflection under her and the wet band over her, the pair the
+      // chart gives every hull — see hullWater. Built once the bitmap is here
+      // (both are cut from it) and laid against her every frame after sizing.
+      const load = (h: ReturnType<typeof mkHull>, url: string) => {
         h.url = url
+        if (h.water) { h.water.back.destroy(); h.water.soak.destroy(); h.water = null }
         if (!url) { h.sp.texture = PIXI.Texture.EMPTY; return }
-        void texture(PIXI, url).then(tex => { if (!dead && h.url === url) h.sp.texture = tex }).catch(() => {})
+        void texture(PIXI, url).then(tex => {
+          if (dead || h.url !== url) return
+          h.sp.texture = tex
+          const w = hullWater(PIXI, url)
+          if (!w) return
+          h.node.addChildAt(w.back, 0)
+          h.node.addChild(w.soak)
+          h.water = w
+        }).catch(() => {})
       }
       const player = mkHull(0.5)
       const enemy = mkHull(1)
@@ -336,7 +350,7 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       const paintEnemy = (p: HullPaint | undefined) => {
         if (p === paintNow) return
         paintNow = p ?? null
-        if (!p || (p.hue === 0 && p.sat === 1 && p.bright === 1)) { enemy.sp.filters = []; return }
+        if (!p || (p.hue === 0 && p.sat === 1 && p.bright === 1)) { enemy.node.filters = []; return }
         // AT THE RENDERER'S RESOLUTION. A filter draws its sprite into a
         // texture of its own and a Pixi filter's default resolution is 1 —
         // not the renderer's — so on a phone the one hull wearing paint was
@@ -350,7 +364,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         // MULTIPLIER where 1 is. x = a * 2/3 + 1, so a = (mult - 1) * 1.5.
         if (p.sat !== 1) f.saturate((p.sat - 1) * 1.5, true)
         if (p.bright !== 1) f.brightness(p.bright, true)
-        enemy.sp.filters = [f]
+        // ON THE NODE, not the sprite: her reflection wears her paint too.
+        enemy.node.filters = [f]
       }
       paintEnemy(artRef.current.enemyPaint)
       // SHE IS NOT HERE UNTIL THE FIGHT IS. The alpha eases toward whatever
@@ -553,6 +568,7 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
           player.sp.height = f.player.box * (player.sp.texture.height / player.sp.texture.width)
         }
         if (art.shipFlip) player.sp.scale.x = -Math.abs(player.sp.scale.x)
+        player.water?.fit(player.sp)
         // DEAD IN THE WATER. The run's own ending, the same settle-and-roll a
         // sunk hull gets, but slower, because it is yours.
         if (sc.mood === 'dead') gone = Math.min(1, gone + dt * 0.35)
@@ -573,6 +589,7 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
           enemy.sp.width = f.enemy.box
           enemy.sp.height = f.enemy.box * (enemy.sp.texture.height / enemy.sp.texture.width)
         }
+        enemy.water?.fit(enemy.sp)
         enemy.node.x = f.enemy.x + (ef?.x ?? 0)
         enemy.node.y = f.enemy.y + (ef?.y ?? 0) - bob * 0.6 - drop * 1.35
         enemy.node.rotation = ((ef?.rot ?? 0) * Math.PI) / 180

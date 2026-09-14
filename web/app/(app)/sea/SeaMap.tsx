@@ -14392,23 +14392,24 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext,
       transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
       transformOrigin: 'bottom center',
     }}>
-      {/* THE WATER UNDER IT, so the hull sits IN the sea rather than on top of
-          it. Foreshortened with the plane, like the berth pools and the
-          portal. */}
-      {/* A CONTACT SHADOW, and nothing else. This was a red wash under every
-          available hull — a colour on the water that meant "you can fight this"
-          and looked like the ship was standing in something. What you can fight
-          is said by the dock ring out in front of her now; a hull only needs
-          the dark patch that stops her floating a foot above the sea. */}
+      {/* THE WATER SHE STANDS IN. The same trough, collar and swell your own
+          ship gets at anchor (see .sea-heave-*), scaled to her beam and lying
+          in the plane. This replaces a contact shadow, which said "a foot
+          above the sea" however faint it was drawn: a dark patch under a thing
+          is a thing above the ground, and only water moving against her says
+          she is in it. A 0x0 box, so the rings' own centring lands on the
+          waterline; the counter-squash puts them back in the plane. */}
       <div aria-hidden style={{
-        position: 'absolute', left: '50%', bottom: w * 0.06,
-        width: w * 0.92, height: w * 0.22,
-        transform: `translate(-50%, 0) scaleY(${GROUND})`,
-        borderRadius: '50%',
-        background: locked
-          ? 'radial-gradient(ellipse, rgba(6,12,18,0.55) 0%, transparent 70%)'
-          : 'radial-gradient(ellipse, rgba(6,12,18,0.44) 0%, transparent 72%)',
-      }} />
+        position: 'absolute', left: '50%', bottom: w * 0.05, width: 0, height: 0,
+        transform: `scale(${(w / 440).toFixed(3)}) scaleY(${GROUND})`,
+        ['--heave' as string]: 0.55,
+        opacity: locked ? 0.45 : 1,
+      }}>
+        <div className="sea-heave-trough" />
+        <div className="sea-heave-collar" />
+        <div className="sea-heave-swell" />
+        <div className="sea-heave-swell" style={{ animationDelay: '2.7s' }} />
+      </div>
 
       {/* ── AND HER REFLECTION, so she is IN the sea ────────────────────
           Every hull on this chart has one -- the player's, her twin on the
@@ -14506,7 +14507,7 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext,
           exactly the fought hull, so the rest of the bay keeps living. The
           art faces the player unmirrored, which is the pose a duel wants. */}
       <div className={hullRef ? undefined : 'enc-drift'} style={{ animationDelay: `${(-phase * 17).toFixed(2)}s` }}>
-      <div className={hullRef ? undefined : 'enc-turn'} style={{ animationDelay: `${(-phase * 29).toFixed(2)}s` }}>
+      <div className={hullRef ? undefined : 'enc-turn'} style={{ position: 'relative', animationDelay: `${(-phase * 29).toFixed(2)}s` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={hull} alt="" draggable={false} decoding="async" style={{
           // ── maxWidth: 'none' IS THE SHIP BEING VISIBLE AT ALL ───────────
@@ -14554,6 +14555,20 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext,
           // is shooting at you. The fought hull is at full presence for the
           // duration, whatever the ledger says about her.
           opacity: cleared && !hullRef ? 0.85 : 1,
+        }} />
+        {/* ── AND THE WATER UP HER SIDE ──────────────────────────────────
+            The band every hull on the canvas wears (see soakPlate): a pale
+            teal copy of her, cut to her own outline by being her, masked to
+            the lowest sixth so the sea meets the boat on the boat's own curve.
+            Filters, because the DOM has no source-in: black, inverted to
+            white, warmed, then swung round to the water's own colour. */}
+        <img aria-hidden src={hull} alt="" draggable={false} decoding="async" style={{
+          position: 'absolute', left: 0, top: 0, width: w, maxWidth: 'none',
+          filter: 'brightness(0) invert(1) sepia(1) saturate(2.6) hue-rotate(140deg) brightness(0.72)',
+          opacity: locked ? 0.4 : 0.8,
+          WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.55) 8%, rgba(0,0,0,0.18) 13%, transparent 17%)',
+          maskImage: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.55) 8%, rgba(0,0,0,0.18) 13%, transparent 17%)',
+          pointerEvents: 'none',
         }} />
       </div>
       </div>
