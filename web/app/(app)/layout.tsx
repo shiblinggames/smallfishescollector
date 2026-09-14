@@ -49,6 +49,7 @@ export const maxDuration = 20
 import Nav from '@/components/Nav'
 import MembershipModal from '@/components/MembershipModal'
 import CastingOff from '@/components/CastingOff'
+import CoachFlash from '@/components/CoachFlash'
 import SetupModal from '@/components/SetupModal'
 import WelcomeModal from '@/components/WelcomeModal'
 import { getCurrentProfile } from '@/lib/userData'
@@ -106,6 +107,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           off the world routes and nothing on a session that has already had
           it; see the component, which also explains why it can never hang. */}
       <CastingOff />
+      {/* The ring a tour draws round the control it is pointing at, in a layer
+          of its own so no scroll box or rounded card can clip it. Draws
+          nothing until something on the page wears `.coach-flash`. */}
+      <CoachFlash />
       {/* Global membership purchase popup — opens on the `open-membership`
           event fired by every "Become a member" CTA across the app. */}
       <MembershipModal />

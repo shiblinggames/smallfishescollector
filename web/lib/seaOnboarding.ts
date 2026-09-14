@@ -390,7 +390,7 @@ export const GATE_TOUR: Beat[] = [
   },
   {
     ...D,
-    text: 'Pick one and *Recruit* them. Congrats on your first hand.',
+    text: 'Pick one and *Recruit* them.',
     until: 'recruited',
     target: 'recruit',
     overPanel: true,

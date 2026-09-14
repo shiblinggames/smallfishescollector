@@ -69,7 +69,7 @@ export default function SeaGateTour({
   goal: React.MutableRefObject<{ x: number; y: number; r: number } | null>
   /** Which beat is up, and when it is over -- for the lock. Same contract as
    *  the first voyage. */
-  onBeat?: (b: { until: string; at?: string; target?: string; lock: boolean } | null) => void
+  onBeat?: (b: { until: string; at?: string; target?: string; lock: boolean; route?: boolean } | null) => void
   onDone?: () => void
   /** Where it got to. A captain can cross the reef, read three beats and shut
    *  the tab; the fourth is where they come back to. */
@@ -98,7 +98,9 @@ export default function SeaGateTour({
   const live = !done && !!beat && inAnchorage && !fighting
   useEffect(() => {
     onBeat?.(live && beat
-      ? { until: beat.until, at: beat.at, target: beat.target, lock: step <= GATE_FORCED_THROUGH }
+      // `route` goes out too: the chart draws the chevrons for it, the same
+      // run it lays down when a clear opens something new. See NextHeading.
+      ? { until: beat.until, at: beat.at, target: beat.target, lock: step <= GATE_FORCED_THROUGH, route: beat.route }
       : null)
   }, [live, beat, step, onBeat])
 

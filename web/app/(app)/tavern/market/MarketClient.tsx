@@ -781,20 +781,48 @@ export default function MarketClient({
 
   function handleLiquidate() {
     if (liquidating) return
+    // ── AND SO IS THIS ────────────────────────────────────────────────
+    //
+    // See handleSell: a stack sells on the press and the server's figure
+    // replaces the estimate when it lands. Selling the WHOLE hold did not.
+    // It closed the confirm, which put the big "Sell all N fish" button back
+    // on the screen with the hold still in it, and then waited out a round
+    // trip — so the one press that empties your boat answered by showing you
+    // the button you had just pressed, for most of a second, before anything
+    // happened. Reported as exactly that: a delay, and the sell button
+    // flashing up again before the sale.
+    //
+    // The hold empties, the purse pays and the confirm closes on the same
+    // frame, all three. The total is known here: it is the number printed on
+    // the button. An error puts every part of it back.
+    const snapshot = portfolio
+    const purseBefore = doubloons
+    const expect = liquidateValue
     setLiquidating(true)
     setLiquidateConfirm(false)
-    startTransition(async () => {
-      const res = await sellEntireHold()
+    setPortfolio([])
+    setDoubloons(purseBefore + expect)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: purseBefore + expect }))
+    hapticReward()
+    showToast(`+${expect.toLocaleString()} ⟡`)
+    // Not a transition, for the same reason the stack sale is not one: there
+    // is nothing left to defer. The hold is already empty on screen; this is
+    // the bookkeeping.
+    void (async () => {
+      const res = await sellEntireHold().catch(() => ({ error: 'The sale did not go through.' } as const))
       setLiquidating(false)
-      if ('error' in res) { showToast(res.error); return }
+      if ('error' in res) {
+        showToast(res.error)
+        setPortfolio(snapshot)
+        setDoubloons(purseBefore)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: purseBefore }))
+        return
+      }
       setDoubloons(res.doubloons)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
       window.dispatchEvent(new Event('pending-sales-may-have-changed'))
-      hapticReward()
-      showToast(`+${res.earned.toLocaleString()} ⟡`)
-      setPortfolio([])
       sellBeatDone()
-    })
+    })()
   }
 
   // ── Browse: sort + filter ──

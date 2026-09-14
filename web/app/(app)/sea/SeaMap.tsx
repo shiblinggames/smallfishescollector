@@ -2662,7 +2662,7 @@ export default function SeaMap({
    * nothing else. `gateLock` is composed below, after `inAnchorage` exists.
    */
   const [gateDone, setGateDone] = useState(tour.gateSeen)
-  const [gateBeat, setGateBeat] = useState<{ until: string; at?: string; target?: string; lock: boolean } | null>(null)
+  const [gateBeat, setGateBeat] = useState<{ until: string; at?: string; target?: string; lock: boolean; route?: boolean } | null>(null)
   /** What the crew panel is doing, for the tour: which room, and how many
    *  hands have been signed on this session. Both arrive as window events
    *  from the panel, which is a different tree. */
@@ -5927,6 +5927,32 @@ export default function SeaMap({
     const t = setTimeout(() => setHeading(null), HEADING_MS)
     return () => clearTimeout(t)
   }, [fightOn, justCleared.length])
+
+  /**
+   * ── AND THE TOUR'S LAST BEAT POINTS THE SAME WAY A CLEAR DOES ──────────
+   *
+   * The anchorage tour ends by asking a captain to go and find the first thing
+   * on the campaign, and it lit the ROAD for it -- the steady line and ring the
+   * chart keeps to whatever is next. Every other time the game sends you
+   * somewhere new it also runs the chevrons up the water (see NextHeading),
+   * and a first sight of the campaign that gets less of a send-off than the
+   * second one is backwards. It gets both now, exactly as a cleared node does.
+   *
+   * Keyed on the STOP rather than the beat object: `gateBeat` is rebuilt by
+   * the tour on every render of it, and a run of chevrons that restarted on
+   * each one would never finish its own fade.
+   */
+  const gateRouting = gateBeat?.route === true
+  useEffect(() => {
+    if (!gateRouting || fightOn) return
+    const to = nextStop?.at
+    if (!to) return
+    setHeading({ from: { ...pos.current }, to, key: Date.now() })
+    const t = setTimeout(() => setHeading(null), HEADING_MS)
+    return () => clearTimeout(t)
+    // The id, not the memoised point — see the note above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gateRouting, nextAtId, fightOn])
 
   const hudRow = useMemo(() => {
     const on: string[] = []
