@@ -59,7 +59,6 @@ import { installSpaceAction, typingInField, uncoveredCenter } from '@/lib/spaceA
 import { compact } from '@/lib/almanac'
 import { createPortal } from 'react-dom'
 import { hullFilter } from '@/app/(app)/sea/raidWaters'
-import { renderTally } from './renderTally'
 import { DialSVG, CX, CY, OUTER_R, INNER_R } from '@/components/FishingDial'
 import AimBarFx, { type AimBarFxHandle } from './AimBarFx'
 import type { ZoneDef } from '@/app/(app)/fishing/depths'
@@ -913,10 +912,6 @@ export default function RaidCombat({
   usedAbilitySub = 'Already used this raid.', openingNote,
   megaAugment = null,
 }: RaidCombatProps) {
-  // COUNTED, so the meter can say whether a slow frame was THIS. See
-  // renderTally: an increment in the render body, on purpose, because it has to
-  // see the passes React throws away as well as the ones it commits.
-  renderTally.n++
   // Net crew raid effects; no-op default so the practice skirmish is unaffected.
   const mods: RaidMods = raidMods ?? { damagePct: 0, damageTakenPct: 0, critPct: 0, firstStrike: false }
 

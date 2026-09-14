@@ -20,7 +20,6 @@ import {
 import RaidCombat from '../RaidCombat'
 import { hullPaint } from '@/app/(app)/sea/raidWaters'
 import GauntletArena, { type ArenaHandle, type ArenaTheme, type Mood } from './GauntletArena'
-import FrameMeter, { frameMeterOn, setFrameMeterOn } from './FrameMeter'
 import { getShip, shipTierByName } from '@/lib/ships'
 import GauntletSlipway, { type SlipwayPlace } from './GauntletSlipway'
 import { getShipSkin, shipSkinFilter } from '@/lib/shipSkins'
@@ -329,8 +328,6 @@ export interface GauntletGameProps {
   /** Whether the OTHER gauntlet is also unlocked for this player. When true, the
    *  intro shows a switcher next to the title to hop to the other one. */
   otherGauntletUnlocked?: boolean
-  /** Admin only: unlocks the frame meter. Nothing else reads it. */
-  isAdmin?: boolean
   shipImageUrl: string
   shipName: string
   username: string | null
@@ -942,32 +939,6 @@ export default function GauntletGame(props: GauntletGameProps) {
    * still held alone — switching gauntlets, and last run's recap — moved out
    * onto the HUD, and the rest went with it.
    */
-  /**
-   * ── THE FRAME METER ───────────────────────────────────────────────────────
-   *
-   * Admin only, off by default, remembered across reloads. The component is not
-   * in the tree at all unless it is on — see FrameMeter for what it measures
-   * and, more usefully, for what each number RULES OUT.
-   */
-  const [meterOn, setMeterOn] = useState(false)
-  useEffect(() => { if (props.isAdmin && frameMeterOn()) setMeterOn(true) }, [props.isAdmin])
-  const meter = props.isAdmin ? (
-    meterOn
-      ? <FrameMeter onClose={() => setMeterOn(false)} />
-      : (
-        <button type="button" aria-label="Show frame meter"
-          onClick={() => { setFrameMeterOn(true); setMeterOn(true) }}
-          style={{
-            position: 'fixed', left: 8, bottom: 'calc(env(safe-area-inset-bottom, 0px) + 68px)',
-            zIndex: 2000, width: 26, height: 26, borderRadius: 7, cursor: 'pointer',
-            background: 'rgba(3,7,13,0.7)', border: '1px solid rgba(140,170,200,0.3)',
-            color: '#7f9ab0', font: '9px/1 ui-monospace, monospace', letterSpacing: '0.04em',
-          }}>
-          FPS
-        </button>
-      )
-  ) : null
-
   const [slipNear, setSlipNear] = useState<string | null>(null)
   /** The keeper is the descent's button; this is his pressed state. */
   const [portalPressed, setPortalPressed] = useState(false)
@@ -5339,9 +5310,6 @@ export default function GauntletGame(props: GauntletGameProps) {
           <AbyssScrim />
         </>
       )}
-      {/* Admin instrument, on every screen of the gauntlet so a fight and a
-          lobby can be compared with the same numbers. */}
-      {meter}
       {inRun ? phaseView : (
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={phase} initial={PHASE_INITIAL} animate={PHASE_ENTER} exit={PHASE_EXIT}>
