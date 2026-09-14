@@ -163,7 +163,9 @@ const getCachedUserPoints = unstable_cache(
       admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', userId),
       admin.from('user_crew').select('xp, died_at, effects, cards(slug)').eq('user_id', userId),
       admin.from('daily_voyages').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'revealed'),
-      admin.from('fish_collection').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+      // fish_collection has no `id` (its key is user_id + fish_id); counting by
+      // one failed the query and the collection scored zero.
+      admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', userId),
       admin.from('rod_inventory').select('rod_tier').eq('user_id', userId),
       admin.from('shiny_catches').select('id', { count: 'exact', head: true }).eq('user_id', userId),
       admin.from('exchange_bets').select('status, stake, payout').eq('user_id', userId),

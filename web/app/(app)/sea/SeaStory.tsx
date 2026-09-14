@@ -67,7 +67,22 @@ export default function SeaStory({ node, cleared, intro = false, onDone, onClear
       // idempotent on an already-cleared node, so reading that beat from the
       // deck did not defer the payoff, it forfeited it permanently. The map
       // has always branched here; the water never learned to.
-      const res = node.payoff ? await claimScoutDebt(node.id) : await markStoryNodeRead(node.id)
+      //
+      // ── AND A LINE THAT DROPS IS A LINE THAT DROPS ────────────────
+      //
+      // A server action that cannot reach the database does not return an
+      // error, it THROWS — and an async transition that throws hands the
+      // whole route to the error boundary. That is how a 504 on one profile
+      // read turned "Pull the thread" into a full-page "That did not go
+      // through" with the scene gone from under it. Caught here, it is a
+      // line under the plate and the button is still there to press again.
+      let res: Awaited<ReturnType<typeof claimScoutDebt>> | Awaited<ReturnType<typeof markStoryNodeRead>>
+      try {
+        res = node.payoff ? await claimScoutDebt(node.id) : await markStoryNodeRead(node.id)
+      } catch {
+        setErr('The sea did not answer. Try again in a moment.')
+        return
+      }
       if (res && 'error' in res) { setErr(res.error); return }
       // The purse changed under the header on every other surface.
       if ('newDoubloons' in res && res.doubloonsDelta !== 0) {
@@ -122,7 +137,9 @@ export default function SeaStory({ node, cleared, intro = false, onDone, onClear
           ? <SceneToll cost={toll} accent={node.sceneAccent}
               onPay={() => new Promise<void>((resolve, reject) => {
                 startTransition(async () => {
-                  const res = await claimMilestoneNode(node.id)
+                  let res: Awaited<ReturnType<typeof claimMilestoneNode>>
+                  try { res = await claimMilestoneNode(node.id) }
+                  catch { reject(new Error('The sea did not answer. Try again in a moment.')); return }
                   if (res && 'error' in res) { reject(new Error(res.error)); return }
                   // The purse changed under the header on every other surface.
                   window.dispatchEvent(new CustomEvent('doubloons-changed'))

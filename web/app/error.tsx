@@ -39,7 +39,7 @@ export default function Error({ error, reset }: {
         }}>
           {stale
             ? 'The game updated while you had this open. One moment.'
-            : 'Something went wrong on this page. Try again, and if it keeps happening head back to the tavern.'}
+            : 'Something went wrong on this page. Try again, and if it keeps happening head back out to sea.'}
         </p>
 
         {!stale && (
@@ -51,13 +51,13 @@ export default function Error({ error, reset }: {
               }}>
               Try again
             </button>
-            <Link href="/tavern" className="tap font-karla font-700"
+            <Link href="/sea" className="tap font-karla font-700"
               style={{
                 padding: '0.7rem 1.1rem', borderRadius: 12, fontSize: '0.9rem',
                 background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
                 color: '#d8e2ea', textDecoration: 'none',
               }}>
-              The Tavern
+              Back to sea
             </Link>
           </div>
         )}

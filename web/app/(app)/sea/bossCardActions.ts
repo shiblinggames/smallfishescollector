@@ -16,7 +16,7 @@ import { getCurrentUser } from '@/lib/userData'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getRaidMapView, type RaidRecords } from '@/app/(app)/expeditions/raidMapActions'
 import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
-import { ownedSpecialIds } from '@/lib/specialItems'
+import { ownedSpecialIds, SPECIAL_OWNED_COLUMN } from '@/lib/specialItems'
 import type { RaidNodeView } from '@/lib/raidMap'
 
 export type BossCardState = {
@@ -37,8 +37,11 @@ export async function bossCardState(): Promise<BossCardState | { error: string }
   const [map, stats, profileRes] = await Promise.all([
     getRaidMapView(),
     getRaidPlayerStats(user.id),
+    // The specials are one boolean column EACH (has_tide_turner, ...), not a
+    // `special_items` array: that column has never existed, and selecting it
+    // failed the whole read, so the card saw no items and no skins either.
     admin.from('profiles')
-      .select('raid_items, ship_skins, special_items')
+      .select(`raid_items, ship_skins, ${Object.values(SPECIAL_OWNED_COLUMN).join(', ')}`)
       .eq('id', user.id)
       .single(),
   ])
