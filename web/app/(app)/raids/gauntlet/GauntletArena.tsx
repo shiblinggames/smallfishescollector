@@ -337,7 +337,12 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         if (p === paintNow) return
         paintNow = p ?? null
         if (!p || (p.hue === 0 && p.sat === 1 && p.bright === 1)) { enemy.sp.filters = []; return }
-        const f = new PIXI.ColorMatrixFilter()
+        // AT THE RENDERER'S RESOLUTION. A filter draws its sprite into a
+        // texture of its own and a Pixi filter's default resolution is 1 —
+        // not the renderer's — so on a phone the one hull wearing paint was
+        // drawn at 1x and scaled up, soft, beside a player hull drawn sharp.
+        // 'inherit' is the renderer's own, and the antialias likewise.
+        const f = new PIXI.ColorMatrixFilter({ resolution: 'inherit', antialias: 'inherit' })
         // Each call multiplies onto the matrix already there, and a fresh
         // filter starts as identity — so the three compose in one pass.
         if (p.hue) f.hue(p.hue, true)
