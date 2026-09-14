@@ -48,6 +48,7 @@ export const maxDuration = 20
 
 import Nav from '@/components/Nav'
 import MembershipModal from '@/components/MembershipModal'
+import CastingOff from '@/components/CastingOff'
 import SetupModal from '@/components/SetupModal'
 import WelcomeModal from '@/components/WelcomeModal'
 import { getCurrentProfile } from '@/lib/userData'
@@ -98,6 +99,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         canSail={canSail(profile)}
       />
       {children}
+      {/* ── ONE WAIT, AT THE FRONT ───────────────────────────────────────
+          The renderer, the chart's paintings, the effect sheet and the code
+          behind the doors, fetched once per session behind a bar, instead of
+          arriving in pieces later in the middle of things. It draws nothing
+          off the world routes and nothing on a session that has already had
+          it; see the component, which also explains why it can never hang. */}
+      <CastingOff />
       {/* Global membership purchase popup — opens on the `open-membership`
           event fired by every "Become a member" CTA across the app. */}
       <MembershipModal />

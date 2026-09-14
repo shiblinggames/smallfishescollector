@@ -152,6 +152,30 @@ function Card({ portrait, speaker, text, accent, placement, offset, z, anchor, o
     if (h && Math.abs(h - cardH) > 1) setCardH(h)
   })
 
+  // ── IT DOES NOT SLIDE IN FROM THE EDGE ──────────────────────────────────
+  //
+  // `left` and `top` are CSS-transitioned so a card FOLLOWS a target that has
+  // moved -- a HUD disc that shifted, a panel that resized. That is worth
+  // having and it was doing something else as well.
+  //
+  // A card whose target is not in the document YET -- a control inside a panel
+  // the captain has not opened, a disc that mounts a beat later -- renders
+  // centred, which is `left: 0`. The moment the target appears the card is
+  // placed, `left` jumps to a real number, and the transition obligingly
+  // animated it: every one of those cards slid in across the whole screen from
+  // the left edge, at the same speed, every time. Over a tour that is a dozen
+  // identical slides, which is exactly as tiring as it sounds.
+  //
+  // So the transition is ARMED a frame after the card has been painted where
+  // it belongs. The first placement is a cut; every move after it glides.
+  const [glide, setGlide] = useState(false)
+  useEffect(() => {
+    if (!spot || glide) return
+    let b = 0
+    const a = requestAnimationFrame(() => { b = requestAnimationFrame(() => setGlide(true)) })
+    return () => { cancelAnimationFrame(a); cancelAnimationFrame(b) }
+  }, [spot, glide])
+
   const vw = spot ? window.innerWidth : 0
   const cardW = spot ? Math.min(CARD_W, vw - 24) : 0
   const left = spot ? Math.max(12, Math.min(vw - cardW - 12, spot.x - cardW / 2)) : 0
@@ -172,7 +196,7 @@ function Card({ portrait, speaker, text, accent, placement, offset, z, anchor, o
       style={spot ? {
         position: 'fixed', zIndex: z, pointerEvents: 'none',
         left, top: y, width: cardW,
-        transition: 'left 220ms ease, top 220ms ease',
+        transition: glide ? 'left 220ms ease, top 220ms ease' : 'none',
         display: 'flex', justifyContent: 'center',
       } : {
         position: 'fixed', left: 0, right: 0, zIndex: z,
