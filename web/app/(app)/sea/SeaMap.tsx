@@ -5847,6 +5847,17 @@ export default function SeaMap({
    * it was a new object on every render of this chart, and that effect re-ran
    * (and re-wrote a shared ref) on every one of them.
    */
+  /**
+   * WHOSE FACE HANGS OVER WHICH DOOR. Davy always: he is a gauntlet's host and
+   * nothing else, and a captain meets him here or not at all. The Don only once
+   * his gauntlet is open, which is the moment the Throne falls — the same beat
+   * that stops him being a spoiler. See seaMaelstrom's `showKeeper`.
+   */
+  const gpuKeepers = useMemo(
+    () => ({ davy: true, don: maelOpen('don') }),
+    [maelOpen],
+  )
+
   const gateNextAt = useMemo(
     () => (nextStop?.at ? { x: nextStop.at.x, y: nextStop.at.y, r: NODE_REACH } : null),
     [nextStop],
@@ -6066,9 +6077,12 @@ export default function SeaMap({
       if (nearMael) {
         const m = nearMael
         if (!maelOpen(m.id)) {
+          // NEITHER THE NAME NOR THE REASON, for the Don's. Both name the last
+          // boss of the campaign to a captain who has not met him. See
+          // MaelstromName, which keeps the same secret on the water.
           holdLabel ??= m.id === 'davy'
             ? 'The Davy Jones Gauntlet: clear Chapter 2 first'
-            : "Don's Gauntlet: beat Don Finleone at the Throne to descend"
+            : 'Something is turning down there. Finish the campaign to learn what it is.'
         } else {
           reach.push({
             id: 'mael',
@@ -9535,6 +9549,7 @@ export default function SeaMap({
           position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
         }}>
           <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} captain={gpuCaptain}
+            keepers={gpuKeepers}
             ship={gpuShip} fleet={gpuFleet} berths={gpuBerths} portal={gpuPortal} homes={gpuHomes} towns={gpuTowns}
             occluders={gpuOccluders} handle={gpuRef} />
         </div>
@@ -9684,6 +9699,15 @@ export default function SeaMap({
             ports' name plates, one step quieter, because it is a feature of the
             water rather than somewhere you go ashore. */}
         {!inAnchorage && <PortalName tier={portalTier} stone={portalStone} />}
+        {/* ── THE TWO DOORS, NAMED ────────────────────────────────────────
+            Every other thing on this water says what it is: the ports, the
+            portal, the sea gate. The maelstroms said nothing at all, so two of
+            the largest objects on the chart were a pair of unexplained
+            whirlpools until you happened to sail into one and read the helm.
+            See MaelstromName for the Don's half of it. */}
+        {!inAnchorage && MAELSTROMS.map(m => (
+          <MaelstromName key={m.id} m={m} open={maelOpen(m.id)} />
+        ))}
         {/* The charge stands on the RING, not the hull: the painted band is
             the cylinder's footprint, so the ring itself is what flares. */}
         {/* ON THE CANVAS NOW (see seaGuideFx). This is the ?gpu=0 fallback. */}
@@ -13285,6 +13309,61 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
  * onto it reads as a swap, not a boarding. The smacks get away with
  * moored-scale because you never sail one.
  */
+/**
+ * ── A DOOR WITH A NAME ON IT ────────────────────────────────────────────────
+ *
+ * The two maelstroms were the only large things on this chart that said nothing
+ * about themselves. Every port is labelled, the portal is labelled, the sea
+ * gate is labelled — and the gauntlets, which are the biggest objects in the
+ * junction and the hardest content in the game, were two unexplained whirlpools
+ * you found out about by sailing into one.
+ *
+ * ── AND ONE OF THEM KEEPS ITS NAME BACK ─────────────────────────────────────
+ *
+ * Don's Gauntlet is kept by Don's Ghost and named for Don Finleone, who is the
+ * last boss of the campaign. Writing that over the water is handing a captain
+ * in chapter one the end of the story, so until his door opens — which is the
+ * Throne falling, and therefore the moment he is no longer a secret — it is
+ * `???`, with nobody standing in the eye (see seaMaelstrom's `showKeeper`).
+ *
+ * Davy is nobody's ending. His name is on his door from the first time it is
+ * seen, locked or not, with the one line that says how to open it.
+ */
+const MaelstromName = memo(function MaelstromName({ m, open }: { m: Maelstrom; open: boolean }) {
+  const secret = m.id === 'don' && !open
+  const accent = m.id === 'davy' ? '#8fd6d8' : '#a8c7b2'
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: m.x, top: m.y + m.r * GROUND,
+      pointerEvents: 'none',
+      // Counter-squashed like everything else that stands up out of the plane.
+      transform: `translate(-50%, 14px) scaleY(${1 / GROUND})`,
+      transformOrigin: 'top center',
+      textAlign: 'center', whiteSpace: 'nowrap',
+    }}>
+      <p className="font-cinzel font-700" style={{
+        fontSize: secret ? '1.7rem' : '1.35rem', lineHeight: 1.1, margin: 0,
+        letterSpacing: secret ? '0.18em' : undefined,
+        color: open ? '#eef4f8' : 'rgba(202,214,222,0.72)',
+        textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
+      }}>{secret ? '???' : m.name}</p>
+      {/* WHAT IT WANTS, in one line, the way the portal's board does it. A door
+          that does nothing and says nothing reads as a broken game rather than
+          as something to come back for. The Don's cannot name its own gate
+          without naming him, so it names the campaign instead. */}
+      <p className="font-karla font-600" style={{
+        fontSize: '0.9rem', marginTop: 2,
+        color: open ? `${accent}cc` : 'rgba(230,196,140,0.9)',
+        textShadow: '0 1px 10px rgba(0,0,0,0.92)',
+      }}>
+        {open ? 'Sail into the eye to descend'
+          : m.id === 'davy' ? 'Clear Chapter II to open it'
+            : 'Finish the campaign to learn what this is'}
+      </p>
+    </div>
+  )
+})
+
 const PortalName = memo(function PortalName({ tier, stone }: { tier: number; stone: boolean }) {
   const t = PORTAL_TIERS.find(p => p.tier === tier) ?? PORTAL_TIERS[0]
   return (

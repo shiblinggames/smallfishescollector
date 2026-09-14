@@ -361,10 +361,18 @@ export type GpuHandle = {
 }
 
 export default function SeaIslandsGPU({
-  islands, marks, captain, ship, fleet, berths, portal, homes, towns, occluders, handle,
+  islands, marks, captain, ship, fleet, berths, portal, homes, towns, occluders, keepers, handle,
 }: {
   islands: GpuIsland[]
   marks: GpuMark[]
+  /**
+   * WHICH GAUNTLET KEEPERS MAY BE SEEN over their own maelstrom, by id. A door
+   * left out of this map is drawn with nobody standing in it.
+   *
+   * It exists for the Don, whose keeper is the face of the campaign's last
+   * boss: see the note on `showKeeper` in seaMaelstrom.
+   */
+  keepers: Record<string, boolean>
   /** How the player looks right now. Rebuilt only when it actually changes —
    *  see the effect below, which compares by VALUE because a captain is
    *  expensive to assemble and cheap to steer. */
@@ -423,6 +431,11 @@ export default function SeaIslandsGPU({
   const [ready, setReady] = useState(0)
   const lookRef = useRef<CaptainLook | null>(captain)
   lookRef.current = captain
+  // Read per frame rather than pushed: beating the Throne opens the Don's door
+  // while this canvas is up, and a ref cannot be missed by an init that has
+  // already run.
+  const keepersRef = useRef(keepers)
+  keepersRef.current = keepers
   const shipRef = useRef(ship)
   shipRef.current = ship
   /** Every way home that is currently open, as wells. See buildHomes. */
@@ -640,7 +653,11 @@ export default function SeaIslandsGPU({
       // Over the drift and under the land: a maelstrom is the water itself
       // doing something, so it sits with the water and everything that
       // stands on the water stands over it.
-      const maelstroms: Maelstroms = makeMaelstroms(PIXI, a.renderer)
+      // WHOSE FACE MAY BE SEEN — read through a ref on every frame, because
+      // beating the Throne is something that happens while this canvas is up.
+      const maelstroms: Maelstroms = makeMaelstroms(PIXI, a.renderer, {
+        showKeeper: id => keepersRef.current[id] !== false,
+      })
       world.addChild(maelstroms.view)
 
       // ── WHERE SHE CAN TIE UP ──────────────────────────────────────

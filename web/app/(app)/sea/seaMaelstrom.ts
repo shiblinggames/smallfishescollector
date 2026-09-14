@@ -360,8 +360,23 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
   /** Draw the keeper as himself rather than as a projection. True inside his
    *  own gauntlet, where you are standing in the room with him. */
   solidKeeper?: boolean
+  /**
+   * ── WHOSE FACE MAY BE SEEN ────────────────────────────────────────────────
+   *
+   * Asked every frame, per door, because the answer is a thing the captain can
+   * change by playing. Default: everyone.
+   *
+   * IT EXISTS FOR THE DON. His gauntlet is kept by Don's Ghost, and the Don is
+   * the last boss of the campaign — so a captain in chapter one sailing past
+   * the junction met the face of a character they will not be told about for
+   * three chapters, hanging over the water with his name under it. The door
+   * stays; who is behind it does not, until the Throne is beaten, which is the
+   * same moment the gauntlet itself opens.
+   */
+  showKeeper?: (id: Maelstrom['id']) => boolean
 }): Maelstroms {
   const solidKeeper = !!opts?.solidKeeper
+  const showKeeper = opts?.showKeeper ?? (() => true)
   const view: Container = new PIXI.Container()
   view.eventMode = 'none'
 
@@ -842,6 +857,11 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         // and he holds a flat opacity instead of climbing with proximity.
         const jitter = solidKeeper ? 1 : 0.86 + 0.14 * Math.sin(t * 23.7) * Math.sin(t * 7.3)
         const dropout = solidKeeper ? 1 : (Math.sin(t * 0.7) > 0.985 ? 0.35 : 1)
+        // AND HE MAY NOT BE SHOWN AT ALL — see showKeeper. The beam still
+        // stands in the eye, so the door reads as something with a keeper
+        // rather than as a hole with a piece missing; there is simply nobody
+        // standing in it yet.
+        o.holo.visible = showKeeper(m.id)
         o.holo.alpha = solidKeeper ? lit : (0.2 + 0.55 * gg) * jitter * dropout * lit
         // ── AND HE COMES UP AS YOU COME IN ──────────────────────────────
         //
