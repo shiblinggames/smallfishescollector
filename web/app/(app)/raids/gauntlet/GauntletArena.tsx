@@ -311,6 +311,19 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       }
       const player = mkHull(0.5)
       const enemy = mkHull(1)
+      // SHE IS NOT HERE UNTIL THE FIGHT IS. The alpha eases toward whatever
+      // `enemyHidden` says, and starting at Pixi's default of 1 meant every
+      // screen that does NOT want her — the fall, the breather, the reward —
+      // opened with her on the water for the few frames it took to fade her
+      // off. Most visible at the very start of a run, where the descent is the
+      // first thing you see.
+      enemy.node.alpha = 0
+      // AND NEITHER IS SHE. `showHull` is `mood === 'fight' || 'dead'`, and
+      // this too started at Pixi's 1 — so a run opened with her parked on the
+      // descent screen for the few frames it took to ease her off, which is
+      // the "picture of a ship rather than a ship" this file already warns
+      // about further down.
+      player.node.alpha = 0
       load(player, artRef.current.shipUrl)
       load(enemy, artRef.current.enemyUrl)
       // Over the hulls: rain falls in front of a ship, and so do the motes,
@@ -593,7 +606,20 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return <div ref={holder} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }} />
+  /**
+   * ── THE BOX IS OPAQUE BEFORE THE RENDERER EXISTS ──────────────────────────
+   *
+   * Mounting this thing is four awaits deep — the Pixi module, the Application,
+   * the water's shader, the hull textures — and until the first of them lands
+   * this is an EMPTY DIV. Behind it is the app's own /raids page image, so
+   * starting a run flashed the practice-raid backdrop for as long as the boot
+   * took, with the hulls fading in over it as their textures arrived.
+   *
+   * A background colour on the div costs nothing and cannot be late. It is the
+   * theme's own deepest water stop, so the moment the shader does come up it
+   * paints over a sea of the same colour and there is nothing to see.
+   */
+  return <div ref={holder} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none', background: theme.sea[0] }} />
 }
 
 /** Height is a screen measurement inside a squashed plane — kept here so the
