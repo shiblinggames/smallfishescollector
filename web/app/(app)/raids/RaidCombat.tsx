@@ -2766,17 +2766,11 @@ export default function RaidCombat({
     // The plates' own sizes, and the deck's height. These change when a status
     // chip appears or a name gets longer — not on a frame — so they are read
     // when something might have changed and cached in between.
-    const dim = { ew: 160, eh: 48, pw: 160, ph: 48, rise: 0, deckTop: window.innerHeight }
+    const dim = { ew: 160, eh: 48, pw: 160, ph: 48, deckTop: window.innerHeight }
     const measurePlates = () => {
       const e = enemyPlateRef.current
       const p = playerPlateRef.current
-      if (e) {
-        dim.ew = e.offsetWidth || dim.ew; dim.eh = e.offsetHeight || dim.eh
-        // How far the enemy's figure stands above the plate's edge. A computed
-        // style read, so it belongs here with the other measurements and not
-        // on a frame.
-        dim.rise = parseFloat(getComputedStyle(e).getPropertyValue('--rise')) || 0
-      }
+      if (e) { dim.ew = e.offsetWidth || dim.ew; dim.eh = e.offsetHeight || dim.eh }
       if (p) { dim.pw = p.offsetWidth || dim.pw; dim.ph = p.offsetHeight || dim.ph }
       // WHERE THE DECK'S TOP EDGE IS, not how tall it is. Over the sea the deck
       // no longer sits on the bottom of the window — on a phone it stops above
@@ -2820,8 +2814,7 @@ export default function RaidCombat({
       // bar directly above it.
       const line = (window.innerWidth >= 640 ? 60 : 44) + 18
       el.style.left = `${raidColumn().left - box.left}px`
-      // Plus the figure's rise: the card is placed by the top of its head.
-      el.style.top = `${line + 42 + dim.rise - box.top}px`
+      el.style.top = `${line + 42 - box.top}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
     }
@@ -8461,18 +8454,15 @@ export default function RaidCombat({
           type="button"
           onClick={() => setShowEnemyStats(true)}
           aria-label={`${enemy.name} — view stats`}
-          className={`rc-enemy-plate${enemy.portrait ? ' has-figure' : ''}${enemyPhase >= 2 ? ' rc-phase2-pulse' : ''}`}
+          className={`rc-enemy-plate${enemyPhase >= 2 ? ' rc-phase2-pulse' : ''}`}
           animate={enemyNameplateAnim}
           ref={enemyPlateRef}
           style={{
             // Over the sea the frame loop moves this onto the enemy's own hull;
             // the corner is where it sits on a /raids/* route, and where it
             // starts here before the first frame places it.
-            // `--rise` is how far the figure's head stands above the plate's
-            // edge; the plate is placed by its head so nothing above it is
-            // covered.
-            position: 'absolute', top: 'calc(10px + var(--rise, 0px))', left: 10, zIndex: 4,
-            background: 'rgba(6,12,20,0.9)',
+            position: 'absolute', top: 10, left: 10, zIndex: 4,
+            background: 'rgba(6,12,20,0.92)',
             // Phase 2 overrides the normal boss-gold (or elite-violet)
             // accent with crimson — same intensity as elite, deeper red so
             // it reads as "wounded and dangerous" not just "boss".
@@ -8482,48 +8472,55 @@ export default function RaidCombat({
               : isElite ? '#a78bfa'
               : '#2a3548'
             }`,
-            borderRadius: 12,
+            borderRadius: 14,
             boxShadow:
               enemyPhase >= 2 ? '0 0 18px rgba(239,68,68,0.5)'
               : isElite ? '0 0 14px rgba(167,139,250,0.32)'
-              : undefined,
-            display: 'flex', alignItems: 'center', gap: 8,
-            // ── THE WIDTH AND THE PORTRAIT ARE IN CSS, NOT HERE ──────────
+              : '0 6px 18px rgba(0,0,0,0.45)',
+            // A COLUMN: the art on top, the words under it, the art clipped
+            // to the frame's own corners.
+            display: 'flex', flexDirection: 'column', alignItems: 'stretch',
+            padding: 0, overflow: 'hidden',
+            // ── THE SIZES ARE IN CSS, NOT HERE ────────────────────────────
             //
-            // `.rc-enemy-plate` in globals.css carries the minimum width, the
-            // padding, the portrait's size and the name's type, and a phone
-            // over the sea takes a smaller set of all four. They cannot stay
-            // inline: an inline style beats a media query outright, so the
-            // rule would need `!important` on every line to reach them.
-            //
-            // It is a phone problem specifically. 160 wide with a 54px round
-            // portrait is a reasonable card on a monitor and a fifth of the
-            // glass on a 390px screen — and over the sea it is docked in the
-            // top-left corner under the depth bar, so the two of them together
-            // were most of what you saw before you saw any water.
+            // `.rc-enemy-plate` in globals.css carries the width, the art's
+            // height and the name's type, and a phone over the sea takes a
+            // smaller set of all three. They cannot stay inline: an inline
+            // style beats a media query outright, so the rule would need
+            // `!important` on every line to reach them.
             textAlign: 'left',
             cursor: 'pointer',
             font: 'inherit', color: 'inherit',
           }}
         >
-          {/* THE FIGURE — see `.rc-enemy-figure` in globals.css. The accent
-              that used to be a ring round a badge is a glow on the cutout
-              itself: it follows the painted silhouette, which a circle never
-              did. */}
+          {/* THE ART. See `.rc-enemy-art` in globals.css. The figure is a
+              cutout on transparency, so it gets a ground: a soft pool of the
+              card's accent behind the head, which is also where the
+              elite/boss/phase colour lives now instead of a ring. Drawn wider
+              than the frame and anchored at the top so the crop is head and
+              chest, and a scrim climbs the lower half for the name to sit on. */}
           {enemy.portrait && (
-            <div className="rc-enemy-figure" aria-hidden>
+            <div className="rc-enemy-art" aria-hidden style={{
+              position: 'relative', flexShrink: 0, overflow: 'hidden',
+              background: `radial-gradient(ellipse 70% 62% at 50% 34%, ${
+                enemyPhase >= 2 ? 'rgba(239,68,68,0.5)'
+                : isBoss ? 'rgba(251,191,36,0.38)'
+                : isElite ? 'rgba(139,92,246,0.5)'
+                : 'rgba(64,132,160,0.42)'
+              } 0%, rgba(6,12,20,0) 100%)`,
+            }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={enemy.portrait} alt="" draggable={false} decoding="async" style={{
-                filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))${
-                  enemyPhase >= 2 ? ' drop-shadow(0 0 9px rgba(239,68,68,0.75))'
-                  : isBoss ? ' drop-shadow(0 0 9px rgba(251,191,36,0.55))'
-                  : isElite ? ' drop-shadow(0 0 9px rgba(167,139,250,0.7))'
-                  : ''
-                }`,
+                position: 'absolute', left: '-19%', top: '-1%', width: '138%', maxWidth: 'none',
+                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.55))',
+              }} />
+              <div style={{
+                position: 'absolute', left: 0, right: 0, bottom: 0, height: '52%',
+                background: 'linear-gradient(to top, rgba(6,12,20,1) 0%, rgba(6,12,20,0.72) 40%, rgba(6,12,20,0) 100%)',
               }} />
             </div>
           )}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="rc-enemy-info" style={{ position: 'relative', minWidth: 0, marginTop: enemy.portrait ? -16 : 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
               <p className="rc-enemy-name font-cinzel font-700" style={{ color: '#ffffff', lineHeight: 1, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {enemy.name}
