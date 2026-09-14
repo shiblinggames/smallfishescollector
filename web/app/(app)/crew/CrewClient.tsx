@@ -471,8 +471,21 @@ function CrewPanel({
   return (
     <motion.div
       onClick={onClick}
+      // ── IT IS A BUTTON, SO IT SAYS SO ──────────────────────────────────
+      // A div with an onClick is a control to everyone except the browser, a
+      // screen reader, and anything that has to reason about what is pressable
+      // — which is why a tour that stands every control down could not stand
+      // this one down, and a captain mid-beat could open a second recruit and
+      // strand themselves behind a sheet nobody had told them about.
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
       whileTap={onClick && !locked ? { scale: 0.965 } : undefined}
-      whileHover={onClick && !locked ? { y: -2 } : undefined}
+      // ── AND IT DOES NOT LIFT ON HOVER ──────────────────────────────────
+      // `whileHover={{ y: -2 }}` was a transform, and a transformed box counts
+      // toward its scroll container's overflow: running the pointer up a list
+      // of recruits raised and dropped the sheet's scrollbar on every card it
+      // crossed. Two pixels of lift is not worth a flickering scrollbar, and
+      // the press still answers with the tap scale.
       transition={{ type: 'spring', stiffness: 460, damping: 26 }}
       style={{
         position: 'relative', display: 'flex', gap: '0.85rem', padding: '0.85rem',

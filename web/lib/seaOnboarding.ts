@@ -238,6 +238,15 @@ export const FIRST_VOYAGE: Beat[] = [
     until: 'haulShut',
     target: 'haul-close',
   },
+  // AND WHERE THE NEXT LOT COMES FROM. Twenty worms is a session, not a
+  // career, and a captain who runs dry with no idea where bait is sold stops
+  // playing rather than going to look. Said once, here, while the empty bait
+  // box is the thing they were just thinking about.
+  {
+    ...D,
+    text: 'When those run out, the *Tackle Shop* on the Mainland sells more. Rods, reels and hooks too, when you’ve the coin for better.',
+    until: 'next',
+  },
   {
     ...D,
     text: 'Fish nearby in the *Shallows* by sailing south of here. Follow the light.',

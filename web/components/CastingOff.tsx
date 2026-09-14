@@ -129,11 +129,20 @@ export default function CastingOff() {
       {
         // The painted effect sheet, which is one file and every burn, freeze,
         // ward, splash, muzzle flash and fireball in the game. See fxSheet.
+        //
+        // AND THE TWO FACES. Doby and Kat front every card of both tours and
+        // both come from storage rather than /public, so they are a network
+        // round trip at the moment a card appears — and a card whose portrait
+        // has not landed is a card with a broken picture in it, which is what
+        // was reported on the voyage's last beat. Two files, fetched once.
         label: 'Loading the guns',
         weight: 1,
         run: async onP => {
-          const { FX_SHEET } = await import('@/app/(app)/sea/fxSheet')
-          await warmImages([FX_SHEET], onP)
+          const [{ FX_SHEET }, { GUIDES }] = await Promise.all([
+            import('@/app/(app)/sea/fxSheet'),
+            import('@/lib/onboardingScenes'),
+          ])
+          await warmImages([FX_SHEET, GUIDES.doby.portrait, GUIDES.kat.portrait], onP)
         },
       },
       {

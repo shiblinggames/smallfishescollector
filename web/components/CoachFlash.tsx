@@ -52,6 +52,31 @@ const ALWAYS = '[data-tour-card],[data-coach="helm"],[data-coach="fish"],[data-c
  * Swallowing the CLICK on a control leaves both alone.
  */
 const CONTROL = 'button,a,input,select,textarea,label,[role="button"],[role="link"],[role="tab"],[data-coach]'
+/**
+ * ── AND WHAT OPENED ON TOP OF IT ────────────────────────────────────────────
+ *
+ * The control a tour points at often opens something the tour does not model:
+ * press the empty seat it lit and a picker full of your crew comes up, and not
+ * one row of it is the flashed element. Blocking those is worse than not
+ * blocking at all — it is a sheet the tour told you to open and will not let
+ * you use, which is a dead end with the wheel still held.
+ *
+ * So a press is allowed when it lands in a layer ABOVE the one the lit control
+ * lives in. `layerOf` is the largest z-index on an element's positioned
+ * ancestors, which is what "on top of" means here; the floor keeps the nav and
+ * the chart's own furniture, which sit low, on the blocked side of the line.
+ */
+const OVERLAY_FLOOR = 100
+const layerOf = (el: Element | null): number => {
+  let z = 0
+  for (let n: Element | null = el; n && n !== document.body; n = n.parentElement) {
+    const cs = getComputedStyle(n)
+    if (cs.position === 'static') continue
+    const v = parseInt(cs.zIndex, 10)
+    if (Number.isFinite(v) && v > z) z = v
+  }
+  return z
+}
 
 /** How often the document is asked who is flashing. Cheap — a class selector
  *  over a document that almost never has one — and far less often than a
@@ -73,6 +98,10 @@ export default function CoachFlash() {
      *  inert — see `.sea-tour-read`). Refreshed on the same scan as the rings. */
     let locked = false
     let readOnly = false
+    /** The layer the lit control sits in — see layerOf. Measured on the scan
+     *  rather than per press: a control does not change layers while it is up,
+     *  and a press should not pay for a walk of the whole tree twice. */
+    let flashLayer = 0
 
     // THE RECTS, EVERY FRAME. A control can move under a ring: a panel
     // scrolls, a sheet resizes, the sea's HUD reflows on a rotate. One
@@ -115,6 +144,8 @@ export default function CoachFlash() {
         host.appendChild(ring)
         rings.set(el, ring)
       }
+      flashLayer = 0
+      for (const el of rings.keys()) flashLayer = Math.max(flashLayer, layerOf(el))
       if (rings.size > 0 && raf === 0) { tick() }
       else if (rings.size === 0 && raf !== 0) { cancelAnimationFrame(raf); raf = 0 }
     }
@@ -150,6 +181,9 @@ export default function CoachFlash() {
       if (!readOnly && t.closest('.coach-flash')) return
       // Not a control at all: open water, a scroll box, a line of text.
       if (!t.closest(CONTROL)) return
+      // Something opened on top of what the tour pointed at — see layerOf.
+      const z = layerOf(t)
+      if (z >= OVERLAY_FLOOR && z > flashLayer) return
       e.stopPropagation()
       if (e.type === 'click' || e.type === 'dblclick' || e.type === 'keydown') e.preventDefault()
     }
