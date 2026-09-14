@@ -213,16 +213,22 @@ export default function ProfileClient({ username, ancientsCaught, ancientVigil, 
           {activeBg.id === 'ancient_deep' && <AncientBgEffect />}
         </div>
       )}
-    // ── ONE COLUMN, INCLUDING THE HERO ──────────────────────────────────
-    //
-    // This was `.page-col` at 980 while everything under it — the tab strip,
-    // the showcase, the stats — was capped at 540 and centred, so the card at
-    // the top ran nearly twice the width of the page it introduced. The seam
-    // was right under the captain's name.
-    //
-    // The column is the modal's width now (see page-col-modal), and the caps
-    // below it are gone rather than being re-set to match: two numbers that
-    // have to agree will stop agreeing, and the column is already the answer.
+    {/* ── ONE COLUMN, INCLUDING THE HERO ──────────────────────────────────
+        This was `.page-col` at 980 while everything under it — the tab strip,
+        the showcase, the stats — was capped at 540 and centred, so the card at
+        the top ran nearly twice the width of the page it introduced. The seam
+        was right under the captain's name.
+
+        The column is the modal's width now (see page-col-modal), and the caps
+        below it are gone rather than being re-set to match: two numbers that
+        have to agree will stop agreeing, and the column is already the answer.
+
+        AND IT IS A JSX COMMENT NOW. It was written with `//`, which inside
+        JSX children is not a comment at all — it is TEXT. Every visitor to a
+        public profile was served ten lines of this reasoning as a paragraph at
+        the top of the page, which is what pushed the actual profile into the
+        bottom half of the screen. Nothing warns about it: it compiles, it type
+        checks, and it renders exactly what it says. */}
     <div className="page-col page-col-modal flex flex-col" style={{ gap: 0, paddingBottom: 48, position: 'relative', zIndex: 1 }}>
 
       {/* ── Header — identity banner ── */}
