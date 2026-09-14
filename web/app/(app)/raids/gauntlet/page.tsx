@@ -40,6 +40,7 @@ export default async function GauntletPage() {
           48px on top of that and left a dead strip under the home page. */}
       <div className="page-col">
         <GauntletGame
+          isAdmin={!!profile?.is_admin}
           otherGauntletUnlocked={donsUnlocked}
           shipImageUrl={stats.shipImageUrl}
           shipName={stats.shipName}

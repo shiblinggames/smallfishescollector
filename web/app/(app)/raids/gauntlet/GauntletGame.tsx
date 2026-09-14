@@ -19,6 +19,7 @@ import {
 } from '@/lib/gauntletMotion'
 import RaidCombat from '../RaidCombat'
 import GauntletArena, { type ArenaHandle, type ArenaTheme, type Mood } from './GauntletArena'
+import FrameMeter, { frameMeterOn, setFrameMeterOn } from './FrameMeter'
 import { getShip, shipTierByName } from '@/lib/ships'
 import GauntletSlipway, { type SlipwayPlace } from './GauntletSlipway'
 import { getShipSkin, shipSkinFilter } from '@/lib/shipSkins'
@@ -78,6 +79,35 @@ type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
  * and kept current, so every screen answers the same question the same way.
  */
 const WIDE_QUERY = '(min-width: 900px)'
+/**
+ * ── HOW WIDE THE SLIPWAY'S DIORAMA MAY BE ───────────────────────────────────
+ *
+ * Places are laid out in units of the viewport's SHORT side. On a desktop that
+ * is the height and there is width to spare; on a phone it IS the width, so a
+ * place at 0.34 of it sits 133px off centre on a 390 screen and the card riding
+ * it — 170-odd px wide, centred — hangs 40px past the glass. Both outer pairs
+ * were clipped, on both sides.
+ *
+ * So the horizontal spread is squeezed when the short side is the width. Not
+ * the vertical: a phone is TALL, and the one thing it has spare is the axis the
+ * moorings are already stacked on.
+ *
+ * ONE NUMBER, SHARED. The Pixi moorings and the DOM cards are placed from the
+ * same offsets by two different renderers, so a squeeze that lived in only one
+ * of them would peel the cards off the lights they ride.
+ */
+function useSlipSpreadX(): number {
+  const [spread, setSpread] = useState(1)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 560px)')
+    const on = () => setSpread(mq.matches ? 0.62 : 1)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return spread
+}
+
 function useWide(): boolean {
   const [wide, setWide] = useState(false)
   useEffect(() => {
@@ -298,6 +328,8 @@ export interface GauntletGameProps {
   /** Whether the OTHER gauntlet is also unlocked for this player. When true, the
    *  intro shows a switcher next to the title to hop to the other one. */
   otherGauntletUnlocked?: boolean
+  /** Admin only: unlocks the frame meter. Nothing else reads it. */
+  isAdmin?: boolean
   shipImageUrl: string
   shipName: string
   username: string | null
@@ -456,6 +488,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // A resumable crashed run takes priority over the intro/cooldown screens — the
   // player is offered their dive back before anything else.
   const wide = useWide()
+  const slipSpreadX = useSlipSpreadX()
   /** The width of a screen between fights: a column on a phone, a sheet on a desktop. */
   const sheetW = wide ? 640 : 440
   const [phase, setPhaseRaw] = useState<Phase>(props.resumeState ? 'resume' : props.available ? 'intro' : 'usedup')
@@ -908,7 +941,35 @@ export default function GauntletGame(props: GauntletGameProps) {
    * still held alone — switching gauntlets, and last run's recap — moved out
    * onto the HUD, and the rest went with it.
    */
+  /**
+   * ── THE FRAME METER ───────────────────────────────────────────────────────
+   *
+   * Admin only, off by default, remembered across reloads. The component is not
+   * in the tree at all unless it is on — see FrameMeter for what it measures
+   * and, more usefully, for what each number RULES OUT.
+   */
+  const [meterOn, setMeterOn] = useState(false)
+  useEffect(() => { if (props.isAdmin && frameMeterOn()) setMeterOn(true) }, [props.isAdmin])
+  const meter = props.isAdmin ? (
+    meterOn
+      ? <FrameMeter onClose={() => setMeterOn(false)} />
+      : (
+        <button type="button" aria-label="Show frame meter"
+          onClick={() => { setFrameMeterOn(true); setMeterOn(true) }}
+          style={{
+            position: 'fixed', left: 8, bottom: 'calc(env(safe-area-inset-bottom, 0px) + 68px)',
+            zIndex: 2000, width: 26, height: 26, borderRadius: 7, cursor: 'pointer',
+            background: 'rgba(3,7,13,0.7)', border: '1px solid rgba(140,170,200,0.3)',
+            color: '#7f9ab0', font: '9px/1 ui-monospace, monospace', letterSpacing: '0.04em',
+          }}>
+          FPS
+        </button>
+      )
+  ) : null
+
   const [slipNear, setSlipNear] = useState<string | null>(null)
+  /** The keeper is the descent's button; this is his pressed state. */
+  const [portalPressed, setPortalPressed] = useState(false)
   /**
    * THE MOORING CARDS' NODES, handed down to the Slipway's frame loop so it can
    * fade and lift each one by how close she actually is. `slipNear` is a single
@@ -2614,8 +2675,9 @@ export default function GauntletGame(props: GauntletGameProps) {
       // page is on its way out and the water is the lobby now.
       { id: 'leave', label: 'The Way Home', ox: 0.27, oy: 0.37, color: 0x7fd8c8 },
     ]
-    // The same stage in CSS, for the cards that ride the moorings.
-    const stageLeft = (ox: number) => `calc(50% + ${ox} * min(100vw, 100vh))`
+    // The same stage in CSS, for the cards that ride the moorings — including
+    // the squeeze, or the cards would part company with their lights.
+    const stageLeft = (ox: number) => `calc(50% + ${ox * slipSpreadX} * min(100vw, 100vh))`
     const stageTop = (oy: number) => `calc(50% + ${oy} * min(100vw, 100vh))`
     // What each place is, in one line, and its mark. The icons are the same
     // strokes the old tiles carried, so a returning captain recognises them.
@@ -2663,6 +2725,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           places={slipPlaces}
           cards={slipCards}
           sail={slipSail}
+          spreadX={slipSpreadX}
           shipUrl={props.shipImageUrl}
           onNear={setSlipNear}
           onEnterPortal={() => setModeChoiceOpen(true)}
@@ -2791,50 +2854,64 @@ export default function GauntletGame(props: GauntletGameProps) {
           const hex = hexOf(pl.color)
           const meta = PLACE_META[pl.id]
           if (pl.portal) return (
-            /* ── THE WAY DOWN IS THE DOOR ITSELF ───────────────────────
-               First it was two lines of text under the bowl, which said what
-               to do and gave you nothing to do it with. Then it was a card,
-               which gave you something to press and put a slab of chrome over
-               the middle of a phone.
-               It is neither now. The keeper turning over the eye IS the
-               control: a tap target laid over him, drawing nothing but a ring
-               that breathes, so what you are pressing is the art rather than a
-               box in front of the art. Sailing into the eye still opens the
-               same chooser, and the ring is centred on the same point the boat
-               is steering for. */
-            <button key={pl.id} type="button"
+            /* ── THE WAY DOWN IS HIM ───────────────────────────────────
+               Three tries. Two lines of text said what to do and gave you
+               nothing to do it with. A card gave you something to press and
+               put a slab of chrome over the middle of a phone. A ring drew a
+               circle around a thing that is not circular, which is why it
+               looked stuck on.
+               Nothing is drawn around him now. What says "press me" is a soft
+               glow with no edge, breathing behind him, and what answers the
+               press is the glow jumping and the words punching — so the
+               feedback is ON the art rather than beside it. */
+            <motion.button key={pl.id} type="button"
               aria-label="The Descent — begin the dive"
-              onClick={() => { vibrate([0, 16]); setModeChoiceOpen(true) }}
+              onPointerDown={() => { vibrate([0, 16]); setPortalPressed(true) }}
+              onPointerUp={() => setPortalPressed(false)}
+              onPointerLeave={() => setPortalPressed(false)}
+              onClick={() => setModeChoiceOpen(true)}
               className="tap"
+              animate={portalPressed ? { scale: 0.97 } : { scale: 1 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 26 }}
               style={{
                 position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy),
-                transform: 'translate(-50%, -50%)', zIndex: 5, cursor: 'pointer',
-                width: 'min(46vw, 46vh)', height: 'min(46vw, 26vh)',
+                // CENTRED WITH MOTION VALUES, NOT A `transform` STRING. This
+                // element animates `scale`, and framer-motion builds the whole
+                // transform itself — an inline `translate(-50%, -50%)` would be
+                // thrown away the first frame it animated and the button would
+                // jump a half-width down and right off its own mooring.
+                x: '-50%', y: '-50%',
+                zIndex: 5, cursor: 'pointer',
+                width: 'min(52vw, 40vh)', height: 'min(52vw, 30vh)',
                 display: 'grid', placeItems: 'center',
                 background: 'none', border: 'none', padding: 0,
               }}>
-              {/* The ring, breathing on the eye's own beat. It is the only
-                  thing drawn: everything inside it is the maelstrom. */}
+              {/* NO EDGE ANYWHERE IN THIS. A gradient that fades to nothing
+                  cannot look stuck on, which a ring around a non-circular
+                  subject always does. */}
               <motion.span aria-hidden
-                animate={{ opacity: [0.22, 0.6, 0.22], scale: [0.94, 1.04, 0.94] }}
-                transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                animate={portalPressed
+                  ? { opacity: 0.95, scale: 1.06 }
+                  : { opacity: [0.3, 0.62, 0.3], scale: [0.97, 1.03, 0.97] }}
+                transition={portalPressed
+                  ? { duration: 0.12 }
+                  : { duration: 3.1, repeat: Infinity, ease: 'easeInOut' }}
                 style={{
-                  position: 'absolute', inset: '14% 8%', borderRadius: '50%',
-                  border: `1.5px solid ${hex}`,
-                  boxShadow: `0 0 22px ${hex}55, inset 0 0 26px ${hex}33`,
+                  position: 'absolute', inset: '-6%', borderRadius: '50%',
+                  background: `radial-gradient(ellipse at 50% 46%, ${hex}3a 0%, ${hex}18 38%, transparent 68%)`,
                 }} />
-              {/* And the words, low enough to sit on the rim rather than over
-                  his face, small enough not to be furniture. */}
-              <span style={{ position: 'absolute', left: '50%', bottom: -6, transform: 'translateX(-50%)', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '0.18em', color: '#f4efe4', textShadow: `0 2px 10px rgba(0,0,0,0.98), 0 0 18px ${hex}66` }}>{pl.label}</span>
+              {/* The words sit under him, and they are READABLE: it was a
+                  0.48rem whisper in the run's own colour over moving water. */}
+              <span style={{ position: 'absolute', left: '50%', bottom: -2, transform: 'translateX(-50%)', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '0.86rem', letterSpacing: '0.16em', color: '#fbf6ea', textShadow: `0 2px 12px rgba(0,0,0,1), 0 0 22px ${hex}88` }}>{pl.label}</span>
                 <motion.span className="font-karla font-800 uppercase"
-                  animate={{ opacity: [0.45, 1, 0.45] }}
-                  transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{ display: 'block', fontSize: '0.48rem', letterSpacing: '0.22em', color: hex, marginTop: 2, textShadow: '0 1px 8px rgba(0,0,0,0.95)' }}>
+                  animate={portalPressed ? { opacity: 1, scale: 1.06 } : { opacity: [0.66, 1, 0.66], scale: 1 }}
+                  transition={portalPressed ? { duration: 0.12 } : { duration: 3.1, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ display: 'block', fontSize: '0.58rem', letterSpacing: '0.2em', color: '#f4efe4', marginTop: 3, textShadow: `0 1px 10px rgba(0,0,0,1), 0 0 14px ${hex}aa` }}>
                   Tap to descend
                 </motion.span>
               </span>
-            </button>
+            </motion.button>
           )
           return (
             // ── A MOORING'S CARD, DRIVEN BY THE BOAT ────────────────────
@@ -5128,6 +5205,9 @@ export default function GauntletGame(props: GauntletGameProps) {
           <AbyssScrim />
         </>
       )}
+      {/* Admin instrument, on every screen of the gauntlet so a fight and a
+          lobby can be compared with the same numbers. */}
+      {meter}
       {inRun ? phaseView : (
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={phase} initial={PHASE_INITIAL} animate={PHASE_ENTER} exit={PHASE_EXIT}>

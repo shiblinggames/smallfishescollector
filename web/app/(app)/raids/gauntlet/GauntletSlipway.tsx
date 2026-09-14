@@ -128,11 +128,20 @@ function glow(PIXI: typeof import('pixi.js')): Texture {
   return (glowTex = PIXI.Texture.from(c))
 }
 
-export default function GauntletSlipway({ theme, variant, places, shipUrl, cards, sail, onNear, onEnterPortal }: {
+export default function GauntletSlipway({ theme, variant, places, shipUrl, cards, sail, spreadX, onNear, onEnterPortal }: {
   theme: SlipwayTheme
   /** Whose door this is: which maelstrom, whose hologram, which wreck-field. */
   variant: 'davy' | 'don'
   places: SlipwayPlace[]
+  /**
+   * HOW WIDE THE DIORAMA IS ALLOWED TO BE, across. The places are laid out in
+   * units of the viewport's SHORT side, which on a desktop is the height and on
+   * a phone is the width — so the same 0.34 that sits comfortably inside a wide
+   * screen puts a card half off the glass on a tall one. The host works out the
+   * squeeze (it has to, because the DOM cards are placed from the same numbers)
+   * and hands it down so both sides cannot disagree.
+   */
+  spreadX: number
   shipUrl: string
   /**
    * ── THE CARDS THAT RIDE THE MOORINGS ──────────────────────────────────────
@@ -172,6 +181,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
   const placesRef = useRef(places); placesRef.current = places
   const onNearRef = useRef(onNear); onNearRef.current = onNear
   const cardsRef = useRef(cards); cardsRef.current = cards
+  const spreadRef = useRef(spreadX); spreadRef.current = spreadX
   const sailRef = useRef(sail); sailRef.current = sail
   const onPortalRef = useRef(onEnterPortal); onPortalRef.current = onEnterPortal
   const variantRef = useRef(variant); variantRef.current = variant
@@ -314,11 +324,16 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
       const pos = { x: app.screen.width * 0.5, y: app.screen.height * 0.5 + u0 * 0.26 }
       const target = { x: pos.x, y: pos.y }
       let facing = 1
-      /** Eased toward `facing`, so she COMES ABOUT instead of being mirrored
-       *  between two frames. She narrows to her beam through the turn and opens
-       *  out on the new tack, which is what a hull swinging round actually
-       *  looks like from above. */
-      let face = 1
+      /**
+       * WHICH WAY SHE IS POINTED. Plain ±1, applied the frame it changes.
+       *
+       * It used to EASE through zero, on the reasoning that a hull swinging its
+       * beam toward you narrows and opens out again. That is true of a hull and
+       * false of this sprite: the art is a flat side-on painting, so squashing
+       * it horizontally through zero is a sheet of paper being turned over, and
+       * it reads as exactly that. A mirror between two frames is the honest
+       * cheat here, and it is the one the chart has always used.
+       */
       /** How hard she is driving, 0..1, smoothed. Feeds the wake's force and
        *  the lift of her bow: a boat under way sits differently from one
        *  drifting, and that difference is most of "she is sailing". */
@@ -343,7 +358,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
           if (!p) return
           const W = app.screen.width, H = app.screen.height
           const u = Math.min(W, H)
-          target.x = W / 2 + p.ox * u
+          target.x = W / 2 + p.ox * u * spreadRef.current
           target.y = H / 2 + p.oy * u
         }
       }
@@ -383,7 +398,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
         // short side, so a phone and a desktop see the same composition.
         const u = Math.min(W, H)
         const cx = W / 2, cy = H / 2
-        const at = (p: { ox: number; oy: number }) => ({ x: cx + p.ox * u, y: cy + p.oy * u })
+        const at = (p: { ox: number; oy: number }) => ({ x: cx + p.ox * u * spreadRef.current, y: cy + p.oy * u })
         const REACH = REACH_U * u
 
         uRes[0] = W; uRes[1] = H
@@ -426,11 +441,10 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
           heading = Math.atan2(vy, vx)
           if (Math.abs(dx) > 12) facing = dx < 0 ? 1 : -1
         }
-        // Both of these are eased, and neither was. A hull has mass: full speed
-        // on the first frame of a press, a dead stop on the last and a mirror
-        // flip in between is a cursor, not a boat.
+        // The throttle is eased — a hull has mass, and full speed on the first
+        // frame of a press is a cursor rather than a boat. The FACING is not:
+        // see its declaration.
         drive += (Math.hypot(vx, vy) / top - drive) * Math.min(1, dt * 4)
-        face += (facing - face) * Math.min(1, dt * 6.5)
 
         const bob = Math.sin(t * 1.6) * 3 + Math.sin(t * 2.4 + 1) * 1.8
         boat.x = pos.x
@@ -443,14 +457,12 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
           shade.height = beam * 0.22
           shade.y = hull.height * 0.29 - bob
         }
-        // THE TURN, DRAWN. `face` crosses zero as she comes about; the floor
-        // keeps her from vanishing outright at the crossing.
-        const sgn = face < 0 ? -1 : 1
-        hull.scale.x = Math.abs(hull.scale.x) * sgn * Math.max(0.22, Math.abs(face))
+        const sgn = facing
+        hull.scale.x = Math.abs(hull.scale.x) * sgn
         // AND HER BOW COMES UP WITH THE THROTTLE. Small on purpose: at this
         // size a few degrees is the difference between a boat and a sticker,
         // and any more is a toy being waggled.
-        hull.rotation = drive * 0.06 * face
+        hull.rotation = drive * 0.06 * sgn
 
         // ── AND THE WATER ANSWERS ─────────────────────────────────────
         // The cutwater is forward of her centre and a little below it; where
@@ -491,6 +503,13 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
           // answering. Squared, so the far ones sit right back and nearly all
           // of the brightening happens in the last boat-length.
           const k = Math.max(0, Math.min(1, 1 - dd / (REACH * 2.6))) ** 2
+          // ── LEGIBLE FIRST, LIT SECOND ───────────────────────────────
+          //
+          // The far state was 0.26 opacity, which is a menu you cannot read
+          // from across the room — and a hub whose whole job is to show you
+          // where you can go. `k` still says which one you are AT; it no
+          // longer decides whether the others can be seen at all.
+          const seen = 0.62 + 0.38 * k
           const pulse = 0.5 + 0.5 * Math.sin(t * 1.4 + m.ph)
           // ── AND IT IS A POOL, NOT A FLOOD ───────────────────────────
           //
@@ -502,7 +521,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
           // and the lit one is unmistakable because the others are not.
           m.pool.width = u * (0.17 + 0.02 * pulse) * (1 + 0.42 * k)
           m.pool.height = m.pool.width * 0.42
-          m.pool.alpha = 0.11 + 0.4 * k + 0.05 * pulse * (0.3 + k)
+          m.pool.alpha = 0.16 + 0.42 * k + 0.05 * pulse * (0.3 + k)
           for (let j = 0; j < m.rings.length; j++) {
             // The ripples quicken as she comes alongside rather than stepping
             // from one rate to another.
@@ -516,7 +535,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
           // and the glow all read it. See the `cards` prop.
           const el = cardsRef.current?.current.get(m.p.id)
           if (el) {
-            el.style.opacity = (0.26 + 0.74 * k).toFixed(3)
+            el.style.opacity = seen.toFixed(3)
             // The lift was SIX PIXELS, which is a card that does not move.
             el.style.transform = `translate(-50%, ${(32 - 15 * k).toFixed(1)}px) scale(${(0.88 + 0.12 * k).toFixed(3)})`
             el.style.setProperty('--k', k.toFixed(3))
