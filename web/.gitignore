@@ -64,6 +64,8 @@ card-art-uploads/
 scripts/*
 !scripts/check-*.mts
 !scripts/derive-exchange-payouts.mjs
+# The painted effect sheet's packer: public/fx-sheet.webp cannot be rebuilt without it.
+!scripts/pack-fx.mjs
 
 # Badge slicer source sheets (dev-only input for slice-badges.mjs; sliced output in public/badges/ is committed)
 # Badge SOURCE sheets. Multi-badge plates that slice-badges.mjs cuts into

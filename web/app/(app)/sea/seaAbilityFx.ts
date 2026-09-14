@@ -39,6 +39,7 @@
 import type { Container, Particle, ParticleContainer, Texture } from 'pixi.js'
 import { GROUND } from './islandArt'
 import { texture as loadTexture } from './skiffArt'
+import { FX_SHEET, FX_CELL, FX_FRAMES, type FxName } from './fxSheet'
 
 /**
  * ── THE POOLS ARE SIZED ON THE WORST CAST, NOT THE AVERAGE ─────────────────
@@ -108,16 +109,8 @@ let discTex: Texture | null = null
  * and comes off, a snare still drags low. What moves is now a picture of the
  * thing rather than a light standing in for it.
  */
-const FX_SHEET = '/fx-sheet.webp'
-const FX_CELL = 128
-/** Where each element sits on the sheet, [x, y, w, h]. Written by the packer;
- *  every cell is the full 128 with the element centred, so one anchor serves
- *  all of them. */
-const FX_FRAMES = {
-  flame: [0, 0, 128, 128], ember: [128, 0, 128, 128], ice: [256, 0, 128, 128], frost: [384, 0, 128, 128],
-  ward: [0, 128, 128, 128], smoke: [128, 128, 128, 128], spark: [256, 128, 128, 128],
-} as const
-type FxName = keyof typeof FX_FRAMES
+// The sheet itself, and where each element sits, live in fxSheet.ts — the gun
+// effects read the same table.
 
 function moteTexture(PIXI: typeof import('pixi.js')): Texture {
   if (moteTex) return moteTex
@@ -415,10 +408,9 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
       const [x, y, w, h] = FX_FRAMES[n]
       return new PIXI.Texture({ source: base.source, frame: new PIXI.Rectangle(x, y, w, h) })
     }
-    fx = {
-      flame: cut('flame'), ember: cut('ember'), ice: cut('ice'), frost: cut('frost'),
-      ward: cut('ward'), smoke: cut('smoke'), spark: cut('spark'),
-    }
+    const all = {} as Record<FxName, Texture>
+    for (const n of Object.keys(FX_FRAMES) as FxName[]) all[n] = cut(n)
+    fx = all
     for (const c of conds) {
       for (let i = 0; i < 8; i++) {
         const p: Particle = new PIXI.Particle({ texture: fx.flame })

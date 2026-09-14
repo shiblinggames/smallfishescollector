@@ -38,6 +38,8 @@
 
 import type { Container, Particle, ParticleContainer, Texture } from 'pixi.js'
 import { GROUND } from './islandArt'
+import { texture as loadTexture } from './skiffArt'
+import { FX_SHEET, FX_FRAMES, type FxName } from './fxSheet'
 
 /** Smoke puffs alive at once. A broadside throws six or seven; this is enough
  *  for three overlapping volleys before the oldest is recycled. */
@@ -55,6 +57,12 @@ const DEBRIS_CAP = 30
 const SHARD_CAP = 64
 /** Slicks. One per wreck, and they outlive everything else here. */
 const SLICK_CAP = 5
+/** The painted set, which only exists once the sheet has landed (see below).
+ *  Columns of water, fireballs, stars and coals. */
+const SPLASH_CAP = 14
+const FIRE_CAP = 8
+const STAR_CAP = 32
+const EMBER_CAP = 48
 
 let puffTex: Texture | null = null
 let ringTex: Texture | null = null
@@ -160,6 +168,11 @@ type Puff = {
   age: number; life: number
   size: number; grow: number
   alpha: number
+  /** The texture's own size, so `size` means the same on-screen pixels
+   *  whichever pool the puff came from: 64 for a dot, more for a painting. */
+  div: number
+  /** Radians per second. A round dot never needed one; a painting does. */
+  spin: number
 }
 
 type Drop = {
@@ -182,6 +195,7 @@ type Debris = {
   age: number; life: number
   size: number
   spin: number
+  div: number
 }
 
 type Ring = {
@@ -273,6 +287,13 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
   // what is behind it; powder smoke is a solid thing that hides what is behind
   // it, and adding it would make a broadside look like a firework.
   sprayLayer.blendMode = 'add'
+  // THE FLASHES GET THEIR OWN. They used to share the spray's container, which
+  // draws from ONE texture source: a bloom and a droplet in the same batch is
+  // whichever texture was registered first, drawn twice.
+  const flashLayer: ParticleContainer = new PIXI.ParticleContainer({
+    dynamicProperties: { position: true, rotation: false, vertex: true, color: true },
+  })
+  flashLayer.blendMode = 'add'
   // OIL AND WRECKAGE, both DARK, so neither can be additive — adding a dark
   // colour to water does nothing at all. The slick multiplies the sea down the
   // way a squall's shadow does; the wreckage is drawn straight.
@@ -298,89 +319,353 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
   view.addChild(shardLayer)
   view.addChild(smokeLayer)
   view.addChild(sprayLayer)
+  view.addChild(flashLayer)
 
   const pt = puffTexture(PIXI), rt = ringTexture(PIXI), st = sparkTexture(PIXI)
   const sht = shardTexture(PIXI)
 
-  const smoke: Puff[] = []
-  for (let i = 0; i < SMOKE_CAP; i++) {
-    const p: Particle = new PIXI.Particle({ texture: pt })
-    p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
-    smokeLayer.addParticle(p)
-    smoke.push({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0, grow: 0, alpha: 0 })
+  /** A ring buffer over a pool: the oldest is always the one recycled. */
+  const ring = <T>(list: T[]) => { let n = 0; return () => { const v = list[n]; n = (n + 1) % list.length; return v } }
+  const puff = (p: Particle, div: number): Puff =>
+    ({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0, grow: 0, alpha: 0, div, spin: 0 })
+  const wreck = (p: Particle, div: number): Debris =>
+    ({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0, spin: 0, div })
+  const fill = <T>(list: T[], n: number, tex: Texture, layer: ParticleContainer, make: (p: Particle) => T, tint?: number) => {
+    for (let i = 0; i < n; i++) {
+      const p: Particle = new PIXI.Particle({ texture: tex })
+      p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
+      if (tint !== undefined) p.tint = tint
+      layer.addParticle(p); list.push(make(p))
+    }
   }
-  let ns = 0
-  const takeSmoke = () => { const s = smoke[ns]; ns = (ns + 1) % SMOKE_CAP; return s }
 
-  const flashes: Puff[] = []
-  for (let i = 0; i < FLASH_CAP; i++) {
-    const p: Particle = new PIXI.Particle({ texture: pt })
-    p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
-    sprayLayer.addParticle(p)
-    flashes.push({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0, grow: 0, alpha: 0 })
-  }
-  let nf = 0
-  const takeFlash = () => { const f = flashes[nf]; nf = (nf + 1) % FLASH_CAP; return f }
-
+  const smoke: Puff[] = []; fill(smoke, SMOKE_CAP, pt, smokeLayer, p => puff(p, 64))
+  const flashes: Puff[] = []; fill(flashes, FLASH_CAP, pt, flashLayer, p => puff(p, 64))
   const drops: Drop[] = []
-  for (let i = 0; i < SPRAY_CAP; i++) {
-    const p: Particle = new PIXI.Particle({ texture: st })
-    p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
-    sprayLayer.addParticle(p)
-    drops.push({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0 })
-  }
-  let nd = 0
-  const takeDrop = () => { const d = drops[nd]; nd = (nd + 1) % SPRAY_CAP; return d }
-
+  fill(drops, SPRAY_CAP, st, sprayLayer, p => ({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0 }))
   const rings: Ring[] = []
-  for (let i = 0; i < RING_CAP; i++) {
-    const p: Particle = new PIXI.Particle({ texture: rt })
-    p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
-    ringLayer.addParticle(p)
-    rings.push({ p, x: 0, y: 0, age: 1, life: 1, from: 0, to: 0, alpha: 0 })
-  }
-  let nr = 0
-  const takeRing = () => { const r = rings[nr]; nr = (nr + 1) % RING_CAP; return r }
-
-  const debris: Debris[] = []
-  for (let i = 0; i < DEBRIS_CAP; i++) {
-    const p: Particle = new PIXI.Particle({ texture: st })
-    p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
-    p.tint = 0x4a3a2a
-    debrisLayer.addParticle(p)
-    debris.push({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0, spin: 0 })
-  }
-  let nde = 0
-  const takeDebris = () => { const d = debris[nde]; nde = (nde + 1) % DEBRIS_CAP; return d }
-
+  fill(rings, RING_CAP, rt, ringLayer, p => ({ p, x: 0, y: 0, age: 1, life: 1, from: 0, to: 0, alpha: 0 }))
+  const debris: Debris[] = []; fill(debris, DEBRIS_CAP, st, debrisLayer, p => wreck(p, 16), 0x4a3a2a)
   // Splinters: same fields as wreckage, but they never float — a sliver hits
   // the water and is gone.
-  const shards: Debris[] = []
-  for (let i = 0; i < SHARD_CAP; i++) {
-    const p: Particle = new PIXI.Particle({ texture: sht })
-    p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
-    shardLayer.addParticle(p)
-    shards.push({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0, spin: 0 })
-  }
-  let nsh = 0
-  const takeShard = () => { const d = shards[nsh]; nsh = (nsh + 1) % SHARD_CAP; return d }
+  const shards: Debris[] = []; fill(shards, SHARD_CAP, sht, shardLayer, p => wreck(p, 32))
+  const slicks: Puff[] = []; fill(slicks, SLICK_CAP, pt, slickLayer, p => puff(p, 64), 0x5a5f52)
+  const tSmoke = ring(smoke), tFlash = ring(flashes), takeDrop = ring(drops), takeRing = ring(rings)
+  const takeDebris = ring(debris), takeShard = ring(shards), takeSlick = ring(slicks)
 
-  const slicks: Puff[] = []
-  for (let i = 0; i < SLICK_CAP; i++) {
-    const p: Particle = new PIXI.Particle({ texture: pt })
-    p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
-    p.tint = 0x5a5f52
-    slickLayer.addParticle(p)
-    slicks.push({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0, grow: 0, alpha: 0 })
+  // ── THE PAINTED SET ──────────────────────────────────────────────────────
+  //
+  // Everything above is a gradient on a canvas: a soft dot, a soft ring. They
+  // were tuned with care and they still read as dots and rings. The sheet
+  // (fxSheet.ts) holds PAINTED smoke, a muzzle flash, a column of water, a
+  // fireball, a star and embers — and it is a fetch. So the painted pools are
+  // built the moment it lands and the guns draw from them from that frame on;
+  // until then, and if it never comes, the dots draw as they always did.
+  // Nothing below waits on it.
+  //
+  // Two containers, because a ParticleContainer draws from ONE source and
+  // these are the only particles here that come off the sheet: `paint` for
+  // the solid things (smoke, water) and `paintAdd` for the things that ARE
+  // light.
+  let fx: Record<FxName, Texture> | null = null
+  let dead = false
+  const pSmoke: Puff[] = [], pFlash: Puff[] = [], pSplash: Puff[] = [], pFire: Puff[] = [], pStar: Puff[] = []
+  const embers: Debris[] = []
+  const tPSmoke = ring(pSmoke), tPFlash = ring(pFlash), tSplash = ring(pSplash)
+  const tFire = ring(pFire), tStar = ring(pStar), tEmber = ring(embers)
+  void loadTexture(PIXI, FX_SHEET).then(base => {
+    if (dead) return
+    const cut = (n: FxName) => {
+      const [x, y, w, h] = FX_FRAMES[n]
+      return new PIXI.Texture({ source: base.source, frame: new PIXI.Rectangle(x, y, w, h) })
+    }
+    const all = {} as Record<FxName, Texture>
+    for (const n of Object.keys(FX_FRAMES) as FxName[]) all[n] = cut(n)
+    const paint: ParticleContainer = new PIXI.ParticleContainer({
+      dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
+    })
+    const paintAdd: ParticleContainer = new PIXI.ParticleContainer({
+      dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
+    })
+    paintAdd.blendMode = 'add'
+    // The divisors are each painting's size against its cell, tuned so the
+    // numbers the emitters already use land at about the size the dots did.
+    // The splash is anchored at its FOOT: it stands on the water, not through it.
+    fill(pSplash, SPLASH_CAP, all.splash, paint, p => { p.anchorY = 0.96; return puff(p, 128) })
+    fill(pSmoke, SMOKE_CAP, all.smoke, paint, p => puff(p, 150))
+    fill(pFlash, FLASH_CAP, all.flash, paintAdd, p => puff(p, 200))
+    fill(pFire, FIRE_CAP, all.fireball, paintAdd, p => puff(p, 128))
+    fill(pStar, STAR_CAP, all.spark, paintAdd, p => puff(p, 150))
+    fill(embers, EMBER_CAP, all.ember, paintAdd, p => wreck(p, 128))
+    // Painted smoke and water sit where the dot smoke does; painted light
+    // goes over everything.
+    view.addChildAt(paint, view.getChildIndex(smokeLayer) + 1)
+    view.addChild(paintAdd)
+    fx = all
+  }).catch(() => { /* the dots keep drawing */ })
+
+  /** Smoke and flashes come off the sheet once it is here. A painted puff
+   *  also gets a random face and a slow turn, which a round dot never needed. */
+  const takeSmoke = () => {
+    if (!fx) return tSmoke()
+    const s = tPSmoke()
+    s.p.rotation = Math.random() * Math.PI * 2
+    s.spin = (Math.random() - 0.5) * 0.7
+    return s
   }
-  let nsl = 0
-  const takeSlick = () => { const s2 = slicks[nsl]; nsl = (nsl + 1) % SLICK_CAP; return s2 }
+  const takeFlash = () => {
+    if (!fx) return tFlash()
+    const f = tPFlash()
+    f.p.rotation = Math.random() * Math.PI * 2
+    return f
+  }
+  /** WATER STOOD UP. A column at `x,y`, `size` tall, up in the first third
+   *  and falling back for the rest. Nothing without the sheet: the drops that
+   *  always went with a shot into the sea are still thrown around it. */
+  const splash = (x: number, y: number, size: number, life: number, delay: number) => {
+    if (!fx) return
+    const s = tSplash()
+    s.x = x; s.y = y; s.h = 0; s.vh = 0; s.vx = 0; s.vy = 0
+    s.age = -delay; s.life = life; s.size = size; s.grow = 0; s.alpha = 0.95
+    // Mirrored half the time, so a walk of them is not one painting six times.
+    s.spin = Math.random() < 0.5 ? 1 : -1
+    return s
+  }
+  /** FIRE. Falls back to the bloom the dots drew, so a detonation without
+   *  the sheet is still a detonation. */
+  const fireball = (x: number, y: number, size: number, life: number, delay: number, tint = 0xffffff) => {
+    const f = fx ? tFire() : tFlash()
+    f.x = x; f.y = y; f.h = 20; f.vh = 40; f.vx = 0; f.vy = 0
+    f.age = -delay; f.life = life; f.size = size; f.grow = size * 0.6; f.alpha = 1
+    f.p.tint = tint
+    if (fx) { f.p.rotation = Math.random() * Math.PI * 2; f.spin = (Math.random() - 0.5) * 1.2 }
+    return f
+  }
+  /** THE STAR. A hard point of light that takes a tint cleanly, which the
+   *  flash (painted orange) does not: the railgun's cores, a crit's strike. */
+  const star = (x: number, y: number, size: number, life: number, delay: number, tint: number) => {
+    const f = fx ? tStar() : tFlash()
+    f.x = x; f.y = y; f.h = 24; f.vh = 0; f.vx = 0; f.vy = 0
+    f.age = -delay; f.life = life; f.size = size; f.grow = size * 0.5; f.alpha = 1
+    f.p.tint = tint
+    if (fx) f.p.rotation = Math.random() * Math.PI * 2
+    return f
+  }
+  /** EMBERS off a strike: thrown like splinters, except they are light. */
+  const ember = (x: number, y: number, n: number, out: number, up: number, delay = 0) => {
+    if (!fx) return
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2
+      const o = out * (0.4 + Math.random() * 0.8)
+      const d = tEmber()
+      d.x = x; d.y = y
+      d.vx = Math.cos(a) * o; d.vy = Math.sin(a) * o * GROUND
+      d.h = 10; d.vh = up * (0.6 + Math.random() * 0.8)
+      d.age = -delay - Math.random() * 0.05; d.life = 0.55 + Math.random() * 0.5
+      d.size = 16 + Math.random() * 14
+      d.spin = (Math.random() - 0.5) * 14
+      d.p.rotation = Math.random() * Math.PI * 2
+    }
+  }
 
   let dark = 0
 
   /** Gravity on HEIGHT, in world px per second squared. Not on y: y is a place
    *  on the sea and height is how far above it a thing is. */
   const G = 900
+
+  // ── THE STEPS ────────────────────────────────────────────────────────────
+  // One per kind of thing, each run over the dot pool and the painted pool
+  // alike; `div` is what makes a size mean the same in both. Every one of
+  // them treats a NEGATIVE AGE as a particle waiting its turn, held invisible
+  // and unmoved — the stagger idiom this whole layer runs on.
+  const stepSmoke = (list: Puff[], dt: number, lit: number) => {
+    for (const s of list) {
+      if (s.age >= s.life) { if (s.p.alpha) s.p.alpha = 0; continue }
+      s.age += dt
+      if (s.age < 0) { if (s.p.alpha) s.p.alpha = 0; continue }
+      const t = s.age / s.life
+      s.x += s.vx * dt
+      s.y += s.vy * dt
+      s.h += s.vh * dt
+      // Smoke slows as it spreads. It is losing to the air, not falling.
+      s.vx -= s.vx * Math.min(1, 1.5 * dt)
+      s.vy -= s.vy * Math.min(1, 1.5 * dt)
+      const size = s.size + s.grow * t
+      s.p.x = s.x
+      s.p.y = s.y - s.h / GROUND
+      s.p.scaleX = size / s.div
+      s.p.scaleY = size / s.div
+      s.p.rotation += s.spin * dt
+      // In fast, out slow: a puff arrives at once and then thins.
+      s.p.alpha = s.alpha * lit * Math.min(1, t * 8) * (1 - t) * (1 - t)
+    }
+  }
+  const stepFlash = (list: Puff[], dt: number) => {
+    for (const f of list) {
+      if (f.age >= f.life) { if (f.p.alpha) f.p.alpha = 0; continue }
+      f.age += dt
+      if (f.age < 0) { if (f.p.alpha) f.p.alpha = 0; continue }
+      const t = f.age / f.life
+      const size = f.size + f.grow * t
+      f.p.x = f.x
+      f.p.y = f.y - f.h / GROUND
+      f.p.scaleX = size / f.div
+      f.p.scaleY = size / f.div
+      f.p.alpha = f.alpha * (1 - t) * (1 - t)
+    }
+  }
+  const stepFire = (list: Puff[], dt: number) => {
+    for (const f of list) {
+      if (f.age >= f.life) { if (f.p.alpha) f.p.alpha = 0; continue }
+      f.age += dt
+      if (f.age < 0) { if (f.p.alpha) f.p.alpha = 0; continue }
+      const t = f.age / f.life
+      f.h += f.vh * dt
+      // Swells in the first fifth, then only drifts wider while it fades: a
+      // fireball is one hot instant and then a cloud.
+      const size = f.size * (0.5 + 0.5 * Math.min(1, t * 5)) + f.grow * t
+      f.p.x = f.x
+      f.p.y = f.y - f.h / GROUND
+      f.p.scaleX = size / f.div
+      f.p.scaleY = size / f.div
+      f.p.rotation += f.spin * dt
+      f.p.alpha = f.alpha * Math.min(1, t * 10) * (1 - t)
+    }
+  }
+  const stepSplash = (list: Puff[], dt: number, lit: number) => {
+    for (const s of list) {
+      if (s.age >= s.life) { if (s.p.alpha) s.p.alpha = 0; continue }
+      s.age += dt
+      if (s.age < 0) { if (s.p.alpha) s.p.alpha = 0; continue }
+      const t = s.age / s.life
+      // Up fast, then it hangs and falls back: tall at a third, wider and
+      // shorter by the end, which is water losing to gravity. `spin` here is
+      // only the mirror, ±1.
+      const rise = Math.min(1, t * 3)
+      const k = s.size / s.div
+      s.p.x = s.x
+      s.p.y = s.y
+      s.p.scaleX = k * (0.55 + 0.45 * rise + 0.25 * t) * s.spin
+      s.p.scaleY = k * (0.3 + 0.7 * rise) * (1 - 0.35 * Math.max(0, t - 0.4))
+      s.p.alpha = s.alpha * lit * Math.min(1, t * 8) * Math.min(1, (1 - t) * 2)
+    }
+  }
+  const stepDrops = (dt: number, lit: number) => {
+    for (const d of drops) {
+      if (d.age >= d.life) { if (d.p.alpha) d.p.alpha = 0; continue }
+      d.age += dt
+      // A NEGATIVE AGE IS A DROPLET WAITING ITS TURN — see sink(), where the
+      // stagger is what turns one call into a hull filling over seconds.
+      if (d.age < 0) { if (d.p.alpha) d.p.alpha = 0; continue }
+      const t = d.age / d.life
+      d.x += d.vx * dt
+      d.y += d.vy * dt
+      d.vh -= G * dt
+      d.h += d.vh * dt
+      // BACK IN THE WATER AND DONE. A droplet that fell through the surface
+      // and kept going would trail off below the sea.
+      if (d.h <= 0) { d.age = d.life; d.p.alpha = 0; continue }
+      d.p.x = d.x
+      d.p.y = d.y - d.h / GROUND
+      d.p.scaleX = d.size / 16
+      d.p.scaleY = d.size / 16
+      d.p.alpha = lit * (1 - t)
+    }
+  }
+  // ── WRECKAGE ──────────────────────────────────────────────────────────
+  const stepDebris = (dt: number, lit: number) => {
+    for (const d of debris) {
+      if (d.age >= d.life) { if (d.p.alpha) d.p.alpha = 0; continue }
+      d.age += dt
+      if (d.age < 0) { if (d.p.alpha) d.p.alpha = 0; continue }
+      const t = d.age / d.life
+      d.x += d.vx * dt
+      d.y += d.vy * dt
+      if (d.h > 0) {
+        d.vh -= G * dt
+        d.h += d.vh * dt
+        // IT LANDS AND STAYS. A droplet ends at the surface; a plank floats,
+        // which is the whole point of it being wreckage.
+        if (d.h <= 0) { d.h = 0; d.vh = 0 }
+      } else {
+        // Adrift: it keeps some way on and loses it slowly to the water.
+        d.vx -= d.vx * Math.min(1, 0.8 * dt)
+        d.vy -= d.vy * Math.min(1, 0.8 * dt)
+      }
+      d.p.x = d.x
+      d.p.y = d.y - d.h / GROUND
+      d.p.rotation += d.spin * dt
+      d.p.scaleX = d.size / d.div
+      // Flattened on the water once it is floating, upright while it is in
+      // the air — the same plane-and-air rule everything else here obeys.
+      d.p.scaleY = (d.size / d.div) * (d.h > 0 ? 1 : GROUND)
+      // In hard, out over the last fifth, so it drifts a long while and then
+      // is quietly gone rather than blinking out.
+      d.p.alpha = lit * Math.min(1, d.age * 6) * Math.min(1, (1 - t) * 5)
+    }
+  }
+  // ── THE SPLINTERS, AND THE COALS ──────────────────────────────────────
+  // Wreckage floats; a sliver does not. Same arc as everything else in the
+  // air, and the moment it reaches the water it is finished. An ember is the
+  // same thing on fire: it is not dimmed by the night, and the water puts it
+  // out.
+  const stepShards = (list: Debris[], dt: number, lit: number) => {
+    for (const d of list) {
+      if (d.age >= d.life) { if (d.p.alpha) d.p.alpha = 0; continue }
+      d.age += dt
+      if (d.age < 0) { if (d.p.alpha) d.p.alpha = 0; continue }
+      const t = d.age / d.life
+      d.x += d.vx * dt
+      d.y += d.vy * dt
+      d.vh -= G * dt
+      d.h += d.vh * dt
+      if (d.h < 0) d.h = 0
+      d.p.x = d.x
+      d.p.y = d.y - d.h / GROUND
+      d.p.rotation += d.spin * dt
+      d.p.scaleX = d.size / d.div
+      d.p.scaleY = d.size / d.div
+      // Out fast at the end, and out FASTER once it is in the water.
+      d.p.alpha = lit * Math.min(1, d.age * 14) * Math.min(1, (1 - t) * 3.2) * (d.h > 0 ? 1 : 0.35)
+    }
+  }
+  // ── THE SLICK ─────────────────────────────────────────────────────────
+  const stepSlicks = (dt: number) => {
+    for (const sl of slicks) {
+      if (sl.age >= sl.life) { if (sl.p.alpha) sl.p.alpha = 0; continue }
+      sl.age += dt
+      if (sl.age < 0) { if (sl.p.alpha) sl.p.alpha = 0; continue }
+      const t = sl.age / sl.life
+      const size = sl.size + sl.grow * Math.min(1, t * 3)
+      sl.p.x = sl.x
+      sl.p.y = sl.y
+      sl.p.scaleX = size / sl.div
+      // ON the plane, like every flat thing.
+      sl.p.scaleY = (size / sl.div) * GROUND
+      // Spreads in over a second, holds, and thins out over the last third.
+      sl.p.alpha = sl.alpha * Math.min(1, t * 4) * Math.min(1, (1 - t) * 3)
+    }
+  }
+  const stepRings = (dt: number, lit: number) => {
+    for (const r of rings) {
+      // A negative age is a ring waiting its turn — see the crit's second.
+      if (r.age >= r.life) { if (r.p.alpha) r.p.alpha = 0; continue }
+      r.age += dt
+      if (r.age < 0) continue
+      const t = r.age / r.life
+      // Fast then slow, like water actually spreading.
+      const e = 1 - (1 - t) * (1 - t)
+      const rad = r.from + (r.to - r.from) * e
+      r.p.x = r.x
+      r.p.y = r.y
+      r.p.scaleX = (rad * 2) / 128
+      // ON THE PLANE. This is the line between a ring lying on the sea and a
+      // hoop standing up out of it.
+      r.p.scaleY = ((rad * 2) / 128) * GROUND
+      r.p.alpha = r.alpha * lit * (1 - t)
+    }
+  }
 
   return {
     view,
@@ -473,7 +758,9 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       // orbs floating off a hull rather than as a hull being broken. A miss
       // still throws its column. A hit throws the ship.
       if (wet) {
-        for (let i = 0; i < 22; i++) {
+        // The column itself, painted, with the drops thrown around its foot.
+        splash(x, y, 170, 0.75, 0)
+        for (let i = 0; i < 14; i++) {
           const d = takeDrop()
           const a = Math.random() * Math.PI * 2
           const out = 30 + Math.random() * 90
@@ -503,6 +790,14 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       f.grow = heavy ? 60 : 30
       f.alpha = heavy ? 0.85 : 0.6
       f.p.tint = heavy ? 0xffe0a0 : 0xffd28a
+
+      // A CRIT BURNS: the strike is a fireball with a star at its heart. A
+      // hit is the flash and a few coals coming out of the hole.
+      if (heavy) {
+        fireball(x, y, 120, 0.55, 0.02)
+        star(x, y, 170, 0.3, 0, 0xfff0c8)
+      }
+      ember(x, y, heavy ? 10 : 4, heavy ? 220 : 140, heavy ? 260 : 190)
 
       // SPLINTERS. Thrown out of the wound and DOWN, tumbling, in the colours
       // of broken timber with a few still hot from the strike. Sprayed into a
@@ -560,6 +855,7 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       r.from = 40; r.to = 700
       r.alpha = 0.62
       r.p.tint = 0xfff0c8
+      star(x, y, 260, 0.36, 0, 0xfff0c8)
 
       // Thrown flat and hard, all the way round. Low, because this is pressure
       // leaving along the surface rather than water being lifted.
@@ -635,6 +931,14 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
         d.size = 12 + Math.random() * 12
         d.p.tint = 0xeaf6ff
       }
+
+      // AND SHE STANDS THE WATER UP as she goes, three times, each smaller;
+      // and once, as the sea reaches the magazine, she burns.
+      splash(x, y, 190, 0.8, 0.05)
+      splash(x + 30, y + 10, 140, 0.7, 0.55)
+      splash(x - 36, y - 8, 110, 0.65, 1.0)
+      fireball(x, y, 150, 0.7, 0.3)
+      ember(x, y, 12, 180, 300, 0.3)
 
       // THREE RINGS, WIDENING AND SLOWING. The sea closing over her.
       for (let i = 0; i < 3; i++) {
@@ -734,7 +1038,8 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
         r2.from = 26; r2.to = heavy ? 300 : 230
         r2.alpha = 0.34
         r2.p.tint = heavy ? 0xffd88a : 0xe8f2f8
-        for (let j = 0; j < 7; j++) {
+        splash(ax2, ay2, heavy ? 120 : 95, 0.6, 0.5 + k * 0.075)
+        for (let j = 0; j < 4; j++) {
           const d = takeDrop()
           const a2 = Math.random() * Math.PI * 2
           const out2 = 90 + Math.random() * 180
@@ -771,13 +1076,8 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       // over to the weapon's own colour — energy being gathered, which is
       // what makes the instant afterwards read as release.
       for (let i = 0; i < 3; i++) {
-        const f = takeFlash()
-        f.x = mx; f.y = my
-        f.h = 36; f.vh = 0; f.vx = 0; f.vy = 0
-        f.age = -i * 0.11; f.life = 0.13
-        f.size = 60 + i * 40; f.grow = 60
-        f.alpha = 0.5 + i * 0.2
-        f.p.tint = i === 2 ? tint : 0xffffff
+        const f = star(mx, my, 60 + i * 40, 0.13, i * 0.11, i === 2 ? tint : 0xffffff)
+        f.h = 36; f.grow = 60; f.alpha = 0.5 + i * 0.2
       }
 
       // THE LANCE. A chain of additive cores down the whole line, tapering
@@ -787,14 +1087,8 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       const N = 14
       for (let i = 0; i < N; i++) {
         const t = i / (N - 1)
-        const f = takeFlash()
-        f.x = mx + ux * span * t
-        f.y = my + uy * span * t
-        f.h = 30; f.vh = 0; f.vx = 0; f.vy = 0
-        f.age = -T; f.life = 0.24
-        f.size = 64 - t * 30; f.grow = -40
-        f.alpha = 0.9
-        f.p.tint = i % 3 === 0 ? 0xffffff : tint
+        const f = star(mx + ux * span * t, my + uy * span * t, 64 - t * 30, 0.24, T, i % 3 === 0 ? 0xffffff : tint)
+        f.h = 30; f.grow = -40; f.alpha = 0.9
       }
       // The water under it kicks: spray lifting off the surface along the
       // path, which is how a beam over the sea says how hot it is.
@@ -884,13 +1178,12 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       f1.size = 260; f1.grow = 900
       f1.alpha = 1
       f1.p.tint = 0xffffff
-      const f2 = takeFlash()
-      f2.x = x; f2.y = y
-      f2.h = 46; f2.vh = 0; f2.vx = 0; f2.vy = 0
-      f2.age = -0.08; f2.life = 0.5
-      f2.size = 200; f2.grow = 520
-      f2.alpha = 0.8
-      f2.p.tint = tint
+      // ...then the fire itself, the weapon's own colour as a star at its
+      // heart, the sea stood on end under it, and coals thrown wide.
+      fireball(x, y, 340, 0.95, 0.06)
+      star(x, y, 420, 0.4, 0.03, tint)
+      splash(x, y, 360, 1.05, 0.08)
+      ember(x, y, 18, 320, 420, 0.06)
 
       // STACKED SHOCKWAVES. Three, each later, wider and fainter — one ring
       // is a hit, a train of them is a detonation.
@@ -970,149 +1263,22 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
     advance(dt) {
       // Lit by the same sun as everything else. Not switched off after dark —
       // a muzzle flash is its OWN light and is the one thing out here that gets
-      // brighter at night, so only the smoke and the spray dim.
+      // brighter at night, so only the smoke and the water dim. Fire, stars and
+      // coals are light too.
       const lit = 1 - dark * 0.45
-
-      for (const s of smoke) {
-        if (s.age >= s.life) { if (s.p.alpha) s.p.alpha = 0; continue }
-        s.age += dt
-        const t = s.age / s.life
-        s.x += s.vx * dt
-        s.y += s.vy * dt
-        s.h += s.vh * dt
-        // Smoke slows as it spreads. It is losing to the air, not falling.
-        s.vx -= s.vx * Math.min(1, 1.5 * dt)
-        s.vy -= s.vy * Math.min(1, 1.5 * dt)
-        const size = s.size + s.grow * t
-        s.p.x = s.x
-        s.p.y = s.y - s.h / GROUND
-        s.p.scaleX = size / 64
-        s.p.scaleY = size / 64
-        // In fast, out slow: a puff arrives at once and then thins.
-        s.p.alpha = s.alpha * lit * Math.min(1, t * 8) * (1 - t) * (1 - t)
-      }
-
-      for (const f of flashes) {
-        if (f.age >= f.life) { if (f.p.alpha) f.p.alpha = 0; continue }
-        f.age += dt
-        const t = f.age / f.life
-        const size = f.size + f.grow * t
-        f.p.x = f.x
-        f.p.y = f.y - f.h / GROUND
-        f.p.scaleX = size / 64
-        f.p.scaleY = size / 64
-        f.p.alpha = f.alpha * (1 - t) * (1 - t)
-      }
-
-      for (const d of drops) {
-        if (d.age >= d.life) { if (d.p.alpha) d.p.alpha = 0; continue }
-        d.age += dt
-        // A NEGATIVE AGE IS A DROPLET WAITING ITS TURN — see sink(), where the
-        // stagger is what turns one call into a hull filling over seconds.
-        if (d.age < 0) { if (d.p.alpha) d.p.alpha = 0; continue }
-        const t = d.age / d.life
-        d.x += d.vx * dt
-        d.y += d.vy * dt
-        d.vh -= G * dt
-        d.h += d.vh * dt
-        // BACK IN THE WATER AND DONE. A droplet that fell through the surface
-        // and kept going would trail off below the sea.
-        if (d.h <= 0) { d.age = d.life; d.p.alpha = 0; continue }
-        d.p.x = d.x
-        d.p.y = d.y - d.h / GROUND
-        d.p.scaleX = d.size / 16
-        d.p.scaleY = d.size / 16
-        d.p.alpha = lit * (1 - t)
-      }
-
-      // ── WRECKAGE ────────────────────────────────────────────────────────
-      for (const d of debris) {
-        if (d.age >= d.life) { if (d.p.alpha) d.p.alpha = 0; continue }
-        d.age += dt
-        if (d.age < 0) { if (d.p.alpha) d.p.alpha = 0; continue }
-        const t = d.age / d.life
-        d.x += d.vx * dt
-        d.y += d.vy * dt
-        if (d.h > 0) {
-          d.vh -= G * dt
-          d.h += d.vh * dt
-          // IT LANDS AND STAYS. A droplet ends at the surface; a plank floats,
-          // which is the whole point of it being wreckage.
-          if (d.h <= 0) { d.h = 0; d.vh = 0 }
-        } else {
-          // Adrift: it keeps some way on and loses it slowly to the water.
-          d.vx -= d.vx * Math.min(1, 0.8 * dt)
-          d.vy -= d.vy * Math.min(1, 0.8 * dt)
-        }
-        d.p.x = d.x
-        d.p.y = d.y - d.h / GROUND
-        d.p.rotation += d.spin * dt
-        d.p.scaleX = d.size / 16
-        // Flattened on the water once it is floating, upright while it is in
-        // the air — the same plane-and-air rule everything else here obeys.
-        d.p.scaleY = (d.size / 16) * (d.h > 0 ? 1 : GROUND)
-        // In hard, out over the last fifth, so it drifts a long while and then
-        // is quietly gone rather than blinking out.
-        d.p.alpha = lit * Math.min(1, d.age * 6) * Math.min(1, (1 - t) * 5)
-      }
-
-      // ── THE SPLINTERS ────────────────────────────────────────────────
-      // Wreckage floats; a sliver does not. Same arc as everything else in the
-      // air, and the moment it reaches the water it is finished.
-      for (const d of shards) {
-        if (d.age >= d.life) { if (d.p.alpha) d.p.alpha = 0; continue }
-        d.age += dt
-        const t = d.age / d.life
-        d.x += d.vx * dt
-        d.y += d.vy * dt
-        d.vh -= G * dt
-        d.h += d.vh * dt
-        if (d.h < 0) d.h = 0
-        d.p.x = d.x
-        d.p.y = d.y - d.h / GROUND
-        d.p.rotation += d.spin * dt
-        d.p.scaleX = d.size / 32
-        d.p.scaleY = d.size / 32
-        // Out fast at the end, and out FASTER once it is in the water.
-        d.p.alpha = lit * Math.min(1, d.age * 14) * Math.min(1, (1 - t) * 3.2) * (d.h > 0 ? 1 : 0.35)
-      }
-
-      // ── THE SLICK ───────────────────────────────────────────────────────
-      for (const sl of slicks) {
-        if (sl.age >= sl.life) { if (sl.p.alpha) sl.p.alpha = 0; continue }
-        sl.age += dt
-        if (sl.age < 0) { if (sl.p.alpha) sl.p.alpha = 0; continue }
-        const t = sl.age / sl.life
-        const size = sl.size + sl.grow * Math.min(1, t * 3)
-        sl.p.x = sl.x
-        sl.p.y = sl.y
-        sl.p.scaleX = size / 64
-        // ON the plane, like every flat thing.
-        sl.p.scaleY = (size / 64) * GROUND
-        // Spreads in over a second, holds, and thins out over the last third.
-        sl.p.alpha = sl.alpha * Math.min(1, t * 4) * Math.min(1, (1 - t) * 3)
-      }
-
-      for (const r of rings) {
-        // A negative age is a ring waiting its turn — see the crit's second.
-        if (r.age >= r.life) { if (r.p.alpha) r.p.alpha = 0; continue }
-        r.age += dt
-        if (r.age < 0) continue
-        const t = r.age / r.life
-        // Fast then slow, like water actually spreading.
-        const e = 1 - (1 - t) * (1 - t)
-        const rad = r.from + (r.to - r.from) * e
-        r.p.x = r.x
-        r.p.y = r.y
-        r.p.scaleX = (rad * 2) / 128
-        // ON THE PLANE. This is the line between a ring lying on the sea and a
-        // hoop standing up out of it.
-        r.p.scaleY = ((rad * 2) / 128) * GROUND
-        r.p.alpha = r.alpha * lit * (1 - t)
-      }
+      stepSmoke(smoke, dt, lit); stepSmoke(pSmoke, dt, lit)
+      stepFlash(flashes, dt); stepFlash(pFlash, dt); stepFlash(pStar, dt)
+      stepFire(pFire, dt)
+      stepSplash(pSplash, dt, lit)
+      stepDrops(dt, lit)
+      stepDebris(dt, lit)
+      stepShards(shards, dt, lit); stepShards(embers, dt, 1)
+      stepSlicks(dt)
+      stepRings(dt, lit)
     },
 
     destroy() {
+      dead = true
       view.destroy({ children: true })
     },
   }
