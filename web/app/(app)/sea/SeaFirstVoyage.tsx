@@ -68,7 +68,7 @@ function destination(id: string): { x: number; y: number; r: number } | null {
 
 export default function SeaFirstVoyage({
   hasSeen, startAt, fishing, hooked, caught, nearId, ashore, blocked, cam, goal,
-  holdCast, fishOnly, stowRod, at, almanac, onBeat, onDone,
+  holdCast, fishOnly, stowRod, at, almanac, haulOpen, holdOpen, onBeat, onDone,
 }: {
   hasSeen: boolean
   /** Where the tour got to. It leaves the chart to sell a fish at the market,
@@ -89,6 +89,13 @@ export default function SeaFirstVoyage({
   blocked: 'bait' | 'hold' | null
   /** Whether the Almanac is open. Advances the `almanac` beat. */
   almanac: boolean
+  /** Whether the Daily Haul is open. The beat after the worms waits for it to
+   *  SHUT, because the one after that asks them to sail somewhere and a panel
+   *  over the sea is not a thing you can sail through. */
+  haulOpen: boolean
+  /** Whether the hold is open. The beat that names the hold is ANSWERED by
+   *  opening it — see the note on that beat below. */
+  holdOpen: boolean
   /** Which beat is up, so the chart can decide what is allowed while the
    *  voyage holds the wheel. Null once it is over. */
   onBeat?: (b: { until: string; at?: string; target?: string } | null) => void
@@ -294,6 +301,24 @@ export default function SeaFirstVoyage({
   }, [wantBait, blocked, next])
 
   // The book, opened. Next works too; this is the other way through.
+  // ── THE HAUL, SHUT AGAIN ────────────────────────────────────────────
+  // Satisfied at once when the haul is not open at all, which is the captain
+  // who already had bait and never went in there.
+  const wantHaulShut = beat?.until === 'haulShut'
+  useEffect(() => { if (wantHaulShut && !haulOpen) next() }, [wantHaulShut, haulOpen, next])
+
+  /**
+   * ── AND A BEAT THAT IS ANSWERED BY PRESSING THE THING ──────────────
+   *
+   * "Every fish goes into your hold" points at the Hold button and waits for
+   * Next. Pressing the button it is pointing at — which is the obvious thing
+   * to do, and the button is lit — opens the hold OVER the card, so the
+   * dialogue and its ring sat on top of the panel the tour had just sent them
+   * into, with the Next hidden underneath. Opening the hold IS the answer.
+   */
+  const wantHoldLook = beat?.until === 'next' && beat?.target === 'hold'
+  useEffect(() => { if (wantHoldLook && holdOpen) next() }, [wantHoldLook, holdOpen, next])
+
   const wantAlmanac = beat?.until === 'almanac'
   useEffect(() => {
     if (wantAlmanac && almanac) next()
@@ -403,7 +428,7 @@ export default function SeaFirstVoyage({
       // The Daily Haul opens in a PopupShell at 111 and this card sits at 70,
       // so the line saying "claim your worms" would vanish behind the scrim
       // the moment they did as it said. Lifted for those two cases only.
-      z={b.until === 'bait' || stuck === 'bait' ? 120 : undefined}
+      z={b.until === 'bait' || b.until === 'haulShut' || stuck === 'bait' ? 120 : undefined}
     />
   )
 }

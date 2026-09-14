@@ -1770,13 +1770,16 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     const fit: React.CSSProperties = compact
       ? { minWidth: 0, padding: '0.5rem 1rem', fontSize: '0.74rem', letterSpacing: '0.07em' }
       : {}
+    // THE SAME OPTIMISTIC PATH THE SWIPE TAKES. This button awaited the
+    // server before anything on screen moved, so signing a hand on read as a
+    // second of "Recruiting..." on a dead card — on the one press the whole
+    // anchorage tour is waiting for. The candidate is marked aboard on the tap
+    // and the roster arrives behind it; see recruitBoard, which this now is.
     const recruit = (e: React.MouseEvent) => {
       e.stopPropagation()
       vibrate(14)
-      run(() => recruitCrew(c.id), c.id, () => {
-        window.dispatchEvent(new Event('crew-changed'))
-        onDone?.()
-      })
+      recruitBoard(c.id)
+      onDone?.()
     }
     if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, ...fit, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
     if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, ...fit, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>

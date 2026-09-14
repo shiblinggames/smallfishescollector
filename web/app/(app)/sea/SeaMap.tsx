@@ -2673,6 +2673,26 @@ export default function SeaMap({
    *  already has a crew and an empty board is not held there until tomorrow. */
   const [handsAboard, setHandsAboard] = useState(0)
   /**
+   * WHICH OVERLAYS ARE OPEN, for the first voyage.
+   *
+   * The Daily Haul and the hold are owned by components a long way from here
+   * and the tour has beats about both: one sends a captain into the haul for
+   * worms and has to know when they are out of it, and one is ANSWERED by
+   * opening the hold. Announced on one event rather than threaded through
+   * three components, the same way the crew panel tells the anchorage tour
+   * which room is showing.
+   */
+  const [overlays, setOverlays] = useState<Record<string, boolean>>({})
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<{ id?: string; open?: boolean }>).detail
+      if (!d?.id) return
+      setOverlays(prev => (prev[d.id!] === !!d.open ? prev : { ...prev, [d.id!]: !!d.open }))
+    }
+    window.addEventListener('sea-overlay', on)
+    return () => window.removeEventListener('sea-overlay', on)
+  }, [])
+  /**
    * IS THERE ANYBODY ON THE SHIP.
    *
    * Seeded from the page and kept live by the crew panel, which announces it
@@ -5960,10 +5980,15 @@ export default function SeaMap({
    * Keyed on the STOP rather than the beat object: `gateBeat` is rebuilt by
    * the tour on every render of it, and a run of chevrons that restarted on
    * each one would never finish its own fade.
+   *
+   * AND NOT UNTIL THEY ARE THROUGH THE GATE. The beat comes up within hail of
+   * it, which is eleven hundred pixels short and still inside the harbour, so
+   * a line of chevrons appeared over the anchorage pointing through a wall at
+   * water the captain had not reached yet. `onSeaGate` is the crossing itself.
    */
   const gateRouting = gateBeat?.route === true
   useEffect(() => {
-    if (!gateRouting || fightOn) return
+    if (!gateRouting || fightOn || !onSeaGate) return
     const to = nextStop?.at
     if (!to) return
     setHeading({ from: { ...pos.current }, to, key: Date.now() })
@@ -5971,7 +5996,7 @@ export default function SeaMap({
     return () => clearTimeout(t)
     // The id, not the memoised point — see the note above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gateRouting, nextAtId, fightOn])
+  }, [gateRouting, nextAtId, fightOn, onSeaGate])
 
   const hudRow = useMemo(() => {
     const on: string[] = []
@@ -11785,6 +11810,7 @@ hullRef={hullRefFor(t.key)} />
         // The same two gates FishingHere puts on the Cast button. If it will
         // not let them cast, the tour has to stop asking them to.
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
+        haulOpen={overlays.haul === true} holdOpen={overlays.hold === true}
         cam={tourCam} goal={tourGoal} holdCast={tourHoldCast}
         fishOnly={tourFishOnly} stowRod={stowRod} at={pos}
         onBeat={setTourBeat} onDone={() => setTourDone(true)} />}

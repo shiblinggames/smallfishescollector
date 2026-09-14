@@ -223,7 +223,13 @@ export default function SeaGateTour({
   // dependency on every render of this component, so the effect below would
   // tear down and re-write a SHARED ref sixty times a second. See the note on
   // gateNextAt in SeaMap, which is the same trap one level up.
-  const routing = !!beat?.route && !gated
+  // ── AND NOT UNTIL THEY ARE THROUGH THE GATE ──────────────────────────
+  // The routing beat comes up within HAIL of the gate, which is eleven hundred
+  // pixels short of it and still inside the harbour. Lighting the road from
+  // there drew a line over the anchorage pointing through its own wall at water
+  // the captain had not reached. The chart's chevrons wait on the same
+  // crossing; see the note in SeaMap.
+  const routing = !!beat?.route && !gated && pastGate
   const pathing = beat?.path === 'sea_gate' && !gated
   const lit = useMemo(
     () => (pathing ? { x: SEA_GATE.x, y: SEA_GATE.y, r: SEA_GATE_HALF } : routing ? nextAt : null),
@@ -334,6 +340,22 @@ export default function SeaGateTour({
   // ── THE BEATS THAT WAIT ON THE CREW PANEL ────────────────────────────────
   const want = beat?.until
   useEffect(() => { if (live && want === 'crewOpen' && crewOpen) next() }, [live, want, crewOpen, next])
+  /**
+   * ── AND THE ONE THAT DOES NOT, BUT IS BURIED BY IT ──────────────────────
+   *
+   * A `next` beat that is NOT raised over the crew panel sits underneath it.
+   * The beat before "Open the Crew menu" is one of those: it says the menu
+   * changes up here and it LIGHTS THE CREW DISC to show you which one, so the
+   * obvious thing to do is press the lit control — and pressing it opens the
+   * panel over the card, taking its Next with it. Nothing on screen advances
+   * the tour, and the crew disc, having been pressed, is no longer the thing
+   * to press. That is the "you can still get stuck if you don't click Next".
+   *
+   * Opening the panel is a better answer to that beat than Next was.
+   */
+  useEffect(() => {
+    if (live && want === 'next' && !beat?.overPanel && crewOpen) next()
+  }, [live, want, beat, crewOpen, next])
   useEffect(() => { if (live && want === 'recruitBoard' && crewOpen && crewSection === 'recruits') next() }, [live, want, crewOpen, crewSection, next])
   useEffect(() => { if (live && want === 'crewDoors' && crewOpen && crewSection === null) next() }, [live, want, crewOpen, crewSection, next])
   useEffect(() => { if (live && want === 'assignBoard' && crewOpen && crewSection === 'assign') next() }, [live, want, crewOpen, crewSection, next])

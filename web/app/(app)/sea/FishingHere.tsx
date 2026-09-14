@@ -791,6 +791,12 @@ export default function FishingHere({
    *  What is aboard changes once per catch and is read about once a session, so
    *  polling it would be paying constantly for a number nobody is looking at. */
   const [holdOpen, setHoldOpen] = useState(false)
+  // TOLD TO THE CHART, for the first voyage: the beat that names the hold is
+  // answered by OPENING it, and a card left up over the open hold is the tour
+  // talking across the thing it just pointed at. See seaOnboarding.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('sea-overlay', { detail: { id: 'hold', open: holdOpen } }))
+  }, [holdOpen])
   const [holdRows, setHoldRows] = useState<{ fishId: number; qty: number }[] | null>(null)
 
   // ── THE COLLECTION LOG ─────────────────────────────────────────────────

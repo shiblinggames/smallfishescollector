@@ -50,6 +50,12 @@ export default function SeaBonus({ size, top, right }: {
   right: number
 }) {
   const [open, setOpen] = useState(false)
+  // TOLD TO THE CHART. The first voyage sends a captain in here for their
+  // worms and has to know when they have come back out — see `haulShut` in
+  // seaOnboarding. Same shape the crew panel uses for the anchorage tour.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('sea-overlay', { detail: { id: 'haul', open } }))
+  }, [open])
   const [state, setState] = useState<State>(null)
 
   useEffect(() => {
@@ -127,6 +133,7 @@ export default function SeaBonus({ size, top, right }: {
           transition={{ duration: 0.18 }}
           onClick={e => e.stopPropagation()}
           style={{
+            position: 'relative',
             margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
             // OPAQUE. It floats over painted, moving water like everything else
             // out here, and a translucent panel over the sea reads as a smear.
@@ -135,6 +142,23 @@ export default function SeaBonus({ size, top, right }: {
             borderRadius: 18, padding: '1.2rem 1rem 1.3rem',
             boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
           }}>
+          {/* ── A WAY OUT THAT LOOKS LIKE ONE ──────────────────────────
+              PopupShell closes on a tap outside the card and nothing else, so
+              this had no visible way to shut: a captain who had just collected
+              their worms had to guess that the water behind the panel was a
+              button. Every other full-screen panel in the game has this ×, and
+              the first voyage now points at it. */}
+          <button type="button" onClick={() => setOpen(false)} aria-label="Close"
+            data-coach="haul-close"
+            style={{
+              position: 'absolute', top: 10, right: 10, zIndex: 2,
+              width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.14)',
+              borderRadius: '50%', color: 'rgba(240,237,232,0.7)', cursor: 'pointer',
+            }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
           {state ? (
             <DailyHaul
               isPremium={state.isPremium}

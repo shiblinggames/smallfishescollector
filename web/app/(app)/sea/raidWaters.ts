@@ -850,10 +850,28 @@ export function portalOpen(pt: ReturnPortal, cleared: Set<string> | string[]): b
  * not beaten yet is not offered, and a boss you have not MET is not shown at
  * all — the gate keeps trophies, it does not tell fortunes.
  *
- * Verified clear water: the nearest wall is seven thousand pixels off and the
- * nearest place is fourteen hundred.
+ * ── AND IT SITS IN THE MIDDLE OF THE JUNCTION, NOT IN ITS DOORWAY ──────────
+ *
+ * It was at (0, -7400), which is EIGHT HUNDRED pixels north of the sea gate.
+ * The viewport shows somewhere between eight hundred and sixteen hundred
+ * pixels of water, so a captain crossing for the first time came out of the
+ * gate with a standing portal already filling the screen: the first thing on
+ * the campaign's water was a door to bosses they had not met, before they had
+ * seen any of it. Reported as exactly that.
+ *
+ * It is at the junction's own centre now, which is 2,600 out. That leaves a
+ * clear run of open sea on the way through the gate, and it is the right place
+ * for it on its own terms: the Wargate keeps the whole campaign's trophies, and
+ * the middle of the crossing is where every strait can be seen from.
+ *
+ * MEASURED, because this water is crowded:
+ *
+ *   from the sea gate                        2,600
+ *   edge to either maelstrom                 1,961
+ *   to the nearest strait mouth (Coffers)    5,531
+ *   inside the junction's own rim (3,800)    dead centre
  */
-export const WARGATE = { x: 0, y: -7400 }
+export const WARGATE = { x: HUB.x, y: HUB.y }
 export const WARGATE_REACH = 340
 
 /**

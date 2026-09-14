@@ -72,6 +72,11 @@ export type Beat = {
    *   'catch'   — waits for a fish in the hold.
    *   'look'    — the camera flies somewhere and holds while they read.
    *   'reach'   — waits until they have sailed into the ring the path draws.
+   *   'haulShut'— waits until the Daily Haul is shut again. The beat before it
+   *               sends a captain in there for worms, and the one after sends
+   *               them south to fish, which is an instruction you cannot follow
+   *               through an open panel. Satisfied at once if the haul is not
+   *               open at all, so a captain who already had bait walks past it.
    *   'gate'    — waits until they have sailed up to the Sea Gate. Its own
    *               wait rather than a `reach` because the gate is not a chart
    *               place and not the campaign's next stop: it is a pair of
@@ -91,7 +96,7 @@ export type Beat = {
    *               captain who already has some.
    */
   until: 'next' | 'fish' | 'bite' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait' | 'almanac'
-    | 'gate'
+    | 'gate' | 'haulShut'
     // The anchorage tour's own: the crew panel opened, its Recruit room
     // opened, a hand signed on, the Assign room opened, a captain seated,
     // the panel closed again.
@@ -215,6 +220,16 @@ export const FIRST_VOYAGE: Beat[] = [
     until: 'bait',
     target: 'haul haul-bait',
   },
+  // AND BACK OUT OF IT. The haul has no way out but a tap on the water behind
+  // it, which is not a thing anybody guesses; it has an × now and this points
+  // at it. Without the beat the next line told them to sail somewhere from
+  // inside a panel that covered the sea.
+  {
+    ...D,
+    text: 'Got ’em. Now shut the haul and we’ll put that bait to work.',
+    until: 'haulShut',
+    target: 'haul-close',
+  },
   {
     ...D,
     text: 'Fish nearby in the *Shallows* by sailing south of here. Follow the light.',
@@ -237,13 +252,13 @@ export const FIRST_VOYAGE: Beat[] = [
   },
   {
     ...K,
-    text: 'Cast your line!',
+    text: 'Cast your line! And then we wait for a bite...',
     until: 'bite',
     target: 'cast',
   },
   {
     ...K,
-    text: 'You’ve caught something! Click *Reel In* to catch it. Hit the green to catch it. But hit the gold and get a perfect catch for bonus XP!',
+    text: 'You’ve got something! Click *Reel In* while the needle hits the green to land the catch. But hit the gold zone for a perfect catch for some bonus XP!',
     until: 'catch',
     target: 'reel',
   },
