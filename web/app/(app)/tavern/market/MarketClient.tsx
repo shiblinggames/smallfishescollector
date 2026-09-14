@@ -884,7 +884,11 @@ export default function MarketClient({
       show={tourAt === 'out'}
       portrait={GUIDES.doby.portrait}
       speaker={GUIDES.doby.speaker}
-      text="That is a sale, cap’n. *Back* at the top takes you to the water."
+      // JUST THE WAY OUT. "That's a sale, cap'n" is the first voyage's own
+      // line on the chart, said over the purse the coin has just landed in
+      // (see FIRST_VOYAGE) — and a guide who says the same thing twice in two
+      // rooms is a guide nobody reads the second time.
+      text="*Back* at the top takes you to the water."
       accent={SEA_ACCENT}
       placement="bottom"
       onClose={() => setTourAt(null)}

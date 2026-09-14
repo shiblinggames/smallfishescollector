@@ -99,8 +99,10 @@ export type Beat = {
     | 'gate' | 'haulShut'
     // The anchorage tour's own: the crew panel opened, its Recruit room
     // opened, a hand signed on, the Assign room opened, a captain seated,
-    // the panel closed again.
-    | 'crewOpen' | 'recruitBoard' | 'recruited' | 'crewDoors' | 'assignBoard' | 'assigned' | 'crewClosed'
+    // the panel closed again. NO 'crewDoors': getting back out of a room is
+    // the waypoint's job now rather than a beat of its own — see the note in
+    // GATE_TOUR where that beat used to be.
+    | 'crewOpen' | 'recruitBoard' | 'recruited' | 'assignBoard' | 'assigned' | 'crewClosed'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
@@ -433,16 +435,20 @@ export const GATE_TOUR: Beat[] = [
     until: 'next',
     overPanel: true,
   },
-  // BACK OUT OF THE RECRUIT ROOM FIRST. Assign is one of the four doors, and
-  // the captain is standing inside a different one -- "Click Assign" with no
-  // Assign on the screen is an instruction that cannot be followed.
-  {
-    ...D,
-    text: 'Head back to the crew menu.',
-    until: 'crewDoors',
-    target: 'crew-back',
-    overPanel: true,
-  },
+  // ── AND NO BEAT FOR GETTING BACK OUT OF THE RECRUIT ROOM ──────────────
+  //
+  // There was one: "Head back to the crew menu", waiting on the four doors
+  // being on screen, because "Click Assign" with no Assign on the screen is an
+  // instruction that cannot be followed. It was also a beat that could be left
+  // standing, and it was reported stuck.
+  //
+  // It is not needed. A beat whose target is not in the document now re-points
+  // itself at the way back and lights that instead (see `waypoint` in
+  // SeaGateTour) — from inside a room that is the back button, with the words
+  // "Head back to the crew menu", which is the beat this replaces, generated
+  // from the state rather than assumed by the script. Standing at the doors it
+  // says "Click Assign" and points at the door. One beat, right either way,
+  // and nothing left over to get stuck on.
   {
     ...D,
     text: 'Click *Assign*.',
