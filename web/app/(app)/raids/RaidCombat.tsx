@@ -2766,11 +2766,17 @@ export default function RaidCombat({
     // The plates' own sizes, and the deck's height. These change when a status
     // chip appears or a name gets longer — not on a frame — so they are read
     // when something might have changed and cached in between.
-    const dim = { ew: 160, eh: 48, pw: 160, ph: 48, deckTop: window.innerHeight }
+    const dim = { ew: 160, eh: 48, pw: 160, ph: 48, rise: 0, deckTop: window.innerHeight }
     const measurePlates = () => {
       const e = enemyPlateRef.current
       const p = playerPlateRef.current
-      if (e) { dim.ew = e.offsetWidth || dim.ew; dim.eh = e.offsetHeight || dim.eh }
+      if (e) {
+        dim.ew = e.offsetWidth || dim.ew; dim.eh = e.offsetHeight || dim.eh
+        // How far the enemy's figure stands above the plate's edge. A computed
+        // style read, so it belongs here with the other measurements and not
+        // on a frame.
+        dim.rise = parseFloat(getComputedStyle(e).getPropertyValue('--rise')) || 0
+      }
       if (p) { dim.pw = p.offsetWidth || dim.pw; dim.ph = p.offsetHeight || dim.ph }
       // WHERE THE DECK'S TOP EDGE IS, not how tall it is. Over the sea the deck
       // no longer sits on the bottom of the window — on a phone it stops above
@@ -2814,7 +2820,8 @@ export default function RaidCombat({
       // bar directly above it.
       const line = (window.innerWidth >= 640 ? 60 : 44) + 18
       el.style.left = `${raidColumn().left - box.left}px`
-      el.style.top = `${line + 42 - box.top}px`
+      // Plus the figure's rise: the card is placed by the top of its head.
+      el.style.top = `${line + 42 + dim.rise - box.top}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
     }
@@ -8454,14 +8461,17 @@ export default function RaidCombat({
           type="button"
           onClick={() => setShowEnemyStats(true)}
           aria-label={`${enemy.name} — view stats`}
-          className={`rc-enemy-plate${enemyPhase >= 2 ? ' rc-phase2-pulse' : ''}`}
+          className={`rc-enemy-plate${enemy.portrait ? ' has-figure' : ''}${enemyPhase >= 2 ? ' rc-phase2-pulse' : ''}`}
           animate={enemyNameplateAnim}
           ref={enemyPlateRef}
           style={{
             // Over the sea the frame loop moves this onto the enemy's own hull;
             // the corner is where it sits on a /raids/* route, and where it
             // starts here before the first frame places it.
-            position: 'absolute', top: 10, left: 10, zIndex: 4,
+            // `--rise` is how far the figure's head stands above the plate's
+            // edge; the plate is placed by its head so nothing above it is
+            // covered.
+            position: 'absolute', top: 'calc(10px + var(--rise, 0px))', left: 10, zIndex: 4,
             background: 'rgba(6,12,20,0.9)',
             // Phase 2 overrides the normal boss-gold (or elite-violet)
             // accent with crimson — same intensity as elite, deeper red so
@@ -8496,26 +8506,21 @@ export default function RaidCombat({
             font: 'inherit', color: 'inherit',
           }}
         >
+          {/* THE FIGURE — see `.rc-enemy-figure` in globals.css. The accent
+              that used to be a ring round a badge is a glow on the cutout
+              itself: it follows the painted silhouette, which a circle never
+              did. */}
           {enemy.portrait && (
-            <div className="rc-enemy-portrait" style={{
-              flexShrink: 0, borderRadius: '50%',
-              border: `2px solid ${
-                enemyPhase >= 2 ? '#ef4444'
-                : isBoss ? '#fbbf24'
-                : isElite ? '#a78bfa'
-                : ENEMY_COLOR
-              }`,
-              overflow: 'hidden',
-              boxShadow: `0 0 ${enemyPhase >= 2 ? 14 : 10}px ${
-                enemyPhase >= 2 ? 'rgba(239,68,68,0.6)'
-                : isBoss ? 'rgba(251,191,36,0.45)'
-                : isElite ? 'rgba(167,139,250,0.55)'
-                : 'rgba(239,68,68,0.4)'
-              }`,
-              background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(20,40,60,0.85) 70%)',
-            }}>
+            <div className="rc-enemy-figure" aria-hidden>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={enemy.portrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={enemy.portrait} alt="" draggable={false} decoding="async" style={{
+                filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))${
+                  enemyPhase >= 2 ? ' drop-shadow(0 0 9px rgba(239,68,68,0.75))'
+                  : isBoss ? ' drop-shadow(0 0 9px rgba(251,191,36,0.55))'
+                  : isElite ? ' drop-shadow(0 0 9px rgba(167,139,250,0.7))'
+                  : ''
+                }`,
+              }} />
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>

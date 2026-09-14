@@ -175,23 +175,23 @@ function beamTexture(PIXI: typeof import('pixi.js')): Texture {
   const c = document.createElement('canvas')
   c.width = W; c.height = H
   const g = c.getContext('2d')!
-  const v = g.createLinearGradient(0, 0, 0, H)
-  v.addColorStop(0.0, 'rgba(255,255,255,0)')
-  v.addColorStop(0.3, 'rgba(255,255,255,0.35)')
-  v.addColorStop(0.5, 'rgba(255,255,255,1)')
-  v.addColorStop(0.7, 'rgba(255,255,255,0.35)')
-  v.addColorStop(1.0, 'rgba(255,255,255,0)')
-  g.fillStyle = v
-  g.fillRect(0, 0, W, H)
-  // Soft at the muzzle end, and a longer fade past the target: spent energy.
-  g.globalCompositeOperation = 'destination-in'
-  const h = g.createLinearGradient(0, 0, W, 0)
-  h.addColorStop(0.00, 'rgba(255,255,255,0)')
-  h.addColorStop(0.06, 'rgba(255,255,255,1)')
-  h.addColorStop(0.86, 'rgba(255,255,255,1)')
-  h.addColorStop(1.00, 'rgba(255,255,255,0)')
-  g.fillStyle = h
-  g.fillRect(0, 0, W, H)
+  // A GAUSSIAN ACROSS, BY HAND. A canvas gradient is straight lines between
+  // its stops, and a straight line has a corner at each stop: three nested
+  // bars with corners read as six parallel beams. This has no corners
+  // anywhere, so bars laid on one line melt into one.
+  const img = g.createImageData(W, H)
+  for (let y = 0; y < H; y++) {
+    const d = (y - (H - 1) / 2) / (H / 2)
+    const across = Math.exp(-d * d * 4.5)
+    for (let x = 0; x < W; x++) {
+      // Soft at the muzzle end, and a longer fade past the target: spent energy.
+      const along = x < W * 0.06 ? x / (W * 0.06) : x > W * 0.86 ? 1 - (x - W * 0.86) / (W * 0.14) : 1
+      const i = (y * W + x) * 4
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255
+      img.data[i + 3] = Math.round(255 * across * Math.max(0, along))
+    }
+  }
+  g.putImageData(img, 0, 0)
   beamTex = PIXI.Texture.from(c)
   return beamTex
 }
@@ -1168,11 +1168,12 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
         f.p.tint = i === 2 ? tint : 0xffffff
       }
 
-      // THE LANCE. Three bars on one line, all on the same frame: wide and
-      // faint in the weapon's colour, a tighter brighter one inside it, and a
-      // white core, from the muzzle to well past the target. A beam is the
-      // one thing here that must NOT stagger along its length, and the one
-      // thing drawn LONG — it is a bar, not a chain of anything.
+      // THE LANCE. Two bars on one line, on the same frame: the weapon's
+      // colour, and a white core inside it, from the muzzle to well past the
+      // target. A beam is the one thing here that must NOT stagger along its
+      // length, and the one thing drawn LONG — it is a bar, not a chain of
+      // anything. Two, not three: the glow and the heat are one beam, and
+      // every bar past that is another beam.
       const span = len + 90
       const ang = Math.atan2(dy, dx)
       const lance = (w: number, alpha: number, life: number, t: number) => {
@@ -1181,9 +1182,8 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
         b.age = -T; b.life = life; b.alpha = alpha
         b.p.tint = t
       }
-      lance(130, 0.30, 0.36, tint)
-      lance(50, 0.75, 0.32, tint)
-      lance(16, 1.0, 0.28, 0xffffff)
+      lance(84, 0.7, 0.34, tint)
+      lance(22, 1.0, 0.28, 0xffffff)
       // And where it lands: one hot bloom on the hull, white going to the
       // weapon's colour as it fades.
       const fh = tFlash()

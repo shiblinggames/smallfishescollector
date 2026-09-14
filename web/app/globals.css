@@ -179,16 +179,32 @@ html, body {
    THE CARD carries its size here rather than inline so this media query can
    reach it at all: an inline style beats a media query outright, and the rule
    would otherwise need !important on every line. */
-.rc-enemy-plate { min-width: 160px; padding: 0.45rem 0.6rem 0.5rem 0.45rem; }
-.rc-enemy-portrait { width: 54px; height: 54px; }
+.rc-enemy-plate { --rise: 44px; --figure: 96px; min-width: 160px; padding: 0.45rem 0.6rem 0.5rem 0.45rem; }
 .rc-enemy-name { font-size: 0.9rem; }
+/* THE FIGURE. The portraits are full painted cutouts, and for a long time the
+   card showed a 54px circle of one's middle: a badge, and an empty ship under
+   it. Now the figure STANDS IN the card. A column `--figure` wide is kept clear
+   on the left; the figure hangs in a wrapper that starts `--rise` above the
+   plate and ends at its bottom edge, so the head clears the top of the card
+   and the body fades out at the waist inside it. The image is drawn larger
+   than the column and offset, which is what makes it a portrait (head and
+   shoulders) rather than a small whole person. `--rise` is read by the
+   docking code so the card is placed with its head, not its edge. */
+.rc-enemy-plate.has-figure { min-width: 232px; padding-left: calc(var(--figure) + 0.3rem); }
+.rc-enemy-figure {
+  position: absolute; left: 4px; top: calc(-1 * var(--rise)); bottom: 0;
+  width: var(--figure); overflow: hidden; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to top, transparent 0, #000 32%);
+  mask-image: linear-gradient(to top, transparent 0, #000 32%);
+}
+.rc-enemy-figure img { position: absolute; left: -22%; top: -2%; width: 144%; height: auto; max-width: none; }
 
 @media (max-width: 430px) {
   .gauntlet-depthbar .db-word { display: none; }
   /* Only over the sea. On a /raids/* route the card sits in the corner of its
      own stage with nothing stacked above it, and there it can have its room. */
-  .raid-oversea-stage .rc-enemy-plate { min-width: 118px; padding: 0.34rem 0.46rem 0.38rem 0.34rem; }
-  .raid-oversea-stage .rc-enemy-portrait { width: 38px; height: 38px; }
+  .raid-oversea-stage .rc-enemy-plate { --rise: 30px; --figure: 70px; min-width: 118px; padding: 0.34rem 0.46rem 0.38rem 0.34rem; }
+  .raid-oversea-stage .rc-enemy-plate.has-figure { min-width: 182px; padding-left: calc(var(--figure) + 0.25rem); }
   .raid-oversea-stage .rc-enemy-name { font-size: 0.78rem; }
 }
 
