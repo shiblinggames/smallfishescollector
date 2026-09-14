@@ -7818,6 +7818,38 @@ export default function RaidCombat({
             }
             return items
   })()
+
+  // ── THE STATUS MARKS, DECIDED ONCE ──────────────────────────────────────
+  //
+  // Each side's bespoke effects (burn, freeze, wards, the brace, the aim
+  // affliction) as chips, built here because each card draws them in one of
+  // two places: as a RING over the portrait when there is one, or as a row
+  // under the bar when there is not. See StatusRing for why a ring.
+  const enemyChips: BespokeChip[] = [
+    ...(aegisVis ? [{ key: 'aegis', color: '#e8d8a8', title: `${aegisVis.name} — a wall drinks every shot whole` }] : []),
+    ...(enemyBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn' }] : []),
+    ...(enemyFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — its turn is skipped' }] : []),
+    // The ward has to be VISIBLE or the timing is one-sided: he reads
+    // your burst, you never get to read his. Seeing it up is what lets
+    // you hold the killing blow until it lapses.
+    ...(wardUp ? [{ key: 'ward', color: '#d1495b', title: 'Death ward — the killing blow will not land while this holds' }] : []),
+    ...(foreseeUp ? [{ key: 'foresee', color: '#8b7bf0', title: 'Reading you — he slips everything you fire while this holds' }] : []),
+    ...(snareDodgeTurns > 0 ? [{ key: 'snare', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared — dodges can be fouled' }] : []),
+  ]
+  const playerChips: BespokeChip[] = [
+    // Laz's ward, with its fuse showing. This ability had no on-screen
+    // presence whatsoever before now: you spent your legendary and got
+    // nothing back until it either saved you or died with the enemy.
+    ...(vengeanceWardTurns > 0 ? [{ key: 'ward', color: '#d1495b', tone: 'buff' as const, turns: vengeanceWardTurns, title: `Vengeance Ward — a killing blow in the next ${vengeanceWardTurns} turn${vengeanceWardTurns === 1 ? '' : 's'} is cheated. Let it run out and it is wasted.` }] : []),
+    // Anchor brace — a one-hit damage CUT (not a shield pool), so it
+    // gets its OWN steel chip + iron-clamp icon, distinct from the
+    // shield glyphs and the cyan/amber shield-pool bar segments.
+    ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', color: '#9eb0cd', tone: 'buff' as const, title: `Braced — the next hit is cut ${Math.round((anchorReductionPct ?? 0) * 100)}% (one blow, softens not blocks; crits punch through)` }] : []),
+    ...(playerBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn (a crew heal puts it out)' }] : []),
+    ...(playerFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — your turn is skipped' }] : []),
+    ...(aimAffliction ? [{ key: 'aim', color: AIM_AFFLICTION_COLOR, tone: 'debuff' as const, turns: aimAfflictionRef.current?.passes, title: `${aimAffliction.name} — ${aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0)}` }] : []),
+  ]
+
   return (
     <div className={overSea ? 'raid-oversea-stage' : undefined} style={{
       display: 'flex', flexDirection: 'column',
@@ -8646,19 +8678,21 @@ export default function RaidCombat({
               // Mega-ready pips do, in the danger red the ultimate hits in.
               readyGlow={enemy.ultimate && !enemyChargesHidden && enemyCharges >= enemyMagazine ? '#ff4d6d' : null}
             />
-            {/* Ch4 statuses + bespoke effect chips (burn/freeze/snare) — one row. */}
-            <StatusBadgesRow statuses={enemyStatuses} bespoke={[
-              ...(aegisVis ? [{ key: 'aegis', color: '#e8d8a8', title: `${aegisVis.name} — a wall drinks every shot whole` }] : []),
-              ...(enemyBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn' }] : []),
-              ...(enemyFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — its turn is skipped' }] : []),
-              // The ward has to be VISIBLE or the timing is one-sided: he reads
-              // your burst, you never get to read his. Seeing it up is what lets
-              // you hold the killing blow until it lapses.
-              ...(wardUp ? [{ key: 'ward', color: '#d1495b', title: 'Death ward — the killing blow will not land while this holds' }] : []),
-              ...(foreseeUp ? [{ key: 'foresee', color: '#8b7bf0', title: 'Reading you — he slips everything you fire while this holds' }] : []),
-              ...(snareDodgeTurns > 0 ? [{ key: 'snare', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared — dodges can be fouled' }] : []),
-            ]} />
           </div>
+          {/* THE STATUSES RIDE THE PORTRAIT. A ring of marks over the art,
+              in a box the same shape as the art (first child, full width,
+              square), so a status appearing never adds a row and never moves
+              the card. Without a portrait there is nothing to ring, and the
+              row under the bar is what there is. */}
+          {enemy.portrait ? (
+            <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, width: '100%', aspectRatio: '1 / 1', pointerEvents: 'none' }}>
+              <StatusRing statuses={enemyStatuses} bespoke={enemyChips} r={41} start={-52} step={27} size={20} />
+            </div>
+          ) : (
+            <div className="rc-enemy-info" style={{ paddingTop: 0 }}>
+              <StatusBadgesRow statuses={enemyStatuses} bespoke={enemyChips} />
+            </div>
+          )}
         </motion.button>
 
         {/* Enemy boat — sits in the water (below the horizon), farther away than the player */}
@@ -9510,19 +9544,26 @@ export default function RaidCombat({
               when unset) so the in-fight portrait matches /profile and the
               leaderboard. */}
           {playerCharacterColor && (
-            <div style={{
-              flexShrink: 0,
-              borderRadius: '50%',
-              boxShadow: `0 0 10px rgba(96,165,250,0.4)`,
-              overflow: 'hidden',
-            }}>
-              <CharacterAvatar
-                characterColor={playerCharacterColor}
-                equippedHat={playerEquippedHat ?? null}
-                size={50}
-                bgColor={playerAvatarBg ?? undefined}
-                ringColor={playerAvatarBorder ?? undefined}
-              />
+            // The 3px margin is the ring's room: a mark on the rim of a 50px
+            // portrait reaches 34 from its centre, and the card's own padding
+            // gets it the rest of the way.
+            <div style={{ position: 'relative', flexShrink: 0, margin: 3 }}>
+              <div style={{
+                borderRadius: '50%',
+                boxShadow: `0 0 10px rgba(96,165,250,0.4)`,
+                overflow: 'hidden',
+              }}>
+                <CharacterAvatar
+                  characterColor={playerCharacterColor}
+                  equippedHat={playerEquippedHat ?? null}
+                  size={50}
+                  bgColor={playerAvatarBg ?? undefined}
+                  ringColor={playerAvatarBorder ?? undefined}
+                />
+              </div>
+              {/* YOUR STATUSES RIDE YOUR PORTRAIT — see the enemy's. Eight
+                  seats round the rim, from the top-right, clockwise. */}
+              <StatusRing statuses={playerStatuses} bespoke={playerChips} r={50} start={-45} step={45} size={17} />
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -9533,20 +9574,8 @@ export default function RaidCombat({
                 as a cyan segment — one row, no stacked bar. */}
             <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact shield={abyssalShieldHp} />
             <ChargesRow charges={playerCharges} max={playerMaxCharges} small readyGlow={canMega ? (megaAugment?.color ?? null) : null} />
-            {/* Ch4 statuses + bespoke effect chips on YOUR hull. */}
-            <StatusBadgesRow statuses={playerStatuses} bespoke={[
-              // Laz's ward, with its fuse showing. This ability had no on-screen
-              // presence whatsoever before now: you spent your legendary and got
-              // nothing back until it either saved you or died with the enemy.
-              ...(vengeanceWardTurns > 0 ? [{ key: 'ward', color: '#d1495b', tone: 'buff' as const, turns: vengeanceWardTurns, title: `Vengeance Ward — a killing blow in the next ${vengeanceWardTurns} turn${vengeanceWardTurns === 1 ? '' : 's'} is cheated. Let it run out and it is wasted.` }] : []),
-              // Anchor brace — a one-hit damage CUT (not a shield pool), so it
-              // gets its OWN steel chip + iron-clamp icon, distinct from the
-              // shield glyphs and the cyan/amber shield-pool bar segments.
-              ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', color: '#9eb0cd', tone: 'buff' as const, title: `Braced — the next hit is cut ${Math.round((anchorReductionPct ?? 0) * 100)}% (one blow, softens not blocks; crits punch through)` }] : []),
-              ...(playerBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn (a crew heal puts it out)' }] : []),
-              ...(playerFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — your turn is skipped' }] : []),
-              ...(aimAffliction ? [{ key: 'aim', color: AIM_AFFLICTION_COLOR, tone: 'debuff' as const, turns: aimAfflictionRef.current?.passes, title: `${aimAffliction.name} — ${aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0)}` }] : []),
-            ]} />
+            {/* Without a portrait there is no rim to ring; the row it is. */}
+            {!playerCharacterColor && <StatusBadgesRow statuses={playerStatuses} bespoke={playerChips} />}
           </div>
         </motion.button>
 
@@ -11605,6 +11634,81 @@ function StatusBadgesRow({ statuses, bespoke = [] }: { statuses: ActiveStatus[];
       })}
       {bespoke.map(b => chip(b.key, b.color, b.tone ?? 'debuff', b.turns, b.title))}
     </div>
+  )
+}
+
+/**
+ * ── STATUSES ON THE PORTRAIT, NOT UNDER IT ──────────────────────────────────
+ *
+ * The chip row under the HP bar had one defect that outweighed everything it
+ * did right: it was a ROW, and a row that appears is a row's worth of height
+ * the card did not have a moment ago. Every burn, every ward, every brace
+ * made the card taller and shoved the bars, so the one thing on screen you
+ * are meant to be able to find without looking would jump. A card's shape
+ * should not depend on what is happening to the ship.
+ *
+ * So the marks ride the portrait instead, on a ring: one mark sits at the
+ * upper right, and each one after it takes the next seat clockwise. The
+ * geometry is the caller's — `r` as a percentage of the box, so one component
+ * fits a 50px avatar rim and a 158px square painting — and the box is the
+ * caller's too; this only lays the marks in it. Nothing here has a size that
+ * depends on how many there are.
+ *
+ * The ring is drawn OVER the art and clear of the face, which sits top-centre
+ * in every painting; the seats start to the right of it and walk down and
+ * round.
+ */
+function StatusRing({ statuses, bespoke = [], r, start, step, size }: {
+  statuses: ActiveStatus[]; bespoke?: BespokeChip[]
+  /** Radius, as a percentage of the box's width, from its centre. */
+  r: number
+  /** First seat's angle in degrees, 0 = right, clockwise positive. */
+  start: number
+  /** Degrees between seats. */
+  step: number
+  /** The mark's diameter in px. */
+  size: number
+}) {
+  const marks: { key: string; color: string; turns?: number; title: string }[] = [
+    ...statuses.map(s => {
+      const def = STATUS_DEFS[s.id]
+      return { key: s.id, color: def.color, turns: s.turnsLeft, title: `${def.name} — ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})` }
+    }),
+    ...bespoke.map(b => ({ key: b.key, color: b.color, turns: b.turns, title: b.title })),
+  ]
+  if (marks.length === 0) return null
+  return (
+    <>
+      {marks.map((m, i) => {
+        const a = ((start + step * i) * Math.PI) / 180
+        return (
+          <motion.span key={m.key} title={m.title}
+            initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 22 }}
+            style={{
+              // Centred on its seat by margins, not a translate: the spring
+              // owns `transform` and would clobber one.
+              position: 'absolute',
+              left: `${50 + r * Math.cos(a)}%`, top: `${50 + r * Math.sin(a)}%`,
+              width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2,
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: m.color, background: 'rgba(6,12,20,0.94)',
+              border: `1.5px solid ${m.color}`,
+              boxShadow: `0 0 6px ${m.color}88, 0 1px 3px rgba(0,0,0,0.6)`,
+            }}>
+            <StatusGlyph icon={m.key} size={Math.round(size * 0.55)} />
+            {m.turns != null && (
+              <span className="font-karla font-800" style={{
+                position: 'absolute', right: -4, bottom: -4,
+                minWidth: 11, height: 11, padding: '0 2px', borderRadius: 999,
+                fontSize: '0.5rem', lineHeight: '11px', textAlign: 'center',
+                color: '#0a0f18', background: m.color,
+              }}>{m.turns}</span>
+            )}
+          </motion.span>
+        )
+      })}
+    </>
   )
 }
 
