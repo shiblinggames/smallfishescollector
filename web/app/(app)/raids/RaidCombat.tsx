@@ -8496,9 +8496,9 @@ export default function RaidCombat({
           {/* THE ART. See `.rc-enemy-art` in globals.css. The figure is a
               cutout on transparency, so it gets a ground: a soft pool of the
               card's accent behind the head, which is also where the
-              elite/boss/phase colour lives now instead of a ring. Drawn wider
-              than the frame and anchored at the top so the crop is head and
-              chest, and a scrim climbs the lower half for the name to sit on. */}
+              elite/boss/phase colour lives now instead of a ring. The whole
+              painting, fitted; a scrim climbs the lower third for the name to
+              sit on. */}
           {enemy.portrait && (
             <div className="rc-enemy-art" aria-hidden style={{
               position: 'relative', flexShrink: 0, overflow: 'hidden',
@@ -8511,12 +8511,13 @@ export default function RaidCombat({
             }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={enemy.portrait} alt="" draggable={false} decoding="async" style={{
-                position: 'absolute', left: '-19%', top: '-1%', width: '138%', maxWidth: 'none',
+                position: 'absolute', inset: 0, width: '100%', height: '100%',
+                objectFit: 'contain', objectPosition: 'center top',
                 filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.55))',
               }} />
               <div style={{
-                position: 'absolute', left: 0, right: 0, bottom: 0, height: '52%',
-                background: 'linear-gradient(to top, rgba(6,12,20,1) 0%, rgba(6,12,20,0.72) 40%, rgba(6,12,20,0) 100%)',
+                position: 'absolute', left: 0, right: 0, bottom: 0, height: '36%',
+                background: 'linear-gradient(to top, rgba(6,12,20,1) 0%, rgba(6,12,20,0.55) 45%, rgba(6,12,20,0) 100%)',
               }} />
             </div>
           )}
@@ -10606,25 +10607,38 @@ function EnemyStatsPopup({
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
 
-        {/* Header — portrait + name. Right-padded so the name clears the X. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, paddingRight: 32 }}>
+        {/* ── THE PORTRAIT, FIRST ──────────────────────────────────────
+            The sheet opens on the enemy, not on a table with a badge in the
+            corner. A full-bleed panel across the top of the card (pulled out
+            through the card's own padding so it meets the corners), the whole
+            painting fitted into it on a pool of the accent, and a scrim up
+            the lower third with the eyebrow and the name set on it. The X
+            sits over the art; it carries its own ground. */}
+        <div style={{
+          position: 'relative', overflow: 'hidden',
+          margin: '-1.1rem -1rem 14px', borderRadius: '20px 20px 0 0',
+          height: 'clamp(230px, 36vh, 320px)',
+          background: `radial-gradient(ellipse 62% 58% at 50% 40%, ${
+            isBoss ? 'rgba(251,191,36,0.34)' : isElite ? 'rgba(139,92,246,0.42)' : 'rgba(64,132,160,0.36)'
+          } 0%, rgba(12,6,6,0) 100%)`,
+        }}>
           {enemy.portrait && (
-            <div style={{
-              flexShrink: 0, width: 60, height: 60, borderRadius: '50%',
-              border: `2px solid ${isBoss ? '#fbbf24' : ENEMY_COLOR}`,
-              boxShadow: `0 0 10px ${isBoss ? 'rgba(251,191,36,0.45)' : 'rgba(239,68,68,0.4)'}`,
-              overflow: 'hidden',
-              background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(20,40,60,0.85) 70%)',
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={enemy.portrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={enemy.portrait} alt="" draggable={false} decoding="async" style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              objectFit: 'contain', objectPosition: 'center bottom',
+              filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.6))',
+            }} />
           )}
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', color: isBoss ? '#fbbf24' : '#c4a96a', letterSpacing: '0.14em', marginBottom: 3 }}>
-              {isBoss ? 'Boss' : 'Enemy'}
+          <div style={{
+            position: 'absolute', left: 0, right: 0, bottom: 0, height: '46%',
+            background: 'linear-gradient(to top, #0e0707 0%, rgba(14,7,7,0.78) 42%, rgba(14,7,7,0) 100%)',
+          }} />
+          <div style={{ position: 'absolute', left: '1rem', right: '1rem', bottom: '0.75rem' }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', color: isBoss ? '#fbbf24' : isElite ? '#c4b5fd' : '#c4a96a', letterSpacing: '0.14em', marginBottom: 3 }}>
+              {isBoss ? 'Boss' : isElite ? 'Elite' : 'Enemy'}
             </p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#f0ede8', lineHeight: 1.05, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
               {enemy.name}
             </p>
           </div>

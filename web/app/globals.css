@@ -179,14 +179,15 @@ html, body {
    THE CARD carries its size here rather than inline so this media query can
    reach it at all: an inline style beats a media query outright, and the rule
    would otherwise need !important on every line. */
-.rc-enemy-plate { --art: 118px; width: 158px; }
+.rc-enemy-plate { width: 158px; }
 /* THE CARD IS THE PORTRAIT. The enemy's painted figure fills the top of the
-   card edge to edge, cropped to head and chest on a ground tinted the card's
+   card edge to edge, WHOLE — the art is square, like the paintings, and the
+   figure is fitted inside it, not cropped — on a ground tinted the card's
    accent; a scrim rises from the bottom of the art and the name, HP and
-   statuses sit on it, under the face. Nothing hangs outside the frame. The
+   statuses sit on it, under the figure. Nothing hangs outside the frame. The
    badge-and-a-row layout it replaces showed a 54px circle of the figure's
    middle and left the fight looking like a fight against an empty ship. */
-.rc-enemy-art { height: var(--art); }
+.rc-enemy-art { aspect-ratio: 1 / 1; }
 .rc-enemy-info { padding: 0 0.55rem 0.5rem; }
 .rc-enemy-name { font-size: 0.84rem; }
 
@@ -194,7 +195,7 @@ html, body {
   .gauntlet-depthbar .db-word { display: none; }
   /* Only over the sea. On a /raids/* route the card sits in the corner of its
      own stage with nothing stacked above it, and there it can have its room. */
-  .raid-oversea-stage .rc-enemy-plate { --art: 88px; width: 126px; }
+  .raid-oversea-stage .rc-enemy-plate { width: 126px; }
   .raid-oversea-stage .rc-enemy-info { padding: 0 0.42rem 0.4rem; }
   .raid-oversea-stage .rc-enemy-name { font-size: 0.72rem; }
 }
