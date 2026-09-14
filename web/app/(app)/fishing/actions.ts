@@ -871,7 +871,14 @@ export async function reelIn(
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
-  if (!profile) return { error: 'Data not found' }
+  if (!profile) {
+    // NOT "Data not found". That string was going to the player, painted over
+    // the sea, and it says nothing to anyone who does not have this file open.
+    // The cast is NOT consumed here — the token is claimed further down — so
+    // the honest thing to say is "try again", because trying again works.
+    console.error('[reelIn] profile read failed', { userId: user.id })
+    return { error: 'The line went slack. Reel in again.' }
+  }
 
   // THE PRIMEVAL EYE. Resolved HERE, at the top of the grant, because its
   // tiers touch three different things further down (the golden roll, the XP,
@@ -888,6 +895,35 @@ export async function reelIn(
   // we rebind them to the token, so a caller can't pick a legendary, force a
   // ×100 jackpot, or reel without casting.
   const token = profile.pending_cast as PendingCast | null
+  if (!token || token.fishId === CRATE_FISH_ID) return { caught: false }
+
+  /**
+   * ── THE SPECIES IS READ BEFORE THE TOKEN IS SPENT ─────────────────────────
+   *
+   * This read used to sit AFTER the claim, and the claim is what consumes the
+   * cast. So any failure here — a dropped connection, a species row that is
+   * somehow not there — burned the cast and granted nothing: the player reeled
+   * in, watched the fish land, and got an error where the catch should have
+   * been. One lost fish per failure, and no way to tell afterwards that it had
+   * happened.
+   *
+   * Reading first costs nothing (it mutates nothing, and a forged `fishId`
+   * cannot reach it — the id comes off the server's own token, never the
+   * caller's argument) and it means a failure leaves the cast exactly where it
+   * was. Reel again and the same fish is still on the hook.
+   */
+  const { data: fish } = await admin.from('fish_species').select('*').eq('id', token.fishId).single()
+  if (!fish) {
+    console.error('[reelIn] species read failed', { userId: user.id, fishId: token.fishId })
+    return { error: 'The line went slack. Reel in again.' }
+  }
+
+  // AND NOW IT IS SPENT. Atomic and one-shot: the null-ing gates on
+  // `pending_cast is not null`, so of any concurrent reelIn calls exactly one
+  // wins, and each legitimate cast yields at most one catch. The client's
+  // fishId / doubleCatch / jackpotMultiplier arguments are IGNORED — they are
+  // rebound to the token, so a caller cannot pick a legendary, force a x100
+  // jackpot, or reel without casting.
   const { data: claimed } = await admin
     .from('profiles')
     .update({ pending_cast: null, catch_pending: false })
@@ -895,14 +931,11 @@ export async function reelIn(
     .not('pending_cast', 'is', null)
     .select('id')
     .maybeSingle()
-  if (!token || !claimed || token.fishId === CRATE_FISH_ID) return { caught: false }
+  if (!claimed) return { caught: false }
   fishId = token.fishId
   doubleCatch = token.doubleCatch
   jackpotMultiplier = token.jackpotMult
   const lockedCatchQty = token.catchQty ?? 1   // Locked-In Rod guaranteed haul (3 at streak 5+)
-
-  const { data: fish } = await admin.from('fish_species').select('*').eq('id', fishId).single()
-  if (!fish) return { error: 'Data not found' }
 
   // Fishing Renown (post-100): a tiny XP multiplier on every catch (Wisdom).
   const renownXpMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).xpMult

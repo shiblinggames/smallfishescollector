@@ -11540,11 +11540,16 @@ hullRef={hullRefFor(t.key)} />
       {/* HANDED THE ROW GEOMETRY RATHER THAN GUESSING AT IT. Both of this
           badge's offsets used to be constants, and constants cannot know that
           a HUD disc is 26px on a phone and 40px on a monitor. See its note. */}
-      <HotspotBadge spot={inSpot} compact={!!fishingIn}
-        hudSize={hudSize} lowered={hudSize === 26} />
+      {/* Only when the chart owns that corner. While fishing it is handed to
+          FishingHere and sits in its row — see the badge's `inline` note. */}
+      {!fishingIn && (
+        <HotspotBadge spot={inSpot} compact={false}
+          hudSize={hudSize} lowered={hudSize === 26} />
+      )}
 
       {fishingIn && (
         <FishingHere
+          hotspotChip={inSpot ? <HotspotBadge spot={inSpot} compact inline /> : null}
           zone={fishingIn.id}
           bait={activeBait}
           baitBonus={getBait(activeBait).catchZoneBonus}
@@ -15676,12 +15681,14 @@ const HotspotRing = memo(function HotspotRing({ h }: { h: Hotspot }) {
  * built out of. A layout constant that encodes the size of something else is a
  * collision waiting for a breakpoint.
  */
-function HotspotBadge({ spot, compact, hudSize, lowered }: {
+function HotspotBadge({ spot, compact, hudSize, lowered, inline }: {
   spot: Hotspot | null; compact: boolean
+  /** Rendered INSIDE somebody else's row rather than placed on the overlay. */
+  inline?: boolean
   /** A HUD disc's diameter, which is what sets how far down the row reaches. */
-  hudSize: number
+  hudSize?: number
   /** Whether the water's name has been pushed to the second row. */
-  lowered: boolean
+  lowered?: boolean
 }) {
   const [left, setLeft] = useState('')
   useEffect(() => {
@@ -15698,7 +15705,7 @@ function HotspotBadge({ spot, compact, hudSize, lowered }: {
   }, [spot])
 
   /** The underside of the HUD disc row, which both placements have to clear. */
-  const hudBottom = 18 + hudSize
+  const hudBottom = 18 + (hudSize ?? 26)
   /** And of the water's name, which only the centred one sits under. The name
    *  is 1.35rem of Cinzel over a 1px rule at +5, so a shade under 34px. */
   const bannerBottom = (lowered ? 56 : 18) + 34
@@ -15717,7 +15724,24 @@ function HotspotBadge({ spot, compact, hudSize, lowered }: {
           exit={{ opacity: 0, y: -8, scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 340, damping: 28 }}
           style={{
-            position: 'absolute', zIndex: Z.hud, pointerEvents: 'none',
+            /**
+             * ── INLINE IS NOT A PLACEMENT, IT IS THE ABSENCE OF ONE ────────
+             *
+             * COMPACT used to be `position: absolute; left: 12` at a guessed
+             * offset below the HUD disc row — and while you are fishing, that
+             * band belongs to FishingHere, which puts an XP bar and a row of
+             * state chips there in normal flow. The two knew nothing about each
+             * other and landed on top of each other: the hotspot's name read
+             * THROUGH the Daylight pill.
+             *
+             * The note on this badge's other two offsets already says why a
+             * constant cannot know where a row ends. The answer is not a better
+             * constant, it is to stop placing it: while fishing it is handed to
+             * FishingHere and sits IN that row, beside the other two things
+             * that describe the state of the world.
+             */
+            ...(inline ? { position: 'relative' as const, display: 'flex' } : {
+            position: 'absolute' as const, zIndex: Z.hud, pointerEvents: 'none' as const,
             // COMPACT sits top-LEFT under the phase glyph, out of the centre
             // column entirely — the catch card, the jackpot pill and the reroll
             // button all live down the middle and there is no room there.
@@ -15725,6 +15749,7 @@ function HotspotBadge({ spot, compact, hudSize, lowered }: {
             ...(compact ? { top: below, left: 12, display: 'flex' } : {
               top: below, left: 0, right: 0,
               display: 'flex', justifyContent: 'center', padding: '0 1rem',
+            }),
             }),
           }}>
           <div style={{

@@ -364,6 +364,7 @@ const MENU_VAL: React.CSSProperties = {
 }
 
 export default function FishingHere({
+  hotspotChip,
   zone, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
   seaPhase, baitBag, onBaitChange, rack, look, onLookChange, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onReel,
@@ -371,6 +372,8 @@ export default function FishingHere({
   onHooked, onXp, onOpenAlmanac,
   spritesReady, onClose,
 }: {
+  /** The hotspot pill, when you are floating in one. See the row it lands in. */
+  hotspotChip?: React.ReactNode
   zone: string
   bait: string
   baitBonus: number
@@ -1798,6 +1801,14 @@ export default function FishingHere({
               fontSize: '0.66rem', letterSpacing: '0.12em', color: 'rgba(214,232,240,0.75)', whiteSpace: 'nowrap',
             }}>{PHASE_LABEL[seaPhase]}</span>
           </div>
+
+          {/* ── AND THE WATER YOU ARE IN ──────────────────────────────
+              Handed down by the chart rather than placed by it. It used to
+              position itself at a guessed offset below the HUD discs, which is
+              where THIS row is — so the hotspot's name read straight through
+              the Daylight pill. It belongs beside the other two things that
+              say what is true about the world right now. */}
+          {hotspotChip}
 
           {/* The auto toggle. Shown only when the item is actually equipped,
               and a toggle rather than always-on because handing your rod to a
