@@ -367,7 +367,10 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       // the vignette and the ceremonies.
       // The painted conditions ride OVER the hulls and under the rain. See
       // AbilityFx.over for why they cannot share `view`.
-      world.addChild(spells.over, weather.air, scenery.near)
+      // The guns' fire and the spells' painted set go OVER the hulls: a
+      // fireball centred on a ship and drawn under her is a fireball nobody
+      // sees.
+      world.addChild(guns.over, spells.over, weather.air, scenery.near)
 
       // Anchors are read by the fight EVERY FRAME through a ref, so neither
       // side re-renders to keep a hitsplat over a hull.

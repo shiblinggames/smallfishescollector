@@ -63,6 +63,8 @@ const SPLASH_CAP = 14
 const FIRE_CAP = 8
 const STAR_CAP = 32
 const EMBER_CAP = 48
+/** Lances. Three bars per railgun shot; two shots never overlap. */
+const BEAM_CAP = 8
 
 let puffTex: Texture | null = null
 let ringTex: Texture | null = null
@@ -160,6 +162,48 @@ function shardTexture(PIXI: typeof import('pixi.js')): Texture {
   return shardTex
 }
 
+let beamTex: Texture | null = null
+/**
+ * THE LANCE. A bar with a peaked profile across it and soft ends: the one
+ * thing here drawn LONG. It exists because a puff stretched twenty times along
+ * one axis is bright in the middle and dark at both ends, which is a lozenge,
+ * and a chain of puffs is a string of beads; neither is a beam.
+ */
+function beamTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (beamTex) return beamTex
+  const W = 256, H = 32
+  const c = document.createElement('canvas')
+  c.width = W; c.height = H
+  const g = c.getContext('2d')!
+  const v = g.createLinearGradient(0, 0, 0, H)
+  v.addColorStop(0.0, 'rgba(255,255,255,0)')
+  v.addColorStop(0.3, 'rgba(255,255,255,0.35)')
+  v.addColorStop(0.5, 'rgba(255,255,255,1)')
+  v.addColorStop(0.7, 'rgba(255,255,255,0.35)')
+  v.addColorStop(1.0, 'rgba(255,255,255,0)')
+  g.fillStyle = v
+  g.fillRect(0, 0, W, H)
+  // Soft at the muzzle end, and a longer fade past the target: spent energy.
+  g.globalCompositeOperation = 'destination-in'
+  const h = g.createLinearGradient(0, 0, W, 0)
+  h.addColorStop(0.00, 'rgba(255,255,255,0)')
+  h.addColorStop(0.06, 'rgba(255,255,255,1)')
+  h.addColorStop(0.86, 'rgba(255,255,255,1)')
+  h.addColorStop(1.00, 'rgba(255,255,255,0)')
+  g.fillStyle = h
+  g.fillRect(0, 0, W, H)
+  beamTex = PIXI.Texture.from(c)
+  return beamTex
+}
+
+type Beam = {
+  p: Particle
+  x: number; y: number
+  angle: number; len: number; w: number
+  age: number; life: number
+  alpha: number
+}
+
 type Puff = {
   p: Particle
   x: number; y: number
@@ -209,7 +253,15 @@ type Ring = {
 export type ImpactKind = 'hit' | 'crit' | 'miss'
 
 export type GunFx = {
+  /** Everything that lies ON the water. Goes UNDER the hulls. */
   view: Container
+  /**
+   * WHAT HAPPENS ABOVE THE HULLS. A fireball centred on a hull that is drawn
+   * under the hull is a fireball nobody sees, which is exactly what happened
+   * the first day the painted set shipped. Flash, fire, star, coals, painted
+   * smoke and the lance all live here; the host adds it above the ships.
+   */
+  over: Container
   /**
    * A HULL FIRES. `x,y` is where she is; `tx,ty` is what she is shooting at,
    * which is all the smoke needs to know to roll off the right side of her.
@@ -270,6 +322,8 @@ export type GunFx = {
 export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
   const view: Container = new PIXI.Container()
   view.eventMode = 'none'
+  const over: Container = new PIXI.Container()
+  over.eventMode = 'none'
 
   // Three layers, and the order is the picture: rings are IN the water, spray
   // and smoke are above it. Rings first so a droplet can fall in front of the
@@ -319,10 +373,17 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
   view.addChild(shardLayer)
   view.addChild(smokeLayer)
   view.addChild(sprayLayer)
-  view.addChild(flashLayer)
+  // Above the hulls: the flash, and the lance, which is the one thing here
+  // that turns, so its container pays for rotation.
+  const beamLayer: ParticleContainer = new PIXI.ParticleContainer({
+    dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
+  })
+  beamLayer.blendMode = 'add'
+  over.addChild(flashLayer)
+  over.addChild(beamLayer)
 
   const pt = puffTexture(PIXI), rt = ringTexture(PIXI), st = sparkTexture(PIXI)
-  const sht = shardTexture(PIXI)
+  const sht = shardTexture(PIXI), bt = beamTexture(PIXI)
 
   /** A ring buffer over a pool: the oldest is always the one recycled. */
   const ring = <T>(list: T[]) => { let n = 0; return () => { const v = list[n]; n = (n + 1) % list.length; return v } }
@@ -350,8 +411,11 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
   // the water and is gone.
   const shards: Debris[] = []; fill(shards, SHARD_CAP, sht, shardLayer, p => wreck(p, 32))
   const slicks: Puff[] = []; fill(slicks, SLICK_CAP, pt, slickLayer, p => puff(p, 64), 0x5a5f52)
+  // A lance is anchored at the MUZZLE and drawn out along its angle.
+  const beams: Beam[] = []
+  fill(beams, BEAM_CAP, bt, beamLayer, p => { p.anchorX = 0; return { p, x: 0, y: 0, angle: 0, len: 0, w: 0, age: 1, life: 1, alpha: 0 } })
   const tSmoke = ring(smoke), tFlash = ring(flashes), takeDrop = ring(drops), takeRing = ring(rings)
-  const takeDebris = ring(debris), takeShard = ring(shards), takeSlick = ring(slicks)
+  const takeDebris = ring(debris), takeShard = ring(shards), takeSlick = ring(slicks), takeBeam = ring(beams)
 
   // ── THE PAINTED SET ──────────────────────────────────────────────────────
   //
@@ -397,10 +461,10 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
     fill(pFire, FIRE_CAP, all.fireball, paintAdd, p => puff(p, 128))
     fill(pStar, STAR_CAP, all.spark, paintAdd, p => puff(p, 150))
     fill(embers, EMBER_CAP, all.ember, paintAdd, p => wreck(p, 128))
-    // Painted smoke and water sit where the dot smoke does; painted light
-    // goes over everything.
-    view.addChildAt(paint, view.getChildIndex(smokeLayer) + 1)
-    view.addChild(paintAdd)
+    // Both above the hulls: painted smoke and water under the flash, painted
+    // light over everything.
+    over.addChildAt(paint, 0)
+    over.addChild(paintAdd)
     fx = all
   }).catch(() => { /* the dots keep drawing */ })
 
@@ -531,6 +595,22 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       f.p.scaleY = size / f.div
       f.p.rotation += f.spin * dt
       f.p.alpha = f.alpha * Math.min(1, t * 10) * (1 - t)
+    }
+  }
+  const stepBeams = (dt: number) => {
+    for (const b of beams) {
+      if (b.age >= b.life) { if (b.p.alpha) b.p.alpha = 0; continue }
+      b.age += dt
+      if (b.age < 0) { if (b.p.alpha) b.p.alpha = 0; continue }
+      const t = b.age / b.life
+      b.p.x = b.x
+      b.p.y = b.y - 30 / GROUND
+      b.p.rotation = b.angle
+      b.p.scaleX = b.len / 256
+      // Full width the frame it fires and thinning as it dies: a beam does
+      // not swell, it cuts and is gone.
+      b.p.scaleY = (b.w / 32) * (1 - 0.6 * t)
+      b.p.alpha = b.alpha * Math.min(1, b.age * 40) * (1 - t) * (1 - t)
     }
   }
   const stepSplash = (list: Puff[], dt: number, lit: number) => {
@@ -669,6 +749,7 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
 
   return {
     view,
+    over,
     night(d) { dark = d },
 
     fire(x, y, tx, ty) {
@@ -1075,21 +1156,43 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       // THE CHARGE. Three swells at the muzzle, each brighter, white going
       // over to the weapon's own colour — energy being gathered, which is
       // what makes the instant afterwards read as release.
+      // Soft blooms, not the painted star: a star is a spark, and a railgun
+      // charging is a swell of light with no edge at all.
       for (let i = 0; i < 3; i++) {
-        const f = star(mx, my, 60 + i * 40, 0.13, i * 0.11, i === 2 ? tint : 0xffffff)
-        f.h = 36; f.grow = 60; f.alpha = 0.5 + i * 0.2
+        const f = tFlash()
+        f.x = mx; f.y = my
+        f.h = 36; f.vh = 0; f.vx = 0; f.vy = 0
+        f.age = -i * 0.11; f.life = 0.13
+        f.size = 60 + i * 40; f.grow = 60
+        f.alpha = 0.5 + i * 0.2
+        f.p.tint = i === 2 ? tint : 0xffffff
       }
 
-      // THE LANCE. A chain of additive cores down the whole line, tapering
-      // toward the target, all appearing on the same frame — a beam is the
-      // one thing here that must NOT stagger along its length.
+      // THE LANCE. Three bars on one line, all on the same frame: wide and
+      // faint in the weapon's colour, a tighter brighter one inside it, and a
+      // white core, from the muzzle to well past the target. A beam is the
+      // one thing here that must NOT stagger along its length, and the one
+      // thing drawn LONG — it is a bar, not a chain of anything.
       const span = len + 90
-      const N = 14
-      for (let i = 0; i < N; i++) {
-        const t = i / (N - 1)
-        const f = star(mx + ux * span * t, my + uy * span * t, 64 - t * 30, 0.24, T, i % 3 === 0 ? 0xffffff : tint)
-        f.h = 30; f.grow = -40; f.alpha = 0.9
+      const ang = Math.atan2(dy, dx)
+      const lance = (w: number, alpha: number, life: number, t: number) => {
+        const b = takeBeam()
+        b.x = mx; b.y = my; b.angle = ang; b.len = span; b.w = w
+        b.age = -T; b.life = life; b.alpha = alpha
+        b.p.tint = t
       }
+      lance(130, 0.30, 0.36, tint)
+      lance(50, 0.75, 0.32, tint)
+      lance(16, 1.0, 0.28, 0xffffff)
+      // And where it lands: one hot bloom on the hull, white going to the
+      // weapon's colour as it fades.
+      const fh = tFlash()
+      fh.x = tx; fh.y = ty
+      fh.h = 30; fh.vh = 0; fh.vx = 0; fh.vy = 0
+      fh.age = -T; fh.life = 0.3
+      fh.size = 120; fh.grow = 220
+      fh.alpha = 0.9
+      fh.p.tint = 0xffffff
       // The water under it kicks: spray lifting off the surface along the
       // path, which is how a beam over the sea says how hot it is.
       for (let i = 1; i < 6; i++) {
@@ -1269,6 +1372,7 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       stepSmoke(smoke, dt, lit); stepSmoke(pSmoke, dt, lit)
       stepFlash(flashes, dt); stepFlash(pFlash, dt); stepFlash(pStar, dt)
       stepFire(pFire, dt)
+      stepBeams(dt)
       stepSplash(pSplash, dt, lit)
       stepDrops(dt, lit)
       stepDebris(dt, lit)
@@ -1280,6 +1384,7 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
     destroy() {
       dead = true
       view.destroy({ children: true })
+      over.destroy({ children: true })
     },
   }
 }

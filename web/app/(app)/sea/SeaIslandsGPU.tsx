@@ -766,7 +766,9 @@ export default function SeaIslandsGPU({
       // unambiguously magic, and it should read over the powder smoke rather
       // than through it.
       const spells: AbilityFx = makeAbilityFx(PIXI)
-      world.addChild(spells.view, spells.over)
+      world.addChild(spells.view)
+      // `guns.over` and `spells.over` go in AFTER the marks, below: they are
+      // the part of a fight that happens on a hull, and a hull is a mark.
       // THE BAYS' BOUNDARIES, as broken water. In the world with everything
       // else lying on the plane, and UNDER the boats: a shoal is water, and a
       // hull crossing in front of one is right.
@@ -1221,6 +1223,11 @@ export default function SeaIslandsGPU({
       // always should have been: plain lists, with no bearing on paint order.
       marks.sortableChildren = true
       world.addChild(marks)
+      // OVER THE MARKS: the guns' fire and the spells' painted set. A fireball
+      // centred on an enemy hull and drawn under her is a fireball nobody
+      // sees. (Her own boat lives on the stage, above the world; a strike on
+      // her still shows around her, not through her.)
+      world.addChild(guns.over, spells.over)
       /** A bucket of marks with a shared reach. Culling only — see the row. */
       type MarkCol = {
         list: Swayer[]
