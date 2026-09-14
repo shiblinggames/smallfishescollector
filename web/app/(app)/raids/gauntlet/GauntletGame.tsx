@@ -2299,7 +2299,22 @@ export default function GauntletGame(props: GauntletGameProps) {
   }
 
   function pushOn() {
-    setConfluenceUnlocked(null) // the "just unlocked" highlight is spent once you dive
+    /**
+     * ── NOTHING THE BREATHER IS DRAWN FROM CHANGES WHILE IT IS UP ────────────
+     *
+     * The same fault as the boon draft, in a quieter dress. `setPhase` starts a
+     * 200ms fade and commits behind it, so every setState fired here landed
+     * while the breather was still ON SCREEN: the sounding line went, the deal
+     * went, and the dock — three big circles — jumped up by the height of the
+     * row that had just disappeared. That is what "it flashes those three
+     * action buttons slightly higher" is.
+     *
+     * So they are collected and handed to setPhase, which runs them inside the
+     * veil beside the commit. Refs are untouched: nothing renders from them.
+     */
+    const settle: (() => void)[] = []
+    const commitSettle = () => { for (const f of settle) f() }
+    settle.push(() => setConfluenceUnlocked(null)) // spent once you dive
     // Crushing Depth (and any future drain curse): the hull sheds a slice of
     // max HP before each new fight. Clamped to leave at least 1 — the curse
     // squeezes how deep you can go, but the sea never lands the kill itself.
@@ -2307,19 +2322,22 @@ export default function GauntletGame(props: GauntletGameProps) {
     if (drainPct > 0) {
       const drained = Math.max(1, Math.round(playerHPRef.current - hpMax * drainPct))
       playerHPRef.current = drained
-      setPlayerHP(drained)
+      settle.push(() => setPlayerHP(drained))
     }
     // Fight the fight Sounding Line pre-rolled at the breather (fallback-roll if
     // somehow unset). Clear the peek so the next breather rolls fresh.
     const next = peekFightRef.current ?? generateFight(rollStateRef.current, skipOffset, termFxRef.current, props.variant)
     peekFightRef.current = null
-    setPeekFight(null)
+    settle.push(() => setPeekFight(null))
     // Snapshot whether this fight opens with freshly restored abilities, then
     // clear the accumulator for the next stretch.
-    setFightOpensRefreshed(crewRefreshedRef.current)
+    const refreshed = crewRefreshedRef.current
     crewRefreshedRef.current = false
-    setFight(next)
-    setOffer(null)   // no deal. The server counts this as a refusal and sweetens the next one.
+    settle.push(() => {
+      setFightOpensRefreshed(refreshed)
+      setFight(next)
+      setOffer(null) // no deal. The server counts it as a refusal and sweetens the next.
+    })
     // Don's Contracts — a chance-based "job" on the hull you're diving into.
     // Additive: this fires at the descend (after every other between-fight beat),
     // so it never replaces a boon/curse/market. One active contract at a time.
@@ -2333,15 +2351,15 @@ export default function GauntletGame(props: GauntletGameProps) {
         // greediest, so the term is a genuine coin-flip on every job rather than
         // a quiet buff (all low stakes) or an instant run-ender (all high ones).
         if (termFxRef.current.forceContracts) {
+          commitSettle()
           takeContract(offers[1])
           return
         }
-        setContractOffer({ kind, offers })
-        setPhase('contract')
+        setPhase('contract', () => { commitSettle(); setContractOffer({ kind, offers }) })
         return
       }
     }
-    setPhase('descending')
+    setPhase('descending', commitSettle)
   }
 
   function cashOut(takeOffer = false) {
@@ -4414,21 +4432,42 @@ export default function GauntletGame(props: GauntletGameProps) {
                     ...(wide ? { height: '100%', display: 'flex', flexDirection: 'column' as const } : null),
                     padding: wide ? '1.25rem 1.15rem 1.15rem 1.3rem' : '0.9rem 1rem 0.9rem 1.2rem',
                     borderRadius: 16,
-                    // Firm dark base so the card reads over the detailed backdrop;
-                    // the rarity tint stays as an accent up top.
+                    /**
+                     * ── A SALVAGED PLATE, NOT A RARITY GRADIENT ───────────
+                     *
+                     * It was a coloured wash pouring down from the top edge
+                     * with a six-pixel bar of the same colour glued to the
+                     * left. That pairing — top-to-bottom tint plus a vertical
+                     * accent stripe — is the house style of every generated
+                     * card on the internet, and it is the one thing this game
+                     * has no business looking like.
+                     *
+                     * The room is a drowned one. So the card is a dark plate
+                     * lit from ABOVE LEFT, the way everything else in this
+                     * fight is lit, and the rarity is in the LIGHT falling on
+                     * it rather than in a colour poured over it: a soft pool
+                     * at the top-left corner, a hairline on the top edge where
+                     * it catches, and a rim that gets brighter as the find gets
+                     * rarer. No stripe.
+                     */
                     background: banArmed
-                      ? 'linear-gradient(180deg, rgba(220,70,70,0.24) 0%, rgba(19,8,10,0.92) 58%)'
-                      : `linear-gradient(180deg, ${rm.color}30 0%, rgba(7,12,19,0.9) 58%)`,
-                    border: `1.5px solid ${banArmed ? 'rgba(240,120,120,0.85)' : `${rm.color}${legendary ? 'dd' : rare ? '99' : '66'}`}`,
+                      ? 'radial-gradient(120% 90% at 18% 0%, rgba(220,70,70,0.22) 0%, transparent 58%), linear-gradient(180deg, rgba(24,11,13,0.96), rgba(11,6,7,0.97))'
+                      : `radial-gradient(120% 90% at 18% 0%, ${rm.color}${legendary ? '30' : rare ? '24' : '18'} 0%, transparent 58%), linear-gradient(180deg, rgba(11,17,25,0.95), rgba(5,9,15,0.97))`,
+                    border: `1px solid ${banArmed ? 'rgba(240,120,120,0.85)' : `${rm.color}${legendary ? 'b0' : rare ? '7a' : '4a'}`}`,
                     color: '#eef7f4', cursor: 'pointer',
-                    boxShadow: banArmed ? '0 0 22px rgba(220,70,70,0.35)'
-                             : legendary ? `0 0 40px ${rm.color}5a, inset 0 0 38px ${rm.color}1c`
-                             : rare       ? `0 0 24px ${rm.color}36`
-                             : `0 0 14px ${rm.color}20`,
+                    boxShadow: banArmed
+                      ? '0 0 22px rgba(220,70,70,0.35), inset 0 1px 0 rgba(255,180,180,0.3)'
+                      : [
+                          // The catch on the top edge: one hairline, the same
+                          // trick the deck and the aim bar use to sit an object
+                          // IN a scene rather than on it.
+                          `inset 0 1px 0 ${rm.color}${legendary ? '88' : rare ? '66' : '44'}`,
+                          'inset 0 -14px 24px rgba(0,0,0,0.45)',
+                          '0 10px 26px rgba(0,0,0,0.55)',
+                          legendary ? `0 0 34px ${rm.color}44` : rare ? `0 0 20px ${rm.color}2c` : `0 0 12px ${rm.color}18`,
+                        ].join(', '),
                   }}
                 >
-                  {/* Rarity edge */}
-                  <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: `linear-gradient(180deg, ${rm.color}, ${rm.color}33)`, boxShadow: `0 0 16px ${rm.color}` }} />
                   {/* NO SWEEPING SHEEN. A bar of light crossing the card on a
                       loop is the shop-window shine every gacha reaches for,
                       and on a screen where you are reading three descriptions
@@ -4632,20 +4671,25 @@ export default function GauntletGame(props: GauntletGameProps) {
                 </motion.button>
                 </motion.div>
 
-                {/* TAKEN. One word, stamped over the card you chose, for as long
-                    as the claim holds. Nothing else on the screen has to say
-                    what happened. */}
+                {/* ── THE CLAIM, WITHOUT THE WORD ──────────────────────
+                    It used to stamp "Taken" across the card. The word added
+                    nothing — you had just pressed it, and the other two cards
+                    were already going — and it was white type over a card at
+                    the exact moment the card was brightest, so it was hard to
+                    read as well as redundant.
+                    What says it now is the card doing what a claimed thing
+                    does: the light on it comes UP, hard, and a ring of that
+                    light leaves the edge. */}
                 <AnimatePresence>
                   {boonTaken?.idx === idx && (
-                    <motion.div key="taken" aria-hidden
-                      initial={{ opacity: 0, scale: 1.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                      transition={{ duration: 0.28, ease: [0.16, 1.2, 0.3, 1] }}
-                      style={{ position: 'absolute', inset: 0, zIndex: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                      <span className="font-cinzel font-800 uppercase" style={{
-                        fontSize: wide ? '1.5rem' : '1.15rem', letterSpacing: '0.22em', color: '#fff',
-                        textShadow: `0 0 18px ${rm.color}, 0 0 44px ${rm.color}aa, 0 2px 8px rgba(0,0,0,0.9)`,
-                      }}>Taken</span>
-                    </motion.div>
+                    <motion.span key="claim" aria-hidden
+                      initial={{ opacity: 0.9, scale: 1 }} animate={{ opacity: 0, scale: 1.06 }} exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                      style={{
+                        position: 'absolute', inset: -3, zIndex: 7, borderRadius: 19, pointerEvents: 'none',
+                        border: `2px solid ${rm.color}`,
+                        boxShadow: `0 0 26px ${rm.color}, inset 0 0 26px ${rm.color}55`,
+                      }} />
                   )}
                 </AnimatePresence>
 
@@ -4899,6 +4943,26 @@ export default function GauntletGame(props: GauntletGameProps) {
     const d = fight?.depth ?? 1
     const taunt = gauntletTaunt(d, props.variant)
 
+    /**
+     * ── WHAT THE FALL FEELS LIKE DEPENDS ON WHAT IS AT THE BOTTOM ────────────
+     *
+     * The descent was the same fall every time: gold number, three chevrons,
+     * teal. But by the time it plays you have ALREADY committed — the choice
+     * was made on the breather — so this is not a spoiler, it is a telegraph,
+     * and a telegraph is the whole job of a transition. Open water should feel
+     * like a held breath and a boss should feel like the water going wrong on
+     * the way down.
+     *
+     * Three dials, and every one of them is the same idea turned up: the
+     * COLOUR of the light you are falling through, how FAST the chevrons pull
+     * you, and how many of them there are. Nothing new is drawn.
+     */
+    const fall = fight?.isBoss
+      ? { key: '#f87171', word: 'Something holds this water', chevrons: 4, beat: 0.72, glow: 0.46, ring: true }
+      : fight?.isElite
+        ? { key: '#c084fc', word: 'A hunter waits below', chevrons: 3, beat: 0.86, glow: 0.3, ring: false }
+        : { key: AC, word: null as string | null, chevrons: 3, beat: 1.1, glow: 0.18, ring: false }
+
     // Don Finleone's rise (Don's Gauntlet, placed at milestone depths): his OWN
     // telegraph so you feel him coming, not just meet a big boss mid-descent. Copy
     // climbs by rise (first meeting → returns → the throne). Shows his FACE, not
@@ -4944,19 +5008,37 @@ export default function GauntletGame(props: GauntletGameProps) {
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           textAlign: 'center', padding: '2rem 1rem',
         }}>
-          <motion.div initial={{ opacity: 0, y: -22, scale: 0.86 }} animate={{ opacity: 0.92, y: 0, scale: 1 }} transition={{ duration: 1.2, ease: 'easeOut' }}>
+          <motion.div initial={{ opacity: 0, y: -22, scale: 0.86 }} animate={{ opacity: 0.92, y: 0, scale: 1 }} transition={{ duration: 1.2, ease: 'easeOut' }}
+            style={{ position: 'relative' }}>
+            {/* THE LIGHT HE IS FALLING THROUGH. Open water barely lights him;
+                an elite puts violet on him; a boss burns. */}
+            <motion.span aria-hidden
+              animate={fall.ring
+                ? { opacity: [fall.glow * 0.6, fall.glow, fall.glow * 0.6], scale: [0.94, 1.08, 0.94] }
+                : { opacity: fall.glow, scale: 1 }}
+              transition={fall.ring ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.6 }}
+              style={{ position: 'absolute', inset: -26, borderRadius: '50%', background: `radial-gradient(circle, ${fall.key} 0%, ${fall.key}44 42%, transparent 70%)` }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={heroImg} alt="" loading="eager" decoding="async"
-              style={{ width: 104, height: 104, objectFit: 'contain', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,0.7))' }} />
+              style={{ position: 'relative', width: 104, height: 104, objectFit: 'contain', filter: `drop-shadow(0 8px 26px rgba(0,0,0,0.7))${fight?.isBoss ? ` drop-shadow(0 0 18px ${fall.key}99)` : ''}` }} />
           </motion.div>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12, duration: 0.4 }}
             className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.34em', color: AC, marginTop: 16 }}>
             {d === 1 ? (isDonG ? 'Into the Green' : 'Into the Locker') : 'Deeper Still'}
           </motion.p>
           <motion.p initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18, type: 'spring', stiffness: 230, damping: 18 }}
-            className="font-cinzel font-800" style={{ fontSize: '2.4rem', color: GOLD, lineHeight: 1, marginTop: 8, textShadow: '0 0 28px rgba(240,192,64,0.4)' }}>
+            className="font-cinzel font-800" style={{ fontSize: '2.4rem', color: GOLD, lineHeight: 1, marginTop: 8, textShadow: `0 0 28px ${fight?.isBoss ? 'rgba(248,113,113,0.55)' : fight?.isElite ? 'rgba(192,132,252,0.45)' : 'rgba(240,192,64,0.4)'}` }}>
             Depth {d}
           </motion.p>
+          {/* ONE LINE, AND ONLY WHEN THERE IS SOMETHING TO SAY. Open water
+              says nothing, which is what makes the other two mean anything. */}
+          {fall.word && (
+            <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.45 }}
+              className="font-karla font-800 uppercase"
+              style={{ fontSize: '0.56rem', letterSpacing: '0.26em', color: fall.key, marginTop: 9, textShadow: `0 0 14px ${fall.key}88` }}>
+              {fall.word}
+            </motion.p>
+          )}
           {/* Blood Oath (a Locker upgrade) opens the run already holding one
               boon. Announce it on the first descent so a boon you never drafted
               doesn't read as a bug when you open the codex. */}
@@ -4993,9 +5075,12 @@ export default function GauntletGame(props: GauntletGameProps) {
             </motion.p>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, marginTop: 18 }}>
-            {[0, 1, 2].map(i => (
-              <motion.svg key={i} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-                initial={{ opacity: 0.12 }} animate={{ opacity: [0.12, 0.85, 0.12] }} transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.16 }}>
+            {/* THE PULL. Same chevrons, but a boss drags you down faster and
+                with one more of them — the cadence is the tell, and it is read
+                before any of the words are. */}
+            {Array.from({ length: fall.chevrons }).map((_, i) => (
+              <motion.svg key={i} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={fall.key} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                initial={{ opacity: 0.12 }} animate={{ opacity: [0.12, 0.85, 0.12] }} transition={{ duration: fall.beat, repeat: Infinity, delay: i * (fall.beat * 0.15) }}>
                 <path d="M6 9l6 6 6-6" />
               </motion.svg>
             ))}

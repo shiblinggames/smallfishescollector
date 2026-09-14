@@ -247,6 +247,39 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       const scenery: Scenery = makeScenery(PIXI)
       world.addChild(weather.water, scenery.far, guns.view, spells.view)
 
+      /**
+       * ── EVERY GUN FIRED ONCE, TWENTY THOUSAND PIXELS AWAY ───────────
+       *
+       * The first Lock of a run stalls and every Lock after it is clean. That
+       * is not a React shape and it is not fill rate: it is FIRST USE. A
+       * particle system does no GPU work at all until something in it is
+       * actually drawn, and then it does all of it at once — upload the
+       * texture, compile and link the program for its blend mode, allocate the
+       * buffers. On a phone that is tens of milliseconds, and it lands on the
+       * single frame in the fight that must not stall, because the first thing
+       * the first Lock does is fire a gun.
+       *
+       * So they are all fired here instead, at mount, off in the far
+       * north-west where nothing is looked at. The particles are pooled and age
+       * out on their own; what stays behind is the compiled program and the
+       * uploaded texture, and every Lock after this one is the good one.
+       *
+       * It lands on the descent screen — a second of falling water, which is
+       * the best place in a run to spend a frame.
+       */
+      {
+        const FAR = -20000
+        guns.fire(FAR, FAR, FAR - 120, FAR)
+        guns.volley(FAR, FAR, FAR - 120, FAR, 3)
+        guns.impact(FAR, FAR, 'hit')
+        guns.impact(FAR, FAR, 'crit')
+        guns.shock(FAR, FAR)
+        guns.wake(FAR, FAR, 1, 0)
+        // The crew fire abilities within a turn or two of the first shot, and
+        // they are a second system with a second program.
+        spells.cast(FAR, FAR, FAR - 120, FAR, 0xffffff, 'buff', 1)
+      }
+
       // ── THE TWO HULLS ───────────────────────────────────────────────
       //
       // Plain sprites in the world. The fight poses them through `shipFx`; it
