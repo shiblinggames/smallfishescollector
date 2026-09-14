@@ -198,6 +198,16 @@ export default function CrewHub({
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('crew-hub-section', { detail: { section: open ? section : null } }))
   }, [open, section])
+  // And HOW MANY HANDS are on the roster, for the same tour: its recruit beat
+  // waits for a hand to be signed on, and a board whose three candidates have
+  // already been taken cannot produce one. Somebody who already has a crew has
+  // answered it. Fired whenever the hall is read, which is on open and on
+  // every `crew-changed`.
+  const handsAboard = hall?.roster.length ?? 0
+  useEffect(() => {
+    if (!open) return
+    window.dispatchEvent(new CustomEvent('crew-aboard', { detail: { hands: handsAboard } }))
+  }, [open, handsAboard])
   // ── RE-READ WHEN THE CREW CHANGES ───────────────────────────────────────
   // Both reads happened on open and never again, so a hand signed on in the
   // Recruit room was not on the front page's count when you came back to it,

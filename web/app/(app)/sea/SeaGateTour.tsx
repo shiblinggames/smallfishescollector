@@ -43,7 +43,7 @@ import { markGateTourSeen, setGateTourStep } from './tourActions'
 
 export default function SeaGateTour({
   hasSeen, startAt, inAnchorage, fighting, cam, goal, crewOpen, crewSection, recruits,
-  hasCaptain, pastGate, nextAt, nearId, at, onBeat, onDone,
+  hasCaptain, hands, pastGate, nextAt, nearId, at, onBeat, onDone,
 }: {
   hasSeen: boolean
   /** The crew panel: open or not, and which of its rooms is showing. The
@@ -52,6 +52,9 @@ export default function SeaGateTour({
   crewSection: string | null
   /** Rises by one every time a hand is signed on, and never falls. */
   recruits: number
+  /** How many hands are on the roster right now. The recruit beat takes this
+   *  as an answer too — see the note there. */
+  hands: number
   /** Where she is tied up, if anywhere. Reveals a `showWhen.moor` beat. */
   nearId: string | null
   /** Where she is, live. Reveals a `showWhen.near` beat, and answers `reach`. */
@@ -69,7 +72,7 @@ export default function SeaGateTour({
   goal: React.MutableRefObject<{ x: number; y: number; r: number } | null>
   /** Which beat is up, and when it is over -- for the lock. Same contract as
    *  the first voyage. */
-  onBeat?: (b: { until: string; at?: string; target?: string; lock: boolean; route?: boolean } | null) => void
+  onBeat?: (b: { until: string; at?: string; target?: string; lock: boolean; route?: boolean; pointing?: boolean } | null) => void
   onDone?: () => void
   /** Where it got to. A captain can cross the reef, read three beats and shut
    *  the tab; the fourth is where they come back to. */
@@ -88,8 +91,61 @@ export default function SeaGateTour({
   const [step, setStep] = useState(hasSeen ? GATE_TOUR.length : startAt)
   /** The one beat the × has hidden. Not the tour — see the note above. */
   const [hidden, setHidden] = useState(-1)
+  /**
+   * WHETHER THE CONTROL THIS BEAT NAMES IS IN THE DOCUMENT. Written by the
+   * flashing effect further down, read by the beat published outward (a lock
+   * that switches every control off while pointing at one that is not there is
+   * a captain with nothing to press) and by the waypoint at the bottom.
+   */
+  const [found, setFound] = useState(true)
+  /** What is lit RIGHT NOW. The beat's own target normally; the way back when
+   *  that target has gone (see `waypoint`). Held in a ref because the flashing
+   *  effect is keyed on the beat and must not tear down and rebuild its poll
+   *  every time the answer flickers. */
+  const litRef = useRef<string | undefined>(undefined)
   const done = step >= GATE_TOUR.length
   const beat = done ? null : GATE_TOUR[step]
+
+  /**
+   * ── THE WAY BACK ────────────────────────────────────────────────────────
+   *
+   * Every beat of the crew half is about a control INSIDE the crew panel, and
+   * a captain can leave that panel at any moment: the × on it, the back
+   * gesture, a tap on the scrim. Leave it and the instruction on screen names
+   * something that is not on screen, which is the point at which a guided
+   * sequence stops guiding — and with the wheel held, the control that would
+   * let them back in is switched off with everything else.
+   *
+   * So when the beat's own target is missing, the card says the one thing that
+   * gets them back to it and points at a control that is always there in that
+   * state. Two states, two answers:
+   *
+   *   the panel is shut       -> the crew disc on the HUD
+   *   the panel is in a room  -> the back button at the top of it
+   *
+   * At the four doors with a door missing there is no third answer, so the
+   * card keeps its own words and the lock is dropped instead (see `pointing`
+   * below), which hands the screen back rather than leaving them holding a
+   * dead one.
+   *
+   * NOT FOR THE LAST BEAT. `crewClosed` is waiting for the panel to GO, so its
+   * target disappearing is the thing it wants rather than a captain adrift.
+   */
+  const waypoint = beat && beat.overPanel && !found && beat.until !== 'crewClosed'
+    ? (!crewOpen
+        ? { target: 'hud-crew', text: 'Open the *Crew* menu to carry on.' }
+        : crewSection !== null
+          ? { target: 'crew-back', text: 'Head back to the crew menu.' }
+          : null)
+    : null
+  /** Is there anything on screen for the captain to press? The beat's own
+   *  control, or the way back to it. When there is not, the chart lets go of
+   *  the wheel rather than leaving every control dimmed around a card that
+   *  names one of them. */
+  const pointing = found || !!waypoint
+  // The flashing effect reads this, so the ring lands on whatever the card is
+  // actually anchored to — the way back, when the target has gone.
+  litRef.current = waypoint?.target ?? beat?.target
 
   // Told outward, for the lock. Only while the tour is actually running here:
   // south of the reef it waits, and a waiting tour holds nothing. And only
@@ -100,9 +156,13 @@ export default function SeaGateTour({
     onBeat?.(live && beat
       // `route` goes out too: the chart draws the chevrons for it, the same
       // run it lays down when a clear opens something new. See NextHeading.
-      ? { until: beat.until, at: beat.at, target: beat.target, lock: step <= GATE_FORCED_THROUGH, route: beat.route }
+      //
+      // AND `pointing`, which is the chart's cue to let go of the wheel: a
+      // lock that switches off every control while naming one that is not
+      // there is a captain with nothing to press. See the note above.
+      ? { until: beat.until, at: beat.at, target: beat.target, lock: step <= GATE_FORCED_THROUGH, route: beat.route, pointing }
       : null)
-  }, [live, beat, step, onBeat])
+  }, [live, beat, step, onBeat, pointing])
 
   /**
    * ── THE BEATS THAT WAIT TO BE ARRIVED AT ─────────────────────────────────
@@ -214,6 +274,27 @@ export default function SeaGateTour({
   // Polled for the life of the beat, the way the first voyage does: two of the
   // targets are inside the crew panel and appear whenever the captain opens
   // it, which is not within any number of retries of the beat coming up.
+  /**
+   * ── AND WHETHER THE THING IT IS POINTING AT IS ACTUALLY THERE ───────────
+   *
+   * This is the whole of how the crew half used to strand a captain, so it is
+   * worth writing down in full.
+   *
+   * While the tour holds the wheel the chart dims and DISABLES every
+   * `[data-coach]` control that is not the one being flashed (`.sea-tour-lock`
+   * in globals.css). That is right when the tour is pointing at something on
+   * screen and catastrophic when it is not: shut the crew panel on the beat
+   * that says "Select Recruit" and the target is gone, nothing is flashed, and
+   * the crew disc that would let you back in is one of the controls the lock
+   * just switched off. Same on the way out of a room: step into the Roster and
+   * the beat's door is gone, and so is the back button, because it wears a
+   * `data-coach` too. No card to press, no control to press, nothing to do.
+   *
+   * So the tour says whether its target is in the document. If it is not, the
+   * card re-points at the way back (see `waypoint` below) and the chart drops
+   * the lock (see `found` in the beat it publishes), so at worst a captain who
+   * has wandered off gets a live screen and a line telling them where to go.
+   */
   useEffect(() => {
     const want = beat?.target
     // THE GUARD COMES FIRST. `clear()` is a document-wide sweep of every
@@ -221,14 +302,27 @@ export default function SeaGateTour({
     // page -- so clearing before checking whether this tour has anything to say
     // put out the other tour's highlight on every render. Same fault as the
     // goal above, in a third place.
-    if (!want || !inAnchorage || fighting) return
+    if (!want || !inAnchorage || fighting) { setFound(true); return }
     const clear = () => document.querySelectorAll('.coach-flash')
       .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
     clear()
-    const names = want.split(' ')
     const find = () => {
-      for (const n of names) {
-        document.querySelectorAll(`[data-coach="${n}"]`)
+      clear()
+      // WHETHER THE BEAT'S OWN TARGET IS THERE is the question `found`
+      // answers, and it is asked first and separately: the waypoint exists
+      // BECAUSE the answer is no, so counting the waypoint's own control would
+      // make the answer yes and put the card straight back to an instruction
+      // nobody can follow.
+      let n = 0
+      for (const name of want.split(' ')) {
+        n += document.querySelectorAll(`[data-coach="${name}"]`).length
+      }
+      setFound(n > 0)
+      // And then light whatever the card is actually pointing at, which is the
+      // way back when the target has gone.
+      const lit = n > 0 ? want : (litRef.current ?? want)
+      for (const name of lit.split(' ')) {
+        document.querySelectorAll(`[data-coach="${name}"]`)
           .forEach(el => el.classList.add('coach-flash', 'coach-flash-gold'))
       }
     }
@@ -273,18 +367,30 @@ export default function SeaGateTour({
   const recruitMark = useRef(recruits)
   useEffect(() => { if (want !== 'recruited') recruitMark.current = recruits }, [want, recruits])
   useEffect(() => {
-    if (live && want === 'recruited' && recruits > recruitMark.current) next()
-  }, [live, want, recruits, next])
+    // ── OR THEY ALREADY HAVE ONE ──────────────────────────────────────
+    //
+    // The board holds three a day and they can all be gone: signed on before
+    // the tour reached this beat, or taken on another device. Waiting for a
+    // recruit that cannot be made is a tour that stops until tomorrow, on the
+    // beat before the one that opens the campaign. What this beat is FOR is
+    // having a hand aboard, so having one satisfies it.
+    if (live && want === 'recruited' && (recruits > recruitMark.current || hands > 0)) next()
+  }, [live, want, recruits, hands, next])
 
   // WAITS RATHER THAN PLAYS, anywhere but here. A captain who crosses the reef
   // and turns straight round should meet the same beat when they come back, not
   // find the tour has talked itself out over the fishing grounds.
   // Kept mounted so the last card can fade rather than cut. See the first voyage.
-  const visible = !(done || !beat || !inAnchorage || fighting || step === hidden || gated)
+  //
+  // AND A HIDDEN CARD COMES BACK when the captain is adrift: the × means "I
+  // have read this", which is not the same as "I no longer need to be told how
+  // to get back to the thing you were pointing at".
+  const visible = !(done || !beat || !inAnchorage || fighting || (step === hidden && !waypoint) || gated)
   const b = beat ?? GATE_TOUR[GATE_TOUR.length - 1]
   // Anything the captain has to DO has no button: the button is the thing
-  // they were asked to do.
-  const waiting = b.until !== 'next' && b.until !== 'look'
+  // they were asked to do. A waypoint is one of those: it is asking for a tap
+  // on a real control, so it does not get a Next either.
+  const waiting = (b.until !== 'next' && b.until !== 'look') || !!waypoint
   // Above the crew panel while the instruction is about something inside it.
   const inPanel = b.overPanel === true
 
@@ -293,10 +399,10 @@ export default function SeaGateTour({
       show={visible}
       portrait={b.portrait}
       speaker={b.speaker}
-      text={b.text}
+      text={waypoint?.text ?? b.text}
       accent={SEA_ACCENT}
       onClose={() => setHidden(step)}
-      anchor={b.target}
+      anchor={waypoint?.target ?? b.target}
       onNext={waiting ? undefined : next}
       nextLabel={step === GATE_TOUR.length - 1 ? 'Aye' : undefined}
       z={inPanel ? 120 : undefined}

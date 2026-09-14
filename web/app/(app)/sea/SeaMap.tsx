@@ -2662,12 +2662,16 @@ export default function SeaMap({
    * nothing else. `gateLock` is composed below, after `inAnchorage` exists.
    */
   const [gateDone, setGateDone] = useState(tour.gateSeen)
-  const [gateBeat, setGateBeat] = useState<{ until: string; at?: string; target?: string; lock: boolean; route?: boolean } | null>(null)
+  const [gateBeat, setGateBeat] = useState<{ until: string; at?: string; target?: string; lock: boolean; route?: boolean; pointing?: boolean } | null>(null)
   /** What the crew panel is doing, for the tour: which room, and how many
    *  hands have been signed on this session. Both arrive as window events
    *  from the panel, which is a different tree. */
   const [crewSection, setCrewSection] = useState<string | null>(null)
   const [recruitTick, setRecruitTick] = useState(0)
+  /** How many hands are on the roster, as the crew panel last saw it. The
+   *  anchorage tour's recruit beat takes this as an answer, so a captain who
+   *  already has a crew and an empty board is not held there until tomorrow. */
+  const [handsAboard, setHandsAboard] = useState(0)
   /**
    * IS THERE ANYBODY ON THE SHIP.
    *
@@ -2706,6 +2710,10 @@ export default function SeaMap({
   useEffect(() => {
     const onSection = (e: Event) => setCrewSection((e as CustomEvent<{ section: string | null }>).detail?.section ?? null)
     const onCrew = () => setRecruitTick(n => n + 1)
+    const onAboard = (e: Event) => {
+      const n = (e as CustomEvent<{ hands?: number }>).detail?.hands
+      if (typeof n === 'number') setHandsAboard(n)
+    }
     const onAssigned = (e: Event) => {
       const d = (e as CustomEvent<{ captain?: boolean }>).detail
       if (typeof d?.captain === 'boolean') setHasCaptain(d.captain)
@@ -2713,10 +2721,12 @@ export default function SeaMap({
     window.addEventListener('crew-hub-section', onSection)
     window.addEventListener('crew-changed', onCrew)
     window.addEventListener('crew-assigned', onAssigned)
+    window.addEventListener('crew-aboard', onAboard)
     return () => {
       window.removeEventListener('crew-hub-section', onSection)
       window.removeEventListener('crew-changed', onCrew)
       window.removeEventListener('crew-assigned', onAssigned)
+      window.removeEventListener('crew-aboard', onAboard)
     }
   }, [])
   useEffect(() => {
@@ -3264,7 +3274,16 @@ export default function SeaMap({
   /** See gateDone. Only north of the reef, only once the chart has arrived,
    *  and only through the tour's forced half -- past that it is asking the
    *  captain to sail to the Gunwharf, which a dimmed helm cannot do. */
-  const gateLock = inAnchorage && !gateDone && arrived && gateBeat?.lock === true
+  //
+  // AND ONLY WHILE THE TOUR HAS SOMETHING TO POINT AT. The lock switches off
+  // every `data-coach` control that is not the one being flashed, so a beat
+  // whose target has left the document — the crew panel shut on the beat that
+  // names a button inside it — dimmed the whole screen including the way back
+  // in. The tour says when that has happened; the wheel goes back to the
+  // captain until it can point at something again. See `pointing` in
+  // SeaGateTour, which also re-points the card itself.
+  const gateLock = inAnchorage && !gateDone && arrived
+    && gateBeat?.lock === true && gateBeat.pointing !== false
 
   const anyLock = tourLock || gateLock
   const sideRef = useRef(startSide !== 'fishing')
@@ -11788,7 +11807,7 @@ hullRef={hullRefFor(t.key)} />
         hasSeen={tour.gateSeen} startAt={tour.gateStep}
         inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam}
         goal={tourGoal}
-        crewOpen={crewHubOpen} crewSection={crewSection} recruits={recruitTick}
+        crewOpen={crewHubOpen} crewSection={crewSection} recruits={recruitTick} hands={handsAboard}
         hasCaptain={hasCaptain} pastGate={onSeaGate}
         nextAt={gateNextAt}
         nearId={near?.id ?? null} at={pos}
