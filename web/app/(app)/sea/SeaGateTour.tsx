@@ -43,7 +43,7 @@ import { markGateTourSeen, setGateTourStep } from './tourActions'
 
 export default function SeaGateTour({
   hasSeen, startAt, inAnchorage, fighting, cam, goal, crewOpen, crewSection, recruits,
-  hasCaptain, hands, pastGate, nextAt, nearId, at, onBeat, onDone,
+  hasCaptain, hands, pastGate, campaignOpen, nextAt, nearId, at, onBeat, onDone,
 }: {
   hasSeen: boolean
   /** The crew panel: open or not, and which of its rooms is showing. The
@@ -64,6 +64,8 @@ export default function SeaGateTour({
   hasCaptain: boolean
   /** Out through the Sea Gate, on the campaign's water. */
   pastGate: boolean
+  /** The campaign sheet is open. The last beat ends on it — see `campaign`. */
+  campaignOpen: boolean
   /** What the campaign wants next, and where. Drives the `route` line and the
    *  `reach` wait. Null when there is nothing open. */
   nextAt: { x: number; y: number; r: number } | null
@@ -360,19 +362,18 @@ export default function SeaGateTour({
   useEffect(() => { if (live && want === 'assignBoard' && crewOpen && crewSection === 'assign') next() }, [live, want, crewOpen, crewSection, next])
   useEffect(() => { if (live && want === 'assigned' && hasCaptain) next() }, [live, want, hasCaptain, next])
   useEffect(() => { if (live && want === 'crewClosed' && !crewOpen) next() }, [live, want, crewOpen, next])
+  // The pennant, opened. The last beat, and the end of the tour.
+  useEffect(() => { if (live && want === 'campaign' && campaignOpen) next() }, [live, want, campaignOpen, next])
 
-  // Sailed up to the Sea Gate. The same hail the `near` beats use, so the line
-  // arrives while the arch is filling the screen rather than at the moment of
-  // crossing — and crossing asks first, so a card that waited for the far side
-  // would be a card nobody read until after the decision it was about.
+  // ── THROUGH THE GATE, NOT WITHIN HAIL OF IT ──────────────────────────
+  //
+  // This waited on GATE_HAIL, eleven hundred pixels out, which is still well
+  // inside the harbour: the beat handed over while the captain was in open
+  // anchorage water with the two boulders still ahead of them, so the line
+  // about what is out there arrived before they had seen any of it. The
+  // crossing itself is the moment, and the chart already knows it.
   const wantGate = beat?.until === 'gate'
-  useEffect(() => {
-    if (!live || !wantGate) return
-    const id = window.setInterval(() => {
-      if (Math.hypot(at.current.x - SEA_GATE.x, at.current.y - SEA_GATE.y) < GATE_HAIL) next()
-    }, 250)
-    return () => window.clearInterval(id)
-  }, [live, wantGate, at, next])
+  useEffect(() => { if (live && wantGate && pastGate) next() }, [live, wantGate, pastGate, next])
 
   // Sailed into the ring the path drew.
   const wantReach = beat?.until === 'reach'

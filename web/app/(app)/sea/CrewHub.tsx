@@ -172,8 +172,20 @@ export default function CrewHub({
   // hall's state is what every card behind it needs; starting them together
   // means the first card you press is already drawn rather than saying
   // "mustering" for a second. Neither blocks the other.
+  // ── READ ON MOUNT, NOT ON OPEN ──────────────────────────────────────────
+  //
+  // Both reads waited for the panel to be opened, so the first thing a captain
+  // saw was an empty panel: no doors' art, no board, no skins, for as long as
+  // two round trips took. In the middle of the anchorage tour that is a beat
+  // pointing at a door that has not been drawn yet, which is why "Select
+  // Recruit" arrived late — the card cannot anchor to something that is not in
+  // the document.
+  //
+  // This component is mounted with the chart and the chart already asks the
+  // hall for its badge counts on arrival, so the panel's own read is two
+  // requests earlier rather than two requests more. By the time anybody opens
+  // it, it is drawn.
   useEffect(() => {
-    if (!open) return
     let live = true
     setErr(null); setHallErr(null)
     crewHub().then(r => {
@@ -187,7 +199,7 @@ export default function CrewHub({
       else setHall(r)
     }, () => { if (live) setHallErr('Could not reach the hall.') })
     return () => { live = false }
-  }, [open])
+  }, [])
 
   // Back to the four doors every time the panel is shut, so re-opening it is
   // never a room you have forgotten you were standing in. A link that named a

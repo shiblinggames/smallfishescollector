@@ -77,6 +77,11 @@ export type Beat = {
    *               them south to fish, which is an instruction you cannot follow
    *               through an open panel. Satisfied at once if the haul is not
    *               open at all, so a captain who already had bait walks past it.
+   *   'campaign'— waits until the campaign sheet is opened. The tour's last
+   *               beat: it names the pennant and ENDS on the tap, rather than
+   *               marching a captain to the first node. The road to it is the
+   *               chart's own from there, and the chart draws that whenever
+   *               you are outside the harbour with something waiting.
    *   'gate'    — waits until they have sailed up to the Sea Gate. Its own
    *               wait rather than a `reach` because the gate is not a chart
    *               place and not the campaign's next stop: it is a pair of
@@ -103,6 +108,7 @@ export type Beat = {
     // the waypoint's job now rather than a beat of its own — see the note in
     // GATE_TOUR where that beat used to be.
     | 'crewOpen' | 'recruitBoard' | 'recruited' | 'assignBoard' | 'assigned' | 'crewClosed'
+    | 'campaign'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
@@ -490,10 +496,22 @@ export const GATE_TOUR: Beat[] = [
   // AND ARRIVING IS WHAT SAYS THE REST. The pennant lit, and the road drawn
   // to whatever the campaign wants next — which on a fresh captain is A Loose
   // Thread, on the far side of the gate they are standing at.
+  // ── AND IT ENDS ON THE PENNANT, NOT AT THE NODE ───────────────────────
+  //
+  // This waited on `reach`: the tour was not over until the captain had sailed
+  // all the way to A Loose Thread, with the pennant flashing the whole way and
+  // the wheel still held. That is a tour marching somebody to a fight they may
+  // not want yet.
+  //
+  // It ends on the tap now. The pennant is named, they open it, the tour lets
+  // go — and the road to the first node is the CHART'S from there, which it
+  // draws whenever you are outside the harbour with something waiting and puts
+  // away when you come back in. Sail off and it is gone; come back out and it
+  // is there. Nobody is marched anywhere.
   {
     ...D,
-    text: 'Looks like we’ve got someone to deal with already. That pennant up top is your *campaign*, and it always says who you’re after next. I’ve lit the way. Let’s go and see what’s happening.',
-    until: 'reach',
+    text: 'Looks like we’ve got someone to deal with already. That pennant up top is your *campaign*, and it always says who you’re after next. Give it a tap.',
+    until: 'campaign',
     target: 'hud-journey',
     route: true,
   },

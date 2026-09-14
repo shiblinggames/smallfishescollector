@@ -206,6 +206,11 @@ function Card({ portrait, speaker, text, accent, placement, offset, z, anchor, o
       }}
     >
       <div ref={cardRef}
+        // NAMED FOR THE BLOCKER. While a tour holds the wheel every press on
+        // the page is swallowed except the control it is pointing at and this
+        // card — see components/CoachFlash. Without the mark the tour could
+        // lock out its own Next.
+        data-tour-card
         style={{
           position: 'relative',
           display: 'flex', alignItems: 'center', gap: 11,

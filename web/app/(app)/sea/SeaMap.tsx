@@ -11855,7 +11855,7 @@ hullRef={hullRefFor(t.key)} />
         inAnchorage={inAnchorage} fighting={fightOn} cam={tourCam}
         goal={tourGoal}
         crewOpen={crewHubOpen} crewSection={crewSection} recruits={recruitTick} hands={handsAboard}
-        hasCaptain={hasCaptain} pastGate={onSeaGate}
+        hasCaptain={hasCaptain} pastGate={onSeaGate} campaignOpen={campaignOpen}
         nextAt={gateNextAt}
         nearId={near?.id ?? null} at={pos}
         onBeat={setGateBeat} onDone={() => setGateDone(true)} />}

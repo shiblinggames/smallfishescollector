@@ -180,7 +180,7 @@ function ClaimCard({ accent, eyebrow, title, sub, claimed, claimedSub, loading, 
   coach?: string
 }) {
   return (
-    <div data-coach={coach} style={{
+    <div style={{
       background: claimed ? 'rgba(8,8,6,0.7)' : 'linear-gradient(180deg, rgba(14,16,22,0.94) 0%, rgba(7,9,12,0.97) 100%)',
       border: `1px solid ${claimed ? 'rgba(255,255,255,0.08)' : `${accent}44`}`,
       borderRadius: 16, padding: '0.95rem 1rem',
@@ -203,6 +203,12 @@ function ClaimCard({ accent, eyebrow, title, sub, claimed, claimedSub, loading, 
         </div>
         {!claimed && (
           <motion.button whileTap={{ scale: 0.93 }} onClick={onClaim} disabled={loading}
+            // ── ON THE BUTTON, NOT THE CARD ─────────────────────────────
+            // The mark used to sit on the whole row, so the tour drew a ring
+            // round a paragraph of text and a picture when the one thing a
+            // captain has to do is press Claim. A highlight that includes
+            // everything points at nothing.
+            data-coach={coach}
             className="font-cinzel font-700 uppercase tracking-[0.06em]"
             style={{ flexShrink: 0, padding: '0.6rem 1rem', borderRadius: 11, background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, fontSize: '0.74rem', cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? '…' : 'Claim'}

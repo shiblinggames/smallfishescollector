@@ -34,6 +34,25 @@
 
 import { useEffect, useRef } from 'react'
 
+/**
+ * ── WHAT STAYS LIVE WHILE A TOUR HOLDS THE WHEEL ────────────────────────────
+ *
+ * The card's own buttons, and the three controls the lock has always left
+ * alone: the helm, the Fish button and the level bar. Steering is not a door,
+ * and a wheel that stops answering is a game that looks broken.
+ */
+const ALWAYS = '[data-tour-card],[data-coach="helm"],[data-coach="fish"],[data-coach="level"]'
+/**
+ * AND WHAT COUNTS AS A PRESS WORTH BLOCKING.
+ *
+ * Only things that are actually controls. A tap on open water is how you steer
+ * on a desktop and a drag on a list is how you read it, so a blanket block
+ * would take the game away rather than the distractions — and `pointer-events:
+ * none` on a subtree, the obvious way to do this, stops touch scrolling dead.
+ * Swallowing the CLICK on a control leaves both alone.
+ */
+const CONTROL = 'button,a,input,select,textarea,label,[role="button"],[role="link"],[role="tab"],[data-coach]'
+
 /** How often the document is asked who is flashing. Cheap — a class selector
  *  over a document that almost never has one — and far less often than a
  *  frame. The tours re-apply theirs on a 250ms poll of their own, so this is
@@ -49,6 +68,11 @@ export default function CoachFlash() {
     /** The element being pointed at, and the ring drawn over it. */
     const rings = new Map<Element, HTMLDivElement>()
     let raf = 0
+    /** Whether a tour is holding the wheel, and whether the beat it is on is
+     *  one that only asks to be READ (in which case even the lit control is
+     *  inert — see `.sea-tour-read`). Refreshed on the same scan as the rings. */
+    let locked = false
+    let readOnly = false
 
     // THE RECTS, EVERY FRAME. A control can move under a ring: a panel
     // scrolls, a sheet resizes, the sea's HUD reflows on a rotate. One
@@ -70,6 +94,8 @@ export default function CoachFlash() {
     }
 
     const scan = () => {
+      locked = !!document.querySelector('.sea-tour-lock')
+      readOnly = !!document.querySelector('.sea-tour-read')
       const want = new Set<Element>(document.querySelectorAll('.coach-flash'))
       for (const [el, ring] of rings) {
         if (want.has(el) && el.isConnected) continue
@@ -93,10 +119,51 @@ export default function CoachFlash() {
       else if (rings.size === 0 && raf !== 0) { cancelAnimationFrame(raf); raf = 0 }
     }
 
+    /**
+     * ── AND NOTHING ELSE IS PRESSABLE ─────────────────────────────────────
+     *
+     * A tour that dims the other controls is still a tour you can wander out
+     * of: the dimming only ever covered the handful of things carrying a
+     * `data-coach`, so the Daily Haul's other Claim buttons, the panel's x, the
+     * nav and every sheet behind them stayed live. A captain could claim their
+     * gems, shut the haul and walk off mid-beat, and every lock-out reported so
+     * far started with exactly that kind of step sideways.
+     *
+     * So every press on the page is swallowed in the CAPTURE phase unless it
+     * lands on the control the tour is pointing at, or on the card itself.
+     * Scrolling and steering are untouched: the block is on `click` and the
+     * presses that stand in for it, never on the pointer stream a drag is made
+     * of, and only when the target is a control in the first place.
+     *
+     * IT TURNS ITSELF OFF when the tour has nothing to point at. That is the
+     * same safety valve `pointing` is in SeaGateTour, in the one place that
+     * could otherwise take the whole screen away: a beat with no lit control
+     * and no read-mode is a beat that cannot be answered, and a blocked screen
+     * is the worst possible answer to it.
+     */
+    const swallow = (e: Event) => {
+      if (!locked) return
+      if (!readOnly && rings.size === 0) return
+      const t = e.target as Element | null
+      if (!t || typeof t.closest !== 'function') return
+      if (t.closest(ALWAYS)) return
+      if (!readOnly && t.closest('.coach-flash')) return
+      // Not a control at all: open water, a scroll box, a line of text.
+      if (!t.closest(CONTROL)) return
+      e.stopPropagation()
+      if (e.type === 'click' || e.type === 'dblclick' || e.type === 'keydown') e.preventDefault()
+    }
+    // Capture, so it runs before anything React has bound at the root. Pointer
+    // and mouse presses are only STOPPED, never prevented: preventing them
+    // would take focus and touch-scrolling with them.
+    const kinds = ['pointerdown', 'mousedown', 'click', 'dblclick', 'keydown'] as const
+    for (const k of kinds) document.addEventListener(k, swallow, true)
+
     scan()
     const id = window.setInterval(scan, SCAN_MS)
     return () => {
       window.clearInterval(id)
+      for (const k of kinds) document.removeEventListener(k, swallow, true)
       if (raf !== 0) cancelAnimationFrame(raf)
       for (const ring of rings.values()) ring.remove()
     }
