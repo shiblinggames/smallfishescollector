@@ -203,7 +203,17 @@ type Mark = {
 }
 
 export type AbilityFx = {
+  /** Under the hulls: the washes, rings and marks that lie on the water. */
   view: Container
+  /**
+   * OVER the hulls: the painted conditions and the ward's shell arcs. A
+   * separate container the host adds AFTER its ships, because the first cut
+   * put everything in `view` — which the arena adds before the hulls — and the
+   * ice shards, being paint rather than light, vanished behind the ship they
+   * were meant to be frozen onto. Light gets away with being underneath; a
+   * picture of a thing does not.
+   */
+  over: Container
   /**
    * ── A SHIELD IS A STATE, WHICH IS WHY IT IS NOT A `cast` ─────────────────
    *
@@ -326,8 +336,9 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
   const fxPaint: ParticleContainer = new PIXI.ParticleContainer({
     dynamicProperties: { position: true, rotation: true, vertex: true, color: true, uvs: true },
   })
-  view.addChild(fxPaint)
-  view.addChild(fxAdd)
+  const over: Container = new PIXI.Container()
+  over.addChild(fxPaint)
+  over.addChild(fxAdd)
   /** The cut frames, once the sheet is in. Nothing painted draws before then;
    *  the dots carry every condition until it lands, as they always did. */
   let fx: Record<FxName, Texture> | null = null
@@ -478,7 +489,7 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         // Formed high, breaking off, drifting down. Small and soft.
         const cycle = (c.t * 0.38 + sd) % 1
         const h = 80 - cycle * 80
-        const sz = beam * (0.06 + sd * 0.04)
+        const sz = beam * (0.09 + sd * 0.05)
         p.anchorY = 0.5
         p.x = c.x + Math.cos(ang) * rx * (0.7 + sd * 0.4) + Math.sin(c.t + sd * 6) * 4
         p.y = c.y + Math.sin(ang) * ry * (0.7 + sd * 0.4) * GROUND - h / GROUND
@@ -517,7 +528,9 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
       if (a.paint === 'ice') {
         // Shards hanging on the hull, formed and barely moving. Stillness is
         // the state; the frost above is the only thing that falls.
-        const sz = beam * (0.11 + sd * 0.06)
+        // Twice the first cut. At 0.11 of the beam a shard was a fleck on a
+        // 200px hull; ice that reads as ice is a thing the size of a gunport.
+        const sz = beam * (0.2 + sd * 0.1)
         p.x = c.x + Math.cos(ang) * rx * (0.6 + sd * 0.35)
         p.y = c.y + Math.sin(ang) * ry * (0.6 + sd * 0.35) * GROUND - (beam * (0.08 + sd * 0.1)) / GROUND
         p.scaleX = sz / FX_CELL; p.scaleY = sz / FX_CELL
@@ -739,6 +752,7 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
 
   return {
     view,
+    over,
     night(d) { dark = d },
 
     status(side, x, y, beam, kind) {
@@ -1373,6 +1387,7 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
 
     destroy() {
       view.destroy({ children: true })
+      over.destroy({ children: true })
     },
   }
 }

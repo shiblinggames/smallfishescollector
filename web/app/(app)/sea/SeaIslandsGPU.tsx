@@ -766,7 +766,7 @@ export default function SeaIslandsGPU({
       // unambiguously magic, and it should read over the powder smoke rather
       // than through it.
       const spells: AbilityFx = makeAbilityFx(PIXI)
-      world.addChild(spells.view)
+      world.addChild(spells.view, spells.over)
       // THE BAYS' BOUNDARIES, as broken water. In the world with everything
       // else lying on the plane, and UNDER the boats: a shoal is water, and a
       // hull crossing in front of one is right.

@@ -365,7 +365,9 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       load(enemy, artRef.current.enemyUrl)
       // Over the hulls: rain falls in front of a ship, and so do the motes,
       // the vignette and the ceremonies.
-      world.addChild(weather.air, scenery.near)
+      // The painted conditions ride OVER the hulls and under the rain. See
+      // AbilityFx.over for why they cannot share `view`.
+      world.addChild(spells.over, weather.air, scenery.near)
 
       // Anchors are read by the fight EVERY FRAME through a ref, so neither
       // side re-renders to keep a hitsplat over a hull.
@@ -600,8 +602,26 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         // The wards and the conditions ride the same measurements, around the
         // hulls' middles.
         const ey = f.enemy.y - f.enemy.hull * 0.22
-        spells.ward('player', f.player.x, f.player.y, f.player.hull * 0.6, 0x5eead4, !!pf?.guard)
-        spells.ward('enemy', f.enemy.x, ey, f.enemy.hull * 0.6, 0xc084fc, !!ef?.guard)
+        /**
+         * ── A WARD IS PLANTED ON THE WATER, SO IT IS GIVEN THE WATERLINE ──
+         *
+         * The ward draws a footprint at the point it is handed and stands its
+         * dome up from there. The enemy's anchor IS her waterline (her sprite
+         * hangs from its foot), but the player's is her sprite's CENTRE — so
+         * her shield's footprint was cutting through the middle of her hull
+         * and its dome stood a fifth of a ship above her rigging. It never
+         * looked like a shell around a ship because it was a shell around a
+         * point half way up one.
+         *
+         * Her keel sits about 0.28 of the sprite's height below its centre
+         * (the same figure the chart's own captain uses), so that is where the
+         * shell is planted. The enemy's ward takes her true waterline for the
+         * same reason, rather than the lifted point her burning uses: fire is
+         * on the hull, a shell is on the sea.
+         */
+        const playerWater = f.player.y + player.sp.height * 0.28
+        spells.ward('player', f.player.x, playerWater, f.player.hull * 0.6, 0x5eead4, !!pf?.guard)
+        spells.ward('enemy', f.enemy.x, f.enemy.y, f.enemy.hull * 0.6, 0xc084fc, !!ef?.guard)
         spells.status('player', f.player.x, f.player.y, f.player.hull * 0.6, pf?.status ?? 0)
         spells.status('enemy', f.enemy.x, ey, f.enemy.hull * 0.6, ef?.status ?? 0)
 
