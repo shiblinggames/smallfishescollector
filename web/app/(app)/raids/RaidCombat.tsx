@@ -9695,8 +9695,22 @@ export default function RaidCombat({
       {/* Crew abilities restored — a one-shot banner so the refresh is obvious
           (CSS animation runs once on mount; it ends invisible + click-through).
           Centered via a flex wrap so the keyframe's transform doesn't clobber it. */}
-      {(abilitiesRefreshed || restorePulse > 0) && (
-        <div key={`restore-${restorePulse}`} aria-hidden style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 70px)', left: 0, right: 0, zIndex: 95, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+      {(abilitiesRefreshed || restorePulse > 0) && typeof document !== 'undefined' && (
+        // ── OVER THE HOST'S FURNITURE, NOT UNDER IT ──────────────────────
+        //
+        // Two faults, and the first one is why the z-index looked fine and lost
+        // anyway. This banner sits at 95 inside the fight's own stage, and over
+        // the sea that stage is itself a layer at z-index 1 — so 95 is 95
+        // WITHIN it, and the gauntlet's depth bar at 20 in the page's own
+        // context won outright. A portal to <body> puts it back in the one
+        // stacking context where the number means what it says.
+        //
+        // And it was landing at 70px regardless, which is exactly where that
+        // depth bar is. `hudTop` already carries how far the host's furniture
+        // reaches (18 on a raid, 51 in a gauntlet), so the banner clears
+        // whatever is up there without having to know what it is.
+        createPortal(
+        <div key={`restore-${restorePulse}`} aria-hidden style={{ position: 'fixed', top: `calc(env(safe-area-inset-top, 0px) + ${52 + hudTop}px)`, left: 0, right: 0, zIndex: 1250, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 9, padding: '0.55rem 1.05rem', borderRadius: 999,
             background: 'rgba(8,20,28,0.92)', border: '1px solid rgba(110,231,214,0.6)',
@@ -9706,7 +9720,7 @@ export default function RaidCombat({
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6ee7d6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v13" /><circle cx="12" cy="5" r="2.4" /><path d="M5 12a7 7 0 0 0 14 0" /></svg>
             <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.08em', color: '#aef5e8' }}>Crew Abilities Restored</span>
           </div>
-        </div>
+        </div>, document.body)
       )}
 
       {/* Full-screen crit flash — fixed, matches the existing raid */}

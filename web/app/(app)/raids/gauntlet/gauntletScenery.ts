@@ -311,6 +311,9 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
 
   let seeded = false
   let gradeDark = 0
+  /** How much of the room the boss has, 0 to 1, eased. A thing that big does
+   *  not arrive between two frames. */
+  let bossPress = 0
 
   function retint() {
     deepGlow.tint = scene.key
@@ -389,17 +392,42 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
       // IN THE OPEN WATER, not at the foot of the frame. The bottom third of
       // a fight is the log and the guns, so anything drawn there is drawn for
       // nobody. The deep pools under the engagement itself, between the hulls.
+      /**
+       * ── WHAT A BOSS DOES TO THIS ROOM ────────────────────────────
+       *
+       * Nothing is DRAWN for it. A boss depth used to turn a white spiral over
+       * the whole arena (see gauntletWeather) and it read as a drawing of a
+       * whirlpool laid over the water, because that is what it was.
+       *
+       * What happens instead is what happens in a room when something big is
+       * in it: the light goes wrong. The glow under the fight swells and
+       * breathes SLOWER — a bigger thing breathing — the light coming down
+       * from above is cut back as if something is between you and the surface,
+       * and the walls come in. Three numbers, all of them already here, and
+       * between them the water itself is the boss's presence instead of a
+       * shape competing with him.
+       */
+      const bossIn = scene.boss ? 1 : 0
+      bossPress += (bossIn - bossPress) * Math.min(1, dt * 0.8)
+
       deepGlow.x = W * 0.5; deepGlow.y = H * 0.5
-      const dg = Math.max(W, H) * (1.0 + 0.16 * Math.sin(t * 0.5))
+      // Slower and wider with him in the room: the swell drops from a 0.5
+      // rad/s breath to nearly half that, which is the whole difference
+      // between water moving and something under it moving.
+      const swell = Math.sin(t * (0.5 - 0.22 * bossPress))
+      const dg = Math.max(W, H) * (1.0 + (0.16 + 0.14 * bossPress) * swell)
       deepGlow.width = dg; deepGlow.height = dg * 0.6
-      deepGlow.alpha = (hc ? 0.16 : 0.07) + deep * 0.08 + (scene.boss ? 0.06 : 0) + flare * 0.02
+      deepGlow.alpha = (hc ? 0.16 : 0.07) + deep * 0.08 + bossPress * 0.1 + flare * 0.02
 
       // During a fall everything tears upward, like the weather's rise.
       const rise = fall * fall * 260
 
       // ── THE SHAFTS ───────────────────────────────────────────────
       flare = Math.max(0, flare - dt * 1.4)
-      const shaftBase = (hc ? 0.05 : 0.07) * g.shafts * (1 + flare) * (1 - deep * 0.35)
+      // AND THE LIGHT FROM ABOVE IS CUT. Something is between you and the
+      // surface. Not off — a room with no light in it is a black screen — but
+      // down to a third, which is felt immediately and never has to be named.
+      const shaftBase = (hc ? 0.05 : 0.07) * g.shafts * (1 + flare) * (1 - deep * 0.35) * (1 - 0.62 * bossPress)
       for (let i = 0; i < shafts.length; i++) {
         const sh = shafts[i]
         sh.x += sh.v * dt
@@ -435,8 +463,9 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
       }
 
       // ── THE VIGNETTE ─────────────────────────────────────────────
-      const va = 0.35 + deep * 0.35 + gradeDark * 0.6
-      const ve = Math.max(W, H) * 0.34
+      // AND THE WALLS COME IN, both darker and further into the frame.
+      const va = 0.35 + deep * 0.35 + gradeDark * 0.6 + bossPress * 0.18
+      const ve = Math.max(W, H) * (0.34 + 0.1 * bossPress)
       // top, bottom, left, right
       edges[0].x = 0; edges[0].y = 0; edges[0].rotation = 0; edges[0].width = W; edges[0].height = ve * 0.7
       edges[1].x = W; edges[1].y = H; edges[1].rotation = Math.PI; edges[1].width = W; edges[1].height = ve

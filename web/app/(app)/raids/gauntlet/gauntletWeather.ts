@@ -20,8 +20,12 @@
 //   CHOP      pale streaks tearing across the surface, low and fast.
 //   THE BOLT  a hard flash of the run's own colour with a fork in it. Rare and
 //             short at the top of a dive, frequent and violent at the bottom.
-//   THE MAW   at a boss depth only: a slow spiral turning over the whole
-//             arena, so the last fight of a stretch is fought inside something.
+// NO MAW. A boss depth used to turn a broad white SPIRAL over the whole arena,
+// drawn as four canvas arms, on the idea that the last fight of a stretch
+// should be fought inside something. It read as a drawing of a whirlpool laid
+// over the water — and once it is a drawing, a bigger and slower one is just a
+// bigger drawing. What a boss does to this room now is in gauntletScenery: the
+// light from above is cut back and the walls come in. Weather is weather.
 //
 // Every pool is fixed and recycled. Nothing here allocates after construction,
 // because this runs sixty times a second under a fight that is already asking
@@ -50,7 +54,6 @@ function live(t: Texture | null): Texture | null {
 
 let dotTex: Texture | null = null
 let lineTex: Texture | null = null
-let spiralTex: Texture | null = null
 let glowTex: Texture | null = null
 
 function dot(PIXI: typeof import('pixi.js')): Texture {
@@ -104,54 +107,20 @@ function glow(PIXI: typeof import('pixi.js')): Texture {
   return (glowTex = PIXI.Texture.from(c))
 }
 
-/** The maw: a broad slow spiral, white, for a boss depth to turn overhead. */
-function spiral(PIXI: typeof import('pixi.js')): Texture {
-  const cached = live(spiralTex)
-  if (cached) return cached
-  const S = 512
-  const c = document.createElement('canvas')
-  c.width = S; c.height = S
-  const g = c.getContext('2d')!
-  const cx = S / 2, cy = S / 2
-  g.lineCap = 'round'
-  for (let a = 0; a < 4; a++) {
-    const off = (a / 4) * Math.PI * 2
-    let px = 0, py = 0
-    for (let i = 0; i <= 150; i++) {
-      const t = i / 150
-      const th = off + t * Math.PI * 2 * 1.5
-      const r = 10 + Math.pow(t, 0.9) * (S / 2 - 14)
-      const x = cx + Math.cos(th) * r, y = cy + Math.sin(th) * r
-      if (i > 0) {
-        g.strokeStyle = 'rgba(255,255,255,' + (0.1 + 0.5 * Math.sin(t * Math.PI)).toFixed(3) + ')'
-        g.lineWidth = 20 * (0.3 + t)
-        g.beginPath(); g.moveTo(px, py); g.lineTo(x, y); g.stroke()
-      }
-      px = x; py = y
-    }
-  }
-  const out = document.createElement('canvas')
-  out.width = S; out.height = S
-  const og = out.getContext('2d')!
-  og.filter = 'blur(6px)'
-  og.drawImage(c, 0, 0)
-  return (spiralTex = PIXI.Texture.from(out))
-}
-
 export type WeatherTheme = {
-  /** The run's own colour: the bolt, the bubbles, the maw all take it. */
+  /** The run's own colour: the bolt and the bubbles take it. */
   key: number
   /** The rain and chop, which are water rather than magic. */
   pale: number
 }
 
 export type Weather = {
-  /** On the water, under the hulls: chop and the maw. */
+  /** On the water, under the hulls: the chop. */
   water: Container
   /** In the air, over everything: rain, the rise, the bolt. */
   air: Container
   /**
-   * `heavy` 0..1 is how bad it is here. `boss` turns the maw on. `fall` is
+   * `heavy` 0..1 is how bad it is here. `fall` is
    * pushed to 1 by a descent and decays, and while it is up the rise tears
    * past hard — which is the whole trick of making a cut read as a drop.
    */
@@ -166,15 +135,10 @@ export function makeWeather(PIXI: typeof import('pixi.js')): Weather {
   water.eventMode = 'none'
   air.eventMode = 'none'
 
-  const dotT = dot(PIXI), lineT = line(PIXI), glowT = glow(PIXI), spiralT = spiral(PIXI)
+  const dotT = dot(PIXI), lineT = line(PIXI), glowT = glow(PIXI)
   let th: WeatherTheme = { key: 0x8fe9ff, pale: 0xcfe6f0 }
 
   // ── THE MAW, on the water ───────────────────────────────────────────
-  const maw: Sprite = new PIXI.Sprite(spiralT)
-  maw.anchor.set(0.5)
-  maw.alpha = 0
-  maw.blendMode = 'add'
-  water.addChild(maw)
 
   const chopLayer: ParticleContainer = new PIXI.ParticleContainer({
     dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
@@ -250,7 +214,6 @@ export function makeWeather(PIXI: typeof import('pixi.js')): Weather {
       for (const d of rain) d.p.tint = next.pale
       for (const c of chop) c.p.tint = next.pale
       for (const b of rise) b.p.tint = next.key
-      maw.tint = next.key
       flash.tint = next.key
       for (const f of forks) f.tint = next.key
     },
@@ -326,18 +289,6 @@ export function makeWeather(PIXI: typeof import('pixi.js')): Weather {
         c.p.scaleX = 2 / 8
         c.p.scaleY = c.len / 64
         c.p.alpha = Math.sin((c.age / c.life) * Math.PI) * 0.22 * (0.4 + heavy)
-      }
-
-      // ── THE MAW ──────────────────────────────────────────────────
-      if (boss) {
-        maw.x = W * 0.5
-        maw.y = H * 0.40
-        const d = Math.max(W, H) * 1.9
-        maw.width = d; maw.height = d * 0.5
-        maw.rotation += dt * 0.16
-        maw.alpha = 0.10 + 0.06 * Math.sin(t * 0.7)
-      } else if (maw.alpha) {
-        maw.alpha = Math.max(0, maw.alpha - dt)
       }
 
       // ── THE BOLT ─────────────────────────────────────────────────

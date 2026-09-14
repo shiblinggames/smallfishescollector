@@ -971,6 +971,29 @@ export default function GauntletGame(props: GauntletGameProps) {
   /** The keeper is the descent's button; this is his pressed state. */
   const [portalPressed, setPortalPressed] = useState(false)
   /**
+   * ── AND THE BEAT BETWEEN PRESSING HIM AND THE CHOOSER ─────────────────────
+   *
+   * Tapping the keeper used to open the descent chooser on the same frame, so
+   * the one moment in the gauntlet that should feel like going under was a
+   * popup appearing.
+   *
+   * WHAT IT IS NOT: a wall of water sweeping the viewport. That shipped once,
+   * was pulled the same day as "terrible, distracting and nauseating", and the
+   * rule it left behind is written into the plan — nothing full-screen may
+   * MOVE on a screen change, but THE LIGHT MAY DIP. So this dips: his glow
+   * floods, the edges close in, and the water goes dark around him for half a
+   * second. Nothing travels.
+   */
+  const [diving, setDiving] = useState(false)
+  const diveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (diveTimer.current) clearTimeout(diveTimer.current) }, [])
+  const beginDescent = () => {
+    if (diving) return
+    setDiving(true)
+    vibrate([0, 18, 60, 34])
+    diveTimer.current = setTimeout(() => { setDiving(false); setModeChoiceOpen(true) }, 620)
+  }
+  /**
    * THE MOORING CARDS' NODES, handed down to the Slipway's frame loop so it can
    * fade and lift each one by how close she actually is. `slipNear` is a single
    * id and a piece of state; presence is a number per card, sixty times a
@@ -2862,6 +2885,23 @@ export default function GauntletGame(props: GauntletGameProps) {
           </div>
           </div>
 
+        {/* ── GOING UNDER ──────────────────────────────────────────────────
+            The half-second between pressing the keeper and the chooser. See
+            `beginDescent`: the edges close and the light goes out of the room,
+            and NOTHING moves across the screen. A vignette tightening is a dip,
+            not a sweep. */}
+        <AnimatePresence>
+          {diving && (
+            <motion.div key="dive" aria-hidden
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.55, ease: 'easeIn' }}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 8, pointerEvents: 'none',
+                background: `radial-gradient(ellipse 78% 58% at 50% ${50 + slipPlaces[0].oy * 100}%, transparent 0%, rgba(2,5,10,0.55) 46%, rgba(1,3,6,0.94) 82%)`,
+              }} />
+          )}
+        </AnimatePresence>
+
         {/* ── THE PLACES, AS CARDS ─────────────────────────────────────────
             A mooring on the water says "tie up here" and nothing else, so
             each carries a card: its mark, its name, one line of what it is.
@@ -2887,7 +2927,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               onPointerDown={() => { vibrate([0, 16]); setPortalPressed(true) }}
               onPointerUp={() => setPortalPressed(false)}
               onPointerLeave={() => setPortalPressed(false)}
-              onClick={() => setModeChoiceOpen(true)}
+              onClick={beginDescent}
               className="tap"
               animate={portalPressed ? { scale: 0.97 } : { scale: 1 }}
               transition={{ type: 'spring', stiffness: 520, damping: 26 }}
@@ -2908,12 +2948,16 @@ export default function GauntletGame(props: GauntletGameProps) {
                   cannot look stuck on, which a ring around a non-circular
                   subject always does. */}
               <motion.span aria-hidden
-                animate={portalPressed
-                  ? { opacity: 0.95, scale: 1.06 }
-                  : { opacity: [0.3, 0.62, 0.3], scale: [0.97, 1.03, 0.97] }}
-                transition={portalPressed
-                  ? { duration: 0.12 }
-                  : { duration: 3.1, repeat: Infinity, ease: 'easeInOut' }}
+                animate={diving
+                  ? { opacity: [0.95, 0], scale: [1.1, 2.4] }
+                  : portalPressed
+                    ? { opacity: 0.95, scale: 1.06 }
+                    : { opacity: [0.3, 0.62, 0.3], scale: [0.97, 1.03, 0.97] }}
+                transition={diving
+                  ? { duration: 0.62, ease: 'easeOut' }
+                  : portalPressed
+                    ? { duration: 0.12 }
+                    : { duration: 3.1, repeat: Infinity, ease: 'easeInOut' }}
                 style={{
                   position: 'absolute', inset: '-6%', borderRadius: '50%',
                   background: `radial-gradient(ellipse at 50% 46%, ${hex}3a 0%, ${hex}18 38%, transparent 68%)`,
