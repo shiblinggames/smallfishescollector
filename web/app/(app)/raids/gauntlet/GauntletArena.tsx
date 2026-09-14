@@ -72,7 +72,7 @@ import { makeGunFx, type GunFx, type ImpactKind } from '@/app/(app)/sea/seaGunFx
 import { makeAbilityFx, type AbilityFx } from '@/app/(app)/sea/seaAbilityFx'
 import { GROUND } from '@/app/(app)/sea/islandArt'
 import { texture } from '@/app/(app)/sea/skiffArt'
-import { duelFrame } from '@/app/(app)/sea/raidWaters'
+import { duelFrame, type HullPaint } from '@/app/(app)/sea/raidWaters'
 import { makeWeather, type Weather } from './gauntletWeather'
 import { makeScenery, type Scenery, type Mood, type BeatKind, type SceneVariant } from './gauntletScenery'
 import type { ShipAnchor, ShipFx, FightFx } from '@/app/(app)/raids/RaidCombat'
@@ -126,7 +126,7 @@ function waterBox(W: number, H: number) {
   return { cx: W / 2, cy: top + (H - top - bottom) / 2 }
 }
 
-export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, enemyHue, shipFlip, seaBeam, enemyHidden, handle }: {
+export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, enemyPaint, shipFlip, seaBeam, enemyHidden, handle }: {
   theme: ArenaTheme
   scene: ArenaScene
   /** Which screen of the run this is under. Drives the grade and the beats. */
@@ -136,13 +136,13 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
   /** The player's hull art, as the fight already knows it. */
   shipUrl: string
   /**
-   * HER PAINT, in degrees of hue. Every enemy below a Man-o-War flies the
-   * player's own v3 art, so without this every schooner in the gauntlet is the
-   * same schooner — and the gauntlet draws its mobs FROM the raid configs, so
-   * you meet the same three hulls over and over down a dive. From `hullHue`, so
-   * a ship is the same colour here as she is in her own raid.
+   * HER PAINT. Every enemy below a Man-o-War flies the player's own v3 art, so
+   * without this every schooner in the gauntlet is the same schooner — and the
+   * gauntlet draws its mobs FROM the raid configs, so you meet the same three
+   * hulls over and over down a dive. From `hullPaint`, so a ship is the same
+   * colour here as she is in her own raid.
    */
-  enemyHue?: number
+  enemyPaint?: HullPaint
   /** The enemy's, this depth. Empty when there is none yet. */
   enemyUrl: string
   /** Whether the player's sprite is drawn mirrored — the ships table's own flag. */
@@ -164,8 +164,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
   themeRef.current = theme
   const sceneRef = useRef({ ...scene, mood })
   sceneRef.current = { ...scene, mood }
-  const artRef = useRef({ shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam, enemyHue: enemyHue ?? 0 })
-  artRef.current = { shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam, enemyHue: enemyHue ?? 0 }
+  const artRef = useRef({ shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam, enemyPaint })
+  artRef.current = { shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam, enemyPaint }
   const hiddenRef = useRef(!!enemyHidden)
   hiddenRef.current = !!enemyHidden
   /** 1 the instant a new depth arrives, decayed by the frame loop. */
@@ -332,17 +332,22 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
        * pass is a few hundred square pixels; it is nothing beside the water,
        * and it is the only filter in this arena.
        */
-      let enemyHueNow: number | null = null
-      const paintEnemy = (deg: number) => {
-        if (deg === enemyHueNow) return
-        enemyHueNow = deg
-        if (!deg) { enemy.sp.filters = [] ; return }
+      let paintNow: HullPaint | null = null
+      const paintEnemy = (p: HullPaint | undefined) => {
+        if (p === paintNow) return
+        paintNow = p ?? null
+        if (!p || (p.hue === 0 && p.sat === 1 && p.bright === 1)) { enemy.sp.filters = []; return }
         const f = new PIXI.ColorMatrixFilter()
-        f.hue(deg, false)
-        f.saturate(0.12, true)
+        // Each call multiplies onto the matrix already there, and a fresh
+        // filter starts as identity — so the three compose in one pass.
+        if (p.hue) f.hue(p.hue, true)
+        // Pixi's saturate takes an OFFSET where 0 is unchanged; CSS takes a
+        // MULTIPLIER where 1 is. x = a * 2/3 + 1, so a = (mult - 1) * 1.5.
+        if (p.sat !== 1) f.saturate((p.sat - 1) * 1.5, true)
+        if (p.bright !== 1) f.brightness(p.bright, true)
         enemy.sp.filters = [f]
       }
-      paintEnemy(artRef.current.enemyHue ?? 0)
+      paintEnemy(artRef.current.enemyPaint)
       // SHE IS NOT HERE UNTIL THE FIGHT IS. The alpha eases toward whatever
       // `enemyHidden` says, and starting at Pixi's default of 1 meant every
       // screen that does NOT want her — the fall, the breather, the reward —
@@ -570,7 +575,7 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         } else {
           // Eased both ways, so she does not blink out at the top of a descent
           // and does not blink in at the bottom of one.
-          paintEnemy(art.enemyHue ?? 0)
+          paintEnemy(art.enemyPaint)
           const want = hiddenRef.current || !art.enemyUrl ? 0 : 1
           enemy.node.alpha += Math.max(-dt * 2.2, Math.min(dt * 1.6, want - enemy.node.alpha))
         }

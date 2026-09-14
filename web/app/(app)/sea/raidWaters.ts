@@ -1262,41 +1262,71 @@ export function portraitFor(e: Encounter): string | null {
  * the art as painted has to stay in the fleet or the original stops being a
  * ship anyone has seen.
  */
-const HULL_HUES = [0, 22, -26, 48, -58, 86, 128, -96, 162, 64, -14] as const
+/**
+ * ── PAINT, NOT A HUE WHEEL ──────────────────────────────────────────────────
+ *
+ * The first cut rotated the hue by up to 162 degrees and it produced ships
+ * nobody has ever sailed: a brigantine is timber and pitch, and timber rotated
+ * half way round the wheel is violet. A big rotation also drags the SAILS and
+ * the trim and the highlights with it, so the whole painting goes strange
+ * rather than the hull being a different colour.
+ *
+ * Real hulls differ in ways with much smaller numbers behind them. They are
+ * darker or lighter. They are freshly tarred or salt-bleached. The timber has
+ * gone red with rust bleed or green with weed. So each paint is a SMALL
+ * rotation with brightness and saturation doing most of the work — nothing
+ * turns more than sixty degrees, and two of them do not turn at all.
+ *
+ * Ten of them, and the first is the art exactly as painted, because the
+ * original has to stay in the fleet.
+ */
+export type HullPaint = { hue: number; sat: number; bright: number }
+
+const HULL_PAINTS: readonly HullPaint[] = [
+  { hue: 0, sat: 1, bright: 1 },          // as painted
+  { hue: -15, sat: 1.12, bright: 0.94 },  // deep timber, oiled
+  { hue: -34, sat: 1.22, bright: 0.97 },  // rust bleed down the strakes
+  { hue: 19, sat: 1.1, bright: 1.07 },    // sun-bleached ochre
+  { hue: 42, sat: 1.04, bright: 0.95 },   // weed-green, long unscraped
+  { hue: 58, sat: 0.92, bright: 0.93 },   // sea-green, colder water
+  { hue: 0, sat: 0.4, bright: 0.8 },      // freshly tarred, near grey
+  { hue: 9, sat: 0.55, bright: 1.13 },    // salt-bleached pale
+  { hue: -48, sat: 1.16, bright: 0.89 },  // old blood red
+  { hue: 27, sat: 0.78, bright: 1.03 },   // faded, half stripped
+]
 
 /** Stable per enemy, so the same hull is the same colour in a campaign raid, on
  *  the chart, and in a gauntlet that borrowed her from a raid config. */
-export function hullHue(enemyId: string | null | undefined): number {
-  if (!enemyId) return 0
+export function hullPaint(enemyId: string | null | undefined): HullPaint {
+  if (!enemyId) return HULL_PAINTS[0]
   // Math.imul: `*` on integers is floating point in JS and throws away the low
   // bits, which are the entire output of a hash. See seaShoals, where exactly
   // that emptied the ocean.
   let h = 0
   for (let i = 0; i < enemyId.length; i++) h = Math.imul(h ^ enemyId.charCodeAt(i), 0x01000193)
-  return HULL_HUES[((h >>> 0) % HULL_HUES.length)]
+  return HULL_PAINTS[(h >>> 0) % HULL_PAINTS.length]
 }
 
 /** The CSS half of it, for the two renderers that draw a hull as an <img>. */
-export function hullFilter(enemyId: string | null | undefined): string {
-  const deg = hullHue(enemyId)
-  // Saturation lifts a touch with the rotation so a shifted hull does not read
-  // as the same ship under a coloured light.
-  return deg === 0 ? '' : `hue-rotate(${deg}deg) saturate(1.12)`
+export function paintCss(p: HullPaint): string {
+  const parts: string[] = []
+  if (p.hue) parts.push(`hue-rotate(${p.hue}deg)`)
+  if (p.sat !== 1) parts.push(`saturate(${p.sat})`)
+  if (p.bright !== 1) parts.push(`brightness(${p.bright})`)
+  return parts.join(' ')
 }
 
-/** The CSS filter for a chart mark, from the enemy it is standing in for. */
-export function hullFilterFor(e: Encounter): string {
-  const deg = hullHueFor(e)
-  return deg === 0 ? '' : `hue-rotate(${deg}deg) saturate(1.12)`
+export function hullFilter(enemyId: string | null | undefined): string {
+  return paintCss(hullPaint(enemyId))
 }
 
 /** WHICH ENEMY'S PAINT THIS MARK WEARS. The same walk `hullFor` makes. */
-export function hullHueFor(e: Encounter): number {
+export function hullPaintFor(e: Encounter): HullPaint {
   const node = RAID_MAP.find(n => n.id === e.node)
-  if (!node) return 0
+  if (!node) return HULL_PAINTS[0]
   if (node.raidId) {
     const cfg = getRaidConfigById(node.raidId)
-    return hullHue(cfg?.bossId)
+    return hullPaint(cfg?.bossId)
   }
   if (node.type === 'skirmish') {
     const ahead = ENCOUNTERS
@@ -1305,10 +1335,14 @@ export function hullHueFor(e: Encounter): number {
     for (const x of ahead) {
       const n = RAID_MAP.find(m => m.id === x.node)
       const cfg = n?.raidId ? getRaidConfigById(n.raidId) : null
-      if (cfg) return hullHue(cfg.sequence[0])
+      if (cfg) return hullPaint(cfg.sequence[0])
     }
   }
-  return 0
+  return HULL_PAINTS[0]
+}
+
+export function hullFilterFor(e: Encounter): string {
+  return paintCss(hullPaintFor(e))
 }
 
 export function hullFor(e: Encounter): string | null {
