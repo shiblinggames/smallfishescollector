@@ -191,7 +191,7 @@ export const BADGES: Badge[] = [
   // three new-data hooks: goldens (shiny_catches), Finn wins (finn_wins), fish
   // value sold (fish_sold_doubloons), and boat-skin collection (ship_skins).
   { id: 'wet_behind_ears', name: 'Wet Behind the Ears', description: 'Reach Fishing Level 25',                        imageUrl: '/badges/wet_behind_ears.png', difficulty: 'rookie'     },
-  { id: 'beginners_luck', name: "Beginner's Luck",     description: 'Open your first supply crate',                    imageUrl: '/badges/beginners_luck.png', difficulty: 'rookie'      },
+  { id: 'beginners_luck', name: "Beginner's Luck",     description: 'Fish up and open your first supply crate',        imageUrl: '/badges/beginners_luck.png', difficulty: 'rookie'      },
   { id: 'struck_gold',    name: 'Struck Gold',         description: 'Catch your first golden fish',                    imageUrl: '/badges/struck_gold.png',    difficulty: 'rookie'      },
   { id: 'old_hand',       name: 'Old Hand',            description: 'Reach Fishing Level 50',                          imageUrl: '/badges/old_hand.png',       difficulty: 'seasoned'    },
   { id: 'crate_expectations', name: 'Crate Expectations', description: 'Open 250 supply crates',                       imageUrl: '/badges/crate_expectations.png', difficulty: 'seasoned' },

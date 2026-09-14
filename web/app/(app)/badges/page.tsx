@@ -335,11 +335,13 @@ export default async function BadgesPage() {
         badgeGoal('twice_the_haul', 'Twice the Haul', 'Land 500 double catches', doubleCatches, 500, '/sea'),
         badgeGoal('saltlung', 'Saltlung', 'Cast your line 1,000 times', casts, 1000, '/sea'),
         badgeGoal('salted_through', 'Salted Through', 'Cast your line 10,000 times', casts, 10_000, '/sea'),
-        badgeGoal('crate_digger', 'Crate Digger', 'Open 50 supply crates', cratesOpened, 50, '/sea'),
-        badgeGoal('beginners_luck', "Beginner's Luck", 'Open your first supply crate', cratesOpened, 1, '/sea', { binary: true }),
-        badgeGoal('crate_expectations', 'Crate Expectations', 'Open 250 supply crates', cratesOpened, 250, '/sea'),
-        badgeGoal('wreck_diver', 'Wreck Diver', 'Open 500 supply crates', cratesOpened, 500, '/sea'),
-        badgeGoal('salvage_rights', 'Salvage Rights', 'Open 1,000 supply crates', cratesOpened, 1000, '/sea'),
+        // FISHED UP, not handed over. The weekly free crate and the Master
+        // challenge's crate roll the same loot and count for none of these.
+        badgeGoal('crate_digger', 'Crate Digger', 'Fish up 50 supply crates', cratesOpened, 50, '/sea'),
+        badgeGoal('beginners_luck', "Beginner's Luck", 'Fish up your first supply crate', cratesOpened, 1, '/sea', { binary: true }),
+        badgeGoal('crate_expectations', 'Crate Expectations', 'Fish up 250 supply crates', cratesOpened, 250, '/sea'),
+        badgeGoal('wreck_diver', 'Wreck Diver', 'Fish up 500 supply crates', cratesOpened, 500, '/sea'),
+        badgeGoal('salvage_rights', 'Salvage Rights', 'Fish up 1,000 supply crates', cratesOpened, 1000, '/sea'),
         badgeGoal('three_for_three', 'Three for Three', 'Clear all three daily challenges, 7 times', dailySweeps, 7, '/sea'),
         badgeGoal('standing_watch', 'Standing Watch', 'Clear all three daily challenges, 30 times', dailySweeps, 30, '/sea'),
         badgeGoal('old_reliable', 'Old Reliable', 'Clear all three daily challenges, 100 times', dailySweeps, 100, '/sea'),

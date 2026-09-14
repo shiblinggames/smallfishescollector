@@ -115,8 +115,18 @@ export async function grantCrateLoot(
     .select('doubloons, unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets, equipped_pet')
     .eq('id', userId).single()
 
-  // Lifetime crates-opened counter (admin stat).
-  await admin.rpc('bump_profile_stat', { uid: userId, col: 'fishing_crates_opened', n: 1 })
+  // ── THE CRATES-OPENED COUNTER IS NOT BUMPED HERE ────────────────────────
+  //
+  // `fishing_crates_opened` is what every crate badge reads, from Beginner's
+  // Luck at one to Salvage Rights at a thousand, and this roller is shared by
+  // three callers: the crate you reel up mid-cast, the weekly free crate in
+  // the Daily Haul, and the Master daily challenge's payout. Bumped here, all
+  // three fed those badges, so a captain who had never seen a crate on the
+  // line unlocked Beginner's Luck by claiming a handout on their first Monday.
+  //
+  // A crate badge is about FISHING ONE UP. So the counter belongs to the
+  // caller that did: see reelCrate in fishing/actions. This function rolls the
+  // loot and grants it, and says nothing about how the crate was come by.
 
   const unlockedSkins = (profile?.unlocked_character_colors as string[] | null) ?? []
   const unlockedBoats = (profile?.unlocked_boats as string[] | null) ?? []

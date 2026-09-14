@@ -161,8 +161,11 @@ export async function claimDailyReward(
   // ── The payout ────────────────────────────────────────────────────────────
   // Master pays a rolled crate and no coin; the other three pay coin and no
   // crate. grantCrateLoot handles the whole grant (doubloons, bait, cosmetic,
-  // pet) and bumps the lifetime crates-opened counter itself, so a Master
-  // clear also feeds the crate badges exactly like a reeled crate would.
+  // pet).
+  //
+  // IT DOES NOT FEED THE CRATE BADGES, and that is deliberate. Those count
+  // crates you fished up, and this one was handed over for clearing a
+  // challenge. The counter is bumped in reelCrate alone; see the note there.
   //
   // The claim flag above is already flipped, so the crate cannot be rolled
   // twice even if the loot grant throws.

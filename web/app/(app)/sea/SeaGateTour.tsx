@@ -30,10 +30,10 @@
 // read this", and it must not cost a captain the rest of the help. The next
 // beat brings the guide back.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { GATE_TOUR, GATE_FORCED_THROUGH, SEA_ACCENT } from '@/lib/seaOnboarding'
-import { PLACES, SEA_GATE } from './chart'
+import { PLACES, SEA_GATE, SEA_GATE_HALF } from './chart'
 
 /** How close counts as "at the Sea Gate" for the beat that names it. Wide,
  *  because it is a ring of light a captain sails TOWARDS: the line should
@@ -152,12 +152,26 @@ export default function SeaGateTour({
   // teardown fires before the next body, so the frame this stops being a
   // routing beat is the frame the path goes out. Nothing has to be nulled by
   // hand, and nothing that belongs to the other tour gets touched.
+  //
+  // TWO KINDS OF BEAT LIGHT ONE: `route` points at whatever the campaign wants
+  // next, and `path` points at a named place — today only the Sea Gate, which
+  // is a pair of constants rather than a row in PLACES.
+  //
+  // MEMOISED, and that is not a saved multiply. A fresh object here is a new
+  // dependency on every render of this component, so the effect below would
+  // tear down and re-write a SHARED ref sixty times a second. See the note on
+  // gateNextAt in SeaMap, which is the same trap one level up.
   const routing = !!beat?.route && !gated
+  const pathing = beat?.path === 'sea_gate' && !gated
+  const lit = useMemo(
+    () => (pathing ? { x: SEA_GATE.x, y: SEA_GATE.y, r: SEA_GATE_HALF } : routing ? nextAt : null),
+    [pathing, routing, nextAt],
+  )
   useEffect(() => {
-    if (!routing || !nextAt) return
-    goal.current = nextAt
+    if (!lit) return
+    goal.current = lit
     return () => { goal.current = null }
-  }, [routing, nextAt, goal])
+  }, [lit, goal])
   useEffect(() => { if (done) onDone?.() }, [done, onDone])
 
   const next = useCallback(() => {
@@ -229,6 +243,19 @@ export default function SeaGateTour({
   useEffect(() => { if (live && want === 'assignBoard' && crewOpen && crewSection === 'assign') next() }, [live, want, crewOpen, crewSection, next])
   useEffect(() => { if (live && want === 'assigned' && hasCaptain) next() }, [live, want, hasCaptain, next])
   useEffect(() => { if (live && want === 'crewClosed' && !crewOpen) next() }, [live, want, crewOpen, next])
+
+  // Sailed up to the Sea Gate. The same hail the `near` beats use, so the line
+  // arrives while the arch is filling the screen rather than at the moment of
+  // crossing — and crossing asks first, so a card that waited for the far side
+  // would be a card nobody read until after the decision it was about.
+  const wantGate = beat?.until === 'gate'
+  useEffect(() => {
+    if (!live || !wantGate) return
+    const id = window.setInterval(() => {
+      if (Math.hypot(at.current.x - SEA_GATE.x, at.current.y - SEA_GATE.y) < GATE_HAIL) next()
+    }, 250)
+    return () => window.clearInterval(id)
+  }, [live, wantGate, at, next])
 
   // Sailed into the ring the path drew.
   const wantReach = beat?.until === 'reach'

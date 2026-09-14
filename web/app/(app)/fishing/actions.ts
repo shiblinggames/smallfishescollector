@@ -1704,8 +1704,20 @@ export async function reelCrate(_zone: string, _tier: CrateTier = 'wooden', resu
   }
   await admin.from('profiles').update(streakUpdate).eq('id', user.id)
 
-  // Which tier, for the Almanac's crate tally. Fire-and-forget beside the
-  // lifetime fishing_crates_opened total that grantCrateLoot already bumps.
+  // ── THE CRATE THE BADGES COUNT ──────────────────────────────────────────
+  //
+  // Both tallies are bumped HERE rather than inside the shared roller, and
+  // that is the whole point: this is the one path where a crate came up on
+  // the line. The weekly free crate and the Master challenge's payout roll
+  // through the same loot table and must not feed the crate badges, which are
+  // about fishing one up. See the note in crateLoot.
+  //
+  // The lifetime total the badges read, then the per-tier tally the Almanac
+  // shows. Fire-and-forget: a lost counter is a counter, and a crate opening
+  // must not stall behind one.
+  void admin.rpc('bump_profile_stat', {
+    uid: user.id, col: 'fishing_crates_opened', n: 1,
+  }).then(() => {}, () => {})
   void admin.rpc('bump_profile_json_counter', {
     uid: user.id, col: 'crate_opens', key: crateToken.crateTier, n: 1,
   }).then(() => {}, () => {})

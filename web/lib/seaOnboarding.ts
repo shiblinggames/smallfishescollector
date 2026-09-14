@@ -72,6 +72,11 @@ export type Beat = {
    *   'catch'   — waits for a fish in the hold.
    *   'look'    — the camera flies somewhere and holds while they read.
    *   'reach'   — waits until they have sailed into the ring the path draws.
+   *   'gate'    — waits until they have sailed up to the Sea Gate. Its own
+   *               wait rather than a `reach` because the gate is not a chart
+   *               place and not the campaign's next stop: it is a pair of
+   *               constants, and it is the one thing on this half of the water
+   *               a new captain most needs pointing at.
    *   'moor'    — waits until they are actually tied up at `at`.
    *   'ashore'  — waits until the island's door chooser is open.
    *   'sold'    — waits until the hold has been emptied at the market. That
@@ -86,6 +91,7 @@ export type Beat = {
    *               captain who already has some.
    */
   until: 'next' | 'fish' | 'bite' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait' | 'almanac'
+    | 'gate'
     // The anchorage tour's own: the crew panel opened, its Recruit room
     // opened, a hand signed on, the Assign room opened, a captain seated,
     // the panel closed again.
@@ -116,7 +122,9 @@ export type Beat = {
   stowRod?: true
   /** Draw the guiding path to this place. Naming somewhere says WHAT; on a
    *  chart this size a new captain also needs WHICH WAY, and an instruction
-   *  they cannot follow is worse than none. */
+   *  they cannot follow is worse than none. The anchorage's tour uses the one
+   *  value `'sea_gate'`, which is a pair of constants rather than a row in
+   *  PLACES — see SeaGateTour. */
   path?: string
   /**
    * HOLD THIS BEAT BACK, in milliseconds, after the one before it finishes.
@@ -435,14 +443,29 @@ export const GATE_TOUR: Beat[] = [
     overPanel: true,
   },
   // ── AND OUT THROUGH THE GATE ──────────────────────────────────────────
-  // Silent until they are actually out on the campaign's water, then a line,
-  // the pennant lit, and a lit path to whatever the campaign wants next --
-  // which on a fresh captain is A Loose Thread.
+  //
+  // THE CREW IS ABOARD AND NOTHING SAYS WHERE TO GO. This used to end on the
+  // closed crew panel and then go quiet until the captain had found the Sea
+  // Gate, crossed it, and come out the other side on their own — which is a
+  // tour that teaches the anchorage and then abandons you in it. The gate is
+  // due north of the arch and nothing on the water names it.
+  //
+  // So: a line that points north and a lit path to the gate, held until they
+  // are actually up to it. Everything from here asks the captain to SAIL, so
+  // the wheel is theirs again (see GATE_FORCED_THROUGH).
   {
     ...D,
-    text: 'Looks like we’ve got someone to deal with already. Let’s head over and see what’s happening.',
+    text: 'Now let’s see what’s out there. Head *north* for the *Sea Gate* and we’ll take her out.',
+    until: 'gate',
+    path: 'sea_gate',
+  },
+  // AND ARRIVING IS WHAT SAYS THE REST. The pennant lit, and the road drawn
+  // to whatever the campaign wants next — which on a fresh captain is A Loose
+  // Thread, on the far side of the gate they are standing at.
+  {
+    ...D,
+    text: 'Looks like we’ve got someone to deal with already. That pennant up top is your *campaign*, and it always says who you’re after next. I’ve lit the way. Let’s go and see what’s happening.',
     until: 'reach',
-    showWhen: { pastGate: true },
     target: 'hud-journey',
     route: true,
   },
@@ -461,7 +484,12 @@ export const GATE_TOUR: Beat[] = [
  * tour ending on the crew -- the whole of it is forced.
  */
 export const GATE_FORCED_THROUGH = (() => {
-  const i = GATE_TOUR.findIndex(b => b.showWhen)
+  // THE FIRST BEAT THAT ASKS THEM TO SAIL, however it asks: gated on arriving
+  // somewhere (`showWhen`), or lighting a way there (`path` / `route`). It
+  // keyed on `showWhen` alone, which was right while the only sailing beat was
+  // gated on the gate crossing and would silently hold the wheel through a
+  // "head north" beat the moment one was written.
+  const i = GATE_TOUR.findIndex(b => b.showWhen || b.path || b.route)
   return i < 0 ? GATE_TOUR.length - 1 : i - 1
 })()
 

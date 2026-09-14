@@ -97,6 +97,9 @@ export async function claimWeeklyCrate(): Promise<
   await admin.from('profiles').update({ last_crate_claim_week: week }).eq('id', user.id)
 
   const tier: 'wooden' | 'gold' = isPremiumActive(profile) ? 'gold' : 'wooden'
+  // The full loot table, and none of the crate badges: those count crates you
+  // fished up, and this one arrived for showing up on a Monday. The counter
+  // they read lives in reelCrate; see the note in crateLoot.
   const loot = await grantCrateLoot(admin, user.id, tier)
 
   return { claimed: true, tier, loot }
