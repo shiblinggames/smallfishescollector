@@ -30,7 +30,7 @@ import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
 import {
-  decodeXfog, xfogHas, xfogOpen, xfogReveal, xfogSet, seedXfog, inExpWater,
+  decodeXfog, xfogHas, xfogOpen, xfogCover, xfogNear, xfogSet, seedXfog, inExpWater,
   XFOG_CELL, XFOG_W, XFOG_H, XFOG_X0, XFOG_Y0, XFOG_CELLS,
 } from '@/lib/seaExploreExp'
 import type { RenownState } from '@/app/(app)/actions/renown'
@@ -3720,6 +3720,11 @@ export default function SeaMap({
   /** Set when any cell is mid-fade. The loop does nothing at all when it is
    *  clear, which is almost always. */
   const xfogFading = useRef(true)
+  /** A campaign cell was remembered since the minimap last cared. The carve
+   *  runs on every frame and the map redraws on a proximity tick, so the two
+   *  are told apart by this rather than by the carve poking React sixty times
+   *  a second. */
+  const xfogDirty = useRef(false)
   /** The pixel buffer, allocated once. A fresh ImageData per frame is five
    *  kilobytes of garbage per frame for the whole of a fade, in the one
    *  function on this chart that must not make any. */
@@ -8549,13 +8554,44 @@ export default function SeaMap({
       //
       // It costs nothing when nothing is clearing, which is nearly always: one
       // boolean, and out.
+      // ── THE FRONT FOLLOWS THE HULL ────────────────────────────────────
+      //
+      // Every frame, and only the eighty-odd cells she could be lightening.
+      // A cell's cover is its DISTANCE from her (see xfogCover), so the edge
+      // moves by whatever she moved this frame rather than jumping a cell at a
+      // time — the whole of the fix for "it clears in big splotches".
+      //
+      // THE MINIMUM, ALWAYS. Fog that has lifted never comes back: sailing away
+      // from a cell must not re-cover it, and neither must anything else in
+      // this loop. That is also what lets the ease below leave a part-lifted
+      // cell alone instead of dragging it back to full.
+      //
+      // AND A CELL WHOLLY CLEAR IS A CELL REMEMBERED. The bit is the memory,
+      // written here, at the moment the water is actually open rather than
+      // when a square drawn around her happened to contain it.
+      if (inExpWater(pos.current.y)) {
+        const a = xfogAlpha.current
+        for (const ci of xfogNear(pos.current.x, pos.current.y)) {
+          const want = xfogCover(ci, pos.current.x, pos.current.y)
+          if (want < a[ci]) { a[ci] = want; xfogFading.current = true }
+          if (want <= 0 && !xfogHas(xfogRef.current, ci)) {
+            xfogSet(xfogRef.current, ci)
+            xfogPending.current.add(ci)
+            xfogDirty.current = true
+          }
+        }
+      }
       if (xfogFading.current) {
         const a = xfogAlpha.current
         const k = 1 - Math.exp(-2.6 * dt)
         let live = false
         for (let i = 0; i < XFOG_CELLS; i++) {
           const target = xfogOpen(xfogRef.current, i) ? 0 : 1
-          if (a[i] === target) continue
+          // ONLY EVER DOWN. A cell the carve above has part-lifted has no bit
+          // yet, so its target is still 1 — and easing it back UP would be the
+          // fog rolling in behind her, which is the other half of what was
+          // reported. Lifting is the only direction anything here may go.
+          if (a[i] <= target) continue
           a[i] += (target - a[i]) * k
           // Snap the last sliver. An exponential never actually arrives, and a
           // layer that redraws forever to move an alpha from 0.004 to 0.003 is
@@ -9268,16 +9304,12 @@ export default function SeaMap({
         // different things, so the side decides which mask is being written.
         // Feeding a northern position to `fogReveal` gets -1 nine times, which
         // is harmless and also eight wasted index computations per frame.
+        // THE CAMPAIGN'S MASK IS NOT WRITTEN HERE. Its front is a distance
+        // field carved on every frame, and the bit is set the moment a cell is
+        // wholly clear — see the carve in the frame loop. A stamp on this
+        // slower tick was the cell-at-a-time reveal that made it jump.
         if (inExpWater(pos.current.y)) {
-          for (const ci of xfogReveal(pos.current.x, pos.current.y)) {
-            if (xfogHas(xfogRef.current, ci)) continue
-            xfogSet(xfogRef.current, ci)
-            xfogPending.current.add(ci)
-            // The mask flips at once; the PICTURE of it eases down over the
-            // next second. See xfogAlpha.
-            xfogFading.current = true
-            lit = true
-          }
+          if (xfogDirty.current) { xfogDirty.current = false; lit = true }
         } else {
           for (const ci of fogReveal(pos.current.x, pos.current.y)) {
             if (fogHas(fogRef.current, ci)) continue

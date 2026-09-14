@@ -34,7 +34,11 @@ export const XFOG_CELL = 700
 
 /** How far around the boat clears, in cells. See seaExplore's note — a little
  *  more than you can literally see, so it reads as a chart being filled in
- *  rather than as a spotlight following the hull. */
+ *  rather than as a spotlight following the hull.
+ *
+ *  THE LIVE REVEAL NO LONGER USES IT: the campaign's front is a distance field
+ *  (see `xfogCover`), and a cell-quantised stamp is what it replaced. Kept
+ *  because `seedXfog` still measures in cells. */
 export const XFOG_REVEAL = 1
 
 /**
@@ -149,11 +153,57 @@ export function xfogCentre(i: number): { x: number; y: number } {
   }
 }
 
-/** Every cell revealed by standing at a point. */
-export function xfogReveal(x: number, y: number): number[] {
+/**
+ * ── HOW THE FRONT ACTUALLY MOVES ────────────────────────────────────────────
+ *
+ * A cell used to be a BIT, and the reveal was the nine cells around the hull's
+ * own: the instant she crossed a boundary, nine seven-hundred-pixel squares
+ * flipped together and faded out as one. On a viewport that shows somewhere
+ * between eight hundred and sixteen hundred pixels of water, that is a slab
+ * bigger than the screen going at once, every seven hundred pixels of sailing,
+ * and it is exactly what "it clears in big splotches" was describing. The
+ * second-long ease did not help: it made the slab fade instead of blink.
+ *
+ * So the PICTURE of the fog is a distance field now. Every frame, every cell
+ * near the hull takes its cover from how far its centre is from her: nothing
+ * inside `XFOG_CLEAR`, untouched past `XFOG_SOFT`, smoothstepped between. She
+ * moves a few pixels a frame, so the front moves a few pixels a frame. The
+ * bank's bilinear upscale turns a gradient of per-cell values into a soft round
+ * edge rather than a staircase of squares, which is what it was always for and
+ * what a field of nothing but 0s and 1s never gave it.
+ *
+ * IT ONLY EVER LIFTS. The caller takes the MINIMUM of this and what a cell
+ * already had, so fog cannot come back over water that has been sailed — see
+ * the note at the loop.
+ *
+ * The MEMORY is still a bit, set when a cell is wholly clear. That is what
+ * survives a reload and what the badges count, and it is a tighter footprint
+ * than the old nine-cell stamp by design: it records where she has actually
+ * been rather than a square drawn around it.
+ */
+export const XFOG_CLEAR = XFOG_CELL * 1.5
+export const XFOG_SOFT = XFOG_CELL * 3.2
+
+/** How much fog a cell should be wearing with the hull at `hx,hy`: 0 clear,
+ *  1 untouched. */
+export function xfogCover(i: number, hx: number, hy: number): number {
+  const cx = XFOG_X0 + ((i % XFOG_W) + 0.5) * XFOG_CELL
+  const cy = XFOG_Y0 + (((i / XFOG_W) | 0) + 0.5) * XFOG_CELL
+  const d = Math.hypot(cx - hx, cy - hy)
+  if (d <= XFOG_CLEAR) return 0
+  if (d >= XFOG_SOFT) return 1
+  const t = (d - XFOG_CLEAR) / (XFOG_SOFT - XFOG_CLEAR)
+  return t * t * (3 - 2 * t)
+}
+
+/** Every cell the hull at `x,y` could be lightening right now — the window
+ *  `xfogCover` is worth asking about, and nothing else. About eighty cells,
+ *  which is why this can run on every frame rather than on a proximity tick. */
+export function xfogNear(x: number, y: number): number[] {
   const out: number[] = []
-  for (let dy = -XFOG_REVEAL; dy <= XFOG_REVEAL; dy++) {
-    for (let dx = -XFOG_REVEAL; dx <= XFOG_REVEAL; dx++) {
+  const n = Math.ceil(XFOG_SOFT / XFOG_CELL)
+  for (let dy = -n; dy <= n; dy++) {
+    for (let dx = -n; dx <= n; dx++) {
       const i = xfogIndex(x + dx * XFOG_CELL, y + dy * XFOG_CELL)
       if (i >= 0) out.push(i)
     }

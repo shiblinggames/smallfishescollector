@@ -186,6 +186,25 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
   view.addChild(puffLayer)
   const puffs: Sprite[] = []
   const far: Sprite[] = []
+  /**
+   * ── A PUFF DOES NOT TELEPORT ────────────────────────────────────────────
+   *
+   * Which cell each one is riding, and how far it has faded in. The frontier
+   * list is rebuilt on a slow tick and CULLED TO THE CAMERA, so cells drop off
+   * its front and back as you sail: assigning puffs by their position in that
+   * list handed every one of them a different cell every time it was rebuilt,
+   * and a soft blob most of a screen wide reappearing somewhere else is the
+   * single most visible thing this layer can do wrong. It is the "and it
+   * appears as well" in the report.
+   *
+   * So a puff keeps its cell. When the cell it wants changes, it fades OUT
+   * where it is, and only then takes the new one and fades back in. Nothing
+   * ever jumps; the front breathes.
+   */
+  const cellOf: number[][] = [new Array(PUFFS).fill(-1), new Array(FAR_PUFFS).fill(-1)]
+  const fade: number[][] = [new Array(PUFFS).fill(0), new Array(FAR_PUFFS).fill(0)]
+  /** For the fades. `advance` is given the clock, not the step. */
+  let lastT = -1
   for (let i = 0; i < PUFFS; i++) {
     const s: Sprite = new PIXI.Sprite(puffTexture(PIXI))
     s.anchor.set(0.5)
@@ -289,16 +308,40 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
       // is half again as big and half as bright. Everything else is the same
       // arithmetic, because they are the same object at two distances.
       const a0 = alpha
+      const dt = lastT < 0 ? 0 : Math.min(0.1, Math.max(0, t - lastT))
+      lastT = t
       const ride = (pool: Sprite[], rate: number, size: number, lit: number, seed: number) => {
+        const held = cellOf[seed], fd = fade[seed]
         for (let p = 0; p < pool.length; p++) {
           const s = pool[p]
           // Stepped through the frontier so the two layers never sit on the
           // same cells — a far puff exactly behind a near one is a brighter
           // puff, not a deeper bank.
           const idx = p * (seed === 0 ? 1 : 2) + seed
-          if (idx >= edge.length) { s.visible = false; continue }
-          const i = edge[idx]
+          const want = idx < edge.length ? edge[idx] : -1
+          // OUT BEFORE IT MOVES. See the note on cellOf: a puff only changes
+          // cell once it is invisible, so the front never pops.
+          if (held[p] !== want) {
+            fd[p] -= dt * 1.6
+            if (fd[p] <= 0) { fd[p] = 0; held[p] = want }
+          } else if (want >= 0) {
+            fd[p] = Math.min(1, fd[p] + dt * 1.1)
+          }
+          const i = held[p]
+          if (i < 0 || fd[p] <= 0) { s.visible = false; continue }
           const cx = i % XFOG_W, cy = (i / XFOG_W) | 0
+          // ── AND IT SITS ON THE FOG'S SIDE OF THE LINE ──────────────────
+          //
+          // A puff is two and a half cells across and it was centred on a
+          // frontier cell, so most of a thousand pixels of it hung over water
+          // that had already been cleared: fog lying on open sea, wandering
+          // about as it drifted. Pushed back up the alpha gradient — which
+          // points into the bank — it hugs the front from the fogged side,
+          // which is where a fog bank's own edge actually is.
+          const gx = (cx < XFOG_W - 1 ? a0[i + 1] : a0[i]) - (cx > 0 ? a0[i - 1] : a0[i])
+          const gy = (cy < XFOG_H - 1 ? a0[i + XFOG_W] : a0[i]) - (cy > 0 ? a0[i - XFOG_W] : a0[i])
+          const gl = Math.hypot(gx, gy) || 1
+          const bias = XFOG_CELL * 0.55
           // Two irrational-ish rates per puff so no two are ever in step and
           // the pattern never closes. Seeded off the CELL, not the pool slot,
           // so a puff does not jump phase when the frontier is rebuilt under it.
@@ -307,8 +350,8 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
           const sway = Math.cos(t * 0.17 * rate + ph * 1.3) * XFOG_CELL * 0.34
           s.visible = true
           s.position.set(
-            XFOG_X0 + (cx + 0.5) * XFOG_CELL + drift,
-            XFOG_Y0 + (cy + 0.5) * XFOG_CELL + sway,
+            XFOG_X0 + (cx + 0.5) * XFOG_CELL + drift + (gx / gl) * bias,
+            XFOG_Y0 + (cy + 0.5) * XFOG_CELL + sway + (gy / gl) * bias,
           )
           // Breathing, and never quite the same size twice.
           const grow = 1 + Math.sin(t * 0.13 * rate + ph * 0.7) * 0.16
@@ -322,12 +365,15 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
           // invisible on its own — what it does is stop the OVERLAP of two
           // puffs from being a fixed shape.
           s.rotation = ph + t * 0.04 * rate
-          s.alpha = a0[i] * lit * (1 + Math.sin(t * 0.19 * rate + ph * 1.7) * 0.3)
+          s.alpha = a0[i] * lit * fd[p] * (1 + Math.sin(t * 0.19 * rate + ph * 1.7) * 0.3)
           s.tint = tint
         }
       }
-      ride(puffs, 1, 2.5, 0.5, 0)
-      ride(far, 0.62, 3.6, 0.26, 1)
+      // A touch smaller than they were. Sitting on the fog's side of the front
+      // rather than astride it, a puff no longer needs to be wide enough to
+      // cover the line it was centred on.
+      ride(puffs, 1, 2.1, 0.5, 0)
+      ride(far, 0.62, 3.0, 0.26, 1)
     },
 
     night(t) {
