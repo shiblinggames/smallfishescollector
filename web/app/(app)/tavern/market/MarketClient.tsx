@@ -555,6 +555,10 @@ export default function MarketClient({
    */
   const [tourAt, setTourAt] = useState<'sell' | 'out' | null>(
     tourStep === SELL_STEP ? 'sell' : null)
+  /** Declared up here rather than beside `liquidating` below, because the
+   *  tour's own effect reads it: selling the hold is TWO presses and the
+   *  second one needed pointing at as much as the first. */
+  const [liquidateConfirm, setLiquidateConfirm] = useState(false)
 
   /**
    * THE SALE HAPPENED, BY WHATEVER ROUTE.
@@ -587,7 +591,12 @@ export default function MarketClient({
   // The control being talked about, lit up. Same handle-and-flash the sea tour
   // uses; retried briefly because a panel can mount after the card does.
   useEffect(() => {
-    const want = tourAt === 'sell' ? 'sell-all' : tourAt === 'out' ? 'market-back' : null
+    // SELLING THE HOLD IS TWO PRESSES. The tour lit the first and then went
+    // quiet over a confirm nobody had been told about, which on the one screen
+    // a first voyage has to get through is where it stops guiding.
+    const want = tourAt === 'sell'
+      ? (liquidateConfirm ? 'sell-confirm' : 'sell-all')
+      : tourAt === 'out' ? 'market-back' : null
     const clear = () => document.querySelectorAll('.coach-flash')
       .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
     clear()
@@ -600,7 +609,7 @@ export default function MarketClient({
     }
     find()
     return clear
-  }, [tourAt])
+  }, [tourAt, liquidateConfirm])
 
   const sellBeatDone = useCallback(() => {
     setTourAt(now => {
@@ -772,7 +781,6 @@ export default function MarketClient({
   }
 
   const [browseExpanded, setBrowseExpanded] = useState(false)
-  const [liquidateConfirm, setLiquidateConfirm] = useState(false)
   const [liquidating, setLiquidating] = useState(false)
   // FULL MARKET PRICE. No 90% haircut and no hour: getting to this building is
   // the cost now — see sellEntireHold. Same rate the per-species rows pay, so
@@ -866,7 +874,9 @@ export default function MarketClient({
       show={tourAt === 'sell'}
       portrait={GUIDES.kat.portrait}
       speaker={GUIDES.kat.speaker}
-      text="Everything you caught is here. *Sell all* takes the lot in one go."
+      text={liquidateConfirm
+        ? 'That is the price for the lot. *Sell* to take it.'
+        : 'Everything you caught is here. *Sell all* takes the lot in one go.'}
       accent={SEA_ACCENT}
       placement="bottom"
     />
@@ -874,7 +884,7 @@ export default function MarketClient({
       show={tourAt === 'out'}
       portrait={GUIDES.doby.portrait}
       speaker={GUIDES.doby.speaker}
-      text="That is coin in your pocket. *Back* at the top takes you to the water."
+      text="That is a sale, cap’n. *Back* at the top takes you to the water."
       accent={SEA_ACCENT}
       placement="bottom"
       onClose={() => setTourAt(null)}
@@ -1151,6 +1161,7 @@ export default function MarketClient({
                       Keep fishing
                     </button>
                     <button onClick={handleLiquidate} disabled={liquidating}
+                      data-coach="sell-confirm"
                       className="font-cinzel font-700 tap"
                       style={{
                         flex: 1.6, fontSize: '0.95rem', padding: '0.8rem', borderRadius: 12,

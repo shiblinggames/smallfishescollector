@@ -235,7 +235,7 @@ export const PLACES: Place[] = [
      * own homestead row. It is the one island on this chart that is different
      * for everybody, which is the entire point of it.
      */
-    id: 'home', name: 'The Homestead', blurb: 'Yours. Such as it is.',
+    id: 'home', name: 'The Homestead', blurb: 'Customize your home',
     href: '/home', x: 1500, y: -200, r: 460, art: '/sea/home-isle-2.png',
     kind: 'port', minLevel: 0,
     buildings: [],

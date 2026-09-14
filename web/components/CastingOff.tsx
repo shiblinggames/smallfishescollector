@@ -52,7 +52,7 @@ const KEY = 'stb:cast-off'
  * that stays cached, so it is worth asking for; the server round trip on the
  * press is the floor and this does not pretend otherwise.
  */
-const DOORS = ['/sea', '/raids/gauntlet', '/raids/dons-gauntlet', '/badges', '/leaderboard', '/profile']
+const DOORS = ['/sea', '/raids/gauntlet', '/raids/dons-gauntlet', '/tavern/market', '/badges', '/leaderboard', '/profile']
 
 export default function CastingOff() {
   const pathname = usePathname()

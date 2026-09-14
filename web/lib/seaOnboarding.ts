@@ -277,9 +277,16 @@ export const FIRST_VOYAGE: Beat[] = [
   // two places a fish goes are named in the same breath; opening it advances
   // the beat, and so does Next, because looking is optional.
   {
+    // ── AND IT IS READ, NOT SKIPPED ────────────────────────────────────
+    // This waited on the Almanac being OPENED, and the hold beat above waited
+    // on the hold. Both are lit controls, so pressing them is the obvious
+    // move — and both answered by taking the line off the screen, so a
+    // captain who did the obvious thing never got to read what they were
+    // told. The card rides ABOVE whichever panel it just sent them into now
+    // (see the z in SeaFirstVoyage) and waits to be dismissed.
     ...K,
     text: 'It is written into your *Almanac* as well, along with every fish you will ever land. Open the Log and start your collection.',
-    until: 'almanac',
+    until: 'next',
     target: 'log',
     holdCast: true,
   },

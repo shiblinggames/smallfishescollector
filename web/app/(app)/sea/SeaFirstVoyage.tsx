@@ -307,23 +307,6 @@ export default function SeaFirstVoyage({
   const wantHaulShut = beat?.until === 'haulShut'
   useEffect(() => { if (wantHaulShut && !haulOpen) next() }, [wantHaulShut, haulOpen, next])
 
-  /**
-   * ── AND A BEAT THAT IS ANSWERED BY PRESSING THE THING ──────────────
-   *
-   * "Every fish goes into your hold" points at the Hold button and waits for
-   * Next. Pressing the button it is pointing at — which is the obvious thing
-   * to do, and the button is lit — opens the hold OVER the card, so the
-   * dialogue and its ring sat on top of the panel the tour had just sent them
-   * into, with the Next hidden underneath. Opening the hold IS the answer.
-   */
-  const wantHoldLook = beat?.until === 'next' && beat?.target === 'hold'
-  useEffect(() => { if (wantHoldLook && holdOpen) next() }, [wantHoldLook, holdOpen, next])
-
-  const wantAlmanac = beat?.until === 'almanac'
-  useEffect(() => {
-    if (wantAlmanac && almanac) next()
-  }, [wantAlmanac, almanac, next])
-
   const wantFish = beat?.until === 'fish'
   useEffect(() => {
     if (wantFish && fishing) next()
@@ -428,7 +411,16 @@ export default function SeaFirstVoyage({
       // The Daily Haul opens in a PopupShell at 111 and this card sits at 70,
       // so the line saying "claim your worms" would vanish behind the scrim
       // the moment they did as it said. Lifted for those two cases only.
-      z={b.until === 'bait' || b.until === 'haulShut' || stuck === 'bait' ? 120 : undefined}
+      // ── OVER WHATEVER IT JUST SENT THEM INTO ─────────────────────────
+      // The haul for the worms, the hold and the Almanac for the two beats
+      // that name them. All three are lit controls and pressing a lit
+      // control is the obvious move, so the panel it opens must not bury the
+      // line that asked for it — that is a captain who did as they were told
+      // and lost the sentence for it. Raised, the card sits on top and is
+      // dismissed when it has been read.
+      z={b.until === 'bait' || b.until === 'haulShut' || stuck === 'bait'
+        || (b.target === 'hold' && holdOpen) || (b.target === 'log' && almanac)
+        ? 120 : undefined}
     />
   )
 }

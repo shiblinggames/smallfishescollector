@@ -2296,6 +2296,16 @@ body.hardcore-gauntlet::after {
   filter: saturate(0.5);
   transition: opacity 240ms ease, filter 240ms ease;
 }
+/* ── A BEAT THAT ONLY ASKS TO BE READ ────────────────────────────────────
+   The anchorage tour lights a control on beats that are not about pressing it
+   — "your menu options change up here" lights the crew disc so you can see
+   which one it means. Left live, the obvious move is to press it, and the
+   panel that opens buries the card and the Next it was waiting for. Lit and
+   INERT: the only live thing on screen is the card's own button. See gateRead
+   in SeaMap, which is also why the first voyage is not included. */
+.sea-tour-read [data-coach]:not([data-coach="helm"]) {
+  pointer-events: none !important;
+}
 
 /* Captain's Log journal — illuminated-manuscript drop cap on the lead
    paragraph of the freshest story entry. Parchment-gold, Cinzel, floated

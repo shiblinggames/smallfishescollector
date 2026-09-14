@@ -3306,6 +3306,27 @@ export default function SeaMap({
     && gateBeat?.lock === true && gateBeat.pointing !== false
 
   const anyLock = tourLock || gateLock
+  /**
+   * ── AND A BEAT THAT ONLY ASKS TO BE READ HOLDS EVERYTHING ──────────────
+   *
+   * The anchorage tour lights a control on beats that are not about pressing
+   * it — "your menu options change up here" lights the crew disc so you can
+   * SEE which one it means. The disc is the flashed control, so the lock left
+   * it live, so the obvious move was to press it: the panel opened over the
+   * card, the Next went under it, and from there a captain could recruit a
+   * hand while the tour still sat on the line before the one that asks for it.
+   * That is the lock-out, and every version of it starts the same way.
+   *
+   * On a read beat the lit control is INERT. The only live thing on the screen
+   * is the card's own button, which makes the sequence exactly as linear as it
+   * reads. The helm is the one exception: steering is not a door, and a wheel
+   * that stops answering is a game that looks broken.
+   *
+   * The first voyage is deliberately NOT included. Its beats about the hold
+   * and the Almanac invite a press — they are "open this and look" — and the
+   * card rides over what it opens rather than being buried by it.
+   */
+  const gateRead = gateLock && (gateBeat?.until === 'next' || gateBeat?.until === 'look')
   const sideRef = useRef(startSide !== 'fishing')
   /**
    * AND WHICH BOAT IS UNDER HER, which is NOT the same line.
@@ -9598,7 +9619,7 @@ export default function SeaMap({
       // same claim on the main thread.
       // AND HELD FOR THE FIRST VOYAGE. `.sea-tour-lock` stands every control
       // down except the one the tour is pointing at. See tourLock.
-      className={`sea-surface${dialUp || fightOn ? ' sea-frozen' : ''}${anyLock ? ' sea-tour-lock' : ''}`}
+      className={`sea-surface${dialUp || fightOn ? ' sea-frozen' : ''}${anyLock ? ' sea-tour-lock' : ''}${gateRead ? ' sea-tour-read' : ''}`}
     >
       {/* THE WATER'S COLOUR, on a layer of its own.
           Under everything and containing nothing, so repainting it repaints one
