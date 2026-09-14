@@ -8735,7 +8735,12 @@ export default function RaidCombat({
               }}
             />
             {/* Persistent burn/freeze tell — lingers between activation + tick */}
-            {(enemyBurning || enemyFrozen) && <ShipStatusAura burning={enemyBurning} frozen={enemyFrozen} />}
+            {/* NOT OVER THE SEA. There the renderer draws the condition itself,
+                painted, on the hull it is painting — and this CSS version was
+                being laid on top of it, so a burning ship had two fires that
+                did not agree. Off a route with a renderer (plain /raids), this
+                is still the only one there is. */}
+            {!overSea && (enemyBurning || enemyFrozen) && <ShipStatusAura burning={enemyBurning} frozen={enemyFrozen} />}
             {/* The Last Wall — pale rampart ring around the hull while the
                 aegis stands; exit scales up + fades so the break reads as a
                 shatter without any extra FX machinery. */}
@@ -8878,7 +8883,7 @@ export default function RaidCombat({
                 {playerAura && <PlayerStatusAura key={`pa-${playerAura.key}`} kind={playerAura.kind} color={playerAura.color} />}
               </AnimatePresence>
               {/* Persistent burn glow / frost tint from elite Scorching / Glacial */}
-              {(playerBurning || playerFrozen) && <ShipStatusAura burning={playerBurning} frozen={playerFrozen} paused={subPhase === 'aiming'} />}
+              {!overSea && (playerBurning || playerFrozen) && <ShipStatusAura burning={playerBurning} frozen={playerFrozen} paused={subPhase === 'aiming'} />}
               {/* The ward, while it holds: a slow crimson pulse around your hull. It
                   quickens on the last turn, because a fuse you cannot hear run out is
                   not a decision. */}

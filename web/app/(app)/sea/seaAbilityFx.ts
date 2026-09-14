@@ -38,6 +38,7 @@
 
 import type { Container, Particle, ParticleContainer, Texture } from 'pixi.js'
 import { GROUND } from './islandArt'
+import { texture as loadTexture } from './skiffArt'
 
 /**
  * ── THE POOLS ARE SIZED ON THE WORST CAST, NOT THE AVERAGE ─────────────────
@@ -88,6 +89,35 @@ export type AbilityShape =
 let moteTex: Texture | null = null
 let ringTex: Texture | null = null
 let discTex: Texture | null = null
+
+/**
+ * ── THE PAINTED ELEMENTS ────────────────────────────────────────────────────
+ *
+ * Every condition used to be built from the same three canvas gradients: a soft
+ * dot, a soft ring, a soft disc. Tinted and moved with care, and still a dot, a
+ * ring and a disc — which is why a burning hull read as a hull with orange
+ * lights round it. The manner was right and the material was not.
+ *
+ * These are PAINTED: a tongue of flame, an ember, an ice shard, a puff of frost,
+ * a segment of a ward shell, a roll of smoke, a spark — each generated in the
+ * house style on a magenta plate, keyed, and packed by hand into one sheet. One
+ * sheet because a ParticleContainer draws every particle it holds from a single
+ * texture source; seven separate PNGs would be seven containers.
+ *
+ * The motion is unchanged. Fire still rises and flickers out, ice still forms
+ * and comes off, a snare still drags low. What moves is now a picture of the
+ * thing rather than a light standing in for it.
+ */
+const FX_SHEET = '/fx-sheet.webp'
+const FX_CELL = 128
+/** Where each element sits on the sheet, [x, y, w, h]. Written by the packer;
+ *  every cell is the full 128 with the element centred, so one anchor serves
+ *  all of them. */
+const FX_FRAMES = {
+  flame: [0, 0, 128, 128], ember: [128, 0, 128, 128], ice: [256, 0, 128, 128], frost: [384, 0, 128, 128],
+  ward: [0, 128, 128, 128], smoke: [128, 128, 128, 128], spark: [256, 128, 128, 128],
+} as const
+type FxName = keyof typeof FX_FRAMES
 
 function moteTexture(PIXI: typeof import('pixi.js')): Texture {
   if (moteTex) return moteTex
@@ -279,6 +309,29 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
   view.addChild(ringLayer)
   view.addChild(moteLayer)
 
+  /**
+   * THE PAINTED LAYERS, over the lights. Two, because a blend mode is per
+   * container: fire, sparks, frost and the ward shell ADD (they are light), while
+   * ice and smoke are things with their own shading and go on as paint.
+   *
+   * `uvs` DYNAMIC. A condition's particles change ELEMENT when the condition
+   * changes — the same slot is a flame this turn and an ice shard the next — and
+   * a ParticleContainer uploads texture coordinates once unless told otherwise.
+   * See the fish, where exactly that left every school wearing one frame.
+   */
+  const fxAdd: ParticleContainer = new PIXI.ParticleContainer({
+    dynamicProperties: { position: true, rotation: true, vertex: true, color: true, uvs: true },
+  })
+  fxAdd.blendMode = 'add'
+  const fxPaint: ParticleContainer = new PIXI.ParticleContainer({
+    dynamicProperties: { position: true, rotation: true, vertex: true, color: true, uvs: true },
+  })
+  view.addChild(fxPaint)
+  view.addChild(fxAdd)
+  /** The cut frames, once the sheet is in. Nothing painted draws before then;
+   *  the dots carry every condition until it lands, as they always did. */
+  let fx: Record<FxName, Texture> | null = null
+
   const mt = moteTexture(PIXI), rt = ringTexture(PIXI), dt2 = discTexture(PIXI)
 
   const motes: Mote[] = []
@@ -332,8 +385,159 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
       moteLayer.addParticle(o)
       orbit.push(o)
     }
-    return { shellA, shellB, orbit, up: false, x: 0, y: 0, beam: 200, color: 0xffffff, t: 0, fade: 0 }
+    return {
+      shellA, shellB, orbit, up: false, x: 0, y: 0, beam: 200, color: 0xffffff, t: 0, fade: 0,
+      /** Painted arcs of shell riding the dome's rim, once the sheet is in.
+       *  They replace the orbiting dots, which are hidden when these draw. */
+      arcs: [] as Particle[],
+    }
   })
+
+  // ── THE SHEET LANDS ─────────────────────────────────────────────────────
+  //
+  // Built here rather than up front because a Particle needs a texture to
+  // exist, and the sheet is a fetch. Until it arrives the dots draw as they
+  // always have; the moment it does, the painted set takes over and the dots
+  // are held at zero. Nothing flickers: the handover is one frame's alpha.
+  void loadTexture(PIXI, FX_SHEET).then(base => {
+    const cut = (n: FxName) => {
+      const [x, y, w, h] = FX_FRAMES[n]
+      return new PIXI.Texture({ source: base.source, frame: new PIXI.Rectangle(x, y, w, h) })
+    }
+    fx = {
+      flame: cut('flame'), ember: cut('ember'), ice: cut('ice'), frost: cut('frost'),
+      ward: cut('ward'), smoke: cut('smoke'), spark: cut('spark'),
+    }
+    for (const c of conds) {
+      for (let i = 0; i < 8; i++) {
+        const p: Particle = new PIXI.Particle({ texture: fx.flame })
+        p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
+        fxAdd.addParticle(p); c.art.push(p)
+      }
+      for (let i = 0; i < 4; i++) {
+        const p: Particle = new PIXI.Particle({ texture: fx.ice })
+        p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
+        fxPaint.addParticle(p); c.paint.push(p)
+      }
+    }
+    for (const w of wards) {
+      for (let i = 0; i < 6; i++) {
+        const p: Particle = new PIXI.Particle({ texture: fx.ward })
+        p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
+        fxAdd.addParticle(p); w.arcs.push(p)
+      }
+    }
+  }).catch(() => { /* the dots keep drawing */ })
+
+  /**
+   * ── WHAT EACH CONDITION IS MADE OF, ONCE IT IS PAINTED ──────────────────────
+   *
+   * The lit set (eight, additive) and the painted set (four, normal blend) per
+   * condition, by kind. Colour is the ART'S own now: a flame is already orange.
+   * The tint is white unless a condition genuinely changes the colour of the
+   * thing — enrage is a redder fire, regen a green spark, fortify a steel shell.
+   */
+  const ART: Partial<Record<number, { lit: FxName; paint: FxName | null; tint: number; paintTint: number }>> = {
+    1: { lit: 'flame', paint: 'smoke', tint: 0xffffff, paintTint: 0xffffff },   // burn
+    2: { lit: 'frost', paint: 'ice', tint: 0xffffff, paintTint: 0xffffff },     // freeze
+    3: { lit: 'spark', paint: null, tint: 0xd9b066, paintTint: 0xffffff },      // snare
+    5: { lit: 'spark', paint: null, tint: 0x9cf0b0, paintTint: 0xffffff },      // regen
+    6: { lit: 'ward', paint: null, tint: 0xc8d4e6, paintTint: 0xffffff },       // fortify
+    7: { lit: 'flame', paint: 'smoke', tint: 0xff9a86, paintTint: 0xffffff },   // enrage
+    8: { lit: 'spark', paint: 'smoke', tint: 0xb9a6ff, paintTint: 0xffffff },   // weakened
+  }
+
+  /** Drive one condition's painted particles. Returns false when this kind has
+   *  no painted form (the marked sigil keeps its dot ring), so the caller
+   *  falls back to the dots. */
+  const driveArt = (c: typeof conds[number], rx: number, ry: number, lit: number): boolean => {
+    if (!fx || c.art.length === 0) return false
+    const a = ART[c.kind]
+    if (!a) return false
+    const beam = c.beam
+    for (let i = 0; i < c.art.length; i++) {
+      const p = c.art[i]
+      const sd = c.seed[i]
+      const ang = (i / c.art.length) * Math.PI * 2 + c.t * 0.12
+      p.texture = fx[a.lit]
+      p.tint = a.tint
+      if (a.lit === 'flame') {
+        // Tongues round the rim, each on its own flicker, licking up from the
+        // waterline. The scale breathes rather than the sprite moving, so the
+        // fire stays planted on the hull.
+        const flick = 0.82 + 0.18 * Math.sin(c.t * (5.5 + sd * 3) + sd * 9)
+        const hgt = beam * (0.16 + sd * 0.1) * flick
+        p.anchorY = 0.92
+        p.x = c.x + Math.cos(ang) * rx * (0.55 + sd * 0.35)
+        p.y = c.y + Math.sin(ang) * ry * (0.55 + sd * 0.35) * GROUND
+        p.scaleX = (hgt * 0.62) / FX_CELL * (sd > 0.5 ? 1 : -1)
+        p.scaleY = hgt / FX_CELL
+        p.rotation = Math.sin(c.t * 2.1 + sd * 7) * 0.12
+        p.alpha = c.fade * lit * (0.7 + 0.3 * flick)
+      } else if (a.lit === 'frost') {
+        // Formed high, breaking off, drifting down. Small and soft.
+        const cycle = (c.t * 0.38 + sd) % 1
+        const h = 80 - cycle * 80
+        const sz = beam * (0.06 + sd * 0.04)
+        p.anchorY = 0.5
+        p.x = c.x + Math.cos(ang) * rx * (0.7 + sd * 0.4) + Math.sin(c.t + sd * 6) * 4
+        p.y = c.y + Math.sin(ang) * ry * (0.7 + sd * 0.4) * GROUND - h / GROUND
+        p.scaleX = sz / FX_CELL; p.scaleY = sz / FX_CELL
+        p.rotation = sd * 6.28
+        p.alpha = c.fade * lit * Math.min(1, cycle * 5) * Math.min(1, (1 - cycle) * 2.2) * 0.75
+      } else if (a.lit === 'spark') {
+        // Low and dragged for a snare, rising for regen, sagging for weakened.
+        const cycle = (c.t * (c.kind === 5 ? 0.5 : 0.3) + sd) % 1
+        const h = c.kind === 5 ? cycle * 120 : c.kind === 8 ? 40 - cycle * 40 : 6 + Math.sin(c.t * 1.6 + sd * 6) * 6
+        const sz = beam * (0.05 + sd * 0.04) * (c.kind === 5 ? 1 - cycle * 0.5 : 1)
+        p.anchorY = 0.5
+        p.x = c.x + Math.cos(ang) * rx * (0.75 + sd * 0.4)
+        p.y = c.y + Math.sin(ang) * ry * (0.75 + sd * 0.4) * GROUND - h / GROUND
+        p.scaleX = sz / FX_CELL; p.scaleY = sz / FX_CELL
+        p.rotation = c.t * (0.6 + sd) + sd * 6
+        p.alpha = c.fade * lit * (c.kind === 5 ? 1 - cycle : 0.55 + 0.35 * Math.sin(c.t * 3 + sd * 6)) * 0.9
+      } else {
+        // Fortify: arcs of shell standing round the hull, still, catching light.
+        const sz = beam * 0.3
+        p.anchorY = 0.5
+        p.x = c.x + Math.cos(ang) * rx * 0.95
+        p.y = c.y + Math.sin(ang) * ry * 0.95 * GROUND - (beam * 0.12) / GROUND
+        p.scaleX = sz / FX_CELL; p.scaleY = sz / FX_CELL
+        p.rotation = ang + Math.PI / 2
+        p.alpha = c.fade * lit * (0.5 + 0.2 * Math.sin(c.t * 1.3 + sd * 6))
+      }
+    }
+    for (let i = 0; i < c.paint.length; i++) {
+      const p = c.paint[i]
+      const sd = c.seed[(i + 5) % c.seed.length]
+      if (!a.paint) { if (p.alpha) p.alpha = 0; continue }
+      p.texture = fx[a.paint]
+      p.tint = a.paintTint
+      const ang = (i / c.paint.length) * Math.PI * 2 + 0.6 + c.t * 0.08
+      if (a.paint === 'ice') {
+        // Shards hanging on the hull, formed and barely moving. Stillness is
+        // the state; the frost above is the only thing that falls.
+        const sz = beam * (0.11 + sd * 0.06)
+        p.x = c.x + Math.cos(ang) * rx * (0.6 + sd * 0.35)
+        p.y = c.y + Math.sin(ang) * ry * (0.6 + sd * 0.35) * GROUND - (beam * (0.08 + sd * 0.1)) / GROUND
+        p.scaleX = sz / FX_CELL; p.scaleY = sz / FX_CELL
+        p.rotation = -0.6 + sd * 1.2 + Math.sin(c.t * 0.7 + sd * 6) * 0.05
+        p.alpha = c.fade * 0.92
+      } else {
+        // Smoke off a burn, rolling up and thinning; for a weakened hull it
+        // hangs low and heavy instead.
+        const cycle = (c.t * 0.28 + sd) % 1
+        const h = c.kind === 8 ? 10 + Math.sin(c.t + sd * 6) * 6 : 20 + cycle * 130
+        const sz = beam * (0.14 + cycle * 0.16)
+        p.x = c.x + Math.cos(ang) * rx * 0.5 + (c.kind === 8 ? 0 : Math.sin(c.t * 0.9 + sd * 6) * 10)
+        p.y = c.y + Math.sin(ang) * ry * 0.5 * GROUND - h / GROUND
+        p.scaleX = sz / FX_CELL; p.scaleY = sz / FX_CELL
+        p.rotation = sd * 6.28 + c.t * 0.2
+        p.alpha = c.fade * (c.kind === 8 ? 0.45 : (1 - cycle) * 0.5)
+      }
+    }
+    return true
+  }
 
   // ── THE CONDITIONS ───────────────────────────────────────────────────────
   //
@@ -351,7 +555,12 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
       moteLayer.addParticle(b)
       bits.push(b)
     }
-    return { halo, bits, kind: 0, x: 0, y: 0, beam: 200, t: 0, fade: 0, seed: bits.map(() => Math.random()) }
+    return {
+      halo, bits, kind: 0, x: 0, y: 0, beam: 200, t: 0, fade: 0, seed: bits.map(() => Math.random()),
+      /** The painted set: eight in the lit layer, four in the painted one.
+       *  Filled in when the sheet lands. */
+      art: [] as Particle[], paint: [] as Particle[],
+    }
   })
 
   /** What each condition looks like. Colour, and the MANNER — which is the part
@@ -958,6 +1167,8 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         if (c.fade < 0.01) {
           if (c.halo.alpha) c.halo.alpha = 0
           for (const b of c.bits) if (b.alpha) b.alpha = 0
+          for (const p of c.art) if (p.alpha) p.alpha = 0
+          for (const p of c.paint) if (p.alpha) p.alpha = 0
           continue
         }
         c.t += dt
@@ -977,6 +1188,14 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         c.halo.scaleY = ((ry * 2.1) / 128) * GROUND
         c.halo.alpha = 0.20 * c.fade * lit * (0.8 + 0.2 * Math.sin(c.t * 1.9))
 
+        // THE PAINTED FORM, when the sheet is in and the kind has one. The
+        // dots stay as the fallback and for the marked sigil.
+        if (driveArt(c, rx, ry, lit)) {
+          for (const b of c.bits) if (b.alpha) b.alpha = 0
+          continue
+        }
+        for (const p of c.art) if (p.alpha) p.alpha = 0
+        for (const p of c.paint) if (p.alpha) p.alpha = 0
         for (let i = 0; i < c.bits.length; i++) {
           const b = c.bits[i]
           const sd = c.seed[i]
@@ -1017,6 +1236,7 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         // of being there while its shatter is going off.
         w.fade += ((w.up ? 1 : 0) - w.fade) * Math.min(1, dt * 9)
         if (w.fade < 0.01) {
+          for (const p of w.arcs) if (p.alpha) p.alpha = 0
           if (w.shellA.alpha) { w.shellA.alpha = 0; w.shellB.alpha = 0 }
           for (const o of w.orbit) if (o.alpha) o.alpha = 0
           continue
@@ -1059,17 +1279,36 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         w.shellB.scaleY = ((w.beam * 0.26 * breathe2 * 2) / 128) * GROUND
         w.shellB.alpha = 0.20 * w.fade * lit
 
-        // The lights ride the DOME's rim now — the moving part that stops the
-        // whole thing reading as a painted shape.
-        for (let i = 0; i < w.orbit.length; i++) {
-          const o = w.orbit[i]
-          const a2 = (i / w.orbit.length) * Math.PI * 2 + w.t * 0.9
-          o.x = w.x + Math.cos(a2) * rx
-          o.y = w.y - lift + Math.sin(a2) * ryDome
-          o.tint = w.color
-          o.scaleX = 13 / 24
-          o.scaleY = 13 / 24
-          o.alpha = 0.55 * w.fade * lit * (0.6 + 0.4 * Math.sin(w.t * 2.2 + i))
+        // ── SEGMENTS OF SHELL, riding the dome's rim ─────────────────
+        // Painted arcs, turned tangent to the rim so each reads as a piece
+        // of the same sphere, sliding slowly round it and catching the light
+        // in turn. The dots that used to orbit here are held at zero while
+        // the arcs draw; they come back only if the sheet never arrived.
+        if (fx && w.arcs.length) {
+          for (const o of w.orbit) if (o.alpha) o.alpha = 0
+          for (let i = 0; i < w.arcs.length; i++) {
+            const p = w.arcs[i]
+            const a2 = (i / w.arcs.length) * Math.PI * 2 + w.t * 0.45
+            const sz = w.beam * 0.34
+            p.x = w.x + Math.cos(a2) * rx * 0.98
+            p.y = w.y - lift + Math.sin(a2) * ryDome * 0.98
+            p.tint = w.color
+            p.scaleX = sz / FX_CELL
+            p.scaleY = sz / FX_CELL
+            p.rotation = a2 + Math.PI / 2
+            p.alpha = 0.7 * w.fade * lit * (0.55 + 0.45 * Math.sin(w.t * 2.2 + i * 1.05))
+          }
+        } else {
+          for (let i = 0; i < w.orbit.length; i++) {
+            const o = w.orbit[i]
+            const a2 = (i / w.orbit.length) * Math.PI * 2 + w.t * 0.9
+            o.x = w.x + Math.cos(a2) * rx
+            o.y = w.y - lift + Math.sin(a2) * ryDome
+            o.tint = w.color
+            o.scaleX = 13 / 24
+            o.scaleY = 13 / 24
+            o.alpha = 0.55 * w.fade * lit * (0.6 + 0.4 * Math.sin(w.t * 2.2 + i))
+          }
         }
       }
 
