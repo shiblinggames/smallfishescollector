@@ -1242,6 +1242,75 @@ export function portraitFor(e: Encounter): string | null {
   return null
 }
 
+/**
+ * ── WHOSE PAINT THAT IS ─────────────────────────────────────────────────────
+ *
+ * Every enemy below a Man-o-War flies the PLAYER'S OWN v3 art now — one ladder
+ * for both sides, which was the right call for the silhouettes and cost the
+ * fleet its identity: every enemy schooner in the game became the same
+ * schooner in the same paint, and a chapter of raids that used to be five
+ * different ships became five copies of one.
+ *
+ * The answer is not a second set of paintings. A hull is timber and pitch and
+ * whatever the crew could get, and two crews painting the same class of ship do
+ * not paint it the same colour. So the art stays and the PAINT changes: one
+ * hue rotation per enemy, applied wherever that enemy is drawn.
+ *
+ * A CURATED WHEEL, NOT A RANDOM ONE. A hash straight onto 360 degrees gives you
+ * a pink brigantine sooner or later. These eleven are sea colours — weathered
+ * greens, rusts, tars, a cold navy, an ochre — and one of them is 0, because
+ * the art as painted has to stay in the fleet or the original stops being a
+ * ship anyone has seen.
+ */
+const HULL_HUES = [0, 22, -26, 48, -58, 86, 128, -96, 162, 64, -14] as const
+
+/** Stable per enemy, so the same hull is the same colour in a campaign raid, on
+ *  the chart, and in a gauntlet that borrowed her from a raid config. */
+export function hullHue(enemyId: string | null | undefined): number {
+  if (!enemyId) return 0
+  // Math.imul: `*` on integers is floating point in JS and throws away the low
+  // bits, which are the entire output of a hash. See seaShoals, where exactly
+  // that emptied the ocean.
+  let h = 0
+  for (let i = 0; i < enemyId.length; i++) h = Math.imul(h ^ enemyId.charCodeAt(i), 0x01000193)
+  return HULL_HUES[((h >>> 0) % HULL_HUES.length)]
+}
+
+/** The CSS half of it, for the two renderers that draw a hull as an <img>. */
+export function hullFilter(enemyId: string | null | undefined): string {
+  const deg = hullHue(enemyId)
+  // Saturation lifts a touch with the rotation so a shifted hull does not read
+  // as the same ship under a coloured light.
+  return deg === 0 ? '' : `hue-rotate(${deg}deg) saturate(1.12)`
+}
+
+/** The CSS filter for a chart mark, from the enemy it is standing in for. */
+export function hullFilterFor(e: Encounter): string {
+  const deg = hullHueFor(e)
+  return deg === 0 ? '' : `hue-rotate(${deg}deg) saturate(1.12)`
+}
+
+/** WHICH ENEMY'S PAINT THIS MARK WEARS. The same walk `hullFor` makes. */
+export function hullHueFor(e: Encounter): number {
+  const node = RAID_MAP.find(n => n.id === e.node)
+  if (!node) return 0
+  if (node.raidId) {
+    const cfg = getRaidConfigById(node.raidId)
+    return hullHue(cfg?.bossId)
+  }
+  if (node.type === 'skirmish') {
+    const ahead = ENCOUNTERS
+      .filter(x => x.bay === e.bay && x.along > e.along)
+      .sort((a, b) => a.along - b.along)
+    for (const x of ahead) {
+      const n = RAID_MAP.find(m => m.id === x.node)
+      const cfg = n?.raidId ? getRaidConfigById(n.raidId) : null
+      if (cfg) return hullHue(cfg.sequence[0])
+    }
+  }
+  return 0
+}
+
 export function hullFor(e: Encounter): string | null {
   const node = RAID_MAP.find(n => n.id === e.node)
   if (!node) return null

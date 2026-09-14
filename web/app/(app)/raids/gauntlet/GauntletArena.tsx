@@ -126,7 +126,7 @@ function waterBox(W: number, H: number) {
   return { cx: W / 2, cy: top + (H - top - bottom) / 2 }
 }
 
-export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, shipFlip, seaBeam, enemyHidden, handle }: {
+export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, enemyHue, shipFlip, seaBeam, enemyHidden, handle }: {
   theme: ArenaTheme
   scene: ArenaScene
   /** Which screen of the run this is under. Drives the grade and the beats. */
@@ -135,6 +135,14 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
   depth: number
   /** The player's hull art, as the fight already knows it. */
   shipUrl: string
+  /**
+   * HER PAINT, in degrees of hue. Every enemy below a Man-o-War flies the
+   * player's own v3 art, so without this every schooner in the gauntlet is the
+   * same schooner — and the gauntlet draws its mobs FROM the raid configs, so
+   * you meet the same three hulls over and over down a dive. From `hullHue`, so
+   * a ship is the same colour here as she is in her own raid.
+   */
+  enemyHue?: number
   /** The enemy's, this depth. Empty when there is none yet. */
   enemyUrl: string
   /** Whether the player's sprite is drawn mirrored — the ships table's own flag. */
@@ -156,8 +164,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
   themeRef.current = theme
   const sceneRef = useRef({ ...scene, mood })
   sceneRef.current = { ...scene, mood }
-  const artRef = useRef({ shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam })
-  artRef.current = { shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam }
+  const artRef = useRef({ shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam, enemyHue: enemyHue ?? 0 })
+  artRef.current = { shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam, enemyHue: enemyHue ?? 0 }
   const hiddenRef = useRef(!!enemyHidden)
   hiddenRef.current = !!enemyHidden
   /** 1 the instant a new depth arrives, decayed by the frame loop. */
@@ -311,6 +319,30 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       }
       const player = mkHull(0.5)
       const enemy = mkHull(1)
+      /**
+       * ── THE PAINT, AS A COLOUR MATRIX ───────────────────────────────
+       *
+       * Not `tint`: tint MULTIPLIES, so it can only ever make a hull darker,
+       * and a dark hull tinted green is a black hull. A hue rotation moves the
+       * colour without touching how bright she is, which is what paint does.
+       *
+       * The filter is only attached when there is something to rotate — the
+       * wheel includes 0 on purpose, and a hull wearing the art as painted
+       * should not pay for a render pass to be told so. On a small sprite the
+       * pass is a few hundred square pixels; it is nothing beside the water,
+       * and it is the only filter in this arena.
+       */
+      let enemyHueNow: number | null = null
+      const paintEnemy = (deg: number) => {
+        if (deg === enemyHueNow) return
+        enemyHueNow = deg
+        if (!deg) { enemy.sp.filters = [] ; return }
+        const f = new PIXI.ColorMatrixFilter()
+        f.hue(deg, false)
+        f.saturate(0.12, true)
+        enemy.sp.filters = [f]
+      }
+      paintEnemy(artRef.current.enemyHue ?? 0)
       // SHE IS NOT HERE UNTIL THE FIGHT IS. The alpha eases toward whatever
       // `enemyHidden` says, and starting at Pixi's default of 1 meant every
       // screen that does NOT want her — the fall, the breather, the reward —
@@ -538,6 +570,7 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         } else {
           // Eased both ways, so she does not blink out at the top of a descent
           // and does not blink in at the bottom of one.
+          paintEnemy(art.enemyHue ?? 0)
           const want = hiddenRef.current || !art.enemyUrl ? 0 : 1
           enemy.node.alpha += Math.max(-dt * 2.2, Math.min(dt * 1.6, want - enemy.node.alpha))
         }

@@ -58,6 +58,7 @@ import type { DialAimBonus } from '@/lib/dialAim'
 import { installSpaceAction, typingInField, uncoveredCenter } from '@/lib/spaceAction'
 import { compact } from '@/lib/almanac'
 import { createPortal } from 'react-dom'
+import { hullFilter } from '@/app/(app)/sea/raidWaters'
 import { renderTally } from './renderTally'
 import { DialSVG, CX, CY, OUTER_R, INNER_R } from '@/components/FishingDial'
 import AimBarFx, { type AimBarFxHandle } from './AimBarFx'
@@ -8713,11 +8714,16 @@ export default function RaidCombat({
                 // and the box stays so the effects keep their geometry.
                 visibility: overSea ? 'hidden' : 'visible',
                 transform: 'scaleX(-1)',  // face the player
-                // Just a grounding drop-shadow now. The elite (violet) +
-                // wounded-boss (crimson) halos, the boss/non-boss hue-rotate hull
-                // tint, and the gauntlet drowned/ghost wash were all removed —
-                // enemy art shows in its natural colour.
-                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
+                // ── HER OWN PAINT ────────────────────────────────────
+                //
+                // The elite/boss halos and the gauntlet wash were removed for
+                // good reasons and stay removed. This is not those: every
+                // enemy below a Man-o-War flies the player's own v3 art now,
+                // so without a hue of her own every schooner in the game is
+                // the SAME schooner. `enemyArtFilter` is the host's wash (the
+                // gauntlet's drowned grey, the Don's spectral green) and it
+                // composes in front. See hullFilter.
+                filter: `${hullFilter(enemy.id)} ${enemyArtFilter} drop-shadow(0 3px 6px rgba(0,0,0,0.35))`.trim(),
                 pointerEvents: 'none',
               }}
             />

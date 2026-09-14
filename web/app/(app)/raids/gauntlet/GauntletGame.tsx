@@ -18,6 +18,7 @@ import {
   ENTER, EXIT, POP, CEREMONY, STAGGER, STAGGER_SLOW, stagger,
 } from '@/lib/gauntletMotion'
 import RaidCombat from '../RaidCombat'
+import { hullHue } from '@/app/(app)/sea/raidWaters'
 import GauntletArena, { type ArenaHandle, type ArenaTheme, type Mood } from './GauntletArena'
 import FrameMeter, { frameMeterOn, setFrameMeterOn } from './FrameMeter'
 import { getShip, shipTierByName } from '@/lib/ships'
@@ -2560,6 +2561,10 @@ export default function GauntletGame(props: GauntletGameProps) {
       // two renderers would disagree about which way she is pointing.
       shipUrl={props.shipImageUrl}
       enemyUrl={fight?.enemy.image ?? ''}
+      // HER OWN PAINT. The gauntlet draws its mobs from the raid configs, so
+      // without this you meet the same three hulls, in the same colour, all
+      // the way down a dive. See hullHue.
+      enemyHue={hullHue(fight?.enemy.id)}
       seaBeam={arenaBeam}
       // She is only on the water during the fight. Everywhere else you are
       // alone with what you did to her.

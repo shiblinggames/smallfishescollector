@@ -61,7 +61,7 @@ import {
   WARGATE, WARGATE_REACH, MAELSTROMS, MAELSTROM_REACH, type Maelstrom,
   // The duel's framing lives with the raid water now, so the gauntlet's arena
   // composes its fights from the same numbers this chart does.
-  WARSHIP_W, FIGHT_CAM_LIFT, zoomFor, fightZoom,
+  WARSHIP_W, FIGHT_CAM_LIFT, zoomFor, fightZoom, hullFilterFor,
   type Bay, type Encounter, type Cache, type Beat,
 } from './raidWaters'
 import { RAID_MAP, RAID_CHAPTERS, chapterForNode, computeRaidMap, type RaidNode, type RaidChapter } from '@/lib/raidMap'
@@ -14353,6 +14353,14 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext,
   const node = RAID_MAP.find(n => n.id === enc.node)
   const at = encounterAt(enc)
   const hull = hullFor(enc)
+  /**
+   * HER OWN PAINT. Every enemy below a Man-o-War flies the player's own v3 art
+   * now, so without this every schooner on the chart is the same schooner. See
+   * hullHueFor in raidWaters — it walks to the same enemy `hullFor` does, so a
+   * hull is the same colour here, in her raid, and in a gauntlet that borrowed
+   * her.
+   */
+  const paint = hullFilterFor(enc)
   if (!node || !at || !hull) return null
 
   const locked = status === 'locked'
@@ -14412,7 +14420,8 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext,
         transform: `translate(-50%, 0) scaleY(${-MIRROR_LIE})`,
         transformOrigin: 'top center',
         opacity: locked ? 0.12 : MIRROR_ALPHA,
-        filter: 'blur(0.7px)',
+        // Her reflection wears her paint, obviously. See hullHueFor.
+        filter: `${paint} blur(0.7px)`.trim(),
         WebkitMaskImage: 'linear-gradient(to top, transparent 0%, rgba(0,0,0,0.55) 55%, black 100%)',
         maskImage: 'linear-gradient(to top, transparent 0%, rgba(0,0,0,0.55) 55%, black 100%)',
         pointerEvents: 'none',
@@ -14527,11 +14536,15 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext,
           // shadow drawn on the water above, which is what actually stops her
           // floating. What is left needs a filter and earns it — the drained
           // look of a locked hull, and the gold on the ONE you are near.
+          // The paint goes FIRST so the states above compose over it — a
+          // locked hull is a drained version of her own colour, not of
+          // somebody else's. An unpainted hull (hue 0) still carries no filter
+          // in its default state, which is the whole point of the note above.
           filter: locked
-            ? 'grayscale(0.72) brightness(0.82) drop-shadow(0 0 10px rgba(150,186,210,0.35))'
+            ? `${paint} grayscale(0.72) brightness(0.82) drop-shadow(0 0 10px rgba(150,186,210,0.35))`.trim()
             : isNear && !cleared
-              ? 'drop-shadow(0 8px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(240,192,64,0.55))'
-              : undefined,
+              ? `${paint} drop-shadow(0 8px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(240,192,64,0.55))`.trim()
+              : (paint || undefined),
           // A cleared boss sits faded as "already taken" — but not while she
           // is shooting at you. The fought hull is at full presence for the
           // duration, whatever the ledger says about her.
