@@ -361,6 +361,18 @@ function snapIndicator(el: HTMLDivElement | null) {
 function flashBar(el: HTMLDivElement | null, color: string, peak = 0.55) {
   if (!el) return
   el.style.background = color
+  // ON THE COMPOSITOR. This was a requestAnimationFrame loop writing `opacity`
+  // for 320ms — twenty main-thread style writes starting on the exact frame
+  // the shot is locked, beside the React pass that same press already costs.
+  // An opacity animation is the cheapest thing a compositor does; the loop
+  // stays only as the fallback for an engine with no Web Animations.
+  if (typeof el.animate === 'function') {
+    try {
+      el.style.opacity = '0'
+      el.animate([{ opacity: peak }, { opacity: 0 }], { duration: 320, easing: 'linear' })
+      return
+    } catch { /* fall through to the loop */ }
+  }
   el.style.opacity = String(peak)
   let start: number | null = null
   function fade(t: number) {
@@ -11397,11 +11409,26 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
           <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(45deg, rgba(110,120,140,0.32) 0 5px, rgba(56,66,86,0.32) 5px 10px)' }} />
         ) : (
           <>
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: accent, borderRadius: 4, transition: 'width 0.4s ease' }} />
+            {/* ── SCALED, NOT RESIZED ──────────────────────────────────
+                The fill used to transition `width`, and the shield segments
+                `width` AND `left`. Those are LAYOUT properties: for every frame
+                of the 400ms ease the browser re-laid-out and repainted the bar
+                — on the main thread, on every hit, on up to four bars at once.
+                That is the frame the damage number lands in.
+
+                A transform is composited: the layer is drawn once and moved by
+                the GPU. Every element is full-width now and `scaleX` from its
+                left edge does what `width` did; the segments add a `translateX`
+                in percent, which is relative to the element's OWN width — the
+                full bar — so it is unaffected by the scale that follows it.
+                The rounded right end of the fill is gone (a scaled corner
+                would squash); at four pixels on a six-pixel bar nobody has ever
+                seen it, and the container's own radius still clips the ends. */}
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '100%', background: accent, transformOrigin: 'left center', transform: `scaleX(${pct / 100})`, transition: 'transform 0.4s ease', willChange: 'transform' }} />
             {segs.map((s, i) => {
               const w = (s.hp / denom) * 100 * segScale
               const left = off; off += w
-              return <div key={i} style={{ position: 'absolute', top: 0, bottom: 0, left: `${left}%`, width: `${w}%`, background: `linear-gradient(90deg, ${s.color}, ${s.gradTo})`, boxShadow: `0 0 6px ${s.color}aa`, transition: 'width 0.35s ease, left 0.4s ease' }} />
+              return <div key={i} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '100%', background: `linear-gradient(90deg, ${s.color}, ${s.gradTo})`, boxShadow: `0 0 6px ${s.color}aa`, transformOrigin: 'left center', transform: `translateX(${left}%) scaleX(${w / 100})`, transition: 'transform 0.4s ease', willChange: 'transform' }} />
             })}
           </>
         )}
