@@ -35,6 +35,7 @@
 
 import { createPortal } from 'react-dom'
 import PopupShell from '@/components/PopupShell'
+import SheetBoundary from '@/components/SheetBoundary'
 import LoadoutBody from './LoadoutBody'
 import { vibrate } from '@/lib/haptics'
 
@@ -151,19 +152,26 @@ export default function GearSheet({
             Everything you own, and anything here can be swapped.
           </p>
 
-          <LoadoutBody
-            rack={rack}
-            activeRod={activeRod}
-            locked={false}
-            onPick={onRodChange}
-            look={look}
-            onLookChange={onLookChange}
-            reelTier={reelTier}
-            hookTier={hookTier}
-            reelName={reelName}
-            lineName={lineName}
-            hookName={hookName}
-          />
+          {/* ── AND IT CANNOT TAKE THE CHART WITH IT ────────────────────
+              The sea is one client component with a live renderer and an hour
+              of session state in it, and anything that throws while it is
+              mounted unmounts the lot. A wardrobe is not worth that: see
+              components/SheetBoundary. */}
+          <SheetBoundary name="Loadout" onClose={onClose}>
+            <LoadoutBody
+              rack={rack}
+              activeRod={activeRod}
+              locked={false}
+              onPick={onRodChange}
+              look={look}
+              onLookChange={onLookChange}
+              reelTier={reelTier}
+              hookTier={hookTier}
+              reelName={reelName}
+              lineName={lineName}
+              hookName={hookName}
+            />
+          </SheetBoundary>
 
           {/* ── AND WHERE THE REST OF IT COMES FROM ─────────────────────── */}
           <p className="font-karla font-700 uppercase" style={{

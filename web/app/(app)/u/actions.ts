@@ -132,7 +132,7 @@ export async function purchaseCharacterColor(colorId: string): Promise<
   return { doubloons: newDoubloons, gems: newGems, unlockedColors: newUnlocked }
 }
 
-export async function updateCharacterColor(colorId: string): Promise<{ error?: string }> {
+export async function updateCharacterColor(colorId: string, opts?: { quiet?: boolean }): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -170,7 +170,9 @@ export async function updateCharacterColor(colorId: string): Promise<{ error?: s
 
   // The skin is the captain on the chart, so /sea's cached render is now wrong.
   // See the note in fishing/actions equipBoat.
-  revalidatePath('/sea')
+  // Quiet when the chart itself asked: see the note on equipBoat in
+  // fishing/actions. The sprite has already changed on screen.
+  if (!opts?.quiet) revalidatePath('/sea')
   await admin.from('profiles').update({ character_color: colorId }).eq('id', user.id)
   return {}
 }

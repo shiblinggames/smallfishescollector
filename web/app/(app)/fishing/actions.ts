@@ -2169,7 +2169,25 @@ export async function releaseAncient(fishId: number): Promise<
   return { ok: true, vigil }
 }
 
-export async function equipBoat(boatId: string | null): Promise<{ ok: true } | { error: string }> {
+/**
+ * ── AND `quiet` IS FOR THE CHART ──────────────────────────────────────────
+ *
+ * `revalidatePath('/sea')` exists for a real reason (see the note at the call):
+ * the Shipyard returns to the chart with `router.back()`, which restores the
+ * CACHED entry, so without it a captain could equip a boat and sail away in the
+ * old one.
+ *
+ * It is exactly wrong when the caller IS the chart. The sea's own loadout
+ * applies the change optimistically to the sprite that is on screen, so the
+ * revalidate re-runs the biggest server batch in the game to tell a page a
+ * thing it has already done — and does it while a WebGL renderer, a frame loop
+ * and an hour of session state are mounted on top of the result. One slow read
+ * in that batch and the route throws, which a player reads as the game
+ * crashing because they changed a hat.
+ *
+ * So the chart says `quiet`. Everywhere else keeps the invalidation.
+ */
+export async function equipBoat(boatId: string | null, opts?: { quiet?: boolean }): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -2200,7 +2218,7 @@ export async function equipBoat(boatId: string | null): Promise<{ ok: true } | {
   // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
   // away and still be in the old one. It did not read as a stale render; it read
   // as the equip having silently failed.
-  revalidatePath('/sea')
+  if (!opts?.quiet) revalidatePath('/sea')
   await admin.from('profiles').update({ equipped_boat: boatId }).eq('id', user.id)
   return { ok: true }
 }
@@ -2239,7 +2257,7 @@ export async function buyBoat(boatId: string): Promise<{ ok: true; doubloons?: n
   return useGems ? { ok: true, gems: newBalance } : { ok: true, doubloons: newBalance }
 }
 
-export async function equipHat(hatId: string | null): Promise<{ ok: true } | { error: string }> {
+export async function equipHat(hatId: string | null, opts?: { quiet?: boolean }): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -2257,7 +2275,7 @@ export async function equipHat(hatId: string | null): Promise<{ ok: true } | { e
   // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
   // away and still be in the old one. It did not read as a stale render; it read
   // as the equip having silently failed.
-  revalidatePath('/sea')
+  if (!opts?.quiet) revalidatePath('/sea')   // see equipBoat
   await admin.from('profiles').update({ equipped_hat: hatId }).eq('id', user.id)
   return { ok: true }
 }
@@ -2273,7 +2291,7 @@ export async function equipHat(hatId: string | null): Promise<{ ok: true } | { e
  *
  *  Unequip (null) needs a slot, since there is nothing to read a flag off:
  *  `slot` defaults to stern, which is every pet that existed before the bow. */
-export async function equipPet(petId: string | null, slot: 'stern' | 'bow' = 'stern'): Promise<{ ok: true } | { error: string }> {
+export async function equipPet(petId: string | null, slot: 'stern' | 'bow' = 'stern', opts?: { quiet?: boolean }): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -2293,7 +2311,7 @@ export async function equipPet(petId: string | null, slot: 'stern' | 'bow' = 'st
     column = PET_SLOT_COLUMN[own]
   }
   // Same reason as the boat: the pet rides on the chart's sprite.
-  revalidatePath('/sea')
+  if (!opts?.quiet) revalidatePath('/sea')   // see equipBoat
   await admin.from('profiles').update({ [column]: petId }).eq('id', user.id)
   return { ok: true }
 }

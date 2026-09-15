@@ -151,10 +151,16 @@ export default function LoadoutBody({
     if (slot === 'rod') { onPick(Number(id)); setSlot(null); return }
     setBusy(true)
     const value = id === '' ? null : id
-    if (slot === 'hat') { onLookChange({ hatId: value }); await equipHat(value).catch(() => {}) }
-    else if (slot === 'boat') { onLookChange({ boatId: value }); await equipBoat(value).catch(() => {}) }
-    else if (slot === 'pet') { onLookChange({ petId: value }); await equipPet(value).catch(() => {}) }
-    else if (slot === 'skin' && value) { onLookChange({ characterColor: value }); await updateCharacterColor(value).catch(() => {}) }
+    // QUIET, ALL FOUR. `onLookChange` above has already moved the sprite on the
+    // chart behind this sheet, so the revalidate these actions do for the
+    // Shipyard's benefit would re-run the sea's whole server batch to report a
+    // change that is already on screen — underneath a live renderer. See the
+    // note on equipBoat in fishing/actions.
+    const quiet = { quiet: true }
+    if (slot === 'hat') { onLookChange({ hatId: value }); await equipHat(value, quiet).catch(() => {}) }
+    else if (slot === 'boat') { onLookChange({ boatId: value }); await equipBoat(value, quiet).catch(() => {}) }
+    else if (slot === 'pet') { onLookChange({ petId: value }); await equipPet(value, 'stern', quiet).catch(() => {}) }
+    else if (slot === 'skin' && value) { onLookChange({ characterColor: value }); await updateCharacterColor(value, quiet).catch(() => {}) }
     setBusy(false)
     setSlot(null)
   }
