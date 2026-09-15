@@ -2,8 +2,14 @@ import { redirect } from 'next/navigation'
 import PracticeRaidGame from './PracticeRaidGame'
 import { getRaidPlayerStats } from '../actions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { adminOnlyPage } from '@/lib/adminGate'
 
+// THE OLD TUTORIAL. The campaign's first fight moved to /raids/skirmish and
+// runs on the ordinary raid page; this is the wrapper it left behind, with its
+// own enemy table and its own chrome. Nothing links here. Admin only, kept for
+// comparison until it is deleted outright.
 export default async function PracticeRaidPage() {
+  await adminOnlyPage()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 

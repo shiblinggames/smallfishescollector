@@ -98,6 +98,7 @@ export default function ForgeBoard({
   onForgeTap, onLearnTap, abyssalUnlocked = false, raidItemSlots = 4,
   acceleratorUnlocked = false, conversion = null, gemsNow = 0,
   convertBusy = false, claimBusy = false, onStartConvert, onClaimConvert, onTabChange,
+  onOpenBoss,
 }: {
   /** Owns Don's Abyssal Forge? Tier-3 recipes are hidden entirely until then. */
   abyssalUnlocked?: boolean
@@ -123,20 +124,29 @@ export default function ForgeBoard({
   onClaimConvert?: () => void
   /** Reports which bench is showing so the page hero can match it. */
   onTabChange?: (tab: ForgeTab) => void
+  /** Open a campaign boss's card, by node id, without leaving the chart. The
+   *  sea passes this; see goToSource for what happens without it. */
+  onOpenBoss?: (nodeId: string) => void
 }) {
   const router = useRouter()
   // GO AND GET IT. A leaf of a build tree names where it drops; this makes that
-  // name somewhere you can actually go. A campaign drop opens its boss card on
-  // the hub (so you read the odds and records before committing), a Gauntlet
-  // drop goes straight to the descent, since a run has no boss card to open.
+  // name somewhere you can actually go. A campaign drop opens its boss card (so
+  // you read the odds and records before committing), a Gauntlet drop goes
+  // straight to the descent, since a run has no boss card to open.
   //
-  // The forge is its own route, so this is a plain navigation. No handoff to
-  // the raid section, no drawer to close.
+  // THE FORGE IS A SHEET ON THE CHART NOW, not its own route. This used to push
+  // to /expeditions?boss=..., which is a retired page that redirects to /sea
+  // and drops the query on the way: a full navigation that reloaded the chart
+  // and then visibly did nothing. The sea hands in `onOpenBoss` and the card
+  // opens in place. The fallback keeps the id in the URL for a chart that reads
+  // it, so a mount without the handler still lands on the right card.
   const goToSource = (itemId: string) => {
     const link = raidSourceForItem(itemId)
     if (!link) return
     vibrate([0, 14])
-    router.push(link.kind === 'boss' ? `/expeditions?boss=${link.nodeId}` : link.route!)
+    if (link.kind !== 'boss') { router.push(link.route!); return }
+    if (onOpenBoss) { onOpenBoss(link.nodeId!); return }
+    router.push(`/sea?boss=${encodeURIComponent(link.nodeId!)}`)
   }
   // Which forge you're looking at. The Abyssal (tier-3) tab only becomes a real
   // destination once you own the Abyssal Forge; before that it's a locked teaser.

@@ -6,6 +6,7 @@ import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import AchievementsClient, { type JourneyGroup, type JourneyGoal } from '@/app/(app)/achievements/AchievementsClient'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { isPremiumActive } from '@/lib/premium'
 import { reconcileBadges } from '@/app/(app)/achievements/badgeActions'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { hasPrestigedAllZones } from '@/lib/collection'
@@ -147,7 +148,11 @@ export default async function BadgesPage() {
   const bootyHauls   = Number(profile?.voyage_booty_hauls ?? 0)
   const snags = Number(profile?.fishing_snags ?? 0)
   const jackpots = Number(profile?.fishing_jackpots ?? 0)
-  const isPremium = !!profile?.is_premium
+  // THE SHARED TEST, not the raw column: a lapsed membership is a flag that is
+  // still true with an expiry in the past, and reading the flag alone let a
+  // lapsed Captain keep the Captain rods on this page while every other gate in
+  // the game had already shut.
+  const isPremium = isPremiumActive(profile)
   const petsOwned = ((profile?.unlocked_pets as string[] | null) ?? []).length
   const shipTier = Number(profile?.ship_tier ?? 0)
   const trawlsCollected = Number(profile?.trawls_collected ?? 0)

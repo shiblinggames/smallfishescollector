@@ -52,7 +52,15 @@ const KEY = 'stb:cast-off'
  * that stays cached, so it is worth asking for; the server round trip on the
  * press is the floor and this does not pretend otherwise.
  */
-const DOORS = ['/sea', '/raids/gauntlet', '/raids/dons-gauntlet', '/tavern/market', '/badges', '/leaderboard', '/profile']
+// THE LIST IS THE CHART'S, NOT THE NAV'S. It used to warm /badges, /leaderboard
+// and /profile, which are tab-bar destinations the chart never pushes anybody
+// through, and skipped the four places you reach by sailing to them: the
+// Mainland, the Homestead, the Shipyard and the Trawl Docks. Those are the
+// presses that feel slow on a phone, and the ones a prefetch can help.
+const DOORS = [
+  '/sea', '/tavern', '/home', '/shipyard', '/trawl-docks', '/tavern/market',
+  '/raids/gauntlet', '/raids/dons-gauntlet',
+]
 
 export default function CastingOff() {
   const pathname = usePathname()

@@ -81,7 +81,7 @@ const CARDS: { id: Room; title: string; blurb: string; accent: string }[] = [
 
 const TITLES: Record<Room, string> = { refits: 'Refits', armament: 'Armament', appearance: 'Look' }
 
-export default function ShipSheet({ open, focus, onClose }: {
+export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
   open: boolean
   /**
    * WHICH DOOR ASKED.
@@ -97,6 +97,10 @@ export default function ShipSheet({ open, focus, onClose }: {
    */
   focus: 'ship' | 'forge' | 'items'
   onClose: () => void
+  /** A drop source on the forge board names a campaign boss; this opens that
+   *  boss's card on the chart. The sheet shuts itself first, since the card
+   *  is a sheet too and two of them is a stack. */
+  onOpenBoss?: (nodeId: string) => void
 }) {
   const router = useRouter()
   const [state, setState] = useState<Props | null>(null)
@@ -300,7 +304,8 @@ export default function ShipSheet({ open, focus, onClose }: {
               // "why is the forge navy" you can see from across the room. And
               // its own focus header prints the forge's name a second time,
               // directly under the header three lines up that already says it.
-              <ShipHero {...state} focus="forge" boxed bare onBack={onClose} />
+              <ShipHero {...state} focus="forge" boxed bare onBack={onClose}
+                onOpenBoss={onOpenBoss ? id => { onClose(); onOpenBoss(id) } : undefined} />
             ) : room ? (
               // THE ROOM ITSELF, tiles only. Everything they open still works
               // because it is still ShipHero doing the opening.

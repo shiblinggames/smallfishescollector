@@ -1,8 +1,12 @@
+// A prototype of a pack opener for an economy the game no longer has. Kept
+// as a reference for the motion work in it; admin only, see lib/adminGate.
 import { createClient } from '@/lib/supabase/server'
+import { adminOnlyPage } from '@/lib/adminGate'
 import DemoPackOpener from './DemoPackOpener'
 import type { CardVariant } from '@/lib/types'
 
 export default async function DemoPage() {
+  await adminOnlyPage()
   const supabase = await createClient()
   const { data: variants } = await supabase
     .from('card_variants')

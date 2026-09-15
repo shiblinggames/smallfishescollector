@@ -20,7 +20,7 @@ import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, resolveTerms, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, GALAXY_HULL_SKIN_ID, GALAXY_HULL_CHEST_TIER, GHOST_HULL_SKIN_ID, GHOST_HULL_CHEST_TIER, GHOST_HULL_DROP_MULT, DONS_GAUNTLET_ITEM_IDS, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestLabelFor, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, donsHardcoreUnlocked, hcCols, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type DepthSplit, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
-import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult, donsBloodGemMult, DONS_DAILY_TRIBUTE_ID, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
+import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult, donsBloodGemMult, gauntletStartDepth, DONS_DAILY_TRIBUTE_ID, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import {
   rollOffer, offerCoinMult, offerFathomMult, offerChestMult,
@@ -62,6 +62,31 @@ import { getRaidPlayerStats } from '../actions'
  * Server-side and unprompted by the client, so there is nothing here to forge.
  */
 const ACTIVE_GAP_CAP_MS = 5 * 60_000
+
+/**
+ * ── THE FASTEST A DEPTH CAN HONESTLY FALL ───────────────────────────────────
+ *
+ * The cash-out takes the depth from the client and clamps it to the economy's
+ * caps, and that was the whole of the check: a request naming the cap paid the
+ * cap. The run clock is the one fact about a run the server keeps for itself
+ * (gauntlet_run_active_ms is accumulated from timestamps this file writes, see
+ * tickActiveMs), so the clock is what the depth is held against.
+ *
+ * FOUR SECONDS, from the record. Every honest personal best in
+ * gauntlet_depth_bests takes at least nine seconds for depth one and the pace
+ * only slows from there (over twenty-five a depth past ten); the rows that do
+ * not fit that curve are two seconds for seventy depths, which is the forgery
+ * this exists to stop. Half the fastest real depth cannot touch a real player
+ * and still turns "start, cash out at the cap, repeat" from instant into a
+ * minute of waiting per run, with the pay-out bounded by the wait.
+ *
+ * A SPEED BUMP, NOT A LOCK, and it is called that here so nobody mistakes it.
+ * The fights resolve on the client; until each one is checkpointed server-side
+ * as it falls, a patient forger still gets paid at the rate an honest run
+ * would. That is the per-fight checkpoint on the list, and this is what holds
+ * the door until it lands.
+ */
+const MIN_MS_PER_DEPTH = 4_000
 
 /** Fold the time since the last tick into the run's total. Returns the fields
  *  to write; the caller merges them into whatever update it was already doing,
@@ -866,8 +891,20 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // sunk (drives chest + pot, so the head start is no loot shortcut); combatDepth
   // = how deep you reached (drives Fathoms + deepest record + contest, so the
   // skip DOES count toward depth). Equal for everyone without Veteran's Start.
-  const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth)))
-  const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth)))
+  //
+  // ── AND THE CLOCK HAS TO AGREE ──────────────────────────────────────────
+  // Read, not written: the finish stops the clock further down, and this only
+  // asks how long the run has actually been open for. See MIN_MS_PER_DEPTH.
+  const clockMs = tickActiveMs(profile.gauntlet_run_active_ms, profile.gauntlet_run_tick_at, { stop: true }).gauntlet_run_active_ms
+  const timeDepth = Math.floor(clockMs / MIN_MS_PER_DEPTH)
+  const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth), timeDepth))
+  // The combat depth may sit above the reward depth by exactly the head start
+  // Veteran's Start grants, and no more. Read off the same Locker the client
+  // reads, so the two cannot disagree about how big a head start is.
+  const headStart = gauntletStartDepth(
+    ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [],
+  ) - 1
+  const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth), rd + headStart))
   // BOUNTIES. How deep a single run got is a moment, not a total:
   // profiles.gauntlet_deepest is a lifetime high-water mark, so a captain who
   // has already seen 15 could never complete "reach depth 10 today" from it.

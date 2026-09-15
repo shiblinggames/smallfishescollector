@@ -3,10 +3,13 @@
 // which is how the placement numbers it reproduces were arrived at in the first
 // place. See SkiffBench.
 
+import { adminOnlyPage } from '@/lib/adminGate'
 import SkiffBench from './SkiffBench'
 
 export const metadata = { title: 'Skiff bench' }
 
-export default function SkiffBenchPage() {
+// Admin only, like every other bench under /sea.
+export default async function SkiffBenchPage() {
+  await adminOnlyPage()
   return <SkiffBench />
 }

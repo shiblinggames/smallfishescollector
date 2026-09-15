@@ -1617,7 +1617,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, exploredExpRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, navXP, renownNav, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
-  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, hasCaptain: hasCaptain0, raidItems, raidSeats, itemMounts, portal, startSide, hasPact = false,
+  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, openBoss = null, raidParty, hasCaptain: hasCaptain0, raidItems, raidSeats, itemMounts, portal, startSide, hasPact = false,
   seenChapterUnlocks = [], seenUltimateUnlock = false,
 }: {
   fishingXP: number
@@ -1671,6 +1671,9 @@ export default function SeaMap({
   /** A panel to open the moment the chart is up, named in the URL. The retired
    *  /crew route lands here; nothing else uses it yet. */
   openDoor?: 'crew' | 'loadout' | 'ship' | 'forge' | null
+  /** A boss card to open the moment the chart is up, by node id. The retired
+   *  /expeditions?boss= links land here; the forge's own fallback does too. */
+  openBoss?: string | null
   /** Chapters whose parchment this captain has already dismissed, and whether
    *  the Quartermaster's plans have been announced. Both are the celebration's
    *  ONLY memory — see the note where they are read. */
@@ -4204,7 +4207,7 @@ export default function SeaMap({
   /** The raid being fought over the chart, by raidId. */
   const [fightId, setFightId] = useState<string | null>(null)
   /** The boss card standing open in front of it, by node id. */
-  const [bossCard, setBossCard] = useState<string | null>(null)
+  const [bossCard, setBossCard] = useState<string | null>(openBoss)
   /**
    * ── THE CARD IS READ BEFORE IT IS ASKED FOR ─────────────────────────────
    *
@@ -10890,7 +10893,12 @@ hullRef={hullRefFor(t.key)} />
         hookName={getHook(mods.hookTier).name}
         onShowWay={showWay}
       />
-      <ShipSheet open={shipSheet !== null} focus={shipSheet ?? 'ship'} onClose={() => setShipSheet(null)} />
+      <ShipSheet open={shipSheet !== null} focus={shipSheet ?? 'ship'} onClose={() => setShipSheet(null)}
+        // FROM THE FORGE TO THE FIGHT. A part's drop source names a boss; the
+        // card opens here, on the water, with the sheet already shut. Nothing
+        // else is armed: the approach refs stay down, and the card's own
+        // onClose knows how to stand everything down regardless.
+        onOpenBoss={id => setBossCard(id)} />
       {/* RE-READ ON THE WAY OUT. Collecting a finished stint happens INSIDE
           this sheet, and the island's "Training done" is what says there is one
           — so without this the mark stays lit over a hall you just emptied.

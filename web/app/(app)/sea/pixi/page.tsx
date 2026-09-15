@@ -8,10 +8,14 @@
 // empty divs, and Pixi itself is `await import`ed inside the effect. Nothing
 // touches `window` or WebGL on the server.
 
+import { adminOnlyPage } from '@/lib/adminGate'
 import PixiBench from './PixiBench'
 
 export const metadata = { title: 'Pixi spike' }
 
-export default function PixiSpikePage() {
+// Admin only, like the other two benches it names. It was the one of the
+// three without the guard.
+export default async function PixiSpikePage() {
+  await adminOnlyPage()
   return <PixiBench />
 }

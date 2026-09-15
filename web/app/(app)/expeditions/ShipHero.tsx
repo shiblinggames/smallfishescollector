@@ -350,6 +350,9 @@ interface Props {
    *  there a link to /expeditions would sail you off the sea to get out of a
    *  sheet. Given one, the arrow closes instead of navigating. */
   onBack?: () => void
+  /** Open a campaign boss's card in place. Handed straight to ForgeBoard, so a
+   *  drop source on the sea opens its card instead of sailing off the chart. */
+  onOpenBoss?: (nodeId: string) => void
   isAdmin?: boolean
   /** Persisted Navigation Renown allocations ({} when none). Renown LEVEL
    *  derives live from expeditionXP. */
@@ -637,6 +640,7 @@ export default function ShipHero({
   bare = false,
   shipSection,
   onBack,
+  onOpenBoss,
   isAdmin = false,
   navRenownAlloc = null,
   seenNavRenownIntro = true,
@@ -1609,7 +1613,7 @@ export default function ShipHero({
                       minWidth: 0, width: '100%', font: 'inherit', background: 'none',
                       WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' as const,
                     }
-                    const href = row.key === 'crew' ? '/crew?tab=assign' : `/expeditions/${row.key}`
+                    const href = row.key === 'crew' ? '/sea?open=crew&card=assign' : `/sea?open=${row.key}`
                     if (row.locked) {
                       return <div key={row.key} aria-label="Forge. Locked until you unlock it in the Gauntlet." style={style}>{inner}</div>
                     }
@@ -1781,7 +1785,7 @@ export default function ShipHero({
                   const style = { color: '#e0ddd8', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: '50%', width: 32, height: 32, textDecoration: 'none' } as CSSProperties
                   return onBack
                     ? <button type="button" onClick={onBack} aria-label="Close" style={{ ...style, cursor: 'pointer' }}>{chev}</button>
-                    : <Link href="/expeditions" aria-label="Back to expeditions" style={style}>{chev}</Link>
+                    : <Link href="/sea" aria-label="Back to sea" style={style}>{chev}</Link>
                 })() : (
                 <button
                   onClick={closeLoadout}
@@ -2355,6 +2359,7 @@ export default function ShipHero({
                    with what you can forge NOW, then your parts and what each one
                    can become, then the whole collection as a wall of medallions. */
                 <ForgeBoard
+                  onOpenBoss={onOpenBoss}
                   abyssalUnlocked={abyssalUnlocked}
                   raidItemSlots={raidItemSlots}
                   ownedRaidItems={ownedRaidItems}

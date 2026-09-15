@@ -12,7 +12,7 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { buildClearedSet } from '@/lib/raidProgress'
-import { computeRaidMap } from '@/lib/raidMap'
+import { computeRaidMap, RAID_MAP } from '@/lib/raidMap'
 import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 import { canSail } from '@/lib/seaAccess'
 import { getEffectiveRod } from '@/lib/rods'
@@ -50,9 +50,9 @@ export default async function SeaPage({ searchParams }: {
   /** `?open=crew&card=…` — the retired /crew route's landing, so a link that
    *  used to be a page still opens the room it named. See
    *  app/(app)/crew/page.tsx. */
-  searchParams: Promise<{ open?: string; card?: string }>
+  searchParams: Promise<{ open?: string; card?: string; boss?: string }>
 }) {
-  const { open: openDoor, card: openCard } = await searchParams
+  const { open: openDoor, card: openCard, boss: openBoss } = await searchParams
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const profile = await getCurrentProfile()
@@ -480,6 +480,10 @@ export default async function SeaPage({ searchParams }: {
       seenUltimateUnlock={profile?.seen_ultimate_unlock === true}
       openCard={openCard === 'assign' || openCard === 'recruits' || openCard === 'roster' || openCard === 'wardrobe'
         ? openCard : null}
+      // A boss card to open on arrival, by node id. Checked against the map so
+      // a stray value opens nothing rather than a sheet for a node that is not
+      // there.
+      openBoss={openBoss && RAID_MAP.some(n => n.id === openBoss && n.raidId) ? openBoss : null}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
         .filter(b => b.quantity > 0)
         .map(b => ({ type: b.bait_type, quantity: b.quantity }))

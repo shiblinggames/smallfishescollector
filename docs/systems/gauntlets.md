@@ -81,6 +81,26 @@ raises stakes; cash out or press on. The main repeatable endgame.
 - Effect copy is generated from the effect where possible (`lib/tides.ts`
   describes each kind), so a retune cannot leave stale numbers on a card.
 
+## The cash-out is held against the clock (2026-09-15)
+
+`cashOutGauntlet` takes the depth and the pot from the client and clamps them to the
+economy caps, and for a long time that was the whole check: a request naming the cap paid
+the cap, and the normal gauntlet has no run cap or cooldown, so `start, cash out, repeat`
+was an infinite money loop for anybody with Postman. Two testers have used Postman against
+other actions already.
+
+**The floor.** `gauntlet_run_active_ms` is the one fact about a run the server keeps for
+itself (accumulated from timestamps `tickActiveMs` writes, idle gaps capped at five
+minutes). The paid depth is now `min(client depth, floor(active_ms / 4000))`. Four seconds
+a depth is half the fastest honest depth on record (`gauntlet_depth_bests`: nine seconds
+for depth one, over twenty-five a depth past ten), so it cannot touch a real player. The
+combat depth may exceed the reward depth by exactly the Veteran's Start head start
+(`gauntletStartDepth() - 1`), read off the same Locker the client reads.
+
+**It is a speed bump, not a lock**, and the code says so. Fights resolve on the client;
+until each one is checkpointed server-side as it falls, a patient forger is paid at the
+rate an honest run would be. The per-fight checkpoint is still the real fix.
+
 ## Connects to
 
 - [raids-campaign.md](raids-campaign.md) — same combat engine, same laws.

@@ -4,8 +4,14 @@ import Link from 'next/link'
 import { getRaidPlayerStats } from '../actions'
 import { CORSAIRS_RECKONING } from '@/lib/bossRaids'
 import TurnBasedRaidPreview from './TurnBasedRaidPreview'
+import { adminOnlyPage } from '@/lib/adminGate'
 
+// THE PREVIEW OF A MECHANIC THAT SHIPPED. Every fight in the game is turn-based
+// now, and this page still opens under a banner reading PREVIEW, "test the new
+// mechanic". Nothing links here, but a URL is a door, and the first thing it
+// tells whoever finds it is that the game is unfinished. Admin only.
 export default async function TurnBasedRaidPage() {
+  await adminOnlyPage()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')

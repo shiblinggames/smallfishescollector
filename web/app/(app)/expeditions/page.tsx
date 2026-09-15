@@ -32,6 +32,13 @@ import { redirect } from 'next/navigation'
 // card, raidMapActions, StoryScene — because the water was built to REACH the
 // hub's own components rather than to reimplement them. This directory is a
 // component library with no page on it now.
-export default function Page() {
-  redirect('/sea')
+//
+// ONE THING IS FORWARDED: `?boss=<nodeId>`. The forge board used to push here
+// with a boss to open, and the hop ate the query, so the press reloaded the
+// chart and then visibly did nothing. The sea reads the same parameter now.
+export default async function Page({ searchParams }: {
+  searchParams: Promise<{ boss?: string }>
+}) {
+  const { boss } = await searchParams
+  redirect(boss ? `/sea?boss=${encodeURIComponent(boss)}` : '/sea')
 }
