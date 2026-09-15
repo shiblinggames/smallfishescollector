@@ -2442,6 +2442,86 @@ body.hardcore-gauntlet::after {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* ── THE DOOR: /login and /register ───────────────────────────────────────
+   See app/login/SignInStage.tsx for why the page looks like this at all. The
+   rules below are the two halves it cannot do inline: a grid that has to
+   answer a media query, and an animation that has to be a keyframe.
+
+   THE GLINTS. Moonlight on the water, drifting forever. A repeating gradient
+   twice the width of its box, translated across it: one compositor-only
+   animation, no repaint, and it turns a photograph of a sea back into a sea. */
+@keyframes signinGlints {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+.signin-glints {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: 62%;
+  width: 200%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: repeating-linear-gradient(
+    102deg,
+    rgba(198,238,244,0) 0px,
+    rgba(198,238,244,0) 46px,
+    rgba(198,238,244,0.055) 52px,
+    rgba(198,238,244,0) 62px,
+    rgba(198,238,244,0) 128px
+  );
+  /* Softest at the horizon, strongest where the water is nearest, so it reads
+     as the surface catching the light rather than a texture over the image. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 48%, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 48%, #000 100%);
+  animation: signinGlints 26s linear infinite;
+}
+
+/* THE TWO COLUMNS. Stacked on a phone with the words first, because the words
+   and the card are the page's job and the screenshot is the argument for it.
+   Side by side once there is room to show the shot at a size worth showing. */
+.signin-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.4rem;
+  align-items: center;
+}
+.signin-col { min-width: 0; }
+.signin-art { min-width: 0; }
+@media (min-width: 900px) {
+  .signin-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr); gap: 3rem; }
+}
+
+/* THE FRAME. Two real screens, the front one square on and the one behind it
+   turned away, so the pair reads as "there is more of this" without becoming a
+   row of cards. */
+.signin-shots {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  aspect-ratio: 600 / 1245;
+}
+.signin-shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 30px 70px rgba(0,0,0,0.62);
+}
+.signin-shot-back {
+  transform: rotate(6deg) translate(11%, 3%) scale(0.93);
+  opacity: 0.62;
+  filter: saturate(0.85);
+}
+.signin-shot-front { transform: rotate(-2deg); }
+@media (prefers-reduced-motion: reduce) {
+  .signin-glints { animation: none; }
+}
+
 .landing-rise {
   opacity: 0;
   animation: landingRise 0.7s cubic-bezier(0.16, 0.9, 0.28, 1) forwards;

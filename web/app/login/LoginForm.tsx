@@ -53,57 +53,64 @@ export default function LoginForm() {
     }
   }
 
+  // ── IT LIVES INSIDE THE CARD NOW ──────────────────────────────────────────
+  //
+  // Both of these used to bring their own panel: a dark rounded box with a blur
+  // behind it, because the form was floating on the background painting by
+  // itself. It sits inside the door's own card (see SignInStage), so a second
+  // one is a card in a card. What is left is the words and the controls.
   if (sent) {
     return (
-      <div className="text-center space-y-3" style={{
-        background: 'rgba(0,0,0,0.45)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: 14,
-        padding: '2rem 1.75rem',
-        backdropFilter: 'blur(8px)',
-      }}>
-        <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.58rem', color: '#5a9aaa' }}>Check Your Email</p>
-        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.1rem' }}>Link sent.</p>
-        <p className="font-karla font-300 text-[#a0a09a]" style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
-          We sent a sign-in link to <span className="text-[#f0c040]">{email}</span>.<br />
-          Click the link to sign in — you can close this tab.
+      <div style={{ textAlign: 'center', padding: '0.4rem 0 0.2rem' }}>
+        <p className="font-karla font-600 uppercase" style={{
+          fontSize: '0.56rem', letterSpacing: '0.18em', color: '#5a9aaa', margin: 0,
+        }}>Check your email</p>
+        <p className="font-cinzel font-700" style={{
+          fontSize: '1.1rem', color: '#f0ede8', margin: '6px 0 6px',
+        }}>Link sent.</p>
+        <p className="font-karla font-300" style={{
+          fontSize: '0.82rem', lineHeight: 1.6, color: '#a0a09a', margin: 0,
+        }}>
+          It is on its way to <span style={{ color: '#f0c040' }}>{email}</span>.
+          <br />Press the link and you are aboard. This tab can go.
         </p>
       </div>
     )
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* Primary action */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* The press almost everybody makes. */}
       <GoogleButton next={next} />
 
-      {/* Email fallback */}
       {!showEmail ? (
         <button
           type="button"
           onClick={() => setShowEmail(true)}
           className="font-karla font-400 transition-colors"
-          style={{ fontSize: '0.88rem', color: '#7a8a94', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}
+          style={{
+            fontSize: '0.82rem', color: '#7a8a94', background: 'none',
+            border: 'none', cursor: 'pointer', padding: '0.15rem', alignSelf: 'center',
+          }}
           onMouseEnter={e => (e.currentTarget.style.color = '#b0c0ca')}
           onMouseLeave={e => (e.currentTarget.style.color = '#7a8a94')}
         >
-          or sign in with email
+          or use an email link instead
         </button>
       ) : (
         <form onSubmit={handleSubmit} style={{
-          background: 'rgba(0,0,0,0.45)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 14,
-          padding: '1.25rem',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.875rem',
+          display: 'flex', flexDirection: 'column', gap: '0.7rem',
+          // A hairline above it, not a box around it: the form is a second
+          // half of the card rather than a thing sitting on it.
+          borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.85rem',
         }}>
           {error && (
-            <p className="font-karla text-sm border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400" style={{ borderRadius: 8 }}>
-              {error}
-            </p>
+            <p className="font-karla" style={{
+              fontSize: '0.78rem', lineHeight: 1.5, margin: 0,
+              color: '#f2b0b0', background: 'rgba(220,90,90,0.12)',
+              border: '1px solid rgba(220,90,90,0.34)', borderRadius: 9,
+              padding: '0.5rem 0.65rem',
+            }}>{error}</p>
           )}
           <input
             type="email"
@@ -112,10 +119,11 @@ export default function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="sg-input"
+            style={{ borderRadius: 10 }}
             placeholder="your@email.com"
           />
           <button type="submit" disabled={loading} className="btn-gold w-full">
-            {loading ? 'Sending…' : 'Send Sign-In Link'}
+            {loading ? 'Sending…' : 'Send the link'}
           </button>
         </form>
       )}
