@@ -21,10 +21,22 @@ import LoginForm from './LoginForm'
  * grimdark naval sim that does not exist, and it was the first thing anybody
  * saw.
  *
- * So the game itself is on the page now. Not a painting OF the game: the actual
- * screen, the one with PERFECT across the dial and a parrot on the gunwale, in
- * a frame beside the words. The landing page proved that argument already and
- * this is the same two files it uses.
+ * ── AND IT IS A DESKTOP PAGE ABOUT AN OPEN SEA ──────────────────────────────
+ *
+ * The first cut of this put two phone screenshots beside the words. Both were
+ * wrong twice over: they are old (the retired fishing hub, the old five-tab
+ * bar), and they are PHONES, stood on end, on the page for a game that is a
+ * whole chart you sail and is at its best on a monitor.
+ *
+ * What is beside the words now is the world: the painted chart, big, laid on
+ * the water like something on a table. It is the same hand every island and
+ * every wreck in the game is drawn by, it says "there is a sea out here and
+ * things in it" in one look, and it is a MAP rather than a mock-up of a
+ * screen, so it cannot quietly go out of date the way a screenshot does the
+ * next time a HUD moves.
+ *
+ * A live screenshot would still be better in the slot, and the slot is one
+ * element: swap the image, keep the frame.
  *
  * ── AND THE SEA MOVES ───────────────────────────────────────────────────────
  *
@@ -72,7 +84,7 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
       <div aria-hidden className="signin-glints" />
 
       <div className="relative z-10 mx-auto px-6" style={{
-        maxWidth: 1040, paddingTop: 'clamp(2.5rem, 7vh, 5rem)', paddingBottom: '3.5rem',
+        maxWidth: 1160, paddingTop: 'clamp(2.5rem, 7vh, 5rem)', paddingBottom: '3.5rem',
       }}>
         <div className="signin-grid">
           {/* ── THE WORDS AND THE DOOR ──────────────────────────────── */}
@@ -102,7 +114,7 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
               margin: '1.1rem 0 0', maxWidth: '34ch',
             }}>
               {isNew
-                ? 'Fish with a needle and a shrinking window. Sign a crew, take a ship into eight raids, and find out who has been running the sea floor the whole time.'
+                ? 'An open sea to sail. Fish it with a needle and a shrinking window, sign a crew, and take a ship into eight raids against the outfit running the sea floor.'
                 : 'The water is where you left it. Your hold, your crew and your run are all still aboard.'}
             </p>
 
@@ -141,29 +153,21 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
             </p>
           </div>
 
-          {/* ── AND THE GAME ITSELF ─────────────────────────────────────
-              ONE SHOWN PROPERLY, then one plain note under it. The landing
-              page settled this argument: an even row of cards is the loudest
-              tell there is, and the cast is the thing you do a thousand times
-              so it is the thing that gets the frame. The second shot sits
-              behind it, turned, saying only that the game goes somewhere. */}
-          <div className="signin-art landing-rise" style={{ animationDelay: '0.18s' }} aria-hidden={false}>
-            <div className="signin-shots">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img width={600} height={1245} src="/lp_shot_fight.jpg"
-                alt="A turn of ship combat against a drowned hand"
-                className="signin-shot signin-shot-back" loading="lazy" decoding="async" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img width={600} height={1245} src="/lp_shot_cast.jpg"
-                alt="A perfect catch landing on the fishing dial"
-                className="signin-shot signin-shot-front" loading="eager" decoding="async" />
-            </div>
-            <p className="font-karla" style={{
-              fontSize: '0.74rem', color: '#8fa3b5', textAlign: 'center',
-              margin: '0.9rem auto 0', maxWidth: 300, lineHeight: 1.6,
+          {/* ── AND THE SEA IT IS A DOOR TO ─────────────────────────────
+              ONE THING SHOWN PROPERLY, then one plain note under it. The
+              landing page settled that argument: an even row of cards is the
+              loudest tell there is. */}
+          <div className="signin-art landing-rise" style={{ animationDelay: '0.18s' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img width={1440} height={1788} src="/chartingmap.webp"
+              alt="A painted chart of the sea: islands, wrecks, a maelstrom and the things living under it"
+              className="signin-chart" loading="eager" decoding="async" />
+            <p className="font-karla signin-cap" style={{
+              fontSize: '0.76rem', color: '#9fb6c6', textAlign: 'center',
+              margin: '0.4rem auto 0', maxWidth: 360, lineHeight: 1.6,
             }}>
-              Land the needle in the gold for a perfect catch. Then take what it
-              buys you somewhere colder.
+              One sea, sailed in real time. Fish it, chart it, and take a ship
+              north through the gate when you are ready for what is out there.
             </p>
           </div>
         </div>

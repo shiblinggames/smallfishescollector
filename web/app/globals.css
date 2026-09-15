@@ -2489,37 +2489,61 @@ body.hardcore-gauntlet::after {
 .signin-col { min-width: 0; }
 .signin-art { min-width: 0; }
 @media (min-width: 900px) {
-  .signin-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr); gap: 3rem; }
+  /* DESKTOP IS THE SHOWCASE. The words and the card take the left, the world
+     takes the right and takes MORE of it than the words do: the page is an
+     argument for a sea, and the sea should be the bigger half of it. */
+  .signin-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 3.4rem; }
 }
 
-/* THE FRAME. Two real screens, the front one square on and the one behind it
-   turned away, so the pair reads as "there is more of this" without becoming a
-   row of cards. */
-.signin-shots {
-  position: relative;
+/* ── THE CHART ────────────────────────────────────────────────────────────
+   A painted map, cut out, laid on the water. It has its own paper edge so it
+   gets no frame and no border: a rule round a torn edge is a rule round a torn
+   edge. The shadow is what puts it on the table.
+
+   IT BREATHES. Six pixels over twenty seconds, which nobody watches and
+   everybody feels, and it is a transform so it costs a composite and nothing
+   else. A map pinned dead still on a moving sea is the one arrangement that
+   reads as two images rather than one picture. */
+@keyframes signinChartFloat {
+  0%, 100% { transform: rotate(-2.5deg) translate3d(0, 0, 0); }
+  50%      { transform: rotate(-2.5deg) translate3d(0, -6px, 0); }
+}
+.signin-chart {
+  display: block;
   width: 100%;
-  max-width: 300px;
+  max-width: 460px;
+  height: auto;
   margin: 0 auto;
-  aspect-ratio: 600 / 1245;
+  transform: rotate(-2.5deg);
+  animation: signinChartFloat 20s ease-in-out infinite;
+  filter: drop-shadow(0 26px 44px rgba(0,0,0,0.6)) drop-shadow(0 0 60px rgba(120,200,210,0.14));
 }
-.signin-shot {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.14);
-  box-shadow: 0 30px 70px rgba(0,0,0,0.62);
+
+/* ── AND ON A PHONE IT IS THE GROUND, NOT A BLOCK ─────────────────────────
+   A tall map stacked above the words pushes the one control on the page below
+   the fold, which on the door of a game is the whole page failing. Down here
+   it goes behind everything at a fraction of its weight: still the sea, still
+   painted, and out of the way of the button. */
+@media (max-width: 899px) {
+  .signin-chart {
+    position: fixed;
+    left: 50%;
+    top: 46%;
+    z-index: 0;
+    width: 150vw;
+    max-width: none;
+    margin: 0;
+    opacity: 0.14;
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(-4deg);
+    animation: none;
+    filter: none;
+  }
+  .signin-cap { display: none; }
 }
-.signin-shot-back {
-  transform: rotate(6deg) translate(11%, 3%) scale(0.93);
-  opacity: 0.62;
-  filter: saturate(0.85);
-}
-.signin-shot-front { transform: rotate(-2deg); }
 @media (prefers-reduced-motion: reduce) {
   .signin-glints { animation: none; }
+  .signin-chart { animation: none; }
 }
 
 .landing-rise {
