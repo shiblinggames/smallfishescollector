@@ -21,10 +21,23 @@
 // not change what happens next, and that is fine: what they change is whether
 // the exchange feels like two people talking or one person being read at.
 //
-// ASKING IS ALWAYS FREE. The daily gate is on the POINT, never on the talking,
-// so somebody who has already had their word today can still pull alongside
-// and get a real exchange out of it. A person who has nothing to say until
-// tomorrow is a vending machine.
+// ASKING IS ALWAYS FREE. The daily gate is on the day's WORD, never on the
+// talking, so somebody who has already had their word today can still pull
+// alongside and get a real exchange out of it. A person who has nothing to say
+// until tomorrow is a vending machine.
+//
+// ── AND ONE OF THEM IS A JOB ────────────────────────────────────────────────
+//
+// The hold picker is gone. It was a grid of every fish aboard with a number on
+// each, which made a present into a menu: the correct play was to scan for the
+// highest figure and tap it, and the actual content of the moment, that this
+// person likes this fish, was a coloured border on one tile.
+//
+// What replaced it is two lines of conversation with the sea in between. You
+// ask what they are after, they name one fish, and the option to hand it over
+// stays greyed with the name on it until you have gone out and caught one.
+// There is no picker because there is no choice to make: there is one fish,
+// they told you which, and either you have been fishing or you have not.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -42,7 +55,6 @@ export type SceneGain = {
   gained: number
   tier: FolkTier
   tierUp: string | null
-  how?: 'loved' | 'plain'
 }
 
 /** Who is speaking. Their lines are typed; yours appear whole, because you
@@ -158,8 +170,8 @@ function Choice({ label, hint, accent, warm, onClick, disabled, tag, spent }: {
 }
 
 export default function FolkScene({
-  folk, open, tier, points, opener, gain, resolved, canChat, canGift, knowsFav, hold, busy,
-  onChat, onGift, onClose,
+  folk, open, tier, points, opener, gain, resolved, canChat, want, wantReady, busy,
+  onChat, onAsk, onDeliver, onClose,
 }: {
   folk: Folk | null
   open: boolean
@@ -174,14 +186,15 @@ export default function FolkScene({
    *  swapping the card out from under it. */
   resolved: { text: string; nonce: number } | null
   canChat: boolean
-  canGift: boolean
-  /** Have they actually told you what they like? Changes the picker from a
-   *  hint into a statement. */
-  knowsFav: boolean
-  hold: { id: number; name: string; qty: number; habitat: string | null }[]
+  /** The open request, or null if nothing has been asked for. */
+  want: { fishId: number; name: string } | null
+  /** Holding one, landed since they asked. Decided on the server; the card only
+   *  draws it, because a client cannot be trusted with the word "fresh". */
+  wantReady: boolean
   busy: boolean
   onChat: () => void
-  onGift: (fishId: number) => void
+  onAsk: () => void
+  onDeliver: () => void
   onClose: () => void
 }) {
   const reduced = useMemo(prefersReducedMotion, [])
@@ -193,7 +206,6 @@ export default function FolkScene({
   const [asked, setAsked] = useState<Set<number>>(new Set())
   /** The one beat after an ask that has one: offered alone, then gone. */
   const [followUp, setFollowUp] = useState<Ask['then'] | null>(null)
-  const [picking, setPicking] = useState(false)
   const [crest, setCrest] = useState<string | null>(null)
 
   // A fresh visit starts fresh.
@@ -202,7 +214,6 @@ export default function FolkScene({
     setTurns([{ who: 'them', text: opener }])
     setAsked(new Set())
     setFollowUp(null)
-    setPicking(false)
     setCrest(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, folk?.id])
@@ -244,7 +255,7 @@ export default function FolkScene({
     setTurns(t => [...t, { who: 'you', text }, { who: 'them', text: reply }])
   }
 
-  const choicesHidden = typing || !!crest || picking
+  const choicesHidden = typing || !!crest
 
   return (
     <AnimatePresence>
@@ -397,93 +408,6 @@ export default function FolkScene({
               <RapportBar points={points} gained={gain?.gained ?? 0} accent={accent} />
             </div>
 
-            {/* ── THE HOLD, INLINE. It never opens anything: the choices are
-                replaced by the list and come back when you pick or back out. */}
-            {picking && (
-              <div style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto', touchAction: 'pan-y' }}>
-                <p className="font-karla font-700 uppercase" style={{
-                  fontSize: '0.54rem', letterSpacing: '0.18em',
-                  color: 'rgba(226,238,246,0.5)', margin: '0 0 7px',
-                }}>In your hold</p>
-
-                {hold.length === 0 ? (
-                  <p className="font-karla" style={{
-                    fontSize: '0.8rem', color: 'rgba(226,238,246,0.5)', margin: '6px 0', lineHeight: 1.5,
-                  }}>
-                    Your hold is empty. Anything you catch is worth having,
-                    and the one fish they actually want is worth three times as much.
-                  </p>
-                ) : (
-                  /* THREE FIXED COLUMNS. A hold runs to a couple of dozen
-                     species and one full-width row each turned picking a gift
-                     into a scroll down a list. Fixed tiles mean the whole hold
-                     is one glance, and the names truncate rather than reflow,
-                     so the tiles stay on a grid instead of jumping about as the
-                     hold changes. */
-                  <div style={{
-                    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6,
-                  }}>
-                    {hold.map(f => {
-                      const fav = f.id === folk.favourite.id
-                      return (
-                        <button key={f.id} disabled={busy}
-                          onClick={() => { setPicking(false); onGift(f.id) }}
-                          className="font-karla font-600"
-                          style={{
-                            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                            height: 62, padding: '0.4rem 0.45rem', borderRadius: 10,
-                            textAlign: 'left', cursor: busy ? 'default' : 'pointer',
-                            opacity: busy ? 0.5 : 1,
-                            background: fav ? `${accent}26` : 'rgba(255,255,255,0.045)',
-                            border: `1px solid ${fav ? accent + '8a' : 'rgba(255,255,255,0.13)'}`,
-                            boxShadow: fav ? `0 0 14px ${accent}30` : 'none',
-                          }}>
-                          {/* One line, clipped. The tile is a fixed size and the
-                              name is the part that gives, so it ellipses. */}
-                          <span style={{
-                            fontSize: '0.72rem', lineHeight: 1.2,
-                            color: fav ? '#f4ecd8' : '#cfe0ec',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            display: 'block', width: '100%',
-                          }} title={f.name}>{f.name}</span>
-
-                          <span style={{
-                            display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 4,
-                          }}>
-                            <span className="font-cinzel font-700" style={{
-                              fontSize: '0.78rem',
-                              color: fav ? accent : 'rgba(226,238,246,0.72)',
-                            }}>+{fav ? GIFT_FAVOURITE_POINTS : 1}</span>
-                            <span style={{
-                              fontSize: '0.56rem', color: 'rgba(226,238,246,0.38)', whiteSpace: 'nowrap',
-                            }}>{'\u00d7'}{f.qty}</span>
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {/* WHY THE FAVOURITE IS MARKED BEFORE THEY SAY IT. Carrying
-                    somebody's fish is one of the two ways to work out what they
-                    like, and the tile IS that hint - it just carries the number
-                    now instead of a coy line about them looking at it. Once
-                    they have told you, the line under it changes from a thing
-                    you noticed to a thing you know. */}
-                {hold.some(f => f.id === folk.favourite.id) && (
-                  <p className="font-karla" style={{
-                    fontSize: '0.66rem', color: `${accent}c0`, margin: '8px 0 0', lineHeight: 1.4,
-                  }}>
-                    {knowsFav
-                      ? `${folk.favourite.name} is their favourite.`
-                      : 'They keep looking at one of these.'}
-                  </p>
-                )}
-
-                <Choice label="Never mind" accent={accent} onClick={() => setPicking(false)} />
-              </div>
-            )}
-
             {/* ── WHAT YOU CAN SAY ────────────────────────────────────── */}
             {!choicesHidden && (
               <motion.div
@@ -533,30 +457,49 @@ export default function FolkScene({
                   ))
                 )}
 
-                {/* OFFERED EVEN WITH AN EMPTY HOLD, and that is the point.
-                    It used to be hidden unless you were already carrying fish,
-                    so a captain who had never happened to pull alongside with a
-                    full hold had no way of learning that gifting exists at all.
-                    Tapping it with nothing aboard says so, which teaches the
-                    mechanic in the one place somebody would want it. */}
-                {!followUp && <Choice label="I brought you something." accent={accent}
-                  hint={canGift
-                    ? (hold.length === 0 ? 'Your hold is empty' : undefined)
-                    : 'Come back tomorrow'}
-                  // WHAT IT PAYS, ON THE OPTION. Gifting moved the friendship
-                  // more than anything else you can do out here and said so
-                  // nowhere until after you had given the fish away.
-                  tag={canGift ? `+1 to +${GIFT_FAVOURITE_POINTS} rapport` : 'Given today'}
-                  spent={!canGift} disabled={busy}
-                  onClick={() => { vibrate(8); setPicking(true) }} />}
+                {/* ── THE JOB ──────────────────────────────────────────
+                    Three states and only ever three, and the middle one is why
+                    there is no picker any more.
+
+                    NOTHING ASKED. One option: ask. Always offered, at every
+                    tier and with an empty hold, because this is the engine of
+                    the whole system and an option that only appears when you
+                    happen to be carrying the right fish is an option nobody
+                    ever discovers.
+
+                    ASKED, NOT CAUGHT. The option stays, greyed, WITH THE NAME
+                    OF THE FISH ON IT. That is the single most useful sentence
+                    on this card: it survives closing the panel, sailing away
+                    and coming back next week, and it is the only reminder in
+                    the game of what somebody is waiting on.
+
+                    CAUGHT. Warm, and it says what it pays. */}
+                {!followUp && !want && <Choice
+                  label="Anything you're after?"
+                  hint="They will name one fish"
+                  accent={accent} disabled={busy}
+                  onClick={() => { vibrate(8); onAsk() }} />}
+
+                {!followUp && want && !wantReady && <Choice
+                  label={`Still after that ${want.name}?`}
+                  hint="Go and land one. Something already in the hold will not do."
+                  tag="Waiting"
+                  accent={accent} spent disabled={busy}
+                  onClick={() => {}} />}
+
+                {!followUp && want && wantReady && <Choice
+                  label={`I got your ${want.name}.`}
+                  accent={accent} warm disabled={busy}
+                  tag={`+${GIFT_FAVOURITE_POINTS} rapport`}
+                  onClick={() => { vibrate(12); onDeliver() }} />}
 
                 {!followUp && <Choice label="I should get back to it." accent={accent} onClick={onClose} />}
 
-                {/* Only once both are spent, and only as a fact. Never a
-                    warning about a streak, because there is not one. The two
-                    choices above already say they are spent; this says the part
-                    they cannot, which is that waiting costs nothing. */}
-                {!canChat && !canGift && (
+                {/* Only when the day's word is spent AND there is nothing to
+                    go and catch, which is the one combination that leaves
+                    somebody with nothing to do here. Stated as a fact, never as
+                    a warning about a streak, because there is not one. */}
+                {!canChat && want && !wantReady && (
                   <p className="font-karla" style={{
                     fontSize: '0.66rem', color: 'rgba(226,238,246,0.35)',
                     textAlign: 'center', margin: '9px 0 2px',

@@ -10,7 +10,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-  FOLK, folkById, tierFor, nextLine, giftWorth, CHAT_POINTS,
+  FOLK, folkById, tierFor, nextLine, favouriteFor, favouriteById, wantKey,
+  CHAT_POINTS, GIFT_FAVOURITE_POINTS,
   type FolkId, type FolkTier,
 } from '@/lib/seaFolk'
 import { RODS } from '@/lib/rods'
@@ -26,8 +27,20 @@ export type Rapport = {
   tier: FolkTier
   seenLines: string[]
   chattedToday: boolean
-  giftedToday: boolean
   giftsGiven: number
+  /**
+   * THE JOB THEY HAVE GIVEN YOU, or null if you have not asked.
+   *
+   * One at a time, per person. The name rides along so a panel can print the
+   * request without a round trip to the species table.
+   */
+  want: { fishId: number; name: string } | null
+  /**
+   * AND WHETHER YOU CAN SETTLE IT RIGHT NOW: holding one, landed since they
+   * asked. Decided on the server against fish_collection, never on the client,
+   * because it is the whole of what makes this a job rather than a hand-over.
+   */
+  wantReady: boolean
 }
 
 export type FolkTalk = {
@@ -39,9 +52,16 @@ export type FolkTalk = {
   tierUp: string | null
 }
 
+/** What they say when you ask what they are after. Costs nothing and moves
+ *  nothing: asking is free, the same way every other thing you can say is. */
+export type FolkAsk = {
+  line: string
+  fishId: number
+  fishName: string
+}
+
 export type FolkGift = {
   line: string
-  how: 'loved' | 'plain'
   points: number
   tier: FolkTier
   tierUp: string | null
@@ -59,26 +79,61 @@ async function me() {
 export async function folkState(): Promise<Rapport[]> {
   const user = await me()
   if (!user) return []
-  const { data } = await createAdminClient()
+  const admin = createAdminClient()
+  const { data } = await admin
     .from('sea_rapport')
-    .select('folk_id, points, seen_lines, last_chat_on, last_gift_on, gifts_given')
+    .select('folk_id, points, seen_lines, last_chat_on, gifts_given, want_fish_id, want_asked_at')
     .eq('user_id', user.id)
   const d = today()
   const rows = (data ?? []) as {
     folk_id: string; points: number; seen_lines: string[] | null
-    last_chat_on: string | null; last_gift_on: string | null; gifts_given: number
+    last_chat_on: string | null; gifts_given: number
+    want_fish_id: number | null; want_asked_at: string | null
   }[]
+
+  // ── WHICH OPEN REQUESTS CAN BE SETTLED RIGHT NOW ────────────────────────
+  //
+  // TWO CONDITIONS, AND THE SECOND IS THE POINT. You have to be holding one,
+  // and fish_collection has to say you landed one AFTER they asked. Without
+  // that second half the request is settled by whatever was already in the
+  // hold, which is the old hand-over with a sentence in front of it.
+  //
+  // ONE PAIR OF QUERIES FOR ALL NINE, not one pair per regular. This runs
+  // every time a panel opens.
+  const open = rows.filter(r => r.want_fish_id != null && r.want_asked_at)
+  const ready = new Set<string>()
+  if (open.length) {
+    const ids = [...new Set(open.map(r => r.want_fish_id as number))]
+    const [inv, col] = await Promise.all([
+      admin.from('fish_inventory').select('fish_id, quantity').eq('user_id', user.id).in('fish_id', ids),
+      admin.from('fish_collection').select('fish_id, last_caught_at').eq('user_id', user.id).in('fish_id', ids),
+    ])
+    const held = new Map((inv.data ?? []).map(x => [x.fish_id as number, Number(x.quantity ?? 0)]))
+    const last = new Map((col.data ?? []).map(x => [x.fish_id as number, String(x.last_caught_at ?? '')]))
+    for (const r of open) {
+      const fid = r.want_fish_id as number
+      if ((held.get(fid) ?? 0) < 1) continue
+      const caught = last.get(fid)
+      if (!caught) continue
+      if (Date.parse(caught) > Date.parse(r.want_asked_at as string)) ready.add(r.folk_id)
+    }
+  }
+
   return FOLK.map(f => {
     const r = rows.find(x => x.folk_id === f.id)
     const points = r?.points ?? 0
+    // A stored id that is no longer one of their three reads as no request at
+    // all, so editing the cast cannot strand somebody on a job that is gone.
+    const fav = r?.want_fish_id != null ? favouriteById(f, r.want_fish_id) : null
     return {
       folkId: f.id,
       points,
       tier: tierFor(points),
       seenLines: r?.seen_lines ?? [],
       chattedToday: r?.last_chat_on === d,
-      giftedToday: r?.last_gift_on === d,
       giftsGiven: r?.gifts_given ?? 0,
+      want: fav ? { fishId: fav.id, name: fav.name } : null,
+      wantReady: !!fav && ready.has(f.id),
     }
   })
 }
@@ -146,144 +201,191 @@ export async function talkToFolk(folkId: string): Promise<FolkTalk | { error: st
   }
 }
 
-/**
- * A FISH, HANDED OVER.
- *
- * One a day per regular, and it costs you the fish. Claims the day FIRST and
- * takes the catch second, reverting the claim if the hold turns out to be
- * empty: the opposite order would let a failed take spend somebody's daily
- * gift on nothing.
- *
- * Nothing is ever refused. A captain who sailed all the way out with a gift
- * should not be told they picked the wrong one, so the worst case is still a
- * point and a warm line.
- */
 /** One line out of a pool. Never empty: every pool ships with at least one, and
  *  a folk whose lines are still being written has exactly one. */
 function pickLine(pool: string[]): string {
   return pool[Math.floor(Math.random() * pool.length)] ?? pool[0] ?? ''
 }
 
-export async function giftToFolk(folkId: string, fishId: number): Promise<FolkGift | { error: string }> {
+/**
+ * ── ASKING SOMEBODY WHAT THEY WANT ──────────────────────────────────────────
+ *
+ * Free, like every other thing you can say to these nine. It moves no points
+ * and spends no day; all it does is open a job and write down which fish, so
+ * that the delivery has something to be checked against.
+ *
+ * ONE AT A TIME, PER PERSON. Asking again while a request is open re-states the
+ * one that is already open rather than rolling a new one, which is both the
+ * honest answer and the thing that stops a captain shopping for an easier fish
+ * by asking twenty times.
+ *
+ * WHICH ONE THEY NAME is favourites[gifts_given % 3], so it advances on
+ * delivery and comes round in order. It is not stored: a third column would be
+ * a second record of a number the row already has, and the two would drift.
+ */
+export async function askForFavourite(folkId: string): Promise<FolkAsk | { error: string }> {
   const user = await me()
   if (!user) return { error: 'Unauthorized' }
   const folk = folkById(folkId)
   if (!folk) return { error: 'There is nobody by that name out here.' }
 
   const admin = createAdminClient()
-  const d = today()
-
   await admin.from('sea_rapport')
     .upsert({ user_id: user.id, folk_id: folk.id }, {
       onConflict: 'user_id,folk_id', ignoreDuplicates: true,
     })
 
-  const { data: before } = await admin.from('sea_rapport')
-    .select('points, gifts_given, last_gift_on')
+  const { data: row } = await admin.from('sea_rapport')
+    .select('gifts_given, seen_lines, want_fish_id')
     .eq('user_id', user.id).eq('folk_id', folk.id).single()
-  if (!before) return { error: 'That did not take.' }
-  if (before.last_gift_on === d) {
-    return { error: `${folk.name} has had a gift from you today.` }
+  if (!row) return { error: 'That did not take.' }
+
+  // Already asked. Say the same thing again rather than picking a new fish.
+  const open = row.want_fish_id != null ? favouriteById(folk, row.want_fish_id) : null
+  if (open) return { line: open.ask, fishId: open.id, fishName: open.name }
+
+  const fav = favouriteFor(folk, row.gifts_given ?? 0)
+  const seen = (row.seen_lines ?? []) as string[]
+  const key = wantKey(folk, fav.id)
+
+  // ── WHAT THEY ASKED FOR, AND WHEN ───────────────────────────────────────
+  // The timestamp is the freshness line the delivery is measured against, so
+  // it is written HERE, by the server, and never sent by a client.
+  const { data: set } = await admin.from('sea_rapport')
+    .update({
+      want_fish_id: fav.id,
+      want_asked_at: new Date().toISOString(),
+      // The ask is a thing they told you, so it goes in the same list every
+      // other thing they have told you goes in. See wantKey.
+      seen_lines: seen.includes(key) ? seen : [...seen, key],
+    })
+    .eq('user_id', user.id).eq('folk_id', folk.id)
+    .select('want_fish_id')
+  if (!set || set.length === 0) return { error: 'That did not take.' }
+
+  return { line: fav.ask, fishId: fav.id, fishName: fav.name }
+}
+
+/**
+ * ── SETTLING THE JOB ────────────────────────────────────────────────────────
+ *
+ * Three points, repeatable, and no clock on it at all. What bounds it is the
+ * sea: the fish has to be the one they asked for AND it has to have been landed
+ * since they asked. See GIFT_FAVOURITE_POINTS for why the daily gate came off.
+ *
+ * THE CLIENT SENDS A FOLK ID AND NOTHING ELSE. Which fish is owed, when it was
+ * asked for, whether the hold has one and whether it is a fresh one are all
+ * read here, against the row and against fish_collection.
+ *
+ * "CAUGHT SINCE YOU ASKED" IS fish_collection.last_caught_at. It is the only
+ * record of when anything was landed, and it is a single timestamp per species
+ * rather than a log, which makes the rule exactly as strict as it needs to be:
+ * the most recent one you caught has to be newer than the ask. A captain who
+ * had three in the hold already and never went back out cannot settle anything.
+ *
+ * CLAIM FIRST, TAKE THE FISH SECOND. The update only matches a row whose want
+ * is still the one being delivered, so two taps cannot both pay out; and if the
+ * hold turns out to be empty after that, the whole claim is handed back. The
+ * other order would spend somebody's request on nothing.
+ */
+export async function deliverToFolk(folkId: string): Promise<FolkGift | { error: string }> {
+  const user = await me()
+  if (!user) return { error: 'Unauthorized' }
+  const folk = folkById(folkId)
+  if (!folk) return { error: 'There is nobody by that name out here.' }
+
+  const admin = createAdminClient()
+
+  const { data: before } = await admin.from('sea_rapport')
+    .select('points, gifts_given, want_fish_id, want_asked_at')
+    .eq('user_id', user.id).eq('folk_id', folk.id).maybeSingle()
+  if (!before?.want_fish_id || !before.want_asked_at) {
+    return { error: `${folk.short} has not asked you for anything.` }
+  }
+  const fav = favouriteById(folk, before.want_fish_id)
+  if (!fav) return { error: `${folk.short} has not asked you for anything.` }
+
+  // ── IS IT A FRESH ONE ───────────────────────────────────────────────────
+  const { data: caught } = await admin.from('fish_collection')
+    .select('last_caught_at')
+    .eq('user_id', user.id).eq('fish_id', fav.id).maybeSingle()
+  const landedAfter = !!caught?.last_caught_at
+    && Date.parse(String(caught.last_caught_at)) > Date.parse(String(before.want_asked_at))
+  if (!landedAfter) {
+    return { error: `You have not landed a ${fav.name} since they asked. One out of the hold does not count.` }
   }
 
-  // What it is, and whether they can even be given it.
-  const { data: fish } = await admin.from('fish_species')
-    .select('id, name, habitat').eq('id', fishId).single()
-  if (!fish) return { error: 'No such fish.' }
-
-  // ── CLAIM THE DAY ───────────────────────────────────────────────────
-  const worth = giftWorth(folk, fishId)
-  const points = (before.points ?? 0) + worth.points
+  // ── CLAIM THE JOB ───────────────────────────────────────────────────────
+  const points = (before.points ?? 0) + GIFT_FAVOURITE_POINTS
   const wasTier = tierFor(before.points ?? 0)
   const tier = tierFor(points)
 
   const { data: claimed } = await admin.from('sea_rapport')
     .update({
-      points, last_gift_on: d, gifts_given: (before.gifts_given ?? 0) + 1,
+      points,
+      gifts_given: (before.gifts_given ?? 0) + 1,
+      want_fish_id: null,
+      want_asked_at: null,
     })
     .eq('user_id', user.id).eq('folk_id', folk.id)
-    .or(`last_gift_on.is.null,last_gift_on.neq.${d}`)
+    .eq('want_fish_id', fav.id)
     .select('points')
   if (!claimed || claimed.length === 0) {
-    return { error: `${folk.name} has had a gift from you today.` }
+    return { error: 'You have already handed that over.' }
   }
 
-  // ── THEN TAKE THE FISH ──────────────────────────────────────────────
-  // Optimistic: the update only matches while the quantity is still what was
-  // read, so two gifts cannot spend the same last fish.
+  // ── THEN TAKE THE FISH ──────────────────────────────────────────────────
+  // Optimistic: the write only matches while the quantity is still what was
+  // read, so two deliveries cannot spend the same last fish.
   const { data: held } = await admin.from('fish_inventory')
-    .select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single()
+    .select('quantity').eq('user_id', user.id).eq('fish_id', fav.id).maybeSingle()
   const have = Number(held?.quantity ?? 0)
   let took = false
   if (have >= 1) {
     if (have === 1) {
       const { data: gone } = await admin.from('fish_inventory')
-        .delete().eq('user_id', user.id).eq('fish_id', fishId).eq('quantity', 1).select('fish_id')
+        .delete().eq('user_id', user.id).eq('fish_id', fav.id).eq('quantity', 1).select('fish_id')
       took = !!gone && gone.length > 0
     } else {
       const { data: cut } = await admin.from('fish_inventory')
         .update({ quantity: have - 1 })
-        .eq('user_id', user.id).eq('fish_id', fishId).eq('quantity', have).select('fish_id')
+        .eq('user_id', user.id).eq('fish_id', fav.id).eq('quantity', have).select('fish_id')
       took = !!cut && cut.length > 0
     }
   }
   if (!took) {
-    // Give the day back. They never got the fish, so they never used it.
+    // Give the job back exactly as it was. They never got the fish, so the
+    // request was never settled and the ask still stands.
     await admin.from('sea_rapport')
       .update({
-        points: before.points ?? 0, last_gift_on: before.last_gift_on,
+        points: before.points ?? 0,
         gifts_given: before.gifts_given ?? 0,
+        want_fish_id: fav.id,
+        want_asked_at: before.want_asked_at,
       })
       .eq('user_id', user.id).eq('folk_id', folk.id)
-    return { error: 'That is not in your hold any more.' }
+    return { error: `There is no ${fav.name} in your hold.` }
   }
 
-  // ── YOU REMEMBERED ──────────────────────────────────────────────────
+  // ── YOU REMEMBERED ──────────────────────────────────────────────────────
   //
   // The one badge on the Salt Road that cannot be derived. `gifts_given` counts
-  // presents and nothing records WHICH fish each one was, so by tomorrow the
-  // row cannot say whether anybody ever worked out what somebody liked. A hook
-  // at the moment it happens is the only place the answer exists.
+  // deliveries and nothing records WHICH fish each one was, so by tomorrow the
+  // row cannot say whether anybody ever went out and caught somebody's fish on
+  // purpose. A hook at the moment it happens is the only place the answer is.
   //
   // After the fish is confirmed taken, never before: everything above this line
-  // can still hand the day back and fail, and a badge granted for a gift that
-  // was reverted is a badge for nothing. Best-effort, like every other hook —
-  // the gift is the thing that matters and it has already landed.
-  if (worth.how === 'loved') {
-    try { await unlockBadge('you_remembered') } catch { /* best-effort */ }
-  }
+  // can still hand the job back and fail, and a badge for a delivery that was
+  // reverted is a badge for nothing. Best-effort, like every other hook.
+  try { await unlockBadge('you_remembered') } catch { /* best-effort */ }
 
   return {
-    // BOTH GRADES ARE POOLS. The loved one used to be a single string, so
-    // the rarest thing a captain can do out here — go and catch one particular
-    // person's one particular fish — read back word for word the second time.
-    line: pickLine(worth.how === 'loved' ? folk.onLoved : folk.onPlain),
-    how: worth.how,
+    line: pickLine(fav.brought),
     points,
     tier,
     tierUp: tier > wasTier ? folk.tierUp[(tier - 1) as 0 | 1 | 2 | 3] : null,
-    fishName: String(fish.name ?? 'that'),
+    fishName: fav.name,
   }
-}
-
-/** The hold, for the gift picker. Names and counts only. */
-export async function holdForGifting(): Promise<{ id: number; name: string; qty: number; habitat: string | null }[]> {
-  const user = await me()
-  if (!user) return []
-  const admin = createAdminClient()
-  const { data: rows } = await admin.from('fish_inventory')
-    .select('fish_id, quantity').eq('user_id', user.id)
-  const held = (rows ?? []) as { fish_id: number; quantity: number }[]
-  if (!held.length) return []
-  const { data: species } = await admin.from('fish_species')
-    .select('id, name, habitat').in('id', held.map(h => h.fish_id))
-  const byId = new Map((species ?? []).map(s => [s.id as number, s]))
-  return held.map(h => ({
-    id: h.fish_id,
-    name: String(byId.get(h.fish_id)?.name ?? 'Unknown'),
-    qty: h.quantity,
-    habitat: (byId.get(h.fish_id)?.habitat as string | null) ?? null,
-  })).filter(f => f.qty > 0)
 }
 
 

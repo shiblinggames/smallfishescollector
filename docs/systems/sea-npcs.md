@@ -75,7 +75,9 @@ him for every captain mid-story.
 
 `web/lib/seaFolk.ts` is the cast and every word they say. `folkActions.ts` is the only
 thing that moves a point. Table: `sea_rapport (user_id, folk_id, points, seen_lines,
-last_chat_on, last_gift_on, gifts_given)`, SELECT-own RLS, every write service-role.
+last_chat_on, last_gift_on, gifts_given, want_fish_id, want_asked_at)`, SELECT-own RLS,
+every write service-role. `last_gift_on` is dead weight kept for history: gifting has not
+been rationed by the day since requests shipped.
 
 **Nine regulars, and they are the only people rapport can attach to.** The five zone
 buyers, Yoon, and three added with this system who keep no shop at all (Dennis, once Tam Brill, in the
@@ -88,8 +90,8 @@ against what he turns out to be.
 | | |
 |---|---|
 | Tiers | 5, named not numbered: a stranger / a known face / good company / trusted / thick as thieves |
-| Points | chat +1, own-water fish +2, **their one favourite +5**. Thresholds **4 / 14 / 34 / 70** |
-| Gate | one chat and one gift per regular per day (UTC, same as dailies) |
+| Points | chat +1, **a fish they asked for +3**, nothing else scores at all. Thresholds **4 / 14 / 34 / 70** |
+| Gate | one chat per regular per day (UTC). **Deliveries have no clock on them** |
 | Reward | **story only.** No rate bumps, no unlocks, no items. A tier buys new dialogue |
 
 **The curve steepens on purpose.** It was 4 / 10 / 18 / 30, which put the top tier eight
@@ -105,28 +107,61 @@ week and you missed seven points you were never holding. There is deliberately n
 no decay and no warning, because the house law is evergreen and player-paced and this is a
 mechanic that in other games exists to punish absence.
 
-**Each regular has ONE favourite species**, not a list, chosen to say something about them:
-Marlow wants a Blue Marlin, Dennis wants the Muskellunge because it is the fish of ten thousand
-casts and that is a drop rate, Nance wants the Coelacanth, Cass wants Cobia because they school around wreckage. Worth 5 against a
-chat's 1, so the fastest way to know somebody is to work out what they like and go and catch
-it. It does not break the curve because it cannot be done casually: one species out of thirty
-in a band, one gift per day, and it has to be in the hold when you are in front of them.
-Favourite every single day is still 12 days to the top tier, against 24 for whatever came out
-of their own water and 70 for conversation alone. **The favourite is hidden until tier 1** so
-it reads as something you learned about them rather than a hint the game handed over.
+### Gifting is a request, not a hand-over
 
-**Nothing is ever refused as a gift.** Their own water's fish are liked, a short list each
-is loved, anything else still lands for a point and a warm line. A captain who sailed out
-with a gift must never be told they picked wrong.
+**Each regular has THREE favourite species and they come round in order.** You ASK what they
+are after, they name one, and that request stays open until you land one and bring it back.
+It is `favourites[gifts_given % 3]`, derived rather than stored, so the cycle advances on
+delivery and there is no third column to fall out of step with the count it follows.
 
-Guards worth keeping: the daily gate is claimed by the UPDATE itself (`last_chat_on IS NULL
-OR <> today` in the WHERE), so two taps cannot both be the first — verified on the live
-table, two taps in a day added exactly one point. Gifting claims the day FIRST and takes the
-fish second, reverting the claim if the hold turns out to be empty.
+**A delivery only counts if the fish was caught AFTER the ask.** Checked against
+`fish_collection.last_caught_at` versus `want_asked_at`. That single comparison is what makes
+this a job rather than a transaction: a hold full of what somebody wants settles nothing, and
+the only way to close a request is to go out and fish for it.
+
+**The daily gift gate is gone, and the courtesy gift with it.** The old shape was "hand over
+any fish, once a day", +1 for anything and +3 for the favourite. Two things were wrong with
+it. The consolation grade made the favourite a rounding error and made the best play emptying
+your hold into whoever was nearest. And the clock meant the only road to 70 points across nine
+people was turning up every morning for two months, which is an alarm clock rather than a long
+friendship. Now the ceiling is how many of the right fish a captain can find, so somebody who
+plays one long evening a week is not permanently behind somebody who logs in daily to tap a
+button. **This was the explicit ask** (2026-09-15): a way to max without time-gating it so hard.
+
+**One request at a time, per person.** Asking again while one is open re-states the same fish
+rather than rolling a new one, which is both the honest answer and what stops a captain
+shopping for an easier target by asking twenty times.
+
+The three are still chosen to say something about the person, which is the only rule that
+matters here. Marlow wants a marlin, a Greenland shark that was already old when the harbour
+was a beach, and a halibut that lies on the bottom and lets the sea bring it whatever it is
+having. Fitch, who lives in the dark, wants the three that carry their own light or look up
+through their own skull. Rue, who carries everybody's news and is asked for nothing, wants a
+cod, a lanternfish and a salmon that always knows the road home.
+
+**A favourite is revealed only by being told**, never by a tier. Two ways: they mention one in
+a tier line, or you ask outright. An ask writes a `folkId:want:speciesId` key into `seen_lines`
+alongside the tier keys (`folkId:tier:index`), so there is one record of what a person has
+said to you and no new column for it. `favouritesKnown()` reads both.
+
+**The Salt Road is the quest log.** `FolkPanel` opens on a "Waiting on you" section above the
+roster: one wide row per open request, fish named, the ones you can settle right now sorted
+first and lit. Requests have no clock and no order, so a captain can be carrying six at once
+across five bands, and the conversation that opened each one is out on the water behind them.
+
+Guards worth keeping: the daily chat gate is claimed by the UPDATE itself (`last_chat_on IS
+NULL OR <> today` in the WHERE), so two taps cannot both be the first — verified on the live
+table, two taps in a day added exactly one point. A delivery claims the job the same way
+(`.eq('want_fish_id', fav.id)` in the WHERE) and takes the fish SECOND, restoring the request
+exactly as it was if the hold turns out to be empty.
 
 **The conversation is ONE surface and it is a back-and-forth.** `FolkScene.tsx` holds all
-of it: portrait, typewriter, where you stand, the replies, and the hold when you are giving
-something. Nothing else opens. The first cut stacked three surfaces (hail panel, a scene
+of it: portrait, typewriter, where you stand, the replies, and the ask-or-deliver option.
+Nothing else opens. **There is no hold picker any more.** It was a grid of every fish aboard
+with a number on each, which made a present into a menu: the right play was to scan for the
+highest figure and tap it, and the content of the moment, that this person likes this fish,
+was a coloured border on one tile. What replaced it is two lines of conversation with the sea
+in between, and no picker because there is no choice to make. The first cut stacked three surfaces (hail panel, a scene
 with its own painted backdrop, then the gift list back in the panel behind it) which is the
 opposite of the seamlessness it was after.
 
@@ -152,10 +187,14 @@ new mark within the CURRENT TIER's span (not the whole ladder, or late tiers loo
 progress), and crossing a tier takes the card over with the line they only ever say once.
 The first cut paid out in a silent integer inside a panel nobody was looking at.
 
-**The Salt Road is a grid of portrait cards.** Tapping one opens what you know about them:
-water, standing, favourite catch, gifts brought. A card carries one piece of live state, a dot
-when they have a word for you, so the grid answers "who should I go and see" at a glance. It
-was horizontal rows once, which reads as a database; the face is the point.
+**The Salt Road is a grid of portrait cards, over a list of open jobs.** Tapping a card opens
+what you know about them: water, standing, what they are waiting on, which of their three
+favourites you have learned, fish brought. A card carries one piece of live state, a dot when
+there is a reason to sail out to that person (a word not had today, OR a fish in the hold they
+asked for), so the grid answers "who should I go and see" at a glance. It was horizontal rows
+once, which reads as a database; the face is the point. The "Waiting on you" rows sit ABOVE the
+grid, because a roster answers "who do I know" and a captain opening this panel is usually
+asking "what am I doing".
 
 **Two sections: Known to you, and Still out there.** Unmet regulars show as dashed cards with
 a question mark and their WATER and nothing else, and move up into Known to you the moment you
@@ -184,22 +223,37 @@ on the stails", uncorrected. His voice cracks, and it is a BEAT, not a spelling:
 leave hidden until it is taken), and he moves on slightly embarrassed. Two of them, at good
 company and thick as thieves. Broken-syllable spellings were rejected; never do those. The stock-market asks are REAL: ask about the Greeks and he gives
 correct, genuinely useful answers in his voice; keep the finance right if they are touched. His
-favourite is the Atlantic Bluefin Tuna, because one sold for millions at auction. Storage id stays
+three are a position, a growth stock and a bubble: the Atlantic Bluefin Tuna because one sold for
+millions at auction, the Black Marlin because it is all upside and no theta, and the Pufferfish
+because it inflates and then it does not. Storage id stays
 `pell`. Under the jokes he got laid off, called it a sabbatical, and is deciding whether to go back.
 
 **Dennis talks like Dennis.** He was Tam Brill (Shallows) until September 2026 and is the third
 regular based on a real friend: awkward, geeky, funny, a big gamer, six years on the expeditions and a
 story from every one of them, and quietly very well off in a way he never leads with. His register
 is VERBOSE: long lines, a tangent, an apology for the tangent, the tangent finished anyway. He has
-no catchphrase, on purpose; his mannerism is the shape of the sentence. Favourite: the Muskellunge,
-the fish of ten thousand casts, which to him is a drop rate he keeps a tally for. Storage id stays
+no catchphrase, on purpose; his mannerism is the shape of the sentence. His three are a drop
+rate, a boss fight and a lore drop, which are the only three categories he has: the Muskellunge
+(the fish of ten thousand casts, which to him is a drop rate he keeps a tally for), the Goliath
+Tigerfish, and the Seahorse, because the males carry the eggs. Storage id stays
 `brill`. Under the stories is a man who talks because quiet is where he goes back to waiting in the
 dark, and who is spending the money on something for green captains.
 
 **Yoon talks like Yoon.** He is based on a real person and the slang is really his:
 sheeeeesh, locked in, gucci, betty johnson, gyattt. He is deliberately the one voice that
 breaks the sea's register, and the Locked-In Rod is named after the way he says it rather
-than the other way round. Keep the mannerisms if his lines are ever extended.
+than the other way round. Keep the mannerisms if his lines are ever extended. All three of his
+favourites are about THE HAND, which is the only thing he has ever cared about: the Oarfish,
+the Snipe Eel (all mouth and a shoelace, and it snaps), and the Giant Trevally, which means
+going back to the Shallows to be humbled by the easy water.
+
+**The rule on those three voices, and the one exception to date.** Nobody puts words in the
+mouths of Yoon, Matty or Dennis. Going from one favourite to three needed two more asks and
+two more sets of reactions apiece, and the go-ahead for exactly that was given on 2026-09-15
+("You can build out the lines for them all. Just match the styles for my friends."). Everything
+written before that date is still verbatim and untouched; the lines added that day are written
+IN the voice rather than BY it and are his to overwrite. The rule stands for anything after
+them: ask first.
 
 **The three friends have more to say at the start.** Yoon, Matty and Dennis carry five
 asks at tiers zero and one (the rest have two), one extra at tier two, and two extra lines in
@@ -232,7 +286,8 @@ enough that flattering each would flatten all of them; the top happens once per 
 "thick as thieves" across the cast unlocks something meaningful at home. Design it before
 building it, and do not bolt a currency onto rapport to get there.
 
-Adding a regular means: an entry in `FOLK` (with a face, role, accent and favourite), a position in
+Adding a regular means: an entry in `FOLK` (with a face, role, accent, and THREE `favourites`,
+each carrying its own `ask` and `brought` lines), a position in
 `SOCIALS` (or a buyer row), and a keep-out in `seaFinn`'s list. `check-finn` and
 `check-traders` are the gate on any position.
 

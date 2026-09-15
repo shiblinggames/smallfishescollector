@@ -35,7 +35,7 @@ import { PLACES } from './chart'
 import { PersonCard, UnknownCard, type Portrait } from '@/components/SaltRoadCards'
 import { getCharacterSprites } from '@/lib/characters'
 import { HATS } from '@/lib/hats'
-import { FOLK, TIER_NAME, TIER_AT, toNextTier, knowsFavourite, tierFor, folkRoleFor, isMaxRapport, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
+import { FOLK, TIER_NAME, TIER_AT, toNextTier, favouritesKnown, tierFor, folkRoleFor, isMaxRapport, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
 import { folkState, type Rapport } from './folkActions'
 import { finnState } from './finnActions'
 import { finnChapters, finnWaitingOn, type FinnChapterView } from '@/lib/finnQuests'
@@ -222,10 +222,66 @@ function Head({ face, accent, role, name, water, maxed = false }: {
   )
 }
 
+/**
+ * ── ONE OPEN REQUEST, AS A ROW ──────────────────────────────────────────────
+ *
+ * A quest log for a system that never had one. These jobs have no clock on them
+ * and no order, so a captain can be carrying four at once, spread across four
+ * bands, opened on four different evenings. The conversation that started each
+ * one is out on the water somewhere behind them.
+ *
+ * SO IT IS A ROW, NOT A CARD. The fish's name is the payload and a name does
+ * not fit under a portrait in a grid cell. Wide, one per line, readable at a
+ * glance from across a room, and the ready ones come first and are lit.
+ */
+function WaitingRow({ folk, want, ready, onOpen }: {
+  folk: Folk
+  want: { fishId: number; name: string }
+  ready: boolean
+  onOpen: () => void
+}) {
+  return (
+    <button onClick={onOpen} style={{
+      display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+      padding: '0.5rem 0.6rem', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+      background: ready
+        ? `linear-gradient(90deg, ${folk.accent}22 0%, ${folk.accent}0a 100%)`
+        : 'rgba(255,255,255,0.03)',
+      border: `1px solid ${ready ? `${folk.accent}70` : `${SEA},0.13)`}`,
+    }}>
+      <span aria-hidden style={{
+        transform: folk.face.mirrored ? 'scaleX(-1)' : 'none',
+        flexShrink: 0, borderRadius: '50%', boxShadow: `0 0 12px ${folk.accent}30`,
+      }}>
+        <CharacterAvatar
+          characterColor={folk.face.characterColor} equippedHat={folk.face.hat}
+          bgColor={folk.face.bg} ringColor={folk.face.ring} size={38}
+        />
+      </span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span className="font-karla font-700 uppercase" style={{
+          display: 'block', fontSize: '0.5rem', letterSpacing: '0.16em',
+          color: folk.accent, lineHeight: 1.4,
+        }}>{folk.short}</span>
+        <span className="font-cinzel font-700" style={{
+          display: 'block', fontSize: '0.88rem', color: '#f0ede8', lineHeight: 1.2,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{want.name}</span>
+      </span>
+      {/* The only two states a job has, said in two words. */}
+      <span className="font-karla font-700 uppercase" style={{
+        flexShrink: 0, fontSize: '0.5rem', letterSpacing: '0.14em',
+        color: ready ? folk.accent : `${SEA},0.38)`,
+      }}>{ready ? 'In your hold' : 'Go and land one'}</span>
+    </button>
+  )
+}
+
 /** What you know about one of the regulars. */
 function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: () => void }) {
   const water = PLACES.find(w => w.id === folk.zoneId)?.name ?? 'Open water'
   const left = toNextTier(rap.points)
+  const known = favouritesKnown(folk, rap.seenLines)
   return (
     <>
       <BackTo onBack={onBack} />
@@ -253,32 +309,72 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
         <Bar at={rap.points} of={TIER_AT[4]} color={folk.accent} />
       </div>
 
-      {/* The one fish. Withheld until they are a known face, so it reads as
-          something you learned about them rather than a hint handed over. */}
+      {/* ── THE OPEN JOB ───────────────────────────────────────────────
+          THE ONE THING ON THIS PAGE THAT ANSWERS "WHAT NOW".
+
+          A request survives shutting the panel, sailing off and coming back a
+          week later, and the conversation that opened it is out on the water
+          somewhere behind you. Without this the only record of what somebody is
+          waiting on is a sentence a captain has to remember, which is not a
+          quest log, it is homework. */}
+      <div style={{
+        marginTop: 8, padding: '0.6rem 0.7rem', borderRadius: 11,
+        background: rap.wantReady ? `${folk.accent}18` : 'rgba(255,255,255,0.035)',
+        border: `1px solid ${rap.wantReady ? `${folk.accent}70` : `${SEA},0.14)`}`,
+      }}>
+        <p className="font-karla font-700 uppercase" style={{
+          fontSize: '0.52rem', letterSpacing: '0.18em', color: `${SEA},0.5)`, margin: 0,
+        }}>Waiting on</p>
+        {rap.want ? (
+          <>
+            <p className="font-cinzel font-700" style={{
+              fontSize: '1rem', color: folk.accent, margin: '4px 0 0',
+            }}>{rap.want.name}</p>
+            <p className="font-karla" style={{
+              fontSize: '0.7rem', color: `${SEA},0.55)`, margin: '3px 0 0', lineHeight: 1.45,
+            }}>
+              {rap.wantReady
+                ? `One is in your hold. Sail out to them and hand it over. Worth ${GIFT_FAVOURITE_POINTS}.`
+                : 'Go and land one. A fish that was already in your hold when they asked does not settle it.'}
+            </p>
+          </>
+        ) : (
+          <p className="font-karla" style={{
+            fontSize: '0.74rem', color: `${SEA},0.45)`, margin: '4px 0 0', lineHeight: 1.45,
+          }}>
+            Nothing, just now. Pull alongside and ask what they are after.
+          </p>
+        )}
+      </div>
+
+      {/* ── AND WHAT YOU HAVE LEARNED ABOUT THEM ───────────────────────
+          Three apiece, revealed only by being told: they mention one in
+          passing, or you ask outright. The count is shown because the gap is
+          the interesting part. Somebody you know one fish about is somebody you
+          have more to find out about. */}
       <div style={{
         marginTop: 8, padding: '0.6rem 0.7rem', borderRadius: 11,
         background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.14)`,
       }}>
         <p className="font-karla font-700 uppercase" style={{
           fontSize: '0.52rem', letterSpacing: '0.18em', color: `${SEA},0.5)`, margin: 0,
-        }}>Favourite catch</p>
-        {/* Shown once they have SAID it, not at a tier. The reveal and the
-            telling are the same event now. */}
-        {knowsFavourite(folk, rap.seenLines) ? (
-          <>
-            <p className="font-cinzel font-700" style={{
-              fontSize: '1rem', color: folk.accent, margin: '4px 0 0',
-            }}>{folk.favourite.name}</p>
-            <p className="font-karla" style={{
-              fontSize: '0.7rem', color: `${SEA},0.55)`, margin: '3px 0 0',
-            }}>Worth {GIFT_FAVOURITE_POINTS}. Any other fish is worth one.</p>
-          </>
+        }}>Favourite catches ({known.length} of {folk.favourites.length})</p>
+        {known.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
+            {known.map(f => (
+              <span key={f.id} className="font-karla font-600" style={{
+                fontSize: '0.72rem', color: '#f2e9d6', padding: '0.18rem 0.5rem',
+                borderRadius: 999, background: `${folk.accent}1c`,
+                border: `1px solid ${folk.accent}45`,
+              }}>{f.name}</span>
+            ))}
+          </div>
         ) : (
           <p className="font-karla" style={{
             fontSize: '0.74rem', color: `${SEA},0.45)`, margin: '4px 0 0', lineHeight: 1.45,
           }}>
-            They have not mentioned it. Keep talking, or watch what they do when
-            you offer them something out of your hold.
+            They have not mentioned any of them. Keep talking, or ask them
+            straight out what they are after.
           </p>
         )}
       </div>
@@ -287,7 +383,7 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
         <p className="font-karla" style={{
           fontSize: '0.68rem', color: `${SEA},0.4)`, margin: '10px 0 0',
         }}>
-          You have brought them {rap.giftsGiven} {rap.giftsGiven === 1 ? 'gift' : 'gifts'}.
+          You have brought them {rap.giftsGiven} fish they asked for.
         </p>
       )}
     </>
@@ -456,6 +552,13 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
   /** Everybody still out there, in the cast's own order so the grid does not
    *  reshuffle as they are found. */
   const unmet = FOLK.filter(f => !met.some(m => m.folk.id === f.id))
+
+  /** Every job that is open, the ones you can settle right now first. The
+   *  order is the only sorting in this panel and it earns its keep: a captain
+   *  with six requests open wants the two they can close at the top. */
+  const waiting = met
+    .filter(m => !!m.rap.want)
+    .sort((a, b) => Number(b.rap.wantReady) - Number(a.rap.wantReady))
 
   const openFolk = met.find(m => m.folk.id === showing) ?? null
   const openRival = showing === 'finn'
@@ -666,6 +769,24 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
                       </button>
                     </Section>
 
+                    {/* ── WHAT IS OPEN, BEFORE WHO IS OUT THERE ──────
+                        Above the roster on purpose. A roster answers "who do I
+                        know"; this answers "what am I doing", and on any
+                        screen that has both, the second question is the one
+                        somebody opened the panel to ask. Gone entirely when
+                        nothing is open, so it never sits there empty. */}
+                    {waiting.length > 0 && (
+                      <Section title={`Waiting on you (${waiting.length})`}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {waiting.map(({ folk, rap: r }) => (
+                            <WaitingRow key={folk.id} folk={folk}
+                              want={r.want!} ready={r.wantReady}
+                              onOpen={() => { vibrate(6); setShowing(folk.id) }} />
+                          ))}
+                        </div>
+                      </Section>
+                    )}
+
                     {met.length > 0 && (
                       <Section title={`Known to you (${met.length})`}>
                         <div style={{
@@ -678,7 +799,12 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
                               sub={TIER_NAME[r.tier]}
                               pct={Math.round((Math.min(r.points, TIER_AT[4]) / TIER_AT[4]) * 100)}
                               maxed={r.tier >= 4}
-                              dot={!r.chattedToday}
+                              // SOMETHING TO DO HERE: a word not yet had today,
+                              // or a fish in the hold that somebody is waiting
+                              // on. One dot for both, because from the grid the
+                              // question is only ever "is there a reason to
+                              // sail out to this person".
+                              dot={!r.chattedToday || r.wantReady}
                               onOpen={() => { vibrate(6); setShowing(folk.id) }} />
                           ))}
                         </div>

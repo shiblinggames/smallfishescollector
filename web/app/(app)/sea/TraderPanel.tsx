@@ -17,8 +17,8 @@ import { vibrate } from '@/lib/haptics'
 import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
 import { strikeDeal, sellToResident, wagerForRunnerRod } from './traderActions'
 import { RODS } from '@/lib/rods'
-import { folkById, knowsFavourite, folkRoleFor, type FolkTier } from '@/lib/seaFolk'
-import { folkState, talkToFolk, giftToFolk, holdForGifting, buyFolkRod, type Rapport } from './folkActions'
+import { folkById, folkRoleFor, type FolkTier } from '@/lib/seaFolk'
+import { folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod, type Rapport } from './folkActions'
 import FolkScene, { type SceneGain } from './FolkScene'
 
 export default function TraderPanel({
@@ -68,7 +68,6 @@ export default function TraderPanel({
   // and the map already carries enough live state.
   const folk = trader.folkId ? folkById(trader.folkId) : null
   const [rap, setRap] = useState<Rapport | null>(null)
-  const [hold, setHold] = useState<{ id: number; name: string; qty: number; habitat: string | null }[]>([])
   /** What they just said. Fed to the scene as a new turn rather than
    *  replacing anything, so the exchange keeps its thread. */
   const [spoke, setSpoke] = useState<{ text: string; nonce: number } | null>(null)
@@ -101,7 +100,6 @@ export default function TraderPanel({
     void folkState().then(rows => {
       if (alive) setRap(rows.find(r => r.folkId === folk.id) ?? null)
     })
-    void holdForGifting().then(h => { if (alive) setHold(h) })
     return () => { alive = false }
   }, [folk])
 
@@ -120,21 +118,47 @@ export default function TraderPanel({
     setBusy(false)
   }
 
-  async function handOver(fishId: number) {
+  /** ASKING COSTS NOTHING and moves nothing. All it does is put their answer
+   *  into the conversation and open the job, which is why it sets no gain. */
+  async function askWhatTheyWant() {
+    if (busy || !folk) return
+    setBusy(true); setErr('')
+    try {
+      const res = await askForFavourite(folk.id)
+      if ('error' in res) { setErr(res.error) }
+      else {
+        setSpoke(v => ({ text: res.line, nonce: (v?.nonce ?? 0) + 1 }))
+        setRap(r => (r ? {
+          ...r,
+          want: { fishId: res.fishId, name: res.fishName },
+          // Freshness is the SERVER'S word and it has just moved the line: the
+          // ask is newer than anything in the hold, so nothing aboard settles
+          // it. Saying otherwise here would offer a button the server refuses.
+          wantReady: false,
+        } : r))
+      }
+    } catch { setErr('They did not hear you.') }
+    setBusy(false)
+  }
+
+  async function handOver() {
     if (busy || !folk) return
     setBusy(true); setErr(''); vibrate(12)
     try {
-      const res = await giftToFolk(folk.id, fishId)
+      const res = await deliverToFolk(folk.id)
       if ('error' in res) { setErr(res.error) }
       else {
         setSpoke(v => ({ text: res.line, nonce: (v?.nonce ?? 0) + 1 }))
         setGain({
           points: res.points, gained: res.points - (rap?.points ?? 0),
-          tier: res.tier, tierUp: res.tierUp, how: res.how,
+          tier: res.tier, tierUp: res.tierUp,
         })
-        setRap(r => (r ? { ...r, points: res.points, tier: res.tier, giftedToday: true } : r))
-        setHold(h => h.map(f => (f.id === fishId ? { ...f, qty: f.qty - 1 } : f)).filter(f => f.qty > 0))
-        vibrate(res.how === 'loved' ? [0, 40, 60, 90] : 14)
+        // The job is settled, so the option goes back to being an ask.
+        setRap(r => (r ? {
+          ...r, points: res.points, tier: res.tier,
+          giftsGiven: r.giftsGiven + 1, want: null, wantReady: false,
+        } : r))
+        vibrate([0, 40, 60, 90])
       }
     } catch { setErr('That did not reach them.') }
     setBusy(false)
@@ -565,9 +589,9 @@ export default function TraderPanel({
                 color: '#f2ead8',
                 // Warm until we know otherwise: an unloaded standing is far
                 // likelier to have something waiting than not.
-                background: (!rap || !rap.chattedToday || !rap.giftedToday)
+                background: (!rap || !rap.chattedToday || !rap.want || rap.wantReady)
                   ? `${folk.accent}26` : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${(!rap || !rap.chattedToday || !rap.giftedToday)
+                border: `1px solid ${(!rap || !rap.chattedToday || !rap.want || rap.wantReady)
                   ? folk.accent + '73' : 'rgba(255,255,255,0.16)'}`,
                 cursor: 'pointer',
               }}>
@@ -607,15 +631,14 @@ export default function TraderPanel({
           gain={gain}
           resolved={spoke}
           canChat={!rap.chattedToday}
-          // NOT gated on carrying anything. An option that only appears
-          // when you happen to be holding fish is an option most captains
-          // never discover.
-          canGift={!rap.giftedToday}
-          knowsFav={knowsFavourite(folk, rap.seenLines)}
-          hold={hold}
+          // THE JOB, STRAIGHT OFF THE ROW. Whether a fish in the hold is a
+          // fresh one is the server's answer, never a sum done out here.
+          want={rap.want}
+          wantReady={rap.wantReady}
           busy={busy}
           onChat={haveAWord}
-          onGift={handOver}
+          onAsk={askWhatTheyWant}
+          onDeliver={handOver}
           onClose={() => { setScene(false); setGain(null); setSpoke(null) }}
         />
       )}

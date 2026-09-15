@@ -114,24 +114,55 @@ export function toNextTier(points: number): number | null {
 
 export const CHAT_POINTS = 1
 /**
- * THE ONE FISH THEY ACTUALLY WANT.
+ * WHAT A DELIVERY IS WORTH.
  *
- * Three points against a chat's one, so hunting somebody's favourite is worth
- * three days of turning up. The fastest way to know one of these eight is still
- * to work out what they like and go and catch it, but the gap is a nudge rather
- * than a shortcut.
+ * Three points against a chat's one, and unlike a chat it is NOT rationed by
+ * the clock. It is rationed by the sea: a regular asks for one particular fish,
+ * and the request is settled only by one you land AFTER they asked. So the pace
+ * of a friendship is set by how much fishing you do, which is the thing this
+ * game is, rather than by how many mornings have gone by since you started.
  *
- * THERE IS NO MIDDLE TIER. Anything that is not their favourite is worth one,
- * full stop. A fish from their own water used to be worth two, which meant the
- * picker had three grades to explain and a captain had to think about habitats
- * to give somebody a present. One special fish and everything else is the same
- * fact in a shape anybody can hold.
+ * THAT IS THE WHOLE REASON THE DAILY GATE CAME OFF. The top rung is seventy
+ * points and there are nine people on this ladder; at one gift a day each, the
+ * only road to the end of it was to turn up every morning for two months and
+ * keep turning up. That is not a long friendship, it is an alarm clock. Now the
+ * ceiling is how many of the right fish you can find, so a captain who wants to
+ * spend a whole evening on one person can, and one who plays twice a week is
+ * not permanently behind.
  *
- * At the ceiling this is a chat plus a favourite every single day, which is
- * eighteen days to the top tier — the same figure the curve was tuned to before
- * favourites existed.
+ * THERE IS NO CONSOLATION GRADE. Handing over any old fish for a point used to
+ * be the floor of this system and it is gone. It made the favourite a rounding
+ * error, it meant the best play was to empty your hold into whoever was
+ * nearest, and it turned a request into a transaction. One fish, asked for by
+ * name, caught on purpose.
  */
 export const GIFT_FAVOURITE_POINTS = 3
+
+/**
+ * ── ONE OF THE THREE FISH SOMEBODY IS AFTER ───────────────────────────
+ *
+ * A favourite is not a fact about a person any more, it is a REQUEST. You ask
+ * what they want, they name one of these, and the job stays open until you land
+ * one and carry it back. So each carries both halves of that exchange: the
+ * asking and the handing over.
+ *
+ * `brought` is a POOL because a request repeats. A single string read back word
+ * for word identical the second time a captain did the rarest thing on this
+ * water, which was exactly the wrong way round.
+ */
+export type Favourite = {
+  /** fish_species.id. */
+  id: number
+  /** Carried alongside the id so a panel can name it without a round trip to
+   *  the species table. Rename a species and this needs the same edit. */
+  name: string
+  /** What they say when you ask what they are after. It NAMES THE FISH, every
+   *  time, because this line is the only place the request is ever spelled out
+   *  in their own words. */
+  ask: string
+  /** What they say when you put it in their hands. */
+  brought: string[]
+}
 
 export type Folk = {
   id: FolkId
@@ -278,16 +309,27 @@ export type Folk = {
   /** The moment the bond deepens. One per tier crossed into, so four. */
   tierUp: [string, string, string, string]
   /**
-   * THE ONE FISH. Not a list: a single species, theirs, chosen to say
-   * something about them. Marlow wants a marlin. Dennis (once Tam Brill), the gamer,
-   * and proud of it, wants a bluegill. Nance, who reveres the oldest water,
-   * wants the fish that should have been extinct.
+   * THE THREE FISH, AND THEY COME ROUND IN ORDER.
    *
-   * The name is carried alongside the id so a panel can say it without a
-   * round trip to the species table. Rename a species and this needs the same
-   * edit, which is the trade and it is worth it here.
+   * It was one apiece, which made a whole friendship a single errand: work out
+   * the fish, catch the fish, and every present after that was the same present
+   * with the same sentence over it. Three means asking twice gets a different
+   * answer, and it gives each of these nine three chances to say something
+   * about themselves rather than one.
+   *
+   * THEY ARE STILL CHOSEN TO BE ABOUT THE PERSON, which is the only rule here
+   * that matters. Marlow wants a marlin and a halibut that lies on the bottom
+   * and lets the sea bring it whatever it is having. Fitch, who lives in the
+   * dark, wants the three that carry their own light or look up through their
+   * own skull. Nance wants the three oldest things in the water. Rue, who
+   * carries everybody's news and is asked for nothing, wants a cod, a
+   * lanternfish and a salmon that always knows the road home.
+   *
+   * WHICH ONE THEY ASK FOR is favourites[gifts_given % 3], derived rather than
+   * stored, so the cycle advances on delivery and there is no third column to
+   * fall out of step with the count it was supposed to follow.
    */
-  favourite: { id: number; name: string }
+  favourites: [Favourite, Favourite, Favourite]
   /**
    * THE LAST THING THEY DO FOR YOU, and only two of them have one.
    *
@@ -303,25 +345,21 @@ export type Folk = {
    */
   rodTier?: number
   /**
-   * ── THEIR REACTION, AS TWO POOLS ──────────────────────────────────────────
+   * ── WHERE THEIR REACTIONS WENT ────────────────────────────────────────────
    *
-   * Two outcomes and only ever two, because `giftWorth` grades a gift as the
-   * one fish they want or everything else. There is no middle: a fish from a
-   * regular's own water used to score higher and that tier was removed.
+   * `onLoved` and `onPlain` were two pools on the folk: one for the favourite,
+   * one for everything else. The second grade does not exist any more (see
+   * GIFT_FAVOURITE_POINTS), and the first could not stay where it was, because
+   * a pool hanging off the PERSON cannot name a FISH once a person has three of
+   * them. Meg's old line opened "Largemouth. You went and found one on purpose"
+   * and would have fired on a gar.
    *
-   * BOTH ARE POOLS NOW, and the loved one is the reason. It used to be a single
-   * string, which meant the RAREST and most deliberate thing a captain can do
-   * out here — go and catch a particular somebody's particular fish — read back
-   * word for word identical the second time they did it. The ordinary case had
-   * two lines to shuffle between and the special case had one, which is exactly
-   * the wrong way round.
-   *
-   * The old `onLiked` field is folded into `onPlain`: it was written for the
-   * removed middle tier and had been firing on a coin flip against `onPlain`
-   * ever since, which is what a pool is. Now it is one.
+   * So both moved down a level, into `Favourite.brought`, and nothing was
+   * thrown away: every reaction that named its fish went to that fish, and the
+   * ones that worked for anything are shared out across the three. The lines
+   * the three real people wrote for themselves are all still here, in their own
+   * words, where they have always been.
    */
-  onLoved: string[]
-  onPlain: string[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -347,8 +385,6 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'sand', hat: 'brown', bg: '#1a1408', ring: '#c8a060', mirrored: true },
     role: 'Someone to know', accent: '#d8b070',
     blurb: 'Kept the Shallows scale for thirty years. Watches who turns into somebody.',
-    // Honest, solid, nothing clever. Exactly her.
-    favourite: { id: 8, name: 'Largemouth Bass' },
     lines: [
       [
         "Bring it here and I'll weigh it here. Ashore they'll give you more, and a long haul home to collect it.",
@@ -402,16 +438,37 @@ export const FOLK: Folk[] = [
       "I will tell you something I do not tell the harbour: I set my rate by the captain, not the catch. Yours has been the good one for a while.",
       "You are one of mine now. That is not a discount, it is better than one.",
     ],
-    onLoved: [
-      "Now that is a fish. I will not weigh this one, I will keep it.",
-      "Largemouth. You went and found one on purpose, did you. Thirty years and people still manage it.",
-      "That is the one. I will not thank you twice, so hear it properly the once: thank you.",
-    ],
-    onPlain: [
-      "Kind of you. It will not go to waste, I promise you that.",
-      "For me? Go on then. I will find a use for it.",
-      "I have been handed better by people who wanted something. You want nothing. Noted.",
-      "Straight off the deck and still cold. That is the right way to hand somebody a fish.",
+    // Honest, solid, nothing clever, and then one she has seen exactly once in
+    // thirty years. Meg is not a woman with a trophy, she is a woman with a
+    // scale, so two of her three are supper.
+    favourites: [
+      {
+        id: 8, name: 'Largemouth Bass',
+        ask: "A largemouth bass. My mother weighed the first one I ever landed and told me it was small. It was not. Go and settle that for me.",
+        brought: [
+          "Now that is a fish. I will not weigh this one, I will keep it.",
+          "Largemouth. You went and found one on purpose, did you. Thirty years and people still manage it.",
+          "That is the one. I will not thank you twice, so hear it properly the once: thank you.",
+        ],
+      },
+      {
+        id: 3, name: 'Yellow Perch',
+        ask: "Yellow perch. Do not pull that face. Every captain out here wants to hand me the big one and not one of them has ever brought me supper.",
+        brought: [
+          "Perch. Small, plain, and exactly what I asked for. You listen. That is rarer out here than the gar is.",
+          "There. That is a proper fish and I will be hearing nothing else about it.",
+          "Straight off the deck and still cold. That is the right way to hand somebody a fish.",
+        ],
+      },
+      {
+        id: 59, name: 'Alligator Gar',
+        ask: "A gar. An alligator gar. I have weighed exactly one in thirty years and I never got a proper look at it, because the hand holding it would not stop talking. Bring me another and I will take my time.",
+        brought: [
+          "Look at the length of it. I am taking my time with this one, and you can sit there while I do.",
+          "Two. In thirty years. And the second one is yours. I am writing the date down, and I do not write dates down.",
+          "That is a very old shape of fish. Something about it makes the Shallows feel less settled than I like to pretend they are.",
+        ],
+      },
     ],
   },
   {
@@ -423,9 +480,6 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'blue', hat: 'black', bg: '#0b1420', ring: '#4fc3f7', mirrored: true },
     role: 'Someone to know', accent: '#4fc3f7',
     blurb: 'Cashed out of tech, bought a boat, and has a position in everything, including you.',
-    // The one fish in his water that ever sold for millions at an auction. He
-    // will tell you the number. He will tell you the number more than once.
-    favourite: { id: 60, name: 'Atlantic Bluefin Tuna' },
     // HE TALKS LIKE HE TALKS.
     //
     // Matty is a real person, like Yoon, and this is really how he speaks. A
@@ -514,15 +568,52 @@ export const FOLK: Folk[] = [
     // MATTY'S LINES COME FROM MATTY. He is a real person and everything he
     // says out here is his, verbatim - punctuation, capitals and all. Nobody
     // else writes them and nobody tidies them.
-    onLoved: [
-      "YOOOOO. Dude. What. That's a bluefin. That's crazy.",
-      "dude. you didn't have to. appreciate it man",
-      "this is almost as nice as hitting a 10 bagger",
-      "I can't believe you got me one of these. you're the goat.",
-    ],
-    onPlain: [
-      "Yooooo, nice. That's a solid hold. Solid.",
-      "Thanks dude.",
+    //
+    // The three fish are a position, a growth stock and a bubble, because that
+    // is the only way he has ever looked at anything.
+    //
+    // ── WHO WROTE THE NEW ONES, AND WHEN ──────────────────────────────
+    //
+    // The standing rule on this file is that the three real people do not get
+    // words put in their mouths. It has not been broken. Going from one
+    // favourite to three needed two more asks and two more sets of reactions
+    // apiece, and the go-ahead for exactly that was given on 2026-09-15: "You
+    // can build out the lines for them all. Just match the styles for my
+    // friends."
+    //
+    // So: everything that was here before is still verbatim and untouched. The
+    // lines added that day are written IN the voice rather than BY the voice,
+    // they are his to overwrite the moment he wants to, and the rule stands
+    // unchanged for anything after them. Ask first.
+    favourites: [
+      {
+        id: 60, name: 'Atlantic Bluefin Tuna',
+        ask: "Yooooo. Okay. A bluefin. One of those sold for three million at an auction once. Three million. For a fish. Bring me one and let me just look at it, dude.",
+        brought: [
+          "YOOOOO. Dude. What. That's a bluefin. That's crazy.",
+          "dude. you didn't have to. appreciate it man",
+          "this is almost as nice as hitting a 10 bagger",
+          "I can't believe you got me one of these. you're the goat.",
+        ],
+      },
+      {
+        id: 133, name: 'Black Marlin',
+        ask: "Bruh. Get me a black marlin. Fastest fish in the whole ocean. That's a growth stock. That's all upside and no theta. Go.",
+        brought: [
+          "Yooooo. That's the fastest fish in the ocean and you just had it in a bucket. LOL.",
+          "dude. you didn't have to. appreciate it man",
+          "Okay so if I could put money on you I already would have. Ima say that once and then never again.",
+        ],
+      },
+      {
+        id: 105, name: 'Pufferfish',
+        ask: "Okay this is gonna sound dumb. Get me a pufferfish. Dude, it blows up and then it goes back down. That's a bubble. That's the entire market in one fish and I want one on my boat.",
+        brought: [
+          "LOL. Look at it. That's every position I've ever held, dude. That's perfect.",
+          "Bruh. It's doing the thing. It's inflating. Greatest gift anyone has ever given me.",
+          "Thanks dude.",
+        ],
+      },
     ],
   },
   {
@@ -531,8 +622,6 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'gray', hat: 'black', bg: '#101418', ring: '#a8b4c0', mirrored: true },
     role: 'Someone to know', accent: '#b0bcc8',
     blurb: 'Sits still in deep water and lets everybody else do the sailing.',
-    // Old Marlow wants a marlin. He has never once acknowledged this.
-    favourite: { id: 38, name: 'Blue Marlin' },
     lines: [
       [
         "Long way back to the dock from here. I've made a living out of exactly that.",
@@ -586,16 +675,38 @@ export const FOLK: Folk[] = [
       "I do not usually talk while I weigh. With you I have noticed I do.",
       "You have my trust, which is worth nothing, and my company, which out here is worth a great deal more.",
     ],
-    onLoved: [
-      "Well now. I have not held one of these in years. I am not going to weigh it and you cannot make me.",
-      "A marlin. On my deck. I have nothing prepared to say about that, and I am usually prepared.",
-      "You will have heard I do not go after these any more. You will notice I never said I stopped wanting one.",
-    ],
-    onPlain: [
-      "Generous. I will eat well and think better of you than I already do.",
-      "You did not have to. I will remember that you did.",
-      "I sit still and things come to me. Rarely this politely.",
-      "Set it down there. And sit down yourself, you have been standing since you tied up.",
+    // A marlin, which he has never once acknowledged; a shark that was already
+    // out there before the harbour was a beach; and a flat fish that lies on
+    // the bottom and lets the sea bring it whatever the sea is having, which is
+    // his entire trade described as an animal.
+    favourites: [
+      {
+        id: 38, name: 'Blue Marlin',
+        ask: "A blue marlin, since you have asked, and yes, I have heard the joke about my name. Several thousand times, and it was never funny. Bring me one anyway.",
+        brought: [
+          "Well now. I have not held one of these in years. I am not going to weigh it and you cannot make me.",
+          "A marlin. On my deck. I have nothing prepared to say about that, and I am usually prepared.",
+          "You will have heard I do not go after these any more. You will notice I never said I stopped wanting one.",
+        ],
+      },
+      {
+        id: 134, name: 'Greenland Shark',
+        ask: "Find me a Greenland shark. They live four hundred years, which means there are some down there that were already old when this harbour was a beach. I would like to sit in the same room as one and think about that.",
+        brought: [
+          "Four hundred years. It has outlasted every argument I have ever had about a price. Set it down gently.",
+          "I am going to sit with this a while. You do not have to stay. You never do have to, and you always do.",
+          "Somewhere down there is one of these that will still be swimming when the pair of us are a story. That is a comfort and I could not tell you why.",
+        ],
+      },
+      {
+        id: 125, name: 'Atlantic Halibut',
+        ask: "Halibut. Atlantic, if you can manage it. It lies flat on the bottom and lets the sea bring it whatever the sea is having. You will not find a fish out here that works more like I do.",
+        brought: [
+          "There it is. My whole trade, in a fish. I sit still and everybody else does the sailing.",
+          "Set it down there. And sit down yourself, you have been standing since you tied up.",
+          "Generous. I will eat well and think better of you than I already do.",
+        ],
+      },
     ],
   },
   {
@@ -604,8 +715,6 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'storm', hat: 'midnight', bg: '#080c14', ring: '#6878a0', mirrored: true },
     role: 'Someone to know', accent: '#8090b8',
     blurb: 'Lives in the dark water. Says very little about anything.',
-    // The one that carries its own light down there, which he has a line about.
-    favourite: { id: 41, name: 'Anglerfish' },
     // The Galaxy Rod. He lives in the dark and his fish carries its own light;
     // the void down there and the one overhead are the same void, and he is the
     // one person out here who would say so.
@@ -663,16 +772,37 @@ export const FOLK: Folk[] = [
       "I have started expecting you. That is new for me.",
       "You are the one I would tell, if there were ever anything worth telling.",
     ],
-    onLoved: [
-      "Ah. You brought it up alive. Good.",
-      "Its light still works. Most of them come up dark.",
-      "Mm. That is the one. You knew that.",
-    ],
-    onPlain: [
-      "Thank you. Truly.",
-      "That was kind. I do not have much to say to kind.",
-      "Mm. Good.",
-      "I will eat this. That is more than I say about most things.",
+    // All three are about light in a place that has none. Two carry their own
+    // and the third looks up through the top of its own head. He lives down
+    // there on purpose and he has never explained why to anybody.
+    favourites: [
+      {
+        id: 41, name: 'Anglerfish',
+        ask: "Anglerfish. It carries its own light down here. I could not tell you why that gets me. It does.",
+        brought: [
+          "Ah. You brought it up alive. Good.",
+          "Its light still works. Most of them come up dark.",
+          "Mm. That is the one. You knew that.",
+        ],
+      },
+      {
+        id: 56, name: 'Firefly Squid',
+        ask: "Firefly squid. A whole hand of them goes up at once down there, and then it is dark again. Bring me one. I want to see it close.",
+        brought: [
+          "Mm. Still lit. Hold it a moment before I do.",
+          "There. Small, and doing the whole thing on its own.",
+          "Thank you. Truly.",
+        ],
+      },
+      {
+        id: 47, name: 'Barreleye',
+        ask: "Barreleye. Its head is clear and its eyes point up through it. Down there, and it is looking up. I have thought about that more than is reasonable.",
+        brought: [
+          "Looking up. Still. Even now. Mm.",
+          "I have wanted to hold one of these for eleven years and I never said so out loud until you asked.",
+          "Mm. Good.",
+        ],
+      },
     ],
   },
   {
@@ -681,8 +811,6 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'ice', hat: 'offwhite', bg: '#0a1018', ring: '#9ec4d8', mirrored: true },
     role: 'Someone to know', accent: '#9ec4d8',
     blurb: 'Keeps the count of who goes down to the oldest water and comes back up.',
-    // The fish that should have been extinct, for the one who reveres old water.
-    favourite: { id: 50, name: 'Coelacanth' },
     // The Lightsaber Rod. She keeps the count of who goes down to the oldest
     // water and comes back up, and a blade of light is what you take down.
     rodTier: 19,
@@ -739,16 +867,37 @@ export const FOLK: Folk[] = [
       "I trust you with this water. There is nobody else I would say that to.",
       "You are the one who comes back. Of everyone I have weighed for, you are the one who comes back.",
     ],
-    onLoved: [
-      "You brought this to me first. Ahead of the harbour, ahead of the coin. I will not forget it.",
-      "Sixty-six million years it managed without any of us, and you carried it up here in a wet sack. For me.",
-      "I keep a count of who goes down and comes back. I am going to need a second list.",
-    ],
-    onPlain: [
-      "From the old water, and you gave it away. You are a strange captain and I like you for it.",
-      "Thank you. It is a long way to carry a gift.",
-      "You went down, you came back, and you thought of somebody on the way up. That is the rare part.",
-      "This goes on the ice and your name goes in the book. Both of them keep.",
+    // The three oldest things in the water. She keeps the count of who goes
+    // down to the oldest water and comes back up, and every one of these asks
+    // is really the same ask, which is that you come back up.
+    favourites: [
+      {
+        id: 50, name: 'Coelacanth',
+        ask: "A coelacanth, if you can raise one. It should have been gone sixty million years and nobody told it. I find that steadying.",
+        brought: [
+          "You brought this to me first. Ahead of the harbour, ahead of the coin. I will not forget it.",
+          "Sixty-six million years it managed without any of us, and you carried it up here in a wet sack. For me.",
+          "I keep a count of who goes down and comes back. I am going to need a second list.",
+        ],
+      },
+      {
+        id: 149, name: 'Chambered Nautilus',
+        ask: "Bring me a nautilus. The chambered one. It has not changed its mind about anything in five hundred million years and I would like to ask it how.",
+        brought: [
+          "Every chamber is a year it decided to keep going. I keep a book that does the same job and mine is shorter.",
+          "Look at the shape of it. Nothing arrives at a shape like that by hurrying.",
+          "This goes on the ice and your name goes in the book. Both of them keep.",
+        ],
+      },
+      {
+        id: 150, name: 'Ghost Shark',
+        ask: "A ghost shark. Not a shark, whatever the harbour calls it. That line was old before there were trees. Go carefully, and come up.",
+        brought: [
+          "Older than the trees. Older than the reef. You went down and got it and you came back up, which is the part I actually care about.",
+          "I have weighed two of these in forty years and I wrote down neither. I am writing this one down.",
+          "Thank you. It is a long way to carry a gift.",
+        ],
+      },
     ],
   },
   {
@@ -757,8 +906,6 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'golden', hat: 'black', bg: '#141008', ring: '#f0c040', mirrored: true },
     role: 'Someone to know', accent: '#f0c040',
     blurb: 'Carries one rod that no shop will stock, and an opinion on whether you deserve it.',
-    // Twenty feet of ribbon out of the dark. Gyattt.
-    favourite: { id: 49, name: 'Oarfish' },
     // The Locked-In Rod. His own asks have promised this for as long as they
     // have existed - "Technically. Practically? Nah. Not yet." - and the code
     // never made it true: anybody who could sail to him and cover the price
@@ -834,15 +981,53 @@ export const FOLK: Folk[] = [
       "Rod's yours whenever you've got the coin, and it was yours the day you stopped asking the price. Sheeeeesh. Took you long enough.",
     ],
     // YOON'S LINES COME FROM YOON. Same rule as Matty and Dennis.
-    onLoved: [
-      "Gyattt. You hauled this all the way out here for me? Sit down. I'm gonna tell you how it's caught properly.",
-      "this way too much dip on my chip brotha. ty. ty.",
-      "you are doing way too much, but i am thankful",
-      "bet.",
-    ],
-    onPlain: [
-      "Good fish, clean handling. Gucci.",
-      "Betty johnson. I'll take it. I don't eat much out here anyway.",
+    //
+    // All three of his asks are about THE HAND, because that is the only thing
+    // he has ever cared about. Two are shapes that punish a heavy hand and the
+    // third is a trip back to the easy water to be humbled in it.
+    //
+    // ── WHO WROTE THE NEW ONES, AND WHEN ──────────────────────────────
+    //
+    // The standing rule on this file is that the three real people do not get
+    // words put in their mouths. It has not been broken. Going from one
+    // favourite to three needed two more asks and two more sets of reactions
+    // apiece, and the go-ahead for exactly that was given on 2026-09-15: "You
+    // can build out the lines for them all. Just match the styles for my
+    // friends."
+    //
+    // So: everything that was here before is still verbatim and untouched. The
+    // lines added that day are written IN the voice rather than BY the voice,
+    // they are his to overwrite the moment he wants to, and the rule stands
+    // unchanged for anything after them. Ask first.
+    favourites: [
+      {
+        id: 49, name: 'Oarfish',
+        ask: "Oarfish. Twenty feet of ribbon out of the black. Bruhhh. Bring me one of those and I will actually stop working for the afternoon.",
+        brought: [
+          "Gyattt. You hauled this all the way out here for me? Sit down. I'm gonna tell you how it's caught properly.",
+          "this way too much dip on my chip brotha. ty. ty.",
+          "you are doing way too much, but i am thankful",
+          "bet.",
+        ],
+      },
+      {
+        id: 152, name: 'Snipe Eel',
+        ask: "Aight. Snipe eel. Gyattt, the thing is basically all mouth and a shoelace. I wanna see what a hand has to do to land one without snapping it.",
+        brought: [
+          "Gyattt. Not a mark on it. You know what that takes? I know what that takes.",
+          "Sheeeeesh. That's a soft hand. That's the whole thing I've been telling you about, right there.",
+          "bet.",
+        ],
+      },
+      {
+        id: 63, name: 'Giant Trevally',
+        ask: "Go back to the shallows and get me a giant trevally. Yeah. The shallows. Gyattt, everybody skips that water the second they can, and a GT will still take the rod off you. Humbling. Go.",
+        brought: [
+          "Sheeeeesh. Went back to the easy water and it wasn't easy, huh. Locked in.",
+          "Gyattt. Rod's in one piece too. Gucci.",
+          "this way too much dip on my chip brotha. ty. ty.",
+        ],
+      },
     ],
   },
 
@@ -864,9 +1049,6 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'default', hat: 'olive', bg: '#0e140c', ring: '#a3c46a', mirrored: true },
     role: 'Someone to know', accent: '#a3c46a',
     blurb: 'Talks for a living, fishes for fun, and owns more than he lets on.',
-    // The fish of ten thousand casts. To a gamer that is a drop rate, and he
-    // is keeping a tally.
-    favourite: { id: 12, name: 'Muskellunge' },
     // HE TALKS LIKE HE TALKS.
     //
     // Dennis is a real person, like Yoon and Matty, and this is really how he
@@ -942,15 +1124,53 @@ export const FOLK: Folk[] = [
       "You're on the short list. It's a short list. Honestly it's you and a bosun who doesn't know he's on it.",
     ],
     // DENNIS'S LINES COME FROM DENNIS. Same rule as Matty and Yoon.
-    onLoved: [
-      "No. No way. You did not. Ten thousand casts and you just, you just brought one over? I need to sit down. I'm going to be talking about this for a year. Longer. You've made a huge mistake and I love you for it.",
-      "wow. wow. you got another one for me? i haven't even had enough time to get over the last one!",
-      "im honestly shocked at how quickly you're able to get these over to me. you must be one of the greatest fishers on the sea.",
-      "how are you catching these?? i've spent years out on these seas and I can barely get any. but here you are just pulling these out of thin air. If I could invest in you I would!",
-    ],
-    onPlain: [
-      "Oh, that's a good one. That's a really good one. I'm going to log it and then I'm going to tell you a story about it, fair warning.",
-      "For me? Thank you. Genuinely. Nobody brings me things, I'm usually the one bringing things. This is nice. This is a nice change.",
+    //
+    // A drop rate, a boss fight and a lore drop, which is the only three
+    // categories he has. The asks run long and take a tangent and apologise
+    // for the tangent and then finish the tangent. That is him. Do not tighten.
+    //
+    // ── WHO WROTE THE NEW ONES, AND WHEN ──────────────────────────────
+    //
+    // The standing rule on this file is that the three real people do not get
+    // words put in their mouths. It has not been broken. Going from one
+    // favourite to three needed two more asks and two more sets of reactions
+    // apiece, and the go-ahead for exactly that was given on 2026-09-15: "You
+    // can build out the lines for them all. Just match the styles for my
+    // friends."
+    //
+    // So: everything that was here before is still verbatim and untouched. The
+    // lines added that day are written IN the voice rather than BY the voice,
+    // they are his to overwrite the moment he wants to, and the rule stands
+    // unchanged for anything after them. Ask first.
+    favourites: [
+      {
+        id: 12, name: 'Muskellunge',
+        ask: "Muskellunge. The fish of ten thousand casts. Ten thousand. That's a drop rate, that's a grind, that's the kind of number I respect. I'm at about nine hundred. I'm keeping a tally. Of course I'm keeping a tally. Anyway. No pressure. Enormous pressure.",
+        brought: [
+          "No. No way. You did not. Ten thousand casts and you just, you just brought one over? I need to sit down. I'm going to be talking about this for a year. Longer. You've made a huge mistake and I love you for it.",
+          "wow. wow. you got another one for me? i haven't even had enough time to get over the last one!",
+          "im honestly shocked at how quickly you're able to get these over to me. you must be one of the greatest fishers on the sea.",
+          "how are you catching these?? i've spent years out on these seas and I can barely get any. but here you are just pulling these out of thin air. If I could invest in you I would!",
+        ],
+      },
+      {
+        id: 132, name: 'Goliath Tigerfish',
+        ask: "Okay so. Goliath tigerfish. Go and look at what its teeth do and then come back and tell me that isn't a boss fight. It's a boss fight. It has a health bar. It has phases. I want one and I want to be very normal about it, which I won't be.",
+        brought: [
+          "It has the teeth. It actually has the teeth. I'm looking at the teeth. Sorry. Give me a minute. I'm looking at the teeth.",
+          "You beat the boss and then you brought me the drop. Do you know what that is? That's a raid. We did a raid. I'm logging this under raid.",
+          "Oh, that's a good one. That's a really good one. I'm going to log it and then I'm going to tell you a story about it, fair warning.",
+        ],
+      },
+      {
+        id: 90, name: 'Seahorse',
+        ask: "Seahorse. And before you say anything, yes, it's tiny, and yes, I want one, because the males carry the eggs, which nobody ever leads with, and it is objectively the best fact in this entire ocean. That's the ask. That's the whole ask. Sorry. I get into it.",
+        brought: [
+          "Look at him. That's a dad. That's a working dad. I am going to be insufferable about this all week.",
+          "It's so small. It's so small and I care about it so much. This is the correct emotional response and I will not be taking notes from anyone.",
+          "For me? Thank you. Genuinely. Nobody brings me things, I'm usually the one bringing things. This is nice. This is a nice change.",
+        ],
+      },
     ],
   },
   {
@@ -959,8 +1179,6 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'forest', hat: 'olive', bg: '#0c1410', ring: '#88b09c', mirrored: true },
     role: 'Someone to know', accent: '#88b09c',
     blurb: 'Dives the wrecks and comes up with stories, some of them true.',
-    // Cobia hang around wreckage, which is where she spends her working day.
-    favourite: { id: 21, name: 'Cobia' },
     lines: [
       [
         "Do not anchor here. I am working underneath you.",
@@ -1014,16 +1232,37 @@ export const FOLK: Folk[] = [
       "I have started saving the good stories for you, which is a bad habit and I am not stopping.",
       "There are two of us who know what is behind that door now. Sleep well.",
     ],
-    onLoved: [
-      "Out of the current, that one. You had to work for it. I can see you had to work for it.",
-      "Cobia. They hang about the wrecks like they are paying rent down there. Did you have to shoo it off something of mine?",
-      "I have come up empty from better water than that. Do not repeat that anywhere.",
-    ],
-    onPlain: [
-      "Fresh food out here is worth more than salvage. I am not exaggerating.",
-      "That is decent of you. I eat what I find, mostly, and what I find is usually rope.",
-      "Right. That is dinner, and I did not have to hold my breath for it.",
-      "You have no idea how much of my diet is a guess. This is not a guess.",
+    // All three live in her working day. She meets them in the dark, at depth,
+    // on somebody else's boat, and what she wants is a proper look at one in
+    // daylight without having to hold her breath.
+    favourites: [
+      {
+        id: 21, name: 'Cobia',
+        ask: "Cobia, if you are offering. They hang about wreckage, so I see more of them than most, and I have never once got tired of it.",
+        brought: [
+          "Out of the current, that one. You had to work for it. I can see you had to work for it.",
+          "Cobia. They hang about the wrecks like they are paying rent down there. Did you have to shoo it off something of mine?",
+          "I have come up empty from better water than that. Do not repeat that anywhere.",
+        ],
+      },
+      {
+        id: 24, name: 'Barracuda',
+        ask: "A barracuda. One hung off my shoulder in the middle wreck for forty minutes once, just watching, and then it left. I have wanted a proper look at one ever since and I am not going back down after it.",
+        brought: [
+          "There you are. Forty minutes it watched me and I never once got to look back. I am looking now.",
+          "Held the same way it hangs in the water. Still. All teeth and patience, this lot.",
+          "Right. That is dinner, and I did not have to hold my breath for it.",
+        ],
+      },
+      {
+        id: 80, name: 'Stingray',
+        ask: "Stingray. They settle into the silt in a hold that went down flat, and you do not see them until you have already put a hand down. Bring me one and let me be cross with it in daylight.",
+        brought: [
+          "In daylight. On a deck. Not under my hand in the dark. Much better.",
+          "The silt sits on them like a blanket down there. Nothing in a wreck wants to be found, and that one is the worst of them.",
+          "Fresh food out here is worth more than salvage. I am not exaggerating.",
+        ],
+      },
     ],
   },
   {
@@ -1032,8 +1271,6 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'lavender', hat: 'purple', bg: '#12101c', ring: '#b0a0d0', mirrored: true },
     role: 'Someone to know', accent: '#b0a0d0',
     blurb: 'Carries news between the regulars and remembers all of it.',
-    // Plain, dependable, everywhere. A messenger's fish.
-    favourite: { id: 27, name: 'Atlantic Cod' },
     lines: [
       [
         "I carry word between the boats out here. No, there is no charge. That surprises everyone.",
@@ -1087,16 +1324,38 @@ export const FOLK: Folk[] = [
       "You get the real news now, not the harbour version.",
       "You are the last name on the list and the only one who ever asked how I was.",
     ],
-    onLoved: [
-      "You remembered. I mentioned this once, months ago, and you remembered.",
-      "Cod. Plain as anything, and not one person has ever brought me one. That is rather the whole of me, is it not.",
-      "I carry what everybody says and nobody asks what I would want. You asked, once. Here it is.",
-    ],
-    onPlain: [
-      "Kind. I will eat it somewhere between here and the Abyss and think well of you.",
-      "A gift for the messenger. That does not happen. Thank you.",
-      "I will have told three people about this before nightfall. Occupational hazard.",
-      "Something for me, for once. I will not make a thing of it. I will mention it, but I will not make a thing of it.",
+    // Three fish that do the job and are never thanked for it: supper, the most
+    // numerous thing in the sea that nobody can name, and the one that carries
+    // itself the whole way home and never gets the road wrong. She has carried
+    // word for forty years and never once for herself.
+    favourites: [
+      {
+        id: 27, name: 'Atlantic Cod',
+        ask: "A cod. Plain Atlantic cod. Everything else out here is somebody's trophy and a cod is just supper, which is the entire point of it.",
+        brought: [
+          "You remembered. I mentioned this once, months ago, and you remembered.",
+          "Cod. Plain as anything, and not one person has ever brought me one. That is rather the whole of me, is it not.",
+          "I carry what everybody says and nobody asks what I would want. You asked, once. Here it is.",
+        ],
+      },
+      {
+        id: 51, name: 'Lanternfish',
+        ask: "Lanternfish. There are more of them in this sea than anything else with a spine, and not one captain out here could name one. I have a certain sympathy. Bring me one.",
+        brought: [
+          "The most of anything in the whole sea, and nobody has ever handed one to a person on purpose before. Until now.",
+          "It carries a light and nobody looks. I will not be drawing the comparison out loud. I have drawn it.",
+          "Something for me, for once. I will not make a thing of it. I will mention it, but I will not make a thing of it.",
+        ],
+      },
+      {
+        id: 82, name: 'Atlantic Salmon',
+        ask: "An Atlantic salmon. It goes out, it carries itself the whole way back, and it never once gets the road wrong. I have been doing that for forty years with worse navigation.",
+        brought: [
+          "All that way and it still knew the road. Forty years, and I still check my chart twice.",
+          "There is nothing out here better at carrying something home. Present company included, and I am being generous to myself.",
+          "A gift for the messenger. That does not happen. Thank you.",
+        ],
+      },
     ],
   },
 ]
@@ -1403,35 +1662,65 @@ export function nextLine(folk: Folk, tier: FolkTier, seen: readonly string[]): {
 }
 
 /**
- * HAVE THEY ACTUALLY TOLD YOU WHAT THEY LIKE?
+ * WHICH OF THEIR THREE THEY WILL ASK FOR NEXT.
  *
- * Read off the lines they have SAID, not off a tier. The panel used to reveal
- * the favourite at tier 1 because that was roughly when they would have got
- * round to it, which is the game handing over a fact rather than the captain
- * learning one. Now the reveal and the telling are the same event: the check
- * walks the seen-line keys, resolves each back to its text, and asks whether
- * any of them names the fish.
- *
- * Derived by CONTENT rather than by a stored index, so reordering a pool
- * cannot silently unlearn something a captain was told months ago.
+ * Derived from the number of deliveries rather than stored, so the cycle cannot
+ * drift out of step with the count it is supposed to follow. Modulo twice, so a
+ * negative count from a bad row still lands inside the array instead of handing
+ * back undefined.
  */
-export function knowsFavourite(folk: Folk, seen: readonly string[]): boolean {
-  const needle = folk.favourite.name.toLowerCase()
+export function favouriteFor(folk: Folk, giftsGiven: number): Favourite {
+  const n = folk.favourites.length
+  return folk.favourites[(((giftsGiven % n) + n) % n)]
+}
+
+/** One of their three, by species id. Null for anything else in the sea, which
+ *  is how the server refuses a delivery of the wrong fish. */
+export function favouriteById(folk: Folk, fishId: number): Favourite | null {
+  return folk.favourites.find(f => f.id === fishId) ?? null
+}
+
+/**
+ * ── THE KEY AN ASK LEAVES BEHIND ────────────────────────────────────────────
+ *
+ * Asking somebody what they want is the main way a captain learns one of these
+ * now, and `seen_lines` is the only record of what anybody has been told. So an
+ * ask writes a key into it in the same array the tier lines use, in a shape
+ * that cannot collide with them: tier keys are `id:0-4:index`, and this is
+ * `id:want:speciesId`.
+ *
+ * No new column for it. The array was already there and already meant exactly
+ * this: the things this person has said to you.
+ */
+export const wantKey = (folk: Folk, fishId: number) => `${folk.id}:want:${fishId}`
+
+/**
+ * WHICH OF THEIR THREE HAVE THEY ACTUALLY TOLD YOU ABOUT?
+ *
+ * Two ways to have been told, and both are read off what they have SAID rather
+ * than off a tier. The panel used to reveal a favourite at tier 1 because that
+ * was roughly when they would have got round to it, which is the game handing
+ * over a fact instead of a captain learning one.
+ *
+ *   THEY MENTIONED IT IN PASSING. Several of the tier pools name a fish, so the
+ *   check walks the seen keys, resolves each back to its text, and asks whether
+ *   it contains the name. Derived by CONTENT rather than by a stored index, so
+ *   reordering a pool cannot silently unlearn something told months ago.
+ *
+ *   OR YOU ASKED THEM OUTRIGHT. That leaves a `want` key, above.
+ */
+export function favouritesKnown(folk: Folk, seen: readonly string[]): Favourite[] {
+  const known = new Set<number>()
   for (const key of seen) {
     const [id, t, i] = key.split(':')
     if (id !== folk.id) continue
+    if (t === 'want') { known.add(Number(i)); continue }
     const line = poolFor(folk, Number(t) as FolkTier)?.[Number(i)]
-    if (line && line.toLowerCase().includes(needle)) return true
+    if (!line) continue
+    const hay = line.toLowerCase()
+    for (const f of folk.favourites) {
+      if (hay.includes(f.name.toLowerCase())) known.add(f.id)
+    }
   }
-  return false
-}
-
-/** How well a gift lands. Nothing is ever refused: a captain who sailed all
- *  the way out with a fish should never be told they picked the wrong one, so
- *  the worst case is still a point and a warm line. */
-export function giftWorth(folk: Folk, fishId: number): {
-  points: number; how: 'loved' | 'plain'
-} {
-  if (fishId === folk.favourite.id) return { points: GIFT_FAVOURITE_POINTS, how: 'loved' }
-  return { points: 1, how: 'plain' }
+  return folk.favourites.filter(f => known.has(f.id))
 }
