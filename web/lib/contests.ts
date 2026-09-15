@@ -55,18 +55,13 @@ export interface ContestDef {
 }
 
 export const CONTESTS: ContestDef[] = [
-  {
-    id: 'achievement_points_beta',
-    name: 'The Decorated Captain',
-    tagline: 'Every badge in your Captain’s Log is worth points. The captain carrying the most achievement points when the beta closes out takes the final prize. Chase every feat, fill every page.',
-    goalLabel: 'Most achievement points when beta ends',
-    prize: 'A free custom item, your own one-of-a-kind cosmetic',
-    prizeCode: 'ACHIEVEMENT-POINTS-BETA',
-    status: 'active',
-    accent: '#a78bfa',
-    board: { computed: 'achievement_points', unit: ' pts' },
-    resolutionNote: 'The captain with the most achievement points when the beta ends takes the prize.',
-  },
+  // THE DECORATED CAPTAIN IS GONE. It was "most achievement points when the
+  // beta closes out takes the final prize", and on 2026-09-15 the decision was
+  // that no standing carries a prize any more: a race for the top of a board
+  // is exactly the thing that makes a forged number worth forging, and the
+  // boards are for looking at. The four decided contests below stay as the
+  // record of who won them. No contests row was ever written for this one, so
+  // there is nothing to resolve.
   {
     id: 'gauntlet_deepest_30d',
     name: 'The Deepest Descent',

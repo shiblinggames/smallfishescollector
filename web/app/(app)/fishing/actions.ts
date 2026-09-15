@@ -897,6 +897,34 @@ export async function reelIn(
   const token = profile.pending_cast as PendingCast | null
   if (!token || token.fishId === CRATE_FISH_ID) return { caught: false }
 
+  // ── AND IT CANNOT HAVE BITTEN YET ─────────────────────────────────────────
+  //
+  // The token pins WHAT was on the line; this pins WHEN. castLine stamps the
+  // cast with the server's clock and hands the client the wait it rolled, and
+  // the client will not show a bite before max(760ms, that wait) has passed
+  // (FishingHere), let alone the dial after it. So a reel that arrives sooner
+  // than the bite could have happened did not come from the dial. It came from
+  // a script replaying castLine and reelIn back to back, which is the one
+  // forgery the token alone does not stop: the fish is real, the timing is not.
+  //
+  // Every clock here is the server's. castAt was written by this file, and
+  // the response then had to travel to a phone and the timer start there, so
+  // an honest reel is always LATER than this floor, never at it. Nothing is
+  // added for the dial itself, because its minimum is not pinned down and a
+  // floor that is too low costs nothing while one that is too high costs a
+  // real catch.
+  //
+  // REFUSED WITHOUT SPENDING THE CAST. The claim is further down; this returns
+  // before it, so the line is still out and reeling again is the answer. A
+  // scripted caller gets a refusal, and a real player can never be here.
+  const biteFloorMs = token.shot?.instantBite
+    ? 760
+    : Math.max(760, Number(token.shot?.waitMs ?? 0))
+  if (Date.now() - Number(token.castAt ?? 0) < biteFloorMs) {
+    console.warn('[reelIn] reel before the bite', { userId: user.id, elapsed: Date.now() - Number(token.castAt ?? 0), biteFloorMs })
+    return { error: 'Nothing has bitten yet. The line is still out.' }
+  }
+
   /**
    * ── THE SPECIES IS READ BEFORE THE TOKEN IS SPENT ─────────────────────────
    *
