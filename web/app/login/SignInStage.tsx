@@ -23,20 +23,29 @@ import LoginForm from './LoginForm'
  *
  * ── AND IT IS A DESKTOP PAGE ABOUT AN OPEN SEA ──────────────────────────────
  *
- * The first cut of this put two phone screenshots beside the words. Both were
- * wrong twice over: they are old (the retired fishing hub, the old five-tab
- * bar), and they are PHONES, stood on end, on the page for a game that is a
- * whole chart you sail and is at its best on a monitor.
+ * Two goes at putting art beside the words failed for the same reason. First
+ * the landing page's two phone screenshots: OLD (the retired fishing hub, a
+ * five-tab bar that is not there) and PHONES, stood on end, on the door of a
+ * game that is a whole chart you sail and is at its best on a monitor. Then the
+ * painted world chart, which is old as well and was never a picture of the
+ * game, only a picture of a map.
  *
- * What is beside the words now is the world: the painted chart, big, laid on
- * the water like something on a table. It is the same hand every island and
- * every wreck in the game is drawn by, it says "there is a sea out here and
- * things in it" in one look, and it is a MAP rather than a mock-up of a
- * screen, so it cannot quietly go out of date the way a screenshot does the
- * next time a HUD moves.
+ * Nothing goes in that slot until something TRUE goes in it. What a door owes a
+ * player is the game, and a stale screenshot is worse than no screenshot: it
+ * promises a screen that is not there any more, and the first thing it teaches
+ * is that the pictures lie.
  *
- * A live screenshot would still be better in the slot, and the slot is one
- * element: swap the image, keep the frame.
+ * So the page does the honest version well instead: the painted sea, full
+ * bleed, the title where a title goes, the card under it, wide and quiet. That
+ * is a door, and it is a good one.
+ *
+ * ── AND THE SLOT IS ONE LINE AWAY ───────────────────────────────────────────
+ *
+ * `HERO` below. Point it at a WIDE capture of the chart from a desktop window
+ * (about 16:10, 1600px across is plenty; /public, any name) and the page goes
+ * two-column on its own: words and card on the left, the sea on the right, in
+ * a frame that is already built and waiting under `.signin-hero`. Nothing else
+ * has to change. Until then it is null and the page is centred.
  *
  * ── AND THE SEA MOVES ───────────────────────────────────────────────────────
  *
@@ -57,6 +66,12 @@ import LoginForm from './LoginForm'
  *   forever across the water. A still photograph of a sea is the one thing a
  *   sea should never be, and it costs a single compositor-only animation.
  */
+/**
+ * A WIDE SHOT OF THE GAME, or null. See the note above: the page lays itself
+ * out both ways, and the only rule is that whatever goes here is CURRENT.
+ */
+const HERO: { src: string; alt: string; w: number; h: number } | null = null
+
 export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
   const isNew = mode === 'new'
   return (
@@ -86,7 +101,7 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
       <div className="relative z-10 mx-auto px-6" style={{
         maxWidth: 1160, paddingTop: 'clamp(2.5rem, 7vh, 5rem)', paddingBottom: '3.5rem',
       }}>
-        <div className="signin-grid">
+        <div className={HERO ? 'signin-grid' : 'signin-solo'}>
           {/* ── THE WORDS AND THE DOOR ──────────────────────────────── */}
           <div className="signin-col landing-rise" style={{ animationDelay: '0.05s' }}>
             <p className="font-karla font-600 uppercase" style={{
@@ -156,20 +171,22 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
           {/* ── AND THE SEA IT IS A DOOR TO ─────────────────────────────
               ONE THING SHOWN PROPERLY, then one plain note under it. The
               landing page settled that argument: an even row of cards is the
-              loudest tell there is. */}
-          <div className="signin-art landing-rise" style={{ animationDelay: '0.18s' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img width={1440} height={1788} src="/chartingmap.webp"
-              alt="A painted chart of the sea: islands, wrecks, a maelstrom and the things living under it"
-              className="signin-chart" loading="eager" decoding="async" />
-            <p className="font-karla signin-cap" style={{
-              fontSize: '0.76rem', color: '#9fb6c6', textAlign: 'center',
-              margin: '0.4rem auto 0', maxWidth: 360, lineHeight: 1.6,
-            }}>
-              One sea, sailed in real time. Fish it, chart it, and take a ship
-              north through the gate when you are ready for what is out there.
-            </p>
-          </div>
+              loudest tell there is. Empty until there is a true picture to put
+              in it, and the page is centred while it is. */}
+          {HERO && (
+            <div className="signin-art landing-rise" style={{ animationDelay: '0.18s' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img width={HERO.w} height={HERO.h} src={HERO.src} alt={HERO.alt}
+                className="signin-hero" loading="eager" decoding="async" />
+              <p className="font-karla signin-cap" style={{
+                fontSize: '0.76rem', color: '#9fb6c6', textAlign: 'center',
+                margin: '0.85rem auto 0', maxWidth: 380, lineHeight: 1.6,
+              }}>
+                One sea, sailed in real time. Fish it, chart it, and take a ship
+                north through the gate when you are ready for what is out there.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </main>

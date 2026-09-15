@@ -2495,55 +2495,42 @@ body.hardcore-gauntlet::after {
   .signin-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 3.4rem; }
 }
 
-/* ── THE CHART ────────────────────────────────────────────────────────────
-   A painted map, cut out, laid on the water. It has its own paper edge so it
-   gets no frame and no border: a rule round a torn edge is a rule round a torn
-   edge. The shadow is what puts it on the table.
-
-   IT BREATHES. Six pixels over twenty seconds, which nobody watches and
-   everybody feels, and it is a transform so it costs a composite and nothing
-   else. A map pinned dead still on a moving sea is the one arrangement that
-   reads as two images rather than one picture. */
-@keyframes signinChartFloat {
-  0%, 100% { transform: rotate(-2.5deg) translate3d(0, 0, 0); }
-  50%      { transform: rotate(-2.5deg) translate3d(0, -6px, 0); }
+/* ── WITH NO PICTURE, IT IS ONE COLUMN AND IT IS CENTRED ──────────────────
+   The honest version, done properly: the painted sea full bleed, the title
+   where a title goes, the card under it. Capped narrower than the two-column
+   frame because a line of body copy running the width of a monitor is not a
+   line anybody reads. See the note in SignInStage on why the slot is empty. */
+.signin-solo {
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: center;
 }
-.signin-chart {
+.signin-solo .signin-col > p,
+.signin-solo .signin-col > h1 { margin-left: auto; margin-right: auto; }
+.signin-solo .signin-col > div { margin-left: auto; margin-right: auto; }
+
+/* ── AND WITH ONE, IT IS A LANDSCAPE FRAME ────────────────────────────────
+   Sized for a WIDE capture off a desktop window, because that is what the
+   game is: a chart you sail, not a column on a phone. A hairline and a deep
+   shadow, turned a degree and a half so it sits on the water rather than
+   being pasted onto it. */
+.signin-hero {
   display: block;
   width: 100%;
-  max-width: 460px;
   height: auto;
-  margin: 0 auto;
-  transform: rotate(-2.5deg);
-  animation: signinChartFloat 20s ease-in-out infinite;
-  filter: drop-shadow(0 26px 44px rgba(0,0,0,0.6)) drop-shadow(0 0 60px rgba(120,200,210,0.14));
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 34px 80px rgba(0,0,0,0.66), 0 0 70px rgba(120,200,210,0.10);
+  transform: rotate(-1.2deg);
 }
-
-/* ── AND ON A PHONE IT IS THE GROUND, NOT A BLOCK ─────────────────────────
-   A tall map stacked above the words pushes the one control on the page below
-   the fold, which on the door of a game is the whole page failing. Down here
-   it goes behind everything at a fraction of its weight: still the sea, still
-   painted, and out of the way of the button. */
 @media (max-width: 899px) {
-  .signin-chart {
-    position: fixed;
-    left: 50%;
-    top: 46%;
-    z-index: 0;
-    width: 150vw;
-    max-width: none;
-    margin: 0;
-    opacity: 0.14;
-    pointer-events: none;
-    transform: translate(-50%, -50%) rotate(-4deg);
-    animation: none;
-    filter: none;
-  }
+  /* On a phone it goes straight, and the caption goes: a wide shot shrunk to a
+     phone column is a postage stamp with a sentence under it. */
+  .signin-hero { transform: none; border-radius: 13px; }
   .signin-cap { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .signin-glints { animation: none; }
-  .signin-chart { animation: none; }
 }
 
 .landing-rise {
