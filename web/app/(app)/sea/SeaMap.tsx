@@ -80,6 +80,11 @@ import { handlingRate, accelRate, lanternGlow, BASE_SPEED_PX, BASE_TURN_RAD, BAS
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
+// Named, not computed: the loadout prints "Bronze Reel", and the numbers in
+// `mods` are needle multipliers. See FishingMods.
+import { getReel } from '@/lib/reels'
+import { getLine } from '@/lib/lines'
+import { getHook } from '@/lib/hooks'
 import TrawlIndicator from '../fishing/TrawlIndicator'
 import DailyOrders from '../trawl-docks/DailyOrders'
 import BountiesPanel from '../expeditions/BountiesPanel'
@@ -319,6 +324,11 @@ const Almanac = dynamic(() => import('../fishing/Almanac'), { ssr: false })
  *  drags GearScreen and the whole forge bench behind it, and a captain who
  *  never moors there never fetches a byte of it. */
 const ShipyardSheet = dynamic(() => import('./ShipyardSheet'), { ssr: false })
+// The fishing side's own loadout, opened from the HUD rather than from inside
+// the rod overlay. Held behind a dynamic import like every other sheet: it
+// drags in the preview stage and five cosmetic tables, and most sails never
+// open it. See sea/GearSheet.
+const GearSheet = dynamic(() => import('./GearSheet'), { ssr: false })
 // THE SHIP SCREEN, over the water. Lazy for the same reason the yard is: it
 // pulls in the whole loadout / forge / armoury tree, and most sails never open
 // it. See sea/ShipSheet.
@@ -4132,6 +4142,38 @@ export default function SeaMap({
   const [almanacOpen, setAlmanacOpen] = useState(false)
   /** The locker, open or shut. */
   const [yardOpen, setYardOpen] = useState(false)
+  /** The fishing side's loadout, off the HUD. See sea/GearSheet. */
+  const [gearOpen, setGearOpen] = useState(false)
+  /**
+   * ── AND THE WAY TO A PLACE, WHEN SOMETHING ASKS FOR IT ──────────────────
+   *
+   * The loadout's signposts do not just NAME the Shipyard and the Mainland,
+   * they point at them: press one and the sheet shuts and the chart lights the
+   * same road it draws to the campaign's next stop, for as long as a heading
+   * runs. Naming a building to somebody who has never found it is half an
+   * answer on a chart this size.
+   *
+   * Its own ref rather than the tour's, because the tour owns that one and a
+   * captain asking for directions is not a tour beat.
+   */
+  const wayGoal = useRef<{ x: number; y: number; r: number } | null>(null)
+  /**
+   * POINT AT A PLACE, and shut whatever asked. The road and the chevrons both,
+   * which is the same send-off a cleared node gets, so "where is the Shipyard"
+   * is answered in the language the chart already uses for "where next".
+   */
+  const showWay = useCallback((id: string) => {
+    const p = PLACES.find(x => x.id === id)
+    if (!p) return
+    setGearOpen(false)
+    wayGoal.current = { x: p.x, y: p.y, r: p.r }
+    setHeading({ from: { ...pos.current }, to: { x: p.x, y: p.y }, key: Date.now() })
+    window.setTimeout(() => {
+      // Only if nothing has asked for a different one since.
+      if (wayGoal.current?.x === p.x && wayGoal.current?.y === p.y) wayGoal.current = null
+      setHeading(h => (h && h.to.x === p.x && h.to.y === p.y ? null : h))
+    }, HEADING_MS)
+  }, [])
   /** The ship screen, opened over the water. 'ship' from the Gunwharf's
    *  "Manage her", 'forge' from mooring at the Forge island. Null is shut. */
   // ── A DOOR NAMED IN THE URL ───────────────────────────────────────────
@@ -5076,6 +5118,7 @@ export default function SeaMap({
       if (crewOpen) { setCrewOpen(false); return }
       if (crewHubOpen) { setCrewHubOpen(false); return }
       if (almanacOpen) { setAlmanacOpen(false); return }
+      if (gearOpen) { setGearOpen(false); return }
       if (yardOpen) { setYardOpen(false); return }
       if (shipSheet) { setShipSheet(null); return }
       if (reading) { setReading(null); return }
@@ -5086,7 +5129,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, campaignOpen, choosing, shipSheet, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
+  }, [find, ashore, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, campaignOpen, choosing, shipSheet, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, gearOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -6055,11 +6098,17 @@ export default function SeaMap({
     if (inAnchorage && (!fishingIn || wide)) on.push('crew')
     // ── AND WHAT SHE CARRIES ──────────────────────────────────────────
     //
-    // Beside the crew, and on the expedition side only: the two questions you
-    // settle between fights are who is aboard and what is mounted, and they
-    // should be next to each other. On the fishing side there is nothing to
-    // mount — raid relics do not touch a rod — so the slot is not there.
-    if (inAnchorage && (!fishingIn || wide)) on.push('loadout')
+    // ONE SLOT, BOTH HALVES, and the CONTENT switches with the side, exactly as
+    // the journey and the spine above it do. Out past the reef it is the battle
+    // loadout: what is mounted on the hull. On the fishing side it is the rod,
+    // the rack and everything you are wearing.
+    //
+    // It was expedition-only, on the reasoning that raid relics do not touch a
+    // rod. True, and beside the point: the fishing half has its own loadout and
+    // it is the one a captain changes most often. The only door to it was a
+    // sheet INSIDE the rod overlay, so changing what you carry meant already
+    // carrying it. See sea/GearSheet.
+    if (!fishingIn || wide) on.push('loadout')
     if (!fishingIn || wide) on.push('chart')
     // THE BOOK, on the fishing side only. It is a reference about FISH, and out
     // past the reef there are none — a door to it standing in the campaign's
@@ -9139,7 +9188,10 @@ export default function SeaMap({
         // compass arrow with a distance on it is a bearing rather than a
         // route. This is the road, and it is on whenever there is somewhere
         // to be -- not only while a tour happens to be running.
-        const lit = tourGoal.current ?? campaignGoalRef.current
+        // A road somebody ASKED for outranks both: the tour's is guidance they
+        // are already following and the campaign's is standing advice, and
+        // neither is the question just put to the chart. See wayGoal.
+        const lit = wayGoal.current ?? tourGoal.current ?? campaignGoalRef.current
         gpuRef.current?.guide(lit ? pos.current : null, lit, lit?.r)
         gpuRef.current?.skipper({
           // THE SAME BLOWS, ON THE CANVAS HULL. `heel` and the offset are
@@ -10814,6 +10866,30 @@ hullRef={hullRefFor(t.key)} />
 
       {/* THE LOCKER, over the water you are moored in. */}
       <ShipyardSheet open={yardOpen} onClose={() => setYardOpen(false)} />
+      {/* ── THE FISHING SIDE'S LOADOUT ────────────────────────────────
+          Off the HUD, so what you carry can be changed from the water rather
+          than only from inside the rod overlay. Same body the Shipyard draws
+          with; see sea/GearSheet for the signposts at the foot of it. */}
+      <GearSheet
+        open={gearOpen}
+        onClose={() => setGearOpen(false)}
+        rack={rack}
+        activeRod={activeRod}
+        onRodChange={setActiveRod}
+        look={{ characterColor, hatId, boatId, petId, petBow: gear.petBow ?? null }}
+        onLookChange={patch => {
+          if (patch.characterColor !== undefined) setCharacterColor(patch.characterColor)
+          if (patch.boatId !== undefined) setBoatId(patch.boatId)
+          if (patch.hatId !== undefined) setHatId(patch.hatId)
+          if (patch.petId !== undefined) setPetId(patch.petId)
+        }}
+        reelTier={mods.reelTier}
+        hookTier={mods.hookTier}
+        reelName={getReel(mods.reelTier).name}
+        lineName={getLine(mods.lineTier).name}
+        hookName={getHook(mods.hookTier).name}
+        onShowWay={showWay}
+      />
       <ShipSheet open={shipSheet !== null} focus={shipSheet ?? 'ship'} onClose={() => setShipSheet(null)} />
       {/* RE-READ ON THE WAY OUT. Collecting a finished stint happens INSIDE
           this sheet, and the island's "Training done" is what says there is one
@@ -11203,12 +11279,19 @@ hullRef={hullRefFor(t.key)} />
           opens (a wheel, a rod, a chart, a pennant); this one is the shape of
           the screen behind it, because the thing itself is six unrelated
           relics and no single one of them stands for the rest. */}
-      {inAnchorage && (!fishingIn || wide) && !fightOn && (
+      {(!fishingIn || wide) && !fightOn && (
         <button
           type="button"
-          onClick={e => { e.stopPropagation(); vibrate(8); setShipSheet('items') }}
-          aria-label="Battle Loadout"
-          title="Battle Loadout"
+          onClick={e => {
+            e.stopPropagation(); vibrate(8)
+            // ONE DISC, TWO LOCKERS. Out past the reef it is what is mounted on
+            // the hull; on the fishing side it is the rod, the rack and what
+            // you are wearing. See the note in hudRow.
+            if (inAnchorage) setShipSheet('items')
+            else setGearOpen(true)
+          }}
+          aria-label={inAnchorage ? 'Battle Loadout' : 'Your Loadout'}
+          title={inAnchorage ? 'Battle Loadout' : 'Your Loadout'}
           data-coach="hud-loadout"
           data-no-steer
           style={{
