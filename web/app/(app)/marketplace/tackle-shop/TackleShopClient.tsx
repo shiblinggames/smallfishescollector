@@ -4,7 +4,8 @@ import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { HOOKS, hookGlowClass } from '@/lib/hooks'
-import { RODS, rodGlowClass, isCaptainRod, rodSpeedPct, COMPLETIONIST_TIER, ROD_SELL_RATE } from '@/lib/rods'
+import { RODS, rodGlowClass, isCaptainRod, rodSpeedPct, COMPLETIONIST_TIER, ROD_SELL_RATE } from '@/lib/rods'
+import type { CompletionistProgress, Requirement } from '@/lib/completionist'
 import { openMembership } from '@/components/MembershipModal'
 import { REELS } from '@/lib/reels'
 import { LINES } from '@/lib/lines'
@@ -83,8 +84,7 @@ export default function TackleShopClient({
   baitInventory: initialBait,
   fishingXP,
   isPremium,
-  uniqueSpeciesCaught,
-  totalSpecies,
+  completionist,
 }: {
   hookTier: number
   equippedRod: number
@@ -95,8 +95,10 @@ export default function TackleShopClient({
   baitInventory: BaitInventoryItem[]
   fishingXP: number
   isPremium: boolean
-  uniqueSpeciesCaught: number
-  totalSpecies: number
+  /** Every requirement for the capstone rod, and whether they are all met.
+   *  Computed once on the server by lib/completionist, which is the same call
+   *  the claim makes: the bars below and the server's answer are one thing. */
+  completionist: CompletionistProgress
 }) {
   const router = useRouter()
   const [section, setSection] = useState<Section>(null)
@@ -348,6 +350,9 @@ export default function TackleShopClient({
     (() => {
       const owned = lineTier + 1
       const maxed = lineTier >= LINES.length - 1
+      // Off the same object the capstone's bars use, so "species discovered"
+      // means one thing on this page. See lib/completionist.
+      const { have: uniqueSpeciesCaught, need: totalSpecies } = completionist.species
       const remaining = Math.max(0, totalSpecies - uniqueSpeciesCaught)
       return {
         key: 'line' as const, label: 'Line', color: '#4ade80', imageUrl: '/monofilament.png',
@@ -750,10 +755,7 @@ export default function TackleShopClient({
         const compRod = RODS.find(r => r.tier === 14)!
         const compOwned = ownedRods.includes(14)
         const compActive = equippedRod === 14
-        const playerLevel = getLevelFromXP(fishingXP)
-        const isLevelOk = playerLevel >= 100
-        const isSpeciesOk = totalSpecies > 0 && uniqueSpeciesCaught >= totalSpecies
-        const eligible = isLevelOk && isSpeciesOk && !compOwned
+        const eligible = completionist.eligible && !compOwned
         const c = compRod.color
 
         // The browsable rod ladder (Completionist is its own capstone card below),
@@ -1105,10 +1107,11 @@ export default function TackleShopClient({
                       : 'The sea hides its greatest secret from those who haven\'t seen everything it holds.'}
                   </p>
                   <div className="flex flex-col gap-2.5 mb-4">
-                    {[
-                      { label: 'Fishing Level', current: Math.min(playerLevel, 100), max: 100, done: isLevelOk },
-                      { label: 'Species Discovered', current: uniqueSpeciesCaught, max: totalSpecies, done: isSpeciesOk },
-                    ].map(({ label, current, max, done }) => (
+                    {/* FOUR BARS, AND THE SERVER WROTE ALL FOUR. The level and
+                        the collection, then the two the capstone gained: every
+                        regular at the top of their ladder, and every isle on
+                        the fishing chart landed on. See lib/completionist. */}
+                    {completionist.all.map(({ label, have: current, need: max, done }: Requirement) => (
                       <div key={label}>
                         <div className="flex justify-between mb-1">
                           <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: done ? '#4ade80' : '#6a6764' }}>{label}</span>

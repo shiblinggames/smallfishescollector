@@ -3,7 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { isPremiumActive } from '@/lib/premium'
 import { getCurrentProfile } from '@/lib/userData'
-import { provenCaughtSpecies } from '@/lib/collection'
+import { completionistProgress } from '@/lib/completionist'
+import { getLevelFromXP } from '@/lib/fishingLevel'
 import TackleShopClient from './TackleShopClient'
 
 export default async function TackleShopPage() {
@@ -17,27 +18,30 @@ export default async function TackleShopPage() {
   // RLS `.single()` can transiently return null while the auth session is
   // refreshing, which collapsed `rod_tier ?? 0` to Bamboo and showed the
   // wrong equipped rod. Every other read on this page already uses admin.
-  const [profile, { data: baitInventory }, { data: rodRows }, { data: collRows }, { data: speciesRows }] = await Promise.all([
+  const [profile, { data: baitInventory }, { data: rodRows }, { data: collRows }, { data: speciesRows }, { data: rapportRows }, { data: isleRows }] = await Promise.all([
     getCurrentProfile(),
     admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     admin.from('fish_species').select('id, habitat'),
+    admin.from('sea_rapport').select('folk_id, points').eq('user_id', user.id),
+    admin.from('sea_discoveries').select('isle_id').eq('user_id', user.id),
   ])
 
   const ownedRods = (rodRows ?? []).map(r => r.rod_tier)
-  // Species caught for the Completionist Rod gate — prestige-proof (see
-  // lib/collection): lifetime set + live collection + Ancient trophies, and every
-  // non-ancient species once all four zones are prestiged. Mirrors claimCompletionistRod.
-  const allSpecies = (speciesRows ?? []) as { id: number; habitat: string }[]
-  const totalSpecies = allSpecies.length
-  const caughtSet = provenCaughtSpecies(allSpecies, {
+  // ── THE CAPSTONE'S GATE, ASKED ONCE ──────────────────────────────────────
+  // The same call `claimCompletionistRod` makes, so the bars on the card and
+  // the server's answer cannot disagree. They have twice. See lib/completionist.
+  const completionist = completionistProgress({
+    level: getLevelFromXP(profile?.fishing_xp ?? 0),
+    allSpecies: (speciesRows ?? []) as { id: number; habitat: string }[],
     lifetime: profile?.lifetime_species as number[] | null,
     liveIds: (collRows ?? []).map(r => r.fish_id),
     ancientCatches: profile?.ancient_catches as number[] | null,
     prestige: profile?.prestige_levels as Record<string, number> | null,
+    rapport: rapportRows ?? [],
+    isles: isleRows ?? [],
   })
-  const uniqueSpeciesCaught = allSpecies.filter(s => caughtSet.has(s.id)).length
 
   return (
     <>
@@ -67,8 +71,7 @@ export default async function TackleShopPage() {
           baitInventory={baitInventory ?? []}
           fishingXP={profile?.fishing_xp ?? 0}
           isPremium={isPremiumActive(profile)}
-          uniqueSpeciesCaught={uniqueSpeciesCaught}
-          totalSpecies={totalSpecies ?? 0}
+          completionist={completionist}
         />
       </main>
     </>

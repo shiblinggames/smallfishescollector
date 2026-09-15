@@ -502,7 +502,7 @@ export const BADGE_DETAIL: Record<string, string> = {
   half_the_sea:     'Catch 50 different fish species. A solid start on filling out the logbook.',
   ancient_ones:     'Land all six Ancient Deep trophies. The rarest, oldest fish in the sea.',
   full_collection:  'Catch every single species in the game. The ultimate collector’s feat.',
-  completionist_rod:'Claim the Completionist Rod. The capstone tool, earned only at Fishing Level 100 with every species landed. The proof you’ve mastered the sea.',
+  completionist_rod:'Claim the Completionist Rod. The capstone tool, and it asks for the whole fishing half of the game: Level 100, every species landed, every regular thick as thieves, and every isle on the chart set foot on.',
   fully_rigged:     'Fill all three of the Completionist Rod’s power sockets. A rod built exactly the way you fish.',
   reforged:         'Pay the re-forge fee to swap the Completionist Rod into a fresh three-effect loadout. A rod remade to fit how your fishing has changed.',
   growing_crew:     'Recruit 25 crew over your career, living or lost.',

@@ -8,7 +8,7 @@ import { RODS, isCaptainRod, ROD_SELL_RATE } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingGearLevelReq } from '@/lib/gearGating'
-import { provenCaughtSpecies } from '@/lib/collection'
+import { completionistProgress, completionistBlocker } from '@/lib/completionist'
 import { isPremiumActive } from '@/lib/premium'
 import { revalidatePath } from 'next/cache'
 
@@ -185,30 +185,35 @@ export async function claimCompletionistRod(): Promise<{ ownedRods: number[] } |
   const COMPLETIONIST_TIER = 14
   const admin = createAdminClient()
 
-  const [{ data: profile }, { data: alreadyOwned }, { data: collRows }, { data: speciesRows }] = await Promise.all([
+  const [{ data: profile }, { data: alreadyOwned }, { data: collRows }, { data: speciesRows }, { data: rapportRows }, { data: isleRows }] = await Promise.all([
     admin.from('profiles').select('fishing_xp, ancient_catches, lifetime_species, prestige_levels').eq('id', user.id).single(),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id).eq('rod_tier', COMPLETIONIST_TIER).maybeSingle(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     admin.from('fish_species').select('id, habitat'),
+    // THE OTHER TWO THIRDS OF THE FISHING HALF: the people and the map. See
+    // lib/completionist, which is also what the shop draws its bars from — the
+    // gate has been wrong twice by having the check and the display written out
+    // separately, and this is the fix for that class of bug rather than for one
+    // instance of it.
+    admin.from('sea_rapport').select('folk_id, points').eq('user_id', user.id),
+    admin.from('sea_discoveries').select('isle_id').eq('user_id', user.id),
   ])
 
   if (!profile) return { error: 'Profile not found' }
   if (alreadyOwned) return { error: 'Already owned' }
 
-  const level = getLevelFromXP(profile.fishing_xp ?? 0)
-  if (level < 100) return { error: `Need level 100 (you're level ${level})` }
-  // Prestige-proof completion (see lib/collection): the lifetime set + live
-  // collection + Ancient trophies, plus every non-ancient species if all four
-  // zones are prestiged. Ancient Deep is never wiped, so it stays required.
   const allSpecies = (speciesRows ?? []) as { id: number; habitat: string }[]
-  const caught = provenCaughtSpecies(allSpecies, {
+  const progress = completionistProgress({
+    level: getLevelFromXP(profile.fishing_xp ?? 0),
+    allSpecies,
     lifetime: profile.lifetime_species as number[] | null,
     liveIds: (collRows ?? []).map(r => r.fish_id),
     ancientCatches: profile.ancient_catches as number[] | null,
     prestige: profile.prestige_levels as Record<string, number> | null,
+    rapport: rapportRows ?? [],
+    isles: isleRows ?? [],
   })
-  const missing = allSpecies.filter(s => !caught.has(s.id)).length
-  if (missing > 0) return { error: `Catch all ${allSpecies.length} species first` }
+  if (!progress.eligible) return { error: completionistBlocker(progress) ?? 'Not yet' }
 
   await admin.from('rod_inventory').insert({ user_id: user.id, rod_tier: COMPLETIONIST_TIER })
 
