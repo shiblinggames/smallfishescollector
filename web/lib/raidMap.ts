@@ -876,23 +876,33 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "Barnacle Pete plays the broke old fool. Truth is he's robbed the small and the slow for years, and none of it ever sticks to him.",
     bridge: "Pull any thread and it runs back to one reef, where Pete's little fish do his collecting for him.",
     image: '/raidlog.png',
+    // ── THEY HAVE ALREADY MET THE CAPTAIN ──────────────────────────────
+    //
+    // This node was written before the first voyage and the anchorage tour
+    // existed, so it opened like a first meeting: Doby introducing himself and
+    // Kat explaining what a crew is to somebody who had just signed one on.
+    // By the time anybody reads this they have fished with these two, sold a
+    // catch with them, crewed a ship and sailed it out through the gate. The
+    // scene picks up the same conversation instead of starting one, and in the
+    // voice the tutorial actually uses: Doby warm and blunt and fond of "kid",
+    // Kat brisk and practical. See docs/systems/story-universe.md.
     scene: [
-      { ...GUIDE.doby, text: "Every reef on this coast has gone quiet, small fry. And a quiet sea is a sea with something wrong in it." },
+      { ...GUIDE.doby, text: "Now you've a ship under you and a hand on her, there's something you ought to hear. Every reef on this coast has gone quiet, small fry. And a quiet sea is a sea with something wrong in it." },
       { text: "Barnacle Pete robs the small and the slow. Has done for years, all up and down this coast." },
       { text: "Little crews. Fishing folk. The odd unlucky angler. Anyone too small to swing back." },
-      { ...GUIDE.kat, text: "And here's the part that never sat right with me. Pete steals a fortune and stays poor as a barnacle." },
+      { ...GUIDE.kat, text: "And here's the part that never sat right with me! Pete steals a fortune and stays poor as a barnacle." },
       { speaker: 'A Passing Sailor', text: "Pete don't spend his haul. He delivers it." },
       { text: "Said once, by a sailor who never said it again." },
       { text: "The rest sails off to *someone Pete would rather you never asked about*. So nobody asks.", pause: 700 },
-      { ...GUIDE.doby, text: "You've got a boat, a free afternoon, and no manners worth mentioning. Kat and I have sailed with worse. We're with you." },
+      { ...GUIDE.doby, text: "You've a ship, a free afternoon, and no manners worth mentioning. We've been out here with you since the first worm went on the hook, kid. We're not stopping now." },
       { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "Broke, me? Couldn't rob a rockpool. Now mind yer business, guppy." },
       { ...GUIDE.kat, text: "Charming sort. Go shake him till the truth falls out of his coat. But do it clever, not bare-knuckled." },
-      { ...GUIDE.kat, text: "A ship is only as strong as her hull and her hands. Upgrade the ship when the coin allows, and sign on crew at the Crew Hall. A full deck wins the fights a lone captain loses." },
-      { ...GUIDE.doby, text: "Then point us at the reef. Time Pete's Raiders learned who they picked a fight with." },
+      { ...GUIDE.kat, text: "You've one hand aboard and that's a start. Sign on more at the Crew Hall when the board refreshes, and put the coin into the ship. A full deck wins the fights a lone captain loses!" },
+      { ...GUIDE.doby, text: "Then point us at the reef, cap'n. Time Pete's Raiders learned who they picked a fight with." },
     ],
     detail: {
       description:
-        "Pete's no broke old chancer. He's good at exactly one thing: picking on anyone too small to swing back. Little crews, fishing folk, the odd unlucky angler. Years of it up and down this coast, and somehow he's not a coin richer for it.\n\nThat's the funny part. Pete steals a fortune and keeps about a copper. The rest sails off to someone he'd rather you never asked about, so nobody asks. You've got a boat, a free afternoon, and no manners worth mentioning. Go shake the loudest pirate on the water and see what falls out of his coat.",
+        "Pete's no broke old chancer. He's good at exactly one thing: picking on anyone too small to swing back. Little crews, fishing folk, the odd unlucky angler. Years of it up and down this coast, and somehow he's not a coin richer for it.\n\nThat's the funny part. Pete steals a fortune and keeps about a copper. The rest sails off to someone he'd rather you never asked about, so nobody asks. You've a ship, a crew signing on, and no manners worth mentioning. Go shake the loudest pirate on the water and see what falls out of his coat.",
       drops: [
         {
           emoji: '📜',
