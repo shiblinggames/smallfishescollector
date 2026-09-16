@@ -4940,8 +4940,21 @@ export default function SeaMap({
    * decide whether a regular in your water gets a name or stays a mark.
    */
   const [metFolk, setMetFolk] = useState<Set<string>>(() => new Set())
+  /**
+   * REQUESTS YOU CAN SETTLE RIGHT NOW: a regular asked for a fish and one has
+   * been landed since. Read off the same rows as `metFolk` (the server decides
+   * "fresh", see folkActions), and ADDED TO on the spot when a catch lands, so
+   * the Salt Road disc lights the moment it becomes true rather than the next
+   * time a panel happens to close.
+   */
+  const [readyFolk, setReadyFolk] = useState<{ folkId: string; short: string; fishName: string }[]>([])
   const refreshMet = useCallback(() => {
-    void folkState().then(rows => setMetFolk(new Set(rows.filter(r => r.points > 0).map(r => r.folkId)))).catch(() => {})
+    void folkState().then(rows => {
+      setMetFolk(new Set(rows.filter(r => r.points > 0).map(r => r.folkId)))
+      setReadyFolk(rows
+        .filter(r => r.wantReady && r.want)
+        .map(r => ({ folkId: r.folkId, short: folkById(r.folkId)?.short ?? r.folkId, fishName: r.want!.name })))
+    }).catch(() => {})
   }, [])
   useEffect(() => { refreshMet() }, [refreshMet])
   /** Does Finn have a piece of his story waiting? Drives the dot on the
@@ -11221,11 +11234,15 @@ hullRef={hullRefFor(t.key)} />
           a stop waiting on the other — and it is the same amber dot the crew
           disc uses, meaning the same thing. */}
       {(!fishingIn || wide) && !fightOn && (() => {
-        const lit = inAnchorage ? !!nextStop : finnWaiting
+        // A regular's request you can settle lights it the same amber as a
+        // beat of Finn's: both are "somebody out there is waiting on you".
+        const lit = inAnchorage ? !!nextStop : (finnWaiting || readyFolk.length > 0)
         const label = inAnchorage ? 'The Campaign' : 'The Salt Road'
         const sub = inAnchorage
           ? (nextStop ? `${nextStop.chapter.coda ? nextStop.chapter.title : `Chapter ${nextStop.chapter.romanNumeral}`} — ${nextStop.verb} ${nextStop.node.label}` : label)
-          : (finn?.questReady ? `${label} — ${FINN_NAME} is waiting on you` : label)
+          : (finn?.questReady ? `${label} — ${FINN_NAME} is waiting on you`
+            : readyFolk.length > 0 ? `${label} — ${readyFolk[0].short} is waiting on that ${readyFolk[0].fishName}`
+              : label)
         return (
           <button
             type="button"
@@ -11829,9 +11846,17 @@ hullRef={hullRefFor(t.key)} />
           log={log}
           renownPoints={renownState ? renownPoints : undefined}
           onOpenRenown={renownState ? () => setRenownOpen(true) : undefined}
-          onCaught={qty => {
+          onCaught={(qty, waitingOn) => {
             setHoldCount(n => Math.min(hold.capacity, n + qty))
             setCaughtTick(n => n + 1)
+            // The server just said who was waiting on this species. Light the
+            // disc now; the panel reads the same truth when it opens.
+            if (waitingOn?.length) {
+              setReadyFolk(r => {
+                const have = new Set(r.map(x => x.folkId))
+                return [...r, ...waitingOn.filter(w => !have.has(w.folkId))]
+              })
+            }
           }}
           onReel={onFinnReel}
           onBaitChange={t => {

@@ -29,6 +29,7 @@
 // drift. Those are situational and belong to the full screen, and the map does
 // not offer the Ancient Deep as a quick cast.
 
+import type { WaitingFolk } from '@/app/(app)/fishing/actions'
 import { AUTO_RECAST_MS, AUTO_CRATE_TOTAL_MS } from '@/lib/autoFishing'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -213,7 +214,7 @@ type Hooked = {
 /** Everything the shared ResultCard needs. `reelIn` already returns all of it —
  *  the map was throwing it away and printing a name and an XP number. */
 type Caught =
-  | { kind: 'fish'; card: React.ComponentProps<typeof ResultCard> }
+  | { kind: 'fish'; card: React.ComponentProps<typeof ResultCard>; waitingOn?: WaitingFolk[] }
   | { kind: 'crate'; tier: string; loot: CrateLootView }
   | { kind: 'miss'; result: 'miss' | 'penalty' }
 
@@ -455,7 +456,7 @@ export default function FishingHere({
   onRodChange: (tier: number) => void
   /** How many fish this catch actually banked, so the hold ticks up as you
    *  fill it rather than sitting at whatever it was when the page loaded. */
-  onCaught: (qty: number) => void
+  onCaught: (qty: number, waitingOn?: WaitingFolk[]) => void
   /**
    * EVERY REEL, WON OR LOST, with the server's own numbers.
    *
@@ -1381,7 +1382,7 @@ export default function FishingHere({
         })
         // The server clamps catchQty to the space actually left, so this is the
         // number that went in rather than the number that was rolled.
-        onCaught(res.catchQty ?? 1)
+        onCaught(res.catchQty ?? 1, res.waitingOn)
         onReel?.({ perfectStreak: res.perfectStreak ?? 0, caught: res.catchQty ?? 1 })
         // The badge watcher only looks when something tells it to, and a
         // catch told it nothing: every catch badge was granted on the server
@@ -1393,6 +1394,7 @@ export default function FishingHere({
         if (res.fish?.id != null) logCatch(Number(res.fish.id))
         setCaught({
           kind: 'fish',
+          waitingOn: res.waitingOn,
           card: {
             fish: res.fish as FishSpecies,
             baitSaved: res.baitSaved,
@@ -2089,7 +2091,23 @@ export default function FishingHere({
                 /* THE SAME CARD. Not a summary of it — the component the
                    fishing screen renders, handed the same payload. See
                    components/CatchResultCard for why it left FishingGame. */
-                <ResultCard {...caught.card} />
+                <>
+                  <ResultCard {...caught.card} />
+                  {/* SOMEBODY ASKED FOR THIS ONE. Said on the catch, because
+                      the catch is the moment it became true, and a request
+                      that is only ever discovered by reopening a panel is a
+                      request most captains will forget they took. One line,
+                      under the card, in the card's own colour. */}
+                  {caught.waitingOn && caught.waitingOn.length > 0 && (
+                    <p className="font-karla font-600" style={{
+                      margin: '8px 0 0', textAlign: 'center', fontSize: '0.78rem',
+                      color: '#f0c040', textShadow: '0 1px 8px rgba(0,0,0,0.8)',
+                    }}>
+                      {caught.waitingOn.map(w => w.short).join(' and ')}
+                      {caught.waitingOn.length > 1 ? ' are' : ' is'} waiting on this one. Sail it over.
+                    </p>
+                  )}
+                </>
               ) : (
                 <div style={{
                   width: '100%', borderRadius: 16, padding: '1rem 1.15rem', textAlign: 'center',

@@ -1,5 +1,6 @@
 'use server'
 
+import { folkById } from '@/lib/seaFolk'
 import { eyeFromProfile } from '@/lib/finnItems'
 import { flagAnomaly } from '@/lib/anomaly'
 import { revalidatePath } from 'next/cache'
@@ -182,6 +183,34 @@ type PendingCast = {
    *  (which would let a player swap rods mid-abandon to improve a live roll).
    *  Optional: tokens written before this shipped simply cannot be resumed. */
   shot?: CastShot
+}
+
+/** One regular with an open request for the species just landed. */
+export type WaitingFolk = { folkId: string; short: string; fishName: string }
+
+/**
+ * ── WHO WAS WAITING ON THIS ONE ────────────────────────────────────────────
+ *
+ * A regular's request (sea_rapport.want_fish_id, see folkActions) is settled
+ * by a fish landed after the ask, and the catch is the only moment the game
+ * knows a request has just become deliverable. Read here, once, so the result
+ * card can say so and the chart can light the Salt Road without a reopen.
+ *
+ * Best-effort and read-only: a failed read costs a line of text, never the
+ * catch, which has already landed by the time this runs.
+ */
+async function folkWaitingOn(admin: ReturnType<typeof createAdminClient>, userId: string, fishId: number): Promise<WaitingFolk[]> {
+  try {
+    const { data } = await admin.from('sea_rapport')
+      .select('folk_id').eq('user_id', userId).eq('want_fish_id', fishId)
+    const out: WaitingFolk[] = []
+    for (const r of (data ?? []) as { folk_id: string }[]) {
+      const f = folkById(r.folk_id)
+      const fav = f?.favourites.find(x => x.id === fishId)
+      if (f && fav) out.push({ folkId: f.id, short: f.short, fishName: fav.name })
+    }
+    return out
+  } catch { return [] }
 }
 
 /** castLine's client payload, minus baitRemaining (which is read live). */
@@ -827,6 +856,10 @@ export async function reelIn(
       vigilComplete?: boolean
       /** The baby plesiosaurus just landed in unlocked_pets (first time only). */
       vigilPetGranted?: boolean
+      /** REGULARS WHO ASKED FOR THIS SPECIES and are still waiting on it. The
+       *  moment the fish lands is the one moment both facts are in hand, so
+       *  it is said here rather than left for the Salt Road to be opened. */
+      waitingOn?: WaitingFolk[]
     }
   | { caught: false }
   | { error: string }
@@ -1524,11 +1557,16 @@ export async function reelIn(
     && (((profile.ancient_catches as number[] | null) ?? []).length < 6)
     && Math.random() < 0.14
 
+  // Who asked for this. After the inventory write, so "in your hold" is true
+  // by the time anybody reads it.
+  const waitingOn = await folkWaitingOn(admin, user.id, fishId)
+
   return {
     caught: true,
     fish: fish as FishSpecies,
     baitSaved,
     isNewSpecies,
+    waitingOn: waitingOn.length ? waitingOn : undefined,
     deepStirs,
     xpGained,
     newXP,
