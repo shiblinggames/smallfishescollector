@@ -25,12 +25,22 @@ function clearFlash(id: string) {
   document.querySelector(`[data-coach="${id}"]`)?.classList.remove('coach-flash', 'coach-flash-gold')
 }
 
-export default function LobbyGuide({ show, steps, accent = '#f0c040', onSeen }: {
+export default function LobbyGuide({ show, steps, accent = '#f0c040', onSeen, anchored = false, z }: {
   show: boolean
   steps: LobbyGuideStep[]
   accent?: string
   /** Fired once when the guide first opens — mark the has_seen_* flag here. */
   onSeen?: () => void
+  /**
+   * Put the card NEXT TO the flashed control (GuideCoach's `anchor`) rather
+   * than at the bottom of the screen. Off by default so the three tavern
+   * lobbies keep the layout they were tuned with; the fight's tour turns it
+   * on, because a card at the bottom would sit on the action row it is
+   * describing.
+   */
+  anchored?: boolean
+  /** z-index for the card, for a guide that plays inside a portal. */
+  z?: number
 }) {
   const [step, setStep] = useState<number | null>(null)
   const seenFiredRef = useRef(false)
@@ -84,6 +94,8 @@ export default function LobbyGuide({ show, steps, accent = '#f0c040', onSeen }: 
       accent={accent}
       placement="bottom"
       offset="calc(env(safe-area-inset-bottom, 0px) + 90px)"
+      anchor={anchored ? cur?.coachId || undefined : undefined}
+      z={z}
       onNext={next}
       nextLabel={last ? 'Got it' : 'Next →'}
       onClose={finish}

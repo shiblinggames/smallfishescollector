@@ -68,7 +68,32 @@ import { raidDamageProfile, fortuneLootMult, type RaidMods } from '@/lib/expedit
 import type { CrateItemChance } from '@/lib/raidLoot'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
 import { getCheckTutorialSeen, markCheckTutorialSeen } from './checkTutorialActions'
+import { getSkirmishTourSeen, markSkirmishTourSeen } from './skirmishTourActions'
+import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
 import { GUIDES } from '@/lib/onboardingScenes'
+
+/**
+ * ── THE REEF SKIRMISH'S GUIDED INTRO ────────────────────────────────────────
+ *
+ * The campaign's first fight shipped with no coaching at all: the old
+ * walkthrough lived on the retired practice page and never moved with the
+ * fight. Four cards, click-through, each beside the control it is about
+ * (the handles are `data-coach` on the deck). What they cover, and no more:
+ * the action row with Reload named, the aim lock, that enemies keep a
+ * pattern you can read off their cannonballs, and what Special is. Plain,
+ * contracted, one asterisked term a line, the way Doby and Kat talk on the
+ * sea. Once per account (has_seen_skirmish_tour), never on a boss.
+ *
+ * The facts, checked: the Reef Raider's pattern is reload, fire, reload, fire
+ * (lib/bossRaids); crew abilities unlock at CLASS_UNLOCK_LEVEL 10 and step up
+ * at 25, 40, 75 and 100 (lib/crewClasses); the class is fixed by species.
+ */
+const SKIRMISH_TOUR: LobbyGuideStep[] = [
+  { coachId: 'raid-actions', ...GUIDES.doby, text: 'Every turn you pick one move down here. *Reload* loads a cannonball, Fire spends one, and Dodge sidesteps the next hit.' },
+  { coachId: 'raid-fire', ...GUIDES.kat, text: 'When you *Fire*, press Lock as the marker hits the gold center. Green lands. Gold hits harder.' },
+  { coachId: 'raid-enemy-charges', ...GUIDES.doby, text: 'Enemies follow a *pattern*. Watch the cannonballs up here: this one loads, then fires. Learn the rhythm and dodge on the turn it matters.' },
+  { coachId: 'raid-special', ...GUIDES.kat, text: '*Special* is your crew. Their abilities unlock at level 10 and get stronger as they level. Different crew, different tricks.' },
+]
 import type { ContractFightFacts } from '@/lib/gauntletContracts'
 import { applyStatus, statusMods, tickStatuses, cleanseStatuses, STATUS_DEFS, type ActiveStatus, type StatusId } from '@/lib/statuses'
 import { CannonShotBurst, ImpactBurst, RailgunBeam, NukeMissile, NukeBlast } from './megaFx'
@@ -623,6 +648,8 @@ export interface RaidCombatProps {
    */
   challenge?: boolean
   isBoss: boolean
+  /** The Reef Skirmish: open the four-card intro once. See SKIRMISH_TOUR. */
+  skirmishTour?: boolean
   shipImageUrl: string
   /** Optional CSS filter to recolor the ship sprite when a skin is equipped.
    *  e.g. `'hue-rotate(180deg) brightness(0.7)'` for Corsair Black. */
@@ -887,7 +914,7 @@ export interface RaidCombatProps {
 
 export default function RaidCombat({
   enemy, affix, isElite = false, challenge = false,
-  isBoss, shipImageUrl, shipFilter, enemyArtFilter = '', bonusChargeSlots = 0, shipName, playerLabel,
+  isBoss, skirmishTour = false, shipImageUrl, shipFilter, enemyArtFilter = '', bonusChargeSlots = 0, shipName, playerLabel,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
   playerHpMax, playerHp: initialPlayerHp,
@@ -2346,6 +2373,23 @@ export default function RaidCombat({
     setCheckTutorialSeen(true)
     void markCheckTutorialSeen().catch(() => {})
   }
+
+  // ── The skirmish's guided intro ──────────────────────────────────────
+  // Opens two frames after the deck has painted, so its rings have controls
+  // to sit on, and only if this account has never seen it. Combat is
+  // turn-based, so the fight simply waits for the first press under it.
+  const [skirmishGuide, setSkirmishGuide] = useState(false)
+  useEffect(() => {
+    if (!skirmishTour) return
+    let alive = true
+    getSkirmishTourSeen()
+      .then(seen => {
+        if (!alive || seen) return
+        requestAnimationFrame(() => requestAnimationFrame(() => { if (alive) setSkirmishGuide(true) }))
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [skirmishTour])
 
   // Arm the check that opens a phase (called from both revival paths).
   function armMechanicCheck(check: BossMechanicCheck | undefined) {
@@ -8696,12 +8740,16 @@ export default function RaidCombat({
                 HP bar as a violet segment so it reads as the enemy's, not your
                 cyan shield. */}
             <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact shield={enemyShieldHp} shieldColor="#c084fc" shieldGradTo="#a855f7" hidden={enemyHpHidden} />
-            <ChargesRow
-              charges={enemyCharges} max={enemyMagazine} small hidden={enemyChargesHidden}
-              // Ultimate tell — the full battery glows the same way the player's
-              // Mega-ready pips do, in the danger red the ultimate hits in.
-              readyGlow={enemy.ultimate && !enemyChargesHidden && enemyCharges >= enemyMagazine ? '#ff4d6d' : null}
-            />
+            {/* The enemy's cannonballs are the pattern tell the skirmish's
+                tour points at; the handle is a shrink-to-fit box round them. */}
+            <div data-coach="raid-enemy-charges" style={{ alignSelf: 'flex-start' }}>
+              <ChargesRow
+                charges={enemyCharges} max={enemyMagazine} small hidden={enemyChargesHidden}
+                // Ultimate tell — the full battery glows the same way the player's
+                // Mega-ready pips do, in the danger red the ultimate hits in.
+                readyGlow={enemy.ultimate && !enemyChargesHidden && enemyCharges >= enemyMagazine ? '#ff4d6d' : null}
+              />
+            </div>
           </div>
           {/* THE STATUSES RIDE THE PORTRAIT. A ring of marks over the art,
               in a box the same shape as the art (first child, full width,
@@ -9306,6 +9354,12 @@ export default function RaidCombat({
             content out via the inner wrapper before it unmounts, so it needs no
             exit animation — and AnimatePresence's exit RE-RENDER was restarting
             the wrapper's keyframes, flashing the crew image a faint second time. */}
+        {/* The skirmish's four cards, beside the controls they name. z 90 so
+            the card clears the deck inside the sea's fight portal. */}
+        {skirmishGuide && (
+          <LobbyGuide show steps={SKIRMISH_TOUR} accent="#f0c040" anchored z={90}
+            onSeen={() => { void markSkirmishTourSeen().catch(() => {}) }} />
+        )}
         {typeof document !== 'undefined' && abilitySummon && createPortal(
           <AbilitySummonFx key={abilitySummon.key} label={abilitySummon.label} name={abilitySummon.name} color={abilitySummon.color} image={abilitySummon.image} chase={abilitySummon.chase} skinId={abilitySummon.skinId} />,
           document.body,
@@ -13080,8 +13134,10 @@ const ACTION_ICON: Record<'dodge' | 'special' | 'reload' | 'fire' | 'volley', Re
   ),
 }
 
-function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPulse, keyHint }: {
+function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPulse, keyHint, coach }: {
   icon: React.ReactNode
+  /** A `data-coach` handle for a tour to point at. */
+  coach?: string
   label: string
   color: string
   enabled: boolean
@@ -13105,7 +13161,7 @@ function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPul
    */
   const [pressed, setPressed] = useState(0)
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
+    <div data-coach={coach} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
       <div style={{ position: 'relative' }}>
         {/* ── THE PRESS LEAVES SOMETHING BEHIND ──────────────────────────
             A ring off the rim in the action's own colour. The button already
@@ -13424,25 +13480,25 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
 
   return (
     <div ref={menuRootRef} style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+      <div data-coach="raid-actions" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <CircleBtn
           icon={ACTION_ICON.dodge} label="Dodge" color="#38bdf8" keyHint="D"
           enabled={canDodge && !disabled} highlighted={dodgeHighlighted}
           onClick={() => { if (canDodge && !disabled) onSelect('dodge') }}
         />
         <CircleBtn
-          icon={ACTION_ICON.special} label="Special" color="#c084fc" keyHint="S"
+          icon={ACTION_ICON.special} label="Special" color="#c084fc" keyHint="S" coach="raid-special"
           enabled={hasSpecial && !disabled} highlighted={false}
           readyPulse={crewAbilityReady}
           onClick={tapSpecial}
         />
         <CircleBtn
-          icon={ACTION_ICON.reload} label={canReload ? 'Reload' : 'Full'} color="#a8b8d0" keyHint="R"
+          icon={ACTION_ICON.reload} label={canReload ? 'Reload' : 'Full'} color="#a8b8d0" keyHint="R" coach="raid-reload"
           enabled={canReload && !disabled} highlighted={reloadHighlighted}
           onClick={() => { if (canReload && !disabled) onSelect('reload') }}
         />
         <CircleBtn
-          icon={ACTION_ICON.fire} label="Fire" color="#4ade80" keyHint="F"
+          icon={ACTION_ICON.fire} label="Fire" color="#4ade80" keyHint="F" coach="raid-fire"
           enabled={canFire && !disabled} highlighted={fireHighlighted}
           onClick={tapFire}
         />

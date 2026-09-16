@@ -1814,6 +1814,7 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
                 // one: no gold nameplate, no boss-only mechanic check, no
                 // stiffer flee roll, no defeat callout. See config.skirmish.
                 isBoss={isBoss && !config.skirmish}
+                skirmishTour={!!config.skirmish}
                 // WHICH RUN THIS IS, said on screen. Derived from the raidId
                 // rather than passed down from whoever opened the fight, so a
                 // challenge entered from the sea, from the node map or from its

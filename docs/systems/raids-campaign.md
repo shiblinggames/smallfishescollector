@@ -225,3 +225,24 @@ is a rectangle floating in the sky.
 
 Both disappear the moment the fight starts (`!hullRef` for the enemy, `!fightOn` for the captain):
 once the cannons are out the screen belongs to the ships.
+
+## The Reef Skirmish has a guided intro (2026-09-16)
+
+The campaign's first fight shipped with no coaching: the walkthrough lived on the retired
+`/raids/practice` page and never moved with the fight. It has one now, and it is the tavern
+lobbies' `LobbyGuide` (a stepped `GuideCoach` that flashes `data-coach` handles), not a modal:
+four click-through cards from Doby and Kat, each beside the control it names, over the live deck.
+
+- **Cards** (`SKIRMISH_TOUR` in `RaidCombat.tsx`): the action row with Reload named; the aim lock;
+  that enemies keep a pattern you can read off their cannonballs (the Reef Raider's is reload, fire,
+  reload, fire); and what Special is (crew abilities unlock at level 10, step up at 25/40/75/100,
+  and the class is fixed by species). Four lines, plain, one asterisked term each.
+- **Handles**: `raid-actions` on the row, `raid-fire` / `raid-reload` / `raid-special` on the
+  `CircleBtn`s (a `coach` prop), `raid-enemy-charges` on a shrink-to-fit box round the enemy's pips.
+- **When**: two frames after the deck paints, only when `RaidGame` passes `skirmishTour`
+  (`config.skirmish`), only if `has_seen_skirmish_tour` is false. Marked seen on open, the lobby
+  guide's convention. Its own column, because `has_seen_raid_tutorial` was set as a side effect of
+  a practice kill and cannot be trusted. `web/supabase/migrate_skirmish_tour.sql`.
+- `LobbyGuide` grew `anchored` (card beside the flashed control rather than at the screen's foot)
+  and `z` (the fight plays inside the sea's portal). Both off by default so the lobbies are as
+  they were.
