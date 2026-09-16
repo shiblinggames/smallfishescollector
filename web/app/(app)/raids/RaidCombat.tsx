@@ -12747,7 +12747,7 @@ const ABILITY_CAST_LABEL: Record<string, string> = {
 // everything else is the arrival and the departure around it.
 const SUMMON_TOTAL_MS = 2600
 
-const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: string; name: string; color: string; image: string | null; chase?: boolean; skinId?: string | null }) {
+const AbilitySummonFx = memo(function AbilitySummonFx({ name, color, image, chase, skinId }: { label: string; name: string; color: string; image: string | null; chase?: boolean; skinId?: string | null }) {
   // One ~1.45s pass: fast fade-in, a long hold, then fade-out (matches
   // SUMMON_TOTAL_MS). The crew is CONJURED — a rune ring + light rays sweep in
   // behind a smaller portrait, a white impact flash lands on arrival, and the
@@ -12885,16 +12885,21 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
         // vanish. The creature now blooms out of the light AND dissolves back
         // into it — slight scale-up and re-blur on the way out, so the exit is
         // a departure rather than an opacity ramp.
-        initial={{ scale: 1.6, y: 10, opacity: 0, filter: 'blur(16px) brightness(1.9)' }}
+        //
+        // ── WHY THERE IS NO FILTER ON THIS ANY MORE ──────────────────────
+        // The art arrived through a blur, and under it the <img> carried
+        // will-change:transform and three stacked drop-shadows, the widest
+        // 130px on a chase skin. Chrome draws stacked large filters through a
+        // downsampled texture, and a compositor layer forced inside a filter
+        // animation is rasterised at a reduced scale and upscaled. The result
+        // was a 1024px portrait drawn pixelated, worst on exactly the skins
+        // that cost gems. The wrapper animates transform and opacity only now,
+        // which the compositor handles at full resolution, and the glow is a
+        // gradient drawn BEHIND the art rather than a filter drawn through it.
+        initial={{ scale: 1.6, y: 10, opacity: 0 }}
         animate={{
           scale: [1.6, 1, 1, 1.07], y: [10, 0, 0, -6],
           opacity: [0, 1, 1, 0],
-          filter: [
-            'blur(16px) brightness(1.9)',
-            'blur(0px) brightness(1)',
-            'blur(0px) brightness(1)',
-            'blur(10px) brightness(1.5)',
-          ],
         }}
         // IN by ~0.44s, HELD to ~2.16s, gone by 2.6s. The hold nearly doubles:
         // you get a beat to actually see the crew standing there before the
@@ -12908,32 +12913,45 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
                 bright flash backlights the hero instead of washing over it — a
                 white wash on top read as the art vanishing then reappearing. */}
             {chase && skinId && <ChaseSkinFx skinId={skinId} color={color} variant="summon" />}
+            {/* The bloom, behind the art. A radial gradient costs nothing and
+                never touches the image's own pixels. A chase skin gets the
+                wider, brighter one. */}
+            <div aria-hidden style={{
+              position: 'absolute', inset: chase ? '-28%' : '-18%', borderRadius: '50%', zIndex: 0, pointerEvents: 'none',
+              background: chase
+                ? `radial-gradient(ellipse at 50% 55%, ${color}88 0%, ${color}44 32%, ${color}14 58%, transparent 74%)`
+                : `radial-gradient(ellipse at 50% 55%, ${color}66 0%, ${color}2e 34%, transparent 70%)`,
+            }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image} alt={name} decoding="async" loading="eager" style={{ position: 'relative', zIndex: 1, height: 'min(50vh, 300px)', width: 'auto', maxWidth: '82vw', display: 'block', willChange: 'transform', filter: chase
-              ? `drop-shadow(0 0 34px ${color}) drop-shadow(0 0 80px ${color}) drop-shadow(0 0 130px ${color}66) drop-shadow(0 12px 32px rgba(0,0,0,0.7))`
-              : `drop-shadow(0 0 28px ${color}) drop-shadow(0 0 66px ${color}88) drop-shadow(0 12px 32px rgba(0,0,0,0.65))` }} />
+            <img src={image} alt={name} decoding="async" loading="eager" style={{
+              position: 'relative', zIndex: 1, height: 'min(50vh, 300px)', width: 'auto', maxWidth: '82vw', display: 'block',
+              // One small, cheap shadow for the silhouette's edge. Nothing wide.
+              filter: `drop-shadow(0 0 12px ${color}) drop-shadow(0 8px 18px rgba(0,0,0,0.6))`,
+            }} />
           </div>
         ) : (
           <div style={{ fontSize: '3.4rem', color, filter: `drop-shadow(0 0 22px ${color})`, display: 'flex' }}><IconAnchor size={54} /></div>
         )}
       </motion.div>
 
-      {/* Small crew name, then the BIG ability name slamming up underneath. */}
+      {/* THE CREW'S NAME, and nothing under it. The ability's name used to
+          slam up at 2.15rem beneath a small crew name, and the two together
+          took the bottom third of the screen off the portrait. The log says
+          what the ability did; the summon is the crew. */}
       <motion.div
         initial={{ y: 14 }}
         animate={{ y: [14, 0, 0, 0] }}
         transition={{ duration: DUR, times: [0, 0.11, 0.84, 0.94], ease: 'easeOut' }}
-        style={{ textAlign: 'center', marginTop: 16, position: 'relative', zIndex: 2, padding: '0 1rem' }}
+        style={{ textAlign: 'center', marginTop: 14, position: 'relative', zIndex: 2, padding: '0 1rem' }}
       >
-        <p className="font-karla font-700 uppercase tracking-[0.32em]" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{name}</p>
         <motion.p
           className="font-cinzel font-800 uppercase"
-          initial={{ scale: 1.35, letterSpacing: '0.3em' }}
-          animate={{ scale: 1, letterSpacing: '0.06em' }}
+          initial={{ scale: 1.2, letterSpacing: '0.24em' }}
+          animate={{ scale: 1, letterSpacing: '0.08em' }}
           transition={{ delay: 0.14, duration: 0.34, ease: [0.2, 1, 0.3, 1] }}
-          style={{ fontSize: '2.15rem', lineHeight: 1.05, color: '#fff', marginTop: 4, textShadow: `0 0 22px ${color}, 0 0 54px ${color}aa, 0 3px 8px rgba(0,0,0,0.85)` }}
+          style={{ fontSize: '1.45rem', lineHeight: 1.1, color: '#fff', textShadow: `0 0 18px ${color}, 0 0 44px ${color}aa, 0 3px 8px rgba(0,0,0,0.85)` }}
         >
-          {label}
+          {name}
         </motion.p>
       </motion.div>
       </motion.div>{/* end synchronized-fade wrapper */}
