@@ -88,49 +88,29 @@ export default function HoldSheetBody({ rows, species, count, capacity, tier }: 
 
   return (
     <>
-      {/* ── HOW FULL ── a bar, not a fraction to do arithmetic on. It also
-          turns before it bites: amber at three quarters, red at nine tenths,
-          so the decision arrives while there is still room to act on it. */}
-      <div style={{ marginTop: 12 }}>
-        <div style={{
-          height: 8, borderRadius: 999, overflow: 'hidden',
-          background: 'rgba(255,255,255,0.07)',
-          border: '1px solid rgba(255,255,255,0.08)',
-        }}>
-          <motion.div
-            initial={false}
-            animate={{ width: `${fill * 100}%` }}
-            transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-            style={{
-              height: '100%',
-              background: nearFull ? '#f87171' : fill >= 0.75 ? '#e8b463' : '#5fb0c8',
-            }} />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-          {/* THE NUMBER, NOT THE TIER'S NAME. "Leviathan Hold" is charming and
-              tells you nothing; the capacity beside it is the whole fact. Same
-              call as the Shipyard, which stopped naming its rungs too. */}
-          <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: `${SEA},0.55)` }}>
-            {Math.round(fill * 100)}% full
-          </span>
-          <span className="font-karla font-700" style={{
-            fontSize: '0.72rem', fontVariantNumeric: 'tabular-nums',
-            color: nearFull ? '#f87171' : `${SEA},0.75)`,
-          }}>
-            {count} of {capacity}
-          </span>
-        </div>
+      {/* ── HOW FULL ── the bar is the whole answer; the count is in the
+          title line above it, once. Amber at three quarters, red at nine
+          tenths, so the warning arrives while there is still room to act. */}
+      <div style={{
+        marginTop: 12, height: 8, borderRadius: 999, overflow: 'hidden',
+        background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)',
+      }}>
+        <motion.div
+          initial={false}
+          animate={{ width: `${fill * 100}%` }}
+          transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+          style={{ height: '100%', background: nearFull ? '#f87171' : fill >= 0.75 ? '#e8b463' : '#5fb0c8' }} />
       </div>
 
       {priced.length === 0 ? (
         <p className="font-karla font-600" style={{
           fontSize: '0.816rem', color: `${SEA},0.55)`, marginTop: 16, lineHeight: 1.6,
         }}>
-          Empty. Everything you land goes in here until you sell it.
+          Empty. Every fish you catch goes in here until you sell it.
         </p>
       ) : (
         <>
-          <Label>Worth the most</Label>
+          <Label>Aboard</Label>
           <div style={{ marginTop: 4 }}>
             {shown.map(r => (
               <div key={r.fishId} style={{
@@ -151,9 +131,7 @@ export default function HoldSheetBody({ rows, species, count, capacity, tier }: 
             ))}
           </div>
 
-          {/* THE REST, AS ONE LINE. Openable rather than gone: the manifest is
-              occasionally what somebody wants, and it is never what they opened
-              the panel for. */}
+          {/* THE REST, AS ONE LINE. Openable rather than gone. */}
           {rest.length > 0 && (
             <button type="button" data-no-steer
               onClick={e => { e.stopPropagation(); setFull(v => !v) }}
@@ -168,7 +146,7 @@ export default function HoldSheetBody({ rows, species, count, capacity, tier }: 
                 fontVariantNumeric: 'tabular-nums', minWidth: 26,
               }}>×{restFish}</span>
               <span className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: `${SEA},0.55)` }}>
-                {full ? 'Hide the rest' : `${rest.length} other ${rest.length === 1 ? 'kind' : 'kinds'}, smaller money`}
+                {full ? 'Show fewer' : `${rest.length} more`}
               </span>
               <span className="font-karla font-700" style={{
                 flexShrink: 0, fontSize: '0.792rem', color: `${GOLD}99`, fontVariantNumeric: 'tabular-nums',
@@ -176,15 +154,13 @@ export default function HoldSheetBody({ rows, species, count, capacity, tier }: 
             </button>
           )}
 
-          {/* MARKET value, and it says so. What the hold actually fetches
-              depends on who buys it, so a single "worth" number would be wrong
-              everywhere except one counter. */}
+          {/* MARKET value, and it says so: a buyer on the water pays less. */}
           <div style={{
             display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10,
             paddingTop: 10, borderTop: `1px solid ${GOLD}47`,
           }}>
             <span className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.96rem', color: '#f2ead8' }}>
-              At full market
+              Worth at the Market
             </span>
             <span className="font-cinzel font-700" style={{
               fontSize: '1.08rem', color: GOLD, fontVariantNumeric: 'tabular-nums',
@@ -193,53 +169,34 @@ export default function HoldSheetBody({ rows, species, count, capacity, tier }: 
         </>
       )}
 
-      {/* ── WHERE IT GOES ── two lanes, which is how many there are. The
-          third one this used to lead with was retired with /fishing. */}
-      <Label>Where to sell it</Label>
-      <Lane
-        name="A buyer out here"
-        pays="78 to 86%"
-        note="Sail to the trader in your water. The deeper the band, the better the rate, because carrying it further is the whole cost." />
-      <Lane
-        name="The Market, ashore"
-        pays="100%"
-        note="Full price, less a 3% cut if you are not a Captain. You have to bring the catch home to the Mainland yourself." />
+      {/* ── SELLING IT ── two places, two sentences. This was two labelled
+          lanes with a paragraph each, one of them explaining WHY a nearer
+          buyer pays less and the other quoting a Captain fee that no longer
+          exists. A new player wants to know where to go, not the economics. */}
+      <Label>Selling it</Label>
+      <p className="font-karla font-600" style={{
+        fontSize: '0.8rem', color: `${SEA},0.62)`, marginTop: 6, lineHeight: 1.65,
+      }}>
+        Sail it home to the <span style={{ color: '#f2ead8' }}>Market on the Mainland</span> for full price.
+        Or sell to the <span style={{ color: '#f2ead8' }}>buyer out in this water</span> for a little less, 78 to 86%.
+      </p>
 
-      {/* ── AND WHERE IT GETS BIGGER ── the question a full hold actually
-          raises, which this panel never answered. */}
-      <Label>Where to make it bigger</Label>
+      {/* ── A BIGGER HOLD ── one line, with the price on it. */}
+      <Label>A bigger hold</Label>
       {next ? (
         <p className="font-karla font-600" style={{
-          fontSize: '0.792rem', color: `${SEA},0.62)`, marginTop: 6, lineHeight: 1.65,
+          fontSize: '0.8rem', color: `${SEA},0.62)`, marginTop: 6, lineHeight: 1.65,
         }}>
-          The Shipyard on the Mainland fits a bigger one:{' '}
-          <span style={{ color: '#f2ead8' }}>+{next.capacity - capacity} fish</span>, taking you to{' '}
-          {next.capacity}, for{' '}
+          The Shipyard sells the next size, <span style={{ color: '#f2ead8' }}>{next.capacity} fish</span>, for{' '}
           <span style={{ color: GOLD, fontVariantNumeric: 'tabular-nums' }}>⟡ {next.cost.toLocaleString()}</span>.
         </p>
       ) : (
         <p className="font-karla font-600" style={{
-          fontSize: '0.792rem', color: `${SEA},0.62)`, marginTop: 6, lineHeight: 1.65,
+          fontSize: '0.8rem', color: `${SEA},0.62)`, marginTop: 6, lineHeight: 1.65,
         }}>
-          {capacity} fish is the biggest hold there is. Nothing at the Shipyard will better it.
+          This is the biggest hold there is.
         </p>
       )}
     </>
-  )
-}
-
-function Lane({ name, pays, note }: { name: string; pays: string; note: string }) {
-  return (
-    <div style={{ marginTop: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <span className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.86rem', color: '#f2ead8' }}>
-          {name}
-        </span>
-        <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: GOLD }}>{pays}</span>
-      </div>
-      <p className="font-karla font-600" style={{
-        fontSize: '0.752rem', color: `${SEA},0.55)`, marginTop: 2, lineHeight: 1.55,
-      }}>{note}</p>
-    </div>
   )
 }

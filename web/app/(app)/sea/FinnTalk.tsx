@@ -24,7 +24,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { TypedBody, useTypewriter, prefersReducedMotion } from '@/components/cutscene'
+import { prefersReducedMotion, TypedLine } from '@/components/cutscene'
 import { vibrate } from '@/lib/haptics'
 import {
   FINN_NAME, FINN_AVATAR, FINN_ASKS, FINN_STANDING_NAME, FINN_STANDING_AT,
@@ -191,11 +191,11 @@ export default function FinnTalk({
   }, [incoming?.nonce])
 
   const last = turns[turns.length - 1] ?? { who: 'them' as const, text: '' }
-  const { shown, typing, finish } = useTypewriter(
-    last.who === 'them' ? last.text : '', `${turns.length}:${last.text}`, { reduced },
-  )
+  // The typewriter lives in a leaf (TypedLine): a character arriving re-renders
+  // one paragraph, not this card. `typing` comes up twice a line, not two
+  // hundred times, and `finish` comes out through the ref for the tap.
+  const [typing, setTyping] = useState(true)
   const finishRef = useRef<() => void>(() => {})
-  finishRef.current = finish
 
   if (!finn) return null
 
@@ -323,9 +323,9 @@ export default function FinnTalk({
             )}
 
             <div style={{ height: 112, flexShrink: 0, overflowY: 'auto', touchAction: 'pan-y', cursor: 'pointer' }} onClick={tapBody}>
-              <TypedBody all={[last.text]} text={last.text}
-                shown={last.who === 'them' ? shown : last.text.length}
-                typing={last.who === 'them' ? typing : false}
+              <TypedLine text={last.text} lineKey={`${turns.length}:${last.text}`}
+                active={last.who === 'them'} reduced={reduced}
+                onTyping={setTyping} finishRef={finishRef}
                 accent={GOLD} quoted size="1rem" />
             </div>
 

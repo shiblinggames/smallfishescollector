@@ -251,7 +251,13 @@ export default function SeaFirstVoyage({
     const want = stuck === 'bait' ? 'haul haul-bait' : beat?.target
     // Guard before the sweep: `clear()` takes every `.coach-flash` on the page
     // and the anchorage tour's marks are on the same page.
-    if (!want) return
+    //
+    // AND THE RING PARKS WHILE THE HOLD IS OPEN. The sheet is the thing the
+    // ring was pointing at; a ring still pulsing over an open panel reads as
+    // an instruction not yet done. The previous run's cleanup takes it off
+    // when the sheet opens, and this effect puts it back when the sheet shuts.
+    const parked = beat?.target === 'hold' && holdOpen
+    if (!want || parked) return
     const clear = () => document.querySelectorAll('.coach-flash')
       .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
     clear()
@@ -265,7 +271,7 @@ export default function SeaFirstVoyage({
     find()
     const id = window.setInterval(find, 250)
     return () => { window.clearInterval(id); clear() }
-  }, [beat, stuck])
+  }, [beat, stuck, holdOpen])
 
   // ── THE WAY THERE ─────────────────────────────────────────────────────────
   //
@@ -396,7 +402,12 @@ export default function SeaFirstVoyage({
 
   return (
     <GuideCoach
-      show={visible}
+      // THE CARD STEPS ASIDE FOR THE HOLD. It used to ride above the sheet
+      // (see the z note below) so the line survived the press; in practice it
+      // sat over the panel it was describing. The sheet has the line's whole
+      // content in it. The card comes back the moment the sheet shuts, and is
+      // answered with Next as before, so nothing is lost, only overlapped.
+      show={visible && !(b.target === 'hold' && holdOpen)}
       portrait={b.portrait}
       speaker={b.speaker}
       text={text}
@@ -419,7 +430,7 @@ export default function SeaFirstVoyage({
       // and lost the sentence for it. Raised, the card sits on top and is
       // dismissed when it has been read.
       z={b.until === 'bait' || b.until === 'haulShut' || stuck === 'bait'
-        || (b.target === 'hold' && holdOpen) || (b.target === 'log' && almanac)
+        || (b.target === 'log' && almanac)
         ? 120 : undefined}
     />
   )

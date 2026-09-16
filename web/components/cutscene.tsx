@@ -8,7 +8,7 @@
 // ended up still being a slideshow while the story nodes became cutscenes. Anything
 // both of them do lives here now, once, so the next change lands in both or neither.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
 import { FINN_AVATAR } from '@/lib/finn'
@@ -61,14 +61,45 @@ export function renderEmphasis(text: string, accent: string) {
 }
 
 /**
+ * When each raw character of `text` becomes visible, in milliseconds from the
+ * start of the line. THE PAUSE A MARK BUYS LANDS AFTER IT: a full stop is a
+ * breath after the sentence, not a stall before its last character, which is
+ * what the old chain did (it looked at the character about to appear and
+ * waited before showing it, so every sentence froze, then lurched). Markup
+ * asterisks cost no time; they are not letters.
+ */
+function schedule(text: string): number[] {
+  const at = new Array<number>(text.length)
+  let t = 0
+  for (let i = 0; i < text.length; i++) {
+    at[i] = t
+    const ch = text[i]
+    if (ch === '*') continue
+    t += '.!?'.includes(ch) ? PUNCT_MS : ',;:'.includes(ch) ? COMMA_MS : TYPE_MS
+  }
+  return at
+}
+
+/**
  * The typewriter, and the beat before it.
  *
- * Each character schedules the next, so punctuation buys itself an extra pause and a
- * line reads at the speed it should be read at. `pause` holds a silence BEFORE the
- * first character, which is the whole difference between a reveal and a sentence.
+ * ── DRIVEN BY THE CLOCK, NOT BY A CHAIN OF TIMERS ───────────────────────────
  *
- * `finish()` completes the current line instantly. Callers wire it so one tap
- * finishes and the NEXT one advances, never both, or a fast tapper eats lines.
+ * It was a setTimeout per character, each scheduling the next. Every hop paid
+ * the timer clamp plus the render it caused, so on a busy frame the cadence
+ * fell behind and characters arrived in clumps, and the pause for punctuation
+ * was on the wrong side of the mark. Now the line has a schedule (when each
+ * character is due) and one animation-frame loop reveals everything that is
+ * due by the current time. A slow frame reveals two characters at once and the
+ * line is back on its clock; there is nothing to drift.
+ *
+ * A NEW LINE RESETS DURING RENDER, not in an effect, so the first paint of a
+ * new line is its first character rather than the tail of the last one.
+ *
+ * `pause` holds a silence BEFORE the first character, which is the whole
+ * difference between a reveal and a sentence. `finish()` completes the current
+ * line instantly. Callers wire it so one tap finishes and the NEXT one
+ * advances, never both, or a fast tapper eats lines.
  */
 export function useTypewriter(
   text: string,
@@ -77,36 +108,94 @@ export function useTypewriter(
 ) {
   const { pause = 0, onBegin, reduced = false } = opts
   const [shown, setShown] = useState(0)
-  const [held, setHeld] = useState(false)
-  const timers = useRef<number[]>([])
+  const [held, setHeld] = useState(pause > 0)
+  const raf = useRef(0)
   const beginRef = useRef(onBegin)
   beginRef.current = onBegin
 
-  const clear = () => { timers.current.forEach(clearTimeout); timers.current = [] }
+  const keyRef = useRef<number | string | null>(null)
+  if (keyRef.current !== key) {
+    keyRef.current = key
+    if (shown !== 0) setShown(0)
+    if (held !== pause > 0) setHeld(pause > 0)
+  }
 
   useEffect(() => {
-    clear()
-    setShown(0)
+    cancelAnimationFrame(raf.current)
     if (reduced) { setShown(text.length); setHeld(false); beginRef.current?.(); return }
-
-    const type = (n: number) => {
-      if (n >= text.length) return
-      const ch = text[n]
-      const delay = '.!?'.includes(ch) ? PUNCT_MS : ',;:'.includes(ch) ? COMMA_MS : TYPE_MS
-      timers.current.push(window.setTimeout(() => { setShown(n + 1); type(n + 1) }, delay))
+    const at = schedule(text)
+    const t0 = performance.now()
+    let begun = false
+    let last = -1
+    const tick = (now: number) => {
+      const e = now - t0 - pause
+      if (e < 0) { raf.current = requestAnimationFrame(tick); return }
+      if (!begun) { begun = true; setHeld(false); beginRef.current?.() }
+      let n = last < 0 ? 0 : last
+      while (n < at.length && at[n] <= e) n++
+      if (n !== last) { last = n; setShown(n) }
+      if (n < at.length) raf.current = requestAnimationFrame(tick)
     }
-    const begin = () => { setHeld(false); beginRef.current?.(); type(0) }
-
-    if (pause > 0) { setHeld(true); timers.current.push(window.setTimeout(begin, pause)) }
-    else begin()
-
-    return clear
+    raf.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, reduced])
 
   const typing = held || shown < text.length
-  const finish = () => { clear(); setHeld(false); setShown(text.length) }
+  const finish = () => { cancelAnimationFrame(raf.current); setHeld(false); setShown(text.length) }
   return { shown, typing, held, finish }
+}
+
+/** A run of the line: plain or emphasised, and where its first character sits
+ *  in the RAW text (asterisks included), so a reveal count indexes it. */
+type Seg = { str: string; strong: boolean; start: number }
+function segmentsOf(text: string): Seg[] {
+  const out: Seg[] = []
+  const re = /\*([^*]+)\*/g
+  let i = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) {
+    if (m.index > i) out.push({ str: text.slice(i, m.index), strong: false, start: i })
+    out.push({ str: m[1], strong: true, start: m.index + 1 })
+    i = m.index + m[0].length
+  }
+  if (i < text.length) out.push({ str: text.slice(i), strong: false, start: i })
+  return out
+}
+
+/**
+ * One typed line in a LEAF, so a character arriving re-renders this paragraph
+ * and nothing around it. The two NPC cards on the sea called the hook at the
+ * top of the card, which re-rendered the portrait, an animated standing bar
+ * and every choice button two hundred times a line. `typing` is reported up
+ * through `onTyping` when it changes, which is twice a line, and `finish` is
+ * handed out through a ref so a tap on the card can still complete the line.
+ */
+export function TypedLine({ text, lineKey, active = true, reduced, pause, onTyping, finishRef, all, ...body }: {
+  text: string
+  lineKey: number | string
+  /** False for a line that is not typed at all (the player's own reply). */
+  active?: boolean
+  reduced?: boolean
+  pause?: number
+  onTyping?: (typing: boolean) => void
+  finishRef?: React.MutableRefObject<() => void>
+  all?: string[]
+  accent: string
+  italic?: boolean
+  quoted?: boolean
+  size?: string
+  align?: 'left' | 'center'
+}) {
+  const { shown, typing, finish } = useTypewriter(active ? text : '', lineKey, { reduced, pause })
+  if (finishRef) finishRef.current = finish
+  const isTyping = active ? typing : false
+  const report = useRef(onTyping)
+  report.current = onTyping
+  // Layout effect, so the parent knows before paint and never shows a
+  // choice row for one frame under a line that is still arriving.
+  useLayoutEffect(() => { report.current?.(isTyping) }, [isTyping])
+  return <TypedBody all={all ?? [text]} text={text} shown={active ? shown : text.length} typing={isTyping} {...body} />
 }
 
 /** The asterisks are markup, not letters. Strip them for anything that MEASURES text. */
@@ -152,17 +241,65 @@ export function TypedBody({ all, text, shown, typing, accent, italic, quoted, si
           {quoted ? `“${stripEmphasis(t)}”` : stripEmphasis(t)}
         </p>
       ))}
-      <p className="font-karla" style={{
-        ...metrics, gridArea: '1 / 1',
-        fontStyle: italic ? 'italic' : 'normal',
-        color: italic ? 'rgba(240,237,232,0.86)' : '#f4f0e8',
-      }}>
-        {quoted && shown > 0 && <span style={{ color: `${accent}bb` }}>&ldquo;</span>}
-        {renderEmphasis(text.slice(0, shown), accent)}
-        {quoted && !typing && <span style={{ color: `${accent}bb` }}>&rdquo;</span>}
-        {typing && <Caret accent={accent} />}
-      </p>
+      {/* ── THE WHOLE LINE IS LAID OUT FROM THE FIRST FRAME ─────────────
+          The visible slice used to be the only text in the paragraph, so a
+          long word built up on one line and jumped to the next the moment it
+          no longer fit, and the closing quote popped in on the last character
+          and moved the line again. Every character is in the paragraph from
+          the start now; the ones not yet due are simply invisible. Nothing
+          reflows, ever. The caret takes no width for the same reason. */}
+      <TypedText text={text} shown={shown} typing={typing} accent={accent} quoted={quoted} metrics={metrics} italic={italic} />
     </div>
+  )
+}
+
+function TypedText({ text, shown, typing, accent, quoted, metrics, italic }: {
+  text: string; shown: number; typing: boolean; accent: string; quoted?: boolean; metrics: React.CSSProperties; italic?: boolean
+}) {
+  const segs = useMemo(() => segmentsOf(text), [text])
+  // The caret sits after the last visible character: in the first segment that
+  // is not fully shown, or after the last one while the line is still "typing"
+  // (the pause before the first character).
+  let caretIn = -1
+  if (typing) {
+    caretIn = segs.findIndex(s => shown - s.start < s.str.length)
+    if (caretIn === -1) caretIn = segs.length - 1
+  }
+  return (
+    <p className="font-karla" style={{
+      ...metrics, gridArea: '1 / 1',
+      fontStyle: italic ? 'italic' : 'normal',
+      color: italic ? 'rgba(240,237,232,0.86)' : '#f4f0e8',
+    }}>
+      {quoted && <span style={{ color: `${accent}bb`, opacity: shown > 0 ? 1 : 0 }}>&ldquo;</span>}
+      {segs.map((s, i) => {
+        const vis = Math.max(0, Math.min(s.str.length, shown - s.start))
+        const style: React.CSSProperties | undefined = s.strong ? { color: accent } : undefined
+        const inner = (
+          <>
+            {s.str.slice(0, vis)}
+            {caretIn === i && <CaretMark accent={accent} />}
+            <span aria-hidden style={{ opacity: 0 }}>{s.str.slice(vis)}</span>
+          </>
+        )
+        return s.strong
+          ? <strong key={i} className="font-800" style={style}>{inner}</strong>
+          : <span key={i}>{inner}</span>
+      })}
+      {quoted && <span style={{ color: `${accent}bb`, opacity: typing ? 0 : 1 }}>&rdquo;</span>}
+    </p>
+  )
+}
+
+/** The blinking caret, at zero width: a mark that says "words are arriving"
+ *  without moving a single one of them. */
+function CaretMark({ accent }: { accent: string }) {
+  return (
+    <span aria-hidden style={{ position: 'relative', display: 'inline-block', width: 0, height: '1em', verticalAlign: 'text-bottom' }}>
+      <motion.span
+        animate={{ opacity: [1, 0.15, 1] }} transition={{ duration: 0.75, repeat: Infinity }}
+        style={{ position: 'absolute', left: 2, top: 0, width: 2, height: '1em', background: accent }} />
+    </span>
   )
 }
 

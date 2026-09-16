@@ -42,7 +42,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { TypedBody, useTypewriter, prefersReducedMotion } from '@/components/cutscene'
+import { prefersReducedMotion, TypedLine } from '@/components/cutscene'
 import { vibrate } from '@/lib/haptics'
 import {
   TIER_NAME, TIER_AT, tierFor, folkRoleFor, isMaxRapport, ASKS, GIFT_FAVOURITE_POINTS,
@@ -240,11 +240,10 @@ export default function FolkScene({
 
   const last = turns[turns.length - 1] ?? { who: 'them' as const, text: opener }
   const typedKey = `${turns.length}:${last.text}`
-  const { shown, typing, finish } = useTypewriter(
-    last.who === 'them' ? last.text : '', typedKey, { reduced },
-  )
+  // The typewriter lives in a leaf (TypedLine): a character arriving re-renders
+  // one paragraph, not this card with its animated bars and choice buttons.
+  const [typing, setTyping] = useState(true)
   const finishRef = useRef<() => void>(() => {})
-  finishRef.current = finish
 
   if (!folk) return null
 
@@ -398,9 +397,9 @@ export default function FolkScene({
                 height once and short lines sit in the space. */}
             <div style={{ height: 104, flexShrink: 0, overflowY: 'auto', touchAction: 'pan-y', cursor: typing ? 'pointer' : 'default' }}
               onClick={() => { if (typing) finishRef.current() }}>
-              <TypedBody all={[last.text]} text={last.text}
-                shown={last.who === 'them' ? shown : last.text.length}
-                typing={last.who === 'them' ? typing : false}
+              <TypedLine text={last.text} lineKey={typedKey}
+                active={last.who === 'them'} reduced={reduced}
+                onTyping={setTyping} finishRef={finishRef}
                 accent={accent} quoted size="1rem" />
             </div>
 
