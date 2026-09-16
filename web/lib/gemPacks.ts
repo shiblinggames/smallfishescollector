@@ -1,16 +1,28 @@
-// Real-money gem packs.
+// ── REAL-MONEY GEM PACKS ────────────────────────────────────────────────────
 //
 // PRICED AGAINST WHAT PLAYERS ACTUALLY EARN, not against a feeling. An active
-// day pays about 185 gems, the average balance sits near 1,800 and the richest
-// captain holds around 17,000. So the ladder is set so the middle pack is worth
-// roughly a week of play, which is the point where buying reads as a shortcut
-// rather than as the only way through. Nothing here is unobtainable by playing:
-// every gem sink in the game is still reachable on earned gems alone, which is
-// the line this stays on the right side of.
+// day pays about 185 gems, so the middle pack is about a fortnight of play,
+// which is the point where buying reads as a shortcut rather than as the only
+// way through. Nothing here is unobtainable by playing: every gem sink in the
+// game is still reachable on earned gems alone, which is the line this stays
+// on the right side of.
 //
-// The bonus curve is the standard shape for a reason — it makes the larger
-// packs better value per gem, so a player who has decided to spend is not
-// punished for spending once instead of five times.
+// ── MADE GENEROUS ON PURPOSE (2026-09-16) ───────────────────────────────────
+//
+// "I don't want this game to give off an icky feeling of taking advantage of
+// people." The first ladder had the two tells of one that does: a $49.99 tier
+// whose only job is to catch the one player in a hundred who will pay it, and
+// a bonus curve steep enough (up to +60%) that every smaller purchase felt
+// like the wrong one. Both are gone.
+//
+//   The base rate DOUBLED. 500 for $1.99, where it was 250.
+//   The ladder STOPS AT $19.99. There is no whale tier and there will not be.
+//   The bonus is FLAT-ISH. +12, +20, +30: a bigger pack is a little better,
+//   never so much better that the small one is a trap.
+//
+// The escalation that remains exists so a player who has decided to spend is
+// not punished for spending once instead of four times. That is the whole of
+// what a bonus curve is for, and it is all this one does.
 //
 // Prices are in CENTS and are the single source of truth for both Stripe (web)
 // and, later, App Store Connect. When the iOS products are created their
@@ -35,44 +47,36 @@ export type GemPack = {
 export const GEM_PACKS: GemPack[] = [
   {
     id: 'pouch',
-    gems: 250,
+    gems: 500,
     priceCents: 199,
     bonusPct: null,
     name: 'Pouch of Gems',
-    blurb: 'A day or two of good fortune.',
+    blurb: 'A few days of good fortune.',
   },
   {
     id: 'purse',
-    gems: 700,
+    gems: 1400,
     priceCents: 499,
     bonusPct: 12,
     name: 'Purse of Gems',
-    blurb: 'Enough for a reroll or three.',
+    blurb: 'A skin for somebody in the crew.',
   },
   {
     id: 'chest',
-    gems: 1600,
+    gems: 3000,
     priceCents: 999,
-    bonusPct: 28,
+    bonusPct: 20,
     name: 'Chest of Gems',
-    blurb: 'About a week of play, in one go.',
+    blurb: 'A fortnight of play, in one go.',
     best: true,
   },
   {
     id: 'hoard',
-    gems: 3600,
+    gems: 6500,
     priceCents: 1999,
-    bonusPct: 44,
+    bonusPct: 30,
     name: 'Hoard of Gems',
-    blurb: 'A legendary skin and change.',
-  },
-  {
-    id: 'trove',
-    gems: 10000,
-    priceCents: 4999,
-    bonusPct: 60,
-    name: "Leviathan's Trove",
-    blurb: 'The deep gives up everything at once.',
+    blurb: 'A legendary skin, and change.',
   },
 ]
 

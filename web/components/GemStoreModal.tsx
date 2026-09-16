@@ -248,7 +248,7 @@ export default function GemStoreModal() {
               ))}
             </div>
             <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6f6784', textAlign: 'center', lineHeight: 1.4 }}>
-              Secure checkout by Stripe. One payment, no subscription, and nothing here is needed to finish the game.
+              Secure checkout by Stripe. One payment, no subscription. Packs stop at $19.99 on purpose, and nothing here is needed to finish the game.
             </p>
           </>
         )}
