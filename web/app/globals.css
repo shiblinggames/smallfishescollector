@@ -42,6 +42,19 @@ body.doc-hidden *::after {
   to   { opacity: 1; }
 }
 
+/* ── THE TYPE SIZE ON A MONITOR ──
+   1,134 font sizes under 12px across the player-facing components, tuned by
+   eye on a phone held close. On a monitor at arm's length they are hard to
+   read, and they cannot be re-tuned one at a time blind. Nearly every size in
+   the game is in rem, so the root size is the one dial that reaches all of
+   them: 17px from 900px up on a fine pointer, a 6% lift, which is browser
+   zoom at 106% for the whole game and nothing else. Pixel-sized boxes do not
+   grow with it, so text inside them wraps a shade sooner. Turn this number
+   or delete the block; nothing else depends on it. */
+@media (min-width: 900px) and (pointer: fine) {
+  html { font-size: 17px; }
+}
+
 body {
   background: #000000;
   color: #f0ede8;
