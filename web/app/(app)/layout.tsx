@@ -57,6 +57,7 @@ import WelcomeModal from '@/components/WelcomeModal'
 import { getCurrentProfile } from '@/lib/userData'
 import { canSail } from '@/lib/seaAccess'
 import { isPremiumActive } from '@/lib/premium'
+import SessionWatch from '@/components/SessionWatch'
 import { CHARACTER_COLORS } from '@/lib/characters'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -109,6 +110,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           off the world routes and nothing on a session that has already had
           it; see the component, which also explains why it can never hang. */}
       <CastingOff enabled={!!profile?.has_seen_setup && !!profile?.has_seen_welcome} />
+      {/* Signed in somewhere else? This takes you to the door and says so,
+          rather than leaving you on a screen that can no longer load. */}
+      <SessionWatch />
       {/* The ring a tour draws round the control it is pointing at, in a layer
           of its own so no scroll box or rounded card can clip it. Draws
           nothing until something on the page wears `.coach-flash`. */}

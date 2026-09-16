@@ -10,6 +10,8 @@ export default function LoginForm() {
   // WAS '/packs', which is the retired pack economy — a default nobody had
   // looked at since that system was pulled.
   const next = searchParams.get('next') ?? '/sea'
+  // Put here by SessionWatch when a session was revoked under this browser.
+  const ended = searchParams.get('ended') === 'elsewhere'
   const [showEmail, setShowEmail] = useState(false)
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -80,6 +82,18 @@ export default function LoginForm() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* WHY THEY ARE LOOKING AT THIS. Being returned to the door with no
+          explanation reads as the game having broken. */}
+      {ended && (
+        <p className="font-karla" style={{
+          fontSize: '0.78rem', lineHeight: 1.5, margin: 0,
+          color: '#cfe0e8', background: 'rgba(120,170,210,0.10)',
+          border: '1px solid rgba(120,170,210,0.3)', borderRadius: 9,
+          padding: '0.5rem 0.65rem',
+        }}>
+          This account was opened on another device, so this one was signed out. One at a time.
+        </p>
+      )}
       {/* The press almost everybody makes. */}
       <GoogleButton next={next} />
 

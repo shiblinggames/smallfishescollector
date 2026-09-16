@@ -10,6 +10,7 @@ import { getMailUnreadCount } from '@/app/actions/mail'
 import { BADGE_MAP } from '@/lib/badges'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { signOutHere } from '@/lib/signOut'
 import { motion, AnimatePresence } from 'framer-motion'
 import TickingNumber from './TickingNumber'
 
@@ -289,8 +290,9 @@ export default function Nav({ doubloons, gems, canSail = false }: {
   useEffect(() => { setMenuOpen(false) }, [pathname])
 
   async function signOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    // Marks the leave as deliberate so SessionWatch does not meet them at the
+    // door with "you signed in on another device".
+    await signOutHere()
     router.push('/login')
     router.refresh()
   }

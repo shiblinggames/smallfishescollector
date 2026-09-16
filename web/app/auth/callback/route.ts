@@ -28,6 +28,24 @@ export async function GET(request: NextRequest) {
     )
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // ── ONE DEVICE AT A TIME ────────────────────────────────────────────
+      //
+      // Signing in here ends every OTHER session on the account. `others`
+      // keeps the one just created and revokes the rest, so the phone signs
+      // the desktop out and the desktop signs the phone out, whichever went
+      // second. Both doors arrive here: the magic link and Google alike.
+      //
+      // The revocation is immediate on the server. The other device finds out
+      // when its library next exchanges its refresh token, which it does on
+      // its own ticker and whenever its tab becomes visible, so picking that
+      // device back up is the thing that signs it out. Its access token stays
+      // valid until it expires, which is the documented shape of this and the
+      // reason not to also pay a session lookup on every request: see
+      // components/SessionWatch, which meets it at the door.
+      //
+      // Never allowed to fail a sign-in. A captain who got here has proved who
+      // they are, and a failed cleanup is not a reason to refuse them.
+      try { await supabase.auth.signOut({ scope: 'others' }) } catch { /* in they come anyway */ }
       return NextResponse.redirect(`${origin}${next}`)
     }
   }

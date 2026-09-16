@@ -34,7 +34,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
-import { createClient } from '@/lib/supabase/client'
+import { signOutHere } from '@/lib/signOut'
 import { allSettings, setSetting, type SeaSetting } from '@/lib/seaSettings'
 
 const SEA = 'rgba(180,214,232'
@@ -272,7 +272,7 @@ export default function SeaSettings({ size, top, isAdmin = false }: {
                 setLeaving(true)
                 vibrate(10)
                 void (async () => {
-                  await createClient().auth.signOut()
+                  await signOutHere()
                   router.push('/login')
                   router.refresh()
                 })()
