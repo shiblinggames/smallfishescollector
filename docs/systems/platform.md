@@ -218,3 +218,37 @@ after looking rather than rebuilt:
 - **The profile stays 560** on purpose: `app/(app)/u/[username]/ProfileClient.tsx` records the
   seam a wider column put under the captain's name.
 - The sea HUD, the arena's pixel density and selection are in ocean-hub.md and gauntlets.md.
+
+## One session per account (2026-09-16)
+
+**Signing in ends every other session on the account.** `app/auth/callback/route.ts` calls
+`supabase.auth.signOut({ scope: 'others' })` right after `exchangeCodeForSession`: `others` keeps
+the session just created and revokes the rest. Both doors land on that callback, so the magic link
+and Google both carry it. It is wrapped in a try and can never fail a sign-in.
+
+**How the other device finds out, and when.** The revocation is immediate on the server, but a
+revoked session's ACCESS token stays valid until it expires (Supabase's documented behaviour: only
+the refresh token is destroyed). The client library exchanges its refresh token on its own ticker
+and whenever the tab becomes visible, so picking the old device back up is itself what signs it
+out. The alternative, checking the JWT's `session_id` against `auth.sessions` on every request, was
+considered and rejected: it is a database round trip per navigation across the whole app to close a
+window that ends the moment somebody actually looks at the device.
+
+**And it says why.** `components/SessionWatch.tsx`, mounted in the `(app)` shell, listens for
+`SIGNED_OUT` and hard-navigates to `/login?ended=elsewhere`, where `LoginForm` prints a line. A
+device left on a screen it can no longer load data for reads as the game being broken. It is a hard
+navigation because everything in memory belongs to a session that no longer exists. The door is
+outside the `(app)` group, so the watcher never runs there and cannot loop.
+
+**A deliberate sign-out fires the same event**, and meeting that captain with "you signed in on
+another device" would be a lie. `lib/signOut.ts` marks the leave in `sessionStorage` first and the
+watcher stands down for it; both Sign Out buttons (Nav, SeaSettings) go through `signOutHere()`.
+
+**The helm guard is not redundant.** Two tabs in the SAME browser share one session, so they are
+both still live after this. `profiles.sea_session` is what stops those two charts fighting over the
+boat; see ocean-hub.md.
+
+**Not used:** Supabase's own "Single session per user" auth setting. It is a dashboard toggle on Pro
+and up, and it only takes effect at intervals of the JWT expiry, which is the same window this has
+without needing a plan or a setting nobody can see from the repo. If it is ever turned on, this code
+is harmless alongside it.
