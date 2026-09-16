@@ -3046,3 +3046,36 @@ deliberately left in — that is what keeps it *on* the boat.
   band (`myBot`) is 160 on a fine pointer, 214 on a thumb; `Compass` takes a `fine` prop for it.
 - **Selection:** `.sea-surface` keeps `user-select: none` on a mouse (the global rule is
   coarse-pointer only now, see platform.md), so a drag never paints a selection.
+
+### The boot screen waits for the chart, and stays off the setup modal (2026-09-16)
+
+`components/CastingOff.tsx`. Two contracts changed:
+
+- **The shell passes `enabled`** (`has_seen_setup && has_seen_welcome`). Before, a brand-new
+  account saw the cover over the name-entry modal for up to seven seconds, the session latched,
+  and the reload out of the welcome (the one load that builds the world) had no cover at all.
+- **On the sea the cover lifts on `sea:ready`**, which SeaMap dispatches (and flags on
+  `window.__seaReady`) when its sprites are decoded, AND when the warm-up is done, whichever is
+  later, under a nine-second cap. The warm-up owns 86% of the bar; the chart owns the rest.
+
+It preloads the two ground textures (`/sea/ground-turf.png`, `/sea/ground-rock.png`), which used
+to land after mount and repaint every island, and the nine regulars' faces via
+`app/(app)/sea/folkFaces.ts`. The percentage is eased toward the reported value by a frame loop
+that writes the DOM directly, so the cover never re-renders over the mounting chart.
+
+### The anchorage tour begins north of the reef (2026-09-16)
+
+`GATE_TOUR_Y = NORTH_WALL - 1100` in `SeaGateTour.tsx`. The tour used to begin the moment
+`inAnchorage` flipped, 250px past the reef line between the headland stacks, so its first card and
+the road it draws sat over the boulders beside the mouth. It now waits for the hull to reach that
+line (`deep`, which only ever climbs), and `inAnchorage` still pauses it south of the reef. Two
+road guards that disagreed now agree: the chevron heading to the first bay (`pendingHeading` in
+SeaMap) draws only past the Sea Gate, like `campaignGoalRef` already did, and the road to the gate
+(`pathing`) draws only from the harbour side.
+
+### Kat's hold line steps aside for the hold (2026-09-16)
+
+The beat is still `until: 'next'`, on purpose (see "the first voyage, as designed"). But while the
+hold sheet is open the card hides and the ring on the chip parks, and both return when the sheet
+shuts. The card used to be RAISED above the sheet instead, which put it over the panel it was
+describing with the ring still pulsing under it.

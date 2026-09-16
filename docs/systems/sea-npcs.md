@@ -157,6 +157,14 @@ exactly as it was if the hold turns out to be empty.
 
 **The conversation is ONE surface and it is a back-and-forth.** `FolkScene.tsx` holds all
 of it: portrait, typewriter, where you stand, the replies, and the ask-or-deliver option.
+
+**The typewriter (2026-09-16).** One implementation, `components/cutscene.tsx`. It is driven from
+elapsed time on animation frames against a per-line schedule, so a slow frame catches up smoothly;
+the pause a mark buys lands AFTER it; the whole line is laid out from the first frame with the
+unrevealed part invisible, so a word never builds on one line and jumps to the next; the caret takes
+no width. Finn and the folk render it through `TypedLine`, a leaf that owns the hook, so a
+character arriving re-renders one paragraph and not the card. Callers get `typing` through
+`onTyping` and `finish` through a ref.
 Nothing else opens. **There is no hold picker any more.** It was a grid of every fish aboard
 with a number on each, which made a present into a menu: the right play was to scan for the
 highest figure and tap it, and the content of the moment, that this person likes this fish,
