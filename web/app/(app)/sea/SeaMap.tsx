@@ -4225,27 +4225,30 @@ export default function SeaMap({
     }, HEADING_MS)
   }, [])
   /**
-   * ── PRESS A MARK, SAIL TO IT ──────────────────────────────────────────
+   * ── A MARK POINTS. IT DOES NOT SAIL. ──────────────────────────────────
    *
-   * The compass was a legend: five headings you then had to steer yourself.
-   * A mark is a course now. Same road the campaign draws to its next stop,
-   * same fade, and the helm turns toward it the way a tap on open water does.
-   */
-  /**
-   * ── A COURSE THAT FOLLOWS ─────────────────────────────────────────────
+   * It sailed for one day. Press a mark and the boat set a course and went,
+   * the whole way, steering itself round rock while you watched. Out on sight:
+   * "it takes away the point of sailing".
    *
-   * The regulars work their water, so a course set to where Dennis WAS is a
-   * course to empty sea by the time you get there, which is what happened.
-   * A mark for somebody who moves hands in `at`, and the loop re-aims at them
-   * every frame until you arrive or set any other course. Cancelled by
-   * comparison, not by editing every place a course can be set: if the target
-   * is not where the follow last put it, something else moved it.
+   * And the chart already agreed with that. Every other way to move here is a
+   * HELM ORDER rather than a destination: a tap sets a heading one hop ahead
+   * toward your thumb, a hold works the stick, and tapping a trader or a port
+   * only pulls you alongside something already on screen. See the note in
+   * onTap, which spells it out. The compass press was the one autopilot in a
+   * game that otherwise has none. It was mine, and it was wrong.
+   *
+   * So it does what the loadout's signposts do instead: light the road and the
+   * chevrons toward the mark for as long as a heading runs, then let go. Which
+   * way Dennis is, answered. Getting there, still yours.
+   *
+   * The road goes stale if he moves off it, which is fine over 7.6 seconds of
+   * it. The MARK is recomputed from his live position every frame, so the thing
+   * you actually steer by never lies. That is also why the follow that was
+   * built for the old course is gone: it existed to keep an autopilot honest.
    */
-  const followRef = useRef<{ at: () => Vec; last: Vec } | null>(null)
-  const goTo = useCallback((x: number, y: number, at?: () => Vec) => {
+  const pointAt = useCallback((x: number, y: number) => {
     vibrate(8)
-    target.current = { x, y }
-    followRef.current = at ? { at, last: target.current } : null
     wayGoal.current = { x, y, r: 240 }
     setHeading({ from: { ...pos.current }, to: { x, y }, key: Date.now() })
     window.setTimeout(() => {
@@ -7664,19 +7667,6 @@ export default function SeaMap({
         }
       }
 
-      // FOLLOWING SOMEBODY. See goTo. Re-aimed every frame; dropped the moment
-      // any other course is set, or once alongside.
-      if (followRef.current) {
-        const f = followRef.current
-        if (target.current !== f.last) followRef.current = null
-        else {
-          const p = f.at()
-          target.current = { x: p.x, y: p.y }
-          f.last = target.current
-          if (wayGoal.current) { wayGoal.current.x = p.x; wayGoal.current.y = p.y }
-          if (Math.hypot(p.x - pos.current.x, p.y - pos.current.y) < ARRIVE + 60) followRef.current = null
-        }
-      }
       const dx = target.current.x - pos.current.x
       const dy = target.current.y - pos.current.y
       const d = Math.hypot(dx, dy)
@@ -11337,7 +11327,7 @@ hullRef={hullRefFor(t.key)} />
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!hudOff && (
         <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends} regulars={regulars}
-          hullSpeed={hullSpeed} lockLine={lockLine} onGo={goTo}
+          hullSpeed={hullSpeed} lockLine={lockLine} onPoint={pointAt}
           finn={finnBearing}
           // WHICH SEA'S HEADINGS TO GIVE — see the note on the prop. Past the
           // rim the harbour is behind you and the bays are the whole world.
@@ -16586,13 +16576,13 @@ function fmtSail(seconds: number): string {
   const m = Math.floor(s / 60), r = s % 60
   return r ? `${m}m ${r}s` : `${m}m`
 }
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next, side, hullSpeed, lockLine, onGo }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next, side, hullSpeed, lockLine, onPoint }: {
   /** Full-sail speed multiplier for this hull, for the sailing time. */
   hullSpeed: number
   /** Why a band is shut, in the words the lock wears everywhere else. */
   lockLine: (p: Place) => string
-  /** Set a course for a mark's world position; `at` makes it a following course. */
-  onGo: (x: number, y: number, at?: () => { x: number; y: number }) => void
+  /** Light the road toward a mark's world position. It points, it does not sail. */
+  onPoint: (x: number, y: number) => void
   /**
    * ── WHICH HALF OF THE GAME YOU ARE SAILING ──────────────────────────────
    *
@@ -16725,8 +16715,6 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
     id: string; name: string; dim: boolean; dist: boolean
     /** Why a dim mark is dim, printed under it: a level, or Captain's water. */
     why?: string
-    /** Somebody who moves: where they are, asked at every frame of the sail. */
-    at?: () => { x: number; y: number }
     /** Somebody, not somewhere. Drawn as a mark, never as a name — see below. */
     mystery?: boolean
     /** Overrides the plate's colour. Only Finn uses it, and only to say whether
@@ -16933,7 +16921,6 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
       // you can settle breathes like a finished job of Finn's; a word does not.
       marks.push({
         id: `folk:${r.id}`, name: r.waiting ? `${r.name} · ${r.waiting}` : r.name, dim: false, dist: true,
-        at: r.at,
         accent: r.waiting ? '#f0c040' : undefined,
         urgent: !!r.waiting && r.waiting.startsWith('waiting'),
         ...project(at.x, at.y),
@@ -17025,16 +17012,16 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
         const tx = here.x + m.sx / z
         const ty = here.y + m.sy / (GROUND * z)
         return (
-          <div key={m.id} role="button" tabIndex={0} aria-label={`Sail to ${m.name || 'the mark'}`} data-no-steer
+          <div key={m.id} role="button" tabIndex={0} aria-label={`Show the way to ${m.name || 'the mark'}`} data-no-steer
             onPointerDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); onGo(tx, ty, m.at) }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(tx, ty, m.at) } }}
+            onClick={e => { e.stopPropagation(); onPoint(tx, ty) }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPoint(tx, ty) } }}
             style={{
             position: 'absolute', left: '50%', top: '50%', zIndex: Z.compass,
             transform: `translate(${x}px, ${y}px) translate(-50%, -50%)`,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-            // A COURSE, NOT A LEGEND. The mark is pressable; it used to be
-            // pointer-events none, five headings you then steered yourself.
+            // A SIGNPOST, NOT A COURSE. The mark is pressable and it lights
+            // the road toward itself. It never touches the helm.
             pointerEvents: 'auto', cursor: 'pointer', padding: '6px 8px', touchAction: 'manipulation',
           }}>
             <span style={{

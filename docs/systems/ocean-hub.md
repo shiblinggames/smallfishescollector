@@ -1996,14 +1996,15 @@ on. The front gains and loses puffs one at a time, at the places that actually c
 
 The fallback chart (`?gpu=0`) still paints the cell field flat; it is the fallback.
 
-### The compass is a course, not a legend (2026-09-16)
+### The compass points. It does not sail. (2026-09-16)
 
 Four changes to the edge marks, and the role ranking, the five-slot cap and the edge placement
 were left exactly as they were, because they are why it reads at all.
 
-- **Press a mark to sail to it.** Same road the campaign draws to its next stop, same fade; the
-  helm turns toward it the way a tap on open water does. Marks carry `data-no-steer` so the
-  press does not also steer the chart. The target is recovered by undoing the mark's projection.
+- **Press a mark and it lights the road toward it**, the same road and fade the campaign draws
+  to its next stop, for `HEADING_MS` (7.6s). `pointAt(x, y)` writes `wayGoal` and the heading
+  and NEVER touches `target`: the helm is not involved. Marks carry `data-no-steer` so the press
+  does not also steer the chart. The target is recovered by undoing the mark's projection.
 - **Amber for a regular with something for you.** "Meg · waiting on that Largemouth Bass" (from
   the request system, breathes like a finished job of Finn's) or "Meg · has a word" (not chatted
   today, no pulse). Read off the same `folkState` rows the Salt Road uses.
@@ -2013,23 +2014,37 @@ were left exactly as they were, because they are why it reads at all.
 - A wake trail (the last minute of the hull's track, fading) was built the same day and
   REMOVED on sight: "I don't like the wake trail." Do not re-propose.
 
-### A course to somebody follows them (2026-09-16)
+### The mark sailed for one day, and it was wrong (2026-09-16)
 
-The regulars work their water, so a compass mark pressed for Dennis set a course to where he
-WAS and arrived at empty sea. `goTo(x, y, at?)` takes an optional `at` (the regular's live
-position function, which the compass mark carries as `Mark.at`). While `followRef` is set the
-sail loop re-aims `target` and `wayGoal` at `at()` every frame. It lets go on arrival (within
-ARRIVE + 60px) or the moment the target is not the object the follow last wrote, which is how
-any other course (a tap, the stick, a warp) cancels it without those sites knowing the follow
-exists. Friends' marks stay fixed courses for now.
+**Do not re-propose pressing a compass mark to sail there.** It shipped in the morning, grew a
+follow so it tracked a moving regular, and was out by the evening: *"I don't like that you can
+just click on something on the compass and it auto sails to it. It takes away the point of
+sailing."*
+
+He was right and the chart already said so. **Every other way to move here is a helm order, not
+a destination.** A tap sets a heading one hop ahead toward your thumb (`hopToward`, and the note
+in `onTap` spells it out: "a tap is a heading rather than a destination", which is why tapping
+your own boat is the only way to stop). A hold or a drag works the stick. Tapping a trader or a
+port pulls you alongside something already on screen. The compass press was the one true
+autopilot in a game that has none, and it sailed you, unattended and off-screen, round rock.
+
+Gone with it: `goTo`, `followRef`, `Mark.at`, and the per-frame re-aim in the sail loop. The
+follow only ever existed to keep an autopilot honest. Nothing replaces it, because the MARK
+itself is recomputed from a regular's live position every frame, so the arrow you steer by
+never goes stale. Only the drawn road does, over 7.6 seconds, which does not matter.
+
+The lookahead below stays. It was built for the long autopilot courses, but it is gated on a SET
+course with the stick released, so what it does now is keep a tap's hop from grinding along a
+rock. That is polish on manual steering, not steering for you.
 
 ### The lookahead: the bow aims round the rock ahead (2026-09-16)
 
 Steering had no avoidance. A set course sailed a straight line and met rock by contact: pushed
 out along the shore's normal with only the inward velocity removed, so the hull slides along a
 coast and rounds a round island. It jams in a bay, because the line to the target points into
-the pocket and the slide has nowhere to go. With compass marks now setting courses that became
-the game's own suggestion, so it was answered without a pathfinder.
+the pocket and the slide has nowhere to go. It was built the day compass marks set courses, when
+that became the game's own suggestion rather than a captain's tap. The marks stopped sailing the
+same day (see above) and this stayed, because a tap's hop can still be aimed at a rock.
 
 **The rule** (in the sail loop, just before the heading becomes velocity): if the line ahead is
 blocked within 520px by an obstacle in the near list, the bow aims at the tangent of the nearest
