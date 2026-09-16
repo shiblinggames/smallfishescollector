@@ -15,12 +15,12 @@
 // a bonus curve steep enough (up to +60%) that every smaller purchase felt
 // like the wrong one. Both are gone.
 //
-//   The base rate DOUBLED. 500 for $1.99, where it was 250.
+//   The base rate is about 400 a dollar: 800 for $1.99, where it was 250.
 //   The ladder STOPS AT $19.99. There is no whale tier and there will not be.
-//   The bonus is FLAT-ISH up to the Chest, +12 and +20, so the small packs
-//   are never a trap. The Hoard then doubles the base rate, ten thousand for
-//   $19.99, because the top of a four-rung ladder should be the generous
-//   rung, not the expensive one.
+//   The bonus is GENTLE. +10, +19, +24 to the Hoard's ten thousand: a bigger
+//   pack is a little better, never so much better that the small one is a
+//   trap. Set from the top down: the Hoard was fixed at ten thousand first
+//   and the rest brought into line under it.
 //
 // The escalation that remains exists so a player who has decided to spend is
 // not punished for spending once instead of four times. That is the whole of
@@ -54,7 +54,7 @@ export type GemPack = {
 export const GEM_PACKS: GemPack[] = [
   {
     id: 'pouch',
-    gems: 500,
+    gems: 800,
     priceCents: 199,
     bonusPct: null,
     name: 'Pouch of Gems',
@@ -62,30 +62,28 @@ export const GEM_PACKS: GemPack[] = [
   },
   {
     id: 'purse',
-    gems: 1400,
+    gems: 2200,
     priceCents: 499,
-    bonusPct: 12,
+    bonusPct: 10,
     name: 'Purse of Gems',
-    blurb: 'A skin for somebody in the crew.',
+    blurb: 'A skin for somebody in the crew, and change.',
   },
   {
     id: 'chest',
-    gems: 3000,
+    gems: 4800,
     priceCents: 999,
-    bonusPct: 20,
+    bonusPct: 19,
     name: 'Chest of Gems',
-    blurb: 'Two or three skins, or one and a respec.',
-    best: true,
+    blurb: 'A few skins, or a legendary and a respec.',
   },
   {
     id: 'hoard',
     gems: 10000,
     priceCents: 1999,
-    // Twice the base rate. The top of the ladder is the generous one rather
-    // than the expensive one, which is the opposite of how these usually go.
-    bonusPct: 99,
+    bonusPct: 24,
     name: 'Hoard of Gems',
     blurb: 'Three legendary skins, and change.',
+    best: true,
   },
 ]
 
