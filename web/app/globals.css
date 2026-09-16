@@ -2492,6 +2492,26 @@ body.hardcore-gauntlet::after {
   .trawl-bubble { opacity: 0; }
 }
 
+/* ── Casting off: the boot screen's two motions ──
+   Both compositor-only (opacity, transform), because the heaviest screen in
+   the app is mounting underneath this while it plays. */
+@keyframes castoffBreathe { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.7; } }
+.castoff-glow {
+  position: absolute; left: 50%; top: 50%; width: 520px; height: 520px;
+  transform: translate(-50%, -54%); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(24,120,124,0.42) 0%, rgba(24,120,124,0.12) 38%, rgba(11,26,36,0) 68%);
+  animation: castoffBreathe 3.2s ease-in-out infinite;
+}
+@keyframes castoffSheen { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+.castoff-sheen {
+  position: absolute; top: 0; bottom: 0; width: 40%;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0) 100%);
+  animation: castoffSheen 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .castoff-glow, .castoff-sheen { animation: none; }
+}
+
 /* ── Landing page: a staged arrival ──────────────────────────────────────────
    Kept as CSS rather than framer so app/page.tsx stays a SERVER component (it
    does the logged-in redirect before rendering). Transform and opacity only,

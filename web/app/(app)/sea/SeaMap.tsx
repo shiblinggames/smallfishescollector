@@ -2420,6 +2420,16 @@ export default function SeaMap({
    *  warm load resolves before the button is ever on screen.
    */
   const [spritesReady, setSpritesReady] = useState(false)
+  // ── TOLD TO THE BOOT SCREEN ──────────────────────────────────────────
+  // CastingOff covers this page while it builds and lifts on this signal
+  // rather than on its own warm-up finishing, so the bar means the chart is
+  // actually there. The flag is for a cover that attaches its listener after
+  // the sprites already landed.
+  useEffect(() => {
+    if (!spritesReady) return
+    window.__seaReady = true
+    window.dispatchEvent(new Event('sea:ready'))
+  }, [spritesReady])
   useEffect(() => {
     let cancelled = false
     const urls: string[] = []
@@ -6119,14 +6129,16 @@ export default function SeaMap({
     if (justCleared.length <= clearedCount.current) { clearedCount.current = justCleared.length; return }
     clearedCount.current = justCleared.length
     const to = nextStop?.at
-    if (!to || !inAnchorage) return
+    // Past the gate, like campaignGoalRef above it: from inside the harbour
+    // the line runs west through the anchorage's own wall.
+    if (!to || !onSeaGate) return
     const from = { ...pos.current }
     if (Math.hypot(to.x - from.x, to.y - from.y) < 1600) return
     pendingHeading.current = { from, to }
     // `nextAtId` rather than the object: the memo rebuilds on every status
     // change and only a different STOP is a different heading.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [justCleared.length, nextAtId, inAnchorage])
+  }, [justCleared.length, nextAtId, onSeaGate])
 
   /**
    * ── AND IT WAITS FOR THE GUNS TO STOP ─────────────────────────────────

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { vibrate } from '@/lib/haptics'
 import { motion } from 'framer-motion'
 import StepTourModal, { type TourStep } from '@/components/StepTourModal'
 import GuideScene from '@/components/GuideScene'
@@ -68,8 +69,12 @@ export default function WelcomeModal() {
     // the same black, so the welcome and the sea join up as one shot. The
     // scene stays mounted under the fade rather than vanishing first.
     setLeaving(true)
+    // ANSWERED ON THE PRESS. The button goes to its pending state (see the
+    // GuideScene below), the hand feels it, and the curtain starts moving now
+    // rather than after an ease-in's dead first hundred milliseconds.
+    vibrate(12)
     startTransition(async () => {
-      await Promise.all([claimWelcomePack(), new Promise(r => setTimeout(r, 560))])
+      await Promise.all([claimWelcomePack(), new Promise(r => setTimeout(r, 380))])
       // STRAIGHT TO THE WATER, AND A REAL LOAD OF IT. The sea page shows a dark
       // field rather than a chart while a captain is still being set up, so
       // the chart has to be built now, from a profile that now has a name, a
@@ -102,7 +107,7 @@ export default function WelcomeModal() {
 
   const curtain = leaving ? (
     <motion.div aria-hidden
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, ease: 'easeIn' }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.36, ease: 'easeOut' }}
       style={{ position: 'fixed', inset: 0, background: '#04090f', zIndex: 1400, pointerEvents: 'none' }} />
   ) : null
 
@@ -116,6 +121,10 @@ export default function WelcomeModal() {
           lines={WELCOME_SCENE}
           ctaLabel="Let's Go →"
           accent="#60a5fa"
+          // The button knows it was pressed: disabled and showing its wait
+          // the instant the curtain starts, so a second press cannot fire the
+          // grant twice and the press never reads as ignored.
+          pending={leaving}
           onDone={() => { if (installStep) setPhase('install'); else grantAndClose() }}
         />
         {curtain}

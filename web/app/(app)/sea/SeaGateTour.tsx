@@ -33,7 +33,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { GATE_TOUR, GATE_FORCED_THROUGH, SEA_ACCENT } from '@/lib/seaOnboarding'
-import { PLACES, SEA_GATE, SEA_GATE_HALF } from './chart'
+import { NORTH_WALL, PLACES, SEA_GATE, SEA_GATE_HALF } from './chart'
+
+/** Where the anchorage tour may begin: eleven hundred pixels north of the reef
+ *  line, seven hundred clear of its northernmost rock, and still eighteen
+ *  hundred short of the island row, so the first card lands on open water. */
+const GATE_TOUR_Y = NORTH_WALL - 1100
 
 /** How close counts as "at the Sea Gate" for the beat that names it. Wide,
  *  because it is a ring of light a captain sails TOWARDS: the line should
@@ -153,7 +158,22 @@ export default function SeaGateTour({
   // south of the reef it waits, and a waiting tour holds nothing. And only
   // through the forced half -- past that it is asking the captain to sail
   // somewhere, which a lock would make impossible. See GATE_FORCED_THROUGH.
-  const live = !done && !!beat && inAnchorage && !fighting
+  // ── NOT IN THE DOORWAY ───────────────────────────────────────────────
+  // `inAnchorage` flips the moment the hull is 250px past the reef line,
+  // still between the headland stacks with the whole harbour ahead. Starting
+  // there put the first card, and the road it draws, over the boulders beside
+  // the mouth. The tour waits until the boat is well clear of the reef and
+  // stays started from then on, so sailing back to the mouth does not restart
+  // it (the inAnchorage test below still pauses it south of the reef).
+  const [deep, setDeep] = useState(false)
+  useEffect(() => {
+    if (deep || done) return
+    const check = () => { if (inAnchorage && at.current.y < GATE_TOUR_Y) setDeep(true) }
+    check()
+    const id = window.setInterval(check, 300)
+    return () => window.clearInterval(id)
+  }, [deep, done, inAnchorage, at])
+  const live = !done && !!beat && inAnchorage && deep && !fighting
   useEffect(() => {
     onBeat?.(live && beat
       // `route` goes out too: the chart draws the chevrons for it, the same
@@ -232,7 +252,9 @@ export default function SeaGateTour({
   // the captain had not reached. The chart's chevrons wait on the same
   // crossing; see the note in SeaMap.
   const routing = !!beat?.route && !gated && pastGate
-  const pathing = beat?.path === 'sea_gate' && !gated
+  // And only from the harbour side: cross back through the arch and this
+  // road would run from the fishing grounds through the reef.
+  const pathing = beat?.path === 'sea_gate' && !gated && inAnchorage
   const lit = useMemo(
     () => (pathing ? { x: SEA_GATE.x, y: SEA_GATE.y, r: SEA_GATE_HALF } : routing ? nextAt : null),
     [pathing, routing, nextAt],
@@ -407,7 +429,7 @@ export default function SeaGateTour({
   // AND A HIDDEN CARD COMES BACK when the captain is adrift: the × means "I
   // have read this", which is not the same as "I no longer need to be told how
   // to get back to the thing you were pointing at".
-  const visible = !(done || !beat || !inAnchorage || fighting || (step === hidden && !waypoint) || gated)
+  const visible = !(done || !beat || !inAnchorage || !deep || fighting || (step === hidden && !waypoint) || gated)
   const b = beat ?? GATE_TOUR[GATE_TOUR.length - 1]
   // Anything the captain has to DO has no button: the button is the thing
   // they were asked to do. A waypoint is one of those: it is asking for a tap

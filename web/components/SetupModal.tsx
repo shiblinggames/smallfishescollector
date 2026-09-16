@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { vibrate } from '@/lib/haptics'
 import { motion, AnimatePresence } from 'framer-motion'
 import { updateUsername, updateCharacterColor, updateAvatarColors } from '@/app/(app)/u/actions'
 import { markSetupSeen } from '@/app/actions/firstRun'
@@ -128,9 +129,14 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
   }
 
   function handleFinish() {
+    vibrate(10)
     startFinishTx(async () => {
-      await updateAvatarColors({ bgColor: avatarBg, borderColor: avatarBorder })
-      await markSetupSeen()
+      // Two writes to the same row, in parallel rather than one after the
+      // other: the press used to wait out two round trips in series.
+      await Promise.all([
+        updateAvatarColors({ bgColor: avatarBg, borderColor: avatarBorder }),
+        markSetupSeen(),
+      ])
       setDone(true)
       // When there is no welcome to play this IS the end of setup, and the sea
       // page has been showing a dark field until now. Same full load the
@@ -465,7 +471,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
             <button
               onClick={handleFinish}
               disabled={finishPending}
-              className="font-karla font-700 w-full"
+              className="font-karla font-700 w-full tap"
               style={{
                 padding: '0.75rem',
                 background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.45)',

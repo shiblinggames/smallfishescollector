@@ -108,7 +108,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           arriving in pieces later in the middle of things. It draws nothing
           off the world routes and nothing on a session that has already had
           it; see the component, which also explains why it can never hang. */}
-      <CastingOff />
+      <CastingOff enabled={!!profile?.has_seen_setup && !!profile?.has_seen_welcome} />
       {/* The ring a tour draws round the control it is pointing at, in a layer
           of its own so no scroll box or rounded card can clip it. Draws
           nothing until something on the page wears `.coach-flash`. */}

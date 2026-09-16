@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentProfile } from '@/lib/userData'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import MarketClient from './MarketClient'
@@ -25,11 +25,19 @@ export type MarketState = {
 }
 
 export default async function MarketPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  // THE PROFILE THE SHELL ALREADY FETCHED. The layout reads the current
+  // profile for every page; this page made its own auth round trip and its
+  // own profiles read on top, which on a phone was two serial network hops
+  // before the market's queries could even start. `getCurrentProfile` is
+  // request-cached, so this is the same row and no extra trip.
+  const profile = await getCurrentProfile()
+  if (!profile) redirect('/login')
+  const user = { id: profile.id as string }
 
   const admin = createAdminClient()
+
+  // Decided up front so the contract count can ride in the batch below.
+  const exchangeOpen = getLevelFromXP(Number(profile.fishing_xp ?? 0)) >= EXCHANGE_FISHING_LEVEL
 
   type MarketRow = {
     fish_id: number
@@ -44,8 +52,7 @@ export default async function MarketPage() {
     quantity: number
   }
 
-  const [{ data: profile }, market, inventoryRes, stateRes, collectionRes] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at, fishing_xp, has_seen_exchange_intro, has_seen_sea_tour, sea_tour_step').eq('id', user.id).single(),
+  const [market, inventoryRes, stateRes, collectionRes, betsRes] = await Promise.all([
     // Shared market snapshot from the cross-request cache (lib/fishMarket).
     getCachedFishMarketFull(),
     admin.from('fish_inventory')
@@ -54,7 +61,14 @@ export default async function MarketPage() {
       .gt('quantity', 0),
     admin.from('market_state').select('mood, next_update_at').eq('id', 1).single(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
+    // How many contracts are running, for the Exchange door's own sub-line.
+    // Head-only count, only for captains who can trade at all, and IN the
+    // batch: it used to be a sixth query after the other five had landed.
+    exchangeOpen
+      ? admin.from('exchange_bets').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'open')
+      : Promise.resolve({ count: 0 as number | null }),
   ])
+  const openContracts = betsRes.count ?? 0
 
   const inventoryMap = new Map<number, number>()
   for (const row of (inventoryRes.data ?? []) as InvRow[]) {
@@ -89,17 +103,7 @@ export default async function MarketPage() {
   // The Exchange announcement is worth nothing if it waits behind a tab the
   // captain has no reason to press. Decided here so the page can OPEN on the
   // Exchange the one time there is news, then never again.
-  const exchangeOpen = getLevelFromXP(Number(profile?.fishing_xp ?? 0)) >= EXCHANGE_FISHING_LEVEL
-  const exchangeUnveil = exchangeOpen && profile?.has_seen_exchange_intro !== true
-
-  // How many contracts are running, for the Exchange door's own sub-line. A tab
-  // that can say "2 running" is worth pressing; one that just says its name is
-  // furniture. Head-only count, and only for captains who can trade at all.
-  const { count: openContracts } = exchangeOpen
-    ? await admin.from('exchange_bets')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id).eq('status', 'open')
-    : { count: 0 }
+  const exchangeUnveil = exchangeOpen && profile.has_seen_exchange_intro !== true
 
   return (
     <>
