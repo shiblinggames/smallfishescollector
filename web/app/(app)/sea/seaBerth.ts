@@ -124,6 +124,13 @@ export type Berths = {
   view: Container
   /** Which berth the captain is standing in, if any. */
   setActive(id: string | null): void
+  /**
+   * WHETHER THE MOORINGS ARE ON THE WATER AT ALL. Off for a fight: a berth is
+   * an invitation to pull in, and a ring of lamps under a broadside is an
+   * invitation on the wrong screen. Eased, so the harbour dims out as the
+   * guns come up rather than blinking off the frame the fight is composed.
+   */
+  shown(on: boolean): void
   /** `camX`/`camY` and the half-viewport in world units, so a berth on the far
    *  side of the chart costs nothing. Each one is fourteen lamps plus a pool
    *  and a rim, all trigonometry, and there are one per port. */
@@ -193,13 +200,28 @@ export function makeBerths(
     return (r << 16) | (g << 8) | b
   }
 
+  /** See `shown`. Starts on; the chart says otherwise the moment a fight is up. */
+  let shownWant = 1
+  let shownK = 1
+
   return {
     view,
 
     setActive(id) { active = id },
 
+    shown(on) { shownWant = on ? 1 : 0 },
+
     advance(t, dt, camX, camY, halfW, halfH) {
       const d = Math.min(dt, 0.05)
+      // The whole layer, one alpha. About a quarter of a second either way.
+      shownK += (shownWant - shownK) * Math.min(1, d * 5)
+      if (shownK < 0.01) {
+        // Gone: nothing to draw and nothing to move, so no sprite writes.
+        if (view.visible) view.visible = false
+        return
+      }
+      view.visible = true
+      view.alpha = shownK
       for (const b of built) {
         // Off screen is off: the node is hidden AND left alone, so a berth you
         // cannot see costs neither a draw nor sixteen sprite writes.

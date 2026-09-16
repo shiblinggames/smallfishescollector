@@ -293,6 +293,9 @@ export type GpuHandle = {
   /** Which berth she is standing in, or null. Eased on the far side, so this
    *  can be called every frame or only on change. */
   berth(id: string | null): void
+  /** Whether the moorings are drawn at all. Off during a fight; eased on the
+   *  far side, so this is pushed every frame like the lantern and the fog. */
+  berths(on: boolean): void
   /** The portal's tier can change mid-session (you buy one), and whether
    *  you are standing in it changes every frame you cross the rim. */
   portal(spec: PortalWellSpec, inside: boolean, hold: number): void
@@ -1979,6 +1982,7 @@ export default function SeaIslandsGPU({
         },
         guide(from, to, radius) { guide.set(from, to, radius) },
         berth(id) { berthLayer.setActive(id) },
+        berths(on) { berthLayer.shown(on) },
         portal(spec, inside, hold) { portalWell.setSpec(spec); portalWell.setActive(inside, hold) },
         wargate(inside) { wargateWell.setActive(inside, inside ? 1 : 0) },
         // WHICH WAY HOME SHE IS FLOATING IN, by its place in `homes`. The mouth

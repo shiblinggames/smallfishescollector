@@ -8939,6 +8939,11 @@ export default function SeaMap({
         // the handle is null for the first frames, binding is one assignment,
         // and a bind that is missed is a chart with no fog on it at all.
         gpuRef.current.fog(xfogAlpha.current)
+        // AND WHETHER THE MOORINGS ARE ON THE WATER. Off while a fight is up:
+        // a ring of lamps inviting you to pull in, under a broadside, is an
+        // invitation on the wrong screen. Read off the ref the loop already
+        // keeps, pushed every frame for the same reason the two above are.
+        gpuRef.current.berths(!fightOnRef.current)
         // THE GLOW LIST, on change only. Unlike the two above this ALLOCATES on
         // the way in, so it is pushed from an effect rather than from here —
         // this line is only the first hand-over, for the frames before that
