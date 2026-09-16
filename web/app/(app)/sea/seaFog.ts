@@ -49,8 +49,45 @@
 
 import type { Container, Sprite, Texture } from 'pixi.js'
 import {
-  XFOG_CELL, XFOG_W, XFOG_H, XFOG_X0, XFOG_Y0, XFOG_CELLS,
+  XFOG_CELL, XFOG_W, XFOG_H, XFOG_X0, XFOG_Y0, XFOG_CELLS, XFOG_CLEAR, XFOG_SOFT,
 } from '@/lib/seaExploreExp'
+
+/**
+ * ── THE BANK IS DRAWN FINER THAN IT IS REMEMBERED ───────────────────────────
+ *
+ * The memory is a bit per seven-hundred-pixel cell and the picture of it was
+ * one texel per cell, stretched. That was always going to be square-ish: the
+ * clearing round the hull is a couple of thousand pixels across, so it fell on
+ * two or three texels a side, and the GPU's bilinear blend between so few
+ * samples is a rounded square with straight runs between the sample points.
+ * "Still splotchy" is that shape, plus the per-cell colour jitter coming out
+ * of the stretch as a quilt.
+ *
+ * So the field is kept at SUB texels per cell for drawing. The part of it
+ * near the hull is computed straight from her distance, per texel, every
+ * frame, so the front is genuinely round and moves by the pixels she moved.
+ * Everywhere else a texel takes its cell's value, which is how a remembered
+ * cell, a seeded chapter and the fallback's ease all still show up. The noise
+ * stays at cell scale and is looked up, not recomputed, so the extra texels
+ * cost a multiply and four byte writes each.
+ *
+ * FOUR: 175px texels. Two still shows corners on the clearing; eight is
+ * 108,000 texels a frame for a difference nobody sees over water.
+ */
+const SUB = 4
+const FW = XFOG_W * SUB
+const FH = XFOG_H * SUB
+const FCELL = XFOG_CELL / SUB
+
+/** Cover at a world point, the same curve xfogCover applies to a cell centre.
+ *  Duplicated rather than imported because that one takes a cell index. */
+function coverAt(px: number, py: number, hx: number, hy: number): number {
+  const d = Math.hypot(px - hx, py - hy)
+  if (d <= XFOG_CLEAR) return 0
+  if (d >= XFOG_SOFT) return 1
+  const t = (d - XFOG_CLEAR) / (XFOG_SOFT - XFOG_CLEAR)
+  return t * t * (3 - 2 * t)
+}
 
 /** Blank paper, not a hole. The same three numbers the minimap has used for
  *  unexplored water since it shipped — a captain has already learned what this
@@ -141,7 +178,9 @@ export type Fog = {
    * and cannot go stale.
    */
   bind(alpha: Float32Array): void
-  advance(camX: number, camY: number, halfW: number, halfH: number, t: number): void
+  /** `hx,hy` is the HULL in world space, not the camera: the front is cut
+   *  round her, and a fight frames the engagement rather than the captain. */
+  advance(camX: number, camY: number, halfW: number, halfH: number, t: number, hx: number, hy: number): void
   /** The hour. Fog is water vapour and it goes the colour of the light. */
   night(tint: number): void
   destroy(): void
@@ -156,14 +195,24 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
   // One texel per cell. `scaleMode: 'linear'` is not a default worth relying on
   // silently: with 'nearest' this is a grid of seven-hundred-pixel squares and
   // the entire design is gone.
-  const buf = new Uint8Array(XFOG_W * XFOG_H * 4)
+  const buf = new Uint8Array(FW * FH * 4)
   const src = new PIXI.BufferImageSource({
     resource: buf,
-    width: XFOG_W,
-    height: XFOG_H,
+    width: FW,
+    height: FH,
     scaleMode: 'linear',
     alphaMode: 'premultiply-alpha-on-upload',
   })
+  /** The fine field. Starts fully fogged and ONLY EVER LIFTS, by the same rule
+   *  the cell field lives under: the minimum of what it had, its cell, and
+   *  the hull's own reach. */
+  const fine = new Float32Array(FW * FH).fill(1)
+  /** Per-cell roll and jitter, computed once a frame at cell scale and read
+   *  by the sixteen texels under each. */
+  const cellK = new Float32Array(XFOG_CELLS)
+  const cellLift = new Float32Array(XFOG_CELLS)
+  const cellN = new Float32Array(XFOG_CELLS)
+  for (let i = 0; i < XFOG_CELLS; i++) cellN[i] = ((i * 2654435761) % 17) / 17
   const bank: Sprite = new PIXI.Sprite(new PIXI.Texture({ source: src }))
   bank.position.set(XFOG_X0, XFOG_Y0)
   bank.width = XFOG_W * XFOG_CELL
@@ -224,6 +273,12 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
    *  cells are on the edge changes when you sail into one, not sixty times a
    *  second. */
   let edge: number[] = []
+  /** The same cells as a set, for the puffs: "is my cell still an edge" is a
+   *  membership question, and answering it by position in the list is what
+   *  made every puff move whenever any cell did. */
+  const edgeSet = new Set<number>()
+  /** Cells a puff is already riding, per layer, so two never take the same one. */
+  const claimed: Set<number>[] = [new Set(), new Set()]
   let edgeAt = -1
 
   let tint = 0xffffff
@@ -233,43 +288,82 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
 
     bind(a) { alpha = a },
 
-    advance(camX, camY, halfW, halfH, t) {
+    advance(camX, camY, halfW, halfH, t, hx, hy) {
       if (!alpha) return
 
-      // ── UPLOAD THE BANK ──────────────────────────────────────────────────
+      // ── THE ROLL, AT CELL SCALE ──────────────────────────────────────────
       //
-      // Every frame, and it is 1,696 texels: less work than the string
-      // concatenation that writes the world transform. Premultiplied on upload,
-      // so the colour is scaled by its own alpha here — an unpremultiplied
-      // buffer through a premultiplying source gives dark fringes at the front,
-      // which on a fog edge is the one artefact that looks like a bug.
       // TWO DRIFTS AT TWO RATES, so the interior never settles into a pattern.
-      // Slow: this is a bank a mile across, not steam off a cup.
+      // Slow: this is a bank a mile across, not steam off a cup. Computed once
+      // per cell (1,696 of them) and read by the texels under it: the noise is
+      // the expensive part and it has no business being finer than a cell,
+      // because a patch of thick fog is bigger than a cell, not smaller.
       const ax = t * 0.035, ay = t * 0.021
       const bx = -t * 0.017, by = t * 0.012
       for (let i = 0; i < XFOG_CELLS; i++) {
-        const a = alpha[i]
-        const o = i * 4
-        if (a <= 0) { buf[o] = 0; buf[o + 1] = 0; buf[o + 2] = 0; buf[o + 3] = 0; continue }
+        if (alpha[i] <= 0) { cellK[i] = 0; continue }
         const cx = i % XFOG_W, cy = (i / XFOG_W) | 0
-        // Deterministic per-cell jitter, so a wall of it has some tooth even
-        // where the drift happens to be flat. The same hash the minimap uses,
-        // so the two halves of the chart are recognisably one idea.
-        const n = ((i * 2654435761) % 17) / 17
         // AND THE ROLL. Lattice a third of a cell, so a patch of thick is
         // several cells across and survives the upscale as a shape rather than
         // as noise. 0.78..1 rather than 0..1: fog thins, it does not vanish.
         const roll = 0.78 + 0.22 * (
           fbm(cx * 0.34 + ax, cy * 0.34 + ay) * 0.6
           + fbm(cx * 0.13 + bx, cy * 0.13 + by) * 0.4)
-        const k = a * 0.96 * roll
+        cellK[i] = 0.96 * roll
         // Colour is lifted where the fog is thick, so a bank has a lit side
         // rather than being one value with holes in it.
-        const lift = 1 + (roll - 0.89) * 0.5
-        buf[o] = (PAPER.r + n * 7) * k * lift
-        buf[o + 1] = (PAPER.g + n * 8) * k * lift
-        buf[o + 2] = (PAPER.b + n * 9) * k * lift
-        buf[o + 3] = 255 * k
+        cellLift[i] = 1 + (roll - 0.89) * 0.5
+      }
+
+      // ── THE FRONT, CUT ROUND THE HULL ────────────────────────────────────
+      //
+      // Only the texels she could be lightening: a window of XFOG_SOFT around
+      // her, about 700 texels. Each takes the minimum of what it already had
+      // and her reach, so the edge is a circle that moves by whatever she
+      // moved this frame, at texel resolution rather than cell resolution.
+      const reach = Math.ceil(XFOG_SOFT / FCELL)
+      const hcx = Math.floor((hx - XFOG_X0) / FCELL), hcy = Math.floor((hy - XFOG_Y0) / FCELL)
+      for (let ty = Math.max(0, hcy - reach); ty <= Math.min(FH - 1, hcy + reach); ty++) {
+        const py = XFOG_Y0 + (ty + 0.5) * FCELL
+        for (let tx = Math.max(0, hcx - reach); tx <= Math.min(FW - 1, hcx + reach); tx++) {
+          const j = ty * FW + tx
+          const want = coverAt(XFOG_X0 + (tx + 0.5) * FCELL, py, hx, hy)
+          if (want < fine[j]) fine[j] = want
+        }
+      }
+
+      // ── UPLOAD THE BANK ──────────────────────────────────────────────────
+      //
+      // Every frame, 27,000 texels: a min, a multiply and four byte writes
+      // each, which is still less than the water shader spends on one column.
+      // Premultiplied on upload, so the colour is scaled by its own alpha here:
+      // an unpremultiplied buffer through a premultiplying source gives dark
+      // fringes at the front, which on a fog edge is the one artefact that
+      // looks like a bug.
+      //
+      // A texel can never be foggier than its CELL. That is how a remembered
+      // cell, a seeded chapter and the fallback's ease all reach this layer:
+      // the cell field only ever lifts, and the texel follows it down.
+      for (let ty = 0; ty < FH; ty++) {
+        const cy = (ty / SUB) | 0
+        for (let tx = 0; tx < FW; tx++) {
+          const i = cy * XFOG_W + ((tx / SUB) | 0)
+          const j = ty * FW + tx
+          const ca = alpha[i]
+          if (ca < fine[j]) fine[j] = ca
+          const a = fine[j]
+          const o = j * 4
+          if (a <= 0.002) { buf[o] = 0; buf[o + 1] = 0; buf[o + 2] = 0; buf[o + 3] = 0; continue }
+          const k = a * cellK[i]
+          const lift = cellLift[i]
+          // Jitter is kept, but at a quarter of what it was: at cell scale it
+          // was tooth on a wall; stretched, it was the quilt.
+          const n = cellN[i] * 0.25
+          buf[o] = (PAPER.r + n * 7) * k * lift
+          buf[o + 1] = (PAPER.g + n * 8) * k * lift
+          buf[o + 2] = (PAPER.b + n * 9) * k * lift
+          buf[o + 3] = 255 * k
+        }
       }
       src.update()
 
@@ -282,6 +376,7 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
       if (t - edgeAt > 0.4) {
         edgeAt = t
         edge = []
+        edgeSet.clear()
         for (let i = 0; i < XFOG_CELLS; i++) {
           if (alpha[i] < 0.35) continue
           const cx = i % XFOG_W, cy = (i / XFOG_W) | 0
@@ -299,6 +394,7 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
           if (Math.abs(wx - camX) > halfW + XFOG_CELL * 2) continue
           if (Math.abs(wy - camY) > halfH + XFOG_CELL * 2) continue
           edge.push(i)
+          edgeSet.add(i)
         }
       }
 
@@ -311,21 +407,48 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
       const dt = lastT < 0 ? 0 : Math.min(0.1, Math.max(0, t - lastT))
       lastT = t
       const ride = (pool: Sprite[], rate: number, size: number, lit: number, seed: number) => {
-        const held = cellOf[seed], fd = fade[seed]
+        const held = cellOf[seed], fd = fade[seed], mine = claimed[seed]
+        // ── A PUFF KEEPS ITS CELL UNTIL THE CELL STOPS BEING AN EDGE ─────
+        //
+        // This is the whole of "it pops in and out". Puffs used to be dealt
+        // cells by their index into the frontier list, and that list is
+        // rebuilt as you sail: one cell joining at the front shifted every
+        // puff's slot by one, and every one of them faded out and came back
+        // somewhere else. Nothing teleported any more; everything churned.
+        //
+        // Now the only question a puff asks is whether the cell it is on is
+        // still frontier and still on screen. While it is, it stays. When it
+        // is not, it fades out where it is and only then takes the nearest
+        // unclaimed edge cell, so the front gains and loses puffs one at a
+        // time at the places that actually changed.
         for (let p = 0; p < pool.length; p++) {
           const s = pool[p]
-          // Stepped through the frontier so the two layers never sit on the
-          // same cells — a far puff exactly behind a near one is a brighter
-          // puff, not a deeper bank.
-          const idx = p * (seed === 0 ? 1 : 2) + seed
-          const want = idx < edge.length ? edge[idx] : -1
-          // OUT BEFORE IT MOVES. See the note on cellOf: a puff only changes
-          // cell once it is invisible, so the front never pops.
-          if (held[p] !== want) {
-            fd[p] -= dt * 1.6
-            if (fd[p] <= 0) { fd[p] = 0; held[p] = want }
-          } else if (want >= 0) {
+          const cur = held[p]
+          const keep = cur >= 0 && edgeSet.has(cur)
+          if (keep) {
             fd[p] = Math.min(1, fd[p] + dt * 1.1)
+          } else {
+            fd[p] -= dt * 1.6
+            if (fd[p] <= 0) {
+              fd[p] = 0
+              if (cur >= 0) { mine.delete(cur); held[p] = -1 }
+              // The nearest unclaimed edge cell to where it faded, or to the
+              // camera when it has never been anywhere. Neither layer takes a
+              // cell the other is on: a far puff exactly behind a near one is
+              // a brighter puff, not a deeper bank.
+              let best = -1, bestD = Infinity
+              const fx = cur >= 0 ? XFOG_X0 + ((cur % XFOG_W) + 0.5) * XFOG_CELL : camX
+              const fy = cur >= 0 ? XFOG_Y0 + (((cur / XFOG_W) | 0) + 0.5) * XFOG_CELL : camY
+              for (let e = 0; e < edge.length; e++) {
+                const c = edge[e]
+                if (mine.has(c) || claimed[1 - seed].has(c)) continue
+                const ex = XFOG_X0 + ((c % XFOG_W) + 0.5) * XFOG_CELL - fx
+                const ey = XFOG_Y0 + (((c / XFOG_W) | 0) + 0.5) * XFOG_CELL - fy
+                const d = ex * ex + ey * ey
+                if (d < bestD) { bestD = d; best = c }
+              }
+              if (best >= 0) { held[p] = best; mine.add(best) }
+            }
           }
           const i = held[p]
           if (i < 0 || fd[p] <= 0) { s.visible = false; continue }

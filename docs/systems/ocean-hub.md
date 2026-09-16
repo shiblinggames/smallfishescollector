@@ -1970,6 +1970,32 @@ every profile row to re-index a mask about fog.
   nothing under the fog to cover. What survives both is your NEXT stop, and that is correct:
   it is the one mark whose entire job is to say which way to go.
 
+### The bank is drawn finer than it is remembered (2026-09-15)
+
+"Still splotchy, and it pops in and out." Two separate faults, both in `seaFog.ts`.
+
+**Splotchy was the resolution.** The memory is a bit per 700px cell and the bank was one
+texel per cell, stretched by the GPU. The clearing round the hull is a couple of thousand
+pixels across, so it fell on two or three texels a side, and a bilinear blend between so few
+samples is a rounded square with straight runs between sample points; the per-cell colour
+jitter came out of the stretch as a quilt. The bank is now kept at **four texels per cell**
+(212 by 128). The window round the hull is computed per texel straight from her distance
+every frame, so the front is genuinely round and moves by the pixels she moved; every other
+texel takes the minimum of itself and its cell, which is how a remembered cell, a seeded
+chapter and the fallback's ease still reach it. Noise stays at cell scale and is looked up,
+not recomputed. `advance` takes the HULL's world position for this, not the camera's, because
+a fight frames the engagement rather than the captain.
+
+**Popping was the puffs.** They were dealt frontier cells by index into a list rebuilt every
+0.4s and culled to the camera. One cell joining at the front shifted every puff's slot by
+one, so all of them faded out and came back somewhere else, constantly, while sailing. The
+earlier fix stopped teleports and replaced them with churn. A puff now keeps its cell until
+that cell stops being frontier or leaves the screen (a set membership test), and only then
+fades out and takes the nearest unclaimed edge cell. Neither layer takes a cell the other is
+on. The front gains and loses puffs one at a time, at the places that actually changed.
+
+The fallback chart (`?gpu=0`) still paints the cell field flat; it is the fallback.
+
 ### What is on the canvas, and what is not
 
 **On the Pixi canvas** — the water, the swell, islands and the towns on them, shoals, surf,

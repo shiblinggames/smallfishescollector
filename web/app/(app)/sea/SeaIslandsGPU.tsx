@@ -1614,7 +1614,8 @@ export default function SeaIslandsGPU({
         squalls.advance(camX, camY, halfW, halfH, dt)
         glow.advance(camX, camY, halfW, halfH, t)
         guideFx.advance(t, dt)
-        fog.advance(camX, camY, halfW, halfH, t)
+        // The HULL, not the camera: the front is cut round her.
+        fog.advance(camX, camY, halfW, halfH, t, boatAt.x, boatAt.y)
         // The sky. Needs the screen as well as the world, because half of it is
         // drawn in screen space — that is what the parallax IS.
         clouds.advance(t, dt, camX, camY, camZoom, a.screen.width, a.screen.height)
