@@ -3573,14 +3573,49 @@ export default function SeaMap({
       // stays in the type so an old row still reads.
       : sideRef.current ? 'moored' : 'fishing', [])
 
+  /**
+   * ── THIS CHART'S CLAIM ON THE HELM ──────────────────────────────────────
+   *
+   * A random id per chart session, kept in sessionStorage so a reload is the
+   * same session and does not lose the helm to itself. The first save this
+   * chart makes CLAIMS (a chart that has just opened is the one the captain is
+   * looking at); every save after that defers, and the moment the server says
+   * another chart has it, this one stops writing and puts up the banner. See
+   * saveSeaPosition in traderActions for the rule.
+   */
+  const helmId = useRef<string>('')
+  if (!helmId.current && typeof window !== 'undefined') {
+    try {
+      const k = 'stb:helm'
+      helmId.current = sessionStorage.getItem(k) ?? ''
+      if (!helmId.current) { helmId.current = Math.random().toString(36).slice(2, 12); sessionStorage.setItem(k, helmId.current) }
+    } catch { helmId.current = Math.random().toString(36).slice(2, 12) }
+  }
+  const helmClaimed = useRef(false)
+  const helmLostRef = useRef(false)
+  const [helmLost, setHelmLost] = useState(false)
+
   /** Both masks travel together. The campaign's cells are drained here rather
    *  than at each call site, because there are six of them and the one that
    *  forgot would leak a captain's exploration on every flush it made. */
   const saveSeaPosition = useCallback(
-    (x: number, y: number, fog: number[]) => {
+    async (x: number, y: number, fog: number[], claim = false) => {
+      // Stood down: another chart has the helm and this one writes nothing
+      // until the captain takes it back. The fog cells stay queued.
+      if (helmLostRef.current && !claim) return
       const exp = [...xfogPending.current]
       xfogPending.current.clear()
-      return persistSeaPosition(x, y, fog, exp, sideNow())
+      const take = claim || !helmClaimed.current
+      const res = await persistSeaPosition(x, y, fog, exp, sideNow(), { session: helmId.current, claim: take })
+      if (res.helm === 'elsewhere') {
+        // Put the campaign's cells back: they were not written.
+        for (const i of exp) xfogPending.current.add(i)
+        helmLostRef.current = true
+        setHelmLost(true)
+        return
+      }
+      helmClaimed.current = true
+      if (helmLostRef.current) { helmLostRef.current = false; setHelmLost(false) }
     },
     [sideNow])
 
@@ -7062,6 +7097,9 @@ export default function SeaMap({
       if (!near) return
       // A tab nobody is looking at is a boat nobody is steering.
       if (document.visibilityState === 'hidden') return
+      // Stood down from the helm: no beats, or friends would see one captain
+      // in two places. See saveSeaPosition.
+      if (helmLostRef.current) return
       presence.current?.send({
         x: Math.round(me.x), y: Math.round(me.y), f: facing.current,
         // The frame the fishing screen already hands back through onPose, so
@@ -11563,6 +11601,37 @@ hullRef={hullRefFor(t.key)} />
       )}
 
       <FolkPanel open={folkOpen} onClose={() => { setFolkOpen(false); refreshMet() }} finn={finn} />
+
+      {/* ── SAILING ELSEWHERE ─────────────────────────────────────────────
+          Another chart on this account took the helm (the phone, after the
+          desktop; a second tab). This one has stopped writing position and
+          presence so the two cannot fight over the row, and says so where a
+          captain will see it. One press takes the helm back; the other chart
+          then gets this same banner on its next save. */}
+      {helmLost && (
+        <div data-no-steer onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}
+          style={{
+            position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 74px)', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 9350, maxWidth: 'min(92vw, 420px)', width: '100%',
+            display: 'flex', alignItems: 'center', gap: 12, padding: '0.7rem 0.85rem', borderRadius: 14,
+            background: 'rgba(10,16,22,0.97)', border: '1px solid rgba(240,192,64,0.5)',
+            boxShadow: '0 14px 40px rgba(0,0,0,0.6)',
+          }}>
+          <span style={{ minWidth: 0, flex: 1 }}>
+            <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.88rem', color: '#f4ecd8', lineHeight: 1.2 }}>
+              You set sail on another device.
+            </span>
+            <span className="font-karla" style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(240,237,232,0.6)', marginTop: 2, lineHeight: 1.4 }}>
+              This chart has stopped saving so the two do not fight over your boat.
+            </span>
+          </span>
+          <button type="button" className="font-cinzel font-700"
+            onClick={() => { vibrate(10); void saveSeaPosition(pos.current.x, pos.current.y, [...fogPending.current], true); fogPending.current.clear() }}
+            style={{ flexShrink: 0, padding: '0.5rem 0.9rem', borderRadius: 999, cursor: 'pointer', fontSize: '0.78rem', color: '#f4ecd8', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.55)' }}>
+            Take the helm
+          </button>
+        </div>
+      )}
 
       {/* A BEAT, PLAYING OVER THE CHART. StoryScene portals itself to the body,
           so the map does not have to know anything about where it lands. */}

@@ -417,12 +417,34 @@ export async function saveSeaPosition(
    * on the expedition ship, with the fishing boat moored at the Gunwharf.
    */
   side: 'fishing' | 'anchorage' | 'moored' | 'open' = 'fishing',
-): Promise<void> {
+  /**
+   * ── WHICH CHART IS AT THE HELM ────────────────────────────────────────
+   *
+   * Two open charts on one account (a forgotten desktop tab, then the phone)
+   * both wrote this row every few seconds, and whichever wrote last won the
+   * next load. `session` is a random id per chart session; `claim` is a
+   * chart TAKING the helm (on mount, or the button on the banner). A save
+   * that does not claim and finds a DIFFERENT session with a fresh heartbeat
+   * writes nothing and is told so, and the chart that sent it stops writing
+   * and says why on screen. The newest chart wins by default, which is what
+   * a captain who just opened the phone expects; the old one can take it
+   * back with one press.
+   */
+  helm?: { session: string; claim: boolean },
+): Promise<{ helm: 'mine' | 'elsewhere' }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return
+  if (!user) return { helm: 'mine' }
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return { helm: 'mine' }
   const admin = createAdminClient()
+
+  if (helm && !helm.claim) {
+    const { data: row } = await admin.from('profiles')
+      .select('sea_session, sea_seen_at').eq('id', user.id).single()
+    const other = row?.sea_session && row.sea_session !== helm.session
+    const fresh = row?.sea_seen_at && (Date.now() - Date.parse(String(row.sea_seen_at))) < HELM_FRESH_MS
+    if (other && fresh) return { helm: 'elsewhere' }
+  }
 
   const patch: Record<string, unknown> = {
     sea_x: Math.max(-1e6, Math.min(1e6, x)),
@@ -435,6 +457,7 @@ export async function saveSeaPosition(
     // decides which wall a captain wakes up behind.
     sea_side: side === 'anchorage' || side === 'moored' || side === 'open' ? side : 'fishing',
   }
+  if (helm) patch.sea_session = helm.session
 
   // ── THE FOG ───────────────────────────────────────────────────────────
   //
@@ -465,7 +488,13 @@ export async function saveSeaPosition(
   }
 
   await admin.from('profiles').update(patch).eq('id', user.id)
+  return { helm: 'mine' }
 }
+
+/** How long another chart's last heartbeat counts as "still sailing". The
+ *  chart saves every few seconds while moving; half a minute is well past a
+ *  dropped connection and well short of a tab somebody actually left open. */
+const HELM_FRESH_MS = 30_000
 
 /**
  * Does this captain already carry the runner's rod? (KAN-25.) The wager

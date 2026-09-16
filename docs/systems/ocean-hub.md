@@ -1996,6 +1996,24 @@ on. The front gains and loses puffs one at a time, at the places that actually c
 
 The fallback chart (`?gpu=0`) still paints the cell field flat; it is the fallback.
 
+### One chart at the helm (2026-09-16)
+
+Two open charts on one account (a forgotten desktop tab, then the phone) each saved the boat's
+position every few seconds and whichever wrote last won the next load; both also broadcast
+presence as the same captain, so a friend saw one boat in two places. Sessions themselves are
+not limited (Supabase keeps every magic-link session; 25 of 70 signed-in accounts hold more than
+one), and forcing single sessions would sign people out of their other device, which feels worse
+than the bug.
+
+**The rule.** `profiles.sea_session` holds the id of the chart session that most recently TOOK
+the helm (a random id per chart, in sessionStorage so a reload keeps it). `saveSeaPosition` takes
+`helm: { session, claim }`: a chart's first save claims; every later save defers, and a save
+that finds a different session with a heartbeat under thirty seconds old writes nothing and
+returns `elsewhere`. The chart then stops saving position and sending presence beats and shows a
+banner, "You set sail on another device", with a Take the helm button that claims. The newest
+chart wins by default; the old one takes it back with one press, and the other then gets the
+same banner on its next save. Fog cells queued for an unwritten save are put back.
+
 ### What is on the canvas, and what is not
 
 **On the Pixi canvas** — the water, the swell, islands and the towns on them, shoals, surf,
