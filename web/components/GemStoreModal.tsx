@@ -208,7 +208,7 @@ export default function GemStoreModal() {
           <>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b3a9c9', lineHeight: 1.5, margin: '8px 0 14px' }}>
               Gems buy skins for your crew, a Renown respec, and a charge for the Accelerator.
-              Nothing they buy is out of reach on gems earned by playing. A pack is a shortcut, not a key.
+              Nothing they buy is out of reach on gems earned by playing.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
               {GEM_PACKS.map(p => (

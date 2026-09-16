@@ -24,6 +24,11 @@
 // not punished for spending once instead of four times. That is the whole of
 // what a bonus curve is for, and it is all this one does.
 //
+// AND NO PACK IS EVER DESCRIBED AS TIME SAVED. "About a week of play" is a
+// sentence that tells a player the game is a wait they can pay to skip, which
+// is the icky feeling in one line. The earn rate above is for PRICING this
+// file; it never reaches a card. A blurb says what the gems buy, full stop.
+//
 // Prices are in CENTS and are the single source of truth for both Stripe (web)
 // and, later, App Store Connect. When the iOS products are created their
 // identifiers must map back to these ids, so a purchase on either platform
@@ -51,7 +56,7 @@ export const GEM_PACKS: GemPack[] = [
     priceCents: 199,
     bonusPct: null,
     name: 'Pouch of Gems',
-    blurb: 'A few days of good fortune.',
+    blurb: 'A little extra in the purse.',
   },
   {
     id: 'purse',
@@ -67,7 +72,7 @@ export const GEM_PACKS: GemPack[] = [
     priceCents: 999,
     bonusPct: 20,
     name: 'Chest of Gems',
-    blurb: 'A fortnight of play, in one go.',
+    blurb: 'Two or three skins, or one and a respec.',
     best: true,
   },
   {
