@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { freezeFromForm } from './actions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { notFound } from 'next/navigation'
@@ -88,9 +89,10 @@ export default async function DevStatsPage() {
   const flagRowsArr = (flagRows ?? []) as FlagRow[]
   const flagUserIds = [...new Set(flagRowsArr.map(f => f.user_id))]
   const { data: flagUsers } = flagUserIds.length
-    ? await admin.from('profiles').select('id, username').in('id', flagUserIds)
-    : { data: [] as { id: string; username: string | null }[] }
+    ? await admin.from('profiles').select('id, username, frozen').in('id', flagUserIds)
+    : { data: [] as { id: string; username: string | null; frozen: boolean | null }[] }
   const nameById = new Map((flagUsers ?? []).map((u: any) => [u.id as string, (u.username as string | null)]))
+  const frozenById = new Map((flagUsers ?? []).map((u: any) => [u.id as string, u.frozen === true]))
   const flagByUser = new Map<string, { count: number; maxSev: number; kinds: Record<string, number> }>()
   for (const f of flagRowsArr) {
     const e = flagByUser.get(f.user_id) ?? { count: 0, maxSev: 0, kinds: {} }
@@ -100,7 +102,7 @@ export default async function DevStatsPage() {
     flagByUser.set(f.user_id, e)
   }
   const flaggedUsers = [...flagByUser.entries()]
-    .map(([uid, e]) => ({ uid, name: nameById.get(uid) ?? uid.slice(0, 8), ...e }))
+    .map(([uid, e]) => ({ uid, name: nameById.get(uid) ?? uid.slice(0, 8), frozen: frozenById.get(uid) ?? false, ...e }))
     .sort((a, b) => b.maxSev - a.maxSev || b.count - a.count)
 
   // ── Davy Jones Gauntlet — computed in JS from the profile snapshot above
@@ -447,9 +449,22 @@ export default async function DevStatsPage() {
                       {Object.entries(u.kinds).map(([k, n]) => `${k.replace('cap_trip:', '')} ×${n}`).join(' · ')}
                     </span>
                   </div>
-                  <span style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <span className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#f87171' }}>{u.count}</span>
-                    <span className="font-karla" style={{ display: 'block', fontSize: '0.7rem', color: '#928d84', marginTop: 2 }}>sev {u.maxSev}</span>
+                  <span style={{ textAlign: 'right', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span>
+                      <span className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#f87171' }}>{u.count}</span>
+                      <span className="font-karla" style={{ display: 'block', fontSize: '0.7rem', color: '#928d84', marginTop: 2 }}>sev {u.maxSev}</span>
+                    </span>
+                    {/* THE FREEZE SWITCH. A form with a bound action, so the
+                        page stays a Server Component and the button is a
+                        button. Review first, then press; it never deletes. */}
+                    <form action={freezeFromForm.bind(null, u.uid, !u.frozen)}>
+                      <button type="submit" className="font-karla font-700 uppercase tracking-[0.1em]" style={{
+                        fontSize: '0.62rem', padding: '0.45rem 0.8rem', borderRadius: 999, cursor: 'pointer',
+                        background: u.frozen ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.14)',
+                        border: `1px solid ${u.frozen ? 'rgba(52,211,153,0.5)' : 'rgba(248,113,113,0.5)'}`,
+                        color: u.frozen ? '#7fd0a0' : '#fca5a5',
+                      }}>{u.frozen ? 'Unfreeze' : 'Freeze'}</button>
+                    </form>
                   </span>
                 </div>
               ))}

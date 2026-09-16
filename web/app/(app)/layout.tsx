@@ -46,6 +46,7 @@
  */
 export const maxDuration = 20
 
+import Honeypot from '@/components/Honeypot'
 import Nav from '@/components/Nav'
 import MembershipModal from '@/components/MembershipModal'
 import CastingOff from '@/components/CastingOff'
@@ -111,6 +112,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           of its own so no scroll box or rounded card can clip it. Draws
           nothing until something on the page wears `.coach-flash`. */}
       <CoachFlash />
+      {/* The honeypot. Renders nothing; see app/actions/honeypot.ts. */}
+      <Honeypot />
       {/* Global membership purchase popup — opens on the `open-membership`
           event fired by every "Become a member" CTA across the app. */}
       <MembershipModal />

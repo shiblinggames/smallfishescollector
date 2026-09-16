@@ -16,6 +16,32 @@ The non-game knowledge: how the app is built, shipped, and kept safe.
   IAP is the App Store gate). Tide Run is its OWN iOS app now and is out of this
   codebase entirely: `ios/PORT_BRIEF.md`, and see tavern.md for what came out.
 
+## Anti-cheat, as a browser game has it (2026-09-16)
+
+There is no anti-cheat program to install in a browser. What exists is three things: what
+the server decides, what behaviour can be flagged, and what is done about a flag. The game's
+structural advantage is that there is NO player-to-player economy (no trading, no gifting),
+so a bot can only inflate its own account and, with no prizes on the boards, the industrial
+motive that drives botting elsewhere does not exist. What remains is the occasional tester
+with Postman, which is what the two incidents to date were.
+
+**Signals** land in `anomaly_flags` via `lib/anomaly.flagAnomaly` (advisory, never blocks):
+cap trips on reward endpoints, implausible perfect streaks, chart puzzle forgeries, and the
+**honeypot** (`app/actions/honeypot.ts`, severity 5): a server action the real client never
+calls, reachable only by reading the bundle or replaying requests, so it has no honest trigger.
+
+**The freeze switch** (`app/dev/stats/actions.ts`): a button per flagged account on the admin
+stats page. It sets `profiles.frozen` (the record) and `auth.users.raw_app_meta_data.frozen`
+(the gate); `proxy.ts` reads the latter off `getUser()` with no extra query and sends a frozen
+account to `/frozen` (403 on POST). Nothing is deleted. Review first, press second; act in
+batches rather than on detection, so a script author cannot tell what tripped.
+
+**Deliberately not done:** third-party anti-cheat SDKs (none work in a browser), obfuscation,
+IP bans, CAPTCHAs in the loop, automatic bans. Timing-variance flags wait for honest baselines
+from live traffic. Server-authoritative dial and fights remain the structural fix if a forged
+number ever hurts anyone but the forger. Vercel's bot protection is a dashboard toggle
+(Firewall, managed rulesets), not code.
+
 ## Security posture (the convention that holds everything)
 
 - **Anything that mutates value goes through a service-role RPC or admin-client server
