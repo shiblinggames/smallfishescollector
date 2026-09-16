@@ -19,7 +19,7 @@ pay-to-win, never FOMO**. Captain membership sells convenience and cosmetics, no
 ## Gems for money: the Purser (door opened 2026-09-16)
 
 The server half predates the door: `lib/gemPacks.ts` (four packs, $1.99 to $19.99: 500, 1,400,
-3,000, 6,500 gems; **no whale tier on purpose**, bonus capped at +30%, made generous 2026-09-16
+3,000, 10,000 gems; **no whale tier on purpose**, the top rung is the generous one at twice the base rate, made generous 2026-09-16
 because "I don't want this game to give off an icky feeling"), `app/actions/gems.ts` (checkout re-reads price and count
 from the catalogue, never from the caller), and the Stripe webhook (`kind: 'gems'`, fulfils
 by inserting a `gem_transactions` row keyed on the session id BEFORE moving the balance).

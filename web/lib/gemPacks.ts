@@ -17,8 +17,10 @@
 //
 //   The base rate DOUBLED. 500 for $1.99, where it was 250.
 //   The ladder STOPS AT $19.99. There is no whale tier and there will not be.
-//   The bonus is FLAT-ISH. +12, +20, +30: a bigger pack is a little better,
-//   never so much better that the small one is a trap.
+//   The bonus is FLAT-ISH up to the Chest, +12 and +20, so the small packs
+//   are never a trap. The Hoard then doubles the base rate, ten thousand for
+//   $19.99, because the top of a four-rung ladder should be the generous
+//   rung, not the expensive one.
 //
 // The escalation that remains exists so a player who has decided to spend is
 // not punished for spending once instead of four times. That is the whole of
@@ -77,11 +79,13 @@ export const GEM_PACKS: GemPack[] = [
   },
   {
     id: 'hoard',
-    gems: 6500,
+    gems: 10000,
     priceCents: 1999,
-    bonusPct: 30,
+    // Twice the base rate. The top of the ladder is the generous one rather
+    // than the expensive one, which is the opposite of how these usually go.
+    bonusPct: 99,
     name: 'Hoard of Gems',
-    blurb: 'A legendary skin, and change.',
+    blurb: 'Three legendary skins, and change.',
   },
 ]
 
