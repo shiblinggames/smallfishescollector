@@ -1,5 +1,6 @@
 'use client'
 
+import { openGemStore } from '@/components/GemStoreModal'
 import { useState, useEffect, useMemo, useRef, useTransition, type ReactNode } from 'react'
 import CloseButton from '@/components/CloseButton'
 import { createPortal } from 'react-dom'
@@ -4452,6 +4453,16 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#c9b6f5' }}>{skin.gemCost.toLocaleString()} ◆</span>
                     <span className="font-karla" style={{ fontSize: '0.6rem', color: canAfford ? 'rgba(255,255,255,0.4)' : '#f2b0b0' }}>· you have {state.gems.toLocaleString()}</span>
                   </div>
+                  {/* THE SHORTFALL IS THE MOMENT. A captain looking at a skin
+                      they are two hundred short of is the one person in the
+                      game the purser is for; the link sits under the price. */}
+                  {!canAfford && (
+                    <button type="button" onClick={() => { setSkinBuyConfirm(null); openGemStore() }}
+                      className="font-karla font-700 uppercase tracking-[0.1em]"
+                      style={{ display: 'block', margin: '-4px auto 12px', fontSize: '0.6rem', color: '#c9b6f5', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                      Get gems
+                    </button>
+                  )}
 
                   <div className="flex" style={{ gap: 8 }}>
                     <button type="button" disabled={!!skinBusy} onClick={() => { if (!skinBusy) setSkinBuyConfirm(null) }}

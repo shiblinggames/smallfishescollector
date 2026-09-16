@@ -24,7 +24,8 @@ import { createEmbeddedCheckout, createHostedCheckout, checkMembership } from '@
 
 const GOLD = '#f0c040'
 const PUBLISHABLE = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
-const stripePromise = PUBLISHABLE ? loadStripe(PUBLISHABLE) : null
+/** Shared with GemStoreModal: one Stripe handle, one boundary, two cards. */
+export const stripePromise = PUBLISHABLE ? loadStripe(PUBLISHABLE) : null
 
 /** Open the membership popup from anywhere. */
 export function openMembership() {
@@ -34,7 +35,7 @@ export function openMembership() {
 // Catches a render crash inside EmbeddedCheckout (bad key, stripe.js init
 // failure) so the popup falls back to hosted instead of the whole subtree
 // unmounting and vanishing.
-class CheckoutBoundary extends Component<{ onError: () => void; children: ReactNode }, { failed: boolean }> {
+export class CheckoutBoundary extends Component<{ onError: () => void; children: ReactNode }, { failed: boolean }> {
   state = { failed: false }
   static getDerivedStateFromError() { return { failed: true } }
   componentDidCatch() { this.props.onError() }

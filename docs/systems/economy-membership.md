@@ -16,6 +16,27 @@ pay-to-win, never FOMO**. Captain membership sells convenience and cosmetics, no
 - Cumulative stats bump via `bump_*` RPCs, fire-and-forget — never block gameplay on a
   stats write.
 
+## Gems for money: the Purser (door opened 2026-09-16)
+
+The server half predates the door: `lib/gemPacks.ts` (five packs, $1.99 to $49.99, the
+middle one about a week of play), `app/actions/gems.ts` (checkout re-reads price and count
+from the catalogue, never from the caller), and the Stripe webhook (`kind: 'gems'`, fulfils
+by inserting a `gem_transactions` row keyed on the session id BEFORE moving the balance).
+**That once-only guarantee was resting on a unique constraint that did not exist** until
+2026-09-16: `gem_transactions_payment_ref_key` (partial, `where payment_ref is not null`).
+A retried webhook would have paid twice.
+
+`components/GemStoreModal.tsx` is the door, the same shape as the membership card (same
+embedded Checkout, hosted fallback to `/sea?gems=success`, shared `CheckoutBoundary` and
+Stripe handle exported from MembershipModal). It opens from `openGemStore()`: the gem balance
+in the Nav (both layouts) is a button with a plus, and the crew skin shop shows Get gems under
+the price when the captain is short. After paying, the modal polls `currentGems()` until the
+balance moves, dispatches `gems-changed`, and refreshes.
+
+**The line it stays on:** nothing gems buy is out of reach on gems earned by playing, and the
+modal says so where the money is. Gem sinks today: crew skins, Renown respecs, Accelerator
+charges, recruit rerolls.
+
 ## Membership ("Captain")
 
 - Stripe-backed subscription (`web/lib/premium.ts`, `web/lib/stripe.ts`).

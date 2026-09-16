@@ -46,6 +46,7 @@
  */
 export const maxDuration = 20
 
+import GemStoreModal from '@/components/GemStoreModal'
 import Honeypot from '@/components/Honeypot'
 import Nav from '@/components/Nav'
 import MembershipModal from '@/components/MembershipModal'
@@ -117,6 +118,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* Global membership purchase popup — opens on the `open-membership`
           event fired by every "Become a member" CTA across the app. */}
       <MembershipModal />
+      <GemStoreModal />
     </>
   )
 }

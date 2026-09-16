@@ -1,5 +1,6 @@
 'use client'
 
+import { openGemStore } from '@/components/GemStoreModal'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import AnnouncementBanner from './AnnouncementBanner'
@@ -405,9 +406,13 @@ export default function Nav({ doubloons, gems, canSail = false }: {
 
         <div className="flex items-center gap-3">
           {displayGems !== undefined && (
-            <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#a78bfa' }}>
-              <TickingNumber value={displayGems} /> ◆
-            </span>
+            // THE PURSE IS A DOOR. The balance was a number; pressing it opens
+            // the gem packs, with a plus so it reads as pressable.
+            <button type="button" onClick={openGemStore} aria-label="Get gems"
+              className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span><TickingNumber value={displayGems} /> ◆</span>
+              <span aria-hidden style={{ width: 14, height: 14, borderRadius: 999, border: '1px solid rgba(167,139,250,0.6)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', lineHeight: 1 }}>+</span>
+            </button>
           )}
           {displayDoubloons !== undefined && (
             <span
@@ -460,9 +465,11 @@ export default function Nav({ doubloons, gems, canSail = false }: {
 
         <div className="flex items-center gap-3">
           {displayGems !== undefined && (
-            <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#a78bfa' }}>
-              <TickingNumber value={displayGems} /> ◆
-            </span>
+            <button type="button" onClick={openGemStore} aria-label="Get gems"
+              className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span><TickingNumber value={displayGems} /> ◆</span>
+              <span aria-hidden style={{ width: 14, height: 14, borderRadius: 999, border: '1px solid rgba(167,139,250,0.6)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', lineHeight: 1 }}>+</span>
+            </button>
           )}
           {displayDoubloons !== undefined && (
             <span
