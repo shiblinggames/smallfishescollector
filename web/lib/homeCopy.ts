@@ -60,7 +60,7 @@ export const HOME = {
   /** The pun. It is the identity, so it sits right under the title. */
   tagline: `Seas the Booty.`,
   /** The opening paragraph, under the title. The most important words here. */
-  pitch: `I made a fishing game and it got a bit out of hand. There’s a whole sea to sail now, a crew to sign, and nine boss fights waiting at the end of it. Runs in a browser tab.`,
+  pitch: `Just a cozy fishing game. And a whole sea to explore.`,
 
   /** The main button, top of the page. */
   playButton: `Play free`,
@@ -75,46 +75,45 @@ export const HOME = {
   bands: [
     {
       eyebrow: `The sea`,
-      title: `There’s no zone menu. Just the sea.`,
+      title: `An open-world fishing RPG.`,
       body: [
-        `The whole chart is one piece of water and it starts out dark. You clear the fog by sailing into it. And you cast wherever you happen to be, so how deep you’re fishing is really just how far out you were willing to go.`,
-        `There are 27 isles to find out there, plus a fair amount of buried stuff that isn’t drawn on the map at all. Night falls every 48 minutes. And 9 regulars work that water who’ll start holding things back for you once you’ve brought them enough of what they’re after.`,
+        `An open sea filled with hundreds of species of fish to catch. Upgrade your boat, rods, and other fishing equipment to catch them all. You might need the best gear to catch the rarest fish out there!`,
+        `There are hidden treasures and unique islands to explore. Meet other captains who may have tasks for you. Befriend them and maybe you might unlock other hidden treasures.`,
       ],
       art: `sea`,
     },
     {
-      eyebrow: `The cast`,
-      title: `A needle spins and you get about a second`,
+      eyebrow: `Skill-based fun`,
+      title: `It's all about timing.`,
       body: [
-        `Hit the band clean and you keep the fish and the streak. Miss it and the streak’s gone. The window gets smaller the deeper you fish, which is sort of the whole problem.`,
-        `152 species across 5 zones. Six of them are giants down in the Ancient Deep that you can’t sell at all. You just keep those.`,
+        `Fishing relies on timing your catch. It's easy to land a fish, not so easy to perfectly land a fish. And even harder to repeatedly catch a fish perfectly. This game rewards skill, so see if you have what it takes to keep your streaks going!`,
       ],
       art: `cast`,
     },
     {
-      eyebrow: `The fight`,
-      title: `And then there’s the part with cannons`,
+      eyebrow: `Not just fishing`,
+      title: `Battle it out in Expeditions`,
       body: [
-        `Turn-based ship fights, and you aim every shot yourself on a moving bar. Four chapters. It opens on coastal pirates and ends somewhere a lot worse, and then there’s a finale I’m pretty proud of that you fight on the fishing dial.`,
-        `Your crew are sea creatures you sign one at a time and level up to 100. If one dies out there it’s gone for good. That part isn’t going to change.`,
+        `Collect a crew. Upgrade your ships and search for rare, powerful items.`,
+        `Level up your crew for unique, powerful abilities. Customize them with special skins, and enjoy the turn-based strategic combat. Four campaign chapters, and tons of endgame content to enjoy after you finish the main campaign!`,
       ],
       art: `fight`,
     },
     {
       eyebrow: `The cost`,
-      title: `It’s free, and I’m not going to nickel and dime you`,
+      title: `Free to play!`,
       body: [
-        `Everything in here can be earned by playing. No seasons, nothing expires, and nothing you buy makes a fish bite faster or a shot hit harder. I really didn’t want this to be one of those games.`,
-        `Captain is $9.99 one time, not a subscription, and it opens the deep end - the Ancient Deep, the last chapter, the harder gauntlets. The first three chapters are a full game on their own and they cost nothing.`,
+        `You can play through most of the game for absolutely no cost.`,
+        `Becoming a captain unlocks a few special perks, and it opens the endgame, but there's no pressure to get this unless you feel like this game is something you've already enjoyed playing. And gems, our premium currency, can easily be earned through normal play. If you want to support the game in another way, they are also available for purchase, for cosmetic upgrades!`,
       ],
       art: null,
     },
   ] as HomeBand[],
 
   /** The button at the bottom, for whoever read the whole thing. */
-  closingButton: `Make a captain`,
+  closingButton: `Become a captain!`,
   /** And the last line on the page. */
-  closingNote: `Still in open beta, so expect the odd rough edge. No password to remember either, I just email you a link.`,
+  closingNote: `Still in open beta, but ready to release very soon!`,
 }
 
 /**
