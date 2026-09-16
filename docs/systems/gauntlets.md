@@ -105,3 +105,11 @@ rate an honest run would be. The per-fight checkpoint is still the real fix.
 
 - [raids-campaign.md](raids-campaign.md) — same combat engine, same laws.
 - [crew.md](crew.md) — party lock, hardcore death. [forge.md](forge.md) — loot feeds it.
+
+### The arena renders at 1.5x (2026-09-16)
+
+`GauntletArena.tsx` capped `resolution` at 1.25, which on a 2x desktop monitor drew the water
+at five eighths of native and upscaled it, visibly soft under the crisp DOM fight. It is 1.5
+now. Not the chart's 2, on purpose: the file's own note records that the aim bar's compositor
+animations are what a saturated GPU stutters, and the arena is scenery behind a fight. If the
+fight stutters on a weak GPU after this, 1.25 is the number to go back to.

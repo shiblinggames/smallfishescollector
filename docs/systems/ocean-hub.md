@@ -3039,7 +3039,10 @@ deliberately left in — that is what keeps it *on* the boat.
 - **The desktop action pill carries a Space keycap** in `.key-hint`, the chip the stylesheet had
   built for exactly this and nothing used. The first voyage already says "clicking, or with
   WASD", so the chip is a reminder rather than the only teaching.
-- **Still phone-shaped on a monitor, deliberately untouched until looked at:** the action pill and
-  the "Which one" chooser sit at `HELM_BOTTOM + HELM_D + 10` (214px) off the bottom for a helm
-  that is `display: none` on a fine pointer, and the compass reserves the same band via `myBot`.
-  Moving them is a visual call.
+- **On a fine pointer the bottom HUD comes down.** The action pill and the "Which one" chooser
+  sat at `HELM_BOTTOM + HELM_D + 10` (214px) off the bottom, past the arc of a helm that is
+  `display: none` on a mouse. They sit at `HELM_BOTTOM + 10` there now, which is where the cast
+  button lands when you fish, so the pill and the cast row are one spot. The compass's bottom
+  band (`myBot`) is 160 on a fine pointer, 214 on a thumb; `Compass` takes a `fine` prop for it.
+- **Selection:** `.sea-surface` keeps `user-select: none` on a mouse (the global rule is
+  coarse-pointer only now, see platform.md), so a drag never paints a selection.

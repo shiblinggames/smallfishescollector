@@ -198,3 +198,23 @@ never a filter, which would make the element the containing block for fixed desc
 `:focus-visible` ring on every control at zero specificity, and `button:not(:disabled)` is a
 pointer. The phone tab bar reserves its 64px through `--tabbar-safe`, which is 0px from 640px up;
 never hard-code `64px + env(safe-area-inset-bottom)` for it again.
+
+## Desktop columns and type: the dials (2026-09-16)
+
+Every desktop-only layout decision is one number in `web/app/globals.css`, so it can be turned
+after looking rather than rebuilt:
+
+- **`--game-col`**: 480px on a phone (unchanged), 720px from 900px up. The tavern games, trivia
+  rooms, chart-room puzzles and the two charting puzzles were seventeen separate `maxWidth: 480`
+  literals; they read the token now. The leaderboard and the badges page take
+  `max(var(--modal-w), var(--game-col))` so phones keep the modal width; the world chart is the
+  token + 120px. **`--felt-col`** is blackjack's own (420 / 540). Boards that size themselves in
+  pixels (the hold, the minefield's 44px tiles) stay their size and centre; fluid grids (the
+  trivia board's four tiles, the chart room's 2x2) grow.
+- **Root `font-size: 17px`** from 900px up on a fine pointer. There were 1,134 font sizes under
+  12px in player-facing components, tuned on a phone held close, and they cannot be re-tuned one
+  at a time blind; nearly everything is in rem, so the root is the one dial that reaches all of
+  them. It is browser zoom at 106% for the whole game. Delete the block to revert.
+- **The profile stays 560** on purpose: `app/(app)/u/[username]/ProfileClient.tsx` records the
+  seam a wider column put under the captain's name.
+- The sea HUD, the arena's pixel density and selection are in ocean-hub.md and gauntlets.md.
