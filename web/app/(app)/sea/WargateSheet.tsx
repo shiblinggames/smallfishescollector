@@ -157,7 +157,15 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
                 <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: 'rgba(196,169,106,0.85)', paddingBottom: 6, marginBottom: 10, borderBottom: '1px solid rgba(196,169,106,0.18)' }}>
                   Chapter {['I', 'II', 'III', 'IV', 'V'][bay.chapter - 1] ?? bay.chapter} · {bay.name}
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: items.length === 1 ? 'minmax(0, 72%)' : '1fr 1fr', justifyContent: 'center', gap: 10 }}>
+                {/* ── AS MANY ACROSS AS FIT ─────────────────────────────
+                    Two columns, always, in a 720px sheet made each portrait
+                    355px wide and 390 tall, so a monitor showed four bosses
+                    and a scroll. A chapter has at most four entries, and at
+                    170px a card is still a face and a name, so on a wide sheet
+                    every chapter is one row. The 45% floor keeps a phone at
+                    two across, exactly as it was. A chapter with one boss
+                    stays centred, capped so it is not a poster. */}
+                <div style={{ display: 'grid', gridTemplateColumns: items.length === 1 ? 'minmax(0, min(72%, 240px))' : 'repeat(auto-fill, minmax(min(170px, 45%), 1fr))', justifyContent: 'center', gap: 10 }}>
                   {items.map(({ e, v }) => {
                     const cleared = v.status === 'cleared'
                     const art = v.node.image ?? null
