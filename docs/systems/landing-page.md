@@ -49,6 +49,20 @@ Notes on capturing:
 - **Nothing personal in shot.** The captures are public. Watch the corner for a
   real username, and for anything from a friend list.
 
+## The phone strip (2026-09-16)
+
+Three true phone captures sit in a row under the title, one line under each, the way an app
+store shows them. They are `HOME.strip` in `lib/homeCopy.ts` (file, caption, alt), and the page
+renders whichever of the files exist under `web/public/lp/`, so a missing one shrinks the row
+rather than leaving a hole. On a phone the row scrolls sideways with a snap.
+
+The three Kong shot on 2026-09-04: `online-fishing.jpg` (cropped above its bottom tab bar,
+which read Fishing / Expeditions / Badges / Profile, the retired hub), `online-saltroad.jpg` and
+`online-almanac.jpg`. Two carry details that have since changed and are worth a reshoot when
+convenient: the Salt Road shows Pell and Tam, now Matty and Dennis; the Almanac shows 128/146,
+and the count is 152. The sign-in door's hero slot shows the fishing capture in a phone frame
+until a wide desktop capture exists (`HERO.kind` in `SignInStage.tsx`).
+
 ## The trailer
 
 `TrailerFrame` takes either a hosted file or a YouTube id (set
