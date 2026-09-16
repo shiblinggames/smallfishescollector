@@ -124,7 +124,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
           the true center regardless of the link/balance widths. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <BackButton href="/tavern" label="Tavern" />
+          <BackButton href="/sea" label="The Sea" />
         </div>
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
           The Den

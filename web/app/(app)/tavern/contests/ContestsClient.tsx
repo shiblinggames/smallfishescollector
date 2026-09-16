@@ -32,9 +32,9 @@ export default function ContestsClient({ views }: { views: Record<string, Contes
     <div>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Link href="/tavern" className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#9a948a', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <Link href="/sea" className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#9a948a', display: 'flex', alignItems: 'center', gap: 5 }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          Tavern
+          The Sea
         </Link>
         <h1 className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#f0ece4' }}>Contests</h1>
         <span style={{ width: 56 }} />

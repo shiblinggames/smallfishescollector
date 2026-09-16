@@ -50,9 +50,9 @@ export default async function SocialPage() {
   return (
     <main className="min-h-screen pt-6">
       <div className="page-col mb-4 flex items-center justify-between gap-3">
-        <Link href="/tavern" className="font-karla font-600"
+        <Link href="/sea" className="font-karla font-600"
           style={{ fontSize: '0.7rem', color: '#7a7674', textDecoration: 'none' }}>
-          ← The Tavern
+          ← The Sea
         </Link>
         {profile?.username && (
           <Link href={`/u/${profile.username}`} className="font-karla font-600"

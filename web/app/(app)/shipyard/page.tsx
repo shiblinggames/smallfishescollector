@@ -17,6 +17,6 @@ export const metadata = { title: 'The Shipyard' }
 
 export default async function ShipyardPage() {
   const state = await shipyardState()
-  if ('error' in state) redirect('/tavern')
+  if ('error' in state) redirect('/sea')
   return <ShipyardClient {...state} />
 }
