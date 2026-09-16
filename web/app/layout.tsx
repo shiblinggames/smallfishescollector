@@ -56,19 +56,19 @@ export const metadata: Metadata = {
     default: 'Small Fishes: Seas the Booty',
     template: '%s · Small Fishes',
   },
-  description: 'A free browser game on an open sea. Sail a fogged chart, fish it with a needle and a shrinking window, sign a crew, and take a ship into nine boss fights.',
+  description: 'A fishing game that got a bit out of hand. Sail an open sea, catch 152 species, sign a crew, and take a ship into nine boss fights. Free, in your browser.',
   applicationName: 'Small Fishes',
   openGraph: {
     type: 'website',
     siteName: 'Small Fishes: Seas the Booty',
     title: 'Small Fishes: Seas the Booty',
-    description: 'A free browser game on an open sea. Sail a fogged chart, fish it with a needle and a shrinking window, sign a crew, and take a ship into nine boss fights.',
+    description: 'A fishing game that got a bit out of hand. Sail an open sea, catch 152 species, sign a crew, and take a ship into nine boss fights. Free, in your browser.',
     url: '/',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Small Fishes: Seas the Booty',
-    description: 'A free browser game on an open sea. Sail a fogged chart, fish it with a needle and a shrinking window, sign a crew, and take a ship into nine boss fights.',
+    description: 'A fishing game that got a bit out of hand. Sail an open sea, catch 152 species, sign a crew, and take a ship into nine boss fights. Free, in your browser.',
   },
 }
 

@@ -9,7 +9,7 @@ import TrailerFrame, { type Trailer } from './TrailerFrame'
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
   description:
-    'A free browser game on an open sea. Sail a fogged chart, fish it with a needle and a shrinking window, sign a crew, and take a ship into nine boss fights.',
+    'A fishing game that got a bit out of hand. Sail an open sea, catch 152 species, sign a crew, and take a ship into nine boss fights. Free, in your browser.',
 }
 
 /**
@@ -54,6 +54,25 @@ export const metadata: Metadata = {
  * That is deliberate and it is the same rule the sign-in door follows: NOTHING
  * GOES IN A SLOT UNTIL SOMETHING TRUE GOES IN IT. A stale screenshot is worse
  * than no screenshot, which is the whole reason this rewrite happened.
+ *
+ * ── AND IT IS IN HIS VOICE, NOT A TRAILER'S ─────────────────────────────────
+ *
+ * The first draft of this rewrite was written well and written by nobody. "Four
+ * chapters that open on coastal pirates and close somewhere considerably
+ * worse." Nice sentence. Not a sentence he would ever say, and this is a game
+ * made by one person whose whole advantage over a studio is that there is a
+ * person here.
+ *
+ * So the page is FIRST PERSON and it talks the way he talks to his testers on
+ * the Jira board: contractions, short uneven sentences, spaced hyphens, a
+ * numeral instead of a spelled-out number, the occasional aside. He owns things
+ * in the first person ("because of how I initially set up the sprites") and he
+ * volunteers what is still rough rather than hiding it, which is worth more on a
+ * landing page than any amount of polish. See the memory on his Jira tone.
+ *
+ * What did NOT come across from that voice: the hedging ("I believe this is
+ * fixed") belongs on a bug ticket and nowhere near a pitch, and the doubled
+ * exclamation marks read as manic at this size. Warmth, not volume.
  *
  * Stays a SERVER component: the logged-in redirect runs before anything
  * renders, so the arrival is a CSS keyframe rather than framer, and the file
@@ -250,8 +269,8 @@ export default async function HomePage() {
             fontSize: '1.08rem', lineHeight: 1.7, color: '#c3d6e2',
             margin: '1.5rem auto 0', maxWidth: 560,
           }}>
-            Sail an open sea in a browser tab. Fish it with a needle and a shrinking window, sign a
-            crew one at a time, and take a ship into the outfit that runs the sea floor.
+            I made a fishing game and it got a bit out of hand. There’s a whole sea to sail now, a
+            crew to sign, and nine boss fights waiting at the end of it. Runs in a browser tab.
           </p>
 
           {/* THE BUTTON, ABOVE THE FOLD, and pointed at the right door. It went
@@ -277,7 +296,7 @@ export default async function HomePage() {
             )}
           </div>
           <p className="font-karla" style={{ fontSize: '0.76rem', color: '#8fa3b5', marginTop: 14 }}>
-            In your browser. No download, no cost.{' '}
+            No download, no cost, no catch.{' '}
             <Link href="/login" style={{ color: '#9ec3d4', textDecoration: 'underline', textUnderlineOffset: 3 }}>
               Already sailing?
             </Link>
@@ -300,40 +319,40 @@ export default async function HomePage() {
               is what the game now is. */}
           <Band
             eyebrow="The sea"
-            title="One sea, fogged until you sail it"
+            title="There’s no zone menu. Just the sea."
             desktop={SHOTS.sea.desktop}
             phone={SHOTS.sea.phone}
             delay="0.24s"
           >
             <p style={{ margin: 0 }}>
-              There is no zone menu and no level select. The chart is one piece of water and it is
-              dark until your hull has been there, so how deep you fish is simply how far out you
-              were willing to go. Twenty seven isles are out there to find, buried caches that are
-              drawn on no map, and a day that turns to night every forty eight minutes.
+              The whole chart is one piece of water and it starts out dark. You clear the fog by
+              sailing into it. And you cast wherever you happen to be, so how deep you’re fishing is
+              really just how far out you were willing to go.
             </p>
             <p style={{ margin: '0.9rem 0 0' }}>
-              Nine regulars work that water. Bring them the fish they are after often enough and
-              they start keeping things back for you.
+              There are 27 isles to find out there, plus a fair amount of buried stuff that isn’t
+              drawn on the map at all. Night falls every 48 minutes. And 9 regulars work that water
+              who’ll start holding things back for you once you’ve brought them enough of what
+              they’re after.
             </p>
           </Band>
 
           {/* THEN THE CAST. The thing you do a thousand times. */}
           <Band
             eyebrow="The cast"
-            title="A needle turns, and a window opens"
+            title="A needle spins and you get about a second"
             desktop={SHOTS.cast.desktop}
             phone={SHOTS.cast.phone}
             flip
             delay="0.3s"
           >
             <p style={{ margin: 0 }}>
-              Hit the band clean and the fish is yours and the streak holds. Miss it and the streak
-              goes back to nothing. The window narrows the deeper you fish, and the deep does not
-              care that you were on a run.
+              Hit the band clean and you keep the fish and the streak. Miss it and the streak’s gone.
+              The window gets smaller the deeper you fish, which is sort of the whole problem.
             </p>
             <p style={{ margin: '0.9rem 0 0' }}>
-              More than 150 species across five zones, down to six giants in the Ancient Deep that
-              do not sell for a coin because nobody sensible would part with one.
+              152 species across 5 zones. Six of them are giants down in the Ancient Deep that you
+              can’t sell at all. You just keep those.
             </p>
           </Band>
 
@@ -342,19 +361,19 @@ export default async function HomePage() {
               into a features list. */}
           <Band
             eyebrow="The fight"
-            title="Nine bosses, and you aim every shot"
+            title="And then there’s the part with cannons"
             desktop={SHOTS.fight.desktop}
             phone={SHOTS.fight.phone}
             delay="0.36s"
           >
             <p style={{ margin: 0 }}>
-              Turn-based ship combat with an aim bar you have to time yourself. Four chapters that
-              open on coastal pirates and close somewhere considerably worse, and then a finale
-              fought on the fishing dial, which is the last place you would want to fight it.
+              Turn-based ship fights, and you aim every shot yourself on a moving bar. Four chapters.
+              It opens on coastal pirates and ends somewhere a lot worse, and then there’s a finale
+              I’m pretty proud of that you fight on the fishing dial.
             </p>
             <p style={{ margin: '0.9rem 0 0' }}>
-              Your crew are sea creatures you sign one at a time and take to level 100. If one dies
-              out there, it is dead. There is no bringing them back, and there never will be.
+              Your crew are sea creatures you sign one at a time and level up to 100. If one dies out
+              there it’s gone for good. That part isn’t going to change.
             </p>
           </Band>
 
@@ -363,20 +382,20 @@ export default async function HomePage() {
               a game you assume is selling advantages. */}
           <Band
             eyebrow="The cost"
-            title="Free, and nothing you buy makes a fish bite"
+            title="It’s free, and I’m not going to nickel and dime you"
             desktop={null}
             phone={null}
             delay="0.42s"
           >
             <p style={{ margin: 0 }}>
-              Everything in the game can be earned by playing it. There are no seasons, nothing
-              expires, and no purchase anywhere changes a catch rate, a payout or a number in a
-              fight. That is a rule, not a phase.
+              Everything in here can be earned by playing. No seasons, nothing expires, and nothing
+              you buy makes a fish bite faster or a shot hit harder. I really didn’t want this to be
+              one of those games.
             </p>
             <p style={{ margin: '0.9rem 0 0' }}>
-              Captain is one payment of $9.99, once, and it is yours for good. It opens the deep
-              end: the Ancient Deep, the last chapter, and the harder gauntlets. The first three
-              chapters are a whole game on their own and they cost nothing.
+              Captain is $9.99 one time, not a subscription, and it opens the deep end - the Ancient
+              Deep, the last chapter, the harder gauntlets. The first three chapters are a full game
+              on their own and they cost nothing.
             </p>
           </Band>
         </div>
@@ -392,7 +411,8 @@ export default async function HomePage() {
             Make a captain
           </Link>
           <p className="font-karla" style={{ fontSize: '0.76rem', color: '#7d90a2', marginTop: 14 }}>
-            Open beta. Free to play. No password to remember.
+            Still in open beta, so expect the odd rough edge. No password to remember either, I just
+            email you a link.
           </p>
         </div>
 

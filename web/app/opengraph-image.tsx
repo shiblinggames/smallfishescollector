@@ -26,7 +26,7 @@ import { join } from 'node:path'
  * and no network, so both faces and the plate are read off disk and inlined.
  * The budget is 500KB for the lot and this comes in around 140KB.
  */
-export const alt = 'Small Fishes: Seas the Booty. A free browser game on an open sea.'
+export const alt = 'Small Fishes: Seas the Booty. A fishing game that got a bit out of hand.'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -100,7 +100,7 @@ export default async function OpengraphImage() {
               maxWidth: 640,
             }}
           >
-            Sail an open sea, fish it, and sign a crew.
+            A fishing game that got a bit out of hand.
           </div>
           <div style={{ fontFamily: 'Karla', fontSize: 22, color: '#89a2b5', marginTop: 10 }}>
             Free in your browser. No download.

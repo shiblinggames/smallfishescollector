@@ -100,6 +100,42 @@ open it. Before September 2026 there was no image at all and the description was
 `Redeem your pack code and collect all 36 digital fish cards`, which is an
 economy the game retired months ago.
 
+## The voice
+
+**The page is first person and it is Kong's voice, not a trailer's.** Settled
+2026-09-16, after a first draft came back written well and written by nobody:
+"Four chapters that open on coastal pirates and close somewhere considerably
+worse." Good sentence. Not one he would ever say, and the whole advantage a game
+made by one person has over a studio is that there is a person there.
+
+The reference is how he writes to testers on the Jira board (see the Jira
+comment tone memory, which quotes him at length). What carries over:
+
+- **First person, and he owns things in it.** "I made a fishing game and it got
+  a bit out of hand." "There's a finale I'm pretty proud of." Not "the game
+  features".
+- **Contractions everywhere, and uneven rhythm.** Fragments are fine. A run of
+  evenly-weighted declarative sentences is the thing that reads as generated even
+  with every other tell removed.
+- **Numerals, casually.** "27 isles", "every 48 minutes", not "twenty seven".
+- **Spaced hyphens ( - ) for an aside.** Never em-dashes, which is the house
+  rule anyway.
+- **He volunteers what is still rough.** "Still in open beta, so expect the odd
+  rough edge." That is worth more on a landing page than polish.
+- **Plain everyday words.** "you just keep those", "sort of the whole problem".
+
+What does NOT carry over from the Jira voice:
+
+- **The hedging.** "I believe this is fixed" is right on a bug ticket and wrong
+  in a pitch. Nothing on the page hedges.
+- **The doubled exclamation marks and the emoji.** "Ty!!" and the P.S. hearts
+  are right in a reply to a friend and read as manic at landing-page size.
+  Warmth, not volume.
+- **The @mention opener and the sign-off.** There is nobody to address.
+
+If the copy is ever rewritten, rewrite it out loud. If it is not a sentence he
+would say to somebody at a bar, it does not go on the page.
+
 ## The copy
 
 Every number on the page is checked against the code, and the ones that were
