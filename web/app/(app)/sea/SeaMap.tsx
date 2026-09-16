@@ -17,6 +17,7 @@
 // animates on its own timer, because that is how a scene ends up feeling like
 // several things happening near each other.
 
+import { openMembership } from '@/components/MembershipModal'
 import { CAPTAIN_WATER, CAPTAIN_WATER_SAYS } from '@/lib/captainWater'
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
@@ -6256,6 +6257,16 @@ export default function SeaMap({
             : liveCleared.includes('the_throne')
               ? CAPTAIN_WATER_SAYS.dons
               : 'Something is turning down there. Finish the campaign to learn what it is.'
+          // AND A HANDLE ON THE DOOR. With the Throne cleared the only thing
+          // between this captain and the descent is the register, so the helm
+          // offers the card here rather than a sail back to Kip.
+          if (m.id === 'don' && liveCleared.includes('the_throne')) {
+            reach.push({
+              id: 'mael',
+              label: 'Become a Captain',
+              run: () => { vibrate(10); openMembership() },
+            })
+          }
         } else {
           reach.push({
             id: 'mael',
@@ -16305,6 +16316,25 @@ function WaterBanner({ place, locked, lowered, lockLine }: {
               }}>
               {lockLine(shown)}
             </motion.p>
+          )}
+          {/* THE DOOR HAS A HANDLE. When the band is Captain's water the
+              banner is the moment somebody is standing at it wanting in, and
+              a sail back to the Mainland to hear Kip say so is friction with
+              a price on it. The card is one call away; Kip stays for anybody
+              who would rather hear it from him. data-no-steer, because the
+              chart under this steers on pointerdown. */}
+          {locked && fresh && lockLine(shown) === CAPTAIN_WATER && (
+            <motion.button type="button" data-no-steer
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); vibrate(10); openMembership() }}
+              className="font-cinzel font-700"
+              style={{
+                marginTop: 10, padding: '0.5rem 1.1rem', borderRadius: 999, cursor: 'pointer',
+                fontSize: '0.8rem', color: '#f4ecd8',
+                background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.55)',
+                boxShadow: '0 4px 18px rgba(0,0,0,0.5)', pointerEvents: 'auto',
+              }}>Become a Captain</motion.button>
           )}
         </motion.div>
       )}

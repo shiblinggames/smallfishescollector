@@ -20,6 +20,8 @@
 // (fortune moves them, so they are computed against the crew you actually have)
 // and the drop's own detail modal.
 
+import BecomeCaptainButton from '@/components/BecomeCaptainButton'
+import { CAPTAIN_WATER } from '@/lib/captainWater'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
@@ -575,9 +577,14 @@ export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidIt
             </div>
           )}
           {locked ? (
-            <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#8a857c', display: 'flex', alignItems: 'center', gap: 7, padding: '0.4rem 0' }}>
-              <IconLock size={15} /> {boss.lockReason ?? 'Locked'}
-            </p>
+            <>
+              <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: boss.lockReason === CAPTAIN_WATER ? '#f0c040' : '#8a857c', display: 'flex', alignItems: 'center', gap: 7, padding: '0.4rem 0' }}>
+                <IconLock size={15} /> {boss.lockReason ?? 'Locked'}
+              </p>
+              {/* THE DOOR HAS A HANDLE. Captain's water is the one lock on this
+                  card a press can open, so it gets the card's own button. */}
+              {boss.lockReason === CAPTAIN_WATER && <BecomeCaptainButton full />}
+            </>
           ) : (
             <button type="button" className="tap" disabled={enterBlocked} onClick={doEnter}
               style={{ width: '100%', borderRadius: 13, padding: '0.9rem 0', textAlign: 'center', lineHeight: 1.15, cursor: enterBlocked ? 'default' : 'pointer',
