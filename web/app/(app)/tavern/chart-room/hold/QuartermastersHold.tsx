@@ -272,7 +272,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
   const selMeta = HOLD_META[selected]
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+    <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
       <ChartingNav title="The Hold" backHref="/tavern/chart-room" backLabel="Charting" points={puzzlePoints} />
 
       {/* Difficulty picker — all four holds open, tap to switch. No lock. */}

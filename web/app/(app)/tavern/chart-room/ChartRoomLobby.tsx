@@ -38,7 +38,7 @@ export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchSt
   hasSeenGuide?: boolean
 }) {
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+    <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       <ChartingNav title="Charting" backHref="/tavern" backLabel="Tavern" points={puzzlePoints} />
 
       {/* The World Chart — the collectible the puzzles feed toward. */}

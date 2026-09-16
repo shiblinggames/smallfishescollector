@@ -46,7 +46,7 @@ export default function CapstanGame({ initial, parlorPoints }: { initial: Capsta
   const update = (p: CapstanPuzzleClient) => setPuzzles(prev => prev.map(x => (x.index === p.index ? p : x)))
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+    <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* On the main Capstan page the back exits to the Parlor; inside a puzzle

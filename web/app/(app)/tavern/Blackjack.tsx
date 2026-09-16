@@ -1764,7 +1764,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   }, [chips, wager])
 
   return (
-    <div style={{ width: '100%', maxWidth: 420, margin: '0 auto' }}>
+    <div style={{ width: '100%', maxWidth: 'var(--felt-col)', margin: '0 auto' }}>
     {/* Shared Den back-nav (uniform across the three games). */}
     <div style={{ marginBottom: '0.8rem' }}>
       <DenNav title="Blackjack" />

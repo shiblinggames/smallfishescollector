@@ -383,7 +383,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   }
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+    <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
       <ChartingNav title="Treasure Match" backHref="/tavern/chart-room" backLabel="Charting" points={puzzlePoints} />
 
       {/* Bold HUD — Moves + Score. Solid dark panels so the readout stays

@@ -175,7 +175,7 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
   const showSummary = status !== 'active' && !result
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+    <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       {/* Header row, same skeleton as the board. Side rails get equal
           flex so the title sits at the true center. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -221,7 +221,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
   const boardW = `min(95vw, ${cols * 44}px)`
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+    <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
       <ChartingNav title="The Minefield" backHref="/tavern/chart-room" backLabel="Charting" points={puzzlePoints} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4 }}>
         <button onClick={() => { haptic(8); setHelp(true) }} className="font-karla font-700 tap" aria-label="How to play"

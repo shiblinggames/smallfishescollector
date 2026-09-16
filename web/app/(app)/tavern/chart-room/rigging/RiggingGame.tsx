@@ -177,7 +177,7 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
   const cy = (cell: number) => Math.floor(cell / cols) + 0.5
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+    <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
       <ChartingNav title="Lay the Rigging" backHref="/tavern/chart-room" backLabel="Charting" points={puzzlePoints} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4 }}>
         <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: cleared ? GOLD : '#8f8672', whiteSpace: 'nowrap' }}>

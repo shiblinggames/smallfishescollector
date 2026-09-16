@@ -90,7 +90,7 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
 
   return (
     <main className="min-h-screen" style={{ background: 'radial-gradient(ellipse at 50% -10%, #16202e 0%, #0a0f16 60%)' }}>
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '1.5rem 0.9rem calc(env(safe-area-inset-bottom) + 5rem)' }}>
+      <div style={{ maxWidth: 'calc(var(--game-col) + 120px)', margin: '0 auto', padding: '1.5rem 0.9rem calc(env(safe-area-inset-bottom) + 5rem)' }}>
 
         <div style={{ marginBottom: 14 }}>
           <ChartingNav title="The World Chart" backHref="/tavern/chart-room" backLabel="Charting" points={points} />

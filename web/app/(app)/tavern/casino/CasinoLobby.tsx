@@ -119,7 +119,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
   }
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+    <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       {/* Header row. Side rails get equal flex so the title sits at
           the true center regardless of the link/balance widths. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

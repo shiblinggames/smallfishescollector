@@ -3277,6 +3277,20 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
    and so a change to the bar's padding has one place to follow.
    Zero above the sm breakpoint, where the bar is not rendered at all. */
 :root { --tabbar-safe: 0px; }
+
+/* ── THE GAME COLUMN ──
+   The tavern games, the trivia rooms, the chart room and the two charting
+   puzzles were each a `maxWidth: 480` literal in their own file: a phone
+   column, repeated seventeen times, sitting in the middle of a 1440px
+   monitor with 60% of the screen empty either side. One token now. 480 on a
+   phone, exactly as it was; 720 from 900px up, which is enough for the chart
+   room's 2x2 of puzzle cards and the trivia board's four tiles to read as a
+   board rather than a strip, and one number to turn after looking at it.
+   --felt-col is the blackjack table's own, narrower because a felt is. */
+:root { --game-col: 480px; --felt-col: 420px; }
+@media (min-width: 900px) {
+  :root { --game-col: 720px; --felt-col: 540px; }
+}
 @media (max-width: 639px) {
   :root { --tabbar-safe: calc(64px + env(safe-area-inset-bottom, 0px)); }
 }
