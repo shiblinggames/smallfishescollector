@@ -146,15 +146,12 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
               borderRadius: 18, padding: '1.25rem 1.15rem 1.15rem',
               boxShadow: '0 22px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,240,200,0.06)',
             }}>
+              {/* The title and then the form. There was a line under the title
+                  explaining the magic link; the form's own button says it. */}
               <p className="font-cinzel font-700" style={{
-                fontSize: '1rem', color: '#f0ede8', margin: '0 0 2px',
+                fontSize: '1rem', color: '#f0ede8', margin: '0 0 0.9rem',
               }}>
                 {isNew ? 'Come aboard' : 'Welcome back, cap’n'}
-              </p>
-              <p className="font-karla" style={{
-                fontSize: '0.78rem', color: '#8fa3b5', margin: '0 0 1rem', lineHeight: 1.5,
-              }}>
-                No password to remember. We send a link, you press it, you are in.
               </p>
 
               <Suspense fallback={null}>
@@ -162,13 +159,16 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
               </Suspense>
             </div>
 
-            <p className="font-karla" style={{
-              fontSize: '0.72rem', color: '#7d93a6', marginTop: 14, maxWidth: 420, lineHeight: 1.6,
-            }}>
-              {isNew
-                ? 'Nothing to install, nothing to pay. Everything in the game can be earned by playing it.'
-                : 'New here? The same link makes you a captain. There is no separate sign up.'}
-            </p>
+            {/* Only the register door carries a line under the card. The
+                sign-in door used to explain that the same link signs you up,
+                which nobody coming back needs to read. */}
+            {isNew && (
+              <p className="font-karla" style={{
+                fontSize: '0.72rem', color: '#7d93a6', marginTop: 14, maxWidth: 420, lineHeight: 1.6,
+              }}>
+                Nothing to install, nothing to pay. Everything in the game can be earned by playing it.
+              </p>
+            )}
           </div>
 
           {/* ── AND THE SEA IT IS A DOOR TO ─────────────────────────────
