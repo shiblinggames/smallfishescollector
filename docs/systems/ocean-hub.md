@@ -1998,7 +1998,7 @@ The fallback chart (`?gpu=0`) still paints the cell field flat; it is the fallba
 
 ### The compass is a course, not a legend (2026-09-16)
 
-Five changes to the edge marks, and the role ranking, the five-slot cap and the edge placement
+Four changes to the edge marks, and the role ranking, the five-slot cap and the edge placement
 were left exactly as they were, because they are why it reads at all.
 
 - **Press a mark to sail to it.** Same road the campaign draws to its next stop, same fade; the
@@ -2010,9 +2010,8 @@ were left exactly as they were, because they are why it reads at all.
 - **Time, not metres.** A sailing time at the hull's full speed (`world / (SPEED * hullSpeed)`),
   which shortens with a hull upgrade.
 - **A dim band edge says why.** The level, or "Captain's water" in gold.
-- **A wake trail.** The last sixty seconds of the hull's track as a fading line on the water,
-  drawn by the renderer under the hulls; a jump over 1,500px starts a fresh trail. The one
-  heading the sea can give a captain in a bay with no coast.
+- A wake trail (the last minute of the hull's track, fading) was built the same day and
+  REMOVED on sight: "I don't like the wake trail." Do not re-propose.
 
 ### One chart at the helm (2026-09-16)
 
