@@ -4219,6 +4219,23 @@ export default function SeaMap({
       setHeading(h => (h && h.to.x === p.x && h.to.y === p.y ? null : h))
     }, HEADING_MS)
   }, [])
+  /**
+   * ── PRESS A MARK, SAIL TO IT ──────────────────────────────────────────
+   *
+   * The compass was a legend: five headings you then had to steer yourself.
+   * A mark is a course now. Same road the campaign draws to its next stop,
+   * same fade, and the helm turns toward it the way a tap on open water does.
+   */
+  const goTo = useCallback((x: number, y: number) => {
+    vibrate(8)
+    target.current = { x, y }
+    wayGoal.current = { x, y, r: 240 }
+    setHeading({ from: { ...pos.current }, to: { x, y }, key: Date.now() })
+    window.setTimeout(() => {
+      if (wayGoal.current?.x === x && wayGoal.current?.y === y) wayGoal.current = null
+      setHeading(h => (h && h.to.x === x && h.to.y === y ? null : h))
+    }, HEADING_MS)
+  }, [])
   /** The ship screen, opened over the water. 'ship' from the Gunwharf's
    *  "Manage her", 'forge' from mooring at the Forge island. Null is shut. */
   // ── A DOOR NAMED IN THE URL ───────────────────────────────────────────
@@ -4990,12 +5007,16 @@ export default function SeaMap({
    * time a panel happens to close.
    */
   const [readyFolk, setReadyFolk] = useState<{ folkId: string; short: string; fishName: string }[]>([])
+  /** Regulars you know who have not had today's word yet. The compass wears
+   *  it as amber, the same amber the discs use for "something waiting". */
+  const [wordFolk, setWordFolk] = useState<Set<string>>(() => new Set())
   const refreshMet = useCallback(() => {
     void folkState().then(rows => {
       setMetFolk(new Set(rows.filter(r => r.points > 0).map(r => r.folkId)))
       setReadyFolk(rows
         .filter(r => r.wantReady && r.want)
         .map(r => ({ folkId: r.folkId, short: folkById(r.folkId)?.short ?? r.folkId, fishName: r.want!.name })))
+      setWordFolk(new Set(rows.filter(r => r.points > 0 && !r.chattedToday).map(r => r.folkId)))
     }).catch(() => {})
   }, [])
   useEffect(() => { refreshMet() }, [refreshMet])
@@ -5409,6 +5430,14 @@ export default function SeaMap({
 
   const yoon = useMemo(() => yoonTrader(), [])
   /** Every regular with a place on the chart, and whether you know them. */
+  /** What a met regular has for you, in the compass's own words. A request
+   *  you can settle outranks a word, and either is why the mark goes amber. */
+  const waitFor = useCallback((id: string): string | undefined => {
+    const rd = readyFolk.find(x => x.folkId === id)
+    if (rd) return `waiting on that ${rd.fishName}`
+    if (wordFolk.has(id)) return 'has a word'
+    return undefined
+  }, [readyFolk, wordFolk])
   const regulars = useMemo<CompassRegular[]>(() => [
     ...SOCIALS.map(r => {
       // The live boat, off the same `socials` list the chart draws from, so the
@@ -5417,15 +5446,17 @@ export default function SeaMap({
       return {
         id: r.folkId, name: r.name, zoneId: r.zoneId, x: r.x, y: r.y,
         met: metFolk.has(r.folkId),
+        waiting: waitFor(r.folkId),
         at: t ? () => traderPos(t, Date.now() / 1000) : undefined,
       }
     }),
     {
       id: 'yoon', name: yoon.name, zoneId: 'ancient_deep', x: yoon.x, y: yoon.y,
       met: metFolk.has('yoon'),
+      waiting: waitFor('yoon'),
       at: () => traderPos(yoon, Date.now() / 1000),
     },
-  ], [metFolk, yoon, socials])
+  ], [metFolk, yoon, socials, waitFor])
   useEffect(() => { allTradersRef.current = [yoon, smuggler, ...residents, ...socials, ...traders] }, [yoon, smuggler, residents, socials, traders])
 
   /**
@@ -11226,6 +11257,7 @@ hullRef={hullRefFor(t.key)} />
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!hudOff && (
         <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends} regulars={regulars}
+          hullSpeed={hullSpeed} lockLine={lockLine} onGo={goTo}
           finn={finnBearing}
           // WHICH SEA'S HEADINGS TO GIVE — see the note on the prop. Past the
           // rim the harbour is behind you and the bays are the whole world.
@@ -16449,6 +16481,8 @@ const COMPASS_MAX = 5
 /** A regular with a place on the chart, and whether this captain knows them. */
 type CompassRegular = {
   id: string; name: string; zoneId: string; x: number; y: number; met: boolean
+  /** Why this regular is worth sailing to right now, or nothing. */
+  waiting?: string
   /**
    * WHERE THEY ACTUALLY ARE, asked at draw time.
    *
@@ -16464,7 +16498,21 @@ type CompassRegular = {
  *  was 96) let two centres pass while the words lay on each other. */
 const COMPASS_KEEP = { x: 120, y: 42 }
 
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next, side }: {
+/** A sailing time, from a distance and the hull. "1,340m" on a chart with no
+ *  scale means nothing; "40s" does, and it gets shorter when the hull does. */
+function fmtSail(seconds: number): string {
+  const s = Math.max(1, Math.round(seconds))
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60), r = s % 60
+  return r ? `${m}m ${r}s` : `${m}m`
+}
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next, side, hullSpeed, lockLine, onGo }: {
+  /** Full-sail speed multiplier for this hull, for the sailing time. */
+  hullSpeed: number
+  /** Why a band is shut, in the words the lock wears everywhere else. */
+  lockLine: (p: Place) => string
+  /** Set a course for a mark's world position. */
+  onGo: (x: number, y: number) => void
   /**
    * ── WHICH HALF OF THE GAME YOU ARE SAILING ──────────────────────────────
    *
@@ -16595,6 +16643,8 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
 
   type Mark = {
     id: string; name: string; dim: boolean; dist: boolean
+    /** Why a dim mark is dim, printed under it: a level, or Captain's water. */
+    why?: string
     /** Somebody, not somewhere. Drawn as a mark, never as a name — see below. */
     mystery?: boolean
     /** Overrides the plate's colour. Only Finn uses it, and only to say whether
@@ -16797,7 +16847,14 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
       // now, and an arrow aimed at where somebody moored is an arrow aimed at
       // empty water.
       const at = r.at?.() ?? { x: r.x, y: r.y }
-      marks.push({ id: `folk:${r.id}`, name: r.name, dim: false, dist: true, ...project(at.x, at.y) })
+      // AMBER WHEN THEY HAVE SOMETHING FOR YOU, and it says what. A request
+      // you can settle breathes like a finished job of Finn's; a word does not.
+      marks.push({
+        id: `folk:${r.id}`, name: r.waiting ? `${r.name} · ${r.waiting}` : r.name, dim: false, dist: true,
+        accent: r.waiting ? '#f0c040' : undefined,
+        urgent: !!r.waiting && r.waiting.startsWith('waiting'),
+        ...project(at.x, at.y),
+      })
     }
   }
 
@@ -16821,8 +16878,13 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
   for (const [idx, edge] of [[outIdx, 'inner'], [backIdx, 'outer']] as const) {
     const w = idx >= 0 ? waters[idx] : undefined
     if (!w) continue
+    // A DIM MARK SAYS WHY. "The Deep, dim" left a captain to sail there to
+    // find out; the level or the register is one line under the name.
+    const shut = locked(w)
     marks.push({
-      id: w.id, name: w.name, dim: locked(w), dist: false,
+      id: w.id, name: w.name, dim: shut, dist: false,
+      why: shut ? lockLine(w) : undefined,
+      accent: shut && lockLine(w) === CAPTAIN_WATER ? '#f0c040' : undefined,
       ...edgeAt((edge === 'inner' ? w.inner : w.outer) as number),
     })
   }
@@ -16875,12 +16937,22 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
         // buyer. The band edges do not: "the Deep, 180m" invites you to read it
         // as a place at a distance when it is a boundary you cross.
         const lead = m.dist
+        // Where the mark points, back in world units: its screen offset is
+        // the projection of (target - here), so undoing it gives the target.
+        const tx = here.x + m.sx / z
+        const ty = here.y + m.sy / (GROUND * z)
         return (
-          <div key={m.id} aria-hidden style={{
+          <div key={m.id} role="button" tabIndex={0} aria-label={`Sail to ${m.name || 'the mark'}`} data-no-steer
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); onGo(tx, ty) }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(tx, ty) } }}
+            style={{
             position: 'absolute', left: '50%', top: '50%', zIndex: Z.compass,
             transform: `translate(${x}px, ${y}px) translate(-50%, -50%)`,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-            pointerEvents: 'none',
+            // A COURSE, NOT A LEGEND. The mark is pressable; it used to be
+            // pointer-events none, five headings you then steered yourself.
+            pointerEvents: 'auto', cursor: 'pointer', padding: '6px 8px', touchAction: 'manipulation',
           }}>
             <span style={{
               width: 0, height: 0,
@@ -16914,12 +16986,23 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
                 textShadow: '0 1px 6px rgba(0,0,0,0.9)',
               }}>{m.name}</span>
             )}
+            {/* TIME, NOT METRES. The chart has no scale, so a distance is a
+                number with no feel to it; a sailing time at this hull's full
+                speed is one a captain can weigh, and it shortens with the
+                hull, which is a quiet reward for the upgrade. */}
             {lead && (
               <span className="font-karla font-700" style={{
                 fontSize: '0.66rem', marginTop: -1,
                 color: `rgba(190,214,228,${dim ? 0.3 : 0.6})`,
                 textShadow: '0 1px 6px rgba(0,0,0,0.9)',
-              }}>{Math.round(m.world / 10)}m</span>
+              }}>{fmtSail(m.world / (SPEED * Math.max(0.2, hullSpeed)))}</span>
+            )}
+            {!lead && m.why && (
+              <span className="font-karla font-700" style={{
+                fontSize: '0.6rem', marginTop: -1, whiteSpace: 'nowrap',
+                color: m.accent ?? 'rgba(206,152,152,0.7)',
+                textShadow: '0 1px 6px rgba(0,0,0,0.9)',
+              }}>{m.why}</span>
             )}
           </div>
         )

@@ -1996,6 +1996,24 @@ on. The front gains and loses puffs one at a time, at the places that actually c
 
 The fallback chart (`?gpu=0`) still paints the cell field flat; it is the fallback.
 
+### The compass is a course, not a legend (2026-09-16)
+
+Five changes to the edge marks, and the role ranking, the five-slot cap and the edge placement
+were left exactly as they were, because they are why it reads at all.
+
+- **Press a mark to sail to it.** Same road the campaign draws to its next stop, same fade; the
+  helm turns toward it the way a tap on open water does. Marks carry `data-no-steer` so the
+  press does not also steer the chart. The target is recovered by undoing the mark's projection.
+- **Amber for a regular with something for you.** "Meg · waiting on that Largemouth Bass" (from
+  the request system, breathes like a finished job of Finn's) or "Meg · has a word" (not chatted
+  today, no pulse). Read off the same `folkState` rows the Salt Road uses.
+- **Time, not metres.** A sailing time at the hull's full speed (`world / (SPEED * hullSpeed)`),
+  which shortens with a hull upgrade.
+- **A dim band edge says why.** The level, or "Captain's water" in gold.
+- **A wake trail.** The last sixty seconds of the hull's track as a fading line on the water,
+  drawn by the renderer under the hulls; a jump over 1,500px starts a fresh trail. The one
+  heading the sea can give a captain in a bay with no coast.
+
 ### One chart at the helm (2026-09-16)
 
 Two open charts on one account (a forgotten desktop tab, then the phone) each saved the boat's

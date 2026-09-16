@@ -809,6 +809,19 @@ export default function SeaIslandsGPU({
       // covers water you cannot see into at all.
       const glow: Glow = makeGlow(PIXI)
       world.addChildAt(glow.view, 1)
+      // ── THE WAKE TRAIL ───────────────────────────────────────────────
+      //
+      // The last minute of where she has been, as a line on the water that
+      // fades with age. In a bay there is no coast and no road, and with the
+      // campaign's water hiding what the chain has not reached, a captain can
+      // be looking at ten thousand pixels of open sea with no way to tell
+      // which way they came. The trail is the one heading the sea itself can
+      // give them. Under the hulls, over the water and the glow.
+      const trail = new PIXI.Graphics()
+      world.addChildAt(trail, 2)
+      const trailPts: { x: number; y: number; t: number }[] = []
+      let trailLastT = -1
+      const TRAIL_S = 60, TRAIL_EVERY = 0.25, TRAIL_JUMP = 1500
       // OVER THE WATER AND THE HULLS BOTH. These are the chart SPEAKING —
       // a heading and a charging portal — and neither is allowed to end up
       // behind the boat it is talking to. Under the fog, because there is no
@@ -1594,6 +1607,25 @@ export default function SeaIslandsGPU({
         // -- harmless here, and smoothed out of the speed that reads it.
         boatAt.x = camX + hullOff.current.x / camZoom
         boatAt.y = camY + hullOff.current.y / (camZoom * GROUND)
+        // Sample the trail four times a second; a jump (a warp, a fight framing
+        // the engagement) starts a fresh one rather than drawing a ruler line
+        // across the sea. Then redraw it with each segment fading by age.
+        if (t - trailLastT >= TRAIL_EVERY) {
+          trailLastT = t
+          const last = trailPts[trailPts.length - 1]
+          if (last && Math.hypot(boatAt.x - last.x, boatAt.y - last.y) > TRAIL_JUMP) trailPts.length = 0
+          if (!last || Math.hypot(boatAt.x - last.x, boatAt.y - last.y) > 4) trailPts.push({ x: boatAt.x, y: boatAt.y, t })
+          while (trailPts.length && t - trailPts[0].t > TRAIL_S) trailPts.shift()
+          trail.clear()
+          for (let i = 1; i < trailPts.length; i++) {
+            const a = trailPts[i], b = trailPts[i - 1]
+            const age = (t - a.t) / TRAIL_S
+            const alpha = 0.32 * (1 - age) * (1 - age)
+            if (alpha <= 0.01) continue
+            trail.moveTo(b.x, b.y * GROUND).lineTo(a.x, a.y * GROUND)
+              .stroke({ width: 5 * (1 - age * 0.5), color: 0xdcf0ff, alpha })
+          }
+        }
 
         drift.advance(camX, camY, halfW, halfH, t, dt)
         shoals.advance(camX, camY, halfW, halfH, t, dt, boatAt)
