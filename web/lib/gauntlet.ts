@@ -90,9 +90,17 @@ export const DONS_GAUNTLET_LIVE = true
 /** Has this player unlocked Don's Gauntlet? Admins always; everyone else only
  *  once it's live AND they've finished the campaign (beat Don Finleone = the
  *  `the_throne` raid clear), NOT a node clear like the classic gauntlet. */
-export function donsGauntletUnlocked(opts: { isAdmin?: boolean | null; throneCleared?: boolean | null }): boolean {
+export function donsGauntletUnlocked(opts: {
+  isAdmin?: boolean | null
+  throneCleared?: boolean | null
+  /** CAPTAIN'S WATER (lib/captainWater). Don's is the endgame descent and it
+   *  sits behind the door; a descent already on record keeps it open. */
+  captain: boolean
+  donsDeepest?: number | null
+}): boolean {
   if (opts.isAdmin) return true
-  return DONS_GAUNTLET_LIVE && !!opts.throneCleared
+  if (!DONS_GAUNTLET_LIVE || !opts.throneCleared) return false
+  return opts.captain || (opts.donsDeepest ?? 0) > 0
 }
 
 // Which gauntlet a boon / curse / confluence belongs to. OMITTED = both. So the
@@ -185,10 +193,19 @@ export function bloodRerollTier(id: string | null | undefined): BloodRerollTier 
 /** Can this player actually START a hardcore run right now? Admins always (for
  *  pre-launch testing); everyone else only once HARDCORE_LIVE + the Gauntlet is
  *  unlocked + they've reached HC_UNLOCK_DEPTH in the normal Gauntlet. */
-export function hardcoreUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?: string[] | null; deepest?: number | null }): boolean {
+export function hardcoreUnlocked(opts: {
+  isAdmin?: boolean | null
+  clearedNodes?: string[] | null
+  deepest?: number | null
+  /** CAPTAIN'S WATER (lib/captainWater). A hardcore descent on record keeps
+   *  it open for whoever was already down there when the door went up. */
+  captain: boolean
+  hcDeepest?: number | null
+}): boolean {
   if (opts.isAdmin) return true
   if (!HARDCORE_LIVE) return false
-  return gauntletUnlocked({ isAdmin: false, clearedNodes: opts.clearedNodes }) && (opts.deepest ?? 0) >= HC_UNLOCK_DEPTH
+  if (!(gauntletUnlocked({ isAdmin: false, clearedNodes: opts.clearedNodes }) && (opts.deepest ?? 0) >= HC_UNLOCK_DEPTH)) return false
+  return opts.captain || (opts.hcDeepest ?? 0) > 0
 }
 
 /** Can this player start a DON'S hardcore run? The Throne cleared, AND
@@ -200,10 +217,19 @@ export function hardcoreUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?
  *  afflictions the Davy pool never had. Five depths of his normal descent is a
  *  cheap, honest rehearsal, and it means nobody's first taste of the Ch3/Ch4
  *  enemies is a run where the crew does not come back. */
-export function donsHardcoreUnlocked(opts: { isAdmin?: boolean | null; throneCleared?: boolean | null; donsDeepest?: number | null }): boolean {
+export function donsHardcoreUnlocked(opts: {
+  isAdmin?: boolean | null
+  throneCleared?: boolean | null
+  donsDeepest?: number | null
+  /** See hardcoreUnlocked. Same door, Don's side of it. */
+  captain: boolean
+  donsHcDeepest?: number | null
+}): boolean {
   if (opts.isAdmin) return true
   if (!HARDCORE_LIVE) return false
-  return donsGauntletUnlocked({ isAdmin: false, throneCleared: opts.throneCleared }) && (opts.donsDeepest ?? 0) >= HC_UNLOCK_DEPTH
+  const dons = donsGauntletUnlocked({ isAdmin: false, throneCleared: opts.throneCleared, captain: opts.captain, donsDeepest: opts.donsDeepest })
+  if (!(dons && (opts.donsDeepest ?? 0) >= HC_UNLOCK_DEPTH)) return false
+  return opts.captain || (opts.donsHcDeepest ?? 0) > 0
 }
 
 /** The profile columns each descent keeps its hardcore state in. Don's runs are

@@ -8,6 +8,7 @@
 // ADMIN ONLY while it finds its feet, the same way Chapter 4 shipped. It is not
 // the landing page yet and should not become one until it has been lived with.
 
+import { inCaptainsWater } from '@/lib/captainWater'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
@@ -409,6 +410,11 @@ export default async function SeaPage({ searchParams }: {
       // a copy that knows about three of the four is wrong in a way nobody
       // notices until somebody is standing off a boss that will not open.
       isAdmin={profile?.is_admin === true}
+      // CAPTAIN'S WATER, and what this captain already holds of it. See
+      // lib/captainWater: the chart draws the locks, the server keeps them.
+      captain={inCaptainsWater(profile)}
+      donsDeepest={Number(profile?.dons_gauntlet_deepest ?? 0)}
+      hasAncientAccess={profile?.has_ancient_deep_access === true}
       // WHETHER THERE IS ANY POINT ASKING WHO IS OUT THERE. See the poll in
       // SeaMap: without a pact there is nobody it could ever return, and it
       // was asking every twenty seconds regardless for the life of the tab.
@@ -433,6 +439,7 @@ export default async function SeaPage({ searchParams }: {
           getExpeditionLevel(Number(profile?.expedition_xp ?? 0)),
           profile?.is_admin === true,
           ((profile?.ancient_catches as number[] | null) ?? []).length,
+          { captain: inCaptainsWater(profile) },
         ).map(v => [v.node.id, v.status]),
       )}
       log={{

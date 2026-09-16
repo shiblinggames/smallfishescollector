@@ -3,6 +3,7 @@
 // only on cash-out. The cooldown gate + payout are server-authoritative (see
 // actions.ts); the fight engine is the shared RaidCombat, hosted by GauntletGame.
 
+import { inCaptainsWater } from '@/lib/captainWater'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import GauntletGame from './GauntletGame'
@@ -29,7 +30,10 @@ export default async function GauntletPage() {
   if (!gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes })) redirect('/sea')
 
   // Show the switcher only if Don's Gauntlet is ALSO unlocked for this player.
-  const donsUnlocked = donsGauntletUnlocked({ isAdmin: profile?.is_admin, throneCleared: !!throneRes.data })
+  const donsUnlocked = donsGauntletUnlocked({
+    isAdmin: profile?.is_admin, throneCleared: !!throneRes.data,
+    captain: inCaptainsWater(profile), donsDeepest: Number(profile?.dons_gauntlet_deepest ?? 0),
+  })
 
 
   return (
@@ -82,6 +86,7 @@ export default async function GauntletPage() {
           hasSeenIntro={profile?.has_seen_gauntlet_intro === true}
           topDescender={leaderboard.top}
           hardcoreUnlocked={daily.hardcoreUnlocked}
+          hardcoreCaptainLocked={daily.hardcoreCaptainLocked}
           hardcoreLive={daily.hardcoreLive}
           hcDeepest={daily.hcDeepest}
           hcRunsLeft={daily.hcRunsLeft}

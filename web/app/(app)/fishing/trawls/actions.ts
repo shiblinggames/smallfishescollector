@@ -6,6 +6,7 @@
 // out of voyage/raid parties by loadDeployedParty. Types + reward math live in
 // ./constants ('use server' strips non-async exports).
 
+import { inCaptainsWater, CAPTAIN_WATER_SAYS, type CaptainWaterRow } from '@/lib/captainWater'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getLevelFromXP as fishingLevelFromXP } from '@/lib/fishingLevel'
@@ -58,7 +59,7 @@ const isZone = (z: string): z is TrawlZoneKey => z in TRAWL_ZONE_BY_KEY
 // Build the full client state from the player's profile + roster + active trawls.
 async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState> {
   const [{ data: profile }, { data: trawlRows }, { data: crewRows }, { data: pendingVoyage }, { data: ch3Row }, { data: bunkRows }] = await Promise.all([
-    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access, equipped_raid_items, borrowed_jaw_xp, finn_spoil_free, finn_spoil_paid, crew_stores_level').eq('id', userId).single(),
+    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access, equipped_raid_items, borrowed_jaw_xp, finn_spoil_free, finn_spoil_paid, crew_stores_level, is_premium, premium_expires_at, is_admin').eq('id', userId).single(),
     admin.from('trawls').select('zone, crew_id, ends_at').eq('user_id', userId),
     admin.from('user_crew').select(CREW_COLS).eq('user_id', userId).is('died_at', null),
     // Crew on a pending voyage are also unavailable — exclude from the picker.
@@ -163,6 +164,8 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
     const { data: ch3 } = await admin.from('raid_completions')
       .select('id').eq('user_id', user.id).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle()
     if (!ch3) return { error: 'Clear Chapter 3 (defeat the Quartermaster) to trawl the Ancient Deep.' }
+    // Captain's water, same as the cast; the flag is the grandfather.
+    if (!inCaptainsWater(profile as CaptainWaterRow | null)) return { error: CAPTAIN_WATER_SAYS.ancient }
   }
 
   const active = (trawlRows ?? []) as { zone: string; crew_id: number }[]

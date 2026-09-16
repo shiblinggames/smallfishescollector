@@ -5,6 +5,7 @@
 // token to clear one board back to banked.
 // Effects themselves are applied at the fishing / raid / gauntlet reward paths.
 
+import { captainsWaterOpen, CAPTAIN_WATER_SAYS, type CaptainWaterRow } from '@/lib/captainWater'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
@@ -23,20 +24,26 @@ export interface RenownState {
   respecs: number
   /** Gems in hand, so the panel can price the buy button without a second read. */
   gems: number
+  /** CAPTAIN'S WATER (lib/captainWater). False means the board is read-only:
+   *  points still bank, nothing can be spent. Points already spent keep it. */
+  captain: boolean
 }
 
 const XP_COL = (skill: RenownSkill) => (skill === 'fishing' ? 'fishing_xp' : 'expedition_xp')
 const ALLOC_COL = (skill: RenownSkill) => (skill === 'fishing' ? 'fishing_renown_alloc' : 'nav_renown_alloc')
 
 type Admin = ReturnType<typeof createAdminClient>
-async function readRow(admin: Admin, userId: string, skill: RenownSkill): Promise<{ xp: number; alloc: RenownAlloc; respecs: number; gems: number }> {
-  const { data } = await admin.from('profiles').select(`${XP_COL(skill)}, ${ALLOC_COL(skill)}, renown_respecs, gems`).eq('id', userId).single()
+async function readRow(admin: Admin, userId: string, skill: RenownSkill): Promise<{ xp: number; alloc: RenownAlloc; respecs: number; gems: number; captain: boolean }> {
+  const { data } = await admin.from('profiles').select(`${XP_COL(skill)}, ${ALLOC_COL(skill)}, renown_respecs, gems, is_premium, premium_expires_at, is_admin`).eq('id', userId).single()
   const row = (data ?? {}) as Record<string, unknown>
+  const alloc = (row[ALLOC_COL(skill)] as RenownAlloc | null) ?? {}
   return {
     xp: Number(row[XP_COL(skill)] ?? 0),
-    alloc: (row[ALLOC_COL(skill)] as RenownAlloc | null) ?? {},
+    alloc,
     respecs: Math.max(0, Number(row.renown_respecs ?? 0)),
     gems: Math.max(0, Number(row.gems ?? 0)),
+    // Grandfathered by points already on the board: see lib/captainWater.
+    captain: captainsWaterOpen(row as CaptainWaterRow, spentPoints(skill, alloc) > 0),
   }
 }
 
@@ -45,8 +52,8 @@ async function writeAlloc(admin: Admin, userId: string, skill: RenownSkill, allo
   else                     await admin.from('profiles').update({ nav_renown_alloc: alloc }).eq('id', userId)
 }
 
-function stateFrom(skill: RenownSkill, xp: number, alloc: RenownAlloc, respecs = 0, gems = 0): RenownState {
-  return { skill, level: renownLevel(skill, xp), spent: spentPoints(skill, alloc), available: availablePoints(skill, xp, alloc), alloc, respecs, gems }
+function stateFrom(skill: RenownSkill, xp: number, alloc: RenownAlloc, respecs = 0, gems = 0, captain = false): RenownState {
+  return { skill, level: renownLevel(skill, xp), spent: spentPoints(skill, alloc), available: availablePoints(skill, xp, alloc), alloc, respecs, gems, captain }
 }
 
 export async function getRenownState(skill: RenownSkill): Promise<RenownState | null> {
@@ -54,8 +61,8 @@ export async function getRenownState(skill: RenownSkill): Promise<RenownState | 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const admin = createAdminClient()
-  const { xp, alloc, respecs, gems } = await readRow(admin, user.id, skill)
-  return stateFrom(skill, xp, alloc, respecs, gems)
+  const { xp, alloc, respecs, gems, captain } = await readRow(admin, user.id, skill)
+  return stateFrom(skill, xp, alloc, respecs, gems, captain)
 }
 
 /** Mark the one-time "you hit level 100, meet Renown" intro celebration as seen
@@ -78,12 +85,13 @@ export async function allocateRenown(skill: RenownSkill, statId: string): Promis
   if (!isRenownStat(skill, statId)) return { error: 'Unknown stat.' }
 
   const admin = createAdminClient()
-  const { xp, alloc, respecs, gems } = await readRow(admin, user.id, skill)
+  const { xp, alloc, respecs, gems, captain } = await readRow(admin, user.id, skill)
+  if (!captain) return { error: CAPTAIN_WATER_SAYS.renown }
   if (availablePoints(skill, xp, alloc) <= 0) return { error: 'No Renown points to spend.' }
 
   const next: RenownAlloc = { ...alloc, [statId]: Math.max(0, Math.floor(alloc[statId] ?? 0)) + 1 }
   await writeAlloc(admin, user.id, skill, next)
-  return stateFrom(skill, xp, next, respecs, gems)
+  return stateFrom(skill, xp, next, respecs, gems, captain)
 }
 
 /** Commit a whole batch of pending allocations at once (the panel stages a draft
@@ -104,14 +112,15 @@ export async function commitRenown(skill: RenownSkill, delta: RenownAlloc): Prom
   }
 
   const admin = createAdminClient()
-  const { xp, alloc, respecs, gems } = await readRow(admin, user.id, skill)
-  if (total === 0) return stateFrom(skill, xp, alloc, respecs, gems)
+  const { xp, alloc, respecs, gems, captain } = await readRow(admin, user.id, skill)
+  if (!captain) return { error: CAPTAIN_WATER_SAYS.renown }
+  if (total === 0) return stateFrom(skill, xp, alloc, respecs, gems, captain)
   if (total > availablePoints(skill, xp, alloc)) return { error: 'Not enough Renown points.' }
 
   const next: RenownAlloc = { ...alloc }
   for (const [id, p] of Object.entries(clean)) next[id] = Math.max(0, Math.floor(alloc[id] ?? 0)) + p
   await writeAlloc(admin, user.id, skill, next)
-  return stateFrom(skill, xp, next, respecs, gems)
+  return stateFrom(skill, xp, next, respecs, gems, captain)
 }
 
 /**
@@ -130,7 +139,8 @@ export async function respecRenown(skill: RenownSkill): Promise<RenownState | { 
   if (!user) return { error: 'Not signed in.' }
 
   const admin = createAdminClient()
-  const { xp, alloc, respecs, gems } = await readRow(admin, user.id, skill)
+  const { xp, alloc, respecs, gems, captain } = await readRow(admin, user.id, skill)
+  if (!captain) return { error: CAPTAIN_WATER_SAYS.renown }
   if (respecs <= 0) return { error: 'No respec tokens. You can buy one with gems.' }
   if (spentPoints(skill, alloc) === 0) return { error: 'Nothing to undo on this board yet.' }
 
@@ -144,7 +154,7 @@ export async function respecRenown(skill: RenownSkill): Promise<RenownState | { 
   if (!charged) return { error: 'No respec tokens. You can buy one with gems.' }
 
   await writeAlloc(admin, user.id, skill, {})
-  return stateFrom(skill, xp, {}, Math.max(0, Number(charged.renown_respecs ?? 0)), gems)
+  return stateFrom(skill, xp, {}, Math.max(0, Number(charged.renown_respecs ?? 0)), gems, captain)
 }
 
 /** Buy one respec token for gems. Guarded the same way every gem purchase in
@@ -155,7 +165,8 @@ export async function buyRenownRespec(skill: RenownSkill): Promise<RenownState |
   if (!user) return { error: 'Not signed in.' }
 
   const admin = createAdminClient()
-  const { xp, alloc, respecs, gems } = await readRow(admin, user.id, skill)
+  const { xp, alloc, respecs, gems, captain } = await readRow(admin, user.id, skill)
+  if (!captain) return { error: CAPTAIN_WATER_SAYS.renown }
   if (gems < RENOWN_RESPEC_GEM_COST) return { error: `You need ${RENOWN_RESPEC_GEM_COST.toLocaleString()} gems.` }
 
   const { data: bought } = await admin
@@ -167,5 +178,5 @@ export async function buyRenownRespec(skill: RenownSkill): Promise<RenownState |
     .maybeSingle()
   if (!bought) return { error: `You need ${RENOWN_RESPEC_GEM_COST.toLocaleString()} gems.` }
 
-  return stateFrom(skill, xp, alloc, Math.max(0, Number(bought.renown_respecs ?? 0)), Math.max(0, Number(bought.gems ?? 0)))
+  return stateFrom(skill, xp, alloc, Math.max(0, Number(bought.renown_respecs ?? 0)), Math.max(0, Number(bought.gems ?? 0)), captain)
 }

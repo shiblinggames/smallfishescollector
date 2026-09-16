@@ -1,5 +1,6 @@
 'use server'
 
+import { inCaptainsWater, CAPTAIN_WATER_SAYS } from '@/lib/captainWater'
 import { folkById } from '@/lib/seaFolk'
 import { eyeFromProfile } from '@/lib/finnItems'
 import { flagAnomaly } from '@/lib/anomaly'
@@ -271,7 +272,7 @@ export async function castLine(
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, ancient_vigil, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, ancient_vigil, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels, is_premium, premium_expires_at, is_admin')
     .eq('id', user.id)
     .single()
 
@@ -304,6 +305,11 @@ export async function castLine(
     if (!ch3) {
       return { error: 'Clear Chapter 3 (defeat the Quartermaster) to reach the Ancient Deep.' }
     }
+    // ── AND IT IS CAPTAIN'S WATER ─────────────────────────────────────────
+    // Checked here, inside the "not yet through" branch, so the flag itself
+    // is the grandfather: anybody who had already cast in this water keeps
+    // it. See lib/captainWater.
+    if (!inCaptainsWater(profile)) return { error: CAPTAIN_WATER_SAYS.ancient }
     await admin.from('profiles').update({ has_ancient_deep_access: true }).eq('id', user.id)
   }
 

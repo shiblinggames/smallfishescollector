@@ -8,6 +8,8 @@
 // lib/gauntlet; boons + curses are the run-modifier layer (Tides are raids-only).
 // The pot is only banked on cash-out; a wipe loses everything.
 
+import { openMembership } from '@/components/MembershipModal'
+import { CAPTAIN_WATER } from '@/lib/captainWater'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal, flushSync } from 'react-dom'
 import { useRouter } from 'next/navigation'
@@ -396,6 +398,8 @@ export interface GauntletGameProps {
   // ── Hardcore mode ──
   /** Can this player START a hardcore run right now? (admin-only pre-launch.) */
   hardcoreUnlocked: boolean
+  /** Every other gate met and the door the one thing shut. See lib/captainWater. */
+  hardcoreCaptainLocked: boolean
   /** Is hardcore live for everyone yet? false → non-admins see a "Coming Soon" tag. */
   hardcoreLive: boolean
   /** This player's best hardcore cash-out depth. */
@@ -1313,6 +1317,16 @@ export default function GauntletGame(props: GauntletGameProps) {
                     onClick={() => { setModeChoiceOpen(false); setHcConfirmOpen(true) }}
                     footer={comingSoon
                       ? <p className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.12em', color: HC_ACCENT }}>Coming Soon</p>
+                      : props.hardcoreCaptainLocked
+                      // CAPTAIN'S WATER. The depth is met; the door is the lock,
+                      // and it says so in the gold every other lock of its kind
+                      // wears, with the way to Kip's terms right under it.
+                      ? <><p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${GOLD}cc` }}>{CAPTAIN_WATER}</p>
+                          <button type="button" onClick={e => { e.stopPropagation(); openMembership() }}
+                            className="font-cinzel font-700"
+                            style={{ marginTop: 4, fontSize: '0.7rem', color: GOLD, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                            Become a Captain
+                          </button></>
                       : !canHc
                       // Live but not yet eligible — the only unmet gate here is the
                       // normal-Gauntlet depth floor (they're already on the page).

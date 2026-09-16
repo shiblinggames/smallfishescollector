@@ -4,6 +4,7 @@
 // slice 0 uses the classic Davy pool/curve/rewards as a stub — later slices add
 // the Ch3+4 enemy pool, the steeper curve, the rewards, boons/curses, and theme.
 
+import { inCaptainsWater } from '@/lib/captainWater'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import GauntletGame from '../gauntlet/GauntletGame'
@@ -27,7 +28,12 @@ export default async function DonsGauntletPage() {
 
   // Gated on finishing the campaign (beat Don Finleone). Admins always, everyone
   // else only once DONS_GAUNTLET_LIVE flips.
-  if (!donsGauntletUnlocked({ isAdmin: profile?.is_admin, throneCleared: !!throneRes.data })) redirect('/sea')
+  // AND ON CAPTAIN'S WATER: see lib/captainWater. A descent already on record
+  // keeps the door open for whoever was down here before it went up.
+  if (!donsGauntletUnlocked({
+    isAdmin: profile?.is_admin, throneCleared: !!throneRes.data,
+    captain: inCaptainsWater(profile), donsDeepest: Number(profile?.dons_gauntlet_deepest ?? 0),
+  })) redirect('/sea')
 
   // Show the switcher only if Davy's Gauntlet is ALSO unlocked (cleared Ch2).
   const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
@@ -92,6 +98,7 @@ export default async function DonsGauntletPage() {
           // depth in HIS water), its own three runs a day, its own deepest and
           // its own Drowned Ledger. Davy's budget is untouched by spending these.
           hardcoreUnlocked={daily.hardcoreUnlocked}
+          hardcoreCaptainLocked={daily.hardcoreCaptainLocked}
           hardcoreLive={daily.hardcoreLive}
           hcDeepest={daily.hcDeepest}
           hcRunsLeft={daily.hcRunsLeft}

@@ -657,6 +657,9 @@ export default function ShipHero({
     skill: 'nav', level: navRenownLevel,
     spent: spentPoints('nav', navRenownAllocState),
     available: navRenownAvailable, alloc: navRenownAllocState,
+    // Captain's water is the SERVER's answer: the panel refetches on open and
+    // every spend is refused there. This seed only feeds the bar's badge.
+    captain: true,
       // The panel refetches these on open; a bar built from page-load props
     // cannot know a live gem balance.
     respecs: 0, gems: 0,

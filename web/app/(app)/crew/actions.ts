@@ -406,6 +406,9 @@ export async function getCrewState(): Promise<CrewState | null> {
     navXp: (prof as any).expedition_xp ?? 0,
     bloodGems: ((prof as any).blood_gems as number | null) ?? 0,
     hardcoreUnlocked: hardcoreUnlocked({
+      // Captain's water (lib/captainWater); this only decides whether the
+      // Blood Market door is drawn, the server keeps the gate itself.
+      captain: premium,
       isAdmin: (prof as any).is_admin,
       clearedNodes: ((prof as any).raid_node_progress?.cleared as string[] | undefined) ?? [],
       deepest: (prof as any).gauntlet_deepest ?? 0,

@@ -22,6 +22,45 @@ pay-to-win, never FOMO**. Captain membership sells convenience and cosmetics, no
 - **Every perk gate checks `isPremiumActive`** — one helper, no scattered date math.
   Perks are QoL and cosmetics; anything that would raise player power is out of bounds.
 
+## Captain's water (settled 2026-09-16)
+
+**Gate the deep end, never the rates.** A lifetime $9.99 is closer to buying the game than to
+a subscription, so the honest shape is a demo and a full game: a free captain gets the whole
+first act of both loops at full strength, and a Captain gets the water past it. Nothing about
+how fast anybody fishes, fights or earns changes with the badge. `lib/captainWater.ts` is the
+one function and the one lock name ("Captain's water"); every gate is kept on the server and
+only drawn on the client.
+
+**The line is the Quartermaster.** Clearing Chapter III opens the Ancient Deep and everything
+after it is the endgame in all but name, so that is the door, and it is one door:
+
+| Captain's water | Where the gate lives |
+|---|---|
+| The Ancient Deep (and so the giants and the Completionist Rod) | `castLine`, the trawl deploy; the chart's band lock |
+| Chapter IV, the finale, the Vigil | `computeRaidMap` (every caller passes `{ captain }`); `lockReason` reads "Captain's water" |
+| Don's Gauntlet | `donsGauntletUnlocked` (page redirect + `startGauntletRun`); the maelstrom's hold label once the Throne has fallen |
+| Hardcore, Davy's Terms, Blood Gems | `hardcoreUnlocked` / `donsHardcoreUnlocked`; the lobby's Hardcore card names the lock |
+| Renown | every spend in `actions/renown.ts`; the panel reads but does not stage, points keep banking |
+
+**Stays free, deliberately:** the Shallows through the Abyss, every regular and rapport tier and
+the folk rods, Chapters I to III, Davy's Gauntlet, crew, voyages, bounties, the Homestead, the
+tavern, every leaderboard and badge. The Abyssal Forge is not gated separately: it is bought
+inside Don's Gauntlet, so it is behind the door already.
+
+**Grandfathered by state.** Each gate takes what the captain already holds: the Ancient Deep
+flag, a Chapter IV node cleared, a Don's descent on record, a hardcore descent on record, points
+spent in Renown. Whoever was already through when the door went up keeps it. Grant on state,
+never on crossing, applied to a lock.
+
+**The market's three percent cut is gone for everyone** (same day). It was the one perk that
+touched a rate, and it was confusing on the receipt. Not folded into the door; removed.
+
+**Never gate:** anything in combat math, catch odds, XP or payouts; anything a free captain needs
+to finish Chapter III; friend lists or profiles. Pacts and presence stay Captain-only because
+they need both sides.
+
+The membership card leads with the door now ("The deep end") and Kip reads from the same list.
+
 ## Mail
 
 - `app/actions/mail.ts`: service-role INSERT, claiming through the `claim_mail` RPC,

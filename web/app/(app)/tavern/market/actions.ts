@@ -148,11 +148,10 @@ export async function sellEntireHold(): Promise<
     multiplierMap.set(row.fish_id, Number(row.multiplier))
   }
 
-  // The Captain's 3% is a membership perk and stays. It was never the thing
-  // that made this lane slow, and it is the same fee the per-species market
-  // charges — selling one at a time to dodge it would be thirty taps for
-  // nothing.
-  const fee = isPremiumActive(profile) ? 1.0 : 0.97
+  // NO CUT. There was a three percent fee for non-Captains here, and it went
+  // on 2026-09-16 for everybody: it was confusing on the receipt, and a perk
+  // that touches a rate is the wrong kind of perk. See lib/captainWater.
+  const fee = 1.0
 
   let totalEarned = 0
   let totalFishSold = 0
@@ -212,8 +211,8 @@ export async function marketSellFish(
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
-  const isPremium = isPremiumActive(profile)
-  const fee = isPremium ? 1.0 : 0.97
+  // NO CUT. See the note on the other sell path.
+  const fee = 1.0
   const multiplier = market?.multiplier ?? 1.0
   const priceEach = Math.floor(fish.sell_value * Number(multiplier) * fee)
   const earned = priceEach * quantity

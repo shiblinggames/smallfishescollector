@@ -17,6 +17,7 @@
 // animates on its own timer, because that is how a scene ends up feeling like
 // several things happening near each other.
 
+import { CAPTAIN_WATER, CAPTAIN_WATER_SAYS } from '@/lib/captainWater'
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
@@ -1617,7 +1618,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, exploredExpRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, navXP, renownNav, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
-  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, openBoss = null, raidParty, hasCaptain: hasCaptain0, raidItems, raidSeats, itemMounts, portal, startSide, hasPact = false,
+  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, openBoss = null, captain = false, donsDeepest = 0, hasAncientAccess = false, raidParty, hasCaptain: hasCaptain0, raidItems, raidSeats, itemMounts, portal, startSide, hasPact = false,
   seenChapterUnlocks = [], seenUltimateUnlock = false,
 }: {
   fishingXP: number
@@ -1674,6 +1675,11 @@ export default function SeaMap({
   /** A boss card to open the moment the chart is up, by node id. The retired
    *  /expeditions?boss= links land here; the forge's own fallback does too. */
   openBoss?: string | null
+  /** CAPTAIN'S WATER (lib/captainWater), and what this captain already holds
+   *  of it. The chart only DRAWS these locks; every one is kept on the server. */
+  captain?: boolean
+  donsDeepest?: number
+  hasAncientAccess?: boolean
   /** Chapters whose parchment this captain has already dismissed, and whether
    *  the Quartermaster's plans have been announced. Both are the celebration's
    *  ONLY memory — see the note where they are read. */
@@ -1971,9 +1977,9 @@ export default function SeaMap({
   const liveStatus = useMemo(() => (justCleared.length === 0
     ? nodeStatus
     : Object.fromEntries(
-      computeRaidMap(new Set(liveCleared), doubloonsNow, navLevel, isAdmin, ancientsCaught)
+      computeRaidMap(new Set(liveCleared), doubloonsNow, navLevel, isAdmin, ancientsCaught, { captain })
         .map(v => [v.node.id, v.status]))),
-  [justCleared, nodeStatus, liveCleared, doubloonsNow, navLevel, isAdmin, ancientsCaught])
+  [justCleared, nodeStatus, liveCleared, doubloonsNow, navLevel, isAdmin, ancientsCaught, captain])
 
   /**
    * ── AND WHAT IS ACTUALLY DRAWN ON THE WATER ────────────────────────────
@@ -4230,8 +4236,8 @@ export default function SeaMap({
   const [nearMael, setNearMael] = useState<Maelstrom | null>(null)
   const maelOpen = useCallback((id: Maelstrom['id']) => id === 'davy'
     ? gauntletUnlocked({ isAdmin, clearedNodes: liveCleared })
-    : donsGauntletUnlocked({ isAdmin, throneCleared: liveCleared.includes('the_throne') }),
-  [isAdmin, liveCleared])
+    : donsGauntletUnlocked({ isAdmin, throneCleared: liveCleared.includes('the_throne'), captain, donsDeepest }),
+  [isAdmin, liveCleared, captain, donsDeepest])
   const [gateOpen, setGateOpen] = useState(false)
   const [gateData, setGateData] = useState<BossCardState | null>(null)
   /** The fight's own loadout, read on the same approach for the same reason. */
@@ -5756,7 +5762,14 @@ export default function SeaMap({
     }
   }, [engaging, pickStation])
 
-  const locked = useCallback((p: Place) => level < p.minLevel, [level])
+  /** The Ancient Deep is Captain's water once the level is met. The flag is
+   *  the grandfather, same as the server's. */
+  const ancientOpen = captain || hasAncientAccess
+  const locked = useCallback((p: Place) => level < p.minLevel || (p.id === 'ancient_deep' && !ancientOpen), [level, ancientOpen])
+  /** Why a band is shut, in the words the lock wears everywhere else. */
+  const lockLine = useCallback((p: Place) =>
+    (p.id === 'ancient_deep' && level >= p.minLevel) ? CAPTAIN_WATER : `Fishing ${p.minLevel} to work this water`,
+  [level])
 
   /**
    * WHAT IS BUILT, for the canvas.
@@ -6238,7 +6251,11 @@ export default function SeaMap({
           // MaelstromName, which keeps the same secret on the water.
           holdLabel ??= m.id === 'davy'
             ? 'The Davy Jones Gauntlet: clear Chapter 2 first'
-            : 'Something is turning down there. Finish the campaign to learn what it is.'
+            // Once the Throne has fallen the secret is out and the lock can
+            // say what it is. Before that, the same silence as ever.
+            : liveCleared.includes('the_throne')
+              ? CAPTAIN_WATER_SAYS.dons
+              : 'Something is turning down there. Finish the campaign to learn what it is.'
         } else {
           reach.push({
             id: 'mael',
@@ -6402,7 +6419,7 @@ export default function SeaMap({
       // — and if the band is above your level, why it will not work.
       if (near && near.kind === 'water') {
         holdLabel ??= locked(near)
-          ? `Fishing ${near.minLevel} to work this water`
+          ? lockLine(near)
           : `Hold to fish ${near.name}`
       }
     }
@@ -16284,7 +16301,7 @@ function WaterBanner({ place, locked, lowered }: {
                 fontSize: '0.816rem', marginTop: 6, color: 'rgba(214,166,166,0.95)',
                 textShadow: '0 1px 10px rgba(0,0,0,0.95)',
               }}>
-              Fishing {shown.minLevel} to work this water
+              {lockLine(shown)}
             </motion.p>
           )}
         </motion.div>

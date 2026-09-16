@@ -42,6 +42,9 @@ export default function FishingLevelBar({
     spent: spentPoints('fishing', alloc),
     available: Math.max(0, rLevel - spentPoints('fishing', alloc)),
     alloc,
+    // The panel refetches on open and the server refuses a spend; this seed
+    // only feeds the bar's badge.
+    captain: true,
       // The panel refetches these on open; a bar built from page-load props
     // cannot know a live gem balance.
     respecs: 0, gems: 0,

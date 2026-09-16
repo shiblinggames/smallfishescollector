@@ -10,6 +10,8 @@
 // re-derives the level from XP and can't be over-spent. We update optimistically
 // for feel, then reconcile with the returned state.
 
+import BecomeCaptainButton from '@/components/BecomeCaptainButton'
+import { CAPTAIN_WATER } from '@/lib/captainWater'
 import { useState, useCallback, useEffect } from 'react'
 import CloseButton from '@/components/CloseButton'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -70,7 +72,9 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
 
   const draftTotal = Object.values(draft).reduce((n, v) => n + (v || 0), 0)
   const available = state.available - draftTotal   // banked points still free to stage
-  const has = available > 0
+  // CAPTAIN'S WATER. Points bank whatever the badge says; spending them is
+  // the part behind the door, so the board reads but does not stage.
+  const has = available > 0 && state.captain
 
   // Stage one point onto a stat (local only — nothing saves until Confirm).
   const addDraft = useCallback((stat: RenownStat) => {
@@ -173,7 +177,12 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
             <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: meta.accent, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <span style={{ opacity: 0.85 }}>✦</span> Renown {state.level}
             </span>
-            {has ? (
+            {!state.captain ? (
+              <span className="font-karla font-700 uppercase tracking-[0.06em]"
+                style={{ fontSize: '0.58rem', color: '#f0c040', whiteSpace: 'nowrap' }}>
+                {CAPTAIN_WATER}
+              </span>
+            ) : has ? (
               <motion.span
                 key={available}
                 initial={{ scale: 1.18 }}
@@ -197,6 +206,17 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
               </span>
             )}
           </div>
+          {/* THE DOOR, NAMED, WITH THE WAY TO THE TERMS. Points keep banking
+              under it, which the line says, because a wall that looks like
+              lost progress is the one thing worse than a wall. */}
+          {!state.captain && (
+            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center', lineHeight: 1.5, margin: 0 }}>
+                Renown is Captain’s water. Your points keep banking; spending them opens with the register.
+              </p>
+              <BecomeCaptainButton label="Become a Captain" />
+            </div>
+          )}
         </div>
 
         {/* Stat board — each stat is its own card. */}

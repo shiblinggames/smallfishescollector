@@ -1,5 +1,6 @@
 'use server'
 
+import { inCaptainsWater, type CaptainWaterRow } from '@/lib/captainWater'
 import { isChallengeRaidId, baseRaidIdOf } from '@/lib/raidChallenge'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -285,6 +286,7 @@ export async function getBountyBoard(): Promise<BountyBoard> {
     // Gauntlet's own page read. NOT the raid-id set above: the gate is a map
     // NODE ('chapter_2_class'), which no raid id will ever match.
     const hcOpen = hardcoreUnlocked({
+      captain: inCaptainsWater(profile as CaptainWaterRow | null),
       isAdmin: (profile as { is_admin?: boolean } | null)?.is_admin ?? false,
       clearedNodes: ((profile as { raid_node_progress?: { cleared?: string[] } } | null)?.raid_node_progress?.cleared) ?? [],
       deepest: Number((profile as Record<string, unknown> | null)?.gauntlet_deepest ?? 0),
@@ -516,6 +518,7 @@ export async function rerollBounty(bountyId: string): Promise<RerollResult> {
   const cleared = await clearedRaids(admin, user.id)
   const ranGauntlet = Number((profile as Record<string, unknown> | null)?.gauntlet_runs_completed ?? 0) > 0
   const hcOpen = hardcoreUnlocked({
+    captain: inCaptainsWater(profile as CaptainWaterRow | null),
     isAdmin: (profile as { is_admin?: boolean } | null)?.is_admin ?? false,
     clearedNodes: ((profile as { raid_node_progress?: { cleared?: string[] } } | null)?.raid_node_progress?.cleared) ?? [],
     deepest: Number((profile as Record<string, unknown> | null)?.gauntlet_deepest ?? 0),

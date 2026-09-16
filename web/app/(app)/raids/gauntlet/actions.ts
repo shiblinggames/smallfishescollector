@@ -10,6 +10,7 @@
 // The once-a-day gate is the real limiter, so we trust the client's reported
 // depth/pot up to the computed ceiling.
 
+import { inCaptainsWater, type CaptainWaterRow } from '@/lib/captainWater'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logBountyEvent } from '@/app/(app)/expeditions/bountyActions'
@@ -19,7 +20,7 @@ import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, resolveTerms, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
-import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, GALAXY_HULL_SKIN_ID, GALAXY_HULL_CHEST_TIER, GHOST_HULL_SKIN_ID, GHOST_HULL_CHEST_TIER, GHOST_HULL_DROP_MULT, DONS_GAUNTLET_ITEM_IDS, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestLabelFor, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, donsHardcoreUnlocked, hcCols, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type DepthSplit, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
+import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, GALAXY_HULL_SKIN_ID, GALAXY_HULL_CHEST_TIER, GHOST_HULL_SKIN_ID, GHOST_HULL_CHEST_TIER, GHOST_HULL_DROP_MULT, DONS_GAUNTLET_ITEM_IDS, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestLabelFor, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, donsHardcoreUnlocked, donsGauntletUnlocked, hcCols, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type DepthSplit, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult, donsBloodGemMult, gauntletStartDepth, DONS_DAILY_TRIBUTE_ID, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import {
@@ -468,16 +469,16 @@ async function throneCleared(admin: ReturnType<typeof createAdminClient>, userId
   return !!data
 }
 
-export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; hcDeepestRun: GauntletRunSnapshot | null; lastRun: GauntletRunSnapshot | null; hcLastRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; resumePaused: boolean; hardcoreUnlocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean; runTerms: SignedTerms | null }> {
+export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; hcDeepestRun: GauntletRunSnapshot | null; lastRun: GauntletRunSnapshot | null; hcLastRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; resumePaused: boolean; hardcoreUnlocked: boolean; hardcoreCaptainLocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean; runTerms: SignedTerms | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, hcDeepestRun: null, lastRun: null, hcLastRun: null, resumeState: null, resumePaused: false, hardcoreUnlocked: false, hardcoreLive: HARDCORE_LIVE, hcDeepest: 0, hcRunsLeft: 0, runHardcore: false, runTerms: null }
+  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, hcDeepestRun: null, lastRun: null, hcLastRun: null, resumeState: null, resumePaused: false, hardcoreUnlocked: false, hardcoreCaptainLocked: false, hardcoreLive: HARDCORE_LIVE, hcDeepest: 0, hcRunsLeft: 0, runHardcore: false, runTerms: null }
 
   const isDon = variant === 'don'
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, gauntlet_last_run, gauntlet_hc_last_run, dons_gauntlet_last_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_deepest_run, dons_gauntlet_hc_deepest, dons_gauntlet_hc_deepest_run, dons_gauntlet_hc_last_run, dons_gauntlet_hc_last_run_at, dons_gauntlet_hc_runs_today')
+    .select('is_premium, premium_expires_at, gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, gauntlet_last_run, gauntlet_hc_last_run, dons_gauntlet_last_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_deepest_run, dons_gauntlet_hc_deepest, dons_gauntlet_hc_deepest_run, dons_gauntlet_hc_last_run, dons_gauntlet_hc_last_run_at, dons_gauntlet_hc_runs_today')
     .eq('id', user.id)
     .single()
   // "One run at a time": a resume only belongs to THIS gauntlet if the open run's
@@ -528,6 +529,10 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
   const hcRunsLeft = isAdmin ? HARDCORE_RUNS_PER_DAY : Math.max(0, HARDCORE_RUNS_PER_DAY - hcUsedToday)
   const donsDeepest = (profile?.dons_gauntlet_deepest as number | null) ?? 0
   const throne = isDon ? await throneCleared(admin, user.id) : false
+  // CAPTAIN'S WATER. See lib/captainWater; hcDeep is this descent's own
+  // hardcore record, which is what grandfathers it.
+  const captain = inCaptainsWater(profile as CaptainWaterRow | null)
+  const hcDeep = (profile?.[HC.deepest] as number | null) ?? 0
   return {
     available,
     deepest,
@@ -543,8 +548,17 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
     // in HIS water: reaching depth 10 of Davy's says nothing about surviving the
     // Ch3/Ch4 pool.
     hardcoreUnlocked: isDon
-      ? donsHardcoreUnlocked({ isAdmin, throneCleared: throne, donsDeepest })
-      : hardcoreUnlocked({ isAdmin, clearedNodes, deepest }),
+      ? donsHardcoreUnlocked({ isAdmin, throneCleared: throne, donsDeepest, captain, donsHcDeepest: hcDeep })
+      : hardcoreUnlocked({ isAdmin, clearedNodes, deepest, captain, hcDeepest: hcDeep }),
+    // CAPTAIN'S WATER, AND ONLY THAT. True when every other gate on hardcore
+    // is met and the door is the one thing shut, so the lobby can say which
+    // lock it is rather than "reach depth five" to somebody at depth twenty.
+    hardcoreCaptainLocked: !captain && (isDon
+      ? donsHardcoreUnlocked({ isAdmin, throneCleared: throne, donsDeepest, captain: true })
+      : hardcoreUnlocked({ isAdmin, clearedNodes, deepest, captain: true }))
+      && !(isDon
+        ? donsHardcoreUnlocked({ isAdmin, throneCleared: throne, donsDeepest, captain, donsHcDeepest: hcDeep })
+        : hardcoreUnlocked({ isAdmin, clearedNodes, deepest, captain, hcDeepest: hcDeep })),
     hardcoreLive: HARDCORE_LIVE,
     hcDeepest: (profile?.[HC.deepest] as number | null) ?? 0,
     // Hardcore runs left today (of HARDCORE_RUNS_PER_DAY) for the mode-choice card.
@@ -669,7 +683,7 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin, raid_node_progress, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, gauntlet_run_open, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_hc_last_run_at, dons_gauntlet_hc_runs_today')
+    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin, raid_node_progress, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, gauntlet_run_open, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_hc_last_run_at, dons_gauntlet_hc_runs_today, is_premium, premium_expires_at, gauntlet_hc_deepest, dons_gauntlet_hc_deepest')
     .eq('id', user.id)
     .single()
 
@@ -677,6 +691,13 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
   const HC = hcCols(variant)
   const deepest = ((isDon ? (profile?.dons_gauntlet_deepest as number | null) : (profile?.gauntlet_deepest as number | null)) ?? 0)
   const isAdmin = profile?.is_admin === true
+  // ── CAPTAIN'S WATER, ON THE SERVER ──────────────────────────────────────
+  // The page redirects a locked captain away from Don's; this is the check
+  // that holds when the page is not how the request arrived.
+  const captain = inCaptainsWater(profile as CaptainWaterRow | null)
+  if (isDon && !donsGauntletUnlocked({ isAdmin, throneCleared: await throneCleared(admin, user.id), captain, donsDeepest: deepest })) {
+    return { started: false, reason: 'locked', deepest }
+  }
   // One run at a time: block starting THIS gauntlet while a DIFFERENT gauntlet's
   // run is still open (its checkpoint + records would otherwise get stomped).
   const openVariant = ((profile?.gauntlet_run_variant as GauntletVariant | null) ?? 'davy')
@@ -713,8 +734,8 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
     // Server-enforced gate — admin-only until HARDCORE_LIVE (so the action can't
     // be forced from the client), then unlock + that descent's own depth floor.
     const gateOk = isDon
-      ? donsHardcoreUnlocked({ isAdmin, throneCleared: await throneCleared(admin, user.id), donsDeepest: (profile?.dons_gauntlet_deepest as number | null) ?? 0 })
-      : hardcoreUnlocked({ isAdmin, clearedNodes, deepest })
+      ? donsHardcoreUnlocked({ isAdmin, throneCleared: await throneCleared(admin, user.id), donsDeepest: (profile?.dons_gauntlet_deepest as number | null) ?? 0, captain, donsHcDeepest: (profile?.dons_gauntlet_hc_deepest as number | null) ?? 0 })
+      : hardcoreUnlocked({ isAdmin, clearedNodes, deepest, captain, hcDeepest: (profile?.gauntlet_hc_deepest as number | null) ?? 0 })
     if (!gateOk) {
       return { started: false, reason: 'locked', deepest }
     }

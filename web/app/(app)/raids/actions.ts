@@ -1,5 +1,6 @@
 'use server'
 
+import { inCaptainsWater } from '@/lib/captainWater'
 import { createClient } from '@/lib/supabase/server'
 import { dialAimBonus, type DialAimBonus } from '@/lib/dialAim'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -535,7 +536,7 @@ export async function claimRaidLoot(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, equipped_raid_items, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp, ancient_catches')
+    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, equipped_raid_items, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp, ancient_catches, is_premium, premium_expires_at')
     .eq('id', user.id)
     .single()
   if (!profile) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [], currencyId: null, gemsGranted: 0, crateDoubloons: 0 }
@@ -550,7 +551,7 @@ export async function claimRaidLoot(
   // is unreachable here too — otherwise the finale's crate could be claimed by
   // a captain who never went down for the giants.
   const ancientsCaught = ((profile.ancient_catches as number[] | null) ?? []).length
-  const nodeView = computeRaidMap(cleared, profile.doubloons ?? 0, navLevel, profile.is_admin === true, ancientsCaught)
+  const nodeView = computeRaidMap(cleared, profile.doubloons ?? 0, navLevel, profile.is_admin === true, ancientsCaught, { captain: inCaptainsWater(profile) })
     .find(v => v.node.raidId === raidId)
   if (!nodeView || nodeView.status === 'locked') {
     return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [], currencyId: null, gemsGranted: 0, crateDoubloons: 0 }

@@ -16,6 +16,7 @@ import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST, SPOILS_PRICE } from '@/lib/shi
 import type { RaidMuster, MusterReport } from '@/lib/crewMuster'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE, THE_SUNKEN_HAND_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin, hullDropImage, MANOWAR_SHIP_TIER } from '@/lib/shipSkins'
+import { CAPTAIN_WATER } from '@/lib/captainWater'
 import { ALL_RAIDS } from '@/lib/raidRegistry'
 import { RAID_ITEMS } from '@/lib/raidItems'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
@@ -3114,6 +3115,9 @@ export function nodeArtRevealed(node: RaidNode, clearedNodeIds: Set<string>): bo
   return clearedNodeIds.has(node.revealBossAfter)
 }
 
+/** The chapters behind the door. See lib/captainWater. */
+const CAPTAIN_CHAPTERS = new Set(['the_last_fathom', 'one_last_ride'])
+
 export function computeRaidMap(
   cleared: Set<string>,
   doubloons: number,
@@ -3121,12 +3125,26 @@ export function computeRaidMap(
   isAdmin = false,
   /** How many Ancient Deep giants the player has landed — feeds requiresAncients. */
   ancientsCaught = 0,
+  /** CAPTAIN'S WATER. Required rather than defaulted, so a caller that forgets
+   *  it fails to compile instead of quietly opening the endgame. */
+  water: { captain: boolean } = { captain: false },
 ): RaidNodeView[] {
+  // ── ALREADY THROUGH THE DOOR ────────────────────────────────────────────
+  // Anybody with a Chapter IV node cleared was in this water before the door
+  // went up, and keeps it. Grant on state, never on crossing.
+  const holdsCaptainWater = [...cleared].some(id => CAPTAIN_CHAPTERS.has(chapterForNode(id)?.id ?? ''))
   // adminOnly nodes are hidden entirely for non-admins (the chain just ends
   // before them) while content is in review.
   return RAID_MAP.filter(node => isAdmin || !node.adminOnly).map(node => {
     if (cleared.has(node.id)) {
       return { node, status: 'cleared' as const, claimable: false }
+    }
+    // ── CAPTAIN'S WATER ─────────────────────────────────────────────────
+    // Before the prerequisite reasons, on purpose: the lock says what it is
+    // rather than which fight comes first, because "clear the Quartermaster"
+    // would send a free captain to do exactly that and then meet this.
+    if (!isAdmin && !water.captain && !holdsCaptainWater && CAPTAIN_CHAPTERS.has(chapterForNode(node.id)?.id ?? '')) {
+      return { node, status: 'locked' as const, claimable: false, lockReason: CAPTAIN_WATER }
     }
     // Coming-soon takes precedence over normal lock-reason resolution. The node
     // is intentionally inaccessible while content lands, not blocked by player

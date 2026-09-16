@@ -48,6 +48,9 @@ class CheckoutBoundary extends Component<{ onError: () => void; children: ReactN
  * table is how a game ends up promising something it does not sell. One list,
  * two places that read it. */
 export const PERKS = [
+  // THE DOOR, FIRST. Everything under it is a sweetener on top of the actual
+  // proposition, which is the endgame. See lib/captainWater.
+  ['The deep end', 'the Ancient Deep, Chapter IV, Don’s Gauntlet, Hardcore, Renown'],
   ['150 gems a day', '3× the free haul'],
   ['Premium chum bait', 'every day'],
   ['A gold crate', 'every week'],
