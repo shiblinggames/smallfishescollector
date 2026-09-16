@@ -15,7 +15,7 @@ import { motion } from 'framer-motion'
 import { getBait } from '@/lib/bait'
 import { vibrate } from '@/lib/haptics'
 import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
-import { strikeDeal, sellToResident, wagerForRunnerRod } from './traderActions'
+import { strikeDeal, sellToResident, wagerForRunnerRod, runnerRodOwned } from './traderActions'
 import { RODS } from '@/lib/rods'
 import { folkById, folkRoleFor, type FolkTier } from '@/lib/seaFolk'
 import { folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod, type Rapport } from './folkActions'
@@ -170,6 +170,15 @@ export default function TraderPanel({
    *  is excused the daily cap and gets his own footer button. */
   const isWager = trader.deal === 'wager'
   const rod = trader.deal === 'wager' ? RODS.find(r => r.tier === trader.rodTier) : null
+  /** Already carried: the bet is not offered (KAN-25). Null until the read
+   *  lands; the button waits on it rather than flashing an offer first. */
+  const [rodOwned, setRodOwned] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (trader.deal !== 'wager') { setRodOwned(false); return }
+    let live = true
+    void runnerRodOwned(trader.rodTier).then(v => { if (live) setRodOwned(v) }).catch(() => { if (live) setRodOwned(false) })
+    return () => { live = false }
+  }, [trader])
 
   /** Whether the cut has been made, and how it fell. Held apart from `done`
    *  because a LOSS is not an error and must not read as one: he took the
@@ -535,7 +544,12 @@ export default function TraderPanel({
         )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          {!spent && !isTalk && !cut && (
+          {isWager && rodOwned && rod && (
+            <p className="font-karla" style={{ flex: 1.2, margin: 0, padding: '0.8rem 0.4rem', fontSize: '0.8rem', lineHeight: 1.4, color: 'rgba(242,234,216,0.7)', textAlign: 'center' }}>
+              You already carry the {rod.name}. He has nothing to cut you for.
+            </p>
+          )}
+          {!spent && !isTalk && !cut && !(isWager && rodOwned !== false) && (
             <button onClick={isResident ? sellHold : isWager ? cutForRod : strike}
               // THE CUT IS NOT ONE OF THE SIX. It has a harder limit of its own
               // - once a night - and making somebody choose between a shot at

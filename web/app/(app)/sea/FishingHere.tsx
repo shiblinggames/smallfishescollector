@@ -1335,6 +1335,11 @@ export default function FishingHere({
         await held
         if ('error' in loot) { setErr(loot.error); setPhase('idle'); return }
         setCaught({ kind: 'crate', tier, loot })
+        // TELL THE PURSE (KAN-61). The server credited the coin; the counter
+        // listens for this the way it does for every sale on the chart.
+        if (loot.type === 'doubloons') {
+          window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: loot.newDoubloons }))
+        }
         setPhase('result')
       }).catch(() => {
         setErr('The crate slipped the line.')

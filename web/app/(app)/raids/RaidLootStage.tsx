@@ -1,5 +1,6 @@
 'use client'
 
+import { getRaidItem } from '@/lib/raidItems'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { LOOT_RARITY_TIER } from '@/lib/raidLoot'
@@ -207,9 +208,12 @@ export default function RaidLootStage(props: Props) {
           style={{ width: size, height: size, objectFit: 'contain', objectPosition: 'bottom', filter: getShipSkin(item.shipSkinId)?.filter ?? 'none' }} />
       )
     }
-    if (item.image) {
+    // The loot row's own art, or the raid item's (KAN-62: the Chain-Shot Rack
+    // was handed over as an emoji because its loot row predated its painting).
+    const art = item.image ?? (item.id ? getRaidItem(item.id)?.image : null)
+    if (art) {
       // eslint-disable-next-line @next/next/no-img-element
-      return <img src={item.image} alt={item.label} style={{ width: size, height: size, objectFit: 'contain' }} />
+      return <img src={art} alt={item.label} style={{ width: size, height: size, objectFit: 'contain' }} />
     }
     if (item.emoji === GEM_GLYPH) {
       return (

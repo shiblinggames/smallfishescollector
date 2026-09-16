@@ -675,6 +675,10 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
     if (item) {
       drop.sublabel = `Raid item. ${item.description}`
       drop.raidItemId = item.id
+      // THE ITEM'S OWN ART, when the loot row carries none (KAN-62). Several
+      // rows were written with image: null and an emoji stand-in before the
+      // item art existed; the item def has had the painting since.
+      if (!drop.image && item.image) drop.image = item.image
     }
     // Fishing special (The Primeval Eye). Neither a raid item nor a skin, so
     // without this branch it falls through both and reads as a bare label with

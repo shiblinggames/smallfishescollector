@@ -19,7 +19,7 @@ export type CrateTier = 'wooden' | 'metal' | 'gold' | 'diamond' | 'ancient'
 export type DupePet = { petId: string; petName: string; petImageUrl: string; petAccent: string }
 
 export type CrateLoot = (
-  | { type: 'doubloons'; amount: number }
+  | { type: 'doubloons'; amount: number; newDoubloons: number }
   | { type: 'bait';      baitType: string; baitName: string; quantity: number }
   | { type: 'skin';      skinId: string;   skinName: string }
   | { type: 'hat';       hatId: string;    hatName: string;  hatImageUrl: string  }
@@ -207,8 +207,12 @@ export async function grantCrateLoot(
   if (outcome === 'doubloons') {
     const [min, max] = CRATE_DOUBLOON_RANGE[tier]
     const amount = Math.floor(min + Math.random() * (max - min + 1))
-    await admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + amount }).eq('id', userId)
-    return pay({ type: 'doubloons', amount })
+    const newDoubloons = (profile?.doubloons ?? 0) + amount
+    await admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', userId)
+    // The new total rides along (KAN-61): the purse was paid on the server
+    // and nothing on the sea was told, so the counter sat where it was until
+    // a reload.
+    return pay({ type: 'doubloons', amount, newDoubloons })
   }
 
   // Bait — weighted random pick from this tier's pool

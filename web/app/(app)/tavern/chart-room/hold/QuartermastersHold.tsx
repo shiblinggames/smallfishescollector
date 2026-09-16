@@ -312,7 +312,10 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
       <div style={{
         position: 'relative',
         width: 'min(92vw, 396px)', aspectRatio: '1 / 1', margin: '0 auto',
-        display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)',
+        // ROWS ARE FIXED TOO (KAN-22). Only the columns were, so a row with no
+        // digit in it had nothing to size against and collapsed to a line,
+        // then sprang open the moment a number went in.
+        display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gridTemplateRows: 'repeat(9, 1fr)',
         background: 'linear-gradient(180deg, #f3e9cf 0%, #e9dcba 100%)',
         border: `2.5px solid ${INK}`, borderRadius: 8, overflow: 'hidden',
         boxShadow: '0 6px 18px rgba(0,0,0,0.45)',

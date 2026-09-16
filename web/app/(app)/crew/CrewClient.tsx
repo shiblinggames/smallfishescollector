@@ -930,16 +930,23 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
           const divine = isDivineTrait(t)
           return (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
-              <span className={`font-karla font-700${divine ? ' trait-divine' : ''}`} style={{
-                fontSize: '0.5rem', letterSpacing: '0.06em', textTransform: 'uppercase',
-                // Divine takes its own colour from .trait-divine (a clipped
-                // gradient), so leave `color` off it or the class has nothing
-                // to show through.
-                ...(divine ? {} : { color: buff ? '#9cc7a8' : '#c79c9c' }),
+              {/* THE PILL AND THE TEXT ARE TWO ELEMENTS (KAN-23). .trait-divine
+                  paints its text as a clipped gradient, and this chip was
+                  setting an inline `background` on the SAME element, which
+                  overrode the gradient: transparent text clipped to a flat
+                  translucent wash, which is to say nothing. On the manifest the
+                  chip has its own wrapper; here the pill was the text. */}
+              <span style={{
+                display: 'inline-block',
                 background: divine ? 'rgba(63,214,196,0.14)' : buff ? 'rgba(60,120,80,0.18)' : 'rgba(140,60,60,0.18)',
                 border: `1px solid ${divine ? 'rgba(63,214,196,0.55)' : buff ? 'rgba(120,180,140,0.4)' : 'rgba(180,110,110,0.4)'}`,
                 borderRadius: 3, padding: '0.12rem 0.4rem',
-              }}>{label}</span>
+              }}>
+                <span className={`font-karla font-700${divine ? ' trait-divine' : ''}`} style={{
+                  fontSize: '0.5rem', letterSpacing: '0.06em', textTransform: 'uppercase',
+                  ...(divine ? {} : { color: buff ? '#9cc7a8' : '#c79c9c' }),
+                }}>{label}</span>
+              </span>
             </div>
           )
         })()}

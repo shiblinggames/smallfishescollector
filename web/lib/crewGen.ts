@@ -37,6 +37,9 @@ const CREW_NAMES: Record<string, string> = {
   pufferfish: 'Puff', red_snapper: 'Snappy', salmon: 'Sam', sardine: 'Sard',
   sailfish: 'Selly', swordfish: 'Sawyer', tiger_shark: 'Ty', tuna: 'Toon', whale_shark: 'Welly',
   coelacanth: 'Laz',
+  // The legendaries with a name of their own (KAN-24: the wardrobe titled
+  // her section off the slug, "Moorish Idol").
+  moorish_idol: 'Mira',
 }
 
 /** Crew display nickname for a card slug, falling back to the catalog name. */

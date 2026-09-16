@@ -466,3 +466,17 @@ export async function saveSeaPosition(
 
   await admin.from('profiles').update(patch).eq('id', user.id)
 }
+
+/**
+ * Does this captain already carry the runner's rod? (KAN-25.) The wager
+ * refuses the stake for an owned rod, but the panel had no way to know that
+ * before the press, so it offered a bet nobody could take.
+ */
+export async function runnerRodOwned(rodTier: number): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  const { data } = await createAdminClient()
+    .from('rod_inventory').select('rod_tier').eq('user_id', user.id).eq('rod_tier', rodTier).maybeSingle()
+  return !!data
+}

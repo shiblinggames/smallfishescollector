@@ -3774,6 +3774,9 @@ export default function GauntletGame(props: GauntletGameProps) {
       .map(c => ({ c, tier: curseTiers[c.id] ?? 0 }))
       .filter(x => x.tier >= 1)
     const activeConf = activeConfluences(boonTiers, confluencesTaken)
+    // Convergences (Don's), drafted and online. Listed under the synergies
+    // they are built from (KAN-26): they were only ever visible in the codex.
+    const activeConv = activeConvergences(boonTiers, confluencesTaken, convergencesTaken)
     // Synergies you QUALIFY for but haven't drafted — nudge the player to watch
     // for the gold "forge a synergy" card in an upcoming draft.
     const eligibleConf = eligibleConfluences(boonTiers, confluencesTaken, props.variant)
@@ -4037,6 +4040,23 @@ export default function GauntletGame(props: GauntletGameProps) {
                                   rungs: c.levels.map((lv, i) => ({ label: boonTierLabel(i + 1), desc: lv.desc, held: i + 1 <= lvl, current: i + 1 === lvl })) })}
                                 style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: fresh ? `${GOLD}30` : `${GOLD}18`, border: `1px solid ${GOLD}${fresh ? 'aa' : '66'}`, color: '#fbe7c4', boxShadow: fresh ? `0 0 12px ${GOLD}66` : 'none' }}>
                                 {c.name} {lvlLabel}{fresh ? ' · NEW' : ''}
+                              </button>
+                            )
+                          })}
+                        </LoadoutRow>
+                      )}
+                      {activeConv.length > 0 && (
+                        <LoadoutRow label="Convergences" color="#b98bff">
+                          {activeConv.map(cv => {
+                            const lvl = convergenceLevel(cv, boonTiers, confluencesTaken)
+                            const lvlLabel = ['', 'I', 'II', 'III'][lvl] ?? ''
+                            const reqNames = cv.requires.map(r => CONFLUENCES.find(c => c.id === r.confluenceId)?.name ?? r.confluenceId)
+                            return (
+                              <button key={cv.id} className="font-karla font-700 tap"
+                                onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${cv.name} ${lvlLabel}` : cv.name, desc: convergenceDescAt(cv, lvl), detail: `${cv.detail} Its level is the lower of your ${reqNames.join(' and ')} levels, so deepen whichever is behind to level it up.`, flavor: cv.flavor, count: 0, image: cv.image,
+                                  rungs: cv.levels.map((lv, i) => ({ label: boonTierLabel(i + 1), desc: lv.desc, held: i + 1 <= lvl, current: i + 1 === lvl })) })}
+                                style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: 'rgba(185,139,255,0.16)', border: '1px solid rgba(185,139,255,0.55)', color: '#e6d9ff' }}>
+                                {cv.name} {lvlLabel}
                               </button>
                             )
                           })}
