@@ -2513,6 +2513,142 @@ body.hardcore-gauntlet::after {
   .landing-rise { animation: none; opacity: 1; }
 }
 
+/* ── THE LANDING PAGE: FRAMES ─────────────────────────────────────────────
+   See app/page.tsx for what the page is trying to say. These are the parts it
+   cannot do inline, and they are all one idea: SHOW THE GAME AT THE SIZE IT IS
+   PLAYED.
+
+   The page used to be a 620px column with two phone screenshots stood up in
+   it, which is a phone game's landing page. This is a whole chart you sail on
+   a monitor, and a wide world shrunk into a phone column is the one crop that
+   makes it look small. So the desktop shot is the big one and the phone rides
+   its corner, which also happens to be the honest claim: it is the same game
+   in both places, and one of them is bigger. */
+
+/* THE DESKTOP FRAME. A restrained window, with the address on it. The chrome
+   is not decoration: "no download, plays in a browser tab" is one of the
+   strongest things this game can say, and a title bar with the real address in
+   it says that faster than the sentence does. */
+.lp-desk {
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0a121c;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 40px 90px rgba(0,0,0,0.72), 0 0 80px rgba(20,120,150,0.12);
+}
+.lp-desk-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  background: linear-gradient(180deg, #131f2c 0%, #0b1420 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.lp-desk-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.lp-desk-url {
+  flex: 1;
+  min-width: 0;
+  margin-left: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.42);
+  border: 1px solid rgba(255,255,255,0.07);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: #7f97a9;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lp-desk img { display: block; width: 100%; height: auto; }
+
+/* THE PHONE. A bezel and nothing else. No notch and no home button: both date
+   a frame to a particular handset, and a frame that looks like a 2019 phone
+   makes the game in it look 2019 as well. */
+.lp-phone {
+  border-radius: 26px;
+  padding: 6px;
+  background: linear-gradient(170deg, #202c38 0%, #0a1017 100%);
+  border: 1px solid rgba(255,255,255,0.17);
+  box-shadow: 0 30px 62px rgba(0,0,0,0.78), inset 0 1px 0 rgba(255,255,255,0.10);
+}
+.lp-phone img { display: block; width: 100%; height: auto; border-radius: 21px; }
+
+/* THE PAIR. The phone sits on the desktop shot's corner on a wide screen and
+   drops underneath it on a narrow one, where an overlap would cover the thing
+   it is meant to be standing next to. */
+.lp-duo { position: relative; }
+.lp-duo .lp-phone {
+  position: absolute;
+  right: -1.5%;
+  bottom: -9%;
+  width: 21%;
+  min-width: 112px;
+}
+@media (max-width: 760px) {
+  .lp-duo .lp-phone {
+    position: static;
+    width: min(52%, 210px);
+    margin: 1.4rem auto 0;
+  }
+}
+
+/* THE PLAY BUTTON. Translucent tinted gold with a hairline, the same language
+   as every primary button in the game (house rule: no solid gold fills). It
+   grows a little under the pointer so the whole still reads as pressable, not
+   just the disc. */
+.trailer-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding-left: 5px; /* the triangle's mass is left of its bounding box */
+  color: #ffdb7a;
+  background: linear-gradient(180deg, rgba(240,200,80,0.26) 0%, rgba(224,168,46,0.15) 100%);
+  border: 1px solid rgba(240,200,80,0.66);
+  box-shadow: 0 10px 34px rgba(0,0,0,0.55), 0 0 44px rgba(240,192,64,0.26), inset 0 1px 0 rgba(255,240,200,0.18);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  transition: transform 0.22s cubic-bezier(0.16,0.9,0.28,1), box-shadow 0.22s, background 0.22s;
+}
+button:hover > .trailer-play {
+  transform: translate(-50%, -50%) scale(1.07);
+  background: linear-gradient(180deg, rgba(240,200,80,0.36) 0%, rgba(224,168,46,0.22) 100%);
+  box-shadow: 0 14px 44px rgba(0,0,0,0.6), 0 0 64px rgba(240,192,64,0.40), inset 0 1px 0 rgba(255,240,200,0.24);
+}
+button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); transition-duration: 0.07s; }
+@media (prefers-reduced-motion: reduce) {
+  .trailer-play, button:hover > .trailer-play { transition: none; transform: translate(-50%, -50%); }
+}
+
+/* THE TWO-COLUMN BANDS. Words on one side, a picture on the other, alternating
+   down the page. One column on a phone, and the PICTURE goes first there: a
+   heading followed by a wall of prose with the picture below the fold is how a
+   section gets scrolled past. */
+.lp-band {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.6rem;
+  align-items: center;
+}
+.lp-band > .lp-band-art { order: -1; }
+@media (min-width: 900px) {
+  .lp-band { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 3.2rem; }
+  .lp-band > .lp-band-art { order: 0; }
+  /* Flipped: the art takes the left. Declared by the narrower column moving,
+     not by re-ordering the markup, so the reading order stays the reading
+     order for a screen reader. */
+  .lp-band.lp-flip { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); }
+  .lp-band.lp-flip > .lp-band-art { order: -1; }
+}
+
 /* ── Exchange: the "how far" slider ──────────────────────────────────────── */
 /* A native range input, because it is keyboard and screen-reader accessible
    for free and a hand-rolled drag handle is neither. Only the furniture is

@@ -35,10 +35,41 @@ const karla = Karla({
   variable: '--font-karla',
 })
 
+/**
+ * ── WHAT THE INTERNET SEES ──────────────────────────────────────────────────
+ *
+ * This was two years out of date and describing a different game: "Redeem your
+ * pack code and collect all 36 digital fish cards" is the card-pack economy,
+ * retired months ago, and the title carried an em-dash against the house rule.
+ * It is the description Google prints and the one every pasted link unfurled
+ * with, so it was the most-read sentence the game had and it was fiction.
+ *
+ * The TEMPLATE is new. Pages set bare titles ("The Sea", "The Shipyard") and
+ * were shipping browser tabs and search results that said only that, with no
+ * way to tell whose sea it was.
+ *
+ * The card's picture is generated next door in app/opengraph-image.tsx.
+ */
 export const metadata: Metadata = {
   metadataBase: new URL('https://seasthebooty.com'),
-  title: 'Small Fishes: Seas the Booty — Online Game',
-  description: 'Redeem your pack code and collect all 36 digital fish cards.',
+  title: {
+    default: 'Small Fishes: Seas the Booty',
+    template: '%s · Small Fishes',
+  },
+  description: 'A free browser game on an open sea. Sail a fogged chart, fish it with a needle and a shrinking window, sign a crew, and take a ship into nine boss fights.',
+  applicationName: 'Small Fishes',
+  openGraph: {
+    type: 'website',
+    siteName: 'Small Fishes: Seas the Booty',
+    title: 'Small Fishes: Seas the Booty',
+    description: 'A free browser game on an open sea. Sail a fogged chart, fish it with a needle and a shrinking window, sign a crew, and take a ship into nine boss fights.',
+    url: '/',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Small Fishes: Seas the Booty',
+    description: 'A free browser game on an open sea. Sail a fogged chart, fish it with a needle and a shrinking window, sign a crew, and take a ship into nine boss fights.',
+  },
 }
 
 // Lock the scale so iOS doesn't auto-zoom when focusing an input whose

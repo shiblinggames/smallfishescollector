@@ -1,7 +1,7 @@
 {
   "name": "Small Fishes: Seas the Booty",
   "short_name": "Small Fishes",
-  "description": "Collect all 36 digital fish cards. Daily games, expeditions, and more.",
+  "description": "An open sea you sail, fish and fight over. Free to play in your browser.",
   "start_url": "/sea",
   "id": "/sea",
   "scope": "/",

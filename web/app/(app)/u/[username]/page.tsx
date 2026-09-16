@@ -15,7 +15,7 @@ import type { CareerStats, CareerAggregates } from '@/lib/careerStats'
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
   const { username } = await params
   return {
-    title: `${username} — Small Fishes`,
+    title: username,
     alternates: { canonical: `/u/${username}` },
   }
 }
