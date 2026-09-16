@@ -88,7 +88,7 @@ export default function ParlorStanding({ points, streak, claimedGems }: { points
               {toNext.toLocaleString()} to <span style={{ color: next.color }}>{next.title}</span> · <span style={{ color: GEM }}>+{next.gems} {GEM_GLYPH}</span>
             </span>
           ) : (
-            <span className="font-karla" style={{ fontSize: '0.62rem', color: GEM }}>Top rank — every rank attained</span>
+            <span className="font-karla" style={{ fontSize: '0.62rem', color: GEM }}>Top rank, every rank attained</span>
           )}
         </div>
       </button>
@@ -143,7 +143,7 @@ function ParlorLadderModal({ points, claimedGems, onClose }: { points: number; c
             </button>
           </div>
           <p className="font-karla" style={{ fontSize: '0.64rem', color: '#a8a090', marginTop: 2 }}>
-            Earn points in both games to climb. Each rank pays its gems once — collect them in the lobby.
+            Earn points in both games to climb. Each rank pays its gems once. Collect them in the lobby.
           </p>
         </div>
 

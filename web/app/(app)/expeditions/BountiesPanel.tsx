@@ -285,7 +285,7 @@ function RankUpOverlay({ rank, onClose }: { rank: BountyRank | null; onClose: ()
           <motion.p className="font-karla font-600"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}
             style={{ fontSize: '0.68rem', color: '#6d675d', marginTop: 20 }}>
-            Tap to continue
+            Press to continue
           </motion.p>
         </motion.div>
       )}

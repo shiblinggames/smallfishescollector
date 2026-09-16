@@ -393,7 +393,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
             hidden scrollbar, and the chips — the thing a captain checks most —
             always stay on screen. whitespace-nowrap keeps any two-word tab
             from folding into two lines mid-scroll. */}
-        <div className="hidden sm:flex flex-1 min-w-0 overflow-x-auto scrollbar-hide whitespace-nowrap ml-6 gap-1 text-[0.66rem] font-karla font-600 uppercase tracking-[0.1em]">
+        <div className="hidden sm:flex flex-1 min-w-0 overflow-x-auto scrollbar-hide whitespace-nowrap ml-6 gap-1 text-[0.74rem] font-karla font-600 uppercase tracking-[0.1em]">
           {[...links, ...desktopOnlyLinks, ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin', badge: null }] : [])].map(({ href, label, badge }) => (
             <Link key={href} href={href}
               className={`py-1.5 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#a0a09a] hover:text-[#f0ede8]'}`}>
@@ -741,7 +741,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
             <div style={{ flex: 1, minWidth: 0 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1.2 }}>Get the App</p>
               <p className="font-karla" style={{ fontSize: '0.82rem', color: '#92c0ca', marginTop: 5, lineHeight: 1.45 }}>
-                Full-screen &amp; faster — it really feels like a real game. Takes about 5 seconds:
+                Full-screen and faster. It really feels like a real game. Takes about 5 seconds:
               </p>
             </div>
             <button
@@ -761,11 +761,11 @@ export default function Nav({ doubloons, gems, canSail = false }: {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', marginTop: '1rem' }}>
             {((isChromeIOS ? [
-              { label: 'Share', desc: 'Tap the Share icon — top right', icon: ICON_SHARE },
+              { label: 'Share', desc: 'Tap the Share icon, top right', icon: ICON_SHARE },
               { label: 'View More', desc: 'Tap View More', icon: ICON_CARET },
               { label: 'Add to Home Screen', desc: 'Tap Add to Home Screen', icon: ICON_ADD_HOME },
             ] : [
-              { label: '···', desc: 'Tap the three dots — bottom right corner', icon: ICON_DOTS },
+              { label: '···', desc: 'Tap the three dots, bottom right corner', icon: ICON_DOTS },
               { label: 'Share', desc: 'Tap Share', icon: ICON_SHARE },
               { label: 'View More', desc: 'Tap View More', icon: ICON_CARET },
               { label: 'Add to Home Screen', desc: 'Tap Add to Home Screen', icon: ICON_ADD_HOME },
@@ -779,7 +779,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
                 }}>{icon ?? i + 1}</span>
                 <p className="font-karla" style={{ fontSize: '0.84rem', lineHeight: 1.35 }}>
                   <span className="font-700" style={{ color: '#f0ede8' }}>{label}</span>
-                  <span style={{ color: '#8fb4be' }}> — {desc}</span>
+                  <span style={{ color: '#8fb4be' }}> · {desc}</span>
                 </p>
               </div>
             ))}

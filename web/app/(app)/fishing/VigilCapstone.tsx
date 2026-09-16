@@ -206,7 +206,7 @@ export default function VigilCapstone({ names, onClose }: {
                 It rides the bow, so it sails alongside whatever pet you already keep. No crate will ever hand out another.
               </p>
               <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.54rem', color: '#6f6890', marginTop: 20 }}>
-                Tap to continue
+                Press to continue
               </p>
             </motion.div>
           </motion.div>

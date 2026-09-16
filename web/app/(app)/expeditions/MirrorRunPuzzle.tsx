@@ -254,7 +254,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         @keyframes mrun-lens-bounce { 0% { transform: scale(0.7) } 55% { transform: scale(1.2) } 100% { transform: scale(1) } }
       `}</style>
       <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', textAlign: 'center', lineHeight: 1.5 }}>
-        Bend the beam through <b style={{ color: '#c9c2b6' }}>all {targets.length} lenses</b> — the prism splits it in two, so both branches must land. Plan it, then fire.
+        Bend the beam through <b style={{ color: '#c9c2b6' }}>all {targets.length} lenses</b>. The prism splits it in two, so both branches must land. Plan it, then fire.
       </p>
       <div style={{ position: 'relative', width: W, height: H, borderRadius: 12, overflow: 'hidden', background: '#0a1320', border: '1px solid #1f2e42', boxShadow: 'inset 0 0 26px rgba(0,0,0,0.5)' }}>
         {Array.from({ length: lvl.rows }).map((_, gy) =>
@@ -323,7 +323,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         )}
         {failed && (
           <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: RED, textAlign: 'center', margin: 0 }}>
-            Out of fires. The mirrors reset — plan it through.
+            Out of fires. The mirrors reset. Plan it through.
           </p>
         )}
         {solved && (

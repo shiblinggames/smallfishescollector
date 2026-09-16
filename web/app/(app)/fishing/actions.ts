@@ -1129,7 +1129,7 @@ export async function reelIn(
         // Targeted mail — the prize details + claim instructions. Only
         // the winner sees it in their inbox (target_user_id filter).
         await admin.from('mail_messages').insert({
-          subject: '🏆 First Ancient Deep Catch — Custom Boat Prize',
+          subject: '🏆 First Ancient Deep Catch: Custom Boat Prize',
           body: "You did it. You're the first captain ever to land a fish in the Ancient Deep.\n\nAs promised, you've won a custom boat designed for you. Reply to this email to claim it:\n\nhello@shiblinggames.com\n\nInclude your prize code: ANCIENT-FIRST\n\nWe'll work with you on the design. Welcome to the deep.\n\n— Cap'n Shibling",
           sender_label: "Cap'n Shibling",
           target_user_id: user.id,

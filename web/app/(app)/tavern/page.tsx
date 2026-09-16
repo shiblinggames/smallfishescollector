@@ -66,7 +66,7 @@ export default async function TavernPage() {
           that this was the page a new captain landed on. It is not any more —
           they hang off the app shell now, so they fire wherever the session
           opens. See app/(app)/layout.tsx. */}
-      <div className="page-col pt-6 pb-16 flex flex-col gap-4" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="page-col pt-6 pb-16 sm:pb-8 flex flex-col gap-4" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Ungrouped ON PURPOSE, and the only thing that is. A one-line ticker
             of who holds each board is the room's background noise rather than

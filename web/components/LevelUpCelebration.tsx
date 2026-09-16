@@ -287,7 +287,7 @@ export default function LevelUpCelebration({
           <motion.p className="font-karla font-400"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
             style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.32)', marginTop: '1rem', letterSpacing: '0.08em' }}>
-            tap to continue
+            press to continue
           </motion.p>
         </motion.div>
       </motion.div>

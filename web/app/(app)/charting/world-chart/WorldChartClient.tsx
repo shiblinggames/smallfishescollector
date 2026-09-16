@@ -168,7 +168,7 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
         </div>
 
         <p className="font-karla" style={{ textAlign: 'center', fontSize: '0.72rem', color: 'rgba(206,218,228,0.5)', marginTop: 12 }}>
-          Tap a charted landmark to revisit it. The fog lifts as you earn charting points.
+          Pick a charted landmark to revisit it. The fog lifts as you earn charting points.
         </p>
       </div>
 

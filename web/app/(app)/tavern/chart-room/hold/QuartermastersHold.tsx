@@ -238,7 +238,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
       setWrong(r.wrong)
       setHintsMap(prev => ({ ...prev, [selected]: r.hintsUsed }))
       const n = r.wrong.filter(Boolean).length
-      setMessage(n === 0 ? 'Manifest checks out so far — no bad cargo.' : `${n} lot${n > 1 ? 's' : ''} stowed wrong. (Tally used — clean bonus forfeit.)`)
+      setMessage(n === 0 ? 'Manifest checks out so far. No bad cargo.' : `${n} lot${n > 1 ? 's' : ''} stowed wrong. (Tally used, clean bonus forfeit.)`)
     })
   }
 
@@ -250,7 +250,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
       if ('error' in r) { setMessage(r.error); return }
       if (!r.correct) {
         setWrong(r.wrong ?? null)
-        setMessage('She lists — some lots are stowed wrong. Find them and try again.')
+        setMessage('She lists. Some lots are stowed wrong. Find them and try again.')
         return
       }
       setSolvedMap(prev => ({ ...prev, [selected]: { doubloons: r.doubloonsWon, clean: r.clean } }))
@@ -482,7 +482,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
           </div>
 
           <p className="font-karla" style={{ fontSize: '0.66rem', color: message ? '#e0b48a' : (cleanStill ? '#7bbf7b' : '#a89e86'), textAlign: 'center', minHeight: '1rem', lineHeight: 1.4 }}>
-            {message ?? (cleanStill ? `Stow it clean (no tally) for +${holdPayout(selected, true) - HOLD_META[selected].payout} ⟡.` : 'Tally used this hold — clean bonus forfeit.')}
+            {message ?? (cleanStill ? `Stow it clean (no tally) for +${holdPayout(selected, true) - HOLD_META[selected].payout} ⟡.` : 'Tally used this hold, clean bonus forfeit.')}
           </p>
         </>
       )}
@@ -508,7 +508,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
               >
                 <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: GOLD }}>The hold sits even.</p>
                 <p className="font-karla" style={{ fontSize: '0.78rem', color: '#dccba6', lineHeight: 1.5, marginTop: 8 }}>
-                  {win.clean ? 'Stowed clean — not a single tally called.' : 'A fair stow.'} The quartermaster counts out your share.
+                  {win.clean ? 'Stowed clean. Not a single tally called.' : 'A fair stow.'} The quartermaster counts out your share.
                 </p>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f4ecd8', marginTop: 14 }}>+{win.doubloons} ⟡</p>
                 <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#7bbf7b', marginTop: 6 }}>+{win.points} charting point{win.points > 1 ? 's' : ''}</p>

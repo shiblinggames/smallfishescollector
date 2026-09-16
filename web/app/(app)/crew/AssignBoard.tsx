@@ -215,7 +215,7 @@ export default function AssignBoard({
             <button type="button"
               onClick={() => setOpenBreakdown(o => (o === t.key ? null : t.key))}
               aria-expanded={openBreakdown === t.key}
-              aria-label={`${t.label} totals. Tap for the breakdown.`}
+              aria-label={`${t.label} totals. Press for the breakdown.`}
               style={{
               width: '100%', display: 'block', textAlign: 'left',
               padding: '0.8rem 0.85rem 0.7rem', font: 'inherit', cursor: 'pointer',
@@ -319,7 +319,7 @@ export default function AssignBoard({
                       {([['power', 'Power'], ['dodge', 'Savvy'], ['fortune', 'Fortune']] as const).map(([k, label]) => (
                         <p key={k} className="font-karla" style={{ fontSize: '0.68rem', color: '#948d85', lineHeight: 1.45 }}>
                           <span className="font-700" style={{ color: STAT_COLOR[k] }}>{label}</span>
-                          {' — '}{STAT_MEANING[t.key][k]}
+                          {' · '}{STAT_MEANING[t.key][k]}
                         </p>
                       ))}
                       <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7d7770', lineHeight: 1.45, marginTop: 2 }}>
@@ -364,7 +364,7 @@ export default function AssignBoard({
                       // The tour points at the captain's seat on the raid
                       // party: it is the one seat the Sea Gate cares about.
                       data-coach={captain && t.key === 'raid' ? 'captain-seat' : undefined}
-                      aria-label={`Open seat ${i + 1} on the ${t.label}. Tap to assign a crew.`}
+                      aria-label={`Open seat ${i + 1} on the ${t.label}. Press to assign a crew.`}
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                         minHeight: 104, borderRadius: 12, cursor: 'pointer', font: 'inherit',
@@ -398,7 +398,7 @@ export default function AssignBoard({
                 const artColor = skin?.color ?? rc
                 return (
                   <button key={i} type="button" onClick={() => onTapCrew(crew)}
-                    aria-label={`${crew.name}, seat ${i + 1}. Tap to view, swap or remove them.`}
+                    aria-label={`${crew.name}, seat ${i + 1}. Press to view, swap or remove them.`}
                     style={{
                       position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                       minHeight: 104, padding: '0.4rem 0.3rem 0.45rem', borderRadius: 12,

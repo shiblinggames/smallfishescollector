@@ -77,7 +77,7 @@ export async function buyPortalTier(): Promise<
 
   await admin.from('doubloon_transactions').insert({
     user_id: user.id, amount: -next.cost,
-    reason: `Homestead Portal — ${next.name}`,
+    reason: `Homestead Portal: ${next.name}`,
   })
 
   return {
@@ -143,7 +143,7 @@ export async function buyPortalPort(portId: string): Promise<
 
   await admin.from('doubloon_transactions').insert({
     user_id: user.id, amount: -port.cost,
-    reason: `Homestead Portal — ${port.name}`,
+    reason: `Homestead Portal: ${port.name}`,
   })
 
   return { ok: true, ports: next, doubloons: Number(newDoubloons) }

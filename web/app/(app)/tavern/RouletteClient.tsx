@@ -428,7 +428,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
           textAlign: 'center', marginTop: 4, minHeight: '0.8rem',
         }}>
           {phase === 'bet'
-            ? (totalPlaced > 0 ? 'Tap the wheel to spin' : 'Place your bets')
+            ? (totalPlaced > 0 ? 'Press the wheel to spin' : 'Place your bets')
             : phase === 'spinning' && winningNumber === null
               ? 'No more bets…'
               : ' '}

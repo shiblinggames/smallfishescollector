@@ -391,7 +391,7 @@ export default function SeaFirstVoyage({
   const text = stuck === 'bait'
     ? 'You’re out of bait, Captain. Open the *Daily Haul*, top right, and claim your free worms.'
     : stuck === 'hold'
-      ? 'Your *hold* is full. Nothing else fits until you sell what is in it — the market on the Mainland pays best.'
+      ? 'Your *hold* is full. Nothing else fits until you sell what is in it. The market on the Mainland pays best.'
       : b.text
 
   return (

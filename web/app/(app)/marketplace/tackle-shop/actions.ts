@@ -91,7 +91,7 @@ export async function purchaseRod(
 
   if (!profile) return { error: 'Profile not found' }
   if (alreadyOwned) return { error: 'Already owned' }
-  if (isCaptainRod(rod) && !isPremiumActive(profile)) return { error: `The ${rod.name} is a Captain's rod — become a Captain to wield it.` }
+  if (isCaptainRod(rod) && !isPremiumActive(profile)) return { error: `The ${rod.name} is a Captain's rod. Become a Captain to wield it.` }
   const levelReq = fishingGearLevelReq(rod)
   if (getLevelFromXP(profile.fishing_xp ?? 0) < levelReq) return { error: `Reach Fishing Lv ${levelReq} to buy the ${rod.name}` }
   if (profile.doubloons < rod.cost) return { error: `Need ${rod.cost.toLocaleString()} ⟡` }

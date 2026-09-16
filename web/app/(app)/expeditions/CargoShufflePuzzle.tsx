@@ -14,7 +14,7 @@
 // transitions) — no RAF loop needed since nothing animates continuously; the
 // iOS-PWA freeze lessons from Mirror Run don't apply to stepwise motion.
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { RaidCargoPuzzle } from '@/lib/raidMap'
 import { vibrate, hapticTap, hapticReward } from '@/lib/haptics'
@@ -62,6 +62,34 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
   const [roomClearFx, setRoomClearFx] = useState(false)
   const solvedRef = useRef(false)
   const swipeRef = useRef<{ x: number; y: number } | null>(null)
+
+  // ── ARROW KEYS ────────────────────────────────────────────────────────
+  // Swipe is the phone verb, and a mouse can drag, but on a desktop the
+  // natural way to shove a crate is the keyboard and there was none. Arrows
+  // and WASD, one step each, with the arrows kept from scrolling the page.
+  // `step` is defined further down and closes over state, so it is reached
+  // through a ref that is refreshed every render rather than re-binding the
+  // listener each time.
+  const stepRef = useRef<(dr: number, dc: number) => void>(() => {})
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const k = e.key.toLowerCase()
+      const d =
+        k === 'arrowup' || k === 'w' ? [-1, 0]
+        : k === 'arrowdown' || k === 's' ? [1, 0]
+        : k === 'arrowleft' || k === 'a' ? [0, -1]
+        : k === 'arrowright' || k === 'd' ? [0, 1]
+        : null
+      if (!d) return
+      e.preventDefault()
+      stepRef.current(d[0], d[1])
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // Reset state when the room changes (next room / replay).
   const roomRef = useRef(room)
@@ -152,6 +180,8 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
     })
   }
 
+  stepRef.current = step
+
   function reset() {
     if (solvedRef.current || roomClearFx) return
     vibrate(10)
@@ -199,7 +229,7 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
           <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="font-karla font-700"
             style={{ fontSize: '0.64rem', color: '#f08a8a', textAlign: 'center', marginBottom: 8 }}>
-            A crate is jammed in a corner — Undo or Reset to free it.
+            A crate is jammed in a corner. Undo or Reset to free it.
           </motion.p>
         )}
       </AnimatePresence>
@@ -332,7 +362,7 @@ export default function CargoShufflePuzzle({ puzzle, onSolved }: { puzzle: RaidC
       {/* Controls + how-to. */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
         <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8a8480', lineHeight: 1.4, maxWidth: '58%' }}>
-          Swipe to move. Shove every crate onto a marked square — crates only push, never pull.
+          Swipe, drag, or use the arrow keys to move. Shove every crate onto a marked square. Crates only push, never pull.
         </p>
         <div style={{ display: 'flex', gap: 6 }}>
           <button type="button" onClick={undo} disabled={st.history.length === 0}

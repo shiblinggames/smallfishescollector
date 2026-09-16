@@ -191,7 +191,7 @@ export default function AncientRankUp({ name, from, to, onClose }: {
 
 
               <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.54rem', color: '#6f6890', marginTop: 18 }}>
-                Tap to continue
+                Press to continue
               </p>
             </motion.div>
           )}

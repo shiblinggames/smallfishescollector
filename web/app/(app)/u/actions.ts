@@ -342,7 +342,7 @@ export async function purchaseAvatarSpecial(specialId: string): Promise<
     .single()
   if (!profile) return { error: 'Profile not found' }
 
-  if (!isPremiumActive(profile)) return { error: 'Captain-only — become a Captain first' }
+  if (!isPremiumActive(profile)) return { error: 'Captain only. Become a Captain first' }
 
   const owned = (profile.unlocked_avatar_specials as string[] | null) ?? []
   if (owned.includes(specialId)) return { error: 'Already owned' }

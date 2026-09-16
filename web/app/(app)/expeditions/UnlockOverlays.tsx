@@ -247,7 +247,7 @@ data-any-key
           className="font-karla"
           style={{ fontSize: '0.6rem', color: 'rgba(240,192,64,0.4)', marginTop: '0.7rem' }}
         >
-          Tap anywhere to dismiss
+          Press anywhere to dismiss
         </motion.p>
       </motion.div>
     </motion.div>,

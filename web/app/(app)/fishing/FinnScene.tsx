@@ -197,7 +197,7 @@ export default function FinnScene({ beat, onComplete }: {
                   animate={{ opacity: typing ? 0.35 : [0.4, 0.85, 0.4] }}
                   transition={typing ? { duration: 0.2 } : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
                   style={{ fontSize: '0.56rem', letterSpacing: '0.16em', color: 'rgba(240,237,232,0.6)' }}>
-                  {typing ? 'Tap to skip ▸' : 'Tap ▸'}
+                  {typing ? 'Press to skip ▸' : 'Press ▸'}
                 </motion.span>
               )}
             </div>

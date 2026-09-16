@@ -103,7 +103,7 @@ const EXPLAIN: Record<Buyable, { does: string; why: string }> = {
   },
   accel: {
     does: 'Reaches top speed sooner after every stop.',
-    why: 'Every stop and start — after a cast, after a hail, coming off a dock. '
+    why: 'Every stop and start: after a cast, after a hail, coming off a dock. '
        + 'It does not raise your top speed, only how quickly you reach it.',
   },
   hold: {

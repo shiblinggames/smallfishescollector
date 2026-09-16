@@ -1159,7 +1159,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         if (res.reason === 'other_run') { setHcBlockedMsg(`You have an unfinished ${props.variant === 'don' ? 'Davy Jones' : "Don's"} Gauntlet run. Finish or bank it first.`); return }
         // Hardcore was rejected server-side (gate not met / no living squad).
         setHcBlockedMsg(res.reason === 'no_squad'
-          ? 'Assign at least one crew to your raid party first — that party is the squad you risk.'
+          ? 'Assign at least one crew to your raid party first. That party is the squad you risk.'
           : 'The Hardcore Gauntlet is not open to you yet.')
         return
       }
@@ -1365,7 +1365,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: `${DANGER}cc` }}>No Turning Back</p>
             <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3d7d7', lineHeight: 1.08, marginTop: 8 }}>Send Them Down?</p>
             <p className="font-karla" style={{ fontSize: '0.84rem', color: 'rgba(240,220,220,0.82)', lineHeight: 1.5, marginTop: 10, maxWidth: 320, marginInline: 'auto' }}>
-              If you <strong style={{ color: '#fca5a5' }}>fall or abandon</strong> this run, these crew are lost to the Locker — <strong style={{ color: '#fca5a5' }}>gone for good</strong>, and remembered only in your Crew Hall.
+              If you <strong style={{ color: '#fca5a5' }}>fall or abandon</strong> this run, these crew are lost to the Locker, <strong style={{ color: '#fca5a5' }}>gone for good</strong>, and remembered only in your Crew Hall.
             </p>
             {/* The exact squad at risk. */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, justifyContent: 'center', marginTop: 14 }}>
@@ -2495,7 +2495,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 const max = detailEffect.maxTier ?? 3
                 return (
                   <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: accent, marginTop: 9 }}>
-                    {detailEffect.count >= max ? `Tier ${detailEffect.count} of ${max} — fully upgraded.` : `Tier ${detailEffect.count} of ${max} — draft it again to upgrade.`}
+                    {detailEffect.count >= max ? `Tier ${detailEffect.count} of ${max}, fully upgraded.` : `Tier ${detailEffect.count} of ${max}. Draft it again to upgrade.`}
                   </p>
                 )
               })()}
@@ -2606,7 +2606,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b9b2a6', lineHeight: 1.55, marginTop: 12, maxWidth: 340, marginInline: 'auto' }}>
             {props.resumePaused
               ? 'You stepped away mid-descent. Pick the line back up whenever you like. Your progress is right where you left it.'
-              : 'Your last dive was cut short before it ended. The current holds you at your breather — take the line back up and press on.'}
+              : 'Your last dive was cut short before it ended. The current holds you at your breather. Take the line back up and press on.'}
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 20 }}>
             {pill('Depth', `${depth}`, GOLD)}
@@ -2629,7 +2629,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <BackLink router={router} label="Leave it held" />
               </div>
               <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7d776e', lineHeight: 1.5, marginTop: 6 }}>
-                Held safely. Resume as many times as you like — no limit{hardcoreRun ? ', and your crew are never at risk while it is paused' : ''}.
+                Held safely. Resume as many times as you like, no limit{hardcoreRun ? ', and your crew are never at risk while it is paused' : ''}.
               </p>
             </>
           ) : (
@@ -2656,10 +2656,10 @@ export default function GauntletGame(props: GauntletGameProps) {
               <p className="font-karla" style={{ fontSize: '0.62rem', color: hardcoreRun ? '#c88a8a' : '#7d776e', lineHeight: 1.5, marginTop: 12 }}>
                 {hardcoreRun
                   ? (letGoArmed
-                      ? 'This ends the run and drowns your whole squad, for good. Tap once more to confirm, or resume above.'
+                      ? 'This ends the run and drowns your whole squad, for good. Press once more to confirm, or resume above.'
                       : 'A crashed run can be resumed once. Ending it is not a pause: it ends the run AND drowns your hardcore crew, permanently.')
                   : (letGoArmed
-                      ? 'This ends the run for good and banks your Fathoms. Tap once more to confirm, or resume above.'
+                      ? 'This ends the run for good and banks your Fathoms. Press once more to confirm, or resume above.'
                       : 'A crashed run can be resumed once. Ending it is not a pause: the run is over for good, and the Fathoms you earned are banked.')}
               </p>
             </>
@@ -2680,7 +2680,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             Your Dive Is Held
           </h1>
           <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b9b2a6', lineHeight: 1.55, marginTop: 12, maxWidth: 340, marginInline: 'auto' }}>
-            Saved right where you stopped. Step away as long as you need — come back to the Gauntlet whenever and pick up the descent{hardcoreRun ? '. Your crew are safe while it is held' : ''}.
+            Saved right where you stopped. Step away as long as you need. Come back to the Gauntlet whenever and pick up the descent{hardcoreRun ? '. Your crew are safe while it is held' : ''}.
           </p>
           <button onClick={doResume} disabled={resuming} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
             style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}2a, ${GOLD}10)`, border: `1px solid ${GOLD}70`, cursor: resuming ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}22` }}>
@@ -2930,7 +2930,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                press is the glow jumping and the words punching — so the
                feedback is ON the art rather than beside it. */
             <motion.button key={pl.id} type="button"
-              aria-label="The Descent — begin the dive"
+              aria-label="The Descent: begin the dive"
               onPointerDown={() => { vibrate([0, 16]); setPortalPressed(true) }}
               onPointerUp={() => setPortalPressed(false)}
               onPointerLeave={() => setPortalPressed(false)}
@@ -2977,7 +2977,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                   animate={portalPressed ? { opacity: 1, scale: 1.06 } : { opacity: [0.66, 1, 0.66], scale: 1 }}
                   transition={portalPressed ? { duration: 0.12 } : { duration: 3.1, repeat: Infinity, ease: 'easeInOut' }}
                   style={{ display: 'block', fontSize: '0.58rem', letterSpacing: '0.2em', color: '#f4efe4', marginTop: 3, textShadow: `0 1px 10px rgba(0,0,0,1), 0 0 14px ${hex}aa` }}>
-                  Tap to descend
+                  Press to descend
                 </motion.span>
               </span>
             </motion.button>
@@ -3002,7 +3002,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             // frame, four things answering it.
             <button key={pl.id} type="button"
               className="tap"
-              aria-label={`${pl.label} — ${meta.sub}`}
+              aria-label={`${pl.label}: ${meta.sub}`}
               onClick={() => { vibrate([0, 10]); slipSail.current?.(pl.id) }}
               ref={el => {
                 slipCards.current.set(pl.id, el)
@@ -3174,7 +3174,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
           padding: '10px 0.95rem', textAlign: 'center',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+          paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)',
         }}>
           {/* Davy claims it — drowned, looming, sinking in from above. */}
           <motion.div
@@ -3235,7 +3235,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 ))}
               </div>
               <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(240,220,220,0.82)', marginTop: 11, lineHeight: 1.45 }}>
-                Your squad went down with the ship — {props.crewMembers.length} crew, gone for good. They rest now in your Crew Hall.
+                Your squad went down with the ship: {props.crewMembers.length} crew, gone for good. They rest now in your Crew Hall.
               </p>
               <button onClick={() => router.push('/crew')} className="font-karla font-700 uppercase tracking-[0.12em] tap"
                 style={{ marginTop: 12, padding: '0.5rem 1rem', borderRadius: 10, fontSize: '0.58rem', background: `${CRIMSON}18`, border: `1px solid ${CRIMSON}66`, color: '#fca5a5', cursor: 'pointer' }}>
@@ -3291,7 +3291,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
           padding: '12px 0.95rem', textAlign: 'center', overflow: 'hidden',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+          paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)',
         }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.32em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', color: VIO, marginTop: 16, textShadow: `0 0 16px ${VIO}66` }}>
@@ -3458,7 +3458,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
           padding: '12px 0.95rem', textAlign: 'center',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+          paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)',
         }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.3em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', color: MC, marginTop: 16, textShadow: `0 0 16px ${MC}55` }}>
@@ -3553,7 +3553,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       <>
         {arena('contract')}
         <Screen id={phase}>
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)' }}>
           {/* THE DON DOES NOT SIT IN THE MIDDLE OF THE PAGE.
               Every meta screen here was the same centered column: eyebrow, round
               portrait, big title, italic quote, body. Same rhythm every time,
@@ -3650,7 +3650,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       <>
         {arena('contract')}
         <Screen id={phase}>
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: wide ? 600 : 420, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: wide ? 600 : 420, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)' }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 22, textShadow: `0 0 16px ${MC}55` }}>
             {won ? 'Contract Cleared' : 'Contract Broken'}
@@ -3698,7 +3698,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {arena('fallen')}
         <Screen id={phase}>
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 56%, ${AK}30 0%, ${AK}10 42%, transparent 72%)` }} />
-        <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1.6rem 1.1rem', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
+        <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1.6rem 1.1rem', paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)' }}>
           {/* His face, sinking + dimmed — he's going down. The throne clear glints gold. */}
           <motion.div initial={{ opacity: 0.95, scale: 1, y: 0, rotate: 0 }} animate={{ opacity: isThrone ? 1 : 0.62, scale: 0.9, y: 26, rotate: isThrone ? 0 : -5 }} transition={{ duration: 1.5, ease: 'easeIn' }}
             style={{ position: 'relative', width: 150, height: 150 }}>
@@ -3865,7 +3865,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
           padding: '10px 0.95rem', textAlign: 'center',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+          paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)',
         }}>
           {/* Depth + a line of voice. The "Catch Your Breath" eyebrow is gone: the
               screen IS the breather, and a label announcing that spent the most
@@ -3934,7 +3934,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                           ? getShipSkin(o.id)?.imageByTier?.[6]
                           : getRaidItem(o.id)?.image
                         return (
-                          <div key={o.id} title={o.lockedUntilDepth ? `${o.name} — opens at depth ${o.lockedUntilDepth}` : o.name} style={{
+                          <div key={o.id} title={o.lockedUntilDepth ? `${o.name}, opens at depth ${o.lockedUntilDepth}` : o.name} style={{
                             flexShrink: 0, width: 82, padding: '0.2rem 0.1rem',
                             textAlign: 'center', opacity: o.lockedUntilDepth ? 0.5 : 1,
                           }}>
@@ -4079,7 +4079,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                         </LoadoutRow>
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 1, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                        <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#7a756c' }}>Tap any to read</span>
+                        <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#7a756c' }}>Press any to read</span>
                         <button onClick={() => setSynergiesOpen(true)} className="font-karla font-800 uppercase tracking-[0.1em] tap"
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.54rem', color: '#c9bfa8', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
@@ -4290,7 +4290,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
           padding: '12px 0.95rem', textAlign: 'center',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+          paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)',
         }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.34em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', color: CRIM, marginTop: 16, textShadow: `0 0 18px ${CRIM}66` }}>
@@ -4419,7 +4419,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: wide ? 1120 : 470, margin: '0 auto',
           padding: '12px 0.9rem', textAlign: 'center',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+          paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)',
         }}>
           <motion.p initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.36em', color: boonFromShrine ? '#f87171' : AC, marginTop: 10, textShadow: boonFromShrine ? '0 0 16px rgba(239,68,68,0.5)' : `0 0 16px ${AC}66` }}>
@@ -4595,6 +4595,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     const info = (
                       <span
                         role="button" tabIndex={0} aria-label={`What ${b.name} does`}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); e.currentTarget.click() } }}
                         onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg,
                           rungs: fam?.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= b.tier, current: i + 1 === b.tier })),
                           rarityLabel: rm.label, rarityColor: rm.color }) }}
@@ -4957,7 +4958,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               </button>
               {banArmed && (
                 <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#f8b4b4', marginTop: 8, lineHeight: 1.4 }}>
-                  Tap the boon you want gone for the rest of the run.
+                  Pick the boon you want gone for the rest of the run.
                 </p>
               )}
             </div>
@@ -4991,7 +4992,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: '#f0a0a0' }}>Banish a Power</p>
               <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#ffe4e4', lineHeight: 1.12, marginTop: 8 }}>{banConfirm.name}</p>
               <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(245,225,225,0.8)', lineHeight: 1.5, marginTop: 11 }}>
-                Bin it for the rest of the dive — it never surfaces again, and a different power takes its place in this draft. Costs one of your {filtersLeft} banishes.
+                Bin it for the rest of the dive. It never surfaces again, and a different power takes its place in this draft. Costs one of your {filtersLeft} banishes.
               </p>
               <button onClick={() => banBoon(banConfirm.idx)} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
                 style={{ width: '100%', marginTop: 16, padding: '0.9rem', borderRadius: 13, fontSize: '0.95rem', color: '#ffe4e4', background: 'linear-gradient(180deg, rgba(220,70,70,0.5), rgba(120,25,30,0.4))', border: '1px solid rgba(240,120,120,0.85)', cursor: 'pointer' }}>
@@ -5120,7 +5121,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 style={{ marginTop: 14, maxWidth: 320, padding: '0.5rem 0.9rem', borderRadius: 12, background: `${AC}12`, border: `1px solid ${AC}45`, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
                 <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#dfeee9', lineHeight: 1.35, textAlign: 'left' }}>
-                  <span className="font-800 uppercase tracking-[0.06em]" style={{ color: AC }}>Blood Oath</span> — you dive already holding <strong style={{ color: '#f4ecd8' }}>{nm} I</strong>.
+                  <span className="font-800 uppercase tracking-[0.06em]" style={{ color: AC }}>Blood Oath</span>: you dive already holding <strong style={{ color: '#f4ecd8' }}>{nm} I</strong>.
                 </p>
               </motion.div>
             ) : null
@@ -5207,7 +5208,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           : 'linear-gradient(to bottom, rgba(3,9,11,0.16) 0%, rgba(3,9,11,0.08) 52%, rgba(2,6,8,0.32) 100%)' }} />
       </div>
       <div className="raid-combat-region flex flex-col items-center gap-2 select-none"
-        style={{ position: 'relative', userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)' }}>
+        style={{ position: 'relative', userSelect: 'none', paddingBottom: 'calc(var(--tabbar-safe, 0px) + 48px)' }}>
         {gloom > 0.02 && (
           <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none',
             background: `radial-gradient(ellipse 116% 96% at 50% 44%, transparent 56%, rgba(${gloomHue},${gloom}) 100%)` }} />
@@ -5315,7 +5316,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               if (!prev.has(crewId)) return prev
               const next = new Set(prev); next.delete(crewId); return next
             })}
-            usedAbilitySub="Used — back soon."
+            usedAbilitySub="Used. Back soon."
             openingNote={rollStateRef.current.prevWasBoss ? 'Your crew catch their breath. Abilities refreshed.' : undefined}
           />
         </div>
@@ -5511,7 +5512,7 @@ function MarkChoice({ offer, searing, taken, onChoose }: {
   return (
     <>
       <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'radial-gradient(ellipse 90% 60% at 24% 42%, rgba(255,106,61,0.13), transparent 60%), radial-gradient(ellipse 90% 60% at 76% 42%, rgba(77,157,224,0.13), transparent 60%), #05070b' }} />
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 'var(--modal-w)', margin: '0 auto', minHeight: '72vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '1.4rem 0.9rem', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 20px)' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 'var(--modal-w)', margin: '0 auto', minHeight: '72vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '1.4rem 0.9rem', paddingBottom: 'calc(var(--tabbar-safe, 0px) + 20px)' }}>
         <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.3em' }} transition={{ duration: 0.7 }}
           className="font-karla font-800 uppercase" style={{ textAlign: 'center', fontSize: '0.6rem', color: '#c9b48a', textShadow: '0 0 16px rgba(240,192,64,0.4)' }}>
           {searing ? 'The Mark Sears In' : taken > 0 ? `His Mark · ${taken} already yours` : 'His Mark'}
@@ -5661,7 +5662,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
       <div style={{
         position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
         padding: '10px 0.95rem', textAlign: 'center',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)',
         // The chest burst/ray FX scale up to ~800px and stay mounted at opacity
         // 0; transformed elements still count toward scroll size, so without
         // this they balloon the page's scroll area. Clip the decorative bleed —
@@ -5800,7 +5801,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
             {newBest && (
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
                 className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: AC, marginTop: 12 }}>
-                New deepest descent — depth {r.depth}.
+                New deepest descent: depth {r.depth}.
               </motion.p>
             )}
 
@@ -5919,11 +5920,11 @@ function AbandonRunModal({ pot, hardcore = false, don, onStay, onAbandon }: { po
         <p className="font-karla" style={{ fontSize: '0.82rem', color: '#c9c3b8', lineHeight: 1.5, marginTop: 10 }}>
           {pot > 0
             ? <>Walk away from this run and the <strong style={{ color: '#e08a8a' }}>{fmt(pot)} ⟡</strong> you&apos;ve hauled up, along with the Nav XP and any depth unlocks, goes down with the ship. Nothing is banked until you cash out.</>
-            : <>Walk away now and this descent is over for the day. Your one run is spent — there&apos;s no picking it back up.</>}
+            : <>Walk away now and this descent is over for the day. Your one run is spent. There&apos;s no picking it back up.</>}
         </p>
         {hardcore && (
           <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#fca5a5', lineHeight: 1.5, marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${CRIMSON}14`, border: `1px solid ${CRIMSON}55` }}>
-            This is a Hardcore run. Abandoning counts as a wipe — the squad you brought down here dies for good.
+            This is a Hardcore run. Abandoning counts as a wipe. The squad you brought down here dies for good.
           </p>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 18 }}>
@@ -5933,7 +5934,7 @@ function AbandonRunModal({ pot, hardcore = false, don, onStay, onAbandon }: { po
           </button>
           <button onClick={onAbandon} className="font-karla font-700 tap"
             style={{ width: '100%', padding: '0.6rem', borderRadius: 11, fontSize: '0.74rem', background: 'none', border: `1px solid ${CRIMSON}40`, color: `${CRIMSON}dd`, cursor: 'pointer' }}>
-            {hardcore ? 'Abandon — drown my crew' : 'Abandon and lose it all'}
+            {hardcore ? 'Abandon and drown my crew' : 'Abandon and lose it all'}
           </button>
         </div>
       </motion.div>
@@ -6558,7 +6559,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
         {view === 'run' && traceBoons.length > 1 && (
           <div style={{ marginTop: 13 }}>
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: '#9a948a', marginBottom: 6 }}>
-              {trace ? 'Tracing — tap again to clear' : 'Tap a boon to trace it'}
+              {trace ? 'Tracing. Press again to clear' : 'Pick a boon to trace it'}
             </p>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {traceBoons.map(b => {
@@ -6614,12 +6615,12 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
         {!anyRows && (
           <div style={{ marginTop: 16, borderRadius: 14, padding: '1.4rem 1rem', textAlign: 'center', background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#c8d0da' }}>No synergies in reach yet</p>
-            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a94a0', lineHeight: 1.5, marginTop: 6 }}>Draft a couple of boons that pair up and the synergies they can form will appear here — even the ones you&apos;re still one boon short of.</p>
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a94a0', lineHeight: 1.5, marginTop: 6 }}>Draft a couple of boons that pair up and the synergies they can form will appear here, even the ones you&apos;re still one boon short of.</p>
           </div>
         )}
 
         <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5f6875', textAlign: 'center', lineHeight: 1.5, marginTop: 14 }}>
-          Tap a synergy to see how it works. Switch to the Codex for the full catalogue.
+          Pick a synergy to see how it works. Switch to the Codex for the full catalogue.
         </p>
         </>)}
 
@@ -6697,8 +6698,8 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
             maxLvl = oc.levels.length
             name = oc.name; effectStr = confluenceDescAt(oc, Math.max(1, lvl)); detailStr = oc.detail; flavorStr = oc.flavor
             stateLabel = on ? 'Active' : ready ? 'Ready to draft' : need1 ? 'One boon away' : 'Not held'
-            hint = on ? (lvl >= maxLvl ? 'Fully deepened — maxed out' : `Deepen ${parts.filter(p => p.tier === lvl).map(p => p.name).join(' & ')} to reach ${ROMAN[lvl + 1]}`)
-              : ready ? 'Both halves held — draft it instead of a boon this round'
+            hint = on ? (lvl >= maxLvl ? 'Fully deepened, maxed out' : `Deepen ${parts.filter(p => p.tier === lvl).map(p => p.name).join(' & ')} to reach ${ROMAN[lvl + 1]}`)
+              : ready ? 'Both halves held. Draft it instead of a boon this round'
               : need1 ? `Draft ${parts.filter(p => p.tier < 1).map(p => p.name).join(' & ')} to unlock it`
               : `Hold ${parts.map(p => p.name).join(' & ')} together to unlock it`
             comps = parts.map(p => ({ node: <BoonToken boonId={p.id} tier={p.tier} held={p.tier >= 1} full={view === 'codex'} size={34} />, name: p.name + (p.tier >= 1 ? ` ${ROMAN[Math.min(p.tier, 3)]}` : ''), held: p.tier >= 1 }))
@@ -6718,8 +6719,8 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
             maxLvl = cv.levels.length
             name = cv.name; effectStr = convergenceDescAt(cv, Math.max(1, lvl)); detailStr = cv.detail; flavorStr = cv.flavor
             stateLabel = on ? 'Active' : ready ? 'Ready to draft' : need1 ? 'One synergy away' : 'Not online'
-            hint = on ? (lvl >= maxLvl ? 'Fully deepened — maxed out' : 'Deepen either synergy to level it up')
-              : ready ? 'Both synergies online — draft it instead of a boon this round'
+            hint = on ? (lvl >= maxLvl ? 'Fully deepened, maxed out' : 'Deepen either synergy to level it up')
+              : ready ? 'Both synergies online. Draft it instead of a boon this round'
               : need1 ? `Bring ${parts.filter(p => !p.online).map(p => p.name).join(' & ')} online to unlock it`
               : `Bring ${parts.map(p => p.name).join(' & ')} online together to unlock it`
             comps = parts.map(p => ({ node: <MiniCrest color={KRAKEN} dim={view === 'codex' ? false : !p.online} size={34} image={p.image} />, name: p.name, held: p.online }))
@@ -6934,7 +6935,7 @@ function LootModal({ mode, don, totalFortune = 0, onClose }: {
           })}
         </div>
         <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8f8a80', lineHeight: 1.45, marginTop: 8 }}>
-          Each rolls on its own, only while unowned — the deeper you bank, the better the odds, maxing out at depth 50.
+          Each rolls on its own, only while unowned. The deeper you bank, the better the odds, maxing out at depth 50.
           {ftnMult > 1
             ? <> Your crew&apos;s Fortune is already worth <span style={{ color: GOLD, fontWeight: 700 }}>{ftnMult.toFixed(2)}×</span> on every line above, and Davy&apos;s Offer can raise them further on the spot.</>
             : <> Crew Fortune raises them, up to double, and Davy&apos;s Offer can raise them further on the spot.</>}
@@ -7111,7 +7112,7 @@ function LootModal({ mode, don, totalFortune = 0, onClose }: {
             </div>
 
             <p className="font-karla" style={{ fontSize: '0.76rem', color: '#8f8a82', lineHeight: 1.45, marginTop: 8, textAlign: 'left' }}>
-              Tap anything to see how it drops and its odds by depth.
+              Pick anything to see how it drops and its odds by depth.
             </p>
 
             {/* Normal / Hardcore toggle — each tab lists only what actually drops
@@ -7196,7 +7197,7 @@ function GauntletIntroModal({ variant, onClose, firstTime }: { variant?: Gauntle
   const davySteps: { color: string; title: string; text: string; icon: React.ReactNode }[] = [
     { color: TEAL, title: 'Descend the Locker', text: 'Fight ship after ship. Each depth hits harder.', icon: ChevIcon },
     { color: '#8b9cff', title: 'Powers and curses', text: 'Between fights you draft a boon for the whole dive. Go deep enough and the Locker forces curses on you too.', icon: StarIcon },
-    { color: '#b98bff', title: 'Synergies', text: 'Hold the right pair of boons and a synergy surfaces as a card in a draft — take it instead of a boon. It lasts the whole dive and levels up as you deepen its two boons.', icon: CubeIcon },
+    { color: '#b98bff', title: 'Synergies', text: 'Hold the right pair of boons and a synergy surfaces as a card in a draft. Take it instead of a boon. It lasts the whole dive and levels up as you deepen its two boons.', icon: CubeIcon },
     { color: GOLD, title: 'One pot grows', text: 'Every ship you sink swells a single pot of doubloons and Nav XP.', icon: PotIcon },
     { color: '#f87171', title: 'Cash out or sink', text: 'Bank the pot whenever you like. Go under first and it all sinks with you.', icon: SkullIcon },
     { color: TEAL, title: 'Fathoms to spend', text: 'Each dive also pays Fathoms, win or lose. Spend them on Run Upgrades for the next dive, or on Permanent Upgrades that carry into voyages, raids and fishing.', icon: WaveIcon },
@@ -7207,11 +7208,11 @@ function GauntletIntroModal({ variant, onClose, firstTime }: { variant?: Gauntle
   const donSteps: { color: string; title: string; text: string; icon: React.ReactNode }[] = [
     { color: KRAKEN, title: 'Descend the deep', text: "Fight ship after ship of the Don's own fleet. Every depth cuts deeper than the last.", icon: ChevIcon },
     { color: '#8b9cff', title: 'Powers and curses', text: 'Between fights you draft a boon for the whole dive. Push deep enough and the dark forces curses on you too.', icon: StarIcon },
-    { color: '#b98bff', title: 'Convergences', text: 'The right boons fuse into a synergy — and down in the Don’s water, synergies themselves can converge into something greater still.', icon: CubeIcon },
+    { color: '#b98bff', title: 'Convergences', text: 'The right boons fuse into a synergy, and down in the Don’s water, synergies themselves can converge into something greater still.', icon: CubeIcon },
     { color: GOLD, title: 'The Don descends with you', text: 'He does not wait at the bottom. Meet Don Finleone in the deep, and best him to take his Mark.', icon: CrownIcon },
-    { color: '#e0a34a', title: "The Don's contracts", text: 'On the way down he offers jobs. Take one and clear his terms for a prize — fail it and you pay the price.', icon: ScrollIcon },
-    { color: '#f87171', title: 'Cash out or sink', text: 'One pot of doubloons and Nav XP swells with every kill. Bank it whenever you like — go under first and it all sinks with you.', icon: SkullIcon },
-    { color: KRAKEN, title: 'Fathoms and darker deals', text: "Every dive pays Fathoms for the Don's own Locker of upgrades — and a shadier market prowls these waters, dealing in things Davy never stocked.", icon: WaveIcon },
+    { color: '#e0a34a', title: "The Don's contracts", text: 'On the way down he offers jobs. Take one and clear his terms for a prize. Fail it and you pay the price.', icon: ScrollIcon },
+    { color: '#f87171', title: 'Cash out or sink', text: 'One pot of doubloons and Nav XP swells with every kill. Bank it whenever you like. Go under first and it all sinks with you.', icon: SkullIcon },
+    { color: KRAKEN, title: 'Fathoms and darker deals', text: "Every dive pays Fathoms for the Don's own Locker of upgrades, and a shadier market prowls these waters, dealing in things Davy never stocked.", icon: WaveIcon },
   ]
   const steps = isDon ? donSteps : davySteps
   return (
@@ -7428,7 +7429,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <p className="font-cinzel font-700" style={{ fontSize: featured ? '1.04rem' : '0.96rem', color: comingSoon ? '#cfcabf' : '#f0ede8', lineHeight: 1.15 }}>{e.name}</p>
             {e.tierLabel && !comingSoon && (
-              <span title="This upgrade has higher tiers — buy this to unlock the next." className="font-karla font-800 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.46rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55`, borderRadius: 999, padding: '0.16rem 0.42rem' }}>Tier {e.tierLabel}</span>
+              <span title="This upgrade has higher tiers. Buy this to unlock the next." className="font-karla font-800 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.46rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55`, borderRadius: 999, padding: '0.16rem 0.42rem' }}>Tier {e.tierLabel}</span>
             )}
             {comingSoon && (
               <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ flexShrink: 0, fontSize: '0.46rem', color: AC, background: `${AC}1c`, border: `1px solid ${AC}55`, borderRadius: 999, padding: '0.16rem 0.4rem' }}>Coming Soon</span>
@@ -7482,8 +7483,8 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
         </div>
         <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', marginTop: 6, lineHeight: 1.45 }}>
           {section === 'run'
-            ? 'Perks that sharpen the descent itself — they only matter inside the Gauntlet. Bought with Fathoms.'
-            : 'Permanent power you carry topside — into raids, voyages, and fishing. Bought with Fathoms, earned by descending.'}
+            ? 'Perks that sharpen the descent itself. They only matter inside the Gauntlet. Bought with Fathoms.'
+            : 'Permanent power you carry topside, into raids, voyages, and fishing. Bought with Fathoms, earned by descending.'}
         </p>
 
         {state === null ? (
@@ -7574,7 +7575,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                   <p className="font-karla font-700" style={{ fontSize: '0.5rem', color: `${AC}cc` }}>{activeCount} of {owned.length} on</p>
                 </div>
                 <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7a766e', lineHeight: 1.4, marginBottom: 9 }}>
-                  Switch any perk off to leave it out of your next dive. It stays yours — flip it back on any time.
+                  Switch any perk off to leave it out of your next dive. It stays yours. Flip it back on any time.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {owned.map(e => {
@@ -7586,7 +7587,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                         <div style={{ flex: 1, minWidth: 0, opacity: on ? 1 : 0.5, transition: 'opacity 0.15s' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                             <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: on ? '#eafffb' : '#c4bfb6', lineHeight: 1.15 }}>{e.name}</p>
-                            {e.tierLabel && <span title="Owned tier — higher tiers may be available in the shop." className="font-karla font-800 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.44rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55`, borderRadius: 999, padding: '0.14rem 0.4rem' }}>Tier {e.tierLabel}</span>}
+                            {e.tierLabel && <span title="Owned tier. Higher tiers may be available in the shop." className="font-karla font-800 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.44rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55`, borderRadius: 999, padding: '0.14rem 0.4rem' }}>Tier {e.tierLabel}</span>}
                             {!on && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#8a8480', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.14rem 0.4rem' }}>Off</span>}
                           </div>
                           <p className="font-karla" style={{ fontSize: '0.68rem', color: on ? '#a7c4bd' : '#8a857c', lineHeight: 1.42, marginTop: 3 }}>{e.description}</p>
@@ -7595,7 +7596,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                           type="button"
                           role="switch"
                           aria-checked={on}
-                          aria-label={`${e.name} — ${on ? 'on' : 'off'}`}
+                          aria-label={`${e.name}, ${on ? 'on' : 'off'}`}
                           disabled={busyT}
                           onClick={() => toggle(e.id, !on)}
                           className="tap"
@@ -7646,7 +7647,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
 
             {forSale.length === 0 ? (
               <p className="font-karla" style={{ fontSize: '0.78rem', color: '#7a766e', textAlign: 'center', padding: '1.2rem 0' }}>
-                {entries.length === 0 ? 'Nothing in this shop yet — more coming.' : 'You own everything here. Dive deeper for what comes next.'}
+                {entries.length === 0 ? 'Nothing in this shop yet. More coming.' : 'You own everything here. Dive deeper for what comes next.'}
               </p>
             ) : section === 'run' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{forSale.map(e => <Card key={e.id} e={e} />)}</div>
@@ -7994,7 +7995,7 @@ function Shell({ children, wide, hardcore }: { children: React.ReactNode; wide?:
       <div className="flex flex-col" style={{
         position: 'relative', zIndex: 1,
         maxWidth: wide ? 460 : 420, margin: '0 auto', padding: '12px 0.25rem',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        paddingBottom: 'calc(var(--tabbar-safe, 0px) + 24px)',
       }}>
         {/* Dark panel so copy stays legible over the abyss; slightly translucent
             now so the atmosphere bleeds through behind it. */}
@@ -8084,8 +8085,9 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
   return (
     <div style={{ position: 'relative' }}>
       <div
-        role="button" aria-label="Run details" aria-expanded={open}
+        role="button" aria-label="Run details" aria-expanded={open} tabIndex={0}
         onClick={() => { hapticTap(); setOpen(o => !o) }}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hapticTap(); setOpen(o => !o) } }}
         // FULLY OPAQUE, no backdrop-filter. This bar is position:sticky inside the
         // PWA's -webkit-overflow-scrolling:touch combat scroller; backdrop-filter on
         // a sticky element there is an iOS repaint bug — during the aim-bar swap it
@@ -8114,7 +8116,7 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
               WITHOUT a banner shoving the combat stage down. Tap the bar for the
               full job (goal, reward, penalty) in the detail panel below. */}
           {contract && (
-            <motion.span aria-label="Active job — tap for details" title="Active job"
+            <motion.span aria-label="Active job, press for details" title="Active job"
               animate={{ opacity: [1, 0.4, 1] }}
               transition={{ duration: 1.25, repeat: Infinity, ease: 'easeInOut' }}
               style={{ alignSelf: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 17, height: 17, borderRadius: 5, color: '#3fbf82', background: 'rgba(63,191,130,0.18)', border: '1px solid rgba(63,191,130,0.55)', boxShadow: '0 0 8px rgba(63,191,130,0.5)', flexShrink: 0 }}>
@@ -8124,7 +8126,7 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {isHardcore && (
-            <span aria-label="Hardcore — your crew die for good if you sink" title="Hardcore — your crew die for good if you sink"
+            <span aria-label="Hardcore: your crew die for good if you sink" title="Hardcore: your crew die for good if you sink"
               style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: '50%', color: '#fca5a5', background: 'rgba(140,10,20,0.4)', border: '1px solid rgba(220,38,38,0.6)', boxShadow: '0 0 10px rgba(220,38,38,0.4)' }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></svg>
             </span>
@@ -8208,14 +8210,14 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <p className="font-karla" style={{ fontSize: '0.72rem', color: '#e8dfc8' }}>
               <span style={{ color: GOLD }}>Depth {depth}</span>
-              {isBoss ? ' — a BOSS holds this water.' : isElite ? ` — Elite${affixName ? `: ${affixName}` : ''}.` : ' — open water.'}
+              {isBoss ? '. A BOSS holds this water.' : isElite ? `. Elite${affixName ? `: ${affixName}` : ''}.` : '. Open water.'}
             </p>
             <p className="font-karla" style={{ fontSize: '0.72rem', color: '#cfc9bf' }}>Pot: {fmt(pot)} ⟡</p>
             <p className="font-karla" style={{ fontSize: '0.72rem', color: curses > 0 ? '#f8a5a5' : '#8a847a' }}>
-              {curses > 0 ? `${curses} curse${curses === 1 ? '' : 's'} on the run — see your loadout at the next breather.` : 'No curses on the run yet.'}
+              {curses > 0 ? `${curses} curse${curses === 1 ? '' : 's'} on the run. See your loadout at the next breather.` : 'No curses on the run yet.'}
             </p>
             {isHardcore && (
-              <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#fca5a5' }}>Hardcore — your crew die for good if you sink.</p>
+              <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#fca5a5' }}>Hardcore: your crew die for good if you sink.</p>
             )}
 
             {/* Active job (Don's contract) riding this fight — the goal, the

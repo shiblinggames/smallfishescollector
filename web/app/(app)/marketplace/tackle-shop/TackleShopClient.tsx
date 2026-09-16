@@ -385,7 +385,7 @@ export default function TackleShopClient({
   // opened them; this answers "what can I afford" before you touch anything.
   if (section === null) {
     return (
-      <div className="page-col pb-16">
+      <div className="page-col pb-16 sm:pb-8">
         <ShopHeader title="Tackle Shop" backLabel="Back" onBack={() => router.back()} badge={levelBadge} />
 
         {/* ── THE PULSE: how kitted-out you are, at a glance ─────────────── */}
@@ -726,7 +726,7 @@ export default function TackleShopClient({
                             border: `1px solid ${hookReady ? `${c}55` : 'rgba(240,192,64,0.32)'}`,
                             padding: '0.14rem 0.5rem', borderRadius: 999,
                           }}>
-                            {isPending ? 'Upgrading…' : !hookLevelMet ? `Fishing Lv ${hookReq} · ${hookReq - fishingLevel} to go` : canAffordHook ? 'Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
+                            {isPending ? 'Upgrading…' : !hookLevelMet ? `Fishing Lv ${hookReq} · ${hookReq - fishingLevel} to go` : canAffordHook ? 'Press to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
                           </span>
                         )}
                       </div>
@@ -1197,7 +1197,7 @@ export default function TackleShopClient({
                           border: `1px solid ${reelReady ? `${c}55` : 'rgba(240,192,64,0.32)'}`,
                           padding: '0.14rem 0.5rem', borderRadius: 999,
                         }}>
-                          {isPending ? 'Upgrading…' : !reelLevelMet ? `Fishing Lv ${reelReq} · ${reelReq - fishingLevel} to go` : canAffordReel ? 'Tap to upgrade' : `${(reel.cost - doubloons).toLocaleString()} ⟡ short`}
+                          {isPending ? 'Upgrading…' : !reelLevelMet ? `Fishing Lv ${reelReq} · ${reelReq - fishingLevel} to go` : canAffordReel ? 'Press to upgrade' : `${(reel.cost - doubloons).toLocaleString()} ⟡ short`}
                         </span>
                       )}
                     </div>
@@ -1233,7 +1233,7 @@ export default function TackleShopClient({
               <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
             </svg>
             <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: '#9ab39c', lineHeight: 1.4, position: 'relative' }}>
-              Lines are earned by catching unique species — no purchase needed.
+              Lines are earned by catching unique species. No purchase needed.
             </p>
           </div>
           {LINES.map(line => {
@@ -1391,7 +1391,7 @@ export default function TackleShopClient({
               initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} transition={{ delay: 1.7 }}
               style={{ position: 'relative', fontSize: '0.64rem', letterSpacing: '0.2em', color: '#9a8a60' }}
             >
-              Tap to continue
+              Press to continue
             </motion.span>
           </motion.div>
         )

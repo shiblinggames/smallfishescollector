@@ -5225,6 +5225,10 @@ export default function SeaMap({
       if (introNode) { setIntroNode(null); return }
       if (folkOpen) { setFolkOpen(false); return }
       if (mapOpen) { setMapOpen(false); return }
+      // LAST, the fishing card: the one sheet that was never on this list, so
+      // Escape did nothing on the most-repeated screen in the game. Same rule
+      // as tapping the water beside it, and the same refusal mid-cast.
+      if (fishingRef.current && canLeaveRef.current) { setFishingIn(null); setFrame('rest'); return }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -6414,7 +6418,7 @@ export default function SeaMap({
         const peek = st === 'locked' && n?.previewWhenLocked === true
         // A LOCKED ONE STILL SAYS ITS NAME. A boss you can see, sail up to and
         // get nothing from reads as broken rather than as not yet.
-        if (n && st === 'locked' && !peek) holdLabel ??= `${n.label} — not yet`
+        if (n && st === 'locked' && !peek) holdLabel ??= `${n.label}, not yet`
         // NO ROUTE, NO VERB. A button captioned with a boss's name that does
         // nothing when pressed is worse than no button.
         else if (n && !n.route) holdLabel ??= n.label
@@ -6474,7 +6478,7 @@ export default function SeaMap({
           // LOCKED STILL SAYS ITS NAME, for a post: the campaign's order is the
           // point, and naming what you cannot do yet is the honest half of
           // refusing it. A sealed chest has no name to give.
-          holdLabel ??= what === 'beat' ? `${n.label} — not yet` : 'A cache, sealed'
+          holdLabel ??= what === 'beat' ? `${n.label}, not yet` : 'A cache, sealed'
           continue
         }
         // A BEAT IS READ, A TOLL IS SETTLED, A CHOICE IS MADE. See verbFor.
@@ -7362,6 +7366,12 @@ export default function SeaMap({
     // quietly took a heading behind it. A press that landed somewhere else has
     // to leave before that capture happens.
     if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) return
+    // ── ONLY THE PRIMARY BUTTON IS A HELM ORDER ──────────────────────────
+    // A right-press used to start a heading AND capture the pointer, so the
+    // browser's context menu opened over a boat that was now steering, and a
+    // middle-press did the same without the menu. A mouse has three buttons
+    // and the sea answers to one of them.
+    if (e.pointerType === 'mouse' && e.button !== 0) return
     // Anything with a button in it is a control, not the sea. Cast, Reel In,
     // the prompt and the trader panel all live inside this element.
     if ((e.target as HTMLElement).closest('button, [data-no-steer]')) return
@@ -9840,6 +9850,9 @@ export default function SeaMap({
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onUp}
+      // A right-click on the water is nothing, not a browser menu over the
+      // boat. See onDown for why the press itself is ignored too.
+      onContextMenu={e => e.preventDefault()}
       style={{
         cursor: 'pointer',
         // Without this a drag on a touchscreen is a scroll gesture and the
@@ -10286,6 +10299,10 @@ hullRef={hullRefFor(t.key)} />
                 }}
                 disabled={warn}>
                 {text?.replace(/^Hold to fish /, 'Fish ')}
+                {/* The key that does the same thing, in the chip the stylesheet
+                    built for exactly this and nothing had used. Space and E
+                    both act; one is enough to say. */}
+                <span className="key-hint" style={{ marginLeft: 10 }}>Space</span>
               </motion.button>
             </div>
           )
@@ -10687,7 +10704,7 @@ hullRef={hullRefFor(t.key)} />
         <button
           onClick={e => { e.stopPropagation(); vibrate(8); setPicking(true) }}
           data-no-steer
-          aria-label={visiting ? `Visiting ${visiting.username} — change` : 'Call on a friend'}
+          aria-label={visiting ? `Visiting ${visiting.username}, change` : 'Call on a friend'}
           title={visiting ? `Visiting ${visiting.username}` : 'Call on a friend'}
           style={{
             position: 'absolute', right: 14, bottom: 96, zIndex: Z.action,
@@ -11412,9 +11429,9 @@ hullRef={hullRefFor(t.key)} />
         const lit = inAnchorage ? !!nextStop : (finnWaiting || readyFolk.length > 0)
         const label = inAnchorage ? 'The Campaign' : 'The Salt Road'
         const sub = inAnchorage
-          ? (nextStop ? `${nextStop.chapter.coda ? nextStop.chapter.title : `Chapter ${nextStop.chapter.romanNumeral}`} — ${nextStop.verb} ${nextStop.node.label}` : label)
-          : (finn?.questReady ? `${label} — ${FINN_NAME} is waiting on you`
-            : readyFolk.length > 0 ? `${label} — ${readyFolk[0].short} is waiting on that ${readyFolk[0].fishName}`
+          ? (nextStop ? `${nextStop.chapter.coda ? nextStop.chapter.title : `Chapter ${nextStop.chapter.romanNumeral}`} · ${nextStop.verb} ${nextStop.node.label}` : label)
+          : (finn?.questReady ? `${label} · ${FINN_NAME} is waiting on you`
+            : readyFolk.length > 0 ? `${label} · ${readyFolk[0].short} is waiting on that ${readyFolk[0].fishName}`
               : label)
         return (
           <button

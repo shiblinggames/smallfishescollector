@@ -203,7 +203,7 @@ export function parlorHostReaction(correct: boolean, streak: number, broke = 0):
     return 'Cold water. Shake it off and pick again.'
   }
   if (streak >= 12) return "The whole room's holding its breath. Don't you dare blink."
-  if (streak >= 8)  return `${streak} in a row — you're on a proper heater now.`
+  if (streak >= 8)  return `${streak} in a row. You’re on a proper heater now.`
   if (streak >= 4)  return `${streak} straight. The house is starting to sweat.`
   const lines = ['Well read.', 'Sharp as a gaff hook.', 'The coin knows its master.', 'Clean as you like.']
   return lines[streak % lines.length]

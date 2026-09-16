@@ -144,7 +144,7 @@ export default function RenownUpOverlay({ info, onDismiss }: Props) {
                   className="font-karla font-400"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
                   style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.32)', marginTop: '1rem', letterSpacing: '0.08em' }}>
-                  {isLast ? 'tap to continue' : 'tap for the next'}
+                  {isLast ? 'press to continue' : 'press for the next'}
                 </motion.p>
               </motion.div>
             </motion.div>

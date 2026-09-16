@@ -22,7 +22,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>How We Use It</h2>
-              <p>We use your data solely to operate Small Fishes — to authenticate your account, save your progress, and display leaderboards and social features. We do not sell your data, use it for advertising, or share it with third parties except as described below.</p>
+              <p>We use your data solely to operate Small Fishes: to authenticate your account, save your progress, and display leaderboards and social features. We do not sell your data, use it for advertising, or share it with third parties except as described below.</p>
             </section>
 
             <section>

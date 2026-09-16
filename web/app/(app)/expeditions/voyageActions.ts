@@ -134,7 +134,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   const routeCfg = ROUTE_CONFIGS[route]
   if (!routeCfg) return { error: 'Unknown route' }
   if (COMING_SOON_ROUTES.has(route)) {
-    return { error: 'This route isn\'t ready to sail yet — coming soon.' }
+    return { error: 'This route isn\'t ready to sail yet. Coming soon.' }
   }
   if (shipTier < routeCfg.minShipTier) {
     return { error: 'Requires a Sloop or better for this route' }
@@ -222,7 +222,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
     // becomes a clean error instead of a rejected promise — otherwise the
     // client's transition can hang on "Sending…" with nothing surfaced.
     console.error('[sendDailyVoyage] threw:', e)
-    return { error: 'Could not set sail — something went wrong. Please try again.' }
+    return { error: 'Could not set sail. Something went wrong, please try again.' }
   }
 }
 

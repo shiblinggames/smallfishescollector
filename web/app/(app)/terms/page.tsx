@@ -37,7 +37,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Intellectual Property</h2>
-              <p>All content in the Game — including artwork, card designs, names, and code — is owned by Shibling Games LLC. You may not reproduce, distribute, or create derivative works without our written permission.</p>
+              <p>All content in the Game, including artwork, card designs, names, and code, is owned by Shibling Games LLC. You may not reproduce, distribute, or create derivative works without our written permission.</p>
             </section>
 
             <section>

@@ -184,7 +184,7 @@ export default function AssignPicker({
                     type="button"
                     disabled={disabled}
                     onClick={() => onPick(m)}
-                    aria-label={`${m.name}${note ? `, ${note}` : ''}${locked ? '' : '. Tap to assign.'}`}
+                    aria-label={`${m.name}${note ? `, ${note}` : ''}${locked ? '' : '. Press to assign.'}`}
                     className="tap"
                     style={{
                       position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,

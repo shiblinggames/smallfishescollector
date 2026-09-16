@@ -166,7 +166,7 @@ export default function LegendDiscoveryOverlay({
               className="font-karla font-400"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}
               style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.34)', marginTop: '1.3rem', letterSpacing: '0.08em' }}>
-              tap to continue
+              press to continue
             </motion.p>
           </motion.div>
         </motion.div>

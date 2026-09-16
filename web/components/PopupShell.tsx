@@ -34,7 +34,7 @@
 //   </PopupShell>
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
 
 /**
  * ── HOW DEEP THIS ONE IS ────────────────────────────────────────────────────
@@ -59,6 +59,64 @@ const ModalDepth = createContext(0)
  *  phone's width without a third-level dialog becoming a slot. */
 const DEPTH_STEP = 16
 const DEPTH_MAX = 2
+
+/**
+ * ── WHAT A DESKTOP EXPECTS OF A DIALOG, ANSWERED ONCE ───────────────────────
+ *
+ * Built for a phone, this shell did one of the six things a dialog owes a
+ * desktop: clicking the empty backdrop closed it. Escape did nothing in any
+ * of the twenty-odd sheets built on it, the page behind kept scrolling under a
+ * mouse wheel the moment the sheet's own content fit, and focus never moved,
+ * so Tab walked straight out into the page underneath. The sea answered
+ * Escape for its own sheets with a hand-maintained chain of twenty-three
+ * branches, and the one sheet that was not on the list (the fishing result)
+ * silently had no key at all.
+ *
+ * So the shell owns three of those now, and every sheet built on it gets them
+ * without knowing:
+ *
+ *   ESCAPE closes the TOPMOST open shell and only that one. A module-level
+ *   stack says which is on top. The listener runs in the CAPTURE phase and
+ *   stops the event there, so the sea's chain, KeyboardAdvance and anything
+ *   else on window never see the same press, and one press closes one sheet.
+ *   Closing calls the same `onClose` the backdrop does, so a caller that
+ *   blocks the backdrop while busy blocks Escape for free.
+ *
+ *   THE PAGE BEHIND STOPS SCROLLING. `overflow: hidden` on body, refcounted so
+ *   nested shells restore it once, with the scrollbar's width padded back in
+ *   so the page does not shift sideways on Windows. Not lib/bodyScrollLock:
+ *   that one pins the body to the top for combat screens and would jump a
+ *   scrolled tavern page to zero on every open.
+ *
+ *   FOCUS MOVES IN, AND BACK. The wrapper takes focus on open (so the next
+ *   Tab starts inside the dialog and Escape has somewhere to land), and
+ *   whatever had focus before gets it back on close. Not a full trap: Tab can
+ *   still leave, which is wrong in theory and right in practice for a game
+ *   where the "page behind" is usually a canvas with nothing to focus.
+ *
+ * `role="dialog"` and `aria-modal` sit on the wrapper for the same reason: it
+ * is the one element every sheet shares.
+ */
+const openShells: symbol[] = []
+
+let bodyLocks = 0
+let bodyPrev = { overflow: '', paddingRight: '' }
+function lockBody(): () => void {
+  if (bodyLocks++ === 0) {
+    const b = document.body.style
+    bodyPrev = { overflow: b.overflow, paddingRight: b.paddingRight }
+    const gutter = window.innerWidth - document.documentElement.clientWidth
+    b.overflow = 'hidden'
+    if (gutter > 0) b.paddingRight = `${gutter}px`
+  }
+  return () => {
+    if (--bodyLocks === 0) {
+      const b = document.body.style
+      b.overflow = bodyPrev.overflow
+      b.paddingRight = bodyPrev.paddingRight
+    }
+  }
+}
 
 export interface PopupShellProps {
   open: boolean
@@ -91,6 +149,47 @@ export default function PopupShell({
 }: PopupShellProps) {
   const depth = useContext(ModalDepth)
   const inset = Math.min(depth, DEPTH_MAX) * DEPTH_STEP
+
+  const idRef = useRef<symbol | null>(null)
+  if (idRef.current === null) idRef.current = Symbol('popup-shell')
+  const wrapRef = useRef<HTMLDivElement>(null)
+  // The latest onClose, so the one listener registered per open never calls
+  // a stale closure and callers need not memoise theirs.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  useEffect(() => {
+    if (!open) return
+    const id = idRef.current as symbol
+    openShells.push(id)
+    const before = typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null
+    const raf = requestAnimationFrame(() => {
+      try { wrapRef.current?.focus({ preventScroll: true }) } catch { /* fine */ }
+    })
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (openShells[openShells.length - 1] !== id) return
+      e.stopImmediatePropagation()
+      e.preventDefault()
+      onCloseRef.current()
+    }
+    window.addEventListener('keydown', onKey, true)
+    const unlock = lockBody()
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('keydown', onKey, true)
+      const i = openShells.indexOf(id)
+      if (i >= 0) openShells.splice(i, 1)
+      unlock()
+      // Only if focus is still where we put it, or nowhere: a caller that
+      // moved focus on purpose (a picker that focuses its result) keeps it.
+      const now = document.activeElement
+      if (before && before.isConnected && (now === null || now === document.body || now === wrapRef.current)) {
+        try { before.focus({ preventScroll: true }) } catch { /* fine */ }
+      }
+    }
+  }, [open])
+
   return (
     <AnimatePresence>
       {open && (
@@ -117,6 +216,10 @@ export default function PopupShell({
               safe for any `position: fixed` children (unlike transform/filter). */}
           <motion.div
             key="popup-wrapper"
+            ref={wrapRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -133,6 +236,7 @@ export default function PopupShell({
             style={{
               position: 'fixed', inset: 0, zIndex,
               display: 'flex',
+              outline: 'none',
               paddingTop,
               // ── INSET BY DEPTH ────────────────────────────────────────
               // See ModalDepth. The base rem is the phone's own margin; the

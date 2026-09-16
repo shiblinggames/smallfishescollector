@@ -139,7 +139,7 @@ function StatBullet({ value, help, color }: { value: string; help: string; color
       <p className="font-karla" style={{ fontSize: '0.85rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.45 }}>
         <span className="font-700" style={{ color }}>{value}</span>
         {' '}
-        <span style={{ color: 'rgba(240,237,232,0.55)' }}>— {help}</span>
+        <span style={{ color: 'rgba(240,237,232,0.55)' }}>· {help}</span>
       </p>
     </li>
   )
@@ -173,7 +173,7 @@ function rodStatLines(r: typeof RODS[number]): RodStatLine[] {
     lines.push({ title: 'Catch Zone', value: `+${r.catchZoneBonus}°`, help: 'wider green band on the dial', group: 'base' })
   }
   if (r.perfectZoneBonus > 0) {
-    lines.push({ title: 'Perfect Zone', value: `+${r.perfectZoneBonus}°`, help: 'bigger gold zone — easier Perfects', group: 'base' })
+    lines.push({ title: 'Perfect Zone', value: `+${r.perfectZoneBonus}°`, help: 'bigger gold zone, easier Perfects', group: 'base' })
   }
   if (r.snagImmune) {
     lines.push({ title: 'Snag Immune', value: 'Yes', help: 'red zones cost no extra bait', group: 'base' })
@@ -190,7 +190,7 @@ function rodStatLines(r: typeof RODS[number]): RodStatLine[] {
     lines.push({ title: 'Miss Retry', value: `${Math.round(r.retryOnMissChance * 100)}% chance`, help: 'missed dial sometimes refires', group: proc })
   }
   if ((r.jackpotChance ?? 0) > 0) {
-    lines.push({ title: 'Jackpot', value: `×${r.jackpotMultiplier}`, help: 'rare chance at a huge haul — odds rise in shallower zones', group: proc })
+    lines.push({ title: 'Jackpot', value: `×${r.jackpotMultiplier}`, help: 'rare chance at a huge haul. Odds rise in shallower zones', group: proc })
   }
   if ((r.crateChanceMult ?? 1) > 1) {
     lines.push({ title: 'Crate Lure', value: `× ${r.crateChanceMult}`, help: 'more treasure crates per cast', group: proc })
@@ -199,13 +199,13 @@ function rodStatLines(r: typeof RODS[number]): RodStatLine[] {
     lines.push({ title: 'Perfect XP', value: `× ${r.perfectXpMult}`, help: 'Perfect catches grant double XP', group: proc })
   }
   if (r.wormhole) {
-    lines.push({ title: 'Wormhole', value: 'Reroll', help: 'reroll any catch into another fish from the same zone — better or worse', group: proc })
+    lines.push({ title: 'Wormhole', value: 'Reroll', help: 'reroll any catch into another fish from the same zone, better or worse', group: proc })
   }
   if ((r.instantBiteChance ?? 0) > 0) {
     lines.push({ title: 'Lightspeed', value: `${Math.round(r.instantBiteChance! * 100)}%`, help: 'chance a bite comes almost instantly', group: proc })
   }
   if (lines.length === 0) {
-    lines.push({ title: 'Base Rod', value: '—', help: 'standard rod — no bonuses', group: 'base' })
+    lines.push({ title: 'Base Rod', value: '—', help: 'standard rod, no bonuses', group: 'base' })
   }
   return lines
 }
@@ -1749,7 +1749,7 @@ export default function GearScreen({
                           }}
                         >
                           <p className="font-cinzel font-700" style={{ fontSize: '0.83rem', color: '#f0ede8' }}>
-                            ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span> — now equipped
+                            ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span>, now equipped
                           </p>
                           <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: cosmeticToast.color }}>
                             −{cosmeticToast.cost.toLocaleString()} {cosmeticToast.currency === 'gems' ? '◆' : '⟡'}
@@ -1898,7 +1898,7 @@ export default function GearScreen({
                                   {forged.length > 0 ? forged.map((l, i) => (
                                     <span key={i} className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#f3d98a', background: 'rgba(232,200,74,0.12)', border: '1px solid rgba(232,200,74,0.4)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>{l}</span>
                                   )) : (
-                                    <span className="font-karla" style={{ fontSize: '0.76rem', color: '#6a7888', fontStyle: 'italic' }}>Empty — fold rods in below</span>
+                                    <span className="font-karla" style={{ fontSize: '0.76rem', color: '#6a7888', fontStyle: 'italic' }}>Empty. Fold rods in below</span>
                                   )}
                                 </div>
                               </div>
@@ -2136,7 +2136,7 @@ export default function GearScreen({
                                         {group.map(l => <StatBullet key={l.title} value={l.value} help={l.help} color={rod.color} />)}
                                       </ul>
                                     ) : (
-                                      <p className="font-karla" style={{ fontSize: '0.81rem', color: '#6a7888', fontStyle: 'italic' }}>Nothing forged in yet — fold rods in via the forge below.</p>
+                                      <p className="font-karla" style={{ fontSize: '0.81rem', color: '#6a7888', fontStyle: 'italic' }}>Nothing forged in yet. Fold rods in via the forge below.</p>
                                     )}
                                   </div>
                                 )
@@ -2155,7 +2155,7 @@ export default function GearScreen({
                           <>
                             <p className="font-karla font-600 uppercase tracking-[0.14em]"
                               style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.42)', marginTop: 4, paddingLeft: 2 }}>
-                              Tap to Swap
+                              Press to Swap
                             </p>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                               {ownedRodDefs.map(r => {
@@ -2418,7 +2418,7 @@ export default function GearScreen({
                                     }}>
                                       <span className="font-karla font-700 uppercase tracking-[0.1em]"
                                         style={{ fontSize: '0.74rem', color: captainLocked ? '#f0c040' : !rodLevelMet ? '#e0a44a' : canAfford ? r.color : '#f87171' }}>
-                                        {captainLocked ? <><IconAnchor size={10} /> Captain only</> : !rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? 'Tap to Buy' : `Need ${need.toLocaleString()}`}
+                                        {captainLocked ? <><IconAnchor size={10} /> Captain only</> : !rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? 'Press to Buy' : `Need ${need.toLocaleString()}`}
                                       </span>
                                       <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
                                         {r.cost.toLocaleString()} ⟡
@@ -2491,7 +2491,7 @@ export default function GearScreen({
                       )}
                     </AnimatePresence>
                     <TackleNote icon="up" color={reel.color}
-                      text="Reels slow the needle down, giving you more time to tap. They’re auto-equipped, and you can upgrade to a better tier any time you can afford one." />
+                      text="Reels slow the needle down, giving you more time to press. They’re auto-equipped, and you can upgrade to a better tier any time you can afford one." />
                     {/* Equipped reel detail header */}
                     <div style={{
                       background: `linear-gradient(180deg, ${reel.color}10 0%, rgba(4,10,18,0.85) 100%)`,
@@ -2512,7 +2512,7 @@ export default function GearScreen({
                         <StatRow
                           title="Needle Speed"
                           value={`${dragPct}% slower`}
-                          help="The catch-zone needle sweeps slower, giving you a bigger window to tap inside the green band."
+                          help="The catch-zone needle sweeps slower, giving you a bigger window to press inside the green band."
                           color={reel.color}
                         />
                       ) : (
@@ -2665,7 +2665,7 @@ export default function GearScreen({
                         <StatRow
                           title="Catch Zone"
                           value={`+${hookTier * 3}°`}
-                          help="Widens the green band on the dial — bigger window to land a catch on every cast."
+                          help="Widens the green band on the dial. A bigger window to land a catch on every cast."
                           color={hook.color}
                         />
                       ) : (
@@ -2778,7 +2778,7 @@ export default function GearScreen({
                     )}
                   </div>
                   <p className="font-karla font-300" style={{ fontSize: '0.78rem', color: '#6a6460', lineHeight: 1.5, textAlign: 'center' }}>
-                    Lines are earned by catching unique species — no purchase needed.
+                    Lines are earned by catching unique species. No purchase needed.
                   </p>
                 </div>
               )}
@@ -2921,7 +2921,7 @@ export default function GearScreen({
                         }}
                       >
                         <p className="font-cinzel font-700" style={{ fontSize: '0.83rem', color: '#f0ede8' }}>
-                          ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span> — now equipped
+                          ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span>, now equipped
                         </p>
                         <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: cosmeticToast.color }}>
                           −{cosmeticToast.cost.toLocaleString()} ⟡
@@ -3070,7 +3070,7 @@ export default function GearScreen({
                               least know there is something else to weigh. */}
                           <p className="font-karla font-600" style={{ fontSize: '0.79rem', color: 'rgba(230,215,180,0.5)', marginTop: 3, lineHeight: 1.45 }}>
                             Out on the water, the hull you sail decides how she
-                            handles. Tap one to see what it does.
+                            handles. Pick one to see what it does.
                           </p>
                         </div>
                         <CosmeticLegend />
@@ -3298,7 +3298,7 @@ export default function GearScreen({
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#a78bfa' }}>Pets</p>
                         <p className="font-karla font-300" style={{ fontSize: '0.78rem', color: '#7a7268', lineHeight: 1.4 }}>
-                          Pets are a rare drop from crates — the golden variants are the trophies. Tap one to equip, or tap the equipped pet to put it away.
+                          Pets are a rare drop from crates. The golden variants are the trophies. Press one to equip, or press the equipped pet to put it away.
                         </p>
                         <CosmeticLegend />
 
@@ -3353,8 +3353,8 @@ export default function GearScreen({
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Badges</p>
                   <p className="font-karla font-300" style={{ fontSize: '0.79rem', color: '#5a5755', lineHeight: 1.4 }}>
                     {selectedBadgeSlot !== null
-                      ? `Slot ${selectedBadgeSlot + 1} selected — pick a badge to equip there. Tap the slot again to deselect.`
-                      : 'Pick a slot first, or tap a badge to fill the next empty slot. Tap an equipped badge to remove it.'}
+                      ? `Slot ${selectedBadgeSlot + 1} selected. Pick a badge to equip there. Press the slot again to deselect.`
+                      : 'Pick a slot first, or press a badge to fill the next empty slot. Press an equipped badge to remove it.'}
                   </p>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {[0, 1, 2].map(slot => {
@@ -3487,7 +3487,7 @@ export default function GearScreen({
                 owned, equipped: equippedPet === p.id, purchasable: false,
                 unlockHint: p.earnedOnly
                   ? 'Not a crate drop. Take all six Ancient Deep giants to Vigil Rank V.'
-                  : 'A rare find in fishing crates — golden variants are the trophies.',
+                  : 'A rare find in fishing crates. Golden variants are the trophies.',
                 itemImg: p.restImageUrl, mystery: !owned, concealed: !owned && p.earnedOnly === true,
               }
             }
@@ -3665,7 +3665,7 @@ export default function GearScreen({
                   </div>
                 )}
 
-                <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.9rem' }}>Tap anywhere to close</p>
+                <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.9rem' }}>Press anywhere to close</p>
               </motion.div>
             </motion.div>
           )

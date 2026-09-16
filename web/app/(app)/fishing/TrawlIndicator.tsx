@@ -609,7 +609,7 @@ export default function TrawlIndicator({
         onTap={() => { if (!draggingRef.current) { openPanel(); haptic(12) } }}
         whileTap={{ scale: 0.9 }}
         whileDrag={{ scale: 1.08 }}
-        aria-label="Trawls — tap to open, press and hold to move"
+        aria-label="Trawls. Press to open, press and hold to move"
         style={{
           // Default spot: left edge, just above the music/SFX chips (which sit
           // at bottom:110, ~34px tall each). Players can drag it elsewhere; the
@@ -718,7 +718,7 @@ export default function TrawlIndicator({
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f4ecd8' }}>Trawls</p>
                 {/* Slot count is now a compact tappable chip — opens the slot-info modal. */}
-                <motion.button onClick={() => { haptic(8); setSlotInfo(true) }} whileTap={{ scale: 0.9 }} aria-label="Trawl slots — how to get more"
+                <motion.button onClick={() => { haptic(8); setSlotInfo(true) }} whileTap={{ scale: 0.9 }} aria-label="Trawl slots, how to get more"
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.26rem 0.55rem', borderRadius: 999, background: 'rgba(196,169,106,0.1)', border: '1px solid rgba(196,169,106,0.32)', cursor: 'pointer' }}>
                   <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: GOLD }}>{state.unlockedSlots}/{TRAWL_MAX_SLOTS}</span>
                   <div style={{ display: 'flex', gap: 3.5 }}>
@@ -730,7 +730,7 @@ export default function TrawlIndicator({
               </div>
             </div>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#bcb29a', lineHeight: 1.45, marginTop: 2 }}>
-              Crew fish a zone on their own — collect their XP and doubloon haul
+              Crew fish a zone on their own. Collect their XP and doubloon haul
               when they come back. {canDeploy
                 ? 'Pick a zone to send someone.'
                 : 'Sending is done at the Trawl Docks; you can collect from anywhere.'}
@@ -773,9 +773,9 @@ export default function TrawlIndicator({
                   // the standout Ready" and the flag said otherwise, so the one
                   // state meant to stand out was drawn like the four that are
                   // not: pale text on the same black plate.
-                  ready:    { c: '#ffd96a',     label: collectingZone === z.key ? 'Hauling In…' : canCollect ? 'Tap to Collect' : 'Waiting at the Docks', filled: true,  dot: false },
+                  ready:    { c: '#ffd96a',     label: collectingZone === z.key ? 'Hauling In…' : canCollect ? 'Press to Collect' : 'Waiting at the Docks', filled: true,  dot: false },
                   running:  { c: theme.accent, label: `Fishing · ${fmtCountdown(ms)}`, filled: false, dot: true  },
-                  sendable: { c: theme.accent, label: 'Tap to send crew',              filled: false, dot: false },
+                  sendable: { c: theme.accent, label: 'Press to send crew',              filled: false, dot: false },
                   ashore:   { c: 'rgba(255,255,255,0.55)', label: 'Send from the Docks',   filled: false, dot: false },
                   noslot:   { c: '#9a958c',    label: 'No free slot',                  filled: false, dot: false },
                   locked:   { c: '#8f877a',    label: z.key === 'ancient_deep' && state.fishingLevel >= z.minLevel ? 'Locked · Clear Chapter 3' : `Locked · Lv ${z.minLevel}`, filled: false, dot: false },
@@ -1023,7 +1023,7 @@ export default function TrawlIndicator({
               </div>
             )}
             {allOrderedCrew.length === 0 && !quickCrew && (state.freeCrew.length === 0
-              ? <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '2rem 0' }}>No free crew — they&apos;re all at sea, raiding, or voyaging. Recruit more in the Crew Hall.</p>
+              ? <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '2rem 0' }}>No free crew. They&apos;re all at sea, raiding, or voyaging. Recruit more in the Crew Hall.</p>
               : trawlWho === 'free' && state.freeCrew.some(c => c.inRaidParty)
                 // The default filter hides raid hands, so say WHY the list is
                 // empty rather than blaming an invisible filter.
@@ -1246,7 +1246,7 @@ export default function TrawlIndicator({
             </div>
             <p className="font-karla" style={{ fontSize: '0.78rem', color: '#cfc6b0', lineHeight: 1.5, marginTop: 10 }}>
               {slotUnlock === 1
-                ? 'Tap the crew icon on the left to send a crew fishing — they bring back XP and doubloons while you do other things.'
+                ? 'Press the crew icon on the left to send a crew fishing. They bring back XP and doubloons while you do other things.'
                 : 'More slots means more zones fishing for you at the same time. Pick another zone to crew.'}
             </p>
             <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
@@ -1283,7 +1283,7 @@ export default function TrawlIndicator({
 
             {ns ? (
               <div style={{ marginTop: 12, padding: '0.85rem 0.9rem', borderRadius: 14, background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)' }}>
-                <p className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#dccba6', marginBottom: 8 }}>Unlock slot {ns.slot} — reach BOTH:</p>
+                <p className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#dccba6', marginBottom: 8 }}>Unlock slot {ns.slot}: reach BOTH</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <Req label="Fishing Lv" need={ns.fishing} have={state.fishingLevel} />
                   {ns.nav > 0 && <Req label="Nav Lv" need={ns.nav} have={state.navLevel} />}
@@ -1293,7 +1293,7 @@ export default function TrawlIndicator({
                 </p>
               </div>
             ) : (
-              <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: GREEN, textAlign: 'center', marginTop: 10 }}>All {TRAWL_MAX_SLOTS} slots unlocked — your whole fleet&apos;s at work.</p>
+              <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: GREEN, textAlign: 'center', marginTop: 10 }}>All {TRAWL_MAX_SLOTS} slots unlocked. Your whole fleet&apos;s at work.</p>
             )}
           </motion.div>
         </motion.div>

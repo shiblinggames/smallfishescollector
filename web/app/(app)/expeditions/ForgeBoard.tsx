@@ -466,7 +466,7 @@ export default function ForgeBoard({
       {groups.length === 0 ? (
         <p className="font-karla" style={{ fontSize: '0.82rem', color: '#8a8480', lineHeight: 1.5, textAlign: 'center', padding: '1.4rem 0.5rem' }}>
           {abyssalTab
-            ? 'No Abyssal recipes match. Forge tier-2 relics first — the Abyssal bench fuses two forged pieces into one.'
+            ? 'No Abyssal recipes match. Forge tier-2 relics first. The Abyssal bench fuses two forged pieces into one.'
             : 'Nothing here yet.'}
         </p>
       ) : groups.map(g => (
@@ -750,7 +750,7 @@ function AbyssalAcceleratorPanel({ unlocked, ownedRaidItems, conversion, gemsNow
               <p className="font-karla" style={{ fontSize: '0.56rem', color: '#8f8378', textAlign: 'center', marginTop: 7 }}>Consumes the epic · takes 24 hours · one at a time</p>
             </>
           ) : (
-            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8f8378', textAlign: 'center' }}>Tap an epic above to transmute it.</p>
+            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8f8378', textAlign: 'center' }}>Pick an epic above to transmute it.</p>
           )}
         </>
       )}
@@ -968,7 +968,7 @@ function RecipeSheet({
                       cursor: (!canAfford || isLearning) ? 'default' : 'pointer' }}>
                     {isLearning ? 'Learning…'
                       : !canAfford ? `Need ${recipe.fathomCost} Fathoms, you have ${fathomsNow}`
-                      : armedLearn ? 'Tap again to confirm'
+                      : armedLearn ? 'Press again to confirm'
                       : `Learn Recipe, ${recipe.fathomCost} Fathoms`}
                   </button>
                 ) : state === 'ready' ? (
@@ -980,7 +980,7 @@ function RecipeSheet({
                         : 'linear-gradient(180deg, rgba(232,200,121,0.3), rgba(196,169,106,0.14))',
                       border: `1px solid ${armed ? (abyssal ? 'rgba(255,120,80,0.8)' : 'rgba(248,140,90,0.7)') : abyssal ? `${EMBER}aa` : `${GOLD}99`}`,
                       color: armed ? '#ffd0b0' : abyssal ? '#ffcdb8' : '#f0d695', cursor: busy ? 'default' : 'pointer' }}>
-                    {busy ? 'Forging…' : armed ? 'Tap again to spend the parts' : `Forge ${result.name}`}
+                    {busy ? 'Forging…' : armed ? 'Press again to spend the parts' : `Forge ${result.name}`}
                   </button>
                 ) : (
                   <p className="font-karla" style={{ fontSize: '0.86rem', color: '#8a8480', lineHeight: 1.5, textAlign: 'center' }}>
@@ -1077,7 +1077,7 @@ function TreeBranch({ node, onOpenRecipe, onGoToSource }: {
         </button>
       ) : source ? (
         <button type="button" onClick={() => onGoToSource!(node.id)} className="tap"
-          aria-label={`${def?.name ?? node.id}, drops from ${source.label}. Tap to go there.`}
+          aria-label={`${def?.name ?? node.id}, drops from ${source.label}. Press to go there.`}
           style={{
             display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0,
             padding: '0.32rem 0.4rem', borderRadius: 8, textAlign: 'left', font: 'inherit',
@@ -1286,7 +1286,7 @@ function ForgePlanner({
 
       {targeted.length === 0 ? (
         <p className="font-karla" style={{ fontSize: '0.84rem', color: '#8a8480', lineHeight: 1.5, textAlign: 'center', padding: '1.2rem 0.5rem' }}>
-          Tap a piece above to see what it takes to forge, and what it flies once you have it.
+          Pick a piece above to see what it takes to forge, and what it flies once you have it.
         </p>
       ) : (
         <>
@@ -1324,19 +1324,19 @@ function ForgePlanner({
           {/* Fathom affordability + mount check */}
           {chosen.length > 0 && (
             <p className="font-karla" style={{ fontSize: '0.76rem', color: fathomsNow >= plan.fathomCost ? GREEN : AMBER, marginBottom: 8 }}>
-              {plan.fathomCost === 0 ? 'Every recipe already learned — just the drops to go.'
-                : fathomsNow >= plan.fathomCost ? `You hold ${fathomsNow} Fathoms — enough to learn all ${plan.learnRecipeIds.length} recipe${plan.learnRecipeIds.length > 1 ? 's' : ''}.`
+              {plan.fathomCost === 0 ? 'Every recipe already learned. Just the drops to go.'
+                : fathomsNow >= plan.fathomCost ? `You hold ${fathomsNow} Fathoms, enough to learn all ${plan.learnRecipeIds.length} recipe${plan.learnRecipeIds.length > 1 ? 's' : ''}.`
                 : `Learning the ${plan.learnRecipeIds.length} recipe${plan.learnRecipeIds.length > 1 ? 's' : ''} costs ${plan.fathomCost} Fathoms; you have ${fathomsNow}.`}
             </p>
           )}
           <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.5, color: overMount ? AMBER : GREEN, marginBottom: shared.length ? 8 : 14 }}>
             {overMount
-              ? `⚑ ${targeted.length} pieces but only ${raidItemSlots} mounts — build them all, you'll just swap which ${raidItemSlots} you fly per fight.`
-              : `✓ All ${targeted.length} fit your ${raidItemSlots} mounts — the whole set can ride at once.`}
+              ? `⚑ ${targeted.length} pieces but only ${raidItemSlots} mounts. Build them all, you'll just swap which ${raidItemSlots} you fly per fight.`
+              : `✓ All ${targeted.length} fit your ${raidItemSlots} mounts. The whole set can ride at once.`}
           </p>
           {shared.length > 0 && (
             <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.5, color: AMBER, background: `${AMBER}12`, border: `1px solid ${AMBER}3a`, borderRadius: 9, padding: '0.55rem 0.7rem', marginBottom: 14 }}>
-              ⚑ Two of your picks want the same part. You&apos;ll need to build {shared.join(' and ')} — the forge consumes what it fuses, so each one needs its own copy, farmed separately.
+              ⚑ Two of your picks want the same part. You&apos;ll need to build {shared.join(' and ')}. The forge consumes what it fuses, so each one needs its own copy, farmed separately.
             </p>
           )}
 
@@ -1350,7 +1350,7 @@ function ForgePlanner({
                 How they&apos;re made
               </p>
               <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.45, marginBottom: 11 }}>
-                Open one to walk its parts down to the drops. Tap a fusion to read its recipe, or a drop to go where it falls.
+                Open one to walk its parts down to the drops. Pick a fusion to read its recipe, or a drop to go where it falls.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
                 {plan.trees.map((t, k) => (

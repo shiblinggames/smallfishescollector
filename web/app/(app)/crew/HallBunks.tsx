@@ -290,8 +290,8 @@ export default function HallBunks({
                 onClick={() => setPicking(i)}
                 title={lev ? 'The Leviathan bunk. Every stint rolls against their trait and keeps the better of each stat. It can never make them worse.' : undefined}
                 aria-label={lev
-                  ? 'Empty Leviathan bunk. Tap to put a crew in it. Every stint rolls against their trait and keeps the better of each stat.'
-                  : `Empty bunk ${i + 1}. Tap to put a crew in it.`}
+                  ? 'Empty Leviathan bunk. Press to put a crew in it. Every stint rolls against their trait and keeps the better of each stat.'
+                  : `Empty bunk ${i + 1}. Press to put a crew in it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                   minHeight: 100, borderRadius: 11, cursor: 'pointer', font: 'inherit',

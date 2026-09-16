@@ -269,7 +269,7 @@ export default function ProfileClient({
     if (id === profileBg) return
     if (id !== null) {
       const def = getProfileBackground(id)
-      if (def && level < def.minLevel) { flashLockMsg(`${def.label} — unlocks at Level ${def.minLevel}`); return }
+      if (def && level < def.minLevel) { flashLockMsg(`${def.label} unlocks at Level ${def.minLevel}`); return }
     }
     setProfileBg(id)
     setProfileBgSaving(true)
@@ -623,8 +623,8 @@ export default function ProfileClient({
                 <div style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
                   <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#b4aea6', lineHeight: 1.4, marginBottom: 8 }}>
                     {selectedBadgeSlot !== null
-                      ? `Slot ${selectedBadgeSlot + 1} selected — pick a badge to equip there.`
-                      : 'Pick a slot first, or tap a badge to fill the next empty slot.'}
+                      ? `Slot ${selectedBadgeSlot + 1} selected. Pick a badge to equip there.`
+                      : 'Pick a slot first, or press a badge to fill the next empty slot.'}
                   </p>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
                     {[0, 1, 2].map(slot => {
@@ -1016,7 +1016,7 @@ export default function ProfileClient({
               />
               {lookTab === 'avatar' && (
                 <span className="font-karla" style={{ marginTop: 7, fontSize: '0.56rem', letterSpacing: '0.06em', color: 'rgba(240,237,232,0.42)' }}>
-                  Tap a swatch to try it on
+                  Pick a swatch to try it on
                 </span>
               )}
             </div>
@@ -1130,7 +1130,7 @@ export default function ProfileClient({
                       saveAvatarBg(c.hex)
                     }}
                     aria-label={`Background ${c.label}${locked ? ' (premium)' : ''}`}
-                    title={locked ? `${c.label} — premium only` : c.label}
+                    title={locked ? `${c.label}, Captain only` : c.label}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
@@ -1166,7 +1166,7 @@ export default function ProfileClient({
                     onClick={() => {
                       if (!owned) {
                         if (!isPremium) {
-                          flashLockMsg(`${s.label} — Captain-only`)
+                          flashLockMsg(`${s.label} is Captain only`)
                           return
                         }
                         setPurchaseError(null)
@@ -1176,7 +1176,7 @@ export default function ProfileClient({
                       saveAvatarBg(s.hex)
                     }}
                     aria-label={`Background ${s.label}${!owned ? ` (${s.gemPrice} gems)` : ''}`}
-                    title={owned ? s.label : `${s.label} — ${s.gemPrice} ◆`}
+                    title={owned ? s.label : `${s.label}, ${s.gemPrice} ◆`}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
@@ -1216,7 +1216,7 @@ export default function ProfileClient({
                       saveAvatarBorder(c.hex)
                     }}
                     aria-label={`Border ${c.label}${locked ? ' (premium)' : ''}`}
-                    title={locked ? `${c.label} — premium only` : c.label}
+                    title={locked ? `${c.label}, Captain only` : c.label}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
@@ -1254,7 +1254,7 @@ export default function ProfileClient({
                     onClick={() => {
                       if (!owned) {
                         if (!isPremium) {
-                          flashLockMsg(`${s.label} — Captain-only`)
+                          flashLockMsg(`${s.label} is Captain only`)
                           return
                         }
                         setPurchaseError(null)
@@ -1264,7 +1264,7 @@ export default function ProfileClient({
                       saveAvatarBorder(s.hex)
                     }}
                     aria-label={`Border ${s.label}${!owned ? ` (${s.gemPrice} gems)` : ''}`}
-                    title={owned ? s.label : `${s.label} — ${s.gemPrice} ◆`}
+                    title={owned ? s.label : `${s.label}, ${s.gemPrice} ◆`}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
@@ -1331,7 +1331,7 @@ export default function ProfileClient({
                     disabled={profileBgSaving}
                     onClick={() => selectProfileBg(bg.id)}
                     aria-label={`Background ${bg.label}${locked ? ` (unlocks at level ${bg.minLevel})` : ''}`}
-                    title={locked ? `${bg.label} — unlocks at Level ${bg.minLevel}` : bg.label}
+                    title={locked ? `${bg.label} unlocks at Level ${bg.minLevel}` : bg.label}
                     style={{
                       position: 'relative', width: '100%', aspectRatio: '16 / 10',
                       borderRadius: 10, overflow: 'hidden', padding: 0,
@@ -1433,7 +1433,7 @@ export default function ProfileClient({
                   <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#e0d2ad', lineHeight: 1.4 }}>{c.unlockHint ?? 'Locked'}</p>
                 </div>
               )}
-              <p className="font-karla font-400" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.9rem' }}>Tap anywhere to close</p>
+              <p className="font-karla font-400" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.9rem' }}>Press anywhere to close</p>
             </div>
           )
         })()}
@@ -1482,7 +1482,7 @@ export default function ProfileClient({
               )
             })()}
             <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.75)', lineHeight: 1.5, marginBottom: 14 }}>
-              {purchasePrompt.price.toLocaleString()} {purchasePrompt.currency === 'gems' ? '◆' : '⟡'} — yours forever once bought.
+              {purchasePrompt.price.toLocaleString()} {purchasePrompt.currency === 'gems' ? '◆' : '⟡'}, yours forever once bought.
             </p>
             <p className="font-karla text-center" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.85)', marginBottom: 14 }}>
               Your purse: {(purchasePrompt.currency === 'gems' ? gems : doubloons).toLocaleString()} {purchasePrompt.currency === 'gems' ? '◆' : '⟡'}

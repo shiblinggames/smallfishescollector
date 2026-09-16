@@ -216,7 +216,7 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
     setSpinning(false)
     onUpdate(r.puzzle)
     if (r.outcome === 'overboard') { vibrate([0, 60, 40, 120]); flash('bad', 'Overboard! Your round bank spills into the sea.') }
-    else if (r.outcome === 'lose_turn') { vibrate([0, 40, 30, 80]); flash('bad', 'Lose a turn — a strike against you.') }
+    else if (r.outcome === 'lose_turn') { vibrate([0, 40, 30, 80]); flash('bad', 'Lose a turn. A strike against you.') }
     else { vibrate(20); flash('info', `The capstan holds on ${r.wedge} ⟡. Call a consonant.`) }
   }
 
@@ -227,7 +227,7 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
       const r = await callConsonant(puzzle.index, letter)
       if ('error' in r) { setError(r.error); return }
       onUpdate(r.puzzle)
-      if (r.count > 0) { vibrate(30); flash('good', `${r.count} × ${letter} — +${r.gained.toLocaleString()} ⟡ to the bank.`) }
+      if (r.count > 0) { vibrate(30); flash('good', `${r.count} × ${letter}, +${r.gained.toLocaleString()} ⟡ to the bank.`) }
       else { vibrate([0, 40, 30, 80]); flash('bad', `No ${letter}. A strike against you.`) }
     })
   }
@@ -241,7 +241,7 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
       setShowVowels(false)
       onUpdate(r.puzzle)
       if (r.count > 0) { vibrate(30); flash('good', `${r.count} × ${letter} revealed.`) }
-      else { vibrate(20); flash('info', `No ${letter} — the fee's spent.`) }
+      else { vibrate(20); flash('info', `No ${letter}. The fee's spent.`) }
     })
   }
 
@@ -348,7 +348,7 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
       {/* Vowel picker */}
       <AnimatePresence>
         {showVowels && (
-          <PickerSheet title={`Buy a vowel — ${CAPSTAN_VOWEL_COST} ⟡ from the bank`} onClose={() => setShowVowels(false)}>
+          <PickerSheet title={`Buy a vowel, ${CAPSTAN_VOWEL_COST} ⟡ from the bank`} onClose={() => setShowVowels(false)}>
             <LetterGrid letters={[...CAPSTAN_VOWELS]} disabled={puzzle.called} busy={isPending} onPick={pickVowel} wide />
           </PickerSheet>
         )}
@@ -591,7 +591,7 @@ function WinOverlay({ puzzle, win, onClose }: { puzzle: CapstanPuzzleClient; win
         <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0e8d0', marginTop: 6 }}>{puzzle.phrase}</p>
         <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: PARLOR.candle, marginTop: 10 }}>+{win.points} pts toward your Parlor rank</p>
         {win.rankedUp && (
-          <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#c084fc', marginTop: 4 }}>New rank reached — collect your gems in the Parlor</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#c084fc', marginTop: 4 }}>New rank reached. Collect your gems in the Parlor</p>
         )}
         <button onClick={onClose} className="font-cinzel font-700" style={{ marginTop: 16, padding: '0.6rem 1.6rem', borderRadius: 12, background: `linear-gradient(180deg, ${PARLOR.candle}, ${PARLOR.brass})`, border: 'none', color: '#160f06', fontSize: '0.9rem', cursor: 'pointer' }}>
           Well done

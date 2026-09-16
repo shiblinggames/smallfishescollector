@@ -169,7 +169,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
           >
             <GuideHeader {...VOICE.doby} line="Welcome aboard, Captain! First, what should we call you?" />
             <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#9aa0a6', marginBottom: '1.5rem', lineHeight: 1.55 }}>
-              This is how other captains will see you — on the leaderboards, in raids, and around the tavern.
+              This is how other captains will see you, on the leaderboards, in raids, and around the tavern.
             </p>
 
             <form onSubmit={handleUsernameNext}>
@@ -295,7 +295,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
                   borderRadius: 10, padding: '0.7rem 0.9rem',
                 }}>
                   <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#f0c040', marginBottom: 3 }}>
-                    {skin.name} — Locked
+                    {skin.name}, locked
                   </p>
                   <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.5 }}>
                     {skin.unlockHint}
@@ -370,7 +370,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
                       setAvatarBg(c.hex === NONE_VALUE ? null : c.hex)
                     }}
                     aria-label={`Background ${c.label}${locked ? ' (premium)' : ''}`}
-                    title={locked ? `${c.label} — premium only` : c.label}
+                    title={locked ? `${c.label}, Captain only` : c.label}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
@@ -420,7 +420,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
                       setAvatarBorder(c.hex === NONE_VALUE ? null : c.hex)
                     }}
                     aria-label={`Border ${c.label}${locked ? ' (premium)' : ''}`}
-                    title={locked ? `${c.label} — premium only` : c.label}
+                    title={locked ? `${c.label}, Captain only` : c.label}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',

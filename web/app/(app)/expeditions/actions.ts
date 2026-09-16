@@ -223,7 +223,7 @@ export async function learnForgeRecipe(resultId: string): Promise<{ ok: true; fa
   const learned = (profile?.forge_recipes_learned as string[] | null) ?? []
   if (learned.includes(resultId)) return { error: 'Already learned.' }
   const fathoms = (profile?.gauntlet_fathoms as number | null) ?? 0
-  if (fathoms < recipe.fathomCost) return { error: `Not enough Fathoms — this recipe needs ${recipe.fathomCost}.` }
+  if (fathoms < recipe.fathomCost) return { error: `Not enough Fathoms. This recipe needs ${recipe.fathomCost}.` }
 
   const newFathoms = fathoms - recipe.fathomCost
   const newLearned = [...learned, resultId]
@@ -267,7 +267,7 @@ export async function startAbyssalConversion(epicId: string): Promise<
   if (!owned.includes(epicId)) return { error: 'You don’t own that item.' }
   if (owned.includes(legendaryId)) return { error: 'You already own the legendary version.' }
   const gems = (profile.gems as number | null) ?? 0
-  if (gems < ABYSSAL_ACCEL_GEM_COST) return { error: `Not enough gems — charging costs ${ABYSSAL_ACCEL_GEM_COST}.` }
+  if (gems < ABYSSAL_ACCEL_GEM_COST) return { error: `Not enough gems. Charging costs ${ABYSSAL_ACCEL_GEM_COST}.` }
 
   const conversion: AbyssalConversion = {
     epicId, legendaryId,

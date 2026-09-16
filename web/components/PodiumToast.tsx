@@ -71,7 +71,7 @@ export default function PodiumToast({ notif, onDone }: { notif: PodiumNotif | nu
             {ordinal} · {notif.category}
           </p>
           <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: '#6a6764', marginTop: '0.15rem' }}>
-            Tap to view leaderboard →
+            Press to view leaderboard →
           </p>
         </div>
       </div>

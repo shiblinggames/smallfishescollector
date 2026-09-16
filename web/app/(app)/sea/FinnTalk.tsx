@@ -322,7 +322,7 @@ export default function FinnTalk({
               }}>You: {turns[turns.length - 2].text}</p>
             )}
 
-            <div style={{ height: 112, flexShrink: 0, overflowY: 'auto', touchAction: 'pan-y' }} onClick={tapBody}>
+            <div style={{ height: 112, flexShrink: 0, overflowY: 'auto', touchAction: 'pan-y', cursor: 'pointer' }} onClick={tapBody}>
               <TypedBody all={[last.text]} text={last.text}
                 shown={last.who === 'them' ? shown : last.text.length}
                 typing={last.who === 'them' ? typing : false}
@@ -333,7 +333,7 @@ export default function FinnTalk({
               <p className="font-karla font-400 uppercase" style={{
                 fontSize: '0.55rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)',
                 textAlign: 'center', margin: '4px 0 0', flexShrink: 0,
-              }}>{typing ? 'tap to skip' : 'tap to go on'}</p>
+              }}>{typing ? 'press to skip' : 'press to go on'}</p>
             )}
 
             <StandingBar points={points} />

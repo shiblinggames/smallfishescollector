@@ -16,7 +16,7 @@ export default function SupportStudioCard({ isPremium }: { isPremium: boolean })
   if (isPremium) {
     return (
       <p className="font-karla text-center" style={{ fontSize: '0.74rem', color: '#8a8270' }}>
-        Thanks for being a Captain — you keep our indie studio afloat. ⚓
+        Thanks for being a Captain. You keep our indie studio afloat. ⚓
       </p>
     )
   }

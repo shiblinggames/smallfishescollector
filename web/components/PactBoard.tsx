@@ -54,7 +54,7 @@ function Row({ person, atSea, children }: {
         {!person.captain && (
           <p className="font-karla" style={{
             fontSize: '0.66rem', color: 'rgba(226,180,140,0.9)', margin: 0,
-          }}>not a Captain — you will not see each other</p>
+          }}>not a Captain, so you will not see each other</p>
         )}
         {person.captain && atSea && (
           <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8fe0ac', margin: 0 }}>

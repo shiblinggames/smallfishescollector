@@ -48,6 +48,18 @@ const LINKS = [
 ]
 
 
+/**
+ * ── NOT ON A DESKTOP ────────────────────────────────────────────────────────
+ *
+ * The bar is display:none from 640px up, and it still mounted and ran three
+ * Supabase queries on every route change plus a 20-second interval, to light
+ * badges on a bar nobody could see. Rendering is left exactly as it was: a
+ * server/client mismatch from returning null would be worse than the queries.
+ * The NETWORK is what stops. Asked fresh each time rather than cached, so a
+ * window narrowed below the breakpoint fetches on its next route change.
+ */
+const isWide = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches
+
 export default function MobileTabBar() {
   const pathname = usePathname()
   // Hooks must run unconditionally — the early-return below used to sit
@@ -83,6 +95,7 @@ export default function MobileTabBar() {
     const needFetch = !fetchedOnceRef.current || wasSeaRef.current || inSea
     wasSeaRef.current = inSea
     if (!needFetch) return
+    if (isWide()) return
     fetchedOnceRef.current = true
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
@@ -104,6 +117,7 @@ export default function MobileTabBar() {
   }, [pathname])
 
   const fetchTrawls = useCallback(() => {
+    if (isWide()) return
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: { user: { id: string } } | null } }) => {
@@ -139,6 +153,7 @@ export default function MobileTabBar() {
   }, [fetchTrawls])
 
   const fetchBadgeState = useCallback(() => {
+    if (isWide()) return
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: { user: { id: string } } | null } }) => {

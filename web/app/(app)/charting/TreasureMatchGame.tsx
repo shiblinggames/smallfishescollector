@@ -292,7 +292,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     if (newMoves <= 0) { await endRun(localScore, false); return }
     if (!hasValidMove(boardRef.current, cols, rows)) {
       const nb = reshuffle(rngRef.current, cols, rows, types)
-      boardRef.current = nb; setBoard(nb); setMessage('No matches left — board reshuffled (free).')
+      boardRef.current = nb; setBoard(nb); setMessage('No matches left. Board reshuffled, free.')
     }
   }
 
@@ -471,12 +471,12 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
 
       {!cleared && board.includes(WILD) && (
         <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: GOLD, textAlign: 'center', textShadow: `0 0 10px ${GOLD}66` }}>
-          A Compass is wild — swap it beside matching treasures to complete a line.
+          A Compass is wild. Swap it beside matching treasures to complete a line.
         </p>
       )}
       <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672', textAlign: 'center' }}>
         {cleared
-          ? `Maxed ${MATCH_MAX_POINTS}/5 this week — fresh board Monday.`
+          ? `Maxed ${MATCH_MAX_POINTS}/5 this week. Fresh board Monday.`
           : message ?? `Best ${displayBest.toLocaleString()} · ${banked}/5 banked`}
       </p>
 
@@ -556,7 +556,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
               <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }}
                 style={{ maxWidth: 'var(--modal-w)', width: '100%', textAlign: 'center', padding: '1.6rem 1.4rem', borderRadius: 18, background: ['radial-gradient(ellipse 80% 60% at 50% 24%, rgba(196,169,106,0.14) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(40,32,16,0.96) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}5e`, boxShadow: 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: result.maxed ? GREEN : GOLD }}>
-                  {result.maxed ? 'Perfect haul — 5/5!' : result.pointsWon > 0 ? 'Tier up!' : 'Run complete'}
+                  {result.maxed ? 'Perfect haul, 5/5!' : result.pointsWon > 0 ? 'Tier up!' : 'Run complete'}
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.74rem', color: '#dccba6', lineHeight: 1.5, marginTop: 6 }}>
                   This run {result.score.toLocaleString()} · best {result.best.toLocaleString()} this week.

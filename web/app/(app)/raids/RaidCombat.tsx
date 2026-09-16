@@ -209,8 +209,8 @@ function crewCounterCue(responses: MechanicResponse[]): string {
   const cats = [...new Set(responses.map(r => RESPONSE_CATEGORY[r]))]
   // A check that accepts every category (the Don's phases) — the answer is
   // simply "act with your crew", so say so plainly instead of listing all four.
-  if (cats.length >= 4) return 'Fire ANY crew ability to answer him — but someone has to act.'
-  return `Fire a crew ability to counter it — ${cats.join(' or ')}.`
+  if (cats.length >= 4) return 'Fire ANY crew ability to answer him. Somebody has to act.'
+  return `Fire a crew ability to counter it: ${cats.join(' or ')}.`
 }
 // HP-relative per-tick cap. Now only guards the player from INCOMING burns
 // (Scorching affix) — outgoing Incendiary / Wildfire / Fallout are uncapped and
@@ -281,7 +281,7 @@ function enemySpecialDesc(s: NonNullable<BroadsideEnemy['special']>): string {
   const turns  = s.turns ?? 2
   const passes = s.aimPasses ?? 2
   const pct = (m: number) => Math.round((m ?? 0) * 100)
-  if (s.aimAttack === 'decoys')   return `Throws false gold across your aim bar for your next ${passes} shots. Lock a decoy band and the shot misfires — only the true mark scores.`
+  if (s.aimAttack === 'decoys')   return `Throws false gold across your aim bar for your next ${passes} shots. Lock a decoy band and the shot misfires. Only the true mark scores.`
   if (s.aimAttack === 'hardened') return `Plates your aim lock for your next ${passes} shots, so it takes two taps to lock a shot instead of one.`
   if (s.aimAttack === 'squall')   return `Gusts your aim needle mid-sweep for your next ${passes} shots, dragging the mark off line as you aim.`
   const mag = s.magnitude ?? 0
@@ -301,8 +301,8 @@ function enemySpecialDesc(s: NonNullable<BroadsideEnemy['special']>): string {
 // stats-popup conditions + the HP-bar chip row when one is on you.
 function aimAfflictionDesc(kind: AimAttackId, passes: number): string {
   const n = `${passes} shot${passes === 1 ? '' : 's'}`
-  if (kind === 'decoys')   return `False gold blooms across your aim bar for your next ${n}. Lock a decoy band and the shot misfires — only the true mark scores.`
-  if (kind === 'hardened') return `Your aim lock is plated for your next ${n} — the first tap only cracks it, so it takes two taps to land a shot instead of one.`
+  if (kind === 'decoys')   return `False gold blooms across your aim bar for your next ${n}. Lock a decoy band and the shot misfires. Only the true mark scores.`
+  if (kind === 'hardened') return `Your aim lock is plated for your next ${n}. The first press only cracks it, so it takes two presses to land a shot instead of one.`
   return `Your aim needle is gusted mid-sweep for your next ${n}, dragging the mark off line as you aim.`
 }
 const AIM_AFFLICTION_COLOR = '#a78bfa'
@@ -310,7 +310,7 @@ const AIM_AFFLICTION_COLOR = '#a78bfa'
 /** Plain-English description of an enemy ULTIMATE (raid-8). It spends a full
  *  magazine for one authored, non-crit blow scaled by `mult`. */
 function enemyUltimateDesc(u: NonNullable<BroadsideEnemy['ultimate']>): string {
-  return `At a full magazine it spends every cannonball at once for one massive blow, about ${u.mult}x a normal shot. The pips glow full as the tell — burn its charges down, brace, or shield before it fires.`
+  return `At a full magazine it spends every cannonball at once for one massive blow, about ${u.mult}x a normal shot. The pips glow full as the tell. Burn its charges down, brace, or shield before it fires.`
 }
 
 function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number, damagePct = 0): number {
@@ -2403,8 +2403,8 @@ export default function RaidCombat({
     pendingCheckRef.current = null
     setPendingCheck(null)
     setResolveLog(prev => [...prev, early
-      ? `✓ ${chk.name} COUNTERED — you made the right move! ${chk.counteredLine}`
-      : `${chk.name} — countered! ${chk.counteredLine}`])
+      ? `✓ ${chk.name} COUNTERED. You made the right move! ${chk.counteredLine}`
+      : `${chk.name}: countered! ${chk.counteredLine}`])
     setCheckResultFlash({ ok: true, label: early ? 'Right move!' : 'Countered!', key: Date.now() })
     setTimeout(() => setCheckResultFlash(cf => (cf && cf.ok ? null : cf)), 1400)
     vibrate([0, 25, 30, 25])
@@ -2417,7 +2417,7 @@ export default function RaidCombat({
     pendingCheckRef.current = null
     setPendingCheck(null)
     // Failed the check — the consequence lands, and the log/flash is LOUD about it.
-    setResolveLog(prev => [...prev, `${chk.name} lands — no one answered the ${enemy.name}. ${chk.failLine}`])
+    setResolveLog(prev => [...prev, `${chk.name} lands. Nobody answered the ${enemy.name}. ${chk.failLine}`])
     setCheckResultFlash({ ok: false, label: `${chk.name} hits!`, key: Date.now() })
     setTimeout(() => setCheckResultFlash(cf => (cf && !cf.ok ? null : cf)), 1700)
     // Status fail — a lingering Ch4 debuff on the player (+ an optional damage
@@ -2426,7 +2426,7 @@ export default function RaidCombat({
     if (chk.consequence.kind === 'status') {
       const c = chk.consequence
       applyPlayerStatus(c.status, c.magnitude, c.turns)
-      setResolveLog(prev => [...prev, `${STATUS_DEFS[c.status].name} takes hold — your ship ${STATUS_DEFS[c.status].describe(c.magnitude)} for ${c.turns} turns.`])
+      setResolveLog(prev => [...prev, `${STATUS_DEFS[c.status].name} takes hold. Your ship ${STATUS_DEFS[c.status].describe(c.magnitude)} for ${c.turns} turns.`])
       if (!c.dmgPct) return
       statusChipDmg = Math.max(1, Math.round(playerHpMax * c.dmgPct))
     }
@@ -2434,7 +2434,7 @@ export default function RaidCombat({
       const heal = Math.max(1, Math.round(enemyHpMaxRef.current * chk.consequence.value))
       const nHp = Math.min(enemyHpMaxRef.current, enemyHpRef.current + heal)
       enemyHpRef.current = nHp; setEnemyHp(nHp)
-      setResolveLog(prev => [...prev, `${enemy.name} collects — heals ${heal}.`])
+      setResolveLog(prev => [...prev, `${enemy.name} collects, healing ${heal}.`])
       return
     }
     if (chk.consequence.kind === 'burnDot') {
@@ -2446,7 +2446,7 @@ export default function RaidCombat({
       const perTurn = Math.max(1, Math.round(playerHpMax * chk.consequence.pctPerTurn))
       playerBurnRef.current = { turns, dmg: perTurn }
       setPlayerBurning(true)
-      setResolveLog(prev => [...prev, `Your hull catches — it burns for ${turns} turns unless a crew heal puts the fire out.`])
+      setResolveLog(prev => [...prev, `Your hull catches. It burns for ${turns} turns unless a crew heal puts the fire out.`])
       return
     }
     // damagePctMaxHp (or a status's damage chip) — a hit that can wipe.
@@ -2464,17 +2464,17 @@ export default function RaidCombat({
       if (vRevive) {
         // Laz FIRST — the vengeance ward catches even a one-shot wipe.
         playerHpRef.current = vRevive.hp; setPlayerHp(vRevive.hp)
-        setResolveLog(prev => [...prev, `It should have sunk you — the vengeance ward erupts, and you surge back to ${vRevive.hp} HP (+${Math.round(vRevive.buffPct * 100)}% damage).`])
+        setResolveLog(prev => [...prev, `It should have sunk you. The vengeance ward erupts, and you surge back to ${vRevive.hp} HP (+${Math.round(vRevive.buffPct * 100)}% damage).`])
       } else if (anchorSaveAvailable && !anchorUsedRef.current) {
         // Quartermaster's Anchor catches a would-be wipe, once per run.
         anchorUsedRef.current = true; onAnchorSave?.()
         playerHpRef.current = 1; setPlayerHp(1)
         setAnchorSaveFx(k => k + 1)
         onCheatedDeath()
-        setResolveLog(prev => [...prev, `It should have sunk you — the anchor holds at 1 HP.`])
+        setResolveLog(prev => [...prev, `It should have sunk you. The anchor holds at 1 HP.`])
       } else {
         playerHpRef.current = 0; setPlayerHp(0)
-        setResolveLog(prev => [...prev, `It rakes you for ${dmg} — your hull gives way.`])
+        setResolveLog(prev => [...prev, `It rakes you for ${dmg} and your hull gives way.`])
         setSubPhase('done'); onPlayerDefeated()
       }
     }
@@ -2531,7 +2531,7 @@ export default function RaidCombat({
         if (healed > 0) {
           playerHpRef.current += healed
           setPlayerHp(playerHpRef.current)
-          lines.push(`Mending knits the hull — +${healed} HP.`)
+          lines.push(`Mending knits the hull, +${healed} HP.`)
           onStat?.({ dmgHealed: healed })
         }
       }
@@ -2541,7 +2541,7 @@ export default function RaidCombat({
         if (healed > 0) {
           enemyHpRef.current += healed
           setEnemyHp(enemyHpRef.current)
-          lines.push(`The ${enemy.name} mends itself — ${healed} HP restored.`)
+          lines.push(`The ${enemy.name} mends itself, ${healed} HP restored.`)
         }
       }
       const pTick = tickStatuses(playerStatusesRef.current)
@@ -3136,7 +3136,7 @@ export default function RaidCombat({
         // turn's splat clobbered it.
         setTimeout(() => setPHitsplat(null), 480)
         setResolveLog(prev => [...prev, revived
-          ? `${enemy.name} runs you down — but the vengeance ward erupts and drags you back at ${next} HP!`
+          ? `${enemy.name} runs you down, but the vengeance ward erupts and drags you back at ${next} HP!`
           : next <= 0
           ? `You break for it, but ${enemy.name} runs you down for ${dmg}!`
           : `You try to flee, but ${enemy.name} lands a parting shot for ${dmg}.`])
@@ -3257,14 +3257,14 @@ export default function RaidCombat({
       const roll = Math.random()
       if (roll < 0.34) {
         applyPlayerStatus('enrage', tide.randomFightBuff, 99)
-        introLines.push(`The Don's Favor — you open ENRAGED (+${Math.round(tide.randomFightBuff * 100)}% damage).`)
+        introLines.push(`The Don's Favor: you open ENRAGED (+${Math.round(tide.randomFightBuff * 100)}% damage).`)
       } else if (roll < 0.67) {
         applyPlayerStatus('fortify', tide.randomFightBuff, 99)
-        introLines.push(`The Don's Favor — you open FORTIFIED (−${Math.round(tide.randomFightBuff * 100)}% damage taken).`)
+        introLines.push(`The Don's Favor: you open FORTIFIED (−${Math.round(tide.randomFightBuff * 100)}% damage taken).`)
       } else {
         const perRound = Math.max(3, Math.round(playerHpMax * (0.03 + tide.randomFightBuff * 0.06)))
         applyPlayerStatus('regen', perRound, 99)
-        introLines.push(`The Don's Favor — you open MENDING (+${perRound} HP each round).`)
+        introLines.push(`The Don's Favor: you open MENDING (+${perRound} HP each round).`)
       }
     }
     // The Undertow (curse): open each fight under ONE random debuff (weaken /
@@ -3273,13 +3273,13 @@ export default function RaidCombat({
       const roll = Math.random()
       if (roll < 0.34) {
         applyPlayerStatus('weaken', tide.randomFightDebuff, 99)
-        introLines.push(`The Undertow — you open WEAKENED (−${Math.round(tide.randomFightDebuff * 100)}% damage dealt).`)
+        introLines.push(`The Undertow: you open WEAKENED (−${Math.round(tide.randomFightDebuff * 100)}% damage dealt).`)
       } else if (roll < 0.67) {
         applyPlayerStatus('feeble', tide.randomFightDebuff, 99)
-        introLines.push(`The Undertow — you open FEEBLE (+${Math.round(tide.randomFightDebuff * 100)}% damage taken).`)
+        introLines.push(`The Undertow: you open FEEBLE (+${Math.round(tide.randomFightDebuff * 100)}% damage taken).`)
       } else {
         applyPlayerStatus('slowed', Math.max(1, Math.round(tide.randomFightDebuff * 10)), 99)
-        introLines.push(`The Undertow — you open SLOWED.`)
+        introLines.push(`The Undertow: you open SLOWED.`)
       }
     }
     // Host-supplied opener (Gauntlet: 'Crew abilities refreshed.' on a refresh round).
@@ -3297,7 +3297,7 @@ export default function RaidCombat({
         else if (e.kind === 'depthScaleDamage') { dPerDepth += e.perDepth; dCap += e.maxBonus }
       }
       const kBonus = Math.min(kCap, kPerKill * Math.max(0, runKills))
-      if (kBonus > 0) introLines.push(`Rising Tide: +${Math.round(kBonus * 100)}% damage — ${runKills} hull${runKills === 1 ? '' : 's'} in your wake.`)
+      if (kBonus > 0) introLines.push(`Rising Tide: +${Math.round(kBonus * 100)}% damage, ${runKills} hull${runKills === 1 ? '' : 's'} in your wake.`)
       const dBonus = Math.min(dCap, dPerDepth * Math.max(0, runDepth))
       if (dBonus > 0) introLines.push(`Abyssal Bounty: +${Math.round(dBonus * 100)}% damage at depth ${runDepth}.`)
     }
@@ -3881,7 +3881,7 @@ export default function RaidCombat({
   function onFlareBarrageDone(missed: number, feintsTapped: number) {
     const dmg = missed * flarePerMiss + feintsTapped * flarePerFeint
     if (dmg <= 0) {
-      setResolveLog(prev => [...prev, `Screen read clean — every flare called right.`])
+      setResolveLog(prev => [...prev, `Screen read clean. Every flare called right.`])
       setSubPhase('await_input')
       return
     }
@@ -3891,31 +3891,31 @@ export default function RaidCombat({
     vibrate([0, 40, 30, 60])
     // Build the "what went wrong" clause from the two failure types.
     const parts: string[] = []
-    if (feintsTapped > 0) parts.push(`tapped ${feintsTapped} live shell${feintsTapped > 1 ? 's' : ''}`)
+    if (feintsTapped > 0) parts.push(`hit ${feintsTapped} live shell${feintsTapped > 1 ? 's' : ''}`)
     if (missed > 0)       parts.push(`let ${missed} flare${missed > 1 ? 's' : ''} through`)
     const what = parts.join(' and ')
     const newHp = playerHpRef.current - dmg
     if (newHp > 0) {
       playerHpRef.current = newHp; setPlayerHp(newHp)
-      setResolveLog(prev => [...prev, `You ${what} — the barrage rakes you for ${dmg}.`])
+      setResolveLog(prev => [...prev, `You ${what}. The barrage rakes you for ${dmg}.`])
       setSubPhase('await_input')
     } else {
       const vRevive = tryVengeanceRevive()
       if (vRevive) {
         // Laz FIRST — the vengeance ward catches even a failed-mechanic wipe.
         playerHpRef.current = vRevive.hp; setPlayerHp(vRevive.hp)
-        setResolveLog(prev => [...prev, `You ${what} — it should have sunk you, but the vengeance ward erupts, and you surge back to ${vRevive.hp} HP (+${Math.round(vRevive.buffPct * 100)}% damage).`])
+        setResolveLog(prev => [...prev, `You ${what}. It should have sunk you, but the vengeance ward erupts, and you surge back to ${vRevive.hp} HP (+${Math.round(vRevive.buffPct * 100)}% damage).`])
         setSubPhase('await_input')
       } else if (anchorSaveAvailable && !anchorUsedRef.current) {
         anchorUsedRef.current = true; onAnchorSave?.()
         playerHpRef.current = 1; setPlayerHp(1)
         setAnchorSaveFx(k => k + 1)
         onCheatedDeath()
-        setResolveLog(prev => [...prev, `You ${what} — it should have sunk you, but the anchor holds at 1 HP.`])
+        setResolveLog(prev => [...prev, `You ${what}. It should have sunk you, but the anchor holds at 1 HP.`])
         setSubPhase('await_input')
       } else {
         playerHpRef.current = 0; setPlayerHp(0)
-        setResolveLog(prev => [...prev, `You ${what} — the barrage rakes you for ${dmg} and your hull gives way.`])
+        setResolveLog(prev => [...prev, `You ${what}. The barrage rakes you for ${dmg} and your hull gives way.`])
         setSubPhase('done'); onPlayerDefeated()
       }
     }
@@ -3974,7 +3974,7 @@ export default function RaidCombat({
     if (tide.abilityRefundChance > 0 && Math.random() < tide.abilityRefundChance) {
       onRefreshAbility?.(crew.id)
       setRestorePulse(k => k + 1)
-      setResolveLog(prev => [...prev, `Second Calling — the deep answers, and ${crew.name} keeps their station. Ability unspent.`])
+      setResolveLog(prev => [...prev, `Second Calling. The deep answers, and ${crew.name} keeps their station. Ability unspent.`])
     }
 
     // FINAL-FANTASY-STYLE SUMMON. Instead of a small portrait pill, a big image
@@ -4063,7 +4063,7 @@ export default function RaidCombat({
       case 'sharpshot': {
         const sm = m as import('@/lib/crewClasses').SharpshotMilestone
         setSharpshotBuff({ multiplier: sm.critZoneMultiplier, shotsLeft: sm.shotsBuffed })
-        setResolveLog(prev => [...prev, `${crew.name} steadies your aim — a wider crit window on your next ${sm.shotsBuffed} shot${sm.shotsBuffed === 1 ? '' : 's'}.`])
+        setResolveLog(prev => [...prev, `${crew.name} steadies your aim: a wider crit window on your next ${sm.shotsBuffed} shot${sm.shotsBuffed === 1 ? '' : 's'}.`])
         break
       }
       case 'snare': {
@@ -4074,7 +4074,7 @@ export default function RaidCombat({
         snareJamChanceRef.current = sn.jamChance
         const pct = Math.round(sn.jamChance * 100)
         const snDur = `${sn.disableDodgeTurns} turn${sn.disableDodgeTurns === 1 ? '' : 's'}`
-        setResolveLog(prev => [...prev, `${crew.name} jams the ${enemy.name}'s helm — ${pct}% to foul each dodge for ${snDur}.`])
+        setResolveLog(prev => [...prev, `${crew.name} jams the ${enemy.name}'s helm: ${pct}% to foul each dodge for ${snDur}.`])
         break
       }
       case 'anchor': {
@@ -4083,7 +4083,7 @@ export default function RaidCombat({
         anchorReductionRef.current = an.pctReduction
         noteCheckResponse('brace')
         anchorAbsorbsCritsRef.current = !!an.absorbsCrits
-        setResolveLog(prev => [...prev, `${crew.name} drops the sea anchor — the next hit you take is cut ${Math.round(an.pctReduction * 100)}%${an.absorbsCrits ? ', crits and all' : ''}.`])
+        setResolveLog(prev => [...prev, `${crew.name} drops the sea anchor. The next hit you take is cut ${Math.round(an.pctReduction * 100)}%${an.absorbsCrits ? ', crits and all' : ''}.`])
         break
       }
       case 'navigator': {
@@ -4098,7 +4098,7 @@ export default function RaidCombat({
           setTimeout(() => setPHitsplat(null), 900)
         }
         setResolveLog(prev => [...prev, add > 0
-          ? `${crew.name} runs the powder up — +${add} cannonball${add === 1 ? '' : 's'} loaded.`
+          ? `${crew.name} runs the powder up, +${add} cannonball${add === 1 ? '' : 's'} loaded.`
           : `${crew.name} works the powder but comes up empty this time.`])
         break
       }
@@ -4172,7 +4172,7 @@ export default function RaidCombat({
           if (!huntersBane) setEnemyImpact({ key: lk + 1, kind: 'crit' })
           cameraShake('crit')
           vibrate(huntersBane ? [0, 90, 40, 130] : chaseColor ? [0, 70, 45, 110] : [0, 55, 40, 90])
-          applyAbilityDamage(dmg, `${crew.name} lands a leviathan salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, 'crit', false, chaseColor ?? undefined)
+          applyAbilityDamage(dmg, `${crew.name} lands a leviathan salvo for ${dmg}${bigGame ? '. Big-game strike!' : '!'}`, 'crit', false, chaseColor ?? undefined)
           if (!huntersBane) playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 700))
           // A second delayed thud for any OTHER (future) chase skin on Doby;
           // Hunter's Bane's bespoke strike already carries the weight.
@@ -4293,7 +4293,7 @@ export default function RaidCombat({
         // category (brace / shield / heal / snare / burst).
         noteCheckResponse('brace'); noteCheckResponse('shield'); noteCheckResponse('heal'); noteCheckResponse('snare'); noteCheckResponse('burst')
         const nice = (a: EnemyAction) => a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : a === 'special' ? (enemy.special?.name ?? 'Special') : a === 'ultimate' ? (enemy.ultimate?.name ?? 'Ultimate') : 'Dodge'
-        setResolveLog(prev => [...prev, `${crew.name} reads the tide — the enemy will ${moves.map(nice).join(', then ')}.${refreshed ? ' Your dodge is ready again.' : ''}`])
+        setResolveLog(prev => [...prev, `${crew.name} reads the tide. The enemy will ${moves.map(nice).join(', then ')}.${refreshed ? ' Your dodge is ready again.' : ''}`])
         break
       }
       case 'vengeance': {
@@ -4339,7 +4339,7 @@ export default function RaidCombat({
         setEHitsplat({ key: ak + 1, text: 'MARKED', color: chaseColor ?? '#f43f5e', big: true })
         setTimeout(() => setEHitsplat(null), 900)
         const dur = `${rq.markTurns} turn${rq.markTurns === 1 ? '' : 's'}`
-        setResolveLog(prev => [...prev, `${crew.name} marks the ${enemy.name} for death — +${Math.round(rq.markMag * 100)}% damage from the whole crew for ${dur}${rq.pierceShield ? ', and its shield is laid open' : ''}.`])
+        setResolveLog(prev => [...prev, `${crew.name} marks the ${enemy.name} for death: +${Math.round(rq.markMag * 100)}% damage from the whole crew for ${dur}${rq.pierceShield ? ', and its shield is laid open' : ''}.`])
         break
       }
     }
@@ -4370,9 +4370,9 @@ export default function RaidCombat({
       const pick = spent[Math.floor(Math.random() * spent.length)]
       onRefreshAbility?.(pick.id)
       setRestorePulse(k => k + 1)
-      setResolveLog(prev => [...prev, `The ${item.name} thunders across the deck — ${pick.name} is back to their station, ability restored.`])
+      setResolveLog(prev => [...prev, `The ${item.name} thunders across the deck. ${pick.name} is back to their station, ability restored.`])
     } else {
-      setResolveLog(prev => [...prev, `The ${item.name} beats, but the call goes unanswered — no ability restored.`])
+      setResolveLog(prev => [...prev, `The ${item.name} beats, but the call goes unanswered. No ability restored.`])
     }
   }
 
@@ -4971,8 +4971,8 @@ export default function RaidCombat({
     setResolveLog([
       ...(confused ? [`Drowned Whispers! You called for ${ACTION_NOUN[confused.from]}, but your crew ${ACTION_PAST[confused.to]} instead.`] : []),
       first === 'player'
-        ? `You're faster — you act first.`
-        : `Enemy is faster — they act first.`,
+        ? `You're faster, so you act first.`
+        : `Enemy is faster, so they act first.`,
     ])
 
     const order: Actor[] = first === 'player' ? ['player', 'enemy'] : ['enemy', 'player']
@@ -5446,7 +5446,7 @@ export default function RaidCombat({
       if (who === 'enemy' && enemyFrozenRef.current > 0) {
         enemyFrozenRef.current -= 1
         const ends = enemyFrozenRef.current === 0
-        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [ends ? `The ${enemy.name} is frozen solid — its turn is skipped.` : `The ${enemy.name} is locked in deep ice — another turn frozen.`], freezeEnds: ends })
+        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [ends ? `The ${enemy.name} is frozen solid. Its turn is skipped.` : `The ${enemy.name} is locked in deep ice. Another turn frozen.`], freezeEnds: ends })
         continue
       }
       // Counter-Battery: you fired into the enemy's shot this beat and smashed
@@ -5457,12 +5457,12 @@ export default function RaidCombat({
       if (who === 'enemy' && counterEnemyShot && !rackStripped) {
         counterEnemyShot = false
         eCharges = Math.max(0, eCharges - (eActionNow === 'volley' ? VOLLEY_COST : 1))
-        const cLines = [`Counter-Battery! You fire into the ${enemy.name}'s broadside — its shot is smashed clean out of the air.`]
+        const cLines = [`Counter-Battery! You fire into the ${enemy.name}'s broadside. Its shot is smashed clean out of the air.`]
         // Broadside Duel: you loaded while they didn't.
         if (tide.counterBonusRefund > 0) {
           const before = pCharges
           pCharges = Math.min(playerMaxCharges, pCharges + tide.counterBonusRefund)
-          if (pCharges > before) cLines.push(`Broadside Duel — you loaded while they didn't (+${pCharges - before} cannonball${pCharges - before === 1 ? '' : 's'}).`)
+          if (pCharges > before) cLines.push(`Broadside Duel: you loaded while they didn't (+${pCharges - before} cannonball${pCharges - before === 1 ? '' : 's'}).`)
         }
         // Return to Sender: fling their would-be shell right back at them.
         let reflectOut = 0
@@ -5472,7 +5472,7 @@ export default function RaidCombat({
           const pm = enemyPhaseRef.current >= 2 && phaseList[enemyPhaseRef.current - 2] ? phaseList[enemyPhaseRef.current - 2].damageMult : 1
           reflectOut = Math.max(1, Math.floor(eBase * pm * tide.counterReflectPct))
           eHp = Math.max(0, eHp - reflectOut)
-          cLines.push(`Return to Sender — their own shell, flung back for ${reflectOut}.`)
+          cLines.push(`Return to Sender: their own shell, flung back for ${reflectOut}.`)
           counterFin = finishCheck(eHp, pHp, cLines)
           eHp = counterFin.eHp; pHp = counterFin.pHp
         }
@@ -5483,7 +5483,7 @@ export default function RaidCombat({
       // mirror of the Frozen Cannonball. Your chosen action is forfeit.
       if (who === 'player' && playerFrozenRef.current) {
         playerFrozenRef.current = false
-        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: ['Your ship is frozen solid — your turn is skipped.'], freezeEnds: true })
+        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: ['Your ship is frozen solid. Your turn is skipped.'], freezeEnds: true })
         continue
       }
       const action = who === 'player' ? pAction : eActionNow
@@ -5530,7 +5530,7 @@ export default function RaidCombat({
       // fired anyway" becomes "you took its last round, so it had to load".
       // Suppressed under Shuttered Ports, which hides the magazine on purpose.
       if (rackStripped && !enemyChargesHidden) {
-        stepLines.push(`The ${enemy.name} goes to fire on an empty rack. You took its last cannonball — it has to load instead.`)
+        stepLines.push(`The ${enemy.name} goes to fire on an empty rack. You took its last cannonball, so it has to load instead.`)
       }
 
       // Snare made good — the enemy tried to slip aside but its helm is jammed,
@@ -5609,13 +5609,13 @@ export default function RaidCombat({
           // in the log either (or the player could just tally reloads to rebuild
           // the magazine). Obscure the action entirely.
           stepLines.push(enemyChargesHidden
-            ? `The ${enemy.name} works something behind its shuttered gunports — you can't make it out.`
+            ? `The ${enemy.name} works something behind its shuttered gunports. You can't make it out.`
             : `Enemy loads a cannonball. (${eCharges}/${enemyMagazine})`)
           // Ultimate telegraph — the moment the magazine tops out on an
           // ultimate-carrying enemy, say so (the glowing pips are the visual
           // tell; this is the narrated one). Suppressed under Shuttered Ports.
           if (enemy.ultimate && eCharges >= enemyMagazine && !enemyChargesHidden) {
-            stepLines.push(`⚠ The ${enemy.name}'s full battery gleams — ${enemy.ultimate.name} is primed.`)
+            stepLines.push(`⚠ The ${enemy.name}'s full battery gleams. ${enemy.ultimate.name} is primed.`)
           }
         }
       } else if (action === 'repair') {
@@ -5649,9 +5649,9 @@ export default function RaidCombat({
           aimAfflictionRef.current = { kind: sp.aimAttack, name: sp.name, passes }
           setAimAffliction({ kind: sp.aimAttack, name: sp.name })
           const what =
-            sp.aimAttack === 'decoys'   ? 'False targets bloom across your aim bar — do NOT lock a crimson band.'
-            : sp.aimAttack === 'hardened' ? 'Your lock is plated over — the first tap only cracks it; tap TWICE to land a shot.'
-            :                               'A squall grips your aim — the needle will gust fast and slow mid-sweep.'
+            sp.aimAttack === 'decoys'   ? 'False targets bloom across your aim bar. Do NOT lock a crimson band.'
+            : sp.aimAttack === 'hardened' ? 'Your lock is plated over. The first press only cracks it, so press TWICE to land a shot.'
+            :                               'A squall grips your aim. The needle will gust fast and slow mid-sweep.'
           pushStep({
             who, action, pHp, eHp, pCharges, eCharges,
             splatTarget: 'player',
@@ -5687,7 +5687,7 @@ export default function RaidCombat({
               : undefined,
             logLines: [
               `${sp.name}! ${sp.line}`,
-              `${targetWord} ${def?.name ?? sp.status}${def ? ` — ${def.describe(magnitude)}` : ''} (${turns} turn${turns === 1 ? '' : 's'}).`,
+              `${targetWord} ${def?.name ?? sp.status}${def ? `: ${def.describe(magnitude)}` : ''} (${turns} turn${turns === 1 ? '' : 's'}).`,
             ],
           })
         }
@@ -5848,7 +5848,7 @@ export default function RaidCombat({
             ? getActiveEffects(liveItems).filter(e => e.type === 'first_shot_mult').reduce((a, e) => a * e.value, 1)
             : 1
           if (isOpeningShot && phaseAmbush && shotsThisFightRef.current > 1 && firstShotMult > 1) {
-            stepLines.push(`The Reckoning re-arms — a new phase is a new opening.`)
+            stepLines.push(`The Reckoning re-arms. A new phase is a new opening.`)
           }
           // Carrion Sight (item, id the_shakedown): +% vs an enemy that ALREADY carries any status —
           // a Ch4 status (weaken/feeble/corrode/slowed/marked), a burn, or a
@@ -6002,8 +6002,8 @@ export default function RaidCombat({
           stepLines.push(`The ${enemy.name} doesn't so much as flinch behind the wall.`)
         } else if (defenderAction === 'dodge' && defenderFrozen) {
           stepLines.push(isAttackerPlayer
-            ? `The ${enemy.name} is frozen solid — it can't weave aside.`
-            : `Your ship is frozen solid — you can't weave aside.`)
+            ? `The ${enemy.name} is frozen solid. It can't weave aside.`
+            : `Your ship is frozen solid. You can't weave aside.`)
         } else if (defenderAction === 'dodge' && isAttackerPlayer && isMega && megaAug?.pierce) {
           // Railgun: can't be FULLY dodged, but a clean dodge now GRAZES it to
           // RAILGUN_GRAZE_PCT of the hit instead of landing full (was: always
@@ -6054,9 +6054,9 @@ export default function RaidCombat({
                 if (pierceCritDmg != null) {
                   dmg = pierceCritDmg
                   playerCritShot = true
-                  stepLines.push(`You read the feint — the shot slips through the dodge and lands clean as a critical.`)
+                  stepLines.push(`You read the feint. The shot slips through the dodge and lands clean as a critical.`)
                 } else {
-                  stepLines.push(`You read the feint — the shot slips through the dodge.`)
+                  stepLines.push(`You read the feint. The shot slips through the dodge.`)
                 }
               }
             }
@@ -6073,7 +6073,7 @@ export default function RaidCombat({
             stepLines.push(
               isAttackerPlayer && bossForesightRef.current > 0
                 ? `He read that one before you fired it. Slipped.`
-                : isAttackerPlayer ? `Enemy weaves aside — dodged!` : `You weave aside — dodged!`)
+                : isAttackerPlayer ? `Enemy weaves aside. Dodged!` : `You weave aside. Dodged!`)
             splatText = 'Dodged'
             splatColor = '#38bdf8'
             // Telemetry: enemy dodged YOUR shot (still a shot fired) vs YOU
@@ -6093,7 +6093,7 @@ export default function RaidCombat({
               const spite = Math.max(1, Math.round(dmg * tide.retaliateDodgePct))
               eHp = wardFloor(eHp - soakEnemyShield(spite))
               reflectDmgOut = (reflectDmgOut ?? 0) + spite
-              stepLines.push(`Spiteful Wake — you slip the shot and the wake lashes back for ${spite}.`)
+              stepLines.push(`Spiteful Wake: you slip the shot and the wake lashes back for ${spite}.`)
               const fin = finishCheck(eHp, pHp, stepLines)
               eHp = fin.eHp; pHp = fin.pHp
               if (fin.executed) executeKind = fin.executed
@@ -6191,7 +6191,7 @@ export default function RaidCombat({
           // nothing (zeroing dmg also skips the on-hit procs, all gated dmg>0).
           if (tide.enemyParryChance > 0 && dmg > 0 && !isMega && Math.random() < tide.enemyParryChance) {
             dmg = 0
-            stepLines.push(`The ${enemy.name} turns your shot aside — parried.`)
+            stepLines.push(`The ${enemy.name} turns your shot aside. Parried.`)
           }
           // STREAK PIERCE. Hold the chain to the raid's pierceAt and your shots
           // stop caring about his plate. Read from the streak BEFORE this shot
@@ -6243,7 +6243,7 @@ export default function RaidCombat({
             if (grabbed) pCharges += 1
             stepLines.push(grabbed
               ? `Press-Gang! You rip a cannonball off the ${enemy.name} and ram it into your own rack.`
-              : `Press-Gang! You rip a loaded cannonball off the ${enemy.name} — your rack is already full.`)
+              : `Press-Gang! You rip a loaded cannonball off the ${enemy.name}, but your rack is already full.`)
             stoleChargeOut = true
           }
           // Telemetry: a landed player shot (fire/volley/mega). dmg is the blow
@@ -6342,7 +6342,7 @@ export default function RaidCombat({
             if (freezeChance > 0 && procRoll(freezeChance)) {
               // Permafrost "Deep Freeze": 2 skipped turns instead of 1.
               enemyFreezePendingRef.current = tide.deepFreeze ? 2 : 1
-              stepLines.push(tide.deepFreeze ? `Frozen shot! The ${enemy.name} locks in deep ice — its next two turns are frozen.` : `Frozen shot! The ${enemy.name} ices over — its next turn is frozen.`)
+              stepLines.push(tide.deepFreeze ? `Frozen shot! The ${enemy.name} locks in deep ice. Its next two turns are frozen.` : `Frozen shot! The ${enemy.name} ices over. Its next turn is frozen.`)
               procStatus = 'freeze'
             }
             // Don's Gauntlet — statusOnHit boons (Rattling Shot / Chainshot): a
@@ -6359,8 +6359,8 @@ export default function RaidCombat({
             if (tide.stunOnHitChance > 0 && procRoll(tide.stunOnHitChance)) {
               enemyFreezePendingRef.current = Math.max(enemyFreezePendingRef.current, tide.stunOnHitTurns)
               stepLines.push(tide.stunOnHitTurns > 1
-                ? `Kraken's Grip! The deep seizes the ${enemy.name} — it's held for its next two turns.`
-                : `Kraken's Grip! The deep seizes the ${enemy.name} — it loses its next turn.`)
+                ? `Kraken's Grip! The deep seizes the ${enemy.name}. It's held for its next two turns.`
+                : `Kraken's Grip! The deep seizes the ${enemy.name}. It loses its next turn.`)
               // Its own concussive look — a stun skips a turn like a freeze, but
               // it is a SEIZING, not an icing, and borrowing the frost visual
               // made the two effects indistinguishable on screen.
@@ -6388,8 +6388,8 @@ export default function RaidCombat({
                 const crush = Math.max(1, Math.round(enemyHpMaxRef.current * tide.gripCrushPerStack * coils))
                 eHp = Math.max(0, eHp - crush)
                 stepLines.push(tide.gripTurns > 1
-                  ? `Kraken's Grip! ${coils} coils close on the ${enemy.name} — held for its next two turns and crushed for ${crush}.`
-                  : `Kraken's Grip! ${coils} coils close on the ${enemy.name} — it loses its next turn and takes ${crush}.`)
+                  ? `Kraken's Grip! ${coils} coils close on the ${enemy.name}. Held for its next two turns and crushed for ${crush}.`
+                  : `Kraken's Grip! ${coils} coils close on the ${enemy.name}. It loses its next turn and takes ${crush}.`)
                 onStat?.({ dmgDealt: crush })
                 procStatus = 'stun'
                 const fin = finishCheck(eHp, pHp, stepLines)
@@ -6430,7 +6430,7 @@ export default function RaidCombat({
                 landed.push(`Feeble (+${Math.round(CHAIN_SHOT_FEEBLE_PCT * 100)}% damage taken)`)
               }
               debuffApplied = 'marked'
-              stepLines.push(`The rack fires! Scrap iron rips through the ${enemy.name} — ${landed.join(', ')}, ${CHAIN_SHOT_WEAKEN_TURNS} rounds.`)
+              stepLines.push(`The rack fires! Scrap iron rips through the ${enemy.name}: ${landed.join(', ')}, ${CHAIN_SHOT_WEAKEN_TURNS} rounds.`)
             }
             // Leviathan's Cannon: a LANDED crit stokes the siege, advancing the
             // damage ramp by an extra turn. Counted here, past the dodge, so a
@@ -6439,7 +6439,7 @@ export default function RaidCombat({
               const rampTurnsPerCrit = onHitEffects.filter(e => e.type === 'crit_ramp_turns').reduce((a, e) => Math.max(a, e.value), 0)
               if (rampTurnsPerCrit > 0) {
                 critRampBonusRef.current += rampTurnsPerCrit
-                stepLines.push(`The Leviathan stokes — that crit advances the siege a turn.`)
+                stepLines.push(`The Leviathan stokes. That crit advances the siege a turn.`)
               }
             }
           }
@@ -6525,8 +6525,8 @@ export default function RaidCombat({
             splatColor = '#5fd0ff'
           } else if (partialDodge) {
             stepLines.push(action === 'volley'
-              ? `Enemy partially dodges your volley — grazed for ${dmg}.`
-              : `Enemy partially dodges — grazed for ${dmg}.`)
+              ? `Enemy partially dodges your volley, grazed for ${dmg}.`
+              : `Enemy partially dodges, grazed for ${dmg}.`)
             splatText = `-${dmg}`
             splatColor = '#94a3b8'
           } else if (lockedAimResult === 'critical') {
@@ -6555,8 +6555,8 @@ export default function RaidCombat({
           }
           // Leviathan's Hunger heal line — pushed here so it follows the shot
           // it fed on, not before it.
-          if (lifestealHealedOut > 0) stepLines.push(`${lifestealLabel || "Leviathan's Hunger drinks the wound"} — +${lifestealHealedOut} HP.`)
-          if (overkillHealedOut > 0) stepLines.push(`The kill spills over — you reclaim +${overkillHealedOut} HP from the overkill.`)
+          if (lifestealHealedOut > 0) stepLines.push(`${lifestealLabel || "Leviathan's Hunger drinks the wound"}, +${lifestealHealedOut} HP.`)
+          if (overkillHealedOut > 0) stepLines.push(`The kill spills over. You reclaim +${overkillHealedOut} HP from the overkill.`)
         } else {
           // The enemy's INTENDED hit, captured before ANY of the player's
           // mitigation/anchor/shield reduces it — Spiteful Wake reflects off
@@ -6608,7 +6608,7 @@ export default function RaidCombat({
                 if (fin.executed) executeKind = fin.executed
                 titheHealedOut += fin.tithed
               } else {
-                stepLines.push(`The Aegis braces — the opening blow glances clean off the hull.`)
+                stepLines.push(`The Aegis braces. The opening blow glances clean off the hull.`)
               }
             }
           }
@@ -6625,7 +6625,7 @@ export default function RaidCombat({
           if (anchorReductionRef.current != null && dmg > 0 && (!enemyCrit || anchorAbsorbsCritsRef.current)) {
             const before = dmg
             dmg = Math.max(1, Math.round(dmg * (1 - anchorReductionRef.current)))
-            stepLines.push(`The sea anchor holds — the blow is cut (${before} → ${dmg}).`)
+            stepLines.push(`The sea anchor holds. The blow is cut (${before} → ${dmg}).`)
             anchorReductionRef.current = null
             anchorConsumed = true
           } else if (anchorReductionRef.current != null && dmg > 0 && enemyCrit && !anchorAbsorbsCritsRef.current) {
@@ -6648,7 +6648,7 @@ export default function RaidCombat({
             if (dmg > ceil && Math.random() < capChance) {
               const before = dmg
               dmg = ceil
-              stepLines.push(`Dampener Plate holds — the blow is blunted (${before} → ${dmg}).`)
+              stepLines.push(`Dampener Plate holds. The blow is blunted (${before} → ${dmg}).`)
             }
           }
           // Shield pool — soaks from the pool before HP. Seeded by the Stormward
@@ -6668,7 +6668,7 @@ export default function RaidCombat({
               .filter(e => e.type === 'charge_on_hit_chance').reduce((a, e) => Math.max(a, e.value), 0)
             if (chargeOnHit > 0 && pCharges < playerMaxCharges && Math.random() < chargeOnHit) {
               pCharges += 1
-              stepLines.push(`The Warden answers the blow — a cannonball rolls into the breech. (${pCharges}/${playerMaxCharges})`)
+              stepLines.push(`The Warden answers the blow. A cannonball rolls into the breech. (${pCharges}/${playerMaxCharges})`)
             }
           }
           // Contract facts (Not a Scratch): only a NORMAL offensive shot that
@@ -6721,7 +6721,7 @@ export default function RaidCombat({
             } else if (affix?.freezeChance && Math.random() < affix.freezeChance) {
               playerFreezePendingRef.current = true
               procStatus = 'freeze'
-              stepLines.push('Glacial hit! Your ship ices over — your next turn is frozen.')
+              stepLines.push('Glacial hit! Your ship ices over. Your next turn is frozen.')
             }
           }
           // Vampiric affix: 50% chance to heal a fraction of dealt
@@ -6747,10 +6747,10 @@ export default function RaidCombat({
             splatColor = '#7dd3fc'
           } else if (partialDodge) {
             stepLines.push(action === 'ultimate'
-              ? `You partially dodge ${enemy.ultimate?.name ?? 'the ultimate'} — grazed for ${dmg}.`
+              ? `You partially dodge ${enemy.ultimate?.name ?? 'the ultimate'}, grazed for ${dmg}.`
               : action === 'volley'
-              ? `You partially dodge the volley — grazed for ${dmg}.`
-              : `You partially dodge — grazed for ${dmg}.`)
+              ? `You partially dodge the volley, grazed for ${dmg}.`
+              : `You partially dodge, grazed for ${dmg}.`)
             splatText = `-${dmg}`
             splatColor = '#94a3b8'
           } else if (action === 'ultimate') {
@@ -6790,7 +6790,7 @@ export default function RaidCombat({
           // Broadside Duel: winning the exchange holds your rhythm even on a
           // non-crit — the chain doesn't break, and the win still stacks it.
           critStreakRef.current = Math.min(tide.critStreakMaxStacks, prior + tide.counterBonusStack)
-          stepLines.push(`Broadside Duel — you win the exchange and the guns keep their rhythm (${critStreakRef.current} stack${critStreakRef.current === 1 ? '' : 's'}).`)
+          stepLines.push(`Broadside Duel: you win the exchange and the guns keep their rhythm (${critStreakRef.current} stack${critStreakRef.current === 1 ? '' : 's'}).`)
         } else {
           if (prior >= 2) stepLines.push(`${streakLabel} broken. Back to zero.`)
           critStreakRef.current = 0
@@ -7164,7 +7164,7 @@ export default function RaidCombat({
       // spark bursting on the enemy hull as its shot is knocked down.
       if (step.countered) {
         const bk = Date.now() + i + 31
-        setBoonFlash({ label: 'COUNTER-BATTERY', sub: 'Their broadside — smashed from the air', color: '#7dd3fc', key: bk })
+        setBoonFlash({ label: 'COUNTER-BATTERY', sub: 'Their broadside, smashed from the air', color: '#7dd3fc', key: bk })
         playStepChainRef.current.push(setTimeout(() => setBoonFlash(bf => (bf && bf.key === bk ? null : bf)), 1500))
         setEnemyImpact({ key: bk + 1, kind: 'normal' })
         setEnemyShakeKind('hit'); setEnemyShakeKey(k => k + 1)
@@ -7788,7 +7788,7 @@ export default function RaidCombat({
               const sub = locked
                 ? `Unlocks at Lv 10.`
                 : playerStatusMods.silenced
-                  ? 'Silenced — abilities locked.'
+                  ? 'Silenced. Abilities locked.'
                   : usedRaid
                     ? usedAbilitySub
                     : oneAbilityUsedThisTurn
@@ -7842,28 +7842,28 @@ export default function RaidCombat({
   // two places: as a RING over the portrait when there is one, or as a row
   // under the bar when there is not. See StatusRing for why a ring.
   const enemyChips: BespokeChip[] = [
-    ...(aegisVis ? [{ key: 'aegis', color: '#e8d8a8', title: `${aegisVis.name} — a wall drinks every shot whole` }] : []),
-    ...(enemyBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn' }] : []),
-    ...(enemyFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — its turn is skipped' }] : []),
+    ...(aegisVis ? [{ key: 'aegis', color: '#e8d8a8', title: `${aegisVis.name}: a wall drinks every shot whole` }] : []),
+    ...(enemyBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze: burning each turn' }] : []),
+    ...(enemyFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen: its turn is skipped' }] : []),
     // The ward has to be VISIBLE or the timing is one-sided: he reads
     // your burst, you never get to read his. Seeing it up is what lets
     // you hold the killing blow until it lapses.
-    ...(wardUp ? [{ key: 'ward', color: '#d1495b', title: 'Death ward — the killing blow will not land while this holds' }] : []),
-    ...(foreseeUp ? [{ key: 'foresee', color: '#8b7bf0', title: 'Reading you — he slips everything you fire while this holds' }] : []),
-    ...(snareDodgeTurns > 0 ? [{ key: 'snare', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared — dodges can be fouled' }] : []),
+    ...(wardUp ? [{ key: 'ward', color: '#d1495b', title: 'Death ward: the killing blow will not land while this holds' }] : []),
+    ...(foreseeUp ? [{ key: 'foresee', color: '#8b7bf0', title: 'Reading you: he slips everything you fire while this holds' }] : []),
+    ...(snareDodgeTurns > 0 ? [{ key: 'snare', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared: dodges can be fouled' }] : []),
   ]
   const playerChips: BespokeChip[] = [
     // Laz's ward, with its fuse showing. This ability had no on-screen
     // presence whatsoever before now: you spent your legendary and got
     // nothing back until it either saved you or died with the enemy.
-    ...(vengeanceWardTurns > 0 ? [{ key: 'ward', color: '#d1495b', tone: 'buff' as const, turns: vengeanceWardTurns, title: `Vengeance Ward — a killing blow in the next ${vengeanceWardTurns} turn${vengeanceWardTurns === 1 ? '' : 's'} is cheated. Let it run out and it is wasted.` }] : []),
+    ...(vengeanceWardTurns > 0 ? [{ key: 'ward', color: '#d1495b', tone: 'buff' as const, turns: vengeanceWardTurns, title: `Vengeance Ward: a killing blow in the next ${vengeanceWardTurns} turn${vengeanceWardTurns === 1 ? '' : 's'} is cheated. Let it run out and it is wasted.` }] : []),
     // Anchor brace — a one-hit damage CUT (not a shield pool), so it
     // gets its OWN steel chip + iron-clamp icon, distinct from the
     // shield glyphs and the cyan/amber shield-pool bar segments.
-    ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', color: '#9eb0cd', tone: 'buff' as const, title: `Braced — the next hit is cut ${Math.round((anchorReductionPct ?? 0) * 100)}% (one blow, softens not blocks; crits punch through)` }] : []),
-    ...(playerBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze — burning each turn (a crew heal puts it out)' }] : []),
-    ...(playerFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen — your turn is skipped' }] : []),
-    ...(aimAffliction ? [{ key: 'aim', color: AIM_AFFLICTION_COLOR, tone: 'debuff' as const, turns: aimAfflictionRef.current?.passes, title: `${aimAffliction.name} — ${aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0)}` }] : []),
+    ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', color: '#9eb0cd', tone: 'buff' as const, title: `Braced: the next hit is cut ${Math.round((anchorReductionPct ?? 0) * 100)}% (one blow, softens not blocks; crits punch through)` }] : []),
+    ...(playerBurning ? [{ key: 'burn', color: '#fb923c', title: 'Ablaze: burning each turn (a crew heal puts it out)' }] : []),
+    ...(playerFrozen ? [{ key: 'freeze', color: '#7dd3fc', title: 'Frozen: your turn is skipped' }] : []),
+    ...(aimAffliction ? [{ key: 'aim', color: AIM_AFFLICTION_COLOR, tone: 'debuff' as const, turns: aimAfflictionRef.current?.passes, title: `${aimAffliction.name}: ${aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0)}` }] : []),
   ]
 
   return (
@@ -8501,7 +8501,7 @@ export default function RaidCombat({
         <motion.button
           type="button"
           onClick={() => setShowEnemyStats(true)}
-          aria-label={`${enemy.name} — view stats`}
+          aria-label={`${enemy.name}, view stats`}
           className={`rc-enemy-plate${isBoss ? ' is-boss' : ''}${enemyPhase >= 2 ? ' rc-phase2-pulse' : ''}`}
           animate={enemyNameplateAnim}
           ref={enemyPlateRef}
@@ -9546,7 +9546,7 @@ export default function RaidCombat({
         <motion.button
           type="button"
           onClick={() => setShowStats(true)}
-          aria-label={`${nameplate} — view stats`}
+          aria-label={`${nameplate}, view stats`}
           animate={playerNameplateAnim}
           ref={playerPlateRef}
           style={{
@@ -9820,7 +9820,7 @@ export default function RaidCombat({
             <div style={{ padding: '0.55rem 1rem', borderRadius: 12, background: 'rgba(38,20,54,0.92)', border: '1px solid rgba(168,139,250,0.6)', boxShadow: '0 0 26px rgba(168,139,250,0.4)' }}>
               <p className="font-cinzel font-800 uppercase" style={{ fontSize: '0.92rem', letterSpacing: '0.1em', color: '#c4b5fd', textShadow: '0 0 14px rgba(168,139,250,0.6)' }}>Confused!</p>
               <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#d2c4ec', marginTop: 2, lineHeight: 1.35 }}>
-                You called for {ACTION_NOUN[confusedFx.from]} — your crew {ACTION_PAST[confusedFx.to]} instead.
+                You called for {ACTION_NOUN[confusedFx.from]}. Your crew {ACTION_PAST[confusedFx.to]} instead.
               </p>
             </div>
           </motion.div>
@@ -9867,14 +9867,14 @@ export default function RaidCombat({
             runCurses={runCurses}
             conditions={[
               ...statusConditions(playerStatuses),
-              ...(playerBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: playerBurnRef.current.turns, desc: `Your ship is on fire — it loses ${playerBurnRef.current.dmg} HP at the end of each of your turns. Any crew heal douses the flames.` }] : []),
-              ...(playerFrozen ? [{ key: 'freeze', name: 'Frozen', color: FREEZE_COLOR, desc: 'Your ship is iced over — your next turn is skipped, and you cannot weave aside from incoming shots while frozen.' }] : []),
+              ...(playerBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: playerBurnRef.current.turns, desc: `Your ship is on fire. It loses ${playerBurnRef.current.dmg} HP at the end of each of your turns. Any crew heal douses the flames.` }] : []),
+              ...(playerFrozen ? [{ key: 'freeze', name: 'Frozen', color: FREEZE_COLOR, desc: 'Your ship is iced over. Your next turn is skipped, and you cannot weave aside from incoming shots while frozen.' }] : []),
               // Aim-bar afflictions (Iron Etiquette's hardened lock, decoys, squall).
               // Count is in "shots" not turns, so the desc carries it (no `turns`).
               ...(aimAffliction ? [{ key: 'aim', name: aimAffliction.name, color: AIM_AFFLICTION_COLOR, desc: aimAfflictionDesc(aimAffliction.kind, aimAfflictionRef.current?.passes ?? 0) }] : []),
               // Anchor brace — mirrors the status chip so the stats popup explains
               // it alongside burns/freezes. A one-hit damage cut, not a pool.
-              ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', name: 'Braced', color: '#9eb0cd', desc: `The next hit against you is cut by ${Math.round((anchorReductionPct ?? 0) * 100)}%, then it is spent. It softens a blow rather than blocking it, so you still take reduced damage — and a critical hit punches straight through.` }] : []),
+              ...((anchorReductionPct ?? 0) > 0 ? [{ key: 'brace', name: 'Braced', color: '#9eb0cd', desc: `The next hit against you is cut by ${Math.round((anchorReductionPct ?? 0) * 100)}%, then it is spent. It softens a blow rather than blocking it, so you still take reduced damage, and a critical hit punches straight through.` }] : []),
             ]}
             onClose={() => setShowStats(false)}
           />
@@ -9900,9 +9900,9 @@ export default function RaidCombat({
               // the player's to make.
               ...(aegisVis ? [{ key: 'aegis', name: aegisVis.name, color: '#e8d8a8', desc: 'A wall of iron and will stands between your guns and his hull. Single shots glance off it whole. If anything can bring it down in one stroke, it is everything you have, all at once.' }] : []),
               ...statusConditions(enemyStatuses),
-              ...(enemyBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: enemyBurnRef.current.turns, desc: `Its hull is on fire — it loses ${enemyBurnRef.current.dmg} HP at the end of each of its turns.` }] : []),
-              ...(enemyFrozen ? [{ key: 'freeze', name: 'Frozen', color: FREEZE_COLOR, desc: 'Iced over — its next turn is skipped, and it cannot weave aside from your shots while frozen.' }] : []),
-              ...(snareDodgeTurns > 0 ? [{ key: 'snare', name: 'Snared', color: '#d9b066', turns: snareDodgeTurns, desc: 'A snare fouls its rigging — each time it tries to dodge, there is a chance the dodge fails and it must act instead.' }] : []),
+              ...(enemyBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: enemyBurnRef.current.turns, desc: `Its hull is on fire. It loses ${enemyBurnRef.current.dmg} HP at the end of each of its turns.` }] : []),
+              ...(enemyFrozen ? [{ key: 'freeze', name: 'Frozen', color: FREEZE_COLOR, desc: 'Iced over. Its next turn is skipped, and it cannot weave aside from your shots while frozen.' }] : []),
+              ...(snareDodgeTurns > 0 ? [{ key: 'snare', name: 'Snared', color: '#d9b066', turns: snareDodgeTurns, desc: 'A snare fouls its rigging. Each time it tries to dodge, there is a chance the dodge fails and it must act instead.' }] : []),
             ]}
             onClose={() => setShowEnemyStats(false)}
           />
@@ -10492,7 +10492,7 @@ function PlayerStatsPopup({
               </div>
             )}
             {boonList.length === 0 && curseList.length === 0 && contractsWon.length === 0 && (
-              <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.5)', textAlign: 'center', padding: '0.9rem 0' }}>No boons or curses yet — they surface between fights.</p>
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.5)', textAlign: 'center', padding: '0.9rem 0' }}>No boons or curses yet. They surface between fights.</p>
             )}
           </>
         ) : (
@@ -10591,7 +10591,7 @@ function EnemyStatsPopup({
     c.kind === 'damagePctMaxHp'
       ? `hits you for ${Math.round(c.value * 100)}% of your max hull`
       : c.kind === 'burnDot'
-      ? `sets you ablaze — ${Math.round(c.pctPerTurn * 100)}% of your hull per turn for ${c.turns} turns unless a heal puts it out`
+      ? `sets you ablaze, ${Math.round(c.pctPerTurn * 100)}% of your hull per turn for ${c.turns} turns unless a heal puts it out`
       : c.kind === 'status'
       ? `leaves you ${c.status === 'feeble' ? 'exposed (you take more damage)' : c.status === 'weaken' ? 'weakened (you deal less)' : 'slowed'} for ${c.turns} turns${c.dmgPct ? `, and clips you for ${Math.round(c.dmgPct * 100)}%` : ''}`
       : `the boss heals ${Math.round(c.value * 100)}% of its HP`
@@ -11040,7 +11040,7 @@ function EnemyStatsPopup({
                   Signal Flares
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
-                  Every few turns a screen of {flareShots} false flares goes up. Swat each amber flare before its fuse burns out — every one you let through chips your hull.{flareHasFeints ? ' Some glow red: those are live shells, so let them fizzle. Tapping a red flare hurts worse than missing an amber one.' : ''}
+                  Every few turns a screen of {flareShots} false flares goes up. Swat each amber flare before its fuse burns out. Every one you let through chips your hull.{flareHasFeints ? ' Some glow red: those are live shells, so let them fizzle. Swatting a red flare hurts worse than missing an amber one.' : ''}
                 </p>
               </div>
             </div>
@@ -11056,7 +11056,7 @@ function EnemyStatsPopup({
               Phases · {popupPhases.length + 1}
             </p>
             <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.4, marginBottom: 8 }}>
-              This boss falls, then rises again — meaner each time. Watch for a telegraphed move and answer it in time.
+              This boss falls, then rises again, meaner each time. Watch for a telegraphed move and answer it in time.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {popupPhases.map((ph, i) => {
@@ -11077,7 +11077,7 @@ function EnemyStatsPopup({
                     {chk && (
                       <div style={{ marginTop: 6 }}>
                         <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#f3c0c0', lineHeight: 1.35 }}>
-                          Telegraphed: “{chk.name}” — {chk.telegraph}
+                          Telegraphed: “{chk.name}” · {chk.telegraph}
                         </p>
                         <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.4, marginTop: 4 }}>
                           <span style={{ color: '#86efac', fontWeight: 700 }}>Hint:</span> {checkHint(chk)} You get {chk.chargeTurns} turn{chk.chargeTurns === 1 ? '' : 's'} to answer, or it {describeConsequence(chk.consequence)}.
@@ -11308,17 +11308,17 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
       {/* Banner + remaining tally */}
       <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none', textAlign: 'center' }}>
         <div className="font-cinzel font-700 uppercase" style={{ fontSize: '0.82rem', letterSpacing: '0.12em', color, textShadow: `0 0 16px ${color}aa`, whiteSpace: 'nowrap' }}>
-          {label} — intercept!
+          {label}. Intercept!
         </div>
         <div className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: feintChance > 0 ? FEINT_COLOR : '#c4b690', marginTop: 2, whiteSpace: 'nowrap' }}>
-          {feintChance > 0 ? "swat amber · never tap the red ✕" : `${Math.max(0, count - resolved)} left`}
+          {feintChance > 0 ? "swat amber · leave the red ✕" : `${Math.max(0, count - resolved)} left`}
         </div>
       </div>
       {/* Active flares — amber = swat, red ✕ = feint (a LIVE shell, leave it). */}
       {flares.map(f => {
         const c = f.feint ? FEINT_COLOR : color
         return (
-          <button key={f.id} type="button" aria-label={f.feint ? 'Live shell — do not tap' : 'Swat flare'}
+          <button key={f.id} type="button" aria-label={f.feint ? 'Live shell, leave it' : 'Swat flare'}
             onPointerDown={(e) => { e.preventDefault(); resolveFlare(f, true) }}
             style={{
               position: 'absolute', left: `${f.x}%`, top: `${f.y}%`,
@@ -11657,7 +11657,7 @@ function StatusBadgesRow({ statuses, bespoke = [] }: { statuses: ActiveStatus[];
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
       {statuses.map(s => {
         const def = STATUS_DEFS[s.id]
-        return chip(s.id, def.color, def.tone, s.turnsLeft, `${def.name} — ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})`)
+        return chip(s.id, def.color, def.tone, s.turnsLeft, `${def.name}: ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})`)
       })}
       {bespoke.map(b => chip(b.key, b.color, b.tone ?? 'debuff', b.turns, b.title))}
     </div>
@@ -11699,7 +11699,7 @@ function StatusRing({ statuses, bespoke = [], r, start, step, size }: {
   const marks: { key: string; color: string; turns?: number; title: string }[] = [
     ...statuses.map(s => {
       const def = STATUS_DEFS[s.id]
-      return { key: s.id, color: def.color, turns: s.turnsLeft, title: `${def.name} — ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})` }
+      return { key: s.id, color: def.color, turns: s.turnsLeft, title: `${def.name}: ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})` }
     }),
     ...bespoke.map(b => ({ key: b.key, color: b.color, turns: b.turns, title: b.title })),
   ]
@@ -13237,7 +13237,7 @@ function CrewRail({ items, disabled }: { items: SpecialItem[]; disabled: boolean
               <motion.button
                 key={item.id}
                 type="button"
-                title={`${item.label} — ${item.sub}`}
+                title={`${item.label}: ${item.sub}`}
                 aria-label={`${item.label}. ${item.sub}`}
                 whileTap={ready ? { scale: 0.94 } : undefined}
                 whileHover={ready ? { scale: 1.06, y: -2 } : undefined}
@@ -13839,7 +13839,7 @@ function DialAimInline({
           position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)',
           fontSize: '0.55rem', letterSpacing: '0.14em', color: '#9fb2c8', whiteSpace: 'nowrap',
         }}>
-          Tap twice
+          Press twice
         </div>
       )}
     </div>
@@ -13942,7 +13942,7 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
       )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexShrink: 0 }}>
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: hardenedArmed ? '#9fb2c8' : '#fbbf24' }}>
-          {hardenedArmed ? 'Plated — Tap Twice' : 'Lock Your Shot'}
+          {hardenedArmed ? 'Plated. Press twice' : 'Lock Your Shot'}
         </p>
         {afflictionLabel ? (
           <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#c084fc', textShadow: '0 0 8px rgba(192,132,252,0.5)' }}>
@@ -14117,7 +14117,7 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
           ? 'Lock through the mist. The gold center won\'t stay visible.'
           : hasInk
           ? 'The dark keeps swallowing the bar. Lock by rhythm.'
-          : 'Tap LOCK when the marker hits the gold center.'}
+          : 'Press LOCK when the marker hits the gold center.'}
       </p>
     </div>
   )

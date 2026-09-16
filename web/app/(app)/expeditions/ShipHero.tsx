@@ -194,8 +194,9 @@ function PickerCrewCard({ card, selected, current, onSelect }: { card: RosterCre
               return (
                 <span
                   key={e.id}
-                  role="button"
+                  role="button" tabIndex={0}
                   onClick={ev => { ev.stopPropagation(); setOpenTrait(isOpen ? null : e.id) }}
+                  onKeyDown={ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); setOpenTrait(isOpen ? null : e.id) } }}
                   className="font-karla font-700"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.56rem', cursor: 'pointer',
@@ -569,7 +570,7 @@ data-any-key
           Repairs +{range.min} to +{range.max} HP
         </p>
       )}
-      <p className="font-karla uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#7a7674', marginTop: 14 }}>Tap to continue</p>
+      <p className="font-karla uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#7a7674', marginTop: 14 }}>Press to continue</p>
     </motion.div>
   )
 }
@@ -1192,7 +1193,7 @@ export default function ShipHero({
   // unlocked. Marked seen the moment it starts.
   const shipGuideSteps = useMemo(() => {
     const steps: { tab: 'loadout' | 'ship' | 'forge'; portrait: string; speaker: string; text: string }[] = [
-      { tab: 'loadout', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "*Items* is your battle setup. Equip raid items here before a fight, and tap an empty slot to fill it." },
+      { tab: 'loadout', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "*Items* is your battle setup. Equip raid items here before a fight, and press an empty slot to fill it." },
       { tab: 'ship',    portrait: GUIDES.kat.portrait,  speaker: 'Kat',  text: "*Ship* is where you buy and upgrade your hull. A bigger ship means more crew slots and firepower." },
     ]
     if (forgeUnlocked) steps.push({ tab: 'forge', portrait: GUIDES.doby.portrait, speaker: 'Doby', text: "The *Forge* fuses two raid items into a single stronger one." })
@@ -1861,7 +1862,7 @@ export default function ShipHero({
                   </p>
                   <p className="font-karla font-400"
                     style={{ fontSize: '0.62rem', color: 'rgba(240,237,232,0.6)', lineHeight: 1.4, marginTop: 4 }}>
-                    Set your crew, equip raid items, check your scores — then commit at the bottom.
+                    Set your crew, equip raid items, check your scores, then commit at the bottom.
                   </p>
                 </div>
               )}
@@ -2078,7 +2079,7 @@ export default function ShipHero({
                         key={i}
                         type="button"
                         onClick={() => setItemDetail(itemId)}
-                        aria-label={`${def.name}, equipped. Tap for its effect and an unequip option.`}
+                        aria-label={`${def.name}, equipped. Press for its effect and an unequip option.`}
                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0, padding: '0.5rem 0.35rem 0.45rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.92)', abyssal), boxShadow: abyssal ? '0 0 14px rgba(255,90,60,0.26)' : '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}14`, border: `1.5px solid ${color}66` }) }}
                       >
                         <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2100,7 +2101,7 @@ export default function ShipHero({
                       key={i}
                       type="button"
                       onClick={() => setPickerOpen(true)}
-                      aria-label="Empty slot. Tap to choose an item to equip."
+                      aria-label="Empty slot. Press to choose an item to equip."
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 84, padding: '0.5rem 0.35rem', borderRadius: 12, border: '1.5px dashed rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', font: 'inherit', touchAction: 'manipulation' }}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7d8894" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
@@ -2121,7 +2122,7 @@ export default function ShipHero({
                   if (def && mountedFinale) {
                     return (
                       <button type="button" onClick={() => setItemDetail(mountedFinale)}
-                        aria-label={`${def.name}, mounted. Tap for its effect and an unmount option.`}
+                        aria-label={`${def.name}, mounted. Press for its effect and an unmount option.`}
                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0, padding: '0.5rem 0.35rem 0.45rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', ...primevalBorder('rgba(20,11,13,0.92)') }}>
                         {/* The tier rides the ART as a corner chip. The line
                             below belongs to the NAME, the same as every other
@@ -2157,7 +2158,7 @@ export default function ShipHero({
                   }
                   return (
                     <button type="button" onClick={() => setMountNote(v => !v)}
-                      aria-label="Locked mount. Tap to see what it accepts."
+                      aria-label="Locked mount. Press to see what it accepts."
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 84, padding: '0.5rem 0.35rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', ...primevalBorder('rgba(15,9,11,0.68)', true) }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ANCIENT} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                         <rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
@@ -2207,7 +2208,7 @@ export default function ShipHero({
                       <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#8a8480' }}>{owned.length} owned</span>
                     </div>
                     <p className="font-karla" style={{ fontSize: '0.7rem', color: full ? '#d8a14a' : '#8a8480', marginBottom: '0.7rem', lineHeight: 1.45 }}>
-                      {full ? 'Hull full. Tap an equipped item to free its slot.' : 'Tap an item for its effect and to equip it.'}
+                      {full ? 'Hull full. Pick an equipped item to free its slot.' : 'Pick an item for its effect and to equip it.'}
                     </p>
                     {/* GROUPED BY TIER, best shelf first, then THREE COLUMNS
                         growing DOWN within each.
@@ -2242,7 +2243,7 @@ export default function ShipHero({
                             key={itemId}
                             type="button"
                             onClick={() => setItemDetail(itemId)}
-                            aria-label={`${def.name}${on ? ', equipped' : blocked ? ', hull full' : ''}. Tap for details.`}
+                            aria-label={`${def.name}${on ? ', equipped' : blocked ? ', hull full' : ''}. Press for details.`}
                             style={{
                               width: '100%', minWidth: 0,
                               display: 'flex', flexDirection: 'column', gap: 4,
@@ -3184,7 +3185,7 @@ export default function ShipHero({
                         type="button"
                         disabled={blocked}
                         onClick={blocked ? undefined : () => { toggleItem(itemId); setPickerOpen(false) }}
-                        aria-label={blocked ? `${def.name}. Hull full, free a slot first.` : wouldSwap ? `${def.name}. Tap to swap for ${swapNames.join(', ')}.` : `${def.name}. Tap to equip.`}
+                        aria-label={blocked ? `${def.name}. Hull full, free a slot first.` : wouldSwap ? `${def.name}. Press to swap for ${swapNames.join(', ')}.` : `${def.name}. Press to equip.`}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
                           padding: '0.55rem 0.6rem', borderRadius: 11,
@@ -3438,7 +3439,7 @@ export default function ShipHero({
             style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
             <CloseButton onClick={() => setClassesOpen(false)} style={{ position: 'absolute', top: 8, right: 10, zIndex: 6 }} />
             <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#c084fc', marginBottom: 4 }}>Captain&rsquo;s Class</p>
-            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', marginBottom: 14, lineHeight: 1.45 }}>Permanent buffs you pick at the end of each chapter. They stack. Tap one for its full breakdown.</p>
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', marginBottom: 14, lineHeight: 1.45 }}>Permanent buffs you pick at the end of each chapter. They stack. Pick one for its full breakdown.</p>
             {(() => {
               const ownedIds = new Set(Object.values(shipClasses))
               const lines = SHIP_CLASS_LINES
@@ -3563,7 +3564,7 @@ export default function ShipHero({
                     ) : tierLocked ? (
                       <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{getShip(Math.max(MANOWAR_SHIP_TIER, skin.requiresShipTier ?? 0)).name} only</span>
                     ) : (
-                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
+                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Press to equip</span>
                     )}
                   </button>
                 )
@@ -3633,7 +3634,7 @@ export default function ShipHero({
                     ) : tierLocked ? (
                       <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{getShip(Math.max(MANOWAR_SHIP_TIER, skin.requiresShipTier ?? 0)).name} only</span>
                     ) : (
-                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
+                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Press to equip</span>
                     )}
                   </button>
                 )
@@ -3889,10 +3890,10 @@ function UpgradeShipPanel({
 // time from the "How it works" link (ForgeHelpModal). One source of truth.
 const FORGE_RULES: { title: string; body: string }[] = [
   { title: 'Fuse two into one', body: 'A recipe melds two relics into a single forged item that carries BOTH their effects in one loadout slot.' },
-  { title: 'Learn, then forge', body: 'Spend Fathoms once to learn a recipe. When you own both components, forge it — forging sacrifices the two components for good.' },
-  { title: 'Refarming components', body: "You only ever hold one of each relic — a boss won't drop one you already own. To get another copy of a component, forge (spend) the one you have first; then it can drop again." },
+  { title: 'Learn, then forge', body: 'Spend Fathoms once to learn a recipe. When you own both components, forge it. Forging sacrifices the two components for good.' },
+  { title: 'Refarming components', body: "You only ever hold one of each relic. A boss won't drop one you already own. To get another copy of a component, forge (spend) the one you have first; then it can drop again." },
   { title: 'No doubling up', body: "A forged item can't be equipped beside its own ingredients (or another grade of them). Equipping the fusion swaps the conflicting relic out, so the same effect never stacks twice." },
-  { title: 'Mix different fusions', body: 'Two DIFFERENT forged items CAN ride together — that pairing is a real build, not blocked. Only a fusion + its own parts conflict.' },
+  { title: 'Mix different fusions', body: 'Two DIFFERENT forged items CAN ride together. That pairing is a real build, not blocked. Only a fusion + its own parts conflict.' },
   { title: 'Chase the legendary', body: "Boss-drop recipes call for the legendary grade (a Prime or master-craft relic), so every fusion is a real chase." },
 ]
 
@@ -3929,7 +3930,7 @@ function ForgeIntroOverlay({ onDone }: { onDone: () => void }) {
       <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: '#c9a7ff', marginTop: 18 }}>Unlocked</motion.p>
       <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34 }} className="font-cinzel font-800" style={{ fontSize: '1.85rem', lineHeight: 1.05, marginTop: 6, ...PRISMATIC_TEXT }}>The Forge Awakens</motion.h1>
       <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="font-karla" style={{ fontSize: '0.82rem', color: '#b9b2a6', lineHeight: 1.5, marginTop: 10, maxWidth: 340 }}>
-        Bring your rarest relics and fuse them — two powers into a single slot. Here is how it works:
+        Bring your rarest relics and fuse them: two powers into a single slot. Here is how it works:
       </motion.p>
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <ForgeRules />
@@ -3980,7 +3981,7 @@ function RecipeUnlockedOverlay({ name, image, onDone }: { name: string; image: s
       <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.44 }} className="font-karla" style={{ fontSize: '0.8rem', color: '#b9b2a6', lineHeight: 1.5, marginTop: 10, maxWidth: 300 }}>
         You can forge this now. Gather its components and bring them to the anvil.
       </motion.p>
-      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: '#7a7470', marginTop: 22 }}>Tap to continue</motion.p>
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: '#7a7470', marginTop: 22 }}>Press to continue</motion.p>
     </motion.div>
   )
 }
@@ -4520,7 +4521,7 @@ function VoyageScoreBreakdown({ power, dodge, fortune, total, onClose }: {
       ))}
 
       <p className="font-karla" style={{ fontSize: '0.7rem', color: '#7a6a60', lineHeight: 1.45, textAlign: 'center', marginTop: '0.4rem' }}>
-        Voyage Score is the average of all three — a strong, balanced crew clears events from every angle.
+        Voyage Score is the average of all three. A strong, balanced crew clears events from every angle.
       </p>
     </>
   )
@@ -4633,7 +4634,7 @@ function RaidScoreBreakdown({
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.7rem', color: '#7a6a60', lineHeight: 1.45, textAlign: 'center', marginBottom: '1rem' }}>
-        Raid Score is the average of Offense and Defense — both matter equally.
+        Raid Score is the average of Offense and Defense. Both matter equally.
       </p>
 
       {/* How to raise it */}
@@ -4641,9 +4642,9 @@ function RaidScoreBreakdown({
         <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.74rem', color: '#c8704a', marginBottom: '0.6rem' }}>Raise it by</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
           {[
-            'Recruiting stronger crewmates — more Power, Fortune & Savvy',
-            'Leveling up your Nav rank — it boosts every stat',
-            'Upgrading your ship — more HP to survive longer',
+            'Recruiting stronger crewmates: more Power, Fortune & Savvy',
+            'Leveling up your Nav rank: it boosts every stat',
+            'Upgrading your ship: more HP to survive longer',
           ].map(t => (
             <div key={t} style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start' }}>
               <span style={{ color: '#c8704a', fontSize: '0.84rem', lineHeight: 1.45, flexShrink: 0 }}>→</span>

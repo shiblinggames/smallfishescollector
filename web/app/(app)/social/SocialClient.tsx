@@ -343,7 +343,7 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
                         role={isMe ? undefined : 'button'}
                         tabIndex={isMe ? undefined : 0}
                         onKeyDown={isMe ? undefined : e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenMember(m.username) } }}
-                        aria-label={isMe ? undefined : `${m.username}, tap for their summary`}
+                        aria-label={isMe ? undefined : `${m.username}, press for their summary`}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: isMe ? 'default' : 'pointer', touchAction: 'manipulation' }}
                       >
                         <span className="font-cinzel font-700" style={{ width: 18, textAlign: 'center', fontSize: '0.82rem', color: rankColor, flexShrink: 0 }}>{rank}</span>

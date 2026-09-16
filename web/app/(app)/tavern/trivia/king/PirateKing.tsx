@@ -273,10 +273,10 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
                 </motion.div>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: GOLD, letterSpacing: '0.04em', textShadow: `0 0 22px ${GOLD}77` }}>Pirate King</p>
                 <p className="font-karla" style={{ fontSize: '0.76rem', color: '#c8c0ae', lineHeight: 1.55, marginTop: 8 }}>
-                  All ten answered true. The crown and {doubloonsAwarded} ⟡ are yours until the next ladder is rigged — and a run like that sends your Parlor rank soaring.
+                  All ten answered true. The crown and {doubloonsAwarded} ⟡ are yours until the next ladder is rigged, and a run like that sends your Parlor rank soaring.
                 </p>
                 <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
-                  <ParlorHost size={58} line="A perfect ladder. I've hosted a hundred captains and crowned a handful — you're one of them now." />
+                  <ParlorHost size={58} line="A perfect ladder. I've hosted a hundred captains and crowned a handful. You're one of them now." />
                 </div>
               </div>
             </>
@@ -435,7 +435,7 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
                 {result.rankedUp && (
                   <motion.p initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.15 }}
                     className="font-cinzel font-700" style={{ fontSize: '0.92rem', textAlign: 'center', marginTop: 8, color: '#c084fc', textShadow: '0 0 14px rgba(192,132,252,0.55)' }}>
-                    New rank reached — collect your gems in the Parlor
+                    New rank reached. Collect your gems in the Parlor
                   </motion.p>
                 )}
               </div>
@@ -566,7 +566,7 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
               className="font-karla font-700 uppercase tracking-[0.08em]"
               style={{ display: 'block', width: '100%', marginTop: 10, padding: '0.6rem 0', borderRadius: 12, background: 'rgba(122,142,196,0.12)', border: '1px solid rgba(122,142,196,0.45)', color: '#aebde0', fontSize: '0.62rem', cursor: 'pointer' }}
             >
-              {walkConfirm ? `Tap again to walk with ${banked} ⟡` : `Walk with ${banked} ⟡`}
+              {walkConfirm ? `Press again to walk with ${banked} ⟡` : `Walk with ${banked} ⟡`}
             </button>
           )}
           {error && <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f08a8a', marginTop: 10 }}>{error}</p>}

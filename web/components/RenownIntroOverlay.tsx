@@ -21,11 +21,11 @@ interface Props {
 const COPY: Record<RenownSkill, { track: string; earn: string }> = {
   fishing: {
     track: 'Fishing Renown',
-    earn: 'Every catch beyond this point earns Renown — bank the points, then spend them on permanent boosts to your angling.',
+    earn: 'Every catch beyond this point earns Renown. Bank the points, then spend them on permanent boosts to your angling.',
   },
   nav: {
     track: 'Navigation Renown',
-    earn: 'Every raid and voyage beyond this point earns Renown — bank the points, then spend them on permanent boosts to your captaincy.',
+    earn: 'Every raid and voyage beyond this point earns Renown. Bank the points, then spend them on permanent boosts to your captaincy.',
   },
 }
 
@@ -136,7 +136,7 @@ export default function RenownIntroOverlay({ open, skill, onDismiss }: Props) {
                   className="font-karla font-400"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}
                   style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.34)', marginTop: '1.5rem', letterSpacing: '0.08em' }}>
-                  tap to continue
+                  press to continue
                 </motion.p>
               )}
             </AnimatePresence>

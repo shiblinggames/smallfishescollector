@@ -671,7 +671,7 @@ export default function DailyVoyagePanel({
                         [<IconMap key="i" size={18} />, 'Pick a route', 'Riskier routes pay more, but your crew might not make it back.'],
                         [<IconHourglass key="i" size={18} />, 'They sail (up to 9 hours)', 'One thing befalls them along the way. Higher Nav and expedition level cut the time. Check back to see how it went.'],
                         [<IconCrate key="i" size={18} />, 'Claim your loot', 'When they return, collect doubloons, gems, rare drops and Nav XP. All of it earned while you were doing something else.'],
-                        [<IconSkull key="i" size={18} />, 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Crew Fortune cuts the risk, all the way to zero. Deeper routes need more Fortune to sail safe.'],
+                        [<IconSkull key="i" size={18} />, 'Crew can die', 'On dangerous routes, crew members can be lost at sea, permanently. Crew Fortune cuts the risk, all the way to zero. Deeper routes need more Fortune to sail safe.'],
                       ] as [ReactNode, string, string][]).map(([icon, title, desc]) => (
                         <div key={title} style={{ display: 'flex', gap: '0.75rem' }}>
                           <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1, color: '#c8aa6a' }}>{icon}</span>
@@ -1102,7 +1102,7 @@ export default function DailyVoyagePanel({
                       </p>
                       {isCrewLoss && lostCard && (
                         <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#c06060', marginTop: '0.3rem' }}>
-                          {lostCard.name} — lost at sea.
+                          {lostCard.name}, lost at sea.
                         </p>
                       )}
                       {e.baitDrop && (

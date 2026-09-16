@@ -18,8 +18,12 @@ export default async function RaidPage() {
 
   return (
     <>
-      <main className="min-h-screen pt-6">
-        <div className="page-col pb-12">
+      <main className="min-h-screen pt-6" style={{ width: '100%' }}>
+        {/* NO page-col. A fight is a scene, not a document: the reading column
+          put the battle in a strip down the middle of its own sea on anything
+          wider than a phone. The other fight pages went full-bleed first;
+          this one is the same fight. RaidCombat caps its own control deck. */}
+        <div className="pb-12" style={{ width: '100%' }}>
           <RaidGame
             config={CORSAIRS_RECKONING}
             shipImageUrl={stats.shipImageUrl}

@@ -185,7 +185,7 @@ export default function MailInbox({ initialUnreadCount, size = 36 }: {
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <button
         onClick={() => open ? setOpen(false) : openInbox()}
-        aria-label={unread > 0 ? `Mail — ${unread} unread` : 'Mail'}
+        aria-label={unread > 0 ? `Mail, ${unread} unread` : 'Mail'}
         aria-expanded={open}
         className="relative flex items-center justify-center rounded-full transition-colors"
         style={{

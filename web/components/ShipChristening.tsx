@@ -181,7 +181,7 @@ export default function ShipChristening({ data, onDone }: { data: ChristeningDat
         transition={{ duration: 0.4, delay: reduced ? 0 : 2 }}
         style={{ fontSize: '0.52rem', letterSpacing: '0.18em', color: '#8a96a8', marginTop: 20 }}
       >
-        Tap to continue
+        Press to continue
       </motion.p>
     </motion.div>,
     document.body,

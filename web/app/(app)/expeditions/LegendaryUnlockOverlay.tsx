@@ -126,7 +126,7 @@ export function LegendaryUnlockOverlay({ crew, onClose }: { crew: UnlockedLegend
         initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ delay: 1.1, duration: 0.5 }}
         className="font-karla" style={{ position: 'relative', marginTop: 18, fontSize: '0.72rem', color: 'rgba(240,237,232,0.5)' }}
       >
-        Tap to continue
+        Press to continue
       </motion.p>
     </motion.div>,
     document.body,

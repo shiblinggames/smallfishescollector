@@ -72,7 +72,7 @@ export default async function SocialPage() {
       {/* THE PACT BOARD, in full, under the list it depends on. Following
           somebody is the floor and the pact is the permission, so the two
           belong on one page: every name you could ask is on the list above. */}
-      <div className="page-col pb-16" style={{ marginTop: '1.25rem' }}>
+      <div className="page-col pb-16 sm:pb-8" style={{ marginTop: '1.25rem' }}>
         <section style={{
           borderRadius: 16, padding: '0.9rem 1rem 1rem',
           background: 'rgba(8,14,22,0.6)',

@@ -82,7 +82,7 @@ export default function CipherDialsPuzzle({ puzzle, onSolved }: { puzzle: RaidPu
       }`}</style>
 
       <p className="font-karla" style={{ textAlign: 'center', fontSize: '0.74rem', lineHeight: 1.5, color: 'rgba(240,237,232,0.72)', maxWidth: 300, margin: '0 auto 0.9rem' }}>
-        Tap a dial to turn it. Turning one nudges the dials beside it. Line every seal to the <span style={{ color: LIT }}>gold mark</span> up top.
+        Press a dial to turn it. Turning one nudges the dials beside it. Line every seal to the <span style={{ color: LIT }}>gold mark</span> up top.
       </p>
 
       <div style={{
@@ -96,7 +96,7 @@ export default function CipherDialsPuzzle({ puzzle, onSolved }: { puzzle: RaidPu
               key={i}
               type="button"
               onClick={() => turn(i)}
-              aria-label={aligned ? 'Sealed to the index' : 'Off the index, tap to turn'}
+              aria-label={aligned ? 'Sealed to the index' : 'Off the index, press to turn'}
               aria-pressed={aligned}
               style={{
                 position: 'relative', width: '100%', aspectRatio: '1', padding: 0,

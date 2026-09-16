@@ -116,7 +116,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
         setMineAt(i)
         setBoom(true)
         haptic([0, 30, 40, 70])
-        setMessage('She struck a mine. The board resets — chart it again.')
+        setMessage('She struck a mine. The board resets. Chart it again.')
         setTimeout(() => { setBoom(false); setMineAt(null); applyRevealed(r.revealed) }, 620)
         return 'bust'
       }
@@ -150,7 +150,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
     if (!adj) return
     const nbs = neighborsOf(i, cols, rows)
     if (nbs.filter(n => flagged.has(n)).length !== adj) {
-      setMessage('Flag all its mines first, then tap to sweep around it.')
+      setMessage('Flag all its mines first, then press it to sweep around it.')
       return
     }
     setMessage(null)
@@ -177,6 +177,13 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
 
   function onPointerDown(e: React.PointerEvent, i: number) {
     if (cleared) return
+    // ── RIGHT-CLICK FLAGS ────────────────────────────────────────────────
+    // How every desktop minesweeper has worked since 1990, and the board was
+    // already swallowing the context menu without doing anything with the
+    // press. Nothing is recorded in `press`, so the pointerup that follows
+    // finds nothing and does not also reveal the tile.
+    if (e.button === 2) { doFlag(i); haptic([0, 14, 30, 18]); return }
+    if (e.button !== 0) return
     setPressedIdx(i)
     haptic(7) // immediate tactile tick on press
     const t = setTimeout(() => {
@@ -323,8 +330,8 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
         {message ?? (cleared
           ? 'Channel clear. Come back Monday for a fresh minefield.'
           : busts > 0
-            ? `The board's the same all week — learn it. Long-press to flag a mine.`
-            : 'Long-press a tile to flag it. A new minefield is laid every Monday.')}
+            ? `The board's the same all week, so learn it. Hold or right-click to flag a mine.`
+            : 'Hold or right-click a tile to flag it. A new minefield is laid every Monday.')}
       </p>
 
       {/* How-to-play sheet */}
@@ -341,10 +348,10 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
                   {[
-                    { n: '1', t: 'Tap to reveal', d: 'Open a tile of water. Open every safe tile to clear the board.' },
+                    { n: '1', t: 'Press to reveal', d: 'Open a tile of water. Open every safe tile to clear the board.' },
                     { n: '2', t: 'Read the soundings', d: 'A number is how many mines touch that tile (the 8 around it). Use them to deduce where mines hide.' },
-                    { n: '3', t: 'Long-press to flag', d: 'Hold a tile to plant a flag on a mine you have worked out. Or flip the Flag toggle and tap. The counter tracks mines left.' },
-                    { n: '4', t: 'Tap a number to sweep', d: 'Once a number has all its mines flagged, tap it to clear every remaining tile around it at once.' },
+                    { n: '3', t: 'Hold or right-click to flag', d: 'Hold a tile, or right-click it, to plant a flag on a mine you have worked out. Or flip the Flag toggle and press. The counter tracks mines left.' },
+                    { n: '4', t: 'Press a number to sweep', d: 'Once a number has all its mines flagged, press it to clear every remaining tile around it at once.' },
                   ].map(s => (
                     <div key={s.n} style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
                       <div className="font-cinzel font-800" style={{ flexShrink: 0, width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', background: `${GOLD}1c`, border: `1px solid ${GOLD}66`, color: GOLD, fontSize: '0.8rem' }}>{s.n}</div>
@@ -356,7 +363,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
                   ))}
                 </div>
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: '#cfc6b0', lineHeight: 1.5, textAlign: 'center', marginTop: 16 }}>
-                  Strike a mine and the board resets — but it is the <span style={{ color: '#e8dcc2' }}>same board all week</span>, so each run you know more. First clear banks <span style={{ color: GOLD }}>+{initial.reward} charting points</span>.
+                  Strike a mine and the board resets, but it is the <span style={{ color: '#e8dcc2' }}>same board all week</span>, so each run you know more. First clear banks <span style={{ color: GOLD }}>+{initial.reward} charting points</span>.
                 </p>
                 <button onClick={() => { haptic(10); setHelp(false) }} className="font-cinzel font-700"
                   style={{ width: '100%', marginTop: 16, padding: '0.75rem', borderRadius: 12, fontSize: '0.9rem', background: 'rgba(47,111,214,0.18)', border: '1px solid rgba(120,170,255,0.4)', color: '#bcd4ff', cursor: 'pointer' }}>

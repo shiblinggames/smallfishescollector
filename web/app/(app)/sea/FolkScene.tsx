@@ -396,7 +396,7 @@ export default function FolkScene({
                 A RESERVED BLOCK. Their lines run from four words to thirty and
                 the card must not resize between them, so the tallest sets the
                 height once and short lines sit in the space. */}
-            <div style={{ height: 104, flexShrink: 0, overflowY: 'auto', touchAction: 'pan-y' }}
+            <div style={{ height: 104, flexShrink: 0, overflowY: 'auto', touchAction: 'pan-y', cursor: typing ? 'pointer' : 'default' }}
               onClick={() => { if (typing) finishRef.current() }}>
               <TypedBody all={[last.text]} text={last.text}
                 shown={last.who === 'them' ? shown : last.text.length}

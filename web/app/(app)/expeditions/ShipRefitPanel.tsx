@@ -163,8 +163,8 @@ export default function ShipRefitPanel({ picks, refitsUsed, doubloons, onClose }
       <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: ACCENT }}>The Refit</p>
       <p className="font-karla" style={{ fontSize: '0.92rem', color: '#b8b2aa', marginTop: 6, lineHeight: 1.5 }}>
         {cost === 0
-          ? 'Your first refit is free. Tap any chapter to pick a different class. Nothing is saved until you confirm.'
-          : `This one costs ${cost.toLocaleString()} ⟡. Tap any chapter to pick a different class. Nothing is saved until you confirm.`}
+          ? 'Your first refit is free. Press any chapter to pick a different class. Nothing is saved until you confirm.'
+          : `This one costs ${cost.toLocaleString()} ⟡. Press any chapter to pick a different class. Nothing is saved until you confirm.`}
       </p>
       {cost > 0 && (
         <p className="font-karla font-700" style={{ fontSize: '0.86rem', color: affordable ? '#e0c07a' : '#e08a8a', marginTop: 6 }}>

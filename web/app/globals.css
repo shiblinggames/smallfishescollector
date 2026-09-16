@@ -304,6 +304,33 @@ html, body {
 }
 .tap:active:not([disabled]):not([aria-disabled="true"]) { transform: scale(0.96); opacity: 0.92; }
 
+/* ── AND UNDER A MOUSE IT LIFTS ──
+   .tap was the iOS depress-on-touch and nothing else: 240 controls that
+   answered a press and were visually dead under a pointer, because a phone
+   has no hover and nobody had needed one. The lift is the same one the gold
+   buttons do. It is a transform and not a filter on purpose: a filter makes
+   the element the containing block for any position:fixed descendant, which
+   is the trap this file already documents for transforms, and .tap's own
+   :active already spends that budget, so nothing new is being risked here.
+   Only where a hover exists, so a thumb never sees a stuck hover state. */
+@media (hover: hover) and (pointer: fine) {
+  .tap:hover:not([disabled]):not([aria-disabled="true"]) { transform: translateY(-1px); }
+}
+
+/* ── KEYBOARD FOCUS IS VISIBLE ──
+   There was no focus-visible rule anywhere, so a keyboard user got the
+   browser's default ring, which on these dark custom backgrounds is often
+   nothing at all. Zero-specificity via :where, so any control that draws its
+   own focus, or a wrapper that sets outline:none inline, still wins. */
+:where(button, a[href], [role="button"], [tabindex="0"], .tap, .btn-gold, .btn-ghost):focus-visible {
+  outline: 2px solid rgba(240,192,64,0.85);
+  outline-offset: 2px;
+}
+
+/* A <button> is cursor:default in Chrome and Firefox. Every button in this
+   game is meant to be pressed, and eight of them relied on the default. */
+button:not(:disabled) { cursor: pointer; }
+
 /* Tactile press for the expedition hub's Manage Crew / Manage Ship
    columns. The whole column (art + label) dips on press so a tap
    anywhere on the image acknowledges instantly — on touch, :hover

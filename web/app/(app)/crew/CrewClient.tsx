@@ -339,7 +339,7 @@ function EmptySlotTile({ color, onClick }: { color: string; onClick: () => void 
         background: `${color}33`, border: `1.5px solid ${color}`,
         fontSize: '1.3rem', lineHeight: 1,
       }}>+</span>
-      <span className="uppercase" style={{ fontSize: '0.62rem' }}>Open seat · tap to add</span>
+      <span className="uppercase" style={{ fontSize: '0.62rem' }}>Open seat · press to add</span>
     </button>
   )
 }
@@ -681,7 +681,7 @@ function CrewPanel({
                 fontSize: '1.05rem', lineHeight: 1,
               }}>{crewLevelFromXP(xp)}</span>
               {hasLevelUp && (
-                <span aria-label="Unseen level-up" title="New level — tap to view" style={{
+                <span aria-label="Unseen level-up" title="New level, press to view" style={{
                   position: 'absolute', top: -2, right: -8,
                   width: 7, height: 7, borderRadius: '50%',
                   background: '#fff5d0',
@@ -3330,7 +3330,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                       Comparing
                     </span>
                     <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.74rem', color: '#eafaf6', lineHeight: 1.3 }}>
-                      Tap another hand to weigh against {comparePick.name}
+                      Pick another hand to weigh against {comparePick.name}
                     </span>
                   </span>
                   <button type="button" onClick={() => setComparePick(null)} className="font-karla font-700 tap"
@@ -3955,7 +3955,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                             </p>
                           )}
                           <p className="font-karla font-600" style={{ fontSize: '0.66rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: `${accent}99`, marginTop: 6 }}>
-                            Tap to see all milestones →
+                            See all milestones →
                           </p>
                         </>
                       ) : (
@@ -3998,7 +3998,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                             )
                           })}
                           <p className="font-karla font-600" style={{ fontSize: '0.66rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.58)', marginTop: 2 }}>
-                            Tap to collapse ▲
+                            Collapse ▲
                           </p>
                         </div>
                       )}
@@ -4023,7 +4023,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     <div>
                       <div className="flex items-baseline justify-between" style={{ marginBottom: 8 }}>
                         <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>Skins</p>
-                        <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)' }}>tap to equip or unlock</p>
+                        <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)' }}>press to equip or unlock</p>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
                         {tiles.map(t => {
@@ -4092,7 +4092,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     const ch = dEff[k] - dBase[k]
                     return (
                       <button key={k} type="button" onClick={() => { vibrate(5); setStatDetail(k) }}
-                        aria-label={`${STAT_LABEL[k]} ${dEff[k]}. Tap for detail.`}
+                        aria-label={`${STAT_LABEL[k]} ${dEff[k]}. Press for detail.`}
                         title={`What ${STAT_LABEL[k]} does`}
                         style={{
                           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
@@ -4420,7 +4420,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     style={{ position: 'relative', fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, textAlign: 'center', maxWidth: 320, lineHeight: 1.4 }}>{skin.blurb}</motion.p>
                 )}
                 <motion.p className="font-karla font-700 uppercase" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
-                  style={{ position: 'relative', fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.32)', marginTop: 22 }}>Tap to continue</motion.p>
+                  style={{ position: 'relative', fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.32)', marginTop: 22 }}>Press to continue</motion.p>
               </motion.div>
             )
           })()}
@@ -4539,7 +4539,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                         <button type="button" disabled={!!skinBusy} onClick={() => runSkinAction(`equip:none:${skin.slug}`, () => equipCrewSkin(skin.slug, null))}
                           className="font-karla font-700 uppercase tracking-[0.08em] w-full"
                           style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.64rem', background: `${c}22`, border: `1px solid ${c}77`, color: '#fff', cursor: 'pointer', opacity: skinBusy ? 0.5 : 1 }}>
-                          {skinBusy ? '…' : '✓ Equipped · tap to remove'}
+                          {skinBusy ? '…' : '✓ Equipped · press to remove'}
                         </button>
                       ) : owned && ownsCrew ? (
                         <button type="button" disabled={!!skinBusy} onClick={() => runSkinAction(`equip:${skin.id}`, () => equipCrewSkin(skin.slug, skin.id))}
@@ -4663,7 +4663,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#f3c0c6' }}>The Blood Market</p>
                 </div>
                 <p className="font-karla" style={{ fontSize: '0.74rem', color: '#b0aaa0', lineHeight: 1.5 }}>
-                  Blood Gems are the spoils of the <span style={{ color: '#f0a9b1', fontWeight: 700 }}>Hardcore Gauntlet</span> — pulled from the cash-out chest, and only yours if you bring your crew home alive.
+                  Blood Gems are the spoils of the <span style={{ color: '#f0a9b1', fontWeight: 700 }}>Hardcore Gauntlet</span>, pulled from the cash-out chest, and only yours if you bring your crew home alive.
                 </p>
                 <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ padding: '0.55rem 0.7rem', borderRadius: 10, background: `${BLOOD}10`, border: `1px solid ${BLOOD}2e` }}>
@@ -4854,7 +4854,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                           style={{ position: 'relative', fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, maxWidth: 320, lineHeight: 1.4 }}>{won.blurb}</motion.p>
                       )}
                       <motion.p className="font-karla font-700 uppercase" initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} transition={{ delay: 1 }}
-                        style={{ position: 'relative', fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.4)', marginTop: 22 }}>Tap to continue · {ownsCrew ? 'equip it in the Skins tab' : 'recruit its crew to wear it'}</motion.p>
+                        style={{ position: 'relative', fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.4)', marginTop: 22 }}>Press to continue · {ownsCrew ? 'equip it in the Skins tab' : 'recruit its crew to wear it'}</motion.p>
                     </>
                   )
                 })() : null}

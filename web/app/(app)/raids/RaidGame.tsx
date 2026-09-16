@@ -1687,7 +1687,7 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
         // MobileTabBar (~64px) + iOS home indicator + a comfort margin.
         // Height/scroll behavior lives in .raid-combat-region (browser =
         // natural document scroll, PWA = fixed-height internal scroller).
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
+        paddingBottom: 'calc(var(--tabbar-safe, 0px) + 48px)',
       }}>
         {/* Nav level bar — kept across all phases. NOTE: must NOT be
             position:sticky (or have transform/filter/will-change) — combined
@@ -2114,7 +2114,7 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
         userSelect: 'none',
         // Same scroll behavior as the playing phase (see .raid-combat-region)
         // so the Return to Port button is always reachable.
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
+        paddingBottom: 'calc(var(--tabbar-safe, 0px) + 48px)',
         // The region only ever scrolls vertically; overflow-y:auto makes the
         // browser compute overflow-x to auto too, so any sub-pixel horizontal
         // bleed shows a stray scrollbar. Pin it off.
@@ -2203,7 +2203,7 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
   }
 
   return (
-    <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
+    <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(var(--tabbar-safe, 0px) + 1rem)' }}>
 
       {/* ── Nav level bar ─────────────────────────────────────────────────────── */}
       {/* See note in playing-phase return — no position:sticky here either. */}

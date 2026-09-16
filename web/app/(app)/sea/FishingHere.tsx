@@ -265,6 +265,18 @@ function Sheet({ title, blurb, onClose, children }: {
   onClose: () => void
   children: React.ReactNode
 }) {
+  // Escape closes the sheet, and the chart's own Escape (which would stow the
+  // whole fishing card underneath it) never sees the press: capture phase,
+  // stopped here. Only mounted while open, so no open flag to watch.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.stopImmediatePropagation()
+      onClose()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [onClose])
   return (
     <motion.div data-no-steer
       onClick={e => { e.stopPropagation(); onClose() }}

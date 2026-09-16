@@ -852,7 +852,7 @@ export async function pickShipClass(
   if (GAUNTLET_LIVE && nodeId === GAUNTLET_UNLOCK_NODE) {
     try {
       await admin.from('mail_messages').insert({
-        subject: 'The Locker Opens — Davy Jones Gauntlet Unlocked',
+        subject: 'The Locker Opens: Davy Jones Gauntlet Unlocked',
         body: "You closed out Chapter 2. Word travels fast down in the dark, and something has taken notice.\n\nThe Davy Jones Gauntlet is open to you now. Descend as deep as you dare, fighting ship after ship while one pot swells with every kill. Cash out and it's all yours. Sink before you do and it goes to the deep with you.\n\nGo as deep as you can and you'll tear loose rewards that follow you topside. Find it under Expeditions.\n\n— Davy Jones",
         sender_label: 'Davy Jones',
         target_user_id: user.id,

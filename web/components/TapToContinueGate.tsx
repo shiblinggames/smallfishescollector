@@ -26,7 +26,7 @@ export default function TapToContinueGate({ visible, onTap }: Props) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          aria-label="Tap to continue"
+          aria-label="Press to continue"
           style={{
             position: 'fixed', inset: 0, zIndex: 70,
             background: 'transparent',
@@ -63,7 +63,7 @@ export default function TapToContinueGate({ visible, onTap }: Props) {
               whiteSpace: 'nowrap',
             }}
           >
-            Tap to continue →
+            Press to continue →
           </motion.span>
         </motion.button>
       )}

@@ -25,7 +25,7 @@ export default function PrizeModal({ cardName, variantName, prizeCode, onClose }
             ✦ Special Prize ✦
           </h2>
           <p className="font-karla font-300 text-[#a0a09a] text-sm leading-relaxed">
-            You pulled a <span className="text-[#f0ede8] font-500">{variantName} {cardName}</span> — one of the rarest cards in the game.
+            You pulled a <span className="text-[#f0ede8] font-500">{variantName} {cardName}</span>, one of the rarest cards in the game.
           </p>
         </div>
 

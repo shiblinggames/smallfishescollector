@@ -15,7 +15,7 @@
 // client. Embedded completion polls checkMembership inline; the hosted path
 // returns via /tavern?membership=success which we detect below.
 
-import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
+import { Component, useCallback, useEffect, useState, type ReactNode, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
@@ -145,12 +145,30 @@ export default function MembershipModal() {
 
   function close() { setOpen(false); router.refresh() }
 
+  // ── ESCAPE, BUT NOT OVER A HALF-TYPED CARD ─────────────────────────────
+  // Escape closes this like any dialog, except while the embedded Stripe form
+  // is up, when a stray key must not throw away a card number. Same rule the
+  // backdrop click follows below. Capture phase, so nothing else on window
+  // reads the same press.
+  const embeddedRef = useRef(false)
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || embeddedRef.current) return
+      e.stopImmediatePropagation()
+      close()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!open) return null
 
   const showEmbedded = step === 'pay' && !!stripePromise && !!clientSecret
+  embeddedRef.current = showEmbedded
 
   return (
-    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+    <div onClick={showEmbedded ? undefined : close} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <motion.div onClick={e => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
         style={{

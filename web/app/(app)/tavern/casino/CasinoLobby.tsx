@@ -27,7 +27,7 @@ const GOLD = '#f0c040'
 
 const DEN_GUIDE: LobbyGuideStep[] = [
   { coachId: 'den-wallet', ...GUIDES.doby, text: "Buy *chips* with your doubloons here. One purse plays every table, and you can cash out any time." },
-  { coachId: 'den-tables', ...GUIDES.kat, text: "*Blackjack, Slots, and Roulette* — spend your chips at any of them. Winnings ride until you cash out." },
+  { coachId: 'den-tables', ...GUIDES.kat, text: "*Blackjack, Slots, and Roulette*. Spend your chips at any of them. Winnings ride until you cash out." },
 ]
 
 const DEN_TABS = [
@@ -213,7 +213,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
           {panelOpen ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               <p className="font-karla" style={{ fontSize: '0.66rem', color: '#a09988', lineHeight: 1.4, textAlign: 'center' }}>
-                {chips === 0 ? <>Buy chips to play any table — cash out any time.</> : <>Top up. Chips work at every table.</>}
+                {chips === 0 ? <>Buy chips to play any table. Cash out any time.</> : <>Top up. Chips work at every table.</>}
               </p>
               {/* Five increments + a Max cell in one 3-col grid = two tidy rows.
                   (Drop the smallest preset so the Max cell makes six total.) */}

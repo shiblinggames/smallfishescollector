@@ -670,7 +670,7 @@ export default function Minimap({
       ctx.fillStyle = 'rgba(250,214,208,0.95)'
       ctx.font = '700 8px ui-sans-serif, system-ui'
       ctx.textAlign = 'center'
-      ctx.fillText(finn.ready ? 'Finn — waiting' : 'Finn', x, y - 11)
+      ctx.fillText(finn.ready ? 'Finn · waiting' : 'Finn', x, y - 11)
     }
 
     // ── YOUR CREW ────────────────────────────────────────────────────────

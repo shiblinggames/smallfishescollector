@@ -68,7 +68,7 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
 
       {/* The host presides — a dashing crimson cavalier who runs the room. */}
       <div style={{ padding: '0.2rem 0.2rem 0.1rem' }}>
-        <ParlorHost line="Welcome back to the Parlor. Sharpen your wits — the good stakes aren't just coin tonight." />
+        <ParlorHost line="Welcome back to the Parlor. Sharpen your wits. The good stakes aren't just coin tonight." />
       </div>
 
       {/* Parlor Standing — the mastery rank you climb across both games. Points
@@ -81,7 +81,7 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
       <ParlorClaim points={parlorPoints} claimedGems={parlorRankGemsClaimed} />
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        Doubloons for a right answer — and <span style={{ color: '#c084fc' }}>gems ◆</span> to collect each time you climb a Parlor rank. Fresh boards every Monday.
+        Doubloons for a right answer, and <span style={{ color: '#c084fc' }}>gems ◆</span> to collect each time you climb a Parlor rank. Fresh boards every Monday.
       </p>
 
       {/* The Captain's Board — live */}

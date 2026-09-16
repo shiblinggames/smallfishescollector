@@ -182,11 +182,11 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
       </div>
 
       <div style={{ padding: '0.1rem 0.1rem 0.2rem' }}>
-        <ParlorHost size={58} line={playedToday ? "Back tomorrow for your next card. The board keeps its secrets till then." : "Pick a card and I'll turn it over. Answer true and the coin — and the gems — are yours."} />
+        <ParlorHost size={58} line={playedToday ? "Back tomorrow for your next card. The board keeps its secrets till then." : "Pick a card and I'll turn it over. Answer true and the coin and the gems are yours."} />
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        Twelve cards chalked fresh each Monday. {picksAllowed === 2 ? 'Captains play two a day' : 'Play one a day'} — pick a card and the clue is revealed; answer it for doubloons. The richer the card, the harder the question. Choose wisely.
+        Twelve cards chalked fresh each Monday. {picksAllowed === 2 ? 'Captains play two a day' : 'Play one a day'}. Pick a card and the clue is revealed, answer it for doubloons. The richer the card, the harder the question. Choose wisely.
       </p>
 
       {/* Gems now come from climbing your Parlor rank (a right answer here or in
@@ -382,7 +382,7 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
                       className="font-cinzel font-700"
                       style={{ fontSize: '0.86rem', textAlign: 'center', marginTop: 5, color: GEM_COLOR, textShadow: `0 0 14px ${GEM_COLOR}66` }}
                     >
-                      New rank reached — collect your gems in the Parlor
+                      New rank reached. Collect your gems in the Parlor
                     </motion.p>
                   )}
                   {shownExplanation && (
