@@ -2013,6 +2013,24 @@ were left exactly as they were, because they are why it reads at all.
 - A wake trail (the last minute of the hull's track, fading) was built the same day and
   REMOVED on sight: "I don't like the wake trail." Do not re-propose.
 
+### The lookahead: the bow aims round the rock ahead (2026-09-16)
+
+Steering had no avoidance. A set course sailed a straight line and met rock by contact: pushed
+out along the shore's normal with only the inward velocity removed, so the hull slides along a
+coast and rounds a round island. It jams in a bay, because the line to the target points into
+the pocket and the slide has nowhere to go. With compass marks now setting courses that became
+the game's own suggestion, so it was answered without a pathfinder.
+
+**The rule** (in the sail loop, just before the heading becomes velocity): if the line ahead is
+blocked within 520px by an obstacle in the near list, the bow aims at the tangent of the nearest
+blocking rock (radius plus a 44px margin) on the side the line already leans to, the shorter way
+round. The chosen side is held for 0.8s per rock so a hull on a rock's centreline does not
+shiver. Only while the course was SET: with the stick held the captain is steering. A target
+that lies before the rock (a mooring off its coast) is left alone. No tangent found means the
+old heading and the old slide. Capsules are treated as a circle at their nearest point, which
+the slide corrects. Known limit: a deep narrow inlet with the target behind its mouth can still
+catch it; the fix for that would be a pathfinder, not worth it unless a tester finds one.
+
 ### One chart at the helm (2026-09-16)
 
 Two open charts on one account (a forgotten desktop tab, then the phone) each saved the boat's

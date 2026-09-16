@@ -1939,6 +1939,11 @@ export default function SeaMap({
    * times a second while under way, none at all at anchor.
    */
   const nearObs = useRef<Obstacle[]>([])
+  /** Which way round the rock ahead this course is going, and until when.
+   *  See the lookahead in the loop: a side chosen once is kept for most of a
+   *  second, or a hull sitting exactly on a rock's centreline would pick a
+   *  new side every frame and shiver in front of it. */
+  const tangentSide = useRef<{ o: Obstacle | null; s: number; until: number }>({ o: null, s: 1, until: 0 })
   const nearAt = useRef({ x: Infinity, y: Infinity })
   /** Mirrored for the frame loop, which mounts once and would otherwise hold
    *  whatever was cleared when the page loaded — so a chapter finished in this
@@ -7650,7 +7655,57 @@ export default function SeaMap({
       const dx = target.current.x - pos.current.x
       const dy = target.current.y - pos.current.y
       const d = Math.hypot(dx, dy)
-
+      // ── THE LOOKAHEAD ──────────────────────────────────────────────
+      //
+      // The hull sailed a straight line to its target and met rock by
+      // contact: pushed out along the normal, sliding along the shore. That
+      // rounds a round island and it jams in a bay, because the line to the
+      // target points into the pocket and the slide has nowhere left to go.
+      // Pressing a compass mark made that the game's own suggestion rather
+      // than the captain's tap, so it had to be answered.
+      //
+      // No pathfinding. If the line ahead is blocked within LOOK, the bow aims
+      // at the TANGENT of the nearest blocking rock on the side the line
+      // already leans to, which is the shorter way round. Past the rock the
+      // line to the target is clear again and it carries on. Only while the
+      // course was SET (a tap, a mark): with the stick held the captain is
+      // steering and this would fight them. When it cannot find a tangent it
+      // aims where it always did, and the slide below is the exact code that
+      // ran before this existed.
+      let ax = dx, ay = dy
+      if (d > ARRIVE && !boxHeld.current && !fightOnRef.current) {
+        const LOOK = 520, MARGIN = 44
+        const ux = dx / d, uy = dy / d
+        let best: { o: Obstacle; cx: number; cy: number; R: number; tPar: number } | null = null
+        for (const o of nearObs.current) {
+          const c = obstacleNearest(o, pos.current.x, pos.current.y)
+          const cx = c.x - pos.current.x, cy = c.y - pos.current.y
+          const tPar = cx * ux + cy * uy
+          const R = o.r + MARGIN
+          if (tPar <= 0 || tPar - R > Math.min(d, LOOK)) continue
+          const perp = Math.abs(cx * uy - cy * ux)
+          if (perp >= R) continue
+          // The target is on this side of the rock (a mooring off its coast):
+          // nothing to go round.
+          const chord = Math.sqrt(Math.max(0, R * R - perp * perp))
+          if (d <= tPar - chord) continue
+          if (!best || tPar < best.tPar) best = { o, cx, cy, R, tPar }
+        }
+        if (best) {
+          const L = Math.hypot(best.cx, best.cy)
+          if (L > best.R) {
+            const base = Math.atan2(best.cy, best.cx)
+            const theta = Math.asin(best.R / L)
+            const lean = ux * best.cy - uy * best.cx
+            const hs = tangentSide.current
+            const s = hs.o === best.o && now < hs.until ? hs.s : (lean >= 0 ? 1 : -1)
+            if (hs.o !== best.o || hs.s !== s) tangentSide.current = { o: best.o, s, until: now + 800 }
+            const aim = base - s * theta
+            ax = Math.cos(aim); ay = Math.sin(aim)
+          }
+        }
+      }
+      const al = Math.hypot(ax, ay) || 1
       let want = 0
       if (d > ARRIVE) {
         const t = Math.min(1, (d - ARRIVE) / (SLOW - ARRIVE))
@@ -7672,8 +7727,8 @@ export default function SeaMap({
         const v = stickVec(boxHeld.current)
         if (v) want *= v.mag
       }
-      const wx = d > 0.001 ? (dx / d) * want : 0
-      const wy = d > 0.001 ? (dy / d) * want : 0
+      const wx = d > 0.001 ? (ax / al) * want : 0
+      const wy = d > 0.001 ? (ay / al) * want : 0
       // EXPONENTIAL, not linear. `min(1, ACCEL * dt)` makes the boat accelerate
       // at a rate that depends on the frame rate: a phone dropping to 30fps
       // reaches speed differently to one holding 60, so the same course feels
