@@ -10223,7 +10223,7 @@ hullRef={hullRefFor(t.key)} />
             transition={{ duration: 0.16, ease: 'easeOut' }}
             style={{
               position: 'absolute', left: '50%', transform: 'translateX(-50%)',
-              bottom: HELM_BOTTOM + HELM_D + 10, zIndex: Z.action + 1,
+              bottom: finePointer ? HELM_BOTTOM + 10 : HELM_BOTTOM + HELM_D + 10, zIndex: Z.action + 1,
               width: 'min(84vw, 320px)', display: 'flex', flexDirection: 'column', gap: 6,
             }}>
             <p className="font-karla font-800 uppercase" style={{
@@ -10261,7 +10261,13 @@ hullRef={hullRefFor(t.key)} />
         }
         const box = {
           position: 'absolute' as const, left: 0, right: 0,
-          bottom: HELM_BOTTOM + HELM_D + 10, zIndex: Z.action,
+          // ── ON A MOUSE, NO WHEEL TO CLEAR ─────────────────────────────
+          // 214px up on a phone, past the helm's upper arc. The helm is
+          // display:none on a fine pointer, so that left the pill floating a
+          // quarter of the way up a monitor with empty water under it. It sits
+          // where the cast button lands when you fish instead, so the one
+          // becomes the other in place.
+          bottom: finePointer ? HELM_BOTTOM + 10 : HELM_BOTTOM + HELM_D + 10, zIndex: Z.action,
           display: 'flex', justifyContent: 'center', padding: '0 1rem',
         }
 
@@ -11343,7 +11349,7 @@ hullRef={hullRefFor(t.key)} />
           and distances on them are the single largest thing on this screen that
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!hudOff && (
-        <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends} regulars={regulars}
+        <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends} regulars={regulars} fine={finePointer}
           hullSpeed={hullSpeed} lockLine={lockLine} onPoint={pointAt}
           finn={finnBearing}
           // WHICH SEA'S HEADINGS TO GIVE — see the note on the prop. Past the
@@ -16593,13 +16599,15 @@ function fmtSail(seconds: number): string {
   const m = Math.floor(s / 60), r = s % 60
   return r ? `${m}m ${r}s` : `${m}m`
 }
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next, side, hullSpeed, lockLine, onPoint }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next, side, hullSpeed, lockLine, onPoint, fine }: {
   /** Full-sail speed multiplier for this hull, for the sailing time. */
   hullSpeed: number
   /** Why a band is shut, in the words the lock wears everywhere else. */
   lockLine: (p: Place) => string
   /** Light the road toward a mark's world position. It points, it does not sail. */
   onPoint: (x: number, y: number) => void
+  /** A mouse: the helm is hidden, so the bottom band the marks avoid is shallower. */
+  fine: boolean
   /**
    * ── WHICH HALF OF THE GAME YOU ARE SAILING ──────────────────────────────
    *
@@ -16693,7 +16701,9 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
    *  row; side markers are unaffected because their x pins them first. */
   // Past the helm's upper arc, not just past the bottom edge — 170 left the
   // Abyss's label lying on the wheel.
-  const myBot = Math.min(214, hh * 0.5)
+  // On a mouse there is no wheel, only the pill, which sits lower (see the
+  // action box), so the marks may come down to just above it.
+  const myBot = Math.min(fine ? 160 : 214, hh * 0.5)
 
   /**
    * WHAT DESERVES AN ARROW, once the zones became rings.
