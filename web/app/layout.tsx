@@ -6,6 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import PageTransition from '@/components/PageTransition'
 import ClientBackground from '@/components/ClientBackground'
 import MobileTabBar from '@/components/MobileTabBar'
+import { SEARCH_DESCRIPTION } from '@/lib/homeCopy'
 import BadgeWatcher from '@/components/BadgeWatcher'
 import ProfileLive from '@/components/ProfileLive'
 import BackgroundAnimationPauser from '@/components/BackgroundAnimationPauser'
@@ -56,19 +57,19 @@ export const metadata: Metadata = {
     default: 'Small Fishes: Seas the Booty',
     template: '%s · Small Fishes',
   },
-  description: 'A fishing game that got a bit out of hand. Sail an open sea, catch 152 species, sign a crew, and take a ship into nine boss fights. Free, in your browser.',
+  description: SEARCH_DESCRIPTION,
   applicationName: 'Small Fishes',
   openGraph: {
     type: 'website',
     siteName: 'Small Fishes: Seas the Booty',
     title: 'Small Fishes: Seas the Booty',
-    description: 'A fishing game that got a bit out of hand. Sail an open sea, catch 152 species, sign a crew, and take a ship into nine boss fights. Free, in your browser.',
+    description: SEARCH_DESCRIPTION,
     url: '/',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Small Fishes: Seas the Booty',
-    description: 'A fishing game that got a bit out of hand. Sail an open sea, catch 152 species, sign a crew, and take a ship into nine boss fights. Free, in your browser.',
+    description: SEARCH_DESCRIPTION,
   },
 }
 

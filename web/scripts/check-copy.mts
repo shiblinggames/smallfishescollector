@@ -37,6 +37,7 @@ import { PERSONAS } from '../lib/seaTraders'
 import { GOSSIP } from '../lib/tavernGossip'
 import { HOUSE, FURNITURE, ROOMS } from '../lib/homestead'
 import { FIRST_VOYAGE, GATE_TOUR } from '../lib/seaOnboarding'
+import { HOME, SEARCH_DESCRIPTION, SOCIAL_CARD, SHOT_ALT } from '../lib/homeCopy'
 
 let findings = 0
 const fail = (where: string, why: string, text?: string) => {
@@ -81,6 +82,19 @@ const SOURCES: Src[] = [
   // written: they are the most-read prose in the game by a distance, and they
   // are the ONE place a stray dash is seen by every single player.
   { label: 'onboarding', strings: [...FIRST_VOYAGE, ...GATE_TOUR].map(b => b.text) },
+  // ── THE HOMEPAGE ───────────────────────────────────────────────────────
+  // Every word a stranger reads before they have an account, plus the search
+  // description and the social card, which are read by far more people than the
+  // page is. It is meant to be edited by hand and often, and it is the one copy
+  // source with nobody downstream to catch a dash, so it is caught here.
+  { label: 'homepage', strings: [
+    HOME.eyebrow, HOME.title, HOME.tagline, HOME.pitch,
+    HOME.playButton, HOME.trailerButton, HOME.underButtons, HOME.signInLink,
+    HOME.closingButton, HOME.closingNote,
+    ...HOME.bands.flatMap(b => [b.eyebrow, b.title, ...b.body]),
+    SEARCH_DESCRIPTION, SOCIAL_CARD.line, SOCIAL_CARD.note,
+    ...Object.values(SHOT_ALT).flatMap(a => [a.desktop, a.phone]),
+  ] },
   // The homestead: every rung of the house and every furnishing.
   { label: 'homestead', strings: [
     ...HOUSE.flatMap(b => [b.name, b.blurb, b.adds]),

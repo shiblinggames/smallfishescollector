@@ -5,11 +5,11 @@ import { join } from 'node:path'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import TrailerFrame, { type Trailer } from './TrailerFrame'
+import { HOME, SHOT_ALT, SEARCH_DESCRIPTION, TRAILER_LABEL, type HomeBand } from '@/lib/homeCopy'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
-  description:
-    'A fishing game that got a bit out of hand. Sail an open sea, catch 152 species, sign a crew, and take a ship into nine boss fights. Free, in your browser.',
+  description: SEARCH_DESCRIPTION,
 }
 
 /**
@@ -54,6 +54,20 @@ export const metadata: Metadata = {
  * That is deliberate and it is the same rule the sign-in door follows: NOTHING
  * GOES IN A SLOT UNTIL SOMETHING TRUE GOES IN IT. A stale screenshot is worse
  * than no screenshot, which is the whole reason this rewrite happened.
+ *
+ * ── THE WORDS ARE NOT IN THIS FILE ──────────────────────────────────────────
+ *
+ * They are in `lib/homeCopy.ts`, all of them, with nothing else in there. Copy
+ * wants editing by somebody who is thinking about the sentence and not about
+ * where the closing tag went, and it was buried in JSX between two style
+ * objects. Everything a visitor reads now lives in one list of plain strings,
+ * along with the search description and the social card, and the page builds
+ * itself around whatever is in it: add a band, remove one, reorder them, and
+ * the art follows and the sides keep alternating.
+ *
+ * Nothing in here needs touching to change a word. That file is also wired into
+ * `npm run check`, so an em-dash in it fails the build rather than the taste
+ * test.
  *
  * ── AND IT IS IN HIS VOICE, NOT A TRAILER'S ─────────────────────────────────
  *
@@ -117,16 +131,16 @@ const TRAILER: Trailer | null = (() => {
 
 const SHOTS = {
   sea: {
-    desktop: shot('sea-desktop.jpg', 'The open sea chart, with the boat under sail and the fog rolled back'),
-    phone: shot('sea-phone.jpg', 'The same sea on a phone'),
+    desktop: shot('sea-desktop.jpg', SHOT_ALT.sea.desktop),
+    phone: shot('sea-phone.jpg', SHOT_ALT.sea.phone),
   },
   cast: {
-    desktop: shot('cast-desktop.jpg', 'The fishing dial mid cast, the needle coming round to the perfect band'),
-    phone: shot('cast-phone.jpg', 'A perfect catch landing on the fishing dial'),
+    desktop: shot('cast-desktop.jpg', SHOT_ALT.cast.desktop),
+    phone: shot('cast-phone.jpg', SHOT_ALT.cast.phone),
   },
   fight: {
-    desktop: shot('fight-desktop.jpg', 'A turn of ship combat, the aim bar mid swing'),
-    phone: shot('fight-phone.jpg', 'Ship combat on a phone'),
+    desktop: shot('fight-desktop.jpg', SHOT_ALT.fight.desktop),
+    phone: shot('fight-phone.jpg', SHOT_ALT.fight.phone),
   },
 } as const
 
@@ -174,17 +188,22 @@ function BandArt({ desktop, phone }: { desktop: Shot | null; phone: Shot | null 
   return null
 }
 
-function Band({
-  eyebrow, title, children, desktop, phone, flip, delay,
-}: {
-  eyebrow: string
-  title: string
-  children: React.ReactNode
-  desktop: Shot | null
-  phone: Shot | null
-  flip?: boolean
-  delay: string
-}) {
+/**
+ * One section, built from one entry in HOME.bands. Which side the art sits on
+ * and how late the section rises are worked out from its POSITION, so neither
+ * is a thing anybody has to think about while writing: reorder the list and the
+ * page keeps alternating correctly on its own.
+ */
+function Band({ band, index }: { band: HomeBand; index: number }) {
+  const { eyebrow, title } = band
+  const pair = band.art ? SHOTS[band.art] : null
+  const desktop = pair?.desktop ?? null
+  const phone = pair?.phone ?? null
+  const flip = index % 2 === 1
+  const delay = `${(0.24 + index * 0.06).toFixed(2)}s`
+  const children = band.body.map((para, i) => (
+    <p key={i} style={{ margin: i === 0 ? 0 : '0.9rem 0 0' }}>{para}</p>
+  ))
   const art = desktop || phone
   const words = (
     <div>
@@ -251,7 +270,7 @@ export default async function HomePage() {
         {/* ── THE MASTHEAD. The pun is the identity, so it leads. ── */}
         <div className="text-center landing-rise" style={{ animationDelay: '0.05s' }}>
           <p className="font-karla font-600 uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.22em', color: '#7ab8cc', margin: 0 }}>
-            Shibling Games
+            {HOME.eyebrow}
           </p>
 
           <h1 className="font-cinzel font-900" style={{
@@ -259,18 +278,17 @@ export default async function HomePage() {
             color: '#f0ede8', margin: '1.1rem 0 0.5rem',
             textShadow: '0 2px 40px rgba(14,80,120,0.8), 0 0 80px rgba(14,116,144,0.4)',
           }}>
-            Small Fishes
+            {HOME.title}
           </h1>
           <p className="font-cinzel italic" style={{ fontSize: '1.3rem', color: '#f0c040', textShadow: '0 0 24px rgba(240,192,64,0.5)', margin: 0 }}>
-            Seas the Booty.
+            {HOME.tagline}
           </p>
 
           <p className="font-karla font-300" style={{
             fontSize: '1.08rem', lineHeight: 1.7, color: '#c3d6e2',
             margin: '1.5rem auto 0', maxWidth: 560,
           }}>
-            I made a fishing game and it got a bit out of hand. There’s a whole sea to sail now, a
-            crew to sign, and nine boss fights waiting at the end of it. Runs in a browser tab.
+            {HOME.pitch}
           </p>
 
           {/* THE BUTTON, ABOVE THE FOLD, and pointed at the right door. It went
@@ -285,20 +303,20 @@ export default async function HomePage() {
             <Link href="/register" className="btn-gold" style={{
               minWidth: 210, padding: '1rem 2rem', fontSize: '1rem', letterSpacing: '0.1em',
             }}>
-              Play free
+              {HOME.playButton}
             </Link>
             {TRAILER && (
               <a href="#trailer" className="btn-ghost" style={{
                 minWidth: 210, padding: '1rem 2rem', fontSize: '1rem', letterSpacing: '0.1em',
               }}>
-                Watch the trailer
+                {HOME.trailerButton}
               </a>
             )}
           </div>
           <p className="font-karla" style={{ fontSize: '0.76rem', color: '#8fa3b5', marginTop: 14 }}>
-            No download, no cost, no catch.{' '}
+            {HOME.underButtons}{' '}
             <Link href="/login" style={{ color: '#9ec3d4', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-              Already sailing?
+              {HOME.signInLink}
             </Link>
           </p>
         </div>
@@ -309,95 +327,17 @@ export default async function HomePage() {
              exact lie this rewrite was about. ── */}
         {TRAILER && (
           <section id="trailer" className="landing-rise" style={{ animationDelay: '0.16s', marginTop: '3.6rem', scrollMarginTop: '2rem' }}>
-            <TrailerFrame trailer={TRAILER} label="Watch the trailer" />
+            <TrailerFrame trailer={TRAILER} label={TRAILER_LABEL} />
           </section>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(3.6rem, 8vw, 6rem)', marginTop: 'clamp(3.6rem, 8vw, 6rem)' }}>
 
-          {/* THE SEA FIRST. It is the thing the old page never mentioned and it
-              is what the game now is. */}
-          <Band
-            eyebrow="The sea"
-            title="There’s no zone menu. Just the sea."
-            desktop={SHOTS.sea.desktop}
-            phone={SHOTS.sea.phone}
-            delay="0.24s"
-          >
-            <p style={{ margin: 0 }}>
-              The whole chart is one piece of water and it starts out dark. You clear the fog by
-              sailing into it. And you cast wherever you happen to be, so how deep you’re fishing is
-              really just how far out you were willing to go.
-            </p>
-            <p style={{ margin: '0.9rem 0 0' }}>
-              There are 27 isles to find out there, plus a fair amount of buried stuff that isn’t
-              drawn on the map at all. Night falls every 48 minutes. And 9 regulars work that water
-              who’ll start holding things back for you once you’ve brought them enough of what
-              they’re after.
-            </p>
-          </Band>
+          {/* THE ORDER IS THE ORDER IN lib/homeCopy.ts. The sea leads because it
+              is what the game now is and the page before this one never said so
+              once, but that is an argument to have in the copy file, not here. */}
+          {HOME.bands.map((band, i) => <Band key={band.title} band={band} index={i} />)}
 
-          {/* THEN THE CAST. The thing you do a thousand times. */}
-          <Band
-            eyebrow="The cast"
-            title="A needle spins and you get about a second"
-            desktop={SHOTS.cast.desktop}
-            phone={SHOTS.cast.phone}
-            flip
-            delay="0.3s"
-          >
-            <p style={{ margin: 0 }}>
-              Hit the band clean and you keep the fish and the streak. Miss it and the streak’s gone.
-              The window gets smaller the deeper you fish, which is sort of the whole problem.
-            </p>
-            <p style={{ margin: '0.9rem 0 0' }}>
-              152 species across 5 zones. Six of them are giants down in the Ancient Deep that you
-              can’t sell at all. You just keep those.
-            </p>
-          </Band>
-
-          {/* AND WHERE THE FISHING GOES. Raids and crew are one arc, so they are
-              one band: naming every mode separately is how a page turns back
-              into a features list. */}
-          <Band
-            eyebrow="The fight"
-            title="And then there’s the part with cannons"
-            desktop={SHOTS.fight.desktop}
-            phone={SHOTS.fight.phone}
-            delay="0.36s"
-          >
-            <p style={{ margin: 0 }}>
-              Turn-based ship fights, and you aim every shot yourself on a moving bar. Four chapters.
-              It opens on coastal pirates and ends somewhere a lot worse, and then there’s a finale
-              I’m pretty proud of that you fight on the fishing dial.
-            </p>
-            <p style={{ margin: '0.9rem 0 0' }}>
-              Your crew are sea creatures you sign one at a time and level up to 100. If one dies out
-              there it’s gone for good. That part isn’t going to change.
-            </p>
-          </Band>
-
-          {/* THE QUESTION EVERYBODY IS ACTUALLY ASKING. Put plainly, with the
-              price in it. A free-to-play game that will not say what it sells is
-              a game you assume is selling advantages. */}
-          <Band
-            eyebrow="The cost"
-            title="It’s free, and I’m not going to nickel and dime you"
-            desktop={null}
-            phone={null}
-            delay="0.42s"
-          >
-            <p style={{ margin: 0 }}>
-              Everything in here can be earned by playing. No seasons, nothing expires, and nothing
-              you buy makes a fish bite faster or a shot hit harder. I really didn’t want this to be
-              one of those games.
-            </p>
-            <p style={{ margin: '0.9rem 0 0' }}>
-              Captain is $9.99 one time, not a subscription, and it opens the deep end - the Ancient
-              Deep, the last chapter, the harder gauntlets. The first three chapters are a full game
-              on their own and they cost nothing.
-            </p>
-          </Band>
         </div>
 
         {/* ── The second ask, for whoever read to the bottom. Same door,
@@ -408,11 +348,10 @@ export default async function HomePage() {
             display: 'block', maxWidth: 300, margin: '0 auto',
             padding: '1rem 2rem', fontSize: '1rem', letterSpacing: '0.1em',
           }}>
-            Make a captain
+            {HOME.closingButton}
           </Link>
           <p className="font-karla" style={{ fontSize: '0.76rem', color: '#7d90a2', marginTop: 14 }}>
-            Still in open beta, so expect the odd rough edge. No password to remember either, I just
-            email you a link.
+            {HOME.closingNote}
           </p>
         </div>
 

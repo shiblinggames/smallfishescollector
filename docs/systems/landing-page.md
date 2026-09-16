@@ -100,6 +100,35 @@ open it. Before September 2026 there was no image at all and the description was
 `Redeem your pack code and collect all 36 digital fish cards`, which is an
 economy the game retired months ago.
 
+## Editing the words
+
+**Every word on the page is in `web/lib/homeCopy.ts` and nothing else is in it.**
+No markup, no styling, no logic. That file is the one to open; `page.tsx` builds
+itself around whatever is in it and never needs touching to change a sentence.
+
+It holds the masthead, the buttons, every band, the closing line, the search
+description, the social card lines and the screenshot alt text. Bands are a
+list: add one, delete one, reorder them, and the art follows its `art` key while
+the sides keep alternating and the rise delays recompute from position. A band
+with `art: null` renders as words at full width.
+
+Three things make it safe to edit by hand:
+
+- **Every string is in backticks**, so apostrophes and quote marks can be typed
+  freely. Only a backtick itself and the sequence `${` will break it.
+- **`npm run check` polices it**, as the `homepage` source in
+  `scripts/check-copy.mts`. An em-dash or en-dash anywhere in that file exits 1,
+  and `prebuild` runs it, so a dash cannot reach the site. Verified by injecting
+  one.
+- **`npm run build` fails loudly** on broken syntax, so nothing malformed
+  deploys.
+
+The numbers in that file are checked against the code (see "The copy" below).
+Changing one means checking that section first.
+
+One thing is NOT in there: `web/public/manifest.json`, the installed-app card.
+It is JSON so it cannot import, and it changes about once a year.
+
 ## The voice
 
 **The page is first person and it is Kong's voice, not a trailer's.** Settled
