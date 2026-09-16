@@ -10683,7 +10683,7 @@ hullRef={hullRefFor(t.key)} />
           rest of the furniture while the rod or the guns are out. */}
       <BayBanner bay={hudOff ? null : insideBay} />
 
-      <WaterBanner
+      <WaterBanner lockLine={lockLine}
         place={!hudOff && near && near.kind === 'water' ? near : null}
         locked={near ? locked(near) : false}
         // BELOW THE DISC ROW ON A PHONE. The banner centres itself and the
@@ -16241,7 +16241,9 @@ const BayBanner = memo(function BayBanner({ bay }: { bay: string | null }) {
   )
 })
 
-function WaterBanner({ place, locked, lowered }: {
+function WaterBanner({ place, locked, lowered, lockLine }: {
+  /** Why a band is shut, from the chart, which is the only one that knows. */
+  lockLine: (p: Place) => string
   place: Place | null; locked: boolean
   /** Drop below the top row. Two callers, two reasons: while the rod is out
    *  the level bar owns the top of the screen, and on a phone the HUD discs
