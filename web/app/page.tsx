@@ -129,6 +129,9 @@ const TRAILER: Trailer | null = (() => {
   return null
 })()
 
+/** The phone strip under the title: only the captures that are actually there. */
+const STRIP = HOME.strip.filter(s => has(s.file))
+
 const SHOTS = {
   sea: {
     desktop: shot('sea-desktop.jpg', SHOT_ALT.sea.desktop),
@@ -328,6 +331,31 @@ export default async function HomePage() {
         {TRAILER && (
           <section id="trailer" className="landing-rise" style={{ animationDelay: '0.16s', marginTop: '3.6rem', scrollMarginTop: '2rem' }}>
             <TrailerFrame trailer={TRAILER} label={TRAILER_LABEL} />
+          </section>
+        )}
+
+        {/* ── THREE PHONES, THE WAY AN APP STORE DOES IT ────────────────
+            Three true captures side by side with one line under each. The
+            page had no picture at all until these landed, and the band slots
+            below still wait on desktop captures; this row is the honest
+            version with what exists today. On a phone it scrolls sideways
+            rather than stacking three tall frames into a mile of page. */}
+        {STRIP.length > 0 && (
+          <section className="landing-rise" style={{ animationDelay: '0.2s', marginTop: 'clamp(3rem, 6vw, 4.4rem)' }}>
+            <div className="lp-strip">
+              {STRIP.map(s => (
+                <figure key={s.file} style={{ margin: 0 }}>
+                  <div className="lp-phone">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/lp/${s.file}`} alt={s.alt} loading="lazy" decoding="async"
+                      style={{ aspectRatio: '9 / 17.5', objectFit: 'cover', objectPosition: 'top' }} />
+                  </div>
+                  <figcaption className="font-karla" style={{ textAlign: 'center', fontSize: '0.82rem', color: '#9fb6c6', marginTop: 12, lineHeight: 1.5 }}>
+                    {s.caption}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
           </section>
         )}
 

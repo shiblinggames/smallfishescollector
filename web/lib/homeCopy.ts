@@ -71,6 +71,17 @@ export const HOME = {
   /** The sign-in link at the end of that line, for people who already play. */
   signInLink: `Already sailing?`,
 
+  /**
+   * Three phone captures in a row under the title, left to right, each with
+   * one short line under it. The files live in web/public/lp; a file that is
+   * not there is skipped, so the row shrinks rather than showing a hole.
+   */
+  strip: [
+    { file: `online-fishing.jpg`, caption: `Waiting on a bite`, alt: `The rowboat, the parrot, and a line in the water` },
+    { file: `online-saltroad.jpg`, caption: `The regulars you get to know`, alt: `The Salt Road, nine regulars and how well each knows you` },
+    { file: `online-almanac.jpg`, caption: `Every catch, kept in the Almanac`, alt: `The Angler's Almanac, the collection by water` },
+  ],
+
   /** The sections, in the order they appear. */
   bands: [
     {

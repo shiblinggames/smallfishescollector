@@ -2634,6 +2634,32 @@ body.hardcore-gauntlet::after {
 }
 .lp-phone img { display: block; width: 100%; height: auto; border-radius: 21px; }
 
+/* THE STRIP. Three phones in a row on anything wide enough; on a phone one
+   row that scrolls sideways with a snap, which is how every app store shows
+   the same thing, rather than three tall frames stacked into a long page. */
+.lp-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.6rem;
+  max-width: 880px;
+  margin: 0 auto;
+}
+@media (max-width: 760px) {
+  .lp-strip {
+    display: flex;
+    max-width: none;
+    margin: 0 -1.5rem;
+    padding: 0 1.5rem;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .lp-strip::-webkit-scrollbar { display: none; }
+  .lp-strip > figure { flex: 0 0 68%; scroll-snap-align: center; }
+}
+
 /* THE PAIR. The phone sits on the desktop shot's corner on a wide screen and
    drops underneath it on a narrow one, where an overlap would cover the thing
    it is meant to be standing next to. */

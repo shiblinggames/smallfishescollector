@@ -72,7 +72,17 @@ import LoginForm from './LoginForm'
  * A WIDE SHOT OF THE GAME, or null. See the note above: the page lays itself
  * out both ways, and the only rule is that whatever goes here is CURRENT.
  */
-const HERO: { src: string; alt: string; w: number; h: number } | null = null
+/**
+ * A PHONE, not a wide shot, for now. The slot was drawn for a landscape
+ * capture of the chart from a desktop window (see the note above), and that
+ * capture still does not exist. What does exist is a true phone capture of the
+ * cast, the fish in the rowboat with the parrot waiting on a bite, which is the
+ * game's charm in one frame. It stands in the phone frame the landing page
+ * uses. When a wide shot lands, switch `kind` and the frame follows.
+ */
+const HERO: { kind: 'phone' | 'wide'; src: string; alt: string } | null = {
+  kind: 'phone', src: '/lp/online-fishing.jpg', alt: 'Waiting on a bite, in the rowboat with the parrot',
+}
 
 export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
   const isNew = mode === 'new'
@@ -166,7 +176,7 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
               <p className="font-karla" style={{
                 fontSize: '0.72rem', color: '#7d93a6', marginTop: 14, maxWidth: 420, lineHeight: 1.6,
               }}>
-                Nothing to install, nothing to pay. Everything in the game can be earned by playing it.
+                Free to play. Explore the open seas today!
               </p>
             )}
           </div>
@@ -178,9 +188,16 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
               in it, and the page is centred while it is. */}
           {HERO && (
             <div className="signin-art landing-rise" style={{ animationDelay: '0.18s' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img width={HERO.w} height={HERO.h} src={HERO.src} alt={HERO.alt}
-                className="signin-hero" loading="eager" decoding="async" />
+              {HERO.kind === 'phone' ? (
+                <div className="lp-phone" style={{ width: 'min(300px, 70%)', margin: '0 auto' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={HERO.src} alt={HERO.alt} loading="eager" decoding="async"
+                    style={{ aspectRatio: '9 / 17.5', objectFit: 'cover', objectPosition: 'top' }} />
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={HERO.src} alt={HERO.alt} className="signin-hero" loading="eager" decoding="async" />
+              )}
               <p className="font-karla signin-cap" style={{
                 fontSize: '0.76rem', color: '#9fb6c6', textAlign: 'center',
                 margin: '0.85rem auto 0', maxWidth: 380, lineHeight: 1.6,
