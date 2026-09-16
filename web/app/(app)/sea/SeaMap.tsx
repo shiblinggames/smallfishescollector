@@ -4231,9 +4231,21 @@ export default function SeaMap({
    * A mark is a course now. Same road the campaign draws to its next stop,
    * same fade, and the helm turns toward it the way a tap on open water does.
    */
-  const goTo = useCallback((x: number, y: number) => {
+  /**
+   * ── A COURSE THAT FOLLOWS ─────────────────────────────────────────────
+   *
+   * The regulars work their water, so a course set to where Dennis WAS is a
+   * course to empty sea by the time you get there, which is what happened.
+   * A mark for somebody who moves hands in `at`, and the loop re-aims at them
+   * every frame until you arrive or set any other course. Cancelled by
+   * comparison, not by editing every place a course can be set: if the target
+   * is not where the follow last put it, something else moved it.
+   */
+  const followRef = useRef<{ at: () => Vec; last: Vec } | null>(null)
+  const goTo = useCallback((x: number, y: number, at?: () => Vec) => {
     vibrate(8)
     target.current = { x, y }
+    followRef.current = at ? { at, last: target.current } : null
     wayGoal.current = { x, y, r: 240 }
     setHeading({ from: { ...pos.current }, to: { x, y }, key: Date.now() })
     window.setTimeout(() => {
@@ -7652,6 +7664,19 @@ export default function SeaMap({
         }
       }
 
+      // FOLLOWING SOMEBODY. See goTo. Re-aimed every frame; dropped the moment
+      // any other course is set, or once alongside.
+      if (followRef.current) {
+        const f = followRef.current
+        if (target.current !== f.last) followRef.current = null
+        else {
+          const p = f.at()
+          target.current = { x: p.x, y: p.y }
+          f.last = target.current
+          if (wayGoal.current) { wayGoal.current.x = p.x; wayGoal.current.y = p.y }
+          if (Math.hypot(p.x - pos.current.x, p.y - pos.current.y) < ARRIVE + 60) followRef.current = null
+        }
+      }
       const dx = target.current.x - pos.current.x
       const dy = target.current.y - pos.current.y
       const d = Math.hypot(dx, dy)
@@ -16566,8 +16591,8 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
   hullSpeed: number
   /** Why a band is shut, in the words the lock wears everywhere else. */
   lockLine: (p: Place) => string
-  /** Set a course for a mark's world position. */
-  onGo: (x: number, y: number) => void
+  /** Set a course for a mark's world position; `at` makes it a following course. */
+  onGo: (x: number, y: number, at?: () => { x: number; y: number }) => void
   /**
    * ── WHICH HALF OF THE GAME YOU ARE SAILING ──────────────────────────────
    *
@@ -16700,6 +16725,8 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
     id: string; name: string; dim: boolean; dist: boolean
     /** Why a dim mark is dim, printed under it: a level, or Captain's water. */
     why?: string
+    /** Somebody who moves: where they are, asked at every frame of the sail. */
+    at?: () => { x: number; y: number }
     /** Somebody, not somewhere. Drawn as a mark, never as a name — see below. */
     mystery?: boolean
     /** Overrides the plate's colour. Only Finn uses it, and only to say whether
@@ -16906,6 +16933,7 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
       // you can settle breathes like a finished job of Finn's; a word does not.
       marks.push({
         id: `folk:${r.id}`, name: r.waiting ? `${r.name} · ${r.waiting}` : r.name, dim: false, dist: true,
+        at: r.at,
         accent: r.waiting ? '#f0c040' : undefined,
         urgent: !!r.waiting && r.waiting.startsWith('waiting'),
         ...project(at.x, at.y),
@@ -16999,8 +17027,8 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
         return (
           <div key={m.id} role="button" tabIndex={0} aria-label={`Sail to ${m.name || 'the mark'}`} data-no-steer
             onPointerDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); onGo(tx, ty) }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(tx, ty) } }}
+            onClick={e => { e.stopPropagation(); onGo(tx, ty, m.at) }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(tx, ty, m.at) } }}
             style={{
             position: 'absolute', left: '50%', top: '50%', zIndex: Z.compass,
             transform: `translate(${x}px, ${y}px) translate(-50%, -50%)`,
