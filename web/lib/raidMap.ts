@@ -15,7 +15,7 @@ import { REEF_SKIRMISH, CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE
 import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST, SPOILS_PRICE } from '@/lib/shipBerth'
 import type { RaidMuster, MusterReport } from '@/lib/crewMuster'
 import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE, THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE, THE_SUNKEN_HAND_CHALLENGE } from '@/lib/raidChallenge'
-import { getShipSkin, hullDropImage } from '@/lib/shipSkins'
+import { getShipSkin, hullDropImage, MANOWAR_SHIP_TIER } from '@/lib/shipSkins'
 import { ALL_RAIDS } from '@/lib/raidRegistry'
 import { RAID_ITEMS } from '@/lib/raidItems'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
@@ -616,7 +616,8 @@ export interface RaidNode {
 
 // Ship-skin loot previews recolor this ship sprite (the tier-4 brigantine) so
 // players see the skin on an actual hull rather than a flat color chip.
-const SHIP_SKIN_PREVIEW_IMG = '/models/brigantine_v2.png'
+// The Man-o-War: the only hull a skin can hang on. See skinsFitHull.
+const SHIP_SKIN_PREVIEW_IMG = '/models/man-o-war_v2.png'
 
 /** Derive a drop list (with rolled-once odds) from a boss raid's loot
  *  table so the node sheet and the live crate never drift apart.
@@ -656,12 +657,14 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
         drop.label = skin.name
         drop.sublabel = 'Ship skin. A cosmetic new look for your ship.'
         // Most skins recolor via a bespoke sprite (imageByTier), not a CSS
-        // filter. Preview that sprite (the recolored brigantine) so the drop
-        // shows the skin's real look, not the base hull. Filter-only skins fall
-        // back to the base preview image + their filter.
-        // Trimmed to the ship itself: a drop tile is 60px tall and the raw
-        // sprite is mostly transparent canvas around an off-centre hull.
-        drop.image = hullDropImage(skin.imageByTier?.[4] ?? SHIP_SKIN_PREVIEW_IMG)
+        // filter. Preview that sprite so the drop shows the skin's real look,
+        // not the base hull. Filter-only skins fall back to the base preview
+        // image + their filter.
+        // THE MAN-O-WAR, ALWAYS. A skin only hangs on the last hull, so the
+        // brigantine this used to show was a picture of something that cannot
+        // happen. Trimmed to the ship itself: a drop tile is 60px tall and the
+        // raw sprite is mostly transparent canvas around an off-centre hull.
+        drop.image = hullDropImage(skin.imageByTier?.[MANOWAR_SHIP_TIER] ?? SHIP_SKIN_PREVIEW_IMG)
         drop.imageFilter = skin.filter
         drop.shipSkinId = l.shipSkinId
       }

@@ -367,14 +367,30 @@ export function canEquipShipSkin(skin: ShipSkinDef, shipTier: number): boolean {
  *
  *  The originals are untouched: they are still the enemy ships in raid combat
  *  and the previews on the skin shelf, and both of those want the canvas. */
+// ── AND THEY ARE THE MAN-O-WAR SPRITES ──────────────────────────────────────
+//
+// A skin only ever hangs on the last hull (skinsFitHull), so a drop preview
+// painted on a brigantine was a picture of something that cannot happen. Every
+// drop site asks for imageByTier[MANOWAR_SHIP_TIER] now, and these are the
+// trimmed copies of exactly those sprites, made the way the first seven were:
+// sharp trim at threshold 1, re-opened, resized to 140 tall.
 const HULL_DROP_TRIMMED = new Set([
   '/enemy_finnship.png',
   '/enemychapter1brigantine_v2.png',
   '/enemychapter2brigantine_v2.png',
   '/enemychapter3brigantine.png',
   '/enemychapter4brigantine.png',
+  '/enemychapter1man-o-war_v2.png',
+  '/enemychapter2man-o-war_v2.png',
+  '/enemychapter3man-o-war.png',
+  '/enemychapter4man-o-war.png',
   '/tundrahull.png',
   '/volcanichull.png',
+  '/galaxyhull.png',
+  '/goldengauntlethull.png',
+  '/pitchblackhull.png',
+  '/badbloodhull.png',
+  '/donsghosthull.png',
 ])
 
 /** The tight version of a skin sprite, for anywhere the ART is the subject

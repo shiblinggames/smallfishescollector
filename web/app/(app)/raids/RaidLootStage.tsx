@@ -6,7 +6,7 @@ import { LOOT_RARITY_TIER } from '@/lib/raidLoot'
 import { motion } from 'framer-motion'
 import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_COLOR, isUniqueLoot } from '@/lib/bossRaids'
 import type { RaidClearTimes } from './actions'
-import { getShipSkin } from '@/lib/shipSkins'
+import { getShipSkin, hullDropImage, MANOWAR_SHIP_TIER } from '@/lib/shipSkins'
 import { vibrate } from '@/lib/haptics'
 import { playChestSfx, playChestCreakSfx } from '@/lib/fishingMusic'
 import { IconCrate } from '@/components/GameIcons'
@@ -201,8 +201,9 @@ export default function RaidLootStage(props: Props) {
   function lootArt(item: RaidLootItem, size: number) {
     if (item.shipSkinId) {
       return (
+        // The Man-o-War sprite, trimmed: a skin only hangs on the last hull.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={getShipSkin(item.shipSkinId)?.imageByTier?.[4] ?? shipImageUrl} alt={item.label}
+        <img src={hullDropImage(getShipSkin(item.shipSkinId)?.imageByTier?.[MANOWAR_SHIP_TIER] ?? shipImageUrl)} alt={item.label}
           style={{ width: size, height: size, objectFit: 'contain', objectPosition: 'bottom', filter: getShipSkin(item.shipSkinId)?.filter ?? 'none' }} />
       )
     }
