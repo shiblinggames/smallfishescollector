@@ -206,9 +206,13 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         // The chart's own reasoning: full retina costs fill rate for a picture
         // nobody reads at that density. A shade over one is the honest floor.
         // LOWER THAN THE CHART'S, and for the same reason as the line above:
-        // the chart is a map you read, this is water behind a fight. 1.25
-        // against 1.5 is a third of the fragment work back.
-        resolution: Math.min(1.25, window.devicePixelRatio || 1),
+        // the chart is a map you read, this is water behind a fight. It was
+        // 1.25, which on a 2x desktop monitor rendered the arena at five
+        // eighths of native and upscaled it, visibly soft against the crisp
+        // DOM fight on top. 1.5 halves that gap for a fifth more fragment
+        // work than 1.25, and stays under the chart's 2 on purpose: the aim
+        // bar's compositor animations are what a saturated GPU stutters.
+        resolution: Math.min(1.5, window.devicePixelRatio || 1),
         autoDensity: true,
         preference: 'webgl',
       })
