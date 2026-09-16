@@ -76,7 +76,15 @@ number ever hurts anyone but the forger. Vercel's bot protection is a dashboard 
 - **Copy whose job is explaining a mechanic is plain and literal** ("How much damage you
   deal"), flavor keeps the charm. The split is by job, not by surface.
 - Mechanics explanations must be verified against the code that consumes the value.
-- `web/scripts/check-copy.mts` enforces some of this on data catalogs (not yet JSX).
+- Two scripts enforce the dash rule and both run in `npm run check` and `prebuild`:
+  `web/scripts/check-copy.mts` on the data catalogs in `lib/`, and (since 2026-09-16)
+  `web/scripts/check-page-copy.mts` on everything in `app/` and `components/`. The second walks
+  the TypeScript AST for string literals, template parts and JSX text, so the comments, which are
+  full of dashes on purpose, are invisible to it. A lone dash as an empty value and a numeric range
+  are typography and pass. `generate.ts` files (model prompts) and the admin benches are skipped.
+  Before it existed, 289 dashes sat in component copy, 126 of them in the raid combat log.
+- **"Press", not "tap"**, in copy, buttons and aria labels, because a mouse does not tap. "Pick"
+  where the action is a choice. The iPhone install steps keep "tap" on purpose.
 
 ## The modal width is `--modal-w`
 
@@ -164,3 +172,29 @@ screen and `#c8a870` on the second: one character in two colours, on two consecu
   crew muster and a reward line, and the note in the file explains why. A panel may exceed the
   default when its content is genuinely a table; it may not sit below it just because nobody
   chose.
+
+## Dialogs: what `PopupShell` owns (2026-09-16)
+
+Every sheet built on `components/PopupShell.tsx` gets three things without knowing, and no sheet
+should implement them again on top:
+
+- **Escape closes the topmost open shell, and only that one.** A module-level stack says which is
+  on top. The listener is in the CAPTURE phase and stops the event there, so the sea's own
+  Escape chain in `SeaMap.tsx` (23 branches, one per panel) and `KeyboardAdvance` never see the
+  same press. It calls the same `onClose` the backdrop click does, so a caller that blocks the
+  backdrop while busy blocks Escape for free.
+- **The page behind stops scrolling** under a mouse wheel: `overflow: hidden` on body, refcounted
+  across nested shells, with the scrollbar's width padded back so nothing shifts sideways on
+  Windows. Not `lib/bodyScrollLock.ts`: that pins the body to the top and is for combat screens.
+- **Focus moves into the wrapper on open and back to what had it on close.** Not a full trap.
+
+`role="dialog"` and `aria-modal` sit on the wrapper. Hand-rolled overlays (the gem store, the
+membership modal, the fishing card's own sheets) carry their own Escape in the capture phase with
+the same stop, and the two checkout modals refuse both Escape and the backdrop while the embedded
+Stripe form is up, so a stray press cannot discard a half-typed card.
+
+Desktop affordances that are now global in `globals.css`: `.tap:hover` lifts a pixel (a transform,
+never a filter, which would make the element the containing block for fixed descendants), a gold
+`:focus-visible` ring on every control at zero specificity, and `button:not(:disabled)` is a
+pointer. The phone tab bar reserves its 64px through `--tabbar-safe`, which is 0px from 640px up;
+never hard-code `64px + env(safe-area-inset-bottom)` for it again.

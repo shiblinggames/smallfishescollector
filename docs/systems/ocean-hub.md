@@ -3026,3 +3026,20 @@ large. Sizes are 0.17 of the hull box (enemy) and 0.16 of `WARSHIP_W` (captain),
 The captain's bust cancels the hull's mirror AND its heel (`--facing`, `--heel`, both published by
 the loop): mirrored a face reads backwards, tilted it looks like it is falling off. The bob is
 deliberately left in — that is what keeps it *on* the boat.
+
+### Desktop input on the chart (2026-09-16)
+
+- **Only the primary mouse button is a helm order.** `onDown` returns for any other button on a
+  mouse. A right-press used to start a heading and capture the pointer, so the browser's menu
+  opened over a boat that was now steering. `onContextMenu` on the wrapper suppresses the menu.
+- **Escape closes the fishing result card**, last in the sea's Escape chain, with the same
+  refusal mid-cast as tapping the water (`canLeaveRef`). It was the one sheet never on the list.
+  The card's own bait, loadout and hold sheets (`Sheet` in `FishingHere.tsx`) take Escape first,
+  in the capture phase, so a press closes the sheet and not the card under it.
+- **The desktop action pill carries a Space keycap** in `.key-hint`, the chip the stylesheet had
+  built for exactly this and nothing used. The first voyage already says "clicking, or with
+  WASD", so the chip is a reminder rather than the only teaching.
+- **Still phone-shaped on a monitor, deliberately untouched until looked at:** the action pill and
+  the "Which one" chooser sit at `HELM_BOTTOM + HELM_D + 10` (214px) off the bottom for a helm
+  that is `display: none` on a fine pointer, and the compass reserves the same band via `myBot`.
+  Moving them is a visual call.
