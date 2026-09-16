@@ -2013,6 +2013,16 @@ were left exactly as they were, because they are why it reads at all.
 - A wake trail (the last minute of the hull's track, fading) was built the same day and
   REMOVED on sight: "I don't like the wake trail." Do not re-propose.
 
+### A course to somebody follows them (2026-09-16)
+
+The regulars work their water, so a compass mark pressed for Dennis set a course to where he
+WAS and arrived at empty sea. `goTo(x, y, at?)` takes an optional `at` (the regular's live
+position function, which the compass mark carries as `Mark.at`). While `followRef` is set the
+sail loop re-aims `target` and `wayGoal` at `at()` every frame. It lets go on arrival (within
+ARRIVE + 60px) or the moment the target is not the object the follow last wrote, which is how
+any other course (a tap, the stick, a warp) cancels it without those sites knowing the follow
+exists. Friends' marks stay fixed courses for now.
+
 ### The lookahead: the bow aims round the rock ahead (2026-09-16)
 
 Steering had no avoidance. A set course sailed a straight line and met rock by contact: pushed
