@@ -62,9 +62,11 @@ import LoginForm from './LoginForm'
  *   the contrast it needs because the card brings its own ground (house rule:
  *   panels on art get a solid base).
  *
- *   AND IT DRIFTS. One repeating gradient of moonlight glints, translated
- *   forever across the water. A still photograph of a sea is the one thing a
- *   sea should never be, and it costs a single compositor-only animation.
+ *   AND IT IS STILL. It drifted once: a repeating gradient of moonlight
+ *   glints translated forever across the lower half of the page. It read as
+ *   diagonal lines scrolling behind the card rather than as light on water,
+ *   and a moving pattern at the edge of the eye on a page whose whole job is
+ *   one text field is a distraction from the field. Removed on sight.
  */
 /**
  * A WIDE SHOT OF THE GAME, or null. See the note above: the page lays itself
@@ -95,9 +97,6 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
           radial-gradient(120% 60% at 50% 100%, rgba(24,120,124,0.30) 0%, rgba(24,120,124,0) 70%)
         `,
       }} />
-      {/* The glints, drifting. One layer, one transform, no repaint. */}
-      <div aria-hidden className="signin-glints" />
-
       <div className="relative z-10 mx-auto px-6" style={{
         maxWidth: 1160, paddingTop: 'clamp(2.5rem, 7vh, 5rem)', paddingBottom: '3.5rem',
       }}>
@@ -124,14 +123,18 @@ export default function SignInStage({ mode }: { mode: 'in' | 'new' }) {
               Seas the Booty.
             </p>
 
-            <p className="font-karla" style={{
-              fontSize: '0.95rem', lineHeight: 1.65, color: '#c3d6e2',
-              margin: '1.1rem 0 0', maxWidth: '34ch',
-            }}>
-              {isNew
-                ? 'An open sea to sail. Fish it with a needle and a shrinking window, sign a crew, and take a ship into eight raids against the outfit running the sea floor.'
-                : 'The water is where you left it. Your hold, your crew and your run are all still aboard.'}
-            </p>
+            {/* WHAT THIS IS, for somebody who does not know yet. A captain
+                coming back does not need telling that their hold is still
+                theirs, and a sentence that says nothing is worse than no
+                sentence: the card is what they came for, so they get it. */}
+            {isNew && (
+              <p className="font-karla" style={{
+                fontSize: '0.95rem', lineHeight: 1.65, color: '#c3d6e2',
+                margin: '1.1rem 0 0', maxWidth: '34ch',
+              }}>
+                An open sea to sail. Fish it with a needle and a shrinking window, sign a crew, and take a ship into eight raids against the outfit running the sea floor.
+              </p>
+            )}
 
             {/* THE CARD. Its own solid ground, because it is sitting on a
                 painting and a translucent panel over art reads as a smear.

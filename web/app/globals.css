@@ -2444,38 +2444,13 @@ body.hardcore-gauntlet::after {
 }
 /* ── THE DOOR: /login and /register ───────────────────────────────────────
    See app/login/SignInStage.tsx for why the page looks like this at all. The
-   rules below are the two halves it cannot do inline: a grid that has to
-   answer a media query, and an animation that has to be a keyframe.
+   rules below are the half it cannot do inline: a grid that has to answer a
+   media query.
 
-   THE GLINTS. Moonlight on the water, drifting forever. A repeating gradient
-   twice the width of its box, translated across it: one compositor-only
-   animation, no repaint, and it turns a photograph of a sea back into a sea. */
-@keyframes signinGlints {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-50%, 0, 0); }
-}
-.signin-glints {
-  position: fixed;
-  inset: auto 0 0 0;
-  height: 62%;
-  width: 200%;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0.5;
-  background-image: repeating-linear-gradient(
-    102deg,
-    rgba(198,238,244,0) 0px,
-    rgba(198,238,244,0) 46px,
-    rgba(198,238,244,0.055) 52px,
-    rgba(198,238,244,0) 62px,
-    rgba(198,238,244,0) 128px
-  );
-  /* Softest at the horizon, strongest where the water is nearest, so it reads
-     as the surface catching the light rather than a texture over the image. */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 48%, #000 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 48%, #000 100%);
-  animation: signinGlints 26s linear infinite;
-}
+   THERE WERE GLINTS. A repeating diagonal gradient over the lower half of the
+   page, translated forever, meant as moonlight on the water. It read as lines
+   scrolling behind the card instead, which on a page that is one text field is
+   a distraction from the field. Gone. The painting carries the water. */
 
 /* THE TWO COLUMNS. Stacked on a phone with the words first, because the words
    and the card are the page's job and the screenshot is the argument for it.
@@ -2528,9 +2503,6 @@ body.hardcore-gauntlet::after {
      phone column is a postage stamp with a sentence under it. */
   .signin-hero { transform: none; border-radius: 13px; }
   .signin-cap { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .signin-glints { animation: none; }
 }
 
 .landing-rise {

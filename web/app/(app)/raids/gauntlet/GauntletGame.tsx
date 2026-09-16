@@ -2605,7 +2605,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </h1>
           <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b9b2a6', lineHeight: 1.55, marginTop: 12, maxWidth: 340, marginInline: 'auto' }}>
             {props.resumePaused
-              ? 'You stepped away mid-descent. Pick the line back up whenever you like — your progress is right where you left it.'
+              ? 'You stepped away mid-descent. Pick the line back up whenever you like. Your progress is right where you left it.'
               : 'Your last dive was cut short before it ended. The current holds you at your breather — take the line back up and press on.'}
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 20 }}>
