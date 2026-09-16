@@ -657,7 +657,9 @@ export default async function BadgesPage() {
   return (
     <>
       <main className="min-h-screen pt-8" style={{ position: 'relative', zIndex: 1 }}>
-        <div className="page-col page-col-modal pb-16 sm:pb-8">
+        {/* The same AchievementsClient that /achievements draws at 980. Phones keep
+            the modal width; a monitor gets the game column. */}
+        <div className="page-col page-col-modal pb-16 sm:pb-8" style={{ maxWidth: 'max(var(--modal-w), var(--game-col))' }}>
           <div className="mb-4">
             {/* The Captain's Log link lived here. It is not offered anywhere in
                 the app now — the page still renders for anyone who has the URL. */}
