@@ -91,18 +91,30 @@ export default async function OpengraphImage() {
           <div style={{ fontFamily: 'Cinzel', fontSize: 40, lineHeight: 1.2, color: '#f0c040', marginTop: 12 }}>
             {HOME.tagline}
           </div>
-          <div
-            style={{
-              fontFamily: 'Karla',
-              fontSize: 28,
-              lineHeight: 1.4,
-              color: '#c3d6e2',
-              marginTop: 26,
-              maxWidth: 640,
-            }}
-          >
-            {SOCIAL_CARD.line}
-          </div>
+          {/* ── IT BREAKS AT SENTENCES, NOT WHEREVER THE BOX ENDS ──────────
+              One line of prose set to a fixed width wraps where the width says,
+              which put "explore." alone on a second line under "Just a cozy
+              fishing game. And a whole sea to". A card is read in a feed in
+              about a second and a widow like that is the whole impression.
+
+              So each SENTENCE gets its own line. It reads as a deliberate break
+              at any length, which matters because the line is edited by hand in
+              lib/homeCopy.ts and nobody should have to count characters. */}
+          {SOCIAL_CARD.line.split(/(?<=\.)\s+/).filter(Boolean).map((sentence, i) => (
+            <div
+              key={i}
+              style={{
+                fontFamily: 'Karla',
+                fontSize: 28,
+                lineHeight: 1.4,
+                color: '#c3d6e2',
+                marginTop: i === 0 ? 26 : 2,
+                maxWidth: 700,
+              }}
+            >
+              {sentence}
+            </div>
+          ))}
           <div style={{ fontFamily: 'Karla', fontSize: 22, color: '#89a2b5', marginTop: 10 }}>
             {SOCIAL_CARD.note}
           </div>

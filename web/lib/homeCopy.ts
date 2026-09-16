@@ -77,7 +77,7 @@ export const HOME = {
       eyebrow: `The sea`,
       title: `An open-world fishing RPG.`,
       body: [
-        `An open sea filled with hundreds of species of fish to catch. Upgrade your boat, rods, and other fishing equipment to catch them all. You might need the best gear to catch the rarest fish out there!`,
+        `An open sea filled with over 150 species of fish to catch. Upgrade your boat, rods, and other fishing equipment to catch them all. You might need the best gear to catch the rarest fish out there!`,
         `There are hidden treasures and unique islands to explore. Meet other captains who may have tasks for you. Befriend them and maybe you might unlock other hidden treasures.`,
       ],
       art: `sea`,
@@ -104,14 +104,19 @@ export const HOME = {
       title: `Free to play!`,
       body: [
         `You can play through most of the game for absolutely no cost.`,
-        `Becoming a captain unlocks a few special perks, and it opens the endgame, but there's no pressure to get this unless you feel like this game is something you've already enjoyed playing. And gems, our premium currency, can easily be earned through normal play. If you want to support the game in another way, they are also available for purchase, for cosmetic upgrades!`,
+        `Becoming a captain unlocks a few special perks, and it opens the endgame, but there's no pressure to get this unless you feel like this game is something you've already enjoyed playing. And gems, our premium currency, can easily be earned through normal play. If you want to support the game in another way, they're available for purchase too. They only ever buy extras and small shortcuts, never anything that helps you catch more fish or win a fight!`,
       ],
       art: null,
     },
   ] as HomeBand[],
 
-  /** The button at the bottom, for whoever read the whole thing. */
-  closingButton: `Become a captain!`,
+  /**
+   * The button at the bottom, for whoever read the whole thing. It makes a FREE
+   * account. It used to say "Become a captain!", which sat directly under the
+   * paragraph explaining that becoming a Captain costs $9.99, so the last thing
+   * on the page read as the upsell instead of the way in.
+   */
+  closingButton: `Create a free account`,
   /** And the last line on the page. */
   closingNote: `Still in open beta, but ready to release very soon!`,
 }
@@ -122,7 +127,7 @@ export const HOME = {
  * Not on the page itself, but read by far more people than the page is. Keep it
  * under about 160 characters or search results cut it off mid-sentence.
  */
-export const SEARCH_DESCRIPTION = `A fishing game that got a bit out of hand. Sail an open sea, catch 152 species, sign a crew, and take a ship into nine boss fights. Free, in your browser.`
+export const SEARCH_DESCRIPTION = `Just a cozy fishing game, and a whole sea to explore. Over 150 fish to catch, a crew to level up, and turn-based battles. Free to play in your browser.`
 
 /**
  * ── THE SOCIAL CARD ─────────────────────────────────────────────────────────
@@ -132,7 +137,7 @@ export const SEARCH_DESCRIPTION = `A fishing game that got a bit out of hand. Sa
  * already on it.
  */
 export const SOCIAL_CARD = {
-  line: `A fishing game that got a bit out of hand.`,
+  line: `Just a cozy fishing game. And a whole sea to explore.`,
   note: `Free in your browser. No download.`,
 }
 
