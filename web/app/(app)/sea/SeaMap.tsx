@@ -16005,16 +16005,12 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, call = null }: {
               one gets a soft ellipse at its foot: it is sitting IN water, and
               without something where it meets the surface it reads as pasted
               on rather than floating in. */}
-          {locked && (
-            /* Weather, not a wall. A locked water is one you can SEE is bad:
-               squall streaks that fade out with no boundary anywhere. */
-            <div aria-hidden style={{
-              position: 'absolute', inset: '4%',
-              background: 'repeating-linear-gradient(58deg, rgba(150,164,178,0.13) 0 8px, transparent 8px 22px)',
-              maskImage: 'radial-gradient(circle, #000 20%, transparent 72%)',
-              WebkitMaskImage: 'radial-gradient(circle, #000 20%, transparent 72%)',
-            }} />
-          )}
+          {/* NO WEATHER OVER LOCKED WATER. Squall streaks used to be painted
+              across any band above your level, on the reasoning that a water
+              you cannot fish should look bad. They arrived before the level
+              wall, which stops the boat at the rim and says what it wants;
+              beside that they were a second, vaguer way of saying the same
+              thing, and a diagonal hatch over open sea read as a glitch. */}
         </>
       ) : (
         <>

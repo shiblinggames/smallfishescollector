@@ -352,6 +352,11 @@ visibly the building you sailed past.
 click and starts a heading on pointerdown. The chooser is wrapped in a
 `stopPropagation` div or dismissing it also puts the helm over.
 
+**Locked water wears no weather (2026-09-17).** Diagonal "squall streaks" were painted over
+any band above your level from 2026-08-25. The level wall stops the boat at the band's rim and
+says what it wants; beside that the streaks were a second, vaguer cue, and a hatch over open
+sea read as a glitch. Removed. Do not re-add a texture to locked water; the wall is the cue.
+
 **Six doors, in two labelled rows** (`ASHORE_ROWS` in `ashoreDoors.ts`, 2026-09-17). Top:
 the Tavern, the Market, the Tackle Shop, which are about you and your boat. Bottom: the
 Parlor, the Den, the Chart Room, which are the evening's games. One unlabelled grid of six
