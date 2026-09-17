@@ -43,6 +43,7 @@ import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORT
 import { getShip, SHIP_CAPTAIN_SLOT, SHIP_CREW_FACE, MIN_SHIP_TIER } from '@/lib/ships'
 import { getSetting, SEA_SETTINGS_EVENT } from '@/lib/seaSettings'
 import { shipSkinSeaImage, shipSkinSeaScale } from '@/lib/shipSkins'
+import { ASHORE } from './ashoreDoors'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { SUBMERGE } from './submerge'
@@ -17124,27 +17125,6 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
 }
 
 
-const ASHORE: {
-  href: string; art: string; name: string; blurb: string; cta: string; accent: string
-  /** `data-coach` handle, for a tour that needs to point at this door. */
-  coach?: string
-}[] = [
-  { href: '/tavern', art: '/sea/tavern.png', name: 'The Tavern',
-    blurb: 'The day\u2019s tot, and whatever race is running', cta: 'Enter', accent: '#e0a545' },
-  { href: '/tavern/casino', art: '/sea/den.png', name: 'The Den',
-    blurb: 'Cards, dice and the wheel', cta: 'Play', accent: '#d9534f' },
-  { href: '/tavern/chart-room', art: '/sea/charting.png', name: 'The Chart Room',
-    blurb: 'The week\u2019s puzzles and the world chart', cta: 'Study', accent: '#6fc4b4' },
-  { href: '/tavern/trivia', art: '/sea/parlor.png', name: 'The Parlor',
-    blurb: 'Trivia, and the Pirate King ladder', cta: 'Sit in', accent: '#dd8f79' },
-  { href: '/tavern/market', art: '/sea/market.png', name: 'The Market',
-    blurb: 'Sell the hold at full price', cta: 'Trade', accent: '#7fd6a0',
-    // The first voyage lights this one up when it sends a captain in to sell
-    // their first fish. See SeaFirstVoyage.
-    coach: 'market' },
-  { href: '/marketplace/tackle-shop', art: '/sea/tackle.png', name: 'Tackle Shop',
-    blurb: 'Rods, hooks, reels and bait', cta: 'Browse', accent: '#67d4e8' },
-]
 
 function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter()
@@ -17188,10 +17168,15 @@ function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void 
             what the nav already is. */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {ASHORE.map((d, i) => (
-            <motion.button key={d.href} type="button" className="tap"
+            /* NO `.tap` HERE. It owns a transform through whileTap, and the
+               stylesheet's own note says the two fight on one element: framer
+               writes transform inline while it animates and drops it when it
+               settles, and the CSS hover and press transforms take over at
+               that moment, which is a jump you can see. whileTap alone. */
+            <motion.button key={d.href} type="button"
               data-coach={d.coach}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 + i * 0.06, type: 'spring', stiffness: 380, damping: 28 }}
+              transition={{ delay: 0.04 + i * 0.05, duration: 0.26, ease: [0.22, 0.9, 0.28, 1] }}
               whileTap={{ scale: 0.97 }}
               onClick={() => { vibrate([0, 16]); onClose(); router.push(d.href) }}
               style={{
@@ -17209,14 +17194,21 @@ function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void 
                 position: 'relative', width: '100%', height: 84,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8,
               }}>
+                {/* NO FILTERS ON A CARD THAT IS ANIMATING. This was a blurred
+                    layer behind a picture carrying two stacked drop-shadows,
+                    six of them at once, inside a button animating its own
+                    opacity and position. A filtered subtree has to be
+                    re-rasterised every frame of that, and stacked filters are
+                    drawn through a downsampled texture, which is the same trap
+                    the ability summon hit. A radial gradient is already soft
+                    and costs the compositor nothing. */}
                 <div aria-hidden style={{
-                  position: 'absolute', width: 96, height: 96, borderRadius: '50%',
-                  background: `radial-gradient(circle, ${d.accent}44, transparent 68%)`, filter: 'blur(3px)',
+                  position: 'absolute', width: 104, height: 104, borderRadius: '50%',
+                  background: `radial-gradient(circle, ${d.accent}4d 0%, ${d.accent}1f 46%, transparent 70%)`,
                 }} />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={d.art} alt="" loading="eager" decoding="async" style={{
                   position: 'relative', maxWidth: '92%', maxHeight: 82, objectFit: 'contain',
-                  filter: `drop-shadow(0 8px 18px ${d.accent}4d) drop-shadow(0 4px 10px rgba(0,0,0,0.6))`,
                 }} />
               </div>
               <p className="font-cinzel font-800" style={{ fontSize: '0.936rem', color: '#f0ede8', lineHeight: 1.12 }}>

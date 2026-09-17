@@ -178,6 +178,12 @@ export default function CastingOff({ enabled = true }: { enabled?: boolean }) {
             import('@/app/(app)/sea/submerge'),
           ])
           const urls: string[] = ['/sea/ground-turf.png', '/sea/ground-rock.png']
+          // The six doors on the Mainland. Seven hundred kilobytes that used
+          // to be fetched at the moment the chooser opened, so the cards came
+          // up empty and the paintings dropped in one at a time underneath an
+          // animation that had already finished.
+          const { ASHORE } = await import('@/app/(app)/sea/ashoreDoors')
+          for (const d of ASHORE) urls.push(d.art)
           for (const p of chart.PLACES) {
             urls.push(p.art)
             for (const b of p.buildings ?? []) urls.push(b.art)
