@@ -88,3 +88,14 @@ nothing. That rule used to live inside `setRodsAboard` and nowhere else.
 the Shipyard uses, moved out of the shipyard folder when the third consumer appeared. The
 rod grid shows sprites rather than a column of names, because the sprite is how a rod is
 actually recognised.
+
+## The loadout says how to get more (2026-09-17)
+
+`GearScreen`: every slot tile ends in "Change" (or "Choose" when empty) with a chevron, in
+the slot family's colour, so a tile reads as a control rather than a label; the caption
+under the fisher figure says "Press a slot to change it" instead of "Preview". Every slot's
+sheet opens with one gold line from `HOW_TO_GET` saying where more of that thing comes
+from (rods, reels, hooks: the Tackle Shop; lines: species; specials: shop, some earned;
+Finn's spoils: his campaign; badges: achievements; skins: doubloons, gems, levels,
+achievements, crates; hats: doubloons, some crates; boats: doubloons, gems, achievement
+points, crates; pets: crates). Keep that record true when a source changes.

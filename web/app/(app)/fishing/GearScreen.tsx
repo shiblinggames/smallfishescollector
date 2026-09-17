@@ -30,6 +30,27 @@ import LoadoutStats from '@/components/LoadoutStats'
 type BaitItem = { bait_type: string; quantity: number }
 export type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'special2' | 'badge' | 'skin' | 'hat' | 'boat' | 'pet'
 
+/**
+ * WHERE MORE COMES FROM. One plain line at the top of every slot's sheet.
+ * A picker full of what you own says nothing about how the rest is got, and
+ * a captain who has just found the loadout has no way of knowing that rods
+ * are bought, lines are earned, pets come out of crates and badges out of
+ * achievements. Said once, up top, in the same words each time.
+ */
+const HOW_TO_GET: Record<SlotKey, string> = {
+  rod: 'Buy new rods at the Tackle Shop. Stronger ones unlock as your Fishing level climbs.',
+  reel: 'Upgrade your reel at the Tackle Shop.',
+  hook: 'Upgrade your hook at the Tackle Shop.',
+  line: 'Lines are earned by catching new species. Nothing to buy.',
+  special: 'Special tackle is sold at the Tackle Shop. Some pieces are only earned.',
+  special2: 'Finn hands these out as his campaign goes on.',
+  badge: 'Badges are earned through achievements.',
+  skin: 'Skins are bought with doubloons or gems, earned by levels and achievements, or found in crates.',
+  hat: 'Hats are bought with doubloons. A few only come out of crates.',
+  boat: 'Boats are bought with doubloons or gems, earned with achievement points, or found in crates.',
+  pet: 'Pets come out of supply crates.',
+}
+
 function ShopLink({ href, label, sub, color, onClick }: { href: string; label: string; sub: string; color: string; onClick: () => void }) {
   return (
     <Link href={href} onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.9rem 1rem', borderRadius: 20, background: `${color}12`, border: `1px solid ${color}45`, textDecoration: 'none' }}>
@@ -713,6 +734,17 @@ function GearSlot({
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }} title={sub}>{sub}</p>
         )}
+        {/* IT OPENS. A tile with a picture and a name reads as a label, and
+            a label is not a thing you press. One word in the slot family's
+            colour with a chevron says what a press does. */}
+        <p className="font-karla font-700 uppercase" style={{
+          display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: big ? 4 : 3,
+          fontSize: '0.56rem', letterSpacing: '0.14em', lineHeight: 1,
+          color: `${outline}${empty ? '99' : 'cc'}`,
+        }}>
+          {empty ? 'Choose' : 'Change'}
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
+        </p>
       </div>
     </motion.button>
   )
@@ -806,13 +838,15 @@ function FisherPreview({
           noGlow
         />
       </div>
-      {/* Says what it is. Without this it reads as a slot you should be able
-          to tap, which it deliberately is not. */}
+      {/* Says what it is and what the tiles round it do. Without a line here
+          the figure reads as a slot you should be able to tap, which it
+          deliberately is not; "Preview" alone said that and nothing about
+          where the tap goes instead. */}
       <p className="font-karla font-600 uppercase" style={{
-        fontSize: '0.74rem', letterSpacing: '0.18em',
+        fontSize: '0.66rem', letterSpacing: '0.16em',
         color: 'rgba(196,181,253,0.65)', marginTop: 4,
       }}>
-        Preview
+        Press a slot to change it
       </p>
     </div>
   )
@@ -1720,6 +1754,12 @@ export default function GearScreen({
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
               </div>
+
+              {/* WHERE MORE COMES FROM. See HOW_TO_GET. */}
+              <p className="font-karla font-600" style={{
+                margin: '-2px 0 10px', fontSize: '0.74rem', lineHeight: 1.4,
+                color: 'rgba(240,192,64,0.8)',
+              }}>{HOW_TO_GET[openSlot]}</p>
 
               {/* ── Rod ── */}
               {openSlot === 'rod' && (() => {
