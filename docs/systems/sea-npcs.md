@@ -360,6 +360,22 @@ would make the story unreachable for everybody at once rather than for one capta
 `lib/finnQuests.ts` is the ladder, `finn_quest` (jsonb) is the one currently set and
 `finn_quests_done` (text[]) is the position on it. Thirteen jobs against thirteen beats.
 
+**A job pays doubloons AND flat fishing XP (`xp` on each job, 2026-09-17).** Flat on
+purpose: the jobs are a help toward the next level and never the way you level, because
+fishing is. Each chapter's six climb from about a quarter to about three quarters of one
+level's gap at the chapter's entry level (Shallows 15 to 45, Open Waters 50 to 140, Deep 165
+to 490, Abyss 850 to 2,550, Ancient Deep 6,500 to 20,000), so the last job of an act moves
+the bar a long way and none pays a whole level from a standing start. No multiplier: prestige
+and renown multiply CATCH XP and this is not a catch. Past the cap it still counts, since
+renown is derived from the total. `turnInFinnQuest` bumps `fishing_xp` through
+`bump_profile_stat` (atomic, so a catch landing in the same second cannot lose it) and returns
+`newFishingXP`; the chart puts that straight into `xpLive`, which is what the level is derived
+from, so a job that crosses a level puts up the SAME level card a catch does, on the same
+frame, on top of his sheet. The level disc's ring runs once either way. His card shows
+`⟡ · +XP` on the job and a "Paid" line after the hand-over. `FishingHere` is fed `xpLive`
+rather than the load-time prop for this: it keeps a local copy and adds every reel to it,
+and seeded from the prop a job paid between casts was overwritten by the next catch.
+
 **The campaign is told in five chapters, and the chapter break is the water.**
 `FINN_CHAPTERS` in `lib/finnQuests`, the same shape as `RAID_CHAPTERS` on the raid map and
 for the same reason: it turns a ladder of tasks into a story with acts. I The Hand on the Rod

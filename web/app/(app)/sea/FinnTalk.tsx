@@ -90,8 +90,8 @@ function QuestSlot({ quest }: { quest: FinnQuestView }) {
           color: quest.done ? '#ffd986' : 'rgba(226,238,246,0.45)',
         }}>{quest.done ? 'Done. Hand it over' : 'He asked you for'}</p>
         <p className="font-cinzel font-700" style={{
-          fontSize: '0.78rem', margin: 0, color: '#f0c040',
-        }}>{quest.reward.toLocaleString()} ⟡</p>
+          fontSize: '0.78rem', margin: 0, color: '#f0c040', whiteSpace: 'nowrap',
+        }}>{quest.reward.toLocaleString()} ⟡ <span style={{ color: '#4ade80' }}>+{quest.xp.toLocaleString()} XP</span></p>
       </div>
       <p className="font-karla font-600" style={{
         fontSize: '0.86rem', margin: '3px 0 0', color: '#f0ede8', lineHeight: 1.3,
@@ -142,13 +142,15 @@ function Choice({ label, hint, warm, onClick, disabled }: {
 }
 
 export default function FinnTalk({
-  finn, open, incoming, busy, onSpeak, onTurnIn, onClose,
+  finn, open, incoming, paid, busy, onSpeak, onTurnIn, onClose,
 }: {
   finn: FinnSeaState | null
   open: boolean
   /** Lines the server just returned, appended when `nonce` changes so a
    *  resolve continues the conversation rather than replacing the card. */
   incoming: { lines: string[]; nonce: number } | null
+  /** What he just paid for a job, shown while he talks. Cleared on close. */
+  paid?: { doubloons: number; xp: number; nonce: number } | null
   busy: boolean
   onSpeak: () => void
   onTurnIn: () => void
@@ -337,6 +339,27 @@ export default function FinnTalk({
             )}
 
             <StandingBar points={points} />
+            {/* PAID. The purse and the level bar both move on the same frame,
+                but neither is on this card, so this is where the hand-over is
+                seen to have happened. Springs in once per payment. */}
+            <AnimatePresence>
+              {paid && (
+                <motion.div key={paid.nonce}
+                  initial={{ opacity: 0, y: 6, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+                  style={{
+                    marginTop: 10, flexShrink: 0, padding: '0.5rem 0.7rem', borderRadius: 11,
+                    background: 'rgba(60,44,10,0.75)', border: '1px solid rgba(240,192,64,0.6)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8,
+                  }}>
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.18em', color: '#ffd986' }}>Paid</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f0c040', whiteSpace: 'nowrap' }}>
+                    +{paid.doubloons.toLocaleString()} ⟡ <span style={{ color: '#4ade80' }}>+{paid.xp.toLocaleString()} XP</span>
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
             {quest && <QuestSlot quest={quest} />}
 
             {!choicesHidden && (
@@ -350,7 +373,7 @@ export default function FinnTalk({
                 {quest?.done && (
                   <Choice
                     label="Here. Done."
-                    hint={`He owes you ${quest.reward.toLocaleString()} ⟡ and the next piece of it`}
+                    hint={`He owes you ${quest.reward.toLocaleString()} ⟡, ${quest.xp.toLocaleString()} fishing XP and the next piece of it`}
                     warm disabled={busy}
                     onClick={() => { vibrate([0, 30, 50, 70]); onTurnIn() }} />
                 )}

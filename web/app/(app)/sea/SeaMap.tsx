@@ -1815,6 +1815,14 @@ export default function SeaMap({
    */
   const [levelNew, setLevelNew] = useState(false)
   const levelWas = useRef(level)
+  /** XP just landed from somewhere that is not a catch (Finn paying a job).
+   *  The level disc's ring runs once so the gain has somewhere to be seen. */
+  const [xpFlash, setXpFlash] = useState(false)
+  useEffect(() => {
+    if (!xpFlash) return
+    const t = setTimeout(() => setXpFlash(false), 2300)
+    return () => clearTimeout(t)
+  }, [xpFlash])
   /** Open the spine once the level card is put down: pressed the pulsing disc,
    *  read what the level paid, then the spine it belongs to. */
   const skillAfterGrant = useRef(false)
@@ -3981,6 +3989,8 @@ export default function SeaMap({
   /** The scene, and the lines the server last handed back for it. */
   const [finnOpen, setFinnOpen] = useState(false)
   const [finnLines, setFinnLines] = useState<{ lines: string[]; nonce: number } | null>(null)
+  /** What he just paid, for the card to show while he talks. */
+  const [finnPaid, setFinnPaid] = useState<{ doubloons: number; xp: number; nonce: number } | null>(null)
   const [finnTalk, setFinnTalk] = useState<{
     lines: (string | FinnSceneLine)[]
     mode: 'offer' | 'result' | 'reveal'
@@ -4054,10 +4064,20 @@ export default function SeaMap({
         return
       }
       setFinnLines(v => ({ lines: res.lines, nonce: (v?.nonce ?? 0) + 1 }))
+      setFinnPaid(v => ({ doubloons: res.reward, xp: res.xp, nonce: (v?.nonce ?? 0) + 1 }))
       if (res.reward > 0) {
         // WITH THE NUMBER. The nav ignores this event without one, on purpose:
         // an empty detail used to crash it. So it was firing, and doing nothing.
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+      }
+      // THE XP, INTO THE LIVE TOTAL. The level is derived from this, and a
+      // level crossing is what puts the level card up (see levelWas), so a job
+      // that levels you gets the same celebration as a catch that does, on
+      // the same frame, on top of his card. The disc's ring runs once either
+      // way so the gain is visible from the water.
+      if (res.xp > 0) {
+        setXpLive(res.newFishingXP)
+        setXpFlash(true)
       }
       const f = await finnState()
       if (f) setFinn(f)
@@ -11608,7 +11628,7 @@ hullRef={hullRefFor(t.key)} />
                 answer is an event: a level just happened, and this is where to
                 see what it bought. On the ring only, so the number stays put. */}
             <AnimatePresence>
-              {fresh && (
+              {(fresh || (!nav && xpFlash)) && (
                 <motion.span aria-hidden
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0.6, 0, 0.6], scale: [1, 1.55, 1] }}
@@ -12073,7 +12093,11 @@ hullRef={hullRefFor(t.key)} />
             rodPerfectXpMult: rodNow?.perfectXpMult ?? mods.rodPerfectXpMult,
           }}
           onBaitSpent={left => { if (typeof left === 'number') setBaitLeft(left) }}
-          fishingXP={fishingXP}
+          // THE LIVE TOTAL, not the load-time prop. The card keeps a local copy
+          // and adds every reel to it; seeded from the prop, XP paid between
+          // casts (Finn's jobs) was overwritten by the next catch and the bar
+          // went backwards.
+          fishingXP={xpLive}
           auto={auto}
           tideTurner={tideTurner}
           seaPhase={phase}
@@ -12178,10 +12202,11 @@ hullRef={hullRefFor(t.key)} />
         finn={finn}
         open={finnOpen}
         incoming={finnLines}
+        paid={finnPaid}
         busy={finnBusy}
         onSpeak={() => { void hailFinn() }}
         onTurnIn={() => { void handInFinnQuest() }}
-        onClose={() => { setFinnOpen(false); setFinnLines(null) }}
+        onClose={() => { setFinnOpen(false); setFinnLines(null); setFinnPaid(null) }}
       />
 
       {/* TEACHING. The walkthrough runs once on the first arrival; the

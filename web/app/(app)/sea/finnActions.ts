@@ -113,6 +113,8 @@ export type FinnQuestView = {
   id: string
   label: string
   reward: number
+  /** Fishing XP on turn-in. See FinnQuest.xp. */
+  xp: number
   /** How far along, in the job's own units. */
   have: number
   target: number
@@ -341,6 +343,7 @@ async function viewQuest(
     id: quest.id,
     label: quest.label,
     reward: quest.reward,
+    xp: quest.xp,
     have,
     target: quest.target,
     done: have >= quest.target,
@@ -442,6 +445,11 @@ export async function turnInFinnQuest(): Promise<{
   reward: number; lines: string[]; questsDone: string[]
   /** The purse after the pay, so the nav can show the right number now. */
   newDoubloons: number
+  /** Fishing XP paid, and the total after it, so the chart's live XP can
+   *  take it on the same frame. A level crossed here shows the same card a
+   *  level crossed on a catch does: the chart derives that from the total. */
+  xp: number
+  newFishingXP: number
 } | { error: string } | null> {
   const user = await me()
   if (!user) return null
@@ -485,16 +493,24 @@ export async function turnInFinnQuest(): Promise<{
       user_id: user.id, amount: quest.reward, reason: `Finn's job: ${quest.label}`,
     })
   }
+  // AND THE XP, flat, no multiplier: prestige and renown multiply CATCH XP,
+  // and this is not a catch. Past the cap it still counts, because renown is
+  // derived from the total.
+  if (quest.xp > 0) {
+    await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_xp', n: quest.xp })
+  }
 
-  // The purse as it stands. The chart used to fire the nav's event with no
-  // value here and the nav, rightly, ignored it -- so a job paid and the
-  // number did not move until the next page.
-  const { data: after } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+  // The purse and the XP as they stand. The chart used to fire the nav's
+  // event with no value here and the nav, rightly, ignored it -- so a job
+  // paid and the number did not move until the next page.
+  const { data: after } = await admin.from('profiles').select('doubloons, fishing_xp').eq('id', user.id).single()
   return {
     reward: quest.reward,
     lines: [quest.done, ...rung.lines],
     questsDone: newDone,
     newDoubloons: Number(after?.doubloons ?? 0),
+    xp: quest.xp,
+    newFishingXP: Number(after?.fishing_xp ?? 0),
   }
 }
 
