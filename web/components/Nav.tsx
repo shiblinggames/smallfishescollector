@@ -1,6 +1,7 @@
 'use client'
 
 import { openGemStore } from '@/components/GemStoreModal'
+import { openDoubloonGuide } from '@/components/DoubloonGuide'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import AnnouncementBanner from './AnnouncementBanner'
@@ -415,15 +416,22 @@ export default function Nav({ doubloons, gems, canSail = false }: {
               <span><TickingNumber value={displayGems} /> ◆</span>
             </button>
           )}
+          {/* AND THE GOLD OPENS A GUIDE. The gem balance beside this has been a
+              door since the Purser shipped, so a doubloon balance that did
+              nothing read as the broken one of the pair. It sells nothing:
+              doubloons are not for sale. It says what they are for. */}
           {displayDoubloons !== undefined && (
-            <span
+            <button
+              type="button"
+              onClick={openDoubloonGuide}
+              aria-label="What doubloons buy"
               data-doubloon-pill
               data-coach="purse"
               className="font-cinzel font-700 text-[#f0c040]"
-              style={{ fontSize: '0.78rem' }}
+              style={{ fontSize: '0.78rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}
             >
-              <TickingNumber value={displayDoubloons} /> ⟡
-            </span>
+              <span><TickingNumber value={displayDoubloons} /> ⟡</span>
+            </button>
           )}
           {/* Sized to match the avatar beside it. Left at 36 it was the tallest
               thing in the row and quietly held the bar at its old height. */}
@@ -472,14 +480,17 @@ export default function Nav({ doubloons, gems, canSail = false }: {
             </button>
           )}
           {displayDoubloons !== undefined && (
-            <span
+            <button
+              type="button"
+              onClick={openDoubloonGuide}
+              aria-label="What doubloons buy"
               data-doubloon-pill
               data-coach="purse"
               className="font-cinzel font-700 text-[#f0c040]"
-              style={{ fontSize: '0.8rem' }}
+              style={{ fontSize: '0.8rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}
             >
-              <TickingNumber value={displayDoubloons} /> ⟡
-            </span>
+              <span><TickingNumber value={displayDoubloons} /> ⟡</span>
+            </button>
           )}
           {isSignedIn && <MailInbox initialUnreadCount={mailUnread} />}
           {/* Hamburger — animates into an X when open. */}

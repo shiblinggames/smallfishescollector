@@ -47,6 +47,7 @@
 export const maxDuration = 20
 
 import GemStoreModal from '@/components/GemStoreModal'
+import DoubloonGuide from '@/components/DoubloonGuide'
 import Honeypot from '@/components/Honeypot'
 import Nav from '@/components/Nav'
 import MembershipModal from '@/components/MembershipModal'
@@ -123,6 +124,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           event fired by every "Become a member" CTA across the app. */}
       <MembershipModal />
       <GemStoreModal />
+      {/* The doubloon balance's own door: what the gold is for. Sells nothing. */}
+      <DoubloonGuide />
     </>
   )
 }
