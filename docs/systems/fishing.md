@@ -1,11 +1,18 @@
 # Fishing
 
-> **This page is being retired.** The ocean hub (`docs/systems/ocean-hub.md`) is the
-> intended home of the fishing loop — you sail to water and cast where you are, instead of
-> picking a zone from a menu. `FishingGame.tsx` is still the reference implementation and
-> still the only place several things exist, so read it before changing the hub's version.
-> When the two disagree about a RULE, the hub is wrong until proven otherwise; when they
-> disagree about a SURFACE, the hub is where the direction is going.
+> **This page is now about RULES, not about a screen.** The ocean hub
+> (`docs/systems/ocean-hub.md`) is where the fishing loop lives: you sail to water and cast
+> where you are, instead of picking a zone from a menu.
+>
+> **`FishingGame.tsx` IS DELETED, and so is the whole `/fishing` route** (verified
+> 2026-09-17: there is no `app/(app)/fishing/page.tsx`). This page used to call it the
+> reference implementation; it is in git history and nowhere else. The loop is
+> **`web/app/(app)/sea/FishingHere.tsx`** now. What is left in `app/(app)/fishing/` is a
+> grab-bag the sea still imports: `actions.ts` (the server verdicts), `GearScreen.tsx`,
+> `TrawlIndicator.tsx`, the Almanac, the Ancient cinematics and `FinnScene.tsx`.
+>
+> The RULES below are still current and still the source of truth. Only the file names in
+> the old prose were wrong.
 
 The first of the two core loops (with expeditions). Everything else in the game feeds off
 it or gates behind its level. Player-paced, evergreen: no timers that punish absence.
@@ -16,8 +23,9 @@ Zone select → cast → catch dial → reel in → result → market. The dial 
 a rotating needle, a green catch zone (width set by gear), and a hold meter for larger
 fish. Streaks of perfect catches build "on fire" state with escalating rewards.
 
-- The whole game lives in `web/app/(app)/fishing/FishingGame.tsx` (very large, one file
-  by design — the state machine reads top to bottom).
+- The loop lives in `web/app/(app)/sea/FishingHere.tsx` — the card, the dial, the reel and
+  the result, drawn over the chart where you cast. (It replaced `fishing/FishingGame.tsx`,
+  which was one very large file by design and is now deleted.)
 - Dial math and zone geometry: `web/lib/dialAim.ts`. Zone/species data:
   `web/app/(app)/fishing/zoneData.ts`, `web/lib/fishSpecies.ts`.
 - Server verdicts: `reelIn` in `web/app/(app)/fishing/actions.ts`.
@@ -115,9 +123,10 @@ systems already multiply it down and the old bases predate most of them.
   considered and rejected: it would turn a flavor system into a grind target.
 - **Prestige caps and its perks are deliberate** — no sell bonus there either. Prestige
   logic lives in `web/app/(app)/fishing/actions.ts`, not a dedicated lib.
-- **FishingGame is statically imported** by `FishingPageClient.tsx`. It was `next/dynamic`
-  + `ssr:false` once; that created a post-hydration waterfall that made the page feel
-  slow. Don't re-dynamic it.
+- **The lesson from `FishingPageClient.tsx`, which is also deleted:** it imported the game
+  statically after `next/dynamic` + `ssr:false` was tried and created a post-hydration
+  waterfall that made the page feel slow. The rule survives the file: do not lazy-load the
+  thing a screen exists to show.
 - Random events, crate encounters (`components/CrateOpening.tsx` is THE crate moment),
   and giant/ancient trophies layer on top of the base loop without changing dial rules.
 - **A golden is a forced choice, and the CHART owns it, not the catch card.** Landing one

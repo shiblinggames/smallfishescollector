@@ -8,8 +8,14 @@ finale. The bible for who knows what and when.
 **Finn — the friendly guide fish — runs the Finndicate.** The reveal is seeded across
 chapters and must never be leaked early by incidental copy. Anything Finn says pre-reveal
 is written in innocent voice; re-read `web/lib/finn.ts` and `web/lib/finnItems.ts` before
-giving Finn new lines anywhere (the encounter panel is
-`web/app/(app)/fishing/FinnEncounter.tsx`, the ancient-catch cutscenes are `FinnScene.tsx`).
+giving Finn new lines anywhere. **His conversation panel is `web/app/(app)/sea/FinnTalk.tsx`**
+(corrected 2026-09-17: `fishing/FinnEncounter.tsx` is deleted along with the rest of the
+fishing screen), and the ancient-catch cutscenes are `web/app/(app)/fishing/FinnScene.tsx`,
+which survives.
+
+**He is labelled "The Angler", not "Rival"** (2026-09-17). The wagers he used to offer are
+retired, so the word no longer describes anything he does. Whatever the label says it must
+read INNOCENT right through the Megalodon beat and must never tip this twist.
 
 **Finn is found, not rolled.** He used to arrive on a 2% chance per cast on the fishing
 screen. He now stands out on the sea chart and you sail to him: one meeting, one beat, and

@@ -1466,11 +1466,18 @@ there is no HTTP route to it. Supabase's own security advisor is what surfaced t
 
 Two pieces, split by **when the knowledge is usable** rather than by topic.
 
-**The arrival walkthrough** (`SeaTour.tsx`) — five cards, 91 words, shown once and latched
-on `profiles.has_seen_sea_tour`. It covers only what you cannot use the chart at all
-without: steering, that Cast appears in open water, the chart button, that there are isles
-and bottles and buried things out there, and that the islands round about are places you
-can moor.
+**The arrival walkthrough** — shown once and latched on `profiles.has_seen_sea_tour`
+(+ `sea_tour_step`, because it leaves the chart for the market and has to resume). It
+covers only what you cannot use the chart at all without: steering, that Cast appears in
+open water, the chart button, that there are isles and bottles and buried things out
+there, and that the islands round about are places you can moor.
+
+> **STALE NAME, CORRECTED 2026-09-17.** This said `SeaTour.tsx`, which does not exist. The
+> component is **`sea/SeaFirstVoyage.tsx`**, playing the script in `lib/seaOnboarding`, and
+> it is no longer "five cards, 91 words" — it holds each beat until the captain has done
+> the thing it asked for. **"The first voyage, as designed 2026-09-10" further down this
+> same file supersedes this paragraph**; read that one. `sea/SeaGateTour.tsx` is a
+> SEPARATE, later tour, played the first time you cross the reef.
 
 **Landfall hints** (`SeaLandfallHint.tsx`) — one line the first time you come within
 mooring range of the Shipyard, the Trawl Docks or the Homestead, latched per-port in
