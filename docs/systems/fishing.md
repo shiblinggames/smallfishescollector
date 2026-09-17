@@ -83,8 +83,8 @@ systems already multiply it down and the old bases predate most of them.
 - **Fishing XP comes from catches, trawls, and Finn's jobs, in that order of weight.**
   Catch XP is `catchXP()` in `lib/fishingLevel.ts` with the prestige, renown, rod and streak
   multipliers applied in `reelIn`. Trawl hauls pay their own XP. Finn's jobs pay a FLAT
-  amount each (`xp` in `lib/finnQuests.ts`), tuned as a quarter to three quarters of one
-  level at the chapter's entry, with no multiplier: a help toward the level, never the way
+  amount each (`xp` in `lib/finnQuests.ts`), in a tight band per chapter (80 to 110 in the
+  Shallows up to 2,500 to 3,000 in the Abyss; 10,000 flat in the Ancient Deep), with no multiplier: a help toward the level, never the way
   you level. Any new XP source goes through `bump_profile_stat('fishing_xp')` or the reelIn
   UPDATE, and the chart must receive the new total (`setXpLive`) so the level card fires.
 - **Fish size variance grants no XP or sell bonus.** Length rolls and personal-best tiers

@@ -362,10 +362,10 @@ would make the story unreachable for everybody at once rather than for one capta
 
 **A job pays doubloons AND flat fishing XP (`xp` on each job, 2026-09-17).** Flat on
 purpose: the jobs are a help toward the next level and never the way you level, because
-fishing is. Each chapter's six climb from about a quarter to about three quarters of one
-level's gap at the chapter's entry level (Shallows 15 to 45, Open Waters 50 to 140, Deep 165
-to 490, Abyss 850 to 2,550, Ancient Deep 6,500 to 20,000), so the last job of an act moves
-the bar a long way and none pays a whole level from a standing start. No multiplier: prestige
+fishing is. The six in a chapter sit in a TIGHT band (Shallows 80 to 110, Open Waters 150 to
+200, Deep 500 to 650, Abyss 2,500 to 3,000) and the Ancient Deep's eight pay 10,000 each, no
+range. Early on a job is a level or more, on purpose: the first gaps are tiny and levelling
+fast early feels good. A wide range within a chapter was tried first and rejected. No multiplier: prestige
 and renown multiply CATCH XP and this is not a catch. Past the cap it still counts, since
 renown is derived from the total. `turnInFinnQuest` bumps `fishing_xp` through
 `bump_profile_stat` (atomic, so a catch landing in the same second cannot lose it) and returns
