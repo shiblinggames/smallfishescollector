@@ -33,8 +33,8 @@ export const FINN_AVATAR = {
  *
  * Finn now stands out on the chart and you sail to him — lib/seaFinn.ts for
  * where, app/(app)/sea/finnActions.ts for what happens when you get there. Both
- * Finns read and write the same four columns (finn_encounters, finn_wins,
- * finn_seen_beats, finn_revealed), so leaving the old 2% roll live would mean
+ * Finns read and write the same columns (finn_encounters, finn_seen_beats,
+ * finn_revealed), so leaving the old 2% roll live would mean
  * the story advancing in two places: sail three thousand pixels for the next
  * beat, and find the fishing screen had already spent it on a cast.
  *
@@ -46,60 +46,29 @@ export const FINN_AVATAR = {
  */
 export const FINN_ENCOUNTER_RATE = 0
 
-/** Weighted tier pick: 60% T1, 30% T2, 10% T3. */
-export const FINN_TIER_WEIGHTS = [0.6, 0.3, 0.1] as const
-
 /** Rare lore-drop chance once the player has reached the post-reveal phase. */
 export const FINN_EPILOGUE_LORE_CHANCE = 0.15
 
-// ─── Challenge definitions ───────────────────────────────────────────────────
-
-export type FinnChallengeType = 'perfect_streak' | 'speed_catch'
-
-export interface FinnTier {
-  tier: 1 | 2 | 3
-  /** Reward multiplier — final payout = fishingLevel × multiplier doubloons. */
-  multiplier: number
-}
-
-export interface PerfectTier extends FinnTier {
-  /** Consecutive perfects required to win. */
-  perfects: number
-}
-
-export interface SpeedTier extends FinnTier {
-  /** Fish required to win. */
-  fish: number
-  /** Time window in milliseconds. */
-  timeMs: number
-}
-
-export const FINN_PERFECT_TIERS: PerfectTier[] = [
-  { tier: 1, perfects: 1, multiplier: 5  },
-  { tier: 2, perfects: 2, multiplier: 10 },
-  { tier: 3, perfects: 3, multiplier: 15 },
-]
-
-// Base times calibrated for Shallows. Higher zones multiply timeMs via
-// FINN_SPEED_ZONE_MULT so the per-fish pace stays tight no matter where
-// the player is fishing. Ancient Deep is excluded from speed challenges
-// entirely — its boss-style multi-stage catches don't fit a speed format.
-export const FINN_SPEED_TIERS: SpeedTier[] = [
-  { tier: 1, fish: 3, timeMs: 30_000, multiplier: 5  },
-  { tier: 2, fish: 5, timeMs: 42_000, multiplier: 10 },
-  { tier: 3, fish: 7, timeMs: 54_000, multiplier: 15 },
-]
-
-/** Multiplier on the Shallows-baseline timeMs per zone. Tracks actual
- *  bite-wait scaling (deeper waters have longer waits) so the challenge
- *  stays achievable but never sloppy at any depth. */
-export const FINN_SPEED_ZONE_MULT: Record<string, number> = {
-  shallows:     1.0,
-  open_waters:  1.4,
-  deep:         1.9,
-  abyss:        2.5,
-  ancient_deep: 0,    // sentinel — speed challenges skipped entirely here
-}
+// ─── THE WAGERS ARE RETIRED (2026-09-17) ─────────────────────────────────────
+//
+// He used to offer bets: land three perfects, or five fish inside a minute,
+// for a multiple of your fishing level in doubloons. Tiers, weights, zone
+// time-multipliers, win and loss line pools, a `finn_challenge` column and a
+// `finn_wins` counter, all of it lived here.
+//
+// THEY HAD ALREADY STOPPED WORKING. When his bets became JOBS the client's
+// take-it and pass-it handlers were left behind unwired, so `finnState` never
+// saw a bet reach `active` and none could be accepted at all. Nobody could win
+// one, `finn_wins` was frozen wherever it stood, three badges hung on it and
+// were unearnable, and sixteen written story beats sat behind a door with no
+// handle.
+//
+// So they are gone rather than repaired, because the jobs are the better
+// version of the same idea: a bet is a thing that happens to you while you
+// fish, and a job is a thing you go and do. See docs/systems/sea-npcs.md.
+//
+// THE WRITING SURVIVED. The sixteen win beats are folded into the one beat
+// stream below, and the three badges now count jobs.
 
 // ─── Story beats ─────────────────────────────────────────────────────────────
 
@@ -110,33 +79,33 @@ export const FINN_SPEED_ZONE_MULT: Record<string, number> = {
  * You are not befriending Finn. You are earning his attention, which he gives
  * grudgingly and takes back the moment you stop turning up.
  *
- * DERIVED, NEVER STORED. `finn_encounters` and `finn_wins` have both been
- * written since long before the friendship system existed, and they are exactly
- * the two things the player does with him: turn up, and take his bets. A second
+ * DERIVED, NEVER STORED. `finn_encounters` and `finn_quests_done` are exactly
+ * the two things a captain does with him: turn up, and do the work. A second
  * counter would be a second source of truth for a fact the database already
  * holds twice over.
  *
- * A win is worth two meetings. Taking a bet and landing it costs a hunt for the
- * streak on top of the sail out, and it is the only thing he actually respects.
+ * A JOB IS WORTH TWO MEETINGS. It used to be a won bet that was worth two, on
+ * the reasoning that landing one cost a hunt on top of the sail out. The bets
+ * are retired; a job costs more than one ever did, and it is the only thing he
+ * actually respects.
  *
- * The tiers are named as a rivalry rather than a friendship, and the ladder is
- * his arc in five words: he starts by not knowing which angler you are and ends
- * one rung short of calling you his equal, which is the exact thing he says he
- * will never do.
+ * The ladder is his arc in five words: he starts by not knowing which angler
+ * you are and ends one rung short of calling you his equal, which is the exact
+ * thing he says he will never do.
  */
 export const FINN_STANDING_NAME = [
   'Another angler',
   'Worth watching',
-  'Worth betting against',
+  'Worth testing',
   'Worth teaching',
   'Nearly his equal',
 ] as const
 
 export const FINN_STANDING_AT = [0, 3, 8, 16, 28] as const
 
-/** Meetings, plus two for every bet you have taken off him. */
-export function finnStanding(encounters: number, wins: number): number {
-  return Math.max(0, encounters) + Math.max(0, wins) * 2
+/** Meetings, plus two for every job you have handed back. */
+export function finnStanding(encounters: number, jobsDone: number): number {
+  return Math.max(0, encounters) + Math.max(0, jobsDone) * 2
 }
 
 export function finnStandingTier(points: number): 0 | 1 | 2 | 3 | 4 {
@@ -248,7 +217,7 @@ export interface FinnBeat {
 /** Encounter-track beats — fire when finn_encounters crosses milestone.
  *  Early beats are PURE rival. Later ones quietly circle the Ancient Deep
  *  and let the smallest cracks show. He never explains himself. */
-export const FINN_ENCOUNTER_BEATS: FinnBeat[] = [
+const FINN_EARLY_BEATS: FinnBeat[] = [
   {
     id: 'e1', milestone: 1, track: 'encounter',
     lines: [
@@ -360,10 +329,19 @@ export const FINN_ENCOUNTER_BEATS: FinnBeat[] = [
   },
 ]
 
-/** Win-track beats — fire when finn_wins crosses milestone.
- *  His grudging respect grows, but his real interest stays fixed on whether
- *  you can reach the Deep he can't. */
-export const FINN_WIN_BEATS: FinnBeat[] = [
+/**
+ * ── THE BEATS THAT USED TO BE BEHIND A WAGER ────────────────────────────────
+ *
+ * Sixteen of them, written for the moment you beat him at something, and
+ * unreachable from the day the bets stopped being takeable. They are the back
+ * half of the stream now, which is where they were always needed: there are
+ * thirty-two jobs on his ladder and only thirteen early beats, so the last
+ * nineteen turn-ins used to hand back a payment and no story at all.
+ *
+ * Their ids are untouched. They are in players' `finn_seen_beats` and a
+ * renumber would re-tell a beat somebody has already heard.
+ */
+const FINN_LATE_BEATS: FinnBeat[] = [
   {
     id: 'w1', milestone: 1, track: 'win',
     lines: [
@@ -443,7 +421,7 @@ export const FINN_WIN_BEATS: FinnBeat[] = [
     id: 'w25', milestone: 25, track: 'win',
     lines: [
       { text: "The deep has taken things off me I don't put into words.", pause: 350 },
-      { text: "Leave it where it lies. Take the bet, or don't." },
+      { text: "Leave it where it lies. Take the work, or don't." },
     ],
   },
   {
@@ -456,7 +434,7 @@ export const FINN_WIN_BEATS: FinnBeat[] = [
   {
     id: 'w30', milestone: 30, track: 'win',
     lines: [
-      { text: "Thirty wins. Most anglers don't last thirty *casts*.", pause: 300 },
+      { text: "Thirty jobs. Most anglers don't last thirty *casts*.", pause: 300 },
       { text: "...I won't call you my equal. But I'll quit calling you 'kid.'", pause: 250 },
       { text: "Spend that sparingly. I don't hand it out twice." },
     ],
@@ -609,92 +587,24 @@ export function finnAncientBeat(fishId: number): FinnAncientBeat | null {
 
 // ─── Generic line pools (pre-reveal) ─────────────────────────────────────────
 
-/** Shown when an encounter fires but no story beat is due. Single-line. */
-export const FINN_OFFER_LINES: string[] = [
+/** Shown when you turn up and he has nothing due: no beat, no job, no gate.
+ *  Three of the original six named a wager and went with them. */
+export const FINN_IDLE_LINES: string[] = [
   "Same again?",
   "Bored yet?",
-  "Try this on for size.",
-  "Reckon you can handle this?",
-  "Loosen up. It's just doubloons.",
   "Your line. Your call.",
-]
-
-/** Shown when player wins a challenge but no win-beat milestone is hitting. */
-export const FINN_WIN_LINES: string[] = [
-  "Hmph.",
-  "Lucky.",
-  "Don't say it.",
-  "Fine. You earned that one.",
-  "...next one's mine.",
-]
-
-/** Shown when player loses a challenge. */
-export const FINN_LOSS_LINES: string[] = [
-  "Told you.",
-  "Try the bait next time.",
-  "Better luck next decade.",
-  "Stick to the shallows, kid.",
-  "That'll teach you to bet against me.",
 ]
 
 // ─── Epilogue pools (post-reveal) ────────────────────────────────────────────
 
-/** Replaces FINN_OFFER_LINES once player has seen the reveal. He's openly
- *  fixed on the remaining trophies now, and only just keeping the lid on it. */
-export const FINN_EPILOGUE_OFFER_LINES: string[] = [
+/** Replaces FINN_IDLE_LINES once the player has seen the reveal. He is openly
+ *  fixed on the remaining trophies now, and only just keeping the lid on it.
+ *  The two that offered him a round of dice went with the wagers. */
+export const FINN_EPILOGUE_IDLE_LINES: string[] = [
   "Back at it. How many of the six now?",
-  "Another bet, same rules. Though we both know what I really want out of you.",
   "...you've been down to the deep again. I can see it on you.",
-  "Sit a minute. The deep's waited this long. It can wait for a round of dice.",
   "How's the black water treating you?",
   "Don't let the rest of this ocean distract you. Six. That's the only number that counts.",
-]
-
-/** Replaces FINN_WIN_LINES post-reveal. */
-export const FINN_EPILOGUE_WIN_LINES: string[] = [
-  "Good. Now go pull up the next one.",
-  "You make it look like nothing. It was never nothing. Not for me.",
-  "Closer. Every win, you're a step closer to all six.",
-  "I waited a long time to watch someone do this. Don't you dare stop now.",
-  "Easy as breathing for you. I used to resent that. Now I'm grateful for it.",
-]
-
-/** Replaces FINN_LOSS_LINES post-reveal. */
-export const FINN_EPILOGUE_LOSS_LINES: string[] = [
-  "Hmph. The deep won't care about your bad day. Neither will I.",
-  "Shake it off. There's trophies down there with your name not yet on them.",
-  "Even off your game you're better on that water than I ever was.",
-  "The deep is patient. I am running short of it. Get back out there.",
-]
-
-// ─── Return-acknowledgement pools ────────────────────────────────────────────
-// Fires as the FIRST line on Finn's NEXT encounter after a resolved (or
-// declined) challenge — so he remembers the last outcome instead of acting
-// like every encounter is the first. Cleared on the server after each
-// encounter so it only fires once per outcome.
-
-export const FINN_RETURN_AFTER_PASS: string[] = [
-  "Last time you walked away. Not biting today either?",
-  "You passed on me last time. Cold feet, or just smart?",
-  "Back so soon. Still afraid to commit?",
-  "I half-thought you'd dodge me again.",
-  "You ducked my last bet. Don't make a habit of it.",
-]
-
-export const FINN_RETURN_AFTER_LOSS: string[] = [
-  "Lost the last one. Ready to lose another?",
-  "Last bet went my way. Got a stomach for round two?",
-  "Don't tell me you forgot the last one. Try again.",
-  "I'll take your doubloons twice if you'll let me.",
-  "You owed me one. Time to settle.",
-]
-
-export const FINN_RETURN_AFTER_WIN: string[] = [
-  "You got me last time. Won't happen twice.",
-  "Beat me once. That's a coincidence. Twice is a pattern.",
-  "Don't get smug about the last one. I was warming up.",
-  "Lucky last time. Skill this time?",
-  "Hope you didn't spend it all already.",
 ]
 
 /** Rare lore drops — fires occasionally instead of a normal offer line.
@@ -707,24 +617,6 @@ export const FINN_EPILOGUE_LORE_LINES: string[] = [
 ]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function pickWeighted<T>(items: readonly T[], weights: readonly number[]): T {
-  const total = weights.reduce((a, b) => a + b, 0)
-  let r = Math.random() * total
-  for (let i = 0; i < items.length; i++) {
-    r -= weights[i]
-    if (r <= 0) return items[i]
-  }
-  return items[items.length - 1]
-}
-
-export function pickFinnTier(): 1 | 2 | 3 {
-  return pickWeighted([1, 2, 3] as const, FINN_TIER_WEIGHTS)
-}
-
-export function pickChallengeType(): FinnChallengeType {
-  return Math.random() < 0.5 ? 'perfect_streak' : 'speed_catch'
-}
 
 export function pickRandomLine(pool: readonly string[]): string {
   return pool[Math.floor(Math.random() * pool.length)] ?? ''
@@ -755,25 +647,13 @@ export function pickRandomLine(pool: readonly string[]): string {
  * high-water mark implies, no gaps. Walking forward is identical for them and
  * repairs the case rather than skipping it.
  */
-export function findNextEncounterBeat(
+export const FINN_BEATS: FinnBeat[] = [...FINN_EARLY_BEATS, ...FINN_LATE_BEATS]
+
+export function findNextBeat(
   seenBeats: readonly string[],
 ): FinnBeat | null {
   const seen = new Set(seenBeats)
-  return FINN_ENCOUNTER_BEATS.find(b => !seen.has(b.id)) ?? null
+  return FINN_BEATS.find(b => !seen.has(b.id)) ?? null
 }
 
-/** The next unseen win-track beat, or null. Fires when a challenge is won —
- *  his reaction is either this beat's lines or a generic win line.
- *
- *  Same change as the encounter track above: one WIN, one beat, rather than a
- *  milestone ladder up to 40. Winning a bet already costs a hunt for Finn plus
- *  the challenge itself, and gating story behind a second counter on top of
- *  that put the last win beat further away than any player has ever reached —
- *  the high-water mark on the live table is 61 wins against a 40 milestone, and
- *  two players out of 81 have ever reached the end of it. */
-export function findNextWinBeat(
-  seenBeats: readonly string[],
-): FinnBeat | null {
-  const seen = new Set(seenBeats)
-  return FINN_WIN_BEATS.find(b => !seen.has(b.id)) ?? null
-}
+

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import StoryLog, { type StoryLogData } from './StoryLog'
-import { FINN_ENCOUNTER_BEATS, FINN_REVEAL_BEAT } from '@/lib/finn'
+import { FINN_BEATS, FINN_REVEAL_BEAT } from '@/lib/finn'
 import { getRaidMapView } from '@/app/(app)/expeditions/raidMapActions'
 import { isCombatNode } from '@/lib/raidMap'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
@@ -17,7 +17,7 @@ export default async function CaptainsLogPage() {
   // ── Finn arc recap ───────────────────────────────────────────────────────
   const seenFinn = new Set((profile?.finn_seen_beats as string[] | null) ?? [])
   const finnRevealed = !!profile?.finn_revealed || seenFinn.has('reveal')
-  const finnEncounter = FINN_ENCOUNTER_BEATS.filter(b => seenFinn.has(b.id)).map(b => ({ id: b.id, lines: b.lines.map(l => l.text) }))
+  const finnEncounter = FINN_BEATS.filter(b => seenFinn.has(b.id)).map(b => ({ id: b.id, lines: b.lines.map(l => l.text) }))
 
   // ── Raid map recap ───────────────────────────────────────────────────────
   const raidViews = raidMap.views
@@ -49,7 +49,7 @@ export default async function CaptainsLogPage() {
       revealed: finnRevealed,
       revealLines: finnRevealed ? FINN_REVEAL_BEAT.lines.map(l => l.text) : [],
       discovered: finnEncounter.length + (finnRevealed ? 1 : 0),
-      total: FINN_ENCOUNTER_BEATS.length + 1,
+      total: FINN_BEATS.length + 1,
     },
     raid: {
       done: raidDone,

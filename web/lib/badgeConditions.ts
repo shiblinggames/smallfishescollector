@@ -192,7 +192,7 @@ export interface BadgeProfileFields {
   ancient_vigil?: unknown             // THE LONG VIGIL: per-giant rank + released state
   trophy_size_catches?: number | null  // lifetime count of Trophy-SIZE catches
   prestige_levels?: Record<string, number> | null
-  finn_wins?: number | null
+  finn_quests_done?: string[] | null
   fish_sold_doubloons?: number | null
   fishing_casts?: number | null
   fishing_double_catches?: number | null
@@ -512,7 +512,7 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     crate_expectations: Number(p.fishing_crates_opened ?? 0) >= 250,
     a_real_keeper:  Number(p.trophy_size_catches ?? 0) >= 10,
     full_stringer:  (p.unlocked_pets ?? []).length >= 3,
-    one_upped:      Number(p.finn_wins ?? 0) >= 1,
+    one_upped:      (p.finn_quests_done ?? []).length >= 6,
     fresh_coat:     (p.ship_skins ?? []).length >= 1,
     // Veteran
     twice_the_haul: Number(p.fishing_double_catches ?? 0) >= 500,
@@ -534,12 +534,12 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     high_water_mark: PRESTIGE_ZONES.some(z => (prestige[z] ?? 0) >= 5),
     fish_baron:     Number(p.fish_sold_doubloons ?? 0) >= 1_000_000,
     hoard_of_gold:  j.goldenCount >= 10,
-    finns_rival:    Number(p.finn_wins ?? 0) >= 10,
+    finns_rival:    (p.finn_quests_done ?? []).length >= 18,
     // Grandmaster
     in_the_flow:    streak >= 30,
     eagle_eyed:     Number(p.total_perfects ?? 0) >= 5000,
     el_dorado:      j.goldenCount >= 25,
-    the_better_angler: Number(p.finn_wins ?? 0) >= 25,
+    the_better_angler: (p.finn_quests_done ?? []).length >= 32,
     full_drydock:   SHIP_SKINS.every(s => (p.ship_skins ?? []).includes(s.id)),
     // ── 2026-07 expansion (Gauntlet + endgame) ──
     // Descent (depth 5 = into_the_deep, depth 10 = davy_jones, already above).
@@ -748,7 +748,7 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, crew_drill_level, crew_stores_level, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, gauntlet_deepest, gauntlet_fathoms, ancient_catches, ancient_vigil, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, daily_challenge_sweeps, voyage_booty_hauls, daily_master_cleared, bounties_claimed, bounty_boards_cleared, bounty_elites_claimed, bounty_gems_earned, sea_explored, sea_explored_exp'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, crew_drill_level, crew_stores_level, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, gauntlet_deepest, gauntlet_fathoms, ancient_catches, ancient_vigil, trophy_size_catches, prestige_levels, finn_quests_done, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, daily_challenge_sweeps, voyage_booty_hauls, daily_master_cleared, bounties_claimed, bounty_boards_cleared, bounty_elites_claimed, bounty_gems_earned, sea_explored, sea_explored_exp'
 
 // EVERY FIELD A CONDITION READS MUST BE LISTED ABOVE. A missing column does not
 // error: the field comes back undefined, `?? 0` turns it into zero, and the

@@ -188,7 +188,7 @@ export const BADGES: Badge[] = [
 
   // ── 2026-07 fishing expansion (24 badges across every tier) ──────────────
   // Art PENDING — 4 sheets of 6 for the slice-badges run. Fishing pursuits +
-  // three new-data hooks: goldens (shiny_catches), Finn wins (finn_wins), fish
+  // three new-data hooks: goldens (shiny_catches), Finn's jobs (finn_quests_done), fish
   // value sold (fish_sold_doubloons), and boat-skin collection (ship_skins).
   { id: 'wet_behind_ears', name: 'Wet Behind the Ears', description: 'Reach Fishing Level 25',                        imageUrl: '/badges/wet_behind_ears.png', difficulty: 'rookie'     },
   { id: 'beginners_luck', name: "Beginner's Luck",     description: 'Fish up and open your first supply crate',        imageUrl: '/badges/beginners_luck.png', difficulty: 'rookie'      },
@@ -197,7 +197,7 @@ export const BADGES: Badge[] = [
   { id: 'crate_expectations', name: 'Crate Expectations', description: 'Open 250 supply crates',                       imageUrl: '/badges/crate_expectations.png', difficulty: 'seasoned' },
   { id: 'a_real_keeper',  name: 'A Real Keeper',       description: 'Land 10 Trophy-size catches',                     imageUrl: '/badges/a_real_keeper.png',  difficulty: 'seasoned'    },
   { id: 'full_stringer',  name: 'Full Stringer',       description: 'Keep 3 fishing pets at once',                     imageUrl: '/badges/full_stringer.png',  difficulty: 'seasoned'    },
-  { id: 'one_upped',      name: 'One-Upped',           description: 'Win a challenge against Finn',                    imageUrl: '/badges/one_upped.png',      difficulty: 'seasoned'    },
+  { id: 'one_upped',      name: 'The Hand on the Rod', description: "Finish the first chapter of Finn's jobs",          imageUrl: '/badges/one_upped.png',      difficulty: 'seasoned'    },
   { id: 'fresh_coat',     name: 'Fresh Coat',          description: 'Own a boat skin',                                 imageUrl: '/badges/fresh_coat.png',     difficulty: 'seasoned'    },
   { id: 'twice_the_haul', name: 'Twice the Haul',      description: 'Land 500 double catches',                         imageUrl: '/badges/twice_the_haul.png', difficulty: 'veteran'     },
   { id: 'menagerie',      name: 'The Menagerie',       description: 'Keep 5 fishing pets at once',                     imageUrl: '/badges/menagerie.png',      difficulty: 'veteran'     },
@@ -209,11 +209,11 @@ export const BADGES: Badge[] = [
   { id: 'high_water_mark', name: 'High Water Mark',    description: 'Reach Max Prestige in any fishing zone',          imageUrl: '/badges/high_water_mark.png', difficulty: 'master'     },
   { id: 'fish_baron',     name: 'Fish Baron',          description: 'Sell 1,000,000 doubloons of fish',                imageUrl: '/badges/fish_baron.png',     difficulty: 'master'      },
   { id: 'hoard_of_gold',  name: 'Hoard of Gold',       description: 'Catch 10 golden fish',                            imageUrl: '/badges/hoard_of_gold.png',  difficulty: 'master'      },
-  { id: 'finns_rival',    name: "Finn's Rival",        description: 'Win 10 challenges against Finn',                  imageUrl: '/badges/finns_rival.png',    difficulty: 'master'      },
+  { id: 'finns_rival',    name: 'The Long Sail',       description: "Finish three chapters of Finn's jobs",             imageUrl: '/badges/finns_rival.png',    difficulty: 'master'      },
   { id: 'in_the_flow',    name: 'In the Flow',         description: 'Land 30 perfect catches in a row',                imageUrl: '/badges/in_the_flow.png',    difficulty: 'grandmaster' },
   { id: 'eagle_eyed',     name: 'Eagle-Eyed',          description: 'Land 5,000 perfect catches all-time',            imageUrl: '/badges/eagle_eyed.png',     difficulty: 'grandmaster' },
   { id: 'el_dorado',      name: 'El Dorado',           description: 'Catch 25 golden fish',                            imageUrl: '/badges/el_dorado.png',      difficulty: 'grandmaster' },
-  { id: 'the_better_angler', name: 'The Better Angler', description: 'Win 25 challenges against Finn',                 imageUrl: '/badges/the_better_angler.png', difficulty: 'grandmaster' },
+  { id: 'the_better_angler', name: 'The Better Angler', description: 'Finish every job Finn sets you',                  imageUrl: '/badges/the_better_angler.png', difficulty: 'grandmaster' },
   { id: 'full_drydock',   name: 'Full Drydock',        description: 'Own every boat skin',                             imageUrl: '/badges/full_drydock.png',   difficulty: 'grandmaster' },
 
   // ── 2026-07 expansion (batches 13–16) ────────────────────────────────────

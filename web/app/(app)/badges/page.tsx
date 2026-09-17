@@ -201,7 +201,7 @@ export default async function BadgesPage() {
   const totalStars = ZONES.reduce((s, z) => s + Math.min(5, prestige[z] ?? 0), 0)
   const topZonePrestige = Math.min(5, Math.max(0, ...ZONES.map(z => prestige[z] ?? 0)))
   const goldenCount = goldenRes.count ?? 0
-  const finnWins = Number(profile?.finn_wins ?? 0)
+  const finnJobs = ((profile?.finn_quests_done as string[] | null) ?? []).length
   const fishSold = Number(profile?.fish_sold_doubloons ?? 0)
   const boatSkinsOwned = ((profile?.ship_skins as string[] | null) ?? []).length
 
@@ -329,9 +329,9 @@ export default async function BadgesPage() {
         badgeGoal('struck_gold', 'Struck Gold', 'Catch your first golden fish', goldenCount, 1, '/sea', { binary: true }),
         badgeGoal('hoard_of_gold', 'Hoard of Gold', 'Catch 10 golden fish', goldenCount, 10, '/sea'),
         badgeGoal('el_dorado', 'El Dorado', 'Catch 25 golden fish', goldenCount, 25, '/sea'),
-        badgeGoal('one_upped', 'One-Upped', 'Win a challenge against Finn', finnWins, 1, '/sea', { binary: true }),
-        badgeGoal('finns_rival', "Finn's Rival", 'Win 10 challenges against Finn', finnWins, 10, '/sea'),
-        badgeGoal('the_better_angler', 'The Better Angler', 'Win 25 challenges against Finn', finnWins, 25, '/sea'),
+        badgeGoal('one_upped', 'The Hand on the Rod', "Finish the first chapter of Finn's jobs", finnJobs, 6, '/sea'),
+        badgeGoal('finns_rival', 'The Long Sail', "Finish three chapters of Finn's jobs", finnJobs, 18, '/sea'),
+        badgeGoal('the_better_angler', 'The Better Angler', 'Finish every job Finn sets you', finnJobs, 32, '/sea'),
         badgeGoal('fishmonger', 'Fishmonger', 'Sell 250,000 doubloons of fish', fishSold, 250_000, '/sea'),
         badgeGoal('fish_baron', 'Fish Baron', 'Sell 1,000,000 doubloons of fish', fishSold, 1_000_000, '/sea'),
         badgeGoal('got_away', 'The One That Got Away', 'Lose 50 fish to snapped lines', snags, 50, '/sea'),

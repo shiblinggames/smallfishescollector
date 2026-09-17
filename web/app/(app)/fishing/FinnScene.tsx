@@ -125,8 +125,9 @@ export default function FinnScene({ beat, onComplete }: {
       <AnimatePresence><FlashOut k={flash} /></AnimatePresence>
       <Letterbox />
 
-      {/* Eyebrow — he stays "Rival" even in the Megalodon beat; the wrongness is
-          in the words and the cold light, never a label that tips the twist. */}
+      {/* Eyebrow — he stays "The Angler" even in the Megalodon beat; the
+          wrongness is in the words and the cold light, never a label that tips
+          the twist. He was labelled "Rival" until the wagers were retired. */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 44, zIndex: 7,
         display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 1.1rem' }}>
         {!last && (

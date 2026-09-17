@@ -286,8 +286,8 @@ import { getTrawlState } from '../fishing/trawls/actions'
  * check is the encounter count, not a coordinate. */
 const finnNow = () => finnHaunt(0, 0)
 import { KIP } from '@/lib/seaSmuggler'
-import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, turnInFinnQuest, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
-import { FINN_NAME, findNextEncounterBeat, type FinnSceneLine } from '@/lib/finn'
+import { finnState, speakToFinn, turnInFinnQuest, type FinnSeaState } from './finnActions'
+import { FINN_NAME, findNextBeat, type FinnSceneLine } from '@/lib/finn'
 
 // THE SEA'S OWN. `fishing/FinnEncounter` is still mounted by the retired
 // fishing screen; this is the chart's version and it follows the chart's
@@ -3993,10 +3993,7 @@ export default function SeaMap({
   const [finnPaid, setFinnPaid] = useState<{ doubloons: number; xp: number; nonce: number } | null>(null)
   const [finnTalk, setFinnTalk] = useState<{
     lines: (string | FinnSceneLine)[]
-    mode: 'offer' | 'result' | 'reveal'
-    offer?: FinnOffer | null
-    resultKind?: 'won' | 'lost'
-    rewardText?: string
+    mode: 'offer' | 'reveal'
   } | null>(null)
   /** Stops a second tap on Hail while the first is still in flight. */
   const [finnBusy, setFinnBusy] = useState(false)
@@ -4086,42 +4083,6 @@ export default function SeaMap({
     }
   }, [finnBusy])
 
-  /** Take the bet. The clock starts server-side, not here. */
-  const takeFinnBet = useCallback(async () => {
-    const bet = await acceptFinnChallenge()
-    setFinnTalk(null)
-    setBetProgress(0)
-    if (bet) setFinn(prev => (prev ? { ...prev, challenge: bet } : prev))
-  }, [])
-
-  /** Walk away from it. Remembered, so he can needle you about it next time. */
-  const passFinnBet = useCallback(async () => {
-    setFinnTalk(null)
-    await declineFinnChallenge()
-  }, [])
-
-  /**
-   * HOW THE RUNNING BET IS GOING, for the chip and for knowing when to ask.
-   *
-   * Local and approximate ON PURPOSE. The server settles from its own counters
-   * and this number never reaches it — it exists so the player can watch a bet
-   * fill up, and so `settleFinnBet` is called at the moment it is worth calling
-   * rather than on a poll.
-   */
-  const [betProgress, setBetProgress] = useState(0)
-
-  /**
-   * A REEL LANDED. Decide whether the bet is worth settling.
-   *
-   * A perfect-streak bet reads the server's streak directly, which is the same
-   * value the settlement will read, so the two agree by construction. A speed
-   * bet counts fish landed since it was taken.
-   *
-   * Nothing is claimed early: `claimFinnChallenge` consumes the bet whatever it
-   * decides, so asking before the target is met would throw the bet away. The
-   * only two moments worth asking are "the target is met" and "the clock ran
-   * out", and both are below.
-   */
   /**
    * ── THE MARK HAS TO TURN ON THE CATCH THAT EARNS IT ───────────────────────
    *
@@ -4153,59 +4114,10 @@ export default function SeaMap({
   }, [])
   useEffect(() => () => { if (finnPollRef.current) clearTimeout(finnPollRef.current) }, [])
 
-  const onFinnReel = useCallback((r: { perfectStreak: number; caught: number }) => {
-    // FIRST, and outside the bet guard below: a job and a wager are different
-    // things, and a captain with no wager running is exactly the captain most
-    // likely to have a job on.
-    refreshFinnSoon()
-    const bet = finnRef.current?.challenge
-    if (!bet) return
-    if (bet.type === 'perfect_streak') {
-      setBetProgress(r.perfectStreak)
-      if (r.perfectStreak >= (bet.perfects ?? Infinity)) void settleFinnBet()
-    } else {
-      setBetProgress(prev => {
-        const next = prev + r.caught
-        if (next >= (bet.fish ?? Infinity)) void settleFinnBet()
-        return next
-      })
-    }
-  }, [refreshFinnSoon])
-
-  // THE CLOCK RUNNING OUT IS ALSO AN ANSWER. A speed bet nobody finishes would
-  // otherwise sit on the profile forever, blocking every future offer, and the
-  // player would never be told they had lost. Fires once, on the deadline.
-  useEffect(() => {
-    const bet = finn?.challenge
-    if (!bet?.endsAt) return
-    const ms = bet.endsAt - Date.now()
-    if (ms <= 0) { void settleFinnBet(); return }
-    const t = setTimeout(() => { void settleFinnBet() }, ms)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [finn?.challenge?.endsAt])
-
-  /**
-   * SETTLE THE OUTSTANDING BET.
-   *
-   * Passes NOTHING. Whether it was won and what it pays are both worked out on
-   * the server from counters the cast path maintains — see the note at the top
-   * of finnActions.ts, and the doubloon faucet it replaced.
-   */
-  const settleFinnBet = useCallback(async () => {
-    const res = await claimFinnChallenge()
-    if (!res) return
-    setBetProgress(0)
-    setFinn(prev => (prev ? { ...prev, challenge: null, wins: res.wins, seenBeats: res.seenBeats } : prev))
-    if (res.won) {
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-    }
-    setFinnTalk({
-      lines: res.lines, mode: 'result',
-      resultKind: res.won ? 'won' : 'lost',
-      rewardText: res.rewardText,
-    })
-  }, [])
+  // A REEL LANDED. His jobs all count catches and all of them are counted on
+  // the server, so this is the only thing that can tell the chart a job just
+  // finished. It used to carry the running wager as well; there are no wagers.
+  const onFinnReel = useCallback(() => { refreshFinnSoon() }, [refreshFinnSoon])
 
   // ── THE ISLES ─────────────────────────────────────────────────────────
   //
@@ -5089,7 +5001,7 @@ export default function SeaMap({
     // A finished job outranks an unheard beat: one is "there is more story out
     // there", the other is "he is holding your pay". Both light the same dot,
     // and the dot is the only nudge either of them gets.
-    () => !!finn && (finn.questReady || findNextEncounterBeat(finn.seenBeats) !== null),
+    () => !!finn && (finn.questReady || findNextBeat(finn.seenBeats) !== null),
     [finn])
 
   /**
@@ -10943,7 +10855,6 @@ hullRef={hullRefFor(t.key)} />
           Kept up during fishing as well as on the water — the bet is WON with
           the rod out, so hiding it behind the dial would hide it for exactly
           the part that counts. */}
-      <FinnBet bet={finn?.challenge ?? null} progress={betProgress} />
 
       {/* THE CREW, holding the left corner out in the expeditions.
           A real button, for the same reason the chart is one: the map's
@@ -13306,71 +13217,6 @@ const LandmarkField = memo(function LandmarkField() {
 function markKind(art: string): string {
   return art.slice(art.lastIndexOf('/') + 1).replace('.png', '')
 }
-
-/**
- * THE OUTSTANDING WAGER.
- *
- * A bet you cannot see is a bet you forget you took, and Finn's are won by
- * doing something specific — three in a row, five before the sand runs out —
- * which nobody can aim at from memory. So it states the target and how far
- * along it is, and for a speed bet it counts down.
- *
- * THE NUMBERS HERE ARE NOT THE ONES THAT PAY. The settlement runs on the
- * server against its own counters (finnActions.ts). This is a readout, and it
- * is allowed to be a frame behind without anything being at stake.
- *
- * The clock only ticks while there is a clock to tick — a perfect-streak bet
- * has no deadline and mounts no interval at all.
- */
-const FinnBet = memo(function FinnBet({ bet, progress }: {
-  bet: FinnChallenge | null
-  progress: number
-}) {
-  const [, tick] = useState(0)
-  const timed = !!bet?.endsAt
-  useEffect(() => {
-    if (!timed) return
-    const id = setInterval(() => tick(v => v + 1), 250)
-    return () => clearInterval(id)
-  }, [timed])
-
-  if (!bet) return null
-
-  const target = bet.type === 'perfect_streak' ? (bet.perfects ?? 0) : (bet.fish ?? 0)
-  const done = Math.min(progress, target)
-  const left = bet.endsAt ? Math.max(0, bet.endsAt - Date.now()) : null
-  // Under ten seconds it goes red, because that is the point at which the
-  // decision changes from "keep fishing" to "this one has to land".
-  const urgent = left != null && left < 10_000
-
-  return (
-    <div data-no-steer style={{
-      position: 'absolute', top: 52, right: 12, zIndex: Z.hud,
-      pointerEvents: 'none',
-      padding: '0.34rem 0.62rem', borderRadius: 10,
-      background: 'rgba(26,16,4,0.92)',
-      border: `1px solid ${urgent ? 'rgba(255,132,96,0.75)' : 'rgba(255,190,96,0.42)'}`,
-      boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
-      textAlign: 'right', maxWidth: 190,
-    }}>
-      <p className="font-karla font-700 uppercase" style={{
-        margin: 0, fontSize: '0.5rem', letterSpacing: '0.16em',
-        color: 'rgba(255,206,138,0.72)',
-      }}>{FINN_NAME}&rsquo;s bet</p>
-      <p className="font-karla font-600" style={{
-        margin: '1px 0 0', fontSize: '0.72rem', color: '#f0e2c8', lineHeight: 1.15,
-      }}>{bet.targetText}</p>
-      <p className="font-cinzel font-700" style={{
-        margin: '2px 0 0', fontSize: '0.84rem',
-        color: urgent ? '#ff9c78' : '#ffd07a',
-        fontVariantNumeric: 'tabular-nums',
-      }}>
-        {done}/{target}
-        {left != null && ` · ${Math.floor(left / 1000)}s`}
-      </p>
-    </div>
-  )
-})
 
 /**
  * FINN, WAITING.

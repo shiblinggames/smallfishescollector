@@ -29,7 +29,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { vibrate } from '@/lib/haptics'
 import {
-  FINN_NAME, FINN_AVATAR, findNextEncounterBeat,
+  FINN_NAME, FINN_AVATAR, findNextBeat,
 } from '@/lib/finn'
 import { PLACES } from './chart'
 import { PersonCard, UnknownCard, type Portrait } from '@/components/SaltRoadCards'
@@ -392,7 +392,7 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
 
 /** What you know about the rival. His card turns over to the campaign rather
  *  than to a favourite fish, because that is what he is. */
-function RivalDetail({ finn, chapters, onBack }: {
+function AnglerDetail({ finn, chapters, onBack }: {
   finn: FinnSeaState | null
   chapters: FinnChapterView[]
   onBack: () => void
@@ -413,7 +413,7 @@ function RivalDetail({ finn, chapters, onBack }: {
   return (
     <>
       <BackTo onBack={onBack} />
-      <Head face={FINN_FACE} accent={GOLD} role="Rival" name={FINN_NAME}
+      <Head face={FINN_FACE} accent={GOLD} role="The Angler" name={FINN_NAME}
         water={finn ? `Moored off ${finn.at.bandName}` : undefined} />
 
       {/* ── WHAT WENT, AND WHY ────────────────────────────────────────────
@@ -561,9 +561,9 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
     .sort((a, b) => Number(b.rap.wantReady) - Number(a.rap.wantReady))
 
   const openFolk = met.find(m => m.folk.id === showing) ?? null
-  const openRival = showing === 'finn'
+  const openAngler = showing === 'finn'
 
-  const finnMore = !!finn && (finn.questReady || findNextEncounterBeat(finn.seenBeats) !== null)
+  const finnMore = !!finn && (finn.questReady || findNextBeat(finn.seenBeats) !== null)
   const finnQuest = finn?.quest ?? null
   const chapters = finnChapters(finn?.questsDone ?? [], finn?.fishingLevel ?? 1)
   const here = chapters.find(c => c.current) ?? null
@@ -656,12 +656,12 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
             </div>
 
             <div style={{ minHeight: 340 }}>
-              {openRival ? (
+              {openAngler ? (
                 <motion.div key="rival"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   transition={{ duration: 0.12 }}
                   style={{ paddingTop: '0.9rem' }}>
-                  <RivalDetail finn={finn} chapters={chapters}
+                  <AnglerDetail finn={finn} chapters={chapters}
                     onBack={() => { vibrate(6); setShowing(null) }} />
                 </motion.div>
               ) : openFolk ? (

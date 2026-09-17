@@ -84,8 +84,8 @@ buyers, Yoon, and three added with this system who keep no shop at all (Dennis, 
 Shallows, Cass Turbot in Open Waters, Rue Bream in the Deep, all in `chart.ts` as
 `SOCIALS`). The wanderers are excluded by the architecture, not by choice: they are hashed
 out of (cell, day), so a friendship with one would be a friendship with a ghost. **Finn is
-excluded on purpose** — he is the rival, he has his own track, and a friendship meter works
-against what he turns out to be.
+excluded on purpose** — he is the campaign, he has his own track, and a friendship meter
+works against what he turns out to be.
 
 | | |
 |---|---|
@@ -306,11 +306,12 @@ each carrying its own `ask` and `brought` lines), a position in
 nothing on the chart said so.** A captain who had met Finn twice had no way to learn that a
 third meeting would say something new.
 
-- **Finn is the headline** and gets the gold: times met, how much of his story you have
-  heard (`seenBeats` counted against `FINN_ENCOUNTER_BEATS`, 13), wagers won and their own
-  beat track (16), and where he was last seen. The button carries an **amber dot whenever a
-  beat is waiting** — which, since `findNextEncounterBeat` walks the unseen list rather than
-  gating on a milestone, is true until he runs out of things to say. The `milestone` field
+- **Finn is the headline** and gets the gold: how much of his story you have heard
+  (`seenBeats` counted against `FINN_BEATS`, 29, plus the reveal) and where he was last
+  seen. The button
+  carries an **amber dot whenever a beat is waiting** — which, since `findNextBeat` walks
+  the unseen list rather than gating on a milestone, is true until he runs out of things to
+  say. The `milestone` field
   on a beat is vestigial; do not reintroduce it as a gate without changing this panel.
 - **The named folk are a roster, not a log.** Finn, the five zone buyers and Yoon are
   permanent and always in the same water, so they are listed and gated by band level. Locked
@@ -326,9 +327,18 @@ six names and the panel's job is the Finn loop.
 
 ## Finn IS on the Salt Road, in his own category
 
-He is filed under **The Rival**, never with the regulars: they are people you are getting to
-know and he is the fishing campaign wearing a coat. Same card language so the panel reads as
-one thing, his own heading and his own gold so it is obvious he is a different kind of entry.
+He is filed under **The Angler**, never with the regulars: they are people you are getting
+to know and he is the fishing campaign wearing a coat. Same card language so the panel reads
+as one thing, his own heading and his own gold so it is obvious he is a different kind of
+entry.
+
+**He was labelled "The Rival" until 2026-09-17**, and that was accurate while he offered
+wagers: you competed with him and you won or lost. Those became JOBS, and the loop is now
+that he sets you work, you sail back, and he pays you and tells you the next piece of the
+story. That is the campaign's spine, not a competitor — thirty-two jobs, five chapters, the
+only delivery route the fishing story has. **The label must stay innocent**: it is on screen
+right through the Megalodon beat and it must never tip what he turns out to be, which is why
+it is "The Angler" and not something grander. See the note in `fishing/FinnScene.tsx`.
 
 **He is moored now** (`FINN_MOORING`, a short sail south-west of the Mainland, 1,118px from
 the start point). He used to be somewhere new after every conversation, walked across the
@@ -342,12 +352,12 @@ It also repaired his script for free. Six of his lines are written for somebody 
 dock watching anglers come and go, which had become nonsense while he was ambushing captains
 in the Abyss. Moored in sight of the harbour he claims to work, they read as written.
 
-**His STANDING is derived, never stored:** `finn_encounters + finn_wins * 2`, both columns
-the profile has kept since long before any of this. A win counts double because taking a bet
-and landing it is the only thing he respects. Five rungs — Another angler / Worth watching /
-Worth betting against / Worth teaching / Nearly his equal — at 0 / 3 / 8 / 16 / 28. The
-ladder is his arc: he ends one rung short of calling you his equal, which is the exact thing
-he keeps saying he never will.
+**His STANDING is derived, never stored:** `finn_encounters + finn_quests_done.length * 2`.
+A job counts double because doing one is the only thing he respects; it was a won bet that
+counted double until the wagers were retired. Five rungs — Another angler / Worth watching /
+Worth testing / Worth teaching / Nearly his equal — at 0 / 3 / 8 / 16 / 28. The ladder is
+his arc: he ends one rung short of calling you his equal, which is the exact thing he keeps
+saying he never will.
 
 `check-finn` changed jobs with him. It used to walk 1,800 haunts asserting they were far
 apart and clear; it now asserts the single mooring is in fishable water, a short sail from
@@ -461,7 +471,7 @@ story, so at the top he answers the question he spends the whole arc dodging.
 
 ### The rest of his machinery
 
-He is the campaign's rival (see [story-universe.md](story-universe.md), and read it before
+He is the campaign's one constant (see [story-universe.md](story-universe.md), and read it before
 writing him a line — the whole arc hangs on what he does not say yet). Code:
 `web/lib/seaFinn.ts` for where he is, `web/app/(app)/sea/finnActions.ts` for everything
 that happens when you get there.
@@ -482,38 +492,44 @@ are at different points in it.
   gave landmarks too wide a keep-out and sealed the Shallows to **0.0% standing room**
   without anything looking wrong.
 - **The Shallows is excluded** once you have any other water. It holds all four ports and
-  is 3.7% clear, and a rival loitering off the end of your own dock is not one you have to
-  go and find.
+  is 3.7% clear, and somebody loitering off the end of your own dock is not somebody you
+  have to go and find.
 - **Findable.** A named compass arrow and an amber ring on the minimap. The point was never
   to hide him, it was to make you sail.
 
-### His bets are server-owned, and that is new
+### The wagers are retired (2026-09-17)
 
-The fishing-screen settlement took the verdict AND the payout as arguments:
+**He offers no bets and there is no way to make him.** Land three perfects, or five fish
+inside a minute, for a multiple of your fishing level in doubloons: tiers, weights, zone
+time-multipliers, win and loss line pools, `profiles.finn_challenge`, `profiles.finn_wins`,
+`acceptFinnChallenge` / `declineFinnChallenge` / `claimFinnChallenge`, the HUD progress chip
+and the deadline timer are all deleted.
 
-```
-settleFinnChallenge(won: boolean, rewardDoubloons: number, ...)
-newGold = doubloons + (won ? Math.floor(rewardDoubloons) : 0)
-```
+**They had already stopped working.** When the bets became jobs the client's take-it and
+pass-it handlers were left behind unwired, so an offered bet could never reach `active`,
+`finnState` never surfaced one, and nobody could accept anything. That froze `finn_wins`
+wherever it stood, which in turn meant:
 
-Anyone with a console could mint doubloons. Survivable while the sea was two admins on an
-allowlist; not survivable with the chart open. The bet now lives in
-`profiles.finn_challenge` (written only by the server, so the tier and multiplier are never
-in the client's gift) and is settled against counters `reelIn` already maintains:
+- **Three badges were unearnable.** `one_upped`, `finns_rival` and `the_better_angler` all
+  counted wins. They count JOBS now (chapter I / three chapters / the whole ladder — 6 / 18
+  / 32) and are renamed for the chapters they mark. **Nobody lost one**: `reconcileBadges`
+  only ever adds, so the 18 / 10 / 4 captains holding them keep them for good.
+- **Sixteen written story beats were behind a door with no handle.** `FINN_WIN_BEATS` fired
+  on a win. They are the back half of `FINN_BEATS` now, which is where they were needed
+  anyway: thirty-two jobs against thirteen early beats meant the last nineteen turn-ins paid
+  out and said nothing. Two lines named the wager and were reworded; **the ids are
+  untouched**, because they sit in players' `finn_seen_beats` and a renumber would re-tell a
+  beat somebody has already heard.
 
-| Bet | Measured against |
-|---|---|
-| `perfect_streak` | `current_perfect_streak` **and** a `total_perfects` delta |
-| `speed_catch` | `sum(fish_lifetime.catches)`, snapshotted at accept, plus the deadline |
+**The columns are left in place.** `finn_challenge` (0 rows non-null) and `finn_wins` are no
+longer read or written by anything. Dropping them is a migration with no payoff; they are
+the historical record of who beat him while it was possible.
 
-No change to the cast path — those numbers were already being written and had nobody
-reading them. The `total_perfects` delta is not redundant: the streak survives taking the
-bet, so a captain sitting on a run of nine would otherwise win "three in a row" without
-casting.
-
-Offers come at ~45% of meetings, never stacked on a running bet, and an EXPIRED speed bet
-stops counting as running — otherwise closing the tab mid-bet would block every future
-offer for the life of the account.
+**The client-holds-nothing rule survives them**, and it was worth writing down. The old
+settlement was `settleFinnChallenge(won, rewardDoubloons, ...)` — verdict and payout both
+arguments, mintable from a console. Jobs take nothing from the client either: the target,
+the measurement and the payout are all server-side, and every job is a DELTA from a
+snapshot taken when it was set.
 
 ## The two sell lanes
 

@@ -58,7 +58,7 @@ function Beat({ lines, accent, dropcap }: { lines: string[]; accent: string; dro
 }
 
 /** A Finn moment rendered like a remembered exchange — his avatar beside
- *  the words, so the journal reads as a record of run-ins with the rival. */
+ *  the words, so the journal reads as a record of run-ins with the angler. */
 function FinnBeat({ lines, accent, dropcap }: { lines: string[]; accent: string; dropcap?: boolean }) {
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -231,13 +231,13 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
               ringColor={FINN_AVATAR.borderColor}
             />
           }
-          title="The Rival on the Dock"
+          title="The Angler on the Dock"
           accent={FINN_ACCENT}
           chip={`${finn.discovered} / ${finn.total} moments uncovered`}
         >
           {finn.discovered === 0 ? (
             <p className="font-karla" style={{ fontSize: '0.78rem', color: INK_FAINT, lineHeight: 1.55 }}>
-              You have not crossed his path yet. Keep fishing and a rival will find you.
+              You have not crossed his path yet. Keep fishing and he will find you.
             </p>
           ) : (
             <>

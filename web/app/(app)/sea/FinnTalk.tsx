@@ -1,6 +1,6 @@
 'use client'
 
-// ── TALKING TO THE RIVAL ────────────────────────────────────────────────────
+// ── TALKING TO THE ANGLER ───────────────────────────────────────────────────
 //
 // The regulars' scene, in his colours, with the campaign bolted into it.
 //
@@ -161,7 +161,7 @@ export default function FinnTalk({
   const [queue, setQueue] = useState<string[]>([])
   const [asked, setAsked] = useState<Set<number>>(new Set())
 
-  const points = finnStanding(finn?.encounters ?? 0, finn?.wins ?? 0)
+  const points = finnStanding(finn?.encounters ?? 0, finn?.questsDone?.length ?? 0)
   const tier = finnStandingTier(points)
   const asks = FINN_ASKS[tier] ?? []
   const openAsks = asks.map((a, i) => ({ a, i })).filter(({ i }) => !asked.has(i))
@@ -299,7 +299,7 @@ export default function FinnTalk({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p className="font-karla font-700 uppercase" style={{
                   fontSize: '0.53rem', color: GOLD, letterSpacing: '0.2em', marginBottom: 2,
-                }}>Rival</p>
+                }}>The Angler</p>
                 <p className="font-cinzel font-700" style={{
                   fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1,
                 }}>{FINN_NAME}</p>
