@@ -108,7 +108,7 @@ export function TrophyMark({ size = 10, color = '#fbbf24' }: { size?: number; co
 // card simply no longer draws them. Perfect and the streak are said far more
 // loudly by the dial burning behind this card, and the two size bounds only
 // ever fed the range bar.
-export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatch, gemEarned, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeTier, isPB, previousBest, isShiny = false, deepStirs = false, vigilRankUp = null }: {
+export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatch, gemEarned, streakBonusXP = 0, perfectBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeTier, isPB, previousBest, isShiny = false, deepStirs = false, vigilRankUp = null }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -119,6 +119,8 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
   gemEarned?: boolean
   perfectStreak?: number
   streakBonusXP?: number
+  /** What the perfect earned over the same fish landed clean. See reelIn. */
+  perfectBonusXP?: number
   jackpotMultiplier?: number
   perfectXpMult?: number
   lockedStage?: number
@@ -178,7 +180,13 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
     tally.push({ v: `×${catchQty}`, l: 'Haul', c: '#f0c040' })
   }
   if (jackpotMultiplier && jackpotMultiplier > 1) tally.push({ v: `×${jackpotMultiplier}`, l: 'Jackpot', c: '#fb923c' })
-  if (perfectXpMult > 1) tally.push({ v: `×${perfectXpMult}`, l: 'XP mult', c: '#bfe3ff' })
+  // WHAT THE PERFECT WAS WORTH, as a number rather than a multiplier. The XP
+  // figure above already contains it; this says how much of it was the
+  // perfect's doing. It covers the rod's perfect multiplier too, which used
+  // to be its own "×2 XP mult" chip: one gold number reads, two chips about
+  // the same thing did not.
+  if (perfectBonusXP > 0) tally.push({ v: `+${perfectBonusXP}`, l: 'Perfect', c: '#f0c040' })
+  else if (perfectXpMult > 1) tally.push({ v: `×${perfectXpMult}`, l: 'XP mult', c: '#bfe3ff' })
   // The streak's own XP is granted SEPARATELY from the catch's, so folding it
   // into the figure above would be quietly wrong about both.
   if (streakBonusXP > 0) tally.push({ v: `+${streakBonusXP}`, l: 'Streak', c: '#fbbf24' })

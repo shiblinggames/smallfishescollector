@@ -803,6 +803,10 @@ export async function reelIn(
       unlockedSkinId?: string
       perfectStreak?: number
       streakBonusXP?: number
+      /** What the perfect itself earned over the same fish landed clean, after
+       *  every multiplier and before the streak's own grant. Absent on a plain
+       *  catch. The card and the floating number say it; nothing banks it. */
+      perfectBonusXP?: number
       // ── Per-catch size variance (lib/fishSize) ──
       /** Rolled length in inches. Always present on caught:true. */
       sizeIn: number
@@ -1322,6 +1326,15 @@ export async function reelIn(
   // before prestige, renown, the rod and the Eye multiply the lot.
   const serverStreakBonus = Math.round(baseCatchXP * (mult - 1))
   const xpGained = Math.round((baseCatchXP + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
+  // WHAT THE PERFECT WAS WORTH. The 1.2 in catchXP and the rod's perfect
+  // multiplier both vanished into the one figure, so a perfect paid more and
+  // nothing ever said so. This is the same fish landed clean, subtracted:
+  // the catch's own XP on a perfect (streak set aside, it is reported on its
+  // own) less the catch's XP had it not been. Reported, never banked.
+  const perfectBonusXP = result === 'perfect'
+    ? Math.round(baseCatchXP * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
+      - Math.round(catchXP(fish.catch_difficulty, fish.habitat, false) * prestigeXPMult * renownXpMult * eye.fishingXpMult)
+    : undefined
   // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
   // The mirror of the reel: his raid item is fed by the fishing half of the
   // game, so wearing it is a standing reason to keep casting.
@@ -1580,6 +1593,7 @@ export async function reelIn(
     unlockedSkinId: reelInUnlockedSkin,
     perfectStreak: newPerfectStreak,
     streakBonusXP: serverStreakBonus,
+    perfectBonusXP,
     sizeIn,
     sizeMin: sizeMinIn ?? undefined,
     sizeMax: sizeMaxIn ?? undefined,

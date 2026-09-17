@@ -686,7 +686,7 @@ export default function FishingHere({
   /** The running streak, straight off the server's own count, for the bar. */
   const [streak, setStreak] = useState(0)
   /** XP floated off the boat, where the boat is. */
-  const [xpPop, setXpPop] = useState<{ id: number; value: number } | null>(null)
+  const [xpPop, setXpPop] = useState<{ id: number; value: number; perfect: boolean } | null>(null)
 
   /**
    * THE BAR HAS TO MOVE.
@@ -1387,7 +1387,7 @@ export default function FishingHere({
         // Displaying what the server said, never counting it here — the streak
         // is server authoritative and reelIn owns it.
         setStreak(res.perfectStreak ?? 0)
-        setXpPop({ id: Date.now(), value: res.xpGained })
+        setXpPop({ id: Date.now(), value: res.xpGained, perfect: (res.perfectBonusXP ?? 0) > 0 })
         // The bar climbs by exactly what the popup says, so the two can never
         // tell different stories about the same catch.
         setXp(v => {
@@ -1427,6 +1427,7 @@ export default function FishingHere({
             perfectXpMult: perfect ? mods.rodPerfectXpMult : 1,
             perfectStreak: res.perfectStreak ?? 1,
             streakBonusXP: res.streakBonusXP ?? 0,
+            perfectBonusXP: res.perfectBonusXP ?? 0,
             catchQty: res.catchQty ?? 1,
             sizeIn: res.sizeIn,
             sizeMin: res.sizeMin,
@@ -1738,10 +1739,16 @@ export default function FishingHere({
             className="font-karla font-700"
             style={{
               position: 'absolute', left: '50%', top: '46%', zIndex: 31, pointerEvents: 'none',
-              fontSize: '1.2rem', color: '#4ade80',
-              textShadow: '0 0 10px rgba(74,222,128,0.7), 0 2px 8px rgba(0,0,0,0.9)',
+              fontSize: '1.2rem', whiteSpace: 'nowrap',
+              // GOLD ON A PERFECT. The same number, in the colour the perfect
+              // itself flashes in, so the bigger figure is seen to be the
+              // perfect's doing rather than the fish's.
+              color: xpPop.perfect ? '#f0c040' : '#4ade80',
+              textShadow: xpPop.perfect
+                ? '0 0 12px rgba(240,192,64,0.75), 0 2px 8px rgba(0,0,0,0.9)'
+                : '0 0 10px rgba(74,222,128,0.7), 0 2px 8px rgba(0,0,0,0.9)',
             }}>
-            +{xpPop.value} XP
+            +{xpPop.value} XP{xpPop.perfect && <span style={{ fontSize: '0.78rem', letterSpacing: '0.1em', marginLeft: 6 }}>PERFECT</span>}
           </motion.p>
         )}
       </AnimatePresence>

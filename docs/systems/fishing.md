@@ -87,6 +87,13 @@ systems already multiply it down and the old bases predate most of them.
   Shallows up to 2,500 to 3,000 in the Abyss; 10,000 flat in the Ancient Deep), with no multiplier: a help toward the level, never the way
   you level. Any new XP source goes through `bump_profile_stat('fishing_xp')` or the reelIn
   UPDATE, and the chart must receive the new total (`setXpLive`) so the level card fires.
+- **A perfect's XP bonus is SAID, not just paid (2026-09-17).** `catchXP()` is 1.2x on a
+  perfect and the rod may multiply it again, and both vanished into the one `+N XP` figure.
+  `reelIn` now returns `perfectBonusXP`: the catch's own XP on the perfect (streak set aside,
+  it is reported on its own line) less the same fish landed clean, after every multiplier.
+  Reported, never banked. The floating number off the boat goes gold and says PERFECT, and
+  the result card's tally carries `+N Perfect` in gold, which replaced the old `x2 XP mult`
+  chip since the number already contains the rod's multiplier.
 - **Fish size variance grants no XP or sell bonus.** Length rolls and personal-best tiers
   are bragging rights only (`web/lib/fishSize.ts`). Adding an economic reward to size was
   considered and rejected: it would turn a flavor system into a grind target.
