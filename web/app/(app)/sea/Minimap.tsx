@@ -172,9 +172,20 @@ function diamond(ctx: CanvasRenderingContext2D, x: number, y: number, r: number)
   ctx.closePath()
 }
 
+/**
+ * WHICH HALF OF THE WORLD THIS IS. The panel draws one of three and picks for
+ * you from where the hull is floating, which is right and was invisible: the
+ * same button opened three different maps and never said so.
+ */
+const HALF_NAME: Record<'fishing' | 'expeditions' | 'seagate', string> = {
+  fishing: 'The fishing grounds',
+  expeditions: 'The anchorage',
+  seagate: 'Past the Sea Gate',
+}
+
 export default function Minimap({
   open, onClose, fog, xfog, at, seaAt, found, bearings, dug, friends, finn, side = 'fishing',
-  cleared = [], next = null, shown,
+  cleared = [], next = null, shown, onPointing,
 }: {
   /** Whether a campaign node is on the water for this captain. The chart must
    *  not draw what the sea is hiding: a pip for every fight in a chapter you
@@ -189,6 +200,13 @@ export default function Minimap({
   finn?: { x: number; y: number; ready: boolean } | null
   open: boolean
   onClose: () => void
+  /**
+   * Point the chart's road at a harbour and shut this panel. The same
+   * `showWay` the loadout's signposts use, so "where is the Shipyard" is
+   * answered in the one language the sea already speaks for it. It POINTS; it
+   * does not sail, which is the rule for everything on this chart.
+   */
+  onPointing?: (placeId: string) => void
   /** Which half of the world to draw. See HALVES. */
   side?: 'fishing' | 'expeditions' | 'seagate'
   /** The live bitfield. Read, never written — the map owns it. */
@@ -217,6 +235,49 @@ export default function Minimap({
   cleared?: string[]
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  /**
+   * ── A HARBOUR YOU CAN ASK ABOUT ──────────────────────────────────────────
+   *
+   * The chart drew ten harbours and named them, and that was all it did: a
+   * captain who did not already know what the Tally House was for had a name
+   * and no way to find out, and a captain who did know still had to work out
+   * which way to sail. Pressing one now says what it is in a line, and offers
+   * to point the road at it.
+   *
+   * Harbours only, and on purpose. The fishing bands are places too, but they
+   * are regions the size of the screen and the compass already carries them;
+   * a ring round the Abyss would be a ring round most of the chart.
+   */
+  const viewRef = useRef<{ s: number; ox: number; oy: number; w: number; h: number } | null>(null)
+  const [picked, setPicked] = useState<string | null>(null)
+  const [hovering, setHovering] = useState(false)
+  // A chart reopened, or flipped to the other half, is a fresh question.
+  useEffect(() => { setPicked(null) }, [open, side])
+  const pickedPlace = picked ? PLACES.find(p => p.id === picked) ?? null : null
+
+  /** Which harbour is under a press, if any. Generous, because this is a
+   *  schematic at phone size and the marks are four pixels across. */
+  const hitAt = useCallback((clientX: number, clientY: number): string | null => {
+    const v = viewRef.current
+    const cv = canvasRef.current
+    if (!v || !cv) return null
+    const r = cv.getBoundingClientRect()
+    const px = clientX - r.left, py = clientY - r.top
+    let best: string | null = null
+    let bestD = 24
+    for (const p of PLACES) {
+      if (p.kind !== 'port') continue
+      const x = v.ox + p.x * v.s
+      const y = v.oy + p.y * v.s
+      // Off this half of the world: drawn, but outside the box.
+      if (x < -24 || y < -24 || x > v.w + 24 || y > v.h + 24) continue
+      // Measured a little above the square, because the name is drawn there
+      // and the name is the part a finger aims at.
+      const d = Math.hypot(x - px, (y - 5) - py)
+      if (d < bestD) { bestD = d; best = p.id }
+    }
+    return best
+  }, [])
   const [w, setW] = useState(0)
   /** Enough width to stand the key beside the chart rather than under it. */
   const [wide, setWide] = useState(false)
@@ -259,6 +320,10 @@ export default function Minimap({
     const oy = (H - WH * s) / 2 - top * s
     const tx = (x: number) => ox + x * s
     const ty = (y: number) => oy + y * s
+    // Kept so a press can be turned back into a place. The draw owns this
+    // transform and recomputes it on every resize and every half; reading it
+    // here rather than deriving it twice is what stops the two disagreeing.
+    viewRef.current = { s, ox, oy, w, h: H }
 
     // ── THE SEA, cell by cell ────────────────────────────────────────────
     // +1 on the cell size, so neighbouring cells overlap by a pixel. Without
@@ -562,8 +627,15 @@ export default function Minimap({
       ctx.fillStyle = INK.port
       sq(ctx, x, y, 4); ctx.fill()
       ctx.strokeStyle = 'rgba(6,12,18,0.9)'; ctx.lineWidth = 1.5; ctx.stroke()
-      ctx.fillStyle = 'rgba(244,236,216,0.92)'
-      ctx.font = '600 9px ui-sans-serif, system-ui'
+      // THE ONE BEING ASKED ABOUT wears a ring, so the card below and the
+      // mark up here are plainly the same place.
+      if (p.id === picked) {
+        ctx.strokeStyle = 'rgba(240,192,64,0.95)'
+        ctx.lineWidth = 1.6
+        ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.stroke()
+      }
+      ctx.fillStyle = p.id === picked ? '#f0c040' : 'rgba(244,236,216,0.92)'
+      ctx.font = `${p.id === picked ? '800' : '600'} 9px ui-sans-serif, system-ui`
       ctx.textAlign = 'center'
       ctx.fillText(p.name.replace(/^The /, ''), x, y - 8)
     }
@@ -697,7 +769,7 @@ export default function Minimap({
       ctx.fillStyle = INK.you
       ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [fog, w, at, seaAt, found, bearings, dug, friends, finn, side, cleared, next, shown])
+  }, [fog, w, at, seaAt, found, bearings, dug, friends, finn, side, cleared, next, shown, picked])
 
   useEffect(() => { if (open) draw() }, [open, draw])
 
@@ -786,24 +858,41 @@ export default function Minimap({
               borderRadius: 18, padding: wide ? PANEL_PAD.wide : PANEL_PAD.narrow,
               boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
             }}>
-            {/* ── THE TALLY ──────────────────────────────────────────────
-                Three numbers, because "41% sailed" on its own says how much
-                water you have crossed and nothing about whether crossing it got
-                you anything. The dig count deliberately shows how many bearings
-                you HOLD rather than how many exist: the total is not something
-                the chart is willing to tell you. */}
+            {/* ── WHAT THIS IS, THEN WHAT IT COUNTS ──────────────────────
+                It opened on three bare numbers. "41%", "3/27", "0" is a scoreboard
+                for a chart nobody has said is a chart, on a panel that does not
+                name which half of the world it is showing — and the world has
+                three halves, chosen for you by where you are floating. A captain
+                who had just found the button was reading statistics about a
+                picture they had not been introduced to.
+
+                So: the name of the water you are looking at, the one line that
+                says the marks are pressable, and the tally under them at the
+                size a tally deserves. The dig count still shows the bearings you
+                HOLD rather than how many exist: the total is not something the
+                chart is willing to tell you. */}
             <div style={{
-              display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+              display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
               gap: 12, marginBottom: 9,
               // Spans the chart AND the key when they sit side by side, so the
               // close button stays in the panel's top corner rather than in
               // the middle of it.
               width: wide ? w + KEY_W + KEY_GAP : w,
             }}>
-              <div style={{ display: 'flex', gap: 20, minWidth: 0 }}>
-                <Stat label="Sailed" value={`${Math.round(prog.pct * 100)}%`} />
-                <Stat label="Isles" value={`${islesFound}/${ISLES.length}`} />
-                <Stat label="Dug" value={digsKnown ? `${digsDone}/${digsKnown}` : '0'} />
+              <div style={{ minWidth: 0 }}>
+                <p className="font-cinzel font-800" style={{
+                  fontSize: '1.16rem', color: '#f4ecd8', margin: 0, lineHeight: 1.15,
+                }}>{HALF_NAME[side]}</p>
+                <p className="font-karla font-600" style={{
+                  fontSize: '0.74rem', color: 'rgba(190,212,228,0.6)', margin: '3px 0 0', lineHeight: 1.4,
+                }}>
+                  Press a harbour to see what it is, and to light the way there.
+                </p>
+                <div style={{ display: 'flex', gap: 18, minWidth: 0, marginTop: 10 }}>
+                  <Stat label="Sailed" value={`${Math.round(prog.pct * 100)}%`} />
+                  <Stat label="Isles" value={`${islesFound}/${ISLES.length}`} />
+                  <Stat label="Dug" value={digsKnown ? `${digsDone}/${digsKnown}` : '0'} />
+                </div>
               </div>
               <button type="button" onClick={() => { vibrate(8); onClose() }} aria-label="Close"
                 style={{
@@ -837,11 +926,59 @@ export default function Minimap({
               gap: wide ? KEY_GAP : 10,
               alignItems: 'flex-start',
             }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
             <canvas ref={canvasRef}
+              onClick={e => { const id = hitAt(e.clientX, e.clientY); if (id) vibrate(8); setPicked(id) }}
+              onPointerMove={e => { if (e.pointerType === 'mouse') setHovering(!!hitAt(e.clientX, e.clientY)) }}
+              onPointerLeave={() => setHovering(false)}
               style={{
                 width: w, height: h, display: 'block', borderRadius: 12,
                 background: '#080d14', border: '1px solid rgba(180,214,232,0.12)',
+                cursor: hovering ? 'pointer' : 'default',
               }} />
+
+            {/* ── WHAT IT IS, AND THE WAY THERE ─────────────────────────
+                Over the foot of the chart rather than under it: a card in the
+                flow would push the key down every time somebody pressed a
+                harbour, and the chart would jump under the finger that did it. */}
+            <AnimatePresence>
+              {pickedPlace && (
+                <motion.div
+                  key={pickedPlace.id}
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                  transition={{ duration: 0.16 }}
+                  style={{
+                    position: 'absolute', left: 8, right: 8, bottom: 8,
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '0.6rem 0.7rem', borderRadius: 12,
+                    background: 'rgba(8,13,20,0.96)',
+                    border: '1px solid rgba(240,192,64,0.45)',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+                  }}>
+                  <span style={{ minWidth: 0, flex: 1 }}>
+                    <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.92rem', color: '#f4ecd8', lineHeight: 1.15 }}>
+                      {pickedPlace.name}
+                    </span>
+                    <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.74rem', color: 'rgba(190,212,228,0.62)', marginTop: 2, lineHeight: 1.4 }}>
+                      {pickedPlace.blurb}
+                    </span>
+                  </span>
+                  {onPointing && (
+                    <button type="button" className="font-cinzel font-700 tap"
+                      onClick={() => { vibrate(10); onPointing(pickedPlace.id); onClose() }}
+                      style={{
+                        flexShrink: 0, padding: '0.5rem 0.85rem', borderRadius: 999,
+                        fontSize: '0.72rem', letterSpacing: '0.06em', cursor: 'pointer',
+                        color: '#ffdb7a', background: 'rgba(240,200,80,0.16)',
+                        border: '1px solid rgba(240,200,80,0.55)',
+                      }}>
+                      Show me
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            </div>
 
             {/* ── THE KEY ────────────────────────────────────────────────
                 GROUPED, because ten flat rows of almost-identical dots is a
@@ -872,11 +1009,14 @@ export default function Minimap({
                   that never needed a key. */}
               {side === 'fishing' && (
                 <KeyGroup title="Places">
-                  <Key mark={<Square c={INK.port} />} label="Harbour" />
-                  <Key mark={<Tri c={INK.isle} ring="rgba(255,206,138,0.55)" />} label="Isle, not landed" />
-                  <Key mark={<Tri c={INK.isleDone} />} label="Been ashore" />
-                  <Key mark={<Cross c={INK.dig} />} label="Buried, marked" />
-                  <Key mark={<Cross c={INK.digDone} thin />} label="Already dug" />
+                  {/* PLAINER. "Isle, not landed" and "Buried, marked" read as
+                      chart shorthand to somebody who already knows the game.
+                      These say the same things in the words a first week uses. */}
+                  <Key mark={<Square c={INK.port} />} label="Harbour, press it" />
+                  <Key mark={<Tri c={INK.isle} ring="rgba(255,206,138,0.55)" />} label="Isle, not visited" />
+                  <Key mark={<Tri c={INK.isleDone} />} label="Isle, visited" />
+                  <Key mark={<Cross c={INK.dig} />} label="Treasure, marked" />
+                  <Key mark={<Cross c={INK.digDone} thin />} label="Treasure, dug up" />
                 </KeyGroup>
               )}
 
@@ -886,7 +1026,7 @@ export default function Minimap({
                 <KeyGroup title="Faces">
                   <Key mark={<Diamond c={INK.finn} ring={INK.finn} />} label="Finn" />
                   <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="Someone you know" />
-                  <Key mark={<Dot c={INK.trader} r={2.8} />} label="Buyer" />
+                  <Key mark={<Dot c={INK.trader} r={2.8} />} label="Somewhere to sell" />
                   <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain" />
                 </KeyGroup>
               )}
@@ -907,7 +1047,7 @@ export default function Minimap({
 
               <KeyGroup title="The chart">
                 <Key mark={<Dot c={INK.you} r={4} ring="rgba(240,250,255,0.55)" />} label="You" />
-                <Key mark={<Swatch c={INK.fog} />} label="Not sailed" />
+                <Key mark={<Swatch c={INK.fog} />} label="Water you have not sailed" />
               </KeyGroup>
             </div>
             </div>

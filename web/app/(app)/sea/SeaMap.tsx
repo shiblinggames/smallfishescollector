@@ -11984,6 +11984,9 @@ hullRef={hullRefFor(t.key)} />
         // rocked shut.
         cleared={liveCleared}
         onClose={() => setMapOpen(false)}
+        // Press a harbour on the chart and the water lights the way to it.
+        // The same road the loadout's signposts draw; it points, never sails.
+        onPointing={showWay}
         fog={fogRef.current}
         xfog={xfogRef.current}
         at={pos}
