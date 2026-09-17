@@ -102,13 +102,13 @@ export function TrophyMark({ size = 10, color = '#fbbf24' }: { size?: number; co
  * colour and they say what happened, which is the whole of what they need to
  * do while the splash and the card's own landing carry the drama.
  */
-// `perfectStreak`, `sizeMin`, `sizeMax` and `lockedStage` are
+// `sizeMin`, `sizeMax` and `lockedStage` are
 // deliberately NOT destructured. They stay in the type because they are what
 // reelIn returns and the caller is right to hand over the whole payload; the
 // card simply no longer draws them. Perfect and the streak are said far more
 // loudly by the dial burning behind this card, and the two size bounds only
 // ever fed the range bar.
-export function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect = false, xpGained, doubleCatch, gemEarned, streakBonusXP = 0, perfectBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeTier, isPB, previousBest, isShiny = false, deepStirs = false, vigilRankUp = null }: {
+export function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect = false, perfectStreak = 0, xpGained, doubleCatch, gemEarned, streakBonusXP = 0, perfectBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeTier, isPB, previousBest, isShiny = false, deepStirs = false, vigilRankUp = null }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -148,6 +148,14 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect = false, x
     : isAncient ? '#e11d48'
     : baseR.color
   const label = isShiny ? 'Golden' : isAncient ? 'Ancient' : baseR.label
+  // A NEW SPECIES LIGHTS THE FISH. It is the most consequential thing this
+  // card ever reports, a permanent addition to the log, and it sat in the
+  // footer at 0.7rem under the sell price. The halo and the fish's shadow go
+  // its blue for that one catch, and it is said above the name, in the same
+  // place and size the trophy label already uses. The Golden and the Ancient
+  // keep their own colours; they are rarer still.
+  const newSpecies = isNewSpecies && !isShiny && !isAncient
+  const halo = newSpecies ? '#7dd3fc' : accent
 
   // Size ticks up from zero, which is the one animated number worth keeping:
   // it is the measurement, and watching it settle is the measurement happening.
@@ -191,13 +199,17 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect = false, x
   else if (perfectXpMult > 1) tally.push({ v: `×${perfectXpMult}`, l: 'XP mult', c: '#bfe3ff' })
   // The streak's share, after the multipliers, so it is at the same scale as
   // the two beside it.
-  if (streakBonusXP > 0) tally.push({ v: `+${streakBonusXP}`, l: 'Streak', c: '#fbbf24' })
+  // The run as well as the amount: "+31 · Streak ×5" says both what this
+  // catch got from the streak and how long the streak is, without a second
+  // drawing of a run the fishing HUD's own bar already shows.
+  if (streakBonusXP > 0) tally.push({ v: `+${streakBonusXP}`, l: perfectStreak > 1 ? `Streak ×${perfectStreak}` : 'Streak', c: '#fbbf24' })
   if (gemEarned) tally.push({ v: '◆1', l: 'Challenge', c: '#63e2b7' })
 
   // ── THE NOTES ── the rare states, one flat line each. Never more than two
   // on a card in practice, and stacked rather than themed.
   const notes: { text: string; c: string }[] = []
-  if (isNewSpecies) notes.push({ text: 'New species. Logged.', c: '#7dd3fc' })
+  // A new species is said above the name now, not down here.
+  if (isNewSpecies && (isShiny || isAncient)) notes.push({ text: 'New species. Logged.', c: '#7dd3fc' })
   if (isAncient) notes.push({ text: `Ancient ${ancientCount} of ${ancientTotal} revealed.`, c: '#e11d48' })
   if (vigilRankUp) notes.push({ text: `Vigil ${vigilNumeral(vigilRankUp.to)}. Rank ${vigilRankUp.from} to ${vigilRankUp.to}.`, c: '#c4b5fd' })
   if (isShiny && shinyMessage) notes.push({ text: shinyMessage, c: SHINY_THEME.primary })
@@ -254,15 +266,30 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect = false, x
           }}>
           <span aria-hidden style={{
             position: 'absolute', inset: -6, borderRadius: '50%',
-            background: `radial-gradient(circle, ${accent}3a 0%, transparent 68%)`,
+            background: `radial-gradient(circle, ${halo}3a 0%, transparent 68%)`,
           }} />
           <FishImg name={fish.name} style={{
             position: 'relative', maxWidth: '100%', maxHeight: '100%', objectFit: 'contain',
-            filter: isShiny ? SHINY_FISH_FILTER : `drop-shadow(0 3px 10px ${accent}55)`,
+            filter: isShiny ? SHINY_FISH_FILTER : `drop-shadow(0 3px 10px ${halo}55)`,
           }} />
         </motion.div>
 
         <div style={{ width: '100%', minWidth: 0 }}>
+          {newSpecies && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut', delay: 0.18 }}
+              className="font-karla font-800 uppercase"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 5,
+                fontSize: '0.54rem', letterSpacing: '0.2em', lineHeight: 1,
+                color: '#7dd3fc', padding: '0.28rem 0.6rem', borderRadius: 999,
+                border: '1px solid rgba(125,211,252,0.45)', background: 'rgba(125,211,252,0.1)',
+              }}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="#7dd3fc" aria-hidden><path d="M12 2l2.4 6.6L21 9.3l-5 4.4 1.5 6.8L12 17l-5.5 3.5L8 13.7 3 9.3l6.6-.7z" /></svg>
+              New species
+            </motion.p>
+          )}
           <p className="font-cinzel font-800" style={{
             fontSize: '1.12rem', lineHeight: 1.12, color: '#f2ece0',
             overflow: 'hidden', textOverflow: 'ellipsis',

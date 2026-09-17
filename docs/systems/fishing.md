@@ -104,9 +104,12 @@ systems already multiply it down and the old bases predate most of them.
   little large; the ledger fades up left to right with each figure counting from nothing
   (`Counted`), so the additive parts are seen to add; on a perfect the hairline flashes gold
   once and returns to the catch's colour. Timing only. The flat opaque surface, no gradient,
-  no backdrop, no shake are all deliberate: the card sits on painted moving water. Two ideas
-  were offered and NOT taken pending a call: promoting "New species" from a footer line to a
-  ribbon, and drawing the streak as a row of pips.
+  no backdrop, no shake are all deliberate: the card sits on painted moving water. A NEW SPECIES
+  is the headline: a blue ribbon above the name and the fish's halo in the same blue, in the
+  place the trophy label already uses (the Golden and the Ancient keep their own colours and
+  the footer line). The streak chip's label carries the run ("Streak x5") beside the amount;
+  streak PIPS on the card were considered and rejected, since the fishing HUD's own bar
+  already draws the run and the card is a receipt for one catch.
 - **Fish size variance grants no XP or sell bonus.** Length rolls and personal-best tiers
   are bragging rights only (`web/lib/fishSize.ts`). Adding an economic reward to size was
   considered and rejected: it would turn a flavor system into a grind target.
