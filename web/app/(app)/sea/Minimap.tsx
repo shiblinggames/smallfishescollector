@@ -251,9 +251,31 @@ export default function Minimap({
   const viewRef = useRef<{ s: number; ox: number; oy: number; w: number; h: number } | null>(null)
   const [picked, setPicked] = useState<string | null>(null)
   const [hovering, setHovering] = useState(false)
+  /**
+   * ── AND A LIST, BECAUSE A CHART IS NOT A TAP TARGET ──────────────────────
+   *
+   * The marks on the canvas are four pixels across and five of the anchorage's
+   * harbours sit within a thumb's width of each other, so pressing the right
+   * one on a phone is a game of its own. The chart is for seeing where things
+   * ARE; this tab is for pressing them. Same places, same blurbs, same road
+   * lit at the end of it, in rows big enough to hit.
+   */
+  const [tab, setTab] = useState<'chart' | 'places'>('chart')
   // A chart reopened, or flipped to the other half, is a fresh question.
-  useEffect(() => { setPicked(null) }, [open, side])
+  useEffect(() => { setPicked(null); setTab('chart') }, [open, side])
   const pickedPlace = picked ? PLACES.find(p => p.id === picked) ?? null : null
+
+  /**
+   * The harbours on the half being looked at, north or south of the reef.
+   * Read off the coordinates rather than a hand-kept list, so a harbour that
+   * moves cannot end up on the wrong page of its own chart. Past the gate
+   * there are no harbours at all, and the anchorage's are the ones worth
+   * offering: they are what "back" means from out there.
+   */
+  const harbours = PLACES
+    .filter(p => p.kind === 'port' && !!p.blurb)
+    .filter(p => (side === 'fishing' ? p.y > NORTH_WALL : p.y < NORTH_WALL))
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   /** Which harbour is under a press, if any. Generous, because this is a
    *  schematic at phone size and the marks are four pixels across. */
@@ -804,7 +826,9 @@ export default function Minimap({
       // key groups which at this width run two columns and about 200px. It
       // read 210 for the header AND the key together, which only ever came up
       // on a short screen, and came up as a chart running off the bottom.
-      const chrome = roomy ? 104 : 268
+      // The header grew a title, a line of instruction and a row of tabs, and
+      // this is what keeps the chart inside the window under all three.
+      const chrome = roomy ? 190 : 350
       const panel = Math.min(window.innerWidth, PANEL_MAX)
       const across = panel - gutter(roomy) - (roomy ? KEY_W + KEY_GAP : 0)
       setW(Math.round(Math.min(
@@ -886,7 +910,9 @@ export default function Minimap({
                 <p className="font-karla font-600" style={{
                   fontSize: '0.74rem', color: 'rgba(190,212,228,0.6)', margin: '3px 0 0', lineHeight: 1.4,
                 }}>
-                  Press a harbour to see what it is, and to light the way there.
+                  {tab === 'chart'
+                    ? 'Where everything is. Harbours are pressable.'
+                    : 'Press one and the water lights the way to it.'}
                 </p>
                 <div style={{ display: 'flex', gap: 18, minWidth: 0, marginTop: 10 }}>
                   <Stat label="Sailed" value={`${Math.round(prog.pct * 100)}%`} />
@@ -903,6 +929,77 @@ export default function Minimap({
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
             </div>
+
+            {/* ── THE TWO WAYS IN ────────────────────────────────────────
+                The chart to see the shape of the water, the list to press a
+                harbour without aiming at a four-pixel square. Neither is a
+                lesser version of the other, so neither is hidden behind a
+                menu. */}
+            <div style={{
+              display: 'flex', gap: 6, marginBottom: 10,
+              width: wide ? w + KEY_W + KEY_GAP : w,
+            }}>
+              {([['chart', 'The chart'], ['places', 'Harbours']] as const).map(([id, label]) => (
+                <button key={id} type="button" className="font-karla font-700 uppercase tap"
+                  onClick={() => { vibrate(8); setTab(id) }}
+                  aria-pressed={tab === id}
+                  style={{
+                    padding: '0.46rem 0.95rem', borderRadius: 999, cursor: 'pointer',
+                    fontSize: '0.62rem', letterSpacing: '0.14em',
+                    color: tab === id ? '#f2ead8' : 'rgba(190,212,228,0.55)',
+                    background: tab === id ? 'rgba(180,214,232,0.16)' : 'transparent',
+                    border: `1px solid ${tab === id ? 'rgba(180,214,232,0.4)' : 'rgba(180,214,232,0.14)'}`,
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── THE LIST ───────────────────────────────────────────────
+                Rows, not pins. Each one is the whole target: the name, what
+                the place is for, and the road at the end of it. Two columns
+                where there is room, because ten rows down one side of a
+                desktop panel is a column of nothing beside a column of list. */}
+            {tab === 'places' && (
+              <div style={{
+                width: wide ? w + KEY_W + KEY_GAP : w,
+                display: 'grid',
+                gridTemplateColumns: wide ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+                gap: 8,
+                maxHeight: wide ? h : undefined,
+                overflowY: wide ? 'auto' : undefined,
+              }}>
+                {harbours.map(p => (
+                  <button key={p.id} type="button" className="tap"
+                    onClick={() => { vibrate(10); onPointing?.(p.id); onClose() }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                      minHeight: 58, padding: '0.6rem 0.75rem', borderRadius: 12,
+                      textAlign: 'left', cursor: 'pointer',
+                      background: 'rgba(255,255,255,0.035)',
+                      border: '1px solid rgba(180,214,232,0.16)',
+                    }}>
+                    <span aria-hidden style={{
+                      flexShrink: 0, width: 9, height: 9, borderRadius: 2,
+                      background: INK.port, border: '1px solid rgba(6,12,18,0.9)',
+                    }} />
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.92rem', color: '#f4ecd8', lineHeight: 1.15 }}>
+                        {p.name}
+                      </span>
+                      <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.74rem', color: 'rgba(190,212,228,0.6)', marginTop: 2, lineHeight: 1.4 }}>
+                        {p.blurb}
+                      </span>
+                    </span>
+                    <span className="font-cinzel font-700" aria-hidden style={{
+                      flexShrink: 0, fontSize: '0.66rem', letterSpacing: '0.08em', color: '#ffdb7a',
+                    }}>
+                      Show me
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* ── TWO LAYOUTS, AND THEY ARE GENUINELY DIFFERENT ──────────
                 WIDE:   chart and key side by side, which is what buys the
@@ -921,7 +1018,7 @@ export default function Minimap({
                 The old `marginTop: wide ? 0 : 10` on the key is the tell. It
                 was written by somebody who believed the key was below. */}
             <div style={{
-              display: 'flex',
+              display: tab === 'chart' ? 'flex' : 'none',
               flexDirection: wide ? 'row' : 'column',
               gap: wide ? KEY_GAP : 10,
               alignItems: 'flex-start',
