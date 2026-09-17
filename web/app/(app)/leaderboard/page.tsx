@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
+import { type AvatarMap } from './boardUI'
 import LeaderboardClient from './LeaderboardClient'
 import type { LeaderboardEntry } from './LeaderboardClient'
 import { getAchievementPointsBoard } from '@/lib/achievementPoints'
@@ -167,16 +168,14 @@ export default async function LeaderboardPage() {
     ...trophiesData.top.map(e => e.user_id),
     ...bountyPointsData.top.map(e => e.user_id),
   ])
-  const avatarsMap: Record<string, {
-    characterColor: string | null
-    equippedHat: string | null
-    avatarBg: string | null
-    avatarBorder: string | null
-  }> = {}
+  // The same select also carries what the podium needs to draw a whole
+  // fisher (boat, pet, rod, reel, hook): five more columns on a query that
+  // was already going out, rather than a second one.
+  const avatarsMap: AvatarMap = {}
   if (displayedUserIds.size > 0) {
     const { data: avatarRows } = await admin
       .from('profiles')
-      .select('id, character_color, equipped_hat, avatar_bg_color, avatar_border_color')
+      .select('id, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_boat, equipped_pet, rod_tier, reel_tier, hook_tier')
       .in('id', Array.from(displayedUserIds))
     for (const row of (avatarRows ?? []) as Array<{
       id: string
@@ -184,12 +183,22 @@ export default async function LeaderboardPage() {
       equipped_hat: string | null
       avatar_bg_color: string | null
       avatar_border_color: string | null
+      equipped_boat: string | null
+      equipped_pet: string | null
+      rod_tier: number | null
+      reel_tier: number | null
+      hook_tier: number | null
     }>) {
       avatarsMap[row.id] = {
         characterColor: row.character_color,
         equippedHat: row.equipped_hat,
         avatarBg: row.avatar_bg_color,
         avatarBorder: row.avatar_border_color,
+        equippedBoat: row.equipped_boat,
+        equippedPet: row.equipped_pet,
+        rodTier: row.rod_tier ?? 0,
+        reelTier: row.reel_tier ?? 0,
+        hookTier: row.hook_tier ?? 0,
       }
     }
   }

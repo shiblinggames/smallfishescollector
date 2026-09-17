@@ -5,6 +5,7 @@
 // visually identical. Pure presentational; no data fetching here.
 
 import Link from 'next/link'
+import FisherPose from '@/components/FisherPose'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -39,6 +40,12 @@ export type AvatarMap = Record<string, {
   equippedHat: string | null
   avatarBg: string | null
   avatarBorder: string | null
+  /** The rest of the fisher, for the podium. See PodiumStage. */
+  equippedBoat?: string | null
+  equippedPet?: string | null
+  rodTier?: number
+  reelTier?: number
+  hookTier?: number
 }>
 
 /** Per-board display metadata. Single source of truth for label, accent,
@@ -214,6 +221,10 @@ interface SectionProps {
    *  that accept signed scores like Blackjack) means they have a rank. */
   myScore: number | null
   currentUserId: string
+  /** Draw the top three as whole fishers on a stage instead of three ledger
+   *  rows. The Achievement Points board: it is the one that asks who the
+   *  best captain is, and the answer should be allowed to stand there. */
+  stage?: boolean
   showZone?: boolean
   avatars: AvatarMap
   /** Optional per-row value text color from the score. When provided,
@@ -222,7 +233,7 @@ interface SectionProps {
   valueColor?: (n: number) => string
 }
 
-export function LeaderboardSection({ accent, unit, subUnit, data, myScore, currentUserId, showZone, avatars, valueColor }: SectionProps) {
+export function LeaderboardSection({ accent, unit, subUnit, data, myScore, currentUserId, stage = false, showZone, avatars, valueColor }: SectionProps) {
   const top3 = data.slice(0, 3)
   const rest = data.slice(3)
   const myRank = data.findIndex(e => e.user_id === currentUserId) + 1
@@ -236,9 +247,14 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
         </p>
       )}
 
+      {/* ── THE STAGE ── the top three as whole fishers, when asked for. */}
+      {stage && top3.length > 0 && (
+        <PodiumStage top3={top3} accent={accent} unit={unit} currentUserId={currentUserId} avatars={avatars} />
+      )}
+
       {/* Top 3 — drawn metal medallions, no rank stripes; the podium reads as
           the top of a harbor ledger. */}
-      {top3.length > 0 && (
+      {!stage && top3.length > 0 && (
         <div style={{
           background: LEDGER_BG, border: LEDGER_BORDER,
           borderRadius: 14, overflow: 'hidden', marginBottom: 6,
@@ -375,3 +391,85 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
     </div>
   )
 }
+
+// ── THE PODIUM ──────────────────────────────────────────────────────────────
+//
+// Three whole fishers: character, hat, boat, rod, reel, hook, pet, the same
+// composite the profile and the gear screen draw, so a captain on the stage
+// looks exactly as they look on their own page. Gold stands in the middle
+// and a little taller; silver and bronze flank. Under each, the medallion,
+// the name and the score, and the whole figure is the link to the profile.
+//
+// The glows are off (`noGlow`): three infinite drop-shadow loops for a
+// decorative row is a real cost for a halo nobody would see at this size.
+//
+// It replaces the three ledger rows for the board it is on rather than
+// sitting above them, because the rows would then say the same three names
+// again directly underneath.
+export function PodiumStage({ top3, accent, unit, currentUserId, avatars }: {
+  top3: LeaderboardEntry[]
+  accent: string
+  unit: (n: number) => string
+  currentUserId: string
+  avatars: AvatarMap
+}) {
+  // Silver, gold, bronze left to right, so gold is in the middle. A board
+  // with fewer than three keeps the order and leaves the missing place empty.
+  const order = [top3[1], top3[0], top3[2]]
+  const rankOf = (e: LeaderboardEntry) => (top3.indexOf(e) + 1) as 1 | 2 | 3
+  const rankColor = ['#f0c040', '#c0c8d4', '#c47a3a']
+  return (
+    <div style={{
+      background: LEDGER_BG, border: LEDGER_BORDER,
+      borderRadius: 14, overflow: 'hidden', marginBottom: 6,
+      boxShadow: 'inset 0 1px 0 rgba(240,220,180,0.06)',
+      padding: '0.9rem 0.5rem 0.75rem',
+      display: 'grid', gridTemplateColumns: '1fr 1.25fr 1fr', alignItems: 'end', gap: 4,
+    }}>
+      {order.map((entry, col) => {
+        if (!entry) return <div key={`empty-${col}`} />
+        const rank = rankOf(entry)
+        const a = avatars[entry.user_id]
+        const isMe = entry.user_id === currentUserId
+        const gold = rank === 1
+        return (
+          <Link key={entry.user_id} href={`/u/${entry.username}`} className="tap" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0,
+            textDecoration: 'none', borderRadius: 12, padding: '0.3rem 0.2rem 0.4rem',
+            background: isMe ? `${accent}0d` : 'transparent',
+          }}>
+            <div style={{ width: gold ? '100%' : '86%', position: 'relative' }}>
+              {/* A soft ground in the medal's colour so the figure is standing
+                  ON something rather than floating over the ledger. */}
+              <div aria-hidden style={{
+                position: 'absolute', left: '8%', right: '8%', bottom: '2%', height: '22%', borderRadius: '50%',
+                background: `radial-gradient(ellipse at center, ${rankColor[rank - 1]}33 0%, transparent 70%)`,
+              }} />
+              <FisherPose
+                characterColor={a?.characterColor ?? 'default'}
+                equippedHat={a?.equippedHat ?? null}
+                equippedBoat={a?.equippedBoat ?? null}
+                equippedPet={a?.equippedPet ?? null}
+                rodTier={a?.rodTier ?? 0}
+                reelTier={a?.reelTier ?? 0}
+                hookTier={a?.hookTier ?? 0}
+                noGlow
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, minWidth: 0, maxWidth: '100%' }}>
+              <RankMedallion rank={rank} size={gold ? 24 : 20} />
+              <p className="font-karla font-700 truncate" style={{ fontSize: gold ? '0.86rem' : '0.76rem', color: isMe ? '#f0ede8' : '#c8c8c2', minWidth: 0 }}>
+                {entry.username}
+              </p>
+            </div>
+            {isMe && <span className="font-karla" style={{ color: accent, fontSize: '0.55rem', marginTop: 1 }}>you</span>}
+            <p className="font-cinzel font-700" style={{ fontSize: gold ? '0.95rem' : '0.8rem', color: rankColor[rank - 1], marginTop: 2 }}>
+              {unit(entry.score)}
+            </p>
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
+

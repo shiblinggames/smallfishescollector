@@ -151,6 +151,9 @@ export default function LeaderboardClient({ fishing, perfectStreak, chartingPoin
         myScore={scoreOf(activeTab)}
         currentUserId={currentUserId}
         avatars={avatars}
+        // The best captains, shown whole. Only here: this is the board that
+        // asks the question the figure answers.
+        stage={activeTab === 'achievementPoints'}
       />
     </div>
   )
