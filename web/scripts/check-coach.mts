@@ -144,6 +144,12 @@ const walkFwd = (dir: string) => {
       // table-driven one renders `data-coach={d.coach}` rather than the bare
       // name — what matters is that the prop gets onto an element at all.
       if (new RegExp('data-coach=\\{[^}]*\\b' + prop + '\\b').test(src)) continue
+      // OR IT HANDS IT ON. A room header takes `coach` and gives it to the
+      // back pill, which is the thing a tour actually points at. That is not
+      // a dropped prop, and the rule keeps its teeth either way: whatever it
+      // was handed to is walked by this same loop, so if THAT stops rendering
+      // the attribute, it is the one that fails. Probed by doing exactly that.
+      if (new RegExp('[^-\\w]' + prop + '=\\{[^}]*\\b' + prop + '\\b').test(src)) continue
       dropped++
       console.log(`    DROPPED ${n.name} takes a "${prop}" prop and never renders data-coach`)
     }

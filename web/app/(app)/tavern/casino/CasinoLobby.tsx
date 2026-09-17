@@ -17,7 +17,7 @@ import RouletteHubCard from '../RouletteHubCard'
 import { useAnimatedNumber } from '../useAnimatedNumber'
 import { Avatar } from '@/app/(app)/leaderboard/boardUI'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
-import BackButton from '@/components/BackButton'
+import RoomHeader from '@/components/RoomHeader'
 import ResetCountdown from '@/components/ResetCountdown'
 import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
 import { GUIDES } from '@/lib/onboardingScenes'
@@ -122,22 +122,16 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
     <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       {/* Header row. Side rails get equal flex so the title sits at
           the true center regardless of the link/balance widths. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <BackButton href="/sea" label="The Sea" />
-        </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          The Den
-        </p>
-        {/* Live chip purse — the Nav already shows doubloons, so this slot
-            carries CHIPS instead (replaces the old giant counter below). */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
+      {/* The room's own header, shared with every other door off the
+          Mainland. The right slot carries CHIPS, which is the one number this
+          room is about; the Nav already carries doubloons on every page. */}
+      <RoomHeader title="The Den" backHref="/sea" backLabel="The Sea" accent="#d9534f"
+        right={
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.28rem 0.55rem 0.28rem 0.6rem', borderRadius: 999, background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(196,169,106,0.42)', whiteSpace: 'nowrap' }}>
             <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#a68a4a' }}>Chips</span>
             <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: GOLD, lineHeight: 1 }}>{animatedChips.toLocaleString()} ⟡</span>
           </div>
-        </div>
-      </div>
+        } />
 
       {/* Wallet panel — the shared purse. Same wood/brass family as the
           Blackjack table so the lobby reads as part of the card room. */}

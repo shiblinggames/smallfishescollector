@@ -386,7 +386,7 @@ export default function TackleShopClient({
   if (section === null) {
     return (
       <div className="page-col pb-16 sm:pb-8">
-        <ShopHeader title="Tackle Shop" backLabel="Back" onBack={() => router.back()} badge={levelBadge} />
+        <ShopHeader title="Tackle Shop" backLabel="The Sea" href="/sea" badge={levelBadge} />
 
         {/* ── THE PULSE: how kitted-out you are, at a glance ─────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>

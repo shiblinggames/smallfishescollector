@@ -6,7 +6,7 @@
 
 import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
-import BackButton from '@/components/BackButton'
+import RoomHeader from '@/components/RoomHeader'
 import { ParlorHost, CrownIcon, ParlorPointsTicker } from './ParlorArt'
 import ParlorClaim from './ParlorClaim'
 import ParlorStanding from './ParlorStanding'
@@ -54,17 +54,9 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
     <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       {/* Header row. Side rails get equal flex so the title sits at
           the true center regardless of the link/balance widths. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <BackButton href="/sea" label="The Sea" />
-        </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          The Parlor
-        </p>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <ParlorPointsTicker value={parlorPoints} />
-        </div>
-      </div>
+      {/* The room's own header, shared with every other door off the Mainland. */}
+      <RoomHeader title="The Parlor" backHref="/sea" backLabel="The Sea" accent="#dd8f79"
+        right={<ParlorPointsTicker value={parlorPoints} />} />
 
       {/* The host presides — a dashing crimson cavalier who runs the room. */}
       <div style={{ padding: '0.2rem 0.2rem 0.1rem' }}>

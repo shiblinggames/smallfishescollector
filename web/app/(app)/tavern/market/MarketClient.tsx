@@ -919,7 +919,7 @@ export default function MarketClient({
             is reached from the fishing hub, the tavern ticker AND mid-cast
             from the fishing screen, so it returns you where you came from
             rather than picking one of the three. */}
-        <ShopHeader title="Fish Market" backLabel="Back" coach="market-back" onBack={() => router.back()}
+        <ShopHeader title="The Market" backLabel="The Sea" coach="market-back" href="/sea"
           /* RANKS OPPOSITE BACK, in the slot the header already keeps for it.
              It sat above the board before, taking a row of its own and pushing
              the market down. Only on the Exchange side: the Hold sells fish and
