@@ -1112,11 +1112,11 @@ export default function Minimap({
                       instruction in a legend's clothes and read as nonsense in
                       a column of nouns. Where to press is said once, under the
                       title, which is where somebody looks for what to do. */}
-                  <Key mark={<Square c={INK.port} />} label="A harbor" />
-                  <Key mark={<Tri c={INK.isle} ring="rgba(255,206,138,0.55)" />} label="An isle you have not visited" />
-                  <Key mark={<Tri c={INK.isleDone} />} label="An isle you have visited" />
-                  <Key mark={<Cross c={INK.dig} />} label="Buried treasure you have a bearing for" />
-                  <Key mark={<Cross c={INK.digDone} thin />} label="Treasure you have already dug up" />
+                  <Key mark={<Square c={INK.port} />} label="Harbor" />
+                  <Key mark={<Tri c={INK.isle} ring="rgba(255,206,138,0.55)" />} label="Isle, unvisited" />
+                  <Key mark={<Tri c={INK.isleDone} />} label="Isle, visited" />
+                  <Key mark={<Cross c={INK.dig} />} label="Treasure, marked" />
+                  <Key mark={<Cross c={INK.digDone} thin />} label="Treasure, dug" />
                 </KeyGroup>
               )}
 
@@ -1125,9 +1125,9 @@ export default function Minimap({
               {side === 'fishing' && (
                 <KeyGroup title="Faces">
                   <Key mark={<Diamond c={INK.finn} ring={INK.finn} />} label="Finn" />
-                  <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="A regular you have met" />
-                  <Key mark={<Dot c={INK.trader} r={2.8} />} label="A buyer for your fish" />
-                  <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain, sailing now" />
+                  <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="A regular" />
+                  <Key mark={<Dot c={INK.trader} r={2.8} />} label="Fish buyer" />
+                  <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain" />
                 </KeyGroup>
               )}
 
@@ -1136,18 +1136,18 @@ export default function Minimap({
                   more rows to read past. */}
               {side !== 'fishing' && (
                 <KeyGroup title="The campaign">
-                  <Key mark={<Swatch c={BAYS[0].sea[1]} round />} label="A chapter's bay" />
-                  <Key mark={<Swatch c="rgba(240,192,64,0.95)" round />} label="A fight you have not won" />
-                  <Key mark={<Swatch c="transparent" round ring="rgba(190,214,232,0.62)" />} label="A fight you have won" />
-                  <Key mark={<Swatch c={`${BAYS[0].sea[0]}88`} round />} label="A bay still locked" />
-                  <Key mark={<Dot c="transparent" r={3} ring="rgba(240,192,64,0.95)" ringR={7} />} label="The campaign's next stop" />
-                  <Key mark={<Dash c="rgba(240,192,64,0.6)" />} label="The way back to the Sea Gate" />
+                  <Key mark={<Swatch c={BAYS[0].sea[1]} round />} label="Chapter's bay" />
+                  <Key mark={<Swatch c="rgba(240,192,64,0.95)" round />} label="Fight, open" />
+                  <Key mark={<Swatch c="transparent" round ring="rgba(190,214,232,0.62)" />} label="Fight, won" />
+                  <Key mark={<Swatch c={`${BAYS[0].sea[0]}88`} round />} label="Bay, locked" />
+                  <Key mark={<Dot c="transparent" r={3} ring="rgba(240,192,64,0.95)" ringR={7} />} label="Next stop" />
+                  <Key mark={<Dash c="rgba(240,192,64,0.6)" />} label="Way home" />
                 </KeyGroup>
               )}
 
-              <KeyGroup title="What the marks mean">
+              <KeyGroup title="The chart">
                 <Key mark={<Dot c={INK.you} r={4} ring="rgba(240,250,255,0.55)" />} label="Your boat" />
-                <Key mark={<Swatch c={INK.fog} />} label="Water you have not sailed yet" />
+                <Key mark={<Swatch c={INK.fog} />} label="Unsailed water" />
               </KeyGroup>
             </div>
             </div>
