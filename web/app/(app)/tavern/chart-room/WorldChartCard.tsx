@@ -23,7 +23,7 @@ export default function WorldChartCard({ points, claimed }: { points: number; cl
   return (
     <Link href="/charting/world-chart" className="tap" style={{ display: 'block', textDecoration: 'none' }}>
       <div style={{
-        position: 'relative', borderRadius: 18, overflow: 'hidden', minHeight: 168,
+        position: 'relative', borderRadius: 'var(--card-r)', overflow: 'hidden', minHeight: 168,
         display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '1rem 1.15rem 1.05rem',
         border: `1px solid ${accent}77`,
         boxShadow: pending.length > 0 ? `0 0 26px ${GEM}2a` : `0 0 18px ${GOLD}14`,

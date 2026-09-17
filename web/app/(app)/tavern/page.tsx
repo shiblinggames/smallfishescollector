@@ -11,6 +11,8 @@ import SaltRoadDigest from './SaltRoadDigest'
 import SupportStudioCard from '@/components/SupportStudioCard'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { SkeletonBox } from '@/components/Skeleton'
+import RoomHeader from '@/components/RoomHeader'
+import RoomIntro from '@/components/RoomIntro'
 
 /**
  * ── THE TAVERN IS THE SOCIAL ROOM ───────────────────────────────────────────
@@ -66,7 +68,13 @@ export default async function TavernPage() {
           that this was the page a new captain landed on. It is not any more —
           they hang off the app shell now, so they fire wherever the session
           opens. See app/(app)/layout.tsx. */}
-      <div className="page-col pt-6 pb-16 sm:pb-8 flex flex-col gap-4" style={{ position: 'relative', zIndex: 1 }}>
+      {/* The same column every other room off the Mainland uses. This was
+          the one at 980, and it was the only room with no way back to the
+          water: the nav's tab was the way out, and the nav is not the sea. */}
+      <div className="px-4 pt-6 pb-16 sm:pb-8" style={{ position: 'relative', zIndex: 1 }}>
+      <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+        <RoomHeader title="The Tavern" backHref="/sea" backLabel="The Sea" accent="#e0a545" />
+        <RoomIntro>The room with other captains in it. Who you sail with, where you stand with the regulars, and the day&apos;s races.</RoomIntro>
 
         {/* Ungrouped ON PURPOSE, and the only thing that is. A one-line ticker
             of who holds each board is the room's background noise rather than
@@ -127,6 +135,7 @@ export default async function TavernPage() {
           </p>
         </div>
 
+      </div>
       </div>
     </main>
   )

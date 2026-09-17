@@ -7,6 +7,7 @@
 import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
 import RoomHeader from '@/components/RoomHeader'
+import RoomIntro from '@/components/RoomIntro'
 import { ParlorHost, CrownIcon, ParlorPointsTicker } from './ParlorArt'
 import ParlorClaim from './ParlorClaim'
 import ParlorStanding from './ParlorStanding'
@@ -57,6 +58,7 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
       {/* The room's own header, shared with every other door off the Mainland. */}
       <RoomHeader title="The Parlor" backHref="/sea" backLabel="The Sea" accent="#dd8f79"
         right={<ParlorPointsTicker value={parlorPoints} />} />
+      <RoomIntro>Trivia for doubloons. Every right answer also earns Parlor points, and points climb a rank ladder that pays gems.</RoomIntro>
 
       {/* The host presides — a dashing crimson cavalier who runs the room. */}
       <div style={{ padding: '0.2rem 0.2rem 0.1rem' }}>
@@ -72,28 +74,28 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
       {/* Collect any ranks your points have reached — the interactive gem claim. */}
       <ParlorClaim points={parlorPoints} claimedGems={parlorRankGemsClaimed} />
 
-      <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        Doubloons for a right answer, and <span style={{ color: '#c084fc' }}>gems ◆</span> to collect each time you climb a Parlor rank. Fresh boards every Monday.
-      </p>
-
+      {/* The two live games and the Captains' third, two across like the
+          Den's tables and the Chart Room's puzzles. */}
+      <div className="grid grid-cols-2 gap-3">
       {/* The Captain's Board — live */}
-      <div data-coach="parlor-board">
       <ScenicCard
+        coach="parlor-board"
         href="/tavern/trivia/board"
         title="The Captain's Board"
-        gradient={['#241f48', '#161230', '#0a0818']}
+        blurb={`One trivia card a day off the week's board. A right answer pays doubloons.`}
         accent="#a78bfa"
-        bgImage="/captainsboard-bg.jpg"
+        chip={{
+          text: boardPlayedToday ? (doubloonsThisWeek > 0 ? `Played · ${doubloonsThisWeek} ⟡ wk` : 'Played today') : 'Card ready',
+          lit: boardPlayedToday && doubloonsThisWeek > 0,
+        }}
       >
-        {/* Soft dark ground so the faint tiles read on the simpler wash. */}
-        <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 72% 56% at 50% 30%, rgba(8,6,22,0.62) 0%, transparent 72%)', pointerEvents: 'none' }} />
         {/* Mini board scene: a 4x3 grid of glowing category tiles. */}
         <div
           aria-hidden
           style={{
             position: 'absolute',
-            top: 16, left: '50%', transform: 'translateX(-50%)',
-            display: 'grid', gridTemplateColumns: 'repeat(4, 44px)', gap: 6,
+            top: 10, left: '50%', transform: 'translateX(-50%)',
+            display: 'grid', gridTemplateColumns: 'repeat(4, 34px)', gap: 5,
           }}
         >
           {Array.from({ length: 12 }).map((_, i) => {
@@ -105,11 +107,11 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
                 transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut', delay: (i % 5) * 0.45 }}
                 className="font-cinzel font-700"
                 style={{
-                  height: 24, borderRadius: 6,
+                  height: 20, borderRadius: 5,
                   background: `${cat.color}30`,
                   border: `1px solid ${cat.color}99`,
                   color: cat.color,
-                  fontSize: '0.6rem',
+                  fontSize: '0.56rem',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
@@ -118,43 +120,24 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
             )
           })}
         </div>
-        {/* Daily-card chip — one card a day off the weekly board */}
-        <span
-          className="font-karla font-700"
-          style={{
-            position: 'absolute', top: 8, right: 10,
-            fontSize: '0.58rem', letterSpacing: '0.04em',
-            color: boardPlayedToday ? (doubloonsThisWeek > 0 ? GOLD : '#9a9488') : '#a78bfa',
-            background: 'rgba(10,8,24,0.7)',
-            border: '1px solid rgba(167,139,250,0.3)',
-            borderRadius: 999, padding: '0.2rem 0.55rem',
-          }}
-        >
-          {boardPlayedToday
-            ? (doubloonsThisWeek > 0 ? `Played · ${doubloonsThisWeek} ⟡ wk` : 'Played today')
-            : 'Card ready'}
-        </span>
       </ScenicCard>
-      </div>
 
       {/* Pirate King — live */}
-      <div data-coach="parlor-king">
       <ScenicCard
+        coach="parlor-king"
         href="/tavern/trivia/king"
         title="Pirate King"
-        gradient={['#3a2c10', '#221a0c', '#0e0a06']}
+        blurb="A ladder of questions with a bigger prize on every rung. Walk with what you have, or climb for the crown."
         accent={GOLD}
-        bgImage="/pirateking-bg.jpg"
+        chip={kingChipText ? { text: kingChipText, lit: !!king && king.doubloonsAwarded > 0 } : undefined}
       >
-        {/* Soft dark ground so the gold rungs read on the gold wash. */}
-        <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 72% 56% at 50% 28%, rgba(14,9,3,0.6) 0%, transparent 72%)', pointerEvents: 'none' }} />
         {/* Mini ladder scene: prize rungs climbing to a crown. */}
         <div
           aria-hidden
           style={{
             position: 'absolute',
-            top: 14, left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', alignItems: 'flex-end', gap: 7,
+            top: 8, left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', alignItems: 'flex-end', gap: 5,
           }}
         >
           {[20, 100, 360, 1000].map((p, i) => (
@@ -162,12 +145,12 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
               key={p}
               className="font-karla font-700"
               style={{
-                width: 44, height: 18 + i * 9,
-                borderRadius: 6,
+                width: 36, height: 16 + i * 8,
+                borderRadius: 5,
                 background: `${GOLD}${i === 3 ? '4a' : '2e'}`,
                 border: `1px solid ${GOLD}${i === 3 ? 'bb' : '88'}`,
                 color: i === 3 ? GOLD : '#e6c86a',
-                fontSize: '0.56rem',
+                fontSize: '0.5rem',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
@@ -177,36 +160,20 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
           <motion.span
             animate={{ y: [0, -4, 0] }}
             transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ display: 'inline-flex', lineHeight: 1, marginLeft: 2, marginBottom: 38 }}
+            style={{ display: 'inline-flex', lineHeight: 1, marginLeft: 2, marginBottom: 34 }}
           >
-            <CrownIcon size={26} color={GOLD} />
+            <CrownIcon size={22} color={GOLD} />
           </motion.span>
         </div>
-        {/* Today's run chip */}
-        {kingChipText && (
-          <span
-            className="font-karla font-700"
-            style={{
-              position: 'absolute', top: 8, right: 10,
-              fontSize: '0.58rem', letterSpacing: '0.04em',
-              color: king && king.doubloonsAwarded > 0 ? GOLD : '#9a9488',
-              background: 'rgba(14,10,6,0.7)',
-              border: `1px solid ${GOLD}4d`,
-              borderRadius: 999, padding: '0.2rem 0.55rem',
-            }}
-          >
-            {kingChipText}
-          </span>
-        )}
       </ScenicCard>
-      </div>
 
       {/* Spin the Capstan — live, Captain-only */}
       <CapstanCard isMember={isCaptain} solved={capstanSolved} />
+      </div>
 
       {/* Top of the Parlor — the three deepest banks of parlor points. */}
       {topParlor.length > 0 && (
-        <div style={{ borderRadius: 14, padding: '0.75rem 0.9rem 0.6rem', background: 'rgba(20,14,7,0.6)', border: '1px solid rgba(201,162,74,0.28)' }}>
+        <div className="room-panel" style={{ padding: '0.75rem 0.9rem 0.6rem' }}>
           <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#e6d8b4', textAlign: 'center', letterSpacing: '0.02em', marginBottom: 8 }}>
             Top of the Parlor
           </p>

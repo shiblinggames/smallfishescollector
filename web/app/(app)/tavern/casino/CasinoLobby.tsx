@@ -18,6 +18,7 @@ import { useAnimatedNumber } from '../useAnimatedNumber'
 import { Avatar } from '@/app/(app)/leaderboard/boardUI'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import RoomHeader from '@/components/RoomHeader'
+import RoomIntro from '@/components/RoomIntro'
 import ResetCountdown from '@/components/ResetCountdown'
 import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
 import { GUIDES } from '@/lib/onboardingScenes'
@@ -132,6 +133,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
             <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: GOLD, lineHeight: 1 }}>{animatedChips.toLocaleString()} ⟡</span>
           </div>
         } />
+      <RoomIntro>Buy chips with doubloons, play any table, and cash out what you win. One purse, every table.</RoomIntro>
 
       {/* Wallet panel — the shared purse. Same wood/brass family as the
           Blackjack table so the lobby reads as part of the card room. */}
@@ -419,10 +421,6 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
           </div>
         )
       })()}
-
-      <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
-        One purse, every table. Session winnings track per game until you cash out.
-      </p>
 
       <LobbyGuide
         show={!hasSeenGuide}

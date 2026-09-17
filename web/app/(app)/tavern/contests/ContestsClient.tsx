@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import RoomHeader from '@/components/RoomHeader'
 import { motion } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import RankMedallion from '@/components/RankMedallion'
@@ -30,15 +30,9 @@ export default function ContestsClient({ views }: { views: Record<string, Contes
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Link href="/sea" className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#9a948a', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          The Sea
-        </Link>
-        <h1 className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#f0ece4' }}>Contests</h1>
-        <span style={{ width: 56 }} />
-      </div>
+      {/* The same head as every room on the Mainland. This is a room off
+          the Tavern, so that is where the way out goes. */}
+      <RoomHeader title="Contests" backHref="/tavern" backLabel="The Tavern" style={{ marginBottom: 16 }} />
       {/* Carry-over assurance — these prizes are permanent, beta or not. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24,

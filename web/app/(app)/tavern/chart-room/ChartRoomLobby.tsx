@@ -11,6 +11,7 @@ import MinefieldCard from './MinefieldCard'
 import RiggingCard from './RiggingCard'
 import WorldChartCard from './WorldChartCard'
 import ChartingNav from '@/components/ChartingNav'
+import RoomIntro from '@/components/RoomIntro'
 import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
 import { GUIDES } from '@/lib/onboardingScenes'
 import { markChartingGuideSeen } from './actions'
@@ -40,6 +41,7 @@ export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchSt
   return (
     <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       <ChartingNav title="The Chart Room" backHref="/sea" backLabel="The Sea" points={puzzlePoints} />
+      <RoomIntro>Four puzzles, new every Monday. Each one you solve pays doubloons and charting points, and points uncover the World Chart, which pays gems.</RoomIntro>
 
       {/* The World Chart — the collectible the puzzles feed toward. */}
       <div data-coach="chart-world">
@@ -71,10 +73,6 @@ export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchSt
           ))}
         </div>
       )}
-
-      <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
-        Fresh puzzles every Monday. Stow the hold clean for a bonus.
-      </p>
 
       <LobbyGuide
         show={!hasSeenGuide}

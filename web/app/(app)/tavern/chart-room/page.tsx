@@ -10,7 +10,6 @@ import { MINEFIELD_POINTS } from '@/app/(app)/charting/minefieldConstants'
 import { getRiggingState } from './rigging/actions'
 import { RIGGING_POINTS } from './rigging/constants'
 import ChartRoomLobby from './ChartRoomLobby'
-import ChartRoomBackdrop from './ChartRoomBackdrop'
 
 export default async function ChartRoomPage() {
   const user = await getCurrentUser()
@@ -40,11 +39,13 @@ export default async function ChartRoomPage() {
 
   const puzzlePoints = Number(profile?.puzzle_points ?? 0)
 
+  // NO BACKDROP OF ITS OWN. It had a chart table under lamplight painted
+  // behind it, and it was the only room on the Mainland that did: the Den
+  // and the Parlor stand on the plain floor, and a captain crossing from one
+  // to the other felt the building change. The chart grid lives on the
+  // World Chart card now, where it is the point.
   return (
-    <>
-      <ChartRoomBackdrop />
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <main className="min-h-screen pb-24 sm:pb-0">
+    <main className="min-h-screen pb-24 sm:pb-0">
           <div className="px-4 pt-6 pb-12">
             <ChartRoomLobby
               holdSolved={holdSolved}
@@ -62,8 +63,6 @@ export default async function ChartRoomPage() {
               hasSeenGuide={(profile?.has_seen_charting_guide as boolean | null) ?? false}
             />
           </div>
-        </main>
-      </div>
-    </>
+    </main>
   )
 }

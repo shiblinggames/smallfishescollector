@@ -4,43 +4,27 @@ import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
 
 const GOLD = '#f0c040'
+const CELL = 9
 
-/** Door card for The Hold inside the Chart Room lobby. Parchment manifest
- *  scene: a faint cargo grid with a few lit lots and a slow drifting glow.
- *  Shows the week's progress chip (N/4 holds stowed + ⟡ banked). */
+/** The Chart Room's door into the Hold: a 9x9 cargo sudoku, four a week.
+ *  The scene is the manifest itself, a few lots already stowed. */
 export default function HoldCard({ solvedCount, doubloonsToday }: { solvedCount: number; doubloonsToday: number }) {
   const chip = solvedCount >= 4 ? `All 4 stowed · +${doubloonsToday} ⟡`
     : solvedCount > 0 ? `${solvedCount}/4 stowed`
     : '4 new holds'
-  const chipLit = solvedCount >= 4
   return (
     <ScenicCard
       href="/tavern/chart-room/hold"
       title="The Hold"
-      gradient={['#3a2f14', '#221a0c', '#100a04']}
+      blurb="Sudoku with cargo: every row, column and bay holds each lot once. Four holds a week, doubloons for each."
       accent="#c4a96a"
-      bgImage="/hold-bg.jpg"
+      chip={{ text: chip, lit: solvedCount >= 4 }}
     >
-      {/* Soft dark ground so the faint cargo grid reads on the amber wash. */}
-      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 66% 60% at 50% 34%, rgba(10,7,2,0.6) 0%, transparent 74%)', pointerEvents: 'none' }} />
-      {/* Lantern wash over the manifest */}
-      <motion.div
-        aria-hidden
-        animate={{ opacity: [0.28, 0.46, 0.28] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          position: 'absolute', top: 2, left: '50%', translateX: '-50%',
-          width: 150, height: 120,
-          background: 'radial-gradient(ellipse at center, rgba(240,200,110,0.3) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Faint 9x9 cargo grid */}
       <div
         aria-hidden
         style={{
-          position: 'absolute', top: 22, left: '50%', transform: 'translateX(-50%)',
-          display: 'grid', gridTemplateColumns: 'repeat(9, 11px)', gridTemplateRows: 'repeat(9, 11px)', gap: 1,
+          position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)',
+          display: 'grid', gridTemplateColumns: `repeat(9, ${CELL}px)`, gridTemplateRows: `repeat(9, ${CELL}px)`, gap: 1,
         }}
       >
         {Array.from({ length: 81 }).map((_, i) => {
@@ -52,10 +36,10 @@ export default function HoldCard({ solvedCount, doubloonsToday }: { solvedCount:
               transition={lit ? { duration: 3.4, repeat: Infinity, ease: 'easeInOut', delay: (i % 5) * 0.4 } : undefined}
               className="font-cinzel font-700"
               style={{
-                width: 11, height: 11, borderRadius: 2,
-                background: lit ? `${GOLD}44` : 'rgba(10,7,2,0.35)',
+                width: CELL, height: CELL, borderRadius: 2,
+                background: lit ? `${GOLD}44` : 'rgba(10,7,2,0.45)',
                 border: `0.5px solid ${lit ? `${GOLD}99` : 'rgba(196,169,106,0.3)'}`,
-                color: GOLD, fontSize: '0.42rem',
+                color: GOLD, fontSize: '0.38rem',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
@@ -64,20 +48,6 @@ export default function HoldCard({ solvedCount, doubloonsToday }: { solvedCount:
           )
         })}
       </div>
-      {/* Day progress chip */}
-      <span
-        className="font-karla font-700"
-        style={{
-          position: 'absolute', top: 8, right: 10,
-          fontSize: '0.58rem', letterSpacing: '0.04em',
-          color: chipLit ? GOLD : '#9a9488',
-          background: 'rgba(14,10,4,0.7)',
-          border: '1px solid rgba(196,169,106,0.35)',
-          borderRadius: 999, padding: '0.2rem 0.55rem',
-        }}
-      >
-        {chip}
-      </span>
     </ScenicCard>
   )
 }

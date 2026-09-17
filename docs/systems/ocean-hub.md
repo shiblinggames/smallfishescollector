@@ -352,6 +352,12 @@ visibly the building you sailed past.
 click and starts a heading on pointerdown. The chooser is wrapped in a
 `stopPropagation` div or dismissing it also puts the helm over.
 
+**Six doors, in two labelled rows** (`ASHORE_ROWS` in `ashoreDoors.ts`, 2026-09-17). Top:
+the Tavern, the Market, the Tackle Shop, which are about you and your boat. Bottom: the
+Parlor, the Den, the Chart Room, which are the evening's games. One unlabelled grid of six
+made a new captain read six blurbs to learn that split; the row label says it first. The
+order inside a row is fixed and is the reading order everywhere the six are listed.
+
 ## The stack
 
 `Z` in SeaMap, and it is written down because three screen-space overlays had **no z-index at

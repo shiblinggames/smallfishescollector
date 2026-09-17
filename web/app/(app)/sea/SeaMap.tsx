@@ -43,7 +43,7 @@ import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORT
 import { getShip, SHIP_CAPTAIN_SLOT, SHIP_CREW_FACE, MIN_SHIP_TIER } from '@/lib/ships'
 import { getSetting, SEA_SETTINGS_EVENT } from '@/lib/seaSettings'
 import { shipSkinSeaImage, shipSkinSeaScale } from '@/lib/shipSkins'
-import { ASHORE } from './ashoreDoors'
+import { ASHORE_ROWS } from './ashoreDoors'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { SUBMERGE } from './submerge'
@@ -17172,12 +17172,19 @@ function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void 
           </button>
         </div>
 
-        {/* Three across, which with six doors is two rows of three. They stay
-            three across on the narrowest phone: this is one choice between six
-            things, and stacking it turns it into a list you scroll, which is
-            what the nav already is. */}
+        {/* Two rows of three, and each row says what it is. The top row is
+            where you look after yourself and your boat; the bottom row is
+            the evening's games. They stay three across on the narrowest
+            phone: this is one choice between six things, and stacking it
+            turns it into a list you scroll, which is what the nav already is. */}
+        {ASHORE_ROWS.map((row, r) => (
+        <div key={row.label} style={{ marginTop: r === 0 ? 0 : 12 }}>
+        <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{
+          fontSize: '0.58rem', color: 'rgba(190,214,228,0.7)', textShadow: '0 1px 5px rgba(0,0,0,0.85)',
+          marginBottom: 6, paddingLeft: 2,
+        }}>{row.label}</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          {ASHORE.map((d, i) => (
+          {row.doors.map((d, j) => { const i = r * 3 + j; return (
             /* NO `.tap` HERE. It owns a transform through whileTap, and the
                stylesheet's own note says the two fight on one element: framer
                writes transform inline while it animates and drops it when it
@@ -17236,8 +17243,10 @@ function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void 
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
               </span>
             </motion.button>
-          ))}
+          ) })}
         </div>
+        </div>
+        ))}
       </motion.div>
     </PopupShell>
     </div>

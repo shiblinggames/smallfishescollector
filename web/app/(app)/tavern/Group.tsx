@@ -9,6 +9,10 @@
 // other half of the rule this page runs on: the tavern says how things STAND
 // and links to where they are managed. A group that holds a full list is a
 // filing cabinet with a fireplace.
+//
+// The box is `.room-panel`, the same surface the Den's wallet, the Parlor's
+// standing and the Chart Room's leaderboard sit on. It had its own
+// translucent grey before, and was the one panel on the Mainland that did.
 
 import Link from 'next/link'
 
@@ -20,11 +24,7 @@ export default function Group({ title, note, action, children }: {
   children: React.ReactNode
 }) {
   return (
-    <section style={{
-      borderRadius: 16, padding: '0.85rem 1rem 1rem',
-      background: 'rgba(10,12,16,0.55)',
-      border: '1px solid rgba(255,255,255,0.08)',
-    }}>
+    <section className="room-panel" style={{ padding: '0.85rem 1rem 1rem' }}>
       <div style={{
         display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
         gap: 10, marginBottom: '0.7rem',

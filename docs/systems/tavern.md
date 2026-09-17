@@ -189,3 +189,22 @@ for anyone off the list.
 
 Back links from the tavern's own sub-pages (casino, trivia, contests) are unchanged — those
 are returns, not doors.
+
+## The rooms agree with each other (2026-09-17)
+
+Every room off the Mainland is built from the same three parts, and any new room uses them:
+
+- **`RoomHeader`** — the way out on the left, the room's name, the one number the room is
+  about on the right. The Tavern's way out is `/sea` like every other door's; Contests, a
+  room off the Tavern, goes back to `/tavern`.
+- **`RoomIntro`** — one plain line under the header saying what you do here and what it
+  pays. Charm stays on the cards; this line is literal.
+- **`ScenicCard`** — THE ONE DOOR CARD, `tavern/ScenicCard.tsx`. Solid dark base, the
+  door's accent as a tint at the top, a gradient glow behind the art, title, and a one-line
+  `blurb` saying what is behind the door. Status is a `chip` prop (the card draws the pill).
+  Each card supplies only its scene. **No per-card gradients and no painted backdrops**: the
+  velvet, felt, parchment and night-water JPGs behind thirteen cards were deleted with this,
+  because thirteen distinct places read as thirteen different games. The Chart Room's own
+  page backdrop went for the same reason; every room stands on the plain floor.
+- **`.room-panel`** for any box of content inside a room (wallet, standing, leaderboard,
+  the Tavern's groups).

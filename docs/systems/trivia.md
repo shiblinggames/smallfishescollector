@@ -11,6 +11,12 @@ ladder (the prestige climb). Questions are generated nightly, not hand-authored.
 
 ## Design shape
 
+- **The lobby says what the room is for before the cards do.** `RoomIntro` under the
+  header: trivia for doubloons, every right answer also earns Parlor points, points climb a
+  rank ladder that pays gems. The three game cards then each carry a one-line `blurb` with
+  their own rule. The host's line stays in character; the intro is the literal one. See
+  tavern.md, "The rooms agree".
+
 - Generation is nightly and server-side; the client never sees answers ahead of
   submission (`triviaVerify` is the only judge).
 - The two-tier split is deliberate: the Board is low-stakes daily habit; the King ladder

@@ -15,6 +15,12 @@ which advance the World Chart — a long-arc landmark map paying escalating gems
 
 ## Design rules
 
+- **The lobby says what the room is for before the cards do.** `RoomIntro` under the
+  header: four puzzles a week, each pays doubloons and charting points, points uncover the
+  World Chart, the chart pays gems. Each puzzle card's `blurb` then says its own rule in one
+  line (sudoku with cargo; swap to line up three; flag the mines; rope each cleat to its
+  match). The names alone told a new captain nothing. See tavern.md, "The rooms agree".
+
 - **Puzzle boards grow VERTICALLY on phones.** Portrait is the layout axis; a puzzle
   that scales by widening breaks on the primary device class.
 - Weekly cadence with no expiry punishment — miss a week, the chart waits (evergreen
