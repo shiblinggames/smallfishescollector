@@ -1417,7 +1417,10 @@ export default function FishingHere({
             baitSaved: res.baitSaved,
             isNewSpecies: res.isNewSpecies,
             isPerfect: perfect,
-            xpGained: res.xpGained,
+            // THE CATCH'S OWN PART, not the total: the card lays it beside the
+            // perfect's and the streak's, and the three add up to the number
+            // that flew off the boat. The total is what the bar climbed by.
+            xpGained: res.xpCatch ?? res.xpGained,
             // FROM THE CAST, not invented. All three were hard-coded to
             // nothing, so a jackpot or a double catch paid out silently and
             // the card said you had landed one ordinary fish.
@@ -1426,7 +1429,7 @@ export default function FishingHere({
             lockedStage: hooked.lockedStage ?? 0,
             perfectXpMult: perfect ? mods.rodPerfectXpMult : 1,
             perfectStreak: res.perfectStreak ?? 1,
-            streakBonusXP: res.streakBonusXP ?? 0,
+            streakBonusXP: res.xpStreak ?? res.streakBonusXP ?? 0,
             perfectBonusXP: res.perfectBonusXP ?? 0,
             catchQty: res.catchQty ?? 1,
             sizeIn: res.sizeIn,

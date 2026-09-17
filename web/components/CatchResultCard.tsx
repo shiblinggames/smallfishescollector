@@ -174,21 +174,23 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
   // ── THE LEDGER ── everything that is a number, in one row.
   const tally: { v: string; l: string; c: string }[] = []
   if (!isAncient) tally.push({ v: fish.sell_value.toLocaleString(), l: 'Sell ⟡', c: '#f0c040' })
+  // THE LEDGER ADDS UP. `xpGained` here is the CATCH'S part; the perfect's
+  // and the streak's follow it, and the three sum to what the bar climbed by.
+  // The total used to sit here with the others beside it as though they were
+  // on top, so a perfect read as paying less than it did.
   if (xpGained > 0) tally.push({ v: `+${xpGained}`, l: 'XP', c: '#86efac' })
   if (doubleCatch) tally.push({ v: '×2', l: 'Double', c: '#fbbf24' })
   else if (catchQty > 1 && (!jackpotMultiplier || jackpotMultiplier <= 1)) {
     tally.push({ v: `×${catchQty}`, l: 'Haul', c: '#f0c040' })
   }
   if (jackpotMultiplier && jackpotMultiplier > 1) tally.push({ v: `×${jackpotMultiplier}`, l: 'Jackpot', c: '#fb923c' })
-  // WHAT THE PERFECT WAS WORTH, as a number rather than a multiplier. The XP
-  // figure above already contains it; this says how much of it was the
-  // perfect's doing. It covers the rod's perfect multiplier too, which used
-  // to be its own "×2 XP mult" chip: one gold number reads, two chips about
-  // the same thing did not.
+  // WHAT THE PERFECT WAS WORTH, as a number rather than a multiplier. It
+  // covers the rod's perfect multiplier too, which used to be its own "×2 XP
+  // mult" chip: one gold number reads, two chips about the same thing did not.
   if (perfectBonusXP > 0) tally.push({ v: `+${perfectBonusXP}`, l: 'Perfect', c: '#f0c040' })
   else if (perfectXpMult > 1) tally.push({ v: `×${perfectXpMult}`, l: 'XP mult', c: '#bfe3ff' })
-  // The streak's own XP is granted SEPARATELY from the catch's, so folding it
-  // into the figure above would be quietly wrong about both.
+  // The streak's share, after the multipliers, so it is at the same scale as
+  // the two beside it.
   if (streakBonusXP > 0) tally.push({ v: `+${streakBonusXP}`, l: 'Streak', c: '#fbbf24' })
   if (gemEarned) tally.push({ v: '◆1', l: 'Challenge', c: '#63e2b7' })
 

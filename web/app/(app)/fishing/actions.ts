@@ -803,10 +803,20 @@ export async function reelIn(
       unlockedSkinId?: string
       perfectStreak?: number
       streakBonusXP?: number
-      /** What the perfect itself earned over the same fish landed clean, after
-       *  every multiplier and before the streak's own grant. Absent on a plain
-       *  catch. The card and the floating number say it; nothing banks it. */
+      /**
+       * THE THREE PARTS OF xpGained, AND THEY ADD UP TO IT. The card lists
+       * them side by side, and side by side they read as things that sum, so
+       * they have to: `xpCatch + perfectBonusXP + xpStreak === xpGained`,
+       * every one after every multiplier. `streakBonusXP` above is the older,
+       * pre-multiplier report of the streak and is kept for anything that
+       * still reads it; the card does not.
+       */
+      xpCatch?: number
+      /** What the perfect earned over the same fish landed clean. Absent on a
+       *  plain catch. Reported, never banked on its own. */
       perfectBonusXP?: number
+      /** What the streak earned, after the multipliers. */
+      xpStreak?: number
       // ── Per-catch size variance (lib/fishSize) ──
       /** Rolled length in inches. Always present on caught:true. */
       sizeIn: number
@@ -1335,6 +1345,11 @@ export async function reelIn(
     ? Math.round(baseCatchXP * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
       - Math.round(catchXP(fish.catch_difficulty, fish.habitat, false) * prestigeXPMult * renownXpMult * eye.fishingXpMult)
     : undefined
+  // AND THE STREAK'S SHARE, at the same scale, so the three parts the card
+  // shows add up to the number that flew off the boat. The catch's part is
+  // whatever is left, which absorbs the rounding.
+  const xpStreak = xpGained - Math.round(baseCatchXP * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
+  const xpCatch = xpGained - (perfectBonusXP ?? 0) - xpStreak
   // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
   // The mirror of the reel: his raid item is fed by the fishing half of the
   // game, so wearing it is a standing reason to keep casting.
@@ -1593,7 +1608,9 @@ export async function reelIn(
     unlockedSkinId: reelInUnlockedSkin,
     perfectStreak: newPerfectStreak,
     streakBonusXP: serverStreakBonus,
+    xpCatch,
     perfectBonusXP,
+    xpStreak,
     sizeIn,
     sizeMin: sizeMinIn ?? undefined,
     sizeMax: sizeMaxIn ?? undefined,
