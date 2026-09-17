@@ -432,11 +432,17 @@ export function PodiumStage({ top3, accent, unit, currentUserId, avatars }: {
         const a = avatars[entry.user_id]
         const isMe = entry.user_id === currentUserId
         const gold = rank === 1
+        const metal = rankColor[rank - 1]
+        // THE STEP. A podium is three blocks of different heights, and the
+        // heights are what say first, second, third before any numeral does.
+        const step = rank === 1 ? 30 : rank === 2 ? 20 : 12
         return (
           <Link key={entry.user_id} href={`/u/${entry.username}`} className="tap" style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0,
             textDecoration: 'none', borderRadius: 12, padding: '0.3rem 0.2rem 0.4rem',
-            background: isMe ? `${accent}0d` : 'transparent',
+            // The winner's column is lit in its own metal; the others are not.
+            background: gold ? `linear-gradient(180deg, ${metal}14 0%, transparent 70%)` : isMe ? `${accent}0d` : 'transparent',
+            border: `1px solid ${gold ? `${metal}44` : 'transparent'}`,
           }}>
             {/* THE POSE IS MOSTLY SKY. FisherPose reserves its whole 900x800
                 canvas and the figure sits in the bottom two thirds of it, so
@@ -444,12 +450,19 @@ export function PodiumStage({ top3, accent, unit, currentUserId, avatars }: {
                 screen measured the dead space at 37% of the width above and
                 2% below and pulls the box in by that; the same numbers here,
                 backed off slightly so the hat clears the card's top. */}
-            <div style={{ width: gold ? '100%' : '86%', position: 'relative', marginTop: '-34%', marginBottom: '-1%' }}>
+            <div style={{ width: gold ? '100%' : '86%', position: 'relative', marginTop: '-30%', marginBottom: '-1%' }}>
+              {/* THE NUMERAL, LARGE, OVER THE HEAD. It sat under the figure at
+                  the size of a caption and read as part of the name. It is the
+                  rank; it goes where a rank goes, in the sky the pose leaves
+                  above the hat, big enough to read across the room. */}
+              <div style={{ position: 'absolute', top: '30%', left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 2, pointerEvents: 'none' }}>
+                <RankMedallion rank={rank} size={gold ? 52 : 40} />
+              </div>
               {/* A soft ground in the medal's colour so the figure is standing
                   ON something rather than floating over the ledger. */}
               <div aria-hidden style={{
                 position: 'absolute', left: '8%', right: '8%', bottom: '2%', height: '22%', borderRadius: '50%',
-                background: `radial-gradient(ellipse at center, ${rankColor[rank - 1]}33 0%, transparent 70%)`,
+                background: `radial-gradient(ellipse at center, ${metal}33 0%, transparent 70%)`,
               }} />
               <FisherPose
                 characterColor={a?.characterColor ?? 'default'}
@@ -462,14 +475,18 @@ export function PodiumStage({ top3, accent, unit, currentUserId, avatars }: {
                 noGlow
               />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, minWidth: 0, maxWidth: '100%' }}>
-              <RankMedallion rank={rank} size={gold ? 24 : 20} />
-              <p className="font-karla font-700 truncate" style={{ fontSize: gold ? '0.86rem' : '0.76rem', color: isMe ? '#f0ede8' : '#c8c8c2', minWidth: 0 }}>
-                {entry.username}
-              </p>
-            </div>
-            {isMe && <span className="font-karla" style={{ color: accent, fontSize: '0.55rem', marginTop: 1 }}>you</span>}
-            <p className="font-cinzel font-700" style={{ fontSize: gold ? '0.95rem' : '0.8rem', color: rankColor[rank - 1], marginTop: 2 }}>
+            {/* THE BLOCK the figure stands on: the metal, stepped by rank. */}
+            <div aria-hidden style={{
+              width: '100%', height: step, marginTop: 2, borderRadius: '4px 4px 0 0',
+              background: `linear-gradient(180deg, ${metal}66 0%, ${metal}22 100%)`,
+              borderTop: `2px solid ${metal}cc`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 -6px 14px ${metal}22`,
+            }} />
+            <p className="font-karla font-700 truncate" style={{ fontSize: gold ? '0.86rem' : '0.76rem', color: isMe ? '#f0ede8' : '#c8c8c2', minWidth: 0, maxWidth: '100%', marginTop: 6 }}>
+              {entry.username}
+              {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 5 }}>you</span>}
+            </p>
+            <p className="font-cinzel font-700" style={{ fontSize: gold ? '0.95rem' : '0.8rem', color: metal, marginTop: 2 }}>
               {unit(entry.score)}
             </p>
           </Link>
