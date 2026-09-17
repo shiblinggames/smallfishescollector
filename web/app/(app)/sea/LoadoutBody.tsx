@@ -30,6 +30,7 @@ import PreviewStage from '@/components/PreviewStage'
 import CalloutLayer from '@/components/CalloutLayer'
 import type { SlotKey } from '@/app/(app)/fishing/GearScreen'
 import { vibrate } from '@/lib/haptics'
+import { HOW_TO_GET } from '@/lib/howToGetGear'
 import { RODS } from '@/lib/rods'
 import { HATS } from '@/lib/hats'
 import { BOATS } from '@/lib/boats'
@@ -224,6 +225,12 @@ export default function LoadoutBody({
                 </button>
               </div>
 
+              {/* WHERE MORE COMES FROM. The picker only ever shows what you
+                  own; this is the one line about the rest. lib/howToGetGear. */}
+              <p className="font-karla font-600" style={{
+                fontSize: '0.72rem', lineHeight: 1.4, color: 'rgba(240,192,64,0.8)', marginTop: 6,
+              }}>{HOW_TO_GET[slot]}</p>
+
               {rodLocked ? (
                 <p className="font-karla font-600" style={{
                   fontSize: '0.78rem', color: 'rgba(232,201,138,0.85)', marginTop: 8,
@@ -303,6 +310,9 @@ export default function LoadoutBody({
           </div>
         ))}
       </div>
+      <p className="font-karla font-600" style={{
+        fontSize: '0.72rem', lineHeight: 1.4, color: 'rgba(240,192,64,0.8)', marginTop: 8,
+      }}>Reels and hooks are upgraded at the Tackle Shop. Lines are earned by catching new species.</p>
     </>
   )
 }

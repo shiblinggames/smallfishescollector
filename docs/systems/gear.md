@@ -91,11 +91,17 @@ actually recognised.
 
 ## The loadout says how to get more (2026-09-17)
 
-`GearScreen`: every slot tile ends in "Change" (or "Choose" when empty) with a chevron, in
-the slot family's colour, so a tile reads as a control rather than a label; the caption
-under the fisher figure says "Press a slot to change it" instead of "Preview". Every slot's
-sheet opens with one gold line from `HOW_TO_GET` saying where more of that thing comes
-from (rods, reels, hooks: the Tackle Shop; lines: species; specials: shop, some earned;
+TWO loadouts, and both got it. The one a captain actually opens from the water is
+`sea/GearSheet` (the HUD's "Your Loadout"), which draws `sea/LoadoutBody`: the Shipyard's
+`PreviewStage` with `CalloutLayer` chips pointing at the picture. Each chip now ends in a
+gold chevron and wears a gold hairline so it reads as a control, the subtitle says "Press
+any label on the picture to change what you are holding or wearing", the picker that opens
+under the picture carries the source line, and the reel/line/hook list says where those
+come from. The fishing screen's `GearScreen` got the same: every slot tile ends in "Change"
+(or "Choose" when empty), the caption under the figure says "Press a slot to change it",
+and every slot sheet opens with the source line. The lines live in ONE place,
+`lib/howToGetGear.ts` (`HOW_TO_GET`), so the two loadouts cannot drift; they say where
+more of that thing comes from (rods, reels, hooks: the Tackle Shop; lines: species; specials: shop, some earned;
 Finn's spoils: his campaign; badges: achievements; skins: doubloons, gems, levels,
 achievements, crates; hats: doubloons, some crates; boats: doubloons, gems, achievement
 points, crates; pets: crates). Keep that record true when a source changes.

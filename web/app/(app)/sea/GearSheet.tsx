@@ -149,7 +149,7 @@ export default function GearSheet({
           <p className="font-karla" style={{
             fontSize: '0.76rem', color: '#8a9aa6', margin: '0 0 0.9rem', lineHeight: 1.5,
           }}>
-            Everything you own, and anything here can be swapped.
+            Press any label on the picture to change what you are holding or wearing.
           </p>
 
           {/* ── AND IT CANNOT TAKE THE CHART WITH IT ────────────────────

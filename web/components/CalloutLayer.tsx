@@ -50,17 +50,27 @@ export function CalloutChip({ label, name, dim, compact = false }: {
       // An opaque floor. These sit on painted art, where a translucent chip
       // reads as a smear — the house rule for anything drawn over the world.
       background: 'rgba(6,14,22,0.88)',
-      border: `1px solid ${dim ? 'rgba(240,192,64,0.6)' : 'rgba(180,214,232,0.26)'}`,
+      border: `1px solid ${dim ? 'rgba(240,192,64,0.6)' : 'rgba(240,192,64,0.34)'}`,
       whiteSpace: 'nowrap',
     }}>
       <span className="font-karla font-700 uppercase" style={{
         fontSize: labelSize, letterSpacing: '0.12em', lineHeight: 1.1,
         color: 'rgba(190,212,228,0.6)',
       }}>{label}</span>
-      <span className="font-cinzel font-700" style={{
-        maxWidth: compact ? 78 : 120, overflow: 'hidden', textOverflow: 'ellipsis',
-        fontSize: nameSize, lineHeight: 1.25, color: '#e6e2dc',
-      }}>{name}</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, maxWidth: compact ? 92 : 136 }}>
+        <span className="font-cinzel font-700" style={{
+          minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
+          fontSize: nameSize, lineHeight: 1.25, color: '#e6e2dc',
+        }}>{name}</span>
+        {/* IT OPENS. A label with a name in it, joined to the picture by a
+            hairline, reads as a caption; a caption is not a thing you press.
+            The chevron is the one mark that says a press does something,
+            in the same gold every other control on the water wears. */}
+        <svg width={compact ? 8 : 10} height={compact ? 8 : 10} viewBox="0 0 24 24" fill="none" stroke="#f0c040"
+          strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </span>
     </span>
   )
 }

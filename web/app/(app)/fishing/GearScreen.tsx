@@ -25,31 +25,11 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS, getSpecialItem, effectiveSpecialDef } from '@/lib/specialItems'
 import { PETS, getPet, getPetOverlay, PET_SPECIES_ORDER, PET_SPECIES_LABEL } from '@/lib/pets'
 import FisherPose from '@/components/FisherPose'
+import { HOW_TO_GET } from '@/lib/howToGetGear'
 import LoadoutStats from '@/components/LoadoutStats'
 
 type BaitItem = { bait_type: string; quantity: number }
 export type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'special2' | 'badge' | 'skin' | 'hat' | 'boat' | 'pet'
-
-/**
- * WHERE MORE COMES FROM. One plain line at the top of every slot's sheet.
- * A picker full of what you own says nothing about how the rest is got, and
- * a captain who has just found the loadout has no way of knowing that rods
- * are bought, lines are earned, pets come out of crates and badges out of
- * achievements. Said once, up top, in the same words each time.
- */
-const HOW_TO_GET: Record<SlotKey, string> = {
-  rod: 'Buy new rods at the Tackle Shop. Stronger ones unlock as your Fishing level climbs.',
-  reel: 'Upgrade your reel at the Tackle Shop.',
-  hook: 'Upgrade your hook at the Tackle Shop.',
-  line: 'Lines are earned by catching new species. Nothing to buy.',
-  special: 'Special tackle is sold at the Tackle Shop. Some pieces are only earned.',
-  special2: 'Finn hands these out as his campaign goes on.',
-  badge: 'Badges are earned through achievements.',
-  skin: 'Skins are bought with doubloons or gems, earned by levels and achievements, or found in crates.',
-  hat: 'Hats are bought with doubloons. A few only come out of crates.',
-  boat: 'Boats are bought with doubloons or gems, earned with achievement points, or found in crates.',
-  pet: 'Pets come out of supply crates.',
-}
 
 function ShopLink({ href, label, sub, color, onClick }: { href: string; label: string; sub: string; color: string; onClick: () => void }) {
   return (
