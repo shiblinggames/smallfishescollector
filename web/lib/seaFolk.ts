@@ -501,10 +501,19 @@ export const FOLK: Folk[] = [
     //   earnings                   he will ask if you are playing the next one
     //   "nails on the stails"      his one real slip, uncorrected
     //   "bro", "whaddup", "ima"    the register the given lines are in
+    //   "moshi moshi"              a greeting, and he uses it a lot (2026-09-17)
+    //   "baboobeeboo"              mocking somebody for complaining (2026-09-17)
     // EVERY LINE BELOW IS VERBATIM FROM THE USER (2026-09-05 rewrite): the
     // greeting, all five pools, afterMax, the tier-ups, the gifts and every
     // ask. Do not paraphrase, tighten, or "improve" any of it. New lines
     // come from him.
+    //
+    // THE FIVE MARKED `// 2026-09-17` ARE THE ONE EXCEPTION, and they are the
+    // same deal as the 2026-09-15 batch further down: he gave the two
+    // mannerisms ("moshi moshi", "baboobeeboo") and asked for them to be in
+    // there, so the lines around them are written IN the voice rather than BY
+    // it. His to overwrite the second he wants to. Everything else is still
+    // his own words and stays that way.
     //
     // THE STOCK MARKET ASKS ARE REAL. Ask him about the Greeks and he gives
     // you genuinely good information, in his voice. That is the joke: the
@@ -522,6 +531,7 @@ export const FOLK: Folk[] = [
         "Middle of the ocean and still can't catch anything. This rod is a piece of crap.",
         "Yooooo. Nice boat dude. I'm just chillin'.",
         "Bruh, the fish here are rigged. I've been at it for two hours. This is rigged.",
+        "Moshi moshi. Bruh. Please tell me you're having better luck than me.",   // 2026-09-17
       ],
       [
         "Yooooo, you came back. Welcome back to the open waters dude. This is like the index fund of oceans. Boring, but it compounds.",
@@ -536,6 +546,7 @@ export const FOLK: Folk[] = [
         "I'm up, by the way. Technically. I'm mostly down, but like I'm up today.",
         "We gotta both make it out of this rat - I mean fish race. We can't be working our whole lives.",
         "Yooooo. Good seeing you again dude. Ready to make some money?",
+        "Moshi moshi! Dude, perfect timing. I was about thirty seconds from doing something stupid at the Den.",   // 2026-09-17
       ],
       [
         "Okay. Real talk. I didn't quit. Bruh, I got laid off. The boat was the severance. I told everyone it was a sabbatical.",
@@ -543,6 +554,7 @@ export const FOLK: Folk[] = [
         "I miss playing at the Den all the time. My wife always gets on me.",
         "Dude, my recommendation is to always YOLO. Until you have kids. But before that, always YOLO.",
         "Need some life advice? I got you bro. You just gotta win the lottery. Then you're set.",
+        "Some captain at the Den was whining about variance all night. Baboobeeboo. Dude, that IS the game. That's what you signed up for.",   // 2026-09-17
       ],
       [
         "Dude. I set a stop-loss on myself. One more year out here, then I go back and get a real job. If I blow through it, you're allowed to say something. Please let me hit it big out here!",
@@ -550,6 +562,7 @@ export const FOLK: Folk[] = [
         "Life is hard but at least I know I'm just one big trade away from retiring. Admittedly I've said this every year for 10 years.",
         "My mom thinks I'm an investing genius. Let's let her keep thinking that.",
         "I don't wanna go back to work. If I'm still working here 5 years from now please slap me.",
+        "Okay so I complain a lot out here. I'm aware. Next time I start up about the rod just hit me with a baboobeeboo and I'll shut up.",   // 2026-09-17
       ],
     ],
     afterMax: [
@@ -558,6 +571,7 @@ export const FOLK: Folk[] = [
       "Did you see the price of the Shallow fishes this week? I shoulda held.",
       "How much fish you catching these days? I see you out here all the time now. You might be the fishing god.",
       "Every time I see you I get the itch to play options again. I can't do it though. I got kids now.",
+      "Moshi moshi. Same boat, same spot, same bad decisions. LOL.",   // 2026-09-17
     ],
     tierUp: [
       "Yooooo. Whaddup big dawg.",
