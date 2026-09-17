@@ -438,7 +438,13 @@ export function PodiumStage({ top3, accent, unit, currentUserId, avatars }: {
             textDecoration: 'none', borderRadius: 12, padding: '0.3rem 0.2rem 0.4rem',
             background: isMe ? `${accent}0d` : 'transparent',
           }}>
-            <div style={{ width: gold ? '100%' : '86%', position: 'relative' }}>
+            {/* THE POSE IS MOSTLY SKY. FisherPose reserves its whole 900x800
+                canvas and the figure sits in the bottom two thirds of it, so
+                drawn as-is there is a block of nothing above the hat. The gear
+                screen measured the dead space at 37% of the width above and
+                2% below and pulls the box in by that; the same numbers here,
+                backed off slightly so the hat clears the card's top. */}
+            <div style={{ width: gold ? '100%' : '86%', position: 'relative', marginTop: '-34%', marginBottom: '-1%' }}>
               {/* A soft ground in the medal's colour so the figure is standing
                   ON something rather than floating over the ledger. */}
               <div aria-hidden style={{
