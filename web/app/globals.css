@@ -3346,6 +3346,29 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
    room's 2x2 of puzzle cards and the trivia board's four tiles to read as a
    board rather than a strip, and one number to turn after looking at it.
    --felt-col is the blackjack table's own, narrower because a felt is. */
+/* ── THE TWO SURFACES A ROOM IS MADE OF ──
+   An ENTRY CARD is a door you press: ScenicCard, ten of them across the
+   tavern hub and the chart room, and they already agreed with each other.
+   A PANEL is a box of content inside a room, and those did not: the Den's
+   wallet was radius 16 on an opaque brown gradient with a deep shadow, the
+   chart room's leaderboard was 14 on sixty-percent alpha with no shadow at
+   all, and the Parlor's standing was 14 on a different brown with an inset
+   highlight. The same intent, written four times, and a captain crossing
+   three of those rooms in a minute feels it as three different games.
+
+   One class now. The panel radius sits just inside the card's, so a panel
+   within a room reads as nested rather than as a card that got it wrong.
+   Opaque, because these sit on painted rooms and the house rule is that a
+   panel on art brings its own ground. Padding stays with the caller: that
+   genuinely differs by what is in the box. */
+:root { --card-r: 18px; --panel-r: 16px; }
+.room-panel {
+  background: linear-gradient(180deg, #1c1611 0%, #0b0908 100%);
+  border: 1px solid rgba(196,169,106,0.28);
+  border-radius: var(--panel-r);
+  box-shadow: 0 8px 26px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
 :root { --game-col: 480px; --felt-col: 420px; }
 @media (min-width: 900px) {
   :root { --game-col: 720px; --felt-col: 540px; }

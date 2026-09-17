@@ -55,7 +55,7 @@ export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchSt
 
       {/* Top charters — the three deepest banks of charting points. */}
       {topCharters.length > 0 && (
-        <div style={{ borderRadius: 14, padding: '0.75rem 0.9rem 0.6rem', background: 'rgba(20,14,7,0.6)', border: '1px solid rgba(196,169,106,0.28)' }}>
+        <div className="room-panel" style={{ padding: '0.75rem 0.9rem 0.6rem' }}>
           <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#e6d8b4', textAlign: 'center', letterSpacing: '0.02em', marginBottom: 8 }}>
             Top Charters
           </p>

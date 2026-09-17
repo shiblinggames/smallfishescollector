@@ -135,13 +135,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
 
       {/* Wallet panel — the shared purse. Same wood/brass family as the
           Blackjack table so the lobby reads as part of the card room. */}
-      <div data-coach="den-wallet" style={{
-        background: 'linear-gradient(180deg, #1a1410 0%, #0b0908 100%)',
-        border: '1px solid rgba(196,169,106,0.25)',
-        borderRadius: 16,
-        padding: '0.7rem 0.85rem 0.7rem',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
-      }}>
+      <div data-coach="den-wallet" className="room-panel" style={{ padding: '0.7rem 0.85rem 0.7rem' }}>
         {/* Chips live in the header pill now — this row just carries the
             session tally (mid-play) + Cash Out. Hidden entirely on a fresh
             empty purse so the buy-in leads. */}
@@ -356,12 +350,8 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
       {denBoards.overall.length > 0 && (() => {
         const rows = denBoards[denTab]
         return (
-          <div style={{
-            background: 'linear-gradient(180deg, #1a1410 0%, #0b0908 100%)',
-            border: '1px solid rgba(196,169,106,0.25)',
-            borderRadius: 16,
+          <div className="room-panel" style={{
             padding: '0.85rem 1rem 0.75rem',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
           }}>
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a', textAlign: 'center', marginBottom: 8 }}>
               High Rollers

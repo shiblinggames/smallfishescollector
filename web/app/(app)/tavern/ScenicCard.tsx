@@ -65,7 +65,7 @@ export default function ScenicCard({ href, title, gradient, accent, height = 168
       style={{
         position: 'relative',
         height,
-        borderRadius: 18,
+        borderRadius: 'var(--card-r)',
         overflow: 'hidden',
         background: `linear-gradient(180deg, ${gradient[0]} 0%, ${gradient[1]} 55%, ${gradient[2]} 100%)`,
         border: `1px solid ${accent}80`,

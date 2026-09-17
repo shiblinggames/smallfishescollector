@@ -30,13 +30,10 @@ export default function ParlorStanding({ points, streak, claimedGems }: { points
     <>
       <button
         onClick={() => setOpen(true)}
-        className="font-karla"
+        className="font-karla room-panel"
         style={{
           width: '100%', textAlign: 'left', cursor: 'pointer',
-          padding: '0.8rem 0.95rem', borderRadius: 14,
-          background: 'linear-gradient(180deg, #201a12 0%, #120d08 100%)',
-          border: '1px solid rgba(201,162,74,0.4)',
-          boxShadow: '0 6px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+          padding: '0.8rem 0.95rem',
         }}
       >
         {/* eyebrow + "view ranks" affordance */}
