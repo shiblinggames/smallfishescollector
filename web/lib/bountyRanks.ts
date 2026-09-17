@@ -19,7 +19,7 @@ export type BountyRank = {
 
 export const BOUNTY_RANKS: BountyRank[] = [
   { slug: 'freebooter',    title: 'Freebooter',    points: 25,   emblem: '/bounty/ranks/freebooter.png',    accent: '#9db4c9', blurb: 'You take the odd order off the board.' },
-  { slug: 'bloodhound',    title: 'Bloodhound',    points: 120,  emblem: '/bounty/ranks/bloodhound.png',    accent: '#cf8f7c', blurb: 'The harbourmaster knows your name now.' },
+  { slug: 'bloodhound',    title: 'Bloodhound',    points: 120,  emblem: '/bounty/ranks/bloodhound.png',    accent: '#cf8f7c', blurb: 'The harbormaster knows your name now.' },
   { slug: 'privateer',     title: 'Privateer',     points: 320,  emblem: '/bounty/ranks/privateer.png',     accent: '#c8d2df', blurb: 'You hunt with a letter of marque.' },
   { slug: 'reckoner',      title: 'Reckoner',      points: 650,  emblem: '/bounty/ranks/reckoner.png',      accent: '#e2b84e', blurb: 'Debts come due when you make port.' },
   { slug: 'bounty_hunter', title: 'Bounty Hunter', points: 1200, emblem: '/bounty/ranks/bounty_hunter.png', accent: '#e78a68', blurb: 'The name whispered on every dock.' },

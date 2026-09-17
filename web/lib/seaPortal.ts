@@ -101,7 +101,7 @@ export const PORTAL_PORTS: PortalPort[] = [
   { id: 'mainland', name: 'The Mainland', cost: 15_000, to: { x: 0, y: 760 }, accent: '#e0b062' },
   { id: 'home', name: 'The Homestead', cost: 35_000, to: { x: 1500, y: 520 }, accent: '#7fc8de' },
   { id: 'trawl_docks', name: 'The Tally House', cost: 70_000, to: { x: -1150, y: -320 }, accent: '#8fd0e8' },
-  { id: 'trawl_fleet', name: 'The Trawl Harbour', cost: 120_000, to: { x: -2050, y: -400 }, accent: '#6fd39a' },
+  { id: 'trawl_fleet', name: 'The Trawl Harbor', cost: 120_000, to: { x: -2050, y: -400 }, accent: '#6fd39a' },
   { id: 'shipyard', name: 'The Shipyard', cost: 200_000, to: { x: 700, y: -420 }, accent: '#c9a227' },
   {
     id: 'gunwharf', name: 'The Gunwharf', cost: 500_000,

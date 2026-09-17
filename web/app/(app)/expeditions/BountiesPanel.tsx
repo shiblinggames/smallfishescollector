@@ -738,7 +738,8 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
           The board is empty
         </p>
         <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: '#8d7f66', lineHeight: 1.55, maxWidth: 300, margin: '0 auto' }}>
-          The harbourmaster posts work for captains who have made a name. Put
+          
+          The harbormaster posts work for captains who have made a name. Put
           Captain Krust on the bottom of the sea and there will be orders here
           every morning after that.
         </p>
@@ -871,8 +872,8 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
         <Sheet label="Swap this order" onClose={() => setSwapping(null)}>
           <p className="font-pirata" style={{ fontSize: '1.3rem', letterSpacing: '0.03em', color: '#f0dcae', marginBottom: 4 }}>Swap this order?</p>
           <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: '#a49c8e', lineHeight: 1.5 }}>
-            <span style={{ color: '#e8e0d2' }}>{swapping.name}</span> goes back on the
-            board and the harbourmaster posts another of the same tier. You get
+            <span style={{ color: '#e8e0d2' }}>{swapping.name}</span>  goes back on the
+            board and the harbormaster posts another of the same tier. You get
             one swap a day and this is yours.
           </p>
           <button type="button" onClick={() => handleSwap(swapping)} className="font-karla font-800 tap"

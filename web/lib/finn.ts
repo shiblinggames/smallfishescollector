@@ -186,7 +186,7 @@ export const FINN_ASKS: [FinnAsk[], FinnAsk[], FinnAsk[], FinnAsk[], FinnAsk[]] 
   ],
   [
     { you: 'How long have you been out here?',
-      they: "Longer than the harbour has had a name I recognise. I stopped counting on purpose." },
+      they: "Longer than the harbor has had a name I recognize. I stopped counting on purpose." },
     { you: 'Do you fish much yourself?',
       they: "Every day. Do not ask me what I catch." },
     { you: 'What is the furthest you have been?',

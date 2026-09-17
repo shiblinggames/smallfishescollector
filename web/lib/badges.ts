@@ -329,7 +329,7 @@ export const BADGES: Badge[] = [
   // aggregate over exchange_bets, which is a durable log, so none of it
   // needed a counter.
   { id: 'first_contract',  name: 'Paper Captain',      description: 'Open your first contract on the Exchange',        imageUrl: '/badges/first_contract.png',  difficulty: 'rookie'      },
-  { id: 'first_settle',    name: 'Read the Water',     description: 'Have a contract settle in your favour',           imageUrl: '/badges/first_settle.png',    difficulty: 'seasoned'    },
+  { id: 'first_settle',    name: 'Read the Water',     description: 'Have a contract settle in your favor',           imageUrl: '/badges/first_settle.png',    difficulty: 'seasoned'    },
   { id: 'cut_losses',      name: 'Out Before the Bell', description: 'Sell a contract early rather than ride it out',  imageUrl: '/badges/cut_losses.png',      difficulty: 'seasoned'    },
   { id: 'worthless',       name: 'Not a Doubloon',     description: 'Watch a contract expire worthless',               imageUrl: '/badges/worthless.png',       difficulty: 'seasoned'    },
   { id: 'big_score',       name: "The Whole Berth",    description: 'Clear 200,000 doubloons profit on a single contract', imageUrl: '/badges/big_score.png',   difficulty: 'veteran'     },
@@ -342,11 +342,11 @@ export const BADGES: Badge[] = [
   { id: 'elite_order',     name: 'The Hard Way',       description: 'Claim an Elite bounty',                           imageUrl: '/badges/elite_order.png',     difficulty: 'veteran'     },
   { id: 'fifty_orders',    name: 'Known at the Docks', description: 'Claim 50 bounties',                               imageUrl: '/badges/fifty_orders.png',    difficulty: 'veteran'     },
   { id: 'seven_boards',    name: 'Every Morning',      description: 'Clear the whole board on 7 days',                 imageUrl: '/badges/seven_boards.png',    difficulty: 'master'      },
-  { id: 'bounty_hoard',    name: "Harbourmaster's Favourite", description: 'Earn 5,000 gems from bounties',            imageUrl: '/badges/bounty_hoard.png',     difficulty: 'master'      },
+  { id: 'bounty_hoard',    name: "Harbormaster's Favorite", description: 'Earn 5,000 gems from bounties',            imageUrl: '/badges/bounty_hoard.png',     difficulty: 'master'      },
   { id: 'waking_it',       name: 'Waking It',          description: 'Take a Primeval spoil to Tier III',               imageUrl: '/badges/waking_it.png',       difficulty: 'veteran'     },
   { id: 'fully_attuned',   name: 'Fully Attuned',      description: 'Take a Primeval spoil to Tier VI',                imageUrl: '/badges/fully_attuned.png',   difficulty: 'grandmaster' },
   { id: 'the_sixth_mount', name: 'The Sixth Mount',    description: 'Sail with all six item slots filled',             imageUrl: '/badges/the_sixth_mount.png', difficulty: 'veteran'     },
-  { id: 'colours_of_the_hand', name: 'Colours of the Hand', description: 'Own all three hulls off The Sunken Hand',    imageUrl: '/badges/colours_of_the_hand.png', difficulty: 'master'  },
+  { id: 'colours_of_the_hand', name: 'Colors of the Hand', description: 'Own all three hulls off The Sunken Hand',    imageUrl: '/badges/colours_of_the_hand.png', difficulty: 'master'  },
 
   // ── Sheet 27 — The daily docket. Clearing ALL THREE challenges in a day.
   //

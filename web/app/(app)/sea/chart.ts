@@ -460,7 +460,7 @@ export const PLACES: Place[] = [
     // `href` is never followed — the chart intercepts this island by id and
     // opens the trawl panel where you float. It is present because a Place has
     // one, and /sea is the honest answer to "where does this go".
-    id: 'trawl_fleet', name: 'The Trawl Harbour', blurb: 'Send a crew, bring them in',
+    id: 'trawl_fleet', name: 'The Trawl Harbor', blurb: 'Send a crew, bring them in',
     // THE SHED IS THE BUILDING; THE BOATS ARE NOT. A harbour drawn as one
     // picture put its own jetty and its own boats up on the grass, which is
     // a dock going nowhere and hulls sitting in a field. The island already

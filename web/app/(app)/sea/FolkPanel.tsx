@@ -358,7 +358,7 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
       }}>
         <p className="font-karla font-700 uppercase" style={{
           fontSize: '0.52rem', letterSpacing: '0.18em', color: `${SEA},0.5)`, margin: 0,
-        }}>Favourite catches ({known.length} of {folk.favourites.length})</p>
+        }}>Favorite catches ({known.length} of {folk.favourites.length})</p>
         {known.length > 0 ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
             {known.map(f => (

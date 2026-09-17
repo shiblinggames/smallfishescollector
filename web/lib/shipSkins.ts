@@ -187,7 +187,7 @@ export const SHIP_SKINS: ShipSkinDef[] = [
   {
     id: 'sunken_hand_hull',
     name: 'Sunken Hand Hull',
-    description: "His own colours, crimson and unhurried. The ship that was waiting at the end of every line you ever cast.",
+    description: "His own colors, crimson and unhurried. The ship that was waiting at the end of every line you ever cast.",
     filter: 'none',
     color: '#a33b4a',
     source: 'The Sunken Hand',
@@ -327,7 +327,7 @@ export const SHIP_SKINS: ShipSkinDef[] = [
   {
     id: 'corsair_hull',
     name: 'Corsair Hull',
-    description: 'Paid for one order at a time, over a season of them. The harbourmaster knows your colours now, and so does everyone who reads his board.',
+    description: 'Paid for one order at a time, over a season of them. The harbormaster knows your colors now, and so does everyone who reads his board.',
     filter: 'hue-rotate(-24deg) saturate(1.32) brightness(0.94)',
     color: '#b4463a',
     source: 'Bounty milestone · 1,200 points',

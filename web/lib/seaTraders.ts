@@ -383,7 +383,7 @@ export const PERSONAS: { mood: string; lines: string[] }[] = [
     lines: [
       'Two boats went out together last week and one came back. They are not saying which.',
       'You did not hear it from me, but somebody has been buying charts. All of them.',
-      'The Harbourmaster has a new coat. Where does a Harbourmaster come by a coat like that.',
+      'The Harbormaster has a new coat. Where does a Harbormaster come by a coat like that.',
       'Everyone is very interested in the deep water lately. Everyone.',
       'I do not repeat things. I say them once, to everybody.',
       'There is a name going round that nobody says twice. I will not be the second one.',
@@ -406,7 +406,7 @@ export const PERSONAS: { mood: string; lines: string[] }[] = [
       'I have not spoken to a soul in eleven days. You are doing very well so far.',
       'The gulls have names now. I gave them the names. None of them objected.',
       'What day is it. No. Do not tell me. I have come to like not knowing.',
-      'I talk to the boat. The boat is a marvellous listener and has never once interrupted.',
+      'I talk to the boat. The boat is a marvelous listener and has never once interrupted.',
       'You are the third real thing I have seen this week and the other two were weather.',
       'I sang the whole way out. There was nobody to stop me and I checked.',
     ],

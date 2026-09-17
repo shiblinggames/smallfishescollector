@@ -1697,10 +1697,10 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           check: {
             id: 'cooking_books', name: 'Cooking the Books', chargeTurns: 2,
             telegraph: 'The Quartermaster ducks low behind the counter and starts working the ledger, fast.',
-            hint: "Don't let him finish the tally. Fire a crew ability to break it. Something disrupting to foul his concentration, or a heavy-hitting one to overpower him before the count closes, or he balances the ledger in his favour.",
+            hint: "Don't let him finish the tally. Fire a crew ability to break it. Something disrupting to foul his concentration, or a heavy-hitting one to overpower him before the count closes, or he balances the ledger in his favor.",
             responses: ['snare', 'burst'],
             counteredLine: 'You break his tally before it can close.',
-            failLine: 'The ledger balances in his favour.',
+            failLine: 'The ledger balances in his favor.',
             consequence: { kind: 'enemyHealPctMaxHp', value: 0.30 },
           } },
         // Phase 4. Nothing left to sell. Desperation + a HEAL check.
@@ -2440,7 +2440,7 @@ export const THE_SUNKEN_HAND: BossRaidConfig = {
     finn: { gold: 12000, xp: 12000 },
   },
   preFightDialogue: [
-    { speaker: 'narrator', text: 'The water ahead is flat and wrong, and the ship sitting on it is flying his colours.' },
+    { speaker: 'narrator', text: 'The water ahead is flat and wrong, and the ship sitting on it is flying his colors.' },
     { speaker: 'boss', text: 'You came. *Of course* you came.' },
     { speaker: 'boss', text: 'Six of them in your hold and you still brought the ship. That is the thing about you, captain. You have never once done the sensible thing.' },
     { speaker: 'crew', ...CREW_SPEAKER.doby, text: 'He has every one of them in him now. Whatever he throws at us, captain, we taught it to him.' },

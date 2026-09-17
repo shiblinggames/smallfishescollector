@@ -141,7 +141,7 @@ export const HOUSE: Build[] = [
   },
   {
     name: 'A great hall', cost: 900_000, art: '/sea/home-isle-4.png', x: 54, y: 63, scale: 0.45,
-    blurb: 'Two storeys, and a fire that never quite goes out.',
+    blurb: 'Two storys, and a fire that never quite goes out.',
     adds: 'A brazier up on the headland, and a boathouse below it.',
   },
   {

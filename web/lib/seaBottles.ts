@@ -212,7 +212,7 @@ export const FRAGMENTS: string[] = [
   'Saw a light out past the last band and put about hard. Some things you leave for a braver season.',
   'The cook swears the current runs backwards past the shelf. He is right, and none of us will admit it to his face.',
   'Half the hold is water and the other half is fish, and at this point I could not tell you which is winning.',
-  'Whoever left the last bottle: we found it, we read it, and it helped. Passing the favour on.',
+  'Whoever left the last bottle: we found it, we read it, and it helped. Passing the favor on.',
   'Made port with nothing to show and every one of us still aboard. Some voyages you count that as the catch.',
 ]
 

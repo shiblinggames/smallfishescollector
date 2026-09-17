@@ -213,7 +213,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     // (both halves) so it stays the balanced class.
     name: 'Buccaneer III',
     tagline: 'Better at everything. One last time.',
-    description: 'A final, lighter lift across the board for the captain who never specialised. Stacks on your Buccaneer II.',
+    description: 'A final, lighter lift across the board for the captain who never specialized. Stacks on your Buccaneer II.',
     bullets: [
       { label: '+3% damage', positive: true },
       { label: '+3% HP',     positive: true },

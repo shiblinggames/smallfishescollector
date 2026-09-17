@@ -108,7 +108,7 @@ const CARDS: { id: Section; title: string; blurb: string; accent: string }[] = [
   { id: 'assign', title: 'Assign', blurb: 'Seat your raid and voyage parties', accent: '#7ed6c4' },
   { id: 'recruits', title: 'Recruit', blurb: 'Sign new hands on', accent: '#f0c040' },
   { id: 'roster', title: 'Roster', blurb: 'Every hand you have, and the fallen', accent: '#8fb8dc' },
-  { id: 'wardrobe', title: 'Skins', blurb: 'Coats and colours for your legends', accent: '#c084fc' },
+  { id: 'wardrobe', title: 'Skins', blurb: 'Coats and colors for your legends', accent: '#c084fc' },
 ]
 
 const TITLES: Record<Section, string> = {

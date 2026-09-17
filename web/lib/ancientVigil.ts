@@ -213,7 +213,7 @@ export function vigilScale(attemptingRank: number): VigilScale | null {
 export const VIGIL_FIGHT_TELL: Record<number, string> = {
   143: 'Perfect or nothing, every phase. No dark to fight, just your own hands.',
   144: 'The ring circles you the whole way down.',
-  145: 'The armoured ram. Every phase comes faster than the last.',
+  145: 'The armored ram. Every phase comes faster than the last.',
   146: 'It coils, and the ring rocks like a swell.',
   147: 'It bears down: the ring drifts and the needle quickens together.',
   148: 'The breathing jaw. The window closes and opens as you watch.',

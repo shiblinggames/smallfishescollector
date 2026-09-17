@@ -911,7 +911,7 @@ export default function Minimap({
                   fontSize: '0.74rem', color: 'rgba(190,212,228,0.6)', margin: '3px 0 0', lineHeight: 1.4,
                 }}>
                   {tab === 'chart'
-                    ? 'Where everything is. Harbours are pressable.'
+                    ? 'Where everything is. Harbors are pressable.'
                     : 'Press one and the water lights the way to it.'}
                 </p>
                 <div style={{ display: 'flex', gap: 18, minWidth: 0, marginTop: 10 }}>
@@ -939,7 +939,7 @@ export default function Minimap({
               display: 'flex', gap: 6, marginBottom: 10,
               width: wide ? w + KEY_W + KEY_GAP : w,
             }}>
-              {([['chart', 'The chart'], ['places', 'Harbours']] as const).map(([id, label]) => (
+              {([['chart', 'The chart'], ['places', 'Harbors']] as const).map(([id, label]) => (
                 <button key={id} type="button" className="font-karla font-700 uppercase tap"
                   onClick={() => { vibrate(8); setTab(id) }}
                   aria-pressed={tab === id}
@@ -1106,14 +1106,17 @@ export default function Minimap({
                   that never needed a key. */}
               {side === 'fishing' && (
                 <KeyGroup title="Places">
-                  {/* PLAINER. "Isle, not landed" and "Buried, marked" read as
-                      chart shorthand to somebody who already knows the game.
-                      These say the same things in the words a first week uses. */}
-                  <Key mark={<Square c={INK.port} />} label="Harbour, press it" />
-                  <Key mark={<Tri c={INK.isle} ring="rgba(255,206,138,0.55)" />} label="Isle, not visited" />
-                  <Key mark={<Tri c={INK.isleDone} />} label="Isle, visited" />
-                  <Key mark={<Cross c={INK.dig} />} label="Treasure, marked" />
-                  <Key mark={<Cross c={INK.digDone} thin />} label="Treasure, dug up" />
+                  {/* EVERY ROW NAMES A THING. A legend answers "what is that
+                      mark", so every label here is a noun phrase and none of
+                      them is an instruction: "Harbor, press it" was an
+                      instruction in a legend's clothes and read as nonsense in
+                      a column of nouns. Where to press is said once, under the
+                      title, which is where somebody looks for what to do. */}
+                  <Key mark={<Square c={INK.port} />} label="A harbor" />
+                  <Key mark={<Tri c={INK.isle} ring="rgba(255,206,138,0.55)" />} label="An isle you have not visited" />
+                  <Key mark={<Tri c={INK.isleDone} />} label="An isle you have visited" />
+                  <Key mark={<Cross c={INK.dig} />} label="Buried treasure you have a bearing for" />
+                  <Key mark={<Cross c={INK.digDone} thin />} label="Treasure you have already dug up" />
                 </KeyGroup>
               )}
 
@@ -1122,9 +1125,9 @@ export default function Minimap({
               {side === 'fishing' && (
                 <KeyGroup title="Faces">
                   <Key mark={<Diamond c={INK.finn} ring={INK.finn} />} label="Finn" />
-                  <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="Someone you know" />
-                  <Key mark={<Dot c={INK.trader} r={2.8} />} label="Somewhere to sell" />
-                  <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain" />
+                  <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="A regular you have met" />
+                  <Key mark={<Dot c={INK.trader} r={2.8} />} label="A buyer for your fish" />
+                  <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain, sailing now" />
                 </KeyGroup>
               )}
 
@@ -1134,17 +1137,17 @@ export default function Minimap({
               {side !== 'fishing' && (
                 <KeyGroup title="The campaign">
                   <Key mark={<Swatch c={BAYS[0].sea[1]} round />} label="A chapter's bay" />
-                  <Key mark={<Swatch c="rgba(240,192,64,0.95)" round />} label="A fight waiting" />
-                  <Key mark={<Swatch c="transparent" round ring="rgba(190,214,232,0.62)" />} label="One you have taken" />
-                  <Key mark={<Swatch c={`${BAYS[0].sea[0]}88`} round />} label="Shut until earned" />
-                  <Key mark={<Dot c="transparent" r={3} ring="rgba(240,192,64,0.95)" ringR={7} />} label="What to do next" />
-                  <Key mark={<Dash c="rgba(240,192,64,0.6)" />} label="The way home" />
+                  <Key mark={<Swatch c="rgba(240,192,64,0.95)" round />} label="A fight you have not won" />
+                  <Key mark={<Swatch c="transparent" round ring="rgba(190,214,232,0.62)" />} label="A fight you have won" />
+                  <Key mark={<Swatch c={`${BAYS[0].sea[0]}88`} round />} label="A bay still locked" />
+                  <Key mark={<Dot c="transparent" r={3} ring="rgba(240,192,64,0.95)" ringR={7} />} label="The campaign's next stop" />
+                  <Key mark={<Dash c="rgba(240,192,64,0.6)" />} label="The way back to the Sea Gate" />
                 </KeyGroup>
               )}
 
-              <KeyGroup title="The chart">
-                <Key mark={<Dot c={INK.you} r={4} ring="rgba(240,250,255,0.55)" />} label="You" />
-                <Key mark={<Swatch c={INK.fog} />} label="Water you have not sailed" />
+              <KeyGroup title="What the marks mean">
+                <Key mark={<Dot c={INK.you} r={4} ring="rgba(240,250,255,0.55)" />} label="Your boat" />
+                <Key mark={<Swatch c={INK.fog} />} label="Water you have not sailed yet" />
               </KeyGroup>
             </div>
             </div>

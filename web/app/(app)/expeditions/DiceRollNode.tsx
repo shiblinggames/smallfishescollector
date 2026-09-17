@@ -95,7 +95,7 @@ export default function DiceRollNode({
       <div style={{ marginTop: '1rem', textAlign: 'center' }}>
         <DieFace value={result.roll} bonus={result.bonus} dc={result.dc} accent={accent} settled />
         <p className="font-cinzel font-700 uppercase tracking-[0.14em]" style={{ marginTop: '0.9rem', fontSize: '0.92rem', color: accent }}>
-          {win ? 'The bones favour you' : 'The bones turn cold'}
+          {win ? 'The bones favor you' : 'The bones turn cold'}
         </p>
         <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'rgba(240,237,232,0.82)', marginTop: '0.45rem' }}>
           {win ? picked.winText : picked.missText}

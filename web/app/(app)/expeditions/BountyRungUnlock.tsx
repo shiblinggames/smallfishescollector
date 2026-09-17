@@ -125,7 +125,7 @@ export default function BountyRungUnlock({ chapter, title, boss, orders, gems, f
                 style={{ fontSize: '0.82rem', color: '#a99cb8', lineHeight: 1.6, marginTop: '0.7rem' }}
               >
                 {first
-                  ? 'The harbourmaster keeps a board of work for captains with a name. Yours is on it now. New orders every morning, paid in gems.'
+                  ? 'The harbormaster keeps a board of work for captains with a name. Yours is on it now. New orders every morning, paid in gems.'
                   : `Clearing ${title} bought you a harder order, and the board pays for it.`}
               </motion.p>
 

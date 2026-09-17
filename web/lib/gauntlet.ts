@@ -1706,7 +1706,7 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
   },
   {
     id: 'thornmail', image: '/gauntlet/curses/thornmail.png', name: 'Thornmail', gauntlet: 'don',
-    flavor: 'The ghost fleet armours in cold iron that turns a shot the way a reef turns a wave.',
+    flavor: 'The ghost fleet armors in cold iron that turns a shot the way a reef turns a wave.',
     tiers: [
       { desc: 'Enemies parry 15% of your shots (dealing nothing)', detail: 'Every enemy has a 15% chance to PARRY a shot you fire — it turns the blow aside entirely and takes no damage. Your Mega ultimate can never be parried.', effects: [{ kind: 'enemyParry', chance: 0.15 }] as TideEffect[] },
       { desc: 'Enemies parry 25% of your shots', detail: 'Every enemy now has a 25% chance to parry a shot you fire, taking no damage.', effects: [{ kind: 'enemyParry', chance: 0.25 }] as TideEffect[] },
@@ -1946,7 +1946,7 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '+48% boss damage', detail: 'Deal 48% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.48 } },
   ] },
   { id: 'spiteful_wake', image: '/gauntlet/boons/spiteful_wake.png', name: 'Spiteful Wake', flavor: 'Strike the hull and the hull strikes back — and slip its shot and the sea flings your spite anyway.', rarity: 'rare', tiers: [
-    { desc: 'Enemies take back 18% of the hit they aim at you (12% if you dodge)', detail: "Whenever an enemy fires on you, it takes 18% of that shot's full damage right back — even if your armour or a shield soaks the blow. When you DODGE, the enemy still takes 12% of the damage it would have dealt. You punish them whether the hit lands or not.", effect: { kind: 'retaliatePct', pct: 0.18, dodgePct: 0.12 } },
+    { desc: 'Enemies take back 18% of the hit they aim at you (12% if you dodge)', detail: "Whenever an enemy fires on you, it takes 18% of that shot's full damage right back — even if your armor or a shield soaks the blow. When you DODGE, the enemy still takes 12% of the damage it would have dealt. You punish them whether the hit lands or not.", effect: { kind: 'retaliatePct', pct: 0.18, dodgePct: 0.12 } },
     { desc: 'Enemies take back 30% of the hit they aim at you (15% if you dodge)', detail: "Enemies take back 30% of every shot's full damage (soaked or not), and 15% of any shot you dodge.", effect: { kind: 'retaliatePct', pct: 0.30, dodgePct: 0.15 } },
     { desc: 'Enemies take back 42% of the hit they aim at you (18% if you dodge)', detail: "Enemies take back 42% of every shot's full damage (soaked or not), and 18% of any shot you dodge.", effect: { kind: 'retaliatePct', pct: 0.42, dodgePct: 0.18 } },
   ] },

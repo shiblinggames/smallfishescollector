@@ -76,7 +76,7 @@ type Room = 'refits' | 'armament' | 'appearance'
 const CARDS: { id: Room; title: string; blurb: string; accent: string }[] = [
   { id: 'refits', title: 'Refits', blurb: 'Berths, armory, repair kit', accent: '#ffd56b' },
   { id: 'armament', title: 'Armament', blurb: "Her class, and the ultimate", accent: '#c084fc' },
-  { id: 'appearance', title: 'Look', blurb: 'The colours she flies', accent: '#7ed6c4' },
+  { id: 'appearance', title: 'Look', blurb: 'The colors she flies', accent: '#7ed6c4' },
 ]
 
 const TITLES: Record<Room, string> = { refits: 'Refits', armament: 'Armament', appearance: 'Look' }

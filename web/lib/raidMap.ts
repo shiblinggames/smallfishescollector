@@ -229,7 +229,7 @@ export interface RaidTumblerPuzzle { stages: RaidTumblerStage[] }
 export interface RaidPuzzle {
   /** Which puzzle engine renders this node. 'beacon' = Lights Out (default,
    *  back-compat for the existing smuggler's-chart node). 'cipher' = the
-   *  coupled wax dials (turn one, its neighbours turn too; line every seal
+   *  coupled wax dials (turn one, its neighbors turn too; line every seal
    *  to the index at once). 'mirror' = the light-beam redirection grid.
    *  'cargo' = Sokoban crate-pushing (Ch4). */
   kind?: 'beacon' | 'cipher' | 'mirror' | 'cargo' | 'tumbler'
@@ -1119,7 +1119,7 @@ export const RAID_MAP: RaidNode[] = [
     image: '/raidlog.png',
     scene: [
       { text: "Pete's wax only ever coughed up two letters: C.K." },
-      { text: "The fence on the cold side of the strait can fill in the rest. Long as you act like he did you no favour by it." },
+      { text: "The fence on the cold side of the strait can fill in the rest. Long as you act like he did you no favor by it." },
       { speaker: 'The Fence', text: "*Captain Krust*. And you never heard it here.", pause: 800 },
       { speaker: 'The Fence', portrait: CAPTAIN_KRUST.enemies.krust.portrait, text: "Old, leathery, and the Finndicate sets its clock by him. He moves their freight. All of it." },
       { speaker: 'The Fence', portrait: CAPTAIN_KRUST.enemies.krust.portrait, text: "Never once asked whose name's on a manifest. Stayed afloat a whole lifetime for exactly that reason." },
@@ -1135,7 +1135,7 @@ export const RAID_MAP: RaidNode[] = [
     sceneAccent: '#7dd3fc',
     detail: {
       description:
-        "Pete's wax only ever coughed up two letters: C.K. The fence past the strait fills in the rest, long as you act like he did you no favour by it.\n\nCaptain Krust. An old, leathery hand the Finndicate trusts with its freight, the kind who's never once asked whose name's on a manifest and has stayed afloat a whole lifetime for exactly that reason. He's nothing like Pete. He doesn't rob the small. He moves cargo, on time, in bulk, and the Finndicate sets its clock by him. Still no kingpin, mind. He answers upward like every other fish in this sea. But he sits a long way above a barnacled chancer, and his consignment's on the cold water right now.",
+        "Pete's wax only ever coughed up two letters: C.K. The fence past the strait fills in the rest, long as you act like he did you no favor by it.\n\nCaptain Krust. An old, leathery hand the Finndicate trusts with its freight, the kind who's never once asked whose name's on a manifest and has stayed afloat a whole lifetime for exactly that reason. He's nothing like Pete. He doesn't rob the small. He moves cargo, on time, in bulk, and the Finndicate sets its clock by him. Still no kingpin, mind. He answers upward like every other fish in this sea. But he sits a long way above a barnacled chancer, and his consignment's on the cold water right now.",
       drops: [
         {
           emoji: '📜',
@@ -1298,7 +1298,7 @@ export const RAID_MAP: RaidNode[] = [
     // TYPE_IMAGE in RaidsSection. Override here only for a one-off art.
     puzzle: {
       // 4×4 Lights Out. Light every beacon at once; each tap flips the beacon and
-      // its neighbours, so there is no greedy solve. 4×4 is fully solvable with a
+      // its neighbors, so there is no greedy solve. 4×4 is fully solvable with a
       // unique solution (no quiet patterns). A real puzzle that isn't a wall.
       // Scrambled from the solved board, so always solvable. Difficulty = grid
       // size + scrambleTaps.
@@ -1320,7 +1320,7 @@ export const RAID_MAP: RaidNode[] = [
           rarity: 'rare',
         },
       ],
-      dropsNote: 'Tap beacons to light the chain. Each tap flips the one you touch and its neighbours. Light them all at once to read the network. One-time, no cost, no fight.',
+      dropsNote: 'Tap beacons to light the chain. Each tap flips the one you touch and its neighbors. Light them all at once to read the network. One-time, no cost, no fight.',
     },
   },
   {
@@ -2737,7 +2737,7 @@ export const RAID_MAP: RaidNode[] = [
     flavor:
       'Six giants came up out of the Ancient Deep on your line, and every one of them went somewhere. You never once asked where. The don said you had not met the Hand yet. He was right, and he was not warning you.',
     bridge:
-      'The sea is very quiet now, and every quiet thing you ever pulled up out of the dark was a favour you did not know you were doing.',
+      'The sea is very quiet now, and every quiet thing you ever pulled up out of the dark was a favor you did not know you were doing.',
     requiresNode: 'chapter_4_augment',
     // THE cross-track gate: the reveal is what the six giants buy you.
     requiresAncients: 6,
@@ -2791,11 +2791,11 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.doby, text: "He's ABSORBING them. Those slept down there before there were charts to leave them off, and he is taking every last thing they had." },
       { text: 'The sea flattens. Every wave for a league around lies down at once, like the water is holding still to let it happen.', pause: 800, fx: 'shake' },
       { ...GUIDE.mako, text: "The hold. Captain, the hold is EMPTY." },
-      { text: 'What comes down on the water afterward is only the shape. Grey and light and wrong, like driftwood.', pause: 700 },
+      { text: 'What comes down on the water afterward is only the shape. Gray and light and wrong, like driftwood.', pause: 700 },
       { ...GUIDE.finn, text: "Finally." },
       { ...GUIDE.finn, text: "A lifetime of waiting. *Finally.* The power I have been longing for." },
       { text: 'Something goes wrong with the way he is standing there.', pause: 900, insert: { kind: 'finn-becoming' }, closeup: true },
-      { text: 'The colour drains out of him first. Then the shape starts to go, and what is left of it will not hold still.', pause: 1100, fx: 'shake', closeup: true },
+      { text: 'The color drains out of him first. Then the shape starts to go, and what is left of it will not hold still.', pause: 1100, fx: 'shake', closeup: true },
       { text: 'He gets bigger. Not all at once. The way a swell gets bigger, when you already know it is going to break over you.', pause: 1100, closeup: true },
       { text: 'Light opens along him in cracks, like something inside is too big for the shell it borrowed.', pause: 1000, fx: 'flash', closeup: true },
       { text: 'The morning goes white, and then it goes dark from him outward.', backdrop: '/scenes/morning-undone.jpg', pause: 1000, fx: 'flash', insert: { kind: 'finn-sinister' }, closeup: true },
@@ -2811,12 +2811,12 @@ export const RAID_MAP: RaidNode[] = [
       { ...GUIDE.finnFinal, text: "And I want it said plainly, in front of your whole crew, because you have earned the hearing of it." },
       { ...GUIDE.finnFinal, text: "You hunted them. You hauled them up out of the dark one at a time. You carried them in your own hold and kept them safe for me the entire way." },
       { ...GUIDE.kat, text: "Captain. Do not let him talk." },
-      { ...GUIDE.finnFinal, text: "The finest crew that ever put out of that harbour, and every hour of it went into earning me this. Thank you. Truly. You have my gratitude, for whatever you think that is worth out here." },
+      { ...GUIDE.finnFinal, text: "The finest crew that ever put out of that harbor, and every hour of it went into earning me this. Thank you. Truly. You have my gratitude, for whatever you think that is worth out here." },
       { ...GUIDE.laz, text: "He is thanking us." },
       { ...GUIDE.finnFinal, text: "It was always going to be mine. You just did the rowing." },
       { ...GUIDE.finnFinal, text: "You'll come after me. You have never once done the sensible thing, and I built all of this on it." },
       { ...GUIDE.finnFinal, text: "One last ride, then. You and me and the deep. You'll be on time. You always are." },
-      { text: 'The dark holds where the morning was. Six grey shapes turn slow circles on the water.', pause: 600 },
+      { text: 'The dark holds where the morning was. Six gray shapes turn slow circles on the water.', pause: 600 },
       { text: 'You came out here for the last name on the board. You have had it since the day you started.', pause: 700 },
     ],
     detail: {
@@ -2900,11 +2900,11 @@ export const RAID_MAP: RaidNode[] = [
       { text: 'He looks at you the way he did on the dock, every morning, for years.', pause: 950, closeup: true },
       { ...GUIDE.finnFinal, text: "...you were never supposed to be better than me at this." },
       { text: 'And then there is nothing there to look back at.', pause: 1200, fx: 'flash', closeup: true },
-      { text: 'What is left of him goes up rather than down, grey and weightless, and the wind takes it apart before it clears the mast.', pause: 1000 },
+      { text: 'What is left of him goes up rather than down, gray and weightless, and the wind takes it apart before it clears the mast.', pause: 1000 },
 
       // THE COSTUME COMES OFF LAST. He does not die as the thing he became.
       { text: 'And then the water is quiet, and there is a small boat sitting on it.', pause: 1000, insert: { kind: 'finn-remains' } },
-      { text: 'Someone is in the stern, the way someone was the first morning you came alongside. No colour to him. No weight to him either.', pause: 1000, closeup: true },
+      { text: 'Someone is in the stern, the way someone was the first morning you came alongside. No color to him. No weight to him either.', pause: 1000, closeup: true },
       { ...GUIDE.finn, text: 'Heh.' },
       { ...GUIDE.finn, text: "Would you look at that. All of it gone, and this is what's left underneath." },
       { text: 'It is just Finn. The loudmouth off your dock, sat in his own little boat with no line in the water.', pause: 1000, closeup: true },

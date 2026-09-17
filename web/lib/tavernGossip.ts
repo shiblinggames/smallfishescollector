@@ -99,7 +99,7 @@ export const GOSSIP: Overheard[] = [
     from: 'two tables over',
   },
   {
-    say: ["Water goes different colours the further out you get. That's not the light. That's how deep you are."],
+    say: ["Water goes different colors the further out you get. That's not the light. That's how deep you are."],
     from: 'under the window',
   },
   {
@@ -213,7 +213,7 @@ export const GOSSIP: Overheard[] = [
     from: 'two tables over',
   },
   {
-    say: ["Finn'll give you work. He'll also make sure you know he's doing you a favour."],
+    say: ["Finn'll give you work. He'll also make sure you know he's doing you a favor."],
     from: 'the corner nobody sits in',
   },
   {
@@ -317,7 +317,7 @@ export const GOSSIP: Overheard[] = [
     from: 'the bar',
   },
   {
-    say: ["Weather's turning. You can smell it off the harbour."],
+    say: ["Weather's turning. You can smell it off the harbor."],
     from: 'by the fire',
   },
   {

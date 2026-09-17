@@ -461,11 +461,11 @@ export default async function BadgesPage() {
         badgeGoal('waking_it', 'Waking It', 'Take a Primeval spoil to Tier III', spoilTier, 3, '/sea'),
         badgeGoal('fully_attuned', 'Fully Attuned', 'Take a Primeval spoil to Tier VI', spoilTier, FINN_ITEM_MAX_LEVEL, '/sea'),
         badgeGoal('the_sixth_mount', 'The Sixth Mount', 'Sail with all six item slots filled', mountsFilled, 6, '/sea'),
-        badgeGoal('colours_of_the_hand', 'Colours of the Hand', 'Own all three hulls off The Sunken Hand', handHullsOwned, SUNKEN_HAND_HULLS.length, '/sea'),
+        badgeGoal('colours_of_the_hand', 'Colors of the Hand', 'Own all three hulls off The Sunken Hand', handHullsOwned, SUNKEN_HAND_HULLS.length, '/sea'),
 
         // ── The Exchange ──
         badgeGoal('first_contract', 'Paper Captain', 'Open your first contract on the Exchange', ex.opened, 1, '/tavern/market'),
-        badgeGoal('first_settle', 'Read the Water', 'Have a contract settle in your favour', ex.won, 1, '/tavern/market'),
+        badgeGoal('first_settle', 'Read the Water', 'Have a contract settle in your favor', ex.won, 1, '/tavern/market'),
         badgeGoal('cut_losses', 'Out Before the Bell', 'Sell a contract early rather than ride it out', ex.closedEarly, 1, '/tavern/market'),
         badgeGoal('worthless', 'Not a Doubloon', 'Watch a contract expire worthless', ex.worthless, 1, '/tavern/market'),
         badgeGoal('big_score', 'The Whole Berth', 'Clear 200,000 doubloons profit on a single contract', ex.bestProfit, 200_000, '/tavern/market'),
@@ -477,7 +477,7 @@ export default async function BadgesPage() {
         badgeGoal('elite_order', 'The Hard Way', 'Claim an Elite bounty', bountyElites, 1, '/sea'),
         badgeGoal('fifty_orders', 'Known at the Docks', 'Claim 50 bounties', bountiesClaimed, 50, '/sea'),
         badgeGoal('seven_boards', 'Every Morning', 'Clear the whole board on 7 days', bountyBoards, 7, '/sea'),
-        badgeGoal('bounty_hoard', "Harbourmaster's Favourite", 'Earn 5,000 gems from bounties', bountyGems, 5_000, '/sea'),
+        badgeGoal('bounty_hoard', "Harbormaster's Favorite", 'Earn 5,000 gems from bounties', bountyGems, 5_000, '/sea'),
       ],
     },
     {

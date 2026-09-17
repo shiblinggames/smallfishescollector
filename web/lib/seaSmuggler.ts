@@ -90,8 +90,8 @@ export const KIP_REACH_MULT = 1.5
 export const KIP_INTRO: string[] = [
   "Do not wave. Do not point. Just drift alongside like we are talking about the weather.",
   "I used to move crates I did not pay for. That is finished. I got old and the Brine Reach got patient.",
-  "What I deal in now is what I know, and I have spent twenty years learning exactly how this harbour works.",
-  "So here is the one piece worth your time. The harbour keeps a register, and the names on it are called Captains. It is not a rank you earn off anybody. You put your name down and the harbour starts treating you differently the same day.",
+  "What I deal in now is what I know, and I have spent twenty years learning exactly how this harbor works.",
+  "So here is the one piece worth your time. The harbor keeps a register, and the names on it are called Captains. It is not a rank you earn off anybody. You put your name down and the harbor starts treating you differently the same day.",
 ]
 
 /**
@@ -108,7 +108,7 @@ export const KIP_TERMS = {
   /** Said under the list. One payment, kept for good: see MembershipModal. */
   terms: 'One payment of $9.99. It is not a subscription and it does not lapse. Buy it once and it is yours for good.',
   /** The nudge under the button, in his voice rather than the shop's. */
-  aside: 'I take nothing out of this. I just know which captains get the better end of the harbour, and I would rather it was you.',
+  aside: 'I take nothing out of this. I just know which captains get the better end of the harbor, and I would rather it was you.',
 } as const
 
 /**

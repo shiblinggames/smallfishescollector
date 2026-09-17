@@ -408,7 +408,7 @@ export const FOLK: Folk[] = [
         "I could work the deep. Better rates down there, and everyone who takes them comes back quieter. I like being loud.",
         "You want to know why I stay shallow? Because everyone starts here. I get to see who they turn into.",
         "I have weighed for three captains who went past the shelf and did not come back. I know all their names and all their boats.",
-        "The harbour thinks the Shallows are the easy water. The Shallows are the water that decides whether you carry on.",
+        "The harbor thinks the Shallows are the easy water. The Shallows are the water that decides whether you carry on.",
       ],
       [
         "There are four captains I would trust with my scale. You are one, and two of the others are dead.",
@@ -435,7 +435,7 @@ export const FOLK: Folk[] = [
     tierUp: [
       "You keep turning up. All right. Meg. That is what I go by, and now you know it.",
       "Pull alongside properly next time. You are not a queue, you are a regular.",
-      "I will tell you something I do not tell the harbour: I set my rate by the captain, not the catch. Yours has been the good one for a while.",
+      "I will tell you something I do not tell the harbor: I set my rate by the captain, not the catch. Yours has been the good one for a while.",
       "You are one of mine now. That is not a discount, it is better than one.",
     ],
     // Honest, solid, nothing clever, and then one she has seen exactly once in
@@ -651,7 +651,7 @@ export const FOLK: Folk[] = [
         "You could go round me. Sail the whole way home and keep the difference. You do not, and we both know it is not the coin.",
         "I have no crew, no hall and no name ashore. I have the deep and I have the captains who come out to it. You are the best of them.",
         "When I stop being out here, and there will be a day, take the wreck at the eastern edge. I have left something in it that is yours.",
-        "I have been out here so long the water is more of a home than the harbour was, and I was born in the harbour.",
+        "I have been out here so long the water is more of a home than the harbor was, and I was born in the harbor.",
         "You keep sailing out to an old buyer who charges you for the privilege. I stopped working out why and started being glad.",
       ],
     ],
@@ -691,7 +691,7 @@ export const FOLK: Folk[] = [
       },
       {
         id: 134, name: 'Greenland Shark',
-        ask: "Find me a Greenland shark. They live four hundred years, which means there are some down there that were already old when this harbour was a beach. I would like to sit in the same room as one and think about that.",
+        ask: "Find me a Greenland shark. They live four hundred years, which means there are some down there that were already old when this harbor was a beach. I would like to sit in the same room as one and think about that.",
         brought: [
           "Four hundred years. It has outlasted every argument I have ever had about a price. Set it down gently.",
           "I am going to sit with this a while. You do not have to stay. You never do have to, and you always do.",
@@ -746,8 +746,8 @@ export const FOLK: Folk[] = [
       ],
       [
         "I will talk to you. I do not do that. Take it as it is meant.",
-        "There is a light down there that is not a fish. Do not chase it, and do not tell the harbour I said so.",
-        "If I am ever not here, do not look for me. Go up and stay up. That is the only favour I will ever ask.",
+        "There is a light down there that is not a fish. Do not chase it, and do not tell the harbor I said so.",
+        "If I am ever not here, do not look for me. Go up and stay up. That is the only favor I will ever ask.",
         "There was somebody before you. He talked constantly. I miss him and I would never have told him so.",
         "You are the only one who has never asked me why I am down here. I would tell you, if you did.",
       ],
@@ -827,7 +827,7 @@ export const FOLK: Folk[] = [
         "A coelacanth, if you ever raise one. It should have been gone sixty million years and nobody told it. I find that steadying.",
       ],
       [
-        "This water is older than the harbour, older than the reef, older than whatever put the reef there.",
+        "This water is older than the harbor, older than the reef, older than whatever put the reef there.",
         "There are things on my scale I have never named. I weigh them, I pay for them, I do not write them down.",
         "You keep coming back up. That is the part I am proud of, and I have no right to be proud of it.",
         "You came back up again. I keep a count of that for everyone. Yours is the number I check first.",
@@ -849,7 +849,7 @@ export const FOLK: Folk[] = [
     ],
     afterMax: [
       "You still come up when I say it. Most stop humouring an old woman eventually.",
-      "I have written some of it down. Not for the harbour. For whoever is out here after me.",
+      "I have written some of it down. Not for the harbor. For whoever is out here after me.",
       "Bring me nothing today. Sit there. That is a thing you are allowed to do.",
       "I told you the deep takes whoever it likes. It has not taken you. I am not calling that luck out loud.",
       "You will be the old one out here one day. Start noticing what you would want to pass on.",
@@ -862,7 +862,7 @@ export const FOLK: Folk[] = [
       "When they find my boat empty, the count goes to you. It is a book and a pencil and forty years. Do not lose the pencil.",
     ],
     tierUp: [
-      "Nance. Grey Nance to the harbour, just Nance to whoever comes back twice.",
+      "Nance. Grey Nance to the harbor, just Nance to whoever comes back twice.",
       "You are welcome at my boat, and out here that sentence means something.",
       "I trust you with this water. There is nobody else I would say that to.",
       "You are the one who comes back. Of everyone I have weighed for, you are the one who comes back.",
@@ -875,7 +875,7 @@ export const FOLK: Folk[] = [
         id: 50, name: 'Coelacanth',
         ask: "A coelacanth, if you can raise one. It should have been gone sixty million years and nobody told it. I find that steadying.",
         brought: [
-          "You brought this to me first. Ahead of the harbour, ahead of the coin. I will not forget it.",
+          "You brought this to me first. Ahead of the harbor, ahead of the coin. I will not forget it.",
           "Sixty-six million years it managed without any of us, and you carried it up here in a wet sack. For me.",
           "I keep a count of who goes down and comes back. I am going to need a second list.",
         ],
@@ -891,7 +891,7 @@ export const FOLK: Folk[] = [
       },
       {
         id: 150, name: 'Ghost Shark',
-        ask: "A ghost shark. Not a shark, whatever the harbour calls it. That line was old before there were trees. Go carefully, and come up.",
+        ask: "A ghost shark. Not a shark, whatever the harbor calls it. That line was old before there were trees. Go carefully, and come up.",
         brought: [
           "Older than the trees. Older than the reef. You went down and got it and you came back up, which is the part I actually care about.",
           "I have weighed two of these in forty years and I wrote down neither. I am writing this one down.",
@@ -952,7 +952,7 @@ export const FOLK: Folk[] = [
         "Bruhhh, that hold is heavy. You've been out here since the light came up, huh.",
       ],
       [
-        "There were three of us making rods out here. Other two sell in the harbour now. They're good, no shade.",
+        "There were three of us making rods out here. Other two sell in the harbor now. They're good, no shade.",
         "Gyattt. I stayed out because a rod should go to the captain it fits, and you can't tell that through a shop window.",
         "Bring me a bad run some time. Lowkey I'd rather watch how you fish when it's going wrong.",
         "Locked in isn't trying harder. It's the part where you stop trying and it just goes.",
@@ -964,7 +964,7 @@ export const FOLK: Folk[] = [
         "Gyattt. When you buy the rod, and you will, know it was never a test. I just had to be sure it'd get used.",
         "After this there's no better rod. There's only better fishing. That's the good news and nobody ever hears it that way.",
         "You're locked in more days than you're not now. Gyattt. That took what, a season?",
-        "Everything's gucci out here when you're fishing like this. Gyattt. Don't tell the harbour I said gucci.",
+        "Everything's gucci out here when you're fishing like this. Gyattt. Don't tell the harbor I said gucci.",
       ],
     ],
     afterMax: [
@@ -1096,7 +1096,7 @@ export const FOLK: Folk[] = [
         "You fish like you're speedrunning. Efficient. No wasted casts. I fish like I'm doing every side quest, and honestly I'm having a great time. Both are valid. That's the nicest thing I'll say today.",
       ],
       [
-        "Okay so the money. I don't hide it, I just don't lead with it, which people say is the same thing and it's not. I bought the harbour's tab once. Nobody knows it was me. Now you know. Please be cool.",
+        "Okay so the money. I don't hide it, I just don't lead with it, which people say is the same thing and it's not. I bought the harbor's tab once. Nobody knows it was me. Now you know. Please be cool.",
         "Back on the expeditions the thing nobody tells you is how much of it is waiting. Waiting, and then a very short amount of something, and then waiting about the something. Fishing's the same shape. Life's the same shape. I think about this a lot.",
         "I keep a spreadsheet of every fish I've caught. Weight, spot, weather, what I was thinking about. The last column's the important one. You're in it more than you'd expect. In a normal way. I'm being normal.",
         "You can tell me if I'm being a lot. Everybody else just sort of drifts away mid-sentence and I finish the sentence to the water. The water's a great listener. Terrible at follow-up questions.",
@@ -1120,7 +1120,7 @@ export const FOLK: Folk[] = [
     tierUp: [
       "Dennis! You asked. People usually just let me talk until I say it by accident.",
       "Okay, so we're friends now, and I want to be upfront that friends of mine get the long versions of things. All of them. You've been warned. This is the warning.",
-      "I'm going to tell you stuff I don't tell the harbour. Not because it's secret. Because the harbour walks off. You don't walk off.",
+      "I'm going to tell you stuff I don't tell the harbor. Not because it's secret. Because the harbor walks off. You don't walk off.",
       "You're on the short list. It's a short list. Honestly it's you and a bosun who doesn't know he's on it.",
     ],
     // DENNIS'S LINES COME FROM DENNIS. Same rule as Matty and Yoon.
@@ -1200,7 +1200,7 @@ export const FOLK: Folk[] = [
       [
         "The second wreck has a door that was shut from the inside. I have looked at it eleven times.",
         "My sister dives the deep band. We have not spoken in six years and I still check her mooring is empty every morning.",
-        "If I ever come up saying I saw nothing down there, get me to the harbour. That is not a joke.",
+        "If I ever come up saying I saw nothing down there, get me to the harbor. That is not a joke.",
         "You learn to tell how fast a boat went down by the way the doors sit. I wish I did not know that.",
         "Never dive alone. I say it to everyone, and then I do it every single day.",
       ],
@@ -1321,7 +1321,7 @@ export const FOLK: Folk[] = [
     tierUp: [
       "Rue. Rue Bream. Now you are on my list, which is a real list and it is quite short.",
       "I will carry word for you. Anywhere on this sea, no charge, you only have to ask.",
-      "You get the real news now, not the harbour version.",
+      "You get the real news now, not the harbor version.",
       "You are the last name on the list and the only one who ever asked how I was.",
     ],
     // Three fish that do the job and are never thanked for it: supper, the most
@@ -1455,7 +1455,7 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
       { you: 'Is the rate fixed?', they: 'Fixed by the distance you just sailed. I only read it out.' },
     ],
     [
-      { you: 'Do you ever go ashore?', they: 'Not in nine years. The harbour and I agreed to stop pretending.' },
+      { you: 'Do you ever go ashore?', they: 'Not in nine years. The harbor and I agreed to stop pretending.' },
       { you: 'What is out past here?', they: 'Darker water and better prices. Both get worse the further you go.' },
     ],
     [
@@ -1541,7 +1541,7 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
       { you: 'What do you listen to out here?', they: 'The water. Gyattt, I know how that sounds. Also the water.' },
     ],
     [
-      { you: 'Why not sell in the harbour?', they: 'Because then anybody with coin gets it. That\'s not it. That was never it.' },
+      { you: 'Why not sell in the harbor?', they: 'Because then anybody with coin gets it. That\'s not it. That was never it.' },
       { you: 'Do you miss making them?', they: 'Lowkey, yeah. But I said one rod and I meant one rod.' },
       { you: 'Am I overthinking this?', they: 'Bruhhh. Constantly. That is most of what is between you and the next one.' },
     ],
