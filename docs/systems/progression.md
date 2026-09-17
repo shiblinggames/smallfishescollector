@@ -111,3 +111,17 @@ Docks opens the Fishing level with claiming enabled (`ordersAshore`, as before);
 Posting House opens the Navigation level. `BountiesPanel` takes `embedded` and keeps everything but
 its own header. The orders disc is gone from the HUD row; the old orders sheet and bounty modal
 mounts on the chart are gone with it.
+
+## The level sheet and the level card (2026-09-17)
+
+- **The level card says what CHANGED.** `LevelRewardsGrant` diffs `fishingLevelPerks(from)`
+  against `(to)` and drops the zeros, exactly as `NavLevelUpOverlay` diffs the Nav bonuses.
+  It used to print the perks AT the new level, so level 1 to 2 announced "Catch zone +0
+  degrees". A level that moved neither number shows no stat block; what it opened is still
+  said below.
+- **Today's work is one row at the top of the level sheet, shut.** `SkillPanel`'s `extra`
+  is `{ title, summary, ready, children }`: the row says how the day stands in a few words
+  ("2/3 done", "1 to claim", gold when something is waiting) and opens on a press to the
+  same `DailyOrders` (now `embedded`, no title of its own) or `BountiesPanel`. It was the
+  whole board pasted under the level's table, below the fold. The chart writes the summary
+  from `orders` and from `bountyTally`, which `pollBounties` now fills.

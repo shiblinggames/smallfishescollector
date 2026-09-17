@@ -24,8 +24,10 @@ import { flyCoinsToPurse } from '@/lib/coinFly'
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
 
-export default function DailyOrders({ initial, canClaim = true, onChange }: {
+export default function DailyOrders({ initial, canClaim = true, onChange, embedded = false }: {
   initial: DailyChallengeState | null
+  /** Drawn inside a row that already carries the title and the count. */
+  embedded?: boolean
   /**
    * FALSE ON THE WATER.
    *
@@ -156,7 +158,8 @@ export default function DailyOrders({ initial, canClaim = true, onChange }: {
   }
 
   return (
-    <div style={{ marginBottom: 18 }}>
+    <div style={{ marginBottom: embedded ? 4 : 18 }}>
+      {!embedded && (
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f4ecd8' }}>
           Today&apos;s Orders
@@ -165,6 +168,7 @@ export default function DailyOrders({ initial, canClaim = true, onChange }: {
           {done.filter(Boolean).length}/{state.challenges.length} done
         </span>
       </div>
+      )}
       {/* "HERE" DEPENDS ON WHERE YOU ARE READING IT. This said "come back here
           to collect" from the day it was written, which was true while the only
           place it could be read was the island. It is on the chart now, where

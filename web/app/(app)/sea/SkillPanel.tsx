@@ -47,7 +47,7 @@
 // to think about a level, so it is where the points you get for finishing one
 // belong. The allocator itself is unchanged (`RenownPanel`) — this opens it.
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
@@ -204,7 +204,7 @@ function navRows(level: number, hallTier: number): { stats: Stat[]; ahead: Event
   return { stats, ahead }
 }
 
-export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown, onOpenRenown, hallTier, extra, extraTitle }: {
+export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown, onOpenRenown, hallTier, extra }: {
   open: boolean
   onClose: () => void
   skill: Skill
@@ -218,9 +218,21 @@ export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown,
    * had a disc of its own on the HUD, which was a row of eight discs for a
    * screen that is meant to be water. The level is where a captain goes to
    * see how they are doing; today's work belongs on the same page.
+   *
+   * ONE ROW AT THE TOP, SHUT. It was the full board, pasted under the level's
+   * own table, which put the one thing that changes every day below the
+   * fold of a sheet most captains open to read a number. The row says how
+   * the day stands in six words and opens on a press; the board is the same
+   * component it always was, drawn inside.
    */
-  extra?: ReactNode
-  extraTitle?: string
+  extra?: {
+    title: string
+    /** How the day stands, short: "2/3 done", "1 to claim". */
+    summary: string
+    /** Something is waiting to be collected. The row goes gold. */
+    ready?: boolean
+    children: ReactNode
+  }
   /** Raw XP for this spine. The level and the bar are both derived from it. */
   xp: number
   /** Null when the server has not read it (or the captain is not at the cap). */
@@ -237,6 +249,10 @@ export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown,
   /** Which stat has been asked about. One at a time: this is a table, and two
    *  open explanations put you back where the last version was. */
   const [asked, setAsked] = useState<string | null>(null)
+  /** The day's work, opened. Shut on every open of the sheet: the number is
+   *  what the sheet is for, and the row already says how the day stands. */
+  const [extraOpen, setExtraOpen] = useState(false)
+  useEffect(() => { if (!open) setExtraOpen(false) }, [open])
 
   const { stats, ahead } = useMemo(
     () => (fishing ? fishingRows(level) : navRows(level, hallTier)),
@@ -326,6 +342,38 @@ export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown,
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '0 1.05rem 1rem' }}>
+          {extra && (
+            <div style={{
+              marginBottom: 10, borderRadius: 12, overflow: 'hidden',
+              background: extra.ready ? 'rgba(240,192,64,0.08)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${extra.ready ? 'rgba(240,192,64,0.45)' : 'rgba(255,255,255,0.1)'}`,
+            }}>
+              <button type="button" className="tap" aria-expanded={extraOpen}
+                onClick={() => { vibrate(10); setExtraOpen(v => !v) }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '0.6rem 0.75rem', background: 'none', border: 'none', textAlign: 'left',
+                }}>
+                <span className="font-karla font-800 uppercase" style={{
+                  flex: 1, minWidth: 0, fontSize: '0.56rem', letterSpacing: '0.18em', color: extra.ready ? GOLD : `${GOLD}cc`,
+                }}>{extra.title}</span>
+                <span className="font-karla font-700" style={{
+                  flexShrink: 0, fontSize: '0.7rem', color: extra.ready ? GOLD : `${SEA},0.6)`,
+                  fontVariantNumeric: 'tabular-nums',
+                }}>{extra.summary}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={extra.ready ? GOLD : `${SEA},0.5)`}
+                  strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+                  style={{ flexShrink: 0, transform: extraOpen ? 'rotate(180deg)' : 'none', transition: 'transform 180ms ease' }}>
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+              {extraOpen && (
+                <div style={{ padding: '0 0.75rem 0.5rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div style={{ paddingTop: 10 }}>{extra.children}</div>
+                </div>
+              )}
+            </div>
+          )}
           {renown && (renown.available > 0 || capped) && (
             <button type="button" className="tap"
               onClick={() => { vibrate(10); onOpenRenown() }}
@@ -442,14 +490,6 @@ export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown,
             </>
           )}
 
-          {extra && (
-            <>
-              <p className="font-karla font-800 uppercase" style={{
-                margin: '1.1rem 0 0.5rem', fontSize: '0.5rem', letterSpacing: '0.2em', color: `${GOLD}cc`,
-              }}>{extraTitle}</p>
-              <div>{extra}</div>
-            </>
-          )}
         </div>
       </motion.div>
     </PopupShell>

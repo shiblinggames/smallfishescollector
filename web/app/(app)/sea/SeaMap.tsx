@@ -5123,6 +5123,8 @@ export default function SeaMap({
    * the hull — and the island is the only thing that can tell you.
    */
   const [bountyReady, setBountyReady] = useState(false)
+  /** How the board stands, for the level sheet's one-line row. */
+  const [bountyTally, setBountyTally] = useState<{ unlocked: boolean; done: number; total: number; ready: number } | null>(null)
   const bountyPolled = useRef(false)
   /**
    * ── AND A RUNG NOBODY HAS BEEN TOLD ABOUT ──────────────────────────────
@@ -5142,6 +5144,12 @@ export default function SeaMap({
     void getBountyBoard().then(
       b => {
         setBountyReady(b.unlocked && b.bounties.some(x => !x.claimed && x.progress >= x.target))
+        setBountyTally({
+          unlocked: b.unlocked,
+          done: b.bounties.filter(x => x.progress >= x.target).length,
+          total: b.bounties.length,
+          ready: b.bounties.filter(x => !x.claimed && x.progress >= x.target).length,
+        })
         if (b.news) setRungNews(b.news)
       },
       () => {})
@@ -11700,10 +11708,25 @@ hullRef={hullRefFor(t.key)} />
         // bounty board each had a disc and a sheet of their own; they are a
         // section of the level they belong to now. Claiming an order still
         // wants the Trawl Docks under you (ordersAshore), as it always did.
-        extraTitle={skillView === 'fishing' ? 'Today’s Orders' : 'Bounties'}
         extra={skillView === 'fishing'
-          ? (orders ? <DailyOrders initial={orders} canClaim={ordersAshore} onChange={setOrders} /> : null)
-          : <BountiesPanel embedded onClose={() => setSkillOpen(false)} />}
+          ? (orders ? (() => {
+              const n = orders.challenges.length
+              const done = orders.challenges.filter((c, i) => (orders.progress[i] ?? 0) >= c.target).length
+              const ready = orders.challenges.filter((c, i) => (orders.progress[i] ?? 0) >= c.target && !orders.claimed[i]).length
+              return {
+                title: 'Today’s Orders',
+                summary: ready > 0 ? `${ready} to claim` : `${done}/${n} done`,
+                ready: ready > 0,
+                children: <DailyOrders embedded initial={orders} canClaim={ordersAshore} onChange={setOrders} />,
+              }
+            })() : undefined)
+          : {
+              title: 'Bounties',
+              summary: !bountyTally ? '' : !bountyTally.unlocked ? 'Locked'
+                : bountyTally.ready > 0 ? `${bountyTally.ready} to claim` : `${bountyTally.done}/${bountyTally.total} done`,
+              ready: !!bountyTally && bountyTally.ready > 0,
+              children: <BountiesPanel embedded onClose={() => setSkillOpen(false)} />,
+            }}
         xp={skillView === 'nav' ? navXP : xpLive}
         renown={skillView === 'nav' ? renownNavState : renownState}
         hallTier={crewTiers?.hall ?? 1}

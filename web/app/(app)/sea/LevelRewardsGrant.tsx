@@ -49,7 +49,19 @@ export default function LevelRewardsGrant({ granted, from, to, onDone }: {
   // fishing level ever hands over.
   const zones = zonesUnlockedBetween(from, to)
   const gear = fishingGearUnlockedBetween(from, to)
-  const perks = fishingLevelPerks(to)
+  // THE DIFFERENCE, NOT THE STATE. This printed the perks AT the new level,
+  // so level 1 to 2 announced "Catch zone +0 degrees" as though that were
+  // the prize. Nav's card diffs its bonuses and drops the zeros; this does
+  // the same. A level that moved neither number shows no stat block at all,
+  // and what it did open (a water, a rod) is still said below.
+  const before = fishingLevelPerks(from)
+  const after = fishingLevelPerks(to)
+  const dZone = after.catchZone - before.catchZone
+  const dBite = Math.round((after.biteSpeed - before.biteSpeed) * 10) / 10
+  const stats = [
+    ...(dZone > 0 ? [{ label: 'Catch zone', value: `+${dZone}°` }] : []),
+    ...(dBite > 0 ? [{ label: 'Quicker bites', value: `+${dBite}%` }] : []),
+  ]
 
   const unlocks: UnlockGroup[] = []
   if (zones.length) {
@@ -68,14 +80,8 @@ export default function LevelRewardsGrant({ granted, from, to, onDone }: {
       skill="Fishing"
       from={from}
       to={to}
-      statsCaption="Angler's Edge"
-      // The two numbers every level moves. Small print on the old card, and
-      // they belong with Nav's stat lines: a level that changed nothing you can
-      // name is a level that felt like nothing.
-      stats={[
-        { label: 'Catch zone', value: `+${perks.catchZone}°` },
-        { label: 'Quicker bites', value: `${perks.biteSpeed}%` },
-      ]}
+      statsCaption={stats.length ? "Angler's Edge" : undefined}
+      stats={stats}
       chips={granted.map(g => (many ? `Lv ${g.level} · ${rewardLabel(g.reward)}` : rewardLabel(g.reward)))}
       unlocks={unlocks}
       // SAY WHY IT ARRIVED IN A HEAP. Several levels at once looks like a bug
