@@ -2739,10 +2739,17 @@ export default function SeaMap({
   /** THE CAPTAIN'S FACE. `raidParty` comes back ordered by slot, so the first
    *  row is whoever is nearest the captain's seat. Card art lives in the same
    *  bucket every portrait in this game does. */
+  //
+  //  `undefined` means the crew panel has not said anything this session, so
+  //  the server's answer stands. Once it HAS spoken -- which it does on its
+  //  own first render as well as on every change -- its answer is the newer
+  //  one and is kept: nothing else in the game reseats a captain, and the
+  //  prop only refreshes on a navigation that would agree with it anyway.
+  const [liveCaptainArt, setLiveCaptainArt] = useState<string | null | undefined>(undefined)
   const captainFace = useMemo(() => {
-    const art = raidParty[0]?.art
+    const art = liveCaptainArt !== undefined ? liveCaptainArt : raidParty[0]?.art
     return art ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${art}` : null
-  }, [raidParty])
+  }, [raidParty, liveCaptainArt])
   // ── IS THE CAPTAIN DRAWN ON THE DECK ──────────────────────────────────
   //
   // A switch in the settings disc, off by nobody's default. Somebody who has
@@ -2771,8 +2778,11 @@ export default function SeaMap({
       if (typeof n === 'number') setHandsAboard(n)
     }
     const onAssigned = (e: Event) => {
-      const d = (e as CustomEvent<{ captain?: boolean }>).detail
+      const d = (e as CustomEvent<{ captain?: boolean; art?: string | null }>).detail
       if (typeof d?.captain === 'boolean') setHasCaptain(d.captain)
+      // `art: null` is an answer -- the seats emptied -- so the key has to be
+      // tested for, not the value.
+      if (d && 'art' in d) setLiveCaptainArt(d.art ?? null)
     }
     window.addEventListener('crew-hub-section', onSection)
     window.addEventListener('crew-changed', onCrew)

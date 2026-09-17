@@ -1707,10 +1707,14 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
    * the first render, so a chart that has just mounted this panel learns the
    * truth without asking the server for it again.
    */
-  const captainSeated = state.roster.some(c => c.raidSlot != null)
+  // Ordered by seat, so [0] is whoever stands nearest the wheel -- the same
+  // row, by the same rule, that the server's `raidParty` puts first.
+  const seatedCrew = state.roster.filter(c => c.raidSlot != null).sort((a, b) => a.raidSlot! - b.raidSlot!)
+  const captainSeated = seatedCrew.length > 0
+  const captainArt = seatedCrew[0]?.filename ?? null
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('crew-assigned', { detail: { captain: captainSeated } }))
-  }, [captainSeated])
+    window.dispatchEvent(new CustomEvent('crew-assigned', { detail: { captain: captainSeated, art: captainArt } }))
+  }, [captainSeated, captainArt])
 
   // Optimistic recruit for the swipe gesture — mark the board candidate aboard
   // the instant they tap (dims the card, disables the swipe) so it feels

@@ -24,6 +24,7 @@
 // genuinely gone somewhere else, past a deadband the pulse cannot cross.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { renderEmphasis } from '@/components/cutscene'
 
@@ -98,7 +99,8 @@ export default function GuideCoach({
 
   // Keyed by its text, so a new line does not rewrite the old card in place:
   // it leaves, and the next one arrives. `wait` so the two never stack.
-  return (
+  if (typeof document === 'undefined') return null
+  return createPortal(
     <AnimatePresence mode="wait">
       {show && (
         <Card key={text}
@@ -106,7 +108,8 @@ export default function GuideCoach({
           placement={placement} offset={offset} z={z} anchor={anchor}
           onClose={onClose} onNext={onNext} nextLabel={nextLabel} />
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }
 

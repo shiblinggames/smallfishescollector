@@ -9354,10 +9354,12 @@ export default function RaidCombat({
             content out via the inner wrapper before it unmounts, so it needs no
             exit animation — and AnimatePresence's exit RE-RENDER was restarting
             the wrapper's keyframes, flashing the crew image a faint second time. */}
-        {/* The skirmish's four cards, beside the controls they name. z 90 so
-            the card clears the deck inside the sea's fight portal. */}
+        {/* The skirmish's four cards, beside the controls they name. The card
+            portals to the body, so this number is measured against the sea's
+            fight portal itself (RaidSheet, 113) rather than against anything
+            inside it. Under the dial's 1200, which the tour never meets. */}
         {skirmishGuide && (
-          <LobbyGuide show steps={SKIRMISH_TOUR} accent="#f0c040" anchored z={90}
+          <LobbyGuide show steps={SKIRMISH_TOUR} accent="#f0c040" anchored z={130}
             onSeen={() => { void markSkirmishTourSeen().catch(() => {}) }} />
         )}
         {typeof document !== 'undefined' && abilitySummon && createPortal(
