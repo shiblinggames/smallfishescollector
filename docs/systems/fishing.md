@@ -99,6 +99,14 @@ systems already multiply it down and the old bases predate most of them.
   XP chip with the perfect beside it, and a captain read the perfect as excluded. The old
   `streakBonusXP` field is pre-multiplier and kept only for anything else still reading it;
   the `x2 XP mult` chip is gone, its effect is inside the Perfect number.
+- **The result card ARRIVES IN ORDER (2026-09-17), and that is the whole of its juice.**
+  `components/CatchResultCard.tsx`: the fish springs in; the length lands a beat later, a
+  little large; the ledger fades up left to right with each figure counting from nothing
+  (`Counted`), so the additive parts are seen to add; on a perfect the hairline flashes gold
+  once and returns to the catch's colour. Timing only. The flat opaque surface, no gradient,
+  no backdrop, no shake are all deliberate: the card sits on painted moving water. Two ideas
+  were offered and NOT taken pending a call: promoting "New species" from a footer line to a
+  ribbon, and drawing the streak as a row of pips.
 - **Fish size variance grants no XP or sell bonus.** Length rolls and personal-best tiers
   are bragging rights only (`web/lib/fishSize.ts`). Adding an economic reward to size was
   considered and rejected: it would turn a flavor system into a grind target.

@@ -102,13 +102,13 @@ export function TrophyMark({ size = 10, color = '#fbbf24' }: { size?: number; co
  * colour and they say what happened, which is the whole of what they need to
  * do while the splash and the card's own landing carry the drama.
  */
-// `isPerfect`, `perfectStreak`, `sizeMin`, `sizeMax` and `lockedStage` are
+// `perfectStreak`, `sizeMin`, `sizeMax` and `lockedStage` are
 // deliberately NOT destructured. They stay in the type because they are what
 // reelIn returns and the caller is right to hand over the whole payload; the
 // card simply no longer draws them. Perfect and the streak are said far more
 // loudly by the dial burning behind this card, and the two size bounds only
 // ever fed the range bar.
-export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatch, gemEarned, streakBonusXP = 0, perfectBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeTier, isPB, previousBest, isShiny = false, deepStirs = false, vigilRankUp = null }: {
+export function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect = false, xpGained, doubleCatch, gemEarned, streakBonusXP = 0, perfectBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeTier, isPB, previousBest, isShiny = false, deepStirs = false, vigilRankUp = null }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -204,15 +204,34 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
   if (baitSaved) notes.push({ text: 'The bait survived.', c: 'rgba(255,255,255,0.42)' })
   if (deepStirs) notes.push({ text: 'Something deeper stirs. It wants better bait.', c: 'rgba(196,181,253,0.75)' })
 
+  // ── IT ARRIVES IN ORDER ─────────────────────────────────────────────
+  //
+  // The fish sprang in and everything else was simply there: the name, the
+  // length, the whole ledger, printed at once and still. A reveal has a
+  // sequence. The fish first; the length a beat later, a little large, since
+  // it is the punchline to the fish; then the ledger left to right, each
+  // figure counting up from nothing, so the parts are seen to add. Timing
+  // only. Nothing moves that was not already on the card, and nothing glows
+  // that stays glowing: this sits on painted water and the flat surface is
+  // what keeps it readable.
+  //
+  // ONE GOLD BEAT FOR A PERFECT. The dial burning behind the card says it
+  // loudest and that is still where it is said; the card's hairline agrees
+  // for one flash on landing and then goes back to the catch's own colour.
+  const flash = isPerfect || perfectBonusXP > 0
   return (
-    <div style={{
-      width: '100%', borderRadius: 16, overflow: 'hidden',
-      // FLAT AND OPAQUE. One colour, one hairline in the catch's own accent.
-      // This sits over painted, moving water and anything translucent reads as
-      // a smear; anything gradient reads as another light source.
-      background: '#080e15',
-      border: `1px solid ${accent}66`,
-    }}>
+    <motion.div
+      initial={{ borderColor: `${accent}66` }}
+      animate={flash ? { borderColor: [`${accent}66`, '#f0c040', '#f0c040', `${accent}66`] } : { borderColor: `${accent}66` }}
+      transition={flash ? { duration: 0.9, times: [0, 0.2, 0.5, 1], ease: 'easeOut', delay: 0.15 } : undefined}
+      style={{
+        width: '100%', borderRadius: 16, overflow: 'hidden',
+        // FLAT AND OPAQUE. One colour, one hairline in the catch's own accent.
+        // This sits over painted, moving water and anything translucent reads as
+        // a smear; anything gradient reads as another light source.
+        background: '#080e15',
+        border: '1px solid',
+      }}>
       {/* ── STACKED AND CENTRED ────────────────────────────────────────
           It was a row: the fish at a fixed 86px on the left and the words in a
           flex:1 column beside it, hard against the left edge. The card's own
@@ -267,10 +286,14 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
           </p>
 
           {hasSize && !isShiny && (
-            <p style={{
-              display: 'flex', alignItems: 'baseline', justifyContent: 'center',
-              gap: 7, marginTop: 5,
-            }}>
+            <motion.p
+              initial={{ opacity: 0, scale: 1.18 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 340, damping: 20, delay: 0.25 }}
+              style={{
+                display: 'flex', alignItems: 'baseline', justifyContent: 'center',
+                gap: 7, marginTop: 5, transformOrigin: '50% 100%',
+              }}>
               <span className="font-cinzel font-700 tabular-nums" style={{
                 fontSize: '1.28rem', lineHeight: 1, color: '#f0ede8',
               }}>{formatFishLength(displaySize)}</span>
@@ -283,7 +306,7 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
                   Best{previousBest != null ? ` · +${(sizeIn - previousBest).toFixed(1)} in` : ''}
                 </span>
               )}
-            </p>
+            </motion.p>
           )}
         </div>
       </div>
@@ -294,19 +317,23 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
           borderTop: '1px solid rgba(255,255,255,0.07)',
         }}>
           {tally.map((t, i) => (
-            <div key={t.l} style={{
-              flex: 1, minWidth: 0, textAlign: 'center', padding: '0.45rem 0.2rem',
-              borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.07)',
-            }}>
+            <motion.div key={t.l}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: 'easeOut', delay: 0.3 + i * 0.07 }}
+              style={{
+                flex: 1, minWidth: 0, textAlign: 'center', padding: '0.45rem 0.2rem',
+                borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.07)',
+              }}>
               <p className="font-cinzel font-800 tabular-nums" style={{
                 fontSize: '0.95rem', lineHeight: 1.05, color: t.c,
                 overflow: 'hidden', textOverflow: 'ellipsis',
-              }}>{t.v}</p>
+              }}><Counted text={t.v} delay={0.3 + i * 0.07} /></p>
               <p className="font-karla font-700 uppercase" style={{
                 fontSize: '0.48rem', letterSpacing: '0.14em',
                 color: 'rgba(255,255,255,0.32)', marginTop: 2,
               }}>{t.l}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -324,6 +351,33 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   )
+}
+
+/**
+ * A FIGURE THAT COUNTS UP. `+140`, `1,250`: the sign and the separators are
+ * kept, the number underneath runs from nothing to itself in a third of a
+ * second, starting when its chip arrives. Anything that is not a plain
+ * number (`×2`, `◆1`) is printed as it is.
+ */
+function Counted({ text, delay }: { text: string; delay: number }) {
+  const m = /^([+\-]?)([\d,]+)$/.exec(text)
+  const target = m ? Number(m[2].replace(/,/g, '')) : NaN
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    if (!Number.isFinite(target)) return
+    let raf = 0
+    const start = performance.now() + delay * 1000
+    const dur = 350
+    const tick = (now: number) => {
+      const t = Math.max(0, Math.min(1, (now - start) / dur))
+      setN(Math.round(target * (1 - Math.pow(1 - t, 3))))
+      if (t < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, delay])
+  if (!m) return <>{text}</>
+  return <>{m[1]}{n.toLocaleString()}</>
 }
