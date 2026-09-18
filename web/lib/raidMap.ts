@@ -1518,31 +1518,39 @@ export const RAID_MAP: RaidNode[] = [
   {
     id: 'gullet_heading',    type: 'story',
     label: 'The Throat of the Sea',
-    flavor: "The Cartographer's charts and Krust's beacon map finally agree on one point of water, and the crews out here have a name for it they don't say twice.",
-    bridge: "You've got the name now: the Gullet, where the sea swallows everything down. The only way in runs through a channel sealed behind a Finndicate cipher.",
+    flavor: "The Cartographer's recent charts explain nothing at all, except that every single one of them calls out the Gullet.",
+    bridge: "The Gullet is the only lead you have, and something down there is keeping a count. The way in runs through a channel sealed behind a Finndicate cipher.",
     requiresNode: 'cartographer',
     image: '/raidlog.png',
     scene: [
-      { text: "The Cartographer's charts and Krust's beacon map finally point the same way, and the old charts leave that spot blank. No depth, no name. Just a warning nobody bothered to finish writing." },
-      { ...GUIDE.mako, text: "The Cartographer folded like a wet chart. And still every line he ever drew runs to the same place. Down." },
-      { ...GUIDE.doby, text: "Because he was never the place, small fry. Only the finger pointing at it." },
-      { ...GUIDE.kat, text: "The crews out here have a name for that water. I've watched grown captains find something else to look at rather than give it to me." },
-      { text: "The Gullet. Where the sea swallows everything down.", pause: 900, fx: 'shake' },
-      { ...GUIDE.dole, text: "The Gullet. Everyone says it like a curse. It's a current with a very good reputation and very bad manners." },
-      { ...GUIDE.dole, text: "Three charts, one point of water, and no two agree on the depth. Warnings are cheaper than that. Somebody wants this water unvisited." },
-      { ...GUIDE.doby, text: "Whatever the Finndicate takes off the weak, it all ends up down that throat. And now so do we." },
-      { text: "Dole has already inked a heading you had not thought to ask for.", pause: 400 },
+      { text: "The Cartographer had a lot of charts. Old charts. Old routes. The Finndicate is a well-oiled operation. But his recent work still didn't explain anything." },
+      // DOLE DOES NOT KNOW THIS WATER, and Dole knows every current worth
+      // knowing. Left to sit; nobody in the scene picks it up.
+      { ...GUIDE.dole, text: "The waters he was trying to chart... I don't recognize them at all." },
+      { ...GUIDE.kat, text: "Well, there's definitely something interesting about all his charts. They all call out the Gullet." },
+      { ...GUIDE.mako, text: "The Gullet, you say." },
+      { ...GUIDE.kat, text: "Yeah... this one says to always prepare extra for the Gullet." },
+      { ...GUIDE.dole, text: "I'm not sure what to make of that. Don't tell me that's our only lead." },
+      { ...GUIDE.doby, text: "That's our only lead." },
+      { ...GUIDE.dole, text: "Great." },
+      // "THE COUNT" IS THE TOLLMASTER, four nodes early and never explained.
+      // Spet's own opening is "I'm the one who counts it", so this is the
+      // only warning the player gets that somebody down there is weighing.
+      { ...GUIDE.kat, text: "Just read this other map... points at the Gullet too. It says: *\"Don't mess up the count. The Gullet will swallow you whole. Our charts need to make it through.\"*", pause: 700 },
+      { ...GUIDE.dole, text: "Sounds inviting." },
+      { ...GUIDE.mako, text: "I'm sure the Gullet will welcome us with open fins." },
+      { ...GUIDE.doby, text: "Set the sails, captain. We're in too deep now!" },
     ],
     sceneAccent: '#8fa76b',
     detail: {
       description:
-        "The Cartographer's charts and Krust's beacon map finally agree: every freight lane bends to one drowned anchorage far past the danger line, the place the old charts leave blank with only a warning. The crews call it the Gullet, and say it as little as they can. Whatever the Finndicate takes off the weak gets swallowed down there, and that's exactly where you're bound.",
+        "The Cartographer had charts by the locker-load. Old routes, old soundings, years of a well-oiled operation laid out in ink. None of it explains what he was doing lately, and Dole does not recognize the waters in his recent work at all.\n\nOne thing runs through every page of it. They all call out the Gullet. One says to always prepare extra for it. Another says not to mess up the count, because the Gullet will swallow you whole and the charts have to make it through. Nobody aboard can tell you what the count is. It is the only lead you have, and it is enough to sail on.",
       drops: [
-        { emoji: '📜', label: "Captain's Logbook, Fragment VI", sublabel: "\"Nothing the Finndicate takes ever gets spent. It just gets swallowed.\"", rarity: 'uncommon' },
+        { emoji: '📜', label: "Captain's Logbook, Fragment VI", sublabel: "\"Don't mess up the count. The Gullet will swallow you whole. Our charts need to make it through.\" Written in the margin of one of the Cartographer's own maps.", rarity: 'uncommon' },
       ],
-      dropsNote: 'A place with a name at last, and a heading right down its throat.',
+      dropsNote: 'One place named on every chart he owned, and a heading right down its throat.',
       ctaLabel: 'Read the Charts →',
-      summary: "The charts agree at last: every freight lane ends at the Gullet, a drowned anchorage past the danger line where the Finndicate swallows all it takes. You set a heading down its throat.",
+      summary: "The Cartographer's recent charts explained nothing except the Gullet, which every one of them called out. One warned not to mess up the count. It was the only lead you had, so you sailed down its throat.",
     },
   },
   {
