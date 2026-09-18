@@ -960,13 +960,18 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     krust: { gold: 350, xp: 350 },
   },
   dialogueAccent: '#7dd3fc',
+  // NO NARRATOR OPENER. The scene before this one ends with his lookouts
+  // spotting you, so the fight starts on him talking rather than on a
+  // paragraph describing water you are already in.
   preFightDialogue: [
-    { speaker: 'narrator', text: "Past the Bilge Strait the water turns cold and the fog thins to a hard gray line. A long iron-sided carrack waits there, riding low under more cargo than any honest captain could explain. The wax on Pete's letter and the seal on her hull match." },
-    { speaker: 'boss', text: "C.K. So you're the little hook that's been snagging my freight. I wondered who kept making my couriers late." },
-    { speaker: 'crew', ...CREW_SPEAKER.doby, text: "Captain Krust. Pete kept your letters but not his life. You run the Finndicate's cargo." },
-    { speaker: 'boss', text: "I move what I'm told to move and I don't ask whose name is on the manifest. That's why I've lasted, and that's why captains like Pete are fodder and captains like me aren't." },
-    { speaker: 'crew', ...CREW_SPEAKER.mako, text: "A hauler who is proud he never looks in his own crates. I have eaten braver fish than you for breakfast, Krust." },
-    { speaker: 'boss', text: "But you've cost the Finndicate a season's haul, captain, and someone above me will want that back out of you. *I'll just take it out first.*", pause: 500 },
+    { speaker: 'boss', text: "So you're the little hook that's been snagging my freight. Wondered why my couriers've been late." },
+    { speaker: 'crew', ...CREW_SPEAKER.doby, text: "Captain Krusty was it? I see why you got that name." },
+    { speaker: 'boss', text: "Don't you dare disrespect me. I own these straits. You lot are meddling in business where you don't belong." },
+    { speaker: 'crew', ...CREW_SPEAKER.mako, text: "You may run these straits, but I run these streets." },
+    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "That didn't come out as hard as you'd think, Mako." },
+    { speaker: 'crew', ...CREW_SPEAKER.mako, text: "Regrets." },
+    { speaker: 'narrator', text: "Krust looks annoyed. But you weren't trying to be friends anyway." },
+    { speaker: 'boss', text: "You've cost me enough time. It's time to pay up.", pause: 500 },
     { speaker: 'crew', ...CREW_SPEAKER.kat, text: "Someone above you. There is always someone above. This whole sea is just fish too frightened to look up, captain. Let us give this one a reason to." },
     { speaker: 'boss', text: "Strike your colors or strike your guns. Either way this consignment sails on without you." },
   ],

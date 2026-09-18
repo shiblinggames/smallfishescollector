@@ -1200,14 +1200,14 @@ export const RAID_MAP: RaidNode[] = [
     type: 'raid',
     label: "Krust's Consignment",
     flavor: "Captain Krust's freight runs the cold water past the Bilge Strait. Sink the consignment and the Finndicate feels every lost crate.",
-    bridge: "Krust goes down and his manifest goes over the side with him. No kingpin either, this one. Right to the end he kept muttering that someone above him would want it all back.",
+    bridge: "Krust goes down and his manifest goes over the side with him. He was no kingpin either. Whatever he was hauling, someone further up the line is already missing it.",
     requiresNode: 'krust_reveal',
     route: '/raids/krust',
     raidId: CAPTAIN_KRUST.raidId,
     image: CAPTAIN_KRUST.enemies.krust.portrait,
     detail: {
       description:
-        "Krust's full run in one go: six ship battles through his consignment crew, each heavier than the last, no breather anywhere in it, and the old captain waiting at the end on his iron-sided carrack. Every hull in this crew is crustacean, all shell and spite, so a slice of your fire just glances off them, and Krust shrugs off more still. Sink the lot and his loot crate splits open, the only place his contraband ever drops. Nothing Pete's reef threw at you sailed half this hard.",
+        "Krust's full run in one go: six ship battles through his consignment crew, each heavier than the last, no breather anywhere in it, and the old captain waiting at the end on his iron-sided carrack.\n\nEvery hull in this crew is crustacean, all shell and spite, so a slice of your fire just glances off them, and Krust shrugs off more still. He has owned this cold water long enough to think nobody can take it from him. Sink the lot and his crate splits open, the only place his contraband ever drops. Nothing on Pete's reef sailed half this hard.",
       enemies: ['Bilge Runner ×2', 'Brine Deckhand ×2', 'Hull Breaker', 'Krust Overseer', 'Captain Krust'],
       drops: lootDrops(CAPTAIN_KRUST.loot),
       clearReward: clearPayout(CAPTAIN_KRUST),
