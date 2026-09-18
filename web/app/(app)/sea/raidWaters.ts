@@ -743,7 +743,15 @@ export const BEATS: Beat[] = [
 export const RAID_ISLES: RaidIsle[] = [
   { id: 'thread-tangle', bay: 'thread', name: 'The Tangle', along: 3009, across: -2016, r: 200 },
   { id: 'thread-ledger', bay: 'thread', name: "The Ledger's Rest", along: 7464, across: -1801, r: 195 },
+  // ── THE BILGE STRAIT, WHICH WAS NOT ONE ──────────────────────────────
+  // The Eels' whole claim is that this is the ONLY crossing and there is no
+  // way around it, and the chart drew that as a single round rock sitting
+  // beside open water you could steer wide of without noticing. A strait is
+  // two shores and a gap. So there is a second bank opposite now, and the
+  // road threads between them: the pinch is real, it is the width of a
+  // couple of hulls, and it is the reason a toll can be charged at all.
   { id: 'thread-bilge', bay: 'thread', name: 'Bilge Bank', along: 8105, across: 651, r: 180 },
+  { id: 'thread-toll', bay: 'thread', name: 'Toll Rock', along: 8300, across: 60, r: 140 },
   { id: 'thread-purse', bay: 'thread', name: 'Cutpurse Rock', along: 6458, across: 1943, r: 175 },
   { id: 'thread-wax', bay: 'thread', name: 'Wax Shoal', along: 4238, across: 2194, r: 160 },
   { id: 'thread-watch', bay: 'thread', name: 'Between Watches', along: 1750, across: 2500, r: 170 },
