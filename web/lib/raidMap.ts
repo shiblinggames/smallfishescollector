@@ -1785,12 +1785,12 @@ export const RAID_MAP: RaidNode[] = [
     // Between Watches closer. Writes profiles.ship_classes['sunken_hand'].
     id: 'chapter_2_class',    type: 'class_pick',
     label: "Captain's Choice",
-    flavor: "Three Finndicate captains on the seabed and the Gullet drained dry. Time to decide what your name stands for on the deep water.",
+    flavor: "Three Finndicate captains on the seabed and the Gullet drained dry. Time to decide what your name stands for where the coin sleeps.",
     requiresNode: 'chapter_2_close',
     classPick: { chapterId: 'sunken_hand' },
     detail: {
       description:
-        "You read the Cartographer's seas, cracked the Gullet's cipher, and put its collector under. Pick a class for the deep water ahead. Once it's chosen it stays with you for every raid from here on, stacking with the captain you already are.",
+        "You read the Cartographer's seas, cracked the Gullet's cipher, and put its collector under. Pick a class for the northeastern water ahead. Once it's chosen it stays with you for every raid from here on, stacking with the captain you already are.",
       dropsNote: 'Deepen the class you already sail (a Mark II that stacks on top of it) or branch into a fresh one. It stays with you for good, barring the single refit the end of the campaign buys you.',
       ctaLabel: 'Pick a class',
     },
