@@ -8882,18 +8882,24 @@ export default function RaidCombat({
                 Dodge Jammed · {snareDodgeTurns}
               </span>
             )}
-            {/* Foresight (Oracle) — the enemy's revealed upcoming moves. First is
-                imminent (full opacity); later moves fade back. */}
+            {/* Foresight (Oracle) — the enemy's revealed upcoming moves. The
+                plate is a narrow column (158px, 126 over the sea on a phone)
+                and up to three moves in one row overran it under the plate's
+                overflow clip, so the moves stack: one per line, numbered, the
+                imminent one at full strength and the later ones faded back. */}
             {foreseenMoves && foreseenMoves.length > 0 && (
               <span className="font-karla font-700 uppercase" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 3,
-                padding: '1px 6px', borderRadius: 999, fontSize: '0.46rem', letterSpacing: '0.08em',
+                display: 'flex', flexDirection: 'column', alignSelf: 'flex-start', maxWidth: '100%', gap: 1, marginBottom: 3,
+                padding: '2px 6px 3px', borderRadius: 6, fontSize: '0.46rem', letterSpacing: '0.08em', lineHeight: 1.35,
                 color: '#cfc4ff', background: 'rgba(139,123,240,0.16)', border: '1px solid rgba(139,123,240,0.5)',
               }}>
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, opacity: 0.85 }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>
+                  {foreseenMoves.length === 1 ? 'Next move' : 'Next moves'}
+                </span>
                 {foreseenMoves.map((a, i) => (
-                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', opacity: i === 0 ? 1 : 0.5 }}>
-                    {i > 0 && <span style={{ opacity: 0.6, margin: '0 2px' }}>→</span>}
+                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', opacity: i === 0 ? 1 : 0.55, color: i === 0 ? '#ece8ff' : undefined }}>
+                    <span style={{ opacity: 0.6, minWidth: 6 }}>{i + 1}</span>
                     {a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : a === 'special' ? 'Special' : a === 'ultimate' ? 'Ultimate' : 'Dodge'}
                   </span>
                 ))}
