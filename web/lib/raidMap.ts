@@ -859,6 +859,7 @@ export const SCENE_BACKDROPS: Record<string, string> = {
   // on the last line when Krust's lookouts see them (SceneLine.backdrop).
   krust_reveal: '/scenes/chart-table.jpg',
   quartermaster: '/scenes/quartermaster-cache.jpg',
+  last_cache: '/scenes/quartermaster-cache.jpg',
   chapter_1_close: '/scenes/deck-night.jpg',
   // Chapter II — the strait and the Gullet
   finndicate_notice: '/scenes/chart-table.jpg',  // Krust's hold, sorted onto the chart table
@@ -1340,8 +1341,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'smugglers_chart',
     type: 'puzzle',
     label: "The Smuggler's Chart",
-    flavor: "Krust's cabin gave up the freight network map: every drop along the coast strung onto a single chain of signal beacons. Light the whole chain and it shows where it all ships to.",
-    bridge: "The beacons catch all at once, and every lane on the map bends to a single point far past the danger line. That's where the freight ends up, and that's where you're headed.",
+    flavor: "Krust's cabin gave up the freight network map: every drop on the coast strung onto one chain of signal beacons. Light the whole chain at once and you see how much of it there is.",
+    bridge: "Every beacon on the coast burns for one chartmaker's survey. Dole had the heading right, and the size of the thing feeding it is the part nobody was meant to read.",
     requiresNode: 'finndicate_notice',
     // No per-node image. Every puzzle node defaults to /puzzle.png via
     // TYPE_IMAGE in RaidsSection. Override here only for a one-off art.
@@ -1356,16 +1357,16 @@ export const RAID_MAP: RaidNode[] = [
       scrambleTaps: 12,
       rewardNavXp: 500,
       reveal:
-        "The beacons hold, the whole chain steady at last, and the map gives up its secret. Every freight lane bends to one place, far past the danger line where the charts just stop.\n\nYou've got the heading now. That's where the Finndicate funnels all of it, and that's where you sail next.",
+        "The beacons hold, the whole chain steady at last, and the map gives up its secret. Every lane, every drop, every night run on this coast, all of it feeding one chartmaker past the danger line.\n\nDole had the heading right. What he did not have was the scale of it.",
     },
     detail: {
       description:
-        "Krust was no kingpin, just a captain who ran cargo, and the Finndicate keeps its captains roped to each other. His cabin gave up the network map: a chain of signal beacons, each drop wired to the next, lit only on the nights the freight runs.\n\nThe chain's rigged against prying eyes. Light one beacon and the lanterns either side of it flare or gutter, so no single light ever gives the shape away. Get them all burning at once and the network shows itself, headings and all, the kind nobody was ever meant to read.",
+        "Krust was no kingpin, just a captain who ran cargo, and the Finndicate keeps its captains roped to each other. His cabin gave up the network map: a chain of signal beacons, each drop wired to the next, lit only on the nights the freight runs.\n\nThe chain's rigged against prying eyes. Light one beacon and the lanterns either side of it flare or gutter, so no single light ever gives the shape away. Get them all burning at once and the whole apparatus shows itself: every drop on this coast, and the one survey it has been feeding.",
       drops: [
         {
           emoji: '🧭',
           label: '500 Nav XP',
-          sublabel: 'Reading the whole network sharpens your navigation. No coin in it, just the heading.',
+          sublabel: 'Reading the whole network sharpens your navigation. No coin in it, just the shape of the thing.',
           rarity: 'rare',
         },
       ],
@@ -1382,6 +1383,17 @@ export const RAID_MAP: RaidNode[] = [
     flavor: 'The Quartermaster has a driftwood shack on a rock just inside the danger line. Two bits of kit on the counter, take one, leave the other for good.',
     requiresNode: 'smugglers_chart',
     choice: { items: ['gunners_sight', 'reinforced_hull'] },
+    image: QUARTERMASTER_FACE,
+    // SECOND OF FOUR. At the strait he said everyone ends up at his counter
+    // and you would be back; this is that, collected without ceremony. The
+    // second line seeds the Sunken Cache, whose copy already says he is
+    // always there first -- and reads on a second pass as a Finndicate front
+    // telling you plainly that it knew your heading before you sailed it.
+    scene: [
+      { text: "A driftwood shack hammered to a rock, a counter already laid out, and the same keeper behind it." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Told you. Two on the barrel, captain. Same rules as the strait." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "You're wondering how I got out here first. Everybody does. Nobody asks twice." },
+    ],
     detail: {
       description:
         "Past the beacon chain the chart shows another drop point, a driftwood shack hammered to a rock just inside the danger line. The same counter, the same keeper, the same trick he pulled past the strait: two bits of kit on the barrel, take one, leave the other for good. He got here before you did, and he will be there the next time too.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout with the rest of your kit.",
