@@ -110,6 +110,7 @@ import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
 import { vibrate } from '@/lib/haptics'
 import CharacterAvatar from '@/components/CharacterAvatar'
+import BattleFxCanvas, { useBattleFx } from '@/components/BattleFx'
 import { IconShield, IconFog, IconSwords, IconBurst, IconAnchor, IconCrate, IconSkull, IconBolt, IconFlame, IconStar } from '@/components/GameIcons'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
@@ -8006,6 +8007,12 @@ export default function RaidCombat({
             imperatively so a critical hit costs no render at all. */}
         <div ref={impactFlashRef} aria-hidden
           style={{ position: 'absolute', inset: 0, zIndex: 9, opacity: 0, display: 'none', pointerEvents: 'none' }} />
+        {/* THE STATUS EFFECTS, AS PARTICLES. One canvas over both hulls; the
+            aura components below register themselves with it. It halts during
+            the aim sub-phase for the same reason their `paused` prop existed:
+            the needle is on the compositor and main-thread work stays off it.
+            See components/BattleFx. */}
+        <BattleFxCanvas overSea={overSea} paused={subPhase === 'aiming'} />
         {/* ── Atmospheric backdrop ─────────────────────────────────────────
             Sun/sky/clouds/water all swap based on `atmosphere`. Each
             variant is a self-contained fragment so the parts (sun
@@ -12098,121 +12105,12 @@ function BarrageSplat({ text, dx, crit, color: colorProp }: { text: string; dx: 
 // Enemy status aura — a brief themed glow + drifting motes over the hull when
 // a burn or freeze status ticks. Burn = embers rising; freeze = cold rime
 // settling. Localized to the enemy ship, fades on its own.
+// A status landing on the enemy. The picture is drawn by BattleFx; this is
+// the mount that tells it which hull and which effect. Keyed per event by the
+// caller, so every landing is a fresh emitter.
 function EnemyStatusAura({ kind, color: colorOverride }: { kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked' | 'stunned' | 'stolen'; color?: string }) {
-  const burn = kind === 'burn'
-  const snared = kind === 'snared'
-  const foresee = kind === 'foresee'
-  const marked = kind === 'marked'
-  const stunned = kind === 'stunned'   // Kraken's Grip — a SEIZING, not an icing
-  const stolen  = kind === 'stolen'    // Press-Gang — shot ripped off its rack
-  const color = colorOverride ?? (burn ? '#fb923c' : snared ? '#d9b066' : foresee ? '#8b7bf0' : marked ? '#f43f5e' : stunned ? '#c9b6ff' : stolen ? '#f5c542' : '#7dd3fc')
-  const moteColor = colorOverride ?? (burn ? '#ffd27a' : snared ? '#f0d79a' : foresee ? '#cfc4ff' : marked ? '#ffa8b8' : stunned ? '#efe6ff' : stolen ? '#ffe9a8' : '#e0f4ff')
-  const motes = useMemo(() => Array.from({ length: snared ? 8 : stolen ? 7 : 6 }, (_, n) => ({
-    // snare = motes clamp INWARD (a tightening net); burn rises, rime drifts down.
-    // stolen = they stream LEFT, off the enemy toward your rack.
-    x: stolen ? -(26 + Math.random() * 40) : snared ? (Math.random() - 0.5) * 52 : (Math.random() - 0.5) * 46,
-    y: stolen ? (Math.random() - 0.5) * 22 : snared ? (Math.random() - 0.5) * 40 : (burn ? -1 : 1) * (12 + Math.random() * 26),
-    size: 3 + Math.random() * 3,
-    delay: Math.random() * 0.12,
-    dur: 0.6 + Math.random() * 0.3,
-    inward: snared,
-  }) ), [burn, snared, stolen])
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: [0, 1, 1, 0] }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.85, times: [0, 0.2, 0.7, 1] }}
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 4 }}
-    >
-      {/* Hull wash */}
-      <div style={{
-        position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen',
-        background: `radial-gradient(ellipse at center, ${color}aa 0%, ${color}44 42%, transparent 70%)`,
-      }} />
-      {/* Stunned — a hard concussive shock: one fast shockwave punching out,
-          then dazed sparks wheeling over the hull. Nothing icy about it, so a
-          stun can never be mistaken for a freeze. */}
-      {stunned && (
-        <>
-          <motion.div
-            initial={{ scale: 0.25, opacity: 0.95 }} animate={{ scale: 2.1, opacity: 0 }}
-            transition={{ duration: 0.42, ease: 'easeOut' }}
-            style={{ position: 'absolute', left: '50%', top: '48%', width: 62, height: 62, marginLeft: -31, marginTop: -31, borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 22px ${color}` }}
-          />
-          {[0, 1, 2].map(n => (
-            <motion.span key={`st${n}`} aria-hidden
-              initial={{ rotate: n * 120, opacity: 0 }}
-              animate={{ rotate: n * 120 + 300, opacity: [0, 1, 1, 0] }}
-              transition={{ duration: 0.85, times: [0, 0.2, 0.7, 1], ease: 'linear' }}
-              style={{ position: 'absolute', left: '50%', top: '26%', width: 34, height: 34, marginLeft: -17, transformOrigin: '50% 120%' }}>
-              <span style={{ position: 'absolute', left: 0, top: 0, width: 7, height: 7, borderRadius: '50%', background: moteColor, boxShadow: `0 0 10px ${color}` }} />
-            </motion.span>
-          ))}
-        </>
-      )}
-      {/* Stolen — the rack is robbed: a snatch-arc whipping off toward your
-          side, with the shot motes streaming after it. */}
-      {stolen && (
-        <motion.div
-          initial={{ x: 6, opacity: 0 }} animate={{ x: -30, opacity: [0, 1, 0] }}
-          transition={{ duration: 0.6, times: [0, 0.3, 1], ease: 'easeOut' }}
-          style={{ position: 'absolute', left: '38%', top: '44%', width: 30, height: 12, borderRadius: '50%', border: `2px solid ${color}`, borderRightColor: 'transparent', borderTopColor: 'transparent', boxShadow: `0 0 14px ${color}aa` }}
-        />
-      )}
-      {/* Foresee — concentric scan rings sweeping the enemy hull, like an eye
-          opening to read its next move (Oracle). */}
-      {foresee && [0, 1].map(n => (
-        <motion.div key={`fr${n}`}
-          initial={{ scale: 0.3, opacity: 0.85 }} animate={{ scale: 2.4, opacity: 0 }}
-          transition={{ duration: 0.8, delay: n * 0.16, ease: 'easeOut' }}
-          style={{
-            position: 'absolute', left: '46%', top: '50%', width: 56, height: 56,
-            marginLeft: -28, marginTop: -28, borderRadius: '50%',
-            border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}aa`,
-          }}
-        />
-      ))}
-      {/* Marked (Requiem) — reticle rings CONVERGE onto the hull, like a
-          crosshair locking a bounty, then a crimson crosshair snaps in. */}
-      {marked && [0, 1].map(n => (
-        <motion.div key={`mk${n}`}
-          initial={{ scale: 2.2, opacity: 0 }} animate={{ scale: 0.6, opacity: [0, 0.9, 0] }}
-          transition={{ duration: 0.7, delay: n * 0.14, ease: 'easeIn' }}
-          style={{
-            position: 'absolute', left: '46%', top: '50%', width: 60, height: 60,
-            marginLeft: -30, marginTop: -30, borderRadius: '50%',
-            border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}aa`,
-          }}
-        />
-      ))}
-      {marked && (
-        <motion.div
-          initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: [0, 1, 0] }}
-          transition={{ duration: 0.85, times: [0, 0.4, 1], ease: 'easeOut' }}
-          style={{ position: 'absolute', left: '46%', top: '50%', width: 34, height: 34, marginLeft: -17, marginTop: -17 }}
-        >
-          <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 5px ${color})` }}>
-            <circle cx="12" cy="12" r="7" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" />
-          </svg>
-        </motion.div>
-      )}
-      {/* Drifting motes — snare clamps inward, burn/freeze/foresee drift outward */}
-      {motes.map((m, n) => (
-        <motion.div
-          key={n}
-          initial={{ x: m.inward ? m.x : 0, y: m.inward ? m.y : 0, opacity: 0 }}
-          animate={{ x: m.inward ? 0 : m.x, y: m.inward ? 0 : m.y, opacity: [0, 1, 0] }}
-          transition={{ duration: m.dur, delay: m.delay, ease: 'easeOut' }}
-          style={{
-            position: 'absolute', left: '46%', top: '52%', width: m.size, height: m.size,
-            marginLeft: -m.size / 2, marginTop: -m.size / 2, borderRadius: '50%',
-            background: moteColor, boxShadow: `0 0 6px ${color}`,
-          }}
-        />
-      ))}
-    </motion.div>
-  )
+  const ref = useBattleFx(`enemy:${kind}`, colorOverride)
+  return <div ref={ref} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 }
 
 // Thermal Shock confluence detonation — the signature ice+fire moment. A white
@@ -12286,150 +12184,13 @@ function ShipDamageFX({ hpPct, flip = false }: { hpPct: number; flip?: boolean }
 // Persistent enemy status — a low ambient tell that lingers between the
 // activation flare and the tick/skip. Burning: a base ember glow + slow rising
 // embers. Frozen: a cyan frost tint over the hull.
-function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen: boolean; paused?: boolean }) {
-  // `paused` freezes the mixBlend opacity pulses to a static value during the
-  // aim minigame — a blended layer re-composites every opacity frame, which on
-  // the main thread starves the aim RAF (the needle stutters). Frozen = one
-  // composite, not per-frame. The aura still shows, it just stops breathing.
-  return (
-    <>
-      {/* Fire and ice are OPPOSITE materials and must not share a look. Fire is
-          chaotic, rising and irregular; ice is solid, crystalline and almost
-          perfectly still (frozen = stopped). Both were the same pulsing colour
-          blob before, which is what made them read as placeholder art.
-          Transform/opacity only, no blend modes (see the aim-RAF note above). */}
-      <style>{`
-        /* Flame tongues: prime-ish durations so the licks never re-sync — that
-           irregularity is what separates fire from a pulsing light. */
-        @keyframes rc-flame-a { 0%,100% { transform: scaleY(0.82) scaleX(1.04); opacity: 0.5; } 38% { transform: scaleY(1.22) scaleX(0.9); opacity: 0.92; } 61% { transform: scaleY(0.98) scaleX(1.08); opacity: 0.68; } }
-        @keyframes rc-flame-b { 0%,100% { transform: scaleY(1.12) scaleX(0.94); opacity: 0.78; } 45% { transform: scaleY(0.8) scaleX(1.1); opacity: 0.42; } 72% { transform: scaleY(1.18) scaleX(0.96); opacity: 0.85; } }
-        @keyframes rc-flame-c { 0%,100% { transform: scaleY(0.94) scaleX(1.0); opacity: 0.62; } 29% { transform: scaleY(1.3) scaleX(0.88); opacity: 0.95; } 66% { transform: scaleY(0.86) scaleX(1.06); opacity: 0.5; } }
-        /* Heat shimmer over the hull — the ship should look LIT, not just backed. */
-        @keyframes rc-heat     { 0%,100% { opacity: 0.16; } 50% { opacity: 0.34; } }
-        /* ── ICE, BUILT LIKE THE FIRE IS ──────────────────────────────
-           The fire works because it is three layers doing three different
-           things: a heat pool at the waterline, tongues on their own rhythms,
-           embers leaving. The ice had one layer of static shards and a
-           diagonal band of light sweeping over them on a loop, which is a
-           shop-window shine, not a material. It is three layers now too, and
-           every one of them obeys the rule that ice is STILL: rime creeping
-           at the waterline, facets that grow rather than move, and frost dust
-           falling off them. Nothing slides, nothing pulses in place. */
-        /* The rime breathes so slowly it reads as spreading, not throbbing. */
-        @keyframes rc-rime  { 0%,100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.05); opacity: 0.72; } }
-        /* A facet GROWS in and holds. Staggered, so the ice takes the hull
-           rather than appearing on it. */
-        @keyframes rc-facet { 0% { transform: rotate(var(--rot)) scale(0.2); opacity: 0; } 34% { transform: rotate(var(--rot)) scale(1.06); opacity: 1; } 100% { transform: rotate(var(--rot)) scale(1); opacity: 0.94; } }
-        /* Frost coming off the ice and falling. The ice equivalent of an
-           ember, and it goes DOWN, which is the whole difference. */
-        @keyframes rc-frostfall { 0% { transform: translateY(0) scale(1); opacity: 0; } 14% { opacity: 0.9; } 100% { transform: translateY(30px) scale(0.5); opacity: 0; } }
-        /* Phase backdrop swap: the new sea fades up over the old one. Slow
-           enough to feel like weather turning, not a cut. */
-        @keyframes rc-bg-in { from { opacity: 0 } to { opacity: 1 } }
-        .rc-bg-fade { animation: rc-bg-in 1.1s ease-out both; }
-      `}</style>
-
-      {burning && (
-        <div style={{
-          // ON THE SHIP, NOT ON THE PAINTING. See `--ink` where it is written:
-          // the sprite's box is mostly transparent water on some hulls, and a
-          // fire tuned to the box burns the sea either side of her.
-          position: 'absolute', top: 0, bottom: 0,
-          left: 'calc(50% - 50% * var(--ink, 1))', width: 'calc(100% * var(--ink, 1))',
-          pointerEvents: 'none', zIndex: 0,
-        }}>
-          {/* Base heat pool at the waterline */}
-          <div aria-hidden style={{ position: 'absolute', inset: '-8% -4% -2%', borderRadius: '46%', background: 'radial-gradient(ellipse at 50% 84%, rgba(255,140,40,0.62) 0%, rgba(220,70,20,0.26) 44%, transparent 70%)', animation: paused ? 'none' : 'rc-heat 1.9s ease-in-out infinite', opacity: paused ? 0.3 : undefined }} />
-          {/* Three flame tongues along the hull, each on its own rhythm and
-              anchored at the base so they rise and taper like real licks. */}
-          {[
-            { left: '26%', w: 26, h: 46, anim: 'rc-flame-a', dur: '0.83s', hue: 'rgba(255,190,90,0.95)' },
-            { left: '47%', w: 32, h: 60, anim: 'rc-flame-b', dur: '1.07s', hue: 'rgba(255,150,50,0.95)' },
-            { left: '68%', w: 24, h: 40, anim: 'rc-flame-c', dur: '0.71s', hue: 'rgba(255,215,130,0.9)' },
-          ].map((f, n) => (
-            <span key={n} aria-hidden style={{
-              position: 'absolute', left: f.left, bottom: '6%', width: f.w, height: f.h,
-              marginLeft: -f.w / 2, transformOrigin: '50% 100%',
-              borderRadius: '50% 50% 46% 46% / 62% 62% 38% 38%',
-              background: `radial-gradient(ellipse at 50% 88%, ${f.hue} 0%, rgba(255,110,30,0.55) 42%, transparent 74%)`,
-              animation: paused ? 'none' : `${f.anim} ${f.dur} ease-in-out infinite`,
-              opacity: paused ? 0.6 : undefined,
-            }} />
-          ))}
-          {/* Embers — more of them, scattered and staggered. */}
-          {[0, 1, 2, 3, 4].map(n => (
-            <span key={n} className="rc-ember" style={{ left: `${22 + n * 14}%`, animationDelay: `${n * 0.42}s`, background: n % 2 ? '#ffd27a' : '#ff9d4d' }} />
-          ))}
-        </div>
-      )}
-
-      {frozen && (
-        <div style={{
-          // Same inset as the fire, and NO `overflow: hidden`. That clip was
-          // cutting the rime's own glow off against a hard square edge a few
-          // per cent outside the hull — a bloom with a straight line through
-          // it, which is the one thing a glow must never have. The frost dust
-          // falls a little past her now, which is what frost does.
-          position: 'absolute', top: '-6%', bottom: '-6%',
-          left: 'calc(50% - 53% * var(--ink, 1))', width: 'calc(106% * var(--ink, 1))',
-          zIndex: 3, pointerEvents: 'none',
-        }}>
-          {/* THE RIME, at the waterline. The fire's answering layer is its heat
-              pool, and ice needs the same: something at the foot of the hull
-              that says the cold is coming FROM the water she is sitting in
-              rather than having been sprayed onto her. */}
-          <span aria-hidden style={{
-            position: 'absolute', inset: '-4% -6% -2%', borderRadius: '46%',
-            background: 'radial-gradient(ellipse at 50% 86%, rgba(186,230,253,0.5) 0%, rgba(56,189,248,0.22) 46%, transparent 72%)',
-            animation: paused ? 'none' : 'rc-rime 4.6s ease-in-out infinite',
-            opacity: paused ? 0.55 : undefined,
-          }} />
-
-          {/* NO encasing shell. Ice reads better as the CRYSTALS alone: a
-              filled bubble over the hull hid the ship and looked like a
-              coloured blob, which is the thing the fire/ice pass set out to
-              get away from. The shards do the work.
-
-              They GROW, each on its own delay, and then stop. Growth is the
-              one motion ice is allowed, because it is what ice actually does;
-              anything that slides or pulses turns it back into a light. */}
-          {[
-            { left: '14%', top: '34%', w: 13, h: 30, rot: -26, d: '0.00s' },
-            { left: '27%', top: '20%', w: 10, h: 23, rot: 11,  d: '0.22s' },
-            { left: '40%', top: '38%', w: 16, h: 37, rot: -12, d: '0.09s' },
-            { left: '54%', top: '15%', w: 12, h: 27, rot: 22,  d: '0.34s' },
-            { left: '64%', top: '40%', w: 18, h: 42, rot: -7,  d: '0.16s' },
-            { left: '78%', top: '24%', w: 11, h: 25, rot: 29,  d: '0.28s' },
-            { left: '47%', top: '60%', w: 14, h: 30, rot: -35, d: '0.41s' },
-            { left: '86%', top: '48%', w: 9,  h: 21, rot: 17,  d: '0.48s' },
-          ].map((s, n) => (
-            <span key={n} aria-hidden style={{
-              position: 'absolute', left: s.left, top: s.top, width: s.w, height: s.h,
-              ['--rot' as string]: `${s.rot}deg`,
-              transform: `rotate(${s.rot}deg)`,
-              transformOrigin: '50% 100%',
-              clipPath: 'polygon(50% 0%, 100% 34%, 78% 100%, 22% 100%, 0% 34%)',
-              background: 'linear-gradient(150deg, rgba(240,252,255,0.92) 0%, rgba(165,226,255,0.6) 44%, rgba(56,189,248,0.3) 100%)',
-              boxShadow: '0 0 9px rgba(186,230,253,0.6), inset 0 0 6px rgba(255,255,255,0.7)',
-              animation: paused ? 'none' : `rc-facet 0.62s cubic-bezier(0.2, 1.1, 0.3, 1) ${s.d} both`,
-            }} />
-          ))}
-
-          {/* FROST DUST, coming off the ice and falling. The ember's opposite
-              number, and the only thing on this hull that moves. */}
-          {!paused && [0, 1, 2, 3, 4, 5].map(n => (
-            <span key={`f${n}`} aria-hidden style={{
-              position: 'absolute', left: `${16 + n * 13}%`, top: `${26 + (n % 3) * 16}%`,
-              width: 3, height: 3, borderRadius: '50%',
-              background: 'rgba(233,250,255,0.95)',
-              boxShadow: '0 0 5px rgba(186,230,253,0.9)',
-              animation: `rc-frostfall ${2.2 + (n % 4) * 0.5}s linear ${n * 0.47}s infinite`,
-            }} />
-          ))}
-        </div>
-      )}
-    </>
-  )
+// The persistent burn / freeze on a hull, OFF THE SEA ONLY (over the sea and
+// in the gauntlet the Pixi layer paints it on the hull it is painting -- see
+// the guard at the mount). Both can be true at once and both are drawn.
+// `paused` is handled by the layer itself, off the same sub-phase.
+function ShipStatusAura({ burning, frozen }: { burning: boolean; frozen: boolean; paused?: boolean }) {
+  const ref = useBattleFx('ship:condition', null, { burning, frozen })
+  return <div ref={ref} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 }
 
 // Lethal-save burst (Quartermaster's Anchor item) — a cyan shield ring + flash
@@ -12562,19 +12323,10 @@ function AnchorSaveBurst() {
 // The ward, while it holds. A slow crimson breath around your hull that QUICKENS on
 // its last turn — the ability's only tell that the fuse is nearly out, short of
 // reading the number on the chip.
-function VengeanceWardAura({ urgent, paused }: { urgent: boolean; paused?: boolean }) {
-  const C = '#d1495b'
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-      <motion.div
-        aria-hidden
-        animate={paused ? { opacity: 0.34 } : { opacity: urgent ? [0.3, 0.66, 0.3] : [0.16, 0.38, 0.16] }}
-        transition={paused ? { duration: 0.2 } : { duration: urgent ? 0.62 : 2.1, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ position: 'absolute', inset: '-8% -4% -2%', borderRadius: '46%',
-          background: `radial-gradient(ellipse at 50% 62%, ${C}77 0%, ${C}26 48%, transparent 74%)` }}
-      />
-    </div>
-  )
+// The ward, while it holds: a slow crimson pulse, quick on the last turn.
+function VengeanceWardAura({ urgent }: { urgent: boolean; paused?: boolean }) {
+  const ref = useBattleFx('ship:ward', null, { urgent })
+  return <div ref={ref} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 }
 
 function VengeanceEruptBurst() {
@@ -12617,118 +12369,13 @@ function VengeanceEruptBurst() {
 //   aim    — an amber reticle that locks onto the guns (Sharpshot)
 //   charge — a gold flash + fast-rising powder sparks (Navigator)
 //   brace  — a steel bulwark ring + shimmer settling over the hull (Anchor)
+// A buff arriving on your own hull, themed per ability so each has its own
+// signature: heal rises green, tide snaps a ring shut, aim drops a reticle on
+// the guns, charge flashes and throws powder sparks, brace clamps iron corners
+// inward, parry is a struck steel angle. All drawn by BattleFx.
 function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' | 'parry'; color?: string }) {
-  const CFG = {
-    heal:   { color: '#4ade80', mote: '#bbf7d0' },
-    tide:   { color: '#5eead4', mote: '#a7f3e8' },
-    aim:    { color: '#fbbf24', mote: '#fde68a' },
-    charge: { color: '#f5c542', mote: '#ffe9a8' },
-    brace:  { color: '#9eb0cd', mote: '#d6deec' },   // steel/iron — a damage-CUT brace, distinct from the cyan shield POOLS
-    parry:  { color: '#e8eefc', mote: '#ffffff' },   // a bright steel TURN — the blow is deflected, not soaked
-  } as const
-  const color = colorOverride ?? CFG[kind].color
-  const mote = colorOverride ?? CFG[kind].mote
-  const rise    = kind === 'heal' || kind === 'tide' || kind === 'charge'
-  const fast    = kind === 'charge'
-  const ring    = kind === 'tide' || kind === 'brace'   // a shield / bulwark forming
-  const reticle = kind === 'aim'
-  const parry   = kind === 'parry'   // steel turning the blow aside
-  const moteCount = fast ? 8 : reticle ? 4 : 6
-  const motes = useMemo(() => Array.from({ length: moteCount }, () => ({
-    x: (Math.random() - 0.5) * (reticle ? 34 : 50),
-    y: rise ? -(14 + Math.random() * 30) : (Math.random() - 0.5) * 30,
-    size: 3 + Math.random() * 3,
-    delay: Math.random() * (fast ? 0.08 : 0.14),
-    dur: (fast ? 0.42 : 0.65) + Math.random() * 0.3,
-  })), [moteCount, rise, fast, reticle])
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: [0, 1, 1, 0] }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.85, times: [0, 0.2, 0.7, 1] }}
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 4 }}
-    >
-      {/* Hull wash — dimmer for the aim reticle so the crosshair reads. */}
-      <div style={{
-        position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen',
-        background: `radial-gradient(ellipse at center, ${color}${reticle ? '55' : '99'} 0%, ${color}3a 44%, transparent 72%)`,
-      }} />
-      {/* Parry — a hard steel slash across the hull with a spark flare at the
-          point of contact. A DEFLECTION, so it's a struck angle, not the round
-          bubble a shield uses or the soft whoosh a dodge uses. */}
-      {parry && (
-        <>
-          <motion.div
-            initial={{ scaleX: 0.2, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }}
-            transition={{ duration: 0.42, times: [0, 0.25, 1], ease: 'easeOut' }}
-            style={{ position: 'absolute', left: '18%', right: '18%', top: '46%', height: 3, borderRadius: 2, transform: 'rotate(-28deg)', background: `linear-gradient(90deg, transparent, ${mote}, transparent)`, boxShadow: `0 0 16px ${color}` }}
-          />
-          <motion.div
-            initial={{ scale: 0.3, opacity: 1 }} animate={{ scale: 1.9, opacity: 0 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            style={{ position: 'absolute', left: '58%', top: '42%', width: 26, height: 26, marginLeft: -13, marginTop: -13, borderRadius: '50%', background: `radial-gradient(circle, ${mote} 0%, ${color}88 40%, transparent 72%)` }}
-          />
-        </>
-      )}
-      {/* A round bulwark ring snaps OUT for a shield pool (tide). The brace
-          instead clamps steel corner brackets INWARD (an iron clamp), so a
-          damage-cut reads as bracing by SHAPE, not as a shield bubble. */}
-      {ring && kind !== 'brace' && (
-        <motion.div
-          initial={{ scale: 0.4, opacity: 0.9 }} animate={{ scale: 1.45, opacity: 0 }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
-          style={{
-            position: 'absolute', inset: '8%', borderRadius: '50%',
-            border: `2.5px solid ${color}`, boxShadow: `0 0 18px ${color}aa, inset 0 0 12px ${color}66`,
-          }}
-        />
-      )}
-      {kind === 'brace' && (
-        <motion.div
-          initial={{ scale: 1.4, opacity: 0 }} animate={{ scale: 1, opacity: [0, 1, 1, 0] }}
-          transition={{ duration: 0.8, times: [0, 0.2, 0.7, 1], ease: 'easeOut' }}
-          style={{ position: 'absolute', inset: '9%', pointerEvents: 'none' }}
-        >
-          <div style={{ position: 'absolute', top: 0, left: 0, width: 17, height: 17, borderTop: `3px solid ${color}`, borderLeft: `3px solid ${color}`, boxShadow: `0 0 12px ${color}aa` }} />
-          <div style={{ position: 'absolute', top: 0, right: 0, width: 17, height: 17, borderTop: `3px solid ${color}`, borderRight: `3px solid ${color}`, boxShadow: `0 0 12px ${color}aa` }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, width: 17, height: 17, borderBottom: `3px solid ${color}`, borderLeft: `3px solid ${color}`, boxShadow: `0 0 12px ${color}aa` }} />
-          <div style={{ position: 'absolute', bottom: 0, right: 0, width: 17, height: 17, borderBottom: `3px solid ${color}`, borderRight: `3px solid ${color}`, boxShadow: `0 0 12px ${color}aa` }} />
-        </motion.div>
-      )}
-      {/* Aim reticle — a crosshair that snaps down onto the guns. */}
-      {reticle && (
-        <motion.div
-          initial={{ scale: 1.5, opacity: 0, rotate: -18 }} animate={{ scale: 1, opacity: [0, 1, 1, 0], rotate: 0 }}
-          transition={{ duration: 0.75, times: [0, 0.25, 0.7, 1], ease: 'easeOut' }}
-          style={{ position: 'absolute', left: '50%', top: '50%', width: 52, height: 52, marginLeft: -26, marginTop: -26 }}
-        >
-          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 10px ${color}aa` }} />
-          {[0, 90, 180, 270].map(a => (
-            <div key={a} style={{
-              position: 'absolute', left: '50%', top: '50%', width: 2, height: 11,
-              marginLeft: -1, marginTop: -5.5, background: color, boxShadow: `0 0 6px ${color}`,
-              transform: `rotate(${a}deg) translateY(-19px)`,
-            }} />
-          ))}
-        </motion.div>
-      )}
-      {/* Sparks — rise (heal/tide/charge) or drift (aim/brace). */}
-      {motes.map((m, n) => (
-        <motion.div
-          key={n}
-          initial={{ x: 0, y: 0, opacity: 0 }}
-          animate={{ x: m.x, y: m.y, opacity: [0, 1, 0] }}
-          transition={{ duration: m.dur, delay: m.delay, ease: 'easeOut' }}
-          style={{
-            position: 'absolute', left: '50%', top: '56%', width: m.size, height: m.size,
-            marginLeft: -m.size / 2, marginTop: -m.size / 2, borderRadius: '50%',
-            background: mote, boxShadow: `0 0 6px ${color}`,
-          }}
-        />
-      ))}
-    </motion.div>
-  )
+  const ref = useBattleFx(`player:${kind}`, colorOverride)
+  return <div ref={ref} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 }
 
 // Dodge whoosh — a bright afterimage of the ship sprite slides in the retreat

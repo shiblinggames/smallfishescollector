@@ -246,3 +246,36 @@ four click-through cards from Doby and Kat, each beside the control it names, ov
 - `LobbyGuide` grew `anchored` (card beside the flashed control rather than at the screen's foot)
   and `z` (the fight plays inside the sea's portal). Both off by default so the lobbies are as
   they were.
+
+## The status effects are particles (2026-09-17)
+
+**`components/BattleFx.tsx`: one 2D canvas over the battle stage, and every status aura is
+an emitter into it.** Sixteen: seven done to the enemy (burn, freeze, snared, foresee,
+marked, stunned, stolen), six done to you (heal, tide, aim, charge, brace, parry), the
+persistent burn/freeze on routes with no renderer, and the vengeance ward. The kit it draws
+with is `lib/fxCanvas.ts`, lifted from `components/DialFx` (which keeps its own copy on
+purpose; keep the two in step).
+
+**Why.** The dial's fire is hundreds of pooled sprites with buoyancy, drag and a heat ramp,
+blended ADDITIVELY. The auras were DOM: a gradient wash and six `<span>` motes tweened A to
+B with a `box-shadow` glow. A box-shadow does not add, a tween is not physics, one colour
+cannot read as heat, and the DOM version had to avoid blend modes because a blended layer
+starved the aim needle's RAF. One canvas lifts every one of those.
+
+**What it does NOT replace.** Over the sea and in the gauntlet, `sea/seaAbilityFx.ts` (Pixi)
+paints the PERSISTENT conditions on the hull the chart is painting, and the ability casts on
+the water. Those stay. The `!overSea` guard on `ShipStatusAura` is what keeps the two from
+double-drawing a burn.
+
+**Rules it keeps.** It halts during `subPhase === 'aiming'` and holds the last frame -- the
+needle is on the compositor and main-thread work stays off it. It is canvas 2D, never a
+second WebGL context (see DialFx for what that did to the chart). Each aura component still
+mounts inside the hull's box at `inset: 0` and hands the layer that element; the loop reads
+its rect every frame, so recoil and the sea re-placing the hull come for free, and keeps the
+last rect once the element is gone. `--ink` is read off the same element so a fire is sized
+to the ship, not the painting. The layer goes fully idle -- no RAF -- when nothing is alive.
+
+**Adding a status.** Add the kind to `FxKind` and `COLOR`, a `DUR`, a `case` in `drive`.
+The vocabulary is small on purpose: an elliptical wash, rings that expand or converge,
+pooled particles in eight modes (rise, fall, inward, drift, stream, orbit, smoke, spark), and
+stroked marks (reticle, brackets, slash, arc). Build new ones from those.
