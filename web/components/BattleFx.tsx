@@ -57,6 +57,12 @@ import { bakeDot, bakeRing, makeBlob, HOT } from '@/lib/fxCanvas'
 export type FxKind =
   | 'enemy:burn' | 'enemy:freeze' | 'enemy:snared' | 'enemy:foresee' | 'enemy:marked' | 'enemy:stunned' | 'enemy:stolen'
   | 'player:heal' | 'player:tide' | 'player:aim' | 'player:charge' | 'player:brace' | 'player:parry'
+  // ── THE LEGENDARY SIGNATURES ──
+  // A legendary boon's moment, drawn as its own thing rather than as the
+  // common cue for the same effect. No title card and no spark burst on
+  // purpose: the action log already says what happened. These are the
+  // PICTURE of it.
+  | 'enemy:coil' | 'enemy:kraken' | 'enemy:wrath' | 'player:feed' | 'player:favor'
   | 'ship:condition' | 'ship:ward'
 
 /** What a persistent emitter reads live, updated by its component each render. */
@@ -91,6 +97,7 @@ let nextId = 1
 const DUR: Partial<Record<FxKind, number>> = {
   'enemy:burn': 0.95, 'enemy:freeze': 1.0, 'enemy:snared': 0.85, 'enemy:foresee': 0.85,
   'enemy:marked': 0.9, 'enemy:stunned': 0.85, 'enemy:stolen': 0.7,
+  'enemy:coil': 0.6, 'enemy:kraken': 1.15, 'enemy:wrath': 0.85, 'player:feed': 1.05, 'player:favor': 1.1,
   'player:heal': 0.95, 'player:tide': 0.85, 'player:aim': 0.8, 'player:charge': 0.7,
   'player:brace': 0.85, 'player:parry': 0.62,
 }
@@ -168,6 +175,11 @@ const COLOR: Record<string, [string, string]> = {
   'player:charge': ['#f5c542', '#ffe9a8'],
   'player:brace':  ['#9eb0cd', '#d6deec'],
   'player:parry':  ['#e8eefc', '#ffffff'],
+  'enemy:coil':    ['#7c3aed', '#c4b5fd'],
+  'enemy:kraken':  ['#7c3aed', '#d8ccff'],
+  'enemy:wrath':   ['#f5c542', '#fff1b8'],
+  'player:feed':   ['#dc2626', '#4ade80'],
+  'player:favor':  ['#f5c542', '#fff1b8'],
 }
 const WARD = '#d1495b'
 const FIRE_POOL = '#ff8c28'
@@ -531,6 +543,114 @@ export default function BattleFxCanvas({ overSea, paused }: { overSea: boolean; 
             p.age = 0; p.life = 0.3 + Math.random() * 0.2; p.size = 2 + Math.random() * 2
             p.mode = SPARK; p.img = D(M); p.ramp = false
           }
+          break
+        }
+
+        // ── THE LEGENDARY SIGNATURES ─────────────────────────────────
+        case 'enemy:coil': {
+          // One coil of the deep taking hold: a single violet ring tightening
+          // onto the hull, quiet, so the build-up is seen without being loud.
+          const k = easeIn(t / 0.55)
+          if (k < 1) ellipse(R(C), cx, cy, hw * lerp(1.55, 0.95, k), hh * lerp(1.55, 0.95, k), 0.7 * (1 - k * 0.5))
+          spawn(8, 0.25, () => {
+            const p = takeP(); const a = Math.random() * Math.PI * 2
+            p.cx = cx; p.cy = cy; p.r = Math.max(hw, hh) * 1.4; p.w = a
+            p.age = 0; p.life = 0.45; p.size = 2.4 + Math.random() * 2
+            p.mode = INWARD; p.img = D(M); p.ramp = false
+          })
+          break
+        }
+        case 'enemy:kraken': {
+          // THE DEEP CLOSES. Tentacles come up from under the hull and wrap it,
+          // growing in over the first third, then the whole grip clenches: a
+          // ring collapses hard onto the hull, ink boils off it, and the
+          // wash goes deep violet. Held for the rest of the beat.
+          const grow = easeOut(t / 0.34)
+          const clench = easeIn((t - 0.34) / 0.22)
+          const tight = 1 - 0.14 * clench
+          ellipse(D(C), cx, cy, hw * 1.4, hh * 1.25, (0.3 + 0.35 * clench) * env(t, 0.15, 0.8))
+          // Four arcs, each a bezier from below the hull curling round a side
+          // of it. Drawn to `grow` of their length so they rise into place.
+          const arcs: [number, number, number][] = [[-0.85, -1, 0.9], [-0.35, 1, 1.15], [0.3, -1, 1.05], [0.8, 1, 0.95]]
+          for (let n = 0; n < arcs.length; n++) {
+            const [ox, side, len] = arcs[n]
+            const g = easeOut((t - n * 0.05) / 0.34)
+            if (g <= 0) continue
+            const x0 = cx + ox * hw * tight, y0 = rc.y + rc.h * 1.05
+            const x1 = cx + (ox + side * 0.6) * hw * tight, y1 = cy + hh * 0.2
+            const x2 = cx + (ox - side * 0.25) * hw * tight, y2 = cy - hh * (0.9 * len) * tight
+            strokeGlow(C, 3.4, 0.85 * env(t, 0.2, 0.82), () => {
+              ctx.moveTo(x0, y0)
+              // Partial bezier by subdividing: cheap and exact enough.
+              const N = 18
+              for (let s = 1; s <= N * g; s++) {
+                const u = s / N, v = 1 - u
+                ctx.lineTo(v * v * x0 + 2 * v * u * x1 + u * u * x2, v * v * y0 + 2 * v * u * y1 + u * u * y2)
+              }
+            })
+            // A sucker glow at the tip.
+            const u = g, v = 1 - g
+            circ(D(M), v * v * x0 + 2 * v * u * x1 + u * u * x2, v * v * y0 + 2 * v * u * y1 + u * u * y2, 5, 0.9 * env(t, 0.2, 0.82))
+          }
+          if (clench > 0 && clench < 1) ellipse(R(M), cx, cy, hw * lerp(1.7, 0.7, clench), hh * lerp(1.7, 0.7, clench), 0.95 * (1 - clench))
+          // Ink at the clench.
+          if (t > 0.34 && e.debtB === 0) { e.debtB = 1; for (let i = 0; i < 7; i++) { const p = takeS(); const hw2 = rc.w * rc.ink / 2; p.x = cx + (Math.random() * 2 - 1) * hw2 * 0.7; p.y = cy + hh * 0.3; p.vx = (Math.random() - 0.5) * 24; p.vy = -18 - Math.random() * 20; p.age = 0; p.life = 1.2 + Math.random() * 0.8; p.size = 14 + Math.random() * 12; p.mode = SMOKE; p.img = D('#2a1650'); p.ramp = false; p.spin = (Math.random() - 0.5) * 2 } }
+          spawn(30, 0.5, () => {
+            const p = takeP(); const a = Math.random() * Math.PI * 2
+            p.cx = cx; p.cy = cy; p.r = Math.max(hw, hh) * (1.5 + Math.random() * 0.5); p.w = a
+            p.age = 0; p.life = 0.5 + Math.random() * 0.3; p.size = 2.6 + Math.random() * 2.6
+            p.mode = INWARD; p.img = D(M); p.ramp = false
+          })
+          break
+        }
+        case 'enemy:wrath': {
+          // The Man-o-War's Wrath: on top of the Mega's own blast, a heavy gold
+          // shockwave and a second slower one behind it, hot gold sparks thrown
+          // wide, and the hull lit gold for the beat.
+          ellipse(D(C), cx, cy, hw * 1.5, hh * 1.3, 0.55 * env(t, 0.08, 0.4))
+          const k1 = easeOut(t / 0.42), k2 = easeOut((t - 0.1) / 0.6)
+          if (k1 < 1) ellipse(R(M), cx, cy, hw * lerp(0.3, 2.6, k1), hh * lerp(0.3, 2.6, k1), 1.0 * (1 - k1))
+          if (k2 > 0 && k2 < 1) ellipse(R(C), cx, cy, hw * lerp(0.4, 2.0, k2), hh * lerp(0.4, 2.0, k2), 0.7 * (1 - k2))
+          if (born) for (let i = 0; i < 28; i++) {
+            const p = takeP(); const a = Math.random() * Math.PI * 2
+            p.x = cx; p.y = cy; p.vx = Math.cos(a) * (120 + Math.random() * 160); p.vy = Math.sin(a) * (90 + Math.random() * 120)
+            p.age = 0; p.life = 0.4 + Math.random() * 0.3; p.size = 3 + Math.random() * 3
+            p.mode = SPARK; p.img = D(M); p.ramp = false
+          }
+          break
+        }
+        case 'player:feed': {
+          // THE LEVIATHAN FEEDS. A deep drink: blood streams in from the enemy's
+          // side of the water into your hull, and the hull answers green as it
+          // takes. Red first, then the mend.
+          const red = D(C), green = D(M)
+          ellipse(red, cx, cy, hw * 1.3, hh * 1.15, 0.4 * env(t, 0.1, 0.45) * (1 - easeIn((t - 0.45) / 0.3)))
+          ellipse(green, cx, cy, hw * 1.3, hh * 1.15, 0.5 * env(Math.max(0, (t - 0.4) / 0.6), 0.25, 0.7))
+          spawn(40, 0.45, () => {
+            const p = takeP()
+            // Born off to the RIGHT, where the enemy is, at the hull's height.
+            const a = (Math.random() - 0.5) * 0.9
+            p.cx = cx; p.cy = cy; p.r = hw * (2.2 + Math.random() * 0.8); p.w = a
+            p.age = 0; p.life = 0.5 + Math.random() * 0.3; p.size = 3 + Math.random() * 3
+            p.mode = INWARD; p.img = red; p.ramp = false
+          })
+          const k = easeOut((t - 0.45) / 0.5)
+          if (k > 0 && k < 1) ellipse(R(M), cx, cy, hw * lerp(0.6, 1.4, k), hh * lerp(0.6, 1.4, k), 0.85 * (1 - k))
+          break
+        }
+        case 'player:favor': {
+          // THE DON'S FAVOR. The fight opens with something granted, in the
+          // colour of what it was: a slow ring out and a stately rise of motes.
+          ellipse(D(C), cx, cy, hw * 1.35, hh * 1.2, 0.45 * env(t, 0.2, 0.7))
+          const k = easeOut(t / 0.8)
+          if (k < 1) ellipse(R(C), cx, cy, hw * lerp(0.5, 1.6, k), hh * lerp(0.5, 1.6, k), 0.8 * (1 - k))
+          spawn(26, 0.6, () => {
+            const p = takeP()
+            p.x = cx + (Math.random() * 2 - 1) * hw * 0.8; p.y = rc.y + rc.h * (0.4 + Math.random() * 0.45)
+            p.vx = (Math.random() - 0.5) * 8; p.vy = -(12 + Math.random() * 18)
+            p.age = 0; p.life = 0.8 + Math.random() * 0.5; p.size = 2.6 + Math.random() * 2.8
+            p.mode = RISE; p.ramp = false; p.img = D(M); p.k = 0.25; p.spin = Math.random() * 6
+          })
           break
         }
 

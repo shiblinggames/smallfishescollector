@@ -279,3 +279,15 @@ to the ship, not the painting. The layer goes fully idle -- no RAF -- when nothi
 The vocabulary is small on purpose: an elliptical wash, rings that expand or converge,
 pooled particles in eight modes (rise, fall, inward, drift, stream, orbit, smoke, spark), and
 stroked marks (reticle, brackets, slash, arc). Build new ones from those.
+
+**The legendaries have their own signatures (2026-09-18).** Five of the seven legendary boons
+fired the same cue as a common boon with the same effect. Each has a picture of its own now,
+on the same layer, with NO title card and NO spark burst by Kong's call ("it should already
+tell you it occurred in the action log"): Kraken's Grip draws a quiet violet ring tightening
+per coil and, on the close, four tentacle arcs rising from under the hull that clench with a
+crit impact and ink; Leviathan's Hunger on a DEEP drink only (a crit, or a sixth of the hull
+in one swallow) streams blood in from the enemy's side and answers green; Man-o-War's Wrath
+throws a gold double shockwave over the Mega's blast; the Don's Favor lights your hull at the
+opening in the colour of what was granted; Powder Hoard fires the charge flare with "+N
+loaded". Executioner and Stormward already had theirs. The chase-skin strike FX were NOT
+borrowed for these: those stay chase-only on purpose.

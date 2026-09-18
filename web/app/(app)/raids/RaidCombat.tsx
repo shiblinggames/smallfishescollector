@@ -1891,7 +1891,7 @@ export default function RaidCombat({
   const [restorePulse, setRestorePulse] = useState(0)
   // Enemy status aura — a themed glow over the enemy hull while a tide/raid-item
   // status (burn, freeze) procs on it, so those effects read on the ship itself.
-  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked' | 'stunned' | 'stolen'; color?: string } | null>(null)
+  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked' | 'stunned' | 'stolen' | 'coil' | 'kraken' | 'wrath'; color?: string } | null>(null)
   // Thermal Shock confluence detonation — an ice+fire shatter burst over the hull.
   const [thermalShockFx, setThermalShockFx] = useState<{ key: number } | null>(null)
   // Persistent status — the enemy keeps a low ember glow while burning and a
@@ -1913,7 +1913,7 @@ export default function RaidCombat({
   const [enemyDeflect, setEnemyDeflect] = useState(0)
   const [playerImpact, setPlayerImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
   // Heal sparkle on the player hull (Mender / Abyssal Tide / repair kit).
-  const [playerAura, setPlayerAura] = useState<{ key: number; kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' | 'parry'; color?: string } | null>(null)
+  const [playerAura, setPlayerAura] = useState<{ key: number; kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' | 'parry' | 'feed' | 'favor'; color?: string } | null>(null)
   // Dodge whoosh — afterimage + speed lines on whichever ship slips a shot.
   const [dodgeFx, setDodgeFx] = useState<{ key: number; actor: Actor } | null>(null)
 
@@ -3259,6 +3259,19 @@ export default function RaidCombat({
     // Powder Hoard carryover (initialCharges) folds in on top of any Primer
     // proc + start-charge tide, capped to the magazine.
     setPlayerCharges(Math.max(0, Math.min(playerMaxCharges, playerStartCharges + chargesStartRef.current + initialCharges)))
+    // Powder Hoard: the rack is already loaded from the last fight. The charge
+    // flare and the count, so a boon that carries powder is seen to carry it.
+    if (initialCharges > 0) {
+      const lk = Date.now() + 7
+      setTimeout(() => {
+        setPlayerAura({ key: lk, kind: 'charge' })
+        setPHitsplat({ key: lk + 1, text: `+${initialCharges} loaded`, color: '#f5c542' })
+        setTimeout(() => {
+          setPlayerAura(a => (a && a.key === lk ? null : a))
+          setPHitsplat(p => (p && p.key === lk + 1 ? null : p))
+        }, 950)
+      }, 460)
+    }
     setEnemyCharges(Math.max(0, Math.min(enemyMagazine, (enemy.startCharges ?? 0) + enemyChargesDeltaRef.current)))
     guaranteedDodgeLeftRef.current = guaranteedDodgeBankRef.current
     // Stormward: reform the fight shield into the soak pool. Only when active,
@@ -3323,17 +3336,26 @@ export default function RaidCombat({
     // applied for the whole fight via the shared status pipeline.
     if (tide.randomFightBuff > 0) {
       const roll = Math.random()
+      let favorColor = '#f87171'
       if (roll < 0.34) {
         applyPlayerStatus('enrage', tide.randomFightBuff, 99)
         introLines.push(`The Don's Favor: you open ENRAGED (+${Math.round(tide.randomFightBuff * 100)}% damage).`)
       } else if (roll < 0.67) {
         applyPlayerStatus('fortify', tide.randomFightBuff, 99)
         introLines.push(`The Don's Favor: you open FORTIFIED (−${Math.round(tide.randomFightBuff * 100)}% damage taken).`)
+        favorColor = '#9eb0cd'
       } else {
         const perRound = Math.max(3, Math.round(playerHpMax * (0.03 + tide.randomFightBuff * 0.06)))
         applyPlayerStatus('regen', perRound, 99)
         introLines.push(`The Don's Favor: you open MENDING (+${perRound} HP each round).`)
+        favorColor = '#4ade80'
       }
+      // The Favor, seen: the hull lit in the colour of what was granted.
+      const fk = Date.now() + 5
+      setTimeout(() => {
+        setPlayerAura({ key: fk, kind: 'favor', color: favorColor })
+        setTimeout(() => setPlayerAura(a => (a && a.key === fk ? null : a)), 1150)
+      }, 520)
     }
     // The Undertow (curse): open each fight under ONE random debuff (weaken /
     // feeble / slowed), the dark mirror of The Don's Favor.
@@ -5149,6 +5171,16 @@ export default function RaidCombat({
       // Blood in the Water: HP reclaimed from the overkill on a kill. The same
       // heal splat + aura the Tithe gets; it had a log line and nothing else.
       overkillHeal?: number
+      // ── THE LEGENDARIES' OWN MOMENTS ──
+      // Kraken's Grip: a coil took hold (count after this hit), or the deep
+      // CLOSED on this hit. The close replaces the generic stun flare.
+      gripCoil?: number
+      gripClosed?: boolean
+      // Leviathan's Hunger: a DEEP drink -- a crit, or a share of the hull big
+      // enough to matter. Ordinary drinks keep the splat; this one feeds.
+      deepDrink?: boolean
+      // Man-o-War's Wrath: the Mega landed under the boon.
+      wrath?: boolean
       // Cannonade (boon): the crit streak AFTER this landed player shot (0 = the
       // chain just broke). Drives the persistent heat rim + streak badge.
       cannonade?: number
@@ -5599,6 +5631,10 @@ export default function RaidCombat({
       let overkillHealedOut = 0 // Don's overkill-heal boon, this shot
       let reloadProcOut = 0      // Powder Keg / Trade-Wind Sails: extra balls this reload
       let doubleStruckOut = false // Weather Gauge / Hobble: the opening shot hit twice
+      let gripCoilOut = 0         // Kraken's Grip: coils after this hit (a coil took hold)
+      let gripClosedOut = false   // Kraken's Grip: the deep closed on this hit
+      let deepDrinkOut = false    // Leviathan's Hunger: a deep drink this hit
+      let wrathOut = false        // Man-o-War's Wrath: the Mega landed under the boon
       let thermalBurstOut = 0    // Thermal Shock confluence: shatter burst this hit
       let executeKind: 'execute' | 'coup' | undefined   // Executioner / Coup de Grâce sank the hull this step
       let titheHealedOut = 0     // Reaper's Tithe: HP tithed back for the kill this step
@@ -5949,6 +5985,7 @@ export default function RaidCombat({
             && tide.doubleStrikeChance > 0 && Math.random() < tide.doubleStrikeChance
           const doubleStrikeMult = doubleStruck ? 2 : 1
           if (doubleStruck) doubleStruckOut = true
+          if (isMega && tide.megaDmgMult > 1 && (lockedAimResult ?? 'miss') !== 'miss') wrathOut = true
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
                        * tide.dmgMult * tideActionMult * itemActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * avengeMult * statusOutMult * firstShotMult * afflictedMult * doubleStrikeMult
           if (doubleStruck) stepLines.push(`Weather Gauge! You take the opening and the shot lands twice.`)
@@ -6349,6 +6386,9 @@ export default function RaidCombat({
             lifestealHealedOut = pHp - before
             if (lifestealHealedOut > 0) {
               onStat?.({ dmgHealed: lifestealHealedOut })
+              // A DEEP drink is the boon's moment; an ordinary one is a splat.
+              // Deep = a crit, or a sixth of the hull in one swallow.
+              if (tide.lifestealPct > 0 && ((lockedAimResult ?? 'miss') === 'critical' || lifestealHealedOut >= Math.round(playerHpMax * 0.06))) deepDrinkOut = true
               // Attribute the heal to its ACTUAL source(s). Lifesteal comes from
               // the Leviathan's Hunger boon (tide.lifestealPct) AND/OR Davy's Blood
               // Cannon lineage (lifesteal_pct item) — the log used to always credit
@@ -6475,12 +6515,14 @@ export default function RaidCombat({
                   : `Kraken's Grip! ${coils} coils close on the ${enemy.name}. It loses its next turn and takes ${crush}.`)
                 onStat?.({ dmgDealt: crush })
                 procStatus = 'stun'
+                gripClosedOut = true
                 const fin = finishCheck(eHp, pHp, stepLines)
                 eHp = fin.eHp; pHp = fin.pHp
                 if (fin.executed) executeKind = fin.executed
                 titheHealedOut += fin.tithed
               } else {
                 stepLines.push(`The deep coils tighter around the ${enemy.name}. (${coils}/${tide.gripHits})`)
+                gripCoilOut = coils
               }
             }
             // THE RACK — a landed hit fires a SPREAD. One roll, and every round the
@@ -6898,6 +6940,10 @@ export default function RaidCombat({
         reloadProc: reloadProcOut || undefined,
         doubleStruck: doubleStruckOut || undefined,
         overkillHeal: overkillHealedOut || undefined,
+        gripCoil: gripCoilOut || undefined,
+        gripClosed: gripClosedOut || undefined,
+        deepDrink: deepDrinkOut || undefined,
+        wrath: wrathOut || undefined,
         cannonade: cannonadeStep,
         aegisDown: aegisDownOut,
       })
@@ -7571,7 +7617,7 @@ export default function RaidCombat({
                 }
               }
             }
-            if (step.procStatus) {
+            if (step.procStatus && !step.gripClosed) {
               const ak = Date.now() + i + 7
               setEnemyAura({ key: ak, kind: step.procStatus === 'stun' ? 'stunned' : step.procStatus })
               setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 950)
@@ -7593,6 +7639,50 @@ export default function RaidCombat({
                 setTimeout(() => setPlayerAura(a => (a && a.key === pk ? null : a)), 850)
                 vibrate([0, 18, 24, 30])
               }, 220)
+            }
+            // ── THE LEGENDARIES ──
+            // Kraken's Grip: a coil quietly, the close loudly.
+            if (step.gripCoil && !isDodged) {
+              const ck = Date.now() + i + 63
+              playStepChainRef.current.push(setTimeout(() => {
+                setEnemyAura({ key: ck, kind: 'coil' })
+                playStepChainRef.current.push(setTimeout(() => setEnemyAura(a => (a && a.key === ck ? null : a)), 650))
+              }, 160))
+            }
+            if (step.gripClosed) {
+              const kk = Date.now() + i + 67
+              playStepChainRef.current.push(setTimeout(() => {
+                setEnemyAura({ key: kk, kind: 'kraken' })
+                // The clench, a beat in: the hull is struck by the grip itself.
+                playStepChainRef.current.push(setTimeout(() => {
+                  setEnemyImpact({ key: kk + 1, kind: 'crit' })
+                  setEnemyShakeKind('crit'); setEnemyShakeKey(k => k + 1)
+                  cameraShake('crit')
+                  vibrate([0, 50, 30, 80])
+                  playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 520))
+                }, 400))
+                playStepChainRef.current.push(setTimeout(() => setEnemyAura(a => (a && a.key === kk ? null : a)), 1200))
+              }, 140))
+            }
+            // Man-o-War's Wrath: over the Mega's own blast, the gold shockwave.
+            if (step.wrath && !isDodged) {
+              const wk = Date.now() + i + 71
+              playStepChainRef.current.push(setTimeout(() => {
+                setEnemyAura({ key: wk, kind: 'wrath' })
+                setEnemyShakeKind('crit'); setEnemyShakeKey(k => k + 1)
+                vibrate([0, 40, 20, 60])
+                playStepChainRef.current.push(setTimeout(() => setEnemyAura(a => (a && a.key === wk ? null : a)), 900))
+              }, 120))
+            }
+            // Leviathan's Hunger, a deep drink: blood in from their side, the
+            // hull answering green. Timed with the lifesteal splat below.
+            if (step.deepDrink && !isDodged) {
+              const fk = Date.now() + i + 73
+              playStepChainRef.current.push(setTimeout(() => {
+                setPlayerAura({ key: fk, kind: 'feed' })
+                vibrate([0, 20, 40, 30])
+                playStepChainRef.current.push(setTimeout(() => setPlayerAura(a => (a && a.key === fk ? null : a)), 1100))
+              }, 200))
             }
             // Weather Gauge / Hobble — the opening shot struck twice. A second
             // impact and shake a beat after the first, so the doubled number on
@@ -7724,7 +7814,7 @@ export default function RaidCombat({
           }
           // Scorching lit / Glacial iced — flare the player hull aura + switch on
           // the persistent burn glow / frost tint (mirror of the enemy procs).
-          if (step.procStatus) {
+          if (step.procStatus && !step.gripClosed) {
             const ak = Date.now() + i + 9
             setPlayerAura({ key: ak })
             setTimeout(() => setPlayerAura(a => (a && a.key === ak ? null : a)), 950)
@@ -12185,7 +12275,7 @@ function BarrageSplat({ text, dx, crit, color: colorProp }: { text: string; dx: 
 // A status landing on the enemy. The picture is drawn by BattleFx; this is
 // the mount that tells it which hull and which effect. Keyed per event by the
 // caller, so every landing is a fresh emitter.
-function EnemyStatusAura({ kind, color: colorOverride }: { kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked' | 'stunned' | 'stolen'; color?: string }) {
+function EnemyStatusAura({ kind, color: colorOverride }: { kind: 'burn' | 'freeze' | 'snared' | 'foresee' | 'marked' | 'stunned' | 'stolen' | 'coil' | 'kraken' | 'wrath'; color?: string }) {
   const ref = useBattleFx(`enemy:${kind}`, colorOverride)
   return <div ref={ref} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 }
@@ -12450,7 +12540,7 @@ function VengeanceEruptBurst() {
 // signature: heal rises green, tide snaps a ring shut, aim drops a reticle on
 // the guns, charge flashes and throws powder sparks, brace clamps iron corners
 // inward, parry is a struck steel angle. All drawn by BattleFx.
-function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' | 'parry'; color?: string }) {
+function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' | 'parry' | 'feed' | 'favor'; color?: string }) {
   const ref = useBattleFx(`player:${kind}`, colorOverride)
   return <div ref={ref} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 }
