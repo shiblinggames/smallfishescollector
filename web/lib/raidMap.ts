@@ -1716,8 +1716,8 @@ export const RAID_MAP: RaidNode[] = [
     // whole Gullet stretch.
     id: 'gullet_raid',    type: 'raid',
     label: "The Tollmaster's Cut",
-    flavor: "Down in the throat waits Tollmaster Spet, the barracuda who weighs and stacks everything the sea swallows. His quickest hulls sail loaded, a shot in the pipe before you've found your range.",
-    bridge: "Spet goes down and the Gullet drains dry. Three Finndicate captains on the seabed now, and the cold water past here answers to a don even Spet would not name.",
+    flavor: "Down in the throat waits Tollmaster Spet, the barracuda who keeps the Finndicate's books. His quickest hulls sail loaded, a shot in the pipe before you've found your range.",
+    bridge: "Spet goes down and the Gullet drains dry. Three Finndicate captains on the seabed, a set of books nobody was ever meant to audit, and past here the cold water answers to a don even Spet would not name.",
     requiresNode: 'scout_debt',
     requiresNavLevel: 35,
     route: '/raids/gullet',
@@ -1725,7 +1725,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_TOLLMASTER.enemies.spet.portrait,
     detail: {
       description:
-        "Tollmaster Spet, the freight-collector who runs the Gullet, and the barracuda crew that taxes the sea for him. His quickest hulls take the First Cut: they open loaded and fire on the bell before a slow captain finds his range, and Spet himself opens with two. The whole toll line runs a harder cadence than anything you've fought, all volleys and double-taps. Equip his own drop and you can take the first cut right back.",
+        "Tollmaster Spet keeps the Finndicate's books, and the Gullet is where the counting happens. Everything the outfit takes comes down this throat to be weighed against his page, which is a duller kind of power than a cannon and a much harder one to sink.\n\nHis barracuda crew take the First Cut: they open loaded and fire on the bell before a slow captain finds his range, and Spet himself opens with two. The whole toll line runs a harder cadence than anything you've fought, all volleys and double-taps. Equip his own drop and you can take the first cut right back.",
       enemies: ['Silverdart ×2', 'Snapjaw ×2', 'Gulletmaw ×2', 'The Exactor ×2', 'Tollmaster Spet'],
       drops: lootDrops(THE_TOLLMASTER.loot),
       clearReward: clearPayout(THE_TOLLMASTER),
@@ -1735,7 +1735,7 @@ export const RAID_MAP: RaidNode[] = [
   {
     id: 'gullet_raid_challenge',    type: 'raid',
     label: "Challenge: The Tollmaster's Cut",
-    flavor: "The same loaded barracudas, drilled harder and angrier for the loss. Spet does not lose his cut twice.",
+    flavor: "The same loaded barracudas, drilled harder and angrier for the loss. Spet has had time to go back over the figures, and they still do not balance.",
     requiresNode: 'gullet_raid',
     route: '/raids/gullet/challenge',
     raidId: THE_TOLLMASTER_CHALLENGE.raidId,
@@ -1743,7 +1743,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_TOLLMASTER.enemies.spet.portrait,
     detail: {
       description:
-        "The Tollmaster's whole toll line again, harder for the loss. The barracudas hit cleaner, Spet's doubled opener bites deeper, and every hull still fires first. Crack his crate this run and his own Primer rolls at twice the rate.",
+        "The Tollmaster's whole toll line again, harder for the loss. The barracudas hit cleaner, Spet's doubled opener bites deeper, and every hull still fires first. He is not out here for the cargo this time. Crack his crate this run and his own Primer rolls at twice the rate.",
       enemies: ['Silverdart ×2', 'Snapjaw ×2', 'Gulletmaw ×2', 'The Exactor ×2', 'Tollmaster Spet'],
       drops: lootDrops(THE_TOLLMASTER_CHALLENGE.loot),
       clearReward: clearPayout(THE_TOLLMASTER_CHALLENGE),
