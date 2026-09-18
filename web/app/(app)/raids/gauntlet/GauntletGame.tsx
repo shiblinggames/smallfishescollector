@@ -102,13 +102,43 @@ const WIDE_QUERY = '(min-width: 900px)'
 function useSlipSpreadX(): number {
   const [spread, setSpread] = useState(1)
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 560px)')
+    const mq = window.matchMedia(SLIP_PHONE_QUERY)
     const on = () => setSpread(mq.matches ? 0.62 : 1)
     on()
     mq.addEventListener('change', on)
     return () => mq.removeEventListener('change', on)
   }, [])
   return spread
+}
+
+/**
+ * ── THE PHONE GETS A DIFFERENT LOBBY, NOT A SQUEEZED ONE ────────────────────
+ *
+ * The diorama is desktop-first by design and the squeeze above was the attempt
+ * to make it survive a phone. It does not. Five cards pinned at fractional
+ * offsets on a 390px-wide screen land on top of each other, each one
+ * `white-space: nowrap` so none of them can even shrink, over water you steer
+ * by DRAGGING -- so half the touches meant for a card go to the helm instead.
+ * And every one of them cost two taps: one to sail there, one to press the
+ * helm that appeared at the bottom.
+ *
+ * So a phone does not get the diorama at all. It gets the maelstrom, big, in
+ * the upper half where a thumb never is, and the four places as a real docked
+ * grid at the bottom where a thumb always is. Same places, same handlers, one
+ * tap each. The water is still the backdrop and still sails; it is just no
+ * longer asked to be the menu.
+ */
+const SLIP_PHONE_QUERY = '(max-width: 560px)'
+function useIsPhone(): boolean {
+  const [phone, setPhone] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia(SLIP_PHONE_QUERY)
+    const on = () => setPhone(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return phone
 }
 
 function useWide(): boolean {
@@ -492,6 +522,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // player is offered their dive back before anything else.
   const wide = useWide()
   const slipSpreadX = useSlipSpreadX()
+  // A phone gets the docked lobby, not the squeezed diorama. See useIsPhone.
+  const phone = useIsPhone()
   /** The width of a screen between fights: a column on a phone, a sheet on a desktop. */
   const sheetW = wide ? 640 : 440
   const [phase, setPhaseRaw] = useState<Phase>(props.resumeState ? 'resume' : props.available ? 'intro' : 'usedup')
@@ -981,11 +1013,43 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [diving, setDiving] = useState(false)
   const diveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (diveTimer.current) clearTimeout(diveTimer.current) }, [])
+  /**
+   * HOW LONG THE WATER TAKES YOU. 620ms was a blink -- long enough to be a
+   * state change and too short to be a descent, so pressing him felt like
+   * opening a menu. It runs 1500ms now and it goes all the way to BLACK
+   * rather than to a vignette, because the thing on the other side of it is
+   * supposed to be somewhere else. Nothing travels across the screen (that
+   * rule stands: a full-screen sweep was pulled as nauseating); the light
+   * just closes down from the edges, the eye of the maelstrom holds longest,
+   * and then there is nothing.
+   */
+  const DIVE_MS = 1500
   const beginDescent = () => {
     if (diving) return
     setDiving(true)
-    vibrate([0, 18, 60, 34])
-    diveTimer.current = setTimeout(() => { setDiving(false); setModeChoiceOpen(true) }, 620)
+    // A descending pattern under a descending picture: three pulses, each
+    // longer and further apart, ending on the one that lands in the dark.
+    vibrate([0, 14, 150, 22, 260, 46])
+    diveTimer.current = setTimeout(() => { setDiving(false); setModeChoiceOpen(true) }, DIVE_MS)
+  }
+  /**
+   * THE SAME WATER CLOSES AFTER THE MODE CHOICE. Choosing Normal or Hardcore
+   * used to swap the modal out for the first fight in a frame, which made the
+   * descent the player just watched into a thing that happened before a menu
+   * rather than the way in. The choice now dips through the same black on the
+   * same clock, and the run starts behind it.
+   */
+  const [sinking, setSinking] = useState(false)
+  const sinkTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (sinkTimer.current) clearTimeout(sinkTimer.current) }, [])
+  const descendInto = (hardcore: boolean) => {
+    if (sinking || starting) return
+    setSinking(true)
+    vibrate([0, 14, 150, 22, 260, 46])
+    // The run is kicked off IMMEDIATELY so the network round-trip overlaps the
+    // fade instead of following it; the black is the cover, not the wait.
+    begin(hardcore)
+    sinkTimer.current = setTimeout(() => setSinking(false), DIVE_MS)
   }
   /**
    * THE MOORING CARDS' NODES, handed down to the Slipway's frame loop so it can
@@ -1306,7 +1370,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                   <Card
                     accent={AC} title="Normal" titleColor={AC} icon={chevrons} enabled={!starting}
                     desc="Push your luck for the pot. Your crew are never at risk."
-                    onClick={() => begin(false)}
+                    onClick={() => { setModeChoiceOpen(false); descendInto(false) }}
                     footer={<>
                       <p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${AC}cc` }}>Your Deepest</p>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#dbf5ef' }}>{props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}</p>
@@ -1447,7 +1511,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: '#c48a8a', marginTop: 13 }}>
               {props.hcRunsLeft} of {HARDCORE_RUNS_PER_DAY} hardcore runs left today
             </p>
-            <button onClick={() => begin(true)} disabled={starting} className="font-cinzel font-800 tap"
+            <button onClick={() => { setHcConfirmOpen(false); descendInto(true) }} disabled={starting} className="font-cinzel font-800 tap"
               style={{ width: '100%', marginTop: 9, padding: '1.05rem', borderRadius: 13, fontSize: '1.2rem', lineHeight: 1.1, color: '#170a0a', border: 'none', cursor: starting ? 'wait' : 'pointer',
                 background: pressure > 0 ? 'linear-gradient(180deg, #ffd868, #f0c040 55%, #d4a02c)' : `linear-gradient(180deg, #f0797d, ${DANGER} 55%, #b83f45)`,
                 boxShadow: `0 6px 22px ${pressure > 0 ? '#f0c040' : DANGER}44`, textShadow: '0 1px 0 rgba(255,255,255,0.25)' }}>
@@ -2802,8 +2866,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     // same diorama: the eye above centre, two moorings either side below it,
     // two more on the floor, her among them. A wide screen gives its margins
     // to the water, not to the layout.
-    const slipPlaces: SlipwayPlace[] = [
-      { id: 'portal', label: 'The Descent', ox: 0, oy: -0.16, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
+    // ── THE PLACES ──────────────────────────────────────────────────
+    // On a wide screen these are moorings on a painted sea and you sail
+    // between them. On a phone only the FIRST of them is drawn on the water
+    // (see `slipPlaces` below): the rest become a docked grid, because five
+    // fixed cards at fractional offsets on a 390px screen sit on top of one
+    // another and steal the drags meant for the helm.
+    const allPlaces: SlipwayPlace[] = [
+      { id: 'portal', label: 'The Descent', ox: 0, oy: phone ? -0.10 : -0.16, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
       { id: 'run', label: 'Run Upgrades', ox: -0.34, oy: 0.14, color: 0xc4a0e8 },
       { id: 'shore', label: 'Permanent Upgrades', ox: 0.34, oy: 0.14, color: 0xf0c040 },
       { id: 'records', label: 'The Records', ox: -0.27, oy: 0.37, color: 0x9ab8c8 },
@@ -2814,6 +2884,10 @@ export default function GauntletGame(props: GauntletGameProps) {
       // page is on its way out and the water is the lobby now.
       { id: 'leave', label: 'The Way Home', ox: 0.27, oy: 0.37, color: 0x7fd8c8 },
     ]
+    // What the WATER draws. A phone gets the eye and nothing else.
+    const slipPlaces: SlipwayPlace[] = phone ? allPlaces.slice(0, 1) : allPlaces
+    // What the DOCK draws, on a phone: everything that is not the eye.
+    const dockPlaces = allPlaces.filter(pl => !pl.portal)
     // The same stage in CSS, for the cards that ride the moorings — including
     // the squeeze, or the cards would part company with their lights.
     const stageLeft = (ox: number) => `calc(50% + ${ox * slipSpreadX} * min(100vw, 100vh))`
@@ -2840,12 +2914,29 @@ export default function GauntletGame(props: GauntletGameProps) {
       boxShadow: `0 10px 30px rgba(0,0,0,0.65), 0 0 22px ${AC}26, inset 0 1px 0 ${AC}33`,
       fontSize: '0.84rem', letterSpacing: '0.05em', whiteSpace: 'nowrap',
     }
-    const moor = () => {
+    /**
+     * ── ONE TAP ───────────────────────────────────────────────────────
+     * Pressing a place USED to only sail the boat to it; you then had to
+     * find the helm that appeared at the bottom of the screen and press
+     * that too. Two taps and a wait, for "open the shop". Kong: "You should
+     * be able to just click it once and have it open."
+     *
+     * So the press opens it. On a wide screen the boat still sails over --
+     * that is the diorama doing its job and it costs nothing, because it
+     * happens behind the panel that is already up. The helm stays for the
+     * captain who steers there by dragging instead of pressing.
+     *
+     * The Records is the exception and always was: `LeaderboardModal` owns
+     * its own open state, so its place is rendered AS that modal's trigger
+     * rather than opened from here.
+     */
+    const openPlace = (id: string) => {
       vibrate([0, 12])
-      if (slipNear === 'run') setShopSection('run')
-      else if (slipNear === 'shore') setShopSection('shore')
-      else if (slipNear === 'leave') router.push('/sea')
+      if (id === 'run') setShopSection('run')
+      else if (id === 'shore') setShopSection('shore')
+      else if (id === 'leave') router.push('/sea')
     }
+    const moor = () => { if (slipNear) openPlace(slipNear) }
     return (
       <>
         {/* ── THE HUB IS THE WATER ─────────────────────────────────────────
@@ -2879,19 +2970,19 @@ export default function GauntletGame(props: GauntletGameProps) {
             rather than a button of ours that opens it. `LeaderboardModal`
             renders its trigger and owns its open state, so styling that
             trigger as the helm is the whole integration. */}
-        {slipNear === 'records' && (
+        {!phone && slipNear === 'records' && (
           <LeaderboardModal
             boards={isDonG ? ['gauntletDonsDepth', 'gauntletDonsHardcore', 'gauntletBigHit'] : ['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']}
             title={gauntletTitle} label="The Records" triggerStyle={helmStyle} />
         )}
-        {slipLabel && slipNear !== 'portal' && slipNear !== 'records' && (
+        {!phone && slipLabel && slipNear !== 'portal' && slipNear !== 'records' && (
           <button type="button" onClick={moor} className="tap" style={{ ...helmStyle, display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
             <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.84rem', letterSpacing: '0.05em' }}>{slipLabel}</span>
             <span className="font-karla font-700 uppercase" style={{ marginLeft: 'auto', fontSize: '0.52rem', letterSpacing: '0.16em', color: `${AC}cc` }}>{slipNear === 'leave' ? 'Sail' : 'Moor'}</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
           </button>
         )}
-        {slipNear === 'portal' && (
+        {!phone && slipNear === 'portal' && (
           <div aria-hidden style={{ ...helmStyle, cursor: 'default', textAlign: 'center', border: `1px solid ${AC}44` }}>
             <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: `${AC}dd` }}>Hold course into the eye</span>
           </div>
@@ -2988,17 +3079,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             `beginDescent`: the edges close and the light goes out of the room,
             and NOTHING moves across the screen. A vignette tightening is a dip,
             not a sweep. */}
-        <AnimatePresence>
-          {diving && (
-            <motion.div key="dive" aria-hidden
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.55, ease: 'easeIn' }}
-              style={{
-                position: 'fixed', inset: 0, zIndex: 8, pointerEvents: 'none',
-                background: `radial-gradient(ellipse 78% 58% at 50% ${50 + slipPlaces[0].oy * 100}%, transparent 0%, rgba(2,5,10,0.55) 46%, rgba(1,3,6,0.94) 82%)`,
-              }} />
-          )}
-        </AnimatePresence>
+        <DiveVeil show={diving || sinking} ms={DIVE_MS} focusY={50 + allPlaces[0].oy * 100} />
 
         {/* ── THE PLACES, AS CARDS ─────────────────────────────────────────
             A mooring on the water says "tie up here" and nothing else, so
@@ -3038,7 +3119,10 @@ export default function GauntletGame(props: GauntletGameProps) {
                 // jump a half-width down and right off its own mooring.
                 x: '-50%', y: '-50%',
                 zIndex: 5, cursor: 'pointer',
-                width: 'min(52vw, 40vh)', height: 'min(52vw, 30vh)',
+                // A phone gives him the upper half outright: there is no
+                // diorama around him there to leave room for.
+                width: phone ? 'min(82vw, 46vh)' : 'min(52vw, 40vh)',
+                height: phone ? 'min(72vw, 34vh)' : 'min(52vw, 30vh)',
                 display: 'grid', placeItems: 'center',
                 background: 'none', border: 'none', padding: 0,
               }}>
@@ -3062,13 +3146,43 @@ export default function GauntletGame(props: GauntletGameProps) {
                 }} />
               {/* The words sit under him, and they are READABLE: it was a
                   0.48rem whisper in the run's own colour over moving water. */}
-              <span style={{ position: 'absolute', left: '50%', bottom: -2, transform: 'translateX(-50%)', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '0.86rem', letterSpacing: '0.16em', color: '#fbf6ea', textShadow: `0 2px 12px rgba(0,0,0,1), 0 0 22px ${hex}88` }}>{pl.label}</span>
+              {/* ── "YOU CAN TOUCH HIM" ─────────────────────────────────
+                  The glow alone was ambient: it reads as mood lighting on a
+                  picture, not as a control, and Kong could not tell the art
+                  was the button. Two rings now go OUT from him on a loop,
+                  the way a finger leaves one -- a shape that means "tap"
+                  and means nothing else. They are drawn with no edge and
+                  they die before they reach him, so nothing is framed. */}
+              {!diving && [0, 1].map(i => (
+                <motion.span key={`ripple-${i}`} aria-hidden
+                  initial={{ opacity: 0, scale: 0.55 }}
+                  animate={{ opacity: [0, 0.5, 0], scale: [0.55, 1.15, 1.35] }}
+                  transition={{ duration: 2.8, repeat: Infinity, delay: i * 1.4, ease: 'easeOut' }}
+                  style={{ position: 'absolute', inset: '4%', borderRadius: '50%', border: `2px solid ${hex}`, pointerEvents: 'none', maskImage: 'radial-gradient(circle, transparent 58%, #000 78%)', WebkitMaskImage: 'radial-gradient(circle, transparent 58%, #000 78%)' }} />
+              ))}
+              <span style={{ position: 'absolute', left: '50%', bottom: phone ? -10 : -2, transform: 'translateX(-50%)', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: phone ? '1rem' : '0.86rem', letterSpacing: '0.16em', color: '#fbf6ea', textShadow: `0 2px 12px rgba(0,0,0,1), 0 0 22px ${hex}88` }}>{pl.label}</span>
+                {/* A CHIP, not a whisper. It was 0.58rem of letter-spaced
+                    text floating over moving water, which is the register
+                    of a caption. A bordered pill is the register of a
+                    control, and it is the only one on this screen. */}
                 <motion.span className="font-karla font-800 uppercase"
-                  animate={portalPressed ? { opacity: 1, scale: 1.06 } : { opacity: [0.66, 1, 0.66], scale: 1 }}
-                  transition={portalPressed ? { duration: 0.12 } : { duration: 3.1, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{ display: 'block', fontSize: '0.58rem', letterSpacing: '0.2em', color: '#f4efe4', marginTop: 3, textShadow: `0 1px 10px rgba(0,0,0,1), 0 0 14px ${hex}aa` }}>
-                  Press to descend
+                  animate={portalPressed ? { opacity: 1, scale: 1.06 } : { opacity: [0.8, 1, 0.8], scale: [1, 1.025, 1] }}
+                  transition={portalPressed ? { duration: 0.12 } : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 7,
+                    padding: phone ? '0.4rem 0.95rem' : '0.32rem 0.8rem', borderRadius: 999,
+                    fontSize: phone ? '0.62rem' : '0.56rem', letterSpacing: '0.18em', color: '#0a0f16',
+                    background: `linear-gradient(180deg, ${hex}, ${hex}cc)`,
+                    boxShadow: `0 4px 16px rgba(0,0,0,0.7), 0 0 22px ${hex}66`,
+                  }}>
+                  {/* A finger. The one mark that says a thing is touched. */}
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M9 11V5.5a1.8 1.8 0 0 1 3.6 0V11" />
+                    <path d="M12.6 11V9.2a1.7 1.7 0 0 1 3.4 0V11" />
+                    <path d="M16 11.2a1.7 1.7 0 0 1 3.4 0V15a6 6 0 0 1-6 6h-1.6a5 5 0 0 1-3.8-1.8l-3-3.6a1.8 1.8 0 0 1 2.6-2.4L9 14.6" />
+                  </svg>
+                  Tap to descend
                 </motion.span>
               </span>
             </motion.button>
@@ -3094,7 +3208,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             <button key={pl.id} type="button"
               className="tap"
               aria-label={`${pl.label}: ${meta.sub}`}
-              onClick={() => { vibrate([0, 10]); slipSail.current?.(pl.id) }}
+              onClick={() => { slipSail.current?.(pl.id); openPlace(pl.id) }}
               ref={el => {
                 slipCards.current.set(pl.id, el)
                 if (el && !el.style.transform) {
@@ -3167,6 +3281,74 @@ export default function GauntletGame(props: GauntletGameProps) {
             rebuilt: the ranks, the records, the rules, the descent cards. The
             sea is the front door and this is still the room behind it, so
             nothing in here had to change for the water to become primary. */}
+        {/* ── THE DOCK (PHONE ONLY) ────────────────────────────────────────
+            The four places as a real mobile control strip: a two-by-two grid
+            pinned above the tab bar, in the thumb's half of the screen, each
+            tile a full-width target that opens its panel on ONE press. This
+            replaces the scattered fixed cards, which on a 390px screen landed
+            on top of each other, could not shrink (every one of them was
+            `white-space: nowrap`), sat in the middle of the drag surface used
+            to steer, and cost two taps each.
+
+            It rides above the tab bar's own safe area rather than guessing a
+            number, and it is the only chrome between the water and the bar. */}
+        {phone && (
+          <motion.div
+            initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+            style={{
+              position: 'fixed', left: 0, right: 0, zIndex: 6,
+              bottom: 'calc(var(--tabbar-safe, 0px) + 10px)',
+              padding: '0 10px',
+              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
+            }}>
+            {dockPlaces.map(pl => {
+              const hex = hexOf(pl.color)
+              const meta = PLACE_META[pl.id]
+              const inner = (
+                <>
+                  <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 9, background: `${hex}22`, border: `1px solid ${hex}66`, color: hex, flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{meta.icon}</svg>
+                  </span>
+                  <span style={{ display: 'grid', gap: 1, minWidth: 0, textAlign: 'left' }}>
+                    <span className="font-cinzel font-800" style={{ fontSize: '0.72rem', color: '#f3ead2', lineHeight: 1.06, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.label}</span>
+                    {/* The line that says what it is for. On the water this
+                        only appeared once you were alongside; there is no
+                        "alongside" in a dock, so it is simply always there. */}
+                    <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#a8a296', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.sub}</span>
+                  </span>
+                </>
+              )
+              const tile: CSSProperties = {
+                display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+                padding: '0.6rem 0.7rem', borderRadius: 14, cursor: 'pointer', font: 'inherit',
+                background: 'linear-gradient(180deg, rgba(14,20,32,0.96), rgba(5,9,16,0.96))',
+                border: `1px solid ${hex}4d`,
+                boxShadow: `0 6px 20px rgba(0,0,0,0.6), inset 0 1px 0 ${hex}22`,
+                WebkitTapHighlightColor: 'transparent',
+              }
+              // The Records opens a modal that owns its own state, so its tile
+              // IS that modal's trigger rather than a button that asks for it.
+              if (pl.id === 'records') return (
+                <LeaderboardModal key={pl.id}
+                  boards={isDonG ? ['gauntletDonsDepth', 'gauntletDonsHardcore', 'gauntletBigHit'] : ['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']}
+                  title={gauntletTitle} label={pl.label}
+                  triggerClassName="tap" triggerStyle={tile} triggerContent={inner} />
+              )
+              return (
+                <motion.button key={pl.id} type="button" className="tap"
+                  aria-label={`${pl.label}: ${meta.sub}`}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ type: 'spring', stiffness: 520, damping: 26 }}
+                  onClick={() => openPlace(pl.id)}
+                  style={tile}>
+                  {inner}
+                </motion.button>
+              )
+            })}
+          </motion.div>
+        )}
+
         {introOpen && <GauntletIntroModal variant={props.variant} onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {lootMode && <LootModal mode={lootMode} don={isDonG} totalFortune={props.totalFortune} onClose={() => setLootMode(null)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} don={isDonG} onClose={() => setInfoCurrency(null)} />}
@@ -5209,6 +5391,12 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
     return (
       <>
+        {/* THE VEIL CROSSES INTO HERE. `begin()` flips the phase mid-fade, so
+            the lobby's copy unmounts while the black is still closing; this
+            one is already mounted and picks it up without a flash (see
+            DiveVeil's note on `initial={false}`), then lifts to reveal the
+            fall. */}
+        <DiveVeil show={sinking} ms={DIVE_MS} focusY={40} />
         {arena('fall')}
         <Screen id={phase}>
         <div style={{
@@ -5540,6 +5728,48 @@ const HARDCORE_CHEST_FILTER = 'grayscale(0.4) sepia(1) saturate(2.4) hue-rotate(
 
 // rAF count-up for the reward numbers (easeOutCubic). Holds at 0 until `run`
 // flips true, so the chest can reveal first and THEN the numbers tick up.
+/**
+ * ── GOING UNDER ─────────────────────────────────────────────────────────────
+ *
+ * The light closing down to black over a second and a half. Two layers on one
+ * clock: the edges come in first, then flat black takes the middle, so the eye
+ * of the maelstrom is the last thing lit.
+ *
+ * NOTHING MOVES ACROSS THE SCREEN. A full-screen sweep was pulled once as
+ * "terrible, distracting and nauseating" and that rule stands -- the light may
+ * dip, nothing may travel.
+ *
+ * ── WHY IT IS PORTALED, AND WHY `initial` IS FALSE ──────────────────────────
+ * The mode choice starts the run, and `begin()` flips the phase to 'descending'
+ * partway through the fade -- which unmounts the whole lobby tree, veil
+ * included. So this renders to the BODY and is mounted by both phases: when
+ * the first copy goes the second is already there, and `initial={false}` makes
+ * it appear at its animate target rather than re-running from transparent.
+ */
+function DiveVeil({ show, ms, focusY }: { show: boolean; ms: number; focusY: number }) {
+  if (typeof document === 'undefined') return null
+  return createPortal(
+    <AnimatePresence>
+      {show && (
+        <motion.div key="dive" aria-hidden
+          initial={false}
+          animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.45, ease: 'easeOut' } }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1400, pointerEvents: 'none' }}>
+          <motion.div aria-hidden
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            transition={{ duration: (ms / 1000) * 0.55, ease: 'easeIn' }}
+            style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 80% 60% at 50% ${focusY}%, transparent 0%, rgba(2,5,10,0.6) 44%, rgba(1,3,6,0.98) 80%)` }} />
+          <motion.div aria-hidden
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            transition={{ duration: (ms / 1000) * 0.6, delay: (ms / 1000) * 0.38, ease: 'easeIn' }}
+            style={{ position: 'absolute', inset: 0, background: '#010306' }} />
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body,
+  )
+}
+
 function CountUp({ to, dur = 850, run = true }: { to: number; dur?: number; run?: boolean }) {
   const [n, setN] = useState(0)
   useEffect(() => {

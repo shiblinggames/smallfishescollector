@@ -463,3 +463,41 @@ This month's lessons apply from line one, not as a later pass:
 - Both variants, hardcore and not, reach a boss depth and cash out.
 - `/sea` still has its context after a gauntlet visit and a return.
 - Frames on a phone at a boss depth, measured, not assumed.
+
+## The lobby is one tap, and a phone gets its own (2026-09-18)
+
+Kong: "all the different options - run upgrades, perm upgrades. You should be able to just
+click it once and have it open... their positioning on mobile is really bad."
+
+**One tap.** Pressing a mooring only SAILED the boat to it; you then had to find the helm
+that appeared at the bottom and press that too. `openPlace(id)` now runs off the card's own
+press, so the panel opens immediately and the boat sails over behind it. `moor()` is kept
+for the captain who steers by dragging. The Records is the exception and always was:
+`LeaderboardModal` owns its open state, so its tile is rendered AS that modal's trigger via
+the new `triggerContent` / `triggerClassName` props (which also let the gauntlet drop that
+component's trophy EMOJI).
+
+**A phone gets a different lobby, not a squeezed one.** The diorama is desktop-first and
+`useSlipSpreadX`'s 0.62 squeeze was the attempt to make it survive a phone. It does not:
+five `position: fixed` cards at fractional offsets on a 390px screen land on top of each
+other, none can shrink (every one is `white-space: nowrap`), and they sit in the middle of
+the drag surface you steer with, so touches meant for a card take the helm instead. Under
+`useIsPhone()` (same 560px query) the water draws only the eye, the maelstrom takes the
+upper half at `min(82vw, 46vh)`, and the four places become a two-by-two docked grid above
+the tab bar in the thumb's half. Same places, same handlers, one press each.
+
+**Tapping him is now legible.** The glow alone read as mood lighting on a picture. Two
+edge-free ripples go out from him on a loop (the shape a finger leaves, which means "tap"
+and nothing else) and the caption became a filled chip with a finger glyph, because a
+bordered pill is the register of a control and 0.58rem of letter-spaced text over moving
+water is the register of a caption.
+
+**The descent is a descent.** 620ms and a vignette was long enough to be a state change and
+too short to be going somewhere. `DIVE_MS` is 1500 and it runs all the way to black, in two
+layers on one clock so the eye is the last thing lit. The mode choice goes through the same
+veil via `descendInto()`, which fires `begin()` immediately so the server round-trip happens
+UNDER the fade rather than after it. Nothing travels across the screen; that rule stands.
+
+`DiveVeil` is portaled to the body and mounted by BOTH the intro and descending phases,
+because `begin()` flips the phase mid-fade and unmounts the lobby tree. `initial={false}` is
+what stops the second mount flashing back to transparent.

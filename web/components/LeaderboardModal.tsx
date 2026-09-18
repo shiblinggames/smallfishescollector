@@ -16,11 +16,24 @@ export default function LeaderboardModal({
   label = 'Ranks',
   title = 'Leaderboard',
   triggerStyle,
+  triggerContent,
+  triggerClassName,
 }: {
   boards: BoardKey[]
   label?: string
   title?: string
   triggerStyle?: React.CSSProperties
+  /**
+   * The whole inside of the trigger, replacing the default trophy + label.
+   * This component owns its open state, so a caller that wants its OWN control
+   * to open the board has two choices: lift the state, or hand the control's
+   * insides down here. This is the second, and it is the cheaper one -- the
+   * board stays self-contained and the caller gets one tap instead of two.
+   * It also lets a caller opt out of the trophy EMOJI, which is an emoji used
+   * as a UI icon and against the house rule wherever a caller can draw better.
+   */
+  triggerContent?: React.ReactNode
+  triggerClassName?: string
 }) {
   const [open, setOpen] = useState(false)
   const [data, setData] = useState<LeaderboardBoardsResult | null>(null)
@@ -153,7 +166,7 @@ export default function LeaderboardModal({
     <>
       <button
         onClick={openModal}
-        className="font-karla font-700 uppercase tracking-[0.1em]"
+        className={triggerClassName ?? 'font-karla font-700 uppercase tracking-[0.1em]'}
         style={{
           // Subtle compact pill — same shape as the FishingGame HUD's
           // zone-tinted variant, but with a neutral gold tint so it's
@@ -174,8 +187,10 @@ export default function LeaderboardModal({
           ...triggerStyle,
         }}
       >
-        <span aria-hidden style={{ fontSize: '0.82rem', lineHeight: 1 }}>🏆</span>
-        {label}
+        {triggerContent ?? <>
+          <span aria-hidden style={{ fontSize: '0.82rem', lineHeight: 1 }}>🏆</span>
+          {label}
+        </>}
       </button>
 
       {typeof document !== 'undefined' && createPortal(
