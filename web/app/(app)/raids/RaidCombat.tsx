@@ -103,8 +103,6 @@ import { describeEffect, effectTone, type TideEffect } from '@/lib/tides'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
 import { getCrewSkinByFilename } from '@/lib/crewSkins'
-import { ChaseSkinFx } from '@/components/ChaseSkinFx'
-import { TempestStrikeFx, LeviathanStrikeFx, RequiemMarkFx, GalaxySurgeFx, FossilWardFx, KrakenOracleFx } from '@/components/ChaseStrikeFx'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
@@ -9054,18 +9052,10 @@ export default function RaidCombat({
             {enemyImpact && (
               <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
             )}
-            {/* Bespoke chase-skin ability strikes over the enemy hull. */}
-            {enemyStrikeFx?.kind === 'tempest' && (
-              <TempestStrikeFx key={`tsf-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} shots={enemyStrikeFx.shots ?? 5} interval={enemyStrikeFx.interval ?? 200} />
-            )}
-            {enemyStrikeFx?.kind === 'leviathan' && (
-              <LeviathanStrikeFx key={`lsf-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} />
-            )}
-            {enemyStrikeFx?.kind === 'requiem' && (
-              <RequiemMarkFx key={`rmf-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} />
-            )}
-            {enemyStrikeFx?.kind === 'oracle' && (
-              <KrakenOracleFx key={`kof-${enemyStrikeFx.key}`} color={enemyStrikeFx.color} />
+            {/* The chase skins' set pieces over the enemy hull: the storm, the
+                apex kill, the death-mark, the scry. Drawn by BattleFx. */}
+            {enemyStrikeFx && (
+              <ChaseStrikeMount key={`esf-${enemyStrikeFx.key}`} kind={enemyStrikeFx.kind} color={enemyStrikeFx.color} shots={enemyStrikeFx.shots} interval={enemyStrikeFx.interval} />
             )}
             {/* Thermal Shock confluence — the ice+fire shatter detonation */}
             <AnimatePresence>
@@ -9213,12 +9203,10 @@ export default function RaidCombat({
               {playerImpact && (
                 <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
               )}
-              {/* Bespoke chase-skin ability FX over the player hull (Catfish's Galaxy surge) */}
-              {playerStrikeFx?.kind === 'galaxy' && (
-                <GalaxySurgeFx key={`gsf-${playerStrikeFx.key}`} color={playerStrikeFx.color} />
-              )}
-              {playerStrikeFx?.kind === 'ward' && (
-                <FossilWardFx key={`fwf-${playerStrikeFx.key}`} color={playerStrikeFx.color} />
+              {/* The chase skins' set pieces over your hull: the cosmic surge,
+                  the ancient ward. Drawn by BattleFx. */}
+              {playerStrikeFx && (
+                <ChaseStrikeMount key={`psf-${playerStrikeFx.key}`} kind={playerStrikeFx.kind} color={playerStrikeFx.color} />
               )}
               {/* Lethal-save burst — Quartermaster's Anchor catches a killing blow */}
               {anchorSaveFx > 0 && <AnchorSaveBurst key={`asf-${anchorSaveFx}`} />}
@@ -12278,6 +12266,24 @@ function BarrageSplat({ text, dx, crit, color: colorProp }: { text: string; dx: 
 // Enemy status aura — a brief themed glow + drifting motes over the hull when
 // a burn or freeze status ticks. Burn = embers rising; freeze = cold rime
 // settling. Localized to the enemy ship, fades on its own.
+// A chase skin's set piece. The picture is drawn by BattleFx; this is the
+// mount that tells it which hull and which piece. Tempest's length follows
+// the barrage it is timed to, so the caller's shots and cadence go with it.
+const STRIKE_KIND = {
+  tempest: 'enemy:tempest', leviathan: 'enemy:leviathan', requiem: 'enemy:requiem', oracle: 'enemy:oracle',
+  galaxy: 'player:galaxy', ward: 'player:fossil',
+} as const
+function ChaseStrikeMount({ kind, color, shots, interval }: { kind: keyof typeof STRIKE_KIND; color: string; shots?: number; interval?: number }) {
+  const ref = useBattleFx(STRIKE_KIND[kind], color, kind === 'tempest' ? { shots, interval, dur: ((shots ?? 5) * (interval ?? 200) + 900) / 1000 } : undefined)
+  return <div ref={ref} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+}
+
+// The raid-item drum's activation rings, off the pill's portrait.
+function CastPillRings({ color }: { color: string }) {
+  const ref = useBattleFx('pill:cast', color)
+  return <div ref={ref} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+}
+
 // A status landing on the enemy. The picture is drawn by BattleFx; this is
 // the mount that tells it which hull and which effect. Keyed per event by the
 // caller, so every landing is a fresh emitter.
@@ -12631,7 +12637,8 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ name, color, image, chas
   // One 2.6s pass. Fractions, not seconds, so every piece below shares one
   // clock: arrival, then a long hold on the crew, then a slow departure.
   const DUR = SUMMON_TOTAL_MS / 1000
-  const HOLD: number[] = [0, 0.08, 0.84, 0.94]   // transform-settle timing (opacity is driven by the wrapper below)
+  // The light show, as one emitter into the summon's own canvas (below).
+  const summonFxRef = useBattleFx('summon:arrive', color, { chase: !!chase, skinId: skinId ?? null, dur: DUR }, 'summon')
   return (
     <motion.div
       aria-hidden
@@ -12660,90 +12667,13 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ name, color, image, chas
       {/* Near-opaque dark + color-wash backdrop so the summon takes over. */}
       <div style={{ position: 'absolute', inset: 0, opacity: 0.92, background: `radial-gradient(ellipse 75% 65% at 50% 46%, ${color}30 0%, rgba(1,3,8,0.96) 60%)` }} />
 
-      {/* Rotating light rays fanning out behind the crew (conic gradient). */}
-      <motion.div
-        initial={{ scale: 0.4, rotate: -30 }}
-        animate={{ scale: [0.4, 1.1, 1.18, 1.24], rotate: [-30, 20, 46, 64] }}
-        transition={{ duration: DUR, times: HOLD, ease: 'easeOut' }}
-        style={{
-          position: 'absolute', top: '43%', width: 460, height: 460, borderRadius: '50%', opacity: 0.36,
-          background: `repeating-conic-gradient(from 0deg, ${color}00 0deg, ${color}3a 9deg, ${color}00 20deg)`,
-          willChange: 'transform', pointerEvents: 'none',
-        }}
-      />
-
-      {/* Summoning rune ring — two counter-rotating rings that snap in. */}
-      {[{ d: 300, dir: 1, dash: '14 12', w: 2 }, { d: 240, dir: -1, dash: '4 16', w: 3 }].map((r, i) => (
-        <motion.div key={`ring-${i}`}
-          initial={{ scale: 0.3, rotate: 0 }}
-          animate={{ scale: [0.3, 1, 1, 1.08], rotate: r.dir * 108 }}
-          transition={{ duration: DUR, times: HOLD, ease: 'easeOut' }}
-          style={{
-            position: 'absolute', top: '43%', width: r.d, height: r.d, marginTop: -r.d / 2, borderRadius: '50%', opacity: 0.6,
-            border: `${r.w}px dashed ${color}`, boxShadow: `0 0 24px ${color}55`, willChange: 'transform', pointerEvents: 'none',
-          }}
-        />
-      ))}
-
-      {/* White impact flash on the crew's arrival. */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.4 }}
-        animate={{ opacity: [0, 0.85, 0], scale: [0.4, 1.6, 2] }}
-        transition={{ duration: 0.45, delay: 0.1, ease: 'easeOut' }}
-        style={{ position: 'absolute', top: '43%', width: 260, height: 260, marginTop: -130, borderRadius: '50%', background: `radial-gradient(circle, #ffffffcc 0%, ${color}55 40%, transparent 70%)`, pointerEvents: 'none' }}
-      />
-
-      {/* Chase arrival pop — a big gold-white flare so a top-tier skin lands
-          with extra weight. The skin's signature motion (below, over the art)
-          carries the identity. */}
-      {chase && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.3 }}
-          animate={{ opacity: [0, 0.9, 0], scale: [0.3, 2, 2.6] }}
-          transition={{ duration: 0.7, delay: 0.14, ease: 'easeOut' }}
-          style={{ position: 'absolute', top: '43%', width: 320, height: 320, marginTop: -160, borderRadius: '50%', background: `radial-gradient(circle, #fffbe8ee 0%, ${color}77 34%, transparent 68%)`, pointerEvents: 'none' }}
-        />
-      )}
-
-      {/* THE GROUND ANSWERS A CHASE. Two flat ripples spreading from the
-          arrival's foot — squashed to ellipses so they lie under the figure
-          rather than around it, which is what plants the summon ON something
-          instead of floating it in a void. Transient, so they may drive their
-          own opacity like the arrival flashes above. */}
-      {chase && [0.18, 0.46].map((delay, i) => (
-        <motion.div key={`ripple-${i}`}
-          initial={{ opacity: 0, scale: 0.25 }}
-          animate={{ opacity: [0, 0.65, 0], scale: [0.25, 2.1 + i * 0.5, 2.6 + i * 0.5] }}
-          transition={{ duration: 0.9, delay, ease: 'easeOut' }}
-          style={{
-            position: 'absolute', top: '43%', width: 300, height: 90, marginTop: 96,
-            borderRadius: '50%', border: `2px solid ${color}`,
-            boxShadow: `0 0 18px ${color}66`, pointerEvents: 'none',
-          }}
-        />
-      ))}
-
-      {/* AND THE AIR FILLS. Sparks climbing around the figure for the whole
-          hold — a legendary does not just land, it keeps happening. Positions
-          are hashed off the index so the memo's one render is deterministic;
-          transient by nature, so their own opacity curve is allowed. */}
-      {chase && [...Array(14)].map((_, i) => {
-        const fx = ((i * 137) % 100) / 100
-        const drift = ((i * 61) % 100) / 100
-        return (
-          <motion.span key={`spark-${i}`}
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: [0, 1, 0], y: [40, -150 - drift * 120], x: (drift - 0.5) * 60 }}
-            transition={{ duration: 1.2 + drift * 0.6, delay: 0.2 + fx * 1.1, ease: 'easeOut' }}
-            style={{
-              position: 'absolute', top: '46%', left: `calc(50% + ${(fx - 0.5) * 300}px)`,
-              width: 5 + drift * 4, height: 5 + drift * 4, borderRadius: '50%',
-              background: `radial-gradient(circle, #ffffff 0%, ${color} 55%, transparent 80%)`,
-              boxShadow: `0 0 10px ${color}`, pointerEvents: 'none',
-            }}
-          />
-        )
-      })}
+      {/* THE LIGHT SHOW, AS PARTICLES. The rays, the two rings, the arrival
+          flash, the chase flare, the ripples at its feet and the climbing
+          sparks were nineteen tweened divs; they are one emitter into a
+          canvas of the summon's own, behind the art, and a chase skin's
+          signature is drawn there too. See components/BattleFx. */}
+      <BattleFxCanvas bus="summon" overSea={false} paused={false} z={1} />
+      <div ref={summonFxRef} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 
       {/* The crew — JUST the art, no card frame. A colored glow (drop-shadow)
           instead of a border/background so it reads as summoning the character,
@@ -12785,10 +12715,6 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ name, color, image, chas
       >
         {image ? (
           <div style={{ position: 'relative', display: 'inline-block' }}>
-            {/* Chase FX sits BEHIND the character (img is z-lifted above it), so a
-                bright flash backlights the hero instead of washing over it — a
-                white wash on top read as the art vanishing then reappearing. */}
-            {chase && skinId && <ChaseSkinFx skinId={skinId} color={color} variant="summon" />}
             {/* The bloom, behind the art. A radial gradient costs nothing and
                 never touches the image's own pixels. A chase skin gets the
                 wider, brighter one. */}
@@ -12801,12 +12727,11 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ name, color, image, chas
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image} alt={name} decoding="async" loading="eager" style={{
               position: 'relative', zIndex: 1, height: 'min(50vh, 300px)', width: 'auto', maxWidth: '82vw', display: 'block',
-              // One small, cheap shadow for the silhouette's edge. Nothing wide.
-              filter: `drop-shadow(0 0 12px ${color}) drop-shadow(0 8px 18px rgba(0,0,0,0.6))`,
+              // No filter at all now. The glow is the canvas behind the art.
             }} />
           </div>
         ) : (
-          <div style={{ fontSize: '3.4rem', color, filter: `drop-shadow(0 0 22px ${color})`, display: 'flex' }}><IconAnchor size={54} /></div>
+          <div style={{ fontSize: '3.4rem', color, display: 'flex' }}><IconAnchor size={54} /></div>
         )}
       </motion.div>
 
@@ -12848,26 +12773,13 @@ function AbilityCastFx({ label, name, color, image, emoji }: { label: string; na
         position: 'absolute', left: '50%', bottom: '15%', zIndex: 8,
         pointerEvents: 'none', display: 'flex', alignItems: 'center', gap: 9,
         padding: '0.32rem 0.78rem 0.32rem 0.34rem', borderRadius: 999,
-        background: 'rgba(7,11,18,0.74)', border: `1px solid ${color}77`,
+        background: 'rgba(7,11,18,0.9)', border: `1px solid ${color}77`,
         boxShadow: `0 0 22px ${color}55, 0 6px 18px rgba(0,0,0,0.5)`,
-        backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
       }}
     >
-      {/* Portrait + expanding ring */}
+      {/* Portrait; the activation rings and sparks off it are BattleFx's. */}
       <div style={{ position: 'relative', flexShrink: 0, width: 40, height: 40 }}>
-        <motion.div
-          initial={{ opacity: 0.55, scale: 0.5 }}
-          animate={{ opacity: 0, scale: 2.4 }}
-          transition={{ duration: 0.72, ease: 'easeOut' }}
-          style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}` }}
-        />
-        {/* Second ring, trailing — reads as a real "activation" pop, not a static glow. */}
-        <motion.div
-          initial={{ opacity: 0.4, scale: 0.5 }}
-          animate={{ opacity: 0, scale: 3.1 }}
-          transition={{ duration: 0.82, delay: 0.12, ease: 'easeOut' }}
-          style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `1.5px solid ${color}aa` }}
-        />
+        <CastPillRings color={color} />
         <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${color}`, boxShadow: `0 0 14px ${color}aa`, background: '#0a121e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {image
             // eslint-disable-next-line @next/next/no-img-element

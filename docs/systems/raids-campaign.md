@@ -291,3 +291,18 @@ throws a gold double shockwave over the Mega's blast; the Don's Favor lights you
 opening in the colour of what was granted; Powder Hoard fires the charge flare with "+N
 loaded". Executioner and Stormward already had theirs. The chase-skin strike FX were NOT
 borrowed for these: those stay chase-only on purpose.
+
+**The chase skins' set pieces and the summon are on it too (2026-09-18).** Kong: "port all of
+them and juice them up." `components/ChaseStrikeFx.tsx` (six framer-motion set pieces, 48
+elements) is gone; Tempest, Hunter's Bane, the Idol's mark, Kraken Hunter's scry, Galaxy and
+Fossil are `enemy:tempest / enemy:leviathan / enemy:requiem / enemy:oracle / player:galaxy /
+player:fossil` in BattleFx, mounted by `ChaseStrikeMount` in the same hull boxes on the same
+timings (Tempest's length follows the barrage through `live.dur`). Juice that DOM could not
+do: real rain and a massing cloud under the storm, bolts with a white filament that throw
+sparks off the hull, a two-hundred-star spiral galaxy turning behind the hull, a pupil that
+LOOKS during the scry, stone dust at the ward's lock. The summon splash's light show (rays,
+rings, flash, ripples, sparks, and the per-skin signature that was `ChaseSkinFx variant=
+"summon"`) is one emitter, `summon:arrive`, into a SECOND canvas on its own bus (`'summon'`,
+inside the portal, behind the art); the crew `<img>` carries no filter any more. The
+raid-item pill's two rings are `pill:cast`. `bangChase` (the Pixi half on the water) is
+untouched. `ChaseSkinFx` still serves the crew cards and skin previews.
