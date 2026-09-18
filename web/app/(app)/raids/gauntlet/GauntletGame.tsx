@@ -2672,24 +2672,114 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Held: the confirmation shown right after "Pause & step away". The run is saved
   // server-side; the captain can wander off and resume from the hub any time.
   if (phase === 'paused') {
+    // ── THE DIVE, HELD ──────────────────────────────────────────────────
+    // This screen predated the arena and the Screen layer: a bare centred
+    // column on nothing, headed by the ⏸ emoji as its icon, which is against
+    // the house rule twice over (an emoji AS a UI icon, and a glyph that
+    // renders as a different shape on every platform). Every other phase in
+    // this run stands on the water in its own mood and says what is at stake.
+    // This one now does too.
+    //
+    // The mood is 'between': you are at a breather, not in a fight and not
+    // dead, which is exactly where a pause is taken. The maw hangs above the
+    // water, HELD -- its bob and its pulse are stopped, because the one thing
+    // this screen has to say is that nothing is moving until you come back.
+    const held = rollStateRef.current.cleared + skipOffset
+    const heldPot = potRef.current
+    const heldBoons = Object.keys(boonTiers).length
+    const heldCurses = Object.keys(curseTiersRef.current).length
+    const stat = (label: string, value: string, color: string) => (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '0.5rem 0.9rem', borderRadius: 12, background: 'rgba(240,192,64,0.06)', border: `1px solid ${GOLD}2a` }}>
+        <span className="font-cinzel font-800" style={{ fontSize: '1.05rem', color, lineHeight: 1 }}>{value}</span>
+        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#9a948a' }}>{label}</span>
+      </div>
+    )
     return (
       <>
-        <div className="pb-10 sm:pb-6" style={{ position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto', paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '2.4rem', marginTop: 30 }} aria-hidden>⏸</div>
-          <h1 className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: '#f3ead2', lineHeight: 1.12, marginTop: 10, textShadow: '0 0 26px rgba(240,192,64,0.3)' }}>
+        {arena('between')}
+        <Screen id={phase}>
+        {/* A still, cold wash from above: the descent is stopped, not running. */}
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 110% 70% at 50% -8%, ${AC}1c 0%, ${AC}0a 38%, transparent 68%)` }} />
+        <div className="pb-10 sm:pb-6" style={{ position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto', paddingTop: 6, paddingLeft: '0.95rem', paddingRight: '0.95rem', textAlign: 'center' }}>
+          {/* The maw, holding still. No bob, no pulsing ring: everything that
+              moves on every other screen is deliberately stopped on this one. */}
+          <motion.div
+            initial={{ opacity: 0, y: -14, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            style={{ position: 'relative', width: 150, height: 150, margin: '18px auto 0' }}
+          >
+            <div style={{ position: 'absolute', inset: -18, borderRadius: '50%', background: `radial-gradient(circle, ${AC}20 0%, transparent 68%)` }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={heroImg} alt="" loading="eager" decoding="async"
+              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `grayscale(0.45) brightness(0.82) drop-shadow(0 10px 26px rgba(0,0,0,0.7)) drop-shadow(0 0 18px ${AC}2e)` }} />
+            {/* THE PAUSE MARK, drawn. Two bars in a ring, struck in the run's
+                accent, sitting over the stilled maw. */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.18, type: 'spring', stiffness: 260, damping: 18 }}
+              style={{
+                position: 'absolute', left: '50%', top: '50%', width: 62, height: 62, marginLeft: -31, marginTop: -31,
+                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'radial-gradient(circle, rgba(8,13,22,0.94) 0%, rgba(6,11,19,0.86) 70%)',
+                border: `1.5px solid ${AC}88`, boxShadow: `0 0 26px ${AC}44, inset 0 0 18px ${AC}1a`,
+              }}
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill={AC} aria-hidden>
+                <rect x="6" y="4.5" width="4.4" height="15" rx="1.6" />
+                <rect x="13.6" y="4.5" width="4.4" height="15" rx="1.6" />
+              </svg>
+            </motion.div>
+          </motion.div>
+
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.22 }}
+            className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.32em', color: AC, marginTop: 14 }}>
+            The Descent Is Stopped
+          </motion.p>
+          <motion.h1 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.26, type: 'spring', stiffness: 240, damping: 19 }}
+            className="font-cinzel font-800" style={{ fontSize: '1.75rem', color: '#f3ead2', lineHeight: 1.1, marginTop: 6, textShadow: `0 0 26px ${AC}3a` }}>
             Your Dive Is Held
-          </h1>
-          <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b9b2a6', lineHeight: 1.55, marginTop: 12, maxWidth: 340, marginInline: 'auto' }}>
-            Saved right where you stopped. Step away as long as you need. Come back to the Gauntlet whenever and pick up the descent{hardcoreRun ? '. Your crew are safe while it is held' : ''}.
+          </motion.h1>
+          <p className="font-karla" style={{ fontSize: '0.8rem', color: '#b9b2a6', lineHeight: 1.55, marginTop: 10, maxWidth: 352, marginInline: 'auto' }}>
+            Saved right where you stopped. Step away as long as you need and pick the descent back up whenever you like{hardcoreRun ? '. Your crew are never at risk while it is held' : ''}.
           </p>
+
+          {/* WHAT IS BEING HELD. A pause screen that shows nothing is just a
+              modal; the run you are leaving on the seabed is the content. */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32, duration: 0.4 }}
+            style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
+            {stat('Depth', `${held}`, GOLD)}
+            {stat(heldBoons === 1 ? 'Boon' : 'Boons', `${heldBoons}`, AC)}
+            {stat(heldCurses === 1 ? 'Curse' : 'Curses', `${heldCurses}`, '#e08a6a')}
+          </motion.div>
+
+          {/* The pot riding on it, stated plainly: it is the reason to come
+              back, and it is still only paid if you cash out. */}
+          {heldPot > 0 && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.4 }}
+              style={{ marginTop: 14, padding: '0.85rem 1rem', borderRadius: 16, background: `radial-gradient(ellipse at 50% 0%, ${GOLD}12 0%, rgba(8,13,22,0.5) 74%)`, border: `1px solid ${GOLD}38`, boxShadow: `inset 0 0 24px ${GOLD}0c, 0 14px 36px rgba(0,0,0,0.4)` }}>
+              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: `${GOLD}cc` }}>Waiting on the Seabed</p>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: GOLD, lineHeight: 1.05, marginTop: 4, textShadow: `0 0 18px ${GOLD}33` }}>
+                {heldPot.toLocaleString()} <span style={{ fontSize: '1rem' }}>⟡</span>
+              </p>
+              <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#8a8480', marginTop: 3 }}>
+                Yours only if you climb back out with it
+              </p>
+            </motion.div>
+          )}
+
           <button onClick={doResume} disabled={resuming} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
-            style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}2a, ${GOLD}10)`, border: `1px solid ${GOLD}70`, cursor: resuming ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}22` }}>
+            style={{ marginTop: 20, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}2a, ${GOLD}10)`, border: `1px solid ${GOLD}70`, cursor: resuming ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}22`, animation: resuming ? 'none' : 'gauntCta 2.6s ease-in-out infinite' }}>
             {resuming ? 'Descending…' : 'Resume Now'}
           </button>
           <div style={{ marginTop: 12 }}>
             <BackLink router={router} label="Leave for now" />
           </div>
+          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7d776e', lineHeight: 1.5, marginTop: 8 }}>
+            Held safely. Resume as many times as you like, no limit.
+          </p>
         </div>
+        </Screen>
       </>
     )
   }
@@ -5485,7 +5575,10 @@ function ChestOpenFx({ tier, color }: { tier: number; color: string }) {
 // How long the chest "reveals" before the haul starts ticking into your purse.
 const REVEAL_DELAY = 900
 // The wind-up beat before the lid bursts — chest rattles + creaks, glow builds.
-const ANTICIPATION_MS = 750
+// 750 was a flinch, not a strain. The lid now fights you for a beat longer,
+// which is the whole difference between a button that fired and a chest that
+// was prised open. Every keyframe on the wind-up reads this.
+const ANTICIPATION_MS = 1050
 
 // The Mark emblems — a swept shark dorsal fin, a whale-tail fluke. Silhouettes so
 // the boss reward reads its own iconography (never emoji).
@@ -5679,22 +5772,50 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
                 Hardcore Gauntlet · survivor bonus paid
               </p>
             )}
-            <div style={{ position: 'relative', width: 200, height: 200, margin: '20px auto 6px' }}>
+            <div style={{ position: 'relative', width: 240, height: 240, margin: '18px auto 6px' }}>
+              {/* THE HAUL LINE. It came up out of the water on a rope, so the
+                  rope is there, running off the top of the frame. A still
+                  chest hanging in a void was the flattest part of this. */}
+              <div aria-hidden style={{ position: 'absolute', left: '50%', top: -40, width: 2, height: 62, marginLeft: -1, background: `linear-gradient(180deg, transparent, rgba(180,150,96,0.42) 40%, rgba(180,150,96,0.6))` }} />
+              {/* The standing aura, and the light that BUILDS under the lid as
+                  it strains -- three rings on their own clocks so the swell
+                  reads as pressure rather than one fade. */}
               <div style={{ position: 'absolute', inset: -10, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}33 0%, transparent 68%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
-              {/* Building glow as the lid strains in the wind-up beat. */}
+              {/* Seam light: a hot line where the lid meets the box, growing
+                  as the wind-up runs. This is the thing that says "something
+                  inside is about to get out". */}
               {opening && (
-                <motion.div aria-hidden initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: [0, 0.95], scale: [0.75, 1.45] }} transition={{ duration: ANTICIPATION_MS / 1000, ease: 'easeIn' }}
-                  style={{ position: 'absolute', inset: -22, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}77 0%, transparent 70%)`, pointerEvents: 'none' }} />
+                <>
+                  <motion.div aria-hidden initial={{ opacity: 0, scaleX: 0.3 }} animate={{ opacity: [0, 0.4, 1], scaleX: [0.3, 0.8, 1.1] }} transition={{ duration: ANTICIPATION_MS / 1000, ease: 'easeIn' }}
+                    style={{ position: 'absolute', left: '18%', right: '18%', top: '46%', height: 6, borderRadius: 4, background: `linear-gradient(90deg, transparent, #fff6e0, ${art.color}, #fff6e0, transparent)`, filter: 'blur(2px)', pointerEvents: 'none' }} />
+                  <motion.div aria-hidden initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: [0, 0.9], scale: [0.7, 1.5] }} transition={{ duration: ANTICIPATION_MS / 1000, ease: 'easeIn' }}
+                    style={{ position: 'absolute', inset: -26, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}77 0%, transparent 70%)`, pointerEvents: 'none' }} />
+                  {/* Dust and grit shaken off the lid as it fights the hasp. */}
+                  {[...Array(10)].map((_, n) => {
+                    const a = (n / 10) * Math.PI * 2
+                    return (
+                      <motion.div key={`grit-${n}`} aria-hidden
+                        initial={{ x: 0, y: 0, opacity: 0 }}
+                        animate={{ x: Math.cos(a) * (46 + (n % 3) * 14), y: Math.sin(a) * 26 + 40, opacity: [0, 0.8, 0] }}
+                        transition={{ duration: 0.7 + (n % 3) * 0.15, delay: 0.18 + (n % 5) * 0.1, ease: 'easeOut' }}
+                        style={{ position: 'absolute', left: '50%', top: '52%', width: 3, height: 3, borderRadius: '50%', background: 'rgba(184,166,128,0.85)', pointerEvents: 'none' }} />
+                    )
+                  })}
+                </>
               )}
+              {/* The chest. At rest it swings a little on its line. Under the
+                  wind-up it JUDDERS -- three hard pulls with recovery between
+                  them, not one continuous rattle, because a lid being forced
+                  gives in stages. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <motion.img src={art.closed} alt="" loading="eager" decoding="async"
                 animate={opening
-                  ? { x: [0, -4, 4, -4, 4, -3, 3, -2, 2, 0], rotate: [0, -2, 2, -2, 2, -1.5, 1.5, 0], scale: [1, 1.05, 1.04, 1.08, 1.12] }
-                  : { y: [0, -6, 0] }}
+                  ? { x: [0, -5, 5, -2, 0, -7, 7, -3, 0, -9, 9, 0], rotate: [0, -2.4, 2.4, -0.8, 0, -3, 3, -1, 0, -3.6, 3.6, 0], scale: [1, 1.04, 1.03, 1.02, 1.05, 1.08, 1.06, 1.05, 1.09, 1.13, 1.1, 1.16] }
+                  : { y: [0, -6, 0], rotate: [-1.2, 1.2, -1.2] }}
                 transition={opening
                   ? { duration: ANTICIPATION_MS / 1000, ease: 'easeInOut' }
-                  : { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `${chestFilter}drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 26px ${art.color}44)` }} />
+                  : { duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', transformOrigin: '50% 12%', filter: `${chestFilter}drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 26px ${art.color}44)` }} />
             </div>
             <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: art.color, lineHeight: 1.1, marginTop: 4, textShadow: `0 0 22px ${art.color}44` }}>
               {chestLabel}
@@ -5719,10 +5840,66 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
                 {offerTakenLine(r.offerTaken)}
               </p>
             )}
-            <button onClick={open} disabled={opening} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
-              style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: opening ? 'default' : 'pointer', opacity: opening ? 0.55 : 1, boxShadow: `0 0 20px ${GOLD}1f` }}>
-              {opening ? 'Prising It Open…' : 'Crack It Open'}
-            </button>
+            {/* ── THE BUTTON ──────────────────────────────────────────────
+                It was the same flat gold rectangle every other screen uses,
+                for the one tap in the whole run that is pure payoff. It is a
+                struck object now:
+                  - It BREATHES at rest (a slow gold swell) so the eye goes to
+                    it without a label telling you to press it.
+                  - A sheen sweeps across it on a loop -- metal catching light.
+                  - It ANSWERS the press: whileTap drops it 2px and shrinks it,
+                    which is the responsiveness that was missing entirely (the
+                    old one had `tap` and nothing else).
+                  - Under the wind-up it does not grey out and sit there. It
+                    stays lit, the label becomes the strain, and a progress
+                    sweep fills it for exactly the anticipation beat, so the
+                    press has visible consequence while you wait.
+                `tap` is kept for the shared press-not-tap handling. */}
+            <motion.button onClick={open} disabled={opening}
+              className="font-cinzel font-800 uppercase tracking-[0.1em] tap"
+              whileHover={opening ? undefined : { scale: 1.02, y: -1 }}
+              whileTap={opening ? undefined : { scale: 0.975, y: 2 }}
+              animate={opening ? { scale: 1, y: 0 } : { scale: [1, 1.018, 1], y: 0 }}
+              transition={opening ? { duration: 0.18 } : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                position: 'relative', overflow: 'hidden', marginTop: 26, width: '100%',
+                padding: '1.2rem 1rem', borderRadius: 16, fontSize: '1.12rem', color: '#fff6dd',
+                background: `linear-gradient(180deg, ${GOLD}3a 0%, ${GOLD}1c 46%, ${GOLD}12 100%)`,
+                border: `1.5px solid ${GOLD}${opening ? 'aa' : '88'}`,
+                cursor: opening ? 'default' : 'pointer',
+                boxShadow: opening
+                  ? `0 0 46px ${GOLD}4a, inset 0 0 30px ${GOLD}26, inset 0 1px 0 ${GOLD}55`
+                  : `0 6px 22px rgba(0,0,0,0.45), 0 0 26px ${GOLD}2e, inset 0 1px 0 ${GOLD}55`,
+                textShadow: `0 0 16px ${GOLD}88, 0 1px 3px rgba(0,0,0,0.7)`,
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+              {/* The strain sweep: fills the button over the wind-up, so the
+                  press is visibly DOING something for the beat it takes. */}
+              {opening && (
+                <motion.span aria-hidden initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
+                  transition={{ duration: ANTICIPATION_MS / 1000, ease: 'linear' }}
+                  style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '100%', transformOrigin: '0% 50%', background: `linear-gradient(90deg, ${GOLD}2e, ${GOLD}1a)`, pointerEvents: 'none' }} />
+              )}
+              {/* Metal catching the light, on a loop while it waits. */}
+              {!opening && (
+                <motion.span aria-hidden
+                  initial={{ x: '-140%' }} animate={{ x: '140%' }}
+                  transition={{ duration: 2.6, repeat: Infinity, repeatDelay: 1.1, ease: 'easeInOut' }}
+                  style={{ position: 'absolute', top: 0, bottom: 0, width: '45%', background: `linear-gradient(90deg, transparent, ${GOLD}2e 40%, #fff6dd33 50%, ${GOLD}2e 60%, transparent)`, pointerEvents: 'none' }} />
+              )}
+              <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                {/* A hasp, drawn. The thing you are actually breaking. */}
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <rect x="3.5" y="10.5" width="17" height="10" rx="2.2" />
+                  <path d={opening ? 'M8 10.5V7.4a4 4 0 0 1 7.2-2.4' : 'M8 10.5V7.4a4 4 0 0 1 8 0v3.1'} />
+                  <circle cx="12" cy="15.4" r="1.5" fill="currentColor" stroke="none" />
+                </svg>
+                {opening ? 'Prising It Open…' : 'Crack It Open'}
+              </span>
+            </motion.button>
+            <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7d776e', marginTop: 9 }}>
+              {opening ? 'The hasp is giving…' : 'Everything you carried up is in there'}
+            </p>
           </>
         ) : (
           <>

@@ -69,8 +69,13 @@ import { CHEST_ODDS_CAP } from './gauntletOffer'
 // Net at depth 18: ~71% less Nav XP, ~42% fewer ⟡. At depth 40 (a real push):
 // ~57% less XP, ~23% fewer ⟡. Deliberately hardest exactly where the risk is
 // lowest. Retune GROWTH to move the height; move FLATTEN to move the shape.
+// 2026-09-18, same day: "I think we nerfed a bit too hard." GROWTH 34->42 and
+// XP 14->19, shape untouched. The shape was the fix and it stays; this is the
+// height dial the block above says to turn. Depth 18 now pays ~72% of the old
+// doubloons (was 58%) and depth 40 ~96% (was 77%) -- the deep end is close to
+// where it was, and the shallow end is still well under, which is the point.
 export const POT_BASE = 0
-export const POT_GROWTH = 34
+export const POT_GROWTH = 42
 export const BOSS_POT_MULT = 3
 const POT_FLATTEN_DEPTH = 30
 
@@ -335,7 +340,7 @@ export function roundContribution(depth: number, isBoss: boolean, variant: Gaunt
 // gamble is real. The chest tier no longer multiplies this at all — that
 // stacked up to 1.5× on the sharper of the two problems.
 const XP_BASE = 0
-const XP_GROWTH = 14
+const XP_GROWTH = 19
 const XP_FLATTEN_DEPTH = 26
 const XP_BOSS_FACTOR = 1.35
 // Don's Gauntlet reward multipliers (variant 'don'). Fathoms is the headline

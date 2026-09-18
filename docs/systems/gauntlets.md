@@ -148,7 +148,12 @@ now RISES 340 → 680 → 986 across depths 10, 20 and 29 instead of going const
 | 30 | 51,030 | 35,139 | 22,326 | 8,600 |
 | 40 | 76,950 | 59,619 | 31,539 | 13,514 |
 
-Hardest exactly where the risk is lowest: depth 18 loses 71% of its XP, depth 40 loses 57%.
+**Then, same day: "I think we nerfed a bit too hard."** `POT_GROWTH` 34→42 and `XP_GROWTH`
+14→19, shape untouched. The shape was the fix and it stays; this is the height dial. Final
+landing: depth 18 pays 15,813 ⟡ (72% of the old) and 4,386 Nav XP (39%); depth 40 pays
+73,647 ⟡ (96%) and 18,340 XP (58%). The deep end is close to where it was, the shallow end
+is still well under, which was the whole point.
+
 Retune GROWTH to move the height, FLATTEN to move the shape. `maxPotForDepth` (the server
 ceiling) and `estimatePotForDepth` (the intro preview) derive from `roundContribution`, so
 they followed automatically; a run already in flight just clamps down, which is safe.
