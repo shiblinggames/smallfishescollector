@@ -79,10 +79,12 @@ const PANEL: React.CSSProperties = {
   maxHeight: '84vh', display: 'flex', flexDirection: 'column',
 }
 
-export default function SeaNodeSheet({ node, cleared, onClose, onCleared }: {
+export default function SeaNodeSheet({ node, cleared, onClose, onCleared, onRepelled }: {
   node: RaidNode
   cleared: boolean
   onClose: () => void
+  /** A gate held against you: close, and sail the captain home. See SeaMap. */
+  onRepelled?: () => void
   /**
    * THIS NODE IS DONE, SAID THE INSTANT IT IS DONE.
    *
@@ -278,6 +280,7 @@ export default function SeaNodeSheet({ node, cleared, onClose, onCleared }: {
                   <DpsCheckNode nodeId={node.id} dpsCheck={node.dpsCheck}
                     doubloons={state.doubloons}
                     onActed={() => onCleared?.(node.id)}
+                    onRepelled={() => { onClose(); onRepelled?.() }}
                     onResolved={done} />
                 </div>
               )}

@@ -326,8 +326,15 @@ export interface RaidDpsCheck {
   threshold: number
   /** Doubloons to skip the check outright (the safe option). */
   payCost: number
-  /** Doubloons owed if you take the shot and fall short of the threshold. */
-  failCost: number
+  /**
+   * DEAD. A miss used to cost this many doubloons AND clear the node, so you
+   * could fail your way through for money. A miss now holds the gate and puts
+   * you back at the Gunwharf like any other sinking, costing only the sail
+   * back. Kept on the type so old data does not break; nothing reads it.
+   *
+   * @deprecated
+   */
+  failCost?: number
 }
 
 // ── Choice-gated payoff ──────────────────────────────────────────────────────

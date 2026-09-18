@@ -694,9 +694,11 @@ export async function resolveDpsCheck(
     return { outcome: 'paid', newDoubloons }
   }
 
-  // action === 'shot' — must hold the full fail cost to even attempt it (a miss
-  // owes that much), so a broke captain can't risk coin they don't have.
-  if (doubloons < dc.failCost) return { error: `Need ${dc.failCost.toLocaleString()} doubloons to risk the shot` }
+  // action === 'shot' — ANYONE MAY FIRE. This used to demand the full repair
+  // bill up front, which meant the only captains allowed to attempt the free
+  // route were the ones who least needed it: if you could not cover a miss,
+  // your sole option was to hand over the toll. A miss costs no coin now, so
+  // there is nothing to hold in reserve and nothing to gate the attempt on.
   // No aiming — always a straight (non-critical) HIT. The hit RANGE comes from
   // the player's stats (ship + crew power), so the breakdown can show it; the
   // roll within it is the luck. Bounds mirror rollDpsShot's 'hit' branch.
@@ -716,8 +718,24 @@ export async function resolveDpsCheck(
     const { newDoubloons } = await settle(0, 'passed')
     return { outcome: 'passed', damage, threshold: dc.threshold, newDoubloons, breakdown }
   }
-  const { newDoubloons, delta } = await settle(dc.failCost, 'failed')
-  return { outcome: 'failed', damage, threshold: dc.threshold, doubloonsDelta: delta, newDoubloons, breakdown }
+  /**
+   * ── A MISS DOES NOT CLEAR THE GATE, AND DOES NOT BILL YOU ──────────────
+   *
+   * It used to do both: the node was marked cleared and a repair charge came
+   * off your purse, so falling short still got you through, for money. That
+   * made the harbour gate the one obstacle in the game you could buy your way
+   * past by failing at it, and it contradicted the rule the sea already runs
+   * on. When a fight sinks you, `SeaMap`'s sunkRef puts you back at the
+   * Gunwharf and takes nothing: "a captain who has just lost should be asked
+   * to try again, not sent away to earn the right to."
+   *
+   * So the gate behaves like every other loss on this water. The shot missed,
+   * the gate holds, you wake up at the wharf and sail back. Nothing is
+   * deducted and nothing is consumed, which also means the shot no longer has
+   * to be affordable -- see the client, which used to refuse to let a captain
+   * fire unless they were holding the full repair bill.
+   */
+  return { outcome: 'failed', damage, threshold: dc.threshold, doubloonsDelta: 0, newDoubloons: doubloons, breakdown }
 }
 
 // Choice-gated payoff (the freed-scout debt). A story-type node whose reward

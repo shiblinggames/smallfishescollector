@@ -788,6 +788,15 @@ export const RAID_ISLES: RaidIsle[] = [
   // couple of hulls, and it is the reason a toll can be charged at all.
   { id: 'thread-bilge', bay: 'thread', name: 'Bilge Bank', along: 8105, across: 651, r: 180 },
   { id: 'thread-toll', bay: 'thread', name: 'Toll Rock', along: 8300, across: 60, r: 140 },
+  // ── THE HARBOUR GATE, WHICH WAS A ROCK CALLED THE FORK ──────────────
+  // The Coffers' gate is a node you fire a cannon at, and the chart drew it
+  // as an ordinary beat marker on an ordinary rock: nothing about it said
+  // barrier, so there was no gate to blow open. Two posts flank the road
+  // just past the fork now, set square across the lane, and you pass
+  // between them. Placed off the road's local tangent at that point rather
+  // than by eye -- see the probe note in docs/systems/ocean-hub.md.
+  { id: 'cof-gatepost-n', bay: 'the_coffers', name: 'The Harbor Gate', along: 3105, across: -2067, r: 170 },
+  { id: 'cof-gatepost-s', bay: 'the_coffers', name: 'The Harbor Gate', along: 2321, across: -3227, r: 170 },
   { id: 'thread-purse', bay: 'thread', name: 'Cutpurse Rock', along: 6458, across: 1943, r: 175 },
   { id: 'thread-wax', bay: 'thread', name: 'Wax Shoal', along: 4238, across: 2194, r: 160 },
   { id: 'thread-watch', bay: 'thread', name: 'Between Watches', along: 1750, across: 2500, r: 170 },

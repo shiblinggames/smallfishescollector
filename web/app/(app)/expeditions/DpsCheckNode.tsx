@@ -28,13 +28,21 @@ function oddsTier(pct: number): { label: string; color: string } {
 }
 
 export default function DpsCheckNode({
-  nodeId, dpsCheck, doubloons, onResolved, onActed,
+  nodeId, dpsCheck, doubloons, onResolved, onActed, onRepelled,
 }: {
   nodeId: string
   dpsCheck: RaidDpsCheck
   doubloons: number
   /** Called once the player has seen the outcome and taps to continue. */
   onResolved: () => void
+  /**
+   * THE SHOT MISSED AND THE GATE HELD. Nothing was cleared and nothing was
+   * charged, so the sheet must NOT treat this as progress -- it has to close
+   * and put the captain back where a sinking would. Optional, because the
+   * expeditions page has no water to sail you across; there, missing simply
+   * ends the attempt.
+   */
+  onRepelled?: () => void
   /** Fires the moment the node is cleared server-side (shot resolved or paid),
    *  so the sheet refreshes the map on ANY close — not just the Sail On tap. */
   onActed?: () => void
@@ -71,7 +79,10 @@ export default function DpsCheckNode({
     spinning = false
     if ('error' in res) { setPending(false); setErr(res.error); setPhase('choose'); return }
     if (res.outcome === 'paid') { onResolved(); return } // shouldn't happen for a shot
-    onActed?.()   // node is cleared server-side now — any close should refresh the map
+    // ONLY A PASS CLEARS IT. A miss leaves the gate shut and the node
+    // untouched server-side, so telling the chart it is done would light up a
+    // stop the captain has not actually made.
+    if (res.outcome === 'passed') onActed?.()
 
     // Decelerating ratchet onto the real damage, then hold + reveal the verdict.
     const finalDmg = res.damage
@@ -116,7 +127,7 @@ export default function DpsCheckNode({
         </p>
         <div style={{ margin: '0.85rem auto 0', maxWidth: 300, background: `${RED}14`, border: `1px solid ${RED}44`, borderRadius: 12, padding: '0.85rem 0.9rem' }}>
           <p className="font-karla" style={{ fontSize: '0.86rem', lineHeight: 1.5, color: 'rgba(240,237,232,0.9)' }}>
-            You get <span style={{ color: '#f4ecd8', fontWeight: 700 }}>one shot</span>. If you fall short of {dpsCheck.threshold} damage, the repairs cost you <span style={{ color: RED, fontWeight: 700 }}>{dpsCheck.failCost.toLocaleString()} ⟡</span>. There's no second try.
+            You get <span style={{ color: '#f4ecd8', fontWeight: 700 }}>one shot</span>. Fall short of {dpsCheck.threshold} damage and the gate holds: you come to at the <span style={{ color: RED, fontWeight: 700 }}>Gunwharf</span> and sail all the way back. It costs you nothing but the trip.
           </p>
           {preview && tier && (
             <p className="font-karla font-700" style={{ fontSize: '0.8rem', marginTop: '0.6rem', color: '#a89e86' }}>
@@ -189,18 +200,11 @@ export default function DpsCheckNode({
         <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'rgba(240,237,232,0.82)', marginTop: '0.7rem' }}>
           {passed
             ? 'The gate blows open and you sail straight through, free.'
-            : 'The gate holds. You limp through under fire, and the repairs come out of your purse.'}
+            : 'The gate holds. You come to at the Gunwharf with your ship intact and the whole way back to sail again.'}
         </p>
-        {!passed && 'doubloonsDelta' in result && result.doubloonsDelta !== 0 && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.8rem' }}>
-            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.72rem', color: RED, background: `${RED}1f`, border: `1px solid ${RED}44`, borderRadius: 999, padding: '0.32rem 0.72rem' }}>
-              {result.doubloonsDelta.toLocaleString()} ⟡
-            </span>
-          </div>
-        )}
         <button
           data-any-key
-          onClick={onResolved}
+          onClick={passed ? onResolved : (onRepelled ?? onResolved)}
           className="font-cinzel font-700 uppercase tracking-[0.06em]"
           style={{ width: '100%', marginTop: '1.1rem', padding: '0.8rem', borderRadius: 12, fontSize: '0.98rem', background: `${GOLD}26`, border: `1px solid ${GOLD}66`, color: GOLD, cursor: 'pointer' }}
         >
@@ -211,9 +215,14 @@ export default function DpsCheckNode({
   }
 
   // ── Choose view ──────────────────────────────────────────────────────────
-  const cantAfford = doubloons < dpsCheck.payCost          // can't cover the 10k pay
-  const canShoot = doubloons >= dpsCheck.failCost          // must hold the 20k a miss would cost
-  const hardLocked = cantAfford && !canShoot               // no coin for either way through
+  const cantAfford = doubloons < dpsCheck.payCost          // can't cover the toll
+  // ANYONE MAY FIRE. A miss costs no coin, only the sail back, so there is
+  // nothing to hold in reserve. This was gated on `doubloons >= failCost`,
+  // which shut the free route to exactly the captains who needed it.
+  // NOTHING HARD-LOCKS THIS GATE ANY MORE. A captain with an empty purse
+  // can still fire, and a miss only costs the sail back, so there is always
+  // a way through and never a screen telling you to go and earn one.
+  const hardLocked = false
   const tier = preview ? oddsTier(preview.passChance) : null
   return (
     <div style={{ marginTop: '1rem' }}>
@@ -239,20 +248,18 @@ export default function DpsCheckNode({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
         {/* Fire one shot — the damage check. Locked below the 20k a miss would cost. */}
         <button
-          onClick={() => canShoot && setPhase('confirm')}
-          disabled={pending || !canShoot}
-          style={{ textAlign: 'left', padding: '0.9rem', borderRadius: 14, background: canShoot ? `${RED}18` : 'rgba(255,255,255,0.03)', border: `1px solid ${canShoot ? `${RED}55` : 'rgba(255,255,255,0.1)'}`, cursor: pending || !canShoot ? 'not-allowed' : 'pointer', opacity: canShoot ? 1 : 0.7 }}
+          onClick={() => setPhase('confirm')}
+          disabled={pending}
+          style={{ textAlign: 'left', padding: '0.9rem', borderRadius: 14, background: `${RED}18`, border: `1px solid ${RED}55`, cursor: pending ? 'not-allowed' : 'pointer', opacity: 1 }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Fire One Shot</span>
-            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.62rem', color: canShoot ? '#ffb3b3' : '#f0a8a8', background: canShoot ? `${RED}22` : 'rgba(248,113,113,0.12)', border: `1px solid ${canShoot ? `${RED}55` : 'rgba(248,113,113,0.35)'}`, borderRadius: 999, padding: '0.28rem 0.6rem' }}>
-              {canShoot ? 'free if you pass' : `needs ${dpsCheck.failCost.toLocaleString()} ⟡`}
+            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.62rem', color: '#ffb3b3', background: `${RED}22`, border: `1px solid ${RED}55`, borderRadius: 999, padding: '0.28rem 0.6rem' }}>
+              free if you pass
             </span>
           </div>
           <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.45 }}>
-            {canShoot
-              ? <>One cannon shot at the gate. Deal <span style={{ color: GOLD }}>{dpsCheck.threshold}+</span> damage and you're through for free. Deal less and repairs cost you <span style={{ color: RED }}>{dpsCheck.failCost.toLocaleString()} ⟡</span>.</>
-              : <>You need <span style={{ color: RED }}>{dpsCheck.failCost.toLocaleString()} ⟡</span> in hand to risk the shot, since a miss costs that much in repairs.</>}
+            One cannon shot at the gate. Deal <span style={{ color: GOLD }}>{dpsCheck.threshold}+</span> damage and you&rsquo;re through for free. Deal less and the gate holds, and you sail back from the Gunwharf to try again.
           </p>
         </button>
 

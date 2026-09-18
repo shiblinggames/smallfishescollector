@@ -11771,6 +11771,10 @@ hullRef={hullRefFor(t.key)} />
         return n ? (
           <SeaNodeSheet node={n} cleared={(liveStatus[n.id] ?? 'locked') === 'cleared'}
             onCleared={markCleared}
+            /* THE GATE HELD. Exactly what a sinking does, and for the same
+               reason: the penalty is the water between you and here, not a
+               bill. See sunkRef. */
+            onRepelled={() => { const b = berthOf(GUNWHARF); warpTo(b.x, b.y) }}
             onClose={() => setSheetNode(null)} />
         ) : null
       })()}

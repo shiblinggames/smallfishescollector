@@ -369,3 +369,35 @@ chase skin's accent, a boon's own colour).
 swaps inline with the aim bar) and the first decode of the hit-state art.** Measure with the
 DELAY-vs-WORST method before changing anything else; that is what settled the blend-mode
 isolation bug, which cost 104ms a crit and was nowhere near where it looked.
+
+## The harbour gate stops being a toll you can fail into (2026-09-18)
+
+Kong: "A missed shot actually sends you all the way back to the anchorage. Similar to how you
+get sent back if you sink in a battle... This matches it better as an open world game."
+
+**What it did.** A miss charged `failCost` (20,000) AND marked the node cleared, so falling
+short still got you through, for money. That made it the one obstacle in the game you could
+buy your way past by failing at it. Worse, both the client and the server refused to let you
+fire at all unless you were holding the full repair bill, so the free route was open only to
+the captains who least needed it.
+
+**What it does.** A miss clears nothing and costs nothing. The gate holds, and `onRepelled`
+warps the captain to the Gunwharf berth, which is exactly what `SeaMap`'s `sunkRef` already
+does when a fight sinks you, and for the reason written there: "a captain who has just lost
+should be asked to try again, not sent away to earn the right to." The whole penalty is the
+water between you and the gate. Anyone may fire; `canShoot` and `hardLocked` are gone, and
+`RaidDpsCheck.failCost` is deprecated and unread.
+
+**`onActed` now fires only on a pass.** It means "cleared server-side", and a miss is not,
+so firing it regardless was lighting up a stop the captain had not made.
+
+**And it looks like a gate.** It was a beat marker on a rock called The Fork, with nothing
+about it reading as a barrier. Two posts (`cof-gatepost-n` / `-s`) now stand square across
+the lane just past the fork, 1,400px apart centre to centre with 1,060px of clear water
+between their faces, so the road threads between them. Placed off the road's LOCAL TANGENT
+at that point, not by eye: same probe method as the Sounding fog bank, and the trader check
+still clears every shore.
+
+**Still owed:** the boom-chain. The node after this one says "the lens flares green and the
+boom-chain drops into the water", so a chain across the gap is already canon and is the piece
+that would make the posts unmistakably a gate rather than two rocks.
