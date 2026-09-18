@@ -104,6 +104,14 @@ type Span = {
   bars: Sprite[]
   /** 0 shut, 1 fully dropped. Eased toward the cleared flag. */
   open: number
+  /**
+   * HAS IT EVER BEEN TOLD. The cleared map is not known at construction (the
+   * renderer is handed it per frame), so without this a span that is ALREADY
+   * open starts shut and eases: a captain who broke this gate a week ago
+   * would watch it break again, from the top, on every single page load.
+   * The first frame snaps to the truth; every frame after it eases.
+   */
+  primed: boolean
 }
 
 export type Chains = {
@@ -141,7 +149,7 @@ export function makeChains(PIXI: typeof import('pixi.js')): Chains {
       sp.anchor.set(0.5)
       floats.push(sp); water.addChild(sp)
     }
-    spans.push({ spec, links, floats, bars, open: 0 })
+    spans.push({ spec, links, floats, bars, open: 0, primed: false })
   }
 
   let clock = 0
@@ -161,8 +169,11 @@ export function makeChains(PIXI: typeof import('pixi.js')): Chains {
 
         // Ease toward its state rather than snapping: the line that describes
         // this says the chain DROPS, and a thing that drops takes a moment.
+        // EXCEPT the first time, which is not a change of state, it is finding
+        // out what the state has been all along. See `primed`.
         const want = cleared(span.spec.node) ? 1 : 0
-        span.open += Math.max(-dt * 0.7, Math.min(dt * 0.7, want - span.open))
+        if (!span.primed) { span.primed = true; span.open = want }
+        else span.open += Math.max(-dt * 0.7, Math.min(dt * 0.7, want - span.open))
 
         const vis = near && span.open < 0.995
         const dx = b.x - a.x, dy = b.y - a.y
