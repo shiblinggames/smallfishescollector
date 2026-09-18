@@ -306,3 +306,33 @@ rings, flash, ripples, sparks, and the per-skin signature that was `ChaseSkinFx 
 inside the portal, behind the art); the crew `<img>` carries no filter any more. The
 raid-item pill's two rings are `pill:cast`. `bangChase` (the Pixi half on the water) is
 untouched. `ChaseSkinFx` still serves the crew cards and skin previews.
+
+**Where an effect sits on a hull, and how big it is (2026-09-18).** Kong, on the persistent
+burn and freeze: "the flames and the ice crystals look bad. They look really small and are
+always sitting way under the actual enemy ship." Two causes, both about measuring the
+PICTURE instead of the SHIP.
+
+`--ink` (2026) already told an effect how much of the painting's WIDTH is hull, because fire
+sized to the frame burned in open water either side of her. Nothing ever did the same for
+the other axis, and the other axis was worse: the flames seated at 0.9 of the box. For the
+enemy the anchor IS her waterline and the art hangs entirely above it, so 0.9 is roughly
+right; for YOUR ship the anchor is the sprite's CENTRE, so the box runs half a painting below
+the hull and 0.9 is open water. `place()` now publishes `--wl`, the fraction of the box the
+waterline sits at (0.97 enemy, 0.80 player, 0.88 default off the sea), and BattleFx seats
+`wy` on it.
+
+The size was a separate bug: the ice facets were clamped by `Math.min(1, hh / 44)`, so a
+crystal could never exceed about 26px however large the ship was drawn, and the flame tongues
+scaled off `hh` (the picture's half-height, transparent sky included). Both now scale from
+`hw`, which is the box narrowed by `--ink` and therefore a real measurement of her. The fire
+also went from three tongues to five, gained a dark base and a lean that sways, and the ice
+from eight facets to ten spread across her middle. The RISING PARTICLES were left alone;
+Kong said those already looked good.
+
+**The Mist Veil stopped being one wedge (2026-09-18).** "The mist veil effect looks cheap."
+It was a single grey gradient band translating left and right on a 1.6s loop, which is what
+it looked like. It is three banks now at three widths, three speeds and two directions over a
+standing haze that breathes, so the bar is never covered the same way twice. The constraint
+it still honours: no blur, no filter and no blend mode anywhere on the aim bar, because that
+surface sits beside the needle and every layer on it must stay on the compositor. Soft-edged
+gradients do a blur's work. The density the mechanic reads is unchanged.

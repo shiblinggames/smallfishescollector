@@ -86,7 +86,7 @@ export type FxLive = {
   chase?: boolean; skinId?: string | null
 }
 
-type Rect = { x: number; y: number; w: number; h: number; ink: number }
+type Rect = { x: number; y: number; w: number; h: number; ink: number; wl: number }
 
 type Emitter = {
   id: number
@@ -280,10 +280,18 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
         if (r.width > 0 && r.height > 0) {
           if (e.inkAt < 0 || clock - e.inkAt > 0.5) {
             e.inkAt = clock
-            const v = parseFloat(getComputedStyle(e.el).getPropertyValue('--ink'))
-            e.rect = { x: r.left - c.left, y: r.top - c.top, w: r.width, h: r.height, ink: Number.isFinite(v) && v > 0 ? v : (e.rect?.ink ?? 1) }
+            const cs = getComputedStyle(e.el)
+            const v = parseFloat(cs.getPropertyValue('--ink'))
+            const wv = parseFloat(cs.getPropertyValue('--wl'))
+            e.rect = {
+              x: r.left - c.left, y: r.top - c.top, w: r.width, h: r.height,
+              ink: Number.isFinite(v) && v > 0 ? v : (e.rect?.ink ?? 1),
+              // 0.88, not 0.9: off the sea this is a sprite in a box with its
+              // own transparent skirt, and the old 0.9 put the fire in it.
+              wl: Number.isFinite(wv) && wv > 0 ? wv : (e.rect?.wl ?? 0.88),
+            }
           } else {
-            e.rect = { x: r.left - c.left, y: r.top - c.top, w: r.width, h: r.height, ink: e.rect?.ink ?? 1 }
+            e.rect = { x: r.left - c.left, y: r.top - c.top, w: r.width, h: r.height, ink: e.rect?.ink ?? 1, wl: e.rect?.wl ?? 0.88 }
           }
         }
       }
@@ -392,7 +400,14 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
       e.age += dt
       const hw = rc.w * rc.ink / 2, hh = rc.h / 2
       const cx = rc.x + rc.w / 2, cy = rc.y + rc.h * 0.52
-      const wy = rc.y + rc.h * 0.9
+      // HER WATERLINE, not the bottom of her picture. See `--wl`.
+      const wy = rc.y + rc.h * rc.wl
+      // ── HOW BIG IS THE SHIP ─────────────────────────────────────────
+      // `hw` is a REAL measurement of her (the box narrowed by `--ink`);
+      // `hh` is the picture's half-height and includes whatever transparent
+      // sky the art was exported with. Anything that has to look the right
+      // size ON her is scaled from `hw`.
+      const sh = hw * 0.62
       const [col, mote] = COLOR[e.kind] ?? [e.color ?? '#ffffff', e.color ?? '#ffffff']
       const C = e.color ?? col, M = e.color ?? mote
       const t = e.dur === Infinity ? 0 : Math.min(1, e.age / e.dur)
@@ -1149,17 +1164,26 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
         case 'ship:condition': {
           const { burning, frozen } = e.live
           if (burning) {
-            // Heat pool at the waterline, breathing.
-            ellipse(D(FIRE_POOL), cx, wy - hh * 0.1, hw * 1.15, hh * 0.5, 0.36 + 0.1 * Math.sin(clock * 3.3))
-            // Three tongues on their own rhythms: prime-ish periods, so the
+            // Heat pool ON her waterline, breathing.
+            ellipse(D(FIRE_POOL), cx, wy - sh * 0.3, hw * 1.15, sh * 0.62, 0.38 + 0.1 * Math.sin(clock * 3.3))
+            // FIVE tongues on their own rhythms: prime-ish periods, so the
             // licks never re-sync. That irregularity is what separates fire
-            // from a pulsing light.
-            const T = [[-0.45, 0.83, 0.62], [0.05, 1.07, 0.84], [0.4, 0.71, 0.56]] as const
+            // from a pulsing light. They were three, they were scaled off the
+            // PICTURE's height rather than the ship's, and they sat at the
+            // bottom of the picture -- so on the sea they were three small
+            // gold smudges under the hull. Sized from `sh` now (a real
+            // measurement of her) and seated on `wy`, they burn ON her.
+            const T = [[-0.62, 0.79, 0.74], [-0.3, 1.07, 1.02], [0.02, 0.67, 0.86], [0.34, 0.93, 1.1], [0.64, 0.83, 0.7]] as const
             for (const [ox, per, ht] of T) {
-              const f = 0.8 + 0.2 * Math.sin(clock * (Math.PI * 2 / per) + ox * 9)
-              const th = hh * ht * f, tw = hw * 0.3
-              blob(D('#ffb864'), cx + ox * hw, wy - th * 0.55, tw * 2, th * 2, 0.55)
-              blob(D('#fff0c8'), cx + ox * hw, wy - th * 0.35, tw * 1.1, th * 1.1, 0.45)
+              const f = 0.78 + 0.22 * Math.sin(clock * (Math.PI * 2 / per) + ox * 9)
+              // Lean: a flame is never a vertical column, and a tongue that
+              // sways is the cheapest thing that stops fire reading as a lamp.
+              const lean = Math.sin(clock * (Math.PI * 2 / (per * 1.7)) + ox * 5) * sh * 0.16
+              const th = sh * 1.5 * ht * f, tw = hw * 0.26
+              const bx = cx + ox * hw
+              blob(D('#c8500f'), bx, wy - th * 0.22, tw * 2.5, th * 1.1, 0.3)
+              blob(D('#ffb864'), bx + lean * 0.5, wy - th * 0.55, tw * 2, th * 2, 0.55)
+              blob(D('#fff0c8'), bx + lean, wy - th * 0.78, tw * 1.05, th * 1.15, 0.5)
             }
             e.debtA += 24 * dt
             while (e.debtA >= 1) { e.debtA -= 1; ember(rc, 1.0, true, '#ffd27a', 0.55) }
@@ -1167,16 +1191,23 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
             while (e.debtB >= 1) { e.debtB -= 1; puff(rc, 0.8) }
           }
           if (frozen) {
-            // Rime at the waterline, breathing so slowly it reads as spreading.
-            ellipse(D(RIME), cx, wy - hh * 0.1, hw * 1.2 * (1 + 0.04 * Math.sin(clock * 1.37)), hh * 0.5, 0.42)
+            // Rime ON her waterline, breathing so slowly it reads as spreading.
+            ellipse(D(RIME), cx, wy - sh * 0.3, hw * 1.2 * (1 + 0.04 * Math.sin(clock * 1.37)), sh * 0.62, 0.42)
             // Facets that GROW in once and hold. Nothing on ice slides.
+            //
+            // They were capped: `Math.min(1, hh / 44)` meant a crystal could
+            // never exceed about 26px however big the ship was, so on the sea
+            // eight of them sat under the hull like grit. They scale off `sh`
+            // now, which is her actual size, and they are spread across her
+            // MIDDLE rather than the top of her picture.
             ctx.globalCompositeOperation = 'source-over'
-            for (let i = 0; i < 8; i++) {
-              const sd = e.seed[i], s2 = e.seed[i + 8]
+            for (let i = 0; i < 10; i++) {
+              const sd = e.seed[i % 16], s2 = e.seed[(i + 8) % 16]
               const g = easeOut((e.age - i * 0.06) / 0.62)
               if (g <= 0) continue
-              const fx = cx + (sd * 2 - 1) * hw * 0.85, fy = rc.y + rc.h * (0.18 + s2 * 0.5)
-              const L = (10 + s2 * 16) * Math.min(1, hh / 44) * g, W = L * 0.42
+              const fx = cx + (sd * 2 - 1) * hw * 0.85
+              const fy = wy - sh * (0.15 + s2 * 1.0)
+              const L = sh * (0.42 + s2 * 0.5) * g, W = L * 0.42
               ctx.save(); ctx.translate(fx, fy); ctx.rotate((sd - 0.5) * 1.3)
               ctx.globalAlpha = 0.92
               ctx.beginPath(); ctx.moveTo(0, -L); ctx.lineTo(W, -L * 0.34); ctx.lineTo(W * 0.56, 0); ctx.lineTo(-W * 0.56, 0); ctx.lineTo(-W, -L * 0.34); ctx.closePath()

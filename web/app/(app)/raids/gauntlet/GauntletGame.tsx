@@ -2088,7 +2088,6 @@ export default function GauntletGame(props: GauntletGameProps) {
   }
 
   function applyBoon(offer: BoonOffer) {
-    setBoonTaken(null)
     runEventsRef.current.push({ depth: rollStateRef.current.cleared + skipOffset, kind: 'boon' })
     // Opportunity-cost model: completing a boon PAIR no longer auto-grants the
     // confluence — it just makes it eligible to be OFFERED as a draft card
@@ -2101,6 +2100,12 @@ export default function GauntletGame(props: GauntletGameProps) {
       setPendingBoons(null)
       setPendingConfluence(null)   // forwent the synergy card this draft
       setPendingReprieve(null)     // chose the boon over the relief
+      // AND THE CLAIM ITSELF, inside the veil with everything else. This ran
+      // FIRST, before the fade: clearing it sends every card's `animate` back
+      // to its resting pose, so the two you passed on brightened from 0.26 to
+      // full and the one you took dropped out of its lift -- all of it in
+      // plain view, for the 200ms the fade takes. That was the flicker.
+      setBoonTaken(null)
     })
   }
 
@@ -4725,12 +4730,42 @@ export default function GauntletGame(props: GauntletGameProps) {
             rarest pull (mirrors the Crew Hall legendary reveal). */}
         <AnimatePresence>
           {boonBanner && (
+            /* ── THE WORD NEEDS SOMETHING TO SIT ON ──────────────────────
+               It was bare glowing text laid straight over the cards: gold on
+               a lit, busy, gold-ish screen, carrying its own glow as its only
+               separation. A glow does not separate -- it BLENDS, which is why
+               the one beat meant to stop the room was the hardest thing on it
+               to read. The house rule covers this: a panel on art gets a
+               solid base.
+
+               So the room dims behind it, and the word is struck on an opaque
+               plate with rules either side. The plate is what you read; the
+               glow is decoration on top of it, where decoration belongs. */
             <motion.div key={boonBanner.key} aria-hidden
-              initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.45, ease: [0.16, 1.25, 0.3, 1] }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.28 }}
               style={{ position: 'fixed', inset: 0, zIndex: 60, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-              <p className="font-pirata" style={{ fontSize: '2.4rem', letterSpacing: '0.05em', lineHeight: 1, color: '#f5b94a', textShadow: '0 0 28px #f5b94a, 0 0 64px rgba(245,185,74,0.6)' }}>Legendary!</p>
-              <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.95rem', letterSpacing: '0.18em', color: '#ecdcbd', marginTop: 8, textShadow: '0 2px 12px rgba(0,0,0,0.85)' }}>{boonBanner.name}</p>
+              {/* The room goes down so the plate can come up. */}
+              <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 90% 52% at 50% 50%, rgba(3,6,12,0.86) 0%, rgba(3,6,12,0.66) 46%, rgba(3,6,12,0.3) 78%, transparent 100%)' }} />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.72, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94 }}
+                transition={{ duration: 0.45, ease: [0.16, 1.25, 0.3, 1] }}
+                style={{
+                  position: 'relative', padding: '0.9rem 2rem 1rem', borderRadius: 16, maxWidth: '86vw',
+                  background: 'linear-gradient(180deg, rgba(26,20,8,0.97) 0%, rgba(10,8,4,0.98) 100%)',
+                  border: '1px solid rgba(245,185,74,0.55)',
+                  boxShadow: '0 0 60px rgba(245,185,74,0.28), 0 18px 60px rgba(0,0,0,0.75), inset 0 1px 0 rgba(245,185,74,0.3)',
+                }}>
+                {/* A rule either side of the word, which is what makes a
+                    title a title rather than a line of text. */}
+                <div aria-hidden style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginBottom: 6 }}>
+                  <span style={{ width: 34, height: 1, background: 'linear-gradient(90deg, transparent, rgba(245,185,74,0.8))' }} />
+                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.34em', color: 'rgba(245,185,74,0.9)' }}>Plunder</span>
+                  <span style={{ width: 34, height: 1, background: 'linear-gradient(270deg, transparent, rgba(245,185,74,0.8))' }} />
+                </div>
+                <p className="font-pirata" style={{ fontSize: '2.4rem', letterSpacing: '0.05em', lineHeight: 1, color: '#ffdd94', textShadow: '0 0 22px rgba(245,185,74,0.85), 0 2px 4px rgba(0,0,0,0.9)' }}>Legendary!</p>
+                <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.95rem', letterSpacing: '0.18em', color: '#f3e6cb', marginTop: 7, textShadow: '0 2px 10px rgba(0,0,0,0.95)' }}>{boonBanner.name}</p>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -4794,9 +4829,21 @@ export default function GauntletGame(props: GauntletGameProps) {
                   // Press-and-hold weight: the card sinks under the finger with a
                   // tick on contact, then claimBoon's commit buzz fires on release
                   // — the pick should feel heavier than a menu tap.
-                  whileTap={flipped && !boonTaken ? { scale: 0.93 } : undefined}
-                  whileHover={flipped && !boonTaken ? { scale: 1.015 } : undefined}
-                  transition={POP}
+                  // ── STABLE GESTURES ────────────────────────────────────
+                  // These were `flipped && !boonTaken ? {...} : undefined`, so
+                  // the instant a pick landed both props went from an object to
+                  // UNDEFINED on every card at once. Framer-motion treats a
+                  // removed gesture variant as "animate back to base", and that
+                  // fires on the same render as the new `animate` target -- two
+                  // animations racing for the same properties on the cards you
+                  // did NOT pick. Hence the flicker.
+                  //
+                  // The objects are constant now and never change identity.
+                  // Whether a card can be touched is settled by pointer-events
+                  // in the style below and by the guard in onClick, which is
+                  // where that question belongs anyway.
+                  whileTap={{ scale: 0.93 }}
+                  whileHover={{ scale: 1.015 }}
                   onPointerDown={flipped ? () => hapticTap() : undefined}
                   // Armed to banish: the whole card becomes the "bin this one"
                   // target (and opens a confirm) instead of drafting it.
@@ -4813,8 +4860,17 @@ export default function GauntletGame(props: GauntletGameProps) {
                         ? { scale: 1.045, opacity: 1, filter: 'brightness(1.22)' }
                         : { scale: 0.965, opacity: 0.26, filter: 'brightness(0.7)' })
                     : { scale: 1, opacity: 1, filter: 'brightness(1)' }}
+                  // The claim settles on a plain curve. It inherited POP, a
+                  // spring, so the cards you passed on OVERSHOT on their way
+                  // down and bounced -- which on a dimming card reads as a
+                  // flicker even once the racing gestures above are fixed.
+                  transition={boonTaken ? { duration: 0.32, ease: 'easeOut' } : POP}
                   className="tap"
                   style={{
+                    // Untouchable once a pick is in flight, and before the card
+                    // has flipped. This is what the gesture props used to do by
+                    // disappearing, done where it cannot race an animation.
+                    pointerEvents: flipped && !boonTaken ? 'auto' : 'none',
                     position: 'relative', textAlign: 'left', overflow: 'hidden', width: '100%',
                     // Full height in the grid, so three cards of different
                     // description lengths still square off as a row.

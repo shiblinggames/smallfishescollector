@@ -2791,6 +2791,20 @@ export default function RaidCombat({
       // CSS. Unset on a /raids/* route, where `place` never runs and 1 keeps
       // the behaviour those effects were tuned against.
       el.style.setProperty('--ink', a.box > 0 ? (a.w / a.box).toFixed(3) : '1')
+      // ── AND WHERE HER WATERLINE IS, TOP TO BOTTOM ───────────────────
+      //
+      // `--ink` fixed the fire burning out in open water either side of her.
+      // It never fixed the other axis, and the other axis was worse: the
+      // effects put the flames at 0.9 of the BOX, and the box is the whole
+      // painting. For the ENEMY the anchor is her waterline and the art hangs
+      // entirely above it, so the box bottom is the water and 0.9 is roughly
+      // right. For YOU the anchor is the sprite's CENTRE, so the box runs half
+      // a painting below your hull and 0.9 is open water.
+      //
+      // Published as the fraction of the box the waterline sits at, so an
+      // effect can burn ON the ship instead of under her. Unset on /raids/*,
+      // where `place` never runs and the default keeps the old behaviour.
+      el.style.setProperty('--wl', seat >= 1 ? '0.97' : '0.80')
     }
 
     /**
@@ -13733,6 +13747,24 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
             50%  { transform: translateX(218%); }
             100% { transform: translateX(-55%); }
           }
+          /* Two more banks on their own clocks. The slow one crosses the
+             other way, so the fog never reads as ONE object going back and
+             forth -- which is exactly what the single band read as. */
+          @keyframes mist-veil-drift-b {
+            0%   { transform: translateX(205%) scaleX(1.35); }
+            50%  { transform: translateX(-70%) scaleX(1.35); }
+            100% { transform: translateX(205%) scaleX(1.35); }
+          }
+          @keyframes mist-veil-drift-c {
+            0%   { transform: translateX(-90%) scaleX(0.62); }
+            50%  { transform: translateX(240%) scaleX(0.62); }
+            100% { transform: translateX(-90%) scaleX(0.62); }
+          }
+          /* And the whole veil breathes, so density is never constant. */
+          @keyframes mist-veil-breathe {
+            0%, 100% { opacity: 0.82; }
+            50%      { opacity: 1; }
+          }
         `}</style>
       )}
       {/* Inkfall blackout — two short, unevenly-spaced dark beats per cycle so
@@ -13857,23 +13889,55 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
             by the fog). pointerEvents:none keeps taps falling through
             to the parent panel. */}
         {hasFog && (
-          <div aria-hidden style={{ position: 'absolute', inset: 1, zIndex: 4, pointerEvents: 'none', overflow: 'hidden', borderRadius: 9 }}>
+          /* ── THE VEIL ────────────────────────────────────────────────────
+             It was ONE grey wedge sliding left and right on a 1.6s loop, and
+             that is what it looked like: a rectangle with soft ends, going
+             back and forth. Fog does not have an edge, does not travel as a
+             single object, and is never the same density twice.
+
+             So it is three banks now, at three widths, three speeds and two
+             directions, over a standing haze that breathes. They overlap and
+             part on their own clocks, so the bar is never covered the same
+             way twice and nothing in it reads as a shape.
+
+             THE RULE IT STILL KEEPS: no blur, no filter, no blend mode on
+             this surface. Every layer here animates TRANSFORM and nothing
+             else, so all of it lives on the compositor -- the aim bar is the
+             most RAF-sensitive instrument in the game and the needle beside
+             it must never wait on this. Soft-edged gradients do the work a
+             blur would.
+
+             The DENSITY (the mechanic) is untouched: the banks sum to the
+             same `fogOpacity` the single wedge carried. */
+          <div aria-hidden style={{
+            position: 'absolute', inset: 1, zIndex: 4, pointerEvents: 'none', overflow: 'hidden', borderRadius: 9,
+            animation: 'mist-veil-breathe 4.3s ease-in-out infinite',
+          }}>
+            {/* The standing haze the banks ride through: thin, always there,
+                heavier at the top where fog sits. */}
             <div style={{
-              position: 'absolute', top: -2, bottom: -2,
-              width: '38%',
-              background: `linear-gradient(90deg,
-                rgba(220,232,242,0) 0%,
-                rgba(220,232,242,${0.18 * fogOpacity}) 15%,
-                rgba(220,232,242,${0.92 * fogOpacity}) 50%,
-                rgba(220,232,242,${0.18 * fogOpacity}) 85%,
-                rgba(220,232,242,0) 100%
-              )`,
-              // No blur on a layer that TRANSLATES every frame — it would
-              // re-rasterize per frame ON THE AIM BAR, the most RAF-sensitive
-              // surface in the game. The gradient's own soft edges carry the
-              // fog read; the drift + density (the mechanic) are untouched.
-              animation: 'mist-veil-drift 1.6s ease-in-out infinite',
+              position: 'absolute', inset: 0,
+              background: `linear-gradient(180deg,
+                rgba(226,236,245,${0.2 * fogOpacity}) 0%,
+                rgba(214,228,240,${0.1 * fogOpacity}) 55%,
+                rgba(206,222,238,${0.16 * fogOpacity}) 100%)`,
             }} />
+            {([
+              { w: '38%', a: 0.62, anim: 'mist-veil-drift 1.6s ease-in-out infinite' },
+              { w: '30%', a: 0.34, anim: 'mist-veil-drift-b 2.9s ease-in-out infinite' },
+              { w: '22%', a: 0.26, anim: 'mist-veil-drift-c 4.1s ease-in-out infinite' },
+            ] as const).map((bank, i) => (
+              <div key={i} style={{
+                position: 'absolute', top: -2, bottom: -2, width: bank.w,
+                background: `linear-gradient(90deg,
+                  rgba(220,232,242,0) 0%,
+                  rgba(220,232,242,${0.18 * fogOpacity * bank.a}) 15%,
+                  rgba(232,242,250,${1.15 * fogOpacity * bank.a}) 50%,
+                  rgba(220,232,242,${0.18 * fogOpacity * bank.a}) 85%,
+                  rgba(220,232,242,0) 100%)`,
+                animation: bank.anim,
+              }} />
+            ))}
           </div>
         )}
         {/* Inkfall blackout — a full-bar dark veil at zIndex 4 (over the zone +
