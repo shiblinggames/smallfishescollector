@@ -787,14 +787,17 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     pete:    { gold: 180, xp: 180 },
   },
   preFightDialogue: [
-    { speaker: 'narrator', text: "A weathered galleon slides out of the fog. Barnacle-crusted hull, patched sails, cannons already trained on your ship." },
-    { speaker: 'boss', text: "So another pup thinks they can take old Barnacle Pete. Many've tried, captain. *None've sailed home.*" },
-    { speaker: 'boss', text: "I've been raiding these waters since before your grandfather wet his trousers in his first storm. Your crew, your ship, your name, they'll all join the others at the bottom." },
-    { speaker: 'crew', ...CREW_SPEAKER.doby, text: "I have swum this coast longer than you have drawn breath, Pete, and I never once heard your name. There is a lesson in that, if you live to learn it." },
-    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "Save your breath, Pete. We're not here to talk. We're here for the plunder." },
-    { speaker: 'boss', text: "Plunder?! Hah! The only thing you'll take from me is a swift trip to Davy Jones." },
-    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "He does love the sound of himself. Put a ball through his mainmast, captain, and let us all get on with our day." },
-    { speaker: 'boss', text: "Ready your guns. *This is where your story ends.*", pause: 600, fx: 'shake' },
+    { speaker: 'narrator', text: "A weathered ship slides out of the fog. Barnacle-crusted hull, patched sails, and cannons aimed at your ship already." },
+    { speaker: 'boss', text: "So another pup thinks they can take old Barnie. Many have tried... none've sailed home." },
+    { speaker: 'boss', text: "I've been raiding these waters longer than you've been alive. Don't matter. You'll be back where you started before long." },
+    // THE CREW TURN TO YOU HERE. Up to this point both of them argued with
+    // Pete across the water; from now on they steady the captain instead,
+    // which is the register the whole campaign is being moved into.
+    { speaker: 'crew', ...CREW_SPEAKER.doby, text: "Don't let Pete scare you. He's all bark... or whatever sound it is that he makes." },
+    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "He's cocky only because he's never had a real challenge before." },
+    { speaker: 'boss', text: "What're ya waiting for, lil pup? Got cold fins now that you've seen me in the flesh?" },
+    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "You love hearing yourself talk don't ya, Pete. Let's take him down cap'n. Can't stand to hear him talk anymore." },
+    { speaker: 'boss', text: "Ready your guns. This is where your story ends.", pause: 600, fx: 'shake' },
   ],
 }
 

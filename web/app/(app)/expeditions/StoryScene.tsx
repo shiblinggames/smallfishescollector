@@ -32,9 +32,10 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GOLD, TypedBody, Letterbox, LivingFrame, FlashOut, SceneProgress, InsertShot, SceneBackdrop, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
 import type { SceneLine, SceneInsert } from '@/lib/raidMap'
+import { GHOST_FILTER } from '@/lib/gauntlet'
 
 /** Who is on stage, and where. Two slots: a conversation, not a crowd. */
-interface StageChar { speaker: string; portrait: string }
+interface StageChar { speaker: string; portrait: string; ghost?: boolean }
 
 /**
  * Walk the scene up to `idx` and work out who is standing where. Deterministic, so
@@ -53,7 +54,7 @@ function stageAt(lines: SceneLine[], idx: number): { left: StageChar | null; rig
   for (let i = 0; i <= idx && i < lines.length; i++) {
     const l = lines[i]
     if (!l.speaker || !l.portrait) continue
-    const c: StageChar = { speaker: l.speaker, portrait: l.portrait }
+    const c: StageChar = { speaker: l.speaker, portrait: l.portrait, ghost: l.ghost }
     if (left?.speaker === l.speaker) { lastSpokeLeft = i; continue }
     if (right?.speaker === l.speaker) { lastSpokeRight = i; continue }
     if (!left) { left = c; lastSpokeLeft = i }
@@ -222,12 +223,20 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
           style={{ width: '100%', height: '100%' }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* A REMEMBERED SPEAKER IS DRAINED, and half there. Same wash the
+              gauntlet's ghosts wear, so the two read as the same idea, plus a
+              little transparency -- a memory does not block the light behind
+              it. The shadow goes: a thing that is not in the room casts none. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={c.portrait} alt="" decoding="async"
             style={{
               width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom',
-              filter: lit
-                ? `drop-shadow(0 0 30px ${ACCENT}33) drop-shadow(0 12px 30px rgba(0,0,0,0.78))`
-                : 'drop-shadow(0 10px 24px rgba(0,0,0,0.7))',
+              opacity: c.ghost ? 0.62 : 1,
+              filter: c.ghost
+                ? GHOST_FILTER
+                : lit
+                  ? `drop-shadow(0 0 30px ${ACCENT}33) drop-shadow(0 12px 30px rgba(0,0,0,0.78))`
+                  : 'drop-shadow(0 10px 24px rgba(0,0,0,0.7))',
             }} />
         </motion.div>
       </motion.div>

@@ -376,6 +376,16 @@ export interface SceneLine {
    *  steps aside). For the marquee reveals. The F in the margin, a sealed
    *  letter. The narrator text still rides the plate below it. */
   insert?: SceneInsert
+  /**
+   * A MEMORY, NOT A PERSON. The speaker is not really there: they are being
+   * remembered, or read off a page, or heard again. The bust is drained to
+   * the same spectral wash the gauntlet's ghosts wear and it does not take a
+   * stage slot from anyone who IS present.
+   *
+   * Pete's line in 'Up the Line' is the first: you have already sunk him, and
+   * he answers anyway.
+   */
+  ghost?: boolean
   /** BACKDROP CHANGE from this line on. A node normally paints one backdrop for
    *  its whole scene (SCENE_BACKDROPS), which is right for a scene that stays
    *  in one place. The two Finn scenes do not: the morning is calm, then it is
@@ -881,8 +891,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'intro',
     type: 'story',
     label: 'A Loose Thread',
-    flavor: "Barnacle Pete plays the broke old fool. Truth is he's robbed the small and the slow for years, and none of it ever sticks to him.",
-    bridge: "Pull any thread and it runs back to one reef, where Pete's little fish do his collecting for him.",
+    flavor: "Barnacle Pete... the famed pirate captain who's been robbing these shores for years. No one's ever stopped him because he only pounces on the weak.",
+    bridge: "Every thread runs back to the same reef. Pete doesn't do his own collecting, so his crew are the ones you meet first.",
     image: '/raidlog.png',
     // ── THEY HAVE ALREADY MET THE CAPTAIN ──────────────────────────────
     //
@@ -895,33 +905,33 @@ export const RAID_MAP: RaidNode[] = [
     // voice the tutorial actually uses: Doby warm and blunt and fond of "kid",
     // Kat brisk and practical. See docs/systems/story-universe.md.
     scene: [
-      { ...GUIDE.doby, text: "Now you've a ship under you and a hand on her, there's something you ought to hear. Every reef on this coast has gone quiet, small fry. And a quiet sea is a sea with something wrong in it." },
-      { text: "Barnacle Pete robs the small and the slow. Has done for years, all up and down this coast." },
-      { text: "Little crews. Fishing folk. The odd unlucky angler. Anyone too small to swing back." },
-      { ...GUIDE.kat, text: "And here's the part that never sat right with me! Pete steals a fortune and stays poor as a barnacle." },
-      { speaker: 'A Passing Sailor', text: "Pete don't spend his haul. He delivers it." },
+      { ...GUIDE.doby, text: "Now that you've got your ship and a crew, let's take care of some business. It's been far too long since someone put a stop on Barnacle Pete." },
+      { text: "He's robbed the weak and poor for years. All up and down this coast." },
+      { text: "Little crew. Fishing folk. The odd unlucky angler. Anyone too small to swing back." },
+      { ...GUIDE.kat, text: "And here's the part that doesn't make sense. Pete steals so much but never has anything to show for it." },
+      { speaker: 'A Passing Sailor', text: "They say Pete never gets to spend anything. He just delivers it." },
       { text: "Said once, by a sailor who never said it again." },
       { text: "The rest sails off to *someone Pete would rather you never asked about*. So nobody asks.", pause: 700 },
-      { ...GUIDE.doby, text: "You've a ship, a free afternoon, and no manners worth mentioning. We've been out here with you since the first worm went on the hook, kid. We're not stopping now." },
-      { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "Broke, me? Couldn't rob a rockpool. Now mind yer business, guppy." },
-      { ...GUIDE.kat, text: "Charming sort. Go shake him till the truth falls out of his coat. But do it clever, not bare-knuckled." },
-      { ...GUIDE.kat, text: "You've one hand aboard and that's a start. Sign on more at the Crew Hall when the board refreshes, and put the coin into the ship. A full deck wins the fights a lone captain loses!" },
-      { ...GUIDE.doby, text: "Then point us at the reef, cap'n. Time Pete's Raiders learned who they picked a fight with." },
+      { ...GUIDE.doby, text: "I think it's time we do something about it. We've scouted him out just further down the waters." },
+      { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "Heard there's some new folk in town to plunder." },
+      { ...GUIDE.kat, text: "Charming, isn't he? Let's go shake him up and see what he's up to." },
+      { ...GUIDE.kat, text: "Remember, if you don't feel like you're ready, go back and make sure you get some stronger crew aboard!" },
+      { ...GUIDE.doby, text: "Can always learn the hard way. Onward!" },
     ],
     detail: {
       description:
-        "Pete's no broke old chancer. He's good at exactly one thing: picking on anyone too small to swing back. Little crews, fishing folk, the odd unlucky angler. Years of it up and down this coast, and somehow he's not a coin richer for it.\n\nThat's the funny part. Pete steals a fortune and keeps about a copper. The rest sails off to someone he'd rather you never asked about, so nobody asks. You've a ship, a crew signing on, and no manners worth mentioning. Go shake the loudest pirate on the water and see what falls out of his coat.",
+        "Barnacle Pete is famous, and nobody has ever stopped him. That isn't because he's hard to find. It's because he only ever picks the fights he knows he wins. Little crew, fishing folk, the odd unlucky angler. Anyone too small to swing back.\n\nWhat doesn't make sense is the money. Pete has robbed this coast for years and has nothing to show for it. He never gets to spend any of it. He just delivers it, and no one will say who to. You've got a ship and a crew now, so go and find out.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment I",
-          sublabel: "\"Pete don't spend his haul. He delivers it.\" Said once, by a sailor who never said it again.",
+          sublabel: "\"They say Pete never gets to spend anything. He just delivers it.\" Said once, by a sailor who never said it again.",
           rarity: 'common',
         },
       ],
       dropsNote: 'Pages like this pile up the more you go poking around. Sooner or later they spell out a name.',
       ctaLabel: 'Pull the Thread →',
-      summary: "Pete robs the small and keeps none of it. Every haul gets handed off somewhere else, and you mean to shake him till the where falls out.",
+      summary: "Pete has robbed this coast for years and kept none of it. Every haul goes somewhere else, and you mean to find out where.",
     },
   },
   {
@@ -972,15 +982,15 @@ export const RAID_MAP: RaidNode[] = [
     id: 'pete',
     type: 'raid',
     label: "The Corsair's Reckoning",
-    flavor: "Barnacle Pete and his fleet have surfaced off the coast. Go collect what's owed, dead or alive.",
-    bridge: "Pete goes down hard and his strongbox spills more than coin. Ledgers. A sealed letter. Turns out the loudest pirate on the water is just somebody else's errand boy.",
+    flavor: "Barnacle Pete and his fleet are out in the open at last. He has never had a real fight in his life. Give him one.",
+    bridge: "Pete goes down, and his strongbox spills more than coin. Ledgers. A sealed letter. The famous Barnacle Pete has been running someone else's errands this whole time.",
     requiresNode: 'skirmish',
     route: '/raids',
     raidId: CORSAIRS_RECKONING.raidId,
     image: CORSAIRS_RECKONING.enemies.pete.portrait,
     detail: {
       description:
-        "Pete's whole campaign in one sitting: four ship battles back to back, each one nastier than the last, no time to bail the bilge between them, and the old corsair waiting at the end. Win the run and his loot crate finally cracks open. It's the only place his contraband ever sees the sun.",
+        "Four ship battles back to back, each one harder than the last, with no time to patch up between them. Pete waits at the end of it.\n\nHe has never been pushed by anyone who could swing back, and he fights like it. Win the run and his crate finally opens. It's the only place his contraband ever turns up.",
       enemies: ['Reef Raider ×2', "Crow's Nest Marksman", 'Saltwater Corsair', 'Barnacle Pete'],
       drops: lootDrops(CORSAIRS_RECKONING.loot),
       clearReward: clearPayout(CORSAIRS_RECKONING),
@@ -1021,34 +1031,37 @@ export const RAID_MAP: RaidNode[] = [
     id: 'syndicate',
     type: 'story',
     label: 'Up the Line',
-    flavor: "Pete's books all point the same way and name the Finndicate. One sealed letter points further still, at somebody else.",
-    bridge: "The letter's heading runs straight through the Bilge Strait. Want C.K.'s cargo? First you slip past the thugs who own that water.",
+    flavor: "Pete's books all name the same outfit: the Finndicate. One sealed letter points past them, at somebody called C.K.",
+    bridge: "The letter's heading runs straight through the Bilge Strait. To follow C.K.'s cargo you have to get past the thugs who own that water first.",
     requiresNode: 'pete',
     image: '/raidlog.png',
     scene: [
-      { text: "Pete's strongbox cracks open at last. No fortune inside. Only paperwork." },
-      { text: "Cut sheets. Courier routes. Years of neat little sums." },
-      { text: "And one word stamped on every page: *the Finndicate*.", pause: 800 },
-      { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "You think I keep the coin? Not a copper of it stays with me. Never has." },
-      { ...GUIDE.kat, text: "So much for the kingpin. All that noise, and he was only ever another hand passing the plate up the line. Squeezed dry and tossed back, same as everyone he ever robbed." },
-      { ...GUIDE.doby, text: "The Finndicate. I've heard that name whispered in deep water, and never once by anything that lived to say it twice." },
-      { text: "And the coin never sits still. Page after page, every haul buys the same thing over and over, and not one line says what." },
-      { text: "Under the ledgers there's a sealed letter. No name on it. Just two letters pressed into the wax: *C.K.*", pause: 700, insert: { kind: 'sealed-letter', wax: 'C.K.' } },
-      { text: "The route's mostly burned away, but the heading held. Out past the Bilge Strait, into the cold." },
-      { text: "Whoever C.K. is, the Finndicate trusts them with cargo by the holdful. And now you know which way it sails." },
-      { text: "A fin has been cutting your wake since the strongbox cracked. It closes the distance now, hungry and unbothered.", pause: 500 },
-      { ...GUIDE.mako, text: "Bilge Strait, after one sealed letter. Most captains wouldn't sail that far on a hunch. Good thing neither of us is most captains." },
-      { ...GUIDE.mako, text: "Mako. I don't waste myself in small water, and you just made yourself worth watching. Muster a crew and my name's on offer." },
-      { text: "No handshake. Sharks don't. He drifts back into the deep, all teeth and appetite, a shape you could call on when the water turns mean." },
+      { text: "You find Pete's strongbox. But there's no treasure inside. Just... paperwork?" },
+      { text: "Cut sheets. Courier routes. Years of accounting." },
+      { text: "One word is stamped on every page: *the Finndicate*.", pause: 800 },
+      // HE IS NOT THERE. You sank him; this is the line replaying in your
+      // head as the ledgers make sense of it. See SceneLine.ghost.
+      { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, ghost: true, text: "You think I keep the coin? Not a doubloon stays with me." },
+      { ...GUIDE.kat, text: "Hmm... Pete was nothing but a pawn. He works for someone else. No wonder he plundered so much and had so little to show for it." },
+      { ...GUIDE.doby, text: "The Finndicate. I've heard the name. They control the outer seas... but they're mostly involved in commercial business. Why would Pete involve himself..." },
+      { text: "The pages say the same thing over and over again. Funds needed for purchases, but no reason behind them." },
+      { text: "Under the ledgers there is a sealed letter. No name, but two initials: *C.K.*", pause: 700, insert: { kind: 'sealed-letter', wax: 'C.K.' } },
+      { text: "The route is mostly burned away, but you make out a path out past the Bilge Strait." },
+      { text: "Whoever C.K. is, the Finndicate trusts them with the cargo. Seems like many small captains like Barnacle Pete are shipping their plunder to him." },
+      { text: "You notice that someone's been trailing you for a while now... you've felt their presence ever since you came into Pete's quarters.", pause: 500 },
+      { ...GUIDE.mako, text: "Hmm... the Bilge Strait huh? Most captains wouldn't sail through there just based on a hunch. Good thing neither of us is the average captain." },
+      { ...GUIDE.mako, text: "Name's Mako. Common enemy means we're partners. I've been trying to lock down Pete for a while now. Seems like we had a common goal. Muster a crew and my name's on the table." },
+      { text: "Mako joins the campaign. He is now also recruitable as a crew for your ship." },
     ],
     detail: {
       description:
-        "Pete's strongbox wasn't empty, just full of the wrong captain's paperwork. Cut sheets, courier routes, years of neat little sums, and one word stamped on every page: the Finndicate. So much for the kingpin. Pete was a cash cow like all the rest, squeezed dry and tossed back same as everyone he ever robbed. And the coin never sits still. Page after page, every haul buys the same thing over and over, and not one line says what.\n\nUnder the ledgers there's a sealed letter. No name on it, just two letters pressed into the wax: C.K. The manifest's heavy and the route's mostly burned away, but the heading held. It runs out past the Bilge Strait, into the cold. Whoever C.K. is, the Finndicate trusts them with cargo by the holdful, and now you know which way it sails.",
+        "The strongbox held no treasure, just paperwork. Cut sheets, courier routes, years of accounting, and one word stamped on every page: the Finndicate. Pete was never the kingpin. He was a pawn working for someone else, which explains how he plundered so much and had so little to show for it.\n\nThe Finndicate control the outer seas, and they are mostly a commercial outfit, which is the part that doesn't fit. The pages ask for funds over and over and never once say what the purchases are for. Under the ledgers there is a sealed letter, no name, two initials pressed into the wax: C.K. The route is mostly burned away, but it runs out past the Bilge Strait. Whoever C.K. is, small captains like Pete have been shipping their plunder to him.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment II",
           sublabel: "\"The Finndicate doesn't lose captains. It loses ledgers.\" Scratched into the underside of the strongbox lid.",
+          // Pete's own hand, and the one page of his that says anything.
           rarity: 'uncommon',
         },
         {
@@ -1060,7 +1073,7 @@ export const RAID_MAP: RaidNode[] = [
       ],
       dropsNote: 'A name to chase (the Finndicate) and a lead to follow (C.K., and the way the cargo runs). Both run straight through the Bilge Strait.',
       ctaLabel: 'Follow the Trail →',
-      summary: "Pete's strongbox held no fortune, just ledgers naming the Finndicate and a sealed letter marked C.K., with a heading out past the Bilge Strait into the cold.",
+      summary: "Pete's strongbox held no treasure, just ledgers naming the Finndicate and a sealed letter marked C.K., with a route running out past the Bilge Strait.",
     },
   },
   {
