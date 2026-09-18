@@ -3279,6 +3279,29 @@ export default function RaidCombat({
         setTimeout(() => setPlayerAura(a => (a && a.key === bulwarkKey ? null : a)), 900)
       }, 380)
     }
+    // Bilge Pump / Bulwark of the Abyss: the fight opens with HP restored. It
+    // was folded into the opening HP in silence, so a boon that heals you every
+    // single fight was never once seen doing it. The number is what ACTUALLY
+    // landed -- the same clamp the opening state uses, with and without the
+    // heal, differenced -- so a full hull is not told it was healed.
+    {
+      const nominal = Math.round((tide.everyFightHeal + tide.everyFightHealPct * playerHpMax) * tide.healMult)
+      if (nominal > 0) {
+        const base = Math.max(0, Math.min(healCap, initialPlayerHp + tide.hpStartDelta + Math.round(tide.hpStartPct * playerHpMax)))
+        const healed = Math.max(0, Math.min(healCap, base + nominal)) - base
+        if (healed > 0) {
+          const hk = Date.now() + 3
+          setTimeout(() => {
+            setPHitsplat({ key: hk, text: `+${healed}`, color: '#4ade80', big: true })
+            setPlayerAura({ key: hk + 1, kind: 'heal' })
+            setTimeout(() => {
+              setPHitsplat(p => (p && p.key === hk ? null : p))
+              setPlayerAura(a => (a && a.key === hk + 1 ? null : a))
+            }, 950)
+          }, shieldOpenMaxRef.current > 0 ? 760 : 420)
+        }
+      }
+    }
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
     setLastPlayerAction(null); setForeseenMoves(null)
@@ -5115,6 +5138,17 @@ export default function RaidCombat({
       // Rattling Shot / Chainshot / the rack landed a debuff — fires an enemy
       // status flare so a control build reads its hex/snare landing.
       debuffApplied?: 'snared' | 'marked'
+      // Press the Powder / Powder Keg / Trade-Wind Sails: extra cannonballs the
+      // reload proc'd this step. Fires the charge flare on your hull -- it was a
+      // log line, and a proc that is only read is a proc that did not happen.
+      reloadProc?: number
+      // Weather Gauge / Hobble: the opening shot landed TWICE. A second impact
+      // and shake a beat after the first, so a doubled number is seen to be
+      // two hits rather than one big one.
+      doubleStruck?: boolean
+      // Blood in the Water: HP reclaimed from the overkill on a kill. The same
+      // heal splat + aura the Tithe gets; it had a log line and nothing else.
+      overkillHeal?: number
       // Cannonade (boon): the crit streak AFTER this landed player shot (0 = the
       // chain just broke). Drives the persistent heat rim + streak badge.
       cannonade?: number
@@ -5563,6 +5597,8 @@ export default function RaidCombat({
       let lifestealHealedOut = 0
       let lifestealLabel = ''   // which source drank the wound (boon vs Blood Cannon)
       let overkillHealedOut = 0 // Don's overkill-heal boon, this shot
+      let reloadProcOut = 0      // Powder Keg / Trade-Wind Sails: extra balls this reload
+      let doubleStruckOut = false // Weather Gauge / Hobble: the opening shot hit twice
       let thermalBurstOut = 0    // Thermal Shock confluence: shatter burst this hit
       let executeKind: 'execute' | 'coup' | undefined   // Executioner / Coup de Grâce sank the hull this step
       let titheHealedOut = 0     // Reaper's Tithe: HP tithed back for the kill this step
@@ -5620,6 +5656,7 @@ export default function RaidCombat({
           const sailChance = getActiveEffects(equippedRaidItems).filter(e => e.type === 'reload_charge_chance').reduce((a, e) => Math.max(a, e.value), 0)
           const sailProc = sailChance > 0 && Math.random() < sailChance ? 1 : 0
           const procGain = tideProc + sailProc
+          reloadProcOut = procGain
           pCharges = Math.min(playerMaxCharges, pCharges + baseGain + procGain)
           if (procGain > 0) {
             // Credit whatever actually fired. When BOTH land on the same reload
@@ -5911,6 +5948,7 @@ export default function RaidCombat({
             && (lockedAimResult ?? 'miss') !== 'miss'
             && tide.doubleStrikeChance > 0 && Math.random() < tide.doubleStrikeChance
           const doubleStrikeMult = doubleStruck ? 2 : 1
+          if (doubleStruck) doubleStruckOut = true
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
                        * tide.dmgMult * tideActionMult * itemActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult * avengeMult * statusOutMult * firstShotMult * afflictedMult * doubleStrikeMult
           if (doubleStruck) stepLines.push(`Weather Gauge! You take the opening and the shot lands twice.`)
@@ -6857,6 +6895,9 @@ export default function RaidCombat({
         executed: executeKind,
         titheHeal: titheHealedOut || undefined,
         debuffApplied,
+        reloadProc: reloadProcOut || undefined,
+        doubleStruck: doubleStruckOut || undefined,
+        overkillHeal: overkillHealedOut || undefined,
         cannonade: cannonadeStep,
         aegisDown: aegisDownOut,
       })
@@ -7252,6 +7293,17 @@ export default function RaidCombat({
           playStepChainRef.current.push(setTimeout(() => { setPHitsplat(null); setPlayerAura(a => (a && a.key === rk + 1 ? null : a)) }, SPLAT_HOLD_MS))
         }, 340))
       }
+      // Powder Keg / Press the Powder / the trade wind: the reload proc'd. The
+      // charge flare on your hull as the extra balls land in the rack, timed
+      // with the charge count updating just below.
+      if (step.reloadProc && step.reloadProc > 0) {
+        const pk = Date.now() + i + 53
+        playStepChainRef.current.push(setTimeout(() => {
+          setPlayerAura({ key: pk, kind: 'charge' })
+          vibrate([0, 22])
+          playStepChainRef.current.push(setTimeout(() => setPlayerAura(a => (a && a.key === pk ? null : a)), 850))
+        }, 180))
+      }
       // Cannonade — sync the heat rim + streak badge on the player hull to the
       // committed streak (0 = the chain just broke, badge clears).
       if (step.cannonade !== undefined) setCannonadeStacks(step.cannonade)
@@ -7542,6 +7594,18 @@ export default function RaidCombat({
                 vibrate([0, 18, 24, 30])
               }, 220)
             }
+            // Weather Gauge / Hobble — the opening shot struck twice. A second
+            // impact and shake a beat after the first, so the doubled number on
+            // the splat is seen to be two hits landing rather than one big one.
+            if (step.doubleStruck && !isDodged) {
+              const dk = Date.now() + i + 57
+              playStepChainRef.current.push(setTimeout(() => {
+                setEnemyImpact({ key: dk, kind: step.big ? 'crit' : 'normal' })
+                setEnemyShakeKind('hit'); setEnemyShakeKey(k => k + 1)
+                vibrate([0, 30])
+                playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 480))
+              }, 190))
+            }
             // Thermal Shock confluence detonation — a beat AFTER the main hit so it
             // reads as a one-two: the shot lands, then the frozen hull shatters in
             // the fire. Ice+fire burst over the hull, its own splat, a hard shake.
@@ -7582,6 +7646,19 @@ export default function RaidCombat({
           if (step.lifestealHeal && step.lifestealHeal > 0) {
             setPHitsplat({ key: Date.now() + i + 5, text: `+${step.lifestealHeal}`, color: '#34d399' })
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
+          }
+          // Blood in the Water — the kill spilled over and you reclaimed HP from
+          // the overkill. Its own splat and a heal pulse, after the Tithe's slot
+          // so the two never land on the same frame when both pay.
+          if (step.overkillHeal && step.overkillHeal > 0) {
+            const ok = Date.now() + i + 61
+            const spilled = step.overkillHeal
+            playStepChainRef.current.push(setTimeout(() => {
+              setPHitsplat({ key: ok, text: `+${spilled}`, color: '#86efac', big: true })
+              setPlayerAura({ key: ok + 1, kind: 'heal', color: '#86efac' })
+              vibrate([0, 26])
+              playStepChainRef.current.push(setTimeout(() => { setPHitsplat(null); setPlayerAura(a => (a && a.key === ok + 1 ? null : a)) }, SPLAT_HOLD_MS))
+            }, step.titheHeal ? 720 : 340))
           }
           // Reaper's Tithe — a gold +HP splat on YOUR hull as the kill pays out,
           // set apart from the green lifesteal drip so the tithe reads as its own.
