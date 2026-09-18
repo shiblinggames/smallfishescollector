@@ -1425,15 +1425,17 @@ export const RAID_MAP: RaidNode[] = [
     // not zero, but no mechanic backs it yet. Wire when ready.
     image: '/krust_soldier.png',
     scene: [
-      { text: "Two cutters running tight together. No flag flying, and neither one built to carry freight." },
-      { text: "They were sounding the water ahead of you. The same water the smuggler's chart points past." },
-      { text: "You catch them clean." },
-      { speaker: 'A Caught Scout', portrait: '/krust_soldier.png', text: "Take what you came for, captain. You'll get no name off this deck." },
-      { text: "They won't even lie about who they sail for. They just go quiet and watch the deck, like sailors who know what telling earns them." },
-      { text: "You don't need them to say it. The cargo in the hold says it. The cut of the ships says it." },
-      { text: "The Finndicate has scouts on this water. And scouts carry headings worth more than coin." },
-      { speaker: 'A Caught Scout', portrait: '/krust_soldier.png', text: "Whatever you do, do it quick. This water doesn't stay empty long." },
-      { text: "The choice is yours. Pick *once, and only once*.", pause: 600 },
+      { text: "You see two cutters sailing tight together. No flags. Neither one is built to carry freight." },
+      { text: "They're sounding the water right ahead of you." },
+      { text: "You catch them." },
+      { speaker: 'A Caught Scout', portrait: '/krust_soldier.png', text: "What do you want from us? You'll get nothing here." },
+      { ...GUIDE.doby, text: "Who do you work for?" },
+      { speaker: 'A Caught Scout', portrait: '/krust_soldier.png', text: "We ain't telling you anything!" },
+      { ...GUIDE.kat, text: "Do you work for the Finndicate?" },
+      // THE SILENCE IS THE ANSWER. Held, so it reads as a scout deciding not
+      // to speak rather than as a line that failed to load.
+      { speaker: 'A Caught Scout', portrait: '/krust_soldier.png', text: "...", pause: 700 },
+      { ...GUIDE.mako, text: "What should we do, captain?" },
     ],
     event: {
       choices: [
@@ -1459,8 +1461,8 @@ export const RAID_MAP: RaidNode[] = [
     },
     detail: {
       description:
-        "Two cutters running tight together, no flag flying and neither one a freight ship. They were sounding the water ahead of you, no question, the same water the smuggler's chart pointed past. You catch them clean.\n\nThe scouts won't tell you who they sail for. They won't even lie about it. They just go quiet and watch the deck like sailors who've run cargo long enough to know what telling earns them. You don't need them to. The cargo in the hold and the cut of the ships makes it plain enough. The Finndicate has scouts on this water, and the scouts have a heading you'd dearly love to read.\n\nThe choice is yours. Pick once, and only once.",
-      dropsNote: 'One-time event. Pick your option and you sail on. The water past this point answers to a captain you haven\'t met yet.',
+        "Two cutters sailing tight together, no flags, and neither one built to carry freight. They were sounding the water right ahead of you, which is the water the chartmaker has been paid to map. You catch them clean.\n\nThey will not say who they work for. Asked straight out whether it's the Finndicate, they say nothing at all, and the nothing is the answer. Scouts sound water for somebody, and somebody out here wants this stretch known before you know it.\n\nThe choice is yours. Pick once, and only once.",
+      dropsNote: 'One-time event. Pick your option and you sail on. The water past this point has already been charted by somebody, and you have not met him yet.',
       ctaLabel: 'Board the Cutters →',
       summary: "Two Finndicate scout cutters, caught clean past the danger line. They never gave a name, but the cargo and the cut of the ships said plenty. You made your call and sailed on.",
     },
@@ -1474,7 +1476,7 @@ export const RAID_MAP: RaidNode[] = [
     type: 'raid',
     label: "The Cartographer's Survey",
     flavor: "Past the Finndicate scouts the water turns to gray wall. The galleon waiting in the fog drew every chart Krust ever followed. Sink him and the Finndicate loses its eyes.",
-    bridge: "His ship goes down with no flag and no name on the hull. The seas he drew belong to nobody now, and the charts in his cabin name half the danger lines you haven't sailed yet.",
+    bridge: "His ship goes down with no flag and no name on the hull. The charts in his cabin were nearly finished, and whatever they were being finished for, he never said.",
     requiresNode: 'cartographer_reveal',
     requiresNavLevel: 28,
     route: '/raids/cartographer',

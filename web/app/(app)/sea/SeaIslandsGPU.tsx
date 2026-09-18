@@ -86,6 +86,7 @@ import { makeSurf, type Surf, type SurfLine } from './seaSurfLine'
 import { makeMaelstroms, type Maelstroms } from './seaMaelstrom'
 import { makeLights, type Lights } from './seaLights'
 import { makeSqualls, type Squalls } from './seaSqualls'
+import { makeBanks, type Banks } from './seaBanks'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
@@ -742,6 +743,11 @@ export default function SeaIslandsGPU({
       // the lot, taking the world's transform the way the gulls do. Rain drawn
       // under an island would be falling behind it.
       const squalls: Squalls = makeSqualls(PIXI)
+      // THE SOUNDING FOG. Same two-height split the squalls and the clouds
+      // use: the lying half goes on the plane with the things that lie on it,
+      // the drifting half goes on the stage in front of the hulls. See
+      // seaBanks for why it screens rather than multiplies.
+      const banks: Banks = makeBanks(PIXI)
       /**
        * FAIR-WEATHER CLOUD, in two places, because it is two facts.
        *
@@ -761,6 +767,7 @@ export default function SeaIslandsGPU({
       world.addChild(clouds.water)
 
       world.addChild(squalls.water)
+      world.addChild(banks.water)
 
       // ── WHAT IS STILL LIT AFTER DARK ──────────────────────────────
       //
@@ -891,6 +898,7 @@ export default function SeaIslandsGPU({
       // Under the captain, over everything else on the stage.
       a.stage.addChild(lights.screen)
       a.stage.addChild(squalls.air)
+      a.stage.addChild(banks.air)
 
       const boats = new PIXI.Container()
       a.stage.addChild(boats)
@@ -981,6 +989,8 @@ export default function SeaIslandsGPU({
           maybe('gulls', gulls.view)
           maybe('lights', lights.screen)
           maybe('squalls', squalls.air)
+          maybe('banks', banks.air)
+          maybe('banks', banks.water)
           maybe('front', front)
           maybe('fog', fog.view)
         }
@@ -1615,6 +1625,7 @@ export default function SeaIslandsGPU({
           a.screen.width / 2 + hullOff.current.x,
           a.screen.height / 2 + hullOff.current.y, t, dt)
         squalls.advance(camX, camY, halfW, halfH, dt)
+        banks.advance(camX, camY, halfW, halfH, dt)
         glow.advance(camX, camY, halfW, halfH, t)
         guideFx.advance(t, dt)
         // The HULL, not the camera: the front is cut round her.
@@ -1936,6 +1947,7 @@ export default function SeaIslandsGPU({
           // the darkness itself and get BRIGHTER as it deepens.
           lights.night(d)
           squalls.night(tint)
+          banks.night(tint)
           wake.night(tint)
           // A harbour lamp is the one light out here that is NOT the sun, so it
           // gives up much less to the hour than the water around it. Most of
@@ -2181,6 +2193,8 @@ export default function SeaIslandsGPU({
           // front of it.
           squalls.air.scale.copyFrom(world.scale)
           squalls.air.position.copyFrom(world.position)
+          banks.air.scale.copyFrom(world.scale)
+          banks.air.position.copyFrom(world.position)
         },
       }
       if (!dead) setReady(n => n + 1)

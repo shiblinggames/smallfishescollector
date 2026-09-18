@@ -1164,14 +1164,19 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   // → boss thesis line → boss "I've already mapped you" beat → engage.
   dialogueAccent: '#9aaecc',
   preFightDialogue: [
-    { speaker: 'narrator', text: "The fog thickens until sea and sky blur into one gray wall. Out of it a slow-built galleon glides up, decks stacked with rolled charts and brass-bound sextants. No flags fly. No name painted on the hull." },
-    { speaker: 'boss', text: "I heard a young captain was reading my routes. I came up the line to see what kind of eyes were behind it." },
-    { speaker: 'crew', ...CREW_SPEAKER.dole, text: "You're the Cartographer. The Finndicate's chartmaker. Krust said his couriers followed your lines." },
-    { speaker: 'boss', text: "Names belong to ships. I draw seas. Krust ran cargo, and you put him at the bottom of one of my channels. Now you're on a page of mine too." },
-    { speaker: 'boss', text: "Every water you've crossed since Driftwood is marked in the cabin behind me. I knew the shape of your wake *before you knew the shape of your hold*.", pause: 700 },
-    { speaker: 'crew', ...CREW_SPEAKER.dole, text: "You drew where I have already been, chartmaker. I read where a captain is going. Only one of those wins a fight, and it is not the man holding the older map." },
-    { speaker: 'boss', text: "Lock your gunports if you've any sense. Or don't, and let this fog have you the way it had the others.", pause: 400 },
-    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "Charts and threats, and so proud of both. Let us show him a sea he did not draw, captain." },
+    { speaker: 'narrator', text: "The fog thickens until sea and sky blur into dull gray. Out of it, a slow-built ship glides up. Decks stacked with rolled charts and brass-bound sextants." },
+    { speaker: 'boss', text: "I heard a young captain was reading my routes." },
+    { speaker: 'crew', ...CREW_SPEAKER.dole, text: "It's him. The Finndicate's chartmaker." },
+    { speaker: 'boss', text: "I prefer to be called The Cartographer. Has a nicer ring to it. You cut off my supply line from Krust. It's unfortunate, he was easy to work with. If a bit naive." },
+    // THE SURVEY IS NEARLY DONE, and he will not say what for. Both halves of
+    // that are the drip; see the bridge, which carries it forward.
+    { speaker: 'boss', text: "No matter. The charts are nearly complete. I won't have time to entertain you any longer." },
+    { speaker: 'crew', ...CREW_SPEAKER.doby, text: "Entertain us? We were just about to show YOU a good time." },
+    // His boast IS his mechanic: the Sounding Fog lands every aim short.
+    { speaker: 'boss', text: "Me? You won't even be able to reach me. That's us chartmakers... always playing the background." },
+    { speaker: 'crew', ...CREW_SPEAKER.dole, text: "Why are you working for the Finndicate at all?" },
+    { speaker: 'boss', text: "Mm... we've got bigger goals than the tiny brains of yours can even comprehend. Now if you'll excuse me.", pause: 500 },
+    { speaker: 'crew', ...CREW_SPEAKER.kat, text: "We're not letting him get away. Let's show him that pen and paper can't do what a cannon can." },
   ],
 }
 

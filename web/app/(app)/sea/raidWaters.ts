@@ -717,6 +717,42 @@ export const ENCOUNTERS: Encounter[] = [
   ...LAID.flatMap(l => l.ships),
 ]
 
+/**
+ * ── WHERE THE CHART IS FOGGY, AND STAYS FOGGY ───────────────────────────────
+ *
+ * Not the fog of war (that is `seaFog`, and it burns off for good once you
+ * have been there). This is weather that lives on one stretch of water,
+ * because a place the story calls a gray wall should be a gray wall when you
+ * sail into it.
+ *
+ * `density` is how thick, 0 to 1. Keep it under about 0.5: this is a veil you
+ * sail through, not a wall you cannot read the sea behind.
+ */
+export type FogBank = {
+  id: string
+  bay: string
+  along: number
+  across: number
+  /** Roughly how far the murk reaches from its centre. */
+  r: number
+  density: number
+}
+
+/**
+ * THE SOUNDING FOG. The Cartographer's water, and the only bank on the chart.
+ * Three nodes and his whole raid describe it and none of it was drawn: you
+ * sailed up to a chartmaker who hides in the murk through clear bright sea.
+ * It straddles the stretch of Chapter II's road from The Sounding, where you
+ * take his scouts, to his own ship.
+ */
+export const FOG_BANKS: FogBank[] = [
+  // Centred between The Sounding (4846,-3289), where you take his scouts,
+  // and the Cartographer himself (5923,-2665). Both sit inside it, and it
+  // bleeds a little onto the road either side so you sail INTO the murk
+  // rather than arriving in it.
+  { id: 'sounding', bay: 'sunken_hand', along: 5385, across: -2977, r: 1600, density: 0.42 },
+]
+
 export const CACHES: Cache[] = [
   { node: 'quartermaster', bay: 'thread', isle: 'thread-purse' },
   ...LAID.flatMap(l => l.caches),
@@ -1009,6 +1045,8 @@ function placeIn(bayId: string, along: number, across: number): { x: number; y: 
 }
 
 export function encounterAt(e: Encounter) { return placeIn(e.bay, e.along, e.across) }
+/** A fog bank sits wherever its bay frame puts it. See seaBanks. */
+export function bankAt(b: FogBank) { return placeIn(b.bay, b.along, b.across) }
 export function isleAt(i: RaidIsle) { return placeIn(i.bay, i.along, i.across) }
 
 /** A cache is wherever its isle is, so the rock and the chest cannot drift. */

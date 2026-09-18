@@ -3097,3 +3097,34 @@ The beat is still `until: 'next'`, on purpose (see "the first voyage, as designe
 hold sheet is open the card hides and the ring on the chip parks, and both return when the sheet
 shuts. The card used to be RAISED above the sheet instead, which put it over the panel it was
 describing with the ring still pulsing under it.
+
+## Fog banks: weather that stays put (2026-09-18)
+
+`app/(app)/sea/seaBanks.ts`, declared as `FOG_BANKS` in `raidWaters.ts`. A bank is a PLACE
+on the chart that is permanently murky. Kong asked for the Cartographer's water to look the
+way three nodes and his whole raid describe it: "the fog thickens until sea and sky blur into
+dull gray", "the galleon waiting in the fog", his crew sailing the Sounding Fog for cover.
+None of it was drawn. You sailed up to a chartmaker who hides in murk through clear water.
+
+**It is not the fog of war.** `seaFog` is the unexplored chart and it burns off for good. A
+bank does not move and does not clear, because a captain who has charted every inch of the
+bay should still sail into the murk here.
+
+**It is not a squall either, and that is why it needed its own file.** `seaSqualls` MULTIPLIES
+the water down: a squall is a cloud, it subtracts light and it rains. Fog does the opposite,
+adding a pale veil between the camera and the sea, so distance disappears into it rather than
+darkening. It blends `screen`. Inverting a squall would not have got there.
+
+**Two heights, the same split the clouds use.** The lying half goes in `world` with
+everything else on the plane, squashed by `GROUND`, so it foreshortens with the water. The
+drifting half goes on the stage in front of the hulls and is pinned to the world transform
+each frame like the rain. One alone reads as a filter; the two together read as being inside
+weather. Eleven deterministic puffs per bank on their own slow clocks, culled as one against
+the camera, and `night()` tints them with the rest of the sea.
+
+**Adding one:** an entry in `FOG_BANKS` (bay + along/across + radius + density). Keep density
+under about 0.5; it is a veil you sail through, not a wall. **Place it by probing, not by
+eye** — a first guess at `along: 5200, across: 0` landed nearly 2,000px from the target. Write
+a throwaway `scripts/_probe.mts` that prints `isleAt` / `encounterAt` / `bankAt` for the bay
+and centre the bank against real numbers. The Sounding bank sits exactly between The Sounding
+isle and the Cartographer's ship, 623px from each.
