@@ -860,6 +860,7 @@ export const SCENE_BACKDROPS: Record<string, string> = {
   krust_reveal: '/scenes/chart-table.jpg',
   quartermaster: '/scenes/quartermaster-cache.jpg',
   last_cache: '/scenes/quartermaster-cache.jpg',
+  gullet_cache: '/scenes/quartermaster-cache.jpg',
   chapter_1_close: '/scenes/deck-night.jpg',
   // Chapter II — the strait and the Gullet
   finndicate_notice: '/scenes/chart-table.jpg',  // Krust's hold, sorted onto the chart table
@@ -1557,7 +1558,7 @@ export const RAID_MAP: RaidNode[] = [
     id: 'gullet_cipher',    type: 'puzzle',
     label: 'The Wax Cipher',
     flavor: "The mouth of the Gullet drowns any ship that reads the channel wrong. The only safe way in is sealed inside a Finndicate manifest, locked behind a row of wax cipher dials.",
-    bridge: "The seals line up, the manifest cracks, and the safe channel through the Gullet's teeth opens off your bow.",
+    bridge: "The seals line up, the manifest cracks, and the safe channel through the Gullet's teeth opens off your bow. So does a deduction at the foot of the page that nobody can account for.",
     requiresNode: 'gullet_heading',
     puzzle: {
       kind: 'cipher',
@@ -1566,7 +1567,7 @@ export const RAID_MAP: RaidNode[] = [
       scrambleTurns: 9,
       rewardNavXp: 600,
       reveal:
-        "The seals line up and the manifest cracks open. There's a thin lane of deep water through a throat of reef that'd gut any ship that guessed.\n\nYou've got the safe way into the Gullet now. Sail it.",
+        "The seals line up and the manifest cracks open. There's a thin lane of deep water through a throat of reef that'd gut any ship that guessed.\n\nThe rest of the page is an ordinary cargo list, right down to the last crate. Then, at the foot of it, a line nobody aboard can account for: a figure taken off the total, written in a different hand, with no reason given beside it. Whoever put it there never expected to be asked.\n\nYou've got the safe way into the Gullet now. Sail it.",
     },
     detail: {
       description:
@@ -1642,6 +1643,22 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The keeper knew your name before you gave it. You take your pick and try not to wonder too hard who told him you were coming.",
     requiresNode: 'gullet_bones',
     choice: { items: ['incendiary_cannonball', 'frozen_cannonball'] },
+    image: QUARTERMASTER_FACE,
+    // THIRD OF FOUR, and the one that should be hardest to explain away. You
+    // cracked a Finndicate cipher to find a channel that drowns anyone who
+    // guesses, and he is already past it with the lamps lit and the stock laid
+    // out -- he did not just arrive, he set up and waited.
+    //
+    // The tell is deliberately the SOFT one: somebody resupplies him past
+    // charted water. First read, a black-marketeer enjoying his own mystique.
+    // Re-read, the Finndicate keeps its own front stocked. He never claims he
+    // skipped the lock, which is the harder line and is being saved.
+    scene: [
+      { text: "The channel drowns anything that guesses wrong. Past it, on a ledge of dead coral, there is a counter. Lamps lit. Stock laid out." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Captain. Good time through the teeth." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Long way past the danger line, this. You'd be amazed what gets delivered out here." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Fire or ice. Take one. Where you're going, you'll be glad of whichever you picked." },
+    ],
     detail: {
       description:
         "Deep in the Gullet, where no honest captain has charts, the Quartermaster is working a shelf of gear far too well-stocked for water this far out. He is already there. He always is. Two pieces of kit on the counter, take one, leave the other for good.\n\nYou grab what you came for and try not to think too hard about how he knew which water you were sailing. Whatever you take is yours to keep, ready to equip in your raid loadout with the rest of your kit.",
@@ -1664,6 +1681,7 @@ export const RAID_MAP: RaidNode[] = [
         { text: "Out here you get back exactly what you gave, and you gave the cold water nothing." },
         { text: "Whatever's waiting down the throat, you'll meet it the way you came. Blind, and on your own keel." },
         { ...GUIDE.dole, text: "No sail, then. Mercy compounds like interest. A pity you didn't invest." },
+        { ...GUIDE.dole, text: "So all we have is a word in a margin. Something down there keeps a count, and we are going to meet it without knowing whose it is." },
       ],
     },
     scene: [
@@ -1672,6 +1690,7 @@ export const RAID_MAP: RaidNode[] = [
       { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "We owe you a deck, captain. We pay what we owe." },
       { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "Every crew in the Gullet sails loaded. They've all got a shot in the pipe before the fight even starts." },
       { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "They'll hit you on the first bell, before a slow captain's even found his range. Go in ready to take one." },
+      { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "And mind the count. Everything that goes down the throat gets weighed, and the Tollmaster takes his cut before anybody else sees a coin of it." },
       { text: "They hand across a strongbox and a folded chart, and slip back into the gray." },
       { text: "Richer, wiser, and not sailing in blind anymore. *The mercy paid.*" },
       { ...GUIDE.dole, text: "A crew that settles its debts in charts. I like them already." },
@@ -1683,7 +1702,7 @@ export const RAID_MAP: RaidNode[] = [
       drops: [
         { emoji: '📜', label: "Captain's Logbook, Fragment VII", sublabel: "\"Out past the danger line, the only sail that comes back for you is one you let go.\"", rarity: 'uncommon' },
       ],
-      dropsNote: 'A payoff for an old mercy: the scouts you spared sail back with coin, charts, and the only pre-fight intel in the game.',
+      dropsNote: 'A payoff for an old mercy: the scouts you spared sail back with coin, charts, the only pre-fight intel in the game, and a name for whatever is doing the counting.',
       ctaLabel: 'Watch the Fog →',
       summary: "You held at the Gullet's mouth. What sailed out of the fog came down to the mercy you showed past the danger line, and the throat of the Gullet is dead ahead.",
     },
