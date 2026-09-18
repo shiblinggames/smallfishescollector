@@ -165,3 +165,30 @@ its stated intent is "roughly a boss round's contribution at this depth", so the
 stale the moment the pot moved and a contract would have paid several rounds' worth. It
 calls `roundContribution` now. See [[feedback-raid-damage-formula-duplicated]] for the same
 trap in combat.
+
+## The crew were paid all along and nobody told you (2026-09-18)
+
+`cashOutGauntlet` has granted crew XP on every cash-out since the mode shipped, and RETURNS
+it as `crewXP`. `GauntletGame.tsx` never referenced the field once, so the one reward in the
+run that belongs to someone other than you happened entirely invisibly. Kong: "the hauled up
+page should show the xp your crew gained as well, like how for expedition voyages after a
+voyage finishes it shows the xp they gained."
+
+The haul screen now carries a "Your crew earned XP" panel in the same shape as
+`RaidLootStage`'s: one row per crew who gained, the delta counting up on the same `counting`
+clock as the doubloon and Nav XP lines, a green `Lv x -> y` on anyone who crossed, and a
+level-up tally chip on the header. The dock preview and the Claim sheet name the crew's cut
+too, so it is part of the decision rather than a surprise afterwards.
+
+**The Claim & Leave confirm was a hand-rolled fixed overlay**, which meant no Escape, no
+scroll lock and a tall phone could tuck its top under the Nav header, and its primary was a
+SOLID gold fill with dark text. That breaks two house rules at once (no solid gold fills; no
+filled primary in a confirm modal). It is a `<PopupShell>` sheet now with a translucent
+tinted primary that answers the press, and it ITEMISES the haul (Nav XP, every crew aboard,
+Fathoms, gems, Blood Gems) instead of one big number above a single grey line.
+
+**A payout change has a client mirror, and it went stale.** The breather's `previewXp` still
+multiplied by `chest.potMult` after the server stopped doing so, quoting up to 1.5x the Nav
+XP a cash-out would actually pay, on the exact number the push-your-luck decision is made
+on. If you touch a payout formula, grep the CLIENT for the mirror: the dock preview, the
+Claim sheet and the haul screen all quote it. Same trap as the contracts copy above.
