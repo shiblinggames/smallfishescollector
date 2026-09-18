@@ -350,8 +350,8 @@ export interface RaidPayoff {
 // 150-word paragraphs. Each line is one tap. Narrator lines omit both
 // speaker and portrait and render as italic log-style text; character
 // lines show a portrait + name plate. `portrait` can also ride a
-// narrator line for a reveal moment (e.g. Krust's face appearing the
-// first time the fence says his name).
+// narrator line for a reveal moment (e.g. Krust's face arriving on the
+// narration that names him, in 'The Name on the Wax').
 export interface SceneLine {
   /** Display name on the plate. Omit for narrator lines. */
   speaker?: string
@@ -855,7 +855,10 @@ export const SCENE_BACKDROPS: Record<string, string> = {
   intro: '/scenes/reef-coast.jpg',
   syndicate: '/scenes/strongbox-deck.jpg',       // strongbox cracked, a fin in the wake
   bilge_milestone: '/scenes/cold-strait.jpg',
-  krust_reveal: '/scenes/smugglers-cove.jpg',    // the Fence's hidden berth
+  // The crew work the name out over the chart, and the water only comes back
+  // on the last line when Krust's lookouts see them (SceneLine.backdrop).
+  krust_reveal: '/scenes/chart-table.jpg',
+  quartermaster: '/scenes/quartermaster-cache.jpg',
   chapter_1_close: '/scenes/deck-night.jpg',
   // Chapter II — the strait and the Gullet
   finndicate_notice: '/scenes/chart-table.jpg',  // the order-paper on the chart table
@@ -885,6 +888,10 @@ export const SCENE_BACKDROPS: Record<string, string> = {
   the_hand_that_sharpens: '/scenes/quiet-water.jpg',  // a morning too still to trust
   the_long_quiet: '/scenes/hull-under.jpg',           // his keel rolling clear of the water
 }
+
+/** The Quartermaster's face. The same one he wears as a boss in Chapter III,
+ *  on purpose: he never looked harmless, and you traded with him anyway. */
+const QUARTERMASTER_FACE = '/raid6_thequartermaster.png'
 
 export const RAID_MAP: RaidNode[] = [
   {
@@ -1116,13 +1123,34 @@ export const RAID_MAP: RaidNode[] = [
     id: 'quartermaster',
     type: 'shop',
     label: "Quartermaster's Cache",
-    flavor: 'Past the strait, a fence lays out two bits of contraband and lets you walk off with exactly one.',
-    bridge: "The fence sells a lot less than he lets on. The cold water ahead answers to one captain, and the wax on Pete's letter finally has a name behind it.",
+    flavor: 'Past the strait, a keeper called the Quartermaster lays out two bits of contraband and lets you walk off with exactly one.',
+    bridge: "The Quartermaster sells a lot less than he lets on. The cold water ahead answers to one captain, and the wax on Pete's letter finally has a name behind it.",
     requiresNode: 'bilge_milestone',
     choice: { items: ['quartermasters_anchor', 'navigators_compass'] },
+    image: QUARTERMASTER_FACE,
+    // ── THE MAN YOU WILL HAVE TO FIGHT ──────────────────────────────────
+    //
+    // The Cache turns on you in Chapter III, and the line it turns on is
+    // "every hook, every cannon, every clever little trick -- you bought it
+    // all off me". That is the payoff of a whole campaign of buying from
+    // him, and until now there was nobody to buy from: the chart drew a
+    // chest on a rock and the keeper existed only in a paragraph on a sheet.
+    // A betrayal by a vending machine is not a betrayal.
+    //
+    // So he is a person from the first cache. Same portrait he wears as a
+    // boss, deliberately: he always looked like this, and you bought from
+    // him anyway. Three lines, no scene-length, because he is a stop on the
+    // way and not a chapter -- and one seed ("you'll be back") that he says
+    // back to you when the guns come out.
+    scene: [
+      { text: "Past the strait, someone has made a counter out of a wrecked hull and a barrel, and is waiting behind it." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Two things on the barrel, captain. You take one." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "I don't haggle and I don't repeat myself." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Everyone who crosses that strait ends up at my counter sooner or later. You'll be back." },
+    ],
     detail: {
       description:
-        "The fence on the far shore of the Bilge Strait doesn't haggle and doesn't repeat himself. He sets two bits of contraband on the barrel between you, the sort that doesn't wash up twice, and tells you to pick. One. The other slides back into the cache and out of your life for good.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout with the rest of your kit.",
+        "The keeper on the far shore of the Bilge Strait calls himself the Quartermaster and doesn't offer a name past it. He sets two bits of contraband on the barrel between you, the sort that doesn't wash up twice, and tells you to pick. One. The other slides back into the cache and out of your life for good.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout with the rest of your kit.",
       dropsNote: 'Pick one. Permanent, equippable, and you can\'t come back for the other.',
     },
   },
@@ -1130,40 +1158,41 @@ export const RAID_MAP: RaidNode[] = [
     id: 'krust_reveal',
     type: 'story',
     label: 'The Name on the Wax',
-    flavor: 'Two letters in a blot of wax. The fence on the cold side of the strait can read you the rest.',
+    flavor: 'Two letters in a blot of wax, and a name behind them at last. Captain Krust moves the Finndicate\'s freight, and lately most of it is stolen.',
     bridge: "Captain Krust. He runs the Finndicate's freight, and every hold he fills is a hold you can empty. His consignment's out on the water right now.",
     requiresNode: 'quartermaster',
     image: '/raidlog.png',
     scene: [
-      { text: "Pete's wax only ever coughed up two letters: C.K." },
-      { text: "The fence on the cold side of the strait can fill in the rest. Long as you act like he did you no favor by it." },
-      { speaker: 'The Fence', text: "*Captain Krust*. And you never heard it here.", pause: 800 },
-      { speaker: 'The Fence', portrait: CAPTAIN_KRUST.enemies.krust.portrait, text: "Old, leathery, and the Finndicate sets its clock by him. He moves their freight. All of it." },
-      { speaker: 'The Fence', portrait: CAPTAIN_KRUST.enemies.krust.portrait, text: "Never once asked whose name's on a manifest. Stayed afloat a whole lifetime for exactly that reason." },
-      { text: "Nothing like Pete, this one. He doesn't rob the small. He moves cargo, on time, in bulk." },
-      { speaker: 'The Fence', text: "No kingpin, mind. Krust answers upward, same as every other fish in this sea." },
-      { speaker: 'The Fence', text: "Take his cargo off him, captain. Do the trade a favor. I do enjoy watching a hungry captain find out how far up this thing goes." },
-      { speaker: 'The Fence', text: "But C.K. don't lose cargo. Lose his cargo, and you find out why.", pause: 500 },
-      { text: "A name at last. The Finndicate's freight has a face, and the face keeps a schedule." },
-      { text: "His consignment's on the cold water right now." },
-      { ...GUIDE.mako, text: "An old hauler who never asks whose name's on the box. He'll be slow, and he'll be certain. My two favorite things in a target." },
-      { ...GUIDE.mako, text: "Sign me on for that run, and I'll be the part he doesn't see coming." },
+      { text: "All this travel just for two letters: C.K." },
+      { text: "Now we know." },
+      // THE REVEAL RIDES THE NARRATION. His face arrives on the line that
+      // names him, which is what a portrait on a narrator line is for.
+      { text: "*Captain Krust*.", portrait: CAPTAIN_KRUST.enemies.krust.portrait, pause: 800 },
+      { ...GUIDE.doby, text: "Krust. He's in charge of moving the Finndicate's freight." },
+      { ...GUIDE.kat, text: "The Finndicate must trust him. He must know he's taking in stolen goods." },
+      { ...GUIDE.mako, text: "Smarter than Pete for sure." },
+      { text: "Krust has been moving commercial goods for ages. But these days, it looks like he's funneling more stolen cargo than actual goods." },
+      { ...GUIDE.doby, text: "His activities are suspicious." },
+      { ...GUIDE.kat, text: "Definitely. Someone is behind all of this... but we'll have to get through Krust to see what's going on." },
+      { text: "Krust's goals are uncertain. But it'll certainly be harder to get through to Krust than Pete." },
+      // And the chart table is behind you: you are on the water with him.
+      { ...GUIDE.mako, text: "Ready your guns, captain. His crew spotted us!", backdrop: '/scenes/cold-strait.jpg', fx: 'shake' },
     ],
     sceneAccent: '#7dd3fc',
     detail: {
       description:
-        "Pete's wax only ever coughed up two letters: C.K. The fence past the strait fills in the rest, long as you act like he did you no favor by it.\n\nCaptain Krust. An old, leathery hand the Finndicate trusts with its freight, the kind who's never once asked whose name's on a manifest and has stayed afloat a whole lifetime for exactly that reason. He's nothing like Pete. He doesn't rob the small. He moves cargo, on time, in bulk, and the Finndicate sets its clock by him. Still no kingpin, mind. He answers upward like every other fish in this sea. But he sits a long way above a barnacled chancer, and his consignment's on the cold water right now.",
+        "All that travel for two letters, and now there is a name behind them: Captain Krust.\n\nKrust runs the Finndicate's freight. He has moved commercial goods for ages, long enough that nobody looks twice at his manifests, and these days he is funneling more stolen cargo than actual goods. The Finndicate trust him with it, which means he knows exactly what he is taking in. He is nothing like Pete, and he will be a great deal harder to get through. Someone is behind all of this, and Krust is the way to them.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment III",
-          sublabel: "\"C.K. don't lose cargo. Lose his cargo and you find out why.\" Said by the fence, who wouldn't give his name either.",
+          sublabel: "\"More stolen cargo than honest goods, and the manifests say neither.\" What Pete's courier routes add up to once you have the name.",
           rarity: 'rare',
         },
       ],
-      dropsNote: 'A name at last. The Finndicate\'s freight has a face, and the face keeps a schedule.',
+      dropsNote: 'A name at last. The Finndicate\'s freight has a face, and that face knows exactly what it is carrying.',
       ctaLabel: 'Name the Devil →',
-      summary: "The fence put a name to the wax: Captain Krust, the old hand the Finndicate trusts with all its freight. No kingpin, but his consignment's on the cold water right now.",
+      summary: "The wax finally had a name behind it: Captain Krust, the hand the Finndicate trusts with all its freight. He knows exactly what he is carrying, and he is the way to whoever is above him.",
     },
   },
   {

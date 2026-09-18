@@ -163,6 +163,23 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
   // Insert = an object beat; the cast steps aside. Close-up = the speaker looms.
   const insertActive = !!line?.insert
   const closeupActive = !!line?.closeup && hasCast
+  /**
+   * ── A FACE ON A NARRATOR LINE: THE REVEAL ───────────────────────────────
+   *
+   * The scene format has always DOCUMENTED this -- "a portrait can also ride
+   * a narrator line for a reveal moment (e.g. Krust's face arriving on the
+   * narration that names him)" -- and the renderer never did it. `stageAt`
+   * skips any line without a speaker, and nothing else read `portrait`, so a
+   * portrait written on narration was silently dropped. The one scene that
+   * used it had put the face on a CHARACTER's line instead, which is why it
+   * looked like the wrong portrait over the wrong name plate.
+   *
+   * It is its own shot, not a stage slot: the cast steps aside exactly as
+   * they do for an insert, and the revealed face takes the frame while the
+   * narration names it. It takes no slot, so it cannot evict anybody, and it
+   * is gone on the next line.
+   */
+  const revealFace = !line?.speaker && line?.portrait ? line.portrait : null
 
   // ── THE BUST ────────────────────────────────────────────────────────────────
   // It used to enter and then stand perfectly still forever, which is the difference
@@ -182,7 +199,7 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
         // arriving from off stage every time the speaker changed.
         initial={{ opacity: 0, x: 0, y: 12, scale: 0.97 }}
         animate={{
-          opacity: insertActive ? 0 : lit ? 1 : closeupActive ? 0.06 : 0.4,
+          opacity: insertActive || revealFace ? 0 : lit ? 1 : closeupActive ? 0.06 : 0.4,
           x: shake && lit ? [0, -6, 5, -3, 0] : 0,
           scale: emphasis,
           y: lit ? 0 : 8,
@@ -299,6 +316,24 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
             paddingBottom: hasCast ? '22%' : '8%', zIndex: 2, pointerEvents: 'none' }}>
             {renderInsert?.(line.insert) ?? <InsertShot kind={line.insert.kind} wax={'wax' in line.insert ? line.insert.wax : undefined} accent={ACCENT} reduced={reduced} />}
           </div>
+        )}
+        {/* ── THE REVEAL — a face arriving on the line that names it. Same
+            slot the insert uses, so the two can never be on screen at once
+            and the framing is one idea rather than two. */}
+        {revealFace && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.88 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              paddingBottom: hasCast ? '22%' : '8%', zIndex: 2, pointerEvents: 'none' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={revealFace} alt="" decoding="async"
+              style={{
+                maxHeight: '100%', maxWidth: '72%', objectFit: 'contain',
+                filter: `drop-shadow(0 0 40px ${ACCENT}44) drop-shadow(0 14px 34px rgba(0,0,0,0.8))`,
+              }} />
+          </motion.div>
         )}
         {/* ── TITLE CARD — a scene with no cast. Words in the dark, nothing else. */}
         {!hasCast && (
