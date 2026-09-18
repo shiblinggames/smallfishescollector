@@ -43,7 +43,8 @@ import {
   emptyRunStats, addRunStats, coerceRunStats,
   dropOddsInfo, type DropOddsInfo,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant,
-  fmtRunTime, fmtSplitDelta, type DepthSplit } from '@/lib/gauntlet'
+  fmtRunTime, fmtSplitDelta, gauntletCrewXp, type DepthSplit } from '@/lib/gauntlet'
+import PopupShell from '@/components/PopupShell'
 import { CTA_BG } from '@/lib/uiTokens'
 import { GAUNTLET_TERMS, TERM_GROUP_META, termsTitle, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
@@ -3854,7 +3855,20 @@ export default function GauntletGame(props: GauntletGameProps) {
     const offerChest    = offerChestMult(offer)
     const dealDoubloons = Math.round(previewDoubloons * offerCoinMult(offer))
     // Nav XP is on its own decoupled curve (not the pot) — mirror the server.
-    const previewXp = Math.round(gauntletXpForDepth(payDepth, props.variant) * chest.potMult)
+    // NO chest.potMult: the chest stopped multiplying Nav XP on 2026-09-18 and
+    // this preview kept applying it, so the breather was quoting up to 1.5x
+    // the XP the cash-out would actually pay. A preview that lies about the
+    // reward is worse than no preview -- it is the number the whole
+    // push-your-luck decision is made on.
+    const previewXp = Math.round(gauntletXpForDepth(payDepth, props.variant))
+    // What the crew take from this dive, per assigned crew member. Granted on
+    // cash-out only and shown on the haul screen; named here too so the crew's
+    // cut is part of the decision rather than a surprise afterwards.
+    const previewCrewXp = gauntletCrewXp(payDepth, props.variant)
+    // Fathoms this dive would bank (the Fence tab already spent comes off it,
+    // mirroring the cash-out settle). Declared HERE rather than inside the
+    // dock's cell list because the Claim & Leave sheet itemises it too.
+    const previewFathoms = Math.max(0, Math.round(fathomsForDepth(cleared, props.variant ?? 'davy') * gauntletFathomsMult(activeUpgrades)) - fenceSpent)
     const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / hpMax) * 100)))
     const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
     const ownedBoons = GAUNTLET_BOONS
@@ -3997,9 +4011,6 @@ export default function GauntletGame(props: GauntletGameProps) {
             // label only ever credited Davy, so a captain saw bigger numbers and
             // had no way to know their crew earned them.
             const ftnMult = fortuneLootMult(props.totalFortune)
-            // Fathoms this dive would bank (the Fence tab already spent comes off
-            // it, mirroring the cash-out settle).
-            const previewFathoms = Math.max(0, Math.round(fathomsForDepth(cleared, props.variant ?? 'davy') * gauntletFathomsMult(activeUpgrades)) - fenceSpent)
             // One compact cell per currency — the old hero was a 2.5rem number and
             // a stacked ledger that ate half the screen to say three things.
             return (
@@ -4012,6 +4023,9 @@ export default function GauntletGame(props: GauntletGameProps) {
                 </p>
                 <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#b9b2a6', marginTop: 6, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
                   +{fmt(previewXp)} Nav XP · +{fmt(previewFathoms)} Fathoms{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''}
+                </p>
+                <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#8f8a80', marginTop: 3, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                  +{fmt(previewCrewXp)} XP to every crew aboard
                 </p>
 
                 {/* The chase — icons + odds in one scrollable row, so what you're
@@ -4331,32 +4345,64 @@ export default function GauntletGame(props: GauntletGameProps) {
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} takenConv={convergencesTaken} variant={props.variant ?? 'davy'} onClose={() => setSynergiesOpen(false)} />}
         {/* Claim & Leave confirm — a light guard so you never bank + end the run
             on a misfire. Shows exactly what walks away with you. */}
-        {confirmClaim && (
-          <div onClick={() => setConfirmClaim(false)} style={{ position: 'fixed', inset: 0, zIndex: 1310, background: 'rgba(6,8,14,0.86)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
-            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 20, padding: '1.35rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(24,20,10,0.99), rgba(12,10,6,0.99))', border: `1px solid ${GOLD}66`, boxShadow: `0 0 44px ${GOLD}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
-              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: offer ? '#c9a7ff' : `${GOLD}cc` }}>{offer ? "Davy's Offer" : 'Bank the Haul'}</p>
-              <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f6ead0', lineHeight: 1.08, marginTop: 8 }}>{offer ? 'Shake on it?' : 'Claim & leave?'}</p>
-              <p className="font-cinzel font-800" style={{ fontSize: '2rem', color: GOLD, lineHeight: 1, marginTop: 12, textShadow: `0 0 26px ${GOLD}55` }}>
-                {fmt(dealDoubloons)} <span style={{ fontSize: '1.2rem' }}>⟡</span>
-              </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#b0a890', marginTop: 6 }}>
-                +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''}{hardcoreRun ? ' · Blood Gems' : ''}
-              </p>
-              <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(230,222,205,0.8)', lineHeight: 1.5, marginTop: 12, maxWidth: 300, marginInline: 'auto' }}>
-                {offer
-                  ? `${offerCopy(offer).line} Your descent ends here, and what he owes you is yours to keep.`
-                  : 'Your descent ends here and this is yours to keep. Push deeper and it grows, but sink and it all goes down with you.'}
-              </p>
-              <button onClick={() => { setConfirmClaim(false); cashOut(!!offer) }} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
-                style={{ width: '100%', marginTop: 16, padding: '1rem', borderRadius: 13, fontSize: '1rem', color: '#1a1206', background: `linear-gradient(180deg, ${GOLD}, ${GOLD}cc)`, border: `1px solid ${GOLD}`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}33` }}>
-                {resolving ? '…' : offer ? <>Shake on It · {fmt(dealDoubloons)} ⟡</> : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
-              </button>
-              <button onClick={() => setConfirmClaim(false)} className="font-karla font-600 tap" style={{ marginTop: 11, background: 'none', border: 'none', color: '#9a948a', fontSize: '0.76rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-                {offer ? 'No deal' : 'Keep diving'}
-              </button>
+        {/* ── WHAT WALKS AWAY WITH YOU ────────────────────────────────────
+            This was a hand-rolled fixed overlay (so no PopupShell, no Escape,
+            no scroll lock, and on a tall phone the top could sit under the
+            header), and its primary was a SOLID gold fill with dark text,
+            which is against the house rules twice: no solid gold fills, and
+            no filled primary in a confirm modal. It is a proper sheet now,
+            and it ITEMISES the haul instead of putting doubloons in a big
+            number and everything else in one grey line -- including the
+            crew's cut, which the cash-out has always paid and no screen ever
+            mentioned. */}
+        <PopupShell open={confirmClaim} onClose={() => setConfirmClaim(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }}
+            transition={{ duration: 0.18 }}
+            style={{ margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 20, padding: '1.35rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(24,20,10,0.99), rgba(12,10,6,0.99))', border: `1px solid ${GOLD}66`, boxShadow: `0 0 44px ${GOLD}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
+            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: offer ? '#c9a7ff' : `${GOLD}cc` }}>{offer ? "Davy's Offer" : 'Bank the Haul'}</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f6ead0', lineHeight: 1.08, marginTop: 8 }}>{offer ? 'Shake on it?' : 'Claim & leave?'}</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '2rem', color: GOLD, lineHeight: 1, marginTop: 12, textShadow: `0 0 26px ${GOLD}55` }}>
+              {fmt(dealDoubloons)} <span style={{ fontSize: '1.2rem' }}>⟡</span>
+            </p>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: '#8a8478', marginTop: 4 }}>
+              Depth {cleared}{chest.potMult > 1 ? ` · ×${chest.potMult} haul` : ''}
+            </p>
+
+            {/* The rest of it, itemised. A row per thing, so nothing the dive
+                earned arrives unannounced on the haul screen. */}
+            <div style={{ marginTop: 13, textAlign: 'left', background: 'rgba(6,10,16,0.7)', border: `1px solid ${GOLD}2e`, borderRadius: 13, padding: '0.5rem 0.75rem 0.55rem' }}>
+              {([
+                ['Nav XP', `+${fmt(previewXp)}`, '#8fd4a8'],
+                ['Every crew aboard', `+${fmt(previewCrewXp)} XP`, '#e8c879'],
+                ['Fathoms', `+${fmt(previewFathoms)}`, AC],
+                ...(chest.gems > 0 ? [['Gems', `+${chest.gems} ◆`, '#a78bfa'] as const] : []),
+                ...(hardcoreRun ? [['Blood Gems', 'Paid on the haul', '#f2536a'] as const] : []),
+              ] as const).map(([label, value, color]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, padding: '0.22rem 0' }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.78rem', color, flexShrink: 0, whiteSpace: 'nowrap' }}>{value}</span>
+                </div>
+              ))}
             </div>
-          </div>
-        )}
+
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(230,222,205,0.8)', lineHeight: 1.5, marginTop: 12, maxWidth: 300, marginInline: 'auto' }}>
+              {offer
+                ? `${offerCopy(offer).line} Your descent ends here, and what he owes you is yours to keep.`
+                : 'Your descent ends here and this is yours to keep. Push deeper and it grows, but sink and it all goes down with you.'}
+            </p>
+            {/* Translucent tinted gold, not a fill, and it answers the press. */}
+            <motion.button onClick={() => { setConfirmClaim(false); cashOut(!!offer) }} disabled={resolving}
+              className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+              whileTap={resolving ? undefined : { scale: 0.975, y: 1 }}
+              style={{ width: '100%', marginTop: 16, padding: '1rem', borderRadius: 13, fontSize: '1rem', color: '#fff6dd', background: `linear-gradient(180deg, ${GOLD}33, ${GOLD}14)`, border: `1.5px solid ${GOLD}88`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 24px ${GOLD}26, inset 0 1px 0 ${GOLD}44`, textShadow: `0 0 14px ${GOLD}77, 0 1px 3px rgba(0,0,0,0.7)` }}>
+              {resolving ? '…' : offer ? <>Shake on It · {fmt(dealDoubloons)} ⟡</> : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
+            </motion.button>
+            <button onClick={() => setConfirmClaim(false)} className="font-karla font-600 tap" style={{ marginTop: 11, background: 'none', border: 'none', color: '#9a948a', fontSize: '0.76rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+              {offer ? 'No deal' : 'Keep diving'}
+            </button>
+          </motion.div>
+        </PopupShell>
         </Screen>
       </>
     )
@@ -5695,6 +5741,10 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
 
   // Nav level + XP bar — the banked XP visibly flows into the bar as the chest
   // opens. Old XP is derived (new total minus this haul's gain).
+  // The crew who actually gained something this dive, and how many of them
+  // crossed a level. Granted per-assigned-crew on cash-out only.
+  const crewGains = (r.crewXP ?? []).filter(c => c.newXP > c.oldXP)
+  const crewLevelUps = crewGains.filter(c => c.newLevel > c.oldLevel).length
   const oldXp = Math.max(0, r.newExpeditionXP - r.bankedXp)
   const oldProg = getXPProgress(oldXp)
   const newProg = getXPProgress(r.newExpeditionXP)
@@ -5974,6 +6024,48 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
                 {newProg.level >= MAX_LEVEL ? 'Max level' : counting ? `${Math.round(newProg.progress * 100)}% to Lv ${newProg.level + 1}` : `${Math.round(oldProg.progress * 100)}% to Lv ${oldProg.level + 1}`}
               </p>
             </motion.div>
+
+            {/* ── WHO GREW ────────────────────────────────────────────────
+                The crew have been paid XP on every cash-out since the mode
+                shipped -- `cashOutGauntlet` grants it and RETURNS it -- and
+                this screen simply never rendered it, so the one reward that
+                belongs to someone other than you happened invisibly. Every
+                other end-of-mission screen in the game shows it (the raid's
+                loot stage, the voyage report). This is that same beat, in the
+                same shape, keyed to the same `counting` clock as the payouts
+                above so it arrives with them rather than before them. */}
+            {crewGains.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62, duration: 0.35 }}
+                style={{ marginTop: 14, textAlign: 'left', background: 'rgba(232,200,121,0.08)', border: '1px solid rgba(232,200,121,0.32)', borderRadius: 14, padding: '0.55rem 0.85rem 0.65rem' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#e8c879' }}>
+                    {crewGains.length === 1 ? 'Your crew earned XP' : 'Your crew earned XP'}
+                  </p>
+                  {crewLevelUps > 0 && (
+                    <motion.span initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.95, type: 'spring', stiffness: 320, damping: 16 }}
+                      className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.48rem', color: '#bff0cf', background: 'rgba(127,212,154,0.18)', border: '1px solid rgba(127,212,154,0.5)', borderRadius: 999, padding: '0.1rem 0.42rem', whiteSpace: 'nowrap' }}>
+                      {crewLevelUps} Level Up{crewLevelUps === 1 ? '' : 's'}
+                    </motion.span>
+                  )}
+                </div>
+                {crewGains.map((c, n) => {
+                  const delta = c.newXP - c.oldXP
+                  const rose = c.newLevel > c.oldLevel
+                  return (
+                    <motion.div key={c.id}
+                      initial={{ opacity: 0, x: -6 }} animate={counting ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 }}
+                      transition={{ delay: 0.1 + n * 0.08, duration: 0.3 }}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, padding: '0.25rem 0' }}>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: '#f3ede2', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                      <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: GOLD, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        +<CountUp to={delta} run={counting} /> XP
+                        {rose && <span style={{ color: '#7fd49a' }}> · Lv {c.oldLevel} → {c.newLevel}</span>}
+                      </span>
+                    </motion.div>
+                  )
+                })}
+              </motion.div>
+            )}
 
             {newBest && (
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
