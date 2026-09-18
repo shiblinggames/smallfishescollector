@@ -868,6 +868,7 @@ export const SCENE_BACKDROPS: Record<string, string> = {
   quartermaster: '/scenes/quartermaster-cache.jpg',
   last_cache: '/scenes/quartermaster-cache.jpg',
   gullet_cache: '/scenes/quartermaster-cache.jpg',
+  coffers_cache: '/scenes/quartermaster-cache.jpg',
   chapter_1_close: '/scenes/deck-night.jpg',
   // Chapter II — the strait and the Gullet
   finndicate_notice: '/scenes/chart-table.jpg',  // Krust's hold, sorted onto the chart table
@@ -1923,6 +1924,26 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "New rig lashed on, and the market's war-fleet dead ahead. Whatever the keeper's grinning about, it'll keep till the guns are quiet.",
     requiresNode: 'coffers_lens',
     choice: { items: ['crows_nest_rigging', 'trade_wind_sails'] },
+    image: QUARTERMASTER_FACE,
+    // ── THE LAST ONE BEFORE HE TURNS ────────────────────────────────────
+    // Fourth of four, and the warmest, which is the whole point: the Cache
+    // pulls its guns on you a few nodes from here on the line "every hook,
+    // every cannon, every clever little trick -- you bought it all off me".
+    // He says that here first, fondly, as a merchant proud of a regular.
+    //
+    // Every line is built to read twice. He was WAITING for you at the one
+    // counter that is inside the Finndicate's own market, and he will, in
+    // fact, still be here after.
+    //
+    // KEPT SHORT ON PURPOSE. 'The Keeper's Smile' is the very next node and
+    // it is his scene: the counting-what-you-sank beat lives there, where it
+    // lands as a threat rather than as a pleasantry.
+    scene: [
+      { text: "A stall in the drowned heart of the market, lit and stocked, and the keeper already waving you over." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "There you are. I was starting to wonder." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Rigging today. Crow's nest or trade winds. One sees further, one gets you there sooner." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Go on in, captain. I'll still be here after." },
+    ],
     detail: {
       description:
         "Even here, in the drowned heart of the market, the Quartermaster's Cache keeps a stall. The same shady supplier that's kitted you out since the coast. The keeper's all smiles today, a shade too glad to see you. He lays two cuts of ship's rigging on the counter: a crow's-nest set that sharpens your eye, or trade-wind canvas that keeps your guns fed. Pick one. The other rolls back under the counter.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout.",
@@ -1937,31 +1958,34 @@ export const RAID_MAP: RaidNode[] = [
     id: 'coffers_keeper',
     type: 'story',
     label: "The Keeper's Smile",
-    flavor: "The Quartermaster who runs the Cache is too glad to see you, and too sure of your picks. He arms every captain who comes through the Coffers, and something in his smile says he knows how it ends for most of them.",
-    bridge: "The war-fleet turns to meet you. Whatever the Quartermaster is playing at, it'll keep until the admiral's on the harbor floor.",
+    flavor: "The Quartermaster is too glad to see you and too sure of your picks. He gives every captain who sails these shores a pick, and he likes to watch how far they get.",
+    bridge: "The crew talked themselves out of it and the war-fleet turned to meet you. Whatever the keeper is playing at, it keeps until the guns are quiet.",
     requiresNode: 'coffers_cache',
     image: '/raidlog.png',
     scene: [
-      { text: "You re-arm at the Quartermaster's Cache, the same stall that's kitted you out since the coast, while he watches from behind his counter, enjoying every moment of it." },
-      { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Good pick. I'd have steered you to it myself. I always do." },
-      { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Every captain who sails into the Coffers gets kitted out right here at my counter. Then I watch how far they get." },
-      { text: "The way he says it puts a cold coin in your gut. Like he's already seen *how your story ends*.", pause: 600 },
-      { ...GUIDE.kat, text: "I don't like him. Anyone that glad to see you has already sold you to somebody. Keep a hand near your cutlass and your eyes on his." },
-      { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "That admiral past the wall has never lost a fight. But every gun on your deck, you bought off me. Don't forget that, captain." },
-      { text: "You want to ask whose side he's really on. Then the war-fleet swings around, and there's no more time for questions." },
-      { text: "You'll come back to it later, once the admiral's on the harbor floor." },
-      { ...GUIDE.laz, text: "That smile. I've seen it on every shopkeeper who ever sold a captain the rope he hangs by." },
-      { ...GUIDE.laz, text: "Trust the guns, captain. Not the hand that sold them. When the fleet turns, hold the line and let him keep his questions." },
+      { text: "You re-arm at the Quartermaster's Cache. The same stall that's kitted you since the coast." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Good pick! I'd have steered you to it myself." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Every captain who sails these shores gets a pick from me. I love to see how far they get." },
+      { text: "The way he says it puts a cold coin in your gut.", pause: 600 },
+      { ...GUIDE.kat, text: "Speaking of who we shouldn't trust... I don't like the Quartermaster." },
+      { ...GUIDE.doby, text: "Free is never really free... is it." },
+      { ...GUIDE.mako, text: "Hey we take what we can get. Who knows what dangers lie ahead." },
+      // HE NAMES IT AND THEN TALKS HIMSELF OUT OF IT. Laz is the one aboard
+      // the Finndicate already wrote off once, and he is the one who guesses
+      // right, three nodes before the Cache pulls its guns.
+      { ...GUIDE.laz, text: "Whoever he is, I sure hope he isn't Finndicate scum." },
+      { ...GUIDE.kat, text: "Wonder why he would be equipping us if he were." },
+      { text: "The crew shrugs it off. You're sure it's fine, right?" },
     ],
     detail: {
       description:
-        "You re-arm at the Quartermaster's Cache one last time, and the shopkeeper is friendlier than any fair trade explains. He says he arms every captain who sails into the Coffers, then watches how far they get, and he reminds you, a little too pointedly, that every gun you carry came off his counter. It sits wrong. But the market's war-fleet is already turning to meet you, and the question will keep.",
+        "You re-arm at the Quartermaster's Cache one last time, and the keeper is friendlier than any fair trade explains. He gives every captain who sails these shores a pick, he says, and he likes to watch how far they get.\n\nThe crew argue about him on the way out and talk themselves back down. Kat does not trust a gift. Doby says free is never free. Mako will take what is going. Laz, who the Finndicate wrote off once already, says out loud that he hopes the keeper is not one of theirs, and nobody has an answer for why a Finndicate keeper would be arming you. So they let it go, and the war-fleet is already turning.",
       drops: [
-        { emoji: '📜', label: 'Overheard at the Counter', sublabel: "\"Every gun on your deck, you bought off me. Don't forget that, captain.\"", rarity: 'uncommon' },
+        { emoji: '📜', label: 'Overheard at the Counter', sublabel: "\"Every captain who sails these shores gets a pick from me. I love to see how far they get.\"", rarity: 'uncommon' },
       ],
       dropsNote: 'A last word from the Quartermaster before the fleet. Whatever he means by it, it waits till the guns are quiet.',
       ctaLabel: 'Meet the Fleet →',
-      summary: "At the last Cache the Quartermaster was oddly friendly, saying he arms every captain who sails into the Coffers and watches how far they get, and pointing out that every gun you carry came off his counter. You filed the unease away and turned to face the market's war-fleet.",
+      summary: "The Quartermaster was friendlier than any fair trade explains, saying he gives every captain a pick and likes to watch how far they get. The crew talked themselves out of suspecting him, and the war-fleet turned to meet you.",
     },
   },
   {
@@ -2153,10 +2177,10 @@ export const RAID_MAP: RaidNode[] = [
       { text: "Chained to a stand in the heart of it, a ledger the size of a hatch cover. Every captain the Quartermaster ever armed, and beside each name, a note on how they sank." },
       { text: "Lost off the Shrouds. Drowned in the Gullet. Sold their own hull back a plank at a time. Debt cleared, debt cleared, debt cleared.", pause: 500 },
       { text: "Your name's near the bottom, in fresh ink. The line for how you sank is still blank.", pause: 700 },
-      { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Every account in that book closes the same way, captain, and every one settles up to the don. Finleone likes his ledgers tidy. Yours is the one line I have left open." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "Every account in that book closes the same way, captain, and every one settles up to the don. Finleone likes his ledgers tidy. Yours is the one line I have left open." },
       { ...GUIDE.laz, text: "I know this book. My name is a few pages up, and the line for how I sank was filled in long ago." },
       { ...GUIDE.laz, text: "They were wrong. I have read this ledger from the other side of it. Let me be the one to see his account closed the right way." },
-      { speaker: 'The Quartermaster', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "You think Finleone stocked these shelves? Somebody stocked *him*. Somebody who never once came down here to collect." },
+      { speaker: 'The Quartermaster', portrait: QUARTERMASTER_FACE, text: "You think Finleone stocked these shelves? Somebody stocked *him*. Somebody who never once came down here to collect." },
       { ...GUIDE.laz, text: "He's stalling. Close the account." },
     ],
     detail: {
