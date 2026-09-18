@@ -192,3 +192,21 @@ multiplied by `chest.potMult` after the server stopped doing so, quoting up to 1
 XP a cash-out would actually pay, on the exact number the push-your-luck decision is made
 on. If you touch a payout formula, grep the CLIENT for the mirror: the dock preview, the
 Claim sheet and the haul screen all quote it. Same trap as the contracts copy above.
+
+## Picking a boon reflowed the page (2026-09-18)
+
+Kong: "The boon selection still has a stutter of the rows after you select yours." The first
+pass at this fixed two real bugs in the CARDS' own animation (the claim was cleared before
+the veil instead of inside it, and the hover/tap variants went from objects to `undefined` on
+the same render as the new target, which framer races). Neither was the stutter.
+
+The stutter was LAYOUT. Five things were written `&& !boonTaken &&`: the synergy card, the
+reprieve, the reroll, the banish and the codex link. All five left the DOM in one render the
+instant you picked, so everything around them reflowed while the cards were still mid-claim.
+
+They stay mounted now and fade in place, and they leave for real inside the veil with the
+draft they belong to. Opacity does not reflow, so nothing moves. **Not** wrapped in a shared
+element: the container is a GRID on a wide screen and these are its cells, so a wrapper would
+change the column count. The fade goes on each root that is already there, and the two that
+drive their own arrival opacity (the synergy card, the reprieve) take it through framer
+instead of the shared style object, so nothing fights over the property.

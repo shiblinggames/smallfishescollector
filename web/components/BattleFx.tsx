@@ -259,6 +259,19 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
     const R = (c: string) => { let s = ring.get(c); if (!s) { s = bakeRing(c); ring.set(c, s) } return s }
     const hot = HOT.map(bakeDot)
     const smokeDot = bakeDot(SMOKE_C)
+    // ── BAKE THE REST BEFORE THEY ARE WANTED ──
+    // `D()` and `R()` bake on first use, and first use is the first status
+    // effect of a fight -- which lands on the frame the first shot resolves,
+    // beside everything else that frame is already doing. Each bake is a
+    // canvas, two gradients and two fills; twenty of them is nothing spread
+    // out and a visible hitch all at once.
+    //
+    // So they are baked up front, in idle time, where the cost is free. The
+    // lazy path stays for any colour a caller passes that is not in the
+    // table (a chase skin's accent, a boon's own colour).
+    const warm = () => { for (const [a, b] of Object.values(COLOR)) { D(a); D(b); R(a) } }
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback
+    const warmId = ric ? ric(warm) : window.setTimeout(warm, 200)
 
     // ── POOLS ──
     const ps = Array.from({ length: P_CAP }, blankP)
@@ -1346,6 +1359,8 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
     }, 120)
 
     return () => {
+      const cic = (window as unknown as { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback
+      if (ric && cic) cic(warmId); else window.clearTimeout(warmId)
       window.clearInterval(watch)
       wake.delete(start)
       stop()

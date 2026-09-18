@@ -336,3 +336,36 @@ standing haze that breathes, so the bar is never covered the same way twice. The
 it still honours: no blur, no filter and no blend mode anywhere on the aim bar, because that
 surface sits beside the needle and every layer on it must stay on the compositor. Soft-edged
 gradients do a blur's work. The density the mechanic reads is unchanged.
+
+## The first shot paid for every later one (2026-09-18)
+
+Kong, on a phone: "the very first time you lock in your shot there's still lag." Every shot
+after it is clean, which is the shape of a ONE-TIME cost being paid on the worst frame in the
+game: the one a press is judged on.
+
+Three first-use costs, none of them per-shot work:
+
+1. **The hulls have no compositor layer until they first move.** Both are large paintings
+   inside `motion.div`s driven by animation controls, and the first `.start()` is where the
+   browser promotes the element and uploads that texture. That first start is the first hit,
+   i.e. the first lock.
+2. **Framer's machinery for each control** initialises on its first start.
+3. **The impact flash sits at `display: none` between flashes**, so the first one is a fresh
+   full-viewport layer as well as a paint.
+
+`warmFightFx()` does all of it at fight open, while the player is reading the enemy's card
+and nothing is being judged. Every warm move is zero-amplitude and the flash is warmed at
+zero opacity, so none of it is visible; only the TIMING changes. Deliberately not a standing
+`will-change` on the hulls: that pins a layer for the whole fight, and there is a standing
+warning in memory about what permanent compositor hints do to these scaled paintings. A
+zero-length animation promotes the layer and lets the browser drop it again.
+
+BattleFx had the same shape of problem: `D()` and `R()` baked their sprites on first use, and
+first use is the first status effect of a fight. The whole `COLOR` table is baked in idle
+time at mount now; the lazy path stays for colours a caller passes that are not in it (a
+chase skin's accent, a boon's own colour).
+
+**If a first-lock hitch survives this, the next suspects are the LogBox's first mount (it
+swaps inline with the aim bar) and the first decode of the hit-state art.** Measure with the
+DELAY-vs-WORST method before changing anything else; that is what settled the blend-mode
+isolation bug, which cost 104ms a crit and was nowhere near where it looked.

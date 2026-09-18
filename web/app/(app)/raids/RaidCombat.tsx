@@ -3001,6 +3001,62 @@ export default function RaidCombat({
   // beat) + a tiny scale punch; volley is a smaller pure shake. Only crit /
   // volley fire it, per the juice rule (nothing screen-wide on normal hits).
   const stageShakeCtrl = useAnimation()
+  /**
+   * ── THE FIRST SHOT PAID FOR EVERY LATER ONE ─────────────────────────────
+   *
+   * Kong, on a phone: "the very first time you lock in your shot there's still
+   * lag." Every shot after it is clean, which is the shape of a ONE-TIME cost
+   * being paid at the worst possible moment -- the frame a press is judged on.
+   *
+   * There are three of them and they are all first-use costs, not per-shot
+   * work:
+   *
+   *  1. THE HULLS HAVE NO COMPOSITOR LAYER UNTIL THEY FIRST MOVE. Both are
+   *     large paintings inside `motion.div`s driven by animation controls.
+   *     The first `.start()` is where the browser promotes the element and
+   *     uploads that texture to the GPU, and on a phone with a big hull that
+   *     is a real hitch. It happens on the first hit -- i.e. on the first
+   *     lock.
+   *  2. FRAMER'S MACHINERY FOR EACH CONTROL initialises on its first start.
+   *  3. THE IMPACT FLASH LIVES AT `display: none` between flashes, so the
+   *     first one is a fresh full-viewport layer as well as a paint.
+   *
+   * So all of it is done HERE instead, at fight open, while the player is
+   * still reading the enemy's card and nothing is being judged. Every warm
+   * move is zero-amplitude and the flash is warmed at zero opacity, so none
+   * of it can be seen; the only thing that changes is WHEN the browser does
+   * the work.
+   *
+   * Deliberately NOT `will-change` left standing on the hulls: that pins a
+   * layer for the whole fight and the memory note on filters and scaled art
+   * is a standing warning about what permanent hints do to these paintings.
+   * A zero-length animation promotes the layer, and the browser is free to
+   * drop it again if it wants to.
+   */
+  const warmedRef = useRef(false)
+  const warmFightFx = useCallback(() => {
+    if (warmedRef.current) return
+    warmedRef.current = true
+    const zero = { duration: 0 } as const
+    // 1 + 2: every control that will drive a hull, a nameplate or the stage.
+    void enemyShakeCtrl.start({ x: 0, rotate: 0 }, zero)
+    void playerShakeCtrl.start({ x: 0, rotate: 0 }, zero)
+    void playerRecoilCtrl.start({ x: 0 }, zero)
+    void stageShakeCtrl.start({ x: 0, y: 0 }, zero)
+    void playerNameplateAnim.start({ scale: 1 }, zero)
+    void enemyNameplateAnim.start({ scale: 1 }, zero)
+    // 3: the flash, at zero opacity. Same path the real one takes, so the
+    // layer and the first paint are both done with.
+    const el = impactFlashRef.current
+    if (el && typeof el.animate === 'function') {
+      try {
+        el.style.display = 'block'
+        el.style.opacity = '0'
+        const a = el.animate([{ opacity: 0 }, { opacity: 0 }], { duration: 16 })
+        a.onfinish = () => { el.style.display = 'none' }
+      } catch { el.style.display = 'none' }
+    }
+  }, [enemyShakeCtrl, playerShakeCtrl, playerRecoilCtrl, stageShakeCtrl, playerNameplateAnim, enemyNameplateAnim])
   const cameraShake = useCallback((kind: 'crit' | 'volley' | 'nuke' | 'hit') => {
     if (kind === 'nuke') {
       // Heaviest shake — the silo impact. Bigger throw, longer settle, a real heave.
@@ -3328,6 +3384,9 @@ export default function RaidCombat({
       }
     }
     setSubPhase('await_input')
+    // Pay the one-time FX costs now, not on the frame the first shot is
+    // judged. See warmFightFx.
+    warmFightFx()
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
     setLastPlayerAction(null); setForeseenMoves(null)
     // Statuses are per-FIGHT: both sides start every encounter clean.

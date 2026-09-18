@@ -4695,6 +4695,28 @@ export default function GauntletGame(props: GauntletGameProps) {
     // on just the SHOWN boons — else the hidden 3rd card never flips.
     const shownBoons = boonCardCount
     const revealDone = pendingBoons.slice(0, shownBoons).every((_, i) => (boonPhases[i] ?? 'sealed') === 'flipped')
+    /**
+     * ── WHY THE ROWS JUMPED ───────────────────────────────────────────
+     *
+     * Five things were written `&& !boonTaken &&`: the synergy card, the
+     * reprieve, the reroll, the banish and the codex link. So the instant
+     * you picked, all five left the DOM in one render -- and everything
+     * around them reflowed while the cards were still mid-claim. That is
+     * the stutter; it was never the cards' own animation.
+     *
+     * They stay MOUNTED now and fade in place. Opacity does not reflow, so
+     * nothing moves. They leave for real inside the veil, with the draft
+     * they belong to (see applyBoon).
+     *
+     * NOT a wrapper element: the container is a GRID on a wide screen and
+     * these are its cells, so wrapping them would change the column count.
+     * The fade goes on each root that is already there.
+     */
+    const dimOnPick: CSSProperties = {
+      opacity: boonTaken ? 0 : 1,
+      pointerEvents: boonTaken ? 'none' : 'auto',
+      transition: 'opacity 240ms ease',
+    }
     return (
       <>
         {arena('boon')}
@@ -5195,7 +5217,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             {/* Confluence — a synergy you QUALIFY for, offered in place of a boon
                 slot (the Hades-duo opportunity cost). Distinct violet lane so the
                 "forge the synergy instead" trade reads at a glance. */}
-            {pendingConfluence && revealDone && !boonTaken && (() => {
+            {pendingConfluence && revealDone && (() => {
               // Convergences (Don's meta-tier) take a hotter crimson-gold lane so
               // "forge a convergence" reads as a bigger moment than a synergy.
               const cvg = !!pendingConfluence.isConvergence
@@ -5203,21 +5225,26 @@ export default function GauntletGame(props: GauntletGameProps) {
               const synImg = (cvg ? CONVERGENCES : CONFLUENCES).find(x => x.id === pendingConfluence.id)?.image
               return (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 2px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 2px', ...dimOnPick }}>
                   <div style={{ flex: 1, height: 1, background: `${AC}33` }} />
                   <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: AC }}>{cvg ? 'or forge a convergence' : 'or forge a synergy'}</span>
                   <div style={{ flex: 1, height: 1, background: `${AC}33` }} />
                 </div>
                 <motion.button
                   initial={{ opacity: 0, y: 22, scale: 0.94 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ ...POP, delay: 0.12 }}
+                  // The claim fades it where it stands. Driven through framer
+                  // rather than the shared style object because this element
+                  // already animates its own opacity on arrival, and the two
+                  // must not fight over the property.
+                  animate={boonTaken ? { opacity: 0, y: 0, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }}
+                  transition={boonTaken ? { duration: 0.24, ease: 'easeOut' } : { ...POP, delay: 0.12 }}
                   whileTap={{ scale: 0.93 }}
                   whileHover={{ scale: 1.015 }}
                   onPointerDown={() => hapticTap()}
                   onClick={() => applyConfluence(pendingConfluence)}
                   className="tap reveal-glow-legendary"
                   style={{
+                    pointerEvents: boonTaken ? 'none' : 'auto',
                     position: 'relative', textAlign: 'left', overflow: 'hidden',
                     padding: '0.9rem 1rem 0.9rem 1.2rem', borderRadius: 16,
                     background: `linear-gradient(180deg, ${AC}2c 0%, rgba(8,14,22,0.62) 74%)`,
@@ -5270,22 +5297,26 @@ export default function GauntletGame(props: GauntletGameProps) {
             {/* Reprieve — an optional one-time relief, taken INSTEAD of a boon.
                 Surfaces in later rounds; the warm amber + "you forgo the draft"
                 cue keep the trade clear. */}
-            {pendingReprieve && revealDone && !boonTaken && (
+            {pendingReprieve && revealDone && (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 2px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 2px', ...dimOnPick }}>
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
                   <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: '#8a8480' }}>or take a reprieve</span>
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
                 </div>
                 <motion.button
                   initial={{ opacity: 0, y: 22, scale: 0.94 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ ...POP, delay: 0.12 }}
+                  // Fades where it stands on a pick, like the synergy card: it
+                  // drives its own arrival opacity, so the shared style object
+                  // must not also reach for the property.
+                  animate={boonTaken ? { opacity: 0, y: 0, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }}
+                  transition={boonTaken ? { duration: 0.24, ease: 'easeOut' } : { ...POP, delay: 0.12 }}
                   whileTap={{ scale: 0.945 }}
                   whileHover={{ scale: 1.015 }}
                   onClick={() => applyReprieve(pendingReprieve)}
                   className="tap"
                   style={{
+                    pointerEvents: boonTaken ? 'none' : 'auto',
                     position: 'relative', textAlign: 'left', overflow: 'hidden',
                     padding: '0.9rem 1rem 0.9rem 1.2rem', borderRadius: 16,
                     background: `linear-gradient(180deg, ${RELIEF}26 0%, rgba(8,14,22,0.62) 74%)`,
@@ -5309,9 +5340,9 @@ export default function GauntletGame(props: GauntletGameProps) {
           </div>
 
           {/* Second Cast — reroll the offered boons (limited per draft). */}
-          {rerollsLeft > 0 && revealDone && !boonTaken && (
+          {rerollsLeft > 0 && revealDone && (
             <button onClick={rerollBoons} className="font-karla font-700 uppercase tracking-[0.1em] tap"
-              style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.1rem', borderRadius: 999, fontSize: '0.64rem', color: AC, background: `${AC}14`, border: `1px solid ${AC}55`, cursor: 'pointer' }}>
+              style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.1rem', borderRadius: 999, fontSize: '0.64rem', color: AC, background: `${AC}14`, border: `1px solid ${AC}55`, cursor: 'pointer', ...dimOnPick }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
               Reroll · {rerollsLeft} left
             </button>
@@ -5319,8 +5350,8 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Banish — arm the mode, then tap the boon you want gone (and confirm).
               A proper button beats the old 24px ✕ that sat on top of a full-card
               draft target. Only while a ban is still available. */}
-          {filtersLeft > 0 && revealDone && !boonTaken && (
-            <div style={{ marginTop: rerollsLeft > 0 ? 9 : 16 }}>
+          {filtersLeft > 0 && revealDone && (
+            <div style={{ marginTop: rerollsLeft > 0 ? 9 : 16, ...dimOnPick }}>
               <button onClick={() => { hapticTap(); setBanArmed(a => !a) }} className="font-karla font-700 uppercase tracking-[0.08em] tap"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.05rem', borderRadius: 999, fontSize: '0.64rem', cursor: 'pointer',
                   color: banArmed ? '#ffd9d9' : '#f0a0a0',
@@ -5340,8 +5371,8 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Codex access — review what a synergy does / what you're building
               toward right when you're deciding. Lights violet when one is on
               offer. */}
-          {revealDone && !boonTaken && (
-            <div style={{ marginTop: rerollsLeft > 0 ? 9 : 16 }}>
+          {revealDone && (
+            <div style={{ marginTop: rerollsLeft > 0 ? 9 : 16, ...dimOnPick }}>
               <button onClick={() => setSynergiesOpen(true)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.5rem 1rem', borderRadius: 999, fontSize: '0.6rem',
                   color: pendingConfluence ? '#e6d5ff' : '#c9c2b6',
