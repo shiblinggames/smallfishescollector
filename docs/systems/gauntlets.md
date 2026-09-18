@@ -113,3 +113,50 @@ at five eighths of native and upscaled it, visibly soft under the crisp DOM figh
 now. Not the chart's 2, on purpose: the file's own note records that the aim bar's compositor
 animations are what a saturated GPU stutters, and the arena is scenery behind a fight. If the
 fight stutters on a weak GPU after this, 1.25 is the number to go back to.
+
+## The reward curve was shaped backwards (2026-09-18)
+
+Kong, at depth 18: "I'm one shotting enemies so it's really quick to get here" — 24,000 ⟡
+and 11,000 Nav XP off a run that risked nothing. The height was the symptom. The SHAPE was
+the bug, and a flat percentage cut would not have fixed it.
+
+**What was wrong.** This is a push-your-luck mode, so reward has to rise with the risk you
+accept. It did the opposite. Both curves flattened early (pot at depth 20, Nav XP at 15), so
+past those points every extra depth paid a CONSTANT amount, while every extra depth costs
+steadily more time as hulls get tanky. The best ⟡/hour and XP/hour was therefore a fast
+shallow loop, bailing at a depth you cannot die at, repeated forever (no cooldown). Pushing
+deep was strictly worse per hour AND carried the only real risk: a sink banks Fathoms,
+bounty progress and the deepest-died counter, and nothing else. On top of that the flat
+per-round BASE (80 ⟡ / 80 XP) paid out fastest where rounds are quickest, and the cash-out
+chest tier multiplied NAV XP as well as doubloons, stacking with the Locker's own 1.25× to
+nearly 1.9× on the sharper of the two problems.
+
+For scale, one depth-18 dive was about 26 full clears of a late-chapter raid in doubloons
+and 10 in Nav XP — enough to take a fresh account to Nav 35 and buy a tier-6 rod outright.
+
+**The fix.** The flat bases are gone (0), growth is cut (`POT_GROWTH` 50→34, `XP_GROWTH`
+25→14), the flattens are pushed out past the depths people actually push to
+(`POT_FLATTEN_DEPTH` 20→30, `XP_FLATTEN_DEPTH` 15→26), and `chest.potMult` no longer touches
+Nav XP in `cashOutGauntlet` (a chest is the doubloon-and-gem reward; the Fathoms-bought
+Locker upgrade still applies, that one is meant to be felt). Marginal ⟡ per non-boss depth
+now RISES 340 → 680 → 986 across depths 10, 20 and 29 instead of going constant at 20.
+
+| Depth | ⟡ before | ⟡ after | XP before | XP after |
+|---|---|---|---|---|
+| 10 | 6,084 | 3,223 | 3,523 | 1,040 |
+| 18 | 21,945 | 12,801 | 11,270 | 3,232 |
+| 30 | 51,030 | 35,139 | 22,326 | 8,600 |
+| 40 | 76,950 | 59,619 | 31,539 | 13,514 |
+
+Hardest exactly where the risk is lowest: depth 18 loses 71% of its XP, depth 40 loses 57%.
+Retune GROWTH to move the height, FLATTEN to move the shape. `maxPotForDepth` (the server
+ceiling) and `estimatePotForDepth` (the intro preview) derive from `roundContribution`, so
+they followed automatically; a run already in flight just clamps down, which is safe.
+
+**One duplicate formula had to be caught by hand.** `lib/gauntletContracts.ts` inlined a
+copy of the pot formula for the Don's plunder reward, commented "kept as its own formula so
+this module stays decoupled from the pot economy". Decoupled is exactly what it must not be:
+its stated intent is "roughly a boss round's contribution at this depth", so the copy went
+stale the moment the pot moved and a contract would have paid several rounds' worth. It
+calls `roundContribution` now. See [[feedback-raid-damage-formula-duplicated]] for the same
+trap in combat.

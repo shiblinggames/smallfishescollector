@@ -13,6 +13,8 @@
 // offers and applies the reward/penalty through the same effect paths boons and
 // curses already use.
 
+import { roundContribution } from './gauntlet'
+
 export type ContractStake = 1 | 2 | 3   // small job / real work / the big score
 
 export type ContractKind =
@@ -170,11 +172,18 @@ export interface ContractOffer {
 }
 
 // Plunder (pot doubloons) in play scales with stake and depth, pitched at
-// roughly a boss round's contribution at the current depth (Don's pot runs
-// ×1.5, mirrored here) so a job is worth the risk without warping the run.
-// Kept as its own formula so this module stays decoupled from the pot economy.
+// roughly a boss round's contribution at the current depth so a job is worth
+// the risk without warping the run.
+//
+// 2026-09-18 — this used to INLINE a copy of the pot formula ("kept as its own
+// formula so this module stays decoupled"). Decoupled from the pot economy is
+// exactly what it must not be: the stated intent is "a boss round at this
+// depth", so when the pot was reshaped the copy went stale and a contract
+// would have paid several rounds' worth. It reads the real contribution now,
+// which is one import in one direction (gauntlet.ts knows nothing of this
+// module) and cannot drift again.
 function plunderReward(stake: ContractStake, depth: number): number {
-  const roundish = (80 + 50 * Math.min(depth, 20)) * 1.5
+  const roundish = roundContribution(depth, true, 'don')
   return Math.round(roundish * (0.4 + 0.3 * stake))
 }
 function plunderPenalty(stake: ContractStake, depth: number): number {

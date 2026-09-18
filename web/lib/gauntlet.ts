@@ -37,20 +37,42 @@ import { CHEST_ODDS_CAP } from './gauntletOffer'
 // ── Economy ────────────────────────────────────────────────────────────────
 // Per-round pot contribution = POT_BASE + POT_GROWTH * min(depth, POT_FLATTEN).
 // A boss round multiplies that by BOSS_POT_MULT. The cash-out chest multiplier
-// rides on top. Tuned against a Tollmaster CHALLENGE clear (~1,980 ⟡): shallow
-// bail (~depth 5) ~1,300; depth 12 ~3.6×; depth 20 ~9×.
+// rides on top. Nav XP is DECOUPLED onto its own gentler curve
+// (gauntletXpForDepth) because leveling was always the sharper problem.
 //
-// 2026-07-01 — the contribution FLATTENS past POT_FLATTEN_DEPTH (20). Cumulative
-// pot was quadratic, so once shrine + confluences made depth 30-40 common,
-// deep cash-outs paid 3-5× the tuned ceiling. Past depth 20 each round now adds
-// a constant (the depth-20 value) instead of a growing amount — deeper still
-// pays more, just not runaway-more. Shallow/mid (<= 20) is unchanged.
-// Nav XP is DECOUPLED onto its own gentler curve (gauntletXpForDepth) because
-// leveling was the sharper problem — a deep dive was 6-8 nav levels.
-export const POT_BASE = 80
-export const POT_GROWTH = 50
+// 2026-07-01 — the contribution FLATTENS past POT_FLATTEN_DEPTH (20), because
+// cumulative pot was quadratic and deep cash-outs paid 3-5× the tuned ceiling.
+//
+// ── 2026-09-18: THE SHAPE WAS BACKWARDS ────────────────────────────────────
+// Kong, at depth 18: "I'm one shotting enemies so it's really quick to get
+// here" — 24k ⟡ and 11k Nav XP off a run that risked nothing. The height was
+// the symptom; the SHAPE was the bug.
+//
+// This is a push-your-luck mode, so reward must rise with the risk you accept.
+// It did the opposite. Both curves flattened early (pot at 20, XP at 15), so
+// past that point every extra depth paid a CONSTANT amount — while every extra
+// depth costs steadily more time as hulls get tanky. The best ⟡/hour and
+// XP/hour was therefore a fast shallow loop, bailing at a depth you cannot
+// die at, forever, with no cooldown. Pushing deep was strictly worse per hour
+// AND carried the only real risk of losing the pot (a sink banks Fathoms and
+// nothing else — see resolveGauntletDeath).
+//
+// The fix is the shape, not a flat percentage cut:
+//   - The flat BASE per round is gone (0). It was the piece that paid out
+//     fastest at shallow depth, where rounds are quickest.
+//   - GROWTH is cut, and the FLATTEN pushed out past the depths people
+//     actually push to, so the marginal ⟡ per depth KEEPS RISING through the
+//     band where the gamble is real instead of going constant at 20.
+//   - The chest tier no longer multiplies Nav XP (see cashOutGauntlet). A
+//     chest is the doubloon-and-gem reward; it was quietly applying up to
+//     1.5× to a level curve that was already the sharper problem.
+// Net at depth 18: ~71% less Nav XP, ~42% fewer ⟡. At depth 40 (a real push):
+// ~57% less XP, ~23% fewer ⟡. Deliberately hardest exactly where the risk is
+// lowest. Retune GROWTH to move the height; move FLATTEN to move the shape.
+export const POT_BASE = 0
+export const POT_GROWTH = 34
 export const BOSS_POT_MULT = 3
-const POT_FLATTEN_DEPTH = 20
+const POT_FLATTEN_DEPTH = 30
 
 // Cooldown between Gauntlet runs. Measured from when a run STARTS
 // (consume-on-start), so a quit-retry can't dodge it. Tune here to make the
@@ -302,16 +324,19 @@ export function roundContribution(depth: number, isBoss: boolean, variant: Gaunt
 }
 
 // Nav XP earned by cashing out at `depth`, DECOUPLED from the doubloon pot and
-// on a gentler curve (lower growth + flattens earlier at XP_FLATTEN_DEPTH) so a
-// deep dive doesn't fast-level players. A typical-boss uplift (XP_BOSS_FACTOR)
-// is baked in so it stays comparable to the old pot-derived XP at shallow depth.
-// The cash-out chest multiplier rides on top of this (see cashOutGauntlet).
-// Tuned 2026-07-02 against real pace data (~55-69 depth/hr) to a TARGET RATE of
-// ~50-60k Nav XP/hr: deep dives (depth 35-45) land ~50-55k/hr, steady-state ~60k.
-// GROWTH 40→25 pulled it down from ~72-82k/hr. Retune GROWTH to move the rate.
-const XP_BASE = 80
-const XP_GROWTH = 25
-const XP_FLATTEN_DEPTH = 15
+// on a gentler curve so a deep dive doesn't fast-level players. A typical-boss
+// uplift (XP_BOSS_FACTOR) is baked in.
+//
+// 2026-09-18 — reshaped with the pot above, and for the same reason: one
+// depth-18 dive paid 11,270 Nav XP, which takes a fresh account to Nav 35 and
+// is about ten full clears of a late-chapter raid (~1,180 XP each). The flat
+// BASE is gone and the FLATTEN pushed from 15 out to 26, so a shallow bail is
+// worth little and the curve keeps climbing through the depths where the
+// gamble is real. The chest tier no longer multiplies this at all — that
+// stacked up to 1.5× on the sharper of the two problems.
+const XP_BASE = 0
+const XP_GROWTH = 14
+const XP_FLATTEN_DEPTH = 26
 const XP_BOSS_FACTOR = 1.35
 // Don's Gauntlet reward multipliers (variant 'don'). Fathoms is the headline
 // draw (2×); Nav XP + crew XP are modest bumps. The pot swells 1.5× (doubloons

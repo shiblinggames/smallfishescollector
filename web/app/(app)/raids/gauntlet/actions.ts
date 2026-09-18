@@ -1073,8 +1073,12 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
 
   const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * gauntletHaulMult(upgrades) * offerCoinMult(offerTaken))
   // Nav XP is decoupled from the doubloon pot onto its own gentler depth curve
-  // (leveling was the sharper concern). Chest multiplier still rides on top.
-  const bankedXp        = Math.round(gauntletXpForDepth(payDepth, variant) * chest.potMult * gauntletXpMult(upgrades))
+  // (leveling was the sharper concern). The CHEST NO LONGER MULTIPLIES IT
+  // (2026-09-18): a chest is the doubloon-and-gem reward, and potMult was
+  // quietly applying up to 1.5× on top of a curve already tuned to be gentle,
+  // stacking with the Locker's own 1.25× to nearly 1.9×. The Locker upgrade
+  // still applies — that one is bought with Fathoms and is meant to be felt.
+  const bankedXp        = Math.round(gauntletXpForDepth(payDepth, variant) * gauntletXpMult(upgrades))
   // Don's chests hand out richer gems (the valuable chest reward) — via the gem
   // count only, NOT chest.potMult, so Nav XP + doubloons stay on their own mults.
   const gems            = Math.round(chest.gems * (isDon ? DONS_CHEST_GEM_MULT : 1))
