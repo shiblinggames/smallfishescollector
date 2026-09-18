@@ -6041,6 +6041,18 @@ export default function SeaMap({
     () => ({ davy: true, don: maelOpen('don') }),
     [maelOpen],
   )
+  /**
+   * WHICH CAMPAIGN NODES ARE DONE, for the renderer. Only the harbour gate's
+   * boom chain reads it so far: strung while the gate stands, dropped once it
+   * is cleared, which is exactly what the node after it says happens. Built
+   * off the same `liveStatus` the chart marks with, so an optimistic clear
+   * drops the chain on the same frame the stop lights up.
+   */
+  const gpuCleared = useMemo(() => {
+    const m: Record<string, boolean> = {}
+    for (const [id, st] of Object.entries(liveStatus)) if (st === 'cleared') m[id] = true
+    return m
+  }, [liveStatus])
 
   const gateNextAt = useMemo(
     () => (nextStop?.at ? { x: nextStop.at.x, y: nextStop.at.y, r: NODE_REACH } : null),
@@ -9856,7 +9868,7 @@ export default function SeaMap({
           position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
         }}>
           <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} captain={gpuCaptain}
-            keepers={gpuKeepers}
+            keepers={gpuKeepers} clearedNodes={gpuCleared}
             ship={gpuShip} fleet={gpuFleet} berths={gpuBerths} portal={gpuPortal} homes={gpuHomes} towns={gpuTowns}
             occluders={gpuOccluders} handle={gpuRef} />
         </div>

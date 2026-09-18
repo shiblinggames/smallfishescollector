@@ -398,6 +398,13 @@ between their faces, so the road threads between them. Placed off the road's LOC
 at that point, not by eye: same probe method as the Sounding fog bank, and the trader check
 still clears every shore.
 
-**Still owed:** the boom-chain. The node after this one says "the lens flares green and the
+**And the chain is strung (2026-09-18).** `app/(app)/sea/seaChains.ts`, declared as `CHAINS`
+in `raidWaters`. Twenty-six iron links and three tarred floats hung between the two posts,
+sagging into the water and squashed by `GROUND` like everything else that floats. It reads
+the cleared-node map the renderer is handed (`clearedNodes`, built off the chart's own
+`liveStatus`, so an optimistic clear drops it on the same frame the stop lights up) and when
+its node is done it goes slack, sinks and fades: exactly what the next node's bridge already
+said happened. The ease is deliberate; a thing that drops takes a moment. `?hide=chains`
+kills it. Superseded note: The node after this one says "the lens flares green and the
 boom-chain drops into the water", so a chain across the gap is already canon and is the piece
 that would make the posts unmistakably a gate rather than two rocks.

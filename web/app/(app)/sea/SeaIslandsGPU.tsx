@@ -87,6 +87,7 @@ import { makeMaelstroms, type Maelstroms } from './seaMaelstrom'
 import { makeLights, type Lights } from './seaLights'
 import { makeSqualls, type Squalls } from './seaSqualls'
 import { makeBanks, type Banks } from './seaBanks'
+import { makeChains, type Chains } from './seaChains'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
@@ -365,7 +366,7 @@ export type GpuHandle = {
 }
 
 export default function SeaIslandsGPU({
-  islands, marks, captain, ship, fleet, berths, portal, homes, towns, occluders, keepers, handle,
+  islands, marks, captain, ship, fleet, berths, portal, homes, towns, occluders, keepers, clearedNodes, handle,
 }: {
   islands: GpuIsland[]
   marks: GpuMark[]
@@ -377,6 +378,13 @@ export default function SeaIslandsGPU({
    * boss: see the note on `showKeeper` in seaMaelstrom.
    */
   keepers: Record<string, boolean>
+  /**
+   * WHICH CAMPAIGN NODES ARE DONE. Only the boom chain reads it so far, to
+   * know whether to hang or to have dropped. A map rather than a callback for
+   * the same reason `keepers` is one: the frame loop must not reach into
+   * React, and this changes a handful of times in a session.
+   */
+  clearedNodes: Record<string, boolean>
   /** How the player looks right now. Rebuilt only when it actually changes —
    *  see the effect below, which compares by VALUE because a captain is
    *  expensive to assemble and cheap to steer. */
@@ -440,6 +448,8 @@ export default function SeaIslandsGPU({
   // already run.
   const keepersRef = useRef(keepers)
   keepersRef.current = keepers
+  const clearedRef = useRef(clearedNodes)
+  clearedRef.current = clearedNodes
   const shipRef = useRef(ship)
   shipRef.current = ship
   /** Every way home that is currently open, as wells. See buildHomes. */
@@ -748,6 +758,9 @@ export default function SeaIslandsGPU({
       // the drifting half goes on the stage in front of the hulls. See
       // seaBanks for why it screens rather than multiplies.
       const banks: Banks = makeBanks(PIXI)
+      // THE HARBOUR GATE'S CHAIN. On the plane with the other things that
+      // float, and it drops itself once its node is cleared. See seaChains.
+      const chains: Chains = makeChains(PIXI)
       /**
        * FAIR-WEATHER CLOUD, in two places, because it is two facts.
        *
@@ -768,6 +781,7 @@ export default function SeaIslandsGPU({
 
       world.addChild(squalls.water)
       world.addChild(banks.water)
+      world.addChild(chains.water)
 
       // ── WHAT IS STILL LIT AFTER DARK ──────────────────────────────
       //
@@ -991,6 +1005,7 @@ export default function SeaIslandsGPU({
           maybe('squalls', squalls.air)
           maybe('banks', banks.air)
           maybe('banks', banks.water)
+          maybe('chains', chains.water)
           maybe('front', front)
           maybe('fog', fog.view)
         }
@@ -1626,6 +1641,7 @@ export default function SeaIslandsGPU({
           a.screen.height / 2 + hullOff.current.y, t, dt)
         squalls.advance(camX, camY, halfW, halfH, dt)
         banks.advance(camX, camY, halfW, halfH, dt)
+        chains.advance(camX, camY, halfW, halfH, dt, id => clearedRef.current[id] === true)
         glow.advance(camX, camY, halfW, halfH, t)
         guideFx.advance(t, dt)
         // The HULL, not the camera: the front is cut round her.
@@ -1948,6 +1964,7 @@ export default function SeaIslandsGPU({
           lights.night(d)
           squalls.night(tint)
           banks.night(tint)
+          chains.night(tint)
           wake.night(tint)
           // A harbour lamp is the one light out here that is NOT the sun, so it
           // gives up much less to the hour than the water around it. Most of

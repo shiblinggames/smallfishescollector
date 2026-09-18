@@ -753,6 +753,42 @@ export const FOG_BANKS: FogBank[] = [
   { id: 'sounding', bay: 'sunken_hand', along: 5385, across: -2977, r: 1600, density: 0.42 },
 ]
 
+/**
+ * ── A BOOM CHAIN, STRUNG BETWEEN TWO ROCKS ──────────────────────────────────
+ *
+ * The harbour gate's chain. It hangs between the two gate posts until the node
+ * is cleared, then drops into the water exactly as the next node's bridge says
+ * it does. See seaChains for the drawing.
+ */
+export type ChainSpec = {
+  id: string
+  /** Cleared this node and the chain drops. */
+  node: string
+  /** The two rocks it is made fast to. */
+  from: string
+  to: string
+}
+
+export const CHAINS: ChainSpec[] = [
+  { id: 'harbor-gate', node: 'coffers_fork', from: 'cof-gatepost-n', to: 'cof-gatepost-s' },
+]
+
+/** Where a chain's two ends actually are, pulled in to the rocks' edges so it
+ *  is made fast to the posts rather than floating from their centres. */
+export function chainSpan(c: ChainSpec): { a: { x: number; y: number }; b: { x: number; y: number } } | null {
+  const ia = ISLE_BY_ID[c.from], ib = ISLE_BY_ID[c.to]
+  if (!ia || !ib) return null
+  const pa = isleAt(ia), pb = isleAt(ib)
+  if (!pa || !pb) return null
+  const dx = pb.x - pa.x, dy = pb.y - pa.y
+  const len = Math.hypot(dx, dy) || 1
+  const ux = dx / len, uy = dy / len
+  return {
+    a: { x: pa.x + ux * ia.r * 0.9, y: pa.y + uy * ia.r * 0.9 },
+    b: { x: pb.x - ux * ib.r * 0.9, y: pb.y - uy * ib.r * 0.9 },
+  }
+}
+
 export const CACHES: Cache[] = [
   { node: 'quartermaster', bay: 'thread', isle: 'thread-purse' },
   ...LAID.flatMap(l => l.caches),
