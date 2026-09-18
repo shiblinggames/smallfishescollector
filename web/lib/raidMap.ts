@@ -1851,8 +1851,8 @@ export const RAID_MAP: RaidNode[] = [
     // downstream chain (coffers_lens.requiresNode) is untouched.
     id: 'coffers_fork',    type: 'dps_check',
     label: 'The Harbor Gate',
-    flavor: "A locked gate bars the way into the Coffers. Blow it open with one good cannon shot, or pay the dockmaster to wave you through.",
-    bridge: "The gate's behind you, and the market's war-fleet is already turning to meet you.",
+    flavor: "A barred gate stands across the channel into the Coffers. Blow it apart with one good cannon shot, or pay to be waved through.",
+    bridge: "The gate's behind you in pieces. Past it the harbor wall still stands, and a boom-chain across the last of the channel.",
     requiresNode: 'coffers_heading',
     image: THE_COFFERS_FLEET.enemies.scout.portrait,
     dpsCheck: {

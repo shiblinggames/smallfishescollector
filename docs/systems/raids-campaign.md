@@ -408,3 +408,27 @@ said happened. The ease is deliberate; a thing that drops takes a moment. `?hide
 kills it. Superseded note: The node after this one says "the lens flares green and the
 boom-chain drops into the water", so a chain across the gap is already canon and is the piece
 that would make the posts unmistakably a gate rather than two rocks.
+
+## The Coffers approach is two barriers, not one (2026-09-18)
+
+The chain was first hung on the GATE, and the texts say otherwise. Node 28 is "a barred gate
+stands across the channel" that a cannon shot breaks or a bribe skips. Node 29 is "the way
+past the harbor WALL", where lighting the signal-lens drops a boom-chain. Two obstacles, in
+that order, and hanging the chain on the first meant the second node's bridge and reveal both
+described something the player never saw.
+
+`SPANS` in `raidWaters` (was `CHAINS`, aliased for safety) now carries a `kind`, and the
+kind changes both the drawing and the leaving:
+
+- **`gate`** is rigid. Eleven banded bars across the lane, made fast to `cof-gatepost-n/-s`.
+  A shot BREAKS it, so on clear the bars scatter outward from the middle and go: the hole
+  opens where the ball went in and the ends are the last to let go. It does not sink.
+- **`chain`** is slack. Links and floats made fast to `cof-wall-n/-s`, a stop further on,
+  sagging into the water. A signal DROPS it, so on clear it goes slack and slides under.
+
+Both post pairs are placed off the road's LOCAL TANGENT at their stop, probed rather than
+eyeballed, and the trader check still clears every shore.
+
+**Also fixed, pre-existing:** node 28's bridge read "the gate's behind you, and the market's
+war-fleet is already turning to meet you", which skips the harbour wall and its boom
+entirely, and those are the very next stop.

@@ -762,16 +762,27 @@ export const FOG_BANKS: FogBank[] = [
  */
 export type ChainSpec = {
   id: string
-  /** Cleared this node and the chain drops. */
+  /**
+   * WHAT IT IS, and it changes both the drawing and the leaving.
+   *
+   * 'gate' is rigid: bars across the lane, and a cannon shot BREAKS it, so it
+   * blows apart rather than sinking. 'chain' is slack: links and floats that
+   * sag, and a signal DROPS it, so it goes under.
+   */
+  kind: 'gate' | 'chain'
+  /** Cleared this node and the span opens. */
   node: string
   /** The two rocks it is made fast to. */
   from: string
   to: string
 }
 
-export const CHAINS: ChainSpec[] = [
-  { id: 'harbor-gate', node: 'coffers_fork', from: 'cof-gatepost-n', to: 'cof-gatepost-s' },
+export const SPANS: ChainSpec[] = [
+  { id: 'harbor-gate', kind: 'gate', node: 'coffers_fork', from: 'cof-gatepost-n', to: 'cof-gatepost-s' },
+  { id: 'harbor-boom', kind: 'chain', node: 'coffers_lens', from: 'cof-wall-n', to: 'cof-wall-s' },
 ]
+/** @deprecated the name from when there was only ever a chain. */
+export const CHAINS = SPANS
 
 /** Where a chain's two ends actually are, pulled in to the rocks' edges so it
  *  is made fast to the posts rather than floating from their centres. */
@@ -833,6 +844,10 @@ export const RAID_ISLES: RaidIsle[] = [
   // than by eye -- see the probe note in docs/systems/ocean-hub.md.
   { id: 'cof-gatepost-n', bay: 'the_coffers', name: 'The Harbor Gate', along: 3105, across: -2067, r: 170 },
   { id: 'cof-gatepost-s', bay: 'the_coffers', name: 'The Harbor Gate', along: 2321, across: -3227, r: 170 },
+  // And the WALL, a stop further on, where the boom is made fast. Placed off
+  // the road's local tangent at Lensrock the same way the gate posts were.
+  { id: 'cof-wall-n', bay: 'the_coffers', name: 'The Harbor Wall', along: 4325, across: -1941, r: 170 },
+  { id: 'cof-wall-s', bay: 'the_coffers', name: 'The Harbor Wall', along: 3869, across: -3265, r: 170 },
   { id: 'thread-purse', bay: 'thread', name: 'Cutpurse Rock', along: 6458, across: 1943, r: 175 },
   { id: 'thread-wax', bay: 'thread', name: 'Wax Shoal', along: 4238, across: 2194, r: 160 },
   { id: 'thread-watch', bay: 'thread', name: 'Between Watches', along: 1750, across: 2500, r: 170 },
