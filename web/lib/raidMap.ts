@@ -861,7 +861,7 @@ export const SCENE_BACKDROPS: Record<string, string> = {
   quartermaster: '/scenes/quartermaster-cache.jpg',
   chapter_1_close: '/scenes/deck-night.jpg',
   // Chapter II — the strait and the Gullet
-  finndicate_notice: '/scenes/chart-table.jpg',  // the order-paper on the chart table
+  finndicate_notice: '/scenes/chart-table.jpg',  // Krust's hold, sorted onto the chart table
   cartographer_reveal: '/scenes/cold-strait.jpg',
   gullet_heading: '/scenes/the-gullet.jpg',
   gullet_bones: '/scenes/wrecked-freighter.jpg', // the snagged freighter
@@ -1088,7 +1088,7 @@ export const RAID_MAP: RaidNode[] = [
     type: 'milestone',
     label: 'The Bilge Eels',
     flavor: "The Bilge Eels report to nobody and serve only doubloons. Every hull that crosses their strait pays, and C.K.'s freight crossed it too.",
-    bridge: "Past the strait the water turns Finndicate. C.K.'s cargo is moving somewhere ahead, and a fence up there already knows your name.",
+    bridge: "Past the strait the water turns Finndicate. C.K.'s cargo is moving somewhere ahead, and there's a keeper up there with a counter and no name to give.",
     requiresNode: 'syndicate',
     milestone: { amount: 1000, spend: true },
     image: '/bilge_eel.png',
@@ -1252,20 +1252,20 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'krust',
     image: '/raidlog.png',
     scene: [
-      { text: "Krust's consignment burns to the waterline, and for the first time since the coast, the deck goes quiet." },
-      { ...GUIDE.kat, text: "Sit. Eat something. You've been running on spite and seawater for a week." },
-      { ...GUIDE.doby, text: "Let the captain stand, Kat. A hand who just put Captain Krust under has earned the view." },
-      { ...GUIDE.mako, text: "That view being your name on every wanted board from here to the danger lines. You put us on the Finndicate's list today." },
-      { ...GUIDE.mako, text: "For what it's worth, I've never eaten better than when something bigger was hunting me." },
-      { ...GUIDE.kat, text: "That's the most encouraging thing you've ever said, and it terrifies me." },
-      { text: "Somewhere past the dark water, something large stops what it is doing to look your way.", pause: 700 },
-      { text: "But that is tomorrow's heading. Tonight the crew is whole, and the grog is cold." },
+      { text: "You watch as Krust's consignment burns to the waterline. The Finndicate will feel this soon." },
+      { ...GUIDE.kat, text: "It's time to rest up, cap'n. Krust is no more." },
+      { ...GUIDE.doby, text: "Krust is gone, but a lot of questions remain." },
+      { ...GUIDE.mako, text: "For one, we're definitely on the Finndicate's list now." },
+      { ...GUIDE.mako, text: "But maybe that's what we need in order to track down what's next." },
+      { ...GUIDE.kat, text: "Somehow encouraging yet terrifying." },
+      { text: "Somewhere past the dark water, something large stops what it's doing to look your way.", pause: 700 },
+      { text: "But that's a problem for another day. Tonight the crew is whole, and the grog is cold." },
     ],
     detail: {
       description:
-        "Pete and Krust both on the seabed, and the coast knows your sails now. Before the next heading the deck goes quiet: Kat patches the hull and the hands, Doby watches the dark water, and Mako grins at the wanted board with your name freshly on it. The Finndicate has noticed you. Tomorrow that will matter. Tonight the crew is whole.",
+        "Pete and Krust are both on the seabed and the consignment burned to the waterline. The Finndicate will feel this one soon.\n\nKrust is gone and the questions are not. You are on their list now, which Mako reckons is the fastest way to find out who is above them. Tomorrow that will matter. Tonight the crew is whole and the grog is cold.",
       ctaLabel: 'Rest a While →',
-      summary: "With Pete and Krust both under, the crew took a quiet watch together before the next heading. The Finndicate has noticed you now, but tonight the deck is whole.",
+      summary: "With Pete and Krust both under, the crew took a quiet watch together before the next heading. You are on the Finndicate's list now, which may be the fastest way to whoever is above them.",
     },
   },
   {
@@ -1276,21 +1276,25 @@ export const RAID_MAP: RaidNode[] = [
     id: 'chapter_1_class',
     type: 'class_pick',
     label: "Captain's Choice",
-    flavor: "Two captains on the seabed and your name on every wanted board from here to the danger lines. Time to decide what kind of captain you want to be.",
+    flavor: "Two captains on the seabed and the Finndicate's attention squarely on you. Time to decide what kind of captain you want to be.",
     requiresNode: 'chapter_1_close',
     classPick: { chapterId: 'thread' },
     detail: {
       description:
-        "You sank Pete. You sank Krust. The coast knows your sails now, and the next stretch of water won't be kind. Stand on your deck and pick a class. Once it's chosen it stays with you for every raid from here on.",
+        "You sank Pete. You sank Krust. You are on the Finndicate's list now, and the water past here won't be kind. Stand on your deck and pick a class. Once it's chosen it stays with you for every raid from here on.",
       ctaLabel: 'Pick a class',
     },
   },
   {
     id: 'finndicate_notice',
     type: 'story',
-    label: 'The Finndicate Takes Notice',
-    flavor: "Krust's on the seabed, and for the first time the Finndicate feels the hole you've torn in its side.",
-    bridge: "They run a special class of freight through water they'll only call the danger zones. Whatever it is, it's worth more to them than the ships it keeps eating.",
+    // The ID IS NOT THE TITLE. This node stopped being about the Finndicate
+    // noticing you (2026-09-18) and became the search of Krust's hold, but
+    // the id is load-bearing -- `requiresNode` chains and Dole's entry in
+    // lib/legendaryUnlocks both key off it -- so only the label moved.
+    label: 'Crate by Crate',
+    flavor: "Krust's hold is three days of crates and not one of them worth stealing. Whatever the Finndicate has been paying for, it was never plunder.",
+    bridge: "Every crate Krust moved was survey gear, and all of it was going to one chartmaker. Dole matched the heading, and it runs out past the danger line.",
     // Gate on the Ch I class pick (not the boss) so the Ch I closer + pick sit
     // BETWEEN this opener and Krust's death — otherwise chapter_1_close and this
     // node both unlock at once, an effective back-to-back story beat. Matches
@@ -1298,39 +1302,38 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'chapter_1_class',
     image: '/raidlog.png',
     scene: [
-      { text: "Krust's consignment is still smoking when the answer comes back. Not a fleet, not a bounty. One scrap of order-paper, and the cold understanding that somebody well above the freight desk has finally set down the ledgers to look at you." },
-      { ...GUIDE.mako, text: "There it is. You wanted the Finndicate to notice you. It noticed." },
-      // Seeds Finn's "every door you kicked down, I left unlocked". Kat raises it,
-      // nobody picks it up, and the scene moves on: luck on first read, a
-      // confession on the second.
-      { ...GUIDE.kat, text: "Does it strike anyone else that Krust's cabin was wide open? Charts on the table, the whole network still pinned out. That's twice now a lock nobody turned." },
-      { ...GUIDE.mako, text: "That's called being good at this, Kat. Enjoy it." },
-      { ...GUIDE.kat, text: "There's a difference between notice and this. Krust was a name. Whatever sets its books down to answer a name is the thing that stands over one." },
-      { ...GUIDE.doby, text: "Then read it out. What does a thing that size want badly enough to put in writing?" },
-      { speaker: 'A Finndicate Order', text: "Danger-zone consignment. Priority freight. It will not open for him. Find the hands that it will.", pause: 500 },
-      { text: "A shape you hadn't logged is already at the chart table, turning the scrap to the light like he is pricing it.", pause: 400 },
-      { ...GUIDE.dole, text: "Danger zones. Such a marvelous name. You only bother naming water that frightening when you're hiding something in it worth the fright." },
-      { ...GUIDE.doby, text: "And who in the cold deep are you?" },
-      { ...GUIDE.dole, text: "The navigator who read this before his tea went cold. Drowned captains couldn't. Dole. I know every current worth knowing and most of the ones that aren't." },
-      { ...GUIDE.dole, text: "The cipher was never the hard part. It's who wrote it, and how much freight they'll feed that water to keep it moving. When you muster hands for the danger line, you could do worse than one who's already been there." },
-      { ...GUIDE.mako, text: "Priority freight, worth every hull it eats. They're not shipping that. They're feeding it." },
-      { text: "Dole sets the scrap down facing you, the heading already circled. You hadn't circled it.", pause: 400 },
+      { text: "Three laborious days going through everything in Krust's hold... crate by crate by crate. Nothing of value was getting sent out. But there is a pattern." },
+      { ...GUIDE.kat, text: "Instruments. Sounding lines... oil, glass. What is the purpose of all of this?" },
+      { ...GUIDE.kat, text: "There's something specific they're after." },
+      { ...GUIDE.mako, text: "Where is this all going to?" },
+      // HIS ENTRANCE IS THE ANSWER. He does not introduce himself first; he
+      // finishes the crew's question, and they ask who he is afterwards.
+      { ...GUIDE.dole, text: "A chartmaker." },
+      { ...GUIDE.doby, text: "Who are you?" },
+      { ...GUIDE.dole, text: "Dole. I've dabbled in charting myself. This is all survey gear, friends. I've been trying to find out who's been stealing my goods and where it's all gone." },
+      { ...GUIDE.kat, text: "A chartmaker? Shouldn't the Finndicate know their way around by now?" },
+      { ...GUIDE.dole, text: "Around the known parts, yes. But those aren't the parts a chartmaker gets paid for." },
+      { ...GUIDE.doby, text: "You know who they're paying then?" },
+      { ...GUIDE.dole, text: "I had a hunch. But I've confirmed it now that you all took down Krust. I was able to match the heading to where the shipments would go to." },
+      { text: "Dole sets a map down facing you." },
+      { ...GUIDE.dole, text: "I'd be happy to help out. The northern seas aren't for the blind." },
+      { text: "Dole joins the party. You are now able to recruit him as well." },
     ],
     sceneAccent: '#a78bfa',
     detail: {
       description:
-        "Krust was no small cog, and the gap he leaves shows plain in the books. For the first time someone well above the freight desk has set down the ledgers and taken a long, cold look at the captain who keeps sinking their cargo. You've got the Finndicate's full attention now, which is the one prize you can't hand back.\n\nA single scrap rode out the wreck of Krust's run. The Finndicate moves a special class of cargo, priority freight steered through water its own manifests will only call the danger zones. Most captains sail in there exactly once. Whatever they're hauling through it is worth every hull it swallows, and they'd love nothing more than for you to drop the thread and walk away.",
+        "Three days in Krust's hold, crate by crate, and almost none of it is worth stealing. Instruments. Sounding line by the mile. Blank vellum, oil, glass. Survey gear, all of it.\n\nThe Finndicate has not been getting rich off what it takes. It has been buying supplies for one chartmaker and paying with everything Pete and Krust ever moved. Dole turns up while the crew are still arguing about it: a chartmaker himself, robbed by the same outfit, who has spent years trying to find out where his own goods went. Krust's fall gave him the last piece. He has the heading now, and he is willing to sail it with you.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment IV",
-          sublabel: "\"Danger-zone consignment. Priority freight. It will not open for him. Find the hands that it will.\" Stamped with a mark no clerk would explain.",
+          sublabel: "\"Instruments, sounding line, vellum, oil, glass. Not one crate of it worth stealing.\" The manifest of Krust's last run, in your own hand.",
           rarity: 'common',
         },
       ],
-      dropsNote: 'A cargo worth losing ships over, and a heading into water that eats them. The trail runs colder and deeper from here.',
+      dropsNote: 'Not plunder. Supplies, bought with everything they ever stole, and a heading that says who for.',
       ctaLabel: 'Follow the Freight →',
-      summary: "Krust's fall bought you the Finndicate's full attention. They run priority freight through water they only call the danger zones, and the trail leads straight in.",
+      summary: "Krust's hold held no plunder, only survey gear. The Finndicate has been funding one chartmaker with everything it steals, and Dole matched the heading to where the shipments go.",
     },
   },
   {
@@ -1376,12 +1379,12 @@ export const RAID_MAP: RaidNode[] = [
     id: 'last_cache',
     type: 'shop',
     label: 'Driftwood Cache',
-    flavor: 'A driftwood outfit clinging to a rock just inside the danger line. Two bits of kit on the counter, take one, leave the other for good.',
+    flavor: 'The Quartermaster has a driftwood shack on a rock just inside the danger line. Two bits of kit on the counter, take one, leave the other for good.',
     requiresNode: 'smugglers_chart',
     choice: { items: ['gunners_sight', 'reinforced_hull'] },
     detail: {
       description:
-        "Past the beacon chain the chart shows another drop point, a driftwood shack hammered to a rock just inside the danger line. The keeper's worked this water longer than most and runs the same trick every fence past the strait pulls: two bits of kit on the counter, take one, leave the other for good. The freight runs deeper than any honest captain has charts for, and there'll be more outfits like this one along the way.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout with the rest of your kit.",
+        "Past the beacon chain the chart shows another drop point, a driftwood shack hammered to a rock just inside the danger line. The same counter, the same keeper, the same trick he pulled past the strait: two bits of kit on the barrel, take one, leave the other for good. He got here before you did, and he will be there the next time too.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout with the rest of your kit.",
       dropsNote: 'Pick one. Permanent, equippable, and you can\'t come back for the other.',
     },
   },
@@ -1613,13 +1616,13 @@ export const RAID_MAP: RaidNode[] = [
   {
     id: 'gullet_cache',    type: 'shop',
     label: 'The Sunken Cache',
-    flavor: "A fence working a shelf of gear deep inside the Gullet, way too well-stocked for water this far out. Two pieces on the counter, take one, leave the other.",
+    flavor: "The Quartermaster has a shelf of gear deep inside the Gullet, far too well-stocked for water this far out. Two pieces on the counter, take one, leave the other.",
     bridge: "The keeper knew your name before you gave it. You take your pick and try not to wonder too hard who told him you were coming.",
     requiresNode: 'gullet_bones',
     choice: { items: ['incendiary_cannonball', 'frozen_cannonball'] },
     detail: {
       description:
-        "Deep in the Gullet, where no honest captain has charts, there's a fence working a shelf of gear that's far too well-stocked for water this far out. He knows your name before you give it, and he runs the same trick every fence past the strait pulls: two pieces of kit on the counter, take one, leave the other for good. You grab what you came for and try not to think too hard about who tipped him off.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout with the rest of your kit.",
+        "Deep in the Gullet, where no honest captain has charts, the Quartermaster is working a shelf of gear far too well-stocked for water this far out. He is already there. He always is. Two pieces of kit on the counter, take one, leave the other for good.\n\nYou grab what you came for and try not to think too hard about how he knew which water you were sailing. Whatever you take is yours to keep, ready to equip in your raid loadout with the rest of your kit.",
       dropsNote: 'Pick one. Permanent, equippable, and you can\'t come back for the other.',
     },
   },
