@@ -3128,3 +3128,47 @@ eye** — a first guess at `along: 5200, across: 0` landed nearly 2,000px from t
 a throwaway `scripts/_probe.mts` that prints `isleAt` / `encounterAt` / `bankAt` for the bay
 and centre the bank against real numbers. The Sounding bank sits exactly between The Sounding
 isle and the Cartographer's ship, 623px from each.
+
+## Couriers: the north gets wandering life (2026-09-20)
+
+Kong: "I think there's a lot of empty sea in the northern expedition side. How can we make it
+feel more alive?"
+
+**Why it read as empty despite being densely built.** Every living system stops at the reef.
+`seaTraders` has a hard rule refusing anything anchored north of the north wall, all fourteen
+buried digs sit south (the closest ~7,000px below the bays), and the regulars are anchored in
+the fishing sea. What was up there was rocks marking campaign stops, the ships you fight, the
+caches and two maelstrom doors. Every object existed to be a node or a wall around one, so
+nothing was ever just THERE.
+
+**`lib/seaCouriers.ts`.** Freight running between the hub and each bay mouth. One lane per
+bay, two hulls per lane, a nine-minute crossing with a 90-second hold at each end.
+
+- **Position is a function of the clock**, the shape `seaWeather` uses for squalls. Every
+  captain sees the same hull in the same place, there is no state to store or sync, and a
+  courier costs arithmetic rather than a simulated entity.
+- **NOT the trader pattern.** A trader swings a 90-280px patrol around a fixed anchor, which
+  reads as a merchant waiting to be hailed. Copying that north would have given us stationary
+  ships in empty water. These travel.
+- **Lanes are authored and checked.** `scripts/check-couriers.mts` (wired into `npm run
+  check`) walks 3,005 points and asserts none touches stone with `BOAT_CLEAR`, and that no
+  lane is empty. A hull crossing thousands of pixels has far more chance of clipping an
+  island than one on an anchor, and `check-traders` exists because that bug shipped once.
+- **The freight travels INBOUND laden.** Outbound from the hub is the empty run. Everything
+  the Finndicate takes moves toward the middle, which is what the whole campaign says.
+
+**Each bay's courier sails that bay's own hull** (Kong: "Are you only using ships and npcs
+that match the bay it belongs in?"). Two wrong turns before that landed:
+1. Feeding each bay's boss id to `hullPaint` hashed Chapter I and Chapter III onto the
+   identical red. Ten paints, five bays.
+2. Worse, the sea's fleet renderer takes a `ShipLook` (url/flip/scale) and has **no notion of
+   hull paint at all** (that is a filter in RaidCombat), so a colour would have been dead
+   data.
+
+So `BAY_HULL` reads the campaign's own ladder instead: sloop on the coast, schooner through
+the Gullet, brigantine in the Coffers, galleon past it. The raid configs already escalate
+that way by chapter, so freight riding the same ladder says "deeper water, bigger cargo" with
+no copy at all.
+
+**They are SCENERY.** You cannot hail one and it cannot hail you. Interception was discussed
+and deliberately deferred: see whether motion alone fixes the feeling first.

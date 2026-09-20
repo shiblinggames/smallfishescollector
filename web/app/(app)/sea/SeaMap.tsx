@@ -55,6 +55,7 @@ import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
 import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/homestead'
+import { couriersAt } from '@/lib/seaCouriers'
 import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inBay, inChapterWater, bayOpen,
@@ -5522,6 +5523,16 @@ export default function SeaMap({
       [yoon, smuggler, ...residents, ...socials, ...traders]
         .map(t => ({ key: t.key, look: captainFromTrader(t.look) }))
     if (finn) out.push({ key: 'finn', look: captainFromTrader(FINN_LOOK) })
+    // THE FREIGHT, WEARING ITS OWN CHAPTER'S HULL. Derived from the clock, so
+    // this list is stable for as long as the lanes are: the LOOKS never
+    // change, only the positions handed over each frame. See lib/seaCouriers.
+    for (const c of couriersAt(0)) {
+      out.push({
+        key: `courier:${c.key}`,
+        look: captainFromTrader(FINN_LOOK),
+        ship: { url: c.hull, flip: false, scale: c.laden ? 0.94 : 0.86 },
+      })
+    }
     // AND THE PEOPLE YOU ACTUALLY KNOW. Same builder, same slot: a friend's
     // boat is not a different kind of thing from a trader's, it is the same
     // thing with better tackle on it.
@@ -8705,6 +8716,32 @@ export default function SeaMap({
         // and he was not.
         //
         // He never turns: he is not passing through.
+        // ── THE FINNDICATE'S FREIGHT, ON THE WATER ────────────────────
+        //
+        // The northern half of the chart had no wandering life in it: traders
+        // are refused north of the reef, every dig is south, the regulars are
+        // anchored in the fishing sea. Everything up there was a campaign
+        // stop or a wall around one, which is why it read as empty while
+        // being densely built.
+        //
+        // These are derived from the clock (see lib/seaCouriers), so they
+        // cost a little arithmetic rather than a simulation, and every
+        // captain sees the same hull in the same place. They are SCENERY for
+        // now: you cannot hail them and they cannot hail you. The point is
+        // that the water the whole story is about finally has cargo on it.
+        for (const c of couriersAt(now)) {
+          list.push({
+            key: `courier:${c.key}`, x: c.x, y: c.y,
+            // Which way she is pointing, off the lane rather than measured.
+            facing: Math.cos(c.heading) >= 0 ? 1 : -1,
+            // Loaded hulls ride lower and bigger; the empty run home is light.
+            scale: c.laden ? 0.94 : 0.86,
+            dim: 1,
+            ang: c.heading,
+            cx: c.x + WATERLINE_X * 0.9,
+            cy: c.y + (WATERLINE_Y * 0.9) / GROUND,
+          })
+        }
         if (finnRef.current) {
           const fa = finnNow()
           list.push({
