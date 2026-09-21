@@ -8,14 +8,42 @@
  * something, and the lanes run past the bay mouths where the campaign's own
  * rocks live.
  *
- * So this asserts the same two things that one does:
+ * ── AND THE CAMPAIGN'S ROCKS ARE NOT IN `SOLIDS` ────────────────────────────
  *
- *   1. No point on any lane is inside a solid, with the boat's clearance.
+ * The first cut of this checker only asked `solidAt`, and `SOLIDS` is built
+ * from ports, the fishing sea's isles and landmarks. Every rock INSIDE a bay is
+ * a `RaidIsle`, placed in bay space, and none of them are in that list. So the
+ * checker was passing on the trunk lanes for a reason it had not earned, and
+ * the moment lanes went inside the bays it would have cheerfully run freight
+ * straight through The Tangle and said nothing.
+ *
+ * So it asks both, and asserts the same two things `check-traders` does:
+ *
+ *   1. No point on any lane is inside a solid or an isle, with the boat's
+ *      clearance.
  *   2. The lanes did not disappear. A guard that refuses every lane would
  *      pass rule 1 perfectly and leave the north exactly as empty as it was.
  */
 import { laneSamples, couriersAt } from '../lib/seaCouriers'
+import { RAID_ISLES, isleAt } from '../app/(app)/sea/raidWaters'
 import { solidAt, BOAT_CLEAR } from '../lib/seaSolid'
+
+// `isleAt` places an isle in bay space and can come back empty for one whose
+// bay is not on the chart. A rock we cannot place is a rock we cannot check, so
+// it is dropped rather than guessed at.
+const ROCKS = RAID_ISLES
+  .map(i => ({ id: i.id, at: isleAt(i), r: i.r }))
+  .filter((r): r is { id: string; at: { x: number; y: number }; r: number } => !!r.at)
+
+/** What this point is inside, counting the campaign's water as well. */
+function blockedBy(x: number, y: number): string | null {
+  const s = solidAt(x, y, BOAT_CLEAR)
+  if (s) return s.what
+  for (const r of ROCKS) {
+    if (Math.hypot(r.at.x - x, r.at.y - y) < r.r + BOAT_CLEAR) return `isle ${r.id}`
+  }
+  return null
+}
 
 const samples = laneSamples(600)
 if (samples.length === 0) {
@@ -25,8 +53,8 @@ if (samples.length === 0) {
 
 const bad: string[] = []
 for (const p of samples) {
-  const hit = solidAt(p.x, p.y, BOAT_CLEAR)
-  if (hit) bad.push(`${p.key} at (${Math.round(p.x)},${Math.round(p.y)}) is inside ${hit.what}`)
+  const hit = blockedBy(p.x, p.y)
+  if (hit) bad.push(`${p.key} at (${Math.round(p.x)},${Math.round(p.y)}) is inside ${hit}`)
 }
 if (bad.length > 0) {
   console.error(`check-couriers: ${bad.length} lane points sail through stone`)
@@ -34,8 +62,10 @@ if (bad.length > 0) {
   process.exit(1)
 }
 
-// And that the water is actually occupied: walk a full there-and-back and
-// make sure every lane puts a hull on the water at some point.
+// And that the water is actually occupied: walk a full there-and-back and make
+// sure every lane puts a hull on the water at some point. The bay lanes run a
+// shorter cycle than the trunk lanes, so the window has to cover the longer of
+// the two to be fair to both.
 const CYCLE = 2 * (9 * 60_000 + 90_000)
 const base = 1_760_000_000_000
 const seen = new Set<string>()
@@ -43,7 +73,7 @@ let maxAfloat = 0
 for (let m = 0; m <= CYCLE; m += 15_000) {
   const now = couriersAt(base + m)
   maxAfloat = Math.max(maxAfloat, now.length)
-  for (const c of now) seen.add(c.bay)
+  for (const c of now) seen.add(c.key.replace(/-\d+$/, ''))
 }
 const lanes = new Set(samples.map(s => s.key))
 for (const lane of lanes) {
@@ -53,4 +83,18 @@ for (const lane of lanes) {
   }
 }
 
-console.log(`check-couriers: ${lanes.size} lanes, ${samples.length} points, none through stone. Up to ${maxAfloat} hulls afloat at once.`)
+// And that every bay has freight INSIDE it, which is the whole point of the
+// second round of lanes. Counting hulls that fall within the bay's own radius
+// is the only honest test of that: a lane that stops at the door passes every
+// check above while leaving the bay as dead as it found it.
+const bays = new Set(samples.map(s => s.bay))
+const inside = new Set<string>()
+for (const lane of lanes) if (lane.endsWith('-in')) inside.add(lane.slice(0, -3))
+for (const b of bays) {
+  if (!inside.has(b)) {
+    console.error(`check-couriers: bay ${b} has no freight working inside it`)
+    process.exit(1)
+  }
+}
+
+console.log(`check-couriers: ${lanes.size} lanes over ${bays.size} bays, ${samples.length} points, none through stone or isle. Up to ${maxAfloat} hulls afloat at once.`)

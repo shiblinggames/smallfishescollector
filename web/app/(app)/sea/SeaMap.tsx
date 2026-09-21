@@ -5526,11 +5526,21 @@ export default function SeaMap({
     // THE FREIGHT, WEARING ITS OWN CHAPTER'S HULL. Derived from the clock, so
     // this list is stable for as long as the lanes are: the LOOKS never
     // change, only the positions handed over each frame. See lib/seaCouriers.
+    //
+    // THE ART COMES OFF THE TIER, not out of a literal. The first cut wrote
+    // the path and `flip: false` by hand, and every one of these four hulls is
+    // drawn flipped, so the whole northern chart was sailing backwards. And
+    // `scale` on a ShipLook is NOT a size knob: every hull is drawn to one
+    // width and that number is the per-SKIN plate correction, 1 for a ship in
+    // her own colours (see makeShip). Using it to say "laden" quietly shrank
+    // the art instead. How loaded she is belongs in how she rides, below.
     for (const c of couriersAt(0)) {
+      const h = getShip(c.tier)
+      if (!h.seaImageUrl) continue
       out.push({
         key: `courier:${c.key}`,
         look: captainFromTrader(FINN_LOOK),
-        ship: { url: c.hull, flip: false, scale: c.laden ? 0.94 : 0.86 },
+        ship: { url: h.seaImageUrl, flip: !!h.seaFlip },
       })
     }
     // AND THE PEOPLE YOU ACTUALLY KNOW. Same builder, same slot: a friend's
@@ -8730,14 +8740,36 @@ export default function SeaMap({
         // now: you cannot hail them and they cannot hail you. The point is
         // that the water the whole story is about finally has cargo on it.
         for (const c of couriersAt(now)) {
+          // ── AND SHE RIDES LIKE WHAT SHE IS ─────────────────────────────
+          //
+          // `lift` is how much of the swell a hull takes, 1 being a fishing
+          // boat's full share, and leaving it out means taking that full
+          // share. Traders and Finn leave it out correctly, because every one
+          // of them really is in the same dinghy. These are not: a courier in
+          // the Last Fathom is a galleon, and a galleon heaving like a cork is
+          // exactly the "2D paper" read, because nothing that big moves that
+          // freely on water. `shipLift` already knows the answer per class and
+          // drives the heel by the same divisor, so all three halves of how
+          // she rides agree.
+          //
+          // Loaded makes her heavier still. That is what laden was always
+          // trying to say, and saying it here is honest where saying it with
+          // `scale` was not: a laden hull sits deeper and moves less, it does
+          // not become a smaller ship.
+          const lift = shipLift(c.tier) * (c.laden ? 0.82 : 1)
           list.push({
             key: `courier:${c.key}`, x: c.x, y: c.y,
             // Which way she is pointing, off the lane rather than measured.
             facing: Math.cos(c.heading) >= 0 ? 1 : -1,
-            // Loaded hulls ride lower and bigger; the empty run home is light.
-            scale: c.laden ? 0.94 : 0.86,
+            // ONE WIDTH FOR EVERY WARSHIP, which is the sea's own rule and not
+            // a shrug: `makeShip` draws all five classes to the same plate and
+            // lets the silhouette carry the class. A courier that drew smaller
+            // than the same hull under a player would be the same ship at two
+            // sizes on one chart.
+            scale: 1,
             dim: 1,
             ang: c.heading,
+            lift,
             cx: c.x + WATERLINE_X * 0.9,
             cy: c.y + (WATERLINE_Y * 0.9) / GROUND,
           })

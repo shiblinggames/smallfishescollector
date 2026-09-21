@@ -7,8 +7,9 @@
 // regulars are anchored in the fishing sea. What was up there was furniture,
 // and all of it existed to be a campaign stop or a wall around one.
 //
-// So: couriers. Hulls running freight between the hub and the bay mouths,
-// visible from a long way off, going somewhere.
+// So: couriers. Hulls running freight between the hub and the bay mouths, and
+// working inside the bays themselves, visible from a long way off, going
+// somewhere.
 //
 // ── POSITION IS A FUNCTION OF THE CLOCK, NOT A SIMULATION ───────────────────
 //
@@ -30,16 +31,18 @@
 // exactly that bug shipped once. A lane drawn by hand can be verified once and
 // stays correct; see `scripts/check-couriers.mts`, which walks every courier
 // over a full window and asserts none of them touches stone.
-import { BAYS, mouthOf, type Bay } from '@/app/(app)/sea/raidWaters'
+import { BAYS, mouthOf, fromBay, type Bay } from '@/app/(app)/sea/raidWaters'
 import { HUB } from '@/app/(app)/sea/raidWaters'
 
 /** How long one crossing takes, end to end. Slow: freight is not in a hurry,
  *  and a hull that crosses the screen quickly reads as a chase. */
 const RUN_MS = 9 * 60_000
+/** A bay run is a fraction of a trunk crossing, so a hull working inside the
+ *  bay covers its shorter lane at about the same speed rather than crawling. */
+const BAY_RUN_MS = 4 * 60_000
 /** And the pause at each end before it sets off again, so an arrival is a
  *  thing you can watch happen rather than a teleport. */
 const HOLD_MS = 90_000
-const CYCLE_MS = RUN_MS + HOLD_MS
 
 /** How far off the hub's centre a lane starts. The hub is a busy junction and
  *  nobody stacks a freight lane on top of the war-gate. */
@@ -61,60 +64,118 @@ const MOUTH_STANDOFF = 900
  * and has no notion of hull paint at all (that is a filter in RaidCombat), so
  * a colour would have been dead data.
  *
- * So a courier belongs to its bay by sailing THAT BAY'S OWN HULL, read off the
- * campaign's own raid configs. Those escalate by chapter on purpose -- sloop
- * on the coast, schooner and brigantine through the Gullet, galleons in the
- * Coffers and past it -- so freight riding the same ladder says "deeper water,
- * bigger cargo" with no copy at all.
+ * So a courier belongs to its bay by sailing THAT BAY'S OWN CLASS of hull, and
+ * it names the class by TIER rather than by an art path. The tier is what the
+ * rest of the sea already keys off: it is how `shipFromFriend` finds the art
+ * and the flip, and how `shipLift` works out how much of the swell that hull
+ * takes. Hard-coding a path instead got both of those wrong at once. Every one
+ * of these four hulls is drawn flipped, so a literal `flip: false` had every
+ * courier on the chart pointing backwards.
+ *
+ * The classes escalate by chapter on purpose: sloop on the coast, schooner and
+ * brigantine through the Gullet, galleons in the Coffers and past it. Freight
+ * riding the same ladder says "deeper water, bigger cargo" with no copy at all.
  */
-const BAY_HULL: Record<string, string> = {
-  thread: '/ship-hero/sloop_v3.png',            // Ch I, Pete's coasters
-  sunken_hand: '/ship-hero/schooner_v3.png',    // Ch II, Krust's and Spet's runs
-  the_coffers: '/ship-hero/brigantine_v3.png',  // Ch III, the market's own freight
-  the_last_fathom: '/ship-hero/galleon_v3.png', // Ch IV, the Don's water
-  one_last_ride: '/ship-hero/galleon_v3.png',
+const BAY_TIER: Record<string, number> = {
+  thread: 2,          // Sloop, Ch I, Pete's coasters
+  sunken_hand: 3,     // Schooner, Ch II, Krust's and Spet's runs
+  the_coffers: 4,     // Brigantine, Ch III, the market's own freight
+  the_last_fathom: 5, // Galleon, Ch IV, the Don's water
+  one_last_ride: 5,
 }
 
-/** The hull this bay's freight sails. */
-export function courierHull(bay: string): string {
-  return BAY_HULL[bay] ?? BAY_HULL.thread
+/** The class of hull this bay's freight sails. */
+export function courierTier(bay: string): number {
+  return BAY_TIER[bay] ?? BAY_TIER.thread
 }
 
 export type Courier = {
   /** Stable per lane + slot, so a hull keeps its identity across frames. */
   key: string
-  /** Which chapter's freight this is. Drives the colours. */
+  /** Which chapter's freight this is. */
   bay: string
   x: number
   y: number
   /** Heading in radians, for pointing the hull. */
   heading: number
-  /** 0 at the hub end, 1 at the bay end. */
+  /** 0 at one end of the lane, 1 at the other. */
   t: number
   /** Outbound is loaded and low in the water; inbound is riding high. */
   laden: boolean
-  /** The hull this bay's fleet sails. See courierHull. */
-  hull: string
+  /** The ship tier whose hull she sails. See courierTier. */
+  tier: number
 }
 
-type Lane = { bay: Bay; a: { x: number; y: number }; b: { x: number; y: number } }
+type Lane = {
+  id: string
+  bay: Bay
+  a: { x: number; y: number }
+  b: { x: number; y: number }
+  runMs: number
+  /** How many hulls work this lane at once. */
+  hulls: number
+}
 
-/** Built once: one lane per bay, hub standoff to mouth standoff. */
-const LANES: Lane[] = BAYS.map(bay => {
-  const m = mouthOf(bay)
-  const dx = m.x - HUB.x, dy = m.y - HUB.y
-  const len = Math.hypot(dx, dy) || 1
-  const ux = dx / len, uy = dy / len
-  return {
-    bay,
-    a: { x: HUB.x + ux * HUB_STANDOFF, y: HUB.y + uy * HUB_STANDOFF },
-    b: { x: m.x - ux * MOUTH_STANDOFF, y: m.y - uy * MOUTH_STANDOFF },
+/**
+ * ── THE IN-BAY LANES ────────────────────────────────────────────────────────
+ *
+ * The trunk lanes stop 900px short of each mouth, which left every bay itself
+ * empty: a captain who sailed all the way in found the same dead water the
+ * couriers were built to fix. So each bay also gets freight of its own, on a
+ * chord that runs from near the door across to the far side.
+ *
+ * `k` is how far off the bay's axis that chord sits, as a fraction of the bay
+ * radius, and it is NOT a taste number. It was probed: every candidate chord
+ * was walked against both the world's solids and the campaign's own rocks, and
+ * these are the offsets that came back clear. The Last Fathom needs a wider one
+ * than the rest because Crooked Light is parked where the others' lane runs.
+ *
+ * Bay space puts `along` at 0 in the door and `2r` at the back wall, so the
+ * chord below enters a quarter of the way in and stops short of the back.
+ */
+const IN_BAY_K: Record<string, number> = {
+  thread: 0.35,
+  sunken_hand: 0.35,
+  the_coffers: 0.35,
+  the_last_fathom: 0.45, // Crooked Light sits on the 0.35 line
+  one_last_ride: 0.35,
+}
+
+/** Hulls on a trunk lane at once, spaced evenly through the cycle so a lane is
+ *  never entirely empty and never a convoy. */
+const PER_TRUNK = 3
+/** And inside a bay, where there is less water to spread them over. */
+const PER_BAY = 2
+
+/** Built once: a trunk lane and a working lane for every bay. */
+const LANES: Lane[] = (() => {
+  const out: Lane[] = []
+  for (const bay of BAYS) {
+    const m = mouthOf(bay)
+    const dx = m.x - HUB.x, dy = m.y - HUB.y
+    const len = Math.hypot(dx, dy) || 1
+    const ux = dx / len, uy = dy / len
+    out.push({
+      id: bay.id,
+      bay,
+      a: { x: HUB.x + ux * HUB_STANDOFF, y: HUB.y + uy * HUB_STANDOFF },
+      b: { x: m.x - ux * MOUTH_STANDOFF, y: m.y - uy * MOUTH_STANDOFF },
+      runMs: RUN_MS,
+      hulls: PER_TRUNK,
+    })
+    const k = IN_BAY_K[bay.id] ?? 0.35
+    const D = bay.r * 2
+    out.push({
+      id: `${bay.id}-in`,
+      bay,
+      a: fromBay(bay, D * 0.25, bay.r * k),
+      b: fromBay(bay, D * 0.80, -bay.r * k),
+      runMs: BAY_RUN_MS,
+      hulls: PER_BAY,
+    })
   }
-})
-
-/** Hulls on a lane at once, spaced evenly through the cycle so a lane is never
- *  entirely empty and never a convoy. */
-const PER_LANE = 2
+  return out
+})()
 
 /**
  * Every courier on the water right now. Derived: hand it the clock and it
@@ -124,16 +185,17 @@ export function couriersAt(now: number = Date.now()): Courier[] {
   const out: Courier[] = []
   for (let li = 0; li < LANES.length; li++) {
     const lane = LANES[li]
-    for (let s = 0; s < PER_LANE; s++) {
+    const cycle = lane.runMs + HOLD_MS
+    for (let s = 0; s < lane.hulls; s++) {
       // Each slot is offset through the cycle, and each lane is offset again
       // so the whole chart does not sail in lockstep.
-      const offset = (s / PER_LANE + li * 0.37) * CYCLE_MS
-      const phase = ((now + offset) % (CYCLE_MS * 2) + CYCLE_MS * 2) % (CYCLE_MS * 2)
+      const offset = (s / lane.hulls + li * 0.37) * cycle
+      const phase = ((now + offset) % (cycle * 2) + cycle * 2) % (cycle * 2)
       // A full there-and-back is two cycles: out, hold, back, hold.
-      const outbound = phase < CYCLE_MS
-      const into = outbound ? phase : phase - CYCLE_MS
-      if (into > RUN_MS) continue          // holding at one end, not on the water
-      const k = into / RUN_MS
+      const outbound = phase < cycle
+      const into = outbound ? phase : phase - cycle
+      if (into > lane.runMs) continue      // holding at one end, not on the water
+      const k = into / lane.runMs
       // Ease the ends so she leans away and settles in rather than snapping
       // to full speed off a standing start.
       const eased = k * k * (3 - 2 * k)
@@ -143,9 +205,9 @@ export function couriersAt(now: number = Date.now()): Courier[] {
       const dx = lane.b.x - lane.a.x, dy = lane.b.y - lane.a.y
       const heading = Math.atan2(outbound ? dy : -dy, outbound ? dx : -dx)
       out.push({
-        key: `${lane.bay.id}-${s}`,
+        key: `${lane.id}-${s}`,
         bay: lane.bay.id,
-        hull: courierHull(lane.bay.id),
+        tier: courierTier(lane.bay.id),
         x, y, heading, t,
         // Outbound from the hub is the empty run; the freight comes BACK.
         // Everything the Finndicate takes is moving toward the middle.
@@ -164,13 +226,14 @@ export function couriersAround(x: number, y: number, halfW: number, halfH: numbe
 }
 
 /** Every point a courier ever occupies on a lane, for the build check. */
-export function laneSamples(steps = 400): { key: string; x: number; y: number }[] {
-  const out: { key: string; x: number; y: number }[] = []
+export function laneSamples(steps = 400): { key: string; bay: string; x: number; y: number }[] {
+  const out: { key: string; bay: string; x: number; y: number }[] = []
   for (const lane of LANES) {
     for (let i = 0; i <= steps; i++) {
       const t = i / steps
       out.push({
-        key: lane.bay.id,
+        key: lane.id,
+        bay: lane.bay.id,
         x: lane.a.x + (lane.b.x - lane.a.x) * t,
         y: lane.a.y + (lane.b.y - lane.a.y) * t,
       })
