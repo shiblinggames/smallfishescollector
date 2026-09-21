@@ -55,7 +55,7 @@ import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
 import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/homestead'
-import { couriersAt } from '@/lib/seaCouriers'
+import { couriersAt, courierSlots } from '@/lib/seaCouriers'
 import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inBay, inChapterWater, bayOpen,
@@ -5534,7 +5534,13 @@ export default function SeaMap({
     // width and that number is the per-SKIN plate correction, 1 for a ship in
     // her own colours (see makeShip). Using it to say "laden" quietly shrank
     // the art instead. How loaded she is belongs in how she rides, below.
-    for (const c of couriersAt(0)) {
+    //
+    // AND IT IS EVERY SLOT, not the ones afloat this second. This read
+    // `couriersAt(0)` at first, which is the couriers between holds at one
+    // frozen instant -- a different set from the ones out there now, so hulls
+    // on the water had no sprite baked for them and drew wrong. A slot exists
+    // whether or not its hull is currently sailing.
+    for (const c of courierSlots()) {
       const h = getShip(c.tier)
       if (!h.seaImageUrl) continue
       out.push({

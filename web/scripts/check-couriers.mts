@@ -24,7 +24,7 @@
  *   2. The lanes did not disappear. A guard that refuses every lane would
  *      pass rule 1 perfectly and leave the north exactly as empty as it was.
  */
-import { laneSamples, couriersAt } from '../lib/seaCouriers'
+import { laneSamples, couriersAt, courierSlots } from '../lib/seaCouriers'
 import { RAID_ISLES, isleAt } from '../app/(app)/sea/raidWaters'
 import { solidAt, BOAT_CLEAR } from '../lib/seaSolid'
 
@@ -97,4 +97,44 @@ for (const b of bays) {
   }
 }
 
-console.log(`check-couriers: ${lanes.size} lanes over ${bays.size} bays, ${samples.length} points, none through stone or isle. Up to ${maxAfloat} hulls afloat at once.`)
+// ── AND THEY DO NOT SAIL THROUGH EACH OTHER ────────────────────────────────
+//
+// A lane is one line with hulls running both ways along it, so before the
+// traffic was separated by direction an outbound ship and an inbound one
+// passed THROUGH each other at the midpoint. Measured at zero pixels apart,
+// which on screen is one hull inside another. A hull is drawn 340px wide, so
+// anything under that is a touch rather than a pass.
+const HULL_W = 340
+let closest = Infinity
+let pair = ''
+for (let m = 0; m < 600; m += 1) {
+  const n = couriersAt(base + m * 20_000)
+  for (let i = 0; i < n.length; i++) {
+    for (let j = i + 1; j < n.length; j++) {
+      const d = Math.hypot(n[i].x - n[j].x, n[i].y - n[j].y)
+      if (d < closest) { closest = d; pair = `${n[i].key} / ${n[j].key}` }
+    }
+  }
+}
+if (closest < HULL_W) {
+  console.error(`check-couriers: ${pair} come within ${Math.round(closest)}px, closer than a hull is wide`)
+  process.exit(1)
+}
+
+// ── AND EVERY SLOT HAS AN IDENTITY ─────────────────────────────────────────
+//
+// The renderer bakes one sprite per key. That list was built from the couriers
+// afloat at a single frozen instant, and which slots are between holds changes
+// minute to minute, so hulls on the water had no sprite of their own. The slot
+// list has to cover anything the clock can ever put out there.
+const slots = new Set(courierSlots().map(c => c.key))
+for (let m = 0; m < 600; m += 1) {
+  for (const c of couriersAt(base + m * 20_000)) {
+    if (!slots.has(c.key)) {
+      console.error(`check-couriers: ${c.key} sails but has no slot, so nothing draws it`)
+      process.exit(1)
+    }
+  }
+}
+
+console.log(`check-couriers: ${lanes.size} lanes over ${bays.size} bays, ${samples.length} points, none through stone or isle. Up to ${maxAfloat} hulls afloat at once, never closer than ${Math.round(closest)}px.`)

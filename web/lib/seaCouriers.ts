@@ -31,25 +31,71 @@
 // exactly that bug shipped once. A lane drawn by hand can be verified once and
 // stays correct; see `scripts/check-couriers.mts`, which walks every courier
 // over a full window and asserts none of them touches stone.
-import { BAYS, mouthOf, fromBay, type Bay } from '@/app/(app)/sea/raidWaters'
+import { BAYS, entryOf, fromBay, type Bay } from '@/app/(app)/sea/raidWaters'
 import { HUB } from '@/app/(app)/sea/raidWaters'
 
-/** How long one crossing takes, end to end. Slow: freight is not in a hurry,
- *  and a hull that crosses the screen quickly reads as a chase. */
-const RUN_MS = 9 * 60_000
-/** A bay run is a fraction of a trunk crossing, so a hull working inside the
- *  bay covers its shorter lane at about the same speed rather than crawling. */
-const BAY_RUN_MS = 4 * 60_000
-/** And the pause at each end before it sets off again, so an arrival is a
- *  thing you can watch happen rather than a teleport. */
-const HOLD_MS = 90_000
+/**
+ * ── A LANE'S TIMING COMES FROM ITS LENGTH ───────────────────────────────────
+ *
+ * The first cut gave every lane the same nine-minute crossing, on the theory
+ * that freight is not in a hurry. What that actually produced was freight that
+ * did not move: the trunk lanes turned out to be three hundred pixels long, so
+ * three hulls shuffled back and forth on top of each other at under one pixel
+ * a second. Slow enough and "unhurried" becomes "broken".
+ *
+ * So the timing is derived. Pick the speed freight should travel at and let
+ * each lane take as long as it takes, and a short bay chord and a long trunk
+ * run both read as the same kind of ship doing the same kind of work.
+ *
+ * The player does 300px a second flat out. A fifth of that is unmistakably
+ * slower than you without being still.
+ */
+const CRUISE_PX_S = 58
+/** The ease at the ends peaks at 1.5x the average, so the average that lands
+ *  CRUISE at mid-run is two thirds of it. */
+const MEAN_PX_MS = (CRUISE_PX_S * (2 / 3)) / 1000
+/** The pause at each end before she sets off again, so an arrival is a thing
+ *  you can watch happen rather than a teleport. Short enough that a lane is
+ *  not visibly empty while she sits. */
+const HOLD_MS = 40_000
 
 /** How far off the hub's centre a lane starts. The hub is a busy junction and
  *  nobody stacks a freight lane on top of the war-gate. */
 const HUB_STANDOFF = 2600
-/** And how far short of the bay's mouth it stops. The strait itself is the
- *  campaign's water; couriers work the approach, not the road. */
-const MOUTH_STANDOFF = 900
+/**
+ * And how far short of the bay's own rim it stops.
+ *
+ * This used to stop short of the MOUTH, which is a different point entirely
+ * and the reason the trunk lanes were 300px long: `mouthOf` is where a strait
+ * LEAVES THE JUNCTION, 3800px out, while the bay itself is another three to
+ * six thousand beyond that. Stopping 900px short of the mouth left a stub just
+ * outside the hub and called it a shipping lane.
+ *
+ * The run now goes all the way down the strait to the bay's door, which is the
+ * road freight would actually take. The axis is clear the whole way in every
+ * bay, and check-couriers walks it to keep that true.
+ */
+const ENTRY_STANDOFF = 400
+
+/**
+ * ── WHICH SIDE OF THE ROAD SHE KEEPS ────────────────────────────────────────
+ *
+ * A lane is one line, and hulls run both ways along it, so an outbound ship
+ * and an inbound ship pass THROUGH each other at the midpoint. Measured: the
+ * closest two couriers ever came was zero pixels, which on screen is one hull
+ * sitting inside another.
+ *
+ * Real traffic solves this the obvious way, by keeping to a side, and so does
+ * this: outbound holds one side of the lane and inbound the other. It costs a
+ * perpendicular offset and it is why couriers now pass each other rather than
+ * merge. A hull is drawn 340px wide, so the two
+ * lines have to be more than that apart or a pass still looks like a touch:
+ * 230 puts 460px between passing keels. The straits are 440px to either side
+ * of their axis, which leaves water outside both offset lines, and
+ * check-couriers walks both of them rather than the centreline they are
+ * measured from.
+ */
+const LANE_SEPARATION = 230
 
 /**
  * ── WHOSE FREIGHT IS THIS ───────────────────────────────────────────────────
@@ -119,26 +165,42 @@ type Lane = {
 /**
  * ── THE IN-BAY LANES ────────────────────────────────────────────────────────
  *
- * The trunk lanes stop 900px short of each mouth, which left every bay itself
- * empty: a captain who sailed all the way in found the same dead water the
- * couriers were built to fix. So each bay also gets freight of its own, on a
- * chord that runs from near the door across to the far side.
+ * A trunk lane stops at the bay's door, which leaves the bay itself empty: a
+ * captain who sailed all the way in found the same dead water the couriers
+ * were built to fix. So each bay also gets freight of its own, on a chord that
+ * crosses its water.
  *
- * `k` is how far off the bay's axis that chord sits, as a fraction of the bay
- * radius, and it is NOT a taste number. It was probed: every candidate chord
- * was walked against both the world's solids and the campaign's own rocks, and
- * these are the offsets that came back clear. The Last Fathom needs a wider one
- * than the rest because Crooked Light is parked where the others' lane runs.
+ * ── THESE FOUR NUMBERS ARE SEARCHED, NOT CHOSEN ─────────────────────────────
  *
- * Bay space puts `along` at 0 in the door and `2r` at the back wall, so the
- * chord below enters a quarter of the way in and stops short of the back.
+ * Bay space puts `along` at 0 in the door and 1 at the back wall, and `across`
+ * at 0 on the axis, as a fraction of the bay radius. A chord is where it
+ * enters, where it leaves, and how far off the axis at each end.
+ *
+ * The first cut used a symmetric chord: enter at +k, leave at -k. That reads
+ * tidily and it is wrong, because a chord that crosses the axis crosses it in
+ * the middle of the bay, which is exactly where the campaign parks its rocks.
+ * One Last Ride has all three of its isles within 260px of the axis, so NO
+ * symmetric chord clears that bay at any offset. The Last Fathom only cleared
+ * by threading a gap.
+ *
+ * So both ends move independently, and the endpoints below came out of a
+ * search: every chord in the grid was walked down BOTH sides of the road
+ * against the world's solids and the campaign's own isles, with 150px of
+ * margin demanded on top of the boat's own clearance, and the longest clear
+ * one won. Re-run scripts/check-couriers to confirm any change to them.
  */
-const IN_BAY_K: Record<string, number> = {
-  thread: 0.35,
-  sunken_hand: 0.35,
-  the_coffers: 0.35,
-  the_last_fathom: 0.45, // Crooked Light sits on the 0.35 line
-  one_last_ride: 0.35,
+type Chord = { a0: number; a1: number; k0: number; k1: number }
+const IN_BAY: Record<string, Chord> = {
+  // len 7967px
+  thread: { a0: 0.15, a1: 0.85, k0: -0.40, k1: 0.40 },
+  // len 6943px
+  sunken_hand: { a0: 0.15, a1: 0.75, k0: 0.40, k1: -0.60 },
+  // len 6974px
+  the_coffers: { a0: 0.15, a1: 0.85, k0: 0.35, k1: -0.40 },
+  // len 9373px
+  the_last_fathom: { a0: 0.15, a1: 0.80, k0: 0.40, k1: -0.50 },
+  // len 3216px, and the only shape that clears this bay at all
+  one_last_ride: { a0: 0.25, a1: 0.60, k0: 0.60, k1: -0.65 },
 }
 
 /** Hulls on a trunk lane at once, spaced evenly through the cycle so a lane is
@@ -147,35 +209,51 @@ const PER_TRUNK = 3
 /** And inside a bay, where there is less water to spread them over. */
 const PER_BAY = 2
 
+/** How long this lane takes end to end, at freight's cruising speed. */
+function runFor(a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return Math.max(30_000, Math.hypot(b.x - a.x, b.y - a.y) / MEAN_PX_MS)
+}
+
 /** Built once: a trunk lane and a working lane for every bay. */
 const LANES: Lane[] = (() => {
   const out: Lane[] = []
   for (const bay of BAYS) {
-    const m = mouthOf(bay)
-    const dx = m.x - HUB.x, dy = m.y - HUB.y
-    const len = Math.hypot(dx, dy) || 1
-    const ux = dx / len, uy = dy / len
-    out.push({
-      id: bay.id,
-      bay,
-      a: { x: HUB.x + ux * HUB_STANDOFF, y: HUB.y + uy * HUB_STANDOFF },
-      b: { x: m.x - ux * MOUTH_STANDOFF, y: m.y - uy * MOUTH_STANDOFF },
-      runMs: RUN_MS,
-      hulls: PER_TRUNK,
-    })
-    const k = IN_BAY_K[bay.id] ?? 0.35
+    const e = entryOf(bay)
+    const ux = Math.cos(bay.bearing), uy = Math.sin(bay.bearing)
+    const ta = { x: HUB.x + ux * HUB_STANDOFF, y: HUB.y + uy * HUB_STANDOFF }
+    const tb = { x: e.x - ux * ENTRY_STANDOFF, y: e.y - uy * ENTRY_STANDOFF }
+    out.push({ id: bay.id, bay, a: ta, b: tb, runMs: runFor(ta, tb), hulls: PER_TRUNK })
+
+    const ch = IN_BAY[bay.id] ?? { a0: 0.2, a1: 0.8, k0: 0.35, k1: -0.35 }
     const D = bay.r * 2
-    out.push({
-      id: `${bay.id}-in`,
-      bay,
-      a: fromBay(bay, D * 0.25, bay.r * k),
-      b: fromBay(bay, D * 0.80, -bay.r * k),
-      runMs: BAY_RUN_MS,
-      hulls: PER_BAY,
-    })
+    const ba = fromBay(bay, D * ch.a0, bay.r * ch.k0)
+    const bb = fromBay(bay, D * ch.a1, bay.r * ch.k1)
+    out.push({ id: `${bay.id}-in`, bay, a: ba, b: bb, runMs: runFor(ba, bb), hulls: PER_BAY })
   }
   return out
 })()
+
+/**
+ * ── EVERY SLOT, WHETHER SHE IS ON THE WATER OR NOT ──────────────────────────
+ *
+ * The renderer needs a baked sprite per key, and that list was being built from
+ * `couriersAt(0)` -- the couriers afloat at one frozen instant. Which slots are
+ * afloat changes minute to minute, so five hulls on the water at any given time
+ * had no sprite baked for them at all, and the chart drew them wrong.
+ *
+ * A slot exists whether or not its hull is currently between holds, so the
+ * looks come from the LANES themselves and never change. Positions come and go;
+ * identities do not.
+ */
+export function courierSlots(): { key: string; bay: string; tier: number }[] {
+  const out: { key: string; bay: string; tier: number }[] = []
+  for (const lane of LANES) {
+    for (let s = 0; s < lane.hulls; s++) {
+      out.push({ key: `${lane.id}-${s}`, bay: lane.bay.id, tier: courierTier(lane.bay.id) })
+    }
+  }
+  return out
+}
 
 /**
  * Every courier on the water right now. Derived: hand it the clock and it
@@ -200,9 +278,12 @@ export function couriersAt(now: number = Date.now()): Courier[] {
       // to full speed off a standing start.
       const eased = k * k * (3 - 2 * k)
       const t = outbound ? eased : 1 - eased
-      const x = lane.a.x + (lane.b.x - lane.a.x) * t
-      const y = lane.a.y + (lane.b.y - lane.a.y) * t
       const dx = lane.b.x - lane.a.x, dy = lane.b.y - lane.a.y
+      const len = Math.hypot(dx, dy) || 1
+      // Keep to your own side, so a head-on pass is a pass and not a merge.
+      const off = (outbound ? 1 : -1) * LANE_SEPARATION
+      const x = lane.a.x + dx * t + (-dy / len) * off
+      const y = lane.a.y + dy * t + (dx / len) * off
       const heading = Math.atan2(outbound ? dy : -dy, outbound ? dx : -dx)
       out.push({
         key: `${lane.id}-${s}`,
@@ -229,14 +310,21 @@ export function couriersAround(x: number, y: number, halfW: number, halfH: numbe
 export function laneSamples(steps = 400): { key: string; bay: string; x: number; y: number }[] {
   const out: { key: string; bay: string; x: number; y: number }[] = []
   for (const lane of LANES) {
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps
-      out.push({
-        key: lane.id,
-        bay: lane.bay.id,
-        x: lane.a.x + (lane.b.x - lane.a.x) * t,
-        y: lane.a.y + (lane.b.y - lane.a.y) * t,
-      })
+    const dx = lane.b.x - lane.a.x, dy = lane.b.y - lane.a.y
+    const len = Math.hypot(dx, dy) || 1
+    // BOTH SIDES OF THE ROAD. No courier ever sails the centreline: outbound
+    // and inbound each hold their own offset, so checking the middle would be
+    // checking water nobody is in.
+    for (const off of [LANE_SEPARATION, -LANE_SEPARATION]) {
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps
+        out.push({
+          key: lane.id,
+          bay: lane.bay.id,
+          x: lane.a.x + dx * t + (-dy / len) * off,
+          y: lane.a.y + dy * t + (dx / len) * off,
+        })
+      }
     }
   }
   return out
