@@ -3142,7 +3142,8 @@ caches and two maelstrom doors. Every object existed to be a node or a wall arou
 nothing was ever just THERE.
 
 **`lib/seaCouriers.ts`.** Freight running between the hub and each bay mouth. One lane per
-bay, two hulls per lane, a nine-minute crossing with a 90-second hold at each end.
+bay plus a working lane INSIDE each bay; three hulls on a trunk lane, two on a bay lane; timing
+derived from lane length at 58px/s cruise (a fifth of the player), 40-second hold at each end.
 
 - **Position is a function of the clock**, the shape `seaWeather` uses for squalls. Every
   captain sees the same hull in the same place, there is no state to store or sync, and a
@@ -3151,9 +3152,19 @@ bay, two hulls per lane, a nine-minute crossing with a 90-second hold at each en
   reads as a merchant waiting to be hailed. Copying that north would have given us stationary
   ships in empty water. These travel.
 - **Lanes are authored and checked.** `scripts/check-couriers.mts` (wired into `npm run
-  check`) walks 3,005 points and asserts none touches stone with `BOAT_CLEAR`, and that no
-  lane is empty. A hull crossing thousands of pixels has far more chance of clipping an
-  island than one on an anchor, and `check-traders` exists because that bug shipped once.
+  check`) walks both sides of every lane against `SOLIDS` AND the campaign's `RAID_ISLES`
+  (`SOLIDS` does not contain them; a check that only asks `solidAt` is blind inside a bay),
+  asserts every bay has freight inside it, that no two couriers come closer than a hull is
+  wide (340), and that every key the clock can emit has a slot in `courierSlots()`.
+- **Traffic keeps to its side.** A lane is one line with hulls both ways; outbound holds
+  +230px off the axis, inbound -230, so a pass is a pass and not a merge.
+- **In-bay chords are SEARCHED, not chosen** (`IN_BAY` in lib/seaCouriers): both ends move
+  independently because a symmetric chord crosses the axis mid-bay, which is where the rocks
+  are. One Last Ride has all three isles within 260px of its axis and clears no symmetric
+  chord at all.
+- **Trunk lanes run to `entryOf`, never `mouthOf`.** The mouth is where a strait leaves the
+  junction (3,800px out); the bay is 3-6k beyond. The first cut aimed at the mouth and left
+  300px of lane, three hulls stacked and effectively still.
 - **The freight travels INBOUND laden.** Outbound from the hub is the empty run. Everything
   the Finndicate takes moves toward the middle, which is what the whole campaign says.
 
@@ -3165,10 +3176,35 @@ that match the bay it belongs in?"). Two wrong turns before that landed:
    hull paint at all** (that is a filter in RaidCombat), so a colour would have been dead
    data.
 
-So `BAY_HULL` reads the campaign's own ladder instead: sloop on the coast, schooner through
-the Gullet, brigantine in the Coffers, galleon past it. The raid configs already escalate
+So `BAY_TIER` names the class by SHIP TIER and the art, flip and swell-lift come off
+`getShip`, the way `shipFromFriend` does: sloop on the coast, schooner through the Gullet,
+brigantine in the Coffers, galleon past it. (Hard-coding the path with `flip: false` had every
+courier sailing backwards; all four hulls are `seaFlip`. `ShipLook.scale` is the per-SKIN
+plate correction, not a size knob. `lift` omitted means a galleon heaves like a dinghy.) The raid configs already escalate
 that way by chapter, so freight riding the same ladder says "deeper water, bigger cargo" with
 no copy at all.
 
 **They are SCENERY.** You cannot hail one and it cannot hail you. Interception was discussed
 and deliberately deferred: see whether motion alone fixes the feeling first.
+
+## The hull has a shape (2026-09-21)
+
+Until this the player's boat was a POINT: her position, with a 55px half-beam (`HULL` in
+SeaMap) baked into every obstacle's radius. One number for every class, so the fishing boat
+stopped a touch early and a Man-o-War, drawn 340 wide, put her bow and stern through rock.
+Kong: "the collision box for the ships are way off."
+
+- **`HULL_COLLIDERS`** in `app/(app)/sea/colliders.ts`, keyed `'fishing'` or the ship tier as
+  a string. Up to four circle/capsule shapes in fractions of the sprite's square box (210 for
+  the fishing boat, 340 for a warship), stored on the art AS DELIVERED, unmirrored, same box
+  and convention as `seaBow`.
+- **Drawn on `/sea/calibrate/hull`** (admin, linked from nowhere, writes nothing). Same shape
+  editor as the boundary bench. Shows today's fallback circle, her position dot, a small-isle
+  rock for scale, and can mirror and world-squash the stage for judging. Copy the table into
+  colliders.ts.
+- **Runtime**: `footOf()` in SeaMap converts to world offsets once in the `hull` memo
+  (mirrored by `seaFlip` there, by `facing` every frame, exactly as the cutwater is). The
+  resolve is now capsule-vs-capsule off `segSeg` closest points; obstacles no longer carry
+  the 55. No entry for a class = the old circle exactly, so nothing moves until placed.
+- `clearOfLand` still pads targets by `HULL`: it nudges a target point, which has no facing
+  and no class. The frame resolve is what stops the hull.

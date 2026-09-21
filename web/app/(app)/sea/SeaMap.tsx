@@ -47,7 +47,7 @@ import { ASHORE_ROWS } from './ashoreDoors'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { SUBMERGE } from './submerge'
-import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS } from './colliders'
+import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS, HULL_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
 import { PORTAL, PORTAL_TIERS, PORTAL_PORTS, hasPortalStone, hasStoneFor, inPortal, warpPoint } from '@/lib/seaPortal'
 import { buyPortalTier, buyPortalPort } from './portalActions'
@@ -798,10 +798,37 @@ function headingFrom(from: Vec, toward: Vec): Vec {
   return { x: from.x + (dx / d) * THROW, y: from.y + (dy / d) * THROW }
 }
 
-/** Half the beam of the boat, near enough. Baked into every obstacle radius so
- *  the hull stops when it TOUCHES a thing rather than when its centre reaches
- *  it, which is the difference between mooring alongside and parking inside. */
+/**
+ * THE FALLBACK HULL: half a fishing boat's beam, as one circle on her centre.
+ *
+ * This used to be baked into every obstacle's radius, which made the boat a
+ * point and every class on the ladder the same point. A Man-o-War is drawn
+ * three times the width this number describes, and her bow and stern went
+ * through rock because the only part of her the water knew about was a circle
+ * in the middle. Now an obstacle's radius is the OBSTACLE's, and the hull
+ * carries its own shape (see `foot` on the hull, and HULL_COLLIDERS). A class
+ * with nothing drawn for it yet gets exactly this circle, so nothing moves
+ * until it has been placed on /sea/calibrate/hull.
+ */
 const HULL = 55
+
+/** One shape of the hull's footprint, as OFFSETS from her position in world
+ *  units, already in the bow-left frame: x is mirrored by `facing` each frame,
+ *  y is on the plane. A circle is the capsule whose two ends coincide. */
+type Foot = { ax: number; ay: number; bx: number; by: number; r: number }
+
+/** The footprint drawn for a class, or the fallback circle. `box` is the
+ *  square the shapes were drawn in and `flip` whether the art is mirrored to
+ *  sail, the same conversion `seaBow` gets in the hull memo. */
+function footOf(key: string, box: number, flip: boolean): Foot[] {
+  const c = HULL_COLLIDERS[key]
+  if (!c || c.shapes.length === 0) return [{ ax: 0, ay: 0, bx: 0, by: 0, r: HULL }]
+  const fx = (v: number) => ((flip ? 1 - v : v) - 0.5) * box
+  const fy = (v: number) => ((v - 0.5) * box) / GROUND
+  return c.shapes.map(k => k.kind === 'circle'
+    ? { ax: fx(k.ax), ay: fy(k.ay), bx: fx(k.ax), by: fy(k.ay), r: k.ar * box }
+    : { ax: fx(k.ax), ay: fy(k.ay), bx: fx(k.bx), by: fy(k.by), r: k.ar * box })
+}
 
 /**
  * EVERYTHING THAT TURNS THE HULL, as circles, worked out once.
@@ -848,12 +875,12 @@ type Obstacle = {
 
 function artShapes(art: string, x: number, y: number, size: number, fallbackR: number): Obstacle[] {
   const c = ART_COLLIDERS[markKind(art)]
-  if (!c || c.shapes.length === 0) return [{ x, y, r: fallbackR + HULL }]
+  if (!c || c.shapes.length === 0) return [{ x, y, r: fallbackR }]
   const px = (ax: number) => x + (ax - 0.5) * size
   const py = (ay: number) => y - (1 - ay) * c.aspect * size / GROUND
   return c.shapes.map(k => k.kind === 'circle'
-    ? { x: px(k.ax), y: py(k.ay), r: k.ar * size + HULL }
-    : { x: px(k.ax), y: py(k.ay), x2: px(k.bx), y2: py(k.by), r: k.ar * size + HULL })
+    ? { x: px(k.ax), y: py(k.ay), r: k.ar * size }
+    : { x: px(k.ax), y: py(k.ay), x2: px(k.bx), y2: py(k.by), r: k.ar * size })
 }
 
 /**
@@ -887,10 +914,10 @@ function allObstacles(): Obstacle[] {
 const OBSTACLES: Obstacle[] = [
   ...PLACES.filter(p => p.kind === 'port').flatMap((p): Obstacle[] => {
     const c = PORT_COLLIDERS[p.id]
-    if (!c || c.shapes.length === 0) return [{ x: p.x, y: p.y, r: p.r * SHORE + HULL }]
+    if (!c || c.shapes.length === 0) return [{ x: p.x, y: p.y, r: p.r * SHORE }]
     return c.shapes.map(k => k.kind === 'circle'
-      ? { x: p.x + k.ax * p.r, y: p.y + k.ay * p.r, r: k.ar * p.r + HULL }
-      : { x: p.x + k.ax * p.r, y: p.y + k.ay * p.r, x2: p.x + k.bx * p.r, y2: p.y + k.by * p.r, r: k.ar * p.r + HULL })
+      ? { x: p.x + k.ax * p.r, y: p.y + k.ay * p.r, r: k.ar * p.r }
+      : { x: p.x + k.ax * p.r, y: p.y + k.ay * p.r, x2: p.x + k.bx * p.r, y2: p.y + k.by * p.r, r: k.ar * p.r })
   }),
   // EVERY landmark, not just the ones that remembered to say so. See the note
   // on `solid` in chart.ts: it is an opt-OUT now, because a rock you can sail
@@ -909,10 +936,10 @@ const OBSTACLES: Obstacle[] = [
   // the stone, well inside the r + 260 you can go ashore from.
   ...ISLES.flatMap((i): Obstacle[] => {
     const c = ISLE_COLLIDERS[i.id]
-    if (!c || c.shapes.length === 0) return [{ x: i.x, y: i.y, r: i.r + HULL }]
+    if (!c || c.shapes.length === 0) return [{ x: i.x, y: i.y, r: i.r }]
     return c.shapes.map(k => k.kind === 'circle'
-      ? { x: i.x + k.ax * i.r, y: i.y + k.ay * i.r, r: k.ar * i.r + HULL }
-      : { x: i.x + k.ax * i.r, y: i.y + k.ay * i.r, x2: i.x + k.bx * i.r, y2: i.y + k.by * i.r, r: k.ar * i.r + HULL })
+      ? { x: i.x + k.ax * i.r, y: i.y + k.ay * i.r, r: k.ar * i.r }
+      : { x: i.x + k.ax * i.r, y: i.y + k.ay * i.r, x2: i.x + k.bx * i.r, y2: i.y + k.by * i.r, r: k.ar * i.r })
   }),
   // AND THE CAMPAIGN'S OWN ISLES. Same treatment, same reason: these are the
   // rocks a bay is scattered with so that sailing one is steering rather than
@@ -924,7 +951,7 @@ const OBSTACLES: Obstacle[] = [
   // drawn; see `isle` on Obstacle and the filter in nearObs.
   ...RAID_ISLES.flatMap((i): Obstacle[] => {
     const p = isleAt(i)
-    return p ? [{ x: p.x, y: p.y, r: i.r + HULL, isle: i.id }] : []
+    return p ? [{ x: p.x, y: p.y, r: i.r, isle: i.id }] : []
   }),
   // The Gunwharf and the Charterhouse need no entry of their own: they are
   // ports now, and the port sweep at the top of this list already gives every
@@ -973,15 +1000,60 @@ function obstacleNearest(o: Obstacle, px: number, py: number): { x: number; y: n
   return { x: o.x + vx * t, y: o.y + vy * t }
 }
 
-function clearOfLand(w: Vec): Vec {
+/**
+ * THE CLOSEST POINTS OF TWO SEGMENTS, P on the first and Q on the second.
+ *
+ * The hull is capsules now and so are the obstacles, so the resolve is capsule
+ * against capsule: find the closest points of the two spines, and the two
+ * radii say whether they overlap. A circle is a segment of zero length and
+ * falls out of the same arithmetic. This is the textbook clamp-and-reclamp
+ * (Ericson, Real-Time Collision Detection 5.1.9), with the degenerate cases
+ * handled rather than divided by.
+ */
+function segSeg(
+  p1x: number, p1y: number, q1x: number, q1y: number,
+  p2x: number, p2y: number, q2x: number, q2y: number,
+): { px: number; py: number; qx: number; qy: number } {
+  const d1x = q1x - p1x, d1y = q1y - p1y
+  const d2x = q2x - p2x, d2y = q2y - p2y
+  const rx = p1x - p2x, ry = p1y - p2y
+  const a = d1x * d1x + d1y * d1y
+  const e = d2x * d2x + d2y * d2y
+  const f = d2x * rx + d2y * ry
+  const cl = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v)
+  let sP = 0, tP = 0
+  const EPS = 1e-9
+  if (a <= EPS && e <= EPS) { sP = 0; tP = 0 }
+  else if (a <= EPS) { sP = 0; tP = cl(f / e) }
+  else {
+    const c = d1x * rx + d1y * ry
+    if (e <= EPS) { tP = 0; sP = cl(-c / a) }
+    else {
+      const b = d1x * d2x + d1y * d2y
+      const denom = a * e - b * b
+      sP = denom !== 0 ? cl((b * f - c * e) / denom) : 0
+      tP = (b * sP + f) / e
+      if (tP < 0) { tP = 0; sP = cl(-c / a) }
+      else if (tP > 1) { tP = 1; sP = cl((b - c) / a) }
+    }
+  }
+  return { px: p1x + d1x * sP, py: p1y + d1y * sP, qx: p2x + d2x * tP, qy: p2y + d2y * tP }
+}
+
+/** `pad` stands in for the hull here: this nudges a TARGET point, which has
+ *  no facing and no class, so it is held the fallback half-beam off every
+ *  obstacle. The frame loop's resolve is what actually stops the hull, with
+ *  her real shape. */
+function clearOfLand(w: Vec, pad = HULL): Vec {
   for (const o of allObstacles()) {
     const c = obstacleNearest(o, w.x, w.y)
     const dx = w.x - c.x, dy = w.y - c.y
     const d = Math.hypot(dx, dy)
-    if (d < o.r) {
+    const reach = o.r + pad
+    if (d < reach) {
       // Dead centre has no direction to be pushed in, so pick one.
-      if (d < 0.001) return { x: c.x + o.r, y: c.y }
-      return { x: c.x + (dx / d) * o.r, y: c.y + (dy / d) * o.r }
+      if (d < 0.001) return { x: c.x + reach, y: c.y }
+      return { x: c.x + (dx / d) * reach, y: c.y + (dy / d) * reach }
     }
   }
   return w
@@ -3543,6 +3615,8 @@ export default function SeaMap({
       bowX: (FISHING_BOW.x - 0.5) * SKIPPER_W,
       bowDown: (FISHING_BOW.y - 0.5) * SKIPPER_W,
       bowTilt: (FISHING_BOW_TILT * Math.PI) / 180,
+      // WHAT SHE ACTUALLY OCCUPIES, for the rocks. See footOf.
+      foot: footOf('fishing', SKIPPER_W, false),
     }
     const d = getShip(shipTier)
     const { beam, keel, scale, keelY, weight } = shipSeat(shipTier)
@@ -3577,6 +3651,9 @@ export default function SeaMap({
       bowX: (((d.seaFlip ? 1 - (d.seaBow?.x ?? 0.8) : d.seaBow?.x ?? 0.8)) - 0.5) * WARSHIP_W,
       bowDown: ((d.seaBow?.y ?? keel) - 0.5) * WARSHIP_W,
       bowTilt: (((d.seaBowTilt ?? 0) * (d.seaFlip ? -1 : 1)) * Math.PI) / 180,
+      // WHAT SHE ACTUALLY OCCUPIES, for the rocks: her class's drawn footprint,
+      // mirrored here alongside seaBow when the art is. See footOf.
+      foot: footOf(String(shipTier), WARSHIP_W, !!d.seaFlip),
     }
   }, [onShip, shipTier])
   // Mirrored into a ref for the frame loop, which must not read a prop.
@@ -8256,20 +8333,36 @@ export default function SeaMap({
       // half second she went over in instead of snapping level.
       maelLeanRef.current += (mLean - maelLeanRef.current) * Math.min(1, dt * 2.6)
 
+      // ── THE HULL HAS A SHAPE NOW ─────────────────────────────────────
+      //
+      // Each shape of her footprint against each obstacle, and the push comes
+      // off the closest points of the two spines. The footprint is stored in
+      // the bow-left frame as offsets from her position; `facing` mirrors it
+      // every frame the same way it mirrors the cutwater, so she occupies the
+      // water her painting is on whichever way she is heading. Sliding is
+      // unchanged: only the inward part of the velocity is removed, so a long
+      // hull scrapes along a coast bow first and rounds it.
+      const hf = hullRef.current
+      const fc = facing.current
       for (const o of nearObs.current) {
-        // Capsule-aware: the normal comes off the segment's closest point, so
-        // sliding along a jetty's face is the same slide a coast gives.
-        const c = obstacleNearest(o, pos.current.x, pos.current.y)
-        const dx = pos.current.x - c.x
-        const dy = pos.current.y - c.y
-        const dd = Math.hypot(dx, dy)
-        if (dd >= o.r) continue
-        const nx = dd < 0.001 ? 1 : dx / dd
-        const ny = dd < 0.001 ? 0 : dy / dd
-        pos.current.x = c.x + nx * o.r
-        pos.current.y = c.y + ny * o.r
-        const vn = vel.current.x * nx + vel.current.y * ny
-        if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
+        const ox2 = o.x2 ?? o.x, oy2 = o.y2 ?? o.y
+        for (const f of hf.foot) {
+          const ax = pos.current.x + fc * f.ax + WATERLINE_X, ay = pos.current.y + f.ay
+          const bx = pos.current.x + fc * f.bx + WATERLINE_X, by = pos.current.y + f.by
+          const q = segSeg(ax, ay, bx, by, o.x, o.y, ox2, oy2)
+          const dx = q.px - q.qx
+          const dy = q.py - q.qy
+          const dd = Math.hypot(dx, dy)
+          const reach = f.r + o.r
+          if (dd >= reach) continue
+          const nx = dd < 0.001 ? 1 : dx / dd
+          const ny = dd < 0.001 ? 0 : dy / dd
+          const push = reach - dd
+          pos.current.x += nx * push
+          pos.current.y += ny * push
+          const vn = vel.current.x * nx + vel.current.y * ny
+          if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
+        }
       }
 
       // WHICH WAY THE CAPTAIN FACES.

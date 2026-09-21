@@ -14,9 +14,10 @@
 //
 // WHAT THE LINES MEAN, because it was asked: the SOLID shape is where the
 // planking is — the boat's own edge reaches it. The faint dashed halo is that
-// shape plus the hull's half-beam (55 world px), which is where the boat's
-// CENTRE is stopped by the game; her edge and your solid line meet exactly
-// when her centre sits on the dash. On a small object the halo is honestly
+// shape plus the FALLBACK hull (a 55 world px circle), which is where a boat
+// with no footprint of her own is stopped. A class with a footprint drawn on
+// /sea/calibrate/hull stops where THAT shape meets your solid line instead,
+// so the halo is only a rough guide now. On a small object it is honestly
 // huge — a hull-width around a buoy is nearly the buoy again.
 
 import { useEffect, useMemo, useRef, useState } from 'react'

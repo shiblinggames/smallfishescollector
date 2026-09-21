@@ -84,3 +84,48 @@ export const PORT_COLLIDERS: Record<string, PortCollider> = {}
 /** Keyed by isle id, same units as ports — fractions of the isle's own r,
  *  centre-origin, drawn over its true seeded coastline on the bench. */
 export const ISLE_COLLIDERS: Record<string, PortCollider> = {}
+
+// ── AND WHAT THE HULL ITSELF IS ────────────────────────────────────────────
+//
+// Everything above describes the things a hull hits. This describes the hull.
+//
+// Until this table existed the boat was a POINT: her centre, with a 55px
+// half-beam baked into every obstacle's radius (`HULL` in SeaMap). One number
+// for every class on the ladder, which is wrong in a different direction on
+// each of them. The fishing boat is 115px wide and stopped a little early; a
+// Man-o-War is drawn 340 wide and sailed her bow and stern straight through
+// rock, because the only part of her the water knew about was a circle in the
+// middle. That is every complaint of the form "the collision box is way off".
+//
+// An entry here gives a class a footprint of its own, drawn on
+// /sea/calibrate/hull against the actual art: up to four shapes, and the frame
+// loop resolves EACH of them against each obstacle, with the push coming off
+// the closest points of the two shapes. No entry keeps the old circle exactly,
+// so nothing moves until it has been placed.
+//
+// ── UNITS ────────────────────────────────────────────────────────────────
+// Fractions of the sprite's own SQUARE box, x across and y down from its top,
+// with `ar` a fraction of the box width — the same box `seaBow` is measured
+// in: 210 for the fishing boat, 340 for a warship. Stored on the art AS
+// DELIVERED, unmirrored. A hull flagged `seaFlip` is mirrored by the runtime
+// in the one place `seaBow` already is, and the boat's own facing is applied
+// on top of that every frame, so the bench never has to know which way a
+// given painting was drawn.
+//
+// Keyed 'fishing' for the composite fishing boat, else the ship tier as a
+// string.
+export type HullCollider = { shapes: ColliderShape[] }
+
+export const HULL_COLLIDERS: Record<string, HullCollider> = {}
+
+for (const [k, c] of Object.entries(HULL_COLLIDERS)) {
+  if (c.shapes.length === 0 || c.shapes.length > 4) throw new Error(`HULL_COLLIDERS['${k}']: 1 to 4 shapes`)
+  for (const sh of c.shapes) {
+    const xs = sh.kind === 'capsule' ? [sh.ax, sh.bx] : [sh.ax]
+    const ys = sh.kind === 'capsule' ? [sh.ay, sh.by] : [sh.ay]
+    for (const v of [...xs, ...ys]) {
+      if (v < -0.5 || v > 1.5) throw new Error(`HULL_COLLIDERS['${k}']: point far outside the sprite`)
+    }
+    if (!(sh.ar > 0 && sh.ar < 1)) throw new Error(`HULL_COLLIDERS['${k}']: implausible radius`)
+  }
+}
