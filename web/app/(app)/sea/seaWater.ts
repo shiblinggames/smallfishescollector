@@ -456,7 +456,16 @@ void main(void) {
   //   An isotropic ridge field has no direction at all, which is most of why
   //   the old one read as a pattern rather than as water. See WIND.
   float caust = 0.0;
-  if (shelf < 0.62 && uDark < 0.9) {
+  // ── SHALLOWS ONLY, IN WORLD PIXELS ────────────────────────────────
+  //
+  // This was gated on `shelf`, the smoothstep across the WHOLE fishable sea,
+  // and shelf < 0.62 is true out to about thirteen thousand pixels from the
+  // origin: the Deep and most of the Abyss had caustics. Kong bisected it:
+  // "it's the caustics", and "I still see them in the deep." Sunlight
+  // dappling a sandy bottom is a thing of shallow water, so the gate is the
+  // Shallows band itself, gone by the far side of Open Waters.
+  float sandy = 1.0 - smoothstep(3000.0, 6200.0, length(world));
+  if (sandy > 0.01 && uDark < 0.9) {
     vec2 cw = w * 3.1 + vec2(swell * 1.5, swell * -0.9);
     // Harder than the swell's stretch: the ripple that focuses light is finer
     // and more strongly combed than the swell carrying it.
@@ -478,7 +487,7 @@ void main(void) {
     // and cusps that are almost white.
     float vary = 0.40 + 0.60 * vnoise(cw * 0.55 - vec2(uTime * 0.013, uTime * 0.008));
     caust = ridged * vary
-      * (1.0 - smoothstep(0.10, 0.62, shelf))
+      * sandy
       * (1.0 - uDark)
       // 0.85, not 0.92. Caustics are the one fine detail that is worth keeping
       // some of under way: they are LOW contrast and they say where the shelf
