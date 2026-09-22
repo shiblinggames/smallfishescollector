@@ -263,6 +263,15 @@ export type Towns = {
   cull(camX: number, camY: number, halfW: number, halfH: number): void
   /** The chimneys. One frame; see seaSmoke. */
   advance(dt: number, camX: number, camY: number, halfW: number, halfH: number): void
+  /**
+   * A COPY of one island's town, for the near pass: every sprite standing on
+   * it (shadows, buildings, lamps and their pools) cloned with the texture,
+   * place, size, tint and blend it has right now, in the island's own local
+   * frame. Smoke is left out. The renderer draws this over the hull when she
+   * is north of the island, and rebuilds it each time she is, so the copy is
+   * never older than the moment it is needed.
+   */
+  clone(id: string): Container | null
   destroy(): void
 }
 
@@ -537,6 +546,27 @@ export async function makeTowns(
           l.pool.alpha = dark * POOL_PEAK
         }
       }
+    },
+
+    clone(id) {
+      const b = built.find(x => x.spec.id === id)
+      if (!b) return null
+      const out: Container = new PIXI.Container()
+      for (const child of b.node.children) {
+        const sp = child as Sprite
+        if (!('texture' in sp) || !('anchor' in sp)) continue
+        const c: Sprite = new PIXI.Sprite(sp.texture)
+        c.anchor.copyFrom(sp.anchor)
+        c.position.copyFrom(sp.position)
+        c.scale.copyFrom(sp.scale)
+        c.rotation = sp.rotation
+        c.tint = sp.tint
+        c.alpha = sp.alpha
+        c.blendMode = sp.blendMode
+        c.visible = sp.visible
+        out.addChild(c)
+      }
+      return out
     },
 
     cull(camX, camY, halfW, halfH) {

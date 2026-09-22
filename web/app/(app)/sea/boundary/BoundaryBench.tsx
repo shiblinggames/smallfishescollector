@@ -25,7 +25,7 @@ import Link from 'next/link'
 import { LANDMARKS, PLACES } from '../chart'
 import { ISLES } from '@/lib/seaIsles'
 import { coastline } from '@/lib/islandShape'
-import { ART_COLLIDERS, PORT_COLLIDERS, type ColliderShape } from '../colliders'
+import { ART_COLLIDERS, PORT_COLLIDERS, HULL_COLLIDERS, type ColliderShape } from '../colliders'
 
 const GROUND = 0.58   // kept in step with SeaMap by hand, like the other benches
 const HULL = 55
@@ -349,13 +349,22 @@ export default function BoundaryBench() {
               )
             })}
 
-            {/* The boat ghost, true world scale. */}
-            <div aria-hidden style={{
-              position: 'absolute', right: 8, bottom: 8,
-              width: BOAT_W * scale, height: BOAT_W * scale * 0.42,
-              borderRadius: '50%', border: '1px solid rgba(150,200,230,0.55)',
-              background: 'rgba(150,200,230,0.12)', pointerEvents: 'none',
-            }} />
+            {/* The boat ghost, true world scale: the fishing boat's DRAWN
+                footprint off HULL_COLLIDERS, not a guessed ellipse, so what
+                you judge a gap against is what actually stops. */}
+            {(() => {
+              const cap = HULL_COLLIDERS['fishing']?.shapes[0]
+              const len = cap && cap.kind === 'capsule' ? (cap.bx - cap.ax) * 210 : BOAT_W
+              const thick = cap ? cap.ar * 2 * 210 : BOAT_W * 0.42
+              return (
+                <div aria-hidden style={{
+                  position: 'absolute', right: 8, bottom: 8,
+                  width: (len + thick) * scale, height: thick * scale,
+                  borderRadius: 999, border: '1px solid rgba(150,200,230,0.55)',
+                  background: 'rgba(150,200,230,0.12)', pointerEvents: 'none',
+                }} />
+              )
+            })()}
           </div>
         </div>
       </div>

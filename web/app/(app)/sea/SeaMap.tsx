@@ -3268,7 +3268,7 @@ export default function SeaMap({
   /** The tall scenery, for the near pass. The SAME list the depth test walks,
    *  handed over so the two agree about which rock is index seven. */
   const gpuOccluders = useMemo<GpuMark[]>(() => GPU_ISLANDS
-    ? OCCLUDERS.map((o, i) => ({ art: o.art, x: o.x, y: o.y, size: o.size, i }))
+    ? OCCLUDERS.map((o, i) => ({ art: o.art, x: o.x, y: o.y, size: o.size, i, plate: o.plate }))
     : [], [])
 
   /**
@@ -13373,10 +13373,26 @@ function outOfWater(b: Bay, x: number, y: number): { x: number; y: number } {
 // other way round: the hull occasionally drawing over a rim rock she is south
 // of costs a glance, and a boulder teleporting over a man-o-war costs the whole
 // illusion that these things are IN a place.
-const OCCLUDERS: { art: string; x: number; y: number; size: number }[] =
-  [...LANDMARKS, ...REEF, ...ANCHORAGE_WALL]
+const OCCLUDERS: { art: string; x: number; y: number; size: number; plate?: { id: string; art: string; width: number; water: number } }[] = [
+  ...[...LANDMARKS, ...REEF, ...ANCHORAGE_WALL]
     .filter(m => m.size >= 300)
-    .map(m => ({ art: m.art, x: m.x, y: m.y, size: m.size }))
+    .map(m => ({ art: m.art, x: m.x, y: m.y, size: m.size })),
+  // ── AND THE PAINTED ISLANDS OF THE FISHING SEA ────────────────────────
+  //
+  // Kong: north of an object the boat should be behind it, south in front.
+  // A port and its town are the biggest things on this water and were never
+  // candidates. The near pass draws the plate and a copy of its buildings
+  // when the hull is north of the island's centre (its top face), which is
+  // where she is behind them. The bays stay out, per the note above.
+  ...[...PLACES.filter(p => p.kind === 'port'), ...ISLES]
+    .flatMap(p => {
+      const pl = plateFor(p.id)
+      return pl ? [{
+        art: pl.art, x: p.x, y: p.y, size: p.r * 2 * pl.width,
+        plate: { id: p.id, art: pl.art, width: pl.width, water: pl.water },
+      }] : []
+    }),
+]
 
 /**
  * ── WHERE EVERY BUILDING'S FEET ARE, IN WORLD PIXELS ────────────────────────

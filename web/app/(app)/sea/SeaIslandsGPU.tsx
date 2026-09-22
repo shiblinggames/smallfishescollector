@@ -123,6 +123,10 @@ export type GpuIsland = { id: string; r: number; x: number; y: number; locked: b
 export type GpuMark = {
   art: string; x: number; y: number; size: number
   sway?: 'bob' | 'rock'
+  /** Set when this occluder is a PAINTED ISLAND rather than a landmark: the
+   *  near pass then draws the plate and a copy of its town over the hull
+   *  instead of baking a mark. `size` is the plate's drawn width. */
+  plate?: { id: string; art: string; width: number; water: number }
   /** Its index on the chart, which is all the sway phase is derived from — so
    *  two identical wrecks side by side are never in step. */
   i: number
@@ -1037,6 +1041,9 @@ export default function SeaIslandsGPU({
       } catch {
         // A malformed query string must not cost anybody the chart.
       }
+      /** The towns, once built (see makeTowns below); the near pass asks it
+       *  for copies. Declared here because nearSprite reads it. */
+      let townLayer: Towns | null = null
       const nearBuilt = new Map<number, import('pixi.js').Container>()
       const nearWanted = new Set<number>()
 
@@ -1047,6 +1054,34 @@ export default function SeaIslandsGPU({
         if (!m) return null
         const node = new PIXI.Container()
         node.visible = false
+        // ── A PAINTED ISLAND, WITH ITS TOWN ─────────────────────────────
+        //
+        // Kong: passing north of something, the boat should be behind it.
+        // The near pass covered tall landmarks only; an island and the
+        // buildings on it were never candidates, so a hull rounding the far
+        // shore of a port drew over the roofs. This copies the plate exactly
+        // as the world draws it and asks the town for a copy of everything
+        // standing on it, in the island's own frame, and the whole thing is
+        // rebuilt each time it is promoted so the copy carries the hour.
+        if (m.plate) {
+          const pl = m.plate
+          node.zIndex = m.y
+          front.addChild(node)
+          nearBuilt.set(i, node)
+          loadTexture(PIXI, pl.art).then(tex => {
+            if (dead || nearBuilt.get(i) !== node) return
+            const sp = new PIXI.Sprite(tex)
+            sp.anchor.set(0.5, pl.water)
+            const k = m.size / tex.width
+            sp.width = m.size
+            sp.height = (tex.height * k) / GROUND
+            sp.tint = landTint
+            node.addChildAt(sp, 0)
+          }).catch(() => {})
+          const town = townLayer?.clone(pl.id)
+          if (town) node.addChild(town)
+          return node
+        }
         // The WORLD base, even though this copy is positioned in screen space.
         // Depth is a fact about where the rock is, not about which pass is
         // drawing it.
@@ -1946,7 +1981,6 @@ export default function SeaIslandsGPU({
       // has already been caught once putting essential setup behind an await
       // that never settled; a town that arrives two hundred milliseconds late
       // is a town that arrives.
-      let townLayer: Towns | null = null
       void makeTowns(PIXI, townRef.current).then(t => {
         if (dead) { t.destroy(); return }
         townLayer = t
@@ -2183,6 +2217,15 @@ export default function SeaIslandsGPU({
           }
         },
         front(list) {
+          // An island's copy is a snapshot; one promoted afresh is rebuilt so
+          // it carries the hour it is promoted in, not the one it was made in.
+          for (const i of list) {
+            const m = occRef.current[i]
+            if (m?.plate && !nearWanted.has(i)) {
+              const old = nearBuilt.get(i)
+              if (old) { old.destroy({ children: true }); nearBuilt.delete(i) }
+            }
+          }
           nearWanted.clear()
           for (const i of list) nearWanted.add(i)
           for (const [i, node] of nearBuilt) node.visible = nearWanted.has(i)
