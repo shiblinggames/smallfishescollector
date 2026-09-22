@@ -141,6 +141,36 @@ const POST = 0.052
 /** How bright at the middle of the night. The pool is deliberately meek: it is
  *  the light REACHING the sand, and sand at night is not lit, it is glimpsed. */
 const CORE_PEAK = 1.0
+/**
+ * ── AND THE LAMPS LIGHT THE BUILDINGS ───────────────────────────────────────
+ *
+ * Kong: do the buildings react to the lighting on the island at night? They
+ * took the night tint and nothing else: a wall beside a lamp was as dark as
+ * one across the island, which is a town with the lights on and nobody lit by
+ * them. Now each building is warmed toward the lamps' own amber by how close
+ * it stands to its nearest lamp, at night only, and a little brighter than
+ * the plain night tint would leave it, so the lit front of a harbour reads as
+ * lit. Set when the hour turns, like the night tint itself; the lamps gutter
+ * on their own and the walls hold steady, which is what a wall does.
+ */
+/** How far a lamp's light reaches up a wall, as a share of the island radius.
+ *  A little past the pool on the ground: light on a vertical face carries. */
+const LAMP_REACH = 0.72
+/** How far toward amber a wall goes standing right beside a lamp at full
+ *  dark. Well short of 1: it is lit, not painted orange. */
+const LAMP_WARMTH = 0.62
+/** The colour the light lifts a wall toward: the lamps' amber, lightened, so
+ *  the lit side is brighter as well as warmer. */
+const LIT = 0xffd9a6
+
+/** Blend two packed colours. */
+function mixColor(a: number, b: number, t: number): number {
+  const ch = (sh: number) => {
+    const x = (a >> sh) & 0xff, y = (b >> sh) & 0xff
+    return Math.round(x + (y - x) * t) & 0xff
+  }
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0)
+}
 // 0.45, up from 0.3, and the pool is wider below: Kong asked for more light.
 const POOL_PEAK = 0.45
 
@@ -219,6 +249,8 @@ type Built = {
   node: Container
   sprites: Sprite[]
   lamps: Lamp[]
+  /** Lamplight reaching each sprite in `sprites`, 0..1, by index. */
+  warmth: number[]
 }
 
 export type Towns = {
@@ -430,7 +462,23 @@ export async function makeTowns(
       }
     }
 
-    built.push({ spec, node, sprites, lamps })
+    // How much lamplight reaches each building: the nearest lamp's pool, by
+    // distance from the building's feet, gaussian so it falls off softly and a
+    // building between two lamps is lit by the nearer. Computed once here;
+    // the hour scales it.
+    const reach = spec.r * LAMP_REACH
+    const warmth = sprites.map(sp => {
+      let best = 0
+      for (const l of lamps) {
+        const dx = sp.position.x - l.pool.position.x
+        const dy = (sp.position.y - l.pool.position.y) * GROUND
+        const d = Math.hypot(dx, dy)
+        const k = Math.exp(-(d * d) / (2 * reach * reach * 0.35))
+        if (k > best) best = k
+      }
+      return best
+    })
+    built.push({ spec, node, sprites, lamps, warmth })
   }
 
   // ── THE SMOKE GOES IN WITH THE TOWNS ─────────────────────────────
@@ -473,7 +521,13 @@ export async function makeTowns(
     night(tint, dark_) {
       dark = dark_
       for (const b of built) {
-        if (!b.spec.locked) for (const s of b.sprites) s.tint = tint
+        if (!b.spec.locked) {
+          b.sprites.forEach((s, i) => {
+            const w = (b.warmth[i] ?? 0) * dark * LAMP_WARMTH
+            // The lit wall: the night tint, lifted toward the lamps' amber.
+            s.tint = w > 0.01 ? mixColor(tint, LIT, w) : tint
+          })
+        }
         // Nothing at noon, full by the middle of the night. Set here as well as
         // in the breath, because the hour can turn while the chart is still —
         // and because `advance` returns early in daylight, which is what has to
