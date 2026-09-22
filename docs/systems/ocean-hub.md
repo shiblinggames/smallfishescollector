@@ -3233,7 +3233,7 @@ had, put to use.
   were PROBED: a polar scan of each band for whole-disc clearance against `SOLIDS`, then picked
   for spread. The first six placed by eye all sat on landmarks. Re-probe if you move one.
 
-## Painted islands (2026-09-22, IN PROGRESS: two prototypes on the water)
+## Painted islands (2026-09-22, SHIPPED: all 10 ports and 27 isles)
 
 Kong: "islands and the grass still look weird." Diagnosis: everything else on the water is a
 hand-painted plate (ships, buildings, raid rocks, landmarks, the homestead house); the 11 ports
@@ -3259,7 +3259,7 @@ the grass for painted islands.
   waterline, no water painted, flat magenta plate), then `scripts/key-corner.mjs raw out 1024`.
   Prompts live in the session scratchpad `plates/`; copy the two prototypes' wording for the rest.
   The port prompt still painted a thin water strip at the foot; the foam ring covers it.
-- **Prototypes**: `trawl_fleet` (The Trawl Harbor) and `shallows-0` (Cormorant Rock). Remaining:
+- **Done**: 10 port plates, 1 prototype isle, 5 band templates shared by the other 26 isles (no rotation; the band water does the telling). Kong approved on the two prototypes ("so much better"). Originally remaining:
   9 ports (Mainland is r=500 and carries the whole town; give it its own plate), the homestead's
   ground, and 5 or 6 isle templates reused by rotation for the other 26 isles (rotation is not
   supported by `Plate` yet; add `rot` and have plate-coast rotate the ray table).
