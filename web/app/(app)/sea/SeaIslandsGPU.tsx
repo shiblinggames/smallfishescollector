@@ -87,6 +87,7 @@ import { makeMaelstroms, type Maelstroms } from './seaMaelstrom'
 import { makeLights, type Lights } from './seaLights'
 import { makeSqualls, type Squalls } from './seaSqualls'
 import { squallsAt, squallPos, type Squall } from '@/lib/seaWeather'
+import { bloomsAround } from '@/lib/seaBlooms'
 import { makeBanks, type Banks } from './seaBanks'
 import { makeChains, type Chains } from './seaChains'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
@@ -1530,6 +1531,7 @@ export default function SeaIslandsGPU({
       let stormListAt = 0
       let stormList: Squall[] = []
       const stormBuf = new Float32Array(16)
+      const bloomBuf = new Float32Array(16)
       /** The viewport in world units, as of the last frame. Written by the
        *  ticker and read by `fleet`, which runs before it. */
       let lastHalfW = 1, lastHalfH = 1
@@ -1647,6 +1649,19 @@ export default function SeaIslandsGPU({
             n++
           }
           water.storms(stormBuf)
+          // And the blooms. Fixed places, so this is six distance checks a
+          // frame; only the ones the view could reach go up.
+          bloomBuf.fill(0)
+          let bn = 0
+          for (const bl of bloomsAround(camX, camY, lastHalfW, lastHalfH)) {
+            if (bn >= 4) break
+            bloomBuf[bn * 4] = bl.x
+            bloomBuf[bn * 4 + 1] = bl.y
+            bloomBuf[bn * 4 + 2] = bl.r
+            bloomBuf[bn * 4 + 3] = 1
+            bn++
+          }
+          water.blooms(bloomBuf)
         }
         // ── WHERE THE HULL ACTUALLY IS, IN THE WORLD ──────────────────
         //

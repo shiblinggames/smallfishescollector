@@ -149,6 +149,18 @@ uniform vec4  uStorm0;
 uniform vec4  uStorm1;
 uniform vec4  uStorm2;
 uniform vec4  uStorm3;
+// ── THE BLOOMS, AS FOUR PLACES ──────────────────────────────────────
+//
+// x, y, radius, 1, for the bioluminescent patches near the camera; the
+// fourth component is 0 for an empty slot. A bloom lights the wake, but a
+// bloom nobody can see is one nobody can sail to, so the surface inside it
+// carries a faint field at night: a cold green mottle that moves slowly,
+// strongest at the middle. Faint on purpose. The wake is the show; this is
+// the sign that says where the show is.
+uniform vec4  uBloom0;
+uniform vec4  uBloom1;
+uniform vec4  uBloom2;
+uniform vec4  uBloom3;
 
 // The plane's foreshortening. Sampling noise without it makes the swell look
 // like it is standing up out of the water rather than lying on it.
@@ -182,6 +194,15 @@ float hash(vec2 p) {
 
 // How much of one squall is over this point, 0 to its power. The same curve
 // squallAt uses on the CPU: a calm eye, then a mile of getting worse.
+// How much of one bloom is under this point, 0 to 1. The same curve
+// bloomAt uses on the CPU: full strength inside a third, gone at the edge.
+float bloomIn(vec4 b, vec2 p) {
+  if (b.w <= 0.0) return 0.0;
+  float d = distance(p, b.xy);
+  float k = 1.0 - clamp((d - b.z * 0.33) / (b.z * 0.67), 0.0, 1.0);
+  return k * k * (3.0 - 2.0 * k);
+}
+
 float stormAt(vec4 s, vec2 p) {
   if (s.w <= 0.0) return 0.0;
   float d = distance(p, s.xy);
@@ -546,6 +567,23 @@ void main(void) {
     * (1.0 - uDark * 0.55) * (1.0 - 0.55 * uRush) * (1.0 - recede * 0.6);
   col += crest * vec3(0.90, 0.96, 1.0) * capAmt;
 
+  // ── AND THE DEEP GLOWS, IN PLACES ─────────────────────────────────
+  //
+  // Branched on the hour and on being inside one at all, so the daytime sea
+  // and the sea outside a bloom pay nothing. The mottle is the swell's own
+  // coarse octave, so the light sits in the troughs the way it does when
+  // something disturbs plankton, and it breathes slowly.
+  if (uDark > 0.05) {
+    float bloom = max(max(bloomIn(uBloom0, world), bloomIn(uBloom1, world)),
+                      max(bloomIn(uBloom2, world), bloomIn(uBloom3, world)));
+    if (bloom > 0.01) {
+      float mottle = vnoise(wa * 1.6 + vec2(uTime * 0.012, uTime * -0.009));
+      mottle = smoothstep(0.35, 0.85, mottle);
+      float breathe = 0.75 + 0.25 * sin(uTime * 0.35 + world.x * 0.0007);
+      col += bloom * mottle * breathe * vec3(0.22, 0.86, 0.72) * 0.085 * uDark * (1.0 - stormK * 0.6);
+    }
+  }
+
   // ── AND THE RAIN HITS IT ──────────────────────────────────────────
   //
   // The squall layer draws the drops and a few rings; this is the surface
@@ -655,6 +693,10 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
       uStorm1: { value: new Float32Array(4), type: 'vec4<f32>' },
       uStorm2: { value: new Float32Array(4), type: 'vec4<f32>' },
       uStorm3: { value: new Float32Array(4), type: 'vec4<f32>' },
+      uBloom0: { value: new Float32Array(4), type: 'vec4<f32>' },
+      uBloom1: { value: new Float32Array(4), type: 'vec4<f32>' },
+      uBloom2: { value: new Float32Array(4), type: 'vec4<f32>' },
+      uBloom3: { value: new Float32Array(4), type: 'vec4<f32>' },
     })
 
     const filter = new PIXI.Filter({
@@ -670,8 +712,16 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
     const u = uniforms.uniforms as Record<string, unknown>
     const cam = u.uCam as Float32Array
     const storms = [u.uStorm0, u.uStorm1, u.uStorm2, u.uStorm3] as Float32Array[]
+    const blooms = [u.uBloom0, u.uBloom1, u.uBloom2, u.uBloom3] as Float32Array[]
     return {
       sprite,
+
+      /** The blooms near the camera, four (x, y, r, 1) in a row; a 0 in the
+       *  fourth place empties the slot. Same shape as `storms`. */
+      blooms(list: Float32Array) {
+        for (let i = 0; i < 4; i++) blooms[i].set(list.subarray(i * 4, i * 4 + 4))
+        uniforms.update()
+      },
 
       /** The squalls near the camera, four (x, y, r, power) in a row. Power 0
        *  empties a slot. Called every frame with the whole list, like the

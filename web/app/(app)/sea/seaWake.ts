@@ -52,31 +52,24 @@
 import type { Container, Particle, ParticleContainer, Sprite, Texture } from 'pixi.js'
 import { GROUND } from './islandArt'
 import { SHIP_SKINS } from '@/lib/shipSkins'
-import { PLACES } from './chart'
+import { bloomAt } from '@/lib/seaBlooms'
 
 // ── BIOLUMINESCENCE ─────────────────────────────────────────────────────────
 //
-// Deep water at night lights up where it is disturbed. On this chart the wake
-// and the rings were white foam at every hour and in every band, so a ship in
-// the Abyss at midnight left the same trail as one in the Shallows at noon.
-// Past the Deep's inner edge, and only as the dark comes up, the marks a hull
-// leaves are tinted toward this and drawn as LIGHT rather than paint, so a
-// ship leaves a glowing thread behind her and stands in a faint glowing ring
-// when she stops. It skips the night tint, because it is not lit by the sky.
-//
-// The band edge comes off PLACES rather than being written here, the same way
-// the water shader reads its shelf, so the glow and the bands cannot disagree.
-const DEEP_IN = PLACES.find(p => p.id === 'deep')?.inner ?? 6900
-/** How far past that edge the glow takes to reach full strength. */
-const DEEP_RAMP = 4000
+// Deep water at night lights up where it is disturbed, in PATCHES. The first
+// cut lit every wake past the Deep's inner edge, which made the glow a
+// property of a band: the whole outer sea, all night, every hull. Kong: "areas
+// of bioluminescence, not the whole outer edge." So the blooms are places, in
+// lib/seaBlooms, and a hull glows only inside one and only as the dark comes
+// up. The marks it leaves are tinted toward this and drawn as LIGHT rather
+// than paint, and they skip the night tint because they are not lit by the
+// sky.
 const BIO = 0x5cf5d8
 
 /** How much a hull at this point glows, given the hour. */
 function glowAt(x: number, y: number, dark: number): number {
   if (dark < 0.05) return 0
-  const r = Math.hypot(x, y)
-  const k = Math.max(0, Math.min(1, (r - DEEP_IN) / DEEP_RAMP))
-  return dark * k * k * (3 - 2 * k)
+  return dark * bloomAt(x, y)
 }
 
 /** Linear blend of two packed colours. */

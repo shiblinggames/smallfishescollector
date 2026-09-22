@@ -3224,8 +3224,11 @@ had, put to use.
   third noise so they are ragged. Under a tenth at rest on purpose (the standing complaint about
   this sea is busyness when still); a storm brings them up 2.5x; dimmer at night, not gone; they
   lie down with distance and stand down under way.
-- **Bioluminescence.** Past the Deep's inner edge (read from `PLACES`, not copied) and as the
-  dark comes up, wake marks and rest rings are tinted toward `BIO` and drawn additive, and they
-  skip the night tint because they are not lit by the sky. `wake.night(tint, dark)` carries the
-  hour. Applies to every hull the wake tracks, so friends and traders glow too. Because it keys
-  off distance from the origin, the far northern water glows at night as well; judged acceptable.
+- **Bioluminescence, as PLACES.** Six blooms in `lib/seaBlooms` (three in the Deep, three in the
+  Abyss), fixed and derived from nothing, like the fog banks and squalls. Kong rejected the first
+  cut, which lit the whole outer band. Inside one and as the dark comes up, wake marks and rest
+  rings are tinted toward `BIO` and drawn additive, skipping the night tint; `wake.night(tint,
+  dark)` carries the hour. The water shader also shows a faint breathing green mottle inside a
+  bloom at night (`uBloom0..3`, `water.blooms()`), so a bloom can be seen and sailed to. Positions
+  were PROBED: a polar scan of each band for whole-disc clearance against `SOLIDS`, then picked
+  for spread. The first six placed by eye all sat on landmarks. Re-probe if you move one.
