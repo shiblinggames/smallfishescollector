@@ -1,3 +1,4 @@
+import { PLATE_COASTS } from './plateCoasts'
 // THE SHAPE OF AN ISLAND, in one place.
 //
 // Plain module, NOT 'use server' — that directive silently drops non-async
@@ -123,6 +124,12 @@ const N = 160
  * `scripts/check-islands` measures every building against.
  */
 export function coastline(id: string): number[] {
+  // A PAINTED ISLAND HAS ITS OWN OUTLINE. See lib/islandPlates: when a plate
+  // stands in for the bake, the coast the foam runs round, the colliders stop
+  // at and the buildings are checked against is read off the picture rather
+  // than seeded, or the water would hug a shore the painting does not have.
+  const painted = PLATE_COASTS[id]
+  if (painted) return painted
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
   const rnd = (n: number) => ((h >>> (n * 3)) % 1000) / 1000

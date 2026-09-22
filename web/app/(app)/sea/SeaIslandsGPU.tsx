@@ -37,6 +37,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { GROUND, islandLift, liftAt, grassTint, bakeIsland, requestGround, evictIslandsExcept } from './islandArt'
+import { plateFor } from '@/lib/islandPlates'
+import { texture as loadTexture } from './skiffArt'
 
 /**
  * ── THE RENDER-BUG BISECT ───────────────────────────────────────────────────
@@ -1167,8 +1169,49 @@ export default function SeaIslandsGPU({
        */
       let landTint = 0xffffff
       const baked: { isle: GpuIsland; sprite: import('pixi.js').Sprite; pad: number }[] = []
+      /** The painted islands, for the night tint. See lib/islandPlates. */
+      const plated: import('pixi.js').Sprite[] = []
       const place = (isle: GpuIsland) => {
         const d = isle.r * 2
+        // ── A PAINTED ISLAND ───────────────────────────────────────────
+        //
+        // The plate stands where the bake would, anchored at its waterline
+        // row so the land rises above the island's position, and drawn with
+        // its height counter-squashed: the painting is already foreshortened
+        // by the artist, and the world layer squashes everything in it by
+        // GROUND, so without the division the island would be flattened
+        // twice. Same arithmetic every building on it does.
+        //
+        // The foam ring still runs, off a coastline that now comes from this
+        // picture (see plateCoasts). The tuft mesh does not: painted grass
+        // waving over painted ground was the seam this exists to remove.
+        const plate = plateFor(isle.id)
+        if (plate) {
+          const s = new PIXI.Sprite(PIXI.Texture.EMPTY)
+          s.anchor.set(0.5, plate.water)
+          s.x = isle.x
+          s.y = isle.y
+          s.tint = landTint
+          land.addChild(s)
+          plated.push(s)
+          loadTexture(PIXI, plate.art).then(t => {
+            if (dead) return
+            s.texture = t
+            const w = d * plate.width
+            const k = w / t.width
+            s.width = w
+            s.height = (t.height * k) / GROUND
+          }).catch(() => {
+            // A plate that will not load leaves the island invisible rather
+            // than half-drawn; the coast still stops a hull.
+          })
+          const f = makeShoreFoam(PIXI, coastline(isle.id), d, foamTex, (isle.x * 0.013) % 1)
+          f.mesh.x = isle.x
+          f.mesh.y = isle.y
+          world.addChildAt(f.mesh, 0)
+          foams.push({ f, x: isle.x, y: isle.y, r: isle.r })
+          return
+        }
         // The chart's own padding: the widest shoal wash plus the blur's
         // spill, plus room for the CLIFF, which now varies per island and on
         // the biggest of them is over a hundred world pixels of drop. Without
@@ -1967,6 +2010,7 @@ export default function SeaIslandsGPU({
           lastTint = tint
           landTint = tint
           for (const b of baked) b.sprite.tint = tint
+          for (const sp of plated) sp.tint = tint
           // THE GRASS IS ON THE LAND, so it takes what the land takes. It was
           // taking nothing at all: a meadow's tint is its island's own green,
           // set once when it was sown, and nothing here had ever written to it.

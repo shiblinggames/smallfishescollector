@@ -3232,3 +3232,34 @@ had, put to use.
   bloom at night (`uBloom0..3`, `water.blooms()`), so a bloom can be seen and sailed to. Positions
   were PROBED: a polar scan of each band for whole-disc clearance against `SOLIDS`, then picked
   for spread. The first six placed by eye all sat on landmarks. Re-probe if you move one.
+
+## Painted islands (2026-09-22, IN PROGRESS: two prototypes on the water)
+
+Kong: "islands and the grass still look weird." Diagnosis: everything else on the water is a
+hand-painted plate (ships, buildings, raid rocks, landmarks, the homestead house); the 11 ports
+and 27 fishing isles were the procedural bake in `islandArt` (five bands, grey soft-light
+texture, crown, rim, stroke) with the `seaGrass` tuft mesh over it. Tuned many times; a gradient
+has no hand in it. Decision (Kong, from three options): paint them as plates, retire the bake and
+the grass for painted islands.
+
+- **`lib/islandPlates.ts`**: `PLATES[id] = { art, width, water }`. `width` is the plate's drawn
+  width as a multiple of 2r (1.25 matches the bake's former land size, since the seeded coast ran
+  ~85% of 1.48r); `water` is the waterline row as a fraction of the plate's height, which is the
+  anchor and lands on the island's position. No entry = the bake, so nothing is half painted.
+- **Renderer** (`SeaIslandsGPU` `place()`): a plated island is a sprite anchored at `water`,
+  height counter-squashed by GROUND (the painting is already foreshortened; the world squashes
+  again). Takes the land's night tint. Foam ring kept; tuft mesh skipped. DOM fallback (`?gpu=0`)
+  still bakes; plates are GPU-only for now.
+- **The coast comes off the art.** `scripts/plate-coast.mts` marches 160 rays out from the anchor
+  through the plate's alpha (in world space, converted through `k` and GROUND) and writes
+  `lib/plateCoasts.ts`; `coastline(id)` prefers it. So foam, colliders, berth and the building band
+  follow the picture. Re-run after adding, moving, resizing or re-anchoring a plate.
+- **Art pipeline**: Kie.ai via the nano-banana-2 skill (`generate_kie.py prompt.json out.png
+  "4:3"`), house-style prompt (three-quarter top-down ~30 degrees, light upper left, cut at the
+  waterline, no water painted, flat magenta plate), then `scripts/key-corner.mjs raw out 1024`.
+  Prompts live in the session scratchpad `plates/`; copy the two prototypes' wording for the rest.
+  The port prompt still painted a thin water strip at the foot; the foam ring covers it.
+- **Prototypes**: `trawl_fleet` (The Trawl Harbor) and `shallows-0` (Cormorant Rock). Remaining:
+  9 ports (Mainland is r=500 and carries the whole town; give it its own plate), the homestead's
+  ground, and 5 or 6 isle templates reused by rotation for the other 26 isles (rotation is not
+  supported by `Plate` yet; add `rot` and have plate-coast rotate the ray table).
