@@ -998,7 +998,8 @@ export default function SeaIslandsGPU({
        *   /sea?hide=clouds,gulls      or several
        *   /sea?hide=all               everything on this list
        *
-       * Names: clouds, haze, gulls, lights, squalls, front, fog.
+       * Names: clouds, haze, gulls, lights, squalls, banks, chains, front, fog,
+       * drift (the foam flecks you sail past), wake, surf (the reef's).
        *
        * A diagnostic, not a setting. It is deliberately not in the UI and it
        * does not persist: bisecting a render bug is the whole of what it is
@@ -1025,6 +1026,9 @@ export default function SeaIslandsGPU({
           maybe('chains', chains.water)
           maybe('front', front)
           maybe('fog', fog.view)
+          maybe('drift', drift.view)
+          maybe('wake', wake.view)
+          maybe('surf', surf.view)
         }
       } catch {
         // A malformed query string must not cost anybody the chart.
