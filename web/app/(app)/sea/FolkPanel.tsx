@@ -533,7 +533,19 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
     return () => { alive = false }
   }, [open])
 
-  useEffect(() => { if (!open) setShowing(null) }, [open])
+  useEffect(() => { if (!open) { setShowing(null); setTab('jobs') } }, [open])
+  /**
+   * ── THREE TABS, NOT ONE SCROLL ───────────────────────────────────────
+   *
+   * Kong: everything listed in one long modal; tab it and organise it. The
+   * panel answers three different questions and used to answer them in one
+   * column: what am I doing (Finn's job and every open request), who do I
+   * know (the roster, met and unmet), and who else is out there (the
+   * wanderers' legend). Each is a tab now, opening on the first because that
+   * is the question a captain opens the panel to ask. The counts on the tabs
+   * are the only thing that used to need scrolling to learn.
+   */
+  const [tab, setTab] = useState<'jobs' | 'people' | 'strangers'>('jobs')
 
   // PORTALLED TO THE BODY, and it has to be, for a reason that is not
   // layout: the chart's root div carries `touchAction: 'none'` so that a
@@ -655,6 +667,34 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
               </button>
             </div>
 
+            {!openAngler && !openFolk && (
+              <div role="tablist" aria-label="Salt Road" style={{
+                display: 'flex', gap: 4, marginTop: 10, padding: 3, borderRadius: 999,
+                background: 'rgba(255,255,255,0.05)', border: `1px solid ${SEA},0.2)`,
+              }}>
+                {([
+                  ['jobs', 'Jobs', waiting.length + (finnQuest && !finnQuest.done ? 1 : 0)],
+                  ['people', 'Regulars', met.length],
+                  ['strangers', 'Strangers', 0],
+                ] as const).map(([k, label, n]) => {
+                  const on = tab === k
+                  return (
+                    <button key={k} type="button" role="tab" aria-selected={on}
+                      onClick={() => { if (!on) { vibrate(6); setTab(k) } }}
+                      className="font-karla font-700 uppercase tracking-[0.1em]"
+                      style={{
+                        flex: 1, fontSize: '0.6rem', padding: '0.42rem 0.5rem', borderRadius: 999,
+                        cursor: on ? 'default' : 'pointer', whiteSpace: 'nowrap',
+                        background: on ? `${SEA},0.16)` : 'transparent',
+                        border: `1px solid ${on ? `${SEA},0.5)` : 'transparent'}`,
+                        color: on ? '#e8f2ea' : 'rgba(214,232,240,0.6)',
+                      }}>
+                      {label}{n > 0 && <span style={{ opacity: 0.65, marginLeft: 5, fontVariantNumeric: 'tabular-nums' }}>{n}</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
             <div style={{ minHeight: 340 }}>
               {openAngler ? (
                 <motion.div key="rival"
@@ -688,6 +728,7 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
                         question for his page; the front is for what you are
                         doing next, and a denominator on a story reads like a
                         checklist. */}
+                  {tab === 'jobs' && (<>
                     <Section title="The Fishing Campaign">
                       <button
                         onClick={() => { vibrate(6); setShowing('finn') }}
@@ -786,7 +827,13 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
                         </div>
                       </Section>
                     )}
-
+                    {waiting.length === 0 && (
+                      <p className="font-karla" style={{
+                        fontSize: '0.78rem', color: `${SEA},0.55)`, margin: '0.9rem 0 0', lineHeight: 1.5,
+                      }}>Nobody is waiting on you. Pull alongside a regular and see what they want.</p>
+                    )}
+                  </>)}
+                  {tab === 'people' && (<>
                     {met.length > 0 && (
                       <Section title={`Known to you (${met.length})`}>
                         <div style={{
@@ -830,6 +877,8 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
                       </Section>
                     )}
 
+                  </>)}
+                  {tab === 'strangers' && (<>
                     {/* The wanderers get a legend rather than rows: they are
                         hashed out of (cell, day) and gone at midnight, so "who
                         have I met" has no honest answer for them. What the
@@ -857,6 +906,7 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
                         </div>
                       ))}
                     </Section>
+                  </>)}
                 </motion.div>
               )}
             </div>
