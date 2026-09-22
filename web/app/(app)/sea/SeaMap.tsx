@@ -987,7 +987,11 @@ const OBSTACLES: Obstacle[] = [
   // drawn; see `isle` on Obstacle and the filter in nearObs.
   ...RAID_ISLES.flatMap((i): Obstacle[] => {
     const p = isleAt(i)
-    return p ? [{ x: p.x, y: p.y, r: i.r, isle: i.id }] : []
+    if (!p) return []
+    // Painted: the shore is the boundary, and every segment keeps the rock's
+    // tag so a rock the story has not drawn yet still stops nobody.
+    if (plateFor(i.id)) return coastObstacles(i.id, p.x, p.y, i.r).map(o => ({ ...o, isle: i.id }))
+    return [{ x: p.x, y: p.y, r: i.r, isle: i.id }]
   }),
   // The Gunwharf and the Charterhouse need no entry of their own: they are
   // ports now, and the port sweep at the top of this list already gives every
