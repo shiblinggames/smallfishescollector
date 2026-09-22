@@ -44,7 +44,14 @@ export type Plate = {
  *  number: drawn a quarter wider than the island's diameter, which is what the
  *  bake's land used to cover; Kong: "the islands are too big", so it is the
  *  diameter itself now. Anchored a little below the middle. */
-const P = (art: string, width = 1.0, water = 0.56): Plate => ({ art, width, water })
+// 0.42, NOT 0.56. The anchor row is where the island's POSITION lands on the
+// painting, and everything placed on an island is placed against that
+// position: a building at 67% of the box expects to stand on the top face.
+// At 0.56 the plate hung too high, its top face ended a sixth of a radius
+// below the centre, and the Crew Hall and the Forge stood on the cliff.
+// Kong: "shifted up more on the island." The anchor is the middle of the
+// painted top face now, which is what the island's centre always meant.
+const P = (art: string, width = 1.0, water = 0.42): Plate => ({ art, width, water })
 
 /** One painting per band, shared by that band's isles. They are far enough
  *  apart that a template repeats without reading as one; the band's water
