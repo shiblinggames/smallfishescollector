@@ -375,6 +375,9 @@ const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
 const SeaCrew = dynamic(() => import('./SeaCrew'), { ssr: false })
 // The Daily Haul, which used to be a page under the Tavern. See sea/SeaBonus.
 const SeaBonus = dynamic(() => import('./SeaBonus'), { ssr: false })
+// The Day: every daily on one disc beside the haul. See sea/SeaDay.
+const SeaDay = dynamic(() => import('./SeaDay'), { ssr: false })
+import type { DayKind } from './SeaDay'
 // Kip, who trades in what he knows about the harbour. See seaSmuggler.
 const SmugglerTalk = dynamic(() => import('./SmugglerTalk'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
@@ -12113,6 +12116,23 @@ hullRef={hullRefFor(t.key)} />
           reason directly above. The haul shifts one slot inward, which is the
           one move this costs and it keeps the corner honest. */}
       {!hudOff && <SeaBonus size={hudSize} top={18} right={12 + (hudSize + 8) * 2} />}
+      {/* THE DAY: every daily on one disc, beside the haul. Kong: voyages,
+          trawls, the puzzles and the Parlor were so hidden it was hard to
+          remember to go and check. Each row opens the sheet the sea already
+          has for it, wherever the hull is; the two that are pages navigate.
+          See SeaDay for the rest. Fourth slot on the right, outermost. */}
+      {!hudOff && (
+        <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 3} ashore={ordersAshore}
+          onOpen={(kind: DayKind) => {
+            if (kind === 'orders') { setSkillView('fishing'); setSkillOpen(true) }
+            else if (kind === 'voyage') setVoyageOpen(true)
+            else if (kind === 'trawls') setTrawlOpen(true)
+            else if (kind === 'bounties') setBountiesOpen(true)
+            else if (kind === 'finn') setFolkOpen(true)
+            else if (kind === 'chart') router.push('/tavern/chart-room')
+            else if (kind === 'parlor') router.push('/tavern/trivia')
+          }} />
+      )}
       {/* THE WAY TO ARRANGE SAILING WITH SOMEBODY, and for a while there was
           no way at all: the panel below was mounted with nothing able to open
           it. See SeaCrew. The count is people waiting on an answer from you,
