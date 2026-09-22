@@ -33,15 +33,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import ResetCountdown from '@/components/ResetCountdown'
-import CharacterAvatar from '@/components/CharacterAvatar'
-import { FINN_AVATAR } from '@/lib/finn'
 import { dayState, type DayState } from './dayActions'
 import { vibrate } from '@/lib/haptics'
 
 const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'
 
-export type DayKind = 'orders' | 'voyage' | 'trawls' | 'bounties' | 'chart' | 'parlor' | 'finn'
+export type DayKind = 'orders' | 'voyage' | 'trawls' | 'bounties' | 'chart' | 'parlor'
 
 /**
  * ── THE PAINTING IS THE ROW ─────────────────────────────────────────────────
@@ -51,12 +49,12 @@ export type DayKind = 'orders' | 'voyage' | 'trawls' | 'bounties' | 'chart' | 'p
  * art-forward. So each daily is a CARD with the house's own painted plate of
  * the place it happens — the same building that stands on the island out
  * there, which is what makes the board feel like the sea rather than a menu
- * over it. Finn is a face instead of a building, because his row is a person.
+ * over it.
  *
  * Nothing new was drawn for this. Every plate below already stands on the
  * chart or hangs in the Tavern.
  */
-const ART: Record<Exclude<DayKind, 'finn'>, string> = {
+const ART: Record<DayKind, string> = {
   orders: '/sea/harbour.png',
   voyage: '/sea/charterhouse.png',
   trawls: '/sea/trawl-shed.png',
@@ -141,15 +139,8 @@ function rowsOf(s: DayState, ashore: boolean): Row[] {
       hot: false, done: p.boardPlayedToday && p.ladderDone,
     })
   }
-  if (s.finn) {
-    const f = s.finn
-    rows.push({
-      kind: 'finn', title: 'Finn’s Job', place: 'The Salt Road',
-      status: f.ready ? 'Done. Hand it over.' : f.hasJob ? (f.label ?? 'A job open') : 'Nothing set',
-      action: f.ready ? 'Open' : f.hasJob ? 'Open' : null,
-      hot: f.ready, done: !f.hasJob,
-    })
-  }
+  // FINN'S JOB IS NOT A ROW. It was, for one commit; Kong: that is a campaign
+  // quest, not a daily. See the note in dayActions.
   return rows
 }
 
@@ -299,28 +290,13 @@ export default function SeaDay({ size, top, right, ashore, onOpen }: {
                       style={{ position: 'absolute', inset: -1, borderRadius: 15, border: `1px solid ${GOLD}` }} />
                   )}
                   <span style={{ height: 74, display: 'grid', placeItems: 'center', width: '100%' }}>
-                    {r.kind === 'finn' ? (
-                      <span style={{
-                        transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none',
-                        borderRadius: '50%', boxShadow: r.hot ? `0 0 16px ${GOLD}55` : 'none',
-                      }}>
-                        <CharacterAvatar
-                          characterColor={FINN_AVATAR.characterColor}
-                          equippedHat={FINN_AVATAR.equippedHat}
-                          bgColor={FINN_AVATAR.bgColor}
-                          ringColor={FINN_AVATAR.borderColor}
-                          size={64}
-                        />
-                      </span>
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={ART[r.kind]} alt="" loading="lazy" decoding="async"
-                        style={{
-                          maxWidth: '100%', maxHeight: 74, objectFit: 'contain',
-                          filter: r.hot ? `drop-shadow(0 0 10px ${GOLD}66)` : 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))',
-                          opacity: r.done && !r.hot ? 0.62 : 1,
-                        }} />
-                    )}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ART[r.kind]} alt="" loading="lazy" decoding="async"
+                      style={{
+                        maxWidth: '100%', maxHeight: 74, objectFit: 'contain',
+                        filter: r.hot ? `drop-shadow(0 0 10px ${GOLD}66)` : 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))',
+                        opacity: r.done && !r.hot ? 0.62 : 1,
+                      }} />
                   </span>
                   <span className="font-cinzel font-700" style={{
                     fontSize: '0.82rem', color: '#f2ead8', lineHeight: 1.15, marginTop: 4,

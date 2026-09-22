@@ -27,7 +27,6 @@ import { getMatchState } from '@/app/(app)/charting/actions'
 import { getMinefieldState } from '@/app/(app)/charting/minefieldActions'
 import { getRiggingState } from '@/app/(app)/tavern/chart-room/rigging/actions'
 import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
-import { finnState } from './finnActions'
 
 export type DayState = {
   /** Today's Orders: the daily challenges. */
@@ -42,8 +41,10 @@ export type DayState = {
   chart: { solved: number; total: number } | null
   /** The Parlor: tonight's board and this week's ladder. */
   parlor: { boardPlayedToday: boolean; ladderDone: boolean } | null
-  /** Finn's job. */
-  finn: { hasJob: boolean; ready: boolean; label: string | null } | null
+  // FINN'S JOB IS NOT HERE. It was, for one commit. Kong: that is a campaign
+  // quest, not a daily. It does not reset, it advances, and a board of things
+  // that come back tomorrow is the wrong place to track a story. The Salt
+  // Road's own panel already carries it.
 }
 
 /** A thenable, not only a Promise: the Supabase query builder is one. */
@@ -58,7 +59,7 @@ export async function dayState(): Promise<DayState | null> {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [profile, orders, voyage, trawls, board, hold, mtch, mine, rig, boardAttempt, ladderAttempt, finn] = await Promise.all([
+  const [profile, orders, voyage, trawls, board, hold, mtch, mine, rig, boardAttempt, ladderAttempt] = await Promise.all([
     safe(getCurrentProfile()),
     safe(getDailyChallenge()),
     safe(getDailyVoyageState()),
@@ -70,10 +71,9 @@ export async function dayState(): Promise<DayState | null> {
     safe(getRiggingState()),
     safe(admin.from('trivia_board_attempts').select('answers').eq('user_id', user.id).eq('date', kingWeekStr()).maybeSingle()),
     safe(admin.from('trivia_ladder_attempts').select('status').eq('user_id', user.id).eq('date', kingWeekStr()).maybeSingle()),
-    safe(finnState()),
   ])
 
-  const out: DayState = { orders: null, voyage: null, trawls: null, bounties: null, chart: null, parlor: null, finn: null }
+  const out: DayState = { orders: null, voyage: null, trawls: null, bounties: null, chart: null, parlor: null }
 
   if (orders) {
     const n = orders.challenges.length
@@ -116,10 +116,6 @@ export async function dayState(): Promise<DayState | null> {
     // The ladder is one climb a week: anything but an active climb is settled.
     const ladder = ladderAttempt?.data?.status as string | undefined
     out.parlor = { boardPlayedToday: picksToday >= picksAllowed, ladderDone: ladder === 'walked' || ladder === 'busted' || ladder === 'crowned' }
-  }
-
-  if (finn) {
-    out.finn = { hasJob: !!finn.quest, ready: finn.questReady, label: finn.quest?.label ?? null }
   }
 
   return out

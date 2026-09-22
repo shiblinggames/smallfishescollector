@@ -12128,7 +12128,6 @@ hullRef={hullRefFor(t.key)} />
             else if (kind === 'voyage') setVoyageOpen(true)
             else if (kind === 'trawls') setTrawlOpen(true)
             else if (kind === 'bounties') setBountiesOpen(true)
-            else if (kind === 'finn') setFolkOpen(true)
             else if (kind === 'chart') router.push('/tavern/chart-room')
             else if (kind === 'parlor') router.push('/tavern/trivia')
           }} />
