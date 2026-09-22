@@ -338,6 +338,12 @@ export type GpuHandle = {
     /** How hard they are driving, 0..1, when the caller knows it outright.
      *  Omitted for traders, whose speed the wake measures for itself. */
     force?: number
+    /** The hull's size FOR THE WAKE: her beam as a ratio of the fishing
+     *  boat's, the number the player's own wake is handed as `scale`. Not the
+     *  same thing as the sprite multiplier above, which is a fraction near 1
+     *  for everyone. Omitted, the sprite multiplier stands in, which is right
+     *  for a fishing boat and a rowing-boat wake on a galleon. */
+    wakeScale?: number
   }[]): void
   skipper(s: {
     bob: number
@@ -1525,7 +1531,7 @@ export default function SeaIslandsGPU({
         ang: number; cx: number; cy: number
         /** Present only for hulls whose speed and ride we know outright — a
          *  friend on the wire. See the fleet handle. */
-        lift?: number; force?: number; frame?: Frame
+        lift?: number; force?: number; wakeScale?: number; frame?: Frame
       }[] = []
       const contacts: Contact[] = []
       /** Backing store for the above. Grows once to the size of the busiest
@@ -1673,7 +1679,7 @@ export default function SeaIslandsGPU({
           slot.id = e.key
           slot.x = e.x; slot.y = e.y; slot.ang = e.ang
           slot.cx = e.cx; slot.cy = e.cy
-          slot.scale = e.scale; slot.kind = c.kind
+          slot.scale = e.wakeScale ?? e.scale; slot.kind = c.kind
           // ALWAYS ASSIGNED, even when undefined. These slots are pooled and
           // written through, so a force left over from whoever held this index
           // last frame would make a moored trader trail foam.

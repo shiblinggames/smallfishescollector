@@ -5455,6 +5455,8 @@ export default function SeaMap({
     /** How hard they are driving, 0..1. Sent for anybody whose speed we know
      *  for a fact; left out for traders, whose wake measures it instead. */
     force?: number
+    /** Her beam ratio for the wake, when she is not a fishing boat. See the renderer. */
+    wakeScale?: number
     /** Where the HULL sits, as opposed to where the sprite is centred. The
      *  sheet reserves a large empty region up and to the left for the rod, so
      *  the boat is well below the middle of it — rings drawn at the centre
@@ -8856,21 +8858,43 @@ export default function SeaMap({
           // `scale` was not: a laden hull sits deeper and moves less, it does
           // not become a smaller ship.
           const lift = shipLift(c.tier) * (c.laden ? 0.82 : 1)
+          // ── SHE IS A WARSHIP, SO SHE WAKES LIKE ONE ───────────────────
+          //
+          // The first cut handed the wake the sprite's centre and the fishing
+          // boat's waterline numbers, so the V opened amidships on a hull with
+          // no bow it knew about. This is the same arithmetic the player's own
+          // hull does in the hull memo: the cutwater off seaBow, mirrored by
+          // seaFlip once and by facing every frame, the V tilted by seaBowTilt,
+          // the rings from the keel, and the hull's true beam ratio for size.
+          const d = getShip(c.tier)
+          const seat = shipSeat(c.tier)
+          // FACING 1 IS WEST on this chart: the unmirrored sprite is bow-left,
+          // and traders derive it as `vx < 0 ? 1 : -1`. It was written the
+          // other way round here, which is why every courier sailed backwards.
+          const facing = Math.cos(c.heading) < 0 ? 1 : -1
+          const bx = d.seaBow?.x ?? 0.8
+          const bowX = ((d.seaFlip ? 1 - bx : bx) - 0.5) * WARSHIP_W
+          const bowDown = ((d.seaBow?.y ?? seat.keel) - 0.5) * WARSHIP_W
+          const bowTilt = (((d.seaBowTilt ?? 0) * (d.seaFlip ? -1 : 1)) * Math.PI) / 180
           list.push({
-            key: `courier:${c.key}`, x: c.x, y: c.y,
-            // Which way she is pointing, off the lane rather than measured.
-            facing: Math.cos(c.heading) >= 0 ? 1 : -1,
-            // ONE WIDTH FOR EVERY WARSHIP, which is the sea's own rule and not
-            // a shrug: `makeShip` draws all five classes to the same plate and
-            // lets the silhouette carry the class. A courier that drew smaller
-            // than the same hull under a player would be the same ship at two
-            // sizes on one chart.
-            scale: 1,
+            key: `courier:${c.key}`,
+            // The wake takes x,y as the CUTWATER, not the sprite's centre.
+            x: c.x + facing * bowX + WATERLINE_X,
+            y: c.y + bowDown / GROUND,
+            facing,
+            // A NOTCH UNDER THE PLAYER, which is the chart's convention for
+            // every hull that is not hers: traders draw at 0.94 of the player's
+            // fishing boat. Couriers were the one exception at 1.0, the same
+            // box as her own warship, and "the same size as me" reads as
+            // bigger on something you are not steering.
+            scale: 0.92,
             dim: 1,
-            ang: c.heading,
+            ang: c.heading + bowTilt * facing,
             lift,
-            cx: c.x + WATERLINE_X * 0.9,
-            cy: c.y + (WATERLINE_Y * 0.9) / GROUND,
+            cx: c.x + WATERLINE_X,
+            cy: c.y + seat.keelY / GROUND,
+            // Her beam ratio, so a galleon pushes a galleon's water.
+            wakeScale: seat.scale,
           })
         }
         if (finnRef.current) {

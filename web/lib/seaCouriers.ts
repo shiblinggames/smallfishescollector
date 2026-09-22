@@ -150,6 +150,8 @@ export type Courier = {
   laden: boolean
   /** The ship tier whose hull she sails. See courierTier. */
   tier: number
+  /** Parked at a lane end between runs. Still on the water, still drawn. */
+  held: boolean
 }
 
 type Lane = {
@@ -272,24 +274,47 @@ export function couriersAt(now: number = Date.now()): Courier[] {
       // A full there-and-back is two cycles: out, hold, back, hold.
       const outbound = phase < cycle
       const into = outbound ? phase : phase - cycle
-      if (into > lane.runMs) continue      // holding at one end, not on the water
-      const k = into / lane.runMs
-      // Ease the ends so she leans away and settles in rather than snapping
-      // to full speed off a standing start.
-      const eased = k * k * (3 - 2 * k)
-      const t = outbound ? eased : 1 - eased
+      const held = into > lane.runMs
       const dx = lane.b.x - lane.a.x, dy = lane.b.y - lane.a.y
       const len = Math.hypot(dx, dy) || 1
-      // Keep to your own side, so a head-on pass is a pass and not a merge.
-      const off = (outbound ? 1 : -1) * LANE_SEPARATION
+      const fwd = Math.atan2(outbound ? dy : -dy, outbound ? dx : -dx)
+      let t: number, off: number, heading: number
+      if (!held) {
+        const k = into / lane.runMs
+        // Ease the ends so she leans away and settles in rather than snapping
+        // to full speed off a standing start.
+        const eased = k * k * (3 - 2 * k)
+        t = outbound ? eased : 1 - eased
+        // Keep to your own side, so a head-on pass is a pass and not a merge.
+        off = (outbound ? 1 : -1) * LANE_SEPARATION
+        heading = fwd
+      } else {
+        // ── THE HOLD IS ON THE WATER ──────────────────────────────────
+        //
+        // A hull between runs used to be dropped from the list, and the
+        // renderer hides anything not in the list, so every courier vanished
+        // the moment she arrived and reappeared forty seconds later. That is
+        // the "popping in and out". She stays: parked at the lane end.
+        //
+        // AND SHE COMES ABOUT, SLOWLY. Outbound runs one side of the road and
+        // inbound the other, which meant a 460px sideways jump at each end
+        // that the vanishing had been hiding. Over the hold she slews from
+        // her arrival side to her departure side and her heading swings
+        // round, so what you see is a ship turning at the end of her run
+        // rather than one teleporting across the lane.
+        const hk = Math.min(1, (into - lane.runMs) / HOLD_MS)
+        const sm = hk * hk * (3 - 2 * hk)
+        t = outbound ? 1 : 0
+        off = (outbound ? 1 : -1) * LANE_SEPARATION * (1 - 2 * sm)
+        heading = fwd + Math.PI * sm
+      }
       const x = lane.a.x + dx * t + (-dy / len) * off
       const y = lane.a.y + dy * t + (dx / len) * off
-      const heading = Math.atan2(outbound ? dy : -dy, outbound ? dx : -dx)
       out.push({
         key: `${lane.id}-${s}`,
         bay: lane.bay.id,
         tier: courierTier(lane.bay.id),
-        x, y, heading, t,
+        x, y, heading, t, held,
         // Outbound from the hub is the empty run; the freight comes BACK.
         // Everything the Finndicate takes is moving toward the middle.
         laden: !outbound,
