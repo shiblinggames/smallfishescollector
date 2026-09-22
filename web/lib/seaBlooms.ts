@@ -29,10 +29,10 @@ export const BLOOMS: Bloom[] = [
   // The Deep, three around the band.
   { key: 'deep-e',  x:  8269, y:  3010, r: 1100 },
   { key: 'deep-s',  x:  -732, y:  8368, r: 1100 },
-  { key: 'deep-sw', x: -5657, y:  6741, r: 1100 },
+  { key: 'deep-sw', x: -5500, y:  6900, r: 1000 },
   // The Abyss, further out and bigger, because the water is darker there.
   { key: 'abyss-e', x: 10739, y:  6200, r: 1400 },
-  { key: 'abyss-s', x:     0, y: 14400, r: 1400 },
+  { key: 'abyss-s', x:   300, y: 14400, r: 1400 },
   { key: 'abyss-w', x: -11085, y: 6400, r: 1400 },
 ]
 
