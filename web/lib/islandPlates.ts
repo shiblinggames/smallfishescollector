@@ -42,8 +42,9 @@ export type Plate = {
 
 /** The one shape every plate shares until a specific one earns a different
  *  number: drawn a quarter wider than the island's diameter, which is what the
- *  bake's land used to cover, anchored a little below the middle. */
-const P = (art: string, width = 1.25, water = 0.56): Plate => ({ art, width, water })
+ *  bake's land used to cover; Kong: "the islands are too big", so it is the
+ *  diameter itself now. Anchored a little below the middle. */
+const P = (art: string, width = 1.0, water = 0.56): Plate => ({ art, width, water })
 
 /** One painting per band, shared by that band's isles. They are far enough
  *  apart that a template repeats without reading as one; the band's water
