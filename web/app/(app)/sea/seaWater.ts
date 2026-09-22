@@ -332,7 +332,13 @@ void main(void) {
   // on it. Lower and it combs; at 1.0 it is the cloudy mottle this replaced.
   vec2 wa = alongWind(w, 0.62);
   float d1 = vnoise(wa + vec2(uTime * 0.020, uTime * -0.013));
-  float d2 = vnoise(wa * 2.7 + vec2(d1 * 1.6 - uTime * 0.031, d1 * -1.2));
+  // NOT WARPED BY d1 ANY MORE. Dragging the fine octave around by the coarse
+  // one is a domain warp, and a warped noise field is a marbling: thin wormy
+  // filaments running across the water, everywhere, that faded as you sailed
+  // because this term stands down at speed. Kong: "what are the squiggly
+  // lines on the water." Sampled on its own it is chop, which is what the
+  // fine octave was ever meant to be. The coarse swell still drifts it.
+  float d2 = vnoise(wa * 2.7 + vec2(-uTime * 0.031, uTime * 0.017));
   // ── THE FINE OCTAVE STANDS DOWN AT SPEED ─────────────────────────
   //
   // A short exposure of something moving fast is BLURRED, and blur is exactly
@@ -348,7 +354,7 @@ void main(void) {
   // was even standing still — see the note on the amplitudes below.
   // AND IT COMES UP UNDER A SQUALL. Wind on water is chop before it is
   // anything else; the fine octave is the chop.
-  float fine = min(0.62, (0.21 + 0.30 * storm) * (1.0 - 0.85 * uRush));
+  float fine = min(0.62, (0.16 + 0.30 * storm) * (1.0 - 0.85 * uRush));
   float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
 
   // ── THE SHELF ─────────────────────────────────────────────────────
@@ -450,7 +456,11 @@ void main(void) {
     float r2 = 1.0 - abs(c2 * 2.0 - 1.0);
     // Two widths. The coarse one carries the shape and the fine one puts the
     // bright cusps on it, which is the part that reads as focused light.
-    float ridged = pow(r1, 5.0) * 0.70 + pow(r2, 8.0) * 0.55;
+    // SOFTENED. Powers of 5 and 8 made each ridge a thin bright wire, and a
+    // network of wires reads as squiggles (Kong: "what are the squiggly
+    // lines"). Lower powers widen every filament into a soft dapple, and the
+    // fine cusps are turned down so the coarse light does the talking.
+    float ridged = pow(r1, 2.4) * 0.62 + pow(r2, 3.6) * 0.30;
     // NOT EVERY FILAMENT IS THE SAME BRIGHTNESS. A network at one value is a
     // diagram of a caustic; the real thing has stretches that are barely there
     // and cusps that are almost white.
@@ -465,7 +475,7 @@ void main(void) {
       * (1.0 - 0.85 * uRush)
       // No sun under a cloud, so no light bent by the surface.
       * (1.0 - stormK);
-    col += caust * vec3(0.72, 0.92, 0.86) * 0.20 * uSwell;
+    col += caust * vec3(0.72, 0.92, 0.86) * 0.13 * uSwell;
   }
 
   // ── THE MOON'S PATH ───────────────────────────────────────────────
