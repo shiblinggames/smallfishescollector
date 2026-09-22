@@ -3263,3 +3263,20 @@ the grass for painted islands.
   9 ports (Mainland is r=500 and carries the whole town; give it its own plate), the homestead's
   ground, and 5 or 6 isle templates reused by rotation for the other 26 isles (rotation is not
   supported by `Plate` yet; add `rot` and have plate-coast rotate the ray table).
+
+## The Day disc (2026-09-22)
+
+Kong: voyages, trawls, the Chart Room puzzles and the Parlor were hidden behind the Mainland;
+hard to remember to check. `sea/SeaDay.tsx` is a fourth HUD disc (right row, outermost, after
+gear / crew / haul) with a board of one row per daily; `sea/dayActions.ts` `dayState()` fans out to
+each system's OWN reader (getDailyChallenge, getDailyVoyageState, getTrawlState, getBountyBoard, the
+four chart-room getters, the trivia attempt tables, finnState) so the board cannot disagree with
+the sheet it opens. A failed reader drops its row, never the board.
+
+- **Rows open the real thing** (Kong's choice over "set a course"): orders -> SkillPanel fishing
+  view, voyage -> VoyageBoard, trawls -> TrawlIndicator dock, bounties -> BountyBoardModal, Finn ->
+  FolkPanel; Chart Room and Parlor `router.push` to their pages. Claiming an order still needs the
+  Tally House (`ordersAshore`); the row says Open, not Claim, until then.
+- **Breath rule is the haul's**: the ring breathes only while something is claimable or waiting
+  (orders ready, voyage back, hauls waiting, bounties claimable, Finn's job done). Otherwise a
+  count badge of what is left today.
