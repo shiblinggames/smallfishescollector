@@ -496,7 +496,8 @@ void main(void) {
       * (1.0 - 0.85 * uRush)
       // No sun under a cloud, so no light bent by the surface.
       * (1.0 - stormK);
-    col += caust * vec3(0.72, 0.92, 0.86) * 0.13 * uSwell * uOnCaust;
+    // 0.07: Kong, even in the Shallows, they took too much attention.
+    col += caust * vec3(0.72, 0.92, 0.86) * 0.07 * uSwell * uOnCaust;
   }
 
   // ── THE MOON'S PATH ───────────────────────────────────────────────
@@ -532,11 +533,13 @@ void main(void) {
   // THE GLARE PATH WIDENS AS THE SUN DROPS. A high sun scatters a few points
   // of light; a low one lays a road of them across the water. So the threshold
   // opens with warmth and the specks recruit their neighbours.
-  float lo = mix(0.86, 0.66, uWarm);
+  // 0.90 and 0.74, up from 0.86 and 0.66: fewer specks fire, and the low
+  // sun's road recruits fewer neighbours. Kong: the glints are too strong.
+  float lo = mix(0.90, 0.74, uWarm);
   sparkle = smoothstep(lo, 0.995, sparkle) * smoothstep(0.30, 0.75, d1);
   // Weighted to the horizon like the warmth is, because that is where a low
   // sun's reflection actually is.
-  float sunRoad = mix(1.0, 1.0 + horizon * 1.6, uWarm);
+  float sunRoad = mix(1.0, 1.0 + horizon * 1.1, uWarm);
   // The road is the colour of the sun making it, not white.
   vec3 glintCol = mix(vec3(1.0), vec3(1.0, 0.62, 0.28), uWarm);
   // AND THEY FADE AS SHE DRIVES. Glare is the highest-contrast thing on the
@@ -573,7 +576,7 @@ void main(void) {
   // stops being dead without going back to strobing — and the at-rest amount is
   // untouched on purpose, because the last two notes on this sea have both been
   // that it is too busy when you are sitting still.
-  col += sparkle * glintCol * 0.096 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.88 * uRush)
+  col += sparkle * glintCol * 0.060 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.88 * uRush)
     // Glare is the first thing a cloud takes.
     * (1.0 - min(1.0, storm * 1.3)) * uOnGlint;
 
