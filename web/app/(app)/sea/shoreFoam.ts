@@ -65,6 +65,25 @@ const SPEED = 0.11
 const AROUND = 6
 /** How fast the breakers drift along the coast, in coast-turns a second. */
 const DRIFT = 0.012
+/**
+ * ── AND IT WASHES ONSHORE ───────────────────────────────────────────────────
+ *
+ * Kong: can the water wash up onto the island? The surf's inner edge sat
+ * exactly on the waterline and the whole thing drew UNDER the island, so
+ * nothing could cross onto the beach. The swash is a second pair of meshes
+ * drawn OVER the island (in the land layer, under the buildings): a thin
+ * translucent sheet with a torn white leading edge that runs up the beach and
+ * slides back, and behind it a dark band that lingers and fades, which is the
+ * sand staying wet after the water has gone. Only on the shore that faces
+ * you, like the breakers, and it travels along the beach rather than hitting
+ * the whole coast at once.
+ */
+/** How far up the beach the swash reaches, as a share of the coast radius. */
+const RUNUP = 0.11
+/** One run up and back, in seconds. */
+const SWASH_PERIOD = 7.5
+/** How long the sand stays wet after the water leaves, in seconds to fade. */
+const WET_FADE = 5.5
 
 /** Value noise on a small lattice, for tearing the crests. */
 function lattice(seed: number, w: number, h: number): (x: number, y: number) => number {
@@ -156,9 +175,51 @@ export function makeSurfTexture(PIXI: typeof import('pixi.js')) {
   return new PIXI.Texture({ source })
 }
 
+/** The swash sheet and the wet-sand band, one texture each, shared by every
+ *  island. Built on first use per renderer. */
+const swashTex = new WeakMap<object, { sheet: Texture; wet: Texture }>()
+function swashTextures(PIXI: typeof import('pixi.js')): { sheet: Texture; wet: Texture } {
+  const hit = swashTex.get(PIXI)
+  if (hit) return hit
+  const make = (paint: (v: number, u: number) => [number, number]) => {
+    const w = 64, h = 128
+    const cv = document.createElement('canvas')
+    cv.width = w; cv.height = h
+    const g = cv.getContext('2d')!
+    const img = g.createImageData(w, h)
+    const n = lattice(31, 16, 16)
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const [lum, a] = paint(y / h, x / w)
+      const tear = 0.55 + 0.45 * n((x / w) * 16, (y / h) * 16)
+      const p = (y * w + x) * 4
+      img.data[p] = lum; img.data[p + 1] = lum; img.data[p + 2] = lum
+      img.data[p + 3] = Math.round(Math.max(0, Math.min(1, a * tear)) * 255)
+    }
+    g.putImageData(img, 0, 0)
+    const source = new PIXI.CanvasSource({ resource: cv })
+    source.addressMode = 'repeat'
+    source.scaleMode = 'linear'
+    return new PIXI.Texture({ source })
+  }
+  // v = 0 is the leading edge, up the beach; v = 1 is back at the waterline.
+  const sheet = make(v => {
+    const edge = Math.exp(-Math.pow((v - 0.07) / 0.06, 2))
+    const film = Math.max(0, 1 - v) * 0.30
+    return [248, Math.min(1, edge * 0.95 + film)]
+  })
+  const wet = make(v => [40, 0.55 * (0.35 + 0.65 * v)])
+  const out = { sheet, wet }
+  swashTex.set(PIXI, out)
+  return out
+}
+
 export type Foam = {
-  /** Both layers, parented together. Position this at the island. */
+  /** Both breaker layers, parented together. Position this at the island,
+   *  UNDER it. */
   mesh: Container
+  /** The swash and the wet sand. Position this at the island too, but OVER
+   *  it, so the water can cross onto the beach. */
+  over: Container
   /** Scrolls the crests shorewards and rolls the breakers along the coast.
    *  Called once a frame with the clock in seconds. */
   advance(seconds: number): void
@@ -195,6 +256,7 @@ export function makeShoreFoam(
 ): Foam {
   const n = rs.length
   const view: Container = new PIXI.Container()
+  const over: Container = new PIXI.Container()
 
   type Layer = {
     mesh: Mesh<MeshGeometry>
@@ -209,7 +271,7 @@ export function makeShoreFoam(
   }
   const layers: Layer[] = []
 
-  const build = (scale: number, lift: number, speed: number, phase: number, alpha: number): Layer => {
+  const build = (scale: number, lift: number, speed: number, phase: number, alpha: number, into: Container = view, tex: Texture = texture): Layer => {
     const verts = new Float32Array(n * 4)
     const uvs = new Float32Array(n * 4)
     const idx: number[] = []
@@ -220,16 +282,60 @@ export function makeShoreFoam(
       const j = (i + 1) % n
       idx.push(i * 2, i * 2 + 1, j * 2, i * 2 + 1, j * 2 + 1, j * 2)
     }
-    const mesh = new PIXI.MeshSimple({ texture, vertices: verts, uvs, indices: new Uint32Array(idx) })
+    const mesh = new PIXI.MeshSimple({ texture: tex, vertices: verts, uvs, indices: new Uint32Array(idx) })
     mesh.alpha = alpha
-    view.addChild(mesh)
+    into.addChild(mesh)
     return { mesh, verts, uvs, base: Float32Array.from(uvs), scale, lift, speed, phase }
   }
   // The main run at the beach, and the thinner faster line a little out.
   layers.push(build(1.0, 0.0, 1.0, 0.0, 0.88))
   layers.push(build(0.55, 0.65, 1.45, 0.37, 0.55))
 
+  // ── THE SWASH, over the island ──────────────────────────────────────
+  const st = swashTextures(PIXI)
+  const wetL = build(1, 0, 0, 0, 0.30, over, st.wet)
+  const sheetL = build(1, 0, 0, 0, 0.62, over, st.sheet)
+  wetL.mesh.tint = 0x223038
+  /** How wet each bearing of beach still is, 0..1, decaying. */
+  const wet = new Float32Array(n)
+  let lastT = 0
+
   const shape = (t: number) => {
+    const dt = Math.max(0, Math.min(0.1, t - lastT))
+    lastT = t
+    // ── THE SWASH FIRST, so its buffers are written every frame too ────
+    {
+      const sb = sheetL.mesh.geometry.getBuffer('aPosition')
+      const sv = sb.data as Float32Array
+      const wb = wetL.mesh.geometry.getBuffer('aPosition')
+      const wv = wb.data as Float32Array
+      const decay = Math.exp(-dt / WET_FADE)
+      for (let i = 0; i < n; i++) {
+        const a = (Math.PI * 2 * i) / n
+        const c = Math.cos(a), s = Math.sin(a)
+        const coast = (rs[i] / 100) * d * 0.74
+        const face = 0.5 + 0.5 * s
+        const facing = face * face * (3 - 2 * face)
+        // Up fast, back slow: the wave arrives and the water drains.
+        const ph = (t / SWASH_PERIOD + seed + a * 0.35) % 1
+        const run = ph < 0.3 ? ph / 0.3 : 1 - (ph - 0.3) / 0.7
+        const e = run * run * (3 - 2 * run)
+        const reach = RUNUP * facing * (0.55 + 0.45 * breakers(a, seed, t, 0.5))
+        const up = reach * e
+        wet[i] = Math.max(wet[i] * decay, up)
+        // The sheet: leading edge up the beach, tail back at the waterline.
+        const si = coast * (1 - up)
+        const so = coast * (1 + 0.015)
+        sv[i * 4] = c * si; sv[i * 4 + 1] = s * si
+        sv[i * 4 + 2] = c * so; sv[i * 4 + 3] = s * so
+        // The wet sand: as far as the water has been lately.
+        const wi = coast * (1 - wet[i])
+        wv[i * 4] = c * wi; wv[i * 4 + 1] = s * wi
+        wv[i * 4 + 2] = c * so; wv[i * 4 + 3] = s * so
+      }
+      sb.update()
+      wb.update()
+    }
     for (const L of layers) {
       // The buffer's OWN array, not the one it was built from: a MeshSimple
       // may copy on construction, and the UV path below learned the same.
@@ -259,6 +365,7 @@ export function makeShoreFoam(
 
   return {
     mesh: view,
+    over,
     advance(seconds) {
       shape(seconds)
       for (const L of layers) {

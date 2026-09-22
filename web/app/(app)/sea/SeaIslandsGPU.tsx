@@ -1211,6 +1211,10 @@ export default function SeaIslandsGPU({
           f.mesh.x = isle.x
           f.mesh.y = isle.y
           world.addChildAt(f.mesh, 0)
+          // The swash goes OVER the plate, under the buildings.
+          f.over.x = isle.x
+          f.over.y = isle.y
+          land.addChild(f.over)
           foams.push({ f, x: isle.x, y: isle.y, r: isle.r })
           return
         }
@@ -1240,6 +1244,9 @@ export default function SeaIslandsGPU({
         f.mesh.x = isle.x
         f.mesh.y = isle.y
         world.addChildAt(f.mesh, 0)
+        f.over.x = isle.x
+        f.over.y = isle.y
+        land.addChild(f.over)
         foams.push({ f, x: isle.x, y: isle.y, r: isle.r })
 
         // THE MEADOW. Parented to the island's own position like the surf is,
@@ -1400,7 +1407,7 @@ export default function SeaIslandsGPU({
           b.sprite.destroy({ texture: true, textureSource: true })
           baked.splice(k, 1)
           const fi = foams.findIndex(f => f.x === b.isle.x && f.y === b.isle.y)
-          if (fi >= 0) { foams[fi].f.mesh.destroy(); foams.splice(fi, 1) }
+          if (fi >= 0) { foams[fi].f.mesh.destroy(); foams[fi].f.over.destroy(); foams.splice(fi, 1) }
           const gi = grasses.findIndex(g => g.x === b.isle.x && g.y === b.isle.y)
           if (gi >= 0) { grasses[gi].g.destroy(); grasses.splice(gi, 1) }
         }
@@ -2013,7 +2020,7 @@ export default function SeaIslandsGPU({
           landTint = tint
           for (const b of baked) b.sprite.tint = tint
           // Foam is paint now, not light, so it takes the hour like the land.
-          for (const f of foams) f.f.mesh.tint = tint
+          for (const f of foams) { f.f.mesh.tint = tint; f.f.over.tint = tint }
           for (const sp of plated) sp.tint = tint
           // THE GRASS IS ON THE LAND, so it takes what the land takes. It was
           // taking nothing at all: a meadow's tint is its island's own green,
