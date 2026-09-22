@@ -68,6 +68,15 @@ const ISLE: Record<string, Plate> = {
   ancient_deep: P('/sea/isle-ancient.png', 0.603),
 }
 
+/** One painting per campaign bay, shared by that bay's rocks. */
+const BAY: Record<string, Plate> = {
+  thread: P('/sea/bay-thread.png', 0.530),
+  sunken_hand: P('/sea/bay-hand.png', 0.503),
+  the_coffers: P('/sea/bay-coffers.png', 0.626),
+  the_last_fathom: P('/sea/bay-fathom.png', 0.562),
+  one_last_ride: P('/sea/bay-ride.png', 0.650),
+}
+
 export const PLATES: Record<string, Plate> = {
   // ── THE PORTS. Ground only; what stands on each is composited as before.
   // The Trawl Harbor and Cormorant Rock were the two prototypes, 2026-09-22;
@@ -91,6 +100,31 @@ export const PLATES: Record<string, Plate> = {
   ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`deep-${i}`, ISLE.deep])),
   ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`abyss-${i}`, ISLE.abyss])),
   ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`ancient_deep-${i}`, ISLE.ancient_deep])),
+
+  // ── THE CAMPAIGN'S ROCKS, by bay. Kong: the north should use the new
+  // islands too. One template per chapter's water, painted in that bay's own
+  // stone: rope-fouled sea rock on the coast, bone in the Gullet, worn gold
+  // sandstone in the Coffers, wet black rock in the Fathom, violet basalt at
+  // the end. The rock a chapter has not reached yet is drawn greyed and dim
+  // (see the locked tint in the renderer), which is what the bake did.
+  ...Object.fromEntries([
+    'thread-tangle', 'thread-ledger', 'thread-bilge', 'thread-toll', 'thread-purse',
+    'thread-wax', 'thread-watch', 'thread-choice',
+  ].map(id => [id, BAY.thread])),
+  ...Object.fromEntries([
+    'hand-knuckle', 'hand-chart', 'hand-last', 'hand-sounding', 'hand-heading', 'hand-cipher',
+    'hand-bones', 'hand-scrip', 'hand-debt', 'hand-closing', 'hand-choice',
+  ].map(id => [id, BAY.sunken_hand])),
+  ...Object.fromEntries([
+    'cof-gatepost-n', 'cof-gatepost-s', 'cof-wall-n', 'cof-wall-s', 'cof-tally', 'cof-fork',
+    'cof-lens', 'cof-counting', 'cof-keeper', 'cof-turn', 'cof-strongbox', 'cof-vault',
+    'cof-ledger', 'cof-end', 'cof-choice',
+  ].map(id => [id, BAY.the_coffers])),
+  ...Object.fromEntries([
+    'fath-deepwatch', 'fath-locks', 'fath-muster', 'fath-bar', 'fath-berth', 'fath-crooked',
+    'fath-gates', 'fath-court', 'fath-last', 'fath-hail', 'fath-quiet', 'fath-armory',
+  ].map(id => [id, BAY.the_last_fathom])),
+  ...Object.fromEntries(['ride-whetstone', 'ride-quiet', 'ride-spoils'].map(id => [id, BAY.one_last_ride])),
 }
 
 export function plateFor(id: string): Plate | null {

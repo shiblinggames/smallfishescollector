@@ -146,6 +146,25 @@ const POOL_PEAK = 0.45
 
 let coreTex: Texture | null = null
 let poolTex: Texture | null = null
+let shadeTex: Texture | null = null
+/** A soft ellipse for a building's contact shadow: solid in the middle,
+ *  gone at the rim, so it reads as ground in shade rather than a decal. */
+function shadowTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (shadeTex) return shadeTex
+  const S = 128
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')!
+  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+  grad.addColorStop(0.00, 'rgba(255,255,255,1)')
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.85)')
+  grad.addColorStop(0.80, 'rgba(255,255,255,0.25)')
+  grad.addColorStop(1.00, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, S, S)
+  shadeTex = PIXI.Texture.from(c)
+  return shadeTex
+}
 
 /** The lamp itself: a hard bright middle and a short halo. Small on screen, so
  *  most of its range goes on the first fifth — anything softer than this stops
@@ -326,6 +345,21 @@ export async function makeTowns(
         // One building that will not decode must not cost the island.
         continue
       }
+      // ── ITS SHADOW, FIRST, so it lies under the building ─────────────
+      //
+      // Kong: buildings should have shadows on the island. A building drawn
+      // with none floats on the paint; a soft dark ellipse at its feet, laid
+      // ON the plane (so it is squashed with the ground rather than standing
+      // up like the building), thrown a little down and to the right because
+      // every light on this chart comes from the upper left, is what seats
+      // it. Multiplied, not painted: it darkens whatever ground is there.
+      const sh: Sprite = new PIXI.Sprite(shadowTexture(PIXI))
+      sh.anchor.set(0.5, 0.5)
+      sh.tint = 0x0a1018
+      sh.alpha = spec.locked ? 0.18 : 0.30
+      sh.blendMode = 'multiply'
+      node.addChild(sh)
+
       const s: Sprite = new PIXI.Sprite(tex)
       // At its FEET.
       s.anchor.set(0.5, 1)
@@ -358,6 +392,11 @@ export async function makeTowns(
       s.tint = spec.locked ? LOCKED : 0xffffff
       node.addChild(s)
       sprites.push(s)
+      // The shadow sits at the feet, as wide as the building and a third as
+      // deep (it is on the plane, and the plane is squashed), slid down-right.
+      sh.width = w * 1.05
+      sh.height = w * 0.34 / GROUND
+      sh.position.set(s.position.x + w * 0.06, s.position.y + (w * 0.02) / GROUND)
 
       // ── AND WHERE ITS CHIMNEYS ARE ───────────────────────────────
       //

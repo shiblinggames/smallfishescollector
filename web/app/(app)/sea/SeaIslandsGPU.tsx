@@ -1165,6 +1165,26 @@ export default function SeaIslandsGPU({
       const meadow = new PIXI.Container()
       world.addChild(meadow)
       const grassTex = makeGrassTexture(PIXI)
+      /** One soft ellipse for every painted island's shadow in the water. */
+      const islandShadowTexture = (() => {
+        let tex: import('pixi.js').Texture | null = null
+        return (P: typeof PIXI) => {
+          if (tex) return tex
+          const S = 256
+          const c = document.createElement('canvas')
+          c.width = c.height = S
+          const cg = c.getContext('2d')!
+          const grad = cg.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+          grad.addColorStop(0.00, 'rgba(255,255,255,1)')
+          grad.addColorStop(0.55, 'rgba(255,255,255,0.9)')
+          grad.addColorStop(0.85, 'rgba(255,255,255,0.3)')
+          grad.addColorStop(1.00, 'rgba(255,255,255,0)')
+          cg.fillStyle = grad
+          cg.fillRect(0, 0, S, S)
+          tex = P.Texture.from(c)
+          return tex
+        }
+      })()
 
       const foams: { f: Foam; x: number; y: number; r: number }[] = []
       const grasses: { g: Grass; x: number; y: number; r: number }[] = []
@@ -1197,11 +1217,32 @@ export default function SeaIslandsGPU({
         // waving over painted ground was the seam this exists to remove.
         const plate = plateFor(isle.id)
         if (plate) {
+          // ── ITS SHADOW IN THE WATER ─────────────────────────────────
+          //
+          // The bake drew one (a blurred dark trace under the land, slid
+          // down-right) and the plate had none, so a painted island floated.
+          // Kong: islands should have shadows in the water. A soft dark
+          // ellipse on the plane, sized to the coast, thrown down and to the
+          // right with the light, multiplied so the water under it darkens
+          // rather than being painted over. Under the plate, over the sea.
+          const shade = new PIXI.Sprite(islandShadowTexture(PIXI))
+          shade.anchor.set(0.5)
+          shade.tint = 0x03101c
+          shade.alpha = isle.locked ? 0.22 : 0.38
+          shade.blendMode = 'multiply'
+          shade.width = d * 0.98
+          shade.height = (d * 0.98 * plate.aspect) / GROUND * 0.92
+          shade.position.set(isle.x + d * 0.05, isle.y + (d * 0.06) / GROUND)
+          land.addChild(shade)
+
           const s = new PIXI.Sprite(PIXI.Texture.EMPTY)
           s.anchor.set(0.5, plate.water)
           s.x = isle.x
           s.y = isle.y
-          s.tint = landTint
+          // A LOCKED rock is one the story has not reached: greyed and dim,
+          // the same reading the bake gave it, so the chapter's water tells
+          // you what is open without a sign.
+          s.tint = isle.locked ? 0x5a6068 : landTint
           land.addChild(s)
           plated.push(s)
           loadTexture(PIXI, plate.art).then(t => {
@@ -2029,7 +2070,7 @@ export default function SeaIslandsGPU({
           for (const b of baked) b.sprite.tint = tint
           // Foam is paint now, not light, so it takes the hour like the land.
           for (const f of foams) { f.f.mesh.tint = tint; f.f.over.tint = tint }
-          for (const sp of plated) sp.tint = tint
+          for (const sp of plated) if (sp.tint !== 0x5a6068) sp.tint = tint
           // THE GRASS IS ON THE LAND, so it takes what the land takes. It was
           // taking nothing at all: a meadow's tint is its island's own green,
           // set once when it was sown, and nothing here had ever written to it.

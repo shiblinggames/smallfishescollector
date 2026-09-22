@@ -3233,7 +3233,7 @@ had, put to use.
   were PROBED: a polar scan of each band for whole-disc clearance against `SOLIDS`, then picked
   for spread. The first six placed by eye all sat on landmarks. Re-probe if you move one.
 
-## Painted islands (2026-09-22, SHIPPED: all 10 ports and 27 isles)
+## Painted islands (2026-09-22, SHIPPED: 10 ports, 27 isles, 49 campaign rocks)
 
 Kong: "islands and the grass still look weird." Diagnosis: everything else on the water is a
 hand-painted plate (ships, buildings, raid rocks, landmarks, the homestead house); the 11 ports
