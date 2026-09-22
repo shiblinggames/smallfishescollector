@@ -49,6 +49,7 @@
 // idea as the lights on a berth ring, because a captain reading the water at
 // night should be reading ONE language of light.
 
+import { plateFor } from '@/lib/islandPlates'
 import type { Container, Sprite, Texture } from 'pixi.js'
 import { GROUND, liftAtPoint } from './islandArt'
 import { coastline, grassAt, GRASS } from '@/lib/islandShape'
@@ -111,6 +112,26 @@ const GLOW = 0xffc478
  *  the promenade whether or not it is drawn as one, and a lamp on it can never
  *  be standing in the sea or on a roof. */
 const PROM = 0.66
+/**
+ * ── ON A PAINTED ISLAND ─────────────────────────────────────────────────────
+ *
+ * Kong: the lights at night need fixing. Two things were wrong once the
+ * islands were plates. Every lamp was raised by the bake's seeded cliff lift,
+ * which a painting does not have, so on the south side a post stood on the
+ * cliff face with its pool in the water. And the run went all the way round
+ * the island at one spacing, which on a painted island reads as a fairground
+ * rather than a harbour front.
+ *
+ * So on a plate the lamps stand on the painted top face, nearer in than the
+ * promenade the bake had (the plate's coast reaches the foot of its cliff, so
+ * the same fraction of it would be on the rock), and only along the shore
+ * that faces you: the south half and the flanks, the same asymmetry the surf
+ * uses, because that is the front of a harbour and the back of an island is
+ * behind its own rise.
+ */
+const PLATE_PROM = 0.50
+/** How far round from due south the run reaches, either way, in radians. */
+const PLATE_ARC = Math.PI * 0.62
 
 /** How tall a lamp stands, as a fraction of the island's radius. Height maps
  *  straight to screen y on this plane, so this is also the gap you see between
@@ -119,8 +140,9 @@ const POST = 0.052
 
 /** How bright at the middle of the night. The pool is deliberately meek: it is
  *  the light REACHING the sand, and sand at night is not lit, it is glimpsed. */
-const CORE_PEAK = 0.9
-const POOL_PEAK = 0.3
+const CORE_PEAK = 1.0
+// 0.45, up from 0.3, and the pool is wider below: Kong asked for more light.
+const POOL_PEAK = 0.45
 
 let coreTex: Texture | null = null
 let poolTex: Texture | null = null
@@ -230,7 +252,10 @@ export async function makeTowns(
       // ONE PER SO MANY PIXELS OF SHORE, not a fixed count. The Mainland is
       // 4.6x a single-purpose port, and nine lamps around it is a lit town
       // while nine around the Shipyard is a runway.
-      const n = Math.max(4, Math.min(12, Math.round(spec.r / 58)))
+      const plated = !!plateFor(spec.id)
+      const n = plated
+        ? Math.max(3, Math.min(8, Math.round(spec.r / 70)))
+        : Math.max(4, Math.min(12, Math.round(spec.r / 58)))
       let h = 0
       for (let i = 0; i < spec.id.length; i++) h = (h * 31 + spec.id.charCodeAt(i)) >>> 0
 
@@ -238,15 +263,20 @@ export async function makeTowns(
         // Evenly spread and then knocked off it. A perfect ring reads as
         // machinery; half a step of slop reads as lamps somebody put up.
         const jit = ((Math.imul(h ^ Math.imul(i + 1, 0x9e3779b1), 2654435761) >>> 0) % 1000) / 1000
-        const a = ((i + 0.5) / n) * Math.PI * 2 + (jit - 0.5) * (Math.PI * 2 / n) * 0.55
-        const p = coastAt(a) * PROM
+        // A plate's run spans the front arc, centred on due south (+y);
+        // the bake's goes all the way round as it always did.
+        const a = plated
+          ? Math.PI / 2 - PLATE_ARC + ((i + 0.5) / n) * PLATE_ARC * 2 + (jit - 0.5) * (PLATE_ARC * 2 / n) * 0.45
+          : ((i + 0.5) / n) * Math.PI * 2 + (jit - 0.5) * (Math.PI * 2 / n) * 0.55
+        const p = coastAt(a) * (plated ? PLATE_PROM : PROM)
         const bx = 50 + Math.cos(a) * p
         const by = 50 + Math.sin(a) * p
         // The same three lines every building here uses: box-percent to node
         // units, then up onto the land at ITS OWN bearing. A lamp that skipped
         // the lift would be buried in the cliff face like the buildings were.
         const lx = -spec.r + (bx / 100) * d
-        const ly = -spec.r + (by / 100) * d - liftAtPoint(spec.id, d, bx, by) / GROUND
+        // No seeded lift on a painting: the ground is where the paint is.
+        const ly = -spec.r + (by / 100) * d - (plated ? 0 : liftAtPoint(spec.id, d, bx, by) / GROUND)
 
         const pool: Sprite = new PIXI.Sprite(poolTexture(PIXI))
         pool.anchor.set(0.5)
@@ -256,8 +286,8 @@ export async function makeTowns(
         // simply drawn round and let alone. Writing the ellipse here squared
         // with the world's and laid the pool out flatter than the ground it
         // is lying on.
-        pool.width = spec.r * 0.66
-        pool.height = spec.r * 0.66
+        pool.width = spec.r * 0.84
+        pool.height = spec.r * 0.84
         pool.position.set(lx, ly)
         pool.tint = GLOW
         pool.alpha = 0
