@@ -210,7 +210,7 @@ export const PLACES: Place[] = [
       // axis and a headland now, and the Mainland's narrowest bearing is its
       // south face — which is where the town was, and where check-islands
       // caught it hanging over the water.
-      { art: '/sea/mainland-town.png', x: 48, y: 62, scale: 0.65, toShore: true },
+      { art: '/sea/mainland-town.png', x: 47, y: 75, scale: 0.71, toShore: true },
     ],
   },
   {
@@ -257,7 +257,7 @@ export const PLACES: Place[] = [
     href: '/trawl-docks', x: -1150, y: -780, r: 265, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/harbour.png', x: 53, y: 58, scale: 0.27 },
+      { art: '/sea/harbour.png', x: 53, y: 55, scale: 0.33 },
     ],
   },
   {
@@ -282,10 +282,10 @@ export const PLACES: Place[] = [
     // owned; these are what the checker measures and what a captain with no
     // profile would see.
     buildings: [
-      { art: '/crew/hall_1.png', x: 54, y: 67, scale: 0.28 },
-      { art: '/crew/drill_1.png', x: 36, y: 60, scale: 0.12 },
+      { art: '/crew/hall_1.png', x: 53, y: 52, scale: 0.30 },
+      { art: '/crew/drill_1.png', x: 35, y: 57, scale: 0.12 },
       // In from 73: the hall's east side is its short one now.
-      { art: '/crew/stores_1.png', x: 71, y: 60, scale: 0.11 },
+      { art: '/crew/stores_1.png', x: 70, y: 56, scale: 0.11 },
     ],
   },
   {
@@ -333,7 +333,7 @@ export const PLACES: Place[] = [
       // number drew a visibly smaller building: 157px against 245. This is
       // the Charterhouse's 0.34 on a smaller isle, which reads as a building
       // of the same institution rather than a model of one.
-      { art: '/sea/posting-house.png', x: 44, y: 58, scale: 0.34 },
+      { art: '/sea/posting-house.png', x: 54, y: 38, scale: 0.34 },
     ],
   },
   {
@@ -366,7 +366,7 @@ export const PLACES: Place[] = [
     kind: 'port', minLevel: 0,
     berth: { dx: -280 * 0.85, dy: 280 * 0.6 },
     buildings: [
-      { art: '/forge/forge.png', x: 51, y: 60, scale: 0.30 },
+      { art: '/forge/forge.png', x: 45, y: 42, scale: 0.30 },
     ],
   },
   {
@@ -402,7 +402,7 @@ export const PLACES: Place[] = [
     href: '/sea', x: -898, y: -5715, r: 340, art: '/sea/gunwharf.png',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/gunwharf.png', x: 53, y: 59, scale: 0.36 },
+      { art: '/sea/gunwharf.png', x: 57, y: 40, scale: 0.36 },
     ],
   },
   {
@@ -429,7 +429,7 @@ export const PLACES: Place[] = [
     kind: 'port', minLevel: 0,
     berth: { dx: -340 * 0.85, dy: 340 * 0.6 },
     buildings: [
-      { art: '/sea/charterhouse.png', x: 51, y: 62, scale: 0.34 },
+      { art: '/sea/charterhouse.png', x: 54, y: 56, scale: 0.36 },
     ],
   },
   {
@@ -471,7 +471,7 @@ export const PLACES: Place[] = [
     href: '/sea', x: -2050, y: -820, r: 210, art: '/sea/trawl-shed.png',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/trawl-shed.png', x: 49, y: 54, scale: 0.33 },
+      { art: '/sea/trawl-shed.png', x: 48, y: 49, scale: 0.44 },
     ],
   },
   {
@@ -481,7 +481,7 @@ export const PLACES: Place[] = [
     kind: 'port', minLevel: 0,
     // Placed on /sea/calibrate, against the real coastline.
     buildings: [
-      { art: '/sea/shipyard.png', x: 53, y: 61, scale: 0.30 },
+      { art: '/sea/shipyard.png', x: 50, y: 63, scale: 0.44 },
     ],
   },
   {
