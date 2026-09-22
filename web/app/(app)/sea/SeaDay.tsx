@@ -33,6 +33,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import ResetCountdown from '@/components/ResetCountdown'
+import CharacterAvatar from '@/components/CharacterAvatar'
+import { FINN_AVATAR } from '@/lib/finn'
 import { dayState, type DayState } from './dayActions'
 import { vibrate } from '@/lib/haptics'
 
@@ -40,6 +42,28 @@ const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'
 
 export type DayKind = 'orders' | 'voyage' | 'trawls' | 'bounties' | 'chart' | 'parlor' | 'finn'
+
+/**
+ * ── THE PAINTING IS THE ROW ─────────────────────────────────────────────────
+ *
+ * The first cut was a list: a dot, a title, a line of status, a pill. It read
+ * as a to-do list in a game made of paintings. Kong: can it be more
+ * art-forward. So each daily is a CARD with the house's own painted plate of
+ * the place it happens — the same building that stands on the island out
+ * there, which is what makes the board feel like the sea rather than a menu
+ * over it. Finn is a face instead of a building, because his row is a person.
+ *
+ * Nothing new was drawn for this. Every plate below already stands on the
+ * chart or hangs in the Tavern.
+ */
+const ART: Record<Exclude<DayKind, 'finn'>, string> = {
+  orders: '/sea/harbour.png',
+  voyage: '/sea/charterhouse.png',
+  trawls: '/sea/trawl-shed.png',
+  bounties: '/sea/posting-house.png',
+  chart: '/sea/charting.png',
+  parlor: '/sea/parlor.png',
+}
 
 type Row = {
   kind: DayKind
@@ -240,42 +264,90 @@ export default function SeaDay({ size, top, right, ashore, onOpen }: {
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
+          {/* Two cards across on a phone, three on a monitor. The plate is
+              the subject and the words sit under it, so the board scans as
+              places rather than as lines. */}
+          <div style={{
+            display: 'grid', gap: 8, marginTop: 12,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(152px, 1fr))',
+          }}>
             {rows.length === 0 && (
               <p className="font-karla" style={{ fontSize: '0.82rem', color: `${SEA},0.55)`, margin: '0.4rem 0' }}>Reading the day…</p>
             )}
-            {rows.map(r => (
-              <button key={r.kind} type="button"
-                onClick={() => { vibrate(6); setOpen(false); onOpen(r.kind) }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
-                  padding: '0.62rem 0.75rem', borderRadius: 12, cursor: 'pointer',
-                  background: r.hot ? `${GOLD}12` : r.done ? 'rgba(123,191,123,0.07)' : 'rgba(255,255,255,0.035)',
-                  border: `1px solid ${r.hot ? `${GOLD}66` : r.done ? 'rgba(123,191,123,0.28)' : `${SEA},0.16)`}`,
-                  opacity: r.done && !r.hot ? 0.78 : 1,
-                }}>
-                <span aria-hidden style={{
-                  width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                  background: r.hot ? GOLD : r.done ? '#7bbf7b' : 'transparent',
-                  border: `1.5px solid ${r.hot ? GOLD : r.done ? '#7bbf7b' : `${SEA},0.45)`}`,
-                  boxShadow: r.hot ? `0 0 8px ${GOLD}` : 'none',
-                }} />
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.92rem', color: '#f2ead8', lineHeight: 1.15 }}>{r.title}</span>
-                  <span className="font-karla" style={{ display: 'block', fontSize: '0.74rem', color: r.hot ? '#f6dfa0' : `${SEA},0.7)`, marginTop: 2 }}>
-                    {r.status}<span style={{ opacity: 0.5 }}> · {r.place}</span>
+            {rows.map(r => {
+              const ring = r.hot ? `${GOLD}88` : r.done ? 'rgba(123,191,123,0.3)' : `${SEA},0.16)`
+              return (
+                <button key={r.kind} type="button"
+                  onClick={() => { vibrate(6); setOpen(false); onOpen(r.kind) }}
+                  title={`${r.status} · ${r.place}`}
+                  style={{
+                    position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: 2, padding: '0.6rem 0.5rem 0.55rem', borderRadius: 14, cursor: 'pointer',
+                    textAlign: 'center', minWidth: 0,
+                    background: r.hot
+                      ? `radial-gradient(ellipse 80% 70% at 50% 28%, ${GOLD}1c 0%, transparent 70%), rgba(40,30,8,0.42)`
+                      : r.done ? 'rgba(123,191,123,0.06)' : 'rgba(255,255,255,0.035)',
+                    border: `1px solid ${ring}`,
+                    boxShadow: r.hot ? `0 0 18px ${GOLD}22` : 'none',
+                  }}>
+                  {/* THE BREATH, on the card that is waiting on you. Same rule
+                      and same feel as the disc itself: a ring, not a blink. */}
+                  {r.hot && (
+                    <motion.span aria-hidden
+                      animate={{ opacity: [0.5, 0, 0.5] }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut' }}
+                      style={{ position: 'absolute', inset: -1, borderRadius: 15, border: `1px solid ${GOLD}` }} />
+                  )}
+                  <span style={{ height: 74, display: 'grid', placeItems: 'center', width: '100%' }}>
+                    {r.kind === 'finn' ? (
+                      <span style={{
+                        transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none',
+                        borderRadius: '50%', boxShadow: r.hot ? `0 0 16px ${GOLD}55` : 'none',
+                      }}>
+                        <CharacterAvatar
+                          characterColor={FINN_AVATAR.characterColor}
+                          equippedHat={FINN_AVATAR.equippedHat}
+                          bgColor={FINN_AVATAR.bgColor}
+                          ringColor={FINN_AVATAR.borderColor}
+                          size={64}
+                        />
+                      </span>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={ART[r.kind]} alt="" loading="lazy" decoding="async"
+                        style={{
+                          maxWidth: '100%', maxHeight: 74, objectFit: 'contain',
+                          filter: r.hot ? `drop-shadow(0 0 10px ${GOLD}66)` : 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))',
+                          opacity: r.done && !r.hot ? 0.62 : 1,
+                        }} />
+                    )}
                   </span>
-                </span>
-                {r.action && (
-                  <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{
-                    flexShrink: 0, fontSize: '0.66rem', padding: '0.36rem 0.7rem', borderRadius: 9,
-                    background: r.hot ? `${GOLD}22` : 'rgba(120,170,255,0.12)',
-                    color: r.hot ? GOLD : '#bcd4ff',
-                    border: `1px solid ${r.hot ? `${GOLD}88` : 'rgba(120,170,255,0.35)'}`,
-                  }}>{r.action}</span>
-                )}
-              </button>
-            ))}
+                  <span className="font-cinzel font-700" style={{
+                    fontSize: '0.82rem', color: '#f2ead8', lineHeight: 1.15, marginTop: 4,
+                    width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>{r.title}</span>
+                  <span className="font-karla" style={{
+                    fontSize: '0.68rem', lineHeight: 1.3, minHeight: '1.7em', width: '100%',
+                    color: r.hot ? '#f6dfa0' : `${SEA},0.62)`,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>{r.status}</span>
+                  <span style={{ minHeight: 22, display: 'flex', alignItems: 'center', marginTop: 3 }}>
+                    {r.action ? (
+                      <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{
+                        fontSize: '0.62rem', padding: '0.3rem 0.66rem', borderRadius: 999,
+                        background: r.hot ? `${GOLD}22` : 'rgba(120,170,255,0.12)',
+                        color: r.hot ? GOLD : '#bcd4ff',
+                        border: `1px solid ${r.hot ? `${GOLD}88` : 'rgba(120,170,255,0.32)'}`,
+                      }}>{r.action}</span>
+                    ) : (
+                      <span className="font-karla font-800 uppercase" style={{
+                        fontSize: '0.54rem', letterSpacing: '0.12em', color: '#7bbf7b', opacity: 0.85,
+                      }}>Done</span>
+                    )}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </motion.div>
       </PopupShell>
