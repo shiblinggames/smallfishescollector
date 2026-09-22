@@ -510,17 +510,43 @@ void main(void) {
   //
   // Measured along the light's own axis, so it points wherever the clock says
   // the light is coming from and turns with it through the night.
-  float across = abs(dot(normalize(vec2(px.x, px.y / GROUND)), vec2(uLight.y, -uLight.x)));
-  float road = (1.0 - smoothstep(0.0, 0.34, across));
+  // ── A GLITTER PATH, NOT A STRIPE ─────────────────────────────────
+  //
+  // The first road was a soft band through the screen centre along the
+  // light's axis, broken by the swell. Kong: make it more realistic. What a
+  // moon lays on water is GLITTER: many separate flecks of specular light,
+  // each a wave face at the right angle, dense on the axis and sparse off
+  // it. The path is narrow out toward the moon and widens toward the viewer,
+  // because nearer waves subtend more angle; and it is brightest toward the
+  // moon's end, where the reflection sits.
+  //
+  // Measured on the plane, in screen px, so the width is a real width and
+  // not a fraction of a direction.
+  vec2 lp = vec2(px.x, px.y / GROUND);
+  vec2 axis = normalize(uLight);
+  float alongL = dot(lp, axis);
+  float acrossL = abs(dot(lp, vec2(axis.y, -axis.x)));
+  // Half-width: a lane that opens toward the near water.
+  float halfW = mix(0.10, 0.36, 1.0 - depth) * uRes.x * 0.5;
+  float lane = exp(-pow(acrossL / max(1.0, halfW), 2.0));
+  // Toward the moon: 1 at the light's end of the screen, 0.5 at the other.
+  float towardMoon = 0.5 + 0.5 * smoothstep(-0.9, 0.9, alongL / (uRes.x * 0.5));
+  // The flecks: fine noise thresholded hard, and the threshold drops on the
+  // axis so the glitter thickens toward the middle of the path. On wave faces
+  // only, off the coarse swell, so it winks as the water moves.
+  float gl = vnoise(w * 7.0 + axis * 1.5 + vec2(uTime * 0.16, uTime * -0.09));
+  float glit = smoothstep(mix(0.985, 0.86, lane), 1.0, gl) * smoothstep(0.30, 0.80, d1);
   // Broken by the swell, because a reflection on moving water is not a stripe,
   // it is a column of separate bright pieces.
-  float broken = smoothstep(0.42, 0.86, d1) * (0.55 + 0.45 * smoothstep(0.4, 0.9, d2));
+  // A faint smooth glow under the flecks, so the path reads at a glance
+  // and the flecks read as being IN it rather than scattered.
+  float road = lane * 0.030 + glit * 0.42 * lane;
   // 0.13, DOWN FROM 0.24. The road was reading as a lit strip laid ON the sea
   // rather than a reflection in it — bright enough that the eye went to it and
   // stayed, which is the opposite of what a night sea should do to attention.
   // Halved, and it still does the job it is here for: the water outside it goes
   // flat and the night stops reading as a dim day.
-  col += road * broken * vec3(0.62, 0.74, 0.95) * 0.13 * uDark * uSwell * (1.0 - 0.88 * uRush) * (1.0 - stormK) * uOnMoon;
+  col += road * towardMoon * vec3(0.80, 0.88, 1.0) * uDark * uSwell * (1.0 - 0.88 * uRush) * (1.0 - stormK) * uOnMoon;
 
   // ── GLINTS ────────────────────────────────────────────────────────
   vec2 gv = vec2(uLight.y, -uLight.x);
