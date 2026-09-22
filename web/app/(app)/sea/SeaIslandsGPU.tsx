@@ -1001,6 +1001,9 @@ export default function SeaIslandsGPU({
        * Names: clouds, haze, gulls, lights, squalls, banks, chains, front, fog,
        * drift (the foam flecks you sail past), wake, surf (the reef's).
        *
+       * And inside the water shader itself: chop (the fine swell octave),
+       * glints, caustics, moon (the night road), caps (whitecaps), bloom.
+       *
        * A diagnostic, not a setting. It is deliberately not in the UI and it
        * does not persist: bisecting a render bug is the whole of what it is
        * for, and anything that reaches for it in earnest is a bug report.
@@ -1029,6 +1032,7 @@ export default function SeaIslandsGPU({
           maybe('drift', drift.view)
           maybe('wake', wake.view)
           maybe('surf', surf.view)
+          water?.hide(all ? new Set(['chop', 'glints', 'caustics', 'moon', 'caps', 'bloom']) : off)
         }
       } catch {
         // A malformed query string must not cost anybody the chart.

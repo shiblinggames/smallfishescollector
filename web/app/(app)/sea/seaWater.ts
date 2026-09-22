@@ -161,6 +161,18 @@ uniform vec4  uBloom0;
 uniform vec4  uBloom1;
 uniform vec4  uBloom2;
 uniform vec4  uBloom3;
+// ── THE BISECT SWITCHES ─────────────────────────────────────────────
+//
+// One per effect the shader paints, 1 to draw and 0 to leave out, driven by
+// /sea?hide=... exactly like the renderer's layers. A diagnostic: when
+// something on the water looks wrong and nobody can name it, this is how it
+// gets named.
+uniform float uOnChop;
+uniform float uOnGlint;
+uniform float uOnCaust;
+uniform float uOnMoon;
+uniform float uOnCaps;
+uniform float uOnBloom;
 
 // The plane's foreshortening. Sampling noise without it makes the swell look
 // like it is standing up out of the water rather than lying on it.
@@ -354,7 +366,7 @@ void main(void) {
   // was even standing still — see the note on the amplitudes below.
   // AND IT COMES UP UNDER A SQUALL. Wind on water is chop before it is
   // anything else; the fine octave is the chop.
-  float fine = min(0.62, (0.16 + 0.30 * storm) * (1.0 - 0.85 * uRush));
+  float fine = min(0.62, (0.16 + 0.30 * storm) * (1.0 - 0.85 * uRush)) * uOnChop;
   float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
 
   // ── THE SHELF ─────────────────────────────────────────────────────
@@ -475,7 +487,7 @@ void main(void) {
       * (1.0 - 0.85 * uRush)
       // No sun under a cloud, so no light bent by the surface.
       * (1.0 - stormK);
-    col += caust * vec3(0.72, 0.92, 0.86) * 0.13 * uSwell;
+    col += caust * vec3(0.72, 0.92, 0.86) * 0.13 * uSwell * uOnCaust;
   }
 
   // ── THE MOON'S PATH ───────────────────────────────────────────────
@@ -498,7 +510,7 @@ void main(void) {
   // stayed, which is the opposite of what a night sea should do to attention.
   // Halved, and it still does the job it is here for: the water outside it goes
   // flat and the night stops reading as a dim day.
-  col += road * broken * vec3(0.62, 0.74, 0.95) * 0.13 * uDark * uSwell * (1.0 - 0.88 * uRush) * (1.0 - stormK);
+  col += road * broken * vec3(0.62, 0.74, 0.95) * 0.13 * uDark * uSwell * (1.0 - 0.88 * uRush) * (1.0 - stormK) * uOnMoon;
 
   // ── GLINTS ────────────────────────────────────────────────────────
   vec2 gv = vec2(uLight.y, -uLight.x);
@@ -554,7 +566,7 @@ void main(void) {
   // that it is too busy when you are sitting still.
   col += sparkle * glintCol * 0.096 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.88 * uRush)
     // Glare is the first thing a cloud takes.
-    * (1.0 - min(1.0, storm * 1.3));
+    * (1.0 - min(1.0, storm * 1.3)) * uOnGlint;
 
   // ── WHITECAPS ─────────────────────────────────────────────────────
   //
@@ -575,7 +587,7 @@ void main(void) {
   crest *= smoothstep(0.35, 0.75, rag);
   float capAmt = 0.09 * (0.6 + 1.6 * stormK) * uSwell
     * (1.0 - uDark * 0.55) * (1.0 - 0.55 * uRush) * (1.0 - recede * 0.6);
-  col += crest * vec3(0.90, 0.96, 1.0) * capAmt;
+  col += crest * vec3(0.90, 0.96, 1.0) * capAmt * uOnCaps;
 
   // ── AND THE DEEP GLOWS, IN PLACES ─────────────────────────────────
   //
@@ -590,7 +602,7 @@ void main(void) {
       float mottle = vnoise(wa * 1.6 + vec2(uTime * 0.012, uTime * -0.009));
       mottle = smoothstep(0.35, 0.85, mottle);
       float breathe = 0.75 + 0.25 * sin(uTime * 0.35 + world.x * 0.0007);
-      col += bloom * mottle * breathe * vec3(0.22, 0.86, 0.72) * 0.085 * uDark * (1.0 - stormK * 0.6);
+      col += bloom * mottle * breathe * vec3(0.22, 0.86, 0.72) * 0.085 * uDark * (1.0 - stormK * 0.6) * uOnBloom;
     }
   }
 
@@ -707,6 +719,12 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
       uBloom1: { value: new Float32Array(4), type: 'vec4<f32>' },
       uBloom2: { value: new Float32Array(4), type: 'vec4<f32>' },
       uBloom3: { value: new Float32Array(4), type: 'vec4<f32>' },
+      uOnChop: { value: 1, type: 'f32' },
+      uOnGlint: { value: 1, type: 'f32' },
+      uOnCaust: { value: 1, type: 'f32' },
+      uOnMoon: { value: 1, type: 'f32' },
+      uOnCaps: { value: 1, type: 'f32' },
+      uOnBloom: { value: 1, type: 'f32' },
     })
 
     const filter = new PIXI.Filter({
@@ -725,6 +743,18 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
     const blooms = [u.uBloom0, u.uBloom1, u.uBloom2, u.uBloom3] as Float32Array[]
     return {
       sprite,
+
+      /** Which effects to leave out, by the names /sea?hide= uses: chop,
+       *  glints, caustics, moon, caps, bloom. */
+      hide(off: Set<string>) {
+        u.uOnChop = off.has('chop') ? 0 : 1
+        u.uOnGlint = off.has('glints') ? 0 : 1
+        u.uOnCaust = off.has('caustics') ? 0 : 1
+        u.uOnMoon = off.has('moon') ? 0 : 1
+        u.uOnCaps = off.has('caps') ? 0 : 1
+        u.uOnBloom = off.has('bloom') ? 0 : 1
+        uniforms.update()
+      },
 
       /** The blooms near the camera, four (x, y, r, 1) in a row; a 0 in the
        *  fourth place empties the slot. Same shape as `storms`. */
