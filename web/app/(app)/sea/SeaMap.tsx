@@ -210,6 +210,7 @@ import SeaCue from './SeaCue'
 import { pendingPacts, hasAcceptedPact } from './pactActions'
 import { heldGolden } from '../fishing/actions'
 import { coastClip, coastline } from '@/lib/islandShape'
+import { plateFor } from '@/lib/islandPlates'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
 import { GROUND, islandLift, liftAt, liftAtPoint, bakeIsland, requestGround } from './islandArt'
@@ -911,8 +912,42 @@ function allObstacles(): Obstacle[] {
   return obstaclesAll
 }
 
+/**
+ * ── A PAINTED ISLAND'S BOUNDARY IS THE ISLAND ───────────────────────────────
+ *
+ * Kong: "the boundaries should be the island itself." A plated island's
+ * coastline is read off its painting (lib/plateCoasts), so the thing to stop
+ * a hull at is that polygon, not the circle the port or isle used to be. The
+ * frame loop resolves circles and capsules, and a closed polygon is a ring of
+ * capsules: every fourth vertex of the 160 joined to the next, forty thin
+ * segments round the shore. The near list keeps only the ones within reach,
+ * so a hull pays for the few segments it is actually alongside.
+ *
+ * The radius is a hair, not a margin: the hull carries its own shape now, so
+ * the shore stops the planking rather than a point.
+ */
+function coastObstacles(id: string, x: number, y: number, r: number): Obstacle[] {
+  const rs = coastline(id)
+  const N = rs.length
+  const step = Math.max(1, Math.round(N / 40))
+  const land = 1.48 * r
+  const at = (i: number) => {
+    const a = (Math.PI * 2 * (i % N)) / N
+    const R = (rs[i % N] / 100) * land
+    return { x: x + Math.cos(a) * R, y: y + Math.sin(a) * R }
+  }
+  const out: Obstacle[] = []
+  for (let i = 0; i < N; i += step) {
+    const a = at(i), b = at(i + step)
+    out.push({ x: a.x, y: a.y, x2: b.x, y2: b.y, r: 4 })
+  }
+  return out
+}
+
 const OBSTACLES: Obstacle[] = [
   ...PLACES.filter(p => p.kind === 'port').flatMap((p): Obstacle[] => {
+    // Painted: the shore is the boundary. See coastObstacles.
+    if (plateFor(p.id)) return coastObstacles(p.id, p.x, p.y, p.r)
     const c = PORT_COLLIDERS[p.id]
     if (!c || c.shapes.length === 0) return [{ x: p.x, y: p.y, r: p.r * SHORE }]
     return c.shapes.map(k => k.kind === 'circle'
@@ -935,6 +970,7 @@ const OBSTACLES: Obstacle[] = [
   // radius (IsleRock draws at r * 2), so this stops the boat a hull clear of
   // the stone, well inside the r + 260 you can go ashore from.
   ...ISLES.flatMap((i): Obstacle[] => {
+    if (plateFor(i.id)) return coastObstacles(i.id, i.x, i.y, i.r)
     const c = ISLE_COLLIDERS[i.id]
     if (!c || c.shapes.length === 0) return [{ x: i.x, y: i.y, r: i.r }]
     return c.shapes.map(k => k.kind === 'circle'
