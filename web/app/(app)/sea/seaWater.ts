@@ -458,7 +458,7 @@ void main(void) {
   float caust = 0.0;
   // ── SHALLOWS ONLY, IN WORLD PIXELS ────────────────────────────────
   //
-  // This was gated on `shelf`, the smoothstep across the WHOLE fishable sea,
+  // This was gated on shelf, the smoothstep across the WHOLE fishable sea,
   // and shelf < 0.62 is true out to about thirteen thousand pixels from the
   // origin: the Deep and most of the Abyss had caustics. Kong bisected it:
   // "it's the caustics", and "I still see them in the deep." Sunlight
