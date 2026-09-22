@@ -344,6 +344,11 @@ export type GpuHandle = {
      *  for everyone. Omitted, the sprite multiplier stands in, which is right
      *  for a fishing boat and a rowing-boat wake on a galleon. */
     wakeScale?: number
+    /** The CUTWATER, when it is not the sprite's centre: where a warship parts
+     *  the water is well forward of where she is drawn. The wake starts here;
+     *  the sprite still stands at x,y. Omitted, x,y serves both, which is
+     *  right for a fishing boat. */
+    wx?: number; wy?: number
   }[]): void
   skipper(s: {
     bob: number
@@ -1531,7 +1536,7 @@ export default function SeaIslandsGPU({
         ang: number; cx: number; cy: number
         /** Present only for hulls whose speed and ride we know outright — a
          *  friend on the wire. See the fleet handle. */
-        lift?: number; force?: number; wakeScale?: number; frame?: Frame
+        lift?: number; force?: number; wakeScale?: number; wx?: number; wy?: number; frame?: Frame
       }[] = []
       const contacts: Contact[] = []
       /** Backing store for the above. Grows once to the size of the busiest
@@ -1677,7 +1682,7 @@ export default function SeaIslandsGPU({
             id: '', x: 0, y: 0, ang: 0, cx: 0, cy: 0, scale: 1, kind: 'plain',
           })
           slot.id = e.key
-          slot.x = e.x; slot.y = e.y; slot.ang = e.ang
+          slot.x = e.wx ?? e.x; slot.y = e.wy ?? e.y; slot.ang = e.ang
           slot.cx = e.cx; slot.cy = e.cy
           slot.scale = e.wakeScale ?? e.scale; slot.kind = c.kind
           // ALWAYS ASSIGNED, even when undefined. These slots are pooled and
@@ -2382,7 +2387,14 @@ export default function SeaIslandsGPU({
           // A friend on her warship trails her SKIN'S wake, the same one she is
           // leaving on her own screen. `wake` on the slot carries it so this
           // does not have to reach back into the skin tables per frame.
-          kind: f.ship?.wake ?? (hull?.wake as WakeKind | undefined) ?? 'plain',
+          //
+          // AND A WARSHIP NEVER TRAILS THE FISHING BOAT'S. `hull` here is the
+          // look's cosmetic rowing boat, and it used to stand in whenever the
+          // ship had no wake of its own. Every courier is handed Finn's look
+          // for want of a better one, and Finn's boat is golden, so every one
+          // of them dragged a warm additive streak behind her that showed up
+          // as a yellow glow off her stern at night.
+          kind: f.ship ? (f.ship.wake ?? 'plain') : ((hull?.wake as WakeKind | undefined) ?? 'plain'),
         })
       }
     })().catch(() => {

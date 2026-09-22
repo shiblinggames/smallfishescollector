@@ -55,7 +55,7 @@ import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
 import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/homestead'
-import { couriersAt, courierSlots } from '@/lib/seaCouriers'
+import { couriersAround, courierSlots } from '@/lib/seaCouriers'
 import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inBay, inChapterWater, bayOpen,
@@ -5457,6 +5457,8 @@ export default function SeaMap({
     force?: number
     /** Her beam ratio for the wake, when she is not a fishing boat. See the renderer. */
     wakeScale?: number
+    /** Her cutwater, when it is not where she is drawn. See the renderer. */
+    wx?: number; wy?: number
     /** Where the HULL sits, as opposed to where the sprite is centred. The
      *  sheet reserves a large empty region up and to the left for the rod, so
      *  the boat is well below the middle of it — rings drawn at the centre
@@ -8840,61 +8842,58 @@ export default function SeaMap({
         // captain sees the same hull in the same place. They are SCENERY for
         // now: you cannot hail them and they cannot hail you. The point is
         // that the water the whole story is about finally has cargo on it.
-        for (const c of couriersAt(now)) {
-          // ── AND SHE RIDES LIKE WHAT SHE IS ─────────────────────────────
-          //
-          // `lift` is how much of the swell a hull takes, 1 being a fishing
-          // boat's full share, and leaving it out means taking that full
-          // share. Traders and Finn leave it out correctly, because every one
-          // of them really is in the same dinghy. These are not: a courier in
-          // the Last Fathom is a galleon, and a galleon heaving like a cork is
-          // exactly the "2D paper" read, because nothing that big moves that
-          // freely on water. `shipLift` already knows the answer per class and
-          // drives the heel by the same divisor, so all three halves of how
-          // she rides agree.
-          //
-          // Loaded makes her heavier still. That is what laden was always
-          // trying to say, and saying it here is honest where saying it with
-          // `scale` was not: a laden hull sits deeper and moves less, it does
-          // not become a smaller ship.
+        // ── ONLY THE ONES YOU COULD SEE ──────────────────────────────────
+        //
+        // Twenty-five hulls are on the water at once and a captain can see
+        // two or three. Each one in the list is a container the renderer
+        // places, heaves, rolls, soaks and reflects every frame, plus a wake
+        // contact it tracks; one left out is hidden and costs nothing. The
+        // reach is a little over the widest viewport at the smallest zoom, so
+        // nothing is ever culled while it is on screen, and a hull that comes
+        // into reach is placed before it is in view.
+        for (const c of couriersAround(camAt.current.x, camAt.current.y, 2600, 2400, now)) {
           const lift = shipLift(c.tier) * (c.laden ? 0.82 : 1)
-          // ── SHE IS A WARSHIP, SO SHE WAKES LIKE ONE ───────────────────
-          //
-          // The first cut handed the wake the sprite's centre and the fishing
-          // boat's waterline numbers, so the V opened amidships on a hull with
-          // no bow it knew about. This is the same arithmetic the player's own
-          // hull does in the hull memo: the cutwater off seaBow, mirrored by
-          // seaFlip once and by facing every frame, the V tilted by seaBowTilt,
-          // the rings from the keel, and the hull's true beam ratio for size.
           const d = getShip(c.tier)
+          if (!d.seaImageUrl) continue
           const seat = shipSeat(c.tier)
+          // ── THE SIZE OF AN ENEMY, NOT OF YOU ──────────────────────────
+          //
+          // The enemy hulls you meet on this water are the same v3 art, drawn
+          // at the box `encArt` gives them: about eight tenths of the player's
+          // own, for every class. A courier is one of them, not one of you, so
+          // she takes the same number from the same function and stays in
+          // step if it is ever retuned.
+          const mult = encArt(d.seaImageUrl).box / WARSHIP_W
           // FACING 1 IS WEST on this chart: the unmirrored sprite is bow-left,
-          // and traders derive it as `vx < 0 ? 1 : -1`. It was written the
-          // other way round here, which is why every courier sailed backwards.
+          // and traders derive it as `vx < 0 ? 1 : -1`.
           const facing = Math.cos(c.heading) < 0 ? 1 : -1
+          // The cutwater and the keel, the same arithmetic the player's hull
+          // memo does, scaled to the box she is actually drawn in.
           const bx = d.seaBow?.x ?? 0.8
-          const bowX = ((d.seaFlip ? 1 - bx : bx) - 0.5) * WARSHIP_W
-          const bowDown = ((d.seaBow?.y ?? seat.keel) - 0.5) * WARSHIP_W
+          const bowX = ((d.seaFlip ? 1 - bx : bx) - 0.5) * WARSHIP_W * mult
+          const bowDown = ((d.seaBow?.y ?? seat.keel) - 0.5) * WARSHIP_W * mult
           const bowTilt = (((d.seaBowTilt ?? 0) * (d.seaFlip ? -1 : 1)) * Math.PI) / 180
           list.push({
             key: `courier:${c.key}`,
-            // The wake takes x,y as the CUTWATER, not the sprite's centre.
-            x: c.x + facing * bowX + WATERLINE_X,
-            y: c.y + bowDown / GROUND,
+            // WHERE SHE IS DRAWN. The first pass put the cutwater here, which
+            // moved the sprite forward by a bow's length and left the rings
+            // where she used to be: that was the ripple sitting off the hull.
+            x: c.x, y: c.y,
+            // Where she parts the water, for the V.
+            wx: c.x + facing * bowX + WATERLINE_X,
+            wy: c.y + bowDown / GROUND,
             facing,
-            // A NOTCH UNDER THE PLAYER, which is the chart's convention for
-            // every hull that is not hers: traders draw at 0.94 of the player's
-            // fishing boat. Couriers were the one exception at 1.0, the same
-            // box as her own warship, and "the same size as me" reads as
-            // bigger on something you are not steering.
-            scale: 0.92,
+            scale: mult,
             dim: 1,
             ang: c.heading + bowTilt * facing,
             lift,
+            // Where she sits, for the rings: under the middle of her, at her
+            // own keel, in the box she is drawn in.
             cx: c.x + WATERLINE_X,
-            cy: c.y + seat.keelY / GROUND,
-            // Her beam ratio, so a galleon pushes a galleon's water.
-            wakeScale: seat.scale,
+            cy: c.y + (seat.keelY * mult) / GROUND,
+            // Her beam as drawn, so a galleon pushes a galleon's water and a
+            // courier pushes a little less than the same hull under you.
+            wakeScale: seat.scale * mult,
           })
         }
         if (finnRef.current) {
