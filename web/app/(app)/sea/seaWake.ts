@@ -52,6 +52,41 @@
 import type { Container, Particle, ParticleContainer, Sprite, Texture } from 'pixi.js'
 import { GROUND } from './islandArt'
 import { SHIP_SKINS } from '@/lib/shipSkins'
+import { PLACES } from './chart'
+
+// ── BIOLUMINESCENCE ─────────────────────────────────────────────────────────
+//
+// Deep water at night lights up where it is disturbed. On this chart the wake
+// and the rings were white foam at every hour and in every band, so a ship in
+// the Abyss at midnight left the same trail as one in the Shallows at noon.
+// Past the Deep's inner edge, and only as the dark comes up, the marks a hull
+// leaves are tinted toward this and drawn as LIGHT rather than paint, so a
+// ship leaves a glowing thread behind her and stands in a faint glowing ring
+// when she stops. It skips the night tint, because it is not lit by the sky.
+//
+// The band edge comes off PLACES rather than being written here, the same way
+// the water shader reads its shelf, so the glow and the bands cannot disagree.
+const DEEP_IN = PLACES.find(p => p.id === 'deep')?.inner ?? 6900
+/** How far past that edge the glow takes to reach full strength. */
+const DEEP_RAMP = 4000
+const BIO = 0x5cf5d8
+
+/** How much a hull at this point glows, given the hour. */
+function glowAt(x: number, y: number, dark: number): number {
+  if (dark < 0.05) return 0
+  const r = Math.hypot(x, y)
+  const k = Math.max(0, Math.min(1, (r - DEEP_IN) / DEEP_RAMP))
+  return dark * k * k * (3 - 2 * k)
+}
+
+/** Linear blend of two packed colours. */
+function lerpColor(a: number, b: number, t: number): number {
+  const ch = (sh: number) => {
+    const x = (a >> sh) & 0xff, y = (b >> sh) & 0xff
+    return Math.round(x + (y - x) * t) & 0xff
+  }
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0)
+}
 
 export type WakeKind =
   | 'plain' | 'gold' | 'ember' | 'frost' | 'void' | 'ash' | 'spirit'
@@ -335,6 +370,8 @@ const RING_LIFE = 4.6
 
 type Mark = {
   p: Particle
+  /** How much this mark glows on its own, 0 for foam. See BIO. */
+  lit: number
   x: number
   y: number
   ang: number
@@ -406,7 +443,7 @@ export type Wake = {
    */
   lay(list: Contact[]): void
   advance(dt: number): void
-  night(tint: number): void
+  night(tint: number, dark?: number): void
   destroy(): void
 }
 
@@ -494,7 +531,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     pool.push({
       p, x: 0, y: 0, ang: 0, side: 1, force: 0, scale: 1,
       age: 1, life: 1, wobble: 0, drift: 0, churn: false, bow: false, heave: 0,
-      tint: 0xffffff, st: STYLES.plain,
+      tint: 0xffffff, st: STYLES.plain, lit: 0,
     })
     ;(pool[i] as Mark & { alt: Particle }).alt = q
   }
@@ -505,7 +542,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
   // over a long cycle.
   const rings: {
     p: Particle; x: number; y: number; age: number; life: number
-    scale: number; heave: number; tint: number
+    scale: number; heave: number; tint: number; lit: number
   }[] = []
   // THREE RINGS EACH, over a cycle, for everybody on screen at once. A quiet
   // corner of the chart holds a couple of dozen captains and a busy one more,
@@ -524,13 +561,14 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     p.alpha = 0
     p.scaleX = p.scaleY = 0
     ringLayer.addParticle(p)
-    rings.push({ p, x: 0, y: 0, age: 1, life: 1, scale: 1, heave: 0, tint: 0xffffff })
+    rings.push({ p, x: 0, y: 0, age: 1, life: 1, scale: 1, heave: 0, tint: 0xffffff, lit: 0 })
   }
   let ringNext = 0
 
   let next = 0
   let clock = 0
   let tint = 0xffffff
+  let dark = 0
 
   const take = (): Mark & { alt: Particle } => {
     const m = pool[next] as Mark & { alt: Particle }
@@ -541,9 +579,10 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
   function emit(
     m: Mark & { alt: Particle },
     s: Contact, style: Style, force: number, side: number,
-    churn: boolean, bow = false,
+    churn: boolean, bow = false, glow = 0,
   ) {
     m.st = style
+    m.lit = glow
     m.bow = bow
     m.heave = s.heave ?? 0
     m.x = s.x
@@ -562,6 +601,9 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     m.wobble = (Math.random() * 2 - 1) * (churn ? 0.5 : 0.16)
     m.drift = 0.75 + Math.random() * 0.5
     m.tint = style.colors[(Math.random() * style.colors.length) | 0]
+    // Toward the glow, most of the way at full dark in the Abyss, so a skin's
+    // own colour still shows through it.
+    if (glow > 0.02) m.tint = lerpColor(m.tint, BIO, glow * 0.85)
 
     // BARELY OFF THE CENTRELINE at the bow. At the stern a pair wants a gap,
     // because that is where a hull's width is; at the bow they want to nearly
@@ -599,7 +641,8 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
       m.y += Math.sin(m.ang) * out
     }
 
-    const light = style.blend === 'add'
+    // Light rather than paint when it glows, whatever the style is.
+    const light = style.blend === 'add' || glow > 0.05
     const live = light ? m.p : m.alt
     const dead = light ? m.alt : m.p
     live.texture = textureFor(PIXI, style.shape)
@@ -608,8 +651,9 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
   }
 
   /** One ring, pushed out from a hull that is standing still. */
-  function ring(s: Contact, style: Style, heave: number) {
+  function ring(s: Contact, style: Style, heave: number, glow = 0) {
     const r = rings[ringNext]
+    r.lit = glow
     ringNext = (ringNext + 1) % RING_CAP
     r.x = s.cx ?? s.x
     r.y = s.cy ?? s.y
@@ -619,7 +663,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     r.life = RING_LIFE * (1 + heave * 0.8)
     r.scale = s.scale
     r.heave = heave
-    r.tint = style.colors[0]
+    r.tint = glow > 0.02 ? lerpColor(style.colors[0], BIO, glow * 0.85) : style.colors[0]
   }
 
   let pending: Contact[] = []
@@ -655,6 +699,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
 
         const style = STYLES[s.kind] ?? STYLES.plain
         const heave = s.heave ?? 0
+        const glow = glowAt(s.x, s.y, dark)
         // The player's own force is exact; everybody else's comes off the
         // measurement above, against the same speed the DOM gate used.
         const force = s.force ?? Math.min(1, st.speed / 210)
@@ -667,21 +712,21 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
           st.ringSince = 1e9
           while (st.since >= EVERY) {
             st.since -= EVERY
-            emit(take(), s, style, force, -1, false)
-            emit(take(), s, style, force, 1, false)
+            emit(take(), s, style, force, -1, false, false, glow)
+            emit(take(), s, style, force, 1, false, false, glow)
             // The stern boils in proportion to how hard she is driving, and to
             // how much of her there is to drive. Three times the hull shoves
             // three times the water, and the churn is where that shows.
             const boil = style.churn * force * (1 + (s.heave ?? 0) * 1.8)
-            if (Math.random() < boil) emit(take(), s, style, force, 0, true)
-            if (boil > 1 && Math.random() < boil - 1) emit(take(), s, style, force, 0, true)
+            if (Math.random() < boil) emit(take(), s, style, force, 0, true, false, glow)
+            if (boil > 1 && Math.random() < boil - 1) emit(take(), s, style, force, 0, true, false, glow)
             // THE STEM, both sides. Only once she is properly under way — a
             // hull idling forward does not throw a crest — and scaled hard by
             // weight, because this is the part a Man-o-War has and a sloop
             // only hints at.
             if (force > 0.45) {
-              emit(take(), s, style, force, -1, false, true)
-              emit(take(), s, style, force, 1, false, true)
+              emit(take(), s, style, force, -1, false, true, glow)
+              emit(take(), s, style, force, 1, false, true, glow)
             }
           }
         } else {
@@ -690,7 +735,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
           const every = RING_EVERY * (1 + heave * 0.8)
           if (st.ringSince >= every) {
             st.ringSince = 0
-            ring(s, style, heave)
+            ring(s, style, heave, glow)
           }
         }
 
@@ -768,8 +813,8 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
         // In fast, out slow: 0 at the start, up by a seventh of the way
         // through, gone by the end.
         const rise = Math.min(1, age / 0.14)
-        r.p.alpha = rise * Math.pow(1 - age, 1.4) * 0.34 * (1 - r.heave * 0.35)
-        r.p.tint = tint === 0xffffff ? r.tint : mix(r.tint, tint)
+        r.p.alpha = rise * Math.pow(1 - age, 1.4) * 0.34 * (1 - r.heave * 0.35) * (1 + r.lit * 0.8)
+        r.p.tint = (tint === 0xffffff || r.lit > 0.05) ? r.tint : mix(r.tint, tint)
       }
 
       for (const raw of pool) {
@@ -803,8 +848,8 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
         // reason a wake reads as a row of identical dots.
         const fade = Math.pow(1 - age, m.churn ? 2.4 : m.bow ? 1.2 : 1.7)
         p.alpha = fade * m.st.alpha * DENSITY * (0.45 + m.force * 0.55)
-          * (m.churn ? 2.2 : m.bow ? 3.4 : 1)
-        p.tint = tint === 0xffffff ? m.tint : mix(m.tint, tint)
+          * (m.churn ? 2.2 : m.bow ? 3.4 : 1) * (1 + m.lit * 1.1)
+        p.tint = (tint === 0xffffff || m.lit > 0.05) ? m.tint : mix(m.tint, tint)
 
         // Stretched ALONG the heading and thin across it: a streak of disturbed
         // water, not a ring. Growing mostly across as it settles, because that
@@ -823,7 +868,10 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
       }
     },
 
-    night(next) { tint = next },
+    night(next, d = 0) {
+      tint = next
+      dark = d
+    },
 
     destroy() { view.destroy({ children: true }) },
   }

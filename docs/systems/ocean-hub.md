@@ -3208,3 +3208,24 @@ Kong: "the collision box for the ships are way off."
   the 55. No entry for a class = the old circle exactly, so nothing moves until placed.
 - `clearOfLand` still pads targets by `HULL`: it nudges a target point, which has no facing
   and no class. The frame resolve is what stops the hull.
+
+## The sea's first visual batch (2026-09-22)
+
+Three additions Kong picked from a recommendations list; all three are inputs the code already
+had, put to use.
+
+- **Squalls reach the surface.** `seaSqualls` already laid a multiplied shadow and rain dimples;
+  the water shader under it did not know. The renderer now uploads up to four squalls near the
+  camera as `uStorm0..3` (x, y, r, power; `water.storms()` each frame, re-listed every 4s like the
+  squall layer). Under one: the fine chop comes up, the swell stands taller, glints, caustics and
+  the moon road go out, a fast fine pock noise lands on the surface, and it dulls 6%. Same falloff
+  curve as `squallAt` on the CPU.
+- **Whitecaps.** Crests are where both swell octaves peak (a ridge along the wind), torn by a
+  third noise so they are ragged. Under a tenth at rest on purpose (the standing complaint about
+  this sea is busyness when still); a storm brings them up 2.5x; dimmer at night, not gone; they
+  lie down with distance and stand down under way.
+- **Bioluminescence.** Past the Deep's inner edge (read from `PLACES`, not copied) and as the
+  dark comes up, wake marks and rest rings are tinted toward `BIO` and drawn additive, and they
+  skip the night tint because they are not lit by the sky. `wake.night(tint, dark)` carries the
+  hour. Applies to every hull the wake tracks, so friends and traders glow too. Because it keys
+  off distance from the origin, the far northern water glows at night as well; judged acceptable.

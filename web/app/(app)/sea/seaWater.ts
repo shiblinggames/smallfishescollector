@@ -138,6 +138,17 @@ uniform float uWarm;
 // PLACES rather than written here, so the shelf can never disagree with the
 // bands it is a picture of.
 uniform vec2  uShelf;
+// ── THE WEATHER, AS FOUR PLACES ─────────────────────────────────────
+//
+// x, y, radius, power, in world units, for the squalls near the camera.
+// Power 0 is an empty slot. The squall layer already lays a shadow and rain
+// on the water; this is the SURFACE answering it, which it never did: the
+// swell under a cloud was the same swell as under clear sky, so the shadow
+// read as a stain rather than as weather.
+uniform vec4  uStorm0;
+uniform vec4  uStorm1;
+uniform vec4  uStorm2;
+uniform vec4  uStorm3;
 
 // The plane's foreshortening. Sampling noise without it makes the swell look
 // like it is standing up out of the water rather than lying on it.
@@ -167,6 +178,15 @@ vec2 alongWind(vec2 p, float k) {
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+// How much of one squall is over this point, 0 to its power. The same curve
+// squallAt uses on the CPU: a calm eye, then a mile of getting worse.
+float stormAt(vec4 s, vec2 p) {
+  if (s.w <= 0.0) return 0.0;
+  float d = distance(p, s.xy);
+  float k = 1.0 - clamp((d - s.z * 0.35) / (s.z * 0.65), 0.0, 1.0);
+  return k * s.w;
 }
 
 float vnoise(vec2 p) {
@@ -272,6 +292,18 @@ void main(void) {
   // on the chart you are.
   vec2 w = (world - uCam) * (0.0016 * (1.0 + recede * 1.5)) + uCam * 0.0016;
 
+  // ── THE WEATHER ON THE SURFACE ────────────────────────────────────
+  //
+  // Summed, so the junction between two squalls is the two of them, and
+  // capped a little over 1 so a tempest can be worse than a squall without
+  // the arithmetic below running away. Everything under a storm is one
+  // number: the chop comes up, the swell stands taller, the glare, the
+  // caustics and the moon's road go out because there is no sun or moon
+  // under a cloud, and the rain pocks the surface.
+  float storm = min(1.25, stormAt(uStorm0, world) + stormAt(uStorm1, world)
+                        + stormAt(uStorm2, world) + stormAt(uStorm3, world));
+  float stormK = min(1.0, storm);
+
   // Two octaves, the second dragged around by the first. One drifts across the
   // swell and the other along it, so the pattern never repeats visibly.
   // STRETCHED ALONG THE WIND, both octaves. 0.62 is a mild train: crests about
@@ -293,7 +325,9 @@ void main(void) {
   // the note on uRush's curve in SeaIslandsGPU.
   // 0.21, down from 0.35. The whole high-frequency field is at 60% of what it
   // was even standing still — see the note on the amplitudes below.
-  float fine = 0.21 * (1.0 - 0.85 * uRush);
+  // AND IT COMES UP UNDER A SQUALL. Wind on water is chop before it is
+  // anything else; the fine octave is the chop.
+  float fine = min(0.62, (0.21 + 0.30 * storm) * (1.0 - 0.85 * uRush));
   float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
 
   // ── THE SHELF ─────────────────────────────────────────────────────
@@ -318,7 +352,7 @@ void main(void) {
   // THE SWELL LIES DOWN AS IT GOES AWAY. Same reason the texture compresses:
   // at a shallow angle a wave presents its top, not its face, so the far water
   // is calmer-looking without being any calmer.
-  float shade = 1.0 + swell * 0.20 * uSwell * (1.0 - recede * 0.55);
+  float shade = 1.0 + swell * 0.20 * (uSwell + storm * 0.9) * (1.0 - recede * 0.55);
   // Gentle: at the far edge the water gives up about a seventh of its light.
   // Any more and the Ancient Deep goes black on its own, which the palette is
   // already responsible for saying — and at 0.22 this was taking a fifth out of
@@ -407,7 +441,9 @@ void main(void) {
       // some of under way: they are LOW contrast and they say where the shelf
       // is, so losing nearly all of them at speed took the shallows' whole
       // character out of the water you were actually crossing.
-      * (1.0 - 0.85 * uRush);
+      * (1.0 - 0.85 * uRush)
+      // No sun under a cloud, so no light bent by the surface.
+      * (1.0 - stormK);
     col += caust * vec3(0.72, 0.92, 0.86) * 0.20 * uSwell;
   }
 
@@ -431,7 +467,7 @@ void main(void) {
   // stayed, which is the opposite of what a night sea should do to attention.
   // Halved, and it still does the job it is here for: the water outside it goes
   // flat and the night stops reading as a dim day.
-  col += road * broken * vec3(0.62, 0.74, 0.95) * 0.13 * uDark * uSwell * (1.0 - 0.88 * uRush);
+  col += road * broken * vec3(0.62, 0.74, 0.95) * 0.13 * uDark * uSwell * (1.0 - 0.88 * uRush) * (1.0 - stormK);
 
   // ── GLINTS ────────────────────────────────────────────────────────
   vec2 gv = vec2(uLight.y, -uLight.x);
@@ -485,7 +521,45 @@ void main(void) {
   // stops being dead without going back to strobing — and the at-rest amount is
   // untouched on purpose, because the last two notes on this sea have both been
   // that it is too busy when you are sitting still.
-  col += sparkle * glintCol * 0.096 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.88 * uRush);
+  col += sparkle * glintCol * 0.096 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.88 * uRush)
+    // Glare is the first thing a cloud takes.
+    * (1.0 - min(1.0, storm * 1.3));
+
+  // ── WHITECAPS ─────────────────────────────────────────────────────
+  //
+  // The surface had glare but never broke. A crest is where both octaves
+  // peak together, which is a ridge line running along the wind because
+  // both octaves are stretched along it; the ragged noise on top keeps it
+  // from being a smooth band, because foam is torn, not painted.
+  //
+  // Quiet at rest and in calm, because the last two notes on this sea were
+  // that it was too busy sitting still: base is under a tenth, and a storm
+  // is what brings it up. Dimmer at night rather than gone, since foam is
+  // the one thing you can still see on a dark sea. It lies down with
+  // distance like the swell does, and it stands down under way like every
+  // other fine thing here, though less, because a breaking crest is low
+  // frequency next to a glint.
+  float crest = smoothstep(0.60, 0.80, d1) * smoothstep(0.50, 0.85, d2);
+  float rag = vnoise(wa * 7.0 + vec2(uTime * 0.09, uTime * -0.05));
+  crest *= smoothstep(0.35, 0.75, rag);
+  float capAmt = 0.09 * (0.6 + 1.6 * stormK) * uSwell
+    * (1.0 - uDark * 0.55) * (1.0 - 0.55 * uRush) * (1.0 - recede * 0.6);
+  col += crest * vec3(0.90, 0.96, 1.0) * capAmt;
+
+  // ── AND THE RAIN HITS IT ──────────────────────────────────────────
+  //
+  // The squall layer draws the drops and a few rings; this is the surface
+  // itself going matte and pocked under the fall, fine and fast, which is
+  // what makes rain read as landing on water rather than falling past it.
+  // Branched, so clear sky pays nothing for it.
+  if (storm > 0.01) {
+    float pock = vnoise(w * 16.0 + vec2(uTime * 1.9, uTime * -2.3));
+    pock = smoothstep(0.80, 0.98, pock);
+    col += pock * vec3(0.78, 0.86, 0.92) * 0.07 * stormK * (1.0 - 0.5 * uRush) * (1.0 - recede * 0.7);
+    // And the whole surface under it goes a shade duller: rain flattens
+    // the reflections that make water bright.
+    col *= 1.0 - 0.06 * stormK;
+  }
 
   // ── AND THE LAST THING: BREAK THE BANDS ───────────────────────────
   //
@@ -577,6 +651,10 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
       // Read off PLACES, so the shelf is a picture of the real bands rather
       // than of two numbers somebody typed into a shader.
       uShelf: { value: new Float32Array([SHELF_IN, SHELF_OUT]), type: 'vec2<f32>' },
+      uStorm0: { value: new Float32Array(4), type: 'vec4<f32>' },
+      uStorm1: { value: new Float32Array(4), type: 'vec4<f32>' },
+      uStorm2: { value: new Float32Array(4), type: 'vec4<f32>' },
+      uStorm3: { value: new Float32Array(4), type: 'vec4<f32>' },
     })
 
     const filter = new PIXI.Filter({
@@ -591,8 +669,18 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
 
     const u = uniforms.uniforms as Record<string, unknown>
     const cam = u.uCam as Float32Array
+    const storms = [u.uStorm0, u.uStorm1, u.uStorm2, u.uStorm3] as Float32Array[]
     return {
       sprite,
+
+      /** The squalls near the camera, four (x, y, r, power) in a row. Power 0
+       *  empties a slot. Called every frame with the whole list, like the
+       *  wake's contacts: a squall that leaves the list is gone from the
+       *  surface, and the shadow above it fades on its own. */
+      storms(list: Float32Array) {
+        for (let i = 0; i < 4; i++) storms[i].set(list.subarray(i * 4, i * 4 + 4))
+        uniforms.update()
+      },
 
       /**
        * THE PER-FRAME PATH, and it is separate from `set` on purpose.

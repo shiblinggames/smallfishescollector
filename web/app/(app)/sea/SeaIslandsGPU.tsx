@@ -86,6 +86,7 @@ import { makeSurf, type Surf, type SurfLine } from './seaSurfLine'
 import { makeMaelstroms, type Maelstroms } from './seaMaelstrom'
 import { makeLights, type Lights } from './seaLights'
 import { makeSqualls, type Squalls } from './seaSqualls'
+import { squallsAt, squallPos, type Squall } from '@/lib/seaWeather'
 import { makeBanks, type Banks } from './seaBanks'
 import { makeChains, type Chains } from './seaChains'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
@@ -1523,6 +1524,12 @@ export default function SeaIslandsGPU({
       let camX = 0, camY = 0, camZoom = 1
       let dark = 0, warm = 0
       let lastCamX = 0, lastCamY = 0, rush = 0
+      /** The squalls the water is told about: re-listed every four seconds
+       *  like the squall layer does, positioned every frame. Sixteen floats,
+       *  four slots of (x, y, r, power). */
+      let stormListAt = 0
+      let stormList: Squall[] = []
+      const stormBuf = new Float32Array(16)
       /** The viewport in world units, as of the last frame. Written by the
        *  ticker and read by `fleet`, which runs before it. */
       let lastHalfW = 1, lastHalfH = 1
@@ -1618,6 +1625,29 @@ export default function SeaIslandsGPU({
         capRef.current?.cap.update(dt)
         for (const c of crewRef.current.values()) c.cap.update(dt)
         water?.frame(t, camX, camY, camZoom, dark, warm, rush)
+        // ── THE WEATHER, HANDED TO THE WATER ──────────────────────────
+        //
+        // Only the squalls within reach of the view: the shader sums whatever
+        // it is given per pixel, and one that cannot touch the screen is a
+        // distance check per pixel for nothing.
+        if (water) {
+          const nowMs = Date.now()
+          if (nowMs - stormListAt > 4000) { stormListAt = nowMs; stormList = squallsAt(nowMs) }
+          stormBuf.fill(0)
+          let n = 0
+          for (const sq of stormList) {
+            if (n >= 4) break
+            const at = squallPos(sq, nowMs)
+            if (Math.abs(at.x - camX) > lastHalfW + sq.r * 1.3
+             || Math.abs(at.y - camY) > lastHalfH + sq.r * 1.3) continue
+            stormBuf[n * 4] = at.x
+            stormBuf[n * 4 + 1] = at.y
+            stormBuf[n * 4 + 2] = sq.r
+            stormBuf[n * 4 + 3] = sq.power
+            n++
+          }
+          water.storms(stormBuf)
+        }
         // ── WHERE THE HULL ACTUALLY IS, IN THE WORLD ──────────────────
         //
         // Not the camera. The camera leaves her to look at an island during a
@@ -1976,7 +2006,7 @@ export default function SeaIslandsGPU({
           squalls.night(tint)
           banks.night(tint)
           chains.night(tint)
-          wake.night(tint)
+          wake.night(tint, d)
           // A harbour lamp is the one light out here that is NOT the sun, so it
           // gives up much less to the hour than the water around it. Most of
           // the point of a lit berth is that it is still lit after dark.
