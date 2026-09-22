@@ -77,7 +77,7 @@ import { swellAt, swellHeel } from './seaSwell'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeClouds } from './seaClouds'
-import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
+import { makeFoamTexture, makeSurfTexture, makeShoreFoam, type Foam } from './shoreFoam'
 import { makeShoals, type Shoals } from './seaShoals'
 import { makeLeviathans, type Leviathans } from './seaLeviathans'
 import { makeGulls, type Gulls } from './seaGulls'
@@ -940,6 +940,8 @@ export default function SeaIslandsGPU({
       // to from a hoisted function it is declared after is a trap waiting for
       // somebody to move a call earlier.
       const foamTex = makeFoamTexture(PIXI)
+      // The islands' surf; the landmark laps keep foamTex. See shoreFoam.
+      const surfTex = makeSurfTexture(PIXI)
       /** Each with the mark it belongs to, because scrolling a UV buffer costs
        *  an upload per mesh per frame and there is no point paying it for foam
        *  nobody can see. With the reef on the canvas this is the difference
@@ -1205,7 +1207,7 @@ export default function SeaIslandsGPU({
             // A plate that will not load leaves the island invisible rather
             // than half-drawn; the coast still stops a hull.
           })
-          const f = makeShoreFoam(PIXI, coastline(isle.id), d, foamTex, (isle.x * 0.013) % 1)
+          const f = makeShoreFoam(PIXI, coastline(isle.id), d, surfTex, (isle.x * 0.013) % 1)
           f.mesh.x = isle.x
           f.mesh.y = isle.y
           world.addChildAt(f.mesh, 0)
@@ -1234,7 +1236,7 @@ export default function SeaIslandsGPU({
         // shader measuring distances in screen space. Added at the BOTTOM of
         // the display list so the crests run up under the shore instead of over
         // the sand.
-        const f = makeShoreFoam(PIXI, coastline(isle.id), d, foamTex, (isle.x * 0.013) % 1)
+        const f = makeShoreFoam(PIXI, coastline(isle.id), d, surfTex, (isle.x * 0.013) % 1)
         f.mesh.x = isle.x
         f.mesh.y = isle.y
         world.addChildAt(f.mesh, 0)
@@ -2010,6 +2012,8 @@ export default function SeaIslandsGPU({
           lastTint = tint
           landTint = tint
           for (const b of baked) b.sprite.tint = tint
+          // Foam is paint now, not light, so it takes the hour like the land.
+          for (const f of foams) f.f.mesh.tint = tint
           for (const sp of plated) sp.tint = tint
           // THE GRASS IS ON THE LAND, so it takes what the land takes. It was
           // taking nothing at all: a meadow's tint is its island's own green,
