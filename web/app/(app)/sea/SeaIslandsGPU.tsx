@@ -2080,7 +2080,7 @@ export default function SeaIslandsGPU({
           // A harbour lamp is the one light out here that is NOT the sun, so it
           // gives up much less to the hour than the water around it. Most of
           // the point of a lit berth is that it is still lit after dark.
-          berthLayer.night(nightTint(d * 0.3, w))
+          berthLayer.night(nightTint(d * 0.3, w), d)
           // A hole in the water takes the hour like the water does. It is
           // not a lamp and it should not stay bright when nothing else is.
           portalWell.night(tint)

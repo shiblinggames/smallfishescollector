@@ -108,6 +108,17 @@ function lamp(PIXI: typeof import('pixi.js')): Texture {
  *  lamplight on water, not a value being displayed. */
 const WARM = 0xffc478
 const COOL = 0xbcd8e6
+/**
+ * ── AND IT HAS TO READ BY DAY ───────────────────────────────────────────────
+ *
+ * Lamplight on water is a night cue. In daylight a warm pool at five percent
+ * is nothing, and the rim and the lamps were tuned to sit under it. Kong:
+ * "make the docking points more evident." So by day the pool is HARBOUR
+ * WATER instead: calmer, paler, a little green, the way water inside a
+ * mooring reads from above, and it hands over to the lamplight as the dark
+ * comes up. The rim and the chase are stronger at rest in both.
+ */
+const DAY = 0x9fe0d8
 
 type Built = {
   spec: BerthSpec
@@ -135,7 +146,9 @@ export type Berths = {
    *  side of the chart costs nothing. Each one is fourteen lamps plus a pool
    *  and a rim, all trigonometry, and there are one per port. */
   advance(t: number, dt: number, camX: number, camY: number, halfW: number, halfH: number): void
-  night(tint: number): void
+  /** The hour: the tint for everything lit, and how dark it is, 0..1, which
+   *  is what chooses harbour water over lamplight. */
+  night(tint: number, dark?: number): void
   destroy(): void
 }
 
@@ -191,6 +204,7 @@ export function makeBerths(
 
   let active: string | null = null
   let tint = 0xffffff
+  let dark = 0
 
   const shade = (c: number) => {
     if (tint === 0xffffff) return c
@@ -239,13 +253,15 @@ export function makeBerths(
         // Breathing on a long, slow period: lamplight on moving water is never
         // quite steady, and a constant one reads as a decal.
         const breath = 0.5 + 0.5 * Math.sin(t * 0.55 + b.spec.x * 0.01)
-        b.poolS.alpha = (0.055 + lit * 0.14) * (0.82 + breath * 0.18)
-        b.poolS.tint = shade(WARM)
+        // Harbour water by day, lamplight by night; the lit state lifts both.
+        const dayK = 1 - dark
+        b.poolS.alpha = ((0.10 + lit * 0.10) * dayK + (0.07 + lit * 0.14) * dark) * (0.86 + breath * 0.14)
+        b.poolS.tint = shade(dark > 0.5 ? WARM : DAY)
 
         // ── THE RIM ──
         // Cool while it is only a boundary, warm once it has you: the edge
         // stops being information and becomes part of the harbour.
-        b.rimS.alpha = 0.12 + lit * 0.30
+        b.rimS.alpha = 0.26 + lit * 0.30
         b.rimS.tint = shade(lit > 0.5 ? WARM : COOL)
         // Drawn in a touch as you enter, so arriving reads as the berth closing
         // around you rather than as a colour change.
@@ -267,13 +283,13 @@ export function makeBerths(
           if (gap > Math.PI) gap = Math.PI * 2 - gap
           const near = Math.max(0, 1 - gap / 0.9)
           const s = b.lamps[i]
-          s.alpha = (0.10 + lit * 0.22) + near * near * (0.34 + lit * 0.46)
+          s.alpha = (0.20 + lit * 0.18) + near * near * (0.40 + lit * 0.40)
           s.tint = shade(WARM)
         }
       }
     },
 
-    night(next) { tint = next },
+    night(next, d = 0) { tint = next; dark = d },
 
     destroy() { view.destroy({ children: true }) },
   }
