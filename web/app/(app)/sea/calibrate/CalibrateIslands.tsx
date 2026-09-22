@@ -38,6 +38,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { PLACES } from '../chart'
 import { GROUND, bakeIsland, requestGround } from '../islandArt'
+import { plateFor } from '@/lib/islandPlates'
 import { HOUSE } from '@/lib/homestead'
 import { coastline, grassAt, GRASS, BUILDABLE, SHORE } from '@/lib/islandShape'
 
@@ -195,10 +196,19 @@ export default function CalibrateIslands() {
    *  the art is decoded rather than a drag later. */
   const [measured, setMeasured] = useState(0)
 
+  // ── THE PAINTED ISLAND, WHEN THERE IS ONE ────────────────────────────
+  //
+  // The sea draws a plated island as its painting, anchored at `water` on the
+  // island's position and counter-squashed on y (see SeaIslandsGPU place()).
+  // A bench that kept showing the bake would have you placing buildings
+  // against ground the sea no longer draws, which is how the Crew Hall ended
+  // up on a cliff. So the plate is drawn here with the same three numbers,
+  // and the bake only stands in for an island that has no plate yet.
+  const plate = plateFor(place.id)
   const island = useMemo(() => {
-    if (typeof window === 'undefined') return null
+    if (typeof window === 'undefined' || plate) return null
     try { return bakeIsland(place.id, d, false, pad).toDataURL() } catch { return null }
-  }, [place.id, d, pad, painted])
+  }, [place.id, d, pad, painted, plate])
 
   const items: Item[] = isHome
     ? [{ art: HOUSE[rung].art, ...house[rung] }]
@@ -367,6 +377,20 @@ export default function CalibrateIslands() {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={island} alt="" draggable={false} style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
+          }} />
+        )}
+        {plate && (
+          // The anchor row lands on the box's centre, and the picture is
+          // scaled up on y about that row: translate percentages are of the
+          // element's own size, so this needs nothing measured off the file.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={plate.art} alt="" draggable={false} style={{
+            position: 'absolute',
+            left: pad * k + (d * k) / 2,
+            top: pad * k + (d * k) / 2,
+            width: d * plate.width * k,
+            transform: `translate(-50%, -${plate.water * 100}%) scaleY(${1 / GROUND})`,
+            transformOrigin: `50% ${plate.water * 100}%`,
           }} />
         )}
 
