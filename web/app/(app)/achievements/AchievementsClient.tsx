@@ -74,11 +74,14 @@ export default function AchievementsClient({ groups }: Props) {
   // The board reads two ways: a CHECKLIST of what is left, or the VOYAGE --
   // the same badges in the order you earned them.
   const [view, setView] = useState<'board' | 'timeline'>('board')
-  // Category sections start COLLAPSED so the board mounts as a scannable index
-  // (each header still shows its N/total progress) instead of rendering all ~170
-  // goal rows at once. Players tap a section, or use "Expand all", to open them.
-  // An active filter force-expands matching goals (see `expanded` below).
-  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set())
+  // ── A TROPHY WALL, NOT AN INDEX ────────────────────────────────────────
+  //
+  // The sections used to mount COLLAPSED, so the page opened as fourteen
+  // headers and four rows of filter chrome before a single badge showed, and
+  // the medallion art only ever appeared at 50px inside a text row. The art
+  // is the point of a badge. Tiles are a fraction of a row's height, so every
+  // section can stand open and ~170 medallions read as a wall you scan with
+  // your eyes rather than a list you dig through.
   const [, startTransition] = useTransition()
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
@@ -142,16 +145,9 @@ export default function AchievementsClient({ groups }: Props) {
     [groups, categoryFilter, tierFilter, statusFilter, claimedIds],
   )
 
-  // Any active filter means the player is hunting — force every visible section
-  // open so results aren't hidden behind a collapsed header.
-  const filtersActive = categoryFilter !== 'all' || tierFilter !== 'all' || statusFilter !== 'all'
-  const allOpen = visibleGroups.length > 0 && visibleGroups.every(g => openGroups.has(g.title))
-  function toggleGroup(title: string) {
-    setOpenGroups(prev => { const n = new Set(prev); if (n.has(title)) n.delete(title); else n.add(title); return n })
-  }
-  function toggleAll() {
-    setOpenGroups(allOpen ? new Set() : new Set(visibleGroups.map(g => g.title)))
-  }
+  // Per-category tallies for the rail, off the UNFILTERED groups so a chip
+  // always says what the category holds, not what the other filters left.
+  const groupTally = useMemo(() => new Map(groups.map(g => [g.title, { done: g.goals.filter(x => x.done).length, total: g.goals.length }])), [groups])
 
   const notifyDoubloons = (n: number) => window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: n }))
 
@@ -233,7 +229,7 @@ export default function AchievementsClient({ groups }: Props) {
               the board opens on YOUR badge, not a number. */}
           {proudest?.badgeImage && (
             <img src={proudest.badgeImage} alt="" title={proudest.label}
-              style={{ width: 56, height: 56, flexShrink: 0, objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.55))' }} />
+              style={{ width: 72, height: 72, flexShrink: 0, objectFit: 'contain', filter: `drop-shadow(0 2px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 10px ${GOLD}44)` }} />
           )}
           <div style={{ minWidth: 0 }}>
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: GOLD }}>Achievement Points</p>
@@ -321,18 +317,10 @@ export default function AchievementsClient({ groups }: Props) {
         </section>
       )}
 
-      {/* ── Filters: category + tier dropdowns ─────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <FilterSelect value={categoryFilter} onChange={setCategoryFilter}
-          options={[{ value: 'all', label: 'All Categories' }, ...groups.map(g => ({ value: g.title, label: g.title }))]} />
-        <FilterSelect value={tierFilter} onChange={v => setTierFilter(v as Filter)}
-          options={[{ value: 'all', label: 'All Tiers' }, ...TIER_ORDER.map(t => ({ value: t, label: DIFFICULTY_META[t].label }))]} />
-      </div>
-
       {/* BOARD vs VOYAGE. Above the filters on purpose: it changes what the
           controls below it are even filtering, so it has to read as the outer
           choice rather than a fourth peer. */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
         {([['board', 'The Board'], ['timeline', 'The Voyage']] as const).map(([val, label]) => {
           const active = view === val
           return (
@@ -356,9 +344,50 @@ export default function AchievementsClient({ groups }: Props) {
       ) : (
       <>
 
-      {/* Claim status — a segmented toggle so it reads as one control, not a
-          third dropdown crowding the row. */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+      {/* ── The category rail. One scrolling row of chips instead of a
+            dropdown, each carrying its accent and its tally, so the whole
+            shape of the board is readable before you scroll it. ──────────── */}
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6, marginBottom: 6, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+        {[{ title: 'all', label: 'All', accent: GOLD }, ...groups.map(g => ({ title: g.title, label: g.title, accent: g.accent }))].map(c => {
+          const active = categoryFilter === c.title
+          const t = c.title === 'all' ? { done: earnedBadges, total: badgeGoals.length } : groupTally.get(c.title)
+          return (
+            <button key={c.title} type="button" onClick={() => setCategoryFilter(c.title)}
+              className="font-cinzel font-700 tap"
+              style={{
+                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 7, padding: '0.42rem 0.7rem', borderRadius: 999, fontSize: '0.74rem', cursor: 'pointer',
+                background: active ? `${c.accent}22` : 'rgba(255,255,255,0.04)',
+                color: active ? c.accent : '#e8e2d6',
+                border: `1px solid ${active ? `${c.accent}99` : 'rgba(196,169,106,0.3)'}`,
+                whiteSpace: 'nowrap',
+              }}>
+              <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: c.accent, opacity: active ? 1 : 0.7 }} />
+              {c.label}
+              {t && <span className="font-karla font-700" style={{ fontSize: '0.64rem', opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>{t.done}/{t.total}</span>}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Tier and claim status, one row of small chips. They wrap on a phone
+          and sit on one line on a monitor. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16, alignItems: 'center' }}>
+        {([['all', 'Any tier', '#cbb98a'], ...TIER_ORDER.map(t => [t, DIFFICULTY_META[t].label, DIFFICULTY_META[t].color] as const)] as const).map(([val, label, color]) => {
+          const active = tierFilter === val
+          return (
+            <button key={val} type="button" onClick={() => setTierFilter(val as Filter)}
+              className="font-karla font-800 uppercase tap"
+              style={{
+                padding: '0.3rem 0.6rem', borderRadius: 999, fontSize: '0.6rem', letterSpacing: '0.1em', cursor: 'pointer',
+                background: active ? `${color}22` : 'rgba(255,255,255,0.03)',
+                color: active ? color : 'rgba(232,226,214,0.75)',
+                border: `1px solid ${active ? `${color}99` : 'rgba(196,169,106,0.24)'}`,
+              }}>
+              {label}
+            </button>
+          )
+        })}
+        <span aria-hidden style={{ width: 1, height: 16, background: 'rgba(196,169,106,0.3)', margin: '0 2px' }} />
         {([
           ['all', 'All', badgeGoals.length],
           ['unclaimed', 'Unclaimed', unclaimedCount],
@@ -367,13 +396,13 @@ export default function AchievementsClient({ groups }: Props) {
           const active = statusFilter === val
           return (
             <button key={val} type="button" onClick={() => setStatusFilter(val)}
-              className="font-karla font-700"
+              className="font-karla font-800 uppercase tap"
               style={{
-                flex: 1, padding: '0.5rem 0.4rem', borderRadius: 11, fontSize: '0.76rem', cursor: 'pointer',
-                background: active ? `${GOLD}1c` : 'rgba(255,255,255,0.04)',
-                color: active ? GOLD : '#e8e2d6',
-                border: `1px solid ${active ? `${GOLD}88` : 'rgba(196,169,106,0.34)'}`,
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                padding: '0.3rem 0.6rem', borderRadius: 999, fontSize: '0.6rem', letterSpacing: '0.1em', cursor: 'pointer',
+                background: active ? `${GOLD}1c` : 'rgba(255,255,255,0.03)',
+                color: active ? GOLD : 'rgba(232,226,214,0.75)',
+                border: `1px solid ${active ? `${GOLD}88` : 'rgba(196,169,106,0.24)'}`,
+                whiteSpace: 'nowrap',
               }}>
               {label} <span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
             </button>
@@ -381,48 +410,28 @@ export default function AchievementsClient({ groups }: Props) {
         })}
       </div>
 
-      {/* Open the whole board or tuck it away — hidden while filtering (every
-          section is already forced open then). */}
-      {!filtersActive && visibleGroups.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
-          <button type="button" onClick={toggleAll} className="font-karla font-700 uppercase tracking-[0.1em]"
-            style={{ background: 'none', border: 'none', color: '#b6a98c', fontSize: '0.6rem', cursor: 'pointer', padding: '2px 4px' }}>
-            {allOpen ? 'Collapse all' : 'Expand all'}
-          </button>
-        </div>
-      )}
-
-      {/* ── Goal groups — collapsible category sections ────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* ── The wall: every category open, medallions in a grid ──────────── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
         {visibleGroups.map(group => {
-          const expanded = filtersActive || openGroups.has(group.title)
           const doneN = group.goals.filter(g => g.done).length
           return (
             <section key={group.title}>
-              {/* Tap-to-toggle header — accent title, chart rule, earned tally,
-                  and a chevron. Non-interactive while a filter is on. */}
-              <button type="button" onClick={() => { if (!filtersActive) toggleGroup(group.title) }} aria-expanded={expanded}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', padding: '0.3rem 0', cursor: filtersActive ? 'default' : 'pointer', textAlign: 'left' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: group.accent, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{group.title}</p>
-                <span aria-hidden style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${group.accent}66, transparent)` }} />
-                <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.5)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{doneN} / {group.goals.length}</span>
-                {!filtersActive && (
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={group.accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden
-                    style={{ flexShrink: 0, transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.85 }}><path d="M6 9l6 6 6-6" /></svg>
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: group.accent, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{group.title}</p>
+                  <span aria-hidden style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${group.accent}66, transparent)` }} />
+                  <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.5)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{doneN} / {group.goals.length}</span>
+                </div>
+                {group.flavor && (
+                  <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.5)', fontStyle: 'italic', marginTop: 3, lineHeight: 1.4 }}>{group.flavor}</p>
                 )}
-              </button>
-              <AnimatePresence initial={false}>
-                {expanded && (
-                  <motion.div key="body" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22, ease: 'easeOut' }} style={{ overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 6 }}>
-                      {group.goals.map(g => (
-                        <GoalRow key={g.id} g={g} groupAccent={group.accent} claimed={claimedIds.has(g.id)} busy={busy === g.id}
-                          onClaim={from => claimOne(g.id, from)} onOpen={() => setDetailGoal(g)} />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))', gap: 8 }}>
+                {group.goals.map(g => (
+                  <BadgeTile key={g.id} g={g} groupAccent={group.accent} claimed={claimedIds.has(g.id)} busy={busy === g.id}
+                    onClaim={from => claimOne(g.id, from)} onOpen={() => setDetailGoal(g)} />
+                ))}
+              </div>
             </section>
           )
         })}
@@ -607,31 +616,90 @@ function SectionHeader({ accent, title, count }: { accent: string; title: string
   )
 }
 
-// ── Filter dropdown (category / tier) ───────────────────────────────────────
-function FilterSelect({ value, onChange, options }: {
-  value: string; onChange: (v: string) => void; options: { value: string; label: string }[]
+// ── One medallion on the wall ───────────────────────────────────────────────
+//
+// The art carries the tile. Earned is full colour with a shadow; ready to
+// claim glows gold and carries the one live button; unearned is greyed and
+// dim, with a thin gauge underneath when there is progress to show. Tier,
+// points and reward live in the detail sheet, one tap away, so the wall stays
+// medallions and names.
+function BadgeTile({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
+  g: JourneyGoal; groupAccent: string; claimed: boolean; busy: boolean; onClaim: (from: { x: number; y: number }) => void; onOpen: () => void
 }) {
-  const active = value !== 'all'
+  const diff = g.difficulty ? DIFFICULTY_META[g.difficulty] : null
+  const accent = diff?.color ?? groupAccent
+  const pct = g.target > 0 ? Math.min(1, g.current / g.target) : (g.done ? 1 : 0)
+  const isBadge = (g.reward ?? 0) > 0
+  const state: 'ready' | 'claimed' | 'progress' | 'done' =
+    isBadge ? (g.done ? (claimed ? 'claimed' : 'ready') : 'progress') : (g.done ? 'done' : 'progress')
+  const earned = g.done
+
+  const ring = state === 'ready' ? `${GOLD}aa` : earned ? `${accent}55` : 'rgba(196,169,106,0.14)'
+  const ground = state === 'ready'
+    ? `radial-gradient(ellipse 80% 70% at 50% 30%, ${GOLD}1e 0%, transparent 70%), rgba(240,192,64,0.05)`
+    : earned
+      ? `radial-gradient(ellipse 80% 70% at 50% 30%, ${accent}14 0%, transparent 70%), rgba(210,180,120,0.04)`
+      : 'rgba(210,180,120,0.025)'
+
   return (
-    <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="font-karla font-700"
-        style={{
-          width: '100%', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', cursor: 'pointer',
-          padding: '0.6rem 2rem 0.6rem 0.85rem', borderRadius: 11, fontSize: '0.8rem',
-          background: active ? `${GOLD}1c` : 'rgba(255,255,255,0.04)',
-          color: active ? GOLD : '#e8e2d6',
-          border: `1px solid ${active ? `${GOLD}88` : 'rgba(196,169,106,0.34)'}`,
-          textOverflow: 'ellipsis',
-        }}>
-        {options.map(o => (
-          <option key={o.value} value={o.value} style={{ background: '#16100a', color: '#e8e2d6' }}>{o.label}</option>
-        ))}
-      </select>
-      <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: GOLD, fontSize: '0.55rem' }}>▼</span>
-    </div>
+    <button type="button" onClick={onOpen} title={g.desc}
+      className="tap"
+      style={{
+        position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+        padding: '0.7rem 0.4rem 0.55rem', borderRadius: 14, cursor: 'pointer', textAlign: 'center',
+        background: ground, border: `1px solid ${ring}`,
+        boxShadow: state === 'ready' ? `0 0 18px ${GOLD}33, inset 0 1px 0 rgba(240,220,180,0.06)` : 'inset 0 1px 0 rgba(240,220,180,0.05)',
+        animation: state === 'ready' ? 'badgeReadyPulse 2.1s ease-in-out infinite' : undefined,
+        minWidth: 0,
+      }}>
+      <div style={{ width: 84, height: 84, display: 'grid', placeItems: 'center' }}>
+        {g.badgeImage ? (
+          <img src={g.badgeImage} alt="" loading="lazy" decoding="async"
+            style={{
+              width: 80, height: 80, objectFit: 'contain',
+              filter: state === 'ready' ? `drop-shadow(0 0 9px ${GOLD}bb)` : earned ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' : 'grayscale(1) brightness(0.8)',
+              opacity: earned ? 1 : 0.32,
+            }}
+            onError={e => {
+              // No-emoji rule: a plain brass ring stands in for missing art.
+              const el = e.target as HTMLImageElement
+              el.style.display = 'none'
+              const p = el.parentElement
+              if (p) p.innerHTML = `<span style="display:block;width:64px;height:64px;border-radius:50%;border:3px solid rgba(196,169,106,${earned ? 0.8 : 0.3});box-shadow:inset 0 0 14px rgba(196,169,106,0.2)"></span>`
+            }} />
+        ) : (
+          <span style={{ width: 22, height: 22, borderRadius: '50%', background: earned ? groupAccent : 'transparent', border: `2px solid ${groupAccent}`, opacity: earned ? 1 : 0.5 }} />
+        )}
+      </div>
+
+      <p className="font-cinzel font-700" style={{
+        fontSize: '0.66rem', lineHeight: 1.2, color: earned ? '#f4ecd8' : 'rgba(240,237,232,0.6)', width: '100%',
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '1.6em',
+      }}>{g.label}</p>
+
+      {/* The foot of the tile: a claim button, a claimed mark, or the gauge. */}
+      <div style={{ width: '100%', minHeight: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {state === 'ready' ? (
+          <motion.span role="button" whileTap={{ scale: 0.92 }}
+            onClick={e => { e.stopPropagation(); if (!busy) onClaim(rectCenter(e.currentTarget)) }}
+            className="font-cinzel font-700 uppercase tracking-[0.06em]"
+            style={{ padding: '0.28rem 0.7rem', borderRadius: 8, ...ctaPill(), fontSize: '0.62rem', opacity: busy ? 0.6 : 1, whiteSpace: 'nowrap', cursor: busy ? 'default' : 'pointer' }}>
+            {busy ? '…' : 'Claim'}
+          </motion.span>
+        ) : state === 'claimed' || state === 'done' ? (
+          <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: '#7bbf7b', opacity: 0.85 }}>
+            {state === 'claimed' ? 'Claimed' : 'Done'}
+          </span>
+        ) : g.binary ? (
+          <span aria-hidden style={{ width: '70%', height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)' }} />
+        ) : (
+          <div title={`${g.current.toLocaleString()} / ${g.target.toLocaleString()}`}
+            style={{ position: 'relative', width: '86%', height: 4, borderRadius: 2, background: 'rgba(0,0,0,0.4)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${pct * 100}%`, background: `linear-gradient(90deg, ${accent}88, ${accent})`, borderRadius: 2 }} />
+          </div>
+        )}
+      </div>
+    </button>
   )
 }
 
