@@ -3302,27 +3302,6 @@ export default function SeaMap({
       ...LANDMARKS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, sway: m.sway, i })),
       ...REEF.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 500 })),
       ...ANCHORAGE_WALL.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 1200 })),
-      // ── MOORING BUOYS, so a berth is a place and not a glow ─────────────
-      //
-      // Kong: make the docking points more evident. The berth was lamplight on
-      // the water at five percent, which reads at night and barely by day, and
-      // it now sits beside painted shorelines that out-shout it. A berth
-      // should have something IN it: three of the chart's own painted buoys,
-      // bobbing on its seaward rim either side of the way in, which is what
-      // marks a mooring anywhere. Buoys are floats on chains and are not
-      // solid (see the note in allObstacles), so a hull sails past them into
-      // the berth as before.
-      ...PLACES.filter(p => p.kind === 'port').flatMap((p, pi) => {
-        const b = berthOf(p)
-        // The mouth faces away from the dock; the buoys flank it.
-        const out = Math.atan2(b.y - p.y, b.x - p.x)
-        return [-0.62, 0, 0.62].map((off, k) => ({
-          art: '/sea/buoy.png',
-          x: b.x + Math.cos(out + off) * b.r * 0.92,
-          y: b.y + Math.sin(out + off) * b.r * 0.92,
-          size: 86, sway: 'bob' as const, i: 2000 + pi * 3 + k,
-        }))
-      }),
       // NO BAY COAST, NO STRAIT SHOAL, NO PLUG. The campaign's water is open
       // sea; what stops you is a rule, not a rock. See raidWaters.
     ]

@@ -654,7 +654,12 @@ export function berthOf(p: Place): { x: number; y: number; r: number } {
   return {
     x: p.x + (p.berth?.dx ?? p.r * 0.85),
     y: p.y + (p.berth?.dy ?? p.r * 0.60),
-    r: p.berth?.r ?? BERTH_R,
+    // SIZED TO THE ISLAND. One radius for every port put the same mooring
+    // off the Mainland as off a fishing shed; Kong: the moorings can be larger
+    // for larger areas. Seven tenths of the island's own radius, never under
+    // the old constant, so the small ports are exactly where they were and the
+    // Mainland, the Homestead and the Crew Hall get a harbour their size.
+    r: p.berth?.r ?? Math.max(BERTH_R, Math.round(p.r * 0.7)),
   }
 }
 export function inBerth(at: { x: number; y: number }, p: Place): boolean {
