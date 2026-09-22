@@ -38,6 +38,10 @@ export type Plate = {
    *  the top. The plate is anchored here, so this row lands on the island's
    *  position and the land stands above it. */
   water: number
+  /** The painting's height over its width. The DOM name plate needs it to
+   *  find the plate's foot without loading the file: the label hangs below
+   *  the PICTURE, not below the island's box, which the picture outgrows. */
+  aspect: number
 }
 
 /** The one shape every plate shares until a specific one earns a different
@@ -51,42 +55,42 @@ export type Plate = {
 // below the centre, and the Crew Hall and the Forge stood on the cliff.
 // Kong: "shifted up more on the island." The anchor is the middle of the
 // painted top face now, which is what the island's centre always meant.
-const P = (art: string, width = 1.0, water = 0.42): Plate => ({ art, width, water })
+const P = (art: string, aspect: number, width = 1.0, water = 0.42): Plate => ({ art, width, water, aspect })
 
 /** One painting per band, shared by that band's isles. They are far enough
  *  apart that a template repeats without reading as one; the band's water
  *  colour does most of the telling anyway. */
-const ISLE: Record<string, string> = {
-  shallows: '/sea/isle-shallows.png',
-  open_waters: '/sea/isle-open.png',
-  deep: '/sea/isle-deep.png',
-  abyss: '/sea/isle-abyss.png',
-  ancient_deep: '/sea/isle-ancient.png',
+const ISLE: Record<string, Plate> = {
+  shallows: P('/sea/isle-shallows.png', 0.652),
+  open_waters: P('/sea/isle-open.png', 0.557),
+  deep: P('/sea/isle-deep.png', 0.560),
+  abyss: P('/sea/isle-abyss.png', 0.561),
+  ancient_deep: P('/sea/isle-ancient.png', 0.603),
 }
 
 export const PLATES: Record<string, Plate> = {
   // ── THE PORTS. Ground only; what stands on each is composited as before.
   // The Trawl Harbor and Cormorant Rock were the two prototypes, 2026-09-22;
   // the rest came through the same prompt the next pass.
-  mainland: P('/sea/port-mainland.png'),
-  home: P('/sea/port-home.png'),
-  trawl_docks: P('/sea/port-tally-house.png'),
-  crew_hall: P('/sea/port-crew-hall.png'),
-  posting_house: P('/sea/port-posting-house.png'),
-  forge_isle: P('/sea/port-forge.png'),
-  gunwharf: P('/sea/port-gunwharf.png'),
-  charterhouse: P('/sea/port-charterhouse.png'),
-  trawl_fleet: P('/sea/port-trawl-harbor.png'),
-  shipyard: P('/sea/port-shipyard.png'),
+  mainland: P('/sea/port-mainland.png', 0.676),
+  home: P('/sea/port-home.png', 0.562),
+  trawl_docks: P('/sea/port-tally-house.png', 0.596),
+  crew_hall: P('/sea/port-crew-hall.png', 0.606),
+  posting_house: P('/sea/port-posting-house.png', 0.562),
+  forge_isle: P('/sea/port-forge.png', 0.671),
+  gunwharf: P('/sea/port-gunwharf.png', 0.658),
+  charterhouse: P('/sea/port-charterhouse.png', 0.642),
+  trawl_fleet: P('/sea/port-trawl-harbor.png', 0.505),
+  shipyard: P('/sea/port-shipyard.png', 0.604),
 
   // ── THE FISHING ISLES, by band. Cormorant Rock keeps the first prototype.
-  'shallows-0': P('/sea/isle-plate-1.png'),
-  'shallows-1': P(ISLE.shallows),
-  'shallows-2': P(ISLE.shallows),
-  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`open_waters-${i}`, P(ISLE.open_waters)])),
-  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`deep-${i}`, P(ISLE.deep)])),
-  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`abyss-${i}`, P(ISLE.abyss)])),
-  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`ancient_deep-${i}`, P(ISLE.ancient_deep)])),
+  'shallows-0': P('/sea/isle-plate-1.png', 0.534),
+  'shallows-1': ISLE.shallows,
+  'shallows-2': ISLE.shallows,
+  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`open_waters-${i}`, ISLE.open_waters])),
+  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`deep-${i}`, ISLE.deep])),
+  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`abyss-${i}`, ISLE.abyss])),
+  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`ancient_deep-${i}`, ISLE.ancient_deep])),
 }
 
 export function plateFor(id: string): Plate | null {

@@ -16279,7 +16279,22 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, call = null }: {
 
       {!isWater && (
         <div style={{
-          position: 'absolute', left: '50%', top: '100%',
+          // ── UNDER THE PICTURE, NOT UNDER THE BOX ─────────────────────
+          //
+          // A painted island outgrows its box: anchored at its top face, the
+          // plate's foot hangs up to a third of a radius below the box's
+          // bottom edge, and a label at 100% of the box sat on the painted
+          // cliff. Kong: "the text for each island is now hard to see." For a
+          // plate the label hangs from the plate's own foot, worked out from
+          // its aspect; an island without one keeps the box.
+          position: 'absolute', left: '50%',
+          top: (() => {
+            const pl = plateFor(place.id)
+            if (!pl) return '100%'
+            const d = place.r * 2
+            const foot = (1 - pl.water) * pl.aspect * pl.width * d / GROUND
+            return `calc(50% + ${Math.round(foot)}px)`
+          })(),
           // COUNTER-SQUASHED. It sits inside the world layer so it travels with
           // its island, but it is a label, not a thing lying on the water —
           // left on the plane it renders 58% tall and unreadable.
@@ -16310,11 +16325,17 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, call = null }: {
               label on this chart grows and shrinks with the world it is
               nailed to — that is what makes it a sign on a place rather than
               UI floating over one. */}
+          {/* BIGGER, AND WITHOUT "THE". Kong: the titles should be bigger,
+              and dropping "The" makes room for it. The article is a data
+              matter everywhere else (dialogue, sheets, the minimap already
+              drops it); on the water the sign says MAINLAND. A heavier halo
+              than before, because the ground under it is a painting now
+              rather than a dark gradient. */}
           <p className="font-cinzel font-700" style={{
-            fontSize: '1.75rem', lineHeight: 1.1,
-            color: locked ? 'rgba(180,192,200,0.55)' : '#eef4f8',
-            textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
-          }}>{place.name}</p>
+            fontSize: '2.3rem', lineHeight: 1.05, letterSpacing: '0.02em',
+            color: locked ? 'rgba(180,192,200,0.6)' : '#f4f7fa',
+            textShadow: '0 2px 4px rgba(0,0,0,0.95), 0 0 10px rgba(0,0,0,0.95), 0 2px 18px rgba(0,0,0,0.9), 0 0 36px rgba(0,0,0,0.7)',
+          }}>{place.name.replace(/^The /, '')}</p>
           <p className="font-karla font-600" style={{
             fontSize: '1.02rem', marginTop: 2,
             color: locked ? 'rgba(206,152,152,0.8)' : 'rgba(192,210,224,0.8)',
