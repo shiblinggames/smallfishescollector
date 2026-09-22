@@ -116,7 +116,16 @@ export const ISLE_COLLIDERS: Record<string, PortCollider> = {}
 // string.
 export type HullCollider = { shapes: ColliderShape[] }
 
-export const HULL_COLLIDERS: Record<string, HullCollider> = {}
+// Drawn by hand on /sea/calibrate/hull, 2026-09-22: one capsule laid along
+// each waterline, stem to stern.
+export const HULL_COLLIDERS: Record<string, HullCollider> = {
+  'fishing': { shapes: [{ kind: 'capsule', ax: 0.347, ay: 0.551, bx: 0.666, by: 0.53, ar: 0.09 }] },  // Fishing boat
+  '2': { shapes: [{ kind: 'capsule', ax: 0.337, ay: 0.626, bx: 0.629, by: 0.629, ar: 0.09 }] },  // Sloop
+  '3': { shapes: [{ kind: 'capsule', ax: 0.309, ay: 0.648, bx: 0.684, by: 0.661, ar: 0.09 }] },  // Schooner
+  '4': { shapes: [{ kind: 'capsule', ax: 0.287, ay: 0.651, bx: 0.671, by: 0.694, ar: 0.09 }] },  // Brigantine
+  '5': { shapes: [{ kind: 'capsule', ax: 0.168, ay: 0.74, bx: 0.759, by: 0.815, ar: 0.09 }] },  // Galleon
+  '6': { shapes: [{ kind: 'capsule', ax: 0.452, ay: 0.879, bx: 0.9, by: 0.85, ar: 0.09 }] },  // Man-o-War
+}
 
 for (const [k, c] of Object.entries(HULL_COLLIDERS)) {
   if (c.shapes.length === 0 || c.shapes.length > 4) throw new Error(`HULL_COLLIDERS['${k}']: 1 to 4 shapes`)
