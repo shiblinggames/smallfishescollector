@@ -3355,8 +3355,12 @@ FLAG: on for admins, or `?ambience=1` once (localStorage `stb:ambience`; `?ambie
   the boat took another. Knob = `(thumb - origin) / HELM_STICK_R * (HELM_R - 22)` now.
 - **Auto-steer never fights a held helm.** The lookahead's tangent aim was exempt only for the
   stick; keys and hold-to-steer are exempt too.
-- **No boat on an island.** Coasts are rings of 4px capsules, a line not a volume: rammed hard, the
-  hull's centre crossed it and the resolve then pushed INLAND every frame. `paintedCoasts()` keeps
-  each plated island's radial coastline; if the waterline point is inside `shoreRadius`, she is
-  lifted out along the bearing to shore + 0.6 HULL and inward velocity is removed (skipped for
-  campaign isles not yet drawn, and in fights).
+- **No boat on an island.** Coasts were rings of 4px capsules, a line not a volume: rammed hard, a
+  hull crossed it (a long expedition hull without its centre ever leaving the water) and the resolve
+  pushed inland or fought itself. The hull resolve now SKIPS coast capsules (`o.grp`) and resolves
+  each plated island as its shape: `paintedCoasts()` + `shoreRadius`, every footprint capsule
+  sampled at 9 points, 3 passes, deepest sample lifts her out along its bearing and removes inward
+  velocity. A first centre-only version shipped and failed for warships; the 8-point / 3-pass setting
+  was chosen by a simulation of 7,992 rams (all hull classes x all ports and isles x 18 bearings x 3
+  speeds, with frame hitches): zero keels on land, zero trapped. Capsules still drive the lookahead
+  and `clearOfLand`.

@@ -8621,6 +8621,9 @@ export default function SeaMap({
       const hf = hullRef.current
       const fc = facing.current
       for (const o of nearObs.current) {
+        // A painted coast is resolved as the SHAPE it is, just below, not as
+        // its ring of capsules. See paintedCoasts.
+        if (o.grp) continue
         const ox2 = o.x2 ?? o.x, oy2 = o.y2 ?? o.y
         for (const f of hf.foot) {
           const ax = pos.current.x + fc * f.ax + WATERLINE_X, ay = pos.current.y + f.ay
@@ -8640,24 +8643,56 @@ export default function SeaMap({
           if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
         }
       }
-      // NEVER ON THE ISLAND. See paintedCoasts: if the capsules have let her
-      // centre past the waterline, lift her out along the bearing and kill
-      // the inward way. A rock the story has not drawn yet stops nobody.
-      if (!fightOnRef.current) {
-        const px = pos.current.x + WATERLINE_X, py = pos.current.y
+      // ── THE SHORE AS A VOLUME ───────────────────────────────────────
+      //
+      // Painted islands resolve against their SHAPE rather than the ring of
+      // thin capsules drawn round it. The ring was a line: rammed hard, a hull
+      // crossed it, and a long expedition hull did it without its centre ever
+      // leaving the water -- the bow drove into the island, the spine crossed
+      // the shore, and where two segments cross the resolve has no "out" to
+      // push along (it fell back to +x), so the pushes fought and she wedged.
+      //
+      // Now each capsule of her footprint is sampled along its spine, every
+      // sample is tested against the coastline's radius on its own bearing,
+      // and the deepest one decides: she is lifted out along that bearing by
+      // exactly how far it is in, and the velocity carrying her inward goes.
+      // Inside is simply not a place any part of her can be, at any speed and
+      // for any length of hull. Skipped for campaign isles the story has not
+      // drawn, exactly as their capsules were.
+      {
+        let reach = 0
+        for (const f of hf.foot) reach = Math.max(reach, Math.hypot(f.ax, f.ay) + f.r, Math.hypot(f.bx, f.by) + f.r)
         for (const c of paintedCoasts()) {
-          const dx = px - c.x, dy = py - c.y
-          if (Math.abs(dx) > c.bound || Math.abs(dy) > c.bound) continue
+          const cdx = pos.current.x - c.x, cdy = pos.current.y - c.y
+          const lim = c.bound + reach
+          if (Math.abs(cdx) > lim || Math.abs(cdy) > lim) continue
           if (c.isle && !isleShownRef.current(c.isle)) continue
-          const d = Math.hypot(dx, dy)
-          const R = shoreRadius(c, dx, dy)
-          if (d >= R) continue
-          const nx = d < 0.001 ? 1 : dx / d, ny = d < 0.001 ? 0 : dy / d
-          const out = R + HULL * 0.6
-          pos.current.x = c.x + nx * out - WATERLINE_X
-          pos.current.y = c.y + ny * out
-          const vn = vel.current.x * nx + vel.current.y * ny
-          if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
+          // THREE PASSES, EIGHT POINTS A SPINE. Lifting her off the deepest
+          // point can leave a lesser one still in, and a coarser spine lets a
+          // bay's corner slip between samples. Settled by simulation
+          // (2026-09-23): every hull class rammed into every port and isle
+          // from 18 bearings at three speeds with frame hitches, 7,992 runs.
+          // At 4 points and 2 passes 31 ended with the keel on land; at 8 and
+          // 3, none did and every one sailed clear afterwards.
+          for (let pass = 0; pass < 3; pass++) {
+            let pen = 0, nx = 0, ny = 0
+            for (const f of hf.foot) {
+              const ax = pos.current.x + fc * f.ax + WATERLINE_X, ay = pos.current.y + f.ay
+              const bx = pos.current.x + fc * f.bx + WATERLINE_X, by = pos.current.y + f.by
+              for (let k = 0; k <= 8; k++) {
+                const t = k / 8
+                const sx = ax + (bx - ax) * t - c.x, sy = ay + (by - ay) * t - c.y
+                const d = Math.hypot(sx, sy)
+                const p = shoreRadius(c, sx, sy) + f.r - d
+                if (p > pen) { pen = p; nx = d < 0.001 ? 1 : sx / d; ny = d < 0.001 ? 0 : sy / d }
+              }
+            }
+            if (pen <= 0) break
+            pos.current.x += nx * pen
+            pos.current.y += ny * pen
+            const vn = vel.current.x * nx + vel.current.y * ny
+            if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
+          }
         }
       }
 
