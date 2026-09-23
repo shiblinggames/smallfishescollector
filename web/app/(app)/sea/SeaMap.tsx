@@ -1074,6 +1074,48 @@ function shoreRadius(c: PaintedCoast, dx: number, dy: number): number {
 }
 
 /**
+ * ── DOES A WHOLE HULL FIT HERE? ─────────────────────────────────────────────
+ *
+ * For "Free my ship": the same two tests the frame loop's resolve makes, run at
+ * a candidate spot instead of the hull's own. Every footprint capsule sampled
+ * against every painted coast's shape, and against every other obstacle's
+ * capsule, with `margin` of water to spare. `shown` hides campaign rocks the
+ * story has not drawn, exactly as the resolve does.
+ */
+function hullClearAt(x: number, y: number, foot: Foot[], fc: number, margin: number, shown: (isle: string) => boolean): boolean {
+  let reach = 0
+  for (const f of foot) reach = Math.max(reach, Math.hypot(f.ax, f.ay) + f.r, Math.hypot(f.bx, f.by) + f.r)
+  for (const c of paintedCoasts()) {
+    const lim = c.bound + reach + margin
+    if (Math.abs(x - c.x) > lim || Math.abs(y - c.y) > lim) continue
+    if (c.isle && !shown(c.isle)) continue
+    for (const f of foot) {
+      const ax = x + fc * f.ax + WATERLINE_X, ay = y + f.ay
+      const bx = x + fc * f.bx + WATERLINE_X, by = y + f.by
+      for (let k = 0; k <= 8; k++) {
+        const t = k / 8
+        const sx = ax + (bx - ax) * t - c.x, sy = ay + (by - ay) * t - c.y
+        if (shoreRadius(c, sx, sy) + f.r + margin > Math.hypot(sx, sy)) return false
+      }
+    }
+  }
+  for (const g of obstacleGroups()) {
+    const gx = x - g.x, gy = y - g.y, gr = g.r + reach + margin
+    if (gx * gx + gy * gy >= gr * gr) continue
+    for (const o of g.items) {
+      if (o.grp) continue
+      if (o.isle && !shown(o.isle)) continue
+      const ox2 = o.x2 ?? o.x, oy2 = o.y2 ?? o.y
+      for (const f of foot) {
+        const q = segSeg(x + fc * f.ax + WATERLINE_X, y + f.ay, x + fc * f.bx + WATERLINE_X, y + f.by, o.x, o.y, ox2, oy2)
+        if (Math.hypot(q.px - q.qx, q.py - q.qy) < f.r + o.r + margin) return false
+      }
+    }
+  }
+  return true
+}
+
+/**
  * HOW FAR THE PAINTED BAND REACHES from the line it is drawn along.
  *
  * The boulders sit at 110 either side and jitter 75, and each is drawn with its
@@ -3969,12 +4011,68 @@ export default function SeaMap({
   const arriveT1 = useRef<number | null>(null)
   const arriveT2 = useRef<number | null>(null)
 
+  /**
+   * ── FREE MY SHIP ────────────────────────────────────────────────────────
+   *
+   * A button in the sea's settings (Kong: no detection, somebody sitting
+   * still is not stuck; the captain says so). Searches outward from the hull
+   * in widening rings for the nearest spot her WHOLE footprint fits in clear
+   * water, on the side of the reef she is on and inside the rim of the water
+   * she is in, and takes the same passage the portal does to get there. Free
+   * and unlimited: it only ever moves you to the nearest open water, so it is
+   * worth nothing as a shortcut. A few seconds between uses so it cannot be
+   * mashed. Already clear says so rather than moving her anyway.
+   */
+  const unstickAt = useRef(0)
+  useEffect(() => {
+    const onUnstick = () => {
+      const nowMs = performance.now()
+      if (nowMs - unstickAt.current < 4000) return
+      unstickAt.current = nowMs
+      const foot = hullRef.current.foot
+      const fc = facing.current
+      const shown = (id: string) => isleShownRef.current(id)
+      const here = pos.current
+      const north = sideRef.current
+      const open = seaGateRef.current
+      const inRegion = (x: number, y: number) => {
+        if (north) {
+          if (y > NORTH_WALL - REEF_FACE - 140) return false
+          const de = Math.hypot(x - EXP_ORIGIN.x, y - EXP_ORIGIN.y)
+          return open ? (de > EXP_EDGE + REEF_FACE + 150 && de < RAID_EDGE - 150) : de < EXP_EDGE - REEF_FACE - 150
+        }
+        if (y < NORTH_WALL + REEF_FACE + 140) return false
+        return Math.hypot(x, y) < Math.min(OUTER_EDGE, levelWallRef.current?.rim ?? OUTER_EDGE) - 150
+      }
+      if (hullClearAt(here.x, here.y, foot, fc, 6, shown)) {
+        setRefused('Your ship is already in open water.')
+        return
+      }
+      for (let r = 40; r <= 3200; r += 40) {
+        const n = Math.max(12, Math.round((Math.PI * 2 * r) / 60))
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2
+          const x = here.x + Math.cos(a) * r, y = here.y + Math.sin(a) * r
+          if (!inRegion(x, y)) continue
+          if (!hullClearAt(x, y, foot, fc, 30, shown)) continue
+          jumpToRef.current(x, y, '#96d6ff')
+          return
+        }
+      }
+      setRefused('No clear water nearby. Try sailing a little, then again.')
+    }
+    window.addEventListener('sea-unstick', onUnstick)
+    return () => window.removeEventListener('sea-unstick', onUnstick)
+  }, [])
+
   const jumpTo = useCallback((x: number, y: number, accent: string) => {
     setPortalOpen(false)
     vibrate([14, 60, 22, 60, 30])
     warpStart = performance.now()
     setWarping({ x, y, accent })
   }, [])
+
+  const jumpToRef = useRef(jumpTo); jumpToRef.current = jumpTo
 
   useEffect(() => {
     if (!warping) return

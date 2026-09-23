@@ -3364,3 +3364,9 @@ FLAG: on for admins, or `?ambience=1` once (localStorage `stb:ambience`; `?ambie
   was chosen by a simulation of 7,992 rams (all hull classes x all ports and isles x 18 bearings x 3
   speeds, with frame hitches): zero keels on land, zero trapped. Capsules still drive the lookahead
   and `clearOfLand`.
+- **Free my ship** (sea settings, 2026-09-23). Kong ruled out stuck DETECTION (a captain sitting
+  still is not stuck), so it is a button: `sea-unstick` event, SeaMap searches rings outward (40px
+  steps to 3200) for the nearest spot where `hullClearAt` fits the whole footprint with 30px spare,
+  on the same reef side and inside the same rim, then `jumpTo`s there (portal passage). Already
+  clear says so. Free, unlimited, 4s between uses. Simulated from inside every painted island with
+  every hull: always found, farthest 520px, <1ms.

@@ -258,6 +258,40 @@ export default function SeaSettings({ size, top, isAdmin = false }: {
                 }} />
             )}
 
+            {/* ── FREE MY SHIP ─────────────────────────────────────────────
+                For a hull that has ended up somewhere she cannot sail out of.
+                The chart does the work (see `sea-unstick` in SeaMap): the
+                nearest clear water, same side of the reef, same passage the
+                portal takes. Free and unlimited, since it only ever moves you
+                a short way. */}
+            <button type="button" data-no-steer
+              onClick={() => {
+                vibrate(10)
+                setOpen(false)
+                window.dispatchEvent(new CustomEvent('sea-unstick'))
+              }}
+              className="font-karla font-700 uppercase"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                width: '100%', margin: '0.55rem 0 0', padding: '0.55rem',
+                borderRadius: 10, cursor: 'pointer',
+                fontSize: '0.62rem', letterSpacing: '0.14em',
+                background: 'rgba(150,214,255,0.08)',
+                border: `1px solid ${SEA},0.3)`,
+                color: `${SEA},0.85)`,
+              }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 3v10" />
+                <path d="M8 7l4-4 4 4" />
+                <path d="M3 17c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0" />
+              </svg>
+              Free my ship
+            </button>
+            <p className="font-karla" style={{ fontSize: '0.6rem', color: `${SEA},0.45)`, margin: '0.25rem 0 0', lineHeight: 1.35, textAlign: 'center' }}>
+              Stuck against land? Moves you to the nearest open water.
+            </p>
+
             {/* ── THE WAY OUT ──────────────────────────────────────────────
                 Last, alone, and deliberately not a switch. It was at the foot
                 of the profile page, which is a reasonable place for it and a
