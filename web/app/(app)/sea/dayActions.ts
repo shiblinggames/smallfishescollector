@@ -38,7 +38,9 @@ export type DayState = {
   /** The daily voyage. */
   voyage: { state: 'none' | 'at_sea' | 'ready'; endsAt: number | null } | null
   /** The trawls: how many crews are out, how many hauls are waiting. */
-  trawls: { out: number; ready: number; slots: number } | null
+  trawls: { out: number; ready: number; slots: number
+    /** When the first crew still out comes back, epoch ms, or null. */
+    nextBack: number | null } | null
   /** The Posting House board. */
   bounties: { unlocked: boolean; claimed: number; total: number; claimable: number; remaining: number } | null
   /** The Chart Room's week: four puzzles. */
@@ -122,8 +124,9 @@ export async function dayState(): Promise<DayState | null> {
   if (trawls && !('error' in trawls)) {
     const active = trawls.zones.filter(z => z.trawl)
     const ready = active.filter(z => z.trawl?.ready).length
-    out.trawls = { out: active.length, ready, slots: trawls.unlockedSlots }
-    for (const z of active) if (z.trawl && !z.trawl.ready) soon(new Date(z.trawl.endsAt).getTime())
+    const backs = active.filter(z => z.trawl && !z.trawl.ready).map(z => new Date(z.trawl!.endsAt).getTime())
+    out.trawls = { out: active.length, ready, slots: trawls.unlockedSlots, nextBack: backs.length ? Math.min(...backs) : null }
+    for (const t of backs) soon(t)
   }
 
   if (board) {

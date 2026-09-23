@@ -188,8 +188,11 @@ function rowsOf(s: DayState): Row[] {
     const t = s.trawls
     rows.push({
       kind: 'trawls', title: 'The Trawls', place: 'The Trawl Harbor',
+      // THE FIRST ONE BACK, like the voyage's "back in". Kong: the trawls
+      // should say when the next crew is home, not only how many are out.
       status: t.ready > 0 ? `${t.ready} haul${t.ready === 1 ? '' : 's'} waiting`
-        : t.out > 0 ? `${t.out} of ${t.slots} out` : `None out, ${t.slots} slot${t.slots === 1 ? '' : 's'}`,
+        : t.out > 0 ? `${t.out >= t.slots ? 'All out' : `${t.out} of ${t.slots} out`}${t.nextBack ? `, first back in ${left(t.nextBack)}` : ''}`
+        : `None out, ${t.slots} slot${t.slots === 1 ? '' : 's'}`,
       action: t.ready > 0 ? 'Collect' : t.out < t.slots ? 'Send' : null,
       hot: t.ready > 0, done: false, away: t.ready === 0 && t.out >= t.slots,
       news: t.ready > 0 ? (t.ready === 1 ? 'A trawl haul is in' : `${t.ready} trawl hauls are in`) : null,
@@ -268,6 +271,15 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   onClose?: () => void
 }) {
   const [open, setOpen] = useState(false)
+  // THE "BACK IN" TIMERS MOVE while the board is open. They are worked out at
+  // render, so without this a voyage said "back in 2h 5m" for as long as you
+  // looked at it. Once every twenty seconds is plenty for minutes.
+  const [, setClock] = useState(0)
+  useEffect(() => {
+    if (!open) return
+    const id = window.setInterval(() => setClock(c => c + 1), 20_000)
+    return () => window.clearInterval(id)
+  }, [open])
   /** The whole board, or one step in on Today's Orders or the bounties. */
   const [view, setView] = useState<'board' | 'haul' | 'orders' | 'bounties' | 'voyage' | 'trawls'>('board')
   const onCloseRef = useRef(onClose)
