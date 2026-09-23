@@ -107,8 +107,8 @@ two marks for one slot and neither said "level".
 **2026-09-23: Today's Orders moved OUT to the day board (SeaDay) and lives only there** (Kong).
 The Fishing level sheet has no `extra` row now; the orders row on the board opens the orders one
 step in (`view: 'orders'`, back arrow to the board), and mooring at the Tally House dispatches
-`sea-day-open` with `{ view: 'orders' }` and sets `ordersAshore` so Claim works; the board's close
-clears it. Bounties left the Navigation sheet the same day for the same board (`view: 'bounties'`);
+`sea-day-open` with `{ view: 'orders' }`. Claiming works from the board anywhere (the
+Tally-House-only rule and `ordersAshore` were dropped the same day). Bounties left the Navigation sheet the same day for the same board (`view: 'bounties'`);
 the level sheet has no `extra` row at all now. The history below is kept for the why.
 
 The day's orders and the bounty board each had a disc and a sheet of their own on the HUD. They are

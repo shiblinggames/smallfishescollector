@@ -43,8 +43,10 @@
 // ── IT OPENS THE REAL THING ─────────────────────────────────────────────────
 //
 // Every row opens the sheet the sea already mounts for it, wherever the hull
-// is, and the two that are pages navigate. Claiming an order still wants the
-// Tally House under you, as it always did, and that row says Open, not Claim.
+// is, and the two that are pages navigate. Orders and bounties are claimed
+// right here, wherever the hull is (Kong, 2026-09-23: the Tally House rule,
+// read anywhere and collect ashore, went, so the two lists side by side on
+// this board behave the same). The server never checked where you were.
 //
 // ── EXCEPT THE ORDERS, WHICH LIVE HERE ──────────────────────────────────────
 //
@@ -52,8 +54,8 @@
 // this board. They were a folded row at the top of the level, which is where
 // the level's numbers belong, and a daily is the board's business. So the
 // orders row opens the orders IN the board, one step in with a way back, and
-// mooring at the Tally House opens the board straight onto them with claiming
-// on (the map sends `sea-day-open` with `view: 'orders'`).
+// mooring at the Tally House opens the board straight onto them (the map
+// sends `sea-day-open` with `view: 'orders'`).
 //
 // The Posting House's bounties followed the same week (Kong: same look, same
 // way in). One step in, the same header, and mooring at the Posting House
@@ -114,14 +116,14 @@ type Row = {
   note?: string
 }
 
-function rowsOf(s: DayState, ashore: boolean): Row[] {
+function rowsOf(s: DayState): Row[] {
   const rows: Row[] = []
   if (s.orders) {
     const o = s.orders
     rows.push({
       kind: 'orders', title: 'Today’s Orders', place: 'The Tally House',
       status: o.ready > 0 ? `${o.ready} ready to claim` : `${o.done} of ${o.total} done`,
-      action: o.ready > 0 ? (ashore ? 'Claim' : 'Open') : o.done < o.total ? 'Open' : null,
+      action: o.ready > 0 ? 'Claim' : o.done < o.total ? 'Open' : null,
       hot: o.ready > 0, done: o.done >= o.total && o.ready === 0,
       news: o.ready > 0 ? (o.ready === 1 ? 'An order is done' : `${o.ready} orders are done`) : null,
     })
@@ -193,15 +195,13 @@ function left(endsAt: number): string {
 
 type Toast = { id: number; kinds: DayKind[]; text: string }
 
-export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, onOpen, seed, orders, onOrders, onClose }: {
+export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, seed, orders, onOrders, onClose }: {
   size: number
   top: number
   right: number
   /** The HUD is down (rod out, a fight, arriving). The disc hides; the board
    *  keeps its state and holds any news until it is back. */
   hidden: boolean
-  /** Standing at the Tally House, where orders can be claimed. */
-  ashore: boolean
   /** Bumps on every catch. A catch can finish an order or a bounty. */
   caughtTick: number
   /** Open the sheet, or the page, for one row. */
@@ -215,7 +215,7 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
   orders: DailyChallengeState | null
   /** A claim, or a fresh read, handed back up to the owner. */
   onOrders: (next: DailyChallengeState) => void
-  /** The board shut. The map drops `ashore` here, as the level sheet did. */
+  /** The board shut. The map re-reads the bounty poll here. */
   onClose?: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -256,8 +256,6 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
   openRef.current = open
   const hiddenRef = useRef(hidden)
   hiddenRef.current = hidden
-  const ashoreRef = useRef(ashore)
-  ashoreRef.current = ashore
 
   const load = useCallback((src?: () => Promise<DayState | null>) => {
     let alive = true
@@ -265,7 +263,7 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
     void read.then(s => {
       if (!alive || !s) return
       setState(s)
-      const rows = rowsOf(s, ashoreRef.current)
+      const rows = rowsOf(s)
       const hotNow = new Set(rows.filter(r => r.hot).map(r => r.kind))
       const before = hotBefore.current
       hotBefore.current = hotNow
@@ -343,7 +341,7 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
     return () => clearTimeout(id)
   }, [toast])
 
-  const rows = state ? rowsOf(state, ashore) : []
+  const rows = state ? rowsOf(state) : []
   const ready = rows.filter(r => r.hot)
   const todo = rows.filter(r => !r.hot && !r.done)
   const done = rows.filter(r => r.done && !r.hot)
@@ -524,7 +522,7 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
               </div>
               <div style={{ marginTop: 6 }}>
                 {view === 'bounties' ? <BountiesPanel embedded onClose={close} /> : orders
-                  ? <DailyOrders embedded initial={orders} canClaim={ashore}
+                  ? <DailyOrders embedded initial={orders}
                       onChange={next => { onOrdersRef.current(next); load() }} />
                   : <p className="font-karla" style={{ fontSize: '0.8rem', color: `${SEA},0.6)`, margin: '10px 0 4px' }}>Reading the orders&hellip;</p>}
               </div>

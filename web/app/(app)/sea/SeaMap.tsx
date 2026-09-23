@@ -5280,10 +5280,6 @@ export default function SeaMap({
     bountyPolled.current = true
     pollBounties()
   }, [inAnchorage, pollBounties])
-  /** Opened by mooring at the Tally House rather than from the HUD disc, which
-   *  is the whole difference between reading the day's orders and being paid
-   *  for them. See DailyOrders' note on canClaim. */
-  const [ordersAshore, setOrdersAshore] = useState(false)
   /**
    * ── BACK TO THE DAY ──────────────────────────────────────────────────────
    *
@@ -5405,7 +5401,7 @@ export default function SeaMap({
       if (ashore) { setAshore(false); return }
       if (voyageOpen) { setVoyageOpen(false); return }
       if (trawlOpen) { setTrawlOpen(false); return }
-      if (ordersOpen) { setOrdersOpen(false); setOrdersAshore(false); return }
+      if (ordersOpen) { setOrdersOpen(false); return }
       if (choosing) { setChoosing(false); return }
       if (campaignOpen) { setCampaignOpen(false); return }
       if (finnOpen) { setFinnOpen(false); setFinnLines(null); return }
@@ -7486,13 +7482,10 @@ export default function SeaMap({
     // remount of the chart on the way back, and a scroll container, to turn a
     // button on.
     //
-    // The rule it exists to protect is untouched: read anywhere, settle up
-    // ashore. You still have to sail here. What changed is that arriving hands
-    // you the panel instead of a URL.
-    // The docks open the day board straight onto today's orders, claiming
-    // enabled because you are standing on the docks. See SeaDay.
+    // (The rule it protected, read anywhere and settle up ashore, was dropped
+    // on 2026-09-23: orders claim from the day board anywhere, like bounties.)
+    // The docks still open the day board straight onto today's orders.
     if (p.id === 'trawl_docks') {
-      setOrdersAshore(true)
       window.dispatchEvent(new CustomEvent('sea-day-open', { detail: { view: 'orders' } }))
       return
     }
@@ -12224,9 +12217,9 @@ hullRef={hullRefFor(t.key)} />
           so an order finishing while you fished could never be noticed as a
           change. `hidden` hides the disc and holds any news until you are
           back. */}
-      <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 3} ashore={ordersAshore}
+      <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 3}
         hidden={hudOff} caughtTick={caughtTick}
-        orders={orders} onOrders={setOrders} onClose={() => { setOrdersAshore(false); pollBounties() }}
+        orders={orders} onOrders={setOrders} onClose={pollBounties}
         seed={() => getBoot().then(b => b?.day ?? null)}
         onOpen={(kind: DayKind) => {
           // A sheet opened from the board brings the board back when it
