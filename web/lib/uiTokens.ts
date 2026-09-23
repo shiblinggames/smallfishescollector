@@ -33,6 +33,16 @@ export type LootRarity =
 export const GEM_GLYPH = '◆'
 export const GEM_COLOR = '#a78bfa'
 
+/**
+ * The Don's ghost fleet, washed a sickly kraken green (vs Davy's cold grey
+ * DROWNED_FILTER in lib/gauntlet). Lives HERE, not in lib/gauntlet, because
+ * the story scenes use it too: StoryScene imported it from lib/gauntlet, and
+ * StoryScene is reachable from the welcome modal in the app layout, so a
+ * single CSS string pulled the whole 217KB gauntlet module into 73 routes
+ * (the 2026-09-23 audit). lib/gauntlet re-exports it for its own callers.
+ */
+export const GHOST_FILTER = 'brightness(0.66) contrast(1.12) sepia(0.85) saturate(2.4) hue-rotate(70deg)'
+
 export const RARITY_COLOR: Record<LootRarity, string> = {
   common:    '#9ca3af',
   uncommon:  '#4ade80',

@@ -601,7 +601,9 @@ function mobMaxDmg2(depth: number){ return Math.round((24 + depth * 3.2) * deepB
 // The Don's ghost fleet — his drowned court + crews raised, washed a sickly,
 // scary KRAKEN GREEN (vs Davy's cold grey DROWNED_FILTER) and renamed "Spectral
 // X". Dark + toxic so the whole bestiary reads as his, not Davy's. Tunable.
-export const GHOST_FILTER = 'brightness(0.66) contrast(1.12) sepia(0.85) saturate(2.4) hue-rotate(70deg)'
+// Defined in lib/uiTokens so the story scenes can use it without importing
+// this module; re-exported here for the gauntlet's own callers.
+export { GHOST_FILTER } from './uiTokens'
 function ghostName(name: string): string {
   if (name.includes('Spectral')) return name
   if (name.startsWith('The ')) return `The Spectral ${name.slice(4)}`

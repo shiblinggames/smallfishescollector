@@ -32,7 +32,8 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GOLD, TypedBody, Letterbox, LivingFrame, FlashOut, SceneProgress, InsertShot, SceneBackdrop, useTypewriter, lineHaptic, prefersReducedMotion } from '@/components/cutscene'
 import type { SceneLine, SceneInsert } from '@/lib/raidMap'
-import { GHOST_FILTER } from '@/lib/gauntlet'
+// From uiTokens, NOT lib/gauntlet: see the note on GHOST_FILTER there.
+import { GHOST_FILTER } from '@/lib/uiTokens'
 
 /** Who is on stage, and where. Two slots: a conversation, not a crowd. */
 interface StageChar { speaker: string; portrait: string; ghost?: boolean }
