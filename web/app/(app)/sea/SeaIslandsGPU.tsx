@@ -1189,6 +1189,16 @@ export default function SeaIslandsGPU({
       // own edge. Exact, free, and it follows whatever shape the island is.
       const townGlow: TownGlow = makeTownGlow(PIXI, townRef.current)
       world.addChild(townGlow.view)
+      // ── EVERY ISLAND'S SHADOW, IN ONE LAYER UNDER THE LAND ─────────────
+      //
+      // Each shadow is multiply-blended and each plate is not, so while they
+      // sat interleaved in one container every island broke the GPU's batch
+      // twice (the 2026-09-23 audit). Here they are all one texture and one
+      // blend, so they draw as one batch, and every plate after them as
+      // another. Under every plate also means one island's shadow never
+      // darkens its neighbour's paint, which is the more correct reading.
+      const islandShades = new PIXI.Container()
+      world.addChild(islandShades)
 
       world.addChild(land)
 
@@ -1234,8 +1244,42 @@ export default function SeaIslandsGPU({
        */
       let landTint = 0xffffff
       const baked: { isle: GpuIsland; sprite: import('pixi.js').Sprite; pad: number }[] = []
-      /** The painted islands, for the night tint. See lib/islandPlates. */
-      const plated: import('pixi.js').Sprite[] = []
+      /**
+       * ── THE PAINTED ISLANDS, TRACKED ───────────────────────────────────
+       *
+       * Every painted island's parts, by id. Before this there was only a
+       * list of plate sprites for the night tint, and the reconcile below
+       * knew nothing about plates at all: it neither removed them when a bay
+       * was left nor counted them as present, so every island-list hand-over
+       * placed every painted island AGAIN on top of itself. There are two
+       * hand-overs per change (an effect and the state tick), plus one at
+       * load, so a session began with two or three copies of every island
+       * and gained two more on every bay crossing: frame cost climbing over
+       * a session, and shadows and wet sand darkening with each copy. Found
+       * by the 2026-09-23 audit.
+       *
+       * The same record drives the cull: an island well off screen has all
+       * its parts switched off together, with hysteresis so an island on the
+       * edge does not flap (each switch is a rebuild of the world's render
+       * instructions, so they must be rare).
+       */
+      type PlatedIsle = {
+        id: string; x: number; y: number; r: number; locked: boolean
+        plate: import('pixi.js').Sprite
+        parts: import('pixi.js').Container[]
+        foam: Foam
+        on: boolean
+      }
+      const platedIsles: PlatedIsle[] = []
+      const dropPlated = (k: number) => {
+        const p = platedIsles[k]
+        // Textures are shared (one painting per band, cached by loadTexture),
+        // so the sprites go and the textures stay.
+        for (const part of p.parts) part.destroy({ children: true })
+        const fi = foams.findIndex(f => f.f === p.foam)
+        if (fi >= 0) foams.splice(fi, 1)
+        platedIsles.splice(k, 1)
+      }
       const place = (isle: GpuIsland) => {
         const d = isle.r * 2
         // ── A PAINTED ISLAND ───────────────────────────────────────────
@@ -1268,7 +1312,7 @@ export default function SeaIslandsGPU({
           shade.width = d * 0.98
           shade.height = (d * 0.98 * plate.aspect) / GROUND * 0.92
           shade.position.set(isle.x + d * 0.05, isle.y + (d * 0.06) / GROUND)
-          land.addChild(shade)
+          islandShades.addChild(shade)
 
           const s = new PIXI.Sprite(PIXI.Texture.EMPTY)
           s.anchor.set(0.5, plate.water)
@@ -1279,9 +1323,9 @@ export default function SeaIslandsGPU({
           // you what is open without a sign.
           s.tint = isle.locked ? 0x5a6068 : landTint
           land.addChild(s)
-          plated.push(s)
           loadTexture(PIXI, plate.art).then(t => {
-            if (dead) return
+            // Removed by the reconcile before its painting arrived.
+            if (dead || s.destroyed) return
             s.texture = t
             const w = d * plate.width
             const k = w / t.width
@@ -1300,6 +1344,10 @@ export default function SeaIslandsGPU({
           f.over.y = isle.y
           land.addChild(f.over)
           foams.push({ f, x: isle.x, y: isle.y, r: isle.r })
+          platedIsles.push({
+            id: isle.id, x: isle.x, y: isle.y, r: isle.r, locked: isle.locked,
+            plate: s, parts: [shade, s, f.mesh, f.over], foam: f, on: true,
+          })
           return
         }
         // The chart's own padding: the widest shoal wash plus the blur's
@@ -1495,7 +1543,15 @@ export default function SeaIslandsGPU({
           const gi = grasses.findIndex(g => g.x === b.isle.x && g.y === b.isle.y)
           if (gi >= 0) { grasses[gi].g.destroy(); grasses.splice(gi, 1) }
         }
-        const have = new Set(baked.map(b => b.isle.id))
+        // Painted islands: gone, or changed from locked to open (a rock the
+        // story has just reached), are removed; the loop below re-places the
+        // second kind with its new state.
+        for (let k = platedIsles.length - 1; k >= 0; k--) {
+          const p = platedIsles[k]
+          const w = want.get(p.id)
+          if (!w || w.locked !== p.locked) dropPlated(k)
+        }
+        const have = new Set([...baked.map(b => b.isle.id), ...platedIsles.map(p => p.id)])
         for (const isle of next) if (!have.has(isle.id)) place(isle)
         // AND THE BAKES BEHIND THEM. Dropping the sprite was only ever half of
         // letting a bay go — see evictIslandsExcept. Done after placing, so an
@@ -1709,6 +1765,21 @@ export default function SeaIslandsGPU({
         for (const f of foams) {
           if (Math.abs(f.x - camX) < halfW + f.r * 1.6
             && Math.abs(f.y - camY) < halfH + f.r * 1.6) f.f.advance(t)
+        }
+        // ── OFF-SCREEN ISLANDS ARE NOT DRAWN ─────────────────────────────
+        // Wake at 3r past the view's edge (a plate hangs well past its
+        // radius, and its shadow further), sleep 1200px beyond that, so an
+        // island sitting on the edge does not switch every frame.
+        for (const p of platedIsles) {
+          const ox = Math.abs(p.x - camX) - halfW
+          const oy = Math.abs(p.y - camY) - halfH
+          const out = Math.max(ox, oy)
+          const wake = p.r * 3
+          const want = p.on ? out < wake + 1200 : out < wake
+          if (want !== p.on) {
+            p.on = want
+            for (const part of p.parts) part.visible = want
+          }
         }
         // Same cull, and it matters more here: a meadow is a couple of thousand
         // vertices rewritten and uploaded, against the surf's few hundred, and
@@ -2104,7 +2175,7 @@ export default function SeaIslandsGPU({
           for (const b of baked) b.sprite.tint = tint
           // Foam is paint now, not light, so it takes the hour like the land.
           for (const f of foams) { f.f.mesh.tint = tint; f.f.over.tint = tint }
-          for (const sp of plated) if (sp.tint !== 0x5a6068) sp.tint = tint
+          for (const p of platedIsles) if (!p.locked) p.plate.tint = tint
           // THE GRASS IS ON THE LAND, so it takes what the land takes. It was
           // taking nothing at all: a meadow's tint is its island's own green,
           // set once when it was sown, and nothing here had ever written to it.

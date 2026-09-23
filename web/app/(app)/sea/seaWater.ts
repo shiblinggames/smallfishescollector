@@ -522,6 +522,10 @@ void main(void) {
   //
   // Measured on the plane, in screen px, so the width is a real width and
   // not a fraction of a direction.
+  // ONLY AFTER DARK. Everything below was multiplied by uDark, so at noon
+  // every pixel computed a noise sample to throw it away. A uniform branch
+  // is the same for the whole screen and costs nothing (2026-09-23 audit).
+  if (uDark > 0.02 && uOnMoon > 0.5) {
   vec2 lp = vec2(px.x, px.y / GROUND);
   vec2 axis = normalize(uLight);
   float alongL = dot(lp, axis);
@@ -546,9 +550,13 @@ void main(void) {
   // stayed, which is the opposite of what a night sea should do to attention.
   // Halved, and it still does the job it is here for: the water outside it goes
   // flat and the night stops reading as a dim day.
-  col += road * towardMoon * vec3(0.80, 0.88, 1.0) * uDark * uSwell * (1.0 - 0.88 * uRush) * (1.0 - stormK) * uOnMoon;
+  col += road * towardMoon * vec3(0.80, 0.88, 1.0) * uDark * uSwell * (1.0 - 0.88 * uRush) * (1.0 - stormK);
+  }
 
   // ── GLINTS ────────────────────────────────────────────────────────
+  // ONLY WHILE THERE IS SUN, the moon's mirror image: this was multiplied
+  // by (1 - uDark) and computed all night for nothing.
+  if (uDark < 0.98 && uOnGlint > 0.5) {
   vec2 gv = vec2(uLight.y, -uLight.x);
   // 6.0, NOT 9.0. At 9 a glint cell is about seventy world pixels across, so
   // at a cruise the whole screen is crossed by several of them a second — a
@@ -604,7 +612,8 @@ void main(void) {
   // that it is too busy when you are sitting still.
   col += sparkle * glintCol * 0.060 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.88 * uRush)
     // Glare is the first thing a cloud takes.
-    * (1.0 - min(1.0, storm * 1.3)) * uOnGlint;
+    * (1.0 - min(1.0, storm * 1.3));
+  }
 
   // ── WHITECAPS ─────────────────────────────────────────────────────
   //
@@ -768,6 +777,16 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
     const filter = new PIXI.Filter({
       glProgram: PIXI.GlProgram.from({ vertex: VERT, fragment: FRAG, name: 'sea-water' }),
       resources: { waterUniforms: uniforms },
+      // ── NOT AT THE SCREEN'S FULL DENSITY ──────────────────────────────
+      //
+      // The renderer runs at up to 2x on a phone, and this is the one pass
+      // that shades every pixel of the screen with several noise samples.
+      // What it draws is soft noise and gradient; at 2x it spent four times
+      // the pixels of 1x on detail nobody can see. Capped at 1.25, which is
+      // 39% of the 2x pixel count and still finer than the eye can split on
+      // a phone held at arm's length (2026-09-23 audit). The dials in this
+      // file are unchanged; if a hard edge ever reads soft, this is the one.
+      resolution: Math.min(typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1, 1.25),
     })
 
     // A plain white rectangle for the filter to run over. Its only job is to

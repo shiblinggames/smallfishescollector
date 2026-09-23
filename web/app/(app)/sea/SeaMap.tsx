@@ -875,6 +875,9 @@ type Obstacle = {
    *  an obstacle whose rock is not drawn must not stop a hull — see the near
    *  list. Everything else on this chart is permanent and leaves it unset. */
   isle?: string
+  /** The painted island this segment is one of forty round. Lets a point
+   *  query skip the whole coast in one test; see obstacleGroups. */
+  grp?: string
 }
 
 function artShapes(art: string, x: number, y: number, size: number, fallbackR: number): Obstacle[] {
@@ -942,7 +945,7 @@ function coastObstacles(id: string, x: number, y: number, r: number): Obstacle[]
   const out: Obstacle[] = []
   for (let i = 0; i < N; i += step) {
     const a = at(i), b = at(i + step)
-    out.push({ x: a.x, y: a.y, x2: b.x, y2: b.y, r: 4 })
+    out.push({ x: a.x, y: a.y, x2: b.x, y2: b.y, r: 4, grp: id })
   }
   return out
 }
@@ -1087,16 +1090,65 @@ function segSeg(
  *  no facing and no class, so it is held the fallback half-beam off every
  *  obstacle. The frame loop's resolve is what actually stops the hull, with
  *  her real shape. */
-function clearOfLand(w: Vec, pad = HULL): Vec {
+/**
+ * ── EVERY OBSTACLE, IN BOUNDED GROUPS ───────────────────────────────────────
+ *
+ * The painted islands made each coast forty segments, which took the chart
+ * from about two hundred obstacles to about three thousand six hundred. That
+ * is fine for the near list, rebuilt once every 400px sailed, and it was not
+ * fine for `clearOfLand`, which holding to steer calls EVERY FRAME and which
+ * walked all of them (the 2026-09-23 audit). Grouped here once: an island's
+ * coast is one group with a bounding circle, everything else is a group of
+ * one, so a point far from an island skips its forty segments in one test.
+ */
+type ObstacleGroup = { x: number; y: number; r: number; items: Obstacle[] }
+let obstacleGroupsCache: ObstacleGroup[] | null = null
+function obstacleGroups(): ObstacleGroup[] {
+  if (obstacleGroupsCache) return obstacleGroupsCache
+  const out: ObstacleGroup[] = []
+  const byGrp = new Map<string, Obstacle[]>()
   for (const o of allObstacles()) {
-    const c = obstacleNearest(o, w.x, w.y)
-    const dx = w.x - c.x, dy = w.y - c.y
-    const d = Math.hypot(dx, dy)
-    const reach = o.r + pad
-    if (d < reach) {
-      // Dead centre has no direction to be pushed in, so pick one.
-      if (d < 0.001) return { x: c.x + reach, y: c.y }
-      return { x: c.x + (dx / d) * reach, y: c.y + (dy / d) * reach }
+    if (o.grp) {
+      const list = byGrp.get(o.grp)
+      if (list) list.push(o); else byGrp.set(o.grp, [o])
+      continue
+    }
+    // A circle, or a capsule bounded by the circle round its midpoint.
+    const x2 = o.x2 ?? o.x, y2 = o.y2 ?? o.y
+    const mx = (o.x + x2) / 2, my = (o.y + y2) / 2
+    out.push({ x: mx, y: my, r: Math.hypot(x2 - o.x, y2 - o.y) / 2 + o.r, items: [o] })
+  }
+  for (const items of byGrp.values()) {
+    let sx = 0, sy = 0
+    for (const o of items) { sx += o.x; sy += o.y }
+    const cx = sx / items.length, cy = sy / items.length
+    let r = 0
+    for (const o of items) {
+      r = Math.max(r, Math.hypot(o.x - cx, o.y - cy) + o.r, Math.hypot((o.x2 ?? o.x) - cx, (o.y2 ?? o.y) - cy) + o.r)
+    }
+    out.push({ x: cx, y: cy, r, items })
+  }
+  obstacleGroupsCache = out
+  return out
+}
+
+function clearOfLand(w: Vec, pad = HULL): Vec {
+  for (const g of obstacleGroups()) {
+    // The whole group is further than its bound plus the pad: none of it can
+    // hold this point.
+    const gx = w.x - g.x, gy = w.y - g.y
+    const gr = g.r + pad
+    if (gx * gx + gy * gy >= gr * gr) continue
+    for (const o of g.items) {
+      const c = obstacleNearest(o, w.x, w.y)
+      const dx = w.x - c.x, dy = w.y - c.y
+      const d = Math.hypot(dx, dy)
+      const reach = o.r + pad
+      if (d < reach) {
+        // Dead centre has no direction to be pushed in, so pick one.
+        if (d < 0.001) return { x: c.x + reach, y: c.y }
+        return { x: c.x + (dx / d) * reach, y: c.y + (dy / d) * reach }
+      }
     }
   }
   return w
@@ -3164,10 +3216,24 @@ export default function SeaMap({
    *  needing `spots` in its dependencies — see the stale-closure rule. */
   const spotsRef = useRef<Hotspot[]>(spots)
   spotsRef.current = spots
+  // ── ONLY WHEN THE SPOTS HAVE MOVED, AND NEVER MID-REEL ─────────────────
+  //
+  // This set a fresh array every 15 seconds whether anything had changed or
+  // not, and every set re-rendered this whole component and the fishing
+  // overlay under it, including in the middle of a reel (2026-09-23 audit).
+  // A hotspot's key changes exactly when it moves, so the set is skipped
+  // unless a key did; and while the dial is up it waits, catching up the
+  // moment the rod is put away, the same gate the clock's phase uses.
   useEffect(() => {
-    const id = setInterval(() => setSpots(hotspotsAt()), 15_000)
+    if (dialUp) return
+    const refresh = () => {
+      const next = hotspotsAt()
+      setSpots(prev => (prev.length === next.length && prev.every((h, k) => h.key === next[k].key)) ? prev : next)
+    }
+    refresh()
+    const id = setInterval(refresh, 15_000)
     return () => clearInterval(id)
-  }, [])
+  }, [dialUp])
   const inSpotRef = useRef<Hotspot | null>(null)
   inSpotRef.current = inSpot
 

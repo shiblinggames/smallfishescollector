@@ -300,66 +300,104 @@ export function makeShoreFoam(
   const wet = new Float32Array(n)
   let lastT = 0
 
-  const shape = (t: number) => {
-    const dt = Math.max(0, Math.min(0.1, t - lastT))
-    lastT = t
-    // ── THE SWASH FIRST, so its buffers are written every frame too ────
-    {
-      const sb = sheetL.mesh.geometry.getBuffer('aPosition')
-      const sv = sb.data as Float32Array
-      const wb = wetL.mesh.geometry.getBuffer('aPosition')
-      const wv = wb.data as Float32Array
-      const decay = Math.exp(-dt / WET_FADE)
-      for (let i = 0; i < n; i++) {
-        const a = (Math.PI * 2 * i) / n
-        const c = Math.cos(a), s = Math.sin(a)
-        const coast = (rs[i] / 100) * d * 0.74
-        const face = 0.5 + 0.5 * s
-        const facing = face * face * (3 - 2 * face)
-        // Up fast, back slow: the wave arrives and the water drains.
-        const ph = (t / SWASH_PERIOD + seed + a * 0.35) % 1
-        const run = ph < 0.3 ? ph / 0.3 : 1 - (ph - 0.3) / 0.7
-        const e = run * run * (3 - 2 * run)
-        const reach = RUNUP * facing * (0.55 + 0.45 * breakers(a, seed, t, 0.5))
-        const up = reach * e
-        wet[i] = Math.max(wet[i] * decay, up)
-        // The sheet: leading edge up the beach, tail back at the waterline.
-        const si = coast * (1 - up)
-        const so = coast * (1 + 0.015)
-        sv[i * 4] = c * si; sv[i * 4 + 1] = s * si
-        sv[i * 4 + 2] = c * so; sv[i * 4 + 3] = s * so
-        // The wet sand: as far as the water has been lately.
-        const wi = coast * (1 - wet[i])
-        wv[i * 4] = c * wi; wv[i * 4 + 1] = s * wi
-        wv[i * 4 + 2] = c * so; wv[i * 4 + 3] = s * so
-      }
-      sb.update()
-      wb.update()
-    }
-    for (const L of layers) {
-      // The buffer's OWN array, not the one it was built from: a MeshSimple
-      // may copy on construction, and the UV path below learned the same.
+  // ── WHAT NEVER CHANGES, WORKED OUT ONCE ─────────────────────────────
+  //
+  // The audit (2026-09-23) found this recomputing the trigonometry of every
+  // coastline point, for four meshes, every frame, on every island in view:
+  // a bearing's cosine, its coast radius and which way it faces are fixed
+  // for the life of the island. They are tables now.
+  const A = new Float32Array(n)
+  const COS = new Float32Array(n)
+  const SIN = new Float32Array(n)
+  const COAST = new Float32Array(n)
+  /** How much the shore at this bearing faces you: the swash's weighting,
+   *  and the breakers' (which never quite reach zero). */
+  const FACE = new Float32Array(n)
+  const FACE_BR = new Float32Array(n)
+  /** The swash's phase offset along the beach, so it travels. */
+  const PH0 = new Float32Array(n)
+  for (let i = 0; i < n; i++) {
+    const a = (Math.PI * 2 * i) / n
+    A[i] = a
+    COS[i] = Math.cos(a)
+    SIN[i] = Math.sin(a)
+    // The waterline: the top face reaches 0.74 of the coastline radius.
+    COAST[i] = (rs[i] / 100) * d * 0.74
+    // FACING. sin is +1 on the south shore, which faces the viewer, and -1 on
+    // the north, which is behind the island's own rise.
+    const face = 0.5 + 0.5 * SIN[i]
+    const f = face * face * (3 - 2 * face)
+    FACE[i] = f
+    FACE_BR[i] = 0.12 + 0.88 * f
+    PH0[i] = seed + a * 0.35
+  }
+
+  // ── AND WHAT BARELY MOVES, WORKED OUT FOUR TIMES A SECOND ───────────
+  //
+  // The breakers drift along the coast at about a hundredth of a turn a
+  // second, so their widths change by nothing the eye can see in a quarter of
+  // a second. They are sampled at 4Hz, and the breaker meshes' GEOMETRY is
+  // only rewritten then; their crests still run every frame, because that is
+  // a UV scroll and costs nothing. The swash does move every frame, but off
+  // these tables it is a few multiplies a point and no trigonometry.
+  const BRK = layers.map(() => new Float32Array(n))
+  const BRK_SW = new Float32Array(n)
+  const BRK_EVERY = 0.25
+  let brkAt = -1
+  const refreshBreakers = (t: number) => {
+    for (let li = 0; li < layers.length; li++) {
+      const L = layers[li]
+      const w = BRK[li]
       const buf = L.mesh.geometry.getBuffer('aPosition')
       const v = buf.data as Float32Array
       for (let i = 0; i < n; i++) {
-        const a = (Math.PI * 2 * i) / n
-        const c = Math.cos(a), s = Math.sin(a)
-        // The waterline: the top face reaches 0.74 of the coastline radius.
-        const coast = (rs[i] / 100) * d * 0.74
-        // FACING. s is +1 on the south shore, which faces the viewer, and -1
-        // on the north, which is behind the island's own rise.
-        const face = 0.5 + 0.5 * s
-        const facing = 0.12 + 0.88 * face * face * (3 - 2 * face)
-        const width = BAND * facing * breakers(a, seed, t, L.phase) * L.scale
-        const inner = coast * (1 + BAND * L.lift * facing * 0.6)
+        w[i] = breakers(A[i], seed, t, L.phase)
+        const width = BAND * FACE_BR[i] * w[i] * L.scale
+        const inner = COAST[i] * (1 + BAND * L.lift * FACE_BR[i] * 0.6)
         const outer = inner * (1 + width)
-        v[i * 4] = c * inner
-        v[i * 4 + 1] = s * inner
-        v[i * 4 + 2] = c * outer
-        v[i * 4 + 3] = s * outer
+        v[i * 4] = COS[i] * inner
+        v[i * 4 + 1] = SIN[i] * inner
+        v[i * 4 + 2] = COS[i] * outer
+        v[i * 4 + 3] = SIN[i] * outer
       }
       buf.update()
     }
+    for (let i = 0; i < n; i++) BRK_SW[i] = breakers(A[i], seed, t, 0.5)
+  }
+
+  const shape = (t: number) => {
+    const dt = Math.max(0, Math.min(0.1, t - lastT))
+    lastT = t
+    // A clock that went backwards (a remount, a reset) re-samples at once.
+    if (brkAt < 0 || t - brkAt >= BRK_EVERY || t < brkAt) { brkAt = t; refreshBreakers(t) }
+    // ── THE SWASH, every frame ─────────────────────────────────────────
+    const sb = sheetL.mesh.geometry.getBuffer('aPosition')
+    const sv = sb.data as Float32Array
+    const wb = wetL.mesh.geometry.getBuffer('aPosition')
+    const wv = wb.data as Float32Array
+    const decay = Math.exp(-dt / WET_FADE)
+    const cycle = t / SWASH_PERIOD
+    for (let i = 0; i < n; i++) {
+      // Up fast, back slow: the wave arrives and the water drains.
+      let ph = (cycle + PH0[i]) % 1
+      if (ph < 0) ph += 1
+      const run = ph < 0.3 ? ph / 0.3 : 1 - (ph - 0.3) / 0.7
+      const e = run * run * (3 - 2 * run)
+      const up = RUNUP * FACE[i] * (0.55 + 0.45 * BRK_SW[i]) * e
+      wet[i] = Math.max(wet[i] * decay, up)
+      const c = COS[i], sn = SIN[i], coast = COAST[i]
+      // The sheet: leading edge up the beach, tail back at the waterline.
+      const si = coast * (1 - up)
+      const so = coast * 1.015
+      sv[i * 4] = c * si; sv[i * 4 + 1] = sn * si
+      sv[i * 4 + 2] = c * so; sv[i * 4 + 3] = sn * so
+      // The wet sand: as far as the water has been lately.
+      const wi = coast * (1 - wet[i])
+      wv[i * 4] = c * wi; wv[i * 4 + 1] = sn * wi
+      wv[i * 4 + 2] = c * so; wv[i * 4 + 3] = sn * so
+    }
+    sb.update()
+    wb.update()
   }
   shape(0)
 
