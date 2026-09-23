@@ -5679,6 +5679,14 @@ export default function SeaMap({
     if (wordFolk.has(id)) return 'has a word'
     return undefined
   }, [readyFolk, wordFolk])
+  /** Live positions for the compass's moving marks. See Compass `live`. */
+  const compassLive = useMemo(() => ({
+    friend: (u: string) => friendAt.current.get(u)?.shown ?? null,
+    buyer: (zoneId: string) => {
+      const t = residents.find(r => r.key === `resident:${zoneId}`)
+      return t ? traderPos(t, Date.now() / 1000) : null
+    },
+  }), [residents])
   const regulars = useMemo<CompassRegular[]>(() => [
     ...SOCIALS.map(r => {
       // The live boat, off the same `socials` list the chart draws from, so the
@@ -6299,6 +6307,7 @@ export default function SeaMap({
     if (!finn || inAnchorage || onSeaGate) return null
     return {
       ...(() => { const a = finnNow(); return { x: a.x, y: a.y } })(),
+      at: () => { const a = finnNow(); return { x: a.x, y: a.y } },
       state: finn.questReady ? 'ready' as const
         : finn.quest ? 'working' as const
         : 'offering' as const,
@@ -11749,7 +11758,7 @@ hullRef={hullRefFor(t.key)} />
           and distances on them are the single largest thing on this screen that
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!hudOff && (
-        <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends} regulars={regulars} fine={finePointer}
+        <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends} regulars={regulars} fine={finePointer} live={compassLive}
           hullSpeed={hullSpeed} lockLine={lockLine} onPoint={pointAt}
           finn={finnBearing}
           // WHICH SEA'S HEADINGS TO GIVE — see the note on the prop. Past the
@@ -16972,7 +16981,20 @@ function fmtSail(seconds: number): string {
   const m = Math.floor(s / 60), r = s % 60
   return r ? `${m}m ${r}s` : `${m}m`
 }
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next, side, hullSpeed, lockLine, onPoint, fine }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next, side, hullSpeed, lockLine, onPoint, fine, live }: {
+  /**
+   * ── WHERE THE MOVING ONES ARE NOW ─────────────────────────────────────
+   *
+   * Kong: the compass was not tracking moving targets. Three of them were
+   * aimed at a remembered spot: Finn's position was worked out once in a
+   * memo and frozen while he sailed his loop, the zone's buyer was aimed at
+   * his mooring while his boat worked a beat around it, and friends came
+   * from the twenty-second poll while their boats on the chart glide on
+   * the live presence feed. These ask at render, from the same source the
+   * sprite is drawn from, so the arrow and the boat agree.
+   */
+  live: { friend: (username: string) => { x: number; y: number } | null; buyer: (zoneId: string) => { x: number; y: number } | null }
+
   /** Full-sail speed multiplier for this hull, for the sailing time. */
   hullSpeed: number
   /** Why a band is shut, in the words the lock wears everywhere else. */
@@ -17031,7 +17053,9 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
    * only says which way is a map feature, and one that says a job is finished
    * is a reason to turn the boat round.
    */
-  finn: { x: number; y: number; state: 'ready' | 'working' | 'offering' } | null
+  finn: { x: number; y: number; state: 'ready' | 'working' | 'offering'
+    /** Where he is NOW. He sails a loop on the clock; see `live`. */
+    at?: () => { x: number; y: number } } | null
   /** Crew waiting at a given port, so a dock with a haul on it can jump the
    *  queue. Zero for everywhere else. */
   waitingAt: (id: string) => number
@@ -17152,7 +17176,8 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
   // end of it. Working or offering, he queues after the ports like anybody
   // else — the way home still outranks a man with a suggestion.
   if (finn) {
-    const f = project(finn.x, finn.y)
+    const fa = finn.at?.() ?? finn
+    const f = project(fa.x, fa.y)
     marks.push({
       id: 'finn',
       name: finn.state === 'ready' ? `${FINN_NAME} · ready` : FINN_NAME,
@@ -17215,8 +17240,11 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
   for (const f of friends) {
     // Same side only. A mate in the Abyss is not somewhere you can meet from a
     // bay, and the arrow would sit on the horizon for the whole voyage.
-    if ((f.y < NORTH_WALL) !== north) continue
-    const at = project(f.x, f.y)
+    // The glided position the chart draws them at, off the live feed; the
+    // poll's copy is only the fallback. See `live`.
+    const fp = live.friend(f.username) ?? f
+    if ((fp.y < NORTH_WALL) !== north) continue
+    const at = project(fp.x, fp.y)
     marks.push({
       id: `friend:${f.username}`, name: f.username, dim: false, dist: true,
       sx: at.sx, sy: at.sy, world: at.world,
@@ -17294,9 +17322,11 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
     // exactly one of them, before you have laid eyes on the boat — which is
     // three quarters of the discovery spent on a label. The arrow says
     // "somebody, that way, this far"; the rest you get by sailing over.
+    // His boat, not his mooring: he works a beat around it. See `live`.
+    const ba = live.buyer(buyer.zoneId) ?? buyer
     marks.push({
       id: `buyer:${buyer.zoneId}`, name: '', dim: false, dist: true, mystery: true,
-      ...project(buyer.x, buyer.y),
+      ...project(ba.x, ba.y),
     })
   }
 
@@ -17419,6 +17449,10 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
             style={{
             position: 'absolute', left: '50%', top: '50%', zIndex: Z.compass,
             transform: `translate(${x}px, ${y}px) translate(-50%, -50%)`,
+            // GLIDES BETWEEN READS. The compass re-reads five times a second,
+            // and a mark on a moving boat stepped across the screen in 200ms
+            // jumps. The same 200ms, linear, turns the steps into motion.
+            transition: 'transform 0.2s linear',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
             // A SIGNPOST, NOT A COURSE. The mark is pressable and it lights
             // the road toward itself. It never touches the helm.
