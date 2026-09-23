@@ -176,25 +176,17 @@ const POOL_PEAK = 0.45
 
 let coreTex: Texture | null = null
 let poolTex: Texture | null = null
-let shadeTex: Texture | null = null
-/** A soft ellipse for a building's contact shadow: solid in the middle,
- *  gone at the rim, so it reads as ground in shade rather than a decal. */
-function shadowTexture(PIXI: typeof import('pixi.js')): Texture {
-  if (shadeTex) return shadeTex
-  const S = 128
-  const c = document.createElement('canvas')
-  c.width = c.height = S
-  const g = c.getContext('2d')!
-  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
-  grad.addColorStop(0.00, 'rgba(255,255,255,1)')
-  grad.addColorStop(0.45, 'rgba(255,255,255,0.85)')
-  grad.addColorStop(0.80, 'rgba(255,255,255,0.25)')
-  grad.addColorStop(1.00, 'rgba(255,255,255,0)')
-  g.fillStyle = grad
-  g.fillRect(0, 0, S, S)
-  shadeTex = PIXI.Texture.from(c)
-  return shadeTex
-}
+/** A building's cast shadow, at noon. Its own silhouette in near-black at
+ *  this opacity; see the note where it is built. */
+const SHADE = 0.26
+const SHADE_LOCKED = 0.14
+/** How long it lies, as a share of the building's height on screen. */
+const SHADOW_LEN = 0.22
+/** How far it leans to the right, in radians: away from a light in the
+ *  upper left, matching the islands' shadows in the water. */
+const SHADOW_LEAN = 0.55
+/** How much of it the night takes. The sun makes it; the lamps do not. */
+const SHADOW_NIGHT = 0.8
 
 /** The lamp itself: a hard bright middle and a short halo. Small on screen, so
  *  most of its range goes on the first fifth — anything softer than this stops
@@ -251,6 +243,8 @@ type Built = {
   lamps: Lamp[]
   /** Lamplight reaching each sprite in `sprites`, 0..1, by index. */
   warmth: number[]
+  /** Each building's cast shadow, faded by the hour. */
+  shades: Sprite[]
 }
 
 export type Towns = {
@@ -375,6 +369,7 @@ export async function makeTowns(
     }
 
     const sprites: Sprite[] = []
+    const shades: Sprite[] = []
     // BACK TO FRONT, in the order the chart lists them. Paint order is the
     // display list's order here, exactly as it was document order before, so
     // the two renderers agree without anybody sorting anything.
@@ -394,12 +389,30 @@ export async function makeTowns(
       // up like the building), thrown a little down and to the right because
       // every light on this chart comes from the upper left, is what seats
       // it. Multiplied, not painted: it darkens whatever ground is there.
-      const sh: Sprite = new PIXI.Sprite(shadowTexture(PIXI))
-      sh.anchor.set(0.5, 0.5)
-      sh.tint = 0x0a1018
-      sh.alpha = spec.locked ? 0.18 : 0.30
-      sh.blendMode = 'multiply'
+      //
+      // ── A CAST SHADOW, OUT OF THE BUILDING ITSELF ─────────────────────
+      //
+      // The first cut was a dark ellipse as wide as the building's IMAGE,
+      // centred on its bottom edge. Kong: something is wrong with the
+      // building shadows. Three things were: on the wide plates (the whole
+      // Mainland town, the homestead's patches of land) the ellipse was a
+      // dark oval across half the island; half of it poked out in front of
+      // the art, which reads as a puddle rather than a shadow; and it ignored
+      // the light and stayed at full strength at midnight.
+      //
+      // So the shadow is the building's own silhouette: the same texture in
+      // near-black, anchored at the same feet, FLIPPED so it lies on the
+      // ground instead of standing up, flattened to a fraction of the
+      // building's height, and skewed so it falls down and to the right,
+      // away from a light in the upper left, the same way the islands'
+      // shadows fall. A roofline casts a roofline. It fades with the night,
+      // because it is the sun's.
+      const sh: Sprite = new PIXI.Sprite(tex)
+      sh.anchor.set(0.5, 1)
+      sh.tint = 0x061018
+      sh.alpha = spec.locked ? SHADE_LOCKED : SHADE
       node.addChild(sh)
+      shades.push(sh)
 
       const s: Sprite = new PIXI.Sprite(tex)
       // At its FEET.
@@ -435,9 +448,15 @@ export async function makeTowns(
       sprites.push(s)
       // The shadow sits at the feet, as wide as the building and a third as
       // deep (it is on the plane, and the plane is squashed), slid down-right.
-      sh.width = w * 1.05
-      sh.height = w * 0.34 / GROUND
-      sh.position.set(s.position.x + w * 0.06, s.position.y + (w * 0.02) / GROUND)
+      // Flipped (negative y) so it hangs toward the viewer from the feet,
+      // and SHADOW_LEN of the building's on-screen height long. It lies on
+      // the plane, so it is NOT counter-squashed the way the building is:
+      // dividing by GROUND here only undoes the squash the world is about to
+      // apply, leaving the length on screen exactly SHADOW_LEN.
+      sh.scale.set(k, -(k * SHADOW_LEN) / GROUND)
+      // Positive skew leans the far end (the flipped roof) to the right.
+      sh.skew.x = SHADOW_LEAN
+      sh.position.copyFrom(s.position)
 
       // ── AND WHERE ITS CHIMNEYS ARE ───────────────────────────────
       //
@@ -487,7 +506,7 @@ export async function makeTowns(
       }
       return best
     })
-    built.push({ spec, node, sprites, lamps, warmth })
+    built.push({ spec, node, sprites, lamps, warmth, shades })
   }
 
   // ── THE SMOKE GOES IN WITH THE TOWNS ─────────────────────────────
@@ -545,6 +564,9 @@ export async function makeTowns(
           l.core.alpha = dark * CORE_PEAK
           l.pool.alpha = dark * POOL_PEAK
         }
+        // The sun's shadows go as the sun does.
+        const base = b.spec.locked ? SHADE_LOCKED : SHADE
+        for (const sh of b.shades) sh.alpha = base * (1 - dark * SHADOW_NIGHT)
       }
     },
 
@@ -560,6 +582,8 @@ export async function makeTowns(
         c.position.copyFrom(sp.position)
         c.scale.copyFrom(sp.scale)
         c.rotation = sp.rotation
+        // The shadows are skewed; a copy without it would stand straight.
+        c.skew.copyFrom(sp.skew)
         c.tint = sp.tint
         c.alpha = sp.alpha
         c.blendMode = sp.blendMode
