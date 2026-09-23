@@ -1,5 +1,6 @@
 'use server'
 
+import { getCurrentUser } from '@/lib/userData'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEffectiveDailyChallenges, getTodayUTC, DAILY_SWEEP_GEMS, type DailyChallengeState } from '@/lib/dailyChallenges'
@@ -62,8 +63,9 @@ async function resolveSnapshotLevel(
 }
 
 export async function getDailyChallenge(): Promise<DailyChallengeState | null> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  // ONE verification per request, shared. See lib/userData.
+  const user = await getCurrentUser()
   if (!user) return null
 
   const date = getTodayUTC()

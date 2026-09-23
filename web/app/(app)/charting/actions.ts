@@ -8,6 +8,7 @@
 // playing. Low stakes is still stakes. See submitMatch.
 // Types live in ./constants ('use server' strips non-async exports).
 
+import { getCurrentUser } from '@/lib/userData'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getThisWeeksMatch } from './generate'
@@ -43,8 +44,9 @@ async function loadPuzzlePoints(userId: string): Promise<number> {
 }
 
 export async function getMatchState(): Promise<MatchState | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  // ONE verification per request, shared. See lib/userData.
+  const user = await getCurrentUser()
   if (!user) return { error: 'Not authenticated' }
 
   const week = matchWeekStr()

@@ -6,6 +6,7 @@
 // the week banks RIGGING_POINTS puzzle points toward the World Chart.
 // Types live in ./constants ('use server' strips non-async exports).
 
+import { getCurrentUser } from '@/lib/userData'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getThisWeeksRigging } from './generate'
@@ -40,8 +41,9 @@ async function loadPuzzlePoints(userId: string): Promise<number> {
 }
 
 export async function getRiggingState(): Promise<RiggingState | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  // ONE verification per request, shared. See lib/userData.
+  const user = await getCurrentUser()
   if (!user) return { error: 'Not authenticated' }
 
   const week = riggingWeekStr()

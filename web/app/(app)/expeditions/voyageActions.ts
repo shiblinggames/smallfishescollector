@@ -1,5 +1,6 @@
 'use server'
 
+import { getCurrentUser } from '@/lib/userData'
 import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -50,8 +51,9 @@ export async function getDailyVoyageState(): Promise<{
   todayVoyage: DailyVoyage | null
   readyVoyage: DailyVoyage | null
 } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  // ONE verification per request, shared. See lib/userData.
+  const user = await getCurrentUser()
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()

@@ -7,6 +7,7 @@
 // puzzle points (toward the World Chart); unlimited retries, no doubloons.
 // Types live in ./minefieldConstants ('use server' strips non-async exports).
 
+import { getCurrentUser } from '@/lib/userData'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getThisWeeksMinefield, type MinefieldLayout } from './minefieldGenerate'
@@ -58,8 +59,9 @@ async function persist(userId: string, week: string, a: AttemptRow) {
 }
 
 export async function getMinefieldState(): Promise<MinefieldState | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  // ONE verification per request, shared. See lib/userData.
+  const user = await getCurrentUser()
   if (!user) return { error: 'Not authenticated' }
 
   const week = minefieldWeekStr()

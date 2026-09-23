@@ -14,9 +14,8 @@
 // Every reader authenticates itself; a reader that fails leaves its row null
 // rather than failing the board, because a board that is empty when one
 // table hiccups is a board that flashes for nothing.
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentProfile } from '@/lib/userData'
+import { getCurrentProfile, getCurrentUser } from '@/lib/userData'
 import { isPremiumActive } from '@/lib/premium'
 import { getDailyChallenge } from '@/app/(app)/fishing/dailyChallengeActions'
 import { getDailyVoyageState } from '@/app/(app)/expeditions/voyageActions'
@@ -53,8 +52,16 @@ const safe = async <T,>(p: PromiseLike<T>): Promise<T | null> => {
 }
 
 export async function dayState(): Promise<DayState | null> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ── ONE TOKEN CHECK FOR THE WHOLE BOARD ──────────────────────────────
+  //
+  // Kong: reading the day takes a long time. Measured: every reader below
+  // opened its own client and called auth.getUser(), which is a network
+  // round trip to the auth server, so a board of eight readers verified the
+  // same token nine times before a single row could be drawn. They all take
+  // the request-cached `getCurrentUser` now (lib/userData), which is the
+  // same verification through React's cache(): the first caller pays and the
+  // rest are free. Same security, one round trip.
+  const user = await getCurrentUser()
   if (!user) return null
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]

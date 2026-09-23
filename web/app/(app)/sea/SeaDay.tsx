@@ -262,9 +262,19 @@ export default function SeaDay({ size, top, right, ashore, onOpen }: {
             display: 'grid', gap: 8, marginTop: 12,
             gridTemplateColumns: 'repeat(auto-fill, minmax(152px, 1fr))',
           }}>
-            {rows.length === 0 && (
-              <p className="font-karla" style={{ fontSize: '0.82rem', color: `${SEA},0.55)`, margin: '0.4rem 0' }}>Reading the day…</p>
-            )}
+            {/* WAITING LOOKS LIKE THE BOARD, not like a sentence. Six cards
+                of the right size and shape, breathing, so the grid does not
+                jump when the read lands. */}
+            {rows.length === 0 && [0, 1, 2, 3, 4, 5].map(i => (
+              <motion.span key={i} aria-hidden
+                animate={{ opacity: [0.35, 0.6, 0.35] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
+                style={{
+                  height: 152, borderRadius: 14,
+                  background: 'rgba(255,255,255,0.035)',
+                  border: `1px solid ${SEA},0.12)`,
+                }} />
+            ))}
             {rows.map(r => {
               const ring = r.hot ? `${GOLD}88` : r.done ? 'rgba(123,191,123,0.3)' : `${SEA},0.16)`
               return (

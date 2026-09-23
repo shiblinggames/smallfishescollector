@@ -6,6 +6,7 @@
 // out of voyage/raid parties by loadDeployedParty. Types + reward math live in
 // ./constants ('use server' strips non-async exports).
 
+import { getCurrentUser } from '@/lib/userData'
 import { inCaptainsWater, CAPTAIN_WATER_SAYS, type CaptainWaterRow } from '@/lib/captainWater'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -129,8 +130,9 @@ async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState
 }
 
 export async function getTrawlState(): Promise<TrawlState | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  // ONE verification per request, shared. See lib/userData.
+  const user = await getCurrentUser()
   if (!user) return { error: 'Not authenticated' }
   return buildTrawlState(createAdminClient(), user.id)
 }

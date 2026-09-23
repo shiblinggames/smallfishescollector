@@ -10,6 +10,7 @@
 // (1-4, permanent, accumulate toward the World Chart). Types live in
 // ./constants ('use server' files silently drop non-async exports at build).
 
+import { getCurrentUser } from '@/lib/userData'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
@@ -73,8 +74,9 @@ async function loadPuzzlePoints(userId: string): Promise<number> {
 }
 
 export async function getHoldState(): Promise<HoldState | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  // ONE verification per request, shared. See lib/userData.
+  const user = await getCurrentUser()
   if (!user) return { error: 'Not authenticated' }
 
   const today = todayStr()
