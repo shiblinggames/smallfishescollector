@@ -2,6 +2,12 @@
 
 // ── THE BOARD, OPENED WHERE IT IS POSTED ────────────────────────────────────
 //
+// 2026-09-23: this is no longer a window of its own. Kong wanted the voyage
+// and the trawls to land like the other dailies, so the day board (SeaDay)
+// opens voyages one step in, in its frame and its header, and mooring at the
+// Charterhouse opens the board there. What is left here is the BODY: the
+// fetch and the panel. The notes below still describe why it is shaped so.
+//
 // Going ashore at the Charterhouse opens the actual voyage panel over the
 // water. It used to route to /expeditions, which is a hub of six cards, one of
 // which opens this — so mooring at the island whose entire purpose is voyages
@@ -34,120 +40,55 @@
 // heading and her fog — every one of those lives in a ref or in state that a
 // new set of server props does not touch. It happens twice a day at most.
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import PopupShell from '@/components/PopupShell'
 import { voyageBoard, type VoyageBoard as Board } from './voyageBoardActions'
 
 const DailyVoyagePanel = dynamic(() => import('@/app/(app)/expeditions/DailyVoyagePanel'), { ssr: false })
 
-export default function VoyageBoard({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** The voyage board's contents. Reads on every mount, which is every open:
+ *  sending a voyage unmounts the panel with its own state, and a cached board
+ *  would offer a route that is already at sea. */
+export default function VoyageBoardBody() {
   const [board, setBoard] = useState<Board | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    setError(null)
-    const res = await voyageBoard()
-    if ('error' in res) { setError(res.error); return }
-    setBoard(res)
-  }, [])
-
   useEffect(() => {
-    if (!open) return
-    // EVERY open, not only the first. Sending a voyage from here unmounts the
-    // panel with its own state; coming back to a cached board would show the
-    // routes as still available when one of them is at sea.
-    void load()
-  }, [open, load])
-
+    let alive = true
+    void voyageBoard().then(res => {
+      if (!alive) return
+      if ('error' in res) setError(res.error)
+      else setBoard(res)
+    }).catch(() => { if (alive) setError('The board would not load. Try again.') })
+    return () => { alive = false }
+  }, [])
   return (
-    // PopupShell does NOT portal, so this is a DOM child of the map — and the
-    // map steers on click and captures the pointer. Without this the backdrop
-    // tap that dismisses the board also puts the helm over.
-    <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-      <PopupShell open={open} onClose={onClose}>
-        <div role="dialog" aria-modal onClick={e => e.stopPropagation()}
-          style={{
-            // No maxHeight and no inner scroller: the modal grows to its
-            // content and PopupShell owns the scroll. See the note on the
-            // hub's copy of this shell — an inner scroll layer here made the
-            // bottom of an expanded voyage log unreachable.
-            // 680, not 480. This is a BOARD — several routes with a crew
-            // muster, a reward line and a button each — and at 480 on a desktop
-            // it was a column the width of a phone stranded in the middle of a
-            // monitor, with every card wrapping to three lines it did not need
-            // to. The phone is unaffected: the shell's padding caps it there.
-            //
-            // 820 NOW, because the routes lay themselves out in two columns
-            // wherever their host is wide enough (see .voyage-routes). At 680
-            // that was two 310px cards, which is a phone column twice — the
-            // exact shape 680 was chosen to escape. This is the width the
-            // two-column board actually wants, and it is deliberately past the
-            // --modal-w standard: that number is for panels you READ, and this
-            // is a wall of postings you compare across.
-            margin: 'auto', width: '100%', maxWidth: 820,
-            background: 'linear-gradient(180deg, rgba(6,12,22,0.34) 0%, rgba(6,11,20,0.48) 45%, rgba(5,9,16,0.44) 100%), url(/voyages-modal-bg.jpg) center / cover no-repeat',
-            border: '1px solid rgba(240,192,64,0.28)',
-            borderRadius: 20,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
-            overflow: 'hidden',
-          }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '0.85rem 1rem 0.6rem',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
-          }}>
-            <div>
-              <p className="font-karla font-700 uppercase tracking-[0.16em]"
-                style={{ fontSize: '0.5rem', color: 'rgba(240,192,64,0.7)', marginBottom: 1 }}>
-                Ashore at the Charterhouse
-              </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0e8d0' }}>
-                Voyages
-              </p>
-            </div>
-            <button type="button" onClick={onClose} aria-label="Close"
-              style={{
-                width: 30, height: 30, borderRadius: '50%', padding: 0,
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                color: '#cfcabf', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-            </button>
-          </div>
-
-          <div style={{ padding: '0.9rem 1rem 1.2rem' }}>
-            {error ? (
-              <p className="font-karla" style={{ fontSize: '0.86rem', color: 'rgba(240,168,144,0.95)', textAlign: 'center', padding: '1.4rem 0' }}>
-                {error}
-              </p>
-            ) : board ? (
-              <DailyVoyagePanel
-                roster={board.roster}
-                shipTier={board.shipTier}
-                todayVoyage={board.todayVoyage}
-                readyVoyage={board.readyVoyage}
-                expeditionXP={board.expeditionXP}
-                voyages={board.voyages}
-                gauntletUpgrades={board.gauntletUpgrades}
-              />
-            ) : (
-              // A RESERVED BOX, not a spinner that collapses when it goes. The
-              // board is tall, and a modal that snaps to full height under a
-              // thumb already reaching for it is how a mis-tap happens.
-              <div aria-busy style={{
-                minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(214,226,236,0.55)' }}>
-                  Reading the board…
-                </p>
-              </div>
-            )}
-          </div>
+    <>
+      {error ? (
+        <p className="font-karla" style={{ fontSize: '0.86rem', color: 'rgba(240,168,144,0.95)', textAlign: 'center', padding: '1.4rem 0' }}>
+          {error}
+        </p>
+      ) : board ? (
+        <DailyVoyagePanel
+          roster={board.roster}
+          shipTier={board.shipTier}
+          todayVoyage={board.todayVoyage}
+          readyVoyage={board.readyVoyage}
+          expeditionXP={board.expeditionXP}
+          voyages={board.voyages}
+          gauntletUpgrades={board.gauntletUpgrades}
+        />
+      ) : (
+        // A RESERVED BOX, not a spinner that collapses when it goes. The
+        // board is tall, and a modal that snaps to full height under a
+        // thumb already reaching for it is how a mis-tap happens.
+        <div aria-busy style={{
+          minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(214,226,236,0.55)' }}>
+            Reading the board…
+          </p>
         </div>
-      </PopupShell>
-    </div>
+      )}
+    </>
   )
 }

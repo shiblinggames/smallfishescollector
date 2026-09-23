@@ -3273,6 +3273,16 @@ each system's OWN reader (getDailyChallenge, getDailyVoyageState, getTrawlState,
 four chart-room getters, the trivia attempt tables, finnState) so the board cannot disagree with
 the sheet it opens. A failed reader drops its row, never the board.
 
+- **Groups, no pills, no overall count; voyage + trawls inside (2026-09-23, Kong).** Cards sit in
+  four fixed `GROUPS`: Free today (haul, one WIDE card), Orders of the day (orders + bounties), Crew
+  at sea (voyage + trawls), The Tavern (chart + parlor); two across everywhere. Each group header
+  shows `N ready` or its done word. The `N of M` headline and segment bar are GONE (voyages and
+  trawls repeat, so one count measured nothing); headline is `N ready to claim` / `All done for
+  today` / `The day`. Action pills removed: the card is the button. Voyage and trawls open one step
+  in (`VoyageBoardBody`, the whole of VoyageBoard.tsx now; `TrawlIndicator variant="embedded"`),
+  the voyage view widening to 820. Charterhouse and Trawl Harbor mooring send `sea-day-open`
+  `{view:'voyage'|'trawls'}`; the map's voyageOpen/trawlOpen state and both windows are gone; the
+  board's close polls crew and bounties.
 - **Cards everywhere, and finishing is an event (2026-09-23, Kong).** Rows on phones and the done
   pills were rejected: one grid of `DayCard`s (2 across under 560px, auto-fill 152px above), ordered
   ready, todo, done. Done is a full card with a green wax `Seal` (tick) in the corner. `doneBefore`

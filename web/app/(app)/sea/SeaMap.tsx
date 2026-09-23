@@ -88,7 +88,6 @@ import FishingHere, { type FishingMods } from './FishingHere'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { getHook } from '@/lib/hooks'
-import TrawlIndicator from '../fishing/TrawlIndicator'
 import { getBountyBoard } from '../expeditions/bountyActions'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
@@ -301,7 +300,6 @@ const SeaDebugPanel = dynamic(() => import('./SeaDebugPanel'), { ssr: false })
 const FinnTalk = dynamic(() => import('./FinnTalk'), { ssr: false })
 // THE VOYAGE BOARD, opened by mooring at the Charterhouse. Dynamic for the
 // same reason: it pulls in the whole expeditions voyage panel behind it.
-const VoyageBoard = dynamic(() => import('./VoyageBoard'), { ssr: false })
 const CrewHub = dynamic(() => import('./CrewHub'), { ssr: false })
 /** The campaign's own cutscene kit, held back until a post is actually read —
  *  see SeaStory. A captain who never leaves the fishing grounds never fetches
@@ -3270,7 +3268,6 @@ export default function SeaMap({
     return () => { alive = false }
   }, [getBoot])
   /** The Charterhouse's voyage board, over the water. */
-  const [voyageOpen, setVoyageOpen] = useState(false)
 
   /** The GPU island layer's camera, filled in when it mounts. Null whenever the
    *  flag is off, which is why every call below is optional. */
@@ -4149,7 +4146,6 @@ export default function SeaMap({
   /** The trawl panel, opened FROM the water. `variant="dock"` opens on mount
    *  and dismisses itself, which is exactly the shape wanted here — it is a
    *  sheet over the chart, not a page you sailed to. */
-  const [trawlOpen, setTrawlOpen] = useState(false)
 
   // ── FINN ──────────────────────────────────────────────────────────────
   //
@@ -5298,7 +5294,7 @@ export default function SeaMap({
    */
   const dayReturn = useRef(false)
   const daySheetSeen = useRef(false)
-  const anyDaySheet = voyageOpen || trawlOpen || skillOpen
+  const anyDaySheet = skillOpen
   useEffect(() => {
     if (anyDaySheet) { if (dayReturn.current) daySheetSeen.current = true; return }
     if (dayReturn.current && daySheetSeen.current) {
@@ -5403,8 +5399,6 @@ export default function SeaMap({
       if (e.key !== 'Escape') return
       if (find) { setFind(null); return }
       if (ashore) { setAshore(false); return }
-      if (voyageOpen) { setVoyageOpen(false); return }
-      if (trawlOpen) { setTrawlOpen(false); return }
       if (ordersOpen) { setOrdersOpen(false); return }
       if (choosing) { setChoosing(false); return }
       if (campaignOpen) { setCampaignOpen(false); return }
@@ -5431,7 +5425,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, voyageOpen, trawlOpen, ordersOpen, campaignOpen, choosing, shipSheet, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, gearOpen, folkOpen, mapOpen])
+  }, [find, ashore, ordersOpen, campaignOpen, choosing, shipSheet, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, gearOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -6754,8 +6748,8 @@ export default function SeaMap({
         // will be sailing when you leave. The Trawl Harbour gets its own verb
         // for the same reason: it is a thing you DO from the deck.
         const label = p.id === 'gunwharf' ? 'See to your ship at the Gunwharf'
-          : p.id === 'charterhouse' ? (voyageOpen ? null : 'Read the voyage board')
-            : p.id === 'trawl_fleet' ? (trawlOpen ? null : 'Send a trawl out')
+          : p.id === 'charterhouse' ? (overlays.day ? null : 'Read the voyage board')
+            : p.id === 'trawl_fleet' ? (overlays.day ? null : 'Send a trawl out')
               : `Go ashore at ${p.name}`
         if (label) reach.push({ id: `port:${p.id}`, label, run: () => enter(p) })
       }
@@ -7469,10 +7463,11 @@ export default function SeaMap({
     // mooring at the island whose whole purpose is voyages left you two taps
     // and a page load away from a voyage, on a screen mostly about other
     // things. The board is posted here; open it here.
-    if (p.id === 'charterhouse') { setVoyageOpen(true); return }
+    // Since 2026-09-23 the board is the day board's voyage view. See SeaDay.
+    if (p.id === 'charterhouse') { window.dispatchEvent(new CustomEvent('sea-day-open', { detail: { view: 'voyage' } })); return }
     // NOT A PAGE. The trawl panel opens over the water you are floating on,
     // because the crews you are sending are going into it.
-    if (p.id === 'trawl_fleet') { setTrawlOpen(true); return }
+    if (p.id === 'trawl_fleet') { window.dispatchEvent(new CustomEvent('sea-day-open', { detail: { view: 'trawls' } })); return }
     // AND THE SHIPYARD OPENS OVER THE WATER TOO. It was a route, and it never
     // needed to be one: the screen it renders is ALREADY a full-bleed overlay
     // with a close in the corner, so the only thing being a page bought it was
@@ -11715,13 +11710,6 @@ hullRef={hullRefFor(t.key)} />
       )}
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
-      {/* AND ASK THE HALL AGAIN ON THE WAY OUT.
-          `voyageBack` lights the Charterhouse, and it comes from the crewHub
-          POLL rather than from a server prop — so the router.refresh() this
-          board fires on a claim cannot clear it, and the island went on saying
-          "Voyage in" after the voyage had been taken. Every other panel that
-          settles something re-polls on close; this was the one that did not. */}
-      <VoyageBoard open={voyageOpen} onClose={() => { setVoyageOpen(false); pollCrew() }} />
 
       {/* ── THE GOLDEN CHOICE ──────────────────────────────────────────
           Above everything, dismissable by nothing, and asked again on the next
@@ -12222,7 +12210,7 @@ hullRef={hullRefFor(t.key)} />
           back. */}
       <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 2}
         hidden={hudOff} caughtTick={caughtTick}
-        orders={orders} onOrders={setOrders} onClose={pollBounties}
+        orders={orders} onOrders={setOrders} onClose={() => { pollBounties(); pollCrew() }}
         seed={() => getBoot().then(b => b?.day ?? null)}
         onOpen={(kind: DayKind) => {
           // A sheet opened from the board brings the board back when it
@@ -12234,9 +12222,7 @@ hullRef={hullRefFor(t.key)} />
             // leave the flag armed for the next time a sheet opens normally.
             setTimeout(() => { if (!daySheetSeen.current) dayReturn.current = false }, 1500)
           }
-          if (kind === 'voyage') setVoyageOpen(true)
-          else if (kind === 'trawls') setTrawlOpen(true)
-          else if (kind === 'chart') router.push('/tavern/chart-room')
+          if (kind === 'chart') router.push('/tavern/chart-room')
           else if (kind === 'parlor') router.push('/tavern/trivia')
         }} />
       {/* THE WAY TO ARRANGE SAILING WITH SOMEBODY, and for a while there was
@@ -12295,19 +12281,6 @@ hullRef={hullRefFor(t.key)} />
 
 
 
-      {/* THE TRAWL PANEL, over the water it is sending crews into.
-
-          The wrapper is not optional. This sheet is a DOM child of the map, and
-          the map STEERS on click and starts a heading on pointerdown — so
-          without it, tapping the backdrop to dismiss also puts the helm over and
-          you close the panel to find the boat sailing off. Exactly the trap the
-          Mainland's chooser documents a few hundred lines down. The wrapper
-          takes no space: everything inside it is position: fixed. */}
-      {trawlOpen && (
-        <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-          <TrawlIndicator variant="dock" canDeploy onDismiss={() => setTrawlOpen(false)} />
-        </div>
-      )}
 
       <CrewNews news={crewNews} onDone={() => setCrewNews(null)} />
 

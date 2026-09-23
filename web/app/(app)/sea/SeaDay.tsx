@@ -31,12 +31,15 @@
 //   so it never lands on top of a reel. Never on the first read, because the
 //   disc already says so and a greeting of four toasts is noise.
 //
-//   READY FIRST. One grid of painted cards, phone and monitor alike: what can
-//   be claimed now, what is still to do today, then what is done. Done is a
-//   full card wearing a stamped seal, not a pill at the bottom (Kong: the
-//   pills did not feel satisfying), and a card that finished since you last
-//   looked gets its seal stamped on in front of you. The header's bar fills a
-//   segment per daily, and the last one of the day closes it out in gold.
+//   IN GROUPS. Painted cards, two across on phone and monitor, in four fixed
+//   groups (Kong): free today (the haul), orders of the day (fishing orders
+//   and bounties), crew at sea (voyage and trawls, which run again whenever
+//   they are back) and the Tavern. No overall "3 of 7": the crew group is not
+//   a once-a-day chore, so one count over all of it measured nothing. Each
+//   group says whether it has something ready or is done. No action pills;
+//   the card is the button. Done is a full card wearing a stamped seal, and
+//   a card that finished since you last looked gets it stamped on in front of
+//   you. Everything done at once sparks off the headline.
 //
 //   AND IT BRINGS YOU BACK. A card opens the real sheet; closing that sheet
 //   brings the board back up, re-read, so the card you just finished is shown
@@ -67,6 +70,14 @@
 // bait beat lights this disc and that row (`data-coach="haul"`), and the
 // haul is "shut" when the board is (`sea-overlay` id 'haul').
 //
+// AND THE VOYAGE AND THE TRAWLS (2026-09-23). Kong: land them like the other
+// dailies. They were a window each, the voyage an 820px wall on a painted
+// background and the trawls a sheet of their own. They open one step in now,
+// in this frame and header, with their insides as they were (VoyageBoardBody,
+// TrawlIndicator `embedded`). The voyage view is the one that widens: its
+// routes lay out two across when there is room. Mooring at the Charterhouse
+// and the Trawl Harbor opens the board on them.
+//
 // The Posting House's bounties followed the same week (Kong: same look, same
 // way in). One step in, the same header, and mooring at the Posting House
 // opens the board on them (`view: 'bounties'`). The old stand-alone bounty
@@ -80,6 +91,10 @@ import { dayState, type DayState } from './dayActions'
 import DailyOrders from '../trawl-docks/DailyOrders'
 import BountiesPanel from '../expeditions/BountiesPanel'
 import DailyHaul from '@/components/DailyHaul'
+import dynamic from 'next/dynamic'
+import TrawlIndicator from '../fishing/TrawlIndicator'
+
+const VoyageBoardBody = dynamic(() => import('./VoyageBoard'), { ssr: false })
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import { vibrate } from '@/lib/haptics'
@@ -212,6 +227,11 @@ function rowsOf(s: DayState): Row[] {
   return rows
 }
 
+/** The one-step-in header, per view. */
+const VIEW_TITLE: Record<string, string> = {
+  haul: 'The Daily Haul', orders: 'Today’s Orders', bounties: 'Bounties', voyage: 'The Voyage', trawls: 'The Trawls',
+}
+
 function cap(t: string): string { return t.charAt(0).toUpperCase() + t.slice(1) }
 
 function left(endsAt: number): string {
@@ -247,7 +267,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
 }) {
   const [open, setOpen] = useState(false)
   /** The whole board, or one step in on Today's Orders or the bounties. */
-  const [view, setView] = useState<'board' | 'haul' | 'orders' | 'bounties'>('board')
+  const [view, setView] = useState<'board' | 'haul' | 'orders' | 'bounties' | 'voyage' | 'trawls'>('board')
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
   const close = useCallback(() => {
@@ -367,6 +387,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
       const want = (e as CustomEvent<{ view?: string } | null>).detail?.view
       if (want === 'orders') showOrders()
       else if (want === 'bounties') showBounties()
+      else if (want === 'voyage' || want === 'trawls' || want === 'haul') { setView(want); setOpen(true) }
       else setOpen(true)
     }
     document.addEventListener('visibilitychange', onVis)
@@ -432,7 +453,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   const go = (kind: DayKind) => {
     vibrate(6)
     setToast(null)
-    if (kind === 'haul') { setView('haul'); setOpen(true); return }
+    if (kind === 'haul' || kind === 'voyage' || kind === 'trawls') { setView(kind); setOpen(true); return }
     if (kind === 'orders') { showOrders(); return }
     if (kind === 'bounties') { showBounties(); return }
     setOpen(false)
@@ -570,7 +591,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
           transition={{ duration: 0.18 }}
           onClick={e => e.stopPropagation()}
           style={{
-            position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
+            position: 'relative', margin: 'auto', width: '100%', maxWidth: view === 'voyage' ? 820 : 'var(--modal-w)',
             background: 'rgba(8,12,18,0.98)', border: `1px solid ${GOLD}3a`,
             borderRadius: 18, boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
             padding: narrow ? '0.8rem 0.75rem 0.85rem' : '1.05rem 1rem 1.15rem',
@@ -602,11 +623,13 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={ART[view]} alt="" style={{ width: 30, height: 30, objectFit: 'contain' }} />
                 <p className="font-cinzel font-700" style={{ fontSize: narrow ? '1.02rem' : '1.15rem', color: '#f4ecd8', margin: 0, lineHeight: 1.25 }}>
-                  {view === 'orders' ? <>Today&rsquo;s Orders</> : view === 'haul' ? 'The Daily Haul' : 'Bounties'}
+                  {VIEW_TITLE[view]}
                 </p>
               </div>
               <div style={{ marginTop: 6 }}>
-                {view === 'haul' ? (state?.haul
+                {view === 'voyage' ? <VoyageBoardBody />
+                : view === 'trawls' ? <TrawlIndicator variant="embedded" canDeploy />
+                : view === 'haul' ? (state?.haul
                   ? <DailyHaul embedded isPremium={state.haul.isPremium}
                       gemsClaimed={state.haul.gemsClaimed} baitClaimed={state.haul.baitClaimed}
                       crateClaimed={state.haul.crateClaimed} onClaimed={() => load()} />
@@ -618,11 +641,12 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
               </div>
             </>
           ) : (<>
-          {/* ── THE HEADER, AND THE DAY AS A BAR ─────────────────────────────
-              One line of words and the reset, then one segment per daily:
-              green for each thing finished, gold for each thing waiting on
-              a claim. It is the one place the whole day reads as progress,
-              and a segment filling is the board noticing you. */}
+          {/* ── THE HEADER ────────────────────────────────────────────────
+              What is waiting on you, and when the day turns. No "3 of 7":
+              Kong, the voyage and the trawls are not once-a-day chores (they
+              run again whenever they are back), so a single count over all
+              of it measured nothing. The groups below say how each part of
+              the day stands instead. */}
           <div style={{ position: 'relative', paddingRight: 36 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 10, rowGap: 0, minHeight: 30 }}>
               <motion.p className="font-cinzel font-700"
@@ -632,58 +656,19 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
                 transition={{ type: 'spring', stiffness: 420, damping: 14 }}
                 style={{
                   fontSize: narrow ? '1.02rem' : '1.15rem', margin: 0, lineHeight: 1.25, transformOrigin: 'left center',
-                  color: state && leftN === 0 ? '#f6e3a6' : '#f4ecd8',
-                  textShadow: state && leftN === 0 ? `0 0 14px ${GOLD}55` : 'none',
+                  color: readyN > 0 ? '#f6e3a6' : state && leftN === 0 ? '#cfeccf' : '#f4ecd8',
                 }}>
                 {!state ? 'Reading the day'
+                  : readyN > 0 ? `${readyN} ready to claim`
                   : leftN === 0 ? 'All done for today'
-                  : readyN > 0 ? `${doneN} of ${rows.length} done · ${readyN} to claim`
-                  : `${doneN} of ${rows.length} done`}
+                  : 'The day'}
               </motion.p>
               <span className="font-karla" style={{ fontSize: '0.66rem', color: `${SEA},0.5)` }}>
                 <ResetCountdown />
               </span>
             </div>
-            {state && rows.length > 0 && (
-              <div style={{ position: 'relative', display: 'flex', gap: 4, marginTop: 7 }}>
-                {rows.map((r, i) => {
-                  const filled = i < doneN
-                  const gold = !filled && i < doneN + readyN
-                  return (
-                    <span key={i} style={{
-                      position: 'relative', flex: 1, height: 5, borderRadius: 3,
-                      background: gold ? `${GOLD}40` : 'rgba(255,255,255,0.08)',
-                    }}>
-                      <motion.span aria-hidden
-                        initial={false}
-                        animate={{ scaleX: filled ? 1 : 0 }}
-                        transition={{ type: 'spring', stiffness: 240, damping: 24, delay: filled && i >= doneN - stamping.length ? 0.25 + (i - (doneN - stamping.length)) * STAMP_GAP : 0 }}
-                        style={{
-                          position: 'absolute', inset: 0, borderRadius: 3, transformOrigin: 'left center',
-                          background: leftN === 0 ? `linear-gradient(90deg, ${DONE}, ${GOLD})` : `linear-gradient(90deg, ${DONE}, #a8e6a8)`,
-                        }} />
-                    </span>
-                  )
-                })}
-                {/* THE LAST ONE. A single pass of light along the whole bar
-                    and sparks off the headline, once, when the day closes
-                    out in front of you. Local to the header, never the
-                    screen. */}
-                <AnimatePresence>
-                  {cheer > 0 && (
-                    <motion.span key={`sweep${cheer}`} aria-hidden
-                      initial={{ x: '-30%', opacity: 0 }}
-                      animate={{ x: '130%', opacity: [0, 1, 0] }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.9, ease: 'easeOut' }}
-                      style={{
-                        position: 'absolute', top: -3, bottom: -3, left: 0, width: '30%', pointerEvents: 'none',
-                        background: `linear-gradient(90deg, transparent, ${GOLD}cc, transparent)`, filter: 'blur(2px)',
-                      }} />
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
+            {/* THE LAST ONE. Sparks off the headline, once, when the day
+                closes out in front of you. Local to the header. */}
             <AnimatePresence>
               {cheer > 0 && (
                 <motion.span key={`burst${cheer}`} aria-hidden initial={{ opacity: 1 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }}
@@ -704,31 +689,54 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
             </AnimatePresence>
           </div>
 
-          {/* ── THE CARDS ─────────────────────────────────────────────────
-              Kong: cards, not rows, on a phone too, and finishing something
-              should feel like something. Two across on a phone, as many as
-              fit on a monitor. Ready first, then what is left, then what is
-              done, and done is a full card with a seal stamped on it rather
-              than a pill at the bottom: the thing you finished keeps its
-              picture. A card finished since you last looked gets the seal
-              stamped on in front of you. */}
+          {/* ── THE CARDS, IN THE GROUPS THEY BELONG TO ────────────────────
+              Kong: logical groupings. What is free today, the day's orders
+              (the fishing orders and the bounties), the crew at sea (the
+              voyage and the trawls, which run again whenever they are back),
+              and the Tavern's puzzles and trivia. A fixed order, so each
+              thing is always where you left it; the gold says what is
+              waiting and the seal says what is finished. No action pills on
+              the cards: the card is the button. */}
           {!state ? (
-            <div style={{ ...gridStyle(narrow), marginTop: 12 }}>
+            <div style={{ ...gridStyle, marginTop: 12 }}>
               {[0, 1, 2, 3].map(i => (
                 <motion.span key={i} aria-hidden
                   animate={{ opacity: [0.35, 0.6, 0.35] }}
                   transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
-                  style={{ height: narrow ? 138 : 158, borderRadius: 14, background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.12)` }} />
+                  style={{ height: narrow ? 118 : 136, borderRadius: 14, background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.12)` }} />
               ))}
             </div>
-          ) : (
-            <div style={{ ...gridStyle(narrow), marginTop: 12 }}>
-              {[...ready, ...todo, ...done].map(r => (
-                <DayCard key={r.kind} r={r} compact={narrow} onGo={() => go(r.kind)}
-                  stampAt={stamping.indexOf(r.kind)} />
-              ))}
-            </div>
-          )}
+          ) : GROUPS.map(g => {
+            const cards = g.kinds.map(k => rows.find(r => r.kind === k)).filter((r): r is Row => !!r)
+            if (cards.length === 0) return null
+            const hotN = cards.filter(r => r.hot).length
+            const allDone = cards.every(r => r.done && !r.hot)
+            return (
+              <section key={g.id} style={{ marginTop: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 6, padding: '0 2px' }}>
+                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: `${SEA},0.55)` }}>
+                    {g.label}
+                  </span>
+                  {hotN > 0 ? (
+                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: GOLD }}>
+                      {hotN} ready
+                    </span>
+                  ) : allDone && (
+                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: DONE, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={DONE} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                      {g.doneWord}
+                    </span>
+                  )}
+                </div>
+                <div style={gridStyle}>
+                  {cards.map(r => (
+                    <DayCard key={r.kind} r={r} compact={narrow} wide={cards.length === 1}
+                      onGo={() => go(r.kind)} stampAt={stamping.indexOf(r.kind)} />
+                  ))}
+                </div>
+              </section>
+            )
+          })}
           </>)}
         </motion.div>
       </PopupShell>
@@ -739,12 +747,19 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
 /** Seconds between two seals when several land on one opening. */
 const STAMP_GAP = 0.2
 
-function gridStyle(narrow: boolean): React.CSSProperties {
-  return {
-    display: 'grid', gap: narrow ? 7 : 8,
-    gridTemplateColumns: narrow ? 'repeat(2, minmax(0, 1fr))' : 'repeat(auto-fill, minmax(152px, 1fr))',
-  }
+/** Two across, phone and monitor alike: every group but the haul is a pair. */
+const gridStyle: React.CSSProperties = {
+  display: 'grid', gap: 7, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
 }
+
+/** The board's groups, in a fixed order so each thing is always where it was.
+ *  Kong: bounties with the fishing orders, the voyage with the trawls. */
+const GROUPS: { id: string; label: string; doneWord: string; kinds: DayKind[] }[] = [
+  { id: 'free', label: 'Free today', doneWord: 'Claimed', kinds: ['haul'] },
+  { id: 'orders', label: 'Orders of the day', doneWord: 'All done', kinds: ['orders', 'bounties'] },
+  { id: 'crew', label: 'Crew at sea', doneWord: 'All out', kinds: ['voyage', 'trawls'] },
+  { id: 'tavern', label: 'The Tavern', doneWord: 'All done', kinds: ['chart', 'parlor'] },
+]
 
 /**
  * ── THE SEAL ────────────────────────────────────────────────────────────────
@@ -805,13 +820,18 @@ function Seal({ size, stamp, delay }: { size: number; stamp: boolean; delay: num
 }
 
 /** One daily, as a painted card. The same card on a phone and a monitor, a
- *  size smaller on the phone. `stampAt` is this card's place in the run of
- *  seals landing right now, or -1. */
-function DayCard({ r, onGo, compact, stampAt }: { r: Row; onGo: () => void; compact: boolean; stampAt: number }) {
+ *  size smaller on the phone. `wide` is a group of one (the Daily Haul): the
+ *  plate sits beside the words instead of above them, across the full row.
+ *  `stampAt` is this card's place in the run of seals landing now, or -1.
+ *
+ *  No action pill. Kong: "Open" and "Send" were not needed and cost a line on
+ *  every card; the card is the button, gold says it is waiting, and the seal
+ *  says it is finished. */
+function DayCard({ r, onGo, compact, wide, stampAt }: { r: Row; onGo: () => void; compact: boolean; wide: boolean; stampAt: number }) {
   const finished = r.done && !r.hot
   const stamp = stampAt >= 0
   const delay = 0.12 + Math.max(0, stampAt) * STAMP_GAP
-  const plate = compact ? 58 : 74
+  const plate = wide ? (compact ? 52 : 60) : compact ? 56 : 70
   return (
     <motion.button type="button" onClick={onGo} layout
       data-coach={r.kind === 'haul' ? 'haul' : undefined}
@@ -821,13 +841,17 @@ function DayCard({ r, onGo, compact, stampAt }: { r: Row; onGo: () => void; comp
         ? { scale: { duration: 0.5, delay, times: [0, 0.2, 0.45, 0.75, 1] }, layout: { type: 'spring', stiffness: 380, damping: 32 } }
         : { layout: { type: 'spring', stiffness: 380, damping: 32 } }}
       style={{
-        position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: 2, padding: compact ? '0.5rem 0.45rem 0.5rem' : '0.6rem 0.5rem 0.55rem', borderRadius: 14, cursor: 'pointer',
-        textAlign: 'center', minWidth: 0,
+        position: 'relative', display: 'flex',
+        flexDirection: wide ? 'row' : 'column', alignItems: 'center',
+        gap: wide ? 12 : 2,
+        gridColumn: wide ? '1 / -1' : undefined,
+        padding: wide ? '0.5rem 3rem 0.5rem 0.6rem' : compact ? '0.5rem 0.45rem 0.55rem' : '0.6rem 0.5rem 0.6rem',
+        borderRadius: 14, cursor: 'pointer',
+        textAlign: wide ? 'left' : 'center', minWidth: 0,
         background: r.hot
-          ? `radial-gradient(ellipse 80% 70% at 50% 28%, ${GOLD}1c 0%, transparent 70%), rgba(40,30,8,0.42)`
+          ? `radial-gradient(ellipse 80% 70% at ${wide ? '15% 50%' : '50% 28%'}, ${GOLD}1c 0%, transparent 70%), rgba(40,30,8,0.42)`
           : finished
-            ? 'radial-gradient(ellipse 80% 70% at 50% 28%, rgba(123,191,123,0.13) 0%, transparent 70%), rgba(18,30,20,0.55)'
+            ? `radial-gradient(ellipse 80% 70% at ${wide ? '15% 50%' : '50% 28%'}, rgba(123,191,123,0.13) 0%, transparent 70%), rgba(18,30,20,0.55)`
             : 'rgba(255,255,255,0.035)',
         border: `1px solid ${r.hot ? `${GOLD}88` : finished ? 'rgba(123,191,123,0.4)' : `${SEA},0.16)`}`,
         boxShadow: r.hot ? `0 0 18px ${GOLD}22` : 'none',
@@ -851,7 +875,7 @@ function DayCard({ r, onGo, compact, stampAt }: { r: Row; onGo: () => void; comp
           }} />
       )}
       {finished && <Seal size={compact ? 28 : 32} stamp={stamp} delay={delay} />}
-      <span style={{ height: plate, display: 'grid', placeItems: 'center', width: '100%' }}>
+      <span style={{ height: plate, width: wide ? plate * 1.25 : '100%', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={ART[r.kind]} alt="" loading="lazy" decoding="async"
           style={{
@@ -859,28 +883,17 @@ function DayCard({ r, onGo, compact, stampAt }: { r: Row; onGo: () => void; comp
             filter: r.hot ? `drop-shadow(0 0 10px ${GOLD}66)` : 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))',
           }} />
       </span>
-      <span className="font-cinzel font-700" style={{
-        fontSize: compact ? '0.76rem' : '0.82rem', color: '#f2ead8', lineHeight: 1.15, marginTop: 4,
-        width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-      }}>{r.title}</span>
-      <span className="font-karla" style={{
-        fontSize: compact ? '0.64rem' : '0.68rem', lineHeight: 1.3, minHeight: '2.6em', width: '100%',
-        color: r.hot ? '#f6dfa0' : finished ? 'rgba(196,232,196,0.72)' : `${SEA},0.62)`,
-        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-      }}>{finished && r.note ? `Out, ${r.note}` : r.status}</span>
-      <span style={{ minHeight: 22, display: 'flex', alignItems: 'center', marginTop: 3 }}>
-        {r.action ? (
-          <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{
-            fontSize: '0.62rem', padding: '0.3rem 0.66rem', borderRadius: 999,
-            background: r.hot ? `${GOLD}22` : 'rgba(120,170,255,0.12)',
-            color: r.hot ? GOLD : '#bcd4ff',
-            border: `1px solid ${r.hot ? `${GOLD}88` : 'rgba(120,170,255,0.32)'}`,
-          }}>{r.action}</span>
-        ) : finished && (
-          <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.16em', color: DONE }}>
-            {r.note ? 'Handled' : 'Done'}
-          </span>
-        )}
+      <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: wide ? undefined : '100%', flex: wide ? 1 : undefined }}>
+        <span className="font-cinzel font-700" style={{
+          fontSize: compact ? '0.76rem' : '0.82rem', color: '#f2ead8', lineHeight: 1.15, marginTop: wide ? 0 : 4,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{r.title}</span>
+        <span className="font-karla" style={{
+          fontSize: compact ? '0.64rem' : '0.68rem', lineHeight: 1.3, marginTop: 2,
+          minHeight: wide ? undefined : '2.6em',
+          color: r.hot ? '#f6dfa0' : finished ? 'rgba(196,232,196,0.72)' : `${SEA},0.62)`,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>{finished && r.note ? `Out, ${r.note}` : r.status}</span>
       </span>
     </motion.button>
   )

@@ -219,7 +219,7 @@ export default function TrawlIndicator({
    * sheet. 'dock' is the Trawl Docks island, where the sheet IS the page — no
    * badge, open on arrival, and closing it puts you back on the water.
    */
-  variant?: 'float' | 'dock'
+  variant?: 'float' | 'dock' | 'embedded'
   /**
    * MAY A CREW BE SENT FROM HERE.
    *
@@ -258,7 +258,10 @@ export default function TrawlIndicator({
    */
   before?: React.ReactNode
 }) {
-  const dock = variant === 'dock'
+  // 'embedded' is the day board's (2026-09-23): the dock's behaviour, no window
+  // of its own, the board's header in place of this one's title.
+  const dock = variant !== 'float'
+  const embedded = variant === 'embedded'
   const [state, setState] = useState<TrawlState | null>(null)
   const [open, setOpen] = useState(dock)
   const [now, setNow] = useState(() => Date.now())
@@ -447,7 +450,9 @@ export default function TrawlIndicator({
     setOpen(false)
   }, [leaving])
 
-  if (!state) return null
+  if (!state) return embedded
+    ? <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(180,214,232,0.6)', margin: '10px 0 4px' }}>Reading the nets&hellip;</p>
+    : null
   const hasSlots = state.unlockedSlots > 0
   // Hidden until Fishing 25 — but NEVER on the Docks. The island's sheet is the
   // page, and it also carries the day's orders (`before`), so bailing here left
@@ -657,66 +662,12 @@ export default function TrawlIndicator({
 
   // ── Panel ────────────────────────────────────────────────────────────────
   const ns = state.nextSlot
-  const panel = (
-    <AnimatePresence onExitComplete={() => { if (dock && leaving) onDismiss?.() }}>
-      {open && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          onClick={() => { if (dock) { closeDock(); return } setOpen(false); setPicking(null) }}
-          // ── THE SAME SHELL EVERY CONVERSATION ON THIS GAME USES ────────
-          //
-          // This was a bottom sheet in warm brown with only its top corners
-          // rounded, and the people you talk to out here open as centred cards
-          // on a cool dark ground with an accent hairline. Two different kinds
-          // of window for two things that are both "a panel over the world",
-          // reachable within seconds of each other.
-          //
-          // Centred, fully rounded, opaque and cool now. The gold stays as the
-          // hairline, because that is what says trawls rather than what says
-          // panel — the accent is the identity and the shell is the house.
-          //
-          // `--tabbar-safe` on a phone: this centres, and the mobile tab bar
-          // would otherwise eat the bottom rows. See the note in globals.css.
-          style={{
-            position: 'fixed', inset: 0, zIndex: 9100,
-            background: 'rgba(3,6,10,0.86)', backdropFilter: 'blur(3px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '1rem', overflowY: 'auto',
-          }}>
-          <motion.div initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-            onClick={e => e.stopPropagation()}
-            style={{
-              // RELATIVE, so the close button can pin itself to the panel.
-              position: 'relative',
-              margin: 'auto',
-              width: '100%', maxWidth: 'var(--modal-w)',
-              maxHeight: 'calc(86vh - var(--tabbar-safe))',
-              overflowY: 'auto', overscrollBehavior: 'contain',
-              background: 'rgba(9,13,19,0.98)',
-              borderRadius: 18, border: '1px solid rgba(196,169,106,0.34)',
-              boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
-              padding: '1.15rem 1.05rem 1.2rem',
-            }}>
-            {/* OUT, and the FIRST thing in the panel.
-                It used to live in the "Trawls" header row, which sits BELOW
-                `before` — and at the Trawl Docks `before` is the whole daily
-                orders block, so the one control that closes this sheet was
-                halfway down it, under a pile of other content and nowhere near
-                where a thumb goes looking.
-                A real row rather than something floated over the corner: this
-                panel's first block is a prop and can be anything, and a
-                zero-height button pinned to the corner would sit on top of
-                whatever that turns out to be. Costs one row of height and
-                cannot cover a thing. */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
-              <CloseBtn onClick={() => { if (dock) { closeDock(); return } setOpen(false); setPicking(null) }} />
-            </div>
-
-            {before}
-
+  // THE TRAWLS THEMSELVES, apart from any window. The dock sheet wraps them in
+  // its own; the day board draws them bare inside its one-step-in view.
+  const content = (<>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f4ecd8' }}>Trawls</p>
+                {!embedded && <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f4ecd8' }}>Trawls</p>}
                 {/* Slot count is now a compact tappable chip — opens the slot-info modal. */}
                 <motion.button onClick={() => { haptic(8); setSlotInfo(true) }} whileTap={{ scale: 0.9 }} aria-label="Trawl slots, how to get more"
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.26rem 0.55rem', borderRadius: 999, background: 'rgba(196,169,106,0.1)', border: '1px solid rgba(196,169,106,0.32)', cursor: 'pointer' }}>
@@ -885,6 +836,65 @@ export default function TrawlIndicator({
                 )
               })}
             </div>
+  </>)
+  const panel = (
+    <AnimatePresence onExitComplete={() => { if (dock && leaving) onDismiss?.() }}>
+      {open && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={() => { if (dock) { closeDock(); return } setOpen(false); setPicking(null) }}
+          // ── THE SAME SHELL EVERY CONVERSATION ON THIS GAME USES ────────
+          //
+          // This was a bottom sheet in warm brown with only its top corners
+          // rounded, and the people you talk to out here open as centred cards
+          // on a cool dark ground with an accent hairline. Two different kinds
+          // of window for two things that are both "a panel over the world",
+          // reachable within seconds of each other.
+          //
+          // Centred, fully rounded, opaque and cool now. The gold stays as the
+          // hairline, because that is what says trawls rather than what says
+          // panel — the accent is the identity and the shell is the house.
+          //
+          // `--tabbar-safe` on a phone: this centres, and the mobile tab bar
+          // would otherwise eat the bottom rows. See the note in globals.css.
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9100,
+            background: 'rgba(3,6,10,0.86)', backdropFilter: 'blur(3px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem', overflowY: 'auto',
+          }}>
+          <motion.div initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+            onClick={e => e.stopPropagation()}
+            style={{
+              // RELATIVE, so the close button can pin itself to the panel.
+              position: 'relative',
+              margin: 'auto',
+              width: '100%', maxWidth: 'var(--modal-w)',
+              maxHeight: 'calc(86vh - var(--tabbar-safe))',
+              overflowY: 'auto', overscrollBehavior: 'contain',
+              background: 'rgba(9,13,19,0.98)',
+              borderRadius: 18, border: '1px solid rgba(196,169,106,0.34)',
+              boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
+              padding: '1.15rem 1.05rem 1.2rem',
+            }}>
+            {/* OUT, and the FIRST thing in the panel.
+                It used to live in the "Trawls" header row, which sits BELOW
+                `before` — and at the Trawl Docks `before` is the whole daily
+                orders block, so the one control that closes this sheet was
+                halfway down it, under a pile of other content and nowhere near
+                where a thumb goes looking.
+                A real row rather than something floated over the corner: this
+                panel's first block is a prop and can be anything, and a
+                zero-height button pinned to the corner would sit on top of
+                whatever that turns out to be. Costs one row of height and
+                cannot cover a thing. */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+              <CloseBtn onClick={() => { if (dock) { closeDock(); return } setOpen(false); setPicking(null) }} />
+            </div>
+
+            {before}
+
+            {content}
           </motion.div>
         </motion.div>
       )}
@@ -1300,6 +1310,15 @@ export default function TrawlIndicator({
       )}
     </AnimatePresence>
   )
+
+  if (embedded) {
+    return (
+      <>
+        {content}
+        {mounted && createPortal(<>{picker}{slotInfoOverlay}{collectReveal}{slotUnlockOverlay}</>, document.body)}
+      </>
+    )
+  }
 
   return (
     <>
