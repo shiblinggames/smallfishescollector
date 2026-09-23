@@ -198,6 +198,19 @@ function Sparkline({ data, up, height = 40, fill = false }: { data: number[]; up
   )
 }
 
+/**
+ * ── THE COUNTDOWN LIVES IN ITS OWN LEAF ─────────────────────────────────────
+ *
+ * It was a hook called at the top of the page, so its once-a-second tick
+ * re-rendered the WHOLE market every second: every holding and browse row and
+ * every inline sparkline, and (because `ownedIds` was rebuilt on each render)
+ * a fresh filter and sort of the whole species list too. The 2026-09-23 audit.
+ * Now only this one text node re-renders.
+ */
+function Countdown({ targetIso, style }: { targetIso: string; style: React.CSSProperties }) {
+  return <p className="font-karla font-700" style={style}>{useCountdown(targetIso)}</p>
+}
+
 function useCountdown(targetIso: string) {
   const getSeconds = useCallback(() =>
     Math.max(0, Math.floor((new Date(targetIso).getTime() - Date.now()) / 1000))
@@ -696,7 +709,6 @@ export default function MarketClient({
     return () => clearInterval(t)
   }, [pendingSales.length])
 
-  const countdown = useCountdown(marketState.next_update_at)
   const mood = MOOD_CONFIG[marketState.mood] ?? MOOD_CONFIG.calm
   const fee = isPremium ? 1.0 : 0.97
 
@@ -841,7 +853,9 @@ export default function MarketClient({
   // share a mood and nothing else, so they are two screens rather than one
   // long one.
   const [side, setSide] = useState<'hold' | 'exchange'>(exchangeUnveil ? 'exchange' : 'hold')
-  const ownedIds = new Set(portfolio.map(e => e.fish_id))
+  // Memoised: a fresh Set every render made `browseAll` below recompute on
+  // every render, since the Set was one of its dependencies.
+  const ownedIds = useMemo(() => new Set(portfolio.map(e => e.fish_id)), [portfolio])
   const browseAll = useMemo(() => {
     let list = allMarket.filter(e => !ownedIds.has(e.fish_id))
     if (habitatFilter) list = list.filter(e => e.habitat === habitatFilter)
@@ -1038,7 +1052,7 @@ export default function MarketClient({
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <p className="font-karla font-500" style={{ fontSize: '0.54rem', color: '#6a6764' }}>Next update</p>
-            <p className="font-karla font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', ...TNUM }}>{countdown}</p>
+            <Countdown targetIso={marketState.next_update_at} style={{ fontSize: '0.95rem', color: '#f0ede8', ...TNUM }} />
           </div>
         </div>
 
