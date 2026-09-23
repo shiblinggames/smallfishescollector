@@ -3273,6 +3273,9 @@ each system's OWN reader (getDailyChallenge, getDailyVoyageState, getTrawlState,
 four chart-room getters, the trivia attempt tables, finnState) so the board cannot disagree with
 the sheet it opens. A failed reader drops its row, never the board.
 
+- **Out is not done (2026-09-23, Kong).** A voyage at sea and trawls all out are `away`, never
+  `done`: no seal, no stamp, no tick; the crew group says `All out` in muted blue, no check. Away
+  rows do not count as left to do, so they never hold the day open.
 - **Groups, no pills, no overall count; voyage + trawls inside (2026-09-23, Kong).** Cards sit in
   four fixed `GROUPS`: Free today (haul, one WIDE card), Orders of the day (orders + bounties), Crew
   at sea (voyage + trawls), The Tavern (chart + parlor); two across everywhere. Each group header

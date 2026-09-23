@@ -137,10 +137,14 @@ type Row = {
   done: boolean
   /** What the toast says when this row turns hot mid-session. */
   news: string | null
-  /** For a row that is out of your hands rather than finished (a voyage at
-   *  sea, every trawl out), the short wait shown on its done chip in place
-   *  of a tick. A voyage at sea is not done; it is handled. */
-  note?: string
+  /**
+   * OUT OF YOUR HANDS, NOT FINISHED: a voyage at sea, every trawl out. Kong: a
+   * tick on those made no sense, they are still going and they run again when
+   * they are back. So they are not `done` (no seal, no stamp, no tick on the
+   * group) and not left to do either (they do not keep the day open). The
+   * card just says when they are back.
+   */
+  away?: boolean
 }
 
 function rowsOf(s: DayState): Row[] {
@@ -176,9 +180,8 @@ function rowsOf(s: DayState): Row[] {
         : v.state === 'at_sea' ? (v.endsAt ? `At sea, back in ${left(v.endsAt)}` : 'At sea')
         : 'Not sent today',
       action: v.state === 'ready' ? 'Reveal' : v.state === 'none' ? 'Send' : null,
-      hot: v.state === 'ready', done: v.state === 'at_sea',
+      hot: v.state === 'ready', done: false, away: v.state === 'at_sea',
       news: v.state === 'ready' ? 'Your voyage is back' : null,
-      note: v.state === 'at_sea' && v.endsAt ? `back in ${left(v.endsAt)}` : undefined,
     })
   }
   if (s.trawls) {
@@ -188,9 +191,8 @@ function rowsOf(s: DayState): Row[] {
       status: t.ready > 0 ? `${t.ready} haul${t.ready === 1 ? '' : 's'} waiting`
         : t.out > 0 ? `${t.out} of ${t.slots} out` : `None out, ${t.slots} slot${t.slots === 1 ? '' : 's'}`,
       action: t.ready > 0 ? 'Collect' : t.out < t.slots ? 'Send' : null,
-      hot: t.ready > 0, done: t.ready === 0 && t.out >= t.slots,
+      hot: t.ready > 0, done: false, away: t.ready === 0 && t.out >= t.slots,
       news: t.ready > 0 ? (t.ready === 1 ? 'A trawl haul is in' : `${t.ready} trawl hauls are in`) : null,
-      note: t.ready === 0 && t.out >= t.slots ? 'all out' : undefined,
     })
   }
   if (s.bounties) {
@@ -412,7 +414,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
       setStamping(kinds)
       vibrate([0, 22, 60, 30])
       const s = stateRef.current
-      const all = !!s && rowsOf(s).every(r => r.done && !r.hot)
+      const all = !!s && rowsOf(s).every(r => (r.done || r.away) && !r.hot)
       if (all) {
         window.setTimeout(() => { setCheer(c => c + 1); vibrate([0, 30, 50, 40, 50, 90]) },
           (0.55 + kinds.length * STAMP_GAP) * 1000)
@@ -444,7 +446,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
 
   const rows = state ? rowsOf(state) : []
   const ready = rows.filter(r => r.hot)
-  const todo = rows.filter(r => !r.hot && !r.done)
+  const todo = rows.filter(r => !r.hot && !r.done && !r.away)
   const done = rows.filter(r => r.done && !r.hot)
   const readyN = ready.length
   const doneN = done.length
@@ -711,6 +713,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
             if (cards.length === 0) return null
             const hotN = cards.filter(r => r.hot).length
             const allDone = cards.every(r => r.done && !r.hot)
+            const allAway = !allDone && cards.every(r => (r.done || r.away) && !r.hot)
             return (
               <section key={g.id} style={{ marginTop: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 6, padding: '0 2px' }}>
@@ -725,6 +728,12 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
                     <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: DONE, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={DONE} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
                       {g.doneWord}
+                    </span>
+                  )}
+                  {hotN === 0 && allAway && g.awayWord && (
+                    // No tick: nothing here is finished, it is out working.
+                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: `${SEA},0.6)` }}>
+                      {g.awayWord}
                     </span>
                   )}
                 </div>
@@ -754,10 +763,10 @@ const gridStyle: React.CSSProperties = {
 
 /** The board's groups, in a fixed order so each thing is always where it was.
  *  Kong: bounties with the fishing orders, the voyage with the trawls. */
-const GROUPS: { id: string; label: string; doneWord: string; kinds: DayKind[] }[] = [
+const GROUPS: { id: string; label: string; doneWord: string; awayWord?: string; kinds: DayKind[] }[] = [
   { id: 'free', label: 'Free today', doneWord: 'Claimed', kinds: ['haul'] },
   { id: 'orders', label: 'Orders of the day', doneWord: 'All done', kinds: ['orders', 'bounties'] },
-  { id: 'crew', label: 'Crew at sea', doneWord: 'All out', kinds: ['voyage', 'trawls'] },
+  { id: 'crew', label: 'Crew at sea', doneWord: 'All done', awayWord: 'All out', kinds: ['voyage', 'trawls'] },
   { id: 'tavern', label: 'The Tavern', doneWord: 'All done', kinds: ['chart', 'parlor'] },
 ]
 
@@ -893,7 +902,7 @@ function DayCard({ r, onGo, compact, wide, stampAt }: { r: Row; onGo: () => void
           minHeight: wide ? undefined : '2.6em',
           color: r.hot ? '#f6dfa0' : finished ? 'rgba(196,232,196,0.72)' : `${SEA},0.62)`,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        }}>{finished && r.note ? `Out, ${r.note}` : r.status}</span>
+        }}>{r.status}</span>
       </span>
     </motion.button>
   )
