@@ -3273,6 +3273,14 @@ each system's OWN reader (getDailyChallenge, getDailyVoyageState, getTrawlState,
 four chart-room getters, the trivia attempt tables, finnState) so the board cannot disagree with
 the sheet it opens. A failed reader drops its row, never the board.
 
+- **Cards everywhere, and finishing is an event (2026-09-23, Kong).** Rows on phones and the done
+  pills were rejected: one grid of `DayCard`s (2 across under 560px, auto-fill 152px above), ordered
+  ready, todo, done. Done is a full card with a green wax `Seal` (tick) in the corner. `doneBefore`
+  diffs each read; newly done kinds queue in `fresh` and are STAMPED (seal drops in on a spring, card
+  gives, ring + sparks, one glow, haptic, staggered `STAMP_GAP`) the next time the board view is on
+  screen, never on a session's first read. Header: `N of M done` plus one segment per daily (green
+  done, gold ready); stamping the day's last one fires `cheer` (bar sweep, sparks off the headline,
+  longer haptic). All local, transform/opacity, nothing under a rounded clip.
 - **The Daily Haul folded in (2026-09-23, Kong).** Its chest disc (`SeaBonus`) is DELETED; the haul
   is the board's FIRST row (`kind: 'haul'`, gold crate plate, hot while gems/bait/crate unclaimed)
   and opens one step in with `DailyHaul embedded`. `dayState().haul` is `bonusState()`. The day disc

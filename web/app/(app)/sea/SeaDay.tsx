@@ -31,9 +31,12 @@
 //   so it never lands on top of a reel. Never on the first read, because the
 //   disc already says so and a greeting of four toasts is noise.
 //
-//   READY FIRST. The board is three sections, not one grid: what can be
-//   claimed now, what is still to do today, and what is done, the last folded
-//   down to a strip of small plates so the eye goes to what is left.
+//   READY FIRST. One grid of painted cards, phone and monitor alike: what can
+//   be claimed now, what is still to do today, then what is done. Done is a
+//   full card wearing a stamped seal, not a pill at the bottom (Kong: the
+//   pills did not feel satisfying), and a card that finished since you last
+//   looked gets its seal stamped on in front of you. The header's bar fills a
+//   segment per daily, and the last one of the day closes it out in gold.
 //
 //   AND IT BRINGS YOU BACK. A card opens the real sheet; closing that sheet
 //   brings the board back up, re-read, so the card you just finished is shown
@@ -275,6 +278,23 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   const [state, setState] = useState<DayState | null>(null)
   /** What was hot on the last read, to tell a change from a standing fact. */
   const hotBefore = useRef<Set<DayKind> | null>(null)
+  /**
+   * ── FINISHING SOMETHING IS AN EVENT ──────────────────────────────────────
+   *
+   * Kong: completing things on the board should feel satisfying. The board
+   * re-reads on its own (catches, clocks, coming back to the tab, closing a
+   * sheet), so it knows the moment a daily turns done, but the captain may
+   * not be looking. `doneBefore` is what was done on the last read; anything
+   * newly done joins `fresh`, and `fresh` is played as stamped seals the next
+   * time the board itself is on screen, whenever that is. The first read of
+   * a session stamps nothing: it is where the board starts, not news.
+   */
+  const doneBefore = useRef<Set<DayKind> | null>(null)
+  const [fresh, setFresh] = useState<DayKind[]>([])
+  /** The seals landing right now, in order. */
+  const [stamping, setStamping] = useState<DayKind[]>([])
+  /** Bumps when the last daily of the day is stamped in front of you. */
+  const [cheer, setCheer] = useState(0)
   const [toast, setToast] = useState<Toast | null>(null)
   /** News that arrived while the HUD was down, shown when it comes back. */
   const held = useRef<Toast | null>(null)
@@ -291,6 +311,13 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
       if (!alive || !s) return
       setState(s)
       const rows = rowsOf(s)
+      const doneNow = new Set(rows.filter(r => r.done && !r.hot).map(r => r.kind))
+      const wasDone = doneBefore.current
+      doneBefore.current = doneNow
+      if (wasDone) {
+        const newly = [...doneNow].filter(k => !wasDone.has(k))
+        if (newly.length) setFresh(prev => [...prev, ...newly.filter(k => !prev.includes(k))])
+      }
       const hotNow = new Set(rows.filter(r => r.hot).map(r => r.kind))
       const before = hotBefore.current
       hotBefore.current = hotNow
@@ -352,6 +379,32 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
     }
   }, [load, showOrders, showBounties])
 
+  // THE SEALS LAND when the board itself is on screen: a beat after it opens
+  // (or after coming back from one step in), so the eye is there first.
+  const stateRef = useRef(state)
+  stateRef.current = state
+  useEffect(() => {
+    if (!open || view !== 'board' || fresh.length === 0) return
+    const kinds = fresh
+    const t = setTimeout(() => {
+      setFresh([])
+      setStamping(kinds)
+      vibrate([0, 22, 60, 30])
+      const s = stateRef.current
+      const all = !!s && rowsOf(s).every(r => r.done && !r.hot)
+      if (all) {
+        window.setTimeout(() => { setCheer(c => c + 1); vibrate([0, 30, 50, 40, 50, 90]) },
+          (0.55 + kinds.length * STAMP_GAP) * 1000)
+      }
+    }, 280)
+    return () => clearTimeout(t)
+  }, [open, view, fresh])
+  useEffect(() => {
+    if (stamping.length === 0) return
+    const t = setTimeout(() => setStamping([]), 1400 + stamping.length * STAMP_GAP * 1000)
+    return () => clearTimeout(t)
+  }, [stamping])
+
   // Held news lands the moment the HUD is back.
   useEffect(() => {
     if (hidden || !held.current) return
@@ -373,6 +426,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   const todo = rows.filter(r => !r.hot && !r.done)
   const done = rows.filter(r => r.done && !r.hot)
   const readyN = ready.length
+  const doneN = done.length
   const leftN = ready.length + todo.length
 
   const go = (kind: DayKind) => {
@@ -564,84 +618,114 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
               </div>
             </>
           ) : (<>
-          {/* ── ONE LINE OF HEADER ────────────────────────────────────────
-              Kong: too long vertically on a phone, a lot of unnecessary
-              stuff. The eyebrow, the headline and the subline were three
-              lines saying one thing. It is the headline and the reset, side
-              by side, and nothing else above the rows. */}
-          <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 10, rowGap: 0, paddingRight: 36, minHeight: 30 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: narrow ? '1.02rem' : '1.15rem', color: '#f4ecd8', margin: 0, lineHeight: 1.25 }}>
-              {!state ? 'Reading the day'
-                : leftN === 0 ? 'All done for today'
-                : readyN > 0 ? `${readyN} ready to claim`
-                : `${leftN} left today`}
-            </p>
-            <span className="font-karla" style={{ fontSize: '0.66rem', color: `${SEA},0.5)` }}>
-              <ResetCountdown />
-            </span>
+          {/* ── THE HEADER, AND THE DAY AS A BAR ─────────────────────────────
+              One line of words and the reset, then one segment per daily:
+              green for each thing finished, gold for each thing waiting on
+              a claim. It is the one place the whole day reads as progress,
+              and a segment filling is the board noticing you. */}
+          <div style={{ position: 'relative', paddingRight: 36 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 10, rowGap: 0, minHeight: 30 }}>
+              <motion.p className="font-cinzel font-700"
+                key={cheer}
+                initial={cheer ? { scale: 0.92 } : false}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 14 }}
+                style={{
+                  fontSize: narrow ? '1.02rem' : '1.15rem', margin: 0, lineHeight: 1.25, transformOrigin: 'left center',
+                  color: state && leftN === 0 ? '#f6e3a6' : '#f4ecd8',
+                  textShadow: state && leftN === 0 ? `0 0 14px ${GOLD}55` : 'none',
+                }}>
+                {!state ? 'Reading the day'
+                  : leftN === 0 ? 'All done for today'
+                  : readyN > 0 ? `${doneN} of ${rows.length} done · ${readyN} to claim`
+                  : `${doneN} of ${rows.length} done`}
+              </motion.p>
+              <span className="font-karla" style={{ fontSize: '0.66rem', color: `${SEA},0.5)` }}>
+                <ResetCountdown />
+              </span>
+            </div>
+            {state && rows.length > 0 && (
+              <div style={{ position: 'relative', display: 'flex', gap: 4, marginTop: 7 }}>
+                {rows.map((r, i) => {
+                  const filled = i < doneN
+                  const gold = !filled && i < doneN + readyN
+                  return (
+                    <span key={i} style={{
+                      position: 'relative', flex: 1, height: 5, borderRadius: 3,
+                      background: gold ? `${GOLD}40` : 'rgba(255,255,255,0.08)',
+                    }}>
+                      <motion.span aria-hidden
+                        initial={false}
+                        animate={{ scaleX: filled ? 1 : 0 }}
+                        transition={{ type: 'spring', stiffness: 240, damping: 24, delay: filled && i >= doneN - stamping.length ? 0.25 + (i - (doneN - stamping.length)) * STAMP_GAP : 0 }}
+                        style={{
+                          position: 'absolute', inset: 0, borderRadius: 3, transformOrigin: 'left center',
+                          background: leftN === 0 ? `linear-gradient(90deg, ${DONE}, ${GOLD})` : `linear-gradient(90deg, ${DONE}, #a8e6a8)`,
+                        }} />
+                    </span>
+                  )
+                })}
+                {/* THE LAST ONE. A single pass of light along the whole bar
+                    and sparks off the headline, once, when the day closes
+                    out in front of you. Local to the header, never the
+                    screen. */}
+                <AnimatePresence>
+                  {cheer > 0 && (
+                    <motion.span key={`sweep${cheer}`} aria-hidden
+                      initial={{ x: '-30%', opacity: 0 }}
+                      animate={{ x: '130%', opacity: [0, 1, 0] }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.9, ease: 'easeOut' }}
+                      style={{
+                        position: 'absolute', top: -3, bottom: -3, left: 0, width: '30%', pointerEvents: 'none',
+                        background: `linear-gradient(90deg, transparent, ${GOLD}cc, transparent)`, filter: 'blur(2px)',
+                      }} />
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+            <AnimatePresence>
+              {cheer > 0 && (
+                <motion.span key={`burst${cheer}`} aria-hidden initial={{ opacity: 1 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }}
+                  transition={{ duration: 1.3 }}
+                  style={{ position: 'absolute', left: 60, top: 14, width: 0, height: 0, pointerEvents: 'none' }}>
+                  {Array.from({ length: 14 }).map((_, k) => {
+                    const a = (k / 14) * Math.PI * 2
+                    return (
+                      <motion.span key={k}
+                        initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+                        animate={{ x: Math.cos(a) * 70, y: Math.sin(a) * 34, scale: 0.3, opacity: 0 }}
+                        transition={{ duration: 0.9, ease: 'easeOut' }}
+                        style={{ position: 'absolute', width: 5, height: 5, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }} />
+                    )
+                  })}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* ── THE ROWS ──────────────────────────────────────────────────
-              No section labels: the ORDER says it (ready first, then what is
-              left) and the gold says which is which. On a phone each daily is
-              a row with its plate as a thumbnail, a quarter of a card's
-              height; on a monitor there is room for the painted cards. */}
+          {/* ── THE CARDS ─────────────────────────────────────────────────
+              Kong: cards, not rows, on a phone too, and finishing something
+              should feel like something. Two across on a phone, as many as
+              fit on a monitor. Ready first, then what is left, then what is
+              done, and done is a full card with a seal stamped on it rather
+              than a pill at the bottom: the thing you finished keeps its
+              picture. A card finished since you last looked gets the seal
+              stamped on in front of you. */}
           {!state ? (
-            narrow ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-                {[0, 1, 2, 3].map(i => (
-                  <motion.span key={i} aria-hidden
-                    animate={{ opacity: [0.35, 0.6, 0.35] }}
-                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
-                    style={{ height: 56, borderRadius: 12, background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.12)` }} />
-                ))}
-              </div>
-            ) : (
-              <div style={{ ...gridStyle, marginTop: 12 }}>
-                {[0, 1, 2].map(i => (
-                  <motion.span key={i} aria-hidden
-                    animate={{ opacity: [0.35, 0.6, 0.35] }}
-                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
-                    style={{ height: 152, borderRadius: 14, background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.12)` }} />
-                ))}
-              </div>
-            )
-          ) : (ready.length + todo.length > 0) && (
-            narrow ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-                {[...ready, ...todo].map(r => <DayRow key={r.kind} r={r} onGo={() => go(r.kind)} />)}
-              </div>
-            ) : (
-              <div style={{ ...gridStyle, marginTop: 12 }}>
-                {[...ready, ...todo].map(r => <DayCard key={r.kind} r={r} onGo={() => go(r.kind)} />)}
-              </div>
-            )
-          )}
-
-          {/* DONE, FOLDED DOWN to one strip of small plates, under a hairline
-              rather than a heading. Still tappable. */}
-          {done.length > 0 && (
-            <div style={{
-              display: 'flex', flexWrap: 'wrap', gap: 5,
-              marginTop: ready.length + todo.length > 0 ? 10 : 8,
-              paddingTop: ready.length + todo.length > 0 ? 10 : 0,
-              borderTop: ready.length + todo.length > 0 ? `1px solid ${SEA},0.1)` : 'none',
-            }}>
-              {done.map(r => (
-                <button key={r.kind} type="button" onClick={() => go(r.kind)}
-                  title={`${r.status} · ${r.place}`}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '0.22rem 0.55rem 0.22rem 0.28rem', borderRadius: 999, cursor: 'pointer',
-                    background: 'rgba(123,191,123,0.07)', border: '1px solid rgba(123,191,123,0.24)',
-                  }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={ART[r.kind]} alt="" style={{ width: 22, height: 22, objectFit: 'contain', opacity: 0.72 }} />
-                  <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: 'rgba(226,238,226,0.8)' }}>{r.title}</span>
-                  {r.note
-                    ? <span className="font-karla" style={{ fontSize: '0.6rem', color: `${SEA},0.6)` }}>{r.note}</span>
-                    : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={DONE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
-                </button>
+            <div style={{ ...gridStyle(narrow), marginTop: 12 }}>
+              {[0, 1, 2, 3].map(i => (
+                <motion.span key={i} aria-hidden
+                  animate={{ opacity: [0.35, 0.6, 0.35] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
+                  style={{ height: narrow ? 138 : 158, borderRadius: 14, background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.12)` }} />
+              ))}
+            </div>
+          ) : (
+            <div style={{ ...gridStyle(narrow), marginTop: 12 }}>
+              {[...ready, ...todo, ...done].map(r => (
+                <DayCard key={r.kind} r={r} compact={narrow} onGo={() => go(r.kind)}
+                  stampAt={stamping.indexOf(r.kind)} />
               ))}
             </div>
           )}
@@ -652,78 +736,100 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   )
 }
 
-const gridStyle: React.CSSProperties = {
-  display: 'grid', gap: 8, marginTop: 6,
-  gridTemplateColumns: 'repeat(auto-fill, minmax(152px, 1fr))',
+/** Seconds between two seals when several land on one opening. */
+const STAMP_GAP = 0.2
+
+function gridStyle(narrow: boolean): React.CSSProperties {
+  return {
+    display: 'grid', gap: narrow ? 7 : 8,
+    gridTemplateColumns: narrow ? 'repeat(2, minmax(0, 1fr))' : 'repeat(auto-fill, minmax(152px, 1fr))',
+  }
 }
 
-/** One daily, as a compact row: the phone's version of the card. The plate
- *  stays, as a thumbnail, so the board is still the sea's places and not a
- *  list of words; everything else fits on one line each. */
-function DayRow({ r, onGo }: { r: Row; onGo: () => void }) {
+/**
+ * ── THE SEAL ────────────────────────────────────────────────────────────────
+ *
+ * What a finished daily wears: a green wax seal with a tick, pressed on at a
+ * tilt in the card's corner. Static on a card that was done before you
+ * looked. On one that finished since, it is STAMPED: it drops in large and
+ * lands with a spring, the card gives under it, a ring and a spray of sparks
+ * come off the impact and the card glows once. Transform and opacity only,
+ * and nothing is clipped, so it costs nothing on the water behind it.
+ */
+function Seal({ size, stamp, delay }: { size: number; stamp: boolean; delay: number }) {
   return (
-    <button type="button" onClick={onGo}
-      data-coach={r.kind === 'haul' ? 'haul' : undefined}
-      title={`${r.status} · ${r.place}`}
-      style={{
-        position: 'relative', display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-        padding: '0.4rem 0.55rem 0.4rem 0.4rem', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-        background: r.hot
-          ? `linear-gradient(90deg, ${GOLD}18 0%, rgba(40,30,8,0.35) 100%)`
-          : 'rgba(255,255,255,0.035)',
-        border: `1px solid ${r.hot ? `${GOLD}88` : `${SEA},0.16)`}`,
-      }}>
-      {r.hot && (
-        <motion.span aria-hidden
-          animate={{ opacity: [0.5, 0, 0.5] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut' }}
-          style={{ position: 'absolute', inset: -1, borderRadius: 13, border: `1px solid ${GOLD}` }} />
+    <span aria-hidden style={{ position: 'absolute', top: 5, right: 5, width: size, height: size, zIndex: 2 }}>
+      {stamp && (
+        <>
+          <motion.span
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: [0.6, 2.1], opacity: [0, 0.7, 0] }}
+            transition={{ duration: 0.6, delay: delay + 0.14, ease: 'easeOut' }}
+            style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${DONE}` }} />
+          {Array.from({ length: 10 }).map((_, k) => {
+            const a = (k / 10) * Math.PI * 2 + 0.3
+            return (
+              <motion.span key={k}
+                initial={{ x: 0, y: 0, opacity: 0, scale: 1 }}
+                animate={{ x: Math.cos(a) * size * 1.25, y: Math.sin(a) * size * 1.25, opacity: [0, 1, 0], scale: 0.4 }}
+                transition={{ duration: 0.65, delay: delay + 0.14, ease: 'easeOut' }}
+                style={{
+                  position: 'absolute', left: size / 2 - 2.5, top: size / 2 - 2.5, width: 5, height: 5, borderRadius: '50%',
+                  background: k % 2 ? GOLD : '#b8f0b8', boxShadow: `0 0 6px ${k % 2 ? GOLD : DONE}`,
+                }} />
+            )
+          })}
+        </>
       )}
-      <span style={{ width: 46, height: 46, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={ART[r.kind]} alt="" loading="lazy" decoding="async"
-          style={{
-            maxWidth: 46, maxHeight: 46, objectFit: 'contain',
-            filter: r.hot ? `drop-shadow(0 0 7px ${GOLD}66)` : 'drop-shadow(0 1px 3px rgba(0,0,0,0.55))',
-          }} />
-      </span>
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span className="font-cinzel font-700" style={{
-          display: 'block', fontSize: '0.84rem', color: '#f2ead8', lineHeight: 1.2,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>{r.title}</span>
-        <span className="font-karla" style={{
-          display: 'block', fontSize: '0.7rem', lineHeight: 1.3, marginTop: 1,
-          color: r.hot ? '#f6dfa0' : `${SEA},0.62)`,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>{r.status}</span>
-      </span>
-      {r.action && (
-        <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{
-          flexShrink: 0, fontSize: '0.6rem', padding: '0.3rem 0.6rem', borderRadius: 999,
-          background: r.hot ? `${GOLD}22` : 'rgba(120,170,255,0.12)',
-          color: r.hot ? GOLD : '#bcd4ff',
-          border: `1px solid ${r.hot ? `${GOLD}88` : 'rgba(120,170,255,0.32)'}`,
-        }}>{r.action}</span>
-      )}
-    </button>
+      <motion.span
+        initial={stamp ? { scale: 2.3, opacity: 0, rotate: -34 } : false}
+        animate={{ scale: 1, opacity: 1, rotate: -12 }}
+        transition={stamp ? { type: 'spring', stiffness: 560, damping: 17, delay } : { duration: 0 }}
+        style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'radial-gradient(circle at 38% 32%, #5aa865 0%, #2f6b3a 58%, #1f4a28 100%)',
+          border: '1.5px solid rgba(200,245,200,0.55)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.55), inset 0 0 0 3px rgba(20,50,26,0.55), inset 0 0 0 4px rgba(200,245,200,0.18)',
+        }}>
+        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="#eaf8e4"
+          strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+          <motion.path d="M5 12.5l4.5 4.5L19 7.5"
+            initial={stamp ? { pathLength: 0 } : false}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 0.3, delay: delay + 0.2, ease: 'easeOut' }} />
+        </svg>
+      </motion.span>
+    </span>
   )
 }
 
-/** One daily, as a painted card. */
-function DayCard({ r, onGo }: { r: Row; onGo: () => void }) {
+/** One daily, as a painted card. The same card on a phone and a monitor, a
+ *  size smaller on the phone. `stampAt` is this card's place in the run of
+ *  seals landing right now, or -1. */
+function DayCard({ r, onGo, compact, stampAt }: { r: Row; onGo: () => void; compact: boolean; stampAt: number }) {
+  const finished = r.done && !r.hot
+  const stamp = stampAt >= 0
+  const delay = 0.12 + Math.max(0, stampAt) * STAMP_GAP
+  const plate = compact ? 58 : 74
   return (
-    <button type="button" onClick={onGo}
+    <motion.button type="button" onClick={onGo} layout
       data-coach={r.kind === 'haul' ? 'haul' : undefined}
       title={`${r.status} · ${r.place}`}
+      animate={stamp ? { scale: [1, 1, 0.955, 1.02, 1] } : { scale: 1 }}
+      transition={stamp
+        ? { scale: { duration: 0.5, delay, times: [0, 0.2, 0.45, 0.75, 1] }, layout: { type: 'spring', stiffness: 380, damping: 32 } }
+        : { layout: { type: 'spring', stiffness: 380, damping: 32 } }}
       style={{
         position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: 2, padding: '0.6rem 0.5rem 0.55rem', borderRadius: 14, cursor: 'pointer',
+        gap: 2, padding: compact ? '0.5rem 0.45rem 0.5rem' : '0.6rem 0.5rem 0.55rem', borderRadius: 14, cursor: 'pointer',
         textAlign: 'center', minWidth: 0,
         background: r.hot
           ? `radial-gradient(ellipse 80% 70% at 50% 28%, ${GOLD}1c 0%, transparent 70%), rgba(40,30,8,0.42)`
-          : 'rgba(255,255,255,0.035)',
-        border: `1px solid ${r.hot ? `${GOLD}88` : `${SEA},0.16)`}`,
+          : finished
+            ? 'radial-gradient(ellipse 80% 70% at 50% 28%, rgba(123,191,123,0.13) 0%, transparent 70%), rgba(18,30,20,0.55)'
+            : 'rgba(255,255,255,0.035)',
+        border: `1px solid ${r.hot ? `${GOLD}88` : finished ? 'rgba(123,191,123,0.4)' : `${SEA},0.16)`}`,
         boxShadow: r.hot ? `0 0 18px ${GOLD}22` : 'none',
       }}>
       {r.hot && (
@@ -732,33 +838,50 @@ function DayCard({ r, onGo }: { r: Row; onGo: () => void }) {
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut' }}
           style={{ position: 'absolute', inset: -1, borderRadius: 15, border: `1px solid ${GOLD}` }} />
       )}
-      <span style={{ height: 74, display: 'grid', placeItems: 'center', width: '100%' }}>
+      {/* The card lights once as the seal lands. */}
+      {stamp && (
+        <motion.span aria-hidden
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.55, 0] }}
+          transition={{ duration: 0.7, delay: delay + 0.12 }}
+          style={{
+            position: 'absolute', inset: -1, borderRadius: 15, pointerEvents: 'none',
+            background: 'radial-gradient(ellipse at 70% 20%, rgba(168,230,168,0.45), transparent 70%)',
+            border: `1px solid ${DONE}`,
+          }} />
+      )}
+      {finished && <Seal size={compact ? 28 : 32} stamp={stamp} delay={delay} />}
+      <span style={{ height: plate, display: 'grid', placeItems: 'center', width: '100%' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={ART[r.kind]} alt="" loading="lazy" decoding="async"
           style={{
-            maxWidth: '100%', maxHeight: 74, objectFit: 'contain',
+            maxWidth: '100%', maxHeight: plate, objectFit: 'contain',
             filter: r.hot ? `drop-shadow(0 0 10px ${GOLD}66)` : 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))',
           }} />
       </span>
       <span className="font-cinzel font-700" style={{
-        fontSize: '0.82rem', color: '#f2ead8', lineHeight: 1.15, marginTop: 4,
+        fontSize: compact ? '0.76rem' : '0.82rem', color: '#f2ead8', lineHeight: 1.15, marginTop: 4,
         width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>{r.title}</span>
       <span className="font-karla" style={{
-        fontSize: '0.68rem', lineHeight: 1.3, minHeight: '1.7em', width: '100%',
-        color: r.hot ? '#f6dfa0' : `${SEA},0.62)`,
+        fontSize: compact ? '0.64rem' : '0.68rem', lineHeight: 1.3, minHeight: '2.6em', width: '100%',
+        color: r.hot ? '#f6dfa0' : finished ? 'rgba(196,232,196,0.72)' : `${SEA},0.62)`,
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-      }}>{r.status}</span>
+      }}>{finished && r.note ? `Out, ${r.note}` : r.status}</span>
       <span style={{ minHeight: 22, display: 'flex', alignItems: 'center', marginTop: 3 }}>
-        {r.action && (
+        {r.action ? (
           <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{
             fontSize: '0.62rem', padding: '0.3rem 0.66rem', borderRadius: 999,
             background: r.hot ? `${GOLD}22` : 'rgba(120,170,255,0.12)',
             color: r.hot ? GOLD : '#bcd4ff',
             border: `1px solid ${r.hot ? `${GOLD}88` : 'rgba(120,170,255,0.32)'}`,
           }}>{r.action}</span>
+        ) : finished && (
+          <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.16em', color: DONE }}>
+            {r.note ? 'Handled' : 'Done'}
+          </span>
         )}
       </span>
-    </button>
+    </motion.button>
   )
 }
