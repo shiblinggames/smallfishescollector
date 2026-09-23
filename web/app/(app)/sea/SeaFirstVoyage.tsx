@@ -395,7 +395,7 @@ export default function SeaFirstVoyage({
   // refuse is worse than no instruction, because the captain tries it and
   // concludes the game is broken rather than that they are missing something.
   const text = stuck === 'bait'
-    ? 'You’re out of bait, Captain. Open the *Daily Haul*, top right, and claim your free worms.'
+    ? 'You’re out of bait, Captain. Open the *day board*, top right, and claim your free worms from the *Daily Haul*.'
     : stuck === 'hold'
       ? 'Your *hold* is full. Nothing else fits until you sell what is in it. The market on the Mainland pays best.'
       : b.text

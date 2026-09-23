@@ -2721,7 +2721,7 @@ The script is the owner's; the copy in `lib/seaOnboarding.ts` is verbatim and is
 | # | Who | Beat | Advances when | Lights |
 |---|---|---|---|---|
 | 0 | Doby | the open sea, how to move (per device) | Next | helm |
-| 1 | Doby | worms from the Daily Haul | bait lands (skipped if they have some) | haul disc + worms card |
+| 1 | Doby | worms from the Daily Haul | bait lands (skipped if they have some) | day disc + haul row + worms card |
 | 2 | Doby | sail south to the Shallows | in the ring | path |
 | 3 | Doby | enter fishing mode (Click *Fish* / hold the helm) | rod out | fish button / helm |
 | 4 | Kat | cast your line | **a bite** | cast |
@@ -3273,6 +3273,13 @@ each system's OWN reader (getDailyChallenge, getDailyVoyageState, getTrawlState,
 four chart-room getters, the trivia attempt tables, finnState) so the board cannot disagree with
 the sheet it opens. A failed reader drops its row, never the board.
 
+- **The Daily Haul folded in (2026-09-23, Kong).** Its chest disc (`SeaBonus`) is DELETED; the haul
+  is the board's FIRST row (`kind: 'haul'`, gold crate plate, hot while gems/bait/crate unclaimed)
+  and opens one step in with `DailyHaul embedded`. `dayState().haul` is `bonusState()`. The day disc
+  moved into the chest disc's slot (`right = 12 + (hud+8)*2`). First voyage: the disc and the haul row
+  carry `data-coach="haul"`, the board's close carries `haul-close`, and SeaDay announces
+  `sea-overlay` id `'haul'` with the board's open state so `haulShut` still resolves; bait copy says
+  "day board, the rising sun up top".
 - **Six rows only.** Finn's job was a seventh for one commit; Kong: that is a campaign quest, not a
   daily. It advances rather than resets, and the Salt Road panel already carries it.
 - **Rows open the real thing** (Kong's choice over "set a course"): orders -> the orders IN the

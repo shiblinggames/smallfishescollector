@@ -27,8 +27,12 @@ import { getMinefieldState } from '@/app/(app)/charting/minefieldActions'
 import { getRiggingState } from '@/app/(app)/tavern/chart-room/rigging/actions'
 import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
 import { BASE_VOYAGE_MS } from '@/lib/voyage'
+import { bonusState } from '@/app/actions/dailyBonus'
 
 export type DayState = {
+  /** The Daily Haul: gems and bait every day, a crate every Monday. Folded
+   *  into the board 2026-09-23 (Kong); it had a disc of its own. */
+  haul: { isPremium: boolean; gemsClaimed: boolean; baitClaimed: boolean; crateClaimed: boolean } | null
   /** Today's Orders: the daily challenges. */
   orders: { done: number; total: number; ready: number; sweepClaimed: boolean } | null
   /** The daily voyage. */
@@ -74,7 +78,7 @@ export async function dayState(): Promise<DayState | null> {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [profile, orders, voyage, trawls, board, hold, mtch, mine, rig, boardAttempt, ladderAttempt] = await Promise.all([
+  const [profile, orders, voyage, trawls, board, hold, mtch, mine, rig, boardAttempt, ladderAttempt, haul] = await Promise.all([
     safe(getCurrentProfile()),
     safe(getDailyChallenge()),
     safe(getDailyVoyageState()),
@@ -86,9 +90,10 @@ export async function dayState(): Promise<DayState | null> {
     safe(getRiggingState()),
     safe(admin.from('trivia_board_attempts').select('answers').eq('user_id', user.id).eq('date', kingWeekStr()).maybeSingle()),
     safe(admin.from('trivia_ladder_attempts').select('status').eq('user_id', user.id).eq('date', kingWeekStr()).maybeSingle()),
+    safe(bonusState()),
   ])
 
-  const out: DayState = { orders: null, voyage: null, trawls: null, bounties: null, chart: null, parlor: null, nextAt: null }
+  const out: DayState = { haul, orders: null, voyage: null, trawls: null, bounties: null, chart: null, parlor: null, nextAt: null }
   const now = Date.now()
   /** Keep the soonest future moment anything flips. */
   const soon = (t: number | null) => {

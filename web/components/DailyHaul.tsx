@@ -7,7 +7,7 @@
 // tapping through — three navigations to press two buttons, and nothing
 // anywhere else in the app ever mentioned that something was waiting.
 //
-// It is a modal off a HUD disc on the chart now (see sea/SeaBonus), which is
+// It is a row on the sea's day board now (see sea/SeaDay), which is
 // where people actually are. The body did not have to change to make that work
 // and mostly did not: what left was the page chrome, the back button and the
 // heading, because a modal has its own title and its own way out.
@@ -38,7 +38,7 @@ type GoodLoot = Exclude<Loot, { error: string }>
 type CratePhase = 'idle' | 'rolling' | 'revealed'
 
 
-export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0, crateClaimed: c0, onClaimed }: {
+export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0, crateClaimed: c0, onClaimed, embedded = false }: {
   isPremium: boolean
   gemsClaimed: boolean
   baitClaimed: boolean
@@ -46,6 +46,8 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
   /** Fired after any successful claim, so the disc that opened this can stop
    *  flashing the moment the last one is gone rather than on the next load. */
   onClaimed?: (all: boolean) => void
+  /** Drawn inside the day board, whose header already says Daily Haul. */
+  embedded?: boolean
 }) {
   const router = useRouter()
   const [gemsClaimed, setGemsClaimed] = useState(g0)
@@ -122,8 +124,8 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
 
   return (
     <div>
-      <div style={{ textAlign: 'center', marginBottom: 16 }}>
-        <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f5f0e6', lineHeight: 1.1 }}>Daily Haul</h2>
+      <div style={{ textAlign: 'center', marginBottom: embedded ? 12 : 16 }}>
+        {!embedded && <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f5f0e6', lineHeight: 1.1 }}>Daily Haul</h2>}
         {isPremium && (
           <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{
             display: 'inline-block', marginTop: 6,

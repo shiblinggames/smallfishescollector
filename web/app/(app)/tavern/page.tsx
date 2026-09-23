@@ -106,7 +106,7 @@ export default async function TavernPage() {
           {/* THE LOGIN BONUS IS NOT HERE ANY MORE. It was a card leading to a
               page, which put free daily currency three taps deep behind a hub
               nobody opens for it. It is a disc on the sea chart now, and it
-              flashes while something is unclaimed. See sea/SeaBonus. */}
+              flashes while something is unclaimed. It lives on the day board now, see sea/SeaDay. */}
           <ContestsHubCard hasNew={profile?.has_seen_contests !== true} />
           {/* TIDE RUN IS NOT IN THIS GAME AT ALL ANY MORE. It was a card here,
               then a man on the water, and now it is its own app on its own

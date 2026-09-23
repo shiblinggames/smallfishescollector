@@ -57,6 +57,13 @@
 // mooring at the Tally House opens the board straight onto them (the map
 // sends `sea-day-open` with `view: 'orders'`).
 //
+// THE DAILY HAUL, TOO (2026-09-23). Kong: fold it into the board. It was its
+// own chest disc beside this one, the only other HUD disc that flashed for
+// something that resets. It is the first row now (it is the one that expires
+// at midnight) and opens one step in like the orders. The first voyage's
+// bait beat lights this disc and that row (`data-coach="haul"`), and the
+// haul is "shut" when the board is (`sea-overlay` id 'haul').
+//
 // The Posting House's bounties followed the same week (Kong: same look, same
 // way in). One step in, the same header, and mooring at the Posting House
 // opens the board on them (`view: 'bounties'`). The old stand-alone bounty
@@ -69,6 +76,7 @@ import ResetCountdown from '@/components/ResetCountdown'
 import { dayState, type DayState } from './dayActions'
 import DailyOrders from '../trawl-docks/DailyOrders'
 import BountiesPanel from '../expeditions/BountiesPanel'
+import DailyHaul from '@/components/DailyHaul'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import { vibrate } from '@/lib/haptics'
@@ -77,7 +85,7 @@ const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'
 const DONE = '#7bbf7b'
 
-export type DayKind = 'orders' | 'voyage' | 'trawls' | 'bounties' | 'chart' | 'parlor'
+export type DayKind = 'haul' | 'orders' | 'voyage' | 'trawls' | 'bounties' | 'chart' | 'parlor'
 
 /**
  * ── THE PAINTING IS THE ROW ─────────────────────────────────────────────────
@@ -88,6 +96,7 @@ export type DayKind = 'orders' | 'voyage' | 'trawls' | 'bounties' | 'chart' | 'p
  * every plate already stands on the chart or hangs in the Tavern.
  */
 const ART: Record<DayKind, string> = {
+  haul: '/goldcrateclosed.png',
   orders: '/sea/harbour.png',
   voyage: '/sea/charterhouse.png',
   trawls: '/sea/trawl-shed.png',
@@ -118,6 +127,19 @@ type Row = {
 
 function rowsOf(s: DayState): Row[] {
   const rows: Row[] = []
+  if (s.haul) {
+    const h = s.haul
+    const left = [!h.gemsClaimed && 'gems', !h.baitClaimed && 'bait', !h.crateClaimed && 'a crate'].filter(Boolean) as string[]
+    rows.push({
+      kind: 'haul', title: 'The Daily Haul', place: 'Free, every day',
+      status: left.length === 0 ? 'All claimed'
+        : left.length === 1 ? `${cap(left[0])} waiting`
+        : `${cap(left.slice(0, -1).join(', '))} and ${left[left.length - 1]} waiting`,
+      action: left.length > 0 ? 'Claim' : null,
+      hot: left.length > 0, done: left.length === 0,
+      news: left.length > 0 ? 'Your daily haul is in' : null,
+    })
+  }
   if (s.orders) {
     const o = s.orders
     rows.push({
@@ -187,6 +209,8 @@ function rowsOf(s: DayState): Row[] {
   return rows
 }
 
+function cap(t: string): string { return t.charAt(0).toUpperCase() + t.slice(1) }
+
 function left(endsAt: number): string {
   const ms = Math.max(0, endsAt - Date.now())
   const h = Math.floor(ms / 3_600_000), m = Math.floor((ms % 3_600_000) / 60_000)
@@ -220,7 +244,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
 }) {
   const [open, setOpen] = useState(false)
   /** The whole board, or one step in on Today's Orders or the bounties. */
-  const [view, setView] = useState<'board' | 'orders' | 'bounties'>('board')
+  const [view, setView] = useState<'board' | 'haul' | 'orders' | 'bounties'>('board')
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
   const close = useCallback(() => {
@@ -243,6 +267,9 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   }, [])
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('sea-overlay', { detail: { id: 'day', open } }))
+    // The first voyage's `haulShut` beat waits on this id: the haul is shut
+    // when the board is, since the haul lives in it now.
+    window.dispatchEvent(new CustomEvent('sea-overlay', { detail: { id: 'haul', open } }))
   }, [open])
 
   const [state, setState] = useState<DayState | null>(null)
@@ -351,6 +378,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   const go = (kind: DayKind) => {
     vibrate(6)
     setToast(null)
+    if (kind === 'haul') { setView('haul'); setOpen(true); return }
     if (kind === 'orders') { showOrders(); return }
     if (kind === 'bounties') { showBounties(); return }
     setOpen(false)
@@ -379,6 +407,9 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
       <div data-no-steer onPointerDown={e => e.stopPropagation()}
         style={{ position: 'absolute', top, right, zIndex: 40, display: hidden ? 'none' : 'block' }}>
         <button type="button"
+          // Named so the first voyage's bait beat can light it: the Daily
+          // Haul, where the free worms are, is inside.
+          data-coach="haul"
           aria-label={readyN > 0 ? `The day, ${readyN} ready to claim` : leftN > 0 ? `The day, ${leftN} left` : 'The day, all done'}
           title="The day"
           onClick={() => { vibrate(8); setOpen(true) }}
@@ -490,7 +521,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
             borderRadius: 18, boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
             padding: narrow ? '0.8rem 0.75rem 0.85rem' : '1.05rem 1rem 1.15rem',
           }}>
-          <button type="button" onClick={close} aria-label="Close"
+          <button type="button" onClick={close} aria-label="Close" data-coach="haul-close"
             style={{
               position: 'absolute', top: narrow ? 8 : 10, right: narrow ? 8 : 10, zIndex: 2, width: 30, height: 30,
               display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 9,
@@ -517,11 +548,16 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={ART[view]} alt="" style={{ width: 30, height: 30, objectFit: 'contain' }} />
                 <p className="font-cinzel font-700" style={{ fontSize: narrow ? '1.02rem' : '1.15rem', color: '#f4ecd8', margin: 0, lineHeight: 1.25 }}>
-                  {view === 'orders' ? <>Today&rsquo;s Orders</> : 'Bounties'}
+                  {view === 'orders' ? <>Today&rsquo;s Orders</> : view === 'haul' ? 'The Daily Haul' : 'Bounties'}
                 </p>
               </div>
               <div style={{ marginTop: 6 }}>
-                {view === 'bounties' ? <BountiesPanel embedded onClose={close} /> : orders
+                {view === 'haul' ? (state?.haul
+                  ? <DailyHaul embedded isPremium={state.haul.isPremium}
+                      gemsClaimed={state.haul.gemsClaimed} baitClaimed={state.haul.baitClaimed}
+                      crateClaimed={state.haul.crateClaimed} onClaimed={() => load()} />
+                  : <p className="font-karla" style={{ fontSize: '0.8rem', color: `${SEA},0.6)`, margin: '10px 0 4px' }}>Counting the haul&hellip;</p>)
+                : view === 'bounties' ? <BountiesPanel embedded onClose={close} /> : orders
                   ? <DailyOrders embedded initial={orders}
                       onChange={next => { onOrdersRef.current(next); load() }} />
                   : <p className="font-karla" style={{ fontSize: '0.8rem', color: `${SEA},0.6)`, margin: '10px 0 4px' }}>Reading the orders&hellip;</p>}
@@ -627,6 +663,7 @@ const gridStyle: React.CSSProperties = {
 function DayRow({ r, onGo }: { r: Row; onGo: () => void }) {
   return (
     <button type="button" onClick={onGo}
+      data-coach={r.kind === 'haul' ? 'haul' : undefined}
       title={`${r.status} · ${r.place}`}
       style={{
         position: 'relative', display: 'flex', alignItems: 'center', gap: 10, width: '100%',
@@ -677,6 +714,7 @@ function DayRow({ r, onGo }: { r: Row; onGo: () => void }) {
 function DayCard({ r, onGo }: { r: Row; onGo: () => void }) {
   return (
     <button type="button" onClick={onGo}
+      data-coach={r.kind === 'haul' ? 'haul' : undefined}
       title={`${r.status} · ${r.place}`}
       style={{
         position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center',

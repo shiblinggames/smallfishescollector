@@ -377,8 +377,6 @@ const PortalMap = dynamic(() => import('./PortalMap'), { ssr: false })
 // not need in order to draw a sea.
 const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
 const SeaCrew = dynamic(() => import('./SeaCrew'), { ssr: false })
-// The Daily Haul, which used to be a page under the Tavern. See sea/SeaBonus.
-const SeaBonus = dynamic(() => import('./SeaBonus'), { ssr: false })
 // The Day: every daily on one disc beside the haul. See sea/SeaDay.
 const SeaDay = dynamic(() => import('./SeaDay'), { ssr: false })
 import type { DayKind } from './SeaDay'
@@ -12211,7 +12209,6 @@ hullRef={hullRefFor(t.key)} />
           were already placed, and the gear in particular must not move for the
           reason directly above. The haul shifts one slot inward, which is the
           one move this costs and it keeps the corner honest. */}
-      {!hudOff && <SeaBonus size={hudSize} top={18} right={12 + (hudSize + 8) * 2} />}
       {/* THE DAY: every daily on one disc, beside the haul. Kong: voyages,
           trawls, the puzzles and the Parlor were so hidden it was hard to
           remember to go and check. Each row opens the sheet the sea already
@@ -12223,7 +12220,7 @@ hullRef={hullRefFor(t.key)} />
           so an order finishing while you fished could never be noticed as a
           change. `hidden` hides the disc and holds any news until you are
           back. */}
-      <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 3}
+      <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 2}
         hidden={hudOff} caughtTick={caughtTick}
         orders={orders} onOrders={setOrders} onClose={pollBounties}
         seed={() => getBoot().then(b => b?.day ?? null)}

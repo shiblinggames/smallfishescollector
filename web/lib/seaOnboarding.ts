@@ -224,7 +224,7 @@ export const FIRST_VOYAGE: Beat[] = [
   // the worms to actually land; a captain who already has bait never sees it.
   {
     ...D,
-    text: 'Oof almost forgot. Ya need worms, kid. How you gonna catch anything without bait? Check the *Daily Haul*, the chest icon in the top right corner. You get freebies each day. Go and collect your worms.',
+    text: 'Oof almost forgot. Ya need worms, kid. How you gonna catch anything without bait? Open the *day board*, the rising sun up top, and look in the *Daily Haul*. You get freebies each day. Go and collect your worms.',
     until: 'bait',
     target: 'haul haul-bait',
   },
@@ -234,7 +234,7 @@ export const FIRST_VOYAGE: Beat[] = [
   // inside a panel that covered the sea.
   {
     ...D,
-    text: 'Got ’em. Now shut the haul and we’ll put that bait to work.',
+    text: 'Got ’em. Now shut the board and we’ll put that bait to work.',
     until: 'haulShut',
     target: 'haul-close',
   },
