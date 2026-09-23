@@ -3370,3 +3370,18 @@ FLAG: on for admins, or `?ambience=1` once (localStorage `stb:ambience`; `?ambie
   on the same reef side and inside the same rim, then `jumpTo`s there (portal passage). Already
   clear says so. Free, unlimited, 4s between uses. Simulated from inside every painted island with
   every hull: always found, farthest 520px, <1ms.
+
+## Bay moods (2026-09-23)
+
+Kong: each expedition bay was the same sea in a different colour. `BAY_MOOD` in raidWaters gives
+each bay water dials (swell, chop, caustics, glint + glint tint, whitecaps, bloom; shader uniforms
+`uBay*` / `uGlintTint`, 1 = open ocean), light (`dusk` floor under darkness, `warm` floor under
+golden hour, `grade` multiply on the sea stops), `fog` (raises the haze), weather (`storms` odds per
+window, `tempest` for the lightning kind; `bayWeatherAt` in lib/seaWeather), and life (`gulls`,
+`deep` = leviathan visibility, as layer alpha). `moodAt` in SeaMap blends them with the water
+colour's own falloff and pushes on the palette deadband (`gpu.mood`). Entering a bay's water
+(inside 0.9 r) shows a chapter title card, once per bay per 10 minutes.
+Characters: Thread = clear, long swells, bright caustics, gulls. Sunken Hand = flat, murky, fog, no
+birds. Coffers = standing golden hour, amber glints, squalls ~1 in 3. Last Fathom = heavy swell,
+never brighter than dusk, strongest blooms and leviathans. One Last Ride = choppy, whitecaps,
+storm-dark, a tempest ~95% of windows.

@@ -169,6 +169,9 @@ export type GpuHandle = {
    *  not change sixty times a second and the shader does not need telling that
    *  it has not. */
   palette(stops: number[][]): void
+  /** The bay's mood at the camera (raidWaters BAY_MOOD, blended). Water
+   *  dials, haze, and how much of the birds and the deep shapes show. */
+  mood(m: import('./raidWaters').BayMood): void
   /**
    * The player's own captain, every frame.
    *
@@ -905,6 +908,9 @@ export default function SeaIslandsGPU({
         return PIXI.Texture.from(cv)
       })()
       const haze = new PIXI.Sprite(hazeTex)
+      /** The haze by day, before night thins it. 0.12 in open water; a foggy
+       *  bay raises it (see `mood`). */
+      let hazeBase = 0.12
       // 0.12, DOWN FROM 0.34 BY WAY OF 0.20. This is the OTHER film on the screen: a static
       // one over the upper third, where the cloud bodies were a moving one over
       // all of it. At a third of full white it was doing more than air does
@@ -2101,7 +2107,7 @@ export default function SeaIslandsGPU({
           // in the dark, it goes invisible, which the palette is already
           // responsible for saying. Left at a third of itself rather than
           // nothing, so a moonlit sea still has some depth in it.
-          haze.alpha = 0.12 * (1 - d * 0.66)
+          haze.alpha = hazeBase * (1 - d * 0.66)
           // AND THE SKY GOES OUT WITH IT. A cloud is a lit thing; after dark
           // there is no sun to light it and no sun to cast it, and a shadow
           // with nothing making it is a stain on the water.
@@ -2249,6 +2255,18 @@ export default function SeaIslandsGPU({
           // seaTownGlow for why this is the town's LIGHT and not its
           // reflection.
           townGlow.night(d)
+        },
+        mood(m) {
+          if (water) {
+            water.set({
+              uSwell: m.swell, uBayChop: m.chop, uBayCaust: m.caust, uBayGlint: m.glint,
+              uBayCaps: m.caps, uBayBloom: m.bloom, uGlintTint: new Float32Array(m.glintTint),
+            })
+          }
+          hazeBase = 0.12 + m.fog * 0.2
+          haze.alpha = hazeBase * (1 - dark * 0.66)
+          gulls.view.alpha = Math.max(0, Math.min(1, m.gulls))
+          leviathans.view.alpha = Math.max(0, Math.min(1, m.deep))
         },
         palette(stops) {
           if (!water || stops.length < 3) return

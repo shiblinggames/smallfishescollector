@@ -40,6 +40,7 @@
 // argument already lives.
 
 import { OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE } from '@/app/(app)/sea/chart'
+import { BAYS, BAY_MOOD, bayCentre } from '@/app/(app)/sea/raidWaters'
 
 /** How long a set of squalls stands before the weather turns. */
 export const SQUALL_WINDOW_MS = 14 * 60_000
@@ -118,7 +119,7 @@ export function squallWindow(now: number = Date.now()): number {
  * chart big enough for a storm to be somewhere you go.
  */
 export function squallsAt(now: number = Date.now()): Squall[] {
-  return [...fishingSqualls(now), ...tempestsAt(now)]
+  return [...fishingSqualls(now), ...tempestsAt(now), ...bayWeatherAt(now)]
 }
 
 function fishingSqualls(now: number): Squall[] {
@@ -316,4 +317,44 @@ export function squallAt(x: number, y: number, now: number = Date.now()): { squa
     if (!best || deep > best.deep) best = { squall: s, deep }
   }
   return best
+}
+
+/**
+ * ── AND THE WEATHER A BAY KEEPS FOR ITSELF ──────────────────────────────────
+ *
+ * The tempests above fall anywhere in the raid water, so no chapter had
+ * weather of its own. Each bay's mood (raidWaters BAY_MOOD) says how often a
+ * window puts weather over it and whether that weather is a squall or a
+ * tempest: One Last Ride is stormy nearly every window, the Thread and the
+ * Gullet never. Derived exactly as the rest are, a hash of (window, bay), the
+ * same sky for everybody, and it pays nothing.
+ */
+function bayWeatherAt(now: number): Squall[] {
+  const win = squallWindow(now)
+  const out: Squall[] = []
+  BAYS.forEach((b, bi) => {
+    const m = BAY_MOOD[b.id]
+    if (!m || m.storms <= 0) return
+    const h = hash(win, bi * 0x3b1d + 0x6d2f)
+    if (unit(h) > m.storms) return
+    const h2 = hash(h, 0x2a71), h3 = hash(h2, 0x5e93), h4 = hash(h3, 0x71c5), h5 = hash(h4, 0x0f3b)
+    const c = bayCentre(b)
+    const ang = unit(h2) * Math.PI * 2
+    const rad = unit(h3) * b.r * 0.55
+    const big = m.tempest
+    const speed = (big ? 1.2 : 1.5) + unit(h5) * 2
+    const dir = unit(hash(h5, 0x2d77)) * Math.PI * 2
+    out.push({
+      key: `B${win}:${b.id}`,
+      x: c.x + Math.cos(ang) * rad,
+      y: c.y + Math.sin(ang) * rad,
+      r: big ? Math.min(b.r * 1.1, 4200 + unit(hash(h5, 0x61af)) * 2400) : 2200 + unit(hash(h5, 0x61af)) * 1600,
+      power: big ? 1.1 + unit(h4) * 0.4 : 0.6 + unit(h4) * 0.4,
+      vx: Math.cos(dir) * speed,
+      vy: Math.sin(dir) * speed,
+      endsAt: (win + 1) * SQUALL_WINDOW_MS,
+      ...(big ? { big: true } : {}),
+    })
+  })
+  return out
 }

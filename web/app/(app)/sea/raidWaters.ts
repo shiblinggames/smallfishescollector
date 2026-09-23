@@ -183,6 +183,76 @@ export const BAY_BY_ID: Record<string, Bay> =
   Object.fromEntries(BAYS.map(b => [b.id, b]))
 
 /** The middle of a bay's water. */
+/**
+ * ── EACH CHAPTER'S OWN WEATHER, LIGHT AND LIFE ──────────────────────────────
+ *
+ * Kong: every bay was the same sea in a different colour. The water shader,
+ * the light, the squalls, the gulls and the shadows below were identical in
+ * all five, so crossing into a new chapter changed a tint and nothing else.
+ * This is everything else. The chart blends these by the same falloff the
+ * water colour uses (see moodAt in SeaMap), so a bay's mood arrives as you
+ * sail into it rather than switching on a line.
+ *
+ *   swell, chop, caust, glint, caps, bloom
+ *                multipliers on the water shader's own terms; 1 is the open
+ *                ocean exactly. glintTint colours the sun on the water.
+ *   dusk         a floor under the day's darkness: 0.45 is a bay that is never
+ *                brighter than early evening, so its lamps are always lit.
+ *   warm         a floor under the golden-hour warmth.
+ *   grade        a colour multiply on the sea's three stops.
+ *   fog          how much the far water hazes over, 0 clear to 1 thick.
+ *   storms       the odds each weather window puts weather in this bay, and
+ *   tempest      whether that weather is a squall or the big lightning kind.
+ *   gulls        how many of the birds are here, 0 none to 1 all.
+ *   deep         how plainly the shapes below show, 0 none to 1 all.
+ */
+export type BayMood = {
+  swell: number; chop: number; caust: number; glint: number; caps: number; bloom: number
+  glintTint: [number, number, number]
+  dusk: number; warm: number; grade: [number, number, number]; fog: number
+  storms: number; tempest: boolean; gulls: number; deep: number
+}
+
+/** The open ocean, and the value every bay is blended against. */
+export const NEUTRAL_MOOD: BayMood = {
+  swell: 1, chop: 1, caust: 1, glint: 1, caps: 1, bloom: 1, glintTint: [1, 1, 1],
+  dusk: 0, warm: 0, grade: [1, 1, 1], fog: 0, storms: 0, tempest: false, gulls: 1, deep: 1,
+}
+
+export const BAY_MOOD: Record<string, BayMood> = {
+  // THE LOOSE THREAD. The first chapter's water: huge, clear, forgiving.
+  // Long lazy swells, bright light through the shallows, clear skies, gulls.
+  thread: {
+    swell: 1.25, chop: 0.8, caust: 1.6, glint: 1.1, caps: 0.8, bloom: 0.8, glintTint: [1, 1, 1],
+    dusk: 0, warm: 0, grade: [1, 1, 1], fog: 0, storms: 0, tempest: false, gulls: 1, deep: 0.5,
+  },
+  // A BIGGER FISH. The Gullet's water, and the coast is bone. Flat, murky and
+  // still, green-grey light, fog on it, and nothing flying: dead water.
+  sunken_hand: {
+    swell: 0.55, chop: 0.5, caust: 0.4, glint: 0.45, caps: 0.3, bloom: 1.2, glintTint: [0.85, 1, 0.8],
+    dusk: 0.18, warm: 0, grade: [0.92, 1, 0.88], fog: 1, storms: 0, tempest: false, gulls: 0, deep: 0.7,
+  },
+  // THE COFFERS. Gold water, gold light: a standing golden hour, the glints
+  // gone amber and doubled, a squall now and then over the fleet.
+  the_coffers: {
+    swell: 1, chop: 1, caust: 1.1, glint: 1.7, caps: 0.9, bloom: 0.5, glintTint: [1, 0.78, 0.42],
+    dusk: 0, warm: 0.55, grade: [1.06, 0.99, 0.88], fog: 0.15, storms: 0.3, tempest: false, gulls: 1, deep: 0.3,
+  },
+  // THE LAST FATHOM. The deepest and darkest water there is: a heavy swell,
+  // never brighter than dusk, the blooms at their strongest, and the shapes
+  // below at their plainest.
+  the_last_fathom: {
+    swell: 1.6, chop: 1.1, caust: 0.2, glint: 0.6, caps: 1.1, bloom: 2.2, glintTint: [0.8, 0.9, 1.1],
+    dusk: 0.45, warm: 0, grade: [0.86, 0.93, 1.06], fog: 0.3, storms: 0.35, tempest: false, gulls: 0.15, deep: 1,
+  },
+  // ONE LAST RIDE. The coda, and it should feel like one: choppy and white-
+  // capped, storm-dark, and a tempest over it nearly every window.
+  one_last_ride: {
+    swell: 1.4, chop: 1.8, caust: 0.2, glint: 0.5, caps: 2, bloom: 0.6, glintTint: [0.9, 0.85, 1.1],
+    dusk: 0.35, warm: 0, grade: [0.9, 0.86, 1.05], fog: 0.35, storms: 0.95, tempest: true, gulls: 0, deep: 0.8,
+  },
+}
+
 export function bayCentre(b: Bay): { x: number; y: number } {
   return {
     x: HUB.x + Math.cos(b.bearing) * b.at,

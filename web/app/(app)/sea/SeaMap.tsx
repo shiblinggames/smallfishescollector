@@ -57,7 +57,7 @@ import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface
 import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/homestead'
 import { couriersAround, courierSlots } from '@/lib/seaCouriers'
 import {
-  BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
+  BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen, BAY_MOOD, NEUTRAL_MOOD, type BayMood,
   fromStrait, toStrait, fromBay, toBay, inBay, inChapterWater, bayOpen,
   bayShutLine, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
   encounterNear, cacheNear, hullFor, portraitFor, encArt, DOCK, dockAt, ENCOUNTER_REACH,
@@ -1434,6 +1434,42 @@ function bayGap(b: Bay, x: number, y: number): number {
   const oa = Math.max(0, Math.abs(q.along - straitLen(b) / 2) - straitLen(b) / 2)
   const oc = Math.max(0, Math.abs(q.across) - b.half)
   return Math.min(disc, Math.hypot(oa, oc))
+}
+
+/**
+ * ── THE BAY'S MOOD HERE ─────────────────────────────────────────────────────
+ *
+ * Every number in raidWaters BAY_MOOD, blended at this point by exactly the
+ * falloff the water colour uses (bayGap, BAY_VOTE, the same knee), against the
+ * open ocean's NEUTRAL_MOOD at the open ocean's small vote. So a chapter's
+ * weather, light and life arrive with its colour and in the same place, and
+ * the junction between bays is a little of each. The two flags go to whichever
+ * side holds most of the weight.
+ */
+function moodAt(p: Vec): BayMood {
+  let wSum = 0.18
+  const w: { m: BayMood; k: number }[] = [{ m: NEUTRAL_MOOD, k: 0.18 }]
+  for (const b of BAYS) {
+    const m = BAY_MOOD[b.id]
+    if (!m) continue
+    const d = bayGap(b, p.x, p.y) / 900
+    const d2 = d * d
+    const k = BAY_VOTE / (1 + d2 * d2 * d2)
+    if (k < 0.004) continue
+    wSum += k
+    w.push({ m, k })
+  }
+  if (w.length === 1) return NEUTRAL_MOOD
+  const mix = (f: (m: BayMood) => number) => w.reduce((a, e) => a + f(e.m) * e.k, 0) / wSum
+  const mix3 = (f: (m: BayMood) => [number, number, number]): [number, number, number] =>
+    [0, 1, 2].map(i => mix(m => f(m)[i])) as [number, number, number]
+  const top = w.reduce((a, e) => (e.k > a.k ? e : a))
+  return {
+    swell: mix(m => m.swell), chop: mix(m => m.chop), caust: mix(m => m.caust), glint: mix(m => m.glint),
+    caps: mix(m => m.caps), bloom: mix(m => m.bloom), glintTint: mix3(m => m.glintTint),
+    dusk: mix(m => m.dusk), warm: mix(m => m.warm), grade: mix3(m => m.grade), fog: mix(m => m.fog),
+    storms: mix(m => m.storms), tempest: top.m.tempest, gulls: mix(m => m.gulls), deep: mix(m => m.deep),
+  }
 }
 
 /** Are we in this water? A band is a ring around the Mainland, south only. */
@@ -5987,6 +6023,19 @@ export default function SeaMap({
   // AND NOT DURING THE ARRIVAL. The discs come up as the hull lands, which is
   // the difference between a sea with an interface on it and an interface.
   const hudOff = !!fishingIn || fightOn || !arrived
+  /** The bay mood at the hull, re-read on the palette's deadband. */
+  const moodNow = useRef<BayMood | null>(null)
+  /** Which bay's water the hull is properly inside, and when each chapter's
+   *  name last came up, so crossing back and forth at a strait mouth does not
+   *  put the card up every time. Ten minutes, per bay, per session. */
+  const bayIn = useRef<string | null>(null)
+  const bayTitled = useRef<Record<string, number>>({})
+  const [bayTitle, setBayTitle] = useState<{ key: number; chapter: number; name: string } | null>(null)
+  useEffect(() => {
+    if (!bayTitle) return
+    const t = window.setTimeout(() => setBayTitle(null), 3600)
+    return () => window.clearTimeout(t)
+  }, [bayTitle])
   /**
    * ── THE SEA, HEARD (behind a flag, 2026-09-23) ─────────────────────────
    *
@@ -9683,14 +9732,39 @@ export default function SeaMap({
       // this one is not, and handing the canvas a palette from the wrong hour
       // is how you get a sea that is a step behind its own sky.
       if (gpuRef.current) {
-        const raw = clk.darkness
+        // ── AND THE BAY'S MOOD ON TOP ───────────────────────────────────
+        // Its dusk is a floor under the hour's darkness and its warmth a floor
+        // under the hour's gold, so the Fathom is never brighter than evening
+        // and the Coffers always sit in golden hour. Its grade multiplies the
+        // sea's stops. Re-read on the same deadband as the palette. See
+        // moodAt and raidWaters BAY_MOOD.
+        if (movedFar || !moodNow.current) moodNow.current = moodAt(pos.current)
+        const mood = moodNow.current
+        const raw = clk.darkness + (1 - clk.darkness) * mood.dusk
+        const warmth = Math.max(clk.warmth, mood.warm)
         if (movedFar || Math.abs(raw - lastRaw) > 0.002) {
           lastRaw = raw
-          gpuRef.current.palette(seaAt(pos.current, raw).stops)
+          const g = mood.grade
+          gpuRef.current.palette(seaAt(pos.current, raw).stops.map(c => c.map((v, i) => Math.min(255, v * g[i]))))
+          gpuRef.current.mood(mood)
+          // A CHAPTER'S NAME, the moment you are properly in its water.
+          const inside = BAYS.find(b => {
+            const c = bayCentre(b)
+            return Math.hypot(pos.current.x - c.x, pos.current.y - c.y) < b.r * 0.9
+          })?.id ?? null
+          if (inside !== bayIn.current) {
+            bayIn.current = inside
+            const shownAt = bayTitled.current[inside ?? ''] ?? -Infinity
+            if (inside && performance.now() - shownAt > 10 * 60_000) {
+              bayTitled.current[inside] = performance.now()
+              const b = BAY_BY_ID[inside]
+              if (b) setBayTitle({ key: Date.now(), chapter: b.chapter, name: b.name })
+            }
+          }
         }
         // A tint, not a filter: see nightTint for why that distinction is the
         // whole reason the islands can be lit at all after what the filter did.
-        gpuRef.current.night(raw, clk.warmth)
+        gpuRef.current.night(raw, warmth)
         // ── AND HOW MUCH LANTERN WAS PAID FOR ─────────────────────────
         //
         // Here rather than in an effect on the tier, and the reason is the
@@ -12265,6 +12339,35 @@ hullRef={hullRefFor(t.key)} />
           setSkillOpen(false)
           setRenownOpen(true)
         }} />
+
+      {/* ── A CHAPTER'S NAME, ON ARRIVAL ─────────────────────────────────
+          Kong: make each expedition zone feel like somewhere. Sailing into a
+          bay's water puts its chapter up for a few seconds: small, high,
+          letting touches through, and gone on its own. The water's own name
+          already lives top-centre; this sits under it and fades. */}
+      <AnimatePresence>
+        {bayTitle && (
+          <motion.div key={bayTitle.key} aria-live="polite"
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+            style={{
+              position: 'absolute', left: 0, right: 0, top: '17%', zIndex: Z.compass + 1,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none',
+              textShadow: '0 2px 12px rgba(0,0,0,0.85)',
+            }}>
+            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.34em', color: 'rgba(240,192,64,0.9)' }}>
+              {bayTitle.chapter >= 5 ? 'The Last Chapter' : `Chapter ${['', 'I', 'II', 'III', 'IV'][bayTitle.chapter] ?? bayTitle.chapter}`}
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+              <span aria-hidden style={{ width: 38, height: 1, background: 'linear-gradient(90deg, transparent, rgba(240,220,170,0.7))' }} />
+              <span className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: '#f4ead2', letterSpacing: '0.02em' }}>
+                {bayTitle.name}
+              </span>
+              <span aria-hidden style={{ width: 38, height: 1, background: 'linear-gradient(90deg, rgba(240,220,170,0.7), transparent)' }} />
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Portals itself to the body at z 1300, over the chart and everything
           standing on it. Tap anywhere to dismiss. */}

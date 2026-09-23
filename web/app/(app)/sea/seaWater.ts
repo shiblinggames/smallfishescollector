@@ -58,6 +58,13 @@ export type WaterUniforms = {
   uLight: Float32Array
   /** How much surface there is at all. 0 is the old flat gradient exactly. */
   uSwell: number
+  /** The bay's own dials, 1 in the open ocean. See the shader's note. */
+  uBayChop?: number
+  uBayCaust?: number
+  uBayGlint?: number
+  uBayCaps?: number
+  uBayBloom?: number
+  uGlintTint?: Float32Array
   /** How hard the camera is travelling, 0..1. See the note in the fragment
    *  shader: fine detail crossing the whole screen at speed is what makes
    *  sailing unpleasant, and this is the knob that takes it away. */
@@ -173,6 +180,17 @@ uniform float uOnCaust;
 uniform float uOnMoon;
 uniform float uOnCaps;
 uniform float uOnBloom;
+// ── THE BAY'S OWN SEA ────────────────────────────────────────────────
+//
+// Multipliers on the terms below, 1 in the open ocean. Each campaign bay
+// carries its own (raidWaters BAY_MOOD), blended by distance on the chart,
+// so the Fathom heaves and the Gullet lies still under the same code.
+uniform float uBayChop;
+uniform float uBayCaust;
+uniform float uBayGlint;
+uniform float uBayCaps;
+uniform float uBayBloom;
+uniform vec3  uGlintTint;
 
 // The plane's foreshortening. Sampling noise without it makes the swell look
 // like it is standing up out of the water rather than lying on it.
@@ -366,7 +384,7 @@ void main(void) {
   // was even standing still — see the note on the amplitudes below.
   // AND IT COMES UP UNDER A SQUALL. Wind on water is chop before it is
   // anything else; the fine octave is the chop.
-  float fine = min(0.62, (0.16 + 0.30 * storm) * (1.0 - 0.85 * uRush)) * uOnChop;
+  float fine = min(0.62, (0.16 + 0.30 * storm) * (1.0 - 0.85 * uRush)) * uOnChop * uBayChop;
   float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
 
   // ── THE SHELF ─────────────────────────────────────────────────────
@@ -497,7 +515,7 @@ void main(void) {
       // No sun under a cloud, so no light bent by the surface.
       * (1.0 - stormK);
     // 0.07: Kong, even in the Shallows, they took too much attention.
-    col += caust * vec3(0.72, 0.92, 0.86) * 0.07 * uSwell * uOnCaust;
+    col += caust * vec3(0.72, 0.92, 0.86) * 0.07 * uSwell * uOnCaust * uBayCaust;
   }
 
   // ── THE MOON'S PATH ───────────────────────────────────────────────
@@ -575,7 +593,7 @@ void main(void) {
   // sun's reflection actually is.
   float sunRoad = mix(1.0, 1.0 + horizon * 1.1, uWarm);
   // The road is the colour of the sun making it, not white.
-  vec3 glintCol = mix(vec3(1.0), vec3(1.0, 0.62, 0.28), uWarm);
+  vec3 glintCol = mix(vec3(1.0), vec3(1.0, 0.62, 0.28), uWarm) * uGlintTint;
   // AND THEY FADE AS SHE DRIVES. Glare is the highest-contrast thing on the
   // water and the most expensive to sweep past; under way it gives up most of
   // itself, and comes back the moment you slow down and look.
@@ -610,7 +628,7 @@ void main(void) {
   // stops being dead without going back to strobing — and the at-rest amount is
   // untouched on purpose, because the last two notes on this sea have both been
   // that it is too busy when you are sitting still.
-  col += sparkle * glintCol * 0.060 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.88 * uRush)
+  col += sparkle * glintCol * 0.060 * uBayGlint * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.88 * uRush)
     // Glare is the first thing a cloud takes.
     * (1.0 - min(1.0, storm * 1.3));
   }
@@ -634,7 +652,7 @@ void main(void) {
   crest *= smoothstep(0.35, 0.75, rag);
   float capAmt = 0.09 * (0.6 + 1.6 * stormK) * uSwell
     * (1.0 - uDark * 0.55) * (1.0 - 0.55 * uRush) * (1.0 - recede * 0.6);
-  col += crest * vec3(0.90, 0.96, 1.0) * capAmt * uOnCaps;
+  col += crest * vec3(0.90, 0.96, 1.0) * capAmt * uOnCaps * uBayCaps;
 
   // ── AND THE DEEP GLOWS, IN PLACES ─────────────────────────────────
   //
@@ -649,7 +667,7 @@ void main(void) {
       float mottle = vnoise(wa * 1.6 + vec2(uTime * 0.012, uTime * -0.009));
       mottle = smoothstep(0.35, 0.85, mottle);
       float breathe = 0.75 + 0.25 * sin(uTime * 0.35 + world.x * 0.0007);
-      col += bloom * mottle * breathe * vec3(0.22, 0.86, 0.72) * 0.085 * uDark * (1.0 - stormK * 0.6) * uOnBloom;
+      col += bloom * mottle * breathe * vec3(0.22, 0.86, 0.72) * 0.085 * uDark * (1.0 - stormK * 0.6) * uOnBloom * uBayBloom;
     }
   }
 
@@ -772,6 +790,12 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
       uOnMoon: { value: 1, type: 'f32' },
       uOnCaps: { value: 1, type: 'f32' },
       uOnBloom: { value: 1, type: 'f32' },
+      uBayChop: { value: 1, type: 'f32' },
+      uBayCaust: { value: 1, type: 'f32' },
+      uBayGlint: { value: 1, type: 'f32' },
+      uBayCaps: { value: 1, type: 'f32' },
+      uBayBloom: { value: 1, type: 'f32' },
+      uGlintTint: { value: new Float32Array([1, 1, 1]), type: 'vec3<f32>' },
     })
 
     const filter = new PIXI.Filter({
