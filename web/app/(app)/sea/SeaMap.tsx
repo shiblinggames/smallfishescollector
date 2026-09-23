@@ -292,7 +292,6 @@ import { FINN_NAME, findNextBeat, type FinnSceneLine } from '@/lib/finn'
 // as the sheets above.
 const RenownPanel = dynamic(() => import('@/components/RenownPanel'), { ssr: false })
 const MarkProbe = dynamic(() => import('./MarkProbe'), { ssr: false })
-const BountiesPanel = dynamic(() => import('../expeditions/BountiesPanel'), { ssr: false })
 const TraderPanel = dynamic(() => import('./TraderPanel'), { ssr: false })
 const FolkPanel = dynamic(() => import('./FolkPanel'), { ssr: false })
 const SeaFirstVoyage = dynamic(() => import('./SeaFirstVoyage'), { ssr: false })
@@ -5253,8 +5252,6 @@ export default function SeaMap({
    * the hull — and the island is the only thing that can tell you.
    */
   const [bountyReady, setBountyReady] = useState(false)
-  /** How the board stands, for the level sheet's one-line row. */
-  const [bountyTally, setBountyTally] = useState<{ unlocked: boolean; done: number; total: number; ready: number } | null>(null)
   const bountyPolled = useRef(false)
   /**
    * ── AND A RUNG NOBODY HAS BEEN TOLD ABOUT ──────────────────────────────
@@ -5274,12 +5271,6 @@ export default function SeaMap({
     void getBountyBoard().then(
       b => {
         setBountyReady(b.unlocked && b.bounties.some(x => !x.claimed && x.progress >= x.target))
-        setBountyTally({
-          unlocked: b.unlocked,
-          done: b.bounties.filter(x => x.progress >= x.target).length,
-          total: b.bounties.length,
-          ready: b.bounties.filter(x => !x.claimed && x.progress >= x.target).length,
-        })
         if (b.news) setRungNews(b.news)
       },
       () => {})
@@ -11983,21 +11974,12 @@ hullRef={hullRefFor(t.key)} />
 
       <SkillPanel
         open={skillOpen}
-        onClose={() => { setSkillOpen(false); pollBounties() }}
+        onClose={() => setSkillOpen(false)}
         skill={skillView}
         onSwitch={setSkillView}
-        // THE BOUNTIES, ON THE SAME PAGE AS THE LEVEL. Today's Orders sat here
-        // under Fishing too, and moved out to the day board (Kong: it lives
-        // there and nowhere else now). See SeaDay.
-        extra={skillView === 'fishing'
-          ? undefined
-          : {
-              title: 'Bounties',
-              summary: !bountyTally ? '' : !bountyTally.unlocked ? 'Locked'
-                : bountyTally.ready > 0 ? `${bountyTally.ready} to claim` : `${bountyTally.done}/${bountyTally.total} done`,
-              ready: !!bountyTally && bountyTally.ready > 0,
-              children: <BountiesPanel embedded onClose={() => setSkillOpen(false)} />,
-            }}
+        // No `extra`: Today's Orders (under Fishing) and the bounties (under
+        // Navigation) both left the level sheet on 2026-09-23 and live on the
+        // day board only. See SeaDay.
         xp={skillView === 'nav' ? navXP : xpLive}
         renown={skillView === 'nav' ? renownNavState : renownState}
         hallTier={crewTiers?.hall ?? 1}

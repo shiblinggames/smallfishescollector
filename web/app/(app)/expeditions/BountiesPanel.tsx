@@ -21,7 +21,7 @@
 
 import { useState, useEffect, useTransition, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import ResetCountdown from '@/components/ResetCountdown'
 import { getBountyBoard, claimBounty, rerollBounty, claimBountyMilestone, type BountyBoard, type BountyView } from './bountyActions'
 import { BOUNTY_POINTS, BOUNTY_MILESTONES } from '@/lib/bounties'
@@ -471,215 +471,145 @@ function PointsLadder({ board, busy, claimFx, onClaim, onClose }: {
   )
 }
 
-/** One notice. A solid slab with the tier as a spine down its left edge, the
- *  prize on the right, and the two lines that matter in between. */
-/** Text with a line through it, drawn rather than declared.
+/** ── ONE BOUNTY, DRAWN LIKE ONE OF TODAY'S ORDERS ─────────────────────────
  *
- *  text-decoration cannot be animated, and the whole point of striking a claimed
- *  order is watching it happen. An absolutely positioned rule over the text can
- *  be scaled from nothing, and sitting at scaleX 1 from the first frame it is
- *  indistinguishable from the real thing on every card that was claimed before
- *  this visit.
+ * Kong: the bounties should look like the fishing daily orders. They sit one
+ * tap apart on the day board now, and two lists of the same kind of thing (a
+ * goal, a count, a prize, a claim) in two different hands read as two
+ * features. So this is DailyOrders' row: the bar IS the background and fills
+ * as you go, green once it is done, a breathing green Claim, a tick once it is
+ * paid, the percentage while it is not. What bounties have that orders do not
+ * rides on the second line (the tier, in its colour, and the points) and the
+ * one swap a day is a small icon beside the percentage.
  *
- *  Single-line text only. The rule spans the whole box, so on wrapped text it
- *  would draw one line through the middle of the paragraph instead of through
- *  each line: that is why the description uses text-decoration instead. */
-function Struck({ on, draw, children }: {
-  on: boolean; draw: boolean; children: React.ReactNode
-}) {
-  return (
-    <span style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
-      {children}
-      {on && (
-        <motion.span aria-hidden
-          initial={{ scaleX: draw ? 0 : 1 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: draw ? 0.08 : 0 }}
-          style={{
-            position: 'absolute', left: 0, right: 0, top: '55%',
-            height: 2, borderRadius: 2,
-            background: 'rgba(196,186,166,0.6)',
-            transformOrigin: 'left center', pointerEvents: 'none',
-          }} />
-      )}
-    </span>
-  )
-}
+ * The description is the tooltip. Every name says what to do ("Clear two
+ * raids", "Sink Captain Krust"); the description is the fine print. */
+const GREEN = '#7bf0b0'
+const ROW_GOLD = '#f0c040'
 
 function BountyCard({ b, rerollUsed, busy, celebrate, onClaim, onSwap }: {
   b: BountyView
   rerollUsed: boolean
   busy: boolean
-  /** This one was claimed a moment ago, so it draws its line instead of just
-   *  wearing it. */
+  /** This one was paid a moment ago: the light crosses it and the gems rise. */
   celebrate: boolean
   onClaim: () => void
   onSwap: () => void
 }) {
+  const stillness = useReducedMotion()
   const t = TIER[b.tier]
   const done = b.progress >= b.target
   const ready = done && !b.claimed
-  const pct = b.target > 0 ? Math.min(1, b.progress / b.target) : 0
+  const p = Math.min(b.progress, b.target)
+  const pct = b.target > 0 ? Math.round((p / b.target) * 100) : 0
+  const accent = b.claimed ? 'rgba(255,255,255,0.2)' : done ? GREEN : ROW_GOLD
+  const pts = BOUNTY_POINTS[b.tier]
 
   return (
-    <motion.div
-      layout
-      // A SMALL POP, once, on the card that was just paid. Localized on purpose:
-      // the board does not shake, the one notice you touched does.
-      animate={celebrate ? { scale: [1, 1.02, 1] } : { scale: 1 }}
+    <motion.div layout title={b.desc}
       transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
       style={{
         position: 'relative', overflow: 'hidden',
-        padding: '0.6rem 0.75rem', borderRadius: 11,
-        // OPAQUE. It sits on a painting, so it cannot be a wash.
-        //
-        // THREE STATES, not two. A finished order used to differ from an
-        // unfinished one by a slightly brighter hairline, which is nothing: you
-        // had to read every card to find the one holding your gems. A ready
-        // notice is now lit, edged in its tier colour and topped with a marker.
-        background: b.claimed
-          ? 'linear-gradient(180deg, rgba(20,17,13,0.95) 0%, rgba(13,11,8,0.96) 100%)'
-          : ready
-            ? 'linear-gradient(180deg, rgba(44,39,29,0.98) 0%, rgba(26,23,17,0.98) 100%)'
-            : 'linear-gradient(180deg, rgba(30,27,22,0.97) 0%, rgba(18,16,12,0.98) 100%)',
-        border: `1px solid ${ready ? t.color + '99' : 'rgba(255,255,255,0.08)'}`,
-        borderTop: `1.5px solid ${ready ? t.color : 'rgba(255,255,255,0.10)'}`,
-        boxShadow: '0 3px 12px rgba(0,0,0,0.5)',
+        padding: '0.7rem 0.8rem', borderRadius: 12,
+        background: 'rgba(255,255,255,0.035)',
+        border: `1px solid ${ready ? `${GREEN}55` : 'rgba(255,255,255,0.09)'}`,
         opacity: b.claimed ? 0.82 : 1,
-      }}
-    >
-      {/* THE SWEEP. One pass of light across the notice as it is paid, gone in
-          half a second. Transform and opacity only, so it costs nothing. */}
-      {celebrate && (
-        <motion.span aria-hidden
-          initial={{ x: '-120%', opacity: 0.9 }}
-          animate={{ x: '120%', opacity: 0 }}
-          transition={{ duration: 0.55, ease: 'easeOut' }}
-          style={{
-            position: 'absolute', top: 0, bottom: 0, left: 0, width: '55%',
-            background: `linear-gradient(90deg, transparent, ${t.color}30, transparent)`,
-            pointerEvents: 'none',
-          }} />
-      )}
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          <span className="font-karla font-700 uppercase tracking-[0.16em]"
-            style={{ fontSize: '0.6rem', color: b.claimed ? '#6d675d' : t.color }}>
-            {t.label}
-          </span>
-          {ready && (
-            <span className="font-karla font-800 uppercase tracking-[0.14em]" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              fontSize: '0.54rem', color: '#0f1208',
-              background: t.color, borderRadius: 999, padding: '0.1rem 0.4rem',
-            }}>
-              <span aria-hidden style={{
-                width: 5, height: 5, borderRadius: 999, background: 'rgba(15,18,8,0.75)',
-                animation: 'shop-pulse 1.6s ease-in-out infinite',
-              }} />
-              Ready
-            </span>
-          )}
-        </span>
-        <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 7, whiteSpace: 'nowrap' }}>
-          {/* Points sit beside the prize because they are paid by the same act.
-              Small: the gems are why you do it today, the points are why you
-              come back, and only one of those needs to shout. */}
-          <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: b.claimed ? '#6d675d' : '#8fa6c4', ...TNUM }}>
-            +{BOUNTY_POINTS[b.tier]} pt{BOUNTY_POINTS[b.tier] === 1 ? '' : 's'}
-          </span>
-          <span className="font-cinzel font-800" style={{
-            fontSize: '1.15rem', lineHeight: 1,
-            color: b.claimed ? '#6d675d' : GEM_COLOR, ...TNUM,
-          }}>
-            {b.gems} {GEM}
-          </span>
-        </span>
-      </div>
-
-      {/* STRUCK THROUGH once it is paid, and the line DRAWS itself on the one
-          you just claimed. Rendered as a span rather than text-decoration
-          because a decoration cannot be animated: this way a card claimed
-          moments ago and a card claimed this morning end in the same place,
-          one having got there in front of you. */}
-      <p className="font-cinzel font-700" style={{
-        fontSize: '1.08rem', lineHeight: 1.2, marginTop: 3,
-        color: b.claimed ? '#8b8578' : '#f4efe4',
-        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
-        <Struck on={b.claimed} draw={celebrate}>{b.name}</Struck>
-      </p>
-      {/* The description wraps, and a drawn rule cannot follow text onto a
-          second line: it would sit BETWEEN the lines rather than through them.
-          So the name gets the animated line and the description gets the real
-          decoration, which handles wrapping properly and arrives at the same
-          moment anyway. */}
-      <p className="font-karla font-500" style={{
-        fontSize: '0.78rem', lineHeight: 1.4, marginTop: 2,
-        color: b.claimed ? '#6d675d' : '#a49c8e',
-        textDecoration: b.claimed ? 'line-through' : undefined,
-        textDecorationColor: 'rgba(196,186,166,0.45)',
-      }}>
-        {b.desc}
-      </p>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 8 }}>
-        {b.target > 1 && !b.claimed && !ready && (
-          <>
-            <div style={{ flex: 1, minWidth: 40, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.09)', overflow: 'hidden' }}>
-              <motion.div
-                initial={{ width: 0 }} animate={{ width: `${pct * 100}%` }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                style={{ height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${t.color}88, ${t.color})` }}
-              />
-            </div>
-            <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.74rem', color: '#a49c8e', ...TNUM }}>
-              {b.progress}/{b.target}
-            </span>
-          </>
-        )}
-
-        {b.claimed ? (
-          <span className="font-karla font-800 uppercase tracking-[0.18em]"
-            style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#7d7466' }}>
-            Paid
-          </span>
-        ) : done ? (
-          // FULL WIDTH. It was a small button tucked to the right, the same size
-          // as Swap, on the one row where the only thing you want to do is take
-          // the money.
-          <motion.button type="button" onClick={onClaim} disabled={busy} className="font-karla font-800 tap"
-            whileTap={busy ? undefined : { scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 600, damping: 24 }}
+      {/* The bar is the background, as on the orders. */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: 0, width: `${pct}%`,
+        background: b.claimed ? 'rgba(255,255,255,0.03)' : `linear-gradient(90deg, ${accent}1c, ${accent}0c)`,
+        transition: 'width 400ms ease-out',
+      }} />
+      <AnimatePresence>
+        {celebrate && (
+          <motion.div key="sweep" aria-hidden
+            initial={{ x: '-110%' }} animate={{ x: '110%' }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.85, ease: [0.22, 0.61, 0.36, 1] }}
             style={{
-              flex: 1, width: '100%', padding: '0.55rem 0.9rem', borderRadius: 9, fontSize: '0.86rem',
-              background: `linear-gradient(180deg, ${t.color}30 0%, ${t.color}18 100%)`,
-              border: `1px solid ${t.color}`, color: '#f8f4ea',
-              cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
+              position: 'absolute', inset: 0, pointerEvents: 'none',
+              background: `linear-gradient(105deg, transparent 0%, ${GEM_COLOR}00 30%, ${GEM_COLOR}3d 50%, ${GEM_COLOR}00 70%, transparent 100%)`,
+            }} />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {celebrate && (
+          <motion.span key="amt" aria-hidden className="font-cinzel font-700"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: [0, 1, 1, 0], y: -26 }}
+            transition={{ duration: 1.3, times: [0, 0.12, 0.6, 1], ease: 'easeOut' }}
+            style={{
+              position: 'absolute', right: 14, top: '50%', zIndex: 2,
+              fontSize: '1.05rem', color: GEM_COLOR, pointerEvents: 'none',
+              textShadow: `0 0 14px ${GEM_COLOR}99, 0 2px 8px rgba(0,0,0,0.9)`,
+            }}>+{b.gems} {GEM}</motion.span>
+        )}
+      </AnimatePresence>
+
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span className="font-karla font-700 block" style={{
+            fontSize: '0.86rem', color: b.claimed ? '#8a8578' : '#f0ede8', lineHeight: 1.25,
+          }}>{b.name}</span>
+          <span className="font-karla font-600 block" style={{
+            fontSize: '0.72rem', color: 'rgba(190,212,228,0.55)', marginTop: 2, ...TNUM,
+          }}>
+            <span style={{ color: b.claimed ? '#8a8578' : t.color }}>{t.label}</span>
+            {' · '}{p}/{b.target}
+            {' · '}<span style={{ color: b.claimed ? undefined : GEM_COLOR }}>{b.gems} {GEM}</span>
+            {' · '}+{pts} pt{pts === 1 ? '' : 's'}
+          </span>
+        </span>
+        {b.claimed ? (
+          <motion.span
+            initial={celebrate ? { scale: 0.4, opacity: 0 } : false}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 18, delay: 0.1 }}
+            style={{
+              flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: `${GREEN}1f`, border: `1px solid ${GREEN}66`,
             }}>
-            {busy ? 'Claiming…' : `Claim ${b.gems} ${GEM}`}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={GREEN}
+              strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-label="Claimed">
+              <motion.path d="M4 12.5l5.5 5.5L20 7"
+                initial={celebrate ? { pathLength: 0 } : false}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 0.34, delay: 0.16, ease: 'easeOut' }} />
+            </svg>
+          </motion.span>
+        ) : done ? (
+          <motion.button type="button"
+            animate={!busy && !stillness ? { scale: [1, 1.035, 1] } : { scale: 1 }}
+            transition={!busy && !stillness ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.15 }}
+            onClick={onClaim} disabled={busy}
+            className="font-karla font-700 uppercase tracking-[0.08em]"
+            style={{
+              flexShrink: 0, padding: '0.45rem 0.85rem', borderRadius: 9,
+              fontSize: '0.7rem', color: '#04120f', background: GREEN,
+              border: `1px solid ${GREEN}`, cursor: busy ? 'default' : 'pointer',
+              opacity: busy ? 0.5 : 1,
+            }}>
+            {busy ? '…' : 'Claim'}
           </motion.button>
         ) : (
-          <>
-            {b.target <= 1 && (
-              <span className="font-karla font-600" style={{ flex: 1, fontSize: '0.74rem', color: '#7d7466' }}>
-                Not done yet
-              </span>
-            )}
+          <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             {!rerollUsed && (
-              <button type="button" onClick={onSwap} disabled={busy} aria-label={`Swap ${b.name}`} className="tap"
+              <button type="button" onClick={onSwap} disabled={busy} aria-label={`Swap ${b.name}`} title="Swap (one a day)"
+                className="tap"
                 style={{
-                  marginLeft: b.target > 1 ? 'auto' : undefined,
-                  flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '0.34rem 0.6rem', borderRadius: 8,
-                  background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.14)',
-                  color: '#a49c8e', cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
+                  width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: 8, padding: 0,
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                  cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
                 }}>
-                <SwapIcon color="#a49c8e" />
-                <span className="font-karla font-700" style={{ fontSize: '0.72rem' }}>Swap</span>
+                <SwapIcon color="rgba(190,212,228,0.6)" />
               </button>
             )}
-          </>
+            <span className="font-karla font-700" style={{
+              fontSize: '0.78rem', color: 'rgba(190,212,228,0.4)', ...TNUM,
+            }}>{pct}%</span>
+          </span>
         )}
       </div>
     </motion.div>
@@ -832,7 +762,7 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
           holding your gems could be fourth. Sorting by state puts the money at
           the top and the finished work out of the way, and `layout` on the card
           means they slide rather than jump when one is paid. */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {[...board.bounties]
           .map((b, i) => ({ b, i, rank: b.claimed ? 2 : b.progress >= b.target ? 0 : 1 }))
           .sort((x, y) => x.rank - y.rank || x.i - y.i)

@@ -34,7 +34,10 @@ arrow, the Posting House plate and "Bounties" as the header. Mooring at the Post
 board's bounties row and the new-rung notice all dispatch `sea-day-open` with `{ view: 'bounties' }`;
 the board's close runs `pollBounties`. `BountyBoardModal` is DELETED. Embedded `BountiesPanel`
 still draws a title-less `BoardHeader` (tally chip + points pill), or the ladder had no door.
-The Navigation level keeps its bounties row. The section below is history.
+The bounties row came OFF the Navigation level sheet the same day (Kong); the day board is the only
+frame on the sea. Cards were redrawn as DailyOrders rows (bar-as-background, green Claim, tick,
+tier + points on the second line, swap as an icon, description as the tooltip). The section below
+is history.
 
 ## Two frames, one set of clothes (2026-09-10)
 
