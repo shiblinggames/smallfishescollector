@@ -20,20 +20,27 @@ export default async function ProfilePage() {
   const admin = createAdminClient()
 
   // Profile via the request-scoped cached loader (lib/userData.ts).
+  //
+  // ONE WAVE. The achievement points used to be awaited after all of this had
+  // landed, a whole round trip on its own, and the golden mounts were a
+  // second read of the same fish_collection rows. Both are in the one
+  // Promise.all now, and the goldens are picked out of the collection read.
   const [
     profile,
     crewRoster,
     { data: rarestFishRows },
     { data: allFishSpecies },
     { data: careerAgg },
-    { data: goldenRows },
+    achievementPoints,
   ] = await Promise.all([
     getCurrentProfile(),
     getCrewRoster(),
     // ALL caught fish — the per-zone Rarest Catches showcase groups + ranks
-    // these client-side (top 3 per zone by rarity, then sell value).
+    // these client-side (top 3 per zone by rarity, then sell value). Carries
+    // is_golden too: the gilded trophy wall is these rows filtered, and
+    // fish_collection.is_golden is exactly what the collection log shows.
     admin.from('fish_collection')
-      .select('fish_species(id, name, bite_rarity, habitat, sell_value)')
+      .select('is_golden, fish_species(id, name, bite_rarity, habitat, sell_value)')
       .eq('user_id', user.id),
     // fish_species has ~140 rows — pulling id+name for the whole table is
     // cheaper than a second round-trip just to map trophy names by id.
@@ -41,23 +48,18 @@ export default async function ProfilePage() {
     // Career aggregates (fish sold, voyage loot, raids, fastest raid) in one
     // SQL round-trip via the career_stats() function.
     admin.rpc('career_stats', { uid: user.id }),
-    // Mounted golden catches — the gilded trophy wall. Source of truth is
-    // fish_collection.is_golden (exactly what the collection log shows golden),
-    // rarest first.
-    admin.from('fish_collection')
-      .select('fish_species(id, name, bite_rarity, habitat)')
-      .eq('user_id', user.id)
-      .eq('is_golden', true)
-      .order('fish_species(bite_rarity)', { ascending: false }),
+    getUserAchievementPoints(user.id),
   ])
 
   const rarestFish = ((rarestFishRows ?? []) as any[])
     .map(r => r.fish_species)
     .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string; sell_value?: number }[]
 
-  const goldenMounts = ((goldenRows ?? []) as any[])
+  // Mounted golden catches, rarest first.
+  const goldenMounts = ((rarestFishRows ?? []) as any[])
+    .filter(r => r.is_golden === true && r.fish_species)
     .map(r => r.fish_species)
-    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
+    .sort((a, b) => (b.bite_rarity ?? 0) - (a.bite_rarity ?? 0)) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
   const ancientIds = ((profile?.ancient_catches as number[] | null) ?? [])
   const ancientIdSet = new Set(ancientIds)
@@ -83,7 +85,6 @@ export default async function ProfilePage() {
   // Union in any level-gated or achievement-gated color the player has EARNED
   // but whose grant never persisted, so the picker shows it unlocked; equipping
   // it persists the unlock server-side (see updateCharacterColor).
-  const achievementPoints = await getUserAchievementPoints(user.id)
   const unlockedColors = [
     ...CHARACTER_COLORS.filter(c => c.free).map(c => c.id),
     ...storedColors,

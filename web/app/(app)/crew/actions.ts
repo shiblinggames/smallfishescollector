@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/userData'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stampBadges } from '@/lib/badgeGrant'
 import { isPremiumActive } from '@/lib/premium'
@@ -420,21 +421,24 @@ export async function getCrewState(): Promise<CrewState | null> {
 /** Just the owned LIVE roster (no recruit board, no graveyard), for the
  *  expeditions crew screen. */
 export async function getCrewRoster(): Promise<CrewMember[]> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // The request-cached check (lib/userData): on a page that already asked,
+  // this costs nothing, where auth.getUser() was a trip to the auth server.
+  const user = await getCurrentUser()
   if (!user) return []
   const admin = createAdminClient()
-  const [{ meta }, { data: prof }] = await Promise.all([
+  // All three at once. The roster read waited on the other two for nothing:
+  // it needs neither to be sent, only to be shaped.
+  const [{ meta }, { data: prof }, { data: rosterRows }] = await Promise.all([
     loadCards(admin),
     admin.from('profiles').select('equipped_crew_skins').eq('id', user.id).single(),
+    admin
+      .from('user_crew')
+      .select('id, card_id, rarity, power, dodge, fortune, effects, pending_trait, voyage_slot, raid_slot, xp, nickname')
+      .eq('user_id', user.id)
+      .is('died_at', null)
+      .order('recruited_at', { ascending: false }),
   ])
   const equippedCrewSkins = ((prof as any)?.equipped_crew_skins as EquippedCrewSkins | null) ?? {}
-  const { data: rosterRows } = await admin
-    .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, pending_trait, voyage_slot, raid_slot, xp, nickname')
-    .eq('user_id', user.id)
-    .is('died_at', null)
-    .order('recruited_at', { ascending: false })
   return ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort)
 }
 

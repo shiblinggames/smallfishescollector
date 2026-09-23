@@ -1,195 +1,98 @@
-import { createClient } from '@/lib/supabase/server'
+import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentUser } from '@/lib/userData'
 import { redirect } from 'next/navigation'
 import { type AvatarMap } from './boardUI'
 import LeaderboardClient from './LeaderboardClient'
 import type { LeaderboardEntry } from './LeaderboardClient'
 import { getAchievementPointsBoard } from '@/lib/achievementPoints'
 
-/** Resolve the player's rank on a board. If they're in the top-50 array we
- *  already fetched, use that index (free). Otherwise run a count query for
- *  "how many people have a higher score than mine" — their rank is that + 1.
- *  Returns null if the player has no score (myScore === 0). */
-async function resolveMyRank(
-  admin: ReturnType<typeof createAdminClient>,
-  view: string,
-  userId: string,
-  myScore: number,
-  top: LeaderboardEntry[],
-): Promise<number | null> {
-  // Caller is expected to skip this when the user has no row in the
-  // view (myScore = null upstream). Once they DO have a row, every
-  // score — including 0 or negative for signed-score boards like
-  // Blackjack — gets a real rank.
-  const idx = top.findIndex(e => e.user_id === userId)
-  if (idx >= 0) return idx + 1
-  const { count } = await admin.from(view).select('*', { count: 'exact', head: true }).gt('score', myScore)
-  return (count ?? 0) + 1
-}
+/** How long every visitor shares one read of the top of each board. The
+ *  captain's OWN score and rank are read fresh on every visit. */
+const SHARED_SECONDS = 30
 
-async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: string, userId: string) {
-  const [{ data: top }, { data: me }] = await Promise.all([
-    admin.from(view).select('user_id, username, score').order('score', { ascending: false }).order('created_at', { ascending: true }).limit(50),
-    admin.from(view).select('score').eq('user_id', userId).single(),
-  ])
-  // Coerce score → number. Some views expose numeric and
-  // PostgREST serializes numeric as a string; downstream formatters
-  // (toLocaleString) would silently break on a string. Integer views
-  // pass through Number() unchanged.
-  const topRows = ((top ?? []) as Array<{ user_id: string; username: string; score: number | string }>)
-    .map(r => ({ user_id: r.user_id, username: r.username, score: Number(r.score) })) as LeaderboardEntry[]
-  // myScore = null when the player has no row in the view (haven't
-  // played / no score). Boards that allow signed scores (Blackjack)
-  // need to distinguish "broke even, 0 net" (number) from "never
-  // played" (null) so the "you" tile and rank chip render correctly.
-  const myRow = me as { score?: number | string } | null
-  const myScore: number | null = myRow === null ? null : Number(myRow.score)
-  const myRank = myScore === null ? null : await resolveMyRank(admin, view, userId, myScore, topRows)
-  return { top: topRows, myScore, myRank }
-}
+/** Boards that are a plain view with a `score` column. */
+const VIEW_BOARDS = {
+  fishing: 'leaderboard_fishing',
+  fishSlots: 'leaderboard_fish_slots',
+  blackjack: 'leaderboard_blackjack',
+  roulette: 'leaderboard_roulette',
+  expedition: 'leaderboard_expedition',
+  species: 'leaderboard_species',
+  fishSold: 'leaderboard_fish_sold',
+  trophies: 'leaderboard_trophies',
+  bountyPoints: 'leaderboard_bounty_points',
+} as const
+type ViewKey = keyof typeof VIEW_BOARDS
+type Mine = { myScore: number | null; myRank: number | null }
 
-// Raid Progress: total number of distinct raid-map nodes the captain
-// has cleared. Combines three sources:
-//   - raid_node_progress.cleared[]: story, milestone, shop, puzzle,
-//     event, class-pick nodes (the things the player explicitly clears)
-//   - distinct raid_completions.raid_id per user: boss-kill nodes
-//     (e.g. corsairs_reckoning + corsairs_reckoning_challenge each
-//     count as one)
-//   - has_completed_practice_raid: the one skirmish/tutorial node
-// Everything counts as 1 — no weighting per node type. Ties broken
-// by latest raid_completions.completed_at ASC so whoever reached
-// that count first wins.
-async function fetchRaidProgressBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  // Scored + ranked in SQL (raid_progress_board) — no longer pulls every profile
-  // and every raid_completion to rank in JS. Rows arrive already ordered
-  // (score desc, earliest last-clear first) and filtered to score > 0.
-  const { data } = await admin.rpc('raid_progress_board')
-  const rows = (data ?? []) as Array<{ user_id: string; username: string | null; score: number }>
-  const top: LeaderboardEntry[] = rows.slice(0, 50).map(r => ({ user_id: r.user_id, username: r.username ?? '', score: r.score }))
-  const myIdx = rows.findIndex(r => r.user_id === userId)
-  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
-}
+const num = (rows: unknown): LeaderboardEntry[] =>
+  ((rows ?? []) as Array<{ user_id: string; username: string | null; score: number | string }>)
+    // Coerce score to a number. Some views expose numeric, and PostgREST
+    // serializes numeric as a string; toLocaleString would silently break.
+    .map(r => ({ user_id: r.user_id, username: r.username ?? '', score: Number(r.score) }))
 
-// Charting Points: cumulative puzzle points banked across the Chart Room
-// (Hold + Rigging + Treasure Match), stored in profiles.puzzle_points.
-// Highest total wins; only players who've banked at least one point show.
-// Ties broken by username ASC for a stable order (no per-point timestamp).
-async function fetchChartingPointsBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  const { data: profiles } = await admin
-    .from('profiles')
-    .select('id, username, puzzle_points')
-    .eq('is_admin', false)
-    .gt('puzzle_points', 0)
-  type Row = LeaderboardEntry
-  const rows: Row[] = ((profiles ?? []) as Array<{ id: string; username: string | null; puzzle_points: number | null }>)
-    .map(p => ({ user_id: p.id, username: p.username ?? '', score: p.puzzle_points ?? 0 }))
-  rows.sort((a, b) => b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0))
-  const top = rows.slice(0, 50)
-  const myIdx = rows.findIndex(r => r.user_id === userId)
-  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
-}
+/** Highest first, ties by name, for the two boards ranked out of profiles. */
+const byScoreThenName = (a: LeaderboardEntry, b: LeaderboardEntry) =>
+  b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0)
 
-// Parlor Points: cumulative parlor points banked across The Parlor (Captain's
-// Board + Pirate King + Spin the Capstan), stored in profiles.parlor_points.
-// Highest total wins; ties broken by username ASC. Same shape as charting points.
-async function fetchParlorPointsBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  const { data: profiles } = await admin
-    .from('profiles')
-    .select('id, username, parlor_points')
-    .eq('is_admin', false)
-    .gt('parlor_points', 0)
-  const rows: LeaderboardEntry[] = ((profiles ?? []) as Array<{ id: string; username: string | null; parlor_points: number | null }>)
-    .map(p => ({ user_id: p.id, username: p.username ?? '', score: p.parlor_points ?? 0 }))
-  rows.sort((a, b) => b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0))
-  const top = rows.slice(0, 50)
-  const myIdx = rows.findIndex(r => r.user_id === userId)
-  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
-}
-
-async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  const [{ data: top }, { data: me }] = await Promise.all([
-    admin.from('leaderboard_perfect_streak')
-      .select('user_id, username, score, zone')
-      .order('score', { ascending: false })
-      .order('zone_rank', { ascending: false })
-      .order('created_at', { ascending: true })
-      .limit(50),
-    admin.from('leaderboard_perfect_streak').select('score').eq('user_id', userId).single(),
-  ])
-  const topRows = (top ?? []) as LeaderboardEntry[]
-  const myRow = me as { score?: number } | null
-  const myScore: number | null = myRow === null ? null : (myRow.score ?? 0)
-  const myRank = myScore === null ? null : await resolveMyRank(admin, 'leaderboard_perfect_streak', userId, myScore, topRows)
-  return { top: topRows, myScore, myRank }
-}
-
-export default async function LeaderboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
+/**
+ * ── THE PART EVERY VISITOR SEES THE SAME ────────────────────────────────────
+ *
+ * The top fifty of every board, the whole-population boards (raid progress,
+ * charting and parlor points, ranked from every row), and the avatars for
+ * everyone on them. Identical for every captain, and it was read afresh on
+ * every visit: some thirty queries and then the avatars behind them. Held for
+ * SHARED_SECONDS across all visitors now, the way the Achievement Points board
+ * already was (lib/achievementPoints), so a visit usually pays for none of it.
+ * A board may lag a catch by that long; your own row does not.
+ */
+const sharedBoards = unstable_cache(async () => {
   const admin = createAdminClient()
-
-  const [profile, fishingData, perfectStreakData, chartingPointsData, parlorPointsData, fishSlotsData, blackjackData, rouletteData, expeditionData, raidProgressData, achievementPointsData, speciesData, fishSoldData, trophiesData, bountyPointsData] = await Promise.all([
-    admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
-    fetchBoard(admin, 'leaderboard_fishing', user.id),
-    fetchPerfectStreakBoard(admin, user.id),
-    fetchChartingPointsBoard(admin, user.id),
-    fetchParlorPointsBoard(admin, user.id),
-    fetchBoard(admin, 'leaderboard_fish_slots', user.id),
-    fetchBoard(admin, 'leaderboard_blackjack', user.id),
-    fetchBoard(admin, 'leaderboard_roulette', user.id),
-    fetchBoard(admin, 'leaderboard_expedition', user.id),
-    fetchRaidProgressBoard(admin, user.id),
-    getAchievementPointsBoard(user.id),
-    fetchBoard(admin, 'leaderboard_species', user.id),
-    fetchBoard(admin, 'leaderboard_fish_sold', user.id),
-    fetchBoard(admin, 'leaderboard_trophies', user.id),
-    fetchBoard(admin, 'leaderboard_bounty_points', user.id),
+  const viewKeys = Object.keys(VIEW_BOARDS) as ViewKey[]
+  const [viewTops, streakTop, raidRows, chartRows, parlorRows, achievement] = await Promise.all([
+    Promise.all(viewKeys.map(k => admin.from(VIEW_BOARDS[k]).select('user_id, username, score')
+      .order('score', { ascending: false }).order('created_at', { ascending: true }).limit(50))),
+    admin.from('leaderboard_perfect_streak').select('user_id, username, score, zone')
+      .order('score', { ascending: false }).order('zone_rank', { ascending: false }).order('created_at', { ascending: true }).limit(50),
+    // Raid Progress: scored and ranked in SQL (raid_progress_board); rows
+    // arrive ordered (score desc, earliest last clear first) and above 0.
+    admin.rpc('raid_progress_board'),
+    // Charting and Parlor points: banked totals on profiles, anyone above 0.
+    admin.from('profiles').select('id, username, puzzle_points').eq('is_admin', false).gt('puzzle_points', 0),
+    admin.from('profiles').select('id, username, parlor_points').eq('is_admin', false).gt('parlor_points', 0),
+    // The top of the Achievement Points board, for the avatars; the viewer's
+    // own place on it is asked for separately below.
+    getAchievementPointsBoard(''),
   ])
+  const tops = Object.fromEntries(viewKeys.map((k, i) => [k, num(viewTops[i].data)])) as Record<ViewKey, LeaderboardEntry[]>
+  const raidAll = num(raidRows.data)
+  const chartAll = ((chartRows.data ?? []) as Array<{ id: string; username: string | null; puzzle_points: number | null }>)
+    .map(p => ({ user_id: p.id, username: p.username ?? '', score: p.puzzle_points ?? 0 })).sort(byScoreThenName)
+  const parlorAll = ((parlorRows.data ?? []) as Array<{ id: string; username: string | null; parlor_points: number | null }>)
+    .map(p => ({ user_id: p.id, username: p.username ?? '', score: p.parlor_points ?? 0 })).sort(byScoreThenName)
+  const perfectStreak = (streakTop.data ?? []) as LeaderboardEntry[]
 
-  // Fetch avatar data (character_color + equipped_hat) for every user that
-  // appears on any board, in a single round-trip, so the leaderboard rows
-  // can render the player's actual character + hat composite next to their
-  // username instead of a colored letter circle.
-  const displayedUserIds = new Set<string>([
-    ...fishingData.top.map(e => e.user_id),
-    ...perfectStreakData.top.map(e => e.user_id),
-    ...chartingPointsData.top.map(e => e.user_id),
-    ...parlorPointsData.top.map(e => e.user_id),
-    ...fishSlotsData.top.map(e => e.user_id),
-    ...blackjackData.top.map(e => e.user_id),
-    ...rouletteData.top.map(e => e.user_id),
-    ...expeditionData.top.map(e => e.user_id),
-    ...raidProgressData.top.map(e => e.user_id),
-    ...achievementPointsData.top.map(e => e.user_id),
-    ...speciesData.top.map(e => e.user_id),
-    ...fishSoldData.top.map(e => e.user_id),
-    ...trophiesData.top.map(e => e.user_id),
-    ...bountyPointsData.top.map(e => e.user_id),
-  ])
-  // The same select also carries what the podium needs to draw a whole
-  // fisher (boat, pet, rod, reel, hook): five more columns on a query that
-  // was already going out, rather than a second one.
-  const avatarsMap: AvatarMap = {}
-  if (displayedUserIds.size > 0) {
+  // Everyone who appears on any board, in one round trip. The same select
+  // carries what the podium needs to draw a whole fisher (boat, pet, rod,
+  // reel, hook).
+  const ids = new Set<string>([
+    ...Object.values(tops).flat(), ...perfectStreak, ...raidAll.slice(0, 50),
+    ...chartAll.slice(0, 50), ...parlorAll.slice(0, 50), ...achievement.top,
+  ].map(e => e.user_id))
+  const avatars: AvatarMap = {}
+  if (ids.size > 0) {
     const { data: avatarRows } = await admin
       .from('profiles')
       .select('id, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_boat, equipped_pet, rod_tier, reel_tier, hook_tier')
-      .in('id', Array.from(displayedUserIds))
+      .in('id', Array.from(ids))
     for (const row of (avatarRows ?? []) as Array<{
-      id: string
-      character_color: string | null
-      equipped_hat: string | null
-      avatar_bg_color: string | null
-      avatar_border_color: string | null
-      equipped_boat: string | null
-      equipped_pet: string | null
-      rod_tier: number | null
-      reel_tier: number | null
-      hook_tier: number | null
+      id: string; character_color: string | null; equipped_hat: string | null
+      avatar_bg_color: string | null; avatar_border_color: string | null
+      equipped_boat: string | null; equipped_pet: string | null
+      rod_tier: number | null; reel_tier: number | null; hook_tier: number | null
     }>) {
-      avatarsMap[row.id] = {
+      avatars[row.id] = {
         characterColor: row.character_color,
         equippedHat: row.equipped_hat,
         avatarBg: row.avatar_bg_color,
@@ -202,6 +105,57 @@ export default async function LeaderboardPage() {
       }
     }
   }
+  return { tops, perfectStreak, raidAll, chartAll, parlorAll, avatars }
+}, ['leaderboard-shared-v1'], { revalidate: SHARED_SECONDS })
+
+/** Your own place on a whole-population board, from the rows already held. */
+function placeIn(all: LeaderboardEntry[], userId: string) {
+  const i = all.findIndex(r => r.user_id === userId)
+  return { top: all.slice(0, 50), myScore: i >= 0 ? all[i].score : null, myRank: i >= 0 ? i + 1 : null }
+}
+
+/**
+ * YOUR ROW ON A VIEW BOARD, read fresh. No row means you have not played it
+ * (null), which is not the same as 0 on a signed board like Blackjack. The
+ * rank is your index when you are in the shared top fifty, and otherwise how
+ * many score above you, plus one.
+ */
+async function mineOn(
+  admin: ReturnType<typeof createAdminClient>, view: string, userId: string, top: LeaderboardEntry[],
+): Promise<Mine> {
+  const { data } = await admin.from(view).select('score').eq('user_id', userId).maybeSingle()
+  if (!data) return { myScore: null, myRank: null }
+  const myScore = Number((data as { score: number | string }).score)
+  const idx = top.findIndex(e => e.user_id === userId)
+  if (idx >= 0) return { myScore, myRank: idx + 1 }
+  const { count } = await admin.from(view).select('*', { count: 'exact', head: true }).gt('score', myScore)
+  return { myScore, myRank: (count ?? 0) + 1 }
+}
+
+export default async function LeaderboardPage() {
+  // The request-cached check the shell already made (lib/userData), not a
+  // second trip to the auth server.
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+
+  const admin = createAdminClient()
+  const shared = await sharedBoards()
+  const viewKeys = Object.keys(VIEW_BOARDS) as ViewKey[]
+  const [viewMine, streakMine, achievementPointsData] = await Promise.all([
+    Promise.all(viewKeys.map(k => mineOn(admin, VIEW_BOARDS[k], user.id, shared.tops[k]))),
+    mineOn(admin, 'leaderboard_perfect_streak', user.id, shared.perfectStreak),
+    getAchievementPointsBoard(user.id),
+  ])
+  const v = Object.fromEntries(viewKeys.map((k, i) => [k, { top: shared.tops[k], ...viewMine[i] }])) as
+    Record<ViewKey, { top: LeaderboardEntry[] } & Mine>
+  const fishingData = v.fishing, fishSlotsData = v.fishSlots, blackjackData = v.blackjack
+  const rouletteData = v.roulette, expeditionData = v.expedition, speciesData = v.species
+  const fishSoldData = v.fishSold, trophiesData = v.trophies, bountyPointsData = v.bountyPoints
+  const perfectStreakData = { top: shared.perfectStreak, ...streakMine }
+  const raidProgressData = placeIn(shared.raidAll, user.id)
+  const chartingPointsData = placeIn(shared.chartAll, user.id)
+  const parlorPointsData = placeIn(shared.parlorAll, user.id)
+  const avatarsMap = shared.avatars
 
   return (
     <>
