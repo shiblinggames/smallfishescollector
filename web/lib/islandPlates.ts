@@ -77,6 +77,28 @@ const BAY: Record<string, Plate> = {
   one_last_ride: P('/sea/bay-ride.webp', 0.650),
 }
 
+/**
+ * ── AND NO TWO NEIGHBOURS ALIKE ─────────────────────────────────────────────
+ *
+ * Kong: the expedition zones felt samey. Every rock in a bay was the one
+ * painting, eight to fifteen identical islands a chapter. Each bay now has
+ * four in its own stone (2026-09-23, Kie.ai, prompts/bay-*-N.json in the
+ * nano-banana skill), each a different silhouette with its own props: nets
+ * and tide pools in the Thread, jawbones and ribcages in the Gullet, fallen
+ * columns and a buried chest in the Coffers, basalt columns and an anchor in
+ * the Fathom, scorched rock and a wreck at the end. Dealt round the bay's
+ * rocks in order, so neighbours differ. Coasts come off each painting: re-run
+ * scripts/plate-coast.mts after changing a deal.
+ */
+const BAY_SET: Record<string, Plate[]> = {
+  thread: [BAY.thread, P('/sea/bay-thread-2.webp', 0.573), P('/sea/bay-thread-3.webp', 0.519), P('/sea/bay-thread-4.webp', 0.479)],
+  sunken_hand: [BAY.sunken_hand, P('/sea/bay-hand-2.webp', 0.597), P('/sea/bay-hand-3.webp', 0.602), P('/sea/bay-hand-4.webp', 0.565)],
+  the_coffers: [BAY.the_coffers, P('/sea/bay-coffers-2.webp', 0.612), P('/sea/bay-coffers-3.webp', 0.682), P('/sea/bay-coffers-4.webp', 0.678)],
+  the_last_fathom: [BAY.the_last_fathom, P('/sea/bay-fathom-2.webp', 0.595), P('/sea/bay-fathom-3.webp', 0.599), P('/sea/bay-fathom-4.webp', 0.538)],
+  one_last_ride: [BAY.one_last_ride, P('/sea/bay-ride-2.webp', 0.615), P('/sea/bay-ride-3.webp', 0.723)],
+}
+const deal = (bay: string, ids: string[]) => ids.map((id, i) => [id, BAY_SET[bay][i % BAY_SET[bay].length]] as const)
+
 export const PLATES: Record<string, Plate> = {
   // ── THE PORTS. Ground only; what stands on each is composited as before.
   // The Trawl Harbor and Cormorant Rock were the two prototypes, 2026-09-22;
@@ -107,24 +129,24 @@ export const PLATES: Record<string, Plate> = {
   // sandstone in the Coffers, wet black rock in the Fathom, violet basalt at
   // the end. The rock a chapter has not reached yet is drawn greyed and dim
   // (see the locked tint in the renderer), which is what the bake did.
-  ...Object.fromEntries([
+  ...Object.fromEntries(deal('thread', [
     'thread-tangle', 'thread-ledger', 'thread-bilge', 'thread-toll', 'thread-purse',
     'thread-wax', 'thread-watch', 'thread-choice',
-  ].map(id => [id, BAY.thread])),
-  ...Object.fromEntries([
+  ])),
+  ...Object.fromEntries(deal('sunken_hand', [
     'hand-knuckle', 'hand-chart', 'hand-last', 'hand-sounding', 'hand-heading', 'hand-cipher',
     'hand-bones', 'hand-scrip', 'hand-debt', 'hand-closing', 'hand-choice',
-  ].map(id => [id, BAY.sunken_hand])),
-  ...Object.fromEntries([
+  ])),
+  ...Object.fromEntries(deal('the_coffers', [
     'cof-gatepost-n', 'cof-gatepost-s', 'cof-wall-n', 'cof-wall-s', 'cof-tally', 'cof-fork',
     'cof-lens', 'cof-counting', 'cof-keeper', 'cof-turn', 'cof-strongbox', 'cof-vault',
     'cof-ledger', 'cof-end', 'cof-choice',
-  ].map(id => [id, BAY.the_coffers])),
-  ...Object.fromEntries([
+  ])),
+  ...Object.fromEntries(deal('the_last_fathom', [
     'fath-deepwatch', 'fath-locks', 'fath-muster', 'fath-bar', 'fath-berth', 'fath-crooked',
     'fath-gates', 'fath-court', 'fath-last', 'fath-hail', 'fath-quiet', 'fath-armory',
-  ].map(id => [id, BAY.the_last_fathom])),
-  ...Object.fromEntries(['ride-whetstone', 'ride-quiet', 'ride-spoils'].map(id => [id, BAY.one_last_ride])),
+  ])),
+  ...Object.fromEntries(deal('one_last_ride', ['ride-whetstone', 'ride-quiet', 'ride-spoils'])),
 }
 
 export function plateFor(id: string): Plate | null {

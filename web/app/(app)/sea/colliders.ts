@@ -60,6 +60,21 @@ export const ART_COLLIDERS: Record<string, ArtCollider> = {
   rig:      { aspect: 1,     shapes: [{ kind: 'capsule', ax: 0.21,  ay: 0.726, bx: 0.71,  by: 0.726, ar: 0.1 }] },
   bones:    { aspect: 1,     shapes: [{ kind: 'capsule', ax: 0.159, ay: 0.632, bx: 0.829, by: 0.641, ar: 0.1 }] },
   monolith: { aspect: 1,     shapes: [{ kind: 'capsule', ax: 0.362, ay: 0.814, bx: 0.632, by: 0.819, ar: 0.1 }] },
+  // THE 2026-09-23 SET (Kie.ai; see the note on SUBMERGE for the same set).
+  // MEASURED off each painting's alpha: one capsule along the widest run
+  // just above its waterline. A starting point; retouch on /sea/boundary.
+  'arch': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.341, ay: 0.381, bx: 0.681, by: 0.381, ar: 0.1 }] },
+  'bones-serpent': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.072, ay: 0.578, bx: 0.928, by: 0.578, ar: 0.1 }] },
+  'bones-skull': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.069, ay: 0.813, bx: 0.762, by: 0.813, ar: 0.1 }] },
+  'buoy-bell': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.219, ay: 0.897, bx: 0.778, by: 0.897, ar: 0.1 }] },
+  'buoy-cage': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.266, ay: 0.897, bx: 0.731, by: 0.897, ar: 0.1 }] },
+  'islet-gulls': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.072, ay: 0.897, bx: 0.928, by: 0.897, ar: 0.1 }] },
+  'pots': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.284, ay: 0.887, bx: 0.556, by: 0.887, ar: 0.1 }] },
+  'raft': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.319, ay: 0.897, bx: 0.6, by: 0.897, ar: 0.1 }] },
+  'rig-hut': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.403, ay: 0.872, bx: 0.678, by: 0.872, ar: 0.1 }] },
+  'statue': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.122, ay: 0.894, bx: 0.897, by: 0.894, ar: 0.1 }] },
+  'wreck-keel': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.072, ay: 0.847, bx: 0.637, by: 0.847, ar: 0.1 }] },
+  'wreck-mast': { aspect: 1, shapes: [{ kind: 'capsule', ax: 0.347, ay: 0.688, bx: 0.728, by: 0.688, ar: 0.1 }] },
   'rock-gate-w':  { aspect: 1.092, shapes: [{ kind: 'capsule', ax: 0.147, ay: 0.866, bx: 0.877, by: 0.861, ar: 0.1 }] },
   'rock-gate-e':  { aspect: 1.249, shapes: [{ kind: 'capsule', ax: 0.108, ay: 0.872, bx: 0.889, by: 0.863, ar: 0.121 }] },
 }

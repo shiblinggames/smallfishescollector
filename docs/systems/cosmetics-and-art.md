@@ -135,3 +135,17 @@ cosmetic table, and there is one place to look when something trails colour that
   not rebuild.
 - **Both tables assert their keys are real skin ids at import in dev.** A renamed skin would
   otherwise drop its hull back to plain foam with nothing anywhere saying so.
+
+## Sea variety set (2026-09-23, Kie.ai)
+
+Kong: the expedition bays and the fishing sea were repetitive. 26 paintings from
+`nano-banana-2/prompts/bay-{thread,hand,coffers,fathom,ride}-N.json` (14 island plates, magenta
+plate, 16:9 2K) and `prompts/mark-*.json` (12 landmark objects, 1:1). Processed by
+`web/scripts/process-sea-art.mjs` (tracked despite `scripts/*`): magenta key HARD 35 / SOFT 8 with
+despill, own alpha-bbox trim, plates to 1024-wide WebP, objects to 320px bottom-anchored PNG, and
+a MEASURED waterline (SUBMERGE) + footprint capsule (ART_COLLIDERS) per object, then palette PNG /
+WebP q78. Plates are dealt round-robin through each bay's rocks (`BAY_SET` / `deal` in
+lib/islandPlates), coasts re-derived with scripts/plate-coast.mts. Objects replace some copies of
+buoy / wreck / bones / rig / monolith / islet in LANDMARKS; the measured waterlines and capsules are
+starting points for /sea/waterline and /sea/boundary. To add more: prompt json, generate_kie.py,
+rerun the processor, wire.

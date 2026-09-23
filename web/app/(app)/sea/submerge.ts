@@ -28,6 +28,25 @@ export const SUBMERGE: Record<string, Submerge> = {
   bones:    { keep: 0.24, pts: [[0, 67.7], [100, 80.2]] },
   monolith: { keep: 0.2,  pts: [[0, 71.5], [59.4, 79.5], [100, 80]] },
   islet:    { keep: 0.24, pts: [[0, 72.7], [32.6, 79.3], [69.3, 80], [100, 64.4]] },
+  // ── THE 2026-09-23 SET ────────────────────────────────────────────
+  // Kong: the fishing sea's buoys, wrecks and bones repeated. Twelve new
+  // objects painted on Kie.ai (prompts/mark-*.json in the nano-banana
+  // skill), keyed and sized by scripts/process-sea-art.mjs. These lines are
+  // MEASURED off each painting (its lowest opaque row at five columns, lifted
+  // 5%), not drawn yet: a starting point, and /sea/waterline is where they
+  // get tuned by eye like the rest.
+  'arch': { keep: 0.24, pts: [[0, 91.6], [25, 91.6], [50, 40], [75, 91.3], [100, 91.3]] },
+  'bones-serpent': { keep: 0.24, pts: [[0, 59.7], [25, 80.6], [50, 59.7], [75, 56.3], [100, 63.8]] },
+  'bones-skull': { keep: 0.24, pts: [[0, 78.1], [25, 90.9], [50, 83.1], [75, 76.9], [100, 55.9]] },
+  'buoy-bell': { keep: 0.24, pts: [[0, 81.3], [25, 89.7], [50, 91.6], [75, 90], [100, 81.3]] },
+  'buoy-cage': { keep: 0.24, pts: [[0, 80.9], [25, 90], [50, 91.6], [75, 90], [100, 80.9]] },
+  'islet-gulls': { keep: 0.24, pts: [[0, 83.8], [25, 88.4], [50, 91.6], [75, 88.8], [100, 84.1]] },
+  'pots': { keep: 0.24, pts: [[0, 61.3], [25, 87.8], [50, 90.6], [75, 79.7], [100, 68.4]] },
+  'raft': { keep: 0.24, pts: [[0, 73.1], [25, 82.2], [50, 91.6], [75, 76.9], [100, 60.9]] },
+  'rig-hut': { keep: 0.24, pts: [[0, 45.3], [25, 65.3], [50, 89.1], [75, 80.6], [100, 46.9]] },
+  'statue': { keep: 0.24, pts: [[0, 74.7], [25, 90.3], [50, 91.3], [75, 86.9], [100, 80]] },
+  'wreck-keel': { keep: 0.24, pts: [[0, 82.5], [25, 91.3], [50, 86.6], [75, 74.1], [100, 51.3]] },
+  'wreck-mast': { keep: 0.24, pts: [[0, 40], [25, 90.9], [50, 70.6], [75, 65.9], [100, 49.7]] },
 
 
   'rock-spire':   { keep: 0.2,  pts: [[0, 82], [46, 83.7], [100, 82]] },
