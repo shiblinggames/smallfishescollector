@@ -1024,6 +1024,56 @@ const OBSTACLES: Obstacle[] = [
  */
 
 /**
+ * ── AND YOU CANNOT BE FORCED THROUGH ONE ────────────────────────────────────
+ *
+ * Players found that ramming an island long enough put the boat ON it, stuck.
+ * The coast above is a ring of 4px capsules, a line and not a volume, and the
+ * resolve pushes a hull away from the nearest point of it. Shove hard at an
+ * angle and the hull's centre crosses the line between two frames; from then
+ * on the nearest shore is BEHIND her, the push points inland, and every frame
+ * drives her further onto the painting with no way back.
+ *
+ * So each painted island is also kept as the shape it is: the coastline is a
+ * radius at every bearing from the centre (lib/islandShape), which makes
+ * "is she inside?" one atan2 and one lookup. Inside is not a state a hull can
+ * be in, so the frame loop lifts her straight back out along that bearing to
+ * the waterline and a hull's width beyond, and takes away the velocity that
+ * was carrying her in. The capsules still do the sliding; this only ever
+ * catches the frame where they have already failed.
+ */
+type PaintedCoast = { id: string; x: number; y: number; land: number; rs: number[]; bound: number; isle?: string }
+let paintedCoastsCache: PaintedCoast[] | null = null
+function paintedCoasts(): PaintedCoast[] {
+  if (paintedCoastsCache) return paintedCoastsCache
+  const out: PaintedCoast[] = []
+  const add = (id: string, x: number, y: number, r: number, isle?: string) => {
+    const rs = coastline(id)
+    const land = 1.48 * r
+    out.push({ id, x, y, land, rs, bound: (Math.max(...rs) / 100) * land + HULL * 2, isle })
+  }
+  for (const p of PLACES) if (p.kind === 'port' && plateFor(p.id)) add(p.id, p.x, p.y, p.r)
+  for (const i of ISLES) if (plateFor(i.id)) add(i.id, i.x, i.y, i.r)
+  for (const i of RAID_ISLES) {
+    const at = isleAt(i)
+    if (at && plateFor(i.id)) add(i.id, at.x, at.y, i.r, i.id)
+  }
+  paintedCoastsCache = out
+  return out
+}
+/** The shore's distance from the island's centre along the bearing to (px, py),
+ *  interpolated between the coastline's samples, the same way coastObstacles
+ *  lays the capsules. */
+function shoreRadius(c: PaintedCoast, dx: number, dy: number): number {
+  const N = c.rs.length
+  let a = Math.atan2(dy, dx)
+  if (a < 0) a += Math.PI * 2
+  const f = (a / (Math.PI * 2)) * N
+  const i = Math.floor(f) % N
+  const t = f - Math.floor(f)
+  return ((c.rs[i] * (1 - t) + c.rs[(i + 1) % N] * t) / 100) * c.land
+}
+
+/**
  * HOW FAR THE PAINTED BAND REACHES from the line it is drawn along.
  *
  * The boulders sit at 110 either side and jitter 75, and each is drawn with its
@@ -7999,7 +8049,11 @@ export default function SeaMap({
       // aims where it always did, and the slide below is the exact code that
       // ran before this existed.
       let ax = dx, ay = dy
-      if (d > ARRIVE && !boxHeld.current && !fightOnRef.current) {
+      // NOT WHILE ANY HELM IS HELD. The stick was exempt; the keys and a held
+      // press on the water were not, so WASD and hold-to-steer had the bow
+      // pulled off the bearing the captain was holding every time a rock was
+      // ahead. Steering is steering whatever it is done with.
+      if (d > ARRIVE && !boxHeld.current && keysRef.current.size === 0 && !holding.current && !fightOnRef.current) {
         const LOOK = 520, MARGIN = 44
         const ux = dx / d, uy = dy / d
         let best: { o: Obstacle; cx: number; cy: number; R: number; tPar: number } | null = null
@@ -8582,6 +8636,26 @@ export default function SeaMap({
           const push = reach - dd
           pos.current.x += nx * push
           pos.current.y += ny * push
+          const vn = vel.current.x * nx + vel.current.y * ny
+          if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
+        }
+      }
+      // NEVER ON THE ISLAND. See paintedCoasts: if the capsules have let her
+      // centre past the waterline, lift her out along the bearing and kill
+      // the inward way. A rock the story has not drawn yet stops nobody.
+      if (!fightOnRef.current) {
+        const px = pos.current.x + WATERLINE_X, py = pos.current.y
+        for (const c of paintedCoasts()) {
+          const dx = px - c.x, dy = py - c.y
+          if (Math.abs(dx) > c.bound || Math.abs(dy) > c.bound) continue
+          if (c.isle && !isleShownRef.current(c.isle)) continue
+          const d = Math.hypot(dx, dy)
+          const R = shoreRadius(c, dx, dy)
+          if (d >= R) continue
+          const nx = d < 0.001 ? 1 : dx / d, ny = d < 0.001 ? 0 : dy / d
+          const out = R + HULL * 0.6
+          pos.current.x = c.x + nx * out - WATERLINE_X
+          pos.current.y = c.y + ny * out
           const vn = vel.current.x * nx + vel.current.y * ny
           if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
         }
@@ -10800,17 +10874,19 @@ hullRef={hullRefFor(t.key)} />
             // honest thing for it to be.
             if (knobRef.current && helmOrigin.current) {
               const o = helmOrigin.current
-              const el = boxRef.current
-              const r = el?.getBoundingClientRect()
-              const cx = r ? r.left + r.width / 2 : 0
-              const cy = r ? r.top + r.height / 2 : 0
-              // Clamped to the ring so the knob never leaves the wheel, however
-              // far the thumb has gone.
-              let kx = o.x + (boxHeld.current.x - o.x) - cx
-              let ky = o.y + (boxHeld.current.y - o.y) - cy
-              const kd = Math.hypot(kx, ky)
+              // ── THE KNOB SHOWS THE STICK, NOT THE THUMB ──────────────
+              // Players said the helm did not answer the way they expected,
+              // and this was why. Steering is measured from where the thumb
+              // LANDED (see stickVec), but the knob was drawn at the thumb's
+              // offset from the wheel's CENTRE. Land left of centre, push a
+              // little right: the boat turned east while the knob still sat
+              // west of the middle. The eye trusts the knob, so the helm read
+              // as wrong. It is drawn from the stick's own vector now, scaled
+              // so full helm is the rim: what you see is what she steers.
+              const sx = boxHeld.current.x - o.x, sy = boxHeld.current.y - o.y
               const lim = HELM_R - 22
-              if (kd > lim) { kx = (kx / kd) * lim; ky = (ky / kd) * lim }
+              const kx = (sx / HELM_STICK_R) * lim
+              const ky = (sy / HELM_STICK_R) * lim
               knobRef.current.style.transform = `translate3d(${kx}px, ${ky}px, 0)`
             }
           }}

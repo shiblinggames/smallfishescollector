@@ -3347,3 +3347,16 @@ the band), the WIND (thin, more with way on), and a synthesised harbour BELL on 
 to 45% while the HUD is down. Recorded SLOTS fill from `public/sea-audio/creak.mp3` (hard turn with
 way on, 4s cooldown), `gull.mp3` / `gull2.mp3` (near land, 8-22s apart); missing files are skipped.
 FLAG: on for admins, or `?ambience=1` once (localStorage `stb:ambience`; `?ambience=0` clears).
+
+## Helm and shore fixes (2026-09-23, player reports)
+
+- **The knob shows the stick.** Steering is measured from where the thumb LANDED (`stickVec`), but
+  the knob was drawn at the thumb's offset from the wheel's CENTRE, so the eye saw one bearing and
+  the boat took another. Knob = `(thumb - origin) / HELM_STICK_R * (HELM_R - 22)` now.
+- **Auto-steer never fights a held helm.** The lookahead's tangent aim was exempt only for the
+  stick; keys and hold-to-steer are exempt too.
+- **No boat on an island.** Coasts are rings of 4px capsules, a line not a volume: rammed hard, the
+  hull's centre crossed it and the resolve then pushed INLAND every frame. `paintedCoasts()` keeps
+  each plated island's radial coastline; if the waterline point is inside `shoreRadius`, she is
+  lifted out along the bearing to shore + 0.6 HULL and inward velocity is removed (skipped for
+  campaign isles not yet drawn, and in fights).
