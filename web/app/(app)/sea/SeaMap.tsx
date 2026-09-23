@@ -17424,16 +17424,37 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
             // the road toward itself. It never touches the helm.
             pointerEvents: 'auto', cursor: 'pointer', padding: '6px 8px', touchAction: 'manipulation',
           }}>
-            <span style={{
-              width: 0, height: 0,
-              transform: `rotate(${a + Math.PI / 2}rad)`,
-              borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
-              borderBottom: `9px solid ${m.accent ?? `rgba(190,214,228,${dim ? 0.28 : lead ? 0.75 : 0.5})`}`,
-              // ONLY THE FINISHED JOB BREATHES. Same limit every pulse on this
-              // chart is held to: it may ask for attention because there is an
-              // answer waiting, and it stops the moment there is not.
-              animation: m.urgent ? 'seaMarkPulse 2.4s ease-in-out infinite' : undefined,
-            }} />
+            {/* ── THE ARROW SAYS WHICH WAY TWICE ─────────────────────────
+                Kong: a triangle made it hard to tell where it pointed. It was
+                a 10 by 9 wedge, nearly equilateral, so any corner could read
+                as the tip, and it always sat ABOVE the name wherever the mark
+                was. Two fixes. It is a notched dart now, one sharp point and
+                a cut-in back, outlined dark so it holds against bright water.
+                And it ORBITS the name: it sits on the side of the label that
+                faces the target, so even at a glance the arrow's place says
+                the way before its shape does. The ring it rides is an ellipse
+                sized to the name, since labels are wide and short. */}
+            {(() => {
+              const ax = Math.cos(a), ay = Math.sin(a)
+              const rx = (m.mystery ? 9 : Math.min(62, (m.name?.length ?? 6) * 3.1 + 6)) + 12
+              const ry = lead ? 22 : 17
+              return (
+                <svg width="16" height="14" viewBox="-2 -7 16 14" aria-hidden style={{
+                  position: 'absolute', left: '50%', top: '50%', overflow: 'visible', pointerEvents: 'none',
+                  transform: `translate(-50%, -50%) translate(${ax * rx}px, ${ay * ry}px) rotate(${a}rad)`,
+                  filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.75))',
+                  // ONLY THE FINISHED JOB BREATHES. Same limit every pulse on
+                  // this chart is held to: it may ask for attention because
+                  // there is an answer waiting, and it stops the moment there
+                  // is not.
+                  animation: m.urgent ? 'seaMarkPulse 2.4s ease-in-out infinite' : undefined,
+                }}>
+                  <path d="M12 0 L0 -6 L3.2 0 L0 6 Z"
+                    fill={m.accent ?? `rgba(214,232,240,${dim ? 0.4 : lead ? 0.95 : 0.72})`}
+                    stroke="rgba(6,12,18,0.7)" strokeWidth="1" strokeLinejoin="round" />
+                </svg>
+              )
+            })()}
             {/* NAME FIRST, then distance. An arrow with only a number on it
                 tells you something is 340m away and leaves you to sail there to
                 find out what, which is not navigation, it is a guess. */}
