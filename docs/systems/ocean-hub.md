@@ -3282,3 +3282,16 @@ the sheet it opens. A failed reader drops its row, never the board.
 - **Breath rule is the haul's**: the ring breathes only while something is claimable or waiting
   (orders ready, voyage back, hauls waiting, bounties claimable). Otherwise a
   count badge of what is left today.
+- **Second pass: seamless and loud when it should be** (2026-09-23). ALWAYS MOUNTED with a
+  `hidden={hudOff}` prop: the HUD drops whenever the rod is out, and unmounting with it lost the
+  board's memory, so an order finishing mid-fish could never register as a change. Re-reads on:
+  mount, open, 3.5s after the last of a run of catches (`caughtTick`), one timer at
+  `dayState().nextAt` (soonest voyage/trawl return), tab becoming visible, `trawls-changed`.
+  No polling. A row turning hot after the first read fires a painted toast (portalled; the pill
+  opens that row, or the board when several); held while `hidden` and shown when the HUD returns.
+  Board sections: Ready to claim / To do today / Done today (folded to small plate chips; a voyage
+  at sea or all trawls out show their wait instead of a tick). Disc badge: gold number = ready,
+  muted number = left, none when done. Sheets opened from the board bring it back on close via
+  `sea-day-open` (SeaMap `dayReturn` / `daySheetSeen`, disarmed after 1.5s if the sheet never
+  opened); Chart Room and Parlor navigate away and do not return.
+

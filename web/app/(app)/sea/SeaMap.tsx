@@ -5197,6 +5197,29 @@ export default function SeaMap({
    *  for them. See DailyOrders' note on canClaim. */
   const [ordersAshore, setOrdersAshore] = useState(false)
   /**
+   * ── BACK TO THE DAY ──────────────────────────────────────────────────────
+   *
+   * Kong: the day board should be seamless to navigate. A card on it opens the
+   * real sheet (voyage, trawls, bounties, the orders on the level page), and
+   * closing that sheet used to drop you on the open sea, a disc away from the
+   * next thing. Now a sheet that was opened FROM the board brings the board
+   * back when it closes, re-read, so the card you just finished is shown
+   * finished and the next one is one tap away. `dayReturn` is armed by the
+   * board's open handler; `daySheetSeen` records that the sheet really did
+   * open, so the return only fires on its close.
+   */
+  const dayReturn = useRef(false)
+  const daySheetSeen = useRef(false)
+  const anyDaySheet = voyageOpen || trawlOpen || bountiesOpen || skillOpen
+  useEffect(() => {
+    if (anyDaySheet) { if (dayReturn.current) daySheetSeen.current = true; return }
+    if (dayReturn.current && daySheetSeen.current) {
+      dayReturn.current = false
+      daySheetSeen.current = false
+      window.dispatchEvent(new CustomEvent('sea-day-open'))
+    }
+  }, [anyDaySheet])
+  /**
    * ── THE TRAWLS HAD THEIR OWN DISC, AND SHOULD NOT HAVE ────────────────────
    *
    * Fifth in the HUD row, and a readout: what is out and how long. It came off
@@ -12120,18 +12143,32 @@ hullRef={hullRefFor(t.key)} />
           trawls, the puzzles and the Parlor were so hidden it was hard to
           remember to go and check. Each row opens the sheet the sea already
           has for it, wherever the hull is; the two that are pages navigate.
-          See SeaDay for the rest. Fourth slot on the right, outermost. */}
-      {!hudOff && (
-        <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 3} ashore={ordersAshore}
-          onOpen={(kind: DayKind) => {
-            if (kind === 'orders') { setSkillView('fishing'); setSkillOpen(true) }
-            else if (kind === 'voyage') setVoyageOpen(true)
-            else if (kind === 'trawls') setTrawlOpen(true)
-            else if (kind === 'bounties') setBountiesOpen(true)
-            else if (kind === 'chart') router.push('/tavern/chart-room')
-            else if (kind === 'parlor') router.push('/tavern/trivia')
-          }} />
-      )}
+          See SeaDay for the rest. Fourth slot on the right, outermost.
+
+          ALWAYS MOUNTED, and that matters: the HUD goes down whenever the rod
+          is out, and unmounting with it threw away everything the board knew,
+          so an order finishing while you fished could never be noticed as a
+          change. `hidden` hides the disc and holds any news until you are
+          back. */}
+      <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 3} ashore={ordersAshore}
+        hidden={hudOff} caughtTick={caughtTick}
+        onOpen={(kind: DayKind) => {
+          // A sheet opened from the board brings the board back when it
+          // closes. The pages leave the sea, so they do not.
+          if (kind !== 'chart' && kind !== 'parlor') {
+            dayReturn.current = true
+            daySheetSeen.current = false
+            // A sheet that refuses to open (a board that is shut) must not
+            // leave the flag armed for the next time a sheet opens normally.
+            setTimeout(() => { if (!daySheetSeen.current) dayReturn.current = false }, 1500)
+          }
+          if (kind === 'orders') { setSkillView('fishing'); setSkillOpen(true) }
+          else if (kind === 'voyage') setVoyageOpen(true)
+          else if (kind === 'trawls') setTrawlOpen(true)
+          else if (kind === 'bounties') setBountiesOpen(true)
+          else if (kind === 'chart') router.push('/tavern/chart-room')
+          else if (kind === 'parlor') router.push('/tavern/trivia')
+        }} />
       {/* THE WAY TO ARRANGE SAILING WITH SOMEBODY, and for a while there was
           no way at all: the panel below was mounted with nothing able to open
           it. See SeaCrew. The count is people waiting on an answer from you,

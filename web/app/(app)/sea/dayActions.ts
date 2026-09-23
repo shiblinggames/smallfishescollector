@@ -26,6 +26,7 @@ import { getMatchState } from '@/app/(app)/charting/actions'
 import { getMinefieldState } from '@/app/(app)/charting/minefieldActions'
 import { getRiggingState } from '@/app/(app)/tavern/chart-room/rigging/actions'
 import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
+import { BASE_VOYAGE_MS } from '@/lib/voyage'
 
 export type DayState = {
   /** Today's Orders: the daily challenges. */
@@ -40,6 +41,13 @@ export type DayState = {
   chart: { solved: number; total: number } | null
   /** The Parlor: tonight's board and this week's ladder. */
   parlor: { boardPlayedToday: boolean; ladderDone: boolean } | null
+  /**
+   * WHEN THE NEXT THING COMES BACK ON ITS OWN, as epoch ms, or null. The
+   * voyage and the trawls finish on a clock rather than because you did
+   * something, so the board would never learn of it without asking again.
+   * The client sets one timer for this moment instead of polling.
+   */
+  nextAt: number | null
   // FINN'S JOB IS NOT HERE. It was, for one commit. Kong: that is a campaign
   // quest, not a daily. It does not reset, it advances, and a board of things
   // that come back tomorrow is the wrong place to track a story. The Salt
@@ -80,7 +88,13 @@ export async function dayState(): Promise<DayState | null> {
     safe(admin.from('trivia_ladder_attempts').select('status').eq('user_id', user.id).eq('date', kingWeekStr()).maybeSingle()),
   ])
 
-  const out: DayState = { orders: null, voyage: null, trawls: null, bounties: null, chart: null, parlor: null }
+  const out: DayState = { orders: null, voyage: null, trawls: null, bounties: null, chart: null, parlor: null, nextAt: null }
+  const now = Date.now()
+  /** Keep the soonest future moment anything flips. */
+  const soon = (t: number | null) => {
+    if (t == null || !(t > now)) return
+    if (out.nextAt == null || t < out.nextAt) out.nextAt = t
+  }
 
   if (orders) {
     const n = orders.challenges.length
@@ -92,9 +106,11 @@ export async function dayState(): Promise<DayState | null> {
   if (voyage && !('error' in voyage)) {
     if (voyage.readyVoyage) out.voyage = { state: 'ready', endsAt: null }
     else if (voyage.todayVoyage) {
-      const v = voyage.todayVoyage as { created_at: string; duration_ms?: number }
-      const endsAt = new Date(v.created_at).getTime() + (v.duration_ms ?? 0)
-      out.voyage = { state: 'at_sea', endsAt: v.duration_ms ? endsAt : null }
+      // The same fallback the reader uses, so "back in" is never blank.
+      const v = voyage.todayVoyage as { created_at: string; duration_ms?: number | null }
+      const endsAt = new Date(v.created_at).getTime() + (v.duration_ms ?? BASE_VOYAGE_MS)
+      out.voyage = { state: 'at_sea', endsAt }
+      soon(endsAt)
     } else out.voyage = { state: 'none', endsAt: null }
   }
 
@@ -102,6 +118,7 @@ export async function dayState(): Promise<DayState | null> {
     const active = trawls.zones.filter(z => z.trawl)
     const ready = active.filter(z => z.trawl?.ready).length
     out.trawls = { out: active.length, ready, slots: trawls.unlockedSlots }
+    for (const z of active) if (z.trawl && !z.trawl.ready) soon(new Date(z.trawl.endsAt).getTime())
   }
 
   if (board) {
