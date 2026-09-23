@@ -3275,8 +3275,9 @@ the sheet it opens. A failed reader drops its row, never the board.
 
 - **Six rows only.** Finn's job was a seventh for one commit; Kong: that is a campaign quest, not a
   daily. It advances rather than resets, and the Salt Road panel already carries it.
-- **Rows open the real thing** (Kong's choice over "set a course"): orders -> SkillPanel fishing
-  view, voyage -> VoyageBoard, trawls -> TrawlIndicator dock, bounties -> BountyBoardModal;
+- **Rows open the real thing** (Kong's choice over "set a course"): orders -> the orders IN the
+  board (2026-09-23: they left the Fishing level sheet and live only here; Tally House mooring opens
+  the board on them via `sea-day-open` `{view:'orders'}`), voyage -> VoyageBoard, trawls -> TrawlIndicator dock, bounties -> BountyBoardModal;
   Chart Room and Parlor `router.push` to their pages. Claiming an order still needs the
   Tally House (`ordersAshore`); the row says Open, not Claim, until then.
 - **Breath rule is the haul's**: the ring breathes only while something is claimable or waiting

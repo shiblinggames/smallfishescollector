@@ -88,7 +88,6 @@ import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { getHook } from '@/lib/hooks'
 import TrawlIndicator from '../fishing/TrawlIndicator'
-import DailyOrders from '../trawl-docks/DailyOrders'
 import { getBountyBoard } from '../expeditions/bountyActions'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
@@ -7497,9 +7496,13 @@ export default function SeaMap({
     // The rule it exists to protect is untouched: read anywhere, settle up
     // ashore. You still have to sail here. What changed is that arriving hands
     // you the panel instead of a URL.
-    // The docks open the Fishing level with today's orders under it, claiming
-    // enabled because you are standing on the docks. See the SkillPanel mount.
-    if (p.id === 'trawl_docks') { setOrdersAshore(true); setSkillView('fishing'); setSkillOpen(true); return }
+    // The docks open the day board straight onto today's orders, claiming
+    // enabled because you are standing on the docks. See SeaDay.
+    if (p.id === 'trawl_docks') {
+      setOrdersAshore(true)
+      window.dispatchEvent(new CustomEvent('sea-day-open', { detail: { view: 'orders' } }))
+      return
+    }
     // AND THE POSTING HOUSE PINS ITS BOARD UP WHERE YOU FLOAT. Bounties were a
     // card on the Expeditions hub, and routing there would have made mooring at
     // the island a redirect off the chart: the sea unloaded, the hub rendered,
@@ -11988,25 +11991,14 @@ hullRef={hullRefFor(t.key)} />
 
       <SkillPanel
         open={skillOpen}
-        onClose={() => { setSkillOpen(false); setOrdersAshore(false); pollBounties() }}
+        onClose={() => { setSkillOpen(false); pollBounties() }}
         skill={skillView}
         onSwitch={setSkillView}
-        // TODAY'S WORK, ON THE SAME PAGE AS THE LEVEL. The orders sheet and the
-        // bounty board each had a disc and a sheet of their own; they are a
-        // section of the level they belong to now. Claiming an order still
-        // wants the Trawl Docks under you (ordersAshore), as it always did.
+        // THE BOUNTIES, ON THE SAME PAGE AS THE LEVEL. Today's Orders sat here
+        // under Fishing too, and moved out to the day board (Kong: it lives
+        // there and nowhere else now). See SeaDay.
         extra={skillView === 'fishing'
-          ? (orders ? (() => {
-              const n = orders.challenges.length
-              const done = orders.challenges.filter((c, i) => (orders.progress[i] ?? 0) >= c.target).length
-              const ready = orders.challenges.filter((c, i) => (orders.progress[i] ?? 0) >= c.target && !orders.claimed[i]).length
-              return {
-                title: 'Today’s Orders',
-                summary: ready > 0 ? `${ready} to claim` : `${done}/${n} done`,
-                ready: ready > 0,
-                children: <DailyOrders embedded initial={orders} canClaim={ordersAshore} onChange={setOrders} />,
-              }
-            })() : undefined)
+          ? undefined
           : {
               title: 'Bounties',
               summary: !bountyTally ? '' : !bountyTally.unlocked ? 'Locked'
@@ -12260,6 +12252,7 @@ hullRef={hullRefFor(t.key)} />
           back. */}
       <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 3} ashore={ordersAshore}
         hidden={hudOff} caughtTick={caughtTick}
+        orders={orders} onOrders={setOrders} onClose={() => setOrdersAshore(false)}
         seed={() => getBoot().then(b => b?.day ?? null)}
         onOpen={(kind: DayKind) => {
           // A sheet opened from the board brings the board back when it
@@ -12271,8 +12264,7 @@ hullRef={hullRefFor(t.key)} />
             // leave the flag armed for the next time a sheet opens normally.
             setTimeout(() => { if (!daySheetSeen.current) dayReturn.current = false }, 1500)
           }
-          if (kind === 'orders') { setSkillView('fishing'); setSkillOpen(true) }
-          else if (kind === 'voyage') setVoyageOpen(true)
+          if (kind === 'voyage') setVoyageOpen(true)
           else if (kind === 'trawls') setTrawlOpen(true)
           else if (kind === 'bounties') setBountiesOpen(true)
           else if (kind === 'chart') router.push('/tavern/chart-room')

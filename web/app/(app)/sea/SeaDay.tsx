@@ -45,12 +45,24 @@
 // Every row opens the sheet the sea already mounts for it, wherever the hull
 // is, and the two that are pages navigate. Claiming an order still wants the
 // Tally House under you, as it always did, and that row says Open, not Claim.
+//
+// ── EXCEPT THE ORDERS, WHICH LIVE HERE ──────────────────────────────────────
+//
+// Kong: Today's Orders comes out of the Fishing level sheet and exists only on
+// this board. They were a folded row at the top of the level, which is where
+// the level's numbers belong, and a daily is the board's business. So the
+// orders row opens the orders IN the board, one step in with a way back, and
+// mooring at the Tally House opens the board straight onto them with claiming
+// on (the map sends `sea-day-open` with `view: 'orders'`).
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import ResetCountdown from '@/components/ResetCountdown'
 import { dayState, type DayState } from './dayActions'
+import DailyOrders from '../trawl-docks/DailyOrders'
+import { getDailyChallenge } from '../fishing/dailyChallengeActions'
+import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import { vibrate } from '@/lib/haptics'
 
 const GOLD = '#f0c040'
@@ -175,7 +187,7 @@ function left(endsAt: number): string {
 
 type Toast = { id: number; kinds: DayKind[]; text: string }
 
-export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, onOpen, seed }: {
+export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, onOpen, seed, orders, onOrders, onClose }: {
   size: number
   top: number
   right: number
@@ -193,8 +205,31 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
    *  Null from it falls back to a read of its own. Later reads are the
    *  board's own. Read once, at mount. */
   seed?: () => Promise<DayState | null>
+  /** The orders themselves, owned by the map (it reads them on arrival). */
+  orders: DailyChallengeState | null
+  /** A claim, or a fresh read, handed back up to the owner. */
+  onOrders: (next: DailyChallengeState) => void
+  /** The board shut. The map drops `ashore` here, as the level sheet did. */
+  onClose?: () => void
 }) {
   const [open, setOpen] = useState(false)
+  /** The whole board, or one step in on Today's Orders. */
+  const [view, setView] = useState<'board' | 'orders'>('board')
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  const close = useCallback(() => {
+    setOpen(false)
+    setView('board')
+    onCloseRef.current?.()
+  }, [])
+  const onOrdersRef = useRef(onOrders)
+  onOrdersRef.current = onOrders
+  /** Step in on the orders, re-reading them so a catch a moment ago shows. */
+  const showOrders = useCallback(() => {
+    setView('orders')
+    setOpen(true)
+    void getDailyChallenge().then(s => { if (s) onOrdersRef.current(s) }).catch(() => {})
+  }, [])
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('sea-overlay', { detail: { id: 'day', open } }))
   }, [open])
@@ -265,7 +300,10 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
   useEffect(() => {
     const onVis = () => { if (document.visibilityState === 'visible') load() }
     const onTrawls = () => load()
-    const onOpenReq = () => setOpen(true)
+    const onOpenReq = (e: Event) => {
+      if ((e as CustomEvent<{ view?: string } | null>).detail?.view === 'orders') showOrders()
+      else setOpen(true)
+    }
     document.addEventListener('visibilitychange', onVis)
     window.addEventListener('trawls-changed', onTrawls)
     window.addEventListener('sea-day-open', onOpenReq)
@@ -274,7 +312,7 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
       window.removeEventListener('trawls-changed', onTrawls)
       window.removeEventListener('sea-day-open', onOpenReq)
     }
-  }, [load])
+  }, [load, showOrders])
 
   // Held news lands the moment the HUD is back.
   useEffect(() => {
@@ -301,8 +339,10 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
 
   const go = (kind: DayKind) => {
     vibrate(6)
-    setOpen(false)
     setToast(null)
+    if (kind === 'orders') { showOrders(); return }
+    setOpen(false)
+    setView('board')
     onOpen(kind)
   }
 
@@ -425,7 +465,7 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
         document.body,
       )}
 
-      <PopupShell open={open} onClose={() => setOpen(false)}>
+      <PopupShell open={open} onClose={close}>
         <motion.div
           initial={{ opacity: 0, scale: 0.96, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -438,7 +478,7 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
             borderRadius: 18, boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
             padding: narrow ? '0.8rem 0.75rem 0.85rem' : '1.05rem 1rem 1.15rem',
           }}>
-          <button type="button" onClick={() => setOpen(false)} aria-label="Close"
+          <button type="button" onClick={close} aria-label="Close"
             style={{
               position: 'absolute', top: narrow ? 8 : 10, right: narrow ? 8 : 10, zIndex: 2, width: 30, height: 30,
               display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 9,
@@ -448,6 +488,34 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
           </button>
 
+          {view === 'orders' ? (
+            <>
+              {/* ── ONE STEP IN: TODAY'S ORDERS ──────────────────────────────
+                  Back goes to the board, not off it; the header is the same
+                  single line the board wears. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingRight: 36, minHeight: 30 }}>
+                <button type="button" onClick={() => { vibrate(6); setView('board'); load() }} aria-label="Back to the day"
+                  style={{
+                    width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: 9, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
+                    color: '#cdd3db', cursor: 'pointer', padding: 0,
+                  }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+                </button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={ART.orders} alt="" style={{ width: 30, height: 30, objectFit: 'contain' }} />
+                <p className="font-cinzel font-700" style={{ fontSize: narrow ? '1.02rem' : '1.15rem', color: '#f4ecd8', margin: 0, lineHeight: 1.25 }}>
+                  Today&rsquo;s Orders
+                </p>
+              </div>
+              <div style={{ marginTop: 6 }}>
+                {orders
+                  ? <DailyOrders embedded initial={orders} canClaim={ashore}
+                      onChange={next => { onOrdersRef.current(next); load() }} />
+                  : <p className="font-karla" style={{ fontSize: '0.8rem', color: `${SEA},0.6)`, margin: '10px 0 4px' }}>Reading the orders&hellip;</p>}
+              </div>
+            </>
+          ) : (<>
           {/* ── ONE LINE OF HEADER ────────────────────────────────────────
               Kong: too long vertically on a phone, a lot of unnecessary
               stuff. The eyebrow, the headline and the subline were three
@@ -529,6 +597,7 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
               ))}
             </div>
           )}
+          </>)}
         </motion.div>
       </PopupShell>
     </>

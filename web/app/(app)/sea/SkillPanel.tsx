@@ -214,7 +214,8 @@ export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown,
   /**
    * ── WHAT THIS SPINE HAS FOR YOU TODAY ────────────────────────────────
    *
-   * The day's orders under Fishing, the bounty board under Navigation. Each
+   * The bounty board under Navigation. (Today's Orders sat under Fishing
+   * until 2026-09-23 and moved to the day board, SeaDay.) Each
    * had a disc of its own on the HUD, which was a row of eight discs for a
    * screen that is meant to be water. The level is where a captain goes to
    * see how they are doing; today's work belongs on the same page.
