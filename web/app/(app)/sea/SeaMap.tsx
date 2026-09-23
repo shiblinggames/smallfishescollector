@@ -293,7 +293,6 @@ import { FINN_NAME, findNextBeat, type FinnSceneLine } from '@/lib/finn'
 const RenownPanel = dynamic(() => import('@/components/RenownPanel'), { ssr: false })
 const MarkProbe = dynamic(() => import('./MarkProbe'), { ssr: false })
 const BountiesPanel = dynamic(() => import('../expeditions/BountiesPanel'), { ssr: false })
-const BountyBoardModal = dynamic(() => import('../expeditions/BountyBoardModal'), { ssr: false })
 const TraderPanel = dynamic(() => import('./TraderPanel'), { ssr: false })
 const FolkPanel = dynamic(() => import('./FolkPanel'), { ssr: false })
 const SeaFirstVoyage = dynamic(() => import('./SeaFirstVoyage'), { ssr: false })
@@ -5239,7 +5238,11 @@ export default function SeaMap({
   /** The bounty board, pinned up at the Posting House. Same rule as the Tally
    *  House's orders and the Shipyard's rack: you sailed here, so the panel
    *  comes to the water rather than the water unloading for a page. */
-  const [bountiesOpen, setBountiesOpen] = useState(false)
+  /** Bounties open on the day board now (see SeaDay), from the Posting House,
+   *  the board's own row, and the new-rung notice alike. */
+  const openBounties = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('sea-day-open', { detail: { view: 'bounties' } }))
+  }, [])
   /**
    * A HUNT THAT IS DONE AND NOT PAID.
    *
@@ -5304,7 +5307,7 @@ export default function SeaMap({
    */
   const dayReturn = useRef(false)
   const daySheetSeen = useRef(false)
-  const anyDaySheet = voyageOpen || trawlOpen || bountiesOpen || skillOpen
+  const anyDaySheet = voyageOpen || trawlOpen || skillOpen
   useEffect(() => {
     if (anyDaySheet) { if (dayReturn.current) daySheetSeen.current = true; return }
     if (dayReturn.current && daySheetSeen.current) {
@@ -5413,7 +5416,6 @@ export default function SeaMap({
       if (trawlOpen) { setTrawlOpen(false); return }
       if (ordersOpen) { setOrdersOpen(false); setOrdersAshore(false); return }
       if (choosing) { setChoosing(false); return }
-      if (bountiesOpen) { setBountiesOpen(false); return }
       if (campaignOpen) { setCampaignOpen(false); return }
       if (finnOpen) { setFinnOpen(false); setFinnLines(null); return }
       if (finnTalk) { setFinnTalk(null); return }
@@ -5438,7 +5440,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, campaignOpen, choosing, shipSheet, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, gearOpen, folkOpen, mapOpen])
+  }, [find, ashore, voyageOpen, trawlOpen, ordersOpen, campaignOpen, choosing, shipSheet, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, gearOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -7512,8 +7514,8 @@ export default function SeaMap({
     // here used to open that whole panel -- your level, your renown, your
     // road ahead, and the notices somewhere down it. A captain who sailed to
     // an island called the Posting House came for the notices. Same board,
-    // same clothes as that section, on its own. See BountyBoardModal.
-    if (p.id === 'posting_house') { setBountiesOpen(true); return }
+    // same clothes as that section, on its own. Since 2026-09-23 that is the day board, one step in on the bounties (SeaDay).
+    if (p.id === 'posting_house') { openBounties(); return }
     // AND THE FORGE LIGHTS WHERE YOU MOOR. Same trade as the Posting House:
     // the bench is one screen you dip into, and a route spends the whole chart
     // to show it. See ShipSheet.
@@ -11979,16 +11981,6 @@ hullRef={hullRefFor(t.key)} />
         )
       })()}
 
-      {/* THE BOUNTY BOARD, over the water you sailed to read it on. The
-          wrapper is the one every sheet over this map needs: the chart STEERS
-          on click and starts a heading on pointerdown, so without it a tap on
-          the backdrop to dismiss would also put the helm over. */}
-      {bountiesOpen && (
-        <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-          <BountyBoardModal open onClose={() => { setBountiesOpen(false); pollBounties() }} />
-        </div>
-      )}
-
       <SkillPanel
         open={skillOpen}
         onClose={() => { setSkillOpen(false); pollBounties() }}
@@ -12030,7 +12022,7 @@ hullRef={hullRefFor(t.key)} />
         <BountyRungUnlock
           chapter={rungNews.chapter} title={rungNews.title} boss={rungNews.boss}
           orders={rungNews.orders} gems={rungNews.gems} first={rungNews.first}
-          onOpen={() => { setRungNews(null); setBountiesOpen(true) }} />
+          onOpen={() => { setRungNews(null); openBounties() }} />
       )}
 
       {/* ── THE PARCHMENT ─────────────────────────────────────────────
@@ -12252,7 +12244,7 @@ hullRef={hullRefFor(t.key)} />
           back. */}
       <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 3} ashore={ordersAshore}
         hidden={hudOff} caughtTick={caughtTick}
-        orders={orders} onOrders={setOrders} onClose={() => setOrdersAshore(false)}
+        orders={orders} onOrders={setOrders} onClose={() => { setOrdersAshore(false); pollBounties() }}
         seed={() => getBoot().then(b => b?.day ?? null)}
         onOpen={(kind: DayKind) => {
           // A sheet opened from the board brings the board back when it
@@ -12266,7 +12258,6 @@ hullRef={hullRefFor(t.key)} />
           }
           if (kind === 'voyage') setVoyageOpen(true)
           else if (kind === 'trawls') setTrawlOpen(true)
-          else if (kind === 'bounties') setBountiesOpen(true)
           else if (kind === 'chart') router.push('/tavern/chart-room')
           else if (kind === 'parlor') router.push('/tavern/trivia')
         }} />

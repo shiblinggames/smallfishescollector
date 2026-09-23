@@ -3277,7 +3277,9 @@ the sheet it opens. A failed reader drops its row, never the board.
   daily. It advances rather than resets, and the Salt Road panel already carries it.
 - **Rows open the real thing** (Kong's choice over "set a course"): orders -> the orders IN the
   board (2026-09-23: they left the Fishing level sheet and live only here; Tally House mooring opens
-  the board on them via `sea-day-open` `{view:'orders'}`), voyage -> VoyageBoard, trawls -> TrawlIndicator dock, bounties -> BountyBoardModal;
+  the board on them via `sea-day-open` `{view:'orders'}`), bounties -> the bounties IN the board
+  the same way (2026-09-23; Posting House mooring and the new-rung notice send `{view:'bounties'}`;
+  BountyBoardModal was deleted; embedded BountiesPanel keeps its tally chip + points pill), voyage -> VoyageBoard, trawls -> TrawlIndicator dock;
   Chart Room and Parlor `router.push` to their pages. Claiming an order still needs the
   Tally House (`ordersAshore`); the row says Open, not Claim, until then.
 - **Breath rule is the haul's**: the ring breathes only while something is claimable or waiting

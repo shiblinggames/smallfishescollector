@@ -54,6 +54,11 @@
 // orders row opens the orders IN the board, one step in with a way back, and
 // mooring at the Tally House opens the board straight onto them with claiming
 // on (the map sends `sea-day-open` with `view: 'orders'`).
+//
+// The Posting House's bounties followed the same week (Kong: same look, same
+// way in). One step in, the same header, and mooring at the Posting House
+// opens the board on them (`view: 'bounties'`). The old stand-alone bounty
+// modal is gone from the sea.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -61,6 +66,7 @@ import PopupShell from '@/components/PopupShell'
 import ResetCountdown from '@/components/ResetCountdown'
 import { dayState, type DayState } from './dayActions'
 import DailyOrders from '../trawl-docks/DailyOrders'
+import BountiesPanel from '../expeditions/BountiesPanel'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import { vibrate } from '@/lib/haptics'
@@ -213,8 +219,8 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
   onClose?: () => void
 }) {
   const [open, setOpen] = useState(false)
-  /** The whole board, or one step in on Today's Orders. */
-  const [view, setView] = useState<'board' | 'orders'>('board')
+  /** The whole board, or one step in on Today's Orders or the bounties. */
+  const [view, setView] = useState<'board' | 'orders' | 'bounties'>('board')
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
   const close = useCallback(() => {
@@ -229,6 +235,11 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
     setView('orders')
     setOpen(true)
     void getDailyChallenge().then(s => { if (s) onOrdersRef.current(s) }).catch(() => {})
+  }, [])
+  /** Step in on the bounties. The panel reads its own board. */
+  const showBounties = useCallback(() => {
+    setView('bounties')
+    setOpen(true)
   }, [])
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('sea-overlay', { detail: { id: 'day', open } }))
@@ -301,7 +312,9 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
     const onVis = () => { if (document.visibilityState === 'visible') load() }
     const onTrawls = () => load()
     const onOpenReq = (e: Event) => {
-      if ((e as CustomEvent<{ view?: string } | null>).detail?.view === 'orders') showOrders()
+      const want = (e as CustomEvent<{ view?: string } | null>).detail?.view
+      if (want === 'orders') showOrders()
+      else if (want === 'bounties') showBounties()
       else setOpen(true)
     }
     document.addEventListener('visibilitychange', onVis)
@@ -312,7 +325,7 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
       window.removeEventListener('trawls-changed', onTrawls)
       window.removeEventListener('sea-day-open', onOpenReq)
     }
-  }, [load, showOrders])
+  }, [load, showOrders, showBounties])
 
   // Held news lands the moment the HUD is back.
   useEffect(() => {
@@ -341,6 +354,7 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
     vibrate(6)
     setToast(null)
     if (kind === 'orders') { showOrders(); return }
+    if (kind === 'bounties') { showBounties(); return }
     setOpen(false)
     setView('board')
     onOpen(kind)
@@ -488,11 +502,11 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
           </button>
 
-          {view === 'orders' ? (
+          {view !== 'board' ? (
             <>
-              {/* ── ONE STEP IN: TODAY'S ORDERS ──────────────────────────────
+              {/* ── ONE STEP IN: TODAY'S ORDERS, OR THE BOUNTIES ──────────────
                   Back goes to the board, not off it; the header is the same
-                  single line the board wears. */}
+                  single line the board wears, with the place's own plate. */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingRight: 36, minHeight: 30 }}>
                 <button type="button" onClick={() => { vibrate(6); setView('board'); load() }} aria-label="Back to the day"
                   style={{
@@ -503,13 +517,13 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
                 </button>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={ART.orders} alt="" style={{ width: 30, height: 30, objectFit: 'contain' }} />
+                <img src={ART[view]} alt="" style={{ width: 30, height: 30, objectFit: 'contain' }} />
                 <p className="font-cinzel font-700" style={{ fontSize: narrow ? '1.02rem' : '1.15rem', color: '#f4ecd8', margin: 0, lineHeight: 1.25 }}>
-                  Today&rsquo;s Orders
+                  {view === 'orders' ? <>Today&rsquo;s Orders</> : 'Bounties'}
                 </p>
               </div>
               <div style={{ marginTop: 6 }}>
-                {orders
+                {view === 'bounties' ? <BountiesPanel embedded onClose={close} /> : orders
                   ? <DailyOrders embedded initial={orders} canClaim={ashore}
                       onChange={next => { onOrdersRef.current(next); load() }} />
                   : <p className="font-karla" style={{ fontSize: '0.8rem', color: `${SEA},0.6)`, margin: '10px 0 4px' }}>Reading the orders&hellip;</p>}

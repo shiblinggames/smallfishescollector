@@ -61,7 +61,9 @@ const TNUM = { fontVariantNumeric: 'tabular-nums' as const }
  *  a small modal on two numbers and a line naming the rung. It reads as a chip
  *  beside the title now: what you have taken out of what is posted. */
 function BoardHeader({ title, claimed, total, points, pointsReady, burst, onPoints, onClose }: {
-  title: string
+  /** Omitted when embedded: the frame around it carries the title and the
+   *  close, and this row keeps only the tally and the points pill. */
+  title?: string
   claimed?: number
   total?: number
   /** Lifetime bounty points. Undefined on the locked and loading states. */
@@ -74,15 +76,15 @@ function BoardHeader({ title, claimed, total, points, pointsReady, burst, onPoin
 }) {
   const showChip = typeof claimed === 'number' && typeof total === 'number' && total > 0
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0.55rem 0.35rem 0.6rem 0.55rem' }}>
-      <p className="font-pirata" style={{
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: title ? '0.55rem 0.35rem 0.6rem 0.55rem' : '0 0 0.55rem' }}>
+      {title && <p className="font-pirata" style={{
         fontSize: '1.5rem', letterSpacing: '0.03em', color: '#f5e3b8', flexShrink: 0,
         // The lantern in the plate is directly behind this row, so it is the
         // brightest wood on the board and the worst place for thin type.
         textShadow: '0 1px 3px rgba(0,0,0,0.85), 0 0 12px rgba(0,0,0,0.5)',
       }}>
         {title}
-      </p>
+      </p>}
       {showChip && (
         <span style={{
           position: 'relative', overflow: 'hidden',
@@ -142,14 +144,14 @@ function BoardHeader({ title, claimed, total, points, pointsReady, burst, onPoin
         </button>
       )}
 
-      <button type="button" onClick={onClose} aria-label="Close"
+      {title && <button type="button" onClick={onClose} aria-label="Close"
         style={{
           flexShrink: 0, width: 30, height: 30, borderRadius: '50%', padding: 0, marginLeft: 8,
           background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
           color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-      </button>
+      </button>}
     </div>
   )
 }
@@ -171,7 +173,9 @@ function Sheet({ label, onClose, children }: { label: string; onClose: () => voi
   useEffect(() => setMounted(true), [])
   if (!mounted) return null
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label={label} onClick={onClose}
+    // data-no-steer: on the sea this sits over the chart, which steers on a
+    // press anywhere not marked.
+    <div role="dialog" aria-modal="true" aria-label={label} onClick={onClose} data-no-steer
       style={{
         position: 'fixed', inset: 0, zIndex: 140,
         background: 'rgba(4,6,10,0.86)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)',
@@ -224,6 +228,7 @@ function RankUpOverlay({ rank, onClose }: { rank: BountyRank | null; onClose: ()
         <motion.div
           role="dialog" aria-modal="true" aria-label={`New rank ${rank.title}`}
           data-any-key
+          data-no-steer
           onClick={onClose}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           style={{
@@ -805,8 +810,10 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
 
   return (
     <div style={{ padding: '0 0.15rem 0.3rem' }}>
-      {!embedded && (<BoardHeader
-        title="Bounties"
+      {/* Embedded, the frame has the title and the close; the tally and the
+          points pill still ride here, or the ladder would have no door. */}
+      {(<BoardHeader
+        title={embedded ? undefined : 'Bounties'}
         claimed={board.rungMax - board.remaining}
         total={board.rungMax}
         points={board.points}

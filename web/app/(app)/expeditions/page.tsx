@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation'
 //
 //   the campaign  → water you sail, one stop at a time (sea/raidWaters)
 //   voyages       → the Charterhouse (sea/VoyageBoard)
-//   bounties      → the Posting House (BountyBoardModal, pinned over the sea)
+//   bounties      → the Posting House (the day board, SeaDay)
 //   the gauntlets → two maelstroms you descend into
 //   your ship     → the Gunwharf, and the Battle Loadout disc in the HUD
 //   the forge     → the Forge island

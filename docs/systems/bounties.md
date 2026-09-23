@@ -26,6 +26,16 @@ ship PvP (removed 2026-08) and inherits its role; don't rebuild PvP alongside it
   — the gem faucet. [badges.md](badges.md) — bounty badges read profile columns (they
   must be listed in `BADGE_PROFILE_COLUMNS` or they silently never earn).
 
+## On the day board (2026-09-23)
+
+Kong: the Posting House bounties follow Today's Orders, same look and same way in. The sea's
+second frame is now the **day board** (`sea/SeaDay.tsx`, `view: 'bounties'`): one step in, back
+arrow, the Posting House plate and "Bounties" as the header. Mooring at the Posting House, the
+board's bounties row and the new-rung notice all dispatch `sea-day-open` with `{ view: 'bounties' }`;
+the board's close runs `pollBounties`. `BountyBoardModal` is DELETED. Embedded `BountiesPanel`
+still draws a title-less `BoardHeader` (tally chip + points pill), or the ladder had no door.
+The Navigation level keeps its bounties row. The section below is history.
+
 ## Two frames, one set of clothes (2026-09-10)
 
 The board is a **section of the Navigation level** (`SkillPanel.extra`) and **its own panel at the
