@@ -5,17 +5,12 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import PageTransition from '@/components/PageTransition'
 import ClientBackground from '@/components/ClientBackground'
-import MobileTabBar from '@/components/MobileTabBar'
 import { SEARCH_DESCRIPTION } from '@/lib/homeCopy'
-import BadgeWatcher from '@/components/BadgeWatcher'
-import ProfileLive from '@/components/ProfileLive'
 import BackgroundAnimationPauser from '@/components/BackgroundAnimationPauser'
 import DragScrollRows from '@/components/DragScrollRows'
 import KeyboardAdvance from '@/components/KeyboardAdvance'
-import PendingSalesWatcher from '@/components/PendingSalesWatcher'
-import FishingAudioPrimer from '@/components/FishingAudioPrimer'
-import ActivityPing from '@/components/ActivityPing'
 import StaleBuildGuard from '@/components/StaleBuildGuard'
+import AppChrome from '@/components/AppChrome'
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -104,14 +99,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PageTransition>
           {children}
         </PageTransition>
-<MobileTabBar />
-        {/* Before the badge watcher in the tree only for reading order; the
-            two talk through window events, not props. See ProfileLive. */}
-        <ProfileLive />
-        <BadgeWatcher />
-        <PendingSalesWatcher />
-        <FishingAudioPrimer />
-        <ActivityPing />
+        {/* Tab bar and the in-game watchers. Loaded only off the public
+            pages; see AppChrome. */}
+        <AppChrome />
         <BackgroundAnimationPauser />
         <DragScrollRows />
         <KeyboardAdvance />
