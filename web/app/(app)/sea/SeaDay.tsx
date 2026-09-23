@@ -301,6 +301,15 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
 
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
+  /** A phone. Rows instead of cards below this width. */
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 560px)')
+    const set = () => setNarrow(mq.matches)
+    set()
+    mq.addEventListener('change', set)
+    return () => mq.removeEventListener('change', set)
+  }, [])
 
   return (
     <>
@@ -419,11 +428,12 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
           style={{
             position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
             background: 'rgba(8,12,18,0.98)', border: `1px solid ${GOLD}3a`,
-            borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
+            borderRadius: 18, boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
+            padding: narrow ? '0.8rem 0.75rem 0.85rem' : '1.05rem 1rem 1.15rem',
           }}>
           <button type="button" onClick={() => setOpen(false)} aria-label="Close"
             style={{
-              position: 'absolute', top: 10, right: 10, zIndex: 2, width: 30, height: 30,
+              position: 'absolute', top: narrow ? 8 : 10, right: narrow ? 8 : 10, zIndex: 2, width: 30, height: 30,
               display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 9,
               background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
               color: '#cdd3db', cursor: 'pointer', padding: 0,
@@ -431,75 +441,86 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
           </button>
 
-          {/* ── THE HEADLINE: what matters, in words, before any card ────── */}
-          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: GOLD, margin: 0 }}>
-            The day
-          </p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f4ecd8', margin: '2px 0 0', paddingRight: 36 }}>
-            {!state ? 'Reading the day'
-              : leftN === 0 ? 'All done for today'
-              : readyN > 0 ? `${readyN} ready to claim`
-              : `${leftN} thing${leftN === 1 ? '' : 's'} left`}
-          </p>
-          <p className="font-karla" style={{ fontSize: '0.72rem', color: `${SEA},0.55)`, margin: '3px 0 0' }}>
-            {state && readyN > 0 && todo.length > 0 ? `${todo.length} more to do today · ` : ''}
-            <ResetCountdown />
-          </p>
+          {/* ── ONE LINE OF HEADER ────────────────────────────────────────
+              Kong: too long vertically on a phone, a lot of unnecessary
+              stuff. The eyebrow, the headline and the subline were three
+              lines saying one thing. It is the headline and the reset, side
+              by side, and nothing else above the rows. */}
+          <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 10, rowGap: 0, paddingRight: 36, minHeight: 30 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: narrow ? '1.02rem' : '1.15rem', color: '#f4ecd8', margin: 0, lineHeight: 1.25 }}>
+              {!state ? 'Reading the day'
+                : leftN === 0 ? 'All done for today'
+                : readyN > 0 ? `${readyN} ready to claim`
+                : `${leftN} left today`}
+            </p>
+            <span className="font-karla" style={{ fontSize: '0.66rem', color: `${SEA},0.5)` }}>
+              <ResetCountdown />
+            </span>
+          </div>
 
-          {!state && (
-            <div style={gridStyle}>
-              {[0, 1, 2, 3].map(i => (
-                <motion.span key={i} aria-hidden
-                  animate={{ opacity: [0.35, 0.6, 0.35] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
-                  style={{ height: 152, borderRadius: 14, background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.12)` }} />
-              ))}
-            </div>
-          )}
-
-          {ready.length > 0 && (
-            <>
-              <SectionLabel color={GOLD}>Ready to claim</SectionLabel>
-              <div style={gridStyle}>
-                {ready.map(r => <DayCard key={r.kind} r={r} onGo={() => go(r.kind)} />)}
-              </div>
-            </>
-          )}
-
-          {todo.length > 0 && (
-            <>
-              <SectionLabel color={`${SEA},0.7)`}>To do today</SectionLabel>
-              <div style={gridStyle}>
-                {todo.map(r => <DayCard key={r.kind} r={r} onGo={() => go(r.kind)} />)}
-              </div>
-            </>
-          )}
-
-          {/* DONE, FOLDED DOWN. Still tappable, because "done" is sometimes
-              "done, and I want to look", but a strip of small plates rather
-              than full cards, so the eye goes to what is left. */}
-          {done.length > 0 && (
-            <>
-              <SectionLabel color={DONE}>Done today</SectionLabel>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-                {done.map(r => (
-                  <button key={r.kind} type="button" onClick={() => go(r.kind)}
-                    title={`${r.status} · ${r.place}`}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 7,
-                      padding: '0.3rem 0.65rem 0.3rem 0.35rem', borderRadius: 999, cursor: 'pointer',
-                      background: 'rgba(123,191,123,0.07)', border: '1px solid rgba(123,191,123,0.26)',
-                    }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ART[r.kind]} alt="" style={{ width: 26, height: 26, objectFit: 'contain', opacity: 0.72 }} />
-                    <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(226,238,226,0.8)' }}>{r.title}</span>
-                    {r.note
-                      ? <span className="font-karla" style={{ fontSize: '0.64rem', color: `${SEA},0.6)` }}>{r.note}</span>
-                      : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={DONE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
-                  </button>
+          {/* ── THE ROWS ──────────────────────────────────────────────────
+              No section labels: the ORDER says it (ready first, then what is
+              left) and the gold says which is which. On a phone each daily is
+              a row with its plate as a thumbnail, a quarter of a card's
+              height; on a monitor there is room for the painted cards. */}
+          {!state ? (
+            narrow ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                {[0, 1, 2, 3].map(i => (
+                  <motion.span key={i} aria-hidden
+                    animate={{ opacity: [0.35, 0.6, 0.35] }}
+                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
+                    style={{ height: 56, borderRadius: 12, background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.12)` }} />
                 ))}
               </div>
-            </>
+            ) : (
+              <div style={{ ...gridStyle, marginTop: 12 }}>
+                {[0, 1, 2].map(i => (
+                  <motion.span key={i} aria-hidden
+                    animate={{ opacity: [0.35, 0.6, 0.35] }}
+                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
+                    style={{ height: 152, borderRadius: 14, background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.12)` }} />
+                ))}
+              </div>
+            )
+          ) : (ready.length + todo.length > 0) && (
+            narrow ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                {[...ready, ...todo].map(r => <DayRow key={r.kind} r={r} onGo={() => go(r.kind)} />)}
+              </div>
+            ) : (
+              <div style={{ ...gridStyle, marginTop: 12 }}>
+                {[...ready, ...todo].map(r => <DayCard key={r.kind} r={r} onGo={() => go(r.kind)} />)}
+              </div>
+            )
+          )}
+
+          {/* DONE, FOLDED DOWN to one strip of small plates, under a hairline
+              rather than a heading. Still tappable. */}
+          {done.length > 0 && (
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: 5,
+              marginTop: ready.length + todo.length > 0 ? 10 : 8,
+              paddingTop: ready.length + todo.length > 0 ? 10 : 0,
+              borderTop: ready.length + todo.length > 0 ? `1px solid ${SEA},0.1)` : 'none',
+            }}>
+              {done.map(r => (
+                <button key={r.kind} type="button" onClick={() => go(r.kind)}
+                  title={`${r.status} · ${r.place}`}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '0.22rem 0.55rem 0.22rem 0.28rem', borderRadius: 999, cursor: 'pointer',
+                    background: 'rgba(123,191,123,0.07)', border: '1px solid rgba(123,191,123,0.24)',
+                  }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={ART[r.kind]} alt="" style={{ width: 22, height: 22, objectFit: 'contain', opacity: 0.72 }} />
+                  <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: 'rgba(226,238,226,0.8)' }}>{r.title}</span>
+                  {r.note
+                    ? <span className="font-karla" style={{ fontSize: '0.6rem', color: `${SEA},0.6)` }}>{r.note}</span>
+                    : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={DONE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
+                </button>
+              ))}
+            </div>
           )}
         </motion.div>
       </PopupShell>
@@ -512,14 +533,55 @@ const gridStyle: React.CSSProperties = {
   gridTemplateColumns: 'repeat(auto-fill, minmax(152px, 1fr))',
 }
 
-function SectionLabel({ color, children }: { color: string; children: React.ReactNode }) {
+/** One daily, as a compact row: the phone's version of the card. The plate
+ *  stays, as a thumbnail, so the board is still the sea's places and not a
+ *  list of words; everything else fits on one line each. */
+function DayRow({ r, onGo }: { r: Row; onGo: () => void }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
-      <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.16em', color, margin: 0, whiteSpace: 'nowrap' }}>
-        {children}
-      </p>
-      <span aria-hidden style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(180,214,232,0.18), transparent)' }} />
-    </div>
+    <button type="button" onClick={onGo}
+      title={`${r.status} · ${r.place}`}
+      style={{
+        position: 'relative', display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+        padding: '0.4rem 0.55rem 0.4rem 0.4rem', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+        background: r.hot
+          ? `linear-gradient(90deg, ${GOLD}18 0%, rgba(40,30,8,0.35) 100%)`
+          : 'rgba(255,255,255,0.035)',
+        border: `1px solid ${r.hot ? `${GOLD}88` : `${SEA},0.16)`}`,
+      }}>
+      {r.hot && (
+        <motion.span aria-hidden
+          animate={{ opacity: [0.5, 0, 0.5] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut' }}
+          style={{ position: 'absolute', inset: -1, borderRadius: 13, border: `1px solid ${GOLD}` }} />
+      )}
+      <span style={{ width: 46, height: 46, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={ART[r.kind]} alt="" loading="lazy" decoding="async"
+          style={{
+            maxWidth: 46, maxHeight: 46, objectFit: 'contain',
+            filter: r.hot ? `drop-shadow(0 0 7px ${GOLD}66)` : 'drop-shadow(0 1px 3px rgba(0,0,0,0.55))',
+          }} />
+      </span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span className="font-cinzel font-700" style={{
+          display: 'block', fontSize: '0.84rem', color: '#f2ead8', lineHeight: 1.2,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{r.title}</span>
+        <span className="font-karla" style={{
+          display: 'block', fontSize: '0.7rem', lineHeight: 1.3, marginTop: 1,
+          color: r.hot ? '#f6dfa0' : `${SEA},0.62)`,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{r.status}</span>
+      </span>
+      {r.action && (
+        <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{
+          flexShrink: 0, fontSize: '0.6rem', padding: '0.3rem 0.6rem', borderRadius: 999,
+          background: r.hot ? `${GOLD}22` : 'rgba(120,170,255,0.12)',
+          color: r.hot ? GOLD : '#bcd4ff',
+          border: `1px solid ${r.hot ? `${GOLD}88` : 'rgba(120,170,255,0.32)'}`,
+        }}>{r.action}</span>
+      )}
+    </button>
   )
 }
 
