@@ -61,39 +61,39 @@ const P = (art: string, aspect: number, width = 1.0, water = 0.42): Plate => ({ 
  *  apart that a template repeats without reading as one; the band's water
  *  colour does most of the telling anyway. */
 const ISLE: Record<string, Plate> = {
-  shallows: P('/sea/isle-shallows.png', 0.652),
-  open_waters: P('/sea/isle-open.png', 0.557),
-  deep: P('/sea/isle-deep.png', 0.560),
-  abyss: P('/sea/isle-abyss.png', 0.561),
-  ancient_deep: P('/sea/isle-ancient.png', 0.603),
+  shallows: P('/sea/isle-shallows.webp', 0.652),
+  open_waters: P('/sea/isle-open.webp', 0.557),
+  deep: P('/sea/isle-deep.webp', 0.560),
+  abyss: P('/sea/isle-abyss.webp', 0.561),
+  ancient_deep: P('/sea/isle-ancient.webp', 0.603),
 }
 
 /** One painting per campaign bay, shared by that bay's rocks. */
 const BAY: Record<string, Plate> = {
-  thread: P('/sea/bay-thread.png', 0.530),
-  sunken_hand: P('/sea/bay-hand.png', 0.503),
-  the_coffers: P('/sea/bay-coffers.png', 0.626),
-  the_last_fathom: P('/sea/bay-fathom.png', 0.562),
-  one_last_ride: P('/sea/bay-ride.png', 0.650),
+  thread: P('/sea/bay-thread.webp', 0.530),
+  sunken_hand: P('/sea/bay-hand.webp', 0.503),
+  the_coffers: P('/sea/bay-coffers.webp', 0.626),
+  the_last_fathom: P('/sea/bay-fathom.webp', 0.562),
+  one_last_ride: P('/sea/bay-ride.webp', 0.650),
 }
 
 export const PLATES: Record<string, Plate> = {
   // ── THE PORTS. Ground only; what stands on each is composited as before.
   // The Trawl Harbor and Cormorant Rock were the two prototypes, 2026-09-22;
   // the rest came through the same prompt the next pass.
-  mainland: P('/sea/port-mainland.png', 0.676),
-  home: P('/sea/port-home.png', 0.562),
-  trawl_docks: P('/sea/port-tally-house.png', 0.596),
-  crew_hall: P('/sea/port-crew-hall.png', 0.606),
-  posting_house: P('/sea/port-posting-house.png', 0.562),
-  forge_isle: P('/sea/port-forge.png', 0.671),
-  gunwharf: P('/sea/port-gunwharf.png', 0.658),
-  charterhouse: P('/sea/port-charterhouse.png', 0.642),
-  trawl_fleet: P('/sea/port-trawl-harbor.png', 0.505),
-  shipyard: P('/sea/port-shipyard.png', 0.604),
+  mainland: P('/sea/port-mainland.webp', 0.676),
+  home: P('/sea/port-home.webp', 0.562),
+  trawl_docks: P('/sea/port-tally-house.webp', 0.596),
+  crew_hall: P('/sea/port-crew-hall.webp', 0.606),
+  posting_house: P('/sea/port-posting-house.webp', 0.562),
+  forge_isle: P('/sea/port-forge.webp', 0.671),
+  gunwharf: P('/sea/port-gunwharf.webp', 0.658),
+  charterhouse: P('/sea/port-charterhouse.webp', 0.642),
+  trawl_fleet: P('/sea/port-trawl-harbor.webp', 0.505),
+  shipyard: P('/sea/port-shipyard.webp', 0.604),
 
   // ── THE FISHING ISLES, by band. Cormorant Rock keeps the first prototype.
-  'shallows-0': P('/sea/isle-plate-1.png', 0.534),
+  'shallows-0': P('/sea/isle-plate-1.webp', 0.534),
   'shallows-1': ISLE.shallows,
   'shallows-2': ISLE.shallows,
   ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [`open_waters-${i}`, ISLE.open_waters])),
