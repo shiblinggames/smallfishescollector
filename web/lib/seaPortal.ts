@@ -79,10 +79,10 @@ export const PORTAL_TIERS: PortalTier[] = [
  * stones enforce is already true of an island by the time you can afford one.
  * What gates a berth is the price, and the price is the whole gate.
  *
- * THE GUNWHARF IS LAST AND DEAREST because it is the only one on the other side
- * of the reef. Every other berth here saves you a sail; that one saves you the
- * arch, the anchorage and the swap into your warship, which is the longest
- * errand in the game.
+ * THE ANCHORAGE BERTHS ARE THE DEAR ONES because they are on the other side of
+ * the reef: each saves the arch, the channel and the swap into your warship,
+ * which is the longest errand in the game. (The Gunwharf was the only one
+ * until 2026-09-23; see the table.)
  */
 export type PortalPort = {
   /** A PLACES id. The berth's name and position both come from there, so this
@@ -98,17 +98,29 @@ export type PortalPort = {
 }
 
 export const PORTAL_PORTS: PortalPort[] = [
-  { id: 'mainland', name: 'The Mainland', cost: 15_000, to: { x: 0, y: 760 }, accent: '#e0b062' },
-  { id: 'home', name: 'The Homestead', cost: 35_000, to: { x: 1500, y: 520 }, accent: '#7fc8de' },
+  // The fishing side keeps the two that are a real sail from the well.
   { id: 'trawl_docks', name: 'The Tally House', cost: 70_000, to: { x: -1150, y: -320 }, accent: '#8fd0e8' },
   { id: 'trawl_fleet', name: 'The Trawl Harbor', cost: 120_000, to: { x: -2050, y: -400 }, accent: '#6fd39a' },
-  { id: 'shipyard', name: 'The Shipyard', cost: 200_000, to: { x: 700, y: -420 }, accent: '#c9a227' },
+  // ── AND THE ANCHORAGE (2026-09-23) ─────────────────────────────────────
+  // Kong: the Mainland, the Homestead and the Shipyard were lame berths. The
+  // well stands off the Homestead, so all three were a short sail from it.
+  // They are gone and the anchorage is in: every one of these saves the arch,
+  // the channel and the change of boat, which is the longest errand there is,
+  // so they share one price. A warp north of the reef puts the warship under
+  // you (see warpTo in SeaMap). Each lands a short pull off the island on the
+  // channel side, outside its mooring ring, checked clear of every solid.
+  // Owners of the retired three keep the ids in portal_ports; nothing reads
+  // them, and Kong ruled no refunds.
+  { id: 'crew_hall', name: 'The Crew Hall', cost: 250_000, to: { x: -107, y: -3840 }, accent: '#d9a45a' },
+  { id: 'posting_house', name: 'The Posting House', cost: 250_000, to: { x: -1560, y: -3984 }, accent: '#c9b27a' },
+  { id: 'forge_isle', name: 'The Forge', cost: 250_000, to: { x: 30, y: -3984 }, accent: '#e0764a' },
   {
-    id: 'gunwharf', name: 'The Gunwharf', cost: 500_000,
+    id: 'gunwharf', name: 'The Gunwharf', cost: 250_000,
     // THE FAR SIDE OF THE REEF. Set down a short pull off the wharf, in the
     // same water the expedition way home lands in — see PORTAL_HOME.
     to: { x: -500, y: -5150 }, accent: '#a78bfa',
   },
+  { id: 'charterhouse', name: 'The Charterhouse', cost: 250_000, to: { x: 500, y: -5150 }, accent: '#f0c040' },
 ]
 
 export const PORT_BY_ID: Record<string, PortalPort> =

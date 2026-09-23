@@ -3326,3 +3326,14 @@ the sheet it opens. A failed reader drops its row, never the board.
   `sea-day-open` (SeaMap `dayReturn` / `daySheetSeen`, disarmed after 1.5s if the sheet never
   opened); Chart Room and Parlor navigate away and do not return.
 
+
+## Homestead portal berths (2026-09-23)
+
+`PORTAL_PORTS` in `lib/seaPortal.ts`. Kong: the Mainland, Homestead and Shipyard berths were lame
+(the well stands off the Homestead, so all three were a short sail) and are GONE; no refunds, stale
+ids stay in `portal_ports` unread. Now: Tally House 70k, Trawl Harbor 120k, and the anchorage at
+250k each (Crew Hall, Posting House, Forge, Gunwharf, Charterhouse). Landings sit a short pull off
+each island on the channel side, outside its mooring ring, checked clear of `SOLIDS`.
+**`warpTo` sets side and hull from the landing**: north of `NORTH_WALL` is the anchorage and the
+warship (plays `crossHull`), south is the fishing boat. Before this, only the arch's column
+(`inGate`) changed them, and the Gunwharf only worked because its landing sat at x -500.

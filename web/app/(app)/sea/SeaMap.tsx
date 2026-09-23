@@ -3859,6 +3859,25 @@ export default function SeaMap({
     pos.current = { x, y }
     target.current = { x, y }
     vel.current = { x: 0, y: 0 }
+    // ── AND THE SIDE, AND THE BOAT, FROM WHERE SHE LANDS ────────────────
+    //
+    // The side and the hull only ever changed in the arch's column, which is
+    // the one place a sailing boat can cross the reef. A warp crosses it
+    // anywhere: the Gunwharf berth only swapped boats because its landing
+    // happened to sit inside that column, and a berth anywhere else in the
+    // anchorage would have set a fishing boat down north of the reef, still
+    // counted as south, for the reef's face to drag back to the rocks. So the
+    // landing decides: north of the wall is the anchorage and the warship,
+    // with the same swap the arch plays; south is the fishing boat.
+    const north = y < NORTH_WALL
+    if (north !== sideRef.current) {
+      sideRef.current = north
+      setInAnchorage(north)
+    }
+    if (north !== hullSideRef.current) {
+      hullSideRef.current = north
+      crossHullRef.current(north)
+    }
     portalIn.current = false
     portalArmed.current = false
     setInPortalNow(false)
