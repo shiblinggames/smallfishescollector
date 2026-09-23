@@ -19,7 +19,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { claimDailyReward, claimDailySweep } from '../fishing/dailyChallengeActions'
 import { DAILY_SWEEP_GEMS, type DailyChallengeState } from '@/lib/dailyChallenges'
 import { vibrate } from '@/lib/haptics'
-import { flyCoinsToPurse } from '@/lib/coinFly'
+import { flyCoinsToPurse, flyPayout } from '@/lib/coinFly'
 
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
@@ -135,7 +135,7 @@ export default function DailyOrders({ initial, canClaim = true, onChange, embedd
     return () => clearTimeout(t)
   }, [paid])
 
-  function sweep() {
+  function sweep(from?: Element) {
     if (busy !== null) return
     setBusy('sweep'); setErr(''); vibrate(10)
     startTransition(async () => {
@@ -143,6 +143,7 @@ export default function DailyOrders({ initial, canClaim = true, onChange, embedd
       setBusy(null)
       if ('error' in res) { setErr(res.error); return }
       vibrate([0, 25, 45, 35, 20, 60])
+      flyPayout(from, { gems: DAILY_SWEEP_GEMS })
       window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.gems }))
       setPaid({ i: 'sweep', amount: DAILY_SWEEP_GEMS, gems: true })
       // The sweep too: it is the same stale-picture bug one row further down,
@@ -319,7 +320,7 @@ export default function DailyOrders({ initial, canClaim = true, onChange, embedd
         {canSweep && canClaim && (
           <motion.button
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            onClick={sweep} disabled={busy !== null}
+            onClick={e => sweep(e.currentTarget)} disabled={busy !== null}
             className="font-cinzel font-700"
             style={{
               width: '100%', marginTop: 8, padding: '0.75rem', borderRadius: 12,

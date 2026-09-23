@@ -24,7 +24,7 @@ import {
 } from '@/app/actions/mail'
 import type { MailMessage } from '@/lib/mailTypes'
 import SwipeAction from '@/components/SwipeAction'
-import { flyCoinsToPurse } from '@/lib/coinFly'
+import { flyCoinsToPurse, flyGemsToPurse } from '@/lib/coinFly'
 import { hapticReward } from '@/lib/haptics'
 
 const ACCENT = '#f0c040'         // gold, parchment-y "letter from the captain"
@@ -165,8 +165,14 @@ export default function MailInbox({ initialUnreadCount, size = 36 }: {
     // up in sync with the coins landing (falls back to instant if no pill).
     window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.newGems }))
     const tickDoubloons = () => window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+    if (from && msg.attachmentGems > 0) {
+      const g = msg.attachmentGems
+      setTimeout(() => flyGemsToPurse(from, g), msg.attachmentDoubloons > 0 ? 180 : 0)
+    }
     if (from && msg.attachmentDoubloons > 0) {
       flyCoinsToPurse(from, msg.attachmentDoubloons, tickDoubloons)
+    } else if (from && msg.attachmentGems > 0) {
+      tickDoubloons()
     } else {
       hapticReward()
       tickDoubloons()

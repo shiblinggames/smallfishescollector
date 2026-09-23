@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import { flyPayout } from '@/lib/coinFly'
 import { useEffect, useRef, useState, useCallback, useMemo} from 'react'
 import CloseButton from '@/components/CloseButton'
 import type { DialAimBonus } from '@/lib/dialAim'
@@ -1583,8 +1584,10 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
     setPhase('dead')
   }, [])
 
-  const collectKill = useCallback(async () => {
+  const collectKill = useCallback(async (e?: { currentTarget: Element }) => {
     if (isClaiming) return
+    // Measured on the press: the button is gone by the time the award lands.
+    const from = e?.currentTarget?.getBoundingClientRect()
     setIsClaiming(true)
     try {
       const res = await awardRaidKill(winXP, winGold, runTokenRef.current ?? undefined)
@@ -1594,6 +1597,7 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
       navXPRef.current = res.newExpeditionXP
       setNavXP(res.newExpeditionXP)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+      flyPayout(from, { doubloons: winGold })
       if (winXP > 0) setXpPopup({ value: winXP, id: Date.now() })
       // Delay the level-up overlay so the player sees the XP bar fill first.
       if (newLevel > oldLevel) {
@@ -2202,6 +2206,9 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
               }
               if (lootResultRef.current) {
                 window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: lootResultRef.current.newDoubloonTotal }))
+                // The flight lives on <body>, so it finishes over wherever
+                // leaveRaid lands.
+                flyPayout(null, { doubloons: lootAmount })
               }
               leaveRaid()
             }}

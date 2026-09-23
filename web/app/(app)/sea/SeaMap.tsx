@@ -18,6 +18,7 @@
 // several things happening near each other.
 
 import { openMembership } from '@/components/MembershipModal'
+import { flyPayout } from '@/lib/coinFly'
 import { CAPTAIN_WATER, CAPTAIN_WATER_SAYS } from '@/lib/captainWater'
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
@@ -3466,6 +3467,9 @@ export default function SeaMap({
         // grant and the Daily Haul fire.
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
         window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.newGems }))
+        // From the middle of the screen, which is where the hull is: the
+        // camera keeps the boat centred, and the spade went in under it.
+        flyPayout(null, { doubloons: result.doubloons, gems: result.gems })
       }
       setFind({ kind: 'dig', result })
     } catch {
@@ -3509,6 +3513,7 @@ export default function SeaMap({
         if (!result.already) {
           window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
           window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.newGems }))
+          flyPayout(null, { doubloons: result.doubloons, gems: result.gems })
         }
       }
       setLanded({ isle, result })
@@ -4272,6 +4277,7 @@ export default function SeaMap({
         // WITH THE NUMBER. The nav ignores this event without one, on purpose:
         // an empty detail used to crash it. So it was firing, and doing nothing.
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+        flyPayout(null, { doubloons: res.reward })
       }
       // THE XP, INTO THE LIVE TOTAL. The level is derived from this, and a
       // level crossing is what puts the level card up (see levelWas), so a job

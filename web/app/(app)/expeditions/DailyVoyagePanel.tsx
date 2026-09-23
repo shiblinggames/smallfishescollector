@@ -23,6 +23,7 @@ import { BASE_VOYAGE_MS, ROUTE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/
 import VoyageHistory, { type VoyageHistoryEntry } from './VoyageHistory'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 import { IconMap, IconSwords, IconBolt, IconWave, IconGull, IconHourglass, IconCrate, IconSkull, IconLock, IconCheck } from '@/components/GameIcons'
+import { flyPayout } from '@/lib/coinFly'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
@@ -588,6 +589,10 @@ export default function DailyVoyagePanel({
    *  playing: the server work happens immediately so the numbers are real and
    *  the balances update, but the panel stays put until the player has actually
    *  seen the reveal and tapped through it. */
+  /** What the voyage paid, held from the reveal until "Take the haul", which is
+   *  the press the coins fly from. Flying them at "Open the manifest" would
+   *  spend the reveal before it happens. */
+  const paidRef = useRef<{ doubloons: number; gems: number } | null>(null)
   const handleClaim = useCallback((advance = true) => {
     if (!activeVoyage) return
     setError(null)
@@ -595,6 +600,7 @@ export default function DailyVoyagePanel({
       try {
       const res = await revealVoyageResults(activeVoyage.id)
       if ('error' in res) { setError(res.error); return }
+      paidRef.current = { doubloons: res.earnedDoubloons, gems: res.earnedGems }
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (res.earnedGems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGemTotal }))
       setClaimedBait(res.earnedBait)
@@ -947,7 +953,7 @@ export default function DailyVoyagePanel({
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 transition={{ type: 'spring', stiffness: 620, damping: 26 }}
-                onClick={() => {
+                onClick={e => {
                   if (reveal === 'sealed') {
                     // The press answers instantly and the verdict sits for a
                     // beat before the number lands. The server call rides along
@@ -967,7 +973,11 @@ export default function DailyVoyagePanel({
                     handleClaim(false)
                     return
                   }
-                  if (reveal === 'haul') setPanelState('done')
+                  if (reveal === 'haul') {
+                    if (paidRef.current) flyPayout(e.currentTarget, paidRef.current)
+                    paidRef.current = null
+                    setPanelState('done')
+                  }
                 }}
                 disabled={reveal === 'outcome'}
                 className="font-karla font-700 uppercase tracking-[0.12em]"

@@ -27,6 +27,7 @@ import { getBountyBoard, claimBounty, rerollBounty, claimBountyMilestone, type B
 import { BOUNTY_POINTS, BOUNTY_MILESTONES } from '@/lib/bounties'
 import { rankForPoints, nextRank, rankGained, type BountyRank } from '@/lib/bountyRanks'
 import { hapticReward } from '@/lib/haptics'
+import { flyPayout } from '@/lib/coinFly'
 
 // Solid dark notices, light ink, the way every other panel in this game reads.
 //
@@ -303,7 +304,7 @@ function PointsLadder({ board, busy, claimFx, onClaim, onClose }: {
   board: BountyBoard
   busy: boolean
   claimFx: { kind: 'gems' | 'doubloons' | 'skin'; amount: number; label: string } | null
-  onClaim: () => void
+  onClaim: (from: Element) => void
   onClose: () => void
 }) {
   const total = BOUNTY_MILESTONES.length
@@ -451,7 +452,7 @@ function PointsLadder({ board, busy, claimFx, onClaim, onClose }: {
       </div>
 
       {ready && !allDone ? (
-        <button type="button" onClick={onClaim} disabled={busy} className="font-karla font-800 tap"
+        <button type="button" onClick={e => onClaim(e.currentTarget)} disabled={busy} className="font-karla font-800 tap"
           style={{
             width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.9rem',
             background: `linear-gradient(180deg, ${look.color}33, ${look.color}1c)`,
@@ -493,7 +494,7 @@ function BountyCard({ b, rerollUsed, busy, celebrate, onClaim, onSwap }: {
   busy: boolean
   /** This one was paid a moment ago: the light crosses it and the gems rise. */
   celebrate: boolean
-  onClaim: () => void
+  onClaim: (from: Element) => void
   onSwap: () => void
 }) {
   const stillness = useReducedMotion()
@@ -582,7 +583,7 @@ function BountyCard({ b, rerollUsed, busy, celebrate, onClaim, onSwap }: {
           <motion.button type="button"
             animate={!busy && !stillness ? { scale: [1, 1.035, 1] } : { scale: 1 }}
             transition={!busy && !stillness ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.15 }}
-            onClick={onClaim} disabled={busy}
+            onClick={e => onClaim(e.currentTarget)} disabled={busy}
             className="font-karla font-700 uppercase tracking-[0.08em]"
             style={{
               flexShrink: 0, padding: '0.45rem 0.85rem', borderRadius: 9,
@@ -683,12 +684,13 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
     )
   }
 
-  function handleClaim(b: BountyView) {
+  function handleClaim(b: BountyView, from?: Element) {
     setBusy(b.id)
     claimBounty(b.id).then(res => {
       setBusy(null)
       if ('error' in res) { setToast(res.error); return }
       hapticReward()
+      flyPayout(from, { gems: res.gems })
       setJustClaimed(b.id)
       setTimeout(() => setJustClaimed(id => (id === b.id ? null : id)), 1200)
       setToast(res.sweep ? `+${res.gems} ${GEM} and ${res.points} points, board cleared` : `+${res.gems} ${GEM} · +${res.points} pt${res.points === 1 ? '' : 's'}`)
@@ -703,7 +705,7 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
     })
   }
 
-  function handleMilestone() {
+  function handleMilestone(from?: Element) {
     setBusy('__ms')
     claimBountyMilestone().then(res => {
       setBusy(null)
@@ -718,6 +720,7 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
         label: res.label,
       })
       setBurst(n => n + 1)
+      flyPayout(from, { gems: res.gems, doubloons: res.doubloons })
       if (res.gems) window.dispatchEvent(new CustomEvent('gems-changed'))
       if (res.doubloons) window.dispatchEvent(new CustomEvent('doubloons-changed'))
       load()
@@ -769,7 +772,7 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
           .map(({ b }) => (
             <BountyCard key={b.id} b={b} rerollUsed={board.rerollUsed} busy={busy === b.id}
               celebrate={justClaimed === b.id}
-              onClaim={() => handleClaim(b)} onSwap={() => setSwapping(b)} />
+              onClaim={el => handleClaim(b, el)} onSwap={() => setSwapping(b)} />
           ))}
       </div>
 

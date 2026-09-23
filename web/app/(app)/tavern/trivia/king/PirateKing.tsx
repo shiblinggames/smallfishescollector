@@ -6,6 +6,7 @@
 // Monday), one 50/50 lifeline. Pays doubloons.
 
 import { useEffect, useState, useTransition } from 'react'
+import { flyPayout } from '@/lib/coinFly'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { answerKingRung, startKingRung, spendKingFiftyFifty, walkKingAway } from './actions'
@@ -153,9 +154,10 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
     })
   }
 
-  function walk() {
+  function walk(e?: { currentTarget: Element }) {
     if (isPending || status !== 'active' || rung < 1) return
     if (!walkConfirm) { setWalkConfirm(true); return }
+    const from = e?.currentTarget?.getBoundingClientRect()
     setError(null)
     startTransition(async () => {
       const r = await walkKingAway()
@@ -164,6 +166,7 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
       setDoubloonsAwarded(r.doubloonsAwarded)
       if (r.newDoubloons !== null) {
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+        flyPayout(from, { doubloons: r.doubloonsAwarded })
       }
       setResult(null)
       setCurrent(null)

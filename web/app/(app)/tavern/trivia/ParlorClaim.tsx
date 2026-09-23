@@ -16,6 +16,7 @@ import { GEM_GLYPH } from '@/lib/uiTokens'
 import { CrownIcon } from './ParlorArt'
 import { claimParlorRank } from './actions'
 import { nextClaimableParlorRank, claimableParlorRanks } from './constants'
+import { flyPayout } from '@/lib/coinFly'
 
 const GEM = '#c084fc'
 
@@ -37,7 +38,8 @@ export default function ParlorClaim({ points, claimedGems }: { points: number; c
   const pending = claimableParlorRanks(points, claimed)
   const pendingGems = pending.reduce((s, r) => s + r.gems, 0)
 
-  const doClaim = useCallback(async () => {
+  const doClaim = useCallback(async (e?: { currentTarget: Element }) => {
+    const from = e?.currentTarget
     if (claiming) return
     setClaiming(true)
     vibrate([0, 25, 35, 70])
@@ -46,6 +48,7 @@ export default function ParlorClaim({ points, claimedGems }: { points: number; c
       setPaid({ gems: res.gemsWon })
       vibrate([0, 30, 45, 90, 45, 160])
       try { window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGems })) } catch { /* no-op */ }
+      flyPayout(from, { gems: res.gemsWon })
       const more = res.moreClaimable
       const nextAwarded = res.newAwarded
       setTimeout(() => {

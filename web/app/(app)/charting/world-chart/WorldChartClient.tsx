@@ -17,6 +17,7 @@ import {
   type LandmarkView,
 } from '@/lib/worldChart'
 import { claimLandmark } from '../worldChartActions'
+import { flyPayout } from '@/lib/coinFly'
 
 const GOLD = '#f0c040'
 const GEM = '#c084fc'
@@ -61,7 +62,7 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
     if (nextUp) setActive(nextUp)
   }, [active, paid, pending, dismissed])
 
-  const doClaim = useCallback(async (lm: LandmarkView) => {
+  const doClaim = useCallback(async (lm: LandmarkView, from?: Element) => {
     if (claimingId != null) return
     setClaimingId(lm.id)
     vibrate([0, 30, 40, 90])
@@ -70,6 +71,7 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
       setPaid({ gems: res.awarded - res.bonus, bonus: res.bonus, completed: res.completed })
       vibrate(res.completed ? [0, 40, 60, 120, 60, 200] : [0, 20, 30, 60, 30, 140])
       try { window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.gems })) } catch { /* noop */ }
+      flyPayout(from, { gems: res.awarded })
       const nextClaimed = res.claimed
       setTimeout(() => {
         setClaimed(nextClaimed)
@@ -184,7 +186,7 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
               lm={active}
               claiming={claimingId === active.id}
               paid={claimingId === active.id ? paid : null}
-              onClaim={() => doClaim(active)}
+              onClaim={el => doClaim(active, el)}
             />
           )}
         </AnimatePresence>,
@@ -227,7 +229,7 @@ function Porthole({ lm }: { lm: LandmarkView }) {
   )
 }
 
-function DiscoveryCinematic({ lm, claiming, paid, onClaim }: { lm: LandmarkView; claiming: boolean; paid: Paid | null; onClaim: () => void }) {
+function DiscoveryCinematic({ lm, claiming, paid, onClaim }: { lm: LandmarkView; claiming: boolean; paid: Paid | null; onClaim: (from: Element) => void }) {
   const [burning, setBurning] = useState(true)
   const [showClaim, setShowClaim] = useState(false)
   useEffect(() => {
@@ -295,7 +297,7 @@ function DiscoveryCinematic({ lm, claiming, paid, onClaim }: { lm: LandmarkView;
               </motion.div>
             ) : showClaim ? (
               <motion.button key="claim" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} disabled={claiming}
-                whileTap={{ scale: 0.96 }} onClick={onClaim} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+                whileTap={{ scale: 0.96 }} onClick={e => onClaim(e.currentTarget)} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
                 style={{ position: 'absolute', inset: 0, width: '100%', borderRadius: 14, fontSize: '1.15rem', color: '#1a1030',
                   background: `linear-gradient(180deg, ${GEM}, #9a5fe0)`, border: `1px solid ${GEM}`, cursor: claiming ? 'default' : 'pointer',
                   boxShadow: `0 4px 22px ${GEM}66, inset 0 1px 0 rgba(255,255,255,0.35)`, opacity: claiming ? 0.7 : 1 }}>

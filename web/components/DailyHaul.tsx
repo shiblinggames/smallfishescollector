@@ -23,6 +23,7 @@ import { claimDailyBonus, claimDailyBait, claimWeeklyCrate } from '@/app/actions
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import CrateOpening, { crateArt, type CrateTierId, type CrateLootView } from '@/components/CrateOpening'
 import ResetCountdown from '@/components/ResetCountdown'
+import { flyPayout } from '@/lib/coinFly'
 
 const GEM = '#a78bfa'
 const BAIT = '#4ade80'
@@ -62,13 +63,14 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
 
   const allDone = gemsClaimed && baitClaimed && crateClaimed
 
-  async function claimGems() {
+  async function claimGems(from?: Element) {
     if (gemsClaimed || loading) return
     setLoading('gems')
     const r = await claimDailyBonus()
     if (r.claimed) {
       setGemsClaimed(true)
       if (r.gems !== undefined) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.gems }))
+      flyPayout(from, { gems: gemAmount })
       onClaimed?.(baitClaimed && crateClaimed)
     }
     setLoading(null)
@@ -174,7 +176,7 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
 
 function ClaimCard({ accent, eyebrow, title, sub, claimed, claimedSub, loading, onClaim, img, glyph, coach }: {
   accent: string; eyebrow: string; title: string; sub: string
-  claimed: boolean; claimedSub: React.ReactNode; loading: boolean; onClaim: () => void
+  claimed: boolean; claimedSub: React.ReactNode; loading: boolean; onClaim: (from: Element) => void
   img?: string; glyph?: React.ReactNode
   /** A `data-coach` name, so a tour can flash this card. */
   coach?: string
@@ -202,7 +204,7 @@ function ClaimCard({ accent, eyebrow, title, sub, claimed, claimedSub, loading, 
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a857c', lineHeight: 1.4 }}>{claimed ? claimedSub : sub}</p>
         </div>
         {!claimed && (
-          <motion.button whileTap={{ scale: 0.93 }} onClick={onClaim} disabled={loading}
+          <motion.button whileTap={{ scale: 0.93 }} onClick={e => onClaim(e.currentTarget)} disabled={loading}
             // ── ON THE BUTTON, NOT THE CARD ─────────────────────────────
             // The mark used to sit on the whole row, so the tour drew a ring
             // round a paragraph of text and a picture when the one thing a

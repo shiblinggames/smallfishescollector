@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DIFFICULTY_META, BADGE_POINTS, type BadgeDifficulty } from '@/lib/badges'
 import { vibrate } from '@/lib/haptics'
+import { flyGemsToPurse } from '@/lib/coinFly'
 import { claimBadgeReward, claimAllBadgeRewards } from './badgeActions'
 import BadgeTimeline from './BadgeTimeline'
 
@@ -184,6 +185,7 @@ export default function AchievementsClient({ groups }: Props) {
       // straight nerf.
       if (r.gems > 0) {
         window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
+        setTimeout(() => flyGemsToPurse(from, r.gems), r.amount > 0 ? 180 : 0)
       }
     })
   }
@@ -199,6 +201,7 @@ export default function AchievementsClient({ groups }: Props) {
       if (r.totalGranted > 0) flyCoins(from, r.totalGranted, r.newDoubloons)
       if (r.totalGems > 0) {
         window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
+        setTimeout(() => flyGemsToPurse(from, r.totalGems), r.totalGranted > 0 ? 180 : 0)
       }
     })
   }

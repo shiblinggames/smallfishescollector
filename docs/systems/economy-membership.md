@@ -83,6 +83,22 @@ they need both sides.
 
 The membership card leads with the door now ("The deep end") and Kip reads from the same list.
 
+## Every claim flies to the purse (2026-09-23)
+
+Kong: claiming anything should reward you the same way. **A button that pays ⟡ or ◆ calls
+`flyPayout(from, { doubloons, gems })` from `lib/coinFly.ts`** after the server answers: gold coins
+arc into the Nav's `[data-doubloon-pill]`, violet diamonds into `[data-gem-pill]` (gems a beat
+behind when both pay), the pill pops on landing. `from` is the pressed element (or a rect taken AT
+THE PRESS when the button unmounts before the answer lands; a detached element falls back to screen
+centre), or `null` for claims with no button (sea digs, isle chests, Finn's jobs, story payoffs: the
+camera keeps the hull centred). Still fire the `doubloons-changed` / `gems-changed` events; the
+flight does not tick the balance. Wired: Daily Haul gems, orders + clean sweep, bounties + bounty
+milestones, mail, badges (own coin flight, shared gem flight), voyage (on "Take the haul", not at
+the manifest), trawl collect (replaced its mid-screen burst), almanac zone rewards, World Chart,
+Parlor ranks, digs, isle chests, Finn jobs, story payoffs, raid kill + raid loot, gauntlet chest,
+Pirate King walk-away. NOT: the weekly crate (CrateOpening owns that moment), answer-driven trivia
+and puzzle payouts, automatic grants, purchases, casino, sales.
+
 ## Mail
 
 - `app/actions/mail.ts`: service-role INSERT, claiming through the `claim_mail` RPC,

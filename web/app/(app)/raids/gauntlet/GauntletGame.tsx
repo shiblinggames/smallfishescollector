@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import { flyPayout } from '@/lib/coinFly'
 // Davy Jones Gauntlet host. Owns the push-your-luck meta-loop (depth, pot,
 // cash-out vs push-on, the daily gate) and mounts the existing RaidCombat
 // engine one fight at a time. No combat rewrite: RaidCombat fights a single
@@ -6101,8 +6102,11 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
     }
   }, [counting, gainedRenown, r.newExpeditionXP])
 
-  function open() {
+  function open(e?: { currentTarget: Element }) {
     if (opening || opened) return
+    // Where the chest was pressed, measured now: the payout flies from it
+    // when the counting starts, two beats later.
+    const from = e?.currentTarget?.getBoundingClientRect()
     const grand = r.chest.tier >= 4    // the richest chests open louder
     // Beat 1 — the wind-up: a building rattle + wooden creak while the lid strains.
     setOpening(true)
@@ -6119,6 +6123,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
         setCounting(true)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
         if (r.gems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
+        flyPayout(from, { doubloons: r.bankedDoubloons, gems: r.gems })
         // A second haptic punch when the bar reaches the new level.
         if (leveledUp) window.setTimeout(() => vibrate([0, 45, 70, 45]), 1000)
       }, REVEAL_DELAY)

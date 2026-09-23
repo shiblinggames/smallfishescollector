@@ -22,6 +22,7 @@ import { tierForLength, TIER_LABEL, TIER_COLOR, formatFishLength } from '@/lib/f
 import { PRESTIGE_MAX, goldenBoostPct, zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { claimZoneReward, prestigeZone } from './actions'
 import type { AlmanacData, AlmanacEntry } from './almanacActions'
+import { flyPayout } from '@/lib/coinFly'
 
 const GOLD = '#f0c040'
 
@@ -89,7 +90,7 @@ export default function AlmanacCollection({ data, onChanged }: {
   const [busy, setBusy] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<string | null>(null)
 
-  const claim = async (zone: string) => {
+  const claim = async (zone: string, from?: Element, amount?: number) => {
     if (busy) return
     setBusy(zone)
     const res = await claimZoneReward(zone).catch(() => null)
@@ -97,6 +98,7 @@ export default function AlmanacCollection({ data, onChanged }: {
       setClaimed(prev => ({ ...prev, [zone]: true }))
       // Into the purse in the nav, now. Same event every payout fires.
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+      flyPayout(from, { doubloons: amount })
     }
     setBusy(null)
   }
@@ -313,7 +315,7 @@ export default function AlmanacCollection({ data, onChanged }: {
                       {isClaimed ? 'Reward claimed' : `${reward.toLocaleString()} ⟡ when every fish is charted`}
                     </span>
                   ) : !isClaimed ? (
-                    <button type="button" disabled={isBusy} onClick={() => void claim(zone)}
+                    <button type="button" disabled={isBusy} onClick={e => void claim(zone, e.currentTarget, reward)}
                       className="font-karla font-700 uppercase tracking-[0.1em]"
                       style={{ fontSize: '0.6rem', padding: '0.42rem 0.8rem', borderRadius: 9, cursor: isBusy ? 'default' : 'pointer', background: `${color}22`, border: `1px solid ${color}77`, color: '#efe9ff', opacity: isBusy ? 0.6 : 1, whiteSpace: 'nowrap' }}>
                       {isBusy ? '…' : `Claim ${reward.toLocaleString()} ⟡`}

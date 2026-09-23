@@ -19,6 +19,7 @@ import {
 import { getXPProgress, MAX_LEVEL } from '@/lib/fishingLevel'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 import { vibrate as haptic } from '@/lib/haptics'
+import { flyPayout } from '@/lib/coinFly'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (f?: string) => (f ? `${SUPA}/storage/v1/object/public/card-arts/${f}` : '')
@@ -269,7 +270,6 @@ export default function TrawlIndicator({
   // (the row is deleted server-side after collect) so the reveal can show their
   // portrait as the hero of the haul.
   const [revealCrew, setRevealCrew] = useState<TrawlCrewView | null>(null)
-  const [coins, setCoins] = useState<{ id: number }[]>([])
   const [flashZone, setFlashZone] = useState<TrawlZoneKey | null>(null)
   const [sendingId, setSendingId] = useState<number | null>(null)
   // Zone whose haul is in flight. Drives the "Collecting…" label so the tap
@@ -304,7 +304,6 @@ export default function TrawlIndicator({
   const [slotUnlock, setSlotUnlock] = useState<number | null>(null)
   const [slotInfo, setSlotInfo] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const pid = useRef(0)
   // Draggable indicator: players can reposition it so it doesn't cover other
   // UI. Offset (from the default spot) persists in localStorage; constrained
   // to the play area; a tap (no drag) still opens the panel.
@@ -517,7 +516,7 @@ export default function TrawlIndicator({
     if (!crew) { setFlashZone(zone); setTimeout(() => setFlashZone(null), 850) }
   }
 
-  async function doCollect(zone: TrawlZoneKey) {
+  async function doCollect(zone: TrawlZoneKey, from?: Element) {
     if (busy) return
     // Answer the tap NOW. The haul haptic below only fires once the server
     // comes back, which left the press feeling dead for the whole round-trip —
@@ -532,9 +531,10 @@ export default function TrawlIndicator({
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
     window.dispatchEvent(new CustomEvent('fishing-xp-changed', { detail: r.newFishingXP }))
     window.dispatchEvent(new CustomEvent('trawls-changed'))
-    const coinCount = tier === 'jackpot' ? 18 : tier === 'bumper' ? 14 : tier === 'good' ? 11 : tier === 'slim' ? 6 : 8
-    setCoins(Array.from({ length: coinCount }, () => ({ id: pid.current++ })))
-    setTimeout(() => setCoins([]), 900)
+    // From the card you pressed into the purse, the same flight every claim
+    // uses (lib/coinFly). It used to be a local burst from mid-screen to the
+    // corner; the size of the haul now sets the size of the burst.
+    flyPayout(from, { doubloons: r.doubloonsGained })
     setRevealEvent(pickTrawlEvent(r.bumper))
     setRevealCrew(state?.zones.find(z => z.key === zone)?.trawl?.crew ?? null)
     setReveal(r)
@@ -756,7 +756,7 @@ export default function TrawlIndicator({
                 const sendable = couldSend && canDeploy
                 const actionable = (ready && canCollect) || sendable
                 const onTapCard = ready
-                  ? () => { if (settled() && canCollect) doCollect(z.key) }
+                  ? (e: React.MouseEvent<HTMLElement>) => { if (settled() && canCollect) doCollect(z.key, e.currentTarget) }
                   : sendable
                     ? () => { if (!settled()) return; haptic(10); setShowAllCrew(false); setPicking(z.key) }
                     : undefined
@@ -1301,24 +1301,10 @@ export default function TrawlIndicator({
     </AnimatePresence>
   )
 
-  const coinFx = (
-    <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 9500, pointerEvents: 'none' }}>
-      <AnimatePresence>
-        {coins.map((c, i) => (
-          <motion.div key={c.id}
-            initial={{ left: '50%', top: '52%', opacity: 1, scale: 1 }}
-            animate={{ left: 'calc(100% - 40px)', top: 18, opacity: 0, scale: 0.6 }}
-            transition={{ duration: 0.65, delay: i * 0.04, ease: 'easeIn' }}
-            style={{ position: 'absolute', width: 13, height: 13, borderRadius: '50%', background: `radial-gradient(circle at 35% 30%, #ffe79a, ${GOLD})`, boxShadow: `0 0 8px ${GOLD}` }} />
-        ))}
-      </AnimatePresence>
-    </div>
-  )
-
   return (
     <>
       {!dock && indicatorButton}
-      {mounted && createPortal(<>{panel}{picker}{slotInfoOverlay}{collectReveal}{slotUnlockOverlay}{coinFx}</>, document.body)}
+      {mounted && createPortal(<>{panel}{picker}{slotInfoOverlay}{collectReveal}{slotUnlockOverlay}</>, document.body)}
     </>
   )
 }

@@ -411,7 +411,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
           {displayGems !== undefined && (
             // THE PURSE IS A DOOR. The balance was a number; pressing it opens
             // the gem packs. No plus, no badge: the number is the button.
-            <button type="button" onClick={openGemStore} aria-label="Get gems"
+            <button type="button" onClick={openGemStore} aria-label="Get gems" data-gem-pill
               className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
               <span><TickingNumber value={displayGems} /> ◆</span>
             </button>
@@ -474,7 +474,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
 
         <div className="flex items-center gap-3">
           {displayGems !== undefined && (
-            <button type="button" onClick={openGemStore} aria-label="Get gems"
+            <button type="button" onClick={openGemStore} aria-label="Get gems" data-gem-pill
               className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
               <span><TickingNumber value={displayGems} /> ◆</span>
             </button>

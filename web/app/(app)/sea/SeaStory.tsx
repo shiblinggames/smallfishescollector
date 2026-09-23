@@ -26,6 +26,7 @@ import { markStoryNodeRead, claimMilestoneNode, claimScoutDebt } from '@/app/(ap
 import { SCENE_BACKDROPS, type RaidNode } from '@/lib/raidMap'
 import { nodeSheet } from './nodeSheetActions'
 import { vibrate } from '@/lib/haptics'
+import { flyPayout } from '@/lib/coinFly'
 
 const GOLD = '#f0c040'
 
@@ -87,6 +88,7 @@ export default function SeaStory({ node, cleared, intro = false, onDone, onClear
       // The purse changed under the header on every other surface.
       if ('newDoubloons' in res && res.doubloonsDelta !== 0) {
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+        if (res.doubloonsDelta > 0) flyPayout(null, { doubloons: res.doubloonsDelta })
       }
       // ── AND SOMEBODY JUST JOINED THE POOL ──────────────────────────
       //
