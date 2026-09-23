@@ -72,8 +72,20 @@ export async function proxy(request: NextRequest) {
   return supabaseResponse
 }
 
+// ── STATIC FILES DO NOT PAY FOR A SESSION CHECK ─────────────────────────────
+//
+// `public/` was in this list, and it matched nothing: files in public/ are
+// served from the site ROOT (/sea/harbour.png, /crew/hall_1.png), never under
+// a /public/ prefix. So every image, sound and model in the game ran this
+// proxy first, and the proxy's first act is auth.getUser(), a network round
+// trip to the auth server. An island scene with forty paintings waited on
+// forty token checks before a single one could be served.
+//
+// Excluded by extension instead, which is the shape Supabase's own SSR guide
+// uses. None of these is ever a page or an action, and none needs the session
+// refreshed or the freeze applied: they are the same file for everybody.
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|fish/|public/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpe?g|webp|gif|svg|ico|mp3|ogg|wav|json|md|txt|glb|woff2?)$).*)',
   ],
 }
