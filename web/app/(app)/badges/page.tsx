@@ -125,9 +125,10 @@ export default async function BadgesPage() {
   const isleSet = new Set(sea.isles)
   const notesRead = NOTE_ISLE_IDS.filter((id: string) => isleSet.has(id)).length
   // The two fog masks, decoded and scored against the cells that were ever
-  // fogged. Percentages are shown as whole points so a bar can move.
-  const fishFogPct = Math.round(fogProgress(decodeFog(profile?.sea_explored as string | null)).pct * 100)
-  const expFogPct = Math.round(xfogProgress(decodeXfog(profile?.sea_explored_exp as string | null)).pct * 100)
+  // fogged. Whole points, rounded DOWN: a rounded-up 49.6% read as a met bar
+  // for a badge that needs a real 50%, which is how Into the Fog got stuck.
+  const fishFogPct = Math.floor(fogProgress(decodeFog(profile?.sea_explored as string | null)).pct * 100)
+  const expFogPct = Math.floor(xfogProgress(decodeXfog(profile?.sea_explored_exp as string | null)).pct * 100)
 
   const crewHallTier = Number(profile?.crew_hall_tier ?? 0)
   const recruits = Number(profile?.lifetime_recruits ?? 0)
