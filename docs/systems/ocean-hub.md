@@ -3337,3 +3337,13 @@ each island on the channel side, outside its mooring ring, checked clear of `SOL
 **`warpTo` sets side and hull from the landing**: north of `NORTH_WALL` is the anchorage and the
 warship (plays `crossHull`), south is the fishing boat. Before this, only the arch's column
 (`inGate`) changed them, and the Gunwharf only worked because its landing sat at x -500.
+
+## The sea, heard (2026-09-23, FLAGGED)
+
+`lib/seaAmbience.ts`, fed from SeaMap's 0.12s proximity tick. Synthesised on the fishing engine's
+SFX bus (`sfxBus()` in lib/fishingMusic, so the SFX mute covers it): the HULL (band-passed noise,
+loudness and brightness follow speed, rolls on a slow LFO), the SWELL (low noise, louder the deeper
+the band), the WIND (thin, more with way on), and a synthesised harbour BELL on `enter()`. Hushed
+to 45% while the HUD is down. Recorded SLOTS fill from `public/sea-audio/creak.mp3` (hard turn with
+way on, 4s cooldown), `gull.mp3` / `gull2.mp3` (near land, 8-22s apart); missing files are skipped.
+FLAG: on for admins, or `?ambience=1` once (localStorage `stb:ambience`; `?ambience=0` clears).

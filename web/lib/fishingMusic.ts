@@ -537,6 +537,13 @@ function tryDecodeDial() {
  *  NOT trigger any fetches or context creation — so players who never
  *  visit /fishing don't pay the cost of 1.6 MB of OGG download + audio
  *  element setup on every tap in other minigames. */
+/** The SFX bus, for sound that lives outside this file (the sea's ambience,
+ *  lib/seaAmbience). Null until the context exists, which is after the first
+ *  press. Routing into it means the SFX mute covers that sound too. */
+export function sfxBus(): { ctx: AudioContext; out: GainNode } | null {
+  return audioCtx && sfxGain ? { ctx: audioCtx, out: sfxGain } : null
+}
+
 export function resumeFishingAudioIfReady(): void {
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().catch(() => {})

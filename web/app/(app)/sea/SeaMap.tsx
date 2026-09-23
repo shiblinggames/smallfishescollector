@@ -18,6 +18,7 @@
 // several things happening near each other.
 
 import { openMembership } from '@/components/MembershipModal'
+import { setSeaAmbience, updateSeaAmbience, playHarbourBell } from '@/lib/seaAmbience'
 import { flyPayout } from '@/lib/coinFly'
 import { CAPTAIN_WATER, CAPTAIN_WATER_SAYS } from '@/lib/captainWater'
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -5830,6 +5831,33 @@ export default function SeaMap({
   // AND NOT DURING THE ARRIVAL. The discs come up as the hull lands, which is
   // the difference between a sea with an interface on it and an interface.
   const hudOff = !!fishingIn || fightOn || !arrived
+  /**
+   * ── THE SEA, HEARD (behind a flag, 2026-09-23) ─────────────────────────
+   *
+   * lib/seaAmbience: the hull, the swell, the wind, the bell. On for admins,
+   * and for anyone who opens the chart with ?ambience=1 once (remembered;
+   * ?ambience=0 turns it back off), so it can be heard before it is everyone's.
+   * The audio context only exists after the first press, so it asks again on
+   * presses until it is sounding.
+   */
+  const hushRef = useRef(false)
+  hushRef.current = hudOff
+  const ambHead = useRef<number | null>(null)
+  useEffect(() => {
+    let on = isAdmin
+    try {
+      const q = new URLSearchParams(window.location.search).get('ambience')
+      if (q === '1') localStorage.setItem('stb:ambience', '1')
+      if (q === '0') localStorage.removeItem('stb:ambience')
+      if (localStorage.getItem('stb:ambience') === '1') on = true
+      if (q === '0') on = false
+    } catch { /* storage refused: the admin rule still stands */ }
+    if (!on) return
+    const ask = () => { if (setSeaAmbience(true)) window.removeEventListener('pointerdown', ask) }
+    ask()
+    window.addEventListener('pointerdown', ask)
+    return () => { window.removeEventListener('pointerdown', ask); setSeaAmbience(false) }
+  }, [isAdmin])
   /** For the keyboard handler, which binds once: while the rod is out, the
    *  chart's space/E stand down and FishingHere's own handler works the rod. */
   const fishingInRef = useRef<Place | null>(null)
@@ -7469,6 +7497,7 @@ export default function SeaMap({
 
   const enter = useCallback((p: Place) => {
     vibrate([18, 40, 24])
+    playHarbourBell()
     if (p.id === 'mainland') { setAshore(true); return }
     // THE GUNWHARF ASKS RATHER THAN GOING ANYWHERE. One of its two doors is
     // not a page at all — it is changing the hull under you — so it cannot be
@@ -9806,6 +9835,32 @@ export default function SeaMap({
       sinceState += dt
       if (sinceState > 0.12) {
         sinceState = 0
+        // THE SEA, HEARD: speed, turn, how far out, how near land. A no-op
+        // unless the flag turned it on. See lib/seaAmbience.
+        {
+          const vx = vel.current.x, vy = vel.current.y
+          const sp = Math.hypot(vx, vy)
+          let turn = 0
+          if (sp > 40) {
+            const a = Math.atan2(vy, vx)
+            if (ambHead.current != null) {
+              let d = Math.abs(a - ambHead.current)
+              if (d > Math.PI) d = 2 * Math.PI - d
+              turn = Math.min(1, d / 0.35)
+            }
+            ambHead.current = a
+          }
+          const { x: px, y: py } = pos.current
+          const depth = py < NORTH_WALL ? (seaGateRef.current ? 0.6 : 0.3) : Math.max(0, Math.min(1, (py - 1400) / 21200))
+          let edge = Infinity
+          for (const q of PLACES) if (q.kind === 'port') edge = Math.min(edge, Math.hypot(q.x - px, q.y - py) - q.r)
+          for (const q of ISLES) edge = Math.min(edge, Math.hypot(q.x - px, q.y - py) - q.r)
+          updateSeaAmbience({
+            speed: sp / (SPEED * 1.4), turn, depth,
+            land: Math.max(0, Math.min(1, 1 - edge / 900)),
+            hushed: hushRef.current,
+          })
+        }
         // The chart's box, for the fight's anchors. Here rather than in the
         // frame body: it changes when the window does, and measuring it sixty
         // times a second forces a layout for a number that almost never moves.
