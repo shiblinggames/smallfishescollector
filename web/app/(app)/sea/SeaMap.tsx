@@ -24,10 +24,8 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
-import RenownPanel from '@/components/RenownPanel'
 import Minimap from './Minimap'
 import SeaCampaignPanel from './SeaCampaignPanel'
-import MarkProbe from './MarkProbe'
 import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
@@ -91,8 +89,6 @@ import { getLine } from '@/lib/lines'
 import { getHook } from '@/lib/hooks'
 import TrawlIndicator from '../fishing/TrawlIndicator'
 import DailyOrders from '../trawl-docks/DailyOrders'
-import BountiesPanel from '../expeditions/BountiesPanel'
-import BountyBoardModal from '../expeditions/BountyBoardModal'
 import { getBountyBoard } from '../expeditions/bountyActions'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
@@ -106,8 +102,7 @@ import { seaClock } from '@/lib/seaClock'
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { squallAt } from '@/lib/seaWeather'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
-import { folkState } from './folkActions'
-import TraderPanel from './TraderPanel'
+import { folkState, type Rapport } from './folkActions'
 import CrewPanel from './CrewPanel'
 import { crewHub } from './crewHubActions'
 import { folkById, type FolkId } from '@/lib/seaFolk'
@@ -202,13 +197,11 @@ function folkRodSlug(folkId: string): string | null {
   if (!tier) return null
   return RODS.find(r => r.tier === tier)?.slug ?? null
 }
-import FolkPanel from './FolkPanel'
-import SeaFirstVoyage from './SeaFirstVoyage'
-import SeaGateTour from './SeaGateTour'
 import SeaLandfallHint from './SeaLandfallHint'
 import SeaCue from './SeaCue'
 import { pendingPacts, hasAcceptedPact } from './pactActions'
 import { heldGolden } from '../fishing/actions'
+import { seaBoot, type SeaBoot } from './bootActions'
 import { coastClip, coastline } from '@/lib/islandShape'
 import { plateFor } from '@/lib/islandPlates'
 // The island painting itself, which used to live in this file. See islandArt
@@ -218,7 +211,6 @@ import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark, type ShipL
 import { type GlowPatch } from './seaGlow'
 import { type CaptainLook } from './seaCaptain'
 import { shipWake, type WakeKind } from './seaWake'
-import SeaDebugPanel from './SeaDebugPanel'
 import { shipEffect } from './auraSpecs'
 import { type BerthSpec } from './seaBerth'
 import { type GpuTown } from './seaTown'
@@ -294,6 +286,20 @@ import { FINN_NAME, findNextBeat, type FinnSceneLine } from '@/lib/finn'
 // THE SEA'S OWN. `fishing/FinnEncounter` is still mounted by the retired
 // fishing screen; this is the chart's version and it follows the chart's
 // conversation convention. See FinnTalk for why they are separate.
+// ── AND NINE MORE THAT ONLY OPEN ON A TAP ────────────────────────────────
+// These were static imports, so their code shipped in the sea's own chunk and
+// was parsed before the chart could draw, though each only shows on an
+// interaction, a tour, or a debug flag (the 2026-09-23 audit). Same treatment
+// as the sheets above.
+const RenownPanel = dynamic(() => import('@/components/RenownPanel'), { ssr: false })
+const MarkProbe = dynamic(() => import('./MarkProbe'), { ssr: false })
+const BountiesPanel = dynamic(() => import('../expeditions/BountiesPanel'), { ssr: false })
+const BountyBoardModal = dynamic(() => import('../expeditions/BountyBoardModal'), { ssr: false })
+const TraderPanel = dynamic(() => import('./TraderPanel'), { ssr: false })
+const FolkPanel = dynamic(() => import('./FolkPanel'), { ssr: false })
+const SeaFirstVoyage = dynamic(() => import('./SeaFirstVoyage'), { ssr: false })
+const SeaGateTour = dynamic(() => import('./SeaGateTour'), { ssr: false })
+const SeaDebugPanel = dynamic(() => import('./SeaDebugPanel'), { ssr: false })
 const FinnTalk = dynamic(() => import('./FinnTalk'), { ssr: false })
 // THE VOYAGE BOARD, opened by mooring at the Charterhouse. Dynamic for the
 // same reason: it pulls in the whole expeditions voyage panel behind it.
@@ -1945,6 +1951,17 @@ export default function SeaMap({
 }) {
   const router = useRouter()
   /**
+   * ── ONE READ ON ARRIVAL, SHARED ─────────────────────────────────────────
+   *
+   * The arrival reads used to be separate server actions, and the client runs
+   * those one at a time, so they queued in single file. They are one action
+   * now (see bootActions); every effect that used to ask on mount takes its
+   * piece of this single promise instead. Made on first use, so whichever
+   * effect runs first starts it and the rest share it.
+   */
+  const bootRef = useRef<Promise<SeaBoot | null> | null>(null)
+  const getBoot = useCallback(() => (bootRef.current ??= seaBoot().catch(() => null)), [])
+  /**
    * ── THE LEVEL, LIVE ──────────────────────────────────────────────────────
    *
    * It was derived from the page's XP, which is a snapshot: a captain who
@@ -3253,9 +3270,9 @@ export default function SeaMap({
   const [golden, setGolden] = useState<{ id: number; name: string; alreadyMounted: boolean } | null>(null)
   useEffect(() => {
     let alive = true
-    void heldGolden().then(h => { if (alive && h) setGolden(h) }).catch(() => {})
+    void getBoot().then(b => { if (alive && b?.golden) setGolden(b.golden) })
     return () => { alive = false }
-  }, [])
+  }, [getBoot])
   /** The Charterhouse's voyage board, over the water. */
   const [voyageOpen, setVoyageOpen] = useState(false)
 
@@ -4187,9 +4204,14 @@ export default function SeaMap({
 
   useEffect(() => {
     let alive = true
-    void finnState().then(f => { if (alive) setFinn(f) })
+    void getBoot().then(b => {
+      if (!alive) return
+      // The boot's copy, or, if that one reader failed, a read of its own.
+      if (b && b.finn) setFinn(b.finn)
+      else void finnState().then(f => { if (alive) setFinn(f) })
+    })
     return () => { alive = false }
-  }, [])
+  }, [getBoot])
 
   /**
    * PULL ALONGSIDE AND TALK.
@@ -5170,16 +5192,23 @@ export default function SeaMap({
   /** Regulars you know who have not had today's word yet. The compass wears
    *  it as amber, the same amber the discs use for "something waiting". */
   const [wordFolk, setWordFolk] = useState<Set<string>>(() => new Set())
-  const refreshMet = useCallback(() => {
-    void folkState().then(rows => {
-      setMetFolk(new Set(rows.filter(r => r.points > 0).map(r => r.folkId)))
-      setReadyFolk(rows
-        .filter(r => r.wantReady && r.want)
-        .map(r => ({ folkId: r.folkId, short: folkById(r.folkId)?.short ?? r.folkId, fishName: r.want!.name })))
-      setWordFolk(new Set(rows.filter(r => r.points > 0 && !r.chattedToday).map(r => r.folkId)))
-    }).catch(() => {})
+  /** The standings, as last read. Handed to the Salt Road panel so it opens
+   *  with cards on it rather than reading its own copy on mount. */
+  const [folkRows, setFolkRows] = useState<Rapport[] | null>(null)
+  const applyFolk = useCallback((rows: Rapport[]) => {
+    setFolkRows(rows)
+    setMetFolk(new Set(rows.filter(r => r.points > 0).map(r => r.folkId)))
+    setReadyFolk(rows
+      .filter(r => r.wantReady && r.want)
+      .map(r => ({ folkId: r.folkId, short: folkById(r.folkId)?.short ?? r.folkId, fishName: r.want!.name })))
+    setWordFolk(new Set(rows.filter(r => r.points > 0 && !r.chattedToday).map(r => r.folkId)))
   }, [])
-  useEffect(() => { refreshMet() }, [refreshMet])
+  const refreshMet = useCallback(() => {
+    void folkState().then(applyFolk).catch(() => {})
+  }, [applyFolk])
+  useEffect(() => {
+    void getBoot().then(b => { if (b?.folk) applyFolk(b.folk); else refreshMet() })
+  }, [getBoot, applyFolk, refreshMet])
   /** Does Finn have a piece of his story waiting? Drives the dot on the
    *  button, which is the whole nudge: a beat is handed over at EVERY meeting
    *  (findNextEncounterBeat walks the unseen list, it is not milestone-gated),
@@ -5305,7 +5334,9 @@ export default function SeaMap({
   const readOrders = useCallback(() => {
     void getDailyChallenge().then(setOrders).catch(() => { /* the icon just stays quiet */ })
   }, [])
-  useEffect(() => { readOrders() }, [readOrders])
+  useEffect(() => {
+    void getBoot().then(b => { if (b?.orders) setOrders(b.orders); else readOrders() })
+  }, [getBoot, readOrders])
 
 
   /** Something finished and not yet collected — the dot on the icon. */
@@ -5335,7 +5366,12 @@ export default function SeaMap({
    *  it when the tab comes back, because a friend's chart cannot show me where
    *  I am until I have told the server. */
   const flushNow = useRef<(() => void) | null>(null)
-  useEffect(() => { void pendingPacts().then(setPendingAsk, () => {}) }, [])
+  useEffect(() => {
+    void getBoot().then(b => {
+      if (b && b.pacts != null) setPendingAsk(b.pacts)
+      else void pendingPacts().then(setPendingAsk, () => {})
+    })
+  }, [getBoot])
   /** The poll, callable on demand — see the crew panel's onChanged. */
   const pullNow = useRef<() => void>(() => {})
 
@@ -7005,7 +7041,9 @@ export default function SeaMap({
      *  what was true when the chart loaded — but somebody asking to sail is not
      *  urgent to the second, so it rides every third poll rather than doubling
      *  the server actions this screen makes. */
-    let sinceAsk = 99
+    // 0, not 99: the arrival read (seaBoot) already brought the count, so the
+    // first poll would only be asking again in the same second.
+    let sinceAsk = 0
     const pull = () => {
       pullNow.current = pull
       if (document.visibilityState !== 'hidden') {
@@ -7384,8 +7422,11 @@ export default function SeaMap({
   /** Who you could call on. Read once; the guard is re-checked server-side on
    *  the visit itself, so a stale list cannot open a door. */
   useEffect(() => {
-    void visitableHomesteads().then(setGuests, () => {})
-  }, [])
+    void getBoot().then(b => {
+      if (b?.guests) setGuests(b.guests)
+      else void visitableHomesteads().then(setGuests, () => {})
+    })
+  }, [getBoot])
 
   /**
    * BUILD ALL FIVE SURFACE TILES ONCE, off the critical path.
@@ -12037,7 +12078,8 @@ hullRef={hullRefFor(t.key)} />
           }} />
       )}
 
-      <FolkPanel open={folkOpen} onClose={() => { setFolkOpen(false); refreshMet() }} finn={finn} />
+      <FolkPanel open={folkOpen} onClose={() => { setFolkOpen(false); refreshMet() }} finn={finn}
+        initial={folkRows} />
 
       {/* ── SAILING ELSEWHERE ─────────────────────────────────────────────
           Another chart on this account took the helm (the phone, after the
@@ -12218,6 +12260,7 @@ hullRef={hullRefFor(t.key)} />
           back. */}
       <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 3} ashore={ordersAshore}
         hidden={hudOff} caughtTick={caughtTick}
+        seed={() => getBoot().then(b => b?.day ?? null)}
         onOpen={(kind: DayKind) => {
           // A sheet opened from the board brings the board back when it
           // closes. The pages leave the sea, so they do not.

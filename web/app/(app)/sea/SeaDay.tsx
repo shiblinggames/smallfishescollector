@@ -175,7 +175,7 @@ function left(endsAt: number): string {
 
 type Toast = { id: number; kinds: DayKind[]; text: string }
 
-export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, onOpen }: {
+export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, onOpen, seed }: {
   size: number
   top: number
   right: number
@@ -188,6 +188,11 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
   caughtTick: number
   /** Open the sheet, or the page, for one row. */
   onOpen: (kind: DayKind) => void
+  /** The FIRST read, from the chart's shared arrival call (see bootActions),
+   *  so the board is not one more server action queued behind the rest.
+   *  Null from it falls back to a read of its own. Later reads are the
+   *  board's own. Read once, at mount. */
+  seed?: () => Promise<DayState | null>
 }) {
   const [open, setOpen] = useState(false)
   useEffect(() => {
@@ -208,9 +213,10 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
   const ashoreRef = useRef(ashore)
   ashoreRef.current = ashore
 
-  const load = useCallback(() => {
+  const load = useCallback((src?: () => Promise<DayState | null>) => {
     let alive = true
-    void dayState().then(s => {
+    const read = src ? src().then(s => s ?? dayState()) : dayState()
+    void read.then(s => {
       if (!alive || !s) return
       setState(s)
       const rows = rowsOf(s, ashoreRef.current)
@@ -234,7 +240,8 @@ export default function SeaDay({ size, top, right, hidden, ashore, caughtTick, o
 
   // ── WHEN TO READ ────────────────────────────────────────────────────────
   // On mount, and every time the board opens.
-  useEffect(() => load(), [load])
+  const seedRef = useRef(seed)
+  useEffect(() => load(seedRef.current), [load])
   useEffect(() => { if (open) return load() }, [open, load])
 
   // After a run of catches, once, a few seconds after the last one.

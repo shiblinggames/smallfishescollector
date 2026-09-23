@@ -488,10 +488,13 @@ function warmFaces() {
   }
 }
 
-export default function FolkPanel({ open, onClose, finn: finnProp }: {
+export default function FolkPanel({ open, onClose, finn: finnProp, initial = null }: {
   open: boolean
   onClose: () => void
   finn: FinnSeaState | null
+  /** The standings the chart already read on arrival (see bootActions). The
+   *  panel opens with these, so it needs no read of its own on mount. */
+  initial?: Rapport[] | null
 }) {
   /**
    * ── READ IT FRESH ON EVERY OPEN ────────────────────────────────────────
@@ -518,16 +521,21 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
   // Once per mount of the sea, not once per open.
   useEffect(() => { warmFaces() }, [])
 
-  const [rap, setRap] = useState<Rapport[]>([])
+  const [rap, setRap] = useState<Rapport[]>(initial ?? [])
   const [showing, setShowing] = useState<string | null>(null)
 
   /**
-   * Standings are loaded ON MOUNT and refreshed whenever the panel opens. The
-   * refresh matters (a chat out on the water changes them), but loading only on
-   * open meant the very first open had no cards at all until a server round
-   * trip came home. Mounting warm costs one read per session.
+   * Standings come WARM from the chart's arrival read (`initial`), which is
+   * what the old mount-time read existed to guarantee: the very first open has
+   * cards on it. That read was its own server action, and the client runs
+   * those one at a time, so it sat in the arrival queue behind everything else
+   * (the 2026-09-23 audit). The chart's copy is synced in as it lands and
+   * whenever the chart re-reads; opening the panel still refreshes, because a
+   * chat out on the water changes them.
    */
+  useEffect(() => { if (initial) setRap(initial) }, [initial])
   useEffect(() => {
+    if (!open) return
     let alive = true
     void folkState().then(rows => { if (alive) setRap(rows) })
     return () => { alive = false }
