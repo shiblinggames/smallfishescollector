@@ -8,7 +8,7 @@ import AchievementsClient, { type JourneyGroup, type JourneyGoal } from '@/app/(
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { isPremiumActive } from '@/lib/premium'
 import { reconcileBadges } from '@/app/(app)/achievements/badgeActions'
-import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { grantBadgeDirect, stampBadges } from '@/lib/badgeGrant'
 import { hasPrestigedAllZones } from '@/lib/collection'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER } from '@/lib/crewHall'
@@ -653,6 +653,27 @@ export default async function BadgesPage() {
 
   const allGoals = groups.flatMap(g => g.goals)
   const doneCount = allGoals.filter(g => g.done).length
+
+  // A goal this page draws as met must be a badge the claim can pay.
+  // claim_badge_reward only pays UNLOCKED badges, and reconcileBadges grants
+  // from badgeConditions, which does not derive every bar on this page the
+  // same way. Where the two disagreed, the page offered a claim that never
+  // persisted, the button flipped to claimed, and the badge came back on the
+  // next visit. The numbers here are all server reads, so a met bar is
+  // proof enough: grant whatever it shows and the reward can land.
+  const shownNotGranted = allGoals.filter(g => g.done && !unlocked.includes(g.id) && BADGE_MAP[g.id]).map(g => g.id)
+  if (shownNotGranted.length > 0) {
+    const { data: row } = await admin.from('profiles').select('unlocked_badges, badge_unlocked_at').eq('id', user.id).single()
+    const current = (row?.unlocked_badges as string[] | null) ?? []
+    const add = shownNotGranted.filter(id => !current.includes(id))
+    if (add.length > 0) {
+      await admin.from('profiles').update({
+        unlocked_badges: [...current, ...add],
+        badge_unlocked_at: stampBadges(row?.badge_unlocked_at, add),
+      }).eq('id', user.id)
+    }
+    unlocked.push(...shownNotGranted)
+  }
 
   return (
     <>

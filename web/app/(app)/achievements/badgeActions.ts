@@ -85,6 +85,9 @@ export async function claimBadgeReward(badgeId: string): Promise<{ newDoubloons:
   })
   if (error) return { error: 'Could not claim reward' }
   const row = (Array.isArray(data) ? data[0] : data) as { new_doubloons: number; new_gems: number; claimed: string[]; granted: boolean } | undefined
+  // Not granted and not already claimed means the badge was never unlocked:
+  // nothing was paid and nothing was recorded, so it must not read as a claim.
+  if (!row?.granted && !(row?.claimed ?? []).includes(badgeId)) return { error: 'That badge is not unlocked yet' }
   return {
     newDoubloons: Number(row?.new_doubloons ?? 0),
     newGems: Number(row?.new_gems ?? 0),
