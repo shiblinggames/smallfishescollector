@@ -18,14 +18,28 @@
 import { Component, useCallback, useEffect, useState, type ReactNode, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { loadStripe } from '@stripe/stripe-js'
+// THE PURE ENTRY. The default '@stripe/stripe-js' injects js.stripe.com into
+// the page the moment it is IMPORTED, by design; this modal is always mounted
+// in the app layout, so every page of the game fetched and ran Stripe.js and
+// its telemetry frames on the off chance somebody bought something (the
+// 2026-09-23 audit). The pure entry does nothing until loadStripe is called.
+import { loadStripe } from '@stripe/stripe-js/pure'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
 import { createEmbeddedCheckout, createHostedCheckout, checkMembership } from '@/app/actions/membership'
 
 const GOLD = '#f0c040'
 const PUBLISHABLE = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
-/** Shared with GemStoreModal: one Stripe handle, one boundary, two cards. */
-export const stripePromise = PUBLISHABLE ? loadStripe(PUBLISHABLE) : null
+/** Whether embedded checkout is configured at all. A plain boolean, so asking
+ *  it loads nothing. */
+export const STRIPE_ON = !!PUBLISHABLE
+let stripeHandle: ReturnType<typeof loadStripe> | null | undefined
+/** Shared with GemStoreModal: one Stripe handle, one boundary, two cards.
+ *  Loaded on first call, which is the moment a checkout actually starts, and
+ *  never before. */
+export function getStripe(): ReturnType<typeof loadStripe> | null {
+  if (stripeHandle === undefined) stripeHandle = PUBLISHABLE ? loadStripe(PUBLISHABLE) : null
+  return stripeHandle
+}
 
 /** Open the membership popup from anywhere. */
 export function openMembership() {
@@ -129,7 +143,10 @@ export default function MembershipModal() {
   // on no-key / soft error, seamlessly fall back to the hosted redirect.
   const startCheckout = useCallback(async () => {
     setError(null); setLoading(true)
-    if (stripePromise) {
+    if (STRIPE_ON) {
+      // Warm Stripe.js while the session is created, so the card form is
+      // not waiting on it afterwards.
+      void getStripe()
       try {
         const r = await createEmbeddedCheckout()
         if (!('error' in r)) { setClientSecret(r.clientSecret); setStep('pay'); setLoading(false); return }
@@ -164,7 +181,7 @@ export default function MembershipModal() {
 
   if (!open) return null
 
-  const showEmbedded = step === 'pay' && !!stripePromise && !!clientSecret
+  const showEmbedded = step === 'pay' && STRIPE_ON && !!clientSecret
   embeddedRef.current = showEmbedded
 
   return (
@@ -216,7 +233,7 @@ export default function MembershipModal() {
           <>
             <div style={{ borderRadius: 12, overflow: 'hidden', minHeight: 240, marginTop: 10 }}>
               <CheckoutBoundary onError={goHosted}>
-                <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret, onComplete }}>
+                <EmbeddedCheckoutProvider stripe={getStripe()} options={{ clientSecret, onComplete }}>
                   <EmbeddedCheckout />
                 </EmbeddedCheckoutProvider>
               </CheckoutBoundary>

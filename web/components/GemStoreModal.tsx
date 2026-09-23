@@ -33,7 +33,7 @@ import { useCallback, useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
-import { CheckoutBoundary, stripePromise } from '@/components/MembershipModal'
+import { CheckoutBoundary, STRIPE_ON, getStripe } from '@/components/MembershipModal'
 import { createGemCheckout, createGemHostedCheckout, currentGems } from '@/app/actions/gems'
 import { GEM_PACKS, packPrice, gemsPerDollar, type GemPack } from '@/lib/gemPacks'
 import { vibrate } from '@/lib/haptics'
@@ -121,7 +121,9 @@ export default function GemStoreModal() {
   const choose = useCallback(async (p: GemPack) => {
     vibrate(10)
     setPack(p); setError(null); setLoading(true)
-    if (stripePromise) {
+    if (STRIPE_ON) {
+      // Warm Stripe.js while the session is created. See getStripe.
+      void getStripe()
       try {
         const r = await createGemCheckout(p.id)
         if (!('error' in r)) { setClientSecret(r.clientSecret); setStep('pay'); setLoading(false); return }
@@ -154,7 +156,7 @@ export default function GemStoreModal() {
 
   if (!open) return null
 
-  const showEmbedded = step === 'pay' && !!stripePromise && !!clientSecret && paid === null
+  const showEmbedded = step === 'pay' && STRIPE_ON && !!clientSecret && paid === null
   embeddedRef.current = showEmbedded
 
   return (
@@ -213,7 +215,7 @@ export default function GemStoreModal() {
             </p>
             <div style={{ borderRadius: 12, overflow: 'hidden', minHeight: 240, marginTop: 10 }}>
               <CheckoutBoundary onError={() => { void goHosted(pack) }}>
-                <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret, onComplete }}>
+                <EmbeddedCheckoutProvider stripe={getStripe()} options={{ clientSecret, onComplete }}>
                   <EmbeddedCheckout />
                 </EmbeddedCheckoutProvider>
               </CheckoutBoundary>
