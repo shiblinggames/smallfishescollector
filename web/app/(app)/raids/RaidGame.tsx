@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState, useCallback, useMemo} from 'react'
 import CloseButton from '@/components/CloseButton'
 import type { DialAimBonus } from '@/lib/dialAim'
@@ -21,7 +22,8 @@ import {
 import { isChallengeRaidId, baseRaidIdOf } from '@/lib/raidChallenge'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
 import { isUniqueLoot } from '@/lib/bossRaids'
-import RaidCombat, { RAID_COL_MAX, type ShipAnchor, type ShipFx, type FightFx } from './RaidCombat'
+import type { ShipAnchor, ShipFx, FightFx } from './RaidCombat'
+import { RAID_COL_MAX } from './raidColumn'
 import RaidLootStage from './RaidLootStage'
 import BossDialogueModal from './BossDialogueModal'
 import TideModal from './TideModal'
@@ -35,6 +37,15 @@ import { lockBodyScroll } from '@/lib/bodyScrollLock'
 // WHERE THIS FIGHT IS. The bay a raid belongs to owns the water it happens
 // on — see bayOfRaid.
 import { bayOfRaid, bayWaterCss } from '@/app/(app)/sea/raidWaters'
+
+// ── THE COMBAT SCREEN IS ITS OWN CHUNK ─────────────────────────────────────
+// RaidCombat is the biggest file in the game, and nothing draws it until a
+// fight starts. Imported statically it rode in the page's first download and
+// held up the pre-fight screen; as a dynamic import the page paints without
+// it, and the effect below fetches it in the background straight after, so
+// by the time a fight starts it is already here (the 2026-09-23 audit).
+const RaidCombat = dynamic(() => import('./RaidCombat'), { ssr: false })
+
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -523,6 +534,8 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
   )
 
   const [phase, setPhase]               = useState<GamePhase>('idle')
+  // Fetch the combat chunk once the page has painted. See RaidCombat above.
+  useEffect(() => { void import('./RaidCombat') }, [])
   const [playerHP, setPlayerHP]         = useState(playerHPMax)
   const [enemyHP, setEnemyHP]           = useState(0)
   const [enemyHPMax, setEnemyHPMax]     = useState(0)

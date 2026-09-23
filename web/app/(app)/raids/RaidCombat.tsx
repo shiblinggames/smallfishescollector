@@ -504,7 +504,8 @@ export type ShipAnchor = {
  * the whole display. Exported so the gauntlet host lays its bar on the same
  * column rather than guessing at the number.
  */
-export const RAID_COL_MAX = 720
+export { RAID_COL_MAX } from './raidColumn'
+import { RAID_COL_MAX } from './raidColumn'
 /** The deck's own side padding, so a card docked to the column's edge lands on
  *  the panel's edge and not 11px outside it. */
 export const RAID_COL_PAD = 11.2

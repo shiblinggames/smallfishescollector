@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 // Davy Jones Gauntlet host. Owns the push-your-luck meta-loop (depth, pot,
 // cash-out vs push-on, the daily gate) and mounts the existing RaidCombat
 // engine one fight at a time. No combat rewrite: RaidCombat fights a single
@@ -19,7 +20,6 @@ import {
   PHASE_INITIAL, PHASE_ENTER, PHASE_EXIT,
   ENTER, EXIT, POP, CEREMONY, STAGGER, STAGGER_SLOW, stagger,
 } from '@/lib/gauntletMotion'
-import RaidCombat from '../RaidCombat'
 import { hullPaint } from '@/app/(app)/sea/raidWaters'
 import GauntletArena, { type ArenaHandle, type ArenaTheme, type Mood } from './GauntletArena'
 import { getShip, shipTierByName } from '@/lib/ships'
@@ -66,6 +66,15 @@ import { lockBodyScroll } from '@/lib/bodyScrollLock'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
+
+// ── THE COMBAT SCREEN IS ITS OWN CHUNK ─────────────────────────────────────
+// RaidCombat is the biggest file in the game, and nothing draws it until a
+// fight starts. Imported statically it rode in the page's first download and
+// held up the pre-fight screen; as a dynamic import the page paints without
+// it, and the effect below fetches it in the background straight after, so
+// by the time a fight starts it is already here (the 2026-09-23 audit).
+const RaidCombat = dynamic(() => import('../RaidCombat'), { ssr: false })
+
 
 type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'merchant' | 'contract' | 'contract_result' | 'don_fallen' | 'mark_choice' | 'between' | 'reward' | 'dead'
 
@@ -527,6 +536,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   /** The width of a screen between fights: a column on a phone, a sheet on a desktop. */
   const sheetW = wide ? 640 : 440
   const [phase, setPhaseRaw] = useState<Phase>(props.resumeState ? 'resume' : props.available ? 'intro' : 'usedup')
+  // Fetch the combat chunk once the page has painted. See RaidCombat above.
+  useEffect(() => { void import('../RaidCombat') }, [])
   /**
    * A phase change between two screens of a live run fades the WORDS out,
    * commits while they cannot be seen, and fades them back in. The sea behind

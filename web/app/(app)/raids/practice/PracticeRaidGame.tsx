@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState, useCallback, startTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -10,11 +11,19 @@ import { GUIDES } from '@/lib/onboardingScenes'
 import { getShipSkin, shipSkinFilter } from '@/lib/shipSkins'
 import { shipTierByName } from '@/lib/ships'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
-import RaidCombat from '../RaidCombat'
 import { raidDamageProfile } from '@/lib/expeditions'
 import type { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 import TapToContinueGate from '@/components/TapToContinueGate'
+
+// ── THE COMBAT SCREEN IS ITS OWN CHUNK ─────────────────────────────────────
+// RaidCombat is the biggest file in the game, and nothing draws it until a
+// fight starts. Imported statically it rode in the page's first download and
+// held up the pre-fight screen; as a dynamic import the page paints without
+// it, and the effect below fetches it in the background straight after, so
+// by the time a fight starts it is already here (the 2026-09-23 audit).
+const RaidCombat = dynamic(() => import('../RaidCombat'), { ssr: false })
+
 
 type GamePhase  = 'idle' | 'playing' | 'win' | 'dead'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -358,6 +367,8 @@ export default function PracticeRaidGame({
 
   // Game state
   const [phase, setPhase]           = useState<GamePhase>('idle')
+  // Fetch the combat chunk once the page has painted. See RaidCombat above.
+  useEffect(() => { void import('../RaidCombat') }, [])
   const [playerHP, setPlayerHP]     = useState(playerHPMax)
   const [enemyHP, setEnemyHP]       = useState(0)
   const [enemyHPMax, setEnemyHPMax] = useState(0)
