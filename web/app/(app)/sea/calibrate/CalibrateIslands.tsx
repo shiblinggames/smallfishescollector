@@ -211,7 +211,7 @@ export default function CalibrateIslands() {
   }, [place.id, d, pad, painted, plate])
 
   const items: Item[] = isHome
-    ? [{ art: HOUSE[rung].art, ...house[rung] }]
+    ? [{ art: HOUSE[rung].seaArt, ...house[rung] }]
     : (rows[place.id] ?? [])
   const cur = items[Math.min(pick, Math.max(0, items.length - 1))]
 

@@ -103,6 +103,15 @@ export type Build = {
    * every rung, which is how you get a lean-to that floats and an Estate whose
    * jetty is buried in the sand.
    */
+  /**
+   * THE SAME RUNG ON THE SEA, without ground. `art` carries its own patch of
+   * island, which is right on /home where it is a picture on its own and
+   * wrong on the chart, where it stood on the painted island as an island on
+   * an island (Kong, 2026-09-23). Painted fresh on Kie.ai, buildings and props
+   * only, cut flat at their feet (prompts/home-house-N.json). `x`, `y` and
+   * `scale` below place THIS art, and /sea/calibrate tunes them.
+   */
+  seaArt: string
   x: number
   y: number
   scale: number
@@ -125,29 +134,29 @@ export type Build = {
  */
 export const HOUSE: Build[] = [
   {
-    name: 'A lean-to', cost: 0, art: '/sea/home-isle-1.png', x: 51, y: 58, scale: 0.46,
+    name: 'A lean-to', cost: 0, art: '/sea/home-isle-1.png', seaArt: '/sea/home-house-1.webp', x: 51, y: 54, scale: 0.4,
     blurb: 'Salvage, canvas and stubbornness.',
     adds: '',
   },
   {
-    name: 'A cottage', cost: 60_000, art: '/sea/home-isle-2.png', x: 52, y: 60, scale: 0.49,
+    name: 'A cottage', cost: 60_000, art: '/sea/home-isle-2.png', seaArt: '/sea/home-house-2.webp', x: 52, y: 56, scale: 0.42,
     blurb: 'One room, one chimney, and a door that shuts.',
     adds: 'A kitchen garden, and a path worn between the two.',
   },
   {
-    name: 'A longhouse', cost: 300_000, art: '/sea/home-isle-3.png', x: 53, y: 60, scale: 0.51,
+    name: 'A longhouse', cost: 300_000, art: '/sea/home-isle-3.png', seaArt: '/sea/home-house-3.webp', x: 53, y: 56, scale: 0.44,
     blurb: 'Long enough to hang the nets indoors.',
     adds: 'A walled garden, a drying rack and a woodpile.',
   },
   {
-    name: 'A great hall', cost: 900_000, art: '/sea/home-isle-4.png', x: 52, y: 62, scale: 0.56,
+    name: 'A great hall', cost: 900_000, art: '/sea/home-isle-4.png', seaArt: '/sea/home-house-4.webp', x: 52, y: 58, scale: 0.48,
     blurb: 'Two storys, and a fire that never quite goes out.',
     adds: 'A brazier up on the headland, and a boathouse below it.',
   },
   {
     // In and up a shade from 54,66 — the widest rung of the house on the
     // narrowest bearing of its isle was the one that overhung.
-    name: 'The Estate', cost: 2_400_000, art: '/sea/home-isle-5.png', x: 52, y: 65, scale: 0.63,
+    name: 'The Estate', cost: 2_400_000, art: '/sea/home-isle-5.png', seaArt: '/sea/home-house-5.webp', x: 52, y: 61, scale: 0.54,
     blurb: 'Nobody mistakes it for anywhere else.',
     adds: 'A working lighthouse. They can see you coming from the Abyss.',
   },
@@ -623,7 +632,7 @@ export function nextBuild(h: Homestead): Build | null {
  */
 export function homeBuildings(h: Homestead): { art: string; x: number; y: number; scale: number }[] {
   const b = builtAt(h)
-  return [{ art: b.art, x: b.x, y: b.y, scale: b.scale }]
+  return [{ art: b.seaArt, x: b.x, y: b.y, scale: b.scale }]
 }
 
 /**
