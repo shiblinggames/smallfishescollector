@@ -488,3 +488,6 @@ CharacterAvatar + name on the scrim), an HP card first in the grid (with the shi
 Its conditions list is every mark on your portrait ring, not just the status pipeline: streak,
 pierce, cannon heat, shield pool, Vengeance ward, Sharpshot, statuses, burn, freeze, aim
 affliction, brace. A new mark on the ring needs a line here too.
+The Gear tab is ART FIRST (Kong, same day): equipped items are tiles (large painting on a rarity
+pool, rarity on the art, name + effects under), two-plus across; the crate odds are art tiles with
+the odds under. Ultimates have no art yet, so their card stays text.

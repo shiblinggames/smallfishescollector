@@ -10745,32 +10745,34 @@ function PlayerStatsPopup({
         {crateOdds.length > 0 && (
           <div style={{ marginTop: 16 }}>
             {sectionHeading(isBoss ? 'In the Crate' : 'Boss Crate', '#f0c040')}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {/* Art tiles, like the gear above: the drop's painting first, then
+                what it is and the odds, the boosted figure over the struck one. */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 6 }}>
               {crateOdds.map(o => {
                 const boosted = o.chance > o.chanceBeforeFortune
                 const pct = (v: number) => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`
                 return (
-                  <div key={o.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '0.35rem 0.5rem', borderRadius: 9,
-                    background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)',
+                  <div key={o.id} title={o.label} style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                    padding: '0.5rem 0.4rem 0.45rem', borderRadius: 12, textAlign: 'center',
+                    background: 'radial-gradient(ellipse 70% 55% at 50% 30%, rgba(240,192,64,0.14) 0%, rgba(255,255,255,0.02) 100%)',
+                    border: '1px solid rgba(240,192,64,0.2)',
                   }}>
-                    <span style={{ flexShrink: 0, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {o.image
                         // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={o.image} alt="" loading="lazy" decoding="async" style={{ maxWidth: 22, maxHeight: 22, objectFit: 'contain' }} />
-                        : <span style={{ fontSize: '0.8rem', color: '#f0c040' }}>◆</span>}
+                        ? <img src={o.image} alt="" loading="lazy" decoding="async" style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: 'drop-shadow(0 3px 7px rgba(0,0,0,0.5))' }} />
+                        : <span style={{ fontSize: '1.2rem', color: '#f0c040' }}>◆</span>}
                     </span>
-                    <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.72rem', color: '#d8d2c6' }}>
-                      {o.label}
-                    </span>
-                    {boosted && (
-                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8f8a80', textDecoration: 'line-through', opacity: 0.8, fontVariantNumeric: 'tabular-nums' }}>
-                        {pct(o.chanceBeforeFortune)}
-                      </span>
-                    )}
-                    <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color: boosted ? '#f0c040' : '#e8e1d2', fontVariantNumeric: 'tabular-nums' }}>
-                      {pct(o.chance)}
+                    <span className="font-karla font-600" style={{
+                      width: '100%', fontSize: '0.64rem', color: '#d8d2c6', lineHeight: 1.2,
+                      overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                    }}>{o.label}</span>
+                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                      <span className="font-cinzel font-800" style={{ fontSize: '0.86rem', color: boosted ? '#f0c040' : '#e8e1d2', fontVariantNumeric: 'tabular-nums' }}>{pct(o.chance)}</span>
+                      {boosted && (
+                        <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#8f8a80', textDecoration: 'line-through', opacity: 0.8, fontVariantNumeric: 'tabular-nums' }}>{pct(o.chanceBeforeFortune)}</span>
+                      )}
                     </span>
                   </div>
                 )
@@ -10779,47 +10781,47 @@ function PlayerStatsPopup({
           </div>
         )}
 
-        {/* Equipped Items — scales with however many raid items are on. */}
+        {/* ── EQUIPPED ITEMS, ART FIRST ─────────────────────────────────────
+            Kong: gear should be more art forward. Each item was a 28px thumbnail
+            at the end of a text row, which spent the painting on a bullet. Now
+            it is a tile: the painting large on a pool of its rarity colour, the
+            rarity on the art, then the name and what it does. Two across. */}
         {equippedItems.length > 0 && (
           <div style={{ marginTop: 16 }}>
             {sectionHeading(equippedItems.length > 1 ? `Equipped Items · ${equippedItems.length}` : 'Equipped Item', '#fbbf24')}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
               {equippedItems.map(item => {
-                // Each item wears its own rarity colour (epic → violet, legendary
-                // → gold, etc.), the same scheme as raid loot — so a forged or
-                // abyssal legendary reads apart from a plain epic at a glance.
                 const c = RARITY_COLOR[item.rarity] ?? '#fbbf24'
                 return (
-                <div key={item.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '0.65rem 0.75rem',
-                  background: `${c}12`,
-                  border: `1px solid ${c}38`,
-                  borderRadius: 12,
-                }}>
-                  {/* Item glyph */}
-                  <div style={{
-                    width: 36, height: 36, flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: `${c}1c`,
-                    border: `1px solid ${c}4d`,
-                    borderRadius: 9,
+                  <div key={item.id} style={{
+                    display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                    background: `${c}0f`, border: `1px solid ${c}40`, borderRadius: 14,
                   }}>
-                    {item.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.image} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
-                    ) : (
-                      <span style={{ fontSize: '1.1rem', color: c, display: 'flex' }}><IconCrate size={18} /></span>
-                    )}
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 2 }}>
-                      <p className="font-karla font-700" style={{ minWidth: 0, fontSize: '0.85rem', color: c, lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
-                      <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.09em', color: c, opacity: 0.85 }}>{item.rarity}</span>
+                    <div style={{
+                      position: 'relative', height: 108,
+                      background: `radial-gradient(ellipse 60% 62% at 50% 52%, ${c}40 0%, ${c}10 55%, rgba(0,0,0,0) 100%)`,
+                      borderBottom: `1px solid ${c}26`,
+                    }}>
+                      {item.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.image} alt="" loading="lazy" decoding="async" style={{
+                          position: 'absolute', inset: '10px 12px', width: 'calc(100% - 24px)', height: 'calc(100% - 20px)',
+                          objectFit: 'contain', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.55))',
+                        }} />
+                      ) : (
+                        <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c }}><IconCrate size={40} /></span>
+                      )}
+                      <span className="font-karla font-800 uppercase" style={{
+                        position: 'absolute', top: 7, left: 7, padding: '0.12rem 0.4rem', borderRadius: 999,
+                        fontSize: '0.46rem', letterSpacing: '0.1em', color: c,
+                        background: 'rgba(6,12,20,0.82)', border: `1px solid ${c}55`,
+                      }}>{item.rarity}</span>
                     </div>
-                    <ItemEffectLines def={item} size={0.7} color="rgba(240,237,232,0.68)" gap={3} showFlavor={false} />
+                    <div style={{ padding: '0.55rem 0.65rem 0.65rem' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: c, lineHeight: 1.15, marginBottom: 4 }}>{item.name}</p>
+                      <ItemEffectLines def={item} size={0.68} color="rgba(240,237,232,0.7)" gap={3} showFlavor={false} />
+                    </div>
                   </div>
-                </div>
                 )
               })}
             </div>
