@@ -3424,8 +3424,14 @@ Kong: little things that speed you up or slow you down. Fishing side only; off w
 down (rod out, fight, arriving); none of it pays anything.
 - CURRENTS (lib/seaFlow `CURRENTS`, `currentAt`): ring lanes round Open Waters (r 5300), the Deep
   (8900, opposite way) and the Abyss (13400), plus an outbound radial at ~60deg and an inbound at
-  ~120deg. They push the hull along the lane at CURRENT_PUSH (0.4 x base speed) at the centre,
-  soft at the edges and ends. Drawn as tapered mesh strips of scrolling streaks (seaFlowGfx).
+  ~120deg. They push the hull along the lane at CURRENT_PUSH (0.55 x base speed) at the centre,
+  soft at the edges and ends. Every lane MEANDERS (`wander`, two seeded sines, ~±230px), and the
+  physics follows the same wandering line, so what you see is where the push is.
+  Drawn (seaFlowGfx, 2026-09-24) as five UV-scrolled strips per lane, all tapered, additive:
+  BODY turquoise sheen (alpha .16, slow), DRIFT wide faint streaks (95px/s), RACE thin bright
+  streaks down the middle (170px/s, roughly a riding hull's pace; the parallax against DRIFT is
+  what reads as moving water), and SHEAR broken-foam lines at +-0.86 of the half-width. Tune in
+  `LAYERS`. 25 meshes total, geometry static, only aUV updates.
 - KELP (`KELP`, `kelpAt`): 14 seeded beds in the Shallows/Open Waters, clear of ports, isles,
   lanes and rocks; inside one you keep KELP_KEEP (60%) of your speed, eased. Drawn as flat frond
   sprites sharing one texture.

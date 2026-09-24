@@ -32,22 +32,40 @@ export type CurrentLane = {
 
 export type KelpBed = { x: number; y: number; r: number; seed: number }
 
+/**
+ * ── LANES MEANDER ──────────────────────────────────────────────────────────
+ *
+ * A current is not drawn with a compass. Every lane wanders a little either
+ * side of its arc or ray, on two slow sines seeded by the lane, so the water
+ * reads as a river in the sea rather than a ruled line (Kong: make them look
+ * better). The physics uses the same wandering line, so what you see is where
+ * the push is. Points every ~400px so the bends are smooth.
+ */
+function wander(seed: number, along: number): number {
+  return Math.sin(along / 2600 + seed) * 170 + Math.sin(along / 1100 + seed * 2.3) * 60
+}
+
 /** A polyline along an arc round the Mainland, from angle a0 to a1 (radians,
  *  screen convention: 0 east, PI/2 south), in the order the water runs. */
-function arc(r: number, a0: number, a1: number): { x: number; y: number }[] {
-  const n = Math.max(6, Math.ceil((Math.abs(a1 - a0) * r) / 900))
+function arc(r: number, a0: number, a1: number, seed: number): { x: number; y: number }[] {
+  const n = Math.max(12, Math.ceil((Math.abs(a1 - a0) * r) / 400))
   return Array.from({ length: n + 1 }, (_, i) => {
     const a = a0 + ((a1 - a0) * i) / n
-    return { x: Math.round(Math.cos(a) * r), y: Math.round(Math.sin(a) * r) }
+    const rr = r + wander(seed, Math.abs(a - a0) * r)
+    return { x: Math.round(Math.cos(a) * rr), y: Math.round(Math.sin(a) * rr) }
   })
 }
 
-/** A straight radial line at angle a, from radius r0 to r1. */
-function ray(a: number, r0: number, r1: number): { x: number; y: number }[] {
-  const n = Math.max(4, Math.ceil(Math.abs(r1 - r0) / 900))
+/** A radial line at angle a, from radius r0 to r1, wandering either side. */
+function ray(a: number, r0: number, r1: number, seed: number): { x: number; y: number }[] {
+  const n = Math.max(8, Math.ceil(Math.abs(r1 - r0) / 400))
   return Array.from({ length: n + 1 }, (_, i) => {
     const r = r0 + ((r1 - r0) * i) / n
-    return { x: Math.round(Math.cos(a) * r), y: Math.round(Math.sin(a) * r) }
+    const off = wander(seed, Math.abs(r - r0))
+    return {
+      x: Math.round(Math.cos(a) * r - Math.sin(a) * off),
+      y: Math.round(Math.sin(a) * r + Math.cos(a) * off),
+    }
   })
 }
 
@@ -57,11 +75,11 @@ function ray(a: number, r0: number, r1: number): { x: number; y: number }[] {
  * across the sea can pick the ring that is going their way.
  */
 export const CURRENTS: CurrentLane[] = [
-  { id: 'ring-open', pts: arc(5300, 0.35, 2.8), half: 300 },
-  { id: 'ring-deep', pts: arc(8900, 2.8, 0.35), half: 320 },
-  { id: 'ring-abyss', pts: arc(13400, 0.4, 2.75), half: 340 },
-  { id: 'outbound', pts: ray(1.05, 3200, 15500), half: 260 },
-  { id: 'inbound', pts: ray(2.09, 15500, 3200), half: 260 },
+  { id: 'ring-open', pts: arc(5300, 0.35, 2.8, 1.1), half: 300 },
+  { id: 'ring-deep', pts: arc(8900, 2.8, 0.35, 2.7), half: 320 },
+  { id: 'ring-abyss', pts: arc(13400, 0.4, 2.75, 4.2), half: 340 },
+  { id: 'outbound', pts: ray(1.05, 3200, 15500, 0.6), half: 260 },
+  { id: 'inbound', pts: ray(2.09, 15500, 3200, 3.3), half: 260 },
 ]
 
 /** How hard a current carries you at its centre, as a share of the base
