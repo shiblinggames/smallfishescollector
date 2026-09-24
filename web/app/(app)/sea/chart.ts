@@ -150,9 +150,9 @@ export type Place = {
  * and the calibrated numbers here were never drawn.
  */
 export const FORGE_RUNGS: { name: string; art: string; x: number; y: number; scale: number }[] = [
-  { name: 'The Forge', art: '/forge/forge.png', x: 45, y: 42, scale: 0.30 },
-  { name: 'The Abyssal Forge', art: '/forge/abyssal_forge.png', x: 45, y: 42, scale: 0.30 },
-  { name: 'The Accelerator', art: '/forge/accelerator.png', x: 45, y: 42, scale: 0.30 },
+  { name: 'The Forge', art: '/forge/forge.png', x: 45, y: 43, scale: 0.30 },
+  { name: 'The Abyssal Forge', art: '/forge/abyssal_forge.png', x: 46, y: 43, scale: 0.30 },
+  { name: 'The Accelerator', art: '/forge/accelerator.png', x: 47, y: 43, scale: 0.30 },
 ]
 
 export const PLACES: Place[] = [
