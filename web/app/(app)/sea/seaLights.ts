@@ -14,7 +14,7 @@
 //   over the screen. It was a flat disc with a rim centred on the hull, and
 //   Kong called it what it was: an oval round the whole boat image, not a
 //   light on a boat. So it has a SOURCE now: an edgeless spill of warmth on
-//   the water in front of her, longer than it is wide, pointing the way she
+//   the water in front of her, a CONE like a hand lantern's beam, pointing the way she
 //   is TRAVELLING (not just left or right: Kong again) and turning with her.
 //   Laid on the plane, so it foreshortens like the sea does. (Dancing glints
 //   on top were tried and cut the same day: far too distracting.)
@@ -90,6 +90,51 @@ function hazeTexture(PIXI: typeof import('pixi.js')): Texture {
   return hazeTex
 }
 
+let coneTex: Texture | null = null
+/**
+ * THE BEAM: a cone, not a pool (Kong: it should be like a flashlight in front
+ * of the boat, not a circle moving out). Drawn pointing +x with the lamp at
+ * the left edge's middle: a small bright glow where the flame is, then a wedge
+ * that widens and fades with distance, soft across its edges so there is no
+ * line to find, and soft at the far end.
+ */
+function coneTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (coneTex) return coneTex
+  const W = 256, H = 160
+  const c = document.createElement('canvas')
+  c.width = W; c.height = H
+  const g = c.getContext('2d')!
+  const img = g.createImageData(W, H)
+  // The cone's width at the far end, as a share of the texture's half-height.
+  // Under 1, so no part of the beam ever reaches the texture's edge and gets
+  // cut into a line.
+  const REACH = 0.92
+  // The lamp sits just inside the left edge, so its glow is round, not cut.
+  const LX = W * 0.07
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const u = Math.max(0, (x - LX) / (W - LX))        // 0 at the lamp, 1 at the far end
+    const v = (y - H / 2) / (H / 2)                   // -1..1 across
+    // Across: how far out of the cone's centre line, as a share of its width
+    // at this distance. Soft over the outer half so the edge is a falloff.
+    const spread = Math.max(0.02, u * REACH)
+    const off = Math.abs(v) / spread
+    const across = off >= 1 ? 0 : 1 - off * off * (3 - 2 * off)
+    // Along: comes up quickly off the lamp, holds, and fades to nothing.
+    const along = Math.min(1, 0.45 + u / 0.08) * Math.pow(1 - u, 1.4)
+    let a = across * along * 0.9
+    // The flame itself: a small round glow at the apex.
+    const gx = (x - LX) / (H / 2), gy = v
+    const d2 = gx * gx + gy * gy
+    a = Math.max(a, Math.exp(-d2 * 16) * 0.8)
+    const o = (y * W + x) * 4
+    img.data[o] = img.data[o + 1] = img.data[o + 2] = 255
+    img.data[o + 3] = Math.round(Math.min(1, a) * 255)
+  }
+  g.putImageData(img, 0, 0)
+  coneTex = PIXI.Texture.from(c)
+  return coneTex
+}
+
 function moteTexture(PIXI: typeof import('pixi.js')): Texture {
   if (moteTex) return moteTex
   const S = 32
@@ -159,8 +204,10 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
   const lanternPlane: Container = new PIXI.Container()
   lanternPlane.scale.set(1, GROUND)
   screen.addChild(lanternPlane)
-  const lantern: Sprite = new PIXI.Sprite(ht)
-  lantern.anchor.set(0.5)
+  // The lamp is the texture's left-middle, so it sits at the bow and the
+  // beam goes out from there.
+  const lantern: Sprite = new PIXI.Sprite(coneTexture(PIXI))
+  lantern.anchor.set(0.07, 0.5)
   lantern.tint = LAMP
   lantern.alpha = 0
   lanternPlane.addChild(lantern)
@@ -254,10 +301,11 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
       // way than across it.
       lanternPlane.position.set(cx, cy + 10)
       lantern.rotation = aim
-      lantern.position.set(Math.cos(aim) * lr * 0.6, Math.sin(aim) * lr * 0.6)
-      lantern.width = lr * 2.3
+      // From the bow, which is a little out from her middle along her way.
+      lantern.position.set(Math.cos(aim) * lr * 0.24, Math.sin(aim) * lr * 0.24)
+      lantern.width = lr * 2.6
       lantern.height = lr * 1.6
-      lantern.alpha = dark * 0.42 * glow * flick
+      lantern.alpha = dark * 0.5 * glow * flick
 
       // ── EVERY OTHER BOAT ── smaller, and it is the one thing out here that
       // is worth steering toward on sight.
