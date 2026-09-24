@@ -31,7 +31,7 @@ import CalloutLayer from '@/components/CalloutLayer'
 import type { SlotKey } from '@/app/(app)/fishing/GearScreen'
 import { vibrate } from '@/lib/haptics'
 import { HOW_TO_GET } from '@/lib/howToGetGear'
-import { RODS } from '@/lib/rods'
+import { RODS, rodEffectLines } from '@/lib/rods'
 import { HATS } from '@/lib/hats'
 import { BOATS } from '@/lib/boats'
 import { PETS } from '@/lib/pets'
@@ -216,19 +216,72 @@ export default function LoadoutBody({
             // loadout is you on real water rather than on a blue box.
             background: `url(${WATER}) 40% 62% / cover no-repeat, #0d1e2b`,
           }} />
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10, minHeight: 22 }}>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.p key={peekLabel ?? 'now'} className="font-karla font-700"
-                initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                transition={{ duration: 0.12 }}
-                style={{ fontSize: '0.78rem', color: peekLabel ? GOLD : `${SEA},0.6)`, textAlign: 'center' }}>
-                {peekLabel ? `Trying on: ${peekLabel}`
-                  : typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
-                    ? 'Hover anything on the right to try it on. Press to equip.'
-                    : 'Press anything below to equip it.'}
-              </motion.p>
-            </AnimatePresence>
-          </div>
+          {/* ── WHAT IT DOES ───────────────────────────────────────────────
+              Kong: on a hover, show the gear's stats here rather than "Trying
+              on: X". The card follows the pointer on the locker; with nothing
+              under it, it shows what is on for the open tab. A rod's lines are
+              the Tackle Shop's own (lib/rods rodEffectLines); anything else is
+              a look, and says so plainly. */}
+          {(() => {
+            const tab = peek?.slot ?? slot ?? 'rod'
+            const peekId = peek ? peek.id : null
+            const trying = peek != null
+            let title = ''
+            let lines: string[] = []
+            let note = ''
+            let delta: string | null = null
+            let tint = GOLD
+            if (tab === 'rod') {
+              const r = trying ? rack.find(x => String(x.tier) === peekId) ?? null : active
+              const def = r ? RODS.find(d => d.tier === r.tier) ?? null : null
+              title = r?.name ?? 'No rod'
+              lines = def ? rodEffectLines(def) : []
+              note = def?.description ?? ''
+              tint = def?.color ?? GOLD
+              if (trying && r && active && r.tier !== active.tier) {
+                const d = r.catchZoneBonus - active.catchZoneBonus
+                delta = d === 0 ? 'Same catch zone as yours' : `${d > 0 ? '+' : ''}${d}° catch zone vs yours`
+              }
+            } else {
+              const id = trying ? peekId : tab === 'hat' ? look.hatId : tab === 'boat' ? look.boatId : tab === 'pet' ? look.petId : look.characterColor
+              const label = trying ? (peekLabel ?? '') : nameFor(tab)
+              title = id === '' || id == null ? (tab === 'hat' ? 'No hat' : tab === 'pet' ? 'No pet' : label) : label
+              const hint = tab === 'skin' ? CHARACTER_COLORS.find(c => c.id === id)?.unlockHint : undefined
+              note = 'A look, not a stat. It changes how you appear on the water and nothing about the catch.'
+              if (hint) note = `${note} ${hint}.`
+            }
+            const on = !trying
+            return (
+              <div style={{
+                marginTop: 10, minHeight: 104, padding: '0.7rem 0.85rem', borderRadius: 13,
+                background: 'rgba(255,255,255,0.03)', border: `1px solid ${trying ? `${tint}66` : 'rgba(255,255,255,0.08)'}`,
+                transition: 'border-color 0.15s',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1rem', color: '#f4ecd8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</p>
+                  <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.54rem', letterSpacing: '0.14em', color: on ? `${SEA},0.55)` : GOLD }}>
+                    {on ? 'Equipped' : 'Trying on'}
+                  </span>
+                </div>
+                {lines.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
+                    {lines.map(l => (
+                      <span key={l} className="font-karla font-700" style={{
+                        fontSize: '0.66rem', padding: '0.2rem 0.5rem', borderRadius: 999,
+                        color: '#eae2cf', background: `${tint}1c`, border: `1px solid ${tint}44`,
+                      }}>{l}</span>
+                    ))}
+                  </div>
+                )}
+                {delta && (
+                  <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: delta.startsWith('+') ? '#7fdfa3' : delta.startsWith('-') ? '#f08a8a' : `${SEA},0.6)`, marginTop: 6 }}>{delta}</p>
+                )}
+                {note && (
+                  <p className="font-karla" style={{ fontSize: '0.72rem', lineHeight: 1.45, color: `${SEA},0.62)`, marginTop: 6 }}>{note}</p>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         {/* ── RIGHT: THE LOCKER ──────────────────────────────────────────── */}

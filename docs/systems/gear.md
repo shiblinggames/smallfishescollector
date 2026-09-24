@@ -116,3 +116,9 @@ more of that thing comes from (rods, reels, hooks: the Tackle Shop; lines: speci
 Finn's spoils: his campaign; badges: achievements; skins: doubloons, gems, levels,
 achievements, crates; hats: doubloons, some crates; boats: doubloons, gems, achievement
 points, crates; pets: crates). Keep that record true when a source changes.
+
+**The loadout's stat card (2026-09-24).** Under the picture, a card for whatever the pointer is on in
+the locker (or what is equipped on the open tab): a rod's lines from `rodEffectLines` in lib/rods,
+which the Tackle Shop now reads too (one list, no drift), plus its catch zone against the rod in
+hand; a cosmetic says it is a look and nothing about the catch.
+

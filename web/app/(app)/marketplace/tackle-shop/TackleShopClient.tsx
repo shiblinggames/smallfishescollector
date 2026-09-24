@@ -4,7 +4,8 @@ import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { HOOKS, hookGlowClass } from '@/lib/hooks'
-import { RODS, rodGlowClass, isCaptainRod, rodSpeedPct, COMPLETIONIST_TIER, ROD_SELL_RATE } from '@/lib/rods'
+import { RODS, rodGlowClass, isCaptainRod, rodSpeedPct, rodEffectLines, COMPLETIONIST_TIER, ROD_SELL_RATE } from '@/lib/rods'
+
 import type { CompletionistProgress, Requirement } from '@/lib/completionist'
 import { openMembership } from '@/components/MembershipModal'
 import { REELS } from '@/lib/reels'
@@ -880,23 +881,9 @@ export default function TackleShopClient({
                 const isBuying = buyingRod === rod.tier && isPending
                 const isEquipping = equippingRod === rod.tier && isPending
                 const c = rod.color
-                const speedPct = rodSpeedPct(rod)
 
-                const effects: string[] = []
-                if (rod.doubleCatchChance >= 1) effects.push('Always double catch')
-                else if (rod.doubleCatchChance > 0) effects.push(`${Math.round(rod.doubleCatchChance * 100)}% double catch`)
-                if (rod.retryOnMissChance > 0) effects.push(`${Math.round(rod.retryOnMissChance * 100)}% miss retry`)
-                if (rod.snagImmune) effects.push('Snag immune')
-                if (rod.perfectZoneBonus > 0) effects.push(`Perfect zone +${rod.perfectZoneBonus}°`)
-                if (rod.rarityBonus > 0) effects.push(`+${Math.round(rod.rarityBonus * 100)}% rare bias`)
-                if ((rod.jackpotChance ?? 0) > 0) effects.push(`×${rod.jackpotMultiplier} jackpot · odds rise in shallows`)
-                if ((rod.crateChanceMult ?? 1) > 1) effects.push(`${rod.crateChanceMult}× crate odds`)
-                if ((rod.perfectXpMult ?? 1) > 1) effects.push(`${rod.perfectXpMult}× perfect XP`)
-                if (rod.wormhole) effects.push('Wormhole reroll')
-                if ((rod.instantBiteChance ?? 0) > 0) effects.push(`${Math.round(rod.instantBiteChance! * 100)}% instant bite`)
-                if (speedPct > 0) effects.push(`${speedPct}% faster bites`)
-                if (rod.catchZoneBonus > 0) effects.push(`+${rod.catchZoneBonus}° catch zone`)
-                if (effects.length === 0) effects.push('Standard rod')
+                // One list, shared with the loadout's hover card. See lib/rods.
+                const effects = rodEffectLines(rod)
 
                 return (
                   <div key={rod.tier} style={{

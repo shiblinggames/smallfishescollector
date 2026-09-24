@@ -351,6 +351,31 @@ export function rodSpeedPct(rod: RodDef): number {
   return Math.round((1 - rodWaitMult(rod)) * 100)
 }
 
+/**
+ * WHAT A ROD DOES, AS SHORT LINES. One list for every surface that shows a
+ * rod's stats (the Tackle Shop's cards, the loadout's hover card), so the two
+ * can never describe the same rod differently.
+ */
+export function rodEffectLines(rod: RodDef): string[] {
+  const speedPct = rodSpeedPct(rod)
+  const effects: string[] = []
+  if (rod.doubleCatchChance >= 1) effects.push('Always double catch')
+  else if (rod.doubleCatchChance > 0) effects.push(`${Math.round(rod.doubleCatchChance * 100)}% double catch`)
+  if (rod.retryOnMissChance > 0) effects.push(`${Math.round(rod.retryOnMissChance * 100)}% miss retry`)
+  if (rod.snagImmune) effects.push('Snag immune')
+  if (rod.perfectZoneBonus > 0) effects.push(`Perfect zone +${rod.perfectZoneBonus}°`)
+  if (rod.rarityBonus > 0) effects.push(`+${Math.round(rod.rarityBonus * 100)}% rare bias`)
+  if ((rod.jackpotChance ?? 0) > 0) effects.push(`×${rod.jackpotMultiplier} jackpot · odds rise in shallows`)
+  if ((rod.crateChanceMult ?? 1) > 1) effects.push(`${rod.crateChanceMult}× crate odds`)
+  if ((rod.perfectXpMult ?? 1) > 1) effects.push(`${rod.perfectXpMult}× perfect XP`)
+  if (rod.wormhole) effects.push('Wormhole reroll')
+  if ((rod.instantBiteChance ?? 0) > 0) effects.push(`${Math.round(rod.instantBiteChance! * 100)}% instant bite`)
+  if (speedPct > 0) effects.push(`${speedPct}% faster bites`)
+  if (rod.catchZoneBonus > 0) effects.push(`+${rod.catchZoneBonus}° catch zone`)
+  if (effects.length === 0) effects.push('Standard rod')
+  return effects
+}
+
 /** Tiers of every rod that can be BOUGHT — excludes the free Bamboo starter
  *  (cost 0) and the earned-only Completionist. Drives the "own every rod"
  *  badge; auto-grows as new purchasable rods ship. */
