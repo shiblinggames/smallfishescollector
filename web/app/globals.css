@@ -4101,3 +4101,12 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
   .yard-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); align-items: start; }
   .yard-stage { position: sticky; top: 0; }
 }
+
+/* The yard's own, tighter type on a wide screen (Kong: too big on desktop).
+   Overrides the .sea-shipyard desktop bump for this page's host. */
+@media (min-width: 900px) {
+  .sea-shipyard .yard-host {
+    --sy-1: 0.66rem; --sy-2: 0.76rem; --sy-3: 0.84rem; --sy-4: 0.92rem;
+    --sy-5: 1rem; --sy-6: 1.16rem; --sy-7: 1.34rem;
+  }
+}

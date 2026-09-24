@@ -124,12 +124,14 @@ hand; a cosmetic says it is a look and nothing about the catch.
 
 ## The Shipyard, rebuilt (2026-09-24)
 
-Kong: the page looked really bad; nicer buttons and a clear upgrade path for each. `/shipyard`
-(ShipyardClient) keeps every purchase, picker (GearScreen, mounted as before) and the confirm modal
-as they were, in a new room: a header with the purse and the close; the boat large on the harbour
-(`/welcome-harbour-open.webp`) with its callouts on the left, the kit row and Carried under it,
-sticky; the refit on the right as `UpgradeCard`s (stat and reading from `DETAIL`, a segmented
-ladder of every tier with "Tier n of m", what the next tier adds, and one button: "Upgrade · cost",
-"Need X more", or a Fully upgraded stamp); then What it adds up to. Two columns from a 900px host
-(`.yard-host` container query), stacked below.
-
+Kong: the page looked really bad; then (same day) too big on desktop, the doubloons shown twice,
+and the callout lines unwanted, with tabs instead of a long list. `/shipyard` (ShipyardClient)
+keeps every purchase, picker (GearScreen, mounted as before and opened by `setSlot`) and the
+confirm modal. The room: a header (name, close); the boat large on the harbour
+(`/welcome-harbour-open.webp`), NO callouts, with LoadoutStats under it, sticky, on the left; on
+the right two tabs. REFIT: one tab per upgrade (Speed, Turning, Pick-up, Hold, Lantern, each
+wearing `n/m` or Max) and the selected one with its whole path (`LADDER`: every tier's value and
+cost, owned ticked, next lit) and one button ("Upgrade · cost", "Need X more", or Fully upgraded).
+RIG: a tile per thing carried or worn (rod, reel, hook, line, look, hat, boat, pet, both specials,
+badges), each opening its picker. Two columns from a 900px host; the page's `--sy-*` type is
+tightened on a wide screen under `.yard-host`.

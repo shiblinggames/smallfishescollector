@@ -19,13 +19,13 @@ import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { RODS, getEffectiveRod, rodGlowClass } from '@/lib/rods'
+import { RODS, getEffectiveRod } from '@/lib/rods'
 import { REELS, getReel } from '@/lib/reels'
 import { HOOKS, getHook } from '@/lib/hooks'
 import { getLine } from '@/lib/lines'
 import { getPet, petSlot } from '@/lib/pets'
 import { getHat } from '@/lib/hats'
-import { CHARACTER_COLORS } from '@/lib/characters'
+import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { getBoat, boatSpeed, boatAgility, trimLabel } from '@/lib/boats'
 import PopupShell from '@/components/PopupShell'
 import { FISH_HOLD_TIERS, getFishHold } from '@/lib/fishHold'
@@ -33,7 +33,6 @@ import { fishingGearLevelReq } from '@/lib/gearGating'
 import { vibrate } from '@/lib/haptics'
 import LoadoutStats from '@/components/LoadoutStats'
 import GearScreen, { type SlotKey } from '../fishing/GearScreen'
-import CalloutLayer from '@/components/CalloutLayer'
 import PreviewStage from '@/components/PreviewStage'
 import { SPECIAL_ITEMS, effectiveSpecialDef } from '@/lib/specialItems'
 import {
@@ -76,22 +75,6 @@ type Buyable = 'hull' | 'handling' | 'accel' | 'hold' | 'lantern'
  * of it. You are spending real money-equivalent on a permanent change and the
  * copy's only job is to make sure you meant to.
  */
-/** Four words, for the row. `EXPLAIN.does` is the full sentence and the
- *  confirm modal still shows it — a page of five paragraphs is how a shipyard
- *  becomes a wall of text, and the number beside the tag is doing most of the
- *  explaining anyway. */
-// ONE LINE, PLAIN, ABOUT THE STAT. These sit under the reading on each tile and
-// they are the only prose a player reads before deciding. Written to the house
-// rule for mechanics copy — literal, no metaphor — and about what the number
-// does for you rather than about the part of the boat that provides it.
-const TAG: Record<Buyable, string> = {
-  hull: 'Get everywhere sooner. Does not change your fishing.',
-  handling: 'Steer tighter. Easier to pull alongside things.',
-  accel: 'Less waiting every time you set off again.',
-  hold: 'Fish more before you have to go and sell.',
-  lantern: 'See further after dark. Nothing changes by day.',
-}
-
 const EXPLAIN: Record<Buyable, { does: string; why: string }> = {
   hull: {
     does: 'Raises your top speed, so you cross the chart in less time.',
@@ -256,6 +239,9 @@ export default function ShipyardClient(p: {
    *  the things that open them are the boat in the picture and the rows under
    *  it, and none of those are inside GearScreen any more. */
   const [slot, setSlot] = useState<SlotKey | null>(null)
+  /** The right-hand pane and, in Refit, which upgrade is open. */
+  const [pane, setPane] = useState<'refit' | 'rig'>('refit')
+  const [refit, setRefit] = useState<Buyable>('hull')
   const [err, setErr] = useState('')
 
   // The Nav bar's balance is read once at render and never asks again, so every
@@ -415,58 +401,76 @@ export default function ShipyardClient(p: {
     },
   }
 
-  // Where each upgrade stands on its ladder, for the tier track.
-  const LADDER: Record<Buyable, { at: number; max: number }> = {
-    hull: { at: hull, max: MAX_HULL_TIER },
-    handling: { at: handling, max: MAX_HANDLING_TIER },
-    accel: { at: accel, max: MAX_ACCEL_TIER },
-    hold: { at: hold, max: FISH_HOLD_TIERS.length - 1 },
-    lantern: { at: lantern, max: MAX_LANTERN_TIER },
+  // Where each upgrade stands on its ladder, and every rung of it: the value
+  // at each tier and what that tier costs, for the full path in the Refit tab.
+  const LADDER: Record<Buyable, { at: number; max: number; value: (t: number) => string; cost: (t: number) => number | null }> = {
+    hull: { at: hull, max: MAX_HULL_TIER, value: t => `${hullMetresPerSec(t).toFixed(1)} m/s`, cost: t => (t === 0 ? null : nextHullCost(t - 1)) },
+    handling: { at: handling, max: MAX_HANDLING_TIER, value: t => `${Math.round(turnDegreesPerSec(t))}°/s`, cost: t => (t === 0 ? null : nextHandlingCost(t - 1)) },
+    accel: { at: accel, max: MAX_ACCEL_TIER, value: t => `${secondsToTopSpeed(t).toFixed(1)}s`, cost: t => (t === 0 ? null : nextAccelCost(t - 1)) },
+    hold: { at: hold, max: FISH_HOLD_TIERS.length - 1, value: t => `${FISH_HOLD_TIERS[t].capacity} fish`, cost: t => (t === 0 ? null : FISH_HOLD_TIERS[t].cost ?? null) },
+    lantern: { at: lantern, max: MAX_LANTERN_TIER, value: t => `${lanternMetres(t).toFixed(1)} m`, cost: t => (t === 0 ? null : nextLanternCost(t - 1)) },
   }
+
+  // THE RIG, as tiles: everything you carry or wear, each opening the same
+  // GearScreen picker the callouts on the picture used to (Kong: no lines
+  // pointing at things; more like the loadout).
+  const hatDef = getHat(hat), boatDef = getBoat(boat), petDef = getPet(pet)
+  const sp1 = effectiveSpecialDef(special, p.hasAutoCatcher ? ['auto_catcher'] : [])
+  const sp2 = special2 ? SPECIAL_ITEMS.find(x => x.id === special2) ?? null : null
+  const RIG: { slot: SlotKey; label: string; name: string; art: string | null; color: string; skin?: boolean }[] = [
+    { slot: 'rod', label: 'Rod', name: rodDef.name, art: rodDef.slug ? `/${rodDef.slug}_thumb.png` : rodDef.imageUrl ?? null, color: rodDef.color },
+    { slot: 'reel', label: 'Reel', name: reelDef.name, art: null, color: reelDef.color },
+    { slot: 'hook', label: 'Hook', name: hookDef.name, art: null, color: hookDef.color },
+    { slot: 'line', label: 'Line', name: lineDef.name, art: null, color: lineDef.color },
+    { slot: 'skin', label: 'Look', name: nameFor('skin'), art: null, color: '#c8a870', skin: true },
+    { slot: 'hat', label: 'Hat', name: hatDef?.name ?? 'No hat', art: hatDef?.restImageUrl ?? null, color: '#c8a870' },
+    { slot: 'boat', label: 'Boat', name: boatDef?.name ?? 'Default', art: boatDef?.restImageUrl ?? null, color: '#9fc9e8' },
+    { slot: 'pet', label: 'Pet', name: petDef?.name ?? 'No pet', art: petDef?.restImageUrl ?? null, color: '#a7f3d0' },
+    { slot: 'special', label: 'Special', name: sp1?.name ?? 'None', art: sp1?.image ?? null, color: sp1?.color ?? '#9aa3ad' },
+    { slot: 'special2', label: 'Sunken Hand', name: !p.hasDeepReel ? 'Locked' : sp2?.name ?? 'None', art: sp2?.image ?? null, color: sp2?.color ?? '#9aa3ad' },
+    { slot: 'badge', label: 'Badges', name: `${badges.filter(Boolean).length} of 3 worn`, art: null, color: '#f0c040' },
+  ]
+  const REFIT: { key: Buyable; label: string }[] = [
+    { key: 'hull', label: 'Speed' }, { key: 'handling', label: 'Turning' }, { key: 'accel', label: 'Pick-up' },
+    { key: 'hold', label: 'Hold' }, { key: 'lantern', label: 'Lantern' },
+  ]
+  const tabD = DETAIL[refit]
+  const tabL = LADDER[refit]
+  const tabShort = Math.max(0, (tabD.cost ?? Infinity) - doubloons)
 
   return (
     // THE TYPE SCALE LIVES ON THE ROOT, as custom properties (--sy-*), because
-    // inline styles cannot carry a media query. See globals.css.
+    // inline styles cannot carry a media query. See globals.css; .yard-host
+    // tightens it on a wide screen (Kong: the text was too big on desktop).
     <div className="fixed left-0 right-0 top-[var(--nav-h)] bottom-[60px] sm:bottom-0 overflow-y-auto sea-shipyard"
       style={{
         background: 'radial-gradient(ellipse 90% 60% at 30% 0%, rgba(40,78,104,0.35) 0%, transparent 60%), #08121c',
-        // Over the chart it is opened on: see the note in history (the sheet
-        // rendered under the whole sea at z auto). One above the Almanac.
+        // Over the chart it is opened on (a sheet at z auto rendered under the
+        // whole sea). One above the Almanac.
         zIndex: 112,
       }}>
-      {/* ── THE YARD, REBUILT (Kong, 2026-09-24: "looks really bad") ──────
-          In the loadout's language: the boat large on the harbour on the
-          left, the refit on the right, every upgrade a card with its whole
-          ladder drawn and one clear button. Every buy, picker and confirm is
-          exactly the code it was; only the room around them changed. */}
-      <div className="yard-host" style={{ maxWidth: 1180, margin: '0 auto', padding: '1.1rem clamp(0.9rem, 3vw, 1.6rem) 2.2rem' }}>
-        {/* HEADER: the name, the purse, the way out. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-karla font-800 uppercase" style={{ fontSize: 'var(--sy-1)', letterSpacing: '0.24em', color: 'rgba(159,201,232,0.7)' }}>Refits and rigging</p>
-            <h1 className="font-cinzel font-800" style={{ fontSize: 'var(--sy-7)', color: '#f4ecd8', lineHeight: 1.1 }}>The Shipyard</h1>
-          </div>
-          <div className="font-karla font-800" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.45rem 0.8rem', borderRadius: 999,
-            background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.35)',
-            color: '#f5dc8a', fontSize: 'var(--sy-4)', fontVariantNumeric: 'tabular-nums',
-          }}>{doubloons.toLocaleString()} <span style={{ color: '#f0c040' }}>⟡</span></div>
+      {/* ── THE YARD, IN THE LOADOUT'S SHAPE (Kong, 2026-09-24) ─────────────
+          The boat on the harbour on the left, no pointer lines; on the right
+          two tabs: REFIT (one upgrade at a time, with its whole path) and RIG
+          (a tile for everything you carry, each opening its picker). Every
+          buy, picker and confirm is the code it was. */}
+      <div className="yard-host" style={{ maxWidth: 1180, margin: '0 auto', padding: '1rem clamp(0.9rem, 3vw, 1.6rem) 2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <h1 className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: 'var(--sy-7)', color: '#f4ecd8', lineHeight: 1.1 }}>The Shipyard</h1>
           <button type="button" onClick={leave} aria-label="Back to the water" title="Back to the water"
             style={{
-              width: 36, height: 36, borderRadius: '50%', padding: 0, flexShrink: 0,
+              width: 34, height: 34, borderRadius: '50%', padding: 0, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'rgba(6,12,18,0.82)', border: '1px solid rgba(180,214,232,0.34)',
               color: '#dfeaf2', cursor: 'pointer',
             }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
 
         {err && (
-          <p className="font-karla font-600" style={{ fontSize: 'var(--sy-4)', color: '#e6a0a0', marginBottom: 10, lineHeight: 1.5 }}>
-            {err}
-          </p>
+          <p className="font-karla font-600" style={{ fontSize: 'var(--sy-3)', color: '#e6a0a0', marginBottom: 10, lineHeight: 1.5 }}>{err}</p>
         )}
 
         <div className="yard-grid">
@@ -478,121 +482,172 @@ export default function ShipyardClient(p: {
               equippedPet: pet, equippedPetBow: petBow,
               rodTier: equipped, reelTier, hookTier,
             }} style={{
-              maxWidth: 'none', borderRadius: 18,
+              maxWidth: 'none', borderRadius: 16,
               background: `url(${YARD_WATER}) 40% 62% / cover no-repeat, #0d1e2b`,
-            }}>
-              {/* The callouts still open the pickers: press a label on the boat. */}
-              <CalloutLayer nameFor={nameFor} onPick={setSlot} />
-            </PreviewStage>
-            <p className="font-karla font-600" style={{ fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.55)', textAlign: 'center', marginTop: 8 }}>
-              Press any label on the boat to change what you carry or wear.
-            </p>
-
-            {/* The tackle you cannot pick out of the picture. */}
-            <div className="sy-kit-row" style={{ marginTop: 10 }}>
-              {([
-                { slot: 'reel' as SlotKey, label: 'Reel', name: reelDef.name, color: reelDef.color },
-                { slot: 'hook' as SlotKey, label: 'Hook', name: hookDef.name, color: hookDef.color },
-                { slot: 'line' as SlotKey, label: 'Line', name: lineDef.name, color: lineDef.color },
-              ]).map(k => (
-                <button key={k.slot} type="button" className="tap yard-press"
-                  onClick={() => { vibrate(8); setSlot(k.slot) }}
-                  style={{
-                    minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-                    gap: 1, padding: '0.55rem 0.7rem', borderRadius: 12, cursor: 'pointer',
-                    background: 'rgba(4,12,20,0.72)', border: `1px solid ${k.color}55`,
-                  }}>
-                  <span className="font-karla font-700 uppercase" style={{ fontSize: 'var(--sy-1)', letterSpacing: '0.14em', color: 'rgba(190,212,228,0.5)' }}>{k.label}</span>
-                  <span className="font-cinzel font-700 truncate" style={{ maxWidth: '100%', fontSize: 'var(--sy-3)', color: '#e6e2dc' }}>{k.name}</span>
-                </button>
-              ))}
-            </div>
-
-            <Band title="Carried" />
-            <div className="sy-rig-grid">
-              {([0, 1] as const).map(n => {
-                const id = n === 0 ? special : special2
-                const def = n === 0
-                  ? effectiveSpecialDef(special, p.hasAutoCatcher ? ['auto_catcher'] : [])
-                  : (special2 ? SPECIAL_ITEMS.find(x => x.id === special2) ?? null : null)
-                const locked = n === 1 && !p.hasDeepReel
-                return (
-                  <button key={n} type="button" className="tap"
-                    onClick={() => { vibrate(8); setSlot(n === 0 ? 'special' : 'special2') }}
-                    style={{
-                      minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                      gap: 4, padding: '0.7rem 0.6rem', borderRadius: 16, cursor: 'pointer',
-                      background: 'rgba(4,12,20,0.6)',
-                      border: `1px solid ${locked ? 'rgba(120,116,110,0.35)' : def ? `${def.color}55` : 'rgba(150,196,222,0.22)'}`,
-                    }}>
-                    <div style={{
-                      width: '100%', height: 'clamp(46px, 15vw, 74px)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {def?.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={def.image} alt="" style={{
-                          maxWidth: '80%', maxHeight: '80%', objectFit: 'contain',
-                          filter: `drop-shadow(0 3px 10px ${def.color}66)`,
-                        }} />
-                      ) : (
-                        <span aria-hidden className="font-cinzel" style={{
-                          fontSize: 'var(--sy-6)', color: locked ? 'rgba(120,116,110,0.6)' : 'rgba(150,196,222,0.35)',
-                        }}>{locked ? 'Locked' : 'Empty'}</span>
-                      )}
-                    </div>
-                    <span className="font-karla font-700 uppercase" style={{
-                      fontSize: 'var(--sy-1)', letterSpacing: '0.14em', color: 'rgba(190,212,228,0.45)',
-                    }}>{n === 0 ? 'Special' : 'Sunken Hand'}</span>
-                    <span className="font-cinzel font-700 truncate" style={{
-                      maxWidth: '100%', fontSize: 'var(--sy-3)', color: def ? '#e6e2dc' : '#4c4a47',
-                    }}>{locked ? 'Locked' : def ? def.name : 'None'}</span>
-                  </button>
-                )
-              })}
-
-              <button type="button" className="tap"
-                onClick={() => { vibrate(8); setSlot('badge') }}
-                style={{
-                  gridColumn: '1 / -1', minWidth: 0,
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '0.7rem 0.8rem', borderRadius: 16, cursor: 'pointer',
-                  background: 'rgba(4,12,20,0.6)', border: '1px solid rgba(240,192,64,0.3)',
-                }}>
-                <span className="font-karla font-700 uppercase" style={{
-                  flex: 1, textAlign: 'left', fontSize: 'var(--sy-1)', letterSpacing: '0.14em',
-                  color: 'rgba(190,212,228,0.5)',
-                }}>Badges</span>
-                <span className="font-cinzel font-700" style={{ fontSize: 'var(--sy-3)', color: '#e6e2dc' }}>
-                  {badges.filter(Boolean).length} of 3 worn
-                </span>
-              </button>
+            }} />
+            <div style={{ marginTop: 10 }}>
+              <LoadoutStats
+                rodTier={equipped} reelTier={reelTier} hookTier={hookTier} lineTier={p.lineTier}
+                completionistEffects={effects}
+                fishingLevel={p.fishingLevel}
+                boatId={boat} hullTier={hull} handlingTier={handling} accelTier={accel}
+              />
             </div>
           </div>
 
-          {/* ── RIGHT: THE REFIT ─────────────────────────────────────────── */}
+          {/* ── RIGHT: REFIT / RIG ───────────────────────────────────────── */}
           <div style={{ minWidth: 0 }}>
-            <Band title="Refit your boat" first />
-            <div className="yard-cards">
-              {(['hull', 'handling', 'accel', 'hold', 'lantern'] as Buyable[]).map(k => {
-                const d = DETAIL[k]
-                const cost = d.cost ?? Infinity
-                return (
-                  <UpgradeCard key={k} d={d} does={TAG[k]} ladder={LADDER[k]}
-                    busy={busy === k} short={Math.max(0, cost - doubloons)}
-                    locked={!!busy}
-                    onBuy={() => { setErr(''); setConfirm(k) }} />
-                )
-              })}
+            <div role="tablist" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, padding: 4, borderRadius: 13, background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              {(['refit', 'rig'] as const).map(t => (
+                <button key={t} type="button" role="tab" aria-selected={pane === t}
+                  onClick={() => { vibrate(5); setPane(t) }}
+                  className="font-karla font-800 uppercase"
+                  style={{
+                    padding: '0.55rem', borderRadius: 9, cursor: 'pointer', fontSize: 'var(--sy-2)', letterSpacing: '0.14em',
+                    background: pane === t ? 'rgba(159,201,232,0.14)' : 'transparent',
+                    border: `1px solid ${pane === t ? 'rgba(159,201,232,0.5)' : 'transparent'}`,
+                    color: pane === t ? '#eef6fb' : 'rgba(190,212,228,0.55)',
+                  }}>{t === 'refit' ? 'Refit your boat' : 'Your rig'}</button>
+              ))}
             </div>
 
-            <Band title="What it adds up to" />
-            <LoadoutStats
-              rodTier={equipped} reelTier={reelTier} hookTier={hookTier} lineTier={p.lineTier}
-              completionistEffects={effects}
-              fishingLevel={p.fishingLevel}
-              boatId={boat} hullTier={hull} handlingTier={handling} accelTier={accel}
-            />
+            {pane === 'refit' ? (
+              <>
+                {/* One tab per upgrade, each wearing where it stands. */}
+                <div role="tablist" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, marginTop: 10 }}>
+                  {REFIT.map(r => {
+                    const on = refit === r.key
+                    const d = DETAIL[r.key], l = LADDER[r.key]
+                    const maxed = d.next === null
+                    return (
+                      <button key={r.key} type="button" role="tab" aria-selected={on}
+                        onClick={() => { vibrate(5); setRefit(r.key) }}
+                        className="yard-press"
+                        style={{
+                          minWidth: 0, padding: '0.5rem 0.3rem 0.45rem', borderRadius: 11, cursor: 'pointer',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                          background: on ? `${d.accent}1c` : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${on ? `${d.accent}99` : 'rgba(255,255,255,0.08)'}`,
+                        }}>
+                        <span className="font-karla font-800 uppercase" style={{ fontSize: 'var(--sy-1)', letterSpacing: '0.1em', color: on ? '#f4ecd8' : 'rgba(190,212,228,0.6)' }}>{r.label}</span>
+                        <span className="font-karla font-700" style={{ fontSize: 'var(--sy-1)', color: maxed ? '#9fe8bd' : `${d.accent}cc`, fontVariantNumeric: 'tabular-nums' }}>
+                          {maxed ? 'Max' : `${l.at + 1}/${l.max + 1}`}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* THE SELECTED UPGRADE, WITH ITS WHOLE PATH. */}
+                <div style={{
+                  marginTop: 10, padding: '0.9rem 1rem', borderRadius: 16,
+                  background: `linear-gradient(180deg, ${tabD.accent}12 0%, rgba(255,255,255,0.012) 60%), #0b1620`,
+                  border: `1px solid ${tabD.accent}38`,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                    <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: 'var(--sy-6)', color: '#f4ecd8', lineHeight: 1.1 }}>
+                      {tabD.now} <span className="font-karla font-600" style={{ fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.55)' }}>{tabD.unit}</span>
+                    </p>
+                  </div>
+                  <p className="font-karla font-600" style={{ fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.72)', lineHeight: 1.45, marginTop: 4 }}>{EXPLAIN[refit].does}</p>
+
+                  {/* Every rung: owned ticked, next lit, the rest waiting. */}
+                  <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {Array.from({ length: tabL.max + 1 }).map((_, i) => {
+                      const owned = i <= tabL.at
+                      const next = i === tabL.at + 1
+                      const c = tabL.cost(i)
+                      return (
+                        <div key={i} style={{
+                          display: 'grid', gridTemplateColumns: '22px 1fr auto', alignItems: 'center', gap: 8,
+                          padding: '0.32rem 0.55rem', borderRadius: 9,
+                          background: next ? `${tabD.accent}18` : 'transparent',
+                          border: `1px solid ${next ? `${tabD.accent}66` : 'transparent'}`,
+                          opacity: owned || next ? 1 : 0.55,
+                        }}>
+                          <span aria-hidden style={{
+                            width: 16, height: 16, borderRadius: '50%', display: 'grid', placeItems: 'center',
+                            background: owned ? tabD.accent : 'transparent',
+                            border: `1.5px solid ${owned || next ? tabD.accent : 'rgba(255,255,255,0.25)'}`,
+                          }}>
+                            {owned && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#0b1620" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                          </span>
+                          <span className="font-karla font-700" style={{ fontSize: 'var(--sy-2)', color: owned ? '#e8e2d4' : next ? '#fff' : '#b8c2ca', fontVariantNumeric: 'tabular-nums' }}>
+                            Tier {i + 1} <span style={{ color: 'rgba(190,212,228,0.55)', margin: '0 4px' }}>·</span> {tabL.value(i)}
+                          </span>
+                          <span className="font-karla font-700" style={{ fontSize: 'var(--sy-2)', color: owned ? '#9fe8bd' : 'rgba(240,192,64,0.85)', fontVariantNumeric: 'tabular-nums' }}>
+                            {owned ? (i === 0 ? 'Standard' : 'Owned') : c != null ? <>{c.toLocaleString()} ⟡</> : ''}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {tabD.next === null ? (
+                    <div className="font-cinzel font-700" style={{
+                      marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '0.65rem', borderRadius: 12,
+                      fontSize: 'var(--sy-3)', color: '#9fe8bd', background: 'rgba(127,214,160,0.08)', border: '1px solid rgba(127,214,160,0.3)',
+                    }}>Fully upgraded</div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                      <p className="font-karla font-700" style={{ flex: 1, minWidth: 120, fontSize: 'var(--sy-2)', color: '#a7e8c0' }}>
+                        Next: {tabD.next} ({tabD.gain})
+                      </p>
+                      <button type="button" onClick={() => { setErr(''); setConfirm(refit) }}
+                        disabled={!!busy || tabShort > 0}
+                        className="font-cinzel font-700 yard-press"
+                        style={{
+                          flexShrink: 0, minWidth: 170, padding: '0.62rem 1rem', borderRadius: 11,
+                          fontSize: 'var(--sy-3)', fontVariantNumeric: 'tabular-nums',
+                          color: !busy && tabShort <= 0 ? '#fff4d6' : 'rgba(242,234,216,0.45)',
+                          background: !busy && tabShort <= 0 ? 'linear-gradient(180deg, rgba(240,192,64,0.3), rgba(240,192,64,0.14))' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${!busy && tabShort <= 0 ? 'rgba(240,192,64,0.7)' : 'rgba(255,255,255,0.12)'}`,
+                          boxShadow: !busy && tabShort <= 0 ? '0 0 18px rgba(240,192,64,0.18), inset 0 1px 0 rgba(255,255,255,0.14)' : 'none',
+                          cursor: !busy && tabShort <= 0 ? 'pointer' : 'default',
+                        }}>
+                        {busy === refit ? 'Working…'
+                          : tabShort > 0 ? `Need ${tabShort.toLocaleString()} more ⟡`
+                            : <>Upgrade · {(tabD.cost ?? 0).toLocaleString()} <span style={{ color: '#f0c040' }}>⟡</span></>}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="font-karla font-600" style={{ fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.6)', margin: '10px 0 8px' }}>
+                  Press anything to change it, buy a better one, or see what it does.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(118px, 1fr))', gap: 8 }}>
+                  {RIG.map(r => (
+                    <button key={r.slot} type="button" className="tap yard-press"
+                      onClick={() => { vibrate(8); setSlot(r.slot) }}
+                      style={{
+                        minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                        padding: '0.6rem 0.4rem 0.55rem', borderRadius: 13, cursor: 'pointer',
+                        background: 'rgba(4,12,20,0.7)', border: `1px solid ${r.color}44`,
+                      }}>
+                      <div style={{ width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {r.skin ? (
+                          <div style={{
+                            width: 50, height: 50, borderRadius: '50%',
+                            backgroundImage: `url(${getCharacterSprites(color).rest})`, backgroundSize: '420% auto',
+                            backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat', backgroundColor: 'rgba(0,0,0,0.25)',
+                          }} />
+                        ) : r.art ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={r.art} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                        ) : (
+                          <span style={{ width: 26, height: 26, borderRadius: '50%', background: `radial-gradient(circle at 38% 32%, ${r.color}, ${r.color}55)`, border: `1px solid ${r.color}` }} />
+                        )}
+                      </div>
+                      <span className="font-karla font-700 uppercase" style={{ fontSize: 'var(--sy-1)', letterSpacing: '0.12em', color: 'rgba(190,212,228,0.55)' }}>{r.label}</span>
+                      <span className="font-cinzel font-700" style={{ maxWidth: '100%', fontSize: 'var(--sy-2)', color: '#e6e2dc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -769,16 +824,6 @@ export default function ShipyardClient(p: {
             onClose={() => {}}
           />
 
-        <button type="button" onClick={leave}
-          className="font-cinzel font-700 block text-center yard-press"
-          style={{
-            width: '100%', maxWidth: 420, margin: '22px auto 0', padding: '0.8rem', borderRadius: 12,
-            fontSize: 'var(--sy-5)', cursor: 'pointer',
-            color: '#f2ead8', background: 'rgba(180,214,232,0.12)',
-            border: '1px solid rgba(180,214,232,0.4)',
-          }}>
-          Back to the water
-        </button>
       </div>
 
       {/* ── CONFIRM THE PURCHASE ────────────────────────────────────────
@@ -887,116 +932,3 @@ export default function ShipyardClient(p: {
 
 /** One of the boat's three numbers. Deliberately narrow — three across on a
  *  phone — so the VALUE is what you read and the price is what you tap. */
-/** A band heading. The page had none: five upgrade cards, a stats panel and a
- *  locker grid all began at the same left edge with nothing saying where one
- *  thing ended and the next started, which is most of why it read as one
- *  undifferentiated pile. */
-function Band({ title, first = false }: { title: string; first?: boolean }) {
-  return (
-    <div style={{ marginTop: first ? 0 : 24, marginBottom: 10 }}>
-      <p className="font-cinzel font-700" style={{ fontSize: 'var(--sy-6)', color: '#f2ead8', lineHeight: 1.1 }}>
-        {title}
-      </p>
-      <div aria-hidden style={{
-        height: 1, marginTop: 9,
-        background: 'linear-gradient(90deg, rgba(180,214,232,0.32), rgba(180,214,232,0.04))',
-      }} />
-    </div>
-  )
-}
-
-/**
- * ── ONE UPGRADE, WITH ITS WHOLE PATH ────────────────────────────────────────
- *
- * Kong: much nicer buttons and a clear upgrade path for each. The card leads
- * with the stat and its reading in a real unit (from DETAIL, which the confirm
- * modal also reads, so they cannot disagree), then the LADDER: one segment per
- * tier, the ones you own filled in the stat's colour, the next one lit, the
- * rest waiting, and "Tier n of m" beside it. Then what the next tier adds and
- * one button that says what it does: Upgrade and the price, how much more you
- * need, or a finished stamp at the top.
- */
-function UpgradeCard({ d, does, ladder, busy, short, locked, onBuy }: {
-  d: { title: string; accent: string; now: string; unit: string; next: string | null; gain: string | null; cost: number | null }
-  does: string
-  ladder: { at: number; max: number }
-  busy: boolean
-  /** How many doubloons short of the next tier; 0 when affordable. */
-  short: number
-  /** Another purchase is in flight. */
-  locked: boolean
-  onBuy: () => void
-}) {
-  const maxed = d.next === null || d.cost === null
-  const can = !maxed && short <= 0 && !locked
-  const segs = ladder.max + 1
-  return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: 8, padding: '0.85rem 0.9rem', borderRadius: 16,
-      background: `linear-gradient(180deg, ${d.accent}12 0%, rgba(255,255,255,0.012) 60%), #0b1620`,
-      border: `1px solid ${maxed ? 'rgba(127,214,160,0.35)' : `${d.accent}38`}`,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-karla font-800 uppercase" style={{ fontSize: 'var(--sy-1)', letterSpacing: '0.14em', color: `${d.accent}c0` }}>{d.title}</p>
-          <p className="font-cinzel font-800" style={{ fontSize: 'var(--sy-7)', color: '#f4ecd8', lineHeight: 1.05, marginTop: 2 }}>
-            {d.now} <span className="font-karla font-600" style={{ fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.55)' }}>{d.unit}</span>
-          </p>
-        </div>
-        <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.6)', fontVariantNumeric: 'tabular-nums' }}>
-          Tier {ladder.at + 1} of {segs}
-        </span>
-      </div>
-
-      {/* THE PATH. */}
-      <div aria-label={`Tier ${ladder.at + 1} of ${segs}`} style={{ display: 'grid', gridTemplateColumns: `repeat(${segs}, minmax(0, 1fr))`, gap: 4 }}>
-        {Array.from({ length: segs }).map((_, i) => {
-          const owned = i <= ladder.at
-          const next = i === ladder.at + 1
-          return (
-            <span key={i} style={{
-              height: 7, borderRadius: 999,
-              background: owned ? d.accent : next ? `${d.accent}40` : 'rgba(255,255,255,0.07)',
-              boxShadow: owned ? `0 0 8px ${d.accent}55` : 'none',
-              border: next ? `1px solid ${d.accent}aa` : '1px solid transparent',
-            }} />
-          )
-        })}
-      </div>
-
-      <p className="font-karla font-600" style={{ fontSize: 'var(--sy-3)', color: 'rgba(190,212,228,0.72)', lineHeight: 1.4 }}>{does}</p>
-
-      {maxed ? (
-        <div className="font-cinzel font-700" style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '0.7rem', borderRadius: 12,
-          fontSize: 'var(--sy-3)', color: '#9fe8bd', background: 'rgba(127,214,160,0.08)', border: '1px solid rgba(127,214,160,0.3)',
-        }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6 9 17l-5-5" /></svg>
-          Fully upgraded
-        </div>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <p className="font-karla font-700" style={{ flex: 1, minWidth: 120, fontSize: 'var(--sy-3)', color: '#a7e8c0' }}>
-            Next: {d.next} <span style={{ color: 'rgba(167,232,192,0.7)' }}>({d.gain})</span>
-          </p>
-          <button type="button" onClick={onBuy} disabled={!can} className="font-cinzel font-700 yard-press yard-buy"
-            style={{
-              flexShrink: 0, minWidth: 176, padding: '0.7rem 1rem', borderRadius: 12,
-              fontSize: 'var(--sy-3)', letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums',
-              // Tinted, never a solid gold slab: the house rule for buttons.
-              color: can ? '#fff4d6' : 'rgba(242,234,216,0.45)',
-              background: can ? 'linear-gradient(180deg, rgba(240,192,64,0.3), rgba(240,192,64,0.14))' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${can ? 'rgba(240,192,64,0.7)' : 'rgba(255,255,255,0.12)'}`,
-              boxShadow: can ? '0 0 18px rgba(240,192,64,0.18), inset 0 1px 0 rgba(255,255,255,0.14)' : 'none',
-              cursor: can ? 'pointer' : 'default',
-            }}>
-            {busy ? 'Working…'
-              : short > 0 ? `Need ${short.toLocaleString()} more ⟡`
-                : <>Upgrade · {(d.cost ?? 0).toLocaleString()} <span style={{ color: '#f0c040' }}>⟡</span></>}
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
