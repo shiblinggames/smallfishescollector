@@ -30,6 +30,7 @@ import AssignBoard from './AssignBoard'
 import AssignPicker from './AssignPicker'
 import CrewCompare from './CrewCompare'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
+import { LiftOver } from './liftOver'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL, XP_TABLE as CREW_XP_TABLE } from '@/lib/crewLevel'
 
@@ -217,28 +218,6 @@ const RECRUIT_PANEL_BG = PANEL_BG
 const RECRUIT_PANEL_BORDER = PANEL_BORDER
 const ROSTER_PANEL_BG = PANEL_BG
 const ROSTER_PANEL_BORDER = PANEL_BORDER
-
-// Shared action-button look: gradient fill, soft shadow, uppercase label.
-// ── A BUTTON, NOT A BAR ─────────────────────────────────────────────────────
-// These were width: 100%, which under a 300px card is a bar and under a
-// 560px sheet is a plank. A button is as wide as its word plus room to press
-// it, sits in the middle, and answers the pointer -- see .crew-act in
-// globals.css for the hover and the press.
-const BTN_BASE: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-  width: 'auto', minWidth: 172, margin: '0 auto',
-  padding: '0.68rem 1.35rem', borderRadius: 12, fontSize: '0.8rem',
-  letterSpacing: '0.09em', textTransform: 'uppercase', cursor: 'pointer',
-  boxShadow: '0 3px 10px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.12)',
-  transition: 'filter 0.15s, transform 0.12s, box-shadow 0.15s',
-}
-const BTN_RECRUIT: React.CSSProperties = {
-  ...BTN_BASE,
-  background: 'linear-gradient(180deg, rgba(74,200,130,0.34) 0%, rgba(46,140,92,0.2) 100%)',
-  border: '1px solid rgba(122,226,162,0.62)', color: '#dcf8e7', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-  boxShadow: '0 3px 10px rgba(0,0,0,0.42), 0 0 18px rgba(74,200,130,0.16), inset 0 1px 0 rgba(255,255,255,0.14)',
-}
-const BTN_STATIC: React.CSSProperties = { ...BTN_BASE, cursor: 'default', boxShadow: 'none' }
 
 function AnchorIcon() {
   return (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2.5" /><line x1="12" y1="22" x2="12" y2="7.5" /><path d="M5 12H2a10 10 0 0 0 20 0h-3" /></svg>)
@@ -1658,10 +1637,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
    *   info column is a good deal narrower than a sheet. Same button, sized
    *   to the room it is in rather than a fixed 172.
    */
-  function renderRecruitAction(c: BoardCandidate, onDone?: () => void, compact = false) {
-    const fit: React.CSSProperties = compact
-      ? { minWidth: 0, padding: '0.5rem 1rem', fontSize: '0.74rem', letterSpacing: '0.07em' }
-      : {}
+  function renderRecruitAction(c: BoardCandidate, onDone?: () => void) {
     // THE SAME OPTIMISTIC PATH THE SWIPE TAKES. This button awaited the
     // server before anything on screen moved, so signing a hand on read as a
     // second of "Recruiting..." on a dead card — on the one press the whole
@@ -1673,14 +1649,40 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
       recruitBoard(c.id)
       onDone?.()
     }
-    if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, ...fit, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
-    if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, ...fit, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>
+    // ── THE REROLL ROW'S SHAPE ───────────────────────────────────────────
+    // Kong: the recruit button looked antiquated; it should match the new
+    // Reroll / Bloodied faces. A round face in the colour of what it does
+    // (green, signing on), the anchor on it, and the word under it. The two
+    // states that cannot recruit wear the same face, greyed, with the reason.
+    const st: 'go' | 'aboard' | 'full' = c.recruited ? 'aboard' : rosterFull ? 'full' : 'go'
+    const accent = st === 'go' ? '#4cc483' : st === 'full' ? '#dc5a5a' : '#9aa3ad'
+    const off = st !== 'go'
     return (
-      <button onClick={recruit} disabled={pending} data-coach="recruit"
-        className="font-cinzel font-700 crew-act"
-        style={{ ...BTN_RECRUIT, ...fit, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
-        <AnchorIcon /><span>{busyId === c.id ? 'Recruiting…' : 'Recruit'}</span>
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <button onClick={off ? undefined : recruit} disabled={off || pending} data-coach="recruit"
+          className="tap reroll-btn"
+          aria-label={st === 'go' ? `Recruit ${c.name}` : st === 'aboard' ? 'Already aboard' : 'Roster full'}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: 0,
+            background: 'none', border: 'none', cursor: off || pending ? 'default' : 'pointer',
+            opacity: pending && busyId === c.id ? 0.6 : 1,
+          }}>
+          <span className="reroll-face" style={{
+            width: 58, height: 58, borderRadius: '50%', display: 'grid', placeItems: 'center',
+            background: `radial-gradient(circle at 38% 30%, ${accent}${off ? '33' : '66'} 0%, ${accent}${off ? '12' : '22'} 55%, rgba(8,6,10,0.9) 100%)`,
+            border: `1.5px solid ${accent}${off ? '55' : 'cc'}`,
+            boxShadow: off ? 'none' : `0 0 16px ${accent}44, inset 0 1px 0 rgba(255,255,255,0.18)`,
+            color: off ? 'rgba(255,255,255,0.6)' : '#effff5',
+          }}>
+            {st === 'aboard' ? <CheckIcon /> : st === 'full' ? <XIcon /> : (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2.5" /><line x1="12" y1="22" x2="12" y2="7.5" /><path d="M5 12H2a10 10 0 0 0 20 0h-3" /></svg>
+            )}
+          </span>
+          <span className="font-cinzel font-800" style={{ fontSize: '0.74rem', color: off ? 'rgba(240,234,216,0.55)' : '#f2ead8', lineHeight: 1.1 }}>
+            {st === 'aboard' ? 'Aboard' : st === 'full' ? 'Roster Full' : busyId === c.id ? 'Recruiting…' : 'Recruit'}
+          </span>
+        </button>
+      </div>
     )
   }
 
@@ -2143,7 +2145,9 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
               // face in what it spends (the gem's purple, the blood's red) with a
               // die or a drop on it, and the words under it: its name, what it
               // does better, what it costs. Centred, sized to their content.
-              <div style={{ marginBottom: '1.1rem', position: 'relative' }}>
+              // paddingTop: the faces lift and grow on hover, and the scroll box
+              // above clipped the top of them.
+              <div style={{ marginBottom: '1.1rem', paddingTop: 8, position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 'clamp(14px, 4vw, 34px)' }}>
                   {rolls.map(r => {
                     const blood = r.key !== 'gem'
@@ -2253,8 +2257,12 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   {panel}
                 </SwipeAction>
               )
+              // Over the panel's edge while it lands (see LiftOver): the pop and
+              // the spotlight grow the card, and the Crew Hall's scroll box cut
+              // it off.
               return (
-                <div key={c.id} style={{
+                <LiftOver key={c.id} active={!!phase || reveal.climaxActive}>
+                <div style={{
                   position: 'relative', borderRadius: 8,
                   transition: 'opacity 0.45s ease, filter 0.45s ease, transform 0.45s ease, box-shadow 0.45s ease',
                   opacity: dim ? 0.34 : 1,
@@ -2267,6 +2275,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     ? <BoardReveal card={c} phase={phase} onTap={() => reveal.tapCard(c)} bloodied={reveal.bloodied}>{panel}</BoardReveal>
                     : swipeCard}
                 </div>
+                </LiftOver>
               )
             })}
             {state.board.length === 0 && (
@@ -3424,8 +3433,15 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
       </div>
 
       {/* Reroll reveal — the board's own cards flip open in place */}
-      <RevealFlash flash={reveal.flash} />
-      <RevealBanner banner={reveal.banner} />
+      {/* On <body> above the lifted cards, so the flash and the Legendary
+          banner still land over the card that caused them. */}
+      {typeof document !== 'undefined' && createPortal(
+        <div style={{ position: 'relative', zIndex: 9001 }}>
+          <RevealFlash flash={reveal.flash} />
+          <RevealBanner banner={reveal.banner} />
+        </div>,
+        document.body,
+      )}
 
       {/* Detail modal — full stat breakdown + traits, opened by tapping a card */}
       <AnimatePresence>
@@ -3633,7 +3649,12 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   // scroll, which is what the scroll region is for.
                   // Taller for the painting across the top (Kong: art forward, like
                   // the enemy's card). The body keeps the room it was budgeted.
-                  width: '100%', maxWidth: wideDetail ? 900 : 'var(--modal-w)', height: wideDetail ? 'min(86vh, 620px)' : 'min(86vh, 590px)',
+                  // WIDE: SIZED TO WHAT IT HOLDS. Kong: still a ton of empty space
+                  // on desktop. A fixed 620 tall body held a stat row and a trait
+                  // line; the rest was dark. On a wide screen the sheet is as tall
+                  // as its content, never shorter than the painting needs.
+                  width: '100%', maxWidth: wideDetail ? 820 : 'var(--modal-w)',
+                  ...(wideDetail ? { minHeight: 470, maxHeight: 'min(86vh, 640px)' } : { height: 'min(86vh, 590px)' }),
                   position: 'relative',
                   ...(wideDetail
                     ? { display: 'grid', gridTemplateColumns: '340px minmax(0, 1fr)', gridTemplateRows: 'minmax(0, 1fr) auto' }
@@ -3765,7 +3786,9 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                 {/* Tab body — flexes to each tab's own content so actions sit
                     right under it (no dead space padding the modal to a fixed
                     height). Two columns on a desktop: stats left, ability right. */}
-                <div style={twoUp ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '0.9rem', alignItems: 'start' } : undefined}>
+                {/* Stacked, not side by side: the painting took the left of the
+                    sheet, and two columns in what is left are too narrow. */}
+                <div style={twoUp ? { display: 'flex', flexDirection: 'column' } : undefined}>
 
                 {/* ── ABILITY tab — species-locked active ability surfaced in raid
                     combat through the Special chooser. Sub-Lv-10 crew get an
@@ -3979,7 +4002,10 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                           touchAction: 'manipulation',
                         }}>
                         <StatIcon k={k} color={STAT_COLOR[k]} />
-                        <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', lineHeight: 1, fontVariantNumeric: 'tabular-nums', color: ch > 0 ? '#7fdfa3' : ch < 0 ? '#f08a8a' : '#ecdcbd' }}>{dEff[k]}</span>
+                        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                          <span className="font-cinzel font-700" style={{ fontSize: wideDetail ? '1.6rem' : '1.4rem', lineHeight: 1, fontVariantNumeric: 'tabular-nums', color: ch > 0 ? '#7fdfa3' : ch < 0 ? '#f08a8a' : '#ecdcbd' }}>{dEff[k]}</span>
+                          {wideDetail && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>{STAT_LABEL[k]}</span>}
+                        </span>
                       </button>
                     )
                   })}

@@ -11567,8 +11567,18 @@ hullRef={hullRefFor(t.key)} />
           // under her.
           const seat = SHIP_CAPTAIN_SLOT[shipTier] ?? SHIP_CAPTAIN_SLOT[MIN_SHIP_TIER]
           const size = WARSHIP_W * SHIP_CREW_FACE
-          // EVERYONE ELSE ABOARD, AS A NUMBER. raidParty[0] is the captain.
-          const others = Math.max(0, raidParty.length - 1)
+          // THE NEXT TWO HANDS, AS FACES TUCKED BEHIND HERS. It was a gold "+N"
+          // pill, which read as a notification badge stuck on a portrait (and a
+          // solid gold fill). Two smaller discs peeking out behind the
+          // captain's shoulder say "and her crew" in the same language as the
+          // face itself; nobody needs the exact count out on the water.
+          const art = (a?: string | null) => a ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${a}` : null
+          const mates = raidParty.slice(1, 3).map(m => art(m.art)).filter((u): u is string => !!u)
+          const mate = size * 0.56
+          const disc = (border: string): React.CSSProperties => ({
+            width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+            borderRadius: '50%', maxWidth: 'none', border, background: 'rgba(6,10,16,0.9)',
+          })
           return (
           <div aria-hidden style={{
             position: 'absolute', left: '50%', top: '50%',
@@ -11579,31 +11589,20 @@ hullRef={hullRefFor(t.key)} />
             transformOrigin: 'center center',
             pointerEvents: 'none',
           }}>
+            {mates.map((u, k) => (
+              <img key={k} src={u} alt="" draggable={false} decoding="async" style={{
+                ...disc('1px solid rgba(126,214,196,0.55)'),
+                position: 'absolute', width: mate, height: mate,
+                right: -mate * (0.42 + k * 0.5), bottom: -mate * (0.02 + k * 0.12),
+                filter: 'brightness(0.82)',
+                boxShadow: '0 3px 10px rgba(0,0,0,0.6)',
+              }} />
+            ))}
             <img src={captainFace} alt="" draggable={false} decoding="async" style={{
-              width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-              borderRadius: '50%', maxWidth: 'none',
-              border: '1.5px solid rgba(126,214,196,0.8)',
-              background: 'rgba(6,10,16,0.9)',
+              ...disc('1.5px solid rgba(126,214,196,0.8)'),
+              position: 'relative',
               boxShadow: '0 6px 18px rgba(0,0,0,0.75)',
             }} />
-            {/* AND THE REST OF THE HANDS. Every assigned crew could stand on
-                the deck -- the seats exist for it -- but five faces on a sloop
-                is a hull you can no longer see. One face, and a count for the
-                watch below. */}
-            {others > 0 && (
-              <span className="font-karla font-800" style={{
-                position: 'absolute', right: -size * 0.1, bottom: -size * 0.04,
-                minWidth: size * 0.42, height: size * 0.42,
-                padding: '0 ' + (size * 0.1) + 'px',
-                borderRadius: 999,
-                display: 'grid', placeItems: 'center',
-                fontSize: size * 0.26, lineHeight: 1,
-                color: '#0a1118',
-                background: 'linear-gradient(180deg, #f6dc94, #d8ae4a)',
-                border: '1px solid rgba(10,17,24,0.55)',
-                boxShadow: '0 3px 10px rgba(0,0,0,0.7)',
-              }}>+{others}</span>
-            )}
           </div>
           )
         })()}

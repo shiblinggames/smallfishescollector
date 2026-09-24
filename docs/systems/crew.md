@@ -180,9 +180,16 @@ Kong: the recruit hall and crew cards should be art forward, like the enemy stat
 - The crew DETAIL sheet opens on a full-bleed painting (210px, 250 on wide) with the name and the
   one-time rename on its scrim; the close floats over the art; level/XP bar under it. The shell
   grew (590) so the tabs keep their budgeted body height.
-- On desktop (wideDetail) the sheet is TWO COLUMNS (900 wide, min(86vh, 620px)): the painting is a
-  340px left column at full height, and the body and the action footer sit on the right. A phone
-  keeps the painting across the top.
+- On desktop (wideDetail) the sheet is TWO COLUMNS (820 wide): the painting is a 340px left column
+  at full height, and the body and the action footer sit on the right. Its height FITS ITS CONTENT
+  (min 470, max min(86vh, 640px)); a fixed height left most of it empty. Stats and Ability stack
+  in the right column; the stat tiles say the stat's name. A phone keeps the painting on top.
+- The Recruit action in the sheet footer is the reroll row's shape: a round green face with the
+  anchor and the word under it. Aboard / Roster Full wear the same face, greyed.
+- During a reroll reveal the board cards are drawn in a layer on <body> (`crew/liftOver.tsx`),
+  pinned to their board slots every frame and clipped to the Crew Hall's scroll box plus 56px, so
+  the landing pop and the spotlight break over the panel's edge instead of being cut off. The flash
+  and the Legendary banner are portalled above that layer.
 - NO RECRUIT BUTTON ON A BOARD CARD. It looked dated, and it came and went with the reveal, so the
   card changed height and the hall grew a scrollbar on every reroll. You press the card to open the
   sheet and sign them on in its footer. Swipe to recruit still works on touch.
