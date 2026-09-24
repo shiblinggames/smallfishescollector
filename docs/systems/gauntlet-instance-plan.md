@@ -566,3 +566,12 @@ pops and bursts on arrival with a tick. The two passed cards SINK as they dim (y
 `BOON_CLAIM_MS` 820 -> 1150 so the landing is seen. A CURSE IS BOUND: "Bear It" closes two
 dotted crimson chains across the art, then it sinks darkening into a red stain as `applyCurse`'s
 from-below beat fires at 980ms. `curseTaking` clears only once the phase has left 'curse'.
+
+**Round six: five boss entrances (2026-09-24).** Kong: the rise was great and every boss did it.
+`BossArrival` in GauntletArena: `surface` (the rise), `fog` (small and pale from the far water,
+growing into station, mist glow letting go), `maelstrom` (three shock rings on the spot, then she
+rises turning), `ghost` (stutters into being inside a cold glow), `ram` (charges in from the
+right with a wake, stops with a jolt and bow spray). Assigned BY HAND per boss in GauntletGame
+`BOSS_ARRIVAL` (a hash put Davy's four on two styles), hash fallback for new bosses:
+cartographer fog, krust ghost, pete surface, spet ram / admiral ram, don_finleone maelstrom,
+quartermaster ghost, saltie surface. Each variant's four bosses are four different entrances.

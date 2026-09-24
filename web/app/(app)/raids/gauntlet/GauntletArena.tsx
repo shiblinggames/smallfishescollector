@@ -173,6 +173,20 @@ function hullGlow(url: string) {
  * its icon used to be; `anchor` is that box, and the object is drawn into it,
  * on the sea, standing on its bottom edge. Nothing about the run changes.
  */
+/**
+ * ── HOW A BOSS ARRIVES ──────────────────────────────────────────────────────
+ * Kong: the boss arrival was great, and every boss did the same one. Five
+ * entrances now, and a boss keeps its own (GauntletGame picks it from the
+ * boss's identity), so "that one comes out of the fog" is something a captain
+ * learns.
+ *   surface    rises out of the water from her waterline, columns along her
+ *   fog        glides up from the far water, small and pale, into her station
+ *   maelstrom  the water turns in rings first, then she spins up out of it
+ *   ghost      flickers into being inside a cold glow, and the glow lets go
+ *   ram        charges in from the side with a bow wave, and stops hard
+ */
+export type BossArrival = 'surface' | 'fog' | 'maelstrom' | 'ghost' | 'ram'
+
 export type ArenaStage = {
   url: string
   anchor: React.RefObject<HTMLElement | null>
@@ -181,7 +195,7 @@ export type ArenaStage = {
   tint: number
 }
 
-export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, enemyPaint, shipFlip, seaBeam, enemyHidden, enemyAura, stage, handle }: {
+export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, enemyPaint, shipFlip, seaBeam, enemyHidden, enemyAura, bossArrival, stage, handle }: {
   theme: ArenaTheme
   scene: ArenaScene
   /** Which screen of the run this is under. Drives the grade and the beats. */
@@ -212,6 +226,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
   enemyHidden?: boolean
   /** An elite's colour: she glows it whatever the depth. */
   enemyAura?: string
+  /** How this boss enters. See BossArrival. */
+  bossArrival?: BossArrival
   /** The object this screen stages on the water, if any. See ArenaStage. */
   stage?: ArenaStage | null
   /** Filled in on mount; the fight reads it and calls into it. */
@@ -229,8 +245,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
   hiddenRef.current = !!enemyHidden
   const stageRef = useRef<ArenaStage | null>(stage ?? null)
   stageRef.current = stage ?? null
-  const dressRef = useRef({ depth, aura: enemyAura ?? null })
-  dressRef.current = { depth, aura: enemyAura ?? null }
+  const dressRef = useRef({ depth, aura: enemyAura ?? null, arrival: bossArrival ?? 'surface' as BossArrival })
+  dressRef.current = { depth, aura: enemyAura ?? null, arrival: bossArrival ?? 'surface' }
   /** 1 the instant a new depth arrives, decayed by the frame loop. */
   const fallRef = useRef(0)
   const depthSeen = useRef(depth)
@@ -603,6 +619,11 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       let riseAt = -1
       let wantedBefore = 0
       let riseWave = 0
+      /** The arrival's own light on her glow (fog's mist, the ghost's cold
+       *  light), over whatever the depth dresses her in. */
+      let arriveGlow = 0
+      let arriveTint = 0xffffff
+      let rampWake = 0
       app.ticker.add(() => {
         const dt = Math.min(0.05, app.ticker.deltaMS / 1000)
         t += dt
@@ -803,24 +824,79 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
           if (!want) riseAt = -1
           wantedBefore = want
           if (riseAt >= 0 && enemy.sp.texture.width > 2) {
-            const p = Math.max(0, Math.min(1, (t - riseAt - 0.55) / 1.9))
+            const style = dressRef.current.arrival
+            const wx = f.enemy.x, wy = f.enemy.y, hull = f.enemy.hull, hw = hull * 0.45
+            const LEN = style === 'fog' ? 2.6 : style === 'maelstrom' ? 2.4 : style === 'ram' ? 1.7 : 1.9
+            const HOLD = style === 'maelstrom' ? 0.95 : 0.55
+            const p = Math.max(0, Math.min(1, (t - riseAt - HOLD) / LEN))
             const e = 1 - (1 - p) ** 3
-            const wx = f.enemy.x, wy = f.enemy.y, hw = f.enemy.hull * 0.45
-            if (p > 0 && riseWave === 0) {
-              riseWave = 1
-              guns.shock(wx, wy)
-              for (let k = 0; k < 5; k++) guns.impact(wx - hw + (hw * 2 * k) / 4, wy + (Math.random() - 0.5) * 10, 'miss' as ImpactKind)
+            arriveGlow = 0
+            enemy.node.scale.x = 1
+            if (style === 'fog') {
+              // FROM THE FAR WATER: further up the view is further away, so she
+              // starts up there, small and pale in the mist, and comes on.
+              const sc = 0.5 + 0.5 * e
+              enemy.node.scale.set(sc, sc)
+              enemy.node.y -= (1 - e) * hull * 0.95
+              enemy.node.alpha = p <= 0 ? 0 : Math.min(1, p * 1.6)
+              arriveGlow = (1 - e) * 0.85; arriveTint = 0xdfe9ee
+              if (p > 0.9 && riseWave === 0) { riseWave = 1; guns.impact(wx - hw * 0.8, wy, 'miss' as ImpactKind) }
+            } else if (style === 'maelstrom') {
+              // THE WATER TURNS FIRST: three rings on the spot she will come up
+              // through, then she rises turning and the turn runs down.
+              const pre = t - riseAt
+              if (pre > 0.05 && riseWave === 0) { riseWave = 1; guns.shock(wx, wy) }
+              if (pre > 0.4 && riseWave === 1) { riseWave = 2; guns.shock(wx, wy) }
+              if (pre > 0.75 && riseWave === 2) { riseWave = 3; guns.shock(wx, wy) }
+              if (p > 0 && riseWave === 3) {
+                riseWave = 4
+                for (let k = 0; k < 6; k++) {
+                  const a = (k / 6) * Math.PI * 2
+                  guns.impact(wx + Math.cos(a) * hw, wy + Math.sin(a) * hw * 0.35, 'miss' as ImpactKind)
+                }
+              }
+              enemy.node.scale.y = 0.18 + 0.82 * e
+              enemy.node.rotation += Math.sin(t * 9) * 0.1 * (1 - e)
+              enemy.node.y += (1 - e) * hull * 0.1
+              enemy.node.alpha = p <= 0 ? 0 : Math.min(1, p * 2.4)
+            } else if (style === 'ghost') {
+              // SHE MATERIALISES: in and out on a stutter that settles, inside
+              // a cold light that lets go of her as she becomes solid.
+              const stutter = p < 0.85 ? 0.35 + 0.65 * Math.abs(Math.sin(t * 23) * Math.sin(t * 7.1)) : 1
+              enemy.node.alpha = p <= 0 ? 0 : Math.min(1, p * 1.3) * stutter
+              arriveGlow = (p <= 0 ? 0 : 1 - e) * 1.1; arriveTint = 0x9fffe6
+              if (p > 0.85 && riseWave === 0) { riseWave = 1; guns.shock(wx, wy) }
+            } else if (style === 'ram') {
+              // CHARGES IN from the right, throwing a bow wave, and stops hard:
+              // a jolt, a shock ring and spray off the bow.
+              const W = app.screen.width
+              enemy.node.x += (1 - e) * W * 0.6
+              enemy.node.rotation += (1 - e) * 0.06 + (p > 0.8 ? Math.sin((p - 0.8) * 40) * 0.03 * (1 - p) * 5 : 0)
+              enemy.node.alpha = p <= 0 ? 0 : Math.min(1, p * 4)
+              if (p > 0 && p < 0.8 && t - rampWake > 0.1) { rampWake = t; guns.wake(enemy.node.x - hw * 0.8, wy, -1, 0) }
+              if (p > 0.82 && riseWave === 0) {
+                riseWave = 1
+                guns.shock(wx - hw, wy)
+                for (let k = 0; k < 3; k++) guns.impact(wx - hw - 10 + k * 12, wy + (k - 1) * 8, 'miss' as ImpactKind)
+              }
+            } else {
+              if (p > 0 && riseWave === 0) {
+                riseWave = 1
+                guns.shock(wx, wy)
+                for (let k = 0; k < 5; k++) guns.impact(wx - hw + (hw * 2 * k) / 4, wy + (Math.random() - 0.5) * 10, 'miss' as ImpactKind)
+              }
+              if (p > 0.42 && riseWave === 1) {
+                riseWave = 2
+                for (let k = 0; k < 3; k++) guns.impact(wx - hw * 0.7 + hw * 0.7 * k, wy, 'miss' as ImpactKind)
+              }
+              enemy.node.scale.y = 0.18 + 0.82 * e
+              enemy.node.y += (1 - e) * hull * 0.1
+              enemy.node.alpha = p <= 0 ? 0 : Math.min(1, p * 2.4)
             }
-            if (p > 0.42 && riseWave === 1) {
-              riseWave = 2
-              for (let k = 0; k < 3; k++) guns.impact(wx - hw * 0.7 + hw * 0.7 * k, wy, 'miss' as ImpactKind)
-            }
-            enemy.node.scale.y = 0.18 + 0.82 * e
-            enemy.node.y += (1 - e) * f.enemy.hull * 0.1
-            enemy.node.alpha = p <= 0 ? 0 : Math.min(1, p * 2.4)
-            if (p >= 1) riseAt = -1
+            if (p >= 1) { riseAt = -1; arriveGlow = 0; enemy.node.scale.set(1, 1) }
           } else {
-            enemy.node.scale.y = 1
+            enemy.node.scale.set(1, 1)
+            arriveGlow = 0
             enemy.node.alpha += Math.max(-dt * 2.2, Math.min(dt * 1.6, want - enemy.node.alpha))
           }
         }
@@ -836,8 +912,15 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
           const band = d >= 35 ? 3 : d >= 20 ? 2 : d >= 10 ? 1 : 0
           if (enemy.water) enemy.water.soak.tint = band >= 1 ? 0x7d9468 : 0xffffff
           const auraHex = dr.aura ? parseInt(dr.aura.replace('#', ''), 16) : NaN
-          const glowOn = Number.isFinite(auraHex) || band >= 2
-          if (glowOn && glow.texture !== PIXI.Texture.EMPTY) {
+          const glowOn = Number.isFinite(auraHex) || band >= 2 || arriveGlow > 0.01
+          if (glowOn && glow.texture !== PIXI.Texture.EMPTY && arriveGlow > 0.01) {
+            const k = enemy.sp.width / glowGeo.w
+            glow.tint = arriveTint
+            glow.scale.set(k * enemy.node.scale.x * 1.05, k * enemy.node.scale.y * 1.05)
+            glow.position.set(enemy.node.x, enemy.node.y)
+            glow.rotation = enemy.node.rotation
+            glow.alpha = Math.min(1, arriveGlow) * Math.max(0.35, enemy.node.alpha)
+          } else if (glowOn && glow.texture !== PIXI.Texture.EMPTY) {
             const col = Number.isFinite(auraHex) ? auraHex
               : sc.hardcore ? (band >= 3 ? 0xff8a70 : 0xff5a4a)
               : band >= 3 ? 0xa8ffe0 : 0x3fd6b0
@@ -847,7 +930,7 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
               : 0.85 + 0.15 * Math.sin(t * 1.3)
             const strength = Number.isFinite(auraHex) ? 0.55 : band >= 3 ? 0.7 : 0.42
             const k = enemy.sp.width / glowGeo.w
-            glow.scale.set(k * (band >= 3 ? 1 + 0.02 * Math.sin(t * 7.3) : 1), k * enemy.node.scale.y)
+            glow.scale.set(k * enemy.node.scale.x * (band >= 3 ? 1 + 0.02 * Math.sin(t * 7.3) : 1), k * enemy.node.scale.y)
             glow.position.set(enemy.node.x, enemy.node.y)
             glow.rotation = enemy.node.rotation
             glow.alpha = enemy.node.alpha * strength * flick

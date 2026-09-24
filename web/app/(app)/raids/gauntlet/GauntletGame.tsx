@@ -22,7 +22,7 @@ import {
   ENTER, EXIT, POP, CEREMONY, STAGGER, STAGGER_SLOW, stagger,
 } from '@/lib/gauntletMotion'
 import { hullPaint } from '@/app/(app)/sea/raidWaters'
-import GauntletArena, { type ArenaHandle, type ArenaTheme, type ArenaStage, type Mood } from './GauntletArena'
+import GauntletArena, { type ArenaHandle, type ArenaTheme, type ArenaStage, type BossArrival, type Mood } from './GauntletArena'
 import { getShip, shipTierByName } from '@/lib/ships'
 import GauntletSlipway, { type SlipwayPlace } from './GauntletSlipway'
 import { getShipSkin, shipSkinFilter } from '@/lib/shipSkins'
@@ -202,6 +202,31 @@ const RUN_PHASES: ReadonlySet<Phase> = new Set<Phase>([
  * and animated on the compositor, then removed: no React state, because this
  * is the one tap in a dive that must not hitch.
  */
+const ARRIVALS: BossArrival[] = ['surface', 'fog', 'maelstrom', 'ghost', 'ram']
+/**
+ * Each boss's entrance, chosen for who it is, so each gauntlet's bosses arrive
+ * four different ways. A hash of the id was tried first and put Davy's four on
+ * two styles between them; with eight bosses, by hand is better. A boss added
+ * later falls back to the hash until it is given one.
+ */
+const BOSS_ARRIVAL: Record<string, BossArrival> = {
+  cartographer: 'fog',        // he hides in his own mist
+  krust: 'ghost',
+  pete: 'surface',
+  spet: 'ram',                // the toll comes to you
+  admiral: 'ram',
+  don_finleone: 'maelstrom',  // the maw is his
+  quartermaster: 'ghost',
+  saltie: 'surface',
+}
+function bossArrivalFor(id: string | undefined): BossArrival {
+  if (!id) return 'surface'
+  if (BOSS_ARRIVAL[id]) return BOSS_ARRIVAL[id]
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return ARRIVALS[h % ARRIVALS.length]
+}
+
 function burstAt(x: number, y: number, color: string) {
   const ring = document.createElement('div')
   Object.assign(ring.style, {
@@ -2756,6 +2781,9 @@ export default function GauntletGame(props: GauntletGameProps) {
       // An elite glows violet at any depth (the colour the run already gives
       // elites everywhere else); the deep dresses everyone else. See the arena.
       enemyAura={fight?.isElite ? '#c084fc' : undefined}
+      // EACH BOSS KEEPS ITS OWN ENTRANCE: picked from its id, so it is the same
+      // every time you meet it. See BossArrival in the arena.
+      bossArrival={bossArrivalFor(fight?.enemy.id)}
       stage={opts?.stage ?? null}
       handle={arenaRef}
     />
