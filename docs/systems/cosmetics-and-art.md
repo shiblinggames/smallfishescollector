@@ -149,3 +149,14 @@ lib/islandPlates), coasts re-derived with scripts/plate-coast.mts. Objects repla
 buoy / wreck / bones / rig / monolith / islet in LANDMARKS; the measured waterlines and capsules are
 starting points for /sea/waterline and /sea/boundary. To add more: prompt json, generate_kie.py,
 rerun the processor, wire.
+
+## The profile page, re-laid (2026-09-24)
+
+Kong: it looked antiquated. `profile/ProfileClient` keeps every picker, modal and action. The page is
+wide on a desktop (`.prof-col`, 1100): the banner is a row (avatar, then name, Captain, levels and
+actions, then the three equipped badges large on a plaque that opens the picker); the tabs are two
+colour-coded halves; each tab is two columns (`.prof-main` the picture, `.prof-side` the record,
+`.prof-wide` the collections under both). The angler is drawn by the shared `PreviewStage` on the
+harbour water, replacing the hand-built overlay stack (and its badge overlays: the badges live on the
+banner now). One column on a phone.
+

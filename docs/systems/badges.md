@@ -63,3 +63,13 @@ build that object and the compiler has to find the one that forgets.
 Badge sheets are generated from the reusable 6-per-sheet prompt (house style; never draw
 counts as digits in the art — the frame carries the number). See
 [cosmetics-and-art.md](cosmetics-and-art.md) for the full art pipeline and style lock.
+
+## The Badges page, pared down (2026-09-24)
+
+Kong: too many filters and selectors at the top. `AchievementsClient` had four rows of chrome
+(Board/Voyage, a category chip rail, five tier chips, three claim-status chips). Now: ONE row, a
+Show control (All / Earned / To earn) with the Board/Voyage switch small on the right. The tier
+filter is gone (the tier is on every medallion) and so is the claim-status filter ("Ready to Claim"
+already lists every unclaimed reward). Categories are a sticky sidebar with tally and bar from
+900px (`.badges-layout` / `.badges-cats` in globals.css), one swipeable row on a phone.
+

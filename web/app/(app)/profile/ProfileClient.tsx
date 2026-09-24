@@ -19,17 +19,15 @@ import { hapticTap } from '@/lib/haptics'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { getBoat, boatGlowClass } from '@/lib/boats'
-import { getHat } from '@/lib/hats'
-import { getPet, getPetOverlay } from '@/lib/pets'
-import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
-import { getRod, rodGlowClass } from '@/lib/rods'
+import { BADGES, BADGE_MAP } from '@/lib/badges'
+import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
-import { getHook, hookGlowClass } from '@/lib/hooks'
+import { getHook } from '@/lib/hooks'
 import { getShip } from '@/lib/ships'
 import { getShipSkin, shipSkinImage } from '@/lib/shipSkins'
 import { SPECIAL_ITEMS, effectiveSpecialDef, type SpecialItemId } from '@/lib/specialItems'
 import PopupShell from '@/components/PopupShell'
+import PreviewStage from '@/components/PreviewStage'
 import { fishImageUrl } from '@/lib/fishArt'
 
 interface Props {
@@ -77,6 +75,9 @@ interface Props {
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
+/** The intro's harbour with its dinghy painted out: the water you stand on. */
+const PROFILE_WATER = '/welcome-harbour-open.webp'
+
 function avatarColor(str: string) {
   let h = 0
   for (const c of str) h = c.charCodeAt(0) + ((h << 5) - h)
@@ -307,7 +308,6 @@ export default function ProfileClient({
   const hook = getHook(hookTier)
   const ship = getShip(shipTier)
   const shipSkinDef = equippedShipSkin ? getShipSkin(equippedShipSkin) : null
-  const charSprites = getCharacterSprites(characterColor)
   const equippedSpecial = effectiveSpecialDef(equippedSpecialId, ownedSpecialIds as SpecialItemId[]) ?? null
 
   // Showcase honors the player's explicit pick first; if they haven't
@@ -391,13 +391,18 @@ export default function ProfileClient({
           {activeBg.id === 'ancient_deep' && <AncientBgEffect />}
         </div>
       )}
-    <div className="page-col page-col-modal" style={{ paddingBottom: '3rem', position: 'relative', zIndex: 1 }}>
+    {/* ── THE PROFILE, RE-LAID (Kong, 2026-09-24: it looked antiquated) ────
+        A wide page on a desktop: the banner runs across the top with you on
+        the left and your three badges on the right, and each tab is two
+        columns (the picture of you or your ship beside the record), with the
+        collections running full width underneath. One column on a phone. */}
+    <div className="prof-col" style={{ paddingBottom: '3rem', position: 'relative', zIndex: 1 }}>
 
       {/* ── Identity header — banner ── */}
-      <div className="flex flex-col items-center" style={{ marginTop: 6, marginBottom: 20, padding: '1.7rem 1.2rem 1.5rem', borderRadius: 24, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: 'linear-gradient(180deg, rgba(16,22,34,0.72), rgba(8,12,20,0.42))' }}>
+      <div className="prof-banner" style={{ marginTop: 6, marginBottom: 18, borderRadius: 22, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: 'linear-gradient(180deg, rgba(14,20,32,0.86), rgba(8,12,20,0.7))', boxShadow: '0 18px 44px rgba(0,0,0,0.35)' }}>
         {/* Dual-tone glow — fishing blue + nav violet. */}
         <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 65% 55% at 28% -12%, rgba(96,165,250,0.18), transparent 62%), radial-gradient(ellipse 65% 55% at 72% -12%, rgba(192,132,252,0.15), transparent 62%)' }} />
-        <div className="flex flex-col items-center" style={{ position: 'relative', zIndex: 1, width: '100%' }}>
+        <div className="prof-hero" style={{ position: 'relative', zIndex: 1, width: '100%' }}>
         {/* Avatar — equipped character + hat composite. Tap to open the
             Profile Look picker. The pencil badge carries the affordance. */}
         <button
@@ -408,7 +413,7 @@ export default function ProfileClient({
             background: 'none', border: 'none', padding: 0, cursor: 'pointer',
             borderRadius: '50%',
             position: 'relative',
-            marginBottom: 14,
+            flexShrink: 0,
           }}
         >
           <CharacterAvatar
@@ -435,6 +440,7 @@ export default function ProfileClient({
           </span>
         </button>
 
+        <div className="prof-id">
         {/* Username + rename */}
         {showUsernameForm ? (
           <form onSubmit={handleSaveUsername} style={{ width: '100%', maxWidth: 300, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -533,10 +539,34 @@ export default function ProfileClient({
           </>
         )}
         </div>
+
+        {/* ── YOUR THREE BADGES, ON THE BANNER ─────────────────────────
+            They were a strip of 26px chips inside the fishing card. They are
+            the thing a captain chose to show, so they sit on the banner, big;
+            pressing them opens the same picker. */}
+        <button type="button" className="prof-badges tap"
+          onClick={() => { setProfileTab('fishing'); setBadgePickerOpen(true) }}
+          aria-label="Change your badges"
+          style={{ background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(240,192,64,0.22)', borderRadius: 16, padding: '0.7rem 0.8rem', cursor: 'pointer' }}>
+          <span className="font-karla font-800 uppercase" style={{ display: 'block', fontSize: '0.56rem', letterSpacing: '0.16em', color: 'rgba(240,192,64,0.8)', marginBottom: 6, textAlign: 'center' }}>Badges</span>
+          <span style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            {[0, 1, 2].map(slot => {
+              const badge = BADGE_MAP[equippedBadges[slot] ?? '']
+              return badge ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={slot} src={badge.imageUrl} alt={badge.name} title={badge.name} loading="lazy" decoding="async"
+                  style={{ width: 54, height: 54, objectFit: 'contain', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.5))' }} />
+              ) : (
+                <span key={slot} style={{ width: 54, height: 54, borderRadius: 12, border: '1px dashed rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.03)' }} />
+              )
+            })}
+          </span>
+        </button>
+        </div>
       </div>
 
       {/* ── Fishing / Navigation tabs (shared) — pill segmented control ── */}
-      <div style={{ display: 'flex', gap: 5, padding: 5, margin: '0 auto 22px', width: '100%', background: 'rgba(8,14,24,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 999 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, padding: 4, margin: '0 auto 20px', width: '100%', maxWidth: 520, background: 'rgba(8,14,24,0.72)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14 }}>
         {([['fishing', 'Fishing'], ['navigation', 'Navigation']] as const).map(([id, label]) => {
           const on = profileTab === id
           return (
@@ -546,12 +576,13 @@ export default function ProfileClient({
               onClick={() => setProfileTab(id)}
               className="font-karla font-700 uppercase tracking-[0.12em]"
               style={{
-                flex: 1, padding: '0.62rem 0', borderRadius: 999,
+                padding: '0.6rem 0', borderRadius: 10,
                 fontSize: '0.7rem', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
-                border: on ? '1px solid rgba(96,165,250,0.55)' : '1px solid transparent',
-                background: on ? 'linear-gradient(180deg, rgba(96,165,250,0.24), rgba(96,165,250,0.12))' : 'transparent',
-                color: on ? '#dbe9ff' : 'rgba(240,237,232,0.5)',
-                boxShadow: on ? '0 2px 10px rgba(96,165,250,0.18)' : 'none',
+                // Each half in its own colour: fishing blue, navigation violet.
+                border: on ? `1px solid ${id === 'fishing' ? 'rgba(96,165,250,0.6)' : 'rgba(192,132,252,0.6)'}` : '1px solid transparent',
+                background: on ? (id === 'fishing' ? 'rgba(96,165,250,0.16)' : 'rgba(192,132,252,0.16)') : 'transparent',
+                color: on ? '#f1f5ff' : 'rgba(240,237,232,0.5)',
+                boxShadow: 'none',
                 transition: 'background 0.15s, color 0.15s',
               }}
             >
@@ -563,10 +594,10 @@ export default function ProfileClient({
 
       {/* ── Fishing tab ── */}
       {profileTab === 'fishing' && (
-        <div className="flex flex-col mx-auto w-full" style={{ gap: 24 }}>
+        <div className="prof-grid">
 
           {/* Headline career stats */}
-          <div>
+          <div className="prof-side">
             <SectionLabel color="#60a5fa" flavor="What the logbook keeps on you, cast for cast.">Career</SectionLabel>
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
@@ -577,7 +608,7 @@ export default function ProfileClient({
           </div>
 
           {/* Character Loadout + badge picker */}
-          <div>
+          <div className="prof-main">
           <SectionLabel color="#60a5fa">Angler &amp; Loadout</SectionLabel>
           <div style={{
             background: 'radial-gradient(ellipse at 50% 90%, rgba(20,50,100,0.22) 0%, transparent 70%)',
@@ -701,117 +732,17 @@ export default function ProfileClient({
               )}
 
             </div>
-            <div style={{
-              position: 'relative', width: '100%', height: 160, marginTop: 8,
-              filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))',
-            }}>
-              <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '72%', maxWidth: 260 }}>
-                <img src={charSprites.rest} alt="" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} />
-                {(() => {
-                  const hd = getHat(equippedHat)
-                  if (!hd) return null
-                  const hp = hd.positions.rest
-                  return (
-                    <img src={hd.restImageUrl} alt="" loading="lazy" decoding="async" style={{
-                      position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
-                      width: `${hp.width}%`,
-                      transform: `rotate(${hp.rotate}deg)`,
-                      transformOrigin: 'center center',
-                      pointerEvents: 'none',
-                    }} />
-                  )
-                })()}
-                {(() => {
-                  const bd = getBoat(equippedBoat)
-                  if (!bd) return null
-                  const bp = bd.positions.rest
-                  return (
-                    <div style={{
-                      position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
-                      width: `${bp.width}%`,
-                      // Match the iOS rest-frame nudge applied in FishingGame
-                      transform: `rotate(${bp.rotate}deg) translateX(-2px)`,
-                      transformOrigin: 'center center',
-                      pointerEvents: 'none',
-                    }}>
-                      <img src={bd.restImageUrl} alt="" loading="lazy" decoding="async" className={boatGlowClass(bd)} style={{ width: '100%', display: 'block' }} />
-                    </div>
-                  )
-                })()}
-                {/* Rod — 3-pose rest sprite. Coords mirror CHAR_ROD_OVERLAY.rest
-                    in FishingGame so the static profile silhouette matches what
-                    the player sees in the actual fishing scene. maxWidth: 'none'
-                    overrides Tailwind preflight which would otherwise cap the
-                    rod at 100% of the avatar container. */}
-                {rod.slug ? (
-                  <img src={`/${rod.slug}_rest.png`} alt="" loading="lazy" decoding="async" className={rodGlowClass(rod)} style={{
-                    position: 'absolute', top: '37%', left: '-12%', width: '107.5%',
-                    transformOrigin: 'center center',
-                    pointerEvents: 'none',
-                    maxWidth: 'none',
-                    ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
-                  } as React.CSSProperties} />
-                ) : rod.imageUrl && (
-                  <img src={rod.imageUrl} alt="" loading="lazy" decoding="async" className={rodGlowClass(rod)} style={{
-                    position: 'absolute', top: '33%', left: '12%', width: '51%',
-                    transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
-                    pointerEvents: 'none',
-                    ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
-                  } as React.CSSProperties} />
-                )}
-                {/* Reel — mirrors CHAR_REEL_OVERLAY.rest from FishingGame. */}
-                {reel.imageUrl && (
-                  <img src={reel.imageUrl} alt="" loading="lazy" decoding="async" style={{
-                    position: 'absolute', top: '15%', left: '-10.3%', width: '222%',
-                    transform: 'rotate(-18deg)', transformOrigin: 'center center',
-                    pointerEvents: 'none',
-                    maxWidth: 'none',
-                  }} />
-                )}
-                {/* Hook — mirrors CHAR_HOOK_OVERLAY.rest from FishingGame
-                    so the profile silhouette matches the live game. */}
-                {hook.imageUrl && (
-                  <img src={hook.imageUrl} alt="" loading="lazy" decoding="async" className={hookGlowClass(hook)} style={{
-                    position: 'absolute', top: '39.5%', left: '-10.5%', width: '204.5%',
-                    transformOrigin: 'center center',
-                    pointerEvents: 'none',
-                    maxWidth: 'none',
-                    ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : {}),
-                  } as React.CSSProperties} />
-                )}
-                {equippedBadges.map((badgeId, slot) => {
-                  if (!badgeId) return null
-                  const badge = BADGE_MAP[badgeId]
-                  const bp = BADGE_SLOT_POSITIONS[slot]?.['rest' as BadgeFrame]
-                  if (!badge || !bp) return null
-                  return (
-                    <img key={slot} src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{
-                      position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
-                      width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
-                      transformOrigin: 'center center', pointerEvents: 'none',
-                    }} />
-                  )
-                })}
-                {/* Pet — last so it sits in the foreground above every
-                    other equipment layer. Mirrors PET_OVERLAY.rest from
-                    FishingGame so the profile silhouette matches the
-                    live fishing render. */}
-                {(() => {
-                  const pet = getPet(equippedPet)
-                  if (!pet) return null
-                  const pp = getPetOverlay(pet.species, 'rest')
-                  return (
-                    <img src={pet.restImageUrl} alt="" loading="lazy" decoding="async" style={{
-                      position: 'absolute', top: `${pp.top}%`, left: `${pp.left}%`,
-                      width: `${pp.width}%`,
-                      transform: `rotate(${pp.rotate}deg)`,
-                      transformOrigin: 'center center',
-                      pointerEvents: 'none',
-                      filter: `drop-shadow(0 0 6px ${pet.accentColor}55)`,
-                    }} />
-                  )
-                })()}
-              </div>
+            {/* THE SAME PICTURE THE LOADOUT AND THE SHIPYARD DRAW (PreviewStage),
+                on the same harbour. It was a hand-built stack of overlays at
+                160px, a second copy of the rig that drifted from the real one. */}
+            <div style={{ padding: '10px 12px 0' }}>
+              <PreviewStage kit={{
+                characterColor, equippedHat, equippedBoat, equippedPet, equippedPetBow: null,
+                rodTier, reelTier, hookTier,
+              }} style={{
+                maxWidth: 'none', borderRadius: 14,
+                background: `url(${PROFILE_WATER}) 40% 62% / cover no-repeat, #0d1e2b`,
+              }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '8px 20px 0' }}>
               <div style={{ textAlign: 'center', flex: 1 }}>
@@ -849,7 +780,7 @@ export default function ProfileClient({
 
           {/* Tackle — the fishing-side twin of the Arsenal, same rail. */}
           {ownedSpecialIds.length > 0 && (
-            <div>
+            <div className="prof-side">
               <SectionLabel color="#60a5fa" flavor="The odd gear you have talked out of the sea.">Tackle</SectionLabel>
               <SpecialTackle items={ownedSpecialIds} equippedIds={[equippedSpecialId, equippedSpecial2Id]} />
             </div>
@@ -857,14 +788,14 @@ export default function ProfileClient({
 
           {/* Vault of the Ancients */}
           {ancientTrophies.length > 0 && (
-            <div>
+            <div className="prof-wide">
               <SectionLabel>Vault of the Ancients</SectionLabel>
               <VaultOfAncients caught={ancientTrophies.map(t => t.id)} vigil={ancientVigil} />
             </div>
           )}
 
           {rarestFish.length > 0 && (
-            <div>
+            <div className="prof-wide">
               <SectionLabel flavor="Your three rarest trophies from every water you've fished.">Rarest Catches</SectionLabel>
               <RarestCatchesByZone fish={rarestFish} prestige={prestigeLevels} />
             </div>
@@ -872,7 +803,7 @@ export default function ProfileClient({
 
           {/* Golden Mounts — the gilded trophy wall */}
           {goldenMounts.length > 0 && (
-            <div>
+            <div className="prof-wide">
               <SectionLabel color="#fbcc4a" flavor="One-in-a-thousand perfect catches, mounted for good.">Golden Catch</SectionLabel>
               <GoldenMounts fish={goldenMounts} />
             </div>
@@ -883,10 +814,10 @@ export default function ProfileClient({
 
       {/* ── Navigation tab ── */}
       {profileTab === 'navigation' && (
-        <div className="flex flex-col mx-auto w-full" style={{ gap: 24 }}>
+        <div className="prof-grid">
 
           {/* Headline career stats */}
-          <div>
+          <div className="prof-side">
             <SectionLabel color="#c084fc" flavor="Broadsides answered, holds hauled home.">Career</SectionLabel>
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
@@ -896,7 +827,7 @@ export default function ProfileClient({
           </div>
 
           {/* Ship Hero */}
-          <div>
+          <div className="prof-main">
           <SectionLabel color="#c084fc">Your Ship</SectionLabel>
           <div style={{
             background: `radial-gradient(ellipse at 50% 65%, ${ship.color}1c 0%, transparent 68%)`,
@@ -911,7 +842,7 @@ export default function ProfileClient({
               loading="lazy"
               decoding="async"
               style={{
-                width: 210, height: 'auto', maxHeight: 150, objectFit: 'contain',
+                width: 'min(100%, 340px)', height: 'auto', maxHeight: 230, objectFit: 'contain',
                 filter: shipSkinDef ? shipSkinDef.filter : `drop-shadow(0 4px 28px ${ship.color}60)`,
               }}
             />
@@ -945,14 +876,14 @@ export default function ProfileClient({
 
           {/* The raid party, in seat order. No editor: this mirrors whoever is
               assigned to raids, so it is changed in the Crew Hall, not here. */}
-          <div>
+          <div className="prof-side">
             <SectionLabel color="#c084fc">Raid Crew</SectionLabel>
             <FeaturedCrew crew={showcaseCrew} emptyHint="No raid crew assigned yet. Set your party in the Crew Hall." />
           </div>
 
           {/* Arsenal — collected raid + forge items */}
           {raidItemIds.length > 0 && (
-            <div>
+            <div className="prof-wide">
               <SectionLabel color="#f0c040">Arsenal</SectionLabel>
               <RaidArsenal items={raidItemIds} />
             </div>

@@ -4110,3 +4110,37 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
     --sy-5: 1rem; --sy-6: 1.16rem; --sy-7: 1.34rem;
   }
 }
+
+/* ── The Badges wall (achievements/AchievementsClient) ─────────────────────
+   Categories are one swipeable row on a phone and a sticky sidebar beside the
+   wall from 900px. */
+.badges-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.badges-cats { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.badges-cats > .badges-cat { flex-shrink: 0; min-width: 140px; }
+@media (min-width: 900px) {
+  .badges-layout { grid-template-columns: 220px minmax(0, 1fr); align-items: start; gap: 20px; }
+  .badges-cats { flex-direction: column; overflow: visible; position: sticky; top: calc(var(--nav-h, 60px) + 12px); }
+  .badges-cats > .badges-cat { min-width: 0; }
+}
+
+/* ── The profile (profile/ProfileClient) ────────────────────────────────────
+   One column on a phone. From 960px: a wide page, the banner laid out in a
+   row (you, then your name and levels, then the badges plaque), and each tab
+   two columns: the picture (.prof-main) on the left spanning the side column,
+   the record (.prof-side) on the right, and the collections (.prof-wide) full
+   width under both. */
+.prof-col { width: 100%; max-width: var(--game-col, 560px); margin: 0 auto; padding: 0 1rem; }
+.prof-hero { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 1.6rem 1.2rem 1.4rem; }
+.prof-id { display: flex; flex-direction: column; align-items: center; }
+.prof-badges { align-self: center; }
+.prof-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+@media (min-width: 960px) {
+  .prof-col { max-width: 1100px; }
+  .prof-hero { flex-direction: row; align-items: center; gap: 26px; padding: 1.4rem 1.6rem; text-align: left; }
+  .prof-id { flex: 1; align-items: flex-start; }
+  .prof-id .justify-center { justify-content: flex-start; }
+  .prof-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px 26px; align-items: start; }
+  .prof-main { grid-column: 1; grid-row: 1 / span 3; }
+  .prof-side { grid-column: 2; }
+  .prof-wide { grid-column: 1 / -1; }
+}

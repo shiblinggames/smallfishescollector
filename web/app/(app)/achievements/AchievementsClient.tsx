@@ -52,8 +52,6 @@ interface Props {
 
 const GOLD = '#f0c040'
 const TIER_ORDER: BadgeDifficulty[] = ['rookie', 'seasoned', 'veteran', 'master', 'grandmaster']
-type Filter = 'all' | BadgeDifficulty
-type StatusFilter = 'all' | 'unclaimed' | 'claimed'
 
 const rectCenter = (el: Element) => {
   const r = el.getBoundingClientRect()
@@ -69,8 +67,12 @@ export default function AchievementsClient({ groups }: Props) {
   )
   const [busy, setBusy] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [tierFilter, setTierFilter] = useState<Filter>('all')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  // ── ONE FILTER, NOT TWO ROWS OF CHIPS (Kong: too many filters and
+  // selectors at the top). The tier row went: the tier is on every medallion.
+  // The claim-status row went: "Ready to Claim" above already lists every
+  // unclaimed reward. What is left is the question people actually ask of a
+  // wall of badges: all of them, the ones I have, or the ones I do not.
+  const [show, setShow] = useState<'all' | 'earned' | 'todo'>('all')
   const [detailGoal, setDetailGoal] = useState<JourneyGoal | null>(null)
   // The board reads two ways: a CHECKLIST of what is left, or the VOYAGE --
   // the same badges in the order you earned them.
@@ -112,25 +114,12 @@ export default function AchievementsClient({ groups }: Props) {
   // they earned without hunting down the category list. Richest reward first.
   const claimableSorted = [...claimable].sort((a, b) => (b.reward ?? 0) - (a.reward ?? 0))
 
-  // Claim-status filter — only meaningful for reward-bearing badges. "Unclaimed"
-  // is every badge whose reward is still owed (earned-but-unclaimed AND still in
-  // progress); "claimed" is the banked shelf. Non-badge journey goals fall out
-  // of both, since they have nothing to claim.
-  const matchesStatus = (g: JourneyGoal) => {
-    if (statusFilter === 'all') return true
-    if ((g.reward ?? 0) <= 0) return false
-    return statusFilter === 'claimed' ? claimedIds.has(g.id) : !claimedIds.has(g.id)
-  }
-  const claimedCount = badgeGoals.filter(g => claimedIds.has(g.id)).length
-  const unclaimedCount = badgeGoals.length - claimedCount
-
   const visibleGroups = useMemo(
     () => groups
       .filter(grp => categoryFilter === 'all' || grp.title === categoryFilter)
-      .map(grp => ({ ...grp, goals: grp.goals.filter(g => (tierFilter === 'all' || g.difficulty === tierFilter) && matchesStatus(g)) }))
+      .map(grp => ({ ...grp, goals: grp.goals.filter(g => show === 'all' || (show === 'earned' ? g.done : !g.done)) }))
       .filter(grp => grp.goals.length > 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [groups, categoryFilter, tierFilter, statusFilter, claimedIds],
+    [groups, categoryFilter, show],
   )
 
   // Per-category tallies for the rail, off the UNFILTERED groups so a chip
@@ -279,99 +268,79 @@ export default function AchievementsClient({ groups }: Props) {
         </section>
       )}
 
-      {/* BOARD vs VOYAGE. Above the filters on purpose: it changes what the
-          controls below it are even filtering, so it has to read as the outer
-          choice rather than a fourth peer. */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-        {([['board', 'The Board'], ['timeline', 'The Voyage']] as const).map(([val, label]) => {
-          const active = view === val
-          return (
-            <button key={val} type="button" onClick={() => setView(val)}
-              className="font-cinzel font-700 tap"
-              style={{
-                flex: 1, padding: '0.55rem 0.4rem', borderRadius: 11, fontSize: '0.8rem', cursor: 'pointer',
-                background: active ? `${GOLD}22` : 'rgba(255,255,255,0.04)',
-                color: active ? GOLD : '#e8e2d6',
-                border: `1px solid ${active ? `${GOLD}99` : 'rgba(196,169,106,0.34)'}`,
-                boxShadow: active ? `0 0 16px ${GOLD}22` : 'none',
-              }}>
-              {label}
-            </button>
-          )
-        })}
+      {/* ── ONE ROW OF CONTROLS ───────────────────────────────────────────
+          Show (All / Earned / To earn) on the left, the Board and the Voyage
+          on the right, small. That is the whole of the chrome above the wall;
+          the categories are a sidebar beside it on a desktop and one
+          swipeable row on a phone. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+        {view === 'board' && (
+          <div role="tablist" aria-label="Show" style={{ display: 'inline-flex', padding: 3, borderRadius: 10, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(196,169,106,0.22)' }}>
+            {([['all', 'All'], ['earned', 'Earned'], ['todo', 'To earn']] as const).map(([val, label]) => {
+              const active = show === val
+              return (
+                <button key={val} type="button" role="tab" aria-selected={active} onClick={() => setShow(val)}
+                  className="font-karla font-800 uppercase tap"
+                  style={{
+                    padding: '0.36rem 0.75rem', borderRadius: 7, fontSize: '0.62rem', letterSpacing: '0.1em', cursor: 'pointer',
+                    background: active ? `${GOLD}24` : 'transparent', color: active ? GOLD : 'rgba(232,226,214,0.7)',
+                    border: `1px solid ${active ? `${GOLD}88` : 'transparent'}`,
+                  }}>{label}</button>
+              )
+            })}
+          </div>
+        )}
+        <div style={{ marginLeft: 'auto', display: 'inline-flex', padding: 3, borderRadius: 10, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(196,169,106,0.22)' }}>
+          {([['board', 'The Board'], ['timeline', 'The Voyage']] as const).map(([val, label]) => {
+            const active = view === val
+            return (
+              <button key={val} type="button" onClick={() => setView(val)}
+                className="font-cinzel font-700 tap"
+                style={{
+                  padding: '0.34rem 0.75rem', borderRadius: 7, fontSize: '0.72rem', cursor: 'pointer',
+                  background: active ? `${GOLD}24` : 'transparent', color: active ? GOLD : '#d8d2c6',
+                  border: `1px solid ${active ? `${GOLD}88` : 'transparent'}`,
+                }}>{label}</button>
+            )
+          })}
+        </div>
       </div>
 
       {view === 'timeline' ? (
         <BadgeTimeline goals={badgeGoals} onOpen={setDetailGoal} />
       ) : (
-      <>
-
-      {/* ── The category rail. One scrolling row of chips instead of a
-            dropdown, each carrying its accent and its tally, so the whole
-            shape of the board is readable before you scroll it. ──────────── */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6, marginBottom: 6, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-        {[{ title: 'all', label: 'All', accent: GOLD }, ...groups.map(g => ({ title: g.title, label: g.title, accent: g.accent }))].map(c => {
+      <div className="badges-layout">
+      {/* ── THE CATEGORIES. A sidebar on a desktop (sticky, each with its tally
+            and a thin bar), one swipeable row of the same buttons on a phone. */}
+      <nav className="badges-cats" aria-label="Categories">
+        {[{ title: 'all', label: 'All badges', accent: GOLD }, ...groups.map(g => ({ title: g.title, label: g.title, accent: g.accent }))].map(c => {
           const active = categoryFilter === c.title
           const t = c.title === 'all' ? { done: earnedBadges, total: badgeGoals.length } : groupTally.get(c.title)
+          const pct = t && t.total > 0 ? t.done / t.total : 0
           return (
             <button key={c.title} type="button" onClick={() => setCategoryFilter(c.title)}
-              className="font-cinzel font-700 tap"
+              className="font-cinzel font-700 tap badges-cat"
               style={{
-                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 7, padding: '0.42rem 0.7rem', borderRadius: 999, fontSize: '0.74rem', cursor: 'pointer',
-                background: active ? `${c.accent}22` : 'rgba(255,255,255,0.04)',
-                color: active ? c.accent : '#e8e2d6',
-                border: `1px solid ${active ? `${c.accent}99` : 'rgba(196,169,106,0.3)'}`,
-                whiteSpace: 'nowrap',
+                display: 'flex', flexDirection: 'column', gap: 5, cursor: 'pointer', textAlign: 'left',
+                padding: '0.48rem 0.7rem', borderRadius: 10, fontSize: '0.76rem',
+                background: active ? `${c.accent}1f` : 'rgba(255,255,255,0.03)',
+                color: active ? '#f4ecd8' : '#d8d2c6',
+                border: `1px solid ${active ? `${c.accent}99` : 'rgba(196,169,106,0.18)'}`,
               }}>
-              <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: c.accent, opacity: active ? 1 : 0.7 }} />
-              {c.label}
-              {t && <span className="font-karla font-700" style={{ fontSize: '0.64rem', opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>{t.done}/{t.total}</span>}
+              <span style={{ display: 'flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap' }}>
+                <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: c.accent, flexShrink: 0 }} />
+                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label}</span>
+                {t && <span className="font-karla font-700" style={{ fontSize: '0.64rem', opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>{t.done}/{t.total}</span>}
+              </span>
+              <span aria-hidden className="badges-cat-bar" style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                <span style={{ display: 'block', height: '100%', width: `${pct * 100}%`, background: c.accent, opacity: 0.8 }} />
+              </span>
             </button>
           )
         })}
-      </div>
+      </nav>
 
-      {/* Tier and claim status, one row of small chips. They wrap on a phone
-          and sit on one line on a monitor. */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16, alignItems: 'center' }}>
-        {([['all', 'Any tier', '#cbb98a'], ...TIER_ORDER.map(t => [t, DIFFICULTY_META[t].label, DIFFICULTY_META[t].color] as const)] as const).map(([val, label, color]) => {
-          const active = tierFilter === val
-          return (
-            <button key={val} type="button" onClick={() => setTierFilter(val as Filter)}
-              className="font-karla font-800 uppercase tap"
-              style={{
-                padding: '0.3rem 0.6rem', borderRadius: 999, fontSize: '0.6rem', letterSpacing: '0.1em', cursor: 'pointer',
-                background: active ? `${color}22` : 'rgba(255,255,255,0.03)',
-                color: active ? color : 'rgba(232,226,214,0.75)',
-                border: `1px solid ${active ? `${color}99` : 'rgba(196,169,106,0.24)'}`,
-              }}>
-              {label}
-            </button>
-          )
-        })}
-        <span aria-hidden style={{ width: 1, height: 16, background: 'rgba(196,169,106,0.3)', margin: '0 2px' }} />
-        {([
-          ['all', 'All', badgeGoals.length],
-          ['unclaimed', 'Unclaimed', unclaimedCount],
-          ['claimed', 'Claimed', claimedCount],
-        ] as const).map(([val, label, n]) => {
-          const active = statusFilter === val
-          return (
-            <button key={val} type="button" onClick={() => setStatusFilter(val)}
-              className="font-karla font-800 uppercase tap"
-              style={{
-                padding: '0.3rem 0.6rem', borderRadius: 999, fontSize: '0.6rem', letterSpacing: '0.1em', cursor: 'pointer',
-                background: active ? `${GOLD}1c` : 'rgba(255,255,255,0.03)',
-                color: active ? GOLD : 'rgba(232,226,214,0.75)',
-                border: `1px solid ${active ? `${GOLD}88` : 'rgba(196,169,106,0.24)'}`,
-                whiteSpace: 'nowrap',
-              }}>
-              {label} <span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
-            </button>
-          )
-        })}
-      </div>
-
+      <div style={{ minWidth: 0 }}>
       {/* ── The wall: every category open, medallions in a grid ──────────── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
         {visibleGroups.map(group => {
@@ -399,12 +368,12 @@ export default function AchievementsClient({ groups }: Props) {
         })}
         {visibleGroups.length === 0 && (
           <p className="font-karla" style={{ fontSize: '0.9rem', color: 'rgba(240,237,232,0.5)', textAlign: 'center', padding: '2rem 0', fontStyle: 'italic' }}>
-            No colors match that tack. Ease off the filters and look again.
+            {show === 'earned' ? 'None flown here yet.' : show === 'todo' ? 'Every one of these is flown.' : 'Nothing here yet.'}
           </p>
         )}
       </div>
-
-      </>
+      </div>
+      </div>
       )}
 
       {/* Achievement detail modal — what it means + how to earn it. Shared by
