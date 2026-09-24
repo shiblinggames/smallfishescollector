@@ -98,6 +98,7 @@ const VoyageBoardBody = dynamic(() => import('./VoyageBoard'), { ssr: false })
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import { vibrate } from '@/lib/haptics'
+import { seaClock, nextPhase, PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
 
 const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'
@@ -237,6 +238,56 @@ const VIEW_TITLE: Record<string, string> = {
   haul: 'The Daily Haul', orders: 'Today’s Orders', bounties: 'Bounties', voyage: 'The Voyage', trawls: 'The Trawls',
 }
 
+/** What the next moment is called, for "Nightfall in 6m". */
+const NEXT_WORD: Record<SeaPhase, string> = { dusk: 'Sunset', night: 'Nightfall', dawn: 'First light', day: 'Full day' }
+
+/** The disc's colour by the hour, when nothing is waiting on a claim. */
+const PHASE_TINT: Record<SeaPhase, string> = {
+  day: '#f3d88a',
+  dusk: '#f0a268',
+  night: '#b9cdf2',
+  dawn: '#f2b4a8',
+}
+
+/**
+ * THE HOUR AS A DRAWN MARK, in the disc's own line style. Day is the whole
+ * sun; dusk the sun half down behind the horizon with the light going; night
+ * a crescent and a star; dawn the sun half up, rising.
+ */
+function PhaseGlyph({ phase, px }: { phase: SeaPhase; px: number }) {
+  return (
+    <svg width={px} height={px} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {phase === 'day' && (<>
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6" />
+      </>)}
+      {phase === 'dusk' && (<>
+        <path d="M3 16.5h18" />
+        <path d="M7 16.5a5 5 0 0 1 10 0" />
+        <path d="M12 7.5v2M6.3 10.4l1.2 1.2M17.7 10.4l-1.2 1.2" />
+        <path d="M9.5 20h5M12 3.2v2.2M10.6 4.2L12 5.6l1.4-1.4" />
+      </>)}
+      {phase === 'night' && (<>
+        <path d="M19.5 14.2A7.6 7.6 0 1 1 9.8 4.5a6 6 0 0 0 9.7 9.7z" />
+        <path d="M17.2 3.6v2.4M16 4.8h2.4" />
+      </>)}
+      {phase === 'dawn' && (<>
+        <path d="M3 16.5h18" />
+        <path d="M7 16.5a5 5 0 0 1 10 0" />
+        <path d="M12 7.5v2M6.3 10.4l1.2 1.2M17.7 10.4l-1.2 1.2" />
+        <path d="M9.5 20h5M12 5.6V3.2M10.6 4.6L12 3.2l1.4 1.4" />
+      </>)}
+    </svg>
+  )
+}
+
+/** "6m", "1h 12m": the time until the next moment of the day. */
+function fmtShort(ms: number): string {
+  const m = Math.max(1, Math.round(ms / 60_000))
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`
+}
+
 function cap(t: string): string { return t.charAt(0).toUpperCase() + t.slice(1) }
 
 function left(endsAt: number): string {
@@ -271,6 +322,22 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   onClose?: () => void
 }) {
   const [open, setOpen] = useState(false)
+  /**
+   * ── THE HOUR ON THE DISC ────────────────────────────────────────────────
+   *
+   * Kong: the disc should show the day cycle, sun, setting sun, moon and so
+   * on, and the board's heading should say the moment rather than "The day".
+   * The same clock the sea's light runs on (lib/seaClock), read every fifteen
+   * seconds, which is plenty for a phase that lasts minutes.
+   */
+  const [phase, setPhase] = useState<SeaPhase>(() => seaClock().phase)
+  const [phaseNext, setPhaseNext] = useState(() => nextPhase())
+  useEffect(() => {
+    const tick = () => { setPhase(seaClock().phase); setPhaseNext(nextPhase()) }
+    tick()
+    const id = window.setInterval(tick, 15_000)
+    return () => window.clearInterval(id)
+  }, [])
   // THE "BACK IN" TIMERS MOVE while the board is open. They are worked out at
   // render, so without this a voyage said "back in 2h 5m" for as long as you
   // looked at it. Once every twenty seconds is plenty for minutes.
@@ -499,8 +566,8 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
           // Named so the first voyage's bait beat can light it: the Daily
           // Haul, where the free worms are, is inside.
           data-coach="haul"
-          aria-label={readyN > 0 ? `The day, ${readyN} ready to claim` : leftN > 0 ? `The day, ${leftN} left` : 'The day, all done'}
-          title="The day"
+          aria-label={`${PHASE_LABEL[phase]}. ${readyN > 0 ? `${readyN} ready to claim` : leftN > 0 ? `${leftN} left today` : 'All done for today'}`}
+          title={PHASE_LABEL[phase]}
           onClick={() => { vibrate(8); setOpen(true) }}
           style={{
             position: 'relative',
@@ -508,7 +575,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: readyN > 0 ? 'rgba(40,30,8,0.82)' : 'rgba(8,16,24,0.72)',
             border: `1px solid ${readyN > 0 ? `${GOLD}88` : `${SEA},0.22)`}`,
-            color: readyN > 0 ? GOLD : `${SEA},0.72)`,
+            color: readyN > 0 ? GOLD : PHASE_TINT[phase],
             backdropFilter: 'blur(2px)',
           }}>
           <AnimatePresence>
@@ -521,13 +588,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
                 style={{ position: 'absolute', inset: -2, borderRadius: '50%', border: `1px solid ${GOLD}` }} />
             )}
           </AnimatePresence>
-          <svg width={Math.round(size * 0.56)} height={Math.round(size * 0.56)}
-            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M3 17h18" />
-            <path d="M6 17a6 6 0 0 1 12 0" />
-            <path d="M12 5v2M5.6 8.6l1.4 1.4M18.4 8.6L17 10M2.5 14h2M19.5 14h2" />
-          </svg>
+          <PhaseGlyph phase={phase} px={Math.round(size * 0.56)} />
           {(readyN > 0 || leftN > 0) && (
             <motion.span aria-hidden key={readyN > 0 ? `r${readyN}` : `l${leftN}`}
               initial={{ scale: 0.6 }} animate={{ scale: 1 }}
@@ -672,14 +733,26 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
                   fontSize: narrow ? '1.02rem' : '1.15rem', margin: 0, lineHeight: 1.25, transformOrigin: 'left center',
                   color: readyN > 0 ? '#f6e3a6' : state && leftN === 0 ? '#cfeccf' : '#f4ecd8',
                 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#f4ecd8' }}>
+                  <span style={{ color: PHASE_TINT[phase], display: 'inline-flex' }}><PhaseGlyph phase={phase} px={narrow ? 18 : 20} /></span>
+                  {PHASE_LABEL[phase]}
+                </span>
+              </motion.p>
+              <span className="font-karla" style={{ fontSize: '0.66rem', color: `${SEA},0.5)` }}>
+                {NEXT_WORD[phaseNext.phase]} in {fmtShort(phaseNext.ms)}
+              </span>
+            </div>
+            <div className="font-karla" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8, marginTop: 1 }}>
+              <span style={{
+                fontSize: narrow ? '0.8rem' : '0.84rem', fontWeight: 700,
+                color: readyN > 0 ? '#f6e3a6' : state && leftN === 0 ? '#cfeccf' : `${SEA},0.75)`,
+              }}>
                 {!state ? 'Reading the day'
                   : readyN > 0 ? `${readyN} ready to claim`
                   : leftN === 0 ? 'All done for today'
-                  : 'The day'}
-              </motion.p>
-              <span className="font-karla" style={{ fontSize: '0.66rem', color: `${SEA},0.5)` }}>
-                <ResetCountdown />
+                  : `${leftN} left today`}
               </span>
+              <span style={{ fontSize: '0.64rem', color: `${SEA},0.45)` }}><ResetCountdown /></span>
             </div>
             {/* THE LAST ONE. Sparks off the headline, once, when the day
                 closes out in front of you. Local to the header. */}

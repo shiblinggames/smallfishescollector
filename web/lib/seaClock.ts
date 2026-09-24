@@ -138,6 +138,23 @@ export const PHASE_LABEL: Record<SeaPhase, string> = {
   night: 'Dark water',
 }
 
+/**
+ * WHAT COMES NEXT, AND WHEN. The day board's header says the moment and how
+ * long it has left ("Dark water · first light in 6m"), so the cycle reads as a
+ * clock you can plan by rather than a colour. Same boundaries seaClock draws.
+ */
+export function nextPhase(now: number = Date.now()): { phase: SeaPhase; ms: number } {
+  const nightStart = 0.5 - NIGHT_FRACTION / 2
+  const nightEnd = 0.5 + NIGHT_FRACTION / 2
+  const FADE = 0.09
+  const t = (now % CYCLE_MS) / CYCLE_MS
+  const marks: [number, SeaPhase][] = [
+    [nightStart - FADE, 'dusk'], [nightStart, 'night'], [nightEnd, 'dawn'], [nightEnd + FADE, 'day'],
+  ]
+  for (const [at, phase] of marks) if (t < at) return { phase, ms: Math.round((at - t) * CYCLE_MS) }
+  return { phase: 'dusk', ms: Math.round((1 - t + marks[0][0]) * CYCLE_MS) }
+}
+
 /** Milliseconds until the next night begins. Used to tell a player when to come
  *  back rather than leaving them to work it out. */
 export function msToNight(now: number = Date.now()): number {
