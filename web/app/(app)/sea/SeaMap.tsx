@@ -8008,6 +8008,10 @@ export default function SeaMap({
     let inLane = false
     /** The lane that carried the hull last frame: sticky through crossings (seaFlow). */
     let laneId: string | null = null
+    /** How far the fight's keep-out is in force, 0..1, eased, and the two ends
+     *  it was last drawn between (kept so it can ease OUT where it was). */
+    let keepK = 0, keepAt = 0
+    const keepA = { x: 0, y: 0 }, keepB = { x: 0, y: 0 }
     /** Tracked apart from `lastDark` because the backdrop also repaints when
      *  the boat has sailed far enough, and the grade has no reason to. */
     let lastGrade = -1
@@ -9562,6 +9566,47 @@ export default function SeaMap({
             // every one of them is in the same fishing boat.
             lift: at.lift,
           })
+        }
+        // ── NOTHING SAILS THROUGH A FIGHT ─────────────────────────────
+        //
+        // Kong: background ships sailed straight through fights, between the
+        // two hulls trading broadsides. Every other boat is placed by its own
+        // clock or by the wire, so none of them can be told to route round;
+        // what can be done is where they are DRAWN. While a fight is on, a
+        // capsule covers both hulls and the water between them, and any boat
+        // whose position falls inside it is drawn on its edge, so a patrol
+        // that crosses the fight slides round it rather than through. It
+        // eases in over a second when the fight starts and back out when it
+        // ends, so nothing is ever seen jumping.
+        {
+          const fh = fightHullRef.current
+          const tNow = performance.now()
+          const kdt = keepAt ? Math.min(0.1, (tNow - keepAt) / 1000) : 0
+          keepAt = tNow
+          if (fh) {
+            keepA.x = pos.current.x; keepA.y = pos.current.y
+            keepB.x = fh.at.x; keepB.y = fh.at.y
+          }
+          keepK += ((fh ? 1 : 0) - keepK) * (1 - Math.exp(-kdt * 3))
+          if (keepK > 0.001) {
+            const R = 640
+            const vx = keepB.x - keepA.x, vy = keepB.y - keepA.y
+            const L2 = vx * vx + vy * vy || 1
+            for (const f of list) {
+              const t = Math.max(0, Math.min(1, ((f.x - keepA.x) * vx + (f.y - keepA.y) * vy) / L2))
+              const qx = keepA.x + vx * t, qy = keepA.y + vy * t
+              let dx = f.x - qx, dy = f.y - qy
+              const d = Math.hypot(dx, dy)
+              if (d >= R) continue
+              // Dead on the line: out to the side, the same side every frame.
+              if (d < 1) { dx = -vy; dy = vx; const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n } else { dx /= d; dy /= d }
+              const push = (R - d) * keepK
+              const ox = dx * push, oy = dy * push
+              f.x += ox; f.y += oy; f.cx += ox; f.cy += oy
+              if (f.wx !== undefined) f.wx += ox
+              if (f.wy !== undefined) f.wy += oy
+            }
+          }
         }
         gpuRef.current.fleet(list)
       }

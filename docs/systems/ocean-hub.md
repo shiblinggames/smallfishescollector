@@ -3448,3 +3448,12 @@ down (rod out, fight, arriving); none of it pays anything.
   own colours over the water: a full-colour canopy mat was tried and read as "an island".
 - FULL SAIL (SeaMap): 2.5s of fast (>75% of top) straight (<0.5 rad/s turn) sailing -> +15%
   (FULL_SAIL), a bow splash and a tick of haptic when it fills; a hard turn or losing way drops it.
+
+## Nothing sails through a fight (2026-09-24)
+
+Kong: background ships sailed through fights. Every hull in the chart's `fleet` list (traders,
+Finndicate couriers, Finn, friends) is placed by its own clock or the wire, so none can be routed;
+instead, just before `gpu.fleet(list)`, a KEEP-OUT capsule (R 640) between your hull and
+`fightHullRef.at` pushes any hull inside it out to its edge (x/y, cx/cy, wx/wy together), eased
+in/out over ~1s (`keepK`). A crossing patrol is drawn sliding round the fight. Canvas only; the
+DOM chart (`?gpu=0`) is unchanged.
