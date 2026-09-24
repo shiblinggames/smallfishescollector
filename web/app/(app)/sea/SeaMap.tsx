@@ -17,6 +17,7 @@
 // animates on its own timer, because that is how a scene ends up feeling like
 // several things happening near each other.
 
+import { releaseCurtain } from '@/lib/arrivalHold'
 import { openMembership } from '@/components/MembershipModal'
 import { currentAt, kelpAt, CURRENT_PUSH, KELP_KEEP } from '@/lib/seaFlow'
 import { setSeaAmbience, updateSeaAmbience, playHarbourBell } from '@/lib/seaAmbience'
@@ -3187,6 +3188,10 @@ export default function SeaMap({
    * are the difference between "the map loaded" and "here is the sea".
    */
   const [curtain, setCurtain] = useState<'dark' | 'lit' | 'gone'>(wantsArrival ? 'dark' : 'gone')
+  // THE WELCOME'S BLACK, TAKEN OVER. The welcome holds a curtain on <body>
+  // through the refresh that builds this chart (lib/arrivalHold); ours is the
+  // same colour and already up, so dropping theirs on mount cannot be seen.
+  useEffect(() => { releaseCurtain() }, [])
   useEffect(() => {
     // The curtain lifts when the chart is warm, not when the page mounts.
     if (curtain !== 'dark' || !spritesReady) return
@@ -4330,7 +4335,12 @@ export default function SeaMap({
    *  can simply stow it. */
   const [canLeaveFishing, setCanLeaveFishing] = useState(false)
   const canLeaveRef = useRef(false)
-  canLeaveRef.current = canLeaveFishing
+  // THE FIRST VOYAGE KEEPS THE ROD OUT for the two beats about what is INSIDE
+  // the fishing card (the hold, the Almanac's Log button). A tap on the water
+  // stowed it and those lines went with it (Kong). The tour stows the rod
+  // itself on the beat after, through stowRod, which this does not touch.
+  const tourKeepsRod = !!tourBeat && (tourBeat.target === 'hold' || tourBeat.target === 'log')
+  canLeaveRef.current = canLeaveFishing && !tourKeepsRod
   const dialUpRef = useRef(false)
   dialUpRef.current = dialUp
 
@@ -13113,7 +13123,7 @@ hullRef={hullRefFor(t.key)} />
           onOpenAlmanac={() => setAlmanacOpen(true)}
           onCanLeave={setCanLeaveFishing}
           spritesReady={spritesReady}
-          onClose={() => { setFishingIn(null); setFrame('rest'); collectLevelRewards(); readOrders() }}
+          onClose={() => { if (tourKeepsRod) return; setFishingIn(null); setFrame('rest'); collectLevelRewards(); readOrders() }}
         />
       )}
 
@@ -13772,7 +13782,9 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
         // Right under the hull. The gap that made this look adrift was the
         // pale wash that used to sit between the two.
         position: 'absolute', left: 0, top: HULL_BOTTOM + 2,
-        transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+        // --plate-k: bigger on a desktop, where the chart is zoomed further out
+        // and the names read small (Kong). See .sea-surface in globals.css.
+        transform: `translateX(-50%) scaleY(${1 / GROUND}) scale(var(--plate-k, 1))`,
         transformOrigin: 'top center',
         textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
         padding: '3px 9px 4px', borderRadius: 9,
@@ -14375,7 +14387,9 @@ const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering, hullRef }
           anything written over art gets an opaque base under it. */}
       <div style={{
         position: 'absolute', left: 0, top: HULL_BOTTOM + 2,
-        transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+        // --plate-k: bigger on a desktop, where the chart is zoomed further out
+        // and the names read small (Kong). See .sea-surface in globals.css.
+        transform: `translateX(-50%) scaleY(${1 / GROUND}) scale(var(--plate-k, 1))`,
         transformOrigin: 'top center',
         textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
         padding: '3px 9px 4px', borderRadius: 9,
@@ -15044,7 +15058,9 @@ const FriendBoat = memo(function FriendBoat({ friend, refs, pose }: {
           colour for "somebody you are sailing with", wherever it appears. */}
       <div style={{
         position: 'absolute', left: 0, top: HULL_BOTTOM + 2,
-        transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+        // --plate-k: bigger on a desktop, where the chart is zoomed further out
+        // and the names read small (Kong). See .sea-surface in globals.css.
+        transform: `translateX(-50%) scaleY(${1 / GROUND}) scale(var(--plate-k, 1))`,
         transformOrigin: 'top center',
         textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
         padding: '3px 9px 4px', borderRadius: 9,

@@ -2662,8 +2662,14 @@ at once:
 - The character on the water was drawn in the default colour, because the one being chosen did not
   exist yet.
 
-Not mounting it ends all three at the source. The last modal (`WelcomeModal`, or `SetupModal` when
-there is no welcome to play) finishes with `window.location.assign('/sea')` — a **full load**, not
+Not mounting it ends all three at the source. **Since 2026-09-24 the last modal finishes with
+`router.refresh()` under `lib/arrivalHold`'s curtain**, not a full load: a full load of /sea showed
+`sea/loading.tsx` (a different dark, "Casting off") only when the server was slow, which is why a
+loading screen appeared on some runs and not others. The hold is a DOM node on <body> in the
+chart's own curtain colour; SeaMap releases it on mount under its identical curtain, so the black
+runs unbroken from the welcome to the arrival shot. A 12s fallback does the old full load. The
+welcome also `import()`s SeaMap and pixi.js on mount, so the chart's code downloads while the
+guides talk. (What follows is the history of the full load:) It used to be `window.location.assign('/sea')` — a **full load**, not
 `router.push`: the route is the one we are already on, and a soft navigation may reuse what it has,
 while a full load reads the finished profile — name, colour, avatar — and builds the chart once,
 correctly. There used to be a window event announcing the end of setup so a mounted chart could
@@ -2753,7 +2759,8 @@ disc, then the haul's row; SeaDay sends `sea-overlay` id `haulView`). The second
 bait skips both.
 
 The pennant beat waits until the hull is halfway from the Sea Gate to the wargate
-(`GATE_TOUR_ON_Y` in SeaGateTour), not merely through the gate. The crew sheet's close carries
+(`GATE_TOUR_ON_Y` in SeaGateTour), not merely through the gate, and the ring the path draws sits
+THERE (r `GATE_TOUR_ON_R` 520, sailing into it counts too), not at the arch. The crew sheet's close carries
 `data-tour-free` (CoachFlash's ALWAYS list), so a captain can shut one recruit and look at the
 others during the recruit beat.
 
@@ -3573,3 +3580,23 @@ was code (neon log-spiral textures, ribbed terraces, lightning) in a hand-painte
 - DEBRIS circles each rim and spirals in (deb-barrel/planks/mast/crate.webp), standing sprites,
   faded at both ends of the run. A DOOR LANDMARK stands at each rim: Davy's barnacled sea-king
   figurehead with a teal lantern, the Don's gilded lamp post on a lacquered dock.
+
+## The runway through the reef (2026-09-24)
+
+Kong: lights along the corridor between fishing and expeditions, like a runway. `sea/seaRunway.ts`
+puts two rows of twelve lamps down the edges of the gap (`GATE_X` ± `GATE_HALF` - 70), from
+`NORTH_WALL + 760` on the fishing side to `NORTH_WALL - 640` in the anchorage: each burns low all
+the time (brighter after dark) and a pulse chases up both rows toward the arch every 2.6s. One
+additive container, hidden and skipped while the passage is off screen.
+
+## NPC name plates on a desktop
+
+Finn's, the traders' and the regulars' plates carry `scale(var(--plate-k))` on their transform;
+`.sea-surface` sets `--plate-k: 1.45` on a fine pointer from 1000px (Kong: too small on desktop).
+
+## The first voyage keeps the rod out for the hold and the Almanac
+
+While the beat's target is `hold` or `log`, `canLeaveRef` is false and FishingHere's close is
+ignored: tapping the water stowed the rod and took those two lines with it. The tour's own
+`stowRod` on the beat after is unaffected.
+

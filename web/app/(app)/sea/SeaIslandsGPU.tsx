@@ -94,6 +94,7 @@ import { makeBanks, type Banks } from './seaBanks'
 import { makeChains, type Chains } from './seaChains'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { makeFlow } from './seaFlowGfx'
+import { makeRunway } from './seaRunway'
 import { makeRush } from './seaRush'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
@@ -1226,6 +1227,9 @@ export default function SeaIslandsGPU({
       // on it. See seaFlowGfx and lib/seaFlow.
       const flow = makeFlow(PIXI)
       world.addChild(flow.view)
+      // The lamps down the gap in the reef: a runway into the anchorage.
+      const runway = makeRunway(PIXI)
+      world.addChild(runway.view)
       const islandShades = new PIXI.Container()
       world.addChild(islandShades)
 
@@ -1900,6 +1904,7 @@ export default function SeaIslandsGPU({
             && Math.abs(g.y - camY) < halfH + g.r * 1.6) { g.g.advance(t); blowing++ }
         }
         flow.advance(t, camX, camY, halfW, halfH)
+        runway.advance(t, camX, camY, halfW, halfH, dark)
         windRush.advance(dt)
         for (const l of laps) {
           if (Math.abs(l.x - camX) < halfW + l.half * 2

@@ -245,7 +245,9 @@ four click-through cards from Doby and Kat, each beside the control it names, ov
   set"): read beats disable every action and the crew rail until Next, and the whole tutor puts
   `.coach-lock` on the body so CoachFlash swallows any press but the ringed control and the card.
   NOT `.sea-tour-lock`: that one greys and disables every unringed coach handle, and the action
-  row is one, so the ringed buttons inside it went dead. The x ends it. Crew abilities unlock at level 1 (since 2026-09-23).
+  row is one, so the ringed buttons inside it went dead. The x ends it. The deck is also held
+  while the has-seen check is in flight (`tutChecking`): that server call queues behind the
+  fight's others, and a turn taken before it answered ran the fight ahead of the script. Crew abilities unlock at level 1 (since 2026-09-23).
 - **Handles**: `raid-crew` on the crew rail, `raid-actions` on the row, `raid-dodge` / `raid-fire` / `raid-reload` / `raid-special` on the
   `CircleBtn`s (a `coach` prop), `raid-enemy-charges` on a shrink-to-fit box round the enemy's pips.
 - **When**: two frames after the deck paints, only when `RaidGame` passes `skirmishTour`

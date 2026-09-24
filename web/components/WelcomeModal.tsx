@@ -8,6 +8,8 @@ import GuideScene from '@/components/GuideScene'
 import { GUIDES } from '@/lib/onboardingScenes'
 import type { SceneLine } from '@/lib/raidMap'
 import { claimWelcomePack } from '@/app/actions/firstRun'
+import { useRouter } from 'next/navigation'
+import { holdCurtain } from '@/lib/arrivalHold'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -25,6 +27,16 @@ const WELCOME_SCENE: SceneLine[] = [
 
 export default function WelcomeModal() {
   const [, startTransition] = useTransition()
+  const router = useRouter()
+  // ── THE SEA IS FETCHED WHILE THEY TALK ─────────────────────────────────
+  // The chart's code and its renderer are the two biggest downloads in the
+  // game, and the welcome is ten seconds of two people talking. Both are
+  // pulled down now, so the chart that mounts after the last line is already
+  // in the browser rather than starting its download on the cut to black.
+  useEffect(() => {
+    void import('@/app/(app)/sea/SeaMap').catch(() => {})
+    void import('pixi.js').catch(() => {})
+  }, [])
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [env, setEnv] = useState<{ standalone: boolean; ios: boolean; chromeIOS: boolean; mobile: boolean } | null>(null)
   const [phase, setPhase] = useState<'scene' | 'install' | 'done'>('scene')
@@ -69,6 +81,8 @@ export default function WelcomeModal() {
     // the same black, so the welcome and the sea join up as one shot. The
     // scene stays mounted under the fade rather than vanishing first.
     setLeaving(true)
+    // The black that carries through to the chart: see lib/arrivalHold.
+    holdCurtain()
     // ANSWERED ON THE PRESS. The button goes to its pending state (see the
     // GuideScene below), the hand feels it, and the curtain starts moving now
     // rather than after an ease-in's dead first hundred milliseconds.
@@ -83,7 +97,12 @@ export default function WelcomeModal() {
       // welcome pack is on the row before the page reads it, and safe to fire
       // blind because has_seen_welcome gates the whole modal -- it can never
       // redirect a returning captain who chose to land elsewhere.
-      window.location.assign('/sea')
+      // IN PLACE, not a full load: a full load of /sea shows the route's
+      // loading screen whenever the server is slow, which is why it appeared
+      // on some runs and not others. A refresh re-reads the profile all the
+      // same (the layout drops this modal, the page builds the chart from the
+      // finished captain) and never shows it. See lib/arrivalHold.
+      router.refresh()
     })
   }
 

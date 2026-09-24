@@ -2412,16 +2412,25 @@ export default function RaidCombat({
   const [tutStep, setTutStep] = useState(-1)
   /** Waiting for the turn to resolve: the turn number it waits to reach. */
   const [tutWaitTurn, setTutWaitTurn] = useState<number | null>(null)
+  /** Asking the server whether this captain has had the tutor. THE DECK IS
+   *  HELD while it asks: the answer queues behind the fight's other server
+   *  calls, and a captain who took a turn before it came back ran the fight
+   *  ahead of the script (Kong: it did not force the flow). */
+  const [tutChecking, setTutChecking] = useState(skirmishTour)
   useEffect(() => {
-    if (!skirmishTour) return
+    if (!skirmishTour) { setTutChecking(false); return }
     let alive = true
     getSkirmishTourSeen()
       .then(seen => {
-        if (!alive || seen) return
+        if (!alive) return
+        if (seen) { setTutChecking(false); return }
         void markSkirmishTourSeen().catch(() => {})
-        requestAnimationFrame(() => requestAnimationFrame(() => { if (alive) setTutStep(0) }))
+        // Straight onto the first beat, in the same render the hold lifts, so
+        // there is no frame in between with a free deck.
+        setTutStep(0)
+        setTutChecking(false)
       })
-      .catch(() => {})
+      .catch(() => { if (alive) setTutChecking(false) })
     return () => { alive = false }
   }, [skirmishTour])
 
@@ -2579,7 +2588,7 @@ export default function RaidCombat({
   /** A card to read: no action at all until Next, or a press would run the
    *  fight ahead of the script. Every read beat, the last included: free play
    *  starts when the tutor is over. */
-  const tutReading = !!tutBeat && tutWaitTurn == null && !tutBeat.only && !tutBeat.aiming
+  const tutReading = tutChecking || (!!tutBeat && tutWaitTurn == null && !tutBeat.only && !tutBeat.aiming)
   const tutAllows = (a: 'reload' | 'dodge' | 'fire') => !tutReading && (!tutOnly || tutOnly === a)
   // Ring what the beat names; the first one on screen is also the anchor.
   useEffect(() => {

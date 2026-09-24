@@ -33,10 +33,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { GATE_TOUR, GATE_FORCED_THROUGH, SEA_ACCENT } from '@/lib/seaOnboarding'
-import { NORTH_WALL, PLACES, SEA_GATE, SEA_GATE_HALF } from './chart'
+import { NORTH_WALL, PLACES, SEA_GATE } from './chart'
 import { WARGATE } from './raidWaters'
 /** Halfway from the Sea Gate to the wargate: where the pennant beat comes up. */
 const GATE_TOUR_ON_Y = (SEA_GATE.y + WARGATE.y) / 2
+/** And the ring drawn there: sailing into it answers the beat too. */
+const GATE_TOUR_ON_R = 520
 
 /** Where the anchorage tour may begin: eleven hundred pixels north of the reef
  *  line, seven hundred clear of its northernmost rock, and still eighteen
@@ -259,7 +261,9 @@ export default function SeaGateTour({
   // road would run from the fishing grounds through the reef.
   const pathing = beat?.path === 'sea_gate' && !gated && inAnchorage
   const lit = useMemo(
-    () => (pathing ? { x: SEA_GATE.x, y: SEA_GATE.y, r: SEA_GATE_HALF } : routing ? nextAt : null),
+    // The ring is drawn where the beat now answers (GATE_TOUR_ON_Y), halfway
+    // on to the wargate, not at the arch it used to wait at.
+    () => (pathing ? { x: SEA_GATE.x, y: GATE_TOUR_ON_Y, r: GATE_TOUR_ON_R } : routing ? nextAt : null),
     [pathing, routing, nextAt],
   )
   useEffect(() => {
@@ -408,7 +412,10 @@ export default function SeaGateTour({
   // wargate, out in the expedition sea proper.
   useEffect(() => {
     if (!live || !wantGate || !pastGate) return
-    const check = () => { if (at.current.y < GATE_TOUR_ON_Y) next() }
+    const check = () => {
+      const p = at.current
+      if (p.y < GATE_TOUR_ON_Y || Math.hypot(p.x - SEA_GATE.x, p.y - GATE_TOUR_ON_Y) < GATE_TOUR_ON_R) next()
+    }
     check()
     const id = window.setInterval(check, 250)
     return () => window.clearInterval(id)

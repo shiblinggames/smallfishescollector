@@ -4079,3 +4079,11 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
   .loadout-stage { position: sticky; top: 0; }
   .loadout-grid { max-height: min(46vh, 420px); overflow-y: auto; padding: 2px 4px 2px 0; }
 }
+
+/* NPC name plates on the chart (Finn, traders, the regulars): a size dial.
+   They ride the world's zoom, and a desktop is zoomed further out, so the
+   names read small there (Kong, 2026-09-24). */
+.sea-surface { --plate-k: 1; }
+@media (pointer: fine) and (min-width: 1000px) {
+  .sea-surface { --plate-k: 1.45; }
+}

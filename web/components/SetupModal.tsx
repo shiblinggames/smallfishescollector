@@ -11,6 +11,8 @@ import CharacterAvatar from '@/components/CharacterAvatar'
 import WelcomeModal from './WelcomeModal'
 import { GUIDES } from '@/lib/onboardingScenes'
 import PopupShell from '@/components/PopupShell'
+import { useRouter } from 'next/navigation'
+import { holdCurtain } from '@/lib/arrivalHold'
 
 // ONE CARD, THREE STEPS. It used to be three separately sized cards and the
 // panel resized under a captain as they filled it in. One card now, and the
@@ -61,6 +63,7 @@ interface Props {
 }
 
 export default function SetupModal({ currentColor, unlockedColors, showWelcomeAfter, hasUsername, isPremium }: Props) {
+  const router = useRouter()
   const [step, setStep] = useState<Step>(hasUsername ? 'color' : 'username')
   const [done, setDone] = useState(false)
 
@@ -124,7 +127,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
       // page has been showing a dark field until now. Same full load the
       // welcome does, for the same reason: the chart gets built from the
       // finished profile, once.
-      if (!showWelcomeAfter) window.location.assign('/sea')
+      if (!showWelcomeAfter) { holdCurtain(); router.refresh() }
     })
   }
 
