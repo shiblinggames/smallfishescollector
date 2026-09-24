@@ -26,6 +26,7 @@
 // thing is a coastline or a rock the size of a boat.
 
 import type { Submerge } from './submerge'
+import { swashTextures } from './shoreFoam'
 
 /** How far the foam reaches either side of the line, as a fraction of the
  *  sprite's height. Small: this is a lap, not a bow wave. */
@@ -56,7 +57,67 @@ const STEPS = 28
 
 export type Lap = {
   mesh: import('pixi.js').Mesh<import('pixi.js').Geometry, import('pixi.js').Shader>
+  /** The swash and the wet stain: add this AFTER the dry half, so the water
+   *  can cross onto the object. Empty when no dry canvas was given. */
+  over: import('pixi.js').Container
   advance(seconds: number): void
+}
+
+/**
+ * ── AND IT WASHES UP ONTO THEM ──────────────────────────────────────────────
+ *
+ * Kong: can the waves wash onto the objects too, the way they wash onto the
+ * islands. The lap above is a band AT the waterline and nothing crossed it,
+ * so a wreck or a rock sat in the water rather than being washed by it. This
+ * is the islands' swash, ported: a translucent sheet with a torn white edge
+ * that runs up the object's face and drains back, and behind it a darker
+ * stain that lingers and fades, which is the stone or the planking staying
+ * wet. Same textures as the islands (shoreFoam swashTextures), same shape of
+ * motion: up fast, back slow, travelling along the object rather than hitting
+ * all of it at once.
+ *
+ * ONLY WHERE THE OBJECT IS. The waterline runs the sprite's full width and the
+ * object does not, so the run-up is weighted by COVER: read once off the dry
+ * canvas, whether there is painting just above the line at each point. Beside
+ * the object there is only sea, and nothing is drawn there.
+ */
+/** How far up the face the water runs, as a share of the sprite's height. */
+const RUNUP = 0.075
+/** One run up and back, in seconds. A little quicker than a beach. */
+const SWASH_PERIOD = 6.2
+/** How long the face stays wet after the water drains, in seconds. */
+const WET_FADE = 4.5
+
+/** Whether there is painting just above the waterline at each of the n
+ *  points, 0..1, smoothed so the swash thins at the silhouette's edge rather
+ *  than stopping square. */
+function coverOf(dry: HTMLCanvasElement, pts: [number, number][], n: number): Float32Array {
+  const out = new Float32Array(n)
+  let data: Uint8ClampedArray | null = null
+  try { data = dry.getContext('2d')?.getImageData(0, 0, dry.width, dry.height).data ?? null } catch { data = null }
+  if (!data) { for (let i = 0; i < n; i++) out[i] = Math.sin((i / (n - 1)) * Math.PI); return out }
+  const W = dry.width, H = dry.height
+  for (let i = 0; i < n; i++) {
+    const f = i / (n - 1)
+    const x = Math.min(W - 1, Math.max(0, Math.round(f * (W - 1))))
+    const yLine = (heightAt(pts, f * 100) / 100) * H
+    let hit = 0, tries = 0
+    for (let dy = 0.02; dy <= 0.09; dy += 0.01) {
+      const y = Math.round(yLine - dy * H)
+      if (y < 0 || y >= H) continue
+      tries++
+      if (data[(y * W + x) * 4 + 3] > 60) hit++
+    }
+    out[i] = tries ? hit / tries : 0
+  }
+  // Smooth, so the edge feathers.
+  const sm = new Float32Array(n)
+  for (let i = 0; i < n; i++) {
+    let s = 0, c = 0
+    for (let k = -2; k <= 2; k++) { const j = i + k; if (j >= 0 && j < n) { s += out[j]; c++ } }
+    sm[i] = s / c
+  }
+  return sm
 }
 
 /** The waterline's height at a fraction across the sprite, walking the
@@ -88,6 +149,9 @@ export function makeLap(
   w: number,
   h: number,
   seed: number,
+  /** The dry half's canvas, for where the object actually is. Without it
+   *  there is no swash, only the lap. */
+  dry?: HTMLCanvasElement | null,
 ): Lap {
   const n = STEPS
   const verts = new Float32Array(n * 4)
@@ -143,9 +207,71 @@ export function makeLap(
   const uvBuf = mesh.geometry.getBuffer('aUV')
   const base = Float32Array.from(uvs)
 
+  // ── THE SWASH ─────────────────────────────────────────────────────────
+  const over = new PIXI.Container()
+  let swash: ((t: number) => void) | null = null
+  if (dry) {
+    const cover = coverOf(dry, sub.pts, n)
+    const st = swashTextures(PIXI)
+    const LINE = new Float32Array(n)
+    const XS = new Float32Array(n)
+    for (let i = 0; i < n; i++) {
+      const f = i / (n - 1)
+      XS[i] = (f - 0.5) * w
+      LINE[i] = (heightAt(sub.pts, f * 100) / 100 - 1) * h
+    }
+    const strip = (tex: import('pixi.js').Texture, alpha: number) => {
+      const v = new Float32Array(n * 4)
+      const u = new Float32Array(n * 4)
+      for (let i = 0; i < n; i++) {
+        const uu = (i / (n - 1)) * ALONG + seed
+        u[i * 4] = uu; u[i * 4 + 1] = 0; u[i * 4 + 2] = uu; u[i * 4 + 3] = 1
+      }
+      const m = new PIXI.MeshSimple({ texture: tex, vertices: v, uvs: u, indices: new Uint32Array(idx) })
+      m.alpha = alpha
+      over.addChild(m)
+      return m
+    }
+    const wetM = strip(st.wet, 0.3)
+    wetM.tint = 0x223038
+    const sheetM = strip(st.sheet, 0.6)
+    const wetAmt = new Float32Array(n)
+    let lastT = 0
+    swash = (t: number) => {
+      const dt = Math.max(0, Math.min(0.1, t - lastT))
+      lastT = t
+      const decay = Math.exp(-dt / WET_FADE)
+      const cycle = t / SWASH_PERIOD
+      const sv = sheetM.geometry.getBuffer('aPosition')
+      const wv = wetM.geometry.getBuffer('aPosition')
+      const sd = sv.data as Float32Array, wd = wv.data as Float32Array
+      const below = 0.012 * h
+      for (let i = 0; i < n; i++) {
+        // Up fast, back slow, and travelling along the object.
+        let ph = (cycle + seed + (i / (n - 1)) * 0.3) % 1
+        if (ph < 0) ph += 1
+        const run = ph < 0.3 ? ph / 0.3 : 1 - (ph - 0.3) / 0.7
+        const e = run * run * (3 - 2 * run)
+        const up = RUNUP * h * cover[i] * e
+        wetAmt[i] = Math.max(wetAmt[i] * decay, up)
+        const x = XS[i], y = LINE[i]
+        // v = 0 is the leading edge, up the face; v = 1 back at the water.
+        sd[i * 4] = x; sd[i * 4 + 1] = y - up
+        sd[i * 4 + 2] = x; sd[i * 4 + 3] = y + below
+        wd[i * 4] = x; wd[i * 4 + 1] = y - wetAmt[i]
+        wd[i * 4 + 2] = x; wd[i * 4 + 3] = y + below
+      }
+      sv.update()
+      wv.update()
+    }
+    swash(0)
+  }
+
   return {
     mesh,
+    over,
     advance(seconds) {
+      swash?.(seconds)
       // v only. u is fixed to the object; scrolling it would slide the foam
       // ALONG the waterline, which is a thing water does not do to a rock.
       const off = -seconds * SPEED

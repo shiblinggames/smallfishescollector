@@ -178,7 +178,8 @@ export function makeSurfTexture(PIXI: typeof import('pixi.js')) {
 /** The swash sheet and the wet-sand band, one texture each, shared by every
  *  island. Built on first use per renderer. */
 const swashTex = new WeakMap<object, { sheet: Texture; wet: Texture }>()
-function swashTextures(PIXI: typeof import('pixi.js')): { sheet: Texture; wet: Texture } {
+/** Shared with the landmarks' swash (markLap), so one wave washes both. */
+export function swashTextures(PIXI: typeof import('pixi.js')): { sheet: Texture; wet: Texture } {
   const hit = swashTex.get(PIXI)
   if (hit) return hit
   const make = (paint: (v: number, u: number) => [number, number]) => {

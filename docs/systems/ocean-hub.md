@@ -3385,3 +3385,13 @@ Characters: Thread = clear, long swells, bright caustics, gulls. Sunken Hand = f
 birds. Coffers = standing golden hour, amber glints, squalls ~1 in 3. Last Fathom = heavy swell,
 never brighter than dusk, strongest blooms and leviathans. One Last Ride = choppy, whitecaps,
 storm-dark, a tempest ~95% of windows.
+
+## Landmark swash (2026-09-23)
+
+Kong: waves should wash onto the objects like the islands. `makeLap` (markLap.ts) now also returns
+`over`: the islands' swash ported (shoreFoam `swashTextures`, exported): a torn white sheet that runs
+up the object's face (RUNUP 7.5% of sprite height, period 6.2s, up fast / back slow, travelling
+along it) and a wet stain that fades (4.5s). Weighted by COVER read once off the dry canvas just
+above the waterline, so nothing is drawn beside the object. Added AFTER the dry half at both mark
+builders; night-tinted with the island foam. Only marks >= LAP_MIN_SIZE (150), so buoys and pots
+have none.

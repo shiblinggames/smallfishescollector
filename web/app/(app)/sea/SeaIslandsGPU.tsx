@@ -1167,11 +1167,13 @@ export default function SeaIslandsGPU({
           put(wet)
           if (sub && m.size >= LAP_MIN_SIZE) {
             const k = m.size / wet.width
-            const lap = makeLap(PIXI, sub, foamTex, m.size, (wet.height * k) / GROUND, (i * 0.41) % 1)
+            const lap = makeLap(PIXI, sub, foamTex, m.size, (wet.height * k) / GROUND, (i * 0.41) % 1, dry)
             node.addChild(lap.mesh)
             laps.push({ l: lap, x: m.x, y: m.y, half: m.size })
-          }
-          if (dry) put(dry)
+            if (dry) put(dry)
+            // The swash washes up OVER the dry half. See markLap.
+            node.addChild(lap.over)
+          } else if (dry) put(dry)
         }).catch(() => {})
         return node
       }
@@ -1666,12 +1668,13 @@ export default function SeaIslandsGPU({
           // without anybody blending anything.
           if (sub && m.size >= LAP_MIN_SIZE) {
             const k = m.size / wet.width
-            const lap = makeLap(PIXI, sub, foamTex, m.size, wet.height * k, (m.i * 0.41) % 1)
+            const lap = makeLap(PIXI, sub, foamTex, m.size, wet.height * k, (m.i * 0.41) % 1, dry)
             inner.addChild(lap.mesh)
             laps.push({ l: lap, x: m.x, y: m.y, half: m.size })
-          }
-
-          if (dry) add(dry)
+            if (dry) add(dry)
+            // The swash washes up OVER the dry half. See markLap.
+            inner.addChild(lap.over)
+          } else if (dry) add(dry)
 
           // The counter-squash, about the base, so it stands rather than lies.
           node.scale.set(1, 1 / GROUND)
@@ -2181,6 +2184,8 @@ export default function SeaIslandsGPU({
           for (const b of baked) b.sprite.tint = tint
           // Foam is paint now, not light, so it takes the hour like the land.
           for (const f of foams) { f.f.mesh.tint = tint; f.f.over.tint = tint }
+          // The landmarks' swash takes the hour too, or it glows white after dark.
+          for (const l of laps) l.l.over.tint = tint
           for (const p of platedIsles) if (!p.locked) p.plate.tint = tint
           // THE GRASS IS ON THE LAND, so it takes what the land takes. It was
           // taking nothing at all: a meadow's tint is its island's own green,
