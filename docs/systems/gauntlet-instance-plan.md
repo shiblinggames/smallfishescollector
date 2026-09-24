@@ -521,3 +521,15 @@ Kong: "this is our endgame content, I really want these to stand out." The three
   recolour it. Depth 10+: waterline soak tinted weed-green. 20+: teal drowned glow. 35+:
   ghost-fire (paler, flickering). Hardcore reds it. Elites glow violet (`enemyAura`) at any
   depth.
+
+**Round two (same day).**
+- **The sounding line.** `DepthBar` carries a hairline along its own bottom edge (no added
+  height; anything that grows above the fight shoves the stage mid-turn): the current run of ten
+  depths as ticks, the ones behind you lit, a bead where you are, red diamonds where you sank a
+  boss (`runEventsRef` boss events), green diamonds at `DON_RISE_DEPTHS` in the Don's variant, a
+  gold notch at your record. Bosses are ROLLED, so nothing ahead is marked but what is fixed.
+- **The lanterns go out.** Hardcore death: the lost squad is `LanternsOut`, each hand lit warm with
+  their name, then going dark one by one (`LANTERN_FIRST` 1.1s, `LANTERN_STEP` 0.7s): glow dies,
+  face greys and settles; the "rest in your Crew Hall" line arrives after the last.
+- **NOT DONE, on purpose: a foil sheen on legendary boons.** The boon card records that a sweeping
+  sheen was rejected (a shop-window shine moving over the words of an irreversible choice).

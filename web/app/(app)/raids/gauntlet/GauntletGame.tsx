@@ -3523,19 +3523,12 @@ export default function GauntletGame(props: GauntletGameProps) {
               style={{ marginTop: 14, padding: '1rem 0.95rem', borderRadius: 16, background: `${CRIMSON}12`, border: `1px solid ${CRIMSON}55`, boxShadow: `inset 0 0 22px ${CRIMSON}0e` }}
             >
               <p className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.2em', color: `${CRIMSON}dd` }}>Lost to the Locker</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 11 }}>
-                {props.crewMembers.map(c => (
-                  <div key={c.id} title={c.name} style={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${CRIMSON}66`, background: 'rgba(20,10,12,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, filter: 'grayscale(0.5) brightness(0.82)' }}>
-                    {c.imageUrl
-                      // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#c48a8a' }}>{c.name.slice(0, 1)}</span>}
-                  </div>
-                ))}
-              </div>
-              <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(240,220,220,0.82)', marginTop: 11, lineHeight: 1.45 }}>
+              <LanternsOut crew={props.crewMembers} color={CRIMSON} />
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                transition={{ delay: LANTERN_FIRST + props.crewMembers.length * LANTERN_STEP + 0.3, duration: 0.8 }}
+                className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(240,220,220,0.82)', marginTop: 11, lineHeight: 1.45 }}>
                 Your squad went down with the ship: {props.crewMembers.length} crew, gone for good. They rest now in your Crew Hall.
-              </p>
+              </motion.p>
               <button onClick={() => router.push('/crew')} className="font-karla font-700 uppercase tracking-[0.12em] tap"
                 style={{ marginTop: 12, padding: '0.5rem 1rem', borderRadius: 10, fontSize: '0.58rem', background: `${CRIMSON}18`, border: `1px solid ${CRIMSON}66`, color: '#fca5a5', cursor: 'pointer' }}>
                 Visit the Graveyard
@@ -5660,7 +5653,10 @@ export default function GauntletGame(props: GauntletGameProps) {
         {fight.isBoss && <BossArrival key={`boss-${fight.depth}`} depth={fight.depth} name={fight.enemy.name} hardcore={hardcoreRun} />}
         <div className="gauntlet-depthbar">
           <div>
-            <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} contract={contractChip} marks={marks} />
+            <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} contract={contractChip} marks={marks}
+              best={hardcoreRun ? props.hcDeepest : props.deepest}
+              bossDepths={runEventsRef.current.filter(e => e.kind === 'boss').map(e => e.depth)}
+              riseDepths={props.variant === 'don' ? DON_RISE_DEPTHS : []} />
           </div>
         </div>
         {/* Everything the run carries (job, Don's Marks, terms, curses) now lives
@@ -8687,7 +8683,7 @@ function Tally({ n, color, label, filled, children }: {
   )
 }
 
-function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted, pressure = 0, signedTerms = {}, contract = null, marks = [] }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean; pressure?: number; signedTerms?: SignedTerms; contract?: ContractOffer | null; marks?: ChosenMark[] }) {
+function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, potGain, uncharted, pressure = 0, signedTerms = {}, contract = null, marks = [], best = 0, bossDepths = [], riseDepths = [] }: { best?: number; bossDepths?: number[]; riseDepths?: number[]; depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean; potGain?: { amount: number; key: number; boss: boolean } | null; uncharted?: boolean; pressure?: number; signedTerms?: SignedTerms; contract?: ContractOffer | null; marks?: ChosenMark[] }) {
   const sharkMarks = marks.filter(m => m.type === 'shark').length
   const whaleMarks = marks.filter(m => m.type === 'whale').length
   // The bar shows only the ESSENTIALS on one immovable row; tapping it opens
@@ -8716,6 +8712,7 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
         // columns clip rather than wrap.
         style={{
           display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', columnGap: 6,
+          position: 'relative',
           background: '#050b13', border: isHardcore ? '1px solid rgba(220,38,38,0.55)' : `1px solid ${GOLD}28`,
           borderRadius: 14, padding: '0.4rem 0.6rem', cursor: 'pointer',
           boxShadow: isHardcore ? '0 0 16px rgba(200,20,32,0.32), inset 0 0 10px rgba(120,10,18,0.3)' : undefined,
@@ -8793,6 +8790,41 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
           </span>
           <svg aria-hidden width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7a746a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : undefined }}><path d="M6 9l6 6 6-6" /></svg>
         </div>
+        {/* ── THE SOUNDING LINE ────────────────────────────────────────────
+            Where you are in this run of ten depths, laid along the bar's own
+            bottom edge so it costs the header no height (anything that grows
+            here shoves the fight down mid-turn). A tick a depth; the ones
+            behind you lit; a bead where you are; red marks where you sank a
+            boss; green diamonds at the Don's fixed rises; a gold notch at your
+            record. Bosses are rolled, not placed, so nothing ahead is marked
+            but what the run already fixes. */}
+        {(() => {
+          const lo = Math.floor((depth - 1) / 10) * 10 + 1
+          const hi = lo + 9
+          const X = (d: number) => `${((d - lo) / 9) * 100}%`
+          const inWin = (d: number) => d >= lo && d <= hi
+          const lit = isHardcore ? '#f87171' : GOLD
+          return (
+            <div aria-hidden style={{ position: 'absolute', left: 12, right: 12, bottom: 1, height: 7, pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', left: 0, right: 0, top: 3, height: 1, background: `${lit}26` }} />
+              <div style={{ position: 'absolute', left: 0, width: X(Math.min(depth, hi)), top: 3, height: 1, background: `${lit}88`, boxShadow: `0 0 4px ${lit}66` }} />
+              {Array.from({ length: 10 }).map((_, i) => {
+                const d = lo + i
+                return <span key={d} style={{ position: 'absolute', left: X(d), top: 2, width: 1, height: 3, marginLeft: -0.5, background: d <= depth ? `${lit}aa` : `${lit}33` }} />
+              })}
+              {bossDepths.filter(inWin).map(d => (
+                <span key={`b${d}`} style={{ position: 'absolute', left: X(d), top: 1, width: 5, height: 5, marginLeft: -2.5, transform: 'rotate(45deg)', background: '#f87171', boxShadow: '0 0 5px #f8717188' }} />
+              ))}
+              {riseDepths.filter(inWin).map(d => (
+                <span key={`r${d}`} style={{ position: 'absolute', left: X(d), top: 1, width: 5, height: 5, marginLeft: -2.5, transform: 'rotate(45deg)', border: '1px solid #3fbf82', background: d < depth ? '#3fbf82' : 'transparent' }} />
+              ))}
+              {best > 0 && inWin(best) && (
+                <span style={{ position: 'absolute', left: X(best), top: -1, width: 2, height: 9, marginLeft: -1, background: GOLD, boxShadow: `0 0 6px ${GOLD}` }} />
+              )}
+              <span style={{ position: 'absolute', left: X(Math.min(depth, hi)), top: 1, width: 5, height: 5, marginLeft: -2.5, borderRadius: '50%', background: '#fff6dc', boxShadow: `0 0 7px ${lit}` }} />
+            </div>
+          )
+        })()}
       </div>
 
       {/* ── "+N ⟡" — EVERY KILL FEEDS THE POT, VISIBLY ──────────────────────
@@ -8956,5 +8988,50 @@ function BossArrival({ depth, name, hardcore }: { depth: number; name: string; h
         </motion.div>
       )}
     </AnimatePresence>
+  )
+}
+
+/**
+ * ── THE LANTERNS GO OUT ─────────────────────────────────────────────────────
+ * Kong: hardcore crew death is the heaviest thing in the game and deserved a
+ * moment. The squad was a row of greyed thumbnails. Now each hand is a lantern:
+ * lit, warm, their name under them, and then going dark one at a time, the
+ * glow dying, the face greying and settling a few pixels lower. Quiet on
+ * purpose: nothing full-screen, no sound of its own, just the order they go.
+ */
+const LANTERN_FIRST = 1.1
+const LANTERN_STEP = 0.7
+function LanternsOut({ crew, color }: { crew: { id: string | number; name: string; imageUrl?: string | null }[]; color: string }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center', marginTop: 14 }}>
+      {crew.map((c, i) => {
+        const at = LANTERN_FIRST + i * LANTERN_STEP
+        return (
+          <div key={c.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 58 }}>
+            <motion.div initial={{ y: 0 }} animate={{ y: 5 }} transition={{ delay: at, duration: 1.4, ease: 'easeOut' }}
+              style={{ position: 'relative', width: 44, height: 44 }}>
+              {/* The light: warm while they are here, gone when they are not. */}
+              <motion.span aria-hidden initial={{ opacity: 1, scale: 1 }} animate={{ opacity: 0, scale: 0.7 }}
+                transition={{ delay: at, duration: 0.9, ease: 'easeIn' }}
+                style={{ position: 'absolute', inset: -14, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,190,110,0.55) 0%, rgba(255,150,70,0.18) 45%, transparent 70%)' }} />
+              <motion.div initial={{ filter: 'grayscale(0) brightness(1)', borderColor: 'rgba(255,196,120,0.85)' }}
+                animate={{ filter: 'grayscale(1) brightness(0.5)', borderColor: `${color}55` }}
+                transition={{ delay: at, duration: 1.1, ease: 'easeOut' }}
+                style={{ position: 'relative', width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', border: '2px solid', background: 'rgba(20,10,12,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {c.imageUrl
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#c48a8a' }}>{c.name.slice(0, 1)}</span>}
+              </motion.div>
+            </motion.div>
+            <motion.span initial={{ opacity: 0.95, color: '#f3dcc0' }} animate={{ opacity: 0.6, color: '#9a8a86' }}
+              transition={{ delay: at, duration: 1.1 }}
+              className="font-karla font-700" style={{ fontSize: '0.6rem', marginTop: 7, maxWidth: 58, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {c.name}
+            </motion.span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
