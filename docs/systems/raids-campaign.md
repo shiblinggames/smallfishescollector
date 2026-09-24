@@ -524,3 +524,12 @@ the player's Fortune card already shows the multiplier.
   chase skins lost it first, then every summon (Kong, 2026-09-24). The glow, the white arrival
   flash and the rising motes carry an ordinary summon; a chase skin adds its flare, ripples and
   signature.
+
+**The campaign panel shows people, not ships (2026-09-24).** `SeaCampaignPanel`'s fight rows used
+the boss's `image` (the hull). They take the enemy's `portrait` now, falling back to the hull only
+for an enemy nobody has painted a face for. EVERY NEW ENEMY SHOULD CARRY A `portrait`. The ships on
+the water (`hullFor`) stay ships.
+
+**Return to port fades.** `RaidSheet` fades off the water over 460ms on leave and only then calls
+the chart's close, so the sheet is gone before the chart takes the sea back and re-renders.
+

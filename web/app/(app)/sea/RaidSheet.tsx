@@ -36,6 +36,8 @@ import type { ShipAnchor, ShipFx, FightFx } from '@/app/(app)/raids/RaidCombat'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { raidSheetState, type RaidSheetState } from './raidSheetActions'
 
+const LEAVE_MS = 460
+
 export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFightFx, onEnemyPhase, onClose, onSunk }: {
   /** Which fight. Resolved to a config through the registry, so this cannot
    *  drift from the raid the node map opens. */
@@ -63,6 +65,17 @@ export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFigh
   const [fetched, setFetched] = useState<RaidSheetState | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const state = preloaded ?? fetched
+  // ── RETURN TO PORT FADES, THEN HANDS BACK ────────────────────────────
+  // Kong: the return after the loot was not smooth. The sheet vanished in
+  // the same frame the chart took the sea back (and re-rendered everything
+  // for it). It fades off the water first now, and the chart gets it back
+  // once it is gone.
+  const [leaving, setLeaving] = useState(false)
+  const leave = () => {
+    if (leaving) return
+    setLeaving(true)
+    window.setTimeout(onClose, LEAVE_MS)
+  }
 
   // READ FRESH, BUT ON APPROACH. Crew, gear, items and the repair debt all
   // change between fights, and a payload kept from the last one would arm you
@@ -93,6 +106,9 @@ export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFigh
       onPointerDown={e => e.stopPropagation()}
       style={{
         position: 'fixed', inset: 0, zIndex: 113,
+        opacity: leaving ? 0 : 1,
+        transition: `opacity ${LEAVE_MS}ms ease-in`,
+        pointerEvents: leaving ? 'none' : undefined,
         // NO BACKDROP OF ITS OWN. That is the whole point: what is behind this
         // is the sea, still running, still the water you sailed here across.
         //
@@ -144,7 +160,7 @@ export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFigh
           raidMods={state.raidMods}
           bonusChargeSlots={state.bonusChargeSlots}
           manowarAugment={state.manowarAugment}
-          onLeave={onClose}
+          onLeave={leave}
           onEnemyPhase={onEnemyPhase}
           // THE FISHING GEAR ON THE DIAL. The route always passed this; the
           // sheet did not, so fighting Finn from the water quietly dropped the

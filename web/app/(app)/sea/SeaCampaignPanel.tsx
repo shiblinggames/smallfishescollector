@@ -271,7 +271,13 @@ export default function SeaCampaignPanel({ open, onClose, status, nextId }: {
                           // table — the same read the Wargate does, so the two
                           // never show a different portrait for one man.
                           const cfg = isCombatNode(n.type) && n.raidId ? getRaidConfigById(n.raidId) : null
-                          const face = cfg ? cfg.enemies[cfg.bossId]?.image ?? null : null
+                          // THE PERSON, NOT THE SHIP (Kong: Corsair's Reckoning
+                          // showed Pete's boat; show him). The painted portrait
+                          // when the enemy has one, which is nearly all of them
+                          // and every new one should; the hull only as a
+                          // fallback for a face nobody has painted yet.
+                          const boss = cfg ? cfg.enemies[cfg.bossId] : null
+                          const face = boss ? boss.portrait ?? boss.image ?? null : null
                           return (
                             <div key={n.id} style={{ display: 'flex', gap: 11, alignItems: 'flex-start', padding: '4px 0' }}>
                               <span aria-hidden style={{
@@ -304,8 +310,8 @@ export default function SeaCampaignPanel({ open, onClose, status, nextId }: {
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={face} alt="" loading="lazy" decoding="async"
                                       style={{
-                                        width: 46, height: 46, flexShrink: 0, borderRadius: 9, objectFit: 'cover',
-                                        objectPosition: 'center top', background: 'rgba(4,9,15,0.7)',
+                                        width: 50, height: 50, flexShrink: 0, borderRadius: 10, objectFit: 'cover',
+                                        objectPosition: 'center 18%', background: 'radial-gradient(circle at 50% 40%, rgba(196,169,106,0.22), rgba(4,9,15,0.85) 75%)',
                                         filter: isDone ? 'saturate(0.6) brightness(0.72)' : 'none',
                                       }} />
                                     <span style={{ minWidth: 0 }}>
