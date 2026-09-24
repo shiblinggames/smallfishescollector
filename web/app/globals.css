@@ -4044,3 +4044,8 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
 .codex-tile:hover { transform: translateY(-3px); }
 .codex-btn { transition: transform 0.18s ease; }
 .codex-btn:hover { transform: translateY(-2px) scale(1.04); }
+
+/* The recruit board's reroll faces (CrewClient): lift on hover, press on tap. */
+.reroll-btn .reroll-face { transition: transform 0.16s ease, box-shadow 0.16s ease; }
+.reroll-btn:not(:disabled):hover .reroll-face { transform: translateY(-2px) scale(1.05); }
+.reroll-btn:not(:disabled):active .reroll-face { transform: scale(0.94); }

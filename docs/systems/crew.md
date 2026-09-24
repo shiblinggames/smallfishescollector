@@ -179,4 +179,14 @@ Kong: the recruit hall and crew cards should be art forward, like the enemy stat
   board and roster grids went from minmax(300px) to minmax(172px) for the taller card.
 - The crew DETAIL sheet opens on a full-bleed painting (210px, 250 on wide) with the name and the
   one-time rename on its scrim; the close floats over the art; level/XP bar under it. The shell
-  grew (590 / 700) so the tabs keep their budgeted body height.
+  grew (590) so the tabs keep their budgeted body height.
+- On desktop (wideDetail) the sheet is TWO COLUMNS (900 wide, min(86vh, 620px)): the painting is a
+  340px left column at full height, and the body and the action footer sit on the right. A phone
+  keeps the painting across the top.
+- NO RECRUIT BUTTON ON A BOARD CARD. It looked dated, and it came and went with the reveal, so the
+  card changed height and the hall grew a scrollbar on every reroll. You press the card to open the
+  sheet and sign them on in its footer. Swipe to recruit still works on touch.
+- The reroll row (Reroll, and the blood tiers Bloodied / Sanguine) is circles and words: a round
+  face in the colour of what it spends (gem purple, blood red) with a die or a drop, and the name,
+  the Legendary boost and the cost under it. The "Blood-Charged Reroll" pill sits over the board's
+  top edge (zero height) so it never pushes the board down.

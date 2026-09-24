@@ -2136,56 +2136,49 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
               })) : []),
             ]
             return (
-              <div style={{ marginBottom: '1.1rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rolls.length}, minmax(0, 1fr))`, gap: 7 }}>
+              // ── CIRCLES AND WORDS ──────────────────────────────────────
+              // Kong: the reroll / blood / sanguine buttons looked bad. They were
+              // three boxes of small print stretched across the width. Now each
+              // is the control the rest of the game uses for an action: a round
+              // face in what it spends (the gem's purple, the blood's red) with a
+              // die or a drop on it, and the words under it: its name, what it
+              // does better, what it costs. Centred, sized to their content.
+              <div style={{ marginBottom: '1.1rem', position: 'relative' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 'clamp(14px, 4vw, 34px)' }}>
                   {rolls.map(r => {
-                    // ── EACH BUTTON WEARS WHAT IT SPENDS ──────────────
-                    //
-                    // The plain reroll was BLUE, which is a colour this game
-                    // uses for nothing you can spend: it read as a system
-                    // button parked between two crimson ones. It costs gems, so
-                    // it takes the gem's own purple, and the blood tiers keep
-                    // blood. Now the row is legible without reading it — the
-                    // colour IS the price — and neither of them is inventing a
-                    // hue the panel does not already own.
                     const blood = r.key !== 'gem'
                     const accent = blood ? BLOOD : '#a78bfa'
                     return (
-                      <button
-                        key={r.key}
-                        onClick={r.onTap}
-                        disabled={r.cannot}
-                        className="active:scale-95"
+                      <button key={r.key} onClick={r.onTap} disabled={r.cannot} className="tap reroll-btn"
                         title={blood ? 'Spend Blood Gems for far better odds' : 'Spend gems for 3 brand-new recruits'}
                         style={{
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-                          minWidth: 0, padding: '0.6rem 0.4rem 0.55rem', borderRadius: 12,
-                          // ── QUIET GROUND, ONE LINE OF COLOUR ────────────
-                          //
-                          // It was a heavy two-stop wash of its own accent over
-                          // a warm base, which made a small button look like a
-                          // banner and put two saturated blocks side by side at
-                          // the top of the board. The base is the panel's own
-                          // dark now and the accent is spent on the border and
-                          // the words — the treatment every other control in
-                          // this modal already uses.
-                          background: r.cannot ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
-                          border: `1px solid ${accent}${r.cannot ? '33' : '66'}`,
-                          opacity: r.cannot ? 0.55 : 1,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: 92, padding: 0,
+                          background: 'none', border: 'none', opacity: r.cannot ? 0.45 : 1,
                           cursor: r.cannot ? 'not-allowed' : 'pointer',
-                          transition: 'transform 0.08s, opacity 0.18s, border-color 0.18s',
-                        }}
-                      >
-                        <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.04em', lineHeight: 1.1, color: r.cannot ? 'rgba(240,237,232,0.5)' : '#f2ead8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
-                          {r.busy ? '…' : r.name}
+                        }}>
+                        <span className="reroll-face" style={{
+                          width: 58, height: 58, borderRadius: '50%', display: 'grid', placeItems: 'center',
+                          background: `radial-gradient(circle at 38% 30%, ${accent}66 0%, ${accent}22 55%, rgba(8,6,10,0.9) 100%)`,
+                          border: `1.5px solid ${accent}${r.cannot ? '55' : 'cc'}`,
+                          boxShadow: r.cannot ? 'none' : `0 0 16px ${accent}44, inset 0 1px 0 rgba(255,255,255,0.18)`,
+                          color: '#fbf3ff',
+                        }}>
+                          {r.busy ? (
+                            <span className="font-cinzel font-800" style={{ fontSize: '1rem' }}>…</span>
+                          ) : blood ? (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2.5c3.6 4.6 6 8 6 11a6 6 0 0 1-12 0c0-3 2.4-6.4 6-11z" /></svg>
+                          ) : (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" aria-hidden>
+                              <rect x="4" y="4" width="16" height="16" rx="3.5" />
+                              <circle cx="9" cy="9" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="15" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="9" r="1.3" fill="currentColor" stroke="none" /><circle cx="9" cy="15" r="1.3" fill="currentColor" stroke="none" />
+                            </svg>
+                          )}
                         </span>
+                        <span className="font-cinzel font-800" style={{ fontSize: '0.74rem', color: '#f2ead8', lineHeight: 1.1, textAlign: 'center' }}>{r.name}</span>
                         {r.boost && (
-                          <span className="font-cinzel font-800" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.64rem', color: '#7ee0a3', lineHeight: 1, whiteSpace: 'nowrap' }}>
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7ee0a3" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
-                            {r.boost}
-                          </span>
+                          <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: '#7ee0a3', lineHeight: 1.1, whiteSpace: 'nowrap' }}>{r.boost}</span>
                         )}
-                        <span className="font-karla font-700" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.62rem', color: 'rgba(255,255,255,0.72)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                        <span className="font-karla font-700" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.62rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                           {r.cost}
                         </span>
                       </button>
@@ -2201,8 +2194,10 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
             )
           })()}
 
+          {/* Over the board's top edge, not in the flow: it appears only while a
+              reveal plays, and in the flow it pushed the whole board down. */}
           {reveal.revealing && reveal.bloodied && (
-            <div className="flex justify-center" style={{ marginBottom: 12 }}>
+            <div className="flex justify-center" style={{ position: 'relative', height: 0, zIndex: 4, top: -8 }}>
               <span className="font-cinzel font-700 uppercase" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.28rem 0.75rem', borderRadius: 999, fontSize: '0.56rem', letterSpacing: '0.16em', color: '#f3c0c6', background: `${BLOOD}1e`, border: `1px solid ${BLOOD}66`, boxShadow: `0 0 16px ${BLOOD}33` }}>
                 <BloodDrop size={12} /> Blood-Charged Reroll
               </span>
@@ -2234,20 +2229,11 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   hint={c.effects.length > 0 && !c.recruited && !viewed.has(`board:${c.id}`)}
                   aboard={c.recruited}
                   onClick={() => openDetail('board', c)}>
-                  {/* ── THE BUTTON, IN THE CARD ──────────────────────────
-                      The card has a footer slot in its info column built for
-                      exactly this, and the column has the room. Signing a
-                      hand on used to be a swipe (touch only) or a tap into
-                      the sheet; the first pass at fixing that hung the button
-                      UNDER the card, which is a button floating beside a card
-                      rather than a card you can act on.
-
-                      Not while the reveal is playing: a live Recruit on a
-                      card still flipping is a card offering something it has
-                      not finished being. */}
-                  {!reveal.phases[c.id] && !reveal.climaxActive
-                    ? renderRecruitAction(c, undefined, true)
-                    : null}
+                  {/* NO BUTTON ON THE CARD (Kong: it looked antiquated, and it
+                      came and went with the reveal, so the card changed height
+                      and the sheet grew a scrollbar on every reroll). The card
+                      is the way in: press it and the sheet it opens signs them
+                      on. A swipe still recruits on touch. */}
                 </CrewPanel>
               )
               const phase = reveal.phases[c.id]
@@ -3493,85 +3479,13 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
           const dTraitLabel = traitLabel(dTrait)
           const dTraitKind = traitKind(dTrait)
           const close = () => { setConfirmAct(null); setStatDetail(null); setDetail(null); setClassExpanded(false); setRenameOpen(false); setRenameErr(null); setPreviewSkin(undefined); setDetailTab('stats') }
-          return (
-            <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-              onClick={close}
-              style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(3,2,5,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
-              <motion.div key="crew-detail" initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 8 }} transition={{ duration: 0.18, ease: 'easeOut' }}
-                onClick={e => e.stopPropagation()}
-                style={{
-                  // FIXED height, not max-height. The card used to grow and
-                  // shrink as you moved between Stats / Ability / Skins, which
-                  // made the tabs feel like they were resizing the sheet. Now
-                  // the shell is constant and the body between the header and
-                  // the action row is the only thing that scrolls.
-                  //
-                  // 620 -> 500, and the header then went from stacked to side by
-                  // side, which is where the room for the body actually came
-                  // from. The old budget was close ~28 + portrait 196 + name ~29
-                  // + level bar ~35 + tabs ~55 + actions ~61, leaving the body
-                  // about 84px — too little for the Stats tab's stat row plus its
-                  // trait line, so the trait fell below the fold on a short phone.
-                  //
-                  // Now: close ~44 + header 146 + tabs ~55 + actions ~61 leaves
-                  // the body around 194. The trait is visible without scrolling
-                  // and the Skins grid gets a usable window. Taller tabs still
-                  // scroll, which is what the scroll region is for.
-                  // Taller for the painting across the top (Kong: art forward, like
-                  // the enemy's card). The body keeps the room it was budgeted.
-                  width: '100%', maxWidth: wideDetail ? 760 : 'var(--modal-w)', height: wideDetail ? 'min(88vh, 700px)' : 'min(86vh, 590px)',
-                  position: 'relative',
-                  display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                  borderRadius: 14,
-                  background: detail.kind === 'board' ? RECRUIT_PANEL_BG : ROSTER_PANEL_BG,
-                  // Rarity at the EDGE, not shouting from it. A full-strength
-                  // 1.5px coloured border plus a coloured bloom made the sheet
-                  // read as a rarity announcement; the portrait ring and the
-                  // rarity word already say the tier twice.
-                  border: `1px solid ${dColor}4d`,
-                  boxShadow: `0 24px 60px rgba(0,0,0,0.62), 0 0 30px ${dColor}1c`,
-                }}>
-                {/* A real 32px target with a plate under it, the same close the
-                    boss sheet and the voyage sheet use. A bare glyph with 5px of
-                    padding is a thumb-sized miss on a phone. */}
-                <div className="flex justify-end" style={{ position: 'absolute', top: 0, right: 0, zIndex: 4, padding: '0.55rem 0.6rem 0' }}>
-                  <button onClick={close} aria-label="Close" type="button"
-                    style={{
-                      width: 32, height: 32, borderRadius: '50%', padding: 0, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'rgba(7,5,4,0.7)', border: '1px solid rgba(255,255,255,0.2)',
-                      color: 'rgba(255,255,255,0.8)', touchAction: 'manipulation',
-                    }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
-                  </button>
-                </div>
-                {/* minHeight:0 or this never scrolls - it just grows the shell. */}
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 1.1rem 0.4rem' }}>
-
-                {/* HEADER ROW: portrait left, identity right.
-                    This used to be a 186x196 portrait CENTRED in a 360 sheet with
-                    the name and level bar stacked under it. That spent 260px of a
-                    500px sheet on the header and left ~87px of dead space down
-                    each side of the picture, which is why the Stats tab's trait
-                    line fell below the fold on a short phone. Side by side the
-                    same information costs ~146px and fills the width. */}
-                {/* ── THE PAINTING FIRST ─────────────────────────────────────
-                    Full-bleed across the top of the sheet (pulled out through
-                    the body's padding), the art on a pool of its rarity, and the
-                    name set on a scrim across its foot: the enemy card's shape.
-                    It was a 132px portrait beside the name. */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-
-                {/* Portrait — rarity frame; a shown skin makes the ART itself glow
-                    in its color (drop-shadow aura on the image). clip-path keeps
-                    the glow inside the arch so it never spills past the frame.
-                    Geometry is IDENTICAL on every tab. The Skins tab used to
-                    shrink the frame 196 -> 186, recentre the art, repad it and
-                    move the gradient, which read as the portrait jumping when
-                    you tapped the tab. That was there to close dead space under
-                    a shorter tab; the shell is a fixed height now, so there is
-                    no dead space to close. */}
-                <div style={{ position: 'relative', margin: '0 -1.1rem', height: wideDetail ? 250 : 210, flexShrink: 0, overflow: 'hidden', borderBottom: `1px solid ${dColor}44`, background: `radial-gradient(ellipse 60% 66% at 50% 42%, ${(portraitSkin ?? dColor)}40 0%, ${(portraitSkin ?? dColor)}12 45%, #070504 82%)` }}>
+          // ── THE PAINTING, placed by the layout ─────────────────────────────
+          // Kong: on desktop this sheet was a lot of empty space. The painting
+          // sat centred in a 760-wide band with nothing either side of it. On a
+          // wide screen it is now the LEFT COLUMN, the full height of the sheet,
+          // with everything else beside it; on a phone it stays across the top.
+          const heroEl = (
+                <div style={{ position: 'relative', ...(wideDetail ? { gridRow: '1 / span 2', gridColumn: 1, height: '100%', borderRight: `1px solid ${dColor}44` } : { margin: '0 -1.1rem', height: 210, borderBottom: `1px solid ${dColor}44` }), flexShrink: 0, overflow: 'hidden', background: `radial-gradient(ellipse 60% 66% at 50% 42%, ${(portraitSkin ?? dColor)}40 0%, ${(portraitSkin ?? dColor)}12 45%, #070504 82%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={artSrc(portraitFilename)} alt={it.name}
                     className={portraitChase ? 'chase-skin-glow' : undefined}
@@ -3692,6 +3606,90 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                 })()}
                   </div>
                 </div>
+          )
+          return (
+            <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+              onClick={close}
+              style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(3,2,5,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+              <motion.div key="crew-detail" initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 8 }} transition={{ duration: 0.18, ease: 'easeOut' }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  // FIXED height, not max-height. The card used to grow and
+                  // shrink as you moved between Stats / Ability / Skins, which
+                  // made the tabs feel like they were resizing the sheet. Now
+                  // the shell is constant and the body between the header and
+                  // the action row is the only thing that scrolls.
+                  //
+                  // 620 -> 500, and the header then went from stacked to side by
+                  // side, which is where the room for the body actually came
+                  // from. The old budget was close ~28 + portrait 196 + name ~29
+                  // + level bar ~35 + tabs ~55 + actions ~61, leaving the body
+                  // about 84px — too little for the Stats tab's stat row plus its
+                  // trait line, so the trait fell below the fold on a short phone.
+                  //
+                  // Now: close ~44 + header 146 + tabs ~55 + actions ~61 leaves
+                  // the body around 194. The trait is visible without scrolling
+                  // and the Skins grid gets a usable window. Taller tabs still
+                  // scroll, which is what the scroll region is for.
+                  // Taller for the painting across the top (Kong: art forward, like
+                  // the enemy's card). The body keeps the room it was budgeted.
+                  width: '100%', maxWidth: wideDetail ? 900 : 'var(--modal-w)', height: wideDetail ? 'min(86vh, 620px)' : 'min(86vh, 590px)',
+                  position: 'relative',
+                  ...(wideDetail
+                    ? { display: 'grid', gridTemplateColumns: '340px minmax(0, 1fr)', gridTemplateRows: 'minmax(0, 1fr) auto' }
+                    : { display: 'flex', flexDirection: 'column' }),
+                  overflow: 'hidden',
+                  borderRadius: 14,
+                  background: detail.kind === 'board' ? RECRUIT_PANEL_BG : ROSTER_PANEL_BG,
+                  // Rarity at the EDGE, not shouting from it. A full-strength
+                  // 1.5px coloured border plus a coloured bloom made the sheet
+                  // read as a rarity announcement; the portrait ring and the
+                  // rarity word already say the tier twice.
+                  border: `1px solid ${dColor}4d`,
+                  boxShadow: `0 24px 60px rgba(0,0,0,0.62), 0 0 30px ${dColor}1c`,
+                }}>
+                {/* A real 32px target with a plate under it, the same close the
+                    boss sheet and the voyage sheet use. A bare glyph with 5px of
+                    padding is a thumb-sized miss on a phone. */}
+                <div className="flex justify-end" style={{ position: 'absolute', top: 0, right: 0, zIndex: 4, padding: '0.55rem 0.6rem 0' }}>
+                  <button onClick={close} aria-label="Close" type="button"
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%', padding: 0, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(7,5,4,0.7)', border: '1px solid rgba(255,255,255,0.2)',
+                      color: 'rgba(255,255,255,0.8)', touchAction: 'manipulation',
+                    }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                {/* minHeight:0 or this never scrolls - it just grows the shell. */}
+                {wideDetail && heroEl}
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 1.1rem 0.4rem', ...(wideDetail ? { gridColumn: 2, gridRow: 1, paddingTop: '2.9rem' } : {}) }}>
+
+                {/* HEADER ROW: portrait left, identity right.
+                    This used to be a 186x196 portrait CENTRED in a 360 sheet with
+                    the name and level bar stacked under it. That spent 260px of a
+                    500px sheet on the header and left ~87px of dead space down
+                    each side of the picture, which is why the Stats tab's trait
+                    line fell below the fold on a short phone. Side by side the
+                    same information costs ~146px and fills the width. */}
+                {/* ── THE PAINTING FIRST ─────────────────────────────────────
+                    Full-bleed across the top of the sheet (pulled out through
+                    the body's padding), the art on a pool of its rarity, and the
+                    name set on a scrim across its foot: the enemy card's shape.
+                    It was a 132px portrait beside the name. */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+
+                {/* Portrait — rarity frame; a shown skin makes the ART itself glow
+                    in its color (drop-shadow aura on the image). clip-path keeps
+                    the glow inside the arch so it never spills past the frame.
+                    Geometry is IDENTICAL on every tab. The Skins tab used to
+                    shrink the frame 196 -> 186, recentre the art, repad it and
+                    move the gradient, which read as the portrait jumping when
+                    you tapped the tab. That was there to close dead space under
+                    a shorter tab; the shell is a fixed height now, so there is
+                    no dead space to close. */}
+                {!wideDetail && heroEl}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {!('xp' in it) && (
                   <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}</p>
@@ -4019,7 +4017,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     with the tab content. One row: Swap / Promote / Remove /
                     Dismiss, each stating exactly what it does before doing it
                     rather than firing on the first tap. */}
-                <div style={{ flexShrink: 0, padding: '0.7rem 1.1rem 1rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ flexShrink: 0, padding: '0.7rem 1.1rem 1rem', borderTop: '1px solid rgba(255,255,255,0.07)', ...(wideDetail ? { gridColumn: 2, gridRow: 2 } : {}) }}>
                 {detail.kind === 'board' ? (
                   renderRecruitAction(it as BoardCandidate, close)
                 ) : (() => {
