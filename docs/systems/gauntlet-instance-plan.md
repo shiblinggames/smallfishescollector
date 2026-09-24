@@ -556,3 +556,13 @@ prompts/slip-*.json):
 | The Records | standing stone of tally marks | lectern with a great open ledger |
 | The Way Home | channel buoy with a rope ladder | gilded mooring post and lamp |
 Still plan: Terms at a gibbet and Contracts at a table are in-run screens, not hub places.
+
+**Round five: the pick and the price (2026-09-24).** Kong: boon and curse screens should be more
+satisfying. A BOON GOES HOME: `flyBoonHome` (module scope, imperative WAAPI on throwaway elements,
+no React state) bursts a ring + sparks off the chosen card's medallion (`data-boon-medal`) in its
+rarity colour, flies a copy of its painting with a three-ghost trail along an arc into the Synergy
+Codex link (`data-boon-codex`, which no longer fades on a pick so it can catch it), and the link
+pops and bursts on arrival with a tick. The two passed cards SINK as they dim (y 14).
+`BOON_CLAIM_MS` 820 -> 1150 so the landing is seen. A CURSE IS BOUND: "Bear It" closes two
+dotted crimson chains across the art, then it sinks darkening into a red stain as `applyCurse`'s
+from-below beat fires at 980ms. `curseTaking` clears only once the phase has left 'curse'.

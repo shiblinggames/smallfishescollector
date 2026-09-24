@@ -191,7 +191,92 @@ const RUN_PHASES: ReadonlySet<Phase> = new Set<Phase>([
  * fixed positioning.
  */
 /** How long the card you took holds lit before the screen moves on. */
-const BOON_CLAIM_MS = 820
+/**
+ * ── A BOON GOES HOME ─────────────────────────────────────────────────────────
+ *
+ * Kong: picking a boon should feel more satisfying. It lifted and lit, and then
+ * the screen changed: the boon was never seen going anywhere. Now the chosen
+ * card's medallion throws a ring and sparks in its rarity's colour, a copy of
+ * its painting lifts off and flies to the codex link (where your boons live),
+ * and the link takes it with a pop. All of it is elements made for the moment
+ * and animated on the compositor, then removed: no React state, because this
+ * is the one tap in a dive that must not hitch.
+ */
+function burstAt(x: number, y: number, color: string) {
+  const ring = document.createElement('div')
+  Object.assign(ring.style, {
+    position: 'fixed', left: `${x - 40}px`, top: `${y - 40}px`, width: '80px', height: '80px',
+    borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 18px ${color}`,
+    pointerEvents: 'none', zIndex: '1400',
+  })
+  document.body.appendChild(ring)
+  ring.animate([{ transform: 'scale(0.55)', opacity: 0.95 }, { transform: 'scale(2.3)', opacity: 0 }], { duration: 560, easing: 'cubic-bezier(0.16,1,0.3,1)' })
+    .onfinish = () => ring.remove()
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + Math.random() * 0.4
+    const d = 46 + Math.random() * 38
+    const sp = document.createElement('div')
+    Object.assign(sp.style, {
+      position: 'fixed', left: `${x - 3}px`, top: `${y - 3}px`, width: '6px', height: '6px', borderRadius: '50%',
+      background: color, boxShadow: `0 0 8px ${color}`, pointerEvents: 'none', zIndex: '1400',
+    })
+    document.body.appendChild(sp)
+    sp.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: `translate(${Math.cos(a) * d}px, ${Math.sin(a) * d}px) scale(0.2)`, opacity: 0 },
+    ], { duration: 520 + Math.random() * 180, easing: 'cubic-bezier(0.2,0.8,0.3,1)' }).onfinish = () => sp.remove()
+  }
+}
+function flyBoonHome(idx: number, color: string) {
+  if (typeof document === 'undefined') return
+  const medal = document.querySelector<HTMLElement>(`[data-boon-medal="${idx}"]`)
+  if (!medal) return
+  const r = medal.getBoundingClientRect()
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2
+  burstAt(cx, cy, color)
+  const src = medal.querySelector('img')?.getAttribute('src')
+  const target = document.querySelector<HTMLElement>('[data-boon-codex]')
+  const tr = target?.getBoundingClientRect()
+  const tx = tr ? tr.left + tr.width / 2 : cx
+  const ty = tr ? tr.top + tr.height / 2 : cy - 140
+  const size = Math.max(40, Math.min(96, r.width))
+  // The flight, and three fainter copies a beat behind it for a trail.
+  for (let k = 0; k < 4; k++) {
+    const el = document.createElement(src ? 'img' : 'div')
+    if (src) (el as HTMLImageElement).src = src
+    Object.assign(el.style, {
+      position: 'fixed', left: `${cx - size / 2}px`, top: `${cy - size / 2}px`, width: `${size}px`, height: `${size}px`,
+      objectFit: 'contain', pointerEvents: 'none', zIndex: '1401', borderRadius: '50%',
+      filter: `drop-shadow(0 0 ${k ? 6 : 12}px ${color})`,
+      ...(src ? {} : { background: color }),
+    })
+    document.body.appendChild(el)
+    const dx = tx - cx, dy = ty - cy
+    const anim = el.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: k ? 0.35 / k : 1 },
+      { transform: `translate(${dx * 0.4}px, ${dy * 0.4 - 70}px) scale(0.8)`, opacity: k ? 0.3 / k : 1, offset: 0.45 },
+      { transform: `translate(${dx}px, ${dy}px) scale(0.28)`, opacity: k ? 0 : 0.9 },
+    ], { duration: 640, delay: 170 + k * 45, easing: 'cubic-bezier(0.5,0,0.3,1)', fill: 'both' })
+    anim.onfinish = () => {
+      el.remove()
+      if (k === 0) {
+        if (target) {
+          target.animate([
+            { transform: 'scale(1)', boxShadow: `0 0 0 ${color}00` },
+            { transform: 'scale(1.18)', boxShadow: `0 0 26px ${color}` },
+            { transform: 'scale(1)', boxShadow: `0 0 0 ${color}00` },
+          ], { duration: 360, easing: 'cubic-bezier(0.2,0.9,0.3,1)' })
+        }
+        burstAt(tx, ty, color)
+        vibrate([0, 14])
+      }
+    }
+  }
+}
+
+// Long enough for the medallion to fly home to the codex and land (see
+// flyBoonHome): the claim is held until it is visibly yours.
+const BOON_CLAIM_MS = 1150
 
 const SWAP_OUT_MS = 200
 const SWAP_IN_MS = 300
@@ -831,6 +916,12 @@ export default function GauntletGame(props: GauntletGameProps) {
    * dim and settle back, the controls go — and only then does the phase move.
    */
   const [boonTaken, setBoonTaken] = useState<{ idx: number; id: string } | null>(null)
+  /** A curse being taken: the chains close and it sinks before the screen
+   *  moves on (see the curse screen). */
+  const [curseTaking, setCurseTaking] = useState(false)
+  // Cleared once the curse screen has actually gone (inside the veil), not
+  // the moment it is applied, or the art would pop back up mid-fade.
+  useEffect(() => { if (phase !== 'curse') setCurseTaking(false) }, [phase])
   const [boonBanner, setBoonBanner] = useState<{ name: string; key: number } | null>(null)
   // Confluence just completed by the boon you claimed — highlighted on the next
   // breather as a "synergy unlocked" beat. Cleared when you descend.
@@ -2104,6 +2195,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     arenaRef.current?.beat(offer.rarity === 'legendary' ? 'legendary' : 'boon',
       parseInt(BOON_RARITY_META[offer.rarity].color.slice(1), 16))
     setBoonTaken({ idx, id: offer.id })
+    flyBoonHome(idx, BOON_RARITY_META[offer.rarity].color)
     window.setTimeout(() => applyBoon(offer), BOON_CLAIM_MS)
   }
 
@@ -4632,8 +4724,27 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Curse art, sinking in from above like it's surfacing for you.
               Its own painted icon (matching the boon set) when we have one;
               the drowned skull sigil is the fallback. */}
-          <motion.div initial={{ opacity: 0, y: -32, scale: 0.7 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={ENTER}
+          {/* ── TAKING IT ───────────────────────────────────────────────
+              Kong: the curse screen should feel better. "Bear It" used to
+              move on the same frame. Now two chains draw closed across the
+              curse, and it sinks darkening into a stain on the water while
+              the deep answers from below (applyCurse's beat), then it goes. */}
+          <motion.div initial={{ opacity: 0, y: -32, scale: 0.7 }}
+            animate={curseTaking
+              ? { opacity: [1, 1, 0], y: [0, 0, 46], scale: [1, 1.04, 0.78], filter: ['brightness(1)', 'brightness(0.9)', 'brightness(0.25)'] }
+              : { opacity: 1, y: 0, scale: 1, filter: 'brightness(1)' }}
+            transition={curseTaking ? { duration: 1.05, times: [0, 0.4, 1], ease: 'easeIn' } : ENTER}
             style={{ position: 'relative', width: 150, height: 150, margin: '18px auto 8px' }}>
+            {curseTaking && (
+              <svg aria-hidden viewBox="0 0 100 100" style={{ position: 'absolute', inset: -10, zIndex: 2, overflow: 'visible', pointerEvents: 'none' }}>
+                {['M8 22 Q50 58 92 78', 'M92 22 Q50 58 8 78'].map((d, i) => (
+                  <motion.path key={i} d={d} fill="none" stroke={CRIM} strokeWidth="3.4" strokeLinecap="round" strokeDasharray="1 5.5"
+                    initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }}
+                    transition={{ duration: 0.36, delay: i * 0.08, ease: 'easeOut' }}
+                    style={{ filter: `drop-shadow(0 0 5px ${CRIM})` }} />
+                ))}
+              </svg>
+            )}
             <div style={{ position: 'absolute', inset: -24, borderRadius: '50%', background: `radial-gradient(circle, ${CRIM}3c 0%, transparent 64%)`, animation: 'gauntPulse 3s ease-in-out infinite' }} />
             {c.image ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -4648,6 +4759,11 @@ export default function GauntletGame(props: GauntletGameProps) {
             )}
           </motion.div>
 
+          {curseTaking && (
+            <motion.div aria-hidden initial={{ opacity: 0, scaleX: 0.3 }} animate={{ opacity: [0, 0.8, 0], scaleX: [0.3, 1.25, 1.6] }}
+              transition={{ duration: 1.1, delay: 0.4, ease: 'easeOut' }}
+              style={{ width: 170, height: 26, margin: '-20px auto 0', borderRadius: '50%', background: `radial-gradient(ellipse, ${CRIM}88 0%, ${CRIM}22 55%, transparent 72%)` }} />
+          )}
           <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...POP, delay: 0.06 }}
             className="font-cinzel font-800" style={{ fontSize: '2.2rem', color: '#fdecec', lineHeight: 1.06, marginTop: 8, textShadow: `0 0 30px ${CRIM}55` }}>
             {c.name}{c.isUpgrade ? ` ${curseTierLabel(c.tier)}` : ''}
@@ -4672,7 +4788,12 @@ export default function GauntletGame(props: GauntletGameProps) {
             It holds for the rest of the dive · {curseTotalAfter} {curseTotalAfter === 1 ? 'curse' : 'curses'} upon you
           </p>
 
-          <button onClick={() => applyCurse(c)} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+          <button disabled={curseTaking} onClick={() => {
+              if (curseTaking) return
+              setCurseTaking(true)
+              vibrate([0, 40, 60, 80])
+              window.setTimeout(() => applyCurse(c), 980)
+            }} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
             style={{
               marginTop: 22, width: '100%', padding: '1.1rem', borderRadius: 14, fontSize: '1.12rem',
               color: '#ffe0e0', background: `linear-gradient(180deg, ${CRIM}3a 0%, rgba(22,6,8,0.86) 70%)`,
@@ -4889,8 +5010,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                   animate={boonTaken
                     ? (boonTaken.idx === idx
                         ? { scale: 1.045, opacity: 1, filter: 'brightness(1.22)' }
-                        : { scale: 0.965, opacity: 0.26, filter: 'brightness(0.7)' })
-                    : { scale: 1, opacity: 1, filter: 'brightness(1)' }}
+                        : { scale: 0.955, opacity: 0.22, y: 14, filter: 'brightness(0.62)' })
+                    : { scale: 1, opacity: 1, y: 0, filter: 'brightness(1)' }}
                   // The claim settles on a plain curve. It inherited POP, a
                   // spring, so the cards you passed on OVERSHOT on their way
                   // down and bounced -- which on a dimming card reads as a
@@ -4973,7 +5094,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                       should be able to choose without opening anything. */}
                   {(() => {
                     const art = (size: number) => (
-                      <div style={{
+                      <div data-boon-medal={idx} style={{
                         position: 'relative', flexShrink: 0, width: size, height: size, borderRadius: size * 0.21,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: `radial-gradient(circle at 42% 34%, ${rm.color}33 0%, rgba(4,9,14,0.55) 74%)`,
@@ -5381,8 +5502,10 @@ export default function GauntletGame(props: GauntletGameProps) {
               toward right when you're deciding. Lights violet when one is on
               offer. */}
           {revealDone && (
-            <div style={{ marginTop: rerollsLeft > 0 ? 9 : 16, ...dimOnPick }}>
-              <button onClick={() => setSynergiesOpen(true)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
+            // NOT dimmed on a pick like its neighbours: the chosen boon flies
+            // home INTO this link (flyBoonHome), so it has to be there to catch it.
+            <div style={{ marginTop: rerollsLeft > 0 ? 9 : 16, pointerEvents: boonTaken ? 'none' : 'auto' }}>
+              <button data-boon-codex onClick={() => setSynergiesOpen(true)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.5rem 1rem', borderRadius: 999, fontSize: '0.6rem',
                   color: pendingConfluence ? '#e6d5ff' : '#c9c2b6',
                   background: pendingConfluence ? 'rgba(185,139,255,0.15)' : 'rgba(255,255,255,0.04)',
