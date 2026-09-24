@@ -469,278 +469,158 @@ function CrewPanel({
     : assignment === 'voyage' ? { label: 'Voyage party', color: '#5fa8c9' }
     : null
 
+  // ── ART FIRST, LIKE THE ENEMY'S CARD ───────────────────────────────────
+  // Kong: the recruit hall and the crew cards should be more art forward, the
+  // way the enemy stat card in a fight is. The card was a ROW: a 102px
+  // portrait in a niche with the details beside it, so the painting was the
+  // smallest thing on a card that exists to show it. Now the painting fills
+  // the top of the card on a pool of its rarity's colour, the name and level
+  // are set on a scrim across its foot (the enemy card's own construction),
+  // the class sits on the art, and the facts follow underneath. Board and
+  // roster still share this one card, so they still read identically.
+  const cls = classForSlug(slug)
+  const classDef = cls ? CLASSES[cls] : null
+  const tInfo = (() => {
+    const t = netTraitStats(effects)
+    return { label: traitLabel(t), divine: isDivineTrait(t), kind: traitKind(t) }
+  })()
   return (
     <motion.div
       onClick={onClick}
-      // ── IT IS A BUTTON, SO IT SAYS SO ──────────────────────────────────
-      // A div with an onClick is a control to everyone except the browser, a
-      // screen reader, and anything that has to reason about what is pressable
-      // — which is why a tour that stands every control down could not stand
-      // this one down, and a captain mid-beat could open a second recruit and
-      // strand themselves behind a sheet nobody had told them about.
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      whileTap={onClick && !locked ? { scale: 0.965 } : undefined}
-      // ── AND IT DOES NOT LIFT ON HOVER ──────────────────────────────────
-      // `whileHover={{ y: -2 }}` was a transform, and a transformed box counts
-      // toward its scroll container's overflow: running the pointer up a list
-      // of recruits raised and dropped the sheet's scrollbar on every card it
-      // crossed. Two pixels of lift is not worth a flickering scrollbar, and
-      // the press still answers with the tap scale.
+      whileTap={onClick && !locked ? { scale: 0.975 } : undefined}
       transition={{ type: 'spring', stiffness: 460, damping: 26 }}
       style={{
-        position: 'relative', display: 'flex', gap: '0.85rem', padding: '0.85rem',
-        borderRadius: 14,
+        position: 'relative', display: 'flex', flexDirection: 'column',
+        borderRadius: 16, overflow: 'hidden',
         background: bg,
-        border: `1px solid ${border}`,
+        border: `1px solid ${color}55`,
         boxShadow: cardShadow,
-        opacity: dimmed ? 0.5 : locked ? 0.55 : 1,
+        opacity: dimmed ? 0.5 : locked ? 0.6 : 1,
         cursor: onClick ? 'pointer' : 'default',
         filter: locked ? 'grayscale(0.65) brightness(0.85)' : undefined,
       }}>
-      {/* The "has traits — tap to view" halo glow was removed entirely.
-          Players asked for a quieter card silhouette with no glow around
-          the whole card. Trait count is still readable on the rarity
-          line ('Epic · 2 traits') and the full list surfaces when the
-          card opens, so the discovery cue is preserved without coloring
-          the card's perimeter. `hint` prop kept for API stability — no-op. */}
-      {/* Level-up halo — gold breathing border over the whole card while a
-          level-up is unseen. Unlike the removed trait halo this one is
-          TRANSIENT (it clears the moment the player opens the card), so at
-          most a couple of cards glow at once and the roster stays calm.
-          Overlay div instead of restyling the card root so it never fights
-          the inline cardShadow/border. */}
       {hasLevelUp && (
         <span aria-hidden className="crew-levelup-halo" style={{
-          position: 'absolute', inset: -1, borderRadius: 7,
-          border: '1px solid rgba(255,217,106,0.6)',
-          pointerEvents: 'none', zIndex: 1,
+          position: 'absolute', inset: 0, borderRadius: 16,
+          border: '1.5px solid rgba(255,217,106,0.7)',
+          pointerEvents: 'none', zIndex: 3,
         }} />
       )}
-      {/* The four carved corner brackets that used to sit here are gone. A HUD
-          frame around every card in a grid is noise, and it was the detail that
-          read oldest. */}
 
-      {/* Portrait wrapper — position:relative + overflow:visible so corner
-          badges can hang at the top corners without being clipped by the
-          arched niche below (which needs overflow:hidden for image
-          clipping). Niche keeps its own clip mask; badges sit on top. */}
+      {/* ── THE PAINTING ── */}
       <div style={{
-        position: 'relative', width: 102, height: 112,
-        flexShrink: 0, alignSelf: 'flex-start',
+        position: 'relative', height: 196, overflow: 'hidden',
+        background: `radial-gradient(ellipse 70% 62% at 50% 42%, ${color}3a 0%, ${color}10 45%, #070504 82%)`,
       }}>
-        {/* Arched portrait niche. clip-path (not just overflow:hidden) so an
-            equipped-skin drop-shadow glow is clipped to the arch instead of
-            bleeding past the rounded top. */}
-        {/* One rounded rect, one ring. This was a tombstone arch wearing TWO
-            frames (a 2px rarity ring with a gold hairline inset inside it),
-            which is what made the portrait read as an inventory slot rather
-            than a character. */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          borderRadius: 12, overflow: 'hidden',
-          clipPath: 'inset(0 round 12px)',
-          border: `1px solid ${color}88`,
-          boxShadow: 'inset 0 -14px 22px rgba(0,0,0,0.55)',
-          background: `linear-gradient(180deg, ${color}1f 0%, #070504 78%)`,
-        }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={artSrc(filename)} alt={name} loading="lazy" decoding="async"
-            className={skinChase ? 'chase-skin-glow' : undefined}
-            style={{
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={artSrc(filename)} alt={name} loading="lazy" decoding="async"
+          className={skinChase ? 'chase-skin-glow' : undefined}
+          style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
+            objectFit: 'contain', objectPosition: 'center 18%', padding: '6px 6px 0',
             ...(skinChase ? { ['--chase-c']: skinGlow } : { filter: skinGlowFilter }),
           } as React.CSSProperties} />
-          {skinChase && skinGlow && <ChaseSkinFx skinId={skinDef?.id} color={skinGlow} />}
-          {/* The inner gold hairline that used to sit here, the second of the
-              portrait's two frames, is gone. */}
-        {/* Class nameplate — replaces the old trait teaser. Class is now the
-            bigger identity decision (species-locked, drives the raid Special
-            ability), so the portrait reads as the role at a glance: "Mender",
-            "Sharpshot", etc. Trait count is still shown on the rarity line
-            below as a small counter so trait info isn't lost. Falls back to
-            a muted "Crew" chip when the species hasn't been mapped to a
-            class yet. */}
-        {(() => {
-          const cls = classForSlug(slug)
-          const def = cls ? CLASSES[cls] : null
-          const tint = def?.color ?? 'rgba(150,150,150,0.85)'
-          const text = def?.color ?? '#c8c8c8'
-          return (
-            <div className="font-karla font-700" style={{
-              position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
-              maxWidth: 'calc(100% - 10px)',
-              fontSize: '0.5rem', letterSpacing: '0.08em', textTransform: 'uppercase',
-              color: text, background: 'rgba(7,5,3,0.88)', border: `1px solid ${tint}`,
-              padding: '0.12rem 0.42rem', borderRadius: 3, whiteSpace: 'nowrap',
-              overflow: 'hidden', textOverflow: 'ellipsis',
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}>
-              {def && <span aria-hidden style={{ fontSize: '0.55rem', lineHeight: 1 }}>{def.emoji}</span>}
-              <span>{def?.name ?? 'Crew'}</span>
-            </div>
-          )
-        })()}
-        </div>{/* end arched niche */}
-
-        {/* The net pip that used to sit here is gone: the duty tag below the
-            name says "Trawling" in words, and the lock badge already covers
-            "cannot be reassigned". Three marks for one fact was too many. */}
+        {skinChase && skinGlow && <ChaseSkinFx skinId={skinDef?.id} color={skinGlow} />}
+        {/* The scrim the name is set on. */}
+        <div aria-hidden style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: '52%',
+          background: 'linear-gradient(to top, rgba(7,5,4,0.96) 0%, rgba(7,5,4,0.72) 40%, rgba(7,5,4,0) 100%)',
+        }} />
+        {/* The class, on the art: the role at a glance. */}
+        <div className="font-karla font-800 uppercase" style={{
+          position: 'absolute', top: 8, left: 8, maxWidth: 'calc(100% - 50px)',
+          display: 'flex', alignItems: 'center', gap: 4,
+          fontSize: '0.52rem', letterSpacing: '0.1em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          padding: '0.18rem 0.5rem', borderRadius: 999,
+          color: classDef?.color ?? '#c8c8c8', background: 'rgba(7,5,3,0.82)', border: `1px solid ${(classDef?.color ?? '#969696')}88`,
+        }}>
+          {classDef && <span aria-hidden style={{ fontSize: '0.6rem', lineHeight: 1 }}>{classDef.emoji}</span>}
+          <span>{classDef?.name ?? 'Crew'}</span>
+        </div>
         {aboard && (
-          <div
-            title="Already signed on to your crew"
-            aria-label="Aboard"
-            style={{
-              position: 'absolute', top: -6, right: -6,
-              width: 26, height: 26, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'radial-gradient(circle at 35% 30%, #4cc483 0%, #2e9a5cd0 70%)',
-              border: '1.5px solid #4cc483',
-              boxShadow: '0 2px 7px rgba(0,0,0,0.6), 0 0 12px #4cc48366, inset 0 1px 0 rgba(255,255,255,0.3)',
-              color: '#06341a', pointerEvents: 'none', zIndex: 2,
-            }}
-          >
+          <div title="Already signed on to your crew" aria-label="Aboard" style={{
+            position: 'absolute', top: 7, right: 7, width: 26, height: 26, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'radial-gradient(circle at 35% 30%, #4cc483 0%, #2e9a5cd0 70%)',
+            border: '1.5px solid #4cc483', boxShadow: '0 2px 7px rgba(0,0,0,0.6), 0 0 12px #4cc48366',
+            color: '#06341a', pointerEvents: 'none', zIndex: 2,
+          }}>
             <CheckIcon />
           </div>
         )}
         {locked && (
-          <div
-            title={lockLabel}
-            style={{
-              position: 'absolute', top: -6, left: -6,
-              width: 26, height: 26, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(7,5,3,0.94)',
-              // One colour per lock, matching that lock's duty tag below, so the
-              // badge and the tag never say different things.
-              border: `1.5px solid ${lockKind === 'trawl' ? 'rgba(70,200,170,0.78)' : lockKind === 'bunk' ? 'rgba(240,192,64,0.72)' : 'rgba(255,180,90,0.7)'}`,
-              boxShadow: lockKind === 'trawl'
-                ? '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(70,200,170,0.42)'
-                : lockKind === 'bunk'
-                  ? '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(240,192,64,0.38)'
-                  : '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(255,180,90,0.4)',
-              pointerEvents: 'none',
-              zIndex: 2,
-            }}
-          >
+          <div title={lockLabel} style={{
+            position: 'absolute', top: 7, right: 7, width: 26, height: 26, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(7,5,3,0.94)',
+            border: `1.5px solid ${lockKind === 'trawl' ? 'rgba(70,200,170,0.78)' : lockKind === 'bunk' ? 'rgba(240,192,64,0.72)' : 'rgba(255,180,90,0.7)'}`,
+            pointerEvents: 'none', zIndex: 2,
+          }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={lockKind === 'trawl' ? '#9fe6d4' : lockKind === 'bunk' ? '#ffe7ad' : '#ffd8a3'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <rect x="4.5" y="11" width="15" height="9.5" rx="1.5" />
               <path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
             </svg>
           </div>
         )}
-      </div>{/* end portrait wrapper */}
-
-      {/* Manifest detail. Centred, not top-aligned: the portrait sets the card
-          height, and this column is shorter than it, so top-aligning left a
-          void underneath (~43px on a roster card, which carries no footer at
-          all since assignment moved to the Assign tab).
-          The footer below deliberately does NOT carry marginTop:auto - an auto
-          margin eats the free space before justify-content can distribute it,
-          which would pin recruit-card actions to the bottom and make the two
-          card types read differently. Everything centres as one cluster. */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.45rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-            {/* 1.18 -> 1.45rem, using the height the centred column freed up.
-                lineHeight goes 1 -> 1.12 with it: the name clips to an ellipsis
-                via overflow:hidden, and at 1 that box is exactly the cap height,
-                so pirata's descenders (Jelly, Doby, Gar) were being shaved. */}
-            <p className="font-pirata" style={{ fontSize: '1.45rem', color: '#ecdcbd', lineHeight: 1.12, letterSpacing: '0.02em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {/* NAME, LEVEL, RARITY AND TRAIT, on the painting's foot. */}
+        <div style={{ position: 'absolute', left: 10, right: 10, bottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+            <p className="font-pirata" style={{ fontSize: '1.4rem', color: '#f3e5c6', lineHeight: 1.12, letterSpacing: '0.02em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 2px 8px rgba(0,0,0,0.9)' }}>
               {name}
             </p>
-            {/* Captain crown — party captain (slot 0), now beside the name. */}
             {isCaptain && (
-              <span aria-label="Captain" title="Captain" style={{ flexShrink: 0, alignSelf: 'center', display: 'inline-flex', alignItems: 'center' }}>
+              <span aria-label="Captain" title="Captain" style={{ flexShrink: 0, alignSelf: 'center', display: 'inline-flex' }}>
                 <svg width="15" height="12" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.3" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}>
                   <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
                 </svg>
               </span>
             )}
-            {/* spacer pushes the LV token to the right of name + crown */}
             <span style={{ flex: 1, minWidth: 0 }} />
-            {/* Level — plain text alongside the name. Cinzel font (matches
-                the stats/rarity treatment elsewhere) reads cleanly at small
-                sizes; pirata had the right vibe but its calligraphic 'L'
-                + 'v' kerned into something that read as 'lvl' or 'lwl'.
-                Small uppercase 'LV' separator with a slightly larger
-                number after, both in the same warm gold so the whole
-                token reads as one unit. */}
             <span style={{
-              position: 'relative', flexShrink: 0,
-              display: 'inline-flex', alignItems: 'baseline', gap: 4,
-              color: hasLevelUp ? '#ffd96a' : '#d9b563',
-              textShadow: hasLevelUp ? '0 0 10px rgba(255,217,106,0.55)' : '0 1px 2px rgba(0,0,0,0.6)',
-              transition: 'color 0.18s, text-shadow 0.18s',
+              position: 'relative', flexShrink: 0, display: 'inline-flex', alignItems: 'baseline', gap: 3,
+              color: hasLevelUp ? '#ffd96a' : '#e6c67a',
+              textShadow: hasLevelUp ? '0 0 10px rgba(255,217,106,0.55)' : '0 1px 4px rgba(0,0,0,0.9)',
             }}>
-              <span className="font-cinzel font-700" style={{
-                fontSize: '0.6rem', letterSpacing: '0.15em', opacity: 0.85,
-              }}>LV</span>
-              <span className="font-cinzel font-700" style={{
-                fontSize: '1.05rem', lineHeight: 1,
-              }}>{crewLevelFromXP(xp)}</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.56rem', letterSpacing: '0.15em', opacity: 0.85 }}>LV</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '1.02rem', lineHeight: 1 }}>{crewLevelFromXP(xp)}</span>
               {hasLevelUp && (
                 <span aria-label="Unseen level-up" title="New level, press to view" style={{
-                  position: 'absolute', top: -2, right: -8,
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: '#fff5d0',
-                  border: '1.5px solid rgba(0,0,0,0.65)',
-                  boxShadow: '0 0 6px rgba(255,245,200,0.85)',
+                  position: 'absolute', top: -2, right: -8, width: 7, height: 7, borderRadius: '50%',
+                  background: '#fff5d0', border: '1.5px solid rgba(0,0,0,0.65)', boxShadow: '0 0 6px rgba(255,245,200,0.85)',
                 }} />
               )}
             </span>
           </div>
-          {/* Rarity, then the trait BY NAME. This line used to read
-              "EPIC · 1 trait", which spent the width on a number that is
-              always 1 under the current system and told you nothing about
-              the crew. The name is the fact worth showing, and it is what
-              players compare cards on.
-
-              Flex rather than inline text so the rarity never truncates: only
-              the trait ellipsises, and only when a long one like GLASS CANNON
-              genuinely runs out of room on a 300px card. */}
-          {(() => {
-            const t = netTraitStats(effects)
-            const label = traitLabel(t)
-            const divine = isDivineTrait(t)
-            const kind = traitKind(t)
-            return (
-              <p className="font-cinzel font-700" style={{
-                display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0,
-                fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase',
-                color, marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)', whiteSpace: 'nowrap',
-              }}>
-                <span style={{ flexShrink: 0 }}>{RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'}</span>
-                {label && (
-                  <>
-                    <span aria-hidden style={{ flexShrink: 0, color: 'rgba(255,255,255,0.28)' }}>·</span>
-                    <span
-                      className={divine ? 'trait-divine' : undefined}
-                      title={label}
-                      style={{
-                        minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '0.08em',
-                        // Divine paints itself through .trait-divine, so it must
-                        // not be handed a colour to override the clipped gradient.
-                        ...(divine ? {} : {
-                          color: kind === 'buff' ? 'rgba(159,217,177,0.85)'
-                            : kind === 'flaw' ? 'rgba(224,154,154,0.85)'
-                            : 'rgba(255,255,255,0.45)',
-                        }),
-                      }}>
-                      {label}
-                    </span>
-                  </>
-                )}
-              </p>
-            )
-          })()}
+          <p className="font-cinzel font-700" style={{
+            display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0, marginTop: 1,
+            fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase',
+            color, textShadow: '0 1px 4px rgba(0,0,0,0.9)', whiteSpace: 'nowrap',
+          }}>
+            <span style={{ flexShrink: 0 }}>{RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'}</span>
+            {tInfo.label && (
+              <>
+                <span aria-hidden style={{ flexShrink: 0, color: 'rgba(255,255,255,0.32)' }}>·</span>
+                <span className={tInfo.divine ? 'trait-divine' : undefined} title={tInfo.label}
+                  style={{
+                    minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '0.08em',
+                    ...(tInfo.divine ? {} : {
+                      color: tInfo.kind === 'buff' ? 'rgba(159,217,177,0.92)'
+                        : tInfo.kind === 'flaw' ? 'rgba(224,154,154,0.92)'
+                        : 'rgba(255,255,255,0.55)',
+                    }),
+                  }}>
+                  {tInfo.label}
+                </span>
+              </>
+            )}
+          </p>
         </div>
+      </div>
 
-        {/* Duty tag. Its own row rather than crowded onto the rarity line,
-            which already carries "LEGENDARY · GLASS CANNON" and has no width to
-            spare on a 300px card. Costs no height: the column was centred
-            precisely because it had ~43px of slack under the stats. */}
+      {/* ── THE FACTS ── */}
+      <div style={{ padding: '0.6rem 0.75rem 0.7rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {duty && (
           <span className="font-karla font-700 uppercase" style={{
             alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -752,22 +632,14 @@ function CrewPanel({
             {duty.label}
           </span>
         )}
-
-        {/* Engraved stats — icon + number over a bar, drawn against a fixed
-            ceiling (STAT_BAR_MAX) so bars are comparable card to card. */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, padding: '0.15rem 0' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
           {(['power', 'dodge', 'fortune'] as const).map((k, i) => (
-            <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+            <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <StatIcon k={k} color={STAT_COLOR[k]} />
-                <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', lineHeight: 1, color: '#ecdcbd' }}>
-                  {eff[k]}
-                </span>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', lineHeight: 1, color: '#ecdcbd' }}>{eff[k]}</span>
               </div>
-              {/* scaleX on a solid fill, never width: width is layout and a
-                  roster renders dozens of cards at once. Staggered so the three
-                  read left to right instead of snapping together. */}
-              <span aria-hidden style={{ display: 'block', width: 44, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              <span aria-hidden style={{ display: 'block', width: '100%', height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
                 <span className="crew-stat-fill" style={{
                   display: 'block', width: '100%', height: '100%', borderRadius: 2,
                   background: STAT_COLOR[k],
@@ -778,14 +650,8 @@ function CrewPanel({
             </div>
           ))}
         </div>
-
-        {/* Footer: action button on its own row. The old "View N traits"
-            link was redundant once the portrait nameplate started teasing
-            the headline trait — players now click the whole card naturally,
-            and the action gets full breathing room so it can't spill off
-            the edge regardless of label length ("Roster Full" / "Aboard"). */}
         {children && (
-          <div style={{ paddingTop: '0.4rem', display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>{children}</div>
           </div>
         )}
@@ -793,6 +659,7 @@ function CrewPanel({
     </motion.div>
   )
 }
+
 
 // ── In Memoriam panel ────────────────────────────────────────────────────────
 // Compact sepia-toned memorial card for fallen crew. No actions — these are
@@ -2354,7 +2221,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
               Your roster is full. Dismiss a hand from the Roster tab, or upgrade your ship, before signing anyone new.
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(172px, 1fr))', gap: '0.8rem' }}>
             {state.board.map((c: BoardCandidate) => {
               const panel = (
                 <CrewPanel name={c.name} filename={c.filename} rarity={c.rarity}
@@ -3435,7 +3302,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   )
                 }
                 const grid = (members: CrewMember[], empties: number, accent: string, onEmpty?: () => void) => (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.7rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(172px, 1fr))', gap: '0.7rem' }}>
                     {members.map(card)}
                     {Array.from({ length: Math.max(0, empties) }).map((_, i) => (
                       <EmptySlotTile key={`empty-${i}`} color={accent} onClick={onEmpty ?? scrollToAvailable} />
@@ -3650,7 +3517,9 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   // the body around 194. The trait is visible without scrolling
                   // and the Skins grid gets a usable window. Taller tabs still
                   // scroll, which is what the scroll region is for.
-                  width: '100%', maxWidth: wideDetail ? 760 : 'var(--modal-w)', height: wideDetail ? 'min(84vh, 600px)' : 'min(82vh, 500px)',
+                  // Taller for the painting across the top (Kong: art forward, like
+                  // the enemy's card). The body keeps the room it was budgeted.
+                  width: '100%', maxWidth: wideDetail ? 760 : 'var(--modal-w)', height: wideDetail ? 'min(88vh, 700px)' : 'min(86vh, 590px)',
                   position: 'relative',
                   display: 'flex', flexDirection: 'column', overflow: 'hidden',
                   borderRadius: 14,
@@ -3665,19 +3534,19 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                 {/* A real 32px target with a plate under it, the same close the
                     boss sheet and the voyage sheet use. A bare glyph with 5px of
                     padding is a thumb-sized miss on a phone. */}
-                <div className="flex justify-end" style={{ flexShrink: 0, padding: '0.55rem 0.6rem 0' }}>
+                <div className="flex justify-end" style={{ position: 'absolute', top: 0, right: 0, zIndex: 4, padding: '0.55rem 0.6rem 0' }}>
                   <button onClick={close} aria-label="Close" type="button"
                     style={{
                       width: 32, height: 32, borderRadius: '50%', padding: 0, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
-                      color: 'rgba(255,255,255,0.6)', touchAction: 'manipulation',
+                      background: 'rgba(7,5,4,0.7)', border: '1px solid rgba(255,255,255,0.2)',
+                      color: 'rgba(255,255,255,0.8)', touchAction: 'manipulation',
                     }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
                   </button>
                 </div>
                 {/* minHeight:0 or this never scrolls - it just grows the shell. */}
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0.2rem 1.1rem 0.4rem' }}>
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 1.1rem 0.4rem' }}>
 
                 {/* HEADER ROW: portrait left, identity right.
                     This used to be a 186x196 portrait CENTRED in a 360 sheet with
@@ -3686,7 +3555,12 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     each side of the picture, which is why the Stats tab's trait
                     line fell below the fold on a short phone. Side by side the
                     same information costs ~146px and fills the width. */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.9rem', marginTop: '0.15rem' }}>
+                {/* ── THE PAINTING FIRST ─────────────────────────────────────
+                    Full-bleed across the top of the sheet (pulled out through
+                    the body's padding), the art on a pool of its rarity, and the
+                    name set on a scrim across its foot: the enemy card's shape.
+                    It was a 132px portrait beside the name. */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
 
                 {/* Portrait — rarity frame; a shown skin makes the ART itself glow
                     in its color (drop-shadow aura on the image). clip-path keeps
@@ -3697,11 +3571,11 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     you tapped the tab. That was there to close dead space under
                     a shorter tab; the shell is a fixed height now, so there is
                     no dead space to close. */}
-                <div style={{ position: 'relative', width: 132, height: 146, flexShrink: 0, borderRadius: 16, overflow: 'hidden', clipPath: 'inset(0 round 16px)', border: `1px solid ${dColor}88`, boxShadow: 'inset 0 -18px 28px rgba(0,0,0,0.55)', background: `linear-gradient(180deg, ${(portraitSkin ?? dColor)}1f 0%, #070504 78%)` }}>
+                <div style={{ position: 'relative', margin: '0 -1.1rem', height: wideDetail ? 250 : 210, flexShrink: 0, overflow: 'hidden', borderBottom: `1px solid ${dColor}44`, background: `radial-gradient(ellipse 60% 66% at 50% 42%, ${(portraitSkin ?? dColor)}40 0%, ${(portraitSkin ?? dColor)}12 45%, #070504 82%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={artSrc(portraitFilename)} alt={it.name}
                     className={portraitChase ? 'chase-skin-glow' : undefined}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 6, transition: 'filter 0.25s', ...(portraitChase ? { ['--chase-c']: portraitSkin } : { filter: portraitSkin ? skinArtGlow(portraitSkin, it.rarity, true) : undefined }) } as React.CSSProperties} />
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 16%', padding: '10px 10px 0', transition: 'filter 0.25s', ...(portraitChase ? { ['--chase-c']: portraitSkin } : { filter: portraitSkin ? skinArtGlow(portraitSkin, it.rarity, true) : undefined }) } as React.CSSProperties} />
                   {portraitChase && portraitSkin && <ChaseSkinFx skinId={shownSkinId} color={portraitSkin} />}
                   {/* Equip flash + light sweep — a tactile beat the moment a skin
                       is equipped. Clipped to the arch by the portrait's overflow. */}
@@ -3715,9 +3589,8 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                         style={{ position: 'absolute', top: 0, bottom: 0, width: '55%', background: 'linear-gradient(105deg, transparent, rgba(255,255,255,0.5), transparent)' }} />
                     </div>
                   )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-
+                  <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '46%', background: 'linear-gradient(to top, rgba(7,5,4,0.96) 0%, rgba(7,5,4,0.7) 42%, rgba(7,5,4,0) 100%)', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', left: '1.1rem', right: '1.1rem', bottom: 10, zIndex: 2 }}>
                 {/* Crew name + one-shot rename. Roster crew with no
                     nickname yet get a small pencil next to the name; tap
                     to swap into an inline input. Already-named or board
@@ -3787,7 +3660,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   }
                   return (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <p className="font-pirata" style={{ fontSize: '1.35rem', color: '#ecdcbd', lineHeight: 1.05, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</p>
+                      <p className="font-pirata" style={{ fontSize: wideDetail ? '2rem' : '1.7rem', color: '#f3e5c6', lineHeight: 1.05, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>{it.name}</p>
                       {canRename && (
                         <button
                           type="button"
@@ -3817,6 +3690,9 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     </div>
                   )
                 })()}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {!('xp' in it) && (
                   <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}</p>
                 )}

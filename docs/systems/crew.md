@@ -168,3 +168,15 @@ where crew XP comes from fastest (12 of 14 captains with crew but no raid clear 
 `CLASS_MILESTONE_LEVELS` is now [1, 10, 25, 40, 75, 100] and `CLASS_UNLOCK_LEVEL` 1: every class has
 a Lv 1 tier at ~70% of its old Lv 10 values, and Lv 10 stays a real step to the old base. Oracle's
 Lv 1 equals its Lv 10 ("see the next move" has nothing smaller).
+
+## Crew cards are art first (2026-09-24)
+
+Kong: the recruit hall and crew cards should be art forward, like the enemy stat card in a fight.
+- `CrewPanel` (the ONE card the recruit board and the roster share, so they still read the same)
+  is a PORTRAIT card now: the painting fills a 196px panel on a pool of its rarity colour, the
+  class chip and the aboard/lock badge sit on the art, and the name + level + rarity·trait line
+  are set on a scrim across its foot. Duty tag, stats and the action follow underneath. The
+  board and roster grids went from minmax(300px) to minmax(172px) for the taller card.
+- The crew DETAIL sheet opens on a full-bleed painting (210px, 250 on wide) with the name and the
+  one-time rename on its scrim; the close floats over the art; level/XP bar under it. The shell
+  grew (590 / 700) so the tabs keep their budgeted body height.
