@@ -122,3 +122,14 @@ the locker (or what is equipped on the open tab): a rod's lines from `rodEffectL
 which the Tackle Shop now reads too (one list, no drift), plus its catch zone against the rod in
 hand; a cosmetic says it is a look and nothing about the catch.
 
+## The Shipyard, rebuilt (2026-09-24)
+
+Kong: the page looked really bad; nicer buttons and a clear upgrade path for each. `/shipyard`
+(ShipyardClient) keeps every purchase, picker (GearScreen, mounted as before) and the confirm modal
+as they were, in a new room: a header with the purse and the close; the boat large on the harbour
+(`/welcome-harbour-open.webp`) with its callouts on the left, the kit row and Carried under it,
+sticky; the refit on the right as `UpgradeCard`s (stat and reading from `DETAIL`, a segmented
+ladder of every tier with "Tier n of m", what the next tier adds, and one button: "Upgrade · cost",
+"Need X more", or a Fully upgraded stamp); then What it adds up to. Two columns from a 900px host
+(`.yard-host` container query), stacked below.
+

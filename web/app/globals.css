@@ -4087,3 +4087,17 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
 @media (pointer: fine) and (min-width: 1000px) {
   .sea-surface { --plate-k: 1.45; }
 }
+
+/* ── The Shipyard, rebuilt (app/(app)/shipyard) ─────────────────────────────
+   The boat on the left, the refit on the right when its host is 900 or more;
+   stacked below that. Container-sized like the loadout. */
+.yard-host { container-type: inline-size; }
+.yard-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.4rem; }
+.yard-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.yard-press { transition: transform 0.14s ease, filter 0.14s ease, box-shadow 0.14s ease; }
+.yard-press:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.08); }
+.yard-press:not(:disabled):active { transform: scale(0.98); }
+@container (min-width: 900px) {
+  .yard-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); align-items: start; }
+  .yard-stage { position: sticky; top: 0; }
+}
