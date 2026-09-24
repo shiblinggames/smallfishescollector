@@ -69,31 +69,47 @@ import type { CrateItemChance } from '@/lib/raidLoot'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
 import { getCheckTutorialSeen, markCheckTutorialSeen } from './checkTutorialActions'
 import { getSkirmishTourSeen, markSkirmishTourSeen } from './skirmishTourActions'
-import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
+import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 
 /**
- * ── THE REEF SKIRMISH'S GUIDED INTRO ────────────────────────────────────────
+ * ── THE REEF SKIRMISH'S GUIDED FIRST FIGHT ─────────────────────────────────
  *
- * The campaign's first fight shipped with no coaching at all: the old
- * walkthrough lived on the retired practice page and never moved with the
- * fight. Four cards, click-through, each beside the control it is about
- * (the handles are `data-coach` on the deck). What they cover, and no more:
- * the action row with Reload named, the aim lock, that enemies keep a
- * pattern you can read off their cannonballs, and what Special is. Plain,
- * contracted, one asterisked term a line, the way Doby and Kat talk on the
- * sea. Once per account (has_seen_skirmish_tour), never on a boss.
+ * Kong rewrote it (2026-09-24) from four click-through cards into a fight you
+ * are walked THROUGH: reload, dodge the shot that follows, fire, then the crew.
+ * Beats with `only` hold the turn to that one action (the other buttons are
+ * off and the page's other controls swallowed, see CoachFlash) and wait for
+ * the turn to resolve; `aiming` shows while the aim bar is up; the rest are
+ * read and answered with Next.
  *
- * The facts, checked: the Reef Raider's pattern is reload, fire, reload, fire
- * (lib/bossRaids); crew abilities unlock at CLASS_UNLOCK_LEVEL 10 and step up
- * at 25, 40, 75 and 100 (lib/crewClasses); the class is fixed by species.
+ * It leans on the Reef Raider's pattern being reload, fire, reload, fire
+ * (lib/bossRaids, 'brute'): turn one both reload, turn two he fires, turn three
+ * he reloads while you shoot. The dodge beat banks one guaranteed dodge, so
+ * "Great dodge!" is never said over a hit. Once per account.
  */
-const SKIRMISH_TOUR: LobbyGuideStep[] = [
-  { coachId: 'raid-actions', ...GUIDES.doby, text: 'Every turn you pick one move down here. *Reload* loads a cannonball, Fire spends one, and Dodge sidesteps the next hit.' },
-  { coachId: 'raid-fire', ...GUIDES.kat, text: 'When you *Fire*, press Lock as the marker hits the gold center. Green lands. Gold hits harder.' },
-  { coachId: 'raid-enemy-charges', ...GUIDES.doby, text: 'Enemies follow a *pattern*. Watch the cannonballs up here: this one loads, then fires. Learn the rhythm and dodge on the turn it matters.' },
-  { coachId: 'raid-special', ...GUIDES.kat, text: '*Special* is your crew. Their abilities unlock at level 10 and get stronger as they level. Different crew, different tricks.' },
+type TutorBeat = {
+  speaker: string; portrait: string; text: string
+  /** data-coach names to ring, space separated; the first one on screen also
+   *  anchors the card. */
+  flash?: string
+  /** Hold the turn to this action, and wait for the turn to resolve. */
+  only?: 'reload' | 'dodge' | 'fire'
+  /** Shown while the aim bar is up; waits for the turn to resolve. */
+  aiming?: true
+}
+const SKIRMISH_TUTOR: TutorBeat[] = [
+  { ...GUIDES.doby, text: 'Ah, our first skirmish! You always remember your first! Anyways, you have several *actions* you can take each turn.' },
+  { ...GUIDES.doby, flash: 'raid-dodge raid-reload raid-fire', text: '*Dodge* if you think an enemy will fire this turn. Reload if you want to be able to fire. And if you have cannonballs available, fire away!' },
+  { ...GUIDES.doby, flash: 'raid-reload', only: 'reload', text: 'I recommend *reloading* for now since you don’t have anything ready. And the enemy can’t fire because they also have nothing loaded.' },
+  { ...GUIDES.doby, flash: 'raid-enemy-charges', text: 'Looks like you both reloaded this turn. Enemies each have *patterns* that you can learn. Use that to your advantage.' },
+  { ...GUIDES.doby, flash: 'raid-dodge', only: 'dodge', text: 'I have a weird feeling they’re gonna fire next.' },
+  { ...GUIDES.doby, flash: 'raid-fire', only: 'fire', text: 'Great dodge! Let’s go on the *offensive* now!' },
+  { ...GUIDES.kat, aiming: true, text: 'Lock into the *green* to hit the enemy, but hit the yellow center and you’ll score a critical hit!' },
+  { ...GUIDES.kat, flash: 'raid-crew raid-special', text: 'Every crew has an *ability* you can use too. Be sure to try it out!' },
+  { ...GUIDES.doby, text: 'You should be all set, cap’n. Show ’em what you’re made of.' },
 ]
+/** The last beat that steers the fight (the aim beat); after it, free play. */
+const TUTOR_FORCED_THROUGH = SKIRMISH_TUTOR.reduce((m, b, i) => (b.only || b.aiming ? i : m), -1)
 import type { ContractFightFacts } from '@/lib/gauntletContracts'
 import { applyStatus, statusMods, tickStatuses, cleanseStatuses, STATUS_DEFS, type ActiveStatus, type StatusId } from '@/lib/statuses'
 import { CannonShotBurst, ImpactBurst, RailgunBeam, NukeMissile, NukeBlast } from './megaFx'
@@ -2393,14 +2409,19 @@ export default function RaidCombat({
   // Opens two frames after the deck has painted, so its rings have controls
   // to sit on, and only if this account has never seen it. Combat is
   // turn-based, so the fight simply waits for the first press under it.
-  const [skirmishGuide, setSkirmishGuide] = useState(false)
+  /** The beat of SKIRMISH_TUTOR that is up, or -1 when the tutor is not
+   *  running. Marked seen the moment it starts, like the old four cards. */
+  const [tutStep, setTutStep] = useState(-1)
+  /** Waiting for the turn to resolve: the turn number it waits to reach. */
+  const [tutWaitTurn, setTutWaitTurn] = useState<number | null>(null)
   useEffect(() => {
     if (!skirmishTour) return
     let alive = true
     getSkirmishTourSeen()
       .then(seen => {
         if (!alive || seen) return
-        requestAnimationFrame(() => requestAnimationFrame(() => { if (alive) setSkirmishGuide(true) }))
+        void markSkirmishTourSeen().catch(() => {})
+        requestAnimationFrame(() => requestAnimationFrame(() => { if (alive) setTutStep(0) }))
       })
       .catch(() => {})
     return () => { alive = false }
@@ -2540,6 +2561,57 @@ export default function RaidCombat({
   }
   const turnRef            = useRef(1)
   const [turn, setTurn]    = useState(1)
+
+  // ── THE TUTOR'S TURN KEEPING (see SKIRMISH_TUTOR) ────────────────────
+  const tutBeat = tutStep >= 0 && tutStep < SKIRMISH_TUTOR.length ? SKIRMISH_TUTOR[tutStep] : null
+  const tutAdvance = useCallback(() => { setTutWaitTurn(null); setTutStep(n => n + 1) }, [])
+  // A waited-on turn has resolved: back to input on a later turn.
+  useEffect(() => {
+    if (tutWaitTurn == null || subPhase !== 'await_input' || turn < tutWaitTurn) return
+    tutAdvance()
+  }, [tutWaitTurn, subPhase, turn, tutAdvance])
+  // The aim beat: up with the bar, and once the shot is locked it waits for
+  // the turn like the others.
+  useEffect(() => {
+    if (!tutBeat?.aiming || tutWaitTurn != null) return
+    if (subPhase !== 'aiming' && subPhase !== 'await_input') setTutWaitTurn(turn + 1)
+  }, [tutBeat, subPhase, turn, tutWaitTurn])
+  /** The one action the tutor allows this turn, if it is holding one. */
+  const tutOnly = tutBeat && tutWaitTurn == null ? tutBeat.only ?? null : null
+  /** A card to read while the fight is still being walked through: no action
+   *  at all until Next, or a press would run the fight ahead of the script.
+   *  Only up to the aim beat; the crew beat after it is free play. */
+  const tutReading = !!tutBeat && tutWaitTurn == null && !tutBeat.only && !tutBeat.aiming && tutStep <= TUTOR_FORCED_THROUGH
+  const tutAllows = (a: 'reload' | 'dodge' | 'fire') => !tutReading && (!tutOnly || tutOnly === a)
+  // Ring what the beat names; the first one on screen is also the anchor.
+  useEffect(() => {
+    const want = tutBeat && tutWaitTurn == null && !tutBeat.aiming ? tutBeat.flash : undefined
+    const clear = () => document.querySelectorAll('.coach-flash')
+      .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
+    if (!want) return
+    const names = want.split(' ')
+    // A beat naming alternatives (the crew rail or the Special button) rings
+    // only the first that exists; one naming several buttons rings them all.
+    const alternatives = want.includes('raid-crew')
+    const find = () => {
+      clear()
+      for (const n of names) {
+        const els = document.querySelectorAll(`[data-coach="${n}"]`)
+        els.forEach(el => el.classList.add('coach-flash', 'coach-flash-gold'))
+        if (alternatives && els.length) break
+      }
+    }
+    find()
+    const id = window.setInterval(find, 250)
+    return () => { window.clearInterval(id); clear() }
+  }, [tutBeat, tutWaitTurn])
+  // A beat that holds the turn to one action takes the rest of the page too:
+  // CoachFlash swallows every press but the ringed control while this is up.
+  useEffect(() => {
+    if (!tutOnly) return
+    document.body.classList.add('sea-tour-lock')
+    return () => document.body.classList.remove('sea-tour-lock')
+  }, [tutOnly])
   // Davy's Heavy Cannon ramp — the per-fight +damage stack. Mirrors the
   // resolver's `rampPerTurn * (turn - 1)` so the hull heat badge shows the
   // exact live bonus. Resets to 0 each new enemy (turn resets to 1).
@@ -4776,10 +4848,19 @@ export default function RaidCombat({
 
   function selectAction(action: EnemyAction) {
     if (subPhase !== 'await_input') return
+    if (tutReading || (tutOnly && action !== tutOnly)) return
     if (action === 'fire'   && !canFire)   return
     if (action === 'volley' && !canVolley) return
     if (action === 'mega'   && !canMega)   return
     if (action === 'dodge'  && !canDodge)  return
+    // THE TUTOR'S ACTION TAKEN. The dodge is banked as a sure thing, so the
+    // shot the Reef Raider sends next is seen to miss; fire moves straight on
+    // to the aim beat; the rest wait for the turn to resolve.
+    if (tutOnly && action === tutOnly) {
+      if (action === 'dodge') guaranteedDodgeLeftRef.current += 1
+      if (action === 'fire') tutAdvance()
+      else setTutWaitTurn(turn + 1)
+    }
     if (action === 'repair') {
       if (!repairKit || kitUsed || playerHp >= playerHpMax) return
       // Mark consumed at selection — no take-backs once the kit is cracked.
@@ -9612,9 +9693,22 @@ export default function RaidCombat({
             portals to the body, so this number is measured against the sea's
             fight portal itself (RaidSheet, 113) rather than against anything
             inside it. Under the dial's 1200, which the tour never meets. */}
-        {skirmishGuide && (
-          <LobbyGuide show steps={SKIRMISH_TOUR} accent="#f0c040" anchored z={130}
-            onSeen={() => { void markSkirmishTourSeen().catch(() => {}) }} />
+        {tutStep >= 0 && (
+          <GuideCoach
+            show={!!tutBeat && tutWaitTurn == null && (tutBeat.aiming ? subPhase === 'aiming' : subPhase === 'await_input')}
+            portrait={(tutBeat ?? SKIRMISH_TUTOR[SKIRMISH_TUTOR.length - 1]).portrait}
+            speaker={(tutBeat ?? SKIRMISH_TUTOR[SKIRMISH_TUTOR.length - 1]).speaker}
+            text={(tutBeat ?? SKIRMISH_TUTOR[SKIRMISH_TUTOR.length - 1]).text}
+            accent="#f0c040"
+            // Over the aim bar the card goes to the top of the screen: beside
+            // the bar it would sit on the very thing it is explaining.
+            placement={tutBeat?.aiming ? 'top' : 'bottom'}
+            anchor={tutBeat?.aiming ? undefined : (tutBeat?.flash ?? 'raid-actions')}
+            onNext={tutBeat && !tutBeat.only && !tutBeat.aiming ? tutAdvance : undefined}
+            nextLabel={tutStep === SKIRMISH_TUTOR.length - 1 ? 'Aye' : undefined}
+            onClose={() => { setTutStep(SKIRMISH_TUTOR.length); setTutWaitTurn(null) }}
+            z={130}
+          />
         )}
         {typeof document !== 'undefined' && abilitySummon && createPortal(
           <AbilitySummonFx key={abilitySummon.key} label={abilitySummon.label} name={abilitySummon.name} color={abilitySummon.color} image={abilitySummon.image} chase={abilitySummon.chase} skinId={abilitySummon.skinId} />,
@@ -9984,7 +10078,7 @@ export default function RaidCombat({
             player's card measures against, so a rail in the flow would push
             that card up by its own height. */}
         <CrewRail items={specialItems.filter(i => i.id.startsWith('crew-'))}
-          disabled={subPhase !== 'await_input'} />
+          disabled={subPhase !== 'await_input' || !!tutOnly || tutReading} />
         {/* THE CONTROLS, IN A COLUMN. The wash above spans the whole width
             because the deck is a BAND across the foot of the scene, and a
             floating panel with sky either side of it would put back the frame
@@ -10061,18 +10155,19 @@ export default function RaidCombat({
           <InlineLockButton onLock={lockShot} />
         ) : (
           <ActionMenu
-            canFire={canFire}
-            canVolley={canVolley}
-            canMega={canMega}
+            // The tutor holds a turn to one action: the rest are off.
+            canFire={canFire && tutAllows('fire')}
+            canVolley={canVolley && !tutOnly && !tutReading}
+            canMega={canMega && !tutOnly && !tutReading}
             megaAugment={megaAugment}
             volleyCost={effVolleyCost}
             megaCost={effMegaCost}
-            canDodge={canDodge}
-            canReload={canReload}
+            canDodge={canDodge && tutAllows('dodge')}
+            canReload={canReload && tutAllows('reload')}
             onSelect={selectAction}
             disabled={subPhase !== 'await_input'}
             highlightedAction={subPhase === 'await_input' ? null : playerAction}
-            specialItems={specialItems}
+            specialItems={tutOnly || tutReading ? [] : specialItems}
           />
         )}
         </div>
@@ -13208,7 +13303,7 @@ function CrewRail({ items, disabled }: { items: SpecialItem[]; disabled: boolean
       display: 'flex', justifyContent: 'center', pointerEvents: 'none',
     }}>
       <div style={{ width: '100%', maxWidth: RAID_COL_MAX, display: 'flex', justifyContent: 'flex-start' }}>
-        <div style={{
+        <div data-coach="raid-crew" style={{
           display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', gap: 10,
           flexWrap: 'wrap', pointerEvents: 'auto',
         }}>
@@ -13380,7 +13475,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
     <div ref={menuRootRef} style={{ position: 'relative' }}>
       <div data-coach="raid-actions" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <CircleBtn
-          icon={ACTION_ICON.dodge} label="Dodge" color="#38bdf8" keyHint="D"
+          icon={ACTION_ICON.dodge} label="Dodge" color="#38bdf8" keyHint="D" coach="raid-dodge"
           enabled={canDodge && !disabled} highlighted={dodgeHighlighted}
           onClick={() => { if (canDodge && !disabled) onSelect('dodge') }}
         />

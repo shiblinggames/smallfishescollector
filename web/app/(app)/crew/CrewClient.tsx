@@ -1570,6 +1570,12 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     setErr(null)
     vibrate(14)
     setState(s => ({ ...s, board: s.board.map(c => c.id === id ? { ...c, recruited: true } : c) }))
+    // SAID ON THE TAP, like the card. The anchorage tour waited for the
+    // server's crew-changed, so the card said "aboard" and the tour sat on its
+    // old beat, still ringing the other recruits, for the length of the round
+    // trip. A refusal rolls the card back; the tour has already moved on, which
+    // is right: a hand is aboard or the board says why not.
+    window.dispatchEvent(new Event('crew-recruited'))
     startTransition(async () => {
       const res = await recruitCrew(id)
       if ('error' in res) { setErr(res.error); setState(s => ({ ...s, board: snapshot })) }

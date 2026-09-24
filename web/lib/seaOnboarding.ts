@@ -454,7 +454,7 @@ export const GATE_TOUR: Beat[] = [
   },
   {
     ...K,
-    text: 'That’s your crew. Crews have *stats and abilities*. Train them up and they get much, much stronger.',
+    text: 'Crews have *stats and abilities*. Train them up and they get much, much stronger.',
     until: 'next',
     overPanel: true,
   },

@@ -3110,10 +3110,12 @@ export default function SeaMap({
     }
     window.addEventListener('crew-hub-section', onSection)
     window.addEventListener('crew-changed', onCrew)
+    window.addEventListener('crew-recruited', onCrew)
     window.addEventListener('crew-assigned', onAssigned)
     window.addEventListener('crew-aboard', onAboard)
     return () => {
       window.removeEventListener('crew-hub-section', onSection)
+      window.removeEventListener('crew-recruited', onCrew)
       window.removeEventListener('crew-changed', onCrew)
       window.removeEventListener('crew-assigned', onAssigned)
       window.removeEventListener('crew-aboard', onAboard)

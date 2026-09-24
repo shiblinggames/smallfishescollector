@@ -351,9 +351,13 @@ export default function SeaGateTour({
       // And then light whatever the card is actually pointing at, which is the
       // way back when the target has gone.
       const lit = n > 0 ? want : (litRef.current ?? want)
+      // THE FIRST NAME ON SCREEN, NOT ALL OF THEM. A beat naming two targets
+      // names alternatives in order (the sheet's Recruit, else the board's
+      // cards): ringing both put three rings on cards behind an open sheet.
       for (const name of lit.split(' ')) {
-        document.querySelectorAll(`[data-coach="${name}"]`)
-          .forEach(el => el.classList.add('coach-flash', 'coach-flash-gold'))
+        const els = document.querySelectorAll(`[data-coach="${name}"]`)
+        els.forEach(el => el.classList.add('coach-flash', 'coach-flash-gold'))
+        if (els.length) break
       }
     }
     find()

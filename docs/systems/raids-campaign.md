@@ -233,11 +233,17 @@ The campaign's first fight shipped with no coaching: the walkthrough lived on th
 lobbies' `LobbyGuide` (a stepped `GuideCoach` that flashes `data-coach` handles), not a modal:
 four click-through cards from Doby and Kat, each beside the control it names, over the live deck.
 
-- **Cards** (`SKIRMISH_TOUR` in `RaidCombat.tsx`): the action row with Reload named; the aim lock;
-  that enemies keep a pattern you can read off their cannonballs (the Reef Raider's is reload, fire,
-  reload, fire); and what Special is (crew abilities unlock at level 1 since 2026-09-23 (was 10; ~70% of the old Lv 10 tier), step up at 10/25/40/75/100,
-  and the class is fixed by species). Four lines, plain, one asterisked term each.
-- **Handles**: `raid-actions` on the row, `raid-fire` / `raid-reload` / `raid-special` on the
+- **A walked fight, not cards (2026-09-24, Kong's script)** — `SKIRMISH_TUTOR` in `RaidCombat.tsx`.
+  Doby opens (actions; what Dodge / Reload / Fire are, the three buttons ringed), then holds turn one
+  to **Reload** (every other action off, `sea-tour-lock` on the body so CoachFlash swallows other
+  presses) and waits for the turn to resolve; reads the pattern line over the enemy's pips; holds
+  turn two to **Dodge** and banks one `guaranteedDodgeLeftRef` so the Reef Raider's shot is seen to
+  miss; "Great dodge!" holds turn three to **Fire**; Kat's aim line rides the top of the screen
+  while the bar is up; after the turn, the crew rail (or Special on a phone) is ringed for the
+  ability line, and Doby closes. It leans on the Reef Raider's pattern (reload, fire, reload, fire).
+  Read beats before the aim beat disable every action until Next, so a press cannot run the fight
+  ahead of the script. The x ends it. Crew abilities unlock at level 1 (since 2026-09-23).
+- **Handles**: `raid-crew` on the crew rail, `raid-actions` on the row, `raid-dodge` / `raid-fire` / `raid-reload` / `raid-special` on the
   `CircleBtn`s (a `coach` prop), `raid-enemy-charges` on a shrink-to-fit box round the enemy's pips.
 - **When**: two frames after the deck paints, only when `RaidGame` passes `skirmishTour`
   (`config.skirmish`), only if `has_seen_skirmish_tour` is false. Marked seen on open, the lobby
@@ -506,5 +512,7 @@ the player's Fortune card already shows the multiplier.
   impact flash is halved (.32 / .16).
 - Second pass on the flash (Kong: still too bright): the MUZZLE flash was 150px growing 320/s at
   0.95 additive on every shot; it is 84 / 130 / 0.5. A crit's fireball 96 @ .8 and star 110 @ .6.
-- A chase skin's summon no longer opens on the rune wheel (18 turning rays + two counter-rotating
-  dashed rings): its gold flare, foot ripples and signature carry it. Ordinary summons keep it.
+- No summon opens on the rune wheel (18 turning rays + two counter-rotating dashed rings) any more:
+  chase skins lost it first, then every summon (Kong, 2026-09-24). The glow, the white arrival
+  flash and the rising motes carry an ordinary summon; a chase skin adds its flare, ripples and
+  signature.
