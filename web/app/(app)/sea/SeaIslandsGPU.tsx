@@ -94,6 +94,7 @@ import { makeBanks, type Banks } from './seaBanks'
 import { makeChains, type Chains } from './seaChains'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { makeFlow } from './seaFlowGfx'
+import { makeRush } from './seaRush'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
 import { makeCaptain, makeShip, lookKey, type Captain, type CaptainLook } from './seaCaptain'
@@ -165,6 +166,9 @@ export type GpuHandle = {
    *  Its own call rather than a night() argument: the hour changes every frame
    *  and this changes when somebody buys something. */
   lantern(glow: number): void
+  /** Wind rushing past the hull (seaRush): where she is, her velocity in
+   *  world px/s, and how strong, 0..1. Every frame. */
+  rush(x: number, y: number, vx: number, vy: number, k: number): void
   /** The three blended stops out of seaAt, 0..255, deep first. Called on the
    *  chart's own deadband rather than every frame: the colour of the sea does
    *  not change sixty times a second and the shader does not need telling that
@@ -941,6 +945,10 @@ export default function SeaIslandsGPU({
       // Under the captain, over everything else on the stage.
       a.stage.addChild(lights.screen)
       a.stage.addChild(squalls.air)
+      // Wind past the hull when she is flying (seaRush). In the air, like the
+      // rain, following the world's camera.
+      const windRush = makeRush(PIXI)
+      a.stage.addChild(windRush.view)
       a.stage.addChild(banks.air)
 
       const boats = new PIXI.Container()
@@ -1849,6 +1857,7 @@ export default function SeaIslandsGPU({
             && Math.abs(g.y - camY) < halfH + g.r * 1.6) { g.g.advance(t); blowing++ }
         }
         flow.advance(t)
+        windRush.advance(dt)
         for (const l of laps) {
           if (Math.abs(l.x - camX) < halfW + l.half * 2
             && Math.abs(l.y - camY) < halfH + l.half * 3) l.l.advance(t)
@@ -2284,6 +2293,7 @@ export default function SeaIslandsGPU({
           lights.night(d)
           squalls.night(tint)
           flow.night(tint)
+          windRush.night(tint)
           banks.night(tint)
           chains.night(tint)
           wake.night(tint, d)
@@ -2314,6 +2324,7 @@ export default function SeaIslandsGPU({
           // Islands have a REFLECTION in the water now, not a cast shadow,
           // and a reflection does not follow the sun.
         },
+        rush(x, y, vx, vy, k) { windRush.set(x, y, vx, vy, k) },
         mood(m) {
           if (water) {
             water.set({
@@ -2555,6 +2566,8 @@ export default function SeaIslandsGPU({
           // a late-baking island can never end up in front of a bird.
           gulls.view.scale.copyFrom(world.scale)
           gulls.view.position.copyFrom(world.position)
+          windRush.view.scale.copyFrom(world.scale)
+          windRush.view.position.copyFrom(world.position)
           // The rain rides the same transform, for the same reason: it is a
           // sibling of the world so a late-baking island cannot end up in
           // front of it.

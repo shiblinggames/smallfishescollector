@@ -8446,6 +8446,12 @@ export default function SeaMap({
         }
         sailFull = full
         sailMom += ((full ? FULL_SAIL : 1) - sailMom) * (1 - Math.exp(-3 * dt))
+        // ── AND YOU CAN SEE IT ON HER ──────────────────────────────────
+        // Kong: wind rushing behind you when you catch a current. Strongest
+        // riding one, lighter at full sail, nothing against or across a lane
+        // (that is not speed). See seaRush.
+        const rushK = way === 'with' ? 0.5 + 0.5 * cur.k : full ? 0.45 : 0
+        gpuRef.current?.rush(pos.current.x, pos.current.y, vel.current.x + (way === 'with' ? cur.ux * CURRENT_PUSH * SPEED * cur.k : 0), vel.current.y + (way === 'with' ? cur.uy * CURRENT_PUSH * SPEED * cur.k : 0), rushK)
         // Said on the HUD, only when it changes.
         const kelpNow = kelpKeep < 0.9
         const was = seaCueRef.current
@@ -8460,6 +8466,7 @@ export default function SeaMap({
         straightT = 0
         sailFull = false
         inLane = false
+        gpuRef.current?.rush(pos.current.x, pos.current.y, 0, 0, 0)
         const was = seaCueRef.current
         if (was.current || was.full || was.kelp) {
           const next = { current: null, full: false, kelp: false }
