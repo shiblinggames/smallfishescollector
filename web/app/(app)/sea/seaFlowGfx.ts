@@ -15,13 +15,24 @@
 //   The same trick the island surf uses (shoreFoam): the geometry never moves,
 //   only its UVs, so each strip is one draw and a few hundred floats.
 //
-//   A KELP BED is one sprite of dark fronds laid flat on the plane, breathing
-//   very slightly. All the beds share one baked texture, so they batch.
+//   A KELP BED is painted (Kie.ai, public/sea/kelp-*.webp) and has DEPTH
+//   (Kong: it looked weird, it should look underwater and 2.5D; it was baked
+//   brush strokes lying flat on the water). Two layers per bed:
+//     DEEP     two or three upright clumps rising from below, tinted toward
+//              deep water and faded, and drawn in PERSPECTIVE: pulled a little
+//              toward the camera and a little smaller, so as you sail they
+//              slide against the surface the way something under the water
+//              does. Their tips reach up into the canopy.
+//     CANOPY   the floating mat on the surface over them, in full colour,
+//              swaying on the swell.
+//   Both are painted at the map's three-quarter angle, so both are counter-
+//   scaled against the plane's squash like every standing sprite.
 //
 // Both sit on the water under the islands, and both take the night tint.
 
 import type { Container, Texture, MeshSimple, Sprite } from 'pixi.js'
 import { CURRENTS, KELP, otherLaneK } from '@/lib/seaFlow'
+import { texture } from './skiffArt'
 
 const GROUND = 0.58
 /** Each layer: which texture, how far one repeat reaches along the lane (world
@@ -38,9 +49,16 @@ const LAYERS: Layer[] = [
   { tex: 'shear', tile: 410, speed: 120, at: -0.86, wide: 0.1, alpha: 0.3, tint: 0xeaf8ff },
 ]
 
+/** How much nearer the camera's line the deep layer is drawn, and how much
+ *  smaller: 1 would be on the surface. Small, or it reads as a lens effect. */
+const DEPTH = 0.955
+/** The water's colour the deep layer is pulled toward. */
+const DEEP_TINT = 0x3e6c76
+
 export type FlowGfx = {
   view: Container
-  advance(seconds: number): void
+  /** The clock, and where the camera is looking (world px), for the depth. */
+  advance(seconds: number, camX?: number, camY?: number): void
   night(tint: number): void
 }
 
@@ -170,46 +188,6 @@ function shearTexture(PIXI: typeof import('pixi.js')): Texture {
   return canvasTex(PIXI, cv)
 }
 
-function kelpTexture(PIXI: typeof import('pixi.js')): Texture {
-  const S = 256
-  const cv = document.createElement('canvas')
-  cv.width = cv.height = S
-  const g = cv.getContext('2d')!
-  let s = 19
-  const rnd = () => ((s = (s * 1103515245 + 12345) >>> 0) / 4294967296)
-  // Long fronds lying on the surface, radiating loosely from a few holdfasts,
-  // in the muted olive and brown of the painted shallows.
-  const tones = ['#3f5a2a', '#4d6a30', '#5b5a26', '#3a4a22', '#6a6a2e']
-  for (let c = 0; c < 5; c++) {
-    const cx = S / 2 + (rnd() - 0.5) * S * 0.35
-    const cy = S / 2 + (rnd() - 0.5) * S * 0.35
-    for (let i = 0; i < 16; i++) {
-      const a = rnd() * Math.PI * 2
-      const len = S * (0.14 + rnd() * 0.2)
-      const bend = (rnd() - 0.5) * 0.9
-      g.strokeStyle = tones[Math.floor(rnd() * tones.length)]
-      g.globalAlpha = 0.5 + rnd() * 0.4
-      g.lineWidth = 3 + rnd() * 5
-      g.lineCap = 'round'
-      g.beginPath()
-      g.moveTo(cx, cy)
-      g.quadraticCurveTo(
-        cx + Math.cos(a + bend) * len * 0.6, cy + Math.sin(a + bend) * len * 0.6,
-        cx + Math.cos(a) * len, cy + Math.sin(a) * len)
-      g.stroke()
-    }
-  }
-  g.globalAlpha = 1
-  // Soft all round, so a bed has no rim.
-  const fade = g.createRadialGradient(S / 2, S / 2, S * 0.18, S / 2, S / 2, S / 2)
-  fade.addColorStop(0, 'rgba(0,0,0,1)')
-  fade.addColorStop(1, 'rgba(0,0,0,0)')
-  g.globalCompositeOperation = 'destination-in'
-  g.fillStyle = fade
-  g.fillRect(0, 0, S, S)
-  return PIXI.Texture.from(cv)
-}
-
 export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
   const view: Container = new PIXI.Container()
   const tex: Record<Layer['tex'], Texture> = {
@@ -279,28 +257,54 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
     }
   }
 
-  const kelpTex = kelpTexture(PIXI)
-  const beds: { sp: Sprite; w: number; phase: number }[] = []
-  for (const k of KELP) {
-    const sp: Sprite = new PIXI.Sprite(kelpTex)
-    sp.anchor.set(0.5)
-    sp.x = k.x
-    sp.y = k.y
-    const w = k.r * 2.3
-    // Laid on the plane: the world squashes y by GROUND, so the texture is
-    // drawn at its own proportions and the world does the rest.
-    sp.width = w
-    sp.height = w
-    sp.rotation = (k.seed * 1.7) % (Math.PI * 2)
-    sp.alpha = 0.75
-    view.addChild(sp)
-    beds.push({ sp, w, phase: k.seed * 0.9 })
-  }
-  void GROUND
+  // ── THE BEDS ── built when the two paintings have landed. The deep layer is
+  // one container under all the canopies, so every canopy is above every
+  // clump even where two beds are near.
+  const deepLayer: Container = new PIXI.Container()
+  const canopyLayer: Container = new PIXI.Container()
+  view.addChild(deepLayer, canopyLayer)
+  const deep: { sp: Sprite; x: number; y: number; sx: number; sy: number }[] = []
+  const canopies: { sp: Sprite; sx: number; sy: number; phase: number }[] = []
+  void Promise.all([texture(PIXI, '/sea/kelp-deep.webp'), texture(PIXI, '/sea/kelp-canopy.webp')]).then(([dt, ct]) => {
+    if (view.destroyed) return
+    for (const k of KELP) {
+      let r = (k.seed * 2654435761) >>> 0
+      const rnd = () => ((r = (r * 1103515245 + 12345) >>> 0) / 4294967296)
+      const n = 2 + (k.seed % 2)
+      for (let c = 0; c < n; c++) {
+        const sp: Sprite = new PIXI.Sprite(dt)
+        // Anchored at the root, low in the painting: the stalks rise from
+        // there, up the screen, into the canopy.
+        sp.anchor.set(0.5, 0.92)
+        const w = k.r * (1.05 + rnd() * 0.4)
+        const h = (w * dt.height) / dt.width / GROUND
+        // Spread across the bed, roots a little below its middle.
+        const x = k.x + (c - (n - 1) / 2) * k.r * 0.55 + (rnd() - 0.5) * k.r * 0.2
+        const y = k.y + k.r * (0.18 + rnd() * 0.22)
+        sp.tint = DEEP_TINT
+        sp.alpha = 0.5
+        const flip = rnd() < 0.5 ? -1 : 1
+        deepLayer.addChild(sp)
+        deep.push({ sp, x, y, sx: (w / dt.width) * flip, sy: h / dt.height })
+      }
+      const sp: Sprite = new PIXI.Sprite(ct)
+      sp.anchor.set(0.5)
+      sp.position.set(k.x, k.y)
+      const w = k.r * 2.1
+      const h = (w * ct.height) / ct.width / GROUND
+      const flip = rnd() < 0.5 ? -1 : 1
+      sp.scale.set((w / ct.width) * flip, h / ct.height)
+      sp.alpha = 0.92
+      canopyLayer.addChild(sp)
+      canopies.push({ sp, sx: sp.scale.x, sy: sp.scale.y, phase: k.seed * 0.9 })
+    }
+  })
+  let lastCamX = 0, lastCamY = 0
 
   return {
     view,
-    advance(t) {
+    advance(t, camX = lastCamX, camY = lastCamY) {
+      lastCamX = camX; lastCamY = camY
       // Every layer runs the way the water does, each at its own pace.
       for (const l of strips) {
         const off = -(t * l.speed) / l.tile
@@ -312,11 +316,19 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
         }
         buf.update()
       }
-      // Kelp breathes with the swell, barely.
-      for (const b of beds) {
-        const s = 1 + Math.sin(t * 0.6 + b.phase) * 0.025
-        b.sp.width = b.w * s
-        b.sp.height = b.w * (2 - s)
+      // THE DEEP LAYER IN PERSPECTIVE: nearer the camera's line and smaller,
+      // so it slides against the surface as the camera moves, and sways a
+      // touch slower than the canopy because the water down there is.
+      for (const d of deep) {
+        d.sp.position.set(camX + (d.x - camX) * DEPTH, camY + (d.y - camY) * DEPTH)
+        d.sp.scale.set(d.sx * DEPTH, d.sy * DEPTH)
+        d.sp.skew.x = Math.sin(t * 0.35 + d.x * 0.001) * 0.05
+      }
+      // The canopy rides the swell: a slow lean and the slightest breath.
+      for (const c of canopies) {
+        const b = Math.sin(t * 0.6 + c.phase)
+        c.sp.skew.x = b * 0.035
+        c.sp.scale.set(c.sx * (1 + b * 0.02), c.sy * (1 - b * 0.02))
       }
     },
     night(tint) {
