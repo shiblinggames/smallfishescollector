@@ -172,8 +172,8 @@ export type GpuHandle = {
   /** The bay's mood at the camera (raidWaters BAY_MOOD, blended). Water
    *  dials, haze, and how much of the birds and the deep shapes show. */
   mood(m: import('./raidWaters').BayMood): void
-  /** The sun (lib/seaClock sunAt): the water's light, every cast shadow,
-   *  and each island's shadow on the sea. A few times a second. */
+  /** The sun (lib/seaClock sunAt): the water's light and every building's
+   *  cast shadow. A few times a second. */
   sun(angle: number, len: number): void
   /**
    * The player's own captain, every frame.
@@ -1221,29 +1221,42 @@ export default function SeaIslandsGPU({
       const meadow = new PIXI.Container()
       world.addChild(meadow)
       const grassTex = makeGrassTexture(PIXI)
-      /** One soft ellipse for every painted island's shadow in the water. */
-      /** Every island's shadow, for the sun to move. Destroyed ones drop out
-       *  on the next pass. */
-      const isleShadeList: { sp: import('pixi.js').Sprite; x: number; y: number; d: number; w: number }[] = []
-      const islandShadowTexture = (() => {
-        let tex: import('pixi.js').Texture | null = null
-        return (P: typeof PIXI) => {
-          if (tex) return tex
-          const S = 256
-          const c = document.createElement('canvas')
-          c.width = c.height = S
-          const cg = c.getContext('2d')!
-          const grad = cg.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
-          grad.addColorStop(0.00, 'rgba(255,255,255,1)')
-          grad.addColorStop(0.55, 'rgba(255,255,255,0.9)')
-          grad.addColorStop(0.85, 'rgba(255,255,255,0.3)')
-          grad.addColorStop(1.00, 'rgba(255,255,255,0)')
-          cg.fillStyle = grad
-          cg.fillRect(0, 0, S, S)
-          tex = P.Texture.from(c)
-          return tex
+      /**
+       * An island painting flipped about its foot and faded downward, the way
+       * markArt bakes a rock's reflection: strong at the waterline, gone about
+       * halfway down, and softened a little because water breaks an image up.
+       * Once per painting, cached; many rocks share one.
+       */
+      const mirrors = new Map<string, import('pixi.js').Texture>()
+      const islandMirror = (PIXI_: typeof import('pixi.js'), art: string, t: import('pixi.js').Texture) => {
+        const hit = mirrors.get(art)
+        if (hit) return hit
+        try {
+          const w = t.source.width, h = t.source.height
+          const cv = document.createElement('canvas')
+          cv.width = w; cv.height = h
+          const g = cv.getContext('2d')!
+          g.filter = `blur(${Math.max(1, Math.round(w * 0.004))}px)`
+          g.translate(0, h)
+          g.scale(1, -1)
+          g.drawImage(t.source.resource as CanvasImageSource, 0, 0, w, h)
+          g.setTransform(1, 0, 0, 1, 0, 0)
+          g.filter = 'none'
+          // Flipped, so the foot is at the TOP now; fade downward from it.
+          const grad = g.createLinearGradient(0, 0, 0, h)
+          grad.addColorStop(0, 'rgba(0,0,0,0.85)')
+          grad.addColorStop(0.2, 'rgba(0,0,0,0.3)')
+          grad.addColorStop(0.42, 'rgba(0,0,0,0)')
+          g.globalCompositeOperation = 'destination-in'
+          g.fillStyle = grad
+          g.fillRect(0, 0, w, h)
+          const out = PIXI_.Texture.from(cv)
+          mirrors.set(art, out)
+          return out
+        } catch {
+          return PIXI_.Texture.EMPTY
         }
-      })()
+      }
 
       const foams: { f: Foam; x: number; y: number; r: number }[] = []
       const grasses: { g: Grass; x: number; y: number; r: number }[] = []
@@ -1318,16 +1331,21 @@ export default function SeaIslandsGPU({
           // ellipse on the plane, sized to the coast, thrown down and to the
           // right with the light, multiplied so the water under it darkens
           // rather than being painted over. Under the plate, over the sea.
-          const shade = new PIXI.Sprite(islandShadowTexture(PIXI))
-          shade.anchor.set(0.5)
-          shade.tint = 0x03101c
-          shade.alpha = isle.locked ? 0.22 : 0.38
-          shade.blendMode = 'multiply'
-          shade.width = d * 0.98
-          shade.height = (d * 0.98 * plate.aspect) / GROUND * 0.92
-          shade.position.set(isle.x + d * 0.05, isle.y + (d * 0.06) / GROUND)
+          // ── THE ISLAND IN THE WATER ────────────────────────────────
+          //
+          // Kong: the dark oval under each island read as a halo or a stain,
+          // stuck out beside the island and was the wrong shape: "shouldn't it
+          // show a reflection of the island instead, like the boulders do?"
+          // It should. The island's own painting, flipped about its foot where
+          // the land meets the sea, squashed onto the water like the rocks'
+          // reflections, faded out a short way down and softened (see
+          // islandMirror). Under the plate, over the sea. Filled in when the
+          // painting lands, below.
+          const shade = new PIXI.Sprite(PIXI.Texture.EMPTY)
+          shade.anchor.set(0.5, 0)
+          shade.alpha = isle.locked ? 0.14 : 0.32
+          shade.x = isle.x
           islandShades.addChild(shade)
-          isleShadeList.push({ sp: shade, x: isle.x, y: isle.y, d, w: shade.width })
 
           const s = new PIXI.Sprite(PIXI.Texture.EMPTY)
           s.anchor.set(0.5, plate.water)
@@ -1346,6 +1364,19 @@ export default function SeaIslandsGPU({
             const k = w / t.width
             s.width = w
             s.height = (t.height * k) / GROUND
+            // The reflection: from the painting's foot, a squashed copy.
+            if (!shade.destroyed) {
+              shade.texture = islandMirror(PIXI, plate.art, t)
+              // Flatter than a rock's (0.62): an island is wide and low, and at
+              // 0.62 its reflection read as a second island hanging below it.
+              // Started a little way up under the painting, because a coast's
+              // foot is not a straight line and a reflection hung from the
+              // image's bottom edge left a gap of sea at the sides.
+              const c = 0.45
+              shade.width = w
+              shade.height = (t.height * k * c) / GROUND
+              shade.y = isle.y + (1 - plate.water) * s.height - s.height * 0.06
+            }
           }).catch(() => {
             // A plate that will not load leaves the island invisible rather
             // than half-drawn; the coast still stops a hull.
@@ -2273,16 +2304,8 @@ export default function SeaIslandsGPU({
           // roads, which lie along it.
           if (water) water.set({ uLight: new Float32Array([Math.cos(angle), Math.sin(angle)]) })
           townLayer?.sun(angle, len)
-          // Each island's shadow slides away from the light and lengthens
-          // with it. At the painted key this is exactly where it always sat.
-          const dx = Math.cos(angle + Math.PI), dy = Math.sin(angle + Math.PI)
-          const reach = 0.078 * len
-          for (let i = isleShadeList.length - 1; i >= 0; i--) {
-            const e = isleShadeList[i]
-            if (e.sp.destroyed) { isleShadeList.splice(i, 1); continue }
-            e.sp.position.set(e.x + dx * e.d * reach, e.y + (dy * e.d * reach) / GROUND)
-            e.sp.width = e.w * (1 + 0.12 * (len - 1))
-          }
+          // Islands have a REFLECTION in the water now, not a cast shadow,
+          // and a reflection does not follow the sun.
         },
         mood(m) {
           if (water) {

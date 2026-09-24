@@ -3404,3 +3404,16 @@ at midday, -112deg at sunset, with shadow length 0.7x at noon and ~2.2x on the h
 moon holds -135deg. SeaMap hands it to the canvas at 4 Hz (`gpu.sun`): the water's `uLight` (swell
 shading, glint and moon roads), every building's cast shadow (seaTown `sun`: skew + length), and each
 island's shadow offset and width (`isleShadeList`).
+
+## Island reflections, softer building shadows (2026-09-23)
+
+Kong: building shadows were detached and too dark/crisp; the dark oval under each island read as
+a halo, stuck out and was the wrong shape, "shouldn't it show a reflection like the boulders do?"
+- Buildings: the shadow is a SOFT silhouette baked once per art (`softShadowOf` in seaTown: alpha
+  filled white and canvas-blurred, cached; unblurred where canvas `filter` is unsupported), SHADE
+  0.2, and tucked up FOOT_TUCK (12% of the painting's height) under the base so it starts beneath
+  the building instead of at the picture's bottom edge. Still turns with the sun.
+- Islands: the oval is gone. Each plate gets its own REFLECTION (`islandMirror` in SeaIslandsGPU):
+  the painting flipped, lightly blurred, faded to nothing by 42% down, squashed 0.45 (flatter than a
+  rock's 0.62) and started 6% up under the plate so a curved coast leaves no gap. Alpha 0.32 (0.14
+  locked). Does not follow the sun.

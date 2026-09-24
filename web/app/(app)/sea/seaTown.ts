@@ -178,7 +178,7 @@ let coreTex: Texture | null = null
 let poolTex: Texture | null = null
 /** A building's cast shadow, at noon. Its own silhouette in near-black at
  *  this opacity; see the note where it is built. */
-const SHADE = 0.26
+const SHADE = 0.2
 const SHADE_LOCKED = 0.14
 /** How long it lies, as a share of the building's height on screen. */
 const SHADOW_LEN = 0.22
@@ -187,6 +187,50 @@ const SHADOW_LEN = 0.22
 const SHADOW_LEAN = 0.55
 /** How much of it the night takes. The sun makes it; the lamps do not. */
 const SHADOW_NIGHT = 0.8
+
+/**
+ * ── A SOFT SILHOUETTE, BAKED ONCE PER PAINTING ─────────────────────────────
+ *
+ * Kong: the building shadows were too dark and too crisp. They were the
+ * painting itself tinted black, so every window frame and roof tile edge came
+ * through razor sharp. This is the painting's alpha filled flat and blurred,
+ * once per art path and cached, so the soft edge costs nothing per frame. A
+ * browser whose canvas ignores `filter` gets it unblurred, which is where it
+ * was before.
+ */
+const softShadows = new Map<string, Texture>()
+function softShadowOf(PIXI: typeof import('pixi.js'), art: string, tex: Texture): Texture {
+  const hit = softShadows.get(art)
+  if (hit) return hit
+  try {
+    const src = tex.source.resource as CanvasImageSource
+    const w = tex.source.width, h = tex.source.height
+    const blur = Math.max(2, Math.round(w * 0.012))
+    const pad = blur * 3
+    const cv = document.createElement('canvas')
+    cv.width = w + pad * 2
+    cv.height = h + pad * 2
+    const g = cv.getContext('2d')!
+    g.filter = `blur(${blur}px)`
+    g.drawImage(src, pad, pad, w, h)
+    g.filter = 'none'
+    g.globalCompositeOperation = 'source-in'
+    g.fillStyle = '#ffffff'
+    g.fillRect(0, 0, cv.width, cv.height)
+    const out = PIXI.Texture.from(cv)
+    softShadows.set(art, out)
+    return out
+  } catch {
+    return tex
+  }
+}
+
+/** How far up the painting its footprint reaches, as a share of its height.
+ *  An isometric building meets the ground along a diamond whose front corner
+ *  is the painting's bottom edge, so a shadow hung from that edge started in
+ *  FRONT of the building and floated. Starting it this far up tucks it under
+ *  the base, where the building covers the join. */
+const FOOT_TUCK = 0.12
 
 /** The lamp itself: a hard bright middle and a short halo. Small on screen, so
  *  most of its range goes on the first fifth — anything softer than this stops
@@ -410,8 +454,12 @@ export async function makeTowns(
       // away from a light in the upper left, the same way the islands'
       // shadows fall. A roofline casts a roofline. It fades with the night,
       // because it is the sun's.
-      const sh: Sprite = new PIXI.Sprite(tex)
-      sh.anchor.set(0.5, 1)
+      const soft = softShadowOf(PIXI, b.art, tex)
+      const sh: Sprite = new PIXI.Sprite(soft)
+      // The blurred bake carries a margin; anchor on the painting's own foot
+      // inside it so the silhouette lines up with the building exactly.
+      const padFrac = soft === tex ? 0 : (soft.height - tex.height) / 2 / soft.height
+      sh.anchor.set(0.5, 1 - padFrac)
       sh.tint = 0x061018
       sh.alpha = spec.locked ? SHADE_LOCKED : SHADE
       node.addChild(sh)
@@ -459,7 +507,8 @@ export async function makeTowns(
       sh.scale.set(k, -(k * SHADOW_LEN) / GROUND)
       // Positive skew leans the far end (the flipped roof) to the right.
       sh.skew.x = SHADOW_LEAN
-      sh.position.copyFrom(s.position)
+      // Tucked up under the base: see FOOT_TUCK.
+      sh.position.set(s.position.x, s.position.y - (tex.height * k * FOOT_TUCK) / GROUND)
 
       // ── AND WHERE ITS CHIMNEYS ARE ───────────────────────────────
       //
