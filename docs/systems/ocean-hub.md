@@ -3607,3 +3607,11 @@ is the beat's own target being on screen, nothing else. With the waypoint counti
 that could not be reached (under an open crew sheet) left the page swallowing every press and the
 captain stuck (Kong hit it).
 
+## The road to the next stop lets go when you turn away (2026-09-24)
+
+Past the gate the chart lights the road to the campaign's next stop. It stayed on whichever way you
+sailed, so going home meant a line trailing behind you (Kong). The loop keeps the closest the hull
+has been to the stop (`campRoad`); 1,200px further out than that and the road is put away. It
+comes back for a new stop, when the campaign pennant is opened, and on the next gate crossing. A
+tour's goal and a road somebody asked for (`wayGoal`) are not affected.
+

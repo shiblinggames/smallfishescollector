@@ -2424,7 +2424,10 @@ export default function RaidCombat({
       .then(seen => {
         if (!alive) return
         if (seen) { setTutChecking(false); return }
-        void markSkirmishTourSeen().catch(() => {})
+        // NOT marked seen here. The fight mounts more than once on the way in
+        // over the sea, and marking it on the first mount meant the mount you
+        // actually play found it seen and ran free (Kong: not forced). It is
+        // marked when the tutor ends, below.
         // Straight onto the first beat, in the same render the hold lifts, so
         // there is no frame in between with a free deck.
         setTutStep(0)
@@ -2583,6 +2586,10 @@ export default function RaidCombat({
     if (!tutBeat?.aiming || tutWaitTurn != null) return
     if (subPhase !== 'aiming' && subPhase !== 'await_input') setTutWaitTurn(turn + 1)
   }, [tutBeat, subPhase, turn, tutWaitTurn])
+  // SEEN WHEN IT ENDS: the last Aye or the x.
+  useEffect(() => {
+    if (tutStep >= SKIRMISH_TUTOR.length) void markSkirmishTourSeen().catch(() => {})
+  }, [tutStep])
   /** The one action the tutor allows this turn, if it is holding one. */
   const tutOnly = tutBeat && tutWaitTurn == null ? tutBeat.only ?? null : null
   /** A card to read: no action at all until Next, or a press would run the

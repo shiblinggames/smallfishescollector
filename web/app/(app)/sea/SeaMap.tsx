@@ -2504,6 +2504,15 @@ export default function SeaMap({
   /** The campaign's next stop, for the lit road out past the gate. Written
    *  from the memo below; the loop must not read a prop. */
   const campaignGoalRef = useRef<{ x: number; y: number; r: number } | null>(null)
+  /**
+   * ── AND IT LETS GO WHEN YOU TURN FOR HOME ─────────────────────────────
+   * Kong: after a clear the road to the next stop stayed on the whole time,
+   * even sailing the other way to go home. The loop tracks the closest the
+   * hull has been to the stop; 1,200px further out than that and the road is
+   * put away. It comes back for a new stop (the next clear), when the
+   * campaign pennant is opened, and on the next crossing of the Sea Gate.
+   */
+  const campRoad = useRef<{ key: string; best: number; off: boolean }>({ key: '', best: Infinity, off: false })
   /** Raised by the tour while the rod should stay stowed. */
   const tourHoldCast = useRef(false)
   /**
@@ -6648,6 +6657,10 @@ export default function SeaMap({
   // ── THE CAMPAIGN'S NEXT STOP, WHERE THE LOOP CAN READ IT ──────────────
   // Only past the gate: inside the harbour the road would point through the
   // reef at water the captain cannot reach from here.
+  // The road back on: the pennant opened, or a fresh crossing of the gate.
+  useEffect(() => {
+    if (campaignOpen || onSeaGate) campRoad.current = { key: '', best: Infinity, off: false }
+  }, [campaignOpen, onSeaGate])
   useEffect(() => {
     campaignGoalRef.current = onSeaGate && nextStop?.at
       ? { x: nextStop.at.x, y: nextStop.at.y, r: NODE_REACH }
@@ -10325,7 +10338,17 @@ export default function SeaMap({
         // A road somebody ASKED for outranks both: the tour's is guidance they
         // are already following and the campaign's is standing advice, and
         // neither is the question just put to the chart. See wayGoal.
-        const lit = wayGoal.current ?? tourGoal.current ?? campaignGoalRef.current
+        let camp = campaignGoalRef.current
+        if (camp) {
+          const cr = campRoad.current
+          const key = `${camp.x},${camp.y}`
+          const d = Math.hypot(pos.current.x - camp.x, pos.current.y - camp.y)
+          if (cr.key !== key) { cr.key = key; cr.best = d; cr.off = false }
+          if (d < cr.best) cr.best = d
+          if (!cr.off && d > cr.best + 1200) cr.off = true
+          if (cr.off) camp = null
+        }
+        const lit = wayGoal.current ?? tourGoal.current ?? camp
         gpuRef.current?.guide(lit ? pos.current : null, lit, lit?.r)
         gpuRef.current?.skipper({
           // THE SAME BLOWS, ON THE CANVAS HULL. `heel` and the offset are
