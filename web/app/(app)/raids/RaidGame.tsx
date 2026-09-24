@@ -318,7 +318,7 @@ interface RaidCrewMember {
   fortune: number
 }
 
-export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, onShipFx, onFightFx, config, equippedShipSkin, shipSkins, equippedItems,
+export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = false, anchors, onShipFx, onFightFx, config, equippedShipSkin, shipSkins, equippedItems,
   ownedRaidItems,
   ownedSpecialItems = [],
   /**
@@ -359,10 +359,15 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
    * flag exists to stop: an opaque imitation of the sea on top of the real one
    * looks like a new screen, because visually it is one.
    *
-   * A boss PHASE backdrop still paints. When Finn turns the sea under him that
-   * is the beat, and it is a change to the water rather than a picture of it.
+   * NOT EVEN A BOSS PHASE. Finn's phase backdrops used to paint here, as "the
+   * sea changing", but they are opaque side-on photographs: over the chart
+   * they hid the water and both hulls, and the finale was the one fight you
+   * could not see. The chart turns its own water instead (onEnemyPhase ->
+   * raidWaters PHASE_MOOD).
    */
   overSea?: boolean
+  /** The enemy's phase, for the chart to turn the water with. See RaidCombat. */
+  onEnemyPhase?: (phase: number) => void
   /** Live handle to where the chart's two hulls are. See RaidCombat. */
   anchors?: { current: { player: ShipAnchor; enemy: ShipAnchor } | null }
   /** What those hulls are doing, sent back for the chart to draw. */
@@ -1653,9 +1658,9 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
     const bayBg = bay && !phaseBg && !overSea ? bayWaterCss(bay) : null
 
     const raidBg = overSea
-      // A phase backdrop is the only one that still paints on the water: it is
-      // the sea CHANGING, not a photograph of a different one.
-      ? phaseBg ?? null
+      // Nothing paints on the water, a phase included: the chart turns the
+      // real sea for it (see overSea above).
+      ? null
       : (
         // A boss phase backdrop (Finn) outranks everything: it is the whole point
         // that the sea changes under him as he escalates.
@@ -1845,6 +1850,7 @@ export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, on
                 bossDefeatedText={config.bossDefeatedText}
                 dialAim={dialAim}
                 onPhaseBg={setPhaseBg}
+                onEnemyPhase={onEnemyPhase}
                 shipImageUrl={shipImageUrl}
                 shipFilter={shipFilter}
                 shipName={shipName}

@@ -66,7 +66,7 @@ import {
   WARGATE, WARGATE_REACH, MAELSTROMS, MAELSTROM_REACH, type Maelstrom,
   // The duel's framing lives with the raid water now, so the gauntlet's arena
   // composes its fights from the same numbers this chart does.
-  WARSHIP_W, FIGHT_CAM_LIFT, zoomFor, fightZoom, hullFilterFor,
+  WARSHIP_W, FIGHT_CAM_LIFT, zoomFor, fightZoom, hullFilterFor, phaseMoodOf, lerpMood,
   type Bay, type Encounter, type Cache, type Beat,
 } from './raidWaters'
 import { RAID_MAP, RAID_CHAPTERS, chapterForNode, computeRaidMap, type RaidNode, type RaidChapter } from '@/lib/raidMap'
@@ -4653,6 +4653,14 @@ export default function SeaMap({
   const [hallSheet, setHallSheet] = useState(false)
   /** The raid being fought over the chart, by raidId. */
   const [fightId, setFightId] = useState<string | null>(null)
+  /**
+   * THE PHASE OF THE FIGHT ON THE WATER, for a boss that turns the sea under
+   * him (raidWaters PHASE_MOOD: Finn). The fight reports it; the frame loop
+   * eases the water toward that phase's mood and back to the bay's own when
+   * the fight closes. A ref, because it only feeds the loop.
+   */
+  const fightPhaseRef = useRef<{ raid: string; phase: number } | null>(null)
+  useEffect(() => { if (!fightId) fightPhaseRef.current = null }, [fightId])
   /** The boss card standing open in front of it, by node id. */
   const [bossCard, setBossCard] = useState<string | null>(openBoss)
   /**
@@ -7980,6 +7988,10 @@ export default function SeaMap({
     /** The canvas's own last hour, unrounded. Separate from `lastDark` because
      *  the two are deliberately at different resolutions. */
     let lastRaw = -1
+    /** The mood on the water while a boss is turning it, eased (see
+     *  fightPhaseRef). Null when the bay's own mood is showing. */
+    let fightMood: BayMood | null = null
+    let fightMoodAt = 0
     /** When the sun was last handed to the canvas. */
     let sunAtMs = -1e9
     // ── WHAT THE WATER AND THE SAILS ADD (see lib/seaFlow) ──────────────
@@ -9871,10 +9883,30 @@ export default function SeaMap({
         // sea's stops. Re-read on the same deadband as the palette. See
         // moodAt and raidWaters BAY_MOOD.
         if (movedFar || !moodNow.current) moodNow.current = moodAt(pos.current)
-        const mood = moodNow.current
+        let mood = moodNow.current
+        // A BOSS TURNING THE SEA. Eased over about a second and a half, so a
+        // phase arrives as weather coming in rather than a cut, and eased back
+        // out to the bay's own mood when the fight closes. While it moves,
+        // the palette and the water are re-sent every frame.
+        let turning = false
+        {
+          const fp = fightPhaseRef.current
+          const want = fp ? phaseMoodOf(fp.raid, fp.phase) : null
+          if (want || fightMood) {
+            const tNow = performance.now()
+            const k = 1 - Math.exp(-Math.min(0.1, (tNow - (fightMoodAt || tNow)) / 1000) / 0.55)
+            fightMoodAt = tNow
+            const goal = want ?? mood
+            const next = lerpMood(fightMood ?? mood, goal, k)
+            const gap = Math.abs(next.dusk - goal.dusk) + Math.abs(next.swell - goal.swell)
+              + Math.abs(next.grade[0] - goal.grade[0]) + Math.abs(next.grade[2] - goal.grade[2])
+            if (!want && gap < 0.004) { fightMood = null; fightMoodAt = 0; turning = true }
+            else { fightMood = next; mood = next; turning = gap > 0.0005 || !want }
+          }
+        }
         const raw = clk.darkness + (1 - clk.darkness) * mood.dusk
         const warmth = Math.max(clk.warmth, mood.warm)
-        if (movedFar || Math.abs(raw - lastRaw) > 0.002) {
+        if (movedFar || turning || Math.abs(raw - lastRaw) > 0.002) {
           lastRaw = raw
           const g = mood.grade
           gpuRef.current.palette(seaAt(pos.current, raw).stops.map(c => c.map((v, i) => Math.min(255, v * g[i]))))
@@ -12036,6 +12068,8 @@ hullRef={hullRefFor(t.key)} />
          * (the DOM chart, `?gpu=0`): `gpuRef` is simply null and the fight
          * plays exactly as it did before, with no branch anywhere in it.
          */
+        // A boss turning the water: see fightPhaseRef.
+        onEnemyPhase={phase => { fightPhaseRef.current = fightId ? { raid: fightId, phase } : null }}
         onFightFx={e => {
           const hull = fightHullRef.current
           const gpu = gpuRef.current

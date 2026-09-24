@@ -109,6 +109,10 @@ import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
 import { vibrate } from '@/lib/haptics'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import BattleFxCanvas, { useBattleFx } from '@/components/BattleFx'
+import dynamic from 'next/dynamic'
+// The fishing dial's fire, the same layer the dial wears on the water: a 2D
+// canvas, so it never opens a second WebGL context over the chart.
+const DialFx = dynamic(() => import('@/components/DialFx'), { ssr: false })
 import { IconShield, IconFog, IconSwords, IconBurst, IconAnchor, IconCrate, IconSkull, IconBolt, IconFlame, IconStar } from '@/components/GameIcons'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
@@ -745,6 +749,10 @@ export interface RaidCombatProps {
    *  transparentBackdrop, so RaidCombat cannot paint a phase backdrop itself:
    *  it hands it up and the owner swaps it. */
   onPhaseBg?: (src: string | null) => void
+  /** Fires with the enemy's phase (1 first) whenever it changes. Over the sea
+   *  the chart turns the water with it instead of painting a backdrop; see
+   *  raidWaters PHASE_MOOD. */
+  onEnemyPhase?: (phase: number) => void
   /** Gauntlet boons / curses held (with art) for the battle profile's Effects
    *  tab. Omitted outside the Gauntlet. */
   runBoons?: { id: string; name: string; tier: number; image?: string | null; desc: string; color: string }[]
@@ -935,6 +943,7 @@ export default function RaidCombat({
   dialAim,
   overSea = false, hudTop = 18, anchors, onShipFx, onFightFx,
   onPhaseBg,
+  onEnemyPhase,
   critStreakCfg,
   defeatSequence,
   bossDefeatedText,
@@ -2226,6 +2235,7 @@ export default function RaidCombat({
   const liveBg = phaseBg ?? zoneBg
   // Hand the phase backdrop to whoever owns the full-screen layer.
   useEffect(() => { onPhaseBg?.(phaseBg ?? null) }, [phaseBg, onPhaseBg])
+  useEffect(() => { onEnemyPhase?.(enemyPhase) }, [enemyPhase, onEnemyPhase])
   // ── The Last Wall (aegis — Sal Brackwater, phase 3) ──────────────────────────────
   // A phase can open behind a wall that drinks EVERY player blow whole. A Mega
   // shatters it outright (the discovery the fight wants the player to make);
@@ -9464,16 +9474,19 @@ export default function RaidCombat({
             zIndex: 1200, pointerEvents: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {/* The scrim is TOP-ANCHORED and ends above the action row, so the
-                Lock Shot button is never dimmed by it. A centred radial was
-                still ~0.9 opaque past mid-screen and laid a shadow straight
-                over the button, which is the one thing the player has to see
-                and hit while the dial is up. Bottom third is left clean. */}
-            <div aria-hidden style={{
-              position: 'absolute', top: 0, left: 0, right: 0, height: '68%',
-              background: 'linear-gradient(180deg, rgba(2,5,10,0.88) 0%, rgba(2,5,10,0.86) 46%, rgba(2,5,10,0.55) 78%, rgba(2,5,10,0) 100%)',
-            }} />
+            {/* NO SCRIM. There was a near-black lid over the top two thirds of
+                the screen for every shot, which on the water blacked out the
+                sea, both hulls and everything the fight was doing to them:
+                the finale was the one fight you could not watch. The fishing
+                dial sits straight on the water, and so does this. All the
+                instrument needs to read over bright sea is a soft shade of its
+                own, a little wider than the rim and gone well before the
+                action row, so the Lock Shot button is never under it. */}
             <div style={{ position: 'relative', width: '86%', maxWidth: 300 }}>
+              <div aria-hidden style={{
+                position: 'absolute', inset: '-22%', borderRadius: '50%', pointerEvents: 'none',
+                background: 'radial-gradient(circle, rgba(2,5,10,0.62) 0%, rgba(2,5,10,0.5) 42%, rgba(2,5,10,0.2) 62%, rgba(2,5,10,0) 72%)',
+              }} />
               <DialAimInline
                 indicatorRef={indicatorRef}
                 zonesGroupRef={dialZonesRef}
@@ -13684,6 +13697,11 @@ function DialAimInline({
           )}
         </div>
       )}
+      {/* THE FIRE, as the fishing dial wears it on the water: grows with the
+          streak, throws a ring of sparks on every crit, and his aura breathes
+          under it. He is carrying all six Ancients, so the dial is dressed as
+          an Ancient's for the whole fight. */}
+      <DialFx streak={streakCount} burstKey={perfectBurstKey} ancientBoss />
       {/* result flash, same element the bar uses */}
       <div ref={flashRef} aria-hidden style={{
         position: 'absolute', inset: '3.6%', borderRadius: '50%', opacity: 0,
@@ -13703,6 +13721,7 @@ function DialAimInline({
         needleStyle="marker"
         turnMark
         fireLevel={streakFire}
+        ancientBoss
         snapKey={snapKey}
         perfectBurstKey={perfectBurstKey}
       />

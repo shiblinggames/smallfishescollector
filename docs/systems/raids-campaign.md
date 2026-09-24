@@ -432,3 +432,24 @@ eyeballed, and the trader check still clears every shore.
 **Also fixed, pre-existing:** node 28's bridge read "the gate's behind you, and the market's
 war-fleet is already turning to meet you", which skips the harbour wall and its boom
 entirely, and those are the very next stop.
+
+## The finale on the water (One Last Ride, 2026-09-24)
+
+Finn's fight (`THE_SUNKEN_HAND`, `aimStyle: 'dial'`) had not followed either side's facelift.
+Kong: get it visually on par. What changed, and what not to regress:
+- **No photo over the sea.** His six `finn_bg*.jpg` phase backdrops are side-on paintings from
+  the page era; over the chart they were opaque and hid the water AND both Pixi hulls. Over the
+  sea `RaidGame` paints nothing now, phase included. Instead `RaidCombat.onEnemyPhase` ->
+  `RaidSheet` -> SeaMap `fightPhaseRef`, and the frame loop eases the water (~1.5s) into
+  `raidWaters PHASE_MOOD.the_sunken_hand[phase-1]` (bone fog / iron / whitecapped wake / dead
+  flat / cold swell / red maw), and back to the bay's mood when the fight closes. Any boss can
+  get the same by adding a PHASE_MOOD entry. The /raids/sunken-hand route still uses the photos.
+- **No scrim.** The dial overlay laid a ~0.88 black lid over the top 68% of the screen every
+  shot. Now only a soft radial shade just past the rim (never reaching the action row).
+- **The fishing dial's dress.** `DialFx` (2D canvas, safe over the chart) behind the dial:
+  streak fire, crit spark ring, and the Ancient aura (`ancientBoss`, on DialSVG too) for the
+  whole fight, since he carries all six.
+- **Gear on the water.** `RaidSheet` never passed `dialAim`, so from the chart the rod/hook/reel
+  did nothing to the dial. Fixed.
+- Not done: the dial needle still paints from the RAF (`compositor = !onDial`), not WAAPI like
+  the fishing needle and the bar.

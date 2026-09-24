@@ -253,6 +253,61 @@ export const BAY_MOOD: Record<string, BayMood> = {
   },
 }
 
+/**
+ * ── WHEN A BOSS TURNS THE SEA UNDER HIM ─────────────────────────────────────
+ *
+ * Finn's six phases each came with a painted backdrop, from when the fight was
+ * a page. Over the chart those were opaque side-on photographs laid across the
+ * live water, and they hid both hulls with it: the finale was the one fight in
+ * the game that left the sea (Kong: get it visually on par). So on the water a
+ * phase is a MOOD instead, the same numbers a bay is made of, and the chart
+ * eases into it (SeaMap, fightPhaseRef). Indexed by phase, 1 first.
+ *
+ * Each follows the giant he has just thrown and the old painting it replaces:
+ *   1 plesiosaurus  bone-pale, milky and still, fog on it
+ *   2 dunkleosteus  iron: heavy grey-green, dull light
+ *   3 mosasaurus    the wake: violent chop, whitecaps everywhere
+ *   4 basilosaurus  dead flat and near-black, the fog back
+ *   5 shastasaurus  cold: a huge slow swell, ice-blue light
+ *   6 megalodon     the maw: red light on a heavy sea
+ */
+export const PHASE_MOOD: Record<string, BayMood[]> = {
+  the_sunken_hand: [
+    { swell: 0.7, chop: 0.5, caust: 0.3, glint: 0.6, caps: 0.4, bloom: 0.9, glintTint: [0.92, 1, 0.96],
+      dusk: 0.25, warm: 0, grade: [0.96, 1, 0.98], fog: 1, storms: 0, tempest: false, gulls: 0, deep: 0.6 },
+    { swell: 1.1, chop: 0.9, caust: 0.2, glint: 0.8, caps: 0.7, bloom: 0.7, glintTint: [0.82, 0.95, 0.86],
+      dusk: 0.4, warm: 0, grade: [0.88, 0.96, 0.86], fog: 0.5, storms: 0.3, tempest: false, gulls: 0, deep: 0.7 },
+    { swell: 1.7, chop: 2, caust: 0.15, glint: 0.5, caps: 2.2, bloom: 0.5, glintTint: [0.85, 0.95, 1.1],
+      dusk: 0.45, warm: 0, grade: [0.85, 0.92, 1.05], fog: 0.3, storms: 1, tempest: true, gulls: 0, deep: 0.9 },
+    { swell: 0.4, chop: 0.3, caust: 0.1, glint: 0.3, caps: 0.2, bloom: 1.1, glintTint: [0.85, 1, 0.9],
+      dusk: 0.6, warm: 0, grade: [0.82, 0.92, 0.84], fog: 0.85, storms: 0, tempest: false, gulls: 0, deep: 1 },
+    { swell: 2, chop: 0.8, caust: 0.6, glint: 1.2, caps: 1, bloom: 0.8, glintTint: [0.8, 0.9, 1.2],
+      dusk: 0.45, warm: 0, grade: [0.82, 0.9, 1.12], fog: 0.4, storms: 0.2, tempest: false, gulls: 0, deep: 1 },
+    { swell: 1.5, chop: 1.6, caust: 0.2, glint: 1, caps: 1.6, bloom: 0.3, glintTint: [1.2, 0.55, 0.45],
+      dusk: 0.55, warm: 0, grade: [1.12, 0.8, 0.78], fog: 0.25, storms: 0.8, tempest: true, gulls: 0, deep: 1 },
+  ],
+}
+
+/** The mood a fight's phase sets, or null. A challenge variant turns the same
+ *  water as its base raid. */
+export function phaseMoodOf(raidId: string, phase: number): BayMood | null {
+  const list = PHASE_MOOD[raidId.replace(/_challenge$/, '')]
+  return list?.[Math.max(0, Math.min(list.length - 1, phase - 1))] ?? null
+}
+
+/** Part of the way from one mood to another. The flags go with the target. */
+export function lerpMood(a: BayMood, b: BayMood, k: number): BayMood {
+  const l = (x: number, y: number) => x + (y - x) * k
+  const l3 = (x: [number, number, number], y: [number, number, number]): [number, number, number] =>
+    [l(x[0], y[0]), l(x[1], y[1]), l(x[2], y[2])]
+  return {
+    swell: l(a.swell, b.swell), chop: l(a.chop, b.chop), caust: l(a.caust, b.caust), glint: l(a.glint, b.glint),
+    caps: l(a.caps, b.caps), bloom: l(a.bloom, b.bloom), glintTint: l3(a.glintTint, b.glintTint),
+    dusk: l(a.dusk, b.dusk), warm: l(a.warm, b.warm), grade: l3(a.grade, b.grade), fog: l(a.fog, b.fog),
+    storms: l(a.storms, b.storms), tempest: k > 0.5 ? b.tempest : a.tempest, gulls: l(a.gulls, b.gulls), deep: l(a.deep, b.deep),
+  }
+}
+
 export function bayCentre(b: Bay): { x: number; y: number } {
   return {
     x: HUB.x + Math.cos(b.bearing) * b.at,

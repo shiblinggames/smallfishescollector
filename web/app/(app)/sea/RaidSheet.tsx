@@ -36,7 +36,7 @@ import type { ShipAnchor, ShipFx, FightFx } from '@/app/(app)/raids/RaidCombat'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { raidSheetState, type RaidSheetState } from './raidSheetActions'
 
-export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFightFx, onClose, onSunk }: {
+export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFightFx, onEnemyPhase, onClose, onSunk }: {
   /** Which fight. Resolved to a config through the registry, so this cannot
    *  drift from the raid the node map opens. */
   raidId: string | null
@@ -57,6 +57,8 @@ export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFigh
   onClose: () => void
   /** She went down. The chart puts you back at the Gunwharf — see SeaMap. */
   onSunk: () => void
+  /** The enemy's phase, so the chart can turn the water under a boss. */
+  onEnemyPhase?: (phase: number) => void
 }) {
   const [fetched, setFetched] = useState<RaidSheetState | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -143,6 +145,11 @@ export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFigh
           bonusChargeSlots={state.bonusChargeSlots}
           manowarAugment={state.manowarAugment}
           onLeave={onClose}
+          onEnemyPhase={onEnemyPhase}
+          // THE FISHING GEAR ON THE DIAL. The route always passed this; the
+          // sheet did not, so fighting Finn from the water quietly dropped the
+          // rod, hook and reel the whole convergence is built on.
+          dialAim={state.dialAim}
           onSunk={onSunk}
         />
       ) : err ? (
