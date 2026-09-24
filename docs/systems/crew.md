@@ -197,3 +197,8 @@ Kong: the recruit hall and crew cards should be art forward, like the enemy stat
   face in the colour of what it spends (gem purple, blood red) with a die or a drop, and the name,
   the Legendary boost and the cost under it. The "Blood-Charged Reroll" pill sits over the board's
   top edge (zero height) so it never pushes the board down.
+
+**Assigning a seat is optimistic (2026-09-24).** The picker closes and the roster moves on the
+tap (the hand into the seat, whoever held it to the bench); the server confirms behind it and a
+refusal restores the snapshot (`run`'s `onFail`). The anchorage tour's assign beat moved only when
+the round trip returned, queued behind the sea's other server actions.

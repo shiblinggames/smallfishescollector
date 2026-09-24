@@ -50,13 +50,16 @@ export async function claimDailyBait(): Promise<{ claimed: boolean; baitType?: s
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const { data: profile } = await admin
-    .from('profiles').select('last_worm_claim, is_premium, premium_expires_at').eq('id', user.id).single()
+  // Both reads at once: which bait is owed depends on the profile, so both
+  // rows it could be are read beside it rather than after it.
+  const [{ data: profile }, { data: rows }] = await Promise.all([
+    admin.from('profiles').select('last_worm_claim, is_premium, premium_expires_at').eq('id', user.id).single(),
+    admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id).in('bait_type', ['worm', 'chum']),
+  ])
   if (!profile || profile.last_worm_claim === today) return { claimed: false }
 
   const baitType = isPremiumActive(profile) ? 'chum' : 'worm'
-  const { data: existing } = await admin
-    .from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', baitType).maybeSingle()
+  const existing = (rows ?? []).find(r => r.bait_type === baitType) ?? null
   const newQty = (existing?.quantity ?? 0) + DAILY_BAIT_QTY
 
   await Promise.all([

@@ -1493,12 +1493,12 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     setDetail({ kind, item })
   }
 
-  function run(action: () => Promise<CrewActionResult>, id: number | 'reroll', onDone?: () => void) {
+  function run(action: () => Promise<CrewActionResult>, id: number | 'reroll', onDone?: () => void, onFail?: () => void) {
     setErr(null)
     setBusyId(id)
     startTransition(async () => {
       const res = await action()
-      if ('error' in res) setErr(res.error)
+      if ('error' in res) { setErr(res.error); onFail?.() }
       else {
         setState(res.state)
         // THE HUB ABOVE RE-READS ON THIS. It fired on a recruit and on nothing
@@ -2338,7 +2338,23 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
               // Explicit slot, not "next open one". applyAssignment benches
               // whoever holds the target slot first, so this doubles as swap.
               const { track, slot } = assignSeat
-              run(() => (track === 'raid' ? assignToRaid(m.id, slot) : assignToVoyage(m.id, slot)), m.id, () => setAssignSeat(null))
+              // SEATED ON THE TAP. The seat filled (and the anchorage tour's
+              // "assign" beat moved on) only when the server answered, a
+              // round trip queued behind whatever else was in flight. The
+              // roster moves now: this hand into the seat and off any other,
+              // whoever held the seat onto the bench; a refusal puts it back.
+              const snapshot = state.roster
+              setState(s => ({
+                ...s,
+                roster: s.roster.map(c => {
+                  if (c.id === m.id) return { ...c, raidSlot: track === 'raid' ? slot : null, voyageSlot: track === 'voyage' ? slot : null }
+                  if (track === 'raid' ? c.raidSlot === slot : c.voyageSlot === slot) return track === 'raid' ? { ...c, raidSlot: null } : { ...c, voyageSlot: null }
+                  return c
+                }),
+              }))
+              setAssignSeat(null)
+              run(() => (track === 'raid' ? assignToRaid(m.id, slot) : assignToVoyage(m.id, slot)), m.id, undefined,
+                () => setState(s => ({ ...s, roster: snapshot })))
             }}
             onClose={() => setAssignSeat(null)}
           />, document.body)}

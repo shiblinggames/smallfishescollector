@@ -259,7 +259,10 @@ export type FishingMods = {
  * a full rack and the hold can hold thirty species, and a sheet taller than the
  * screen has no way out on a phone.
  */
-function Sheet({ title, blurb, onClose, children }: {
+function Sheet({ title, blurb, onClose, children, wide = false }: {
+  /** The loadout's wide layout: picture and locker side by side, so the
+   *  sheet takes the room the HUD's loadout does and sits centred. */
+  wide?: boolean
   title: string
   blurb?: string
   onClose: () => void
@@ -284,7 +287,7 @@ function Sheet({ title, blurb, onClose, children }: {
       transition={{ duration: 0.15 }}
       style={{
         position: 'absolute', inset: 0, zIndex: 34, pointerEvents: 'auto',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        display: 'flex', alignItems: wide ? 'center' : 'flex-end', justifyContent: 'center',
         padding: '1.25rem', background: 'rgba(2,8,14,0.62)', backdropFilter: 'blur(3px)',
       }}>
       <motion.div onClick={e => e.stopPropagation()}
@@ -299,8 +302,8 @@ function Sheet({ title, blurb, onClose, children }: {
           // under your cursor changed size depending on which of four adjacent
           // buttons you pressed. On a phone the 1.25rem padding caps all four
           // at the viewport, so this only ever differed where it was visible.
-          position: 'relative', width: '100%', maxWidth: 'var(--modal-w)',
-          maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
+          position: 'relative', width: '100%', maxWidth: wide ? 'min(1060px, 100%)' : 'var(--modal-w)',
+          maxHeight: wide ? '86vh' : '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
           borderRadius: 18, padding: '1rem',
           background: 'rgba(10,16,22,0.98)',
           border: '1px solid rgba(180,214,232,0.28)',
@@ -2392,7 +2395,7 @@ export default function FishingHere({
           const rod = rack.find(r => r.tier === activeRod) ?? null
           const locked = phase !== 'idle' && phase !== 'result'
           return (
-            <Sheet key="loadout" title="Loadout"
+            <Sheet key="loadout" title="Loadout" wide
               blurb="What you sailed with, and what it is doing to the dial."
               onClose={() => setLoadoutOpen(false)}>
 
@@ -2412,6 +2415,7 @@ export default function FishingHere({
                 reelName={getReel(mods.reelTier).name}
                 lineName={getLine(mods.lineTier).name}
                 hookName={getHook(mods.hookTier).name}
+                wide
               />
 
               <SheetLabel>On the dial</SheetLabel>

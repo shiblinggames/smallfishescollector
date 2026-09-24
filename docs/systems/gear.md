@@ -90,8 +90,10 @@ nothing. That rule used to live inside `setRodsAboard` and nowhere else.
 the right: five tabs (Rod, Look, Hat, Boat, Pet) each showing what is on, the owned items as art
 tiles, HOVER TRIES AN ITEM ON in the picture (`peek`, never saved) and a press equips it. Reel,
 line and hook sit under the grid as three cards, then the two "Where to get more" signposts.
-Stacked on a phone, where a press equips. The fishing overlay's loadout keeps the compact
-callout layout below.
+Stacked on a phone, where a press equips. The fishing overlay's loadout uses the same wide
+layout (its `Sheet` takes `wide`); the columns come from a CONTAINER query on `.loadout-host`
+(720px), so the layout follows the room its host gives it, not the window. The compact callout
+branch in LoadoutBody is unused since.
 
 **The loadout sheet** (`sea/LoadoutBody`) draws `components/PreviewStage` — the same stage
 the Shipyard uses, moved out of the shipyard folder when the third consumer appeared. The

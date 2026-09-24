@@ -6162,9 +6162,10 @@ export default function SeaMap({
       const d = (e as CustomEvent<{ baitType?: string; added?: number }>).detail
       const type = d?.baitType
       const added = Number(d?.added ?? 0)
-      if (!type || !(added > 0)) return
+      // Negative is a claim taken back (the server refused an optimistic one).
+      if (!type || !added) return
       const had = bagRef.current.find(b => b.type === type)?.quantity ?? 0
-      const total = had + added
+      const total = Math.max(0, had + added)
       setBag(prev => prev.some(b => b.type === type)
         ? prev.map(b => (b.type === type ? { ...b, quantity: total } : b))
         : [...prev, { type, quantity: total }])

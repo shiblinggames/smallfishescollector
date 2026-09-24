@@ -38,6 +38,9 @@ type GoodLoot = Exclude<Loot, { error: string }>
 type CratePhase = 'idle' | 'rolling' | 'revealed'
 
 
+/** Kept in step with DAILY_BAIT_QTY in app/actions/dailyBonus. */
+const DAILY_BAIT_QTY = 20
+
 export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0, crateClaimed: c0, onClaimed, embedded = false }: {
   isPremium: boolean
   gemsClaimed: boolean
@@ -65,36 +68,41 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
 
   const allDone = gemsClaimed && baitClaimed && crateClaimed
 
+  // ── CLAIMED ON THE PRESS ──────────────────────────────────────────────
+  //
+  // Kong: the bait took a few seconds to land after Claim. The card waited on
+  // the server, and server actions run one at a time, so the claim queued
+  // behind whatever the sea was already asking for. The stamp, the payout and
+  // the chart's bait count all move on the press now; the server confirms
+  // behind it, and only a refusal (already claimed on another device) puts
+  // anything back.
   async function claimGems(from?: Element) {
     if (gemsClaimed || loading) return
-    setLoading('gems')
-    const r = await claimDailyBonus()
+    setGemsClaimed(true)
+    flyPayout(from, { gems: gemAmount })
+    onClaimed?.(baitClaimed && crateClaimed)
+    const r = await claimDailyBonus().catch(() => ({ claimed: false as const, gems: undefined }))
     if (r.claimed) {
-      setGemsClaimed(true)
       if (r.gems !== undefined) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.gems }))
-      flyPayout(from, { gems: gemAmount })
-      onClaimed?.(baitClaimed && crateClaimed)
+    } else {
+      setGemsClaimed(false)
     }
-    setLoading(null)
   }
 
   async function claimBait() {
     if (baitClaimed || loading) return
-    setLoading('bait')
-    const r = await claimDailyBait()
-    if (r.claimed) {
-      setBaitClaimed(true)
-      // TELL THE CHART. The sea keeps the bait count in its own state and had
-      // no way of hearing about this, so a captain who claimed worms was still
-      // "out of bait" until they changed page. Same shape as gems-changed.
-      if (r.baitType && r.quantity) {
-        window.dispatchEvent(new CustomEvent('bait-changed', {
-          detail: { baitType: r.baitType, added: r.quantity },
-        }))
-      }
-      onClaimed?.(gemsClaimed && crateClaimed)
+    // Members get chum, everyone else worms: the same rule the server uses.
+    const baitType = isPremium ? 'chum' : 'worm'
+    setBaitClaimed(true)
+    // TELL THE CHART, NOW. The sea keeps the bait count in its own state; the
+    // first voyage's bait beat is waiting on exactly this.
+    window.dispatchEvent(new CustomEvent('bait-changed', { detail: { baitType, added: DAILY_BAIT_QTY } }))
+    onClaimed?.(gemsClaimed && crateClaimed)
+    const r = await claimDailyBait().catch(() => ({ claimed: false as const }))
+    if (!r.claimed) {
+      setBaitClaimed(false)
+      window.dispatchEvent(new CustomEvent('bait-changed', { detail: { baitType, added: -DAILY_BAIT_QTY } }))
     }
-    setLoading(null)
   }
 
   async function claimCrate() {

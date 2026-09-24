@@ -205,7 +205,9 @@ export default function LoadoutBody({
       { key: 'boat', label: 'Boat' }, { key: 'pet', label: 'Pet' },
     ]
     return (
-      <div className="loadout-wide">
+      // A CONTAINER, so the two columns come from the room this is given
+      // (the HUD's sheet, or the fishing overlay's), not the window's width.
+      <div className="loadout-host"><div className="loadout-wide">
         {/* ── LEFT: YOU, ON THE WATER ────────────────────────────────────── */}
         <div className="loadout-stage">
           <PreviewStage kit={kit} style={{
@@ -321,7 +323,7 @@ export default function LoadoutBody({
           </div>
           {footer}
         </div>
-      </div>
+      </div></div>
     )
   }
 
