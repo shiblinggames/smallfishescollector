@@ -15,24 +15,27 @@
 //   The same trick the island surf uses (shoreFoam): the geometry never moves,
 //   only its UVs, so each strip is one draw and a few hundred floats.
 //
-//   A KELP BED is painted (Kie.ai, public/sea/kelp-*.webp) and has DEPTH
-//   (Kong: it looked weird, it should look underwater and 2.5D; it was baked
-//   brush strokes lying flat on the water). Two layers per bed:
-//     DEEP     two or three upright clumps rising from below, tinted toward
-//              deep water and faded, and drawn in PERSPECTIVE: pulled a little
-//              toward the camera and a little smaller, so as you sail they
-//              slide against the surface the way something under the water
-//              does. Their tips reach up into the canopy.
-//     CANOPY   the floating mat on the surface over them, in full colour,
-//              swaying on the swell.
-//   Both are painted at the map's three-quarter angle, so both are counter-
-//   scaled against the plane's squash like every standing sprite.
+//   A KELP BED is painted (Kie.ai, public/sea/kelp-*.webp) and is UNDER the
+//   water. Kong, twice: it should look underwater and 2.5D (it was baked
+//   strokes lying flat on the surface), and then, of a full-colour canopy mat
+//   laid over the sea: "does not look underwater at all, it looks like an
+//   island". Anything drawn OVER the water in its own colours is an object on
+//   the water, however it is tinted. So the bed is drawn with MULTIPLY: it
+//   darkens and stains the sea in its shape and every ripple, glint and
+//   colour of the water still shows through it, which is exactly what a thing
+//   below the surface looks like. Layers, deepest first, each softer (baked
+//   blur, not a filter) and pulled further into PERSPECTIVE (nearer the
+//   camera's line and smaller, so they slide under the surface as you sail):
+//     MURK     the dark mass of the bed, very soft
+//     STALKS   two or three clumps rising from below
+//     FRONDS   the mat just under the surface, nearly sharp
+//     SHEEN    the only additive bit: a faint gold where fronds near the top
+//              catch the light. Faint on purpose; any stronger and it floats.
 //
 // Both sit on the water under the islands, and both take the night tint.
 
 import type { Container, Texture, MeshSimple, Sprite } from 'pixi.js'
 import { CURRENTS, KELP, otherLaneK } from '@/lib/seaFlow'
-import { texture } from './skiffArt'
 
 const GROUND = 0.58
 /** Each layer: which texture, how far one repeat reaches along the lane (world
@@ -48,12 +51,6 @@ const LAYERS: Layer[] = [
   { tex: 'shear', tile: 380, speed: 130, at: 0.86, wide: 0.1, alpha: 0.3, tint: 0xeaf8ff },
   { tex: 'shear', tile: 410, speed: 120, at: -0.86, wide: 0.1, alpha: 0.3, tint: 0xeaf8ff },
 ]
-
-/** How much nearer the camera's line the deep layer is drawn, and how much
- *  smaller: 1 would be on the surface. Small, or it reads as a lens effect. */
-const DEPTH = 0.955
-/** The water's colour the deep layer is pulled toward. */
-const DEEP_TINT = 0x3e6c76
 
 export type FlowGfx = {
   view: Container
@@ -257,46 +254,70 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
     }
   }
 
-  // ── THE BEDS ── built when the two paintings have landed. The deep layer is
-  // one container under all the canopies, so every canopy is above every
-  // clump even where two beds are near.
-  const deepLayer: Container = new PIXI.Container()
-  const canopyLayer: Container = new PIXI.Container()
-  view.addChild(deepLayer, canopyLayer)
-  const deep: { sp: Sprite; x: number; y: number; sx: number; sy: number }[] = []
-  const canopies: { sp: Sprite; sx: number; sy: number; phase: number }[] = []
-  void Promise.all([texture(PIXI, '/sea/kelp-deep.webp'), texture(PIXI, '/sea/kelp-canopy.webp')]).then(([dt, ct]) => {
+  // ── THE BEDS ── built when the two paintings have landed, in one
+  // container each per layer so every bed's murk is under every bed's stalks.
+  type BedLayer = { tex: 'deep' | 'mat'; blur: number; blend: 'multiply' | 'add'; tint: number; alpha: number; depth: number; sway: number }
+  const BED_LAYERS: BedLayer[] = [
+    { tex: 'mat', blur: 9, blend: 'multiply', tint: 0x6f8f7a, alpha: 0.55, depth: 0.93, sway: 0 },
+    { tex: 'deep', blur: 3, blend: 'multiply', tint: 0x93a784, alpha: 0.6, depth: 0.962, sway: 0.05 },
+    { tex: 'mat', blur: 1.2, blend: 'multiply', tint: 0xb4c29a, alpha: 0.42, depth: 0.988, sway: 0.035 },
+    { tex: 'mat', blur: 0, blend: 'add', tint: 0x3a3214, alpha: 0.5, depth: 1, sway: 0.035 },
+  ]
+  const holders = BED_LAYERS.map(() => { const c: Container = new PIXI.Container(); view.addChild(c); return c })
+  const bits: { sp: Sprite; x: number; y: number; sx: number; sy: number; depth: number; sway: number; phase: number }[] = []
+  /** The painting, softened once onto a canvas: padded so the blur has room,
+   *  and small, because it is blurred and drawn big. */
+  const soft = (img: HTMLImageElement, blur: number) => {
+    const W = 320
+    const h = Math.round((W * img.naturalHeight) / img.naturalWidth)
+    const pad = Math.ceil(blur * 3)
+    const cv = document.createElement('canvas')
+    cv.width = W + pad * 2
+    cv.height = h + pad * 2
+    const g = cv.getContext('2d')!
+    if (blur > 0) g.filter = `blur(${blur}px)`
+    g.drawImage(img, pad, pad, W, h)
+    return { tex: PIXI.Texture.from(cv), pad, w: W, h }
+  }
+  const load = (url: string) => new Promise<HTMLImageElement>((ok, no) => {
+    const img = new Image()
+    img.onload = () => ok(img)
+    img.onerror = no
+    img.src = url
+  })
+  void Promise.all([load('/sea/kelp-deep.webp'), load('/sea/kelp-canopy.webp')]).then(([deepImg, matImg]) => {
     if (view.destroyed) return
+    const baked = BED_LAYERS.map(l => soft(l.tex === 'deep' ? deepImg : matImg, l.blur))
     for (const k of KELP) {
       let r = (k.seed * 2654435761) >>> 0
       const rnd = () => ((r = (r * 1103515245 + 12345) >>> 0) / 4294967296)
-      const n = 2 + (k.seed % 2)
-      for (let c = 0; c < n; c++) {
-        const sp: Sprite = new PIXI.Sprite(dt)
-        // Anchored at the root, low in the painting: the stalks rise from
-        // there, up the screen, into the canopy.
-        sp.anchor.set(0.5, 0.92)
-        const w = k.r * (1.05 + rnd() * 0.4)
-        const h = (w * dt.height) / dt.width / GROUND
-        // Spread across the bed, roots a little below its middle.
-        const x = k.x + (c - (n - 1) / 2) * k.r * 0.55 + (rnd() - 0.5) * k.r * 0.2
-        const y = k.y + k.r * (0.18 + rnd() * 0.22)
-        sp.tint = DEEP_TINT
-        sp.alpha = 0.5
-        const flip = rnd() < 0.5 ? -1 : 1
-        deepLayer.addChild(sp)
-        deep.push({ sp, x, y, sx: (w / dt.width) * flip, sy: h / dt.height })
-      }
-      const sp: Sprite = new PIXI.Sprite(ct)
-      sp.anchor.set(0.5)
-      sp.position.set(k.x, k.y)
-      const w = k.r * 2.1
-      const h = (w * ct.height) / ct.width / GROUND
-      const flip = rnd() < 0.5 ? -1 : 1
-      sp.scale.set((w / ct.width) * flip, h / ct.height)
-      sp.alpha = 0.92
-      canopyLayer.addChild(sp)
-      canopies.push({ sp, sx: sp.scale.x, sy: sp.scale.y, phase: k.seed * 0.9 })
+      BED_LAYERS.forEach((l, li) => {
+        const b = baked[li]
+        const place = (x: number, y: number, w: number, anchorY: number) => {
+          const sp: Sprite = new PIXI.Sprite(b.tex)
+          // The anchor is on the PAINTING, not the padded canvas round it.
+          sp.anchor.set(0.5, (b.pad + anchorY * b.h) / (b.h + b.pad * 2))
+          sp.blendMode = l.blend
+          sp.tint = l.tint
+          sp.alpha = l.alpha
+          const flip = rnd() < 0.5 ? -1 : 1
+          // Three-quarter paintings, counter-scaled against the plane's squash.
+          const sx = (w / b.w) * flip
+          const sy = ((w * b.h) / b.w / GROUND) / b.h
+          holders[li].addChild(sp)
+          bits.push({ sp, x, y, sx, sy, depth: l.depth, sway: l.sway, phase: k.seed * 0.9 + li })
+        }
+        if (l.tex === 'deep') {
+          // Rooted a little below the bed's middle, rising up the screen.
+          const n = 2 + (k.seed % 2)
+          for (let c = 0; c < n; c++) {
+            place(k.x + (c - (n - 1) / 2) * k.r * 0.55 + (rnd() - 0.5) * k.r * 0.2,
+              k.y + k.r * (0.18 + rnd() * 0.22), k.r * (1.05 + rnd() * 0.4), 0.92)
+          }
+        } else {
+          place(k.x, k.y, k.r * (li === 0 ? 2.4 : li === 2 ? 2.0 : 1.7), 0.5)
+        }
+      })
     }
   })
   let lastCamX = 0, lastCamY = 0
@@ -316,19 +337,14 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
         }
         buf.update()
       }
-      // THE DEEP LAYER IN PERSPECTIVE: nearer the camera's line and smaller,
-      // so it slides against the surface as the camera moves, and sways a
-      // touch slower than the canopy because the water down there is.
-      for (const d of deep) {
-        d.sp.position.set(camX + (d.x - camX) * DEPTH, camY + (d.y - camY) * DEPTH)
-        d.sp.scale.set(d.sx * DEPTH, d.sy * DEPTH)
-        d.sp.skew.x = Math.sin(t * 0.35 + d.x * 0.001) * 0.05
-      }
-      // The canopy rides the swell: a slow lean and the slightest breath.
-      for (const c of canopies) {
-        const b = Math.sin(t * 0.6 + c.phase)
-        c.sp.skew.x = b * 0.035
-        c.sp.scale.set(c.sx * (1 + b * 0.02), c.sy * (1 - b * 0.02))
+      // PERSPECTIVE: the deeper the layer, the nearer the camera's line it is
+      // drawn and the smaller, so the bed slides under the surface as you
+      // sail. And it sways, slower than the swell above it.
+      for (const d of bits) {
+        const b = Math.sin(t * 0.5 + d.phase)
+        d.sp.position.set(camX + (d.x - camX) * d.depth, camY + (d.y - camY) * d.depth)
+        d.sp.scale.set(d.sx * d.depth * (1 + b * 0.015), d.sy * d.depth * (1 - b * 0.015))
+        d.sp.skew.x = b * d.sway
       }
     },
     night(tint) {

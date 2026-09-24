@@ -3439,11 +3439,10 @@ down (rod out, fight, arriving); none of it pays anything.
   hysteresis band). Sim after: <=2 flips, drifters stay on their ring. The SHEAR foam fades out
   inside another lane's water (`otherLaneK`); strips are resampled every ~100px for that.
 - KELP (`KELP`, `kelpAt`): 14 seeded beds in the Shallows/Open Waters, clear of ports, isles,
-  lanes and rocks; inside one you keep KELP_KEEP (60%) of your speed, eased. Drawn (2026-09-24,
-  Kong: "should look underwater and 2.5D") from two Kie paintings, public/sea/kelp-deep.webp and
-  kelp-canopy.webp (prompts/kelp-*.json): 2-3 upright DEEP clumps per bed, tinted DEEP_TINT at
-  alpha .5 and drawn in perspective (pulled toward the camera by DEPTH 0.955 and scaled by it, so
-  they slide under the surface as you sail), under a swaying CANOPY mat. Both counter-scaled by
-  1/GROUND (three-quarter paintings). The baked procedural frond texture is gone.
+  lanes and rocks; inside one you keep KELP_KEEP (60%) of your speed, eased. Drawn UNDER the water
+  (2026-09-24) from two Kie paintings, public/sea/kelp-deep.webp and kelp-canopy.webp: MULTIPLY
+  layers (murk / stalks / fronds, each softer and pulled further into perspective the deeper it is)
+  plus one faint additive gold SHEEN. Tune in `BED_LAYERS` (seaFlowGfx). DO NOT draw the kelp in its
+  own colours over the water: a full-colour canopy mat was tried and read as "an island".
 - FULL SAIL (SeaMap): 2.5s of fast (>75% of top) straight (<0.5 rad/s turn) sailing -> +15%
   (FULL_SAIL), a bow splash and a tick of haptic when it fills; a hard turn or losing way drops it.
