@@ -3,16 +3,10 @@
 // What lib/seaFlow says the water does, made visible, because a current you
 // cannot see is a mystery drag and a kelp bed you cannot see is a bug.
 //
-//   A LANE is four strips along its (meandering) centreline, each tapered to
-//   nothing at both ends, each scrolling its texture the way the water runs
-//   (Kong: make the currents look better; it was one flat strip of streaks):
-//     BODY    a soft turquoise sheen down the lane, so it reads as a river in
-//             the sea even standing still;
-//     DRIFT   wide faint streaks, slow;
-//     RACE    thin bright streaks down the middle, fast, the parallax against
-//             DRIFT is what makes it read as moving water;
-//     SHEAR   broken foam along both edges, where fast water rubs on still.
-//   The same trick the island surf uses (shoreFoam): the geometry never moves,
+//   A LANE is four soft strips along its (meandering) centreline, drawn as
+//   WATER rather than a road (see LAYERS): a faint patchy tint and three layers
+//   of wavy ripple clusters at three speeds, every one of them wandering in
+//   width and centre along the lane. No edge lines. The geometry never moves,
 //   only its UVs, so each strip is one draw and a few hundred floats.
 //
 //   A KELP BED is painted (Kie.ai, public/sea/kelp-*.webp) and is UNDER the
@@ -35,7 +29,7 @@
 // Both sit on the water under the islands, and both take the night tint.
 
 import type { Container, Texture, MeshSimple, Sprite } from 'pixi.js'
-import { CURRENTS, KELP, otherLaneK } from '@/lib/seaFlow'
+import { CURRENTS, KELP } from '@/lib/seaFlow'
 
 const GROUND = 0.58
 /** Each layer: which texture, how far one repeat reaches along the lane (world
@@ -43,13 +37,23 @@ const GROUND = 0.58
  *  centre, 1 the edge), how wide (share of the lane's half-width), and how
  *  strong. RACE runs at about the speed the current carries a hull, so riding
  *  one you keep pace with the bright streaks. */
-type Layer = { tex: 'body' | 'drift' | 'race' | 'shear'; tile: number; speed: number; at: number; wide: number; alpha: number; tint: number }
+/**
+ * ── WATER, NOT A ROAD ───────────────────────────────────────────────────────
+ * Kong: the currents "literally look like highways". They were a solid tinted
+ * band of constant width (the road), two foam lines down its edges (the lane
+ * markings) and a bright streak down its middle (the centre line). So: no edge
+ * lines at all; the tint only in faint patches that come and go; the streaks
+ * short wavy ripples in CLUSTERS with open water between them, at three speeds
+ * so they slide past each other; and every layer's width and centre wandering
+ * slowly along the lane (`wob`, a phase per layer) so no two stretches match.
+ * How a current works is untouched: this is only the picture of it.
+ */
+type Layer = { tex: 'body' | 'ripA' | 'ripB' | 'ripC'; tile: number; speed: number; wide: number; alpha: number; tint: number; wob: number }
 const LAYERS: Layer[] = [
-  { tex: 'body', tile: 900, speed: 40, at: 0, wide: 1.0, alpha: 0.16, tint: 0x9fe6f2 },
-  { tex: 'drift', tile: 760, speed: 95, at: 0, wide: 0.95, alpha: 0.2, tint: 0xffffff },
-  { tex: 'race', tile: 520, speed: 170, at: 0, wide: 0.5, alpha: 0.34, tint: 0xffffff },
-  { tex: 'shear', tile: 380, speed: 130, at: 0.86, wide: 0.1, alpha: 0.3, tint: 0xeaf8ff },
-  { tex: 'shear', tile: 410, speed: 120, at: -0.86, wide: 0.1, alpha: 0.3, tint: 0xeaf8ff },
+  { tex: 'body', tile: 2400, speed: 28, wide: 0.9, alpha: 0.07, tint: 0x9fdce8, wob: 0.3 },
+  { tex: 'ripA', tile: 1500, speed: 60, wide: 0.95, alpha: 0.17, tint: 0xeef8fa, wob: 1.7 },
+  { tex: 'ripB', tile: 1100, speed: 100, wide: 0.7, alpha: 0.19, tint: 0xffffff, wob: 3.1 },
+  { tex: 'ripC', tile: 800, speed: 150, wide: 0.42, alpha: 0.15, tint: 0xffffff, wob: 4.6 },
 ]
 
 export type FlowGfx = {
@@ -59,46 +63,6 @@ export type FlowGfx = {
   night(tint: number): void
 }
 
-function streakTexture(PIXI: typeof import('pixi.js')): Texture {
-  const w = 256, h = 64
-  const cv = document.createElement('canvas')
-  cv.width = w; cv.height = h
-  const g = cv.getContext('2d')!
-  let s = 7
-  const rnd = () => ((s = (s * 1103515245 + 12345) >>> 0) / 4294967296)
-  g.filter = 'blur(1.5px)'
-  for (let i = 0; i < 9; i++) {
-    const y = 10 + rnd() * (h - 20)
-    const x = rnd() * w
-    const len = 40 + rnd() * 90
-    const a = 0.35 + rnd() * 0.5
-    const grad = g.createLinearGradient(x, 0, x + len, 0)
-    grad.addColorStop(0, 'rgba(255,255,255,0)')
-    grad.addColorStop(0.5, `rgba(255,255,255,${a})`)
-    grad.addColorStop(1, 'rgba(255,255,255,0)')
-    g.strokeStyle = grad
-    g.lineWidth = 1.6 + rnd() * 1.6
-    g.lineCap = 'round'
-    for (const off of [0, -w]) { // wrap round the tile's seam
-      g.beginPath(); g.moveTo(x + off, y); g.lineTo(x + len + off, y); g.stroke()
-    }
-  }
-  g.filter = 'none'
-  // Across the lane: gone at the edges, full down the middle.
-  const fade = g.createLinearGradient(0, 0, 0, h)
-  fade.addColorStop(0, 'rgba(0,0,0,0)')
-  fade.addColorStop(0.3, 'rgba(0,0,0,1)')
-  fade.addColorStop(0.7, 'rgba(0,0,0,1)')
-  fade.addColorStop(1, 'rgba(0,0,0,0)')
-  g.globalCompositeOperation = 'destination-in'
-  g.fillStyle = fade
-  g.fillRect(0, 0, w, h)
-  const source = new PIXI.CanvasSource({ resource: cv })
-  source.addressMode = 'repeat'
-  source.scaleMode = 'linear'
-  return new PIXI.Texture({ source })
-}
-
 function canvasTex(PIXI: typeof import('pixi.js'), cv: HTMLCanvasElement): Texture {
   const source = new PIXI.CanvasSource({ resource: cv })
   source.addressMode = 'repeat'
@@ -106,18 +70,21 @@ function canvasTex(PIXI: typeof import('pixi.js'), cv: HTMLCanvasElement): Textu
   return new PIXI.Texture({ source })
 }
 
-/** The sheen: brightest down the middle, gone at the edges, with a slow
- *  unevenness along it so the band is not a flat stripe. */
+/** A FAINT TINT IN PATCHES. Soft across (gone well before the edges) and,
+ *  along the lane, mostly nothing with a few pools of colour, so it reads as
+ *  water that is a little different here rather than as a painted band. */
 function bodyTexture(PIXI: typeof import('pixi.js')): Texture {
-  const w = 128, h = 64
+  const w = 256, h = 64
   const cv = document.createElement('canvas')
   cv.width = w; cv.height = h
   const g = cv.getContext('2d')!
   const img = g.createImageData(w, h)
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const v = y / (h - 1)
-    const across = Math.max(0, 1 - Math.abs(v - 0.5) * 2)
-    const along = 0.7 + 0.3 * Math.sin((x / w) * Math.PI * 2 + Math.sin((x / w) * Math.PI * 6) * 0.6)
+    const across = Math.max(0, 1 - Math.abs(v - 0.5) * 2.2)
+    const u = (x / w) * Math.PI * 2
+    const n = 0.5 + 0.5 * Math.sin(u + Math.sin(u * 3) * 0.8) * Math.sin(u * 2 + 1.3)
+    const along = Math.pow(Math.max(0, n), 2.2)
     const a = across * across * (3 - 2 * across) * along
     const o = (y * w + x) * 4
     img.data[o] = img.data[o + 1] = img.data[o + 2] = 255
@@ -127,33 +94,50 @@ function bodyTexture(PIXI: typeof import('pixi.js')): Texture {
   return canvasTex(PIXI, cv)
 }
 
-/** Thin, bright, long streaks, packed toward the middle. */
-function raceTexture(PIXI: typeof import('pixi.js')): Texture {
-  const w = 256, h = 48
+/** RIPPLES IN CLUSTERS. A long tile holding a few groups of short wavy strokes
+ *  (the way moving water catches the light in patches) with open water between
+ *  the groups, soft at both edges, wrapping cleanly at the seam. */
+function rippleTexture(PIXI: typeof import('pixi.js'), seed: number, clusters: number, per: number, thick: number): Texture {
+  const w = 1024, h = 96
   const cv = document.createElement('canvas')
   cv.width = w; cv.height = h
   const g = cv.getContext('2d')!
-  let s = 31
+  let s = seed
   const rnd = () => ((s = (s * 1103515245 + 12345) >>> 0) / 4294967296)
-  g.filter = 'blur(0.8px)'
-  for (let i = 0; i < 7; i++) {
-    const y = h / 2 + (rnd() - 0.5) * h * 0.6
-    const x = rnd() * w
-    const len = 60 + rnd() * 110
-    const grad = g.createLinearGradient(x, 0, x + len, 0)
-    grad.addColorStop(0, 'rgba(255,255,255,0)')
-    grad.addColorStop(0.75, `rgba(255,255,255,${0.6 + rnd() * 0.4})`)
-    grad.addColorStop(1, 'rgba(255,255,255,0)')
-    g.strokeStyle = grad
-    g.lineWidth = 1.1 + rnd() * 0.9
-    g.lineCap = 'round'
-    for (const off of [0, -w]) { g.beginPath(); g.moveTo(x + off, y); g.lineTo(x + len + off, y); g.stroke() }
+  g.filter = 'blur(0.9px)'
+  g.lineCap = 'round'
+  for (let c = 0; c < clusters; c++) {
+    const cx = ((c + rnd() * 0.6) / clusters) * w
+    const cy = h * (0.3 + rnd() * 0.4)
+    const n = Math.round(per * (0.6 + rnd() * 0.8))
+    for (let k = 0; k < n; k++) {
+      const x0 = cx + (rnd() - 0.5) * 180
+      const y0 = cy + (rnd() - 0.5) * h * 0.42
+      const len = 26 + rnd() * 90
+      const amp = 1.2 + rnd() * 2.6
+      const a = 0.22 + rnd() * 0.5
+      g.lineWidth = thick * (0.7 + rnd() * 0.7)
+      for (const off of [0, -w, w]) {
+        const grad = g.createLinearGradient(x0 + off, 0, x0 + off + len, 0)
+        grad.addColorStop(0, 'rgba(255,255,255,0)')
+        grad.addColorStop(0.5, `rgba(255,255,255,${a})`)
+        grad.addColorStop(1, 'rgba(255,255,255,0)')
+        g.strokeStyle = grad
+        g.beginPath()
+        for (let t = 0; t <= 12; t++) {
+          const px = x0 + off + (len * t) / 12
+          const py = y0 + Math.sin((t / 12) * Math.PI * 1.6 + k) * amp
+          if (t === 0) g.moveTo(px, py); else g.lineTo(px, py)
+        }
+        g.stroke()
+      }
+    }
   }
   g.filter = 'none'
   const fade = g.createLinearGradient(0, 0, 0, h)
   fade.addColorStop(0, 'rgba(0,0,0,0)')
-  fade.addColorStop(0.35, 'rgba(0,0,0,1)')
-  fade.addColorStop(0.65, 'rgba(0,0,0,1)')
+  fade.addColorStop(0.28, 'rgba(0,0,0,1)')
+  fade.addColorStop(0.72, 'rgba(0,0,0,1)')
   fade.addColorStop(1, 'rgba(0,0,0,0)')
   g.globalCompositeOperation = 'destination-in'
   g.fillStyle = fade
@@ -161,34 +145,13 @@ function raceTexture(PIXI: typeof import('pixi.js')): Texture {
   return canvasTex(PIXI, cv)
 }
 
-/** Broken foam: short ragged dashes with gaps, the line where fast water
- *  meets still. */
-function shearTexture(PIXI: typeof import('pixi.js')): Texture {
-  const w = 256, h = 16
-  const cv = document.createElement('canvas')
-  cv.width = w; cv.height = h
-  const g = cv.getContext('2d')!
-  let s = 53
-  const rnd = () => ((s = (s * 1103515245 + 12345) >>> 0) / 4294967296)
-  g.filter = 'blur(0.6px)'
-  let x = 0
-  while (x < w) {
-    const len = 8 + rnd() * 26
-    const y = h / 2 + (rnd() - 0.5) * 5
-    g.fillStyle = `rgba(255,255,255,${0.45 + rnd() * 0.5})`
-    g.beginPath()
-    g.ellipse(x + len / 2, y, len / 2, 1.3 + rnd() * 1.4, 0, 0, Math.PI * 2)
-    g.fill()
-    x += len + 6 + rnd() * 22
-  }
-  g.filter = 'none'
-  return canvasTex(PIXI, cv)
-}
-
 export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
   const view: Container = new PIXI.Container()
   const tex: Record<Layer['tex'], Texture> = {
-    body: bodyTexture(PIXI), drift: streakTexture(PIXI), race: raceTexture(PIXI), shear: shearTexture(PIXI),
+    body: bodyTexture(PIXI),
+    ripA: rippleTexture(PIXI, 71, 4, 7, 1.6),
+    ripB: rippleTexture(PIXI, 113, 5, 5, 1.3),
+    ripC: rippleTexture(PIXI, 197, 3, 4, 1.1),
   }
   const strips: { mesh: MeshSimple; base: Float32Array; speed: number; tile: number }[] = []
 
@@ -220,19 +183,17 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
       const idx: number[] = []
       for (let i = 0; i < n; i++) {
         const f = dist[i] / total
-        const e = Math.min(1, f / 0.12, (1 - f) / 0.12)
+        // Longer tapers than the push's own fade, so a lane frays out.
+        const e = Math.min(1, f / 0.18, (1 - f) / 0.18)
         const taper = e * e * (3 - 2 * e)
-        const c = layer.at * lane.half * taper
+        // THE LANE WANDERS: width and centre drift on two slow sines per
+        // layer, out of step with each other, so no stretch is the same width
+        // and no layer sits exactly on another.
+        const dd = dist[i]
+        const wv = 0.72 + 0.28 * Math.sin(dd / 1700 + layer.wob) * Math.sin(dd / 730 + layer.wob * 1.9)
+        const c = Math.sin(dd / 1300 + layer.wob * 2.3) * 0.18 * lane.half * taper
         const cx = pts[i].x + nrm[i].x * c, cy = pts[i].y + nrm[i].y * c
-        // Edge foam is where fast water meets still. Inside another lane's
-        // water (a crossing) there is no still water, so the line fades out
-        // rather than drawing a wall across the other current.
-        let cut = 1
-        if (layer.tex === 'shear') {
-          const o = Math.min(1, otherLaneK(cx, cy, lane.id) * 2.5)
-          cut = 1 - o * o * (3 - 2 * o)
-        }
-        const h = layer.wide * lane.half * taper * cut
+        const h = layer.wide * lane.half * taper * wv
         verts[i * 4] = cx + nrm[i].x * h
         verts[i * 4 + 1] = cy + nrm[i].y * h
         verts[i * 4 + 2] = cx - nrm[i].x * h

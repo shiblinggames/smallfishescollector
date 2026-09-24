@@ -3470,3 +3470,15 @@ DOM chart (`?gpu=0`) is unchanged.
 - The maelstrom pull is stronger: grip 2.2x the bowl (was 1.6x), `^1.25` (was 1.6), 260px/s at
   the eye (was 140, hull sails 470), swirl 0.75, lean 10, and it drags an unsteered boat's helm
   target along like a current does.
+
+## Currents drawn as water, not a road (2026-09-24)
+
+Kong: "they literally look like highways" (a constant-width tinted band = the road, edge foam
+lines = lane markings, a bright centre streak = the centre line). `seaFlowGfx` LAYERS now: a
+faint PATCHY tint (`bodyTexture`, mostly nothing along the lane) and three layers of wavy ripple
+CLUSTERS with open water between (`rippleTexture`, three seeds, three speeds 60/100/150), each
+layer's width (0.72..1) and centre (±0.18 half) wandering on slow sines keyed by `wob`; 18%
+tapers. NO edge/shear lines, never add them back. How currents push is unchanged.
+The water cue chips sit 60px over the desktop action button (it is a ~44px pill there) and one
+layer above it; they were drawn underneath it.
+

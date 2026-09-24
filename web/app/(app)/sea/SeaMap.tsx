@@ -11163,8 +11163,11 @@ hullRef={hullRefFor(t.key)} />
           taking you, full sail, and kelp. Letting touches through. */}
       {!hudOff && (seaCue.current || seaCue.full || seaCue.kelp) && (
         <div aria-live="polite" style={{
-          position: 'absolute', left: 0, right: 0, zIndex: Z.action, pointerEvents: 'none',
-          bottom: (finePointer ? HELM_BOTTOM + 10 : HELM_BOTTOM + HELM_D + 10) + 40,
+          // Over the action row, not under it (Kong: on desktop they showed
+          // underneath "Fish Open Waters"). The desktop action is a ~44px
+          // button where a phone's is a line of type, so it gets more room.
+          position: 'absolute', left: 0, right: 0, zIndex: Z.action + 1, pointerEvents: 'none',
+          bottom: finePointer ? HELM_BOTTOM + 10 + 60 : HELM_BOTTOM + HELM_D + 10 + 40,
           display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap', padding: '0 1rem',
         }}>
           {seaCue.current && (
