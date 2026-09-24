@@ -588,3 +588,13 @@ quartermaster ghost, saltie surface. Each variant's four bosses are four differe
   too, sparks only. Do not bring either back.
 - Stage art is fitted to its box's HEIGHT as well as width (the tall shrine was cut off at the
   top); the shrine's box is 170 x 190.
+
+**Round eight (2026-09-24).**
+- Descend opens the Normal/Hardcore chooser ON THE PRESS; the dive to black plays once, after
+  the choice (`descendInto`). It used to dive, surface to the hub for the chooser, and dive again.
+- Ending a run leaves through `surfaceTo` (a dip to dark on a throwaway overlay, the swap in the
+  dark, up again 650ms later once the hub has laid its water), and both end screens carry a
+  `TopBack` pinned under the nav as well as the link at the foot.
+- Hub landmarks are SMALLER (0.12 of the short side, was 0.2) and the NAME is the main thing: a
+  larger plate just under the painting's foot, the whole box one button. The buoy no longer
+  stands over Permanent Upgrades.

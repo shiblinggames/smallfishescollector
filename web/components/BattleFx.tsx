@@ -1068,10 +1068,17 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
           const chase = !!e.live.chase, skin = e.live.skinId ?? null
           const X = rc.x + rc.w / 2, Y = rc.y + rc.h * 0.43, R0 = Math.min(rc.w, rc.h) * 0.3
           const A = env(t, 0.05, 0.88), arr = easeOut(e.age / 0.35)
-          rays(C, X, Y, R0 * 2.4 * lerp(0.4, 1.2, arr), 18, -0.5 + e.age * 0.35, (chase ? 0.2 : 0.14) * A)
+          // A CHASE SKIN SKIPS THE RUNE WHEEL (Kong: the rotating circle of
+          // bars at the start of a chase special looked cheap). The turning
+          // rays and the two counter-rotating dashed rings are the ordinary
+          // summon's; a chase skin opens on its gold flare, the ripples at its
+          // feet and its own signature below, which is what makes it a chase.
+          if (!chase) {
+            rays(C, X, Y, R0 * 2.4 * lerp(0.4, 1.2, arr), 18, -0.5 + e.age * 0.35, 0.14 * A)
+            dashRing(C, X, Y, R0 * 1.15 * lerp(0.3, 1, arr), R0 * 1.15 * lerp(0.3, 1, arr), e.age * 0.9, 14, 12, 1.6, 0.6 * A)
+            dashRing(C, X, Y, R0 * 0.92 * lerp(0.3, 1, arr), R0 * 0.92 * lerp(0.3, 1, arr), -e.age * 0.9, 4, 16, 2.2, 0.6 * A)
+          }
           circ(D(C), X, Y + R0 * 0.2, R0 * 1.7, (chase ? 0.5 : 0.35) * A)
-          dashRing(C, X, Y, R0 * 1.15 * lerp(0.3, 1, arr), R0 * 1.15 * lerp(0.3, 1, arr), e.age * 0.9, 14, 12, 1.6, 0.6 * A)
-          dashRing(C, X, Y, R0 * 0.92 * lerp(0.3, 1, arr), R0 * 0.92 * lerp(0.3, 1, arr), -e.age * 0.9, 4, 16, 2.2, 0.6 * A)
           const q1 = (e.age - 0.1) / 0.45
           if (q1 > 0 && q1 < 1) circ(D('#ffffff'), X, Y, R0 * lerp(0.4, 1.8, easeOut(q1)), 0.85 * (1 - q1))
           if (chase) {

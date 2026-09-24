@@ -766,9 +766,12 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       f.x = x + ux * 90; f.y = y + uy * 90
       f.h = 34; f.vh = 0; f.vx = 0; f.vy = 0
       f.age = 0; f.life = 0.11
-      f.size = 150; f.grow = 320
-      f.alpha = 0.95
-      f.p.tint = 0xffe3a8
+      // KEPT DOWN (Kong, twice: the flash on a shot was too bright). It was
+      // 150 across, growing 320 a second, at 0.95 additive: every shot a white
+      // bloom the size of a hull. A gun's flash, not a flare.
+      f.size = 84; f.grow = 130
+      f.alpha = 0.5
+      f.p.tint = 0xffd9a0
 
       // THE SMOKE. Six puffs leaving along the gun line, spreading as they go
       // and rising slowly. Powder smoke hangs — these live over a second, which
@@ -877,8 +880,12 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       // A CRIT BURNS: the strike is a fireball with a star at its heart. A
       // hit is the flash and a few coals coming out of the hole.
       if (heavy) {
-        fireball(x, y, 120, 0.55, 0.02)
-        star(x, y, 170, 0.3, 0, 0xfff0c8)
+        // Also taken down with the flash above: the star was a 170px white
+        // point at full strength.
+        const fb = fireball(x, y, 96, 0.5, 0.02)
+        fb.alpha = 0.8
+        const st = star(x, y, 110, 0.26, 0, 0xffe6b8)
+        st.alpha = 0.6
       }
       ember(x, y, heavy ? 10 : 4, heavy ? 220 : 140, heavy ? 260 : 190)
 

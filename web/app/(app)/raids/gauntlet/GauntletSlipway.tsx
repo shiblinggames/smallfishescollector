@@ -547,7 +547,9 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
           if (m.art && m.art.texture.width > 2) {
             // Sized to the short side like everything on this stage, and a
             // touch bigger for the one she is at. Bobs on its own slow swell.
-            const w = u * 0.2 * (1 + 0.06 * k)
+            // SMALLER (Kong: the words are the main thing, the pictures were too
+            // big, and the buoy stood up over Permanent Upgrades). 0.2 before.
+            const w = u * 0.12 * (1 + 0.06 * k)
             m.art.width = w
             m.art.height = w * (m.art.texture.height / m.art.texture.width)
             m.art.y = Math.sin(t * 1.1 + m.ph) * u * 0.004
@@ -571,7 +573,9 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
             // The lift was SIX PIXELS, which is a card that does not move.
             // Over the landmark (its foot on the mooring), a touch bigger for
             // the one she is at, as the painting under it is.
-            el.style.transform = `translate(-50%, -92%) scale(${(0.98 + 0.05 * k).toFixed(3)})`
+            // The box's top is the painting's top (0.15 of the short side over
+            // the mooring); the name hangs just below the painting's foot.
+            el.style.transform = `translate(-50%, calc(-0.15 * min(100vw, 100vh))) scale(${(0.98 + 0.04 * k).toFixed(3)})`
             el.style.setProperty('--k', k.toFixed(3))
           }
         }

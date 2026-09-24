@@ -504,3 +504,7 @@ the player's Fortune card already shows the multiplier.
   already draws the strike, and the two stacked read as a hard white flash (Kong: too strong).
   The sea's strike flash is smaller and fainter (40px @ .34, crit 70 @ .55), and the whole-stage
   impact flash is halved (.32 / .16).
+- Second pass on the flash (Kong: still too bright): the MUZZLE flash was 150px growing 320/s at
+  0.95 additive on every shot; it is 84 / 130 / 0.5. A crit's fireball 96 @ .8 and star 110 @ .6.
+- A chase skin's summon no longer opens on the rune wheel (18 turning rays + two counter-rotating
+  dashed rings): its gold flare, foot ripples and signature carry it. Ordinary summons keep it.

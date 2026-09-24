@@ -1148,11 +1148,12 @@ export default function GauntletGame(props: GauntletGameProps) {
   const DIVE_MS = 1500
   const beginDescent = () => {
     if (diving) return
-    setDiving(true)
-    // A descending pattern under a descending picture: three pulses, each
-    // longer and further apart, ending on the one that lands in the dark.
-    vibrate([0, 14, 150, 22, 260, 46])
-    diveTimer.current = setTimeout(() => { setDiving(false); setModeChoiceOpen(true) }, DIVE_MS)
+    // THE CHOICE FIRST, THE DIVE ONCE (Kong: pressing Descend played the dive,
+    // came back up to the hub for the Normal/Hardcore choice, then played the
+    // same dive again). The chooser opens on the press; the dive to black is
+    // `descendInto`, after you have chosen, and it is the only one.
+    vibrate([0, 16])
+    setModeChoiceOpen(true)
   }
   /**
    * THE SAME WATER CLOSES AFTER THE MODE CHOICE. Choosing Normal or Hardcore
@@ -1425,6 +1426,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // After a run ends, return to the Gauntlet's own intro (not all the way out to
   // the expeditions map) with fresh server data, ready to descend again. begin()
   // fully resets the run state, so we just flip back to 'intro' + refetch.
+  /** Every end screen's way out, through the dip (see surfaceTo). */
+  const leaveToHub = () => surfaceTo(backToIntro)
   function backToIntro() {
     setReward(null)
     setDeathFathoms(0)
@@ -3360,31 +3363,33 @@ export default function GauntletGame(props: GauntletGameProps) {
               ref={el => {
                 slipCards.current.set(pl.id, el)
                 if (el && !el.style.transform) {
-                  el.style.transform = 'translate(-50%, -92%) scale(0.98)'
+                  el.style.transform = 'translate(-50%, calc(-0.15 * min(100vw, 100vh))) scale(0.98)'
                   el.style.opacity = '0.8'
                 }
               }}
               style={{
                 position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy),
                 zIndex: 4, cursor: 'pointer', willChange: 'transform, opacity',
-                width: 'calc(0.21 * min(100vw, 100vh))', height: 'calc(0.23 * min(100vw, 100vh))',
+                // The painting (0.15 of the short side tall) and the name under
+                // it, all one button. Wide enough for the longest name.
+                width: 'max(170px, calc(0.16 * min(100vw, 100vh)))', height: 'calc(0.15 * min(100vw, 100vh) + 52px)',
                 padding: 0, border: 'none', background: 'none', font: 'inherit',
               }}>
               {/* The light it stands in: a soft pool at its foot that comes up
                   on hover or as she comes alongside. Behind the plate, under
                   nothing of the painting that matters. */}
               <span aria-hidden className="slip-tile-glow" style={{
-                position: 'absolute', left: '8%', right: '8%', bottom: '-4%', height: '30%', borderRadius: '50%',
+                position: 'absolute', left: '14%', right: '14%', top: 'calc(0.15 * min(100vw, 100vh) - 18px)', height: 36, borderRadius: '50%',
                 background: `radial-gradient(ellipse, ${hex}55 0%, ${hex}1a 50%, transparent 72%)`,
                 opacity: 'calc(0.35 + 0.65 * var(--k, 0))', pointerEvents: 'none',
               }} />
               <span style={{
-                position: 'absolute', left: '50%', bottom: '4%', transform: 'translateX(-50%)',
-                display: 'grid', justifyItems: 'center', gap: 2, whiteSpace: 'nowrap', pointerEvents: 'none',
+                position: 'absolute', left: '50%', bottom: 0, transform: 'translateX(-50%)',
+                display: 'grid', justifyItems: 'center', gap: 3, whiteSpace: 'nowrap', pointerEvents: 'none',
               }}>
                 <span className="font-cinzel font-800 slip-tile-plate" style={{
-                  fontSize: '0.86rem', lineHeight: 1.1, color: '#fbf6ea', letterSpacing: '0.02em',
-                  padding: '0.3rem 0.7rem', borderRadius: 10,
+                  fontSize: '1rem', lineHeight: 1.1, color: '#fbf6ea', letterSpacing: '0.02em',
+                  padding: '0.38rem 0.85rem', borderRadius: 11,
                   background: 'rgba(5,9,15,0.82)', border: `1px solid ${hex}88`,
                   boxShadow: `0 4px 14px rgba(0,0,0,0.6), 0 0 calc(18px * var(--k, 0)) ${hex}77`,
                   textShadow: '0 1px 4px rgba(0,0,0,0.9)',
@@ -3540,7 +3545,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       return (
         <Shell>
           <Title sub="Nothing banked.">Run Over</Title>
-          <BackLink router={router} label="Back to the map" primary onClick={backToIntro} />
+          <BackLink router={router} label="Back to the map" primary onClick={leaveToHub} />
         </Shell>
       )
     }
@@ -3548,7 +3553,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       <>
         {arena('reward')}
         <Screen id={phase}>
-        <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken, convergencesTaken, stats: runStatsRef.current, events: runEventsRef.current, contracts: contractsWon }} onBack={backToIntro} don={isDonG} />
+        <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken, convergencesTaken, stats: runStatsRef.current, events: runEventsRef.current, contracts: contractsWon }} onBack={leaveToHub} don={isDonG} />
+        <TopBack onClick={leaveToHub} />
         </Screen>
       </>
     )
@@ -3657,9 +3663,10 @@ export default function GauntletGame(props: GauntletGameProps) {
           </motion.div>
 
           <div style={{ marginTop: 22 }}>
-            <BackLink router={router} label="Back to the map" primary onClick={backToIntro} />
+            <BackLink router={router} label="Back to the map" primary onClick={leaveToHub} />
           </div>
         </div>
+        <TopBack onClick={leaveToHub} />
         </Screen>
       </>
     )
@@ -8758,6 +8765,50 @@ function Title({ children, sub }: { children: React.ReactNode; sub?: string }) {
       <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f0ece4', letterSpacing: '0.02em' }}>{children}</h1>
       {sub && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9a948a', marginTop: 4 }}>{sub}</p>}
     </div>
+  )
+}
+
+/**
+ * ── SURFACING ────────────────────────────────────────────────────────────────
+ * Kong: going back to the map after a run should transition better. It was a
+ * straight swap, and the hub's world then built itself in view. Now the light
+ * dips (not a sweep: nothing moves across the screen), the swap happens in the
+ * dark, and it comes back up once the hub has had a moment to lay its water.
+ * An overlay made for the moment, so it outlives the screen it started on.
+ */
+function surfaceTo(swap: () => void) {
+  if (typeof document === 'undefined') { swap(); return }
+  const v = document.createElement('div')
+  Object.assign(v.style, {
+    position: 'fixed', inset: '0', zIndex: '1500', pointerEvents: 'auto', opacity: '0',
+    background: 'radial-gradient(ellipse 120% 90% at 50% 45%, rgba(4,10,16,0.96) 0%, rgba(1,4,8,1) 70%)',
+  })
+  document.body.appendChild(v)
+  const down = v.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420, easing: 'ease-in', fill: 'forwards' })
+  down.onfinish = () => {
+    swap()
+    window.setTimeout(() => {
+      v.style.pointerEvents = 'none'
+      const up = v.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 700, easing: 'ease-out', fill: 'forwards' })
+      up.onfinish = () => v.remove()
+    }, 650)
+  }
+}
+
+/** The way out, at the TOP of an end screen too (Kong: it was only at the
+ *  foot of a long recap). Pinned under the nav, small, the room's own type. */
+function TopBack({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="tap font-karla font-700 uppercase"
+      style={{
+        position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 70px)', left: 14, zIndex: 40,
+        display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.45rem 0.85rem 0.45rem 0.6rem', borderRadius: 999,
+        fontSize: '0.6rem', letterSpacing: '0.14em', color: '#e6dfd0', cursor: 'pointer',
+        background: 'rgba(6,10,16,0.82)', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 6px 18px rgba(0,0,0,0.5)',
+      }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 6l-6 6 6 6" /></svg>
+      Back to the map
+    </button>
   )
 }
 
