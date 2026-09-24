@@ -93,6 +93,14 @@ export type Bay = {
    *  ships could pass in and no more. */
   half: number
   /**
+   * ITS WATER STOPS AT ITS OWN SHORE. Every other bay's colour and weather
+   * run up its strait to meet you; a contained one keeps them in its disc,
+   * with a tighter edge, so it is the small room the map shows (Kong: One
+   * Last Ride felt far bigger on the sea than on the minimap, because its
+   * violet storm water filled the whole longest strait on the chart).
+   */
+  contained?: boolean
+  /**
    * ── THE CHAPTER'S OWN SEA ──────────────────────────────────────────────
    *
    * Three stops, deep to pale, like every water on this chart. With the rock
@@ -171,7 +179,7 @@ export const BAYS: Bay[] = [
      * Its door opens on chapter IV's tail, which falls out of the array order
      * rather than being written down: see opensBay.
      */
-    bearing: D(-94), at: 11210, r: 2245, half: 460,
+    bearing: D(-94), at: 11210, r: 2245, half: 460, contained: true,
     // Violet-black. Not one of the four, because it is not one of the four —
     // there is no chapter after this and the water should not look like there
     // is.

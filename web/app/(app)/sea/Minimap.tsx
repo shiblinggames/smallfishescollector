@@ -474,15 +474,37 @@ export default function Minimap({
         // see — it is where the water changes colour — so the map says the same
         // thing by fading out at the rim and letting the deep behind it take
         // over. A radial stop does the whole job the ring was doing badly.
+        // ── A REGION, NOT A CIRCLE ──────────────────────────────────────
+        // Kong: the bays should read as general areas, not perfect circles.
+        // The outline wanders on three seeded sines per bay (never the same
+        // shape twice, never further than ~18% from the true rim), and the
+        // wash is drawn twice, a wide faint pass and a tighter one, so its
+        // edge is soft and uneven like water changing colour.
         const bx = tx(c.x), by = ty(c.y), br = b.r * s
-        const wash = ctx.createRadialGradient(bx, by, br * 0.2, bx, by, br)
-        wash.addColorStop(0, openDoor ? `${b.sea[1]}dd` : `${b.sea[0]}aa`)
-        wash.addColorStop(0.72, openDoor ? `${b.sea[1]}bb` : `${b.sea[0]}88`)
-        wash.addColorStop(1, openDoor ? `${b.sea[1]}00` : `${b.sea[0]}00`)
-        ctx.fillStyle = wash
-        ctx.beginPath()
-        ctx.arc(bx, by, br, 0, Math.PI * 2)
-        ctx.fill()
+        let seed = 0
+        for (let i = 0; i < b.id.length; i++) seed = (seed * 31 + b.id.charCodeAt(i)) % 997
+        const region = (k: number) => {
+          ctx.beginPath()
+          const N = 36
+          for (let i = 0; i <= N; i++) {
+            const a = (i / N) * Math.PI * 2
+            const wob = 1 + 0.1 * Math.sin(a * 2 + seed) + 0.06 * Math.sin(a * 3 + seed * 1.7) + 0.04 * Math.sin(a * 5 + seed * 0.3)
+            const r = br * k * wob
+            const x = bx + Math.cos(a) * r, y = by + Math.sin(a) * r * 0.92
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+          }
+          ctx.closePath()
+        }
+        for (const [k, a0, a1] of [[1.05, '55', '00'], [0.82, openDoor ? 'cc' : '99', openDoor ? '44' : '33']] as const) {
+          const wash = ctx.createRadialGradient(bx, by, br * 0.15, bx, by, br * k * 1.1)
+          const col = openDoor ? b.sea[1] : b.sea[0]
+          wash.addColorStop(0, `${col}${a0 === '55' ? '66' : a0}`)
+          wash.addColorStop(0.75, `${col}${a0 === '55' ? '33' : a1}`)
+          wash.addColorStop(1, `${col}00`)
+          ctx.fillStyle = wash
+          region(k)
+          ctx.fill()
+        }
 
         // ── AND WHAT IS IN IT ────────────────────────────────────────────
         //
@@ -525,31 +547,9 @@ export default function Minimap({
           }
         }
 
-        // ── ITS NAME, AND ONLY ONCE IT IS YOURS ──────────────────────
-        //
-        // A shut bay used to print "The Last Fathom" in grey with SHUT over it,
-        // which hands a captain in chapter one the name of every chapter left —
-        // the same spoiler the campaign panel was giving away in its rows, on
-        // the one surface that is meant to show you what you have found. The
-        // titles ARE the story.
-        //
-        // So a bay you have not opened is a patch of dark water with a numeral
-        // on it: there IS a chapter three, and that is all. The numeral stays
-        // because "chapter two" is how a captain thinks about where they are,
-        // and knowing one is ahead is a reason to sail rather than a reveal.
-        ctx.textAlign = 'center'
-        if (openDoor) {
-          ctx.fillStyle = 'rgba(244,236,216,0.94)'
-          ctx.font = '600 10px Karla, system-ui, sans-serif'
-          ctx.fillText(b.name.replace(/^The /, ''), bx, by + 3)
-          ctx.fillStyle = 'rgba(196,169,106,0.8)'
-          ctx.font = '700 8px Karla, system-ui, sans-serif'
-          ctx.fillText(`CHAPTER ${b.chapter}`, bx, by - 8)
-        } else {
-          ctx.fillStyle = 'rgba(196,169,106,0.34)'
-          ctx.font = '700 8px Karla, system-ui, sans-serif'
-          ctx.fillText(`CHAPTER ${b.chapter}`, bx, by + 3)
-        }
+        // NO TITLES (Kong: zones, not chapters with their titles). A bay is
+        // its water and the ships in it; the name is for the water itself to
+        // tell you when you arrive (the chapter banner).
       }
 
       // ── AND THE WATER YOU HAVE NOT SAILED ────────────────────────────
@@ -1137,10 +1137,10 @@ export default function Minimap({
                   more rows to read past. */}
               {side !== 'fishing' && (
                 <KeyGroup title="The campaign">
-                  <Key mark={<Swatch c={BAYS[0].sea[1]} round />} label="Chapter's bay" />
+                  <Key mark={<Swatch c={BAYS[0].sea[1]} round />} label="A chapter's water" />
                   <Key mark={<Swatch c="rgba(240,192,64,0.95)" round />} label="Fight, open" />
                   <Key mark={<Swatch c="transparent" round ring="rgba(190,214,232,0.62)" />} label="Fight, won" />
-                  <Key mark={<Swatch c={`${BAYS[0].sea[0]}88`} round />} label="Bay, locked" />
+                  <Key mark={<Swatch c={`${BAYS[0].sea[0]}88`} round />} label="Not yet open" />
                   <Key mark={<Dot c="transparent" r={3} ring="rgba(240,192,64,0.95)" ringR={7} />} label="Next stop" />
                   <Key mark={<Dash c="rgba(240,192,64,0.6)" />} label="Way home" />
                 </KeyGroup>

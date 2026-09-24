@@ -3488,3 +3488,13 @@ floats, 20 uploads) for a sea where one stretch of one lane is visible. Now poin
 lanes cut into CHUNK=16-segment meshes with bounds, and `advance` hides and skips every chunk
 outside the camera (x1.25 margin, world units from SeaIslandsGPU's halfW/halfH). Kelp sprites
 are culled the same way. Rule for anything that scrolls UVs: cull first, like the surf.
+
+## Expedition minimap zones, and a contained last bay (2026-09-24)
+
+- The minimap draws each bay as a soft IRREGULAR region (seeded wobble on three sines, two wash
+  passes), not a circle, and prints NO names or chapter numerals: zones only. Key: "A chapter's
+  water" / "Not yet open".
+- `Bay.contained` (One Last Ride only): `bayGap` ignores its strait and returns disc x 1.8, so its
+  colour and mood stop at its own water with a tight edge. Before, every bay's water ran up its
+  whole strait, and the Ride's is the longest on the chart (~8,000px of violet storm), which is
+  why it felt far bigger on the sea than on the map.

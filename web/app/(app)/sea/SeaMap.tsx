@@ -1435,6 +1435,9 @@ function bayGap(b: Bay, x: number, y: number): number {
   const c = bayCentre(b)
   const disc = Math.max(0, Math.hypot(x - c.x, y - c.y) - b.r)
   if (disc === 0) return 0
+  // A contained bay: no strait, and a tighter edge (the callers divide by a
+  // shared knee, so a bigger gap is a shorter fade). See Bay.contained.
+  if (b.contained) return disc * 1.8
   const q = toStrait(b, x, y)
   const oa = Math.max(0, Math.abs(q.along - straitLen(b) / 2) - straitLen(b) / 2)
   const oc = Math.max(0, Math.abs(q.across) - b.half)
