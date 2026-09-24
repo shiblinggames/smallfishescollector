@@ -8886,14 +8886,26 @@ export default function SeaMap({
         for (const m of MAELSTROMS) {
           const mdx = m.x - pos.current.x, mdy = m.y - pos.current.y
           const md = Math.hypot(mdx, mdy)
-          const grip = m.r * 1.6
+          // STRONGER (Kong: make the pull feel stronger). It reaches further
+          // out (2.2x the bowl, from 1.6), rises sooner (^1.25), pulls nearly
+          // twice as hard at the eye (260 against a 470 hull, so sailing out
+          // is still a choice) and swirls harder. A boat nobody is steering is
+          // taken with it, as a current takes her: her helm's target drifts
+          // along too, or it would hold her against the pull.
+          const grip = m.r * 2.2
           if (md > grip || md < 1) continue
-          const k = Math.pow(1 - md / grip, 1.6)
-          const pull = 140 * k * dt
+          const k = Math.pow(1 - md / grip, 1.25)
+          const pull = 260 * k * dt
           const mux = mdx / md, muy = mdy / md
-          pos.current.x += mux * pull - muy * pull * 0.55
-          pos.current.y += muy * pull + mux * pull * 0.55
-          mLean += mux * 7 * k
+          const px = mux * pull - muy * pull * 0.75, py = muy * pull + mux * pull * 0.75
+          pos.current.x += px
+          pos.current.y += py
+          const steeringM = !!boxHeld.current || keysRef.current.size > 0 || holding.current
+          const tgx = target.current.x - pos.current.x, tgy = target.current.y - pos.current.y
+          if (!steeringM && tgx * tgx + tgy * tgy < SLOW * SLOW) {
+            target.current = { x: target.current.x + px, y: target.current.y + py }
+          }
+          mLean += mux * 10 * k
         }
       }
       // Eased, and eased OUT here rather than inside the loop above, so a
@@ -10945,9 +10957,13 @@ export default function SeaMap({
             the largest objects on the chart were a pair of unexplained
             whirlpools until you happened to sail into one and read the helm.
             See MaelstromName for the Don's half of it. */}
-        {!inAnchorage && MAELSTROMS.map(m => (
+        {/* NOT GATED ON THE SIDE. It was `!inAnchorage &&`, and the doors are
+            north of the reef, so their names were only ever drawn where you
+            could not see them (Kong: the gauntlets had no labels). */}
+        {MAELSTROMS.map(m => (
           <MaelstromName key={m.id} m={m} open={maelOpen(m.id)} />
         ))}
+        {inAnchorage && <WargateName />}
         {/* The charge stands on the RING, not the hull: the painted band is
             the cylinder's footprint, so the ring itself is what flares. */}
         {/* ON THE CANVAS NOW (see seaGuideFx). This is the ?gpu=0 fallback. */}
@@ -12893,7 +12909,10 @@ hullRef={hullRefFor(t.key)} />
         fog={fogRef.current}
         xfog={xfogRef.current}
         at={pos}
-        side={onSeaGate ? 'seagate' : inAnchorage ? 'expeditions' : 'fishing'}
+        // THE WHOLE EXPEDITION SEA from anywhere north of the reef (Kong: the
+        // map should show the expedition map even in the anchorage). The
+        // anchorage-only disc showed a harbour and hid every bay.
+        side={onSeaGate || inAnchorage ? 'seagate' : 'fishing'}
         seaAt={p => seaAt(p, 0).solid}
         // The rival, and whether he is holding a finished job. Only on the
         // fishing half: he is moored in the Shallows and drawing him on the
@@ -14669,6 +14688,28 @@ const MaelstromName = memo(function MaelstromName({ m, open }: { m: Maelstrom; o
           : m.id === 'davy' ? 'Clear Chapter II to open it'
             : 'Finish the campaign to learn what this is'}
       </p>
+    </div>
+  )
+})
+
+/** THE WARGATE'S NAME, under its well, in the doors' own type. */
+const WargateName = memo(function WargateName() {
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: WARGATE.x, top: WARGATE.y + WARGATE_REACH * 0.9 * GROUND,
+      pointerEvents: 'none',
+      transform: `translate(-50%, 14px) scaleY(${1 / GROUND})`,
+      transformOrigin: 'top center',
+      textAlign: 'center', whiteSpace: 'nowrap',
+    }}>
+      <p className="font-cinzel font-700" style={{
+        fontSize: '1.35rem', lineHeight: 1.1, margin: 0, color: '#f6ead0',
+        textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
+      }}>The Wargate</p>
+      <p className="font-karla font-600" style={{
+        fontSize: '0.9rem', marginTop: 2, color: 'rgba(240,200,130,0.9)',
+        textShadow: '0 1px 10px rgba(0,0,0,0.92)',
+      }}>Sail in to fight any boss you have beaten</p>
     </div>
   )
 })

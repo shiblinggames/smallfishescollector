@@ -502,7 +502,11 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
         const pr = Math.min(W, H) * (0.25 + u * (loud ? 1.4 : 0.85))
         pulse.x = cx; pulse.y = cy
         pulse.width = pr; pulse.height = pr * (below ? 0.5 : 0.7)
-        pulse.alpha = (1 - u) * (beatKind === 'legendary' || beatKind === 'record' ? 0.28 : loud ? 0.2 : beatKind === 'milestone' ? 0.18 : 0.12)
+        // NO RING FOR A ROUTINE BEAT (Kong: the pulse on every sinking, boon
+        // and curse was too repetitive and distracting). The halo only opens
+        // for the rare ones: a legendary, a record, a milestone, your death.
+        const ringed = beatKind === 'legendary' || beatKind === 'record' || beatKind === 'milestone' || beatKind === 'death'
+        pulse.alpha = ringed ? (1 - u) * (beatKind === 'legendary' || beatKind === 'record' ? 0.28 : loud ? 0.2 : 0.18) : 0
         for (const sp of sparks) {
           if (sp.age >= sp.life) { if (sp.p.alpha) sp.p.alpha = 0; continue }
           if (Number.isNaN(sp.x)) { sp.x = cx + (Math.random() - 0.5) * W * 0.3; sp.y = cy }

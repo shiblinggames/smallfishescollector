@@ -2338,7 +2338,8 @@ export default function RaidCombat({
     }
     try {
       const a = el.animate(
-        [{ opacity: strong ? 0.5 : 0.32 }, { opacity: 0 }],
+        // SOFTER (Kong: the hit flash was too strong). 0.5 / 0.32 before.
+        [{ opacity: strong ? 0.32 : 0.16 }, { opacity: 0 }],
         { duration: strong ? 240 : 150, easing: 'ease-out' },
       )
       a.finished.then(done).catch(done)
@@ -8114,6 +8115,7 @@ export default function RaidCombat({
               items.push({
                 id: `crew-${crew.id}`,
                 label: `${crew.name} · ${def.name}`,
+                name: crew.name,
                 sub,
                 color: def.color,
                 emoji: def.emoji,
@@ -9173,7 +9175,7 @@ export default function RaidCombat({
             </AnimatePresence>
             {/* Muzzle flash when the enemy fires back (toward the player, left) */}
             {enemyMuzzle && (
-              <CannonShotBurst key={`em-${enemyMuzzle.key}`} kind={enemyMuzzle.kind} dir="left" />
+              !overSea && <CannonShotBurst key={`em-${enemyMuzzle.key}`} kind={enemyMuzzle.kind} dir="left" />
             )}
             {/* Dodge whoosh — enemy juts back-right out of the way */}
             <AnimatePresence>
@@ -9183,7 +9185,7 @@ export default function RaidCombat({
             </AnimatePresence>
             {/* Explosion burst on impact — overlays the enemy hull */}
             {enemyImpact && (
-              <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
+              !overSea && <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
             )}
             {/* The chase skins' set pieces over the enemy hull: the storm, the
                 apex kill, the death-mark, the scry. Drawn by BattleFx. */}
@@ -9270,7 +9272,7 @@ export default function RaidCombat({
                 }}
               />
               {cannonShot && (
-                <CannonShotBurst key={`cs-${cannonShot.key}`} kind={cannonShot.kind} />
+                !overSea && <CannonShotBurst key={`cs-${cannonShot.key}`} kind={cannonShot.kind} />
               )}
               {/* Buff pulse — the player ship flares in the ability's class
                   color the instant a crew ability fires (pairs with the cast
@@ -9310,7 +9312,7 @@ export default function RaidCombat({
                   portrait now, with every other boost: see playerChips. */}
               {/* Impact spray when the enemy's shot lands on the player hull */}
               {playerImpact && (
-                <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
+                !overSea && <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
               )}
               {/* The chase skins' set pieces over your hull: the cosmic surge,
                   the ancient ward. Drawn by BattleFx. */}
@@ -13168,6 +13170,8 @@ export interface SpecialItem {
   disabled?: boolean
   emoji?: string
   image?: string | null
+  /** The crew member's own name, for the rail: the ability is in `label`. */
+  name?: string
   onClick: () => void
 }
 
@@ -13208,65 +13212,56 @@ function CrewRail({ items, disabled }: { items: SpecialItem[]; disabled: boolean
         }}>
           {items.map(item => {
             const ready = !item.disabled && !disabled
+            // ── A PORTRAIT TILE WITH THEIR NAME ON IT ──────────────────
+            // Kong: show the crew member's name, not the ability, and it
+            // still did not look right. A tall card of their art, the name set
+            // on the art over a dark fade, a steady rim in their class colour
+            // when ready. No breathing glow: six of them pulsing at once over
+            // a fight was noise. Spent is grey with a small tag. The ability
+            // and what it does are on hover (title), as before.
+            const name = item.name ?? item.label.split(' · ')[0]
+            // SPENT is the ability's own state; not-your-turn only dims.
+            const spent = !!item.disabled
             return (
               <motion.button
                 key={item.id}
                 type="button"
                 title={`${item.label}: ${item.sub}`}
                 aria-label={`${item.label}. ${item.sub}`}
-                whileTap={ready ? { scale: 0.94 } : undefined}
-                whileHover={ready ? { scale: 1.06, y: -2 } : undefined}
+                whileTap={ready ? { scale: 0.95 } : undefined}
+                whileHover={ready ? { y: -4 } : undefined}
                 transition={{ type: 'spring', stiffness: 420, damping: 26 }}
                 onClick={() => { if (ready) item.onClick() }}
                 disabled={!ready}
                 style={{
-                  position: 'relative', width: 76, padding: 0, border: 'none',
-                  background: 'none', cursor: ready ? 'pointer' : 'not-allowed',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  position: 'relative', width: 70, height: 92, padding: 0, borderRadius: 12, overflow: 'hidden',
+                  border: `1.5px solid ${spent ? 'rgba(255,255,255,0.12)' : item.color}`,
+                  background: spent ? 'rgba(8,12,18,0.9)' : `${item.color}22`,
+                  boxShadow: ready ? `0 0 14px ${item.color}55, 0 6px 16px rgba(0,0,0,0.5)` : '0 4px 12px rgba(0,0,0,0.45)',
+                  opacity: !spent && !ready ? 0.62 : 1,
+                  cursor: ready ? 'pointer' : 'not-allowed',
                 }}>
-                {/* THE FACE, and whether it is yours to spend. Ready is lit and
-                    in colour with a breathing rim; spent is grey, dimmed and
-                    struck through, because "used" is a state you have to be
-                    able to read at a glance mid-fight without hovering. */}
-                <motion.span
-                  animate={ready
-                    ? { boxShadow: [`0 0 0px ${item.color}00`, `0 0 16px ${item.color}88`, `0 0 0px ${item.color}00`] }
-                    : { boxShadow: 'none' }}
-                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{
-                    position: 'relative', width: 68, height: 68, borderRadius: '50%', overflow: 'hidden',
-                    border: `2px solid ${ready ? item.color : 'rgba(255,255,255,0.16)'}`,
-                    background: ready ? `${item.color}1c` : 'rgba(255,255,255,0.04)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                  {/* CARD ART, NOT A PORTRAIT. `crew.imageUrl` is the full
-                      Supabase card illustration, several hundred pixels tall,
-                      and it was being crammed into a 52px circle centred on the
-                      middle of the card: a hard one-step downscale of a large
-                      image, which is exactly the case browsers resample badly,
-                      cropped to somebody's chest. Bigger circle so the
-                      downscale is gentler, and `top center` so what you get is
-                      the face — the same framing the raid loadout already uses
-                      for these same images. */}
-                  {item.image
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={item.image} alt="" width={68} height={68} decoding="async" style={{
-                        width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center',
-                        filter: ready ? 'none' : 'grayscale(1) brightness(0.55)',
-                      }} />
-                    : <span style={{ color: ready ? item.color : '#6a6460', display: 'flex' }}><IconCrate size={20} /></span>}
-                  {!ready && (
-                    <span aria-hidden style={{
-                      position: 'absolute', left: 6, right: 6, top: '50%', height: 2,
-                      background: 'rgba(255,255,255,0.5)', transform: 'rotate(-24deg)',
+                {item.image
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={item.image} alt="" decoding="async" style={{
+                      position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center',
+                      filter: spent ? 'grayscale(1) brightness(0.45)' : 'none',
                     }} />
-                  )}
-                </motion.span>
-                <span className="font-karla font-700 uppercase" style={{
-                  fontSize: '0.48rem', letterSpacing: '0.1em', maxWidth: 76,
+                  : <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: ready ? item.color : '#6a6460' }}><IconCrate size={22} /></span>}
+                <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '52%', background: 'linear-gradient(to top, rgba(4,7,12,0.95) 0%, rgba(4,7,12,0.7) 45%, rgba(4,7,12,0) 100%)' }} />
+                <span className="font-cinzel font-700" style={{
+                  position: 'absolute', left: 4, right: 4, bottom: 6, textAlign: 'center',
+                  fontSize: '0.66rem', lineHeight: 1.05, color: spent ? '#8a857d' : '#fbf6ea',
+                  textShadow: '0 1px 4px rgba(0,0,0,0.95)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  color: ready ? item.color : '#6a6460',
-                }}>{item.label}</span>
+                }}>{name}</span>
+                {spent && (
+                  <span className="font-karla font-800 uppercase" style={{
+                    position: 'absolute', top: 5, left: '50%', transform: 'translateX(-50%)',
+                    fontSize: '0.44rem', letterSpacing: '0.12em', padding: '1px 5px', borderRadius: 999,
+                    color: '#cfc9bf', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.18)',
+                  }}>Used</span>
+                )}
               </motion.button>
             )
           })}

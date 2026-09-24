@@ -567,9 +567,11 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
           // and the glow all read it. See the `cards` prop.
           const el = cardsRef.current?.current.get(m.p.id)
           if (el) {
-            el.style.opacity = seen.toFixed(3)
+            el.style.opacity = Math.max(0.8, seen).toFixed(3)
             // The lift was SIX PIXELS, which is a card that does not move.
-            el.style.transform = `translate(-50%, ${(32 - 15 * k).toFixed(1)}px) scale(${(0.88 + 0.12 * k).toFixed(3)})`
+            // Over the landmark (its foot on the mooring), a touch bigger for
+            // the one she is at, as the painting under it is.
+            el.style.transform = `translate(-50%, -92%) scale(${(0.98 + 0.05 * k).toFixed(3)})`
             el.style.setProperty('--k', k.toFixed(3))
           }
         }

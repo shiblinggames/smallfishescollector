@@ -180,7 +180,8 @@ function diamond(ctx: CanvasRenderingContext2D, x: number, y: number, r: number)
 const HALF_NAME: Record<'fishing' | 'expeditions' | 'seagate', string> = {
   fishing: 'The fishing grounds',
   expeditions: 'The anchorage',
-  seagate: 'Past the Sea Gate',
+  // Shown from the anchorage too now, so it is named for what it shows.
+  seagate: 'The expedition sea',
 }
 
 export default function Minimap({

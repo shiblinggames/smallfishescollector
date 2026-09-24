@@ -4032,3 +4032,10 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
   .voyage-routes { grid-template-columns: 1fr 1fr; }
   .voyage-routes > :last-child { grid-column: 1 / -1; }
 }
+
+/* ── The gauntlet hub's landmarks, pressable (GauntletGame slip-tile) ──────
+   The painting is on the canvas, so the hover answers on the light at its
+   foot and on the name plate: both come up at once, and the plate lifts. */
+.slip-tile .slip-tile-glow, .slip-tile .slip-tile-plate { transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease; }
+.slip-tile:hover .slip-tile-glow, .slip-tile:focus-visible .slip-tile-glow { opacity: 1 !important; }
+.slip-tile:hover .slip-tile-plate, .slip-tile:focus-visible .slip-tile-plate { transform: translateY(-2px) scale(1.05); }

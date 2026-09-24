@@ -424,7 +424,7 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       prop.node.alpha = 0
       let propUrl = ''
       let propGeo = { pad: 0, w: 1, h: 1 }
-      let propAt = { x: 0, y: 0, w: 0, ok: false }
+      let propAt = { x: 0, y: 0, w: 0, h: 0, ok: false }
       let propMeasured = -1
       let propT0 = 0
       let propSplash = 0
@@ -681,12 +681,17 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
             if (t - propMeasured > 0.25) {
               propMeasured = t
               const r = st.anchor.current?.getBoundingClientRect()
-              if (r && r.width > 0) propAt = { x: r.left - box.left + r.width / 2, y: r.top - box.top + r.height * 0.92, w: r.width * 1.7, ok: true }
+              if (r && r.width > 0) propAt = { x: r.left - box.left + r.width / 2, y: r.top - box.top + r.height * 0.92, w: r.width * 1.7, h: r.height, ok: true }
             }
             if (propAt.ok) {
-              const w = propAt.w
+              // FITTED TO ITS BOX, height included. The shrine is taller than it
+              // is wide, and sized off the width alone it stood well above its
+              // box and was cut off at the top of the screen (Kong). It may
+              // overhang the box a little, never by more than a tenth.
+              const aspect = prop.sp.texture.height / prop.sp.texture.width
+              const w = Math.min(propAt.w, (propAt.h * 1.08) / aspect)
               prop.sp.width = w
-              prop.sp.height = w * (prop.sp.texture.height / prop.sp.texture.width)
+              prop.sp.height = w * aspect
               prop.water?.fit(prop.sp)
               const age = t - propT0
               const sway = Math.sin(t * 1.3) * 3 + Math.sin(t * 2.1 + 0.7) * 1.6

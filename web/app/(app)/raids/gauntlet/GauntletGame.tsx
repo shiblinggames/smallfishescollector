@@ -228,15 +228,7 @@ function bossArrivalFor(id: string | undefined): BossArrival {
 }
 
 function burstAt(x: number, y: number, color: string) {
-  const ring = document.createElement('div')
-  Object.assign(ring.style, {
-    position: 'fixed', left: `${x - 40}px`, top: `${y - 40}px`, width: '80px', height: '80px',
-    borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 18px ${color}`,
-    pointerEvents: 'none', zIndex: '1400',
-  })
-  document.body.appendChild(ring)
-  ring.animate([{ transform: 'scale(0.55)', opacity: 0.95 }, { transform: 'scale(2.3)', opacity: 0 }], { duration: 560, easing: 'cubic-bezier(0.16,1,0.3,1)' })
-    .onfinish = () => ring.remove()
+  // Sparks only: no ring (Kong: ring pulses on picks were distracting).
   for (let i = 0; i < 12; i++) {
     const a = (i / 12) * Math.PI * 2 + Math.random() * 0.4
     const d = 46 + Math.random() * 38
@@ -3313,27 +3305,23 @@ export default function GauntletGame(props: GauntletGameProps) {
               ))}
               <span style={{ position: 'absolute', left: '50%', bottom: phone ? -10 : -2, transform: 'translateX(-50%)', textAlign: 'center', whiteSpace: 'nowrap' }}>
                 <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: phone ? '1rem' : '0.86rem', letterSpacing: '0.16em', color: '#fbf6ea', textShadow: `0 2px 12px rgba(0,0,0,1), 0 0 22px ${hex}88` }}>{pl.label}</span>
-                {/* A CHIP, not a whisper. It was 0.58rem of letter-spaced
-                    text floating over moving water, which is the register
-                    of a caption. A bordered pill is the register of a
-                    control, and it is the only one on this screen. */}
+                {/* A LINE OF TYPE, NOT A PILL (Kong: "Tap to descend" looked out
+                    of place). A solid gradient chip with a finger in it was the
+                    one boxed control floating on open water. The keeper and the
+                    ripples round him already say "press"; this says what
+                    pressing does, in the room's own voice, breathing softly. */}
                 <motion.span className="font-karla font-800 uppercase"
-                  animate={portalPressed ? { opacity: 1, scale: 1.06 } : { opacity: [0.8, 1, 0.8], scale: [1, 1.025, 1] }}
+                  animate={portalPressed ? { opacity: 1 } : { opacity: [0.7, 1, 0.7] }}
                   transition={portalPressed ? { duration: 0.12 } : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 7,
-                    padding: phone ? '0.4rem 0.95rem' : '0.32rem 0.8rem', borderRadius: 999,
-                    fontSize: phone ? '0.62rem' : '0.56rem', letterSpacing: '0.18em', color: '#0a0f16',
-                    background: `linear-gradient(180deg, ${hex}, ${hex}cc)`,
-                    boxShadow: `0 4px 16px rgba(0,0,0,0.7), 0 0 22px ${hex}66`,
+                    display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 5,
+                    fontSize: phone ? '0.7rem' : '0.62rem', letterSpacing: '0.26em', color: hex,
+                    textShadow: `0 1px 8px rgba(0,0,0,1), 0 0 16px ${hex}88`,
                   }}>
-                  {/* A finger. The one mark that says a thing is touched. */}
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M9 11V5.5a1.8 1.8 0 0 1 3.6 0V11" />
-                    <path d="M12.6 11V9.2a1.7 1.7 0 0 1 3.4 0V11" />
-                    <path d="M16 11.2a1.7 1.7 0 0 1 3.4 0V15a6 6 0 0 1-6 6h-1.6a5 5 0 0 1-3.8-1.8l-3-3.6a1.8 1.8 0 0 1 2.6-2.4L9 14.6" />
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" />
                   </svg>
-                  Tap to descend
+                  Descend
                 </motion.span>
               </span>
             </motion.button>
@@ -3356,68 +3344,56 @@ export default function GauntletGame(props: GauntletGameProps) {
             // `--k` is that distance as a 0..1 presence, and the glow, the rim
             // and the sub line all read it in CSS. One number written per
             // frame, four things answering it.
+            // ── THE LANDMARK IS THE BUTTON ──────────────────────────────
+            // Kong: the images should be more clickable, with the text right
+            // on them, easy to see. The card was a small pill hung UNDER the
+            // painting, so the thing you looked at was not the thing you
+            // pressed. This box now covers the landmark itself (its size and
+            // offset match the painting the Slipway stands on the mooring; the
+            // frame loop still owns transform + opacity + --k), with the name
+            // on a dark plate over the lower part of the art, and what the
+            // place is for coming up under it as she comes alongside.
             <button key={pl.id} type="button"
-              className="tap"
+              className="tap slip-tile"
               aria-label={`${pl.label}: ${meta.sub}`}
               onClick={() => { slipSail.current?.(pl.id); openPlace(pl.id) }}
               ref={el => {
                 slipCards.current.set(pl.id, el)
                 if (el && !el.style.transform) {
-                  el.style.transform = 'translate(-50%, 32px) scale(0.88)'
-                  el.style.opacity = '0.26'
+                  el.style.transform = 'translate(-50%, -92%) scale(0.98)'
+                  el.style.opacity = '0.8'
                 }
               }}
               style={{
                 position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy),
-                // PRESSABLE. It was pointer-events:none — a label painted on
-                // the water. Five labels that cannot be touched, over a sea you
-                // steer by dragging, is a screen with no visible way in.
-                // Pressing one takes the helm and sails there; see the
-                // Slipway's `sail` prop.
                 zIndex: 4, cursor: 'pointer', willChange: 'transform, opacity',
-                textAlign: 'left', font: 'inherit',
-                display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px 7px 8px', borderRadius: 13,
-                background: 'linear-gradient(180deg, rgba(14,20,32,0.94), rgba(5,9,16,0.94))',
-                // The pool of light under it comes up WITH her instead of
-                // switching on at a radius. Across the water that second shadow
-                // has no blur at all, so it costs nothing to leave declared.
-                border: `1px solid ${hex}44`,
-                boxShadow: `0 6px 18px rgba(0,0,0,0.55), 0 0 calc(26px * var(--k, 0)) ${hex}55`,
-                whiteSpace: 'nowrap',
+                width: 'calc(0.21 * min(100vw, 100vh))', height: 'calc(0.23 * min(100vw, 100vh))',
+                padding: 0, border: 'none', background: 'none', font: 'inherit',
               }}>
-              {/* THE RIM THAT LIGHTS, as its own layer rather than as a
-                  brightening border. A border colour cannot be interpolated
-                  from a custom property without `color-mix`, which is newer
-                  than some of the phones this runs on, and a `color-mix` that
-                  is not understood throws the whole border declaration away —
-                  leaving the card with no edge at all. A ring drawn over the
-                  top and faded by opacity says the same thing everywhere. */}
-              <span aria-hidden style={{
-                position: 'absolute', inset: -1, borderRadius: 14, pointerEvents: 'none',
-                border: `1px solid ${hex}`, opacity: 'calc(0.7 * var(--k, 0))',
+              {/* The light it stands in: a soft pool at its foot that comes up
+                  on hover or as she comes alongside. Behind the plate, under
+                  nothing of the painting that matters. */}
+              <span aria-hidden className="slip-tile-glow" style={{
+                position: 'absolute', left: '8%', right: '8%', bottom: '-4%', height: '30%', borderRadius: '50%',
+                background: `radial-gradient(ellipse, ${hex}55 0%, ${hex}1a 50%, transparent 72%)`,
+                opacity: 'calc(0.35 + 0.65 * var(--k, 0))', pointerEvents: 'none',
               }} />
-              <span style={{ display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 9, background: `${hex}22`, border: `1px solid ${hex}66`, color: hex, flexShrink: 0 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{meta.icon}</svg>
-              </span>
-              <span style={{ display: 'grid', gap: 1 }}>
-                <span className="font-cinzel font-800" style={{ fontSize: '0.7rem', color: '#f3ead2', lineHeight: 1.05 }}>{pl.label}</span>
-                {/* WHAT IT IS FOR, ONLY ONCE SHE IS THERE. Five of these at
-                    once is a page of small print laid over a painted sea; one
-                    of them, as you come alongside, is the mooring telling you
-                    what it is. The NAME stays legible the whole way in — that
-                    is the part you steer by. */}
+              <span style={{
+                position: 'absolute', left: '50%', bottom: '4%', transform: 'translateX(-50%)',
+                display: 'grid', justifyItems: 'center', gap: 2, whiteSpace: 'nowrap', pointerEvents: 'none',
+              }}>
+                <span className="font-cinzel font-800 slip-tile-plate" style={{
+                  fontSize: '0.86rem', lineHeight: 1.1, color: '#fbf6ea', letterSpacing: '0.02em',
+                  padding: '0.3rem 0.7rem', borderRadius: 10,
+                  background: 'rgba(5,9,15,0.82)', border: `1px solid ${hex}88`,
+                  boxShadow: `0 4px 14px rgba(0,0,0,0.6), 0 0 calc(18px * var(--k, 0)) ${hex}77`,
+                  textShadow: '0 1px 4px rgba(0,0,0,0.9)',
+                }}>{pl.label}</span>
                 <span className="font-karla font-700" style={{
-                  fontSize: '0.52rem', color: '#d7d0c2', lineHeight: 1.1,
+                  fontSize: '0.62rem', color: '#e6dfd0', textShadow: '0 1px 6px rgba(0,0,0,1)',
                   opacity: 'var(--k, 0)',
                 }}>{meta.sub}</span>
               </span>
-              {/* THE MARK THAT SAYS IT IS A CONTROL. Always there, at every
-                  distance, because the thing it has to answer is "can I touch
-                  this" and that question is asked from across the water. */}
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={hex} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden
-                style={{ flexShrink: 0, marginLeft: 1, opacity: 0.75 }}>
-                <path d="M9 6l6 6-6 6" />
-              </svg>
             </button>
           )
         })}
@@ -3718,7 +3694,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               arena draws the painted shrine breaking the surface into it (see
               ArenaStage). Only while you are choosing, as the icon was. */}
           {!shrineFlipping && !shrineCoin && (
-            <div ref={stageAnchorRef} aria-hidden style={{ width: 150, height: 150, margin: '8px auto 2px' }} />
+            <div ref={stageAnchorRef} aria-hidden style={{ width: 170, height: 190, margin: '10px auto 2px' }} />
           )}
 
           {shrineFlipping ? (

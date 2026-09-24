@@ -867,9 +867,11 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       f.h = 10; f.vh = 0
       f.age = 0
       f.life = heavy ? 0.2 : 0.14
-      f.size = heavy ? 92 : 58
-      f.grow = heavy ? 60 : 30
-      f.alpha = heavy ? 0.85 : 0.6
+      // SMALLER AND FAINTER (Kong: the flash on a hit was too strong). It is
+      // the light of the blow at the wound, not a flare over the ship.
+      f.size = heavy ? 70 : 40
+      f.grow = heavy ? 40 : 18
+      f.alpha = heavy ? 0.55 : 0.34
       f.p.tint = heavy ? 0xffe0a0 : 0xffd28a
 
       // A CRIT BURNS: the strike is a fireball with a star at its heart. A

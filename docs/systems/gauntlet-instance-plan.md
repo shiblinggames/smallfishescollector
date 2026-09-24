@@ -575,3 +575,16 @@ right with a wake, stops with a jolt and bow spray). Assigned BY HAND per boss i
 `BOSS_ARRIVAL` (a hash put Davy's four on two styles), hash fallback for new bosses:
 cartographer fog, krust ghost, pete surface, spet ram / admiral ram, don_finleone maelstrom,
 quartermaster ghost, saltie surface. Each variant's four bosses are four different entrances.
+
+**Round seven: Kong's pass on it (2026-09-24).**
+- The hub's landmark IS the button: each mooring card is a box over the painting (0.21 x 0.23 of
+  the short side, `translate(-50%, -92%)` written by the Slipway) with the name on a dark plate on
+  the art and the sub line rising with `--k`; `.slip-tile` hover lights the foot glow and lifts
+  the plate (globals.css).
+- "Tap to descend" is no longer a gradient pill with a finger: a line of type ("Descend" with the
+  double chevron) under the keeper's name.
+- NO RING PULSE on routine beats (sinking -> the depth page, boons, curses, and the rest): the
+  scenery's pulse opens only for legendary, record, milestone and death. `burstAt` lost its ring
+  too, sparks only. Do not bring either back.
+- Stage art is fitted to its box's HEIGHT as well as width (the tall shrine was cut off at the
+  top); the shrine's box is 170 x 190.

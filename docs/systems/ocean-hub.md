@@ -3459,3 +3459,14 @@ instead, just before `gpu.fleet(list)`, a KEEP-OUT capsule (R 640) between your 
 `fightHullRef.at` pushes any hull inside it out to its edge (x/y, cx/cy, wx/wy together), eased
 in/out over ~1s (`keepK`). A crossing patrol is drawn sliding round the fight. Canvas only; the
 DOM chart (`?gpu=0`) is unchanged.
+
+## The junction, named and pulling (2026-09-24)
+
+- The maelstroms' names (`MaelstromName`, since 2026-09-14) were gated `!inAnchorage`, and the
+  doors are north of the reef, so they never drew where you could see them. Ungated. The Wargate
+  gets `WargateName` ("Sail in to fight any boss you have beaten") north of the reef.
+- The map shows the WHOLE expedition sea (`side="seagate"`, now titled "The expedition sea") from
+  anywhere north of the reef; the anchorage-only disc hid every bay.
+- The maelstrom pull is stronger: grip 2.2x the bowl (was 1.6x), `^1.25` (was 1.6), 260px/s at
+  the eye (was 140, hull sails 470), swirl 0.75, lean 10, and it drags an unsteered boat's helm
+  target along like a current does.

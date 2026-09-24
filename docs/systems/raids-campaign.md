@@ -493,3 +493,14 @@ pool, rarity on the art, name + effects under), two-plus across; the crate odds 
 the odds under. Ultimates have no art yet, so their card stays text. The crate odds then MOVED to
 the boss's card (`CrateOddsTiles`, "In the Crate", boss only): the drops belong to the fight, and
 the player's Fortune card already shows the multiplier.
+
+## Crew rail and hit flash (2026-09-24)
+
+- `CrewRail` (desktop) tiles are portrait CARDS (70 x 92, art cover top-centre) with the crew
+  member's NAME (`SpecialItem.name`) on the art over a dark fade, a steady class-colour rim when
+  ready, no breathing glow; a used ability is grey with a "Used" tag, while not-your-turn only
+  dims. The ability and its effect stay in the tooltip.
+- Over the water the DOM `ImpactBurst` / `CannonShotBurst` no longer render: the sea's own gun FX
+  already draws the strike, and the two stacked read as a hard white flash (Kong: too strong).
+  The sea's strike flash is smaller and fainter (40px @ .34, crit 70 @ .55), and the whole-stage
+  impact flash is halved (.32 / .16).
