@@ -59,7 +59,7 @@ const LAYERS: Layer[] = [
 export type FlowGfx = {
   view: Container
   /** The clock, and where the camera is looking (world px), for the depth. */
-  advance(seconds: number, camX?: number, camY?: number): void
+  advance(seconds: number, camX?: number, camY?: number, halfW?: number, halfH?: number): void
   night(tint: number): void
 }
 
@@ -153,15 +153,26 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
     ripB: rippleTexture(PIXI, 113, 5, 5, 1.3),
     ripC: rippleTexture(PIXI, 197, 3, 4, 1.1),
   }
-  const strips: { mesh: MeshSimple; base: Float32Array; speed: number; tile: number }[] = []
+  /**
+   * ── ONLY WHAT IS ON SCREEN IS DRAWN, OR SCROLLED ─────────────────────────
+   * Kong hit stuttering sailing. Every lane was ONE mesh per layer the length
+   * of the lane, resampled every 100px for edge foam that no longer exists,
+   * and every frame rewrote and re-uploaded the UVs of all twenty of them:
+   * about fifteen thousand floats and twenty buffer uploads a frame, for a sea
+   * where you can see a stretch of one lane at a time. Now each lane is cut
+   * into CHUNKS with their own bounds, points every 200px, and a chunk off
+   * the camera is hidden and not touched.
+   */
+  const strips: { mesh: MeshSimple; base: Float32Array; speed: number; tile: number; x0: number; y0: number; x1: number; y1: number }[] = []
+  const CHUNK = 16
 
   for (const lane of CURRENTS) {
-    // Resampled every ~100px (the lane data is every ~400), so the foam can be
-    // cut cleanly where another lane crosses.
+    // Resampled every ~200px (the lane data is every ~400): enough for the
+    // width and centre to wander smoothly.
     const pts: { x: number; y: number }[] = [lane.pts[0]]
     for (let i = 1; i < lane.pts.length; i++) {
       const a = lane.pts[i - 1], b = lane.pts[i]
-      const m = Math.max(1, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 100))
+      const m = Math.max(1, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 200))
       for (let j = 1; j <= m; j++) pts.push({ x: a.x + ((b.x - a.x) * j) / m, y: a.y + ((b.y - a.y) * j) / m })
     }
     const n = pts.length
@@ -206,12 +217,29 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
           idx.push(p, p + 1, q, p + 1, q + 1, q)
         }
       }
-      const mesh = new PIXI.MeshSimple({ texture: tex[layer.tex], vertices: verts, uvs, indices: new Uint32Array(idx) })
-      mesh.blendMode = 'add'
-      mesh.alpha = layer.alpha
-      mesh.tint = layer.tint
-      view.addChild(mesh)
-      strips.push({ mesh, base: Float32Array.from(uvs), speed: layer.speed, tile: layer.tile })
+      void idx
+      // Cut into chunks of CHUNK segments (sharing their end points, so the
+      // strip is seamless), each with its own bounds for the cull.
+      for (let a = 0; a < n - 1; a += CHUNK) {
+        const b = Math.min(n - 1, a + CHUNK)
+        const cn = b - a + 1
+        const cv = verts.slice(a * 4, (b + 1) * 4)
+        const cu = uvs.slice(a * 4, (b + 1) * 4)
+        const ci: number[] = []
+        for (let k = 0; k < cn - 1; k++) { const p = k * 2, q = (k + 1) * 2; ci.push(p, p + 1, q, p + 1, q + 1, q) }
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+        for (let k = 0; k < cv.length; k += 2) {
+          if (cv[k] < x0) x0 = cv[k]; if (cv[k] > x1) x1 = cv[k]
+          if (cv[k + 1] < y0) y0 = cv[k + 1]; if (cv[k + 1] > y1) y1 = cv[k + 1]
+        }
+        const mesh = new PIXI.MeshSimple({ texture: tex[layer.tex], vertices: cv, uvs: cu, indices: new Uint32Array(ci) })
+        mesh.blendMode = 'add'
+        mesh.alpha = layer.alpha
+        mesh.tint = layer.tint
+        mesh.visible = false
+        view.addChild(mesh)
+        strips.push({ mesh, base: Float32Array.from(cu), speed: layer.speed, tile: layer.tile, x0, y0, x1, y1 })
+      }
     }
   }
 
@@ -286,10 +314,17 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
 
   return {
     view,
-    advance(t, camX = lastCamX, camY = lastCamY) {
+    advance(t, camX = lastCamX, camY = lastCamY, halfW = 2400, halfH = 2400) {
       lastCamX = camX; lastCamY = camY
-      // Every layer runs the way the water does, each at its own pace.
+      // The camera's reach, with a margin so nothing pops in at the edge.
+      const vx0 = camX - halfW * 1.25, vx1 = camX + halfW * 1.25
+      const vy0 = camY - halfH * 1.25, vy1 = camY + halfH * 1.25
+      // Every layer runs the way the water does, each at its own pace. Only
+      // the chunks in reach are shown or scrolled.
       for (const l of strips) {
+        const on = l.x1 > vx0 && l.x0 < vx1 && l.y1 > vy0 && l.y0 < vy1
+        if (l.mesh.visible !== on) l.mesh.visible = on
+        if (!on) continue
         const off = -(t * l.speed) / l.tile
         const buf = l.mesh.geometry.getBuffer('aUV')
         const data = buf.data as Float32Array
@@ -303,6 +338,10 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
       // drawn and the smaller, so the bed slides under the surface as you
       // sail. And it sways, slower than the swell above it.
       for (const d of bits) {
+        // Kelp in reach only (a bed is a few hundred px; the margin covers it).
+        const on = d.x > vx0 - 600 && d.x < vx1 + 600 && d.y > vy0 - 600 && d.y < vy1 + 600
+        if (d.sp.visible !== on) d.sp.visible = on
+        if (!on) continue
         const b = Math.sin(t * 0.5 + d.phase)
         d.sp.position.set(camX + (d.x - camX) * d.depth, camY + (d.y - camY) * d.depth)
         d.sp.scale.set(d.sx * d.depth * (1 + b * 0.015), d.sy * d.depth * (1 - b * 0.015))

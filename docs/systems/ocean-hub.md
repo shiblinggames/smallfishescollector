@@ -3482,3 +3482,9 @@ tapers. NO edge/shear lines, never add them back. How currents push is unchanged
 The water cue chips sit 60px over the desktop action button (it is a ~44px pill there) and one
 layer above it; they were drawn underneath it.
 
+**Perf (2026-09-24, Kong hit stuttering sailing).** The current lanes were one mesh per layer per
+lane, resampled every 100px, and EVERY frame rewrote and re-uploaded the UVs of all twenty (~15k
+floats, 20 uploads) for a sea where one stretch of one lane is visible. Now points every 200px,
+lanes cut into CHUNK=16-segment meshes with bounds, and `advance` hides and skips every chunk
+outside the camera (x1.25 margin, world units from SeaIslandsGPU's halfW/halfH). Kelp sprites
+are culled the same way. Rule for anything that scrolls UVs: cull first, like the surf.

@@ -1861,7 +1861,7 @@ export default function SeaIslandsGPU({
           if (Math.abs(g.x - camX) < halfW + g.r * 1.6
             && Math.abs(g.y - camY) < halfH + g.r * 1.6) { g.g.advance(t); blowing++ }
         }
-        flow.advance(t, camX, camY)
+        flow.advance(t, camX, camY, halfW, halfH)
         windRush.advance(dt)
         for (const l of laps) {
           if (Math.abs(l.x - camX) < halfW + l.half * 2
