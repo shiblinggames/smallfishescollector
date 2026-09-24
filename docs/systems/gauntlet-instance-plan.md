@@ -598,3 +598,12 @@ quartermaster ghost, saltie surface. Each variant's four bosses are four differe
 - Hub landmarks are SMALLER (0.12 of the short side, was 0.2) and the NAME is the main thing: a
   larger plate just under the painting's foot, the whole box one button. The buoy no longer
   stands over Permanent Upgrades.
+
+**The Codex, redone (2026-09-24).** Kong: the icon and the Codex looked outdated, and it was a
+narrow modal on desktop. `SynergiesModal` is up to min(1000px, 96vw) wide, a header with the
+painted tome (public/codex-tome.webp, Kie), tiles in an auto-fill grid (min 150px), each tile the
+crest at 80px on a pool of its state's colour with a steady rim; the sweeping sheen on active
+tiles is GONE (same rejected shine as the boon cards). The hub's Codex button and the boon
+screen's codex link both use the tome.
+Also: the maelstrom door landmarks were REMOVED on sight (Kong did not like them); the wreckage
+circling in stays.

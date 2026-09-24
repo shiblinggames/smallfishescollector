@@ -105,8 +105,6 @@ type Theme = {
   paint: string
   /** What the whirlpool is taking down, circling its rim. */
   debris: string[]
-  /** The landmark standing on the water beside the door. */
-  door: string
 }
 
 const THEMES: Record<Maelstrom['id'], Theme> = {
@@ -118,7 +116,6 @@ const THEMES: Record<Maelstrom['id'], Theme> = {
     face: '/davyjones.png',
     paint: '/sea/mael-davy.webp',
     debris: ['/sea/deb-barrel.webp', '/sea/deb-planks.webp', '/sea/deb-mast.webp', '/sea/deb-planks.webp'],
-    door: '/sea/door-davy.webp',
   },
   // Finleone's ghost: drowned green gone nearly to black, verdigris in the
   // arms, tarnished gold sinking.
@@ -136,7 +133,6 @@ const THEMES: Record<Maelstrom['id'], Theme> = {
     face: '/donsgauntlet.png',
     paint: '/sea/mael-don.webp',
     debris: ['/sea/deb-crate.webp', '/sea/deb-barrel.webp', '/sea/deb-planks.webp', '/sea/deb-crate.webp'],
-    door: '/sea/door-don.webp',
   },
 }
 
@@ -433,7 +429,6 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     /** The painted whirlpool, turned in its own flat and laid on the mesh. */
     flatPaint: Container; paint: Sprite; rtPaint: RenderTexture
     debris: { sp: Sprite; ang: number; r: number; spin: number; size: number; bob: number }[]
-    doorSp: Sprite
   }
 
   const sprite = (tex: Texture, size: number, tint: number, alpha: number): Sprite => {
@@ -694,21 +689,9 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
       return { sp, ang: (k / th.debris.length) * Math.PI * 2, r: m.r * (1.15 + k * 0.12), spin: (k % 2 ? 1 : -1) * 0.4, size, bob: k * 1.3 }
     })
 
-    // ── THE DOOR'S LANDMARK, on the water beside its rim ─────────────
-    const doorSp: Sprite = new PIXI.Sprite(PIXI.Texture.EMPTY)
-    doorSp.anchor.set(0.5, 0.95)
-    doorSp.position.set(-m.r * 1.18, m.r * 0.32)
-    void texture(PIXI, th.door).then(tx => {
-      doorSp.texture = tx
-      const w = m.r * 0.42
-      doorSp.width = w
-      doorSp.height = (w * tx.height) / tx.width / GROUND
-    }).catch(() => {})
-    node.addChild(doorSp)
-
     view.addChild(node)
     return {
-      flatPaint, paint, rtPaint, debris, doorSp,
+      flatPaint, paint, rtPaint, debris,
       m, th, node, flatDark, flatLight, rtDark, rtLight,
       storm, funnel, arms, mid, wisps, eye, core, strike, beam, holo,
       terraces, floor, wall, streams, drag, lip: lipS, spray,
@@ -1017,8 +1000,6 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           const edge = Math.min(1, (m.r * 1.8 - d.r) / (m.r * 0.3), (d.r - m.r * 0.92) / (m.r * 0.15))
           d.sp.alpha = Math.max(0, Math.min(1, edge)) * lit
         }
-        o.doorSp.y = m.r * 0.32 + Math.sin(t * 0.7) * 2
-        o.doorSp.tint = dark > 0.3 ? 0xb8c4d0 : 0xffffff
 
         // ── THE FLAT PICTURE, PAINTED ────────────────────────────────────
         renderer.render({ container: o.flatPaint, target: o.rtPaint, clear: true })

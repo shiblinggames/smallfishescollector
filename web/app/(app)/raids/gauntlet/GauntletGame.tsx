@@ -3206,17 +3206,14 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* The Codex always to hand, and the way back into the old lobby for
               everything the water has no place for. */}
           <div style={{ display: 'grid', gap: 8, justifyItems: 'end', flexShrink: 0 }}>
-            {([
-              { id: 'codex', label: 'Codex', color: '#b98bff', onClick: () => setSynergiesOpen(true),
-                icon: <><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></> },
-            ] as const).map(b => (
-              <button key={b.id} type="button" onClick={b.onClick} className="tap" aria-label={b.label}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: 54, padding: '7px 0 5px', borderRadius: 13, cursor: 'pointer', color: b.color,
-                  background: `linear-gradient(180deg, ${b.color}24, rgba(8,12,20,0.88))`, border: `1px solid ${b.color}66`, boxShadow: '0 6px 18px rgba(0,0,0,0.5)' }}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{b.icon}</svg>
-                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', color: '#e8e2d6' }}>{b.label}</span>
-              </button>
-            ))}
+            {/* THE CODEX, AS A BOOK (Kong: the icon looked outdated). The painted
+                tome, standing on its own; the word under it on the room's type. */}
+            <button type="button" onClick={() => setSynergiesOpen(true)} className="tap codex-btn" aria-label="Codex"
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: 66, padding: 0, cursor: 'pointer', background: 'none', border: 'none' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/codex-tome.webp" alt="" style={{ width: 58, height: 58, objectFit: 'contain', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.65)) drop-shadow(0 0 10px rgba(95,201,198,0.25))' }} />
+              <span className="font-cinzel font-800" style={{ fontSize: '0.7rem', color: '#f0e8d4', textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>Codex</span>
+            </button>
           </div>
           </div>
 
@@ -5522,7 +5519,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                   background: pendingConfluence ? 'rgba(185,139,255,0.15)' : 'rgba(255,255,255,0.04)',
                   border: `1px solid ${pendingConfluence ? 'rgba(185,139,255,0.5)' : 'rgba(255,255,255,0.12)'}`,
                   boxShadow: pendingConfluence ? '0 0 16px rgba(185,139,255,0.28)' : 'none', cursor: 'pointer' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/codex-tome.webp" alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
                 {pendingConfluence ? 'Review Synergies' : 'Synergy Codex'}
               </button>
             </div>
@@ -7215,37 +7213,37 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
 
   // One medallion — two component tokens fusing, the synergy name, and a compact
   // state footer. Everything else (effect, how-it-works, flavor) waits behind a tap.
+  // ── A TILE, ART FIRST ────────────────────────────────────────────────
+  // Kong: the Codex looked outdated. It was two columns of small medallions
+  // with a SWEEPING SHEEN on the active ones (the shine the boon cards already
+  // rejected). Now the crest is the tile: large, on a pool of its state's
+  // colour, the name under it, the state in a steady rim and one quiet line.
   const SynergyMedallion = ({ name, status, lvl, accent, dim, onOpen, tokens, kraken }: { name: string; status: Status | 'codex'; lvl: number; accent: string; dim?: boolean; onOpen: () => void; tokens: React.ReactNode; kraken?: boolean }) => {
-    const activeBg = kraken ? `${KRAKEN}1c` : `${GLD}16`
-    const activeBorder = kraken ? `${KRAKEN}66` : `${GLD}66`
+    const lit = status === 'active' || status === 'ready'
     return (
-      <button type="button" onClick={onOpen} className="tap" style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '0.75rem 0.5rem 0.65rem', borderRadius: 14, cursor: 'pointer', minWidth: 0, position: 'relative', overflow: 'hidden',
-        opacity: dim ? 0.4 : 1, transition: 'opacity 0.2s',
-        background: status === 'active' ? activeBg : status === 'ready' ? `${SYN}10` : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${status === 'active' ? activeBorder : status === 'ready' ? `${SYN}4a` : status === 'need1' ? `${NEED}30` : 'rgba(255,255,255,0.09)'}`,
-        boxShadow: status === 'active' ? `0 0 18px ${accent}22` : 'none' }}>
-        {status === 'active' && (
-          <motion.span aria-hidden initial={{ x: '-130%' }} animate={{ x: '190%' }} transition={{ duration: 3.6, repeat: Infinity, repeatDelay: 2.6, ease: 'easeInOut' }}
-            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '40%', background: `linear-gradient(100deg, transparent, ${accent}26, transparent)`, pointerEvents: 'none' }} />
-        )}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>{tokens}</span>
-        <span className="font-cinzel font-800" style={{ fontSize: '0.8rem', lineHeight: 1.12, textAlign: 'center', color: status === 'active' ? (kraken ? '#f0d7ff' : '#fbe7c4') : '#e4ebf2', minHeight: '1.9rem', display: 'flex', alignItems: 'center' }}>{name}</span>
+      <button type="button" onClick={onOpen} className="tap codex-tile" style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '0.9rem 0.6rem 0.8rem', borderRadius: 16, cursor: 'pointer', minWidth: 0, position: 'relative',
+        opacity: dim ? 0.38 : 1, transition: 'opacity 0.2s, transform 0.18s, box-shadow 0.18s',
+        background: `radial-gradient(ellipse 80% 60% at 50% 30%, ${accent}${lit ? '26' : '12'} 0%, rgba(8,13,21,0.9) 70%)`,
+        border: `1.5px solid ${status === 'active' ? accent : status === 'ready' ? `${accent}88` : status === 'need1' ? `${accent}44` : 'rgba(255,255,255,0.1)'}`,
+        boxShadow: status === 'active' ? `0 0 22px ${accent}33, inset 0 0 16px ${accent}14` : '0 6px 16px rgba(0,0,0,0.35)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 88 }}>{tokens}</span>
+        <span className="font-cinzel font-800" style={{ fontSize: '0.9rem', lineHeight: 1.12, textAlign: 'center', color: status === 'active' ? (kraken ? '#f0d7ff' : '#fbe7c4') : '#e8eef4', minHeight: '2rem', display: 'flex', alignItems: 'center' }}>{name}</span>
         {status === 'need1'
-          ? <span className="font-karla font-800 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: NEED }}>Need 1 more</span>
+          ? <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.1em', color: accent }}>One boon away</span>
           : status === 'codex'
             ? <LevelReadout level={lvl} max={3} color={accent} />
-            : <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><LevelReadout level={lvl} max={3} color={accent} /><span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: accent }}>{status === 'active' ? 'Active' : 'Ready'}</span></span>}
+            : <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><LevelReadout level={lvl} max={3} color={accent} /><span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.1em', color: accent }}>{status === 'active' ? 'Active' : 'Ready to draft'}</span></span>}
       </button>
     )
   }
 
   // Locked codex entry — a silhouette medallion teasing an undiscovered synergy.
   const MysteryMedallion = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '0.75rem 0.5rem 0.65rem', borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><MysteryToken size={52} /></span>
-      <span className="font-cinzel font-800" style={{ fontSize: '0.8rem', color: '#7d8794', letterSpacing: '0.12em', minHeight: '1.9rem', display: 'flex', alignItems: 'center' }}>? ? ?</span>
-      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.08em', color: '#6b7280' }}>Undiscovered</span>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '0.9rem 0.6rem 0.8rem', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.12)' }}>
+      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 88 }}><MysteryToken size={72} /></span>
+      <span className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: '#7d8794', letterSpacing: '0.12em', minHeight: '2rem', display: 'flex', alignItems: 'center' }}>? ? ?</span>
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#6b7280' }}>Undiscovered</span>
     </div>
   )
 
@@ -7256,11 +7254,17 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
           was the open-stutter. */}
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GLD}3a`, boxShadow: `0 0 44px ${GLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ minWidth: 0 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${GLD}cc` }}>{view === 'run' ? 'Your Build' : 'The Codex'}</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>{view === 'run' ? 'Synergy Tree' : 'All Synergies'}</p>
+        // WIDE WHERE THERE IS ROOM (Kong: a very narrow modal on desktop). It
+        // was 440 on every screen: a book of art in a phone column.
+        style={{ width: '100%', maxWidth: 'min(1000px, 96vw)', maxHeight: '88vh', overflowY: 'auto', borderRadius: 20, background: 'radial-gradient(ellipse 90% 50% at 50% 0%, rgba(95,201,198,0.08) 0%, transparent 60%), linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GLD}3a`, boxShadow: `0 0 44px ${GLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: 'clamp(1.1rem, 2.4vw, 1.8rem)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/codex-tome.webp" alt="" style={{ width: 60, height: 60, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.6))' }} />
+            <div style={{ minWidth: 0 }}>
+              <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.56rem', color: `${GLD}cc` }}>{view === 'run' ? 'Your Build' : 'The Codex'}</p>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: '#f4efe4', lineHeight: 1.1, marginTop: 3 }}>{view === 'run' ? 'Synergy Tree' : 'All Synergies'}</p>
+            </div>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -7270,7 +7274,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
         {/* This Run (personalized tree) vs Codex (the full catalogue). The tab
             only appears mid-run — from the home there's no build to show. */}
         {activeRun && (
-          <div style={{ display: 'flex', gap: 4, marginTop: 12, padding: 4, background: 'rgba(0,0,0,0.3)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ display: 'flex', gap: 4, marginTop: 14, padding: 4, maxWidth: 420, background: 'rgba(0,0,0,0.3)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
             {([['run', 'This Run'], ['codex', 'Codex']] as ['run' | 'codex', string][]).map(([v, label]) => {
               const on = view === v
               return (
@@ -7328,11 +7332,11 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
           <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#8f97a2', marginTop: 15, marginBottom: 8 }}>Synergies</p>
         )}
         {confRows.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 9 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
             {confRows.map(({ c, parts, lvl, status }) => (
               <SynergyMedallion key={c.id} name={c.name} status={status} lvl={lvl} accent={accentOf(status)}
                 dim={!confMatchesTrace({ c, parts, lvl, status })} onOpen={() => setOpenId(c.id)}
-                tokens={<MiniCrest color={accentOf(status)} size={52} image={c.image} />} />
+                tokens={<MiniCrest color={accentOf(status)} size={80} image={c.image} />} />
             ))}
           </div>
         )}
@@ -7343,12 +7347,12 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
               <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: KRAKEN }}>Convergences</p>
               <span className="font-karla" style={{ fontSize: '0.5rem', color: '#7c8794' }}>two synergies fused</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 9 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
               {convRows.map(({ cv, parts, lvl, status }) => (
                 <SynergyMedallion key={cv.id} name={cv.name} status={status} lvl={lvl} kraken
                   accent={status === 'active' ? KRAKEN : status === 'ready' ? SYN : NEED}
                   dim={!convMatchesTrace({ cv, parts, lvl, status })} onOpen={() => setOpenId(cv.id)}
-                  tokens={<MiniCrest color={KRAKEN} size={52} image={cv.image} />} />
+                  tokens={<MiniCrest color={KRAKEN} size={80} image={cv.image} />} />
               ))}
             </div>
           </>
@@ -7382,12 +7386,12 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
             </div>
 
             <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#8f97a2', marginTop: 15, marginBottom: 8 }}>Synergies</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 9 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
               {codexConf.map(({ c, lvl, discovered, activeNow }) => {
                 if (!discovered) return <MysteryMedallion key={c.id} />
                 return (
                   <SynergyMedallion key={c.id} name={c.name} status={activeNow ? 'active' : 'codex'} lvl={lvl} accent={activeNow ? GLD : '#9aa7b4'} onOpen={() => setOpenId(c.id)}
-                    tokens={<MiniCrest color={activeNow ? GLD : '#9aa7b4'} size={52} image={c.image} />} />
+                    tokens={<MiniCrest color={activeNow ? GLD : '#9aa7b4'} size={80} image={c.image} />} />
                 )
               })}
             </div>
@@ -7398,12 +7402,12 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
                   <p className="font-karla font-800 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: KRAKEN }}>Convergences</p>
                   <span className="font-karla" style={{ fontSize: '0.5rem', color: '#7c8794' }}>two synergies fused</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 9 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
                   {codexConv.map(({ cv, lvl, discovered, activeNow }) => {
                     if (!discovered) return <MysteryMedallion key={cv.id} />
                     return (
                       <SynergyMedallion key={cv.id} name={cv.name} status={activeNow ? 'active' : 'codex'} lvl={lvl} accent={activeNow ? KRAKEN : '#9aa7b4'} kraken onOpen={() => setOpenId(cv.id)}
-                        tokens={<MiniCrest color={activeNow ? KRAKEN : '#9aa7b4'} size={52} image={cv.image} />} />
+                        tokens={<MiniCrest color={activeNow ? KRAKEN : '#9aa7b4'} size={80} image={cv.image} />} />
                     )
                   })}
                 </div>
@@ -7474,7 +7478,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
             <motion.div onClick={close} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ position: 'fixed', inset: 0, zIndex: 1400, background: 'rgba(2,6,12,0.74)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
               <motion.div onClick={e => e.stopPropagation()} initial={{ y: 44 }} animate={{ y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-                style={{ width: '100%', maxWidth: 'var(--modal-w)', maxHeight: '86vh', overflowY: 'auto', background: 'linear-gradient(180deg, #141a24 0%, #0b0f16 100%)', borderRadius: '20px 20px 0 0', border: `1px solid ${accent}66`, borderBottom: 'none', boxShadow: `0 -12px 44px rgba(0,0,0,0.55)`, padding: '1rem 1.1rem calc(env(safe-area-inset-bottom, 0px) + 1.3rem)' }}>
+                style={{ width: '100%', maxWidth: 'min(560px, 100%)', maxHeight: '86vh', overflowY: 'auto', background: 'linear-gradient(180deg, #141a24 0%, #0b0f16 100%)', borderRadius: '20px 20px 0 0', border: `1px solid ${accent}66`, borderBottom: 'none', boxShadow: `0 -12px 44px rgba(0,0,0,0.55)`, padding: '1rem 1.1rem calc(env(safe-area-inset-bottom, 0px) + 1.3rem)' }}>
                 <div aria-hidden style={{ width: 38, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.18)', margin: '0 auto 14px' }} />
 
                 {/* The recipe, spelled out: components fuse into the synergy. */}
