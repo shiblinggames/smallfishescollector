@@ -241,8 +241,11 @@ four click-through cards from Doby and Kat, each beside the control it names, ov
   miss; "Great dodge!" holds turn three to **Fire**; Kat's aim line rides the top of the screen
   while the bar is up; after the turn, the crew rail (or Special on a phone) is ringed for the
   ability line, and Doby closes. It leans on the Reef Raider's pattern (reload, fire, reload, fire).
-  Read beats before the aim beat disable every action until Next, so a press cannot run the fight
-  ahead of the script. The x ends it. Crew abilities unlock at level 1 (since 2026-09-23).
+  EVERY beat holds the fight (Kong: the exact sequence, free play only after "you should be all
+  set"): read beats disable every action and the crew rail until Next, and the whole tutor puts
+  `.coach-lock` on the body so CoachFlash swallows any press but the ringed control and the card.
+  NOT `.sea-tour-lock`: that one greys and disables every unringed coach handle, and the action
+  row is one, so the ringed buttons inside it went dead. The x ends it. Crew abilities unlock at level 1 (since 2026-09-23).
 - **Handles**: `raid-crew` on the crew rail, `raid-actions` on the row, `raid-dodge` / `raid-fire` / `raid-reload` / `raid-special` on the
   `CircleBtn`s (a `coach` prop), `raid-enemy-charges` on a shrink-to-fit box round the enemy's pips.
 - **When**: two frames after the deck paints, only when `RaidGame` passes `skirmishTour`

@@ -3683,7 +3683,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     boss sheet and the voyage sheet use. A bare glyph with 5px of
                     padding is a thumb-sized miss on a phone. */}
                 <div className="flex justify-end" style={{ position: 'absolute', top: 0, right: 0, zIndex: 4, padding: '0.55rem 0.6rem 0' }}>
-                  <button onClick={close} aria-label="Close" type="button"
+                  <button onClick={close} aria-label="Close" type="button" data-tour-free
                     style={{
                       width: 32, height: 32, borderRadius: '50%', padding: 0, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',

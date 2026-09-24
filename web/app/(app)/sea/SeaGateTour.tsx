@@ -34,6 +34,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { GATE_TOUR, GATE_FORCED_THROUGH, SEA_ACCENT } from '@/lib/seaOnboarding'
 import { NORTH_WALL, PLACES, SEA_GATE, SEA_GATE_HALF } from './chart'
+import { WARGATE } from './raidWaters'
+/** Halfway from the Sea Gate to the wargate: where the pennant beat comes up. */
+const GATE_TOUR_ON_Y = (SEA_GATE.y + WARGATE.y) / 2
 
 /** Where the anchorage tour may begin: eleven hundred pixels north of the reef
  *  line, seven hundred clear of its northernmost rock, and still eighteen
@@ -399,7 +402,17 @@ export default function SeaGateTour({
   // about what is out there arrived before they had seen any of it. The
   // crossing itself is the moment, and the chart already knows it.
   const wantGate = beat?.until === 'gate'
-  useEffect(() => { if (live && wantGate && pastGate) next() }, [live, wantGate, pastGate, next])
+  // ── AND WELL PAST IT (Kong, 2026-09-24) ─────────────────────────────
+  // The crossing itself was still too soon: the pennant line arrived with the
+  // arch at the hull's stern. It waits for her to be halfway on to the
+  // wargate, out in the expedition sea proper.
+  useEffect(() => {
+    if (!live || !wantGate || !pastGate) return
+    const check = () => { if (at.current.y < GATE_TOUR_ON_Y) next() }
+    check()
+    const id = window.setInterval(check, 250)
+    return () => window.clearInterval(id)
+  }, [live, wantGate, pastGate, at, next])
 
   // Sailed into the ring the path drew.
   const wantReach = beat?.until === 'reach'

@@ -2679,6 +2679,8 @@ dinghy (Kie prompt `welcome-harbour.json`):
   plate, updating live as the steps are filled in; the step on the right with pips, Doby or Kat's
   line, and tinted Cinzel buttons. Two columns from 760px (`.setup-card` in globals.css), one on a
   phone with the picture across the top.
+- The card's hero uses `/welcome-harbour-open.webp`, the same painting with its dinghy and jetty
+  painted out (an image edit of the original), so your boat is not parked on a painted one.
 - `WelcomeModal` passes the same painting to the scene with `brightBackdrop`, a daylight veil
   (`SceneBackdrop bright`) instead of the story's dusk one.
 
@@ -2749,6 +2751,11 @@ the board and waits for the Daily Haul to be open in it (`until: 'haulView'`, li
 disc, then the haul's row; SeaDay sends `sea-overlay` id `haulView`). The second waits on the Claim
 (`until: 'bait'`, lit `haul-bait`, which is the Claim button itself). A captain who already has
 bait skips both.
+
+The pennant beat waits until the hull is halfway from the Sea Gate to the wargate
+(`GATE_TOUR_ON_Y` in SeaGateTour), not merely through the gate. The crew sheet's close carries
+`data-tour-free` (CoachFlash's ALWAYS list), so a captain can shut one recruit and look at the
+others during the recruit beat.
 
 The anchorage tour's recruit beat lights `recruit recruit-card`: board cards have no Recruit button
 (the sheet a card opens signs them on), so the ring is on the cards at the board and on the sheet's

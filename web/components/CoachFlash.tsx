@@ -41,7 +41,10 @@ import { useEffect, useRef } from 'react'
  * alone: the helm, the Fish button and the level bar. Steering is not a door,
  * and a wheel that stops answering is a game that looks broken.
  */
-const ALWAYS = '[data-tour-card],[data-coach="helm"],[data-coach="fish"],[data-coach="level"]'
+// `data-tour-free` marks a way BACK OUT that a tour must never trap: the crew
+// sheet's close, so a captain looking at one recruit can shut it and look at
+// the others (Kong, 2026-09-24).
+const ALWAYS = '[data-tour-card],[data-tour-free],[data-coach="helm"],[data-coach="fish"],[data-coach="level"]'
 /**
  * AND WHAT COUNTS AS A PRESS WORTH BLOCKING.
  *
@@ -123,7 +126,11 @@ export default function CoachFlash() {
     }
 
     const scan = () => {
-      locked = !!document.querySelector('.sea-tour-lock')
+      // `.coach-lock` is the same hold without the sea's dimming rules: the
+      // fight's tutor uses it, because `.sea-tour-lock [data-coach]` greys
+      // and disables the whole action row (itself a coach handle) along with
+      // the very buttons it rings.
+      locked = !!document.querySelector('.sea-tour-lock, .coach-lock')
       readOnly = !!document.querySelector('.sea-tour-read')
       const want = new Set<Element>(document.querySelectorAll('.coach-flash'))
       for (const [el, ring] of rings) {

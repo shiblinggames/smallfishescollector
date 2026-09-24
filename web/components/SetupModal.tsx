@@ -16,6 +16,7 @@ import PopupShell from '@/components/PopupShell'
 // panel resized under a captain as they filled it in. One card now, and the
 // steps swap inside it.
 const HARBOUR = '/welcome-harbour.webp'
+const HARBOUR_OPEN = '/welcome-harbour-open.webp'
 
 // The step transition, likewise identical across the three.
 const SWAP = {
@@ -185,8 +186,11 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
         {/* ── YOUR CAPTAIN ─────────────────────────────────────────────── */}
         <div className="setup-hero" style={{ position: 'relative', overflow: 'hidden', background: '#0b1824' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={HARBOUR} alt="" decoding="async"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '38% 62%' }} />
+          {/* The SAME harbour with its own dinghy and jetty painted out
+              (Kong: your boat sat on the painted dock, over the painted
+              sail). The full-screen backdrop keeps the original. */}
+          <img src={HARBOUR_OPEN} alt="" decoding="async"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '34% 60%' }} />
           <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,14,24,0.1) 0%, rgba(8,14,24,0) 45%, rgba(8,14,24,0.55) 78%, rgba(8,14,24,0.95) 100%)' }} />
           {/* The dinghy, cropped out of the fishing sprite (the fish in its boat),
               sitting on the painted water. Keyed on the colour so a new pick

@@ -108,8 +108,6 @@ const SKIRMISH_TUTOR: TutorBeat[] = [
   { ...GUIDES.kat, flash: 'raid-crew raid-special', text: 'Every crew has an *ability* you can use too. Be sure to try it out!' },
   { ...GUIDES.doby, text: 'You should be all set, cap’n. Show ’em what you’re made of.' },
 ]
-/** The last beat that steers the fight (the aim beat); after it, free play. */
-const TUTOR_FORCED_THROUGH = SKIRMISH_TUTOR.reduce((m, b, i) => (b.only || b.aiming ? i : m), -1)
 import type { ContractFightFacts } from '@/lib/gauntletContracts'
 import { applyStatus, statusMods, tickStatuses, cleanseStatuses, STATUS_DEFS, type ActiveStatus, type StatusId } from '@/lib/statuses'
 import { CannonShotBurst, ImpactBurst, RailgunBeam, NukeMissile, NukeBlast } from './megaFx'
@@ -2578,10 +2576,10 @@ export default function RaidCombat({
   }, [tutBeat, subPhase, turn, tutWaitTurn])
   /** The one action the tutor allows this turn, if it is holding one. */
   const tutOnly = tutBeat && tutWaitTurn == null ? tutBeat.only ?? null : null
-  /** A card to read while the fight is still being walked through: no action
-   *  at all until Next, or a press would run the fight ahead of the script.
-   *  Only up to the aim beat; the crew beat after it is free play. */
-  const tutReading = !!tutBeat && tutWaitTurn == null && !tutBeat.only && !tutBeat.aiming && tutStep <= TUTOR_FORCED_THROUGH
+  /** A card to read: no action at all until Next, or a press would run the
+   *  fight ahead of the script. Every read beat, the last included: free play
+   *  starts when the tutor is over. */
+  const tutReading = !!tutBeat && tutWaitTurn == null && !tutBeat.only && !tutBeat.aiming
   const tutAllows = (a: 'reload' | 'dodge' | 'fire') => !tutReading && (!tutOnly || tutOnly === a)
   // Ring what the beat names; the first one on screen is also the anchor.
   useEffect(() => {
@@ -2605,13 +2603,18 @@ export default function RaidCombat({
     const id = window.setInterval(find, 250)
     return () => { window.clearInterval(id); clear() }
   }, [tutBeat, tutWaitTurn])
-  // A beat that holds the turn to one action takes the rest of the page too:
-  // CoachFlash swallows every press but the ringed control while this is up.
+  // THE WHOLE TUTOR HOLDS THE PAGE (Kong: follow the exact sequence; free
+  // play only after "you should be all set"). CoachFlash swallows every press
+  // but the ringed control and the card while a beat is up. `.coach-lock`,
+  // not `.sea-tour-lock`: the sea's lock greys and disables every coach
+  // handle that is not ringed, and the action ROW is a handle, so the ringed
+  // buttons inside it went dead with it.
+  const tutRunning = tutStep >= 0 && tutStep < SKIRMISH_TUTOR.length
   useEffect(() => {
-    if (!tutOnly) return
-    document.body.classList.add('sea-tour-lock')
-    return () => document.body.classList.remove('sea-tour-lock')
-  }, [tutOnly])
+    if (!tutRunning) return
+    document.body.classList.add('coach-lock')
+    return () => document.body.classList.remove('coach-lock')
+  }, [tutRunning])
   // Davy's Heavy Cannon ramp — the per-fight +damage stack. Mirrors the
   // resolver's `rampPerTurn * (turn - 1)` so the hull heat badge shows the
   // exact live bonus. Resets to 0 each new enemy (turn resets to 1).
