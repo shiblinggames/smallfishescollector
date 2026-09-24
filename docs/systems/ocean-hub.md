@@ -3432,6 +3432,12 @@ down (rod out, fight, arriving); none of it pays anything.
   streaks down the middle (170px/s, roughly a riding hull's pace; the parallax against DRIFT is
   what reads as moving water), and SHEAR broken-foam lines at +-0.86 of the half-width. Tune in
   `LAYERS`. 25 meshes total, geometry static, only aUV updates.
+- CROSSINGS (2026-09-24): the radials cut all three rings. Max-k made a seam down each crossing's
+  diagonal where the winning lane flipped per frame (a drifter zigzagged, 100+ flips, then got
+  hijacked onto the radial). Now STICKY: SeaMap passes last frame's lane id to
+  `currentAt(x, y, prefer)`, and that lane keeps carrying you until another is >2x stronger (the
+  hysteresis band). Sim after: <=2 flips, drifters stay on their ring. The SHEAR foam fades out
+  inside another lane's water (`otherLaneK`); strips are resampled every ~100px for that.
 - KELP (`KELP`, `kelpAt`): 14 seeded beds in the Shallows/Open Waters, clear of ports, isles,
   lanes and rocks; inside one you keep KELP_KEEP (60%) of your speed, eased. Drawn as flat frond
   sprites sharing one texture.

@@ -109,14 +109,26 @@ const BOXES = CURRENTS.map(l => {
  * lane's edges and fading over its first and last stretch so a lane does not
  * start or stop on a line. Multiply by CURRENT_PUSH and the base speed to get
  * px per second. Zero almost everywhere.
+ *
+ * ── WHERE TWO LANES CROSS ──────────────────────────────────────────────────
+ * The two radials cut through all three rings. Taking simply the stronger
+ * lane at each point made a seam down the diagonal of every crossing where
+ * the winner flipped frame to frame: a drifting hull zigzagged along it (100+
+ * flips in a few seconds, simulated) and was then hijacked off its ring
+ * (Kong: weird where two currents meet). So the lane you are IN is sticky:
+ * pass `prefer` (the `id` this returned last frame) and it keeps carrying you
+ * through a crossing until the other lane is more than twice as strong. The
+ * 2x band is the hysteresis; there is no seam to flip on.
  */
-export function currentAt(x: number, y: number): { ux: number; uy: number; k: number } {
-  let best = { ux: 0, uy: 0, k: 0 }
+export function currentAt(x: number, y: number, prefer?: string | null): { ux: number; uy: number; k: number; id: string | null } {
+  let best = { ux: 0, uy: 0, k: 0, id: null as string | null }
+  let kept: typeof best | null = null
   for (let li = 0; li < CURRENTS.length; li++) {
     const b = BOXES[li]
     if (x < b.x0 || x > b.x1 || y < b.y0 || y > b.y1) continue
     const lane = CURRENTS[li]
     const n = lane.pts.length - 1
+    let mine = { ux: 0, uy: 0, k: 0, id: lane.id as string | null }
     for (let i = 0; i < n; i++) {
       const s = segDist(x, y, lane.pts[i], lane.pts[i + 1])
       if (s.d >= lane.half) continue
@@ -126,10 +138,31 @@ export function currentAt(x: number, y: number): { ux: number; uy: number; k: nu
       const along = (i + s.t) / n
       const ends = Math.min(1, along / 0.12, (1 - along) / 0.12)
       const k = edge * Math.max(0, ends)
-      if (k > best.k) best = { ux: s.ux, uy: s.uy, k }
+      if (k > mine.k) mine = { ux: s.ux, uy: s.uy, k, id: lane.id }
+    }
+    if (mine.k <= 0) continue
+    if (lane.id === prefer) kept = mine
+    if (mine.k > best.k) best = mine
+  }
+  if (kept && kept.k * 2 >= best.k) return kept
+  return best
+}
+
+/** How strongly any lane OTHER than `id` runs at a point, 0..1. For the
+ *  drawing: an edge's foam has no business inside another lane's water. */
+export function otherLaneK(x: number, y: number, id: string): number {
+  let k = 0
+  for (let li = 0; li < CURRENTS.length; li++) {
+    const lane = CURRENTS[li]
+    if (lane.id === id) continue
+    const b = BOXES[li]
+    if (x < b.x0 || x > b.x1 || y < b.y0 || y > b.y1) continue
+    for (let i = 0; i < lane.pts.length - 1; i++) {
+      const s = segDist(x, y, lane.pts[i], lane.pts[i + 1])
+      if (s.d < lane.half) k = Math.max(k, 1 - s.d / lane.half)
     }
   }
-  return best
+  return k
 }
 
 /**

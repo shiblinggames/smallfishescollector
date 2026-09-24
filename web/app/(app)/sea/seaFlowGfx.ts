@@ -21,7 +21,7 @@
 // Both sit on the water under the islands, and both take the night tint.
 
 import type { Container, Texture, MeshSimple, Sprite } from 'pixi.js'
-import { CURRENTS, KELP } from '@/lib/seaFlow'
+import { CURRENTS, KELP, otherLaneK } from '@/lib/seaFlow'
 
 const GROUND = 0.58
 /** Each layer: which texture, how far one repeat reaches along the lane (world
@@ -218,7 +218,14 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
   const strips: { mesh: MeshSimple; base: Float32Array; speed: number; tile: number }[] = []
 
   for (const lane of CURRENTS) {
-    const pts = lane.pts
+    // Resampled every ~100px (the lane data is every ~400), so the foam can be
+    // cut cleanly where another lane crosses.
+    const pts: { x: number; y: number }[] = [lane.pts[0]]
+    for (let i = 1; i < lane.pts.length; i++) {
+      const a = lane.pts[i - 1], b = lane.pts[i]
+      const m = Math.max(1, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 100))
+      for (let j = 1; j <= m; j++) pts.push({ x: a.x + ((b.x - a.x) * j) / m, y: a.y + ((b.y - a.y) * j) / m })
+    }
     const n = pts.length
     // Cumulative distance, for the UVs and the taper.
     const dist = [0]
@@ -241,8 +248,16 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
         const e = Math.min(1, f / 0.12, (1 - f) / 0.12)
         const taper = e * e * (3 - 2 * e)
         const c = layer.at * lane.half * taper
-        const h = layer.wide * lane.half * taper
         const cx = pts[i].x + nrm[i].x * c, cy = pts[i].y + nrm[i].y * c
+        // Edge foam is where fast water meets still. Inside another lane's
+        // water (a crossing) there is no still water, so the line fades out
+        // rather than drawing a wall across the other current.
+        let cut = 1
+        if (layer.tex === 'shear') {
+          const o = Math.min(1, otherLaneK(cx, cy, lane.id) * 2.5)
+          cut = 1 - o * o * (3 - 2 * o)
+        }
+        const h = layer.wide * lane.half * taper * cut
         verts[i * 4] = cx + nrm[i].x * h
         verts[i * 4 + 1] = cy + nrm[i].y * h
         verts[i * 4 + 2] = cx - nrm[i].x * h

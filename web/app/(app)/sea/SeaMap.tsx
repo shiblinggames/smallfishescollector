@@ -7994,6 +7994,8 @@ export default function SeaMap({
     let sailFull = false
     /** Whether the hull was in a lane last frame, for the moment of catching one. */
     let inLane = false
+    /** The lane that carried the hull last frame: sticky through crossings (seaFlow). */
+    let laneId: string | null = null
     /** Tracked apart from `lastDark` because the backdrop also repaints when
      *  the boat has sailed far enough, and the grade has no reason to. */
     let lastGrade = -1
@@ -8391,7 +8393,8 @@ export default function SeaMap({
       if (!hushRef.current && !sideRef.current && !fightOnRef.current) {
         // A CURRENT carries the hull along it, like a maelstrom's pull does:
         // riding it adds to your way, sailing against it takes from it.
-        const cur = currentAt(pos.current.x, pos.current.y)
+        const cur = currentAt(pos.current.x, pos.current.y, laneId)
+        laneId = cur.id
         if (cur.k > 0) {
           const push = CURRENT_PUSH * SPEED * cur.k * dt
           pos.current.x += cur.ux * push
@@ -8471,6 +8474,7 @@ export default function SeaMap({
         straightT = 0
         sailFull = false
         inLane = false
+        laneId = null
         gpuRef.current?.rush(pos.current.x, pos.current.y, 0, 0, 0)
         const was = seaCueRef.current
         if (was.current || was.full || was.kelp) {
