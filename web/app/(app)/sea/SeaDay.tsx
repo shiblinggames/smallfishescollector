@@ -115,10 +115,10 @@ export type DayKind = 'haul' | 'orders' | 'voyage' | 'trawls' | 'bounties' | 'ch
  */
 const ART: Record<DayKind, string> = {
   haul: '/goldcrateclosed.png',
-  orders: '/sea/harbour.png',
-  voyage: '/sea/charterhouse.png',
+  orders: '/sea/tally-house-v2.webp',
+  voyage: '/sea/charterhouse-v2.webp',
   trawls: '/sea/trawl-shed.png',
-  bounties: '/sea/posting-house.png',
+  bounties: '/sea/posting-house-v2.webp',
   chart: '/sea/charting.png',
   parlor: '/sea/parlor.png',
 }

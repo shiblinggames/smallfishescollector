@@ -277,7 +277,7 @@ export const PLACES: Place[] = [
     href: '/trawl-docks', x: -1150, y: -780, r: 265, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/harbour.png', x: 53, y: 55, scale: 0.33 },
+      { art: '/sea/tally-house-v2.webp', x: 53, y: 55, scale: 0.33 },
     ],
   },
   {
@@ -353,7 +353,7 @@ export const PLACES: Place[] = [
       // number drew a visibly smaller building: 157px against 245. This is
       // the Charterhouse's 0.34 on a smaller isle, which reads as a building
       // of the same institution rather than a model of one.
-      { art: '/sea/posting-house.png', x: 54, y: 38, scale: 0.34 },
+      { art: '/sea/posting-house-v2.webp', x: 54, y: 38, scale: 0.34 },
     ],
   },
   {
@@ -444,11 +444,11 @@ export const PLACES: Place[] = [
     // cards so the captain can find the one that opens it is a door in front of
     // a door. `href` is the honest answer to "where does this go" if anything
     // ever falls through to it.
-    href: '/sea', x: 898, y: -5715, r: 340, art: '/sea/charterhouse.png',
+    href: '/sea', x: 898, y: -5715, r: 340, art: '/sea/charterhouse-v2.webp',
     kind: 'port', minLevel: 0,
     berth: { dx: -340 * 0.85, dy: 340 * 0.6 },
     buildings: [
-      { art: '/sea/charterhouse.png', x: 54, y: 56, scale: 0.36 },
+      { art: '/sea/charterhouse-v2.webp', x: 54, y: 56, scale: 0.36 },
     ],
   },
   {
