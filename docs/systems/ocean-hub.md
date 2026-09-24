@@ -3438,7 +3438,9 @@ down (rod out, fight, arriving); none of it pays anything.
   `currentAt(x, y, prefer)`, and that lane keeps carrying you until another is >2x stronger (the
   hysteresis band). Sim after: <=2 flips, drifters stay on their ring. The SHEAR foam fades out
   inside another lane's water (`otherLaneK`); strips are resampled every ~100px for that.
-- KELP (`KELP`, `kelpAt`): 14 seeded beds in the Shallows/Open Waters, clear of ports, isles,
+- KELP (`KELP`, `kelpAt`): 8 seeded beds by KELP_QUOTA (2026-09-24, Kong: too common, big ones in
+  the Shallows): at most 2 small (r 120-160) in the Shallows, 6 (r 170-280) in the Open Waters,
+  2200px apart at least; clear of ports, isles,
   lanes and rocks; inside one you keep KELP_KEEP (60%) of your speed, eased. Drawn UNDER the water
   (2026-09-24) from two Kie paintings, public/sea/kelp-deep.webp and kelp-canopy.webp: MULTIPLY
   layers (murk / stalks / fronds, each softer and pulled further into perspective the deeper it is)

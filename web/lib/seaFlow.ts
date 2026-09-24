@@ -12,7 +12,7 @@
 //             ones run out toward the Abyss and back in toward home. Fixed, so
 //             they are something a captain learns and routes by.
 //
-//   KELP      Weed beds in the Shallows and Open Waters that drag the hull to
+//   KELP      A few weed beds, mostly in the Open Waters, that drag the hull to
 //             about 60% while it is in them. Steer round or push through.
 //
 // All of it is on the fishing side only, and none of it pays anything: it is
@@ -166,26 +166,41 @@ export function otherLaneK(x: number, y: number, id: string): number {
 }
 
 /**
- * THE BEDS, placed once and the same for everybody: a seeded walk through
- * the Shallows and Open Waters that keeps well clear of the Mainland's
- * approach, every port and isle, every current lane and every solid rock.
+ * THE BEDS, placed once and the same for everybody: a seeded walk that keeps
+ * well clear of the Mainland's approach, every port and isle, every current
+ * lane and every solid rock.
+ *
+ * SPARSE, AND SMALL NEAR HOME (Kong: too common, especially the big ones in
+ * the Shallows). It was fourteen anywhere from the Shallows out, and four of
+ * them big ones in a band that is the smallest water on the chart and the one
+ * every trip crosses. Now eight: at most two in the Shallows and both small,
+ * the other six in the Open Waters, which is where the big ones belong, and
+ * well spaced so a bed is a thing you come across rather than a texture.
  */
+const KELP_QUOTA: { inner: number; outer: number; n: number; rMin: number; rMax: number }[] = [
+  { inner: 2300, outer: 3500, n: 2, rMin: 120, rMax: 160 },   // the Shallows (1400-3800)
+  { inner: 4200, outer: 6600, n: 6, rMin: 170, rMax: 280 },   // the Open Waters (3800-6900)
+]
 export const KELP: KelpBed[] = (() => {
   let s = 0x5eed1e
   const rnd = () => ((s = (s * 1103515245 + 12345) >>> 0) / 4294967296)
   const out: KelpBed[] = []
-  for (let tries = 0; tries < 4000 && out.length < 14; tries++) {
-    const a = 0.12 + rnd() * (Math.PI - 0.24)
-    const rad = 2500 + rnd() * 4200
-    const x = Math.round(Math.cos(a) * rad), y = Math.round(Math.sin(a) * rad)
-    const r = Math.round(170 + rnd() * 140)
-    if (y < 500) continue
-    if (PLACES.some(p => p.kind === 'port' && Math.hypot(p.x - x, p.y - y) < p.r * 1.48 + r + 500)) continue
-    if (ISLES.some(i => Math.hypot(i.x - x, i.y - y) < i.r * 1.48 + r + 300)) continue
-    if (CURRENTS.some(l => l.pts.slice(1).some((p, i) => segDist(x, y, l.pts[i], p).d < l.half + r + 250))) continue
-    if (!clearOfSolids(x, y, r + 120)) continue
-    if (out.some(k => Math.hypot(k.x - x, k.y - y) < k.r + r + 900)) continue
-    out.push({ x, y, r, seed: out.length })
+  for (const q of KELP_QUOTA) {
+    let got = 0
+    for (let tries = 0; tries < 4000 && got < q.n; tries++) {
+      const a = 0.12 + rnd() * (Math.PI - 0.24)
+      const rad = q.inner + rnd() * (q.outer - q.inner)
+      const x = Math.round(Math.cos(a) * rad), y = Math.round(Math.sin(a) * rad)
+      const r = Math.round(q.rMin + rnd() * (q.rMax - q.rMin))
+      if (y < 500) continue
+      if (PLACES.some(p => p.kind === 'port' && Math.hypot(p.x - x, p.y - y) < p.r * 1.48 + r + 500)) continue
+      if (ISLES.some(i => Math.hypot(i.x - x, i.y - y) < i.r * 1.48 + r + 300)) continue
+      if (CURRENTS.some(l => l.pts.slice(1).some((p, i) => segDist(x, y, l.pts[i], p).d < l.half + r + 250))) continue
+      if (!clearOfSolids(x, y, r + 120)) continue
+      if (out.some(k => Math.hypot(k.x - x, k.y - y) < k.r + r + 2200)) continue
+      out.push({ x, y, r, seed: out.length })
+      got++
+    }
   }
   return out
 })()

@@ -312,10 +312,11 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
           const n = 2 + (k.seed % 2)
           for (let c = 0; c < n; c++) {
             place(k.x + (c - (n - 1) / 2) * k.r * 0.55 + (rnd() - 0.5) * k.r * 0.2,
-              k.y + k.r * (0.18 + rnd() * 0.22), k.r * (1.05 + rnd() * 0.4), 0.92)
+              k.y + k.r * (0.18 + rnd() * 0.22), k.r * (0.9 + rnd() * 0.3), 0.92)
           }
         } else {
-          place(k.x, k.y, k.r * (li === 0 ? 2.4 : li === 2 ? 2.0 : 1.7), 0.5)
+          // Sized to the water that actually holds you (kelpAt's r), not past it.
+          place(k.x, k.y, k.r * (li === 0 ? 2.1 : li === 2 ? 1.8 : 1.5), 0.5)
         }
       })
     }
