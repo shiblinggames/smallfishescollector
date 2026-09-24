@@ -9620,7 +9620,9 @@ export default function RaidCombat({
             stays blocked until the deferred effect resolves, without keeping a
             framer tree mounted that a rapid effect could re-render. */}
         {summonGuard && typeof document !== 'undefined' && createPortal(
-          <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 69, pointerEvents: 'auto' }} />,
+          // Just under the summon, and over the sea fight's sheet (113), or a tap
+          // could reach the deck through a summon on the water.
+          <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 1499, pointerEvents: 'auto' }} />,
           document.body,
         )}
 
@@ -12804,7 +12806,11 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ name, color, image, chas
     <motion.div
       aria-hidden
       style={{
-        position: 'fixed', inset: 0, zIndex: 70,
+        // OVER EVERYTHING (Kong: summons should overlay everything). It was 70,
+        // which is under the sea fight's own sheet (113) and Finn's dial
+        // (1200), so over the water a summon played behind the nameplates,
+        // the deck and the dial. 1500 clears every layer a fight puts up.
+        position: 'fixed', inset: 0, zIndex: 1500,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         pointerEvents: 'auto',   // block taps while the summon plays
         overflow: 'hidden',
