@@ -10164,7 +10164,6 @@ export default function RaidCombat({
             totalPower={totalPower}
             totalNavigation={totalNavigation}
             totalFortune={totalFortune}
-            crateOdds={crateOdds}
             isBoss={isBoss}
             equippedRaidItems={equippedRaidItems}
             shipClasses={shipClasses}
@@ -10211,6 +10210,7 @@ export default function RaidCombat({
         {showEnemyStats && (
           <EnemyStatsPopup
             enemy={enemy}
+            crateOdds={crateOdds}
             currentHp={enemyHp}
             maxHp={enemyHpMax}
             isBoss={isBoss}
@@ -10329,7 +10329,7 @@ export default function RaidCombat({
 function PlayerStatsPopup({
   shipName, shipImageUrl, shipFilter, characterColor = null, equippedHat = null, avatarBg = null, avatarBorder = null, shieldHp = 0, playerHp, playerHpMax,
   shipMinDamage, shipSpeed, totalPower, totalNavigation, totalFortune,
-  isBoss, equippedRaidItems, crateOdds = [], shipClasses = {}, damagePct = 0,
+  isBoss, equippedRaidItems, shipClasses = {}, damagePct = 0,
   megaAugment = null, megaCost = MEGA_CHARGE_COST,
   tideEffects = [],
   effectLabels = { good: 'Buffs', bad: 'Penalties' },
@@ -10358,8 +10358,6 @@ function PlayerStatsPopup({
   totalFortune: number
   isBoss: boolean
   equippedRaidItems: string[]
-  /** Every unique this raid's crate can still pay, and how likely each is. */
-  crateOdds?: CrateItemChance[]
   /** chapter -> classId picks. Surfaces under the stat grid so the
    *  player can see which classes are buffing them mid-fight. */
   shipClasses?: Record<string, string>
@@ -10737,49 +10735,6 @@ function PlayerStatsPopup({
           </div>
         )}
 
-        {/* IN THE CRATE. Raids never stated a drop rate anywhere: the reveal
-            said what you got and the pre-fight screen said nothing about what
-            you were farming. Now that uniques roll independently those are real
-            numbers, so they can simply be printed. Boosted figure leads, the
-            pre-Fortune one is struck under it, matching the Gauntlet breather. */}
-        {crateOdds.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            {sectionHeading(isBoss ? 'In the Crate' : 'Boss Crate', '#f0c040')}
-            {/* Art tiles, like the gear above: the drop's painting first, then
-                what it is and the odds, the boosted figure over the struck one. */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 6 }}>
-              {crateOdds.map(o => {
-                const boosted = o.chance > o.chanceBeforeFortune
-                const pct = (v: number) => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`
-                return (
-                  <div key={o.id} title={o.label} style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                    padding: '0.5rem 0.4rem 0.45rem', borderRadius: 12, textAlign: 'center',
-                    background: 'radial-gradient(ellipse 70% 55% at 50% 30%, rgba(240,192,64,0.14) 0%, rgba(255,255,255,0.02) 100%)',
-                    border: '1px solid rgba(240,192,64,0.2)',
-                  }}>
-                    <span style={{ width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {o.image
-                        // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={o.image} alt="" loading="lazy" decoding="async" style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: 'drop-shadow(0 3px 7px rgba(0,0,0,0.5))' }} />
-                        : <span style={{ fontSize: '1.2rem', color: '#f0c040' }}>◆</span>}
-                    </span>
-                    <span className="font-karla font-600" style={{
-                      width: '100%', fontSize: '0.64rem', color: '#d8d2c6', lineHeight: 1.2,
-                      overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                    }}>{o.label}</span>
-                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                      <span className="font-cinzel font-800" style={{ fontSize: '0.86rem', color: boosted ? '#f0c040' : '#e8e1d2', fontVariantNumeric: 'tabular-nums' }}>{pct(o.chance)}</span>
-                      {boosted && (
-                        <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#8f8a80', textDecoration: 'line-through', opacity: 0.8, fontVariantNumeric: 'tabular-nums' }}>{pct(o.chanceBeforeFortune)}</span>
-                      )}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
 
         {/* ── EQUIPPED ITEMS, ART FIRST ─────────────────────────────────────
             Kong: gear should be more art forward. Each item was a 28px thumbnail
@@ -10885,14 +10840,60 @@ function PlayerStatsPopup({
   )
 }
 
+// ── IN THE CRATE ─────────────────────────────────────────────────────────────
+// Every unique the boss's crate can still pay and how likely each is, as art
+// tiles: the drop's painting, what it is, the odds with Fortune's boost leading
+// and the pre-Fortune figure struck beside it. Raids never stated a drop rate
+// until uniques began rolling independently; now they are real numbers, so they
+// are printed. It lives on the BOSS's card (Kong: why were drops on the player
+// card?): the drops belong to the fight, and the player's Fortune card already
+// shows the multiplier that moves them.
+function CrateOddsTiles({ odds }: { odds: CrateItemChance[] }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 6 }}>
+      {odds.map(o => {
+        const boosted = o.chance > o.chanceBeforeFortune
+        const pct = (v: number) => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`
+        return (
+          <div key={o.id} title={o.label} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            padding: '0.5rem 0.4rem 0.45rem', borderRadius: 12, textAlign: 'center',
+            background: 'radial-gradient(ellipse 70% 55% at 50% 30%, rgba(240,192,64,0.14) 0%, rgba(255,255,255,0.02) 100%)',
+            border: '1px solid rgba(240,192,64,0.2)',
+          }}>
+            <span style={{ width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {o.image
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={o.image} alt="" loading="lazy" decoding="async" style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: 'drop-shadow(0 3px 7px rgba(0,0,0,0.5))' }} />
+                : <span style={{ fontSize: '1.2rem', color: '#f0c040' }}>◆</span>}
+            </span>
+            <span className="font-karla font-600" style={{
+              width: '100%', fontSize: '0.64rem', color: '#d8d2c6', lineHeight: 1.2,
+              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            }}>{o.label}</span>
+            <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+              <span className="font-cinzel font-800" style={{ fontSize: '0.86rem', color: boosted ? '#f0c040' : '#e8e1d2', fontVariantNumeric: 'tabular-nums' }}>{pct(o.chance)}</span>
+              {boosted && (
+                <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#8f8a80', textDecoration: 'line-through', opacity: 0.8, fontVariantNumeric: 'tabular-nums' }}>{pct(o.chanceBeforeFortune)}</span>
+              )}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Enemy stats popup ───────────────────────────────────────────────────────
 // Mirrors PlayerStatsPopup for the current enemy. Shows what a player would
 // want to know to read the fight: HP / damage range / volley / crit chance /
 // speed, the themed ability if any, and the full behavior pattern as chips so
 // the cycle is legible. Tapping the backdrop or Close dismisses.
 function EnemyStatsPopup({
-  enemy, currentHp, maxHp, isBoss, isElite, affix, conditions = [], onClose,
+  enemy, currentHp, maxHp, isBoss, isElite, affix, conditions = [], crateOdds = [], onClose,
 }: {
+  /** The boss's crate: every unique it can still pay and the odds. */
+  crateOdds?: CrateItemChance[]
   enemy: BroadsideEnemy
   currentHp: number
   /** Actual max HP this fight (base × enemyHpScale), so the sheet matches the bar. */
@@ -11075,6 +11076,16 @@ function EnemyStatsPopup({
             </div>
           ))}
         </div>
+
+        {/* The boss's crate, right under what it hits for: what beating it can pay. */}
+        {isBoss && crateOdds.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#f0c040', letterSpacing: '0.16em', marginBottom: 6 }}>
+              In the Crate
+            </p>
+            <CrateOddsTiles odds={crateOdds} />
+          </div>
+        )}
 
         {/* Elite affix card — appears above the themed-ability card so the
             twist for THIS specific elite reads first. Uses the same shape

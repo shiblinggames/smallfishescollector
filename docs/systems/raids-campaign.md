@@ -490,4 +490,6 @@ pierce, cannon heat, shield pool, Vengeance ward, Sharpshot, statuses, burn, fre
 affliction, brace. A new mark on the ring needs a line here too.
 The Gear tab is ART FIRST (Kong, same day): equipped items are tiles (large painting on a rarity
 pool, rarity on the art, name + effects under), two-plus across; the crate odds are art tiles with
-the odds under. Ultimates have no art yet, so their card stays text.
+the odds under. Ultimates have no art yet, so their card stays text. The crate odds then MOVED to
+the boss's card (`CrateOddsTiles`, "In the Crate", boss only): the drops belong to the fight, and
+the player's Fortune card already shows the multiplier.
