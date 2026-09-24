@@ -3395,3 +3395,12 @@ along it) and a wet stain that fades (4.5s). Weighted by COVER read once off the
 above the waterline, so nothing is drawn beside the object. Added AFTER the dry half at both mark
 builders; night-tinted with the island foam. Only marks >= LAP_MIN_SIZE (150), so buoys and pots
 have none.
+
+## The sun moves (2026-09-23)
+
+`sunAt()` in lib/seaClock: the light's direction and a shadow length over the cycle. It STAYS on the
+painted side (every painting is lit from the upper left): -157deg at sunrise, the painted -135deg
+at midday, -112deg at sunset, with shadow length 0.7x at noon and ~2.2x on the horizon; at night the
+moon holds -135deg. SeaMap hands it to the canvas at 4 Hz (`gpu.sun`): the water's `uLight` (swell
+shading, glint and moon roads), every building's cast shadow (seaTown `sun`: skew + length), and each
+island's shadow offset and width (`isleShadeList`).

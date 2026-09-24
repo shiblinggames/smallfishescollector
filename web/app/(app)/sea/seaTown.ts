@@ -252,6 +252,9 @@ export type Towns = {
   /** The hour: a tint for the buildings, and how far up the town's own lights
    *  have come. */
   night(tint: number, dark: number): void
+  /** The sun: every cast shadow turns and stretches with it. `angle` is
+   *  where the light comes from (lib/seaClock sunAt), `len` its length. */
+  sun(angle: number, len: number): void
   /** Hide whatever is not on screen. A town off the edge of the view costs
    *  nothing to have, which is most of the point of moving it here. */
   cull(camX: number, camY: number, halfW: number, halfH: number): void
@@ -567,6 +570,22 @@ export async function makeTowns(
         // The sun's shadows go as the sun does.
         const base = b.spec.locked ? SHADE_LOCKED : SHADE
         for (const sh of b.shades) sh.alpha = base * (1 - dark * SHADOW_NIGHT)
+      }
+    },
+
+    sun(angle, len) {
+      // The shadow runs AWAY from the light. At the painted key (upper left)
+      // it falls down-right at exactly SHADOW_LEAN and SHADOW_LEN; the sun
+      // swinging lower and further left lays it longer and flatter.
+      const dx = Math.cos(angle + Math.PI), dy = Math.max(0.3, Math.sin(angle + Math.PI))
+      const lean = Math.atan(Math.tan(SHADOW_LEAN) * (dx / dy))
+      const reach = SHADOW_LEN * len * (dy / Math.SQRT1_2)
+      for (const b of built) {
+        for (const sh of b.shades) {
+          const k = sh.scale.x
+          sh.scale.y = -(k * reach) / GROUND
+          sh.skew.x = lean
+        }
       }
     },
 

@@ -172,6 +172,9 @@ export type GpuHandle = {
   /** The bay's mood at the camera (raidWaters BAY_MOOD, blended). Water
    *  dials, haze, and how much of the birds and the deep shapes show. */
   mood(m: import('./raidWaters').BayMood): void
+  /** The sun (lib/seaClock sunAt): the water's light, every cast shadow,
+   *  and each island's shadow on the sea. A few times a second. */
+  sun(angle: number, len: number): void
   /**
    * The player's own captain, every frame.
    *
@@ -1219,6 +1222,9 @@ export default function SeaIslandsGPU({
       world.addChild(meadow)
       const grassTex = makeGrassTexture(PIXI)
       /** One soft ellipse for every painted island's shadow in the water. */
+      /** Every island's shadow, for the sun to move. Destroyed ones drop out
+       *  on the next pass. */
+      const isleShadeList: { sp: import('pixi.js').Sprite; x: number; y: number; d: number; w: number }[] = []
       const islandShadowTexture = (() => {
         let tex: import('pixi.js').Texture | null = null
         return (P: typeof PIXI) => {
@@ -1321,6 +1327,7 @@ export default function SeaIslandsGPU({
           shade.height = (d * 0.98 * plate.aspect) / GROUND * 0.92
           shade.position.set(isle.x + d * 0.05, isle.y + (d * 0.06) / GROUND)
           islandShades.addChild(shade)
+          isleShadeList.push({ sp: shade, x: isle.x, y: isle.y, d, w: shade.width })
 
           const s = new PIXI.Sprite(PIXI.Texture.EMPTY)
           s.anchor.set(0.5, plate.water)
@@ -2260,6 +2267,22 @@ export default function SeaIslandsGPU({
           // seaTownGlow for why this is the town's LIGHT and not its
           // reflection.
           townGlow.night(d)
+        },
+        sun(angle, len) {
+          // The water's key, for the swell's shading and the glint and moon
+          // roads, which lie along it.
+          if (water) water.set({ uLight: new Float32Array([Math.cos(angle), Math.sin(angle)]) })
+          townLayer?.sun(angle, len)
+          // Each island's shadow slides away from the light and lengthens
+          // with it. At the painted key this is exactly where it always sat.
+          const dx = Math.cos(angle + Math.PI), dy = Math.sin(angle + Math.PI)
+          const reach = 0.078 * len
+          for (let i = isleShadeList.length - 1; i >= 0; i--) {
+            const e = isleShadeList[i]
+            if (e.sp.destroyed) { isleShadeList.splice(i, 1); continue }
+            e.sp.position.set(e.x + dx * e.d * reach, e.y + (dy * e.d * reach) / GROUND)
+            e.sp.width = e.w * (1 + 0.12 * (len - 1))
+          }
         },
         mood(m) {
           if (water) {

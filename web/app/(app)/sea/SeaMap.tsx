@@ -98,7 +98,7 @@ import { claimFishingLevelRewards } from '../fishing/actions'
 // other role and needs these numbers — and FishingHere importing back from here
 // is a cycle that killed the page on load. See app/(app)/sea/helm.ts.
 import { HELM_R, HELM_D, HELM_BOTTOM, HELM_DEADZONE, HELM_HOLD_MS, HELM_STICK_R, HELM_SLOW } from './helm'
-import { seaClock } from '@/lib/seaClock'
+import { sunAt, seaClock } from '@/lib/seaClock'
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { squallAt } from '@/lib/seaWeather'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
@@ -7964,6 +7964,8 @@ export default function SeaMap({
     /** The canvas's own last hour, unrounded. Separate from `lastDark` because
      *  the two are deliberately at different resolutions. */
     let lastRaw = -1
+    /** When the sun was last handed to the canvas. */
+    let sunAtMs = -1e9
     /** Tracked apart from `lastDark` because the backdrop also repaints when
      *  the boat has sailed far enough, and the grade has no reason to. */
     let lastGrade = -1
@@ -9765,6 +9767,14 @@ export default function SeaMap({
         // A tint, not a filter: see nightTint for why that distinction is the
         // whole reason the islands can be lit at all after what the filter did.
         gpuRef.current.night(raw, warmth)
+        // ── AND WHERE THE SUN IS ─────────────────────────────────────────
+        // Four times a second: it crosses its arc over the whole cycle, so
+        // nothing about it can change faster than that. See seaClock sunAt.
+        if (now - sunAtMs >= 250) {
+          sunAtMs = now
+          const sun = sunAt()
+          gpuRef.current.sun(sun.angle, sun.len)
+        }
         // ── AND HOW MUCH LANTERN WAS PAID FOR ─────────────────────────
         //
         // Here rather than in an effect on the tier, and the reason is the

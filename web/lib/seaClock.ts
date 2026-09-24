@@ -155,6 +155,40 @@ export function nextPhase(now: number = Date.now()): { phase: SeaPhase; ms: numb
   return { phase: 'dusk', ms: Math.round((1 - t + marks[0][0]) * CYCLE_MS) }
 }
 
+/**
+ * ── WHERE THE SUN IS ────────────────────────────────────────────────────────
+ *
+ * Kong: does the light's direction change, and do shadows follow the sun? They
+ * did not: one fixed key in the upper left. This is the sun.
+ *
+ * IT STAYS ON THE LEFT. Every painting on this sea is lit from the upper left
+ * (every art prompt says so), so a sun that crossed to the right would throw a
+ * shadow away from a wall the painting says is in shade. The sun rides an arc
+ * that keeps to the painted side: low and from the left at sunrise, high at
+ * midday, swinging about 45 degrees over the day, and low again at sunset.
+ * What sells the passing day is the LENGTH: short at noon, long at either end.
+ * At night the moon holds the painted angle, and the shadows are faded anyway.
+ *
+ *   angle  where the light comes FROM, in screen radians (atan2): the painted
+ *          key, upper left, is -3/4 pi.
+ *   len    shadow length against the noon-ish default: ~0.7 at midday, ~2.2
+ *          on the horizon.
+ *   up     whether it is the sun (false: the moon).
+ */
+export const SUN_BASE = -Math.PI * 0.75
+const SUN_SWING = (45 * Math.PI) / 180
+export function sunAt(now: number = Date.now()): { angle: number; len: number; up: boolean } {
+  const nightStart = 0.5 - NIGHT_FRACTION / 2
+  const nightEnd = 0.5 + NIGHT_FRACTION / 2
+  const t = (now % CYCLE_MS) / CYCLE_MS
+  // 0 at sunrise (the start of dawn), 1 at sunset (the start of night).
+  const u = ((((t - nightEnd) % 1) + 1) % 1) / (1 - NIGHT_FRACTION)
+  if (u > 1 || (t >= nightStart && t < nightEnd)) return { angle: SUN_BASE, len: 1, up: false }
+  const elev = Math.sin(Math.PI * u)
+  const low = 1 - elev
+  return { angle: SUN_BASE + (u - 0.5) * SUN_SWING, len: 0.7 + 1.5 * low * low, up: true }
+}
+
 /** Milliseconds until the next night begins. Used to tell a player when to come
  *  back rather than leaving them to work it out. */
 export function msToNight(now: number = Date.now()): number {
