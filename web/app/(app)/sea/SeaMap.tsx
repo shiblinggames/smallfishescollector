@@ -18,6 +18,7 @@
 // several things happening near each other.
 
 import { openMembership } from '@/components/MembershipModal'
+import { currentAt, kelpAt, CURRENT_PUSH, KELP_KEEP } from '@/lib/seaFlow'
 import { setSeaAmbience, updateSeaAmbience, playHarbourBell } from '@/lib/seaAmbience'
 import { flyPayout } from '@/lib/coinFly'
 import { CAPTAIN_WATER, CAPTAIN_WATER_SAYS } from '@/lib/captainWater'
@@ -419,6 +420,10 @@ const CREW_GREEN = 'rgba(143,214,196,0.95)'
  *  an alpha onto it the way every other plate on this chart does. */
 const CREW_GREEN_HEX = '#8fd6c4'
 const SPEED = BASE_SPEED_PX
+/** Full-sail momentum: how much faster, and after how many seconds of a clean
+ *  straight run. See the frame loop and lib/seaFlow. */
+const FULL_SAIL = 1.15
+const FULL_SAIL_AFTER = 2.5
 /**
  * THE FASTEST A HULL CAN BE GOING, in world px per MILLISECOND, with room over
  * the top for every boost in the game.
@@ -7966,6 +7971,16 @@ export default function SeaMap({
     let lastRaw = -1
     /** When the sun was last handed to the canvas. */
     let sunAtMs = -1e9
+    // ── WHAT THE WATER AND THE SAILS ADD (see lib/seaFlow) ──────────────
+    /** The share of speed the kelp leaves you, eased so a bed grips and lets
+     *  go rather than switching. */
+    let kelpKeep = 1
+    /** Full-sail momentum: 1, rising to FULL_SAIL after a clean straight run. */
+    let sailMom = 1
+    /** Seconds of fast, straight sailing so far. */
+    let straightT = 0
+    let lastHeadMom = 0
+    let sailFull = false
     /** Tracked apart from `lastDark` because the backdrop also repaints when
      *  the boat has sailed far enough, and the grade has no reason to. */
     let lastGrade = -1
@@ -8238,7 +8253,7 @@ export default function SeaMap({
       let want = 0
       if (d > ARRIVE) {
         const t = Math.min(1, (d - ARRIVE) / (SLOW - ARRIVE))
-        want = SPEED * hullSpeed * speedRef.current * (t * t * (3 - 2 * t))
+        want = SPEED * hullSpeed * speedRef.current * (t * t * (3 - 2 * t)) * kelpKeep * sailMom
       }
       // ── HOW FAR OUT YOU PUSH IS HOW FAST YOU GO ───────────────────
       //
@@ -8353,6 +8368,48 @@ export default function SeaMap({
       vel.current.y = hy * fwd + hx * lat
       pos.current.x += vel.current.x * dt
       pos.current.y += vel.current.y * dt
+
+      // ── THE CURRENTS, THE KELP AND FULL SAIL ─────────────────────────
+      //
+      // Kong: little things that speed you up or slow you down. The fishing
+      // sea only, and never while the HUD is down (the rod is out, a fight,
+      // arriving): a current that dragged you off your fishing spot would be
+      // a punishment, not a feature.
+      if (!hushRef.current && !sideRef.current && !fightOnRef.current) {
+        // A CURRENT carries the hull along it, like a maelstrom's pull does:
+        // riding it adds to your way, sailing against it takes from it.
+        const cur = currentAt(pos.current.x, pos.current.y)
+        if (cur.k > 0) {
+          const push = CURRENT_PUSH * SPEED * cur.k * dt
+          pos.current.x += cur.ux * push
+          pos.current.y += cur.uy * push
+        }
+        // KELP holds you, easing in and out over about a quarter second.
+        const kelpTarget = 1 - (1 - KELP_KEEP) * kelpAt(pos.current.x, pos.current.y)
+        kelpKeep += (kelpTarget - kelpKeep) * (1 - Math.exp(-4 * dt))
+        // FULL SAIL: a clean, fast, straight run fills the sails. A hard turn
+        // or losing way lets them go.
+        let turn = headRef.current - lastHeadMom
+        while (turn > Math.PI) turn -= Math.PI * 2
+        while (turn < -Math.PI) turn += Math.PI * 2
+        lastHeadMom = headRef.current
+        const fast = Math.hypot(vel.current.x, vel.current.y) > SPEED * hullSpeed * speedRef.current * 0.75 * kelpKeep
+        if (fast && Math.abs(turn) / Math.max(dt, 1e-4) < 0.5) straightT += dt
+        else straightT = Math.max(0, straightT - dt * 4)
+        const full = straightT > FULL_SAIL_AFTER
+        if (full && !sailFull) {
+          // The sails fill: a burst of spray off the bow, once.
+          gpuRef.current?.splash(pos.current.x, pos.current.y, 0, false)
+          vibrate(8)
+        }
+        sailFull = full
+        sailMom += ((full ? FULL_SAIL : 1) - sailMom) * (1 - Math.exp(-3 * dt))
+      } else {
+        kelpKeep += (1 - kelpKeep) * (1 - Math.exp(-4 * dt))
+        sailMom += (1 - sailMom) * (1 - Math.exp(-3 * dt))
+        straightT = 0
+        sailFull = false
+      }
 
       // AND YOU CANNOT SAIL PAST THE HARBOUR. Everything north of it belongs
       // to expeditions, and this screen has nothing up there to find. Handled

@@ -3417,3 +3417,17 @@ a halo, stuck out and was the wrong shape, "shouldn't it show a reflection like 
   the painting flipped, lightly blurred, faded to nothing by 42% down, squashed 0.45 (flatter than a
   rock's 0.62) and started 6% up under the plate so a curved coast leaves no gap. Alpha 0.32 (0.14
   locked). Does not follow the sun.
+
+## Currents, kelp and full sail (2026-09-23)
+
+Kong: little things that speed you up or slow you down. Fishing side only; off while the HUD is
+down (rod out, fight, arriving); none of it pays anything.
+- CURRENTS (lib/seaFlow `CURRENTS`, `currentAt`): ring lanes round Open Waters (r 5300), the Deep
+  (8900, opposite way) and the Abyss (13400), plus an outbound radial at ~60deg and an inbound at
+  ~120deg. They push the hull along the lane at CURRENT_PUSH (0.4 x base speed) at the centre,
+  soft at the edges and ends. Drawn as tapered mesh strips of scrolling streaks (seaFlowGfx).
+- KELP (`KELP`, `kelpAt`): 14 seeded beds in the Shallows/Open Waters, clear of ports, isles,
+  lanes and rocks; inside one you keep KELP_KEEP (60%) of your speed, eased. Drawn as flat frond
+  sprites sharing one texture.
+- FULL SAIL (SeaMap): 2.5s of fast (>75% of top) straight (<0.5 rad/s turn) sailing -> +15%
+  (FULL_SAIL), a bow splash and a tick of haptic when it fills; a hard turn or losing way drops it.

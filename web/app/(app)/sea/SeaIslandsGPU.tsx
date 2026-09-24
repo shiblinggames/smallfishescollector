@@ -93,6 +93,7 @@ import { bloomsAround } from '@/lib/seaBlooms'
 import { makeBanks, type Banks } from './seaBanks'
 import { makeChains, type Chains } from './seaChains'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
+import { makeFlow } from './seaFlowGfx'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
 import { makeCaptain, makeShip, lookKey, type Captain, type CaptainLook } from './seaCaptain'
@@ -1208,6 +1209,10 @@ export default function SeaIslandsGPU({
       // blend, so they draw as one batch, and every plate after them as
       // another. Under every plate also means one island's shadow never
       // darkens its neighbour's paint, which is the more correct reading.
+      // THE CURRENTS AND THE KELP, on the water under everything that stands
+      // on it. See seaFlowGfx and lib/seaFlow.
+      const flow = makeFlow(PIXI)
+      world.addChild(flow.view)
       const islandShades = new PIXI.Container()
       world.addChild(islandShades)
 
@@ -1843,6 +1848,7 @@ export default function SeaIslandsGPU({
           if (Math.abs(g.x - camX) < halfW + g.r * 1.6
             && Math.abs(g.y - camY) < halfH + g.r * 1.6) { g.g.advance(t); blowing++ }
         }
+        flow.advance(t)
         for (const l of laps) {
           if (Math.abs(l.x - camX) < halfW + l.half * 2
             && Math.abs(l.y - camY) < halfH + l.half * 3) l.l.advance(t)
@@ -2277,6 +2283,7 @@ export default function SeaIslandsGPU({
           // the darkness itself and get BRIGHTER as it deepens.
           lights.night(d)
           squalls.night(tint)
+          flow.night(tint)
           banks.night(tint)
           chains.night(tint)
           wake.night(tint, d)
