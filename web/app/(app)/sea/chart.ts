@@ -277,7 +277,7 @@ export const PLACES: Place[] = [
     href: '/trawl-docks', x: -1150, y: -780, r: 265, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/tally-house-v2.webp', x: 53, y: 55, scale: 0.33 },
+      { art: '/sea/tally-house-v2.webp', x: 51, y: 58, scale: 0.38 },
     ],
   },
   {
@@ -353,7 +353,7 @@ export const PLACES: Place[] = [
       // number drew a visibly smaller building: 157px against 245. This is
       // the Charterhouse's 0.34 on a smaller isle, which reads as a building
       // of the same institution rather than a model of one.
-      { art: '/sea/posting-house-v3.webp', x: 59, y: 40, scale: 0.42 },
+      { art: '/sea/posting-house-v3.webp', x: 57, y: 42, scale: 0.43 },
     ],
   },
   {
@@ -421,7 +421,7 @@ export const PLACES: Place[] = [
     href: '/sea', x: -898, y: -5715, r: 340, art: '/sea/gunwharf-v3.webp',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/gunwharf-v3.webp', x: 55, y: 46, scale: 0.5 },
+      { art: '/sea/gunwharf-v3.webp', x: 55, y: 50, scale: 0.53 },
     ],
   },
   {
@@ -490,7 +490,7 @@ export const PLACES: Place[] = [
     href: '/sea', x: -2050, y: -820, r: 210, art: '/sea/trawl-harbor-v3.webp',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/trawl-harbor-v3.webp', x: 48, y: 49, scale: 0.44 },
+      { art: '/sea/trawl-harbor-v3.webp', x: 59, y: 53, scale: 0.44 },
     ],
   },
   {
@@ -500,7 +500,7 @@ export const PLACES: Place[] = [
     kind: 'port', minLevel: 0,
     // Placed on /sea/calibrate, against the real coastline.
     buildings: [
-      { art: '/sea/shipyard-v3.webp', x: 50, y: 63, scale: 0.44 },
+      { art: '/sea/shipyard-v3.webp', x: 50, y: 81, scale: 0.74 },
     ],
   },
   {
