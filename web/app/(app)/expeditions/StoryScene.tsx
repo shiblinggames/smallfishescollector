@@ -66,7 +66,7 @@ function stageAt(lines: SceneLine[], idx: number): { left: StageChar | null; rig
   return { left, right }
 }
 
-export default function StoryScene({ title, lines, ctaLabel, pending, accent, background, renderInsert, ctaSlot, onComplete, onSkip, allowSkip = true }: {
+export default function StoryScene({ title, lines, ctaLabel, pending, accent, background, brightBackdrop, renderInsert, ctaSlot, onComplete, onSkip, allowSkip = true }: {
   title: string
   lines: SceneLine[]
   ctaLabel: string
@@ -75,6 +75,8 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
   accent?: string
   /** Optional painterly establishing backdrop (public/scenes/*). Plain dark when unset. */
   background?: string
+  /** A daylight backdrop: a lighter veil over it. See SceneBackdrop. */
+  brightBackdrop?: boolean
   /** Optional custom insert renderer — lets a caller supply its own insert-shot
    *  visual (e.g. a live dial demo) without teaching the shared kit about it.
    *  Return null to fall back to the built-in InsertShot for that kind. */
@@ -275,7 +277,7 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
     >
       {/* Painterly establishing backdrop (when the node sets one), sitting at the
           very back below the frame and cast. */}
-      {activeBackdrop && <SceneBackdrop key={activeBackdrop} src={activeBackdrop} reduced={reduced} />}
+      {activeBackdrop && <SceneBackdrop key={activeBackdrop} src={activeBackdrop} reduced={reduced} bright={brightBackdrop} />}
 
       {/* The frame is alive (push-in + motes + breathing vignette), the flash on
           an earned beat, and the letterbox — all from the shared cutscene kit so

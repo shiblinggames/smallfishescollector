@@ -121,6 +121,11 @@ export default function WelcomeModal() {
           lines={WELCOME_SCENE}
           ctaLabel="Let's Go →"
           accent="#60a5fa"
+          // THE HARBOUR SETUP WAS DRESSED ON, so the welcome happens in the
+          // same place rather than in a dark empty frame (Kong: on a desktop
+          // it was two busts and a plate at the foot of a black screen).
+          background="/welcome-harbour.webp"
+          brightBackdrop
           // The button knows it was pressed: disabled and showing its wait
           // the instant the curtain starts, so a second press cannot fire the
           // grant twice and the press never reads as ignored.

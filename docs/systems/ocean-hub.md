@@ -2669,6 +2669,19 @@ while a full load reads the finished profile — name, colour, avatar — and bu
 correctly. There used to be a window event announcing the end of setup so a mounted chart could
 release the tour; with no chart mounted there is nothing to tell, and it is gone.
 
+**The dark field is dressed (2026-09-24).** Kong: the first impression was a small card over an
+empty dark page, and the welcome was two busts and a plate at the foot of a black screen on a
+desktop. Both now stand in `/welcome-harbour.webp`, a painted morning harbour with a waiting
+dinghy (Kie prompt `welcome-harbour.json`):
+- `SetupModal` puts the painting full screen behind a lightened shell scrim, and the card is one
+  object for all three steps: a hero of YOUR captain in YOUR dinghy (cropped from the colour's
+  `fishing_*_rest.png`) on that harbour, the avatar badge in its corner and the typed name on a
+  plate, updating live as the steps are filled in; the step on the right with pips, Doby or Kat's
+  line, and tinted Cinzel buttons. Two columns from 760px (`.setup-card` in globals.css), one on a
+  phone with the picture across the top.
+- `WelcomeModal` passes the same painting to the scene with `brightBackdrop`, a daylight veil
+  (`SceneBackdrop bright`) instead of the story's dusk one.
+
 **Where the first load places the boat is decided by `neverSailed`, not `has_seen_setup`.** The
 setup flag closes the moment the welcome does, and the very next read of the row is the one that
 places the boat — so a second session on the same account (an old tab, another device) writing its

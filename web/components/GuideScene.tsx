@@ -10,12 +10,13 @@ import type { ReactNode } from 'react'
 import StoryScene from '@/app/(app)/expeditions/StoryScene'
 import type { SceneLine, SceneInsert } from '@/lib/raidMap'
 
-export default function GuideScene({ title, lines, ctaLabel, accent, background, pending, renderInsert, onDone }: {
+export default function GuideScene({ title, lines, ctaLabel, accent, background, brightBackdrop, pending, renderInsert, onDone }: {
   title: string
   lines: SceneLine[]
   ctaLabel: string
   accent?: string
   background?: string
+  brightBackdrop?: boolean
   pending?: boolean
   /** Optional custom insert visual (e.g. a live dial demo). See StoryScene. */
   renderInsert?: (insert: SceneInsert) => ReactNode
@@ -28,6 +29,7 @@ export default function GuideScene({ title, lines, ctaLabel, accent, background,
       ctaLabel={ctaLabel}
       accent={accent}
       background={background}
+      brightBackdrop={brightBackdrop}
       pending={pending}
       renderInsert={renderInsert}
       onComplete={onDone}

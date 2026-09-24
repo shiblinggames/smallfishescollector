@@ -4049,3 +4049,21 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
 .reroll-btn .reroll-face { transition: transform 0.16s ease, box-shadow 0.16s ease; }
 .reroll-btn:not(:disabled):hover .reroll-face { transform: translateY(-2px) scale(1.05); }
 .reroll-btn:not(:disabled):active .reroll-face { transform: scale(0.94); }
+
+/* ── First-run setup (components/SetupModal) ───────────────────────────────
+   One column on a phone with the captain's picture across the top; two from
+   760, the picture a full-height left column. */
+.setup-card { display: grid; grid-template-columns: minmax(0, 1fr); }
+.setup-hero { height: 200px; }
+.setup-boat-wrap { bottom: 40px; }
+.setup-boat { width: 210px; }
+.setup-swatches { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; max-width: 300px; }
+.setup-swatch { transition: transform 0.15s ease, border-color 0.15s, box-shadow 0.15s; }
+.setup-swatch:hover { transform: translateY(-2px); }
+@media (min-width: 760px) {
+  .setup-card { grid-template-columns: 360px minmax(0, 1fr); min-height: 500px; }
+  .setup-hero { height: auto; }
+  .setup-boat-wrap { bottom: 64px; }
+  .setup-boat { width: 300px; }
+  .setup-swatches { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; max-width: none; }
+}

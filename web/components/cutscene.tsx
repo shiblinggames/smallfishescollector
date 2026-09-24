@@ -34,7 +34,7 @@ export function prefersReducedMotion(): boolean {
  * plate) while keeping the middle readable. Sits at the very back, below the
  * LivingFrame and the cast; scenes without one keep the plain dark gradient.
  */
-export function SceneBackdrop({ src, reduced }: { src: string; reduced?: boolean }) {
+export function SceneBackdrop({ src, reduced, bright }: { src: string; reduced?: boolean; bright?: boolean }) {
   return (
     <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -45,8 +45,12 @@ export function SceneBackdrop({ src, reduced }: { src: string; reduced?: boolean
         transition={{ duration: 32, ease: 'easeOut' }}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
       />
-      <div style={{ position: 'absolute', inset: 0, background:
-        'linear-gradient(180deg, rgba(4,4,7,0.86) 0%, rgba(4,4,7,0.40) 16%, rgba(4,4,7,0.30) 40%, rgba(4,4,7,0.34) 56%, rgba(4,4,7,0.64) 76%, rgba(4,4,7,0.93) 100%)' }} />
+      {/* BRIGHT is for a daylight scene (the welcome): the story's heavy veil
+          made a sunny harbour look like dusk. Still dark at the foot, where the
+          dialogue plate sits. */}
+      <div style={{ position: 'absolute', inset: 0, background: bright
+        ? 'linear-gradient(180deg, rgba(4,8,14,0.45) 0%, rgba(4,8,14,0.05) 18%, rgba(4,8,14,0) 45%, rgba(4,8,14,0.2) 66%, rgba(4,8,14,0.78) 100%)'
+        : 'linear-gradient(180deg, rgba(4,4,7,0.86) 0%, rgba(4,4,7,0.40) 16%, rgba(4,4,7,0.30) 40%, rgba(4,4,7,0.34) 56%, rgba(4,4,7,0.64) 76%, rgba(4,4,7,0.93) 100%)' }} />
     </div>
   )
 }
