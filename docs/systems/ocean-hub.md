@@ -2542,7 +2542,7 @@ question:
 
 | | | |
 |---|---|---|
-| **Your lantern** | a warm pool travelling under the hull | *can I see* |
+| **Your lantern** | edgeless warm haze plus ~44 short-lived glints in a column trailing down-screen (2026-09-24: the flat disc read as "a literal oval of light, cheap"; other boats' lamps use the edgeless haze too) | *can I see* |
 | **Every other boat** | a smaller lamp on each trader, regular and friend | *is anyone about* |
 | **The deep** | cold specks, Abyss 0.6 and Ancient Deep 1.0 | *where am I* |
 

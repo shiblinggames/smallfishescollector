@@ -9,9 +9,13 @@
 // What makes night night is that a few things start EMITTING while everything
 // else stops. Three of them here, and each answers a different question.
 //
-//   THE LANTERN — yours, a warm pool travelling under the hull. Answers "can I
-//   see", and it is the one that makes the dark feel like somewhere you are
-//   rather than a filter over the screen. You sail inside a circle of light.
+//   THE LANTERN — yours, travelling with the hull. Answers "can I see", and it
+//   is the one that makes the dark feel like somewhere you are rather than a
+//   filter over the screen. It was a flat disc with a rim, and Kong called it
+//   what it was: a literal oval of light, cheap. Lamplight on water is not a
+//   disc. It is a faint warmth with no edge at all, and on top of it the swell
+//   catching the flame in broken glints, thickest right under the lamp and
+//   trailing off toward whoever is looking. So: HAZE plus GLINTS.
 //
 //   THE OTHER BOATS — a lamp on every trader, regular and friend out there.
 //   Answers "is anyone about", and it is the reason to look at the sea at night:
@@ -58,27 +62,51 @@ const GLOW_BAND: Record<string, number> = {
   ancient_deep: 1,
 }
 
-let poolTex: Texture | null = null
+let hazeTex: Texture | null = null
+let glintTex: Texture | null = null
 let moteTex: Texture | null = null
 
-/** A soft pool of light. Flat in the middle and gone at the edge: a plain
- *  radial falloff reads as a spotlight aimed down, and lamplight on water is
- *  scattered by the whole surface, so only the boundary is soft. */
-function poolTexture(PIXI: typeof import('pixi.js')): Texture {
-  if (poolTex) return poolTex
+/** How many glints dance under your lantern at once. One batch, fixed pool. */
+const GLINTS = 44
+
+/** Light with NO edge: a gaussian all the way out, so there is no rim for the
+ *  eye to find and call an oval. */
+function hazeTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (hazeTex) return hazeTex
   const S = 256
   const c = document.createElement('canvas')
   c.width = c.height = S
   const g = c.getContext('2d')!
-  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
-  grad.addColorStop(0.00, 'rgba(255,255,255,0.85)')
-  grad.addColorStop(0.42, 'rgba(255,255,255,0.5)')
-  grad.addColorStop(0.78, 'rgba(255,255,255,0.16)')
-  grad.addColorStop(1.00, 'rgba(255,255,255,0)')
-  g.fillStyle = grad
-  g.fillRect(0, 0, S, S)
-  poolTex = PIXI.Texture.from(c)
-  return poolTex
+  const img = g.createImageData(S, S)
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const dx = (x - S / 2) / (S / 2), dy = (y - S / 2) / (S / 2)
+    const r2 = dx * dx + dy * dy
+    // exp(-r2 * 4.5) is ~1% at the edge; the last ramp takes it to exactly 0.
+    const a = r2 >= 1 ? 0 : Math.exp(-r2 * 4.5) * (1 - r2)
+    const o = (y * S + x) * 4
+    img.data[o] = img.data[o + 1] = img.data[o + 2] = 255
+    img.data[o + 3] = Math.round(a * 255)
+  }
+  g.putImageData(img, 0, 0)
+  hazeTex = PIXI.Texture.from(c)
+  return hazeTex
+}
+
+/** One glint: a short soft horizontal fleck, the flame caught on a ripple's
+ *  crest. Ripples lie across the view, so the fleck does too. */
+function glintTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (glintTex) return glintTex
+  const w = 48, h = 10
+  const c = document.createElement('canvas')
+  c.width = w; c.height = h
+  const g = c.getContext('2d')!
+  g.filter = 'blur(1.2px)'
+  g.fillStyle = 'rgba(255,255,255,1)'
+  g.beginPath()
+  g.ellipse(w / 2, h / 2, w / 2 - 4, h / 2 - 3, 0, 0, Math.PI * 2)
+  g.fill()
+  glintTex = PIXI.Texture.from(c)
+  return glintTex
 }
 
 function moteTexture(PIXI: typeof import('pixi.js')): Texture {
@@ -138,20 +166,36 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
   world.blendMode = 'add'
   screen.blendMode = 'add'
 
-  const pt = poolTexture(PIXI)
 
-  // ── YOURS ──
-  const lantern: Sprite = new PIXI.Sprite(pt)
+  const ht = hazeTexture(PIXI)
+
+  // ── YOURS ── the warmth first, then the glints on top of it.
+  const lantern: Sprite = new PIXI.Sprite(ht)
   lantern.anchor.set(0.5)
   lantern.tint = LAMP
   lantern.alpha = 0
   screen.addChild(lantern)
+  const gt = glintTexture(PIXI)
+  const glints: { s: Sprite; dx: number; dy: number; age: number; life: number; w: number }[] = []
+  for (let i = 0; i < GLINTS; i++) {
+    const s: Sprite = new PIXI.Sprite(gt)
+    s.anchor.set(0.5)
+    s.tint = LAMP
+    s.alpha = 0
+    screen.addChild(s)
+    // Staggered from the start, so the first night does not blink in unison.
+    glints.push({ s, dx: 0, dy: 0, age: -Math.random() * 0.8, life: 0, w: 1 })
+  }
+  let gr = 0x1a7e5
+  const grand = () => ((gr = (gr * 1103515245 + 12345) >>> 0) / 4294967296)
+  /** A normal-ish number, for a column that is dense in the middle. */
+  const gauss = () => (grand() + grand() + grand() - 1.5) / 1.5
 
   // ── THEIRS ── a fixed pool of pools, hidden when unused.
   const CREW_LAMPS = 24
   const crewLamps: Sprite[] = []
   for (let i = 0; i < CREW_LAMPS; i++) {
-    const s: Sprite = new PIXI.Sprite(pt)
+    const s: Sprite = new PIXI.Sprite(ht)
     s.anchor.set(0.5)
     s.tint = LAMP
     s.alpha = 0
@@ -228,9 +272,33 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
       // falls off with distance, so a weaker one is smaller AND fainter, and
       // scaling the pair together is the only version that looks like a lamp.
       const lr = (132 + dark * 46) * glow
-      lantern.width = lr * 2
-      lantern.height = lr * 2 * GROUND
-      lantern.alpha = dark * 0.34 * glow * flick
+      // THE WARMTH: wider than the old disc and much fainter, because it has
+      // no edge now and the glints carry the brightness.
+      lantern.width = lr * 2.8
+      lantern.height = lr * 2.8 * GROUND
+      lantern.alpha = dark * 0.3 * glow * flick
+      // THE GLINTS: each lives a fraction of a second, a fleck of flame on a
+      // crest, then comes back somewhere else. Scattered in a column under
+      // the lamp that trails toward the viewer (down the screen) and widens
+      // as it goes, as a reflection on rough water does. Brightest near the
+      // lamp. Offsets are relative to the hull, so they travel with her.
+      for (const g of glints) {
+        g.age += d
+        if (g.age >= g.life) {
+          const along = Math.pow(grand(), 1.6) // most of them close in
+          g.dy = (-0.12 + along * 0.95) * lr * GROUND
+          g.dx = gauss() * lr * (0.16 + along * 0.34)
+          g.life = 0.35 + grand() * 0.7
+          g.age = 0
+          g.w = 0.45 + grand() * 0.8
+        }
+        if (g.age < 0) { g.s.alpha = 0; continue }
+        const f = g.age / g.life
+        const near = Math.exp(-((g.dx / (lr * 0.55)) ** 2) - ((g.dy / (lr * GROUND * 0.7)) ** 2))
+        g.s.position.set(cx + g.dx, cy + 6 + g.dy)
+        g.s.scale.set(g.w * glow * (0.7 + 0.3 * near), 0.8)
+        g.s.alpha = Math.sin(Math.PI * f) * dark * glow * (0.25 + 0.6 * near)
+      }
 
       // ── EVERY OTHER BOAT ── smaller, and it is the one thing out here that
       // is worth steering toward on sight.
@@ -245,10 +313,11 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
           continue
         }
         s.position.set(b.x, b.y + 4)
-        const rr = 74 + Math.sin(t * 2.3 + i) * 3
+        // Edgeless too, for the same reason yours is.
+        const rr = 96 + Math.sin(t * 2.3 + i) * 3
         s.width = rr * 2
         s.height = rr * 2 * GROUND
-        s.alpha = dark * 0.3
+        s.alpha = dark * 0.36
       }
 
       // ── AND THE DEEP ──
