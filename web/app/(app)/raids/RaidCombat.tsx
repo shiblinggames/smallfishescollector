@@ -3640,20 +3640,33 @@ export default function RaidCombat({
     // the work straight back on the main thread and lose the whole point. So a
     // gusting bar keeps the RAF paint it has always had. It is one affliction
     // on one raid, and it is MEANT to be hard to read.
-    const compositor = !onDial && !squallActive
+    //
+    // AND THE DIAL TOO (2026-09-24). Finn's needle painted from this thread
+    // while the fishing dial's has always spun on the compositor, so the one
+    // fight built on the fishing instrument was the one where it could hitch.
+    // Same triangle wave, same clock, same lock; only what moves differs: the
+    // needle's own layer rotates 0 to 360 degrees and back, and the band group
+    // rotates about the dial's centre.
+    const compositor = !squallActive
     if (compositor) {
-      const el = needleTrackRef.current
+      const el = onDial ? indicatorRef.current : needleTrackRef.current
       // Frames to cross, and back again: the same NEEDLE_SPEED the maths below
       // uses, so the picture and the judgment cannot describe different sweeps.
       needlePeriodRef.current = (2 / NEEDLE_SPEED) * (1000 / 60)
       if (el && typeof el.animate === 'function') {
         try {
           const anim = el.animate(
-            [
-              { transform: 'translate3d(0%, 0, 0)' },
-              { transform: 'translate3d(100%, 0, 0)' },
-              { transform: 'translate3d(0%, 0, 0)' },
-            ],
+            onDial
+              ? [
+                  { transform: 'rotate(0deg)' },
+                  { transform: 'rotate(360deg)' },
+                  { transform: 'rotate(0deg)' },
+                ]
+              : [
+                  { transform: 'translate3d(0%, 0, 0)' },
+                  { transform: 'translate3d(100%, 0, 0)' },
+                  { transform: 'translate3d(0%, 0, 0)' },
+                ],
             { duration: needlePeriodRef.current, iterations: Infinity, easing: 'linear' },
           )
           // PINNED SYNCHRONOUSLY, or it starts "when ready" — up to a frame
@@ -3676,7 +3689,15 @@ export default function RaidCombat({
       // `edge` is read once here rather than per frame. It is the band's own
       // half-width, it comes from gear, and it cannot change inside an aiming
       // session — and a fixed-duration animation has to be able to assume that.
-      const zEl = zoneTrackRef.current
+      const zEl: Element | null = onDial ? dialZonesRef.current : zoneTrackRef.current
+      // The band group is SVG and rotates by its `transform` attribute
+      // (paintZone). A CSS animation outranks the attribute while it runs and
+      // hands it back when cancelled, so the lock's attribute write is what
+      // shows after. The pivot has to be the dial's centre in its own units.
+      if (onDial && zEl instanceof SVGElement) {
+        zEl.style.transformBox = 'view-box'
+        zEl.style.transformOrigin = `${CX}px ${CY}px`
+      }
       const lo = aimHitWRef.current + aimGrazeWRef.current
       const span = Math.max(0.0001, (1 - lo) - lo)
       zoneLoRef.current = lo
@@ -3686,7 +3707,9 @@ export default function RaidCombat({
         try {
           // The track carries the band's own offset, exactly as paintZone does.
           const off = -(HIT_W + GRAZE_W)
-          const at = (p: number) => ({ transform: `translate3d(${(p + off) * 100}%, 0, 0)` })
+          const at = (p: number) => onDial
+            ? { transform: `rotate(${p * 360 - 180}deg)` }
+            : { transform: `translate3d(${(p + off) * 100}%, 0, 0)` }
           const anim = zEl.animate([at(lo), at(1 - lo), at(lo)],
             { duration: zonePeriodRef.current, iterations: Infinity, easing: 'linear' })
           // WHERE IT ALREADY WAS, AND WHICH WAY. The band opens at a random

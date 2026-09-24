@@ -451,5 +451,8 @@ Kong: get it visually on par. What changed, and what not to regress:
   whole fight, since he carries all six.
 - **Gear on the water.** `RaidSheet` never passed `dialAim`, so from the chart the rod/hook/reel
   did nothing to the dial. Fixed.
-- Not done: the dial needle still paints from the RAF (`compositor = !onDial`), not WAAPI like
-  the fishing needle and the bar.
+- **The dial runs on the compositor** like the bar and the fishing needle (`compositor =
+  !squallActive`): the needle layer is a WAAPI rotate 0 -> 360 -> 0deg, the band group a rotate
+  about (CX, CY) with `transform-box: view-box`. Same triangle wave and clock as the bar, so
+  `needleAt`/`zoneAt` and the lock's pause-read-commit-cancel are unchanged; the lock writes the
+  band's `transform` ATTRIBUTE, which shows once the CSS animation is cancelled.
