@@ -160,7 +160,8 @@ export default async function LeaderboardPage() {
   return (
     <>
       <main className="min-h-screen pt-8" style={{ position: 'relative', zIndex: 1 }}>
-        <div className="page-col page-col-modal" style={{ maxWidth: 'max(var(--modal-w), var(--game-col))' }}>
+        {/* Wide on a desktop: the boards sit in a sidebar beside the board. */}
+        <div className="page-col page-col-modal" style={{ maxWidth: 'min(1100px, 100%)' }}>
           <div style={{ marginBottom: '1.1rem' }}>
             <h1 className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>Leaderboards</h1>
           </div>

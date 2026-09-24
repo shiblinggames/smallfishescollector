@@ -4144,3 +4144,16 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
   .prof-side { grid-column: 2; }
   .prof-wide { grid-column: 1 / -1; }
 }
+
+/* ── The leaderboards (leaderboard/LeaderboardClient) ───────────────────────
+   The dropdown on a phone; a sticky sidebar of every board with your rank on
+   it from 900px. */
+.lb-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.lb-side { display: none; }
+.lb-row { transition: background 0.15s; }
+.lb-row:hover { background: rgba(240,220,180,0.05) !important; }
+@media (min-width: 900px) {
+  .lb-layout { grid-template-columns: 240px minmax(0, 1fr); align-items: start; }
+  .lb-side { display: block; position: sticky; top: calc(var(--nav-h, 60px) + 12px); }
+  .lb-picker { display: none; }
+}

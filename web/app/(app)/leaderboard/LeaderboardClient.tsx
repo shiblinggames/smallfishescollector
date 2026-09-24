@@ -127,18 +127,70 @@ export default function LeaderboardClient({ fishing, perfectStreak, chartingPoin
     : myRanks.raidProgress
 
   const meta = BOARD_META[activeTab]
+  const groups = groupBoards(AVAILABLE_BOARDS)
+  const myRank = rankOf(activeTab)
+  const myScore = scoreOf(activeTab)
+  const PODIUM: Record<number, string> = { 1: '#f0c040', 2: '#c0c8d4', 3: '#c47a3a' }
 
   return (
-    <div style={{ paddingBottom: '2rem' }}>
+    <div style={{ paddingBottom: '2rem' }} className="lb-layout">
 
-      {/* One scalable dropdown, grouped by category, replacing the old
-          section-tabs + board-pills chrome. */}
-      <BoardPicker
-        groups={groupBoards(AVAILABLE_BOARDS)}
-        active={activeTab}
-        onSelect={setActiveTab}
-        rankOf={rankOf}
-      />
+      {/* ── THE BOARDS ── a sidebar on a desktop, grouped, each with where you
+          stand on it, so the whole spread reads without opening anything. */}
+      <nav className="lb-side" aria-label="Boards">
+        {groups.map(g => (
+          <div key={g.label} style={{ marginBottom: 10 }}>
+            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: 'rgba(196,169,106,0.8)', padding: '0 0.4rem 0.3rem' }}>{g.label}</p>
+            {g.boards.map(k => {
+              const b = BOARD_META[k]
+              const on = k === activeTab
+              const r = rankOf(k)
+              return (
+                <button key={k} type="button" onClick={() => setActiveTab(k)} className="tap"
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '0.46rem 0.55rem', borderRadius: 9,
+                    background: on ? `${b.accent}1f` : 'transparent', border: `1px solid ${on ? `${b.accent}88` : 'transparent'}`,
+                    cursor: 'pointer', textAlign: 'left',
+                  }}>
+                  <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: b.accent, flexShrink: 0 }} />
+                  <span className="font-karla font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: on ? '#f2efe8' : '#c9c4bc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.label}</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: r != null && r <= 3 ? PODIUM[r] : r == null ? '#5a5856' : '#9a9488', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{r == null ? '' : `#${r}`}</span>
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </nav>
+
+      <div style={{ minWidth: 0 }}>
+      {/* The dropdown stays for a phone. */}
+      <div className="lb-picker">
+        <BoardPicker
+          groups={groups}
+          active={activeTab}
+          onSelect={setActiveTab}
+          rankOf={rankOf}
+        />
+      </div>
+
+      {/* ── THE BOARD'S HEAD, AND WHERE YOU STAND ── always, not only when you
+          are outside the top fifty. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12,
+        padding: '0.75rem 0.95rem', borderRadius: 14,
+        background: `linear-gradient(180deg, ${meta.accent}16, rgba(8,8,6,0.5))`, border: `1px solid ${meta.accent}44`,
+      }}>
+        <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '1.2rem', color: '#f4efe4', lineHeight: 1.1 }}>{meta.label}</p>
+        <span className="font-karla font-700" style={{
+          display: 'inline-flex', alignItems: 'baseline', gap: 8, padding: '0.35rem 0.75rem', borderRadius: 999,
+          background: 'rgba(0,0,0,0.3)', border: `1px solid ${myRank != null && myRank <= 3 ? PODIUM[myRank] : 'rgba(255,255,255,0.12)'}`,
+          fontSize: '0.78rem', color: '#e6e1d6', fontVariantNumeric: 'tabular-nums',
+        }}>
+          {myRank != null && myScore != null ? (
+            <>You <span className="font-cinzel font-800" style={{ color: myRank <= 3 ? PODIUM[myRank] : meta.accent }}>#{myRank}</span> <span style={{ opacity: 0.75 }}>{meta.unit(myScore)}</span></>
+          ) : 'Not on this board yet'}
+        </span>
+      </div>
 
       {/* ── Active leaderboard ── */}
       <LeaderboardSection
@@ -151,10 +203,11 @@ export default function LeaderboardClient({ fishing, perfectStreak, chartingPoin
         myScore={scoreOf(activeTab)}
         currentUserId={currentUserId}
         avatars={avatars}
-        // The best captains, shown whole. Only here: this is the board that
-        // asks the question the figure answers.
-        stage={activeTab === 'achievementPoints'}
+        // The best captains, shown whole, on every board now: the podium is
+        // the best-looking thing on this page and it was on one of fourteen.
+        stage
       />
+      </div>
     </div>
   )
 }

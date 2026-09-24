@@ -53,7 +53,10 @@ export default function BoardPicker({
           boxShadow: `0 0 14px ${meta.accent}1f`,
         }}
       >
-        <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
+        {/* A drawn cup, not an emoji (house rule: no emoji as icons). */}
+        <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={meta.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
+        </svg>
         <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1rem', color: '#f2efe8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.label}</p>
         {activeRank != null && (
           <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: activePodium ?? '#9a9488', flexShrink: 0 }}>Rank {activeRank}</span>

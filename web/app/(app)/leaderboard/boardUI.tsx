@@ -296,7 +296,7 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
                   <p className="font-cinzel font-700" style={{ fontSize: rank === 1 ? '0.95rem' : '0.78rem', color: rankColor }}>
                     {unit(entry.score)}
                   </p>
-                  <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: rankColor + '77' }}>
+                  <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: rankColor + '99' }}>
                     {subUnit(entry.score)}
                   </p>
                 </div>
@@ -322,14 +322,16 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
                 href={`/u/${entry.username}`}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '0.65rem 1rem',
+                  padding: '0.7rem 1rem',
                   borderBottom: i < rest.length - 1 ? LEDGER_RULE : 'none',
-                  background: isMe ? `${accent}0d` : 'transparent',
+                  background: isMe ? `${accent}18` : 'transparent',
+                  boxShadow: isMe ? `inset 3px 0 0 ${accent}` : 'none',
                   textDecoration: 'none',
                   transition: 'background 0.15s',
                 }}
+                className="lb-row"
               >
-                <span className="font-cinzel font-600 shrink-0" style={{ width: 22, textAlign: 'right', fontSize: '0.66rem', color: 'rgba(196,169,106,0.5)' }}>
+                <span className="font-cinzel font-700 shrink-0" style={{ width: 24, textAlign: 'right', fontSize: '0.76rem', color: 'rgba(196,169,106,0.65)', fontVariantNumeric: 'tabular-nums' }}>
                   {rank}
                 </span>
                 <Avatar
@@ -341,17 +343,17 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
                   avatarBorder={avatars[entry.user_id]?.avatarBorder}
                 />
                 <div className="flex-1 min-w-0" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                  <p className="font-karla font-600 truncate" style={{ fontSize: '0.8rem', color: isMe ? '#f0ede8' : '#a0a09a', minWidth: 0 }}>
+                  <p className="font-karla font-600 truncate" style={{ fontSize: '0.86rem', color: isMe ? '#f0ede8' : '#b4b0a6', minWidth: 0 }}>
                     {entry.username}
                     {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 6 }}>you</span>}
                   </p>
                   {showZone && <ZoneBadge zone={entry.zone} />}
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p className="font-cinzel font-600" style={{ fontSize: '0.75rem', color: valueColor ? valueColor(entry.score) : (isMe ? accent : '#8a8072') }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: valueColor ? valueColor(entry.score) : (isMe ? accent : '#cdbf9f'), fontVariantNumeric: 'tabular-nums' }}>
                     {unit(entry.score)}
                   </p>
-                  <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: 'rgba(196,169,106,0.4)' }}>
+                  <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(196,169,106,0.55)' }}>
                     {entry.sub ?? subUnit(entry.score)}
                   </p>
                 </div>
@@ -383,7 +385,7 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
             <p className="flex-1 font-karla font-700" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>You</p>
             <div style={{ textAlign: 'right' }}>
               <p className="font-cinzel font-600" style={{ fontSize: '0.75rem', color: valueColor ? valueColor(myScore) : accent }}>{unit(myScore)}</p>
-              <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: (valueColor ? valueColor(myScore) : accent) + '80' }}>{subUnit(myScore)}</p>
+              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: (valueColor ? valueColor(myScore) : accent) + '99' }}>{subUnit(myScore)}</p>
             </div>
           </div>
         </div>
@@ -487,14 +489,14 @@ export function PodiumStage({ top3, accent, unit, currentUserId, avatars }: {
             </div>
 
             <p className="font-karla font-700 truncate" style={{
-              fontSize: gold ? '0.84rem' : '0.74rem', color: isMe ? '#f0ede8' : '#c8c8c2',
+              fontSize: gold ? '0.92rem' : '0.8rem', color: isMe ? '#f0ede8' : '#d6d2c8',
               minWidth: 0, maxWidth: '100%', marginTop: 5,
             }}>
               {entry.username}
               {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 4 }}>you</span>}
             </p>
             <p className="font-cinzel font-700" style={{
-              fontSize: gold ? '0.92rem' : '0.78rem', color: metal, marginTop: 1, marginBottom: 6,
+              fontSize: gold ? '1.02rem' : '0.86rem', color: metal, marginTop: 1, marginBottom: 6, fontVariantNumeric: 'tabular-nums',
             }}>
               {unit(entry.score)}
             </p>

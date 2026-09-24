@@ -132,3 +132,13 @@ mounts on the chart are gone with it.
   same `DailyOrders` (now `embedded`, no title of its own) or `BountiesPanel`. It was the
   whole board pasted under the level's table, below the fold. The chart writes the summary
   from `orders` and from `bountyTally`, which `pollBounties` now fills.
+
+## The leaderboards page, polished (2026-09-24)
+
+Wide on a desktop (1100). The fourteen boards sit in a sticky sidebar grouped by category, each with
+your rank on it (`.lb-side`); a phone keeps the BoardPicker dropdown (`.lb-picker`), whose trophy is
+now a drawn cup, not an emoji. A head card names the board and ALWAYS shows where you stand ("You
+#12 · value", or "Not on this board yet"). Every board gets the podium of whole fishers
+(`LeaderboardSection stage`), not only Achievement Points. Row type is larger (the sub-lines were
+0.48rem), your row carries an accent bar, and rows answer a hover.
+
