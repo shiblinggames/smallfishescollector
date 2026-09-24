@@ -6,15 +6,15 @@
 // entrance is standing rock.
 //
 // So they are OBJECTS now: painted timber pilings with a brass lantern hung off
-// each (`/sea/channel-post.png`, the house style), standing up out of the
-// water down both edges of the gap, from the fishing side through the passage
-// to the anchorage. Stood up like everything else that stands on this chart:
+// each (`/sea/channel-post.png`, the house style), and only FOUR of them, a
+// pair either side of the gap where the reef line is (Kong: not a runway, just
+// a few lamps at the border). Stood up like everything else that stands on this chart:
 // the world is squashed by GROUND, so each post is scaled back up by 1/GROUND
 // and anchored at its foot. The lanterns burn steadily, with a slow, slight
 // flicker each on its own phase, and a small warm pool on the water under each
 // after dark. No chase, no flashing.
 //
-// Twelve posts in one container. Nothing is created per frame, and the whole
+// Four posts in one container. Nothing is created per frame, and the whole
 // thing is skipped while the passage is off screen.
 
 import type { Container, Sprite, Texture } from 'pixi.js'
@@ -22,12 +22,13 @@ import { GATE_X, GATE_HALF, NORTH_WALL } from './chart'
 import { GROUND } from './islandArt'
 
 const ART = '/sea/channel-post.png'
-/** Where the rows run, in world y: out on the fishing side, through the reef
- *  and into the anchorage. */
-const Y_SOUTH = NORTH_WALL + 700
-const Y_NORTH = NORTH_WALL - 620
-/** Posts per side, and how far in from the rock they stand. */
-const COUNT = 6
+/** The band they stand in, for the off-screen skip. */
+const Y_SOUTH = NORTH_WALL + 400
+const Y_NORTH = NORTH_WALL - 500
+/** The two rows of the border pair, either side of the reef line, and how
+ *  far in from the rock they stand. */
+const BORDER_NORTH = NORTH_WALL - 300
+const BORDER_SOUTH = NORTH_WALL + 170
 const INSET = 80
 /** The post's drawn height in world pixels (the boat is 210 across). */
 const POST_H = 170
@@ -58,10 +59,12 @@ export function makeRunway(PIXI: typeof import('pixi.js')): Runway {
   const glow = glowTexture(PIXI)
   type Post = { post: Sprite | null; halo: Sprite; pool: Sprite; x: number; y: number; phase: number }
   const posts: Post[] = []
-  // North first, so the nearer (southern) posts draw over the farther ones.
+  // A FEW, AT THE BORDER (Kong: not a runway, just a few lamps where the
+  // border is). A pair either side of the gap, one just inside each shore of
+  // the reef line, so the crossing itself is what is lit. North first, so the
+  // nearer (southern) posts draw over the farther ones.
   const spots: { x: number; y: number }[] = []
-  for (let i = 0; i < COUNT; i++) {
-    const y = Y_NORTH + (Y_SOUTH - Y_NORTH) * (i / (COUNT - 1))
+  for (const y of [BORDER_NORTH, BORDER_SOUTH]) {
     for (const side of [-1, 1]) spots.push({ x: GATE_X + side * (GATE_HALF - INSET), y })
   }
   spots.forEach((p, k) => {

@@ -113,3 +113,9 @@ room for one column, which is the phone's row at the phone's width.
 the haptic fires on the press, from the price printed on the row; the server's figure replaces the
 estimate when it arrives (the same unless a tick landed between), and an error puts everything
 back. It is no longer wrapped in a transition, so nothing about it is deferred.
+
+**The market screen quotes what the server pays (2026-09-24).** The 3% non-Captain fee left the
+server on 2026-09-16 but stayed in `MarketClient` (`fee = isPremium ? 1.0 : 0.97`, and a hard
+0.97 on the browse rows and movers), so a fish that paid 10 was quoted 9 (Kong caught it from the
+balance). The client fee is 1.0 everywhere and the "3% fee" copy is gone.
+

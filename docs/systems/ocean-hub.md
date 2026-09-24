@@ -3585,9 +3585,9 @@ was code (neon log-spiral textures, ribbed terraces, lightning) in a hand-painte
 
 Kong: lights along the corridor between fishing and expeditions, like a runway. The first cut
 (flat glow dots with a chasing pulse) was too flashy and flat on a 2.5D sea. `sea/seaRunway.ts`
-now stands six painted timber pilings with brass lanterns (`/sea/channel-post.png`, Kie + key-corner)
-down each edge of the gap (`GATE_X` ± `GATE_HALF` - 80), from `NORTH_WALL + 700` to
-`NORTH_WALL - 620`, stood up by 1/GROUND and anchored at the foot like every standing thing. Each
+now stands FOUR painted timber pilings with brass lanterns (`/sea/channel-post.png`, Kie +
+key-corner), a pair either side of the gap (`GATE_X` ± `GATE_HALF` - 80) at `NORTH_WALL - 300` and
+`NORTH_WALL + 170` (Kong: not a runway, a few lamps where the border is), stood up by 1/GROUND and anchored at the foot like every standing thing. Each
 lantern has a steady halo with a slow slight flicker and a small warm pool on the water after dark.
 No chase. Skipped while off screen.
 

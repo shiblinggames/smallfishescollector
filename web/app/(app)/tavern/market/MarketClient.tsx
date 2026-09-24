@@ -328,7 +328,7 @@ function HoldingRow({ entry, fee, onOpen, onQuickSell, selling, simple = false }
 // ── Browse row (discovered, not held) ────────────────────────────────────
 function BrowseRow({ entry }: { entry: MarketFishEntry }) {
   const { up, pct } = marketSignal(entry, useContext(MarketModeCtx))
-  const price = Math.floor(entry.sell_value * entry.multiplier * 0.97)
+  const price = Math.floor(entry.sell_value * entry.multiplier)
   const hColor = HABITAT_COLOR[entry.habitat] ?? '#888'
   const rColor = RARITY_COLOR[entry.bite_rarity] ?? '#9ca3af'
   return (
@@ -357,7 +357,7 @@ function BrowseRow({ entry }: { entry: MarketFishEntry }) {
 function MoverCard({ entry, label, labelColor }: { entry: MarketFishEntry; label: string; labelColor: string }) {
   const pct = pctOf(entry.multiplier, entry.prev_multiplier)
   const up = pct >= 0
-  const price = Math.floor(entry.sell_value * entry.multiplier * 0.97)
+  const price = Math.floor(entry.sell_value * entry.multiplier)
   return (
     <div style={{
       flex: 1, minWidth: 0,
@@ -510,7 +510,7 @@ function TradeSheet({ entry, fee, selling, onSell, onClose }: {
           {selling ? 'Selling…' : `Sell ${qty} · ${proceeds.toLocaleString()} ⟡`}
         </motion.button>
         <p className="font-karla font-400 text-center mt-2" style={{ fontSize: '0.6rem', color: '#5a5654' }}>
-          {fee < 1 ? '3% market fee applied · instant payout' : 'No fee (Captain) · instant payout'}
+          No fee · instant payout
         </p>
       </motion.div>
     </>
@@ -710,7 +710,11 @@ export default function MarketClient({
   }, [pendingSales.length])
 
   const mood = MOOD_CONFIG[marketState.mood] ?? MOOD_CONFIG.calm
-  const fee = isPremium ? 1.0 : 0.97
+  // NO FEE. The 3% non-Captain cut left the SERVER on 2026-09-16 (see
+  // market/actions) and stayed here, so the screen quoted 9 for a fish that
+  // paid 10 (Kong spotted the balance). Kept as a name so every price below
+  // still reads through one number.
+  const fee = 1.0
 
   // How the red/green markers are decided (persisted per device). Defaults to
   // 'normal' — most sellers care whether a price beats the fish's usual value,
@@ -1162,9 +1166,7 @@ export default function MarketClient({
                   <p className="font-karla font-600" style={{
                     fontSize: '0.68rem', color: '#9a9488', textAlign: 'center', marginTop: 6,
                   }}>
-                    {isPremium
-                      ? 'Full market price, paid straight away.'
-                      : 'Paid straight away, less a 3% fee. Captains pay none.'}
+                    Full market price, paid straight away.
                   </p>
                 </>
               ) : (
