@@ -217,6 +217,14 @@ export function DialSVG({
             <path key={`foot${i}`} d={zoneFeet[i]} fill="none" stroke="#000000"
               strokeWidth="2.6" strokeOpacity="0.34" strokeLinecap="butt" />
           ))}
+          {/* THE AIM BAR'S HAIRLINE: the raid dial's gold has a line down its
+              middle, as the bar's does, so the thing you are timing is a line
+              and not a patch. Raid dial only (the marker needle). */}
+          {needleStyle === 'marker' && perfectZone && (() => {
+            const mid = (perfectZone.from + perfectZone.to) / 2
+            const a = polar(OUTER_R - 3, mid), b = polar(INNER_R + 3, mid)
+            return <line x1={a.x.toFixed(2)} y1={a.y.toFixed(2)} x2={b.x.toFixed(2)} y2={b.y.toFixed(2)} stroke="#fbbf24" strokeWidth="2" strokeLinecap="butt" />
+          })()}
           {perfectZone && (() => {
             const midDeg = (perfectZone.from + perfectZone.to) / 2
             const label = polar(OUTER_R + 14, midDeg)

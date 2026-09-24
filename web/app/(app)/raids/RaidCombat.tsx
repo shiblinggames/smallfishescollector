@@ -5038,7 +5038,7 @@ export default function RaidCombat({
     // because this is where `res` exists — a crit should look like a crit
     // before the number has finished arriving, and a miss should be visibly a
     // miss rather than an absence of celebration.
-    if (!onDial) aimFxRef.current?.burst(pos, res)
+    aimFxRef.current?.burst(pos, res)
 
     // Indicator glow boost for hit/crit. Re-center the WIDENED needle on the
     // judged pos: it's anchored by `left` for a 4px needle (pos% − 2px), so
@@ -8169,7 +8169,33 @@ export default function RaidCombat({
     ...(foreseeUp ? [{ key: 'foresee', color: '#8b7bf0', title: 'Reading you: he slips everything you fire while this holds' }] : []),
     ...(snareDodgeTurns > 0 ? [{ key: 'snare', color: '#d9b066', turns: snareDodgeTurns, title: 'Snared: dodges can be fouled' }] : []),
   ]
+  // ── BOOSTS, WHERE STATUSES ARE ─────────────────────────────────────────
+  // Kong: Cannonade, the Perfect Streak and Davy's cannon heat were three
+  // pills in three places in three styles (a solid pill on the hull, a dark
+  // one at the stage's foot, a line of text over Finn's dial). They are marks
+  // on the portrait ring now, the same shape as every ward and burn, each with
+  // its number on the badge. First, so they take the first seats.
+  const streakMax = tide.critStreakMaxStacks || 5
+  const boostChips: BespokeChip[] = [
+    ...(cannonadeStacks > 0 ? [{
+      key: 'streak', tone: 'buff' as const,
+      color: cannonadeStacks >= streakMax ? '#fbbf24' : '#fb923c',
+      badge: cannonadeStacks >= streakMax ? 'MAX' : `${cannonadeStacks}`,
+      title: `${streakLabel} x${cannonadeStacks}: +${Math.round(tide.critStreakPerStack * cannonadeStacks * 100)}% damage while you keep landing crits. A non-crit breaks it.`,
+    }] : []),
+    ...(!!critStreakCfg?.pierceAt && cannonadeStacks >= critStreakCfg.pierceAt ? [{
+      key: 'pierce', tone: 'buff' as const, color: '#c4b5fd',
+      title: `Through the plate: at ${critStreakCfg.pierceAt}+ your shots ignore his shield.`,
+    }] : []),
+    ...(rampBonusPct > 0 ? [{
+      key: 'heat', tone: 'buff' as const,
+      color: rampBonusPct >= 40 ? '#ef4444' : rampBonusPct >= 20 ? '#f97316' : '#fb923c',
+      badge: `${rampBonusPct}%`,
+      title: `Cannon heat: +${rampBonusPct}% damage, climbing each turn of this fight.`,
+    }] : []),
+  ]
   const playerChips: BespokeChip[] = [
+    ...boostChips,
     // Laz's ward, with its fuse showing. This ability had no on-screen
     // presence whatsoever before now: you spent your legendary and got
     // nothing back until it either saved you or died with the enemy.
@@ -9280,32 +9306,8 @@ export default function RaidCombat({
                   which is the opposite of what the boon does. Same reasoning as
                   Cannonade's removed rim below; the ramp already shows in the
                   damage numbers + the Ledger. */}
-              {/* Cannonade (boon) — a streak badge on the hull that brightens
-                  with each consecutive crit (ember orange, gold at max). No hull
-                  halo: a radial glow read as a "shield", which this isn't — the
-                  labelled badge carries it cleanly on its own. */}
-              {cannonadeStacks > 0 && (() => {
-                const maxStk = tide.critStreakMaxStacks || 5
-                const maxed = cannonadeStacks >= maxStk
-                const col = maxed ? '251,191,36' : '251,146,60'
-                return (
-                  <motion.div key={`cn-${cannonadeStacks}`} aria-hidden
-                    initial={{ scale: 1.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 520, damping: 20 }}
-                    className="font-karla font-800 uppercase tracking-wide"
-                    style={{
-                      position: 'absolute', top: '-8%', right: '-3%', zIndex: 5, pointerEvents: 'none',
-                      padding: '2px 7px', borderRadius: 999, fontSize: '0.6rem', lineHeight: 1,
-                      color: '#1a1204', background: `rgba(${col},0.97)`, border: '1px solid rgba(255,255,255,0.55)',
-                      boxShadow: `0 0 12px rgba(${col},0.85)`, whiteSpace: 'nowrap',
-                    }}>
-                    {maxed ? `${streakLabel} Max` : `${streakLabel} ×${cannonadeStacks}`}
-                    {!!critStreakCfg?.pierceAt && cannonadeStacks >= critStreakCfg.pierceAt && (
-                      <span style={{ marginLeft: 4, opacity: 0.9 }}>· PIERCING</span>
-                    )}
-                  </motion.div>
-                )
-              })()}
+              {/* The streak (Cannonade, Perfect Streak) is a MARK on your
+                  portrait now, with every other boost: see playerChips. */}
               {/* Impact spray when the enemy's shot lands on the player hull */}
               {playerImpact && (
                 <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
@@ -9397,36 +9399,7 @@ export default function RaidCombat({
           </motion.div>
           {/* Railgun — a hyper beam erupting across the stage from the player's
               guns into the enemy hull. Stage-level so it isn't clipped. */}
-          {/* Davy's Heavy Cannon heat — a per-fight damage stack badge that runs
-              hotter (orange → red) as the ramp builds, and re-pops each turn it
-              climbs. Only shows once the ramp has actually accrued (turn 2+). */}
-          {rampBonusPct > 0 && (() => {
-            const heatColor = rampBonusPct >= 40 ? '#ef4444' : rampBonusPct >= 20 ? '#f97316' : '#fb923c'
-            const heatGlow = Math.min(22, 7 + rampBonusPct * 0.32)
-            return (
-              <motion.div
-                key={rampBonusPct}
-                aria-hidden
-                initial={{ scale: 0.85, opacity: 0 }}
-                animate={{ scale: [0.85, 1.06, 1], opacity: 0.82 }}
-                transition={{ duration: 0.34, ease: 'easeOut' }}
-                style={{
-                  position: 'absolute', bottom: '2%', left: '3%', zIndex: 6, pointerEvents: 'none',
-                  display: 'inline-flex', alignItems: 'center', gap: 2,
-                  padding: '1px 5px 1px 4px', borderRadius: 999,
-                  background: 'rgba(6,10,16,0.55)',
-                  border: `1px solid ${heatColor}66`,
-                  boxShadow: `0 0 ${heatGlow}px ${heatColor}33`,
-                  opacity: 0.82,
-                }}
-              >
-                <svg width="9" height="10" viewBox="0 0 24 24" fill={heatColor} stroke="none">
-                  <path d="M12 2c1 3-1.5 4.5-1.5 7A4.5 4.5 0 0 0 17 13c.4 3-1.6 8-5 8a5 5 0 0 1-5-5c0-3.6 3.5-5 5-13z" />
-                </svg>
-                <span className="font-cinzel font-800" style={{ fontSize: '0.55rem', color: heatColor, lineHeight: 1 }}>+{rampBonusPct}%</span>
-              </motion.div>
-            )
-          })()}
+          {/* Davy's cannon heat is a MARK on your portrait now: see playerChips. */}
         </motion.div>
 
         {/* Railgun — a hyper beam from the player's bow into the enemy hull.
@@ -9525,9 +9498,8 @@ export default function RaidCombat({
                 perfectBurstKey={dialBurstKey}
                 streakFire={cannonadeStacks >= 3 ? 2 : cannonadeStacks === 2 ? 1 : 0}
                 streakCount={cannonadeStacks}
-                streakLabel={streakLabel}
-                streakPct={Math.round(tide.critStreakPerStack * cannonadeStacks * 100)}
-                piercing={!!critStreakCfg?.pierceAt && cannonadeStacks >= critStreakCfg.pierceAt}
+                aimFxRef={aimFxRef}
+                aimFxRead={aimFxRead}
               />
             </div>
           </div>,
@@ -11919,6 +11891,9 @@ function StatusGlyph({ icon, size = 10 }: { icon: string; size?: number }) {
     case 'aegis':   return P('M4 6.5h16v11H4z', <path d="M4 12h16M9 6.5V12M15 12v5.5" />)                // brick wall
     case 'ward':    return P('M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z', <path d="M12 8v6M9.2 10.4h5.6" />) // shield + cross (Laz's ward)
     case 'aim':     return P('M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4', <circle cx="12" cy="12" r="4.5" />) // crosshair (aim afflictions)
+    case 'streak':  return P('M13 2.5L5 13.5h6l-1 8 8-11h-6l1-8z')                                   // bolt (crit streak)
+    case 'pierce':  return P('M3 12h15M14 7l5 5-5 5', <path d="M9 5v14" />)                            // arrow through a plate
+    case 'heat':    return P('M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z', <path d="M12 11v5" />)   // thermometer (cannon heat)
     case 'brace':   return P('M9 5H5V9M15 5H19V9M19 15V19H15M9 19H5V15')                                  // iron-clamp corner brackets (Anchor brace — a damage cut, not a shield)
     default:        return P('M12 5v14M5 12h14')
   }
@@ -11968,13 +11943,16 @@ function ConditionsSection({ conditions }: { conditions: ConditionItem[] }) {
 // and red/purple-family for debuffs. Renders under each side's HP bar. The
 // bespoke effects (burn / freeze / snare) pass in as extra chips so the player
 // reads ONE coherent status row, even though their mechanics stay bespoke.
-interface BespokeChip { key: string; color: string; turns?: number; title: string; tone?: 'buff' | 'debuff' }
+interface BespokeChip { key: string; color: string; turns?: number; title: string; tone?: 'buff' | 'debuff'
+  /** Text for the corner badge instead of a turn count: a streak's count, a
+   *  ramp's percent. It re-pops the mark whenever it changes. */
+  badge?: string }
 function StatusBadgesRow({ statuses, bespoke = [] }: { statuses: ActiveStatus[]; bespoke?: BespokeChip[] }) {
   if (statuses.length === 0 && bespoke.length === 0) return null
   // Icons are drawn SVGs keyed by the status id / bespoke key — never text
   // glyphs (several took emoji presentation on iOS; see StatusGlyph).
-  const chip = (key: string, color: string, tone: 'buff' | 'debuff', turns: number | undefined, title: string) => (
-    <motion.span key={key} title={title}
+  const chip = (key: string, color: string, tone: 'buff' | 'debuff', turns: number | string | undefined, title: string) => (
+    <motion.span key={typeof turns === 'string' ? `${key}-${turns}` : key} title={title}
       initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 520, damping: 22 }}
       className="font-karla font-800"
@@ -11993,7 +11971,7 @@ function StatusBadgesRow({ statuses, bespoke = [] }: { statuses: ActiveStatus[];
         const def = STATUS_DEFS[s.id]
         return chip(s.id, def.color, def.tone, s.turnsLeft, `${def.name}: ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})`)
       })}
-      {bespoke.map(b => chip(b.key, b.color, b.tone ?? 'debuff', b.turns, b.title))}
+      {bespoke.map(b => chip(b.key, b.color, b.tone ?? 'debuff', b.badge ?? b.turns, b.title))}
     </div>
   )
 }
@@ -12030,12 +12008,12 @@ function StatusRing({ statuses, bespoke = [], r, start, step, size }: {
   /** The mark's diameter in px. */
   size: number
 }) {
-  const marks: { key: string; color: string; turns?: number; title: string }[] = [
+  const marks: { key: string; color: string; turns?: number; title: string; badge?: string }[] = [
     ...statuses.map(s => {
       const def = STATUS_DEFS[s.id]
       return { key: s.id, color: def.color, turns: s.turnsLeft, title: `${def.name}: ${def.describe(s.magnitude)} (${s.turnsLeft} turn${s.turnsLeft === 1 ? '' : 's'})` }
     }),
-    ...bespoke.map(b => ({ key: b.key, color: b.color, turns: b.turns, title: b.title })),
+    ...bespoke.map(b => ({ key: b.key, color: b.color, turns: b.turns, title: b.title, badge: b.badge })),
   ]
   if (marks.length === 0) return null
   return (
@@ -12043,7 +12021,7 @@ function StatusRing({ statuses, bespoke = [], r, start, step, size }: {
       {marks.map((m, i) => {
         const a = ((start + step * i) * Math.PI) / 180
         return (
-          <motion.span key={m.key} title={m.title}
+          <motion.span key={m.badge != null ? `${m.key}-${m.badge}` : m.key} title={m.title}
             initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 520, damping: 22 }}
             style={{
@@ -12058,7 +12036,15 @@ function StatusRing({ statuses, bespoke = [], r, start, step, size }: {
               boxShadow: `0 0 6px ${m.color}88, 0 1px 3px rgba(0,0,0,0.6)`,
             }}>
             <StatusGlyph icon={m.key} size={Math.round(size * 0.55)} />
-            {m.turns != null && (
+            {m.badge != null && (
+              <span className="font-karla font-800" style={{
+                position: 'absolute', right: -6, bottom: -5,
+                minWidth: 11, height: 11, padding: '0 2px', borderRadius: 999,
+                fontSize: '0.46rem', lineHeight: '11px', textAlign: 'center', whiteSpace: 'nowrap',
+                color: '#0a0f18', background: m.color,
+              }}>{m.badge}</span>
+            )}
+            {m.badge == null && m.turns != null && (
               <span className="font-karla font-800" style={{
                 position: 'absolute', right: -4, bottom: -4,
                 minWidth: 11, height: 11, padding: '0 2px', borderRadius: 999,
@@ -13651,13 +13637,21 @@ function buildDialZones(critW: number, hitW: number, grazeW: number): ZoneDef[] 
 
 // Steady opacity per band. Fishing dims whichever zone the needle is not in;
 // here the bands are the target itself, so they stay lit and readable.
+// THE BAR'S READING, not fishing's. The aim bar draws its target as tinted
+// glass (graze faint, hit a little more, gold the strongest) with the glow
+// laid on top by AimBarFx; the dial was solid paint, which read as a
+// different instrument (Kong: it lacks the feel of the raid fight). Now it is
+// the same: translucent bands, the gold hairline, and the FX bloom over them.
 const DIAL_ZONE_OPACITY = (z: ZoneDef) =>
-  z.type === 'perfect' ? 0.95 : z.type === 'catch' ? 0.8 : z.type === 'penalty' ? 0.45 : 0
+  z.type === 'perfect' ? 0.72 : z.type === 'catch' ? 0.42 : z.type === 'penalty' ? 0.26 : 0
 
 function DialAimInline({
-  indicatorRef, zonesGroupRef, flashRef, critW,
-  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey, streakFire, streakCount, streakLabel, streakPct, piercing,
+  indicatorRef, zonesGroupRef, flashRef, critW, aimFxRef, aimFxRead,
+  afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey, streakFire, streakCount,
 }: {
+  /** The aim bar's effects layer, laid round the ring. See AimBarFx 'dial'. */
+  aimFxRef: React.MutableRefObject<AimBarFxHandle | null>
+  aimFxRead: () => { pos: number; zone: number; critW: number; band: number }
   indicatorRef:  React.RefObject<HTMLDivElement | null>
   zonesGroupRef: React.RefObject<HTMLDivElement | null>
   flashRef:      React.RefObject<HTMLDivElement | null>
@@ -13680,17 +13674,9 @@ function DialAimInline({
   /** The dial CATCHES FIRE on a crit streak: the same halos and rings the
    *  fishing dial lights with on a perfect streak, at the same thresholds. */
   streakFire: 0 | 1 | 2
-  /** Live streak readout. The hull badge that normally carries this sits
-   *  BEHIND the dial scrim while aiming, which is the one moment the player
-   *  is actually deciding whether to protect the chain, so the dial carries
-   *  its own copy. */
+  /** For the fire behind the dial. The readout itself is the streak mark
+   *  on your portrait, the same place every boost shows. */
   streakCount: number
-  streakLabel: string
-  streakPct: number
-  /** The streak is high enough to ignore his shield. Called out separately
-   *  because it is a THRESHOLD, not a gradient: the number alone does not
-   *  tell you that you crossed it. */
-  piercing: boolean
 }) {
   const zones = useMemo(() => buildDialZones(critW, hitW, grazeW), [critW, hitW, grazeW])
   // ── THE LOCK LANDS ON THE INSTRUMENT ──────────────────────────────────
@@ -13721,29 +13707,25 @@ function DialAimInline({
 
   return (
     <div ref={popRef} style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto' }}>
-      {streakCount >= 1 && (
-        <div className="font-cinzel font-700 uppercase" style={{
-          position: 'absolute', top: -34, left: 0, right: 0, textAlign: 'center',
-          pointerEvents: 'none', letterSpacing: '0.06em', whiteSpace: 'nowrap',
-          fontSize: streakCount >= 3 ? '0.92rem' : '0.78rem',
-          color: streakCount >= 3 ? '#fbbf24' : '#fb923c',
-          textShadow: streakCount >= 3
-            ? '0 0 16px rgba(251,191,36,0.85), 0 0 34px rgba(249,115,22,0.5)'
-            : '0 0 10px rgba(251,146,60,0.7)',
-          transition: 'font-size 0.2s ease-out, color 0.2s ease-out',
-        }}>
-          {streakLabel} ×{streakCount}
-          <span style={{ opacity: 0.85, marginLeft: 8, fontSize: '0.72em' }}>+{streakPct}%</span>
-          {piercing && (
-            <div style={{
-              marginTop: 2, fontSize: '0.6rem', letterSpacing: '0.16em',
-              color: '#e9d5ff', textShadow: '0 0 12px rgba(192,132,252,0.9)',
-            }}>
-              Through the plate
-            </div>
-          )}
-        </div>
-      )}
+      {/* THE BAR'S HEADER, over the dial: what to do, and what gold means (or
+          the affliction, when there is one), in the bar's own type. */}
+      <div style={{
+        position: 'absolute', top: -24, left: 0, right: 0, display: 'flex', justifyContent: 'center',
+        gap: 10, alignItems: 'baseline', pointerEvents: 'none', whiteSpace: 'nowrap',
+      }}>
+        <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: hardenedArmed ? '#9fb2c8' : '#fbbf24', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+          {hardenedArmed ? 'Plated. Press twice' : 'Lock Your Shot'}
+        </span>
+        {afflictionLabel ? (
+          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#c084fc', textShadow: '0 0 8px rgba(192,132,252,0.5)' }}>
+            {afflictionLabel}
+          </span>
+        ) : (
+          <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#8fa6bd', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+            Gold = Crit
+          </span>
+        )}
+      </div>
       {/* THE FIRE, as the fishing dial wears it on the water: grows with the
           streak, throws a ring of sparks on every crit, and his aura breathes
           under it. He is carrying all six Ancients, so the dial is dressed as
@@ -13778,22 +13760,10 @@ function DialAimInline({
       />
 
 
-      {afflictionLabel && (
-        <div className="font-karla font-800 uppercase" style={{
-          position: 'absolute', top: -18, left: '50%', transform: 'translateX(-50%)',
-          fontSize: '0.55rem', letterSpacing: '0.14em', color: '#f0a0a0', whiteSpace: 'nowrap',
-        }}>
-          {afflictionLabel}
-        </div>
-      )}
-      {hardenedArmed && (
-        <div className="font-karla font-800 uppercase" style={{
-          position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)',
-          fontSize: '0.55rem', letterSpacing: '0.14em', color: '#9fb2c8', whiteSpace: 'nowrap',
-        }}>
-          Press twice
-        </div>
-      )}
+      {/* THE BAR'S EFFECTS, round the ring: the target's glow, the approach,
+          and the burst off every lock in the result's colour. Over the face,
+          because the face is opaque glass. */}
+      <AimBarFx active shape="dial" handleRef={aimFxRef} read={aimFxRead} />
     </div>
   )
 }

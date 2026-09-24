@@ -462,3 +462,19 @@ Kong: get it visually on par. What changed, and what not to regress:
   settle on a crit (1.09 -> 0.97), transform-only; DialFx runs in `sparks` mode (crit spark ring
   from the first crit, idle frames draw nothing). The breathing Ancient canvas aura is OFF here
   (it was the Ancient Deep's lag); the static SVG aura ring stays.
+- **Aim parity with the bar (2026-09-24).** `AimBarFx shape="dial"` lays the bar's effects round
+  the ring (target bloom along the band, hot crit core, the approach flare, the needle's light,
+  and the lock burst in the result colour, which `lockShot` now fires on the dial too). Bands use
+  the bar's translucent reading (`DIAL_ZONE_OPACITY` .72/.42/.26) with the gold hairline
+  (FishingDial, marker needle only), and the bar's "Lock Your Shot / Gold = Crit" header sits
+  over the dial. The dial's private streak text is gone.
+
+## Boosts live on the portrait ring (2026-09-24)
+
+Kong: Cannonade / Perfect Streak, and Davy's cannon heat, were three pills in three places and
+three styles. All boosts are now `boostChips` at the front of `playerChips`, drawn by
+`StatusRing` as marks like every ward and burn: `streak` (bolt, badge = stacks or MAX), `pierce`
+(when the streak goes through plate), `heat` (thermometer, badge = ramp %). `BespokeChip.badge`
+is the corner text and re-pops the mark when it changes. Add any new boost here, never as a
+free-floating pill.
+

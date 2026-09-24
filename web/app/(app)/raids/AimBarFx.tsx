@@ -98,9 +98,18 @@ function bakeSprites(): HTMLCanvasElement[] {
   return sprites
 }
 
-export default function AimBarFx({ active, read, handleRef }: {
+export default function AimBarFx({ active, read, handleRef, shape = 'bar' }: {
   /** Only while a shot is being aimed. Off, the canvas is not mounted at all. */
   active: boolean
+  /**
+   * ── AND THE DIAL ──────────────────────────────────────────────────────────
+   * Finn's fight aims on the fishing dial, and it had none of this: no glow on
+   * the target, nothing answering the approach, no sparks off the lock (Kong:
+   * it lacks the feel of the raid fight). 'dial' lays the SAME effects along
+   * the ring: the box is the dial's, 0..1 runs clockwise from 12 o'clock, and
+   * everything sits on the middle of the band's annulus.
+   */
+  shape?: 'bar' | 'dial'
   /**
    * WHERE EVERYTHING IS, read on the FX's own frame rather than pushed in as
    * props. All four numbers change every frame, and a prop that changes every
@@ -147,8 +156,7 @@ export default function AimBarFx({ active, read, handleRef }: {
         burst(pos, kind) {
           const tint = kind === 'critical' ? 1 : kind === 'hit' ? 2 : kind === 'graze' ? 3 : 4
           const n = kind === 'critical' ? 22 : kind === 'hit' ? 15 : 9
-          const x = SPILL + pos * Math.max(0, w - SPILL * 2)
-          const y = h / 2
+          const { x, y } = at(pos)
           for (let i = 0; i < n; i++) {
             const s = burst[nb]; nb = (nb + 1) % BURST_CAP
             const a = Math.random() * Math.PI * 2
@@ -158,7 +166,8 @@ export default function AimBarFx({ active, read, handleRef }: {
             const sp = 60 + Math.random() * (kind === 'critical' ? 260 : 150)
             s.x = x; s.y = y
             s.vx = Math.cos(a) * sp
-            s.vy = Math.sin(a) * sp * 0.42
+            // The dial has room all round, so its burst is round.
+            s.vy = Math.sin(a) * sp * (dial ? 1 : 0.42)
             s.age = 0
             s.life = 0.34 + Math.random() * 0.4
             s.size = (kind === 'critical' ? 13 : 9) + Math.random() * 8
@@ -167,6 +176,19 @@ export default function AimBarFx({ active, read, handleRef }: {
         },
       }
     }
+
+    // WHERE A POSITION IS ON THE CANVAS, for either instrument. The dial's
+    // geometry is FishingDial's (220 viewBox, band between radii 66 and 96).
+    const dial = shape === 'dial'
+    const at = (p: number): { x: number; y: number; tx: number; ty: number } => {
+      if (!dial) return { x: SPILL + p * Math.max(0, w - SPILL * 2), y: h / 2, tx: 1, ty: 0 }
+      const D = Math.min(w, h) - SPILL * 2
+      const R = (81 / 220) * D
+      const a = p * Math.PI * 2 - Math.PI / 2
+      return { x: w / 2 + Math.cos(a) * R, y: h / 2 + Math.sin(a) * R, tx: -Math.sin(a), ty: Math.cos(a) }
+    }
+    /** Pixels per unit of position: the bar's width, or the ring's length. */
+    const span = () => dial ? 2 * Math.PI * (81 / 220) * (Math.min(w, h) - SPILL * 2) : Math.max(0, w - SPILL * 2)
 
     let raf = 0
     let last = performance.now()
@@ -178,13 +200,58 @@ export default function AimBarFx({ active, read, handleRef }: {
       if (!w || !h) { size(); return }
 
       const { pos, zone, critW, band } = readRef.current()
-      const inner = Math.max(0, w - SPILL * 2)
-      const px = SPILL + pos * inner
-      const zx = SPILL + zone * inner
+      const inner = span()
+      const P = at(pos)
+      const Z = at(zone)
+      const px = P.x
+      const zx = Z.x
       const y = h / 2
 
       ctx.clearRect(0, 0, w, h)
       ctx.globalCompositeOperation = 'lighter'
+
+      if (dial) {
+        // THE SAME THREE THINGS, ALONG THE RING. The band's bloom is a string
+        // of soft blobs following the arc (a straight smear would cut across
+        // the face), the crit core a hotter pair at the seam, the approach a
+        // flare on the seam, and the needle's light small and faint.
+        const breathe = 0.82 + 0.18 * Math.sin(now / 520)
+        const bandPx = Math.max(14, band * inner)
+        const steps = 7
+        ctx.globalAlpha = 0.16 * breathe
+        for (let k = 0; k < steps; k++) {
+          const q = at(zone + band * ((k / (steps - 1)) * 2 - 1) * 0.85)
+          const d = Math.min(46, bandPx * 0.7)
+          ctx.drawImage(imgs[2], q.x - d / 2, q.y - d / 2, d, d)
+        }
+        const critPx = Math.max(8, critW * inner)
+        ctx.globalAlpha = 0.4 * breathe
+        const cd = Math.min(52, critPx * 3.6)
+        ctx.drawImage(imgs[1], Z.x - cd / 2, Z.y - cd / 2, cd, cd)
+        const near = Math.max(0, 1 - Math.abs(pos - zone) / Math.max(0.001, band * 2.4))
+        if (near > 0.01) {
+          ctx.globalAlpha = 0.5 * near * near
+          const r = Math.min(60, critPx * (2.4 + near * 3))
+          ctx.drawImage(imgs[1], Z.x - r, Z.y - r, r * 2, r * 2)
+        }
+        for (const s of burst) {
+          if (s.age >= s.life) continue
+          s.age += dt
+          const t = s.age / s.life
+          s.x += s.vx * dt
+          s.y += s.vy * dt
+          s.vx -= s.vx * Math.min(1, 3.4 * dt)
+          s.vy -= s.vy * Math.min(1, 3.4 * dt)
+          ctx.globalAlpha = 1 - t
+          const d = s.size * (1 + t * 0.5)
+          ctx.drawImage(imgs[s.tint], s.x - d / 2, s.y - d / 2, d, d)
+        }
+        ctx.globalAlpha = near > 0.55 ? 0.3 : 0.2
+        ctx.drawImage(imgs[near > 0.55 ? 1 : 0], P.x - 8.5, P.y - 8.5, 17, 17)
+        ctx.globalAlpha = 1
+        ctx.globalCompositeOperation = 'source-over'
+        return
+      }
 
       // ── THE TARGET, BREATHING ────────────────────────────────────────────
       //
@@ -254,7 +321,7 @@ export default function AimBarFx({ active, read, handleRef }: {
       ro.disconnect()
       if (handleRef) handleRef.current = null
     }
-  }, [active, handleRef])
+  }, [active, handleRef, shape])
 
   if (!active) return null
   return (

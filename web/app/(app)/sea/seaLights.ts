@@ -303,8 +303,11 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
       lantern.rotation = aim
       // From the bow, which is a little out from her middle along her way.
       lantern.position.set(Math.cos(aim) * lr * 0.24, Math.sin(aim) * lr * 0.24)
+      // WIDE. The first cone was a narrow torch beam (Kong: a lot wider): a
+      // lantern throws a broad fan, so the far end is nearly as wide as the
+      // beam is long.
       lantern.width = lr * 2.6
-      lantern.height = lr * 1.6
+      lantern.height = lr * 3.2
       lantern.alpha = dark * 0.5 * glow * flick
 
       // ── EVERY OTHER BOAT ── smaller, and it is the one thing out here that
