@@ -2903,15 +2903,17 @@ export default function GauntletGame(props: GauntletGameProps) {
     // another and steal the drags meant for the helm.
     const allPlaces: SlipwayPlace[] = [
       { id: 'portal', label: 'The Descent', ox: 0, oy: phone ? -0.10 : -0.16, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
-      { id: 'run', label: 'Run Upgrades', ox: -0.34, oy: 0.14, color: 0xc4a0e8 },
-      { id: 'shore', label: 'Permanent Upgrades', ox: 0.34, oy: 0.14, color: 0xf0c040 },
-      { id: 'records', label: 'The Records', ox: -0.27, oy: 0.37, color: 0x9ab8c8 },
+      // EACH GAUNTLET'S OWN LANDMARKS (phase 4): Davy's are drowned and
+      // barnacled, the Don's gilded and lamplit. public/slip-*.webp.
+      { id: 'run', label: 'Run Upgrades', ox: -0.34, oy: 0.14, color: 0xc4a0e8, art: `/slip-${isDonG ? 'don' : 'davy'}-run.webp` },
+      { id: 'shore', label: 'Permanent Upgrades', ox: 0.34, oy: 0.14, color: 0xf0c040, art: `/slip-${isDonG ? 'don' : 'davy'}-shore.webp` },
+      { id: 'records', label: 'The Records', ox: -0.27, oy: 0.37, color: 0x9ab8c8, art: `/slip-${isDonG ? 'don' : 'davy'}-records.webp` },
       // THE WAY OUT, AS A PLACE. There was no exit from this water at all:
       // you arrived by sailing into a maelstrom and the only way back was the
       // browser's own back button, which is not a thing this game asks you to
       // use anywhere else. It takes the mooring the Ledger had, because that
       // page is on its way out and the water is the lobby now.
-      { id: 'leave', label: 'The Way Home', ox: 0.27, oy: 0.37, color: 0x7fd8c8 },
+      { id: 'leave', label: 'The Way Home', ox: 0.27, oy: 0.37, color: 0x7fd8c8, art: `/slip-${isDonG ? 'don' : 'davy'}-leave.webp` },
     ]
     // What the WATER draws. A phone gets the eye and nothing else.
     const slipPlaces: SlipwayPlace[] = phone ? allPlaces.slice(0, 1) : allPlaces

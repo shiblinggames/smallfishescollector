@@ -63,6 +63,13 @@ export type SlipwayPlace = {
   /** The way down: the maelstrom is drawn here and entered rather than moored at. */
   portal?: boolean
   color: number
+  /**
+   * WHAT STANDS HERE. A painted landmark on the mooring (phase 4 of the plan:
+   * each gauntlet's hub is its own place, not the same pools of light in a
+   * different colour). Stands on the pool, rising above it; the card hangs
+   * below, so the two never meet.
+   */
+  art?: string
 }
 
 export type SlipwayTheme = {
@@ -262,6 +269,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
       type Mark = {
         p: SlipwayPlace; node: import('pixi.js').Container
         pool: import('pixi.js').Sprite; rings: import('pixi.js').Sprite[]; ph: number
+        art: import('pixi.js').Sprite | null; dish: import('pixi.js').Sprite | null
       }
       const marks: Mark[] = placesRef.current.filter(p => !p.portal).map((p, i) => {
         const node = new PIXI.Container()
@@ -274,8 +282,22 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
           r.anchor.set(0.5); r.tint = p.color; r.alpha = 0; r.blendMode = 'add'
           node.addChild(r); rings.push(r)
         }
+        // THE LANDMARK, when the place has one: a dark dish under it (light
+        // taken away says the water is deeper where it stands; see the boat's
+        // own shade below), then the painting, anchored near its foot.
+        let art: import('pixi.js').Sprite | null = null
+        let dish: import('pixi.js').Sprite | null = null
+        if (p.art) {
+          dish = new PIXI.Sprite(glowT)
+          dish.anchor.set(0.5); dish.tint = 0x3c4a56; dish.alpha = 0.55; dish.blendMode = 'multiply'
+          art = new PIXI.Sprite(PIXI.Texture.EMPTY)
+          art.anchor.set(0.5, 0.94)
+          node.addChild(dish, art)
+          const a = art
+          void texture(PIXI, p.art).then(t => { if (!dead) a.texture = t }).catch(() => {})
+        }
         world.addChild(node)
-        return { p, node, pool, rings, ph: i * 1.7 }
+        return { p, node, pool, rings, ph: i * 1.7, art, dish }
       })
 
       // ── WHAT SHE LEAVES BEHIND ──────────────────────────────────────
@@ -522,6 +544,16 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, cards
           m.pool.width = u * (0.17 + 0.02 * pulse) * (1 + 0.42 * k)
           m.pool.height = m.pool.width * 0.42
           m.pool.alpha = 0.16 + 0.42 * k + 0.05 * pulse * (0.3 + k)
+          if (m.art && m.art.texture.width > 2) {
+            // Sized to the short side like everything on this stage, and a
+            // touch bigger for the one she is at. Bobs on its own slow swell.
+            const w = u * 0.2 * (1 + 0.06 * k)
+            m.art.width = w
+            m.art.height = w * (m.art.texture.height / m.art.texture.width)
+            m.art.y = Math.sin(t * 1.1 + m.ph) * u * 0.004
+            m.art.alpha = 0.82 + 0.18 * k
+            if (m.dish) { m.dish.width = w * 1.1; m.dish.height = w * 0.34; m.dish.y = u * 0.004 }
+          }
           for (let j = 0; j < m.rings.length; j++) {
             // The ripples quicken as she comes alongside rather than stepping
             // from one rate to another.

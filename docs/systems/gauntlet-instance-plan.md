@@ -543,3 +543,16 @@ ring, four water columns); the Fence's hulk DRAWS ALONGSIDE (`alongside`: in fro
 wake, eases to a stop). Leaving the screen settles it under. Art: public/gauntlet-shrine.webp and
 gauntlet-merchant.webp (Kie, prompts/gauntlet-*.json). Screens, choices and run flow unchanged.
 The haul keeps its own chest-opening sequence (it has real chest art and an open/close beat).
+
+**Round four: each hub is its own place (phase 4, first half, 2026-09-24).** Every Slipway mooring
+carries a painted LANDMARK (`SlipwayPlace.art`), a different set per gauntlet, standing on its
+pool of light over a multiplied dark dish, bobbing slowly, a touch bigger for the one you are at;
+the card still hangs below it. public/slip-{davy,don}-{run,shore,records,leave}.webp (Kie,
+prompts/slip-*.json):
+| place | Davy (drowned, teal, barnacle) | the Don (green, black lacquer, gold) |
+|---|---|---|
+| Run Upgrades | chained sea chest glowing teal | gambling table under a striped awning |
+| Permanent Upgrades | capstan and anvil on a rock | gilded vault door on a dock |
+| The Records | standing stone of tally marks | lectern with a great open ledger |
+| The Way Home | channel buoy with a rope ladder | gilded mooring post and lamp |
+Still plan: Terms at a gibbet and Contracts at a table are in-run screens, not hub places.
