@@ -230,7 +230,7 @@ export const PLACES: Place[] = [
       // axis and a headland now, and the Mainland's narrowest bearing is its
       // south face — which is where the town was, and where check-islands
       // caught it hanging over the water.
-      { art: '/sea/mainland-town.png', x: 47, y: 75, scale: 0.71, toShore: true },
+      { art: '/sea/mainland-town.png', x: 47, y: 77, scale: 0.86, toShore: true },
     ],
   },
   {
@@ -353,7 +353,7 @@ export const PLACES: Place[] = [
       // number drew a visibly smaller building: 157px against 245. This is
       // the Charterhouse's 0.34 on a smaller isle, which reads as a building
       // of the same institution rather than a model of one.
-      { art: '/sea/posting-house-v2.webp', x: 54, y: 38, scale: 0.34 },
+      { art: '/sea/posting-house-v2.webp', x: 59, y: 40, scale: 0.42 },
     ],
   },
   {
@@ -448,7 +448,7 @@ export const PLACES: Place[] = [
     kind: 'port', minLevel: 0,
     berth: { dx: -340 * 0.85, dy: 340 * 0.6 },
     buildings: [
-      { art: '/sea/charterhouse-v2.webp', x: 54, y: 56, scale: 0.36 },
+      { art: '/sea/charterhouse-v2.webp', x: 51, y: 63, scale: 0.47 },
     ],
   },
   {
