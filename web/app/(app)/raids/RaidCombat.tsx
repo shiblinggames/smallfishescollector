@@ -1958,7 +1958,7 @@ export default function RaidCombat({
   // On the dial the ZONES are an SVG group inside DialSVG, rotated by its
   // transform ATTRIBUTE (same as the fishing drift mechanic), and the ship
   // marker orbits on its own layer at the same bearing.
-  const dialZonesRef = useRef<SVGGElement | null>(null)
+  const dialZonesRef = useRef<HTMLDivElement | null>(null)
   /**
    * ── THE NEEDLE MOVES ON A TRANSFORM, NOT ON `left` ────────────────────────
    *
@@ -2074,8 +2074,12 @@ export default function RaidCombat({
     if (onDial) {
       // Bands are built centred on 180 degrees so no arc wraps past 0/360; the
       // whole group just rotates onto the enemy's current bearing.
+      // The band is its own layer (DialSVG bandRef), turned by a CSS
+      // transform about its centre: composited, and the same property the
+      // compositor sweep animates, so the lock's write and the sweep agree.
       const deg = center * 360 - 180
-      dialZonesRef.current?.setAttribute('transform', `rotate(${deg}, ${CX}, ${CY})`)
+      const band = dialZonesRef.current
+      if (band) band.style.transform = `rotate(${deg}deg)`
       return
     }
     // Same track, same reason. The band's width is a constant now written in
@@ -3689,15 +3693,11 @@ export default function RaidCombat({
       // `edge` is read once here rather than per frame. It is the band's own
       // half-width, it comes from gear, and it cannot change inside an aiming
       // session — and a fixed-duration animation has to be able to assume that.
-      const zEl: Element | null = onDial ? dialZonesRef.current : zoneTrackRef.current
-      // The band group is SVG and rotates by its `transform` attribute
-      // (paintZone). A CSS animation outranks the attribute while it runs and
-      // hands it back when cancelled, so the lock's attribute write is what
-      // shows after. The pivot has to be the dial's centre in its own units.
-      if (onDial && zEl instanceof SVGElement) {
-        zEl.style.transformBox = 'view-box'
-        zEl.style.transformOrigin = `${CX}px ${CY}px`
-      }
+      // On the dial, the band's own layer (a div the size of the dial, so it
+      // turns about the centre). It was an SVG group with a CSS pivot, and the
+      // lock's attribute write then picked that pivot up as well: the band
+      // flew off the dial.
+      const zEl: HTMLElement | null = onDial ? dialZonesRef.current : zoneTrackRef.current
       const lo = aimHitWRef.current + aimGrazeWRef.current
       const span = Math.max(0.0001, (1 - lo) - lo)
       zoneLoRef.current = lo
@@ -13659,7 +13659,7 @@ function DialAimInline({
   afflictionLabel, hardenedArmed, hitW, grazeW, firePos, zoneCenter, snapKey, perfectBurstKey, streakFire, streakCount, streakLabel, streakPct, piercing,
 }: {
   indicatorRef:  React.RefObject<HTMLDivElement | null>
-  zonesGroupRef: React.RefObject<SVGGElement | null>
+  zonesGroupRef: React.RefObject<HTMLDivElement | null>
   flashRef:      React.RefObject<HTMLDivElement | null>
   critW: number
   afflictionLabel?: string | null
@@ -13693,10 +13693,34 @@ function DialAimInline({
   piercing: boolean
 }) {
   const zones = useMemo(() => buildDialZones(critW, hitW, grazeW), [critW, hitW, grazeW])
-  // Finn orbits at the middle of the band's radius.
+  // ── THE LOCK LANDS ON THE INSTRUMENT ──────────────────────────────────
+  // The bar answers a lock with its needle snapping tall, the bar flashing
+  // and sparks off the spot. The dial had the flash and a thin needle glow,
+  // and a crit barely read. So the whole dial takes the hit: a sharp pop on
+  // every lock and a bigger one with a settle on a crit, on the compositor
+  // (transform only), while the band and needle stay frozen where you locked.
+  const popRef = useRef<HTMLDivElement | null>(null)
+  const seenSnap = useRef(snapKey)
+  const seenBurst = useRef(perfectBurstKey)
+  useEffect(() => {
+    const el = popRef.current
+    if (!el || typeof el.animate !== 'function') return
+    if (perfectBurstKey !== seenBurst.current) {
+      seenBurst.current = perfectBurstKey
+      seenSnap.current = snapKey
+      el.animate(
+        [{ transform: 'scale(1)' }, { transform: 'scale(1.09)', offset: 0.22 }, { transform: 'scale(0.97)', offset: 0.55 }, { transform: 'scale(1)' }],
+        { duration: 420, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' })
+    } else if (snapKey !== seenSnap.current) {
+      seenSnap.current = snapKey
+      el.animate(
+        [{ transform: 'scale(1)' }, { transform: 'scale(1.04)', offset: 0.3 }, { transform: 'scale(1)' }],
+        { duration: 240, easing: 'ease-out' })
+    }
+  }, [snapKey, perfectBurstKey])
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto' }}>
+    <div ref={popRef} style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto' }}>
       {streakCount >= 1 && (
         <div className="font-cinzel font-700 uppercase" style={{
           position: 'absolute', top: -34, left: 0, right: 0, textAlign: 'center',
@@ -13724,7 +13748,11 @@ function DialAimInline({
           streak, throws a ring of sparks on every crit, and his aura breathes
           under it. He is carrying all six Ancients, so the dial is dressed as
           an Ancient's for the whole fight. */}
-      <DialFx streak={streakCount} burstKey={perfectBurstKey} ancientBoss />
+      {/* NOT the Ancient aura: it breathes on a big canvas every frame for
+          the whole fight, which is the Ancient Deep's own lag report. The
+          static aura ring on the dial carries that; this is the fire and the
+          crit sparks, and it draws nothing while neither is happening. */}
+      <DialFx streak={streakCount} burstKey={perfectBurstKey} sparks />
       {/* result flash, same element the bar uses */}
       <div ref={flashRef} aria-hidden style={{
         position: 'absolute', inset: '3.6%', borderRadius: '50%', opacity: 0,
@@ -13736,7 +13764,7 @@ function DialAimInline({
         angle={firePos * 360}
         rotation={zoneCenter * 360 - 180}
         needleRef={indicatorRef}
-        zonesGroupRef={zonesGroupRef}
+        bandRef={zonesGroupRef}
         // The needle is tinted imperatively by paintNeedleColor setting `color`
         // on the very layer this ref points at, so it never costs a re-render.
         needleColor="currentColor"

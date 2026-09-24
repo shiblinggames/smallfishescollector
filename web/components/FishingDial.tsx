@@ -92,7 +92,7 @@ export function arcPath(startDeg: number, endDeg: number): string {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 export function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, ancientBoss = false, needleRef, zonesGroupRef, needleStyle = 'hand', turnMark = false,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, ancientBoss = false, needleRef, zonesGroupRef, bandRef, needleStyle = 'hand', turnMark = false,
 }: {
   zones: ZoneDef[]
   angle: number
@@ -115,6 +115,18 @@ export function DialSVG({
    *  rotate the arcs during the drift mechanic without forcing a
    *  React re-render every frame. */
   zonesGroupRef?: React.Ref<SVGGElement>
+  /**
+   * ── THE BAND IN ITS OWN LAYER ─────────────────────────────────────────────
+   *
+   * When given, the zones are drawn in a DIV of their own over the face instead
+   * of a group inside it, and this ref is that div: rotate it with a CSS
+   * transform (its box is the dial's, so it turns about the centre). The raid
+   * dial moves its band EVERY frame, and a group inside the main SVG cannot be
+   * composited, so every frame repainted the whole instrument, glows and all:
+   * that was Finn's aim feeling laggy. Fishing, whose zones sit still, keeps
+   * the group (`zonesGroupRef`) and its per-arc opacity writes.
+   */
+  bandRef?: React.Ref<HTMLDivElement>
   /** 'hand' (default) is fishing's clock hand, drawn from the hub outward.
    *  'marker' is the RAID aim-bar's indicator: a short bar that rides inside
    *  the ring, crossing only the band it is judging against. The finale uses
@@ -174,43 +186,7 @@ export function DialSVG({
 
 
 
-  return (
-    <div style={{
-      position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
-      // NO filter here — this wrapper contains the per-frame-transformed
-      // needle, and a standing drop-shadow filter forced the browser to
-      // re-rasterize the whole filtered subtree every frame during fire
-      // streaks (worst on iOS PWA). The streak glow now lives on the two
-      // sibling halo divs below, which fade via opacity and never touch
-      // the needle's raster path.
-    }}>
-      {/* Fire glow halos — box-shadow on a transparent circle matched to
-          the dial's outer ring (r = OUTER_R+6 → 92.7% of the viewBox,
-          inset 3.6%). Shadow radii/colors mirror the old drop-shadow
-          pair per fire level; two stacked divs crossfade on level change
-          the way the old filter transition did. */}
-      <div aria-hidden style={{
-        position: 'absolute', inset: '3.6%', borderRadius: '50%', pointerEvents: 'none',
-        boxShadow: '0 0 12px rgba(251,146,60,0.6), 0 0 22px rgba(251,146,60,0.25)',
-        opacity: fireLevel === 1 ? 1 : 0,
-        transition: 'opacity 0.4s ease',
-      }} />
-      <div aria-hidden style={{
-        position: 'absolute', inset: '3.6%', borderRadius: '50%', pointerEvents: 'none',
-        boxShadow: '0 0 14px rgba(251,146,60,0.7), 0 0 32px rgba(239,68,68,0.35)',
-        opacity: fireLevel === 2 ? 1 : 0,
-        transition: 'opacity 0.4s ease',
-      }} />
-      <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
-        <defs>
-          <radialGradient id="innerGrad" cx="50%" cy="45%" r="50%">
-            <stop offset="0%"   stopColor="#1e2d3e" stopOpacity="1" />
-            <stop offset="55%"  stopColor="#0d1a26" stopOpacity="1" />
-            <stop offset="100%" stopColor="#050c14" stopOpacity="1" />
-          </radialGradient>
-        </defs>
-        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-<g ref={zonesGroupRef} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
+  const zonesArt = (<>
           {zones.map((zone, i) => (
             // data-zone-arc lets the parent's rAF tick repaint
             // fill-opacity imperatively on zone crossings (no re-render).
@@ -264,12 +240,54 @@ export function DialSVG({
             const mid = polar(OUTER_R + 14, (pz.from + pz.to) / 2)
             return <text key={i} x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={pz.color} fontSize="9" opacity="0.85">✕</text>
           })}
+</>)
+
+  return (
+    <div style={{
+      position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
+      // NO filter here — this wrapper contains the per-frame-transformed
+      // needle, and a standing drop-shadow filter forced the browser to
+      // re-rasterize the whole filtered subtree every frame during fire
+      // streaks (worst on iOS PWA). The streak glow now lives on the two
+      // sibling halo divs below, which fade via opacity and never touch
+      // the needle's raster path.
+    }}>
+      {/* Fire glow halos — box-shadow on a transparent circle matched to
+          the dial's outer ring (r = OUTER_R+6 → 92.7% of the viewBox,
+          inset 3.6%). Shadow radii/colors mirror the old drop-shadow
+          pair per fire level; two stacked divs crossfade on level change
+          the way the old filter transition did. */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: '3.6%', borderRadius: '50%', pointerEvents: 'none',
+        boxShadow: '0 0 12px rgba(251,146,60,0.6), 0 0 22px rgba(251,146,60,0.25)',
+        opacity: fireLevel === 1 ? 1 : 0,
+        transition: 'opacity 0.4s ease',
+      }} />
+      <div aria-hidden style={{
+        position: 'absolute', inset: '3.6%', borderRadius: '50%', pointerEvents: 'none',
+        boxShadow: '0 0 14px rgba(251,146,60,0.7), 0 0 32px rgba(239,68,68,0.35)',
+        opacity: fireLevel === 2 ? 1 : 0,
+        transition: 'opacity 0.4s ease',
+      }} />
+      <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
+        <defs>
+          <radialGradient id="innerGrad" cx="50%" cy="45%" r="50%">
+            <stop offset="0%"   stopColor="#1e2d3e" stopOpacity="1" />
+            <stop offset="55%"  stopColor="#0d1a26" stopOpacity="1" />
+            <stop offset="100%" stopColor="#050c14" stopOpacity="1" />
+          </radialGradient>
+        </defs>
+        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+{!bandRef && (
+        <g ref={zonesGroupRef} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
+          {zonesArt}
         </g>
+        )}
 
         {/* THE TURNAROUND. Drawn OUTSIDE the rotating zones group so it stays
             fixed on the face while the band travels past it. Both the needle
             AND the band turn back here. */}
-        {turnMark && (
+        {turnMark && !bandRef && (
           <g>
             <line x1={CX} y1={CY - OUTER_R - 7} x2={CX} y2={CY - INNER_R + 3}
               stroke="#f8fafc" strokeWidth="2" strokeOpacity="0.85" strokeLinecap="round" />
@@ -288,7 +306,7 @@ export function DialSVG({
           />
         )}
         {/* Perfect zone burst — arc flash + expanding ring on tap */}
-        {perfectBurstKey > 0 && perfectZone && (
+        {perfectBurstKey > 0 && perfectZone && !bandRef && (
           <g key={perfectBurstKey} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
             <motion.path
               d={arcPath(perfectZone.from, perfectZone.to)}
@@ -339,6 +357,36 @@ export function DialSVG({
           </>
         )}
       </svg>
+      {bandRef && (
+        <div ref={bandRef} aria-hidden style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          willChange: 'transform',
+          transform: `rotate(${rotation}deg)`,
+        }}>
+          <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
+            {zonesArt}
+            {perfectBurstKey > 0 && perfectZone && (
+              <motion.path key={perfectBurstKey}
+                d={arcPath(perfectZone.from, perfectZone.to)}
+                fill="#fde68a"
+                initial={{ fillOpacity: 0.85 }}
+                animate={{ fillOpacity: 0 }}
+                transition={{ duration: 0.38, ease: 'easeOut' }}
+              />
+            )}
+          </svg>
+        </div>
+      )}
+      {bandRef && turnMark && (
+        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
+            <line x1={CX} y1={CY - OUTER_R - 7} x2={CX} y2={CY - INNER_R + 3}
+              stroke="#f8fafc" strokeWidth="2" strokeOpacity="0.85" strokeLinecap="round" />
+            <line x1={CX} y1={CY - OUTER_R - 7} x2={CX} y2={CY - INNER_R + 3}
+              stroke="#f8fafc" strokeWidth="6" strokeOpacity="0.18" strokeLinecap="round" />
+          </svg>
+        </div>
+      )}
       {/* Needle overlay — its own tiny composited layer ABOVE the dial SVG.
           The parent spins this div with a compositor-thread WAAPI rotation
           (see startNeedleSpin); React's inline `transform` here only matters

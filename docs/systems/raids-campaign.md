@@ -447,12 +447,18 @@ Kong: get it visually on par. What changed, and what not to regress:
 - **No scrim.** The dial overlay laid a ~0.88 black lid over the top 68% of the screen every
   shot. Now only a soft radial shade just past the rim (never reaching the action row).
 - **The fishing dial's dress.** `DialFx` (2D canvas, safe over the chart) behind the dial:
-  streak fire, crit spark ring, and the Ancient aura (`ancientBoss`, on DialSVG too) for the
-  whole fight, since he carries all six.
+  streak fire and crit spark ring; the static Ancient aura ring on DialSVG.
 - **Gear on the water.** `RaidSheet` never passed `dialAim`, so from the chart the rod/hook/reel
   did nothing to the dial. Fixed.
 - **The dial runs on the compositor** like the bar and the fishing needle (`compositor =
-  !squallActive`): the needle layer is a WAAPI rotate 0 -> 360 -> 0deg, the band group a rotate
-  about (CX, CY) with `transform-box: view-box`. Same triangle wave and clock as the bar, so
-  `needleAt`/`zoneAt` and the lock's pause-read-commit-cancel are unchanged; the lock writes the
-  band's `transform` ATTRIBUTE, which shows once the CSS animation is cancelled.
+  !squallActive`): the needle layer is a WAAPI rotate 0 -> 360 -> 0deg, and so is the BAND, which
+  lives in its OWN div layer (`DialSVG bandRef`; fishing keeps the in-SVG `zonesGroupRef`). Same
+  triangle wave and clock as the bar, so `needleAt`/`zoneAt` and the lock are unchanged.
+  Two things that went wrong first, do not regress: (1) the band as an SVG `<g>` inside the dial
+  can never be composited, so moving it repainted the whole instrument every frame (Finn's aim
+  "laggy"); (2) a CSS pivot on that group plus the lock's `rotate(deg, CX, CY)` ATTRIBUTE applied
+  the centre twice once the sweep was cancelled, and the band flew off the dial on lock.
+- **The lock lands:** `DialAimInline` pops the whole dial on every lock (1.04) and harder with a
+  settle on a crit (1.09 -> 0.97), transform-only; DialFx runs in `sparks` mode (crit spark ring
+  from the first crit, idle frames draw nothing). The breathing Ancient canvas aura is OFF here
+  (it was the Ancient Deep's lag); the static SVG aura ring stays.

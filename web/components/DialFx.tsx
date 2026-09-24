@@ -146,7 +146,7 @@ type Bit = {
 
 const blank = (): Bit => ({ x: 0, y: 0, vx: 0, vy: 0, age: 1, life: 1, size: 0, heat: 0, spin: 0 })
 
-export default function DialFx({ streak, burstKey, ancientBoss = false }: {
+export default function DialFx({ streak, burstKey, ancientBoss = false, sparks = false }: {
   /** The live perfect streak. Under 2 is no fire; it builds from there and has
    *  no ceiling written into it, only the diminishing returns of `intensity`. */
   streak: number
@@ -155,12 +155,16 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
   burstKey: number
   /** One of the six Ancient trophy fights. */
   ancientBoss?: boolean
+  /** Keep the canvas up for the crit sparks even with no fire burning, so
+   *  the first perfect of a run bursts like every other. Idle frames draw
+   *  nothing (see `busyUntil`). The raid dial uses this. */
+  sparks?: boolean
 }) {
   const holder = useRef<HTMLDivElement | null>(null)
   const live = useRef({ streak, burstKey, ancientBoss })
   live.current = { streak, burstKey, ancientBoss }
 
-  const wanted = streak >= 2 || ancientBoss
+  const wanted = streak >= 2 || ancientBoss || sparks
 
   useEffect(() => {
     if (!wanted) return
@@ -253,6 +257,10 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
     let clock = 0
     let last = performance.now()
     let raf = 0
+    /** Until when something may still be on the canvas. Past it, with no fire
+     *  and no aura, a frame is one comparison and nothing drawn. */
+    let busyUntil = 0
+    let cleared = false
 
     const spawnEmber = (i: number, burst: boolean, cx: number, cy: number, r: number) => {
       const e = takeEmber()
@@ -332,6 +340,13 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
       const dial = Math.min(w, h) / (1 + 2 * SPILL)
       const r = dial * RING
 
+      const bursting = live.current.burstKey !== seenBurst
+      if (i > 0 || live.current.ancientBoss || bursting) busyUntil = clock + (i > 1.15 ? 3.2 : 1)
+      if (clock > busyUntil) {
+        if (!cleared) { ctx.clearRect(0, 0, w, h); cleared = true }
+        return
+      }
+      cleared = false
       ctx.clearRect(0, 0, w, h)
 
       // ── THE PERFECT ── a hard ring of sparks, on the frame the dial's own
