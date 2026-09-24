@@ -470,7 +470,9 @@ const HouseCard = memo(function HouseCard({ home, coin, busy, guest, onBuy }: {
           One picture, at the plate's own aspect, contained. What you would get
           instead belongs in the confirm step, where you are actually deciding —
           not shrunk to a chip beside the thing you already have. */}
-      <Plate art={now.art} />
+      {/* THE HOUSE AS IT STANDS ON THE SEA (seaArt), not the retired whole-island
+          plate (Kong: Outside still showed the old homes). */}
+      <Plate art={now.seaArt ?? now.art} />
 
       <p className="font-cinzel font-700" style={{
         fontSize: '1.05rem', color: '#f2ead8', margin: '0.6rem 0 0',
@@ -725,7 +727,7 @@ function ConfirmBuy({ confirm, home, coin, onCancel, onYes, busy }: {
 
         {/* THE THING ITSELF. You are about to spend six or seven figures on how
             somewhere looks, so you get to look at it first. */}
-        {build && <Plate art={build.art} />}
+        {build && <Plate art={build.seaArt ?? build.art} />}
 
         <p className="font-karla" style={{
           fontSize: '0.88rem', lineHeight: 1.5, color: 'rgba(212,226,236,0.8)',

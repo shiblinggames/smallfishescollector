@@ -74,12 +74,13 @@ function ray(a: number, r0: number, r1: number, seed: number): { x: number; y: n
  * Abyss 13,450. Neighbouring rings run opposite ways, so a captain working
  * across the sea can pick the ring that is going their way.
  */
+// Widened about a fifth on 2026-09-24 (Kong: slightly wider).
 export const CURRENTS: CurrentLane[] = [
-  { id: 'ring-open', pts: arc(5300, 0.35, 2.8, 1.1), half: 300 },
-  { id: 'ring-deep', pts: arc(8900, 2.8, 0.35, 2.7), half: 320 },
-  { id: 'ring-abyss', pts: arc(13400, 0.4, 2.75, 4.2), half: 340 },
-  { id: 'outbound', pts: ray(1.05, 3200, 15500, 0.6), half: 260 },
-  { id: 'inbound', pts: ray(2.09, 15500, 3200, 3.3), half: 260 },
+  { id: 'ring-open', pts: arc(5300, 0.35, 2.8, 1.1), half: 360 },
+  { id: 'ring-deep', pts: arc(8900, 2.8, 0.35, 2.7), half: 385 },
+  { id: 'ring-abyss', pts: arc(13400, 0.4, 2.75, 4.2), half: 410 },
+  { id: 'outbound', pts: ray(1.05, 3200, 15500, 0.6), half: 310 },
+  { id: 'inbound', pts: ray(2.09, 15500, 3200, 3.3), half: 310 },
 ]
 
 /** How hard a current carries you at its centre, as a share of the base

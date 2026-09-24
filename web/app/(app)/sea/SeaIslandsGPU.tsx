@@ -733,7 +733,7 @@ export default function SeaIslandsGPU({
       // top tier, drawn here under everything that stands on the water. She
       // sails into it because it is in the water and she is on it.
       const wargateWell: PortalWell = makePortalWell(PIXI, {
-        x: WARGATE.x, y: WARGATE.y, r: WARGATE_REACH, accent: 0xf0c040, tier: 5,
+        x: WARGATE.x, y: WARGATE.y, r: WARGATE_REACH, accent: 0xf0c040, tier: 5, art: 'wargate',
       })
       world.addChild(wargateWell.view)
 

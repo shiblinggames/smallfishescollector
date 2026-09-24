@@ -168,6 +168,10 @@ export type PortalWellSpec = {
    * board says what it wants.
    */
   locked?: boolean
+  /** Which painted ring stands round the well. The way home (and every home
+   *  well by a beaten boss) is a ring of old standing stones; the Wargate is
+   *  a ring of tarred stakes, chains, braziers and war banners. */
+  art?: 'portal' | 'wargate'
 }
 
 export type PortalWell = {
@@ -212,6 +216,38 @@ export function makePortalWell(
    * means two containers; there is no way to have one child of an added layer
    * multiply.
    */
+  // ── ITS OWN PAINTING (Kong, 2026-09-24: they should have their own art) ──
+  // A ring of scenery painted from above at the sea's own angle, the middle
+  // left empty so the well below still does the work. Painted with the near
+  // side larger, so it is counter-squashed to show as painted. Under the
+  // well's darkening and light, so the water inside and around it moves.
+  const plate: Sprite = new PIXI.Sprite(PIXI.Texture.EMPTY)
+  plate.anchor.set(0.5)
+  plate.visible = false
+  view.addChild(plate)
+  const placePlate = () => {
+    const tex = plate.texture
+    if (!tex || tex.width < 4) return
+    const w = spec.r * (spec.art === 'wargate' ? 2.75 : 2.6)
+    plate.width = w
+    plate.height = (w * tex.height) / tex.width / GROUND
+    // Centred where the rim's own perspective puts it (see persp below).
+    plate.position.set(0, spec.r * 0.17)
+    plate.visible = true
+  }
+  let plateArt = ''
+  const loadPlate = () => {
+    const url = spec.art === 'wargate' ? '/sea/wargate-ring.webp' : '/sea/portal-ring.webp'
+    if (url === plateArt) { placePlate(); return }
+    plateArt = url
+    void PIXI.Assets.load<Texture>(url).then(tex => {
+      if (view.destroyed || plateArt !== url) return
+      plate.texture = tex
+      placePlate()
+    }).catch(() => {})
+  }
+  loadPlate()
+
   const dark: Container = new PIXI.Container()
   dark.blendMode = 'multiply'
   view.addChild(dark)
@@ -353,6 +389,26 @@ export function makePortalWell(
     )
   }
 
+  /**
+   * ── THE 2.5D RULE ──────────────────────────────────────────────────────
+   * The same rule the gauntlet whirlpools follow: a ring lying in the water,
+   * seen from above and to the south, reaches further on its near side than
+   * its far one. So every ring here is pushed south of centre and squashed a
+   * little, and the bigger the ring the more: the core barely moves, the wide
+   * shoulder the most. `d` is the ring's diameter in the well's units.
+   */
+  const persp = (sp: Sprite, d: number) => {
+    const k = Math.max(0, Math.min(1, d / (spec.r * 3.3)))
+    sp.width = d
+    sp.height = d * (0.94 - 0.14 * k)
+    sp.y = (d / 2) * (0.06 + 0.16 * k)
+  }
+  /** Where a point at radius `rr` and angle `a` lies on those rings. */
+  const perspY = (a: number, rr: number) => {
+    const k = Math.max(0, Math.min(1, (rr * 2) / (spec.r * 3.3)))
+    return Math.sin(a) * rr * (0.94 - 0.14 * k) + rr * (0.06 + 0.16 * k)
+  }
+
   return {
     view,
 
@@ -368,6 +424,7 @@ export function makePortalWell(
     setSpec(next) {
       spec = next
       view.position.set(spec.x, spec.y)
+      loadPlate()
     },
 
     advance(t, dt, camX, camY, halfW, halfH) {
@@ -382,6 +439,10 @@ export function makePortalWell(
       on += (want - on) * Math.min(1, d * (want > on ? 7 : 3))
 
       const dead = spec.locked === true
+      // The painting takes the night like everything that stands on the
+      // water, and an asleep well's ring is dimmer.
+      plate.tint = shade(0xffffff)
+      plate.alpha = dead ? 0.7 : 1
 
       // ── THE WELL ──
       // Breathing slowly, for the reason the berth's pool breathes: a constant
@@ -389,8 +450,7 @@ export function makePortalWell(
       // lamplight on chop, it is something the sea is doing.
       const breath = 0.5 + 0.5 * Math.sin(t * 0.38)
       const size = spec.r * (1.86 + on * 0.1) * (0.985 + breath * 0.015)
-      wellS.width = size
-      wellS.height = size
+      persp(wellS, size)
       wellS.tint = wellTint()
       // Asleep it is a stain on the water rather than a depth in it. Not
       // hidden: half-there is what makes it a question.
@@ -401,8 +461,7 @@ export function makePortalWell(
 
       // The shoulder breathes with the well and reaches much further out.
       const hazeSize = spec.r * (3.3 + on * 0.25) * (0.99 + breath * 0.01)
-      hazeS.width = hazeSize
-      hazeS.height = hazeSize
+      persp(hazeS, hazeSize)
       hazeS.tint = wellTint()
       hazeS.alpha = (dead ? 0.1 : 0.2 + on * 0.08)
 
@@ -413,8 +472,7 @@ export function makePortalWell(
       rimS.alpha = dead ? 0.09 : 0.16 + on * 0.30
       rimS.tint = shade(spec.accent)
       const tighten = 2.1 - on * 0.06
-      rimS.width = spec.r * tighten
-      rimS.height = spec.r * tighten
+      persp(rimS, spec.r * tighten)
 
       // ── THE DRAW ──
       // Inward, not around. Each mote runs the rim to the centre and restarts,
@@ -431,7 +489,7 @@ export function makePortalWell(
         // A slight curl, so the fall spirals rather than spoking straight in.
         const a = lane[i] + p * 0.9
         const s = motes[i]
-        s.position.set(Math.cos(a) * rr, Math.sin(a) * rr)
+        s.position.set(Math.cos(a) * rr, perspY(a, rr))
         // Small and getting smaller. Nothing arrives.
         const k = Math.max(6, spec.r * 0.055) * (1 - p * 0.75)
         s.width = s.height = k
@@ -453,8 +511,7 @@ export function makePortalWell(
         ripPhase[i] = (ripPhase[i] + d * (0.16 + spec.tier * 0.014)) % 1
         const q = ripPhase[i]
         const rr = spec.r * (1.9 - q * 1.55)
-        s.width = rr
-        s.height = rr
+        persp(s, rr)
         s.alpha = (0.07 + on * 0.07) * Math.sin(q * Math.PI)
         s.tint = shade(spec.accent)
       }
@@ -471,8 +528,7 @@ export function makePortalWell(
         // foam whatever water it comes off.
         lipS.tint = shade(mixToWhite(spec.accent, 0.62))
         const lw = spec.r * (2.0 + Math.sin(t * 0.9) * 0.012)
-        lipS.width = lw
-        lipS.height = lw
+        persp(lipS, lw)
       }
 
       // ── TIER 5: THE LIGHT DOWN THERE ──
@@ -483,8 +539,7 @@ export function makePortalWell(
       if (deep) {
         const pulse = 0.55 + 0.3 * Math.sin(t * 0.72) + 0.15 * Math.sin(t * 1.31)
         const cw = spec.r * (0.5 + pulse * 0.16)
-        coreS.width = cw
-        coreS.height = cw
+        persp(coreS, cw)
         coreS.alpha = (0.16 + on * 0.2) * pulse
         coreS.tint = shade(mixToWhite(spec.accent, 0.3))
       }
@@ -507,7 +562,7 @@ export function makePortalWell(
         // pouring inward.
         const rr = spec.r * (1.0 - q * 0.22)
         const a = sprayLane[i] + q * 0.35
-        s.position.set(Math.cos(a) * rr, Math.sin(a) * rr * GROUND - lift)
+        s.position.set(Math.cos(a) * rr, perspY(a, rr) * GROUND - lift)
         const k = Math.max(4, spec.r * 0.032) * (1 - q * 0.4)
         s.width = s.height = k
         // Out at both ends, so nothing pops into being at the lip or lands hard.

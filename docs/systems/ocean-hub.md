@@ -3615,3 +3615,18 @@ has been to the stop (`campRoad`); 1,200px further out than that and the road is
 comes back for a new stop, when the campaign pennant is opened, and on the next gate crossing. A
 tour's goal and a road somebody asked for (`wayGoal`) are not affected.
 
+## 2026-09-24: kelp in 2.5D, wider currents, painted wells
+
+- **Kelp** (`seaFlowGfx` BED_LAYERS): Kong: too aggressive, then "it looks flat". The flat top-down
+  canopy mats and the surface sheen are gone. A bed is a very soft faint murk plus 4-6 standing
+  clumps scattered over an ellipse, drawn far to near: the southern (near) clumps bigger and
+  shallower (`depth` 0.94 far to 0.985 near), the northern ones smaller and deeper, so they slide
+  less as you sail over. Tints lifted toward the water, alphas low.
+- **Currents** widened about a fifth (`half` 360/385/410 on the rings, 310 on the rays).
+- **The wells** (`seaPortalWell`: the portal, the Wargate, the home wells) follow the 2.5D rule
+  (`persp`: every ring pushed south of centre and squashed, more the bigger it is) and each wears a
+  painted ring round it (`spec.art`): standing stones (`/sea/portal-ring.webp`) for the portal and
+  the home wells, tarred stakes, chains, braziers and war banners (`/sea/wargate-ring.webp`) for the
+  Wargate. The rings draw under the boats with the rest of the well.
+- **The Homestead's Outside** plate shows the house's `seaArt`, not the retired whole-island `art`.
+

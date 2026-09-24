@@ -246,11 +246,20 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
   // ── THE BEDS ── built when the two paintings have landed, in one
   // container each per layer so every bed's murk is under every bed's stalks.
   type BedLayer = { tex: 'deep' | 'mat'; blur: number; blend: 'multiply' | 'add'; tint: number; alpha: number; depth: number; sway: number }
+  // FAINTER AND SOFTER (Kong, 2026-09-24: still giant scary masses; it should
+  // be faint and hidden underwater). Tints lifted toward the water, alphas
+  // roughly halved, more blur on every layer and the surface sheen nearly
+  // gone: a shadow of weed under the surface rather than a thing on it.
+  //
+  // ── AND 2.5D, NOT A DECAL (Kong: it looks flat, that is why it does not
+  // fit). The flat top-down canopy mats are gone. A bed is a very soft murk
+  // lying on the bottom, and a scatter of standing clumps through it: the
+  // near (south) ones bigger, lower on the screen and nearer the surface, the
+  // far ones smaller and deeper, so they slide less as you sail over, which
+  // is what puts them under water rather than on it.
   const BED_LAYERS: BedLayer[] = [
-    { tex: 'mat', blur: 9, blend: 'multiply', tint: 0x6f8f7a, alpha: 0.55, depth: 0.93, sway: 0 },
-    { tex: 'deep', blur: 3, blend: 'multiply', tint: 0x93a784, alpha: 0.6, depth: 0.962, sway: 0.05 },
-    { tex: 'mat', blur: 1.2, blend: 'multiply', tint: 0xb4c29a, alpha: 0.42, depth: 0.988, sway: 0.035 },
-    { tex: 'mat', blur: 0, blend: 'add', tint: 0x3a3214, alpha: 0.5, depth: 1, sway: 0.035 },
+    { tex: 'mat', blur: 16, blend: 'multiply', tint: 0xa9bdad, alpha: 0.22, depth: 0.92, sway: 0 },
+    { tex: 'deep', blur: 4, blend: 'multiply', tint: 0xadc0a8, alpha: 0.34, depth: 0.96, sway: 0.05 },
   ]
   const holders = BED_LAYERS.map(() => { const c: Container = new PIXI.Container(); view.addChild(c); return c })
   const bits: { sp: Sprite; x: number; y: number; sx: number; sy: number; depth: number; sway: number; phase: number }[] = []
@@ -282,7 +291,7 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
       const rnd = () => ((r = (r * 1103515245 + 12345) >>> 0) / 4294967296)
       BED_LAYERS.forEach((l, li) => {
         const b = baked[li]
-        const place = (x: number, y: number, w: number, anchorY: number) => {
+        const place = (x: number, y: number, w: number, anchorY: number, depthOf = l.depth) => {
           const sp: Sprite = new PIXI.Sprite(b.tex)
           // The anchor is on the PAINTING, not the padded canvas round it.
           sp.anchor.set(0.5, (b.pad + anchorY * b.h) / (b.h + b.pad * 2))
@@ -294,18 +303,31 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
           const sx = (w / b.w) * flip
           const sy = ((w * b.h) / b.w / GROUND) / b.h
           holders[li].addChild(sp)
-          bits.push({ sp, x, y, sx, sy, depth: l.depth, sway: l.sway, phase: k.seed * 0.9 + li })
+          bits.push({ sp, x, y, sx, sy, depth: depthOf, sway: l.sway, phase: k.seed * 0.9 + li + x * 0.001 })
         }
         if (l.tex === 'deep') {
-          // Rooted a little below the bed's middle, rising up the screen.
-          const n = 2 + (k.seed % 2)
+          // CLUMPS THROUGH THE BED, far to near. Spread over an ellipse (the
+          // bed seen from above and to the south), then drawn north first so
+          // the near ones overlap the far. `s` is how far south a clump is,
+          // 0 at the far edge and 1 at the near: it decides the size (the 2.5D
+          // rule, near reaches further) and the depth (near is shallower).
+          const n = 4 + (k.seed % 3)
+          const spots: { x: number; y: number; s: number }[] = []
           for (let c = 0; c < n; c++) {
-            place(k.x + (c - (n - 1) / 2) * k.r * 0.55 + (rnd() - 0.5) * k.r * 0.2,
-              k.y + k.r * (0.18 + rnd() * 0.22), k.r * (0.9 + rnd() * 0.3), 0.92)
+            const a = rnd() * Math.PI * 2, rr = Math.sqrt(rnd()) * k.r * 0.85
+            const dy = Math.sin(a) * rr * 0.62
+            spots.push({ x: k.x + Math.cos(a) * rr, y: k.y + dy, s: (dy / (k.r * 0.62) + 1) / 2 })
+          }
+          spots.sort((p, q) => p.y - q.y)
+          for (const sp of spots) {
+            place(sp.x, sp.y, k.r * (0.42 + 0.42 * sp.s) * (0.85 + rnd() * 0.3), 0.92, 0.94 + 0.045 * sp.s)
           }
         } else {
           // Sized to the water that actually holds you (kelpAt's r), not past it.
-          place(k.x, k.y, k.r * (li === 0 ? 2.1 : li === 2 ? 1.8 : 1.5), 0.5)
+          // The murk: one soft shadow of the whole bed, a little south of
+          // centre so it sits under the near clumps, fading out inside the
+          // water that actually holds you.
+          place(k.x, k.y + k.r * 0.08, k.r * 1.6, 0.5)
         }
       })
     }
