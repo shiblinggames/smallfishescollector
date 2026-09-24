@@ -3420,8 +3420,10 @@ a halo, stuck out and was the wrong shape, "shouldn't it show a reflection like 
 
 ## Currents, kelp and full sail (2026-09-23)
 
-Kong: little things that speed you up or slow you down. Fishing side only; off while the HUD is
-down (rod out, fight, arriving); none of it pays anything.
+Kong: little things that speed you up or slow you down. Off while the HUD is down (rod out, fight,
+arriving); none of it pays anything. CURRENTS and KELP are fishing side only; FULL SAIL (with its
+wind rush and chip) runs on BOTH sides since 2026-09-24: the expedition straits are long straight
+runs, but a lane drifting a boat toward an authored encounter would fight that layout.
 - CURRENTS (lib/seaFlow `CURRENTS`, `currentAt`): ring lanes round Open Waters (r 5300), the Deep
   (8900, opposite way) and the Abyss (13400), plus an outbound radial at ~60deg and an inbound at
   ~120deg. They push the hull along the lane at CURRENT_PUSH (0.55 x base speed) at the centre,

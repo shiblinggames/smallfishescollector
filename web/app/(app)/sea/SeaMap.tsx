@@ -8402,14 +8402,22 @@ export default function SeaMap({
 
       // ── THE CURRENTS, THE KELP AND FULL SAIL ─────────────────────────
       //
-      // Kong: little things that speed you up or slow you down. The fishing
-      // sea only, and never while the HUD is down (the rod is out, a fight,
-      // arriving): a current that dragged you off your fishing spot would be
-      // a punishment, not a feature.
-      if (!hushRef.current && !sideRef.current && !fightOnRef.current) {
+      // Kong: little things that speed you up or slow you down. Never while
+      // the HUD is down (the rod is out, a fight, arriving): a current that
+      // dragged you off your fishing spot would be a punishment, not a feature.
+      //
+      // FULL SAIL ON BOTH SIDES, THE WATER ON ONE (Kong, 2026-09-24). The
+      // expedition side is mostly long straight straits, which is exactly what
+      // full sail rewards, so it runs there too. The currents and the kelp do
+      // not: that water is an authored layout of bays and fight stations, and
+      // a lane drifting a boat at rest toward an encounter would fight it.
+      if (!hushRef.current && !fightOnRef.current) {
+        const fishingSea = !sideRef.current
         // A CURRENT carries the hull along it, like a maelstrom's pull does:
         // riding it adds to your way, sailing against it takes from it.
-        const cur = currentAt(pos.current.x, pos.current.y, laneId)
+        const cur = fishingSea
+          ? currentAt(pos.current.x, pos.current.y, laneId)
+          : { ux: 0, uy: 0, k: 0, id: null }
         laneId = cur.id
         if (cur.k > 0) {
           const push = CURRENT_PUSH * SPEED * cur.k * dt
@@ -8445,7 +8453,7 @@ export default function SeaMap({
           way = dot > 0.5 ? 'with' : dot < -0.5 ? 'against' : 'across'
         }
         // KELP holds you, easing in and out over about a quarter second.
-        const kelpTarget = 1 - (1 - KELP_KEEP) * kelpAt(pos.current.x, pos.current.y)
+        const kelpTarget = fishingSea ? 1 - (1 - KELP_KEEP) * kelpAt(pos.current.x, pos.current.y) : 1
         kelpKeep += (kelpTarget - kelpKeep) * (1 - Math.exp(-4 * dt))
         // FULL SAIL: a clean, fast, straight run fills the sails. A hard turn
         // or losing way lets them go.
