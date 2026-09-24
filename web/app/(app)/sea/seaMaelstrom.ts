@@ -425,7 +425,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     lip: Sprite; spray: Spray[]
     foam: Foam[]; spirits: Spirit[]
     seen: boolean
-    nextStrike: number; strikeLeft: number
+    nextStrike: number; strikeLeft: number; rtFrame: number
     /** The painted whirlpool, turned in its own flat and laid on the mesh. */
     flatPaint: Container; paint: Sprite; rtPaint: RenderTexture
     debris: { sp: Sprite; ang: number; r: number; spin: number; size: number; bob: number }[]
@@ -493,6 +493,9 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     const core = sprite(discTex!, m.r * 0.22, th.core, 0.3)
     const strike = sprite(discTex!, m.r * 1.7, th.strike, 0)
     for (const sp of [eye, core, strike]) sp.blendMode = 'add'
+    // The strike is retired (see advance), and a 1,000px additive quad at
+    // alpha 0 is still rasterised: out of the draw entirely.
+    strike.visible = false
 
     const rtDark = PIXI.RenderTexture.create({ width: TEX, height: TEX })
     const rtLight = PIXI.RenderTexture.create({ width: TEX, height: TEX })
@@ -697,6 +700,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
       terraces, floor, wall, streams, drag, lip: lipS, spray,
       foam, spirits, seen: false,
       nextStrike: 4 + Math.random() * 8, strikeLeft: 0,
+      rtFrame: 0,
     }
   })
 
@@ -1002,9 +1006,16 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         }
 
         // ── THE FLAT PICTURE, PAINTED ────────────────────────────────────
-        renderer.render({ container: o.flatPaint, target: o.rtPaint, clear: true })
-        renderer.render({ container: o.flatDark, target: o.rtDark, clear: true })
-        renderer.render({ container: o.flatLight, target: o.rtLight, clear: true })
+        // HALF RATE, STAGGERED. Three 512-square render passes a frame, each a
+        // framebuffer switch (a flush on a phone's tiled GPU), for a picture
+        // that turns slowly: the paint on one frame, the dark and light washes
+        // on the next. Each still refreshes 30 times a second at 60fps.
+        if ((o.rtFrame++ & 1) === 0) {
+          renderer.render({ container: o.flatPaint, target: o.rtPaint, clear: true })
+        } else {
+          renderer.render({ container: o.flatDark, target: o.rtDark, clear: true })
+          renderer.render({ container: o.flatLight, target: o.rtLight, clear: true })
+        }
 
         // THE SPIRITS, in the world, laid on the keystone so they belong to
         // the bowl they rise from or fall into.

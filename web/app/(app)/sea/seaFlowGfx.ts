@@ -319,10 +319,18 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
       // The camera's reach, with a margin so nothing pops in at the edge.
       const vx0 = camX - halfW * 1.25, vx1 = camX + halfW * 1.25
       const vy0 = camY - halfH * 1.25, vy1 = camY + halfH * 1.25
+      // HYSTERESIS: shown at 1.25x the view, hidden only past 1.6x. Every
+      // visible flip is a structure change on the world (a rebuild of all of
+      // it), and the four layers' chunk ends nearly line up, so a hard edge
+      // meant bursts of four rebuilds each time the camera crossed one.
+      const ox0 = camX - halfW * 1.6, ox1 = camX + halfW * 1.6
+      const oy0 = camY - halfH * 1.6, oy1 = camY + halfH * 1.6
       // Every layer runs the way the water does, each at its own pace. Only
       // the chunks in reach are shown or scrolled.
       for (const l of strips) {
-        const on = l.x1 > vx0 && l.x0 < vx1 && l.y1 > vy0 && l.y0 < vy1
+        const on = l.mesh.visible
+          ? l.x1 > ox0 && l.x0 < ox1 && l.y1 > oy0 && l.y0 < oy1
+          : l.x1 > vx0 && l.x0 < vx1 && l.y1 > vy0 && l.y0 < vy1
         if (l.mesh.visible !== on) l.mesh.visible = on
         if (!on) continue
         const off = -(t * l.speed) / l.tile
@@ -339,7 +347,9 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
       // sail. And it sways, slower than the swell above it.
       for (const d of bits) {
         // Kelp in reach only (a bed is a few hundred px; the margin covers it).
-        const on = d.x > vx0 - 600 && d.x < vx1 + 600 && d.y > vy0 - 600 && d.y < vy1 + 600
+        const on = d.sp.visible
+          ? d.x > ox0 - 600 && d.x < ox1 + 600 && d.y > oy0 - 600 && d.y < oy1 + 600
+          : d.x > vx0 - 600 && d.x < vx1 + 600 && d.y > vy0 - 600 && d.y < vy1 + 600
         if (d.sp.visible !== on) d.sp.visible = on
         if (!on) continue
         const b = Math.sin(t * 0.5 + d.phase)

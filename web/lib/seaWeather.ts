@@ -119,8 +119,18 @@ export function squallWindow(now: number = Date.now()): number {
  * chart big enough for a storm to be somewhere you go.
  */
 export function squallsAt(now: number = Date.now()): Squall[] {
-  return [...fishingSqualls(now), ...tempestsAt(now), ...bayWeatherAt(now)]
+  // One answer per window. The hull asks every frame (squallAt), and it was
+  // rehashing and rebuilding three arrays each time for a list that changes
+  // once every fourteen minutes. Read-only: callers must not mutate it.
+  const win = squallWindow(now)
+  if (win !== squallCacheWin) {
+    squallCacheWin = win
+    squallCache = [...fishingSqualls(now), ...tempestsAt(now), ...bayWeatherAt(now)]
+  }
+  return squallCache
 }
+let squallCacheWin = NaN
+let squallCache: Squall[] = []
 
 function fishingSqualls(now: number): Squall[] {
   const win = squallWindow(now)

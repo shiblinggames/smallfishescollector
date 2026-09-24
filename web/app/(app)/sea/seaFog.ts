@@ -254,6 +254,11 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
   const fade: number[][] = [new Array(PUFFS).fill(0), new Array(FAR_PUFFS).fill(0)]
   /** For the fades. `advance` is given the clock, not the step. */
   let lastT = -1
+  /** When the roll was last computed, and where the hull was at the last
+   *  upload: see THE ROLL and UPLOAD THE BANK. */
+  let rollAt = -1
+  let upX = Infinity, upY = Infinity
+  let rolled = false
   for (let i = 0; i < PUFFS; i++) {
     const s: Sprite = new PIXI.Sprite(puffTexture(PIXI))
     s.anchor.set(0.5)
@@ -290,6 +295,16 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
 
     advance(camX, camY, halfW, halfH, t, hx, hy) {
       if (!alpha) return
+      // ── NOTHING TO DO WHEN THE BANK IS OFF SCREEN ────────────────────────
+      // The fishing sea, the harbour, anywhere the view does not touch the
+      // fogged campaign: all of the below ran there every frame (27k sines,
+      // 27k texels, a 108KB upload) for a texture nobody could see.
+      const m = XFOG_CELL * 2
+      if (camX + halfW < XFOG_X0 - m || camX - halfW > XFOG_X0 + XFOG_W * XFOG_CELL + m
+        || camY + halfH < XFOG_Y0 - m || camY - halfH > XFOG_Y0 + XFOG_H * XFOG_CELL + m) {
+        upX = Infinity
+        return
+      }
 
       // ── THE ROLL, AT CELL SCALE ──────────────────────────────────────────
       //
@@ -298,9 +313,13 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
       // per cell (1,696 of them) and read by the texels under it: the noise is
       // the expensive part and it has no business being finer than a cell,
       // because a patch of thick fog is bigger than a cell, not smaller.
+      // TEN TIMES A SECOND. The roll moves 0.035 lattice units a second; a
+      // frame of it is invisible, and it was 1,696 cells of noise per frame.
+      rolled = t - rollAt >= 0.1 || rollAt < 0
       const ax = t * 0.035, ay = t * 0.021
       const bx = -t * 0.017, by = t * 0.012
-      for (let i = 0; i < XFOG_CELLS; i++) {
+      if (rolled) rollAt = t
+      if (rolled) for (let i = 0; i < XFOG_CELLS; i++) {
         if (alpha[i] <= 0) { cellK[i] = 0; continue }
         const cx = i % XFOG_W, cy = (i / XFOG_W) | 0
         // AND THE ROLL. Lattice a third of a cell, so a patch of thick is
@@ -344,6 +363,11 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
       // A texel can never be foggier than its CELL. That is how a remembered
       // cell, a seeded chapter and the fallback's ease all reach this layer:
       // the cell field only ever lifts, and the texel follows it down.
+      // Only when something changed: the roll ticked, or the hull moved a
+      // quarter texel (her front is cut at texel resolution).
+      const moved = Math.abs(hx - upX) > FCELL * 0.25 || Math.abs(hy - upY) > FCELL * 0.25
+      if (rolled || moved) {
+      upX = hx; upY = hy
       for (let ty = 0; ty < FH; ty++) {
         const cy = (ty / SUB) | 0
         for (let tx = 0; tx < FW; tx++) {
@@ -366,6 +390,7 @@ export function makeFog(PIXI: typeof import('pixi.js')): Fog {
         }
       }
       src.update()
+      }
 
       // ── AND THE EDGE THAT MOVES ──────────────────────────────────────────
       //

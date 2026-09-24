@@ -1953,9 +1953,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
               transition={{ duration: 0.25 }}
               style={{
                 position: 'fixed', inset: 0, zIndex: 110,
-                background: 'rgba(4,8,14,0.92)',
-                backdropFilter: 'blur(6px)',
-                WebkitBackdropFilter: 'blur(6px)',
+                background: 'rgba(4,8,14,0.93)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 padding: '1.5rem',
               }}

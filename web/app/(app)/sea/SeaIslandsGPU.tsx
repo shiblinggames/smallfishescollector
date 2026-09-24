@@ -1813,6 +1813,44 @@ export default function SeaIslandsGPU({
       // Reused every frame rather than allocated: this is handed to two layers
       // sixty times a second and neither keeps a reference past the call.
       const boatAt = { x: 0, y: 0 }
+      // ── A PARTICLE LAYER WITH NOTHING ALIVE IN IT DRAWS NOTHING ────────────
+      //
+      // Pixi repacks and re-uploads EVERY particle a ParticleContainer holds,
+      // every frame it renders, alive or not: the wake's 1,600 slots, the
+      // guns' 500, the spells', the drift's, all of it while nobody was
+      // moving or firing. A layer whose every particle is at zero alpha is
+      // switched off until one lights. Half a second of grace before it goes,
+      // because every switch is a structure change on the world (see the
+      // mark rows), and a layer flickering between one live puff and none
+      // must not toggle every frame. The list is re-walked every two seconds
+      // so layers built later (an aura, a fight's effects) are found.
+      let pcs: { pc: InstanceType<typeof PIXI.ParticleContainer>; lastLive: number }[] = []
+      let pcsAt = -1e9
+      const idleParticles = (t: number) => {
+        if (t - pcsAt > 2) {
+          pcsAt = t
+          const seen = new Map(pcs.map(e => [e.pc, e]))
+          const next: typeof pcs = []
+          const walk = (c: InstanceType<typeof PIXI.Container>) => {
+            for (const ch of c.children) {
+              if (ch instanceof PIXI.ParticleContainer) next.push(seen.get(ch) ?? { pc: ch, lastLive: t })
+              else if (ch.children.length) walk(ch)
+            }
+          }
+          walk(a.stage)
+          pcs = next
+        }
+        for (const e of pcs) {
+          const kids = e.pc.particleChildren
+          for (let i = 0; i < kids.length; i++) {
+            // A bare IParticle has no alpha; treat it as live, never hide it.
+            const al = (kids[i] as { alpha?: number }).alpha
+            if (al === undefined || al > 0.002) { e.lastLive = t; break }
+          }
+          const want = t - e.lastLive < 0.5
+          if (e.pc.renderable !== want) e.pc.renderable = want
+        }
+      }
       a.ticker.add(() => {
         const t = performance.now() / 1000
         const dt = a.ticker.deltaMS / 1000
@@ -2099,6 +2137,7 @@ export default function SeaIslandsGPU({
             }
           }
         }
+        idleParticles(t)
       })
 
       let lastTint = -1

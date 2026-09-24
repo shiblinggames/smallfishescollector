@@ -240,6 +240,24 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
     // rate is the only thing it spends.
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
     let w = 0, h = 0, fade = 24
+    // ── OVER THE SEA, THE VIEWPORT AND NOT A MILE PAST IT ─────────────────
+    // The hulls stand wherever the chart put them, outside the stage's box,
+    // so this layer used to be the stage grown by 40% on every side: 180% x
+    // 180% of a stage that is nearly the whole screen, about 12 million
+    // device pixels cleared and composited every frame a ward burned, most
+    // of them off screen. Particle positions are measured against the
+    // canvas's own rect, so it can sit anywhere: it is placed exactly over
+    // the viewport instead.
+    const place = () => {
+      if (!overSea) return
+      const par = el.parentElement
+      if (!par) return
+      const p = par.getBoundingClientRect()
+      el.style.left = `${-p.left}px`; el.style.top = `${-p.top}px`
+      el.style.width = `${window.innerWidth}px`; el.style.height = `${window.innerHeight}px`
+    }
+    place()
+    window.addEventListener('resize', place)
     const resize = () => {
       const r = el.getBoundingClientRect()
       w = Math.max(1, Math.round(r.width)); h = Math.max(1, Math.round(r.height))
@@ -281,6 +299,8 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
     const takeS = () => { const p = ss[si]; si = (si + 1) % S_CAP; return p }
 
     let clock = 0
+    /** The canvas's rect, read once per frame rather than once per emitter. */
+    let cRect: DOMRect | null = null, cRectAt = -1
     let last = 0
     let raf = 0
     let running = false
@@ -289,7 +309,8 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
     const measure = (e: Emitter) => {
       if (e.el.isConnected) {
         const r = e.el.getBoundingClientRect()
-        const c = cv.getBoundingClientRect()
+        if (cRectAt !== clock || !cRect) { cRect = cv.getBoundingClientRect(); cRectAt = clock }
+        const c = cRect
         if (r.width > 0 && r.height > 0) {
           if (e.inkAt < 0 || clock - e.inkAt > 0.5) {
             e.inkAt = clock
@@ -1360,7 +1381,11 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
     if (emitters.size > 0) start()
 
     // The aim sub-phase: halt, and hold the last frame.
+    let watchN = 0
     const watch = window.setInterval(() => {
+      // About once a second, re-place over the viewport: the stage can move
+      // as the fight's panels come and go.
+      if (++watchN % 8 === 0) place()
       if (pausedRef.current) stop()
       else if (emitters.size > 0 && !running) start()
     }, 120)
@@ -1369,6 +1394,7 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
       const cic = (window as unknown as { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback
       if (ric && cic) cic(warmId); else window.clearTimeout(warmId)
       window.clearInterval(watch)
+      window.removeEventListener('resize', place)
       wake.delete(start)
       stop()
       ro.disconnect()
@@ -1386,7 +1412,8 @@ export default function BattleFxCanvas({ overSea, paused, bus = 'stage', z = 5 }
       // to reach them; the stage's overflow is visible on that route so it
       // shows, and hidden on the others so it clips to the stage like every
       // other layer there.
-      inset: overSea ? '-40%' : 0,
+      // Over the sea it is placed over the viewport by `place` (above).
+      ...(overSea ? {} : { inset: 0 }),
       // Above both hulls (2 and 3), under the impact flash (9) and the aim
       // badges (11). Additive light over the sprite is the point: the hull is
       // lit by its own fire rather than framed by it. The summon's canvas

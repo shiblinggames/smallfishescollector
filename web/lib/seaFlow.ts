@@ -104,6 +104,18 @@ const BOXES = CURRENTS.map(l => {
   return { x0: Math.min(...xs) - l.half, x1: Math.max(...xs) + l.half, y0: Math.min(...ys) - l.half, y1: Math.max(...ys) + l.half }
 })
 
+/** Each lane cut into spans of SPAN segments, each with its own padded box. */
+const SPAN = 8
+const SPANS = CURRENTS.map(l => {
+  const out: { i: number; x0: number; x1: number; y0: number; y1: number }[] = []
+  for (let i = 0; i < l.pts.length - 1; i += SPAN) {
+    const seg = l.pts.slice(i, Math.min(l.pts.length, i + SPAN + 1))
+    const xs = seg.map(p => p.x), ys = seg.map(p => p.y)
+    out.push({ i, x0: Math.min(...xs) - l.half, x1: Math.max(...xs) + l.half, y0: Math.min(...ys) - l.half, y1: Math.max(...ys) + l.half })
+  }
+  return out
+})
+
 /**
  * THE WATER'S PULL AT A POINT: a direction and a strength 0..1, soft at the
  * lane's edges and fading over its first and last stretch so a lane does not
@@ -121,31 +133,47 @@ const BOXES = CURRENTS.map(l => {
  * 2x band is the hysteresis; there is no seam to flip on.
  */
 export function currentAt(x: number, y: number, prefer?: string | null): { ux: number; uy: number; k: number; id: string | null } {
-  let best = { ux: 0, uy: 0, k: 0, id: null as string | null }
-  let kept: typeof best | null = null
+  // Called every frame on the fishing side. The rings' boxes cover most of
+  // the southern sea, so the lane box alone let ~200 segment tests through a
+  // frame, each returning a fresh object. Spans of SPAN segments carry their
+  // own padded box, and the per-segment math is inline and allocation-free:
+  // an object is made only for the answer.
+  let bk = 0, bux = 0, buy = 0, bid: string | null = null
+  let kk = -1, kux = 0, kuy = 0
   for (let li = 0; li < CURRENTS.length; li++) {
     const b = BOXES[li]
     if (x < b.x0 || x > b.x1 || y < b.y0 || y > b.y1) continue
-    const lane = CURRENTS[li]
-    const n = lane.pts.length - 1
-    let mine = { ux: 0, uy: 0, k: 0, id: lane.id as string | null }
-    for (let i = 0; i < n; i++) {
-      const s = segDist(x, y, lane.pts[i], lane.pts[i + 1])
-      if (s.d >= lane.half) continue
-      const across = 1 - s.d / lane.half
-      const edge = across * across * (3 - 2 * across)
-      // Along the whole lane, 0..1, for the fade at either end.
-      const along = (i + s.t) / n
-      const ends = Math.min(1, along / 0.12, (1 - along) / 0.12)
-      const k = edge * Math.max(0, ends)
-      if (k > mine.k) mine = { ux: s.ux, uy: s.uy, k, id: lane.id }
+    const lane = CURRENTS[li], pts = lane.pts, half = lane.half, h2 = half * half
+    const n = pts.length - 1
+    const spans = SPANS[li]
+    let mk = 0, mux = 0, muy = 0
+    for (let si = 0; si < spans.length; si++) {
+      const sp = spans[si]
+      if (x < sp.x0 || x > sp.x1 || y < sp.y0 || y > sp.y1) continue
+      const end = Math.min(n, sp.i + SPAN)
+      for (let i = sp.i; i < end; i++) {
+        const a = pts[i], c = pts[i + 1]
+        const vx = c.x - a.x, vy = c.y - a.y
+        const L2 = vx * vx + vy * vy || 1
+        const t = Math.max(0, Math.min(1, ((x - a.x) * vx + (y - a.y) * vy) / L2))
+        const dx = x - (a.x + vx * t), dy = y - (a.y + vy * t)
+        const d2 = dx * dx + dy * dy
+        if (d2 >= h2) continue
+        const across = 1 - Math.sqrt(d2) / half
+        const edge = across * across * (3 - 2 * across)
+        // Along the whole lane, 0..1, for the fade at either end.
+        const along = (i + t) / n
+        const ends = Math.min(1, along / 0.12, (1 - along) / 0.12)
+        const k = edge * Math.max(0, ends)
+        if (k > mk) { const L = Math.sqrt(L2); mk = k; mux = vx / L; muy = vy / L }
+      }
     }
-    if (mine.k <= 0) continue
-    if (lane.id === prefer) kept = mine
-    if (mine.k > best.k) best = mine
+    if (mk <= 0) continue
+    if (lane.id === prefer) { kk = mk; kux = mux; kuy = muy }
+    if (mk > bk) { bk = mk; bux = mux; buy = muy; bid = lane.id }
   }
-  if (kept && kept.k * 2 >= best.k) return kept
-  return best
+  if (kk > 0 && kk * 2 >= bk) return { ux: kux, uy: kuy, k: kk, id: prefer ?? null }
+  return { ux: bux, uy: buy, k: bk, id: bid }
 }
 
 /** How strongly any lane OTHER than `id` runs at a point, 0..1. For the

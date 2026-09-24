@@ -4663,7 +4663,35 @@ export default function SeaMap({
    * the fight closes. A ref, because it only feeds the loop.
    */
   const fightPhaseRef = useRef<{ raid: string; phase: number } | null>(null)
+  // The frame loop is built once; an upgrade bought without a remount must
+  // still reach it, so these two are read through refs.
+  const hullSpeedRef = useRef(hullSpeed)
+  hullSpeedRef.current = hullSpeed
+  const lanternTierRef = useRef(lanternTier)
+  lanternTierRef.current = lanternTier
   useEffect(() => { if (!fightId) fightPhaseRef.current = null }, [fightId])
+  /** The mood on the water while a boss is turning it, eased. Null when the
+   *  bay's own mood is showing. A ref, not loop state, because BOTH loops step
+   *  it: the phases change after she is on station, when only fightFrame runs,
+   *  and a mood stepped only by the main loop never showed during the fight. */
+  const fightMoodRef = useRef<{ mood: BayMood | null; at: number }>({ mood: null, at: 0 })
+  /** Ease one frame toward the phase's mood (or back to `base`). */
+  const stepFightMood = (base: BayMood): { mood: BayMood; turning: boolean } => {
+    const fm = fightMoodRef.current
+    const fp = fightPhaseRef.current
+    const want = fp ? phaseMoodOf(fp.raid, fp.phase) : null
+    if (!want && !fm.mood) return { mood: base, turning: false }
+    const tNow = performance.now()
+    const k = 1 - Math.exp(-Math.min(0.1, (tNow - (fm.at || tNow)) / 1000) / 0.55)
+    fm.at = tNow
+    const goal = want ?? base
+    const next = lerpMood(fm.mood ?? base, goal, k)
+    const gap = Math.abs(next.dusk - goal.dusk) + Math.abs(next.swell - goal.swell)
+      + Math.abs(next.grade[0] - goal.grade[0]) + Math.abs(next.grade[2] - goal.grade[2])
+    if (!want && gap < 0.004) { fm.mood = null; fm.at = 0; return { mood: base, turning: true } }
+    fm.mood = next
+    return { mood: next, turning: gap > 0.0005 || !want }
+  }
   /** The boss card standing open in front of it, by node id. */
   const [bossCard, setBossCard] = useState<string | null>(openBoss)
   /**
@@ -4828,6 +4856,20 @@ export default function SeaMap({
       if (frontRef.current) frontRef.current.style.transform = tr
     }
     gpuRef.current?.camera(camAt.current.x, camAt.current.y, z)
+    // A BOSS TURNING THE SEA, on station. The main loop is stood down here,
+    // so the phase mood is stepped and sent from this frame too; see
+    // stepFightMood. Nothing is sent unless it is moving.
+    if (gpuRef.current && (fightPhaseRef.current || fightMoodRef.current.mood)) {
+      const fm = stepFightMood(moodNow.current ?? moodAt(pos.current))
+      if (fm.turning) {
+        const clk = seaClock(Date.now())
+        const raw = clk.darkness + (1 - clk.darkness) * fm.mood.dusk
+        const g = fm.mood.grade
+        gpuRef.current.palette(seaAt(pos.current, raw).stops.map(c => c.map((v, i) => Math.min(255, v * g[i]))))
+        gpuRef.current.mood(fm.mood)
+        gpuRef.current.night(raw, Math.max(clk.warmth, fm.mood.warm))
+      }
+    }
 
     // ── THE PUSH-IN KEEPS EASING HERE TOO ────────────────────────────────
     //
@@ -7980,10 +8022,6 @@ export default function SeaMap({
     /** The canvas's own last hour, unrounded. Separate from `lastDark` because
      *  the two are deliberately at different resolutions. */
     let lastRaw = -1
-    /** The mood on the water while a boss is turning it, eased (see
-     *  fightPhaseRef). Null when the bay's own mood is showing. */
-    let fightMood: BayMood | null = null
-    let fightMoodAt = 0
     /** When the sun was last handed to the canvas. */
     let sunAtMs = -1e9
     // ── WHAT THE WATER AND THE SAILS ADD (see lib/seaFlow) ──────────────
@@ -7998,6 +8036,8 @@ export default function SeaMap({
     let sailFull = false
     /** Whether the hull was in a lane last frame, for the moment of catching one. */
     let inLane = false
+    // When the HUD cue last changed: it is published at most every 300ms.
+    let cueAt = 0
     /** The lane that carried the hull last frame: sticky through crossings (seaFlow). */
     let laneId: string | null = null
     /** How far the fight's keep-out is in force, 0..1, eased, and the two ends
@@ -8276,7 +8316,7 @@ export default function SeaMap({
       let want = 0
       if (d > ARRIVE) {
         const t = Math.min(1, (d - ARRIVE) / (SLOW - ARRIVE))
-        want = SPEED * hullSpeed * speedRef.current * (t * t * (3 - 2 * t)) * kelpKeep * sailMom
+        want = SPEED * hullSpeedRef.current * speedRef.current * (t * t * (3 - 2 * t)) * kelpKeep * sailMom
       }
       // ── HOW FAR OUT YOU PUSH IS HOW FAST YOU GO ───────────────────
       //
@@ -8430,7 +8470,12 @@ export default function SeaMap({
         }
         // CATCHING ONE: the moment the hull gets properly into a lane, a
         // splash at the bow and a tick in the hand.
-        const laneNow = cur.k > 0.35
+        // ── EVERY CUE THRESHOLD HAS A GAP ──────────────────────────────
+        // In at 0.35, out at 0.25; with/against at 0.55 in, 0.35 out; full
+        // sail lets go half a second under where it filled. Hard cutoffs let
+        // a boat steering inside a lane flip the cue several times a second,
+        // and every flip re-rendered the whole chart (and splashed).
+        const laneNow = cur.k > (inLane ? 0.25 : 0.35)
         if (laneNow && !inLane) {
           gpuRef.current?.splash(pos.current.x, pos.current.y, 0, false)
           vibrate([0, 10, 30, 14])
@@ -8442,7 +8487,9 @@ export default function SeaMap({
         if (laneNow) {
           const sp = Math.hypot(vel.current.x, vel.current.y)
           const dot = sp > 20 ? (vel.current.x * cur.ux + vel.current.y * cur.uy) / sp : 1
-          way = dot > 0.5 ? 'with' : dot < -0.5 ? 'against' : 'across'
+          const prevWay = seaCueRef.current.current
+          way = dot > (prevWay === 'with' ? 0.35 : 0.55) ? 'with'
+            : dot < (prevWay === 'against' ? -0.35 : -0.55) ? 'against' : 'across'
         }
         // KELP holds you, easing in and out over about a quarter second.
         const kelpTarget = fishingSea ? 1 - (1 - KELP_KEEP) * kelpAt(pos.current.x, pos.current.y) : 1
@@ -8453,10 +8500,10 @@ export default function SeaMap({
         while (turn > Math.PI) turn -= Math.PI * 2
         while (turn < -Math.PI) turn += Math.PI * 2
         lastHeadMom = headRef.current
-        const fast = Math.hypot(vel.current.x, vel.current.y) > SPEED * hullSpeed * speedRef.current * 0.75 * kelpKeep
+        const fast = Math.hypot(vel.current.x, vel.current.y) > SPEED * hullSpeedRef.current * speedRef.current * 0.75 * kelpKeep
         if (fast && Math.abs(turn) / Math.max(dt, 1e-4) < 0.5) straightT += dt
         else straightT = Math.max(0, straightT - dt * 4)
-        const full = straightT > FULL_SAIL_AFTER
+        const full = straightT > (sailFull ? FULL_SAIL_AFTER - 0.5 : FULL_SAIL_AFTER)
         if (full && !sailFull) {
           // The sails fill: a burst of spray off the bow, once, and the hand
           // feels it.
@@ -8472,14 +8519,16 @@ export default function SeaMap({
         // sailing a current short of full sail. `vel` is her own way through
         // the water (the current moves her position, not her velocity), so
         // "sailing" is measured on it, and drifting reads as not moving.
-        const sailing = Math.hypot(vel.current.x, vel.current.y) > SPEED * hullSpeed * speedRef.current * 0.3
+        const sailing = Math.hypot(vel.current.x, vel.current.y) > SPEED * hullSpeedRef.current * speedRef.current * 0.3
         const riding = way === 'with' && sailing
         const rushK = full && riding ? 1 : full ? 0.6 : riding ? 0.3 * cur.k : 0
         gpuRef.current?.rush(pos.current.x, pos.current.y, vel.current.x + (way === 'with' ? cur.ux * CURRENT_PUSH * SPEED * cur.k : 0), vel.current.y + (way === 'with' ? cur.uy * CURRENT_PUSH * SPEED * cur.k : 0), rushK)
         // Said on the HUD, only when it changes.
         const kelpNow = kelpKeep < 0.9
         const was = seaCueRef.current
-        if (was.current !== way || was.full !== full || was.kelp !== kelpNow) {
+        const tNow = performance.now()
+        if ((was.current !== way || was.full !== full || was.kelp !== kelpNow) && tNow - cueAt > 300) {
+          cueAt = tNow
           const next = { current: way, full, kelp: kelpNow }
           seaCueRef.current = next
           setSeaCue(next)
@@ -9487,7 +9536,9 @@ export default function SeaMap({
         // reach is a little over the widest viewport at the smallest zoom, so
         // nothing is ever culled while it is on screen, and a hull that comes
         // into reach is placed before it is in view.
-        for (const c of couriersAround(camAt.current.x, camAt.current.y, 2600, 2400, now)) {
+        // EPOCH, not the loop's `now` (a rAF stamp): every captain must see
+        // the same hull in the same place, and page-load time is per tab.
+        for (const c of couriersAround(camAt.current.x, camAt.current.y, 2600, 2400, Date.now())) {
           const lift = shipLift(c.tier) * (c.laden ? 0.82 : 1)
           const d = getShip(c.tier)
           if (!d.seaImageUrl) continue
@@ -9947,22 +9998,9 @@ export default function SeaMap({
         // phase arrives as weather coming in rather than a cut, and eased back
         // out to the bay's own mood when the fight closes. While it moves,
         // the palette and the water are re-sent every frame.
-        let turning = false
-        {
-          const fp = fightPhaseRef.current
-          const want = fp ? phaseMoodOf(fp.raid, fp.phase) : null
-          if (want || fightMood) {
-            const tNow = performance.now()
-            const k = 1 - Math.exp(-Math.min(0.1, (tNow - (fightMoodAt || tNow)) / 1000) / 0.55)
-            fightMoodAt = tNow
-            const goal = want ?? mood
-            const next = lerpMood(fightMood ?? mood, goal, k)
-            const gap = Math.abs(next.dusk - goal.dusk) + Math.abs(next.swell - goal.swell)
-              + Math.abs(next.grade[0] - goal.grade[0]) + Math.abs(next.grade[2] - goal.grade[2])
-            if (!want && gap < 0.004) { fightMood = null; fightMoodAt = 0; turning = true }
-            else { fightMood = next; mood = next; turning = gap > 0.0005 || !want }
-          }
-        }
+        const fmStep = stepFightMood(mood)
+        mood = fmStep.mood
+        const turning = fmStep.turning
         const raw = clk.darkness + (1 - clk.darkness) * mood.dusk
         const warmth = Math.max(clk.warmth, mood.warm)
         if (movedFar || turning || Math.abs(raw - lastRaw) > 0.002) {
@@ -9996,7 +10034,7 @@ export default function SeaMap({
         //
         // The setter is one assignment. Doing it every frame costs nothing and
         // cannot miss.
-        gpuRef.current.lantern(lanternGlow(lanternTier))
+        gpuRef.current.lantern(lanternGlow(lanternTierRef.current))
         // AND THE FOG'S BUFFER, for the same reason and by the same argument:
         // the handle is null for the first frames, binding is one assignment,
         // and a bind that is missed is a chart with no fog on it at all.
@@ -10616,7 +10654,7 @@ export default function SeaMap({
         // you happened to cross a cell boundary.
         if (`${ck}|${phaseRef.current}` !== cellRef.current) {
           cellRef.current = `${ck}|${phaseRef.current}`
-          setTraders(tradersAround(pos.current.x, pos.current.y, 2400, day))
+          setTraders(prev => keepByKey(prev, tradersAround(pos.current.x, pos.current.y, 2400, day)))
         }
         // Alongside is close: a trader is a person, not a region, and you
         // should have to actually pull up to them.
@@ -10717,7 +10755,7 @@ export default function SeaMap({
         const bk = `${Math.floor(pos.current.x / BOTTLE_CELL)}:${Math.floor(pos.current.y / BOTTLE_CELL)}|${bottleWindow(epoch)}`
         if (bk !== bottleCell.current) {
           bottleCell.current = bk
-          setBottles(bottlesAround(pos.current.x, pos.current.y, 5200, epoch))
+          setBottles(prev => keepByKey(prev, bottlesAround(pos.current.x, pos.current.y, 5200, epoch)))
         }
 
         // OVER SOMETHING BURIED, and the wider ring where the water looks odd.
@@ -11588,6 +11626,10 @@ hullRef={hullRefFor(t.key)} />
             transform: 'scaleX(var(--facing, 1)) rotate(calc(var(--heel, 0) * -1deg))',
             transformOrigin: 'center center',
             pointerEvents: 'none',
+            // Its own layer: the loop rewrites --heel every frame, and without
+            // this the boat's layer repainted the faces and their shadows each
+            // time.
+            willChange: 'transform',
           }}>
             {mates.map((u, k) => (
               <img key={k} src={u} alt="" draggable={false} decoding="async" style={{
@@ -12274,7 +12316,12 @@ hullRef={hullRefFor(t.key)} />
             const b = berthOf(GUNWHARF)
             warpTo(b.x, b.y)
           }
-          router.refresh()
+          // A BEAT LATER, NOT IN THE SAME TICK. The fight's close already
+          // unmounts the whole combat tree, thaws the chart and brings the HUD
+          // back; a full server refresh landing on top re-rendered the entire
+          // chart in the same moment, which was the hitch right after a fight.
+          // The local clear record covers the gap.
+          window.setTimeout(() => router.refresh(), 700)
         }} />
 
       {/* THE COMPASS. Its mount was deleted in an over-broad slice edit and the
@@ -14354,6 +14401,20 @@ const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering, hullRef }
  * because a tab restored by the browser days later should defer to whatever the
  * account has been doing since.
  */
+/**
+ * THE SAME PEOPLE, THE SAME OBJECTS. Traders and bottles are re-derived on
+ * every cell crossing (about every 3s at cruise), and a fresh array of fresh
+ * objects re-rendered the whole chart, rebuilt the GPU fleet and every memo'd
+ * boat, even when the answer was the people already on screen. A key is a
+ * deterministic derivation (same key, same content), so an entry that is
+ * still here keeps its old object, and an unchanged list keeps its old array.
+ */
+function keepByKey<T extends { key: string }>(prev: T[], next: T[]): T[] {
+  const old = new Map(prev.map(p => [p.key, p]))
+  const out = next.map(n => old.get(n.key) ?? n)
+  return out.length === prev.length && out.every((o, i) => o === prev[i]) ? prev : out
+}
+
 const POS_KEY = 'sea:pos2'
 const POS_TTL = 30 * 60 * 1000
 

@@ -607,14 +607,21 @@ export function makeAura(
     bolts.push({ pts, forks, age: 0, ttl: rand(a.life) })
   }
 
+  /** Whether the last draw left strokes on the Graphics. With no bolts and
+   *  nothing drawn, there is nothing to clear: a clear() every frame
+   *  re-uploads an empty Graphics for every aura with arcs. */
+  let drewBolts = false
   function drawBolts(a: Arcs) {
     if (!arcG) return
+    if (!bolts.length && !drewBolts) return
     arcG.clear()
+    drewBolts = bolts.length > 0
     for (const b of bolts) {
       // Bolts do not fade out so much as cut out; a long fade reads as a wire
       // cooling rather than as a strike ending.
       const k = 1 - Math.pow(b.age / b.ttl, 2)
-      for (const p of [b.pts, ...b.forks]) {
+      for (let pi = -1; pi < b.forks.length; pi++) {
+        const p = pi < 0 ? b.pts : b.forks[pi]
         arcG.moveTo(p[0], p[1])
         for (let i = 2; i < p.length; i += 2) arcG.lineTo(p[i], p[i + 1])
         // The halo first and wide, then the core thin and white on top: that

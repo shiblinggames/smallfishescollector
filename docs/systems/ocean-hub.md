@@ -1364,6 +1364,33 @@ What remains that can re-render the map: a band crossing, an encounter, entering
 patch, the 15s hotspot refresh, and the 5s trawl-ready count (which no-ops when unchanged).
 Sailing across open water now reconciles **nothing**.
 
+**2026-09-24 audit (static, three readers; not profiled).** Fixed:
+- The expedition fog (`seaFog`) skips entirely when the view does not touch its bounds (it ran
+  27k sines, 27k texels and a 108KB upload every frame on the fishing side), rolls its noise at
+  10Hz, and uploads only when the roll ticked or the hull moved a quarter texel.
+- `idleParticles` in SeaIslandsGPU: a ParticleContainer whose particles are all at zero alpha
+  is `renderable = false` after 0.5s (Pixi repacks and uploads every slot of every container it
+  renders; the wake alone is ~1,600). Re-walked every 2s, so late layers are found.
+- Maelstrom render textures at half rate, staggered (paint one frame, dark + light the next);
+  the retired strike sprite is `visible = false`.
+- Current strips and kelp cull with hysteresis (in at 1.25x the view, out at 1.6x): each flip is
+  a rebuild of `world`.
+- `currentAt` scans spans of 8 segments with their own boxes, allocation-free (28x faster,
+  identical on 647k points). `squallsAt` is cached per 14-minute window. Traders and bottles
+  keep their objects and array when the cell's answer is the same people (`keepByKey`).
+- The HUD sea cue has hysteresis on every threshold and publishes at most every 300ms.
+- A boss's phase mood is stepped from `fightFrame` too (`stepFightMood`); it never showed on
+  station before. Couriers take epoch time, not the rAF stamp. Hull speed and lantern tier
+  reach the loop through refs.
+- Sea fights: BattleFx's canvas is placed over the viewport, not the stage grown 40% (about a
+  third of the pixels); stats popups and the rest stop lose their backdrop blur; the Mist Veil
+  clip is square; False Colors decoys move by transform; `router.refresh()` after a fight waits
+  700ms.
+
+Deliberately left: the water filter's temp render target (as a Mesh it would shade at full DPR,
+not the 1.25 cap); feint-flare box-shadow throb (short, small); render groups for the fx layers
+(each group costs a pass per frame; the toggles are rare with the grace period).
+
 ## Art
 
 `public/sea/` — buildings (tavern, market, tackle, harbour, lighthouse) and landmarks

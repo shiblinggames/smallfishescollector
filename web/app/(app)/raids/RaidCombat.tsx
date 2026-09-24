@@ -3841,7 +3841,9 @@ export default function RaidCombat({
         if (d.pos >= dHi) { d.pos = dHi; d.dir = -1 }
         if (d.pos <= dLo) { d.pos = dLo; d.dir = 1 }
         const el = decoyElRefs.current[k]
-        if (el) el.style.left = `${(d.pos - DECOY_HALF) * 100}%`
+        // A transform, not `left`: left is a layout every frame. Percent of the
+        // band's own width, which is DECOY_HALF * 2 of the bar.
+        if (el) el.style.transform = `translateX(${((d.pos - DECOY_HALF) / (DECOY_HALF * 2)) * 100}%)`
         if (Math.abs(firePosRef.current - d.pos) <= DECOY_HALF) onDecoy = true
       }
 
@@ -9514,7 +9516,7 @@ export default function RaidCombat({
         {showCheckTutorial && pendingCheck && typeof document !== 'undefined' && createPortal(
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(6,3,3,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(6,3,3,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.92, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -10538,9 +10540,9 @@ function PlayerStatsPopup({
         // On the /raids routes nothing else reaches 140, so it is safe there
         // too, and the two stats popups must match each other.
         position: 'fixed', inset: 0, zIndex: 140,
-        background: 'rgba(0,0,0,0.82)',
-        backdropFilter: 'blur(4px)',
-        WebkitBackdropFilter: 'blur(4px)',
+        // No backdrop blur: over the live sea it was re-blurred every frame
+        // the card was open, behind a scrim that hides most of it anyway.
+        background: 'rgba(0,0,0,0.86)',
         overflowY: 'auto', WebkitOverflowScrolling: 'touch',
       }}
     >
@@ -10978,9 +10980,9 @@ function EnemyStatsPopup({
         // On the /raids routes nothing else reaches 140, so it is safe there
         // too, and the two stats popups must match each other.
         position: 'fixed', inset: 0, zIndex: 140,
-        background: 'rgba(0,0,0,0.82)',
-        backdropFilter: 'blur(4px)',
-        WebkitBackdropFilter: 'blur(4px)',
+        // No backdrop blur: over the live sea it was re-blurred every frame
+        // the card was open, behind a scrim that hides most of it anyway.
+        background: 'rgba(0,0,0,0.86)',
         overflowY: 'auto', WebkitOverflowScrolling: 'touch',
       }}
     >
@@ -14076,7 +14078,10 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aim
              The DENSITY (the mechanic) is untouched: the banks sum to the
              same `fogOpacity` the single wedge carried. */
           <div aria-hidden style={{
-            position: 'absolute', inset: 1, zIndex: 4, pointerEvents: 'none', overflow: 'hidden', borderRadius: 9,
+            // SQUARE clip. A rounded overflow clip over layers that move
+            // takes them off the compositor (the bar re-rasterised every
+            // frame while aiming); the corner it trims is 3px of thin haze.
+            position: 'absolute', inset: '1px 3px', zIndex: 4, pointerEvents: 'none', overflow: 'hidden',
             animation: 'mist-veil-breathe 4.3s ease-in-out infinite',
           }}>
             {/* The standing haze the banks ride through: thin, always there,
