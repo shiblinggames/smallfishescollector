@@ -1604,11 +1604,17 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Hold longer on depths where Davy speaks, so his taunt is readable —
     // and on the uncharted beat, so the record moment lands. The Don apex gets
     // the longest hold + a heavy haptic: his rise is an EVENT, not a fight.
+    // AND THE WATER ANSWERS IT. The record gets the loud gold beat (the light
+    // from above opens); every tenth depth that is not a record gets the quiet
+    // silver one. A beat after the fall starts, so it lands on the water you
+    // are dropping through rather than on the cut into it.
+    const beatKind = firedBeat ? 'record' as const : d > 0 && d % 10 === 0 ? 'milestone' as const : null
+    const beatT = beatKind ? setTimeout(() => arenaRef.current?.beat(beatKind), 450) : null
     const hasTaunt = fight ? gauntletTaunt(fight.depth, props.variant) !== null : false
     const isApexFight = fight?.isApex === true
     if (isApexFight) vibrate([0, 45, 90, 45, 140])
     const t = setTimeout(() => setPhase('fighting'), isApexFight ? 4200 : hasTaunt ? 3000 : firedBeat ? 2200 : 1350)
-    return () => clearTimeout(t)
+    return () => { clearTimeout(t); if (beatT) clearTimeout(beatT) }
   }, [phase, fight])
 
   // Boon-draft reveal sequence — seal all three, then charge + flip them open
@@ -2653,6 +2659,9 @@ export default function GauntletGame(props: GauntletGameProps) {
       // She is only on the water during the fight. Everywhere else you are
       // alone with what you did to her.
       enemyHidden={opts?.enemyHidden ?? mood !== 'fight'}
+      // An elite glows violet at any depth (the colour the run already gives
+      // elites everywhere else); the deep dresses everyone else. See the arena.
+      enemyAura={fight?.isElite ? '#c084fc' : undefined}
       handle={arenaRef}
     />
     )
@@ -5519,7 +5528,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </motion.div>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12, duration: 0.4 }}
             className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.34em', color: AC, marginTop: 16 }}>
-            {d === 1 ? (isDonG ? 'Into the Green' : 'Into the Locker') : 'Deeper Still'}
+            {d === 1 ? (isDonG ? 'Into the Green' : 'Into the Locker') : d % 10 === 0 && !recordBeat ? 'A Milestone' : 'Deeper Still'}
           </motion.p>
           <motion.p initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18, type: 'spring', stiffness: 230, damping: 18 }}
             className="font-cinzel font-800" style={{ fontSize: '2.4rem', color: GOLD, lineHeight: 1, marginTop: 8, textShadow: `0 0 28px ${fight?.isBoss ? 'rgba(248,113,113,0.55)' : fight?.isElite ? 'rgba(192,132,252,0.45)' : 'rgba(240,192,64,0.4)'}` }}>
@@ -5643,6 +5652,12 @@ export default function GauntletGame(props: GauntletGameProps) {
             side padding and came out narrower than the deck at the foot of
             the same fight, and it started 24px lower than it should have,
             which is what put it on top of the leave button. */}
+        {/* ── THE BOSS ARRIVES BY NAME ─────────────────────────────────
+            Kong: bosses should arrive, not appear. The arena surfaces the hull
+            (GauntletArena, the rise); this names her as she clears the water,
+            in the chapter banners' own type, then gets out of the way. Keyed
+            on the depth so each boss gets it once. */}
+        {fight.isBoss && <BossArrival key={`boss-${fight.depth}`} depth={fight.depth} name={fight.enemy.name} hardcore={hardcoreRun} />}
         <div className="gauntlet-depthbar">
           <div>
             <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} contract={contractChip} marks={marks} />
@@ -8901,5 +8916,45 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * ── A BOSS'S NAME, AS SHE SURFACES ──────────────────────────────────────────
+ * Waits for the rise (the arena holds her under for about half a second, then
+ * takes two to bring her up), lands as she clears the water, holds long enough
+ * to read, and fades. Pointer-transparent, high in the frame and clear of both
+ * nameplates. Red in hardcore, gold otherwise.
+ */
+function BossArrival({ depth, name, hardcore }: { depth: number; name: string; hardcore: boolean }) {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    const a = setTimeout(() => setOn(true), 1100)
+    const b = setTimeout(() => setOn(false), 4300)
+    return () => { clearTimeout(a); clearTimeout(b) }
+  }, [])
+  const key = hardcore ? '#f87171' : '#f0c040'
+  return (
+    <AnimatePresence>
+      {on && (
+        <motion.div aria-live="polite"
+          initial={{ opacity: 0, y: -10, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, transition: { duration: 0.6 } }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            position: 'fixed', left: 0, right: 0, top: '15%', zIndex: 60, pointerEvents: 'none',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+          }}>
+          <span className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.36em', color: key, textShadow: `0 0 14px ${key}88, 0 2px 10px rgba(0,0,0,0.9)` }}>
+            Depth {depth}
+          </span>
+          <span className="font-cinzel font-800" style={{ fontSize: 'clamp(1.6rem, 4.2vw, 2.4rem)', color: '#f6ecd6', lineHeight: 1.05, marginTop: 6, letterSpacing: '0.04em', textShadow: `0 2px 16px rgba(0,0,0,0.95), 0 0 34px ${key}55` }}>
+            {name}
+          </span>
+          <motion.span aria-hidden initial={{ width: 0 }} animate={{ width: 150 }} transition={{ duration: 1, delay: 0.25, ease: 'easeOut' }}
+            style={{ height: 1, marginTop: 8, background: `linear-gradient(90deg, transparent, ${key}, transparent)` }} />
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }

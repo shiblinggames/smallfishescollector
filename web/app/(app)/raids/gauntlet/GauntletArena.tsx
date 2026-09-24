@@ -127,7 +127,44 @@ function waterBox(W: number, H: number) {
   return { cx: W / 2, cy: top + (H - top - bottom) / 2 }
 }
 
-export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, enemyPaint, shipFlip, seaBeam, enemyHidden, handle }: {
+/**
+ * ── A HULL'S OWN GLOW ───────────────────────────────────────────────────────
+ *
+ * Her painting, blurred and filled white on a canvas once per url, so it can be
+ * tinted to anything and laid behind her: only the soft edge past her hull
+ * shows, which reads as the ship giving off light rather than a halo drawn
+ * round her. Cached, because a dive meets the same few hulls over and over.
+ */
+const glowCache = new Map<string, Promise<{ cv: HTMLCanvasElement; pad: number; w: number; h: number } | null>>()
+function hullGlow(url: string) {
+  let job = glowCache.get(url)
+  if (job) return job
+  job = (async () => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.src = url
+    try { await img.decode() } catch { return null }
+    const w = Math.min(360, img.naturalWidth)
+    const h = Math.round((w * img.naturalHeight) / img.naturalWidth)
+    const pad = 22
+    const cv = document.createElement('canvas')
+    cv.width = w + pad * 2
+    cv.height = h + pad * 2
+    const g = cv.getContext('2d')
+    if (!g) return null
+    g.filter = 'blur(7px)'
+    g.drawImage(img, pad, pad, w, h)
+    g.filter = 'none'
+    g.globalCompositeOperation = 'source-in'
+    g.fillStyle = '#ffffff'
+    g.fillRect(0, 0, cv.width, cv.height)
+    return { cv, pad, w, h }
+  })()
+  glowCache.set(url, job)
+  return job
+}
+
+export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, enemyPaint, shipFlip, seaBeam, enemyHidden, enemyAura, handle }: {
   theme: ArenaTheme
   scene: ArenaScene
   /** Which screen of the run this is under. Drives the grade and the beats. */
@@ -156,6 +193,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
    * the fight opens, which is what makes an arrival read as an arrival.
    */
   enemyHidden?: boolean
+  /** An elite's colour: she glows it whatever the depth. */
+  enemyAura?: string
   /** Filled in on mount; the fight reads it and calls into it. */
   handle: React.MutableRefObject<ArenaHandle | null>
 }) {
@@ -169,6 +208,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
   artRef.current = { shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam, enemyPaint }
   const hiddenRef = useRef(!!enemyHidden)
   hiddenRef.current = !!enemyHidden
+  const dressRef = useRef({ depth, aura: enemyAura ?? null })
+  dressRef.current = { depth, aura: enemyAura ?? null }
   /** 1 the instant a new depth arrives, decayed by the frame loop. */
   const fallRef = useRef(0)
   const depthSeen = useRef(depth)
@@ -336,6 +377,16 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         }).catch(() => {})
       }
       const player = mkHull(0.5)
+      // ── THE DEEP ON HER ──────────────────────────────────────────────
+      // Kong: a depth-35 hull looked like a depth-3 hull. Her glow sits in the
+      // world just UNDER her node, a sibling rather than a child, so her paint
+      // filter (a hue rotation) cannot recolour the light she gives off.
+      const glow = new PIXI.Sprite(PIXI.Texture.EMPTY)
+      glow.blendMode = 'add'
+      glow.alpha = 0
+      world.addChild(glow)
+      let glowUrl = ''
+      let glowGeo = { pad: 0, w: 1, h: 1 }
       const enemy = mkHull(1)
       /**
        * ── THE PAINT, AS A COLOUR MATRIX ───────────────────────────────
@@ -506,6 +557,15 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
       // ── THE FRAME ───────────────────────────────────────────────────
       let t = 0
       let gone = 0 // how far under she is, once she is dead
+      // ── A BOSS SURFACES ─────────────────────────────────────────────
+      // Kong: bosses should arrive, not appear. When a boss's hull is first
+      // wanted on the water, the eye opens (scenery, off the boss flag) and a
+      // beat later she RISES: growing up out of the water from her waterline,
+      // water columns going up along her length, a shock ring, and a second
+      // wave as she clears. `riseAt` is when she was wanted; -1 is no rise.
+      let riseAt = -1
+      let wantedBefore = 0
+      let riseWave = 0
       app.ticker.add(() => {
         const dt = Math.min(0.05, app.ticker.deltaMS / 1000)
         t += dt
@@ -519,6 +579,19 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         // the arena swaps textures, and a stale load can never land because
         // the loader checks the url it was asked for is still the one wanted.
         if (art.enemyUrl !== enemy.url) load(enemy, art.enemyUrl)
+        if (art.enemyUrl !== glowUrl) {
+          glowUrl = art.enemyUrl
+          glow.texture = PIXI.Texture.EMPTY
+          if (glowUrl) {
+            const want = glowUrl
+            void hullGlow(want).then(gl => {
+              if (dead || !gl || glowUrl !== want) return
+              glow.texture = PIXI.Texture.from(gl.cv)
+              glowGeo = { pad: gl.pad, w: gl.w, h: gl.h }
+              glow.anchor.set(0.5, (gl.pad + gl.h) / (gl.h + gl.pad * 2))
+            })
+          }
+        }
         if (art.shipUrl !== player.url) load(player, art.shipUrl)
 
         // ── THE FALL ────────────────────────────────────────────────
@@ -608,7 +681,61 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
           // and does not blink in at the bottom of one.
           paintEnemy(art.enemyPaint)
           const want = hiddenRef.current || !art.enemyUrl ? 0 : 1
-          enemy.node.alpha += Math.max(-dt * 2.2, Math.min(dt * 1.6, want - enemy.node.alpha))
+          if (want && !wantedBefore) { riseAt = th2.boss ? t : -1; riseWave = 0 }
+          if (!want) riseAt = -1
+          wantedBefore = want
+          if (riseAt >= 0 && enemy.sp.texture.width > 2) {
+            const p = Math.max(0, Math.min(1, (t - riseAt - 0.55) / 1.9))
+            const e = 1 - (1 - p) ** 3
+            const wx = f.enemy.x, wy = f.enemy.y, hw = f.enemy.hull * 0.45
+            if (p > 0 && riseWave === 0) {
+              riseWave = 1
+              guns.shock(wx, wy)
+              for (let k = 0; k < 5; k++) guns.impact(wx - hw + (hw * 2 * k) / 4, wy + (Math.random() - 0.5) * 10, 'miss' as ImpactKind)
+            }
+            if (p > 0.42 && riseWave === 1) {
+              riseWave = 2
+              for (let k = 0; k < 3; k++) guns.impact(wx - hw * 0.7 + hw * 0.7 * k, wy, 'miss' as ImpactKind)
+            }
+            enemy.node.scale.y = 0.18 + 0.82 * e
+            enemy.node.y += (1 - e) * f.enemy.hull * 0.1
+            enemy.node.alpha = p <= 0 ? 0 : Math.min(1, p * 2.4)
+            if (p >= 1) riseAt = -1
+          } else {
+            enemy.node.scale.y = 1
+            enemy.node.alpha += Math.max(-dt * 2.2, Math.min(dt * 1.6, want - enemy.node.alpha))
+          }
+        }
+
+        // ── HER GLOW, BY HOW DEEP THIS IS ─────────────────────────────
+        //   10+   the waterline weed-stained
+        //   20+   a teal drowned glow round her edge
+        //   35+   ghost-fire: paler, brighter, flickering
+        //   hardcore glows red; an elite glows her colour at any depth.
+        {
+          const dr = dressRef.current
+          const d = dr.depth
+          const band = d >= 35 ? 3 : d >= 20 ? 2 : d >= 10 ? 1 : 0
+          if (enemy.water) enemy.water.soak.tint = band >= 1 ? 0x7d9468 : 0xffffff
+          const auraHex = dr.aura ? parseInt(dr.aura.replace('#', ''), 16) : NaN
+          const glowOn = Number.isFinite(auraHex) || band >= 2
+          if (glowOn && glow.texture !== PIXI.Texture.EMPTY) {
+            const col = Number.isFinite(auraHex) ? auraHex
+              : sc.hardcore ? (band >= 3 ? 0xff8a70 : 0xff5a4a)
+              : band >= 3 ? 0xa8ffe0 : 0x3fd6b0
+            glow.tint = col
+            const flick = band >= 3
+              ? 0.75 + 0.25 * Math.sin(t * 9.1) * Math.sin(t * 5.3 + 1.7)
+              : 0.85 + 0.15 * Math.sin(t * 1.3)
+            const strength = Number.isFinite(auraHex) ? 0.55 : band >= 3 ? 0.7 : 0.42
+            const k = enemy.sp.width / glowGeo.w
+            glow.scale.set(k * (band >= 3 ? 1 + 0.02 * Math.sin(t * 7.3) : 1), k * enemy.node.scale.y)
+            glow.position.set(enemy.node.x, enemy.node.y)
+            glow.rotation = enemy.node.rotation
+            glow.alpha = enemy.node.alpha * strength * flick
+          } else if (glow.alpha) {
+            glow.alpha = 0
+          }
         }
 
         // AND WHERE THEY ARE, for the fight to aim at. The box is the canvas's

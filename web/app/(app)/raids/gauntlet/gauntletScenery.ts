@@ -51,6 +51,10 @@ export type Scene = {
 export type BeatKind =
   | 'boon' | 'legendary' | 'curse' | 'shrine' | 'merchant' | 'contract'
   | 'victory' | 'death' | 'chest' | 'mark'
+  /** Past your deepest ever: gold, loud, and the light from above opens. */
+  | 'record'
+  /** Every tenth depth: silver and quieter, a mark passed rather than a record. */
+  | 'milestone'
 
 export type Scenery = {
   /** Under the hulls, over the water: the deep, the silhouettes, the shafts. */
@@ -347,10 +351,12 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
 
     beat(kind, tint) {
       beatKind = kind
-      beatTint = tint ?? (kind === 'legendary' ? 0xffe9a8 : kind === 'victory' ? scene.key : MOOD_TINT[kind === 'chest' ? 'reward' : kind === 'death' ? 'dead' : kind] ?? scene.key)
-      beatLen = kind === 'death' ? 2.6 : kind === 'legendary' ? 1.8 : kind === 'curse' ? 1.2 : 0.9
+      beatTint = tint ?? (kind === 'record' ? 0xffd76a : kind === 'milestone' ? 0xdfe8f2 : kind === 'legendary' ? 0xffe9a8 : kind === 'victory' ? scene.key : MOOD_TINT[kind === 'chest' ? 'reward' : kind === 'death' ? 'dead' : kind] ?? scene.key)
+      beatLen = kind === 'death' ? 2.6 : kind === 'record' ? 2.4 : kind === 'legendary' ? 1.8 : kind === 'milestone' ? 1.5 : kind === 'curse' ? 1.2 : 0.9
       beatLeft = beatLen
-      flare = kind === 'curse' || kind === 'death' ? 0 : kind === 'legendary' ? 1.8 : 0.5
+      // A RECORD OPENS THE LIGHT FROM ABOVE: the shafts flare hardest of any
+      // beat, because the one thing you did was go further than you ever had.
+      flare = kind === 'curse' || kind === 'death' ? 0 : kind === 'record' ? 2.4 : kind === 'legendary' ? 1.8 : kind === 'milestone' ? 1 : 0.5
       pulse.tint = beatTint; wash.tint = beatTint; washBelow.tint = beatTint
       for (const sp of sparks) { sp.p.tint = beatTint; sp.age = 9 }
       // Sparks: up from the deep for a curse or a death, out of the middle for
@@ -362,8 +368,8 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
       // happens twenty times a run cannot be an event. The count, the ring and
       // the wash below all step down for the ordinary ones and stay for the two
       // that are genuinely rare: a legendary pull and your own death.
-      const loudKind = kind === 'legendary' || kind === 'death'
-      const n = kind === 'legendary' ? BURST_N : loudKind ? 26 : 12
+      const loudKind = kind === 'legendary' || kind === 'death' || kind === 'record'
+      const n = kind === 'legendary' || kind === 'record' ? BURST_N : loudKind ? 26 : kind === 'milestone' ? 18 : 12
       for (let i = 0; i < n; i++) {
         const sp = sparks[i]
         sp.age = 0
@@ -479,14 +485,14 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
         const u = 1 - beatLeft / beatLen
         const env = u < 0.12 ? u / 0.12 : Math.max(0, 1 - (u - 0.12) / 0.88)
         const below = beatKind === 'curse' || beatKind === 'death'
-        const loud = beatKind === 'legendary' || beatKind === 'death'
+        const loud = beatKind === 'legendary' || beatKind === 'death' || beatKind === 'record'
         if (below) {
           washBelow.x = 0; washBelow.y = H; washBelow.width = W; washBelow.height = H * 0.9
           washBelow.alpha = env * (beatKind === 'death' ? 0.26 : 0.14)
           wash.alpha = 0
         } else {
           wash.width = W; wash.height = H
-          wash.alpha = env * (beatKind === 'legendary' ? 0.16 : 0.05)
+          wash.alpha = env * (beatKind === 'legendary' || beatKind === 'record' ? 0.16 : beatKind === 'milestone' ? 0.08 : 0.05)
           washBelow.alpha = 0
         }
         const cx = W * 0.5, cy = below ? H * 0.9 : H * 0.5
@@ -496,7 +502,7 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
         const pr = Math.min(W, H) * (0.25 + u * (loud ? 1.4 : 0.85))
         pulse.x = cx; pulse.y = cy
         pulse.width = pr; pulse.height = pr * (below ? 0.5 : 0.7)
-        pulse.alpha = (1 - u) * (beatKind === 'legendary' ? 0.28 : loud ? 0.2 : 0.12)
+        pulse.alpha = (1 - u) * (beatKind === 'legendary' || beatKind === 'record' ? 0.28 : loud ? 0.2 : beatKind === 'milestone' ? 0.18 : 0.12)
         for (const sp of sparks) {
           if (sp.age >= sp.life) { if (sp.p.alpha) sp.p.alpha = 0; continue }
           if (Number.isNaN(sp.x)) { sp.x = cx + (Math.random() - 0.5) * W * 0.3; sp.y = cy }

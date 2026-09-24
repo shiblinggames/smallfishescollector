@@ -501,3 +501,23 @@ UNDER the fade rather than after it. Nothing travels across the screen; that rul
 `DiveVeil` is portaled to the body and mounted by BOTH the intro and descending phases,
 because `begin()` flips the phase mid-fade and unmounts the lobby tree. `initial={false}` is
 what stops the second mount flashing back to transparent.
+
+## Endgame polish, round one (2026-09-24)
+
+Kong: "this is our endgame content, I really want these to stand out." The three picked:
+
+- **Bosses surface.** `GauntletArena`: when a boss hull is first wanted, `riseAt` holds her
+  under ~0.55s (the eye opens first off the boss flag), then she grows up out of the water from
+  her waterline over ~1.9s (`node.scale.y` 0.18 -> 1, eased), with a shock ring and five water
+  columns along her length, and three more as she clears. GauntletGame's `BossArrival` names her
+  (Depth N over the name, the chapter banners' type, gold / red in hardcore) as she clears, then
+  fades. Non-boss hulls still ease in.
+- **Records and milestones answer on the water.** `gauntletScenery` BeatKinds `record` (gold,
+  loud, the shafts flare hardest of any beat) and `milestone` (silver, quieter). Fired 450ms into
+  the descent: `record` with the existing Uncharted Water pill, `milestone` on every tenth depth
+  that is not a record (its eyebrow reads "A Milestone").
+- **The deep is on the enemy.** A glow built from the hull's own painting (`hullGlow`: blurred,
+  filled white, cached per url) sits UNDER her node as a sibling so her paint filter cannot
+  recolour it. Depth 10+: waterline soak tinted weed-green. 20+: teal drowned glow. 35+:
+  ghost-fire (paler, flickering). Hardcore reds it. Elites glow violet (`enemyAura`) at any
+  depth.
