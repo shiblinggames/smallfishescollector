@@ -327,8 +327,11 @@ const SPRAY_N = 26
  * 0.72 of that width and pulled up to 0.8 of that height, the near edge at
  * full width and pushed down to 1.05. A disc seen from a deck, not from above.
  */
-const FAR_W = 0.72, FAR_H = 0.80
-const NEAR_W = 1.0, NEAR_H = 1.05
+// Deepened 2026-09-24 (Kong: the bands read flat): the far edge pulled in to
+// 0.68 x 0.70, the near edge pushed out to 1.04 x 1.14, so the south of the
+// bowl reaches visibly further than the north.
+const FAR_W = 0.68, FAR_H = 0.70
+const NEAR_W = 1.04, NEAR_H = 1.14
 
 /**
  * THE THROAT'S SHAPE, in units of the world radius.
@@ -368,6 +371,11 @@ const throatY = (u: number, r: number) => (r * DEPTH * Math.pow(u, 1.6)) / GROUN
 const KEY_W = (FAR_W + NEAR_W) / 2
 const KEY_H = (FAR_H + NEAR_H) / 2
 const KEY_DROP = (NEAR_H - FAR_H) / 2
+/** The outermost skirt ring's perspective: its centre sits this far south
+ *  (in radii) and its height is squashed to this, so its near edge reaches
+ *  about 1.08r south of the centre and its far edge only about 0.48r north. */
+const SKIRT_DROP = 0.3
+const SKIRT_H = 0.78
 
 export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Renderer, opts?: {
   /** Draw the keeper as himself rather than as a projection. True inside his
@@ -419,8 +427,8 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     terraces: { u: number; dark: Sprite; band: Sprite }[]
     floor: Sprite; wall: Sprite
     /** The skirt streaming in: crests racing inward, and the drag over them. */
-    streams: { s: Sprite; q: number }[]
-    drag: Sprite
+    streams: { s: Sprite; h: Container; q: number }[]
+    drag: Sprite; dragH: Container
     /** Where the sea tips over the edge, and what comes off it. */
     lip: Sprite; spray: Spray[]
     foam: Foam[]; spirits: Spirit[]
@@ -526,17 +534,24 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     // paints over them where the two meet, so a crest is taken by the hole
     // rather than ending on top of it. Flat on the plane, laid through the
     // same keystone as everything else so the lip is one continuous surface.
+    // EACH IN A HOLDER. The holder carries the perspective squash and the
+    // sprite inside it only turns: squash and spin on one sprite turn the
+    // ELLIPSE itself, so a flattened ring would wobble round as it spun.
     const drag = sprite(wispTex!, 1, th.foam, 0)
     drag.blendMode = 'add'
-    node.addChild(drag)
+    const dragH: Container = new PIXI.Container()
+    dragH.addChild(drag)
+    node.addChild(dragH)
     const streams: One['streams'] = []
     for (let i = 0; i < STREAM_N; i++) {
       const sp = sprite(ringTex!, 1, th.foam, 0)
       sp.blendMode = 'add'
-      node.addChild(sp)
+      const h: Container = new PIXI.Container()
+      h.addChild(sp)
+      node.addChild(h)
       // Spread down the run so they arrive one after another rather than as a
       // set of rings breathing together.
-      streams.push({ s: sp, q: i / STREAM_N })
+      streams.push({ s: sp, h, q: i / STREAM_N })
     }
 
     // ── THE PAINTING, UNDER EVERYTHING THE CODE STILL DRAWS ────────────
@@ -697,7 +712,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
       flatPaint, paint, rtPaint, debris,
       m, th, node, flatDark, flatLight, rtDark, rtLight,
       storm, funnel, arms, mid, wisps, eye, core, strike, beam, holo,
-      terraces, floor, wall, streams, drag, lip: lipS, spray,
+      terraces, floor, wall, streams, drag, dragH, lip: lipS, spray,
       foam, spirits, seen: false,
       nextStrike: 4 + Math.random() * 8, strikeLeft: 0,
       rtFrame: 0,
@@ -781,10 +796,19 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         /** The same, for a ring lying ON the surface at a plain world radius:
          *  no depth, so no lean, but the keystone all the same or the skirt
          *  would be rounder than the hole it runs into. */
-        const flatRing = (sp: Sprite, r: number) => {
-          sp.position.set(0, r * KEY_DROP)
-          sp.width = r * 2 * KEY_W
-          sp.height = r * 2 * KEY_H
+        // ── AND THE SKIRT RECEDES (Kong: the outer bands looked flat; the
+        // ones south of the gauntlet should reach further than the ones
+        // behind). At the mouth a ring matches the mouth's own keystone, so
+        // the lip is one surface; further out the near/far split grows, so
+        // the outermost crests reach well south of the hole and pull in on
+        // the far side, the way a ring lying on the water looks from above
+        // and to the south. Applied to the HOLDER; the sprite inside turns.
+        const flatRing = (h: Container, r: number) => {
+          const k = Math.max(0, Math.min(1, (r / m.r - 1) / (STREAM_OUT - 1)))
+          const drop = KEY_DROP + k * (SKIRT_DROP - KEY_DROP)
+          const hk = KEY_H + k * (SKIRT_H - KEY_H)
+          h.position.set(0, r * drop)
+          h.scale.set(r * 2 * KEY_W, r * 2 * hk)
         }
 
         // ── THE SEA FALLS IN ────────────────────────────────────────────
@@ -798,7 +822,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           if (st.q >= 1) st.q -= 1
           const q = st.q
           const rr = m.r * (STREAM_OUT + (STREAM_IN - STREAM_OUT) * q)
-          flatRing(st.s, rr)
+          flatRing(st.h, rr)
           st.s.rotation += dt * spd * (0.3 + 1.5 * q)
           // Both ends, so nothing switches on in clean water or piles up at
           // the lip. The floor is the same reasoning as the storm skirt's:
@@ -808,7 +832,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         // AND THE WHOLE PATCH TURNS. One broad spiral over the skirt, slower
         // than the arms because it is open sea being dragged rather than the
         // vortex itself.
-        flatRing(o.drag, m.r * 1.45)
+        flatRing(o.dragH, m.r * 1.45)
         o.drag.rotation += dt * spd * 0.42
         o.drag.alpha = (0.04 + 0.07 * gg) * lit
         for (const tr of o.terraces) {

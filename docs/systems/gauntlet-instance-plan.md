@@ -607,3 +607,11 @@ tiles is GONE (same rejected shine as the boon cards). The hub's Codex button an
 screen's codex link both use the tome.
 Also: the maelstrom door landmarks were REMOVED on sight (Kong did not like them); the wreckage
 circling in stays.
+
+**The whirlpool reads 2.5D (2026-09-24).** Kong: the outer bands looked flat. `seaMaelstrom` deepened
+its keystone (far edge 0.68 x 0.70, near edge 1.04 x 1.14, was 0.72 x 0.80 / 1.0 x 1.05), and the
+skirt's crests and drag grow their near/far split with radius (`SKIRT_DROP` 0.30, `SKIRT_H` 0.78 at
+the outermost ring, matching the mouth's keystone at the lip), so the south of the bowl reaches
+well past the north. Each skirt ring sits in a holder that carries the squash while the sprite
+inside turns; squash and spin on one sprite rotated the ellipse itself.
+
