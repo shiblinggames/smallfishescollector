@@ -117,8 +117,8 @@ const ART: Record<DayKind, string> = {
   haul: '/goldcrateclosed.png',
   orders: '/sea/tally-house-v2.webp',
   voyage: '/sea/charterhouse-v2.webp',
-  trawls: '/sea/trawl-shed.png',
-  bounties: '/sea/posting-house-v2.webp',
+  trawls: '/sea/trawl-harbor-v3.webp',
+  bounties: '/sea/posting-house-v3.webp',
   chart: '/sea/charting.png',
   parlor: '/sea/parlor.png',
 }

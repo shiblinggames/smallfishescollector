@@ -353,7 +353,7 @@ export const PLACES: Place[] = [
       // number drew a visibly smaller building: 157px against 245. This is
       // the Charterhouse's 0.34 on a smaller isle, which reads as a building
       // of the same institution rather than a model of one.
-      { art: '/sea/posting-house-v2.webp', x: 59, y: 40, scale: 0.42 },
+      { art: '/sea/posting-house-v3.webp', x: 59, y: 40, scale: 0.42 },
     ],
   },
   {
@@ -418,10 +418,10 @@ export const PLACES: Place[] = [
     // Never followed. The chart intercepts this island by id and opens its own
     // two-door chooser, because one of the doors is not a page at all — it is
     // changing the hull you are sailing.
-    href: '/sea', x: -898, y: -5715, r: 340, art: '/sea/gunwharf.png',
+    href: '/sea', x: -898, y: -5715, r: 340, art: '/sea/gunwharf-v3.webp',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/gunwharf.png', x: 57, y: 40, scale: 0.36 },
+      { art: '/sea/gunwharf-v3.webp', x: 55, y: 46, scale: 0.5 },
     ],
   },
   {
@@ -487,20 +487,20 @@ export const PLACES: Place[] = [
     // what belongs ON the land is the shore end of the work: the shed, the
     // drying rack, the crates. The boats are moored off the beach as a
     // landmark, in the water, submerging like everything else that floats.
-    href: '/sea', x: -2050, y: -820, r: 210, art: '/sea/trawl-shed.png',
+    href: '/sea', x: -2050, y: -820, r: 210, art: '/sea/trawl-harbor-v3.webp',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/trawl-shed.png', x: 48, y: 49, scale: 0.44 },
+      { art: '/sea/trawl-harbor-v3.webp', x: 48, y: 49, scale: 0.44 },
     ],
   },
   {
     // On the way OUT rather than a detour, so you pass it heading for water.
     id: 'shipyard', name: 'The Shipyard', blurb: 'Loadout, rack and upgrades',
-    href: '/shipyard', x: 700, y: -900, r: 265, art: '/sea/shipyard.png',
+    href: '/shipyard', x: 700, y: -900, r: 265, art: '/sea/shipyard-v3.webp',
     kind: 'port', minLevel: 0,
     // Placed on /sea/calibrate, against the real coastline.
     buildings: [
-      { art: '/sea/shipyard.png', x: 50, y: 63, scale: 0.44 },
+      { art: '/sea/shipyard-v3.webp', x: 50, y: 63, scale: 0.44 },
     ],
   },
   {
