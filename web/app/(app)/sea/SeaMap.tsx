@@ -6038,17 +6038,6 @@ export default function SeaMap({
   const hudOff = !!fishingIn || fightOn || !arrived
   /** The bay mood at the hull, re-read on the palette's deadband. */
   const moodNow = useRef<BayMood | null>(null)
-  /** Which bay's water the hull is properly inside, and when each chapter's
-   *  name last came up, so crossing back and forth at a strait mouth does not
-   *  put the card up every time. Ten minutes, per bay, per session. */
-  const bayIn = useRef<string | null>(null)
-  const bayTitled = useRef<Record<string, number>>({})
-  const [bayTitle, setBayTitle] = useState<{ key: number; chapter: number; name: string } | null>(null)
-  useEffect(() => {
-    if (!bayTitle) return
-    const t = window.setTimeout(() => setBayTitle(null), 3600)
-    return () => window.clearTimeout(t)
-  }, [bayTitle])
   /**
    * ── THE SEA, HEARD (behind a flag, 2026-09-23) ─────────────────────────
    *
@@ -9966,20 +9955,9 @@ export default function SeaMap({
           const g = mood.grade
           gpuRef.current.palette(seaAt(pos.current, raw).stops.map(c => c.map((v, i) => Math.min(255, v * g[i]))))
           gpuRef.current.mood(mood)
-          // A CHAPTER'S NAME, the moment you are properly in its water.
-          const inside = BAYS.find(b => {
-            const c = bayCentre(b)
-            return Math.hypot(pos.current.x - c.x, pos.current.y - c.y) < b.r * 0.9
-          })?.id ?? null
-          if (inside !== bayIn.current) {
-            bayIn.current = inside
-            const shownAt = bayTitled.current[inside ?? ''] ?? -Infinity
-            if (inside && performance.now() - shownAt > 10 * 60_000) {
-              bayTitled.current[inside] = performance.now()
-              const b = BAY_BY_ID[inside]
-              if (b) setBayTitle({ key: Date.now(), chapter: b.chapter, name: b.name })
-            }
-          }
+          // (No chapter title here: BayBanner already announces the crossing.
+          // A second card fired from this block on 2026-09-23 and every bay
+          // named itself twice. Kong caught it.)
         }
         // A tint, not a filter: see nightTint for why that distinction is the
         // whole reason the islands can be lit at all after what the filter did.
@@ -12587,34 +12565,6 @@ hullRef={hullRefFor(t.key)} />
           setRenownOpen(true)
         }} />
 
-      {/* ── A CHAPTER'S NAME, ON ARRIVAL ─────────────────────────────────
-          Kong: make each expedition zone feel like somewhere. Sailing into a
-          bay's water puts its chapter up for a few seconds: small, high,
-          letting touches through, and gone on its own. The water's own name
-          already lives top-centre; this sits under it and fades. */}
-      <AnimatePresence>
-        {bayTitle && (
-          <motion.div key={bayTitle.key} aria-live="polite"
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.7, ease: 'easeOut' }}
-            style={{
-              position: 'absolute', left: 0, right: 0, top: '17%', zIndex: Z.compass + 1,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none',
-              textShadow: '0 2px 12px rgba(0,0,0,0.85)',
-            }}>
-            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.34em', color: 'rgba(240,192,64,0.9)' }}>
-              {bayTitle.chapter >= 5 ? 'The Last Chapter' : `Chapter ${['', 'I', 'II', 'III', 'IV'][bayTitle.chapter] ?? bayTitle.chapter}`}
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-              <span aria-hidden style={{ width: 38, height: 1, background: 'linear-gradient(90deg, transparent, rgba(240,220,170,0.7))' }} />
-              <span className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: '#f4ead2', letterSpacing: '0.02em' }}>
-                {bayTitle.name}
-              </span>
-              <span aria-hidden style={{ width: 38, height: 1, background: 'linear-gradient(90deg, rgba(240,220,170,0.7), transparent)' }} />
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Portals itself to the body at z 1300, over the chart and everything
           standing on it. Tap anywhere to dismiss. */}
