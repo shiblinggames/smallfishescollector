@@ -10152,6 +10152,11 @@ export default function RaidCombat({
             shipName={nameplate}
             shipImageUrl={shipImageUrl}
             shipFilter={shipFilter}
+            characterColor={playerCharacterColor ?? null}
+            equippedHat={playerEquippedHat ?? null}
+            avatarBg={playerAvatarBg ?? null}
+            avatarBorder={playerAvatarBorder ?? null}
+            shieldHp={abyssalShieldHp}
             playerHp={playerHp}
             playerHpMax={playerHpMax}
             shipMinDamage={shipMinDamage}
@@ -10172,6 +10177,17 @@ export default function RaidCombat({
             runBoons={runBoons}
             runCurses={runCurses}
             conditions={[
+              // ── EVERYTHING ON YOU, NOT JUST THE STATUS PIPELINE ──────────
+              // Kong: the card did not show your current statuses. It showed
+              // the pipeline ones and burn/freeze, and none of the marks on
+              // your portrait that matter most: the boosts, your ward, your
+              // shield pool, Sharpshot. Every mark on the ring has a line here.
+              ...(cannonadeStacks > 0 ? [{ key: 'streak', name: `${streakLabel} x${cannonadeStacks}`, color: cannonadeStacks >= (tide.critStreakMaxStacks || 5) ? '#fbbf24' : '#fb923c', desc: `+${Math.round(tide.critStreakPerStack * cannonadeStacks * 100)}% damage from your run of critical hits${cannonadeStacks >= (tide.critStreakMaxStacks || 5) ? ', and that is the most it goes' : ''}. Any shot that is not a crit breaks it.` }] : []),
+              ...(!!critStreakCfg?.pierceAt && cannonadeStacks >= critStreakCfg.pierceAt ? [{ key: 'pierce', name: 'Through the Plate', color: '#c4b5fd', desc: `Your streak is ${critStreakCfg.pierceAt} or more, so your shots ignore his shield.` }] : []),
+              ...(rampBonusPct > 0 ? [{ key: 'heat', name: 'Cannon Heat', color: rampBonusPct >= 40 ? '#ef4444' : rampBonusPct >= 20 ? '#f97316' : '#fb923c', desc: `+${rampBonusPct}% damage. It climbs every turn of this fight and resets for the next one.` }] : []),
+              ...(abyssalShieldHp > 0 ? [{ key: 'shield', name: 'Shielded', color: '#67e8f9', desc: `${abyssalShieldHp} HP of shield takes incoming damage before your hull does.` }] : []),
+              ...(vengeanceWardTurns > 0 ? [{ key: 'ward', name: 'Vengeance Ward', color: '#d1495b', turns: vengeanceWardTurns, desc: 'A killing blow in this window is cheated and you survive it. If nothing tries to kill you before it runs out, it is wasted.' }] : []),
+              ...(sharpshotBuff ? [{ key: 'sharp', name: 'Sharpshot', color: '#fbbf24', desc: `The gold crit band is ${sharpshotBuff.multiplier}x wider for your next ${sharpshotBuff.shotsLeft} shot${sharpshotBuff.shotsLeft === 1 ? '' : 's'}.` }] : []),
               ...statusConditions(playerStatuses),
               ...(playerBurning ? [{ key: 'burn', name: 'Ablaze', color: BURN_COLOR, turns: playerBurnRef.current.turns, desc: `Your ship is on fire. It loses ${playerBurnRef.current.dmg} HP at the end of each of your turns. Any crew heal douses the flames.` }] : []),
               ...(playerFrozen ? [{ key: 'freeze', name: 'Frozen', color: FREEZE_COLOR, desc: 'Your ship is iced over. Your next turn is skipped, and you cannot weave aside from incoming shots while frozen.' }] : []),
@@ -10311,7 +10327,7 @@ export default function RaidCombat({
 }
 
 function PlayerStatsPopup({
-  shipName, shipImageUrl, shipFilter, playerHp, playerHpMax,
+  shipName, shipImageUrl, shipFilter, characterColor = null, equippedHat = null, avatarBg = null, avatarBorder = null, shieldHp = 0, playerHp, playerHpMax,
   shipMinDamage, shipSpeed, totalPower, totalNavigation, totalFortune,
   isBoss, equippedRaidItems, crateOdds = [], shipClasses = {}, damagePct = 0,
   megaAugment = null, megaCost = MEGA_CHARGE_COST,
@@ -10326,6 +10342,13 @@ function PlayerStatsPopup({
   shipName: string
   shipImageUrl: string
   shipFilter?: string
+  /** The captain's own avatar, set into the portrait panel beside the name. */
+  characterColor?: string | null
+  equippedHat?: string | null
+  avatarBg?: string | null
+  avatarBorder?: string | null
+  /** The absorb shield pool, shown on the HP card as the HP bar shows it. */
+  shieldHp?: number
   playerHp: number
   playerHpMax: number
   shipMinDamage: number
@@ -10380,6 +10403,8 @@ function PlayerStatsPopup({
   // decides dodging incoming fire and steadier aim. Each has one job now — so a
   // speed boon and an enemy's speed both read clearly against yours.
   const rows: { label: string; value: string; hint: string; color: string }[] = [
+    // HP first, as the enemy's card has it: the one number you check most.
+    { label: 'HP',          value: `${playerHp} / ${playerHpMax}`,  hint: shieldHp > 0 ? `+${shieldHp} shield on top` : 'remaining / total hull', color: '#86efac' },
     { label: 'Damage',      value: `${hitMin}–${powerMax}`,        hint: 'normal-hit damage range',             color: '#f87171' },
     { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'damage on a critical lock',           color: '#fbbf24' },
     { label: 'Initiative',  value: String(shipSpeed),              hint: 'fire first · flee',                    color: '#60a5fa' },
@@ -10539,10 +10564,10 @@ function PlayerStatsPopup({
           width: '100%', maxWidth: 'clamp(380px, 48vw, 620px)',
           // Fixed size across tabs — the modal never jumps when you switch;
           // a taller tab scrolls its own content instead of growing the card.
-          height: 'min(78vh, 620px)',
+          height: 'min(88vh, 780px)',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
           background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
-          border: '1px solid rgba(96,165,250,0.18)',
+          border: '1px solid rgba(96,165,250,0.26)',
           borderRadius: 20,
           padding: '1.1rem 1rem 0',
           boxShadow: '0 18px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset',
@@ -10564,13 +10589,39 @@ function PlayerStatsPopup({
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
 
-        {/* Header — ship art + name. Right-padded so the name never runs under the X. */}
-        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, paddingRight: 32 }}>
+        {/* ── YOUR SHIP, FIRST, AS THE ENEMY'S CARD OPENS ON THE ENEMY ─────
+            Kong: this card looked old beside the enemy's. It was a 60px ship
+            icon beside two lines of text; the enemy's opens on a full-bleed
+            painting with the name set on a scrim. Same panel here: your hull
+            fitted into it on a pool of your blue, your captain's portrait and
+            name set on the scrim. */}
+        <div style={{
+          position: 'relative', overflow: 'hidden', flexShrink: 0,
+          margin: '-1.1rem -1rem 14px', borderRadius: '20px 20px 0 0',
+          height: 'clamp(170px, 26vh, 240px)',
+          background: 'radial-gradient(ellipse 62% 58% at 50% 42%, rgba(96,165,250,0.34) 0%, rgba(6,16,28,0) 100%)',
+        }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={shipImageUrl} alt="" style={{ width: 60, height: 60, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 3px 8px rgba(0,0,0,0.5))${shipFilter && shipFilter !== 'none' ? ` ${shipFilter}` : ''}` }} />
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 3 }}>Captain</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shipName}</p>
+          <img src={shipImageUrl} alt="" draggable={false} decoding="async" style={{
+            position: 'absolute', left: '8%', right: '8%', top: '6%', bottom: '14%',
+            width: '84%', height: '80%', objectFit: 'contain', objectPosition: 'center',
+            filter: `drop-shadow(0 6px 14px rgba(0,0,0,0.6))${shipFilter && shipFilter !== 'none' ? ` ${shipFilter}` : ''}`,
+          }} />
+          <div style={{
+            position: 'absolute', left: 0, right: 0, bottom: 0, height: '52%',
+            background: 'linear-gradient(to top, #07111e 0%, rgba(7,17,30,0.78) 42%, rgba(7,17,30,0) 100%)',
+          }} />
+          <div style={{ position: 'absolute', left: '1rem', right: '1rem', bottom: '0.75rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+            {characterColor && (
+              <div style={{ flexShrink: 0, borderRadius: '50%', overflow: 'hidden', boxShadow: '0 0 12px rgba(96,165,250,0.45)' }}>
+                <CharacterAvatar characterColor={characterColor} equippedHat={equippedHat} size={46}
+                  bgColor={avatarBg ?? undefined} ringColor={avatarBorder ?? undefined} />
+              </div>
+            )}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', color: '#93c5fd', letterSpacing: '0.14em', marginBottom: 3 }}>Captain</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#f0ede8', lineHeight: 1.05, textShadow: '0 2px 10px rgba(0,0,0,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shipName}</p>
+            </div>
           </div>
         </div>
 
@@ -10596,6 +10647,13 @@ function PlayerStatsPopup({
             content scrolls, so the modal keeps one fixed size. */}
         <div ref={bodyScrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '1.1rem' }}>
         {activeTab === 'stats' && (<>
+        {/* RIGHT NOW, FIRST. What is on you this turn is the urgent read; the
+            numbers below are the ones that do not change mid-fight. */}
+        {conditions.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <ConditionsSection conditions={conditions} />
+          </div>
+        )}
         {/* Stat cards — 2-column grid feels less list-y and more dashboard-y. */}
         {sectionHeading('Combat', '#8fb4e0')}
         <div style={{
@@ -10611,20 +10669,12 @@ function PlayerStatsPopup({
               borderRadius: 12,
             }}>
               <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: r.color, letterSpacing: '0.04em' }}>{r.label}</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f0ede8', lineHeight: 1.05 }}>{r.value}</p>
-              <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.35 }}>{r.hint}</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.05 }}>{r.value}</p>
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.35 }}>{r.hint}</p>
             </div>
           ))}
         </div>
 
-        {/* Live conditions — what's on your hull RIGHT NOW (statuses + burn/
-            freeze). Sits right under Combat, above the build sections, so the
-            urgent transient reads come before the permanent loadout. */}
-        {conditions.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <ConditionsSection conditions={conditions} />
-          </div>
-        )}
 
         {/* Classes — one consolidated card: combined stat chips + which picks
             are stacked, instead of a tall row per class. */}
@@ -11891,6 +11941,8 @@ function StatusGlyph({ icon, size = 10 }: { icon: string; size?: number }) {
     case 'aegis':   return P('M4 6.5h16v11H4z', <path d="M4 12h16M9 6.5V12M15 12v5.5" />)                // brick wall
     case 'ward':    return P('M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z', <path d="M12 8v6M9.2 10.4h5.6" />) // shield + cross (Laz's ward)
     case 'aim':     return P('M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4', <circle cx="12" cy="12" r="4.5" />) // crosshair (aim afflictions)
+    case 'shield':  return P('M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z', <path d="M8 12.5c1.3-1.2 2.7-1.2 4 0s2.7 1.2 4 0" />) // shield + wave (absorb pool)
+    case 'sharp':   return P('M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5', <circle cx="12" cy="12" r="2" />) // tight crosshair (Sharpshot)
     case 'streak':  return P('M13 2.5L5 13.5h6l-1 8 8-11h-6l1-8z')                                   // bolt (crit streak)
     case 'pierce':  return P('M3 12h15M14 7l5 5-5 5', <path d="M9 5v14" />)                            // arrow through a plate
     case 'heat':    return P('M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z', <path d="M12 11v5" />)   // thermometer (cannon heat)
@@ -11917,7 +11969,7 @@ function ConditionsSection({ conditions }: { conditions: ConditionItem[] }) {
   return (
     <div>
       <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#c084fc', letterSpacing: '0.14em', marginBottom: 5 }}>
-        {conditions.length > 1 ? `Conditions · ${conditions.length}` : 'Condition'}
+        {conditions.length > 1 ? `Right Now · ${conditions.length}` : 'Right Now'}
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {conditions.map(c => (

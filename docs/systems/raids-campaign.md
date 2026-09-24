@@ -478,3 +478,13 @@ three styles. All boosts are now `boostChips` at the front of `playerChips`, dra
 is the corner text and re-pops the mark when it changes. Add any new boost here, never as a
 free-floating pill.
 
+
+## The Captain's Ledger (player stats card, 2026-09-24)
+
+Kong: it looked old beside the enemy's card and did not show current statuses. `PlayerStatsPopup`
+now opens like `EnemyStatsPopup`: a full-bleed portrait panel (your hull on a blue pool, your
+CharacterAvatar + name on the scrim), an HP card first in the grid (with the shield pool), and
+**Right Now** (ConditionsSection, renamed from "Conditions" on both cards) leading the Stats tab.
+Its conditions list is every mark on your portrait ring, not just the status pipeline: streak,
+pierce, cannon heat, shield pool, Vengeance ward, Sharpshot, statuses, burn, freeze, aim
+affliction, brace. A new mark on the ring needs a line here too.
