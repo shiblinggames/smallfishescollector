@@ -6051,6 +6051,17 @@ export default function SeaMap({
    * presses until it is sounding.
    */
   const hushRef = useRef(false)
+  /**
+   * ── WHAT THE WATER IS DOING TO YOU, SAID ──────────────────────────────
+   *
+   * Kong: it did not feel like catching a current, and full sail gave no
+   * cue. The frame loop sets this only when something CHANGES (entering or
+   * leaving a lane, the sails filling or spilling, into or out of kelp), so
+   * it re-renders a handful of times a trip, never per frame.
+   */
+  const [seaCue, setSeaCue] = useState<{ current: 'with' | 'against' | 'across' | null; full: boolean; kelp: boolean }>(
+    { current: null, full: false, kelp: false })
+  const seaCueRef = useRef(seaCue)
   hushRef.current = hudOff
   const ambHead = useRef<number | null>(null)
   useEffect(() => {
@@ -7981,6 +7992,8 @@ export default function SeaMap({
     let straightT = 0
     let lastHeadMom = 0
     let sailFull = false
+    /** Whether the hull was in a lane last frame, for the moment of catching one. */
+    let inLane = false
     /** Tracked apart from `lastDark` because the backdrop also repaints when
      *  the boat has sailed far enough, and the grade has no reason to. */
     let lastGrade = -1
@@ -8383,6 +8396,34 @@ export default function SeaMap({
           const push = CURRENT_PUSH * SPEED * cur.k * dt
           pos.current.x += cur.ux * push
           pos.current.y += cur.uy * push
+          // ── AND IT CARRIES A BOAT THAT IS NOT BEING SAILED ─────────────
+          // Kong: standing still, nothing pushed him. It did; the helm pushed
+          // back. A released stick leaves a target point and the hull holds
+          // station on it, so the current's drift was undone every frame.
+          // Not steering and already at (or near) that point, the point goes
+          // with the water, and the boat drifts as a boat does. A destination
+          // you TAPPED further off still holds: you asked to go there.
+          const steering = !!boxHeld.current || keysRef.current.size > 0 || holding.current
+          const tx = target.current.x - pos.current.x, ty = target.current.y - pos.current.y
+          if (!steering && tx * tx + ty * ty < SLOW * SLOW) {
+            target.current = { x: target.current.x + cur.ux * push, y: target.current.y + cur.uy * push }
+          }
+        }
+        // CATCHING ONE: the moment the hull gets properly into a lane, a
+        // splash at the bow and a tick in the hand.
+        const laneNow = cur.k > 0.35
+        if (laneNow && !inLane) {
+          gpuRef.current?.splash(pos.current.x, pos.current.y, 0, false)
+          vibrate([0, 10, 30, 14])
+        }
+        inLane = laneNow
+        // Which way it is taking you, for the cue: along your way, against
+        // it, or across it.
+        let way: 'with' | 'against' | 'across' | null = null
+        if (laneNow) {
+          const sp = Math.hypot(vel.current.x, vel.current.y)
+          const dot = sp > 20 ? (vel.current.x * cur.ux + vel.current.y * cur.uy) / sp : 1
+          way = dot > 0.5 ? 'with' : dot < -0.5 ? 'against' : 'across'
         }
         // KELP holds you, easing in and out over about a quarter second.
         const kelpTarget = 1 - (1 - KELP_KEEP) * kelpAt(pos.current.x, pos.current.y)
@@ -8398,17 +8439,33 @@ export default function SeaMap({
         else straightT = Math.max(0, straightT - dt * 4)
         const full = straightT > FULL_SAIL_AFTER
         if (full && !sailFull) {
-          // The sails fill: a burst of spray off the bow, once.
+          // The sails fill: a burst of spray off the bow, once, and the hand
+          // feels it.
           gpuRef.current?.splash(pos.current.x, pos.current.y, 0, false)
-          vibrate(8)
+          vibrate([0, 16, 40, 22])
         }
         sailFull = full
         sailMom += ((full ? FULL_SAIL : 1) - sailMom) * (1 - Math.exp(-3 * dt))
+        // Said on the HUD, only when it changes.
+        const kelpNow = kelpKeep < 0.9
+        const was = seaCueRef.current
+        if (was.current !== way || was.full !== full || was.kelp !== kelpNow) {
+          const next = { current: way, full, kelp: kelpNow }
+          seaCueRef.current = next
+          setSeaCue(next)
+        }
       } else {
         kelpKeep += (1 - kelpKeep) * (1 - Math.exp(-4 * dt))
         sailMom += (1 - sailMom) * (1 - Math.exp(-3 * dt))
         straightT = 0
         sailFull = false
+        inLane = false
+        const was = seaCueRef.current
+        if (was.current || was.full || was.kelp) {
+          const next = { current: null, full: false, kelp: false }
+          seaCueRef.current = next
+          setSeaCue(next)
+        }
       }
 
       // AND YOU CANNOT SAIL PAST THE HARBOUR. Everything north of it belongs
@@ -11004,6 +11061,24 @@ hullRef={hullRefFor(t.key)} />
         </div>
       )}
 
+      {/* ── THE WATER'S CUES ──────────────────────────────────────────
+          Small chips above the helm's own line: which way a current is
+          taking you, full sail, and kelp. Letting touches through. */}
+      {!hudOff && (seaCue.current || seaCue.full || seaCue.kelp) && (
+        <div aria-live="polite" style={{
+          position: 'absolute', left: 0, right: 0, zIndex: Z.action, pointerEvents: 'none',
+          bottom: (finePointer ? HELM_BOTTOM + 10 : HELM_BOTTOM + HELM_D + 10) + 40,
+          display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap', padding: '0 1rem',
+        }}>
+          {seaCue.current && (
+            <SeaCueChip key={`cur-${seaCue.current}`}
+              color={seaCue.current === 'with' ? '#8fe0f0' : seaCue.current === 'against' ? '#f0a58f' : '#c9d6e0'}
+              text={seaCue.current === 'with' ? 'Riding the current' : seaCue.current === 'against' ? 'Against the current' : 'Crossing a current'} />
+          )}
+          {seaCue.full && <SeaCueChip key="full" color="#f0d58a" text="Full sail" />}
+          {seaCue.kelp && <SeaCueChip key="kelp" color="#a8c483" text="In the kelp" />}
+        </div>
+      )}
       {!hudOff && !choosing && (helmLabel.act || helmLabel.hold) && (() => {
         // ONE LINE, ONE STYLE. The two used to be different sizes and different
         // families — the action in Cinzel at 1.02 and the hold in Karla at 0.78
@@ -18031,5 +18106,23 @@ function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void 
       </motion.div>
     </PopupShell>
     </div>
+  )
+}
+
+/** One of the water's cues above the helm. Pops in, and says one thing. */
+function SeaCueChip({ text, color }: { text: string; color: string }) {
+  return (
+    <motion.span
+      initial={{ opacity: 0, y: 6, scale: 0.92 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 460, damping: 26 }}
+      className="font-karla font-800 uppercase"
+      style={{
+        fontSize: '0.62rem', letterSpacing: '0.14em', color,
+        padding: '0.28rem 0.7rem', borderRadius: 999,
+        background: 'rgba(6,12,18,0.72)', border: `1px solid ${color}66`,
+        boxShadow: `0 0 14px ${color}22`, textShadow: '0 1px 6px rgba(0,0,0,0.8)',
+        whiteSpace: 'nowrap',
+      }}>{text}</motion.span>
   )
 }

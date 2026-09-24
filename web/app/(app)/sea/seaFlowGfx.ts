@@ -147,7 +147,7 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
     }
     const mesh = new PIXI.MeshSimple({ texture: streaks, vertices: verts, uvs, indices: new Uint32Array(idx) })
     mesh.blendMode = 'add'
-    mesh.alpha = 0.2
+    mesh.alpha = 0.28
     view.addChild(mesh)
     lanes.push({ mesh, base: Float32Array.from(uvs) })
   }

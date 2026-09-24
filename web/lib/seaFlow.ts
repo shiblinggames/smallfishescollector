@@ -65,8 +65,8 @@ export const CURRENTS: CurrentLane[] = [
 ]
 
 /** How hard a current carries you at its centre, as a share of the base
- *  sailing speed. About +40% riding it, about -40% (so a crawl) against. */
-export const CURRENT_PUSH = 0.4
+ *  sailing speed. Raised from 0.4 (Kong: it did not feel like catching one). */
+export const CURRENT_PUSH = 0.55
 
 /** How hard kelp holds you: the share of your speed you keep inside a bed. */
 export const KELP_KEEP = 0.6
