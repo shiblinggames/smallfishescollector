@@ -28,7 +28,7 @@ const RARITY_DIM = 'rgba(255,255,255,0.14)'
 
 /** Sorts, in the order a raid actually cares about them. Power first because
  *  it is the damage stat; Savvy is the dodge roll; Fortune drives loot. Level
- *  is here because the class Special does not unlock until Lv 10, so "who is
+ *  is here because the class Special grows with it (Lv 1, 10, 25 and up), so "who is
  *  furthest along" is a real question when filling a seat. */
 const SORTS = [
   { k: 'power'   as const, label: 'Power',   color: '#e08a7a' },

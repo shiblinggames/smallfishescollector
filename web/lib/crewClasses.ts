@@ -106,7 +106,17 @@ export function classForSlug(slug: string | null | undefined): CrewClass | null 
 }
 
 // ── Milestone schedule ──────────────────────────────────────────────────────
-export const CLASS_MILESTONE_LEVELS = [10, 25, 40, 75, 100] as const
+// ── EVERY HAND HAS ITS SPECIAL FROM THE FIRST DAY (2026-09-23) ─────────────
+//
+// Kong: people were not playing raids, and the likeliest reason was that a
+// crew's Special did not unlock until Lv 10. Raids are also where crew XP comes
+// from fastest, so a new crew needed raids to level and levels to make a raid
+// worth playing: 12 of the 14 captains with crew and no raid clear had no hand
+// at Lv 10. So the Special unlocks at Lv 1, at about 70% of its old Lv 10
+// strength, and Lv 10 stays a real step up to the old base. Oracle's first
+// tier cannot be smaller than "see the next move", so its Lv 1 and Lv 10 are
+// the same tier.
+export const CLASS_MILESTONE_LEVELS = [1, 10, 25, 40, 75, 100] as const
 export type ClassMilestoneLevel = typeof CLASS_MILESTONE_LEVELS[number]
 
 // ── Per-class typed milestones ─────────────────────────────────────────────
@@ -264,7 +274,7 @@ export interface ClassDef<M> {
   blurb: string                // one-line identity, for the detail modal
   color: string                // accent / icon tint
   emoji: string                // chooser card glyph — monochrome typographic symbol (NO emoji), tinted by `color`
-  milestones: [M, M, M, M, M]
+  milestones: [M, M, M, M, M, M]
 }
 
 // ── Class registry ──────────────────────────────────────────────────────────
@@ -286,6 +296,7 @@ export const MENDER: ClassDef<MenderMilestone> = {
   blurb: 'Restores ship HP. Pure sustain.',
   color: '#4ade80', emoji: '✚',
   milestones: [
+    { unlockLevel: 1,   pctMaxHp: 0.10, desc: 'Heal 10% max HP.' },
     { unlockLevel: 10,  pctMaxHp: 0.15, desc: 'Heal 15% max HP.' },
     { unlockLevel: 25,  pctMaxHp: 0.25, desc: 'Heal 25% max HP.' },
     { unlockLevel: 40,  pctMaxHp: 0.35, desc: 'Heal 35% max HP.' },
@@ -307,6 +318,7 @@ export const SHARPSHOT: ClassDef<SharpshotMilestone> = {
   // ~90% of the hit width at Lv100 — a clean hit almost always crits, but it's
   // never a free auto-crit, so aiming still matters.
   milestones: [
+    { unlockLevel: 1,   critZoneMultiplier: 0.6,  shotsBuffed: 1, desc: 'Next shot crit zone 60% wider.' },
     { unlockLevel: 10,  critZoneMultiplier: 1.0,  shotsBuffed: 1, desc: 'Next shot crit zone doubled.' },
     { unlockLevel: 25,  critZoneMultiplier: 1.75, shotsBuffed: 1, desc: 'Next shot crit zone nearly tripled.' },
     { unlockLevel: 40,  critZoneMultiplier: 2.5,  shotsBuffed: 2, desc: 'Next 2 shots crit zone 3.5× wider.' },
@@ -320,6 +332,7 @@ export const SNARE: ClassDef<SnareMilestone> = {
   blurb: 'Disables the enemy\'s dodge for several turns. Always lands.',
   color: '#c084fc', emoji: '⊘',
   milestones: [
+    { unlockLevel: 1,   jamChance: 0.20, disableDodgeTurns: 2, desc: '20% chance to jam enemy dodge for 2 turns.' },
     { unlockLevel: 10,  jamChance: 0.30, disableDodgeTurns: 2, desc: '30% chance to jam enemy dodge for 2 turns.' },
     { unlockLevel: 25,  jamChance: 0.40, disableDodgeTurns: 2, desc: '40% chance to jam enemy dodge for 2 turns.' },
     { unlockLevel: 40,  jamChance: 0.48, disableDodgeTurns: 3, desc: '48% chance to jam enemy dodge for 3 turns.' },
@@ -333,6 +346,7 @@ export const ANCHOR: ClassDef<AnchorMilestone> = {
   blurb: 'Absorbs a portion of the next incoming hit. Dependable wall, not a coin flip.',
   color: '#38bdf8', emoji: '⛨',
   milestones: [
+    { unlockLevel: 1,   pctReduction: 0.20, desc: 'Reduce next incoming hit by 20%.' },
     { unlockLevel: 10,  pctReduction: 0.30, desc: 'Reduce next incoming hit by 30%.' },
     { unlockLevel: 25,  pctReduction: 0.45, desc: 'Reduce next incoming hit by 45%.' },
     { unlockLevel: 40,  pctReduction: 0.60, desc: 'Reduce next incoming hit by 60%.' },
@@ -346,6 +360,7 @@ export const NAVIGATOR: ClassDef<NavigatorMilestone> = {
   blurb: 'Chance to grant the player a charge instantly. Better odds at higher levels.',
   color: '#a8b8d0', emoji: '◈',
   milestones: [
+    { unlockLevel: 1,   oneChargeChance: 0.30, twoChargeChance: 0,    desc: '30% chance to gain +1 charge.' },
     { unlockLevel: 10,  oneChargeChance: 0.40, twoChargeChance: 0,    desc: '40% chance to gain +1 charge.' },
     { unlockLevel: 25,  oneChargeChance: 0.60, twoChargeChance: 0,    desc: '60% chance to gain +1 charge.' },
     { unlockLevel: 40,  oneChargeChance: 0.80, twoChargeChance: 0,    desc: '80% chance to gain +1 charge.' },
@@ -372,6 +387,7 @@ export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
   blurb: 'Heals the ship and grants a temporary damage shield. Heal now, brace for what\'s coming.',
   color: '#5eead4', emoji: '≋',
   milestones: [
+    { unlockLevel: 1,   pctMaxHp: 0.14, shieldPctMaxHp: 0.05, desc: 'Heal 14% max HP and grant a 5% max HP shield.' },
     { unlockLevel: 10,  pctMaxHp: 0.20, shieldPctMaxHp: 0.08, desc: 'Heal 20% max HP and grant an 8% max HP shield.' },
     { unlockLevel: 25,  pctMaxHp: 0.30, shieldPctMaxHp: 0.11, desc: 'Heal 30% max HP and grant an 11% max HP shield.' },
     { unlockLevel: 40,  pctMaxHp: 0.40, shieldPctMaxHp: 0.14, desc: 'Heal 40% max HP and grant a 14% max HP shield.' },
@@ -395,6 +411,7 @@ export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
     // Curve trimmed from the old 0.85–2.50 (which double-counted the crit and
     // ballooned the boss salvo to ~6× P) to land the Lv100 boss shell at
     // ~3.3× P — Doby's historical boss power, now reliable, not compressed.
+    { unlockLevel: 1,   dmgMult: 0.32, mobPenaltyPct: 0.45, bossBonusPct: 0.20, autoCrit: true, desc: 'Fire 1 heavy crit shot. −45% vs regular hulls, +20% vs bosses and elites.' },
     { unlockLevel: 10,  dmgMult: 0.45, mobPenaltyPct: 0.45, bossBonusPct: 0.25, autoCrit: true, desc: 'Fire 1 heavy crit shot. −45% vs regular hulls, +25% vs bosses and elites.' },
     { unlockLevel: 25,  dmgMult: 0.60, mobPenaltyPct: 0.45, bossBonusPct: 0.35, autoCrit: true, desc: 'Fire 1 heavy crit shot. −45% vs regular hulls, +35% vs bosses and elites.' },
     { unlockLevel: 40,  dmgMult: 0.80, mobPenaltyPct: 0.45, bossBonusPct: 0.45, autoCrit: true, desc: 'Fire 1 heavy crit shot. −45% vs regular hulls, +45% vs bosses and elites.' },
@@ -416,6 +433,7 @@ export const BLITZ: ClassDef<BlitzMilestone> = {
   // 4×.28=1.12, 5×.28=1.40, 6×.30=1.80, 8×.30=2.40 — at/just under Leviathan's
   // regular-hull damage; the frenzy pushes it above only as the target dies.
   milestones: [
+    { unlockLevel: 1,   shots: 2, shotDmgMult: 0.28, frenzyMaxPct: 0.15, desc: 'Fire a 2-shot barrage at 28% damage each. Up to +15% per shot as the target weakens.' },
     { unlockLevel: 10,  shots: 3, shotDmgMult: 0.28, frenzyMaxPct: 0.20, desc: 'Fire a 3-shot barrage at 28% damage each. Up to +20% per shot as the target weakens.' },
     { unlockLevel: 25,  shots: 4, shotDmgMult: 0.28, frenzyMaxPct: 0.25, desc: 'Fire a 4-shot barrage at 28% each. Up to +25% as the target weakens.' },
     { unlockLevel: 40,  shots: 5, shotDmgMult: 0.28, frenzyMaxPct: 0.35, desc: 'Fire a 5-shot barrage at 28% each. Up to +35% as the target weakens.' },
@@ -433,6 +451,7 @@ export const FORESIGHT: ClassDef<ForesightMilestone> = {
   blurb: "Reveals the enemy's next moves. At higher ranks, refreshes your dodge so you can slip a shot you already spent your dodge on.",
   color: '#8b7bf0', emoji: '◉',
   milestones: [
+    { unlockLevel: 1,   revealMoves: 1, dodgeRefreshChance: 0,    desc: "See the enemy's next move." },
     { unlockLevel: 10,  revealMoves: 1, dodgeRefreshChance: 0,    desc: "See the enemy's next move." },
     { unlockLevel: 25,  revealMoves: 2, dodgeRefreshChance: 0,    desc: "See the enemy's next 2 moves." },
     { unlockLevel: 40,  revealMoves: 2, dodgeRefreshChance: 0.30, desc: "See the next 2 moves; 30% chance to refresh your dodge." },
@@ -457,6 +476,7 @@ export const VENGEANCE: ClassDef<VengeanceMilestone> = {
   blurb: 'Arm a vengeance ward for 3 turns. Take a killing blow while it burns and you cheat death: heal part of your hull and surge with bonus damage for the rest of the fight. Let it run out and it is wasted.',
   color: '#d1495b', emoji: '†',
   milestones: [
+    { unlockLevel: 1,   healPctMaxHp: 0.18, dmgBuffPct: 0.10, desc: 'Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 18% max HP, gain +10% damage for the rest of the fight.' },
     { unlockLevel: 10,  healPctMaxHp: 0.25, dmgBuffPct: 0.15, desc: 'Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 25% max HP, gain +15% damage for the rest of the fight.' },
     { unlockLevel: 25,  healPctMaxHp: 0.25, dmgBuffPct: 0.20, desc: 'Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 25% max HP, gain +20% damage for the rest of the fight.' },
     { unlockLevel: 40,  healPctMaxHp: 0.35, dmgBuffPct: 0.25, desc: 'Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 35% max HP, gain +25% damage for the rest of the fight.' },
@@ -478,6 +498,7 @@ export const REQUIEM: ClassDef<RequiemMilestone> = {
   blurb: 'Marks the enemy for death. While the mark burns, that target takes bonus damage from everything. Your shots and every crew ability. She deals no damage herself; the whole crew collects. At the cap, a marked enemy\'s shield is ignored.',
   color: '#f43f5e', emoji: '◎',
   milestones: [
+    { unlockLevel: 1,   markMag: 0.10, markTurns: 2, desc: 'Mark the enemy for 2 turns. It takes +10% damage from all sources.' },
     { unlockLevel: 10,  markMag: 0.15, markTurns: 2, desc: 'Mark the enemy for 2 turns. It takes +15% damage from all sources.' },
     { unlockLevel: 25,  markMag: 0.18, markTurns: 2, desc: 'Mark the enemy for 2 turns. It takes +18% damage from all sources.' },
     { unlockLevel: 40,  markMag: 0.22, markTurns: 3, desc: 'Mark the enemy for 3 turns. It takes +22% damage from all sources.' },
@@ -518,8 +539,8 @@ export const CLASSES: Record<CrewClass, AnyClassDef> = {
 }
 
 /** Highest-tier milestone unlocked by a crew at this level. Returns null if
- *  the crew is below Lv 10 (no ability yet — chooser card reads "Unlocks at
- *  Lv 10" and is disabled). */
+ *  the crew is below CLASS_UNLOCK_LEVEL, which since 2026-09-23 is Lv 1, so in
+ *  practice never. */
 export function currentMilestone<T extends AnyClassDef>(def: T, level: number): T['milestones'][number] | null {
   let active: T['milestones'][number] | null = null
   for (const m of def.milestones) {
@@ -539,6 +560,6 @@ export function nextMilestone<T extends AnyClassDef>(def: T, level: number): T['
   return null
 }
 
-/** Level at which the crew first gets an ability — currently always 10, but
- *  exposed so the UI can read it from one place instead of hardcoding. */
-export const CLASS_UNLOCK_LEVEL = 10
+/** Level at which the crew first gets an ability: 1 since 2026-09-23 (it was
+ *  10). Exposed so the UI reads it from one place instead of hardcoding. */
+export const CLASS_UNLOCK_LEVEL = 1

@@ -1027,7 +1027,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
 
   // Class section expander — collapsed by default the detail modal shows
   // current-tier effect + next-tier preview; expanded it lists every
-  // milestone (Lv 10 / 25 / 40 / 75 / 100) so the player can see what
+  // milestone (Lv 1 / 10 / 25 / 40 / 75 / 100) so the player can see what
   // they're working toward. Reset on modal close.
   const [classExpanded, setClassExpanded] = useState(false)
 

@@ -160,3 +160,11 @@ edge and a 2px accent bar — a phone gesture drawn on a desktop, where it read 
 bottom of a mostly empty screen, nothing like the assign board it opens *from*. It now takes the
 crew panel's own shell (centred, radius 20, the same ground and hairline, `maxHeight: min(84vh,
 100%)`).
+
+## Specials from Lv 1 (2026-09-23)
+
+Kong: raids were going unplayed and a crew's Special did not unlock until Lv 10, while raids are
+where crew XP comes from fastest (12 of 14 captains with crew but no raid clear had no Lv 10 hand).
+`CLASS_MILESTONE_LEVELS` is now [1, 10, 25, 40, 75, 100] and `CLASS_UNLOCK_LEVEL` 1: every class has
+a Lv 1 tier at ~70% of its old Lv 10 values, and Lv 10 stays a real step to the old base. Oracle's
+Lv 1 equals its Lv 10 ("see the next move" has nothing smaller).
