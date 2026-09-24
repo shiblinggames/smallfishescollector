@@ -393,6 +393,15 @@ export default function CalibrateIslands() {
         background: 'radial-gradient(circle at 50% 50%, #2f6f8f 0%, #235a78 62%, #16405c 100%)',
         touchAction: 'none',
       }}>
+        {/* ── THE PLANE, SQUASHED AS THE SEA SQUASHES IT ─────────────────
+            Kong: the bench looked stretched next to the sea. The sea draws
+            the whole world squashed on y by GROUND and counter-stretches each
+            plate and building by 1 / GROUND, so they come out at their own
+            proportions. The bench did the counter-stretch and never the
+            squash, so everything on it stood 1.7 times too tall. This wrapper
+            is that squash. Drags still land right: they measure the box's
+            on-screen rect, which already carries this transform. */}
+        <div style={{ position: 'absolute', inset: 0, transform: `scaleY(${GROUND})`, transformOrigin: '50% 58%' }}>
         {island && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={island} alt="" draggable={false} style={{
@@ -504,6 +513,7 @@ export default function CalibrateIslands() {
                 border: '2px solid rgba(10,16,22,0.85)',
               }} />
           ))}
+        </div>
         </div>
       </div>
 
