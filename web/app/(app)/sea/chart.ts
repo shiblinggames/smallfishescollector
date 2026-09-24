@@ -668,7 +668,7 @@ export const LANDMARKS: {
  * The default (x + 0.85r, y + 0.6r) is open water on every current port;
  * `berth` on the Place overrides it where the default is wrong.
  */
-export const BERTH_R = 260
+export const BERTH_R = 330
 export function berthOf(p: Place): { x: number; y: number; r: number } {
   return {
     x: p.x + (p.berth?.dx ?? p.r * 0.85),
@@ -678,7 +678,7 @@ export function berthOf(p: Place): { x: number; y: number; r: number } {
     // for larger areas. Seven tenths of the island's own radius, never under
     // the old constant, so the small ports are exactly where they were and the
     // Mainland, the Homestead and the Crew Hall get a harbour their size.
-    r: p.berth?.r ?? Math.max(BERTH_R, Math.round(p.r * 0.7)),
+    r: p.berth?.r ?? Math.max(BERTH_R, Math.round(p.r * 0.88)),
   }
 }
 export function inBerth(at: { x: number; y: number }, p: Place): boolean {
