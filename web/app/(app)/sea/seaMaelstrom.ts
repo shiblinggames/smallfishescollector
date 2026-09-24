@@ -87,6 +87,7 @@
 import type { Container, Particle, ParticleContainer, Renderer, RenderTexture, Sprite, Texture } from 'pixi.js'
 import { GROUND } from './islandArt'
 import { MAELSTROMS, type Maelstrom } from './raidWaters'
+import { texture } from './skiffArt'
 
 type Theme = {
   arm: number; mid: number; wisp: number; core: number; eye: number; foam: number; spirit: number; strike: number
@@ -96,8 +97,16 @@ type Theme = {
   spirits: 'rise' | 'sink'
   /** The strike's character: a hard flash, or a slow pulse. */
   strikeKind: 'flash' | 'pulse'
-  /** Whose door this is. Hangs over the eye as a hologram. */
+  /** Whose door this is. Rises out of the eye as a ghost. */
   face: string
+  /** THE PAINTED WHIRLPOOL (Kong: the maelstroms did not fit the game's
+   *  look; they were drawn with code, neon spirals over a keystone). A house
+   *  painting, turned slowly and laid through the same perspective mesh. */
+  paint: string
+  /** What the whirlpool is taking down, circling its rim. */
+  debris: string[]
+  /** The landmark standing on the water beside the door. */
+  door: string
 }
 
 const THEMES: Record<Maelstrom['id'], Theme> = {
@@ -107,6 +116,9 @@ const THEMES: Record<Maelstrom['id'], Theme> = {
     arm: 0x156f6c, mid: 0x1f918c, wisp: 0x5fc9c6, core: 0xa6eef0, eye: 0x1a7f7a, foam: 0x8fd6d8,
     spirit: 0x9cf0ff, strike: 0x9af4ff, speed: 0.5, spirits: 'rise', strikeKind: 'flash',
     face: '/davyjones.png',
+    paint: '/sea/mael-davy.webp',
+    debris: ['/sea/deb-barrel.webp', '/sea/deb-planks.webp', '/sea/deb-mast.webp', '/sea/deb-planks.webp'],
+    door: '/sea/door-davy.webp',
   },
   // Finleone's ghost: drowned green gone nearly to black, verdigris in the
   // arms, tarnished gold sinking.
@@ -122,6 +134,9 @@ const THEMES: Record<Maelstrom['id'], Theme> = {
     arm: 0x1f4a3a, mid: 0x2f6a52, wisp: 0x7fb098, core: 0xd8e6dc, eye: 0x275c46, foam: 0x93b9a5,
     spirit: 0xd6b25c, strike: 0xd9c47c, speed: 0.4, spirits: 'sink', strikeKind: 'pulse',
     face: '/donsgauntlet.png',
+    paint: '/sea/mael-don.webp',
+    debris: ['/sea/deb-crate.webp', '/sea/deb-barrel.webp', '/sea/deb-planks.webp', '/sea/deb-crate.webp'],
+    door: '/sea/door-don.webp',
   },
 }
 
@@ -252,34 +267,36 @@ function holoTexture(PIXI: typeof import('pixi.js'), img: HTMLImageElement, soli
   // belongs to. Solid keeps his own colour and his own paint; all it borrows
   // from the projection is the foot fade, so he still stands IN the light
   // coming out of the hole rather than ending on a cut line.
+  // ── A GHOST, NOT A PROJECTION ────────────────────────────────────────
+  // Kong: the hologram did not fit the game. It was flattened to one colour
+  // of light and cut into scanlines, with a flicker and a signal dropout:
+  // the language of a transmitted picture, in a world with nothing to
+  // transmit it. A drowned man in the fog is the house idiom instead: his own
+  // colours, drained toward the sea's grey and paled, so he reads as a figure
+  // seen through spray. The foot fade below dissolves him into the mist.
   if (!solid) {
-  // TOWARD WHITE. A hologram is one colour of light; the portrait's own hues
-  // fighting the theme's tint is what makes a tinted photo look like a tinted
-  // photo. Luminance, kept in the alpha the art already has.
-  const d = g.getImageData(0, 0, W, H)
-  const px = d.data
-  for (let i = 0; i < px.length; i += 4) {
-    const l = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]
-    // Lifted and compressed: shadows become dim light rather than holes.
-    const v = 90 + l * 0.72
-    px[i] = px[i + 1] = px[i + 2] = v
-  }
-  g.putImageData(d, 0, 0)
-
-  // SCANLINES, cut out rather than drawn on: a projection is made of the
-  // lines that are there, and the gaps are where it is not.
-  g.globalCompositeOperation = 'destination-out'
-  for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1)
-  g.globalCompositeOperation = 'source-over'
+    const d = g.getImageData(0, 0, W, H)
+    const px = d.data
+    for (let i = 0; i < px.length; i += 4) {
+      const l = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]
+      // Half toward his own luminance, then lifted toward a pale sea-grey.
+      for (let k = 0; k < 3; k++) {
+        const c = px[i + k] * 0.5 + l * 0.5
+        px[i + k] = Math.min(255, c * 0.8 + 50)
+      }
+    }
+    g.putImageData(d, 0, 0)
   }
 
   // AND IT DISSOLVES AT THE FOOT, into the light it is standing in.
   g.globalCompositeOperation = 'destination-out'
-  const fade = g.createLinearGradient(0, H * 0.62, 0, H)
+  // Higher and softer for a ghost: he is mist from the waist down.
+  const from = solid ? 0.62 : 0.5
+  const fade = g.createLinearGradient(0, H * from, 0, H)
   fade.addColorStop(0, 'rgba(0,0,0,0)')
   fade.addColorStop(1, 'rgba(0,0,0,1)')
   g.fillStyle = fade
-  g.fillRect(0, Math.floor(H * 0.62), W, Math.ceil(H * 0.38))
+  g.fillRect(0, Math.floor(H * from), W, Math.ceil(H * (1 - from)))
   g.globalCompositeOperation = 'source-over'
   return PIXI.Texture.from(c)
 }
@@ -413,6 +430,10 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     foam: Foam[]; spirits: Spirit[]
     seen: boolean
     nextStrike: number; strikeLeft: number
+    /** The painted whirlpool, turned in its own flat and laid on the mesh. */
+    flatPaint: Container; paint: Sprite; rtPaint: RenderTexture
+    debris: { sp: Sprite; ang: number; r: number; spin: number; size: number; bob: number }[]
+    doorSp: Sprite
   }
 
   const sprite = (tex: Texture, size: number, tint: number, alpha: number): Sprite => {
@@ -520,6 +541,19 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
       streams.push({ s: sp, q: i / STREAM_N })
     }
 
+    // ── THE PAINTING, UNDER EVERYTHING THE CODE STILL DRAWS ────────────
+    // Turned in a flat of its own and laid on its own keystone mesh, drawn
+    // normally: the painted water is the whirlpool now; the dark mesh over it
+    // still deepens the throat, and the light mesh carries the foam.
+    const flatPaint: Container = new PIXI.Container()
+    flatPaint.position.set(TEX / 2, TEX / 2)
+    const paint: Sprite = new PIXI.Sprite(PIXI.Texture.EMPTY)
+    paint.anchor.set(0.5)
+    flatPaint.addChild(paint)
+    const rtPaint = PIXI.RenderTexture.create({ width: TEX, height: TEX })
+    const meshPaint = new PIXI.PerspectiveMesh({ texture: rtPaint, verticesX: 12, verticesY: 12, ...corners })
+    void texture(PIXI, th.paint).then(tx => { paint.texture = tx; paint.width = R * 2.45; paint.height = R * 2.45 }).catch(() => {})
+    node.addChild(meshPaint)
     node.addChild(meshDark, meshLight)
 
     // ── THE THROAT ────────────────────────────────────────────────────
@@ -606,8 +640,10 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     holo.anchor.set(0.5, 1)
     // Additive light, tinted to the door's own colour, for a projection; his
     // own paint, drawn normally, when he is standing here himself.
-    holo.blendMode = solidKeeper ? 'normal' : 'add'
-    holo.tint = solidKeeper ? 0xffffff : th.core
+    // Drawn normally either way now: a ghost in his own drained colours, not
+    // light added to the sea.
+    holo.blendMode = 'normal'
+    holo.tint = solidKeeper ? 0xffffff : 0xeef4f2
     holo.alpha = 0
     node.addChild(holo)
     // Loaded once per theme and baked into a projection — see holoTexture.
@@ -645,8 +681,34 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
       spirits.push({ p, ang: 0, r: 0, h: 0, age: Math.random() * 3, life: 2.2 + Math.random() * 2.2, size: 8 + Math.random() * 12 })
     }
 
+    // ── WHAT IT IS TAKING DOWN ─────────────────────────────────────────
+    // Painted wreckage circling the rim and spiralling in, the world's own
+    // stuff rather than an effect. Standing sprites, counter-squashed.
+    const debris: One['debris'] = th.debris.map((url, k) => {
+      const sp: Sprite = new PIXI.Sprite(PIXI.Texture.EMPTY)
+      sp.anchor.set(0.5, 0.7)
+      sp.alpha = 0
+      node.addChild(sp)
+      const size = m.r * (0.12 + ((k * 37) % 5) * 0.012)
+      void texture(PIXI, url).then(tx => { sp.texture = tx }).catch(() => {})
+      return { sp, ang: (k / th.debris.length) * Math.PI * 2, r: m.r * (1.15 + k * 0.12), spin: (k % 2 ? 1 : -1) * 0.4, size, bob: k * 1.3 }
+    })
+
+    // ── THE DOOR'S LANDMARK, on the water beside its rim ─────────────
+    const doorSp: Sprite = new PIXI.Sprite(PIXI.Texture.EMPTY)
+    doorSp.anchor.set(0.5, 0.95)
+    doorSp.position.set(-m.r * 1.18, m.r * 0.32)
+    void texture(PIXI, th.door).then(tx => {
+      doorSp.texture = tx
+      const w = m.r * 0.42
+      doorSp.width = w
+      doorSp.height = (w * tx.height) / tx.width / GROUND
+    }).catch(() => {})
+    node.addChild(doorSp)
+
     view.addChild(node)
     return {
+      flatPaint, paint, rtPaint, debris, doorSp,
       m, th, node, flatDark, flatLight, rtDark, rtLight,
       storm, funnel, arms, mid, wisps, eye, core, strike, beam, holo,
       terraces, floor, wall, streams, drag, lip: lipS, spray,
@@ -771,7 +833,8 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           ring(tr.band, tr.u, 1.02)
           // Faster the deeper. All one way, with the arms: one vortex.
           tr.band.rotation += dt * spd * (1 + 2.6 * tr.u)
-          tr.band.alpha = (0.1 + 0.16 * tr.u + 0.12 * gg) * lit
+          // Faint: the ribbing was more of the neon look.
+          tr.band.alpha = (0.03 + 0.05 * tr.u + 0.04 * gg) * lit
         }
         const [fx0, fy0, fr] = at(1)
         const fx = fx0, fy = fy0 + fr * KEY_DROP
@@ -826,9 +889,12 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           sp.p.scaleX = sp.size / 32; sp.p.scaleY = sp.size / 32
           sp.p.alpha = Math.pow(Math.sin(u * Math.PI), 0.7) * (0.16 + 0.5 * gg) * lit
         }
-        o.arms.alpha = (0.26 + 0.22 * gg) * lit
-        o.mid.alpha = (0.2 + 0.18 * gg) * lit
-        o.wisps.alpha = (0.18 + 0.26 * gg + 0.05 * Math.sin(t * 1.4 + 1)) * lit
+        // THE CODE'S SPIRALS STEP BACK: the painting carries the whirl now.
+        // Kept as a faint shimmer of motion over it, not as the picture.
+        o.arms.alpha = (0.04 + 0.04 * gg) * lit
+        o.mid.alpha = (0.03 + 0.04 * gg) * lit
+        o.wisps.alpha = (0.04 + 0.05 * gg) * lit
+        o.paint.rotation += dt * spd * 0.55
 
         // THE EYE BEATS, faster and harder the closer you stand.
         // AT THE FLOOR, not on the plane. Sized against the throat's bottom
@@ -855,14 +921,16 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         // A projection is never quite steady; a man is. The flicker and the
         // signal dropout are the projection's, so they go when he is solid,
         // and he holds a flat opacity instead of climbing with proximity.
-        const jitter = solidKeeper ? 1 : 0.86 + 0.14 * Math.sin(t * 23.7) * Math.sin(t * 7.3)
-        const dropout = solidKeeper ? 1 : (Math.sin(t * 0.7) > 0.985 ? 0.35 : 1)
+        // A GHOST BREATHES, it does not flicker: no jitter and no signal
+        // dropout (those were the hologram's). A slow swell of presence.
+        const jitter = solidKeeper ? 1 : 0.85 + 0.15 * Math.sin(t * 0.9)
+        const dropout = 1
         // AND HE MAY NOT BE SHOWN AT ALL — see showKeeper. The beam still
         // stands in the eye, so the door reads as something with a keeper
         // rather than as a hole with a piece missing; there is simply nobody
         // standing in it yet.
         o.holo.visible = showKeeper(m.id)
-        o.holo.alpha = solidKeeper ? lit : (0.2 + 0.55 * gg) * jitter * dropout * lit
+        o.holo.alpha = solidKeeper ? lit : (0.22 + 0.4 * gg) * jitter * dropout * lit
         // ── AND HE COMES UP AS YOU COME IN ──────────────────────────────
         //
         // His feet are on the FLOOR of the throat when nobody is near: down at
@@ -897,7 +965,9 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         // and the flash is stretched so it rolls instead of snapping. The eye
         // still lights; it no longer flickers.
         o.nextStrike -= dt * (0.15 + 0.5 * gg)
-        if (o.nextStrike <= 0 && g > 0.05) {
+        // RETIRED: lightning out of a hole in the sea was part of the effect
+        // look, not the painted one. The eye's own beat stays.
+        if (false && o.nextStrike <= 0 && g > 0.05) {
           o.strikeLeft = th.strikeKind === 'flash' ? 0.42 : 1.6
           o.nextStrike = th.strikeKind === 'flash' ? 5 + Math.random() * 7 : 6 + Math.random() * 6
         }
@@ -931,7 +1001,27 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           f.p.alpha = (0.14 + 0.5 * near) * (0.7 + 0.3 * gg) * lit
         }
 
+        // THE WRECKAGE, going round and in, bobbing, faded at both ends.
+        for (const d of o.debris) {
+          const k = m.r / Math.max(d.r, m.r * 0.5)
+          d.ang += dt * spd * 0.5 * k
+          d.r -= dt * m.r * 0.035 * (1 + 0.6 * gg)
+          if (d.r < m.r * 0.92) { d.r = m.r * (1.5 + Math.random() * 0.3); d.ang = Math.random() * Math.PI * 2 }
+          const [px, py] = keystone(Math.cos(d.ang) * d.r, Math.sin(d.ang) * d.r, m.r)
+          d.sp.position.set(px, py + Math.sin(t * 1.3 + d.bob) * 3)
+          if (d.sp.texture.width > 2) {
+            d.sp.width = d.size
+            d.sp.height = (d.size * d.sp.texture.height) / d.sp.texture.width / GROUND
+          }
+          d.sp.rotation = Math.sin(t * 0.8 + d.bob) * 0.12 + d.spin * (1.5 - d.r / m.r) * 0.3
+          const edge = Math.min(1, (m.r * 1.8 - d.r) / (m.r * 0.3), (d.r - m.r * 0.92) / (m.r * 0.15))
+          d.sp.alpha = Math.max(0, Math.min(1, edge)) * lit
+        }
+        o.doorSp.y = m.r * 0.32 + Math.sin(t * 0.7) * 2
+        o.doorSp.tint = dark > 0.3 ? 0xb8c4d0 : 0xffffff
+
         // ── THE FLAT PICTURE, PAINTED ────────────────────────────────────
+        renderer.render({ container: o.flatPaint, target: o.rtPaint, clear: true })
         renderer.render({ container: o.flatDark, target: o.rtDark, clear: true })
         renderer.render({ container: o.flatLight, target: o.rtLight, clear: true })
 
@@ -976,7 +1066,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
 
     destroy() {
       for (const o of ones) {
-        o.rtDark.destroy(true); o.rtLight.destroy(true)
+        o.rtDark.destroy(true); o.rtLight.destroy(true); o.rtPaint.destroy(true)
         o.flatDark.destroy({ children: true }); o.flatLight.destroy({ children: true })
       }
       view.destroy({ children: true })

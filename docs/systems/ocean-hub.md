@@ -3498,3 +3498,20 @@ are culled the same way. Rule for anything that scrolls UVs: cull first, like th
   colour and mood stop at its own water with a tight edge. Before, every bay's water ran up its
   whole strait, and the Ride's is the longest on the chart (~8,000px of violet storm), which is
   why it felt far bigger on the sea than on the map.
+
+## The gauntlet doors, painted (2026-09-24)
+
+Kong: the maelstroms and the boss holograms did not fit the game's look. Why: the keeper was a
+sci-fi PROJECTION (flattened to one colour, scanlines, flicker, signal dropout) and the whirlpool
+was code (neon log-spiral textures, ribbed terraces, lightning) in a hand-painted world. Now in
+`seaMaelstrom`:
+- A PAINTED whirlpool per door (public/sea/mael-{davy,don}.webp, feathered to a soft round edge)
+  turns in its own flat (`flatPaint` -> `rtPaint`) and is laid on its own keystone mesh UNDER the
+  dark and light meshes. The code's spirals are down to a faint shimmer, the terrace bands faint,
+  the lightning retired. The throat's multiplied darks, the inward rings, foam and spirits stay.
+- The keeper is a GHOST: his own colours drained half toward luminance and paled, normal blend,
+  mist from the waist (foot fade from 0.5), a slow breathing alpha. No scanlines/flicker/dropout.
+  The Don's is still hidden until his door opens (showKeeper).
+- DEBRIS circles each rim and spirals in (deb-barrel/planks/mast/crate.webp), standing sprites,
+  faded at both ends of the run. A DOOR LANDMARK stands at each rim: Davy's barnacled sea-king
+  figurehead with a teal lantern, the Don's gilded lamp post on a lacquered dock.
