@@ -4157,3 +4157,13 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
   .lb-side { display: block; position: sticky; top: calc(var(--nav-h, 60px) + 12px); }
   .lb-picker { display: none; }
 }
+
+/* ── The Gunwharf's ship screen (sea/ShipSheet, focus 'ship') ───────────────
+   Her on the water beside the tabs when the card is 820 or wider (container);
+   stacked below. */
+.wharf-host { container-type: inline-size; }
+.wharf-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@container (min-width: 820px) {
+  .wharf-grid { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); align-items: start; }
+  .wharf-stage { position: sticky; top: 0; }
+}

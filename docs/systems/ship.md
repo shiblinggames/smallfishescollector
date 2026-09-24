@@ -182,3 +182,15 @@ crossing south puts the fishing boat back; the Gunwharf is strictly the yard (`S
 opens on mooring). `ShipAtBerth` and the Gunwharf's two-door chooser are deleted. See
 [ocean-hub.md](ocean-hub.md) "North of the reef IS the ship" for the mechanics; the berth ≠ bunk
 naming law and everything about augments, refits and classes is unchanged.
+
+## The Gunwharf's ship screen, re-laid (2026-09-24)
+
+Kong: the Gunwharf pages felt outdated. `sea/ShipSheet` (focus 'ship') is a wide card now (1060):
+her large on the harbour water on the left in her current paint (skin art, else her sea art) with
+her name, class and four numbers under her; on the right four tabs, HULL and her three rooms
+(Refits, Armament, Look), instead of three plates you opened and backed out of. Hull holds the
+armed buy (unchanged, now a tinted button rather than a solid gold one) and the whole ladder of
+hulls from `SHIPS` with each one's numbers and price, hers marked "Sailing her", the next lit. The
+rooms are still `ShipHero bare` tiles, untouched. The Forge island and the Loadout disc keep their
+own landings. Two columns from an 820 container (`.wharf-host`), stacked below.
+

@@ -40,11 +40,10 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
-import RoomCard, { HullTurn, ObjectRow } from '@/components/RoomCard'
 import { vibrate } from '@/lib/haptics'
 import ShipHero from '@/app/(app)/expeditions/ShipHero'
 import { getShipHeroProps } from '@/app/(app)/expeditions/shipHeroData'
-import { shipTierByName, nextShip as nextHull } from '@/lib/ships'
+import { shipTierByName, nextShip as nextHull, SHIPS } from '@/lib/ships'
 import { SHIP_SKINS, shipSkinAt } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 import { getRepairKit } from '@/lib/repairKits'
@@ -56,6 +55,8 @@ import { buyShip } from '@/app/shipyard/actions'
 type Props = Awaited<ReturnType<typeof getShipHeroProps>>
 
 const GOLD = '#f0c040'
+/** The intro's harbour with its dinghy painted out: the water she is drawn on. */
+const WHARF_WATER = '/welcome-harbour-open.webp'
 const SEA = 'rgba(180,214,232'
 
 /** The hull's three rooms. `appearance` keeps ShipHero's own id so the two
@@ -79,7 +80,6 @@ const CARDS: { id: Room; title: string; blurb: string; accent: string }[] = [
   { id: 'appearance', title: 'Look', blurb: 'The colors she flies', accent: '#7ed6c4' },
 ]
 
-const TITLES: Record<Room, string> = { refits: 'Refits', armament: 'Armament', appearance: 'Look' }
 
 export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
   open: boolean
@@ -157,20 +157,6 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
   /** What she looks like RIGHT NOW: the skin she is actually wearing, if it
    *  fits this hull. Null means her own colours. */
   const herPaint = state ? shipSkinAt(state.equippedShipSkin, tier) : null
-  /** Her paints: the ones she owns that FIT this hull, as a picture each. A
-   *  skin is either its own painting for this tier or a tint of her own. */
-  const paints = (() => {
-    if (!state) return [] as { src: string; filter: string }[]
-    const hull = EXPEDITION_SHIP_STATS[tier]?.image ?? ''
-    const own = [{ src: hull, filter: 'none' }]
-    for (const id of state.shipSkins) {
-      const def = shipSkinAt(id, tier)
-      if (!def) continue
-      own.push({ src: def.imageByTier?.[tier] ?? hull, filter: def.filter })
-    }
-    return own
-  })()
-
   function roomNote(id: Room): string | null {
     if (!state || !now) return null
     switch (id) {
@@ -183,46 +169,6 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
       case 'appearance':
         return `${state.shipSkins.length} of ${SHIP_SKINS.length} paints`
     }
-  }
-
-  function roomArt(id: Room) {
-    if (!state || !now) return null
-    if (id === 'refits') {
-      // WHAT IS ACTUALLY BOLTED TO HER: the kit on her deck and the relics on
-      // her mounts, with the empty mounts drawn empty. An unfitted ship says so
-      // without being told.
-      const srcs = [kit?.image, ...mounted.map(i => getRaidItem(i)?.image)].filter(Boolean) as string[]
-      return <ObjectRow size={32} accent="#ffd56b" srcs={srcs} empty={Math.max(0, mounts - mounted.length)} />
-    }
-    if (id === 'armament') {
-      // TWO FITTINGS, NOT A THIRD PICTURE OF THE SAME SHIP. Her hull is already
-      // the top of this panel and the whole of the Look card; a third one here
-      // would make the rack read as one boat drawn three times.
-      //
-      // What is actually in this room is a class and an ultimate, and neither
-      // has art in this game -- they are a star and a bolt on their own tiles.
-      // So they get the same mount the relics next door sit in: lit when you
-      // have it, an empty socket when you do not, which is the one thing the
-      // door has to say.
-      const star = (
-        <svg key="class" width="54%" height="54%" viewBox="0 0 24 24" fill="none" stroke="#e6ccff"
-          strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-3.5L6 21l1.5-7L2 9.5 9 9z" />
-        </svg>
-      )
-      const bolt = (
-        <svg key="ult" width="54%" height="54%" viewBox="0 0 24 24" fill="none" stroke="#f6dfa0"
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
-        </svg>
-      )
-      const held = [classNames.length ? star : null, augment ? bolt : null].filter(Boolean)
-      return <ObjectRow size={40} accent="#c084fc" glyphs={held} empty={2 - held.length} />
-    }
-    // The paints, turning over. Her own first, so a captain with none still
-    // sees a ship rather than an empty frame.
-    return <HullTurn w={136} h={64} every={2600}
-      srcs={paints.map(p => p.src)} filters={paints.map(p => p.filter)} />
   }
 
   return (
@@ -238,7 +184,7 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.16 }}
           style={{
-            position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
+            position: 'relative', margin: 'auto', width: '100%', maxWidth: focus === 'ship' ? 'min(1060px, 100%)' : 'var(--modal-w)',
             maxHeight: 'min(84vh, 100%)', display: 'flex', flexDirection: 'column',
             borderRadius: 20, overflow: 'hidden',
             background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
@@ -247,27 +193,11 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
           }}>
 
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '1.05rem 1.05rem 0.8rem', paddingRight: 44 }}>
-            {room && !roomOnly && (
-              <button type="button" onClick={() => { vibrate(8); setRoom(null) }} aria-label="Back to the ship"
-                className="tap" style={{
-                  flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: 28, height: 28, borderRadius: '50%', padding: 0, cursor: 'pointer',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
-                  color: 'rgba(230,240,246,0.8)',
-                }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
-              </button>
-            )}
             <p className="font-cinzel font-700" style={{ fontSize: '1.26rem', color: '#f4ecd8', margin: 0, flex: 1, minWidth: 0 }}>
               {focus === 'forge' ? 'The Forge'
                 : focus === 'items' ? 'Battle Loadout'
-                : room ? TITLES[room] : 'Your Ship'}
+                : 'Your Ship'}
             </p>
-            {!room && !roomOnly && now && (
-              <p className="font-karla font-600" style={{
-                fontSize: '0.78rem', color: 'rgba(196,169,106,0.85)', margin: 0, flexShrink: 0,
-              }}>{now.name}</p>
-            )}
           </div>
           <CloseButton onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, zIndex: 6 }} />
 
@@ -306,222 +236,221 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
               // directly under the header three lines up that already says it.
               <ShipHero {...state} focus="forge" boxed bare onBack={onClose}
                 onOpenBoss={onOpenBoss ? id => { onClose(); onOpenBoss(id) } : undefined} />
-            ) : room ? (
-              // THE ROOM ITSELF, tiles only. Everything they open still works
-              // because it is still ShipHero doing the opening.
-              <ShipHero {...state} focus="ship" boxed bare shipSection={room} onBack={() => setRoom(null)} />
-            ) : (<>
-              {/* ── HER, AND HER NUMBERS, IN ONE BLOCK ───────────────────
-                  Two full-width bars before: a strip with her portrait and two
-                  thirds of it empty, then a rank of four numbers under it. A
-                  ship is a WIDE shape and a stat is a SMALL one, so the four
-                  numbers go beside her in a square and the row that was empty
-                  is the row that holds them.
-
-                  IN HER OWN PAINT. The plate up here is what she looks like
-                  right now, skin and all, so the wardrobe below is a choice
-                  against something rather than a catalogue on its own. */}
-              <div style={{ display: 'flex', gap: 10, marginBottom: '0.8rem' }}>
-                <div style={{
-                  flex: '0 0 42%', minWidth: 0, borderRadius: 14, padding: '0.5rem',
-                  display: 'grid', placeItems: 'center',
-                  background: 'radial-gradient(ellipse 110% 80% at 50% 34%, rgba(240,192,64,0.09) 0%, rgba(7,12,20,0) 70%), rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={herPaint?.imageByTier?.[tier] ?? now.image} alt="" aria-hidden decoding="async" style={{
-                    width: '100%', height: 82, objectFit: 'contain',
-                    filter: herPaint?.filter && herPaint.filter !== 'none' ? herPaint.filter : undefined,
-                  }} />
-                </div>
-
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ minWidth: 0 }}>
-                    {state.shipName && (
-                      <p className="font-cinzel font-700" style={{
-                        margin: 0, fontSize: '0.95rem', color: '#f4efe4', lineHeight: 1.15,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>{state.shipName}</p>
-                    )}
-                    <p className="font-karla font-700 uppercase" style={{
-                      margin: state.shipName ? '2px 0 0' : 0, fontSize: '0.54rem',
-                      letterSpacing: '0.16em', color: `${SEA},0.55)`,
-                    }}>{now.name}</p>
+            ) : (
+              // ── THE WHARF, RE-LAID (Kong, 2026-09-24: the Gunwharf pages
+              // felt outdated) ───────────────────────────────────────────────
+              // Her large on the water on the left with her four numbers; on
+              // the right four tabs, HULL (the whole ladder of hulls and the
+              // armed buy) and her three rooms, instead of three plates you
+              // opened and backed out of. The rooms are still ShipHero's tiles,
+              // untouched: every flow behind them works as it did.
+              <div className="wharf-host"><div className="wharf-grid">
+                <div className="wharf-stage">
+                  <div style={{
+                    position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '16 / 10',
+                    background: `url(${WHARF_WATER}) 40% 62% / cover no-repeat, #0d1e2b`,
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}>
+                    <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,12,18,0) 45%, rgba(8,12,18,0.55) 100%)' }} />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={herPaint?.imageByTier?.[tier] ?? SHIPS.find(sh => sh.tier === tier)?.seaImageUrl ?? now.image} alt="" aria-hidden decoding="async" style={{
+                      position: 'absolute', left: '8%', right: '8%', bottom: '6%', width: '84%', height: '82%', objectFit: 'contain',
+                      filter: `drop-shadow(0 14px 18px rgba(0,0,0,0.45))${herPaint?.filter && herPaint.filter !== 'none' ? ` ${herPaint.filter}` : ''}`,
+                    }} />
+                    <div style={{ position: 'absolute', left: 14, bottom: 10, right: 14 }}>
+                      {state.shipName && (
+                        <p className="font-pirata" style={{ margin: 0, fontSize: '1.6rem', color: '#f6ead0', lineHeight: 1, textShadow: '0 2px 10px rgba(0,0,0,0.85)' }}>{state.shipName}</p>
+                      )}
+                      <p className="font-karla font-800 uppercase" style={{ margin: '3px 0 0', fontSize: '0.6rem', letterSpacing: '0.18em', color: 'rgba(240,220,170,0.85)', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>{now.name}</p>
+                    </div>
                   </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                    {([
-                      ['Hull', now.durability],
-                      ['Guns', now.minDamage],
-                      ['Speed', now.speed],
-                      ['Crew', now.crewSlots],
-                    ] as const).map(([k, v]) => (
-                      <div key={k} style={{
-                        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 4,
-                        padding: '0.28rem 0.45rem', borderRadius: 9,
-                        background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)',
-                      }}>
-                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', color: `${SEA},0.5)` }}>{k}</span>
-                        <span className="font-cinzel font-800" style={{ fontSize: '0.92rem', color: '#f6dfa0', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{v}</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6, marginTop: 10 }}>
+                    {([['Hull', now.durability], ['Guns', now.minDamage], ['Speed', now.speed], ['Crew', now.crewSlots]] as const).map(([k, v]) => (
+                      <div key={k} style={{ padding: '0.5rem 0.4rem', borderRadius: 11, textAlign: 'center', background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <p className="font-cinzel font-800" style={{ margin: 0, fontSize: '1.15rem', color: '#f6dfa0', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{v}</p>
+                        <p className="font-karla font-700 uppercase" style={{ margin: '4px 0 0', fontSize: '0.54rem', letterSpacing: '0.14em', color: `${SEA},0.55)` }}>{k}</p>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
 
-              {/* ── THE UPGRADE, WHICH IS WHY THIS PANEL EXISTS ──────────
-                  Armed, then taken. It is the largest purchase in the game and
-                  a one-tap buy on the front page of a panel you opened to
-                  change a colour is how a captain spends 200,000 by accident. */}
-              {next && then ? (
-                <div style={{
-                  marginBottom: '0.95rem', borderRadius: 14, overflow: 'hidden',
-                  background: armed ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.035)',
-                  border: `1px solid ${armed ? 'rgba(240,192,64,0.5)' : 'rgba(240,192,64,0.26)'}`,
-                }}>
-                  <button type="button" className="tap"
-                    onClick={() => { vibrate(8); setBuyErr(null); setArmed(a => !a) }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                      padding: '0.5rem 0.7rem', background: 'none', border: 'none',
-                      cursor: 'pointer', textAlign: 'left',
-                    }}>
-                    {/* WHAT YOU WOULD BE BUYING, in the empty half of the row.
-                        This bar was a label, a name and a price with a hand's
-                        width of nothing between them. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={then.image} alt="" aria-hidden decoding="async" style={{
-                      width: 54, height: 34, flexShrink: 0, objectFit: 'contain',
-                    }} />
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span className="font-karla font-800 uppercase" style={{ display: 'block', fontSize: '0.48rem', letterSpacing: '0.18em', color: `${GOLD}cc` }}>
-                        Next hull
-                      </span>
-                      <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '1.02rem', color: '#f4efe4', lineHeight: 1.15, marginTop: 1 }}>
-                        {next.name}
-                      </span>
-                    </span>
-                    <span className="font-cinzel font-700" style={{
-                      flexShrink: 0, fontSize: '0.92rem', color: canBuy ? GOLD : '#e6a0a0', fontVariantNumeric: 'tabular-nums',
-                    }}>{next.cost.toLocaleString()} ⟡</span>
-                  </button>
+                <div style={{ minWidth: 0 }}>
+                  <div role="tablist" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 5, padding: 4, borderRadius: 13, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    {([['hull', 'Hull', GOLD], ...CARDS.map(c => [c.id, c.title, c.accent] as const)] as const).map(([id, label, accent]) => {
+                      const on = (room ?? 'hull') === id
+                      return (
+                        <button key={id} type="button" role="tab" aria-selected={on}
+                          onClick={() => { vibrate(5); setRoom(id === 'hull' ? null : id as Room) }}
+                          className="font-karla font-800 uppercase tap"
+                          style={{
+                            padding: '0.55rem 0.2rem', borderRadius: 9, cursor: 'pointer', fontSize: '0.64rem', letterSpacing: '0.12em',
+                            background: on ? `${accent}22` : 'transparent', border: `1px solid ${on ? `${accent}99` : 'transparent'}`,
+                            color: on ? '#f6efe0' : `${SEA},0.6)`,
+                          }}>{label}</button>
+                      )
+                    })}
+                  </div>
 
-                  <AnimatePresence initial={false}>
-                    {armed && (
-                      <motion.div key="buy"
-                        initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
-                        style={{ overflow: 'hidden' }}>
-                        <div style={{ padding: '0 0.75rem 0.7rem' }}>
-                          {/* AND WHAT SHE LOOKS LIKE. The four numbers say what
-                              she is worth and none of them says what you are
-                              buying: this is the largest purchase in the game
-                              and it was being made off a name and a price. Her
-                              own plate, the same art the front page draws the
-                              current hull with, so the two can be held against
-                              each other. */}
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={then.image} alt="" aria-hidden decoding="async" style={{
-                            display: 'block', width: '100%', maxWidth: 210, margin: '0 auto 0.45rem',
-                            height: 78, objectFit: 'contain',
-                          }} />
-                          {/* WHAT THE MONEY BUYS, in the same four numbers she
-                              is already described by. A price with no answer to
-                              "and then what" is a number to be afraid of. */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6, marginBottom: '0.6rem' }}>
-                            {([
-                              ['Hull', now.durability, then.durability],
-                              ['Guns', now.minDamage, then.minDamage],
-                              ['Speed', now.speed, then.speed],
-                              ['Crew', now.crewSlots, then.crewSlots],
-                            ] as const).map(([k, a, b]) => (
-                              <div key={k} style={{ textAlign: 'center' }}>
-                                <p className="font-karla font-700" style={{ margin: 0, fontSize: '0.68rem', color: b > a ? '#8fdc9a' : `${SEA},0.55)`, fontVariantNumeric: 'tabular-nums' }}>
-                                  {a} → {b}
-                                </p>
-                                <p className="font-karla font-700 uppercase" style={{ margin: '1px 0 0', fontSize: '0.45rem', letterSpacing: '0.14em', color: `${SEA},0.4)` }}>{k}</p>
-                              </div>
-                            ))}
-                          </div>
-                          <button type="button" disabled={!canBuy || buying}
-                            onClick={() => {
-                              if (!canBuy || buying) return
-                              vibrate(12)
-                              startBuy(async () => {
-                                const res = await buyShip()
-                                if ('error' in res) { setBuyErr(res.error); return }
-                                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-                                setArmed(false)
-                                const fresh = await getShipHeroProps()
-                                setState(fresh)
-                                router.refresh()
-                              })
-                            }}
-                            className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+                  {room ? (
+                    <div style={{ marginTop: 10 }}>
+                      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: `${SEA},0.6)`, margin: '0 0 8px' }}>{roomNote(room) ?? ''}</p>
+                      <ShipHero {...state} focus="ship" boxed bare shipSection={room} onBack={() => setRoom(null)} />
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 10 }}>
+                      {next && then ? (
+                        <div style={{
+                          marginBottom: '0.95rem', borderRadius: 14, overflow: 'hidden',
+                          background: armed ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.035)',
+                          border: `1px solid ${armed ? 'rgba(240,192,64,0.5)' : 'rgba(240,192,64,0.26)'}`,
+                        }}>
+                          <button type="button" className="tap"
+                            onClick={() => { vibrate(8); setBuyErr(null); setArmed(a => !a) }}
                             style={{
-                              width: '100%', padding: '0.68rem', borderRadius: 11, fontSize: '0.9rem',
-                              color: canBuy ? '#1a1206' : 'rgba(240,237,232,0.45)',
-                              background: canBuy ? `linear-gradient(180deg, ${GOLD}, ${GOLD}cc)` : 'rgba(255,255,255,0.06)',
-                              border: `1px solid ${canBuy ? GOLD : 'rgba(255,255,255,0.14)'}`,
-                              cursor: canBuy && !buying ? 'pointer' : 'default',
+                              display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                              padding: '0.5rem 0.7rem', background: 'none', border: 'none',
+                              cursor: 'pointer', textAlign: 'left',
                             }}>
-                            {buying ? 'Signing her over…'
-                              : canBuy ? `Buy the ${next.name}`
-                                : `${(next.cost - state.doubloons).toLocaleString()} ⟡ short`}
+                            {/* WHAT YOU WOULD BE BUYING, in the empty half of the row.
+                                This bar was a label, a name and a price with a hand's
+                                width of nothing between them. */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={then.image} alt="" aria-hidden decoding="async" style={{
+                              width: 54, height: 34, flexShrink: 0, objectFit: 'contain',
+                            }} />
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <span className="font-karla font-800 uppercase" style={{ display: 'block', fontSize: '0.48rem', letterSpacing: '0.18em', color: `${GOLD}cc` }}>
+                                Next hull
+                              </span>
+                              <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '1.02rem', color: '#f4efe4', lineHeight: 1.15, marginTop: 1 }}>
+                                {next.name}
+                              </span>
+                            </span>
+                            <span className="font-cinzel font-700" style={{
+                              flexShrink: 0, fontSize: '0.92rem', color: canBuy ? GOLD : '#e6a0a0', fontVariantNumeric: 'tabular-nums',
+                            }}>{next.cost.toLocaleString()} ⟡</span>
                           </button>
-                          {buyErr && (
-                            <p role="alert" className="font-karla font-600" style={{ margin: '0.5rem 0 0', fontSize: '0.72rem', color: '#e6a0a0', textAlign: 'center' }}>{buyErr}</p>
-                          )}
+
+                          <AnimatePresence initial={false}>
+                            {armed && (
+                              <motion.div key="buy"
+                                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.18, ease: 'easeOut' }}
+                                style={{ overflow: 'hidden' }}>
+                                <div style={{ padding: '0 0.75rem 0.7rem' }}>
+                                  {/* AND WHAT SHE LOOKS LIKE. The four numbers say what
+                                      she is worth and none of them says what you are
+                                      buying: this is the largest purchase in the game
+                                      and it was being made off a name and a price. Her
+                                      own plate, the same art the front page draws the
+                                      current hull with, so the two can be held against
+                                      each other. */}
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={then.image} alt="" aria-hidden decoding="async" style={{
+                                    display: 'block', width: '100%', maxWidth: 210, margin: '0 auto 0.45rem',
+                                    height: 78, objectFit: 'contain',
+                                  }} />
+                                  {/* WHAT THE MONEY BUYS, in the same four numbers she
+                                      is already described by. A price with no answer to
+                                      "and then what" is a number to be afraid of. */}
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6, marginBottom: '0.6rem' }}>
+                                    {([
+                                      ['Hull', now.durability, then.durability],
+                                      ['Guns', now.minDamage, then.minDamage],
+                                      ['Speed', now.speed, then.speed],
+                                      ['Crew', now.crewSlots, then.crewSlots],
+                                    ] as const).map(([k, a, b]) => (
+                                      <div key={k} style={{ textAlign: 'center' }}>
+                                        <p className="font-karla font-700" style={{ margin: 0, fontSize: '0.68rem', color: b > a ? '#8fdc9a' : `${SEA},0.55)`, fontVariantNumeric: 'tabular-nums' }}>
+                                          {a} → {b}
+                                        </p>
+                                        <p className="font-karla font-700 uppercase" style={{ margin: '1px 0 0', fontSize: '0.45rem', letterSpacing: '0.14em', color: `${SEA},0.4)` }}>{k}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <button type="button" disabled={!canBuy || buying}
+                                    onClick={() => {
+                                      if (!canBuy || buying) return
+                                      vibrate(12)
+                                      startBuy(async () => {
+                                        const res = await buyShip()
+                                        if ('error' in res) { setBuyErr(res.error); return }
+                                        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                                        setArmed(false)
+                                        const fresh = await getShipHeroProps()
+                                        setState(fresh)
+                                        router.refresh()
+                                      })
+                                    }}
+                                    className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+                                    style={{
+                                      width: '100%', padding: '0.68rem', borderRadius: 11, fontSize: '0.9rem',
+                                      color: canBuy ? '#fff4d6' : 'rgba(240,237,232,0.45)',
+                                      // Tinted, not a solid gold slab (house rule), like the Shipyard's.
+                                      background: canBuy ? 'linear-gradient(180deg, rgba(240,192,64,0.32), rgba(240,192,64,0.14))' : 'rgba(255,255,255,0.06)',
+                                      boxShadow: canBuy ? '0 0 18px rgba(240,192,64,0.18), inset 0 1px 0 rgba(255,255,255,0.14)' : 'none',
+                                      border: `1px solid ${canBuy ? GOLD : 'rgba(255,255,255,0.14)'}`,
+                                      cursor: canBuy && !buying ? 'pointer' : 'default',
+                                    }}>
+                                    {buying ? 'Signing her over…'
+                                      : canBuy ? `Buy the ${next.name}`
+                                        : `${(next.cost - state.doubloons).toLocaleString()} ⟡ short`}
+                                  </button>
+                                  {buyErr && (
+                                    <p role="alert" className="font-karla font-600" style={{ margin: '0.5rem 0 0', fontSize: '0.72rem', color: '#e6a0a0', textAlign: 'center' }}>{buyErr}</p>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                      ) : (
+                        <p className="font-karla" style={{
+                          margin: '0 0 0.95rem', padding: '0.6rem 0.75rem', borderRadius: 12, fontSize: '0.72rem',
+                          color: `${SEA},0.55)`, fontStyle: 'italic',
+                          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                        }}>The finest hull in the water. Nothing left to buy.</p>
+                      )}
+
+                      {/* ── EVERY HULL, IN ORDER ── owned ticked, the next lit. */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        {SHIPS.map(sh => {
+                          const st = EXPEDITION_SHIP_STATS[sh.tier]
+                          const owned = sh.tier <= tier
+                          const isNext = sh.tier === tier + 1
+                          return (
+                            <div key={sh.tier} style={{
+                              display: 'grid', gridTemplateColumns: '64px minmax(0, 1fr) auto', alignItems: 'center', gap: 10,
+                              padding: '0.45rem 0.6rem', borderRadius: 12,
+                              background: isNext ? 'rgba(240,192,64,0.08)' : sh.tier === tier ? 'rgba(127,214,160,0.06)' : 'rgba(255,255,255,0.025)',
+                              border: `1px solid ${isNext ? 'rgba(240,192,64,0.45)' : sh.tier === tier ? 'rgba(127,214,160,0.35)' : 'rgba(255,255,255,0.06)'}`,
+                              opacity: owned || isNext ? 1 : 0.62,
+                            }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={sh.seaImageUrl ?? sh.imageUrl} alt="" aria-hidden loading="lazy" decoding="async" style={{ width: 64, height: 40, objectFit: 'contain' }} />
+                              <div style={{ minWidth: 0 }}>
+                                <p className="font-cinzel font-700" style={{ margin: 0, fontSize: '0.9rem', color: '#f2ead8', lineHeight: 1.15 }}>{sh.name}</p>
+                                {st && (
+                                  <p className="font-karla font-700" style={{ margin: '2px 0 0', fontSize: '0.62rem', color: `${SEA},0.6)`, fontVariantNumeric: 'tabular-nums' }}>
+                                    Hull {st.durability} · Guns {st.minDamage} · Speed {st.speed} · Crew {st.crewSlots}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="font-karla font-800" style={{ fontSize: '0.66rem', letterSpacing: '0.06em', color: sh.tier === tier ? '#9fe8bd' : owned ? `${SEA},0.55)` : isNext ? GOLD : 'rgba(240,192,64,0.6)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                {sh.tier === tier ? 'Sailing her' : owned ? 'Owned' : sh.cost === 0 ? 'Free' : `${sh.cost.toLocaleString()} ⟡`}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <p className="font-karla" style={{ margin: '0.7rem 0 0', fontSize: '0.62rem', color: `${SEA},0.4)`, textAlign: 'center' }}>
+                        The forge is on its own island.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <p className="font-karla" style={{
-                  margin: '0 0 0.95rem', padding: '0.6rem 0.75rem', borderRadius: 12, fontSize: '0.72rem',
-                  color: `${SEA},0.55)`, fontStyle: 'italic',
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-                }}>The finest hull in the water. Nothing left to buy.</p>
-              )}
-
-              {/* ── HER THREE ROOMS, ACROSS ──────────────────────────────
-                  They were three wide bars stacked: six hundred pixels of card
-                  to say three words, and most of each one empty ground either
-                  side of a small picture. Side by side they are a rack of
-                  three -- the whole set is one look, and the panel ends on the
-                  screen it started on.
-
-                  `auto-fit` rather than a fixed three, because this same card is
-                  560px on a desktop and the width of a phone: three across
-                  where there is room for three, two and a wrap where there is
-                  not, and never a 90px door with a boat in it. */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(138px, 1fr))',
-                gap: '0.55rem',
-              }}>
-                {CARDS.map((card, i) => (
-                  <RoomCard key={card.id}
-                    title={card.title}
-                    note={roomNote(card.id) ?? card.blurb}
-                    accent={card.accent}
-                    index={i}
-                    onClick={() => setRoom(card.id)}>
-                    {roomArt(card.id)}
-                  </RoomCard>
-                ))}
-              </div>
-
-              {/* THE FORGE IS NOT IN HERE, and the relic count belongs to the
-                  Refits door, which now says it. What is left is the one thing
-                  a captain looking for the forge in this panel needs told. */}
-              <p className="font-karla" style={{
-                margin: '0.7rem 0 0', fontSize: '0.6rem', color: `${SEA},0.38)`, textAlign: 'center',
-              }}>
-                The forge is on its own island.
-              </p>
-            </>)}
+              </div></div>
+            )}
           </div>
         </motion.div>
       </PopupShell>
