@@ -465,6 +465,9 @@ export default function SeaIslandsGPU({
    *  else owns the framing. Anything drawn ON her reads this rather than
    *  assuming the middle of the screen. */
   const hullOff = useRef({ x: 0, y: 0 })
+  /** Which way she faces on screen (1 = bow left, the art's own pose), for
+   *  the lantern hung at her bow. */
+  const hullFacing = useRef(1)
   const capRef = useRef<{
     outer: import('pixi.js').Container
     inner: import('pixi.js').Container
@@ -1963,7 +1966,7 @@ export default function SeaIslandsGPU({
         // middle of the screen, a pool of light on empty water.
         lights.advance(camX, camY, halfW, halfH,
           a.screen.width / 2 + hullOff.current.x,
-          a.screen.height / 2 + hullOff.current.y, t, dt)
+          a.screen.height / 2 + hullOff.current.y, t, dt, hullFacing.current)
         squalls.advance(camX, camY, halfW, halfH, dt)
         banks.advance(camX, camY, halfW, halfH, dt)
         chains.advance(camX, camY, halfW, halfH, dt, id => clearedRef.current[id] === true)
@@ -2517,6 +2520,7 @@ export default function SeaIslandsGPU({
           hullOff.current.y = sk.offY + sk.zoom * sk.bob
           c.outer.scale.set(sk.zoom)
           c.inner.scale.x = sk.facing
+          hullFacing.current = sk.facing
           c.inner.rotation = (sk.heel * Math.PI) / 180
           // AND HER REFLECTION LEANS THE OTHER WAY. The line above turns the
           // node that holds both her and her twin; a mirror has to take the

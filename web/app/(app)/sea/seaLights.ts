@@ -9,13 +9,14 @@
 // What makes night night is that a few things start EMITTING while everything
 // else stops. Three of them here, and each answers a different question.
 //
-//   THE LANTERN — yours, travelling with the hull. Answers "can I see", and it
-//   is the one that makes the dark feel like somewhere you are rather than a
-//   filter over the screen. It was a flat disc with a rim, and Kong called it
-//   what it was: a literal oval of light, cheap. Lamplight on water is not a
-//   disc. It is a faint warmth with no edge at all, and on top of it the swell
-//   catching the flame in broken glints, thickest right under the lamp and
-//   trailing off toward whoever is looking. So: HAZE plus GLINTS.
+//   THE LANTERN — yours, hung at the bow. Answers "can I see", and it is the
+//   one that makes the dark feel like somewhere you are rather than a filter
+//   over the screen. It was a flat disc with a rim centred on the hull, and
+//   Kong called it what it was: an oval round the whole boat image, not a
+//   light on a boat. So it has a SOURCE now: an edgeless spill of warmth on
+//   the water off her bow, brightest at the lamp and falling away, which
+//   swaps ends when she comes about. (Dancing glints on top were tried and
+//   cut the same day: far too distracting.)
 //
 //   THE OTHER BOATS — a lamp on every trader, regular and friend out there.
 //   Answers "is anyone about", and it is the reason to look at the sea at night:
@@ -63,11 +64,7 @@ const GLOW_BAND: Record<string, number> = {
 }
 
 let hazeTex: Texture | null = null
-let glintTex: Texture | null = null
 let moteTex: Texture | null = null
-
-/** How many glints dance under your lantern at once. One batch, fixed pool. */
-const GLINTS = 44
 
 /** Light with NO edge: a gaussian all the way out, so there is no rim for the
  *  eye to find and call an oval. */
@@ -90,23 +87,6 @@ function hazeTexture(PIXI: typeof import('pixi.js')): Texture {
   g.putImageData(img, 0, 0)
   hazeTex = PIXI.Texture.from(c)
   return hazeTex
-}
-
-/** One glint: a short soft horizontal fleck, the flame caught on a ripple's
- *  crest. Ripples lie across the view, so the fleck does too. */
-function glintTexture(PIXI: typeof import('pixi.js')): Texture {
-  if (glintTex) return glintTex
-  const w = 48, h = 10
-  const c = document.createElement('canvas')
-  c.width = w; c.height = h
-  const g = c.getContext('2d')!
-  g.filter = 'blur(1.2px)'
-  g.fillStyle = 'rgba(255,255,255,1)'
-  g.beginPath()
-  g.ellipse(w / 2, h / 2, w / 2 - 4, h / 2 - 3, 0, 0, Math.PI * 2)
-  g.fill()
-  glintTex = PIXI.Texture.from(c)
-  return glintTex
 }
 
 function moteTexture(PIXI: typeof import('pixi.js')): Texture {
@@ -149,7 +129,8 @@ export type Lights = {
    * lit where there is no boat.
    */
   lamps(at: { x: number; y: number }[]): void
-  advance(camX: number, camY: number, halfW: number, halfH: number, cx: number, cy: number, t: number, dt: number): void
+  /** `facing` is the hull's on-screen mirror, 1 when her bow is to the left. */
+  advance(camX: number, camY: number, halfW: number, halfH: number, cx: number, cy: number, t: number, dt: number, facing?: number): void
   /** How far into the night, 0 to 1. Everything here reads it and at zero the
    *  whole layer is invisible and skipped. */
   night(dark: number): void
@@ -169,27 +150,12 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
 
   const ht = hazeTexture(PIXI)
 
-  // ── YOURS ── the warmth first, then the glints on top of it.
+  // ── YOURS ──
   const lantern: Sprite = new PIXI.Sprite(ht)
   lantern.anchor.set(0.5)
   lantern.tint = LAMP
   lantern.alpha = 0
   screen.addChild(lantern)
-  const gt = glintTexture(PIXI)
-  const glints: { s: Sprite; dx: number; dy: number; age: number; life: number; w: number }[] = []
-  for (let i = 0; i < GLINTS; i++) {
-    const s: Sprite = new PIXI.Sprite(gt)
-    s.anchor.set(0.5)
-    s.tint = LAMP
-    s.alpha = 0
-    screen.addChild(s)
-    // Staggered from the start, so the first night does not blink in unison.
-    glints.push({ s, dx: 0, dy: 0, age: -Math.random() * 0.8, life: 0, w: 1 })
-  }
-  let gr = 0x1a7e5
-  const grand = () => ((gr = (gr * 1103515245 + 12345) >>> 0) / 4294967296)
-  /** A normal-ish number, for a column that is dense in the middle. */
-  const gauss = () => (grand() + grand() + grand() - 1.5) / 1.5
 
   // ── THEIRS ── a fixed pool of pools, hidden when unused.
   const CREW_LAMPS = 24
@@ -242,13 +208,16 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
   let glow = 1
   let boats: { x: number; y: number }[] = []
   let seeded = false
+  /** The bow's side, eased, so coming about slides the light along her
+   *  rather than jumping it from one end to the other. */
+  let bowSide = 1
 
   return {
     world, screen,
 
     lamps(at) { boats = at },
 
-    advance(camX, camY, halfW, halfH, cx, cy, t, dt) {
+    advance(camX, camY, halfW, halfH, cx, cy, t, dt, facing = 1) {
       const d = Math.min(dt, 0.05)
       // NOON PAYS FOR ONE TEST. Nothing below runs while the sun is up.
       const on = dark > 0.02
@@ -256,49 +225,24 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
       screen.visible = on
       if (!on) return
 
-      // ── YOUR LANTERN ── under the hull, breathing very slightly, because a
+      // ── YOUR LANTERN ── at the bow, breathing very slightly, because a
       // flame in a glass box on a moving boat is never quite steady.
       const flick = 0.94 + Math.sin(t * 3.1) * 0.03 + Math.sin(t * 5.7) * 0.03
-      lantern.position.set(cx, cy + 6)
-      // ── AND IT IS A LADDER NOW ────────────────────────────────────
+      bowSide += (facing - bowSide) * Math.min(1, d * 7)
+      // ── AND IT IS A LADDER ────────────────────────────────────────
       //
-      // `glow` is 0.34 at the first rung and 1 at the last, so a full lantern
-      // is exactly the light this drew before the upgrade existed and nobody
-      // loses a night they already had. See lib/shipyard.
-      //
-      // BOTH THE RADIUS AND THE BRIGHTNESS. A dim lantern that lit the same
-      // circle would read as a fault in the art rather than as a smaller lamp;
-      // a small circle at full brightness would read as a spotlight. Light
-      // falls off with distance, so a weaker one is smaller AND fainter, and
-      // scaling the pair together is the only version that looks like a lamp.
+      // `glow` is 0.34 at the first rung and 1 at the last (lib/shipyard).
+      // BOTH THE REACH AND THE BRIGHTNESS: light falls off with distance, so
+      // a weaker lamp is smaller AND fainter, which is what reads as a lamp.
       const lr = (132 + dark * 46) * glow
-      // THE WARMTH: wider than the old disc and much fainter, because it has
-      // no edge now and the glints carry the brightness.
-      lantern.width = lr * 2.8
-      lantern.height = lr * 2.8 * GROUND
-      lantern.alpha = dark * 0.3 * glow * flick
-      // THE GLINTS: each lives a fraction of a second, a fleck of flame on a
-      // crest, then comes back somewhere else. Scattered in a column under
-      // the lamp that trails toward the viewer (down the screen) and widens
-      // as it goes, as a reflection on rough water does. Brightest near the
-      // lamp. Offsets are relative to the hull, so they travel with her.
-      for (const g of glints) {
-        g.age += d
-        if (g.age >= g.life) {
-          const along = Math.pow(grand(), 1.6) // most of them close in
-          g.dy = (-0.12 + along * 0.95) * lr * GROUND
-          g.dx = gauss() * lr * (0.16 + along * 0.34)
-          g.life = 0.35 + grand() * 0.7
-          g.age = 0
-          g.w = 0.45 + grand() * 0.8
-        }
-        if (g.age < 0) { g.s.alpha = 0; continue }
-        const f = g.age / g.life
-        const near = Math.exp(-((g.dx / (lr * 0.55)) ** 2) - ((g.dy / (lr * GROUND * 0.7)) ** 2))
-        g.s.position.set(cx + g.dx, cy + 6 + g.dy)
-        g.s.scale.set(g.w * glow * (0.7 + 0.3 * near), 0.8)
-        g.s.alpha = Math.sin(Math.PI * f) * dark * glow * (0.25 + 0.6 * near)
-      }
+      // The spill sits forward of the bow, not round the hull: its middle is
+      // off her nose and the stern end of her is mostly outside it, so the
+      // eye reads a lamp throwing light onto the water ahead. Bow is to the
+      // LEFT when facing is 1 (the art's own pose).
+      lantern.position.set(cx - bowSide * lr * 0.52, cy + 10)
+      lantern.width = lr * 1.9
+      lantern.height = lr * 1.9 * GROUND
+      lantern.alpha = dark * 0.42 * glow * flick
 
       // ── EVERY OTHER BOAT ── smaller, and it is the one thing out here that
       // is worth steering toward on sight.
