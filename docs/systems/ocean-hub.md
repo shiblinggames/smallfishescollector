@@ -2731,6 +2731,17 @@ card lifts to `z 120` for that beat and for a bait-stuck cast beat, because the 
 the moment they did as it said. Target flashing is a quarter-second poll for the life of the beat
 rather than a burst of retries, because the worms card mounts whenever the captain opens the sheet.
 
+**Two beats since 2026-09-24**, because the haul lives inside the day board now. The first names
+the board and waits for the Daily Haul to be open in it (`until: 'haulView'`, lit `haul`: the sun
+disc, then the haul's row; SeaDay sends `sea-overlay` id `haulView`). The second waits on the Claim
+(`until: 'bait'`, lit `haul-bait`, which is the Claim button itself). A captain who already has
+bait skips both.
+
+The anchorage tour's recruit beat lights `recruit recruit-card`: board cards have no Recruit button
+(the sheet a card opens signs them on), so the ring is on the cards at the board and on the sheet's
+Recruit once it is open. With `recruit` alone the beat found nothing on the board and its waypoint
+sent the captain "back to the crew menu" from the very room it wanted.
+
 **The bag is `SeaMap` state, not a prop.** It was read straight off the prop — a snapshot of the row
 at render — so the Daily Haul putting twenty worms in that row from a sheet on this very chart could
 not be heard: a captain who had just claimed bait was still "out of bait" until they changed page.

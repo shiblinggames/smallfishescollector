@@ -13168,7 +13168,7 @@ hullRef={hullRefFor(t.key)} />
         // The same two gates FishingHere puts on the Cast button. If it will
         // not let them cast, the tour has to stop asking them to.
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
-        haulOpen={overlays.haul === true} holdOpen={overlays.hold === true}
+        haulOpen={overlays.haul === true} haulView={overlays.haulView === true} holdOpen={overlays.hold === true}
         cam={tourCam} goal={tourGoal} holdCast={tourHoldCast}
         fishOnly={tourFishOnly} stowRod={stowRod} at={pos}
         onBeat={setTourBeat} onDone={() => setTourDone(true)} />}

@@ -2262,7 +2262,11 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
               // it off.
               return (
                 <LiftOver key={c.id} active={!!phase || reveal.climaxActive}>
-                <div style={{
+                <div
+                  // The anchorage tour lights the cards that can still be
+                  // signed on: a card is the way in to its Recruit button.
+                  data-coach={!c.recruited && !phase ? 'recruit-card' : undefined}
+                  style={{
                   position: 'relative', borderRadius: 8,
                   transition: 'opacity 0.45s ease, filter 0.45s ease, transform 0.45s ease, box-shadow 0.45s ease',
                   opacity: dim ? 0.34 : 1,

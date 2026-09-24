@@ -95,13 +95,16 @@ export type Beat = {
    *   'almanac' — waits until the Almanac is open, OR Next. The line invites
    *               the captain to open the book; it does not insist, because
    *               the collection is theirs to look at when they want to.
+   *   'haulView'— waits until the Daily Haul is open inside the day board.
+   *               Skipped, with the bait beat after it, for a captain who
+   *               already has bait.
    *   'bait'    — waits until there is bait on the hook. A new account has
    *               none, and the free worms are in the Daily Haul, so this is
    *               the beat that sends them there. Skipped outright for a
    *               captain who already has some.
    */
   until: 'next' | 'fish' | 'bite' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold' | 'bait' | 'almanac'
-    | 'gate' | 'haulShut'
+    | 'gate' | 'haulShut' | 'haulView'
     // The anchorage tour's own: the crew panel opened, its Recruit room
     // opened, a hand signed on, the Assign room opened, a captain seated,
     // the panel closed again. NO 'crewDoors': getting back out of a room is
@@ -222,11 +225,21 @@ export const FIRST_VOYAGE: Beat[] = [
   // ── THE BAIT ──────────────────────────────────────────────────────────
   // A new account has none, and casting is gated on having some. Waits for
   // the worms to actually land; a captain who already has bait never sees it.
+  // THE BOARD FIRST, THEN THE HAUL, THEN THE CLAIM (Kong, 2026-09-24). The
+  // haul lives inside the day board now, so the bait is two presses deep: the
+  // board is named on the way in, and the Claim is its own beat.
   {
     ...D,
-    text: 'Oof almost forgot. Ya need worms, kid. How you gonna catch anything without bait? Open the *day board*, the rising sun up top, and look in the *Daily Haul*. You get freebies each day. Go and collect your worms.',
+    text: 'Check out the day board. Here are some of the daily activities you can do over time. For now, click on the *Daily Haul* to access the freebies you get each day.',
+    until: 'haulView',
+    // The sun disc on the HUD, and the haul's row once the board is open.
+    target: 'haul',
+  },
+  {
+    ...D,
+    text: 'You can claim everything else later, but for now let’s get you some bait so we can go fishing.',
     until: 'bait',
-    target: 'haul haul-bait',
+    target: 'haul-bait',
   },
   // AND BACK OUT OF IT. The haul has no way out but a tap on the water behind
   // it, which is not a thing anybody guesses; it has an × now and this points
@@ -427,11 +440,16 @@ export const GATE_TOUR: Beat[] = [
     target: 'crew-recruits',
     overPanel: true,
   },
+  // THE CARD, THEN THE BUTTON. The board's cards have no Recruit button any
+  // more (Kong, 2026-09-24): a card opens its sheet and the sheet signs them
+  // on. Both names are lit, so the ring is on the cards at the board and on
+  // the Recruit button once a sheet is open; the card anchors to whichever
+  // comes first on screen, and `recruit` is listed first for that reason.
   {
     ...D,
-    text: 'Pick one and *Recruit* them.',
+    text: 'Click on a recruit to see them up close, then *Recruit* them.',
     until: 'recruited',
-    target: 'recruit',
+    target: 'recruit recruit-card',
     overPanel: true,
   },
   {

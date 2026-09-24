@@ -375,6 +375,11 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
     // when the board is, since the haul lives in it now.
     window.dispatchEvent(new CustomEvent('sea-overlay', { detail: { id: 'haul', open } }))
   }, [open])
+  // And whether the haul itself is showing, one step in: the first voyage's
+  // `haulView` beat waits on it.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('sea-overlay', { detail: { id: 'haulView', open: open && view === 'haul' } }))
+  }, [open, view])
 
   const [state, setState] = useState<DayState | null>(null)
   /** What was hot on the last read, to tell a change from a standing fact. */

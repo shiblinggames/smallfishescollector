@@ -68,7 +68,7 @@ function destination(id: string): { x: number; y: number; r: number } | null {
 
 export default function SeaFirstVoyage({
   hasSeen, startAt, fishing, hooked, caught, nearId, ashore, blocked, cam, goal,
-  holdCast, fishOnly, stowRod, at, almanac, haulOpen, holdOpen, onBeat, onDone,
+  holdCast, fishOnly, stowRod, at, almanac, haulOpen, haulView, holdOpen, onBeat, onDone,
 }: {
   hasSeen: boolean
   /** Where the tour got to. It leaves the chart to sell a fish at the market,
@@ -93,6 +93,9 @@ export default function SeaFirstVoyage({
    *  SHUT, because the one after that asks them to sail somewhere and a panel
    *  over the sea is not a thing you can sail through. */
   haulOpen: boolean
+  /** Whether the Daily Haul is the view showing inside the day board.
+   *  Advances the `haulView` beat. */
+  haulView: boolean
   /** Whether the hold is open. The beat that names the hold is ANSWERED by
    *  opening it — see the note on that beat below. */
   holdOpen: boolean
@@ -301,6 +304,14 @@ export default function SeaFirstVoyage({
   // Bait on the hook. Advances the moment there is some, which for a captain
   // who already had it is the same render the beat came up on: they never see
   // it, and that is the design.
+  // The haul, open in the board. A captain who already has bait skips it: the
+  // bait beat after it would skip too, and "go and get worms" to somebody
+  // holding worms is a detour.
+  const wantHaulView = beat?.until === 'haulView'
+  useEffect(() => {
+    if (wantHaulView && (haulView || blocked !== 'bait')) next()
+  }, [wantHaulView, haulView, blocked, next])
+
   const wantBait = beat?.until === 'bait'
   useEffect(() => {
     if (wantBait && blocked !== 'bait') next()
@@ -429,7 +440,7 @@ export default function SeaFirstVoyage({
       // line that asked for it — that is a captain who did as they were told
       // and lost the sentence for it. Raised, the card sits on top and is
       // dismissed when it has been read.
-      z={b.until === 'bait' || b.until === 'haulShut' || stuck === 'bait'
+      z={b.until === 'haulView' || b.until === 'bait' || b.until === 'haulShut' || stuck === 'bait'
         || (b.target === 'log' && almanac)
         ? 120 : undefined}
     />
