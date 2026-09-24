@@ -526,7 +526,7 @@ Kong: "this is our endgame content, I really want these to stand out." The three
 - **The sounding line.** `DepthBar` carries a hairline along its own bottom edge (no added
   height; anything that grows above the fight shoves the stage mid-turn): the current run of ten
   depths as ticks, the ones behind you lit, a bead where you are, red diamonds where you sank a
-  boss (`runEventsRef` boss events), green diamonds at `DON_RISE_DEPTHS` in the Don's variant, a
+  boss (`runEventsRef` boss events), green diamonds at `DON_RISE_DEPTHS` you have PASSED (future rises were shown at first and gave him away; never mark anything ahead), a
   gold notch at your record. Bosses are ROLLED, so nothing ahead is marked but what is fixed.
 - **The lanterns go out.** Hardcore death: the lost squad is `LanternsOut`, each hand lit warm with
   their name, then going dark one by one (`LANTERN_FIRST` 1.1s, `LANTERN_STEP` 0.7s): glow dies,

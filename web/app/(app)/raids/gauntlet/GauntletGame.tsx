@@ -8941,9 +8941,9 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
             bottom edge so it costs the header no height (anything that grows
             here shoves the fight down mid-turn). A tick a depth; the ones
             behind you lit; a bead where you are; red marks where you sank a
-            boss; green diamonds at the Don's fixed rises; a gold notch at your
-            record. Bosses are rolled, not placed, so nothing ahead is marked
-            but what the run already fixes. */}
+            boss; green diamonds where the Don rose; a gold notch at your
+            record. NOTHING AHEAD OF YOU IS MARKED, not even the Don's fixed
+            rises: that would spoil the fight coming. */}
         {(() => {
           const lo = Math.floor((depth - 1) / 10) * 10 + 1
           const hi = lo + 9
@@ -8961,8 +8961,12 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore, 
               {bossDepths.filter(inWin).map(d => (
                 <span key={`b${d}`} style={{ position: 'absolute', left: X(d), top: 1, width: 5, height: 5, marginLeft: -2.5, transform: 'rotate(45deg)', background: '#f87171', boxShadow: '0 0 5px #f8717188' }} />
               ))}
-              {riseDepths.filter(inWin).map(d => (
-                <span key={`r${d}`} style={{ position: 'absolute', left: X(d), top: 1, width: 5, height: 5, marginLeft: -2.5, transform: 'rotate(45deg)', border: '1px solid #3fbf82', background: d < depth ? '#3fbf82' : 'transparent' }} />
+              {/* ONLY THE RISES YOU HAVE PASSED. Marking his fixed depths ahead
+                  gave the Don away up to ten depths early (Kong caught it): his
+                  descent is the telegraph, and seeing what is next is what the
+                  Sounding Line upgrade is bought for. */}
+              {riseDepths.filter(d => inWin(d) && d < depth).map(d => (
+                <span key={`r${d}`} style={{ position: 'absolute', left: X(d), top: 1, width: 5, height: 5, marginLeft: -2.5, transform: 'rotate(45deg)', border: '1px solid #3fbf82', background: '#3fbf82' }} />
               ))}
               {best > 0 && inWin(best) && (
                 <span style={{ position: 'absolute', left: X(best), top: -1, width: 2, height: 9, marginLeft: -1, background: GOLD, boxShadow: `0 0 6px ${GOLD}` }} />
