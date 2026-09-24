@@ -135,6 +135,26 @@ export type Place = {
  *  which is the point: the dark should be somewhere you go, not somewhere you
  *  drift into.
  */
+/**
+ * ── THE FORGE ISLAND'S THREE RUNGS, EACH PLACED ON ITS OWN ──────────────────
+ *
+ * The Forge, the Abyssal Forge and the Accelerator stand on the same island
+ * as the captain climbs the Locker upgrade (see forgeIsleFor in SeaMap). They
+ * are three different paintings, so each gets its own x, y and scale, like
+ * the Homestead's house rungs, and /sea/calibrate tunes them with a rung
+ * picker. This table is the ONE place they live: forgeIsleFor reads it and
+ * the forge's entry in PLACES below is its first rung (what check-islands
+ * measures and a captain who has not won the forge sees).
+ *
+ * Before 2026-09-23 forgeIsleFor wrote one hard-coded placement over all three
+ * and the calibrated numbers here were never drawn.
+ */
+export const FORGE_RUNGS: { name: string; art: string; x: number; y: number; scale: number }[] = [
+  { name: 'The Forge', art: '/forge/forge.png', x: 45, y: 42, scale: 0.30 },
+  { name: 'The Abyssal Forge', art: '/forge/abyssal_forge.png', x: 45, y: 42, scale: 0.30 },
+  { name: 'The Accelerator', art: '/forge/accelerator.png', x: 45, y: 42, scale: 0.30 },
+]
+
 export const PLACES: Place[] = [
   {
     id: 'mainland', name: 'The Mainland', blurb: 'Tavern, market and shops',
@@ -365,9 +385,8 @@ export const PLACES: Place[] = [
     art: '/forge-bg.jpg',
     kind: 'port', minLevel: 0,
     berth: { dx: -280 * 0.85, dy: 280 * 0.6 },
-    buildings: [
-      { art: '/forge/forge.png', x: 45, y: 42, scale: 0.30 },
-    ],
+    // The first rung; see FORGE_RUNGS for all three.
+    buildings: [(({ art, x, y, scale }) => ({ art, x, y, scale }))(FORGE_RUNGS[0])],
   },
   {
     /**

@@ -36,13 +36,27 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { PLACES } from '../chart'
+import { PLACES, FORGE_RUNGS } from '../chart'
 import { GROUND, bakeIsland, requestGround } from '../islandArt'
 import { plateFor } from '@/lib/islandPlates'
 import { HOUSE } from '@/lib/homestead'
 import { coastline, grassAt, GRASS, BUILDABLE, SHORE } from '@/lib/islandShape'
 
 type Item = { art: string; x: number; y: number; scale: number; toShore?: boolean }
+
+/**
+ * ── ISLANDS THAT ARE A LADDER ───────────────────────────────────────────────
+ *
+ * The Homestead's house rungs and the Forge's three (Forge, Abyssal Forge,
+ * Accelerator) are one painting per rung, each with its own placement. Each
+ * gets a rung picker; the output is one line per rung, and the note under it
+ * says where the lines go.
+ */
+type Rung = { name: string; art: string; x: number; y: number; scale: number }
+const LADDERS: Record<string, { rungs: Rung[]; file: string }> = {
+  home: { rungs: HOUSE.map(b => ({ name: b.name, art: b.seaArt, x: b.x, y: b.y, scale: b.scale })), file: 'lib/homestead.ts, onto each rung of HOUSE' },
+  forge_isle: { rungs: FORGE_RUNGS, file: 'app/(app)/sea/chart.ts, onto each line of FORGE_RUNGS' },
+}
 
 /** Every island you could stand a building on. Waters have no land and the
  *  inner rings are bands rather than discs. */
@@ -160,7 +174,7 @@ const VIEW = 620
 
 export default function CalibrateIslands() {
   const [placeId, setPlaceId] = useState(ISLANDS[0].id)
-  const [rung, setRung] = useState(HOUSE.length - 1)
+  const [rung, setRung] = useState(0)
   const [held, setHeld] = useState<number | null>(null)
   const [pick, setPick] = useState(0)
   const [copied, setCopied] = useState(false)
@@ -170,10 +184,16 @@ export default function CalibrateIslands() {
   const [painted, setPainted] = useState(0)
 
   const place = ISLANDS.find(p => p.id === placeId) ?? ISLANDS[0]
-  const isHome = place.id === 'home'
+  const ladder = LADDERS[place.id]
+  const isHome = !!ladder
+  const RUNGS = ladder?.rungs ?? []
 
-  /** One row per rung, each carrying its own three numbers. */
-  const [house, setHouse] = useState(() => HOUSE.map(b => ({ x: b.x, y: b.y, scale: b.scale })))
+  /** Per ladder, one row per rung, each carrying its own three numbers. */
+  const [ladders, setLadders] = useState<Record<string, { x: number; y: number; scale: number }[]>>(
+    () => Object.fromEntries(Object.entries(LADDERS).map(([id, l]) => [id, l.rungs.map(b => ({ x: b.x, y: b.y, scale: b.scale }))])))
+  const house = ladders[place.id] ?? []
+  const setHouse = (f: (prev: { x: number; y: number; scale: number }[]) => { x: number; y: number; scale: number }[]) =>
+    setLadders(prev => ({ ...prev, [place.id]: f(prev[place.id] ?? []) }))
   const [rows, setRows] = useState<Record<string, Item[]>>(
     () => Object.fromEntries(ISLANDS.map(p => [p.id, (p.buildings ?? []).map(b => ({ ...b }))])))
 
@@ -211,7 +231,7 @@ export default function CalibrateIslands() {
   }, [place.id, d, pad, painted, plate])
 
   const items: Item[] = isHome
-    ? [{ art: HOUSE[rung].seaArt, ...house[rung] }]
+    ? [{ art: RUNGS[Math.min(rung, RUNGS.length - 1)].art, ...house[Math.min(rung, RUNGS.length - 1)] }]
     : (rows[place.id] ?? [])
   const cur = items[Math.min(pick, Math.max(0, items.length - 1))]
 
@@ -255,7 +275,7 @@ export default function CalibrateIslands() {
       // One line per rung, in the order HOUSE lists them, ready to drop onto
       // each entry. NOT the whole HOUSE array: the costs and the copy live there
       // too, and a bench should never be able to overwrite those.
-      return HOUSE.map((b, i) =>
+      return RUNGS.map((b, i) =>
         `// ${b.name}\nx: ${house[i].x}, y: ${house[i].y}, scale: ${house[i].scale.toFixed(2)},`)
         .join('\n') + '\n'
     }
@@ -264,7 +284,7 @@ export default function CalibrateIslands() {
         `  { art: '${b.art}', x: ${b.x}, y: ${b.y}, scale: ${b.scale.toFixed(2)}`
         + `${b.toShore ? ', toShore: true' : ''} },`).join('\n')
       + '\n],\n'
-  }, [isHome, house, rows, place.id])
+  }, [isHome, house, rows, place.id, RUNGS])
 
   // MEASURE WHATEVER IS ON THE BENCH. Cheap and cached, and it has to happen
   // before the verdict means anything: an unmeasured plate reads as solid to its
@@ -320,7 +340,7 @@ export default function CalibrateIslands() {
       {/* ── WHICH ISLAND ── */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
         {ISLANDS.map(p => (
-          <button key={p.id} type="button" onClick={() => { setPlaceId(p.id); setPick(0) }}
+          <button key={p.id} type="button" onClick={() => { setPlaceId(p.id); setPick(0); setRung(0) }}
             className="font-karla font-700"
             style={{
               padding: '0.36rem 0.7rem', borderRadius: 999, fontSize: '0.76rem', cursor: 'pointer',
@@ -331,9 +351,9 @@ export default function CalibrateIslands() {
         ))}
       </div>
 
-      {/* ── WHICH RUNG ── the Homestead only. */}
+      {/* ── WHICH RUNG ── the islands that are a ladder. */}
       {isHome && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-        {HOUSE.map((b, i) => (
+        {RUNGS.map((b, i) => (
           <button key={b.name} type="button" onClick={() => setRung(i)}
             className="font-karla font-700"
             style={{
@@ -351,7 +371,7 @@ export default function CalibrateIslands() {
         <span className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(190,212,228,0.45)' }}>
           Copy from
         </span>
-        {HOUSE.map((b, i) => i === rung ? null : (
+        {RUNGS.map((b, i) => i === rung ? null : (
           <button key={b.name} type="button"
             onClick={() => setHouse(prev => prev.map((r, j) => (j === rung ? { ...prev[i] } : r)))}
             className="font-karla font-700"
@@ -510,7 +530,7 @@ export default function CalibrateIslands() {
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
         }}>
           <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#f0c464', minWidth: 92 }}>
-            {isHome ? HOUSE[rung].name : cur.art.split('/').pop()?.replace('.png', '')}
+            {isHome ? RUNGS[Math.min(rung, RUNGS.length - 1)].name : cur.art.split('/').pop()?.replace('.png', '')}
           </span>
           <span className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(190,212,228,0.7)', fontVariantNumeric: 'tabular-nums' }}>
             x {cur.x} · y {cur.y} · scale {cur.scale.toFixed(2)} ({Math.round(d * cur.scale)}px)
@@ -558,8 +578,8 @@ export default function CalibrateIslands() {
       }}>{source}</pre>
 
       <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(190,212,228,0.45)', marginTop: 10, lineHeight: 1.5 }}>
-        The Homestead goes into <code>lib/homestead.ts</code>, one line onto each rung of{' '}
-        <code>HOUSE</code>. Every other island goes into its own entry in{' '}
+        {ladder ? <>These lines go into <code>{ladder.file}</code>. </> : null}
+        Every island without rungs goes into its own entry in{' '}
         <code>app/(app)/sea/chart.ts</code>. Then run <code>npm run check</code>, which measures
         every building against the same coastline this bench drew and fails on anything standing
         in the surf.

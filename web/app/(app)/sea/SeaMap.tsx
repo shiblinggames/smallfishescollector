@@ -39,7 +39,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, GATE_SIGN_Y, inGate, EXP_ORIGIN, EXP_EDGE, SEA_GATE, SEA_GATE_HALF, inSeaGate, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, GATE_SIGN_Y, inGate, EXP_ORIGIN, FORGE_RUNGS, EXP_EDGE, SEA_GATE, SEA_GATE_HALF, inSeaGate, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
 import { getShip, SHIP_CAPTAIN_SLOT, SHIP_CREW_FACE, MIN_SHIP_TIER } from '@/lib/ships'
 import { getSetting, SEA_SETTINGS_EVENT } from '@/lib/seaSettings'
 import { shipSkinSeaImage, shipSkinSeaScale } from '@/lib/shipSkins'
@@ -16534,18 +16534,18 @@ function crewHallFor(p: Place, tiers: { hall: number; drill: number; stores: num
  */
 function forgeIsleFor(p: Place, tier: number): Place {
   if (p.id !== 'forge_isle') return p
-  const rung = tier >= 3
-    ? { art: '/forge/accelerator.png', name: 'The Accelerator', blurb: 'One epic relic, one day, one legendary' }
-    : tier >= 2
-      ? { art: '/forge/abyssal_forge.png', name: 'The Abyssal Forge', blurb: 'Forged relics, fused into Abyssal mounts' }
-      : tier >= 1
-        ? { art: '/forge/forge.png', name: 'The Forge', blurb: 'Two relics in, one out' }
-        : { art: '/forge/forge.png', name: 'The Forge', blurb: 'Cold, until you win it out of the Locker' }
+  // WHICH RUNG, and its own placement from FORGE_RUNGS (chart.ts), which
+  // /sea/calibrate tunes one rung at a time.
+  const r = FORGE_RUNGS[tier >= 3 ? 2 : tier >= 2 ? 1 : 0]
+  const blurb = tier >= 3 ? 'One epic relic, one day, one legendary'
+    : tier >= 2 ? 'Forged relics, fused into Abyssal mounts'
+      : tier >= 1 ? 'Two relics in, one out'
+        : 'Cold, until you win it out of the Locker'
   return {
     ...p,
-    name: rung.name,
-    blurb: rung.blurb,
-    buildings: [{ art: rung.art, x: 51, y: 60, scale: 0.30 }],
+    name: r.name,
+    blurb,
+    buildings: [{ art: r.art, x: r.x, y: r.y, scale: r.scale }],
   }
 }
 
