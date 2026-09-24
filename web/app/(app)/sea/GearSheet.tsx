@@ -123,12 +123,14 @@ export default function GearSheet({
         <div
           onClick={e => e.stopPropagation()}
           style={{
-            margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
+            // WIDE, like the intro's card (Kong): the picture on the left and
+            // the locker on the right from 820px; stacked below that.
+            margin: 'auto', width: '100%', maxWidth: 'min(1060px, 100%)',
             // Opaque: it floats over painted, moving water, and a translucent
             // panel over the sea reads as a smear. House rule.
             background: 'linear-gradient(180deg, rgba(14,20,28,0.97) 0%, rgba(8,12,18,0.98) 100%)',
             border: '1px solid rgba(196,169,106,0.3)',
-            borderRadius: 18, padding: '1.1rem 1rem 1.15rem',
+            borderRadius: 20, padding: '1.2rem 1.2rem 1.25rem',
             boxShadow: '0 22px 60px rgba(0,0,0,0.65)',
             maxHeight: 'min(86vh, 100%)', overflowY: 'auto',
             position: 'relative',
@@ -144,13 +146,8 @@ export default function GearSheet({
           </button>
 
           <p className="font-cinzel font-700" style={{
-            fontSize: '1.05rem', color: '#f0ede8', margin: '0 0 2px', paddingRight: 30,
+            fontSize: '1.3rem', color: '#f0ede8', margin: '0 0 0.9rem', paddingRight: 30,
           }}>Your Loadout</p>
-          <p className="font-karla" style={{
-            fontSize: '0.76rem', color: '#8a9aa6', margin: '0 0 0.9rem', lineHeight: 1.5,
-          }}>
-            Press any label on the picture to change what you are holding or wearing.
-          </p>
 
           {/* ── AND IT CANNOT TAKE THE CHART WITH IT ────────────────────
               The sea is one client component with a live renderer and an hour
@@ -170,20 +167,24 @@ export default function GearSheet({
               reelName={reelName}
               lineName={lineName}
               hookName={hookName}
+              wide
+              footer={(
+                <>
+                  {/* ── AND WHERE THE REST OF IT COMES FROM ─────────────── */}
+                  <p className="font-karla font-700 uppercase" style={{
+                    fontSize: '0.56rem', letterSpacing: '0.16em', color: 'rgba(196,169,106,0.8)',
+                    margin: '1.1rem 0 0.5rem',
+                  }}>Where to get more</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {signpost('shipyard', 'The Shipyard',
+                      'Upgrade the hull, the rod rack, the hold and the lantern.')}
+                    {signpost('mainland', 'The Tackle Shop, on the Mainland',
+                      'New rods, reels, lines, hooks and bait.')}
+                  </div>
+                </>
+              )}
             />
           </SheetBoundary>
-
-          {/* ── AND WHERE THE REST OF IT COMES FROM ─────────────────────── */}
-          <p className="font-karla font-700 uppercase" style={{
-            fontSize: '0.56rem', letterSpacing: '0.16em', color: 'rgba(196,169,106,0.8)',
-            margin: '1.25rem 0 0.5rem',
-          }}>Where to get more</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {signpost('shipyard', 'The Shipyard',
-              'Upgrade the hull, the rod rack, the hold and the lantern.')}
-            {signpost('mainland', 'The Tackle Shop, on the Mainland',
-              'New rods, reels, lines, hooks and bait.')}
-          </div>
         </div>
       </PopupShell>
     </div>,

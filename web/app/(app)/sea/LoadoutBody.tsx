@@ -35,12 +35,14 @@ import { RODS } from '@/lib/rods'
 import { HATS } from '@/lib/hats'
 import { BOATS } from '@/lib/boats'
 import { PETS } from '@/lib/pets'
-import { CHARACTER_COLORS } from '@/lib/characters'
+import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { loadoutGear, type LoadoutGear } from './loadoutActions'
 import { equipHat, equipBoat, equipPet } from '@/app/(app)/fishing/actions'
 import { updateCharacterColor } from '@/app/(app)/u/actions'
 
 const GOLD = '#f0c040'
+/** The intro's harbour with its dinghy painted out: the wide loadout's water. */
+const WATER = '/welcome-harbour-open.webp'
 const SEA = 'rgba(190,212,228'
 
 export type LoadoutRod = {
@@ -56,8 +58,15 @@ export type LoadoutRod = {
 type Option = { id: string; label: string; art: string | null; on: boolean }
 
 export default function LoadoutBody({
-  rack, activeRod, locked, onPick, look, onLookChange, reelTier, hookTier, reelName, lineName, hookName,
+  rack, activeRod, locked, onPick, look, onLookChange, reelTier, hookTier, reelName, lineName, hookName, wide = false, footer,
 }: {
+  /** THE WIDE LAYOUT (the HUD's loadout): the picture large on the left on
+   *  the painted harbour, the locker as a menu on the right, and a hover on
+   *  anything in it tries it on in the picture. The fishing overlay keeps the
+   *  compact callout layout. */
+  wide?: boolean
+  /** Drawn at the foot of the menu column in the wide layout. */
+  footer?: React.ReactNode
   rack: LoadoutRod[]
   activeRod: number
   /** A line in the water pins the rod. Swapping mid-cast would change the dial
@@ -80,9 +89,12 @@ export default function LoadoutBody({
   lineName: string
   hookName: string
 }) {
-  const [slot, setSlot] = useState<SlotKey | null>(null)
+  const [slot, setSlot] = useState<SlotKey | null>(wide ? 'rod' : null)
   const [gear, setGear] = useState<LoadoutGear | null>(null)
   const [busy, setBusy] = useState(false)
+  /** What the pointer is resting on in the wide menu: tried on in the picture,
+   *  not equipped. */
+  const [peek, setPeek] = useState<{ slot: SlotKey; id: string } | null>(null)
 
   // ON OPEN, NOT ON MOUNT OF THE CHART. Every hat, boat, pet and colour is a
   // lot of rows to put on the critical path of the most-loaded page in the game
@@ -149,7 +161,7 @@ export default function LoadoutBody({
   const choose = async (id: string) => {
     if (busy || !slot) return
     vibrate(8)
-    if (slot === 'rod') { onPick(Number(id)); setSlot(null); return }
+    if (slot === 'rod') { onPick(Number(id)); if (!wide) setSlot(null); setPeek(null); return }
     setBusy(true)
     const value = id === '' ? null : id
     // QUIET, ALL FOUR. `onLookChange` above has already moved the sprite on the
@@ -163,10 +175,155 @@ export default function LoadoutBody({
     else if (slot === 'pet') { onLookChange({ petId: value }); await equipPet(value, 'stern', quiet).catch(() => {}) }
     else if (slot === 'skin' && value) { onLookChange({ characterColor: value }); await updateCharacterColor(value, quiet).catch(() => {}) }
     setBusy(false)
-    setSlot(null)
+    // The wide menu stays on its tab: it is a list you browse, not a picker
+    // you dismiss.
+    if (!wide) setSlot(null)
+    setPeek(null)
   }
 
   const rodLocked = locked && slot === 'rod'
+
+  if (wide) {
+    // ── THE PICTURE, WITH WHATEVER IS BEING TRIED ON ──────────────────────
+    const pk = (s: SlotKey) => (peek && peek.slot === s ? peek.id : undefined)
+    const peekRod = pk('rod')
+    const shownRod = peekRod !== undefined ? rack.find(r => String(r.tier) === peekRod) ?? active : active
+    const peekHat = pk('hat'), peekBoat = pk('boat'), peekPet = pk('pet')
+    const kit = {
+      characterColor: pk('skin') ?? look.characterColor,
+      equippedHat: peekHat !== undefined ? (peekHat || null) : look.hatId,
+      equippedBoat: peekBoat !== undefined ? (peekBoat || null) : look.boatId,
+      equippedPet: peekPet !== undefined ? (peekPet || null) : look.petId,
+      equippedPetBow: look.petBow,
+      rodTier: shownRod?.tier ?? 0,
+      reelTier,
+      hookTier,
+    }
+    const peekLabel = peek ? options().find(o => o.id === peek.id)?.label : null
+    const TABS: { key: SlotKey; label: string }[] = [
+      { key: 'rod', label: 'Rod' }, { key: 'skin', label: 'Look' }, { key: 'hat', label: 'Hat' },
+      { key: 'boat', label: 'Boat' }, { key: 'pet', label: 'Pet' },
+    ]
+    return (
+      <div className="loadout-wide">
+        {/* ── LEFT: YOU, ON THE WATER ────────────────────────────────────── */}
+        <div className="loadout-stage">
+          <PreviewStage kit={kit} style={{
+            maxWidth: 'none', borderRadius: 16,
+            // The intro's harbour, with its own dinghy painted out, so the
+            // loadout is you on real water rather than on a blue box.
+            background: `url(${WATER}) 40% 62% / cover no-repeat, #0d1e2b`,
+          }} />
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10, minHeight: 22 }}>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.p key={peekLabel ?? 'now'} className="font-karla font-700"
+                initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.12 }}
+                style={{ fontSize: '0.78rem', color: peekLabel ? GOLD : `${SEA},0.6)`, textAlign: 'center' }}>
+                {peekLabel ? `Trying on: ${peekLabel}`
+                  : typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
+                    ? 'Hover anything on the right to try it on. Press to equip.'
+                    : 'Press anything below to equip it.'}
+              </motion.p>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* ── RIGHT: THE LOCKER ──────────────────────────────────────────── */}
+        <div className="loadout-menu" style={{ minWidth: 0 }}>
+          <div role="tablist" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }}>
+            {TABS.map(t => {
+              const on = slot === t.key
+              return (
+                <button key={t.key} type="button" role="tab" aria-selected={on} data-no-steer
+                  onClick={() => { vibrate(5); setSlot(t.key); setPeek(null) }}
+                  style={{
+                    padding: '0.5rem 0.2rem 0.45rem', borderRadius: 11, cursor: 'pointer', minWidth: 0,
+                    background: on ? 'rgba(240,192,64,0.12)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${on ? `${GOLD}88` : 'rgba(255,255,255,0.08)'}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                  }}>
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.14em', color: on ? GOLD : `${SEA},0.55)` }}>{t.label}</span>
+                  <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#e8e0cc', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameFor(t.key)}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <p className="font-karla font-600" style={{ fontSize: '0.74rem', lineHeight: 1.45, color: 'rgba(240,192,64,0.8)', margin: '10px 0 8px' }}>
+            {slot ? HOW_TO_GET[slot] : ''}
+          </p>
+
+          <div className="loadout-grid" onMouseLeave={() => setPeek(null)}>
+            {rodLocked ? (
+              <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: 'rgba(232,201,138,0.85)' }}>Rods stay put while a line is in the water.</p>
+            ) : !gear && slot !== 'rod' ? (
+              <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: `${SEA},0.45)` }}>Opening the locker…</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 8 }}>
+                {options().map(o => {
+                  const peeking = peek?.slot === slot && peek.id === o.id
+                  return (
+                    <motion.button key={o.id || 'none'} data-no-steer type="button"
+                      whileTap={o.on || busy ? undefined : { scale: 0.96 }}
+                      onMouseEnter={() => { if (slot) setPeek({ slot, id: o.id }) }}
+                      onFocus={() => { if (slot) setPeek({ slot, id: o.id }) }}
+                      onClick={e => { e.stopPropagation(); if (!o.on) void choose(o.id) }}
+                      disabled={busy}
+                      className="loadout-item"
+                      style={{
+                        position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                        padding: '0.6rem 0.35rem 0.5rem', borderRadius: 13,
+                        background: o.on ? 'rgba(240,192,64,0.13)' : peeking ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.035)',
+                        border: `1px solid ${o.on ? `${GOLD}99` : peeking ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.09)'}`,
+                        cursor: o.on || busy ? 'default' : 'pointer',
+                        opacity: busy && !o.on ? 0.5 : 1,
+                      }}>
+                      {o.on && (
+                        <span className="font-karla font-800 uppercase" style={{
+                          position: 'absolute', top: 5, right: 7, fontSize: '0.5rem', letterSpacing: '0.12em', color: GOLD,
+                        }}>On</span>
+                      )}
+                      <div style={{ width: 58, height: 58, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {slot === 'skin' ? (
+                          <div style={{
+                            width: 52, height: 52, borderRadius: '50%',
+                            backgroundImage: `url(${getCharacterSprites(o.id).rest})`, backgroundSize: '420% auto',
+                            backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat', backgroundColor: 'rgba(0,0,0,0.25)',
+                          }} />
+                        ) : o.art ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={o.art} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                        ) : (
+                          <span style={{ width: 20, height: 20, borderRadius: '50%', border: `1px dashed ${SEA},0.45)` }} />
+                        )}
+                      </div>
+                      <span className="font-karla font-700" style={{
+                        fontSize: '0.66rem', lineHeight: 1.2, textAlign: 'center',
+                        color: o.on ? GOLD : '#e2dccd',
+                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                      }}>{o.label}</span>
+                    </motion.button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* THE REST OF THE KIT: numbers, bought ashore. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, marginTop: 14 }}>
+            {[['Reel', reelName], ['Line', lineName], ['Hook', hookName]].map(([k, v]) => (
+              <div key={k} style={{ padding: '0.5rem 0.6rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', minWidth: 0 }}>
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: `${SEA},0.5)` }}>{k}</p>
+                <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#f2ead8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</p>
+              </div>
+            ))}
+          </div>
+          {footer}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
