@@ -533,3 +533,13 @@ Kong: "this is our endgame content, I really want these to stand out." The three
   face greys and settles; the "rest in your Crew Hall" line arrives after the last.
 - **NOT DONE, on purpose: a foil sheen on legendary boons.** The boon card records that a sweeping
   sheen was rejected (a shop-window shine moving over the words of an irreversible choice).
+
+**Round three: things on the water between fights (2026-09-24).** `ArenaStage` on GauntletArena:
+a screen passes `{ url, anchor, arrive, tint }` and leaves an EMPTY BOX where its icon was
+(`stageAnchorRef`); the arena draws the painted object into that box on the water (measured at
+4Hz, not per frame), standing on the box's bottom edge, with the hull reflection and its own
+breathing glow. The Drowned Shrine BREAKS THE SURFACE (`rise`: grows from its waterline, shock
+ring, four water columns); the Fence's hulk DRAWS ALONGSIDE (`alongside`: in from the right with a
+wake, eases to a stop). Leaving the screen settles it under. Art: public/gauntlet-shrine.webp and
+gauntlet-merchant.webp (Kie, prompts/gauntlet-*.json). Screens, choices and run flow unchanged.
+The haul keeps its own chest-opening sequence (it has real chest art and an open/close beat).

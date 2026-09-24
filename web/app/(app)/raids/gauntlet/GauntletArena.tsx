@@ -164,7 +164,24 @@ function hullGlow(url: string) {
   return job
 }
 
-export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, enemyPaint, shipFlip, seaBeam, enemyHidden, enemyAura, handle }: {
+/**
+ * ── A THING ON THE WATER FOR A SCREEN THAT IS NOT A FIGHT ───────────────────
+ *
+ * Kong: the between-fight moments should happen on the water. A shrine
+ * BREAKS THE SURFACE; the merchant's hulk DRAWS ALONGSIDE. The screen keeps
+ * its words and its choices exactly as they were and leaves an empty box where
+ * its icon used to be; `anchor` is that box, and the object is drawn into it,
+ * on the sea, standing on its bottom edge. Nothing about the run changes.
+ */
+export type ArenaStage = {
+  url: string
+  anchor: React.RefObject<HTMLElement | null>
+  arrive: 'rise' | 'alongside'
+  /** Its light, for the glow round it. */
+  tint: number
+}
+
+export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, enemyPaint, shipFlip, seaBeam, enemyHidden, enemyAura, stage, handle }: {
   theme: ArenaTheme
   scene: ArenaScene
   /** Which screen of the run this is under. Drives the grade and the beats. */
@@ -195,6 +212,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
   enemyHidden?: boolean
   /** An elite's colour: she glows it whatever the depth. */
   enemyAura?: string
+  /** The object this screen stages on the water, if any. See ArenaStage. */
+  stage?: ArenaStage | null
   /** Filled in on mount; the fight reads it and calls into it. */
   handle: React.MutableRefObject<ArenaHandle | null>
 }) {
@@ -208,6 +227,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
   artRef.current = { shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam, enemyPaint }
   const hiddenRef = useRef(!!enemyHidden)
   hiddenRef.current = !!enemyHidden
+  const stageRef = useRef<ArenaStage | null>(stage ?? null)
+  stageRef.current = stage ?? null
   const dressRef = useRef({ depth, aura: enemyAura ?? null })
   dressRef.current = { depth, aura: enemyAura ?? null }
   /** 1 the instant a new depth arrives, decayed by the frame loop. */
@@ -376,6 +397,22 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
           h.water = w
         }).catch(() => {})
       }
+      // ── THE STAGE OBJECT ─────────────────────────────────────────────
+      // Under the hulls (they are not on the water on these screens anyway),
+      // over the guns' water layer, with the reflection every hull gets.
+      const prop = mkHull(1)
+      const propGlow = new PIXI.Sprite(PIXI.Texture.EMPTY)
+      propGlow.blendMode = 'add'
+      propGlow.alpha = 0
+      world.addChildAt(propGlow, world.getChildIndex(prop.node))
+      prop.node.alpha = 0
+      let propUrl = ''
+      let propGeo = { pad: 0, w: 1, h: 1 }
+      let propAt = { x: 0, y: 0, w: 0, ok: false }
+      let propMeasured = -1
+      let propT0 = 0
+      let propSplash = 0
+      let propWake = 0
       const player = mkHull(0.5)
       // ── THE DEEP ON HER ──────────────────────────────────────────────
       // Kong: a depth-35 hull looked like a depth-3 hull. Her glow sits in the
@@ -593,6 +630,87 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
           }
         }
         if (art.shipUrl !== player.url) load(player, art.shipUrl)
+
+        // ── THE STAGE OBJECT, ARRIVING AND STAYING ──────────────────────
+        {
+          const st = stageRef.current
+          const want = st?.url ?? ''
+          if (want && want !== propUrl) {
+            propUrl = want
+            load(prop, want)
+            propT0 = t; propSplash = 0; propWake = 0; propMeasured = -1
+            propGlow.texture = PIXI.Texture.EMPTY
+            void hullGlow(want).then(gl => {
+              if (dead || !gl || propUrl !== want) return
+              propGlow.texture = PIXI.Texture.from(gl.cv)
+              propGeo = { pad: gl.pad, w: gl.w, h: gl.h }
+              propGlow.anchor.set(0.5, (gl.pad + gl.h) / (gl.h + gl.pad * 2))
+            })
+          }
+          if (!want && propUrl) {
+            // GOING: it settles back under and fades, then lets go of its art.
+            prop.node.alpha = Math.max(0, prop.node.alpha - dt * 1.8)
+            prop.node.y += dt * 18
+            propGlow.alpha = prop.node.alpha * 0.4
+            if (prop.node.alpha <= 0) { propUrl = ''; load(prop, '') }
+          } else if (st && prop.sp.texture.width > 2) {
+            // WHERE ITS BOX IS, a few times a second rather than every frame:
+            // reading a rect lays the page out, and this box does not move
+            // unless the window does or the screen scrolls.
+            if (t - propMeasured > 0.25) {
+              propMeasured = t
+              const r = st.anchor.current?.getBoundingClientRect()
+              if (r && r.width > 0) propAt = { x: r.left - box.left + r.width / 2, y: r.top - box.top + r.height * 0.92, w: r.width * 1.7, ok: true }
+            }
+            if (propAt.ok) {
+              const w = propAt.w
+              prop.sp.width = w
+              prop.sp.height = w * (prop.sp.texture.height / prop.sp.texture.width)
+              prop.water?.fit(prop.sp)
+              const age = t - propT0
+              const sway = Math.sin(t * 1.3) * 3 + Math.sin(t * 2.1 + 0.7) * 1.6
+              if (st.arrive === 'rise') {
+                // BREAKS THE SURFACE: grows up from its waterline, with the
+                // water going up round it, and settles on the swell.
+                const p = Math.max(0, Math.min(1, (age - 0.25) / 1.6))
+                const e = 1 - (1 - p) ** 3
+                if (p > 0 && propSplash === 0) {
+                  propSplash = 1
+                  guns.shock(propAt.x, propAt.y)
+                  for (let k = 0; k < 4; k++) guns.impact(propAt.x - w * 0.3 + (w * 0.6 * k) / 3, propAt.y, 'miss' as ImpactKind)
+                }
+                prop.node.scale.y = 0.15 + 0.85 * e
+                prop.node.x = propAt.x
+                prop.node.y = propAt.y + sway * e + (1 - e) * w * 0.08
+                prop.node.alpha = Math.min(1, p * 2.2)
+              } else {
+                // DRAWS ALONGSIDE: in from the right on its own way, leaving a
+                // wake, and eases to a stop.
+                const p = Math.max(0, Math.min(1, age / 2))
+                const e = 1 - (1 - p) ** 3
+                const off = (1 - e) * (app.screen.width * 0.55)
+                prop.node.scale.y = 1
+                prop.node.x = propAt.x + off
+                prop.node.y = propAt.y + sway
+                prop.node.rotation = (1 - e) * -0.05 + Math.sin(t * 0.9) * 0.012
+                prop.node.alpha = Math.min(1, p * 3)
+                if (p < 0.85 && t - propWake > 0.16) {
+                  propWake = t
+                  guns.wake(prop.node.x + w * 0.3, propAt.y, 1, 0)
+                }
+              }
+              // Its own light, breathing slowly round it.
+              if (propGlow.texture !== PIXI.Texture.EMPTY) {
+                const k = prop.sp.width / propGeo.w
+                propGlow.tint = st.tint
+                propGlow.scale.set(k, k * prop.node.scale.y)
+                propGlow.position.set(prop.node.x, prop.node.y)
+                propGlow.rotation = prop.node.rotation
+                propGlow.alpha = prop.node.alpha * (0.32 + 0.12 * Math.sin(t * 1.1))
+              }
+            }
+          }
+        }
 
         // ── THE FALL ────────────────────────────────────────────────
         // Pushed to 1 when the depth changes and decayed here. While it is up

@@ -22,7 +22,7 @@ import {
   ENTER, EXIT, POP, CEREMONY, STAGGER, STAGGER_SLOW, stagger,
 } from '@/lib/gauntletMotion'
 import { hullPaint } from '@/app/(app)/sea/raidWaters'
-import GauntletArena, { type ArenaHandle, type ArenaTheme, type Mood } from './GauntletArena'
+import GauntletArena, { type ArenaHandle, type ArenaTheme, type ArenaStage, type Mood } from './GauntletArena'
 import { getShip, shipTierByName } from '@/lib/ships'
 import GauntletSlipway, { type SlipwayPlace } from './GauntletSlipway'
 import { getShipSkin, shipSkinFilter } from '@/lib/shipSkins'
@@ -990,6 +990,8 @@ export default function GauntletGame(props: GauntletGameProps) {
    * and from timeouts, and neither should re-render this component.
    */
   const arenaRef = useRef<ArenaHandle | null>(null)
+  /** The box a between-fight screen leaves for the thing it stages on the water. */
+  const stageAnchorRef = useRef<HTMLDivElement | null>(null)
   /**
    * ── THE SLIPWAY ──────────────────────────────────────────────────────────
    *
@@ -2637,7 +2639,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // the reward, the breather and the whole next descent, so the boss's own
   // water became the ordinary water. It is his only while you are in front of
   // him, or going down in front of him.
-  const arena = (mood: Mood, opts?: { enemyHidden?: boolean }) => {
+  const arena = (mood: Mood, opts?: { enemyHidden?: boolean; stage?: ArenaStage | null }) => {
     const bossHere = !!fight?.isBoss && (mood === 'fight' || mood === 'dead')
     return (
     <GauntletArena
@@ -2662,6 +2664,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       // An elite glows violet at any depth (the colour the run already gives
       // elites everywhere else); the deep dresses everyone else. See the arena.
       enemyAura={fight?.isElite ? '#c084fc' : undefined}
+      stage={opts?.stage ?? null}
       handle={arenaRef}
     />
     )
@@ -3576,7 +3579,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const canWager = fathomsNow >= 1
     return (
       <>
-        {arena('shrine')}
+        {arena('shrine', { stage: { url: '/gauntlet-shrine.webp', anchor: stageAnchorRef, arrive: 'rise', tint: 0xb794f6 } })}
         <Screen id={phase}>
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${VIO}1f 0%, ${VIO}0a 42%, transparent 70%)` }} />
@@ -3589,17 +3592,11 @@ export default function GauntletGame(props: GauntletGameProps) {
             className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', color: VIO, marginTop: 16, textShadow: `0 0 16px ${VIO}66` }}>
             A Drowned Shrine
           </motion.p>
-          {/* A sunken idol, rising from the dark — only while you're choosing. */}
+          {/* THE SHRINE IS ON THE WATER NOW. This box is where it stands: the
+              arena draws the painted shrine breaking the surface into it (see
+              ArenaStage). Only while you are choosing, as the icon was. */}
           {!shrineFlipping && !shrineCoin && (
-            <motion.div initial={{ opacity: 0, y: -26, scale: 0.7 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={ENTER}
-              style={{ position: 'relative', width: 128, height: 128, margin: '16px auto 6px' }}>
-              <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: `radial-gradient(circle, ${VIO}3a 0%, transparent 66%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
-              <svg width="128" height="128" viewBox="0 0 24 24" fill="none" stroke={VIO} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', filter: `drop-shadow(0 6px 22px ${VIO}55)` }} aria-hidden>
-                <path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z" />
-                <circle cx="12" cy="10" r="2.4" />
-                <path d="M12 12.5V17" /><path d="M9.5 15h5" />
-              </svg>
-            </motion.div>
+            <div ref={stageAnchorRef} aria-hidden style={{ width: 150, height: 150, margin: '8px auto 2px' }} />
           )}
 
           {shrineFlipping ? (
@@ -3743,7 +3740,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const spendable = Math.max(0, runFathoms - fenceSpent)
     return (
       <>
-        {arena('merchant')}
+        {arena('merchant', { stage: { url: '/gauntlet-merchant.webp', anchor: stageAnchorRef, arrive: 'alongside', tint: 0xffc27a } })}
         <Screen id={phase}>
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.35, 0.6, 0.35] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${MC}1c 0%, ${MC}09 44%, transparent 72%)` }} />
@@ -3756,13 +3753,9 @@ export default function GauntletGame(props: GauntletGameProps) {
             className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', color: MC, marginTop: 16, textShadow: `0 0 16px ${MC}55` }}>
             A Black Market
           </motion.p>
-          <motion.div initial={{ opacity: 0, y: -18, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={ENTER}
-            style={{ position: 'relative', width: 96, height: 96, margin: '14px auto 4px' }}>
-            <div style={{ position: 'absolute', inset: -16, borderRadius: '50%', background: `radial-gradient(circle, ${MC}33 0%, transparent 66%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
-            <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke={MC} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', filter: `drop-shadow(0 6px 20px ${MC}55)` }} aria-hidden>
-              <path d="M3 9l1.5-4.5h15L21 9" /><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" /><path d="M9 13h6" />
-            </svg>
-          </motion.div>
+          {/* THE FENCE'S HULK DRAWS ALONGSIDE, on the water, into this box
+              (see ArenaStage). The icon it replaces was a shop glyph. */}
+          <div ref={stageAnchorRef} aria-hidden style={{ width: 150, height: 130, margin: '6px auto 0' }} />
           <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...POP, delay: 0.12 }}
             className="font-cinzel font-800" style={{ fontSize: '1.85rem', color: '#e7f6ee', lineHeight: 1.06, marginTop: 4, textShadow: `0 0 24px ${MC}44` }}>
             The Fence
