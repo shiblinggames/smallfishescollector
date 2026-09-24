@@ -202,3 +202,9 @@ Kong: the recruit hall and crew cards should be art forward, like the enemy stat
 tap (the hand into the seat, whoever held it to the bench); the server confirms behind it and a
 refusal restores the snapshot (`run`'s `onFail`). The anchorage tour's assign beat moved only when
 the round trip returned, queued behind the sea's other server actions.
+
+**Signing on is a moment (2026-09-24).** `recruitBoard` (the sheet's Recruit and the swipe both)
+plays `SignOnMoment` on the tap: the recruit blooms up centre screen in their rarity colour with a
+ring breaking out behind and "<name> is aboard!", about 1.7s, transform/opacity only,
+pointer-events none, portalled above everything with the reveal flash and banner.
+

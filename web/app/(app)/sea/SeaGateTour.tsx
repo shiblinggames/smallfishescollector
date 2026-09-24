@@ -154,7 +154,12 @@ export default function SeaGateTour({
    *  control, or the way back to it. When there is not, the chart lets go of
    *  the wheel rather than leaving every control dimmed around a card that
    *  names one of them. */
-  const pointing = found || !!waypoint
+  // NOT the waypoint. It used to count, which kept every other press on the
+  // page swallowed while the card said "Head back to the crew menu", and a
+  // way back that could not be reached (under an open crew sheet, or simply
+  // missed) was a captain stuck for good (Kong hit it). The waypoint still
+  // rings the way back; it just does not hold the page while it does.
+  const pointing = found
   // The flashing effect reads this, so the ring lands on whatever the card is
   // actually anchored to — the way back, when the target has gone.
   litRef.current = waypoint?.target ?? beat?.target

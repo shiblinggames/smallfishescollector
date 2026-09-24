@@ -1,34 +1,38 @@
-// ── THE RUNWAY THROUGH THE REEF ─────────────────────────────────────────────
+// ── THE CHANNEL MARKERS THROUGH THE REEF ────────────────────────────────────
 //
-// Kong: add lights along the corridor between expeditions and fishing, so it
-// reads as an entrance you pass through, like a runway.
+// Kong: lights along the corridor between expeditions and fishing, so it reads
+// as an entrance you pass through. The first cut was two rows of flat glowing
+// dots with a pulse chasing up them: too flashy, and flat on a 2.5D sea whose
+// entrance is standing rock.
 //
-// Two rows of small lamps on the water, one down each edge of the gap in the
-// reef (chart GATE_X / GATE_HALF), running from the fishing side through the
-// passage to the anchorage. Each lamp burns low all the time; a brighter pulse
-// chases up the rows toward the arch every couple of seconds, the way approach
-// lights lead a pilot in. Brighter after dark, when it matters most, and still
-// visible by day.
+// So they are OBJECTS now: painted timber pilings with a brass lantern hung off
+// each (`/sea/channel-post.png`, the house style), standing up out of the
+// water down both edges of the gap, from the fishing side through the passage
+// to the anchorage. Stood up like everything else that stands on this chart:
+// the world is squashed by GROUND, so each post is scaled back up by 1/GROUND
+// and anchored at its foot. The lanterns burn steadily, with a slow, slight
+// flicker each on its own phase, and a small warm pool on the water under each
+// after dark. No chase, no flashing.
 //
-// Twenty-odd sprites in one container, additive, drawn with the chart's own
-// radial glow baked once. Nothing is created per frame; the advance is a loop
-// of alpha and scale writes, and it skips entirely while the passage is off
-// screen.
+// Twelve posts in one container. Nothing is created per frame, and the whole
+// thing is skipped while the passage is off screen.
 
 import type { Container, Sprite, Texture } from 'pixi.js'
 import { GATE_X, GATE_HALF, NORTH_WALL } from './chart'
 import { GROUND } from './islandArt'
 
-/** Where the rows run, in world y: well out on the fishing side, through the
- *  reef and into the anchorage. */
-const Y_SOUTH = NORTH_WALL + 760
-const Y_NORTH = NORTH_WALL - 640
-/** Lamps per row, and how far in from the rock they sit. */
-const COUNT = 12
-const INSET = 70
-/** One chase up the rows, in seconds, then a rest. */
-const CHASE_S = 1.4
-const PERIOD_S = 2.6
+const ART = '/sea/channel-post.png'
+/** Where the rows run, in world y: out on the fishing side, through the reef
+ *  and into the anchorage. */
+const Y_SOUTH = NORTH_WALL + 700
+const Y_NORTH = NORTH_WALL - 620
+/** Posts per side, and how far in from the rock they stand. */
+const COUNT = 6
+const INSET = 80
+/** The post's drawn height in world pixels (the boat is 210 across). */
+const POST_H = 170
+/** Where the lantern hangs on the art, as fractions of its box. */
+const LAMP_U = 0.68, LAMP_V = 0.22
 
 export type Runway = {
   view: Container
@@ -41,10 +45,9 @@ function glowTexture(PIXI: typeof import('pixi.js')): Texture {
   c.width = c.height = S
   const g = c.getContext('2d')!
   const grd = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
-  grd.addColorStop(0, 'rgba(255,248,225,1)')
-  grd.addColorStop(0.18, 'rgba(255,214,140,0.95)')
-  grd.addColorStop(0.45, 'rgba(255,170,70,0.35)')
-  grd.addColorStop(1, 'rgba(255,150,40,0)')
+  grd.addColorStop(0, 'rgba(255,214,150,0.9)')
+  grd.addColorStop(0.35, 'rgba(255,176,90,0.35)')
+  grd.addColorStop(1, 'rgba(255,150,60,0)')
   g.fillStyle = grd
   g.fillRect(0, 0, S, S)
   return PIXI.Texture.from(c)
@@ -52,53 +55,62 @@ function glowTexture(PIXI: typeof import('pixi.js')): Texture {
 
 export function makeRunway(PIXI: typeof import('pixi.js')): Runway {
   const view: Container = new PIXI.Container()
-  const tex = glowTexture(PIXI)
-  type Lamp = { core: Sprite; halo: Sprite; u: number }
-  const lamps: Lamp[] = []
-  for (const side of [-1, 1]) {
-    const x = GATE_X + side * (GATE_HALF - INSET)
-    for (let i = 0; i < COUNT; i++) {
-      const u = i / (COUNT - 1)
-      const y = Y_SOUTH + (Y_NORTH - Y_SOUTH) * u
-      const halo = new PIXI.Sprite(tex)
-      halo.anchor.set(0.5)
-      halo.blendMode = 'add'
-      halo.position.set(x, y)
-      const core = new PIXI.Sprite(tex)
-      core.anchor.set(0.5)
-      core.blendMode = 'add'
-      core.position.set(x, y)
-      view.addChild(halo, core)
-      lamps.push({ core, halo, u })
-    }
+  const glow = glowTexture(PIXI)
+  type Post = { post: Sprite | null; halo: Sprite; pool: Sprite; x: number; y: number; phase: number }
+  const posts: Post[] = []
+  // North first, so the nearer (southern) posts draw over the farther ones.
+  const spots: { x: number; y: number }[] = []
+  for (let i = 0; i < COUNT; i++) {
+    const y = Y_NORTH + (Y_SOUTH - Y_NORTH) * (i / (COUNT - 1))
+    for (const side of [-1, 1]) spots.push({ x: GATE_X + side * (GATE_HALF - INSET), y })
   }
+  spots.forEach((p, k) => {
+    // The pool of lamplight on the water: flat, so it lies on the plane.
+    const pool = new PIXI.Sprite(glow)
+    pool.anchor.set(0.5)
+    pool.blendMode = 'add'
+    pool.position.set(p.x, p.y)
+    pool.scale.set(2.2, 2.2)
+    const halo = new PIXI.Sprite(glow)
+    halo.anchor.set(0.5)
+    halo.blendMode = 'add'
+    view.addChild(pool)
+    posts.push({ post: null, halo, pool, x: p.x, y: p.y, phase: k * 1.37 })
+  })
+  // The posts arrive with their art; the pools and halos wait for them.
+  void PIXI.Assets.load<Texture>(ART).then(tex => {
+    if (view.destroyed) return
+    const w = POST_H * (tex.width / tex.height)
+    for (const p of posts) {
+      const s = new PIXI.Sprite(tex)
+      s.anchor.set(0.5, 0.96)
+      s.position.set(p.x, p.y)
+      s.width = w
+      s.height = POST_H / GROUND
+      view.addChild(s)
+      // The halo round the lantern: world y is squashed, so the lantern's
+      // height on the art is divided back out.
+      p.halo.position.set(p.x + (LAMP_U - 0.5) * w, p.y - (0.96 - LAMP_V) * POST_H / GROUND)
+      p.halo.scale.set(0.9, 0.9 / GROUND)
+      view.addChild(p.halo)
+      p.post = s
+    }
+  }).catch(() => {})
+
   const x0 = GATE_X - GATE_HALF, x1 = GATE_X + GATE_HALF
   let shown = true
-
   return {
     view,
     advance(t, camX, camY, halfW, halfH, dark) {
-      // Off screen: nothing to do, and the container is hidden once rather
-      // than twenty-four sprites being written every frame.
-      const on = x1 > camX - halfW - 200 && x0 < camX + halfW + 200
-        && Y_SOUTH + 200 > camY - halfH && Y_NORTH - 200 < camY + halfH
+      const on = x1 > camX - halfW - 300 && x0 < camX + halfW + 300
+        && Y_SOUTH + 300 > camY - halfH && Y_NORTH - 400 < camY + halfH
       if (on !== shown) { shown = on; view.visible = on }
       if (!on) return
-      // Brighter after dark; still there by day.
-      const base = 0.28 + 0.4 * dark
-      const phase = (t % PERIOD_S) / CHASE_S
-      for (const l of lamps) {
-        // The pulse: a short bump travelling from the south end to the north.
-        const d = phase - l.u
-        const pulse = d > 0 && d < 0.22 ? Math.sin((d / 0.22) * Math.PI) : 0
-        const a = Math.min(1, base + pulse * (0.55 + 0.3 * dark))
-        const s = 1 + pulse * 0.5
-        // Round on the water: the world is squashed on y, so the sprite is
-        // stood back up by 1/GROUND.
-        l.core.alpha = a
-        l.core.scale.set(0.34 * s, (0.34 * s) / GROUND)
-        l.halo.alpha = a * 0.45
-        l.halo.scale.set(1.3 * s, (1.3 * s) / GROUND)
+      for (const p of posts) {
+        // A lantern, not a sign: steady, with a slow slight flicker.
+        const f = 1 + 0.06 * Math.sin(t * 2.3 + p.phase) + 0.03 * Math.sin(t * 5.1 + p.phase * 2)
+        p.halo.alpha = (0.18 + 0.5 * dark) * f
+        p.pool.alpha = (0.02 + 0.3 * dark) * f
       }
     },
   }

@@ -1493,6 +1493,14 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     setDetail({ kind, item })
   }
 
+  /** The signing-on moment that plays over the page on a recruit. */
+  const [signedOn, setSignedOn] = useState<{ key: number; name: string; filename: string; color: string } | null>(null)
+  useEffect(() => {
+    if (!signedOn) return
+    const t = window.setTimeout(() => setSignedOn(null), 1700)
+    return () => window.clearTimeout(t)
+  }, [signedOn])
+
   function run(action: () => Promise<CrewActionResult>, id: number | 'reroll', onDone?: () => void, onFail?: () => void) {
     setErr(null)
     setBusyId(id)
@@ -1568,7 +1576,11 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
   function recruitBoard(id: number) {
     const snapshot = state.board
     setErr(null)
-    vibrate(14)
+    vibrate([0, 18, 50, 28])
+    // THE MOMENT THEY SIGN ON (Kong: more of an animation and feedback on
+    // Recruit). Played on the tap, over everything, never in the way.
+    const who = state.board.find(c => c.id === id)
+    if (who) setSignedOn({ key: Date.now(), name: who.name, filename: who.filename, color: RARITY_COLORS[(who.rarity as CrewRarity)] ?? '#f0c040' })
     setState(s => ({ ...s, board: s.board.map(c => c.id === id ? { ...c, recruited: true } : c) }))
     // SAID ON THE TAP, like the card. The anchorage tour waited for the
     // server's crew-changed, so the card said "aboard" and the tour sat on its
@@ -3465,6 +3477,9 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
         <div style={{ position: 'relative', zIndex: 9001 }}>
           <RevealFlash flash={reveal.flash} />
           <RevealBanner banner={reveal.banner} />
+          <AnimatePresence>
+            {signedOn && <SignOnMoment key={signedOn.key} name={signedOn.name} filename={signedOn.filename} color={signedOn.color} />}
+          </AnimatePresence>
         </div>,
         document.body,
       )}
@@ -4802,3 +4817,50 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
 // strip. That strip was dropped to declutter the top of the page
 // (gems + nav level live in the Nav, roster count repeats in the tab
 // label + the section header). Component removed.
+
+// ── A HAND SIGNS ON ─────────────────────────────────────────────────────────
+//
+// Kong: Recruit should give more of an animation and feedback. It dimmed the
+// card and shut the sheet, which is a receipt, not a moment. Now the recruit
+// blooms up centre screen in the light of their rarity, a ring breaks out
+// behind them, and their name lands with "is aboard!". About a second and a
+// half, transform and opacity only, and pointer-events none: it never stands
+// between the captain and the next thing they press, the tour's next line
+// included.
+function SignOnMoment({ name, filename, color }: { name: string; filename: string; color: string }) {
+  return (
+    <motion.div aria-hidden
+      initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 1, 0] }} exit={{ opacity: 0 }}
+      transition={{ duration: 1.7, times: [0, 0.1, 0.78, 1], ease: 'easeInOut' }}
+      style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        background: `radial-gradient(ellipse 42% 38% at 50% 46%, ${color}2e 0%, rgba(2,4,8,0.55) 70%, rgba(2,4,8,0.7) 100%)`,
+      }}>
+      <div style={{ position: 'relative', width: 'min(44vw, 240px)', aspectRatio: '1 / 1' }}>
+        {/* The ring that breaks out behind them. */}
+        <motion.span
+          initial={{ scale: 0.4, opacity: 0.9 }} animate={{ scale: 1.9, opacity: 0 }}
+          transition={{ duration: 0.9, ease: 'easeOut', delay: 0.12 }}
+          style={{ position: 'absolute', inset: '8%', borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 24px ${color}88` }} />
+        <motion.span
+          initial={{ scale: 0.5, opacity: 0.7 }} animate={{ scale: 1.5, opacity: 0 }}
+          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.28 }}
+          style={{ position: 'absolute', inset: '14%', borderRadius: '50%', border: `2px solid ${color}aa` }} />
+        {/* The glow behind the art: a gradient, never a filter on the image. */}
+        <div style={{ position: 'absolute', inset: '-10%', borderRadius: '50%', background: `radial-gradient(circle, ${color}66 0%, ${color}22 40%, transparent 70%)` }} />
+        <motion.img src={artSrc(filename)} alt="" decoding="async"
+          initial={{ scale: 0.6, y: 30, opacity: 0 }}
+          animate={{ scale: [0.6, 1.08, 1], y: [30, -4, 0], opacity: [0, 1, 1] }}
+          transition={{ duration: 0.55, times: [0, 0.7, 1], ease: [0.2, 0.9, 0.3, 1] }}
+          style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain' }} />
+      </div>
+      <motion.p className="font-pirata"
+        initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.35, ease: 'easeOut' }}
+        style={{ marginTop: 10, fontSize: 'clamp(1.6rem, 4vw, 2.3rem)', color: '#f5e6c4', textShadow: `0 0 18px ${color}88, 0 2px 12px rgba(0,0,0,0.9)`, textAlign: 'center', padding: '0 1rem' }}>
+        {name} is aboard!
+      </motion.p>
+    </motion.div>
+  )
+}

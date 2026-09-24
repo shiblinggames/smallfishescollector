@@ -3581,13 +3581,15 @@ was code (neon log-spiral textures, ribbed terraces, lightning) in a hand-painte
   faded at both ends of the run. A DOOR LANDMARK stands at each rim: Davy's barnacled sea-king
   figurehead with a teal lantern, the Don's gilded lamp post on a lacquered dock.
 
-## The runway through the reef (2026-09-24)
+## The channel markers through the reef (2026-09-24)
 
-Kong: lights along the corridor between fishing and expeditions, like a runway. `sea/seaRunway.ts`
-puts two rows of twelve lamps down the edges of the gap (`GATE_X` ± `GATE_HALF` - 70), from
-`NORTH_WALL + 760` on the fishing side to `NORTH_WALL - 640` in the anchorage: each burns low all
-the time (brighter after dark) and a pulse chases up both rows toward the arch every 2.6s. One
-additive container, hidden and skipped while the passage is off screen.
+Kong: lights along the corridor between fishing and expeditions, like a runway. The first cut
+(flat glow dots with a chasing pulse) was too flashy and flat on a 2.5D sea. `sea/seaRunway.ts`
+now stands six painted timber pilings with brass lanterns (`/sea/channel-post.png`, Kie + key-corner)
+down each edge of the gap (`GATE_X` ± `GATE_HALF` - 80), from `NORTH_WALL + 700` to
+`NORTH_WALL - 620`, stood up by 1/GROUND and anchored at the foot like every standing thing. Each
+lantern has a steady halo with a slow slight flicker and a small warm pool on the water after dark.
+No chase. Skipped while off screen.
 
 ## NPC name plates on a desktop
 
@@ -3599,4 +3601,9 @@ Finn's, the traders' and the regulars' plates carry `scale(var(--plate-k))` on t
 While the beat's target is `hold` or `log`, `canLeaveRef` is false and FishingHere's close is
 ignored: tapping the water stowed the rod and took those two lines with it. The tour's own
 `stowRod` on the beat after is unaffected.
+
+The anchorage tour's waypoint ("Head back to the crew menu") no longer holds the lock: `pointing`
+is the beat's own target being on screen, nothing else. With the waypoint counting, a way back
+that could not be reached (under an open crew sheet) left the page swallowing every press and the
+captain stuck (Kong hit it).
 
