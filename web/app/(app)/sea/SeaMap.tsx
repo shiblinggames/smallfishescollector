@@ -8999,6 +8999,8 @@ export default function SeaMap({
       // several times a second, which is the "no pattern" of it. Below the
       // deadband it simply keeps whatever it was facing.
       if (Math.abs(vel.current.x) > 70) facing.current = vel.current.x < 0 ? 1 : -1
+      // And the lantern points the way she is actually going (seaLights).
+      gpuRef.current?.sailing(vel.current.x, vel.current.y)
 
       // THE WAKE. Lay a mark behind the hull while making way, then age every
       // mark in the pool. Marks live in world coordinates inside the world

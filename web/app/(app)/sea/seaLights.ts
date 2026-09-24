@@ -9,14 +9,15 @@
 // What makes night night is that a few things start EMITTING while everything
 // else stops. Three of them here, and each answers a different question.
 //
-//   THE LANTERN — yours, hung at the bow. Answers "can I see", and it is the
+//   THE LANTERN — yours, thrown AHEAD. Answers "can I see", and it is the
 //   one that makes the dark feel like somewhere you are rather than a filter
 //   over the screen. It was a flat disc with a rim centred on the hull, and
 //   Kong called it what it was: an oval round the whole boat image, not a
 //   light on a boat. So it has a SOURCE now: an edgeless spill of warmth on
-//   the water off her bow, brightest at the lamp and falling away, which
-//   swaps ends when she comes about. (Dancing glints on top were tried and
-//   cut the same day: far too distracting.)
+//   the water in front of her, longer than it is wide, pointing the way she
+//   is TRAVELLING (not just left or right: Kong again) and turning with her.
+//   Laid on the plane, so it foreshortens like the sea does. (Dancing glints
+//   on top were tried and cut the same day: far too distracting.)
 //
 //   THE OTHER BOATS — a lamp on every trader, regular and friend out there.
 //   Answers "is anyone about", and it is the reason to look at the sea at night:
@@ -136,6 +137,9 @@ export type Lights = {
   night(dark: number): void
   /** How much lantern the captain has bought, 0.34 to 1. See lanternGlow. */
   lantern(glow: number): void
+  /** Which way she is moving, in world units per second. Below a crawl the
+   *  light keeps pointing wherever she last went. */
+  heading(vx: number, vy: number): void
   destroy(): void
 }
 
@@ -150,12 +154,16 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
 
   const ht = hazeTexture(PIXI)
 
-  // ── YOURS ──
+  // ── YOURS ── the pool is rotated inside a holder that carries the plane's
+  // squash, so turning it turns it ON THE WATER rather than on the glass.
+  const lanternPlane: Container = new PIXI.Container()
+  lanternPlane.scale.set(1, GROUND)
+  screen.addChild(lanternPlane)
   const lantern: Sprite = new PIXI.Sprite(ht)
   lantern.anchor.set(0.5)
   lantern.tint = LAMP
   lantern.alpha = 0
-  screen.addChild(lantern)
+  lanternPlane.addChild(lantern)
 
   // ── THEIRS ── a fixed pool of pools, hidden when unused.
   const CREW_LAMPS = 24
@@ -208,9 +216,11 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
   let glow = 1
   let boats: { x: number; y: number }[] = []
   let seeded = false
-  /** The bow's side, eased, so coming about slides the light along her
-   *  rather than jumping it from one end to the other. */
-  let bowSide = 1
+  /** Where the light points, radians on the plane, eased the short way round
+   *  so a turn sweeps it rather than jumping it. Starts to the left, which is
+   *  the way the hull is drawn. */
+  let aim = Math.PI
+  let aimWant = Math.PI
 
   return {
     world, screen,
@@ -228,20 +238,25 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
       // ── YOUR LANTERN ── at the bow, breathing very slightly, because a
       // flame in a glass box on a moving boat is never quite steady.
       const flick = 0.94 + Math.sin(t * 3.1) * 0.03 + Math.sin(t * 5.7) * 0.03
-      bowSide += (facing - bowSide) * Math.min(1, d * 7)
+      void facing
+      let da = aimWant - aim
+      da = Math.atan2(Math.sin(da), Math.cos(da))
+      aim += da * Math.min(1, d * 5)
       // ── AND IT IS A LADDER ────────────────────────────────────────
       //
       // `glow` is 0.34 at the first rung and 1 at the last (lib/shipyard).
       // BOTH THE REACH AND THE BRIGHTNESS: light falls off with distance, so
       // a weaker lamp is smaller AND fainter, which is what reads as a lamp.
       const lr = (132 + dark * 46) * glow
-      // The spill sits forward of the bow, not round the hull: its middle is
-      // off her nose and the stern end of her is mostly outside it, so the
-      // eye reads a lamp throwing light onto the water ahead. Bow is to the
-      // LEFT when facing is 1 (the art's own pose).
-      lantern.position.set(cx - bowSide * lr * 0.52, cy + 10)
-      lantern.width = lr * 1.9
-      lantern.height = lr * 1.9 * GROUND
+      // The spill sits AHEAD of her, not round the hull: its middle is out in
+      // front and her stern is mostly outside it, so the eye reads a lamp
+      // throwing light onto the water she is sailing into. Longer along her
+      // way than across it.
+      lanternPlane.position.set(cx, cy + 10)
+      lantern.rotation = aim
+      lantern.position.set(Math.cos(aim) * lr * 0.6, Math.sin(aim) * lr * 0.6)
+      lantern.width = lr * 2.3
+      lantern.height = lr * 1.6
       lantern.alpha = dark * 0.42 * glow * flick
 
       // ── EVERY OTHER BOAT ── smaller, and it is the one thing out here that
@@ -301,6 +316,8 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
     night(next) { dark = next },
 
     lantern(next) { glow = next },
+
+    heading(vx, vy) { if (vx * vx + vy * vy > 30 * 30) aimWant = Math.atan2(vy, vx) },
 
     destroy() {
       world.destroy({ children: true })

@@ -166,6 +166,8 @@ export type GpuHandle = {
    *  Its own call rather than a night() argument: the hour changes every frame
    *  and this changes when somebody buys something. */
   lantern(glow: number): void
+  /** Which way the hull is moving (world px/s), for the lantern. Every frame. */
+  sailing(vx: number, vy: number): void
   /** Wind rushing past the hull (seaRush): where she is, her velocity in
    *  world px/s, and how strong, 0..1. Every frame. */
   rush(x: number, y: number, vx: number, vy: number, k: number): void
@@ -2153,6 +2155,7 @@ export default function SeaIslandsGPU({
 
       handle.current = {
         lantern(glow) { lights.lantern(glow) },
+        sailing(vx, vy) { lights.heading(vx, vy) },
         fog(alpha) { fog.bind(alpha) },
         glow(list) { glow.set(list) },
         heading(h) { guideFx.heading(h) },

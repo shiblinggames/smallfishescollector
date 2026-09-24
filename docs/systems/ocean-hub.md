@@ -2542,7 +2542,7 @@ question:
 
 | | | |
 |---|---|---|
-| **Your lantern** | an edgeless warm spill off the BOW (centre 0.52 x reach forward of her nose, follows `facing`, eased), not a disc round the hull. 2026-09-24: the centred rimmed disc read as "a literal oval around the whole boat image"; glints were tried and CUT as too distracting, do not re-add. Other boats' lamps use the edgeless haze, still centred | *can I see* |
+| **Your lantern** | an edgeless warm spill AHEAD of her along her direction of TRAVEL (SeaMap -> gpu.sailing(vel) -> lights.heading; eased the short way round, held at rest), 2.3 x 1.6 reach, centre 0.6 reach forward, rotated inside a GROUND-squashed holder so it turns on the water. Not a disc round the hull. 2026-09-24: the centred rimmed disc read as "a literal oval around the whole boat image"; glints were tried and CUT as too distracting, do not re-add. Other boats' lamps use the edgeless haze, still centred | *can I see* |
 | **Every other boat** | a smaller lamp on each trader, regular and friend | *is anyone about* |
 | **The deep** | cold specks, Abyss 0.6 and Ancient Deep 1.0 | *where am I* |
 
