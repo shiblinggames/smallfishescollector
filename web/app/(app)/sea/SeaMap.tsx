@@ -10107,7 +10107,10 @@ export default function SeaMap({
         //
         // The setter is one assignment. Doing it every frame costs nothing and
         // cannot miss.
-        gpuRef.current.lantern(lanternGlow(lanternTierRef.current))
+        // Dark while a fight is up (Kong, 2026-09-25): the pool of lamplight
+        // ahead of the hull is for finding your way, and it sat bright under
+        // the broadside. The same ref the berth lamps below read.
+        gpuRef.current.lantern(fightOnRef.current ? 0 : lanternGlow(lanternTierRef.current))
         // AND THE FOG'S BUFFER, for the same reason and by the same argument:
         // the handle is null for the first frames, binding is one assignment,
         // and a bind that is missed is a chart with no fog on it at all.
@@ -11998,7 +12001,7 @@ hullRef={hullRefFor(t.key)} />
           the one crew question that side ever asks, and a second crew button
           beside it would be two answers to one question on the row with the
           least room. */}
-      {inAnchorage && (!fishingIn || wide) && (
+      {inAnchorage && (!fishingIn || wide) && !fightOn && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(10); setCrewHubOpen(true) }}
