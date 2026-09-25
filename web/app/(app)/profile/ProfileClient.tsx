@@ -77,6 +77,8 @@ interface Props {
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
 /** The intro's harbour with its dinghy painted out: the water you stand on. */
 const PROFILE_WATER = '/welcome-harbour-open.webp'
+/** The Gunwharf's war-quay: the expedition ship's own water. */
+const PROFILE_SHIP_WATER = '/gunwharf-berth.webp'
 
 function avatarColor(str: string) {
   let h = 0
@@ -836,16 +838,25 @@ export default function ProfileClient({
             padding: '14px 16px 16px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
-            <img
-              src={shipSkinImage(equippedShipSkin, shipTier, ship.imageUrl ?? '')}
-              alt={ship.name}
-              loading="lazy"
-              decoding="async"
-              style={{
-                width: 'min(100%, 340px)', height: 'auto', maxHeight: 230, objectFit: 'contain',
-                filter: shipSkinDef ? shipSkinDef.filter : `drop-shadow(0 4px 28px ${ship.color}60)`,
-              }}
-            />
+            {/* ON HER OWN WATER: the Gunwharf's war-quay, the same backdrop the
+                ship screen draws her on, so she is the same picture in both. */}
+            <div style={{
+              width: '100%', aspectRatio: '16 / 10', borderRadius: 12, overflow: 'hidden',
+              background: `url(${PROFILE_SHIP_WATER}) 58% 72% / cover no-repeat, #0d1e2b`,
+              border: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            }}>
+              <img
+                src={shipSkinImage(equippedShipSkin, shipTier, ship.imageUrl ?? '')}
+                alt={ship.name}
+                loading="lazy"
+                decoding="async"
+                style={{
+                  width: '84%', height: '84%', marginBottom: '4%', objectFit: 'contain',
+                  filter: shipSkinDef ? `${shipSkinDef.filter} drop-shadow(0 14px 18px rgba(0,0,0,0.45))` : 'drop-shadow(0 14px 18px rgba(0,0,0,0.45))',
+                }}
+              />
+            </div>
             <div style={{ textAlign: 'center' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: ship.color, lineHeight: 1.2 }}>
                 {customShipName ?? shipName}
