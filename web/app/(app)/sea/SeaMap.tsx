@@ -11641,16 +11641,11 @@ hullRef={hullRefFor(t.key)} />
           // under her.
           const seat = SHIP_CAPTAIN_SLOT[shipTier] ?? SHIP_CAPTAIN_SLOT[MIN_SHIP_TIER]
           const size = WARSHIP_W * SHIP_CREW_FACE
-          // THE NEXT TWO HANDS, AS FACES TUCKED BEHIND HERS. It was a gold "+N"
-          // pill, which read as a notification badge stuck on a portrait (and a
-          // solid gold fill). Two smaller discs peeking out behind the
-          // captain's shoulder say "and her crew" in the same language as the
-          // face itself, and a small chip after them says how many.
-          const art = (a?: string | null) => a ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${a}` : null
-          const mates = raidParty.slice(1, 3).map(m => art(m.art)).filter((u): u is string => !!u)
-          // Everyone aboard but her, for the count chip.
+          // THE REST OF THE HANDS, AS A COUNT. It was a gold "+N" pill (a
+          // notification badge and a solid gold fill), then two faces tucked
+          // behind hers with no number (Kong: remove the faces, keep the
+          // count). Now her face and one small dark chip in its teal ring.
           const others = Math.max(0, raidParty.length - 1)
-          const mate = size * 0.56
           const disc = (border: string): React.CSSProperties => ({
             width: '100%', height: '100%', objectFit: 'cover', display: 'block',
             borderRadius: '50%', maxWidth: 'none', border, background: 'rgba(6,10,16,0.9)',
@@ -11669,15 +11664,6 @@ hullRef={hullRefFor(t.key)} />
             // time.
             willChange: 'transform',
           }}>
-            {mates.map((u, k) => (
-              <img key={k} src={u} alt="" draggable={false} decoding="async" style={{
-                ...disc('1px solid rgba(126,214,196,0.55)'),
-                position: 'absolute', width: mate, height: mate,
-                right: -mate * (0.42 + k * 0.5), bottom: -mate * (0.02 + k * 0.12),
-                filter: 'brightness(0.82)',
-                boxShadow: '0 3px 10px rgba(0,0,0,0.6)',
-              }} />
-            ))}
             <img src={captainFace} alt="" draggable={false} decoding="async" style={{
               ...disc('1.5px solid rgba(126,214,196,0.8)'),
               position: 'relative',
@@ -11689,8 +11675,8 @@ hullRef={hullRefFor(t.key)} />
             {others > 0 && (
               <span className="font-karla font-800" style={{
                 position: 'absolute', zIndex: 2,
-                right: -mate * (0.42 + Math.max(0, mates.length - 1) * 0.5) - size * 0.14,
-                bottom: -size * 0.12,
+                right: -size * 0.16,
+                bottom: -size * 0.08,
                 minWidth: size * 0.36, height: size * 0.36, padding: `0 ${size * 0.07}px`,
                 borderRadius: 999, display: 'grid', placeItems: 'center',
                 fontSize: size * 0.22, lineHeight: 1, color: '#e8fbf6', fontVariantNumeric: 'tabular-nums',
