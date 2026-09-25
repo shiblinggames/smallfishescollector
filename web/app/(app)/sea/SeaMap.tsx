@@ -99,7 +99,7 @@ import { claimFishingLevelRewards } from '../fishing/actions'
 // A LEAF, not SeaMap's own exports. The cast button is this same control in its
 // other role and needs these numbers — and FishingHere importing back from here
 // is a cycle that killed the page on load. See app/(app)/sea/helm.ts.
-import { HELM_R, HELM_D, HELM_BOTTOM, HELM_DEADZONE, HELM_HOLD_MS, HELM_STICK_R, HELM_SLOW, HELM_CATCH } from './helm'
+import { HELM_R, HELM_D, HELM_BOTTOM, HELM_DEADZONE, HELM_HOLD_MS, HELM_STICK_R, HELM_SLOW, HELM_CATCH, HELM_KNOB } from './helm'
 import { sunAt, seaClock } from '@/lib/seaClock'
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { squallAt } from '@/lib/seaWeather'
@@ -11458,7 +11458,7 @@ hullRef={hullRefFor(t.key)} />
               // as wrong. It is drawn from the stick's own vector now, scaled
               // so full helm is the rim: what you see is what she steers.
               const sx = boxHeld.current.x - o.x, sy = boxHeld.current.y - o.y
-              const lim = HELM_R - 22
+              const lim = HELM_R - HELM_KNOB / 2 - 1
               const kx = (sx / HELM_STICK_R) * lim
               const ky = (sy / HELM_STICK_R) * lim
               knobRef.current.style.transform = `translate3d(${kx}px, ${ky}px, 0)`
@@ -11537,10 +11537,10 @@ hullRef={hullRefFor(t.key)} />
             // how a colour stops meaning anything.
             border: `1px solid ${helmLabel.act
               ? 'rgba(240,192,64,0.6)'
-              : `rgba(180,214,232,${helmOn ? 0.46 : 0.22})`}`,
+              : `rgba(180,214,232,${helmOn ? 0.28 : 0.22})`}`,
             boxShadow: helmLabel.act
               ? '0 0 20px rgba(240,192,64,0.22), inset 0 0 14px rgba(240,192,64,0.08)'
-              : helmOn ? '0 0 22px rgba(120,180,210,0.2)' : 'none',
+              : 'none',
             transition: 'background 160ms ease-out, border-color 200ms ease-out, box-shadow 200ms ease-out',
           }}>
           {/* THE ROD COMING. A ring that fills round the helm while a still
@@ -11559,9 +11559,13 @@ hullRef={hullRefFor(t.key)} />
           <div aria-hidden style={{ position: 'absolute', inset: -HELM_CATCH, borderRadius: '50%' }} />
           <div ref={helmArcRef} aria-hidden style={{
             position: 'absolute', inset: -3, borderRadius: '50%', pointerEvents: 'none', opacity: 0,
-            background: 'conic-gradient(from -45deg, rgba(190,236,255,0) 0deg, rgba(190,236,255,0.95) 45deg, rgba(190,236,255,0) 90deg, rgba(190,236,255,0) 360deg)',
-            WebkitMask: 'radial-gradient(circle, transparent 0 calc(100% - 5px), #000 calc(100% - 5px))',
-            mask: 'radial-gradient(circle, transparent 0 calc(100% - 5px), #000 calc(100% - 5px))',
+            // `closest-side`, not bare `circle`: bare sizes the gradient to the
+            // farthest CORNER, which put the band outside the round element
+            // and left the arc invisible (the whole ring brightening was all
+            // that showed).
+            background: 'conic-gradient(from -50deg, rgba(200,240,255,0) 0deg, rgba(200,240,255,1) 50deg, rgba(200,240,255,0) 100deg, rgba(200,240,255,0) 360deg)',
+            WebkitMask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 6px), #000 calc(100% - 6px))',
+            mask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 6px), #000 calc(100% - 6px))',
             filter: 'drop-shadow(0 0 6px rgba(150,220,255,0.7))',
             willChange: 'transform, opacity',
           }} />
@@ -11570,14 +11574,14 @@ hullRef={hullRefFor(t.key)} />
               position: 'absolute', inset: -5, borderRadius: '50%',
               pointerEvents: 'none',
               background: `conic-gradient(from -90deg, rgba(150,226,200,0.95) ${helmHold * 360}deg, rgba(150,226,200,0) 0deg)`,
-              WebkitMask: 'radial-gradient(circle, transparent 0 calc(100% - 4px), #000 calc(100% - 4px))',
-              mask: 'radial-gradient(circle, transparent 0 calc(100% - 4px), #000 calc(100% - 4px))',
+              WebkitMask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 4px), #000 calc(100% - 4px))',
+              mask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 4px), #000 calc(100% - 4px))',
               filter: 'drop-shadow(0 0 8px rgba(120,220,190,0.6))',
             }} />
           )}
           <div ref={knobRef} aria-hidden style={{
             position: 'absolute', left: '50%', top: '50%',
-            width: 42, height: 42, marginLeft: -21, marginTop: -21,
+            width: HELM_KNOB, height: HELM_KNOB, marginLeft: -HELM_KNOB / 2, marginTop: -HELM_KNOB / 2,
             borderRadius: '50%', pointerEvents: 'none',
             // The knob follows the ring: warm while a tap acts, teal while a
             // hold fishes, plain silver otherwise. The hold wins when both are

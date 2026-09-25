@@ -3420,6 +3420,9 @@ FLAG: on for admins, or `?ambience=1` once (localStorage `stb:ambience`; `?ambie
   pushed, brighter the harder (`helmArcRef`, written by the pointer handler, no React state). On
   release the knob springs back with a small overshoot and the arc fades (`springKnob`). No haptic
   ticks: vibrate does nothing in the iOS PWA.
+  2026-09-25: the knob is 54px (`HELM_KNOB`, was 42), the ring unchanged; the ring no longer
+  brightens all round while held, only the arc lights. Ring masks use `circle closest-side`: bare
+  `circle` sizes to the farthest corner and put the band outside the round element (invisible).
 - **The knob shows the stick.** Steering is measured from where the thumb LANDED (`stickVec`), but
   the knob was drawn at the thumb's offset from the wheel's CENTRE, so the eye saw one bearing and
   the boat took another. Knob = `(thumb - origin) / HELM_STICK_R * (HELM_R - 22)` now.

@@ -27,6 +27,10 @@ export const HELM_R = 56
  *  longer hits the sea and plots a course instead. */
 export const HELM_CATCH = 28
 
+/** The knob's diameter (was 42; Kong wanted it bigger with the ring unchanged).
+ *  Its travel is the ring's radius less half of this, so it stays inside. */
+export const HELM_KNOB = 54
+
 /** Its diameter — the cast button matches it exactly. */
 export const HELM_D = HELM_R * 2
 
