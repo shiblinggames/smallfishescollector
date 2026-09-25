@@ -617,6 +617,11 @@ the outermost ring, matching the mouth's keystone at the lip), so the south of t
 well past the north. Each skirt ring sits in a holder that carries the squash while the sprite
 inside turns; squash and spin on one sprite rotated the ellipse itself.
 
+**What circles the bowl shrinks round the far side (2026-09-24).** The wreckage, spray, foam and
+spirits draw at 0.74x their size on the north of their circle and 1.14x on the south (`depthK` in
+`seaMaelstrom`, from the sine of each one's angle). This is local to the bowl, matching its
+keystone; the chart-wide shrink-with-distance stays rejected.
+
 **The pull takes hold, it does not snap shut (2026-09-24).** Kong: you got locked into the middle
 suddenly, and on a phone she jittered once there. In SeaMap's loop the grip eases in over about a
 second (`maelGripRef`), the strength rises on a smoothstep (was a power curve with an edge at the

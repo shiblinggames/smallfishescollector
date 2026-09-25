@@ -375,6 +375,13 @@ const KEY_DROP = (NEAR_H - FAR_H) / 2
  *  (in radii) and its height is squashed to this, so its near edge reaches
  *  about 1.08r south of the centre and its far edge only about 0.48r north. */
 const SKIRT_DROP = 0.3
+/** HOW BIG A THING ON THE BOWL DRAWS BY WHERE IT IS ON THE CIRCLE (Kong,
+ *  2026-09-24: things wrapping round the far side should get smaller). `s` is
+ *  the sine of its angle: -1 the far (north) side, +1 the near. Local to the
+ *  bowl, the same keystone the water is laid on; not the chart-wide size
+ *  falloff, which stays rejected. */
+const DEPTH_FAR = 0.74, DEPTH_NEAR = 1.14
+const depthK = (s: number) => DEPTH_FAR + (DEPTH_NEAR - DEPTH_FAR) * (s + 1) / 2
 const SKIRT_H = 0.78
 
 export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Renderer, opts?: {
@@ -897,7 +904,8 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           const h = sp.hi * 4 * u * (1 - u)
           sp.p.x = Math.cos(sp.ang) * sp.rr * KEY_W
           sp.p.y = Math.sin(sp.ang) * sp.rr * KEY_H + sp.rr * KEY_DROP - h / GROUND
-          sp.p.scaleX = sp.size / 32; sp.p.scaleY = sp.size / 32
+          const sk = depthK(Math.sin(sp.ang))
+          sp.p.scaleX = sp.size * sk / 32; sp.p.scaleY = sp.size * sk / 32
           sp.p.alpha = Math.pow(Math.sin(u * Math.PI), 0.7) * (0.16 + 0.5 * gg) * lit
         }
         // THE CODE'S SPIRALS STEP BACK: the painting carries the whirl now.
@@ -1007,7 +1015,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           const near = 1 - f.r / R
           f.p.x = Math.cos(f.ang) * f.r
           f.p.y = Math.sin(f.ang) * f.r
-          const s = f.size * (0.55 + 0.7 * near)
+          const s = f.size * (0.55 + 0.7 * near) * depthK(Math.sin(f.ang))
           f.p.scaleX = s / 32; f.p.scaleY = s / 32
           f.p.alpha = (0.14 + 0.5 * near) * (0.7 + 0.3 * gg) * lit
         }
@@ -1021,8 +1029,9 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           const [px, py] = keystone(Math.cos(d.ang) * d.r, Math.sin(d.ang) * d.r, m.r)
           d.sp.position.set(px, py + Math.sin(t * 1.3 + d.bob) * 3)
           if (d.sp.texture.width > 2) {
-            d.sp.width = d.size
-            d.sp.height = (d.size * d.sp.texture.height) / d.sp.texture.width / GROUND
+            const size = d.size * depthK(Math.sin(d.ang))
+            d.sp.width = size
+            d.sp.height = (size * d.sp.texture.height) / d.sp.texture.width / GROUND
           }
           d.sp.rotation = Math.sin(t * 0.8 + d.bob) * 0.12 + d.spin * (1.5 - d.r / m.r) * 0.3
           const edge = Math.min(1, (m.r * 1.8 - d.r) / (m.r * 0.3), (d.r - m.r * 0.92) / (m.r * 0.15))
@@ -1075,7 +1084,8 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           s.p.x = px * (1 - su * NARROW * 0.5) + dx
           // Height is a screen measurement inside a squashed layer.
           s.p.y = py * (1 - su * NARROW * 0.5) + dy - s.h / GROUND
-          s.p.scaleX = s.size / 32; s.p.scaleY = s.size / 32
+          const dk = depthK(Math.sin(s.ang))
+          s.p.scaleX = s.size * dk / 32; s.p.scaleY = s.size * dk / 32
         }
       }
     },
