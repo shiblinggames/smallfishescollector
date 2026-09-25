@@ -209,8 +209,21 @@ function RouteCard({
   const drops = est?.drops ?? ROUTE_DROPS[route]
 
   return (
-    <div data-route={route} className="voyage-card" style={{
-      borderRadius: 14, overflow: 'hidden',
+    // ── THE CARD IS WHAT YOU PRESS (Kong, 2026-09-25) ──────────────────────
+    // No Set Sail on the card: only the confirmation says that. The whole card
+    // chooses the route, and says so with a lift on hover and a quiet line at
+    // its foot rather than a button.
+    <motion.div data-route={route} className="voyage-card"
+      role={ready ? 'button' : undefined}
+      tabIndex={ready ? 0 : undefined}
+      aria-label={ready ? `Choose ${rco.name}` : undefined}
+      onClick={ready ? onSail : undefined}
+      onKeyDown={ready ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSail() } }) : undefined}
+      whileHover={ready ? { y: -5 } : undefined}
+      whileTap={ready ? { scale: 0.98 } : undefined}
+      transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+      style={{
+      borderRadius: 14, overflow: 'hidden', cursor: ready ? 'pointer' : 'default',
       display: 'flex', flexDirection: 'column',
       // A SOLID base. These sit on the modal's painted dusk-sea plate, and a
       // translucent card over art reads as a smear.
@@ -369,51 +382,23 @@ function RouteCard({
                 : `Unlocks at Expedition Lv ${rco.minLevel}`}
             </span>
           </div>
+        ) : short ? (
+          <p className="font-karla font-700" style={{ margin: 0, textAlign: 'center', fontSize: '0.74rem', color: 'rgba(255,255,255,0.42)' }}>
+            {minCrew === 1 ? 'Need 1 crew aboard' : `Need ${minCrew} crew aboard`}
+          </p>
         ) : (
-          <motion.button
-            onClick={onSail}
-            disabled={!ready}
-            whileTap={ready ? { scale: 0.97 } : undefined}
-            className="font-cinzel font-800 uppercase tracking-[0.12em]"
-            style={{
-              width: '100%', borderRadius: 9, padding: '0.6rem 0.9rem',
-              transition: 'background 0.15s, opacity 0.15s, border-color 0.15s',
-              // ── TINTED, NOT FILLED ────────────────────────────────────
-              //
-              // Every route owns a colour, and every Set Sail was a full
-              // saturated gradient in it with a matching glow. One is handsome;
-              // a board of them is five different brights stacked down the
-              // screen, each shouting as loudly as the last, and the eye has
-              // nowhere to rest. Reported as distracting, which is the polite
-              // word for it.
-              //
-              // ── AND ONE HUE, NOT FIVE ────────────────────────────────
-              //
-              // Tinting was half the fix; the other half is that the tint was
-              // still a DIFFERENT colour on each card. Five Set Sails in five
-              // families, stacked, is five buttons that each look like a
-              // different kind of action — and they are the same action.
-              //
-              // Gold, because gold is what "do the thing" looks like everywhere
-              // else in this game. Tinted, never filled: that is the house rule
-              // and it is why these read as five equal choices.
-              ...(ready
-                ? { background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', cursor: 'pointer' }
-                : sending
-                  ? { background: 'rgba(240,192,64,0.07)', border: '1px solid rgba(240,192,64,0.3)', color: 'rgba(240,192,64,0.6)', cursor: 'default' }
-                  : { background: 'rgba(80,100,120,0.10)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.34)', cursor: 'default' }),
-            }}
-          >
-            <span style={{ fontSize: '0.88rem' }}>
-              {sending ? 'Sending…'
-                : short ? (minCrew === 1 ? 'Need 1 crew aboard' : `Need ${minCrew} crew aboard`)
-                : 'Set Sail'}
-            </span>
-          </motion.button>
+          <p className="font-karla font-800 uppercase" style={{
+            margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            fontSize: '0.6rem', letterSpacing: '0.16em', color: 'rgba(240,192,64,0.85)',
+            paddingTop: 8, borderTop: '1px solid rgba(200,170,106,0.14)',
+          }}>
+            Choose this route
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 5l7 7-7 7" /></svg>
+          </p>
         )}
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 

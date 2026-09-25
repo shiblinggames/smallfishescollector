@@ -49,7 +49,8 @@ composition, not in the voyage itself.
   route is chosen there is no frame: a slim bar over the water (back, title, Log, close, in
   `sea/VoyageBoard.tsx`) and the cards. A phone swipes a carousel of tall cards (dots under it);
   a tablet shows two and a bit; a wide board (container >= 1000px) has all five across, taller
-  art. It OPENS ON THE ROUTE YOU SAILED LAST, tagged "Last sailed". **Set Sail on a card opens a
+  art. It OPENS ON THE ROUTE YOU SAILED LAST, tagged "Last sailed". **The card itself is what you press** (no
+  Set Sail on it: a lift on hover and a quiet "Choose this route" line at its foot); **that opens a
   confirmation** (portalled over everything) that carries what used to sit above the cards: the
   crew aboard with Power / Fortune / Nav and the "?" explainer, the 1-in-100, a hand out on a
   trawl, and the route's pay / XP / time / odds again; its Set Sail sends. The status screens
