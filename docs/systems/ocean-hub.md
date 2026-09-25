@@ -3640,3 +3640,15 @@ tour's goal and a road somebody asked for (`wayGoal`) are not affected.
   Wargate. The rings draw under the boats with the rest of the well.
 - **The Homestead's Outside** plate shows the house's `seaArt`, not the retired whole-island `art`.
 
+
+
+## The world layer carries an invisible rotation (2026-09-25)
+
+Kong: compass text smooth while sailing, island titles jittery. The titles (and every DOM label
+in the world layer) are page text moved by one transform per frame; Chrome snaps a layer whose
+transform is plain scale-and-translate to whole pixels to keep text crisp, so the words stepped a
+pixel at a time over islands the canvas moves by fractions of one. The compass barely moves (it is
+pinned to the screen edges), which is why it never showed it. Both world-transform writes in
+SeaMap append `SUBPIXEL` (`rotate(0.0001deg)`): no longer axis-aligned, so off the snapping path.
+It displaces nothing measurable and the canvas camera mapping ignores it. If titles ever look
+soft rather than crisp, this is why; if they jitter again, check this suffix survived.

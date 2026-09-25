@@ -1397,6 +1397,24 @@ const OPEN_RGB = OPEN_SEA.map(rgb) as [number, number, number][]
 /** The outer edge of the outermost band — where the chart's water stops. */
 const LAST_OUTER = Math.max(...PLACES.map(p => p.outer ?? 0))
 
+/**
+ * ── WHY THE WORLD LAYER CARRIES A ROTATION NOBODY CAN SEE ──────────────────
+ *
+ * Kong (2026-09-25): the compass text is smooth as you sail and the island
+ * titles are jittery. The islands are painted on the canvas, which moves by
+ * fractions of a pixel; the titles are DOM text in the world layer, and Chrome
+ * snaps a layer whose transform is a plain scale-and-translate to whole pixels
+ * to keep its text crisp. So the words stepped a pixel at a time over an island
+ * gliding under them. (The compass barely moves: it is pinned to the edges.)
+ *
+ * A rotation of a ten-thousandth of a degree makes the transform no longer
+ * axis-aligned, which takes the layer off the snapping path, so it moves by
+ * fractions of a pixel like the canvas. It displaces nothing measurable: at
+ * five thousand pixels out it is under a hundredth of a pixel, and the canvas
+ * camera mapping ignores it.
+ */
+const SUBPIXEL = ' rotate(0.0001deg)'
+
 const WATER_RGB: { mid: number; half: number; c: [number, number, number][] }[] =
   PLACES.filter(p => p.kind === 'water' && p.sea)
     .map(p => ({
@@ -4896,7 +4914,7 @@ export default function SeaMap({
     const world = worldRef.current
     if (world) {
       const tr = `scale(${z}) scaleY(${GROUND})`
-        + ` translate3d(${-camAt.current.x}px, ${-camAt.current.y}px, 0)`
+        + ` translate3d(${-camAt.current.x}px, ${-camAt.current.y}px, 0)${SUBPIXEL}`
       world.style.transform = tr
       if (frontRef.current) frontRef.current.style.transform = tr
     }
@@ -9824,7 +9842,7 @@ export default function SeaMap({
       // scaleY LAST (CSS applies right to left), so the camera pan happens in
       // world units and only then meets the plane's foreshortening.
       if (world) {
-        const t = `scale(${zoomRef.current}) scaleY(${GROUND}) translate3d(${-camAt.current.x}px, ${-camAt.current.y}px, 0)`
+        const t = `scale(${zoomRef.current}) scaleY(${GROUND}) translate3d(${-camAt.current.x}px, ${-camAt.current.y}px, 0)${SUBPIXEL}`
         world.style.transform = t
         // THE SAME STRING, THE SAME FRAME. These two layers are one world drawn
         // in two passes; a transform written to one and not the other would put
