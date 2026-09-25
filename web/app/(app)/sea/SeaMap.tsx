@@ -99,7 +99,7 @@ import { claimFishingLevelRewards } from '../fishing/actions'
 // A LEAF, not SeaMap's own exports. The cast button is this same control in its
 // other role and needs these numbers — and FishingHere importing back from here
 // is a cycle that killed the page on load. See app/(app)/sea/helm.ts.
-import { HELM_R, HELM_D, HELM_BOTTOM, HELM_DEADZONE, HELM_HOLD_MS, HELM_STICK_R, HELM_SLOW } from './helm'
+import { HELM_R, HELM_D, HELM_BOTTOM, HELM_DEADZONE, HELM_HOLD_MS, HELM_STICK_R, HELM_SLOW, HELM_CATCH } from './helm'
 import { sunAt, seaClock } from '@/lib/seaClock'
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { squallAt } from '@/lib/seaWeather'
@@ -2649,6 +2649,27 @@ export default function SeaMap({
    */
   const cmdDir = useRef<Vec | null>(null)
   const knobRef = useRef<HTMLDivElement | null>(null)
+  /** The lit arc on the rim that points the way the stick is pushed. */
+  const helmArcRef = useRef<HTMLDivElement | null>(null)
+  /** The knob's colour fades; `transform` is written by the pointer handlers,
+   *  so it only gets a transition for the spring home on release. */
+  const KNOB_EASE = 'background 200ms ease-out, border-color 200ms ease-out'
+  /** Grabbed: the knob follows the thumb with no easing behind it. */
+  const grabKnob = () => {
+    if (knobRef.current) knobRef.current.style.transition = KNOB_EASE
+    if (helmArcRef.current) helmArcRef.current.style.transition = 'none'
+  }
+  /** Let go: the knob springs home (a small overshoot) and the arc fades,
+   *  instead of both vanishing in one frame. */
+  const springKnob = () => {
+    const k = knobRef.current
+    if (k) {
+      k.style.transition = `${KNOB_EASE}, transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1)`
+      k.style.transform = 'translate3d(0,0,0)'
+    }
+    const a = helmArcRef.current
+    if (a) { a.style.transition = 'opacity 260ms ease-out'; a.style.opacity = '0' }
+  }
 
   /**
    * THE HELM IS THREE CONTROLS, told apart by what your thumb does.
@@ -11380,6 +11401,7 @@ hullRef={hullRefFor(t.key)} />
             // landing point, not from the middle of the wheel.
             helmOrigin.current = { x: e.clientX, y: e.clientY }
             helmSteering.current = false
+            grabKnob()
             setHelmOn(true)
             vibrate(6)
             // The hold's own clock. Ticks the ring so the captain can SEE the
@@ -11440,6 +11462,16 @@ hullRef={hullRefFor(t.key)} />
               const kx = (sx / HELM_STICK_R) * lim
               const ky = (sy / HELM_STICK_R) * lim
               knobRef.current.style.transform = `translate3d(${kx}px, ${ky}px, 0)`
+              // ── THE RIM SAYS WHICH WAY AND HOW HARD ──────────────────
+              // The thumb hides the knob, so the rim carries it: an arc lit
+              // on the side you push, brighter the harder, full at full sail.
+              const arc = helmArcRef.current
+              if (arc) {
+                const m = Math.min(1, Math.hypot(sx, sy) / HELM_STICK_R)
+                const deg = Math.atan2(sx, -sy) * 180 / Math.PI
+                arc.style.transform = `rotate(${deg}deg)`
+                arc.style.opacity = m < 0.05 ? '0' : String(0.35 + 0.65 * m)
+              }
             }
           }}
           onPointerUp={e => {
@@ -11458,7 +11490,7 @@ hullRef={hullRefFor(t.key)} />
               boxHeld.current = null
             helmOrigin.current = null
               setHelmOn(false)
-              if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
+              springKnob()
               try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
               helmActRef.current()
               return
@@ -11471,7 +11503,7 @@ hullRef={hullRefFor(t.key)} />
             boxHeld.current = null
             helmOrigin.current = null
             setHelmOn(false)
-            if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
+            springKnob()
             try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
           }}
           onPointerCancel={() => {
@@ -11482,7 +11514,7 @@ hullRef={hullRefFor(t.key)} />
             boxHeld.current = null
             helmOrigin.current = null
             setHelmOn(false)
-            if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
+            springKnob()
           }}
           onClick={e => e.stopPropagation()}
           style={{
@@ -11519,6 +11551,20 @@ hullRef={hullRefFor(t.key)} />
 
               conic-gradient on a mask, so the sweep costs one paint and no
               layout. Hidden at zero rather than mounted and empty. */}
+          {/* ── A BIGGER CATCH THAN THE RING YOU SEE ────────────────────
+              A thumb that lands a little low or wide of the drawn wheel used
+              to hit the sea and plot a course. This invisible pad is part of
+              the helm (its events bubble to the handlers above), so the ring
+              looks the same size and takes a press HELM_CATCH px round it. */}
+          <div aria-hidden style={{ position: 'absolute', inset: -HELM_CATCH, borderRadius: '50%' }} />
+          <div ref={helmArcRef} aria-hidden style={{
+            position: 'absolute', inset: -3, borderRadius: '50%', pointerEvents: 'none', opacity: 0,
+            background: 'conic-gradient(from -45deg, rgba(190,236,255,0) 0deg, rgba(190,236,255,0.95) 45deg, rgba(190,236,255,0) 90deg, rgba(190,236,255,0) 360deg)',
+            WebkitMask: 'radial-gradient(circle, transparent 0 calc(100% - 5px), #000 calc(100% - 5px))',
+            mask: 'radial-gradient(circle, transparent 0 calc(100% - 5px), #000 calc(100% - 5px))',
+            filter: 'drop-shadow(0 0 6px rgba(150,220,255,0.7))',
+            willChange: 'transform, opacity',
+          }} />
           {helmHold > 0 && helmFishable && (
             <div aria-hidden style={{
               position: 'absolute', inset: -5, borderRadius: '50%',
@@ -11549,7 +11595,7 @@ hullRef={hullRefFor(t.key)} />
               : '0 4px 12px rgba(0,0,0,0.45)',
             // Colours only. `transform` is written by the pointer handlers and
             // a transition on it would put the knob on rails behind the thumb.
-            transition: 'background 200ms ease-out, border-color 200ms ease-out',
+            transition: KNOB_EASE,
             willChange: 'transform',
           }} />
         </div>

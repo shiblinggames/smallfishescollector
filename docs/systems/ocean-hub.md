@@ -3415,6 +3415,11 @@ FLAG: on for admins, or `?ambience=1` once (localStorage `stb:ambience`; `?ambie
 
 ## Helm and shore fixes (2026-09-23, player reports)
 
+- **The helm catches wide, lights its rim, springs home (2026-09-24).** An invisible pad takes a
+  press `HELM_CATCH` (28px) past the drawn ring. An arc on the rim points the way the stick is
+  pushed, brighter the harder (`helmArcRef`, written by the pointer handler, no React state). On
+  release the knob springs back with a small overshoot and the arc fades (`springKnob`). No haptic
+  ticks: vibrate does nothing in the iOS PWA.
 - **The knob shows the stick.** Steering is measured from where the thumb LANDED (`stickVec`), but
   the knob was drawn at the thumb's offset from the wheel's CENTRE, so the eye saw one bearing and
   the boat took another. Knob = `(thumb - origin) / HELM_STICK_R * (HELM_R - 22)` now.

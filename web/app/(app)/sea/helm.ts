@@ -22,6 +22,11 @@
 /** The wheel's radius. */
 export const HELM_R = 56
 
+/** How far past the drawn ring the helm still takes a press. Invisible: the
+ *  wheel looks the same size, and a thumb that lands a little wide of it no
+ *  longer hits the sea and plots a course instead. */
+export const HELM_CATCH = 28
+
 /** Its diameter — the cast button matches it exactly. */
 export const HELM_D = HELM_R * 2
 
