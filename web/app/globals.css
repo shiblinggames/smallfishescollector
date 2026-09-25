@@ -4058,23 +4058,26 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
    the odd one out in kind as well as in count: the only route that pays in
    fishing lures instead of coin. */
 .voyage-routes-host { container-type: inline-size; }
-.voyage-band { height: 96px; }
-/* Narrow (a phone): a sideways carousel of tall cards, snapping one at a time
-   with the next peeking in, and dots under it. Wide: the grid, unchanged. */
+.voyage-band { height: 230px; }
+/* THE CARDS ARE THE BOARD (2026-09-25). A phone: a sideways carousel of tall
+   cards, one at a time with the next peeking in, dots under it. A tablet: two
+   and a bit. A wide board: all five across, no scroll, taller art. */
 .voyage-routes {
-  display: flex; gap: 0.6rem; overflow-x: auto; overscroll-behavior-x: contain;
+  display: flex; gap: 0.7rem; overflow-x: auto; overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory; scrollbar-width: none;
   padding: 2px 9% 4px;
 }
 .voyage-routes::-webkit-scrollbar { display: none; }
-.voyage-routes > .voyage-card { flex: 0 0 82%; scroll-snap-align: center; }
-.voyage-routes .voyage-band { height: 230px; }
-.voyage-dots { display: flex; justify-content: center; align-items: center; gap: 5px; margin-top: 10px; }
+.voyage-routes > .voyage-card { flex: 0 0 82%; scroll-snap-align: center; box-shadow: 0 14px 34px rgba(0,0,0,0.5); }
+.voyage-dots { display: flex; justify-content: center; align-items: center; gap: 5px; margin-top: 12px; }
 @container (min-width: 620px) {
-  .voyage-routes { display: grid; grid-template-columns: 1fr 1fr; overflow: visible; padding: 0; scroll-snap-type: none; }
-  .voyage-routes > .voyage-card { flex: none; }
-  .voyage-routes > :last-child { grid-column: 1 / -1; }
-  .voyage-routes .voyage-band { height: 96px; }
+  .voyage-routes > .voyage-card { flex-basis: 42%; }
+  .voyage-band { height: 250px; }
+}
+@container (min-width: 1000px) {
+  .voyage-routes { overflow: visible; padding: 0; scroll-snap-type: none; }
+  .voyage-routes > .voyage-card { flex: 1 1 0; min-width: 0; }
+  .voyage-band { height: 290px; }
   .voyage-dots { display: none; }
 }
 

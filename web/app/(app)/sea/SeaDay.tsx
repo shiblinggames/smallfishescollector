@@ -670,12 +670,20 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
           exit={{ opacity: 0, scale: 0.96, y: 4 }}
           transition={{ duration: 0.18 }}
           onClick={e => e.stopPropagation()}
-          style={{
-            position: 'relative', margin: 'auto', width: '100%', maxWidth: view === 'voyage' ? 820 : 'var(--modal-w)',
+          style={view === 'voyage'
+            // THE VOYAGE BRINGS ITS OWN CHROME (VoyageBoardBody): no box while
+            // a route is chosen, a framed card for the status screens.
+            ? { position: 'relative', margin: 'auto', width: '100%', maxWidth: 1240 }
+            : {
+            position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
             background: 'rgba(8,12,18,0.98)', border: `1px solid ${GOLD}3a`,
             borderRadius: 18, boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
             padding: narrow ? '0.8rem 0.75rem 0.85rem' : '1.05rem 1rem 1.15rem',
           }}>
+          {view === 'voyage' ? (
+            <VoyageBoardBody title={VIEW_TITLE.voyage} icon={ART.voyage} narrow={narrow}
+              onBack={() => { vibrate(6); setView('board'); load() }} onClose={close} />
+          ) : (<>
           <button type="button" onClick={close} aria-label="Close" data-coach="haul-close"
             style={{
               position: 'absolute', top: narrow ? 8 : 10, right: narrow ? 8 : 10, zIndex: 2, width: 30, height: 30,
@@ -707,8 +715,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
                 </p>
               </div>
               <div style={{ marginTop: 6 }}>
-                {view === 'voyage' ? <VoyageBoardBody />
-                : view === 'trawls' ? <TrawlIndicator variant="embedded" canDeploy />
+                {view === 'trawls' ? <TrawlIndicator variant="embedded" canDeploy />
                 : view === 'haul' ? (state?.haul
                   ? <DailyHaul embedded isPremium={state.haul.isPremium}
                       gemsClaimed={state.haul.gemsClaimed} baitClaimed={state.haul.baitClaimed}
@@ -836,6 +843,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
               </section>
             )
           })}
+          </>)}
           </>)}
         </motion.div>
       </PopupShell>

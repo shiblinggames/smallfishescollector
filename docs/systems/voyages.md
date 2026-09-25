@@ -45,12 +45,16 @@ composition, not in the voyage itself.
   in kind as well as count, the only route that pays in fishing lures instead of coin.
   The sea's shell is 820 wide for this (not `--modal-w`): it is a wall of postings you
   compare across, not a panel you read.
-- **On a phone it is a carousel** (2026-09-25, Kong: the stacked strips looked bad). Below
-  the same 620px container width the row is tall cards you swipe through, snapping one at a
-  time with the next peeking in, dots under it; the band grows to a 230px portrait of the
-  route's 9:16 art (`.voyage-band`). It OPENS ON THE ROUTE YOU SAILED LAST (the voyage just
-  brought home, else the newest in the log), and that card wears a "Last sailed" tag in both
-  layouts. The wide grid is unchanged.
+- **The cards ARE the board** (2026-09-25, Kong: "I don't like it stuck in the modal"). While a
+  route is chosen there is no frame: a slim bar over the water (back, title, Log, close, in
+  `sea/VoyageBoard.tsx`) and the cards. A phone swipes a carousel of tall cards (dots under it);
+  a tablet shows two and a bit; a wide board (container >= 1000px) has all five across, taller
+  art. It OPENS ON THE ROUTE YOU SAILED LAST, tagged "Last sailed". **Set Sail on a card opens a
+  confirmation** (portalled over everything) that carries what used to sit above the cards: the
+  crew aboard with Power / Fortune / Nav and the "?" explainer, the 1-in-100, a hand out on a
+  trawl, and the route's pay / XP / time / odds again; its Set Sail sends. The status screens
+  (at sea, home, the haul) keep a framed card: `onPhase` tells the board which to draw. The past
+  voyages log is behind the bar's Log button.
 - **Where it opens from.** The expeditions hub's Voyages card, and mooring at the
   Charterhouse on `/sea` (`sea/VoyageBoard.tsx`, fed by `sea/voyageBoardActions.ts`). Both
   mount the SAME `DailyVoyagePanel` — a second board would drift, and the one thing it must

@@ -427,6 +427,11 @@ interface Props {
   voyages?: VoyageHistoryEntry[]
   /** Claimed Gauntlet Locker Upgrade ids — surfaces Safe Passage / Swift Sails. */
   gauntletUpgrades?: string[]
+  /** Told which state the panel is in, so the sea's board can drop its frame
+   *  while you are choosing a route and keep it for the status screens. */
+  onPhase?: (phase: 'idle' | 'away' | 'returned' | 'done') => void
+  /** Whether the log of past voyages shows under the routes. */
+  showLog?: boolean
 }
 
 export default function DailyVoyagePanel({
@@ -438,6 +443,8 @@ export default function DailyVoyagePanel({
   expeditionXP = 0,
   voyages = [],
   gauntletUpgrades = [],
+  onPhase,
+  showLog = true,
 }: Props) {
   const router = useRouter()
   // Gauntlet Locker Upgrades that change voyages — surfaced truthfully below.
@@ -474,6 +481,9 @@ export default function DailyVoyagePanel({
   // report a hydration mismatch.
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
+  useEffect(() => { onPhase?.(panelState) }, [panelState, onPhase])
+  /** The route whose Set Sail was pressed: the confirmation is open on it. */
+  const [confirmRoute, setConfirmRoute] = useState<VoyageRoute | null>(null)
 
   // ── THE ROUTE YOU SAILED LAST, and the carousel opening on it ──────────
   // The voyage just brought home if there is one, else the newest in the log.
@@ -612,6 +622,7 @@ export default function DailyVoyagePanel({
         const res = await sendDailyVoyage(route)
         if ('error' in res) { setError(res.error); return }
         setActiveVoyage(res.voyage)
+        setConfirmRoute(null)
         setPanelState('away')
         // The panel knows the crew has sailed. The VOYAGE CARD up in HubCards does
         // not: it reads todayVoyage/readyVoyage as SERVER props, so nothing short of
@@ -667,32 +678,29 @@ export default function DailyVoyagePanel({
     })
   }, [activeVoyage, router])
 
-  // ── Idle: send voyage ──────────────────────────────────────────────────────
+  // ── Idle: choose a route ─────────────────────────────────────────────────
+  //
+  // THE CARDS ARE THE BOARD (Kong, 2026-09-25). The crew strip, the 1-in-100
+  // and the trawl warning used to sit above the routes inside a framed modal,
+  // and the cards were one more thing in the box. Now the routes are all there
+  // is: tall cards, a swipe carousel on a phone and five across on a monitor.
+  // Set Sail on a card opens a CONFIRMATION that carries everything that used
+  // to be outside them, with the real Set Sail at its foot.
   if (panelState === 'idle') {
     const hasCrew = savedCrew.length > 0
+    const keys = Object.keys(ROUTE_CONFIGS) as VoyageRoute[]
+    const cr = confirmRoute
+    const crCfg = cr ? ROUTE_CONFIGS[cr] : null
+    const crEst = cr && stats ? computeRouteEstimate(stats, savedCrew.length, cr, safeVoyages) : null
+    const crMs = cr ? Math.round(computeVoyageDurationMs(getLevelFromXP(expeditionXP), resolvedDeployed?.totals.dodge ?? 0, cr) * voyageSpeedMult) : 0
+    const crRisk = crEst?.crewRiskPct ?? 0
     return (
       <div>
-        <div>
-          {raidActive ? (
-            <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a8868', lineHeight: 1.5 }}>
-              Your crew is on a raid. Finish the raid before sending them on a voyage.
-            </p>
-          ) : !hasCrew ? (
-            <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a8868', lineHeight: 1.5 }}>
-              No hands in the voyage seats. Fill them from your ship&apos;s loadout and they can sail.
-            </p>
-          ) : (
-            <>
-              {/* No blurb. The cards say what a paragraph about routes would,
-                  and everything they do not say is behind the "?" on the crew
-                  strip. */}
-
-              {/* Info modal */}
-              {infoOpen && (
+              {infoOpen && mounted && createPortal(
                 <div
                   onClick={() => setInfoOpen(false)}
                   style={{
-                    position: 'fixed', inset: 0, zIndex: 50,
+                    position: 'fixed', inset: 0, zIndex: 1200,
                     background: 'rgba(0,0,0,0.72)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '1.5rem',
@@ -734,152 +742,202 @@ export default function DailyVoyagePanel({
                     </div>
                   </div>
                 </div>
-              )}
+              , document.body)}
 
-              {/* ── WHERE TO SEND THEM ──────────────────────────────────
-                  FIVE CARDS, NOT A MAP WITH FIVE PINS ON IT.
+        {raidActive || !hasCrew ? (
+          <div style={{
+            maxWidth: 520, margin: '0 auto', padding: '1rem 1.1rem', borderRadius: 14, textAlign: 'center',
+            background: 'rgba(10,7,4,0.94)', border: '1px solid rgba(200,170,106,0.26)',
+          }}>
+            <p className="font-karla" style={{ fontSize: '0.84rem', color: '#c9b894', lineHeight: 1.5, margin: 0 }}>
+              {raidActive
+                ? 'Your crew is on a raid. Finish the raid before sending them on a voyage.'
+                : <>No hands in the voyage seats. Fill them from your ship&apos;s loadout and they can sail.</>}
+            </p>
+          </div>
+        ) : (
+          <div className="voyage-routes-host">
+            <div className="voyage-routes" ref={routesRef} onScroll={onRoutesScroll}>
+              {keys.map(routeKey => (
+                <RouteCard
+                  key={routeKey}
+                  lastSailed={routeKey === lastRoute}
+                  route={routeKey}
+                  stats={stats}
+                  rawDodge={resolvedDeployed?.totals.dodge ?? 0}
+                  crewCount={savedCrew.length}
+                  crewSlots={shipStats.crewSlots}
+                  expeditionXP={expeditionXP}
+                  shipTier={shipTier}
+                  safeVoyages={safeVoyages}
+                  voyageSpeedMult={voyageSpeedMult}
+                  sending={isPending}
+                  onSail={() => { hapticTap(); setError(null); setConfirmRoute(routeKey) }}
+                />
+              ))}
+            </div>
+            <div className="voyage-dots" aria-hidden>
+              {keys.map((routeKey, i) => (
+                <span key={routeKey} style={{
+                  width: i === routeIdx ? 16 : 6, height: 6, borderRadius: 999,
+                  background: i === routeIdx ? 'rgba(240,192,64,0.85)' : 'rgba(200,170,106,0.3)',
+                  transition: 'width 0.2s, background 0.2s',
+                }} />
+              ))}
+            </div>
+          </div>
+        )}
 
-                  The picker used to be a painted chart with a dot on each
-                  route: tap a dot, a full-screen sheet came up, read it, press
-                  Set Sail. Two things were wrong with that. The chart was a
-                  different drawing from every other piece of art in the game
-                  and read as a prop borrowed from somewhere else, and the dot
-                  told you NOTHING — every route looked the same until you had
-                  opened it, so choosing between five of them meant opening
-                  five sheets and remembering the numbers.
+        {showLog && (
+          <div style={{
+            maxWidth: 820, margin: '14px auto 0', padding: '0.8rem 0.9rem', borderRadius: 14,
+            background: 'rgba(10,7,4,0.94)', border: '1px solid rgba(200,170,106,0.22)',
+          }}>
+            <VoyageHistory voyages={voyages} />
+          </div>
+        )}
 
-                  A card can say what the sheet said. The pay, the time, the
-                  risk and the drops are all on the face of it, so the five are
-                  side by side and comparable without a single tap, and the tap
-                  you do make is the one that sends the crew. */}
-
-              {/* THE CREW, ONCE, ABOVE ALL FIVE. Power, Fortune and Nav are the
-                  same hands whichever way you send them — what changes per
-                  route is what those numbers BUY, and that is on each card.
-                  Printing all three on every card would be the same figures
-                  five times over. */}
-              {stats && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '0.5rem 0.7rem', borderRadius: 10, marginBottom: '0.7rem',
-                  background: 'rgba(8,6,3,0.55)', border: '1px solid rgba(255,255,255,0.07)',
+        {/* ── THE CONFIRMATION ────────────────────────────────────────────
+            Everything true of the crew rather than the route: who is aboard
+            and their three numbers, the 1-in-100, a hand still out on a trawl.
+            Plus the route's own figures again, so the last look before the
+            crew leave is at what they are leaving for. */}
+        {mounted && createPortal(
+          <AnimatePresence>
+            {cr && crCfg && (
+              <motion.div key="voyage-confirm"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
+                data-no-steer
+                onClick={() => { if (!isPending) setConfirmRoute(null) }}
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(3,5,9,0.72)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
                 }}>
-                  <span className="font-karla font-800 uppercase" style={{
-                    fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.38)', flexShrink: 0,
+                <motion.div
+                  initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    width: '100%', maxWidth: 440, maxHeight: '92vh', overflowY: 'auto', borderRadius: 18,
+                    background: '#0a0704', border: '1px solid rgba(200,170,106,0.34)',
+                    boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
                   }}>
-                    {savedCrew.length} aboard
-                  </span>
-                  {([
-                    ['Power', stats.power, '#e8a0a0'],
-                    ['Fortune', stats.fortune, '#f0c040'],
-                    ['Nav', resolvedDeployed?.totals.dodge ?? 0, '#7dd3fc'],
-                  ] as const).map(([label, value, tint]) => (
-                    <span key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                      <span className="font-karla font-700 uppercase" style={{
-                        fontSize: '0.5rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.34)',
-                      }}>{label}</span>
-                      <span className="font-cinzel font-700 tabular-nums" style={{ fontSize: '0.86rem', color: tint }}>
-                        {value}
+                  <div style={{ position: 'relative', height: 190 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={crCfg.image} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
+                    <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,7,4,0.05) 0%, rgba(10,7,4,0.35) 50%, #0a0704 100%)' }} />
+                    <button type="button" onClick={() => setConfirmRoute(null)} disabled={isPending} aria-label="Back to the routes"
+                      style={{
+                        position: 'absolute', top: 10, left: 10, width: 32, height: 32, borderRadius: 10,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                        background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.18)', color: '#e6dccb', cursor: 'pointer',
+                      }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+                    </button>
+                    <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{
+                      position: 'absolute', top: 14, right: 12, fontSize: '0.52rem', padding: '0.26rem 0.55rem', borderRadius: 999,
+                      color: crCfg.color, background: `${crCfg.color}22`, border: `1px solid ${crCfg.color}77`,
+                    }}>{crCfg.riskLabel}</span>
+                    <div style={{ position: 'absolute', left: 16, right: 16, bottom: 10 }}>
+                      <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: 'rgba(240,192,64,0.85)', margin: 0 }}>Set sail for</p>
+                      <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#fff', lineHeight: 1.1, margin: '2px 0 0', textShadow: '0 2px 12px rgba(0,0,0,0.9)' }}>{crCfg.name}</p>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '0.8rem 1rem 1rem' }}>
+                    {crEst && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, marginBottom: 10 }}>
+                        {([
+                          ['Pay', `${crEst.lootMin.toLocaleString()}–${crEst.lootMax.toLocaleString()} ⟡`, '#e8c778'],
+                          ['Nav XP', `${crEst.xpMin.toLocaleString()}–${crEst.xpMax.toLocaleString()}`, '#d8ccb4'],
+                          ['Time', formatDuration(crMs), '#d8ccb4'],
+                        ] as const).map(([k, v, c]) => (
+                          <div key={k} style={{ padding: '0.5rem 0.4rem', borderRadius: 10, textAlign: 'center', background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: c, margin: 0, lineHeight: 1.1 }}>{v}</p>
+                            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(214,200,172,0.55)', margin: '4px 0 0' }}>{k}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {crEst && (
+                      <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', margin: '0 0 12px', lineHeight: 1.45 }}>
+                        {crEst.triumphPct}% triumph · {crEst.setbackPct}% setback ·{' '}
+                        <span style={{ color: !safeVoyages && crRisk >= 8 ? (crRisk >= 15 ? '#f87171' : '#f0c040') : 'rgba(214,200,172,0.7)', fontWeight: 700 }}>
+                          {safeVoyages ? 'Safe Passage' : crRisk > 0 ? `${crRisk}% crew risk · safe at ${crCfg.minLevel} Fortune` : 'no crew risk'}
+                        </span>
+                      </p>
+                    )}
+
+                    {/* THE CREW, which is the same whichever route. */}
+                    {stats && (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                        padding: '0.55rem 0.7rem', borderRadius: 10, marginBottom: 8,
+                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                      }}>
+                        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.45)' }}>
+                          {savedCrew.length} aboard
+                        </span>
+                        {([
+                          ['Power', stats.power, '#e8a0a0'],
+                          ['Fortune', stats.fortune, '#f0c040'],
+                          ['Nav', resolvedDeployed?.totals.dodge ?? 0, '#7dd3fc'],
+                        ] as const).map(([label, value, tint]) => (
+                          <span key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.38)' }}>{label}</span>
+                            <span className="font-cinzel font-700 tabular-nums" style={{ fontSize: '0.92rem', color: tint }}>{value}</span>
+                          </span>
+                        ))}
+                        <button type="button" onClick={() => setInfoOpen(true)} aria-label="How voyages work"
+                          style={{
+                            marginLeft: 'auto', width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                            background: 'rgba(200,170,100,0.10)', border: '1px solid rgba(200,170,100,0.32)',
+                            color: '#c8aa6a', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', lineHeight: 1,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>?</button>
+                      </div>
+                    )}
+
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8,
+                      padding: '0.35rem 0.6rem', borderRadius: 8,
+                      background: 'rgba(240,192,64,0.07)', border: '1px solid rgba(240,192,64,0.22)',
+                    }}>
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.14em', color: '#f0c040', flexShrink: 0 }}>1 in 100</span>
+                      <span className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.35 }}>
+                        Massive Booty: ten times the coin and gems, on any route.
                       </span>
-                    </span>
-                  ))}
-                  <button
-                    onClick={() => setInfoOpen(true)}
-                    style={{
-                      marginLeft: 'auto', width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                      background: 'rgba(200,170,100,0.10)', border: '1px solid rgba(200,170,100,0.32)',
-                      color: '#c8aa6a', fontSize: '0.7rem', fontWeight: 700,
-                      cursor: 'pointer', lineHeight: 1, touchAction: 'manipulation',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                    aria-label="How voyages work"
-                  >?</button>
-                </div>
-              )}
+                    </div>
 
-              {/* THE 1-IN-100 IS ADVERTISED, and it belongs above the cards
-                  because it is true of all five. It used to exist only after it
-                  fired, so nobody knew it was possible and the first one read
-                  as a confusing big number rather than a win. */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.7rem',
-                padding: '0.3rem 0.55rem', borderRadius: 8,
-                background: 'rgba(240,192,64,0.07)', border: '1px solid rgba(240,192,64,0.22)',
-              }}>
-                <span className="font-karla font-800 uppercase" style={{
-                  fontSize: '0.5rem', letterSpacing: '0.14em', color: '#f0c040', flexShrink: 0,
-                }}>1 in 100</span>
-                <span className="font-karla" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.35 }}>
-                  Massive Booty: ten times the coin and gems, on any route.
-                </span>
-              </div>
+                    {trawlingAssigned.length > 0 && (
+                      <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#46c0a0', lineHeight: 1.4, margin: '0 0 8px' }}>
+                        {trawlingAssigned.map(c => c.name).join(', ')} {trawlingAssigned.length === 1 ? 'is' : 'are'} out on a trawl and cannot sail until {trawlingAssigned.length === 1 ? 'it returns' : 'they return'}. Swap in another crew or collect the trawl first.
+                      </p>
+                    )}
+                    {error && (
+                      <p className="font-karla" style={{ fontSize: '0.8rem', color: '#f87171', margin: '0 0 8px' }}>{error}</p>
+                    )}
 
-              {/* A slotted crew that is away on a trawl cannot sail — said once,
-                  above, so it is read before a route is chosen rather than
-                  discovered on a card that will not send. */}
-              {trawlingAssigned.length > 0 && (
-                <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#46c0a0', lineHeight: 1.4, marginBottom: '0.6rem' }}>
-                  {trawlingAssigned.map(c => c.name).join(', ')} {trawlingAssigned.length === 1 ? 'is' : 'are'} out on a trawl and cannot sail until {trawlingAssigned.length === 1 ? 'it returns' : 'they return'}. Swap in another crew or collect the trawl first.
-                </p>
-              )}
-
-              {error && (
-                <p className="font-karla" style={{ fontSize: '0.84rem', color: '#f87171', marginBottom: '0.5rem' }}>{error}</p>
-              )}
-
-              {/* ── THE BOARD, IN AS MANY COLUMNS AS IT FITS ──────────────
-                  A CONTAINER query, not a viewport one. This panel is mounted
-                  in two different shells — the hub's card and the Charterhouse
-                  modal on the sea — and they are different widths on the same
-                  monitor. A `min-width: 900px` media query would put a wide
-                  board in a narrow modal and a single column in a wide one,
-                  because the screen was never the thing that decided.
-
-                  THE SHROUD SPANS. Five cards in two columns leaves the last
-                  one alone in the left column, which reads as a layout that ran
-                  out rather than a route that stands apart — and the Shrouded
-                  Reach DOES stand apart: it is the only one that pays in
-                  fishing lures rather than coin. Full width says so. */}
-              <div className="voyage-routes-host" style={{ marginBottom: '0.9rem' }}>
-              {/* ── ON A PHONE, A CAROUSEL (Kong, 2026-09-25) ─────────────
-                  Five cards stacked down a narrow sheet was a long scroll of
-                  strips. Below 620 (the same container query) the row becomes
-                  tall cards you swipe through, one at a time with the next
-                  peeking in, and it opens on the route you sailed last. The
-                  grid above that width is unchanged. */}
-              <div className="voyage-routes" ref={routesRef} onScroll={onRoutesScroll}>
-                {(Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => (
-                  <RouteCard
-                    key={routeKey}
-                    lastSailed={routeKey === lastRoute}
-                    route={routeKey}
-                    stats={stats}
-                    rawDodge={resolvedDeployed?.totals.dodge ?? 0}
-                    crewCount={savedCrew.length}
-                    crewSlots={shipStats.crewSlots}
-                    expeditionXP={expeditionXP}
-                    shipTier={shipTier}
-                    safeVoyages={safeVoyages}
-                    voyageSpeedMult={voyageSpeedMult}
-                    sending={isPending}
-                    onSail={() => handleSend(routeKey)}
-                  />
-                ))}
-              </div>
-              <div className="voyage-dots" aria-hidden>
-                {(Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map((routeKey, i) => (
-                  <span key={routeKey} style={{
-                    width: i === routeIdx ? 16 : 6, height: 6, borderRadius: 999,
-                    background: i === routeIdx ? 'rgba(240,192,64,0.85)' : 'rgba(200,170,106,0.3)',
-                    transition: 'width 0.2s, background 0.2s',
-                  }} />
-                ))}
-              </div>
-              </div>
-            </>
-          )}
-          <VoyageHistory voyages={voyages} />
-        </div>
+                    <motion.button type="button"
+                      onClick={() => handleSend(cr)}
+                      disabled={isPending}
+                      whileTap={isPending ? undefined : { scale: 0.97 }}
+                      className="font-cinzel font-800 uppercase tracking-[0.12em]"
+                      style={{
+                        width: '100%', marginTop: 4, borderRadius: 11, padding: '0.8rem 1rem', fontSize: '0.98rem',
+                        background: 'linear-gradient(180deg, rgba(240,192,64,0.3), rgba(240,192,64,0.14))',
+                        border: '1px solid rgba(240,192,64,0.6)', color: '#f6d77a',
+                        cursor: isPending ? 'default' : 'pointer', opacity: isPending ? 0.7 : 1,
+                      }}>
+                      {isPending ? 'Sending…' : 'Set Sail'}
+                    </motion.button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
       </div>
     )
   }
