@@ -73,8 +73,10 @@ export default function HallSheet({ open, onClose }: {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.16 }}
           style={{
-            position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
-            maxHeight: 'min(84vh, 100%)', display: 'flex', flexDirection: 'column',
+            // WIDE on a desktop (Kong, 2026-09-25): the building and its bunks
+            // sit side by side. A phone keeps the modal width and stacks them.
+            position: 'relative', margin: 'auto', width: '100%', maxWidth: 'min(1080px, 100%)',
+            maxHeight: 'min(88vh, 100%)', display: 'flex', flexDirection: 'column',
             borderRadius: 20, overflow: 'hidden',
             // ── NO PAINTING OF ITS OWN ─────────────────────────────────
             //

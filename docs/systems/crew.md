@@ -18,6 +18,15 @@ title, its own guided tour — is gone. Everything it did happens on the sea:
   hall's tier, the Drills/Stores ladder and the bunks are the *building*; upgrading it from
   the middle of the ocean would make the island scenery. It wears `/crew-bg.jpg`, the
   painting the page had.
+- **The hall, re-laid (2026-09-25, Kong: antiquated).** `HallSheet` is wide on a desktop
+  (1080). Inside, a container query (`.hall-host` / `.hall-grid`): the BUILDING on a stage on the
+  left (the hall plate large on `/crew-bg.jpg` under a dark fade, name, tier pips, Bunks / Roster
+  figures, flavour, the Build button at its foot); the BUNKS on the right as 3:4 portrait cards
+  of the hand's card art (time left top-left, a stint bar along the foot, Claim / Draw on a lit
+  rim when done; empty and locked bunks the same shape), then the training sum and Drills /
+  Stores as horizontal cards (`.hall-ladders`). A phone stacks them. The bunk picker is a bottom
+  sheet on a phone and a centred 760 panel from 700px, its hands as portrait cards five a row.
+  Behaviour unchanged.
 - **The Fallen** is a toggle inside Roster (it always was — it lost its tab long ago). With
   the tab bar gone it needed a way BACK, so the memorial carries one.
 

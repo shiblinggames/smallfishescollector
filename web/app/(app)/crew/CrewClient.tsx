@@ -217,6 +217,8 @@ const PANEL_BORDER = CREW_PANEL_BORDER
 const RECRUIT_PANEL_BG = PANEL_BG
 const RECRUIT_PANEL_BORDER = PANEL_BORDER
 const ROSTER_PANEL_BG = PANEL_BG
+/** The hall's own painting, behind the building on the hall stage. */
+const HALL_PAINTING = '/crew-bg.jpg'
 const ROSTER_PANEL_BORDER = PANEL_BORDER
 
 function AnchorIcon() {
@@ -1922,155 +1924,125 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
           const blocked = hallUpgradeBlocker(state.hallTier, state.navLevel, state.doubloons)
           const navShort = blocked === 'nav'
           return (
-        <>
-        {/* EXACTLY the roster card's background, not a tinted one of its own.
-            The accent gradient over hall.base was gold on gold, which read as a
-            translucent wash rather than a solid card. The tier still shows in
-            the art, the name, the pips and the border. */}
-        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}66`, background: ROSTER_PANEL_BG, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.8rem', marginBottom: '0.9rem' }}>
-          {/* STACKED again. It was side by side to keep the block short while
-              the hall shared the Recruit tab; the hall has its own tab now, so
-              the building gets to be the building. The name also stops being
-              truncated - it had `nowrap + ellipsis` because it was sharing a
-              row with the pips and the button, and "Brassbound Hall" does not
-              fit next to both. */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {/* ART PENDING for tier 6 (Leviathan Hall) — hall_1..5 exist, hall_6
-                does not yet. Fall back to the tier below rather than hiding,
-                which left an empty hole. Self-healing: drop hall_6.png in and
-                this stops firing. */}
-            <motion.img src={`/crew/hall_${hall.tier}.png`} alt="" aria-hidden decoding="async"
-              // Keyed on the tier so a purchase REMOUNTS it: the old building
-              // leaves and the new one lands, in the same spot, with no layer
-              // over the top. `pop` gates the overshoot so opening the tab is
-              // a plain fade rather than a bounce.
-              key={hall.tier}
-              initial={pop?.what === 'hall' ? { scale: 0.62, opacity: 0, rotate: -6 } : { opacity: 0 }}
-              animate={pop?.what === 'hall' ? { scale: [0.62, 1.14, 1], opacity: 1, rotate: 0 } : { opacity: 1 }}
-              transition={pop?.what === 'hall'
-                ? { duration: 0.66, times: [0, 0.66, 1], ease: 'easeOut' }
-                : { duration: 0.25 }}
-              // 116, DOWN FROM 176. The building was taking a third of the
-              // sheet before a single word of what it does, which is a lot of
-              // room for a picture that says the same thing the name, the pips
-              // and the border already say. The plates are 200px native, so
-              // this is still drawn under its own resolution.
-              style={{ width: 116, height: 116, objectFit: 'contain', filter: `drop-shadow(0 5px 14px ${hall.accent}66)` }}
-              onError={e => {
-                const img = e.target as HTMLImageElement
-                if (img.dataset.fellBack) { img.style.visibility = 'hidden'; return }
-                img.dataset.fellBack = '1'
-                img.src = `/crew/hall_${Math.max(1, hall.tier - 1)}.png`
-              }} />
+        // ── THE HALL, RE-LAID (Kong, 2026-09-25: it felt antiquated) ─────────
+        // Two columns once the sheet is wide (a container query, .hall-grid):
+        // the BUILDING on a stage on the left, large on the hall's painting,
+        // with what it gives and the one big purchase under it; the BUNKS on
+        // the right as portrait cards of the hands in them, with the training
+        // sum and the two ladders beneath. A phone stacks them.
+        <div className="hall-host">
+        <div className="hall-grid">
+          <div className="hall-stage" style={{
+            position: 'relative', overflow: 'hidden', borderRadius: 16,
+            border: `1px solid ${hall.accent}55`,
+            background: `linear-gradient(180deg, rgba(8,10,14,0.35) 0%, rgba(8,10,14,0.55) 45%, rgba(8,10,14,0.96) 100%), url(${HALL_PAINTING}) center 30% / cover no-repeat, #0c0f14`,
+            boxShadow: hall.glow ? `0 0 30px ${hall.glow}` : '0 10px 28px rgba(0,0,0,0.4)',
+            padding: '1.1rem 1rem 1rem',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+          }}>
+            {/* The building. Keyed on the tier so a purchase REMOUNTS it: the
+                old hall leaves and the new one lands in the same spot. Tier 6
+                falls back a tier if its plate is missing. */}
+            <div style={{ position: 'relative', width: 'var(--hall-art, 168px)', height: 'var(--hall-art, 168px)', display: 'grid', placeItems: 'center' }}>
+              <span aria-hidden style={{ position: 'absolute', inset: '12%', borderRadius: '50%', background: `radial-gradient(circle, ${hall.accent}40 0%, transparent 70%)` }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <motion.img src={`/crew/hall_${hall.tier}.png`} alt="" aria-hidden decoding="async"
+                key={hall.tier}
+                initial={pop?.what === 'hall' ? { scale: 0.62, opacity: 0, rotate: -6 } : { opacity: 0 }}
+                animate={pop?.what === 'hall' ? { scale: [0.62, 1.14, 1], opacity: 1, rotate: 0 } : { opacity: 1 }}
+                transition={pop?.what === 'hall'
+                  ? { duration: 0.66, times: [0, 0.66, 1], ease: 'easeOut' }
+                  : { duration: 0.25 }}
+                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 8px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 14px ${hall.accent}55)` }}
+                onError={e => {
+                  const img = e.target as HTMLImageElement
+                  if (img.dataset.fellBack) { img.style.visibility = 'hidden'; return }
+                  img.dataset.fellBack = '1'
+                  img.src = `/crew/hall_${Math.max(1, hall.tier - 1)}.png`
+                }} />
+              <AnimatePresence>
+                {pop?.what === 'hall' && (
+                  <motion.span key={pop.n} aria-hidden
+                    initial={{ scale: 0.3, opacity: 0.85 }}
+                    animate={{ scale: 2.2, opacity: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.9, ease: 'easeOut' }}
+                    style={{ position: 'absolute', inset: '15%', borderRadius: '50%', border: `2px solid ${hall.accent}`, pointerEvents: 'none' }} />
+                )}
+              </AnimatePresence>
+            </div>
 
-            <AnimatePresence>
-              {pop?.what === 'hall' && (
-                <motion.span key={pop.n} aria-hidden
-                  initial={{ scale: 0.3, opacity: 0.85 }}
-                  animate={{ scale: 2.2, opacity: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.9, ease: 'easeOut' }}
-                  style={{
-                    position: 'absolute', top: 88, width: 150, height: 150, borderRadius: '50%',
-                    border: `2px solid ${hall.accent}`, pointerEvents: 'none',
-                  }} />
-              )}
-            </AnimatePresence>
-
-            {/* Its own row, full width, no truncation. */}
             <motion.p key={`name-${hall.tier}`} className="font-cinzel font-700"
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: pop?.what === 'hall' ? 0.3 : 0 }}
-              style={{ fontSize: '1.35rem', color: hall.accent, lineHeight: 1.2, marginTop: 2 }}>
+              style={{ fontSize: '1.45rem', color: hall.accent, lineHeight: 1.15, marginTop: 4, textShadow: '0 2px 10px rgba(0,0,0,0.85)' }}>
               {hall.name}
             </motion.p>
-
-            <div style={{ display: 'flex', gap: 4, marginTop: 7 }} aria-label={`Crew Hall tier ${state.hallTier} of ${CREW_HALL_MAX_TIER}`}>
+            <div style={{ display: 'flex', gap: 5, marginTop: 8 }} aria-label={`Crew Hall tier ${state.hallTier} of ${CREW_HALL_MAX_TIER}`}>
               {Array.from({ length: CREW_HALL_MAX_TIER }, (_, i) => (
                 <span key={i} aria-hidden style={{
-                  width: 7, height: 7, borderRadius: 7,
-                  background: i < state.hallTier ? hall.accent : 'rgba(255,255,255,0.14)',
+                  width: 18, height: 5, borderRadius: 3,
+                  background: i < state.hallTier ? hall.accent : 'rgba(255,255,255,0.16)',
                   boxShadow: i < state.hallTier ? `0 0 6px ${hall.accent}88` : undefined,
                 }} />
               ))}
             </div>
-            <div style={{ width: '100%' }}>
-            <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', marginTop: 5, lineHeight: 1.45 }}>
-              <span style={{ color: hall.accent }}>{hall.bunks} bunks</span> for training idle crew
-              {hallRosterBonus(state.hallTier) > 0 && (
-                <>, and <span style={{ color: hall.accent }}>+{hallRosterBonus(state.hallTier)} roster</span></>
-              )}
-            </p>
-            {navShort && nextTier && (
-              <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#9fc4e8', marginTop: 4, lineHeight: 1.45 }}>
-                {nextTier.name} opens at Navigation {nextTier.minNav}
-              </p>
-            )}
-            <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginTop: 4, lineHeight: 1.45, marginBottom: '0.85rem' }}>
+
+            {/* What the building gives, as two figures rather than a sentence. */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, width: '100%', justifyContent: 'center' }}>
+              {([
+                [String(hall.bunks), hall.bunks === 1 ? 'Bunk' : 'Bunks'],
+                ...(hallRosterBonus(state.hallTier) > 0 ? [[`+${hallRosterBonus(state.hallTier)}`, 'Roster']] : []),
+              ] as [string, string][]).map(([v, k]) => (
+                <div key={k} style={{ minWidth: 86, padding: '0.45rem 0.7rem', borderRadius: 11, background: 'rgba(0,0,0,0.42)', border: `1px solid ${hall.accent}33` }}>
+                  <p className="font-cinzel font-800" style={{ margin: 0, fontSize: '1.2rem', color: '#f6ead0', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{v}</p>
+                  <p className="font-karla font-700 uppercase" style={{ margin: '4px 0 0', fontSize: '0.54rem', letterSpacing: '0.16em', color: `${hall.accent}cc` }}>{k}</p>
+                </div>
+              ))}
+            </div>
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: '10px 0 14px', lineHeight: 1.45, maxWidth: 340 }}>
               {hall.flavor}
             </p>
 
-            {/* Its own full-width row. It was a small pill squeezed onto the
-                name's line, which is both the least satisfying shape for the
-                one big purchase on the page and what forced the name to
-                truncate. It states what it buys and what it costs, so the
-                confirm sheet is a confirmation rather than the first time you
-                see the price. */}
+            <div style={{ width: '100%', marginTop: 'auto' }}>
             {nextTier && navShort ? (
               <div className="font-karla font-700 uppercase" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                width: '100%', padding: '0.7rem', borderRadius: 11,
-                fontSize: '0.78rem', letterSpacing: '0.06em',
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.16)',
-                color: 'rgba(255,255,255,0.55)',
+                width: '100%', padding: '0.75rem', borderRadius: 12,
+                fontSize: '0.74rem', letterSpacing: '0.06em',
+                background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.16)',
+                color: 'rgba(255,255,255,0.6)',
               }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
                   <rect x="4.5" y="11" width="15" height="9.5" rx="1.5" /><path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
                 </svg>
-                Bunk {nextTier.bunks} at Navigation {nextTier.minNav}
+                {nextTier.name} at Navigation {nextTier.minNav}
               </div>
             ) : nextTier ? (
               <button
                 onClick={() => setHallUpgradeOpen(true)}
                 className="active:scale-95"
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                  width: '100%', padding: '0.75rem 0.9rem', borderRadius: 11,
-                  cursor: 'pointer', font: 'inherit',
-                  // Tinted gradient with a lit top edge, never a solid fill.
-                  background: `linear-gradient(180deg, ${nextTier.accent}2e 0%, ${nextTier.accent}12 100%)`,
-                  border: `1px solid ${nextTier.accent}77`,
-                  boxShadow: `inset 0 1px 0 ${nextTier.accent}44, 0 3px 12px rgba(0,0,0,0.35)`,
-                  transition: 'transform 0.08s, box-shadow 0.15s',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  width: '100%', padding: '0.75rem 0.95rem', borderRadius: 12,
+                  cursor: 'pointer', font: 'inherit', textAlign: 'left',
+                  background: `linear-gradient(180deg, ${nextTier.accent}30 0%, ${nextTier.accent}12 100%), rgba(10,10,12,0.7)`,
+                  border: `1px solid ${nextTier.accent}88`,
+                  boxShadow: `inset 0 1px 0 ${nextTier.accent}44, 0 4px 14px rgba(0,0,0,0.4)`,
+                  transition: 'transform 0.08s',
                 }}
               >
-                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, minWidth: 0 }}>
-                  <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.86rem', letterSpacing: '0.08em', color: '#f4ecd8' }}>
+                <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f6ecd6' }}>
                     Build the {nextTier.name}
                   </span>
-                  {/* The reason to buy it, said plainly. "Build the Gilded Hall"
-                      is a name; "opens a 4th bunk" is what you get. The last
-                      one opens a bunk that is not like the others, so it says
-                      so here rather than letting the surprise sit behind a
-                      1,000,000 price tag. */}
-                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: nextTier.accent }}>
-                    + Opens bunk {nextTier.bunks}
+                  <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: nextTier.accent }}>
+                    Opens bunk {nextTier.bunks} · {hallRosterBonus(nextTier.tier) - hallRosterBonus(state.hallTier) > 0 ? `+${hallRosterBonus(nextTier.tier) - hallRosterBonus(state.hallTier)} roster` : 'same roster'}
+                    {isLeviathanSlot(nextTier.bunks - 1) && <span style={{ color: LEVIATHAN_COLOR }}> · the Leviathan bunk</span>}
                   </span>
-                  {/* The roster slots the tier also carries. Its own line, not
-                      folded into the bunk one: they answer different problems,
-                      and a captain sitting at a full roster is here FOR this. */}
-                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: nextTier.accent }}>
-                    + {hallRosterBonus(nextTier.tier) - hallRosterBonus(state.hallTier)} crew you can keep
-                  </span>
-                  {isLeviathanSlot(nextTier.bunks - 1) && (
-                    <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: LEVIATHAN_COLOR }}>
-                      + The Leviathan bunk rerolls traits
-                    </span>
-                  )}
                 </span>
                 <span className="font-cinzel font-700" style={{
-                  fontSize: '0.82rem', color: nextTier.accent, fontVariantNumeric: 'tabular-nums',
-                  paddingLeft: 10, borderLeft: `1px solid ${nextTier.accent}44`, marginLeft: 'auto',
+                  flexShrink: 0, fontSize: '0.9rem', color: nextTier.accent, fontVariantNumeric: 'tabular-nums',
+                  padding: '0.35rem 0.65rem', borderRadius: 9, background: 'rgba(0,0,0,0.35)', border: `1px solid ${nextTier.accent}44`,
                 }}>
                   {nextTier.cost.toLocaleString()} ⟡
                 </span>
@@ -2078,9 +2050,9 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
             ) : (
               <div className="font-cinzel font-700 uppercase" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                width: '100%', padding: '0.7rem', borderRadius: 11,
+                width: '100%', padding: '0.75rem', borderRadius: 12,
                 fontSize: '0.82rem', letterSpacing: '0.14em',
-                background: `${hall.accent}12`, border: `1px solid ${hall.accent}55`,
+                background: `${hall.accent}14`, border: `1px solid ${hall.accent}55`,
                 color: hall.accent,
               }}>
                 Hall complete
@@ -2088,18 +2060,8 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
             )}
             </div>
           </div>
-          {/* Upgrade celebration — fires once after a confirmed purchase.
-              Lives INSIDE the hall panel (position:relative + overflow:
-              hidden above) so the effect stays localized to the room that
-              changed, per juice-subtlety: an expanding accent ring + the
-              new hall's name over a brief dark veil. Tap or 3s timeout
-              dismisses (auto-dismiss effect lives next to the state). */}
-          <AnimatePresence>
-          </AnimatePresence>
 
-          {/* The bunks live INSIDE the hero. The hall IS the building that
-              houses them, so a bordered panel under a bordered panel was two
-              boxes describing one place. */}
+          <div className="hall-main" style={{ minWidth: 0 }}>
           {state.hallBunksOpen && (
             <HallBunks
               state={state}
@@ -2113,8 +2075,9 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
               onBuyStores={() => setLadderConfirm('stores')}
             />
           )}
+          </div>
         </div>
-        </>
+        </div>
           )
         })()}
 

@@ -4215,3 +4215,34 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
   .wharf-grid { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); align-items: start; }
   .wharf-stage { position: sticky; top: 0; }
 }
+
+/* ── The Crew Hall (crew/CrewClient hall section + crew/HallBunks) ──────────
+   Container-sized, because the hall renders in a sheet whose width is not the
+   screen's. Narrow: the stage on top, bunks three across under it. From 820:
+   the stage in a left column, the bunks and training on the right. The bunk
+   picker is a bottom sheet on a phone and a centred panel from 700px. */
+.hall-host { container-type: inline-size; }
+.hall-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.hall-stage { --hall-art: 150px; }
+.hall-bunks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.hall-ladders { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.hall-empty-bunk { transition: border-color 0.15s, background 0.15s, transform 0.15s; }
+.hall-empty-bunk:hover { transform: translateY(-2px); }
+@container (min-width: 520px) {
+  .hall-ladders { grid-template-columns: 1fr 1fr; }
+}
+@container (min-width: 820px) {
+  .hall-grid { grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr); align-items: stretch; gap: 20px; }
+  .hall-stage { --hall-art: 200px; }
+  .hall-bunks { gap: 11px; }
+}
+.bunk-picker-scrim { align-items: flex-end; }
+.bunk-picker { max-width: var(--modal-w); border-radius: 18px 18px 0 0; }
+.bunk-picker-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.bunk-pick { transition: transform 0.12s, border-color 0.15s; }
+.bunk-pick:hover { transform: translateY(-2px); }
+@media (min-width: 700px) {
+  .bunk-picker-scrim { align-items: center; padding: 1.5rem; }
+  .bunk-picker { max-width: 760px; border-radius: 18px; }
+  .bunk-picker-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}

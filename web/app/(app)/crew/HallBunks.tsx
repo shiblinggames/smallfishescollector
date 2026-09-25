@@ -222,7 +222,11 @@ export default function HallBunks({
     [state.roster, blockers])
 
   return (
-    <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: `1px solid ${accent}2e` }}>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+        <p className="font-cinzel font-700" style={{ margin: 0, fontSize: '1.05rem', color: '#f2ead8' }}>The bunks</p>
+        <p className="font-karla font-600" style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>Press a finished hand to claim</p>
+      </div>
       {/* THE SUM, not a sentence. What a stint pays is stint length x rate,
           and both halves are things you buy, so showing the working with each
           term labelled by the ladder that set it makes the two upgrade buttons
@@ -235,8 +239,8 @@ export default function HallBunks({
           anonymous. */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-        padding: '0.6rem 0.5rem', borderRadius: 11, marginBottom: '0.6rem',
-        background: 'rgba(0,0,0,0.26)', border: `1px solid ${accent}33`,
+        padding: '0.55rem 0.5rem', borderRadius: 12, marginBottom: '0.7rem',
+        background: 'rgba(0,0,0,0.32)', border: `1px solid ${accent}2e`,
       }}>
         <SumTerm value={fmtStintShort(cap)} label={`Stores ${tierNumeral(state.storesLevel)}`} />
         <SumOp>&times;</SumOp>
@@ -249,7 +253,7 @@ export default function HallBunks({
           will hold, with the ones past their tier locked rather than missing —
           the same reason the assign board draws six seats and locks the ones
           the hull has not opened yet. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7 }}>
+      <div className="hall-bunks">
         {Array.from({ length: MAX_BUNKS }, (_, i) => {
           const crew = bySlot[i]
           // Bunk 6 is the Leviathan bunk. It wears its own colour in every
@@ -270,8 +274,8 @@ export default function HallBunks({
                   ? `Locked. ${opensAt.name} opens the Leviathan bunk, which offers a freshly drawn trait every stint.`
                   : `Locked bunk. ${opensAt.name} opens it.`}
                 style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  minHeight: 100, borderRadius: 11,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  aspectRatio: '3 / 4', borderRadius: 14,
                   border: lev ? `1px dashed ${LEVIATHAN}55` : '1px dashed rgba(255,255,255,0.12)',
                   background: lev ? `linear-gradient(180deg, ${LEVIATHAN}12 0%, rgba(0,0,0,0.3) 100%)` : 'rgba(0,0,0,0.22)',
                 }}>
@@ -292,9 +296,10 @@ export default function HallBunks({
                 aria-label={lev
                   ? 'Empty Leviathan bunk. Press to put a crew in it. Every stint rolls against their trait and keeps the better of each stat.'
                   : `Empty bunk ${i + 1}. Press to put a crew in it.`}
+                className="hall-empty-bunk"
                 style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  minHeight: 100, borderRadius: 11, cursor: 'pointer', font: 'inherit',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  aspectRatio: '3 / 4', borderRadius: 14, cursor: 'pointer', font: 'inherit',
                   border: `1.5px dashed ${tint}${lev ? '99' : '55'}`,
                   background: lev
                     ? `linear-gradient(180deg, ${LEVIATHAN}1c 0%, rgba(0,0,0,0.3) 100%)`
@@ -306,9 +311,9 @@ export default function HallBunks({
                   : (
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      width: 24, height: 24, borderRadius: '50%',
+                      width: 34, height: 34, borderRadius: '50%',
                       background: `${accent}1f`, border: `1.5px solid ${accent}99`,
-                      color: accent, fontSize: '1rem', lineHeight: 1,
+                      color: accent, fontSize: '1.3rem', lineHeight: 1,
                     }}>+</span>
                   )}
                 <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: `${tint}dd` }}>
@@ -328,22 +333,11 @@ export default function HallBunks({
           const pct = t ? stintProgress(t.since, now, t.cap) : 1
           return (
             <motion.button key={crew.id} type="button" disabled={pending || !done}
-              // THE PRESS HAS TO ANSWER. Claiming used to run straight into a
-              // server round trip with nothing happening: no scale, no haptic,
-              // no busy state, and the vibrate lived AFTER the await. Tap, dead
-              // air, then a card appeared. The card was never the problem.
-              whileTap={done ? { scale: 0.93 } : undefined}
+              whileTap={done ? { scale: 0.95 } : undefined}
+              whileHover={done ? { y: -3 } : undefined}
               transition={{ type: 'spring', stiffness: 620, damping: 26 }}
-              // Remember them on the way OUT as well as on the way in. Recording
-              // only at bunk-time meant the hint stayed invisible until you had
-              // completed a whole cycle since it shipped — and the claim is the
-              // better moment anyway: the instant a hand comes off a bunk is
-              // exactly when you decide whether to send them straight back.
               onClick={() => {
                 if (!done) return
-                // Fired SYNCHRONOUSLY, before the action, so the thumb gets its
-                // answer in the same frame as the tap rather than after the
-                // server has had its say.
                 hapticTap()
                 setClaiming(crew.id)
                 writeLastBunkCrew(i, crew.id)
@@ -354,64 +348,48 @@ export default function HallBunks({
                 ? `${crew.name} has finished training. Claim to free the bunk.`
                 : `${crew.name} is training, ${fmtLeft(left)}.`}
               style={{
-                position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                minHeight: 100, padding: '0.4rem 0.25rem 0.45rem', borderRadius: 11,
-                cursor: 'pointer', font: 'inherit', textAlign: 'center',
-                // Done still reads gold, because that is the collect cue
-                // everywhere. A running Leviathan stint keeps the teal, so you
-                // can see at a glance that this one has a chance riding on it.
-                // THE DEEP BUNK KEEPS ITS COLOUR IN EVERY STATE. Gold is the
-                // hall's "collect me" signal, so a finished Leviathan bunk used
-                // to turn gold like the other five and lose its identity at the
-                // exact moment it matters most -- the tap that opens a draw
-                // looked like the tap that pays out XP. It reads teal
-                // throughout now, and carries a glow when ready so "collect me"
-                // still lands without borrowing the colour.
-                border: `1.5px solid ${lev ? (done ? LEVIATHAN : `${LEVIATHAN}66`) : done ? `${GOLD}aa` : 'rgba(255,255,255,0.16)'}`,
-                background: `linear-gradient(180deg, ${lev ? (done ? `${LEVIATHAN}30` : `${LEVIATHAN}14`) : done ? `${GOLD}1f` : 'rgba(255,255,255,0.04)'} 0%, rgba(0,0,0,0.25) 100%)`,
-                boxShadow: done ? (lev ? `0 0 16px ${LEVIATHAN}55` : `0 0 14px ${GOLD}33`) : 'none',
+                // ── A PORTRAIT OF THE HAND IN THE BUNK ─────────────────────
+                // Their card art fills the bunk, the name and level on it over
+                // a dark fade, the stint as a bar along the foot. A finished
+                // stint lights the rim and puts Claim on the card.
+                position: 'relative', aspectRatio: '3 / 4', padding: 0, borderRadius: 14, overflow: 'hidden',
+                cursor: done ? 'pointer' : 'default', font: 'inherit', textAlign: 'center',
+                border: `1.5px solid ${lev ? (done ? LEVIATHAN : `${LEVIATHAN}66`) : done ? `${GOLD}cc` : 'rgba(255,255,255,0.16)'}`,
+                background: lev ? `radial-gradient(120% 90% at 50% 20%, ${LEVIATHAN}30, #070a0e 75%)` : `radial-gradient(120% 90% at 50% 20%, ${accent}26, #0a0907 75%)`,
+                boxShadow: done ? (lev ? `0 0 18px ${LEVIATHAN}66` : `0 0 16px ${GOLD}44`) : '0 6px 16px rgba(0,0,0,0.4)',
                 touchAction: 'manipulation',
-                // The tapped tile dims and holds while the claim is in flight,
-                // so the wait reads as "working" rather than as "nothing
-                // happened". Only the one you touched: the others stay live.
                 opacity: claiming === crew.id ? 0.55 : 1,
               }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', filter: done ? 'none' : 'saturate(0.85) brightness(0.85)' }} />
+              <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '55%', background: 'linear-gradient(to top, rgba(4,6,10,0.97) 0%, rgba(4,6,10,0.7) 45%, rgba(4,6,10,0) 100%)' }} />
               {lev && (
-                <span aria-hidden style={{ position: 'absolute', top: 4, right: 4, lineHeight: 0, opacity: 0.9 }}>
-                  <LeviathanMark size={13} />
+                <span aria-hidden style={{ position: 'absolute', top: 6, right: 6, lineHeight: 0, padding: 3, borderRadius: 8, background: 'rgba(0,0,0,0.5)' }}>
+                  <LeviathanMark size={14} />
                 </span>
               )}
-              <div style={{ width: '100%', height: 38, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
-                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', opacity: done ? 1 : 0.75 }} />
-              </div>
-              <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.72rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {crew.name}
+              {!done && (
+                <span className="font-karla font-700" style={{
+                  position: 'absolute', top: 6, left: 6, padding: '0.12rem 0.45rem', borderRadius: 999,
+                  fontSize: '0.6rem', color: '#eef2f6', fontVariantNumeric: 'tabular-nums',
+                  background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.16)',
+                }}>{fmtLeft(left)}</span>
+              )}
+              <span style={{ position: 'absolute', left: 6, right: 6, bottom: done ? 32 : 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                <span className="font-cinzel font-700" style={{ display: 'block', width: '100%', fontSize: '0.8rem', lineHeight: 1.1, color: '#f6efe2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>
+                  {crew.name}
+                </span>
+                <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(230,220,200,0.7)', fontVariantNumeric: 'tabular-nums' }}>
+                  Lv {crewLevelFromXP(crew.xp)}
+                </span>
               </span>
-              {/* A finished bunk shows JUST the word. The XP used to sit under
-                  it and said nothing the header did not: the sum row at the top
-                  of the panel already states what a stint pays, and it is the
-                  same figure for every bunk. On a tile the only useful fact is
-                  that this hand is waiting on you.
-
-                  The pulse is on the pill alone, not the whole tile: six of them
-                  breathing at once would be a light show, one small moving thing
-                  per finished bunk is a nudge. */}
               {done ? (
                 <span className="bunk-claim-pulse font-karla font-800 uppercase" style={{
-                  display: 'inline-block', padding: '0.2rem 0.7rem', borderRadius: 999,
-                  fontSize: '0.66rem', letterSpacing: '0.1em', lineHeight: 1.45,
-                  // The stint is DONE and the XP is sitting there unclaimed, so
-                  // this is the call to action, not a status. Was a 15% wash
-                  // with pale type, which is the quiet end of this card's own
-                  // palette rather than the loud one.
+                  position: 'absolute', left: '50%', bottom: 8, transform: 'translateX(-50%)',
+                  display: 'inline-block', padding: '0.2rem 0.75rem', borderRadius: 999,
+                  fontSize: '0.64rem', letterSpacing: '0.1em', lineHeight: 1.45, whiteSpace: 'nowrap',
                   ...ctaPill(),
-                  // ...except in the deep bunk, where the whole tile is teal
-                  // and a gold pill was the one piece still borrowing the
-                  // ordinary-bunk colour. Same shape and weight, so it still
-                  // reads as the call to action, just in the colour that says
-                  // WHICH action.
                   ...(lev ? {
                     background: `${LEVIATHAN}33`,
                     color: '#eafffb',
@@ -422,15 +400,10 @@ export default function HallBunks({
                   {claiming === crew.id ? 'Hauling in' : lev ? 'Draw' : 'Claim'}
                 </span>
               ) : (
-                <>
-                  <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.72)', fontVariantNumeric: 'tabular-nums' }}>
-                    {fmtLeft(left)}
-                  </span>
-                  {/* scaleX on a solid fill, never width — width is layout. */}
-                  <span aria-hidden style={{ display: 'block', width: '80%', height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.1)', overflow: 'hidden', marginTop: 2 }}>
-                    <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 2, background: lev ? LEVIATHAN : GOLD, transformOrigin: 'left', transform: `scaleX(${pct})`, transition: 'transform 0.4s linear' }} />
-                  </span>
-                </>
+                // scaleX on a solid fill, never width: width is layout.
+                <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 4, background: 'rgba(255,255,255,0.1)' }}>
+                  <span style={{ display: 'block', width: '100%', height: '100%', background: lev ? LEVIATHAN : GOLD, transformOrigin: 'left', transform: `scaleX(${pct})`, transition: 'transform 0.4s linear' }} />
+                </span>
               )}
             </motion.button>
           )
@@ -441,7 +414,8 @@ export default function HallBunks({
           throughput (a stint pays rate x hours and takes hours, so XP per DAY
           is rate x 24 whatever the stint length). Stores buys fewer trips back
           to collect, which is why it is cheap and stops at six hours. */}
-      <div style={{ display: 'flex', gap: 7, marginTop: '0.65rem' }}>
+      <p className="font-cinzel font-700" style={{ margin: '1rem 0 0.5rem', fontSize: '1.05rem', color: '#f2ead8' }}>Training</p>
+      <div className="hall-ladders">
         {drillsMaxed(state.drillLevel) ? (
           <MaxedCard art={`/crew/drill_${DRILL_ART_MAX}.png`} label="Drills mastered"
             sub={`${rate.toLocaleString()} XP/hr`} accent={GOLD} popping={pop === 'drill'} />
@@ -551,8 +525,8 @@ function UpgradeButton({
       title={afford ? `${cost.toLocaleString()} doubloons` : `Need ${(cost - balance).toLocaleString()} more`}
       className="active:scale-95"
       style={{
-        flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-        padding: '0.55rem 0.35rem 0.6rem', borderRadius: 11, font: 'inherit',
+        minWidth: 0, display: 'grid', gridTemplateColumns: '58px minmax(0, 1fr)', gridTemplateRows: 'auto auto auto', columnGap: 10, alignItems: 'center', textAlign: 'left',
+        padding: '0.6rem 0.75rem', borderRadius: 13, font: 'inherit',
         background: afford
           ? `linear-gradient(180deg, ${accent}22 0%, ${accent}0b 100%)`
           : 'rgba(255,255,255,0.03)',
@@ -573,19 +547,19 @@ function UpgradeButton({
         initial={popping ? { scale: 0.5, opacity: 0, rotate: -8 } : { opacity: 0 }}
         animate={popping ? { scale: [0.5, 1.18, 1], opacity: 1, rotate: 0 } : { opacity: 1 }}
         transition={popping ? { duration: 0.6, times: [0, 0.66, 1], ease: 'easeOut' } : { duration: 0.2 }}
-        style={{ width: 54, height: 54, objectFit: 'contain', filter: afford ? `drop-shadow(0 3px 8px ${accent}55)` : 'grayscale(0.7) brightness(0.7)' }}
+        style={{ gridRow: '1 / span 3', width: 58, height: 58, objectFit: 'contain', filter: afford ? `drop-shadow(0 3px 8px ${accent}55)` : 'grayscale(0.7) brightness(0.7)' }}
         onError={e => {
           const img = e.target as HTMLImageElement
           if (!img.dataset.step && tier > 1) { img.dataset.step = '1'; img.src = `${art}${tier - 1}.png`; return }
           img.style.display = 'none'
         }} />
-      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: afford ? '#f0ede8' : 'rgba(255,255,255,0.45)' }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: afford ? '#f4ecd8' : 'rgba(255,255,255,0.5)' }}>
         {label}
       </span>
-      <span className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.58)', whiteSpace: 'nowrap' }}>
+      <span className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {now} <span style={{ color: afford ? accent : 'rgba(255,255,255,0.3)' }}>&rarr; {next}</span>
       </span>
-      <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', marginTop: 3, color: afford ? accent : 'rgba(255,255,255,0.3)', fontVariantNumeric: 'tabular-nums' }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', marginTop: 2, color: afford ? accent : 'rgba(255,255,255,0.35)', fontVariantNumeric: 'tabular-nums' }}>
         {cost.toLocaleString()} ⟡
       </span>
     </button>
@@ -600,19 +574,19 @@ function UpgradeButton({
 function LockedCard({ art, label, hall }: { art: string; label: string; hall: { name: string; accent: string } }) {
   return (
     <div className="font-karla" style={{
-      flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', gap: 2, padding: '0.55rem 0.35rem 0.6rem', borderRadius: 11,
+      minWidth: 0, display: 'grid', gridTemplateColumns: '58px minmax(0, 1fr)', columnGap: 10, alignItems: 'center', textAlign: 'left',
+      padding: '0.6rem 0.75rem', borderRadius: 13,
       background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.16)',
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={art} alt="" aria-hidden decoding="async"
-        style={{ width: 54, height: 54, objectFit: 'contain', filter: 'grayscale(0.85) brightness(0.55)' }}
+        style={{ gridRow: '1 / span 2', width: 58, height: 58, objectFit: 'contain', filter: 'grayscale(0.85) brightness(0.55)' }}
         onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.5)' }}>
         {label}
       </span>
-      <span style={{ fontSize: '0.62rem', color: hall.accent, textAlign: 'center', lineHeight: 1.3 }}>
-        Needs {hall.name}
+      <span style={{ fontSize: '0.68rem', color: hall.accent, lineHeight: 1.3 }}>
+        Needs the {hall.name}
       </span>
     </div>
   )
@@ -623,8 +597,8 @@ function LockedCard({ art, label, hall }: { art: string; label: string; hall: { 
 function MaxedCard({ art, label, sub, accent, popping }: { art: string; label: string; sub: string; accent: string; popping?: boolean }) {
   return (
     <div className="font-karla" style={{
-      flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', gap: 2, padding: '0.55rem 0.35rem 0.6rem', borderRadius: 11,
+      minWidth: 0, display: 'grid', gridTemplateColumns: '58px minmax(0, 1fr)', columnGap: 10, alignItems: 'center', textAlign: 'left',
+      padding: '0.6rem 0.75rem', borderRadius: 13,
       background: `${accent}18`, border: `1px solid ${accent}55`,
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -632,12 +606,12 @@ function MaxedCard({ art, label, sub, accent, popping }: { art: string; label: s
         initial={popping ? { scale: 0.5, opacity: 0, rotate: -8 } : false}
         animate={popping ? { scale: [0.5, 1.18, 1], opacity: 1, rotate: 0 } : {}}
         transition={{ duration: 0.6, times: [0, 0.66, 1], ease: 'easeOut' }}
-        style={{ width: 54, height: 54, objectFit: 'contain', filter: `drop-shadow(0 3px 8px ${accent}66)` }}
+        style={{ gridRow: '1 / span 2', width: 58, height: 58, objectFit: 'contain', filter: `drop-shadow(0 3px 8px ${accent}66)` }}
         onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: accent }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: accent }}>
         {label}
       </span>
-      <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.58)' }}>{sub}</span>
+      <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)' }}>{sub}</span>
     </div>
   )
 }
@@ -688,8 +662,10 @@ function BunkPicker({
   const hourChoices = Array.from({ length: Math.max(1, capHours) }, (_, i) => i + 1)
   const blockedCount = roster.length - eligible.length
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(2,6,12,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 'var(--modal-w)', maxHeight: '84vh', display: 'flex', flexDirection: 'column', background: 'rgba(14,11,7,0.99)', borderTop: `2px solid ${accent}`, borderRadius: '18px 18px 0 0', boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
+    <div onClick={onClose} className="bunk-picker-scrim" style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', justifyContent: 'center', background: 'rgba(2,6,12,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+      {/* A bottom sheet on a phone, a centred panel wide enough for five
+          portraits a row on a desktop (.bunk-picker in globals.css). */}
+      <div onClick={e => e.stopPropagation()} className="bunk-picker" style={{ width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', background: 'linear-gradient(180deg, rgba(24,20,14,0.99), rgba(10,9,7,0.99))', border: `1px solid ${accent}55`, borderTop: `2px solid ${accent}`, boxShadow: '0 -12px 44px rgba(0,0,0,0.6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '1rem 1rem 0.8rem' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.66rem', color: accent }}>
@@ -856,7 +832,7 @@ function BunkPicker({
                 : 'No crew yet. Recruit some hands and they can train here.'}
             </p>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+            <div className="bunk-picker-grid">
               {shown.map(m => {
                 const blocked = blockers[m.id]
                 return (
@@ -866,18 +842,21 @@ function BunkPicker({
                     aria-label={blocked
                       ? `${m.name} cannot take a bunk: ${blocked}`
                       : leviathan ? `Send ${m.name} to the Leviathan bunk` : `Put ${m.name} in a bunk`}
+                    className={blocked ? undefined : 'bunk-pick'}
                     style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                      padding: '0.5rem 0.35rem', borderRadius: 12, textAlign: 'center',
-                      background: 'rgba(24,20,14,0.96)',
-                      border: `1px solid ${blocked ? 'rgba(255,255,255,0.1)' : `${accent}44`}`,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                      padding: 0, borderRadius: 13, textAlign: 'center', overflow: 'hidden',
+                      background: `radial-gradient(120% 90% at 50% 18%, ${accent}22, #0b0907 72%)`,
+                      border: `1px solid ${blocked ? 'rgba(255,255,255,0.1)' : `${accent}55`}`,
                       cursor: pending || blocked ? 'not-allowed' : 'pointer', font: 'inherit',
                       opacity: blocked ? 0.45 : pending ? 0.55 : 1, touchAction: 'manipulation',
+                      paddingBottom: '0.45rem',
                     }}>
-                    <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    {/* A portrait, like the bunk it is going into. */}
+                    <div style={{ width: '100%', aspectRatio: '4 / 4.2', position: 'relative', marginBottom: 4 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={artSrc(m.filename)} alt="" aria-hidden loading="lazy" decoding="async"
-                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: blocked ? 'grayscale(0.8)' : undefined }} />
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', filter: blocked ? 'grayscale(0.8)' : undefined }} />
                     </div>
                     <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.78rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {m.name}
