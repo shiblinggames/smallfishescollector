@@ -45,6 +45,12 @@ composition, not in the voyage itself.
   in kind as well as count, the only route that pays in fishing lures instead of coin.
   The sea's shell is 820 wide for this (not `--modal-w`): it is a wall of postings you
   compare across, not a panel you read.
+- **On a phone it is a carousel** (2026-09-25, Kong: the stacked strips looked bad). Below
+  the same 620px container width the row is tall cards you swipe through, snapping one at a
+  time with the next peeking in, dots under it; the band grows to a 230px portrait of the
+  route's 9:16 art (`.voyage-band`). It OPENS ON THE ROUTE YOU SAILED LAST (the voyage just
+  brought home, else the newest in the log), and that card wears a "Last sailed" tag in both
+  layouts. The wide grid is unchanged.
 - **Where it opens from.** The expeditions hub's Voyages card, and mooring at the
   Charterhouse on `/sea` (`sea/VoyageBoard.tsx`, fed by `sea/voyageBoardActions.ts`). Both
   mount the SAME `DailyVoyagePanel` — a second board would drift, and the one thing it must

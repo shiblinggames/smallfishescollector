@@ -173,7 +173,7 @@ function minCrewFor(route: VoyageRoute, slots: number): number {
 
 function RouteCard({
   route, stats, rawDodge, crewCount, crewSlots, expeditionXP, shipTier,
-  safeVoyages, voyageSpeedMult, sending, onSail,
+  safeVoyages, voyageSpeedMult, sending, onSail, lastSailed = false,
 }: {
   route: VoyageRoute
   stats: { power: number; dodge: number; fortune: number } | null
@@ -186,6 +186,8 @@ function RouteCard({
   voyageSpeedMult: number
   sending: boolean
   onSail: () => void
+  /** The route your last voyage took, tagged on the band. */
+  lastSailed?: boolean
 }) {
   const rco = ROUTE_CONFIGS[route]
   const expLevel = getLevelFromXP(expeditionXP)
@@ -207,8 +209,9 @@ function RouteCard({
   const drops = est?.drops ?? ROUTE_DROPS[route]
 
   return (
-    <div style={{
+    <div data-route={route} className="voyage-card" style={{
       borderRadius: 14, overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
       // A SOLID base. These sit on the modal's painted dusk-sea plate, and a
       // translucent card over art reads as a smear.
       background: '#0a0704',
@@ -232,7 +235,10 @@ function RouteCard({
           The art is 9:16 portrait painted to the campaign's format, so a wide
           strip is a horizontal slice of it. 24% down lands on the part that
           carries the place: the horizon, its landmark, the tops of the rocks. */}
-      <div style={{ position: 'relative', height: 96 }}>
+      {/* THE BAND is a strip in the grid and a TALL portrait in the phone's
+          carousel (.voyage-band in globals.css): the art is painted 9:16, so a
+          vertical card finally shows the place instead of a slice of it. */}
+      <div className="voyage-band" style={{ position: 'relative' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={rco.image} alt="" aria-hidden loading="lazy" decoding="async"
           style={{
@@ -253,6 +259,13 @@ function RouteCard({
         }}>
           {comingSoon ? 'Coming soon' : locked ? 'Locked' : rco.riskLabel}
         </span>
+        {lastSailed && (
+          <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{
+            position: 'absolute', top: 9, right: 10,
+            fontSize: '0.5rem', padding: '0.24rem 0.5rem', borderRadius: 999,
+            color: '#f0c040', background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(240,192,64,0.5)',
+          }}>Last sailed</span>
+        )}
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 0.85rem 0.45rem' }}>
           <p className="font-cinzel font-800" style={{
             fontSize: '1.12rem', lineHeight: 1.1, color: '#fff',
@@ -264,7 +277,7 @@ function RouteCard({
         </div>
       </div>
 
-      <div style={{ padding: '0.6rem 0.85rem 0.75rem' }}>
+      <div style={{ padding: '0.6rem 0.85rem 0.75rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
         {/* WHAT IT PAYS AND WHAT IT COSTS. Live off the crew actually aboard,
             so swapping a hand moves these and the connection teaches itself. */}
         {est && (
@@ -344,6 +357,7 @@ function RouteCard({
           </div>
         )}
 
+        <div style={{ marginTop: 'auto' }}>
         {locked ? (
           <div style={{
             width: '100%', borderRadius: 9, padding: '0.5rem 0.8rem', textAlign: 'center',
@@ -397,6 +411,7 @@ function RouteCard({
             </span>
           </motion.button>
         )}
+        </div>
       </div>
     </div>
   )
@@ -459,6 +474,35 @@ export default function DailyVoyagePanel({
   // report a hydration mismatch.
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
+
+  // ── THE ROUTE YOU SAILED LAST, and the carousel opening on it ──────────
+  // The voyage just brought home if there is one, else the newest in the log.
+  const lastRoute = (activeVoyage?.route ?? voyages[0]?.route ?? null) as VoyageRoute | null
+  const routesRef = useRef<HTMLDivElement | null>(null)
+  const [routeIdx, setRouteIdx] = useState(0)
+  const onRoutesScroll = () => {
+    const el = routesRef.current
+    if (!el) return
+    const mid = el.scrollLeft + el.clientWidth / 2
+    let best = 0, bestD = Infinity
+    Array.from(el.children).forEach((c, i) => {
+      const card = c as HTMLElement
+      const d = Math.abs(card.offsetLeft + card.offsetWidth / 2 - mid)
+      if (d < bestD) { bestD = d; best = i }
+    })
+    setRouteIdx(best)
+  }
+  useEffect(() => {
+    const el = routesRef.current
+    // Only when it IS a carousel (it scrolls sideways); the grid ignores this.
+    if (!el || el.scrollWidth <= el.clientWidth + 4) return
+    const i = lastRoute ? (Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).indexOf(lastRoute) : -1
+    if (i < 0) return
+    const card = el.children[i] as HTMLElement | undefined
+    if (!card) return
+    el.scrollLeft = card.offsetLeft - (el.clientWidth - card.offsetWidth) / 2
+    setRouteIdx(i)
+  }, [panelState, lastRoute])
   // iOS treats overflow:hidden on body as a suggestion, so the sheet uses the
   // shared lock (see lib/bodyScrollLock) or the page scrolls behind it.
   // A new voyage arrives sealed, even if the previous one was opened.
@@ -797,10 +841,17 @@ export default function DailyVoyagePanel({
                   Reach DOES stand apart: it is the only one that pays in
                   fishing lures rather than coin. Full width says so. */}
               <div className="voyage-routes-host" style={{ marginBottom: '0.9rem' }}>
-              <div className="voyage-routes">
+              {/* ── ON A PHONE, A CAROUSEL (Kong, 2026-09-25) ─────────────
+                  Five cards stacked down a narrow sheet was a long scroll of
+                  strips. Below 620 (the same container query) the row becomes
+                  tall cards you swipe through, one at a time with the next
+                  peeking in, and it opens on the route you sailed last. The
+                  grid above that width is unchanged. */}
+              <div className="voyage-routes" ref={routesRef} onScroll={onRoutesScroll}>
                 {(Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => (
                   <RouteCard
                     key={routeKey}
+                    lastSailed={routeKey === lastRoute}
                     route={routeKey}
                     stats={stats}
                     rawDodge={resolvedDeployed?.totals.dodge ?? 0}
@@ -813,6 +864,15 @@ export default function DailyVoyagePanel({
                     sending={isPending}
                     onSail={() => handleSend(routeKey)}
                   />
+                ))}
+              </div>
+              <div className="voyage-dots" aria-hidden>
+                {(Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map((routeKey, i) => (
+                  <span key={routeKey} style={{
+                    width: i === routeIdx ? 16 : 6, height: 6, borderRadius: 999,
+                    background: i === routeIdx ? 'rgba(240,192,64,0.85)' : 'rgba(200,170,106,0.3)',
+                    transition: 'width 0.2s, background 0.2s',
+                  }} />
                 ))}
               </div>
               </div>
