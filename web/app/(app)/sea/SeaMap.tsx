@@ -11645,9 +11645,11 @@ hullRef={hullRefFor(t.key)} />
           // pill, which read as a notification badge stuck on a portrait (and a
           // solid gold fill). Two smaller discs peeking out behind the
           // captain's shoulder say "and her crew" in the same language as the
-          // face itself; nobody needs the exact count out on the water.
+          // face itself, and a small chip after them says how many.
           const art = (a?: string | null) => a ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${a}` : null
           const mates = raidParty.slice(1, 3).map(m => art(m.art)).filter((u): u is string => !!u)
+          // Everyone aboard but her, for the count chip.
+          const others = Math.max(0, raidParty.length - 1)
           const mate = size * 0.56
           const disc = (border: string): React.CSSProperties => ({
             width: '100%', height: '100%', objectFit: 'cover', display: 'block',
@@ -11681,6 +11683,21 @@ hullRef={hullRefFor(t.key)} />
               position: 'relative',
               boxShadow: '0 6px 18px rgba(0,0,0,0.75)',
             }} />
+            {/* AND HOW MANY, SAID (Kong: it no longer showed how much crew is
+                aboard). A small dark chip in the faces' own teal ring, at the
+                end of the row of faces, never the gold pill it replaced. */}
+            {others > 0 && (
+              <span className="font-karla font-800" style={{
+                position: 'absolute', zIndex: 2,
+                right: -mate * (0.42 + Math.max(0, mates.length - 1) * 0.5) - size * 0.14,
+                bottom: -size * 0.12,
+                minWidth: size * 0.36, height: size * 0.36, padding: `0 ${size * 0.07}px`,
+                borderRadius: 999, display: 'grid', placeItems: 'center',
+                fontSize: size * 0.22, lineHeight: 1, color: '#e8fbf6', fontVariantNumeric: 'tabular-nums',
+                background: 'rgba(6,14,20,0.92)', border: '1px solid rgba(126,214,196,0.8)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
+              }}>+{others}</span>
+            )}
           </div>
           )
         })()}
