@@ -615,3 +615,11 @@ the outermost ring, matching the mouth's keystone at the lip), so the south of t
 well past the north. Each skirt ring sits in a holder that carries the squash while the sprite
 inside turns; squash and spin on one sprite rotated the ellipse itself.
 
+**The pull takes hold, it does not snap shut (2026-09-24).** Kong: you got locked into the middle
+suddenly, and on a phone she jittered once there. In SeaMap's loop the grip eases in over about a
+second (`maelGripRef`), the strength rises on a smoothstep (was a power curve with an edge at the
+grip line), and both the inward draw and the swirl fade across the inner 45% of the bowl, each step
+capped to a quarter (in) / a fifth (round) of the distance left, so no frame can carry her past the
+centre. The old fixed step overshot the eye and back every frame: that was the jitter. The lean
+fades in the eye the same way.
+

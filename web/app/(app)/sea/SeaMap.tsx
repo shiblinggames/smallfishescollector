@@ -2583,6 +2583,9 @@ export default function SeaMap({
   const leanRef = useRef(0)
   /** How far a maelstrom has her over, in screen degrees. Eased, and eased
    *  back to nothing the moment she is out of the grip — see the pull. */
+  /** How fully a whirlpool has hold of her, 0..1, eased in over about a second
+   *  from the moment she is in its grip. See THE MAELSTROMS PULL. */
+  const maelGripRef = useRef(0)
   const maelLeanRef = useRef(0)
   /**
    * ── HER OWN WEIGHT ────────────────────────────────────────────────────────
@@ -8960,7 +8963,23 @@ export default function SeaMap({
       // across maelstroms rather than taken from the nearest, so the junction
       // between two of them is the two of them.
       let mLean = 0
-      if (!fightOnRef.current) {
+      // ── AND IT TAKES HOLD, IT DOES NOT SNAP SHUT (Kong: you got locked in
+      // suddenly, and on a phone she jittered once stuck in the middle) ──
+      // Three changes. The grip EASES IN over about a second from the moment
+      // she is inside one (maelGripRef), instead of arriving at full strength
+      // on the line. The strength rises on a smoothstep rather than a power
+      // curve, so there is no edge to feel. And it FADES OUT IN THE EYE: the
+      // inward draw and the swirl both fall to nothing across the inner 45% of
+      // the bowl, and each step is capped to a fraction of the distance left,
+      // so she settles into a slow circle rather than crossing the dead centre
+      // back and forth every frame (the jitter: a fixed step bigger than the
+      // distance to the eye overshoots it, then overshoots back).
+      let inAnyGrip = false
+      for (const m of MAELSTROMS) {
+        if (Math.hypot(m.x - pos.current.x, m.y - pos.current.y) < m.r * 2.2) { inAnyGrip = true; break }
+      }
+      maelGripRef.current += ((inAnyGrip && !fightOnRef.current ? 1 : 0) - maelGripRef.current) * Math.min(1, dt * (inAnyGrip ? 1.1 : 3))
+      if (!fightOnRef.current && maelGripRef.current > 0.001) {
         for (const m of MAELSTROMS) {
           const mdx = m.x - pos.current.x, mdy = m.y - pos.current.y
           const md = Math.hypot(mdx, mdy)
@@ -8972,10 +8991,17 @@ export default function SeaMap({
           // along too, or it would hold her against the pull.
           const grip = m.r * 2.2
           if (md > grip || md < 1) continue
-          const k = Math.pow(1 - md / grip, 1.25)
-          const pull = 260 * k * dt
+          const sg = 1 - md / grip
+          const k = sg * sg * (3 - 2 * sg) * maelGripRef.current
+          // The eye: both halves fade across the inner 45% of the bowl.
+          const se = Math.min(1, md / (m.r * 0.45))
+          const eye = se * se * (3 - 2 * se)
+          // Never more than a quarter of the way in, or a fifth of the way
+          // round, in one frame: no step can carry her past the centre.
+          const inward = Math.min(260 * k * eye * dt, md * 0.25)
+          const round = Math.min(260 * k * 0.75 * (0.25 + 0.75 * eye) * dt, md * 0.2)
           const mux = mdx / md, muy = mdy / md
-          const px = mux * pull - muy * pull * 0.75, py = muy * pull + mux * pull * 0.75
+          const px = mux * inward - muy * round, py = muy * inward + mux * round
           pos.current.x += px
           pos.current.y += py
           const steeringM = !!boxHeld.current || keysRef.current.size > 0 || holding.current
@@ -8983,7 +9009,7 @@ export default function SeaMap({
           if (!steeringM && tgx * tgx + tgy * tgy < SLOW * SLOW) {
             target.current = { x: target.current.x + px, y: target.current.y + py }
           }
-          mLean += mux * 10 * k
+          mLean += mux * 10 * k * eye
         }
       }
       // Eased, and eased OUT here rather than inside the loop above, so a
