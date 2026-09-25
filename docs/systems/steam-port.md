@@ -103,7 +103,7 @@ and zero calendar, and that is exactly why people trust them enough to sink hund
 into them.
 
 This game currently keys almost everything to UTC: the daily challenges, the bounty board, the
-free recruit, the gauntlet's one run, the trader rotation, even the sea's day and night. That
+free recruit, the hardcore gauntlet's three runs, the trader rotation. That
 is a live-service shape. It is also in quiet tension with the house rule, which has always said
 evergreen and player-paced and never FOMO — a daily that expires is a small FOMO mechanic, and
 it is only there because free-to-play retention wanted it.
@@ -121,17 +121,10 @@ it is only there because free-to-play retention wanted it.
    over in-game days that pass in fourteen real minutes. Shorten them a lot, or tie them to
    play time.
 
-**And one bigger prize, with a trap, which is why it goes LAST.** The sea's day and night
-follows the real clock, so a captain who plays at two in the afternoon only ever sees
-afternoon: there is a whole night palette most players will never see. Stardew gives you the
-entire day arc every session and it is most of why it feels alive. Moving to session time would
-show off art that is already built.
-
-The trap is that sea traders are hashed off `(cell, day)` deterministically so that everybody
-sees the same people on the same day. Untie time from the wall clock and that property breaks.
-It matters less in a game where you sail with one friend rather than a shared world, but it is
-a real coupling: read sea-npcs.md before touching the clock, and treat it as its own piece of
-work rather than part of the boards.
+**Correction (2026-09-25): the sea's day and night is NOT on the real clock.** It is a
+48-minute cycle (`lib/seaClock.ts`), so every session already sees the whole arc. The only
+wall-clock coupling left on the chart is trader rotation, hashed off `(cell, seaDay)` so that
+everybody sees the same people on the same day; keep that on the calendar (shared, optional).
 
 ## The order to do it in
 
@@ -259,3 +252,46 @@ The gem audit stands on its own and is a live balance question either way. All 7
 cost 113,750 gems against roughly 13,500 gems of one-off income, so the collection is only
 reachable today because gems are PURCHASABLE. That is worth looking at as a balance matter
 whatever platform this ships on. See economy-membership.md.
+
+
+## Revisited 2026-09-25, and parked again
+
+Kong asked whether the game could go fully paid, and then whether it could make money staying
+on the web as it is. No decision: **"park all of this for now, not ready for the transition
+decision."** What was worked out, so it is not redone:
+
+**The calendar inventory** (every UTC-keyed mechanic and where it lives):
+- **Gates progression, missing a day loses something:** Daily Haul (50 ◆, Captains 150; 20
+  bait; weekly crate), daily challenges (3/day, 10 ◆ sweep), bounties (15-150 ◆/day by
+  chapter rung, board expires, 1 reroll/day), free recruits (3/day, unrecruited wiped),
+  hardcore gauntlet (3 runs/day per descent), Don's Tribute (10 Fathoms/day), Tide Turner
+  (3 skips/day), Parlor Captain's Board (1 card/day, forfeits), Chart Room weekly points.
+- **Shared or optional, fine on a calendar:** trader rotation (`seaDay`), Chart Room and Parlor
+  weekly boards, casino buy-in cap (abuse guard), folk chats (1/day, story only), contests,
+  mail expiry. NOT calendar: normal gauntlet (no limit), voyages (one pending at a time),
+  trawls (timers), raids, the Exchange, sea day/night.
+- Calendar-gated gem budget at endgame: about 210 ◆/day free, 310 Captain.
+
+**The proposed restock-through-play numbers** (not approved, first draft for when it comes
+back): a new challenge board 20 catches after the last is swept; bounties and recruits refill
+after 2 voyages or raid wins, nothing expires, 1 reroll per board; Daily Haul becomes a meter
+filled by any play (every 4th full meter = the weekly crate); Blood Keys (hold 3, one per
+normal gauntlet run to a set depth) replace hardcore runs/day; Tribute paid per finished
+normal run; Tide Turner holds 3, one back per 15 catches. Optional later: a seeded Daily
+Gauntlet with a leaderboard (Slay the Spire's daily climb), missing it costs nothing. Open
+questions left with Kong: the numbers, whether Daily Haul stays a daily gift, whether a missed
+puzzle week carries over.
+
+**Business models discussed.**
+- Fully paid is possible: no gem store, Captain gates opened to all, gem costs rebalanced to
+  play-only income. Best fit found was "free to start, pay once" (a free opening, one purchase
+  for the rest), the same game on web and Steam, optional cosmetic-only extras later (the
+  Deep Rock Galactic / Sea of Thieves shape).
+- Going client-side like Stardew/Terraria (saves on the player's machine, player-hosted co-op,
+  no per-player server cost) would be close to a rewrite: nearly every rule is server code. A
+  lean server (account + cloud save, leaderboards, shared sea) is the realistic middle.
+- Staying on the web as is is legitimate. Captain is ALREADY $9.99 one-time lifetime, not a
+  subscription; but nobody has paid (all granted), so the price is untested. If staying:
+  test real Captain purchases with the beta, tilt Captain toward cosmetics/convenience/supporter
+  (away from daily gems and the casino cap), point gems at looks, do the restock changes
+  anyway, and put the effort into acquisition (landing page, clips, the first ten minutes).
