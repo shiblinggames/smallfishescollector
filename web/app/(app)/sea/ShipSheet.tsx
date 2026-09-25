@@ -55,8 +55,10 @@ import { buyShip } from '@/app/shipyard/actions'
 type Props = Awaited<ReturnType<typeof getShipHeroProps>>
 
 const GOLD = '#f0c040'
-/** The intro's harbour with its dinghy painted out: the water she is drawn on. */
-const WHARF_WATER = '/welcome-harbour-open.webp'
+/** Her own water, not the fishing harbour (Kong: a different background from
+ *  the fishing boat's): a stone war-quay at dusk, cannon on the wall, open
+ *  sea beyond. */
+const WHARF_WATER = '/gunwharf-berth.webp'
 const SEA = 'rgba(180,214,232'
 
 /** The hull's three rooms. `appearance` keeps ShipHero's own id so the two
@@ -248,7 +250,7 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
                 <div className="wharf-stage">
                   <div style={{
                     position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '16 / 10',
-                    background: `url(${WHARF_WATER}) 40% 62% / cover no-repeat, #0d1e2b`,
+                    background: `url(${WHARF_WATER}) 58% 72% / cover no-repeat, #0d1e2b`,
                     border: '1px solid rgba(255,255,255,0.1)',
                   }}>
                     <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,12,18,0) 45%, rgba(8,12,18,0.55) 100%)' }} />
@@ -294,7 +296,11 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
                   {room ? (
                     <div style={{ marginTop: 10 }}>
                       <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: `${SEA},0.6)`, margin: '0 0 8px' }}>{roomNote(room) ?? ''}</p>
-                      <ShipHero {...state} focus="ship" boxed bare shipSection={room} onBack={() => setRoom(null)} />
+                      {/* Look shows no second ship: the one on the left is the
+                          picture, and a paint picked here repaints her there. */}
+                      <ShipHero {...state} focus="ship" boxed bare shipSection={room} onBack={() => setRoom(null)}
+                        hideHeroArt
+                        onSkinChange={id => setState(s => (s ? { ...s, equippedShipSkin: id } : s))} />
                     </div>
                   ) : (
                     <div style={{ marginTop: 10 }}>

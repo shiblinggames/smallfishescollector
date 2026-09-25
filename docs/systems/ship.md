@@ -193,4 +193,8 @@ armed buy (unchanged, now a tinted button rather than a solid gold one) and the 
 hulls from `SHIPS` with each one's numbers and price, hers marked "Sailing her", the next lit. The
 rooms are still `ShipHero bare` tiles, untouched. The Forge island and the Loadout disc keep their
 own landings. Two columns from an 820 container (`.wharf-host`), stacked below.
+She is drawn on her own water, `/gunwharf-berth.webp` (a stone war-quay at dusk, cannon on the wall,
+open sea beyond), not the fishing harbour the loadout and Shipyard use. The Look tab passes
+`hideHeroArt` (no second picture of her; her name and rename stay) and `onSkinChange`, so a paint
+equipped there repaints her on the left at once.
 

@@ -346,6 +346,11 @@ interface Props {
   /** Which of the three the host has chosen. Controlled, so the panel's cards
    *  and this component cannot disagree about what is showing. */
   shipSection?: 'refits' | 'armament' | 'appearance'
+  /** The host already shows her large (the Gunwharf's ship screen): Look
+   *  keeps her name and rename but draws no second picture of her. */
+  hideHeroArt?: boolean
+  /** Told on every paint equipped, so a host showing her can repaint her. */
+  onSkinChange?: (skinId: string | null) => void
   /** WHERE THE BACK ARROW GOES, when this screen is not on a route. The chart
    *  opens the ship and the forge over the water now (see sea/ShipSheet), and
    *  there a link to /expeditions would sail you off the sea to get out of a
@@ -640,6 +645,8 @@ export default function ShipHero({
   boxed = false,
   bare = false,
   shipSection,
+  hideHeroArt = false,
+  onSkinChange,
   onBack,
   onOpenBoss,
   isAdmin = false,
@@ -1077,6 +1084,7 @@ export default function ShipHero({
   // Skin equip
   function handleEquipSkin(skinId: string | null) {
     setEquippedSkin(skinId)
+    onSkinChange?.(skinId)
     startTransition(async () => {
       await equipShipSkin(skinId)
       // The hero sprite up here is local state and updates instantly. The STORY MAP's
@@ -1893,7 +1901,7 @@ export default function ShipHero({
                         have drawn far bigger, and 96% / 360px on top of that
                         overshot into near full-bleed. These are set against the
                         TRIMMED art: what you see is what the number says. */}
-                    <div style={{
+                    {!hideHeroArt && <div style={{
                       position: 'relative', display: 'inline-block',
                       width: `${80 * (HERO_TIER_SCALE[shipTierForSlots] ?? 1)}%`,
                       maxWidth: 258 * (HERO_TIER_SCALE[shipTierForSlots] ?? 1),
@@ -1951,7 +1959,7 @@ export default function ShipHero({
                           <img {...common} style={{ ...box, filter: rest, transition: 'filter 0.3s ease' }} />
                         )
                       })()}
-                    </div>
+                    </div>}
 
                     {/* Name + inline rename (pencil implies it; no helper text). */}
                     <div style={{ marginTop: '0.65rem' }}>
