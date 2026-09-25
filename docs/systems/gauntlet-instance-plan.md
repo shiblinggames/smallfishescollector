@@ -621,6 +621,10 @@ inside turns; squash and spin on one sprite rotated the ellipse itself.
 spirits draw at 0.74x their size on the north of their circle and 1.14x on the south (`depthK` in
 `seaMaelstrom`, from the sine of each one's angle). This is local to the bowl, matching its
 keystone; the chart-wide shrink-with-distance stays rejected.
+Wreckage also changes layer as it rounds the east and west points: on the far side it draws in
+`debrisBack`, under the throat's glow, the eye, the beam and the spirits; on the near side in
+`debrisFront`, over all of it (a 0.06 margin on the sine so it does not flicker on the line), and
+the far pieces are a touch more see-through.
 
 **The pull takes hold, it does not snap shut (2026-09-24).** Kong: you got locked into the middle
 suddenly, and on a phone she jittered once there. In SeaMap's loop the grip eases in over about a

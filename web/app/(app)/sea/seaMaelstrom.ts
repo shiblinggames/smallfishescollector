@@ -443,7 +443,8 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     nextStrike: number; strikeLeft: number; rtFrame: number
     /** The painted whirlpool, turned in its own flat and laid on the mesh. */
     flatPaint: Container; paint: Sprite; rtPaint: RenderTexture
-    debris: { sp: Sprite; ang: number; r: number; spin: number; size: number; bob: number }[]
+    debris: { sp: Sprite; ang: number; r: number; spin: number; size: number; bob: number; front: boolean }[]
+    debrisBack: Container; debrisFront: Container
   }
 
   const sprite = (tex: Texture, size: number, tint: number, alpha: number): Sprite => {
@@ -629,6 +630,11 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
       spray.push({ p, ang: Math.random() * Math.PI * 2, rr: m.r, hi: 0, age: Math.random(), life: 0.7 + Math.random() * 0.7, size: 5 + Math.random() * 8 })
     }
 
+    // FAR-SIDE WRECKAGE goes in here, under the throat's glow, the eye, the
+    // beam and the spirits climbing out; near-side wreckage is on top of all
+    // of it. Each piece changes layer as it rounds the east and west points.
+    const debrisBack: Container = new PIXI.Container()
+    node.addChild(debrisBack)
     node.addChild(floor, wall, lipS, sprayLayer, eye, core)
 
     // ── THE PROJECTION ──────────────────────────────────────────────
@@ -704,19 +710,23 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     // ── WHAT IT IS TAKING DOWN ─────────────────────────────────────────
     // Painted wreckage circling the rim and spiralling in, the world's own
     // stuff rather than an effect. Standing sprites, counter-squashed.
+    const debrisFront: Container = new PIXI.Container()
+    node.addChild(debrisFront)
     const debris: One['debris'] = th.debris.map((url, k) => {
       const sp: Sprite = new PIXI.Sprite(PIXI.Texture.EMPTY)
       sp.anchor.set(0.5, 0.7)
       sp.alpha = 0
-      node.addChild(sp)
       const size = m.r * (0.12 + ((k * 37) % 5) * 0.012)
       void texture(PIXI, url).then(tx => { sp.texture = tx }).catch(() => {})
-      return { sp, ang: (k / th.debris.length) * Math.PI * 2, r: m.r * (1.15 + k * 0.12), spin: (k % 2 ? 1 : -1) * 0.4, size, bob: k * 1.3 }
+      const ang = (k / th.debris.length) * Math.PI * 2
+      const front = Math.sin(ang) >= 0
+      ;(front ? debrisFront : debrisBack).addChild(sp)
+      return { sp, ang, r: m.r * (1.15 + k * 0.12), spin: (k % 2 ? 1 : -1) * 0.4, size, bob: k * 1.3, front }
     })
 
     view.addChild(node)
     return {
-      flatPaint, paint, rtPaint, debris,
+      flatPaint, paint, rtPaint, debris, debrisBack, debrisFront,
       m, th, node, flatDark, flatLight, rtDark, rtLight,
       storm, funnel, arms, mid, wisps, eye, core, strike, beam, holo,
       terraces, floor, wall, streams, drag, dragH, lip: lipS, spray,
@@ -1026,7 +1036,14 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           d.ang += dt * spd * 0.5 * k
           d.r -= dt * m.r * 0.035 * (1 + 0.6 * gg)
           if (d.r < m.r * 0.92) { d.r = m.r * (1.5 + Math.random() * 0.3); d.ang = Math.random() * Math.PI * 2 }
-          const [px, py] = keystone(Math.cos(d.ang) * d.r, Math.sin(d.ang) * d.r, m.r)
+          const sn = Math.sin(d.ang)
+          // Changes layer past a small margin either side of the east/west
+          // points, so a piece riding the line does not flip every frame.
+          if (d.front ? sn < -0.06 : sn > 0.06) {
+            d.front = !d.front
+            ;(d.front ? o.debrisFront : o.debrisBack).addChild(d.sp)
+          }
+          const [px, py] = keystone(Math.cos(d.ang) * d.r, sn * d.r, m.r)
           d.sp.position.set(px, py + Math.sin(t * 1.3 + d.bob) * 3)
           if (d.sp.texture.width > 2) {
             const size = d.size * depthK(Math.sin(d.ang))
@@ -1035,7 +1052,8 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
           }
           d.sp.rotation = Math.sin(t * 0.8 + d.bob) * 0.12 + d.spin * (1.5 - d.r / m.r) * 0.3
           const edge = Math.min(1, (m.r * 1.8 - d.r) / (m.r * 0.3), (d.r - m.r * 0.92) / (m.r * 0.15))
-          d.sp.alpha = Math.max(0, Math.min(1, edge)) * lit
+          // A touch of distance on the far side: the water shows through.
+          d.sp.alpha = Math.max(0, Math.min(1, edge)) * lit * (0.9 + 0.1 * sn)
         }
 
         // ── THE FLAT PICTURE, PAINTED ────────────────────────────────────
