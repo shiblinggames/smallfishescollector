@@ -483,8 +483,10 @@ five `position: fixed` cards at fractional offsets on a 390px screen land on top
 other, none can shrink (every one is `white-space: nowrap`), and they sit in the middle of
 the drag surface you steer with, so touches meant for a card take the helm instead. Under
 `useIsPhone()` (same 560px query) the water draws only the eye, the maelstrom takes the
-upper half at `min(82vw, 46vh)`, and the four places become a two-by-two docked grid above
-the tab bar in the thumb's half. Same places, same handlers, one press each.
+upper half at `min(82vw, 46vh)`, and the four places become ONE row of four tiles, each the
+place's own painted art over its label, docked above the tab bar (`--tabbar-safe` + 14px) in
+the thumb's half (2026-09-24: the two-by-two grid of small type read as crowded). Same
+places, same handlers, one press each.
 
 **Tapping him is now legible.** The glow alone read as mood lighting on a picture. Two
 edge-free ripples go out from him on a loop (the shape a finger leaves, which means "tap"

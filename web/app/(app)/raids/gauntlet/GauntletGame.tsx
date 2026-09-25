@@ -3427,32 +3427,42 @@ export default function GauntletGame(props: GauntletGameProps) {
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
             style={{
               position: 'fixed', left: 0, right: 0, zIndex: 6,
-              bottom: 'calc(var(--tabbar-safe, 0px) + 10px)',
+              // ONE ROW OF FOUR PICTURES (Kong: the buttons were crowded at the
+              // bottom). The 2x2 of icon-and-caption tiles with 0.5rem type
+              // stacked two rows of chrome on the tab bar; a single row of the
+              // places' own painted landmarks is half the height and reads at
+              // a glance. Still above the bar's own safe area.
+              bottom: 'calc(var(--tabbar-safe, 0px) + 14px)',
               padding: '0 10px',
-              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
+              display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 7,
             }}>
             {dockPlaces.map(pl => {
               const hex = hexOf(pl.color)
               const meta = PLACE_META[pl.id]
               const inner = (
                 <>
-                  <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 9, background: `${hex}22`, border: `1px solid ${hex}66`, color: hex, flexShrink: 0 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{meta.icon}</svg>
+                  {/* THE PLACE ITSELF: its painted landmark, the same art the
+                      wide screen stands on the water. The icon is the fallback. */}
+                  <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: '100%', height: 48 }}>
+                    {pl.art ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={pl.art} alt="" style={{ maxWidth: '100%', maxHeight: 48, objectFit: 'contain', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.6))' }} />
+                    ) : (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={hex} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{meta.icon}</svg>
+                    )}
                   </span>
-                  <span style={{ display: 'grid', gap: 1, minWidth: 0, textAlign: 'left' }}>
-                    <span className="font-cinzel font-800" style={{ fontSize: '0.72rem', color: '#f3ead2', lineHeight: 1.06, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.label}</span>
-                    {/* The line that says what it is for. On the water this
-                        only appeared once you were alongside; there is no
-                        "alongside" in a dock, so it is simply always there. */}
-                    <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#a8a296', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.sub}</span>
-                  </span>
+                  <span className="font-cinzel font-800" style={{
+                    fontSize: '0.64rem', color: '#f3ead2', lineHeight: 1.1, textAlign: 'center',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>{pl.label}</span>
                 </>
               )
               const tile: CSSProperties = {
-                display: 'flex', alignItems: 'center', gap: 9, width: '100%',
-                padding: '0.6rem 0.7rem', borderRadius: 14, cursor: 'pointer', font: 'inherit',
-                background: 'linear-gradient(180deg, rgba(14,20,32,0.96), rgba(5,9,16,0.96))',
-                border: `1px solid ${hex}4d`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 4,
+                width: '100%', minWidth: 0,
+                padding: '0.45rem 0.3rem 0.5rem', borderRadius: 14, cursor: 'pointer', font: 'inherit',
+                background: `radial-gradient(ellipse 80% 60% at 50% 30%, ${hex}22 0%, transparent 70%), linear-gradient(180deg, rgba(14,20,32,0.95), rgba(5,9,16,0.96))`,
+                border: `1px solid ${hex}55`,
                 boxShadow: `0 6px 20px rgba(0,0,0,0.6), inset 0 1px 0 ${hex}22`,
                 WebkitTapHighlightColor: 'transparent',
               }

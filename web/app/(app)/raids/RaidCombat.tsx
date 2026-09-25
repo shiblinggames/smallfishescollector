@@ -13387,6 +13387,89 @@ function CrewRail({ items, disabled }: { items: SpecialItem[]; disabled: boolean
   )
 }
 
+/** One crew member in the Special chooser: a portrait card of their art. */
+function SpecialCrewCard({ item, index, compact, flaring, onPick }: {
+  item: SpecialItem; index: number; compact: boolean; flaring: boolean; onPick: () => void
+}) {
+  const [name, ability] = (() => {
+    const parts = item.label.split(' · ')
+    return [item.name ?? parts[0], parts[1] ?? '']
+  })()
+  const spent = !!item.disabled
+  const c = item.color
+  return (
+    // The wrapper does not clip, so the flare ring can spill past the card.
+    <motion.div
+      initial={{ opacity: 0, y: 14, scale: 0.94 }}
+      animate={{ opacity: 1, y: 0, scale: flaring ? 1.06 : 1 }}
+      transition={{ delay: flaring ? 0 : index * 0.035, type: 'spring', stiffness: 460, damping: 26 }}
+      style={{ position: 'relative' }}
+    >
+      {flaring && (
+        <motion.span aria-hidden
+          initial={{ opacity: 0.95, scale: 0.9 }}
+          animate={{ opacity: 0, scale: 1.35 }}
+          transition={{ duration: 0.34, ease: 'easeOut' }}
+          style={{ position: 'absolute', inset: -2, borderRadius: 14, border: `2px solid ${c}`, boxShadow: `0 0 22px ${c}`, pointerEvents: 'none' }} />
+      )}
+      <motion.button
+        type="button"
+        onClick={onPick}
+        disabled={spent}
+        aria-label={`${item.label}. ${item.sub}`}
+        title={compact ? `${item.label}: ${item.sub}` : undefined}
+        whileTap={spent ? undefined : { scale: 0.94 }}
+        whileHover={spent ? undefined : { y: -3 }}
+        transition={{ type: 'spring', stiffness: 460, damping: 24 }}
+        style={{
+          position: 'relative', display: 'block', width: '100%', padding: 0, borderRadius: 13, overflow: 'hidden',
+          aspectRatio: compact ? '3 / 4' : '4 / 5',
+          border: `1.5px solid ${spent ? 'rgba(255,255,255,0.12)' : c}`,
+          background: spent ? 'rgba(8,12,18,0.9)' : `radial-gradient(120% 90% at 50% 20%, ${c}40, rgba(8,12,20,0.95) 75%)`,
+          boxShadow: spent ? '0 4px 12px rgba(0,0,0,0.45)' : `0 0 ${flaring ? 26 : 12}px ${c}${flaring ? 'aa' : '44'}, 0 6px 16px rgba(0,0,0,0.5)`,
+          cursor: spent ? 'not-allowed' : 'pointer',
+        }}
+      >
+        {item.image
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={item.image} alt="" decoding="async" draggable={false} style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center',
+              filter: spent ? 'grayscale(1) brightness(0.42)' : 'none',
+            }} />
+          : <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: spent ? '#6a6460' : c }}><IconCrate size={26} /></span>}
+        {flaring && <span aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 45%, ${c}66, transparent 70%)`, mixBlendMode: 'screen' }} />}
+        <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '58%', background: 'linear-gradient(to top, rgba(4,7,12,0.97) 0%, rgba(4,7,12,0.72) 45%, rgba(4,7,12,0) 100%)' }} />
+        <span style={{ position: 'absolute', left: 5, right: 5, bottom: compact ? 5 : 7, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span className="font-cinzel font-700" style={{
+            fontSize: compact ? '0.62rem' : '0.8rem', lineHeight: 1.05, color: spent ? '#8a857d' : '#fbf6ea',
+            textShadow: '0 1px 4px rgba(0,0,0,0.95)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{name}</span>
+          {!compact && ability && (
+            <span className="font-karla font-800 uppercase" style={{
+              fontSize: '0.5rem', letterSpacing: '0.12em', color: spent ? '#6f6a63' : c,
+              textShadow: '0 1px 3px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{ability}</span>
+          )}
+        </span>
+        {spent && (
+          <span className="font-karla font-800 uppercase" style={{
+            position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)',
+            fontSize: '0.46rem', letterSpacing: '0.12em', padding: '1px 6px', borderRadius: 999, whiteSpace: 'nowrap',
+            color: '#cfc9bf', background: 'rgba(0,0,0,0.72)', border: '1px solid rgba(255,255,255,0.18)',
+          }}>{/Lv 10/.test(item.sub) ? 'Lv 10' : /next turn/i.test(item.sub) ? 'Next turn' : /Silenced/.test(item.sub) ? 'Silenced' : 'Used'}</span>
+        )}
+      </motion.button>
+      {/* What it does, under the card, on a phone-sized chooser. */}
+      {!compact && (
+        <p className="font-karla" style={{
+          margin: '4px 1px 0', fontSize: '0.6rem', lineHeight: 1.25, color: spent ? '#6a6460' : 'rgba(225,232,245,0.72)',
+          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>{item.sub}</p>
+      )}
+    </motion.div>
+  )
+}
+
 function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, volleyCost = VOLLEY_COST, megaCost = MEGA_CHARGE_COST, canDodge, canReload, onSelect, disabled = false, highlightedAction = null, specialItems = [] }: {
   canFire: boolean
   canVolley: boolean
@@ -13446,6 +13529,18 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
     if (item.disabled) return
     setSpecialMenu(false)
     item.onClick()
+  }
+  // A press flares the card for a beat, then the ability fires. One at a time:
+  // a second press during the flare is ignored.
+  const [flareId, setFlareId] = useState<string | null>(null)
+  const flareTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (flareTimer.current) clearTimeout(flareTimer.current) }, [])
+  function pressSpecial(item: SpecialItem) {
+    if (item.disabled || flareId) return
+    if (!item.id.startsWith('crew-')) { pickSpecial(item); return }
+    vibrate([0, 18, 24, 30])
+    setFlareId(item.id)
+    flareTimer.current = setTimeout(() => { setFlareId(null); pickSpecial(item) }, 230)
   }
 
   // ── Desktop keyboard ──────────────────────────────────────────────────────
@@ -13516,84 +13611,96 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
         />
       </div>
 
-      {/* Special chooser — vertical stack so it scales as more items
-          arrive. Per-entry disabled state surfaces "why not" inline. */}
+      {/* ── THE SPECIAL CHOOSER, ART FIRST (Kong, 2026-09-24: make it art
+          forward and satisfying to press, above all on a phone, which has no
+          crew rail) ────────────────────────────────────────────────────────
+          The crew are portrait cards of their painted art, their name on it
+          and their ability in their class colour under it, dealt in with a
+          small stagger. Pressing one flares it (ring, lift, buzz) for a beat
+          before the ability fires, so the press lands before the summon
+          takes over. Items with no face (the repair kit, the drums) are a
+          plain row under the cards. With the desktop rail up the crew cards
+          shrink and step back: the rail is their door there. */}
       <AnimatePresence>
-      {specialMenu && (
+      {specialMenu && (() => {
+        const crewItems = specialItems.filter(i => i.id.startsWith('crew-'))
+        const otherItems = specialItems.filter(i => !i.id.startsWith('crew-'))
+        return (
         <>
           <div
             onClick={() => setSpecialMenu(false)}
             style={{ position: 'absolute', inset: '-200px 0 -8px 0', zIndex: 9 }}
           />
           <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+            initial={{ opacity: 0, y: 10, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             // The exit mirrors the entrance. Without one the menu unmounted on
-            // a hard cut the same frame the summon splash began — which is
-            // most of what read as jank in the crew-pick sequence.
+            // a hard cut the same frame the summon splash began.
             exit={{ opacity: 0, y: 6, scale: 0.97 }}
-            transition={{ duration: 0.14 }}
+            transition={{ duration: 0.16 }}
             style={{
               position: 'absolute', left: 0, right: 0, bottom: 'calc(100% + 10px)', zIndex: 10,
-              display: 'flex', flexDirection: 'column', gap: 6,
-              background: '#0a1422', border: '1px solid #2a3548',
-              borderRadius: 14, padding: 8,
-              boxShadow: '0 8px 28px rgba(0,0,0,0.6)',
+              display: 'flex', flexDirection: 'column', gap: 8,
+              background: 'linear-gradient(180deg, rgba(14,22,36,0.97), rgba(8,13,22,0.98))',
+              border: '1px solid rgba(160,190,230,0.18)',
+              borderRadius: 16, padding: '10px 10px 10px',
+              boxShadow: '0 12px 34px rgba(0,0,0,0.65)',
+              maxHeight: 'min(72vh, 620px)', overflowY: 'auto',
             }}
           >
-            {specialItems.map(item => {
-              // ── WHAT THIS DRAWER IS FOR, PER SIZE ──────────────────────
-              // On a phone it is everything, and every entry is weighted the
-              // same. With the rail up, the crew already have a door of their
-              // own on deck, so in here they step back to a quiet second way
-              // in and the repair kit — which has no other door — carries the
-              // weight instead.
-              const isCrew = item.id.startsWith('crew-')
-              const muted = railUp && isCrew
-              const lead = railUp && !isCrew
-              return (
+            {crewItems.length > 0 && (
+              <>
+                <p className="font-karla font-800 uppercase" style={{ margin: '0 2px', fontSize: '0.56rem', letterSpacing: '0.18em', color: 'rgba(200,215,240,0.6)' }}>
+                  {railUp ? 'Crew (also on deck)' : 'Call on your crew'}
+                </p>
+                <div style={{
+                  display: 'grid', gap: railUp ? 6 : 8, padding: 2,
+                  gridTemplateColumns: `repeat(auto-fill, minmax(${railUp ? 64 : 96}px, 1fr))`,
+                  opacity: railUp ? 0.8 : 1,
+                }}>
+                  {crewItems.map((item, i) => (
+                    <SpecialCrewCard key={item.id} item={item} index={i} compact={railUp}
+                      flaring={flareId === item.id} onPick={() => pressSpecial(item)} />
+                  ))}
+                </div>
+              </>
+            )}
+            {otherItems.map(item => (
               <motion.button
                 key={item.id}
                 whileTap={item.disabled ? undefined : { scale: 0.97 }}
-                onClick={() => pickSpecial(item)}
+                onClick={() => pressSpecial(item)}
                 disabled={item.disabled}
                 style={{
-                  padding: muted ? '0.4rem 0.55rem' : lead ? '0.75rem 0.8rem' : '0.6rem 0.7rem',
-                  borderRadius: 10,
-                  background: item.disabled ? 'rgba(255,255,255,0.04)'
-                    : muted ? 'rgba(255,255,255,0.03)' : `${item.color}${lead ? '20' : '14'}`,
-                  border: `${muted ? 1 : 2}px solid ${
-                    item.disabled ? 'rgba(255,255,255,0.12)'
-                    : muted ? 'rgba(255,255,255,0.14)' : item.color}`,
-                  boxShadow: lead && !item.disabled ? `0 0 16px ${item.color}33` : undefined,
+                  padding: '0.6rem 0.7rem',
+                  borderRadius: 11,
+                  background: item.disabled ? 'rgba(255,255,255,0.04)' : `linear-gradient(90deg, ${item.color}26, ${item.color}0c)`,
+                  border: `1.5px solid ${item.disabled ? 'rgba(255,255,255,0.12)' : `${item.color}cc`}`,
                   cursor: item.disabled ? 'not-allowed' : 'pointer',
-                  opacity: item.disabled ? 0.55 : muted ? 0.72 : 1,
+                  opacity: item.disabled ? 0.55 : 1,
                   display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
                 }}
               >
                 <div style={{
-                  width: muted ? 24 : lead ? 38 : 32, height: muted ? 24 : lead ? 38 : 32,
-                  borderRadius: 8, flexShrink: 0,
+                  width: 40, height: 40, borderRadius: 10, flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: muted ? 'rgba(255,255,255,0.06)' : `${item.color}22`,
-                  fontSize: '1.1rem', lineHeight: 1, overflow: 'hidden',
-                  filter: muted ? 'grayscale(0.7)' : undefined,
+                  background: `${item.color}22`, overflow: 'hidden',
                 }}>
                   {item.image
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={item.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    : <span style={{ color: item.color, display: 'flex' }}><IconCrate size={18} /></span>}
+                    : <span style={{ color: item.color, display: 'flex' }}><IconCrate size={20} /></span>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: muted ? '0.72rem' : lead ? '0.94rem' : '0.84rem', color: item.disabled ? '#7a7674' : muted ? '#b9b2a6' : '#ffffff', lineHeight: 1.15 }}>{item.label}</p>
-                  <p className="font-karla" style={{ fontSize: '0.66rem', color: item.disabled ? '#6a6460' : `${item.color}cc`, marginTop: 2, lineHeight: 1.3 }}>{item.sub}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: item.disabled ? '#7a7674' : '#ffffff', lineHeight: 1.15 }}>{item.label}</p>
+                  <p className="font-karla" style={{ fontSize: '0.68rem', color: item.disabled ? '#6a6460' : `${item.color}dd`, marginTop: 2, lineHeight: 1.3 }}>{item.sub}</p>
                 </div>
               </motion.button>
-              )
-            })}
+            ))}
           </motion.div>
         </>
-      )}
+        )
+      })()}
       </AnimatePresence>
 
       {/* Fire / Volley chooser — only when you have enough for a volley.

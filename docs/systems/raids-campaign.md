@@ -105,6 +105,12 @@ the column's own 742. Four things read it or the column:
   the drawer they shrink to a quiet second way in (thin border, greyed art, smaller type) and
   the repair kit — the one special with no other door — takes the weight. On a phone the
   drawer is still everything and every entry is weighted the same.
+- **The Special chooser is art first (2026-09-24).** Crew are portrait cards of their painted
+  art (`SpecialCrewCard` in RaidCombat): name on the art, ability name in class colour, what it
+  does clamped under the card, dealt in with a small stagger. Spent cards are grey with a tag
+  (Used / Lv 10 / Next turn / Silenced). A press flares the card (ring, lift, buzz) for 230ms,
+  then fires; faceless items (repair kit, drums) are a plain row under the cards. With the
+  desktop rail up the cards go compact and dimmed.
 - **Signal Flares stay in the column.** The barrage field was `inset: 0` on a stage that over
   the sea is the whole viewport, so on a desktop the flares went up across the entire window,
   outside everything else you were reading. The tap shield stays full-bleed (a stray swat
