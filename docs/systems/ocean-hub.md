@@ -1697,7 +1697,10 @@ under the nav; it used to open seventy pixels down with nothing in the gap, and 
 column covered the scrim so there was no way out. Its bosses are art-forward tiles in the
 campaign Bosses tab's idiom: portrait as cover, the boss's own name (from the raid config) over
 a bottom scrim, a check when bested, two to a row, grouped by chapter, unbested ones dimmed and
-not tappable. **Tapping a bested one sails there on the press** (2026-09-25, Kong: one click, no
+not tappable. **It opens instantly (2026-09-25):** `WargateSheet` takes the chart's `liveStatus`
+(every node's status, kept live as fights are won) instead of reading the whole boss ledger from
+the server on open; that read was slow, and while it was out the empty list showed "Defeat bosses
+to unlock portals" to captains who had. **Tapping a bested one sails there on the press** (2026-09-25, Kong: one click, no
 second menu); it used to open the `BossFightModal` first. The homestead portal's `PortalMap` does the
 same for any band or berth you own; only an unbought one opens the footer, where its price lives.
 
@@ -3642,20 +3645,16 @@ tour's goal and a road somebody asked for (`wayGoal`) are not affected.
 
 
 
-## Island titles are drawn on the canvas (2026-09-25)
+## Island titles jitter while sailing: two fixes tried, both undone (2026-09-25)
 
-Kong: the compass text slides smoothly while sailing, the island titles jitter. The compass marks
-move by CSS transitions the compositor runs on its own; the titles were DOM text in the world
-layer over islands painted on the Pixi canvas, and the DOM layer and the canvas reach the screen
-by different paths, so whenever they land a frame apart the words wobble against the island. (An
-invisible `rotate(0.0001deg)` on the world layer, on the theory that Chrome was pixel-snapping it,
-was tried first and did NOT help; it is gone.) The fix: `GpuHandle.placeLabels(list)` draws each
-port's title (the gold call line, the name, the blurb or lock line) as Pixi Text in a `labels`
-container that takes the world's transform in `camera()`, topmost on the stage, each title
-counter-squashed by 1/GROUND. SeaMap builds the list every render (`placeLabelsRef`, fonts from the
-`--font-cinzel` / `--font-karla` variables, sizes off the root font size) and the frame loop pushes
-it only when its JSON changes. Titles rebuild once `document.fonts.ready` resolves. The DOM title
-in `PlaceIsland` now renders only without the canvas (`?gpu=0`). `placeCall(id)` is the one source
-of an island's "N crew back" / "Orders ready" line, read by both the "!" mark and the title. Other
-DOM labels in the world layer (maelstrom and gate names, small isles, NPC plates) are still DOM:
-move them the same way if they are reported.
+Kong: compass text slides smoothly, island titles jitter. The compass marks move by CSS
+transitions the compositor runs on its own; the titles are DOM text in the world layer over
+islands painted on the Pixi canvas, and the two reach the screen by different paths, so a frame
+apart the words wobble against the island.
+- **`rotate(0.0001deg)` on the world transform** (theory: Chrome pixel-snapping the layer). Did
+  NOT help. Removed.
+- **Titles drawn on the canvas as Pixi Text** (`GpuHandle.placeLabels`). Fixed the wobble by
+  construction but Kong did not like the font it came out in ("switch back to how it was").
+  Reverted (commit 320c45e2 is the implementation, if it comes back: it needs the canvas text to
+  match the DOM Cinzel exactly, e.g. by rasterising the DOM title to a texture).
+The titles are DOM again, exactly as before; the jitter is known and open.

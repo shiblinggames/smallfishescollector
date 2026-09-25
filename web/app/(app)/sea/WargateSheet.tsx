@@ -19,10 +19,8 @@
 // card over the water uses — so the gate cannot disagree with the map about
 // what is cleared, what is next, and what a card shows.
 
-import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { getRaidConfigById } from '@/lib/raidRegistry'
-import { bossCardState, type BossCardState } from './bossCardActions'
 import { ENCOUNTERS, BAY_BY_ID, type Encounter } from './raidWaters'
 import { RAID_MAP, type RaidNodeView } from '@/lib/raidMap'
 
@@ -34,29 +32,30 @@ function seaBosses(): Encounter[] {
     .sort((a, b) => RAID_MAP.findIndex(n => n.id === a.node) - RAID_MAP.findIndex(n => n.id === b.node))
 }
 
-export default function WargateSheet({ preloaded, onSail, onClose }: {
-  /** Read on approach by the chart, like the boss card's — see the prefetch
-   *  where nearGate is set. The fetch below is only the fallback. */
-  preloaded?: BossCardState | null
+export default function WargateSheet({ status, onSail, onClose }: {
+  /**
+   * EVERY CAMPAIGN NODE'S STATUS, from the chart (its `liveStatus`), so the
+   * gate opens INSTANTLY (Kong, 2026-09-25: it took a long time to load, and
+   * sometimes said "defeat bosses" at a captain who had). It used to read the
+   * whole boss ledger from the server on open, and while that read was out
+   * the list was empty, which the sheet took for "nothing bested". Since the
+   * gate sails on one press it needs only who is bested, which the chart
+   * already knows and keeps live as fights are won.
+   */
+  status: Record<string, string>
   /** THE CROSSING. Hands back the encounter whose mooring the gate opens on. */
   onSail: (enc: Encounter) => void
   onClose: () => void
 }) {
-  const [fetched, setFetched] = useState<BossCardState | null>(null)
-  const state = preloaded ?? fetched
-
-  useEffect(() => {
-    if (preloaded) return
-    let live = true
-    bossCardState().then(r => { if (live && !('error' in r)) setFetched(r) }, () => {})
-    return () => { live = false }
-  }, [preloaded])
-
   if (typeof document === 'undefined') return null
 
   const bosses = seaBosses()
-  const viewOf = (id: string): RaidNodeView | null =>
-    state?.views.find(v => v.node.id === id) ?? null
+  const viewOf = (id: string): RaidNodeView | null => {
+    const node = RAID_MAP.find(n => n.id === id)
+    const st = status[id]
+    if (!node || !st) return null
+    return { node, status: st as RaidNodeView['status'], claimable: false }
+  }
 
 
   return createPortal(
@@ -203,11 +202,6 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
             ))
           })()}
 
-          {!state && (
-            /* Nothing while it reads — the same rule as the boss card: a line
-               announcing a wait turns a 100ms gap into an event. */
-            <div style={{ height: 120 }} />
-          )}
         </div>
       </div>
 

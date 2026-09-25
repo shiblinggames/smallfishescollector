@@ -123,9 +123,6 @@ import { BOATS } from '@/lib/boats'
 import type { Frame } from './skiffArt'
 
 export type GpuIsland = { id: string; r: number; x: number; y: number; locked: boolean }
-/** An island's title, drawn on this canvas so it moves with the island it
- *  names. `y` is the world point the title hangs from (the island's foot). */
-export type GpuPlaceLabel = { id: string; x: number; y: number; name: string; sub: string; call: string | null; locked: boolean }
 export type GpuMark = {
   art: string; x: number; y: number; size: number
   sway?: 'bob' | 'rock'
@@ -141,15 +138,6 @@ export type GpuMark = {
 export type GpuHandle = {
   /** Called by the frame loop, right after it writes the DOM world transform. */
   camera(x: number, y: number, zoom: number): void
-  /**
-   * THE ISLANDS' TITLES (2026-09-25). They were DOM text in the world layer,
-   * and Kong saw them jitter while the compass stayed smooth: the DOM layer and
-   * this canvas reach the screen by different paths, and whenever the two land
-   * a frame apart the words wobble against the island under them. Drawn here,
-   * a title is in the same frame as its island by construction. Pushed on
-   * change, not per frame.
-   */
-  placeLabels(list: GpuPlaceLabel[]): void
   /** The clock's two axes: how dark, and how low the sun is. Tints every
    *  sprite on this canvas — see nightTint for why this is a tint and
    *  emphatically not a filter. */
@@ -1005,77 +993,6 @@ export default function SeaIslandsGPU({
       // small, but most of it is never needed in a session — a rock on the far
       // side of the chart is not worth a texture because it might one day be
       // passed closely.
-      // ── TITLE TEXT ────────────────────────────────────────────────
-      // The page's own fonts (next/font variables) and root size, so a title
-      // is the size and face it was as DOM text.
-      let labelsRef: import('pixi.js').Container | null = null
-      const labelBuilt = new Map<string, { node: import('pixi.js').Container; key: string }>()
-      let labelList: GpuPlaceLabel[] = []
-      const cssVar = (v: string, fb: string) => {
-        const f = getComputedStyle(document.documentElement).getPropertyValue(v).trim()
-        return f ? `${f}, ${fb}` : fb
-      }
-      const buildLabel = (l: GpuPlaceLabel): import('pixi.js').Container => {
-        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
-        const karla = cssVar('--font-karla', 'system-ui, sans-serif')
-        const cinzel = cssVar('--font-cinzel', 'serif')
-        const node = new PIXI.Container()
-        node.scale.y = 1 / GROUND
-        let y = 0
-        const halo = (blur: number) => ({ color: 0x000000, alpha: 0.95, blur, distance: 2, angle: Math.PI / 2 })
-        if (l.call) {
-          const t = new PIXI.Text({ text: l.call.toUpperCase(), style: {
-            fontFamily: karla, fontWeight: '700', fontSize: rem, letterSpacing: rem * 0.1,
-            fill: 0xf0c040, dropShadow: halo(8),
-          } })
-          t.anchor.set(0.5, 0); t.y = y; node.addChild(t); y += t.height + 3
-        }
-        const name = new PIXI.Text({ text: l.name, style: {
-          fontFamily: cinzel, fontWeight: '700', fontSize: rem * 2.3, letterSpacing: rem * 2.3 * 0.02,
-          fill: l.locked ? 0xb4c0c8 : 0xf4f7fa,
-          stroke: { color: 0x05080c, width: 4, join: 'round', alpha: 0.55 },
-          dropShadow: halo(14),
-        } })
-        name.alpha = l.locked ? 0.6 : 1
-        name.anchor.set(0.5, 0); name.y = y; node.addChild(name); y += name.height
-        if (l.sub) {
-          const t = new PIXI.Text({ text: l.sub, style: {
-            fontFamily: karla, fontWeight: '600', fontSize: rem * 1.02,
-            fill: l.locked ? 0xce9898 : 0xc0d2e0, dropShadow: halo(9),
-          } })
-          t.alpha = 0.8
-          t.anchor.set(0.5, 0); t.y = y + 2; node.addChild(t)
-        }
-        return node
-      }
-      const syncLabels = () => {
-        if (!labelsRef) return
-        const seen = new Set<string>()
-        for (const l of labelList) {
-          seen.add(l.id)
-          const key = `${l.name}|${l.sub}|${l.call ?? ''}|${l.locked}`
-          let e = labelBuilt.get(l.id)
-          if (!e || e.key !== key) {
-            if (e) { e.node.destroy({ children: true }) }
-            e = { node: buildLabel(l), key }
-            labelBuilt.set(l.id, e)
-            labelsRef.addChild(e.node)
-          }
-          e.node.position.set(l.x, l.y)
-        }
-        for (const [id, e] of labelBuilt) {
-          if (!seen.has(id)) { e.node.destroy({ children: true }); labelBuilt.delete(id) }
-        }
-      }
-      // A title drawn before its web font has loaded is drawn in the fallback
-      // face and never redrawn, so rebuild them all once the fonts are in.
-      void document.fonts?.ready.then(() => {
-        if (dead) return
-        for (const e of labelBuilt.values()) e.node.destroy({ children: true })
-        labelBuilt.clear()
-        syncLabels()
-      })
-
       const front = new PIXI.Container()
       // SAME RULE AS THE WORLD'S MARKS: base further south goes in front. These
       // are built on FIRST NEED, so without it the order is whenever each rock
@@ -1095,13 +1012,6 @@ export default function SeaIslandsGPU({
       // drawn on top of it. See seaClouds.
       a.stage.addChild(clouds.air)
 
-      // ── THE TITLES, TOPMOST ───────────────────────────────────────
-      // They were page text over this whole canvas, so they stay over all of
-      // it. Same transform as the world (see camera()); each title is
-      // counter-squashed so it stands up off the plane like it always did.
-      const labels = new PIXI.Container()
-      a.stage.addChild(labels)
-      labelsRef = labels
       /**
        * ── ?hide=, FOR FINDING OUT WHICH LAYER IS DOING IT ─────────────────
        *
@@ -2695,7 +2605,6 @@ export default function SeaIslandsGPU({
           shoals.scatter(x, y)
         },
 
-        placeLabels(list) { labelList = list; syncLabels() },
         camera(x, y, zoom) {
           camX = x; camY = y; camZoom = zoom
           world.scale.set(zoom, zoom * GROUND)
@@ -2703,10 +2612,6 @@ export default function SeaIslandsGPU({
             a.screen.width / 2 - zoom * x,
             a.screen.height / 2 - zoom * GROUND * y,
           )
-          if (labelsRef) {
-            labelsRef.scale.copyFrom(world.scale)
-            labelsRef.position.copyFrom(world.position)
-          }
           // The air rides the same transform as the water under it. See where
           // it is added: it is a sibling of the world rather than a child, so
           // a late-baking island can never end up in front of a bird.
