@@ -3642,13 +3642,20 @@ tour's goal and a road somebody asked for (`wayGoal`) are not affected.
 
 
 
-## The world layer carries an invisible rotation (2026-09-25)
+## Island titles are drawn on the canvas (2026-09-25)
 
-Kong: compass text smooth while sailing, island titles jittery. The titles (and every DOM label
-in the world layer) are page text moved by one transform per frame; Chrome snaps a layer whose
-transform is plain scale-and-translate to whole pixels to keep text crisp, so the words stepped a
-pixel at a time over islands the canvas moves by fractions of one. The compass barely moves (it is
-pinned to the screen edges), which is why it never showed it. Both world-transform writes in
-SeaMap append `SUBPIXEL` (`rotate(0.0001deg)`): no longer axis-aligned, so off the snapping path.
-It displaces nothing measurable and the canvas camera mapping ignores it. If titles ever look
-soft rather than crisp, this is why; if they jitter again, check this suffix survived.
+Kong: the compass text slides smoothly while sailing, the island titles jitter. The compass marks
+move by CSS transitions the compositor runs on its own; the titles were DOM text in the world
+layer over islands painted on the Pixi canvas, and the DOM layer and the canvas reach the screen
+by different paths, so whenever they land a frame apart the words wobble against the island. (An
+invisible `rotate(0.0001deg)` on the world layer, on the theory that Chrome was pixel-snapping it,
+was tried first and did NOT help; it is gone.) The fix: `GpuHandle.placeLabels(list)` draws each
+port's title (the gold call line, the name, the blurb or lock line) as Pixi Text in a `labels`
+container that takes the world's transform in `camera()`, topmost on the stage, each title
+counter-squashed by 1/GROUND. SeaMap builds the list every render (`placeLabelsRef`, fonts from the
+`--font-cinzel` / `--font-karla` variables, sizes off the root font size) and the frame loop pushes
+it only when its JSON changes. Titles rebuild once `document.fonts.ready` resolves. The DOM title
+in `PlaceIsland` now renders only without the canvas (`?gpu=0`). `placeCall(id)` is the one source
+of an island's "N crew back" / "Orders ready" line, read by both the "!" mark and the title. Other
+DOM labels in the world layer (maelstrom and gate names, small isles, NPC plates) are still DOM:
+move them the same way if they are reported.

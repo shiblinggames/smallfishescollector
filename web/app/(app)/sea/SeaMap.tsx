@@ -209,7 +209,7 @@ import { plateFor } from '@/lib/islandPlates'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
 import { GROUND, islandLift, liftAt, liftAtPoint, bakeIsland, requestGround } from './islandArt'
-import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark, type ShipLook } from './SeaIslandsGPU'
+import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark, type ShipLook, type GpuPlaceLabel } from './SeaIslandsGPU'
 import { type GlowPatch } from './seaGlow'
 import { type CaptainLook } from './seaCaptain'
 import { shipWake, type WakeKind } from './seaWake'
@@ -1396,24 +1396,6 @@ const OPEN_RGB = OPEN_SEA.map(rgb) as [number, number, number][]
  *  blend needs to know about a ring. */
 /** The outer edge of the outermost band — where the chart's water stops. */
 const LAST_OUTER = Math.max(...PLACES.map(p => p.outer ?? 0))
-
-/**
- * ── WHY THE WORLD LAYER CARRIES A ROTATION NOBODY CAN SEE ──────────────────
- *
- * Kong (2026-09-25): the compass text is smooth as you sail and the island
- * titles are jittery. The islands are painted on the canvas, which moves by
- * fractions of a pixel; the titles are DOM text in the world layer, and Chrome
- * snaps a layer whose transform is a plain scale-and-translate to whole pixels
- * to keep its text crisp. So the words stepped a pixel at a time over an island
- * gliding under them. (The compass barely moves: it is pinned to the edges.)
- *
- * A rotation of a ten-thousandth of a degree makes the transform no longer
- * axis-aligned, which takes the layer off the snapping path, so it moves by
- * fractions of a pixel like the canvas. It displaces nothing measurable: at
- * five thousand pixels out it is under a hundredth of a pixel, and the canvas
- * camera mapping ignores it.
- */
-const SUBPIXEL = ' rotate(0.0001deg)'
 
 const WATER_RGB: { mid: number; half: number; c: [number, number, number][] }[] =
   PLACES.filter(p => p.kind === 'water' && p.sea)
@@ -2667,6 +2649,9 @@ export default function SeaMap({
    */
   const cmdDir = useRef<Vec | null>(null)
   const knobRef = useRef<HTMLDivElement | null>(null)
+  /** The islands' titles for the canvas, and the last set it was given. */
+  const placeLabelsRef = useRef<{ list: GpuPlaceLabel[]; key: string }>({ list: [], key: '' })
+  const placeLabelsSent = useRef('')
   /** The lit arc on the rim that points the way the stick is pushed. */
   const helmArcRef = useRef<HTMLDivElement | null>(null)
   /** The knob's colour fades; `transform` is written by the pointer handlers,
@@ -4914,7 +4899,7 @@ export default function SeaMap({
     const world = worldRef.current
     if (world) {
       const tr = `scale(${z}) scaleY(${GROUND})`
-        + ` translate3d(${-camAt.current.x}px, ${-camAt.current.y}px, 0)${SUBPIXEL}`
+        + ` translate3d(${-camAt.current.x}px, ${-camAt.current.y}px, 0)`
       world.style.transform = tr
       if (frontRef.current) frontRef.current.style.transform = tr
     }
@@ -9842,7 +9827,7 @@ export default function SeaMap({
       // scaleY LAST (CSS applies right to left), so the camera pan happens in
       // world units and only then meets the plane's foreshortening.
       if (world) {
-        const t = `scale(${zoomRef.current}) scaleY(${GROUND}) translate3d(${-camAt.current.x}px, ${-camAt.current.y}px, 0)${SUBPIXEL}`
+        const t = `scale(${zoomRef.current}) scaleY(${GROUND}) translate3d(${-camAt.current.x}px, ${-camAt.current.y}px, 0)`
         world.style.transform = t
         // THE SAME STRING, THE SAME FRAME. These two layers are one world drawn
         // in two passes; a transform written to one and not the other would put
@@ -10129,6 +10114,11 @@ export default function SeaMap({
         // ahead of the hull is for finding your way, and it sat bright under
         // the broadside. The same ref the berth lamps below read.
         gpuRef.current.lantern(fightOnRef.current ? 0 : lanternGlow(lanternTierRef.current))
+        // The titles, on change only (a string compare a frame).
+        if (placeLabelsRef.current.key !== placeLabelsSent.current) {
+          gpuRef.current.placeLabels(placeLabelsRef.current.list)
+          placeLabelsSent.current = placeLabelsRef.current.key
+        }
         // AND THE FOG'S BUFFER, for the same reason and by the same argument:
         // the handle is null for the first frames, binding is one assignment,
         // and a bind that is missed is a chart with no fog on it at all.
@@ -10895,6 +10885,64 @@ export default function SeaMap({
     return () => cancelAnimationFrame(raf)
   }, [])
 
+  // ── WHAT EACH ISLAND IS WAITING TO GIVE YOU ─────────────────────────────
+  // One place, read by the island (its "!" mark) and by the canvas title's
+  // gold line alike.
+  const placeCall = (id: string): string | null => (
+              id === 'trawl_fleet' ? (trawlsReady > 0 ? `${trawlsReady} crew back` : null)
+              : id === 'trawl_docks' ? (ordersReady ? 'Orders ready' : null)
+              // ── THE HALL SAYS WHAT IS AT THE HALL ──────────────────
+              //
+              // This was "Hands to sign", off `recruitsWaiting`, and it was
+              // wrong twice over.
+              //
+              // WRONG ADDRESS: the recruit board is in the crew PANEL, which is
+              // a disc in the HUD. Going ashore at the hall opens the building
+              // — its tier, its Drills and Stores ladder, its bunks — and there
+              // is nothing to sign in it. A mark that sends you to an island
+              // that cannot settle it is the "light with no address" this whole
+              // mechanism exists to avoid.
+              //
+              // AND ALWAYS LIT: the board rolls three faces every morning and
+              // most captains take none or one, so `recruitsWaiting > 0` was
+              // true nearly all day, every day. A mark that is always on is not
+              // a signal, it is decoration — and it kept saying "hands to sign"
+              // after a captain had signed the hand and put them in a bunk,
+              // which is what it was reported as.
+              //
+              // A finished STINT is the hall's real errand: it happened here,
+              // it is collected here, and it goes out the moment you take it.
+              : id === 'crew_hall' ? (hallReady ? 'Training done' : null)
+              : id === 'charterhouse' ? (voyageBack ? 'Voyage in' : null)
+              : id === 'posting_house' ? (bountyReady ? 'Bounty paid out' : null)
+              : null
+  )
+
+  // ── THE ISLANDS' TITLES, FOR THE CANVAS ──────────────────────────────────
+  // Kong (2026-09-25): the titles jittered while the compass slid smoothly.
+  // They were DOM text in the world layer over islands painted on the canvas,
+  // and the two reach the screen by different paths; a frame apart, the words
+  // wobble against the island. They are drawn on the canvas now (GpuHandle.
+  // placeLabels), in the same frame as their islands. Built here every render
+  // (a dozen rows) and pushed by the frame loop only when they change.
+  placeLabelsRef.current = (() => {
+    const list: GpuPlaceLabel[] = []
+    for (const p0 of PLACES) {
+      if (p0.kind === 'water') continue
+      const p = forgeIsleFor(crewHallFor(homeFor(p0, visiting?.homestead ?? homestead, visiting?.username), crewTiers), forgeTier)
+      const pl = plateFor(p.id)
+      const foot = pl ? Math.round((1 - pl.water) * pl.aspect * pl.width * p.r * 2 / GROUND) : p.r
+      const lk = locked(p0)
+      list.push({
+        id: p.id, x: p.x, y: p.y + foot + 8,
+        name: p.name.replace(/^The /, ''),
+        sub: lk ? `Fishing ${p.minLevel}` : (p.blurb ?? ''),
+        call: placeCall(p0.id), locked: lk,
+      })
+    }
+    return { list, key: JSON.stringify(list) }
+  })()
+
   return (
     <div
       ref={wrapRef}
@@ -11036,35 +11084,7 @@ export default function SeaMap({
             // Each one names its OWN errand: "2 crew back" and "Orders ready"
             // are different journeys, and a shared badge would be a light with
             // no address.
-            call={
-              p.id === 'trawl_fleet' ? (trawlsReady > 0 ? `${trawlsReady} crew back` : null)
-              : p.id === 'trawl_docks' ? (ordersReady ? 'Orders ready' : null)
-              // ── THE HALL SAYS WHAT IS AT THE HALL ──────────────────
-              //
-              // This was "Hands to sign", off `recruitsWaiting`, and it was
-              // wrong twice over.
-              //
-              // WRONG ADDRESS: the recruit board is in the crew PANEL, which is
-              // a disc in the HUD. Going ashore at the hall opens the building
-              // — its tier, its Drills and Stores ladder, its bunks — and there
-              // is nothing to sign in it. A mark that sends you to an island
-              // that cannot settle it is the "light with no address" this whole
-              // mechanism exists to avoid.
-              //
-              // AND ALWAYS LIT: the board rolls three faces every morning and
-              // most captains take none or one, so `recruitsWaiting > 0` was
-              // true nearly all day, every day. A mark that is always on is not
-              // a signal, it is decoration — and it kept saying "hands to sign"
-              // after a captain had signed the hand and put them in a bunk,
-              // which is what it was reported as.
-              //
-              // A finished STINT is the hall's real errand: it happened here,
-              // it is collected here, and it goes out the moment you take it.
-              : p.id === 'crew_hall' ? (hallReady ? 'Training done' : null)
-              : p.id === 'charterhouse' ? (voyageBack ? 'Voyage in' : null)
-              : p.id === 'posting_house' ? (bountyReady ? 'Bounty paid out' : null)
-              : null
-            } />
+            call={placeCall(p.id)} />
         ))}
         {/* THE TOP OF THE CHART. Rocks, not architecture — see reefRocks. The
             same SeaMark every other landmark goes through, so they get the
@@ -17237,7 +17257,8 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, call = null }: {
         </div>
       )}
 
-      {!isWater && (
+      {/* On the canvas when there is one (see placeLabels); DOM only in the fallback. */}
+      {!isWater && !GPU_ISLANDS && (
         <div style={{
           // ── UNDER THE PICTURE, NOT UNDER THE BOX ─────────────────────
           //
