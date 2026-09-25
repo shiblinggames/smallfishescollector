@@ -1697,7 +1697,9 @@ under the nav; it used to open seventy pixels down with nothing in the gap, and 
 column covered the scrim so there was no way out. Its bosses are art-forward tiles in the
 campaign Bosses tab's idiom: portrait as cover, the boss's own name (from the raid config) over
 a bottom scrim, a check when bested, two to a row, grouped by chapter, unbested ones dimmed and
-not tappable. Tapping a bested one opens the same `BossFightModal` with the gate's verb.
+not tappable. **Tapping a bested one sails there on the press** (2026-09-25, Kong: one click, no
+second menu); it used to open the `BossFightModal` first. The homestead portal's `PortalMap` does the
+same for any band or berth you own; only an unbought one opens the footer, where its price lives.
 
 **Neither island's `href` is ever followed**, which makes them the only two on the chart
 that are handled by id in `enter()`.

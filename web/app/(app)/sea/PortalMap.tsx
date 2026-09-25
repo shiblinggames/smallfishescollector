@@ -87,7 +87,10 @@ export default function PortalMap({
             dim={!bandOwned(t) && !bandNext(t)}
             on={sel?.kind === 'band' && sel.tier.tier === t.tier}
             note={bandOwned(t) ? null : bandNext(t) ? `${short(t.cost)} ⟡` : 'Locked'}
-            onClick={() => setSel({ kind: 'band', tier: t })} />
+            // ONE PRESS TO GO (Kong, 2026-09-25: no second menu). A place you
+            // own sails on the press; only one you still have to buy opens the
+            // footer, because that is where the price and the button live.
+            onClick={() => bandOwned(t) ? onSail(t.to.x, t.to.y, t.accent) : setSel({ kind: 'band', tier: t })} />
         ))}
       </Board>
 
@@ -102,7 +105,7 @@ export default function PortalMap({
             dim={false}
             on={sel?.kind === 'port' && sel.port.id === p.id}
             note={portOwned(p) ? null : `${short(p.cost)} ⟡`}
-            onClick={() => setSel({ kind: 'port', port: p })} />
+            onClick={() => portOwned(p) ? onSail(p.to.x, p.to.y, p.accent) : setSel({ kind: 'port', port: p })} />
         ))}
       </Board>
 

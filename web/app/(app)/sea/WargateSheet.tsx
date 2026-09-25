@@ -20,17 +20,11 @@
 // what is cleared, what is next, and what a card shows.
 
 import { useEffect, useState } from 'react'
-import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { bossCardState, type BossCardState } from './bossCardActions'
 import { ENCOUNTERS, BAY_BY_ID, type Encounter } from './raidWaters'
 import { RAID_MAP, type RaidNodeView } from '@/lib/raidMap'
-
-const BossFightModal = dynamic(
-  () => import('@/app/(app)/expeditions/BossFightModal').then(m => m.BossFightModal),
-  { ssr: false },
-)
 
 /** The sea's fights, in campaign order — the gate lists exactly what stands on
  *  the water, which is the set you can actually be carried to. */
@@ -49,7 +43,6 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
   onClose: () => void
 }) {
   const [fetched, setFetched] = useState<BossCardState | null>(null)
-  const [sel, setSel] = useState<string | null>(null)
   const state = preloaded ?? fetched
 
   useEffect(() => {
@@ -65,8 +58,6 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
   const viewOf = (id: string): RaidNodeView | null =>
     state?.views.find(v => v.node.id === id) ?? null
 
-  const selEnc = sel ? bosses.find(e => e.node === sel) ?? null : null
-  const selView = sel ? viewOf(sel) : null
 
   return createPortal(
     <div
@@ -174,7 +165,10 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
                     const accent = cleared ? '#c4a96a' : '#4f4a42'
                     return (
                       <button key={e.node} type="button" className="tap"
-                        onClick={() => { if (cleared) setSel(e.node) }}
+                        // ONE PRESS TO GO (Kong, 2026-09-25). A bested boss's tile
+                        // sails there; it used to open the boss card first, a
+                        // second menu for a place you had already chosen.
+                        onClick={() => { if (cleared) onSail(e) }}
                         aria-label={cleared ? `Sail to ${name}` : `${name}, not yet bested`}
                         style={{
                           position: 'relative', aspectRatio: '4 / 4.4', borderRadius: 16, overflow: 'hidden',
@@ -217,27 +211,6 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
         </div>
       </div>
 
-      {/* THE CARD, the map's own, with the gate's verb. challenge is withheld
-          on purpose: the gate carries you to the WATER, and which run you take
-          is chosen at the mooring like always. */}
-      {selEnc && selView && state && (
-        <BossFightModal
-          boss={selView}
-          challenge={null}
-          rec={selView.node.raidId ? state.raidRecords[selView.node.raidId] ?? null : null}
-          challengeRec={null}
-          ownedRaidItems={state.ownedRaidItems}
-          ownedShipSkins={state.ownedShipSkins}
-          ownedSpecialItems={state.ownedSpecialItems}
-          totalFortune={state.totalFortune}
-          isNext={false}
-          enterLabel="Sail There →"
-          enterSub="The gate opens on their water"
-          onEnter={() => onSail(selEnc)}
-          onClose={() => setSel(null)}
-          clearedNodeIds={new Set(state.clearedNodeIds)}
-        />
-      )}
     </div>,
     document.body,
   )
