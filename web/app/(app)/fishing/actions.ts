@@ -2058,18 +2058,11 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
   const newGoldenBoost = (goldenBoosts[zone] ?? 0) + (atMax ? 1 : 0)
   const newGoldenBoosts = atMax ? { ...goldenBoosts, [zone]: newGoldenBoost } : goldenBoosts
 
-  // Sand skin: unlock when any zone reaches prestige 3
-  let prestigeUnlockedSkin: string | undefined
+  // Sand used to unlock here at Prestige 3. Since the 2026-09-25 standard it is
+  // a Fishing 25 reward (lib/characters), granted on the catch path.
+  const prestigeUnlockedSkin: string | undefined = undefined
   const profileUpdate: Record<string, unknown> = { prestige_levels: newLevels, [rewardCol]: false }
   if (atMax) profileUpdate.zone_golden_boost = newGoldenBoosts
-  const maxPrestige = Math.max(...Object.values(newLevels))
-  if (maxPrestige >= 3) {
-    const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
-    if (!currentUnlocked.includes('sand')) {
-      profileUpdate.unlocked_character_colors = [...currentUnlocked, 'sand']
-      prestigeUnlockedSkin = 'sand'
-    }
-  }
 
   const allZones = ['shallows', 'open_waters', 'deep', 'abyss']
   const allZonesPrestiged = allZones.every(z => (newLevels[z] ?? 0) >= 1)
@@ -2297,16 +2290,25 @@ export async function equipBoat(boatId: string | null, opts?: { quiet?: boolean 
 
   const admin = createAdminClient()
   if (boatId !== null) {
-    const { data: profile } = await admin.from('profiles').select('unlocked_boats').eq('id', user.id).single()
+    const { data: profile } = await admin.from('profiles').select('unlocked_boats, fishing_xp, expedition_xp').eq('id', user.id).single()
     let unlocked = (profile?.unlocked_boats as string[] | null) ?? []
     if (!unlocked.includes(boatId)) {
-      // Self-heal an achievement-earned boat the player hasn't stored yet
-      // (mirrors updateCharacterColor). Anything else is genuinely locked.
+      // Self-heal an EARNED boat the player hasn't stored yet (a level or an
+      // achievement gate, mirrors updateCharacterColor). Anything else is
+      // genuinely locked.
       const { BOAT_MAP } = await import('@/lib/boats')
+      const { gateMet } = await import('@/lib/cosmeticGates')
       const def = BOAT_MAP[boatId]
-      if (def && typeof def.achievementPoints === 'number') {
-        const { getUserAchievementPoints } = await import('@/lib/achievementPoints')
-        if (await getUserAchievementPoints(user.id) >= def.achievementPoints) {
+      if (def?.gate) {
+        const { getLevelFromXP: navLv } = await import('@/lib/expeditionLevel')
+        const ap = def.gate.kind === 'ap'
+          ? await (await import('@/lib/achievementPoints')).getUserAchievementPoints(user.id)
+          : null
+        if (gateMet(def.gate, {
+          fishingLevel: getLevelFromXP(Number(profile?.fishing_xp ?? 0)),
+          navLevel: navLv(Number(profile?.expedition_xp ?? 0)),
+          ap,
+        })) {
           await admin.from('profiles').update({ unlocked_boats: [...unlocked, boatId] }).eq('id', user.id)
           unlocked = [...unlocked, boatId]
         }
@@ -2335,7 +2337,7 @@ export async function buyBoat(boatId: string): Promise<{ ok: true; doubloons?: n
   const def = BOAT_MAP[boatId]
   if (!def) return { error: 'Unknown boat' }
   if (def.crateOnly) return { error: 'This boat is only found in crates' }
-  if (typeof def.achievementPoints === 'number') return { error: 'This boat is earned, not bought' }
+  if (def.gate) return { error: 'This boat is earned, not bought' }
 
   const admin = createAdminClient()
   const useGems = typeof def.gemPrice === 'number' && def.gemPrice > 0

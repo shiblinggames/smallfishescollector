@@ -25,6 +25,6 @@ export const HOW_TO_GET: Record<SlotKey, string> = {
   badge: 'Badges are earned through achievements.',
   skin: 'Skins are bought with doubloons or gems, earned by levels and achievements, or found in crates.',
   hat: 'Hats are bought with doubloons. A few only come out of crates.',
-  boat: 'Boats are bought with doubloons or gems, earned with achievement points, or found in crates.',
+  boat: 'Boats are bought with doubloons or gems, earned by levels and achievements, or found in crates.',
   pet: 'Pets come out of supply crates.',
 }

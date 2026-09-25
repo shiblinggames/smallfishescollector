@@ -103,7 +103,9 @@ export default function LevelUpCelebration({
         // for the rest of the gesture, so an overlay without this both sails
         // the boat and never receives its own click. See PopupShell.
         data-no-steer
-        onClick={onDone}
+        // A level can open a skin, boat or border: the unlock banner looks as
+        // the card closes, so it arrives on a clear screen.
+        onClick={() => { onDone(); window.dispatchEvent(new Event('unlocks-check')) }}
         style={{
           position: 'fixed', inset: 0, zIndex,
           display: 'flex', alignItems: 'center', justifyContent: 'center',

@@ -18,7 +18,7 @@ import { vibrate } from '@/lib/haptics'
 import ForgeRodEmblem from './ForgeRodEmblem'
 import { IconAnchor } from '@/components/GameIcons'
 import { BAITS } from '@/lib/bait'
-import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN, getBoat, trimLabel, boatSpeed, boatAgility } from '@/lib/boats'
+import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN, getBoat, trimLabel, boatSpeed, boatAgility, boatUnlockHint } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -3074,8 +3074,8 @@ export default function GearScreen({
                     const byOwnedFirst = (a: typeof BOATS[number], c: typeof BOATS[number]) =>
                       Number(unlockedBoats.includes(c.id)) - Number(unlockedBoats.includes(a.id))
                     // Crate + achievement boats shown even when unowned, so players see the chase.
-                    const earnedBoats = BOATS.filter(b => b.crateOnly || typeof b.achievementPoints === 'number').sort(byOwnedFirst)
-                    const purchasableBoats = BOATS.filter(b => !b.crateOnly && typeof b.achievementPoints !== 'number').sort(byOwnedFirst)
+                    const earnedBoats = BOATS.filter(b => b.crateOnly || !!b.gate).sort(byOwnedFirst)
+                    const purchasableBoats = BOATS.filter(b => !b.crateOnly && !b.gate).sort(byOwnedFirst)
                     const groupLabel = { fontSize: '0.74rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
                     const driftEquipped = !equippedBoat
@@ -3517,13 +3517,13 @@ export default function GearScreen({
             const b = getBoat(cosmeticDetail.id)
             if (b) {
               const owned = unlockedBoats.includes(b.id)
-              const isAch = typeof b.achievementPoints === 'number'
+              const isAch = !!b.gate
               info = {
                 kind: 'boat', id: b.id, name: b.name, accent: b.color,
                 owned, equipped: equippedBoat === b.id,
                 price: b.gemPrice ?? (b.cost || undefined), currency: b.gemPrice ? 'gems' : 'doubloons',
                 purchasable: !owned && !isAch && !b.crateOnly && !!(b.gemPrice || b.cost),
-                unlockHint: isAch ? `Reach ${b.achievementPoints} achievement points` : b.crateOnly ? 'Found only in fishing crates' : undefined,
+                unlockHint: boatUnlockHint(b),
                 boatImg: b.restImageUrl, boatGlow: b.glow, boatAsh: b.glowType === 'ash',
               }
             }

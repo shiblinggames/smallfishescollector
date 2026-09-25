@@ -9,6 +9,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 import { CHARACTER_COLORS, earnedLevelColors, earnedAchievementColors } from '@/lib/characters'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
+import { earnedSpecials } from '@/lib/avatarColors'
 import { isPremiumActive } from '@/lib/premium'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import type { CareerStats, CareerAggregates } from '@/lib/careerStats'
@@ -133,7 +134,11 @@ export default async function ProfilePage() {
           unlockedBadges={(profile?.unlocked_badges as string[] | null) ?? []}
           avatarBgColor={(profile?.avatar_bg_color as string | null) ?? null}
           avatarBorderColor={(profile?.avatar_border_color as string | null) ?? null}
-          unlockedAvatarSpecials={(profile?.unlocked_avatar_specials as string[] | null) ?? []}
+          // Bought, plus the earned rings this captain qualifies for.
+          unlockedAvatarSpecials={(() => {
+            const stored = (profile?.unlocked_avatar_specials as string[] | null) ?? []
+            return [...stored, ...earnedSpecials({ fishingLevel: level, navLevel: expeditionLevel, ap: achievementPoints }, stored)]
+          })()}
           initialProfileBg={(profile?.profile_bg as string | null) ?? null}
         />
       </main>

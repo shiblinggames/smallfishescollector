@@ -1362,6 +1362,37 @@ body.hardcore-gauntlet::after {
   .avatar-silver { animation: none; }
 }
 
+/* ── The earned rings (2026-09-25) ─────────────────────────────────────────
+   Laurel (a quarter of the achievement pool): gold and green leaves round the
+   ring. Hemp (Navigation 25): a twisted rope, tan strands with dark lays.
+   Tidemark (Navigation 75): deep water with white crests. Each is a repeating
+   conic, so the pattern reads as a made thing rather than a colour, and each
+   turns slowly; they freeze under reduced motion like the bought rings. */
+.avatar-laurel {
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg,
+    #3f7d3a 0deg 9deg, #9bc46a 9deg 14deg, #e8c25a 14deg 18deg, #3f7d3a 18deg 22.5deg);
+  animation: avatar-aurora-spin 28s linear infinite;
+  will-change: transform;
+}
+.avatar-hemp {
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg,
+    #c9a36a 0deg 7deg, #8a6634 7deg 10deg, #e2c692 10deg 13deg, #6b4a22 13deg 15deg);
+  animation: avatar-aurora-spin 34s linear infinite;
+  will-change: transform;
+}
+.avatar-tidemark {
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg,
+    #0e4f7a 0deg 14deg, #1f86b8 14deg 22deg, #bfeaf7 22deg 25deg, #f4fbff 25deg 26.5deg, #0e4f7a 26.5deg 30deg);
+  animation: avatar-aurora-spin 20s linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-laurel, .avatar-hemp, .avatar-tidemark { animation: none; }
+}
+
 /* Animated avatar backgrounds — render via inset overflow:hidden so the
    sprite/character above stays static while the bg breathes.
 

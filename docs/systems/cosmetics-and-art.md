@@ -48,6 +48,40 @@ background convention, keyed to transparent PNG in post.
 [badges.md](badges.md), [crew.md](crew.md), [ship.md](ship.md). Sprite-sheet uploads to
 Supabase Storage go via curl + service-role key ([platform.md](platform.md)).
 
+## Unlock standard (2026-09-25, Kong)
+
+Every boat, skin and avatar border/background has ONE route. Value order is boats (most
+visible) > skins > borders/backgrounds, so boats cost most and take the hardest earned steps.
+
+| | Boats | Skins | Borders / backgrounds |
+|---|---|---|---|
+| ⟡ | 5k · 100k · 750k · 1.5M | 100k · 500k · 1M | – |
+| ◆ | 750 · 1000 (1500 open) | 250 · 500 · 750 | 500 · 1000 · 1500 |
+
+Earned steps (`gate` on the def, `lib/cosmeticGates.ts`):
+- **Fishing:** 25 Sand skin · 50 Forest · 75 Ice set (skin + boat) · 100 Crystal
+- **Navigation:** 25 Hemp border · 50 Sky · 75 Tidemark border · 100 Galaxy skin
+- **Achievements, as a SHARE of the badge pool** (`AP_POOL`, summed from lib/badges, so the
+  number moves as badges ship): 25% Laurel border · 50% Abyssal set (skin + boat) · 75%
+  Celestial boat, the hardest unlock in the game (Kong: high AP is harder than level 100).
+
+**Named sets** (Ethereal, Abyssal, Golden, Ice, Aurora) unlock by the same route, on the same
+step of each category's ladder. Golden: boat 100k, skin 100k. Ethereal: boat 750k, skin 500k.
+The Golden hat stays a crate drop (hats were out of scope). Bought borders stay Captain-only;
+earned ones need neither gems nor membership. Captain palette colours untouched. Profile page
+backgrounds stay on the fishing zone levels. Prestige gates nothing now.
+
+**Owned stays owned.** `checkUnlocks` (app/(app)/unlockActions.ts) seeds `profiles.seen_unlocks`
+on its first run with what the OLD rules gave (LEGACY_KEYS) and stores those, so a captain who
+qualified for Galaxy at 390 AP or the Ethereal skin at 450 keeps it.
+
+**The unlock banner** (`components/UnlockBanner`, mounted in the app layout): one card at the
+top per newly earned cosmetic, picture + name + reason, auto-dismisses, never blocks. Checks on
+arrival, page change (15s floor), tab return, and `unlocks-check` (fired as a level-up card
+closes). The server stores each earned id into its owned column and remembers what it has
+announced on the account. Bought and crate cosmetics announce themselves where they happen.
+Earned rings are CSS (`.avatar-laurel/-hemp/-tidemark` in globals.css).
+
 ## Boat stats — the hull stops being only a costume
 
 `lib/boats.ts`. Two axes, doing two different jobs, and neither can do the other's.
@@ -61,17 +95,18 @@ buys a better *answer* — there isn't one.
 
 **`grade` is a REWARD.** A multiplier on *both* numbers at once, so a fine hull is better at
 everything without telling you which way to sail. Working hulls are 1.00; the ladder runs
-50k → 1.03, 500k → 1.05, 1M → 1.07, with the achievement boats at 1.04–1.05.
+100k → 1.03, 750k → 1.05, 1.5M → 1.07 (prices raised 2026-09-25, grades unchanged), with the
+achievement boats at 1.04–1.05.
 
 | hull | acquired | speed | agility | rig |
 |---|---|---|---|---|
 | Pistachio | 5,000 ⟡ | 88% | 112% | Nimble |
 | Desert | 5,000 ⟡ | 112% | 88% | Long-haul |
 | Charcoal / Offwhite | free | 92% / 108% | 108% / 92% | — |
-| Fire, Ice, Jet Black | gems | 100% | 100% | Balanced |
-| Golden | 50,000 ⟡ | 109% | 97% | Fast |
-| Ethereal | 500,000 ⟡ | 95% | 116% | Nimble |
-| Chromium | 1,000,000 ⟡ | 118% | 96% | Long-haul |
+| Fire, Jet Black (gems); Ice (Fishing 75) | | 100% | 100% | Balanced |
+| Golden | 100,000 ⟡ | 109% | 97% | Fast |
+| Ethereal | 750,000 ⟡ | 95% | 116% | Nimble |
+| Chromium | 1,500,000 ⟡ | 118% | 96% | Long-haul |
 
 A Chromium genuinely out-sails a Desert, which is the point of a million doubloons. It does
 not out-sail it in a direction the Desert's owner did not choose.

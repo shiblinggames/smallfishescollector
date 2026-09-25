@@ -1,3 +1,5 @@
+import { type CosmeticGate, type GateStats, gateMet, gateHint } from './cosmeticGates'
+
 // Boat cosmetics. Each boat ships as a 2-up PNG sheet (see slice-boat.mjs)
 // that's split into a rest/wait variant and a slightly tilted cast variant.
 // Position is configured per fishing frame because the character bobs/shifts
@@ -45,9 +47,9 @@ export interface BoatDef {
   wake?: 'gold' | 'ember' | 'frost' | 'void' | 'ash' | 'spirit'
   /** Gem price in the shop (premium boats). Takes precedence over `cost`. */
   gemPrice?: number
-  /** Earned (not bought) once the player reaches this Achievement Points total.
-   *  Mirrors the achievement-gated character skins. */
-  achievementPoints?: number
+  /** Earned, not bought (lib/cosmeticGates): a level step or a share of the
+   *  achievement pool. Replaced the absolute `achievementPoints` 2026-09-25. */
+  gate?: CosmeticGate
   /**
    * WHICH WAY SHE IS RIGGED, on the ocean hub. See TRIM below.
    *
@@ -180,7 +182,7 @@ export const BOATS: BoatDef[] = [
     trim: 0.04,
     name: 'Oak',
     color: '#bda05a',
-    cost: 1000,
+    cost: 5000,
     restImageUrl: '/boat_oak_rest.png',
     castImageUrl: '/boat_oak_cast.png',
     positions: SHARED_POSITIONS,
@@ -190,7 +192,7 @@ export const BOATS: BoatDef[] = [
     trim: -0.06,
     name: 'Cherry',
     color: '#c84a3a',
-    cost: 2000,
+    cost: 5000,
     restImageUrl: '/boat_cherry_rest.png',
     castImageUrl: '/boat_cherry_cast.png',
     positions: SHARED_POSITIONS,
@@ -255,7 +257,7 @@ export const BOATS: BoatDef[] = [
     grade: 1.03,
     name: 'Golden',
     color: '#f0c040',
-    cost: 50000,
+    cost: 100_000,
     restImageUrl: '/boat_golden_rest.png',
     castImageUrl: '/boat_golden_cast.png',
     positions: SHARED_POSITIONS,
@@ -289,7 +291,7 @@ export const BOATS: BoatDef[] = [
     grade: 1.05,
     name: 'Ethereal',
     color: '#dde8ff',
-    cost: 500000,
+    cost: 750_000,
     restImageUrl: '/boat_ethereal_rest.png',
     castImageUrl: '/boat_ethereal_cast.png',
     positions: SHARED_POSITIONS,
@@ -302,7 +304,7 @@ export const BOATS: BoatDef[] = [
     name: 'Fire',
     color: '#ff7a1a',
     cost: 0,
-    gemPrice: 750,
+    gemPrice: 1000,
     restImageUrl: '/boat_fire_rest.png',
     castImageUrl: '/boat_fire_cast.png',
     positions: FIRE_POSITIONS,
@@ -314,7 +316,7 @@ export const BOATS: BoatDef[] = [
     name: 'Ice',
     color: '#a4dcf2',
     cost: 0,
-    gemPrice: 750,
+    gate: { kind: 'fishing', level: 75 },   // the Ice set, with the skin
     restImageUrl: '/boat_ice_rest.png',
     castImageUrl: '/boat_ice_cast.png',
     positions: SHARED_POSITIONS,
@@ -326,7 +328,7 @@ export const BOATS: BoatDef[] = [
     name: 'Jet Black',
     color: '#1b1b20',
     cost: 0,
-    gemPrice: 500,
+    gemPrice: 750,
     restImageUrl: '/boat_jetblack_rest.png',
     castImageUrl: '/boat_jetblack_cast.png',
     positions: SHARED_POSITIONS,
@@ -337,7 +339,7 @@ export const BOATS: BoatDef[] = [
     grade: 1.07,
     name: 'Chromium',
     color: '#c4c8cc',
-    cost: 1_000_000,
+    cost: 1_500_000,
     restImageUrl: '/boat_chromium_rest.png',
     castImageUrl: '/boat_chromium_cast.png',
     positions: SHARED_POSITIONS,
@@ -349,7 +351,7 @@ export const BOATS: BoatDef[] = [
     name: 'Celestial',
     color: '#b0a8e0',
     cost: 0,
-    achievementPoints: 420,   // see lib/characters.ts for the pool-relative reasoning
+    gate: { kind: 'ap', share: 0.75 },   // the hardest unlock in the game
     restImageUrl: '/boat_celestial_rest.png',
     castImageUrl: '/boat_celestial_cast.png',
     positions: SHARED_POSITIONS,
@@ -362,28 +364,43 @@ export const BOATS: BoatDef[] = [
     name: 'Abyssal',
     color: '#3a2f5a',
     cost: 0,
-    achievementPoints: 350,   // see lib/characters.ts for the pool-relative reasoning
+    gate: { kind: 'ap', share: 0.5 },    // the Abyssal set, with the skin
     restImageUrl: '/boat_abyssal_rest.png',
     castImageUrl: '/boat_abyssal_cast.png',
     positions: SHARED_POSITIONS,
   },
 ]
 
-/** Achievement-gated boats the player has earned (>= threshold) but doesn't own
- *  yet. STATE-based + idempotent, mirroring the character-color helper. */
+/** Earned boats the player qualifies for but doesn't own yet. STATE-based and
+ *  idempotent. An achievement gate needs `ap`; without it only level gates are
+ *  checked. */
+export function earnedBoats(stats: GateStats, unlocked: string[] = []): string[] {
+  return BOATS
+    .filter(b => b.gate && !unlocked.includes(b.id) && gateMet(b.gate, stats))
+    .map(b => b.id)
+}
+
+/** The achievement-gated half of {@link earnedBoats}, for callers that only
+ *  have a score. */
 export function earnedAchievementBoats(achievementPoints: number, unlocked: string[] = []): string[] {
   return BOATS
-    .filter(b => typeof b.achievementPoints === 'number')
-    .filter(b => !unlocked.includes(b.id))
-    .filter(b => achievementPoints >= (b.achievementPoints as number))
+    .filter(b => b.gate?.kind === 'ap' && !unlocked.includes(b.id))
+    .filter(b => gateMet(b.gate!, { fishingLevel: 0, navLevel: 0, ap: achievementPoints }))
     .map(b => b.id)
 }
 
 /** Ids of the achievement-gated boats — lets callers cheaply check whether an
  *  achievement-points lookup is even needed before running one. */
 export const ACHIEVEMENT_BOAT_IDS = new Set(
-  BOATS.filter(b => typeof b.achievementPoints === 'number').map(b => b.id),
+  BOATS.filter(b => b.gate?.kind === 'ap').map(b => b.id),
 )
+
+/** What a locked boat says: its gate, a crate, or nothing (it has a price). */
+export function boatUnlockHint(b: BoatDef): string | undefined {
+  if (b.gate) return gateHint(b.gate)
+  if (b.crateOnly) return 'Found only in fishing crates'
+  return undefined
+}
 
 export const BOAT_MAP: Record<string, BoatDef> = Object.fromEntries(BOATS.map(b => [b.id, b]))
 

@@ -59,6 +59,7 @@ import { getCurrentProfile } from '@/lib/userData'
 import { canSail } from '@/lib/seaAccess'
 import { isPremiumActive } from '@/lib/premium'
 import SessionWatch from '@/components/SessionWatch'
+import UnlockBanner from '@/components/UnlockBanner'
 import { CHARACTER_COLORS } from '@/lib/characters'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -118,6 +119,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           of its own so no scroll box or rounded card can clip it. Draws
           nothing until something on the page wears `.coach-flash`. */}
       <CoachFlash />
+      {/* "Unlocked": a skin, boat or border a level or the achievement pool
+          just opened. Only for a signed-in captain. */}
+      {profile && <UnlockBanner />}
       {/* The honeypot. Renders nothing; see app/actions/honeypot.ts. */}
       <Honeypot />
       {/* Global membership purchase popup — opens on the `open-membership`

@@ -13,7 +13,7 @@ import { PROFILE_BACKGROUNDS, getProfileBackground } from '@/lib/profileBackgrou
 import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile, CoinAmount } from '@/components/ProfileStats'
 import type { CareerStats } from '@/lib/careerStats'
-import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
+import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, specialUnlockHint, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 import { hapticTap } from '@/lib/haptics'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
@@ -1107,18 +1107,20 @@ export default function ProfileClient({
                     type="button"
                     onClick={() => {
                       if (!owned) {
+                        // EARNED ones say how; only bought ones are Captain-only.
+                        if (s.gate) { flashLockMsg(`${s.label}: ${specialUnlockHint(s)}`); return }
                         if (!isPremium) {
                           flashLockMsg(`${s.label} is Captain only`)
                           return
                         }
                         setPurchaseError(null)
-                        setPurchasePrompt({ kind: 'special', id: s.id, name: s.label, price: s.gemPrice, currency: 'gems' })
+                        setPurchasePrompt({ kind: 'special', id: s.id, name: s.label, price: s.gemPrice ?? 0, currency: 'gems' })
                         return
                       }
                       saveAvatarBg(s.hex)
                     }}
-                    aria-label={`Background ${s.label}${!owned ? ` (${s.gemPrice} gems)` : ''}`}
-                    title={owned ? s.label : `${s.label}, ${s.gemPrice} ◆`}
+                    aria-label={`Background ${s.label}${!owned ? ` (${specialUnlockHint(s)})` : ''}`}
+                    title={owned ? s.label : `${s.label}, ${specialUnlockHint(s)}`}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
@@ -1195,18 +1197,20 @@ export default function ProfileClient({
                     className={s.cssClass}
                     onClick={() => {
                       if (!owned) {
+                        // EARNED ones say how; only bought ones are Captain-only.
+                        if (s.gate) { flashLockMsg(`${s.label}: ${specialUnlockHint(s)}`); return }
                         if (!isPremium) {
                           flashLockMsg(`${s.label} is Captain only`)
                           return
                         }
                         setPurchaseError(null)
-                        setPurchasePrompt({ kind: 'special', id: s.id, name: s.label, price: s.gemPrice, currency: 'gems' })
+                        setPurchasePrompt({ kind: 'special', id: s.id, name: s.label, price: s.gemPrice ?? 0, currency: 'gems' })
                         return
                       }
                       saveAvatarBorder(s.hex)
                     }}
-                    aria-label={`Border ${s.label}${!owned ? ` (${s.gemPrice} gems)` : ''}`}
-                    title={owned ? s.label : `${s.label}, ${s.gemPrice} ◆`}
+                    aria-label={`Border ${s.label}${!owned ? ` (${specialUnlockHint(s)})` : ''}`}
+                    title={owned ? s.label : `${s.label}, ${specialUnlockHint(s)}`}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',

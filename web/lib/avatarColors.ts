@@ -8,6 +8,8 @@
 // Gold border is gated to premium members; validate server-side in
 // updateAvatarColors.
 
+import { type CosmeticGate, type GateStats, gateHint, gateMet } from './cosmeticGates'
+
 export const NONE_VALUE = 'none' as const
 
 /** Backwards-compatible defaults — null in the DB resolves to these. */
@@ -65,20 +67,43 @@ export interface AvatarSpecial {
   label: string
   hex: string
   kind: 'border' | 'bg'
-  /** Gems required to unlock. */
-  gemPrice: number
+  /** Gems required to unlock (bought ones; Captain only, as before). */
+  gemPrice?: number
+  /** Earned ones: no gems, no membership, just the gate (lib/cosmeticGates). */
+  gate?: CosmeticGate
   /** CSS class that renders the animation on the preview swatch. */
   cssClass: string
 }
 
 export const AVATAR_SPECIALS: AvatarSpecial[] = [
-  { id: 'aurora',      label: 'Aurora',      hex: AURORA_VALUE,      kind: 'border', gemPrice: 300,  cssClass: 'avatar-aurora' },
+  // ── THE STANDARD OF 2026-09-25 ── borders and backgrounds are the least
+  // visible cosmetic, so they take the easy earned steps and keep their gem
+  // prices on a 500 / 1000 / 1500 ladder. Aurora is a set: border and
+  // background both 500.
+  { id: 'aurora',      label: 'Aurora',      hex: AURORA_VALUE,      kind: 'border', gemPrice: 500,  cssClass: 'avatar-aurora' },
   { id: 'sovereign',   label: 'Sovereign',   hex: SOVEREIGN_VALUE,   kind: 'border', gemPrice: 1000, cssClass: 'avatar-sovereign' },
   { id: 'sterling',    label: 'Sterling',    hex: STERLING_VALUE,    kind: 'border', gemPrice: 1000, cssClass: 'avatar-silver' },
   { id: 'aurora_bg',   label: 'Aurora',      hex: AURORA_BG_VALUE,   kind: 'bg',     gemPrice: 500,  cssClass: 'avatar-bg-aurora' },
   { id: 'treasure',    label: 'Treasure',    hex: TREASURE_VALUE,    kind: 'bg',     gemPrice: 1500, cssClass: 'avatar-bg-treasure' },
   { id: 'quicksilver', label: 'Quicksilver', hex: QUICKSILVER_VALUE, kind: 'bg',     gemPrice: 1500, cssClass: 'avatar-bg-silver' },
+  // Earned rings, drawn in CSS (globals.css .avatar-laurel / -hemp / -tidemark).
+  { id: 'laurel',      label: 'Laurel',      hex: 'laurel',          kind: 'border', gate: { kind: 'ap', share: 0.25 }, cssClass: 'avatar-laurel' },
+  { id: 'hemp',        label: 'Hemp',        hex: 'hemp',            kind: 'border', gate: { kind: 'nav', level: 25 },  cssClass: 'avatar-hemp' },
+  { id: 'tidemark',    label: 'Tidemark',    hex: 'tidemark',        kind: 'border', gate: { kind: 'nav', level: 75 },  cssClass: 'avatar-tidemark' },
 ]
+
+/** Earned specials the player qualifies for but doesn't own yet. An achievement
+ *  gate needs `ap` in the stats. */
+export function earnedSpecials(stats: GateStats, unlocked: string[] = []): string[] {
+  return AVATAR_SPECIALS
+    .filter(s => s.gate && !unlocked.includes(s.id) && gateMet(s.gate, stats))
+    .map(s => s.id)
+}
+
+/** What a locked special says: its gate, or its gem price. */
+export function specialUnlockHint(s: AvatarSpecial): string {
+  return s.gate ? gateHint(s.gate) : `${(s.gemPrice ?? 0).toLocaleString()} ◆`
+}
 
 export function getAvatarSpecial(hex: string | null | undefined): AvatarSpecial | undefined {
   if (!hex) return undefined

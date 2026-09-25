@@ -18,7 +18,7 @@
 // copy, here, called by both.
 
 import { earnedLevelColors, earnedAchievementColors } from '@/lib/characters'
-import { earnedAchievementBoats } from '@/lib/boats'
+import { earnedBoats } from '@/lib/boats'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 
@@ -44,17 +44,20 @@ export type Unlocked = {
 export function unlockedCosmetics(p: UnlockSource | null, achievementPoints: number): Unlocked {
   const storedColors = p?.unlocked_character_colors ?? []
   const storedBoats = p?.unlocked_boats ?? []
+  const fishingLevel = getLevelFromXP(Number(p?.fishing_xp ?? 0))
+  const navLevel = navLevelFromXP(Number(p?.expedition_xp ?? 0))
   return {
     colors: [
       ...storedColors,
       ...earnedLevelColors({
-        fishingLevel: getLevelFromXP(Number(p?.fishing_xp ?? 0)),
-        navLevel: navLevelFromXP(Number(p?.expedition_xp ?? 0)),
+        fishingLevel,
+        navLevel,
         maxPrestige: Math.max(0, ...Object.values(p?.prestige_levels ?? {})),
       }, storedColors),
       ...earnedAchievementColors(achievementPoints, storedColors),
     ],
-    boats: [...storedBoats, ...earnedAchievementBoats(achievementPoints, storedBoats)],
+    // Level-gated (Ice) and achievement-gated (Abyssal, Celestial) alike.
+    boats: [...storedBoats, ...earnedBoats({ fishingLevel, navLevel, ap: achievementPoints }, storedBoats)],
     // Hats and pets have no earned-but-ungranted path today: everything is
     // written on unlock. They come through here anyway so a caller asks one
     // question rather than four, and so the day one of them grows a ladder

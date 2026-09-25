@@ -8,6 +8,7 @@ import { CHARACTER_COLORS, earnedLevelColors, earnedAchievementColors, ACHIEVEME
 import { earnedAchievementBoats, ACHIEVEMENT_BOAT_IDS } from '@/lib/boats'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBg, isPremiumBorder, getAvatarSpecial, AVATAR_SPECIALS } from '@/lib/avatarColors'
+import { gateMet } from '@/lib/cosmeticGates'
 import { isPremiumActive } from '@/lib/premium'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
@@ -271,7 +272,7 @@ export async function updateAvatarColors(input: {
     const admin0 = createAdminClient()
     const { data: profile } = await admin0
       .from('profiles')
-      .select('is_premium, premium_expires_at, unlocked_avatar_specials')
+      .select('is_premium, premium_expires_at, unlocked_avatar_specials, fishing_xp, expedition_xp')
       .eq('id', user.id)
       .single()
 
@@ -280,8 +281,25 @@ export async function updateAvatarColors(input: {
     }
     if (needsOwnedCheck) {
       const owned = (profile?.unlocked_avatar_specials as string[] | null) ?? []
-      if (bgSpecial && !owned.includes(bgSpecial.id))         return { error: `${bgSpecial.label} not unlocked` }
-      if (borderSpecial && !owned.includes(borderSpecial.id)) return { error: `${borderSpecial.label} not unlocked` }
+      // EARNED specials (Laurel, Hemp, Tidemark) are checked against their gate
+      // rather than the bought list, and stored once they pass so they stick.
+      const earned = async (sp: NonNullable<typeof bgSpecial>) => {
+        if (owned.includes(sp.id)) return true
+        if (!sp.gate) return false
+        const ap = sp.gate.kind === 'ap' ? await getUserAchievementPoints(user.id) : null
+        const ok = gateMet(sp.gate, {
+          fishingLevel: getLevelFromXP(Number(profile?.fishing_xp ?? 0)),
+          navLevel: navLevelFromXP(Number(profile?.expedition_xp ?? 0)),
+          ap,
+        })
+        if (ok) {
+          owned.push(sp.id)
+          await createAdminClient().from('profiles').update({ unlocked_avatar_specials: owned }).eq('id', user.id)
+        }
+        return ok
+      }
+      if (bgSpecial && !(await earned(bgSpecial)))         return { error: `${bgSpecial.label} not unlocked` }
+      if (borderSpecial && !(await earned(borderSpecial))) return { error: `${borderSpecial.label} not unlocked` }
     }
   }
 
@@ -332,7 +350,8 @@ export async function purchaseAvatarSpecial(specialId: string): Promise<
   if (!user) return { error: 'Unauthorized' }
 
   const special = AVATAR_SPECIALS.find(s => s.id === specialId)
-  if (!special) return { error: 'Not for sale' }
+  if (!special || special.gate || !special.gemPrice) return { error: 'Not for sale' }
+  const gemPrice = special.gemPrice
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -347,9 +366,9 @@ export async function purchaseAvatarSpecial(specialId: string): Promise<
   const owned = (profile.unlocked_avatar_specials as string[] | null) ?? []
   if (owned.includes(specialId)) return { error: 'Already owned' }
   const balance = profile.gems ?? 0
-  if (balance < special.gemPrice) return { error: `Need ${special.gemPrice.toLocaleString()} ◆` }
+  if (balance < gemPrice) return { error: `Need ${gemPrice.toLocaleString()} ◆` }
 
-  const newGems = balance - special.gemPrice
+  const newGems = balance - gemPrice
   const newOwned = [...owned, specialId]
   await Promise.all([
     admin.from('profiles')
@@ -357,7 +376,7 @@ export async function purchaseAvatarSpecial(specialId: string): Promise<
       .eq('id', user.id),
     admin.from('gem_transactions').insert({
       user_id: user.id,
-      amount: -special.gemPrice,
+      amount: -gemPrice,
       reason: `Bought ${special.label} ${special.kind === 'border' ? 'border' : 'background'}`,
     }),
   ])
