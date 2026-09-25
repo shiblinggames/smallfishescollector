@@ -48,14 +48,44 @@ async function loadPuzzlePoints(userId: string): Promise<number> {
   return (data?.puzzle_points as number | null) ?? 0
 }
 
+/** Save a board, but never over a banked one: only rows still unbanked
+ *  (points_awarded 0) are written, and points_awarded itself is only ever
+ *  moved by bankClear. A stale save used to write 'active' and 0 back over a
+ *  clear, and the same week could then be banked again. A missing row is
+ *  created; an existing one is never replaced by that insert. */
 async function persist(userId: string, week: string, a: AttemptRow) {
   const admin = createAdminClient()
-  await admin.from('minefield_attempts').upsert({
-    user_id: userId, week,
+  const row = {
+    revealed: a.revealed, flagged: a.flagged, status: a.status, busts: a.busts,
+    updated_at: new Date().toISOString(),
+  }
+  const { data } = await admin.from('minefield_attempts').update(row)
+    .eq('user_id', userId).eq('week', week).eq('points_awarded', 0)
+    .select('user_id')
+  if (data && data.length > 0) return
+  await admin.from('minefield_attempts').upsert(
+    { user_id: userId, week, ...row, points_awarded: 0 },
+    { onConflict: 'user_id,week', ignoreDuplicates: true },
+  )
+}
+
+/** Bank the clear: flip the row to cleared with its points, only from the
+ *  unbanked state. true = this request banked it and may pay. */
+async function bankClear(userId: string, week: string, a: AttemptRow, existed: boolean): Promise<boolean> {
+  const admin = createAdminClient()
+  const row = {
     revealed: a.revealed, flagged: a.flagged, status: a.status,
     points_awarded: a.points_awarded, busts: a.busts,
     updated_at: new Date().toISOString(),
-  })
+  }
+  if (!existed) {
+    const { error } = await admin.from('minefield_attempts').insert({ user_id: userId, week, ...row })
+    if (!error) return true
+  }
+  const { data } = await admin.from('minefield_attempts').update(row)
+    .eq('user_id', userId).eq('week', week).eq('points_awarded', 0)
+    .select('user_id')
+  return !!data && data.length > 0
 }
 
 export async function getMinefieldState(): Promise<MinefieldState | { error: string }> {
@@ -140,14 +170,13 @@ export async function revealCell(index: number): Promise<RevealResult | { error:
   if (cleared && a.points_awarded === 0) {
     a.status = 'cleared'
     a.points_awarded = MINEFIELD_POINTS
-    pointsWon = MINEFIELD_POINTS
-    const admin = createAdminClient()
-    const oldPoints = await loadPuzzlePoints(user.id)
-    newPuzzlePoints = oldPoints + MINEFIELD_POINTS
-    await Promise.all([
-      persist(user.id, week, a),
-      admin.from('profiles').update({ puzzle_points: newPuzzlePoints }).eq('id', user.id),
-    ])
+    if (await bankClear(user.id, week, a, existing !== null)) {
+      pointsWon = MINEFIELD_POINTS
+      const admin = createAdminClient()
+      const oldPoints = await loadPuzzlePoints(user.id)
+      newPuzzlePoints = oldPoints + MINEFIELD_POINTS
+      await admin.from('profiles').update({ puzzle_points: newPuzzlePoints }).eq('id', user.id)
+    }
   } else {
     if (cleared) a.status = 'cleared'
     await persist(user.id, week, a)

@@ -6,6 +6,7 @@ import { nextShip, MIN_SHIP_TIER } from '@/lib/ships'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { navLevelReqForShip } from '@/lib/gearGating'
 import { revalidatePath } from 'next/cache'
+import { spend, grant } from '@/lib/wallet'
 
 export async function buyShip(): Promise<{ shipTier: number; doubloons: number } | { error: string }> {
   const supabase = await createClient()
@@ -38,12 +39,22 @@ export async function buyShip(): Promise<{ shipTier: number; doubloons: number }
   const navLevel = navLevelFromXP(profile.expedition_xp ?? 0)
   const navReq = navLevelReqForShip(cost)
   if (navLevel < navReq) return { error: `Reach Nav Lv ${navReq} to buy the ${next.name}` }
-  if (profile.doubloons < cost) return { error: 'Not enough doubloons' }
-
-  const newDoubloons = profile.doubloons - cost
+  // The spend is the guard, in place. The hull then moves up only from the
+  // tier this request priced, so two taps cannot buy one rung twice; the loser
+  // is refunded.
+  const newDoubloons = await spend(admin, user.id, 'doubloons', cost)
+  if (newDoubloons == null) return { error: 'Not enough doubloons' }
+  const tierGuard = admin.from('profiles').update({ ship_tier: nextTier }).eq('id', user.id)
+  const { data: moved } = await (profile.ship_tier == null
+    ? tierGuard.is('ship_tier', null)
+    : tierGuard.eq('ship_tier', profile.ship_tier)
+  ).select('id')
+  if (!moved || moved.length === 0) {
+    await grant(admin, user.id, 'doubloons', cost)
+    return { error: 'That ship is already yours. Reload and try again.' }
+  }
 
   await Promise.all([
-    admin.from('profiles').update({ ship_tier: nextTier, doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: -cost,

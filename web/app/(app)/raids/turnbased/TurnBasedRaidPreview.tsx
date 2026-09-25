@@ -7,7 +7,7 @@
 import { useState } from 'react'
 import RaidCombat from '../RaidCombat'
 import { BossRaidConfig } from '@/lib/bossRaids'
-import { RaidPlayerStats } from '../actions'
+import type { RaidPlayerStats } from '@/lib/raidPlayerStats'
 import { IconAnchor, IconSkull } from '@/components/GameIcons'
 
 export default function TurnBasedRaidPreview({ config, stats }: {

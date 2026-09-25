@@ -4,7 +4,8 @@ import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState, useCallback, startTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { awardPracticeKill } from './practiceActions'
+import { awardPracticeKill, startPracticeRun } from './practiceActions'
+import { PRACTICE_KILL_REWARDS } from '@/lib/practiceRewards'
 import { markRaidTutorialSeen } from '../tutorialActions'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
@@ -57,21 +58,21 @@ const PRACTICE_ENEMIES: Record<string, PracticeEnemy> = {
     shipSpeed: 4, actionMs: 4500,
     pattern: ['reload', 'fire', 'reload', 'fire'],
     critChance: 0.025,
-    image: '/ship-hero/sloop_v3.png', portrait: ENEMY_IMG_BASE + 'reefraider.png', killGold: 20, killXP: 20,
+    image: '/ship-hero/sloop_v3.png', portrait: ENEMY_IMG_BASE + 'reefraider.png', killGold: PRACTICE_KILL_REWARDS.brute.gold, killXP: PRACTICE_KILL_REWARDS.brute.xp,
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     shipSpeed: 3, actionMs: 5500,
     pattern: ['reload', 'dodge', 'fire', 'reload', 'reload', 'reload', 'volley'],
     critChance: 0.10,
-    image: '/ship-hero/sloop_v3.png', portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: 25, killXP: 30,
+    image: '/ship-hero/sloop_v3.png', portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: PRACTICE_KILL_REWARDS.sniper.gold, killXP: PRACTICE_KILL_REWARDS.sniper.xp,
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     shipSpeed: 7, actionMs: 3500,
     pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley', 'reload', 'fire'],
     critChance: 0.05,
-    image: '/ship-hero/sloop_v3.png', portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: 35, killXP: 45,
+    image: '/ship-hero/sloop_v3.png', portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: PRACTICE_KILL_REWARDS.corsair.gold, killXP: PRACTICE_KILL_REWARDS.corsair.xp,
   },
 }
 const NON_BOSS_IDS = ['brute', 'sniper', 'corsair'] as const
@@ -450,9 +451,12 @@ export default function PracticeRaidGame({
   const enemyPatternIdxRef = useRef(0)
   const enemyActionElapsedRef = useRef(0)
   const roundEndingRef    = useRef(false)
+  const practiceTokenPRef = useRef<Promise<string | null>>(Promise.resolve(null))
 
   const startGame = useCallback((enemy: PracticeEnemy) => {
     currentEnemyRef.current = enemy
+    // One-shot server token for this fight; the kill award awaits it.
+    practiceTokenPRef.current = startPracticeRun(enemy.id).then(r => r.token).catch(() => null)
     setFightId(id => id + 1)  // force <RaidCombat /> remount
     firePosRef.current = 0; fireDirRef.current = 1
     const halfW = 0.06 + GRAZE_W
@@ -786,7 +790,7 @@ export default function PracticeRaidGame({
     }
 
     let res: Awaited<ReturnType<typeof awardPracticeKill>> | null = null
-    try { res = await awardPracticeKill(xp, gold) } catch { /* save failed */ }
+    try { res = await awardPracticeKill(await practiceTokenPRef.current) } catch { /* save failed */ }
     if (!res) { setTimeout(showPostBattle, 400); return }
 
     const oldLevel = getLevelFromXP(navXPRef.current)
@@ -819,7 +823,7 @@ export default function PracticeRaidGame({
     if (isClaiming) return
     setIsClaiming(true)
     try {
-      const res = await awardPracticeKill(winXP, winGold)
+      const res = await awardPracticeKill(await practiceTokenPRef.current)
       setNavXP(res.newExpeditionXP)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (winXP > 0) setXpPopup({ value: winXP, id: Date.now() })

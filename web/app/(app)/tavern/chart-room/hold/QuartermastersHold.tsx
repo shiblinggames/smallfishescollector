@@ -250,7 +250,8 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
       if ('error' in r) { setMessage(r.error); return }
       if (!r.correct) {
         setWrong(r.wrong ?? null)
-        setMessage('She lists. Some lots are stowed wrong. Find them and try again.')
+        if (r.hintsUsed !== undefined) setHintsMap(prev => ({ ...prev, [selected]: r.hintsUsed! }))
+        setMessage('She lists. Some lots are stowed wrong. Find them and try again. (Counts as a tally, clean bonus forfeit.)')
         return
       }
       setSolvedMap(prev => ({ ...prev, [selected]: { doubloons: r.doubloonsWon, clean: r.clean } }))

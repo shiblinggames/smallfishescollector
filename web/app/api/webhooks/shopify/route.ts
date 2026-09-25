@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHmac } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(req: NextRequest) {
@@ -10,7 +10,9 @@ export async function POST(req: NextRequest) {
   const secret = process.env.SHOPIFY_WEBHOOK_SECRET
   if (!secret || !hmac) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const digest = createHmac('sha256', secret).update(body).digest('base64')
-  if (hmac !== digest) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Constant-time compare, so the check cannot be probed byte by byte.
+  const a = Buffer.from(hmac), b = Buffer.from(digest)
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const order = JSON.parse(body)
   const premiumProductId = process.env.SHOPIFY_PREMIUM_PRODUCT_ID

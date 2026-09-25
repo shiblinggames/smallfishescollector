@@ -16,6 +16,7 @@
 // That matters more here than it did for the isles. A bottle is infinite, and
 // anything infinite that can be faked is a faucet.
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { bottleFromKey, bottlePos, fragmentFor, carriesBearing, BOTTLE_REACH } from '@/lib/seaBottles'
@@ -40,7 +41,7 @@ export type DigState = { bearings: string[]; dug: string[] }
 export async function getDigState(): Promise<DigState> {
   const supabase = await createClient()
   // getSession, not getUser: own-rows read on a hot page load.
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   if (!session?.user) return { bearings: [], dug: [] }
   const admin = createAdminClient()
   const { data } = await admin

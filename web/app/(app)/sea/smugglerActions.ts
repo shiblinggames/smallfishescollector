@@ -14,6 +14,7 @@
 // is a separate product now and nothing here leaves the water: the membership
 // card is mounted in the app shell and opens over the chart where you are.
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isPremiumActive } from '@/lib/premium'
@@ -33,7 +34,7 @@ export async function smugglerStanding(): Promise<{ isCaptain: boolean }> {
   const supabase = await createClient()
   // getSession, not getUser: this reads two columns of the caller's own row and
   // the session names them. See the note in lib/supabase.
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   const uid = session?.user?.id
   if (!uid) return { isCaptain: false }
 

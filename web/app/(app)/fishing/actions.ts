@@ -28,6 +28,7 @@ import { vigilFor, isReleased, vigilTotal, vigilComplete, vigilHuntChance, ancie
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
+import { arrayAdd, grant, spend } from '@/lib/wallet'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -117,7 +118,9 @@ function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat
 // ── Server-side event validation ─────────────────────────────────────────────
 
 const EVENT_DURATION_MS = 120_000
-const EVENT_MIN_GAP_MS  = 600_000 // 10 minutes minimum between events
+// There used to be an exported activateEvent here that let any caller start
+// the zone event of its choosing. Nothing in the game called it, so it went
+// (2026-09-25 exploit audit). Events still read from profiles.active_event.
 
 function getActiveEvent(raw: unknown): { type: string } | null {
   if (!raw || typeof raw !== 'object') return null
@@ -125,40 +128,6 @@ function getActiveEvent(raw: unknown): { type: string } | null {
   if (!e.type || !e.started_at) return null
   if (Date.now() - new Date(e.started_at).getTime() > EVENT_DURATION_MS) return null
   return { type: e.type }
-}
-
-export async function activateEvent(type: string): Promise<{ ok: true } | { error: string }> {
-  const VALID = new Set(['bloom', 'fullmoon', 'redtide', 'glassy'])
-  if (!VALID.has(type)) return { error: 'Invalid event type' }
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('active_event, last_event_at')
-    .eq('id', user.id)
-    .single()
-  if (!profile) return { error: 'Profile not found' }
-
-  const now = Date.now()
-
-  if (getActiveEvent(profile.active_event)) return { error: 'Event already active' }
-
-  if (profile.last_event_at) {
-    const lastAt = new Date(profile.last_event_at as string).getTime()
-    if (now - lastAt < EVENT_MIN_GAP_MS) return { error: 'Too soon' }
-  }
-
-  const started_at = new Date().toISOString()
-  await admin
-    .from('profiles')
-    .update({ active_event: { type, started_at }, last_event_at: started_at })
-    .eq('id', user.id)
-
-  return { ok: true }
 }
 
 // CrateTier + CrateLoot + the loot roller now live in @/lib/crateLoot (imported
@@ -891,21 +860,28 @@ export async function reelIn(
   const admin = createAdminClient()
   const isCatch = result === 'perfect' || result === 'catch'
 
-  // Snag: consume one extra bait
+  // Snag: consume one extra bait. The bait is the one the CAST used, off the
+  // server's token, never the caller's argument.
   if (result === 'penalty') {
-    const { data: baitRow } = await admin
-      .from('bait_inventory')
-      .select('quantity')
-      .eq('user_id', user.id)
-      .eq('bait_type', baitType)
-      .single()
+    const { data: castRow } = await admin
+      .from('profiles').select('pending_cast').eq('id', user.id).single()
+    const snagBait = (castRow?.pending_cast as PendingCast | null)?.baitType
+    const { data: baitRow } = snagBait
+      ? await admin
+        .from('bait_inventory')
+        .select('quantity')
+        .eq('user_id', user.id)
+        .eq('bait_type', snagBait)
+        .single()
+      : { data: null }
 
-    if (baitRow && baitRow.quantity > 0) {
+    if (snagBait && baitRow && baitRow.quantity > 0) {
       await admin
         .from('bait_inventory')
         .update({ quantity: baitRow.quantity - 1 })
         .eq('user_id', user.id)
-        .eq('bait_type', baitType)
+        .eq('bait_type', snagBait)
+        .eq('quantity', baitRow.quantity)
     }
     // Lifetime snag counter (line lost) — admin stat.
     await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_snags', n: 1 })
@@ -1005,17 +981,24 @@ export async function reelIn(
   // fishId / doubleCatch / jackpotMultiplier arguments are IGNORED — they are
   // rebound to the token, so a caller cannot pick a legendary, force a x100
   // jackpot, or reel without casting.
+  //
+  // The claim matches THIS token's castAt, not just "some token is there": a
+  // reel that read one cast must not be able to spend a newer cast that landed
+  // in between and be paid for the old one.
   const { data: claimed } = await admin
     .from('profiles')
     .update({ pending_cast: null, catch_pending: false })
     .eq('id', user.id)
-    .not('pending_cast', 'is', null)
+    .eq('pending_cast->>castAt', String(token.castAt))
     .select('id')
     .maybeSingle()
   if (!claimed) return { caught: false }
   fishId = token.fishId
   doubleCatch = token.doubleCatch
   jackpotMultiplier = token.jackpotMult
+  // The bait is the token's too. The argument was used for the bait-save refund
+  // below, so a worm cast could be refunded as a Golden Lure.
+  baitType = token.baitType
   const lockedCatchQty = token.catchQty ?? 1   // Locked-In Rod guaranteed haul (3 at streak 5+)
 
   // Fishing Renown (post-100): a tiny XP multiplier on every catch (Wisdom).
@@ -1104,9 +1087,9 @@ export async function reelIn(
       // already complete the moment the pet def exists, with no backfill.
       if (vigilComplete(vigil)) {
         const ownedPets = ((profile as { unlocked_pets?: string[] } | null)?.unlocked_pets ?? [])
+        // Added in place, so a crate pet landing meanwhile is not written over.
         if (!ownedPets.includes(VIGIL_PET_ID)) {
-          updates.unlocked_pets = [...ownedPets, VIGIL_PET_ID]
-          vigilPetGranted = true
+          vigilPetGranted = await arrayAdd(admin, user.id, 'unlocked_pets', VIGIL_PET_ID)
         }
       }
     }
@@ -1122,9 +1105,12 @@ export async function reelIn(
       && profile.equipped_special === 'perfected_sigil'
       ? Math.min(aStreak, 3) * 10
       : 0
-    const ancientNewDoubloons = (profile.doubloons ?? 0) + ancientSigilBonus
-    if (ancientSigilBonus > 0) updates.doubloons = ancientNewDoubloons
     await admin.from('profiles').update(updates).eq('id', user.id)
+    // Paid in place rather than riding the update above as an absolute
+    // balance, which would write over a sale that landed during the reel.
+    const ancientNewDoubloons = ancientSigilBonus > 0
+      ? await grant(admin, user.id, 'doubloons', ancientSigilBonus)
+      : undefined
 
     // ── First-ever Ancient Deep catch contest ───────────────────────────
     // Atomic claim via the contests table's PK constraint: whichever
@@ -1171,7 +1157,7 @@ export async function reelIn(
       // Ancients can never roll shiny (habitat-blocked in lib/shiny rollShiny).
       isShiny: false,
       sigilBonus: ancientSigilBonus,
-      newDoubloons: ancientSigilBonus > 0 ? ancientNewDoubloons : undefined,
+      newDoubloons: ancientNewDoubloons,
       firstAncientCatch,
       // Set only when a RELEASED giant was landed on a perfect — drives the
       // rank-up celebration and the wall's new numeral.
@@ -1371,7 +1357,6 @@ export async function reelIn(
   const sigilBonus = result === 'perfect' && sigilEquipped
     ? Math.min(newPerfectStreak, 3) * 10
     : 0
-  const newDoubloons = (profile.doubloons ?? 0) + sigilBonus
 
   // Galaxy Rod — "Wormhole": this catch is rerollable if the equipped rod has
   // the effect and the catch is a normal landable fish (ancient_deep already
@@ -1403,7 +1388,6 @@ export async function reelIn(
     ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}),
     pending_reroll: wormholeAvail ? { fishId, qty: catchQty, habitat: fish.habitat } : null,
   }
-  if (sigilBonus > 0) profileUpdates.doubloons = newDoubloons
   if (result === 'perfect') profileUpdates.total_perfects = (profile.total_perfects ?? 0) + 1
   // Ceiling-guarded like the other two record sites; see STREAK_RECORD_CEILING.
   if (newPerfectStreak > STREAK_RECORD_CEILING) {
@@ -1425,26 +1409,23 @@ export async function reelIn(
     const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
     const toAdd = fishingColorsToGrant(newFishingLevel, currentUnlocked)
     if (toAdd.length > 0) {
-      profileUpdates.unlocked_character_colors = [...currentUnlocked, ...toAdd]
+      // Added in place, so a skin bought during the reel is not written over.
+      for (const id of toAdd) await arrayAdd(admin, user.id, 'unlocked_character_colors', id)
       reelInUnlockedSkin = toAdd[toAdd.length - 1]
     }
   }
   if (oldFishingLevel < 100 && newFishingLevel >= 100) await grantBadgeDirect(user.id, 'master_angler')
   if (newPerfectStreak >= 10) await grantBadgeDirect(user.id, 'unbroken')
 
-  const [, baitFetchResult] = await Promise.all([
+  // The Sigil pays in place and the saved bait goes back in place, so neither
+  // writes over a sale or a cast that landed while this reel was running.
+  const [, newDoubloons] = await Promise.all([
     admin.from('profiles').update(profileUpdates).eq('id', user.id),
+    sigilBonus > 0 ? grant(admin, user.id, 'doubloons', sigilBonus) : Promise.resolve(undefined),
     baitSaved
-      ? admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', baitType).single()
-      : Promise.resolve({ data: null }),
+      ? admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: baitType, p_qty: 1 })
+      : Promise.resolve(null),
   ])
-
-  if (baitSaved && baitFetchResult.data) {
-    await admin.from('bait_inventory')
-      .update({ quantity: baitFetchResult.data.quantity + 1 })
-      .eq('user_id', user.id)
-      .eq('bait_type', baitType)
-  }
 
   // Lifetime event counters (admin stats) — only fire on the event.
   if (effectiveDoubleCatch)          await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_double_catches', n: 1 })
@@ -1621,7 +1602,7 @@ export async function reelIn(
     shinyId,
     alreadyMounted,
     sigilBonus,
-    newDoubloons: sigilBonus > 0 ? newDoubloons : undefined,
+    newDoubloons,
     wormhole: wormholeAvail,
     catchQty,
   }
@@ -1774,16 +1755,31 @@ export async function reelCrate(_zone: string, _tier: CrateTier = 'wooden', resu
   // `tier` argument is IGNORED, and a call with no live crate cast opens nothing
   // — closing the "loop reelCrate('diamond') with no cast" doubloon faucet.
   const crateToken = profile?.pending_cast as PendingCast | null
+  if (!profile || !crateToken || crateToken.fishId !== CRATE_FISH_ID || !crateToken.crateTier) {
+    return { error: 'No crate to open.' }
+  }
+
+  // THE SAME BITE FLOOR reelIn applies, for the same reason: a crate opened
+  // sooner than it could have surfaced came from a script, not the dial.
+  // Refused before the claim, so an honest line is never spent by it.
+  const biteFloorMs = crateToken.shot?.instantBite
+    ? 760
+    : Math.max(760, Number(crateToken.shot?.waitMs ?? 0))
+  if (Date.now() - Number(crateToken.castAt ?? 0) < biteFloorMs) {
+    console.warn('[reelCrate] reel before the bite', { userId: user.id, elapsed: Date.now() - Number(crateToken.castAt ?? 0), biteFloorMs })
+    return { error: 'Nothing has bitten yet. The line is still out.' }
+  }
+
+  // One-shot, and matched to THIS token's castAt so a newer cast landing in
+  // between cannot be spent in its place.
   const { data: claimed } = await admin
     .from('profiles')
     .update({ pending_cast: null })
     .eq('id', user.id)
-    .not('pending_cast', 'is', null)
+    .eq('pending_cast->>castAt', String(crateToken.castAt))
     .select('id')
     .maybeSingle()
-  if (!profile || !crateToken || !claimed || crateToken.fishId !== CRATE_FISH_ID || !crateToken.crateTier) {
-    return { error: 'No crate to open.' }
-  }
+  if (!claimed) return { error: 'No crate to open.' }
 
   // ── The streak ────────────────────────────────────────────────────────────
   // Same rule a fish gets: a perfect reel adds one, anything less resets to
@@ -1839,19 +1835,12 @@ export async function quickBuyWorms(): Promise<{ qty: number; doubloons: number 
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile) return { error: 'Profile not found' }
-  if ((profile.doubloons ?? 0) < QUICK_BUY_WORMS_COST) return { error: 'Not enough doubloons' }
-
-  const newDoubloons = profile.doubloons - QUICK_BUY_WORMS_COST
+  // Spend first, in place; the result is the guard, so two taps cannot both
+  // buy with one balance.
+  const newDoubloons = await spend(admin, user.id, 'doubloons', QUICK_BUY_WORMS_COST)
+  if (newDoubloons === null) return { error: 'Not enough doubloons' }
 
   await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
     admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: 'worm', p_qty: QUICK_BUY_WORMS_QTY }),
     admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -QUICK_BUY_WORMS_COST, reason: 'Quick-buy worms' }),
   ])
@@ -1997,9 +1986,17 @@ export async function claimZoneReward(zone: string): Promise<{ doubloons: number
   const earned = zoneRewardDoubloons(zone, prestigeLevel)
   if (!earned) return { error: 'Invalid zone' }
 
-  const newDoubloons = (profile.doubloons ?? 0) + earned
-  await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons, [rewardCol]: true }).eq('id', user.id),
+  // Flip the claim flag FIRST, only where it is still unclaimed, and pay only
+  // if this request is the one that flipped it.
+  const { data: flipped } = await admin.from('profiles')
+    .update({ [rewardCol]: true })
+    .eq('id', user.id)
+    .or(`${rewardCol}.is.null,${rewardCol}.eq.false`)
+    .select('id')
+  if (!flipped || flipped.length === 0) return { error: 'Already claimed' }
+
+  const [newDoubloons] = await Promise.all([
+    grant(admin, user.id, 'doubloons', earned),
     admin.from('doubloon_transactions').insert({ user_id: user.id, amount: earned, reason: `Zone completion: ${zone}` }),
   ])
 
@@ -2175,13 +2172,21 @@ export async function buySpecialItem(itemId: string): Promise<{ ok: true } | { e
     return { error: `Reach depth ${def.requiresGauntletDepth} in Davy Jones' Gauntlet first` }
   }
 
-  if (usesFathoms) {
-    const fathoms = (profile.gauntlet_fathoms as number | null) ?? 0
-    if (fathoms < def.costFathoms!) return { error: 'Not enough Fathoms' }
-    await admin.from('profiles').update({ gauntlet_fathoms: fathoms - def.costFathoms!, [column]: true }).eq('id', user.id)
-  } else {
-    if ((profile.doubloons ?? 0) < def.shopCost!) return { error: 'Not enough doubloons' }
-    await admin.from('profiles').update({ doubloons: (profile.doubloons ?? 0) - def.shopCost!, [column]: true }).eq('id', user.id)
+  // Spend first, in place; the result is the guard. Then flip the item on only
+  // where it is still off, and give the charge back if a concurrent twin
+  // already flipped it.
+  const col = usesFathoms ? 'gauntlet_fathoms' : 'doubloons'
+  const cost = usesFathoms ? def.costFathoms! : def.shopCost!
+  const after = await spend(admin, user.id, col, cost)
+  if (after === null) return { error: usesFathoms ? 'Not enough Fathoms' : 'Not enough doubloons' }
+  const { data: flipped } = await admin.from('profiles')
+    .update({ [column]: true })
+    .eq('id', user.id)
+    .or(`${column}.is.null,${column}.eq.false`)
+    .select('id')
+  if (!flipped || flipped.length === 0) {
+    await grant(admin, user.id, col, cost)
+    return { error: 'Already owned' }
   }
   return { ok: true }
 }
@@ -2309,7 +2314,7 @@ export async function equipBoat(boatId: string | null, opts?: { quiet?: boolean 
           navLevel: navLv(Number(profile?.expedition_xp ?? 0)),
           ap,
         })) {
-          await admin.from('profiles').update({ unlocked_boats: [...unlocked, boatId] }).eq('id', user.id)
+          await arrayAdd(admin, user.id, 'unlocked_boats', boatId)
           unlocked = [...unlocked, boatId]
         }
       }
@@ -2346,14 +2351,17 @@ export async function buyBoat(boatId: string): Promise<{ ok: true; doubloons?: n
   if (!profile) return { error: 'Profile not found' }
   const unlocked = (profile.unlocked_boats as string[] | null) ?? []
   if (unlocked.includes(boatId)) return { error: 'Already owned' }
-  const balance = useGems ? (profile.gems ?? 0) : (profile.doubloons ?? 0)
-  if (balance < price) return { error: useGems ? 'Not enough gems' : 'Not enough doubloons' }
-  const newBalance = balance - price
+  // Spend first, in place; the result is the guard. Then add the boat once,
+  // and give the charge back if a concurrent twin already added it.
+  const col = useGems ? 'gems' : 'doubloons'
+  const newBalance = await spend(admin, user.id, col, price)
+  if (newBalance === null) return { error: useGems ? 'Not enough gems' : 'Not enough doubloons' }
+  if (!(await arrayAdd(admin, user.id, 'unlocked_boats', boatId))) {
+    await grant(admin, user.id, col, price)
+    return { error: 'Already owned' }
+  }
 
-  const update: Record<string, unknown> = { unlocked_boats: [...unlocked, boatId], equipped_boat: boatId }
-  if (useGems) update.gems = newBalance
-  else update.doubloons = newBalance
-  await admin.from('profiles').update(update).eq('id', user.id)
+  await admin.from('profiles').update({ equipped_boat: boatId }).eq('id', user.id)
   await admin.from(useGems ? 'gem_transactions' : 'doubloon_transactions').insert({
     user_id: user.id,
     amount: -price,
@@ -2436,14 +2444,15 @@ export async function buyHat(hatId: string): Promise<{ ok: true; doubloons: numb
   if (!profile) return { error: 'Profile not found' }
   const unlocked = (profile.unlocked_hats as string[] | null) ?? []
   if (unlocked.includes(hatId)) return { error: 'Already owned' }
-  if ((profile.doubloons ?? 0) < def.cost) return { error: 'Not enough doubloons' }
-
-  const newDoubloons = (profile.doubloons ?? 0) - def.cost
-  await admin.from('profiles').update({
-    doubloons: newDoubloons,
-    unlocked_hats: [...unlocked, hatId],
-    equipped_hat: hatId,
-  }).eq('id', user.id)
+  // Spend first, in place; the result is the guard. Then add the hat once,
+  // and give the charge back if a concurrent twin already added it.
+  const newDoubloons = await spend(admin, user.id, 'doubloons', def.cost)
+  if (newDoubloons === null) return { error: 'Not enough doubloons' }
+  if (!(await arrayAdd(admin, user.id, 'unlocked_hats', hatId))) {
+    await grant(admin, user.id, 'doubloons', def.cost)
+    return { error: 'Already owned' }
+  }
+  await admin.from('profiles').update({ equipped_hat: hatId }).eq('id', user.id)
   await admin.from('doubloon_transactions').insert({
     user_id: user.id,
     amount: -def.cost,
@@ -2551,8 +2560,6 @@ export async function sellGoldenTrophy(
   const earned = Math.floor((trophy.fish_species.sell_value ?? 0) * SHINY_SELL_MULT * renownSellMult)
   if (earned <= 0) return { error: 'Trophy has no value' }
 
-  const newDoubloons = (profile?.doubloons ?? 0) + earned
-
   // ── CLAIM THE ROW BEFORE PAYING FOR IT ────────────────────────────────────
   //
   // The status check above is a read, and a read is not a claim: two taps that
@@ -2578,8 +2585,9 @@ export async function sellGoldenTrophy(
   if (claimErr) return { error: 'Could not sell that one. Try again.' }
   if (!claimed?.length) return { error: 'Trophy already resolved' }
 
-  await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+  // Paid in place, so a sale elsewhere landing meanwhile is not written over.
+  const [newDoubloons] = await Promise.all([
+    grant(admin, user.id, 'doubloons', earned),
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: earned,
       reason: `Sold golden ${trophy.fish_species.name}`,
@@ -2691,22 +2699,25 @@ export async function setCompletionistEffects(
   // first forge. Using the flag (not "is current empty") stops a clear-then-
   // rebuild from dodging the fee.
   const mustPay = changed && clean.length > 0 && !!prof?.has_seen_forge_flourish
-  if (mustPay && doubloons < REFORGE_COST) return { error: `Re-forging costs ${REFORGE_COST.toLocaleString()} doubloons.` }
-
-  const newDoubloons = mustPay ? doubloons - REFORGE_COST : doubloons
+  // The fee comes off in place, and the result is the guard.
+  let newDoubloons = doubloons
+  if (mustPay) {
+    const after = await spend(admin, user.id, 'doubloons', REFORGE_COST)
+    if (after === null) return { error: `Re-forging costs ${REFORGE_COST.toLocaleString()} doubloons.` }
+    newDoubloons = after
+  }
   const update: Record<string, unknown> = { completionist_effects: clean }
   if (firstForge) update.has_seen_forge_flourish = true
-  if (mustPay) update.doubloons = newDoubloons
+
+  await admin.from('profiles').update(update).eq('id', user.id)
 
   // "Reforged" badge — pay the re-forge fee to swap into a fresh FULL loadout.
   // Hook-granted (a paid re-forge isn't recoverable from the final state, which
-  // just reads as 3 effects — same as a free first forge).
+  // just reads as 3 effects — same as a free first forge). Added in place.
   const badges = (prof?.unlocked_badges as string[] | null) ?? []
   if (mustPay && clean.length >= COMPLETIONIST_MAX_EFFECTS && !badges.includes('reforged')) {
-    update.unlocked_badges = [...badges, 'reforged']
+    await arrayAdd(admin, user.id, 'unlocked_badges', 'reforged')
   }
-
-  await admin.from('profiles').update(update).eq('id', user.id)
   return { completionistEffects: clean, firstForge, charged: mustPay, newDoubloons }
 }
 
@@ -2767,14 +2778,14 @@ export async function claimFishingLevelRewards(): Promise<{
     }
   }
 
-  let doubloons = profile.doubloons ?? 0
-  let gems      = profile.gems ?? 0
+  let doubloonsOwed = 0
+  let gemsOwed      = 0
   let holdTier  = (profile.fish_hold_tier as number | null) ?? 0
   const bait: Record<string, number> = {}
 
   for (const { reward } of owed) {
-    doubloons += reward.doubloons ?? 0
-    gems      += reward.gems ?? 0
+    doubloonsOwed += reward.doubloons ?? 0
+    gemsOwed      += reward.gems ?? 0
     // A FLOOR, never a bump: a captain who already bought a better hold keeps it and
     // the reward is simply already satisfied. See LevelReward.holdFloor.
     if (reward.holdFloor != null) holdTier = Math.max(holdTier, reward.holdFloor)
@@ -2786,15 +2797,27 @@ export async function claimFishingLevelRewards(): Promise<{
   }
   holdTier = Math.min(holdTier, FISH_HOLD_TIERS.length - 1)
 
-  await Promise.all([
-    admin.from('profiles').update({
-      doubloons,
-      gems,
-      fish_hold_tier: holdTier,
-      claimed_fishing_levels: level,   // paid up to here; a re-call grants nothing
-    }).eq('id', user.id),
-    ...Object.entries(bait).map(([type, qty]) =>
-      admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: type, p_qty: qty })),
+  // MOVE THE WATERMARK FIRST, and only from the value read above. That update
+  // is the claim: two calls fired together both read the same watermark, and
+  // only one of them gets the row back, so the levels are paid once.
+  const { data: moved } = await admin.from('profiles')
+    .update({ claimed_fishing_levels: level })   // paid up to here; a re-call grants nothing
+    .eq('id', user.id)
+    .or(profile.claimed_fishing_levels == null
+      ? 'claimed_fishing_levels.is.null'
+      : `claimed_fishing_levels.eq.${claimed}`)
+    .select('id')
+  if (!moved || moved.length === 0) return { ...empty, from: claimed, to: claimed }
+
+  // Paid in place. The hold is a floor, so it only ever raises a lower tier
+  // and never writes over one bought meanwhile.
+  const [doubloons, gems] = await Promise.all([
+    grant(admin, user.id, 'doubloons', doubloonsOwed),
+    grant(admin, user.id, 'gems', gemsOwed),
+    admin.from('profiles').update({ fish_hold_tier: holdTier })
+      .eq('id', user.id).or(`fish_hold_tier.is.null,fish_hold_tier.lt.${holdTier}`),
+    Promise.all(Object.entries(bait).map(([type, qty]) =>
+      admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: type, p_qty: qty }))),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: owed.reduce((a, o) => a + (o.reward.doubloons ?? 0), 0),

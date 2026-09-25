@@ -28,7 +28,7 @@ import GauntletSlipway, { type SlipwayPlace } from './GauntletSlipway'
 import { getShipSkin, shipSkinFilter } from '@/lib/shipSkins'
 import type { RaidMods } from '@/lib/expeditions'
 import { fortuneLootMult } from '@/lib/expeditions'
-import type { RaidCrewMember } from '../actions'
+import type { RaidCrewMember } from '@/lib/raidPlayerStats'
 import { classForSlug, CLASSES, currentMilestone } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import {

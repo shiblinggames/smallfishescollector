@@ -1,10 +1,12 @@
 'use server'
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isPremiumActive } from '@/lib/premium'
 import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
 import { grantCrateLoot, type CrateLoot } from '@/lib/crateLoot'
+import { grant } from '@/lib/wallet'
 
 // Daily Bonus — three claims. Gems + bait reset daily; the crate is weekly.
 // Members get more of each: 150 vs 50 gems, chum vs worms, a gold crate vs a
@@ -21,16 +23,21 @@ export async function claimDailyBonus(): Promise<{ claimed: boolean; gems?: numb
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const { data: profile } = await admin
-    .from('profiles').select('gems, last_daily_claim, is_premium, premium_expires_at').eq('id', user.id).single()
-  if (!profile || profile.last_daily_claim === today) return { claimed: false }
+  // Stamp today FIRST, and only if it is not already stamped. Two taps fired
+  // together both pass a plain read; only one of them gets a row back here.
+  const { data: stamped } = await admin
+    .from('profiles').update({ last_daily_claim: today })
+    .eq('id', user.id)
+    .or(`last_daily_claim.is.null,last_daily_claim.neq.${today}`)
+    .select('is_premium, premium_expires_at')
+  const profile = stamped?.[0]
+  if (!profile) return { claimed: false }
 
   const isPremium = isPremiumActive(profile)
   const bonus = isPremium ? MEMBER_DAILY_GEMS : DAILY_GEMS
-  const newGems = (profile.gems ?? 0) + bonus
 
-  await Promise.all([
-    admin.from('profiles').update({ gems: newGems, last_daily_claim: today }).eq('id', user.id),
+  const [newGems] = await Promise.all([
+    grant(admin, user.id, 'gems', bonus),
     admin.from('gem_transactions').insert({
       user_id: user.id,
       amount: bonus,
@@ -50,24 +57,19 @@ export async function claimDailyBait(): Promise<{ claimed: boolean; baitType?: s
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  // Both reads at once: which bait is owed depends on the profile, so both
-  // rows it could be are read beside it rather than after it.
-  const [{ data: profile }, { data: rows }] = await Promise.all([
-    admin.from('profiles').select('last_worm_claim, is_premium, premium_expires_at').eq('id', user.id).single(),
-    admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id).in('bait_type', ['worm', 'chum']),
-  ])
-  if (!profile || profile.last_worm_claim === today) return { claimed: false }
+  // Stamp today FIRST, only where it is not already stamped, and pay only if
+  // this request is the one that stamped it. Double taps get nothing twice.
+  const { data: stamped } = await admin
+    .from('profiles').update({ last_worm_claim: today })
+    .eq('id', user.id)
+    .or(`last_worm_claim.is.null,last_worm_claim.neq.${today}`)
+    .select('is_premium, premium_expires_at')
+  const profile = stamped?.[0]
+  if (!profile) return { claimed: false }
 
   const baitType = isPremiumActive(profile) ? 'chum' : 'worm'
-  const existing = (rows ?? []).find(r => r.bait_type === baitType) ?? null
-  const newQty = (existing?.quantity ?? 0) + DAILY_BAIT_QTY
-
-  await Promise.all([
-    admin.from('profiles').update({ last_worm_claim: today }).eq('id', user.id),
-    existing
-      ? admin.from('bait_inventory').update({ quantity: newQty }).eq('user_id', user.id).eq('bait_type', baitType)
-      : admin.from('bait_inventory').insert({ user_id: user.id, bait_type: baitType, quantity: newQty }),
-  ])
+  // Added in place, so a cast spending bait at the same moment is not undone.
+  await admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: baitType, p_qty: DAILY_BAIT_QTY })
 
   return { claimed: true, baitType, quantity: DAILY_BAIT_QTY }
 }
@@ -92,12 +94,16 @@ export async function claimWeeklyCrate(): Promise<
   const admin = createAdminClient()
   const week = kingWeekStr()
 
-  const { data: profile } = await admin
-    .from('profiles').select('last_crate_claim_week, is_premium, premium_expires_at').eq('id', user.id).single()
-  if (!profile || profile.last_crate_claim_week === week) return { claimed: false }
-
-  // Stamp the gate FIRST so a fast double-tap can't open two crates.
-  await admin.from('profiles').update({ last_crate_claim_week: week }).eq('id', user.id)
+  // Stamp the gate FIRST so a fast double-tap can't open two crates, and make
+  // the stamp itself the check: it only matches a row not yet stamped this
+  // week, so of two requests fired together only one gets a row back.
+  const { data: stamped } = await admin
+    .from('profiles').update({ last_crate_claim_week: week })
+    .eq('id', user.id)
+    .or(`last_crate_claim_week.is.null,last_crate_claim_week.neq.${week}`)
+    .select('is_premium, premium_expires_at')
+  const profile = stamped?.[0]
+  if (!profile) return { claimed: false }
 
   const tier: 'wooden' | 'gold' = isPremiumActive(profile) ? 'gold' : 'wooden'
   // The full loot table, and none of the crate badges: those count crates you
@@ -128,7 +134,7 @@ export async function bonusState(): Promise<{
   const supabase = await createClient()
   // getSession, not getUser: this is a read of the caller's own row and the
   // session is enough to name them. See the note in lib/supabase.
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   const uid = session?.user?.id
   if (!uid) return null
 

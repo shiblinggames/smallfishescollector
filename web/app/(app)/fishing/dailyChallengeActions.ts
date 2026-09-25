@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getEffectiveDailyChallenges, getTodayUTC, DAILY_SWEEP_GEMS, type DailyChallengeState } from '@/lib/dailyChallenges'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
+import { grant } from '@/lib/wallet'
 
 /** Tier weights for the Master challenge's crate.
  *
@@ -185,9 +186,9 @@ export async function claimDailyReward(
     void admin.rpc('bump_profile_stat', { uid: user.id, col: 'daily_master_cleared', n: 1 })
       .then(() => {}, () => {})
   } else {
-    newDoubloons += challenge.reward
-    await Promise.all([
-      admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    // Paid in place, so a sale landing at the same moment is not written over.
+    ;[newDoubloons] = await Promise.all([
+      grant(admin, user.id, 'doubloons', challenge.reward),
       admin.from('doubloon_transactions').insert({
         user_id: user.id, amount: challenge.reward,
         reason: `Daily challenge (${challenge.label})`,
@@ -244,14 +245,12 @@ export async function claimDailySweep(): Promise<
   // Atomic bump rather than read-add-write: the gem balance is shared with
   // chest opens and casino payouts, so an absolute overwrite could stomp a
   // concurrent grant.
-  await admin.rpc('bump_profile_stat', { uid: user.id, col: 'gems', n: DAILY_SWEEP_GEMS })
+  // grant() also hands back the balance it landed on, so no re-read.
+  const gems = await grant(admin, user.id, 'gems', DAILY_SWEEP_GEMS)
   // Lifetime swept days, for the sweep badges. Fire and forget: a failed
   // counter must never cost the player the gems they just earned.
   void admin.rpc('bump_profile_stat', { uid: user.id, col: 'daily_challenge_sweeps', n: 1 })
     .then(() => {}, () => {})
 
-  const { data: after } = await admin
-    .from('profiles').select('gems').eq('id', user.id).single()
-
-  return { gems: after?.gems ?? 0, awarded: DAILY_SWEEP_GEMS }
+  return { gems, awarded: DAILY_SWEEP_GEMS }
 }

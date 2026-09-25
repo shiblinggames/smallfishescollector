@@ -782,9 +782,13 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
     if (isBossRound(round, config.sequence.length)) zoneJitterRef.current = 1800 + Math.random() * 2200
   }, [])
 
-  // The current run's server token (minted at start). Threaded into every
-  // awardRaidKill so the server can bound this run's kills to its real mob count.
-  const runTokenRef = useRef<string | null>(null)
+  // The current run's server token (minted at start). Every reward call of the
+  // run REQUIRES it (awardRaidKill pays a round once per token, recordRaidClear
+  // banks the clear, claimRaidLoot opens the crate of a cleared token), so the
+  // calls AWAIT the mint rather than reading a ref that might still be empty.
+  const runTokenPRef = useRef<Promise<string | null>>(Promise.resolve(null))
+  // Which round the legacy shoot path's pending kill was, for collectKill.
+  const winRoundRef = useRef(0)
 
   const startGame = useCallback(() => {
     firePosRef.current      = 0; fireDirRef.current = 1
@@ -814,11 +818,9 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
 
     raidStartTimeRef.current = performance.now()
 
-    // Mint this run's server token (fire-and-forget — it resolves well before the
-    // first kill). null on any hiccup, in which case awardRaidKill falls back to
-    // its capped path, so a token failure never blocks the raid.
-    runTokenRef.current = null
-    startRaidRun(config.raidId).then(r => { runTokenRef.current = r.token }).catch(() => {})
+    // Mint this run's server token. Not awaited here (it resolves well before
+    // the first kill); the reward calls await the promise instead.
+    runTokenPRef.current = startRaidRun(config.raidId).then(r => r.token).catch(() => null)
 
     phaseRef.current = 'playing'
     setPhase('playing')
@@ -1188,6 +1190,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
         const enemyId = getEnemyForRound(roundRef.current, config).id
         const gold = config.killRewards[enemyId]?.gold ?? 0
         const xp   = config.killRewards[enemyId]?.xp   ?? 0
+        winRoundRef.current = roundRef.current
 
         roundEndingRef.current = true
         setEnemySinking(true)
@@ -1269,10 +1272,13 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
 
     streakRef.current++
     setStreak(streakRef.current)
-    const enemyId = getEnemyForRound(roundRef.current, config).id
+    // The round that fell. The server prices the kill from this and the run
+    // token; the gold and xp below are only the client's display of the same line.
+    const killedRound = roundRef.current
+    const enemyId = getEnemyForRound(killedRound, config).id
     const gold = config.killRewards[enemyId]?.gold ?? 0
     const xp   = config.killRewards[enemyId]?.xp   ?? 0
-    const isBossKill = isBossRound(roundRef.current, config.sequence.length)
+    const isBossKill = isBossRound(killedRound, config.sequence.length)
 
     setEnemySinking(true)
     setClearReady(false)
@@ -1285,6 +1291,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
       setTimeout(async () => {
         setEnemySinking(false)
         setWinGold(gold); setWinXP(xp)
+        const runToken = await runTokenPRef.current
         // Roll loot + dollar amount up front so the stage can pre-position
         // the slot before the player taps Loot Chest.
         // NOTHING TO ROLL for a skirmish. `rollCrate` over an empty table has
@@ -1297,9 +1304,6 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
         // best thing in the crate rather than whichever index happened to sort
         // first. With no items it lands on the currency, which now always pays.
         const rarityRank = (i: number) => LOOT_RARITY_TIER[config.loot[i].rarity] ?? 1
-        const final = crate.itemIdxs.length
-          ? [...crate.itemIdxs].sort((a, b) => rarityRank(b) - rarityRank(a))[0]
-          : Math.max(0, crate.currencyIdx)
         const base  = Math.floor(Math.random() * 301 + 300)
         // Tide doubloonsAtRaidEnd: sum all run-active deltas onto the
         // raw base BEFORE fortune scales it. Net result lands in the
@@ -1311,8 +1315,11 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
         // crate's own purse, and there is no crate here; the gold for the
         // Raider is the killRewards line awarded below, like any other kill.
         const total = config.skirmish ? 0 : Math.max(0, Math.floor(base * fortuneMult) + tideDoubloons)
-        setSlotFinal(final)
-        setLootItemIdxs(crate.itemIdxs)
+        // The client roll only PRE-POSITIONS the reel on a currency row. The
+        // crate's contents are rolled by claimRaidLoot below, and its answer
+        // replaces these, so the reveal never shows an item that was not paid.
+        setSlotFinal(Math.max(0, crate.currencyIdx))
+        setLootItemIdxs([])
         setLootBase(base)
         setLootAmount(total)
         setWinIsBoss(true)
@@ -1361,6 +1368,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
         // No clock on a skirmish: one mob is not a run to race, and the time
         // block on the win screen is the raid records panel.
         if (!config.skirmish) setClearTimeMs(clearElapsedMs)
+        let clearDone: Promise<unknown> = Promise.resolve()
         if (!clearRecordedRef.current) {
           clearRecordedRef.current = true
           // THE SKIRMISH CLEARS THROUGH ITS OWN FLAG. A raid_completions row
@@ -1371,8 +1379,8 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
           // node opens the way every other node opens.
           const record = config.skirmish
             ? recordSkirmishClear().then(() => null)
-            : recordRaidClear(config.raidId, clearElapsedMs, runTokenRef.current ?? undefined)
-          record
+            : recordRaidClear(config.raidId, clearElapsedMs, runToken)
+          clearDone = record
             .then(t => { if (t) setClearTimes(t) })
             .catch(() => {
               // If the insert fails, clear the guard so the loot-claim
@@ -1390,16 +1398,22 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
         // the Nav total ticks up in sync with the reveal, not mid-animation.
         if (!config.skirmish && !lootGrantedRef.current) {
           lootGrantedRef.current = true
-          const lootElapsedMs = performance.now() - raidStartTimeRef.current
-          claimRaidLoot(total, crate.itemIdxs.map(i => config.loot[i].id), lootElapsedMs, playerHPMax - playerHP, config.raidId)
+          // AFTER the clear lands: the crate only opens on a token the server
+          // has already marked cleared.
+          clearDone
+            .then(() => claimRaidLoot(total, runToken))
             .then(res => {
               lootResultRef.current = res
-              // THE REEL FOLLOWS THE SERVER. The currency half is drawn there
-              // now, so the row shown when nothing unique dropped has to be the
-              // row that was actually paid, or the reveal goes back to printing
-              // a reward nobody received. Only when no unique landed: a unique
-              // is still the headline and the client already knows which.
-              if (!crate.itemIdxs.length && res.currencyId) {
+              // THE REEL FOLLOWS THE SERVER. Both halves of the crate are drawn
+              // there now, so the reel lands on the rarest unique the server
+              // rolled, or on the currency row it actually paid.
+              const serverIdxs = res.itemIds
+                .map(id => config.loot.findIndex(l => l.id === id))
+                .filter(i => i >= 0)
+              setLootItemIdxs(serverIdxs)
+              if (serverIdxs.length) {
+                setSlotFinal([...serverIdxs].sort((a, b) => rarityRank(b) - rarityRank(a))[0])
+              } else if (res.currencyId) {
                 const idx = config.loot.findIndex(l => l.id === res.currencyId)
                 if (idx >= 0) setSlotFinal(idx)
               }
@@ -1418,7 +1432,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
         const bonus = raidCompletionBonusXp(config)
         try {
           const before = navXPRef.current
-          const res = await awardRaidKill(xp + bonus, gold, runTokenRef.current ?? undefined)
+          const res = await awardRaidKill(killedRound, runToken)
           mergeCrewXPGrants(res.crewXP)
           const killTotal = res.newExpeditionXP - bonus
           const oldLevel = getLevelFromXP(before)
@@ -1556,7 +1570,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
     }
 
     let res: Awaited<ReturnType<typeof awardRaidKill>> | null = null
-    try { res = await awardRaidKill(xp, gold, runTokenRef.current ?? undefined) } catch { /* save failed */ }
+    try { res = await awardRaidKill(killedRound, await runTokenPRef.current) } catch { /* save failed */ }
     if (!res) { setTimeout(advanceToNext, 400); return }
     mergeCrewXPGrants(res.crewXP)
 
@@ -1595,7 +1609,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
     const from = e?.currentTarget?.getBoundingClientRect()
     setIsClaiming(true)
     try {
-      const res = await awardRaidKill(winXP, winGold, runTokenRef.current ?? undefined)
+      const res = await awardRaidKill(winRoundRef.current, await runTokenPRef.current)
       mergeCrewXPGrants(res.crewXP)
       const oldLevel = getLevelFromXP(navXPRef.current)
       const newLevel = getLevelFromXP(res.newExpeditionXP)
@@ -2183,12 +2197,14 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
               // blip, etc.) clearRecordedRef will be false. Retry once
               // here so the clear still lands as long as the player
               // reached the loot screen.
+              const runToken = await runTokenPRef.current
               if (!clearRecordedRef.current) {
                 clearRecordedRef.current = true
                 const retry = config.skirmish
                   ? recordSkirmishClear()
-                  : recordRaidClear(config.raidId, elapsedMs)
-                retry.catch(() => { clearRecordedRef.current = false })
+                  : recordRaidClear(config.raidId, elapsedMs, runToken)
+                // Awaited: the crate below only opens on a cleared token.
+                try { await retry } catch { clearRecordedRef.current = false }
               }
               // The crate loot was already granted at boss-kill, so Collect just
               // fires the purse-update event from the stored result and routes —
@@ -2202,7 +2218,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
                 lootGrantedRef.current = true
                 try {
                   const res = await Promise.race([
-                    claimRaidLoot(lootAmount, lootItemIdxs.map(i => config.loot[i].id), elapsedMs, playerHPMax - playerHP, config.raidId),
+                    claimRaidLoot(lootAmount, runToken),
                     new Promise<null>(resolve => setTimeout(() => resolve(null), 4000)),
                   ])
                   if (res) lootResultRef.current = res

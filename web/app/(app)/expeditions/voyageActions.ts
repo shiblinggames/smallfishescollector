@@ -20,6 +20,7 @@ import { grantXPToCrewIds, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
 import { BASE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/voyage'
 import { eyeCharge } from '@/lib/finnItems'
+import { grant, arrayAdd } from '@/lib/wallet'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -217,6 +218,11 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
     .select('*')
     .single()
 
+  // ONE SHIP AT SEA. The read above is only the friendly early answer: two sends
+  // fired together both pass it. The partial unique index
+  // daily_voyages_one_pending (migrate_exploit_fixes_raids.sql) refuses the
+  // second insert, and that refusal is the same answer as the read's.
+  if (error?.code === '23505') return { error: 'Your crew is already at sea' }
   if (error || !voyage) return { error: 'Failed to send voyage' }
   return { ok: true, voyage: voyage as DailyVoyage }
   } catch (e) {
@@ -252,6 +258,18 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const voyage = voyageRow as DailyVoyage
 
+  // THE FLIP COMES FIRST. Two reveals fired together both read 'pending' above
+  // and both paid the haul. Only the request whose conditional update actually
+  // moves the row to 'revealed' goes on to pay; the other finds it gone.
+  const { data: flipped } = await admin
+    .from('daily_voyages')
+    .update({ status: 'revealed' })
+    .eq('id', voyageId)
+    .eq('user_id', user.id)
+    .neq('status', 'revealed')
+    .select('id')
+  if (!flipped || flipped.length === 0) return { error: 'Already revealed' }
+
   const { data: profile } = await admin
     .from('profiles')
     .select('doubloons, gems, expedition_xp, has_tide_turner, has_phantom_hook, has_perfected_sigil, unlocked_character_colors, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
@@ -259,9 +277,6 @@ export async function revealVoyageResults(voyageId: number): Promise<
     .single()
 
   if (!profile) return { error: 'Profile not found' }
-
-  const newDoubloons = (profile.doubloons ?? 0) + voyage.total_doubloons
-  const newGems = (profile.gems ?? 0) + voyage.total_gems
 
   // Nav XP comes from the ROUTE and how the voyage went, not from summing an
   // event list. The old voyageXP() added up six events' worth; with one event
@@ -316,8 +331,9 @@ export async function revealVoyageResults(voyageId: number): Promise<
   const newPerfectedSigil = !!(voyage.perfected_sigil_drop && !profile.has_perfected_sigil)
   // A voyage is Navigation XP, so it charges The Primeval Eye like a raid kill.
   const reelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], xpEarned)
+  // Balances move in place (lib/wallet) and Nav XP through bump_profile_stat;
+  // only flags and the Eye's charge are written as values.
   const profileUpdate: Record<string, unknown> = {
-    doubloons: newDoubloons, gems: newGems, expedition_xp: newExpeditionXP,
     ...(reelCharge !== null ? { anglers_patience_xp: reelCharge } : {}),
   }
   if (newTideTurner) profileUpdate.has_tide_turner = true
@@ -333,8 +349,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
   if (newExpeditionLevel >= 50) {
     await grantBadgeDirect(user.id, 'navigator')
     const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
-    if (!currentUnlocked.includes('sky')) {
-      profileUpdate.unlocked_character_colors = [...currentUnlocked, 'sky']
+    if (!currentUnlocked.includes('sky') && await arrayAdd(admin, user.id, 'unlocked_character_colors', 'sky')) {
       unlockedSkinId = 'sky'
     }
   }
@@ -344,7 +359,8 @@ export async function revealVoyageResults(voyageId: number): Promise<
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .eq('status', 'revealed')
-  if ((completedVoyages ?? 0) + 1 >= 100) await grantBadgeDirect(user.id, 'fleet_admiral')
+  // This voyage was already flipped to 'revealed' above, so the count includes it.
+  if ((completedVoyages ?? 0) >= 100) await grantBadgeDirect(user.id, 'fleet_admiral')
 
   // Crew XP is a per-route figure (ROUTE_PAYOUTS.crewXp), tuned so the RATE is
   // flat at roughly 200 an hour whatever route was sailed. It cannot be a share
@@ -361,9 +377,13 @@ export async function revealVoyageResults(voyageId: number): Promise<
   )
   const survivorIds = (voyage.crew_variant_ids as number[]).filter(id => !voyage.crew_lost.includes(id))
 
-  const [, , , crewXP] = await Promise.all([
-    admin.from('profiles').update(profileUpdate).eq('id', user.id),
-    admin.from('daily_voyages').update({ status: 'revealed' }).eq('id', voyageId),
+  const [newDoubloons, newGems, , , crewXP] = await Promise.all([
+    grant(admin, user.id, 'doubloons', voyage.total_doubloons),
+    grant(admin, user.id, 'gems', voyage.total_gems),
+    Promise.all([
+      Object.keys(profileUpdate).length > 0 ? admin.from('profiles').update(profileUpdate).eq('id', user.id) : null,
+      xpEarned > 0 ? admin.rpc('bump_profile_stat', { uid: user.id, col: 'expedition_xp', n: xpEarned }) : null,
+    ]),
     // Soft-delete: lost crew get died_at + died_on_voyage_id stamped
     // instead of being deleted, so the Crew Hall Graveyard tab can
     // memorialize them with full portrait / name / rarity / traits.

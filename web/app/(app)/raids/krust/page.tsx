@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import RaidGame from '../RaidGame'
-import { getRaidPlayerStats } from '../actions'
+import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { CAPTAIN_KRUST } from '@/lib/bossRaids'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 

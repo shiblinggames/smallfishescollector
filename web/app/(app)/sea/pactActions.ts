@@ -17,6 +17,7 @@
 // on purpose: dropping a follow should take somebody off your water at once,
 // and re-testing beats trying to find and delete every pact when it happens.
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isPremiumActive } from '@/lib/premium'
@@ -44,6 +45,7 @@ export type PactState = {
   couldAsk: PactPerson[]
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const SEL = 'id, username, character_color, is_premium, premium_expires_at'
 type Row = {
   id: string; username: string | null; character_color: string | null
@@ -58,7 +60,7 @@ const toPerson = (r: Row): PactPerson => ({
 
 async function me() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   return session?.user ?? null
 }
 
@@ -196,6 +198,10 @@ export async function endPact(pactId: number): Promise<{ ok: boolean }> {
 export async function endPactWith(otherId: string): Promise<{ ok: boolean }> {
   const user = await me()
   if (!user) return { ok: false }
+  // A UUID AND NOTHING ELSE. This goes into a PostgREST `.or()` filter, which
+  // is not escaped: a crafted id like `x),id.gt.0,and(id.eq.0` rewrote the
+  // filter and deleted every pact in the game (2026-09-25 audit).
+  if (!UUID_RE.test(otherId)) return { ok: false }
   const admin = createAdminClient()
   await admin.from('sea_pacts').delete()
     .or(`and(requester_id.eq.${user.id},addressee_id.eq.${otherId}),and(requester_id.eq.${otherId},addressee_id.eq.${user.id})`)

@@ -539,3 +539,20 @@ the water (`hullFor`) stay ships.
 **Return to port fades.** `RaidSheet` fades off the water over 460ms on leave and only then calls
 the chart's close, so the sheet is gone before the chart takes the sea back and re-renders.
 
+
+
+## Raid rewards are priced by the server (2026-09-25 audit)
+
+`awardRaidKill(round, token)`: the client names only WHICH round fell (the round equal to the
+sequence length is the boss). The server reads the raid from the run token, prices it from that
+raid's `killRewards` (the boss adds `raidCompletionBonusXp` once), and pays each round once per
+token (`run_tokens.paid_rounds`, via `claim_run_token_round`). The token is REQUIRED; no token
+pays nothing. Honest payouts are identical (the client always sent those exact table values).
+Before, one forged call was worth a whole raid x1.5 (27k gold, 27k Nav XP, 27k to every crew).
+`RaidGame` keeps the token as a promise (`runTokenPRef`) and every reward call awaits it.
+
+`claimRaidLoot(baseDoubloons, token)` needs a CLEARED token and stamps `run_tokens.looted_at`
+first: one crate per real clear. Uniques are rolled server-side with the client preview's
+inputs (odds unchanged); the reveal waits for the server's items. The coin figure is still
+client-reported (tide bonuses roll client-side), clamped to 3,000. `recordRaidClear` requires
+the token. Practice (admin-only page) mints its own one-shot token (`startPracticeRun`).

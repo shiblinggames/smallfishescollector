@@ -906,7 +906,7 @@ export interface RaidCombatProps {
    *  RaidGame (clears at the rest stop). onAbilityFired signals back when
    *  a crew's ability lands so RaidGame can mark it used.
    *  All optional so practice raid (which uses no crew) still works. */
-  crewMembers?: import('./actions').RaidCrewMember[]
+  crewMembers?: import('@/lib/raidPlayerStats').RaidCrewMember[]
   usedAbilityIds?: Set<number>
   /** When true, this fight OPENS with crew abilities freshly restored — drives a
    *  prominent one-shot "Crew Abilities Restored" banner so the refresh is

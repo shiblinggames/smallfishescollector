@@ -13,6 +13,14 @@ import { getShipAugment, AUGMENT_COST, RETOOL_COST, SCHEMATICS_COST, ULTIMATE_BU
 import { getShipSkin, canEquipShipSkin } from '@/lib/shipSkins'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { hasForge, hasAbyssalForge, hasAbyssalAccelerator, bonusChargeSlots } from '@/lib/gauntletUpgrades'
+import { spend, grant, arrayAdd } from '@/lib/wallet'
+
+// ── EVERY PURCHASE HERE: SPEND FIRST, THEN THE FLAG ────────────────────────
+// These used to read the balance, check it, and write `balance - cost` beside
+// the flag. The spend is now the guard (lib/wallet: taken in place or not at
+// all), and the flag write that follows is still conditional on the thing not
+// already being owned. If a concurrent twin got the flag first, this request
+// hands its coin straight back.
 
 // ── Crew picker ───────────────────────────────────────────────────────────────
 
@@ -208,7 +216,7 @@ export async function learnForgeRecipe(resultId: string): Promise<{ ok: true; fa
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_upgrades, dons_gauntlet_upgrades, gauntlet_fathoms, forge_recipes_learned, raid_items')
+    .select('gauntlet_upgrades, dons_gauntlet_upgrades, forge_recipes_learned, raid_items')
     .eq('id', user.id)
     .single()
   const learnUpgrades = [
@@ -222,13 +230,13 @@ export async function learnForgeRecipe(resultId: string): Promise<{ ok: true; fa
   }
   const learned = (profile?.forge_recipes_learned as string[] | null) ?? []
   if (learned.includes(resultId)) return { error: 'Already learned.' }
-  const fathoms = (profile?.gauntlet_fathoms as number | null) ?? 0
-  if (fathoms < recipe.fathomCost) return { error: `Not enough Fathoms. This recipe needs ${recipe.fathomCost}.` }
-
-  const newFathoms = fathoms - recipe.fathomCost
-  const newLearned = [...learned, resultId]
-  await admin.from('profiles').update({ gauntlet_fathoms: newFathoms, forge_recipes_learned: newLearned }).eq('id', user.id)
-  return { ok: true, fathoms: newFathoms, learned: newLearned }
+  const newFathoms = await spend(admin, user.id, 'gauntlet_fathoms', recipe.fathomCost)
+  if (newFathoms == null) return { error: `Not enough Fathoms. This recipe needs ${recipe.fathomCost}.` }
+  if (!(await arrayAdd(admin, user.id, 'forge_recipes_learned', resultId))) {
+    await grant(admin, user.id, 'gauntlet_fathoms', recipe.fathomCost)
+    return { error: 'Already learned.' }
+  }
+  return { ok: true, fathoms: newFathoms, learned: [...learned, resultId] }
 }
 
 /** Charge the Abyssal Accelerator: spend gems, consume an owned EPIC boss item,
@@ -248,7 +256,7 @@ export async function startAbyssalConversion(epicId: string): Promise<
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('raid_items, equipped_raid_items, gauntlet_upgrades, dons_gauntlet_upgrades, gems, abyssal_conversion')
+    .select('raid_items, equipped_raid_items, gauntlet_upgrades, dons_gauntlet_upgrades, abyssal_conversion')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found.' }
@@ -266,27 +274,32 @@ export async function startAbyssalConversion(epicId: string): Promise<
   const owned = (profile.raid_items as string[] | null) ?? []
   if (!owned.includes(epicId)) return { error: 'You don’t own that item.' }
   if (owned.includes(legendaryId)) return { error: 'You already own the legendary version.' }
-  const gems = (profile.gems as number | null) ?? 0
-  if (gems < ABYSSAL_ACCEL_GEM_COST) return { error: `Not enough gems. Charging costs ${ABYSSAL_ACCEL_GEM_COST}.` }
-
   const conversion: AbyssalConversion = {
     epicId, legendaryId,
     completesAt: new Date(Date.now() + ABYSSAL_ACCEL_MS).toISOString(),
   }
-  const newGems = gems - ABYSSAL_ACCEL_GEM_COST
   const newOwned = owned.filter(id => id !== epicId)
   const equipped = ((profile.equipped_raid_items as string[] | null) ?? []).filter(id => id !== epicId)
 
-  // Guard the write on the slot STILL being null so a fast double-tap (or two
-  // tabs) can't charge two conversions or double-spend the epic + gems.
+  // The gems first: the spend is the guard.
+  const newGems = await spend(admin, user.id, 'gems', ABYSSAL_ACCEL_GEM_COST)
+  if (newGems == null) return { error: `Not enough gems. Charging costs ${ABYSSAL_ACCEL_GEM_COST}.` }
+
+  // Guard the write on the slot STILL being null (and the epic still held) so
+  // a fast double-tap (or two tabs) can't charge two conversions; the loser
+  // gets its gems back.
   const { data: updated } = await admin
     .from('profiles')
-    .update({ abyssal_conversion: conversion, gems: newGems, raid_items: newOwned, equipped_raid_items: equipped })
+    .update({ abyssal_conversion: conversion, raid_items: newOwned, equipped_raid_items: equipped })
     .eq('id', user.id)
     .is('abyssal_conversion', null)
+    .contains('raid_items', [epicId])
     .select('id')
     .maybeSingle()
-  if (!updated) return { error: 'The Accelerator is already running. Claim it first.' }
+  if (!updated) {
+    await grant(admin, user.id, 'gems', ABYSSAL_ACCEL_GEM_COST)
+    return { error: 'The Accelerator is already running. Claim it first.' }
+  }
 
   await admin.from('gem_transactions').insert({ user_id: user.id, amount: -ABYSSAL_ACCEL_GEM_COST, reason: 'Charged the Abyssal Accelerator' })
   return { ok: true, conversion, gems: newGems, raidItems: newOwned }
@@ -315,14 +328,17 @@ export async function claimAbyssalConversion(): Promise<
   const owned = (profile?.raid_items as string[] | null) ?? []
   const newOwned = owned.includes(conversion.legendaryId) ? owned : [...owned, conversion.legendaryId]
 
+  // Clear the slot first (conditional, so a double-claim finds it empty), then
+  // add the legendary in place rather than writing back a stale copy of the hold.
   const { data: updated } = await admin
     .from('profiles')
-    .update({ raid_items: newOwned, abyssal_conversion: null })
+    .update({ abyssal_conversion: null })
     .eq('id', user.id)
     .not('abyssal_conversion', 'is', null)
     .select('id')
     .maybeSingle()
   if (!updated) return { error: 'Already claimed.' }
+  await arrayAdd(admin, user.id, 'raid_items', conversion.legendaryId)
 
   return { ok: true, legendaryId: conversion.legendaryId, raidItems: newOwned }
 }
@@ -390,7 +406,7 @@ export async function startUltimateBuild(id: string): Promise<{ ok: boolean; err
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles')
-    .select('ship_tier, expedition_xp, doubloons, manowar_augment, manowar_augment_build, gauntlet_upgrades').eq('id', user.id).single()
+    .select('ship_tier, expedition_xp, manowar_augment, manowar_augment_build, gauntlet_upgrades').eq('id', user.id).single()
   if (!profile) return { ok: false, error: 'No profile.' }
 
   // The ultimate is a once-and-for-all choice. If one is already forged, no rebuild.
@@ -413,20 +429,23 @@ export async function startUltimateBuild(id: string): Promise<{ ok: boolean; err
   })
   if (!gate) return { ok: false, error: 'You do not meet every requirement yet.' }
 
-  const doubloons = (profile.doubloons as number | null) ?? 0
-  if (doubloons < AUGMENT_COST) return { ok: false, error: `You need ${AUGMENT_COST.toLocaleString()} doubloons.` }
+  const newDoubloons = await spend(admin, user.id, 'doubloons', AUGMENT_COST)
+  if (newDoubloons == null) return { ok: false, error: `You need ${AUGMENT_COST.toLocaleString()} doubloons.` }
 
   const completesAt = new Date(Date.now() + ULTIMATE_BUILD_MS).toISOString()
   const build: ShipAugmentBuild = { id: augment.id, completesAt }
-  const newDoubloons = doubloons - AUGMENT_COST
   // Conditional write: only start if no build is in flight (guards a double-tap).
   const { data: updated } = await admin.from('profiles')
-    .update({ manowar_augment_build: build, doubloons: newDoubloons })
+    .update({ manowar_augment_build: build })
     .eq('id', user.id)
     .is('manowar_augment_build', null)
+    .is('manowar_augment', null)
     .select('manowar_augment_build')
     .maybeSingle()
-  if (!updated) return { ok: false, error: 'A weapon is already being built.' }
+  if (!updated) {
+    await grant(admin, user.id, 'doubloons', AUGMENT_COST)
+    return { ok: false, error: 'A weapon is already being built.' }
+  }
 
   await admin.from('doubloon_transactions').insert({
     user_id: user.id, amount: -AUGMENT_COST, reason: `Ultimate weapon build: ${augment.name}`,
@@ -474,7 +493,7 @@ export async function startUltimateRetool(id: string): Promise<{ ok: boolean; er
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles')
-    .select('doubloons, manowar_augment, manowar_augment_build, manowar_schematics').eq('id', user.id).single()
+    .select('manowar_augment, manowar_augment_build, manowar_schematics').eq('id', user.id).single()
   if (!profile) return { ok: false, error: 'No profile.' }
 
   if (!profile.manowar_augment) return { ok: false, error: 'Forge your first ultimate before retooling.' }
@@ -485,20 +504,22 @@ export async function startUltimateRetool(id: string): Promise<{ ok: boolean; er
     return { ok: false, error: 'The shipwrights are already at work. Change their pick instead.' }
   }
 
-  const doubloons = (profile.doubloons as number | null) ?? 0
-  if (doubloons < RETOOL_COST) return { ok: false, error: `You need ${RETOOL_COST.toLocaleString()} doubloons.` }
+  const newDoubloons = await spend(admin, user.id, 'doubloons', RETOOL_COST)
+  if (newDoubloons == null) return { ok: false, error: `You need ${RETOOL_COST.toLocaleString()} doubloons.` }
 
   const completesAt = new Date(Date.now() + ULTIMATE_BUILD_MS).toISOString()
   const build: ShipAugmentBuild = { id: augment.id, completesAt, retool: true }
-  const newDoubloons = doubloons - RETOOL_COST
   // Conditional write guards a double-tap, same as the first build.
   const { data: updated } = await admin.from('profiles')
-    .update({ manowar_augment_build: build, doubloons: newDoubloons })
+    .update({ manowar_augment_build: build })
     .eq('id', user.id)
     .is('manowar_augment_build', null)
     .select('manowar_augment_build')
     .maybeSingle()
-  if (!updated) return { ok: false, error: 'The shipwrights are already at work.' }
+  if (!updated) {
+    await grant(admin, user.id, 'doubloons', RETOOL_COST)
+    return { ok: false, error: 'The shipwrights are already at work.' }
+  }
 
   await admin.from('doubloon_transactions').insert({
     user_id: user.id, amount: -RETOOL_COST, reason: `Ultimate retool: ${augment.name}`,
@@ -516,24 +537,22 @@ export async function buyUltimateSchematics(): Promise<{ ok: boolean; error?: st
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles')
-    .select('doubloons, manowar_augment, manowar_augment_build, manowar_schematics').eq('id', user.id).single()
+    .select('manowar_augment, manowar_augment_build, manowar_schematics').eq('id', user.id).single()
   if (!profile) return { ok: false, error: 'No profile.' }
 
   if (!profile.manowar_augment) return { ok: false, error: 'Forge your first ultimate before buying the Full Schematics.' }
   if (profile.manowar_schematics === true) return { ok: false, error: 'You already own the Full Schematics.' }
 
-  const doubloons = (profile.doubloons as number | null) ?? 0
-  if (doubloons < SCHEMATICS_COST) return { ok: false, error: `You need ${SCHEMATICS_COST.toLocaleString()} doubloons.` }
+  const newDoubloons = await spend(admin, user.id, 'doubloons', SCHEMATICS_COST)
+  if (newDoubloons == null) return { ok: false, error: `You need ${SCHEMATICS_COST.toLocaleString()} doubloons.` }
 
   // A retool mid-clock finishes instantly with the purchase.
   const pending = parseAugmentBuild(profile.manowar_augment_build ?? null)
-  const newDoubloons = doubloons - SCHEMATICS_COST
   const active = pending?.retool ? pending.id : (profile.manowar_augment as string)
   // Conditional write (schematics still false) guards a double-tap.
   const { data: updated } = await admin.from('profiles')
     .update({
       manowar_schematics: true,
-      doubloons: newDoubloons,
       manowar_augment: active,
       ...(pending?.retool ? { manowar_augment_build: null } : {}),
     })
@@ -541,7 +560,10 @@ export async function buyUltimateSchematics(): Promise<{ ok: boolean; error?: st
     .eq('manowar_schematics', false)
     .select('manowar_schematics')
     .maybeSingle()
-  if (!updated) return { ok: false, error: 'You already own the Full Schematics.' }
+  if (!updated) {
+    await grant(admin, user.id, 'doubloons', SCHEMATICS_COST)
+    return { ok: false, error: 'You already own the Full Schematics.' }
+  }
 
   await admin.from('doubloon_transactions').insert({
     user_id: user.id, amount: -SCHEMATICS_COST, reason: 'Ultimate weapon: the Full Schematics',
@@ -582,7 +604,7 @@ export async function buySixthBerth(): Promise<{ ok: boolean; error?: string; do
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles')
-    .select('doubloons, has_sixth_berth').eq('id', user.id).single()
+    .select('has_sixth_berth').eq('id', user.id).single()
   if (!profile) return { ok: false, error: 'No profile.' }
   if (profile.has_sixth_berth === true) return { ok: false, error: 'Your ship already has its sixth crew slot.' }
 
@@ -591,18 +613,19 @@ export async function buySixthBerth(): Promise<{ ok: boolean; error?: string; do
     .select('id').eq('user_id', user.id).eq('raid_id', 'the_blockade').limit(1).maybeSingle()
   if (!cleared) return { ok: false, error: 'Beat Sal Brackwater before you can add a crew slot.' }
 
-  const doubloons = (profile.doubloons as number | null) ?? 0
-  if (doubloons < SIXTH_BERTH_COST) return { ok: false, error: `You need ${SIXTH_BERTH_COST.toLocaleString()} doubloons.` }
-
-  const newDoubloons = doubloons - SIXTH_BERTH_COST
+  const newDoubloons = await spend(admin, user.id, 'doubloons', SIXTH_BERTH_COST)
+  if (newDoubloons == null) return { ok: false, error: `You need ${SIXTH_BERTH_COST.toLocaleString()} doubloons.` }
   // Conditional write (still false) guards a double-tap.
   const { data: updated } = await admin.from('profiles')
-    .update({ has_sixth_berth: true, doubloons: newDoubloons })
+    .update({ has_sixth_berth: true })
     .eq('id', user.id)
     .eq('has_sixth_berth', false)
     .select('has_sixth_berth')
     .maybeSingle()
-  if (!updated) return { ok: false, error: 'Your ship already carries the sixth berth.' }
+  if (!updated) {
+    await grant(admin, user.id, 'doubloons', SIXTH_BERTH_COST)
+    return { ok: false, error: 'Your ship already carries the sixth berth.' }
+  }
 
   await admin.from('doubloon_transactions').insert({
     user_id: user.id, amount: -SIXTH_BERTH_COST, reason: 'The Sixth Berth (Man-o-War crew slot)',
@@ -620,7 +643,7 @@ export async function buyArmoryExpansion(): Promise<{ ok: boolean; error?: strin
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles')
-    .select('doubloons, has_armory_expansion').eq('id', user.id).single()
+    .select('has_armory_expansion').eq('id', user.id).single()
   if (!profile) return { ok: false, error: 'No profile.' }
   if (profile.has_armory_expansion === true) return { ok: false, error: 'Your deck already carries the extra mount.' }
 
@@ -629,18 +652,19 @@ export async function buyArmoryExpansion(): Promise<{ ok: boolean; error?: strin
     .select('id').eq('user_id', user.id).eq('raid_id', 'the_throne').limit(1).maybeSingle()
   if (!cleared) return { ok: false, error: 'Take the throne before the shipwright will cut you a new mount.' }
 
-  const doubloons = (profile.doubloons as number | null) ?? 0
-  if (doubloons < ARMORY_EXPANSION_COST) return { ok: false, error: `You need ${ARMORY_EXPANSION_COST.toLocaleString()} doubloons.` }
-
-  const newDoubloons = doubloons - ARMORY_EXPANSION_COST
+  const newDoubloons = await spend(admin, user.id, 'doubloons', ARMORY_EXPANSION_COST)
+  if (newDoubloons == null) return { ok: false, error: `You need ${ARMORY_EXPANSION_COST.toLocaleString()} doubloons.` }
   // Conditional write (still false) guards a double-tap.
   const { data: updated } = await admin.from('profiles')
-    .update({ has_armory_expansion: true, doubloons: newDoubloons })
+    .update({ has_armory_expansion: true })
     .eq('id', user.id)
     .eq('has_armory_expansion', false)
     .select('has_armory_expansion')
     .maybeSingle()
-  if (!updated) return { ok: false, error: 'Your deck already carries the extra mount.' }
+  if (!updated) {
+    await grant(admin, user.id, 'doubloons', ARMORY_EXPANSION_COST)
+    return { ok: false, error: 'Your deck already carries the extra mount.' }
+  }
 
   await admin.from('doubloon_transactions').insert({
     user_id: user.id, amount: -ARMORY_EXPANSION_COST, reason: 'The Expanded Armory (extra raid-item mount)',

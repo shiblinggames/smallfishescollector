@@ -15,6 +15,7 @@
 // It also stores each earned id into the owned column it belongs to, which is
 // the same self-heal the equip paths already do on demand.
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { CHARACTER_COLORS } from '@/lib/characters'
@@ -78,7 +79,7 @@ function hadUnderOldRules(key: string, s: { fishing: number; nav: number; presti
 
 export async function checkUnlocks(): Promise<UnlockNews[]> {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   const user = session?.user
   if (!user) return []
 

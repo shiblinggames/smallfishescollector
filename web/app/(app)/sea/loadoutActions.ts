@@ -23,6 +23,7 @@
 // undo it from the other end. You can wear anything you own out here; you buy
 // it ashore.
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
@@ -49,7 +50,7 @@ export async function loadoutGear(): Promise<LoadoutGear | null> {
   const supabase = await createClient()
   // getSession, not getUser: this reads the caller's own rows and the session
   // names them. See the note in lib/supabase.
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   const uid = session?.user?.id
   if (!uid) return null
 

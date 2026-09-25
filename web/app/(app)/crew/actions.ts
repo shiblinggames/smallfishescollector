@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/userData'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stampBadges } from '@/lib/badgeGrant'
 import { isPremiumActive } from '@/lib/premium'
+import { spend, grant, arrayAdd } from '@/lib/wallet'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { crewCapacity } from '@/lib/crewCapacity'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
@@ -337,12 +338,21 @@ export async function getCrewState(): Promise<CrewState | null> {
     // still fires here exactly as it always has.
     const pinnedSlug = ((prof as any).crew_next_roll_legendary_slug as string | null) ?? null
     const owedLegendary = (prof as any).crew_next_roll_legendary === true && !pinnedSlug
-    await admin.from('daily_recruits').delete().eq('user_id', user.id)
-    const rows = generateBoardRows(user.id, DAILY_RECRUITS, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, owedLegendary, null)
-    if (rows.length) await admin.from('daily_recruits').insert(rows)
-    await admin.from('profiles')
+    // Stamp the date FIRST, and only if it is still stale. Two tabs opening at
+    // the rollover both get here; only the one whose stamp lands refills, so
+    // boards never stack and an owed legendary is honoured once.
+    let stampQ = admin.from('profiles')
       .update({ last_free_recruit_date: today, ...(owedLegendary ? { crew_next_roll_legendary: false, crew_next_roll_legendary_slug: null } : {}) })
       .eq('id', user.id)
+    const prevDate = ((prof as any).last_free_recruit_date as string | null) ?? null
+    stampQ = prevDate === null ? stampQ.is('last_free_recruit_date', null) : stampQ.eq('last_free_recruit_date', prevDate)
+    if (owedLegendary) stampQ = stampQ.eq('crew_next_roll_legendary', true)
+    const { data: stamped } = await stampQ.select('id')
+    if (stamped && stamped.length > 0) {
+      await admin.from('daily_recruits').delete().eq('user_id', user.id)
+      const rows = generateBoardRows(user.id, DAILY_RECRUITS, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, owedLegendary, null)
+      if (rows.length) await admin.from('daily_recruits').insert(rows)
+    }
   }
 
   const { data: boardRows } = await admin
@@ -462,17 +472,17 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   if (gems < REROLL_COST) return { error: 'Not enough gems' }
   if (tier && bloodGems < tier.bloodCost) return { error: 'Not enough Blood Gems' }
 
-  // Guarded deduction: gte() on BOTH currencies stops concurrent rerolls from
-  // overdrawing gems OR blood gems. Also stamp today's date so getCrewState()
-  // won't regenerate a free board over this gem roll.
-  let q = admin
-    .from('profiles')
-    .update({ gems: gems - REROLL_COST, ...(tier ? { blood_gems: bloodGems - tier.bloodCost } : {}), last_free_recruit_date: utcDate() })
-    .eq('id', user.id)
-    .gte('gems', REROLL_COST)
-  if (tier) q = q.gte('blood_gems', tier.bloodCost)
-  const { data: updated } = await q.select('gems').single()
-  if (!updated) return { error: tier ? 'Not enough gems or Blood Gems' : 'Not enough gems' }
+  // Both currencies leave in place (the guard against concurrent rerolls
+  // overdrawing either). Gems first; if the Blood Gems fall short the gems
+  // go back.
+  if (await spend(admin, user.id, 'gems', REROLL_COST) === null) return { error: 'Not enough gems' }
+  if (tier && await spend(admin, user.id, 'blood_gems', tier.bloodCost) === null) {
+    await grant(admin, user.id, 'gems', REROLL_COST)
+    return { error: 'Not enough gems or Blood Gems' }
+  }
+  // Stamp today's date so getCrewState() won't regenerate a free board over
+  // this gem roll.
+  await admin.from('profiles').update({ last_free_recruit_date: utcDate() }).eq('id', user.id)
 
   // Blood-Charged badge — hook-granted the first time a reroll is boosted with
   // Blood Gems (a blood-charged reroll; not derivable from stored state).
@@ -488,13 +498,18 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   const weights = tier ? tier.weights : GEM_WEIGHTS
   const legendaryUnlocks = ((prof as any)?.legendary_unlocks as string[] | null) ?? []
   // Same one-shot flag as the free board — whichever roll the captain does
-  // first spends it.
-  const owedLegendary = (prof as any)?.crew_next_roll_legendary === true
-  const rows = generateBoardRows(user.id, 3, 'gem', weights, byGroup, meta, 0, legendaryUnlocks, owedLegendary, (prof as any)?.crew_next_roll_legendary_slug ?? null)
+  // first spends it. Cleared TOGETHER with its pin (a pin left behind would
+  // aim the next gift at the wrong crew), and cleared BEFORE the roll with a
+  // guarded write, so two rerolls fired together honour it only once.
+  let owedLegendary = false
+  if ((prof as any)?.crew_next_roll_legendary === true) {
+    const { data: took } = await admin.from('profiles')
+      .update({ crew_next_roll_legendary: false, crew_next_roll_legendary_slug: null })
+      .eq('id', user.id).eq('crew_next_roll_legendary', true).select('id')
+    owedLegendary = !!took && took.length > 0
+  }
+  const rows = generateBoardRows(user.id, 3, 'gem', weights, byGroup, meta, 0, legendaryUnlocks, owedLegendary, owedLegendary ? ((prof as any)?.crew_next_roll_legendary_slug ?? null) : null)
   if (rows.length) await admin.from('daily_recruits').insert(rows)
-  // Cleared TOGETHER. A pin left behind after its flag is spent would quietly
-  // aim the next gift somebody was given at the wrong crew.
-  if (owedLegendary) await admin.from('profiles').update({ crew_next_roll_legendary: false, crew_next_roll_legendary_slug: null }).eq('id', user.id)
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -524,15 +539,14 @@ export async function gambleBloodSkin(): Promise<{ skinId: string; state: NonNul
 
   const skin = pool[Math.floor(Math.random() * pool.length)]
 
-  // Guarded deduction + grant in one write (gte stops an overdraw double-tap).
-  const { data: updated } = await admin
-    .from('profiles')
-    .update({ blood_gems: bloodGems - BLOOD_SKIN_GAMBLE_COST, owned_crew_skins: [...ownedArr, skin.id] })
-    .eq('id', user.id)
-    .gte('blood_gems', BLOOD_SKIN_GAMBLE_COST)
-    .select('blood_gems')
-    .single()
-  if (!updated) return { error: 'Not enough Blood Gems' }
+  // Blood Gems leave in place first (the guard against a double-tap), then
+  // the skin lands once. If a twin request already added this same skin,
+  // the Blood Gems go back.
+  if (await spend(admin, user.id, 'blood_gems', BLOOD_SKIN_GAMBLE_COST) === null) return { error: 'Not enough Blood Gems' }
+  if (!(await arrayAdd(admin, user.id, 'owned_crew_skins', skin.id))) {
+    await grant(admin, user.id, 'blood_gems', BLOOD_SKIN_GAMBLE_COST)
+    return { error: 'Try again' }
+  }
 
   // Crimson Fortune badge — hook-granted the first time the blood gamble pays
   // out a skin (can't be derived from stored state; mirrors catfish_jackpot).
@@ -556,6 +570,22 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
 
   const { data: prof } = await admin.from('profiles').select('expedition_xp, crew_hall_tier').eq('id', user.id).single()
   const capacity = crewCapacity(getLevelFromXP((prof as any)?.expedition_xp ?? 0), (prof as any)?.crew_hall_tier)
+
+  // Claim the candidate FIRST, and only if it is still unclaimed. Two taps
+  // fired together both reach here; only the one whose update comes back
+  // with a row gets the crew member.
+  const { data: claimed } = await admin
+    .from('daily_recruits')
+    .update({ recruited: true })
+    .eq('id', recruitId)
+    .eq('user_id', user.id)
+    .eq('recruited', false)
+    .select('id, card_id, rarity, power, dodge, fortune, effects, recruited, start_xp')
+  const rec = claimed?.[0]
+  if (!rec) {
+    const { data: exists } = await admin.from('daily_recruits').select('id').eq('id', recruitId).eq('user_id', user.id).maybeSingle()
+    return { error: exists ? 'Already recruited' : 'Recruit not found' }
+  }
   // Capacity check counts LIVE roster only — fallen crew don't take
   // up a roster slot (graveyard is unlimited memorial space).
   const { count } = await admin
@@ -563,16 +593,11 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .is('died_at', null)
-  if ((count ?? 0) >= capacity) return { error: 'Roster full' }
-
-  const { data: rec } = await admin
-    .from('daily_recruits')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, recruited, start_xp')
-    .eq('id', recruitId)
-    .eq('user_id', user.id)
-    .single()
-  if (!rec) return { error: 'Recruit not found' }
-  if ((rec as any).recruited) return { error: 'Already recruited' }
+  // Roster full: hand the candidate back so it can be taken later.
+  if ((count ?? 0) >= capacity) {
+    await admin.from('daily_recruits').update({ recruited: false }).eq('id', recruitId).eq('user_id', user.id)
+    return { error: 'Roster full' }
+  }
 
   await admin.from('user_crew').insert({
     user_id: user.id,
@@ -590,7 +615,6 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
     // XP, so seeding it covers stat ticks, ability unlock, chips and bars.
     xp: (rec as any).start_xp ?? 0,
   })
-  await admin.from('daily_recruits').update({ recruited: true }).eq('id', recruitId).eq('user_id', user.id)
   // Lifetime recruit counter (cumulative; user_crew only holds the live roster).
   await admin.rpc('bump_profile_stat', { uid: user.id, col: 'lifetime_recruits', n: 1 })
 
@@ -625,15 +649,18 @@ export async function upgradeCrewHall(): Promise<CrewActionResult> {
   // Guarded update: gte() stops concurrent taps from overdrawing, and the
   // eq() on the current tier stops a double-submit from buying two tiers
   // for one confirmation.
-  const { data: updated } = await admin
+  if (await spend(admin, user.id, 'doubloons', next.cost) === null) return { error: 'Not enough doubloons' }
+  const { data: bumped } = await admin
     .from('profiles')
-    .update({ doubloons: doubloons - next.cost, crew_hall_tier: next.tier })
+    .update({ crew_hall_tier: next.tier })
     .eq('id', user.id)
     .eq('crew_hall_tier', current)
-    .gte('doubloons', next.cost)
-    .select('doubloons')
-    .single()
-  if (!updated) return { error: 'Not enough doubloons' }
+    .select('id')
+  if (!bumped || bumped.length === 0) {
+    // A twin request bought this tier first; this payment goes back.
+    await grant(admin, user.id, 'doubloons', next.cost)
+    return { error: 'Crew Hall already upgraded' }
+  }
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -978,15 +1005,14 @@ export async function buyCrewSkin(skinId: string): Promise<CrewActionResult> {
   const equipped = { ...(((prof as any).equipped_crew_skins as EquippedCrewSkins | null) ?? {}) }
   equipped[skin.slug.toLowerCase()] = skinId
 
-  // Guarded deduction — only lands if gems still cover the cost.
-  const { data: updated } = await admin
-    .from('profiles')
-    .update({ gems: gems - skin.gemCost, owned_crew_skins: [...owned, skinId], equipped_crew_skins: equipped })
-    .eq('id', user.id)
-    .gte('gems', skin.gemCost)
-    .select('gems')
-    .single()
-  if (!updated) return { error: 'Not enough gems' }
+  // Gems leave in place first (the guard), then the skin is added once. If a
+  // twin request already added it, the gems go back.
+  if (await spend(admin, user.id, 'gems', skin.gemCost) === null) return { error: 'Not enough gems' }
+  if (!(await arrayAdd(admin, user.id, 'owned_crew_skins', skinId))) {
+    await grant(admin, user.id, 'gems', skin.gemCost)
+    return { error: 'Already owned' }
+  }
+  await admin.from('profiles').update({ equipped_crew_skins: equipped }).eq('id', user.id)
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }

@@ -128,4 +128,7 @@ export interface SubmitHoldResult {
   /** Puzzle points banked by this solve + the player's new lifetime total. */
   pointsWon: number
   newPuzzlePoints: number
+  /** A wrong submit counts as a tally (it returns the same mask): the new
+   *  hint count, so the clean-bonus state stays in step. */
+  hintsUsed?: number
 }

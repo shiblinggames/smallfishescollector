@@ -6,7 +6,7 @@
 
 import { redirect } from 'next/navigation'
 import RaidGame from '../../RaidGame'
-import { getRaidPlayerStats } from '../../actions'
+import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { THE_BLOCKADE_CHALLENGE } from '@/lib/raidChallenge'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 

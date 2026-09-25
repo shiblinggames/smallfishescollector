@@ -55,6 +55,44 @@ number ever hurts anyone but the forger. Vercel's bot protection is a dashboard 
 - Rate limiting: `web/lib/rateLimit.ts`. Run tokens for game-session integrity:
   `web/lib/runToken.ts`.
 
+## The exploit audit of 2026-09-25: the rules it left
+
+Four parallel reviews of every server action found the holes were all in app code, none in
+the database (no client write policies anywhere; only `claim_token` is player-callable). Fixed
+the same day. The rules that came out of it, for every new server action:
+
+- **Balances move in place, never computed in JS.** `lib/wallet.ts`: `spend` (returns null
+  when there is not enough, and IS the purchase guard, called before the item is granted),
+  `grant`, `walletAdd`, and `arrayAdd` for owned-things lists (text[] or jsonb array). They
+  call `wallet_add` / `profile_array_add` (service-role). Reading `gems` then writing
+  `gems: old - cost` let two requests buy two things for one price, and let a slow claim
+  write a stale balance over a purchase (the money came back). A purchase that loses the
+  owned-list race refunds with `grant`. `deduct_doubloons` refuses negative amounts: a
+  "refund" through it silently did nothing (three places did this).
+- **One-shot claims flip first.** A conditional update matching the unclaimed state plus
+  `.select()`, pay only if a row came back. Deletes that pay: `.delete().select()`, pay from
+  the rows actually deleted. Casino cash-out is `casino_cash_out(uid)`; blackjack settles by
+  flipping the hand `active -> settled` first.
+- **Whole numbers only.** `marketSellFish(id, 9.5)` paid for 9.5 fish while the integer
+  inventory write failed, so the fish stayed: an unlimited mint.
+- **Who is asking is VERIFIED.** `getSession()` returns the cookie's claims unchecked; in
+  front of the admin client a hand-written cookie acted as any captain. Use `getUser()` or
+  `lib/verifiedSession.ts` (`getClaims()`, which checks the ES256 signature locally, fast).
+- **Nothing that takes a userId lives in a 'use server' file.** Every export there is a public
+  endpoint. `logBountyEvent`, `getRaidPlayerStats`, `settlePendingSales` moved to `lib/`.
+- **No player-supplied value in a `.or()` filter string** (PostgREST does not escape it; a
+  crafted id deleted every sailing pact). Validate as a UUID first.
+- **Redirect targets are paths**: `next` must start with one `/`, not `//` or `/\`.
+- Raid rewards are server-priced per round against a REQUIRED run token; see
+  [raids-campaign.md](raids-campaign.md). Gauntlet payouts close the run first; see
+  [gauntlets.md](gauntlets.md).
+
+Still open after the fix (bounded, noted for later): a "perfect" catch is still the client's
+word (the bite floor stops instant loops); dig and isle claims trust the reported position
+(one-shot each); trivia generation has no failure cache (a failing generator retries on
+every load); puzzle/parlor point counters are read-modify-write (a race can only LOSE
+points); the raid crate's coin figure is client-reported, clamped to 3,000, once per clear.
+
 ## Recurring code traps (each cost a debugging session)
 
 - `'use server'` files silently DROP non-async exports — constants live in sibling

@@ -19,6 +19,7 @@ import {
   denCapFromXp,
 } from '../constants'
 import { isPremiumActive } from '@/lib/premium'
+import { spend, grant } from '@/lib/wallet'
 import type { RouletteState, SpinResult, RecentSpin } from './types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -127,14 +128,19 @@ export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { erro
     .single()
   if (!profile) return { error: 'Profile not found' }
 
-  const chipsBefore = (profile.casino_chips as number | null) ?? 0
-  if (chipsBefore < totalWagered) return { error: 'Not enough chips' }
+  // The wager leaves the purse in place first. That is the guard: two spins
+  // fired together cannot both bet the same chips.
+  const afterStake = await spend(admin, user.id, 'casino_chips', totalWagered)
+  if (afterStake === null) return { error: 'Not enough chips' }
+  const chipsBefore = afterStake + totalWagered
 
   // Server-authoritative spin + pure settlement.
   const winningNumber = rollWinningNumber()
   const settlement = settleSpin(bets, winningNumber)
 
-  const chipsAfter = chipsBefore - settlement.totalWagered + settlement.totalPayout
+  const chipsAfter = settlement.totalPayout > 0
+    ? await grant(admin, user.id, 'casino_chips', settlement.totalPayout)
+    : afterStake
   const prevSessionNet = (profile.roulette_session_net as number | null) ?? 0
   const prevSessionBuyIns = (profile.casino_session_buy_ins as number | null) ?? 0
   // Shared purse hitting 0 ends the casino session — reset the shared
@@ -145,7 +151,6 @@ export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { erro
 
   await Promise.all([
     admin.from('profiles').update({
-      casino_chips: chipsAfter,
       roulette_session_net: newSessionNet,
       ...(busted ? { casino_session_buy_ins: 0, blackjack_session_net: 0, slots_session_net: 0 } : {}),
     }).eq('id', user.id),

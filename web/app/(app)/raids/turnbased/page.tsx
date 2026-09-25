@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getRaidPlayerStats } from '../actions'
+import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { CORSAIRS_RECKONING } from '@/lib/bossRaids'
 import TurnBasedRaidPreview from './TurnBasedRaidPreview'
 import { adminOnlyPage } from '@/lib/adminGate'

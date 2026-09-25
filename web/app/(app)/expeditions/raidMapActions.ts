@@ -8,7 +8,7 @@ import { RAID_MAP, computeRaidMap, type RaidNodeView } from '@/lib/raidMap'
 import { GAUNTLET_LIVE, GAUNTLET_UNLOCK_NODE } from '@/lib/gauntlet'
 import { raidDamageProfile } from '@/lib/expeditions'
 import { getActiveEffects, exclusiveSiblingOf, effectiveOwnedItems } from '@/lib/raidItems'
-import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
+import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { buildClearedSet } from '@/lib/raidProgress'
 import { loadDeployedParty } from '@/lib/crewData'
 import { musterCrewFrom, musterReport, type MusterCrew } from '@/lib/crewMuster'
@@ -16,8 +16,43 @@ import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { GATE_NODE_TO_LEGENDARY, slugToCardKey, type UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { eyeCharge } from '@/lib/finnItems'
+import { grant, spend, walletAdd, arrayAdd } from '@/lib/wallet'
 
 type Admin = ReturnType<typeof createAdminClient>
+
+/**
+ * ── A NODE CLEARS ONCE, AND ONLY THE CLEAR THAT LANDS PAYS ──────────────────
+ *
+ * Every paying node read the cleared set, then wrote raid_node_progress and a
+ * computed balance in one update. Two requests fired together both passed the
+ * read. Written as absolute balances the doubled pay happened to collapse; the
+ * moment the balance moves in place (lib/wallet) it would not, so the clear has
+ * to be the one-shot.
+ *
+ * This writes `patch` only while raid_node_progress is still exactly the value
+ * this request read (jsonb equality, or still null). A twin that cleared first
+ * changed it, so the second write matches nothing and returns false, and the
+ * caller pays nothing. Balances are NOT in the patch: callers move them in place
+ * after this returns true (or spend first as the guard and refund on false).
+ */
+async function commitNodeClear(
+  admin: Admin,
+  userId: string,
+  readProgress: unknown,
+  patch: Record<string, unknown>,
+): Promise<boolean> {
+  const base = admin.from('profiles').update(patch).eq('id', userId)
+  const guarded = readProgress == null
+    ? base.is('raid_node_progress', null)
+    : base.eq('raid_node_progress', JSON.stringify(readProgress))
+  const { data } = await guarded.select('id')
+  return (data ?? []).length > 0
+}
+
+/** Nav XP in place. */
+async function addNavXp(admin: Admin, userId: string, n: number): Promise<void> {
+  if (n > 0) await admin.rpc('bump_profile_stat', { uid: userId, col: 'expedition_xp', n })
+}
 
 /** Per-raid social records surfaced in the raid node sheet so players see
  *  the fastest clear, their own personal best, and how many other captains
@@ -147,17 +182,17 @@ export async function claimMilestoneNode(
 
   const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
-  const newDoubloons = node.milestone.spend
-    ? doubloons - node.milestone.amount
-    : doubloons + (node.milestone.rewardDoubloons ?? 0)
 
-  await admin
-    .from('profiles')
-    .update({
-      doubloons: newDoubloons,
-      raid_node_progress: { ...prog, cleared: newCleared },
-    })
-    .eq('id', user.id)
+  // A paid milestone spends FIRST (the guard); a reward milestone pays only
+  // after its clear has landed.
+  const cost = node.milestone.spend ? node.milestone.amount : 0
+  if (cost > 0 && (await spend(admin, user.id, 'doubloons', cost)) == null) return { error: 'Not enough doubloons' }
+  const ok = await commitNodeClear(admin, user.id, profile.raid_node_progress, { raid_node_progress: { ...prog, cleared: newCleared } })
+  if (!ok) {
+    if (cost > 0) await grant(admin, user.id, 'doubloons', cost)
+    return { error: 'Already claimed' }
+  }
+  const newDoubloons = await grant(admin, user.id, 'doubloons', node.milestone.spend ? 0 : (node.milestone.rewardDoubloons ?? 0))
 
   return { doubloons: newDoubloons }
 }
@@ -267,11 +302,12 @@ export async function solvePuzzleNode(
   const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
 
-  await admin.from('profiles').update({
-    expedition_xp: newExpeditionXp,
+  const ok = await commitNodeClear(admin, user.id, profile.raid_node_progress, {
     ...(reelCharge !== null ? { anglers_patience_xp: reelCharge } : {}),
     raid_node_progress: { ...prog, cleared: newCleared },
-  }).eq('id', user.id)
+  })
+  if (!ok) return { expeditionXp } // a twin solved it first; it paid
+  await addNavXp(admin, user.id, puzzleXp)
 
   return { expeditionXp: newExpeditionXp }
 }
@@ -310,16 +346,11 @@ export async function claimQuartermasterChoice(
 
   const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
-  const ownedItems = (profile.raid_items as string[] | null) ?? []
-  const newItems = [...new Set([...ownedItems, itemId])]
-
-  await admin
-    .from('profiles')
-    .update({
-      raid_items: newItems,
-      raid_node_progress: { ...prog, cleared: newCleared },
-    })
-    .eq('id', user.id)
+  // One pick. Two different picks fired together used to both land (each wrote
+  // its own item); only the one whose clear lands gets its item now.
+  const ok = await commitNodeClear(admin, user.id, profile.raid_node_progress, { raid_node_progress: { ...prog, cleared: newCleared } })
+  if (!ok) return { error: 'Already chosen' }
+  await arrayAdd(admin, user.id, 'raid_items', itemId)
 
   return { ok: true }
 }
@@ -430,21 +461,29 @@ export async function pickRaidEventChoice(
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
   const newChoices = { ...(prog.choices ?? {}), [nodeId]: choiceId }
 
-  const updates: Record<string, unknown> = {
-    raid_node_progress: { ...prog, cleared: newCleared, choices: newChoices },
-  }
   let newDoubloons: number | undefined
   let newExpeditionXp: number | undefined
 
-  if (choice.outcome.type === 'doubloons') {
-    newDoubloons = (profile.doubloons ?? 0) + choice.outcome.amount
-    updates.doubloons = newDoubloons
-  } else if (choice.outcome.type === 'navXp') {
-    newExpeditionXp = (profile.expedition_xp ?? 0) + choice.outcome.amount
-    updates.expedition_xp = newExpeditionXp
+  // A costly choice takes its coin first (the guard); a paying one pays only
+  // after the clear lands.
+  const coin = choice.outcome.type === 'doubloons' ? choice.outcome.amount : 0
+  if (coin < 0) {
+    const left = await spend(admin, user.id, 'doubloons', -coin)
+    if (left == null) return { error: 'Not enough doubloons' }
+    newDoubloons = left
   }
-
-  await admin.from('profiles').update(updates).eq('id', user.id)
+  const ok = await commitNodeClear(admin, user.id, profile.raid_node_progress, {
+    raid_node_progress: { ...prog, cleared: newCleared, choices: newChoices },
+  })
+  if (!ok) {
+    if (coin < 0) await grant(admin, user.id, 'doubloons', -coin)
+    return { error: 'Already chosen' }
+  }
+  if (coin > 0) newDoubloons = await grant(admin, user.id, 'doubloons', coin)
+  if (choice.outcome.type === 'navXp') {
+    newExpeditionXp = (profile.expedition_xp ?? 0) + choice.outcome.amount
+    await addNavXp(admin, user.id, choice.outcome.amount)
+  }
 
   // Ledger row for doubloon-bearing outcomes. Kept best-effort — a
   // failed insert shouldn't block the choice itself from settling.
@@ -499,11 +538,12 @@ export async function pickForkRoute(
   const newExpeditionXp = ((profile.expedition_xp as number | null) ?? 0) + node.fork.rewardNavXp
   const forkReelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], node.fork.rewardNavXp)
 
-  await admin.from('profiles').update({
-    expedition_xp: newExpeditionXp,
+  const ok = await commitNodeClear(admin, user.id, profile.raid_node_progress, {
     ...(forkReelCharge !== null ? { anglers_patience_xp: forkReelCharge } : {}),
     raid_node_progress: { ...prog, cleared: newCleared, choices: newChoices },
-  }).eq('id', user.id)
+  })
+  if (!ok) return { error: 'Already chosen' }
+  await addNavXp(admin, user.id, node.fork.rewardNavXp)
 
   return { ok: true, newExpeditionXp }
 }
@@ -556,25 +596,41 @@ export async function rollDiceNode(
   const roll = 1 + Math.floor(Math.random() * 20)
   const total = roll + bonus
   const success = total >= option.dc
-  const grant = success ? option.win : option.miss
+  const outcome = success ? option.win : option.miss
 
-  const rawDoubloons = doubloons + (grant.doubloons ?? 0)
-  const newDoubloons = Math.max(0, rawDoubloons)
-  const doubloonsDelta = newDoubloons - doubloons // clamped actual movement
-  const navXpDelta = grant.navXp ?? 0
+  const rawDoubloons = doubloons + (outcome.doubloons ?? 0)
+  let newDoubloons = Math.max(0, rawDoubloons)
+  let doubloonsDelta = newDoubloons - doubloons // clamped actual movement
+  const navXpDelta = outcome.navXp ?? 0
   const newExpeditionXp = ((profile.expedition_xp as number | null) ?? 0) + navXpDelta
 
   const prog = (profile.raid_node_progress as { cleared?: string[]; choices?: Record<string, string> } | null) ?? {}
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
   const newChoices = { ...(prog.choices ?? {}), [nodeId]: optionId }
 
-  const updates: Record<string, unknown> = {
+  // One throw per node: only the throw whose clear lands moves any coin.
+  const ok = await commitNodeClear(admin, user.id, profile.raid_node_progress, {
     raid_node_progress: { ...prog, cleared: newCleared, choices: newChoices },
-  }
-  if (doubloonsDelta !== 0) updates.doubloons = newDoubloons
-  if (navXpDelta !== 0) updates.expedition_xp = newExpeditionXp
+  })
+  if (!ok) return { error: 'Already thrown' }
 
-  await admin.from('profiles').update(updates).eq('id', user.id)
+  // Coin moves in place. A loss is still floored at an empty purse: if the
+  // purse fell since the read, take what is there rather than going negative.
+  if (doubloonsDelta > 0) {
+    newDoubloons = await grant(admin, user.id, 'doubloons', doubloonsDelta)
+  } else if (doubloonsDelta < 0) {
+    const left = await walletAdd(admin, user.id, 'doubloons', doubloonsDelta)
+    if (left != null) {
+      newDoubloons = left
+    } else {
+      const { data: now } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+      const have = Number(now?.doubloons ?? 0)
+      const taken = await spend(admin, user.id, 'doubloons', have)
+      newDoubloons = taken ?? 0
+      doubloonsDelta = -have
+    }
+  }
+  await addNavXp(admin, user.id, navXpDelta)
 
   if (doubloonsDelta !== 0) {
     await admin.from('doubloon_transactions').insert({
@@ -671,15 +727,24 @@ export async function resolveDpsCheck(
   const prog = (profile.raid_node_progress as { cleared?: string[]; choices?: Record<string, string> } | null) ?? {}
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
 
-  // Write the clear + a (clamped) doubloon spend + ledger row.
-  async function settle(cost: number, tag: string): Promise<{ newDoubloons: number; delta: number }> {
-    const newDoubloons = Math.max(0, doubloons - cost)
-    const delta = newDoubloons - doubloons
-    const updates: Record<string, unknown> = {
-      raid_node_progress: { ...prog, cleared: newCleared, choices: { ...(prog.choices ?? {}), [nodeId]: tag } },
+  // Write the clear + a doubloon spend + ledger row. The spend goes FIRST as
+  // the guard and comes back if a twin cleared the node meanwhile. null = the
+  // toll could not be covered, or the node was already cleared.
+  async function settle(cost: number, tag: string): Promise<{ newDoubloons: number; delta: number } | null> {
+    let newDoubloons = doubloons
+    if (cost > 0) {
+      const left = await spend(admin, uid, 'doubloons', cost)
+      if (left == null) return null
+      newDoubloons = left
     }
-    if (delta !== 0) updates.doubloons = newDoubloons
-    await admin.from('profiles').update(updates).eq('id', uid)
+    const ok = await commitNodeClear(admin, uid, profile!.raid_node_progress, {
+      raid_node_progress: { ...prog, cleared: newCleared, choices: { ...(prog.choices ?? {}), [nodeId]: tag } },
+    })
+    if (!ok) {
+      if (cost > 0) await grant(admin, uid, 'doubloons', cost)
+      return null
+    }
+    const delta = -cost
     if (delta !== 0) {
       await admin.from('doubloon_transactions').insert({
         user_id: uid, amount: delta, reason: `Raid: ${nodeLabel} (${tag})`,
@@ -690,8 +755,9 @@ export async function resolveDpsCheck(
 
   if (action === 'pay') {
     if (doubloons < dc.payCost) return { error: `Need ${dc.payCost.toLocaleString()} doubloons` }
-    const { newDoubloons } = await settle(dc.payCost, 'paid')
-    return { outcome: 'paid', newDoubloons }
+    const paid = await settle(dc.payCost, 'paid')
+    if (!paid) return { error: `Need ${dc.payCost.toLocaleString()} doubloons` }
+    return { outcome: 'paid', newDoubloons: paid.newDoubloons }
   }
 
   // action === 'shot' — ANYONE MAY FIRE. This used to demand the full repair
@@ -715,8 +781,9 @@ export async function resolveDpsCheck(
   const breakdown: DpsBreakdown = { roll: base, rangeMin, rangeMax, mult }
 
   if (passed) {
-    const { newDoubloons } = await settle(0, 'passed')
-    return { outcome: 'passed', damage, threshold: dc.threshold, newDoubloons, breakdown }
+    const done = await settle(0, 'passed')
+    if (!done) return { error: 'Already cleared' }
+    return { outcome: 'passed', damage, threshold: dc.threshold, newDoubloons: done.newDoubloons, breakdown }
   }
   /**
    * ── A MISS DOES NOT CLEAR THE GATE, AND DOES NOT BILL YOU ──────────────
@@ -773,23 +840,25 @@ export async function claimScoutDebt(
   }
   if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
 
-  const grant = met ? node.payoff.grant : {}
-  const doubloonsDelta = grant.doubloons ?? 0
-  const navXpDelta = grant.navXp ?? 0
-  const newDoubloons = doubloons + doubloonsDelta
+  const payoff = met ? node.payoff.grant : {}
+  const doubloonsDelta = payoff.doubloons ?? 0
+  const navXpDelta = payoff.navXp ?? 0
+  let newDoubloons = doubloons + doubloonsDelta
   const newExpeditionXp = expeditionXp + navXpDelta
 
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
   const updates: Record<string, unknown> = {
     raid_node_progress: { ...prog, cleared: newCleared },
   }
-  if (doubloonsDelta !== 0) updates.doubloons = newDoubloons
-  if (navXpDelta !== 0) updates.expedition_xp = newExpeditionXp
 
   // Dole's gate: scout_debt is a payoff node, so her unlock rides this action.
   const unlockedLegendary = await applyLegendaryGate(admin, nodeId, (profile.legendary_unlocks as string[] | null) ?? [], updates)
 
-  await admin.from('profiles').update(updates).eq('id', user.id)
+  // Paid only if this request's clear is the one that lands.
+  const ok = await commitNodeClear(admin, user.id, profile.raid_node_progress, updates)
+  if (!ok) return { met, doubloonsDelta: 0, navXpDelta: 0, newDoubloons: doubloons, newExpeditionXp: expeditionXp }
+  if (doubloonsDelta > 0) newDoubloons = await grant(admin, user.id, 'doubloons', doubloonsDelta)
+  await addNavXp(admin, user.id, navXpDelta)
 
   if (doubloonsDelta !== 0) {
     await admin.from('doubloon_transactions').insert({
@@ -946,16 +1015,19 @@ export async function refitShipClasses(
   }
 
   // Conditional on the count still being what was priced, so a refit that raced
-  // another cannot be paid for once and taken twice. The debit above already
-  // landed if this loses, which is the safe direction to fail: the reward is
-  // withheld, never handed out unpaid.
+  // another cannot be paid for once and taken twice. If this loses, the debit
+  // above is refunded.
   const { data: written } = await admin
     .from('profiles')
     .update({ ship_classes: next, ship_refits_used: used + 1 })
     .eq('id', user.id)
     .eq('ship_refits_used', used)
     .select('id')
-  if (!(written ?? []).length) return { error: 'That refit was already taken. Reload and try again.' }
+  if (!(written ?? []).length) {
+    // The race was lost after the debit landed: hand it straight back.
+    if (cost > 0) await grant(admin, user.id, 'doubloons', cost)
+    return { error: 'That refit was already taken. Reload and try again.' }
+  }
 
   // Handed back so the purse in the Nav ticks down with the payment rather than
   // waiting for the next full load.

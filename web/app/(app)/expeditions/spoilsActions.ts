@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SPOILS_PRICE } from '@/lib/shipBerth'
+import { spend, grant } from '@/lib/wallet'
 
 /** THE SPOILS OF THE SUNKEN HAND.
  *
@@ -91,19 +92,21 @@ export async function buySpoil(side: unknown): Promise<{ ok: boolean; error?: st
   if (profile.finn_spoil_free === side) return { ok: false, error: 'You already carry that one.' }
   if (profile.finn_spoil_paid) return { ok: false, error: 'You already bought the other.' }
 
-  const doubloons = (profile.doubloons as number | null) ?? 0
-  if (doubloons < SPOILS_PRICE) {
+  // The spend is the guard; a twin that bought first gets this one refunded.
+  const newDoubloons = await spend(admin, user.id, 'doubloons', SPOILS_PRICE)
+  if (newDoubloons == null) {
     return { ok: false, error: `You need ${SPOILS_PRICE.toLocaleString()} doubloons.` }
   }
-
-  const newDoubloons = doubloons - SPOILS_PRICE
   const { data: updated } = await admin.from('profiles')
-    .update({ finn_spoil_paid: side, doubloons: newDoubloons })
+    .update({ finn_spoil_paid: side })
     .eq('id', user.id)
     .is('finn_spoil_paid', null)
     .select('finn_spoil_paid')
     .maybeSingle()
-  if (!updated) return { ok: false, error: 'You already bought the other.' }
+  if (!updated) {
+    await grant(admin, user.id, 'doubloons', SPOILS_PRICE)
+    return { ok: false, error: 'You already bought the other.' }
+  }
   await markSpoilsNodeCleared(admin, user.id)
   return { ok: true, doubloons: newDoubloons }
 }

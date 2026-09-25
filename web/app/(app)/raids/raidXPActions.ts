@@ -5,51 +5,70 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxLegitKillGrant } from '@/lib/raidRegistry'
+import { getRaidConfigById } from '@/lib/raidRegistry'
+import { raidCompletionBonusXp } from '@/lib/bossRaids'
 import { flagAnomaly } from '@/lib/anomaly'
-import { countRaidKill } from '@/lib/runToken'
+import { claimRaidRound } from '@/lib/runToken'
 import { eyeCharge } from '@/lib/finnItems'
+import { grant } from '@/lib/wallet'
 
+const NOTHING = { newExpeditionXP: 0, newDoubloonTotal: 0, crewXP: [] as CrewXPGrant[] }
+
+/**
+ * Pay one raid kill. THE SERVER NAMES THE PRICE.
+ *
+ * This used to take xp and doubloons from the request and clamp them to a
+ * whole raid's kill total times one and a half, and a call with no token paid
+ * too. A forged call was worth a raid in one request, as often as it liked.
+ *
+ * Now the client says only WHICH round fell (0-based; the round equal to the
+ * sequence length is the boss). The reward is read from the token's own raid
+ * config, the same killRewards line the client shows, and the boss round adds
+ * the full-clear bonus exactly as the client did. Each round of a run pays
+ * once (run_tokens.paid_rounds), so a run pays what its mobs are worth and not
+ * a coin more. No token, no pay.
+ */
 export async function awardRaidKill(
-  xpIn: number,
-  doubloonsIn: number,
-  token?: string,
+  round: number,
+  token?: string | null,
 ): Promise<{ newExpeditionXP: number; newDoubloonTotal: number; crewXP: CrewXPGrant[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { newExpeditionXP: 0, newDoubloonTotal: 0, crewXP: [] }
-
-  // Combat is client-side, so xp/doubloons arrive as hostile input. Clamp each to
-  // the most a single honest kill-grant can be worth (boss kill + full-clear
-  // bonus, headroom included) — a forged 750k call becomes one kill's worth. This
-  // is what stopped the crew-XP inflation exploit.
-  const cap = maxLegitKillGrant()
-  const rawXp     = Math.max(0, Math.floor(Number(xpIn)        || 0))
-  const rawGold   = Math.max(0, Math.floor(Number(doubloonsIn) || 0))
-  const xp        = Math.min(rawXp,   cap.xp)
-  const doubloons = Math.min(rawGold, cap.gold)
+  if (!user) return NOTHING
 
   const admin = createAdminClient()
-
-  // A legit client never exceeds the legit ceiling, so a clamp = near-certain
-  // forgery. Flag it for admin review (advisory only, doesn't change the outcome).
-  if (rawXp > cap.xp || rawGold > cap.gold) {
-    await flagAnomaly(admin, user.id, 'cap_trip:awardRaidKill', 3, { rawXp, rawGold, capXp: cap.xp, capGold: cap.gold })
+  const r = Number(round)
+  if (!token || !Number.isInteger(r) || r < 0) {
+    await flagAnomaly(admin, user.id, 'run_token:awardRaidKill_missing', 2, { round, hasToken: !!token })
+    return NOTHING
   }
 
-  // Run-token bound: the kill must fit its run's mob count (baked into the token
-  // at raid start). A rejected kill = the call was replayed past the run's real
-  // kills → grant nothing. No token (a raid started before this shipped, or the
-  // client not yet wired) falls through tolerantly — silently, since this fires
-  // per-kill and would otherwise flood the panel; the once-per-clear miss on
-  // recordRaidClear is where we watch adoption.
-  if (token && !(await countRaidKill(admin, user.id, token))) {
-    await flagAnomaly(admin, user.id, 'run_token:awardRaidKill_reject', 2, { token, rawXp, rawGold })
-    return { newExpeditionXP: 0, newDoubloonTotal: 0, crewXP: [] }
+  // Resolve the round against the token's raid BEFORE marking it paid, so a
+  // round past the end of the raid is refused without burning anything.
+  const { data: tok } = await admin.from('run_tokens').select('meta').eq('id', token).eq('user_id', user.id).eq('kind', 'raid').maybeSingle()
+  const raidId = (tok?.meta as { raidId?: string } | null)?.raidId
+  const config = raidId ? getRaidConfigById(raidId) : undefined
+  if (!config || r > config.sequence.length) {
+    await flagAnomaly(admin, user.id, 'run_token:awardRaidKill_badRound', 3, { round: r, raidId: raidId ?? null })
+    return NOTHING
   }
+
+  // One pay per round per run. A replay, a concurrent twin or a spent token
+  // gets nothing.
+  if (!(await claimRaidRound(admin, user.id, token, r))) {
+    await flagAnomaly(admin, user.id, 'run_token:awardRaidKill_reject', 2, { token, round: r })
+    return NOTHING
+  }
+
+  const isBoss = r === config.sequence.length
+  const enemyId = isBoss ? config.bossId : config.sequence[r]
+  const reward = config.killRewards[enemyId]
+  const xp = (reward?.xp ?? 0) + (isBoss ? raidCompletionBonusXp(config) : 0)
+  const doubloons = reward?.gold ?? 0
+
   const { data: profile } = await admin
     .from('profiles')
-    .select('expedition_xp, doubloons, ship_classes, nav_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
+    .select('expedition_xp, ship_classes, nav_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
 
@@ -68,18 +87,19 @@ export async function awardRaidKill(
   // Raid kills are Navigation XP, so they charge The Primeval Eye. Gate lives
   // in lib/finnItems so every nav source applies the same three conditions.
   const reelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], xp)
-  const newDoubloonTotal = (profile?.doubloons ?? 0) + scaledDoubloons
 
   // Crew earn the per-kill XP the player just earned, nudged by nav Renown
   // (Command) only — ship classes still don't grow crew faster. Every alive,
   // assigned crew gets bumped via a single atomic RPC; level-up deltas come
   // back so the end-of-encounter overlay can flash crew level-ups.
-  const [, crewXP] = await Promise.all([
-    admin.from('profiles').update({
-      expedition_xp: newExpeditionXP,
-      ...(reelCharge !== null ? { anglers_patience_xp: reelCharge } : {}),
-      doubloons: newDoubloonTotal,
-    }).eq('id', user.id),
+  // Gold and Nav XP move in place; a stale read here must not write back over
+  // a purchase that landed meanwhile.
+  const [newDoubloonTotal, , crewXP] = await Promise.all([
+    grant(admin, user.id, 'doubloons', scaledDoubloons),
+    Promise.all([
+      xp > 0 ? admin.rpc('bump_profile_stat', { uid: user.id, col: 'expedition_xp', n: xp }) : null,
+      reelCharge !== null ? admin.from('profiles').update({ anglers_patience_xp: reelCharge }).eq('id', user.id) : null,
+    ]),
     grantXPToAssignedCrew(admin, user.id, crewXP_amount),
   ])
 

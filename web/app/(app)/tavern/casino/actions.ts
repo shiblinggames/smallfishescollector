@@ -14,6 +14,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX, denDailyCap, denCapFromXp } from '../constants'
 import { isPremiumActive } from '@/lib/premium'
+import { spend, grant } from '@/lib/wallet'
 import type { CasinoWallet, CasinoBuyInResult, CasinoCashOutResult } from './types'
 
 async function getDailyBuyInTotal(userId: string): Promise<number> {
@@ -85,12 +86,11 @@ export async function buyInCasino(amount: number): Promise<CasinoBuyInResult | {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, casino_chips, casino_session_buy_ins')
+    .select('doubloons, casino_session_buy_ins')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
   const doubloons = profile.doubloons as number
-  const chips = (profile.casino_chips as number | null) ?? 0
   const prevSessionBuyIns = (profile.casino_session_buy_ins as number | null) ?? 0
   if (doubloons < amount) return { error: 'Insufficient doubloons' }
 
@@ -99,14 +99,15 @@ export async function buyInCasino(amount: number): Promise<CasinoBuyInResult | {
     return { error: `Daily limit reached (${dailyCap.toLocaleString()} ⟡)` }
   }
 
-  const newDoubloons = doubloons - amount
-  const newChips = chips + amount
+  // Doubloons leave in place first (the guard against two buy-ins spending
+  // the same purse), then the chips land in place.
+  const newDoubloons = await spend(admin, user.id, 'doubloons', amount)
+  if (newDoubloons === null) return { error: 'Insufficient doubloons' }
+  const newChips = await grant(admin, user.id, 'casino_chips', amount)
   const newSessionBuyIns = prevSessionBuyIns + amount
 
   await Promise.all([
     admin.from('profiles').update({
-      doubloons: newDoubloons,
-      casino_chips: newChips,
       casino_session_buy_ins: newSessionBuyIns,
     }).eq('id', user.id),
     admin.from('casino_buy_ins').insert({ user_id: user.id, amount }),
@@ -140,22 +141,17 @@ export async function cashOutCasino(): Promise<CasinoCashOutResult | { error: st
     .maybeSingle()
   if (activeHand) return { error: 'Finish your blackjack hand first' }
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, casino_chips')
-    .eq('id', user.id)
-    .single()
-  if (!profile) return { error: 'Profile not found' }
-  const doubloons = profile.doubloons as number
-  const chips = (profile.casino_chips as number | null) ?? 0
+  // One SQL statement moves every chip to doubloons, so a spin landing at
+  // the same moment can never be paid out twice.
+  const { data: rows, error } = await admin.rpc('casino_cash_out', { uid: user.id })
+  if (error) return { error: 'Cash-out failed' }
+  const row = (Array.isArray(rows) ? rows[0] : rows) as { paid: number | null; doubloons: number | null } | null
+  const chips = Number(row?.paid ?? 0)
   if (chips <= 0) return { error: 'No chips to cash out' }
-
-  const newDoubloons = doubloons + chips
+  const newDoubloons = Number(row?.doubloons ?? 0)
 
   await Promise.all([
     admin.from('profiles').update({
-      doubloons: newDoubloons,
-      casino_chips: 0,
       casino_session_buy_ins: 0,
       blackjack_session_net: 0,
       roulette_session_net: 0,

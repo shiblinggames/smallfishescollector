@@ -15,7 +15,7 @@
 import { getCurrentUser } from '@/lib/userData'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getRaidMapView, type RaidRecords } from '@/app/(app)/expeditions/raidMapActions'
-import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
+import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { ownedSpecialIds, SPECIAL_OWNED_COLUMN } from '@/lib/specialItems'
 import type { RaidNodeView } from '@/lib/raidMap'
 

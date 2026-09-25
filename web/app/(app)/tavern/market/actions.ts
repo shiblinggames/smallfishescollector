@@ -2,51 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { isPremiumActive } from '@/lib/premium'
-
-const PENDING_SALE_DELAY_MS = 60 * 60 * 1000 // 1 hour
-
-// Settles all matured pending sales for a user. Returns total newly credited.
-// Safe to call from any profile-reading path (server components, server actions).
-export async function settlePendingSales(
-  userId: string,
-  admin?: SupabaseClient,
-): Promise<number> {
-  const db = admin ?? createAdminClient()
-  const nowIso = new Date().toISOString()
-
-  const { data: matured } = await db
-    .from('pending_sales')
-    .select('id, amount')
-    .eq('user_id', userId)
-    .lte('settles_at', nowIso)
-
-  if (!matured || matured.length === 0) return 0
-
-  const totalCredit = matured.reduce((s, r) => s + (r.amount ?? 0), 0)
-  if (totalCredit <= 0) return 0
-
-  const { data: profile } = await db
-    .from('profiles')
-    .select('doubloons')
-    .eq('id', userId)
-    .single()
-  const newDoubloons = (profile?.doubloons ?? 0) + totalCredit
-
-  await Promise.all([
-    db.from('profiles').update({ doubloons: newDoubloons }).eq('id', userId),
-    db.from('pending_sales').delete().in('id', matured.map(r => r.id)),
-    db.from('doubloon_transactions').insert({
-      user_id: userId,
-      amount: totalCredit,
-      reason: `Pending sale${matured.length === 1 ? '' : 's'} settled`,
-    }),
-    db.rpc('bump_profile_stat', { uid: userId, col: 'fish_sold_doubloons', n: totalCredit }),
-  ])
-
-  return totalCredit
-}
+import { settlePendingSales } from '@/lib/pendingSales'
+import { grant } from '@/lib/wallet'
 
 export type PendingSale = {
   id: string
@@ -153,9 +111,23 @@ export async function sellEntireHold(): Promise<
   // that touches a rate is the wrong kind of perk. See lib/captainWater.
   const fee = 1.0
 
+  // Empty each stack only if it still holds what was read, and pay only for
+  // the stacks that emptied. Two sells fired together cannot both be paid for
+  // the same fish: the second one's update matches nothing.
+  const cleared = await Promise.all(inventory.map(async item => {
+    const { data } = await admin.from('fish_inventory')
+      .update({ quantity: 0 })
+      .eq('user_id', user.id)
+      .eq('fish_id', item.fish_id)
+      .eq('quantity', item.quantity)
+      .select('fish_id')
+    return data && data.length > 0 ? item : null
+  }))
+
   let totalEarned = 0
   let totalFishSold = 0
-  for (const item of inventory) {
+  for (const item of cleared) {
+    if (!item) continue
     const sellValue = item.fish_species?.sell_value ?? 0
     const multiplier = multiplierMap.get(item.fish_id) ?? 1.0
     totalEarned += Math.floor(sellValue * multiplier * fee) * item.quantity
@@ -163,21 +135,8 @@ export async function sellEntireHold(): Promise<
   }
   if (totalEarned <= 0) return { error: 'The hold is empty' }
 
-  // Re-read the balance AFTER the settle above rather than trusting the one
-  // fetched alongside the inventory: a pending row maturing in between would
-  // otherwise be overwritten by this write.
-  const { data: fresh } = await admin
-    .from('profiles').select('doubloons').eq('id', user.id).single()
-  const newDoubloons = Number(fresh?.doubloons ?? profile.doubloons ?? 0) + totalEarned
-
-  await Promise.all([
-    ...inventory.map(item =>
-      admin.from('fish_inventory')
-        .update({ quantity: 0 })
-        .eq('user_id', user.id)
-        .eq('fish_id', item.fish_id)
-    ),
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+  const [newDoubloons] = await Promise.all([
+    grant(admin, user.id, 'doubloons', totalEarned),
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: totalEarned,
       reason: `Sold ${totalFishSold} fish (market)`,
@@ -192,7 +151,7 @@ export async function marketSellFish(
   fishId: number,
   quantity: number,
 ): Promise<{ earned: number; doubloons: number } | { error: string }> {
-  if (quantity <= 0) return { error: 'Invalid quantity' }
+  if (!Number.isInteger(quantity) || quantity <= 0) return { error: 'Invalid quantity' }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -216,13 +175,17 @@ export async function marketSellFish(
   const multiplier = market?.multiplier ?? 1.0
   const priceEach = Math.floor(fish.sell_value * Number(multiplier) * fee)
   const earned = priceEach * quantity
-  const newDoubloons = (profile.doubloons ?? 0) + earned
 
-  await Promise.all([
-    admin.from('fish_inventory')
-      .update({ quantity: invRow.quantity - quantity })
-      .eq('user_id', user.id).eq('fish_id', fishId),
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+  // Take the fish first, and only if the stack still holds what was read. A
+  // twin request that got there first leaves this update matching nothing.
+  const { data: taken } = await admin.from('fish_inventory')
+    .update({ quantity: invRow.quantity - quantity })
+    .eq('user_id', user.id).eq('fish_id', fishId).eq('quantity', invRow.quantity)
+    .select('fish_id')
+  if (!taken || taken.length === 0) return { error: 'Not enough fish' }
+
+  const [newDoubloons] = await Promise.all([
+    grant(admin, user.id, 'doubloons', earned),
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: earned, reason: 'Sold fish (market)',
     }),

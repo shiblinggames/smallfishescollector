@@ -8,11 +8,11 @@
 //
 // ── HOW THE MONEY MOVES ─────────────────────────────────────────────────────
 //
-// `deduct_doubloons` first, then a GUARDED update, then the ledger row. That is
-// the house pattern (see crew/bunkActions.ts) and every part of it earns its
-// place:
+// spend() from lib/wallet first, then a GUARDED update, then the ledger row.
+// That is the house pattern (see crew/bunkActions.ts) and every part of it
+// earns its place:
 //
-//   The RPC is an atomic relative debit, so two concurrent buys cannot both
+//   spend() is an atomic relative debit, so two concurrent buys cannot both
 //   read the same balance and pay once between them.
 //
 //   It returns the NEW BALANCE, or null when there was not enough. Checked
@@ -21,16 +21,17 @@
 //   not afford the thing they had just been charged for.
 //
 //   The update is filtered on the tier we priced against, so if two taps both
-//   paid, only one can land the build and the loser is refunded.
-//
-// `upgradeCrewHall` predates all of this and uses an absolute overwrite with no
-// ledger row. Follow this, not that.
+//   paid, only one can land the build and the loser is refunded with grant().
+//   (Refunds used to call deduct_doubloons with a negative amount, which the
+//   RPC refuses, so they silently never landed.)
 //
 // The ledger row is written after, with the name of what was bought, so a spend
 // nobody remembers making can be traced back to the exact build.
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { spend, grant } from '@/lib/wallet'
 import {
   HOUSE, FURNISHING_BY_ID, EMPTY_HOMESTEAD, PINNED_MAX,
   openSlots, builtAt, houseTier,
@@ -99,7 +100,7 @@ function orThrow<T>(data: T, error: { message?: string } | null, where: string):
 export async function getHomestead(): Promise<Homestead> {
   const supabase = await createClient()
   // getSession, not getUser: own-row read on a page load.
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   if (!session?.user) return EMPTY_HOMESTEAD
   const admin = createAdminClient()
   const { data, error } = await admin
@@ -147,8 +148,8 @@ export async function build(): Promise<BuildResult> {
   // against null and not for truthiness: a captain who spends their way to
   // exactly zero gets back 0, and `if (!balance)` would tell them they could
   // not afford the thing they had just paid for.
-  const { data: balance } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: next.cost })
-  if (balance == null) return { ok: false, error: `Need ${next.cost.toLocaleString()} \u27e1` }
+  const balance = await spend(admin, user.id, 'doubloons', next.cost)
+  if (balance === null) return { ok: false, error: `Need ${next.cost.toLocaleString()} \u27e1` }
 
   // ── BUILD, GUARDED ON THE TIER WE PRICED AGAINST ──────────────────────
   // Two taps in the same instant both read tier N and both pay; without this
@@ -160,7 +161,7 @@ export async function build(): Promise<BuildResult> {
     .select('user_id')
 
   if (!done?.length) {
-    await admin.rpc('deduct_doubloons', { uid: user.id, amount: -next.cost })
+    await grant(admin, user.id, 'doubloons', next.cost)
     return { ok: false, error: 'That was already built. Nothing was taken.' }
   }
 
@@ -284,8 +285,8 @@ export async function furnish(furnishingId: string): Promise<BuildResult> {
   // never touches it again, which is the opposite of a room you decorate.
   const owned = (current.owned ?? []).includes(item.id)
   if (item.cost > 0 && !owned) {
-    const { data: balance } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: item.cost })
-    if (balance == null) return { ok: false, error: `Need ${item.cost.toLocaleString()} \u27e1` }
+    const balance = await spend(admin, user.id, 'doubloons', item.cost)
+    if (balance === null) return { ok: false, error: `Need ${item.cost.toLocaleString()} \u27e1` }
   }
 
   const furniture = { ...current.furniture, [slot]: item.id }
@@ -297,7 +298,7 @@ export async function furnish(furnishingId: string): Promise<BuildResult> {
 
   if (!done?.length) {
     if (item.cost > 0 && !owned) {
-      await admin.rpc('deduct_doubloons', { uid: user.id, amount: -item.cost })
+      await grant(admin, user.id, 'doubloons', item.cost)
     }
     return { ok: false, error: 'It would not sit right. Nothing was taken.' }
   }
@@ -326,7 +327,13 @@ export async function pinBadges(ids: string[]): Promise<{ ok: boolean; error?: s
   if (houseTier(current) < ROOM_BY_ID.gallery.needsHouse) {
     return { ok: false, error: 'Nowhere to hang them yet.' }
   }
-  const pinned = [...new Set(ids)].slice(0, PINNED_MAX)
+  // Only badges the captain has actually earned can hang. The ids come from
+  // the client, so anything not in unlocked_badges is dropped.
+  const { data: prof } = await admin.from('profiles').select('unlocked_badges').eq('id', user.id).single()
+  const earned = new Set(((prof as { unlocked_badges?: string[] | null } | null)?.unlocked_badges) ?? [])
+  const pinned = [...new Set(Array.isArray(ids) ? ids : [])]
+    .filter(id => typeof id === 'string' && earned.has(id))
+    .slice(0, PINNED_MAX)
   // A plain UPDATE, touching only what changed. The upsert-the-whole-row shape
   // this used to have would happily write back a stale copy of every other
   // column if anything else had moved in between.

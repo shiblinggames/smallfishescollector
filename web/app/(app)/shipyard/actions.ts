@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { grant } from '@/lib/wallet'
 import { RODS } from '@/lib/rods'
 import {
   nextHullCost, MAX_HULL_TIER,
@@ -110,9 +111,10 @@ async function buyTier(
     .update({ [col]: Math.min(maxTier, Number((after as Record<string, unknown> | null)?.[col] ?? tier) + 1) })
     .eq('id', user.id)
   if (writeErr) {
-    // Straight back. A negative deduct is the house refund, the same shape the
-    // crew bunks and the homestead already use.
-    await admin.rpc('deduct_doubloons', { uid: user.id, amount: -price })
+    // Straight back, in place. (This was a negative deduct_doubloons, which the
+    // function refuses outright: its WHERE requires amount >= 0, so the refund
+    // silently never happened.)
+    await grant(admin, user.id, 'doubloons', price)
     await admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: price, reason: `Refunded: ${label} ${tier + 1} could not be fitted`,
     })

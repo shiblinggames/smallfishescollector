@@ -11,7 +11,7 @@
 // the repair debt that refuses the fight) so a caller needs one await.
 
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
+import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 
 export type RaidSheetState =
   Awaited<ReturnType<typeof getRaidPlayerStats>> & { expeditionXP: number }

@@ -22,6 +22,7 @@ import {
 } from './constants'
 import { mawCharge } from '@/lib/finnItems'
 import { storesCapHours, stintDone } from '@/lib/crewBunks'
+import { grant } from '@/lib/wallet'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -225,6 +226,12 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
   if (!trawl) return { error: 'No trawl to collect there' }
   if (new Date((trawl as any).ends_at).getTime() > Date.now()) return { error: 'Your crew has not returned yet' }
 
+  // The delete IS the claim. Two collects fired together both read the row
+  // above; only the one whose delete hands it back gets paid.
+  const { data: claimed } = await admin
+    .from('trawls').delete().eq('id', (trawl as any).id).select('id')
+  if (!claimed || claimed.length === 0) return { error: 'No trawl to collect there' }
+
   const [{ data: crewRow }, { data: profile }, { data: pool }] = await Promise.all([
     admin.from('user_crew').select(CREW_COLS).eq('id', (trawl as any).crew_id).maybeSingle(),
     admin.from('profiles').select('fishing_xp, doubloons, unlocked_character_colors').eq('id', user.id).single(),
@@ -236,7 +243,6 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
 
   const oldXP = (profile?.fishing_xp as number | null) ?? 0
   const newFishingXP = oldXP + haul.xp
-  const newDoubloons = ((profile?.doubloons as number | null) ?? 0) + haul.doubloons
 
   // Sample a few species names for the haul reveal.
   const names = ((pool ?? []) as { name: string }[]).map(r => r.name)
@@ -251,18 +257,21 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
   // on the next visit (so a trawl crossing gets the same toast a catch does).
   // A trawl is still fishing XP, so it charges The Primeval Maw like a catch.
   const jawCharge = mawCharge(profile as Parameters<typeof mawCharge>[0], haul.xp)
-  const profileUpdate: Record<string, unknown> = {
-    fishing_xp: newFishingXP, doubloons: newDoubloons,
-    ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}),
-  }
 
+  // Everything lands as an in-place add, so a sale or a catch finishing at the
+  // same moment is not overwritten by the balance read above.
   const z = TRAWL_ZONE_BY_KEY[zone]
-  await Promise.all([
-    admin.from('profiles').update(profileUpdate).eq('id', user.id),
-    admin.from('trawls').delete().eq('id', (trawl as any).id),
-    ...(haul.doubloons > 0
-      ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: haul.doubloons, reason: `Crew trawl: ${z.label}` })]
-      : []),
+  const [newDoubloons] = await Promise.all([
+    grant(admin, user.id, 'doubloons', haul.doubloons),
+    Promise.all([
+      admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_xp', n: haul.xp }),
+      ...(jawCharge !== null
+        ? [admin.rpc('bump_profile_stat', { uid: user.id, col: 'borrowed_jaw_xp', n: haul.xp })]
+        : []),
+      ...(haul.doubloons > 0
+        ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: haul.doubloons, reason: `Crew trawl: ${z.label}` })]
+        : []),
+    ]),
   ])
 
   // Lifetime trawl counter — powers First Haul / Steady Nets / Deep Trawler.

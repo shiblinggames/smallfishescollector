@@ -78,13 +78,26 @@ export async function saveRiggingPaths(paths: Record<number, number[]>): Promise
   const attempt = await loadAttempt(user.id, week)
   if (attempt.status === 'cleared') return { ok: true }
 
-  const admin = createAdminClient()
-  await admin.from('rigging_attempts').upsert({
-    user_id: user.id, week,
-    paths, status: attempt.status, points_awarded: attempt.points_awarded,
-    updated_at: new Date().toISOString(),
-  })
+  await writeActive(user.id, week, paths)
   return { ok: true }
+}
+
+/** Save in-flight ropes on a board that is still ACTIVE. Never a whole-row
+ *  upsert: a save that raced a clear used to write status 'active' and
+ *  points 0 back over it, and the board could then be banked again. */
+async function writeActive(userId: string, week: string, paths: Record<number, number[]>): Promise<void> {
+  const admin = createAdminClient()
+  const updated_at = new Date().toISOString()
+  const { data } = await admin.from('rigging_attempts')
+    .update({ paths, updated_at })
+    .eq('user_id', userId).eq('week', week).eq('status', 'active')
+    .select('user_id')
+  if (data && data.length > 0) return
+  // No row yet: create it. A row that exists but is cleared makes this a no-op.
+  await admin.from('rigging_attempts').upsert(
+    { user_id: userId, week, paths, status: 'active', points_awarded: 0, updated_at },
+    { onConflict: 'user_id,week', ignoreDuplicates: true },
+  )
 }
 
 export async function submitRigging(paths: Record<number, number[]>): Promise<SubmitRiggingResult | { error: string }> {
@@ -105,31 +118,26 @@ export async function submitRigging(paths: Record<number, number[]>): Promise<Su
 
   if (!solved) {
     // Persist progress, no award.
-    await admin.from('rigging_attempts').upsert({
-      user_id: user.id, week,
-      paths, status: attempt.status, points_awarded: attempt.points_awarded,
-      updated_at: new Date().toISOString(),
-    })
+    if (attempt.status !== 'cleared') await writeActive(user.id, week, paths)
     return { solved: false, pointsWon: 0, newPuzzlePoints: null }
   }
 
-  // Already banked this week? Mark cleared, no double pay.
+  // Already banked this week? No double pay.
   if (attempt.points_awarded > 0 || attempt.status === 'cleared') {
-    await admin.from('rigging_attempts').upsert({
-      user_id: user.id, week, paths, status: 'cleared', points_awarded: attempt.points_awarded,
-      updated_at: new Date().toISOString(),
-    })
     return { solved: true, pointsWon: 0, newPuzzlePoints: null }
   }
 
+  // Clear it FIRST, and only from the unbanked state. Two submits fired
+  // together both reach here; only the one whose write lands banks points.
+  await writeActive(user.id, week, paths)
+  const { data: cleared } = await admin.from('rigging_attempts')
+    .update({ paths, status: 'cleared', points_awarded: RIGGING_POINTS, updated_at: new Date().toISOString() })
+    .eq('user_id', user.id).eq('week', week).eq('status', 'active').eq('points_awarded', 0)
+    .select('user_id')
+  if (!cleared || cleared.length === 0) return { solved: true, pointsWon: 0, newPuzzlePoints: null }
+
   const newPuzzlePoints = oldPoints + RIGGING_POINTS
-  await Promise.all([
-    admin.from('rigging_attempts').upsert({
-      user_id: user.id, week, paths, status: 'cleared', points_awarded: RIGGING_POINTS,
-      updated_at: new Date().toISOString(),
-    }),
-    admin.from('profiles').update({ puzzle_points: newPuzzlePoints }).eq('id', user.id),
-  ])
+  await admin.from('profiles').update({ puzzle_points: newPuzzlePoints }).eq('id', user.id)
 
   return {
     solved: true,

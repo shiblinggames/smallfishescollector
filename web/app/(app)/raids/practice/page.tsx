@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import PracticeRaidGame from './PracticeRaidGame'
-import { getRaidPlayerStats } from '../actions'
+import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { adminOnlyPage } from '@/lib/adminGate'
 

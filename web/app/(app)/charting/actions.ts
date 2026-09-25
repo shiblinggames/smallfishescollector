@@ -163,28 +163,39 @@ export async function submitMatch(moves: [number, number][]): Promise<SubmitMatc
   const delta = Math.max(0, tier - attempt.points_awarded) // never claw back
   const maxed = tier >= MATCH_MAX_POINTS
 
+  const updated_at = new Date().toISOString()
   if (delta <= 0) {
     // No new tier reached — just persist the (possibly improved) best score.
-    await admin.from('treasure_match_attempts').upsert({
-      user_id: user.id, week,
-      status: maxed ? 'cleared' : 'active',
-      best_score: bestScore,
-      points_awarded: attempt.points_awarded,
-      updated_at: new Date().toISOString(),
-    })
+    // Never writes points_awarded: a stale copy of it written back over a
+    // concurrent bank would let the same tier be banked twice.
+    await admin.from('treasure_match_attempts')
+      .update({ best_score: bestScore, updated_at, ...(maxed ? { status: 'cleared' } : {}) })
+      .eq('user_id', user.id).eq('week', week).lt('best_score', bestScore)
+    await admin.from('treasure_match_attempts').upsert(
+      { user_id: user.id, week, status: maxed ? 'cleared' : 'active', best_score: bestScore, points_awarded: 0, updated_at },
+      { onConflict: 'user_id,week', ignoreDuplicates: true },
+    )
     return { bestScore, tier, pointsWon: 0, maxed, newPuzzlePoints: null }
   }
 
+  // Bank the new tier FIRST, and only from the tier we read. Two submits
+  // fired together both reach here; only the one whose write lands is paid.
+  const { data: banked } = await admin.from('treasure_match_attempts')
+    .update({ status: maxed ? 'cleared' : 'active', best_score: bestScore, points_awarded: tier, updated_at })
+    .eq('user_id', user.id).eq('week', week).eq('points_awarded', attempt.points_awarded)
+    .select('user_id')
+  let won = !!banked && banked.length > 0
+  if (!won && attempt.points_awarded === 0) {
+    // No row yet: the first insert wins, a concurrent one hits the key.
+    const { error } = await admin.from('treasure_match_attempts').insert({
+      user_id: user.id, week, status: maxed ? 'cleared' : 'active', best_score: bestScore, points_awarded: tier, updated_at,
+    })
+    won = !error
+  }
+  if (!won) return { bestScore, tier, pointsWon: 0, maxed, newPuzzlePoints: null }
+
   const newPuzzlePoints = oldPoints + delta
-  await Promise.all([
-    admin.from('treasure_match_attempts').upsert({
-      user_id: user.id, week,
-      status: maxed ? 'cleared' : 'active',
-      best_score: bestScore, points_awarded: tier,
-      updated_at: new Date().toISOString(),
-    }),
-    admin.from('profiles').update({ puzzle_points: newPuzzlePoints }).eq('id', user.id),
-  ])
+  await admin.from('profiles').update({ puzzle_points: newPuzzlePoints }).eq('id', user.id)
 
   return {
     bestScore, tier, pointsWon: delta, maxed,

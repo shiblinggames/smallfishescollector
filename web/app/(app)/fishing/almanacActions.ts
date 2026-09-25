@@ -1,5 +1,6 @@
 'use server'
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { vigilFor, type VigilState } from '@/lib/ancientVigil'
@@ -120,7 +121,7 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
   const supabase = await createClient()
   // getSession is enough here: this only READS, and the RLS-safe id is all we
   // need to scope the queries.
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   const uid = session?.user?.id
   if (!uid) return { error: 'Unauthorized' }
 
@@ -279,7 +280,7 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
  */
 export async function markAlmanacViewed(): Promise<void> {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   const uid = session?.user?.id
   if (!uid) return
   await createAdminClient().from('profiles').update({ almanac_viewed_at: new Date().toISOString() }).eq('id', uid)

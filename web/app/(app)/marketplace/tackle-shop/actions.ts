@@ -11,6 +11,7 @@ import { fishingGearLevelReq } from '@/lib/gearGating'
 import { completionistProgress, completionistBlocker } from '@/lib/completionist'
 import { isPremiumActive } from '@/lib/premium'
 import { revalidatePath } from 'next/cache'
+import { grant, spend } from '@/lib/wallet'
 
 export async function buyBait(
   baitType: string,
@@ -41,23 +42,17 @@ export async function buyBait(
   const { data: newDoubloons } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: totalCost })
   if (newDoubloons == null) return { error: `Need ${totalCost.toLocaleString()} ⟡` }
 
+  // Added in place, so a cast spending this bait meanwhile is not undone.
+  await admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: baitType, p_qty: qty })
   const { data: existing } = await admin
     .from('bait_inventory')
     .select('quantity')
     .eq('user_id', user.id)
     .eq('bait_type', baitType)
     .single()
-
-  const newQty = (existing?.quantity ?? 0) + qty
+  const newQty = existing?.quantity ?? qty
 
   await Promise.all([
-    existing
-      ? admin.from('bait_inventory')
-          .update({ quantity: newQty })
-          .eq('user_id', user.id)
-          .eq('bait_type', baitType)
-      : admin.from('bait_inventory')
-          .insert({ user_id: user.id, bait_type: baitType, quantity: qty }),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: -totalCost,
@@ -102,14 +97,18 @@ export async function purchaseRod(
   const { data: newDoubloons } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: rod.cost })
   if (newDoubloons == null) return { error: `Need ${rod.cost.toLocaleString()} ⟡` }
 
-  await Promise.all([
-    admin.from('rod_inventory').insert({ user_id: user.id, rod_tier: rodTier }),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: -rod.cost,
-      reason: `Bought ${rod.name}`,
-    }),
-  ])
+  // A concurrent twin can land the same rod first; the insert then fails on
+  // the key, and this call's charge goes back rather than paying twice.
+  const { error: rodErr } = await admin.from('rod_inventory').insert({ user_id: user.id, rod_tier: rodTier })
+  if (rodErr) {
+    await grant(admin, user.id, 'doubloons', rod.cost)
+    return { error: 'Already owned' }
+  }
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id,
+    amount: -rod.cost,
+    reason: `Bought ${rod.name}`,
+  })
 
   const { data: rows } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id)
   const ownedRods = (rows ?? []).map(r => r.rod_tier)
@@ -155,14 +154,20 @@ export async function sellRod(
   const newRodTier  = wasEquipped ? 0 : (profile.rod_tier as number)
 
   const refund = Math.floor(rod.cost * ROD_SELL_RATE)
-  const newDoubloons = (profile.doubloons as number) + refund
 
-  const profileUpdate: { doubloons: number; rod_tier?: number } = { doubloons: newDoubloons }
-  if (wasEquipped) profileUpdate.rod_tier = 0
+  // REMOVE THE ROD FIRST, and pay only if this call is the one that removed
+  // it. Two sells fired together both pass the ownership read above; only one
+  // delete hands the row back.
+  const { data: removed } = await admin.from('rod_inventory')
+    .delete().eq('user_id', user.id).eq('rod_tier', rodTier).select('rod_tier')
+  if (!removed || removed.length === 0) return { error: "You don't own this rod" }
 
-  await Promise.all([
-    admin.from('rod_inventory').delete().eq('user_id', user.id).eq('rod_tier', rodTier),
-    admin.from('profiles').update(profileUpdate).eq('id', user.id),
+  const [newDoubloons] = await Promise.all([
+    grant(admin, user.id, 'doubloons', refund),
+    // Back to the Bamboo only if the sold rod is still the one in hand.
+    wasEquipped
+      ? admin.from('profiles').update({ rod_tier: 0 }).eq('id', user.id).eq('rod_tier', rodTier)
+      : Promise.resolve(null),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: refund,
@@ -284,12 +289,22 @@ export async function buyReel(): Promise<{ reelTier: number; doubloons: number }
   const cost = REELS[nextTier].cost
   const reelReq = fishingGearLevelReq(REELS[nextTier])
   if (getLevelFromXP(profile.fishing_xp ?? 0) < reelReq) return { error: `Reach Fishing Lv ${reelReq} to buy the ${REELS[nextTier].name}` }
-  if (profile.doubloons < cost) return { error: 'Not enough doubloons' }
-
-  const newDoubloons = profile.doubloons - cost
+  // Spend first, in place; the result is the guard. Then raise the tier only
+  // from the value read above; a concurrent twin that got there first gets
+  // its charge back.
+  const newDoubloons = await spend(admin, user.id, 'doubloons', cost)
+  if (newDoubloons === null) return { error: 'Not enough doubloons' }
+  const raise = admin.from('profiles').update({ reel_tier: nextTier }).eq('id', user.id)
+  const { data: raised } = await (profile.reel_tier == null
+    ? raise.is('reel_tier', null)
+    : raise.eq('reel_tier', currentTier)
+  ).select('id')
+  if (!raised || raised.length === 0) {
+    await grant(admin, user.id, 'doubloons', cost)
+    return { error: 'Your tackle just changed. Try again.' }
+  }
 
   await Promise.all([
-    admin.from('profiles').update({ reel_tier: nextTier, doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: -cost,

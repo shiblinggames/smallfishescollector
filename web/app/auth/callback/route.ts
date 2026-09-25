@@ -8,7 +8,13 @@ export async function GET(request: NextRequest) {
   // Where a fresh sign-in lands when nothing asked for somewhere specific.
   // Callers usually DO ask: see GoogleButton, which spent a long time asking
   // for the tavern by hand while the login form was passing it /sea.
-  const next = searchParams.get('next') ?? '/sea'
+  // A PATH ON THIS SITE, NOTHING ELSE. `${origin}${next}` with next = '@evil.com'
+  // or '.evil.com' became another host, a phishing page straight after a real
+  // login (2026-09-25 audit). One leading slash, then not a second slash or a
+  // backslash.
+  const rawNext = searchParams.get('next') ?? '/sea'
+  const safe = rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\')
+  const next = safe ? rawNext : '/sea'
 
   if (code) {
     const cookieStore = await cookies()

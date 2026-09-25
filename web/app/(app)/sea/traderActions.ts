@@ -29,6 +29,7 @@ import { decodeFog, encodeFog, fogSet } from '@/lib/seaExplore'
 import { decodeXfog, encodeXfog, xfogSet } from '@/lib/seaExploreExp'
 import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
+import { grant } from '@/lib/wallet'
 
 export type DealResult =
   | { ok: true; spent?: number; earned?: number; baitType?: string; qty?: number; doubloons: number }
@@ -181,19 +182,42 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
     return { error: 'Nothing in your hold is worth his salt.' }
   }
 
-  await admin.from('fish_inventory').delete().eq('user_id', user.id)
-  await admin.rpc('bump_profile_stat', { uid: user.id, col: 'doubloons', n: earned })
+  // Pay for what the delete actually took, not for what was read above. Two
+  // Salters fired together both read the same hold; only one of them gets the
+  // rows back from the delete, and the other is paid for nothing.
+  const { data: taken, error: delErr } = await admin
+    .from('fish_inventory').delete().eq('user_id', user.id).select('fish_id, quantity')
+  const sold = await holdValue(admin, (taken ?? []) as { fish_id: number; quantity: number }[], rate)
+  if (delErr || sold <= 0) {
+    await admin.from('sea_trader_deals')
+      .delete().eq('user_id', user.id).eq('trader_key', traderKey)
+    return { error: 'Your hold is empty. Nothing to sell.' }
+  }
+
+  // The balance the wallet landed on, returned by the same statement that paid.
+  const newBalance = await grant(admin, user.id, 'doubloons', sold)
   await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: earned, reason: `Sold the hold to ${trader.name} at sea`,
+    user_id: user.id, amount: sold, reason: `Sold the hold to ${trader.name} at sea`,
   })
 
-  // Re-read rather than predict. This number is now DISPLAYED in the nav, and
-  // `doubloons + earned` is the balance this request expected rather than the
-  // one the database landed on — a concurrent sale elsewhere would leave the
-  // header showing a total that was never true.
-  const { data: after } = await admin
-    .from('profiles').select('doubloons').eq('id', user.id).single()
-  return { ok: true, earned, doubloons: Number(after?.doubloons ?? doubloons + earned) }
+  return { ok: true, earned: sold, doubloons: newBalance }
+}
+
+/** What a set of inventory rows is worth at `rate`, priced server side off the
+ *  species table. Floored once over the whole lot, as both hold sales do. */
+async function holdValue(
+  admin: ReturnType<typeof createAdminClient>,
+  rows: { fish_id: number; quantity: number }[],
+  rate: number,
+): Promise<number> {
+  if (!rows.length) return 0
+  const ids = [...new Set(rows.map(r => r.fish_id))]
+  const { data: species } = await admin
+    .from('fish_species').select('id, sell_value').in('id', ids)
+  const value = new Map((species ?? []).map(f => [f.id as number, Number(f.sell_value ?? 0)]))
+  let total = 0
+  for (const r of rows) total += (value.get(r.fish_id) ?? 0) * r.quantity * rate
+  return Math.floor(total)
 }
 
 /**
@@ -245,19 +269,23 @@ export async function sellToResident(zoneId: string): Promise<
   // lose the fish for nothing; if the delete fails after the grant they would
   // be paid for a hold they still have, which is worse. Deleting first and
   // checking the result means the only failure left is being paid late.
-  const { error: delErr } = await admin
-    .from('fish_inventory').delete().eq('user_id', user.id)
+  //
+  // And pay for the rows the delete handed back, not the ones read above: N
+  // sales fired together all read the same hold, but only one delete gets the
+  // rows, so only one of them is paid.
+  const { data: taken, error: delErr } = await admin
+    .from('fish_inventory').delete().eq('user_id', user.id).select('fish_id, quantity')
   if (delErr) return { error: 'The sale fell through.' }
+  const sold = await holdValue(admin, (taken ?? []) as { fish_id: number; quantity: number }[], rate)
+  if (sold <= 0) return { error: 'Your hold is empty.' }
 
-  await admin.rpc('bump_profile_stat', { uid: user.id, col: 'doubloons', n: earned })
+  const newBalance = await grant(admin, user.id, 'doubloons', sold)
   await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: earned,
+    user_id: user.id, amount: sold,
     reason: `Sold the hold to ${res.name} in ${zone.name}`,
   })
 
-  const { data: profile } = await admin
-    .from('profiles').select('doubloons').eq('id', user.id).single()
-  return { ok: true, earned, rate, doubloons: Number(profile?.doubloons ?? 0) }
+  return { ok: true, earned: sold, rate, doubloons: newBalance }
 }
 
 /**

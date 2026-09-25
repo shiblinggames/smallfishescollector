@@ -14,6 +14,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { clampHallTier } from '@/lib/crewHall'
+import { spend, grant } from '@/lib/wallet'
 import { canBunk, drillsMaxed, hallTierRequiredFor, isLeviathanSlot, ladderHallLocked, nextDrillCost, nextStoresCost, storesMaxed, tierNumeral } from '@/lib/crewBunks'
 import { bunkContext, loadBunks, releaseBunk, NEUTRAL_OFFER, type TraitUpgrade } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
@@ -198,11 +199,9 @@ export async function buyStores(): Promise<CrewActionResult> {
  * from the hall tier alone, so the three things you can buy never overlap:
  * upgrade the building for room, drill for speed, stock stores for time.
  *
- * Canonical doubloon flow: the atomic `deduct_doubloons` RPC first (a relative
- * debit guarded on the live balance, so two concurrent buys cannot both read
- * the same balance and pay once), then the grant and a ledger row.
- * `upgradeCrewHall` predates this and uses an absolute overwrite with no ledger
- * row - follow this, not that.
+ * Canonical doubloon flow: spend() from lib/wallet first (a relative debit
+ * guarded on the live balance, so two concurrent buys cannot both read the
+ * same balance and pay once), then the grant and a ledger row.
  */
 async function buyUpgrade(kind: 'drill' | 'stores'): Promise<CrewActionResult> {
   const supabase = await createClient()
@@ -231,8 +230,8 @@ async function buyUpgrade(kind: 'drill' | 'stores'): Promise<CrewActionResult> {
   if (cost <= 0) return { error: 'Nothing left to buy.' }
   if (ctx.doubloons < cost) return { error: `Need ${cost.toLocaleString()} \u27e1` }
 
-  const { data: newBalance } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: cost })
-  if (newBalance == null) return { error: `Need ${cost.toLocaleString()} \u27e1` }
+  const newBalance = await spend(admin, user.id, 'doubloons', cost)
+  if (newBalance === null) return { error: `Need ${cost.toLocaleString()} \u27e1` }
 
   // Guarded on the level we priced against, so a double submit cannot buy two
   // levels for one payment.
@@ -241,8 +240,10 @@ async function buyUpgrade(kind: 'drill' | 'stores'): Promise<CrewActionResult> {
     .eq('id', user.id).eq(col, from).select('id')
 
   if (!(bumped ?? []).length) {
-    // Lost the race. Refund rather than charging for nothing.
-    await admin.rpc('deduct_doubloons', { uid: user.id, amount: -cost })
+    // Lost the race. Refund rather than charging for nothing. (This used to
+    // call deduct_doubloons with a negative amount, which the RPC refuses, so
+    // the refund silently never landed.)
+    await grant(admin, user.id, 'doubloons', cost)
     return { error: 'That upgrade was already bought.' }
   }
 

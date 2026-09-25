@@ -11,6 +11,7 @@ import {
 import { BJ_MIN_BET, BJ_MAX_BET, denCapFromXp } from '../constants'
 import { isPremiumActive } from '@/lib/premium'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { spend, grant } from '@/lib/wallet'
 
 // ── Server-side state shape (lives in blackjack_hands.state JSONB) ──
 
@@ -214,14 +215,15 @@ function advanceTurn(state: ServerState): void {
 
 /** Settle a hand row: compute payouts, update profile, write the
  *  result jsonb + transaction ledger, mark status='settled'. Returns
- *  the SettleResult shaped for the client. */
+ *  the SettleResult shaped for the client, or null when another request
+ *  settled this hand first (nothing is paid twice). */
 async function finalizeSettlement(
   userId: string,
   handId: number,
   state: ServerState,
   initialWager: number,
   totalWagered: number,
-): Promise<SettleResult> {
+): Promise<SettleResult | null> {
   const admin = createAdminClient()
   const dealerFinal = state.dealerCards
   const dealerTotal = handValue(dealerFinal).total
@@ -242,13 +244,38 @@ async function finalizeSettlement(
   const totalReturned = settled.reduce((sum, h) => sum + h.payout, 0) + insurance.paid
   const netDelta = totalReturned - totalWagered
 
+  const resultJson = {
+    hands: settled,
+    dealerCards: dealerFinal,
+    dealerTotal,
+    dealerBust,
+    dealerNatural,
+    insurance: { taken: state.insuranceTaken, amount: state.insuranceAmount, paid: insurance.paid, net: insurance.net, win: insurance.win },
+    netDelta,
+  }
+
+  // Close the hand FIRST, and only if it is still open. Two stands (or a
+  // stand racing a hit) fired together both reach here; only the one whose
+  // update comes back with a row gets paid.
+  const { data: closed } = await admin.from('blackjack_hands').update({
+    status: 'settled',
+    state: null,            // free the active-state JSON
+    result: resultJson,
+    net_delta: netDelta,
+    settled_at: new Date().toISOString(),
+  }).eq('id', handId).eq('user_id', userId).eq('status', 'active').select('id')
+  if (!closed || closed.length === 0) return null
+
+  // Wagers were already taken from chips at action time; the return lands in place.
+  const newChips = totalReturned > 0
+    ? await grant(admin, userId, 'casino_chips', totalReturned)
+    : await getChips(userId)
+
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net, blackjack_win_streak, blackjack_dealer_bj_streak')
+    .select('doubloons, casino_session_buy_ins, blackjack_session_net, blackjack_win_streak, blackjack_dealer_bj_streak')
     .eq('id', userId)
     .single()
-  const currentChips = (profile?.casino_chips as number | null) ?? 0
-  const newChips = currentChips + totalReturned   // wagers already deducted from chips at action time
   const prevSessionBuyIns = (profile?.casino_session_buy_ins as number | null) ?? 0
   const prevSessionNet = (profile?.blackjack_session_net as number | null) ?? 0
   // When the table busts the player out completely (shared purse → 0),
@@ -264,16 +291,6 @@ async function finalizeSettlement(
   const prevDealerBjStreak = (profile?.blackjack_dealer_bj_streak as number | null) ?? 0
   const newWinStreak = netDelta > 0 ? prevWinStreak + 1 : netDelta < 0 ? 0 : prevWinStreak
   const newDealerBjStreak = dealerNatural ? prevDealerBjStreak + 1 : 0
-
-  const resultJson = {
-    hands: settled,
-    dealerCards: dealerFinal,
-    dealerTotal,
-    dealerBust,
-    dealerNatural,
-    insurance: { taken: state.insuranceTaken, amount: state.insuranceAmount, paid: insurance.paid, net: insurance.net, win: insurance.win },
-    netDelta,
-  }
 
   // Ledger reason — fold all hand outcomes into a short summary
   const outcomeCounts = settled.reduce<Record<HandOutcome, number>>((acc, h) => {
@@ -291,23 +308,13 @@ async function finalizeSettlement(
   // Hand-level settle updates CHIPS only; doubloons move on cash-out.
   // No doubloon_transactions row here — chip movement is internal to
   // the table session and would otherwise bloat the ledger.
-  await Promise.all([
-    admin.from('profiles').update({
-      casino_chips: newChips,
-      casino_session_buy_ins: newSessionBuyIns,
-      blackjack_session_net: newSessionNet,
-      blackjack_win_streak: newWinStreak,
-      blackjack_dealer_bj_streak: newDealerBjStreak,
-      ...(busted ? { roulette_session_net: 0, slots_session_net: 0 } : {}),
-    }).eq('id', userId),
-    admin.from('blackjack_hands').update({
-      status: 'settled',
-      state: null,            // free the active-state JSON
-      result: resultJson,
-      net_delta: netDelta,
-      settled_at: new Date().toISOString(),
-    }).eq('id', handId),
-  ])
+  await admin.from('profiles').update({
+    casino_session_buy_ins: newSessionBuyIns,
+    blackjack_session_net: newSessionNet,
+    blackjack_win_streak: newWinStreak,
+    blackjack_dealer_bj_streak: newDealerBjStreak,
+    ...(busted ? { roulette_session_net: 0, slots_session_net: 0 } : {}),
+  }).eq('id', userId)
   void reason
 
   // Badge hooks (best-effort): 5-win streak and the dealer's back-to-back naturals.
@@ -355,7 +362,7 @@ async function loadActiveHand(userId: string): Promise<{ id: number; state: Serv
 
 async function persistActiveHand(handId: number, state: ServerState, totalWagered: number): Promise<void> {
   const admin = createAdminClient()
-  await admin.from('blackjack_hands').update({ state, total_wagered: totalWagered }).eq('id', handId)
+  await admin.from('blackjack_hands').update({ state, total_wagered: totalWagered }).eq('id', handId).eq('status', 'active')
 }
 
 /** Read the player's chip balance (the SHARED casino purse — one
@@ -367,9 +374,10 @@ async function getChips(userId: string): Promise<number> {
   return (data?.casino_chips as number | null) ?? 0
 }
 
-async function setChips(userId: string, chips: number): Promise<void> {
-  const admin = createAdminClient()
-  await admin.from('profiles').update({ casino_chips: chips }).eq('id', userId)
+/** Wrap a settlement for the client. null means a twin request already
+ *  settled this hand and was paid; this one reports that instead. */
+function settledOrError(result: SettleResult | null): ActionResult {
+  return result ? { kind: 'settled', result } : { error: 'Hand already settled' }
 }
 
 async function getDoubloons(userId: string): Promise<number> {
@@ -420,8 +428,10 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
 
   // Wagers come out of CHIPS, not doubloons. Daily cap is enforced
   // at buy-in, not per-hand — chips on the table can churn freely.
-  const chips = await getChips(user.id)
-  if (chips < wager) return { error: 'Not enough chips' }
+  // The wager leaves the purse in place up front. That is the guard: two
+  // deals fired together cannot both stake the same chips.
+  const afterStake = await spend(admin, user.id, 'casino_chips', wager)
+  if (afterStake === null) return { error: 'Not enough chips' }
 
   // Build a fresh shoe + deal 2-2
   const shoe = newShoe()
@@ -444,16 +454,16 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
     phase: dealerUpRank === 'A' ? 'insuranceOffered' : 'playerTurn',
   }
 
-  // Pull the wager out of chips up front
-  await setChips(user.id, chips - wager)
-
   // Insert the hand row
   const { data: row } = await admin
     .from('blackjack_hands')
     .insert({ user_id: user.id, initial_wager: wager, total_wagered: wager, status: 'active', state })
     .select('id')
     .single()
-  if (!row) return { error: 'Failed to create hand' }
+  if (!row) {
+    await grant(admin, user.id, 'casino_chips', wager)
+    return { error: 'Failed to create hand' }
+  }
   const handId = row.id as number
 
   revalidatePath('/tavern')
@@ -465,12 +475,11 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
       state.hands.forEach(h => { h.stood = true })
       state.activeHandIdx = state.hands.length
       state.phase = 'settled'
-      const result = await finalizeSettlement(user.id, handId, state, wager, wager)
-      return { kind: 'settled', result }
+      return settledOrError(await finalizeSettlement(user.id, handId, state, wager, wager))
     }
   }
 
-  const newChips = chips - wager
+  const newChips = afterStake
   const dailyAlready = await getDailyBuyInTotal(user.id)
   const dailyCap = await getDenCap(user.id)
   const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
@@ -490,10 +499,9 @@ export async function acceptInsurance(): Promise<ActionResult> {
 
   const initialWager = hand.initial_wager
   const insurance = Math.floor(initialWager / 2)
-  const chips = await getChips(user.id)
-  if (chips < insurance) return { error: 'Not enough chips for insurance' }
-
-  await setChips(user.id, chips - insurance)
+  const admin = createAdminClient()
+  const afterInsurance = await spend(admin, user.id, 'casino_chips', insurance)
+  if (afterInsurance === null) return { error: 'Not enough chips for insurance' }
   hand.state.insuranceTaken = true
   hand.state.insuranceAmount = insurance
   hand.state.insuranceResolved = true
@@ -507,15 +515,14 @@ export async function acceptInsurance(): Promise<ActionResult> {
     hand.state.phase = 'settled'
     const totalWagered = hand.total_wagered + insurance
     await persistActiveHand(hand.id, hand.state, totalWagered)
-    const result = await finalizeSettlement(user.id, hand.id, hand.state, initialWager, totalWagered)
-    return { kind: 'settled', result }
+    return settledOrError(await finalizeSettlement(user.id, hand.id, hand.state, initialWager, totalWagered))
   }
 
   hand.state.phase = 'playerTurn'
   const totalWagered = hand.total_wagered + insurance
   await persistActiveHand(hand.id, hand.state, totalWagered)
 
-  const newChips = chips - insurance
+  const newChips = afterInsurance
   const dailyAlready = await getDailyBuyInTotal(user.id)
   const dailyCap = await getDenCap(user.id)
   const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
@@ -542,8 +549,7 @@ export async function declineInsurance(): Promise<ActionResult> {
     hand.state.activeHandIdx = hand.state.hands.length
     hand.state.phase = 'settled'
     await persistActiveHand(hand.id, hand.state, hand.total_wagered)
-    const result = await finalizeSettlement(user.id, hand.id, hand.state, hand.initial_wager, hand.total_wagered)
-    return { kind: 'settled', result }
+    return settledOrError(await finalizeSettlement(user.id, hand.id, hand.state, hand.initial_wager, hand.total_wagered))
   }
 
   hand.state.phase = 'playerTurn'
@@ -575,8 +581,7 @@ export async function hit(): Promise<ActionResult> {
   await persistActiveHand(hand.id, hand.state, hand.total_wagered)
 
   if ((hand.state.phase as Phase) === 'settled') {
-    const result = await finalizeSettlement(user.id, hand.id, hand.state, hand.initial_wager, hand.total_wagered)
-    return { kind: 'settled', result }
+    return settledOrError(await finalizeSettlement(user.id, hand.id, hand.state, hand.initial_wager, hand.total_wagered))
   }
 
   const chips = await getChips(user.id)
@@ -603,8 +608,7 @@ export async function stand(): Promise<ActionResult> {
   await persistActiveHand(hand.id, hand.state, hand.total_wagered)
 
   if ((hand.state.phase as Phase) === 'settled') {
-    const result = await finalizeSettlement(user.id, hand.id, hand.state, hand.initial_wager, hand.total_wagered)
-    return { kind: 'settled', result }
+    return settledOrError(await finalizeSettlement(user.id, hand.id, hand.state, hand.initial_wager, hand.total_wagered))
   }
 
   const chips = await getChips(user.id)
@@ -628,10 +632,9 @@ export async function doubleDown(): Promise<ActionResult> {
   if (active.cards.length !== 2) return { error: 'Can only double on initial two cards' }
   if (active.isSplit) return { error: 'No double after split (house rule)' }
 
-  const chips = await getChips(user.id)
-  if (chips < active.wager) return { error: 'Not enough chips to double' }
-
-  await setChips(user.id, chips - active.wager)
+  const admin = createAdminClient()
+  const afterDouble = await spend(admin, user.id, 'casino_chips', active.wager)
+  if (afterDouble === null) return { error: 'Not enough chips to double' }
   active.wager *= 2
   active.doubled = true
   active.cards.push(drawCard(hand.state.shoe))
@@ -643,11 +646,10 @@ export async function doubleDown(): Promise<ActionResult> {
   await persistActiveHand(hand.id, hand.state, totalWagered)
 
   if ((hand.state.phase as Phase) === 'settled') {
-    const result = await finalizeSettlement(user.id, hand.id, hand.state, hand.initial_wager, totalWagered)
-    return { kind: 'settled', result }
+    return settledOrError(await finalizeSettlement(user.id, hand.id, hand.state, hand.initial_wager, totalWagered))
   }
 
-  const newChips = chips - (active.wager / 2)
+  const newChips = afterDouble
   const dailyAlready = await getDailyBuyInTotal(user.id)
   const dailyCap = await getDenCap(user.id)
   const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
@@ -668,11 +670,10 @@ export async function split(): Promise<ActionResult> {
   if (!active || active.cards.length !== 2 || !canSplit(active.cards)) return { error: 'Cannot split' }
 
   const initialWager = hand.initial_wager
-  const chips = await getChips(user.id)
-  if (chips < initialWager) return { error: 'Not enough chips to split' }
-
-  // Charge the second wager
-  await setChips(user.id, chips - initialWager)
+  // Charge the second wager in place
+  const admin = createAdminClient()
+  const afterSplit = await spend(admin, user.id, 'casino_chips', initialWager)
+  if (afterSplit === null) return { error: 'Not enough chips to split' }
 
   // Split: each hand gets one of the original cards + one new draw
   const [c1, c2] = active.cards
@@ -703,11 +704,10 @@ export async function split(): Promise<ActionResult> {
   await persistActiveHand(hand.id, hand.state, totalWagered)
 
   if ((hand.state.phase as Phase) === 'settled') {
-    const result = await finalizeSettlement(user.id, hand.id, hand.state, initialWager, totalWagered)
-    return { kind: 'settled', result }
+    return settledOrError(await finalizeSettlement(user.id, hand.id, hand.state, initialWager, totalWagered))
   }
 
-  const newChips = chips - initialWager
+  const newChips = afterSplit
   const dailyAlready = await getDailyBuyInTotal(user.id)
   const dailyCap = await getDenCap(user.id)
   const dailyRemaining = Math.max(0, dailyCap - dailyAlready)

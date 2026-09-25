@@ -9,7 +9,7 @@
 // which is the point: this page is the ordinary raid page, unchanged.
 import { redirect } from 'next/navigation'
 import RaidGame from '../RaidGame'
-import { getRaidPlayerStats } from '../actions'
+import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { REEF_SKIRMISH } from '@/lib/bossRaids'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 

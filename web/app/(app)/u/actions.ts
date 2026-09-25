@@ -13,6 +13,7 @@ import { isPremiumActive } from '@/lib/premium'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
+import { arrayAdd, grant, spend } from '@/lib/wallet'
 
 export async function updateUsername(username: string): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -114,15 +115,22 @@ export async function purchaseCharacterColor(colorId: string): Promise<
     return { error: `Need ${cost.toLocaleString()} ${useGems ? '◆' : '⟡'}` }
   }
 
-  const newDoubloons = useGems ? profile.doubloons : profile.doubloons - cost
-  const newGems = useGems ? (profile.gems ?? 0) - cost : (profile.gems ?? 0)
+  // Spend first, in place: the result is the guard, so two taps fired
+  // together cannot both buy with the same balance.
+  const col = useGems ? 'gems' : 'doubloons'
+  const after = await spend(admin, user.id, col, cost)
+  if (after === null) return { error: `Need ${cost.toLocaleString()} ${useGems ? '◆' : '⟡'}` }
+  // A concurrent twin already added it: give this charge back.
+  if (!(await arrayAdd(admin, user.id, 'unlocked_character_colors', colorId))) {
+    await grant(admin, user.id, col, cost)
+    return { error: 'Already owned' }
+  }
+
+  const newDoubloons = useGems ? profile.doubloons : after
+  const newGems = useGems ? after : (profile.gems ?? 0)
   const newUnlocked = [...unlocked, colorId]
-  const profileUpdate: Record<string, unknown> = { unlocked_character_colors: newUnlocked }
-  if (useGems) profileUpdate.gems = newGems
-  else profileUpdate.doubloons = newDoubloons
 
   await Promise.all([
-    admin.from('profiles').update(profileUpdate).eq('id', user.id),
     admin.from(useGems ? 'gem_transactions' : 'doubloon_transactions').insert({
       user_id: user.id,
       amount: -cost,
@@ -165,7 +173,7 @@ export async function updateCharacterColor(colorId: string, opts?: { quiet?: boo
         earned = earnedAchievementColors(pts, unlocked).includes(colorId)
       }
       if (!earned) return { error: 'Color not unlocked' }
-      await admin.from('profiles').update({ unlocked_character_colors: [...unlocked, colorId] }).eq('id', user.id)
+      await arrayAdd(admin, user.id, 'unlocked_character_colors', colorId)
     }
   }
 
@@ -210,7 +218,8 @@ export async function persistEarnedSkins(ids: string[]): Promise<{ granted: stri
 
   const granted = candidates.filter(id => !stored.includes(id) && (earnedLevel.has(id) || earnedAch.has(id)))
   if (granted.length === 0) return { granted: [] }
-  await admin.from('profiles').update({ unlocked_character_colors: [...stored, ...granted] }).eq('id', user.id)
+  // Added in place one at a time, so a skin bought meanwhile is not written over.
+  for (const id of granted) await arrayAdd(admin, user.id, 'unlocked_character_colors', id)
   return { granted }
 }
 
@@ -237,7 +246,7 @@ export async function persistEarnedBoats(ids: string[]): Promise<{ granted: stri
     : new Set<string>()
   const granted = candidates.filter(id => !stored.includes(id) && earned.has(id))
   if (granted.length === 0) return { granted: [] }
-  await admin.from('profiles').update({ unlocked_boats: [...stored, ...granted] }).eq('id', user.id)
+  for (const id of granted) await arrayAdd(admin, user.id, 'unlocked_boats', id)
   return { granted }
 }
 
@@ -294,7 +303,7 @@ export async function updateAvatarColors(input: {
         })
         if (ok) {
           owned.push(sp.id)
-          await createAdminClient().from('profiles').update({ unlocked_avatar_specials: owned }).eq('id', user.id)
+          await arrayAdd(createAdminClient(), user.id, 'unlocked_avatar_specials', sp.id)
         }
         return ok
       }
@@ -368,12 +377,16 @@ export async function purchaseAvatarSpecial(specialId: string): Promise<
   const balance = profile.gems ?? 0
   if (balance < gemPrice) return { error: `Need ${gemPrice.toLocaleString()} ◆` }
 
-  const newGems = balance - gemPrice
+  // Spend first, in place, and let the result be the guard.
+  const newGems = await spend(admin, user.id, 'gems', gemPrice)
+  if (newGems === null) return { error: `Need ${gemPrice.toLocaleString()} ◆` }
+  // A concurrent twin already added it: give this charge back.
+  if (!(await arrayAdd(admin, user.id, 'unlocked_avatar_specials', specialId))) {
+    await grant(admin, user.id, 'gems', gemPrice)
+    return { error: 'Already owned' }
+  }
   const newOwned = [...owned, specialId]
   await Promise.all([
-    admin.from('profiles')
-      .update({ gems: newGems, unlocked_avatar_specials: newOwned })
-      .eq('id', user.id),
     admin.from('gem_transactions').insert({
       user_id: user.id,
       amount: -gemPrice,

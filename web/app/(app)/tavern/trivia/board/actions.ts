@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { isPremiumActive } from '@/lib/premium'
+import { grant } from '@/lib/wallet'
 import { getThisWeeksBoard, type GeneratedTile } from './generate'
 import {
   TRIVIA_TIER_VALUES,
@@ -242,7 +243,6 @@ export async function answerCaptainsTile(
   const value = TRIVIA_TIER_VALUES[tile.tier - 1]
   const doubloonsWon = correct ? value : 0
   const totalAwarded = a.doubloons_awarded + doubloonsWon
-  const newDoubloons = doubloonsWon > 0 ? (profile?.doubloons ?? 0) + doubloonsWon : null
   const newAnswers = { ...a.answers, [key]: { day: today, chosen: chosenIndex, correct, revealedAt: entry.revealedAt } }
 
   // Parlor streak (shared with the King): a correct answer extends it, a wrong
@@ -266,25 +266,29 @@ export async function answerCaptainsTile(
   const gemsWon = 0
   const newGems: number | null = null
 
-  const writes: PromiseLike<unknown>[] = [
-    admin.from('trivia_board_attempts').upsert({
-      user_id: user.id,
-      date: week,
-      category: null,
+  // Record the choice FIRST, and only if the answers are still exactly what we
+  // read (so this card has no choice on it yet). Two answers fired together
+  // both reach here; only the one whose update comes back with a row is paid.
+  const { data: recorded } = await admin.from('trivia_board_attempts')
+    .update({
       answers: newAnswers,
       doubloons_awarded: totalAwarded,
       gems_awarded: a.gems_awarded,   // dormant now — gems moved to rank-ups
-    }),
-  ]
-  // ONE profiles patch — a correct answer can move both currencies at once, and
-  // two concurrent updates to the same row would clobber each other.
-  const profilePatch: Record<string, number> = {
+    })
+    .eq('user_id', user.id)
+    .eq('date', week)
+    .eq('answers', JSON.stringify(a.answers))
+    .select('user_id')
+  if (!recorded || recorded.length === 0) return { error: 'Card already answered' }
+
+  const newDoubloons = doubloonsWon > 0 ? await grant(admin, user.id, 'doubloons', doubloonsWon) : null
+
+  const writes: PromiseLike<unknown>[] = []
+  writes.push(admin.from('profiles').update({
     parlor_streak: currentStreak,
     parlor_best_streak: bestStreak,
     parlor_points: newPoints,
-  }
-  if (newDoubloons !== null) profilePatch.doubloons = newDoubloons
-  writes.push(admin.from('profiles').update(profilePatch).eq('id', user.id))
+  }).eq('id', user.id))
   if (newDoubloons !== null) {
     writes.push(admin.from('doubloon_transactions').insert({
       user_id: user.id,

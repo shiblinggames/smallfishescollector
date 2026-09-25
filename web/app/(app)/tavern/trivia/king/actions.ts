@@ -11,6 +11,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { grant } from '@/lib/wallet'
 import { getThisWeeksLadder, type GeneratedRung } from './generate'
 import {
   PIRATE_KING_PRIZES,
@@ -53,13 +54,37 @@ function stripQuestion(q: GeneratedRung, rung: number, fifty: AttemptRow['fifty'
 async function payOut(userId: string, amount: number, reason: string): Promise<number | null> {
   if (amount <= 0) return null
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', userId).single()
-  const newTotal = (profile?.doubloons ?? 0) + amount
-  await Promise.all([
-    admin.from('profiles').update({ doubloons: newTotal }).eq('id', userId),
-    admin.from('doubloon_transactions').insert({ user_id: userId, amount, reason }),
-  ])
+  const newTotal = await grant(admin, userId, 'doubloons', amount)
+  await admin.from('doubloon_transactions').insert({ user_id: userId, amount, reason })
   return newTotal
+}
+
+/** Move the run from the state we read to the next one, and only if it is
+ *  still in the state we read. true = this request made the move; false = a
+ *  twin request (a double tap, or a crafted race) got there first and this
+ *  one must not pay or reveal anything. A run with no row yet is inserted,
+ *  and the primary key makes a concurrent insert lose the same way. */
+async function advanceRun(
+  userId: string,
+  week: string,
+  from: AttemptRow | null,
+  patch: Record<string, unknown>,
+): Promise<boolean> {
+  const admin = createAdminClient()
+  if (!from) {
+    const { error } = await admin.from('trivia_ladder_attempts').insert({
+      user_id: userId, date: week, rung: 0, status: 'active', fifty: null, doubloons_awarded: 0, current_started_at: null,
+      ...patch,
+    })
+    return !error
+  }
+  let q = admin.from('trivia_ladder_attempts').update(patch)
+    .eq('user_id', userId).eq('date', week)
+    .eq('rung', from.rung).eq('status', from.status)
+  q = from.current_started_at === null ? q.is('current_started_at', null) : q.eq('current_started_at', from.current_started_at)
+  q = from.fifty === null ? q.is('fifty', null) : q.not('fifty', 'is', null)
+  const { data } = await q.select('user_id')
+  return !!data && data.length > 0
 }
 
 /** Grants gems (the crown bonus) and returns the new gem total, null if none.
@@ -120,17 +145,12 @@ export async function startKingRung(): Promise<KingRevealResult | { error: strin
   if (a.status !== 'active') return { error: 'The run is over for this week' }
 
   // Only stamp on the FIRST reveal of this rung; a reload keeps the original clock.
+  // Guarded, and it writes ONLY the stamp: a whole-row write from a stale read
+  // could put a busted run back to active after its answer was revealed.
   const startedAt = a.current_started_at ?? new Date().toISOString()
   if (a.current_started_at === null) {
-    await admin.from('trivia_ladder_attempts').upsert({
-      user_id: user.id,
-      date: week,
-      rung: a.rung,
-      status: 'active',
-      fifty: a.fifty,
-      doubloons_awarded: a.doubloons_awarded,
-      current_started_at: startedAt,
-    })
+    const moved = await advanceRun(user.id, week, attempt as AttemptRow | null, { current_started_at: startedAt })
+    if (!moved) return { error: 'Out of step with the ladder' }
   }
 
   return {
@@ -216,17 +236,18 @@ export async function answerKingRung(
   const gemsWon = 0
   const newGems: number | null = null
 
-  await admin.from('trivia_ladder_attempts').upsert({
-    user_id: user.id,
-    date: week,
+  // The rung moves FIRST, and only from the exact state we judged against.
+  // Two answers fired together (one per option, say) both reach here; only
+  // the one that lands the move is paid or scored.
+  const moved = await advanceRun(user.id, week, attempt as AttemptRow | null, {
     rung: newRung,
     status,
-    fifty: a.fifty,
     doubloons_awarded: status === 'active' ? 0 : won,
     gems_awarded: gemsWon,
     // The climbed-to rung is NOT revealed yet — its clock starts on startKingRung.
     current_started_at: null,
   })
+  if (!moved) return { error: 'Out of step with the ladder' }
 
   let newDoubloons: number | null = null
   if (status === 'crowned') {
@@ -291,16 +312,10 @@ export async function spendKingFiftyFifty(): Promise<{ removed: number[] } | { e
   wrong.splice(Math.floor(Math.random() * wrong.length), 1)
   const removed = wrong.sort((x, y) => x - y)
 
-  await admin.from('trivia_ladder_attempts').upsert({
-    user_id: user.id,
-    date: week,
-    rung: a.rung,
-    status: 'active',
-    fifty: { rung: a.rung, removed },
-    doubloons_awarded: 0,
-    // Using the lifeline does NOT reset the clock — you're still on this question.
-    current_started_at: a.current_started_at,
-  })
+  // Spent once, guarded on it still being unspent on this rung. Using the
+  // lifeline does NOT reset the clock — you're still on this question.
+  const moved = await advanceRun(user.id, week, attempt as AttemptRow | null, { fifty: { rung: a.rung, removed } })
+  if (!moved) return { error: 'The 50/50 is already spent' }
 
   return { removed }
 }
@@ -324,15 +339,10 @@ export async function walkKingAway(): Promise<{ status: 'walked'; doubloonsAward
 
   const won = PIRATE_KING_PRIZES[a.rung - 1]
 
-  await admin.from('trivia_ladder_attempts').upsert({
-    user_id: user.id,
-    date: week,
-    rung: a.rung,
-    status: 'walked',
-    fifty: a.fifty,
-    doubloons_awarded: won,
-    current_started_at: null,
-  })
+  // Walk FIRST, guarded on the run still being where we read it; pay only if
+  // this request is the one that ended it.
+  const moved = await advanceRun(user.id, week, a, { status: 'walked', doubloons_awarded: won, current_started_at: null })
+  if (!moved) return { error: 'No run to walk away from' }
   const newDoubloons = await payOut(user.id, won, `Pirate King: walked at rung ${a.rung} with ${won} ⟡`)
 
   return { status: 'walked', doubloonsAwarded: won, newDoubloons }

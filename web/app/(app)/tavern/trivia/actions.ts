@@ -10,6 +10,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { grant } from '@/lib/wallet'
 import { nextClaimableParlorRank } from './constants'
 
 export type ClaimParlorResult =
@@ -47,12 +48,20 @@ export async function claimParlorRank(): Promise<ClaimParlorResult> {
 
   const gemsWon = next.rank.gems
   const newAwarded = next.cumGems
-  const newGems = ((profile?.gems as number | null) ?? 0) + gemsWon
+  // Advance the claimed total FIRST, and only from the value we read. Two taps
+  // fired together both reach here; only the one whose update comes back with
+  // a row is paid.
+  const claimQ = admin.from('profiles')
+    .update({ parlor_rank_gems_awarded: newAwarded })
+    .eq('id', user.id)
+  const { data: moved } = await (profile?.parlor_rank_gems_awarded == null
+    ? claimQ.is('parlor_rank_gems_awarded', null)
+    : claimQ.eq('parlor_rank_gems_awarded', claimed)
+  ).select('id')
+  if (!moved || moved.length === 0) return { error: 'That rank was already collected.' }
 
-  await Promise.all([
-    admin.from('profiles').update({ parlor_rank_gems_awarded: newAwarded, gems: newGems }).eq('id', user.id),
-    admin.from('gem_transactions').insert({ user_id: user.id, amount: gemsWon, reason: `The Parlor: ${next.rank.title}` }),
-  ])
+  const newGems = await grant(admin, user.id, 'gems', gemsWon)
+  await admin.from('gem_transactions').insert({ user_id: user.id, amount: gemsWon, reason: `The Parlor: ${next.rank.title}` })
 
   // Point-based Parlor badges (reconcile also covers these; grant now for the
   // immediate unlock the moment the matching rank is collected).

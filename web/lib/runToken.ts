@@ -109,3 +109,53 @@ export async function markRunCleared(
     return null
   }
 }
+
+/** Pay one ROUND of a raid run, once. true = this round had not been paid on
+ *  this token and is now marked paid (grant it); false = already paid, or the
+ *  token is missing, foreign, consumed or expired (grant nothing).
+ *
+ *  Test and mark are one statement (claim_run_token_round, service-role only),
+ *  so a replay or two identical requests fired together cannot both pay. It
+ *  also bumps `kills`, so the old counter keeps reading true. */
+export async function claimRaidRound(
+  admin: Admin,
+  userId: string,
+  tokenId: string | null | undefined,
+  round: number,
+): Promise<boolean> {
+  if (!tokenId || !Number.isInteger(round) || round < 0) return false
+  try {
+    const { data, error } = await admin.rpc('claim_run_token_round', { p_id: tokenId, p_uid: userId, p_round: round })
+    return !error && data != null
+  } catch {
+    return false
+  }
+}
+
+/** Open the crate of a CLEARED run, once. Returns the token's meta when this
+ *  call stamped looted_at (pay the crate), or null when the run was never
+ *  cleared, was already looted, or the token is missing, foreign or expired.
+ *  Conditional on looted_at being null, so a replay or a concurrent twin finds
+ *  it stamped and gets nothing. */
+export async function markRunLooted(
+  admin: Admin,
+  userId: string,
+  kind: string,
+  tokenId: string | null | undefined,
+): Promise<{ meta: any } | null> {  // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (!tokenId) return null
+  try {
+    const { data } = await admin
+      .from('run_tokens')
+      .update({ looted_at: new Date().toISOString() })
+      .eq('id', tokenId).eq('user_id', userId).eq('kind', kind)
+      .not('cleared_at', 'is', null)
+      .is('looted_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .select('meta')
+      .maybeSingle()
+    return data ? { meta: data.meta } : null
+  } catch {
+    return null
+  }
+}

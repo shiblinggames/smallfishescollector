@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { FISH_HOLD_TIERS, getFishHold } from '@/lib/fishHold'
+import { grant, spend } from '@/lib/wallet'
 
 export async function upgradeFishHold(): Promise<
   { ok: true; newTier: number; doubloons: number } | { error: string }
@@ -25,13 +26,24 @@ export async function upgradeFishHold(): Promise<
   if (currentTier >= maxTier) return { error: 'Fish hold is already at max tier' }
 
   const next = getFishHold(currentTier + 1)
-  if ((profile.doubloons ?? 0) < next.cost) return { error: 'Not enough doubloons' }
-
-  const newDoubloons = (profile.doubloons ?? 0) - next.cost
   const newTier = currentTier + 1
 
+  // Spend first, in place; the result is the guard. Then raise the tier only
+  // from the value read above, so two taps cannot buy two tiers for one step
+  // or skip a price. The one that loses gets its charge back.
+  const newDoubloons = await spend(admin, user.id, 'doubloons', next.cost)
+  if (newDoubloons === null) return { error: 'Not enough doubloons' }
+  const raise = admin.from('profiles').update({ fish_hold_tier: newTier }).eq('id', user.id)
+  const { data: raised } = await (profile.fish_hold_tier == null
+    ? raise.is('fish_hold_tier', null)
+    : raise.eq('fish_hold_tier', currentTier)
+  ).select('id')
+  if (!raised || raised.length === 0) {
+    await grant(admin, user.id, 'doubloons', next.cost)
+    return { error: 'Your hold just changed. Try again.' }
+  }
+
   await Promise.all([
-    admin.from('profiles').update({ fish_hold_tier: newTier, doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -next.cost, reason: `Upgraded fish hold to ${next.name}` }),
   ])
 

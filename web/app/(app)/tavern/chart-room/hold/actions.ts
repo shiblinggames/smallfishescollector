@@ -14,6 +14,7 @@ import { getCurrentUser } from '@/lib/userData'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { grant } from '@/lib/wallet'
 import { getThisWeeksSudoku } from './generate'
 import {
   HOLD_DIFFICULTIES,
@@ -41,9 +42,12 @@ interface AttemptRow {
   progress: Partial<Record<HoldDifficulty, ProgressEntry>>
   solved: Partial<Record<HoldDifficulty, SolvedEntry>>
   doubloons_awarded: number
+  /** The row's stamp as read; every write is guarded on it (see saveAttempt).
+   *  undefined = no row yet. */
+  updated_at?: string | null
 }
 
-const ATTEMPT_COLS = 'progress, solved, doubloons_awarded'
+const ATTEMPT_COLS = 'progress, solved, doubloons_awarded, updated_at'
 
 // The period key for the Hold is the week's Monday (made weekly
 // 2026-06-14); the `date` column on daily_sudoku / sudoku_attempts holds
@@ -65,6 +69,29 @@ async function loadAttempt(userId: string, today: string): Promise<AttemptRow> {
     .single()
   const a = data as AttemptRow | null
   return a ?? emptyAttempt()
+}
+
+/** Write the attempt row, but only over the exact row this request read
+ *  (its updated_at stamp). Every write here rewrites the whole progress and
+ *  solved maps, so without the guard a tally racing a solve could write the
+ *  solve away (and pay it again), or a save racing a tally could put the hint
+ *  count back. false = another write landed first; nothing was written. */
+async function saveAttempt(
+  userId: string,
+  today: string,
+  read: AttemptRow,
+  next: Pick<AttemptRow, 'progress' | 'solved' | 'doubloons_awarded'>,
+): Promise<boolean> {
+  const admin = createAdminClient()
+  const row = { ...next, updated_at: new Date().toISOString() }
+  if (read.updated_at === undefined) {
+    const { error } = await admin.from('sudoku_attempts').insert({ user_id: userId, date: today, ...row })
+    return !error
+  }
+  const q = admin.from('sudoku_attempts').update(row).eq('user_id', userId).eq('date', today)
+  const { data } = await (read.updated_at === null ? q.is('updated_at', null) : q.eq('updated_at', read.updated_at))
+    .select('user_id')
+  return !!data && data.length > 0
 }
 
 async function loadPuzzlePoints(userId: string): Promise<number> {
@@ -139,11 +166,8 @@ export async function saveHoldProgress(
   const prevHints = attempt.progress[difficulty]?.hints ?? 0
   const prevNotes = attempt.progress[difficulty]?.notes
   const progress = { ...attempt.progress, [difficulty]: { entries, hints: prevHints, notes: notes ?? prevNotes } }
-  await admin.from('sudoku_attempts').upsert({
-    user_id: user.id, date: today,
-    progress, solved: attempt.solved, doubloons_awarded: attempt.doubloons_awarded,
-    updated_at: new Date().toISOString(),
-  })
+  // A save that loses a race is simply skipped; the next autosave carries it.
+  await saveAttempt(user.id, today, attempt, { progress, solved: attempt.solved, doubloons_awarded: attempt.doubloons_awarded })
   return { ok: true }
 }
 
@@ -170,13 +194,11 @@ export async function tallyHold(
   }
 
   const hints = (attempt.progress[difficulty]?.hints ?? 0) + 1
-  const admin = createAdminClient()
   const progress = { ...attempt.progress, [difficulty]: { entries, hints } }
-  await admin.from('sudoku_attempts').upsert({
-    user_id: user.id, date: today,
-    progress, solved: attempt.solved, doubloons_awarded: attempt.doubloons_awarded,
-    updated_at: new Date().toISOString(),
-  })
+  // The hint is recorded before the mask goes back; no record, no mask.
+  if (!(await saveAttempt(user.id, today, attempt, { progress, solved: attempt.solved, doubloons_awarded: attempt.doubloons_awarded }))) {
+    return { error: 'The quartermaster lost count. Try again.' }
+  }
 
   return { wrong, hintsUsed: hints }
 }
@@ -195,7 +217,7 @@ export async function submitHold(
   const [puzzles, attempt, { data: profile }] = await Promise.all([
     getThisWeeksSudoku(),
     loadAttempt(user.id, today),
-    createAdminClient().from('profiles').select('doubloons, puzzle_points').eq('id', user.id).single(),
+    createAdminClient().from('profiles').select('puzzle_points').eq('id', user.id).single(),
   ])
   if (!puzzles) return { error: 'No holds available' }
   if (attempt.solved[difficulty]) return { error: 'This hold is already stowed' }
@@ -213,16 +235,17 @@ export async function submitHold(
   if (!correct) {
     const wrong = new Array(HOLD_CELLS).fill(false)
     for (let i = 0; i < HOLD_CELLS; i++) if (entries[i] !== solution[i]) wrong[i] = true
-    const hints = attempt.progress[difficulty]?.hints ?? 0
+    // A wrong submit hands back the same wrong-cell mask a tally does, so it
+    // counts as a tally. Free masks let a full board be walked to the answer
+    // one resubmit at a time and still paid as clean.
+    const hints = (attempt.progress[difficulty]?.hints ?? 0) + 1
     const progress = { ...attempt.progress, [difficulty]: { entries, hints } }
-    await admin.from('sudoku_attempts').upsert({
-      user_id: user.id, date: today,
-      progress, solved: attempt.solved, doubloons_awarded: attempt.doubloons_awarded,
-      updated_at: new Date().toISOString(),
-    })
+    if (!(await saveAttempt(user.id, today, attempt, { progress, solved: attempt.solved, doubloons_awarded: attempt.doubloons_awarded }))) {
+      return { error: 'The quartermaster lost count. Try again.' }
+    }
     return {
       correct: false, wrong, doubloonsWon: 0, clean: false, newDoubloons: null,
-      pointsWon: 0, newPuzzlePoints: (profile?.puzzle_points ?? 0),
+      pointsWon: 0, newPuzzlePoints: (profile?.puzzle_points ?? 0), hintsUsed: hints,
     }
   }
 
@@ -231,9 +254,7 @@ export async function submitHold(
   const doubloonsWon = holdPayout(difficulty, clean)
   const pointsWon = holdPoints(difficulty)
   const totalAwarded = attempt.doubloons_awarded + doubloonsWon
-  const oldDoubloons = profile?.doubloons ?? 0
   const oldPoints = profile?.puzzle_points ?? 0
-  const newDoubloons = oldDoubloons + doubloonsWon
   const newPuzzlePoints = oldPoints + pointsWon
 
   const solved = {
@@ -245,13 +266,15 @@ export async function submitHold(
     [difficulty]: { entries, hints: attempt.progress[difficulty]?.hints ?? 0 },
   }
 
+  // Mark it stowed FIRST (guarded on the row we read); pay only if this
+  // request is the one that stowed it. Two submits fired together cannot
+  // both be paid.
+  if (!(await saveAttempt(user.id, today, attempt, { progress, solved, doubloons_awarded: totalAwarded }))) {
+    return { error: 'This hold is already stowed' }
+  }
+  const newDoubloons = await grant(admin, user.id, 'doubloons', doubloonsWon)
   await Promise.all([
-    admin.from('sudoku_attempts').upsert({
-      user_id: user.id, date: today,
-      progress, solved, doubloons_awarded: totalAwarded,
-      updated_at: new Date().toISOString(),
-    }),
-    admin.from('profiles').update({ doubloons: newDoubloons, puzzle_points: newPuzzlePoints }).eq('id', user.id),
+    admin.from('profiles').update({ puzzle_points: newPuzzlePoints }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: doubloonsWon,

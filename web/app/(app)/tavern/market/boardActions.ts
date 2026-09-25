@@ -1,5 +1,6 @@
 'use server'
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -120,7 +121,7 @@ const SHUT = (reason: string): Board => ({
 
 export async function getBoard(): Promise<Board> {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   const uid = session?.user?.id
   if (!uid) return SHUT('Sign in to reach the Exchange')
   if (EXCHANGE_UNDER_CONSTRUCTION) return SHUT('The Exchange is closed while the board is rebuilt')

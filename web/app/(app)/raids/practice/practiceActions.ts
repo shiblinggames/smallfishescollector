@@ -4,36 +4,57 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { flagAnomaly } from '@/lib/anomaly'
+import { issueRunToken, consumeRunToken } from '@/lib/runToken'
+import { PRACTICE_KILL_REWARDS } from '@/lib/practiceRewards'
+import { grant } from '@/lib/wallet'
 
-// The practice skirmish is a fixed tutorial: its enemies grant at most 45 XP /
-// 35 gold per kill. Clamp each call to a hair above that so this endpoint — which
-// never server-checks the "one-shot" flag its comment relies on, and so is
-// infinitely replayable — can only ever hand out tutorial-scale scraps.
-const PRACTICE_GRANT_MAX = 100
+// The practice skirmish is the OLD tutorial, admin-only at the page (see
+// practice/page.tsx). Its reward endpoint was not: it took xp and gold from the
+// request, clamped to 100 each, and any captain could call it forever.
+//
+// Now a fight mints a one-shot token naming its enemy, the kill consumes it,
+// and the reward is that enemy's line in PRACTICE_KILL_REWARDS. Both ends are
+// admin-only, matching the page they serve.
 
-export async function awardPracticeKill(
-  xpIn: number,
-  doubloonsIn: number,
-): Promise<{ newExpeditionXP: number; newDoubloonTotal: number; crewXP: CrewXPGrant[] }> {
+async function adminUser() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { newExpeditionXP: 0, newDoubloonTotal: 0, crewXP: [] }
-
-  const rawXp     = Math.max(0, Math.floor(Number(xpIn)        || 0))
-  const rawGold   = Math.max(0, Math.floor(Number(doubloonsIn) || 0))
-  const xp        = Math.min(rawXp,   PRACTICE_GRANT_MAX)
-  const doubloons = Math.min(rawGold, PRACTICE_GRANT_MAX)
-
+  if (!user) return null
   const admin = createAdminClient()
+  const { data: me } = await admin.from('profiles').select('is_admin').eq('id', user.id).single()
+  return me?.is_admin === true ? { user, admin } : null
+}
 
-  // Tutorial grants are tiny; anything over the cap is a forged call. Flag it.
-  if (rawXp > PRACTICE_GRANT_MAX || rawGold > PRACTICE_GRANT_MAX) {
-    await flagAnomaly(admin, user.id, 'cap_trip:awardPracticeKill', 3, { rawXp, rawGold, cap: PRACTICE_GRANT_MAX })
+/** Mint the token for one practice fight against `enemyId`. */
+export async function startPracticeRun(enemyId: string): Promise<{ token: string | null }> {
+  if (!PRACTICE_KILL_REWARDS[enemyId]) return { token: null }
+  const ctx = await adminUser()
+  if (!ctx) return { token: null }
+  const token = await issueRunToken(ctx.admin, ctx.user.id, 'practice', { enemyId })
+  return { token }
+}
+
+export async function awardPracticeKill(
+  token: string | null | undefined,
+): Promise<{ newExpeditionXP: number; newDoubloonTotal: number; crewXP: CrewXPGrant[] }> {
+  const nothing = { newExpeditionXP: 0, newDoubloonTotal: 0, crewXP: [] as CrewXPGrant[] }
+  const ctx = await adminUser()
+  if (!ctx) return nothing
+  const { user, admin } = ctx
+
+  // One kill per token. A replay or a concurrent twin finds it spent.
+  const spent = await consumeRunToken(admin, user.id, 'practice', token)
+  const reward = PRACTICE_KILL_REWARDS[(spent?.meta as { enemyId?: string } | null)?.enemyId ?? '']
+  if (!spent || !reward) {
+    await flagAnomaly(admin, user.id, 'run_token:awardPracticeKill_reject', 2, { hasToken: !!token })
+    return nothing
   }
+  const xp = reward.xp
+  const doubloons = reward.gold
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('expedition_xp, doubloons')
+    .select('expedition_xp')
     .eq('id', user.id)
     .single()
 
@@ -41,19 +62,18 @@ export async function awardPracticeKill(
   // Navigation XP (raid kills, voyages, the Gauntlet, puzzle nodes, fork routes).
   // The skirmish is a free sandbox with no repair risk and no cooldown, so
   // charging here would be a grindable loop that costs nothing to run.
-  const newExpeditionXP  = (profile?.expedition_xp ?? 0) + xp
-  const newDoubloonTotal = (profile?.doubloons ?? 0) + doubloons
+  const newExpeditionXP = (profile?.expedition_xp ?? 0) + xp
 
-  const [, crewXP] = await Promise.all([
-    admin.from('profiles').update({
-      expedition_xp: newExpeditionXP,
-      doubloons: newDoubloonTotal,
-      has_seen_raid_tutorial: true,
-      has_completed_practice_raid: true,
-    }).eq('id', user.id),
-    // Practice raid mirrors the player rule — crew earn the same XP per kill.
-    // Tiny per-kill grant (PRACTICE_XP=25) and one-shot anyway (has_completed
-    // flag gates re-entry) so it's not abusable.
+  const [newDoubloonTotal, , crewXP] = await Promise.all([
+    grant(admin, user.id, 'doubloons', doubloons),
+    Promise.all([
+      admin.rpc('bump_profile_stat', { uid: user.id, col: 'expedition_xp', n: xp }),
+      admin.from('profiles').update({
+        has_seen_raid_tutorial: true,
+        has_completed_practice_raid: true,
+      }).eq('id', user.id),
+    ]),
+    // Practice raid mirrors the player rule: crew earn the same XP per kill.
     grantXPToAssignedCrew(admin, user.id, xp),
   ])
 

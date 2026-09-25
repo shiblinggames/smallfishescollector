@@ -202,6 +202,9 @@ export async function equipBadge(
   slot: 0 | 1 | 2,
 ): Promise<{ equipped: string[] } | { error: string }> {
   if (!BADGE_MAP[badgeId]) return { error: 'Unknown badge' }
+  // The slot comes from the client; anything but a real slot index would
+  // write past the end of the array (or onto a named key).
+  if (!Number.isInteger(slot) || slot < 0 || slot >= MAX_EQUIPPED_BADGES) return { error: 'Invalid slot' }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -234,6 +237,7 @@ export async function equipBadge(
 export async function unequipBadge(
   slot: 0 | 1 | 2,
 ): Promise<{ equipped: string[] } | { error: string }> {
+  if (!Number.isInteger(slot) || slot < 0 || slot >= MAX_EQUIPPED_BADGES) return { error: 'Invalid slot' }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }

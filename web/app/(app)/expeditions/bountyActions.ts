@@ -1,5 +1,6 @@
 'use server'
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { inCaptainsWater, type CaptainWaterRow } from '@/lib/captainWater'
 import { isChallengeRaidId, baseRaidIdOf } from '@/lib/raidChallenge'
 import { createClient } from '@/lib/supabase/server'
@@ -12,6 +13,7 @@ import {
   type Bounty, type BountyMeter, type BountyRung,
 } from '@/lib/bounties'
 import { hardcoreUnlocked } from '@/lib/gauntlet'
+import { grant, arrayAdd } from '@/lib/wallet'
 
 // The measuring layer for BOUNTIES.
 //
@@ -234,7 +236,7 @@ function ladderFacts(profile: Record<string, unknown> | null, bounties: BountyVi
 
 export async function getBountyBoard(): Promise<BountyBoard> {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   const uid = session?.user?.id
   if (!uid) return SHUT
 
@@ -404,10 +406,6 @@ export async function claimBounty(bountyId: string): Promise<ClaimResult> {
   if (won !== true) return { error: 'Already claimed' }
 
   const gems = bountyGems(b)
-  const { data: prof } = await admin.from('profiles')
-    .select('gems, bounties_claimed, bounty_gems_earned, bounty_boards_cleared, bounty_elites_claimed, bounty_points')
-    .eq('id', user.id).single()
-  const total = Number(prof?.gems ?? 0) + gems
 
   // Was this the last one on the board? Counted HERE because the board is
   // overwritten tomorrow morning and there is no later pass that could notice.
@@ -419,15 +417,18 @@ export async function claimBounty(bountyId: string): Promise<ClaimResult> {
   // when this claim is the one that finishes the board.
   const earnedPoints = bountyPoints(b) + (after ? BOUNTY_SWEEP_POINTS : 0)
 
-  const stats = {
-    gems: total,
-    bounties_claimed: Number(prof?.bounties_claimed ?? 0) + 1,
-    bounty_gems_earned: Number(prof?.bounty_gems_earned ?? 0) + gems,
-    bounty_boards_cleared: Number(prof?.bounty_boards_cleared ?? 0) + (after ? 1 : 0),
-    bounty_elites_claimed: Number(prof?.bounty_elites_claimed ?? 0) + (b.tier === 'elite' ? 1 : 0),
-    bounty_points: Number(prof?.bounty_points ?? 0) + earnedPoints,
-  }
-  await admin.from('profiles').update(stats).eq('id', user.id)
+  // Everything moves IN PLACE. Reading the balance and writing back the sum
+  // let a purchase that landed in between be undone by this stale total.
+  const bump = (col: string, n: number) =>
+    n > 0 ? admin.rpc('bump_profile_stat', { uid: user.id, col, n }) : null
+  const [total] = await Promise.all([
+    grant(admin, user.id, 'gems', gems),
+    bump('bounties_claimed', 1),
+    bump('bounty_gems_earned', gems),
+    bump('bounty_boards_cleared', after ? 1 : 0),
+    bump('bounty_elites_claimed', b.tier === 'elite' ? 1 : 0),
+    bump('bounty_points', earnedPoints),
+  ])
 
   return { ok: true, gems, total, points: earnedPoints, sweep: after }
 }
@@ -448,7 +449,7 @@ export async function claimBountyMilestone(): Promise<MilestoneResult> {
 
   const admin = createAdminClient()
   const { data: p } = await admin.from('profiles')
-    .select('doubloons, gems, bounty_points, bounty_milestones_claimed, ship_skins')
+    .select('bounty_points, bounty_milestones_claimed, ship_skins')
     .eq('id', user.id).single()
   if (!p) return { error: 'Profile not found' }
 
@@ -466,15 +467,19 @@ export async function claimBountyMilestone(): Promise<MilestoneResult> {
   const { data: won } = await admin.from('profiles')
     .update({
       bounty_milestones_claimed: claimed + 1,
-      doubloons: Number(p.doubloons ?? 0) + (m.doubloons ?? 0),
-      gems: Number(p.gems ?? 0) + (m.gems ?? 0),
-      ...(grantSkin ? { ship_skins: [...skins, m.shipSkinId as string] } : {}),
     })
     .eq('id', user.id)
     .eq('bounty_milestones_claimed', claimed)
     .select('id')
     .maybeSingle()
   if (!won) return { error: 'Already collected' }
+
+  // Paid only after the rung flipped, and in place.
+  await Promise.all([
+    m.doubloons ? grant(admin, user.id, 'doubloons', m.doubloons) : null,
+    m.gems ? grant(admin, user.id, 'gems', m.gems) : null,
+    grantSkin ? arrayAdd(admin, user.id, 'ship_skins', m.shipSkinId as string) : null,
+  ])
 
   if (m.doubloons) {
     await admin.from('doubloon_transactions')
@@ -554,14 +559,8 @@ export async function rerollBounty(bountyId: string): Promise<RerollResult> {
   return { ok: true }
 }
 
-/** Called by the gauntlet when a run ends. The only thing bounties needed that
- *  the game was not already writing down. Fire and forget: a lost event costs a
- *  bounty tick, never a run. */
-export async function logBountyEvent(userId: string, kind: string, value: number): Promise<void> {
-  try {
-    await createAdminClient().from('bounty_events').insert({ user_id: userId, kind, value })
-  } catch { /* a bounty tick is never worth failing a run over */ }
-}
+// logBountyEvent lives in lib/bountyEvents.ts now. As an export of this
+// 'use server' file it was a public endpoint taking any user id.
 
 /** Remember that this captain has been told about a rung.
  *

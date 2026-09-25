@@ -101,6 +101,18 @@ combat depth may exceed the reward depth by exactly the Veteran's Start head sta
 until each one is checkpointed server-side as it falls, a patient forger is paid at the
 rate an honest run would be. The per-fight checkpoint is still the real fix.
 
+## Cash-out and death close the run first (2026-09-25 audit)
+
+`cashOutGauntlet` and `resolveGauntletDeath` both close the run with a conditional update
+(`gauntlet_run_open = true` -> false, `.select()`) and only the call that closed it pays,
+drowns the hardcore squad or logs the bounty event; concurrent calls used to pay N times.
+`resolveGauntletDeath` now takes the same clock clamp as cash-out (`floor(active_ms / 4000)`,
+combat depth bounded by the Veteran's Start head start): before, start then "die at 100" in a
+loop minted unlimited Fathoms. Davy's Terms "cash out only after a boss" is enforced in
+cash-out from the stored checkpoint. `recordGauntletHit` needs an open run and clamps to
+`max(500, loadout crit) x 7 x (1 + depth/10)` (boons stack with depth; the honest record is
+14,808). The per-fight server checkpoint remains the real fix for forged cash-outs.
+
 ## Connects to
 
 - [raids-campaign.md](raids-campaign.md) — same combat engine, same laws.

@@ -13,7 +13,7 @@
 import { inCaptainsWater, type CaptainWaterRow } from '@/lib/captainWater'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { logBountyEvent } from '@/app/(app)/expeditions/bountyActions'
+import { logBountyEvent } from '@/lib/bountyEvents'
 import { GAUNTLET_DAMAGE_MIN } from '@/lib/bounties'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
@@ -32,7 +32,10 @@ import { getBait } from '@/lib/bait'
 import { merchantPrice } from '@/lib/gauntletMerchant'
 import { eyeCharge } from '@/lib/finnItems'
 import { fortuneLootMult } from '@/lib/expeditions'
-import { getRaidPlayerStats } from '../actions'
+import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
+import { raidDamageProfile } from '@/lib/expeditions'
+import { flagAnomaly } from '@/lib/anomaly'
+import { grant, spend, arrayAdd } from '@/lib/wallet'
 
 // Golden Gauntlet Hull — a rare Man-o-War-only cosmetic that drops only from the
 // top chest tier (Davy Jones' Locker, chest tier 5 / depth 18+). Tunable here.
@@ -114,21 +117,43 @@ export async function recordGauntletHit(dmg: number): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
-  const h = Math.floor(dmg)
+  const raw = Math.floor(dmg)
+
+  // ── HELD AGAINST THE LOADOUT, LIKE recordRaidHit ─────────────────────────
+  // This fed a gem-paying damage bounty with no ceiling at all. A hit only
+  // happens inside an open descent, so one reported outside a run is refused.
+  // The ceiling is the loadout's own crit (the same profile recordRaidHit
+  // uses) times seven, then widened by the depth reached, because boons stack
+  // with every depth: an honest depth-98 run has landed 8x its captain's raid
+  // best. At depth 100 the ceiling is 77x the base crit, far above any real
+  // hit on record, while a forged number from a fresh run is still bounded.
+  const { data: prof } = await admin.from('profiles').select('gauntlet_max_hit, gauntlet_run_open, gauntlet_run_state').eq('id', user.id).single()
+  if (prof?.gauntlet_run_open !== true) {
+    await flagAnomaly(admin, user.id, 'no_run:recordGauntletHit', 2, { hit: raw })
+    return
+  }
+  const depth = Math.max(0, Math.floor(Number((prof.gauntlet_run_state as GauntletRunState | null)?.cleared ?? 0)))
+  const stats = await getRaidPlayerStats(user.id)
+  const { critMax } = raidDamageProfile(stats.totalPower, stats.shipMinDamage, stats.raidMods?.damagePct ?? 0)
+  let ceil = critMax * (stats.classDamageMult || 1)
+  if (stats.manowarAugment) ceil *= stats.manowarAugment.megaMult
+  const clampCeiling = Math.max(500, Math.ceil(ceil)) * 7 * (1 + depth / 10)
+  if (raw > clampCeiling) {
+    await flagAnomaly(admin, user.id, 'cap_trip:recordGauntletHit', 3, { hit: raw, clampCeiling, depth })
+  }
+  const h = Math.floor(Math.min(raw, clampCeiling))
+
   await admin.rpc('bump_gauntlet_hit', { uid: user.id, dmg: h })
   // The Gauntlet has its own damage ladder, on its own scale: raid hits top out
   // around 760 and a deep descent reaches thousands, so one shared number would
   // be a wall in one place and a formality in the other.
-  //
-  // NOT clamped, and that is worth being honest about: gauntlet damage has no
-  // server-side ceiling today because the Biggest Hit board it feeds is vanity.
-  // A damage bounty pays gems, so this borrows a trust boundary it did not set.
-  // The run token bounds a descent, so the exposure is one forged hit per run.
   if (h >= GAUNTLET_DAMAGE_MIN) void logBountyEvent(user.id, 'gauntlet_hit', h)
   // Also track the lifetime biggest hit on the profile (for the One Shot badge).
-  const { data: prof } = await admin.from('profiles').select('gauntlet_max_hit').eq('id', user.id).single()
+  // Conditional on the stored best still being lower, so two hits racing
+  // cannot write the smaller one last.
   if (h > ((prof?.gauntlet_max_hit as number | null) ?? 0)) {
     await admin.from('profiles').update({ gauntlet_max_hit: h }).eq('id', user.id)
+      .or(`gauntlet_max_hit.is.null,gauntlet_max_hit.lt.${h}`)
   }
 }
 
@@ -203,7 +228,7 @@ export async function claimDailyTribute(): Promise<{ ok: true; fathoms: number }
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_upgrades, dons_gauntlet_upgrades, gauntlet_fathoms, dons_stipend_claimed_at')
+    .select('gauntlet_upgrades, dons_gauntlet_upgrades, dons_stipend_claimed_at')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found.' }
@@ -214,11 +239,19 @@ export async function claimDailyTribute(): Promise<{ ok: true; fathoms: number }
   if (!ownedAll.includes(DONS_DAILY_TRIBUTE_ID)) return { error: 'You haven’t earned the Don’s Tribute.' }
   if (stipendClaimedToday(profile.dons_stipend_claimed_at as string | null)) return { error: 'You’ve already collected today’s tribute. Back tomorrow.' }
 
-  const fathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + DONS_DAILY_TRIBUTE_AMOUNT
-  await admin
+  // STAMP FIRST, conditionally: only a stamp that is still from before today's
+  // UTC midnight can move. Two taps together both passed the read above; only
+  // one of them moves the stamp, and only that one is paid.
+  const now = new Date()
+  const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString()
+  const { data: stamped } = await admin
     .from('profiles')
-    .update({ gauntlet_fathoms: fathoms, dons_stipend_claimed_at: new Date().toISOString() })
+    .update({ dons_stipend_claimed_at: now.toISOString() })
     .eq('id', user.id)
+    .or(`dons_stipend_claimed_at.is.null,dons_stipend_claimed_at.lt."${midnight}"`)
+    .select('id')
+  if (!stamped || stamped.length === 0) return { error: 'You’ve already collected today’s tribute. Back tomorrow.' }
+  const fathoms = await grant(admin, user.id, 'gauntlet_fathoms', DONS_DAILY_TRIBUTE_AMOUNT)
   return { ok: true, fathoms }
 }
 
@@ -299,13 +332,15 @@ export async function claimGauntletUpgrade(id: string, variant: GauntletVariant 
   }
   const deepest = ((profile as Record<string, unknown>)[depthCol] as number | null) ?? 0
   if (deepest < upgrade.depthRequired) return { error: `Reach depth ${upgrade.depthRequired} in the Gauntlet first.` }
-  const fathoms = (profile.gauntlet_fathoms as number | null) ?? 0
-  if (fathoms < upgrade.cost) return { error: 'Not enough Fathoms.' }
-
-  const newFathoms = fathoms - upgrade.cost
-  const newOwned = [...owned, id]
-  await admin.from('profiles').update({ gauntlet_fathoms: newFathoms, [ownedCol]: newOwned }).eq('id', user.id)
-  return { ok: true, fathoms: newFathoms, owned: newOwned }
+  // The spend IS the guard: taken in place, or not at all.
+  const newFathoms = await spend(admin, user.id, 'gauntlet_fathoms', upgrade.cost)
+  if (newFathoms == null) return { error: 'Not enough Fathoms.' }
+  // Added once. A concurrent twin that bought it first gets its Fathoms back.
+  if (!(await arrayAdd(admin, user.id, ownedCol, id))) {
+    await grant(admin, user.id, 'gauntlet_fathoms', upgrade.cost)
+    return { error: 'Already unlocked.' }
+  }
+  return { ok: true, fathoms: newFathoms, owned: [...owned, id] }
 }
 
 // The Drowned Shrine's "Davy's Coin" — a double-or-nothing wager of the player's
@@ -335,8 +370,12 @@ export async function wagerGauntletFathoms(stake: number): Promise<
   if (staked < 1) return { error: 'No Fathoms to wager.' }
 
   const won = Math.random() < 0.5
-  const newFathoms = Math.max(0, won ? balance + staked : balance - staked)
-  await admin.from('profiles').update({ gauntlet_fathoms: newFathoms }).eq('id', user.id)
+  // In place. A loss is a spend, and a spend that cannot be covered (the purse
+  // moved since the read) is refused rather than floored at zero.
+  const newFathoms = won
+    ? await grant(admin, user.id, 'gauntlet_fathoms', staked)
+    : await spend(admin, user.id, 'gauntlet_fathoms', staked)
+  if (newFathoms == null) return { error: 'No Fathoms to wager.' }
   return { ok: true, won, stake: staked, fathoms: newFathoms }
 }
 
@@ -891,11 +930,22 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_best_depth, dons_gauntlet_best_depth_ms, dons_gauntlet_deepest_run, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, dons_gauntlet_hc_deepest, dons_gauntlet_hc_best_depth, dons_gauntlet_hc_best_depth_ms, dons_gauntlet_hc_best_pressure, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
+    .select('gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_best_depth, dons_gauntlet_best_depth_ms, dons_gauntlet_deepest_run, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, dons_gauntlet_hc_deepest, dons_gauntlet_hc_best_depth, dons_gauntlet_hc_best_depth_ms, dons_gauntlet_hc_best_pressure, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer, gauntlet_run_state, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
 
   if (!profile || profile.gauntlet_run_open !== true) return { ok: false }
+
+  // DAVY'S TERMS: NO SECOND THOUGHTS. A captain who signed it may only bank at
+  // the breather after a boss. rollDavyOffer and the dock already honour it;
+  // this is the check that holds when the request did not come from the dock.
+  // Read off the checkpoint the server stored (the breather checkpoints before
+  // its dock is shown), and refused WITHOUT closing the run.
+  if (resolveTerms((profile.gauntlet_run_terms as SignedTerms | null) ?? null).cashOutOnlyAfterBoss
+      && (profile.gauntlet_run_state as GauntletRunState | null)?.prevWasBoss !== true) {
+    await flagAnomaly(admin, user.id, 'terms:cashOutBeforeBoss', 2, {})
+    return { ok: false }
+  }
 
   // Which gauntlet is this open run? Don's writes its OWN records (separate
   // leaderboard) + reads its own Locker; the Fathoms purse + lifetime counters
@@ -929,13 +979,12 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // BOUNTIES. How deep a single run got is a moment, not a total:
   // profiles.gauntlet_deepest is a lifetime high-water mark, so a captain who
   // has already seen 15 could never complete "reach depth 10 today" from it.
-  // One row per finished run is the only honest way to answer that, and this is
-  // the only place in the game bounties needed a hook at all.
-  // Fire and forget: a lost tick costs a bounty, never a run.
-  void logBountyEvent(user.id, hc ? 'gauntlet_hc_depth' : 'gauntlet_depth', cd)
+  // One row per finished run is the only honest way to answer that. Logged
+  // below, once the close has gone through, so a doubled request logs once.
   if (rd <= 0) {
-    // Nothing cleared — just close the run.
-    await admin.from('profiles').update({ gauntlet_run_open: false }).eq('id', user.id)
+    // Nothing cleared — just close the run (once).
+    const { data: closed } = await admin.from('profiles').update({ gauntlet_run_open: false }).eq('id', user.id).eq('gauntlet_run_open', true).select('id')
+    if (closed && closed.length > 0) void logBountyEvent(user.id, hc ? 'gauntlet_hc_depth' : 'gauntlet_depth', cd)
     return { ok: false }
   }
 
@@ -1001,7 +1050,6 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   if (!isDon && hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && Math.random() < chestDrop(chestCannonDropChance(cd))) {
     droppedItems.push(BLOOD_CANNON_ITEM_ID)
   }
-  const newRaidItems = droppedItems.length > 0 ? [...new Set([...ownedItems, ...droppedItems])] : ownedItems
 
   // DAVY'S TERMS — the Pressure this run actually carried, derived from the terms
   // column WE stored at run start and never from the client. Hoisted above the skin
@@ -1045,7 +1093,6 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const hcUnlocks = hc ? HARDCORE_UNLOCKS.filter(u => prevHcDeepest < u.depth && u.depth <= hcDeepest) : []
   const hcSkinIds = hcUnlocks.map(u => u.skinId).filter(id => !ownedSkins.includes(id))
   const grantSkins = [...(droppedSkinId ? [droppedSkinId] : []), ...(droppedHcSkinId ? [droppedHcSkinId] : []), ...(droppedPressureSkinId ? [droppedPressureSkinId] : []), ...hcSkinIds]
-  const skinFields = grantSkins.length > 0 ? { ship_skins: [...new Set([...ownedSkins, ...grantSkins])] } : {}
 
   // Blood Gems — the Hardcore premium currency, dropped in the cash-out chest
   // (survive-only). Amount is a live server roll (~0.5–0.7 per reward depth), so
@@ -1065,7 +1112,6 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   ]
   const baseBloodGems   = hc ? bloodGemsForDepth(payDepth, Math.random()) : 0
   const earnedBloodGems = Math.round(baseBloodGems * gemMult * donsBloodGemMult(accountUpgrades))
-  const newBloodGems    = ((profile.blood_gems as number | null) ?? 0) + earnedBloodGems
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
   const navRenown = navRenownEffects(profile.nav_renown_alloc as RenownAlloc | null)
@@ -1096,9 +1142,6 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const grossFathoms     = Math.round(fathomsForDepth(rd, variant) * gauntletFathomsMult(upgrades) * (hc ? HC_FATHOMS_MULT : 1) * offerFathomMult(offerTaken))
   const fenceSpent       = Math.max(0, Math.round(runSnapshot?.fenceSpent ?? 0))
   const earnedFathoms    = Math.max(0, grossFathoms - fenceSpent)
-  const newFathoms       = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
-  const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
-  const newGems          = (profile.gems ?? 0) + gems
   const newExpeditionXP  = (profile.expedition_xp ?? 0) + bankedXp
   // A cash-out is Navigation XP, so it charges The Primeval Eye too.
   const reelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], bankedXp)
@@ -1174,11 +1217,14 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const runClock = tickActiveMs(
     (profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at, { stop: true })
 
-  const [, , crewXP] = await Promise.all([
-    admin.from('profiles').update({
-      doubloons: newDoubloons,
-      gems: newGems,
-      expedition_xp: newExpeditionXP,
+  // ── CLOSE FIRST, PAY ONLY IF THIS CALL CLOSED IT ─────────────────────────
+  // Two cash-outs fired together both read an open run above and both paid.
+  // The close is conditional on the run still being open; the request that
+  // loses that race gets { ok: false } and pays nothing. Balances, Nav XP and
+  // the lifetime counters then move IN PLACE (lib/wallet, bump_profile_stat),
+  // and owned things are added once (arrayAdd), so nothing written here can
+  // undo a purchase or a forge that landed while the run was being settled.
+  const { data: closed } = await admin.from('profiles').update({
       ...(reelCharge !== null ? { anglers_patience_xp: reelCharge } : {}),
       gauntlet_run_open: false,
       gauntlet_run_state: null,
@@ -1191,21 +1237,35 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       // eventually be able to say so.
       ...(hc && cd >= ((profile.gauntlet_hc_best_depth as number | null) ?? 0)
         ? { [HC.bestPressure]: runPressure } : {}),
-      gauntlet_fathoms: newFathoms,
-      blood_gems: newBloodGems,
-      // Lifetime Blood Gems earned (never decremented on spend) — backs the
-      // Blood-Rich / Bloodhoard badges. Adds 0 on a normal (non-hc) cash-out.
-      blood_gems_earned: ((profile.blood_gems_earned as number | null) ?? 0) + earnedBloodGems,
-      // Lifetime counters for the achievement badges (a cash-out ends a run).
-      gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
-      gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,
-      raid_items: newRaidItems,
       // Fold in the last stretch and stop the clock. The run row below reads the
       // same figure, so the log and the profile cannot disagree.
       ...runClock,
-      ...skinFields,
       ...recordFields,
-    }).eq('id', user.id),
+    }).eq('id', user.id).eq('gauntlet_run_open', true).select('id')
+  if (!closed || closed.length === 0) return { ok: false }
+
+  // BOUNTIES. How deep a single run got is a moment, not a total, so one row
+  // per finished run; logged here, after the close, so a run logs once.
+  void logBountyEvent(user.id, hc ? 'gauntlet_hc_depth' : 'gauntlet_depth', cd)
+
+  const bump = (col: string, n: number) =>
+    n > 0 ? admin.rpc('bump_profile_stat', { uid: user.id, col, n }) : null
+  const [newDoubloons, newGems, newFathoms, newBloodGems, , , crewXP] = await Promise.all([
+    grant(admin, user.id, 'doubloons', bankedDoubloons),
+    grant(admin, user.id, 'gems', gems),
+    grant(admin, user.id, 'gauntlet_fathoms', earnedFathoms),
+    grant(admin, user.id, 'blood_gems', earnedBloodGems),
+    Promise.all([
+      bump('expedition_xp', bankedXp),
+      // Lifetime Blood Gems earned (never decremented on spend) — backs the
+      // Blood-Rich / Bloodhoard badges. Adds 0 on a normal (non-hc) cash-out.
+      bump('blood_gems_earned', earnedBloodGems),
+      // Lifetime counters for the achievement badges (a cash-out ends a run).
+      bump('gauntlet_runs_completed', 1),
+      bump('gauntlet_fathoms_earned', earnedFathoms),
+      ...droppedItems.map(id => arrayAdd(admin, user.id, 'raid_items', id)),
+      ...grantSkins.map(id => arrayAdd(admin, user.id, 'ship_skins', id)),
+    ]),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: bankedDoubloons,
@@ -1312,7 +1372,12 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // Fathoms bank on ships SUNK (rewardDepth) — earned win or lose, since they
   // reward descending, not surviving (Lucky Locker boosts the payout). Veteran's
   // Start's head start is excluded here, same as on cash-out.
-  const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth)))
+  // Held against the run clock exactly as cashOutGauntlet is (MIN_MS_PER_DEPTH):
+  // a death reported at depth 90 one second into a run pays for the depth the
+  // clock allows, not the one it names.
+  const clockMs = tickActiveMs(profile.gauntlet_run_active_ms, profile.gauntlet_run_tick_at, { stop: true }).gauntlet_run_active_ms
+  const timeDepth = Math.floor(clockMs / MIN_MS_PER_DEPTH)
+  const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth), timeDepth))
   const grossFathoms = Math.round(fathomsForDepth(rd, isDon ? 'don' : 'davy') * gauntletFathomsMult(activeGauntletUpgrades(
     ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [],
     ((isDon ? profile.dons_gauntlet_upgrades_off : profile.gauntlet_upgrades_off) as string[] | null) ?? [],
@@ -1321,14 +1386,57 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // earnings, clamped so a purchase can never dip into the banked purse.
   const fenceSpent = Math.max(0, Math.round(runSnapshot?.fenceSpent ?? 0))
   const earnedFathoms = Math.max(0, grossFathoms - fenceSpent)
-  const newFathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
 
-  const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth)))
+  // The combat depth may sit above the paid depth by the Veteran's Start head
+  // start and no more, the same bound cashOutGauntlet uses.
+  const headStart = gauntletStartDepth(
+    ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [],
+  ) - 1
+  const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth), rd + headStart))
   const hardcore = profile.gauntlet_run_hardcore === true
+  const squad = hardcore ? ((profile.gauntlet_hc_squad as number[] | null) ?? []) : []
+
+  // Death depth tracking: hardcore deaths advance the hardcore counter (the
+  // grim Ferryman's Toll badge); normal deaths advance the normal one (Greed's
+  // Price). Kept apart so the two modes' badges don't cross-contaminate.
+  const deathFields = hardcore
+    ? { [hcCols(isDon ? 'don' : 'davy').deepestDied]: Math.max((profile[hcCols(isDon ? 'don' : 'davy').deepestDied] as number | null) ?? 0, cd), gauntlet_run_hardcore: false, gauntlet_hc_squad: null }
+    : isDon
+      ? { dons_gauntlet_deepest_died: Math.max((profile.dons_gauntlet_deepest_died as number | null) ?? 0, cd) }
+      : { gauntlet_deepest_died: Math.max((profile.gauntlet_deepest_died as number | null) ?? 0, cd) }
+
+  // Close the run + bank Fathoms ONLY (hardcore banks at the normal rate — the
+  // premium is reserved for surviving). Deepest record / recap / unlocks belong
+  // to cash-outs. Lifetime badge counters advance (a death still ends a run).
+  const deathClock = tickActiveMs(
+    (profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at, { stop: true })
+
+  // ── CLOSE FIRST, AND ONLY ONCE ────────────────────────────────────────────
+  // Conditional on the run still being open, so two deaths reported together
+  // (or a death racing a cash-out) settle the run once: the loser is told the
+  // run is already closed and pays nothing, drowns nobody, logs nothing.
+  const { data: closed } = await admin
+    .from('profiles')
+    .update({
+      gauntlet_run_open: false,
+      gauntlet_run_state: null,
+      gauntlet_resumes_used: 0,
+      gauntlet_run_paused: false,
+      gauntlet_run_terms: null,
+      gauntlet_run_offer: null,
+      ...deathClock,
+      ...deathFields,
+    })
+    .eq('id', user.id)
+    .eq('gauntlet_run_open', true)
+    .select('id')
+  if (!closed || closed.length === 0) {
+    return { ok: false, deepest: prevDeepest, earnedFathoms: 0, newFathoms: (profile.gauntlet_fathoms as number | null) ?? 0, hardcore: false, fallenCount: 0 }
+  }
+
   // A run that ended in the water still reached its depth, and a bounty that
   // only paid on a clean cash-out would quietly punish pushing for one more.
   void logBountyEvent(user.id, hardcore ? 'gauntlet_hc_depth' : 'gauntlet_depth', cd)
-  const squad = hardcore ? ((profile.gauntlet_hc_squad as number[] | null) ?? []) : []
 
   // ── Hardcore permadeath — the squad you sent in is lost to the Locker ─────
   // Soft-delete the exact crew that entered (died_at + died_hardcore_depth so
@@ -1346,37 +1454,14 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
     fallenCount = (killed ?? []).length
   }
 
-  // Death depth tracking: hardcore deaths advance the hardcore counter (the
-  // grim Ferryman's Toll badge); normal deaths advance the normal one (Greed's
-  // Price). Kept apart so the two modes' badges don't cross-contaminate.
-  const deathFields = hardcore
-    ? { [hcCols(isDon ? 'don' : 'davy').deepestDied]: Math.max((profile[hcCols(isDon ? 'don' : 'davy').deepestDied] as number | null) ?? 0, cd), gauntlet_run_hardcore: false, gauntlet_hc_squad: null }
-    : isDon
-      ? { dons_gauntlet_deepest_died: Math.max((profile.dons_gauntlet_deepest_died as number | null) ?? 0, cd) }
-      : { gauntlet_deepest_died: Math.max((profile.gauntlet_deepest_died as number | null) ?? 0, cd) }
-
-  // Close the run + bank Fathoms ONLY (hardcore banks at the normal rate — the
-  // premium is reserved for surviving). Deepest record / recap / unlocks belong
-  // to cash-outs. Lifetime badge counters advance (a death still ends a run).
-  const deathClock = tickActiveMs(
-    (profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at, { stop: true })
-
-  await admin
-    .from('profiles')
-    .update({
-      gauntlet_run_open: false,
-      gauntlet_fathoms: newFathoms,
-      gauntlet_run_state: null,
-      gauntlet_resumes_used: 0,
-      gauntlet_run_paused: false,
-      gauntlet_run_terms: null,
-      gauntlet_run_offer: null,
-      gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
-      gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,
-      ...deathClock,
-      ...deathFields,
-    })
-    .eq('id', user.id)
+  // Fathoms and the lifetime counters move in place.
+  const bump = (col: string, n: number) =>
+    n > 0 ? admin.rpc('bump_profile_stat', { uid: user.id, col, n }) : null
+  const [newFathoms] = await Promise.all([
+    grant(admin, user.id, 'gauntlet_fathoms', earnedFathoms),
+    bump('gauntlet_runs_completed', 1),
+    bump('gauntlet_fathoms_earned', earnedFathoms),
+  ])
 
   // A death is a finished run too, and the one that matters most for pacing:
   // logging only cash-outs would measure the runs that went well.
@@ -1405,16 +1490,10 @@ export async function buyBaitWithFathoms(baitType: string): Promise<
   if (bait.type !== baitType || cost <= 0 || bundle <= 0) return { error: 'That lure is not for sale here.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('gauntlet_fathoms').eq('id', user.id).single()
-  if (!profile) return { error: 'Profile not found.' }
-  const fathoms = (profile.gauntlet_fathoms as number | null) ?? 0
-  if (fathoms < cost) return { error: 'Not enough Fathoms.' }
-
-  const newFathoms = fathoms - cost
-  await Promise.all([
-    admin.from('profiles').update({ gauntlet_fathoms: newFathoms }).eq('id', user.id),
-    admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: baitType, p_qty: bundle }),
-  ])
+  // The spend is the guard, before the lures are handed over.
+  const newFathoms = await spend(admin, user.id, 'gauntlet_fathoms', cost)
+  if (newFathoms == null) return { error: 'Not enough Fathoms.' }
+  await admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: baitType, p_qty: bundle })
   return { ok: true, fathoms: newFathoms, added: bundle, baitType }
 }
 

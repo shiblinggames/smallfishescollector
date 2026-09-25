@@ -22,6 +22,7 @@
 // visitor's money or moves a host's furniture, and the page renders without the
 // controls rather than with disabled ones.
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EMPTY_HOMESTEAD, builtAt, houseTier, type Homestead, type FurnitureSlot } from '@/lib/homestead'
@@ -127,7 +128,7 @@ async function friendIds(admin: ReturnType<typeof createAdminClient>, me: string
  */
 export async function visitableHomesteads(): Promise<Visitable[]> {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   if (!session?.user) return []
   const admin = createAdminClient()
 
@@ -174,7 +175,7 @@ export type Visit = {
  */
 export async function homesteadOf(username: string): Promise<Visit | null> {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   if (!session?.user) return null
   const clean = (username ?? '').trim().toLowerCase()
   if (!clean) return null
@@ -280,7 +281,7 @@ const AT_SEA_MS = 2 * 60_000
  */
 export async function friendsAtSea(): Promise<FriendAtSea[]> {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   if (!session?.user) return []
   const admin = createAdminClient()
 

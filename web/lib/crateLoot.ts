@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { CRATE_PET_CHANCE, rollPet } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
+import { arrayAdd, grant } from '@/lib/wallet'
 
 // Crate loot tables + the shared roller. Kept OUT of the fishing 'use server'
 // actions file on purpose: this is a plain module, so grantCrateLoot is NOT a
@@ -112,7 +113,7 @@ export async function grantCrateLoot(
   tier: CrateTier,
 ): Promise<CrateLoot> {
   const { data: profile } = await admin.from('profiles')
-    .select('doubloons, unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets, equipped_pet')
+    .select('unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets')
     .eq('id', userId).single()
 
   // ── THE CRATES-OPENED COUNTER IS NOT BUMPED HERE ────────────────────────
@@ -148,12 +149,12 @@ export async function grantCrateLoot(
   let dupePet: DupePet | undefined
   if (Math.random() < CRATE_PET_CHANCE[tier]) {
     const pet = rollPet()
-    if (!unlockedPets.includes(pet.id)) {
-      await admin.from('profiles').update({
-        unlocked_pets: [...unlockedPets, pet.id],
-        // Auto-equip the first pet so it lands in the loadout without an extra tap.
-        equipped_pet: (profile?.equipped_pet as string | null) ?? pet.id,
-      }).eq('id', userId)
+    // Added in place, never by writing back the list read above: a concurrent
+    // grant would otherwise be wiped. false means it landed aboard meanwhile,
+    // which is a dupe like any other.
+    if (!unlockedPets.includes(pet.id) && await arrayAdd(admin, userId, 'unlocked_pets', pet.id)) {
+      // Auto-equip the first pet so it lands in the loadout without an extra tap.
+      await admin.from('profiles').update({ equipped_pet: pet.id }).eq('id', userId).is('equipped_pet', null)
       return {
         type: 'pet',
         petId: pet.id, petName: pet.name,
@@ -193,22 +194,22 @@ export async function grantCrateLoot(
   if (outcome === 'cosmetic') {
     const picked = unownedCosmetics[Math.floor(Math.random() * unownedCosmetics.length)]
     if (picked.kind === 'skin') {
-      await admin.from('profiles').update({ unlocked_character_colors: [...unlockedSkins, picked.id] }).eq('id', userId)
+      await arrayAdd(admin, userId, 'unlocked_character_colors', picked.id)
       return pay({ type: 'skin', skinId: picked.id, skinName: picked.name })
     }
     if (picked.kind === 'boat') {
-      await admin.from('profiles').update({ unlocked_boats: [...unlockedBoats, picked.id] }).eq('id', userId)
+      await arrayAdd(admin, userId, 'unlocked_boats', picked.id)
       return pay({ type: 'boat', boatId: picked.id, boatName: picked.name, boatImageUrl: picked.imageUrl })
     }
-    await admin.from('profiles').update({ unlocked_hats: [...unlockedHats, picked.id] }).eq('id', userId)
+    await arrayAdd(admin, userId, 'unlocked_hats', picked.id)
     return pay({ type: 'hat', hatId: picked.id, hatName: picked.name, hatImageUrl: picked.imageUrl })
   }
 
   if (outcome === 'doubloons') {
     const [min, max] = CRATE_DOUBLOON_RANGE[tier]
     const amount = Math.floor(min + Math.random() * (max - min + 1))
-    const newDoubloons = (profile?.doubloons ?? 0) + amount
-    await admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', userId)
+    // Paid in place, so a sale landing at the same moment is not overwritten.
+    const newDoubloons = await grant(admin, userId, 'doubloons', amount)
     // The new total rides along (KAN-61): the purse was paid on the server
     // and nothing on the sea was told, so the counter sat where it was until
     // a reload.
@@ -222,12 +223,7 @@ export async function grantCrateLoot(
   let picked = baitPool[0]
   for (const b of baitPool) { baitRand -= b.weight; if (baitRand <= 0) { picked = b; break } }
   const qty = CRATE_BAIT_QTY[tier]
-  const { data: existing } = await admin.from('bait_inventory').select('quantity').eq('user_id', userId).eq('bait_type', picked.type).single()
-  if (existing) {
-    await admin.from('bait_inventory').update({ quantity: existing.quantity + qty }).eq('user_id', userId).eq('bait_type', picked.type)
-  } else {
-    await admin.from('bait_inventory').insert({ user_id: userId, bait_type: picked.type, quantity: qty })
-  }
+  await admin.rpc('upsert_bait', { p_user_id: userId, p_bait_type: picked.type, p_qty: qty })
   const baitName = getBait(picked.type).name
   return pay({ type: 'bait', baitType: picked.type, baitName, quantity: qty })
 }

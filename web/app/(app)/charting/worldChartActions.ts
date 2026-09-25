@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { grant } from '@/lib/wallet'
 import { LANDMARKS, WORLD_CHART_COMPLETION_BONUS } from '@/lib/worldChart'
 
 export async function getWorldChartState(): Promise<{ points: number; claimed: number[] }> {
@@ -42,7 +43,7 @@ export async function claimLandmark(landmarkId: number): Promise<
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('puzzle_points, charting_landmarks_claimed, gems')
+    .select('puzzle_points, charting_landmarks_claimed')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'No profile' }
@@ -59,10 +60,18 @@ export async function claimLandmark(landmarkId: number): Promise<
   const completed = newClaimed.length === LANDMARKS.length
   const bonus = completed ? WORLD_CHART_COMPLETION_BONUS : 0
   const awarded = landmark.gems + bonus
-  const newGems = ((profile.gems as number | null) ?? 0) + awarded
+  // Record the claim FIRST, and only over the exact claimed set we read. Two
+  // taps fired together both reach here; only the one whose update comes back
+  // with a row is paid (and only it can be the one that completes the chart).
+  const claimQ = admin.from('profiles').update({ charting_landmarks_claimed: newClaimed }).eq('id', user.id)
+  const { data: moved } = await (profile.charting_landmarks_claimed == null
+    ? claimQ.is('charting_landmarks_claimed', null)
+    : claimQ.eq('charting_landmarks_claimed', `{${claimed.join(',')}}`)
+  ).select('id')
+  if (!moved || moved.length === 0) return { error: 'Already claimed' }
 
+  const newGems = await grant(admin, user.id, 'gems', awarded)
   await Promise.all([
-    admin.from('profiles').update({ charting_landmarks_claimed: newClaimed, gems: newGems }).eq('id', user.id),
     admin.from('gem_transactions').insert(
       completed
         ? [

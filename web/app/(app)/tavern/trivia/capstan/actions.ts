@@ -10,6 +10,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isPremiumActive } from '@/lib/premium'
+import { grant } from '@/lib/wallet'
 import { getThisWeeksCapstan, type GeneratedPuzzle } from './generate'
 import {
   kingWeekStr,
@@ -72,7 +73,7 @@ function toClient(index: number, gen: GeneratedPuzzle, run: CapstanRun): Capstan
 /** Auth + Captain gate + this week's puzzle set + the player's attempt row. */
 async function load(): Promise<
   | { error: string }
-  | { userId: string; admin: ReturnType<typeof createAdminClient>; week: string; puzzles: GeneratedPuzzle[]; runs: RunsMap; doubloonsAwarded: number }
+  | { userId: string; admin: ReturnType<typeof createAdminClient>; week: string; puzzles: GeneratedPuzzle[]; runs: RunsMap; doubloonsAwarded: number; readAs: string | null }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -101,6 +102,9 @@ async function load(): Promise<
     puzzles,
     runs: (attempt?.runs as RunsMap | null) ?? {},
     doubloonsAwarded: (attempt?.doubloons_awarded as number | null) ?? 0,
+    // The runs exactly as read, frozen before anything mutates them: persist
+    // only lands if the row still holds this. null = no row yet.
+    readAs: attempt ? JSON.stringify(attempt.runs ?? {}) : null,
   }
 }
 
@@ -114,15 +118,28 @@ export async function getCapstanState(): Promise<CapstanState | { error: string 
   }
 }
 
-async function persist(admin: ReturnType<typeof createAdminClient>, userId: string, week: string, runs: RunsMap, doubloonsAwarded: number) {
-  await admin.from('trivia_capstan_attempts').upsert({
-    user_id: userId,
-    date: week,
+/** Save the runs, but only over the exact runs this request read. Two calls
+ *  fired together (two consonants on one spin, two solves) both read the same
+ *  row; only the first save lands, and the other gets false and must not pay
+ *  or report anything. A first save inserts, and the primary key makes a
+ *  concurrent insert lose the same way. */
+async function persist(admin: ReturnType<typeof createAdminClient>, userId: string, week: string, runs: RunsMap, doubloonsAwarded: number, readAs: string | null): Promise<boolean> {
+  const row = {
     runs,
     doubloons_awarded: doubloonsAwarded,
     updated_at: new Date().toISOString(),
-  })
+  }
+  if (readAs === null) {
+    const { error } = await admin.from('trivia_capstan_attempts').insert({ user_id: userId, date: week, ...row })
+    return !error
+  }
+  const { data } = await admin.from('trivia_capstan_attempts').update(row)
+    .eq('user_id', userId).eq('date', week).eq('runs', readAs)
+    .select('user_id')
+  return !!data && data.length > 0
 }
+
+const OUT_OF_STEP = { error: 'The capstan moved on. Refresh and try again.' }
 
 /** Spin the capstan — the server rolls a wedge and resolves hazards immediately;
  *  a value wedge arms the next consonant call. */
@@ -166,7 +183,7 @@ export async function spinCapstan(index: number): Promise<CapstanSpinResult | { 
   }
 
   ctx.runs[String(index)] = run
-  await persist(ctx.admin, ctx.userId, ctx.week, ctx.runs, ctx.doubloonsAwarded)
+  if (!(await persist(ctx.admin, ctx.userId, ctx.week, ctx.runs, ctx.doubloonsAwarded, ctx.readAs))) return OUT_OF_STEP
   return { wedgeIndex, wedge, outcome, puzzle: toClient(index, gen, run) }
 }
 
@@ -204,7 +221,7 @@ export async function callConsonant(index: number, letterRaw: string): Promise<C
   }
 
   ctx.runs[String(index)] = run
-  await persist(ctx.admin, ctx.userId, ctx.week, ctx.runs, ctx.doubloonsAwarded)
+  if (!(await persist(ctx.admin, ctx.userId, ctx.week, ctx.runs, ctx.doubloonsAwarded, ctx.readAs))) return OUT_OF_STEP
   return { letter, count, gained, puzzle: toClient(index, gen, run) }
 }
 
@@ -232,7 +249,7 @@ export async function buyVowel(index: number, letterRaw: string): Promise<Capsta
   run.called.push(letter)
 
   ctx.runs[String(index)] = run
-  await persist(ctx.admin, ctx.userId, ctx.week, ctx.runs, ctx.doubloonsAwarded)
+  if (!(await persist(ctx.admin, ctx.userId, ctx.week, ctx.runs, ctx.doubloonsAwarded, ctx.readAs))) return OUT_OF_STEP
   return { letter, count, gained: 0, puzzle: toClient(index, gen, run) }
 }
 
@@ -261,20 +278,23 @@ export async function solveCapstan(index: number, guessRaw: string): Promise<Cap
     run.called = Array.from(new Set(phrase.replace(/ /g, '').split('')))
     run.earned = run.bank
     pointsEarned = capstanSolvePoints(run.strikes)
+    ctx.doubloonsAwarded += run.earned
 
-    // Read the currencies, pay doubloons + points in one profiles patch.
+    // Flip the run to solved FIRST (guarded on the runs we read), and pay only
+    // if this request is the one that flipped it.
+    ctx.runs[String(index)] = run
+    if (!(await persist(ctx.admin, ctx.userId, ctx.week, ctx.runs, ctx.doubloonsAwarded, ctx.readAs))) return OUT_OF_STEP
+
     const { data: prof } = await ctx.admin
       .from('profiles')
-      .select('doubloons, parlor_points')
+      .select('parlor_points')
       .eq('id', ctx.userId).single()
-    const prevDoubloons = (prof?.doubloons as number | null) ?? 0
     const prevPoints = (prof?.parlor_points as number | null) ?? 0
     newPoints = prevPoints + pointsEarned
     rankedUp = parlorRank(prevPoints).rank.title !== parlorRank(newPoints).rank.title
-    newDoubloons = prevDoubloons + run.earned
+    newDoubloons = await grant(ctx.admin, ctx.userId, 'doubloons', run.earned)
 
-    ctx.doubloonsAwarded += run.earned
-    await ctx.admin.from('profiles').update({ doubloons: newDoubloons, parlor_points: newPoints }).eq('id', ctx.userId)
+    await ctx.admin.from('profiles').update({ parlor_points: newPoints }).eq('id', ctx.userId)
     if (run.earned > 0) {
       await ctx.admin.from('doubloon_transactions').insert({
         user_id: ctx.userId,
@@ -285,10 +305,10 @@ export async function solveCapstan(index: number, guessRaw: string): Promise<Cap
   } else {
     run.strikes += 1
     if (run.strikes >= CAPSTAN_MAX_STRIKES) run.status = 'failed'
+    ctx.runs[String(index)] = run
+    if (!(await persist(ctx.admin, ctx.userId, ctx.week, ctx.runs, ctx.doubloonsAwarded, ctx.readAs))) return OUT_OF_STEP
   }
 
-  ctx.runs[String(index)] = run
-  await persist(ctx.admin, ctx.userId, ctx.week, ctx.runs, ctx.doubloonsAwarded)
   return {
     correct,
     puzzle: toClient(index, gen, run),

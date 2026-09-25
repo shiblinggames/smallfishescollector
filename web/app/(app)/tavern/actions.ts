@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { spend, grant } from '@/lib/wallet'
 import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT, SLOT_BONUS_MULT } from './constants'
 import type { SlotSymbolId } from './constants'
 
@@ -148,8 +149,10 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
-  const chipsBefore = (profile.casino_chips as number | null) ?? 0
-  if (chipsBefore < wager) return { error: 'Not enough chips' }
+  // The wager leaves the purse in place before the roll. That is the guard:
+  // two spins fired together cannot both bet the same chips.
+  const afterStake = await spend(admin, user.id, 'casino_chips', wager)
+  if (afterStake === null) return { error: 'Not enough chips' }
   // Admins still spin + feed the pot, but can't TAKE the community jackpot —
   // a catfish triple pays them a normal big win instead, pot left intact.
   const isAdmin = (profile as { is_admin?: boolean | null }).is_admin === true
@@ -266,7 +269,7 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   }
 
   const net = payout - wager
-  const newChips = chipsBefore + net
+  const newChips = payout > 0 ? await grant(admin, user.id, 'casino_chips', payout) : afterStake
 
   // Chip movement is internal to the casino session — no
   // doubloon_transactions row here (matches blackjack/roulette;
@@ -281,7 +284,6 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
 
   await Promise.all([
     admin.from('profiles').update({
-      casino_chips: newChips,
       slots_session_net: newSessionNet,
       // Consume the one-time forced-spin override so it only fires once.
       ...(isForced ? { slots_force_next: null } : {}),

@@ -18,6 +18,7 @@
 // showing: it means somebody double-tapped, or two tabs raced, and the honest
 // answer is "you already have this one".
 
+import { verifiedSession } from '@/lib/verifiedSession'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ISLE_BY_ID, ISLES, type IsleNote } from '@/lib/seaIsles'
@@ -54,7 +55,7 @@ export async function getDiscoveries(): Promise<string[]> {
   const supabase = await createClient()
   // getSession, not getUser: this is a read of the caller's own rows on a hot
   // page load, and getUser costs a round trip to the auth server.
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await verifiedSession(supabase)
   if (!session?.user) return []
   const admin = createAdminClient()
   const { data } = await admin

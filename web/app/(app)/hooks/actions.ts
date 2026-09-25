@@ -6,6 +6,7 @@ import { HOOKS } from '@/lib/hooks'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import { revalidatePath } from 'next/cache'
+import { grant, spend } from '@/lib/wallet'
 
 export async function buyHook(): Promise<{ hookTier: number; doubloons: number } | { error: string }> {
   const supabase = await createClient()
@@ -29,12 +30,22 @@ export async function buyHook(): Promise<{ hookTier: number; doubloons: number }
   const cost = HOOKS[nextTier].cost
   const hookReq = fishingGearLevelReq(HOOKS[nextTier])
   if (getLevelFromXP(profile.fishing_xp ?? 0) < hookReq) return { error: `Reach Fishing Lv ${hookReq} to buy the ${HOOKS[nextTier].name}` }
-  if (profile.doubloons < cost) return { error: 'Not enough doubloons' }
-
-  const newDoubloons = profile.doubloons - cost
+  // Spend first, in place; the result is the guard. Then raise the tier only
+  // from the value read above; a concurrent twin that got there first gets
+  // its charge back.
+  const newDoubloons = await spend(admin, user.id, 'doubloons', cost)
+  if (newDoubloons === null) return { error: 'Not enough doubloons' }
+  const raise = admin.from('profiles').update({ hook_tier: nextTier }).eq('id', user.id)
+  const { data: raised } = await (profile.hook_tier == null
+    ? raise.is('hook_tier', null)
+    : raise.eq('hook_tier', currentTier)
+  ).select('id')
+  if (!raised || raised.length === 0) {
+    await grant(admin, user.id, 'doubloons', cost)
+    return { error: 'Your tackle just changed. Try again.' }
+  }
 
   await Promise.all([
-    admin.from('profiles').update({ hook_tier: nextTier, doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: -cost,
