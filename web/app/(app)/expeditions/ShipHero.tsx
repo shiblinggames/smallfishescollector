@@ -487,9 +487,6 @@ const shipPanelBg = (tint?: string) =>
  * chart and the campaign panel already refuse to give: you find out by getting
  * there. "Not yet" is the whole message.
  */
-/** The berth she is drawn on in the Battle Loadout, the Gunwharf's own. */
-const BL_BERTH = '/gunwharf-berth.webp'
-
 /** The small "i" on a loadout card: the full sheet, since the card itself
  *  now equips on a press. A sibling of the card's button, never inside it. */
 function InfoDot({ label, onClick }: { label: string; onClick: () => void }) {
@@ -2093,33 +2090,14 @@ export default function ShipHero({
                   the question you opened the page with. */}
               {/* ── THE LOADOUT, RE-LAID (Kong, 2026-09-26: still hard to use) ──
                   Two columns once the sheet is wide (.bl-grid, a container
-                  query): her on her berth with what is mounted on the left, the
-                  armory on the right. ONE PRESS does the job now: an armory card
+                  query): what is mounted on the left (no picture of her: this
+                  screen is only the equipment), the armory on the right. ONE PRESS does the job now: an armory card
                   equips (or swaps a lower grade out), a mounted card comes off,
                   and the small "i" on each opens the full sheet. It used to be a
                   press to open a sheet and a second press inside it. */}
               <div className="bl-host">
               <div className="bl-grid">
               <div className="bl-hull">
-              <div style={{
-                position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '16 / 9', marginBottom: '0.8rem',
-                background: `url(${BL_BERTH}) 58% 72% / cover no-repeat, #0d1e2b`,
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}>
-                <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,12,18,0) 50%, rgba(8,12,18,0.6) 100%)' }} />
-                {shipHeroSrc && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={shipHeroSrc} alt="" aria-hidden decoding="async" style={{
-                    position: 'absolute', left: '10%', right: '10%', bottom: '8%', width: '80%', height: '78%', objectFit: 'contain',
-                    filter: `drop-shadow(0 14px 18px rgba(0,0,0,0.45))${skinFilter && skinFilter !== 'none' ? ` ${skinFilter}` : ''}`,
-                  }} />
-                )}
-                <span className="font-karla font-800 uppercase" style={{
-                  position: 'absolute', left: 12, bottom: 10, padding: '0.25rem 0.6rem', borderRadius: 999,
-                  fontSize: '0.58rem', letterSpacing: '0.14em', color: '#f4e6c2',
-                  background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(240,192,64,0.35)',
-                }}>{slotsFilled} / {slotsTotal} mounted</span>
-              </div>
               <LoadoutSummary equippedIds={chargedEquippedIds} onOpenEffects={() => setEffectsOpen(true)} />
               {/* Names the SECTION, matching the Inventory divider below, so the
                   two halves of the page read as a pair. */}

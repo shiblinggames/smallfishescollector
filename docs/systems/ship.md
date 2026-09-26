@@ -204,9 +204,8 @@ equipped there repaints her on the left at once.
 
 Kong: still hard to use, fix it for phone and desktop. The Loadout disc's sheet (`ShipSheet`
 focus `items`) is wide now (1060). Inside `ShipHero`'s loadout tab a container query
-(`.bl-host` / `.bl-grid`): **left** her on the Gunwharf berth (`/gunwharf-berth.webp`, the
-`/ship-hero/` art with her skin filter) with an "N / M mounted" chip, the `LoadoutSummary`, and
-the mounted slots as larger cards (`.bl-slots`); **right** the armory, still shelved by tier,
+(`.bl-host` / `.bl-grid`): **left** the `LoadoutSummary` and the mounted slots (no ship picture: Kong, it is
+only the equipment) as larger cards (`.bl-slots`); **right** the armory, still shelved by tier,
 as tinted cards four across (three on a phone, `.bl-inv`). The hull column stays in view while
 the armory scrolls. **One press does the job**: an armory card equips (or swaps a lower grade
 out, same `toggleItem` rules), a mounted card comes off, and the small "i" (`InfoDot`, a sibling
