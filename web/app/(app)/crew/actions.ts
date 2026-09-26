@@ -326,31 +326,25 @@ export async function getCrewState(): Promise<CrewState | null> {
   // Free board fills once per UTC day; gem rerolls (which set the date too)
   // won't be clobbered by this.
   if ((prof as any).last_free_recruit_date !== today) {
-    // One-shot guaranteed legendary, if one is owed. Cleared in the SAME update
-    // that stamps the date, so the roll that honours it is the only roll that
-    // can — a second tab arriving late finds the flag already spent.
+    // ── A GUARANTEED LEGENDARY NEVER LANDS ON THE FREE BOARD (Kong,
+    // 2026-09-26). The one-shot flag (`crew_next_roll_legendary`, pinned or
+    // not) is honoured ONLY by the paid reroll, and this path neither uses nor
+    // clears it. The free board fills itself the moment the crew screen opens,
+    // so a gift spent here would be spent by visiting the page, on a roll the
+    // player never chose to take.
     //
-    // A PINNED legendary is reserved for the PAID reroll and this path leaves it
-    // alone entirely, neither honouring nor clearing it. The free board fills
-    // itself the moment the crew screen is opened, so without this a gift aimed
-    // at a specific crew would be spent by simply visiting the page the next
-    // day, and spent on a roll the player never chose to take. An UNPINNED flag
-    // still fires here exactly as it always has.
-    const pinnedSlug = ((prof as any).crew_next_roll_legendary_slug as string | null) ?? null
-    const owedLegendary = (prof as any).crew_next_roll_legendary === true && !pinnedSlug
     // Stamp the date FIRST, and only if it is still stale. Two tabs opening at
     // the rollover both get here; only the one whose stamp lands refills, so
-    // boards never stack and an owed legendary is honoured once.
+    // boards never stack.
     let stampQ = admin.from('profiles')
-      .update({ last_free_recruit_date: today, ...(owedLegendary ? { crew_next_roll_legendary: false, crew_next_roll_legendary_slug: null } : {}) })
+      .update({ last_free_recruit_date: today })
       .eq('id', user.id)
     const prevDate = ((prof as any).last_free_recruit_date as string | null) ?? null
     stampQ = prevDate === null ? stampQ.is('last_free_recruit_date', null) : stampQ.eq('last_free_recruit_date', prevDate)
-    if (owedLegendary) stampQ = stampQ.eq('crew_next_roll_legendary', true)
     const { data: stamped } = await stampQ.select('id')
     if (stamped && stamped.length > 0) {
       await admin.from('daily_recruits').delete().eq('user_id', user.id)
-      const rows = generateBoardRows(user.id, DAILY_RECRUITS, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, owedLegendary, null)
+      const rows = generateBoardRows(user.id, DAILY_RECRUITS, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, false, null)
       if (rows.length) await admin.from('daily_recruits').insert(rows)
     }
   }

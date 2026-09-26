@@ -52,6 +52,12 @@ title, its own guided tour — is gone. Everything it did happens on the sea:
   about colour — a rarity dot, the chase toggle when lit.
 - **The reroll buttons wear what they spend.** The plain reroll was blue, a colour this game
   uses for nothing purchasable; it takes the gem's purple, blood tiers keep blood.
+- **A guaranteed legendary is for the PAID reroll only (2026-09-26, Kong).** The one-shot
+  gift flag `profiles.crew_next_roll_legendary` (optionally pinned by
+  `crew_next_roll_legendary_slug`) is honoured and cleared ONLY by `rerollBoard` (the gem
+  reroll). The free daily board never uses or clears it: it fills when the crew screen opens,
+  so a gift spent there would be spent by visiting the page. It still only draws legendaries
+  the player has unlocked (the campaign gate); a locked pin falls back to a random unlocked one.
 - **`DAILY_RECRUITS` is 3 for everybody.** It was 3 for a Captain and 2 for everyone else — a
   thin perk on a board whose weights make it a common nine times in ten, and it meant the row
   was a different shape depending on who was looking at it.
