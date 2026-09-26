@@ -4265,3 +4265,20 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
   .bl-hull { position: sticky; top: 0; }
   .bl-inv { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* ── The crew promotion card (components/CrewPromotion) ────────────────────
+   A phone: full width to 380, the art giving up height on a short screen so
+   the words and the button stay in view. A desktop: a larger card with larger
+   type. */
+.promo-card { width: min(380px, 100%); }
+.promo-art { aspect-ratio: 4 / 4.2; max-height: 52vh; }
+.promo-body { padding: 0.8rem 1rem 1rem; }
+.promo-name { font-size: 1.45rem; }
+.promo-now { font-size: 0.9rem; }
+@media (max-height: 640px) { .promo-art { max-height: 40vh; } }
+@media (min-width: 760px) and (min-height: 700px) {
+  .promo-card { width: 440px; }
+  .promo-body { padding: 1rem 1.25rem 1.2rem; }
+  .promo-name { font-size: 1.75rem; }
+  .promo-now { font-size: 1rem; }
+}

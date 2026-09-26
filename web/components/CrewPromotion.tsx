@@ -87,6 +87,20 @@ export default function CrewPromotion() {
   useEffect(() => { if (cur) vibrate([0, 30, 40, 60]) }, [cur?.key])
 
   const next = () => setQueue(q => q.slice(1))
+  // A keyboard steps through too: Enter, Space or Escape.
+  useEffect(() => {
+    if (!cur) return
+    // CAPTURED and stopped: Space is also the chart's "act" key, and a key
+    // that dismissed this card must not cast a line underneath it.
+    const on = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+        e.preventDefault(); e.stopImmediatePropagation()
+        setQueue(q => q.slice(1))
+      }
+    }
+    window.addEventListener('keydown', on, true)
+    return () => window.removeEventListener('keydown', on, true)
+  }, [cur?.key])
 
   return (
     <AnimatePresence>
@@ -98,7 +112,9 @@ export default function CrewPromotion() {
           onClick={next}
           style={{
             position: 'fixed', inset: 0, zIndex: 140, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '1rem', background: 'rgba(3,5,9,0.74)',
+            // Clear of the notch and the home bar on a phone.
+            padding: 'max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom))',
+            background: 'rgba(3,5,9,0.74)',
           }}>
           <motion.div key={cur.key}
             initial={{ opacity: 0, y: 24, scale: 0.92 }}
@@ -106,13 +122,18 @@ export default function CrewPromotion() {
             exit={{ opacity: 0, y: -12, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 320, damping: 26 }}
             onClick={e => e.stopPropagation()}
+            className="promo-card"
+            role="dialog" aria-modal aria-label={`${cur.name} promoted to Tier ${cur.tier}`}
             style={{
-              position: 'relative', width: 'min(360px, 100%)', borderRadius: 20, overflow: 'hidden',
+              position: 'relative', borderRadius: 20, overflow: 'hidden',
+              display: 'flex', flexDirection: 'column', maxHeight: '100%',
               background: '#0b0d12', border: `1px solid ${cur.color}88`,
               boxShadow: `0 24px 64px rgba(0,0,0,0.7), 0 0 44px ${cur.color}33`,
             }}>
             {/* The hand, large, on a pool of their class colour. */}
-            <div style={{ position: 'relative', aspectRatio: '4 / 4.2', background: `radial-gradient(90% 80% at 50% 30%, ${cur.color}55, #0b0d12 75%)` }}>
+            {/* The art takes what the screen can spare (.promo-art): a short
+                phone keeps the words and the button in view. */}
+            <div className="promo-art" style={{ position: 'relative', flexShrink: 1, minHeight: 150, background: `radial-gradient(90% 80% at 50% 30%, ${cur.color}55, #0b0d12 75%)` }}>
               {cur.art && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={cur.art} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
@@ -137,24 +158,24 @@ export default function CrewPromotion() {
                 <span className="font-cinzel font-800" style={{ fontSize: '1.35rem', lineHeight: 1, color: '#140d04' }}>{cur.tier}</span>
               </motion.div>
               <div style={{ position: 'absolute', left: 16, right: 16, bottom: 10 }}>
-                <p className="font-cinzel font-800" style={{ margin: 0, fontSize: '1.5rem', color: '#fff', lineHeight: 1.1, textShadow: '0 2px 12px rgba(0,0,0,0.9)' }}>{cur.name}</p>
+                <p className="font-cinzel font-800 promo-name" style={{ margin: 0, color: '#fff', lineHeight: 1.1, textShadow: '0 2px 12px rgba(0,0,0,0.9)' }}>{cur.name}</p>
                 <p className="font-karla font-700 uppercase" style={{ margin: '4px 0 0', fontSize: '0.62rem', letterSpacing: '0.16em', color: cur.color }}>
                   {cur.className} · Level {cur.level}
                 </p>
               </div>
             </div>
 
-            <div style={{ padding: '0.8rem 1rem 1rem' }}>
+            <div className="promo-body" style={{ flexShrink: 0 }}>
               {/* What the Special did, against what it does now. */}
               {cur.from && (
                 <p className="font-karla" style={{ margin: '0 0 6px', fontSize: '0.78rem', color: 'rgba(214,220,230,0.5)', lineHeight: 1.4, textDecoration: 'line-through', textDecorationColor: 'rgba(214,220,230,0.3)' }}>
                   {cur.from}
                 </p>
               )}
-              <p className="font-karla font-700" style={{ margin: 0, fontSize: '0.92rem', color: '#f4efe4', lineHeight: 1.4 }}>
+              <p className="font-karla font-700 promo-now" style={{ margin: 0, color: '#f4efe4', lineHeight: 1.4 }}>
                 <span style={{ color: cur.color, marginRight: 6 }}>Now:</span>{cur.to}
               </p>
-              <motion.button type="button" onClick={next} whileTap={{ scale: 0.97 }}
+              <motion.button type="button" onClick={next} whileTap={{ scale: 0.97 }} autoFocus
                 className="font-cinzel font-800 uppercase tracking-[0.12em]"
                 style={{
                   width: '100%', marginTop: 14, padding: '0.72rem', borderRadius: 11, fontSize: '0.88rem', cursor: 'pointer',

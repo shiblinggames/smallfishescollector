@@ -642,8 +642,8 @@ function CrewPanel({
           return (
             <div title={st.next ? `Their Special steps up at Lv ${st.next}` : 'Fully promoted'}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
-                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: def.color }}>Tier {st.tier}</span>
-                <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: 'rgba(236,220,189,0.6)' }}>
+                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: def.color, whiteSpace: 'nowrap' }}>Tier {st.tier}</span>
+                <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: 'rgba(236,220,189,0.7)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
                   {st.next ? `Next at Lv ${st.next}` : 'Fully promoted'}
                 </span>
               </div>

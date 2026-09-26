@@ -252,6 +252,12 @@ Tier I, so these are Tiers II to VI): five moments in a hand's whole life, and O
   `.sea-frozen` surface (fight or reel), a `.sea-tour-lock`, `coach-lock`, or any `/raids` page.
   Checks on arrival, page change (15s floor), tab return, every 45s while visible, and on
   `crew-changed` / `promotions-check`.
+- **Sized for both (2026-09-26):** `.promo-card` is full width to 380 on a phone and 440 with
+  larger type on a desktop; the art (`.promo-art`) gives up height on a short screen (52vh, 40vh
+  under 640 tall) so the words and the button never fall off the bottom; the overlay pads for
+  the notch and home bar. Enter / Space / Escape step on, captured and stopped so Space cannot
+  also cast a line on the chart underneath. The roster line is 0.62 / 0.66rem and one line; the
+  bunk picker's "Tier up at N" is its own single line so the three-across tiles stay one height.
 - **Next promotion line**: `promotionStanding(level)` in lib/crewClasses. Owned `CrewPanel`
   cards show "Tier III · Next at Lv 40" with a bar in the class colour; the bunk picker adds
   "tier up at 40" beside the level.

@@ -872,13 +872,18 @@ function BunkPicker({
                       <>
                         <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#b8b1a8', fontVariantNumeric: 'tabular-nums' }}>
                           Lv {crewLevelFromXP(m.xp)}
-                          {(() => {
-                            // Where their Special steps up next: the reason to
-                            // pick one hand over another for a stint.
-                            const st = promotionStanding(crewLevelFromXP(m.xp))
-                            return st.next ? <span style={{ color: 'rgba(240,210,150,0.75)' }}> · tier up at {st.next}</span> : null
-                          })()}
                         </span>
+                        {(() => {
+                          // Where their Special steps up next: the reason to
+                          // pick one hand over another for a stint. Its own
+                          // line, one line, so the tiles stay one height.
+                          const st = promotionStanding(crewLevelFromXP(m.xp))
+                          return (
+                            <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.58rem', color: 'rgba(240,210,150,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {st.next ? `Tier up at ${st.next}` : 'Fully promoted'}
+                            </span>
+                          )
+                        })()}
                         {/* THE TRAIT THEY ALREADY CARRY. This is the fact the
                             choice actually turns on, most of all at the
                             Leviathan bunk: you send the hand whose trait you
