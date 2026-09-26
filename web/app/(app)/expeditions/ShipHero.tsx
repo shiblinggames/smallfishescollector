@@ -487,6 +487,25 @@ const shipPanelBg = (tint?: string) =>
  * chart and the campaign panel already refuse to give: you find out by getting
  * there. "Not yet" is the whole message.
  */
+/** The berth she is drawn on in the Battle Loadout, the Gunwharf's own. */
+const BL_BERTH = '/gunwharf-berth.webp'
+
+/** The small "i" on a loadout card: the full sheet, since the card itself
+ *  now equips on a press. A sibling of the card's button, never inside it. */
+function InfoDot({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" aria-label={label} title="Details"
+      onClick={e => { e.stopPropagation(); onClick() }}
+      className="font-karla font-800"
+      style={{
+        position: 'absolute', top: 5, right: 5, width: 22, height: 22, borderRadius: '50%', padding: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '0.66rem', fontStyle: 'italic', color: '#dfe6ee', cursor: 'pointer',
+        background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.22)', touchAction: 'manipulation',
+      }}>i</button>
+  )
+}
+
 function ShipTile({ accent, title, value, sub, cta, icon, onClick, locked = false }: {
   accent: string; title: string; value: string; sub?: string; cta: string
   icon: React.ReactNode; onClick: () => void; locked?: boolean
@@ -1100,6 +1119,16 @@ export default function ShipHero({
   // per-slot picker — effects stack regardless of position, so "slots" are
   // just a capacity cap). Tap an equipped item to free it; unequipped items
   // gray out once the hull is full. Server caps + validates ownership.
+  /** "Hull full" said for a moment when an armory card cannot go on. It used
+   *  to do nothing at all, which read as a broken button. */
+  const [fullNote, setFullNote] = useState(false)
+  const fullTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function flashFull() {
+    setFullNote(true)
+    if (fullTimer.current) clearTimeout(fullTimer.current)
+    fullTimer.current = setTimeout(() => setFullNote(false), 2600)
+  }
+
   function toggleItem(itemId: string) {
     const equipped = equippedItems.includes(itemId)
     hapticTap() // equip/unequip is already optimistic — give the tap a tick too
@@ -2062,6 +2091,35 @@ export default function ShipHero({
               {/* The hero: what everything mounted actually adds up to. The slots
                   below say WHAT you carry; this says what it comes to, which is
                   the question you opened the page with. */}
+              {/* ── THE LOADOUT, RE-LAID (Kong, 2026-09-26: still hard to use) ──
+                  Two columns once the sheet is wide (.bl-grid, a container
+                  query): her on her berth with what is mounted on the left, the
+                  armory on the right. ONE PRESS does the job now: an armory card
+                  equips (or swaps a lower grade out), a mounted card comes off,
+                  and the small "i" on each opens the full sheet. It used to be a
+                  press to open a sheet and a second press inside it. */}
+              <div className="bl-host">
+              <div className="bl-grid">
+              <div className="bl-hull">
+              <div style={{
+                position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '16 / 9', marginBottom: '0.8rem',
+                background: `url(${BL_BERTH}) 58% 72% / cover no-repeat, #0d1e2b`,
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}>
+                <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,12,18,0) 50%, rgba(8,12,18,0.6) 100%)' }} />
+                {shipHeroSrc && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={shipHeroSrc} alt="" aria-hidden decoding="async" style={{
+                    position: 'absolute', left: '10%', right: '10%', bottom: '8%', width: '80%', height: '78%', objectFit: 'contain',
+                    filter: `drop-shadow(0 14px 18px rgba(0,0,0,0.45))${skinFilter && skinFilter !== 'none' ? ` ${skinFilter}` : ''}`,
+                  }} />
+                )}
+                <span className="font-karla font-800 uppercase" style={{
+                  position: 'absolute', left: 12, bottom: 10, padding: '0.25rem 0.6rem', borderRadius: 999,
+                  fontSize: '0.58rem', letterSpacing: '0.14em', color: '#f4e6c2',
+                  background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(240,192,64,0.35)',
+                }}>{slotsFilled} / {slotsTotal} mounted</span>
+              </div>
               <LoadoutSummary equippedIds={chargedEquippedIds} onOpenEffects={() => setEffectsOpen(true)} />
               {/* Names the SECTION, matching the Inventory divider below, so the
                   two halves of the page read as a pair. */}
@@ -2074,7 +2132,7 @@ export default function ShipHero({
                   a tall stack of wide rows. Same art-first language as the
                   inventory rail and the boss cards: the piece IS the tile, the
                   name sits under it clipped to one line. */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: '1.6rem' }}>
+              <div className="bl-slots">
                 {Array.from({ length: raidItemSlots }, (_, i) => {
                   const itemId = hullItems[i]
                   const def = itemId ? getRaidItem(itemId) : null
@@ -2083,21 +2141,25 @@ export default function ShipHero({
                     const forged = isForgedRaidItem(itemId)
                     const abyssal = isAbyssalForgedItem(itemId)
                     return (
+                      <div key={i} style={{ position: 'relative', minWidth: 0 }}>
                       <button
-                        key={i}
                         type="button"
-                        onClick={() => setItemDetail(itemId)}
-                        aria-label={`${def.name}, equipped. Press for its effect and an unequip option.`}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0, padding: '0.5rem 0.35rem 0.45rem', borderRadius: 12, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.92)', abyssal), boxShadow: abyssal ? '0 0 14px rgba(255,90,60,0.26)' : '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}14`, border: `1.5px solid ${color}66` }) }}
+                        className="bl-card"
+                        onClick={() => toggleItem(itemId)}
+                        aria-label={`${def.name}, equipped. Press to take it off.`}
+                        title="Press to take it off"
+                        style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 0, padding: '0.6rem 0.4rem 0.5rem', borderRadius: 13, cursor: 'pointer', font: 'inherit', touchAction: 'manipulation', ...(forged ? { ...forgedBorderSoft('rgba(14,18,26,0.92)', abyssal), boxShadow: abyssal ? '0 0 14px rgba(255,90,60,0.26)' : '0 0 12px rgba(150,140,180,0.18)' } : { background: `radial-gradient(120% 90% at 50% 25%, ${color}2a, rgba(10,13,19,0.92) 75%)`, border: `1.5px solid ${color}77`, boxShadow: `0 0 12px ${color}22` }) }}
                       >
-                        <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: '100%', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 9px ${color}66)` }} />
                             : <span style={{ color, display: 'flex' }}><IconCrate size={26} /></span>}
                         </div>
-                        <span className="font-karla font-600" style={{ display: 'block', width: '100%', fontSize: '0.58rem', lineHeight: 1.2, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...(forged ? forgedTextSoft(abyssal) : { color: '#cfc9c0' }) }}>{def.name}</span>
+                        <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.64rem', lineHeight: 1.2, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...(forged ? forgedTextSoft(abyssal) : { color: '#e4ddd0' }) }}>{def.name}</span>
                       </button>
+                      <InfoDot label={`${def.name}: details`} onClick={() => setItemDetail(itemId)} />
+                      </div>
                     )
                   }
                   // An empty slot is the obvious place to tap when you want to
@@ -2110,7 +2172,8 @@ export default function ShipHero({
                       type="button"
                       onClick={() => setPickerOpen(true)}
                       aria-label="Empty slot. Press to choose an item to equip."
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 84, padding: '0.5rem 0.35rem', borderRadius: 12, border: '1.5px dashed rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', font: 'inherit', touchAction: 'manipulation' }}
+                      className="bl-card"
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 104, padding: '0.5rem 0.35rem', borderRadius: 13, border: '1.5px dashed rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.025)', cursor: 'pointer', font: 'inherit', touchAction: 'manipulation' }}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7d8894" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
                       <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#7d8894' }}>Equip</span>
@@ -2179,6 +2242,13 @@ export default function ShipHero({
                 })()}
               </div>
 
+              {fullNote && (
+                <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#e0a94e', margin: '-0.4rem 0 1rem', textAlign: 'center' }}>
+                  Hull full. Take an item off to make room.
+                </p>
+              )}
+              </div>
+              <div className="bl-armory">
               {/* ── Inventory ── everything you own, art first, on ONE rail that
                   scrolls sideways. It used to be a vertical stack of wide rows
                   carrying a two-line description each, which pushed a modest
@@ -2247,22 +2317,30 @@ export default function ShipHero({
                         const wouldSwap = !on && !isMount && conflictingRaidItems(itemId, equippedItems).length > 0
                         const blocked = !on && (isMount ? !hasSixthMount : full && !wouldSwap)
                         return (
+                          <div key={itemId} style={{ position: 'relative', minWidth: 0 }}>
                           <button
-                            key={itemId}
                             type="button"
-                            onClick={() => setItemDetail(itemId)}
-                            aria-label={`${def.name}${on ? ', equipped' : blocked ? ', hull full' : ''}. Press for details.`}
+                            className="bl-card"
+                            onClick={() => {
+                              if (blocked) { if (!isMount) flashFull(); return }
+                              toggleItem(itemId)
+                            }}
+                            aria-label={`${def.name}${on ? ', equipped. Press to take it off.' : blocked ? ', hull full.' : wouldSwap ? '. Press to swap it in.' : '. Press to equip.'}`}
                             style={{
                               width: '100%', minWidth: 0,
-                              display: 'flex', flexDirection: 'column', gap: 4,
-                              padding: 0, background: 'none', border: 'none',
-                              cursor: 'pointer', font: 'inherit',
+                              display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center',
+                              padding: '0.55rem 0.35rem 0.5rem', borderRadius: 13,
+                              background: on
+                                ? `radial-gradient(120% 90% at 50% 25%, rgba(74,222,128,0.16), rgba(10,13,19,0.92) 75%)`
+                                : `radial-gradient(120% 90% at 50% 25%, ${color}1f, rgba(10,13,19,0.9) 75%)`,
+                              border: `1px solid ${on ? 'rgba(74,222,128,0.55)' : `${color}44`}`,
+                              cursor: blocked ? 'not-allowed' : 'pointer', font: 'inherit',
                               opacity: blocked ? 0.45 : 1, transition: 'opacity 0.15s',
                               touchAction: 'manipulation',
                             }}
                           >
                             <div style={{
-                              position: 'relative', width: '100%', height: 78,
+                              position: 'relative', width: '100%', height: 70,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
                               {def.image
@@ -2270,7 +2348,7 @@ export default function ShipHero({
                                 ? <img src={def.image} alt="" loading="lazy" decoding="async" className={abyssal ? 'rod-glow-abyssal' : undefined} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 10px ${color}66)` }} />
                                 : <span style={{ color, display: 'flex' }}><IconCrate size={34} /></span>}
                               {on && (
-                                <span style={{ position: 'absolute', top: 2, right: 2, width: 17, height: 17, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,20,14,0.86)', border: '1px solid rgba(74,222,128,0.65)' }}>
+                                <span style={{ position: 'absolute', top: 2, left: 2, width: 17, height: 17, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,20,14,0.86)', border: '1px solid rgba(74,222,128,0.65)' }}>
                                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
                                 </span>
                               )}
@@ -2285,6 +2363,8 @@ export default function ShipHero({
                               {def.name}
                             </span>
                           </button>
+                          <InfoDot label={`${def.name}: details`} onClick={() => setItemDetail(itemId)} />
+                          </div>
                         )
                       }
                       // Alphabetical inside a shelf: acquisition order means
@@ -2311,7 +2391,7 @@ export default function ShipHero({
                                 <div style={{ flex: 1, height: 1, background: `${g.color}2e` }} />
                                 <span className="font-karla font-700" style={{ fontSize: '0.54rem', color: '#6f6a63', fontVariantNumeric: 'tabular-nums' }}>{g.items.length}</span>
                               </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+                              <div className="bl-inv">
                                 {g.items.map(tile)}
                               </div>
                             </div>
@@ -2322,6 +2402,9 @@ export default function ShipHero({
                   </>
                 )
               })()}
+              </div>
+              </div>
+              </div>
 
               </>)}
 

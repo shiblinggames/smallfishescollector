@@ -198,3 +198,18 @@ open sea beyond), not the fishing harbour the loadout and Shipyard use. The Look
 `hideHeroArt` (no second picture of her; her name and rename stay) and `onSkinChange`, so a paint
 equipped there repaints her on the left at once.
 
+
+
+## The Battle Loadout, re-laid (2026-09-26)
+
+Kong: still hard to use, fix it for phone and desktop. The Loadout disc's sheet (`ShipSheet`
+focus `items`) is wide now (1060). Inside `ShipHero`'s loadout tab a container query
+(`.bl-host` / `.bl-grid`): **left** her on the Gunwharf berth (`/gunwharf-berth.webp`, the
+`/ship-hero/` art with her skin filter) with an "N / M mounted" chip, the `LoadoutSummary`, and
+the mounted slots as larger cards (`.bl-slots`); **right** the armory, still shelved by tier,
+as tinted cards four across (three on a phone, `.bl-inv`). The hull column stays in view while
+the armory scrolls. **One press does the job**: an armory card equips (or swaps a lower grade
+out, same `toggleItem` rules), a mounted card comes off, and the small "i" (`InfoDot`, a sibling
+of the card's button) opens the full item sheet. A card that cannot go on because the hull is
+full says "Hull full. Take an item off to make room." for a moment instead of doing nothing.
+Empty slots still open the picker. The finale mount cell is unchanged.

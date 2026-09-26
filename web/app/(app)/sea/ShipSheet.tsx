@@ -186,7 +186,7 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.16 }}
           style={{
-            position: 'relative', margin: 'auto', width: '100%', maxWidth: focus === 'ship' ? 'min(1060px, 100%)' : 'var(--modal-w)',
+            position: 'relative', margin: 'auto', width: '100%', maxWidth: focus === 'ship' || focus === 'items' ? 'min(1060px, 100%)' : 'var(--modal-w)',
             maxHeight: 'min(84vh, 100%)', display: 'flex', flexDirection: 'column',
             borderRadius: 20, overflow: 'hidden',
             background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',

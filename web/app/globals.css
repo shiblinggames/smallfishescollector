@@ -4246,3 +4246,22 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
   .bunk-picker { max-width: 760px; border-radius: 18px; }
   .bunk-picker-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
+
+/* ── The Battle Loadout (expeditions/ShipHero, loadout tab) ─────────────────
+   Container-sized: narrow stacks her and the mounts above the armory; from
+   820 the two sit side by side and the hull column stays in view while the
+   armory scrolls. Cards lift a little under a mouse. */
+.bl-host { container-type: inline-size; }
+.bl-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.bl-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-bottom: 1.2rem; }
+.bl-inv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.bl-card { transition: transform 0.12s, box-shadow 0.15s; }
+@media (hover: hover) { .bl-card:hover { transform: translateY(-2px); } }
+@container (min-width: 520px) {
+  .bl-inv { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@container (min-width: 820px) {
+  .bl-grid { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 24px; align-items: start; }
+  .bl-hull { position: sticky; top: 0; }
+  .bl-inv { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
