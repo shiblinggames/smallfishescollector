@@ -5442,6 +5442,9 @@ export default function SeaMap({
    * every few seconds is a dot that is not worth having.
    */
   const [crewHubOpen, setCrewHubOpen] = useState(openDoor === 'crew')
+  /** A room the next open of the crew panel lands in (the day board's
+   *  Recruits card asks for 'recruits'). Cleared when the panel closes. */
+  const [hubCard, setHubCard] = useState<'assign' | 'recruits' | 'roster' | 'wardrobe' | null>(null)
   const [crewWaiting, setCrewWaiting] = useState(false)
   /**
    * ── WHAT IS FINISHED, PER ISLAND ───────────────────────────────────────
@@ -12893,9 +12896,9 @@ hullRef={hullRefFor(t.key)} />
       </div>
 
       <CrewHub
-        openCard={openCard ?? null}
+        openCard={hubCard ?? openCard ?? null}
         open={crewHubOpen}
-        onClose={() => { setCrewHubOpen(false); pollCrew() }} />
+        onClose={() => { setCrewHubOpen(false); setHubCard(null); pollCrew() }} />
 
       <CrewPanel
         open={crewOpen}
@@ -12998,6 +13001,8 @@ hullRef={hullRefFor(t.key)} />
           }
           if (kind === 'chart') router.push('/tavern/chart-room')
           else if (kind === 'parlor') router.push('/tavern/trivia')
+          // The Recruits card opens the crew panel straight on the board.
+          else if (kind === 'recruits') { setHubCard('recruits'); setCrewHubOpen(true) }
         }} />
       {/* THE WAY TO ARRANGE SAILING WITH SOMEBODY, and for a while there was
           no way at all: the panel below was mounted with nothing able to open

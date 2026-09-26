@@ -104,7 +104,7 @@ const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'
 const DONE = '#7bbf7b'
 
-export type DayKind = 'haul' | 'orders' | 'voyage' | 'trawls' | 'bounties' | 'chart' | 'parlor'
+export type DayKind = 'haul' | 'recruits' | 'orders' | 'voyage' | 'trawls' | 'bounties' | 'chart' | 'parlor'
 
 /**
  * ── THE PAINTING IS THE ROW ─────────────────────────────────────────────────
@@ -116,6 +116,8 @@ export type DayKind = 'haul' | 'orders' | 'voyage' | 'trawls' | 'bounties' | 'ch
  */
 const ART: Record<DayKind, string> = {
   haul: '/goldcrateclosed.png',
+  // Not drawn: the Recruits card shows today's three faces instead.
+  recruits: '/crew/hall_1.png',
   orders: '/sea/tally-house-v2.webp',
   voyage: '/sea/charterhouse-v2.webp',
   trawls: '/sea/trawl-harbor-v3.webp',
@@ -146,10 +148,44 @@ type Row = {
    * card just says when they are back.
    */
   away?: boolean
+  /** The Recruits card draws today's faces where the others draw a building. */
+  faces?: { rarity: number; name: string; art: string; recruited: boolean }[]
 }
 
-function rowsOf(s: DayState): Row[] {
+/** Rarity rims for the Recruits card, the crew screen's own colours. */
+const RARITY_RIM: Record<number, string> = { 1: '#9aa4ad', 2: '#60a5fa', 3: '#c084fc', 4: '#f0c040' }
+
+function rowsOf(s: DayState, recruitsSeen = false): Row[] {
   const rows: Row[] = []
+  // ── TODAY'S RECRUITS (2026-09-26) ─────────────────────────────────────────
+  // Kong: players needed a better nudge to look at the recruit board. The only
+  // tell was a dot on the crew disc, which lives on the expedition side only.
+  // This card is on both sides, shows the three faces themselves, and is HOT
+  // only when there is an Epic on the board you have not looked at yet (about
+  // one day in sixteen: FREE_WEIGHTS has 2% Epic a face and no Legendary at
+  // all). Rares are just a blue rim; lit for them it would be lit nearly every
+  // day and mean nothing. Once you have looked, it goes quiet for the day.
+  if (s.recruits && s.recruits.faces.length > 0) {
+    const f = s.recruits.faces
+    const left = f.filter(x => !x.recruited)
+    const signed = f.length - left.length
+    const epic = left.some(x => x.rarity >= 3)
+    rows.push({
+      kind: 'recruits', title: 'The Recruits', place: 'Your crew panel',
+      status: left.length === 0 ? 'Board signed out'
+        : epic && !recruitsSeen ? 'An Epic is on the board'
+        : signed > 0 ? `Signed ${signed} today`
+        : recruitsSeen ? 'Looked over today'
+        : `${left.length} new faces today`,
+      action: left.length > 0 ? 'Look' : null,
+      hot: epic && !recruitsSeen,
+      done: left.length === 0,
+      // Looked at is dealt with: it stops keeping the day open.
+      away: recruitsSeen && left.length > 0,
+      news: epic && !recruitsSeen ? 'An Epic is on the recruit board' : null,
+      faces: f,
+    })
+  }
   if (s.haul) {
     const h = s.haul
     const left = [!h.gemsClaimed && 'gems', !h.baitClaimed && 'bait', !h.crateClaimed && 'a crate'].filter(Boolean) as string[]
@@ -349,6 +385,21 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   }, [open])
   /** The whole board, or one step in on Today's Orders or the bounties. */
   const [view, setView] = useState<'board' | 'haul' | 'orders' | 'bounties' | 'voyage' | 'trawls'>('board')
+  /** The recruit board has been looked at this session (the crew panel opened
+   *  on Recruit). Session-only, like the crew disc's dot: tomorrow's board
+   *  should be told again. */
+  const [recruitsSeen, setRecruitsSeen] = useState(false)
+  const recruitsSeenRef = useRef(false)
+  useEffect(() => {
+    const on = (e: Event) => {
+      if ((e as CustomEvent<{ section?: string | null }>).detail?.section === 'recruits') {
+        recruitsSeenRef.current = true
+        setRecruitsSeen(true)
+      }
+    }
+    window.addEventListener('crew-hub-section', on)
+    return () => window.removeEventListener('crew-hub-section', on)
+  }, [])
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
   const close = useCallback(() => {
@@ -416,7 +467,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
     void read.then(s => {
       if (!alive || !s) return
       setState(s)
-      const rows = rowsOf(s)
+      const rows = rowsOf(s, recruitsSeenRef.current)
       const doneNow = new Set(rows.filter(r => r.done && !r.hot).map(r => r.kind))
       const wasDone = doneBefore.current
       doneBefore.current = doneNow
@@ -498,7 +549,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
       setStamping(kinds)
       vibrate([0, 22, 60, 30])
       const s = stateRef.current
-      const all = !!s && rowsOf(s).every(r => (r.done || r.away) && !r.hot)
+      const all = !!s && rowsOf(s, recruitsSeenRef.current).every(r => (r.done || r.away) && !r.hot)
       if (all) {
         window.setTimeout(() => { setCheer(c => c + 1); vibrate([0, 30, 50, 40, 50, 90]) },
           (0.55 + kinds.length * STAMP_GAP) * 1000)
@@ -528,7 +579,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
     return () => clearTimeout(id)
   }, [toast])
 
-  const rows = state ? rowsOf(state) : []
+  const rows = state ? rowsOf(state, recruitsSeen) : []
   const ready = rows.filter(r => r.hot)
   const todo = rows.filter(r => !r.hot && !r.done && !r.away)
   const done = rows.filter(r => r.done && !r.hot)
@@ -862,7 +913,7 @@ const gridStyle: React.CSSProperties = {
 /** The board's groups, in a fixed order so each thing is always where it was.
  *  Kong: bounties with the fishing orders, the voyage with the trawls. */
 const GROUPS: { id: string; label: string; doneWord: string; awayWord?: string; kinds: DayKind[] }[] = [
-  { id: 'free', label: 'Free today', doneWord: 'Claimed', kinds: ['haul'] },
+  { id: 'free', label: 'Free today', doneWord: 'Claimed', kinds: ['haul', 'recruits'] },
   { id: 'orders', label: 'Orders of the day', doneWord: 'All done', kinds: ['orders', 'bounties'] },
   { id: 'crew', label: 'Crew at sea', doneWord: 'All done', awayWord: 'All out', kinds: ['voyage', 'trawls'] },
   { id: 'tavern', label: 'The Tavern', doneWord: 'All done', kinds: ['chart', 'parlor'] },
@@ -982,6 +1033,35 @@ function DayCard({ r, onGo, compact, wide, stampAt }: { r: Row; onGo: () => void
           }} />
       )}
       {finished && <Seal size={compact ? 28 : 32} stamp={stamp} delay={delay} />}
+      {r.faces ? (
+        // TODAY'S FACES, overlapping a little, rims in their rarity; a signed
+        // one is dimmed with a tick. The faces are the reason to look.
+        <span style={{ height: plate, width: wide ? plate * 1.9 : '100%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {r.faces.map((f, i) => {
+            const rim = RARITY_RIM[f.rarity] ?? RARITY_RIM[1]
+            const d = Math.round(plate * 0.74)
+            return (
+              <span key={i} title={f.name} style={{
+                position: 'relative', width: d, height: d, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+                marginLeft: i === 0 ? 0 : -Math.round(d * 0.22),
+                border: `2px solid ${rim}`, background: '#0c1119',
+                boxShadow: f.rarity >= 3 && !f.recruited ? `0 0 12px ${rim}99` : '0 2px 6px rgba(0,0,0,0.5)',
+                opacity: f.recruited ? 0.45 : 1, zIndex: 3 - i,
+              }}>
+                {f.art && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={f.art} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+                )}
+                {f.recruited && (
+                  <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.35)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9fe8bd" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
+                  </span>
+                )}
+              </span>
+            )
+          })}
+        </span>
+      ) : (
       <span style={{ height: plate, width: wide ? plate * 1.25 : '100%', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={ART[r.kind]} alt="" loading="lazy" decoding="async"
@@ -990,6 +1070,7 @@ function DayCard({ r, onGo, compact, wide, stampAt }: { r: Row; onGo: () => void
             filter: r.hot ? `drop-shadow(0 0 10px ${GOLD}66)` : 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))',
           }} />
       </span>
+      )}
       <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: wide ? undefined : '100%', flex: wide ? 1 : undefined }}>
         <span className="font-cinzel font-700" style={{
           fontSize: compact ? '0.76rem' : '0.82rem', color: '#f2ead8', lineHeight: 1.15, marginTop: wide ? 0 : 4,

@@ -157,6 +157,12 @@ export default function CrewHub({
    */
   const [boardSeen, setBoardSeen] = useState(false)
   const [section, setSection] = useState<Section | null>(openCard)
+  // A room asked for at OPEN, not only at mount: the chart holds this panel
+  // for the whole session, so the day board's Recruits card (and anything else
+  // that names a room) lands there each time it opens the panel.
+  useEffect(() => { if (open && openCard) setSection(openCard) }, [open, openCard])
+  // Landing on the board by any door counts as having looked at it.
+  useEffect(() => { if (open && section === 'recruits') setBoardSeen(true) }, [open, section])
   /** The hall's full state, for whichever section is showing. */
   const [hall, setHall] = useState<CrewState | null>(null)
   /** Bumped when the berth pill is pressed — see CrewClient's openCapacity. */

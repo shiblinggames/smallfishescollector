@@ -58,6 +58,17 @@ title, its own guided tour — is gone. Everything it did happens on the sea:
   reroll). The free daily board never uses or clears it: it fills when the crew screen opens,
   so a gift spent there would be spent by visiting the page. It still only draws legendaries
   the player has unlocked (the campaign gate); a locked pin falls back to a random unlocked one.
+- **The day board has a Recruits card (2026-09-26).** The crew disc's dot is expedition-side
+  only, so a fishing player never saw it. `SeaDay` now carries "The Recruits" in the Free today
+  group beside the Daily Haul, on both sides of the sea, drawing today's three faces with
+  rarity rims (a signed one dimmed with a tick). It is HOT only when an unsigned Epic is on the
+  board and you have not looked yet (~1 day in 16: FREE_WEIGHTS is 2% Epic a face, 0%
+  Legendary); rares are just a blue rim. Looked at (the crew panel opened on Recruit, by any
+  door, heard through `crew-hub-section`) it goes quiet for the session. Pressing it opens the
+  crew panel on the board (`CrewHub` now honours `openCard` on every open). The faces come
+  from `todaysRecruits()` via `dayState`, which ROLLS today's free board if nobody has yet,
+  through the same `fillFreeBoardIfStale` the crew screen uses (safe now that no gift is ever
+  spent on a free board).
 - **`DAILY_RECRUITS` is 3 for everybody.** It was 3 for a Captain and 2 for everyone else — a
   thin perk on a board whose weights make it a common nine times in ten, and it meant the row
   was a different shape depending on who was looking at it.

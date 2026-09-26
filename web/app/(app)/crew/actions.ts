@@ -294,6 +294,75 @@ function toMember(r: any, meta: Map<number, CardMeta>, equippedSkins?: EquippedC
   }
 }
 
+/**
+ * TODAY'S FREE BOARD, rolled if it has not been yet. One implementation for
+ * the crew screen and the day board's Recruits card, so a board is rolled once
+ * a day whichever door you come in by.
+ *
+ * ── A GUARANTEED LEGENDARY NEVER LANDS HERE (Kong, 2026-09-26). The one-shot
+ * flag (`crew_next_roll_legendary`, pinned or not) is honoured ONLY by the paid
+ * reroll; this neither uses nor clears it. Free-board weights have no
+ * legendary in them either (FREE_WEIGHTS), which is also why rolling it from
+ * the day board spends nothing a player chose to keep.
+ *
+ * Stamp the date FIRST, and only if it is still stale. Two readers arriving at
+ * the rollover both get here; only the one whose stamp lands refills, so
+ * boards never stack.
+ */
+async function fillFreeBoardIfStale(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  prevDate: string | null,
+  byGroup: Record<CrewRarity, number[]>,
+  meta: Map<number, CardMeta>,
+  legendaryUnlocks: readonly string[],
+) {
+  const today = utcDate()
+  if (prevDate === today) return
+  let stampQ = admin.from('profiles').update({ last_free_recruit_date: today }).eq('id', userId)
+  stampQ = prevDate === null ? stampQ.is('last_free_recruit_date', null) : stampQ.eq('last_free_recruit_date', prevDate)
+  const { data: stamped } = await stampQ.select('id')
+  if (stamped && stamped.length > 0) {
+    await admin.from('daily_recruits').delete().eq('user_id', userId)
+    const rows = generateBoardRows(userId, DAILY_RECRUITS, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, false, null)
+    if (rows.length) await admin.from('daily_recruits').insert(rows)
+  }
+}
+
+export type RecruitFace = { rarity: number; name: string; art: string; recruited: boolean }
+
+/**
+ * THE FACES ON TODAY'S BOARD, for the day board's Recruits card (2026-09-26).
+ * Rolls today's free board if nobody has looked yet (see fillFreeBoardIfStale).
+ * Reads the caller from their own session, like every action here.
+ */
+export async function todaysRecruits(): Promise<{ faces: RecruitFace[] } | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const admin = createAdminClient()
+  const { data: prof } = await admin.from('profiles')
+    .select('last_free_recruit_date, legendary_unlocks').eq('id', user.id).single()
+  if (!prof) return null
+  const { byGroup, meta } = await loadCards(admin)
+  await fillFreeBoardIfStale(admin, user.id, ((prof as any).last_free_recruit_date as string | null) ?? null,
+    byGroup, meta, ((prof as any).legendary_unlocks as string[] | null) ?? [])
+  const { data: rows } = await admin.from('daily_recruits')
+    .select('slot, card_id, rarity, recruited').eq('user_id', user.id).order('slot')
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL
+  return {
+    faces: (rows ?? []).map(r => {
+      const m = meta.get(r.card_id as number)
+      return {
+        rarity: Number(r.rarity) || 1,
+        name: m?.name ?? 'A new hand',
+        art: m ? `${base}/storage/v1/object/public/card-arts/${m.filename}` : '',
+        recruited: r.recruited === true,
+      }
+    }),
+  }
+}
+
 // ── Read state (also lazily fills the once-a-day free board) ────────────────
 
 export async function getCrewState(): Promise<CrewState | null> {
@@ -325,29 +394,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   // Free board fills once per UTC day; gem rerolls (which set the date too)
   // won't be clobbered by this.
-  if ((prof as any).last_free_recruit_date !== today) {
-    // ── A GUARANTEED LEGENDARY NEVER LANDS ON THE FREE BOARD (Kong,
-    // 2026-09-26). The one-shot flag (`crew_next_roll_legendary`, pinned or
-    // not) is honoured ONLY by the paid reroll, and this path neither uses nor
-    // clears it. The free board fills itself the moment the crew screen opens,
-    // so a gift spent here would be spent by visiting the page, on a roll the
-    // player never chose to take.
-    //
-    // Stamp the date FIRST, and only if it is still stale. Two tabs opening at
-    // the rollover both get here; only the one whose stamp lands refills, so
-    // boards never stack.
-    let stampQ = admin.from('profiles')
-      .update({ last_free_recruit_date: today })
-      .eq('id', user.id)
-    const prevDate = ((prof as any).last_free_recruit_date as string | null) ?? null
-    stampQ = prevDate === null ? stampQ.is('last_free_recruit_date', null) : stampQ.eq('last_free_recruit_date', prevDate)
-    const { data: stamped } = await stampQ.select('id')
-    if (stamped && stamped.length > 0) {
-      await admin.from('daily_recruits').delete().eq('user_id', user.id)
-      const rows = generateBoardRows(user.id, DAILY_RECRUITS, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, false, null)
-      if (rows.length) await admin.from('daily_recruits').insert(rows)
-    }
-  }
+  await fillFreeBoardIfStale(admin, user.id, ((prof as any).last_free_recruit_date as string | null) ?? null, byGroup, meta, legendaryUnlocks)
 
   const { data: boardRows } = await admin
     .from('daily_recruits')
