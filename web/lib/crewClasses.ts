@@ -563,3 +563,19 @@ export function nextMilestone<T extends AnyClassDef>(def: T, level: number): T['
 /** Level at which the crew first gets an ability: 1 since 2026-09-23 (it was
  *  10). Exposed so the UI reads it from one place instead of hardcoding. */
 export const CLASS_UNLOCK_LEVEL = 1
+
+/**
+ * WHERE A HAND STANDS ON THEIR PROMOTION LADDER (2026-09-26), for the "next
+ * promotion" line on roster cards and in the bunk picker. Tier I is the Lv 1
+ * unlock; the promotions are the rest. `pct` is the way from this tier to the
+ * next, for a bar. `next` is null at the top.
+ */
+export function promotionStanding(level: number): { tier: string; next: number | null; pct: number } {
+  const L = CLASS_MILESTONE_LEVELS
+  let i = 0
+  for (let k = 0; k < L.length; k++) if (level >= L[k]) i = k
+  const tier = ['I', 'II', 'III', 'IV', 'V', 'VI'][i] ?? String(i + 1)
+  const next = i + 1 < L.length ? L[i + 1] : null
+  const pct = next === null ? 1 : Math.max(0, Math.min(1, (level - L[i]) / (next - L[i])))
+  return { tier, next, pct }
+}

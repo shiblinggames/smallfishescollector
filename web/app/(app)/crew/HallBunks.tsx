@@ -25,6 +25,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { hapticTap } from '@/lib/haptics'
 import { createPortal } from 'react-dom'
+import { promotionStanding } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { isDivineTrait, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
 import { CREW_HALL_MAX_TIER, hallTierDef } from '@/lib/crewHall'
@@ -871,6 +872,12 @@ function BunkPicker({
                       <>
                         <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#b8b1a8', fontVariantNumeric: 'tabular-nums' }}>
                           Lv {crewLevelFromXP(m.xp)}
+                          {(() => {
+                            // Where their Special steps up next: the reason to
+                            // pick one hand over another for a stint.
+                            const st = promotionStanding(crewLevelFromXP(m.xp))
+                            return st.next ? <span style={{ color: 'rgba(240,210,150,0.75)' }}> · tier up at {st.next}</span> : null
+                          })()}
                         </span>
                         {/* THE TRAIT THEY ALREADY CARRY. This is the fact the
                             choice actually turns on, most of all at the

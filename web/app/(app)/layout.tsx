@@ -60,6 +60,7 @@ import { canSail } from '@/lib/seaAccess'
 import { isPremiumActive } from '@/lib/premium'
 import SessionWatch from '@/components/SessionWatch'
 import UnlockBanner from '@/components/UnlockBanner'
+import CrewPromotion from '@/components/CrewPromotion'
 import { CHARACTER_COLORS } from '@/lib/characters'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -122,6 +123,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* "Unlocked": a skin, boat or border a level or the achievement pool
           just opened. Only for a signed-in captain. */}
       {profile && <UnlockBanner />}
+      {/* A crew's Special stepping up a tier: the one levelling moment that
+          takes the screen. Waits while a fight or a reel is on. */}
+      {profile && <CrewPromotion />}
       {/* The honeypot. Renders nothing; see app/actions/honeypot.ts. */}
       <Honeypot />
       {/* Global membership purchase popup — opens on the `open-membership`

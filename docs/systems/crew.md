@@ -234,3 +234,26 @@ plays `SignOnMoment` on the tap: the recruit blooms up centre screen in their ra
 ring breaking out behind and "<name> is aboard!", about 1.7s, transform/opacity only,
 pointer-events none, portalled above everything with the reveal flash and banner.
 
+
+
+## Promotions: the one crew-levelling moment that takes the screen (2026-09-26)
+
+Kong: make levelling meaningful, above all ability thresholds, without spam. A crew's Special
+steps up at Lv 10 / 25 / 40 / 75 / 100 (`CLASS_MILESTONE_LEVELS` past the Lv 1 unlock; Lv 1 is
+Tier I, so these are Tiers II to VI): five moments in a hand's whole life, and ONLY these pop.
+- `app/(app)/crewPromotionActions.ts` `checkPromotions()` reads the roster against
+  `profiles.seen_promotions` ('crewId:level'), one read covering every XP source (raids, the
+  gauntlet, voyages, trawls, bunks). NULL seeds everything already reached as seen (no flood).
+  Two tiers crossed at once is ONE card at the top tier, "before" being the tier under the
+  lowest one crossed.
+- `components/CrewPromotion.tsx` (app layout): the hand's art on their class colour, "Promoted",
+  a Tier stamp, "Class · Level N", the old Special struck through and "Now: ..." in plain words.
+  Several are one card you step through ("Next (2 more)"). It WAITS while you are busy: a
+  `.sea-frozen` surface (fight or reel), a `.sea-tour-lock`, `coach-lock`, or any `/raids` page.
+  Checks on arrival, page change (15s floor), tab return, every 45s while visible, and on
+  `crew-changed` / `promotions-check`.
+- **Next promotion line**: `promotionStanding(level)` in lib/crewClasses. Owned `CrewPanel`
+  cards show "Tier III · Next at Lv 40" with a bar in the class colour; the bunk picker adds
+  "tier up at 40" beside the level.
+- Ordinary levels and stat ticks still never pop (a per-activity "Crew grew" strip was
+  proposed as a later step and not built).

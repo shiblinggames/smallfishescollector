@@ -37,7 +37,7 @@ import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL, XP_T
 /** Total XP at the crew level ceiling. Drives the Potential sort, which judges
  *  every hand at Lv 100 rather than wherever it happens to be today. */
 const MAX_LEVEL_XP = CREW_XP_TABLE[CREW_MAX_LEVEL - 1]
-import { classForSlug, CLASSES, currentMilestone, nextMilestone, CLASS_UNLOCK_LEVEL, type AnyClassDef } from '@/lib/crewClasses'
+import { classForSlug, CLASSES, currentMilestone, nextMilestone, CLASS_UNLOCK_LEVEL, type AnyClassDef, promotionStanding } from '@/lib/crewClasses'
 import { vibrate, hapticTap } from '@/lib/haptics'
 import SwipeAction from '@/components/SwipeAction'
 import { playChestSfx } from '@/lib/fishingMusic'
@@ -631,6 +631,28 @@ function CrewPanel({
             </div>
           ))}
         </div>
+        {/* THE NEXT PROMOTION (2026-09-26). A hand you own shows where their
+            Special steps up next and how far along they are, so levels read
+            as progress toward something rather than a number going up. */}
+        {assignment !== undefined && (() => {
+          const cls = classForSlug(slug)
+          if (!cls) return null
+          const def = CLASSES[cls]
+          const st = promotionStanding(crewLevelFromXP(xp))
+          return (
+            <div title={st.next ? `Their Special steps up at Lv ${st.next}` : 'Fully promoted'}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
+                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: def.color }}>Tier {st.tier}</span>
+                <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: 'rgba(236,220,189,0.6)' }}>
+                  {st.next ? `Next at Lv ${st.next}` : 'Fully promoted'}
+                </span>
+              </div>
+              <span aria-hidden style={{ display: 'block', height: 3, marginTop: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <span style={{ display: 'block', width: '100%', height: '100%', background: def.color, opacity: 0.85, transformOrigin: 'left', transform: `scaleX(${st.pct})` }} />
+              </span>
+            </div>
+          )
+        })()}
         {children && (
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>{children}</div>
