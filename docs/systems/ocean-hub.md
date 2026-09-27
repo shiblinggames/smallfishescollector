@@ -3768,3 +3768,6 @@ Kong: portals don't teleport you to buildings. All island berths are gone: the T
 - **`warpTo` sets the Sea Gate state from the landing.** Beyond the anchorage rim counts as out, or the rim would drag a bay landing back into the harbour.
 - The same `PortalMap` renders both wells (`side: 'fish' | 'anchor'`). One press sails anywhere you own; a locked node opens the footer that says why.
 - The free recall's expedition landing is now a literal (-500, -5150), since it used to read the retired Gunwharf berth.
+- The free recall (minimap button, chart hold) lands at your side's home portal, from `RECALL_TO` = `CROSS_TO`:
+  - on the fishing side, the Homestead portal;
+  - anywhere north of the reef, including the bays, the Anchorage portal.
