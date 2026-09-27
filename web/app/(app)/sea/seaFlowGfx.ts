@@ -232,7 +232,13 @@ export function makeFlow(PIXI: typeof import('pixi.js')): FlowGfx {
           if (cv[k] < x0) x0 = cv[k]; if (cv[k] > x1) x1 = cv[k]
           if (cv[k + 1] < y0) y0 = cv[k + 1]; if (cv[k + 1] > y1) y1 = cv[k + 1]
         }
+        // NOT EVERY FRAME (perf, 2026-09-27): MeshSimple's default autoUpdate hangs
+        // an onRender that re-uploads the whole position buffer every frame whether
+        // or not anything moved. Profiled at ~76ms/s of main thread on the idle sea
+        // (plus ~64ms/s of the update events it fires). Anything below that moves
+        // its vertices calls .update() on the buffer itself.
         const mesh = new PIXI.MeshSimple({ texture: tex[layer.tex], vertices: cv, uvs: cu, indices: new Uint32Array(ci) })
+        mesh.autoUpdate = false
         mesh.blendMode = 'add'
         mesh.alpha = layer.alpha
         mesh.tint = layer.tint

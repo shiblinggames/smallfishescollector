@@ -201,6 +201,12 @@ export function makeLap(
   // Additive, like the islands' surf and for the same reason: broken water
   // LIGHTENS what is under it rather than covering it, and that is also what
   // stops the band reading as a drawn line along the hull.
+  // NOT EVERY FRAME (perf, 2026-09-27): MeshSimple's default autoUpdate hangs
+  // an onRender that re-uploads the whole position buffer every frame whether
+  // or not anything moved. Profiled at ~76ms/s of main thread on the idle sea
+  // (plus ~64ms/s of the update events it fires). Anything below that moves
+  // its vertices calls .update() on the buffer itself.
+  mesh.autoUpdate = false
   mesh.blendMode = 'add'
   mesh.alpha = 0.42
 
@@ -228,6 +234,7 @@ export function makeLap(
         u[i * 4] = uu; u[i * 4 + 1] = 0; u[i * 4 + 2] = uu; u[i * 4 + 3] = 1
       }
       const m = new PIXI.MeshSimple({ texture: tex, vertices: v, uvs: u, indices: new Uint32Array(idx) })
+      m.autoUpdate = false
       m.alpha = alpha
       over.addChild(m)
       return m

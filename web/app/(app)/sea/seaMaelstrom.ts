@@ -634,6 +634,10 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     // beam and the spirits climbing out; near-side wreckage is on top of all
     // of it. Each piece changes layer as it rounds the east and west points.
     const debrisBack: Container = new PIXI.Container()
+    // Their own render groups (perf, 2026-09-27): a piece moving between the
+    // back and front layers is a remove and an add, and in the world group
+    // that rebuilt the whole world's instructions every few seconds.
+    debrisBack.isRenderGroup = true
     node.addChild(debrisBack)
     node.addChild(floor, wall, lipS, sprayLayer, eye, core)
 
@@ -711,6 +715,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     // Painted wreckage circling the rim and spiralling in, the world's own
     // stuff rather than an effect. Standing sprites, counter-squashed.
     const debrisFront: Container = new PIXI.Container()
+    debrisFront.isRenderGroup = true
     node.addChild(debrisFront)
     const debris: One['debris'] = th.debris.map((url, k) => {
       const sp: Sprite = new PIXI.Sprite(PIXI.Texture.EMPTY)

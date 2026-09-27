@@ -4288,9 +4288,16 @@ export default function SeaMap({
   const recallLast = recallAt[recallSide] ? new Date(recallAt[recallSide] as string).getTime() : 0
   const recallLeft = Math.max(0, recallLast + RECALL_MS - recallNow)
   // Tick the ring while it refills; nothing to tick once it is ready.
+  // Every 30s, and not while a fight or the rod is up or the tab is away:
+  // each tick is a whole-chart render (perf, 2026-09-27), and a ring that is
+  // a half-minute behind is not one anybody can see. Pressing it reads the
+  // real clock anyway.
   useEffect(() => {
     if (recallLeft <= 0) return
-    const id = window.setInterval(() => setRecallNow(Date.now()), 15_000)
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'hidden' || fightOnRef.current || fishingInRef.current) return
+      setRecallNow(Date.now())
+    }, 30_000)
     return () => window.clearInterval(id)
   }, [recallLeft > 0])
   useEffect(() => {
@@ -6603,8 +6610,11 @@ export default function SeaMap({
     if (kitWasOpen.current && !kitSheetOpen) setKitEpoch(n => n + 1)
     kitWasOpen.current = kitSheetOpen
   }, [kitSheetOpen])
+  const kitSheetOpenRef = useRef(kitSheetOpen); kitSheetOpenRef.current = kitSheetOpen
   useEffect(() => {
-    const bump = () => setKitEpoch(n => n + 1)
+    // Not while a kit sheet is open: its close bumps once, and these fire on
+    // every seat change behind it (perf, 2026-09-27).
+    const bump = () => { if (!kitSheetOpenRef.current) setKitEpoch(n => n + 1) }
     const names = ['crew-changed', 'crew-assigned', 'crew-aboard']
     for (const n of names) window.addEventListener(n, bump)
     return () => { for (const n of names) window.removeEventListener(n, bump) }
@@ -6656,17 +6666,27 @@ export default function SeaMap({
     return () => window.removeEventListener('sea-toast-open', on)
   }, [])
   const kitReadKey = useRef('')
+  const kitReadAt = useRef(0)
+  // KEPT ACROSS A SHORT EXIT (perf, 2026-09-27). Drifting along the hail's
+  // edge re-read both on every re-entry: two server actions and three whole-
+  // chart renders a time. Now the same hull and the same kit are not read
+  // again for 90 seconds, and the copy held is only dropped when the key
+  // changes. Not on a fight closing either: the sheet reads for itself.
+  const nearNode = nearEnc?.node ?? null
   useEffect(() => {
-    if (fightOn) return
-    if (!nearEnc) { bossReadRef.current = false; return }
-    const key = `${nearEnc.node}:${kitEpoch}`
-    if (bossReadRef.current && kitReadKey.current === key) return
-    const n = RAID_MAP.find(x => x.id === nearEnc.node)
+    if (fightOnRef.current || !nearNode) return
+    const key = `${nearNode}:${kitEpoch}`
+    const same = kitReadKey.current === key
+    if (bossReadRef.current && same && Date.now() - kitReadAt.current < 90_000) return
+    const n = RAID_MAP.find(x => x.id === nearNode)
     if (!n?.raidId || !getRaidConfigById(n.raidId)) return
     bossReadRef.current = true
     kitReadKey.current = key
-    setBossData(null)
-    setRaidData(null)
+    kitReadAt.current = Date.now()
+    if (!same) {
+      setBossData(null)
+      setRaidData(null)
+    }
     // Both halves of the wait, started together: the code and the answer.
     void import('./BossCardSheet')
     void import('@/app/(app)/expeditions/BossFightModal')
@@ -6689,7 +6709,7 @@ export default function SeaMap({
       r => { if (!('error' in r) && kitReadKey.current === key) setRaidData(r) },
       () => {},
     )
-  }, [nearEnc, kitEpoch, fightOn])
+  }, [nearNode, kitEpoch])
 
   /** The gate's ledger, read as you pull up to it — same courtesy the boss
    *  card gets, so stepping through opens on a card and not a wait. */
@@ -12776,7 +12796,10 @@ hullRef={hullRefFor(t.key)} />
           setRaidData(null)
           // A fight settles bounties and can open a rung; the marks and the
           // day board hear it now rather than on the next island crossing.
-          window.dispatchEvent(new CustomEvent('sea-fight-ended'))
+          // A beat later, with the deferred refresh: at the close these
+          // reads queued in front of it and landed during the camera's ease
+          // home (perf, 2026-09-27).
+          window.setTimeout(() => window.dispatchEvent(new CustomEvent('sea-fight-ended')), 1500)
           shipFxRef.current = null
           anchorsRef.current = null
           // THE HULL GOES BACK TO BEING A HULL. The fight wrote a transform

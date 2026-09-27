@@ -283,7 +283,13 @@ export function makeShoreFoam(
       const j = (i + 1) % n
       idx.push(i * 2, i * 2 + 1, j * 2, i * 2 + 1, j * 2 + 1, j * 2)
     }
+    // NOT EVERY FRAME (perf, 2026-09-27): MeshSimple's default autoUpdate hangs
+    // an onRender that re-uploads the whole position buffer every frame whether
+    // or not anything moved. Profiled at ~76ms/s of main thread on the idle sea
+    // (plus ~64ms/s of the update events it fires). Anything below that moves
+    // its vertices calls .update() on the buffer itself.
     const mesh = new PIXI.MeshSimple({ texture: tex, vertices: verts, uvs, indices: new Uint32Array(idx) })
+    mesh.autoUpdate = false
     mesh.alpha = alpha
     into.addChild(mesh)
     return { mesh, verts, uvs, base: Float32Array.from(uvs), scale, lift, speed, phase }

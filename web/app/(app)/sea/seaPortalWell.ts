@@ -422,6 +422,8 @@ export function makePortalWell(
     },
 
     setSpec(next) {
+      // Handed the same spec every frame; only a change does any work.
+      if (next === spec) return
       spec = next
       view.position.set(spec.x, spec.y)
       loadPlate()
