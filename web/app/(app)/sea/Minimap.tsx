@@ -186,8 +186,10 @@ const HALF_NAME: Record<'fishing' | 'expeditions' | 'seagate', string> = {
 
 export default function Minimap({
   open, onClose, fog, xfog, at, seaAt, found, bearings, dug, friends, finn, side = 'fishing',
-  cleared = [], next = null, shown, onPointing,
+  cleared = [], next = null, shown, onPointing, recall,
 }: {
+  /** THE FREE RECALL HOME (folded in from its own disc, 2026-09-27 HUD pass). */
+  recall?: { ready: boolean; minutes: number; name: string; onRecall: () => void }
   /** Whether a campaign node is on the water for this captain. The chart must
    *  not draw what the sea is hiding: a pip for every fight in a chapter you
    *  have not started would hand back the whole layout the water withholds. */
@@ -915,6 +917,23 @@ export default function Minimap({
                     ? 'Where everything is. Harbors are pressable.'
                     : 'Press one and the water lights the way to it.'}
                 </p>
+                {recall && (
+                  <button type="button" onClick={() => { vibrate(8); recall.onRecall() }}
+                    disabled={!recall.ready}
+                    className="font-karla font-800"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 10, padding: '0.45rem 0.8rem', borderRadius: 999,
+                      fontSize: '0.74rem', cursor: recall.ready ? 'pointer' : 'default',
+                      color: recall.ready ? '#d6f7e2' : 'rgba(214,232,240,0.55)',
+                      background: recall.ready ? 'rgba(127,214,160,0.16)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${recall.ready ? 'rgba(127,214,160,0.6)' : 'rgba(255,255,255,0.14)'}`,
+                    }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v9.5h13V10" />
+                    </svg>
+                    {recall.ready ? `Recall to ${recall.name}` : `Recall ready in ${recall.minutes}m`}
+                  </button>
+                )}
                 <div style={{ display: 'flex', gap: 18, minWidth: 0, marginTop: 10 }}>
                   <Stat label="Sailed" value={`${Math.round(prog.pct * 100)}%`} />
                   <Stat label="Isles" value={`${islesFound}/${ISLES.length}`} />

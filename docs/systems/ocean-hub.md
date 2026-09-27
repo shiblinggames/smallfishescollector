@@ -3706,3 +3706,20 @@ three): the cooldown is the limit and the on-the-water buyer still matters the r
   note under it: "Recall ready in Nm", or "You are already home" within 900 of the landing.
   Hidden while the first voyage or the gate tour is running; never in a fight or with the rod out.
 - The jump is `jumpTo`, the portals' passage, which also sets side and hull and saves position.
+
+
+## The HUD, regrouped (2026-09-27)
+
+Kong: too many HUD discs. Settled layout:
+- **Left, "you", same order on both sides of the reef**: Journey, Level, Loadout, then Crew
+  (expedition side only, last so nothing before it moves when you cross). `hudRow` order.
+- **Right, "the world"**, from the corner in: Settings, Social, Day board, Chart (`rightAt(n)`).
+  **On a phone (<=560) the Settings gear folds into the Social disc**, which opens a two-item menu
+  (Sailing with / Settings; `SeaCrew onSettings`, `SeaSettings hideTrigger openSignal`), and the run
+  starts one slot nearer (`rightBase`).
+- **Recall folded into the Chart**: the chart disc wears the refill ring (a steady green edge when
+  ready), HOLD it 550ms to recall at once, and the chart sheet (`Minimap recall`) has a Recall home
+  button at the top ("Recall ready in Nm" while cooling). The standalone recall disc is gone.
+- **The Almanac folded into the fishing Level sheet**: a Collection / The Almanac row at the top
+  (`SkillPanel onOpenAlmanac`). The top-bar almanac disc is gone; fishing mode keeps its own Log.
+Phones go from nine discs to six or seven; desktop to seven or eight.

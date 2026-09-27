@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
+
 // ── THE CREW DISC, TOP RIGHT ────────────────────────────────────────────────
 //
 // The way to arrange sailing with somebody, from the deck.
@@ -38,7 +40,7 @@ const ASK = 'rgba(143,214,196'
 /** Somebody is on the wire right now. */
 const LIVE = 'rgba(110,224,150'
 
-export default function SeaCrew({ size, top, right, count, linked = false, onOpen }: {
+export default function SeaCrew({ size, top, right, count, linked = false, onOpen, onSettings }: {
   size: number
   top: number
   /** Where its right edge sits. The caller lays the run out from the corner
@@ -50,8 +52,19 @@ export default function SeaCrew({ size, top, right, count, linked = false, onOpe
    *  with somebody, as opposed to merely being near them. */
   linked?: boolean
   onOpen: () => void
+  /** ON A PHONE the Settings gear folds in here (2026-09-27 HUD pass): the
+   *  disc opens a two-item menu instead of going straight to the panel. */
+  onSettings?: () => void
 }) {
   const waiting = count > 0
+  const [menu, setMenu] = useState(false)
+  const wrapRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!menu) return
+    const onDown = (e: PointerEvent) => { if (!wrapRef.current?.contains(e.target as Node)) setMenu(false) }
+    window.addEventListener('pointerdown', onDown)
+    return () => window.removeEventListener('pointerdown', onDown)
+  }, [menu])
   // ── THE LIGHT ─────────────────────────────────────────────────────────
   //
   // Green means a live connection, and nothing else on this disc means that.
@@ -64,7 +77,7 @@ export default function SeaCrew({ size, top, right, count, linked = false, onOpe
   // do; a connection is a thing that is fine.
   const tone = waiting ? ASK : linked ? LIVE : null
   return (
-    <div data-no-steer
+    <div data-no-steer ref={wrapRef}
       onPointerDown={e => e.stopPropagation()}
       style={{ position: 'absolute', top, right, zIndex: 40 }}>
       <button type="button" data-coach="hud-social"
@@ -73,7 +86,7 @@ export default function SeaCrew({ size, top, right, count, linked = false, onOpe
           : linked ? 'Your crew, sailing with somebody now'
           : 'Your crew'}
         title="Your crew"
-        onClick={() => { vibrate(8); onOpen() }}
+        onClick={() => { vibrate(8); if (onSettings) setMenu(m => !m); else onOpen() }}
         style={{
           position: 'relative',
           width: size, height: size, borderRadius: '50%', padding: 0, cursor: 'pointer',
@@ -137,6 +150,25 @@ export default function SeaCrew({ size, top, right, count, linked = false, onOpe
             }}>{count > 9 ? '9+' : count}</span>
         )}
       </button>
+      {onSettings && menu && (
+        <div style={{
+          position: 'absolute', top: size + 8, right: 0, width: 200, padding: 6, borderRadius: 14,
+          background: 'rgba(8,14,22,0.98)', border: `1px solid ${SEA},0.22)`, boxShadow: '0 12px 30px rgba(0,0,0,0.55)',
+          display: 'flex', flexDirection: 'column', gap: 4,
+        }}>
+          {([
+            [waiting ? `Sailing with (${count} asking)` : 'Sailing with friends', () => { setMenu(false); onOpen() }],
+            ['Settings', () => { setMenu(false); onSettings() }],
+          ] as [string, () => void][]).map(([label, go]) => (
+            <button key={label} type="button" onClick={() => { vibrate(6); go() }}
+              className="font-karla font-700"
+              style={{
+                textAlign: 'left', padding: '0.6rem 0.75rem', borderRadius: 10, cursor: 'pointer',
+                fontSize: '0.82rem', color: '#e6eef4', background: 'rgba(255,255,255,0.04)', border: `1px solid ${SEA},0.12)`,
+              }}>{label}</button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

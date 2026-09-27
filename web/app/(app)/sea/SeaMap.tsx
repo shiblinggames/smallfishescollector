@@ -4228,6 +4228,10 @@ export default function SeaMap({
   const [recallAt, setRecallAt] = useState(recall0)
   useEffect(() => { setRecallAt(recall0) }, [recall0.fishing, recall0.expedition])
   const [recallNote, setRecallNote] = useState<string | null>(null)
+  /** Recall is offered once the tours are done (the chart wears it). */
+  const recallShown = tour.seen && !(inAnchorage && !tour.gateSeen)
+  const chartLong = useRef<number | null>(null)
+  const chartLongFired = useRef(false)
   const [recallBusy, setRecallBusy] = useState(false)
   const [recallNow, setRecallNow] = useState(() => Date.now())
   const recallSide: RecallSide = inAnchorage ? 'expedition' : 'fishing'
@@ -4245,7 +4249,7 @@ export default function SeaMap({
     return () => window.clearTimeout(t)
   }, [recallNote])
   const pressRecall = async () => {
-    if (recallBusy || fightOnRef.current || fishingInRef.current) return
+    if (!recallShown || recallBusy || fightOnRef.current || fishingInRef.current) return
     const side = recallSide
     const to = RECALL_TO[side]
     if (Math.hypot(pos.current.x - to.x, pos.current.y - to.y) < 900) { setRecallNote('You are already home'); return }
@@ -6694,6 +6698,20 @@ export default function SeaMap({
    * not create space.
    */
   const [wide, setWide] = useState(false)
+  /** A phone (560 and under): the Settings gear folds into the Social disc. */
+  const [phoneHud, setPhoneHud] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 560px)')
+    const set = () => setPhoneHud(mq.matches)
+    set()
+    mq.addEventListener('change', set)
+    return () => mq.removeEventListener('change', set)
+  }, [])
+  /** Right offset for the n-th disc of the right-hand run (0 = the corner). */
+  const rightAt = (n: number) => 12 + n * (hudSize + 8)
+  /** With the gear folded away on a phone, the run starts one slot nearer. */
+  const rightBase = phoneHud ? 0 : 1
+  const [settingsSignal, setSettingsSignal] = useState(0)
 
   /**
    * IS THERE A BEARING TO SHOW, and what would it mean.
@@ -6920,7 +6938,6 @@ export default function SeaMap({
     // often are "where am I going" and "what am I getting for this". One slot,
     // because the two spines are never both live — see skillOpen.
     if (!fishingIn || wide) on.push('skill')
-    if (inAnchorage && (!fishingIn || wide)) on.push('crew')
     // ── AND WHAT SHE CARRIES ──────────────────────────────────────────
     //
     // ONE SLOT, BOTH HALVES, and the CONTENT switches with the side, exactly as
@@ -6934,14 +6951,16 @@ export default function SeaMap({
     // sheet INSIDE the rod overlay, so changing what you carry meant already
     // carrying it. See sea/GearSheet.
     if (!fishingIn || wide) on.push('loadout')
-    if (!fishingIn || wide) on.push('chart')
-    // THE FREE RECALL HOME, beside the chart. Not while a tour is speaking.
-    if ((!fishingIn || wide) && tour.seen && !(inAnchorage && !tour.gateSeen)) on.push('recall')
+    // ── THE HUD PASS (Kong, 2026-09-27) ──────────────────────────────
+    // Left is YOU, in the same order on both sides of the reef: journey,
+    // level, loadout, then crew (expedition side), last so nothing before it
+    // moves when you cross. The chart went to the right-hand run (the world),
+    // the recall folded into the chart, the almanac into the fishing level.
+    if (inAnchorage && (!fishingIn || wide)) on.push('crew')
     // THE BOOK, on the fishing side only. It is a reference about FISH, and out
     // past the reef there are none — a door to it standing in the campaign's
     // water would be the busiest thing in that corner and about the other half
     // of the game.
-    if (!inAnchorage && (!fishingIn || wide)) on.push('almanac')
 
     return on
   }, [fishingIn, wide, inAnchorage, orders, trawls.length, trawlsReady, fightOn, tour.seen, tour.gateSeen])
@@ -12159,12 +12178,28 @@ hullRef={hullRefFor(t.key)} />
       {(!fishingIn || wide) && !fightOn && (
         <button
           type="button"
-          onClick={e => { e.stopPropagation(); vibrate(10); setMapOpen(true) }}
-          aria-label="Open the chart"
-          title="The chart"
+          onClick={e => {
+            e.stopPropagation()
+            // A long-press already recalled: this click is its release.
+            if (chartLongFired.current) { chartLongFired.current = false; return }
+            vibrate(10); setMapOpen(true)
+          }}
+          // HOLD TO RECALL, when it is ready: the chart's own door to the free
+          // recall home, one gesture. A plain press still opens the chart.
+          onPointerDown={() => {
+            chartLongFired.current = false
+            if (recallLeft > 0) return
+            if (chartLong.current) clearTimeout(chartLong.current)
+            chartLong.current = window.setTimeout(() => { chartLongFired.current = true; void pressRecall() }, 550)
+          }}
+          onPointerUp={() => { if (chartLong.current) { clearTimeout(chartLong.current); chartLong.current = null } }}
+          onPointerLeave={() => { if (chartLong.current) { clearTimeout(chartLong.current); chartLong.current = null } }}
+          onContextMenu={e => e.preventDefault()}
+          aria-label={recallLeft > 0 ? 'Open the chart' : 'Open the chart. Hold to recall home.'}
+          title={recallLeft > 0 ? `The chart. Recall ready in ${Math.ceil(recallLeft / 60_000)}m` : 'The chart (hold to recall home)'}
           data-coach="chart"
           style={{
-            position: 'absolute', top: 18, left: hudAt('chart'), zIndex: Z.hud,
+            position: 'absolute', top: 18, right: rightAt(rightBase + 2), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: hudSize, height: hudSize, borderRadius: '50%', padding: 0,
             background: 'rgba(6,12,18,0.7)',
@@ -12179,91 +12214,30 @@ hullRef={hullRefFor(t.key)} />
             <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" />
             <path d="M9 4v14M15 6v14" />
           </svg>
+          {/* THE RECALL, worn by the chart: a ring refilling over the cycle,
+              a steady green edge when it is ready. */}
+          {recallShown && (recallLeft > 0 ? (
+            <span aria-hidden style={{
+              position: 'absolute', inset: -3, borderRadius: '50%', pointerEvents: 'none',
+              background: `conic-gradient(rgba(127,214,160,0.85) ${(1 - recallLeft / RECALL_MS) * 360}deg, rgba(127,214,160,0) 0deg)`,
+              WebkitMask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 3px), #000 calc(100% - 3px))',
+              mask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 3px), #000 calc(100% - 3px))',
+            }} />
+          ) : (
+            <span aria-hidden style={{ position: 'absolute', inset: -2, borderRadius: '50%', border: '1.5px solid rgba(127,214,160,0.75)', boxShadow: '0 0 10px rgba(127,214,160,0.35)', pointerEvents: 'none' }} />
+          ))}
+          {recallNote && (
+            <span className="font-karla font-700" style={{
+              position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+              whiteSpace: 'nowrap', pointerEvents: 'none', padding: '0.22rem 0.55rem', borderRadius: 999,
+              fontSize: '0.66rem', color: '#e8f2ea', background: 'rgba(6,12,18,0.92)', border: '1px solid rgba(127,214,160,0.4)',
+            }}>{recallNote}</span>
+          )}
         </button>
       )}
 
-      {/* THE RECALL HOME. A house mark in a ring that refills over the 48
-          minute cycle; gold-green and whole when it is ready. */}
-      {hudRow.includes('recall') && (() => {
-        const frac = recallLeft > 0 ? 1 - recallLeft / RECALL_MS : 1
-        const ready = recallLeft <= 0
-        const to = RECALL_TO[recallSide]
-        return (
-          <button
-            type="button"
-            onClick={e => { e.stopPropagation(); vibrate(10); void pressRecall() }}
-            aria-label={ready ? `Recall to ${to.name}` : `Recall to ${to.name}, ready in ${Math.ceil(recallLeft / 60_000)} minutes`}
-            title={ready ? `Recall to ${to.name} (free, once a cycle)` : `Recall ready in ${Math.ceil(recallLeft / 60_000)}m`}
-            style={{
-              position: 'absolute', top: 18, left: hudAt('recall'), zIndex: Z.hud,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: hudSize, height: hudSize, borderRadius: '50%', padding: 0,
-              background: 'rgba(6,12,18,0.7)',
-              border: `1px solid ${ready ? 'rgba(127,214,160,0.6)' : 'rgba(180,214,232,0.22)'}`,
-              boxShadow: ready ? '0 0 12px rgba(127,214,160,0.25)' : 'none',
-              color: ready ? '#bff0d2' : 'rgba(214,232,240,0.55)', cursor: 'pointer',
-              opacity: recallBusy ? 0.6 : 1,
-            }}>
-            {!ready && (
-              <span aria-hidden style={{
-                position: 'absolute', inset: -3, borderRadius: '50%', pointerEvents: 'none',
-                background: `conic-gradient(rgba(127,214,160,0.85) ${frac * 360}deg, rgba(127,214,160,0) 0deg)`,
-                WebkitMask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 3px), #000 calc(100% - 3px))',
-                mask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 3px), #000 calc(100% - 3px))',
-              }} />
-            )}
-            <svg width={Math.round(hudSize * 0.52)} height={Math.round(hudSize * 0.52)}
-              viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M3 11.5 12 4l9 7.5" />
-              <path d="M5.5 10v9.5h13V10" />
-              <path d="M10 19.5v-5h4v5" />
-            </svg>
-            {recallNote && (
-              <span className="font-karla font-700" style={{
-                position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
-                whiteSpace: 'nowrap', pointerEvents: 'none', padding: '0.22rem 0.55rem', borderRadius: 999,
-                fontSize: '0.66rem', color: '#e8f2ea', background: 'rgba(6,12,18,0.92)', border: '1px solid rgba(127,214,160,0.4)',
-              }}>{recallNote}</span>
-            )}
-          </button>
-        )
-      })()}
-
-      {/* THE ALMANAC, next to the chart, because they are the same kind of
-          thing: a reference you open, read, and shut again. */}
-      {!inAnchorage && (!fishingIn || wide) && (
-        <button
-          type="button"
-          onClick={e => { e.stopPropagation(); vibrate(10); setAlmanacOpen(true) }}
-          aria-label="Open the almanac"
-          data-coach="hud-almanac"
-          title="The almanac"
-          style={{
-            position: 'absolute', top: 18, left: hudAt('almanac'), zIndex: Z.hud,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: hudSize, height: hudSize, borderRadius: '50%', padding: 0,
-            background: 'rgba(6,12,18,0.7)',
-            border: '1px solid rgba(180,214,232,0.22)',
-            color: 'rgba(214,232,240,0.85)', cursor: 'pointer',
-          }}>
-          {/* An open book. Not a fish: there is a fish on half the things in
-              this game and none of them mean "the record of them". */}
-          <svg width={Math.round(hudSize * 0.55)} height={Math.round(hudSize * 0.55)}
-            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            {/* A FISH, NOT A BOOK. It was an open book: a rectangle with a
-                line down the middle, sitting two discs from the chart, which is
-                a folded map — a rectangle with a line down the middle. At
-                twenty-six pixels those are the same picture, and no amount of
-                redrawing either one separates two things that are the same
-                shape. The almanac is about FISH, so it is a fish. */}
-            <path d="M3.4 12c3-3.6 6.2-5.4 9.4-5.4 3.2 0 5.8 1.8 7.8 5.4-2 3.6-4.6 5.4-7.8 5.4-3.2 0-6.4-1.8-9.4-5.4z" />
-            <path d="M3.4 12 1.6 8.4M3.4 12l-1.8 3.6" />
-            <circle cx="16.4" cy="10.6" r="0.9" fill="currentColor" stroke="none" />
-          </svg>
-        </button>
-      )}
+      {/* The Almanac's chart disc folded into the fishing level sheet (the
+          Collection row, 2026-09-27 HUD pass); fishing mode keeps its own Log. */}
 
       {/* ── THE PASSAGE ──────────────────────────────────────────────
           IT HAPPENS TO HER, NOT TO THE SCREEN.
@@ -12906,6 +12880,7 @@ hullRef={hullRefFor(t.key)} />
         onClose={() => setSkillOpen(false)}
         skill={skillView}
         onSwitch={setSkillView}
+        onOpenAlmanac={() => { setSkillOpen(false); setAlmanacOpen(true) }}
         // No `extra`: Today's Orders (under Fishing) and the bounties (under
         // Navigation) both left the level sheet on 2026-09-23 and live on the
         // day board only. See SeaDay.
@@ -13153,7 +13128,7 @@ hullRef={hullRefFor(t.key)} />
           so an order finishing while you fished could never be noticed as a
           change. `hidden` hides the disc and holds any news until you are
           back. */}
-      <SeaDay size={hudSize} top={18} right={12 + (hudSize + 8) * 2}
+      <SeaDay size={hudSize} top={18} right={rightAt(rightBase + 1)}
         hidden={hudOff} caughtTick={caughtTick}
         orders={orders} onOrders={setOrders} onClose={() => { pollBounties(); pollCrew() }}
         seed={() => getBoot().then(b => b?.day ?? null)}
@@ -13177,10 +13152,11 @@ hullRef={hullRefFor(t.key)} />
           it. See SeaCrew. The count is people waiting on an answer from you,
           re-read whenever the panel closes. */}
       {!hudOff && (
-        <SeaCrew size={hudSize} top={18} right={12 + hudSize + 8}
-          count={pendingAsk} linked={linked} onOpen={() => setCrewOpen(true)} />
+        <SeaCrew size={hudSize} top={18} right={rightAt(rightBase)}
+          count={pendingAsk} linked={linked} onOpen={() => setCrewOpen(true)}
+          onSettings={phoneHud ? () => setSettingsSignal(n => n + 1) : undefined} />
       )}
-      {!hudOff && <SeaSettings size={hudSize} top={18} isAdmin={isAdmin} />}
+      {!hudOff && <SeaSettings size={hudSize} top={18} isAdmin={isAdmin} hideTrigger={phoneHud} openSignal={settingsSignal} />}
 
       {/* THE CURTAIN. See the arrival effect. Under the PopupShell layer and
           over the HUD, which is hidden for the shot anyway. Pointer-events
@@ -13242,6 +13218,12 @@ hullRef={hullRefFor(t.key)} />
         // rocked shut.
         cleared={liveCleared}
         onClose={() => setMapOpen(false)}
+        recall={recallShown ? {
+          ready: recallLeft <= 0,
+          minutes: Math.ceil(recallLeft / 60_000),
+          name: RECALL_TO[recallSide].name,
+          onRecall: () => { setMapOpen(false); void pressRecall() },
+        } : undefined}
         // Press a harbour on the chart and the water lights the way to it.
         // The same road the loadout's signposts draw; it points, never sails.
         onPointing={showWay}

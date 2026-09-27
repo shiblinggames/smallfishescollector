@@ -116,13 +116,20 @@ function useOtherAudio(): [boolean, () => void] {
   return [allow, flip]
 }
 
-export default function SeaSettings({ size, top, isAdmin = false }: {
+export default function SeaSettings({ size, top, isAdmin = false, right = 12, hideTrigger = false, openSignal = 0 }: {
   /** The HUD's disc size, so this matches the run on the other side. */
   size: number
   /** Same vertical as that run. */
   top: number
   /** Admin only, and only the presence debug switch is behind it. */
   isAdmin?: boolean
+  /** Where its right edge sits (12 when it is its own disc). */
+  right?: number
+  /** ON A PHONE the gear has no disc of its own (2026-09-27 HUD pass): it is
+   *  an item in the Social disc's menu, which opens it via `openSignal`. */
+  hideTrigger?: boolean
+  /** Bump to open the panel from outside. */
+  openSignal?: number
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -144,6 +151,7 @@ export default function SeaSettings({ size, top, isAdmin = false }: {
     try { setSeaDebug(window.localStorage.getItem('seadebug') === '1') } catch { /* private mode */ }
   }, [])
   const wrap = useRef<HTMLDivElement | null>(null)
+  useEffect(() => { if (openSignal) setOpen(true) }, [openSignal])
 
   // Read again on open. Nothing else writes these today, but the panel is the
   // only place that shows them and a stale switch is worse than no switch.
@@ -178,12 +186,12 @@ export default function SeaSettings({ size, top, isAdmin = false }: {
   return (
     <div ref={wrap} data-no-steer
       onPointerDown={e => e.stopPropagation()}
-      style={{ position: 'absolute', top, right: 12, zIndex: 40 }}>
+      style={{ position: 'absolute', top, right, zIndex: 40 }}>
       <button type="button" data-coach="hud-settings" aria-label="Settings" title="Settings"
         onClick={() => { vibrate(8); setOpen(o => !o) }}
         style={{
           width: size, height: size, borderRadius: '50%', padding: 0, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          display: hideTrigger ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center',
           background: open ? 'rgba(24,38,50,0.95)' : 'rgba(8,16,24,0.72)',
           border: `1px solid ${SEA},${open ? 0.45 : 0.22})`,
           color: `${SEA},${open ? 0.95 : 0.72})`,

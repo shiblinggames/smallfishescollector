@@ -204,7 +204,7 @@ function navRows(level: number, hallTier: number): { stats: Stat[]; ahead: Event
   return { stats, ahead }
 }
 
-export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown, onOpenRenown, hallTier, extra }: {
+export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown, onOpenRenown, hallTier, extra, onOpenAlmanac }: {
   open: boolean
   onClose: () => void
   skill: Skill
@@ -227,6 +227,9 @@ export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown,
    * the day stands in six words and opens on a press; the board is the same
    * component it always was, drawn inside.
    */
+  /** THE COLLECTION (2026-09-27 HUD pass): the Almanac's door on the chart
+   *  folded into the fishing level sheet, the other half of your fishing record. */
+  onOpenAlmanac?: () => void
   extra?: {
     title: string
     /** How the day stands, short: "2/3 done", "1 to claim". */
@@ -344,6 +347,24 @@ export default function SkillPanel({ open, onClose, skill, onSwitch, xp, renown,
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '0 1.05rem 1rem' }}>
+          {skill === 'fishing' && onOpenAlmanac && (
+            <button type="button" className="tap" data-coach="skill-almanac"
+              onClick={() => { vibrate(8); onOpenAlmanac() }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, cursor: 'pointer',
+                padding: '0.65rem 0.8rem', borderRadius: 12, textAlign: 'left',
+                background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.35)',
+              }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9cc4f8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16z" /><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20" />
+              </svg>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span className="font-karla font-800 uppercase" style={{ display: 'block', fontSize: '0.56rem', letterSpacing: '0.18em', color: '#9cc4f8' }}>Collection</span>
+                <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.92rem', color: '#eef4fb' }}>The Almanac</span>
+              </span>
+              <span aria-hidden className="font-cinzel font-700" style={{ color: '#9cc4f8' }}>›</span>
+            </button>
+          )}
           {extra && (
             <div style={{
               marginBottom: 10, borderRadius: 12, overflow: 'hidden',
