@@ -341,6 +341,10 @@ export default async function SeaPage({ searchParams }: {
         .map(d => ({ name: d.name, image: d.image }))}
       raidSeats={raidSeats}
       itemMounts={itemMounts}
+      // Raid gear owned and none of it mounted: the chart says so once (SeaCue
+      // 'gear') and marks the Loadout disc until something is equipped.
+      unequippedGear={((profile?.raid_items as string[] | null) ?? []).length > 0
+        && ((profile?.equipped_raid_items as string[] | null) ?? []).length === 0}
       // Sailing a sunk ship is refused at the raid screen; the DOCK is where
       // that should be discovered, not past the sea gate.
       // THE HOMESTEAD PORTAL. Only the tier: which stones this captain holds is

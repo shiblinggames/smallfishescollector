@@ -121,6 +121,11 @@ import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
 import { vibrate } from '@/lib/haptics'
+import { loadHints, markHint } from '@/lib/hintsClient'
+
+/** `sea_hints_seen` keys for the two stat cards' first-time nudge. */
+const HINT_PLAYER_CARD = 'raid-player-card'
+const HINT_ENEMY_CARD = 'raid-enemy-card'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import BattleFxCanvas, { useBattleFx } from '@/components/BattleFx'
 import dynamic from 'next/dynamic'
@@ -1594,6 +1599,28 @@ export default function RaidCombat({
   // ability if any (Carapace etc.), and the enemy's full behavior pattern as
   // a visible cycle so players can study what punches come when.
   const [showEnemyStats, setShowEnemyStats] = useState(false)
+  // ── THE TWO CARDS ASK TO BE OPENED, ONCE (Kong, 2026-09-27) ──────────────
+  // Your nameplate opens the Captain's Ledger and theirs opens their stat
+  // card, and nothing said so: they looked like labels. Until each has been
+  // opened once (remembered on the account, `sea_hints_seen`), it wears a
+  // slow gold outline and a small "Tap for stats" tag. Opening it retires both.
+  const [cardHint, setCardHint] = useState<{ player: boolean; enemy: boolean }>({ player: false, enemy: false })
+  useEffect(() => {
+    let live = true
+    void loadHints().then(seen => {
+      if (live) setCardHint({ player: !seen.has(HINT_PLAYER_CARD), enemy: !seen.has(HINT_ENEMY_CARD) })
+    })
+    return () => { live = false }
+  }, [])
+  const openPlayerCard = () => {
+    setShowStats(true)
+    if (cardHint.player) { setCardHint(h => ({ ...h, player: false })); void markHint(HINT_PLAYER_CARD) }
+  }
+  const openEnemyCard = () => {
+    setShowEnemyStats(true)
+    if (cardHint.enemy) { setCardHint(h => ({ ...h, enemy: false })); void markHint(HINT_ENEMY_CARD) }
+  }
+  const tapWord = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches ? 'Tap' : 'Click'
   // Flee confirmation (real raids only). The UI is deliberately one number:
   // the die face needed to escape. fleeRoll is the in-flight tumble (die
   // cycling faces before it settles), fleeResult is the settled outcome,
@@ -8953,9 +8980,9 @@ export default function RaidCombat({
             elite static borders are preserved between beats. */}
         <motion.button
           type="button"
-          onClick={() => setShowEnemyStats(true)}
+          onClick={openEnemyCard}
           aria-label={`${enemy.name}, view stats`}
-          className={`rc-enemy-plate${isBoss ? ' is-boss' : ''}${enemyPhase >= 2 ? ' rc-phase2-pulse' : ''}`}
+          className={`rc-enemy-plate${isBoss ? ' is-boss' : ''}${enemyPhase >= 2 ? ' rc-phase2-pulse' : ''}${cardHint.enemy ? ' stat-hint' : ''}`}
           animate={enemyNameplateAnim}
           ref={enemyPlateRef}
           style={{
@@ -9002,6 +9029,9 @@ export default function RaidCombat({
             font: 'inherit', color: 'inherit',
           }}
         >
+          {cardHint.enemy && (
+            <span aria-hidden className="stat-hint-tag inside font-karla font-800 uppercase">{tapWord} for their stats</span>
+          )}
           {/* THE ART. See `.rc-enemy-art` in globals.css. The figure is a
               cutout on transparency, so it gets a ground: a soft pool of the
               card's accent behind the head, which is also where the
@@ -9970,8 +10000,9 @@ export default function RaidCombat({
             nameplate). Idle uses the static border (#2a3548). */}
         <motion.button
           type="button"
-          onClick={() => setShowStats(true)}
+          onClick={openPlayerCard}
           aria-label={`${nameplate}, view stats`}
+          className={cardHint.player ? 'stat-hint' : undefined}
           animate={playerNameplateAnim}
           ref={playerPlateRef}
           style={{
@@ -9988,6 +10019,9 @@ export default function RaidCombat({
             display: 'flex', alignItems: 'center', gap: 8,
           }}
         >
+          {cardHint.player && (
+            <span aria-hidden className="stat-hint-tag font-karla font-800 uppercase">{tapWord} for your stats</span>
+          )}
           {/* Player portrait — mirrors the enemy's portrait badge. Uses the
               player's saved avatar bg/border colors (or the shared defaults
               when unset) so the in-fight portrait matches /profile and the

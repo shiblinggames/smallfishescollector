@@ -564,3 +564,14 @@ Kong: F should surface Fire / Volley, then F or V picks. With a volley or a mega
 opens the same chooser the button does; while it is up F fires the single shot, V the volley, M the
 mega, Escape closes it, and every other key waits. With only the single shot available F fires at
 once (nothing to choose). V and M no longer fire straight off the deck.
+
+
+## The stat cards ask to be opened, once (2026-09-27)
+
+Kong: nothing said your nameplate opens the Captain's Ledger or theirs opens their stat card.
+Until each has been opened once (account-wide, `sea_hints_seen` keys `raid-player-card` /
+`raid-enemy-card`, read and marked through `lib/hintsClient` -> `/api/hints`, a route so it never
+queues in front of the fight's server actions), the plate wears a slow gold OUTLINE (`.stat-hint`;
+an outline because framer owns the plates' borders and shadows) and a "Tap / Click for your stats"
+tag. The enemy plate clips its art, so its tag rides inside along the top (`.stat-hint-tag.inside`).
+Opening a card retires its nudge for good.

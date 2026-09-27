@@ -3669,3 +3669,13 @@ which beside an encounter opens its sheet. The key `down` handler now returns wh
 `up` drops the key from the helm and acts on nothing, and both places that raise `fightOnRef`
 clear held keys so a direction held going in does not carry on after. RaidCombat owns every key
 while the guns are out.
+
+
+## The first piece of gear (2026-09-27)
+
+Kong: the first raid drop (Navigator's Compass or Quartermaster's Anchor) sits in the hold doing
+nothing and nobody is told to mount it. `SeaCue` has a `gear` cue (first in priority): Doby says
+it does nothing in the hold and to equip it in the Battle Loadout, lighting `hud-loadout`. Live when
+`unequippedGear` (page: owns `raid_items`, none `equipped_raid_items`) and nothing is mounted, in
+the anchorage. The Loadout disc also carries a gold dot for as long as that stays true. Like every
+cue it waits for the tours to finish and shows once.

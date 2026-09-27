@@ -4282,3 +4282,23 @@ button:active > .trailer-play { transform: translate(-50%, -50%) scale(0.98); tr
   .promo-name { font-size: 1.75rem; }
   .promo-now { font-size: 1rem; }
 }
+
+/* ── The fight's stat cards, until each has been opened once ──────────────
+   (RaidCombat `cardHint`). An OUTLINE, not a box-shadow: framer animates the
+   plates' borders and shadows on reveal beats, and an outline is nobody
+   else's. The tag sits just outside the plate, pointer-transparent. */
+@keyframes stat-hint-pulse {
+  0%, 100% { outline-color: rgba(240,192,64,0.25); }
+  50%      { outline-color: rgba(240,192,64,0.95); }
+}
+.stat-hint { outline: 2px solid rgba(240,192,64,0.6); outline-offset: 3px; animation: stat-hint-pulse 1.8s ease-in-out infinite; }
+.stat-hint-tag {
+  position: absolute; left: 50%; bottom: calc(100% + 7px); transform: translateX(-50%);
+  white-space: nowrap; pointer-events: none;
+  padding: 0.16rem 0.5rem; border-radius: 999px; font-size: 0.56rem; letter-spacing: 0.12em;
+  color: #1a1206; background: rgba(240,192,64,0.92); box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+/* The enemy plate clips its contents (overflow: hidden for the art), so its
+   tag rides inside, along the top edge. */
+.stat-hint-tag.inside { bottom: auto; top: 6px; z-index: 3; }
+@media (prefers-reduced-motion: reduce) { .stat-hint { animation: none; } }

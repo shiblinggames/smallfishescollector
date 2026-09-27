@@ -50,6 +50,17 @@ const CUES: {
   /** The disc to light under the card, if it has one. Matches `data-coach`. */
   target?: string
 }[] = [
+  // ── THE FIRST PIECE OF GEAR (Kong, 2026-09-27) ────────────────────────────
+  // A Navigator's Compass or a Quartermaster's Anchor drops from an early raid
+  // and lands in the hold, where it does nothing: it has to be MOUNTED. Nothing
+  // said so. True while you own gear and have none equipped; first in line,
+  // because it is the one that changes your next fight.
+  {
+    id: 'gear',
+    ...GUIDES.doby,
+    text: 'That’s your first piece of *raid gear*, cap’n. It does nothing sitting in the hold: open your *Battle Loadout* here and equip it for it to take effect.',
+    target: 'hud-loadout',
+  },
   // ── THE HUD, ONE DISC AT A TIME ───────────────────────────────────────
   //
   // Each of these was a beat in a run of four. A row of discs explained in one

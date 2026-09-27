@@ -1926,7 +1926,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, exploredExpRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, navXP, renownNav, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
-  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, openBoss = null, captain = false, donsDeepest = 0, hasAncientAccess = false, raidParty, hasCaptain: hasCaptain0, raidItems, raidSeats, itemMounts, portal, startSide, hasPact = false,
+  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, openBoss = null, captain = false, donsDeepest = 0, hasAncientAccess = false, raidParty, hasCaptain: hasCaptain0, raidItems, raidSeats, itemMounts, unequippedGear = false, portal, startSide, hasPact = false,
   seenChapterUnlocks = [], seenUltimateUnlock = false,
 }: {
   fishingXP: number
@@ -2010,6 +2010,8 @@ export default function SeaMap({
    *  ones. A muster that only lists who came cannot say who is missing. */
   raidSeats: number
   itemMounts: number
+  /** Owns raid gear and has none equipped (the first-gear cue and disc dot). */
+  unequippedGear?: boolean
   /** Owed repairs. Sailing a sunk ship is refused at the raid screen; the dock
    *  is where that should be discovered, not past the sea gate. */
   /** The Homestead Portal: highest tier owned, and components in hand —
@@ -12643,6 +12645,13 @@ hullRef={hullRefFor(t.key)} />
             <rect x="3.2" y="13.2" width="7.6" height="7.6" rx="1.8" />
             <rect x="13.2" y="13.2" width="7.6" height="7.6" rx="1.8" />
           </svg>
+          {/* GEAR IN THE HOLD, NOTHING MOUNTED: a gold dot until something is. */}
+          {inAnchorage && unequippedGear && raidItems.length === 0 && (
+            <span aria-hidden style={{
+              position: 'absolute', top: 2, right: 2, width: 10, height: 10, borderRadius: '50%',
+              background: '#f0c040', boxShadow: '0 0 8px rgba(240,192,64,0.8)', border: '1.5px solid rgba(6,12,18,0.9)',
+            }} />
+          )}
         </button>
       )}
 
@@ -13347,6 +13356,8 @@ hullRef={hullRefFor(t.key)} />
           seen={tour.hints}
           quiet={!tour.seen || (inAnchorage && !tour.gateSeen)}
           live={{
+            // Gear in the hold and nothing mounted, out where fights happen.
+            gear: inAnchorage && unequippedGear && raidItems.length === 0,
             // A rank gained. The bar has just moved, so the disc that explains
             // what it bought is the only thing worth saying.
             level: !inAnchorage && level >= 2,
