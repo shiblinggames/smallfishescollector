@@ -3658,3 +3658,14 @@ apart the words wobble against the island.
   Reverted (commit 320c45e2 is the implementation, if it comes back: it needs the canvas text to
   match the DOM Cinzel exactly, e.g. by rasterising the DOM title to a texture).
 The titles are DOM again, exactly as before; the jitter is known and open.
+
+
+## The keyboard stands down in a fight (2026-09-27)
+
+Kong: the ship sailed during a raid fight, and Space kept bringing up the raid's pre-fight sheet.
+The pointer paths already returned on `fightOnRef` (onDown, onTap); the chart's key handler did
+not, so D and S (the fight's Dodge and Special) also steered, and Space / E ran the chart's act,
+which beside an encounter opens its sheet. The key `down` handler now returns while a fight is up,
+`up` drops the key from the helm and acts on nothing, and both places that raise `fightOnRef`
+clear held keys so a direction held going in does not carry on after. RaidCombat owns every key
+while the guns are out.

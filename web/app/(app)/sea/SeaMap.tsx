@@ -2861,6 +2861,14 @@ export default function SeaMap({
       setHelmOn(false)
     }
     const down = (e: KeyboardEvent) => {
+      // ── WITH THE GUNS OUT THE KEYBOARD IS THE FIGHT'S ────────────────
+      // Kong (2026-09-27): the ship sailed during a raid fight, and Space kept
+      // opening the raid's pre-fight sheet. The pointer paths already stood
+      // down in a fight (see onDown); the keys did not, so D and S (the
+      // fight's Dodge and Special) also steered, and Space ran the chart's
+      // act, which beside an encounter is "open its sheet". RaidCombat owns
+      // every key while a fight is up.
+      if (fightOnRef.current) return
       if ((e.key === ' ' || e.key.toLowerCase() === 'e') && !typing()
           && !e.metaKey && !e.ctrlKey && !e.altKey) {
         // The rod is out: these keys belong to FishingHere while it is.
@@ -2909,6 +2917,12 @@ export default function SeaMap({
       cmdDir.current = null
     }
     const up = (e: KeyboardEvent) => {
+      // A key let go in a fight: drop it from the helm, act on nothing.
+      if (fightOnRef.current) {
+        keysRef.current.delete(DIRS[e.key.toLowerCase()] ?? '')
+        keyCancel()
+        return
+      }
       // Let go before the hold matured: a tap. The nearest thing, and if
       // nothing is in reach, nothing — the button's own honest answer.
       if (e.key === ' ' || e.key.toLowerCase() === 'e') {
@@ -7048,6 +7062,8 @@ export default function SeaMap({
                 // to read, so doing both at once means dismissing it lands on
                 // a fight already composed.
                 fightOnRef.current = true
+                // A direction held going in must not carry on after it.
+                keysRef.current.clear()
                 fightFastRef.current = false
                 wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
                 // THE CARD FIRST, and the guns after it. Which run you are
@@ -12257,6 +12273,7 @@ hullRef={hullRefFor(t.key)} />
             return
           }
           fightOnRef.current = true
+          keysRef.current.clear()
           fightFastRef.current = false
           wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
           setFightId(raidId)
