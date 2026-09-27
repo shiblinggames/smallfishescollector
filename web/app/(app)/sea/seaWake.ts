@@ -216,6 +216,9 @@ const SKIN_WAKE: Record<string, WakeKind> = {
 }
 
 /** What a warship trails, given the skin she is wearing. */
+/** A particle carrying the tint last written to it, so it is written only on change. */
+type TintMemo = { _tOut?: number }
+
 export function shipWake(skinId: string | null | undefined): WakeKind {
   return (skinId && SKIN_WAKE[skinId]) || 'plain'
 }
@@ -807,7 +810,11 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
         // through, gone by the end.
         const rise = Math.min(1, age / 0.14)
         r.p.alpha = rise * Math.pow(1 - age, 1.4) * 0.34 * (1 - r.heave * 0.35) * (1 + r.lit * 0.8)
-        r.p.tint = (tint === 0xffffff || r.lit > 0.05) ? r.tint : mix(r.tint, tint)
+        // Written only when it changes: Particle's tint setter runs a colour
+        // parse every time, and this was ~10ms/s of an idle sea (perf,
+        // 2026-09-27).
+        const rt = (tint === 0xffffff || r.lit > 0.05) ? r.tint : mix(r.tint, tint)
+        if ((r.p as TintMemo)._tOut !== rt) { (r.p as TintMemo)._tOut = rt; r.p.tint = rt }
       }
 
       for (const raw of pool) {
@@ -842,7 +849,8 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
         const fade = Math.pow(1 - age, m.churn ? 2.4 : m.bow ? 1.2 : 1.7)
         p.alpha = fade * m.st.alpha * DENSITY * (0.45 + m.force * 0.55)
           * (m.churn ? 2.2 : m.bow ? 3.4 : 1) * (1 + m.lit * 1.1)
-        p.tint = (tint === 0xffffff || m.lit > 0.05) ? m.tint : mix(m.tint, tint)
+        const mt = (tint === 0xffffff || m.lit > 0.05) ? m.tint : mix(m.tint, tint)
+        if ((p as TintMemo)._tOut !== mt) { (p as TintMemo)._tOut = mt; p.tint = mt }
 
         // Stretched ALONG the heading and thin across it: a streak of disturbed
         // water, not a ring. Growing mostly across as it settles, because that
