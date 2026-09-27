@@ -80,8 +80,6 @@ export default function BossCardSheet({ nodeId, preloaded, onEnter, onClose }: {
     return () => { live = false; clearTimeout(t) }
   }, [nodeId, preloaded, stale, attempt])
 
-  if (!nodeId || typeof document === 'undefined') return null
-
   const boss: RaidNodeView | null = state?.views.find(v => v.node.id === nodeId) ?? null
   // ── NEVER AN INVISIBLE WALL (Kong, 2026-09-27: pressing to enter Barnacle
   // Pete's raid froze until a refresh) ─────────────────────────────────────
@@ -91,8 +89,16 @@ export default function BossCardSheet({ nodeId, preloaded, onEnter, onClose }: {
   // never read again: an invisible, unclosable wall until a refresh. Now a
   // pre-read without the boss is read fresh once, the wait shows a card with a
   // way out, and a failure says so with a Close.
-  const missing = !!state && !boss
+  const missing = !!nodeId && !!state && !boss
   useEffect(() => { if (missing && preloaded && !stale) setStale(true) }, [missing, preloaded, stale])
+  // A closed card starts the next one trusting the chart's pre-read again.
+  useEffect(() => { if (!nodeId) { setStale(false); setFetched(null); setErr(null); setSlow(false) } }, [nodeId])
+
+  // EVERY HOOK ABOVE THIS LINE. The effect above once sat below the return,
+  // so the card ran one more hook open than closed and React threw the moment
+  // a boss was pressed (the "did not go through" page on every raid).
+  if (!nodeId || typeof document === 'undefined') return null
+
   // The challenge run is a SIDE BRANCH hanging off the boss, which is how the
   // node map models it and therefore how the card expects to be handed it.
   const challenge: RaidNodeView | null =
