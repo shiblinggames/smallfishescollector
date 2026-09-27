@@ -3773,3 +3773,10 @@ Kong: portals don't teleport you to buildings. All island berths are gone: the T
 - The free recall (minimap button, chart hold) lands at your side's home portal, from `RECALL_TO` = `CROSS_TO`:
   - on the fishing side, the Homestead portal;
   - anywhere north of the reef, including the bays, the Anchorage portal.
+
+## Skip tutorial (2026-09-27)
+Older captains who predate the first voyage were being walked through it from the dock, and some got stuck on a beat that waits for an action.
+
+- Every tour card now shows a small "Skip tutorial" link (`GuideCoach onSkip`). It asks twice: the first tap turns into "Tap again to skip the whole tutorial", which resets after 3.5s.
+- Skipping calls `skipTutorials()` in tourActions, which latches BOTH `has_seen_sea_tour` and `has_seen_gate_tour`. It is one way.
+- It is wired on SeaFirstVoyage, SeaGateTour and the Market's two first-voyage cards. The tour's step jumps to the end, which releases its holds.

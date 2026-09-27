@@ -27,6 +27,24 @@ function chartChanged() {
   revalidatePath('/sea')
 }
 
+/**
+ * ── SKIP THE LOT (Kong, 2026-09-27) ────────────────────────────────────────
+ *
+ * Older captains who predate the first voyage were being walked through it
+ * from the dock, and a tour that waits on "sell a fish at the market" can
+ * leave somebody who already knows the game stuck on a beat. Every tour card
+ * now offers this: both walkthroughs, the first voyage and the anchorage's,
+ * latched shut at once. One way: nothing reopens them.
+ */
+export async function skipTutorials(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient()
+    .from('profiles').update({ has_seen_sea_tour: true, has_seen_gate_tour: true }).eq('id', user.id)
+  chartChanged()
+}
+
 /** Shut the arrival walkthrough for good. */
 export async function markSeaTourSeen(): Promise<void> {
   const supabase = await createClient()

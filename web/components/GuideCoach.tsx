@@ -55,7 +55,7 @@ function findSpot(anchor: string): Spot | null {
 
 export default function GuideCoach({
   show, portrait, speaker, text, accent = '#5eb0e0', placement = 'bottom', offset, onClose, autoHideMs, onNext, nextLabel, z = 70,
-  anchor,
+  anchor, onSkip,
 }: {
   show: boolean
   portrait: string
@@ -86,6 +86,9 @@ export default function GuideCoach({
    * `placement` when nothing is found.
    */
   anchor?: string
+  /** A tour card: offers "Skip tutorial" under the line, asked twice so a
+   *  stray tap cannot end a walkthrough somebody wanted. */
+  onSkip?: () => void
 }) {
   // Auto-hide timer. onClose is read through a ref so an inline arrow from the
   // parent doesn't reset the timer every render.
@@ -106,18 +109,26 @@ export default function GuideCoach({
         <Card key={text}
           portrait={portrait} speaker={speaker} text={text} accent={accent}
           placement={placement} offset={offset} z={z} anchor={anchor}
-          onClose={onClose} onNext={onNext} nextLabel={nextLabel} />
+          onClose={onClose} onNext={onNext} nextLabel={nextLabel} onSkip={onSkip} />
       )}
     </AnimatePresence>,
     document.body,
   )
 }
 
-function Card({ portrait, speaker, text, accent, placement, offset, z, anchor, onClose, onNext, nextLabel }: {
+function Card({ portrait, speaker, text, accent, placement, offset, z, anchor, onClose, onNext, nextLabel, onSkip }: {
   portrait: string; speaker: string; text: string; accent: string
   placement: 'top' | 'bottom'; offset?: string; z: number; anchor?: string
-  onClose?: () => void; onNext?: () => void; nextLabel?: string
+  onClose?: () => void; onNext?: () => void; nextLabel?: string; onSkip?: () => void
 }) {
+  // The skip asks once more before it acts, and forgets the question if it
+  // is not answered in a few seconds.
+  const [skipAsk, setSkipAsk] = useState(false)
+  useEffect(() => {
+    if (!skipAsk) return
+    const t = setTimeout(() => setSkipAsk(false), 3500)
+    return () => clearTimeout(t)
+  }, [skipAsk])
   const top = placement === 'top'
   const edge = offset ?? (top
     ? 'calc(env(safe-area-inset-top, 0px) + 96px)'
@@ -246,6 +257,18 @@ function Card({ portrait, speaker, text, accent, placement, offset, z, anchor, o
           <p className="font-karla font-600" style={{ fontSize: '0.86rem', lineHeight: 1.3, color: '#eef2f7' }}>
             {renderEmphasis(text, accent)}
           </p>
+          {onSkip && (
+            <button type="button"
+              onClick={() => { if (skipAsk) onSkip(); else setSkipAsk(true) }}
+              className="font-karla font-700"
+              style={{
+                pointerEvents: 'auto', marginTop: 5, padding: 0, background: 'none', border: 'none',
+                fontSize: '0.66rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2,
+                color: skipAsk ? accent : 'rgba(214,226,236,0.5)',
+              }}>
+              {skipAsk ? 'Tap again to skip the whole tutorial' : 'Skip tutorial'}
+            </button>
+          )}
         </div>
         {onNext && (
           <button

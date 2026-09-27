@@ -16,7 +16,7 @@ import { hapticReward } from '@/lib/haptics'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import { SEA_ACCENT, SELL_STEP } from '@/lib/seaOnboarding'
-import { setSeaTourStep } from '@/app/(app)/sea/tourActions'
+import { setSeaTourStep, skipTutorials } from '@/app/(app)/sea/tourActions'
 
 // ── Palette ──────────────────────────────────────────────────────────────
 const UP = '#4ade80'
@@ -897,6 +897,7 @@ export default function MarketClient({
         : 'Everything you caught is here. *Sell all* takes the lot in one go.'}
       accent={SEA_ACCENT}
       placement="bottom"
+      onSkip={() => { void skipTutorials(); setTourAt(null) }}
     />
     <GuideCoach
       show={tourAt === 'out'}
@@ -910,6 +911,7 @@ export default function MarketClient({
       accent={SEA_ACCENT}
       placement="bottom"
       onClose={() => setTourAt(null)}
+      onSkip={() => { void skipTutorials(); setTourAt(null) }}
     />
     <main className="min-h-screen pb-24 sm:pb-0">
       {/* THE HARBOURMASTER'S BOARD.

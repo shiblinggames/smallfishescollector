@@ -39,7 +39,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { FIRST_VOYAGE, SEA_ACCENT } from '@/lib/seaOnboarding'
 import { PLACES, TOUR_SPOT, berthOf } from './chart'
-import { getSeaTourStep, markSeaTourSeen, setSeaTourStep } from './tourActions'
+import { getSeaTourStep, markSeaTourSeen, setSeaTourStep, skipTutorials } from './tourActions'
 
 /**
  * WHERE A BEAT IS POINTING.
@@ -429,6 +429,9 @@ export default function SeaFirstVoyage({
       anchor={stuck === 'bait' ? 'haul haul-bait' : b.target}
       onNext={waiting ? undefined : next}
       nextLabel={step === FIRST_VOYAGE.length - 1 ? 'Aye' : undefined}
+      // SKIP THE LOT: this voyage and the anchorage's, latched for good. The
+      // step jumps to the end, which is what releases the tour's holds.
+      onSkip={() => { wrote.current = true; void skipTutorials(); setStep(FIRST_VOYAGE.length) }}
       // ABOVE THE SHEET while the instruction is about something inside one.
       // The Daily Haul opens in a PopupShell at 111 and this card sits at 70,
       // so the line saying "claim your worms" would vanish behind the scrim

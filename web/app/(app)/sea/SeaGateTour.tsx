@@ -49,7 +49,7 @@ const GATE_TOUR_Y = NORTH_WALL - 1100
  *  because it is a ring of light a captain sails TOWARDS: the line should
  *  arrive while it is filling the screen, not at the moment of crossing. */
 const GATE_HAIL = 1100
-import { markGateTourSeen, setGateTourStep } from './tourActions'
+import { markGateTourSeen, setGateTourStep, skipTutorials } from './tourActions'
 
 export default function SeaGateTour({
   hasSeen, startAt, inAnchorage, fighting, cam, goal, crewOpen, crewSection, recruits,
@@ -478,6 +478,7 @@ export default function SeaGateTour({
       anchor={waypoint?.target ?? b.target}
       onNext={waiting ? undefined : next}
       nextLabel={step === GATE_TOUR.length - 1 ? 'Aye' : undefined}
+      onSkip={() => { void skipTutorials(); setStep(GATE_TOUR.length) }}
       z={inPanel ? 120 : undefined}
     />
   )
