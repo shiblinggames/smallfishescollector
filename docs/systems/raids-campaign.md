@@ -578,3 +578,4 @@ Opening a card retires its nudge for good.
 
 ## A Navigation level mid-raid applies at once (2026-09-27)
 The raid's max HP, power, dodge and fortune came in as props fixed at raid open, so a Navigation level earned mid-raid (for example +1 max HP) waited for the next raid. RaidGame now adds the difference between `navLevelBonuses` at the level the raid opened on and at the live XP. A max HP gain is also added to current HP (not when down). Sea fights use RaidGame too; the gauntlet grants Navigation XP only at cash-out, so it has nothing to catch.
+Crew too (same day): kills pay crew XP into `crewXPLive`, and the crew list handed to combat carries the live XP, so ability tiers unlock mid-raid. Each hand's stat ticks gained since open (`levelStatBonuses` over `affinity`, times `slotMult`, both now on `RaidCrewMember`) are added to the totals. Practice raids apply the Navigation delta the same way.

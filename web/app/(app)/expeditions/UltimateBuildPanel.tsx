@@ -14,7 +14,7 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { useRouter } from 'next/navigation'
+import { useRefreshAll } from '@/lib/sheetRefresh'
 import { motion, AnimatePresence } from 'framer-motion'
 import UltimatePreview from './UltimatePreview'
 import { startUltimateBuild, swapUltimateBuild, startUltimateRetool, buyUltimateSchematics, switchUltimate } from './actions'
@@ -40,7 +40,7 @@ export default function UltimateBuildPanel({
   /** Owns the Full Schematics — free, instant switching between ultimates. */
   schematics?: boolean
 }) {
-  const router = useRouter()
+  const refreshAll = useRefreshAll()
   const gates = ultimateGateStatus({ chapter3Cleared, shipTier, navLevel, hasRack })
   const allMet = allUltimateGatesMet(gates)
 
@@ -55,6 +55,13 @@ export default function UltimateBuildPanel({
   const [confirmRetool, setConfirmRetool] = useState<ShipAugmentId | null>(null)
   const [confirmSchem, setConfirmSchem] = useState(false)
   const [schemOwned, setSchemOwned] = useState(schematics)
+  // FRESH PROPS WIN. Seeded once, these ignored the refresh a start or a
+  // claim asks for, so reopening the panel showed a build as never started.
+  useEffect(() => { setActive(activeId) }, [activeId])
+  const buildKey = JSON.stringify(initialBuild)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setBuild(initialBuild) }, [buildKey])
+  useEffect(() => { if (schematics) setSchemOwned(true) }, [schematics])
   const [celebrate, setCelebrate] = useState(false)
   const [armKey, setArmKey] = useState(0)
   // Weapon Bay slot selection (null = follow the armed / incoming weapon).
@@ -77,7 +84,7 @@ export default function UltimateBuildPanel({
     // not listen for that event — so after a build purchase the repair button still
     // offered a price you could no longer pay. The server refuses it; the button was
     // simply lying.
-    router.refresh()
+    refreshAll()
   }
 
   async function swap(id: ShipAugmentId) {
@@ -102,7 +109,7 @@ export default function UltimateBuildPanel({
     // not listen for that event — so after a build purchase the repair button still
     // offered a price you could no longer pay. The server refuses it; the button was
     // simply lying.
-    router.refresh()
+    refreshAll()
   }
 
   async function buySchem() {
@@ -120,7 +127,7 @@ export default function UltimateBuildPanel({
     // not listen for that event — so after a build purchase the repair button still
     // offered a price you could no longer pay. The server refuses it; the button was
     // simply lying.
-    router.refresh()
+    refreshAll()
   }
 
   // Free switch (schematics owners) — optimistic, with the tactile beat:
@@ -150,7 +157,7 @@ export default function UltimateBuildPanel({
     if (complete) return (
       <div style={{ marginBottom: '1.7rem' }}>
         {HEADER}
-        <BuildCompleteCard augment={a} kicker={isRetool ? 'Mounts Retooled' : 'Weapon Forged'} onClaim={() => router.refresh()} />
+        <BuildCompleteCard augment={a} kicker={isRetool ? 'Mounts Retooled' : 'Weapon Forged'} onClaim={() => refreshAll()} />
       </div>
     )
     const progress = Math.min(1, 1 - remaining / ULTIMATE_BUILD_MS)

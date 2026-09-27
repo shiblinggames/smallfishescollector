@@ -52,6 +52,9 @@ export default function HallSheet({ open, onClose }: {
     if (!open) return
     let live = true
     setErr(null)
+    // Dropped first: the hall used to mount on the last visit's read and
+    // show a collected stint as still waiting (and fail when pressed).
+    setState(null)
     getCrewState().then(r => {
       if (!live) return
       if (!r) setErr('The hall did not answer. Try again.')

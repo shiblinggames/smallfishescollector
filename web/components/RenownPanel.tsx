@@ -12,7 +12,7 @@
 
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import { CAPTAIN_WATER } from '@/lib/captainWater'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import CloseButton from '@/components/CloseButton'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
@@ -45,6 +45,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
   const stats = renownStats(skill)
 
   const [state, setState] = useState<RenownState>(initial)
+  const onChangeRef = useRef(onChange); onChangeRef.current = onChange
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   // Pending, UNSAVED allocations — points added this session that only persist
@@ -66,7 +67,9 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
   useEffect(() => {
     if (!open) return
     let live = true
-    getRenownState(skill).then(fresh => { if (live && fresh) setState(fresh) })
+    // Handed back up too, so the dot and the chip on the chart agree with
+    // what the board reads even when nothing is spent.
+    getRenownState(skill).then(fresh => { if (live && fresh) { setState(fresh); onChangeRef.current?.(fresh) } })
     return () => { live = false }
   }, [open, skill])
 

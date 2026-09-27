@@ -3723,3 +3723,29 @@ Kong: too many HUD discs. Settled layout:
 - **The Almanac folded into the fishing Level sheet**: a Collection / The Almanac row at the top
   (`SkillPanel onOpenAlmanac`). The top-bar almanac disc is gone; fishing mode keeps its own Log.
 Phones go from nine discs to six or seven; desktop to seven or eight.
+
+## Nothing waits for a reload (2026-09-27 stale-state sweep)
+The chart only gets fresh page props when a server action revalidates `/sea` or something calls `router.refresh()`. Anything changed in a sheet has to reach the chart one of these ways or it shows stale until reload. The window events are the contract; each listener only ever raises a value, so a late or repeated event is harmless.
+
+**Window events, and what fires them:**
+- `bait-changed` `{ baitType, added }`: the Daily Haul, level rewards, a sea trader's bait deal, and bait from a crate.
+  - Spending bait also lowers the bag's own count, not only the hook's.
+  - A fresh bag prop reseeds the hook's count too. Voyage bait arrives this way.
+- `hold-tier-changed` (tier): the Shipyard hold upgrade and level rewards. The chart's hold capacity is live state now.
+- `fishing-xp-changed` (total): a trawl. The level disc, locked waters, catch zone and fishing renown follow.
+- `ancients-changed` (count): FishingHere, when a trophy Ancient lands. It re-opens gated nodes, so a sixth Ancient opens One Last Ride at once.
+- `sea-fight-ended`: the fight closes. The island marks (crew, hall, bounties) and the day board re-read.
+- `sea-due`: the day board's due-back timer. The marks re-read too, and on tab return.
+- `voyages-changed`: a voyage sent or claimed. It refreshes the phone tab bar's voyage dot.
+- `crew-assigned` now carries `seated`, for the warship deck's "+N crew".
+
+**Other rules:**
+- **Rods.** The rod in hand follows the rack's first rod when the equipped rod changes. A regular's rod or a won runner rod calls `router.refresh()`.
+- **Kept across rod openings.** FishingHere remounts on every rod-out, so the chart holds a `FishCarry`: the auto toggle, Tide Turner skips (only while the page's count is unchanged), the streak and trophies.
+- **Renown.** The level is derived live from XP (`liveRenown` in SeaMap), and RenownPanel hands its fresh read back up on open.
+- **Sea-fight loadout.** It is read on every approach and again after any kit sheet closes (ship, crew hub, hall, yard, renown) or a crew event. The stale copy is dropped first.
+- **Sheets read fresh.**
+  - The Hall and Yard sheets drop their last read on open.
+  - CrewClient adopts a fresh `initial` from its holder.
+  - ShipSheet provides `SheetRefresh` (`lib/sheetRefresh.tsx`), so ShipHero's and UltimateBuildPanel's `useRefreshAll()` re-read the sheet as well as the page.
+- **Crew Hall tier, drill and stores buys** revalidate `/sea`, so the island art and berth numbers follow.

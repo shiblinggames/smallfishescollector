@@ -616,6 +616,8 @@ export default function DailyVoyagePanel({
         // back, which is the only reason it ever looked correct.
         // (handleClaim below has always done this. Only the launch path forgot.)
         router.refresh()
+        // The phone tab bar's voyage dot reads its own copy; see MobileTabBar.
+        window.dispatchEvent(new CustomEvent('voyages-changed'))
       } catch (e) {
         // Never let a thrown action leave the button stuck on "Sending…"
         // with no feedback — surface it and clear the pending state.
@@ -656,6 +658,7 @@ export default function DailyVoyagePanel({
       }
       if (advance) setPanelState('done')
       router.refresh()
+      window.dispatchEvent(new CustomEvent('voyages-changed'))
       } catch (e) {
         console.error('[voyage] claim failed:', e)
         setError('Could not claim the voyage. Please try again.')

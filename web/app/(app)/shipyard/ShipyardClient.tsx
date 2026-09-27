@@ -304,6 +304,8 @@ export default function ShipyardClient(p: {
         if ('error' in r) setErr(r.error)
         else {
           bank(r.doubloons); setHold(r.newTier); setCap(getFishHold(r.newTier).capacity)
+          // The chart's hold hears it, or it keeps saying "full".
+          window.dispatchEvent(new CustomEvent('hold-tier-changed', { detail: r.newTier }))
           vibrate([0, 30, 40, 60])
         }
       }

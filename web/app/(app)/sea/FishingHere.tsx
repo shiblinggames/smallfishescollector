@@ -379,8 +379,14 @@ const MENU_VAL: React.CSSProperties = {
   maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
 }
 
+/** What the rod keeps between openings. FishingHere remounts every time the
+ *  rod comes out; the chart owns this object, so the auto toggle, the Tide
+ *  Turner's skips, the streak and the Ancients landed survive the remount
+ *  instead of resetting to the page-load values. */
+export type FishCarry = { auto?: boolean; skips?: number; skipsFor?: number; streak?: number; trophies?: number[] }
+
 export default function FishingHere({
-  hotspotChip,
+  hotspotChip, carry,
   zone, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
   seaPhase, baitBag, onBaitChange, rack, look, onLookChange, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onReel,
@@ -485,6 +491,8 @@ export default function FishingHere({
    * the server's lifetime table gets, so the two cannot drift.
    */
   onReel?: (r: { perfectStreak: number; caught: number }) => void
+  /** See FishCarry. */
+  carry?: FishCarry
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
   /** SOMETHING TOOK THE LINE. Fired on the bite, before the reel is offered.
    *  The first voyage's reel line waits on exactly this moment. */
@@ -687,7 +695,8 @@ export default function FishingHere({
    *  identical to an ordinary one. */
   const [perfectFlash, setPerfectFlash] = useState(false)
   /** The running streak, straight off the server's own count, for the bar. */
-  const [streak, setStreak] = useState(0)
+  const [streak, setStreak] = useState(carry?.streak ?? 0)
+  useEffect(() => { if (carry) carry.streak = streak }, [carry, streak])
   /** XP floated off the boat, where the boat is. */
   const [xpPop, setXpPop] = useState<{ id: number; value: number; perfect: boolean } | null>(null)
 
@@ -855,7 +864,8 @@ export default function FishingHere({
   const [rankUp, setRankUp] = useState<{ name: string; from: number; to: number; petGranted: boolean } | null>(null)
   const [capstone, setCapstone] = useState(false)
   /** Trophies landed, local so the "N of 6" count is right on the sixth. */
-  const [trophies, setTrophies] = useState<Set<number>>(() => new Set(log.ancientCatches))
+  const [trophies, setTrophies] = useState<Set<number>>(() => new Set([...log.ancientCatches, ...(carry?.trophies ?? [])]))
+  useEffect(() => { if (carry) carry.trophies = [...trophies] }, [carry, trophies])
 
   /** A fish you have just landed is a fish you have logged. Without this the
    *  drawer disagrees with the result card you are still looking at. */
@@ -1355,6 +1365,12 @@ export default function FishingHere({
         if (loot.type === 'doubloons') {
           window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: loot.newDoubloons }))
         }
+        // And the bag, for bait out of a crate; and the streak, which a
+        // perfect crate carries on like any other perfect.
+        if (loot.type === 'bait') {
+          window.dispatchEvent(new CustomEvent('bait-changed', { detail: { baitType: loot.baitType, added: loot.quantity } }))
+        }
+        if (typeof loot.perfectStreak === 'number') setStreak(loot.perfectStreak)
         setPhase('result')
       }).catch(() => {
         setErr('The crate slipped the line.')
@@ -1498,6 +1514,8 @@ export default function FishingHere({
             .filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0).length || 6
           const countAfter = new Set([...trophies, fishNow.id]).size
           setTrophies(prev => new Set([...prev, fishNow.id]))
+          // The chart gates One Last Ride on the six; it hears the count here.
+          window.dispatchEvent(new CustomEvent('ancients-changed', { detail: countAfter }))
           // Finn's reaction to THIS giant, played once the cinematic clears.
           // The first trophy also stands in for his old reveal — flipping
           // finn_revealed here is what stops the chart's FINN_REVEAL_BEAT
@@ -1548,7 +1566,8 @@ export default function FishingHere({
   // a zone the captain has already left.
   // SEEDED FROM THE PROFILE, not from `true`. The old default meant the item
   // switched itself back on at the start of every session.
-  const [autoOn, setAutoOn] = useState(auto.on)
+  const [autoOn, setAutoOn] = useState(carry?.auto ?? auto.on)
+  useEffect(() => { if (carry) carry.auto = autoOn }, [carry, autoOn])
   useEffect(() => {
     if (auto.tier === 0 || !autoOn) return
     if (phase !== 'result') return
@@ -1607,7 +1626,11 @@ export default function FishingHere({
   }, [phase, hooked, auto.tier, auto.maxRarity, autoOn, angleNow])
 
   // ── TIDE TURNER ─────────────────────────────────────────────────────────
-  const [skipsLeft, setSkipsLeft] = useState(tideTurner.left)
+  // The carried count only while the page's own count has not moved; a
+  // fresh page copy is the server's word (a voyage can hand the item over).
+  const [skipsLeft, setSkipsLeft] = useState(
+    carry?.skips != null && carry.skipsFor === tideTurner.left ? carry.skips : tideTurner.left)
+  useEffect(() => { if (carry) { carry.skips = skipsLeft; carry.skipsFor = tideTurner.left } }, [carry, skipsLeft, tideTurner.left])
   const [skipping, setSkipping] = useState(false)
   const skip = useCallback(async () => {
     if (skipping || phase !== 'hooked' || skipsLeft <= 0) return

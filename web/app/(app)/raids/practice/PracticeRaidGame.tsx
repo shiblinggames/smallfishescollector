@@ -11,7 +11,7 @@ import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import { getShipSkin, shipSkinFilter } from '@/lib/shipSkins'
 import { shipTierByName } from '@/lib/ships'
-import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
+import { getXPProgress, getLevelFromXP, MAX_LEVEL, navLevelBonuses } from '@/lib/expeditionLevel'
 import { raidDamageProfile } from '@/lib/expeditions'
 import type { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
@@ -319,8 +319,8 @@ interface RaidCrewMember {
 }
 
 export default function PracticeRaidGame({
-  shipImageUrl, shipName, username, playerHPMax, shipMinDamage, shipSpeed,
-  totalPower, totalDodge, totalFortune, crewMembers, equippedShipSkin,
+  shipImageUrl, shipName, username, playerHPMax: basePlayerHPMax, shipMinDamage, shipSpeed,
+  totalPower: baseTotalPower, totalDodge: baseTotalDodge, totalFortune: baseTotalFortune, crewMembers, equippedShipSkin,
   equippedRaidItems = [],
   equippedRepairKit,
   hasSeenTutorial, hasCompletedPractice, initialExpeditionXP,
@@ -349,6 +349,20 @@ export default function PracticeRaidGame({
   initialExpeditionXP: number
 }) {
   const router = useRouter()
+  const [navXP, setNavXP]                 = useState(initialExpeditionXP)
+  // A LEVEL EARNED HERE COUNTS AT ONCE, as it does in a campaign raid (see
+  // RaidGame): the Navigation bonuses gained since the page loaded are added
+  // to the stats the server sent, so "Fight another" is fought at the new level.
+  const openedAtLevelRef = useRef(getLevelFromXP(initialExpeditionXP))
+  const navGain = (() => {
+    const a = navLevelBonuses(openedAtLevelRef.current)
+    const b = navLevelBonuses(getLevelFromXP(navXP))
+    return { hp: b.hp - a.hp, power: b.power - a.power, navigation: b.navigation - a.navigation, fortune: b.fortune - a.fortune }
+  })()
+  const playerHPMax  = basePlayerHPMax + navGain.hp
+  const totalPower   = baseTotalPower + navGain.power
+  const totalDodge   = baseTotalDodge + navGain.navigation
+  const totalFortune = baseTotalFortune + navGain.fortune
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
   const shipFilter        = shipSkinFilter(equippedShipSkin, shipTierByName(shipName))
   const dodgeBonus        = totalDodge * 5
@@ -405,7 +419,6 @@ export default function PracticeRaidGame({
   const [winXP, setWinXP]                 = useState(0)
   const [winPhase, setWinPhase]           = useState<'summary' | 'claimed'>('summary')
   const [isClaiming, setIsClaiming]       = useState(false)
-  const [navXP, setNavXP]                 = useState(initialExpeditionXP)
   // Ref-mirror of navXP — async callbacks close over the initial value
   // otherwise (useCallback deps don't include navXP).
   const navXPRef                          = useRef(initialExpeditionXP)

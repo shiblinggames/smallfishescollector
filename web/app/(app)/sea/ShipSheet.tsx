@@ -35,7 +35,8 @@
 // out on the water it is a disc in the HUD row — because what you mount on the
 // hull is a between-fights decision, and between fights you are on the sea.
 
-import { useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
+import { SheetRefresh } from '@/lib/sheetRefresh'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
@@ -125,6 +126,12 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
     return () => { live = false }
   }, [open])
 
+  /** What ShipHero's reconciles reach: the page's refresh cannot touch this
+   *  sheet's own read, so it is re-read here. See lib/sheetRefresh. */
+  const reread = useCallback(() => {
+    getShipHeroProps().then(r => setState(r), () => {})
+  }, [])
+
   // Back to the plates every time it shuts.
   useEffect(() => { if (!open) { setRoom(null); setArmed(false); setBuyErr(null) } }, [open])
 
@@ -176,6 +183,7 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
   return (
     // The map STEERS on click and starts a heading on pointerdown, so every
     // panel over it needs this or dismissing also puts the helm over.
+    <SheetRefresh.Provider value={reread}>
     <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
       <PopupShell open={open} onClose={onClose} zIndex={118}>
         <motion.div
@@ -461,5 +469,6 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
         </motion.div>
       </PopupShell>
     </div>
+    </SheetRefresh.Provider>
   )
 }

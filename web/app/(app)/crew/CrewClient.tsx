@@ -873,6 +873,14 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
   openCapacity?: number
 }) {
   const [state, setState] = useState<CrewState>(initial)
+  // A FRESH READ FROM THE HOLDER WINS. The Crew hub re-reads on open and on
+  // crew-changed; a room already open kept the copy it mounted with, so a
+  // new hull's capacity or a rolled board waited until you backed out.
+  const firstInitial = useRef(initial)
+  useEffect(() => {
+    if (initial === firstInitial.current) return
+    setState(initial)
+  }, [initial])
   // Blood Gem skin gamble: null = closed, 'rolling' = suspense build-up,
   // 'revealed' = the won skin slams in. skinId set once the server returns it.
   const [skinGamble, setSkinGamble] = useState<{ phase: 'rolling' | 'revealed'; skinId?: string } | null>(null)
@@ -1590,9 +1598,11 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
   const seatedCrew = state.roster.filter(c => c.raidSlot != null).sort((a, b) => a.raidSlot! - b.raidSlot!)
   const captainSeated = seatedCrew.length > 0
   const captainArt = seatedCrew[0]?.filename ?? null
+  // And how many, for the "+N crew" on the warship's deck.
+  const seatedCount = seatedCrew.length
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('crew-assigned', { detail: { captain: captainSeated, art: captainArt } }))
-  }, [captainSeated, captainArt])
+    window.dispatchEvent(new CustomEvent('crew-assigned', { detail: { captain: captainSeated, art: captainArt, seated: seatedCount } }))
+  }, [captainSeated, captainArt, seatedCount])
 
   // Optimistic recruit for the swipe gesture — mark the board candidate aboard
   // the instant they tap (dims the card, disables the swipe) so it feels

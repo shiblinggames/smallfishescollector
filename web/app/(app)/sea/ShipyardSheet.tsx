@@ -35,6 +35,9 @@ export default function ShipyardSheet({ open, onClose }: {
     if (!open) return
     let live = true
     setErr(null)
+    // Dropped first: ShipyardClient seeds its tiers and purse once, so the
+    // last visit's read put back tiers you had since bought.
+    setState(null)
     shipyardState().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)

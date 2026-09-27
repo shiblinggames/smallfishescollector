@@ -38,6 +38,15 @@ import {
   XFOG_CELL, XFOG_W, XFOG_H, XFOG_X0, XFOG_Y0, XFOG_CELLS,
 } from '@/lib/seaExploreExp'
 import type { RenownState } from '@/app/(app)/actions/renown'
+import { renownLevel, type RenownSkill } from '@/lib/renown'
+
+/** A renown state brought up to the XP in hand: the level only ever rises
+ *  with XP, and what is banked is the level less what is spent. */
+function liveRenown(s: RenownState | null, skill: RenownSkill, xp: number): RenownState | null {
+  if (!s) return s
+  const level = Math.max(s.level, renownLevel(skill, xp))
+  return level === s.level ? s : { ...s, level, available: Math.max(0, level - s.spent) }
+}
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
@@ -77,6 +86,7 @@ import { getRaidConfigById } from '@/lib/raidRegistry'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getFishHold } from '@/lib/fishHold'
 import { getCharacterSprites } from '@/lib/characters'
 import { BOATS, boatSpeed, boatAgility } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
@@ -85,7 +95,7 @@ import { getBait } from '@/lib/bait'
 import { handlingRate, accelRate, lanternGlow, BASE_SPEED_PX, BASE_TURN_RAD, BASE_ACCEL } from '@/lib/shipyard'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
-import FishingHere, { type FishingMods } from './FishingHere'
+import FishingHere, { type FishingMods, type FishCarry } from './FishingHere'
 // Named, not computed: the loadout prints "Bronze Reel", and the numbers in
 // `mods` are needle multipliers. See FishingMods.
 import { getReel } from '@/lib/reels'
@@ -2115,6 +2125,17 @@ export default function SeaMap({
    */
   const [xpLive, setXpLive] = useState(fishingXP)
   useEffect(() => { setXpLive(fishingXP) }, [fishingXP])
+  // XP PAID AWAY FROM THE ROD: a trawl's catch. TrawlIndicator announces the
+  // new total and nothing here was listening, so the disc, the level card and
+  // the locked waters all waited for a reload. Never backwards.
+  useEffect(() => {
+    const on = (e: Event) => {
+      const v = Number((e as CustomEvent<number>).detail)
+      if (Number.isFinite(v)) setXpLive(x => Math.max(x, v))
+    }
+    window.addEventListener('fishing-xp-changed', on)
+    return () => window.removeEventListener('fishing-xp-changed', on)
+  }, [])
   const level = useMemo(() => getLevelFromXP(xpLive), [xpLive])
   /**
    * ── THE FIRST WATER THEY HAVE NOT EARNED ─────────────────────────────────
@@ -2184,6 +2205,16 @@ export default function SeaMap({
         // land in the database and the number on screen stays where it was.
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
         window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGems }))
+        // AND WHAT ELSE IT PAID. Bait and a bigger hold landed in the database
+        // with nothing on the chart told: a level-two captain read "+5 worms"
+        // and still could not cast. Same events the Daily Haul and the
+        // Shipyard use.
+        for (const g of res.granted) {
+          for (const [baitType, added] of Object.entries(g.reward.bait ?? {})) {
+            window.dispatchEvent(new CustomEvent('bait-changed', { detail: { baitType, added } }))
+          }
+        }
+        window.dispatchEvent(new CustomEvent('hold-tier-changed', { detail: res.newHoldTier }))
       }
       return true
     }).catch(() => false /* a missed collection is picked up next time */)
@@ -2317,12 +2348,24 @@ export default function SeaMap({
   /** And what that makes open. Falls straight through to the server's answer
    *  until this session has actually cleared something, so the common case
    *  costs nothing. */
-  const liveStatus = useMemo(() => (justCleared.length === 0
+  // THE ANCIENTS, live: the sixth landed at sea opens One Last Ride now, not
+  // after a reload. Only ever rises.
+  const [ancientsLive, setAncientsLive] = useState(ancientsCaught)
+  useEffect(() => { setAncientsLive(n => Math.max(n, ancientsCaught)) }, [ancientsCaught])
+  useEffect(() => {
+    const on = (e: Event) => {
+      const v = Number((e as CustomEvent<number>).detail)
+      if (Number.isFinite(v)) setAncientsLive(n => Math.max(n, v))
+    }
+    window.addEventListener('ancients-changed', on)
+    return () => window.removeEventListener('ancients-changed', on)
+  }, [])
+  const liveStatus = useMemo(() => (justCleared.length === 0 && ancientsLive === ancientsCaught
     ? nodeStatus
     : Object.fromEntries(
-      computeRaidMap(new Set(liveCleared), doubloonsNow, navLevel, isAdmin, ancientsCaught, { captain })
+      computeRaidMap(new Set(liveCleared), doubloonsNow, navLevel, isAdmin, ancientsLive, { captain })
         .map(v => [v.node.id, v.status]))),
-  [justCleared, nodeStatus, liveCleared, doubloonsNow, navLevel, isAdmin, ancientsCaught, captain])
+  [justCleared, nodeStatus, liveCleared, doubloonsNow, navLevel, isAdmin, ancientsLive, ancientsCaught, captain])
 
   /**
    * ── AND WHAT IS ACTUALLY DRAWN ON THE WATER ────────────────────────────
@@ -3188,6 +3231,11 @@ export default function SeaMap({
     return () => window.removeEventListener(SEA_SETTINGS_EVENT, read)
   }, [])
   const [hasCaptain, setHasCaptain] = useState(hasCaptain0)
+  /** How many sit in the raid seats, live from the crew panel; the page's
+   *  `raidParty` until the panel has said. Dropped when the page sends a new
+   *  party, which is the server's word. */
+  const [liveSeated, setLiveSeated] = useState<number | null>(null)
+  useEffect(() => { setLiveSeated(null) }, [raidParty])
   useEffect(() => { setHasCaptain(hasCaptain0) }, [hasCaptain0])
   const hasCaptainRef = useRef(hasCaptain); hasCaptainRef.current = hasCaptain
   useEffect(() => {
@@ -3198,8 +3246,9 @@ export default function SeaMap({
       if (typeof n === 'number') setHandsAboard(n)
     }
     const onAssigned = (e: Event) => {
-      const d = (e as CustomEvent<{ captain?: boolean; art?: string | null }>).detail
+      const d = (e as CustomEvent<{ captain?: boolean; art?: string | null; seated?: number }>).detail
       if (typeof d?.captain === 'boolean') setHasCaptain(d.captain)
+      if (typeof d?.seated === 'number') setLiveSeated(d.seated)
       // `art: null` is an answer -- the seats emptied -- so the key has to be
       // tested for, not the value.
       if (d && 'art' in d) setLiveCaptainArt(d.art ?? null)
@@ -4455,8 +4504,20 @@ export default function SeaMap({
 
   /** The renown panel, opened from the level bar's chip while the rod is out. */
   const [renownOpen, setRenownOpen] = useState(false)
-  const [renownState, setRenownState] = useState(renown)
-  const [renownNavState, setRenownNavState] = useState(renownNav)
+  const [renownRaw, setRenownState] = useState(renown)
+  const [renownNavRaw, setRenownNavState] = useState(renownNav)
+  // RESEEDED when the page sends a fresh copy (a fight's refresh), keyed on
+  // content so an identical copy does not throw away a commit made here.
+  const renownKey = JSON.stringify(renown), renownNavKey = JSON.stringify(renownNav)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setRenownState(renown) }, [renownKey])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setRenownNavState(renownNav) }, [renownNavKey])
+  /** AND LEVELLED LIVE. A renown level is a pure function of the XP, and the
+   *  XP moves on every catch and every fight; the banked count used to wait
+   *  for a commit or a reload, so the "to spend" dot never lit on its own. */
+  const renownState = useMemo(() => liveRenown(renownRaw, 'fishing', xpLive), [renownRaw, xpLive])
+  const renownNavState = useMemo(() => liveRenown(renownNavRaw, 'nav', navXP), [renownNavRaw, navXP])
   /**
    * ── THE SPINE PANEL ────────────────────────────────────────────────────
    *
@@ -5701,6 +5762,23 @@ export default function SeaMap({
     bountyPolled.current = true
     pollBounties()
   }, [inAnchorage, pollBounties])
+  // ── AND THE OTHER MOMENTS THEY CAN CHANGE (2026-09-27) ───────────────────
+  // Read once per crossing, the marks missed everything that happened while
+  // you sailed: a bounty settled by a fight, a voyage home on its clock, a
+  // stint finished while the tab was away. Still no timer of our own: a fight
+  // ending, the day board's own due-back moment, and coming back to the tab.
+  useEffect(() => {
+    const again = () => { pollCrew(); pollBounties() }
+    const onVis = () => { if (document.visibilityState === 'visible') again() }
+    window.addEventListener('sea-fight-ended', again)
+    window.addEventListener('sea-due', again)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('sea-fight-ended', again)
+      window.removeEventListener('sea-due', again)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [pollCrew, pollBounties])
   /**
    * ── BACK TO THE DAY ──────────────────────────────────────────────────────
    *
@@ -6308,7 +6386,13 @@ export default function SeaMap({
   const [bag, setBag] = useState(baitBag)
   const bagKey = JSON.stringify(baitBag)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setBag(baitBag) }, [bagKey])
+  useEffect(() => {
+    setBag(baitBag)
+    // And the hook's count, from the same fresh copy: a voyage's bait arrives
+    // by the page's refresh, not by an event.
+    const q = baitBag.find(b => b.type === activeBaitRef.current)?.quantity
+    if (typeof q === 'number') setBaitLeft(q)
+  }, [bagKey])
   // Mirrored for the listener below, which binds once and must not close over
   // a stale count.
   const bagRef = useRef(bag); bagRef.current = bag
@@ -6342,6 +6426,15 @@ export default function SeaMap({
    *  not change what is equipped ashore, because the rack is what you brought
    *  and swapping between them is the whole point of having brought them. */
   const [activeRod, setActiveRod] = useState(rack[0]?.tier ?? 0)
+  // EQUIPPED OR BOUGHT AT SEA: the rack arrives fresh (the rod actions
+  // revalidate the chart) with the equipped rod first, and the hand followed
+  // none of it. Takes the new first rod when it changes, and any rod that has
+  // left the rack is put down.
+  const rackFirst = rack[0]?.tier ?? 0
+  useEffect(() => { setActiveRod(rackFirst) }, [rackFirst])
+  useEffect(() => {
+    if (rack.length && !rack.some(r => r.tier === activeRod)) setActiveRod(rack[0].tier)
+  }, [rack, activeRod])
   const rodNow = useMemo(
     () => rack.find(r => r.tier === activeRod) ?? rack[0] ?? null,
     [rack, activeRod],
@@ -6415,6 +6508,26 @@ export default function SeaMap({
    *  while you filled the boat — and the hold is the one number that decides
    *  when a session has to end. */
   const [holdCount, setHoldCount] = useState(hold.count)
+  /** THE HOLD'S SIZE, live. A tier bought at the Shipyard or paid by a level
+   *  reward is announced on `hold-tier-changed`; the prop only moved on a
+   *  reload, so a captain who had just paid for a bigger hold was still told
+   *  it was full. Only ever raised: a hold is never taken away. */
+  const [holdTier, setHoldTier] = useState(hold.tier)
+  useEffect(() => { setHoldTier(t => Math.max(t, hold.tier)) }, [hold.tier])
+  useEffect(() => {
+    const on = (e: Event) => {
+      const v = Number((e as CustomEvent<number>).detail)
+      if (Number.isFinite(v)) setHoldTier(t => Math.max(t, v))
+    }
+    window.addEventListener('hold-tier-changed', on)
+    return () => window.removeEventListener('hold-tier-changed', on)
+  }, [])
+  const holdCap = getFishHold(holdTier).capacity
+  /** What FishingHere keeps between openings of the rod: the auto toggle, the
+   *  Tide Turner's skips, the streak on the bar and the Ancients landed. It
+   *  remounts every time the rod comes out and used to reset all four to the
+   *  page-load values. */
+  const fishCarry = useRef<FishCarry>({})
   /**
    * HOW MANY FISH HAVE BEEN LANDED THIS SESSION.
    *
@@ -6454,16 +6567,44 @@ export default function SeaMap({
    * is the same proximity the action button reads, so this fires exactly when
    * the prompt appears — which is the moment a captain has decided.
    */
+  //
+  // ── AND AGAIN WHENEVER THE KIT MAY HAVE CHANGED (2026-09-27) ────────────
+  // It was read once and kept until a fight closed, so a captain who backed
+  // off, mounted an item, benched a hand or bought a hull and came back
+  // fought with the old loadout. Now every approach reads afresh, and so does
+  // closing any sheet that changes the kit (ship, crew, hall, yard, renown)
+  // or a crew change announced from elsewhere. The stale copy is dropped
+  // first: if Enter beats the read, the sheet reads for itself.
+  const kitSheetOpen = yardOpen || shipSheet !== null || hallSheet || crewHubOpen || renownOpen
+  const [kitEpoch, setKitEpoch] = useState(0)
+  const kitWasOpen = useRef(kitSheetOpen)
   useEffect(() => {
-    if (!nearEnc || bossReadRef.current) return
+    if (kitWasOpen.current && !kitSheetOpen) setKitEpoch(n => n + 1)
+    kitWasOpen.current = kitSheetOpen
+  }, [kitSheetOpen])
+  useEffect(() => {
+    const bump = () => setKitEpoch(n => n + 1)
+    const names = ['crew-changed', 'crew-assigned', 'crew-aboard']
+    for (const n of names) window.addEventListener(n, bump)
+    return () => { for (const n of names) window.removeEventListener(n, bump) }
+  }, [])
+  const kitReadKey = useRef('')
+  useEffect(() => {
+    if (fightOn) return
+    if (!nearEnc) { bossReadRef.current = false; return }
+    const key = `${nearEnc.node}:${kitEpoch}`
+    if (bossReadRef.current && kitReadKey.current === key) return
     const n = RAID_MAP.find(x => x.id === nearEnc.node)
     if (!n?.raidId || !getRaidConfigById(n.raidId)) return
     bossReadRef.current = true
+    kitReadKey.current = key
+    setBossData(null)
+    setRaidData(null)
     // Both halves of the wait, started together: the code and the answer.
     void import('./BossCardSheet')
     void import('@/app/(app)/expeditions/BossFightModal')
     bossCardState().then(
-      r => { if (!('error' in r)) setBossData(r) },
+      r => { if (!('error' in r) && kitReadKey.current === key) setBossData(r) },
       // A FAILURE IS NOT WORTH SAYING HERE. Nothing has been asked for yet; the
       // sheet does its own read when it opens and reports properly then.
       () => { bossReadRef.current = false },
@@ -6478,10 +6619,10 @@ export default function SeaMap({
     // but show.
     void import('./RaidSheet')
     raidSheetState().then(
-      r => { if (!('error' in r)) setRaidData(r) },
+      r => { if (!('error' in r) && kitReadKey.current === key) setRaidData(r) },
       () => {},
     )
-  }, [nearEnc])
+  }, [nearEnc, kitEpoch, fightOn])
 
   /** The gate's ledger, read as you pull up to it — same courtesy the boss
    *  card gets, so stepping through opens on a card and not a wait. */
@@ -11854,7 +11995,7 @@ hullRef={hullRefFor(t.key)} />
           // notification badge and a solid gold fill), then two faces tucked
           // behind hers with no number (Kong: remove the faces, keep the
           // count). Now her face and one small dark chip in its teal ring.
-          const others = Math.max(0, raidParty.length - 1)
+          const others = Math.max(0, (liveSeated ?? raidParty.length) - 1)
           const disc = (border: string): React.CSSProperties => ({
             width: '100%', height: '100%', objectFit: 'cover', display: 'block',
             borderRadius: '50%', maxWidth: 'none', border, background: 'rgba(6,10,16,0.9)',
@@ -12550,6 +12691,9 @@ hullRef={hullRefFor(t.key)} />
           bossReadRef.current = false
           setBossData(null)
           setRaidData(null)
+          // A fight settles bounties and can open a rung; the marks and the
+          // day board hear it now rather than on the next island crossing.
+          window.dispatchEvent(new CustomEvent('sea-fight-ended'))
           shipFxRef.current = null
           anchorsRef.current = null
           // THE HULL GOES BACK TO BEING A HULL. The fight wrote a transform
@@ -13296,6 +13440,9 @@ hullRef={hullRefFor(t.key)} />
           baitLeft={baitLeft}
           mods={{
             ...mods,
+            // THE LIVE LEVEL. The catch zone widens every five levels and the
+            // level card says so; from the page's copy it waited for a reload.
+            fishingLevel: level,
             // FROM THE ROD IN HAND, not the one equipped ashore. Swapping rods
             // at sea has to move the dial or the rack is decoration.
             rodCatchBonus: rodNow?.catchZoneBonus ?? mods.rodCatchBonus,
@@ -13304,7 +13451,15 @@ hullRef={hullRefFor(t.key)} />
             rodSnagImmune: rodNow?.snagImmune ?? mods.rodSnagImmune,
             rodPerfectXpMult: rodNow?.perfectXpMult ?? mods.rodPerfectXpMult,
           }}
-          onBaitSpent={left => { if (typeof left === 'number') setBaitLeft(left) }}
+          onBaitSpent={left => {
+            if (typeof left !== 'number') return
+            setBaitLeft(left)
+            // THE BAG TOO. Only the hook's count moved, so the bait sheet kept
+            // its load-time number and switching away and back put the full
+            // count back on the hook: a cast the server then refused.
+            const t = activeBaitRef.current
+            setBag(prev => prev.map(b => (b.type === t ? { ...b, quantity: left } : b)))
+          }}
           // THE LIVE TOTAL, not the load-time prop. The card keeps a local copy
           // and adds every reel to it; seeded from the prop, XP paid between
           // casts (Finn's jobs) was overwritten by the next catch and the bar
@@ -13330,13 +13485,14 @@ hullRef={hullRefFor(t.key)} />
           }}
           activeRod={activeRod}
           onRodChange={setActiveRod}
-          hold={{ count: holdCount, capacity: hold.capacity, tier: hold.tier }}
+          hold={{ count: holdCount, capacity: holdCap, tier: holdTier }}
+          carry={fishCarry.current}
           at={pos}
           log={log}
           renownPoints={renownState ? renownPoints : undefined}
           onOpenRenown={renownState ? () => setRenownOpen(true) : undefined}
           onCaught={(qty, waitingOn) => {
-            setHoldCount(n => Math.min(hold.capacity, n + qty))
+            setHoldCount(n => Math.min(holdCap, n + qty))
             setCaughtTick(n => n + 1)
             // The server just said who was waiting on this species. Light the
             // disc now; the panel reads the same truth when it opens.
@@ -13401,6 +13557,7 @@ hullRef={hullRefFor(t.key)} />
           dealsLeft={DEALS_PER_DAY - dealt.length}
           onDealt={key => setDealt(prev => (prev.includes(key) ? prev : [...prev, key]))}
           onHoldEmptied={() => setHoldCount(0)}
+          onHoldTaken={n => setHoldCount(c => Math.max(0, c - n))}
           onClose={() => { setHailing(null); refreshMet() }}
         />
       )}
@@ -13436,7 +13593,7 @@ hullRef={hullRefFor(t.key)} />
         hooked={hookedTick} caught={caughtTick} nearId={near?.id ?? null} ashore={ashore} almanac={almanacOpen}
         // The same two gates FishingHere puts on the Cast button. If it will
         // not let them cast, the tour has to stop asking them to.
-        blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
+        blocked={baitLeft <= 0 ? 'bait' : holdCount >= holdCap ? 'hold' : null}
         haulOpen={overlays.haul === true} haulView={overlays.haulView === true} holdOpen={overlays.hold === true}
         cam={tourCam} goal={tourGoal} holdCast={tourHoldCast}
         fishOnly={tourFishOnly} stowRod={stowRod} at={pos}

@@ -11,7 +11,7 @@ import { ownedSpecialIds } from '@/lib/specialItems'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, type RaidMods } from '@/lib/expeditions'
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
-import { resolveDeployedCrew } from '@/lib/crewResolve'
+import { resolveDeployedCrew, slotMult } from '@/lib/crewResolve'
 import { getActiveEffects, dedupeRaidItems, RAID_ITEMS } from '@/lib/raidItems'
 import { finnItemLevel } from '@/lib/finnItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
@@ -40,6 +40,11 @@ export interface RaidCrewMember {
   power: number
   dodge: number
   fortune: number
+  /** The crew's own rolled stats before levels (what level ticks are split
+   *  by) and their slot's weight, so a level gained mid-raid can add its
+   *  ticks live. Optional: without them only the ability tier moves. */
+  affinity?: { power: number; dodge: number; fortune: number }
+  slotMult?: number
 }
 
 export interface RaidPlayerStats {
@@ -143,6 +148,8 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
       power:    Math.floor(pc.power   * mult),
       dodge:    Math.floor(pc.dodge   * mult),
       fortune:  Math.floor(pc.fortune * mult),
+      affinity: { power: row?.power ?? 0, dodge: row?.dodge ?? 0, fortune: row?.fortune ?? 0 },
+      slotMult: slotMult(pc.slot),
     }
   })
 

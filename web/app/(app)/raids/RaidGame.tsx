@@ -15,7 +15,21 @@ import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL, navLevelBonuses } from '@/lib/expeditionLevel'
 import { raidDamageProfile, fortuneLootMult, fortuneDoubloonMult, type RaidMods } from '@/lib/expeditions'
 import { rollCrate, crateItemChances, isChallengeRaid, LOOT_RARITY_TIER } from '@/lib/raidLoot'
-import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
+import { crewLevelFromXP, CREW_MAX_LEVEL, levelStatBonuses } from '@/lib/crewLevel'
+
+/** The stat ticks a crew hand has gained between the XP they opened the raid
+ *  on and `xp`, weighted by their slot the way the server weights the totals. */
+function crewTickGain(c: { xp: number; affinity?: { power: number; dodge: number; fortune: number }; slotMult?: number }, xp: number) {
+  if (!c.affinity) return { power: 0, dodge: 0, fortune: 0 }
+  const a = levelStatBonuses(crewLevelFromXP(c.xp), c.affinity)
+  const b = levelStatBonuses(crewLevelFromXP(xp), c.affinity)
+  const m = c.slotMult ?? 1
+  return {
+    power: Math.round((b.power - a.power) * m),
+    dodge: Math.round((b.dodge - a.dodge) * m),
+    fortune: Math.round((b.fortune - a.fortune) * m),
+  }
+}
 import { type ShipAugment } from '@/lib/shipAugments'
 import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp, RAID_ZONE_BG, RAID_LOCATION_BG, RAID_BOSS_BG,
@@ -316,6 +330,11 @@ interface RaidCrewMember {
   power: number
   dodge: number
   fortune: number
+  /** The crew's own rolled stats before levels (what level ticks are split
+   *  by) and their slot's weight, so a level gained mid-raid can add its
+   *  ticks live. Optional: without them only the ability tier moves. */
+  affinity?: { power: number; dodge: number; fortune: number }
+  slotMult?: number
 }
 
 export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = false, anchors, onShipFx, onFightFx, config, equippedShipSkin, shipSkins, equippedItems,
@@ -338,7 +357,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
   shipClasses,
   equippedRepairKit,
   shipImageUrl, shipName, username, playerHPMax: basePlayerHPMax, shipMinDamage, shipSpeed,
-  totalPower: baseTotalPower, totalDodge: baseTotalDodge, totalFortune: baseTotalFortune, crewCount, crewMembers, initialExpeditionXP,
+  totalPower: baseTotalPower, totalDodge: baseTotalDodge, totalFortune: baseTotalFortune, crewCount, crewMembers: crewMembersBase, initialExpeditionXP,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
   raidMods, bonusChargeSlots = 0, manowarAugment = null,
@@ -471,10 +490,28 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
     const b = navLevelBonuses(getLevelFromXP(navXPNow))
     return { hp: b.hp - a.hp, power: b.power - a.power, navigation: b.navigation - a.navigation, fortune: b.fortune - a.fortune }
   })()
+  // ── AND THE CREW'S (2026-09-27) ─────────────────────────────────────────
+  // Every kill pays the crew XP, and it only reached the loot screen: a hand
+  // who hit Lv 10 mid-raid still read "Unlocks at Lv 10", and their stat ticks
+  // waited for the next raid. The live XP is kept here; the crew list handed
+  // on carries it (ability tiers follow), and the ticks gained since the raid
+  // opened are added to the totals, weighted by slot as the server weights them.
+  const [crewXPLive, setCrewXPLive] = useState<Map<number, number>>(() => new Map())
+  const crewMembers = useMemo(() => crewMembersBase.map(c => {
+    const xp = crewXPLive.get(c.id)
+    if (xp == null || xp <= c.xp) return c
+    const d = crewTickGain(c, xp)
+    return { ...c, xp, power: c.power + d.power, dodge: c.dodge + d.dodge, fortune: c.fortune + d.fortune }
+  }), [crewMembersBase, crewXPLive])
+  const crewGain = useMemo(() => crewMembers.reduce((s, c, i) => ({
+    power: s.power + (c.power - crewMembersBase[i].power),
+    dodge: s.dodge + (c.dodge - crewMembersBase[i].dodge),
+    fortune: s.fortune + (c.fortune - crewMembersBase[i].fortune),
+  }), { power: 0, dodge: 0, fortune: 0 }), [crewMembers, crewMembersBase])
   const playerHPMax  = basePlayerHPMax + navGain.hp
-  const totalPower   = baseTotalPower + navGain.power
-  const totalDodge   = baseTotalDodge + navGain.navigation
-  const totalFortune = baseTotalFortune + navGain.fortune
+  const totalPower   = baseTotalPower + navGain.power + crewGain.power
+  const totalDodge   = baseTotalDodge + navGain.navigation + crewGain.dodge
+  const totalFortune = baseTotalFortune + navGain.fortune + crewGain.fortune
   const dodgeBonus        = totalDodge * 5
   // Two different jobs, two different curves. Coin scales uncapped because a
   // richer haul is harmless; ITEM odds are capped at 2x by fortuneLootMult
@@ -613,6 +650,12 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
       if (prev) m.set(g.id, { ...g, oldXP: prev.oldXP, oldLevel: prev.oldLevel })
       else m.set(g.id, g)
     }
+    // And live, for the abilities and the totals (see crewGain).
+    if (grants.length) setCrewXPLive(prev => {
+      const next = new Map(prev)
+      for (const g of grants) next.set(g.id, Math.max(next.get(g.id) ?? 0, g.newXP))
+      return next
+    })
   }
   // Boss pre-fight dialogue. When advancing into a boss round we stash the
   // pending advance here, render the dialogue modal, and only fire the

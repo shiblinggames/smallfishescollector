@@ -11,6 +11,7 @@
 // shown here is for the player to read, not for the server to believe.
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { getBait } from '@/lib/bait'
 import { vibrate } from '@/lib/haptics'
@@ -22,7 +23,7 @@ import { folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod, type
 import FolkScene, { type SceneGain } from './FolkScene'
 
 export default function TraderPanel({
-  trader, alreadyDealt, dealsLeft, onDealt, onHoldEmptied, onClose,
+  trader, alreadyDealt, dealsLeft, onDealt, onHoldEmptied, onHoldTaken, onClose,
 }: {
   trader: Trader
   alreadyDealt: boolean
@@ -31,8 +32,11 @@ export default function TraderPanel({
   /** Both sell paths clear the hold outright, so the map's counter has to hear
    *  about it or it keeps showing a boat full of fish you no longer have. */
   onHoldEmptied: () => void
+  /** A fish handed over as a gift leaves the hold too, one at a time. */
+  onHoldTaken?: (n: number) => void
   onClose: () => void
 }) {
+  const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [done, setDone] = useState<string | null>(null)
@@ -90,7 +94,13 @@ export default function TraderPanel({
     try {
       const res = await buyFolkRod(folk.id)
       if ('error' in res) setRodErr(res.error)
-      else { vibrate([0, 30, 60, 90]); setRodBought(res.rodName) }
+      else {
+        vibrate([0, 30, 60, 90]); setRodBought(res.rodName)
+        // The purse, and the rack: the new rod belongs in the Loadout now,
+        // not after a reload.
+        announce(res.doubloons)
+        router.refresh()
+      }
     } finally { setBusy(false) }
   }
 
@@ -158,6 +168,7 @@ export default function TraderPanel({
           ...r, points: res.points, tier: res.tier,
           giftsGiven: r.giftsGiven + 1, want: null, wantReady: false,
         } : r))
+        onHoldTaken?.(1)
         vibrate([0, 40, 60, 90])
       }
     } catch { setErr('That did not reach them.') }
@@ -196,7 +207,7 @@ export default function TraderPanel({
       // ONLY A WIN CLOSES HIM OUT. A loss leaves him on the chart, because he
       // is still there in the water and pretending otherwise would be a lie
       // the player can see through by looking.
-      if (res.won) { onDealt(trader.key); vibrate([0, 40, 60, 80, 40, 120]) }
+      if (res.won) { onDealt(trader.key); vibrate([0, 40, 60, 80, 40, 120]); router.refresh() }
       else vibrate(30)
     } catch {
       setErr('The deal fell through. Try again.')
@@ -230,6 +241,10 @@ export default function TraderPanel({
       if ('error' in res) { setErr(res.error); setBusy(false); return }
       announce(res.doubloons)
       if (res.earned != null) onHoldEmptied()
+      // Bait bought out here goes in the bag the rod reads from.
+      if (res.baitType && res.qty) {
+        window.dispatchEvent(new CustomEvent('bait-changed', { detail: { baitType: res.baitType, added: res.qty } }))
+      }
       onDealt(trader.key)
       setDone(
         res.earned != null

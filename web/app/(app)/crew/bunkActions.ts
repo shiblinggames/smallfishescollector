@@ -11,6 +11,7 @@
 // take an admin client, and every async export from a 'use server' file becomes
 // a client-callable endpoint.
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { clampHallTier } from '@/lib/crewHall'
@@ -251,6 +252,9 @@ async function buyUpgrade(kind: 'drill' | 'stores'): Promise<CrewActionResult> {
     user_id: user.id, amount: -cost,
     reason: `Crew Hall: ${isDrill ? 'Drill' : 'Stores'} ${tierNumeral(from + 1)}`,
   })
+  // The chart draws the hall's building and counts its berths from the page's
+  // copy of these tiers; it hears a purchase here or not until a reload.
+  revalidatePath('/sea')
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }

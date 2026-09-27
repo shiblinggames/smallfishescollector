@@ -90,13 +90,8 @@ export default function MobileTabBar() {
   const badgesFetchedRef = useRef(false)
   const wasBadgesRef     = useRef(false)
 
-  useEffect(() => {
-    const inSea = pathname.startsWith('/sea')
-    const needFetch = !fetchedOnceRef.current || wasSeaRef.current || inSea
-    wasSeaRef.current = inSea
-    if (!needFetch) return
+  const fetchVoyages = useCallback(() => {
     if (isWide()) return
-    fetchedOnceRef.current = true
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
     // getSession() = local cache read, no auth-server roundtrip (the id
@@ -114,7 +109,25 @@ export default function MobileTabBar() {
           setPendingVoyages(data ?? [])
         })
     })
-  }, [pathname])
+  }, [])
+
+  useEffect(() => {
+    const inSea = pathname.startsWith('/sea')
+    const needFetch = !fetchedOnceRef.current || wasSeaRef.current || inSea
+    wasSeaRef.current = inSea
+    if (!needFetch) return
+    if (isWide()) return
+    fetchedOnceRef.current = true
+    fetchVoyages()
+  }, [pathname, fetchVoyages])
+
+  // A voyage sent or claimed on the chart does not change the path, so the
+  // dot heard neither until you changed tab. Same shape as trawls-changed.
+  useEffect(() => {
+    const h = () => fetchVoyages()
+    window.addEventListener('voyages-changed', h)
+    return () => window.removeEventListener('voyages-changed', h)
+  }, [fetchVoyages])
 
   const fetchTrawls = useCallback(() => {
     if (isWide()) return

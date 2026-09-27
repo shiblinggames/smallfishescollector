@@ -512,7 +512,8 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
     const at = state?.nextAt
     if (!at) return
     const wait = Math.min(2_147_000_000, Math.max(1_000, at - Date.now() + 1_500))
-    const id = setTimeout(() => load(), wait)
+    // The chart's island marks are due at the same moment (see SeaMap).
+    const id = setTimeout(() => { load(); window.dispatchEvent(new CustomEvent('sea-due')) }, wait)
     return () => clearTimeout(id)
   }, [state?.nextAt, load])
 
@@ -520,6 +521,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   useEffect(() => {
     const onVis = () => { if (document.visibilityState === 'visible') load() }
     const onTrawls = () => load()
+    const onFight = () => load()
     const onOpenReq = (e: Event) => {
       const want = (e as CustomEvent<{ view?: string } | null>).detail?.view
       if (want === 'orders') showOrders()
@@ -529,10 +531,12 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
     }
     document.addEventListener('visibilitychange', onVis)
     window.addEventListener('trawls-changed', onTrawls)
+    window.addEventListener('sea-fight-ended', onFight)
     window.addEventListener('sea-day-open', onOpenReq)
     return () => {
       document.removeEventListener('visibilitychange', onVis)
       window.removeEventListener('trawls-changed', onTrawls)
+      window.removeEventListener('sea-fight-ended', onFight)
       window.removeEventListener('sea-day-open', onOpenReq)
     }
   }, [load, showOrders, showBounties])

@@ -11,6 +11,7 @@ import { finnItemLevel, finnTierNumeral, FINN_ITEM_MAX_LEVEL } from '@/lib/finnI
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useRefreshAll } from '@/lib/sheetRefresh'
 import { vibrate, hapticTap, hapticReward } from '@/lib/haptics'
 import { RARITY_COLOR as ITEM_RARITY_COLOR } from '@/lib/uiTokens'
 import { motion, AnimatePresence, useDragControls, type DragControls } from 'framer-motion'
@@ -670,6 +671,7 @@ export default function ShipHero({
   seenNavRenownIntro = true,
 }: Props) {
   const router = useRouter()
+  const refreshAll = useRefreshAll()
   const xpProgress = getXPProgress(expeditionXP)
   // Navigation Renown (post-100). Level derives from expeditionXP; the spend
   // map is stateful so the bar badge updates when the panel allocates.
@@ -1062,7 +1064,7 @@ export default function ShipHero({
     // router.refresh() so the HubCards prep modal (which reads roster
     // assignments from the page's server-fetched props) sees the new
     // assignment too — otherwise the two surfaces would drift.
-    startTransition(async () => { await assignToVoyage(card.id, slot); router.refresh() })
+    startTransition(async () => { await assignToVoyage(card.id, slot); refreshAll() })
   }
 
   function removeFromSlot(i: number, e: React.MouseEvent) {
@@ -1070,7 +1072,7 @@ export default function ShipHero({
     const crew = slots[i]
     const next = [...slots]; next[i] = null
     setSlots(next); notifyCrewChanged(next)
-    if (crew) startTransition(async () => { await benchCrew(crew.id); router.refresh() })
+    if (crew) startTransition(async () => { await benchCrew(crew.id); refreshAll() })
   }
 
   // One round "on-deck" slot (filled portrait or empty dashed circle).
@@ -1107,7 +1109,7 @@ export default function ShipHero({
       // Captain's-Choice nodes are not: page.tsx derives playerShipImage from
       // profile.equipped_ship_skin and threads it into RaidsSection, so without this
       // they keep drawing the old hull.
-      router.refresh()
+      refreshAll()
     })
   }
 
@@ -1148,7 +1150,7 @@ export default function ShipHero({
     // router.refresh() re-runs the server components so the prep modal's
     // ready-check (server-rendered from profile.equipped_raid_items)
     // reflects the new state too.
-    startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
+    startTransition(async () => { await saveEquippedRaidItems(next); refreshAll() })
   }
 
   // Generic raid-item forge (FORGE_RECIPES). `forging` / `forgeArmed` hold the
@@ -1293,7 +1295,7 @@ export default function ShipHero({
       setGemsNow(res.gems)
       window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.gems }))
       vibrate([0, 30, 40, 60])
-      router.refresh()   // resync ownedRaidItems (the epic was consumed)
+      refreshAll()   // resync ownedRaidItems (the epic was consumed)
     })
   }
 
@@ -3056,7 +3058,7 @@ export default function ShipHero({
           // the modal kept quoting your pre-Renown hull. Refreshed once on close
           // rather than per point, so a captain spending five points does not trigger
           // five server round-trips.
-          if (renownDirtyRef.current) { renownDirtyRef.current = false; router.refresh() }
+          if (renownDirtyRef.current) { renownDirtyRef.current = false; refreshAll() }
         }}
         skill="nav"
         initial={navRenownState}
@@ -3153,7 +3155,7 @@ export default function ShipHero({
                       ],
                     })
                   }
-                  router.refresh()
+                  refreshAll()
                 }
               } finally {
                 setUpgradeBusy(false)
@@ -3176,7 +3178,7 @@ export default function ShipHero({
             <KitCelebration
               kitId={kitWon}
               fortune={ratedFortune}
-              onDone={() => { setKitWon(null); setKitOpen(false); router.refresh() }}
+              onDone={() => { setKitWon(null); setKitOpen(false); refreshAll() }}
             />
           ) : (
           <UpgradeRepairKitPanel
@@ -3782,7 +3784,7 @@ export default function ShipHero({
           accent={forgeFx.accent}
           abyssal={forgeFx.abyssal}
           ready={forgeReady}
-          onDone={() => { setForgeFx(null); router.refresh() }}
+          onDone={() => { setForgeFx(null); refreshAll() }}
         />,
         document.body,
       )}

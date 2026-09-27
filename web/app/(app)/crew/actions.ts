@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/userData'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -702,6 +703,9 @@ export async function upgradeCrewHall(): Promise<CrewActionResult> {
     await grant(admin, user.id, 'doubloons', next.cost)
     return { error: 'Crew Hall already upgraded' }
   }
+  // The chart draws the hall's building and counts its berths from the page's
+  // copy of these tiers; it hears a purchase here or not until a reload.
+  revalidatePath('/sea')
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
