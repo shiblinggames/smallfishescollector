@@ -12,7 +12,7 @@ import { awardRaidKill } from './raidXPActions'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
-import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
+import { getXPProgress, getLevelFromXP, MAX_LEVEL, navLevelBonuses } from '@/lib/expeditionLevel'
 import { raidDamageProfile, fortuneLootMult, fortuneDoubloonMult, type RaidMods } from '@/lib/expeditions'
 import { rollCrate, crateItemChances, isChallengeRaid, LOOT_RARITY_TIER } from '@/lib/raidLoot'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
@@ -337,8 +337,8 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
   classDoubloonMult,
   shipClasses,
   equippedRepairKit,
-  shipImageUrl, shipName, username, playerHPMax, shipMinDamage, shipSpeed,
-  totalPower, totalDodge, totalFortune, crewCount, crewMembers, initialExpeditionXP,
+  shipImageUrl, shipName, username, playerHPMax: basePlayerHPMax, shipMinDamage, shipSpeed,
+  totalPower: baseTotalPower, totalDodge: baseTotalDodge, totalFortune: baseTotalFortune, crewCount, crewMembers, initialExpeditionXP,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
   raidMods, bonusChargeSlots = 0, manowarAugment = null,
@@ -455,6 +455,26 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
     // already carries one -- a 2.5% ancient drop spent on nothing.
     ...ownedSpecialItems,
   ])
+  // ── A LEVEL GAINED MID-RAID COUNTS AT ONCE (Kong, 2026-09-27) ─────────────
+  // The stats arrive from the server when the raid opens, with the Navigation
+  // level's bonuses baked in (+1 max HP a level, +1 power, navigation and
+  // fortune every five). A level earned on a kill only moved the XP bar, so the
+  // "+1 max HP" the level card promised did nothing until the next raid. The
+  // difference between the bonuses at the level you have NOW and the level you
+  // opened at is added live; max HP's increase is added to your HP as well.
+  // (Applied flat: the class and upgrade multipliers on the base are not
+  // re-run, which moves a single point by less than one.)
+  const openedAtLevelRef = useRef(getLevelFromXP(initialExpeditionXP))
+  const [navXPNow, setNavXPNow] = useState(initialExpeditionXP)
+  const navGain = (() => {
+    const a = navLevelBonuses(openedAtLevelRef.current)
+    const b = navLevelBonuses(getLevelFromXP(navXPNow))
+    return { hp: b.hp - a.hp, power: b.power - a.power, navigation: b.navigation - a.navigation, fortune: b.fortune - a.fortune }
+  })()
+  const playerHPMax  = basePlayerHPMax + navGain.hp
+  const totalPower   = baseTotalPower + navGain.power
+  const totalDodge   = baseTotalDodge + navGain.navigation
+  const totalFortune = baseTotalFortune + navGain.fortune
   const dodgeBonus        = totalDodge * 5
   // Two different jobs, two different curves. Coin scales uncapped because a
   // richer haul is harmless; ITEM odds are capped at 2x by fortuneLootMult
@@ -710,6 +730,17 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
   const roundRef              = useRef(0)
   const streakRef             = useRef(0)
   const playerHPRef           = useRef(playerHPMax)
+  // The live level (see navGain above) follows the XP bar, and a max HP that
+  // grows mid-fight adds the same to the HP you have, so +1 max HP is +1 HP.
+  useEffect(() => { setNavXPNow(navXP) }, [navXP])
+  const hpGainSeenRef = useRef(navGain.hp)
+  useEffect(() => {
+    const inc = navGain.hp - hpGainSeenRef.current
+    hpGainSeenRef.current = navGain.hp
+    if (inc <= 0 || playerHPRef.current <= 0) return
+    playerHPRef.current += inc
+    setPlayerHP(h => h + inc)
+  }, [navGain.hp])
   // Biggest single hit the player lands this run — reported to claimRaidLoot
   // for the "Biggest Hit" career stat.
   const maxHitRef             = useRef(0)

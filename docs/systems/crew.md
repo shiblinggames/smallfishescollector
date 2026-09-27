@@ -263,3 +263,6 @@ Tier I, so these are Tiers II to VI): five moments in a hand's whole life, and O
   "tier up at 40" beside the level.
 - Ordinary levels and stat ticks still never pop (a per-activity "Crew grew" strip was
   proposed as a later step and not built).
+
+## The hub reads fresh on every open (2026-09-27)
+CrewHub used to read `crewHub()` and `getCrewState()` once, on mount, and `router.refresh()` never reaches that client state. Buying a bigger hull raised the slots on the server while the panel kept showing the old count until a reload. Every open now re-reads both behind what is already drawn, so a hull, a recruit or a promotion bought elsewhere shows the next time the panel opens.

@@ -45,7 +45,7 @@
 // tie up at; putting its upgrades in a panel you can open from the middle of
 // the ocean would make the island scenery.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
@@ -206,6 +206,20 @@ export default function CrewHub({
     }, () => { if (live) setHallErr('Could not reach the hall.') })
     return () => { live = false }
   }, [])
+  // ── AND AGAIN EACH TIME IT OPENS (Kong, 2026-09-27) ────────────────────
+  // Read once on mount, it went stale: a new hull bought at the Gunwharf opens
+  // more seats, but the panel kept the old count until the page was reloaded,
+  // because a refresh of the page's server data does not touch this state.
+  // The mount read still makes the first open instant; EVERY open (the first
+  // included: a hull can be bought before the panel is ever opened) reads
+  // fresh behind what is already drawn.
+  useEffect(() => {
+    if (!open) return
+    let live = true
+    crewHub().then(r => { if (live && !('error' in r)) setState(r) }, () => {})
+    getCrewState().then(r => { if (live && r) setHall(r) }, () => {})
+    return () => { live = false }
+  }, [open])
 
   // Back to the four doors every time the panel is shut, so re-opening it is
   // never a room you have forgotten you were standing in. A link that named a

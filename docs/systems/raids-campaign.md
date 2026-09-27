@@ -575,3 +575,6 @@ queues in front of the fight's server actions), the plate wears a slow gold OUTL
 an outline because framer owns the plates' borders and shadows) and a "Tap / Click for your stats"
 tag. The enemy plate clips its art, so its tag rides inside along the top (`.stat-hint-tag.inside`).
 Opening a card retires its nudge for good.
+
+## A Navigation level mid-raid applies at once (2026-09-27)
+The raid's max HP, power, dodge and fortune came in as props fixed at raid open, so a Navigation level earned mid-raid (for example +1 max HP) waited for the next raid. RaidGame now adds the difference between `navLevelBonuses` at the level the raid opened on and at the live XP. A max HP gain is also added to current HP (not when down). Sea fights use RaidGame too; the gauntlet grants Navigation XP only at cash-out, so it has nothing to catch.
