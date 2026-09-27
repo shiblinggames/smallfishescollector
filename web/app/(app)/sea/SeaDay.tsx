@@ -332,7 +332,17 @@ function left(endsAt: number): string {
   return h > 0 ? `${h}h ${m}m` : `${Math.max(1, m)}m`
 }
 
-type Toast = { id: number; kinds: DayKind[]; text: string }
+/**
+ * A notice. The day board's own carry `kinds` (tap opens that row); one raised
+ * from elsewhere on the chart (`sea-toast`, 2026-09-27) carries a `target`
+ * the map opens instead (see SeaMap's `sea-toast-open`), and its own picture.
+ */
+type Toast = {
+  id: number; kinds: DayKind[]; text: string
+  target?: string; art?: string | null; glyph?: 'friends' | 'folk'
+}
+/** What `sea-toast` carries. */
+export type SeaToast = { text: string; target: string; art?: string | null; glyph?: 'friends' | 'folk' }
 
 export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, seed, orders, onOrders, onClose }: {
   size: number
@@ -567,6 +577,23 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
     return () => clearTimeout(t)
   }, [stamping])
 
+  // ── NOTICES FROM ELSEWHERE ON THE CHART (2026-09-27) ──────────────────
+  // Kong: this notice is the most useful thing on the sea, so other finishes
+  // use it too (a Crew Hall stint, the Accelerator, the Ultimate build, an ask
+  // to sail, a regular's fish in the hold). Same rules as the board's own:
+  // held while the HUD is down, one at a time, five seconds.
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<SeaToast>).detail
+      if (!d?.text || !d.target) return
+      const t: Toast = { id: ++toastId.current, kinds: [], text: d.text, target: d.target, art: d.art ?? null, glyph: d.glyph }
+      if (hiddenRef.current) held.current = t
+      else { setToast(t); vibrate([0, 14, 40, 18]) }
+    }
+    window.addEventListener('sea-toast', on)
+    return () => window.removeEventListener('sea-toast', on)
+  }, [])
+
   // Held news lands the moment the HUD is back.
   useEffect(() => {
     if (hidden || !held.current) return
@@ -685,7 +712,10 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
                 exit={{ opacity: 0, y: -10, scale: 0.96 }}
                 transition={{ type: 'spring', stiffness: 340, damping: 26 }}
                 onClick={() => {
-                  if (toast.kinds.length === 1) go(toast.kinds[0])
+                  if (toast.target) {
+                    vibrate(6); setToast(null)
+                    window.dispatchEvent(new CustomEvent('sea-toast-open', { detail: toast.target }))
+                  } else if (toast.kinds.length === 1) go(toast.kinds[0])
                   else { setToast(null); vibrate(6); setOpen(true) }
                 }}
                 style={{
@@ -697,18 +727,32 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
                   boxShadow: `0 6px 28px rgba(0,0,0,0.5), 0 0 26px ${GOLD}26`,
                 }}>
                 <span style={{ width: 40, height: 40, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={ART[toast.kinds[0]]} alt="" style={{
-                    maxWidth: 40, maxHeight: 40, objectFit: 'contain',
-                    filter: `drop-shadow(0 0 7px ${GOLD}77)`,
-                  }} />
+                  {toast.glyph ? (
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={GOLD}
+                      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      {toast.glyph === 'friends' ? (<>
+                        <path d="M2 17c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0" />
+                        <path d="M6 13V5l5 3-5 3" />
+                        <path d="M15 13V7l4 2.5-4 2.5" />
+                      </>) : (<>
+                        <path d="M3 12c3-4 7-5 11-3l4-3v12l-4-3c-4 2-8 1-11-3z" />
+                        <circle cx="8" cy="11" r="0.8" fill={GOLD} />
+                      </>)}
+                    </svg>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={toast.art ?? ART[toast.kinds[0]]} alt="" style={{
+                      maxWidth: 40, maxHeight: 40, objectFit: 'contain',
+                      filter: `drop-shadow(0 0 7px ${GOLD}77)`,
+                    }} />
+                  )}
                 </span>
                 <span style={{ textAlign: 'left', minWidth: 0 }}>
                   <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.9rem', color: '#f6e6c0', lineHeight: 1.15 }}>
                     {toast.text}
                   </span>
                   <span className="font-karla font-700 uppercase" style={{ display: 'block', fontSize: '0.54rem', letterSpacing: '0.14em', color: GOLD, marginTop: 2 }}>
-                    {toast.kinds.length === 1 ? 'Tap to go there' : 'Tap to see the day'}
+                    {toast.target || toast.kinds.length === 1 ? 'Tap to go there' : 'Tap to see the day'}
                   </span>
                 </span>
               </motion.button>

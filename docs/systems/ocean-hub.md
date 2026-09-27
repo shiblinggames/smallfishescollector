@@ -3780,3 +3780,21 @@ Older captains who predate the first voyage were being walked through it from th
 - Every tour card now shows a small "Skip tutorial" link (`GuideCoach onSkip`). It asks twice: the first tap turns into "Tap again to skip the whole tutorial", which resets after 3.5s.
 - Skipping calls `skipTutorials()` in tourActions, which latches BOTH `has_seen_sea_tour` and `has_seen_gate_tour`. It is one way.
 - It is wired on SeaFirstVoyage, SeaGateTour and the Market's two first-voyage cards. The tour's step jumps to the end, which releases its holds.
+
+## The day board's notice, used by others (2026-09-27)
+Kong: the notice at the top (SeaDay's toast) is the most useful thing on the sea, so more finishes use it.
+
+**How it works**
+- Any code raises one with `window` event `sea-toast` `{ text, target, art? | glyph? }`.
+- SeaDay shows it under the same rules as its own: held while the HUD is down, one at a time, five seconds.
+- A tap dispatches `sea-toast-open` (target), and SeaMap opens the matching sheet: `hall` → HallSheet, `forge` → Ship sheet on the forge, `friends` → Sailing with friends, `folk` → the Salt Road. It is ignored mid-fight.
+
+**What raises one**
+- **Crew Hall stints, the Accelerator and the Ultimate build.** `/api/timers` (a route handler, so it never queues ahead of the captain's actions) returns every finish time. SeaMap sets one timer per future finish and re-reads when:
+  - the chart loads;
+  - a kit sheet closes (`kitEpoch`);
+  - the tab comes back (`tabBack`).
+
+  Finishes already past are not news. Stints that finish within 5 seconds of each other share one notice.
+- **An ask to sail.** Raised when `pendingAsk` rises above the arrival count, which `askSeenRef` seeds.
+- **A regular's wanted fish going into the hold.** Raised from the catch's `waitingOn`, only for regulars not already waiting. Load-time reads never raise it.

@@ -5842,6 +5842,16 @@ export default function SeaMap({
    * cadence every other social surface in the game runs at.
    */
   const [pendingAsk, setPendingAsk] = useState(0)
+  // SOMEBODY NEW ASKS TO SAIL: a notice, tap opens Sailing with friends. The
+  // first read is where the count starts, not news.
+  const askSeenRef = useRef<number | null>(null)
+  useEffect(() => {
+    const before = askSeenRef.current
+    askSeenRef.current = pendingAsk
+    if (before == null || pendingAsk <= before) return
+    const text = pendingAsk > 1 ? `${pendingAsk} captains want to sail with you` : 'A captain wants to sail with you'
+    window.dispatchEvent(new CustomEvent('sea-toast', { detail: { text, target: 'friends', glyph: 'friends' } }))
+  }, [pendingAsk])
   /** Whether anybody could be on the water for you at all. Drives the poll's
    *  rate; see NOPACT_MS. Seeded by the page and re-read whenever the crew
    *  panel closes, because that is the one surface that can change it. */
@@ -5857,8 +5867,10 @@ export default function SeaMap({
   const flushNow = useRef<(() => void) | null>(null)
   useEffect(() => {
     void getBoot().then(b => {
-      if (b && b.pacts != null) setPendingAsk(b.pacts)
-      else void pendingPacts().then(setPendingAsk, () => {})
+      // The arrival count is the baseline for the ask notice, not news.
+      const seed = (n: number) => { askSeenRef.current = n; setPendingAsk(n) }
+      if (b && b.pacts != null) seed(b.pacts)
+      else void pendingPacts().then(seed, () => {})
     })
   }, [getBoot])
   /** The poll, callable on demand — see the crew panel's onChanged. */
@@ -6576,6 +6588,14 @@ export default function SeaMap({
   // closing any sheet that changes the kit (ship, crew, hall, yard, renown)
   // or a crew change announced from elsewhere. The stale copy is dropped
   // first: if Enter beats the read, the sheet reads for itself.
+  /** Bumps when the tab comes back into view, for reads that should refresh
+   *  then (the long clocks above). */
+  const [tabBack, setTabBack] = useState(0)
+  useEffect(() => {
+    const on = () => { if (document.visibilityState === 'visible') setTabBack(n => n + 1) }
+    document.addEventListener('visibilitychange', on)
+    return () => document.removeEventListener('visibilitychange', on)
+  }, [])
   const kitSheetOpen = yardOpen || shipSheet !== null || hallSheet || crewHubOpen || renownOpen
   const [kitEpoch, setKitEpoch] = useState(0)
   const kitWasOpen = useRef(kitSheetOpen)
@@ -6588,6 +6608,52 @@ export default function SeaMap({
     const names = ['crew-changed', 'crew-assigned', 'crew-aboard']
     for (const n of names) window.addEventListener(n, bump)
     return () => { for (const n of names) window.removeEventListener(n, bump) }
+  }, [])
+  // ── THE LONG CLOCKS, TOLD WHEN THEY FINISH (2026-09-27) ──────────────────
+  // Crew Hall stints, the Abyssal Accelerator and the Ultimate build run for
+  // hours. /api/timers says when each finishes; one timer per future finish
+  // puts up the day board's notice when it lands (tap opens the hall, or the
+  // Ship sheet's forge). Re-read on arrival, when a kit sheet closes (a stint
+  // or a build may have been started) and on coming back to the tab. A finish
+  // that already happened is not news: the hall and the forge say so.
+  useEffect(() => {
+    let alive = true
+    const timers: number[] = []
+    void fetch('/api/timers', { cache: 'no-store' }).then(r => r.json()).then((t: { bunks: string[]; accel: string | null; ultimate: string | null }) => {
+      if (!alive) return
+      const now = Date.now()
+      const at = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() : NaN)
+      const soon = (ms: number) => Number.isFinite(ms) && ms > now && ms - now < 2_000_000_000
+      // Every stint finishing within a few seconds of another is one notice.
+      const bunkTimes = [...new Set((t.bunks ?? []).map(at).filter(soon).map(ms => Math.round(ms / 5000) * 5000))]
+      for (const ms of bunkTimes) {
+        timers.push(window.setTimeout(() => window.dispatchEvent(new CustomEvent('sea-toast', { detail: {
+          text: 'Training is done in the Crew Hall', target: 'hall', art: '/crew/hall_1.png',
+        } })), ms - now + 1500))
+      }
+      const accel = at(t.accel)
+      if (soon(accel)) timers.push(window.setTimeout(() => window.dispatchEvent(new CustomEvent('sea-toast', { detail: {
+        text: 'The Accelerator has finished', target: 'forge', art: '/forge/accelerator.png',
+      } })), accel - now + 1500))
+      const ult = at(t.ultimate)
+      if (soon(ult)) timers.push(window.setTimeout(() => window.dispatchEvent(new CustomEvent('sea-toast', { detail: {
+        text: 'Your ultimate weapon is ready', target: 'forge', art: '/forge/forge.png',
+      } })), ult - now + 1500))
+    }).catch(() => {})
+    return () => { alive = false; for (const id of timers) clearTimeout(id) }
+  }, [kitEpoch, tabBack])
+  // Where a notice's tap goes.
+  useEffect(() => {
+    const on = (e: Event) => {
+      const target = (e as CustomEvent<string>).detail
+      if (fightOnRef.current) return
+      if (target === 'hall') setHallSheet(true)
+      else if (target === 'forge') setShipSheet('forge')
+      else if (target === 'friends') setCrewOpen(true)
+      else if (target === 'folk') setFolkOpen(true)
+    }
+    window.addEventListener('sea-toast-open', on)
+    return () => window.removeEventListener('sea-toast-open', on)
   }, [])
   const kitReadKey = useRef('')
   useEffect(() => {
@@ -13512,6 +13578,15 @@ hullRef={hullRefFor(t.key)} />
             // The server just said who was waiting on this species. Light the
             // disc now; the panel reads the same truth when it opens.
             if (waitingOn?.length) {
+              // A REGULAR'S FISH JUST WENT IN THE HOLD: the day board's notice
+              // says so and a tap opens the Salt Road (Kong, 2026-09-27). Only
+              // for somebody not already waiting.
+              const had = new Set(readyFolk.map(x => x.folkId))
+              const fresh = waitingOn.filter(w => !had.has(w.folkId))
+              if (fresh.length) {
+                const text = fresh.length > 1 ? `${fresh.length} regulars want what you caught` : `${fresh[0].short} wants that ${fresh[0].fishName}`
+                window.dispatchEvent(new CustomEvent('sea-toast', { detail: { text, target: 'folk', glyph: 'folk' } }))
+              }
               setReadyFolk(r => {
                 const have = new Set(r.map(x => x.folkId))
                 return [...r, ...waitingOn.filter(w => !have.has(w.folkId))]
