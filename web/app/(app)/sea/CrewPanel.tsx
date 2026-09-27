@@ -68,8 +68,14 @@ export default function CrewPanel({
               borderRadius: 16, padding: '1rem 1.1rem',
             }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#e8f2ea', margin: 0 }}>
-                Sailing crew
+              <p className="font-cinzel font-700" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.15rem', color: '#e8f2ea', margin: 0 }}>
+                Sailing with friends
+                {/* Kong, 2026-09-27: not fleshed out yet, and says so. */}
+                <span className="font-karla font-700 uppercase" style={{
+                  fontSize: '0.56rem', letterSpacing: '0.14em', padding: '0.14rem 0.45rem', borderRadius: 999,
+                  color: 'rgba(240,200,120,0.95)', background: 'rgba(240,192,64,0.12)',
+                  border: '1px solid rgba(240,192,64,0.4)',
+                }}>Beta</span>
               </p>
               <button type="button" onClick={onClose} aria-label="Close"
                 style={{

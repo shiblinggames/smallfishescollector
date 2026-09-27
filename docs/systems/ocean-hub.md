@@ -3713,10 +3713,12 @@ three): the cooldown is the limit and the on-the-water buyer still matters the r
 Kong: too many HUD discs. Settled layout:
 - **Left, "you", same order on both sides of the reef**: Journey, Level, Loadout, then Crew
   (expedition side only, last so nothing before it moves when you cross). `hudRow` order.
-- **Right, "the world"**, from the corner in: Settings, Social, Day board, Chart (`rightAt(n)`).
-  **On a phone (<=560) the Settings gear folds into the Social disc**, which opens a two-item menu
-  (Sailing with / Settings; `SeaCrew onSettings`, `SeaSettings hideTrigger openSignal`), and the run
-  starts one slot nearer (`rightBase`).
+- **Right, "the world"**, from the corner in: Settings, Day board, Chart (`rightAt(n)`).
+  **The Social disc is gone (2026-09-27)** on every screen: it drew the same two figures as Your
+  Crew. Sailing with friends is the first row of the Settings panel (`SeaSettings social`), tagged
+  **Beta**, and the gear carries its alerts: the pulsing count of asks waiting and the steady green
+  ring of a live link. The panel it opens (CrewPanel) is titled "Sailing with friends" with the
+  same Beta tag. `SeaCrew.tsx` is deleted.
 - **Recall folded into the Chart**: the chart disc wears the refill ring (a steady green edge when
   ready), HOLD it 550ms to recall at once, and the chart sheet (`Minimap recall`) has a Recall home
   button at the top ("Recall ready in Nm" while cooling). The standalone recall disc is gone.

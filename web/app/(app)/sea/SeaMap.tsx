@@ -390,7 +390,6 @@ const PortalMap = dynamic(() => import('./PortalMap'), { ssr: false })
 // of destinations down the left. Dynamic, like everything else the chart does
 // not need in order to draw a sea.
 const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
-const SeaCrew = dynamic(() => import('./SeaCrew'), { ssr: false })
 // The Day: every daily on one disc beside the haul. See sea/SeaDay.
 const SeaDay = dynamic(() => import('./SeaDay'), { ssr: false })
 import type { DayKind } from './SeaDay'
@@ -6841,20 +6840,12 @@ export default function SeaMap({
    * not create space.
    */
   const [wide, setWide] = useState(false)
-  /** A phone (560 and under): the Settings gear folds into the Social disc. */
-  const [phoneHud, setPhoneHud] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 560px)')
-    const set = () => setPhoneHud(mq.matches)
-    set()
-    mq.addEventListener('change', set)
-    return () => mq.removeEventListener('change', set)
-  }, [])
   /** Right offset for the n-th disc of the right-hand run (0 = the corner). */
   const rightAt = (n: number) => 12 + n * (hudSize + 8)
-  /** With the gear folded away on a phone, the run starts one slot nearer. */
-  const rightBase = phoneHud ? 0 : 1
-  const [settingsSignal, setSettingsSignal] = useState(0)
+  /** The Settings gear holds the corner on every screen, with sailing with
+   *  friends folded into it (Kong, 2026-09-27: the friends disc wore the same
+   *  figures as Your Crew). The run starts beside it. */
+  const rightBase = 0
 
   /**
    * IS THERE A BEARING TO SHOW, and what would it mean.
@@ -13317,16 +13308,14 @@ hullRef={hullRefFor(t.key)} />
           // The Recruits card opens the crew panel straight on the board.
           else if (kind === 'recruits') { setHubCard('recruits'); setCrewHubOpen(true) }
         }} />
-      {/* THE WAY TO ARRANGE SAILING WITH SOMEBODY, and for a while there was
-          no way at all: the panel below was mounted with nothing able to open
-          it. See SeaCrew. The count is people waiting on an answer from you,
-          re-read whenever the panel closes. */}
+      {/* THE SETTINGS GEAR, which is also the way to arrange sailing with
+          somebody (its own disc until 2026-09-27; it wore Your Crew's figures).
+          The count is people waiting on an answer from you, re-read whenever
+          the panel closes; the gear carries it. */}
       {!hudOff && (
-        <SeaCrew size={hudSize} top={18} right={rightAt(rightBase)}
-          count={pendingAsk} linked={linked} onOpen={() => setCrewOpen(true)}
-          onSettings={phoneHud ? () => setSettingsSignal(n => n + 1) : undefined} />
+        <SeaSettings size={hudSize} top={18} isAdmin={isAdmin}
+          social={{ count: pendingAsk, linked, onOpen: () => setCrewOpen(true) }} />
       )}
-      {!hudOff && <SeaSettings size={hudSize} top={18} isAdmin={isAdmin} hideTrigger={phoneHud} openSignal={settingsSignal} />}
 
       {/* THE CURTAIN. See the arrival effect. Under the PopupShell layer and
           over the HUD, which is hidden for the shot anyway. Pointer-events

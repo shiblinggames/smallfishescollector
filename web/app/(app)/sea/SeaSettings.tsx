@@ -116,7 +116,12 @@ function useOtherAudio(): [boolean, () => void] {
   return [allow, flip]
 }
 
-export default function SeaSettings({ size, top, isAdmin = false, right = 12, hideTrigger = false, openSignal = 0 }: {
+/** Somebody is waiting on you to answer an ask to sail. */
+const ASK = 'rgba(143,214,196'
+/** Somebody is on the wire right now. */
+const LIVE = 'rgba(110,224,150'
+
+export default function SeaSettings({ size, top, isAdmin = false, right = 12, social }: {
   /** The HUD's disc size, so this matches the run on the other side. */
   size: number
   /** Same vertical as that run. */
@@ -125,14 +130,19 @@ export default function SeaSettings({ size, top, isAdmin = false, right = 12, hi
   isAdmin?: boolean
   /** Where its right edge sits (12 when it is its own disc). */
   right?: number
-  /** ON A PHONE the gear has no disc of its own (2026-09-27 HUD pass): it is
-   *  an item in the Social disc's menu, which opens it via `openSignal`. */
-  hideTrigger?: boolean
-  /** Bump to open the panel from outside. */
-  openSignal?: number
+  /**
+   * SAILING WITH FRIENDS, folded in here (Kong, 2026-09-27). It had its own
+   * disc, drawn with the same two figures as Your Crew, so two discs meant
+   * two different things with one picture. The gear carries its alerts now:
+   * the count of captains waiting on an answer, and the steady ring of a live
+   * link. The feature is in beta and says so.
+   */
+  social?: { count: number; linked: boolean; onOpen: () => void }
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const count = social?.count ?? 0
+  const waiting = count > 0
   const [s, setS] = useState(() => allSettings())
   const [otherAudio, flipOtherAudio] = useOtherAudio()
   const [leaving, setLeaving] = useState(false)
@@ -151,7 +161,6 @@ export default function SeaSettings({ size, top, isAdmin = false, right = 12, hi
     try { setSeaDebug(window.localStorage.getItem('seadebug') === '1') } catch { /* private mode */ }
   }, [])
   const wrap = useRef<HTMLDivElement | null>(null)
-  useEffect(() => { if (openSignal) setOpen(true) }, [openSignal])
 
   // Read again on open. Nothing else writes these today, but the panel is the
   // only place that shows them and a stale switch is worse than no switch.
@@ -187,16 +196,50 @@ export default function SeaSettings({ size, top, isAdmin = false, right = 12, hi
     <div ref={wrap} data-no-steer
       onPointerDown={e => e.stopPropagation()}
       style={{ position: 'absolute', top, right, zIndex: 40 }}>
-      <button type="button" data-coach="hud-settings" aria-label="Settings" title="Settings"
+      <button type="button" data-coach="hud-settings"
+        aria-label={waiting ? `Settings, ${count} asking to sail with you` : 'Settings'} title="Settings"
         onClick={() => { vibrate(8); setOpen(o => !o) }}
         style={{
+          position: 'relative',
           width: size, height: size, borderRadius: '50%', padding: 0, cursor: 'pointer',
-          display: hideTrigger ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: open ? 'rgba(24,38,50,0.95)' : 'rgba(8,16,24,0.72)',
-          border: `1px solid ${SEA},${open ? 0.45 : 0.22})`,
+          border: `1px solid ${waiting ? `${ASK},0.55)` : `${SEA},${open ? 0.45 : 0.22})`}`,
           color: `${SEA},${open ? 0.95 : 0.72})`,
           backdropFilter: 'blur(2px)',
         }}>
+        {/* A LIVE LINK IS STEADY; an ask pulses because it wants an answer. */}
+        {!waiting && social?.linked && (
+          <span aria-hidden style={{
+            position: 'absolute', inset: -2, borderRadius: '50%',
+            border: `1px solid ${LIVE},0.5)`, pointerEvents: 'none',
+          }} />
+        )}
+        <AnimatePresence>
+          {waiting && (
+            <motion.span aria-hidden
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.5, 0, 0.5], scale: [1, 1.5, 1] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut' }}
+              style={{
+                position: 'absolute', inset: -2, borderRadius: '50%',
+                border: `1px solid ${ASK},0.9)`, pointerEvents: 'none',
+              }} />
+          )}
+        </AnimatePresence>
+        {waiting && (
+          <span aria-hidden className="font-karla font-800"
+            style={{
+              position: 'absolute', top: -3, right: -3,
+              minWidth: 17, height: 17, padding: '0 4px', borderRadius: 9,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '0.66rem', lineHeight: 1,
+              background: 'rgba(10,26,23,0.96)',
+              border: `1px solid ${ASK},0.75)`,
+              color: `${ASK},1)`,
+            }}>{count > 9 ? '9+' : count}</span>
+        )}
         <svg width={Math.round(size * 0.52)} height={Math.round(size * 0.52)}
           viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -229,6 +272,45 @@ export default function SeaSettings({ size, top, isAdmin = false, right = 12, hi
               fontSize: '0.56rem', letterSpacing: '0.18em',
               color: `${SEA},0.5)`, margin: '0 0 0.2rem',
             }}>Settings</p>
+
+            {/* SAILING WITH FRIENDS, first: it is the one row here that can
+                have somebody waiting on it. Tagged Beta (Kong: not fleshed out
+                yet). */}
+            {social && (
+              <button type="button" data-no-steer
+                onClick={() => { vibrate(8); setOpen(false); social.onOpen() }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 11, width: '100%',
+                  padding: '0.6rem 0.2rem', background: 'none', border: 'none',
+                  borderTop: `1px solid ${SEA},0.1)`, cursor: 'pointer', textAlign: 'left',
+                }}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="font-cinzel font-700" style={{
+                    display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.92rem', color: '#e8f2ea', lineHeight: 1.2,
+                  }}>
+                    Sailing with friends
+                    <span className="font-karla font-700 uppercase" style={{
+                      fontSize: '0.52rem', letterSpacing: '0.14em', padding: '0.12rem 0.4rem', borderRadius: 999,
+                      color: 'rgba(240,200,120,0.95)', background: 'rgba(240,192,64,0.12)',
+                      border: '1px solid rgba(240,192,64,0.4)',
+                    }}>Beta</span>
+                  </span>
+                  <span className="font-karla" style={{
+                    display: 'block', fontSize: '0.68rem', marginTop: 2, lineHeight: 1.35,
+                    color: waiting ? `${ASK},0.95)` : social.linked ? `${LIVE},0.9)` : `${SEA},0.5)`,
+                  }}>
+                    {waiting ? `${count} asking to sail with you`
+                      : social.linked ? 'Sailing with somebody now'
+                      : 'Ask a friend to sail the same sea.'}
+                  </span>
+                </span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+                  style={{ flexShrink: 0, color: `${SEA},0.5)` }}>
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+              </button>
+            )}
 
             <Switch label="Music" note="The sea's own soundtrack."
               on={s.music} onToggle={() => flip('music')} />
