@@ -723,6 +723,11 @@ const SHORE = 0.72
  *  goes where you tapped, a tap at the edge of the screen goes this far in that
  *  direction and no further. */
 const TAP_HOP = 460
+/** How long a direction key must be held before it steers; quicker is a tap,
+ *  which only turns her (see the key handler). */
+const KEY_HOLD_MS = 150
+/** Below this speed she is at rest, and a tapped key only turns her. */
+const UNDERWAY = 40
 
 /**
  * WHERE LETTING GO COASTS TO.
@@ -2856,6 +2861,8 @@ export default function SeaMap({
     // fishing instantly — a behaviour the button itself does not have.
     let keyAt: number | null = null
     let keyHold: ReturnType<typeof setInterval> | null = null
+    /** Direction keys pressed but not yet held long enough to steer. */
+    const keyTimers = new Map<string, number>()
     const keyCancel = () => {
       if (keyHold) { clearInterval(keyHold); keyHold = null }
       keyAt = null
@@ -2897,14 +2904,31 @@ export default function SeaMap({
       // Arrows scroll the page by default, and a scrolling chart is a broken
       // chart. Letters do nothing by default and lose nothing here.
       e.preventDefault()
+      if (e.repeat || keysRef.current.has(d) || keyTimers.has(d)) return
+      // ── A TAP TURNS HER, A HOLD SAILS (Kong, 2026-09-27) ──────────────
+      // Tapping A sailed the boat a hop to the left: steering started at the
+      // press and the release threw a run-out (TAP_HOP). A tap should only
+      // turn her. So a key STEERS only once it has been held KEY_HOLD_MS; a
+      // quicker press turns her to face that way (A / D flip the hull, every
+      // direction aims her lantern) and moves nothing. A key pressed while
+      // another is already steering joins at once, so a diagonal does not lag.
+      faceToward(d)
+      if (keysRef.current.size > 0) { startSteer(d); return }
+      keyTimers.set(d, window.setTimeout(() => { keyTimers.delete(d); startSteer(d) }, KEY_HOLD_MS))
+    }
+    /** The key has been held long enough: it steers. RECORDED AT ONCE, not at
+     *  the next frame, for the reason the old note gave: a frame is not fast
+     *  enough to catch somebody being brisk with the keys. */
+    const startSteer = (d: string) => {
       keysRef.current.add(d)
-      // RECORDED AT THE PRESS, not at the next frame. A tap shorter than one
-      // frame is added and removed between two steps of the loop, so the loop
-      // never sees it - and the release would then coast along the old
-      // velocity, which is the very thing that made a quick nudge sail the
-      // wrong way. Sixty times a second is not fast enough to catch a person
-      // being brisk with the arrow keys.
       cmdDir.current = keysToDir(keysRef.current)
+    }
+    /** Face the way a key points, without sailing. */
+    const faceToward = (d: string) => {
+      const v = keysToDir(new Set([d]))
+      if (!v) return
+      if (v.x !== 0) facing.current = v.x < 0 ? 1 : -1
+      gpuRef.current?.sailing(v.x * 200, v.y * 200)
     }
     /**
      * LETTING GO HAS TO LET GO. The physics reads held keys every frame and
@@ -2921,7 +2945,10 @@ export default function SeaMap({
     const up = (e: KeyboardEvent) => {
       // A key let go in a fight: drop it from the helm, act on nothing.
       if (fightOnRef.current) {
-        keysRef.current.delete(DIRS[e.key.toLowerCase()] ?? '')
+        const dk = DIRS[e.key.toLowerCase()] ?? ''
+        keysRef.current.delete(dk)
+        const t = keyTimers.get(dk)
+        if (t !== undefined) { clearTimeout(t); keyTimers.delete(dk) }
         keyCancel()
         return
       }
@@ -2938,6 +2965,19 @@ export default function SeaMap({
       }
       const d = DIRS[e.key.toLowerCase()]
       if (!d) return
+      // Let go before it steered: that was a tap. At rest it has already
+      // turned her and does nothing more. Under way it changes course the
+      // way a tap always has.
+      const pending = keyTimers.get(d)
+      if (pending !== undefined) {
+        clearTimeout(pending)
+        keyTimers.delete(d)
+        if (keysRef.current.size === 0 && Math.hypot(vel.current.x, vel.current.y) > UNDERWAY) {
+          cmdDir.current = keysToDir(new Set([d]))
+          runOut()
+        }
+        return
+      }
       keysRef.current.delete(d)
       if (keysRef.current.size === 0) runOut()
     }
@@ -2952,6 +2992,8 @@ export default function SeaMap({
      * with no key down there is nothing here to let go of.
      */
     const clear = () => {
+      for (const t of keyTimers.values()) clearTimeout(t)
+      keyTimers.clear()
       const steering = keysRef.current.size > 0
       keysRef.current.clear()
       if (steering) runOut()

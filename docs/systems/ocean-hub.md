@@ -3679,3 +3679,13 @@ it does nothing in the hold and to equip it in the Battle Loadout, lighting `hud
 `unequippedGear` (page: owns `raid_items`, none `equipped_raid_items`) and nothing is mounted, in
 the anchorage. The Loadout disc also carries a gold dot for as long as that stays true. Like every
 cue it waits for the tours to finish and shows once.
+
+
+## A tapped key turns her, a held key sails (2026-09-27)
+
+Kong: tapping A drifted the boat left. Steering began at the press and the release threw a run-out
+(`TAP_HOP`). Now a direction key steers only once held `KEY_HOLD_MS` (150); a quicker press at rest
+only turns her (A / D flip the hull via `facing`, every direction aims the lantern through
+`gpu.sailing`) and moves nothing. Under way (speed > `UNDERWAY`, 40) a tap still changes course
+with the old run-out. A key pressed while another already steers joins at once, so diagonals do
+not lag. Pending holds are cancelled on release, on blur, and in the fight branch.
