@@ -290,3 +290,14 @@ boat; see ocean-hub.md.
 and up, and it only takes effect at intervals of the JWT expiry, which is the same window this has
 without needing a plan or a setting nobody can see from the repo. If it is ever turned on, this code
 is harmless alongside it.
+
+
+## Keys advance dialogue (2026-09-27)
+
+`components/KeyboardAdvance` (root layout) turns a keypress into a tap on the topmost element
+tagged `data-any-key`, if that element is really on top (centre hit test). Since 2026-09-27 it
+listens in the CAPTURE phase and stops the key once used, so a Space that advances a line cannot
+also fire the chart's act key (fish, hail, ashore) underneath. `data-any-key="space"` limits it to
+Space and Enter: the tutorial cards' Next (`GuideCoach`) carry it, because they appear while you
+sail and WASD must still steer. Full-screen scenes (`StoryScene`, level-ups, crate and skin
+reveals) keep bare `data-any-key` (any key). New dialogue: tag its advance target, pick which.

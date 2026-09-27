@@ -41,6 +41,9 @@ export default function KeyboardAdvance() {
       const tagged = document.querySelectorAll<HTMLElement>('[data-any-key]')
       if (tagged.length === 0) return
       const el = tagged[tagged.length - 1]
+      // `data-any-key="space"` answers only Space and Enter: a tutorial card's
+      // Next, which appears while you are sailing, where letters steer.
+      if (el.dataset.anyKey === 'space' && e.key !== ' ' && e.key !== 'Enter') return
 
       // The tagged overlay must actually be on top. Its own centre is the
       // probe: a full-bleed gate hits itself; a card-style overlay hits its
@@ -51,14 +54,19 @@ export default function KeyboardAdvance() {
       const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
       if (!hit || !(el === hit || el.contains(hit))) return
 
+      // THE KEY IS SPENT HERE. Space is also the chart's act key (fish, hail,
+      // go ashore): a press that advanced a line must not also cast one. So
+      // this listens in the CAPTURE phase, ahead of every other window
+      // listener, and stops the key once it has used it.
       e.preventDefault()
+      e.stopImmediatePropagation()
       const opts = { bubbles: true, cancelable: true }
       el.dispatchEvent(new PointerEvent('pointerdown', { ...opts, pointerType: 'mouse' }))
       el.dispatchEvent(new PointerEvent('pointerup', { ...opts, pointerType: 'mouse' }))
       el.dispatchEvent(new MouseEvent('click', opts))
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
   }, [])
 
   return null

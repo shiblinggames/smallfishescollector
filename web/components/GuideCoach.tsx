@@ -250,6 +250,10 @@ function Card({ portrait, speaker, text, accent, placement, offset, z, anchor, o
         {onNext && (
           <button
             onClick={onNext}
+            // SPACE (or Enter) presses Next on a computer (Kong, 2026-09-27).
+            // "space", not any key: these cards come up while you sail, and
+            // WASD steering must not skip a line. See KeyboardAdvance.
+            data-any-key="space"
             className="font-karla font-700 uppercase"
             style={{ pointerEvents: 'auto', flexShrink: 0, alignSelf: 'center', padding: '0.5rem 0.75rem', borderRadius: 10, fontSize: '0.62rem', letterSpacing: '0.06em', background: `${accent}22`, border: `1px solid ${accent}77`, color: accent, cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
