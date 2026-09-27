@@ -206,6 +206,8 @@ import { heldGolden } from '../fishing/actions'
 import { seaBoot, type SeaBoot } from './bootActions'
 import { coastClip, coastline } from '@/lib/islandShape'
 import { plateFor } from '@/lib/islandPlates'
+import { RECALL_MS, RECALL_TO, type RecallSide } from '@/lib/seaRecall'
+import { spendRecall } from './recallActions'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
 import { GROUND, islandLift, liftAt, liftAtPoint, bakeIsland, requestGround } from './islandArt'
@@ -1931,7 +1933,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, exploredExpRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, navXP, renownNav, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
-  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, openBoss = null, captain = false, donsDeepest = 0, hasAncientAccess = false, raidParty, hasCaptain: hasCaptain0, raidItems, raidSeats, itemMounts, unequippedGear = false, portal, startSide, hasPact = false,
+  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, openBoss = null, captain = false, donsDeepest = 0, hasAncientAccess = false, raidParty, hasCaptain: hasCaptain0, raidItems, raidSeats, itemMounts, unequippedGear = false, recall: recall0 = { fishing: null, expedition: null }, portal, startSide, hasPact = false,
   seenChapterUnlocks = [], seenUltimateUnlock = false,
 }: {
   fishingXP: number
@@ -2015,6 +2017,8 @@ export default function SeaMap({
    *  ones. A muster that only lists who came cannot say who is missing. */
   raidSeats: number
   itemMounts: number
+  /** When each side's free recall home was last used (ISO), or null. */
+  recall?: { fishing: string | null; expedition: string | null }
   /** Owns raid gear and has none equipped (the first-gear cue and disc dot). */
   unequippedGear?: boolean
   /** Owed repairs. Sailing a sunk ship is refused at the raid screen; the dock
@@ -4215,6 +4219,52 @@ export default function SeaMap({
   }, [])
 
   const jumpToRef = useRef(jumpTo); jumpToRef.current = jumpTo
+
+  // ── THE FREE RECALL HOME (Kong, 2026-09-27) ─────────────────────────────
+  // One per side per sea day/night cycle (48 minutes): the fishing side to the
+  // Homestead, the expedition side to the Gunwharf. The server owns the
+  // cooldown (recallActions); this holds the stamps to draw the ring, asks the
+  // server first, and jumps only on its yes, by the same passage as a portal.
+  const [recallAt, setRecallAt] = useState(recall0)
+  useEffect(() => { setRecallAt(recall0) }, [recall0.fishing, recall0.expedition])
+  const [recallNote, setRecallNote] = useState<string | null>(null)
+  const [recallBusy, setRecallBusy] = useState(false)
+  const [recallNow, setRecallNow] = useState(() => Date.now())
+  const recallSide: RecallSide = inAnchorage ? 'expedition' : 'fishing'
+  const recallLast = recallAt[recallSide] ? new Date(recallAt[recallSide] as string).getTime() : 0
+  const recallLeft = Math.max(0, recallLast + RECALL_MS - recallNow)
+  // Tick the ring while it refills; nothing to tick once it is ready.
+  useEffect(() => {
+    if (recallLeft <= 0) return
+    const id = window.setInterval(() => setRecallNow(Date.now()), 15_000)
+    return () => window.clearInterval(id)
+  }, [recallLeft > 0])
+  useEffect(() => {
+    if (!recallNote) return
+    const t = window.setTimeout(() => setRecallNote(null), 2600)
+    return () => window.clearTimeout(t)
+  }, [recallNote])
+  const pressRecall = async () => {
+    if (recallBusy || fightOnRef.current || fishingInRef.current) return
+    const side = recallSide
+    const to = RECALL_TO[side]
+    if (Math.hypot(pos.current.x - to.x, pos.current.y - to.y) < 900) { setRecallNote('You are already home'); return }
+    const left = Math.max(0, recallLast + RECALL_MS - Date.now())
+    if (left > 0) { setRecallNote(`Recall ready in ${Math.ceil(left / 60_000)}m`); return }
+    setRecallBusy(true)
+    try {
+      const r = await spendRecall(side)
+      if (r.ok) {
+        setRecallAt(a => ({ ...a, [side]: r.at }))
+        setRecallNow(Date.now())
+        jumpTo(to.x, to.y, to.accent)
+      } else {
+        if (r.readyAt) setRecallAt(a => ({ ...a, [side]: new Date(new Date(r.readyAt as string).getTime() - RECALL_MS).toISOString() }))
+        setRecallNote(r.readyAt ? `Recall ready in ${Math.max(1, Math.ceil((new Date(r.readyAt).getTime() - Date.now()) / 60_000))}m` : 'The recall did not go through')
+      }
+    } catch { setRecallNote('The recall did not go through') }
+    finally { setRecallBusy(false) }
+  }
 
   useEffect(() => {
     if (!warping) return
@@ -6885,6 +6935,8 @@ export default function SeaMap({
     // carrying it. See sea/GearSheet.
     if (!fishingIn || wide) on.push('loadout')
     if (!fishingIn || wide) on.push('chart')
+    // THE FREE RECALL HOME, beside the chart. Not while a tour is speaking.
+    if ((!fishingIn || wide) && tour.seen && !(inAnchorage && !tour.gateSeen)) on.push('recall')
     // THE BOOK, on the fishing side only. It is a reference about FISH, and out
     // past the reef there are none — a door to it standing in the campaign's
     // water would be the busiest thing in that corner and about the other half
@@ -6892,7 +6944,7 @@ export default function SeaMap({
     if (!inAnchorage && (!fishingIn || wide)) on.push('almanac')
 
     return on
-  }, [fishingIn, wide, inAnchorage, orders, trawls.length, trawlsReady, fightOn])
+  }, [fishingIn, wide, inAnchorage, orders, trawls.length, trawlsReady, fightOn, tour.seen, tour.gateSeen])
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width: 900px)')
     if (!mq) return
@@ -12129,6 +12181,54 @@ hullRef={hullRefFor(t.key)} />
           </svg>
         </button>
       )}
+
+      {/* THE RECALL HOME. A house mark in a ring that refills over the 48
+          minute cycle; gold-green and whole when it is ready. */}
+      {hudRow.includes('recall') && (() => {
+        const frac = recallLeft > 0 ? 1 - recallLeft / RECALL_MS : 1
+        const ready = recallLeft <= 0
+        const to = RECALL_TO[recallSide]
+        return (
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); vibrate(10); void pressRecall() }}
+            aria-label={ready ? `Recall to ${to.name}` : `Recall to ${to.name}, ready in ${Math.ceil(recallLeft / 60_000)} minutes`}
+            title={ready ? `Recall to ${to.name} (free, once a cycle)` : `Recall ready in ${Math.ceil(recallLeft / 60_000)}m`}
+            style={{
+              position: 'absolute', top: 18, left: hudAt('recall'), zIndex: Z.hud,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: hudSize, height: hudSize, borderRadius: '50%', padding: 0,
+              background: 'rgba(6,12,18,0.7)',
+              border: `1px solid ${ready ? 'rgba(127,214,160,0.6)' : 'rgba(180,214,232,0.22)'}`,
+              boxShadow: ready ? '0 0 12px rgba(127,214,160,0.25)' : 'none',
+              color: ready ? '#bff0d2' : 'rgba(214,232,240,0.55)', cursor: 'pointer',
+              opacity: recallBusy ? 0.6 : 1,
+            }}>
+            {!ready && (
+              <span aria-hidden style={{
+                position: 'absolute', inset: -3, borderRadius: '50%', pointerEvents: 'none',
+                background: `conic-gradient(rgba(127,214,160,0.85) ${frac * 360}deg, rgba(127,214,160,0) 0deg)`,
+                WebkitMask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 3px), #000 calc(100% - 3px))',
+                mask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 3px), #000 calc(100% - 3px))',
+              }} />
+            )}
+            <svg width={Math.round(hudSize * 0.52)} height={Math.round(hudSize * 0.52)}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M3 11.5 12 4l9 7.5" />
+              <path d="M5.5 10v9.5h13V10" />
+              <path d="M10 19.5v-5h4v5" />
+            </svg>
+            {recallNote && (
+              <span className="font-karla font-700" style={{
+                position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
+                whiteSpace: 'nowrap', pointerEvents: 'none', padding: '0.22rem 0.55rem', borderRadius: 999,
+                fontSize: '0.66rem', color: '#e8f2ea', background: 'rgba(6,12,18,0.92)', border: '1px solid rgba(127,214,160,0.4)',
+              }}>{recallNote}</span>
+            )}
+          </button>
+        )
+      })()}
 
       {/* THE ALMANAC, next to the chart, because they are the same kind of
           thing: a reference you open, read, and shut again. */}

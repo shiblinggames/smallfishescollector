@@ -276,6 +276,11 @@ export default async function SeaPage({ searchParams }: {
     <SeaMap
       fishingXP={Number(profile?.fishing_xp ?? 0)}
       userId={user.id}
+      // The free recall home: when each side's was last used.
+      recall={{
+        fishing: (profile?.last_recall_fish_at as string | null) ?? null,
+        expedition: (profile?.last_recall_exp_at as string | null) ?? null,
+      }}
       tour={{
         seen: profile?.has_seen_sea_tour === true,
         // Where the first voyage got to. It leaves the chart for the market,

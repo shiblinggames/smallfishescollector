@@ -3689,3 +3689,20 @@ only turns her (A / D flip the hull via `facing`, every direction aims the lante
 `gpu.sailing`) and moves nothing. Under way (speed > `UNDERWAY`, 40) a tap still changes course
 with the old run-out. A key pressed while another already steers joins at once, so diagonals do
 not lag. Pending holds are cancelled on release, on blur, and in the fight branch.
+
+
+## The free recall home (2026-09-27)
+
+Players asked; Kong settled it. One free recall per SIDE per sea day/night cycle (`RECALL_MS`,
+48 minutes): the fishing side lands just off the Homestead (1500, 520: the retired Homestead
+berth's landing, coast-checked), the expedition side at the Gunwharf's portal landing
+(`lib/seaRecall` `RECALL_TO`). Kong chose to let it land near the full-price market (option 1 of
+three): the cooldown is the limit and the on-the-water buyer still matters the rest of the time.
+- **Server-owned cooldown**: `profiles.last_recall_fish_at` / `last_recall_exp_at`, stamped by
+  `spendRecall(side)` in ONE conditional update (only when null or older than the cycle), so two
+  presses or a reloaded tab cannot beat it. The chart asks first and jumps only on its yes.
+- **The button**: a house mark in the HUD row right of the chart (`hudRow` slot `recall`), green
+  and lit when ready, a ring refilling over the cycle otherwise (ticks every 15s). Refused with a
+  note under it: "Recall ready in Nm", or "You are already home" within 900 of the landing.
+  Hidden while the first voyage or the gate tour is running; never in a fight or with the rod out.
+- The jump is `jumpTo`, the portals' passage, which also sets side and hull and saves position.
