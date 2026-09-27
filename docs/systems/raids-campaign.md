@@ -556,3 +556,11 @@ first: one crate per real clear. Uniques are rolled server-side with the client 
 inputs (odds unchanged); the reveal waits for the server's items. The coin figure is still
 client-reported (tide bonuses roll client-side), clamped to 3,000. `recordRaidClear` requires
 the token. Practice (admin-only page) mints its own one-shot token (`startPracticeRun`).
+
+
+## F opens the fire chooser on a keyboard (2026-09-27)
+
+Kong: F should surface Fire / Volley, then F or V picks. With a volley or a mega on offer, F now
+opens the same chooser the button does; while it is up F fires the single shot, V the volley, M the
+mega, Escape closes it, and every other key waits. With only the single shot available F fires at
+once (nothing to choose). V and M no longer fire straight off the deck.

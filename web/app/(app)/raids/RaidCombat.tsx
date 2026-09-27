@@ -13545,10 +13545,14 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
 
   // ── Desktop keyboard ──────────────────────────────────────────────────────
   // One key per slot, matching the icons left to right: D dodge · S special ·
-  // R reload · F fire — plus V volley and M mega, which skip the fire chooser
-  // outright (the chooser exists because ONE thumb needs to reach three
-  // options; a keyboard has a key per option, so F is always the single shot
-  // and V/M spend the charges directly). Escape closes either chooser.
+  // R reload · F fire. Escape closes either chooser.
+  //
+  // F OPENS THE FIRE CHOOSER, like the button (Kong, 2026-09-27). With a volley
+  // or a mega on offer, F surfaces Fire / Volley / Mega and a second key picks:
+  // F again for the single shot, V for the volley, M for the mega. V and M used
+  // to fire straight off the deck, which spent charges on a key a captain may
+  // not have meant, and made the keyboard a different game from the button.
+  // With only the single shot available there is nothing to choose, so F fires.
   //
   // Guards mirror the buttons exactly: same enabled conditions, dead while
   // `disabled` (reveal/resolve), dead behind any overlay (uncoveredCenter on
@@ -13573,12 +13577,18 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
         if (k === 's') { e.preventDefault(); setSpecialMenu(false) }
         return
       }
+      if (fireMenu) {
+        // The fire chooser is up: the second key picks, anything else waits.
+        if (disabled) return
+        if (k === 'f' && canFire)        { e.preventDefault(); pick('fire') }
+        else if (k === 'v' && canVolley) { e.preventDefault(); pick('volley') }
+        else if (k === 'm' && canMega)   { e.preventDefault(); pick('mega') }
+        return
+      }
       if (disabled) return
-      if (k === 'd' && canDodge)                 { e.preventDefault(); setFireMenu(false); onSelect('dodge') }
-      else if (k === 'r' && canReload)           { e.preventDefault(); setFireMenu(false); onSelect('reload') }
-      else if (k === 'f' && canFire)             { e.preventDefault(); setFireMenu(false); onSelect('fire') }
-      else if (k === 'v' && canVolley)           { e.preventDefault(); setFireMenu(false); onSelect('volley') }
-      else if (k === 'm' && canMega)             { e.preventDefault(); setFireMenu(false); onSelect('mega') }
+      if (k === 'd' && canDodge)                 { e.preventDefault(); onSelect('dodge') }
+      else if (k === 'r' && canReload)           { e.preventDefault(); onSelect('reload') }
+      else if (k === 'f' && canFire)             { e.preventDefault(); tapFire() }
       else if (k === 's' && hasSpecial)          { e.preventDefault(); setSpecialMenu(true) }
     }
     window.addEventListener('keydown', onKey)
