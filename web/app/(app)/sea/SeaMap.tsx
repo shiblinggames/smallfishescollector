@@ -34,7 +34,7 @@ import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
 import {
-  decodeXfog, xfogHas, xfogOpen, xfogCover, xfogNear, xfogSet, seedXfog, inExpWater,
+  decodeXfog, xfogHas, xfogCentre, xfogOpen, xfogCover, xfogNear, xfogSet, seedXfog, inExpWater,
   XFOG_CELL, XFOG_W, XFOG_H, XFOG_X0, XFOG_Y0, XFOG_CELLS,
 } from '@/lib/seaExploreExp'
 import type { RenownState } from '@/app/(app)/actions/renown'
@@ -60,8 +60,8 @@ import { goAshore, type AshoreResult } from './isleActions'
 import { SUBMERGE } from './submerge'
 import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS, HULL_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
-import { PORTAL, PORTAL_TIERS, PORTAL_PORTS, hasPortalStone, hasStoneFor, inPortal, warpPoint } from '@/lib/seaPortal'
-import { buyPortalTier, buyPortalPort } from './portalActions'
+import { PORTAL, PORTAL_TIERS, ANCHOR_PORTAL, ANCHOR_ACCENT, CROSS_TO, hasPortalStone, hasStoneFor, inPortal, inAnchorPortal, warpPoint } from '@/lib/seaPortal'
+import { buyPortalTier } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
@@ -73,6 +73,7 @@ import {
   bayShutLine, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
   encounterNear, cacheNear, hullFor, portraitFor, encArt, DOCK, dockAt, ENCOUNTER_REACH,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
+  expAreas, inExpArea,
   WARGATE, WARGATE_REACH, MAELSTROMS, MAELSTROM_REACH, type Maelstrom,
   // The duel's framing lives with the raid water now, so the gauntlet's arena
   // composes its fights from the same numbers this chart does.
@@ -3829,6 +3830,7 @@ export default function SeaMap({
    *  sea is slightly heavier would undo the whole reason that loop exists. */
   const rough = useRef(0)
   const [inAnchorage, setInAnchorage] = useState(startSide !== 'fishing')
+  useEffect(() => { if (inAnchorage) setReachedAnchorage(true) }, [inAnchorage])
   /** See gateDone. Only north of the reef, only once the chart has arrived,
    *  and only through the tour's forced half -- past that it is asking the
    *  captain to sail to the Gunwharf, which a dimmed helm cannot do. */
@@ -3926,9 +3928,21 @@ export default function SeaMap({
   /** The charge: the beat between being taken and being asked. While it runs
    *  the flourish plays and the helm is dead weight — the portal has her. */
   const [portalCharge, setPortalCharge] = useState(false)
-  /** The island berths this captain has taught the portal. Local, so a purchase
-   *  lands in the sheet without a reload — same shape as the tier. */
-  const [portalPorts, setPortalPorts] = useState<string[]>(portal.ports)
+  /** WHICH WELL the sheet is for: the Homestead's or the anchorage's. Set
+   *  when the helm offers it, from where she is floating. */
+  const [portalSide, setPortalSide] = useState<'fish' | 'anchor'>('fish')
+  /** The anchorage areas the portal knows, read off the campaign fog as the
+   *  sheet opens. See raidWaters' expAreas. */
+  const [areasOpen, setAreasOpen] = useState<Set<string>>(() => new Set())
+  /**
+   * ── THE CROSSING IS EARNED BY GOING (Kong, 2026-09-27) ─────────────────
+   * Free between the two home portals once the anchorage has been reached the
+   * long way: its walkthrough latched, a campaign node cleared, campaign fog
+   * on the books, or being there now.
+   */
+  const [reachedAnchorage, setReachedAnchorage] = useState(false)
+  const crossOpen = gateDone || reachedAnchorage || startSide !== 'fishing'
+    || !!exploredExpRaw || clearedNodes.length > 0
   const chargeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (chargeTimer.current) clearTimeout(chargeTimer.current) }, [])
   const [portalTier, setPortalTier] = useState(portal.tier)
@@ -3976,9 +3990,9 @@ export default function SeaMap({
       // DEAD WATER only when the portal can reach NOTHING. A stone is no longer
       // the whole story: a captain with a berth and no stone has somewhere to
       // go, and water that reads as dead while it works is worse than no cue.
-      locked: !portalStone && portalPorts.length === 0,
+      locked: !portalStone && !crossOpen,
     }
-  }, [portalTier, portalStone, portalPorts])
+  }, [portalTier, portalStone, crossOpen])
 
   /**
    * MIRRORED, because the frame loop below is mounted with `[]` deps and never
@@ -4162,6 +4176,14 @@ export default function SeaMap({
       sideRef.current = north
       setInAnchorage(north)
     }
+    // PAST THE ANCHORAGE RIM is the open sea, as if the Sea Gate had been
+    // sailed: the anchorage portal sets you down in a chapter's bay, and
+    // without this the rim would drag her back into the harbour.
+    const out = north && Math.hypot(x - EXP_ORIGIN.x, y - EXP_ORIGIN.y) > EXP_EDGE
+    if (out !== seaGateRef.current) {
+      seaGateRef.current = out
+      setOnSeaGate(out)
+    }
     if (north !== hullSideRef.current) {
       hullSideRef.current = north
       crossHullRef.current(north)
@@ -4174,26 +4196,6 @@ export default function SeaMap({
     void saveSeaPosition(x, y, [...fogPending.current])
     fogPending.current.clear()
   }, [saveSeaPosition])
-
-  /** Teaching the portal a berth. Same shape as buyTier, and deliberately not
-   *  folded into it: one is a rung on a ladder and the other is one of a set,
-   *  and a single function taking a discriminator would have to re-explain that
-   *  difference at every call site. */
-  const buyPort = useCallback(async (id: string) => {
-    if (portalBusy) return
-    setPortalBusy(true)
-    setPortalErr(null)
-    try {
-      const res = await buyPortalPort(id)
-      if ('error' in res) setPortalErr(res.error)
-      else {
-        setPortalPorts(res.ports)
-        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-        vibrate([0, 30, 40, 60])
-      }
-    } catch { setPortalErr('That did not go through. Try again.') }
-    setPortalBusy(false)
-  }, [portalBusy])
 
   /**
    * TAKE THE PASSAGE. Shuts the sheet, drops the curtain, moves her behind it.
@@ -7185,7 +7187,7 @@ export default function SeaMap({
       }
       // THE PORTAL, when you are floating in it. Nothing else is inside that
       // ring, and a captain sitting in the middle of one has already decided.
-      if (inPortalNow && !inAnchorage) {
+      if (inPortalNow) {
         reach.push({
           id: 'portal',
           label: 'Step through the portal',
@@ -7195,6 +7197,19 @@ export default function SeaMap({
             // into something from tapping a button beside it.
             vel.current.x = 0; vel.current.y = 0
             target.current = { ...pos.current }
+            const anchor = inAnchorPortal(pos.current.x, pos.current.y)
+            setPortalSide(anchor ? 'anchor' : 'fish')
+            if (anchor) {
+              // What the campaign fog says you have sailed, by area.
+              const bits = xfogRef.current
+              const known = new Set<string>()
+              for (let i = 0; i < bits.length * 8; i++) {
+                if (!xfogHas(bits, i)) continue
+                const c = xfogCentre(i)
+                for (const a of expAreas()) if (!known.has(a.id) && inExpArea(a.id, c.x, c.y)) known.add(a.id)
+              }
+              setAreasOpen(known)
+            }
             setPortalOpen(true)
           },
         })
@@ -9106,7 +9121,9 @@ export default function SeaMap({
       // one of them was drawn.
       //
       // So: the whole mouth counts, and it offers. See the helm.
-      const inMouth = inPortal(pos.current.x, pos.current.y)
+      const inFishMouth = inPortal(pos.current.x, pos.current.y)
+      const inAnchorMouth = inAnchorPortal(pos.current.x, pos.current.y)
+      const inMouth = inFishMouth || inAnchorMouth
       // Out of every mouth once since the last warp: the offer is live again.
       if (!inMouth) portalArmed.current = true
       const offered = inMouth && portalArmed.current
@@ -9118,7 +9135,8 @@ export default function SeaMap({
       // THE WATER STILL ANSWERS, it just does not take you. Standing in the
       // ring gathers it; that is the cue that the thing is live and that the
       // helm has something for you.
-      gpuRef.current?.portal(gpuPortalRef.current, inMouth, inMouth ? 1 : 0)
+      gpuRef.current?.portal(gpuPortalRef.current, inFishMouth, inFishMouth ? 1 : 0)
+      gpuRef.current?.anchorPortal(inAnchorMouth)
 
       if (R > rim) {
         const nx2 = (pos.current.x - home.x) / R, ny2 = (pos.current.y - home.y) / R
@@ -11348,7 +11366,8 @@ export default function SeaMap({
             it is scenery you learn by bumping into. Sized and shadowed like the
             ports' name plates, one step quieter, because it is a feature of the
             water rather than somewhere you go ashore. */}
-        {!inAnchorage && <PortalName tier={portalTier} stone={portalStone} />}
+        {!inAnchorage && <PortalName tier={portalTier} stone={portalStone} cross={crossOpen} />}
+        {inAnchorage && <AnchorPortalName />}
         {/* ── THE TWO DOORS, NAMED ────────────────────────────────────────
             Every other thing on this water says what it is: the ports, the
             portal, the sea gate. The maelstroms said nothing at all, so two of
@@ -12191,7 +12210,7 @@ hullRef={hullRefFor(t.key)} />
           }}>
             <p className="font-karla font-700 uppercase" style={{
               fontSize: '0.62rem', letterSpacing: '0.18em', color: 'rgba(168,146,255,0.85)', margin: 0,
-            }}>The Homestead Portal</p>
+            }}>{portalSide === 'anchor' ? 'The Anchorage Portal' : 'The Homestead Portal'}</p>
             <h2 className="font-pirata" style={{
               fontSize: '1.6rem', color: '#f0ede8', margin: '4px 0 0.8rem', lineHeight: 1.15,
             }}>Where to?</h2>
@@ -12200,11 +12219,18 @@ hullRef={hullRefFor(t.key)} />
                 sea is not laid out for a picker, and a true-scale plan of it
                 collapsed the near waters to a thread and stacked six berths in
                 a pile too small to hit. */}
-            <PortalMap
-              tier={portalTier} ports={portalPorts} stoneFor={stoneFor} busy={portalBusy}
-              onSail={(x, y, accent) => jumpTo(x, y, accent)}
-              onBuyTier={() => void buyTier()}
-              onBuyPort={id => void buyPort(id)} />
+            {portalSide === 'anchor' ? (
+              <PortalMap side="anchor"
+                crossOpen={crossOpen} areasOpen={areasOpen} crewAboard={hasCaptain}
+                onSail={(x, y, accent) => jumpTo(x, y, accent)}
+                onCross={() => jumpTo(CROSS_TO.fish.x, CROSS_TO.fish.y, '#7fc8de')} />
+            ) : (
+              <PortalMap side="fish"
+                tier={portalTier} stoneFor={stoneFor} busy={portalBusy} crossOpen={crossOpen}
+                onSail={(x, y, accent) => jumpTo(x, y, accent)}
+                onCross={() => jumpTo(CROSS_TO.anchor.x, CROSS_TO.anchor.y, ANCHOR_ACCENT)}
+                onBuyTier={() => void buyTier()} />
+            )}
 
             {portalErr && (
               <p className="font-karla font-600" style={{
@@ -15212,8 +15238,32 @@ const WargateName = memo(function WargateName() {
   )
 })
 
-const PortalName = memo(function PortalName({ tier, stone }: { tier: number; stone: boolean }) {
+/** The anchorage portal's name board, in the Homestead portal's manner. */
+const AnchorPortalName = memo(function AnchorPortalName() {
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: ANCHOR_PORTAL.x, top: ANCHOR_PORTAL.y + ANCHOR_PORTAL.r * GROUND,
+      pointerEvents: 'none',
+      transform: `translate(-50%, 10px) scaleY(${1 / GROUND})`,
+      transformOrigin: 'top center',
+      textAlign: 'center', whiteSpace: 'nowrap',
+    }}>
+      <p className="font-cinzel font-700" style={{
+        fontSize: '1.5rem', lineHeight: 1.1, margin: 0, color: '#eef4f8',
+        textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
+      }}>Anchorage Portal</p>
+      <p className="font-karla font-600" style={{
+        fontSize: '0.95rem', marginTop: 2, color: `${ANCHOR_ACCENT}cc`,
+        textShadow: '0 1px 10px rgba(0,0,0,0.92)',
+      }}>Home to the Homestead, out to the bays you have sailed</p>
+    </div>
+  )
+})
+
+const PortalName = memo(function PortalName({ tier, stone, cross }: { tier: number; stone: boolean; cross: boolean }) {
   const t = PORTAL_TIERS.find(p => p.tier === tier) ?? PORTAL_TIERS[0]
+  // Awake if it can take you anywhere: a band, or across to the anchorage.
+  const live = stone || cross
   return (
     <div aria-hidden style={{
       position: 'absolute', left: PORTAL.x, top: PORTAL.y + PORTAL.r * GROUND,
@@ -15224,7 +15274,7 @@ const PortalName = memo(function PortalName({ tier, stone }: { tier: number; sto
     }}>
       <p className="font-cinzel font-700" style={{
         fontSize: '1.5rem', lineHeight: 1.1, margin: 0,
-        color: stone ? '#eef4f8' : 'rgba(202,214,222,0.7)',
+        color: live ? '#eef4f8' : 'rgba(202,214,222,0.7)',
         textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
       }}>Home Portal</p>
       {/* WHAT IT WANTS, or how far it reaches. The board is the only thing out
@@ -15234,12 +15284,12 @@ const PortalName = memo(function PortalName({ tier, stone }: { tier: number; sto
           concludes the game is broken, not that there is something to find. */}
       <p className="font-karla font-600" style={{
         fontSize: '0.95rem', marginTop: 2,
-        color: stone ? `${t.accent}cc` : 'rgba(230,196,140,0.92)',
+        color: live ? `${stone ? t.accent : ANCHOR_ACCENT}cc` : 'rgba(230,196,140,0.92)',
         textShadow: '0 1px 10px rgba(0,0,0,0.92)',
       }}>
-        {stone ? `Reaches ${t.name}` : 'Dead water. It wants a portal stone.'}
+        {stone ? `Reaches ${t.name}` : cross ? 'Reaches the Anchorage' : 'Dead water. It wants a portal stone.'}
       </p>
-      {!stone && (
+      {!live && (
         <p className="font-karla" style={{
           fontSize: '0.82rem', marginTop: 1,
           color: 'rgba(196,214,228,0.66)',

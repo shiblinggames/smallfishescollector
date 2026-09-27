@@ -54,81 +54,41 @@ export const PORTAL_TIERS: PortalTier[] = [
 ]
 
 /**
- * ── AND THE ISLAND BERTHS ───────────────────────────────────────────────────
+ * ── THE ANCHORAGE PORTAL, AND THE CROSSING (Kong, 2026-09-27) ──────────────
  *
- * The band ladder answers "get me back out to deep water". It does not answer
- * the other half of a long sail, which is getting back IN — you finish in the
- * Ancient Deep with a full hold and twenty thousand pixels of empty ocean
- * between you and anywhere that will take it.
+ * Portals do not take you to buildings any more. The Homestead portal used to
+ * sell berths beside islands (the Tally House, the Trawl Harbor and every
+ * building in the anchorage); those are gone, and owners were not refunded
+ * (Kong's call). What replaced them is a second well:
  *
- * So the portal also learns berths: one per island, bought outright, in
- * whatever order you want them.
+ *   - The HOMESTEAD portal keeps its band ladder (the fishing sea's waters)
+ *     and gains one more door: across to the anchorage portal.
+ *   - The ANCHORAGE portal stands in the open water east of the harbour. It
+ *     crosses back to the Homestead portal, and it opens the expedition sea
+ *     by area: the Junction and each chapter's bay (raidWaters' EXP_AREAS).
  *
- * ── A SET, NOT A LADDER ─────────────────────────────────────────────────────
- *
- * The bands are a sequence and owning the Abyss implies owning everything
- * shallower, which is why they are one number. Islands are not a sequence. They
- * are places, and a captain who lives at the Tally House and never uses the
- * Shipyard should not have to buy the Shipyard on the way. `portal_ports` is an
- * array for exactly that reason.
- *
- * ── AND NO STONE ────────────────────────────────────────────────────────────
- *
- * A stone says "you have been to this water". Every one of these is somewhere
- * you have not merely been but MOOR at, repeatedly, by name — the rule the
- * stones enforce is already true of an island by the time you can afford one.
- * What gates a berth is the price, and the price is the whole gate.
- *
- * THE ANCHORAGE BERTHS ARE THE DEAR ONES because they are on the other side of
- * the reef: each saves the arch, the channel and the swap into your warship,
- * which is the longest errand in the game. (The Gunwharf was the only one
- * until 2026-09-23; see the table.)
+ * The crossing is free once you have reached the anchorage the long way.
+ * `portal_ports` still holds the retired berth ids; nothing reads it.
  */
-export type PortalPort = {
-  /** A PLACES id. The berth's name and position both come from there, so this
-   *  table cannot drift from the island it points at. */
-  id: string
-  name: string
-  cost: number
-  /** Where it sets you down: off the island, never on it. Arriving inside a
-   *  berth ring would open that island's own panel the instant you landed, and
-   *  being handed a screen you did not ask for is not an arrival. */
-  to: { x: number; y: number }
-  accent: string
+export const ANCHOR_PORTAL = { x: 2000, y: -3200, r: 230 }
+
+/** The anchorage portal's colour: harbour lamplight, not a fishing band. */
+export const ANCHOR_ACCENT = '#d9a45a'
+
+/**
+ * WHERE A CROSSING SETS YOU DOWN: a short pull south of the other well, never
+ * in it, so arriving does not put its sheet in your face. (The mouth's own
+ * hysteresis would cover it, but water beside a door reads as arriving and
+ * water inside one reads as being handed a menu.)
+ */
+export const CROSS_TO = {
+  anchor: { x: ANCHOR_PORTAL.x, y: ANCHOR_PORTAL.y + 430 },
+  fish: { x: PORTAL.x, y: PORTAL.y + 430 },
 }
 
-export const PORTAL_PORTS: PortalPort[] = [
-  // The fishing side keeps the two that are a real sail from the well.
-  { id: 'trawl_docks', name: 'The Tally House', cost: 70_000, to: { x: -1150, y: -320 }, accent: '#8fd0e8' },
-  { id: 'trawl_fleet', name: 'The Trawl Harbor', cost: 120_000, to: { x: -2050, y: -400 }, accent: '#6fd39a' },
-  // ── AND THE ANCHORAGE (2026-09-23) ─────────────────────────────────────
-  // Kong: the Mainland, the Homestead and the Shipyard were lame berths. The
-  // well stands off the Homestead, so all three were a short sail from it.
-  // They are gone and the anchorage is in: every one of these saves the arch,
-  // the channel and the change of boat, which is the longest errand there is,
-  // so they share one price. A warp north of the reef puts the warship under
-  // you (see warpTo in SeaMap). Each lands a short pull off the island on the
-  // channel side, outside its mooring ring, checked clear of every solid.
-  // Owners of the retired three keep the ids in portal_ports; nothing reads
-  // them, and Kong ruled no refunds.
-  { id: 'crew_hall', name: 'The Crew Hall', cost: 250_000, to: { x: -107, y: -3840 }, accent: '#d9a45a' },
-  { id: 'posting_house', name: 'The Posting House', cost: 250_000, to: { x: -1560, y: -3984 }, accent: '#c9b27a' },
-  { id: 'forge_isle', name: 'The Forge', cost: 250_000, to: { x: 30, y: -3984 }, accent: '#e0764a' },
-  {
-    id: 'gunwharf', name: 'The Gunwharf', cost: 250_000,
-    // THE FAR SIDE OF THE REEF. Set down a short pull off the wharf, in the
-    // same water the expedition way home lands in — see PORTAL_HOME.
-    to: { x: -500, y: -5150 }, accent: '#a78bfa',
-  },
-  { id: 'charterhouse', name: 'The Charterhouse', cost: 250_000, to: { x: 500, y: -5150 }, accent: '#f0c040' },
-]
-
-export const PORT_BY_ID: Record<string, PortalPort> =
-  Object.fromEntries(PORTAL_PORTS.map(p => [p.id, p]))
-
-/** Has this captain taught the portal that berth? */
-export function hasPort(id: string, owned: string[] | null | undefined): boolean {
-  return (owned ?? []).includes(id)
+/** Inside the anchorage portal's mouth? */
+export function inAnchorPortal(x: number, y: number): boolean {
+  return Math.hypot(x - ANCHOR_PORTAL.x, y - ANCHOR_PORTAL.y) < ANCHOR_PORTAL.r
 }
 
 /**

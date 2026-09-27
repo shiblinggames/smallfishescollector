@@ -3397,7 +3397,7 @@ the sheet it opens. A failed reader drops its row, never the board.
   opened); Chart Room and Parlor navigate away and do not return.
 
 
-## Homestead portal berths (2026-09-23)
+## Homestead portal berths (2026-09-23) - RETIRED 2026-09-27, see "Two home portals"
 
 `PORTAL_PORTS` in `lib/seaPortal.ts`. Kong: the Mainland, Homestead and Shipyard berths were lame
 (the well stands off the Homestead, so all three were a short sail) and are GONE; no refunds, stale
@@ -3749,3 +3749,22 @@ The chart only gets fresh page props when a server action revalidates `/sea` or 
   - CrewClient adopts a fresh `initial` from its holder.
   - ShipSheet provides `SheetRefresh` (`lib/sheetRefresh.tsx`), so ShipHero's and UltimateBuildPanel's `useRefreshAll()` re-read the sheet as well as the page.
 - **Crew Hall tier, drill and stores buys** revalidate `/sea`, so the island art and berth numbers follow.
+
+## Two home portals (2026-09-27)
+Kong: portals don't teleport you to buildings. All island berths are gone: the Tally House, Trawl Harbor and every anchorage building. There were no refunds; one owner of the Crew Hall and one of the Tally House lost theirs. `portal_ports` is left unread.
+
+**The Homestead portal** keeps its band ladder, with stones and prices unchanged. It gains a crossing to the anchorage portal.
+
+**The Anchorage portal**
+- It sits in open water east of the harbour: `ANCHOR_PORTAL` (2000, -3200, r 230) in `lib/seaPortal.ts`, 1,829 from the Forge.
+- It is a second canvas well (`anchorWell`, `gpu.anchorPortal(inside)`) with the standing-stone ring in lamplight `ANCHOR_ACCENT`. Its name board is `AnchorPortalName`.
+- It offers the crossing home and the expedition sea by area: `expAreas()` in raidWaters, which is the Junction (landing at `PORTAL_HOME`, the Wargate's feet) and each chapter's bay.
+- A bay's landing is looked for (`bayLanding`): up the bay axis from the door, clear of the bay's rocks, and outside every hull's hail. The Wargate is unchanged and is still the boss-by-boss door.
+
+**Rules**
+- **The crossing.** It is free once the anchorage has been reached the long way: gate tour latched, campaign fog, a cleared node, or having been there this session. It lands 430 south of the other well (`CROSS_TO`).
+- **Areas open by fog.** An area opens when any campaign fog cell inside it has been explored (read as the sheet opens), which is the fishing bands' rule: the portal can't take you anywhere you haven't been.
+- **Sailing out needs a seated captain**, the Sea Gate's own rule.
+- **`warpTo` sets the Sea Gate state from the landing.** Beyond the anchorage rim counts as out, or the rim would drag a bay landing back into the harbour.
+- The same `PortalMap` renders both wells (`side: 'fish' | 'anchor'`). One press sails anywhere you own; a locked node opens the footer that says why.
+- The free recall's expedition landing is now a literal (-500, -5150), since it used to read the retired Gunwharf berth.

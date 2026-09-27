@@ -26,53 +26,115 @@
 
 import { useState } from 'react'
 import { PLACES } from './chart'
-import { PORTAL_TIERS, PORTAL_PORTS, type PortalTier, type PortalPort } from '@/lib/seaPortal'
+import { PORTAL_TIERS, ANCHOR_ACCENT, type PortalTier } from '@/lib/seaPortal'
+import { expAreas, type ExpArea } from './raidWaters'
 
 /**
- * WHAT A BERTH LOOKS LIKE, from the island itself.
- *
- * Every one of these is a place with a painting already: the shed, the wharf,
- * the town. A coloured square beside its name was a label for a thing that has
- * a face — and the face is what a captain actually recognises, because it is
- * what they have been sailing up to for hours.
- *
- * The BUILDING rather than the island plate where there is one. An island plate
- * is mostly grass with a small thing on it, which at 56px is a green blob; the
- * building is the bit you would point at. The Homestead has no separate
- * building — its house is a ladder of five paintings, one per rung — so it
- * falls back to the isle, which is the right picture for it anyway.
- *
- * Derived from PLACES rather than written down again, so a re-drawn island
- * arrives here on its own.
+ * WHAT A PLACE LOOKS LIKE, from the island itself: the building where there
+ * is one, else the isle's own plate. Derived from PLACES rather than written
+ * down again, so a re-drawn island arrives here on its own.
  */
 function berthArt(id: string): string | null {
   const p = PLACES.find(x => x.id === id)
   return p?.buildings?.[0]?.art ?? (p?.art?.startsWith('/sea/') ? p.art : null)
 }
 
+/** The fishing side's colour for the crossing home: the Shallows' blue. */
+const HOME_ACCENT = '#7fc8de'
+
 type Pick =
   | { kind: 'band'; tier: PortalTier }
-  | { kind: 'port'; port: PortalPort }
+  | { kind: 'cross' }
+  | { kind: 'area'; area: ExpArea }
 
-export default function PortalMap({
-  tier, ports, stoneFor, busy, onSail, onBuyTier, onBuyPort,
-}: {
+/**
+ * ── TWO WELLS, ONE SHEET (Kong, 2026-09-27) ─────────────────────────────────
+ *
+ * The Homestead portal: the fishing sea's waters, and the crossing to the
+ * anchorage portal. The anchorage portal: the crossing home, and the
+ * expedition sea's areas. No berths beside buildings on either; see
+ * lib/seaPortal.
+ */
+export default function PortalMap(props: {
+  side: 'fish'
   /** How far the band ladder reaches. */
   tier: number
-  /** Berths already taught. */
-  ports: string[]
   /** Is the stone for this rung in hand? */
   stoneFor: (t: number) => boolean
   busy: boolean
+  crossOpen: boolean
   onSail: (x: number, y: number, accent: string) => void
+  onCross: () => void
   onBuyTier: () => void
-  onBuyPort: (id: string) => void
+} | {
+  side: 'anchor'
+  crossOpen: boolean
+  /** Areas already sailed into the long way. */
+  areasOpen: Set<string>
+  /** The Sea Gate's own rule: nobody seated, nobody sails out. */
+  crewAboard: boolean
+  onSail: (x: number, y: number, accent: string) => void
+  onCross: () => void
 }) {
   const [sel, setSel] = useState<Pick | null>(null)
 
+  const crossNode = (
+    <Node
+      label={props.side === 'fish' ? 'The Anchorage' : 'The Homestead'}
+      accent={props.side === 'fish' ? ANCHOR_ACCENT : HOME_ACCENT}
+      art={berthArt(props.side === 'fish' ? 'crew_hall' : 'home')}
+      owned={props.crossOpen}
+      dim={false}
+      on={sel?.kind === 'cross'}
+      note={props.crossOpen ? null : 'Locked'}
+      onClick={() => props.crossOpen ? props.onCross() : setSel({ kind: 'cross' })} />
+  )
+
+  if (props.side === 'anchor') {
+    const { areasOpen, crewAboard, onSail } = props
+    const areas = expAreas()
+    const open = (a: ExpArea) => areasOpen.has(a.id)
+    return (
+      <div>
+        <Heading>The crossing</Heading>
+        <Board>{crossNode}</Board>
+
+        <Heading>The expedition sea</Heading>
+        <Board>
+          {areas.map(a => (
+            <Node key={a.id}
+              label={a.name}
+              accent={a.accent}
+              round
+              owned={open(a)}
+              dim={!open(a)}
+              on={sel?.kind === 'area' && sel.area.id === a.id}
+              note={open(a) ? (a.chapter ? `Chapter ${roman(a.chapter)}` : null) : 'Locked'}
+              onClick={() => open(a) && crewAboard ? onSail(a.to.x, a.to.y, a.accent) : setSel({ kind: 'area', area: a })} />
+          ))}
+        </Board>
+
+        {sel && (
+          <Footer>
+            {sel.kind === 'cross' ? (
+              <Foot accent={HOME_ACCENT} name="The Homestead" owned={false}
+                line="Opens once you have sailed into the anchorage the long way." action={null} />
+            ) : sel.kind === 'area' ? (
+              <Foot accent={sel.area.accent} round name={sel.area.name} owned={open(sel.area)}
+                line={!open(sel.area)
+                  ? 'Sail into this water the long way first, and the portal will know it.'
+                  : 'She sails with nobody aboard. Seat a captain in Your Crew before you go out.'}
+                action={null} />
+            ) : null}
+          </Footer>
+        )}
+      </div>
+    )
+  }
+
+  const { tier, stoneFor, busy, onSail, onBuyTier } = props
   const bandOwned = (t: PortalTier) => t.tier <= tier
   const bandNext = (t: PortalTier) => t.tier === tier + 1
-  const portOwned = (p: PortalPort) => ports.includes(p.id)
 
   return (
     <div>
@@ -94,72 +156,56 @@ export default function PortalMap({
         ))}
       </Board>
 
-      <Heading>The berths</Heading>
-      <Board>
-        {PORTAL_PORTS.map(p => (
-          <Node key={p.id}
-            label={p.name}
-            accent={p.accent}
-            art={berthArt(p.id)}
-            owned={portOwned(p)}
-            dim={false}
-            on={sel?.kind === 'port' && sel.port.id === p.id}
-            note={portOwned(p) ? null : `${short(p.cost)} ⟡`}
-            onClick={() => portOwned(p) ? onSail(p.to.x, p.to.y, p.accent) : setSel({ kind: 'port', port: p })} />
-        ))}
-      </Board>
+      <Heading>The crossing</Heading>
+      <Board>{crossNode}</Board>
 
-      {/* ── WHAT YOU HAVE PICKED ──
-          One footer rather than a button on every node: eleven buttons is a
-          wall of buttons, eleven places and one verb is a choice.
-
-          AND NOTHING UNTIL SOMETHING IS PICKED. It used to hold seventy pixels
-          open to say "pick where you are going" — a caption on a board of
-          eleven labelled buttons, telling a captain what they can already
-          see. */}
+      {/* ── WHAT YOU HAVE PICKED ── One footer rather than a button on every
+          node, and nothing until something is picked. */}
       {sel && (
-      <div style={{
-        marginTop: 12,
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '0.6rem 0.75rem', borderRadius: 12,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.09)',
-      }}>
-        {sel.kind === 'band' ? (
-          <Foot
-            accent={sel.tier.accent} round
-            name={sel.tier.name}
-            owned={bandOwned(sel.tier)}
-            line={bandOwned(sel.tier)
-              ? 'The portal knows this water.'
-              : bandNext(sel.tier)
-                ? `${sel.tier.cost.toLocaleString()} ⟡ · ${stoneFor(sel.tier.tier) ? 'stone in hand' : `needs the stone from ${sel.tier.name}`}`
-                : 'Build the waters before it first.'}
-            action={bandOwned(sel.tier)
-              ? { label: 'Sail', onClick: () => onSail(sel.tier.to.x, sel.tier.to.y, sel.tier.accent) }
-              : bandNext(sel.tier)
-                ? {
-                  label: busy ? 'Working…' : stoneFor(sel.tier.tier) ? 'Build' : 'No stone',
-                  gold: true,
-                  disabled: busy || !stoneFor(sel.tier.tier),
-                  onClick: onBuyTier,
-                }
-                : null} />
-        ) : (
-          <Foot
-            accent={sel.port.accent}
-            name={sel.port.name}
-            owned={portOwned(sel.port)}
-            line={portOwned(sel.port)
-              ? 'The portal knows this berth.'
-              : `${sel.port.cost.toLocaleString()} ⟡${sel.port.id === 'gunwharf' ? ' · the far side of the reef' : ''}`}
-            action={portOwned(sel.port)
-              ? { label: 'Sail', onClick: () => onSail(sel.port.to.x, sel.port.to.y, sel.port.accent) }
-              : { label: busy ? 'Working…' : 'Teach it', gold: true, disabled: busy, onClick: () => onBuyPort(sel.port.id) }} />
-        )}
-      </div>
+        <Footer>
+          {sel.kind === 'band' ? (
+            <Foot
+              accent={sel.tier.accent} round
+              name={sel.tier.name}
+              owned={bandOwned(sel.tier)}
+              line={bandOwned(sel.tier)
+                ? 'The portal knows this water.'
+                : bandNext(sel.tier)
+                  ? `${sel.tier.cost.toLocaleString()} ⟡ · ${stoneFor(sel.tier.tier) ? 'stone in hand' : `needs the stone from ${sel.tier.name}`}`
+                  : 'Build the waters before it first.'}
+              action={bandOwned(sel.tier)
+                ? { label: 'Sail', onClick: () => onSail(sel.tier.to.x, sel.tier.to.y, sel.tier.accent) }
+                : bandNext(sel.tier)
+                  ? {
+                    label: busy ? 'Working…' : stoneFor(sel.tier.tier) ? 'Build' : 'No stone',
+                    gold: true,
+                    disabled: busy || !stoneFor(sel.tier.tier),
+                    onClick: onBuyTier,
+                  }
+                  : null} />
+          ) : sel.kind === 'cross' ? (
+            <Foot accent={ANCHOR_ACCENT} name="The Anchorage" owned={false}
+              line="Opens once you have sailed through the reef to the anchorage the long way." action={null} />
+          ) : null}
+        </Footer>
       )}
     </div>
+  )
+}
+
+function roman(n: number) {
+  return ['I', 'II', 'III', 'IV', 'V', 'VI'][n - 1] ?? String(n)
+}
+
+function Footer({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      marginTop: 12,
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '0.6rem 0.75rem', borderRadius: 12,
+      background: 'rgba(255,255,255,0.04)',
+      border: '1px solid rgba(255,255,255,0.09)',
+    }}>{children}</div>
   )
 }
 

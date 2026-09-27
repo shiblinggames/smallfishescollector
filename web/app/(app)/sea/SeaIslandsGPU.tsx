@@ -114,6 +114,7 @@ import { makeWake, type Contact, type Wake, type WakeKind } from './seaWake'
 import { makeBerths, type Berths, type BerthSpec } from './seaBerth'
 import { makePortalWell, type PortalWell, type PortalWellSpec } from './seaPortalWell'
 import { WARGATE, WARGATE_REACH } from './raidWaters'
+import { ANCHOR_PORTAL, ANCHOR_ACCENT } from '@/lib/seaPortal'
 import { makeTowns, type Towns, type GpuTown } from './seaTown'
 import { makeFog, type Fog } from './seaFog'
 import { makeGlow, type Glow, type GlowPatch } from './seaGlow'
@@ -326,6 +327,8 @@ export type GpuHandle = {
   /** Whether she is standing in the Wargate's mouth. The gate is a well like
    *  the way home, drawn here under her rather than in the DOM over her. */
   wargate(inside: boolean): void
+  /** Whether she is standing in the anchorage portal's mouth. */
+  anchorPortal(inside: boolean): void
   /** Which way home she is floating in, by index into `homes`, or null. */
   home(i: number | null): void
   /**
@@ -736,6 +739,16 @@ export default function SeaIslandsGPU({
         x: WARGATE.x, y: WARGATE.y, r: WARGATE_REACH, accent: 0xf0c040, tier: 5, art: 'wargate',
       })
       world.addChild(wargateWell.view)
+
+      // ── THE ANCHORAGE PORTAL (2026-09-27) ─────────────────────────
+      // The Homestead portal's twin on the far side of the reef: the same
+      // standing stones, in harbour lamplight. Never dead water; anybody
+      // floating in the anchorage has earned the crossing home.
+      const anchorWell: PortalWell = makePortalWell(PIXI, {
+        x: ANCHOR_PORTAL.x, y: ANCHOR_PORTAL.y, r: ANCHOR_PORTAL.r,
+        accent: parseInt(ANCHOR_ACCENT.slice(1), 16), tier: 3, art: 'portal',
+      })
+      world.addChild(anchorWell.view)
 
       // ── AND EVERY WAY HOME, WHICH IS THE SAME OBJECT AGAIN ────────
       //
@@ -2057,6 +2070,7 @@ export default function SeaIslandsGPU({
         berthLayer.advance(t, dt, camX, camY, halfW, halfH)
         portalWell.advance(t, dt, camX, camY, halfW, halfH)
         wargateWell.advance(t, dt, camX, camY, halfW, halfH)
+        anchorWell.advance(t, dt, camX, camY, halfW, halfH)
       for (const w of homeWells) w.advance(t, dt, camX, camY, halfW, halfH)
         wake.advance(dt)
         maelstroms.advance(t, dt, camX, camY, halfW, halfH)
@@ -2355,6 +2369,7 @@ export default function SeaIslandsGPU({
           // not a lamp and it should not stay bright when nothing else is.
           portalWell.night(tint)
           wargateWell.night(tint)
+          anchorWell.night(tint)
       for (const w of homeWells) w.night(tint)
           // The buildings take the hour at the same strength the land does —
           // they are standing on it. The second number is the town's own lights
@@ -2416,6 +2431,7 @@ export default function SeaIslandsGPU({
         berths(on) { berthLayer.shown(on) },
         portal(spec, inside, hold) { portalWell.setSpec(spec); portalWell.setActive(inside, hold) },
         wargate(inside) { wargateWell.setActive(inside, inside ? 1 : 0) },
+        anchorPortal(inside) { anchorWell.setActive(inside, inside ? 1 : 0) },
         // WHICH WAY HOME SHE IS FLOATING IN, by its place in `homes`. The mouth
         // winds up while you sit in it, the same as the homestead portal does —
         // a hole in the sea that does nothing as you drift over it is a decal.

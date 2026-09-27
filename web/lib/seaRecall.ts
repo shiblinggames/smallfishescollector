@@ -1,7 +1,6 @@
 // The free recall home: its cycle and where each side's lands. Plain module so
 // the chart and the server action read the same numbers.
 
-import { PORT_BY_ID } from './seaPortal'
 
 export type RecallSide = 'fishing' | 'expedition'
 
@@ -19,5 +18,5 @@ export const RECALL_MS = 48 * 60_000
  */
 export const RECALL_TO: Record<RecallSide, { x: number; y: number; accent: string; name: string }> = {
   fishing: { x: 1500, y: 520, accent: '#7fd6a0', name: 'the Homestead' },
-  expedition: { ...(PORT_BY_ID.gunwharf?.to ?? { x: -500, y: -5150 }), accent: '#a78bfa', name: 'the Gunwharf' },
+  expedition: { x: -500, y: -5150, accent: '#a78bfa', name: 'the Gunwharf' },
 }

@@ -1779,3 +1779,54 @@ export function duelFrame(W: number, H: number, cx: number, cy: number, seaBeam:
     enemy: { x: cx + ex * z, y: cy + ey * z * ground, box: enc.box * z, hull: enc.hull * z },
   }
 }
+
+/**
+ * ── THE ANCHORAGE PORTAL'S AREAS (Kong, 2026-09-27) ─────────────────────────
+ *
+ * The expedition sea by area, the way the Homestead portal has the fishing
+ * sea by band: the Junction and every chapter's bay. An area opens on the
+ * portal once you have sailed into it the long way, read off the campaign's
+ * own fog (the same rule the fishing bands keep with their stones: the portal
+ * cannot take you anywhere you have not already been).
+ *
+ * Each bay's landing is LOOKED FOR, like the ways home: a little way up the
+ * bay's axis from its door, clear of every rock in the bay and outside every
+ * hull's hail, so arriving is open water and not a fight card.
+ */
+export type ExpArea = { id: string; name: string; chapter: number | null; to: { x: number; y: number }; accent: string }
+
+function bayLanding(b: Bay): { x: number; y: number } {
+  const rocks = RAID_ISLES.filter(i => i.bay === b.id).map(i => ({ at: isleAt(i), r: i.r }))
+  const hulls = ENCOUNTERS.filter(e => e.bay === b.id).map(e => encounterAt(e))
+    .filter((p): p is { x: number; y: number } => !!p)
+  for (const along of [700, 1000, 1300, 1600, 2000]) {
+    for (const across of [0, 450, -450, 900, -900]) {
+      const q = fromBay(b, along, across)
+      if (!inBay(b, q.x, q.y)) continue
+      if (rocks.some(i => i.at && Math.hypot(i.at.x - q.x, i.at.y - q.y) - i.r < 360)) continue
+      if (hulls.some(h => Math.hypot(h.x - q.x, h.y - q.y) < ENCOUNTER_REACH + 400)) continue
+      return { x: Math.round(q.x), y: Math.round(q.y) }
+    }
+  }
+  const c = entryOf(b)
+  return { x: Math.round(c.x), y: Math.round(c.y) }
+}
+
+let areas: ExpArea[] | null = null
+export function expAreas(): ExpArea[] {
+  if (areas) return areas
+  areas = [
+    // The Junction lands where every way home does, at the Wargate's feet.
+    { id: 'junction', name: 'The Junction', chapter: null, to: PORTAL_HOME, accent: '#f0c040' },
+    ...BAYS.map(b => ({ id: b.id, name: b.name, chapter: b.chapter, to: bayLanding(b), accent: b.sea[2] })),
+  ]
+  return areas
+}
+
+/** Is a point part of an area, for reading the fog: the Junction's disc, or a
+ *  bay's own water (not its strait). */
+export function inExpArea(id: string, x: number, y: number): boolean {
+  if (id === 'junction') return Math.hypot(x - HUB.x, y - HUB.y) <= HUB_R
+  const b = BAY_BY_ID[id]
+  return !!b && inBay(b, x, y)
+}
