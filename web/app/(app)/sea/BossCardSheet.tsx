@@ -54,27 +54,45 @@ export default function BossCardSheet({ nodeId, preloaded, onEnter, onClose }: {
 }) {
   const [fetched, setFetched] = useState<BossCardState | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const state = preloaded ?? fetched
+  /** Set when the chart's pre-read did not have this boss in it: read fresh. */
+  const [stale, setStale] = useState(false)
+  /** The read is taking long enough to say so (and offer a way out). */
+  const [slow, setSlow] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const state = (stale ? null : preloaded) ?? fetched
 
   // ONLY IF THE CHART DID NOT ALREADY HAVE IT. Records, owned items and the
   // repair debt all move between fights, so this is read fresh — but it is read
   // on APPROACH, up in the chart, not on the press. Waiting until the press put
   // a loading line where the card should have been.
   useEffect(() => {
-    if (!nodeId || preloaded) return
+    if (!nodeId || (preloaded && !stale)) return
     let live = true
     setErr(null)
+    setSlow(false)
+    const t = setTimeout(() => { if (live) setSlow(true) }, 6000)
     bossCardState().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)
       else setFetched(r)
     }, () => { if (live) setErr('The charts would not open. Try again.') })
-    return () => { live = false }
-  }, [nodeId, preloaded])
+      .finally(() => clearTimeout(t))
+    return () => { live = false; clearTimeout(t) }
+  }, [nodeId, preloaded, stale, attempt])
 
   if (!nodeId || typeof document === 'undefined') return null
 
   const boss: RaidNodeView | null = state?.views.find(v => v.node.id === nodeId) ?? null
+  // ── NEVER AN INVISIBLE WALL (Kong, 2026-09-27: pressing to enter Barnacle
+  // Pete's raid froze until a refresh) ─────────────────────────────────────
+  // While this waited it drew NOTHING over a full-screen layer that swallows
+  // every press, with the chart already stood down for the fight behind it.
+  // And when the chart's pre-read existed but did not contain this boss, it
+  // never read again: an invisible, unclosable wall until a refresh. Now a
+  // pre-read without the boss is read fresh once, the wait shows a card with a
+  // way out, and a failure says so with a Close.
+  const missing = !!state && !boss
+  useEffect(() => { if (missing && preloaded && !stale) setStale(true) }, [missing, preloaded, stale])
   // The challenge run is a SIDE BRANCH hanging off the boss, which is how the
   // node map models it and therefore how the card expects to be handed it.
   const challenge: RaidNodeView | null =
@@ -103,18 +121,37 @@ export default function BossCardSheet({ nodeId, preloaded, onEnter, onClose }: {
           onClose={onClose}
           clearedNodeIds={new Set(state.clearedNodeIds)}
         />
-      ) : err ? (
-        // ONLY A FAILURE GETS WORDS. There was a "Reading the charts…" line
-        // here for the waiting case and it was the wrong idea twice over: the
-        // chart reads this on approach so there is almost never a wait, and
-        // when there is, a label announcing it makes a 100ms gap into an event.
-        // Nothing at all is a card that has not opened yet; a line of text is a
-        // card that opened to tell you it was not ready.
-        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-          <p className="font-karla font-600 uppercase tracking-[0.16em]"
-            style={{ fontSize: '0.62rem', color: '#f87171' }}>{err}</p>
+      ) : (
+        // WAITING, FAILED, OR THE BOSS IS NOT ON THE CHARTS. The quick case is
+        // still silent for a beat (the chart reads this on approach, so the
+        // wait is usually nothing); past it, a card that says so and can be
+        // closed, because the layer under it swallows every press.
+        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: err || slow || (missing && stale) ? 'rgba(3,5,9,0.6)' : 'transparent' }}
+          onClick={() => { if (err || slow || (missing && stale)) onClose() }}>
+          {(err || slow || (missing && stale)) && (
+            <div onClick={e => e.stopPropagation()} style={{
+              width: 'min(340px, 90vw)', padding: '1rem 1.1rem', borderRadius: 16, textAlign: 'center',
+              background: 'rgba(10,12,18,0.97)', border: '1px solid rgba(196,169,106,0.35)', boxShadow: '0 16px 44px rgba(0,0,0,0.6)',
+            }}>
+              <p className="font-karla font-700" style={{ margin: '0 0 12px', fontSize: '0.86rem', color: err || (missing && stale) ? '#f3a3a3' : '#e6dccb', lineHeight: 1.45 }}>
+                {err ?? (missing && stale ? 'That fight is not on your charts yet.' : 'Reading the charts is taking a while.')}
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {!(missing && stale) && (
+                  <button type="button" onClick={() => { setFetched(null); setErr(null); setStale(true); setAttempt(a => a + 1) }}
+                    className="font-cinzel font-700" style={{ flex: 1, padding: '0.6rem', borderRadius: 10, cursor: 'pointer', fontSize: '0.84rem', color: '#f6d77a', background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.5)' }}>
+                    Try again
+                  </button>
+                )}
+                <button type="button" onClick={onClose}
+                  className="font-cinzel font-700" style={{ flex: 1, padding: '0.6rem', borderRadius: 10, cursor: 'pointer', fontSize: '0.84rem', color: '#d8dee6', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.18)' }}>
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      ) : null}
+      )}
     </div>,
     document.body,
   )

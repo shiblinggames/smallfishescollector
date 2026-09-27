@@ -17,7 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { checkUnlocks, type UnlockNews } from '@/app/(app)/unlockActions'
+import type { UnlockNews } from '@/app/(app)/unlockActions'
 
 const SHOW_MS = 6500
 const MIN_GAP_MS = 15_000
@@ -36,7 +36,9 @@ export default function UnlockBanner() {
     busy.current = true
     lastAt.current = now
     try {
-      const news = await checkUnlocks()
+      // A route, not a server action: see app/api/unlocks.
+      const res = await fetch('/api/unlocks', { method: 'POST' })
+      const news: UnlockNews[] = res.ok ? await res.json() : []
       if (news.length) setQueue(q => [...q, ...news.filter(n => !q.some(x => x.key === n.key))])
     } catch { /* a missed check is caught by the next one */ }
     finally { busy.current = false }

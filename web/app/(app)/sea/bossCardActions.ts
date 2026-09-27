@@ -46,6 +46,11 @@ export async function bossCardState(): Promise<BossCardState | { error: string }
       .single(),
   ])
   const profile = profileRes.data as Record<string, unknown> | null
+  // AN EMPTY MAP IS A FAILED READ, not an answer. getRaidMapView returns no
+  // views when it cannot see the captain (a hiccup at the auth check), and
+  // the card took that as "this boss is not on your charts" and sat there
+  // invisibly. Say it failed, so the card offers Try again.
+  if (map.views.length === 0) return { error: 'The charts would not open. Try again.' }
 
   return {
     views: map.views,

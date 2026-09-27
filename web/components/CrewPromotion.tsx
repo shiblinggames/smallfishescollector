@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { checkPromotions, type Promotion } from '@/app/(app)/crewPromotionActions'
+import type { Promotion } from '@/app/(app)/crewPromotionActions'
 import { vibrate } from '@/lib/haptics'
 
 const MIN_GAP_MS = 15_000
@@ -45,10 +45,15 @@ export default function CrewPromotion() {
   const check = useCallback(async (force = false) => {
     const now = Date.now()
     if (inFlight.current || (!force && now - lastAt.current < MIN_GAP_MS)) return
+    // Not while a fight, a reel or a tour has the screen: nothing could show,
+    // and the check can wait until it can.
+    if (busy(window.location.pathname)) return
     inFlight.current = true
     lastAt.current = now
     try {
-      const got = await checkPromotions()
+      // A route, not a server action: see app/api/promotions.
+      const res = await fetch('/api/promotions', { method: 'POST' })
+      const got: Promotion[] = res.ok ? await res.json() : []
       if (got.length) setQueue(q => [...q, ...got.filter(p => !q.some(x => x.key === p.key))])
     } catch { /* the next check catches it */ }
     finally { inFlight.current = false }

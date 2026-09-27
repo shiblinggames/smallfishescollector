@@ -301,3 +301,20 @@ also fire the chart's act key (fish, hail, ashore) underneath. `data-any-key="sp
 Space and Enter: the tutorial cards' Next (`GuideCoach`) carry it, because they appear while you
 sail and WASD must still steer. Full-screen scenes (`StoryScene`, level-ups, crate and skin
 reveals) keep bare `data-any-key` (any key). New dialogue: tag its advance target, pick which.
+
+
+## Background checks are routes, not server actions (2026-09-27)
+
+Next runs a page's server actions ONE AT A TIME. A background check that is a server action
+(the unlock banner, the crew promotion check every 45s) sits in that queue, and a press that needs
+an action waits behind it. Kong saw entering Barnacle Pete's raid hang. So they are route handlers
+now (`POST /api/unlocks`, `POST /api/promotions`, wrapping `checkUnlocks` / `checkPromotions`),
+fetched by the components, and the promotion check skips itself while a fight, reel or tour has the
+screen. Rule: anything that polls or runs in the background is a route handler; server actions are
+for what a press asks for.
+
+The same report found `sea/BossCardSheet` drawing NOTHING over a full-screen layer that swallows
+every press while it waited, and never re-reading when the chart's pre-read lacked the boss (an
+unclosable invisible wall until refresh). It now re-reads once, shows "Reading the charts is
+taking a while" with Try again / Close after 6s, and every failure has a Close. `bossCardState`
+reports an empty map (the auth check hiccupped) as an error instead of an answer.
