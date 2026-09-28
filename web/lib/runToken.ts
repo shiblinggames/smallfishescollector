@@ -1,4 +1,5 @@
 import type { createAdminClient } from './supabase/admin'
+import { raidData } from './data/raidData'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -19,16 +20,7 @@ export async function issueRunToken(
   kind: string,
   meta: Record<string, unknown> = {},
 ): Promise<string | null> {
-  try {
-    const { data } = await admin
-      .from('run_tokens')
-      .insert({ user_id: userId, kind, meta })
-      .select('id')
-      .single()
-    return (data?.id as string | undefined) ?? null
-  } catch {
-    return null
-  }
+  return raidData(admin).issueRunToken(userId, kind, meta)
 }
 
 /** Atomically consume an OPEN token owned by this user+kind. Returns its meta if it
@@ -41,19 +33,7 @@ export async function consumeRunToken(
   tokenId: string | null | undefined,
 ): Promise<{ meta: any; kills: number } | null> {  // eslint-disable-line @typescript-eslint/no-explicit-any
   if (!tokenId) return null
-  try {
-    const { data } = await admin
-      .from('run_tokens')
-      .update({ consumed_at: new Date().toISOString() })
-      .eq('id', tokenId).eq('user_id', userId).eq('kind', kind)
-      .is('consumed_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .select('meta, kills')
-      .single()
-    return data ? { meta: data.meta, kills: data.kills } : null
-  } catch {
-    return null
-  }
+  return raidData(admin).consumeRunToken(userId, kind, tokenId)
 }
 
 /** Count one raid kill against an open token, bounded by the run's mob count
@@ -66,12 +46,7 @@ export async function countRaidKill(
   tokenId: string | null | undefined,
 ): Promise<boolean> {
   if (!tokenId) return false
-  try {
-    const { data } = await admin.rpc('bump_run_token_kill', { p_id: tokenId, p_uid: userId })
-    return data === true
-  } catch {
-    return false
-  }
+  return raidData(admin).countRaidKill(userId, tokenId)
 }
 
 /** Bank a raid CLEAR against an open token, once.
@@ -95,19 +70,7 @@ export async function markRunCleared(
   tokenId: string | null | undefined,
 ): Promise<{ meta: any } | null> {  // eslint-disable-line @typescript-eslint/no-explicit-any
   if (!tokenId) return null
-  try {
-    const { data } = await admin
-      .from('run_tokens')
-      .update({ cleared_at: new Date().toISOString() })
-      .eq('id', tokenId).eq('user_id', userId).eq('kind', kind)
-      .is('cleared_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .select('meta')
-      .single()
-    return data ? { meta: data.meta } : null
-  } catch {
-    return null
-  }
+  return raidData(admin).markRunCleared(userId, kind, tokenId)
 }
 
 /** Pay one ROUND of a raid run, once. true = this round had not been paid on
@@ -124,12 +87,7 @@ export async function claimRaidRound(
   round: number,
 ): Promise<boolean> {
   if (!tokenId || !Number.isInteger(round) || round < 0) return false
-  try {
-    const { data, error } = await admin.rpc('claim_run_token_round', { p_id: tokenId, p_uid: userId, p_round: round })
-    return !error && data != null
-  } catch {
-    return false
-  }
+  return raidData(admin).claimRaidRound(userId, tokenId, round)
 }
 
 /** Open the crate of a CLEARED run, once. Returns the token's meta when this
@@ -144,18 +102,5 @@ export async function markRunLooted(
   tokenId: string | null | undefined,
 ): Promise<{ meta: any } | null> {  // eslint-disable-line @typescript-eslint/no-explicit-any
   if (!tokenId) return null
-  try {
-    const { data } = await admin
-      .from('run_tokens')
-      .update({ looted_at: new Date().toISOString() })
-      .eq('id', tokenId).eq('user_id', userId).eq('kind', kind)
-      .not('cleared_at', 'is', null)
-      .is('looted_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .select('meta')
-      .maybeSingle()
-    return data ? { meta: data.meta } : null
-  } catch {
-    return null
-  }
+  return raidData(admin).markRunLooted(userId, kind, tokenId)
 }

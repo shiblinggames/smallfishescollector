@@ -6,6 +6,7 @@
 // actions that already know who is asking call it from here instead.
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { raidData } from './data/raidData'
 import { dialAimBonus, type DialAimBonus } from '@/lib/dialAim'
 import { ownedSpecialIds } from '@/lib/specialItems'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, type RaidMods } from '@/lib/expeditions'
@@ -105,11 +106,7 @@ export interface RaidPlayerStats {
 export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStats> {
   const admin = createAdminClient()
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, finn_spoil_free, finn_spoil_paid, borrowed_jaw_xp, has_tide_turner, has_phantom_hook, has_auto_caster, has_auto_catcher, has_perfected_sigil, has_anglers_patience, rod_tier, hook_tier, reel_tier, completionist_effects')
-    .eq('id', userId)
-    .single()
+  const profile = await raidData(admin).profile(userId, 'ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, finn_spoil_free, finn_spoil_paid, borrowed_jaw_xp, has_tide_turner, has_phantom_hook, has_auto_caster, has_auto_catcher, has_perfected_sigil, has_anglers_patience, rod_tier, hook_tier, reel_tier, completionist_effects')
 
   // Promote a finished ultimate build into the active slot before combat reads
   // it, so a weapon that completed while the player was away fires this raid.

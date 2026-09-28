@@ -10,6 +10,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { raidData } from '@/lib/data/raidData'
 
 /** Has the player already seen the skirmish tour? Defaults to true on any
  *  error so a hiccup never puts a tour over a fight twice. */
@@ -18,12 +19,9 @@ export async function getSkirmishTourSeen(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return true
   const admin = createAdminClient()
-  const { data, error } = await admin
-    .from('profiles')
-    .select('has_seen_skirmish_tour')
-    .eq('id', user.id)
-    .single()
-  if (error) return true
+  // A failed read (or no row) says "seen", so a tour never traps anyone.
+  const data = await raidData(admin).profile(user.id, 'has_seen_skirmish_tour')
+  if (!data) return true
   return data?.has_seen_skirmish_tour === true
 }
 
@@ -33,6 +31,6 @@ export async function markSkirmishTourSeen(): Promise<{ ok: boolean }> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false }
   const admin = createAdminClient()
-  await admin.from('profiles').update({ has_seen_skirmish_tour: true }).eq('id', user.id)
+  await raidData(admin).updateProfile(user.id, { has_seen_skirmish_tour: true })
   return { ok: true }
 }

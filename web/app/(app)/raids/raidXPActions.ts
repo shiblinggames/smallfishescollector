@@ -6,6 +6,7 @@ import type { RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { raidKillReward } from '@/lib/raidRules'
+import { raidData } from '@/lib/data/raidData'
 import { flagAnomaly } from '@/lib/anomaly'
 import { claimRaidRound } from '@/lib/runToken'
 import { eyeCharge } from '@/lib/finnItems'
@@ -44,8 +45,8 @@ export async function awardRaidKill(
 
   // Resolve the round against the token's raid BEFORE marking it paid, so a
   // round past the end of the raid is refused without burning anything.
-  const { data: tok } = await admin.from('run_tokens').select('meta').eq('id', token).eq('user_id', user.id).eq('kind', 'raid').maybeSingle()
-  const raidId = (tok?.meta as { raidId?: string } | null)?.raidId
+  const db = raidData(admin)
+  const raidId = ((await db.runTokenMeta(user.id, 'raid', token)) as { raidId?: string } | null)?.raidId
   const config = raidId ? getRaidConfigById(raidId) : undefined
   if (!config || r > config.sequence.length) {
     await flagAnomaly(admin, user.id, 'run_token:awardRaidKill_badRound', 3, { round: r, raidId: raidId ?? null })
@@ -59,11 +60,7 @@ export async function awardRaidKill(
     return NOTHING
   }
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('expedition_xp, ship_classes, nav_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
-    .eq('id', user.id)
-    .single()
+  const profile = await db.profile(user.id, 'expedition_xp, ship_classes, nav_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
 
   // What the round pays is lib/raidRules raidKillReward: the config's own
   // killRewards line (plus the full-clear bonus on the boss), gold scaled by
@@ -88,8 +85,8 @@ export async function awardRaidKill(
   const [newDoubloonTotal, , crewXP] = await Promise.all([
     grant(admin, user.id, 'doubloons', scaledDoubloons),
     Promise.all([
-      xp > 0 ? admin.rpc('bump_profile_stat', { uid: user.id, col: 'expedition_xp', n: xp }) : null,
-      reelCharge !== null ? admin.from('profiles').update({ anglers_patience_xp: reelCharge }).eq('id', user.id) : null,
+      xp > 0 ? db.bumpStat(user.id, 'expedition_xp', xp) : null,
+      reelCharge !== null ? db.updateProfile(user.id, { anglers_patience_xp: reelCharge }) : null,
     ]),
     grantXPToAssignedCrew(admin, user.id, crewXP_amount),
   ])

@@ -15,6 +15,7 @@ import { RAID_DAMAGE_MIN } from '@/lib/bounties'
 import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { grant, arrayAdd } from '@/lib/wallet'
 import { rollRaidCrate, clearTimes, MIN_PLAUSIBLE_CLEAR_MS } from '@/lib/raidRules'
+import { raidData } from '@/lib/data/raidData'
 
 // RaidCrewMember, RaidPlayerStats and getRaidPlayerStats live in
 // lib/raidPlayerStats.ts. As an export of this 'use server' file the loader was
@@ -114,8 +115,8 @@ export async function recordRaidClear(raidId: string, elapsedMs: number, token?:
   }
   // The raid must match the token's BEFORE the clear is banked, or a token
   // minted for an easy raid could spend its one clear on a hard one.
-  const { data: tok } = await admin.from('run_tokens').select('meta').eq('id', token).eq('user_id', user.id).eq('kind', 'raid').maybeSingle()
-  const tokenRaid = (tok?.meta as { raidId?: string } | null)?.raidId
+  const db = raidData(admin)
+  const tokenRaid = ((await db.runTokenMeta(user.id, 'raid', token)) as { raidId?: string } | null)?.raidId
   if (!tokenRaid || tokenRaid !== raidId) {
     await flagAnomaly(admin, user.id, 'mismatch:recordRaidClear', 3, { raidId, tokenRaid: tokenRaid ?? null })
     return null
@@ -133,39 +134,19 @@ export async function recordRaidClear(raidId: string, elapsedMs: number, token?:
   const ms = Math.floor(elapsedMs)
 
   // Who am I (username + admin flag — admins don't count toward the global record).
-  const { data: me } = await admin.from('profiles').select('username, is_admin').eq('id', user.id).single()
+  const me = await db.profile(user.id, 'username, is_admin')
   const myName = (me?.username as string | null) ?? ''
   const iAmAdmin = me?.is_admin === true
 
-  // Previous bests BEFORE inserting this run.
-  const { data: myRows } = await admin
-    .from('raid_completions').select('elapsed_ms')
-    .eq('raid_id', raidId).eq('user_id', user.id)
-    .order('elapsed_ms', { ascending: true }).limit(1)
-  const prevMyBest = (myRows?.[0]?.elapsed_ms as number | undefined) ?? null
-
-  // Global previous best = fastest NON-admin clear. Small table, so pull the
-  // ordered rows + resolve usernames/admin in one extra query.
-  const { data: allRows } = await admin
-    .from('raid_completions').select('user_id, elapsed_ms')
-    .eq('raid_id', raidId).order('elapsed_ms', { ascending: true })
-  const uids = Array.from(new Set((allRows ?? []).map((r: { user_id: string }) => r.user_id)))
-  const { data: profs } = uids.length
-    ? await admin.from('profiles').select('id, username, is_admin').in('id', uids)
-    : { data: [] as { id: string; username: string | null; is_admin: boolean | null }[] }
-  const pMap = new Map((profs ?? []).map((p: { id: string; username: string | null; is_admin: boolean | null }) => [p.id, p]))
-  let prevGlobalBest: number | null = null
-  let prevGlobalUser = ''
-  for (const r of (allRows ?? []) as { user_id: string; elapsed_ms: number }[]) {
-    const p = pMap.get(r.user_id)
-    if (p && !p.is_admin) { prevGlobalBest = r.elapsed_ms; prevGlobalUser = p.username ?? ''; break }
-  }
+  // Previous bests BEFORE inserting this run. The global one is the fastest
+  // NON-admin clear.
+  const [prevMyBest, prevGlobal] = await Promise.all([db.myBestClear(user.id, raidId), db.fastestClear(raidId)])
 
   // Insert this run.
-  await admin.from('raid_completions').insert({ user_id: user.id, elapsed_ms: ms, raid_id: raidId })
+  await db.addClear(user.id, raidId, ms)
 
   // The records (an admin's clear never takes the global one): lib/raidRules clearTimes.
-  return clearTimes(ms, prevMyBest, prevGlobalBest == null ? null : { ms: prevGlobalBest, username: prevGlobalUser }, { username: myName, isAdmin: iAmAdmin })
+  return clearTimes(ms, prevMyBest, prevGlobal, { username: myName, isAdmin: iAmAdmin })
 }
 
 /**
@@ -188,7 +169,7 @@ export async function recordSkirmishClear(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
-  await admin.from('profiles').update({ has_completed_practice_raid: true }).eq('id', user.id)
+  await raidData(admin).updateProfile(user.id, { has_completed_practice_raid: true })
 }
 
 /** Record a single hit the player landed, keeping profiles.highest_raid_damage
@@ -220,7 +201,8 @@ export async function recordRaidHit(dmg: number): Promise<void> {
 
   // Cheap backstop first: only a NEW personal best does any work (bump_raid_damage
   // is a greatest() no-op otherwise), so legit hits never pay for the stats read.
-  const { data: prof } = await admin.from('profiles').select('highest_raid_damage').eq('id', user.id).single()
+  const db = raidData(admin)
+  const prof = await db.profile(user.id, 'highest_raid_damage')
   if (hit <= Number(prof?.highest_raid_damage ?? 0)) return
 
   // "Biggest Hit" is client-reported (combat is client-side), so cap it to what
@@ -252,7 +234,7 @@ export async function recordRaidHit(dmg: number): Promise<void> {
       { hit, flagLine, clampCeiling, totalPower: stats.totalPower, hasUltimate: !!stats.manowarAugment })
   }
 
-  await admin.rpc('bump_raid_damage', { uid: user.id, dmg: Math.min(hit, clampCeiling) })
+  await db.recordRaidHit(user.id, Math.min(hit, clampCeiling))
 }
 
 /** What a crate paid, for the reveal. */
@@ -304,17 +286,13 @@ export async function claimRaidLoot(
     await flagAnomaly(admin, user.id, 'run_token:claimRaidLoot_missing', 3, {})
     return noLoot()
   }
-  const { data: tok } = await admin.from('run_tokens').select('meta').eq('id', token).eq('user_id', user.id).eq('kind', 'raid').maybeSingle()
-  const raidId = (tok?.meta as { raidId?: string } | null)?.raidId ?? ''
+  const db = raidData(admin)
+  const raidId = ((await db.runTokenMeta(user.id, 'raid', token)) as { raidId?: string } | null)?.raidId ?? ''
   const config = getRaidConfigById(raidId)
   // A skirmish has no crate (BossRaidConfig.skirmish), so it has nothing to open.
   if (!config || config.skirmish) return noLoot()
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, equipped_ship_skin, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp, ancient_catches, is_premium, premium_expires_at')
-    .eq('id', user.id)
-    .single()
+  const profile = await db.profile(user.id, 'doubloons, equipped_ship_skin, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp, ancient_catches, is_premium, premium_expires_at')
   if (!profile) return noLoot()
 
   // REACHABLE? You may only open a crate from a raid whose map node is actually
@@ -388,12 +366,10 @@ export async function claimRaidLoot(
     grant(admin, user.id, 'doubloons', doubloons),
     gems > 0 ? grant(admin, user.id, 'gems', gems) : null,
     seatJaw ? arrayAdd(admin, user.id, 'equipped_raid_items', 'borrowed_jaw') : null,
-    grantedSpecial ? admin.from('profiles').update({ [grantedSpecial]: true, ...(equippedSpecial2 ? { equipped_special_2: equippedSpecial2 } : {}) }).eq('id', user.id) : null,
+    grantedSpecial ? db.updateProfile(user.id, { [grantedSpecial]: true, ...(equippedSpecial2 ? { equipped_special_2: equippedSpecial2 } : {}) }) : null,
     // A first skin wears itself, only if nothing is worn (conditional, so a
     // skin equipped meanwhile is never replaced).
-    newShipSkins.length > 0 && !profile.equipped_ship_skin
-      ? admin.from('profiles').update({ equipped_ship_skin: newShipSkins[0] }).eq('id', user.id).is('equipped_ship_skin', null)
-      : null,
+    newShipSkins.length > 0 && !profile.equipped_ship_skin ? db.wearFirstSkin(user.id, newShipSkins[0]) : null,
   ])
 
   return {

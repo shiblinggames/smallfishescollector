@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { raidData } from '@/lib/data/raidData'
 
 /** Has the player already seen the mechanic-check tutorial? Defaults to true on
  *  any error so a hiccup never blocks the fight with a stuck modal. */
@@ -15,12 +16,9 @@ export async function getCheckTutorialSeen(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return true
   const admin = createAdminClient()
-  const { data, error } = await admin
-    .from('profiles')
-    .select('has_seen_check_tutorial')
-    .eq('id', user.id)
-    .single()
-  if (error) return true
+  // A failed read (or no row) says "seen", so a tour never traps anyone.
+  const data = await raidData(admin).profile(user.id, 'has_seen_check_tutorial')
+  if (!data) return true
   return data?.has_seen_check_tutorial === true
 }
 
@@ -30,6 +28,6 @@ export async function markCheckTutorialSeen(): Promise<{ ok: boolean }> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false }
   const admin = createAdminClient()
-  await admin.from('profiles').update({ has_seen_check_tutorial: true }).eq('id', user.id)
+  await raidData(admin).updateProfile(user.id, { has_seen_check_tutorial: true })
   return { ok: true }
 }
