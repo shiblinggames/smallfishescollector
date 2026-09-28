@@ -17,7 +17,12 @@ import { getBait } from '@/lib/bait'
 import { jackpotChanceForZone, rodWaitMult, type RodDef, type LockedInState } from '@/lib/rods'
 import type { HotspotEffect } from '@/lib/seaHotspots'
 import type { EyeEffects } from '@/lib/finnItems'
-import { isReleased, vigilHuntChance, VIGIL_MAX_RANK, ANCIENT_IDS, vigilFor, type VigilState } from '@/lib/ancientVigil'
+import { isReleased, vigilHuntChance, VIGIL_MAX_RANK, ANCIENT_IDS, vigilFor, ancientCatchXP, vigilPaidAfter, vigilComplete, VIGIL_PET_ID, type VigilState } from '@/lib/ancientVigil'
+import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
+import { streakMult, STREAK_RECORD_CEILING } from '@/lib/perfectStreak'
+import { rollShiny } from '@/lib/shiny'
+import { goldenBoostMult } from '@/lib/zoneRewards'
+import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import type { CrateTier } from '@/lib/crateLoot'
 import { ZONE_RARITY_RATES, ZONE_WAIT_BASE, ZONE_CRATE_TIERS, zoneCrateChance } from '@/app/(app)/fishing/zoneData'
 import { rngNext } from '@/lib/rng'
@@ -339,4 +344,287 @@ export function rollCast(i: CastRollInput): CastRoll {
   const shot: CastShot = { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, instantBite, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, lockedStage: locked.stage, vigilRank: vigilAttempt }
   const token: PendingCast = { fishId: fish.id, habitat, baitType, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, castAt: clockNow(), shot }
   return { crate: false, fish, shot, token }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ── THE LANDING ─────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+//
+// What a fish that made it into the boat is worth, once reelIn has bound the
+// cast to its server token and claimed it. Moved out of reelIn verbatim
+// (2026-09-28); the action reads, claims, and writes what these return.
+
+/** The profile columns a landing reads. */
+export type LandingProfile = {
+  fishing_xp?: number | null
+  current_perfect_streak?: number | null
+  highest_perfect_streak?: number | null
+  total_perfects?: number | null
+  zone_perfects?: unknown
+  prestige_levels?: unknown
+  fishing_abyss_streak?: number | null
+  has_phantom_hook?: boolean | null
+  has_perfected_sigil?: boolean | null
+  equipped_special?: string | null
+  force_shiny_next_perfect?: boolean | null
+  force_shiny_always?: boolean | null
+  zone_golden_boost?: unknown
+  ancient_catches?: unknown
+  ancient_vigil?: unknown
+  unlocked_pets?: unknown
+  equipped_raid_items?: unknown
+  finn_spoil_free?: string | null
+  finn_spoil_paid?: string | null
+  borrowed_jaw_xp?: number | null
+}
+
+/** The species columns a landing reads. */
+export type LandingFish = {
+  id: number; habitat: string; catch_difficulty: number; bite_rarity: number
+  sell_value: number | null; length_min_in?: number | string | null; length_max_in?: number | string | null
+}
+
+export type LandingResult = 'perfect' | 'catch'
+
+/** THE BORROWED JAW charges on FISHING xp, and only while it is mounted. */
+function jawChargeAfter(p: LandingProfile, xpGained: number): number | null {
+  const mounted = ((p.equipped_raid_items as string[] | null) ?? []).includes('borrowed_jaw')
+    && (p.finn_spoil_free === 'nav' || p.finn_spoil_paid === 'nav')
+  return mounted ? Number(p.borrowed_jaw_xp ?? 0) + xpGained : null
+}
+
+/**
+ * THE STREAK RECORD. The live counter runs on regardless; the record believes
+ * it only up to STREAK_RECORD_CEILING (a streak past it is flagged, not
+ * written: gameplay is not what gets forged, the record books are).
+ */
+function streakRecord(streak: number, best: number, zone: string): { anomaly: boolean; updates: Record<string, unknown> } {
+  if (streak > STREAK_RECORD_CEILING) return { anomaly: true, updates: {} }
+  if (streak > best) {
+    return { anomaly: false, updates: { highest_perfect_streak: streak, highest_streak_set_at: new Date(clockNow()).toISOString(), best_streak_zone: zone } }
+  }
+  return { anomaly: false, updates: {} }
+}
+
+export type AncientLanding = {
+  isNewTrophy: boolean
+  xpGained: number
+  newXP: number
+  perfectStreak: number
+  /** Written to profiles in one update by reelIn. */
+  updates: Record<string, unknown>
+  /** A streak past the record ceiling: flag it, do not record it. */
+  anomaly: boolean
+  vigil: VigilState
+  vigilWritten: boolean
+  vigilRankUp: { from: number; to: number } | null
+  /** All six at rank 5 and the pet not owned yet: grant it. */
+  grantVigilPet: boolean
+  trophyCount: number
+  sigilBonus: number
+  badges: string[]
+}
+
+/**
+ * ONE OF THE SIX GIANTS, LANDED. reelIn is only reached once the whole
+ * multi-phase fight is cleared, so `result` is the FINAL phase: perfect lands a
+ * Vigil rank on a released giant, an ordinary catch just puts it back on the
+ * wall. ancient_catches stays append-only (the finale's gate).
+ */
+export function landAncient(p: LandingProfile, fishId: number, result: LandingResult, renownXpMult: number): AncientLanding {
+  const existing = (p.ancient_catches as number[] | null) ?? []
+  const isNewTrophy = !existing.includes(fishId)
+
+  const vigil = vigilFor(p.ancient_vigil, existing)
+  const vigilKey = String(fishId)
+  const wasReleased = vigil[vigilKey]?.released === true
+  const fromRank = vigil[vigilKey]?.rank ?? 1
+  const paidThrough = vigil[vigilKey]?.paid ?? 0
+  const perfect = result === 'perfect'
+
+  const xpGained = Math.round(ancientCatchXP({ firstCatch: isNewTrophy, wasReleased, fromRank, perfect, paidThrough }) * renownXpMult)
+  const jawCharge = jawChargeAfter(p, xpGained)
+  const newXP = (p.fishing_xp ?? 0) + xpGained
+  // Perfect streak counts in ancient too (no streak XP bonus here, by design).
+  const aStreak = perfect ? (p.current_perfect_streak ?? 0) + 1 : 0
+  const updates: Record<string, unknown> = { fishing_xp: newXP, current_perfect_streak: aStreak, catch_pending: false, ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}) }
+  if (perfect) updates.total_perfects = (p.total_perfects ?? 0) + 1
+  const rec = streakRecord(aStreak, p.highest_perfect_streak ?? 0, 'ancient_deep')
+  Object.assign(updates, rec.updates)
+  if (isNewTrophy) updates.ancient_catches = [...existing, fishId]
+
+  let vigilRankUp: { from: number; to: number } | null = null
+  let grantVigilPet = false
+  let vigilWritten = false
+  if (wasReleased) {
+    const ranked = perfect && fromRank < VIGIL_MAX_RANK
+    const to = ranked ? fromRank + 1 : fromRank
+    // `paid` records that this rung has spent its one consolation.
+    const paid = vigilPaidAfter({ wasReleased, fromRank, perfect, paidThrough })
+    vigil[vigilKey] = paid > 0 ? { rank: to, released: false, paid } : { rank: to, released: false }
+    updates.ancient_vigil = vigil
+    vigilWritten = true
+    if (ranked) vigilRankUp = { from: fromRank, to }
+    // THE CAPSTONE, granted on STATE: all six at rank 5 pays the pet.
+    if (vigilComplete(vigil)) {
+      const ownedPets = (p.unlocked_pets as string[] | null) ?? []
+      grantVigilPet = !ownedPets.includes(VIGIL_PET_ID)
+    }
+  }
+  const trophyCount = isNewTrophy ? existing.length + 1 : existing.length
+  const badges: string[] = []
+  if (trophyCount >= 6) badges.push('ancient_ones')
+  if (aStreak >= 10) badges.push('unbroken')
+  // Perfected Sigil: equipped + perfect, +10 ⟡ × min(streak, 3).
+  const sigilBonus = perfect && p.has_perfected_sigil && p.equipped_special === 'perfected_sigil'
+    ? Math.min(aStreak, 3) * 10
+    : 0
+  return { isNewTrophy, xpGained, newXP, perfectStreak: aStreak, updates, anomaly: rec.anomaly, vigil, vigilWritten, vigilRankUp, grantVigilPet, trophyCount, sigilBonus, badges }
+}
+
+const PERFECT_BAIT_SAVE_CHANCE = 0.5
+
+export type FishLandingInput = {
+  profile: LandingProfile
+  fish: LandingFish
+  result: LandingResult
+  baitType: string
+  rod: RodDef
+  eye: Pick<EyeEffects, 'perfectBaitSave' | 'goldenOddsMult' | 'fishingXpMult'>
+  renownXpMult: number
+  /** The haul the cast token locked in. */
+  doubleCatch: boolean
+  jackpotMult: number
+  lockedCatchQty: number
+  /** Fish already in the hold, for the capacity clamp. */
+  holdCount: number
+  holdCapacity: number
+}
+
+export type FishLanding = {
+  baitSaved: boolean
+  isShiny: boolean
+  /** Fish actually banked (0 when the hold is full; 1 for a shiny). */
+  catchQty: number
+  effectiveDoubleCatch: boolean
+  effectiveJackpotMult: number
+  xpGained: number
+  newXP: number
+  /** The pre-multiplier streak XP, as it was always reported. */
+  streakBonusXP: number
+  xpCatch: number
+  perfectBonusXP?: number
+  xpStreak: number
+  perfectStreak: number
+  sigilBonus: number
+  wormhole: boolean
+  size: { sizeIn: number; sizeTier?: FishSizeTier; sizeMin: number | null; sizeMax: number | null }
+  deepStirs: boolean
+  /** Written to profiles in one update by reelIn (pending_reroll aside). */
+  updates: Record<string, unknown>
+  anomaly: boolean
+  levels: { from: number; to: number }
+  badges: string[]
+}
+
+/**
+ * AN ORDINARY FISH, LANDED (and the Ancient Deep's sellable regulars). The bait
+ * save, the shiny, the haul clamped to the hold, the XP and the three parts it
+ * is reported in, the streak, the Sigil, the Wormhole, the size, and the rare
+ * omen in the Ancient Deep.
+ */
+export function landFish(i: FishLandingInput): FishLanding {
+  const { profile: p, fish, result, rod, eye } = i
+  const perfect = result === 'perfect'
+
+  // Perfect: 50% chance to return the bait used for this cast. The Phantom Hook
+  // adds 25% on any catch, but only when SEATED in the special slot. The
+  // Primeval Eye's top tier makes a perfect never cost bait.
+  let baitSaved = perfect && rngNext() < PERFECT_BAIT_SAVE_CHANCE
+  const phantomSeated = p.has_phantom_hook && p.equipped_special === 'phantom_hook'
+  if (!baitSaved && phantomSeated) baitSaved = rngNext() < 0.25
+  if (!baitSaved && eye.perfectBaitSave && perfect) baitSaved = true
+
+  // Shinies: Perfect + a 1/SHINY_ODDS roll, with two admin overrides for QA.
+  // A shiny is the whole catch: it lives in shiny_catches, never the hold.
+  const forcedShinyOnce = !!p.force_shiny_next_perfect && perfect
+  const forcedShinyAlways = !!p.force_shiny_always
+  const goldenWipes = ((p.zone_golden_boost as Record<string, number> | null) ?? {})[fish.habitat] ?? 0
+  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect: perfect, habitat: fish.habitat, sellValue: fish.sell_value ?? 0, oddsMult: goldenBoostMult(goldenWipes) * eye.goldenOddsMult })
+
+  // The haul: jackpot beats Locked-In triple beats double; the Ancient Deep only
+  // doubles on an always-double rod; clamped to the hold's free space.
+  const noDoubleCatch = fish.habitat === 'ancient_deep' && (rod.doubleCatchChance ?? 0) < 1
+  const effectiveDoubleCatch = i.doubleCatch && !noDoubleCatch
+  const effectiveJackpotMult = Math.min(i.jackpotMult, 100)
+  const desired = isShiny ? 1 : (effectiveJackpotMult > 1 ? effectiveJackpotMult : (i.lockedCatchQty > 1 ? i.lockedCatchQty : (effectiveDoubleCatch ? 2 : 1)))
+  const catchQty = isShiny ? 1 : Math.min(desired, Math.max(0, i.holdCapacity - i.holdCount))
+
+  const newAbyssStreak = perfect && fish.habitat === 'abyss' ? (p.fishing_abyss_streak ?? 0) + 1 : 0
+  const zonePerfects = { ...((p.zone_perfects as Record<string, number> | null) ?? {}) }
+  if (perfect) zonePerfects[fish.habitat] = (zonePerfects[fish.habitat] ?? 0) + 1
+  const zonePrestige = ((p.prestige_levels as Record<string, number> | null) ?? {})[fish.habitat] ?? 0
+  // +10% catch XP per prestige, capped at P5.
+  const prestigeXPMult = 1 + Math.min(zonePrestige, 5) * 0.10
+  const perfectXpMult = perfect ? (rod.perfectXpMult ?? 1) : 1
+  // The streak MULTIPLIES the catch (lib/perfectStreak), scaled by level.
+  const newPerfectStreak = perfect ? (p.current_perfect_streak ?? 0) + 1 : 0
+  const mult = streakMult(newPerfectStreak, getLevelFromXP(p.fishing_xp ?? 0))
+  const baseCatchXP = catchXP(fish.catch_difficulty, fish.habitat, perfect)
+  const streakBonusXP = Math.round(baseCatchXP * (mult - 1))
+  const xpGained = Math.round((baseCatchXP + streakBonusXP) * prestigeXPMult * perfectXpMult * i.renownXpMult * eye.fishingXpMult)
+  // THE THREE PARTS THE CARD SHOWS, and they add up to xpGained.
+  const perfectBonusXP = perfect
+    ? Math.round(baseCatchXP * prestigeXPMult * perfectXpMult * i.renownXpMult * eye.fishingXpMult)
+      - Math.round(catchXP(fish.catch_difficulty, fish.habitat, false) * prestigeXPMult * i.renownXpMult * eye.fishingXpMult)
+    : undefined
+  const xpStreak = xpGained - Math.round(baseCatchXP * prestigeXPMult * perfectXpMult * i.renownXpMult * eye.fishingXpMult)
+  const xpCatch = xpGained - (perfectBonusXP ?? 0) - xpStreak
+  const jawCharge = jawChargeAfter(p, xpGained)
+  const newXP = (p.fishing_xp ?? 0) + xpGained
+
+  // Perfected Sigil: equipped + perfect, +10 ⟡ × min(streak, 3).
+  const sigilBonus = perfect && p.has_perfected_sigil && p.equipped_special === 'perfected_sigil'
+    ? Math.min(newPerfectStreak, 3) * 10
+    : 0
+  // Galaxy Rod's Wormhole: a normal landable catch can be rerolled once.
+  const wormhole = !!rod.wormhole && !isShiny && catchQty > 0
+
+  const updates: Record<string, unknown> = {
+    fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP, current_perfect_streak: newPerfectStreak, catch_pending: false,
+    ...(perfect ? { zone_perfects: zonePerfects } : {}),
+    ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}),
+  }
+  if (perfect) updates.total_perfects = (p.total_perfects ?? 0) + 1
+  const rec = streakRecord(newPerfectStreak, p.highest_perfect_streak ?? 0, fish.habitat)
+  Object.assign(updates, rec.updates)
+
+  const from = getLevelFromXP(p.fishing_xp ?? 0)
+  const to = getLevelFromXP(newXP)
+  const badges: string[] = []
+  if (from < 100 && to >= 100) badges.push('master_angler')
+  if (newPerfectStreak >= 10) badges.push('unbroken')
+
+  // Size: rolled inside the species range; a shiny is locked to the max.
+  const sizeMin = fish.length_min_in == null ? null : Number(fish.length_min_in)
+  const sizeMax = fish.length_max_in == null ? null : Number(fish.length_max_in)
+  let sizeIn = 0
+  let sizeTier: FishSizeTier | undefined
+  if (sizeMin != null && sizeMax != null) {
+    if (isShiny) { sizeIn = sizeMax; sizeTier = 'trophy' }
+    else { const roll = rollFishSize(sizeMin, sizeMax); sizeIn = roll.lengthIn; sizeTier = roll.tier }
+  }
+
+  // The Ancient Deep's rare omen: a regular on common bait while giants remain.
+  const deepStirs = fish.habitat === 'ancient_deep'
+    && i.baitType !== 'luminous' && i.baitType !== 'golden'
+    && (((p.ancient_catches as number[] | null) ?? []).length < 6)
+    && rngNext() < 0.14
+
+  return {
+    baitSaved, isShiny, catchQty, effectiveDoubleCatch, effectiveJackpotMult,
+    xpGained, newXP, streakBonusXP, xpCatch, perfectBonusXP, xpStreak, perfectStreak: newPerfectStreak,
+    sigilBonus, wormhole, size: { sizeIn, sizeTier, sizeMin, sizeMax }, deepStirs,
+    updates, anomaly: rec.anomaly, levels: { from, to }, badges,
+  }
 }

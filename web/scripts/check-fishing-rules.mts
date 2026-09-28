@@ -16,7 +16,7 @@
 import fs from 'fs'
 import path from 'path'
 import { withRng, mulberry32 } from '../lib/rng'
-import { rollCast, CRATE_FISH_ID, type CastRollInput, type CastCandidate } from '../lib/fishingRules'
+import { rollCast, landFish, landAncient, CRATE_FISH_ID, type CastRollInput, type CastCandidate, type FishLandingInput, type LandingFish } from '../lib/fishingRules'
 import { getEffectiveRod, lockedInState } from '../lib/rods'
 import { NO_HOTSPOT } from '../lib/seaHotspots'
 import { ZONE_RARITY_RATES, ZONE_WAIT_BASE, zoneCrateChance } from '../app/(app)/fishing/zoneData'
@@ -124,5 +124,64 @@ for (const h of ['shallows', 'open_waters', 'deep', 'abyss']) {
   }
 }
 
-console.log(`\n  Fishing rules: determinism, first cast, the giants, stale crates, odds and waits ${failed ? `${failed} FAILED` : 'ok'}.`)
+// ── the landing ─────────────────────────────────────────────────────────────
+{
+  const eye = { perfectBaitSave: false, goldenOddsMult: 1, fishingXpMult: 1 }
+  const shallows = inZone('shallows').filter(s => (s.sell_value ?? 0) > 0) as unknown as LandingFish[]
+  const land = (over: Partial<FishLandingInput>) => landFish({
+    profile: { fishing_xp: 50_000, current_perfect_streak: 4, highest_perfect_streak: 9 }, fish: shallows[0], result: 'perfect', baitType: 'worm',
+    rod, eye, renownXpMult: 1, doubleCatch: false, jackpotMult: 1, lockedCatchQty: 1, holdCount: 0, holdCapacity: 100, ...over,
+  })
+  // Determinism.
+  const a = withRng(mulberry32(31), () => JSON.stringify(Array.from({ length: 50 }, (_, k) => land({ fish: shallows[k % shallows.length] }))))
+  const b = withRng(mulberry32(31), () => JSON.stringify(Array.from({ length: 50 }, (_, k) => land({ fish: shallows[k % shallows.length] }))))
+  if (a.replace(/"highest_streak_set_at":"[^"]*"/g, '') !== b.replace(/"highest_streak_set_at":"[^"]*"/g, '')) fail('the same seed landed differently')
+
+  withRng(mulberry32(33), () => {
+    for (let k = 0; k < 4000; k++) {
+      const fish = species[k % species.length] as unknown as LandingFish
+      if ((fish.sell_value ?? 0) === 0) continue
+      const result = k % 3 === 0 ? 'catch' : 'perfect'
+      const r = land({ fish, result, profile: { fishing_xp: (k * 7919) % 900_000, current_perfect_streak: k % 25, prestige_levels: { [fish.habitat]: k % 7 } },
+        renownXpMult: 1 + (k % 5) * 0.01, eye: { ...eye, fishingXpMult: 1 + (k % 3) * 0.1 } })
+      // The three parts the card shows add up to the XP banked.
+      if (r.xpCatch + (r.perfectBonusXP ?? 0) + r.xpStreak !== r.xpGained) { fail(`xp parts do not sum on ${fish.id}`); break }
+      if (result === 'catch' && (r.perfectStreak !== 0 || r.perfectBonusXP !== undefined)) { fail('a plain catch kept a streak or a perfect bonus'); break }
+    }
+  })
+  // A shiny is one fish, whatever the haul said.
+  const shiny = land({ profile: { force_shiny_always: true }, jackpotMult: 100, doubleCatch: true })
+  if (!shiny.isShiny || shiny.catchQty !== 1) fail('a shiny did not collapse the haul to one')
+  // A full hold banks nothing (and a nothing-banked catch is not rerollable).
+  const full = land({ result: 'catch', holdCount: 100, holdCapacity: 100 })
+  if (full.catchQty !== 0) fail('a full hold still banked a fish')
+  // Jackpot beats the Locked-In triple beats the double; clamped to free space.
+  if (land({ result: 'catch', jackpotMult: 100, lockedCatchQty: 3, doubleCatch: true }).catchQty !== 100) fail('the jackpot did not win the haul')
+  if (land({ result: 'catch', lockedCatchQty: 3, doubleCatch: true }).catchQty !== 3) fail('the Locked-In triple did not beat the double')
+  if (land({ result: 'catch', doubleCatch: true }).catchQty !== 2) fail('a double did not land two')
+  if (land({ result: 'catch', jackpotMult: 100, holdCount: 95 }).catchQty !== 5) fail('the jackpot was not clamped to the free space')
+  // The record believes a streak only up to the ceiling.
+  const wild = land({ profile: { current_perfect_streak: 500, highest_perfect_streak: 10 } })
+  if (!wild.anomaly || 'highest_perfect_streak' in wild.updates) fail('an implausible streak was recorded')
+  const best = land({ profile: { current_perfect_streak: 11, highest_perfect_streak: 5 } })
+  if (best.updates.highest_perfect_streak !== 12) fail('a new best streak was not recorded')
+
+  // The giants: a released one ranks up on a perfect, not on a plain catch;
+  // the capstone pet is owed once, when all six reach the top rank.
+  const six = [143, 144, 145, 146, 147, 148]
+  const released = landAncient({ ancient_catches: six, ancient_vigil: { '144': { rank: 2, released: true } } }, 144, 'perfect', 1)
+  if (!released.vigilRankUp || released.vigilRankUp.to !== 3) fail('a released giant did not rank up on a perfect')
+  const plain = landAncient({ ancient_catches: six, ancient_vigil: { '144': { rank: 2, released: true } } }, 144, 'catch', 1)
+  if (plain.vigilRankUp) fail('a released giant ranked up on a plain catch')
+  const top = Object.fromEntries(six.map(id => [String(id), { rank: 5, released: false }]))
+  top['148'] = { rank: 4, released: true }
+  const cap = landAncient({ ancient_catches: six, ancient_vigil: top }, 148, 'perfect', 1)
+  if (!cap.grantVigilPet) fail('the capstone pet was not owed when all six reached the top')
+  const capOwned = landAncient({ ancient_catches: six, ancient_vigil: top, unlocked_pets: ['plesiosaur_baby'] }, 148, 'perfect', 1)
+  if (capOwned.grantVigilPet) fail('the capstone pet was owed twice')
+  const first = landAncient({ ancient_catches: [144, 145] }, 146, 'catch', 1)
+  if (!first.isNewTrophy || !(first.updates.ancient_catches as number[]).includes(146)) fail('a new giant was not added to the wall')
+}
+
+console.log(`\n  Fishing rules: determinism, first cast, the giants, stale crates, odds, waits and landings ${failed ? `${failed} FAILED` : 'ok'}.`)
 if (failed) process.exit(1)

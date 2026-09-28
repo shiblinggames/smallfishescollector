@@ -51,7 +51,7 @@ export type FishSpecies = {
 
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { rngNext } from '@/lib/rng'
-import { rollCast, tierWeightedPick, activeEventOf as getActiveEvent, CRATE_FISH_ID, type PendingCast } from '@/lib/fishingRules'
+import { rollCast, landFish, landAncient, tierWeightedPick, activeEventOf as getActiveEvent, CRATE_FISH_ID, type PendingCast } from '@/lib/fishingRules'
 
 // fishWaitMs, tierWeightedPick, rollCrateTier and the event reader live in
 // lib/fishingRules now (Phase B, 2026-09-28), with the cast roll itself.
@@ -690,103 +690,20 @@ export async function reelIn(
   // applies to ALL ancient_deep fish regardless — that's a client-only
   // catch-mechanic concern, not a server routing one.
   if (fish.habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0) {
-    const existing = ((profile.ancient_catches as number[] | null) ?? [])
-    const isNewTrophy = !existing.includes(fishId)
-
-    // ── THE LONG VIGIL ──────────────────────────────────────────────────────
-    // Landing a giant you RELEASED. reelIn is only reached once the whole
-    // multi-phase boss fight is cleared, so `result` here is the FINAL phase:
-    // perfect lands the rank, an ordinary catch just puts it back on the wall.
-    // (A miss never arrives here at all — it resets the fight and returns
-    // above, paying nothing, which is why the ceiling is governed entirely by
-    // what a non-perfect LANDING pays. See lib/ancientVigil.)
-    //
-    // The ladder is read BEFORE the XP because what this landing is worth
-    // depends on whether it took a rank. ancient_catches is deliberately
-    // untouched by any of this — it is the finale's gate and stays append-only.
-    const vigil = vigilFor(profile.ancient_vigil, existing)
-    const vigilKey = String(fishId)
-    const wasReleased = vigil[vigilKey]?.released === true
-    const fromRank = vigil[vigilKey]?.rank ?? 1
-    const paidThrough = vigil[vigilKey]?.paid ?? 0
-
-    const xpGained = Math.round(ancientCatchXP({
-      firstCatch: isNewTrophy,
-      wasReleased,
-      fromRank,
-      perfect: result === 'perfect',
-      paidThrough,
-    }) * renownXpMult)
-    // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
-    // The mirror of the reel: his raid item is fed by the fishing half of the
-    // game, so wearing it is a standing reason to keep casting.
-    const jawMounted = ((profile as { equipped_raid_items?: string[] } | null)?.equipped_raid_items ?? []).includes('borrowed_jaw')
-      && (profile.finn_spoil_free === 'nav' || profile.finn_spoil_paid === 'nav')
-    const jawCharge = jawMounted ? Number((profile as { borrowed_jaw_xp?: number } | null)?.borrowed_jaw_xp ?? 0) + xpGained : null
-    const newXP = (profile.fishing_xp ?? 0) + xpGained
-    // Perfect streak counts in ancient too (it grants no streak XP bonus here,
-    // by design), tracked server-side so it can't be spoofed.
-    const aStreak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
-    // THE BORROWED JAW charges on FISHING xp while it is mounted. Same
-    // crossing in the other direction: the raid item is fed by fishing.
-    // Computed here rather than in a helper so it rides the SAME update
-    // as the xp that earned it and cannot drift out of sync.
-    const updates: Record<string, unknown> = { fishing_xp: newXP, current_perfect_streak: aStreak, catch_pending: false, ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}) }
-    if (result === 'perfect') updates.total_perfects = (profile.total_perfects ?? 0) + 1
-    // The record believes the streak only up to the ceiling — see
-    // STREAK_RECORD_CEILING. The live counter runs on regardless: gameplay is
-    // not the target of forgery, the record books are.
-    if (aStreak > STREAK_RECORD_CEILING) {
-      await flagAnomaly(admin, user.id, 'implausible:perfectStreak', 3, { claimed: aStreak })
-    } else if (aStreak > (profile.highest_perfect_streak ?? 0)) {
-      updates.highest_perfect_streak = aStreak
-      updates.highest_streak_set_at = new Date().toISOString()
-      updates.best_streak_zone = 'ancient_deep'
-    }
-    if (isNewTrophy) updates.ancient_catches = [...existing, fishId]
-
-    let vigilRankUp: { from: number; to: number } | null = null
-    let vigilPetGranted = false
-    if (wasReleased) {
-      const ranked = result === 'perfect' && fromRank < VIGIL_MAX_RANK
-      const to = ranked ? fromRank + 1 : fromRank
-      // `paid` records that this rung has spent its one consolation, so a
-      // failed attempt can never pay twice. Written from the same inputs the
-      // payout above read, via a helper that lives beside it.
-      const paid = vigilPaidAfter({ wasReleased, fromRank, perfect: result === 'perfect', paidThrough })
-      vigil[vigilKey] = paid > 0 ? { rank: to, released: false, paid } : { rank: to, released: false }
-      updates.ancient_vigil = vigil
-      if (ranked) vigilRankUp = { from: fromRank, to }
-
-      // THE CAPSTONE — all six at rank 5 pays the baby plesiosaurus, the one
-      // pet no crate can produce. Granted on STATE, not on the crossing (the
-      // house pattern): re-checked on every landing, so it lands for anyone
-      // already complete the moment the pet def exists, with no backfill.
-      if (vigilComplete(vigil)) {
-        const ownedPets = ((profile as { unlocked_pets?: string[] } | null)?.unlocked_pets ?? [])
-        // Added in place, so a crate pet landing meanwhile is not written over.
-        if (!ownedPets.includes(VIGIL_PET_ID)) {
-          vigilPetGranted = await arrayAdd(admin, user.id, 'unlocked_pets', VIGIL_PET_ID)
-        }
-      }
-    }
-    const newTrophies = isNewTrophy ? [...existing, fishId] : existing
-    if (newTrophies.length >= 6) await grantBadgeDirect(user.id, 'ancient_ones')
-    if (aStreak >= 10) await grantBadgeDirect(user.id, 'unbroken')
-    // Perfected Sigil pays out on ancient perfects too — same gate
-    // (equipped + perfect) as the regular catch path, same streak-scaling
-    // formula (+10 ⟡ × min(streak, 3)). See sigilBonus below for the
-    // rationale on equipped-vs-owned.
-    const ancientSigilBonus = result === 'perfect'
-      && profile.has_perfected_sigil
-      && profile.equipped_special === 'perfected_sigil'
-      ? Math.min(aStreak, 3) * 10
-      : 0
-    await admin.from('profiles').update(updates).eq('id', user.id)
+    // ONE OF THE SIX GIANTS. What it pays (XP, the streak, the Vigil ladder,
+    // the capstone pet, the Sigil) is lib/fishingRules landAncient; this writes
+    // it. ancient_catches stays append-only: it is the finale's gate.
+    const land = landAncient(profile, fishId, result, renownXpMult)
+    if (land.anomaly) await flagAnomaly(admin, user.id, 'implausible:perfectStreak', 3, { claimed: land.perfectStreak })
+    // THE CAPSTONE PET, added in place so a crate pet landing meanwhile is not
+    // written over.
+    const vigilPetGranted = land.grantVigilPet ? await arrayAdd(admin, user.id, 'unlocked_pets', VIGIL_PET_ID) : false
+    for (const b of land.badges) await grantBadgeDirect(user.id, b)
+    await admin.from('profiles').update(land.updates).eq('id', user.id)
     // Paid in place rather than riding the update above as an absolute
     // balance, which would write over a sale that landed during the reel.
-    const ancientNewDoubloons = ancientSigilBonus > 0
-      ? await grant(admin, user.id, 'doubloons', ancientSigilBonus)
+    const ancientNewDoubloons = land.sigilBonus > 0
+      ? await grant(admin, user.id, 'doubloons', land.sigilBonus)
       : undefined
 
     // ── First-ever Ancient Deep catch contest ───────────────────────────
@@ -822,111 +739,69 @@ export async function reelIn(
       caught: true,
       fish: fish as FishSpecies,
       baitSaved: false,
-      isNewSpecies: isNewTrophy,
-      xpGained,
-      newXP,
+      isNewSpecies: land.isNewTrophy,
+      xpGained: land.xpGained,
+      newXP: land.newXP,
       dailyProgress: [0, 0, 0],
-      perfectStreak: aStreak,
+      perfectStreak: land.perfectStreak,
       streakBonusXP: 0,
       sizeIn: ancientSize,
       isPB: false,
       previousBest: null,
       // Ancients can never roll shiny (habitat-blocked in lib/shiny rollShiny).
       isShiny: false,
-      sigilBonus: ancientSigilBonus,
+      sigilBonus: land.sigilBonus,
       newDoubloons: ancientNewDoubloons,
       firstAncientCatch,
       // Set only when a RELEASED giant was landed on a perfect — drives the
       // rank-up celebration and the wall's new numeral.
-      vigilRankUp,
-      vigilTotal: updates.ancient_vigil ? vigilTotal(vigil) : undefined,
-      vigilComplete: updates.ancient_vigil ? vigilComplete(vigil) : undefined,
+      vigilRankUp: land.vigilRankUp,
+      vigilTotal: land.vigilWritten ? vigilTotal(land.vigil) : undefined,
+      vigilComplete: land.vigilWritten ? vigilComplete(land.vigil) : undefined,
       vigilPetGranted,
     }
   }
 
-  // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
-  let baitSaved = result === 'perfect' && rngNext() < PERFECT_BAIT_SAVE_CHANCE
-  // OWNING IT IS NOT CARRYING IT. This read has_phantom_hook alone, so the 25%
-  // bait save applied to anyone who had ever bought the thing — which makes the
-  // special slot free for this one item and only this one. Every sibling gates
-  // on the slot: the Sigil checks equipped_special two dozen lines down, and
-  // the Eye checks equipped_special_2 inside eyeFromProfile. Slot 1 only,
-  // because equipSecondSpecial refuses anything but the Eye in slot 2.
-  const phantomSeated = profile.has_phantom_hook && profile.equipped_special === 'phantom_hook'
-  if (!baitSaved && phantomSeated) baitSaved = rngNext() < 0.25
-  // THE PRIMEVAL EYE, tier 6: a perfect catch never costs bait. Absolute, so it
-  // overrides both rolls above rather than adding another chance on top.
-  if (!baitSaved && eye.perfectBaitSave && result === 'perfect') baitSaved = true
-
-  // ── Shiny gate (computed early so the inventory + size logic can branch on it) ──
-  // Shinies are gated on Perfect + a 1/SHINY_ODDS roll, with two admin
-  // overrides (one-shot + persistent) for QA. Habitat-blocked on
-  // ancient_deep but those short-circuited above, so this is safe.
-  //
-  // When shiny: the catch lives EXCLUSIVELY in shiny_catches (per-instance
-  // trophy with size + caught_at metadata). It does NOT also push into
-  // fish_inventory — inventory would stack it under fish_id alongside
-  // regular bass, throwing away its identity. The Trophy Hold lane in the
-  // market sells from shiny_catches directly at 10× value.
+  // ── THE LANDING ────────────────────────────────────────────────────────
+  // What this fish pays is lib/fishingRules landFish: the bait save, the shiny,
+  // the haul clamped to the hold, the XP and its three reported parts, the
+  // streak, the Sigil, the Wormhole, the size and the Ancient Deep's omen. This
+  // action writes it.
+  const reelRod = getEffectiveRod(profile.rod_tier ?? 0, profile.completionist_effects as number[] | null)
+  const land = landFish({
+    profile, fish, result, baitType, rod: reelRod, eye, renownXpMult,
+    doubleCatch, jackpotMult: jackpotMultiplier, lockedCatchQty,
+    holdCount: (holdRows ?? []).reduce((n: number, r: { quantity: number }) => n + (r.quantity ?? 0), 0),
+    holdCapacity: getFishHold(profile.fish_hold_tier ?? 0).capacity,
+  })
+  const { baitSaved, isShiny, catchQty, xpGained, newXP, xpCatch, perfectBonusXP, xpStreak, sigilBonus } = land
   const isPerfect = result === 'perfect'
-  const forcedShinyOnce = !!profile.force_shiny_next_perfect && isPerfect
-  const forcedShinyAlways = !!profile.force_shiny_always
-  // Golden boost: extra golden odds earned by wiping this zone past Max Prestige.
-  const goldenWipes = ((profile.zone_golden_boost as Record<string, number> | null) ?? {})[fish.habitat] ?? 0
-  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat, sellValue: fish.sell_value ?? 0, oddsMult: goldenBoostMult(goldenWipes) * eye.goldenOddsMult })
+  const newPerfectStreak = land.perfectStreak
+  const serverStreakBonus = land.streakBonusXP
+  const wormholeAvail = land.wormhole
+  const oldFishingLevel = land.levels.from
+  const newFishingLevel = land.levels.to
+  const { sizeIn, sizeTier, sizeMin: sizeMinIn, sizeMax: sizeMaxIn } = land.size
 
   // Check if new species for bestiary. The WRITE is deferred until we know
-  // whether a wormhole reroll is live — see the credit block further down.
+  // whether a wormhole reroll is live — see the credit block below.
   const { data: existing } = await admin
     .from('fish_collection')
     .select('catch_count')
     .eq('user_id', user.id)
     .eq('fish_id', fishId)
     .maybeSingle()
-
   const isNewSpecies = !existing
 
-  // Upsert sellable inventory — cap at hold capacity.
-  // Shinies collapse the cast to a single catch (the trophy), so any
-  // double-catch / jackpot multiplier on the same cast is consumed by
-  // the rare moment. This keeps daily-challenge counters from crediting
-  // ghost regular fish that never landed anywhere.
-  // Ancient Deep balancing: Twin-Strike / Millionaire's double-catch STAYS
-  // disabled here (the zone is built around single high-value catches). The
-  // YOLO jackpot now pays its full ×100 in EVERY zone — its odds are scaled
-  // per zone instead (ZONE_JACKPOT_CHANCE in lib/rods) so its ~150k/hr ceiling
-  // holds everywhere, with no separate Ancient Deep haul cap. The clamp below
-  // is just a sanity rail so a manipulated client can't claim more than the
-  // rod's max. (Ancient trophies, sell_value 0, short-circuit far above — this
-  // only ever touches sellable fish.)
-  // Ancient Deep: only ALWAYS-double rods (Millionaire's, doubleCatchChance >= 1)
-  // double here — Twin-Strike's partial double stays single-catch. Trophies
-  // (sell_value 0) never multiply; they short-circuit far above.
-  const reelRod = getEffectiveRod(profile.rod_tier ?? 0, profile.completionist_effects as number[] | null)
-  const noDoubleCatch = fish.habitat === 'ancient_deep' && (reelRod.doubleCatchChance ?? 0) < 1
-  const effectiveDoubleCatch = doubleCatch && !noDoubleCatch
-  const effectiveJackpotMult = Math.min(jackpotMultiplier, 100)
-  const holdCapacity = getFishHold(profile.fish_hold_tier ?? 0).capacity
-  const currentHoldCount = (holdRows ?? []).reduce((s: number, r: { quantity: number }) => s + (r.quantity ?? 0), 0)
-  // Jackpot takes priority over a double-catch (they never stack). Matters for a
-  // forged Completionist Rod carrying BOTH YOLO + Millionaire's — else the
-  // always-double would swallow the ×100 jackpot.
-  // Locked-In triple ranks between jackpot and double: a jackpot rod still wins on
-  // a forged Completionist, but the guaranteed triple beats a mere double.
-  const desired = isShiny ? 1 : (effectiveJackpotMult > 1 ? effectiveJackpotMult : (lockedCatchQty > 1 ? lockedCatchQty : (effectiveDoubleCatch ? 2 : 1)))
-  const catchQty = isShiny ? 1 : Math.min(desired, Math.max(0, holdCapacity - currentHoldCount))
-
+  // Shinies skip the regular inventory — they live ONLY in shiny_catches
+  // (per-instance trophy). Any double-catch / jackpot bonus on the same
+  // cast is consumed by the rare moment; the shiny is the whole catch.
   const { data: invRow } = await admin
     .from('fish_inventory')
     .select('quantity')
     .eq('user_id', user.id)
     .eq('fish_id', fishId)
     .single()
-
-  // Shinies skip the regular inventory — they live ONLY in shiny_catches
-  // (per-instance trophy). Any double-catch / jackpot bonus on the same
-  // cast is consumed by the rare moment; the shiny is the whole catch.
   if (catchQty > 0 && !isShiny) {
     if (invRow) {
       await admin.from('fish_inventory')
@@ -937,152 +812,26 @@ export async function reelIn(
     }
   }
 
-
-  // Track abyss streak for achievements
-  const isAbyssPerfect = result === 'perfect' && fish.habitat === 'abyss'
-  const newAbyssStreak = isAbyssPerfect ? (profile.fishing_abyss_streak ?? 0) + 1 : 0
-
-  // PERFECTS, BY WATER. total_perfects has always been global, so a job could
-  // ask for clean catches but never for clean catches SOMEWHERE. Finn's ladder
-  // is one band per chapter now and needs to know where. Rides the same update
-  // as everything else here, so it costs nothing on the cast path.
-  const zonePerfects = { ...((profile.zone_perfects as Record<string, number> | null) ?? {}) }
-  if (result === 'perfect') {
-    zonePerfects[fish.habitat] = (zonePerfects[fish.habitat] ?? 0) + 1
-  }
-  const prestigeLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
-  const zonePrestige = prestigeLevels[fish.habitat] ?? 0
-  // +10% catch XP per prestige, capped at P5 (+50%) to match the zone reward cap.
-  const prestigeXPMult = 1 + Math.min(zonePrestige, 5) * 0.10
-  // Perfect Rod doubles XP on perfect catches (incl. the streak bonus, so
-  // it scales with streaks). Non-perfect catches are unaffected.
-  const perfectXpMult = result === 'perfect' ? (reelRod.perfectXpMult ?? 1) : 1
-  // Perfect streak — server-authoritative. We compute the streak + its XP bonus
-  // ourselves from the stored value; the client-supplied number is ignored, so
-  // it can't be inflated to mint XP.
-  const newPerfectStreak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
-  // Streak XP bonus is quadratic but CAPPED at streak 10 (10²×3 = 300 max) so a
-  // long perfect streak can't fountain uncapped XP (esp. into post-100 Fishing
-  // Renown). The streak ITSELF keeps climbing — badges (Untouchable=20) + the
-  // display read newPerfectStreak; only its XP contribution flattens past 10.
-  // ── THE STREAK MULTIPLIES THE CATCH; IT NO LONGER PAYS A FLAT SUM ────
-  //
-  // It was `min(streak,10)² × 3` XP ADDED to the catch, and a flat payment is
-  // backwards in a game whose per-catch XP spans 37.5× between the Shallows
-  // (zone mult 0.40) and the Ancient Deep (15.0). Measured: a streak-10 perfect
-  // was worth 12.5× the fish in the starting water and 1.3× in the endgame, so
-  // the streak mattered most exactly where the fish are worth least. One clean
-  // ten-perfect run took a brand new captain to LEVEL 14, and between Lv10 and
-  // Lv20 a single streak-10 perfect was a whole level per catch.
-  //
-  // As a percentage of the catch it is worth the same proportion wherever you
-  // fish, so the water stops deciding whether streaking is worth doing.
-  //
-  // Scaled by FISHING LEVEL on top of that, which is what keeps it honest while
-  // you are learning: the same run now leaves a fresh captain at level 5.
-  //
-  // THE FLOOR IS NOT A DETAIL. Scaling from zero would make a streak worth
-  // 1.01× at level 1 — worth nothing at precisely the moment the mechanic has
-  // to teach itself, which is the same mistake as today's in the other
-  // direction. 0.40 at Lv1, rising to 1.00 at Lv100.
-  //
-  // The maths lives in lib/perfectStreak.ts because the Loadout sheet has to
-  // show a captain what their streak is worth, and a second copy of it on the
-  // client would be one edit away from lying. This is still the authority for
-  // the VALUE: nothing banked here is ever taken from the client.
-  //
-  // streakMult returns exactly 1 when the catch was not perfect, because
-  // newPerfectStreak is 0 there.
-  const mult = streakMult(newPerfectStreak, getLevelFromXP(profile.fishing_xp ?? 0))
-  const baseCatchXP = catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect')
-  // What the streak itself was worth, measured the way it always was reported:
-  // before prestige, renown, the rod and the Eye multiply the lot.
-  const serverStreakBonus = Math.round(baseCatchXP * (mult - 1))
-  const xpGained = Math.round((baseCatchXP + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
-  // WHAT THE PERFECT WAS WORTH. The 1.2 in catchXP and the rod's perfect
-  // multiplier both vanished into the one figure, so a perfect paid more and
-  // nothing ever said so. This is the same fish landed clean, subtracted:
-  // the catch's own XP on a perfect (streak set aside, it is reported on its
-  // own) less the catch's XP had it not been. Reported, never banked.
-  const perfectBonusXP = result === 'perfect'
-    ? Math.round(baseCatchXP * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
-      - Math.round(catchXP(fish.catch_difficulty, fish.habitat, false) * prestigeXPMult * renownXpMult * eye.fishingXpMult)
-    : undefined
-  // AND THE STREAK'S SHARE, at the same scale, so the three parts the card
-  // shows add up to the number that flew off the boat. The catch's part is
-  // whatever is left, which absorbs the rounding.
-  const xpStreak = xpGained - Math.round(baseCatchXP * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
-  const xpCatch = xpGained - (perfectBonusXP ?? 0) - xpStreak
-  // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
-  // The mirror of the reel: his raid item is fed by the fishing half of the
-  // game, so wearing it is a standing reason to keep casting.
-  const jawMounted = ((profile as { equipped_raid_items?: string[] } | null)?.equipped_raid_items ?? []).includes('borrowed_jaw')
-      && (profile.finn_spoil_free === 'nav' || profile.finn_spoil_paid === 'nav')
-  const jawCharge = jawMounted ? Number((profile as { borrowed_jaw_xp?: number } | null)?.borrowed_jaw_xp ?? 0) + xpGained : null
-  const newXP = (profile.fishing_xp ?? 0) + xpGained
-
-  // Perfected Sigil — equipped Shrouded Reach drop pays a streak-scaling
-  // bonus on every Perfect catch, credited immediately. +10 ⟡ × current
-  // streak, capped at streak 3 (so streak 1 = +10, streak 2 = +20,
-  // streak 3+ = +30 flat). The streak-3 ceiling keeps the ramp-up moment
-  // (every streak feels like it's growing) but locks the bonus to a
-  // predictable floor once they're in the groove, so it never runs away.
-  // Gated on EQUIPPED (not just owned) so the player actively chooses
-  // this perk over Tide Turner / Auto Caster.
-  const sigilEquipped = profile.has_perfected_sigil
-    && profile.equipped_special === 'perfected_sigil'
-  const sigilBonus = result === 'perfect' && sigilEquipped
-    ? Math.min(newPerfectStreak, 3) * 10
-    : 0
-
-  // Galaxy Rod — "Wormhole": this catch is rerollable if the equipped rod has
-  // the effect and the catch is a normal landable fish (ancient_deep already
-  // short-circuited above; shinies live in shiny_catches, not the hold). We
-  // stash the catch on profiles.pending_reroll; its presence is the single-use
-  // guard. Non-wormhole catches clear any stale pending reroll.
-  const rodDef = reelRod
-  const wormholeAvail = !!rodDef.wormhole && !isShiny && catchQty > 0
-
   // ── BESTIARY CREDIT, DEFERRED WHEN A REROLL IS LIVE ────────────────────────
-  // Crediting the species here unconditionally made the wormhole log TWO
-  // species per cast: this fish, then the one it turned into. So when a reroll
-  // is available the credit is held on pending_reroll and settled by whichever
-  // comes first — rerollWormhole (which credits the NEW fish only) or the next
-  // castLine (the player declined, so this fish is credited after all).
+  // Crediting unconditionally made the wormhole log TWO species per cast. When
+  // a reroll is available the credit is held on pending_reroll and settled by
+  // whichever comes first: rerollWormhole (credits the NEW fish only) or the
+  // next castLine (the player declined, so this fish is credited after all).
   if (!wormholeAvail) {
     await logCatchToBestiary(admin, user.id, fishId)
     if (isNewSpecies) await creditNewSpecies(admin, user.id, fish.id, profile)
   }
 
-  // Fishing-level skin unlocks: Forest @ 50, Ice @ 75
   const profileUpdates: Record<string, unknown> = {
-    // THE BORROWED JAW charges on FISHING xp while it is mounted. Same
-    // crossing in the other direction: the raid item is fed by fishing.
-    // Computed here rather than in a helper so it rides the SAME update
-    // as the xp that earned it and cannot drift out of sync.
-    fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP, current_perfect_streak: newPerfectStreak, catch_pending: false,
-    ...(result === 'perfect' ? { zone_perfects: zonePerfects } : {}),
-    ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}),
+    ...land.updates,
     pending_reroll: wormholeAvail ? { fishId, qty: catchQty, habitat: fish.habitat } : null,
   }
-  if (result === 'perfect') profileUpdates.total_perfects = (profile.total_perfects ?? 0) + 1
   // Ceiling-guarded like the other two record sites; see STREAK_RECORD_CEILING.
-  if (newPerfectStreak > STREAK_RECORD_CEILING) {
-    await flagAnomaly(admin, user.id, 'implausible:perfectStreak', 3, { claimed: newPerfectStreak })
-  } else if (newPerfectStreak > (profile.highest_perfect_streak ?? 0)) {
-    profileUpdates.highest_perfect_streak = newPerfectStreak
-    profileUpdates.highest_streak_set_at = new Date().toISOString()
-    profileUpdates.best_streak_zone = fish.habitat
-  }
+  if (land.anomaly) await flagAnomaly(admin, user.id, 'implausible:perfectStreak', 3, { claimed: newPerfectStreak })
   let reelInUnlockedSkin: string | undefined
-  const oldFishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
-  const newFishingLevel = getLevelFromXP(newXP)
   {
     // STATE-based, not transition-based: grant any fishing-level color the
-    // player has earned but doesn't own yet. The old `oldFishingLevel < N`
-    // guard silently missed anyone who crossed the threshold via a trawl (also
-    // grants fishing XP) or before the color existed — they never re-crossed,
-    // so it never fired. This self-heals on the next catch. See fishingColorsToGrant.
+    // player has earned but doesn't own yet (self-heals on the next catch).
     const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
     const toAdd = fishingColorsToGrant(newFishingLevel, currentUnlocked)
     if (toAdd.length > 0) {
@@ -1091,8 +840,7 @@ export async function reelIn(
       reelInUnlockedSkin = toAdd[toAdd.length - 1]
     }
   }
-  if (oldFishingLevel < 100 && newFishingLevel >= 100) await grantBadgeDirect(user.id, 'master_angler')
-  if (newPerfectStreak >= 10) await grantBadgeDirect(user.id, 'unbroken')
+  for (const b of land.badges) await grantBadgeDirect(user.id, b)
 
   // The Sigil pays in place and the saved bait goes back in place, so neither
   // writes over a sale or a cast that landed while this reel was running.
@@ -1105,41 +853,20 @@ export async function reelIn(
   ])
 
   // Lifetime event counters (admin stats) — only fire on the event.
-  if (effectiveDoubleCatch)          await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_double_catches', n: 1 })
-  if (effectiveJackpotMult > 1)      await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_jackpots', n: 1 })
+  if (land.effectiveDoubleCatch)     await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_double_catches', n: 1 })
+  if (land.effectiveJackpotMult > 1) await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_jackpots', n: 1 })
 
-
-  // ── Size variance + personal-best tracking (non-ancient catches) ──
-  // Roll a length within the species's [length_min_in, length_max_in] range
-  // and classify into a tier (tiny/small/avg/large/trophy). Then upsert the
-  // PB row for this (user, species), only writing if the new length beats
-  // the previous best. Skipped entirely for ancients (handled above) since
-  // they're one-time catches with canonical sizes. Shinies skip the random
-  // roll and lock to the species's max length (Trophy tier).
-  const sizeMinIn = fish.length_min_in == null ? null : Number(fish.length_min_in)
-  const sizeMaxIn = fish.length_max_in == null ? null : Number(fish.length_max_in)
-  let sizeIn = 0
-  let sizeTier: FishSizeTier | undefined
+  // ── Size + personal best (non-ancient catches) ──
+  // The size was rolled in landFish; the badge, the counter and the PB row
+  // are written here.
   let isPB = false
   let previousBest: number | null = null
   if (sizeMinIn != null && sizeMaxIn != null) {
-    if (isShiny) {
-      sizeIn = sizeMaxIn
-      sizeTier = 'trophy'
-    } else {
-      const roll = rollFishSize(sizeMinIn, sizeMaxIn)
-      sizeIn = roll.lengthIn
-      sizeTier = roll.tier
-    }
-
-    // Trophy Catch badge — landing a top-size-tier fish (or a forced-shiny max).
-    // Also tick the lifetime Trophy-SIZE counter (feeds the Trophy Hunter badge;
-    // distinct from ancient_catches, which is the 6 Ancient Deep giants).
+    // Trophy Catch badge + the lifetime Trophy-SIZE counter (Trophy Hunter).
     if (sizeTier === 'trophy') {
       try { await grantBadgeDirect(user.id, 'trophy_catch') } catch { /* best-effort */ }
       void admin.rpc('bump_profile_stat', { uid: user.id, col: 'trophy_size_catches', n: 1 }).then(() => {}, () => {})
     }
-
     const { data: pbRow } = await admin
       .from('fish_personal_bests')
       .select('best_length_in')
@@ -1244,10 +971,7 @@ export async function reelIn(
   // omen through. Never on the lures (that player already knows), never once all
   // 6 giants are on the wall. Deliberately rare + vague so it reads as ambience,
   // not a tutorial.
-  const deepStirs = fish.habitat === 'ancient_deep'
-    && baitType !== 'luminous' && baitType !== 'golden'
-    && (((profile.ancient_catches as number[] | null) ?? []).length < 6)
-    && rngNext() < 0.14
+  const deepStirs = land.deepStirs
 
   // Who asked for this. After the inventory write, so "in your hold" is true
   // by the time anybody reads it.
