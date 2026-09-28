@@ -562,6 +562,10 @@ In order. Each step is worth doing even if the port never happens.
      - Swift Sails at exactly 15% off;
      - the payouts by outcome, the xp bonus, lost hands unpaid, and specials only once;
      - the timing, and the trawl refusals in order.
+
+     Verified live on catman: an Inner Sea voyage sailed at 1h 19m with 410 ⟡ (the card said
+     1h 19m and 253-422). Revealed, it paid exactly the triumph's 375 Nav XP, 410 ⟡ and 3 ◆.
+     A trawl was not sent live, since sending needs the ship at the Trawl Docks.
 6. **A data-access layer.** Per-system read and write functions replace the scattered
    `admin.from('profiles')` calls, so a local store can later stand in for Supabase behind the
    same functions.
