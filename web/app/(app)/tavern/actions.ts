@@ -5,9 +5,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { spend, grant } from '@/lib/wallet'
-import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT, SLOT_BONUS_MULT } from './constants'
+import { SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT } from './constants'
 import type { SlotSymbolId } from './constants'
-import { rngNext } from '@/lib/rng'
+import { rollSlots, afterRound } from '@/lib/casinoRules'
 
 // Crown & Anchor was retired 2026-06-06 — replaced by Blackjack
 // (app/(app)/tavern/blackjack/actions.ts). The dice_rolls table stays
@@ -58,53 +58,7 @@ export async function getSlotsJackpot(): Promise<SlotsJackpotState> {
   }
 }
 
-function slotWeightedRandom(): SlotSymbolId {
-  const total = SLOT_SYMBOLS_LIST.reduce((s, sym) => s + sym.weight, 0)
-  let r = rngNext() * total
-  for (const sym of SLOT_SYMBOLS_LIST) {
-    r -= sym.weight
-    if (r <= 0) return sym.id
-  }
-  return SLOT_SYMBOLS_LIST[SLOT_SYMBOLS_LIST.length - 1].id
-}
-
-function slotRollReels(): SlotSymbolId[] {
-  return [slotWeightedRandom(), slotWeightedRandom(), slotWeightedRandom()]
-}
-
-// ── Bonus round: its own richer pool (base fish + Jellyfish WILD, no hook) ──
-function slotBonusWeightedRandom(): SlotSymbolId {
-  const total = SLOT_SYMBOLS_LIST.reduce((s, sym) => s + sym.bonusWeight, 0)
-  let r = rngNext() * total
-  for (const sym of SLOT_SYMBOLS_LIST) {
-    r -= sym.bonusWeight
-    if (r <= 0) return sym.id
-  }
-  return SLOT_SYMBOLS_LIST[SLOT_SYMBOLS_LIST.length - 1].id
-}
-function slotRollBonusReels(): SlotSymbolId[] {
-  return [slotBonusWeightedRandom(), slotBonusWeightedRandom(), slotBonusWeightedRandom()]
-}
-
-// Best-paying bonus line with Jellyfish WILD substitution. The wild stands in for
-// common/rare/legendary (NEVER catfish/jackpot). Returns the resolved fish + its
-// base multiplier + triple/pair, or null for no win. Caller applies the bonus
-// boost (SLOT_BONUS_MULT). Enumerating all options + taking the max means a
-// generous case like 2 wilds + 1 fish correctly pays the best line available.
-function evalBonusLine(rs: SlotSymbolId[]): { symbol: SlotSymbolId; kind: 'triple' | 'pair'; mult: number } | null {
-  const wilds = rs.filter(r => r === 'wild').length
-  const nat = (s: SlotSymbolId) => rs.filter(r => r === s).length
-  const opts: { symbol: SlotSymbolId; kind: 'triple' | 'pair'; mult: number }[] = []
-  for (const s of ['common', 'rare', 'shark', 'legendary'] as const) {
-    if (nat(s) + wilds === 3) opts.push({ symbol: s, kind: 'triple', mult: SLOT_PAYOUTS[s] })
-  }
-  if (nat('legendary') + wilds >= 2 && SLOT_PAIR_PAYOUTS.legendary) opts.push({ symbol: 'legendary', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.legendary })
-  if (nat('shark') + wilds >= 2 && SLOT_PAIR_PAYOUTS.shark) opts.push({ symbol: 'shark', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.shark })
-  if (nat('catfish') >= 2 && SLOT_PAIR_PAYOUTS.catfish) opts.push({ symbol: 'catfish', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.catfish })
-  if (nat('rare') + wilds >= 2 && SLOT_PAIR_PAYOUTS.rare) opts.push({ symbol: 'rare', kind: 'pair', mult: SLOT_PAIR_PAYOUTS.rare })
-  if (opts.length === 0) return null
-  return opts.reduce((best, o) => (o.mult > best.mult ? o : best))
-}
+// The reel roll, the bonus round and the pay table are lib/casinoRules rollSlots.
 
 export interface SlotStats {
   spins: number
@@ -158,18 +112,12 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   // a catfish triple pays them a normal big win instead, pot left intact.
   const isAdmin = (profile as { is_admin?: boolean | null }).is_admin === true
 
-  // One-time forced outcome (admin rig/gift): if profiles.slots_force_next holds
-  // a valid symbol, THIS spin lands that symbol as a triple, then the flag is
-  // cleared in the persist below. Otherwise a normal random roll.
-  const forcedSym = (profile as { slots_force_next?: string | null }).slots_force_next ?? null
-  const FORCEABLE = new Set<string>(['common', 'rare', 'legendary', 'catfish', 'anchor'])
-  const isForced = forcedSym !== null && FORCEABLE.has(forcedSym)
-  const reels: SlotSymbolId[] = isForced
-    ? [forcedSym as SlotSymbolId, forcedSym as SlotSymbolId, forcedSym as SlotSymbolId]
-    : slotRollReels()
-  const [a, b, c] = reels
-  const allSame = a === b && b === c
-  const hookCount = reels.filter(r => r === 'anchor').length
+  // One-time forced outcome (admin rig/gift): a valid symbol in
+  // profiles.slots_force_next lands as a triple on THIS spin, then the flag is
+  // cleared in the persist below. The roll and the pay table are
+  // lib/casinoRules rollSlots; the community pot is claimed here.
+  const roll = rollSlots(wager, { forced: (profile as { slots_force_next?: string | null }).slots_force_next ?? null, isAdmin })
+  const { reels, isForced } = roll
 
   // Every spin feeds the global pot before any claim — your own
   // contribution is in the pot you might win this very spin.
@@ -191,82 +139,17 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
     return row.share as number
   }
 
-  // Finds an exactly-2 matching fish pair (third reel can be anything,
-  // including a single hook). Returns the paired symbol or null.
-  function pairSymbol(rs: SlotSymbolId[]): SlotSymbolId | null {
-    const [x, y, z] = rs
-    if (x === y && y === z) return null
-    if (x === y && x !== 'anchor') return x
-    if (x === z && x !== 'anchor') return x
-    if (y === z && y !== 'anchor') return y
-    return null
-  }
-
-  let outcome: SlotSpinResult['outcome']
-  let payout = 0
-  let matchedSymbol: SlotSymbolId | undefined
-  let bonus: SlotSpinResult['bonus'] | undefined
+  const outcome = roll.outcome
+  let payout = roll.payout
+  const matchedSymbol = roll.matchedSymbol
+  let bonus = roll.bonus
   let jackpotWin: number | undefined
-
-  if (allSame && a === 'anchor') {
-    // 3 hooks → the "charged" bonus round. It rolls its OWN richer pool (base
-    // fish + the Jellyfish WILD, no hook), the wild substitutes to complete a
-    // line, and every fish win pays 50% MORE (SLOT_BONUS_MULT). A NATURAL
-    // 3-catfish bonus roll still takes the jackpot (the wild can't complete it).
-    outcome = 'bonus'
-    const bonusReels = slotRollBonusReels()
-    const [ba, bb, bc] = bonusReels
-    const bonusNaturalCatfish = ba === 'catfish' && bb === 'catfish' && bc === 'catfish'
-    if (bonusNaturalCatfish && !isAdmin) {
-      const share = await claimJackpot()
-      jackpotWin = share
-      bonus = { reels: bonusReels, outcome: 'jackpot', payout: share }
-    } else if (bonusNaturalCatfish) {
-      // Admin catfish triple → big win (boosted like any bonus win), pot untouched.
-      bonus = { reels: bonusReels, outcome: 'win', payout: Math.floor(wager * SLOT_PAYOUTS.legendary * SLOT_BONUS_MULT), matchedSymbol: 'catfish' }
-    } else {
-      const line = evalBonusLine(bonusReels)
-      if (line && line.kind === 'triple') {
-        bonus = { reels: bonusReels, outcome: 'win', payout: Math.floor(wager * line.mult * SLOT_BONUS_MULT), matchedSymbol: line.symbol }
-      } else if (line && line.kind === 'pair') {
-        bonus = { reels: bonusReels, outcome: 'pair', payout: Math.floor(wager * line.mult * SLOT_BONUS_MULT), matchedSymbol: line.symbol }
-      } else {
-        bonus = { reels: bonusReels, outcome: 'lose', payout: 0 }
-      }
-    }
-    payout = wager + bonus.payout
-  } else if (allSame && a === 'catfish' && !isAdmin) {
-    // Natural 3 catfish → global jackpot, share proportional to wager
-    outcome = 'jackpot'
+  // A natural three catfish (main reels or the bonus round) takes the pot.
+  if (roll.jackpot) {
     const share = await claimJackpot()
     jackpotWin = share
-    payout = share
-  } else if (allSame && a === 'catfish') {
-    // Admin catfish triple → normal big win, the community pot is left alone.
-    outcome = 'win'
-    payout = wager * SLOT_PAYOUTS.legendary
-  } else if (allSame) {
-    // 3 of same fish → full win
-    outcome = 'win'
-    payout = wager * SLOT_PAYOUTS[a]
-  } else if (hookCount === 2) {
-    // 2 hooks anywhere → refund
-    outcome = 'refund'
-    payout = wager
-  } else {
-    const pair = pairSymbol(reels)
-    if (pair && SLOT_PAIR_PAYOUTS[pair]) {
-      // Pair of marlin / whale / catfish → real pair win (always ≥ 1.5×)
-      outcome = 'pair_win'
-      matchedSymbol = pair
-      payout = Math.floor(wager * SLOT_PAIR_PAYOUTS[pair]!)
-    } else if (pair === 'common') {
-      // Sardine pair pays nothing — surfaced as a near-miss, not a win
-      outcome = 'near_miss'
-      matchedSymbol = pair
-    } else {
-      outcome = 'lose'
-    }
+    if (roll.jackpot === 'main') payout = share
+    else { bonus = { ...bonus!, payout: share }; payout = wager + share }
   }
 
   const net = payout - wager
@@ -275,13 +158,9 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   // Chip movement is internal to the casino session — no
   // doubloon_transactions row here (matches blackjack/roulette;
   // doubloons only move at buy-in / cash-out).
-  const prevSessionNet = (profile.slots_session_net as number | null) ?? 0
-  const prevSessionBuyIns = (profile.casino_session_buy_ins as number | null) ?? 0
-  // Shared purse hitting 0 ends the casino session — reset the shared
-  // buy-in tally and ALL per-game nets (mirrors blackjack's bust-out).
-  const busted = newChips === 0
-  const newSessionNet = busted ? 0 : prevSessionNet + net
-  const newSessionBuyIns = busted ? 0 : prevSessionBuyIns
+  // Shared purse hitting 0 ends the casino session (lib/casinoRules afterRound).
+  const { busted, sessionNet: newSessionNet, sessionBuyIns: newSessionBuyIns } = afterRound(
+    newChips, (profile.slots_session_net as number | null) ?? 0, net, (profile.casino_session_buy_ins as number | null) ?? 0)
 
   await Promise.all([
     admin.from('profiles').update({

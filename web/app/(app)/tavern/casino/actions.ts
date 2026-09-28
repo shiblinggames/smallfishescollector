@@ -12,14 +12,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX, denDailyCap, denCapFromXp } from '../constants'
+import { denDailyCap, denCapFromXp } from '../constants'
+import { buyInAmountOk, buyInRefusal, casinoDayStart } from '@/lib/casinoRules'
 import { isPremiumActive } from '@/lib/premium'
 import { spend, grant } from '@/lib/wallet'
 import type { CasinoWallet, CasinoBuyInResult, CasinoCashOutResult } from './types'
 
 async function getDailyBuyInTotal(userId: string): Promise<number> {
   const admin = createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = casinoDayStart()
   const { data } = await admin
     .from('casino_buy_ins')
     .select('amount')
@@ -76,9 +77,8 @@ export async function getCasinoState(): Promise<CasinoWallet> {
  *  shared daily cap + sufficient doubloons. Buying in mid-session just
  *  tops up the purse — it never resets the per-game nets. */
 export async function buyInCasino(amount: number): Promise<CasinoBuyInResult | { error: string }> {
-  if (!Number.isInteger(amount) || amount < CASINO_BUY_IN_MIN || amount > CASINO_BUY_IN_MAX) {
-    return { error: 'Invalid amount' }
-  }
+  // The purse rules (range, funds, the shared daily cap) are lib/casinoRules buyInRefusal.
+  if (!buyInAmountOk(amount)) return { error: 'Invalid amount' }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -95,9 +95,8 @@ export async function buyInCasino(amount: number): Promise<CasinoBuyInResult | {
   if (doubloons < amount) return { error: 'Insufficient doubloons' }
 
   const [dailyAlready, dailyCap] = await Promise.all([getDailyBuyInTotal(user.id), getDenCap(user.id)])
-  if (dailyAlready + amount > dailyCap) {
-    return { error: `Daily limit reached (${dailyCap.toLocaleString()} ⟡)` }
-  }
+  const refusal = buyInRefusal(amount, doubloons, dailyAlready, dailyCap)
+  if (refusal) return { error: refusal }
 
   // Doubloons leave in place first (the guard against two buy-ins spending
   // the same purse), then the chips land in place.

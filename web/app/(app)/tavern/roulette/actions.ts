@@ -10,16 +10,16 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import {
-  rollWinningNumber, settleSpin, validateBet,
+  rollWinningNumber, settleSpin,
   type Bet,
 } from '@/lib/roulette'
 import {
-  RL_MIN_BET, RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET,
   denDailyCap,
   denCapFromXp,
 } from '../constants'
 import { isPremiumActive } from '@/lib/premium'
 import { spend, grant } from '@/lib/wallet'
+import { betSlipRefusal, afterRound, casinoDayStart } from '@/lib/casinoRules'
 import type { RouletteState, SpinResult, RecentSpin } from './types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -28,7 +28,7 @@ import type { RouletteState, SpinResult, RecentSpin } from './types'
 // three games — casino_buy_ins is the only source).
 async function getDailyBuyInTotal(userId: string): Promise<number> {
   const admin = createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = casinoDayStart()
   const { data } = await admin
     .from('casino_buy_ins')
     .select('amount')
@@ -91,30 +91,11 @@ export async function getRouletteState(): Promise<RouletteState> {
  *  row + updates the chip balance and roulette's session net, and
  *  returns the winning number + payout for the client to animate. */
 export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { error: string }> {
-  if (!Array.isArray(bets) || bets.length === 0) return { error: 'Place at least one bet' }
-  if (bets.length > 50) return { error: 'Too many bets' }
-
-  // Per-bet validation — inside (single-pocket / few-pocket high-vol)
-  // bets share the straight cap; outside (low-vol) bets get the higher
-  // cap. Same constants used by the client buttons so a bet that's UI-
-  // valid is also server-valid.
-  const INSIDE: ReadonlySet<string> = new Set(['straight', 'split', 'street', 'corner', 'line'])
-  // Per-zone totals — the UI stacks chips into one bet per zone, but a
-  // crafted request could split a zone across duplicate bets that each
-  // pass the per-bet check, so the cap is enforced on the zone total.
-  const zoneTotals = new Map<string, number>()
-  for (const bet of bets) {
-    const maxBet = INSIDE.has(bet.type) ? RL_MAX_STRAIGHT_BET : RL_MAX_OUTSIDE_BET
-    const err = validateBet(bet, RL_MIN_BET, maxBet)
-    if (err) return { error: err }
-    const zone = `${bet.type}:${JSON.stringify(bet.target)}`
-    const total = (zoneTotals.get(zone) ?? 0) + bet.amount
-    if (total > maxBet) return { error: `Each bet maxes out at ${maxBet.toLocaleString()} chips` }
-    zoneTotals.set(zone, total)
-  }
-
+  // The bet slip: per-bet limits, inside bets on the straight cap, outside on
+  // the higher one, and the cap held on each zone's TOTAL (lib/casinoRules).
+  const slipError = betSlipRefusal(bets)
+  if (slipError) return { error: slipError }
   const totalWagered = bets.reduce((sum, b) => sum + b.amount, 0)
-  if (totalWagered <= 0) return { error: 'Invalid bet total' }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -141,13 +122,9 @@ export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { erro
   const chipsAfter = settlement.totalPayout > 0
     ? await grant(admin, user.id, 'casino_chips', settlement.totalPayout)
     : afterStake
-  const prevSessionNet = (profile.roulette_session_net as number | null) ?? 0
-  const prevSessionBuyIns = (profile.casino_session_buy_ins as number | null) ?? 0
-  // Shared purse hitting 0 ends the casino session — reset the shared
-  // buy-in tally and ALL per-game nets (mirrors blackjack's bust-out).
-  const busted = chipsAfter === 0
-  const newSessionNet = busted ? 0 : prevSessionNet + settlement.net
-  const newSessionBuyIns = busted ? 0 : prevSessionBuyIns
+  // Shared purse hitting 0 ends the casino session (lib/casinoRules afterRound).
+  const { busted, sessionNet: newSessionNet, sessionBuyIns: newSessionBuyIns } = afterRound(
+    chipsAfter, (profile.roulette_session_net as number | null) ?? 0, settlement.net, (profile.casino_session_buy_ins as number | null) ?? 0)
 
   await Promise.all([
     admin.from('profiles').update({

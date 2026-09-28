@@ -3,11 +3,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { handValue, canSplit, type Card, type SettledHand, type HandOutcome } from '@/lib/blackjack'
 import {
-  newShoe, drawCard, handValue, isBust, isNaturalBlackjack, canSplit,
-  dealerPlay, settleHand, settleInsurance, cardRank,
-  type Card, type SettledHand, type HandOutcome,
-} from '@/lib/blackjack'
+  dealTable, standAll, insuranceCost, answerInsurance, turnRefusal, hitTable, standTable, doubleRefusal, doubleTable,
+  splitRefusal, splitTable, settleTable, nextStreaks, afterRound, casinoDayStart,
+  type Phase, type ServerHand, type ServerState,
+} from '@/lib/casinoRules'
 import { BJ_MIN_BET, BJ_MAX_BET, denCapFromXp } from '../constants'
 import { isPremiumActive } from '@/lib/premium'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
@@ -15,28 +16,9 @@ import { spend, grant } from '@/lib/wallet'
 
 // ── Server-side state shape (lives in blackjack_hands.state JSONB) ──
 
-interface ServerHand {
-  cards: Card[]
-  wager: number
-  doubled: boolean
-  stood: boolean
-  busted: boolean
-  isNatural: boolean    // pre-split natural BJ (split-21 doesn't qualify)
-  isSplit: boolean      // hand was created via split (used to block double-after-split)
-}
-
-export type Phase = 'insuranceOffered' | 'playerTurn' | 'settled'
-
-interface ServerState {
-  shoe: Card[]
-  hands: ServerHand[]
-  activeHandIdx: number
-  dealerCards: Card[]           // both cards stored; hole hidden from client view until reveal
-  insuranceTaken: boolean
-  insuranceAmount: number
-  insuranceResolved: boolean
-  phase: Phase
-}
+// ServerHand, Phase and ServerState, and every move on the table, are
+// lib/casinoRules (Phase B). Phase is re-exported for the client.
+export type { Phase } from '@/lib/casinoRules'
 
 // ── Client-safe view (what the UI sees) ──
 
@@ -109,7 +91,7 @@ export type ActionResult =
 
 async function getDailyBuyInTotal(userId: string): Promise<number> {
   const admin = createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = casinoDayStart()
   const { data } = await admin
     .from('casino_buy_ins')
     .select('amount')
@@ -197,22 +179,6 @@ function toClientState(
 
 // ── Core mutations ──
 
-/** Advance to next active hand, OR transition to settled if all hands
- *  are done. Caller passes the hand row id + the live state object and
- *  the supabase admin client. Returns the post-advance state (still
- *  ServerState; caller persists). */
-function advanceTurn(state: ServerState): void {
-  // Skip any hands that are already busted or stood
-  while (state.activeHandIdx < state.hands.length) {
-    const h = state.hands[state.activeHandIdx]
-    if (!h.busted && !h.stood) return
-    state.activeHandIdx++
-  }
-  // All hands done — dealer plays, phase = settled
-  state.dealerCards = dealerPlay(state.shoe, state.dealerCards)
-  state.phase = 'settled'
-}
-
 /** Settle a hand row: compute payouts, update profile, write the
  *  result jsonb + transaction ledger, mark status='settled'. Returns
  *  the SettleResult shaped for the client, or null when another request
@@ -225,24 +191,10 @@ async function finalizeSettlement(
   totalWagered: number,
 ): Promise<SettleResult | null> {
   const admin = createAdminClient()
-  const dealerFinal = state.dealerCards
-  const dealerTotal = handValue(dealerFinal).total
-  const dealerBust = dealerTotal > 21
-  const dealerNatural = isNaturalBlackjack(dealerFinal)
-
-  const settled: SettledHand[] = state.hands.map(h => settleHand(
-    { cards: h.cards, wager: h.wager, doubled: h.doubled, isNatural: h.isNatural },
-    { cards: dealerFinal, total: dealerTotal, bust: dealerBust, natural: dealerNatural },
-  ))
-
-  const insurance = settleInsurance(state.insuranceAmount, dealerNatural)
-
-  // Total returned to player = sum of hand payouts + insurance payout.
-  // All wagers (initial, doubles, splits, insurance) were already
-  // deducted at the time they happened, so net delta is just:
-  //   (returned) - (total wagered)
-  const totalReturned = settled.reduce((sum, h) => sum + h.payout, 0) + insurance.paid
-  const netDelta = totalReturned - totalWagered
+  // Every hand against the dealer, and insurance: lib/casinoRules settleTable.
+  // All wagers were taken as they were placed, so the net is what comes back
+  // less the total wagered.
+  const { settled, dealerFinal, dealerTotal, dealerBust, dealerNatural, insurance, totalReturned, netDelta } = settleTable(state, totalWagered)
 
   const resultJson = {
     hands: settled,
@@ -276,21 +228,14 @@ async function finalizeSettlement(
     .select('doubloons, casino_session_buy_ins, blackjack_session_net, blackjack_win_streak, blackjack_dealer_bj_streak')
     .eq('id', userId)
     .single()
-  const prevSessionBuyIns = (profile?.casino_session_buy_ins as number | null) ?? 0
-  const prevSessionNet = (profile?.blackjack_session_net as number | null) ?? 0
-  // When the table busts the player out completely (shared purse → 0),
-  // the casino session is over — reset the shared buy-in tally AND all
-  // three per-game nets; the next buy-in starts a fresh session.
-  const busted = newChips === 0
-  const newSessionBuyIns = busted ? 0 : prevSessionBuyIns
-  const newSessionNet = busted ? 0 : prevSessionNet + netDelta
-
-  // Badge streaks: a net-positive round extends the win streak (loss resets,
-  // push leaves it); the dealer's natural extends its own run (else resets).
-  const prevWinStreak = (profile?.blackjack_win_streak as number | null) ?? 0
-  const prevDealerBjStreak = (profile?.blackjack_dealer_bj_streak as number | null) ?? 0
-  const newWinStreak = netDelta > 0 ? prevWinStreak + 1 : netDelta < 0 ? 0 : prevWinStreak
-  const newDealerBjStreak = dealerNatural ? prevDealerBjStreak + 1 : 0
+  // The shared purse hitting 0 ends the casino session (afterRound), and the
+  // badge streaks move (nextStreaks): both lib/casinoRules.
+  const { busted, sessionNet: newSessionNet, sessionBuyIns: newSessionBuyIns } = afterRound(
+    newChips, (profile?.blackjack_session_net as number | null) ?? 0, netDelta, (profile?.casino_session_buy_ins as number | null) ?? 0)
+  const streaks = nextStreaks(netDelta, dealerNatural,
+    (profile?.blackjack_win_streak as number | null) ?? 0, (profile?.blackjack_dealer_bj_streak as number | null) ?? 0)
+  const newWinStreak = streaks.win
+  const newDealerBjStreak = streaks.dealerBj
 
   // Ledger reason — fold all hand outcomes into a short summary
   const outcomeCounts = settled.reduce<Record<HandOutcome, number>>((acc, h) => {
@@ -418,12 +363,8 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
   // unfinished hand, let dealer play, settle, then proceed.
   const orphan = await loadActiveHand(user.id)
   if (orphan) {
-    const s = orphan.state
-    s.hands.forEach(h => { if (!h.busted && !h.stood) h.stood = true })
-    s.activeHandIdx = s.hands.length
-    s.dealerCards = dealerPlay(s.shoe, s.dealerCards)
-    s.phase = 'settled'
-    await finalizeSettlement(user.id, orphan.id, s, orphan.initial_wager, orphan.total_wagered)
+    standAll(orphan.state)
+    await finalizeSettlement(user.id, orphan.id, orphan.state, orphan.initial_wager, orphan.total_wagered)
   }
 
   // Wagers come out of CHIPS, not doubloons. Daily cap is enforced
@@ -433,26 +374,9 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
   const afterStake = await spend(admin, user.id, 'casino_chips', wager)
   if (afterStake === null) return { error: 'Not enough chips' }
 
-  // Build a fresh shoe + deal 2-2
-  const shoe = newShoe()
-  const playerCards = [drawCard(shoe), drawCard(shoe)]
-  const dealerCards = [drawCard(shoe), drawCard(shoe)]
-  const playerNatural = isNaturalBlackjack(playerCards)
-  const dealerUpRank = cardRank(dealerCards[0])
-
-  const state: ServerState = {
-    shoe,
-    hands: [{
-      cards: playerCards, wager, doubled: false,
-      stood: playerNatural, busted: false, isNatural: playerNatural, isSplit: false,
-    }],
-    activeHandIdx: 0,
-    dealerCards,
-    insuranceTaken: false,
-    insuranceAmount: 0,
-    insuranceResolved: false,
-    phase: dealerUpRank === 'A' ? 'insuranceOffered' : 'playerTurn',
-  }
+  // A fresh shoe, two and two; an Ace up offers insurance, otherwise a
+  // natural on either side settles at once (lib/casinoRules dealTable).
+  const state = dealTable(wager)
 
   // Insert the hand row
   const { data: row } = await admin
@@ -468,15 +392,9 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
 
   revalidatePath('/tavern')
 
-  // Resolve naturals immediately when no insurance gate.
-  if (state.phase === 'playerTurn') {
-    const dealerNaturalCheck = isNaturalBlackjack(state.dealerCards)
-    if (playerNatural || dealerNaturalCheck) {
-      state.hands.forEach(h => { h.stood = true })
-      state.activeHandIdx = state.hands.length
-      state.phase = 'settled'
-      return settledOrError(await finalizeSettlement(user.id, handId, state, wager, wager))
-    }
+  // Naturals with no insurance gate settle at once.
+  if (state.phase === 'settled') {
+    return settledOrError(await finalizeSettlement(user.id, handId, state, wager, wager))
   }
 
   const newChips = afterStake
@@ -498,29 +416,16 @@ export async function acceptInsurance(): Promise<ActionResult> {
   if (hand.state.phase !== 'insuranceOffered') return { error: 'Insurance not available' }
 
   const initialWager = hand.initial_wager
-  const insurance = Math.floor(initialWager / 2)
+  const insurance = insuranceCost(initialWager)
   const admin = createAdminClient()
   const afterInsurance = await spend(admin, user.id, 'casino_chips', insurance)
   if (afterInsurance === null) return { error: 'Not enough chips for insurance' }
-  hand.state.insuranceTaken = true
-  hand.state.insuranceAmount = insurance
-  hand.state.insuranceResolved = true
-
-  const dealerNatural = isNaturalBlackjack(hand.state.dealerCards)
-  const playerNatural = hand.state.hands[0].isNatural
-
-  if (dealerNatural || playerNatural) {
-    hand.state.hands.forEach(h => { h.stood = true })
-    hand.state.activeHandIdx = hand.state.hands.length
-    hand.state.phase = 'settled'
-    const totalWagered = hand.total_wagered + insurance
-    await persistActiveHand(hand.id, hand.state, totalWagered)
-    return settledOrError(await finalizeSettlement(user.id, hand.id, hand.state, initialWager, totalWagered))
-  }
-
-  hand.state.phase = 'playerTurn'
+  answerInsurance(hand.state, insurance)
   const totalWagered = hand.total_wagered + insurance
   await persistActiveHand(hand.id, hand.state, totalWagered)
+  if ((hand.state.phase as Phase) === 'settled') {
+    return settledOrError(await finalizeSettlement(user.id, hand.id, hand.state, initialWager, totalWagered))
+  }
 
   const newChips = afterInsurance
   const dailyAlready = await getDailyBuyInTotal(user.id)
@@ -540,20 +445,11 @@ export async function declineInsurance(): Promise<ActionResult> {
   if (!hand) return { error: 'No active hand' }
   if (hand.state.phase !== 'insuranceOffered') return { error: 'Insurance not available' }
 
-  hand.state.insuranceResolved = true
-  const dealerNatural = isNaturalBlackjack(hand.state.dealerCards)
-  const playerNatural = hand.state.hands[0].isNatural
-
-  if (dealerNatural || playerNatural) {
-    hand.state.hands.forEach(h => { h.stood = true })
-    hand.state.activeHandIdx = hand.state.hands.length
-    hand.state.phase = 'settled'
-    await persistActiveHand(hand.id, hand.state, hand.total_wagered)
+  answerInsurance(hand.state, null)
+  await persistActiveHand(hand.id, hand.state, hand.total_wagered)
+  if ((hand.state.phase as Phase) === 'settled') {
     return settledOrError(await finalizeSettlement(user.id, hand.id, hand.state, hand.initial_wager, hand.total_wagered))
   }
-
-  hand.state.phase = 'playerTurn'
-  await persistActiveHand(hand.id, hand.state, hand.total_wagered)
   const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
   const dailyAlready = await getDailyBuyInTotal(user.id)
@@ -569,15 +465,9 @@ export async function hit(): Promise<ActionResult> {
   if (!user) return { error: 'Unauthorized' }
   const hand = await loadActiveHand(user.id)
   if (!hand) return { error: 'No active hand' }
-  if (hand.state.phase !== 'playerTurn') return { error: 'Not your turn' }
-  const active = hand.state.hands[hand.state.activeHandIdx]
-  if (!active || active.stood || active.busted) return { error: 'Hand already done' }
-
-  active.cards.push(drawCard(hand.state.shoe))
-  if (isBust(active.cards)) active.busted = true
-  else if (handValue(active.cards).total === 21) active.stood = true   // auto-stand on 21 (player can't improve)
-
-  advanceTurn(hand.state)
+  const refusal = turnRefusal(hand.state)
+  if (refusal) return { error: refusal }
+  hitTable(hand.state)   // bust, or auto-stand on 21
   await persistActiveHand(hand.id, hand.state, hand.total_wagered)
 
   if ((hand.state.phase as Phase) === 'settled') {
@@ -599,12 +489,9 @@ export async function stand(): Promise<ActionResult> {
   if (!user) return { error: 'Unauthorized' }
   const hand = await loadActiveHand(user.id)
   if (!hand) return { error: 'No active hand' }
-  if (hand.state.phase !== 'playerTurn') return { error: 'Not your turn' }
-  const active = hand.state.hands[hand.state.activeHandIdx]
-  if (!active || active.stood || active.busted) return { error: 'Hand already done' }
-
-  active.stood = true
-  advanceTurn(hand.state)
+  const refusal = turnRefusal(hand.state)
+  if (refusal) return { error: refusal }
+  standTable(hand.state)
   await persistActiveHand(hand.id, hand.state, hand.total_wagered)
 
   if ((hand.state.phase as Phase) === 'settled') {
@@ -626,22 +513,14 @@ export async function doubleDown(): Promise<ActionResult> {
   if (!user) return { error: 'Unauthorized' }
   const hand = await loadActiveHand(user.id)
   if (!hand) return { error: 'No active hand' }
-  if (hand.state.phase !== 'playerTurn') return { error: 'Not your turn' }
+  const refusal = doubleRefusal(hand.state)
+  if (refusal) return { error: refusal }
   const active = hand.state.hands[hand.state.activeHandIdx]
-  if (!active || active.stood || active.busted) return { error: 'Hand already done' }
-  if (active.cards.length !== 2) return { error: 'Can only double on initial two cards' }
-  if (active.isSplit) return { error: 'No double after split (house rule)' }
 
   const admin = createAdminClient()
   const afterDouble = await spend(admin, user.id, 'casino_chips', active.wager)
   if (afterDouble === null) return { error: 'Not enough chips to double' }
-  active.wager *= 2
-  active.doubled = true
-  active.cards.push(drawCard(hand.state.shoe))
-  if (isBust(active.cards)) active.busted = true
-  active.stood = true   // double-down always ends the hand
-
-  advanceTurn(hand.state)
+  doubleTable(hand.state)   // one card, and the hand ends
   const totalWagered = hand.total_wagered + (active.wager / 2)   // we doubled wager, the delta added equals the original wager
   await persistActiveHand(hand.id, hand.state, totalWagered)
 
@@ -664,10 +543,8 @@ export async function split(): Promise<ActionResult> {
   if (!user) return { error: 'Unauthorized' }
   const hand = await loadActiveHand(user.id)
   if (!hand) return { error: 'No active hand' }
-  if (hand.state.phase !== 'playerTurn') return { error: 'Not your turn' }
-  if (hand.state.hands.length !== 1) return { error: 'No re-splitting (house rule)' }
-  const active = hand.state.hands[0]
-  if (!active || active.cards.length !== 2 || !canSplit(active.cards)) return { error: 'Cannot split' }
+  const refusal = splitRefusal(hand.state)
+  if (refusal) return { error: refusal }
 
   const initialWager = hand.initial_wager
   // Charge the second wager in place
@@ -675,31 +552,8 @@ export async function split(): Promise<ActionResult> {
   const afterSplit = await spend(admin, user.id, 'casino_chips', initialWager)
   if (afterSplit === null) return { error: 'Not enough chips to split' }
 
-  // Split: each hand gets one of the original cards + one new draw
-  const [c1, c2] = active.cards
-  const isAceSplit = cardRank(c1) === 'A'
-  const handA: ServerHand = {
-    cards: [c1, drawCard(hand.state.shoe)],
-    wager: active.wager,
-    doubled: false,
-    stood: isAceSplit,             // split aces auto-stand after one card
-    busted: false,
-    isNatural: false,              // split-21 is NOT a natural
-    isSplit: true,
-  }
-  const handB: ServerHand = {
-    cards: [c2, drawCard(hand.state.shoe)],
-    wager: initialWager,
-    doubled: false,
-    stood: isAceSplit,
-    busted: false,
-    isNatural: false,
-    isSplit: true,
-  }
-  hand.state.hands = [handA, handB]
-  hand.state.activeHandIdx = 0
-
-  advanceTurn(hand.state)   // possibly skip past stood ace hands
+  // Each hand takes one card and a fresh draw; split aces stand (lib/casinoRules).
+  splitTable(hand.state, initialWager)
   const totalWagered = hand.total_wagered + initialWager
   await persistActiveHand(hand.id, hand.state, totalWagered)
 
