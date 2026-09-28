@@ -6,8 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { RAID_MAP, computeRaidMap, type RaidNodeView } from '@/lib/raidMap'
 import { GAUNTLET_LIVE, GAUNTLET_UNLOCK_NODE } from '@/lib/gauntlet'
-import { raidDamageProfile } from '@/lib/expeditions'
-import { getActiveEffects, exclusiveSiblingOf, effectiveOwnedItems } from '@/lib/raidItems'
+import { exclusiveSiblingOf, effectiveOwnedItems } from '@/lib/raidItems'
 import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { buildClearedSet } from '@/lib/raidProgress'
 import { loadDeployedParty } from '@/lib/crewData'
@@ -17,7 +16,7 @@ import { aggregateShipClasses } from '@/lib/shipClasses'
 import { GATE_NODE_TO_LEGENDARY, slugToCardKey, type UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { eyeCharge } from '@/lib/finnItems'
 import { grant, spend, walletAdd, arrayAdd } from '@/lib/wallet'
-import { rngNext } from '@/lib/rng'
+import { mapNodeRefusal, throwDice, dpsPreview, dpsShot } from '@/lib/raidRules'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -580,29 +579,21 @@ export async function rollDiceNode(
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
-  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
-
   const cleared = await buildClearedSet(admin, user.id, profile)
-  if (cleared.has(nodeId)) return { error: 'Already thrown' }
-  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
   const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
-  if (node.requiresNavLevel && navLevel < node.requiresNavLevel) return { error: 'Locked' }
+  const gate = mapNodeRefusal(node, { isAdmin: profile.is_admin === true, cleared, navLevel }, 'Already thrown')
+  if (gate) return { error: gate }
 
   const doubloons = profile.doubloons ?? 0
   if (option.requiresDoubloons && doubloons < option.requiresDoubloons) {
     return { error: `Need ${option.requiresDoubloons.toLocaleString()} doubloons to risk it` }
   }
 
-  const bonus = Math.min(node.dice.maxBonus, Math.floor(navLevel / node.dice.bonusPerLevels))
-  const roll = 1 + Math.floor(rngNext() * 20)
-  const total = roll + bonus
-  const success = total >= option.dc
-  const outcome = success ? option.win : option.miss
-
-  const rawDoubloons = doubloons + (outcome.doubloons ?? 0)
-  let newDoubloons = Math.max(0, rawDoubloons)
-  let doubloonsDelta = newDoubloons - doubloons // clamped actual movement
-  const navXpDelta = outcome.navXp ?? 0
+  // The d20, the Navigation bonus and the clamped coin: lib/raidRules throwDice.
+  const thrown = throwDice(node.dice, option, navLevel, doubloons)
+  const { roll, bonus, total, success, navXpDelta } = thrown
+  let doubloonsDelta = thrown.doubloonsDelta // clamped actual movement
+  let newDoubloons = doubloons + doubloonsDelta
   const newExpeditionXp = ((profile.expedition_xp as number | null) ?? 0) + navXpDelta
 
   const prog = (profile.raid_node_progress as { cleared?: string[]; choices?: Record<string, string> } | null) ?? {}
@@ -644,17 +635,6 @@ export async function rollDiceNode(
   return { roll, bonus, total, dc: option.dc, success, doubloonsDelta, navXpDelta, newDoubloons, newExpeditionXp }
 }
 
-// Server-side shot-damage roll — mirrors RaidCombat.rollShotDamage exactly, off
-// the shared raidDamageProfile, so the DPS check uses the player's real cannon.
-function rollDpsShot(res: 'critical' | 'hit' | 'graze' | 'miss', shipMinDamage: number, totalPower: number, damagePct: number): number {
-  if (res === 'miss') return 0
-  const { hitMin, powerMax, critMax } = raidDamageProfile(totalPower, shipMinDamage, damagePct)
-  if (res === 'critical') { const min = shipMinDamage * 2; return Math.floor(rngNext() * (critMax - min + 1)) + min }
-  if (res === 'hit') return Math.floor(rngNext() * (powerMax - hitMin + 1)) + hitMin
-  const grazeMax = Math.max(1, Math.ceil(powerMax * 0.4))
-  return Math.floor(rngNext() * grazeMax) + 1
-}
-
 // Preview for the DPS check — the player's non-crit hit range, gear/class
 // multiplier, and computed odds of clearing the threshold. Read-only; the node
 // sheet shows this up front so the shot is an informed call.
@@ -669,18 +649,9 @@ export async function getDpsCheckPreview(nodeId: string): Promise<
   if (!node || node.type !== 'dps_check' || !node.dpsCheck) return { error: 'Invalid node' }
 
   const stats = await getRaidPlayerStats(user.id)
-  const dmgProfile = raidDamageProfile(stats.totalPower, stats.shipMinDamage, stats.raidMods.damagePct)
-  const rangeMin = dmgProfile.hitMin
-  const rangeMax = dmgProfile.powerMax
-  const noncritMult = getActiveEffects(stats.equippedRaidItems)
-    .filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
-  const mult = stats.classDamageMult * noncritMult
   const threshold = node.dpsCheck.threshold
-  // Chance a uniform hit roll clears the threshold after the multiplier.
-  const needRoll = Math.ceil(threshold / mult)
-  const total = rangeMax - rangeMin + 1
-  const passing = Math.max(0, rangeMax - Math.max(rangeMin, needRoll) + 1)
-  const passChance = total > 0 ? Math.max(0, Math.min(100, Math.round((passing / total) * 100))) : 0
+  // The hit range, the multiplier and the odds: lib/raidRules dpsPreview.
+  const { rangeMin, rangeMax, mult, passChance } = dpsPreview(stats, threshold)
   return { rangeMin, rangeMax, mult, threshold, passChance, power: stats.totalPower, shipMinDamage: stats.shipMinDamage }
 }
 
@@ -713,13 +684,10 @@ export async function resolveDpsCheck(
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
-  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
-
   const cleared = await buildClearedSet(admin, user.id, profile)
-  if (cleared.has(nodeId)) return { error: 'Already cleared' }
-  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
   const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
-  if (node.requiresNavLevel && navLevel < node.requiresNavLevel) return { error: 'Locked' }
+  const gate = mapNodeRefusal(node, { isAdmin: profile.is_admin === true, cleared, navLevel }, 'Already cleared')
+  if (gate) return { error: gate }
 
   const dc = node.dpsCheck
   const uid = user.id
@@ -768,18 +736,9 @@ export async function resolveDpsCheck(
   // there is nothing to hold in reserve and nothing to gate the attempt on.
   // No aiming — always a straight (non-critical) HIT. The hit RANGE comes from
   // the player's stats (ship + crew power), so the breakdown can show it; the
-  // roll within it is the luck. Bounds mirror rollDpsShot's 'hit' branch.
-  const stats = await getRaidPlayerStats(user.id)
-  const dmgProfile = raidDamageProfile(stats.totalPower, stats.shipMinDamage, stats.raidMods.damagePct)
-  const rangeMin = dmgProfile.hitMin
-  const rangeMax = dmgProfile.powerMax
-  const base = rollDpsShot('hit', stats.shipMinDamage, stats.totalPower, stats.raidMods.damagePct)
-  const noncritMult = getActiveEffects(stats.equippedRaidItems)
-    .filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
-  const mult = stats.classDamageMult * noncritMult
-  const damage = Math.round(base * mult)
-  const passed = damage >= dc.threshold
-  const breakdown: DpsBreakdown = { roll: base, rangeMin, rangeMax, mult }
+  // roll within it is the luck.
+  // The shot and its breakdown: lib/raidRules dpsShot.
+  const { damage, passed, breakdown } = dpsShot(await getRaidPlayerStats(user.id), dc.threshold)
 
   if (passed) {
     const done = await settle(0, 'passed')

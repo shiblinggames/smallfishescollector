@@ -1,5 +1,7 @@
 'use server'
 
+import { clockNow } from '@/lib/clock'
+
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
@@ -276,7 +278,7 @@ export async function startAbyssalConversion(epicId: string): Promise<
   if (owned.includes(legendaryId)) return { error: 'You already own the legendary version.' }
   const conversion: AbyssalConversion = {
     epicId, legendaryId,
-    completesAt: new Date(Date.now() + ABYSSAL_ACCEL_MS).toISOString(),
+    completesAt: new Date(clockNow() + ABYSSAL_ACCEL_MS).toISOString(),
   }
   const newOwned = owned.filter(id => id !== epicId)
   const equipped = ((profile.equipped_raid_items as string[] | null) ?? []).filter(id => id !== epicId)
@@ -323,7 +325,7 @@ export async function claimAbyssalConversion(): Promise<
     .single()
   const conversion = parseAbyssalConversion(profile?.abyssal_conversion)
   if (!conversion) return { error: 'Nothing to claim.' }
-  if (!isConversionReady(conversion, Date.now())) return { error: 'It’s still transmuting.' }
+  if (!isConversionReady(conversion, clockNow())) return { error: 'It’s still transmuting.' }
 
   const owned = (profile?.raid_items as string[] | null) ?? []
   const newOwned = owned.includes(conversion.legendaryId) ? owned : [...owned, conversion.legendaryId]
@@ -415,7 +417,7 @@ export async function startUltimateBuild(id: string): Promise<{ ok: boolean; err
   }
   // A build already underway can't be double-started (re-pick it instead).
   const existing = parseAugmentBuild(profile.manowar_augment_build ?? null)
-  if (existing && !isBuildComplete(existing, Date.now())) {
+  if (existing && !isBuildComplete(existing, clockNow())) {
     return { ok: false, error: 'A weapon is already being built. Change your pick instead.' }
   }
 
@@ -432,7 +434,7 @@ export async function startUltimateBuild(id: string): Promise<{ ok: boolean; err
   const newDoubloons = await spend(admin, user.id, 'doubloons', AUGMENT_COST)
   if (newDoubloons == null) return { ok: false, error: `You need ${AUGMENT_COST.toLocaleString()} doubloons.` }
 
-  const completesAt = new Date(Date.now() + ULTIMATE_BUILD_MS).toISOString()
+  const completesAt = new Date(clockNow() + ULTIMATE_BUILD_MS).toISOString()
   const build: ShipAugmentBuild = { id: augment.id, completesAt }
   // Conditional write: only start if no build is in flight (guards a double-tap).
   const { data: updated } = await admin.from('profiles')
@@ -466,7 +468,7 @@ export async function swapUltimateBuild(id: string): Promise<{ ok: boolean; erro
   const { data: profile } = await admin.from('profiles')
     .select('manowar_augment, manowar_augment_build').eq('id', user.id).single()
   const existing = parseAugmentBuild(profile?.manowar_augment_build ?? null)
-  if (!existing || isBuildComplete(existing, Date.now())) {
+  if (!existing || isBuildComplete(existing, clockNow())) {
     return { ok: false, error: 'No build in progress.' }
   }
   if (existing.id === augment.id) return { ok: true }
@@ -500,14 +502,14 @@ export async function startUltimateRetool(id: string): Promise<{ ok: boolean; er
   if (profile.manowar_augment === augment.id) return { ok: false, error: 'That weapon is already mounted.' }
   if (profile.manowar_schematics === true) return { ok: false, error: 'You own the Full Schematics. Switch freely instead.' }
   const existing = parseAugmentBuild(profile.manowar_augment_build ?? null)
-  if (existing && !isBuildComplete(existing, Date.now())) {
+  if (existing && !isBuildComplete(existing, clockNow())) {
     return { ok: false, error: 'The shipwrights are already at work. Change their pick instead.' }
   }
 
   const newDoubloons = await spend(admin, user.id, 'doubloons', RETOOL_COST)
   if (newDoubloons == null) return { ok: false, error: `You need ${RETOOL_COST.toLocaleString()} doubloons.` }
 
-  const completesAt = new Date(Date.now() + ULTIMATE_BUILD_MS).toISOString()
+  const completesAt = new Date(clockNow() + ULTIMATE_BUILD_MS).toISOString()
   const build: ShipAugmentBuild = { id: augment.id, completesAt, retool: true }
   // Conditional write guards a double-tap, same as the first build.
   const { data: updated } = await admin.from('profiles')

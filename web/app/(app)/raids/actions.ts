@@ -3,19 +3,18 @@
 import { inCaptainsWater } from '@/lib/captainWater'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { raidDamageProfile, fortuneLootMult } from '@/lib/expeditions'
+import { raidDamageProfile } from '@/lib/expeditions'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
-import { aggregateShipClasses } from '@/lib/shipClasses'
 import { computeRaidMap } from '@/lib/raidMap'
 import { buildClearedSet } from '@/lib/raidProgress'
-import { getRaidConfigById, rollRaidCurrency, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
-import { rollCrate, isChallengeRaid } from '@/lib/raidLoot'
+import { getRaidConfigById, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
 import { flagAnomaly } from '@/lib/anomaly'
 import { issueRunToken, markRunCleared, markRunLooted } from '@/lib/runToken'
 import { logBountyEvent } from '@/lib/bountyEvents'
 import { RAID_DAMAGE_MIN } from '@/lib/bounties'
 import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { grant, arrayAdd } from '@/lib/wallet'
+import { rollRaidCrate, clearTimes, MIN_PLAUSIBLE_CLEAR_MS } from '@/lib/raidRules'
 
 // RaidCrewMember, RaidPlayerStats and getRaidPlayerStats live in
 // lib/raidPlayerStats.ts. As an export of this 'use server' file the loader was
@@ -104,7 +103,6 @@ export async function recordRaidClear(raidId: string, elapsedMs: number, token?:
 
   // A clear cannot be faster than the shortest honest fight. Anything under this
   // is a forged time reaching for the global record, not a good run.
-  const MIN_PLAUSIBLE_CLEAR_MS = 20_000
   if (elapsedMs < MIN_PLAUSIBLE_CLEAR_MS) {
     await flagAnomaly(admin, user.id, 'implausible:raidClearTime', 3, { raidId, elapsedMs })
     return null
@@ -166,21 +164,8 @@ export async function recordRaidClear(raidId: string, elapsedMs: number, token?:
   // Insert this run.
   await admin.from('raid_completions').insert({ user_id: user.id, elapsed_ms: ms, raid_id: raidId })
 
-  const yourBestMs = prevMyBest == null ? ms : Math.min(prevMyBest, ms)
-  const isPersonalBest = prevMyBest == null || ms < prevMyBest
-
-  let globalBestMs = prevGlobalBest
-  let globalBestUsername = prevGlobalUser
-  let isGlobalBest = false
-  if (!iAmAdmin) {
-    if (prevGlobalBest == null || ms < prevGlobalBest) {
-      globalBestMs = ms
-      globalBestUsername = myName
-      isGlobalBest = true
-    }
-  }
-
-  return { yourBestMs, globalBestMs, globalBestUsername, isPersonalBest, isGlobalBest }
+  // The records (an admin's clear never takes the global one): lib/raidRules clearTimes.
+  return clearTimes(ms, prevMyBest, prevGlobalBest == null ? null : { ms: prevGlobalBest, username: prevGlobalUser }, { username: myName, isAdmin: iAmAdmin })
 }
 
 /**
@@ -350,42 +335,23 @@ export async function claimRaidLoot(
     return noLoot()
   }
 
-  // THE UNIQUES, rolled here. Same inputs the client's preview roll uses: the
-  // uniques already owned drop out, crew Fortune lifts item odds (capped 2x),
-  // Kingpin's Cut lifts legendaries.
-  const stats = await getRaidPlayerStats(user.id)
-  const owned = new Set<string>([...stats.shipSkins, ...stats.ownedRaidItems, ...stats.ownedSpecialItems])
-  const crate = rollCrate(config.loot, owned, config.uniqueShare, stats.legendaryLootMult, fortuneLootMult(stats.totalFortune), isChallengeRaid(raidId))
-  const itemIds = crate.itemIdxs.map(i => config.loot[i].id)
-
-  // WORTH THAT MUCH? The exact figure can't be recomputed (tides are rolled
-  // mid-run on the client), but it can be bounded. See MAX_CRATE_BASE_DOUBLOONS.
-  const claimedBase = Number.isFinite(baseDoubloons) ? Math.floor(baseDoubloons) : 0
-  const safeBaseDoubloons = Math.max(0, Math.min(claimedBase, MAX_CRATE_BASE_DOUBLOONS))
-  if (claimedBase > MAX_CRATE_BASE_DOUBLOONS) {
+  // THE CRATE, rolled here with the inputs the combat sheet's preview uses
+  // (owned uniques drop out, Fortune and Kingpin's Cut lift the odds), the coin
+  // clamped to MAX_CRATE_BASE_DOUBLOONS and class-scaled, and the currency row
+  // drawn: a gem row pays gems INSTEAD of the coin. lib/raidRules rollRaidCrate.
+  const crate = rollRaidCrate({
+    raidId, config, stats: await getRaidPlayerStats(user.id), baseDoubloons,
+    shipClasses: (profile?.ship_classes as Record<string, string> | null) ?? {},
+  })
+  const { itemIds, currencyId, currencyGems, crateDoubloons } = crate
+  if (crate.capTripped) {
     await flagAnomaly(admin, user.id, 'cap_trip:claimRaidLoot_doubloons',
-      claimedBase > MAX_CRATE_BASE_DOUBLOONS * 5 ? 3 : 2,
-      { raidId, claimed: claimedBase, ceiling: MAX_CRATE_BASE_DOUBLOONS })
+      crate.claimedBase > MAX_CRATE_BASE_DOUBLOONS * 5 ? 3 : 2,
+      { raidId, claimed: crate.claimedBase, ceiling: MAX_CRATE_BASE_DOUBLOONS })
   }
 
-  // Helmsman + future doubloon-mult class picks scale the crate doubloons too,
-  // in addition to the per-kill gold (which scales via awardRaidKill).
-  const classPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
-  const classDoubloonMult = aggregateShipClasses(classPicks).doubloonMult
-  const scaledBaseDoubloons = Math.round(safeBaseDoubloons * classDoubloonMult)
-
-  // ── THE CURRENCY ROW, drawn HERE ───────────────────────────────────────────
-  // The crate's currency half is rolled server-side and paid out as whatever it
-  // lands on, which is what the reel has always claimed to be doing. A gem row
-  // pays gems INSTEAD of the coin roll, not on top: the reel shows one reward
-  // and one is what you get.
-  const currencyId = rollRaidCurrency(raidId)
-  const currencyGrant = currencyId ? ITEM_GRANTS[currencyId] : undefined
-  const currencyGems = currencyGrant?.gems ?? 0
-  const crateDoubloons = currencyGems > 0 ? 0 : scaledBaseDoubloons
-
-  let doubloons = crateDoubloons
-  let gems      = currencyGems
+  const doubloons = crateDoubloons + crate.itemDoubloons
+  const gems      = currencyGems + crate.itemGems
   const newShipSkins: string[] = []
   const newRaidItems: string[] = []
   let grantedSpecial: string | null = null   // a has_* column to flip, if a special item dropped
@@ -395,8 +361,6 @@ export async function claimRaidLoot(
   for (const id of itemIds) {
     const g = ITEM_GRANTS[id]
     if (!g) continue
-    if (g.doubloons) doubloons += g.doubloons
-    if (g.gems)      gems      += g.gems
     // Owned things are added once, in place: a concurrent forge or purchase
     // writing the same array is never overwritten by a stale copy.
     if (g.shipSkin && await arrayAdd(admin, user.id, 'ship_skins', g.shipSkin)) newShipSkins.push(g.shipSkin)

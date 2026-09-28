@@ -2,11 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { aggregateShipClasses } from '@/lib/shipClasses'
-import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
+import type { RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { getRaidConfigById } from '@/lib/raidRegistry'
-import { raidCompletionBonusXp } from '@/lib/bossRaids'
+import { raidKillReward } from '@/lib/raidRules'
 import { flagAnomaly } from '@/lib/anomaly'
 import { claimRaidRound } from '@/lib/runToken'
 import { eyeCharge } from '@/lib/finnItems'
@@ -60,28 +59,20 @@ export async function awardRaidKill(
     return NOTHING
   }
 
-  const isBoss = r === config.sequence.length
-  const enemyId = isBoss ? config.bossId : config.sequence[r]
-  const reward = config.killRewards[enemyId]
-  const xp = (reward?.xp ?? 0) + (isBoss ? raidCompletionBonusXp(config) : 0)
-  const doubloons = reward?.gold ?? 0
-
   const { data: profile } = await admin
     .from('profiles')
     .select('expedition_xp, ship_classes, nav_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
 
-  // Ship-class doubloon multiplier (Helmsman + future picks). Applied
-  // server-side so the client can't inflate it. XP isn't class-modified
-  // (gunner doesn't earn more XP per fight, they just hit harder);
-  // only the gold scales. Nav Renown (Plunder) stacks a tiny bit more gold,
-  // and (Command) a tiny bit more crew XP — both identity when unallocated.
-  const classPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
-  const navRenown = navRenownEffects(profile?.nav_renown_alloc as RenownAlloc | null)
-  const doubloonMult = aggregateShipClasses(classPicks).doubloonMult * navRenown.doubloonMult
-  const scaledDoubloons = Math.round(doubloons * doubloonMult)
-  const crewXP_amount = Math.round(xp * navRenown.crewXpMult)
+  // What the round pays is lib/raidRules raidKillReward: the config's own
+  // killRewards line (plus the full-clear bonus on the boss), gold scaled by
+  // ship classes and Nav Renown (Plunder), crew XP by Renown (Command). The
+  // round was bounds-checked above, so a reward always comes back.
+  const pay = raidKillReward(config, r, profile?.ship_classes as Record<string, string> | null, profile?.nav_renown_alloc as RenownAlloc | null)!
+  const xp = pay.xp
+  const scaledDoubloons = pay.doubloons
+  const crewXP_amount = pay.crewXp
 
   const newExpeditionXP  = (profile?.expedition_xp ?? 0) + xp
   // Raid kills are Navigation XP, so they charge The Primeval Eye. Gate lives
