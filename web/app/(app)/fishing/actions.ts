@@ -28,6 +28,7 @@ import { type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_SELL_MULT } from '@/lib/shiny'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
 import { arrayAdd, grant, spend } from '@/lib/wallet'
+import { fishingData, type FishingData } from '@/lib/data/fishingData'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -77,13 +78,11 @@ export type WaitingFolk = { folkId: string; short: string; fishName: string }
  * Best-effort and read-only: a failed read costs a line of text, never the
  * catch, which has already landed by the time this runs.
  */
-async function folkWaitingOn(admin: ReturnType<typeof createAdminClient>, userId: string, fishId: number): Promise<WaitingFolk[]> {
+async function folkWaitingOn(db: FishingData, userId: string, fishId: number): Promise<WaitingFolk[]> {
   try {
-    const { data } = await admin.from('sea_rapport')
-      .select('folk_id').eq('user_id', userId).eq('want_fish_id', fishId)
     const out: WaitingFolk[] = []
-    for (const r of (data ?? []) as { folk_id: string }[]) {
-      const f = folkById(r.folk_id)
+    for (const folkId of await db.folkWanting(userId, fishId)) {
+      const f = folkById(folkId)
       const fav = f?.favourites.find(x => x.id === fishId)
       if (f && fav) out.push({ folkId: f.id, short: f.short, fishName: fav.name })
     }
@@ -114,17 +113,14 @@ export async function castLine(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const admin = createAdminClient()
+  // Every read and write goes through lib/data/fishingData.
+  const db = fishingData(createAdminClient())
 
   // Which patch of water this is, if any. Derived, never trusted.
   const spot = at ? hotspotAt(at.x, at.y) : null
   const hs = hotspotEffect(spot?.kind, spot?.tier)
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, ancient_vigil, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels, is_premium, premium_expires_at, is_admin')
-    .eq('id', user.id)
-    .single()
+  const profile = await db.profile(user.id, 'rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, ancient_vigil, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels, is_premium, premium_expires_at, is_admin')
 
   if (!profile) return { error: 'Profile not found' }
 
@@ -132,7 +128,7 @@ export async function castLine(
   // where a deferred species credit lands. Runs before the early returns below
   // (hold full, no bait) — the catch card is already gone either way, so the
   // reroll is forfeit and the fish they actually kept has to be logged.
-  await settleDeferredSpeciesCredit(admin, user.id, profile)
+  await settleDeferredSpeciesCredit(db, user.id, profile)
 
   const bait = getBait(baitType)
   const renownFishing = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null)
@@ -150,9 +146,7 @@ export async function castLine(
   // (defeating the Quartermaster). `has_ancient_deep_access` grandfathers anyone
   // who already had access + sticky-caches the unlock so this only queries once.
   if (habitat === 'ancient_deep' && (profile as { has_ancient_deep_access?: boolean }).has_ancient_deep_access !== true) {
-    const { data: ch3 } = await admin.from('raid_completions')
-      .select('id').eq('user_id', user.id).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle()
-    if (!ch3) {
+    if (!(await db.hasCleared(user.id, 'the_quartermaster'))) {
       return { error: 'Clear Chapter 3 (defeat the Quartermaster) to reach the Ancient Deep.' }
     }
     // ── AND IT IS CAPTAIN'S WATER ─────────────────────────────────────────
@@ -160,7 +154,7 @@ export async function castLine(
     // is the grandfather: anybody who had already cast in this water keeps
     // it. See lib/captainWater.
     if (!inCaptainsWater(profile)) return { error: CAPTAIN_WATER_SAYS.ancient }
-    await admin.from('profiles').update({ has_ancient_deep_access: true }).eq('id', user.id)
+    await db.updateProfile(user.id, { has_ancient_deep_access: true })
   }
 
   // Derive event effects server-side — never trust client flags
@@ -170,10 +164,10 @@ export async function castLine(
 
   // Fetch hold, bait, and candidates in parallel
   const fishHold = getFishHold(profile.fish_hold_tier ?? 0)
-  const [{ data: holdRows }, { data: baitRow }, { data: candidates }] = await Promise.all([
-    admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
-    admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', baitType).single(),
-    admin.from('fish_species').select('id, catch_difficulty, catch_score, bite_rarity, sell_value').eq('habitat', habitat),
+  const [totalFish, baitHeld, candidates] = await Promise.all([
+    db.holdCount(user.id),
+    db.baitCount(user.id, baitType),
+    db.candidates(habitat),
   ])
 
   // Hold check applies to every zone now. Used to bypass for ancient_deep
@@ -186,7 +180,6 @@ export async function castLine(
   // Trophy-bias note: yes, this also blocks a lure-only cast that might
   // have landed a trophy. Acceptable — the player can dump a single fish
   // to make room and try again. Worth it to fix the silent-drop bug.
-  const totalFish = (holdRows ?? []).reduce((sum, r) => sum + (r.quantity ?? 0), 0)
   if (totalFish >= fishHold.capacity) {
     return { error: `Fish hold full (${fishHold.capacity}/${fishHold.capacity}). Sell some fish to make room.` }
   }
@@ -211,20 +204,20 @@ export async function castLine(
   const live = (profile as { pending_cast?: PendingCast | null }).pending_cast ?? null
   const resuming = !!live?.shot && live.habitat === habitat
 
-  if (!noBait && (!baitRow || baitRow.quantity <= 0)) return { error: 'No bait remaining.' }
+  if (!noBait && (baitHeld == null || baitHeld <= 0)) return { error: 'No bait remaining.' }
 
   if (resuming && live?.shot) {
-    if (!noBait && baitRow) {
-      await admin.from('bait_inventory').update({ quantity: baitRow.quantity - 1 }).eq('user_id', user.id).eq('bait_type', baitType)
-      void admin.rpc('bump_profile_json_counter', { uid: user.id, col: 'bait_used', key: baitType, n: 1 }).then(() => {}, () => {})
+    if (!noBait && baitHeld != null) {
+      await db.setBaitCount(user.id, baitType, baitHeld - 1)
+      void db.bumpJsonCounter(user.id, 'bait_used', baitType, 1).catch(() => {})
     }
     // A re-cast is a cast for the career stat, even though the roll is the same.
-    void admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_casts', n: 1 }).then(() => {}, () => {})
+    void db.bumpStat(user.id, 'fishing_casts', 1).catch(() => {})
     // Walking away mid-catch still breaks the streak, exactly as before.
     if (((profile as { current_perfect_streak?: number }).current_perfect_streak ?? 0) > 0) {
-      await admin.from('profiles').update({ current_perfect_streak: 0 }).eq('id', user.id)
+      await db.updateProfile(user.id, { current_perfect_streak: 0 })
     }
-    return { ...live.shot, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
+    return { ...live.shot, baitRemaining: !noBait && baitHeld != null ? baitHeld - 1 : undefined }
   }
 
   // TEST ACCOUNT hook: kingkong always hooks an uncaught Ancient trophy in the
@@ -251,7 +244,7 @@ export async function castLine(
   // bait) costs nothing.
   const roll = rollCast({
     habitat, baitType,
-    candidates: candidates ?? [],
+    candidates,
     fishingLevel,
     // THE FIRST ONE IS ALWAYS A FISH, and the commonest one: a captain with no
     // fishing XP is on the tour's first catch.
@@ -280,26 +273,22 @@ export async function castLine(
   // stays set and the next cast zeroes the streak through the same path.
   const castUpdate: Record<string, unknown> = { last_used_bait: baitType, catch_pending: true }
   if (profile.catch_pending) castUpdate.current_perfect_streak = 0
-  void admin.from('profiles').update(castUpdate).eq('id', user.id).then(() => {}, () => {})
+  void db.updateProfile(user.id, castUpdate).catch(() => {})
 
   // Lifetime "Lines Cast" career stat — bump once per committed cast.
-  void admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_casts', n: 1 }).then(() => {}, () => {})
+  void db.bumpStat(user.id, 'fishing_casts', 1).catch(() => {})
 
-  if (!noBait && baitRow) {
-    await admin
-      .from('bait_inventory')
-      .update({ quantity: baitRow.quantity - 1 })
-      .eq('user_id', user.id)
-      .eq('bait_type', baitType)
-    void admin.rpc('bump_profile_json_counter', { uid: user.id, col: 'bait_used', key: baitType, n: 1 }).then(() => {}, () => {})
+  if (!noBait && baitHeld != null) {
+    await db.setBaitCount(user.id, baitType, baitHeld - 1)
+    void db.bumpJsonCounter(user.id, 'bait_used', baitType, 1).catch(() => {})
   }
 
   // Persist the server-rolled token: reelIn / reelCrate bind to THIS (the fish,
   // the crate tier, the haul) and clear it one-shot, so the client can never
   // name its own. Awaited so it commits before the client can call back.
-  await admin.from('profiles').update({ pending_cast: roll.token }).eq('id', user.id)
+  await db.updateProfile(user.id, { pending_cast: roll.token })
 
-  return { ...roll.shot, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
+  return { ...roll.shot, baitRemaining: !noBait && baitHeld != null ? baitHeld - 1 : undefined }
 }
 
 const PERFECT_BAIT_SAVE_CHANCE = 0.5
@@ -319,26 +308,15 @@ const PERFECT_BAIT_SAVE_CHANCE = 0.5
  *  last sighting, and every aggregate built on them survive. Fire-and-forget,
  *  since a lost lifetime tick must never cost the player the catch itself. */
 async function logCatchToBestiary(
-  admin: ReturnType<typeof createAdminClient>,
+  db: FishingData,
   userId: string,
   fishId: number,
 ): Promise<boolean> {
   const now = new Date().toISOString()
-  void admin.rpc('bump_fish_lifetime', { uid: userId, fid: fishId, n: 1, at: now })
-    .then(() => {}, () => {})
-
-  const { data: existing } = await admin
-    .from('fish_collection').select('catch_count')
-    .eq('user_id', userId).eq('fish_id', fishId).maybeSingle()
-  if (!existing) {
-    await admin.from('fish_collection').insert({ user_id: userId, fish_id: fishId, catch_count: 1 })
-    return true
-  }
-  await admin.from('fish_collection').update({
-    catch_count: existing.catch_count + 1,
-    last_caught_at: now,
-  }).eq('user_id', userId).eq('fish_id', fishId)
-  return false
+  void db.bumpLifetime(userId, fishId, now).catch(() => {})
+  const existing = await db.collectionRow(userId, fishId)
+  await db.logCatch(userId, fishId, existing, now)
+  return !existing
 }
 
 /** Settle a species credit that reelIn deferred because a wormhole reroll was
@@ -349,18 +327,15 @@ async function logCatchToBestiary(
  *
  *  Clears the token whatever happens, so a catch can only ever settle once. */
 async function settleDeferredSpeciesCredit(
-  admin: ReturnType<typeof createAdminClient>,
+  db: FishingData,
   userId: string,
   profile: { pending_reroll?: unknown; lifetime_species?: unknown; line_tier?: number | null; prestige_levels?: unknown } | null,
 ) {
   const pending = (profile?.pending_reroll ?? null) as { fishId: number } | null
   if (!pending) return
-  const { data: claimed } = await admin
-    .from('profiles').update({ pending_reroll: null })
-    .eq('id', userId).not('pending_reroll', 'is', null).select('id')
-  if (!claimed || claimed.length === 0) return
-  const wasNew = await logCatchToBestiary(admin, userId, pending.fishId)
-  if (wasNew) await creditNewSpecies(admin, userId, pending.fishId, profile)
+  if (!(await db.claimPendingReroll(userId))) return
+  const wasNew = await logCatchToBestiary(db, userId, pending.fishId)
+  if (wasNew) await creditNewSpecies(db, userId, pending.fishId, profile)
 }
 
 /** Settle a deferred credit from OUTSIDE the cast loop — specifically the
@@ -383,7 +358,7 @@ export async function settlePendingCatchCredit(): Promise<void> {
   if (!user) return
   const profile = await getCurrentProfile()
   if (!profile?.pending_reroll) return
-  await settleDeferredSpeciesCredit(createAdminClient(), user.id, profile)
+  await settleDeferredSpeciesCredit(fishingData(createAdminClient()), user.id, profile)
 }
 
 /** Everything that has to happen the first time a species is landed, shared by
@@ -392,34 +367,33 @@ export async function settlePendingCatchCredit(): Promise<void> {
  *  in reelIn, which left a wormhole-only species short of a line-tier bump and
  *  the Full Collection badge. */
 async function creditNewSpecies(
-  admin: ReturnType<typeof createAdminClient>,
+  db: FishingData,
   userId: string,
   newFishId: number,
   profile: { lifetime_species?: unknown; line_tier?: number | null; prestige_levels?: unknown } | null,
 ) {
-  const [{ data: nonAncientSpecies }, { data: caughtRows }] = await Promise.all([
-    admin.from('fish_species').select('id').neq('habitat', 'ancient_deep'),
-    admin.from('fish_collection').select('fish_id').eq('user_id', userId),
+  const [nonAncientIds, caught] = await Promise.all([
+    db.nonAncientSpeciesIds(),
+    db.collectionIds(userId),
   ])
-  const caughtIds = new Set(((caughtRows ?? []) as { fish_id: number }[]).map(r => r.fish_id))
+  const caughtIds = new Set(caught)
   // Lifetime species set — only ever grows, so a prestige wipe can't set the
   // collection badges back. Union the stored set with the current collection
   // (self-heals any drift) and this catch, and persist it if it grew.
   const storedLifetime = (profile?.lifetime_species as number[] | null) ?? []
   const lifetimeSet = new Set<number>([...storedLifetime, ...caughtIds, newFishId])
   if (lifetimeSet.size > storedLifetime.length) {
-    await admin.from('profiles').update({ lifetime_species: [...lifetimeSet] }).eq('id', userId)
+    await db.updateProfile(userId, { lifetime_species: [...lifetimeSet] })
   }
   // Line tier progresses on TOTAL species caught (Ancient Deep included).
   const newLineTier = getLineForSpeciesCount(lifetimeSet.size).tier
   if (newLineTier > (profile?.line_tier ?? 0)) {
-    await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', userId)
+    await db.updateProfile(userId, { line_tier: newLineTier })
   }
   // Full Collection = every NON-ancient species landed. The Ancient Deep
   // giants are a separate trophy hunt (their own badges), so they don't count
   // here — matches the badges-page rule. Judged off the lifetime set so a
   // prestige before the badge lands doesn't lock it out.
-  const nonAncientIds = ((nonAncientSpecies ?? []) as { id: number }[]).map(s => s.id)
   const nonAncientCaught = nonAncientIds.filter(id => lifetimeSet.has(id)).length
   // Prestiging all four zones proves the whole non-ancient set too (see lib/collection).
   if ((nonAncientIds.length > 0 && nonAncientCaught >= nonAncientIds.length) || hasPrestigedAllZones(profile?.prestige_levels as Record<string, number> | null)) {
@@ -532,47 +506,38 @@ export async function reelIn(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
+  // Every read and write goes through lib/data/fishingData. `admin` stays for
+  // the shared helpers (wallet, anomaly flags, the daily challenge set).
   const admin = createAdminClient()
+  const db = fishingData(admin)
   const isCatch = result === 'perfect' || result === 'catch'
 
   // Snag: consume one extra bait. The bait is the one the CAST used, off the
   // server's token, never the caller's argument.
   if (result === 'penalty') {
-    const { data: castRow } = await admin
-      .from('profiles').select('pending_cast').eq('id', user.id).single()
-    const snagBait = (castRow?.pending_cast as PendingCast | null)?.baitType
-    const { data: baitRow } = snagBait
-      ? await admin
-        .from('bait_inventory')
-        .select('quantity')
-        .eq('user_id', user.id)
-        .eq('bait_type', snagBait)
-        .single()
-      : { data: null }
+    const snagBait = (await db.pendingCast(user.id))?.baitType
+    const baitHeld = snagBait ? await db.baitCount(user.id, snagBait) : null
 
-    if (snagBait && baitRow && baitRow.quantity > 0) {
-      await admin
-        .from('bait_inventory')
-        .update({ quantity: baitRow.quantity - 1 })
-        .eq('user_id', user.id)
-        .eq('bait_type', snagBait)
-        .eq('quantity', baitRow.quantity)
+    // Only if the count still reads what we saw: a snag racing a cast must
+    // not charge twice.
+    if (snagBait && baitHeld != null && baitHeld > 0) {
+      await db.setBaitCount(user.id, snagBait, baitHeld - 1, baitHeld)
     }
     // Lifetime snag counter (line lost) — admin stat.
-    await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_snags', n: 1 })
+    await db.bumpStat(user.id, 'fishing_snags', 1)
   }
 
   if (!isCatch) {
     // A missed / snagged cast breaks the perfect streak — server-authoritative
     // (the client value is never trusted). Also clears the in-flight flag AND
     // the pending-cast token so it can't be reeled later.
-    await admin.from('profiles').update({ current_perfect_streak: 0, catch_pending: false, pending_cast: null }).eq('id', user.id)
+    await db.updateProfile(user.id, { current_perfect_streak: 0, catch_pending: false, pending_cast: null })
     return { caught: false }
   }
 
-  const [{ data: profile }, { data: holdRows }] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, line_tier, prestige_levels, ancient_catches, ancient_vigil, unlocked_pets, unlocked_character_colors, total_perfects, zone_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
-    admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
+  const [profile, holdCount] = await Promise.all([
+    db.profile(user.id, 'doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, line_tier, prestige_levels, ancient_catches, ancient_vigil, unlocked_pets, unlocked_character_colors, total_perfects, zone_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species'),
+    db.holdCount(user.id),
   ])
 
   if (!profile) {
@@ -642,7 +607,7 @@ export async function reelIn(
    * caller's argument) and it means a failure leaves the cast exactly where it
    * was. Reel again and the same fish is still on the hook.
    */
-  const { data: fish } = await admin.from('fish_species').select('*').eq('id', token.fishId).single()
+  const fish = await db.species(token.fishId)
   if (!fish) {
     console.error('[reelIn] species read failed', { userId: user.id, fishId: token.fishId })
     return { error: 'The line went slack. Reel in again.' }
@@ -658,14 +623,7 @@ export async function reelIn(
   // The claim matches THIS token's castAt, not just "some token is there": a
   // reel that read one cast must not be able to spend a newer cast that landed
   // in between and be paid for the old one.
-  const { data: claimed } = await admin
-    .from('profiles')
-    .update({ pending_cast: null, catch_pending: false })
-    .eq('id', user.id)
-    .eq('pending_cast->>castAt', String(token.castAt))
-    .select('id')
-    .maybeSingle()
-  if (!claimed) return { caught: false }
+  if (!(await db.claimCast(user.id, token.castAt))) return { caught: false }
   fishId = token.fishId
   doubleCatch = token.doubleCatch
   jackpotMultiplier = token.jackpotMult
@@ -695,7 +653,7 @@ export async function reelIn(
     // written over.
     const vigilPetGranted = land.grantVigilPet ? await arrayAdd(admin, user.id, 'unlocked_pets', VIGIL_PET_ID) : false
     for (const b of land.badges) await grantBadgeDirect(user.id, b)
-    await admin.from('profiles').update(land.updates).eq('id', user.id)
+    await db.updateProfile(user.id, land.updates)
     // Paid in place rather than riding the update above as an absolute
     // balance, which would write over a sale that landed during the reel.
     const ancientNewDoubloons = land.sigilBonus > 0
@@ -709,20 +667,14 @@ export async function reelIn(
     // mail with claim instructions for the custom-boat prize.
     let firstAncientCatch = false
     {
-      const { data: claimed } = await admin
-        .from('contests')
-        .insert({ contest_id: 'first_ancient_catch', winner_user_id: user.id, prize_code: 'ANCIENT-FIRST' })
-        .select('contest_id')
-        .maybeSingle()
-      if (claimed) {
+      if (await db.claimContest('first_ancient_catch', user.id, 'ANCIENT-FIRST')) {
         firstAncientCatch = true
         // Targeted mail — the prize details + claim instructions. Only
         // the winner sees it in their inbox (target_user_id filter).
-        await admin.from('mail_messages').insert({
+        await db.mailTo(user.id, {
           subject: '🏆 First Ancient Deep Catch: Custom Boat Prize',
           body: "You did it. You're the first captain ever to land a fish in the Ancient Deep.\n\nAs promised, you've won a custom boat designed for you. Reply to this email to claim it:\n\nhello@shiblinggames.com\n\nInclude your prize code: ANCIENT-FIRST\n\nWe'll work with you on the design. Welcome to the deep.\n\n— Cap'n Shibling",
-          sender_label: "Cap'n Shibling",
-          target_user_id: user.id,
+          sender: "Cap'n Shibling",
         })
       }
     }
@@ -767,7 +719,7 @@ export async function reelIn(
   const land = landFish({
     profile, fish, result, baitType, rod: reelRod, eye, renownXpMult,
     doubleCatch, jackpotMult: jackpotMultiplier, lockedCatchQty,
-    holdCount: (holdRows ?? []).reduce((n: number, r: { quantity: number }) => n + (r.quantity ?? 0), 0),
+    holdCount,
     holdCapacity: getFishHold(profile.fish_hold_tier ?? 0).capacity,
   })
   const { baitSaved, isShiny, catchQty, xpGained, newXP, xpCatch, perfectBonusXP, xpStreak, sigilBonus } = land
@@ -781,32 +733,13 @@ export async function reelIn(
 
   // Check if new species for bestiary. The WRITE is deferred until we know
   // whether a wormhole reroll is live — see the credit block below.
-  const { data: existing } = await admin
-    .from('fish_collection')
-    .select('catch_count')
-    .eq('user_id', user.id)
-    .eq('fish_id', fishId)
-    .maybeSingle()
-  const isNewSpecies = !existing
+  const isNewSpecies = !(await db.collectionRow(user.id, fishId))
 
   // Shinies skip the regular inventory — they live ONLY in shiny_catches
   // (per-instance trophy). Any double-catch / jackpot bonus on the same
   // cast is consumed by the rare moment; the shiny is the whole catch.
-  const { data: invRow } = await admin
-    .from('fish_inventory')
-    .select('quantity')
-    .eq('user_id', user.id)
-    .eq('fish_id', fishId)
-    .single()
-  if (catchQty > 0 && !isShiny) {
-    if (invRow) {
-      await admin.from('fish_inventory')
-        .update({ quantity: invRow.quantity + catchQty })
-        .eq('user_id', user.id).eq('fish_id', fishId)
-    } else {
-      await admin.from('fish_inventory').insert({ user_id: user.id, fish_id: fishId, quantity: catchQty })
-    }
-  }
+  const had = await db.holdQty(user.id, fishId)
+  if (catchQty > 0 && !isShiny) await db.addToHold(user.id, fishId, catchQty, had)
 
   // ── BESTIARY CREDIT, DEFERRED WHEN A REROLL IS LIVE ────────────────────────
   // Crediting unconditionally made the wormhole log TWO species per cast. When
@@ -814,8 +747,8 @@ export async function reelIn(
   // whichever comes first: rerollWormhole (credits the NEW fish only) or the
   // next castLine (the player declined, so this fish is credited after all).
   if (!wormholeAvail) {
-    await logCatchToBestiary(admin, user.id, fishId)
-    if (isNewSpecies) await creditNewSpecies(admin, user.id, fish.id, profile)
+    await logCatchToBestiary(db, user.id, fishId)
+    if (isNewSpecies) await creditNewSpecies(db, user.id, fish.id, profile)
   }
 
   const profileUpdates: Record<string, unknown> = {
@@ -841,16 +774,14 @@ export async function reelIn(
   // The Sigil pays in place and the saved bait goes back in place, so neither
   // writes over a sale or a cast that landed while this reel was running.
   const [, newDoubloons] = await Promise.all([
-    admin.from('profiles').update(profileUpdates).eq('id', user.id),
+    db.updateProfile(user.id, profileUpdates),
     sigilBonus > 0 ? grant(admin, user.id, 'doubloons', sigilBonus) : Promise.resolve(undefined),
-    baitSaved
-      ? admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: baitType, p_qty: 1 })
-      : Promise.resolve(null),
+    baitSaved ? db.addBait(user.id, baitType, 1) : Promise.resolve(null),
   ])
 
   // Lifetime event counters (admin stats) — only fire on the event.
-  if (land.effectiveDoubleCatch)     await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_double_catches', n: 1 })
-  if (land.effectiveJackpotMult > 1) await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_jackpots', n: 1 })
+  if (land.effectiveDoubleCatch)     await db.bumpStat(user.id, 'fishing_double_catches', 1)
+  if (land.effectiveJackpotMult > 1) await db.bumpStat(user.id, 'fishing_jackpots', 1)
 
   // ── Size + personal best (non-ancient catches) ──
   // The size was rolled in landFish; the badge, the counter and the PB row
@@ -861,22 +792,11 @@ export async function reelIn(
     // Trophy Catch badge + the lifetime Trophy-SIZE counter (Trophy Hunter).
     if (sizeTier === 'trophy') {
       try { await grantBadgeDirect(user.id, 'trophy_catch') } catch { /* best-effort */ }
-      void admin.rpc('bump_profile_stat', { uid: user.id, col: 'trophy_size_catches', n: 1 }).then(() => {}, () => {})
+      void db.bumpStat(user.id, 'trophy_size_catches', 1).catch(() => {})
     }
-    const { data: pbRow } = await admin
-      .from('fish_personal_bests')
-      .select('best_length_in')
-      .eq('user_id', user.id)
-      .eq('fish_id', fishId)
-      .maybeSingle()
-    previousBest = pbRow ? Number(pbRow.best_length_in) : null
+    previousBest = await db.personalBest(user.id, fishId)
     isPB = previousBest == null || sizeIn > previousBest
-    if (isPB) {
-      await admin.from('fish_personal_bests').upsert(
-        { user_id: user.id, fish_id: fishId, best_length_in: sizeIn, caught_at: new Date().toISOString() },
-        { onConflict: 'user_id,fish_id' },
-      )
-    }
+    if (isPB) await db.setPersonalBest(user.id, fishId, sizeIn, new Date().toISOString())
   }
 
   // Update daily challenge progress.
@@ -897,39 +817,18 @@ export async function reelIn(
   let shinyId: number | undefined
   let alreadyMounted = false
   if (isShiny) {
-    const { data: inserted } = await admin
-      .from('shiny_catches')
-      .insert({
-        user_id: user.id,
-        fish_id: fish.id,
-        size_in: sizeIn > 0 ? sizeIn : null,
-        status: 'hold',
-      })
-      .select('id')
-      .single()
-    shinyId = inserted?.id as number | undefined
-    const { data: collectionRow } = await admin
-      .from('fish_collection')
-      .select('is_golden')
-      .eq('user_id', user.id)
-      .eq('fish_id', fish.id)
-      .maybeSingle()
-    alreadyMounted = !!collectionRow?.is_golden
+    shinyId = await db.addShiny(user.id, fish.id, sizeIn > 0 ? sizeIn : null)
+    alreadyMounted = !!(await db.collectionRow(user.id, fish.id))?.is_golden
   }
   // Consume the test flag on any Perfect — whether or not it triggered
   // the override (so a habitat-blocked Perfect doesn't strand the flag
   // forever). Non-perfects leave it alone so QA can keep waiting for
   // the right moment.
   if (profile.force_shiny_next_perfect && isPerfect) {
-    await admin.from('profiles').update({ force_shiny_next_perfect: false }).eq('id', user.id)
+    await db.updateProfile(user.id, { force_shiny_next_perfect: false })
   }
 
-  const { data: dailyRow } = await admin
-    .from('daily_challenge_progress')
-    .select('p1, p2, p3, p4, claimed_1, claimed_2, claimed_3, claimed_4, fishing_level_snapshot')
-    .eq('user_id', user.id)
-    .eq('date', dailyDate)
-    .maybeSingle()
+  const dailyRow = await db.dailyProgress(user.id, dailyDate)
 
   // oldFishingLevel was computed above (line ~473) from the pre-catch
   // XP — that's the right level to lock in for today, even if THIS
@@ -947,20 +846,8 @@ export async function reelIn(
     c.target,
   ))
 
-  await admin.from('daily_challenge_progress').upsert(
-    {
-      user_id: user.id,
-      date: dailyDate,
-      p1: newP[0], p2: newP[1], p3: newP[2],
-      // Only written when the Master challenge is actually in play. Sending
-      // undefined would blank an existing count on the upsert.
-      ...(newP.length > 3 ? { p4: newP[3] } : {}),
-      // Persist the snapshot on first touch (no-op on subsequent
-      // upserts since the value won't change).
-      fishing_level_snapshot: snapLevel,
-    },
-    { onConflict: 'user_id,date' },
-  )
+  // Persist the snapshot on first touch (no-op after, since it does not change).
+  await db.saveDailyProgress(user.id, dailyDate, newP, snapLevel)
 
   // Ancient Deep breadcrumb (see `deepStirs` in the return type): on a regular
   // landed with common bait while giants remain uncaught, RARELY let a faint
@@ -971,7 +858,7 @@ export async function reelIn(
 
   // Who asked for this. After the inventory write, so "in your hold" is true
   // by the time anybody reads it.
-  const waitingOn = await folkWaitingOn(admin, user.id, fishId)
+  const waitingOn = await folkWaitingOn(db, user.id, fishId)
 
   return {
     caught: true,
@@ -1043,8 +930,8 @@ export async function rerollWormhole(): Promise<
   // quietly erase the catch from their log. Only the success path skips it,
   // because there the original stopped being what they landed.
   const abortWithCredit = async (error: string): Promise<{ error: string }> => {
-    const wasNew = await logCatchToBestiary(admin, user.id, origId)
-    if (wasNew) await creditNewSpecies(admin, user.id, origId, profile)
+    const wasNew = await logCatchToBestiary(fishingData(admin), user.id, origId)
+    if (wasNew) await creditNewSpecies(fishingData(admin), user.id, origId, profile)
     return { error }
   }
 
@@ -1092,12 +979,12 @@ export async function rerollWormhole(): Promise<
   // Bestiary — this fish is what the cast actually landed, so it takes the
   // credit reelIn deferred. Counts the CAST, not the fish, matching reelIn: a
   // rerolled ×100 haul is one catch of the species, not a hundred.
-  const isNewSpecies = await logCatchToBestiary(admin, user.id, newFish.id)
+  const isNewSpecies = await logCatchToBestiary(fishingData(admin), user.id, newFish.id)
 
   // A species landed through the wormhole counts exactly as one landed on the
   // line: lifetime set, line tier and the Full Collection badge all move.
   if (isNewSpecies) {
-    await creditNewSpecies(admin, user.id, newFish.id, profile)
+    await creditNewSpecies(fishingData(admin), user.id, newFish.id, profile)
   }
 
   // Size + PB for the new fish (mirrors the catch path; ancients excluded).
