@@ -1,6 +1,9 @@
 # The Steam port — PARKED IDEA, NOT A PLAN
 
 **Status: parked 2026-09-10, the same day it was written. THE GAME STAYS WEB-BASED.**
+**2026-09-28: Kong asked to PREP a possible Steam migration with offline play, up to the whole
+game offline. Still no switch decided. See "Offline-capable port: the preparation plan" at the
+bottom; its first steps change nothing a player can see.**
 
 Nothing here is decided and nothing is being built. This is a worked-through idea kept because
 the analysis in it cost something to produce and is still true — the scaling arithmetic, the
@@ -295,3 +298,183 @@ puzzle week carries over.
   test real Captain purchases with the beta, tilt Captain toward cosmetics/convenience/supporter
   (away from daily gems and the casino cap), point gems at looks, do the restock changes
   anyway, and put the effort into acquisition (landing page, clips, the first ten minutes).
+
+
+## Offline-capable port: the preparation plan (2026-09-28)
+
+Kong: "prep a potential migration to Steam where there is offline capability, or for the whole
+game to exist offline." This section sizes that and orders the work so that every early step
+is useful on the web too, whether or not the port ever happens.
+
+### Where the game stands (measured 2026-09-28)
+
+**The rules are mostly portable already.**
+- 159 `lib/` files (about 43,400 of 45,400 lines) import nothing server-side.
+- That covers fishing levels, crew levels and generation, the raid map, the gauntlet, boss
+  raids, voyages, badges, rods, roulette and blackjack, renown, raid loot, and fish size and
+  shiny rolls.
+- Many of these files say in their headers that they were moved out of `'use server'` on
+  purpose.
+
+**The glue is not portable.**
+- 82 `'use server'` files (about 22,000 lines, 325 exported actions) plus 11 route handlers.
+- They make over 1,000 `.from` / `.rpc` calls, 429 of them on `profiles` alone.
+- `profiles` is one row with 312 columns, and 67 tables are named in code.
+
+**Some rules live inline in the actions**, not in `lib/`:
+- the catch pipeline and bait save in `fishing/actions.ts` (the biggest file, 2,867 lines);
+- dice and DPS checks in `raidMapActions.ts`;
+- chest tables and cash-out in `gauntlet/actions.ts`;
+- slot reel weights, trader wager odds and the blackjack hand state;
+- every currency move.
+
+**Postgres holds real logic.**
+- 35 RPCs are called from code (wallet, stat counters, crew XP, one-shot claims, casino
+  jackpot). Only about 10 of them are in repo SQL.
+- 5 pg_cron jobs:
+  - the hourly fish market tick;
+  - the hourly Exchange tick;
+  - Exchange bet settlement;
+  - casino leaderboard refreshes;
+  - a premium reconcile that calls an edge function that isn't in the repo.
+
+**Some content is data, not code.**
+- Fish species (152), cards (41), card variants (483), crew (32), market prices, and the
+  weekly puzzle and trivia boards all live in the database.
+- Two storage buckets (about 183 MB of crew, fish and enemy art) are addressed by hard-coded
+  Supabase URLs in 22 files. Everything else ships from `public/`.
+
+**Randomness and time are server-side.**
+- Rolls use `Math.random`: 39 calls in actions and 31 `lib` modules. Only three places use a
+  seeded generator.
+- Time comes from `Date.now` (137 calls in actions), plus UTC day keys in 8 files.
+
+**Combat is already client-side.** Raids and gauntlet fights run in the browser. The server
+mints run tokens, clamps the hits reported back, and pays out loot.
+
+**External services:**
+- Anthropic: nightly trivia and puzzle generation.
+- Stripe and Shopify: payments, which go away under premium.
+- Supabase: auth (magic link and Google), and Realtime for presence and live profile updates.
+- Vercel: crons and analytics.
+
+So the Stardew-style port is less of a rewrite than "nearly every rule is server code"
+suggested. The RULES mostly port as they are. What gets rewritten is the layer that loads a
+player's state, applies a rule and writes the result: about 22,000 lines of actions, plus the
+RPCs and the crons.
+
+### The target shape
+
+One game core, run in two places.
+
+**The core** is plain TypeScript, with no Supabase and no Next.
+- A player's state is one typed save (`PlayerSave`).
+- Each action is a command: `(save, input, { rng, now }) -> { save', events }`.
+- Cast, reel, sell, recruit, send a voyage, cash out a gauntlet: every one is a function over
+  the save.
+
+**The web keeps the server as the authority.** A server action becomes four steps: check the
+session, load the save slice, run the command with a server seed, write the difference.
+Behaviour and security stay exactly as they are.
+
+**Steam runs the same core on the player's machine.**
+- It runs against a local save: an SQLite file in a native shell (Tauri), synced by Steam
+  Cloud.
+- Offline is then the normal case, not a special mode.
+- The client calls one `GameApi` interface with two implementations: "call the server action"
+  on the web, "run the core locally" on Steam.
+
+**Online becomes optional extras:**
+- Sailing with friends, over Steam networking (phase 6 above).
+- Leaderboards: either verified runs only (a seeded run whose log the server can replay) or
+  Steam's own leaderboards. A local save can be edited, and in single player that only hurts
+  the person editing it. That is the Stardew and Terraria bargain.
+- Fresh trivia and puzzle packs.
+- Contests.
+
+### Decisions this needs (Kong's, none made)
+
+1. **Who is the authority on Steam.**
+   - The local save (recommended): Stardew-style, and cheating only affects the cheater.
+   - The server, with offline play synced and verified later. That keeps one shared economy,
+     but it makes offline a degraded mode and costs far more.
+2. **One save across web and Steam, or separate saves.** A local-authority Steam save can't
+   flow back into the server-authority web economy without trusting it. The realistic options
+   are separate saves, or a one-way import from web to Steam (the phase 2 claim).
+3. **An offline answer for each shared-world system:**
+   - the fish market's hourly prices and the Exchange: a seeded local simulation;
+   - trader rotation: already seeded by sea day, so it ports cleanly;
+   - the slots jackpot: local;
+   - contests and the Pirate King ladder: online only;
+   - weekly puzzles and trivia: downloaded packs plus a bank shipped with the game (see the
+     tavern notes).
+4. **The calendar.** A device clock can be set to anything, so offline play needs the
+   restock-through-play rhythm drafted above in place of UTC daily resets.
+5. **Money.** Unchanged from phase 1: premium buy-once, no in-game purchases on Steam.
+
+### What can start now on the web (changes nothing a player sees)
+
+In order. Each step is worth doing even if the port never happens.
+
+1. **No new rules in SQL.**
+   - New game logic goes in pure `lib/` modules. Postgres keeps only atomic writes, and each
+     new one gets a TypeScript twin.
+   - The RPCs that exist only in the live database get checked into repo SQL, so the schema
+     can be rebuilt from the repo. That is worth doing for disaster recovery on its own.
+2. **Seeded randomness and an injected clock.**
+   - One `lib/rng.ts`, using the mulberry32 generator already in three places.
+   - It is passed into every roll module: `crewGen`, `crateLoot`, `voyageRoll`, `fishSize`,
+     `shiny`, `raidLoot`, `gauntlet`.
+   - The server keeps drawing a fresh seed every time, so odds and behaviour are identical.
+   - This unlocks deterministic tests, seeded replays for verified leaderboards, and the
+     offline casino and trivia design.
+3. **Content into the repo.**
+   - Fish species, cards, card variants and crew become versioned JSON in the repo, and the
+     database is seeded from it. A database-only copy has no history anyway.
+   - Mirror the two storage buckets into `public/` or an asset manifest. A binary has to bundle
+     them, and it removes 22 hard-coded Supabase URLs.
+4. **A save model with export and import.**
+   - Define `PlayerSave`: everything a player owns, across `profiles` and its child tables.
+   - Add a server export to JSON, and an import.
+   - It's useful now for account backups, beta-wipe tooling and admin fixes, and later it
+     becomes the Steam claim and the cloud-save format.
+5. **Lift the inline rules out of the actions**, one system at a time, core loop first:
+   1. fishing (`castLine`, `reelIn`, `reelCrate`);
+   2. selling;
+   3. crew and recruits;
+   4. voyages and trawls;
+   5. gauntlet cash-out and chests;
+   6. the casino;
+   7. raid map dice.
+
+   Each one becomes a pure command with tests, and the action applies the result through the
+   existing wallet and RPCs. No behaviour change. This step is the bulk of the work.
+6. **A data-access layer.** Per-system read and write functions replace the scattered
+   `admin.from('profiles')` calls, so a local store can later stand in for Supabase behind the
+   same functions.
+7. **The `GameApi` seam on the client.** Components call `api.castLine()` instead of importing
+   the server action directly. On the web the implementation is the server action, so this is
+   a rename, not a behaviour change.
+8. **Restock through play** (drafted above), when Kong is ready to make that design call.
+
+**Then the spike** (phase 3's week, updated):
+- Tauri plus SQLite and a static export of the client.
+- `GameApi` pointed at the local core for ONE system (fishing), running with the network off.
+- The point is to prove the path and surface the surprises while they are cheap.
+
+### Size, roughly
+
+- **Steps 1 to 4:** a few weeks, all low risk.
+- **Steps 5 to 7:** the bulk, measured in months. They can be done system by system alongside
+  normal work, each step shipped to the web with behaviour unchanged.
+- **After that:** porting the RPCs, crons and shared-world systems to local equivalents, once
+  the core runs locally.
+- **On top:** phases 1 to 7 above (money, identity, input, Steam features, networking, the
+  store) still apply.
+
+### Rules while this is prepped
+
+- New game rules go in pure `lib/` modules with injected randomness and time. Never inline in
+  an action, and never in SQL.
+- New content goes in the repo, not only in a table.
+- New art goes in `public/`, not a storage bucket.
