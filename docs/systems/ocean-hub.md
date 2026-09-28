@@ -3798,3 +3798,33 @@ Kong: the notice at the top (SeaDay's toast) is the most useful thing on the sea
   Finishes already past are not news. Stints that finish within 5 seconds of each other share one notice.
 - **An ask to sail.** Raised when `pendingAsk` rises above the arrival count, which `askSeenRef` seeds.
 - **A regular's wanted fish going into the hold.** Raised from the catch's `waitingOn`, only for regulars not already waiting. Load-time reads never raise it.
+
+## The day board is a list (2026-09-27)
+Kong: the board should feel like a task list you want to clear. His notes: the voyage and trawls are not dailies, keep a lifetime tally (no streak), and no new reward.
+
+**Today's list** (`LIST` in SeaDay, mirrored by `lib/dayList.ts` `listItems`)
+- Five items:
+  - **Haul:** all claimed.
+  - **Orders:** all done and claimed.
+  - **Bounties:** all claimed. Only on the list once the board is open.
+  - **Parlor:** tonight's board played. The weekly ladder is not required.
+  - **Recruits:** looked at today, or the board signed out.
+- Recruits "looked at" is `profiles.recruits_seen_on`, written by `POST /api/day` when the crew panel opens on Recruits.
+- Rows (`TaskRow`) have a tick box, the place's picture (Recruits shows today's faces), the status, and a segmented progress bar.
+- Order is ready first (gold, with a Claim or Look pill), then to-do, then done (green tick, struck through). Rows re-sort with layout animation.
+- A row that finished since you last looked stamps its tick when the board opens, with a ting (`playRenownPointSfx`).
+
+**The meter** (`DayMeter`)
+- One segment per list item: green when done, gold when ready.
+- It reads "N of M done today", or "The day's work is done" plus the tally.
+- Clearing the list fires the old headline burst plus `playRenownUpSfx`.
+
+**Full days**
+- `profiles.full_days` (lifetime, only ever rises) and `last_full_day`.
+- Credited once per UTC day by `dayState()`, the first read that sees the list done, via a conditional update on `last_full_day`.
+
+**Other sections**
+- **Crew at work** (`WorkTile`): voyage and trawls. They are never ticked. Gold with Collect or Reveal when something is in; a blue time bar (voyage `startsAt` to `endsAt`) or slot dots while out; a Send pill when idle.
+- **This week:** the Chart Room row, which is not counted on the meter.
+
+**The HUD disc** wears the list's progress as a ring (a static conic arc). The number on it is ready-to-claim, else list items left.

@@ -150,6 +150,10 @@ type Row = {
   away?: boolean
   /** The Recruits card draws today's faces where the others draw a building. */
   faces?: { rarity: number; name: string; art: string; recruited: boolean }[]
+  /** How far through, for the row's bar: [done, of]. */
+  prog?: [number, number]
+  /** A clock running, for the crew tiles' bar: epoch ms. */
+  timer?: { from: number; to: number } | null
 }
 
 /** Rarity rims for the Recruits card, the crew screen's own colours. */
@@ -178,10 +182,11 @@ function rowsOf(s: DayState, recruitsSeen = false): Row[] {
         : recruitsSeen ? 'Looked over today'
         : `${left.length} new faces today`,
       action: left.length > 0 ? 'Look' : null,
-      hot: epic && !recruitsSeen,
-      done: left.length === 0,
-      // Looked at is dealt with: it stops keeping the day open.
-      away: recruitsSeen && left.length > 0,
+      hot: epic && !recruitsSeen && !s.list.recruitsSeen,
+      // LOOKED AT IS DONE (Kong, 2026-09-27: the day board is a list you
+      // tick). The server remembers the look for the day; see /api/day.
+      done: left.length === 0 || recruitsSeen || s.list.recruitsSeen,
+      prog: [signed, f.length],
       news: epic && !recruitsSeen ? 'An Epic is on the recruit board' : null,
       faces: f,
     })
@@ -196,6 +201,7 @@ function rowsOf(s: DayState, recruitsSeen = false): Row[] {
         : `${cap(left.slice(0, -1).join(', '))} and ${left[left.length - 1]} waiting`,
       action: left.length > 0 ? 'Claim' : null,
       hot: left.length > 0, done: left.length === 0,
+      prog: [3 - left.length, 3],
       news: left.length > 0 ? 'Your daily haul is in' : null,
     })
   }
@@ -206,6 +212,7 @@ function rowsOf(s: DayState, recruitsSeen = false): Row[] {
       status: o.ready > 0 ? `${o.ready} ready to claim` : `${o.done} of ${o.total} done`,
       action: o.ready > 0 ? 'Claim' : o.done < o.total ? 'Open' : null,
       hot: o.ready > 0, done: o.done >= o.total && o.ready === 0,
+      prog: [o.done, o.total],
       news: o.ready > 0 ? (o.ready === 1 ? 'An order is done' : `${o.ready} orders are done`) : null,
     })
   }
@@ -218,6 +225,7 @@ function rowsOf(s: DayState, recruitsSeen = false): Row[] {
         : 'Not sent today',
       action: v.state === 'ready' ? 'Reveal' : v.state === 'none' ? 'Send' : null,
       hot: v.state === 'ready', done: false, away: v.state === 'at_sea',
+      timer: v.state === 'at_sea' && v.endsAt && v.startsAt ? { from: v.startsAt, to: v.endsAt } : null,
       news: v.state === 'ready' ? 'Your voyage is back' : null,
     })
   }
@@ -232,6 +240,7 @@ function rowsOf(s: DayState, recruitsSeen = false): Row[] {
         : `None out, ${t.slots} slot${t.slots === 1 ? '' : 's'}`,
       action: t.ready > 0 ? 'Collect' : t.out < t.slots ? 'Send' : null,
       hot: t.ready > 0, done: false, away: t.ready === 0 && t.out >= t.slots,
+      prog: [t.out, t.slots],
       news: t.ready > 0 ? (t.ready === 1 ? 'A trawl haul is in' : `${t.ready} trawl hauls are in`) : null,
     })
   }
@@ -244,6 +253,7 @@ function rowsOf(s: DayState, recruitsSeen = false): Row[] {
         : `${b.claimed} of ${b.total} claimed`,
       action: !b.unlocked ? null : b.claimable > 0 ? 'Claim' : b.claimed < b.total ? 'Open' : null,
       hot: b.unlocked && b.claimable > 0, done: b.unlocked && b.claimed >= b.total,
+      prog: b.unlocked ? [b.claimed, b.total] : undefined,
       news: b.unlocked && b.claimable > 0 ? (b.claimable === 1 ? 'A bounty is ready to claim' : `${b.claimable} bounties are ready to claim`) : null,
     })
   }
@@ -254,16 +264,18 @@ function rowsOf(s: DayState, recruitsSeen = false): Row[] {
       status: `${c.solved} of ${c.total} puzzles solved`,
       action: c.solved < c.total ? 'Open' : null,
       hot: false, done: c.solved >= c.total, news: null,
+      prog: [c.solved, c.total],
     })
   }
   if (s.parlor) {
     const p = s.parlor
     rows.push({
       kind: 'parlor', title: 'The Parlor', place: 'The Tavern, tonight',
-      status: p.boardPlayedToday ? (p.ladderDone ? 'Board played, ladder climbed' : 'Board played, ladder open')
+      status: p.boardPlayedToday ? (p.ladderDone ? 'Board played, ladder climbed' : 'Board played. The ladder is open this week')
         : 'Tonight’s board unplayed',
       action: p.boardPlayedToday && p.ladderDone ? null : 'Open',
-      hot: false, done: p.boardPlayedToday && p.ladderDone, news: null,
+      // TONIGHT'S BOARD is the daily; the ladder is a weekly climb.
+      hot: false, done: p.boardPlayedToday, news: null,
     })
   }
   return rows
@@ -403,6 +415,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   useEffect(() => {
     const on = (e: Event) => {
       if ((e as CustomEvent<{ section?: string | null }>).detail?.section === 'recruits') {
+        if (!recruitsSeenRef.current) void fetch('/api/day', { method: 'POST' }).catch(() => {})
         recruitsSeenRef.current = true
         setRecruitsSeen(true)
       }
@@ -563,10 +576,17 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
       setStamping(kinds)
       vibrate([0, 22, 60, 30])
       const s = stateRef.current
-      const all = !!s && rowsOf(s, recruitsSeenRef.current).every(r => (r.done || r.away) && !r.hot)
+      // A ting per tick, a beat apart, as each seal lands.
+      kinds.forEach((_, i) => window.setTimeout(() => { void import('@/lib/fishingMusic').then(m => m.playRenownPointSfx()).catch(() => {}) }, (0.14 + i * STAMP_GAP) * 1000))
+      const all = !!s && rowsOf(s, recruitsSeenRef.current)
+        .filter(r => LIST.includes(r.kind) && (r.kind !== 'bounties' || !!r.prog))
+        .every(r => r.done && !r.hot)
       if (all) {
-        window.setTimeout(() => { setCheer(c => c + 1); vibrate([0, 30, 50, 40, 50, 90]) },
-          (0.55 + kinds.length * STAMP_GAP) * 1000)
+        window.setTimeout(() => {
+          setCheer(c => c + 1)
+          vibrate([0, 30, 50, 40, 50, 90])
+          void import('@/lib/fishingMusic').then(m => m.playRenownUpSfx()).catch(() => {})
+        }, (0.55 + kinds.length * STAMP_GAP) * 1000)
       }
     }, 280)
     return () => clearTimeout(t)
@@ -612,11 +632,11 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
 
   const rows = state ? rowsOf(state, recruitsSeen) : []
   const ready = rows.filter(r => r.hot)
-  const todo = rows.filter(r => !r.hot && !r.done && !r.away)
-  const done = rows.filter(r => r.done && !r.hot)
+  // THE LIST is what "left today" counts; the crew and the week are not on it.
+  const listRows = rows.filter(r => LIST.includes(r.kind) && (r.kind !== 'bounties' || !!r.prog))
+  const listDoneN = listRows.filter(r => r.done && !r.hot).length
   const readyN = ready.length
-  const doneN = done.length
-  const leftN = ready.length + todo.length
+  const leftN = listRows.length - listDoneN
 
   const go = (kind: DayKind) => {
     vibrate(6)
@@ -675,6 +695,16 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
                 style={{ position: 'absolute', inset: -2, borderRadius: '50%', border: `1px solid ${GOLD}` }} />
             )}
           </AnimatePresence>
+          {/* TODAY'S LIST, AS A RING round the disc: it fills as the
+              dailies are ticked (a static arc, no animation). */}
+          {listRows.length > 0 && readyN === 0 && (
+            <span aria-hidden style={{
+              position: 'absolute', inset: -3, borderRadius: '50%', pointerEvents: 'none',
+              background: `conic-gradient(${leftN === 0 ? DONE : '#9fe0a0'} ${(listDoneN / listRows.length) * 360}deg, rgba(255,255,255,0.08) 0deg)`,
+              WebkitMask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 2.5px), #000 calc(100% - 2.5px))',
+              mask: 'radial-gradient(circle closest-side, transparent 0 calc(100% - 2.5px), #000 calc(100% - 2.5px))',
+            }} />
+          )}
           <PhaseGlyph phase={phase} px={Math.round(size * 0.56)} />
           {(readyN > 0 || leftN > 0) && (
             <motion.span aria-hidden key={readyN > 0 ? `r${readyN}` : `l${leftN}`}
@@ -887,61 +917,53 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
             </AnimatePresence>
           </div>
 
-          {/* ── THE CARDS, IN THE GROUPS THEY BELONG TO ────────────────────
-              Kong: logical groupings. What is free today, the day's orders
-              (the fishing orders and the bounties), the crew at sea (the
-              voyage and the trawls, which run again whenever they are back),
-              and the Tavern's puzzles and trivia. A fixed order, so each
-              thing is always where you left it; the gold says what is
-              waiting and the seal says what is finished. No action pills on
-              the cards: the card is the button. */}
+          {/* ── TODAY'S LIST, THE CREW AT WORK, THE WEEK (Kong, 2026-09-27) ──
+              The day board reads as a list you want to clear. The true
+              dailies are check-off rows with a meter over them: ready sits
+              on top in gold, in progress under it with its bar, done sinks
+              to the bottom ticked. The voyage and the trawls are not dailies
+              (they run again whenever they are back), so they are tiles with
+              their own clocks, and the Chart Room is this week's. */}
           {!state ? (
-            <div style={{ ...gridStyle, marginTop: 12 }}>
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
               {[0, 1, 2, 3].map(i => (
                 <motion.span key={i} aria-hidden
                   animate={{ opacity: [0.35, 0.6, 0.35] }}
                   transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
-                  style={{ height: narrow ? 118 : 136, borderRadius: 14, background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.12)` }} />
+                  style={{ height: 52, borderRadius: 12, background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.12)` }} />
               ))}
             </div>
-          ) : GROUPS.map(g => {
-            const cards = g.kinds.map(k => rows.find(r => r.kind === k)).filter((r): r is Row => !!r)
-            if (cards.length === 0) return null
-            const hotN = cards.filter(r => r.hot).length
-            const allDone = cards.every(r => r.done && !r.hot)
-            const allAway = !allDone && cards.every(r => (r.done || r.away) && !r.hot)
-            return (
-              <section key={g.id} style={{ marginTop: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 6, padding: '0 2px' }}>
-                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: `${SEA},0.55)` }}>
-                    {g.label}
-                  </span>
-                  {hotN > 0 ? (
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: GOLD }}>
-                      {hotN} ready
-                    </span>
-                  ) : allDone && (
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: DONE, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={DONE} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-                      {g.doneWord}
-                    </span>
-                  )}
-                  {hotN === 0 && allAway && g.awayWord && (
-                    // No tick: nothing here is finished, it is out working.
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: `${SEA},0.6)` }}>
-                      {g.awayWord}
-                    </span>
-                  )}
-                </div>
+          ) : (<>
+            <DayMeter rows={listRows} cheer={cheer} fullDays={state.list.fullDays} countedToday={state.list.countedToday} />
+            <section style={{ marginTop: 10 }}>
+              <SectionHead label="Today’s list" right={listRows.length ? `${listDoneN} of ${listRows.length}` : null} done={leftN === 0} />
+              <motion.div layout style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[...listRows].sort((x, y) => rank(x) - rank(y)).map(r => (
+                  <TaskRow key={r.kind} r={r} compact={narrow} onGo={() => go(r.kind)} stampAt={stamping.indexOf(r.kind)} />
+                ))}
+              </motion.div>
+            </section>
+            {rows.some(r => r.kind === 'voyage' || r.kind === 'trawls') && (
+              <section style={{ marginTop: 14 }}>
+                <SectionHead label="Crew at work" right={null} done={false} />
                 <div style={gridStyle}>
-                  {cards.map(r => (
-                    <DayCard key={r.kind} r={r} compact={narrow} wide={cards.length === 1}
-                      onGo={() => go(r.kind)} stampAt={stamping.indexOf(r.kind)} />
+                  {rows.filter(r => r.kind === 'voyage' || r.kind === 'trawls').map(r => (
+                    <WorkTile key={r.kind} r={r} compact={narrow} onGo={() => go(r.kind)} />
                   ))}
                 </div>
               </section>
-            )
-          })}
+            )}
+            {rows.some(r => r.kind === 'chart') && (
+              <section style={{ marginTop: 14 }}>
+                <SectionHead label="This week" right={null} done={false} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {rows.filter(r => r.kind === 'chart').map(r => (
+                    <TaskRow key={r.kind} r={r} compact={narrow} onGo={() => go(r.kind)} stampAt={stamping.indexOf(r.kind)} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>)}
           </>)}
           </>)}
         </motion.div>
@@ -958,179 +980,263 @@ const gridStyle: React.CSSProperties = {
   display: 'grid', gap: 7, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
 }
 
-/** The board's groups, in a fixed order so each thing is always where it was.
- *  Kong: bounties with the fishing orders, the voyage with the trawls. */
-const GROUPS: { id: string; label: string; doneWord: string; awayWord?: string; kinds: DayKind[] }[] = [
-  { id: 'free', label: 'Free today', doneWord: 'Claimed', kinds: ['haul', 'recruits'] },
-  { id: 'orders', label: 'Orders of the day', doneWord: 'All done', kinds: ['orders', 'bounties'] },
-  { id: 'crew', label: 'Crew at sea', doneWord: 'All done', awayWord: 'All out', kinds: ['voyage', 'trawls'] },
-  { id: 'tavern', label: 'The Tavern', doneWord: 'All done', kinds: ['chart', 'parlor'] },
-]
+/** The dailies on today's list, in their resting order (ready and done
+ *  reorder around it). Mirrors lib/dayList. */
+const LIST: DayKind[] = ['haul', 'orders', 'bounties', 'parlor', 'recruits']
 
-/**
- * ── THE SEAL ────────────────────────────────────────────────────────────────
- *
- * What a finished daily wears: a green wax seal with a tick, pressed on at a
- * tilt in the card's corner. Static on a card that was done before you
- * looked. On one that finished since, it is STAMPED: it drops in large and
- * lands with a spring, the card gives under it, a ring and a spray of sparks
- * come off the impact and the card glows once. Transform and opacity only,
- * and nothing is clipped, so it costs nothing on the water behind it.
- */
-function Seal({ size, stamp, delay }: { size: number; stamp: boolean; delay: number }) {
+/** Ready first, then what is left, then what is done. */
+function rank(r: Row): number {
+  return r.hot ? 0 : r.done ? 2 : 1
+}
+
+function SectionHead({ label, right, done }: { label: string; right: string | null; done: boolean }) {
   return (
-    <span aria-hidden style={{ position: 'absolute', top: 5, right: 5, width: size, height: size, zIndex: 2 }}>
-      {stamp && (
-        <>
-          <motion.span
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: [0.6, 2.1], opacity: [0, 0.7, 0] }}
-            transition={{ duration: 0.6, delay: delay + 0.14, ease: 'easeOut' }}
-            style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${DONE}` }} />
-          {Array.from({ length: 10 }).map((_, k) => {
-            const a = (k / 10) * Math.PI * 2 + 0.3
-            return (
-              <motion.span key={k}
-                initial={{ x: 0, y: 0, opacity: 0, scale: 1 }}
-                animate={{ x: Math.cos(a) * size * 1.25, y: Math.sin(a) * size * 1.25, opacity: [0, 1, 0], scale: 0.4 }}
-                transition={{ duration: 0.65, delay: delay + 0.14, ease: 'easeOut' }}
-                style={{
-                  position: 'absolute', left: size / 2 - 2.5, top: size / 2 - 2.5, width: 5, height: 5, borderRadius: '50%',
-                  background: k % 2 ? GOLD : '#b8f0b8', boxShadow: `0 0 6px ${k % 2 ? GOLD : DONE}`,
-                }} />
-            )
-          })}
-        </>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 6, padding: '0 2px' }}>
+      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: `${SEA},0.55)` }}>{label}</span>
+      {right && (
+        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: done ? DONE : `${SEA},0.6)`, fontVariantNumeric: 'tabular-nums' }}>{right}</span>
       )}
-      <motion.span
-        initial={stamp ? { scale: 2.3, opacity: 0, rotate: -34 } : false}
-        animate={{ scale: 1, opacity: 1, rotate: -12 }}
-        transition={stamp ? { type: 'spring', stiffness: 560, damping: 17, delay } : { duration: 0 }}
-        style={{
-          position: 'absolute', inset: 0, borderRadius: '50%',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'radial-gradient(circle at 38% 32%, #5aa865 0%, #2f6b3a 58%, #1f4a28 100%)',
-          border: '1.5px solid rgba(200,245,200,0.55)',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.55), inset 0 0 0 3px rgba(20,50,26,0.55), inset 0 0 0 4px rgba(200,245,200,0.18)',
-        }}>
-        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="#eaf8e4"
-          strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
-          <motion.path d="M5 12.5l4.5 4.5L19 7.5"
-            initial={stamp ? { pathLength: 0 } : false}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.3, delay: delay + 0.2, ease: 'easeOut' }} />
-        </svg>
-      </motion.span>
-    </span>
+    </div>
   )
 }
 
-/** One daily, as a painted card. The same card on a phone and a monitor, a
- *  size smaller on the phone. `wide` is a group of one (the Daily Haul): the
- *  plate sits beside the words instead of above them, across the full row.
- *  `stampAt` is this card's place in the run of seals landing now, or -1.
+/**
+ * ── THE METER ───────────────────────────────────────────────────────────────
  *
- *  No action pill. Kong: "Open" and "Send" were not needed and cost a line on
- *  every card; the card is the button, gold says it is waiting, and the seal
- *  says it is finished. */
-function DayCard({ r, onGo, compact, wide, stampAt }: { r: Row; onGo: () => void; compact: boolean; wide: boolean; stampAt: number }) {
-  const finished = r.done && !r.hot
+ * One segment per item on today's list: green when done, gold when it is
+ * waiting to be claimed, dark while it is still to do. Filling it is the
+ * point. Cleared, it says so and shows the lifetime tally of full days, which
+ * only ever goes up (Kong: no streaks).
+ */
+function DayMeter({ rows, cheer, fullDays, countedToday }: { rows: Row[]; cheer: number; fullDays: number; countedToday: boolean }) {
+  if (rows.length === 0) return null
+  const order = [...rows].sort((x, y) => (x.done && !x.hot ? 0 : x.hot ? 1 : 2) - (y.done && !y.hot ? 0 : y.hot ? 1 : 2))
+  const all = rows.every(r => r.done && !r.hot)
+  return (
+    <div style={{ marginTop: 10, padding: '0.55rem 0.65rem 0.6rem', borderRadius: 12,
+      background: all ? 'linear-gradient(180deg, rgba(40,70,44,0.45), rgba(18,30,20,0.55))' : 'rgba(255,255,255,0.03)',
+      border: `1px solid ${all ? 'rgba(123,191,123,0.45)' : `${SEA},0.14)`}` }}>
+      <div style={{ display: 'flex', gap: 4 }}>
+        {order.map(r => {
+          const done = r.done && !r.hot
+          return (
+            <motion.span key={r.kind} layout
+              style={{ position: 'relative', flex: 1, height: 9, borderRadius: 5, overflow: 'hidden',
+                background: 'rgba(255,255,255,0.07)' }}>
+              <motion.span
+                initial={false}
+                animate={{ scaleX: done || r.hot ? 1 : 0 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                style={{ position: 'absolute', inset: 0, transformOrigin: 'left center', borderRadius: 5,
+                  background: done ? 'linear-gradient(90deg, #5aa865, #9fe0a0)' : `linear-gradient(90deg, ${GOLD}88, ${GOLD})` }} />
+            </motion.span>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginTop: 6 }}>
+        <motion.span key={`m${cheer}`} className="font-cinzel font-700"
+          initial={cheer ? { scale: 0.9, opacity: 0.4 } : false} animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 16 }}
+          style={{ fontSize: '0.86rem', color: all ? '#cfeccf' : '#f2ead8', transformOrigin: 'left center' }}>
+          {all ? 'The day’s work is done' : `${rows.filter(r => r.done && !r.hot).length} of ${rows.length} done today`}
+        </motion.span>
+        <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: all ? 'rgba(196,232,196,0.8)' : `${SEA},0.5)`, whiteSpace: 'nowrap' }}>
+          {fullDays > 0 || countedToday ? `Full days: ${fullDays}` : 'Clear it for your first full day'}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * ── A DAILY, AS A LINE ON THE LIST ──────────────────────────────────────────
+ *
+ * A box to tick, the place's picture, the name and where it stands, and a bar
+ * for anything counted. Ready glows gold with "Claim"; done is ticked in green
+ * and struck through, and sinks to the foot of the list (layout animation).
+ * When one ticks in front of you the box stamps and the row lights once.
+ */
+function TaskRow({ r, onGo, compact, stampAt }: { r: Row; onGo: () => void; compact: boolean; stampAt: number }) {
+  const done = r.done && !r.hot
   const stamp = stampAt >= 0
   const delay = 0.12 + Math.max(0, stampAt) * STAMP_GAP
-  const plate = wide ? (compact ? 52 : 60) : compact ? 56 : 70
+  const box = compact ? 24 : 26
+  const pct = r.prog && r.prog[1] > 0 ? Math.min(1, r.prog[0] / r.prog[1]) : null
   return (
     <motion.button type="button" onClick={onGo} layout
       data-coach={r.kind === 'haul' ? 'haul' : undefined}
       title={`${r.status} · ${r.place}`}
-      animate={stamp ? { scale: [1, 1, 0.955, 1.02, 1] } : { scale: 1 }}
+      animate={stamp ? { scale: [1, 1, 0.97, 1.015, 1] } : { scale: 1 }}
       transition={stamp
         ? { scale: { duration: 0.5, delay, times: [0, 0.2, 0.45, 0.75, 1] }, layout: { type: 'spring', stiffness: 380, damping: 32 } }
         : { layout: { type: 'spring', stiffness: 380, damping: 32 } }}
       style={{
-        position: 'relative', display: 'flex',
-        flexDirection: wide ? 'row' : 'column', alignItems: 'center',
-        gap: wide ? 12 : 2,
-        gridColumn: wide ? '1 / -1' : undefined,
-        padding: wide ? '0.5rem 3rem 0.5rem 0.6rem' : compact ? '0.5rem 0.45rem 0.55rem' : '0.6rem 0.5rem 0.6rem',
-        borderRadius: 14, cursor: 'pointer',
-        textAlign: wide ? 'left' : 'center', minWidth: 0,
+        position: 'relative', display: 'flex', alignItems: 'center', gap: compact ? 9 : 11,
+        width: '100%', padding: compact ? '0.45rem 0.6rem' : '0.5rem 0.7rem',
+        borderRadius: 12, cursor: 'pointer', textAlign: 'left',
         background: r.hot
-          ? `radial-gradient(ellipse 80% 70% at ${wide ? '15% 50%' : '50% 28%'}, ${GOLD}1c 0%, transparent 70%), rgba(40,30,8,0.42)`
-          : finished
-            ? `radial-gradient(ellipse 80% 70% at ${wide ? '15% 50%' : '50% 28%'}, rgba(123,191,123,0.13) 0%, transparent 70%), rgba(18,30,20,0.55)`
-            : 'rgba(255,255,255,0.035)',
-        border: `1px solid ${r.hot ? `${GOLD}88` : finished ? 'rgba(123,191,123,0.4)' : `${SEA},0.16)`}`,
-        boxShadow: r.hot ? `0 0 18px ${GOLD}22` : 'none',
+          ? `radial-gradient(ellipse 70% 120% at 0% 50%, ${GOLD}1f 0%, transparent 70%), rgba(40,30,8,0.42)`
+          : done ? 'rgba(18,30,20,0.4)' : 'rgba(255,255,255,0.035)',
+        border: `1px solid ${r.hot ? `${GOLD}88` : done ? 'rgba(123,191,123,0.28)' : `${SEA},0.16)`}`,
+        boxShadow: r.hot ? `0 0 16px ${GOLD}1f` : 'none',
       }}>
-      {r.hot && (
-        <motion.span aria-hidden
-          animate={{ opacity: [0.5, 0, 0.5] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut' }}
-          style={{ position: 'absolute', inset: -1, borderRadius: 15, border: `1px solid ${GOLD}` }} />
-      )}
-      {/* The card lights once as the seal lands. */}
       {stamp && (
         <motion.span aria-hidden
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0.55, 0] }}
+          initial={{ opacity: 0 }} animate={{ opacity: [0, 0.5, 0] }}
           transition={{ duration: 0.7, delay: delay + 0.12 }}
-          style={{
-            position: 'absolute', inset: -1, borderRadius: 15, pointerEvents: 'none',
-            background: 'radial-gradient(ellipse at 70% 20%, rgba(168,230,168,0.45), transparent 70%)',
-            border: `1px solid ${DONE}`,
-          }} />
+          style={{ position: 'absolute', inset: -1, borderRadius: 13, pointerEvents: 'none',
+            background: 'radial-gradient(ellipse at 10% 50%, rgba(168,230,168,0.45), transparent 70%)', border: `1px solid ${DONE}` }} />
       )}
-      {finished && <Seal size={compact ? 28 : 32} stamp={stamp} delay={delay} />}
+      {/* THE BOX. Empty to do, gold with a mark when it is waiting on you,
+          a green tick when it is done (stamped on when it just happened). */}
+      <span aria-hidden style={{ position: 'relative', width: box, height: box, flexShrink: 0 }}>
+        {done ? (
+          <motion.span
+            initial={stamp ? { scale: 2, opacity: 0, rotate: -30 } : false}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            transition={stamp ? { type: 'spring', stiffness: 560, damping: 17, delay } : { duration: 0 }}
+            style={{ position: 'absolute', inset: 0, borderRadius: 8, display: 'grid', placeItems: 'center',
+              background: 'radial-gradient(circle at 38% 32%, #5aa865 0%, #2f6b3a 70%)', border: '1.5px solid rgba(200,245,200,0.55)' }}>
+            <svg width={box * 0.62} height={box * 0.62} viewBox="0 0 24 24" fill="none" stroke="#eaf8e4" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+              <motion.path d="M5 12.5l4.5 4.5L19 7.5" initial={stamp ? { pathLength: 0 } : false} animate={{ pathLength: 1 }}
+                transition={{ duration: 0.3, delay: delay + 0.18, ease: 'easeOut' }} />
+            </svg>
+          </motion.span>
+        ) : (
+          <span style={{ position: 'absolute', inset: 0, borderRadius: 8, display: 'grid', placeItems: 'center',
+            border: `2px solid ${r.hot ? GOLD : `${SEA},0.4)`}`, background: r.hot ? `${GOLD}22` : 'transparent' }}>
+            {r.hot && <span className="font-karla font-800" style={{ fontSize: '0.8rem', color: GOLD, lineHeight: 1 }}>!</span>}
+          </span>
+        )}
+      </span>
       {r.faces ? (
-        // TODAY'S FACES, overlapping a little, rims in their rarity; a signed
-        // one is dimmed with a tick. The faces are the reason to look.
-        <span style={{ height: plate, width: wide ? plate * 1.9 : '100%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        // Today's three faces, rims in their rarity: the faces are the reason to look.
+        <span style={{ display: 'flex', flexShrink: 0, opacity: done ? 0.6 : 1 }}>
           {r.faces.map((f, i) => {
             const rim = RARITY_RIM[f.rarity] ?? RARITY_RIM[1]
-            const d = Math.round(plate * 0.74)
+            const d = compact ? 26 : 30
             return (
               <span key={i} title={f.name} style={{
-                position: 'relative', width: d, height: d, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-                marginLeft: i === 0 ? 0 : -Math.round(d * 0.22),
-                border: `2px solid ${rim}`, background: '#0c1119',
-                boxShadow: f.rarity >= 3 && !f.recruited ? `0 0 12px ${rim}99` : '0 2px 6px rgba(0,0,0,0.5)',
+                width: d, height: d, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+                marginLeft: i === 0 ? 0 : -Math.round(d * 0.3), border: `2px solid ${rim}`, background: '#0c1119',
+                boxShadow: f.rarity >= 3 && !f.recruited ? `0 0 8px ${rim}99` : 'none',
                 opacity: f.recruited ? 0.45 : 1, zIndex: 3 - i,
               }}>
                 {f.art && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={f.art} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
                 )}
-                {f.recruited && (
-                  <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.35)' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9fe8bd" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
-                  </span>
-                )}
               </span>
             )
           })}
         </span>
       ) : (
-      <span style={{ height: plate, width: wide ? plate * 1.25 : '100%', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={ART[r.kind]} alt="" loading="lazy" decoding="async"
-          style={{
-            maxWidth: '100%', maxHeight: plate, objectFit: 'contain',
-            filter: r.hot ? `drop-shadow(0 0 10px ${GOLD}66)` : 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))',
-          }} />
-      </span>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={ART[r.kind]} alt="" loading="lazy" decoding="async" style={{
+          width: compact ? 34 : 40, height: compact ? 34 : 40, objectFit: 'contain', flexShrink: 0,
+          opacity: done ? 0.55 : 1, filter: done ? 'grayscale(0.4)' : 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
+        }} />
       )}
-      <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: wide ? undefined : '100%', flex: wide ? 1 : undefined }}>
+      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <span className="font-cinzel font-700" style={{
-          fontSize: compact ? '0.76rem' : '0.82rem', color: '#f2ead8', lineHeight: 1.15, marginTop: wide ? 0 : 4,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          fontSize: compact ? '0.8rem' : '0.86rem', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          color: done ? 'rgba(196,232,196,0.7)' : '#f2ead8',
+          textDecoration: done ? 'line-through' : 'none', textDecorationColor: 'rgba(123,191,123,0.7)', textDecorationThickness: 1.5,
         }}>{r.title}</span>
         <span className="font-karla" style={{
-          fontSize: compact ? '0.64rem' : '0.68rem', lineHeight: 1.3, marginTop: 2,
-          minHeight: wide ? undefined : '2.6em',
-          color: r.hot ? '#f6dfa0' : finished ? 'rgba(196,232,196,0.72)' : `${SEA},0.62)`,
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          fontSize: compact ? '0.64rem' : '0.68rem', lineHeight: 1.3, marginTop: 1,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          color: r.hot ? '#f6dfa0' : done ? 'rgba(196,232,196,0.55)' : `${SEA},0.62)`,
         }}>{r.status}</span>
+        {pct != null && !done && (
+          <span aria-hidden style={{ display: 'flex', gap: 3, marginTop: 5, maxWidth: 220 }}>
+            {r.prog![1] <= 8
+              ? Array.from({ length: r.prog![1] }).map((_, i) => (
+                <span key={i} style={{ flex: 1, height: 5, borderRadius: 3,
+                  background: i < r.prog![0] ? (r.hot ? GOLD : 'linear-gradient(90deg, #5aa865, #9fe0a0)') : 'rgba(255,255,255,0.08)' }} />
+              ))
+              : <span style={{ flex: 1, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)', position: 'relative', overflow: 'hidden' }}>
+                  <span style={{ position: 'absolute', inset: 0, width: `${pct * 100}%`, background: 'linear-gradient(90deg, #5aa865, #9fe0a0)' }} />
+                </span>}
+          </span>
+        )}
       </span>
+      {r.hot ? (
+        <span className="font-karla font-800 uppercase" style={{
+          flexShrink: 0, padding: '0.32rem 0.6rem', borderRadius: 999, fontSize: '0.58rem', letterSpacing: '0.12em',
+          color: '#1a1206', background: `linear-gradient(180deg, ${GOLD}ee, ${GOLD}bb)`,
+        }}>{r.action ?? 'Go'}</span>
+      ) : !done && (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={`${SEA},0.45)`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+          <path d="M9 6l6 6-6 6" />
+        </svg>
+      )}
     </motion.button>
   )
 }
+
+/**
+ * ── THE CREW AT WORK ────────────────────────────────────────────────────────
+ *
+ * The voyage and the trawls: never ticked, because they run again whenever
+ * they are back. Gold and "Collect" when something is in, a clock and a bar
+ * while they are out, and a plain "Send" when nobody is.
+ */
+function WorkTile({ r, onGo, compact }: { r: Row; onGo: () => void; compact: boolean }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!r.timer) return
+    const id = window.setInterval(() => setNow(Date.now()), 20_000)
+    return () => window.clearInterval(id)
+  }, [r.timer])
+  const frac = r.timer ? Math.max(0, Math.min(1, (now - r.timer.from) / Math.max(1, r.timer.to - r.timer.from))) : null
+  const idle = !r.hot && !r.away && !(r.prog && r.prog[0] > 0)
+  return (
+    <button type="button" onClick={onGo}
+      title={`${r.status} · ${r.place}`}
+      style={{
+        position: 'relative', display: 'flex', alignItems: 'center', gap: 9, minWidth: 0,
+        padding: compact ? '0.5rem 0.55rem' : '0.55rem 0.65rem', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+        background: r.hot ? `radial-gradient(ellipse 80% 100% at 0% 50%, ${GOLD}1f 0%, transparent 70%), rgba(40,30,8,0.42)` : 'rgba(255,255,255,0.035)',
+        border: `1px solid ${r.hot ? `${GOLD}88` : `${SEA},0.16)`}`,
+      }}>
+      {r.hot && (
+        <motion.span aria-hidden animate={{ opacity: [0.5, 0, 0.5] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut' }}
+          style={{ position: 'absolute', inset: -1, borderRadius: 13, border: `1px solid ${GOLD}` }} />
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={ART[r.kind]} alt="" loading="lazy" decoding="async" style={{
+        width: compact ? 38 : 44, height: compact ? 38 : 44, objectFit: 'contain', flexShrink: 0,
+        filter: r.hot ? `drop-shadow(0 0 8px ${GOLD}66)` : 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
+      }} />
+      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <span className="font-cinzel font-700" style={{ fontSize: compact ? '0.78rem' : '0.84rem', color: '#f2ead8', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</span>
+        <span className="font-karla" style={{
+          fontSize: compact ? '0.62rem' : '0.66rem', lineHeight: 1.3, marginTop: 1,
+          color: r.hot ? '#f6dfa0' : `${SEA},0.62)`,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>{r.status}</span>
+        {frac != null ? (
+          <span aria-hidden style={{ marginTop: 5, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)', position: 'relative', overflow: 'hidden' }}>
+            <span style={{ position: 'absolute', inset: 0, width: `${frac * 100}%`, background: 'linear-gradient(90deg, #4a86b8, #8fc8ee)' }} />
+          </span>
+        ) : r.prog && r.prog[1] > 0 && !r.hot ? (
+          <span aria-hidden style={{ display: 'flex', gap: 3, marginTop: 5 }}>
+            {Array.from({ length: r.prog[1] }).map((_, i) => (
+              <span key={i} style={{ flex: 1, height: 5, borderRadius: 3, background: i < r.prog![0] ? 'linear-gradient(90deg, #4a86b8, #8fc8ee)' : 'rgba(255,255,255,0.08)' }} />
+            ))}
+          </span>
+        ) : null}
+      </span>
+      {(r.hot || idle) && r.action && (
+        <span className="font-karla font-800 uppercase" style={{
+          flexShrink: 0, padding: '0.3rem 0.55rem', borderRadius: 999, fontSize: '0.56rem', letterSpacing: '0.12em',
+          color: r.hot ? '#1a1206' : `${SEA},0.9)`,
+          background: r.hot ? `linear-gradient(180deg, ${GOLD}ee, ${GOLD}bb)` : 'rgba(150,214,255,0.1)',
+          border: r.hot ? 'none' : `1px solid ${SEA},0.3)`,
+        }}>{r.hot ? (r.kind === 'voyage' ? 'Reveal' : 'Collect') : r.action}</span>
+      )}
+    </button>
+  )
+}
+

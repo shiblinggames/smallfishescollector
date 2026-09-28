@@ -29,6 +29,7 @@ import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
 import { BASE_VOYAGE_MS } from '@/lib/voyage'
 import { bonusState } from '@/app/actions/dailyBonus'
 import { todaysRecruits, type RecruitFace } from '@/app/(app)/crew/actions'
+import { listDone } from '@/lib/dayList'
 
 export type DayState = {
   /** The Daily Haul: gems and bait every day, a crate every Monday. Folded
@@ -38,8 +39,8 @@ export type DayState = {
   recruits: { faces: RecruitFace[] } | null
   /** Today's Orders: the daily challenges. */
   orders: { done: number; total: number; ready: number; sweepClaimed: boolean } | null
-  /** The daily voyage. */
-  voyage: { state: 'none' | 'at_sea' | 'ready'; endsAt: number | null } | null
+  /** The daily voyage. `startsAt` is when it sailed, for the progress bar. */
+  voyage: { state: 'none' | 'at_sea' | 'ready'; endsAt: number | null; startsAt?: number | null } | null
   /** The trawls: how many crews are out, how many hauls are waiting. */
   trawls: { out: number; ready: number; slots: number
     /** When the first crew still out comes back, epoch ms, or null. */
@@ -57,6 +58,16 @@ export type DayState = {
    * The client sets one timer for this moment instead of polling.
    */
   nextAt: number | null
+  /**
+   * ── TODAY'S LIST (Kong, 2026-09-27) ─────────────────────────────────────
+   * The true dailies, checked off: the haul, the orders, the bounties (once
+   * open), tonight's Parlor board and a look at the recruits. The voyage and
+   * the trawls run again whenever they are back, and the Chart Room is
+   * weekly, so none of those are on it. `fullDays` is the lifetime count of
+   * days the whole list was cleared: it only ever goes up (no streak, no
+   * FOMO), credited once per UTC day, here, the moment a read sees it done.
+   */
+  list: { recruitsSeen: boolean; fullDays: number; countedToday: boolean; justCounted: boolean }
   // FINN'S JOB IS NOT HERE. It was, for one commit. Kong: that is a campaign
   // quest, not a daily. It does not reset, it advances, and a board of things
   // that come back tomorrow is the wrong place to track a story. The Salt
@@ -99,7 +110,16 @@ export async function dayState(): Promise<DayState | null> {
     safe(todaysRecruits()),
   ])
 
-  const out: DayState = { haul, recruits: recruits ?? null, orders: null, voyage: null, trawls: null, bounties: null, chart: null, parlor: null, nextAt: null }
+  const prof = profile as { full_days?: number | null; last_full_day?: string | null; recruits_seen_on?: string | null } | null
+  const out: DayState = {
+    haul, recruits: recruits ?? null, orders: null, voyage: null, trawls: null, bounties: null, chart: null, parlor: null, nextAt: null,
+    list: {
+      recruitsSeen: prof?.recruits_seen_on === today,
+      fullDays: Number(prof?.full_days ?? 0),
+      countedToday: prof?.last_full_day === today,
+      justCounted: false,
+    },
+  }
   const now = Date.now()
   /** Keep the soonest future moment anything flips. */
   const soon = (t: number | null) => {
@@ -120,7 +140,7 @@ export async function dayState(): Promise<DayState | null> {
       // The same fallback the reader uses, so "back in" is never blank.
       const v = voyage.todayVoyage as { created_at: string; duration_ms?: number | null }
       const endsAt = new Date(v.created_at).getTime() + (v.duration_ms ?? BASE_VOYAGE_MS)
-      out.voyage = { state: 'at_sea', endsAt }
+      out.voyage = { state: 'at_sea', endsAt, startsAt: new Date(v.created_at).getTime() }
       soon(endsAt)
     } else out.voyage = { state: 'none', endsAt: null }
   }
@@ -154,5 +174,23 @@ export async function dayState(): Promise<DayState | null> {
     out.parlor = { boardPlayedToday: picksToday >= picksAllowed, ladderDone: ladder === 'walked' || ladder === 'busted' || ladder === 'crowned' }
   }
 
+  // ── A FULL DAY, CREDITED ONCE ──────────────────────────────────────────
+  // Every item on today's list done: the tally goes up by one, and only the
+  // first read that sees it gets to write (the update matches only while
+  // last_full_day is not today, so two reads racing credit it once).
+  if (!out.list.countedToday && listDone(out)) {
+    const { data: moved } = await admin.from('profiles')
+      .update({ full_days: out.list.fullDays + 1, last_full_day: today })
+      .eq('id', user.id)
+      .or(`last_full_day.is.null,last_full_day.lt.${today}`)
+      .select('full_days')
+    if (moved && moved.length > 0) {
+      out.list.fullDays = Number((moved[0] as { full_days: number }).full_days)
+      out.list.countedToday = true
+      out.list.justCounted = true
+    }
+  }
+
   return out
 }
+
