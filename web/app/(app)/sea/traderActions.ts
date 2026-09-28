@@ -30,7 +30,7 @@ import { decodeXfog, encodeXfog, xfogSet } from '@/lib/seaExploreExp'
 import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
 import { grant } from '@/lib/wallet'
-import { rngNext } from '@/lib/rng'
+import { holdAtRate, runnerCutWon } from '@/lib/sellRules'
 
 export type DealResult =
   | { ok: true; spent?: number; earned?: number; baitType?: string; qty?: number; doubloons: number }
@@ -173,10 +173,8 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
     .from('fish_species').select('id, sell_value').in('id', ids)
   const value = new Map((species ?? []).map(f => [f.id as number, Number(f.sell_value ?? 0)]))
 
-  let earned = 0
   const rate = trader.deal === 'buy' ? trader.rate : 0
-  for (const r of rows) earned += (value.get(r.fish_id) ?? 0) * r.quantity * rate
-  earned = Math.floor(earned)
+  const earned = holdAtRate(rows.map(r => ({ sellValue: value.get(r.fish_id) ?? 0, quantity: r.quantity })), rate)
   if (earned <= 0) {
     await admin.from('sea_trader_deals')
       .delete().eq('user_id', user.id).eq('trader_key', traderKey)
@@ -216,9 +214,7 @@ async function holdValue(
   const { data: species } = await admin
     .from('fish_species').select('id, sell_value').in('id', ids)
   const value = new Map((species ?? []).map(f => [f.id as number, Number(f.sell_value ?? 0)]))
-  let total = 0
-  for (const r of rows) total += (value.get(r.fish_id) ?? 0) * r.quantity * rate
-  return Math.floor(total)
+  return holdAtRate(rows.map(r => ({ sellValue: value.get(r.fish_id) ?? 0, quantity: r.quantity })), rate)
 }
 
 /**
@@ -261,9 +257,7 @@ export async function sellToResident(zoneId: string): Promise<
     .from('fish_species').select('id, sell_value').in('id', ids)
   const value = new Map((species ?? []).map(f => [f.id as number, Number(f.sell_value ?? 0)]))
 
-  let earned = 0
-  for (const r of rows) earned += (value.get(r.fish_id) ?? 0) * r.quantity * rate
-  earned = Math.floor(earned)
+  const earned = holdAtRate(rows.map(r => ({ sellValue: value.get(r.fish_id) ?? 0, quantity: r.quantity })), rate)
   if (earned <= 0) return { error: 'Nothing in your hold is worth anything to them.' }
 
   // CLEAR THE HOLD FIRST. If the grant failed after the delete the player would
@@ -369,7 +363,7 @@ export async function wagerForRunnerRod(traderKey: string): Promise<
     return { error: `He wants ${trader.stake.toLocaleString()} on the table and you have not got it.` }
   }
 
-  const won = rngNext() < trader.odds
+  const won = runnerCutWon(trader.odds)
 
   if (won) {
     // The insert can still lose a race against another grant of the same rod.

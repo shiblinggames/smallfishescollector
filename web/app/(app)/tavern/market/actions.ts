@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isPremiumActive } from '@/lib/premium'
 import { settlePendingSales } from '@/lib/pendingSales'
 import { grant } from '@/lib/wallet'
+import { marketSale, marketPriceEach } from '@/lib/sellRules'
 
 export type PendingSale = {
   id: string
@@ -106,10 +107,8 @@ export async function sellEntireHold(): Promise<
     multiplierMap.set(row.fish_id, Number(row.multiplier))
   }
 
-  // NO CUT. There was a three percent fee for non-Captains here, and it went
-  // on 2026-09-16 for everybody: it was confusing on the receipt, and a perk
-  // that touches a rate is the wrong kind of perk. See lib/captainWater.
-  const fee = 1.0
+  // NO CUT: the non-Captain fee went on 2026-09-16 for everybody. The price
+  // itself is lib/sellRules marketSale.
 
   // Empty each stack only if it still holds what was read, and pay only for
   // the stacks that emptied. Two sells fired together cannot both be paid for
@@ -124,15 +123,12 @@ export async function sellEntireHold(): Promise<
     return data && data.length > 0 ? item : null
   }))
 
-  let totalEarned = 0
-  let totalFishSold = 0
-  for (const item of cleared) {
-    if (!item) continue
-    const sellValue = item.fish_species?.sell_value ?? 0
-    const multiplier = multiplierMap.get(item.fish_id) ?? 1.0
-    totalEarned += Math.floor(sellValue * multiplier * fee) * item.quantity
-    totalFishSold += item.quantity
-  }
+  const { earned: totalEarned, fishSold: totalFishSold } = marketSale(
+    cleared.filter((x): x is InvRow => !!x).map(item => ({
+      sellValue: item.fish_species?.sell_value ?? 0,
+      multiplier: multiplierMap.get(item.fish_id) ?? 1.0,
+      quantity: item.quantity,
+    })))
   if (totalEarned <= 0) return { error: 'The hold is empty' }
 
   const [newDoubloons] = await Promise.all([
@@ -171,10 +167,7 @@ export async function marketSellFish(
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
   // NO CUT. See the note on the other sell path.
-  const fee = 1.0
-  const multiplier = market?.multiplier ?? 1.0
-  const priceEach = Math.floor(fish.sell_value * Number(multiplier) * fee)
-  const earned = priceEach * quantity
+  const earned = marketPriceEach(fish.sell_value, Number(market?.multiplier ?? 1.0)) * quantity
 
   // Take the fish first, and only if the stack still holds what was read. A
   // twin request that got there first leaves this update matching nothing.
