@@ -21,6 +21,7 @@
 // roll, and the crew screen still owns the roll itself.
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { crewData } from '@/lib/data/crewData'
 import { createClient } from '@/lib/supabase/server'
 import { crewCapacity } from '@/lib/crewCapacity'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
@@ -83,19 +84,18 @@ export async function crewHub(): Promise<CrewHubState | { error: string }> {
   if (!user) return { error: 'Not signed in.' }
   const admin = createAdminClient()
 
-  const [{ data: prof }, roster, trawls, voyage, { data: boardRows }, { data: bunkRows }] = await Promise.all([
-    admin.from('profiles')
-      .select('expedition_xp, crew_hall_tier, crew_drill_level, crew_stores_level, last_free_recruit_date')
-      .eq('id', user.id).single(),
+  const db = crewData(admin)
+  const [prof, roster, trawls, voyage, boardRows, bunkRows] = await Promise.all([
+    db.profile(user.id, 'expedition_xp, crew_hall_tier, crew_drill_level, crew_stores_level, last_free_recruit_date'),
     getCrewRoster(),
     getTrawlState(),
     getDailyVoyageState(),
-    admin.from('daily_recruits').select('recruited').eq('user_id', user.id),
+    db.board(user.id),
     // WHO IS TRAINING. The same table the hall's own tiles read, and the same
     // two columns: when the stint began and how long it runs. A roll call that
     // filed a hand in a bunk under "in the hall" was technically true and
     // useless — the hall is where they sleep AND where they work.
-    admin.from('crew_hall_bunks').select('crew_id, since, cap_hours').eq('user_id', user.id),
+    db.bunks(user.id),
   ])
   if (!prof) return { error: 'No profile.' }
 

@@ -22,6 +22,8 @@ import { getCrewSkin, resolveCrewFilename, type EquippedCrewSkins } from '@/lib/
 import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
 import { cardPools, rollRecruitBoard, pickBloodSkin, type CardRow } from '@/lib/crewRules'
 import { cardArt } from '@/lib/artUrl'
+import { clockNow } from '@/lib/clock'
+import { crewData, type CrewData } from '@/lib/data/crewData'
 
 const REROLL_COST = 100
 
@@ -173,10 +175,7 @@ let _cardCatalog: CardRow[] | null = null
  *  Coelacanth is a normal legendary in the pool (fully released 2026-07-07 — no
  *  longer Hardcore-discovery-gated). */
 async function loadCards(admin: ReturnType<typeof createAdminClient>) {
-  if (!_cardCatalog) {
-    const { data } = await admin.from('cards').select('id, name, filename, slug, power, dodge, fortune')
-    _cardCatalog = (data ?? []) as CardRow[]
-  }
+  if (!_cardCatalog) _cardCatalog = await crewData(admin).cardCatalog()
   return cardPools(_cardCatalog)
 }
 
@@ -289,13 +288,9 @@ async function fillFreeBoardIfStale(
 ) {
   const today = utcDate()
   if (prevDate === today) return
-  let stampQ = admin.from('profiles').update({ last_free_recruit_date: today }).eq('id', userId)
-  stampQ = prevDate === null ? stampQ.is('last_free_recruit_date', null) : stampQ.eq('last_free_recruit_date', prevDate)
-  const { data: stamped } = await stampQ.select('id')
-  if (stamped && stamped.length > 0) {
-    await admin.from('daily_recruits').delete().eq('user_id', userId)
-    const rows = generateBoardRows(userId, DAILY_RECRUITS, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, false, null)
-    if (rows.length) await admin.from('daily_recruits').insert(rows)
+  const db = crewData(admin)
+  if (await db.stampFreeBoard(userId, prevDate, today)) {
+    await db.replaceBoard(userId, generateBoardRows(userId, DAILY_RECRUITS, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, false, null))
   }
 }
 
@@ -311,17 +306,15 @@ export async function todaysRecruits(): Promise<{ faces: RecruitFace[] } | null>
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const admin = createAdminClient()
-  const { data: prof } = await admin.from('profiles')
-    .select('last_free_recruit_date, legendary_unlocks').eq('id', user.id).single()
+  const db = crewData(admin)
+  const prof = await db.profile(user.id, 'last_free_recruit_date, legendary_unlocks')
   if (!prof) return null
   const { byGroup, meta } = await loadCards(admin)
   await fillFreeBoardIfStale(admin, user.id, ((prof as any).last_free_recruit_date as string | null) ?? null,
     byGroup, meta, ((prof as any).legendary_unlocks as string[] | null) ?? [])
-  const { data: rows } = await admin.from('daily_recruits')
-    .select('slot, card_id, rarity, recruited').eq('user_id', user.id).order('slot')
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const rows = await db.board(user.id)
   return {
-    faces: (rows ?? []).map(r => {
+    faces: rows.map(r => {
       const m = meta.get(r.card_id as number)
       return {
         rarity: Number(r.rarity) || 1,
@@ -340,12 +333,9 @@ export async function getCrewState(): Promise<CrewState | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const admin = createAdminClient()
+  const db = crewData(admin)
 
-  const { data: prof } = await admin
-    .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, crew_drill_level, crew_stores_level, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks, crew_next_roll_legendary, crew_next_roll_legendary_slug')
-    .eq('id', user.id)
-    .single()
+  const prof = await db.profile(user.id, 'gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, crew_drill_level, crew_stores_level, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks, crew_next_roll_legendary, crew_next_roll_legendary_slug')
   if (!prof) return null
 
   const premium = isPremiumActive(prof as any)
@@ -366,32 +356,22 @@ export async function getCrewState(): Promise<CrewState | null> {
   // won't be clobbered by this.
   await fillFreeBoardIfStale(admin, user.id, ((prof as any).last_free_recruit_date as string | null) ?? null, byGroup, meta, legendaryUnlocks)
 
-  const { data: boardRows } = await admin
-    .from('daily_recruits')
-    .select('id, slot, source, card_id, rarity, power, dodge, fortune, effects, recruited, start_xp')
-    .eq('user_id', user.id)
-    .order('slot')
+  const boardRows = await db.board(user.id)
   // Live roster only — fallen crew (died_at IS NOT NULL) live in the
   // Crew Hall Graveyard tab, not the active roster.
-  const { data: rosterRows } = await admin
-    .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, pending_trait, voyage_slot, raid_slot, xp, nickname')
-    .eq('user_id', user.id)
-    .is('died_at', null)
-    .order('recruited_at', { ascending: false })
+  const rosterRows = await db.roster(user.id)
 
   // Pending voyage lock: any crew currently in a 'pending' daily_voyages
   // crew_variant_ids list can't be reassigned until the voyage reveals.
   // Surface those ids so the UI can gray out + disable the toggle.
   // Crew out on a Trawl are likewise locked from reassignment (hard-locked
   // at sea for the hour). Surfaced separately so the UI can label them.
-  const [{ data: pendingVoyage }, { data: trawlRows }, { data: bunkRows }] = await Promise.all([
-    admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', user.id).eq('status', 'pending').maybeSingle(),
-    admin.from('trawls').select('crew_id').eq('user_id', user.id),
-    admin.from('crew_hall_bunks').select('crew_id, since, rate_per_hour, cap_hours, slot').eq('user_id', user.id),
+  const [atSea, trawlingCrewIds, bunkRows] = await Promise.all([
+    db.voyageAtSea(user.id),
+    db.trawling(user.id),
+    db.bunks(user.id),
   ])
-  const lockedCrewIds: number[] = (pendingVoyage as any)?.crew_variant_ids ?? []
-  const trawlingCrewIds: number[] = ((trawlRows ?? []) as any[]).map(r => r.crew_id as number)
+  const lockedCrewIds: number[] = atSea ?? []
   const bunkedCrewIds: number[] = ((bunkRows ?? []) as any[]).map(r => r.crew_id as number)
   const liveRate = bunkRatePerHour((prof as any).crew_drill_level ?? 1)
   const liveCap = storesCapHours((prof as any).crew_stores_level ?? 1)
@@ -408,15 +388,15 @@ export async function getCrewState(): Promise<CrewState | null> {
   // from bunkedCrewIds because a FINISHED stint is only waiting to be
   // collected and should not read as locked.
   const bunkLockedCrewIds: number[] = ((bunkRows ?? []) as any[])
-    .filter(r => !stintDone(r.since as string, Date.now(), (r.cap_hours as number | null) ?? liveCap))
+    .filter(r => !stintDone(r.since as string, clockNow(), (r.cap_hours as number | null) ?? liveCap))
     .map(r => r.crew_id as number)
 
   const ownedCrewSkins = ((prof as any).owned_crew_skins as string[] | null) ?? []
   const equippedCrewSkins = ((prof as any).equipped_crew_skins as EquippedCrewSkins | null) ?? {}
 
   return {
-    board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
-    roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort),
+    board: boardRows.map(r => toCandidate(r, meta)),
+    roster: rosterRows.map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
     shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds, bunkLockedCrewIds, bunkTerms,
     hallBunksOpen: hallBunksOpen((prof as any).is_admin),
@@ -447,20 +427,16 @@ export async function getCrewRoster(): Promise<CrewMember[]> {
   const user = await getCurrentUser()
   if (!user) return []
   const admin = createAdminClient()
+  const db = crewData(admin)
   // All three at once. The roster read waited on the other two for nothing:
   // it needs neither to be sent, only to be shaped.
-  const [{ meta }, { data: prof }, { data: rosterRows }] = await Promise.all([
+  const [{ meta }, prof, rosterRows] = await Promise.all([
     loadCards(admin),
-    admin.from('profiles').select('equipped_crew_skins').eq('id', user.id).single(),
-    admin
-      .from('user_crew')
-      .select('id, card_id, rarity, power, dodge, fortune, effects, pending_trait, voyage_slot, raid_slot, xp, nickname')
-      .eq('user_id', user.id)
-      .is('died_at', null)
-      .order('recruited_at', { ascending: false }),
+    db.profile(user.id, 'equipped_crew_skins'),
+    db.roster(user.id),
   ])
   const equippedCrewSkins = ((prof as any)?.equipped_crew_skins as EquippedCrewSkins | null) ?? {}
-  return ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort)
+  return rosterRows.map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort)
 }
 
 // ── Reroll the board for 100 gems (always 3 new, boosted odds) ──────────────
@@ -477,7 +453,8 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   const tier = bloodRerollTier(bloodTierId)
   if (bloodTierId && !tier) return { error: 'Unknown reroll tier' }
 
-  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, blood_gems, unlocked_badges, badge_unlocked_at, legendary_unlocks, crew_next_roll_legendary, crew_next_roll_legendary_slug').eq('id', user.id).single()
+  const db = crewData(admin)
+  const prof = await db.profile(user.id, 'gems, crew_hall_tier, blood_gems, unlocked_badges, badge_unlocked_at, legendary_unlocks, crew_next_roll_legendary, crew_next_roll_legendary_slug')
   const gems = (prof as any)?.gems ?? 0
   const bloodGems = ((prof as any)?.blood_gems as number | null) ?? 0
   if (gems < REROLL_COST) return { error: 'Not enough gems' }
@@ -493,19 +470,18 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   }
   // Stamp today's date so getCrewState() won't regenerate a free board over
   // this gem roll.
-  await admin.from('profiles').update({ last_free_recruit_date: utcDate() }).eq('id', user.id)
+  await db.updateProfile(user.id, { last_free_recruit_date: utcDate() })
 
   // Blood-Charged badge — hook-granted the first time a reroll is boosted with
   // Blood Gems (a blood-charged reroll; not derivable from stored state).
   if (tier) {
     const badges = ((prof as any)?.unlocked_badges as string[] | null) ?? []
     if (!badges.includes('blood_charged')) {
-      await admin.from('profiles').update({ unlocked_badges: [...badges, 'blood_charged'], badge_unlocked_at: stampBadges((prof as { badge_unlocked_at?: unknown } | null)?.badge_unlocked_at, ['blood_charged']) }).eq('id', user.id)
+      await db.updateProfile(user.id, { unlocked_badges: [...badges, 'blood_charged'], badge_unlocked_at: stampBadges((prof as { badge_unlocked_at?: unknown } | null)?.badge_unlocked_at, ['blood_charged']) })
     }
   }
 
   const { byGroup, meta } = await loadCards(admin)
-  await admin.from('daily_recruits').delete().eq('user_id', user.id)
   const weights = tier ? tier.weights : GEM_WEIGHTS
   const legendaryUnlocks = ((prof as any)?.legendary_unlocks as string[] | null) ?? []
   // Same one-shot flag as the free board — whichever roll the captain does
@@ -514,13 +490,10 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   // guarded write, so two rerolls fired together honour it only once.
   let owedLegendary = false
   if ((prof as any)?.crew_next_roll_legendary === true) {
-    const { data: took } = await admin.from('profiles')
-      .update({ crew_next_roll_legendary: false, crew_next_roll_legendary_slug: null })
-      .eq('id', user.id).eq('crew_next_roll_legendary', true).select('id')
-    owedLegendary = !!took && took.length > 0
+    owedLegendary = await db.takeOneShotLegendary(user.id)
   }
   const rows = generateBoardRows(user.id, 3, 'gem', weights, byGroup, meta, 0, legendaryUnlocks, owedLegendary, owedLegendary ? ((prof as any)?.crew_next_roll_legendary_slug ?? null) : null)
-  if (rows.length) await admin.from('daily_recruits').insert(rows)
+  await db.replaceBoard(user.id, rows)
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -537,7 +510,8 @@ export async function gambleBloodSkin(): Promise<{ skinId: string; state: NonNul
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin.from('profiles').select('blood_gems, owned_crew_skins, unlocked_badges, badge_unlocked_at').eq('id', user.id).single()
+  const db = crewData(admin)
+  const prof = await db.profile(user.id, 'blood_gems, owned_crew_skins, unlocked_badges, badge_unlocked_at')
   if (!prof) return { error: 'Profile not found' }
   const bloodGems = ((prof as any).blood_gems as number | null) ?? 0
   if (bloodGems < BLOOD_SKIN_GAMBLE_COST) return { error: 'Not enough Blood Gems' }
@@ -559,7 +533,7 @@ export async function gambleBloodSkin(): Promise<{ skinId: string; state: NonNul
   // out a skin (can't be derived from stored state; mirrors catfish_jackpot).
   const badges = ((prof as any).unlocked_badges as string[] | null) ?? []
   if (!badges.includes('crimson_fortune')) {
-    await admin.from('profiles').update({ unlocked_badges: [...badges, 'crimson_fortune'], badge_unlocked_at: stampBadges((prof as { badge_unlocked_at?: unknown } | null)?.badge_unlocked_at, ['crimson_fortune']) }).eq('id', user.id)
+    await db.updateProfile(user.id, { unlocked_badges: [...badges, 'crimson_fortune'], badge_unlocked_at: stampBadges((prof as { badge_unlocked_at?: unknown } | null)?.badge_unlocked_at, ['crimson_fortune']) })
   }
 
   const state = await getCrewState()
@@ -575,39 +549,26 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin.from('profiles').select('expedition_xp, crew_hall_tier').eq('id', user.id).single()
+  const db = crewData(admin)
+  const prof = await db.profile(user.id, 'expedition_xp, crew_hall_tier')
   const capacity = crewCapacity(getLevelFromXP((prof as any)?.expedition_xp ?? 0), (prof as any)?.crew_hall_tier)
 
   // Claim the candidate FIRST, and only if it is still unclaimed. Two taps
   // fired together both reach here; only the one whose update comes back
   // with a row gets the crew member.
-  const { data: claimed } = await admin
-    .from('daily_recruits')
-    .update({ recruited: true })
-    .eq('id', recruitId)
-    .eq('user_id', user.id)
-    .eq('recruited', false)
-    .select('id, card_id, rarity, power, dodge, fortune, effects, recruited, start_xp')
-  const rec = claimed?.[0]
+  const rec = await db.claimRecruit(user.id, recruitId)
   if (!rec) {
-    const { data: exists } = await admin.from('daily_recruits').select('id').eq('id', recruitId).eq('user_id', user.id).maybeSingle()
-    return { error: exists ? 'Already recruited' : 'Recruit not found' }
+    return { error: (await db.recruitExists(user.id, recruitId)) ? 'Already recruited' : 'Recruit not found' }
   }
   // Capacity check counts LIVE roster only — fallen crew don't take
   // up a roster slot (graveyard is unlimited memorial space).
-  const { count } = await admin
-    .from('user_crew')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .is('died_at', null)
   // Roster full: hand the candidate back so it can be taken later.
-  if ((count ?? 0) >= capacity) {
-    await admin.from('daily_recruits').update({ recruited: false }).eq('id', recruitId).eq('user_id', user.id)
+  if ((await db.liveCount(user.id)) >= capacity) {
+    await db.unclaimRecruit(user.id, recruitId)
     return { error: 'Roster full' }
   }
 
-  await admin.from('user_crew').insert({
-    user_id: user.id,
+  await db.addCrew(user.id, {
     card_id: (rec as any).card_id,
     rarity: (rec as any).rarity,
     power: (rec as any).power,
@@ -623,7 +584,7 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
     xp: (rec as any).start_xp ?? 0,
   })
   // Lifetime recruit counter (cumulative; user_crew only holds the live roster).
-  await admin.rpc('bump_profile_stat', { uid: user.id, col: 'lifetime_recruits', n: 1 })
+  await db.bumpStat(user.id, 'lifetime_recruits', 1)
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -637,11 +598,8 @@ export async function upgradeCrewHall(): Promise<CrewActionResult> {
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin
-    .from('profiles')
-    .select('doubloons, crew_hall_tier, expedition_xp')
-    .eq('id', user.id)
-    .single()
+  const db = crewData(admin)
+  const prof = await db.profile(user.id, 'doubloons, crew_hall_tier, expedition_xp')
   const current = clampHallTier((prof as any)?.crew_hall_tier)
   const next = nextHallTier(current)
   if (!next) return { error: 'Crew Hall is fully upgraded' }
@@ -657,13 +615,7 @@ export async function upgradeCrewHall(): Promise<CrewActionResult> {
   // eq() on the current tier stops a double-submit from buying two tiers
   // for one confirmation.
   if (await spend(admin, user.id, 'doubloons', next.cost) === null) return { error: 'Not enough doubloons' }
-  const { data: bumped } = await admin
-    .from('profiles')
-    .update({ crew_hall_tier: next.tier })
-    .eq('id', user.id)
-    .eq('crew_hall_tier', current)
-    .select('id')
-  if (!bumped || bumped.length === 0) {
+  if (!(await db.stepUp(user.id, 'crew_hall_tier', current, next.tier))) {
     // A twin request bought this tier first; this payment goes back.
     await grant(admin, user.id, 'doubloons', next.cost)
     return { error: 'Crew Hall already upgraded' }
@@ -691,7 +643,7 @@ export async function dismissCrew(crewId: number): Promise<CrewActionResult> {
 
   // Dismiss only applies to live crew. Fallen crew live in the
   // graveyard permanently — no "dismiss" affordance there.
-  await admin.from('user_crew').delete().eq('id', crewId).eq('user_id', user.id).is('died_at', null)
+  await crewData(admin).dismiss(user.id, crewId)
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -715,31 +667,20 @@ async function assertCanReassign(
   userId: string,
   crewId: number,
 ): Promise<{ ok: true; crew: { id: number; card_id: number; voyage_slot: number | null } } | { error: string }> {
-  const { data: crew } = await admin
-    .from('user_crew')
-    .select('id, card_id, voyage_slot')
-    .eq('id', crewId).eq('user_id', userId).is('died_at', null)
-    .single()
+  const db = crewData(admin)
+  const crew = await db.crew(userId, crewId, 'id, card_id, voyage_slot')
   if (!crew) return { error: 'Crew not found' }
 
   // In-progress voyage lock — if this crew is in a pending voyage's
   // crew_variant_ids, they're at sea right now and can't be reassigned
   // until the voyage reveals.
   if ((crew as any).voyage_slot != null) {
-    const { data: pending } = await admin
-      .from('daily_voyages')
-      .select('crew_variant_ids')
-      .eq('user_id', userId)
-      .eq('status', 'pending')
-      .maybeSingle()
-    const onActive = pending && Array.isArray((pending as any).crew_variant_ids) && (pending as any).crew_variant_ids.includes(crewId)
+    const onActive = ((await db.voyageAtSea(userId)) ?? []).includes(crewId)
     if (onActive) return { error: 'This crew is at sea right now. Wait for their voyage to return.' }
   }
 
   // Trawl lock — a crew out on a trawl is hard-locked at sea for the hour.
-  const { data: onTrawl } = await admin
-    .from('trawls').select('id').eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
-  if (onTrawl) return { error: 'This crew is out on a trawl. Collect it first to free them up.' }
+  if (await db.onTrawl(userId, crewId)) return { error: 'This crew is out on a trawl. Collect it first to free them up.' }
 
   // Bunk lock — a hand in the hall is committed for the whole stint. This
   // USED to auto-evict them and bank the XP, which made bunking free; the
@@ -751,18 +692,17 @@ async function assertCanReassign(
   // one way a crew could be seated and bunked at the same time, which put a
   // "Training" badge on a party seat and made the hall look like it had lost
   // them. Claiming deletes the row, so the block clears the moment you collect.
-  const { data: onBunk } = await admin
-    .from('crew_hall_bunks').select('since, cap_hours').eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
+  const onBunk = await db.bunkOf(userId, crewId)
   if (onBunk) {
     // The length AGREED when they went in, not the current Stores tier. Reading
     // the live tier would let a Stores purchase extend a hand's sentence after
     // the fact, or cut it short.
     let cap = (onBunk as any).cap_hours as number | null
     if (cap == null) {
-      const { data: prof } = await admin.from('profiles').select('crew_stores_level').eq('id', userId).single()
+      const prof = await db.profile(userId, 'crew_stores_level')
       cap = storesCapHours((prof as any)?.crew_stores_level ?? 1)
     }
-    return stintDone((onBunk as any).since, Date.now(), cap)
+    return stintDone((onBunk as any).since, clockNow(), cap)
       ? { error: 'This crew finished their training. Collect it in the hall to free them up.' }
       : { error: 'This crew is training in the hall. Their stint has to finish first.' }
   }
@@ -777,6 +717,7 @@ async function applyAssignment(
   slot: number | null,
 ): Promise<CrewActionResult> {
   const admin = createAdminClient()
+  const db = crewData(admin)
   const guard = await assertCanReassign(admin, userId, crewId)
   if ('error' in guard) return { error: guard.error }
   const { crew } = guard
@@ -784,11 +725,10 @@ async function applyAssignment(
   if (target === null || slot === null) {
     // Bench — clear both columns. A bunk is kept deliberately: benched IS the
     // state a bunked crew lives in, so benching them changes nothing.
-    await admin.from('user_crew').update({ voyage_slot: null, raid_slot: null })
-      .eq('id', crewId).eq('user_id', userId)
+    await db.updateCrew(userId, crewId, { voyage_slot: null, raid_slot: null })
   } else {
 
-    const { data: prof } = await admin.from('profiles').select('ship_tier, ship_classes, has_sixth_berth').eq('id', userId).single()
+    const prof = await db.profile(userId, 'ship_tier, ship_classes, has_sixth_berth')
     const tier = (prof as any)?.ship_tier ?? 0
     // Hull berths + the Ch4 Expanded Quarters augment.
     const crewSlots = (EXPEDITION_SHIP_STATS[tier]?.crewSlots ?? 1)
@@ -800,19 +740,15 @@ async function applyAssignment(
     const otherCol = target === 'voyage' ? 'raid_slot'   : 'voyage_slot'
 
     // 1) Bench whoever currently holds this exact target slot.
-    await admin.from('user_crew').update({ [slotCol]: null })
-      .eq('user_id', userId).eq(slotCol, slot)
+    await db.vacateSeat(userId, target, slot)
     // 2) Bench any other copy of the same card already on the same track
     //    (one of each fish per track to stop "stack three swordfish for ult").
-    await admin.from('user_crew').update({ [slotCol]: null })
-      .eq('user_id', userId).eq('card_id', crew.card_id).neq('id', crewId)
+    await db.vacateSpecies(userId, target, crew.card_id, crewId)
     // 3) Clear THIS crew's other-track slot first — CHECK constraint requires
     //    one of {voyage_slot, raid_slot} to be null before writing.
-    await admin.from('user_crew').update({ [otherCol]: null })
-      .eq('id', crewId).eq('user_id', userId)
+    await db.updateCrew(userId, crewId, { [otherCol]: null })
     // 4) Finally place them on the target slot.
-    await admin.from('user_crew').update({ [slotCol]: slot })
-      .eq('id', crewId).eq('user_id', userId)
+    await db.updateCrew(userId, crewId, { [slotCol]: slot })
   }
 
   const state = await getCrewState()
@@ -856,19 +792,15 @@ export async function clearParty(track: AssignTrack): Promise<CrewActionResult> 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in' }
-  const admin = createAdminClient()
-  const slotCol = track === 'voyage' ? 'voyage_slot' : 'raid_slot'
+  const db = crewData(createAdminClient())
 
   if (track === 'voyage') {
-    const { data: pending } = await admin.from('daily_voyages')
-      .select('id').eq('user_id', user.id).eq('status', 'pending').maybeSingle()
-    if (pending) return { error: 'Your crew is at sea. Wait for the voyage to return.' }
+    if ((await db.voyageAtSea(user.id)) !== null) return { error: 'Your crew is at sea. Wait for the voyage to return.' }
   } else {
     // `gauntlet_run_open` alone covers active AND paused: pausing flips
     // gauntlet_run_paused and deliberately leaves the run open, so a paused
     // run is still an open one holding this exact party.
-    const { data: prof } = await admin.from('profiles')
-      .select('gauntlet_run_open').eq('id', user.id).single()
+    const prof = await db.profile(user.id, 'gauntlet_run_open')
     if ((prof as { gauntlet_run_open?: boolean } | null)?.gauntlet_run_open) {
       return { error: 'A gauntlet run is still going. Finish or cash out first.' }
     }
@@ -879,8 +811,7 @@ export async function clearParty(track: AssignTrack): Promise<CrewActionResult> 
   // them outright, bunking refuses a seated crew, and a bunk is now held until
   // the XP is claimed — so the three states are mutually exclusive by
   // construction rather than by a filter that would drift out of step.
-  await admin.from('user_crew').update({ [slotCol]: null })
-    .eq('user_id', user.id).not(slotCol, 'is', null)
+  await db.clearTrack(user.id, track)
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -906,19 +837,12 @@ export async function renameCrew(crewId: number, nickname: string): Promise<Crew
   if (clean.length < 1) return { error: 'Pick a name first.' }
   if (clean.length > 30) return { error: 'Name must be 30 characters or fewer.' }
 
-  const admin = createAdminClient()
-  const { data: crew } = await admin
-    .from('user_crew')
-    .select('id, nickname')
-    .eq('id', crewId).eq('user_id', user.id).is('died_at', null)
-    .single()
+  const db = crewData(createAdminClient())
+  const crew = await db.crew(user.id, crewId, 'id, nickname')
   if (!crew) return { error: 'Crew not found' }
   if ((crew as any).nickname != null) return { error: 'This crew has already been named.' }
 
-  const { error } = await admin.from('user_crew')
-    .update({ nickname: clean })
-    .eq('id', crewId).eq('user_id', user.id)
-  if (error) return { error: 'Could not save the name. Try again.' }
+  if (!(await db.updateCrew(user.id, crewId, { nickname: clean }))) return { error: 'Could not save the name. Try again.' }
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -936,11 +860,8 @@ export async function promoteToCaptain(crewId: number): Promise<CrewActionResult
   const guard = await assertCanReassign(admin, user.id, crewId)
   if ('error' in guard) return { error: guard.error }
 
-  const { data: target } = await admin
-    .from('user_crew')
-    .select('id, voyage_slot, raid_slot')
-    .eq('id', crewId).eq('user_id', user.id).is('died_at', null)
-    .single()
+  const db = crewData(admin)
+  const target = await db.crew(user.id, crewId, 'id, voyage_slot, raid_slot')
   if (!target) return { error: 'Crew not found' }
 
   const t = target as any
@@ -955,22 +876,15 @@ export async function promoteToCaptain(crewId: number): Promise<CrewActionResult
   if (targetOldSlot === 0) return { state: (await getCrewState())! }  // already captain
 
   // Find current captain on the same track (slot 0) — null if no one's there.
-  const { data: captain } = await admin
-    .from('user_crew')
-    .select('id')
-    .eq('user_id', user.id).is('died_at', null)
-    .eq(slotCol, 0)
-    .maybeSingle()
+  const captain = await db.captainOf(user.id, track)
 
-  if (captain) {
+  if (captain != null) {
     // Swap. There's no unique-slot constraint, so a brief "both at slot 0"
     // intermediate state is technically allowed by the DB; doing it in two
     // sequential UPDATEs anyway for clarity.
-    await admin.from('user_crew').update({ [slotCol]: targetOldSlot })
-      .eq('id', (captain as any).id).eq('user_id', user.id)
+    await db.updateCrew(user.id, captain, { [slotCol]: targetOldSlot })
   }
-  await admin.from('user_crew').update({ [slotCol]: 0 })
-    .eq('id', crewId).eq('user_id', user.id)
+  await db.updateCrew(user.id, crewId, { [slotCol]: 0 })
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -989,11 +903,8 @@ export async function buyCrewSkin(skinId: string): Promise<CrewActionResult> {
   if (!skin) return { error: 'Unknown skin' }
 
   const admin = createAdminClient()
-  const { data: prof } = await admin
-    .from('profiles')
-    .select('gems, owned_crew_skins, equipped_crew_skins')
-    .eq('id', user.id)
-    .single()
+  const db = crewData(admin)
+  const prof = await db.profile(user.id, 'gems, owned_crew_skins, equipped_crew_skins')
   if (!prof) return { error: 'Profile not found' }
   const owned = ((prof as any).owned_crew_skins as string[] | null) ?? []
   if (owned.includes(skinId)) return { error: 'Already owned' }
@@ -1001,13 +912,9 @@ export async function buyCrewSkin(skinId: string): Promise<CrewActionResult> {
   if (gems < skin.gemCost) return { error: 'Not enough gems' }
 
   // Must own the crew this skin is for (a live crew of that species).
-  const { data: card } = await admin.from('cards').select('id').ilike('slug', skin.slug).single()
-  if (!card) return { error: 'Crew not found' }
-  const { count } = await admin
-    .from('user_crew')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id).eq('card_id', (card as any).id).is('died_at', null)
-  if ((count ?? 0) === 0) return { error: 'Recruit this crew before buying its skins.' }
+  const cardId = await db.cardIdBySlug(skin.slug)
+  if (cardId == null) return { error: 'Crew not found' }
+  if ((await db.liveCount(user.id, cardId)) === 0) return { error: 'Recruit this crew before buying its skins.' }
 
   // A first-time skin auto-equips — nearly everyone wants to wear what they
   // just bought. (They can still switch back to Original or another owned skin
@@ -1022,7 +929,7 @@ export async function buyCrewSkin(skinId: string): Promise<CrewActionResult> {
     await grant(admin, user.id, 'gems', skin.gemCost)
     return { error: 'Already owned' }
   }
-  await admin.from('profiles').update({ equipped_crew_skins: equipped }).eq('id', user.id)
+  await db.updateProfile(user.id, { equipped_crew_skins: equipped })
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -1036,12 +943,8 @@ export async function equipCrewSkin(slug: string, skinId: string | null): Promis
   if (!user) return { error: 'Not signed in' }
   const key = slug.toLowerCase()
 
-  const admin = createAdminClient()
-  const { data: prof } = await admin
-    .from('profiles')
-    .select('owned_crew_skins, equipped_crew_skins')
-    .eq('id', user.id)
-    .single()
+  const db = crewData(createAdminClient())
+  const prof = await db.profile(user.id, 'owned_crew_skins, equipped_crew_skins')
   if (!prof) return { error: 'Profile not found' }
   const owned = ((prof as any).owned_crew_skins as string[] | null) ?? []
   const equipped = { ...(((prof as any).equipped_crew_skins as EquippedCrewSkins | null) ?? {}) }
@@ -1054,7 +957,7 @@ export async function equipCrewSkin(slug: string, skinId: string | null): Promis
     if (!owned.includes(skinId)) return { error: 'You do not own that skin' }
     equipped[key] = skinId
   }
-  await admin.from('profiles').update({ equipped_crew_skins: equipped }).eq('id', user.id)
+  await db.updateProfile(user.id, { equipped_crew_skins: equipped })
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -1079,13 +982,8 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
   if (!user) return []
   const admin = createAdminClient()
   const { meta } = await loadCards(admin)
-  const { data: rows } = await admin
-    .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, xp, nickname, died_at, died_on_voyage_id, died_hardcore_depth, voyage:daily_voyages!died_on_voyage_id(route)')
-    .eq('user_id', user.id)
-    .not('died_at', 'is', null)
-    .order('died_at', { ascending: false })
-  return ((rows ?? []) as any[]).map(r => {
+  const rows = await crewData(admin).graveyard(user.id)
+  return (rows as any[]).map(r => {
     const m = meta.get(r.card_id)
     // voyage is a single object via the explicit FK join, but PostgREST
     // typings sometimes default it to an array — handle both shapes.
@@ -1134,12 +1032,8 @@ export async function crewTheDeck(pullFromVoyages = false): Promise<
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in' }
 
-  const admin = createAdminClient()
-  const { data: prof } = await admin
-    .from('profiles')
-    .select('ship_tier, has_sixth_berth')
-    .eq('id', user.id)
-    .single()
+  const db = crewData(createAdminClient())
+  const prof = await db.profile(user.id, 'ship_tier, has_sixth_berth')
 
   const slots = EXPEDITION_SHIP_STATS[(prof?.ship_tier as number | null) ?? 0].crewSlots
     + ((prof as any)?.has_sixth_berth === true ? 1 : 0)
@@ -1175,16 +1069,9 @@ export async function crewTheDeck(pullFromVoyages = false): Promise<
   // ownership + alive + the one-of-each-card / empty-slot invariants, so the rest
   // of applyAssignment's per-call guard + profile read + state rebuild is
   // redundant here.)
-  const [{ data: pendingVoyage }, { data: trawlRows }] = await Promise.all([
-    admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', user.id).eq('status', 'pending').maybeSingle(),
-    admin.from('trawls').select('crew_id').eq('user_id', user.id),
-  ])
-  const atSea = new Set<number>(
-    Array.isArray((pendingVoyage as any)?.crew_variant_ids) ? (pendingVoyage as any).crew_variant_ids as number[] : [],
-  )
-  const onTrawl = new Set<number>(
-    ((trawlRows ?? []) as { crew_id: number | null }[]).map(t => t.crew_id).filter((v): v is number => v != null),
-  )
+  const [voyageCrew, trawling] = await Promise.all([db.voyageAtSea(user.id), db.trawling(user.id)])
+  const atSea = new Set<number>(voyageCrew ?? [])
+  const onTrawl = new Set<number>(trawling)
 
   // Pick best-available per empty slot (all in memory), skipping locked crew.
   const used = new Set<number>()
@@ -1201,9 +1088,7 @@ export async function crewTheDeck(pullFromVoyages = false): Promise<
   // duplicates already filtered, so no collisions. Writing voyage_slot=null +
   // raid_slot=slot together satisfies the one-track-null CHECK in a single write.
   // Then rebuild state ONCE (vs applyAssignment's per-iteration rebuild).
-  await Promise.all(placements.map(p =>
-    admin.from('user_crew').update({ voyage_slot: null, raid_slot: p.slot }).eq('id', p.crewId).eq('user_id', user.id),
-  ))
+  await Promise.all(placements.map(p => db.updateCrew(user.id, p.crewId, { voyage_slot: null, raid_slot: p.slot })))
   const assigned = placements.length
 
   const state = await getCrewState()
@@ -1216,5 +1101,5 @@ export async function markCrewGuideSeen(): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-  await createAdminClient().from('profiles').update({ has_seen_crew_guide: true }).eq('id', user.id)
+  await crewData(createAdminClient()).updateProfile(user.id, { has_seen_crew_guide: true })
 }

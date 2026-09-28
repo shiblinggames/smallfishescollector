@@ -20,6 +20,7 @@ import { canBunk, drillsMaxed, hallTierRequiredFor, isLeviathanSlot, ladderHallL
 import { bunkContext, loadBunks, releaseBunk, NEUTRAL_OFFER, type TraitUpgrade } from '@/lib/crewBunkSettle'
 import type { CrewXPGrant } from '@/lib/crewXPGrant'
 import { getCrewState, type CrewActionResult, type CrewState } from './actions'
+import { crewData } from '@/lib/data/crewData'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -55,9 +56,8 @@ export async function bunkCrew(crewId: number, slot: number, hours?: number): Pr
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: crew } = await admin
-    .from('user_crew').select('id, xp, voyage_slot, raid_slot, died_at, pending_trait')
-    .eq('id', crewId).eq('user_id', user.id).maybeSingle()
+  const db = crewData(admin)
+  const crew = await db.crew(user.id, crewId, 'id, xp, voyage_slot, raid_slot, died_at, pending_trait', false)
   if (!crew) return { error: 'Crew not found' }
   if ((crew as any).died_at) return { error: 'That hand is gone.' }
   // A hand already holding an unanswered draw cannot go back down for another.
@@ -79,9 +79,7 @@ export async function bunkCrew(crewId: number, slot: number, hours?: number): Pr
   }
 
   // A trawling crew is away from the hall entirely.
-  const { data: onTrawl } = await admin
-    .from('trawls').select('id').eq('user_id', user.id).eq('crew_id', crewId).maybeSingle()
-  if (onTrawl) return { error: 'They are out on a trawl. Collect it first.' }
+  if (await db.onTrawl(user.id, crewId)) return { error: 'They are out on a trawl. Collect it first.' }
 
   const ctx = await bunkContext(admin, user.id)
   if (!ctx.open) return { error: CLOSED }
@@ -110,14 +108,7 @@ export async function bunkCrew(crewId: number, slot: number, hours?: number): Pr
   // Drills or Stores afterwards changes what the NEXT hand gets, never this one.
   // The unique indexes on crew_id and (user_id, slot) are the real guard against
   // a double tap putting one hand in two bunks, or two hands in one bunk.
-  const { error } = await admin.from('crew_hall_bunks').insert({
-    user_id: user.id,
-    crew_id: crewId,
-    slot: want,
-    rate_per_hour: ctx.rate,
-    cap_hours: stintHours,
-  })
-  if (error) return { error: 'Could not bunk that hand.' }
+  if (!(await db.addBunk(user.id, { crew_id: crewId, slot: want, rate_per_hour: ctx.rate, cap_hours: stintHours }))) return { error: 'Could not bunk that hand.' }
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -144,9 +135,8 @@ export async function resolveTraitOffer(
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: crew } = await admin
-    .from('user_crew').select('id, pending_trait, effects')
-    .eq('id', crewId).eq('user_id', user.id).maybeSingle()
+  const db = crewData(admin)
+  const crew = await db.crew(user.id, crewId, 'id, pending_trait, effects', false)
   if (!crew) return { error: 'Crew not found' }
   const offer = (crew as { pending_trait?: string | null }).pending_trait
   if (!offer) return { error: 'No offer to answer.' }
@@ -155,13 +145,8 @@ export async function resolveTraitOffer(
   // trait, which is a legitimate (if unkind) outcome of a flat table.
   const nextEffects = offer === NEUTRAL_OFFER ? [] : [offer]
 
-  const { data: written } = await admin
-    .from('user_crew')
-    .update(accept ? { effects: nextEffects, pending_trait: null } : { pending_trait: null })
-    .eq('id', crewId).eq('user_id', user.id)
-    .not('pending_trait', 'is', null)     // idempotent: a second tap changes nothing
-    .select('id')
-  if (!(written ?? []).length) return { error: 'That offer was already answered.' }
+  // Idempotent: a second tap changes nothing.
+  if (!(await db.answerTrait(user.id, crewId, accept ? { effects: nextEffects, pending_trait: null } : { pending_trait: null }))) return { error: 'That offer was already answered.' }
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -236,11 +221,8 @@ async function buyUpgrade(kind: 'drill' | 'stores'): Promise<CrewActionResult> {
 
   // Guarded on the level we priced against, so a double submit cannot buy two
   // levels for one payment.
-  const { data: bumped } = await admin
-    .from('profiles').update({ [col]: from + 1 })
-    .eq('id', user.id).eq(col, from).select('id')
-
-  if (!(bumped ?? []).length) {
+  const db = crewData(admin)
+  if (!(await db.stepUp(user.id, col, from, from + 1))) {
     // Lost the race. Refund rather than charging for nothing. (This used to
     // call deduct_doubloons with a negative amount, which the RPC refuses, so
     // the refund silently never landed.)
@@ -248,10 +230,7 @@ async function buyUpgrade(kind: 'drill' | 'stores'): Promise<CrewActionResult> {
     return { error: 'That upgrade was already bought.' }
   }
 
-  await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: -cost,
-    reason: `Crew Hall: ${isDrill ? 'Drill' : 'Stores'} ${tierNumeral(from + 1)}`,
-  })
+  await db.ledger(user.id, -cost, `Crew Hall: ${isDrill ? 'Drill' : 'Stores'} ${tierNumeral(from + 1)}`)
   // The chart draws the hall's building and counts its berths from the page's
   // copy of these tiers; it hears a purchase here or not until a reload.
   revalidatePath('/sea')

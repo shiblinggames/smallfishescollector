@@ -8,6 +8,7 @@
 // callsites can fire them unconditionally.
 
 import type { createAdminClient } from './supabase/admin'
+import { crewData } from './data/crewData'
 import { crewLevelFromXP } from './crewLevel'
 import { crewDisplayName } from './crewGen'
 
@@ -26,12 +27,8 @@ export interface CrewXPGrant {
 
 async function resolveNames(admin: Admin, ids: number[]): Promise<Map<number, string>> {
   if (ids.length === 0) return new Map()
-  const { data } = await admin
-    .from('user_crew')
-    .select('id, nickname, cards(name, slug)')
-    .in('id', ids)
   const out = new Map<number, string>()
-  for (const row of ((data ?? []) as any[])) {
+  for (const row of await crewData(admin).crewByIds(ids, 'id, nickname, cards(name, slug)')) {
     const nickname = (row.nickname as string | null) ?? null
     out.set(row.id, nickname ?? crewDisplayName(row.cards?.slug ?? '', row.cards?.name ?? 'Crew'))
   }
@@ -58,8 +55,7 @@ function shape(rows: any[], names: Map<number, string>): CrewXPGrant[] {
  *  earned. Returns one row per crew member with old/new level for the UI. */
 export async function grantXPToAssignedCrew(admin: Admin, userId: string, xp: number): Promise<CrewXPGrant[]> {
   if (xp <= 0) return []
-  const { data } = await admin.rpc('grant_crew_xp_to_assigned', { uid: userId, grant_xp: xp })
-  const rows = (data ?? []) as any[]
+  const rows = await crewData(admin).grantXpToSeated(userId, xp) as any[]
   if (rows.length === 0) return []
   const names = await resolveNames(admin, rows.map(r => Number(r.id)))
   return shape(rows, names)
@@ -70,8 +66,7 @@ export async function grantXPToAssignedCrew(admin: Admin, userId: string, xp: nu
  *  crew_lost). */
 export async function grantXPToCrewIds(admin: Admin, userId: string, crewIds: number[], xp: number): Promise<CrewXPGrant[]> {
   if (xp <= 0 || crewIds.length === 0) return []
-  const { data } = await admin.rpc('grant_crew_xp_to_ids', { uid: userId, crew_ids: crewIds, grant_xp: xp })
-  const rows = (data ?? []) as any[]
+  const rows = await crewData(admin).grantXpToIds(userId, crewIds, xp) as any[]
   if (rows.length === 0) return []
   const names = await resolveNames(admin, rows.map(r => Number(r.id)))
   return shape(rows, names)
@@ -88,8 +83,7 @@ export async function grantXPPairs(
 ): Promise<CrewXPGrant[]> {
   const live = pairs.filter(p => p.xp > 0)
   if (live.length === 0) return []
-  const { data } = await admin.rpc('grant_crew_xp_pairs', { uid: userId, pairs: live })
-  const rows = (data ?? []) as any[]
+  const rows = await crewData(admin).grantXpPairs(userId, live) as any[]
   if (rows.length === 0) return []
   const names = await resolveNames(admin, rows.map(r => Number(r.id)))
   return shape(rows, names)

@@ -12,6 +12,7 @@ import { clampHallTier } from './crewHall'
 import { grantXPPairs, type CrewXPGrant } from './crewXPGrant'
 import { bunkCount, bunkRatePerHour, hallBunksOpen, stintDone, storesCapHours } from './crewBunks'
 import { clockNow } from './clock'
+import { crewData } from './data/crewData'
 import { finishedStints, stintPayouts, leviathanOffer, leviathanBunk, type BunkRow, type TraitUpgrade } from './crewRules'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -39,11 +40,7 @@ export type { TraitUpgrade, BunkRow } from './crewRules'
 
 /** Training rate and bunk capacity for this player, read once. */
 export async function bunkContext(admin: Admin, userId: string) {
-  const { data: prof } = await admin
-    .from('profiles')
-    .select('expedition_xp, crew_hall_tier, crew_drill_level, crew_stores_level, doubloons, is_admin')
-    .eq('id', userId)
-    .single()
+  const prof = await crewData(admin).profile(userId, 'expedition_xp, crew_hall_tier, crew_drill_level, crew_stores_level, doubloons, is_admin')
   const navLevel = getLevelFromXP((prof as any)?.expedition_xp ?? 0)
   const drillLevel = (prof as any)?.crew_drill_level ?? 1
   const storesLevel = (prof as any)?.crew_stores_level ?? 1
@@ -65,9 +62,7 @@ export async function bunkContext(admin: Admin, userId: string) {
 
 /** Every bunk this player holds. */
 export async function loadBunks(admin: Admin, userId: string): Promise<BunkRow[]> {
-  const { data } = await admin
-    .from('crew_hall_bunks').select('id, crew_id, since, rate_per_hour, cap_hours, slot').eq('user_id', userId)
-  return ((data ?? []) as any[]).map(r => ({
+  return (await crewData(admin).bunks(userId)).map(r => ({
     id: r.id, crew_id: r.crew_id, since: r.since,
     rate: r.rate_per_hour ?? null, cap: r.cap_hours ?? null, slot: r.slot ?? null,
   }))
@@ -116,19 +111,12 @@ export async function settleBunks(
 
   // A hand who hit the level ceiling mid-stint still gets their bunk back; they
   // just have nothing left to learn, so the grant is skipped for them.
-  const { data: xpRows } = await admin
-    .from('user_crew').select('id, xp').in('id', done.map(r => r.crew_id))
-  const xpById = new Map<number, number>(((xpRows ?? []) as any[]).map(r => [Number(r.id), r.xp ?? 0]))
+  const db = crewData(admin)
+  const xpRows = await db.crewByIds(done.map(r => r.crew_id), 'id, xp')
+  const xpById = new Map<number, number>((xpRows as any[]).map(r => [Number(r.id), r.xp ?? 0]))
 
-  const won = await Promise.all(done.map(async r => {
-    const { data } = await admin
-      .from('crew_hall_bunks')
-      .delete()
-      .eq('id', r.id)
-      .eq('since', r.since)
-      .select('id')
-    return (data ?? []).length > 0 ? r : null
-  }))
+  // The removal IS the claim, at the `since` that was read.
+  const won = await Promise.all(done.map(async r => ((await db.claimBunk(r.id, r.since)) ? r : null)))
 
   const claimed = won.filter((r): r is BunkRow => r !== null)
   const pairs = stintPayouts(claimed, xpById, rate, capHours)
@@ -164,19 +152,16 @@ async function recutLeviathanTraits(
   const eligible = claimed.filter(leviathanBunk)
   if (eligible.length === 0) return []
 
-  const { data: crew } = await admin
-    .from('user_crew').select('id, rarity, effects, pending_trait').in('id', eligible.map(r => r.crew_id))
+  const db = crewData(admin)
+  const crew = await db.crewByIds(eligible.map(r => r.crew_id), 'id, rarity, effects, pending_trait')
 
   const out: TraitUpgrade[] = []
-  for (const c of ((crew ?? []) as any[])) {
+  for (const c of (crew as any[])) {
     // The roll and the reveal are lib/crewRules leviathanOffer (null when an
     // unanswered offer is already open: it is not replaced).
     const offer = leviathanOffer(c)
     if (!offer) continue
-    const { data: written } = await admin
-      .from('user_crew').update({ pending_trait: offer.parked })
-      .eq('id', c.id).eq('user_id', userId).is('pending_trait', null).select('id')
-    if (!(written ?? []).length) continue
+    if (!(await db.parkTrait(userId, c.id, offer.parked))) continue
     out.push(offer.upgrade)
   }
   return out
@@ -188,9 +173,7 @@ async function recutLeviathanTraits(
  * safe to call speculatively.
  */
 export async function releaseBunk(admin: Admin, userId: string, crewId: number): Promise<BunkSettlement> {
-  const { data } = await admin
-    .from('crew_hall_bunks').select('id, crew_id, since, rate_per_hour, cap_hours, slot')
-    .eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
+  const data = await crewData(admin).bunkOf(userId, crewId)
   if (!data) return { grants: [], freed: [], upgrades: [] }
   const ctx = await bunkContext(admin, userId)
   const row: BunkRow = {

@@ -16,6 +16,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { crewData } from '@/lib/data/crewData'
 import { verifiedSession } from '@/lib/verifiedSession'
 import { CLASSES, classForSlug, CLASS_MILESTONE_LEVELS } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
@@ -49,14 +50,15 @@ export async function checkPromotions(): Promise<Promotion[]> {
   const uid = session.user.id
   const admin = createAdminClient()
 
-  const [{ data: prof }, { data: crew }] = await Promise.all([
-    admin.from('profiles').select('seen_promotions').eq('id', uid).single(),
-    admin.from('user_crew').select('id, card_id, xp, nickname').eq('user_id', uid).is('died_at', null),
+  const db = crewData(admin)
+  const [prof, crew] = await Promise.all([
+    db.profile(uid, 'seen_promotions'),
+    db.roster(uid),
   ])
   if (!prof) return []
   if (!_cards) {
-    const { data } = await admin.from('cards').select('id, name, filename, slug')
-    _cards = new Map((data ?? []).map(c => [c.id as number, { name: c.name as string, filename: c.filename as string, slug: c.slug as string }]))
+    const data = await db.cardCatalog()
+    _cards = new Map(data.map(c => [c.id as number, { name: c.name as string, filename: c.filename as string, slug: c.slug as string }]))
   }
 
   const seenCol = prof.seen_promotions as string[] | null
@@ -102,7 +104,7 @@ export async function checkPromotions(): Promise<Promotion[]> {
 
   const next = new Set([...seen, ...reachedAll])
   if (seenCol === null || next.size > seen.size) {
-    await admin.from('profiles').update({ seen_promotions: [...next] }).eq('id', uid)
+    await db.updateProfile(uid, { seen_promotions: [...next] })
   }
   return out
 }
