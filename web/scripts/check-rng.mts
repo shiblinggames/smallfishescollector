@@ -30,7 +30,7 @@ const RNG_FILES = [
   ...['gauntlet', 'voyageEvents', 'crewGen', 'crateLoot', 'pets', 'voyageRoll', 'tides', 'shiny', 'roulette',
     'raidAffixes', 'gauntletMerchant', 'gauntletContracts', 'fishSize', 'finn', 'blackjack', 'seaFolk',
     'repairKits', 'raidRegistry', 'raidMap', 'raidLoot', 'gauntletOffer', 'gauntletMarks', 'drawPack',
-    'crewTraits', 'seaPortal', 'fishingRules', 'sellRules', 'crewRules', 'voyageRules', 'trawlRules'].map(n => `lib/${n}.ts`),
+    'crewTraits', 'seaPortal', 'fishingRules', 'sellRules', 'crewRules', 'voyageRules', 'trawlRules', 'gauntletRules'].map(n => `lib/${n}.ts`),
   ...['crew/actions.ts', 'expeditions/bountyActions.ts', 'expeditions/raidMapActions.ts', 'fishing/actions.ts',
     'fishing/dailyChallengeActions.ts', 'fishing/trawls/actions.ts', 'fishing/trawls/constants.ts',
     'raids/gauntlet/actions.ts', 'sea/finnActions.ts', 'sea/folkActions.ts', 'sea/traderActions.ts',
@@ -38,7 +38,7 @@ const RNG_FILES = [
 ]
 const CLOCK_FILES = ['seaClock', 'seaTraders', 'weekStart', 'seaHotspots', 'seaCouriers', 'crewBunks',
   'crewBunkSettle', 'dailyChallenges', 'bounties', 'seaWeather', 'seaLeviathans', 'seaBottles', 'seaFinn',
-  'tavernGossip', 'pendingSales', 'ultimateBuild', 'premium', 'fishingRules', 'voyageRules', 'trawlRules'].map(n => `lib/${n}.ts`)
+  'tavernGossip', 'pendingSales', 'ultimateBuild', 'premium', 'fishingRules', 'voyageRules', 'trawlRules', 'gauntletRules'].map(n => `lib/${n}.ts`)
 
 const codeLines = (file: string) => fs.readFileSync(path.join(process.cwd(), file), 'utf8').split('\n')
   .map((l, i) => ({ l, n: i + 1 }))

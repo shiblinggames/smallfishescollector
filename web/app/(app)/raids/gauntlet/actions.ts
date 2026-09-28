@@ -15,28 +15,26 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logBountyEvent } from '@/lib/bountyEvents'
 import { GAUNTLET_DAMAGE_MIN } from '@/lib/bounties'
-import { aggregateShipClasses } from '@/lib/shipClasses'
-import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
+import type { RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, resolveTerms, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
+import { termPressure, pressureFeats, resolveTerms, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
-import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, GALAXY_HULL_SKIN_ID, GALAXY_HULL_CHEST_TIER, GHOST_HULL_SKIN_ID, GHOST_HULL_CHEST_TIER, GHOST_HULL_DROP_MULT, DONS_GAUNTLET_ITEM_IDS, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestLabelFor, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, donsHardcoreUnlocked, donsGauntletUnlocked, hcCols, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type DepthSplit, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
-import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult, donsBloodGemMult, gauntletStartDepth, DONS_DAILY_TRIBUTE_ID, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
+import { chestLabelFor, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, CONFLUENCES, hardcoreUnlocked, donsHardcoreUnlocked, donsGauntletUnlocked, hcCols, HARDCORE_LIVE, HARDCORE_RUNS_PER_DAY, coerceRunStats, chestOdds, type DepthSplit, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
+import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, DONS_DAILY_TRIBUTE_ID, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import {
-  rollOffer, offerCoinMult, offerFathomMult, offerChestMult,
-  EMPTY_OFFER_STATE, CHEST_ODDS_CAP, type OfferState, type DavyOffer,
+  rollOffer, EMPTY_OFFER_STATE, type OfferState, type DavyOffer,
 } from '@/lib/gauntletOffer'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
 import { getBait } from '@/lib/bait'
 import { merchantPrice } from '@/lib/gauntletMerchant'
 import { eyeCharge } from '@/lib/finnItems'
-import { fortuneLootMult } from '@/lib/expeditions'
 import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { raidDamageProfile } from '@/lib/expeditions'
 import { flagAnomaly } from '@/lib/anomaly'
 import { grant, spend, arrayAdd } from '@/lib/wallet'
-import { rngNext } from '@/lib/rng'
+import { clockNow } from '@/lib/clock'
+import { tickActiveMs, settleDepths, runFathoms, cashOutHaul, recordClaim, donFeats, gauntletCooldown, shrineWon } from '@/lib/gauntletRules'
 
 // Golden Gauntlet Hull — a rare Man-o-War-only cosmetic that drops only from the
 // top chest tier (Davy Jones' Locker, chest tier 5 / depth 18+). Tunable here.
@@ -51,66 +49,8 @@ import { rngNext } from '@/lib/rng'
 /** Record a single gauntlet hit; persists the all-time biggest via greatest()
  *  (bump_gauntlet_hit). Fired per new run-best from GauntletGame (win OR loss),
  *  so the Biggest Hit board reflects the largest blow ever landed in a descent. */
-/**
- * ACTIVE TIME ON THE OPEN RUN.
- *
- * gauntlet_best_depth_ms is wall clock, which is why the board carries a
- * 537-minute "run": a gauntlet pauses, resumes and survives a crash, so wall
- * clock measures how long ago you started rather than how long you played.
- *
- * The run already checkpoints at every breather, so the gap between two ticks
- * is a fight's worth of play. Gaps longer than the cap are somebody who walked
- * away, and are dropped rather than counted. That makes the number an
- * UNDER-estimate in the worst case and never an over-estimate, which is the
- * right way round for a figure used to reason about pacing.
- *
- * Server-side and unprompted by the client, so there is nothing here to forge.
- */
-const ACTIVE_GAP_CAP_MS = 5 * 60_000
-
-/**
- * ── THE FASTEST A DEPTH CAN HONESTLY FALL ───────────────────────────────────
- *
- * The cash-out takes the depth from the client and clamps it to the economy's
- * caps, and that was the whole of the check: a request naming the cap paid the
- * cap. The run clock is the one fact about a run the server keeps for itself
- * (gauntlet_run_active_ms is accumulated from timestamps this file writes, see
- * tickActiveMs), so the clock is what the depth is held against.
- *
- * FOUR SECONDS, from the record. Every honest personal best in
- * gauntlet_depth_bests takes at least nine seconds for depth one and the pace
- * only slows from there (over twenty-five a depth past ten); the rows that do
- * not fit that curve are two seconds for seventy depths, which is the forgery
- * this exists to stop. Half the fastest real depth cannot touch a real player
- * and still turns "start, cash out at the cap, repeat" from instant into a
- * minute of waiting per run, with the pay-out bounded by the wait.
- *
- * A SPEED BUMP, NOT A LOCK, and it is called that here so nobody mistakes it.
- * The fights resolve on the client; until each one is checkpointed server-side
- * as it falls, a patient forger still gets paid at the rate an honest run
- * would. That is the per-fight checkpoint on the list, and this is what holds
- * the door until it lands.
- */
-const MIN_MS_PER_DEPTH = 4_000
-
-/** Fold the time since the last tick into the run's total. Returns the fields
- *  to write; the caller merges them into whatever update it was already doing,
- *  so this costs no extra round trip. */
-function tickActiveMs(
-  prevMs: number | null | undefined,
-  tickAt: string | null | undefined,
-  { stop = false }: { stop?: boolean } = {},
-): { gauntlet_run_active_ms: number; gauntlet_run_tick_at: string | null } {
-  const prev = Math.max(0, Number(prevMs ?? 0))
-  const since = tickAt ? Date.now() - new Date(tickAt).getTime() : 0
-  const add = since > 0 ? Math.min(since, ACTIVE_GAP_CAP_MS) : 0
-  return {
-    gauntlet_run_active_ms: prev + add,
-    // `stop` leaves the clock off, for a pause or a finish. Anything else is
-    // still running, so the next tick measures from now.
-    gauntlet_run_tick_at: stop ? null : new Date().toISOString(),
-  }
-}
+// The run clock (ACTIVE_GAP_CAP_MS, MIN_MS_PER_DEPTH, tickActiveMs), the depth
+// settlement and the cash-out's haul are lib/gauntletRules.
 
 export async function recordGauntletHit(dmg: number): Promise<void> {
   if (!Number.isFinite(dmg) || dmg <= 0) return
@@ -370,7 +310,7 @@ export async function wagerGauntletFathoms(stake: number): Promise<
   const staked = Math.min(Math.max(1, Math.floor(stake || 0)), SHRINE_WAGER_CAP, balance)
   if (staked < 1) return { error: 'No Fathoms to wager.' }
 
-  const won = rngNext() < 0.5
+  const won = shrineWon()
   // In place. A loss is a spend, and a spend that cannot be covered (the purse
   // moved since the read) is refused rather than floored at zero.
   const newFathoms = won
@@ -527,9 +467,7 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
 
   // Admins can run it as often as they like (testing the curve).
   const isAdmin = profile?.is_admin === true
-  const lastRunAt = profile?.gauntlet_last_run_at ? new Date(profile.gauntlet_last_run_at as string).getTime() : 0
-  const nextMs = lastRunAt + GAUNTLET_COOLDOWN_MS
-  const available = isAdmin || Date.now() >= nextMs
+  const { available, nextMs } = gauntletCooldown(profile?.gauntlet_last_run_at as string | null, isAdmin)
 
   // A run left open with a saved checkpoint can be picked back up. Two flavours:
   //   • PAUSED (deliberate — player hit "Pause & step away"): unlimited resumes,
@@ -744,10 +682,9 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
   if (profile?.gauntlet_run_open === true && openVariant !== variant) {
     return { started: false, reason: 'other_run', deepest }
   }
-  const lastRunAt = profile?.gauntlet_last_run_at ? new Date(profile.gauntlet_last_run_at as string).getTime() : 0
-  const nextMs = lastRunAt + GAUNTLET_COOLDOWN_MS
   // Admins bypass the cooldown so they can run it repeatedly to test.
-  if (!isAdmin && Date.now() < nextMs) {
+  const { available, nextMs } = gauntletCooldown(profile?.gauntlet_last_run_at as string | null, isAdmin)
+  if (!available) {
     return { started: false, reason: 'cooldown', deepest, nextAt: new Date(nextMs).toISOString() }
   }
 
@@ -968,15 +905,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Read, not written: the finish stops the clock further down, and this only
   // asks how long the run has actually been open for. See MIN_MS_PER_DEPTH.
   const clockMs = tickActiveMs(profile.gauntlet_run_active_ms, profile.gauntlet_run_tick_at, { stop: true }).gauntlet_run_active_ms
-  const timeDepth = Math.floor(clockMs / MIN_MS_PER_DEPTH)
-  const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth), timeDepth))
-  // The combat depth may sit above the reward depth by exactly the head start
-  // Veteran's Start grants, and no more. Read off the same Locker the client
-  // reads, so the two cannot disagree about how big a head start is.
-  const headStart = gauntletStartDepth(
-    ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [],
-  ) - 1
-  const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth), rd + headStart))
+  const { rd, cd } = settleDepths(rewardDepth, combatDepth, clockMs,
+    ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [])
   // BOUNTIES. How deep a single run got is a moment, not a total:
   // profiles.gauntlet_deepest is a lifetime high-water mark, so a captain who
   // has already seen 15 could never complete "reach depth 10 today" from it.
@@ -989,171 +919,46 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     return { ok: false }
   }
 
-  // Economy cap: everything that PAYS (pot, XP, crew XP, Blood Gems) is
-  // evaluated as if the run ended at GAUNTLET_REWARD_DEPTH_CAP. Depth past it
-  // still counts for the record / leaderboard / contest / Fathoms (cd below).
-  const payDepth = Math.min(rd, GAUNTLET_REWARD_DEPTH_CAP)
-  const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(payDepth, variant)))
-  const chest = chestForDepth(payDepth)
-
-  // Run Upgrades (Locker, scope 'gauntlet') that sweeten the cash-out — minus
-  // any the player has switched off, so a disabled Salvager's Eye / Navigator's
-  // Log / Lucky Locker really pays nothing.
-  const upgrades   = activeGauntletUpgrades(
-    ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [],
-    ((isDon ? profile.dons_gauntlet_upgrades_off : profile.gauntlet_upgrades_off) as string[] | null) ?? [],
-  )
-
-  // DAVY'S OFFER — honored only if he actually made one AND the player is banking at
-  // the very depth he made it. Both come from the column WE wrote at the breather, so
-  // a client cannot conjure a deal, upgrade its tier, or carry a shallow offer down to
-  // a deeper pot. Anything else means no deal, and no deal means no bonus.
-  const offerState  = (profile.gauntlet_run_offer as OfferState | null) ?? EMPTY_OFFER_STATE
-  const offerTaken: DavyOffer | null =
-    takeOffer && offerState.live && offerState.live.depth === rd ? offerState.live : null
-  const offerChest  = offerChestMult(offerTaken)
-
-  // Davy cannon chest drops — each component rolls independently at the chest
-  // tier's chance, only for cannons not yet owned, and never once the player
-  // has forged them into the Grand Cannon. Every chance below runs through
-  // chestDrop(), which is the SAME capped multiply the breather showed the player.
-  // Item drops are Davy's-Gauntlet-only — the Davy cannons never roll in a Don's
-  // run. Don's has its own chase (the hull skins below); it drops no cannons.
-  const ownedItems = (profile.raid_items as string[] | null) ?? []
-  // CREW FORTUNE. Read server-side from the deployed party, never taken from
-  // the client, and folded into the same chestDrop() every chase roll below
-  // runs through. getRaidPlayerStats is the exact loader the gauntlet page uses
-  // for the stat panel, so the number here is the number the player was shown.
-  const fortuneOdds = fortuneLootMult((await getRaidPlayerStats(user.id)).totalFortune)
-  const chestDrop = (c: number) => Math.min(CHEST_ODDS_CAP, c * offerChest * fortuneOdds)
-  const dropChance = chestDrop(chestCannonDropChance(cd))
-  const droppedItems: string[] = []
-  // Purely "do you hold this one", NOT "have you built the Grand". The forge is
-  // destructive, so building it CONSUMES both components; gating on the result
-  // meant a forged captain owned neither cannon and could never roll one again.
-  // Re-forging is blocked by forgeRaidItem's own `Already forged` check, so a
-  // recovered component can be equipped but never turned into a second Grand.
-  if (!isDon) {
-    for (const cannon of DAVY_FORGE.components) {
-      if (!ownedItems.includes(cannon) && rngNext() < dropChance) droppedItems.push(cannon)
-    }
-  }
-  // Don's Gauntlet item chase — its own two items, same any-chest curve.
-  if (isDon) {
-    for (const itemId of DONS_GAUNTLET_ITEM_IDS) {
-      if (!ownedItems.includes(itemId) && rngNext() < dropChance) droppedItems.push(itemId)
-    }
-  }
-  // Davy's Blood Cannon — HARDCORE-only chase (the first lifesteal item), from
-  // the deeper hardcore chests. Stops only while you HOLD it: fusing it into the
-  // Bloodletter or the Reaver's Cannon consumes it, so it becomes farmable again
-  // rather than leaving the slot permanently empty.
-  if (!isDon && hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && rngNext() < chestDrop(chestCannonDropChance(cd))) {
-    droppedItems.push(BLOOD_CANNON_ITEM_ID)
-  }
-
-  // DAVY'S TERMS — the Pressure this run actually carried, derived from the terms
-  // column WE stored at run start and never from the client. Hoisted above the skin
-  // rolls because the Pitch Black Hull's drop chance keys off it.
-  const runTerms = (profile.gauntlet_run_terms as SignedTerms | null) ?? null
-  const runPressure = hc ? termPressure(runTerms) : 0
-
-  // The deep-chest Man-o-War hull chase, variant-specific: Davy's drops the
-  // Golden Gauntlet Hull, Don's drops the Galaxy Hull. Same chest tier + odds.
-  // Granted to ship_skins even before the player owns the Man-o-War to wear it.
-  const ownedSkins = (profile.ship_skins as string[] | null) ?? []
-  const normalHullId  = isDon ? GALAXY_HULL_SKIN_ID : GOLD_HULL_SKIN_ID
-  const normalHullTier = isDon ? GALAXY_HULL_CHEST_TIER : GOLD_HULL_CHEST_TIER
-  let droppedSkinId: string | null = null
-  if (chest.tier >= normalHullTier && !ownedSkins.includes(normalHullId) && rngNext() < chestDrop(chestSkinDropChance(cd))) {
-    droppedSkinId = normalHullId
-  }
-  // The SECOND Man-o-War hull. Davy's = Bad Blood Hull (HARDCORE-only). Don's =
-  // Ghost Hull, a NORMAL drop one chest tier below the Galaxy Hull.
-  const secondHullId   = isDon ? GHOST_HULL_SKIN_ID : BLOOD_HULL_SKIN_ID
-  const secondHullTier = isDon ? GHOST_HULL_CHEST_TIER : BLOOD_HULL_CHEST_TIER
-  const secondHullNeedsHc = !isDon   // only Davy's Bad Blood is hardcore-gated
-  // Don's Ghost Hull is the rarer of its two hulls — half the normal skin rate.
-  const secondHullChance = chestSkinDropChance(cd) * (isDon ? GHOST_HULL_DROP_MULT : 1)
-  let droppedHcSkinId: string | null = null
-  if ((!secondHullNeedsHc || hc) && chest.tier >= secondHullTier && !ownedSkins.includes(secondHullId) && rngNext() < chestDrop(secondHullChance)) {
-    droppedHcSkinId = secondHullId
-  }
-  // Pitch Black Hull — the PRESSURE-exclusive drop (Davy's only). Needs hardcore,
-  // a heavy board AND a deep bank, all on this one run: pressureSkinDropChance
-  // returns a hard 0 below either gate, so no shallow sign-and-bank can ever roll it.
-  let droppedPressureSkinId: string | null = null
-  if (!isDon && hc && !ownedSkins.includes(PRESSURE_SKIN_ID) && rngNext() < chestDrop(pressureSkinDropChance(runPressure, payDepth))) {
-    droppedPressureSkinId = PRESSURE_SKIN_ID
-  }
-  // Hardcore Drowned Fleet skins — granted the first time you cash out past a
-  // hardcore-depth milestone (mirrors GAUNTLET_DEPTH_UNLOCKS but for cosmetics).
+  // WHAT THE CASH-OUT PAYS (the chest, the chase drops in their fixed order,
+  // Blood Gems, doubloons, Nav XP, gems, Fathoms, crew XP) is lib/gauntletRules
+  // cashOutHaul. Everything it reads is server-side: the Locker, Davy's Offer as
+  // WE stored it, the terms WE stored at run start, and the crew's Fortune from
+  // the same loader the gauntlet page shows.
   const HC = hcCols(isDon ? 'don' : 'davy')
+  const runTerms = (profile.gauntlet_run_terms as SignedTerms | null) ?? null
+  const prevDeepest = ((isDon ? profile.dons_gauntlet_deepest : profile.gauntlet_deepest) as number | null) ?? 0
   const prevHcDeepest = (profile[HC.deepest] as number | null) ?? 0
-  const hcDeepest = hc ? Math.max(prevHcDeepest, cd) : prevHcDeepest
-  const hcUnlocks = hc ? HARDCORE_UNLOCKS.filter(u => prevHcDeepest < u.depth && u.depth <= hcDeepest) : []
-  const hcSkinIds = hcUnlocks.map(u => u.skinId).filter(id => !ownedSkins.includes(id))
-  const grantSkins = [...(droppedSkinId ? [droppedSkinId] : []), ...(droppedHcSkinId ? [droppedHcSkinId] : []), ...(droppedPressureSkinId ? [droppedPressureSkinId] : []), ...hcSkinIds]
-
-  // Blood Gems — the Hardcore premium currency, dropped in the cash-out chest
-  // (survive-only). Amount is a live server roll (~0.5–0.7 per reward depth), so
-  // deeper survival = more. Normal runs earn none.
-  // DAVY'S TERMS — Pressure multiplies Blood Gems and NOTHING else (doubloons,
-  // Nav XP and Fathoms all stay 1x, so the main economy never sees this). The
-  // Pressure is derived from the terms column WE stored at run start, never from
-  // the client. The multiplier also ramps in with depth (pressureGemMult), so
-  // signing the whole board and farming short shallow dives pays nothing — you
-  // have to be deep AND heavy. (runPressure is derived above, beside the skin rolls.)
-  const gemMult = pressureGemMult(runPressure, payDepth)
-  // Crimson Tithe (Don's account perk) — +15% Blood Gems from any Hardcore dive.
-  // Account permanent, so read the UNION of both Lockers' owned upgrades.
-  const accountUpgrades = [
-    ...((profile.gauntlet_upgrades as string[] | null) ?? []),
-    ...((profile.dons_gauntlet_upgrades as string[] | null) ?? []),
-  ]
-  const baseBloodGems   = hc ? bloodGemsForDepth(payDepth, rngNext()) : 0
-  const earnedBloodGems = Math.round(baseBloodGems * gemMult * donsBloodGemMult(accountUpgrades))
-
-  const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
-  const navRenown = navRenownEffects(profile.nav_renown_alloc as RenownAlloc | null)
-  const doubloonMult = aggregateShipClasses(classPicks).doubloonMult * navRenown.doubloonMult
-
-  const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * gauntletHaulMult(upgrades) * offerCoinMult(offerTaken))
-  // Nav XP is decoupled from the doubloon pot onto its own gentler depth curve
-  // (leveling was the sharper concern). The CHEST NO LONGER MULTIPLIES IT
-  // (2026-09-18): a chest is the doubloon-and-gem reward, and potMult was
-  // quietly applying up to 1.5× on top of a curve already tuned to be gentle,
-  // stacking with the Locker's own 1.25× to nearly 1.9×. The Locker upgrade
-  // still applies — that one is bought with Fathoms and is meant to be felt.
-  const bankedXp        = Math.round(gauntletXpForDepth(payDepth, variant) * gauntletXpMult(upgrades))
-  // Don's chests hand out richer gems (the valuable chest reward) — via the gem
-  // count only, NOT chest.potMult, so Nav XP + doubloons stay on their own mults.
-  const gems            = Math.round(chest.gems * (isDon ? DONS_CHEST_GEM_MULT : 1))
-
-  // Fathoms — the Gauntlet's meta-currency — bank on reaching this depth
-  // (Lucky Locker boosts the payout).
-  // Fathoms (meta-currency) bank on ships SUNK (rewardDepth), so Veteran's Start
-  // never farms the currency that buys upgrades — only the deepest record /
-  // contest / leaderboard below count the combat depth.
-  // Hardcore now banks Fathoms at the SAME rate as normal (HC_*_MULT = 1); its
-  // only added payout is Blood Gems above.
-  // Settle the Fence tab: Fathoms spent at the Fence this run come out of this
-  // dive's earned Fathoms (run-scoped), clamped so a purchase can never turn the
-  // grant negative or dip into the banked purse.
-  const grossFathoms     = Math.round(fathomsForDepth(rd, variant) * gauntletFathomsMult(upgrades) * (hc ? HC_FATHOMS_MULT : 1) * offerFathomMult(offerTaken))
-  const fenceSpent       = Math.max(0, Math.round(runSnapshot?.fenceSpent ?? 0))
-  const earnedFathoms    = Math.max(0, grossFathoms - fenceSpent)
-  const newExpeditionXP  = (profile.expedition_xp ?? 0) + bankedXp
+  const haul = cashOutHaul({
+    variant, hc, rd, cd, pot,
+    owned: ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [],
+    off: ((isDon ? profile.dons_gauntlet_upgrades_off : profile.gauntlet_upgrades_off) as string[] | null) ?? [],
+    accountUpgrades: [
+      ...((profile.gauntlet_upgrades as string[] | null) ?? []),
+      ...((profile.dons_gauntlet_upgrades as string[] | null) ?? []),
+    ],
+    offerState: (profile.gauntlet_run_offer as OfferState | null) ?? null,
+    takeOffer,
+    terms: runTerms,
+    ownedItems: (profile.raid_items as string[] | null) ?? [],
+    ownedSkins: (profile.ship_skins as string[] | null) ?? [],
+    totalFortune: (await getRaidPlayerStats(user.id)).totalFortune,
+    shipClasses: (profile.ship_classes as Record<string, string> | null) ?? {},
+    navRenownAlloc: profile.nav_renown_alloc as RenownAlloc | null,
+    prevHcDeepest,
+    prevDeepest,
+    fenceSpent: runSnapshot?.fenceSpent ?? 0,
+  })
+  const { payDepth, chest, offerTaken, droppedItems, droppedSkinId, droppedHcSkinId, droppedPressureSkinId,
+    hcDeepest, hcUnlocks, grantSkins, runPressure, gemMult, earnedBloodGems,
+    bankedDoubloons, bankedXp, gems, earnedFathoms, deepest } = haul
+  const newExpeditionXP = (profile.expedition_xp ?? 0) + bankedXp
   // A cash-out is Navigation XP, so it charges The Primeval Eye too.
   const reelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], bankedXp)
-  const prevDeepest      = ((isDon ? profile.dons_gauntlet_deepest : profile.gauntlet_deepest) as number | null) ?? 0
-  // The mode's own depth record (return value): hardcore → Drowned Ledger depth.
-  const deepest          = hc ? hcDeepest : Math.max(prevDeepest, cd)
 
   // Wall-clock run time (server-computed from the run-start stamp) for the
   // leaderboard tiebreaker — can't be faked client-side.
   const lastRunAt   = profile.gauntlet_last_run_at ? new Date(profile.gauntlet_last_run_at as string).getTime() : 0
-  const runMs       = lastRunAt > 0 ? Math.max(0, Date.now() - lastRunAt) : null
+  const runMs       = lastRunAt > 0 ? Math.max(0, clockNow() - lastRunAt) : null
 
   // Record fields diverge by mode. HARDCORE advances ONLY the Drowned Ledger
   // (gauntlet_hc_deepest + its own best-depth board) and clears the run flag +
@@ -1165,8 +970,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     // First-to-depth wins board ties, so `_at` is the CLAIM time: stamped only
     // when the depth strictly increases. A faster re-run at the SAME depth
     // still improves the shown run time but keeps the original claim.
-    const hcNewDepth    = runMs != null && cd > prevHcBestDep
-    const hcFasterSame  = runMs != null && cd === prevHcBestDep && (prevHcBestMs == null || runMs < prevHcBestMs)
+    const hcClaim       = recordClaim(cd, runMs, prevHcBestDep, prevHcBestMs)
+    const hcNewDepth    = hcClaim === 'deeper'
+    const hcFasterSame  = hcClaim === 'faster'
     recordFields = {
       [HC.deepest]: hcDeepest,
       gauntlet_run_hardcore: false,
@@ -1182,8 +988,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     // no Deepest-Descent contest, which is Davy-specific).
     const prevBestDep = (profile.dons_gauntlet_best_depth as number | null) ?? 0
     const prevBestMs  = (profile.dons_gauntlet_best_depth_ms as number | null) ?? null
-    const newDepth    = runMs != null && cd > prevBestDep
-    const fasterSame  = runMs != null && cd === prevBestDep && (prevBestMs == null || runMs < prevBestMs)
+    const claim       = recordClaim(cd, runMs, prevBestDep, prevBestMs)
+    const newDepth    = claim === 'deeper'
+    const fasterSame  = claim === 'faster'
     recordFields = {
       dons_gauntlet_deepest: deepest,
       ...(newDepth
@@ -1198,9 +1005,10 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     // First-to-depth wins board ties — `_at` is the CLAIM time, stamped only on
     // a strictly deeper cash-out. Faster same-depth re-runs update the run time
     // shown on the board without moving the claim.
-    const newDepth    = runMs != null && cd > prevBestDep
-    const fasterSame  = runMs != null && cd === prevBestDep && (prevBestMs == null || runMs < prevBestMs)
-    const contestActive  = Date.now() < Date.parse(GAUNTLET_DEEPEST_CONTEST_ENDS_AT)
+    const claim       = recordClaim(cd, runMs, prevBestDep, prevBestMs)
+    const newDepth    = claim === 'deeper'
+    const fasterSame  = claim === 'faster'
+    const contestActive  = clockNow() < Date.parse(GAUNTLET_DEEPEST_CONTEST_ENDS_AT)
     const prevContestDep = (profile.gauntlet_contest_depth as number | null) ?? 0
     recordFields = {
       gauntlet_deepest: deepest,
@@ -1274,7 +1082,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     }),
     // Crew XP is DECOUPLED from the player's Nav XP onto a raid-calibrated scale.
     // Hardcore survivors earn a bonus for bringing the squad home alive.
-    grantXPToAssignedCrew(admin, user.id, Math.round(gauntletCrewXp(payDepth, variant) * (hc ? HC_SURVIVOR_XP_MULT : 1) * navRenown.crewXpMult)),
+    grantXPToAssignedCrew(admin, user.id, haul.crewXp),
     // LAST in the array on purpose: crewXP is destructured positionally above,
     // so anything inserted mid-list silently hands it the wrong result.
     admin.from('gauntlet_runs').insert({
@@ -1296,14 +1104,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // cash-out (curses carried, damage taken, and how the shots were loosed), so
   // they can't be spoofed by a later run. One True Shot is derivable (max-hit
   // stat) and lives in badgeConditions instead.
-  if (isDon && runSnapshot) {
-    const st = runSnapshot.stats
-    const curseCount = Object.keys(runSnapshot.curses ?? {}).length
-    const donFeats: string[] = []
-    if (st && st.shots >= 1 && st.shots === (st.megas ?? 0) && cd >= 10) donFeats.push('ultimate_only')
-    if (curseCount >= 5 && cd >= 30) donFeats.push('weight_of_green')
-    if (st && st.dmgTaken === 0 && cd >= 5) donFeats.push('untouched')
-    for (const id of donFeats) {
+  if (isDon) {
+    for (const id of donFeats(runSnapshot, cd)) {
       try { await grantBadgeDirect(user.id, id) } catch { /* best-effort */ }
     }
   }
@@ -1377,23 +1179,14 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // a death reported at depth 90 one second into a run pays for the depth the
   // clock allows, not the one it names.
   const clockMs = tickActiveMs(profile.gauntlet_run_active_ms, profile.gauntlet_run_tick_at, { stop: true }).gauntlet_run_active_ms
-  const timeDepth = Math.floor(clockMs / MIN_MS_PER_DEPTH)
-  const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth), timeDepth))
-  const grossFathoms = Math.round(fathomsForDepth(rd, isDon ? 'don' : 'davy') * gauntletFathomsMult(activeGauntletUpgrades(
+  const { rd, cd } = settleDepths(rewardDepth, combatDepth, clockMs,
+    ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [])
+  // Settle the Fence tab (run-scoped): spent Fathoms come out of this dive's
+  // earnings, never the banked purse.
+  const earnedFathoms = runFathoms(rd, isDon ? 'don' : 'davy', activeGauntletUpgrades(
     ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [],
     ((isDon ? profile.dons_gauntlet_upgrades_off : profile.gauntlet_upgrades_off) as string[] | null) ?? [],
-  )))
-  // Settle the Fence tab (run-scoped) — spent Fathoms come out of this dive's
-  // earnings, clamped so a purchase can never dip into the banked purse.
-  const fenceSpent = Math.max(0, Math.round(runSnapshot?.fenceSpent ?? 0))
-  const earnedFathoms = Math.max(0, grossFathoms - fenceSpent)
-
-  // The combat depth may sit above the paid depth by the Veteran's Start head
-  // start and no more, the same bound cashOutGauntlet uses.
-  const headStart = gauntletStartDepth(
-    ((isDon ? profile.dons_gauntlet_upgrades : profile.gauntlet_upgrades) as string[] | null) ?? [],
-  ) - 1
-  const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth), rd + headStart))
+  ), { fenceSpent: runSnapshot?.fenceSpent ?? 0 })
   const hardcore = profile.gauntlet_run_hardcore === true
   const squad = hardcore ? ((profile.gauntlet_hc_squad as number[] | null) ?? []) : []
 
