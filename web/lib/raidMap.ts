@@ -22,11 +22,12 @@ import { RAID_ITEMS } from '@/lib/raidItems'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { getRaidItem } from '@/lib/raidItems'
 import { rngNext } from './rng'
+import { cardArt, enemyArt } from '@/lib/artUrl'
 
 // Legendary-crew card art, reused as a StoryScene bust so the chapter guides
 // (Mako/Dole/Laz/Mira) can appear in cutscenes. Card art now; swap to
 // transparent busts later by pointing these at new files. See lib/legendaryUnlocks.
-const CREW_ART = (f: string) => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${f}`
+const CREW_ART = (f: string) => cardArt(f)
 const GUIDE = {
   // OG crew. Always aboard, no unlock. They open the story and mentor.
   doby: { speaker: 'Doby', portrait: CREW_ART('Doby_Mick_v2.png') },
@@ -3366,7 +3367,7 @@ export function pickShowcaseBoss(views: RaidNodeView[]): ShowcaseBoss {
     name: 'Barnacle Pete',
     // Named outright: BroadsideEnemy.portrait is optional, and the one
     // fallback in the game must not be able to resolve to undefined.
-    portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
+    portrait: enemyArt('barnacle_pete.png'),
     backdrop: RAID_BOSS_BG[CORSAIRS_RECKONING.raidId] ?? null,
   }
 }

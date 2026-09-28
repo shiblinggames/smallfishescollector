@@ -1,6 +1,7 @@
 import type { AffixId } from './raidAffixes'
 
-export const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/'
+/** @deprecated use enemyArt(filename) from lib/artUrl. */
+export const ENEMY_IMG_BASE = '/enemy-arts/'
 
 // 'repair' is a player-only action (consumes a turn to use a repair kit).
 // Enemy `pattern` arrays never include it and `pickEnemyAction` never
@@ -431,14 +432,13 @@ export interface BossDialogueLine {
  *  story-node GUIDE map). Use as `{ speaker: 'crew', ...CREW_SPEAKER.mako, text }`.
  *  Which crew are aboard for a given fight follows the campaign: Doby + Kat from
  *  the start, then one legendary per chapter (see [[cutscene-living-crew]]). */
-const CREW_ART_BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/`
 export const CREW_SPEAKER = {
-  doby: { crew: { name: 'Doby', portrait: `${CREW_ART_BASE}Doby_Mick_v2.png` } },
-  kat:  { crew: { name: 'Kat',  portrait: `${CREW_ART_BASE}Catfish.png` } },
-  mako: { crew: { name: 'Mako', portrait: `${CREW_ART_BASE}Mako_Shark.png` } },
-  dole: { crew: { name: 'Dole', portrait: `${CREW_ART_BASE}Dole.png` } },
-  laz:  { crew: { name: 'Laz',  portrait: `${CREW_ART_BASE}Coelacanth.png` } },
-  mira: { crew: { name: 'Mira', portrait: `${CREW_ART_BASE}Mira.png` } },
+  doby: { crew: { name: 'Doby', portrait: cardArt('Doby_Mick_v2.png') } },
+  kat:  { crew: { name: 'Kat',  portrait: cardArt('Catfish.png') } },
+  mako: { crew: { name: 'Mako', portrait: cardArt('Mako_Shark.png') } },
+  dole: { crew: { name: 'Dole', portrait: cardArt('Dole.png') } },
+  laz:  { crew: { name: 'Laz',  portrait: cardArt('Coelacanth.png') } },
+  mira: { crew: { name: 'Mira', portrait: cardArt('Mira.png') } },
 } as const
 
 /** Is this loot row currency, or a real item? Mirrors lootCategory in raidChallenge:
@@ -594,6 +594,7 @@ export interface BossRaidConfig {
 // them from this file drags 151KB of raid data along with them, which is
 // exactly what four unrelated screens were doing.
 import { GEM_GLYPH, GEM_COLOR, RARITY_COLOR } from './uiTokens'
+import { cardArt, enemyArt } from '@/lib/artUrl'
 export { GEM_GLYPH, GEM_COLOR, RARITY_COLOR }
 
 /** Zone → fishing-background JPG (files live in /public, shared with the fishing
@@ -700,7 +701,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.025,
       image: '/ship-hero/sloop_v3.png',
-      portrait: ENEMY_IMG_BASE + 'reefraider.png',
+      portrait: enemyArt('reefraider.png'),
     },
     sniper: {
       id: 'sniper', name: "Crow's Nest Marksman", hpBase: 25, minDmg: 2, maxDmg: 8,
@@ -713,7 +714,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       pattern: ['reload', 'dodge', 'fire', 'reload', 'reload', 'reload', 'volley'],
       critChance: 0.10,
       image: '/ship-hero/sloop_v3.png',
-      portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png',
+      portrait: enemyArt('crowsnestmarksman.png'),
     },
     corsair: {
       id: 'corsair', name: 'Saltwater Corsair', hpBase: 32, minDmg: 5, maxDmg: 8,
@@ -729,7 +730,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley', 'reload', 'fire'],
       critChance: 0.05,
       image: '/ship-hero/sloop_v3.png',
-      portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png',
+      portrait: enemyArt('saltwatercorsair.png'),
     },
     pete: {
       id: 'pete', name: 'Barnacle Pete', hpBase: 46, minDmg: 7, maxDmg: 12,
@@ -754,7 +755,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       pattern: ['reload', 'dodge', 'reload', 'dodge', 'reload', 'dodge', 'volley', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley'],
       critChance: 0.075,
       image: '/ship-hero/schooner_v3.png',
-      portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
+      portrait: enemyArt('barnacle_pete.png'),
     },
   },
   // Eased to 4 mobs (was 6: dropped a sniper + a corsair) so the very first
@@ -1014,7 +1015,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.05,
       image: '/ship-hero/sloop_v3.png',
-      portrait: ENEMY_IMG_BASE + 'driftscout.png',
+      portrait: enemyArt('driftscout.png'),
       aimFogDensity: 0.40, aimFogName: 'Mist Veil',
     },
     reg: {
@@ -1036,7 +1037,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       pattern: ['reload', 'reload', 'reload', 'fire', 'volley', 'dodge'],
       critChance: 0.07,
       image: '/ship-hero/schooner_v3.png',
-      portrait: ENEMY_IMG_BASE + 'soundinghand.png',
+      portrait: enemyArt('soundinghand.png'),
       aimFogDensity: 0.45, aimFogName: 'Mist Veil',
     },
     brute: {
@@ -1056,7 +1057,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       pattern: ['reload', 'reload', 'volley', 'dodge', 'reload', 'fire', 'dodge'],
       critChance: 0.06,
       image: '/ship-hero/schooner_v3.png',
-      portrait: ENEMY_IMG_BASE + 'wakebreaker.png',
+      portrait: enemyArt('wakebreaker.png'),
       aimFogDensity: 0.45, aimFogName: 'Mist Veil',
     },
     elite: {
@@ -1080,7 +1081,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       pattern: ['reload', 'reload', 'fire', 'fire', 'reload', 'reload', 'volley', 'dodge'],
       critChance: 0.11,
       image: '/ship-hero/brigantine_v3.png',
-      portrait: ENEMY_IMG_BASE + 'thesurveyor.png',
+      portrait: enemyArt('thesurveyor.png'),
       aimFogDensity: 0.55, aimFogName: 'Mist Veil',
     },
     cartographer: {
@@ -1108,7 +1109,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       pattern: ['reload', 'reload', 'reload', 'fire', 'fire', 'reload', 'volley', 'dodge'],
       critChance: 0.10,
       image: '/ship-hero/brigantine_v3.png',
-      portrait: ENEMY_IMG_BASE + 'thecartographer.png',
+      portrait: enemyArt('thecartographer.png'),
       aimFogDensity: 0.70, aimFogName: 'Mist Veil',
       parryChance: 0.30, parryDamagePct: 0.25, parryName: 'Riposte',
     },

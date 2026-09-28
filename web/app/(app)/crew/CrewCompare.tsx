@@ -35,10 +35,11 @@ import { crewLevelFromXP, CREW_MAX_LEVEL, XP_TABLE as CREW_XP_TABLE } from '@/li
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import { classForSlug, CLASSES } from '@/lib/crewClasses'
 import type { CrewMember } from './actions'
+import { cardArt } from '@/lib/artUrl'
 
 const MAX_LEVEL_XP = CREW_XP_TABLE[CREW_MAX_LEVEL - 1]
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
-const artSrc = (f: string) => `${SUPA}/storage/v1/object/public/card-arts/${f}`
+const artSrc = (f: string) => cardArt(f)
 
 const STATS = [
   { k: 'power' as const, label: 'Power' },

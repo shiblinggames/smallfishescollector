@@ -20,9 +20,10 @@ import { getXPProgress, MAX_LEVEL } from '@/lib/fishingLevel'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 import { vibrate as haptic } from '@/lib/haptics'
 import { flyPayout } from '@/lib/coinFly'
+import { cardArt } from '@/lib/artUrl'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
-const artSrc = (f?: string) => (f ? `${SUPA}/storage/v1/object/public/card-arts/${f}` : '')
+const artSrc = (f?: string) => cardArt(f)
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
 const BLUE = '#9fc0ef'

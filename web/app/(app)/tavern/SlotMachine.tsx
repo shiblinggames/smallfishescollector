@@ -11,6 +11,7 @@ import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOT
 import type { SlotSymbolId } from './constants'
 import { useAnimatedNumber } from './useAnimatedNumber'
 import { vibrate as haptic } from '@/lib/haptics'
+import { cardArt } from '@/lib/artUrl'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 // Base-game reel strip (fish + hook) vs. the bonus strip (fish + the Jellyfish
@@ -65,7 +66,7 @@ function SlotSymbolDisplay({ id, size }: { id: SlotSymbolId; size?: number }) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={`${SUPABASE_URL}/storage/v1/object/public/card-arts/${sym.filename}`}
+        src={cardArt(sym.filename)}
         alt={sym.label}
         style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
       />
@@ -74,7 +75,7 @@ function SlotSymbolDisplay({ id, size }: { id: SlotSymbolId; size?: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`${SUPABASE_URL}/storage/v1/object/public/card-arts/${sym.filename}`}
+      src={cardArt(sym.filename)}
       alt={sym.label}
       style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', padding: '8%' }}
     />

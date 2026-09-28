@@ -44,6 +44,7 @@ import { playChestSfx } from '@/lib/fishingMusic'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import Link from 'next/link'
+import { cardArt } from '@/lib/artUrl'
 
 // First-time Crew Hall guide — walks the tabs and says plainly what each is
 // for. Blood offerings live inside Recruit and Skins now, and the fallen are a
@@ -73,7 +74,7 @@ const CREW_GUIDE: { tab: 'assign' | 'recruits' | 'roster' | 'hall' | 'wardrobe';
 // gems/nav/roster pill row in the header. Dropped along with them.
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
-const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
+const artSrc = (filename: string) => cardArt(filename)
 
 // Blood Gem accent + glyph (Hardcore Gauntlet premium currency).
 const BLOOD = '#d1394b'

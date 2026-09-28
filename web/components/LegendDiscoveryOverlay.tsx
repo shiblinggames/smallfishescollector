@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
+import { cardArt } from '@/lib/artUrl'
 
 interface Props {
   open: boolean
@@ -33,7 +34,7 @@ export default function LegendDiscoveryOverlay({
   name = 'Laz', species = 'The Coelacanth', artFilename = 'Coelacanth.png',
 }: Props) {
   const [artFailed, setArtFailed] = useState(false)
-  const art = `${SUPA}/storage/v1/object/public/card-arts/${artFilename}`
+  const art = cardArt(artFilename)
 
   useEffect(() => {
     if (!open) return

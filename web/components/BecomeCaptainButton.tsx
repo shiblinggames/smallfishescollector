@@ -7,10 +7,11 @@
 
 import { motion } from 'framer-motion'
 import { openMembership } from './MembershipModal'
+import { cardArt } from '@/lib/artUrl'
 
 // The Captain emblem = the Great White crew card art (Expeditions art, not the
 // fishing sprite), served from the card-arts bucket.
-const CAPTAIN_ART = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Great_White_Shark.png`
+const CAPTAIN_ART = cardArt('Great_White_Shark.png')
 
 export default function BecomeCaptainButton({
   label = 'Become a Captain',

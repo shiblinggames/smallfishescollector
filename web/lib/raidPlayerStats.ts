@@ -20,8 +20,8 @@ import { shipSkinImage } from '@/lib/shipSkins'
 import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult, donsLegendaryLootMult } from '@/lib/gauntletUpgrades'
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
+import { cardArt } from '@/lib/artUrl'
 
-const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
 
 export interface RaidCrewMember {
@@ -143,7 +143,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
       id:       pc.id,
       slug:     row?.slug ?? '',
       name:     row?.name ?? 'Crew',
-      imageUrl: CARD_IMG_BASE + (row?.filename ?? ''),
+      imageUrl: cardArt(row?.filename),
       xp:       (row?.xp as number | undefined) ?? 0,
       power:    Math.floor(pc.power   * mult),
       dodge:    Math.floor(pc.dodge   * mult),

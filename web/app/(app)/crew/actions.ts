@@ -23,6 +23,7 @@ import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } 
 import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
 import { isLegendaryLocked } from '@/lib/legendaryUnlocks'
 import { rngNext } from '@/lib/rng'
+import { cardArt } from '@/lib/artUrl'
 
 const REROLL_COST = 100
 
@@ -358,7 +359,7 @@ export async function todaysRecruits(): Promise<{ faces: RecruitFace[] } | null>
       return {
         rarity: Number(r.rarity) || 1,
         name: m?.name ?? 'A new hand',
-        art: m ? `${base}/storage/v1/object/public/card-arts/${m.filename}` : '',
+        art: m ? cardArt(m.filename) : '',
         recruited: r.recruited === true,
       }
     }),

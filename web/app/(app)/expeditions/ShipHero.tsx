@@ -64,8 +64,8 @@ import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import RenownIntroOverlay from '@/components/RenownIntroOverlay'
 import { crewLevelFromXP } from '@/lib/crewLevel'
+import { cardArt } from '@/lib/artUrl'
 
-const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
 type RosterCrew = {
   id: number
@@ -159,7 +159,7 @@ function PickerCrewCard({ card, selected, current, onSelect }: { card: RosterCre
         border: `1.5px solid ${color}`, background: `radial-gradient(ellipse at 50% 32%, ${color}26 0%, #070504 78%)`,
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
+        <img src={cardArt(card.filename)} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
         {selected && (
           <div aria-hidden style={{ position: 'absolute', bottom: 2, right: 2, width: 16, height: 16, borderRadius: '50%', background: color, border: '1.5px solid #0a0c11', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0a0c11" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -1085,7 +1085,7 @@ export default function ShipHero({
       return (
         <div onClick={() => openPickerForSlot(i)} style={{ position: 'relative', width: size, height: size, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: `2px solid ${ring}`, boxShadow: `0 4px 7px rgba(0,0,0,0.6), 0 0 0 2px rgba(4,6,10,0.5)` }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+          <img src={cardArt(card.filename)} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
           <button onClick={e => removeFromSlot(i, e)} aria-label="Remove crew" style={{ position: 'absolute', top: -2, right: -2, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
             <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
@@ -1407,7 +1407,7 @@ export default function ShipHero({
   // 2.6s read as a strobe; this is slow enough to actually look at.
   const CYCLE_MS = 5200
   const crewArt = useMemo(
-    () => roster.map(c => IMG_BASE + c.filename).filter(Boolean),
+    () => roster.map(c => cardArt(c.filename)).filter(Boolean),
     [roster],
   )
   const itemsArt = useMemo(
@@ -2863,7 +2863,7 @@ export default function ShipHero({
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, maxWidth: '100%', padding: '0.22rem 0.55rem 0.22rem 0.28rem', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
                           <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${currentColor}` }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={IMG_BASE + currentInSlot.filename} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+                            <img src={cardArt(currentInSlot.filename)} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
                           </div>
                           <span className="font-karla truncate" style={{ fontSize: '0.66rem', color: '#9aa0a6', minWidth: 0 }}>
                             Currently <span className="font-700" style={{ color: '#dfe9e3' }}>{currentInSlot.name}</span>
@@ -2957,7 +2957,7 @@ export default function ShipHero({
                       }}>
                         <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 8, overflow: 'hidden', border: `1.5px solid ${pendColor}`, background: `radial-gradient(ellipse at 50% 32%, ${pendColor}26 0%, #070504 78%)` }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={IMG_BASE + pendingCard.filename} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
+                          <img src={cardArt(pendingCard.filename)} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#857f77', marginBottom: 2 }}>

@@ -11,8 +11,9 @@
 // in the scene accent (use it only on the key term the player must remember).
 
 import type { SceneLine } from '@/lib/raidMap'
+import { cardArt } from '@/lib/artUrl'
 
-const CARD_ART = (f: string) => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${f}`
+const CARD_ART = (f: string) => cardArt(f)
 
 /** The two mentor voices. Same portraits as the campaign story GUIDE; defined
  *  here so onboarding scenes outside the raid map can reuse them. */

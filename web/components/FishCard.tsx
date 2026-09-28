@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import type { BorderStyle, ArtEffect, CardStats } from '@/lib/types'
 import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
+import { cardArt } from '@/lib/artUrl'
 
 interface Props {
   name: string
@@ -62,7 +63,7 @@ function StatCell({ label, value }: { label: string; value: number }) {
 export default function FishCard({ name, filename, borderStyle: _borderStyle, artEffect, variantName, dropWeight, unowned, className = '', stats, cardW = DEFAULT_W, fill = false }: Props) {
   const W: number | string = fill ? '100%' : cardW
   const H: number | string = fill ? '100%' : Math.round(cardW * DEFAULT_H / DEFAULT_W)
-  const src = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${filename}`
+  const src = cardArt(filename)
 
   const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
   const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null

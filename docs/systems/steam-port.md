@@ -443,6 +443,18 @@ In order. Each step is worth doing even if the port never happens.
      database is seeded from it. A database-only copy has no history anyway.
    - Mirror the two storage buckets into `public/` or an asset manifest. A binary has to bundle
      them, and it removes 22 hard-coded Supabase URLs.
+   - **DONE 2026-09-28.**
+     - **Content:** `web/content/{fish_species,cards,card_variants}.json`, synced by
+       `scripts/content-sync.mts` (pull / diff / push --apply, upsert only). From now on, edit
+       the JSON, commit it, then push.
+     - **Art:** both buckets, 156 images, converted to WebP in `public/card-arts` and
+       `public/enemy-arts` (184 MB became 16 MB). Every reference now goes through
+       `lib/artUrl` (`cardArt`, `enemyArt`), which maps the database's `.png` names to the
+       `.webp` files. No Supabase storage URL is left in the code.
+     - **Check:** `scripts/check-art.mts` (in `npm run check`) fails if a card, skin or
+       literal `cardArt` / `enemyArt` has no file on disk.
+     - **The buckets are left in place, unused.** Delete them once the new paths have run in
+       production for a while.
 4. **A save model with export and import.**
    - Define `PlayerSave`: everything a player owns, across `profiles` and its child tables.
    - Add a server export to JSON, and an import.

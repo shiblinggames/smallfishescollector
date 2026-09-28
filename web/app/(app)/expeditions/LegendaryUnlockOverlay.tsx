@@ -11,9 +11,10 @@ import { createPortal } from 'react-dom'
 import { classForSlug, CLASSES } from '@/lib/crewClasses'
 import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { Letterbox, LivingFrame, prefersReducedMotion } from '@/components/cutscene'
+import { cardArt } from '@/lib/artUrl'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
-const artSrc = (f: string) => `${SUPA}/storage/v1/object/public/card-arts/${f}`
+const artSrc = (f: string) => cardArt(f)
 
 export function LegendaryUnlockOverlay({ crew, onClose }: { crew: UnlockedLegendary; onClose: () => void }) {
   const cls = classForSlug(crew.slug)

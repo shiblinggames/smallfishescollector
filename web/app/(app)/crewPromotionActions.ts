@@ -19,6 +19,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { verifiedSession } from '@/lib/verifiedSession'
 import { CLASSES, classForSlug, CLASS_MILESTONE_LEVELS } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
+import { cardArt } from '@/lib/artUrl'
 
 export type Promotion = {
   key: string
@@ -89,7 +90,7 @@ export async function checkPromotions(): Promise<Promotion[]> {
       key: `${c.id}:${top}`,
       crewId: c.id as number,
       name: (c.nickname as string | null) || card.name,
-      art: `${base}/storage/v1/object/public/card-arts/${card.filename}`,
+      art: cardArt(card.filename),
       className: def.name,
       color: def.color,
       tier: TIER[idx] ?? String(idx + 1),

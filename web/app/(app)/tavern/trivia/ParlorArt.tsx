@@ -7,9 +7,10 @@
 
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
+import { cardArt } from '@/lib/artUrl'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-export const HOST_ART = `${SUPABASE_URL}/storage/v1/object/public/card-arts/Blue_Marlin_aristocrat.png`
+export const HOST_ART = cardArt('Blue_Marlin_aristocrat.png')
 export const HOST_GLOW = '#c9a24a'
 
 // Candlelit wood + brass — the same cabinet language as the Den next door, so

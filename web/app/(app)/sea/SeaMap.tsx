@@ -393,6 +393,7 @@ const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
 // The Day: every daily on one disc beside the haul. See sea/SeaDay.
 const SeaDay = dynamic(() => import('./SeaDay'), { ssr: false })
 import type { DayKind } from './SeaDay'
+import { cardArt } from '@/lib/artUrl'
 // Kip, who trades in what he knows about the harbour. See seaSmuggler.
 const SmugglerTalk = dynamic(() => import('./SmugglerTalk'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
@@ -3211,7 +3212,7 @@ export default function SeaMap({
   const [liveCaptainArt, setLiveCaptainArt] = useState<string | null | undefined>(undefined)
   const captainFace = useMemo(() => {
     const art = liveCaptainArt !== undefined ? liveCaptainArt : raidParty[0]?.art
-    return art ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${art}` : null
+    return art ? cardArt(art) : null
   }, [raidParty, liveCaptainArt])
   // ── IS THE CAPTAIN DRAWN ON THE DECK ──────────────────────────────────
   //
@@ -14755,8 +14756,7 @@ const AnchorageWall = memo(function AnchorageWall() {
 })
 
 /** Crew card art lives in Supabase storage, same bucket the crew hall reads. */
-const CREW_ART_BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/`
-const crewArt = (f: string) => (f ? CREW_ART_BASE + f : '')
+const crewArt = (f: string) => cardArt(f)
 
 const LandmarkField = memo(function LandmarkField() {
   // These are drawn on the canvas now — two sprites sharing a

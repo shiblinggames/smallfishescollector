@@ -8,9 +8,10 @@ import { RARITY_COLORS, RARITY_NAMES, type CrewRarity } from '@/lib/crewGen'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkinByFilename, skinArtGlow } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
+import { cardArt } from '@/lib/artUrl'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
-const artSrc = (f: string) => `${SUPA}/storage/v1/object/public/card-arts/${f}`
+const artSrc = (f: string) => cardArt(f)
 
 const STAT = [
   { k: 'power' as const, l: 'PWR', c: '#f87171' },

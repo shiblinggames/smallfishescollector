@@ -56,6 +56,7 @@ import { crewHub, type CrewHubState, type HubCrew } from './crewHubActions'
 import { getCrewState } from '@/app/(app)/crew/actions'
 import type { CrewState } from '@/app/(app)/crew/actions'
 import { CREW_SKINS } from '@/lib/crewSkins'
+import { cardArt } from '@/lib/artUrl'
 
 /**
  * THE HALL'S WHOLE SELF, FETCHED ONLY WHEN A DOOR IS OPENED.
@@ -68,7 +69,7 @@ import { CREW_SKINS } from '@/lib/crewSkins'
 const CrewClient = dynamic(() => import('@/app/(app)/crew/CrewClient'), { ssr: false })
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
+const artSrc = (filename: string) => cardArt(filename)
 
 /** The rarity ring, the same four colours the hall and every crate use. A crew
  *  read anywhere in this game has always been read by this ring. */

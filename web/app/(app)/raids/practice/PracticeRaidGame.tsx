@@ -16,6 +16,7 @@ import { raidDamageProfile } from '@/lib/expeditions'
 import type { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 import TapToContinueGate from '@/components/TapToContinueGate'
+import { enemyArt } from '@/lib/artUrl'
 
 // ── THE COMBAT SCREEN IS ITS OWN CHUNK ─────────────────────────────────────
 // RaidCombat is the biggest file in the game, and nothing draws it until a
@@ -31,7 +32,6 @@ type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
 
 // ── Enemy definitions ─────────────────────────────────────────────────────────
 
-const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/'
 
 interface PracticeEnemy {
   id: string
@@ -58,21 +58,21 @@ const PRACTICE_ENEMIES: Record<string, PracticeEnemy> = {
     shipSpeed: 4, actionMs: 4500,
     pattern: ['reload', 'fire', 'reload', 'fire'],
     critChance: 0.025,
-    image: '/ship-hero/sloop_v3.png', portrait: ENEMY_IMG_BASE + 'reefraider.png', killGold: PRACTICE_KILL_REWARDS.brute.gold, killXP: PRACTICE_KILL_REWARDS.brute.xp,
+    image: '/ship-hero/sloop_v3.png', portrait: enemyArt('reefraider.png'), killGold: PRACTICE_KILL_REWARDS.brute.gold, killXP: PRACTICE_KILL_REWARDS.brute.xp,
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     shipSpeed: 3, actionMs: 5500,
     pattern: ['reload', 'dodge', 'fire', 'reload', 'reload', 'reload', 'volley'],
     critChance: 0.10,
-    image: '/ship-hero/sloop_v3.png', portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: PRACTICE_KILL_REWARDS.sniper.gold, killXP: PRACTICE_KILL_REWARDS.sniper.xp,
+    image: '/ship-hero/sloop_v3.png', portrait: enemyArt('crowsnestmarksman.png'), killGold: PRACTICE_KILL_REWARDS.sniper.gold, killXP: PRACTICE_KILL_REWARDS.sniper.xp,
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     shipSpeed: 7, actionMs: 3500,
     pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley', 'reload', 'fire'],
     critChance: 0.05,
-    image: '/ship-hero/sloop_v3.png', portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: PRACTICE_KILL_REWARDS.corsair.gold, killXP: PRACTICE_KILL_REWARDS.corsair.xp,
+    image: '/ship-hero/sloop_v3.png', portrait: enemyArt('saltwatercorsair.png'), killGold: PRACTICE_KILL_REWARDS.corsair.gold, killXP: PRACTICE_KILL_REWARDS.corsair.xp,
   },
 }
 const NON_BOSS_IDS = ['brute', 'sniper', 'corsair'] as const
