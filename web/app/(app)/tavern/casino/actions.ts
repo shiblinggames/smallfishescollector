@@ -14,26 +14,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { denDailyCap, denCapFromXp } from '../constants'
 import { buyInAmountOk, buyInRefusal, casinoDayStart } from '@/lib/casinoRules'
+import { casinoData } from '@/lib/data/casinoData'
 import { isPremiumActive } from '@/lib/premium'
 import { spend, grant } from '@/lib/wallet'
 import type { CasinoWallet, CasinoBuyInResult, CasinoCashOutResult } from './types'
 
 async function getDailyBuyInTotal(userId: string): Promise<number> {
-  const admin = createAdminClient()
-  const today = casinoDayStart()
-  const { data } = await admin
-    .from('casino_buy_ins')
-    .select('amount')
-    .eq('user_id', userId)
-    .gte('created_at', today)
-  return (data ?? []).reduce((sum, r) => sum + (r.amount as number), 0)
+  return casinoData(createAdminClient()).boughtInSince(userId, casinoDayStart())
 }
 
 /** A player's effective shared Den daily cap — Captains climb it with their
  *  combined Fishing+Nav level (2k→20k); non-Captains sit flat at 2,000 ⟡/day. */
 async function getDenCap(userId: string): Promise<number> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('fishing_xp, expedition_xp, is_premium, premium_expires_at').eq('id', userId).single()
+  const data = await casinoData(createAdminClient()).profile(userId, 'fishing_xp, expedition_xp, is_premium, premium_expires_at')
   return denCapFromXp((data?.fishing_xp as number | null) ?? 0, (data?.expedition_xp as number | null) ?? 0, isPremiumActive(data))
 }
 
@@ -47,12 +40,8 @@ export async function getCasinoState(): Promise<CasinoWallet> {
       sessionNets: { blackjack: 0, roulette: 0, slots: 0 }, isMember: false,
     }
   }
-  const admin = createAdminClient()
-  const [{ data: profile }, dailyBoughtIn] = await Promise.all([
-    admin.from('profiles')
-      .select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net, roulette_session_net, slots_session_net, fishing_xp, expedition_xp, is_premium, premium_expires_at')
-      .eq('id', user.id)
-      .single(),
+  const [profile, dailyBoughtIn] = await Promise.all([
+    casinoData(createAdminClient()).profile(user.id, 'doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net, roulette_session_net, slots_session_net, fishing_xp, expedition_xp, is_premium, premium_expires_at'),
     getDailyBuyInTotal(user.id),
   ])
   const isMember = isPremiumActive(profile)
@@ -84,11 +73,8 @@ export async function buyInCasino(amount: number): Promise<CasinoBuyInResult | {
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, casino_session_buy_ins')
-    .eq('id', user.id)
-    .single()
+  const db = casinoData(admin)
+  const profile = await db.profile(user.id, 'doubloons, casino_session_buy_ins')
   if (!profile) return { error: 'Profile not found' }
   const doubloons = profile.doubloons as number
   const prevSessionBuyIns = (profile.casino_session_buy_ins as number | null) ?? 0
@@ -106,11 +92,9 @@ export async function buyInCasino(amount: number): Promise<CasinoBuyInResult | {
   const newSessionBuyIns = prevSessionBuyIns + amount
 
   await Promise.all([
-    admin.from('profiles').update({
-      casino_session_buy_ins: newSessionBuyIns,
-    }).eq('id', user.id),
-    admin.from('casino_buy_ins').insert({ user_id: user.id, amount }),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -amount, reason: `Casino: buy-in ${amount} ⟡` }),
+    db.updateProfile(user.id, { casino_session_buy_ins: newSessionBuyIns }),
+    db.recordBuyIn(user.id, amount),
+    db.ledger(user.id, -amount, `Casino: buy-in ${amount} ⟡`),
   ])
 
   revalidatePath('/tavern')
@@ -131,32 +115,25 @@ export async function cashOutCasino(): Promise<CasinoCashOutResult | { error: st
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const admin = createAdminClient()
-  const { data: activeHand } = await admin
-    .from('blackjack_hands')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .maybeSingle()
-  if (activeHand) return { error: 'Finish your blackjack hand first' }
+  const db = casinoData(createAdminClient())
+  if (await db.activeHand(user.id)) return { error: 'Finish your blackjack hand first' }
 
-  // One SQL statement moves every chip to doubloons, so a spin landing at
-  // the same moment can never be paid out twice.
-  const { data: rows, error } = await admin.rpc('casino_cash_out', { uid: user.id })
-  if (error) return { error: 'Cash-out failed' }
-  const row = (Array.isArray(rows) ? rows[0] : rows) as { paid: number | null; doubloons: number | null } | null
-  const chips = Number(row?.paid ?? 0)
+  // One step moves every chip to doubloons, so a spin landing at the same
+  // moment can never be paid out twice.
+  const cashed = await db.cashOutChips(user.id)
+  if (!cashed) return { error: 'Cash-out failed' }
+  const chips = cashed.paid
   if (chips <= 0) return { error: 'No chips to cash out' }
-  const newDoubloons = Number(row?.doubloons ?? 0)
+  const newDoubloons = cashed.doubloons
 
   await Promise.all([
-    admin.from('profiles').update({
+    db.updateProfile(user.id, {
       casino_session_buy_ins: 0,
       blackjack_session_net: 0,
       roulette_session_net: 0,
       slots_session_net: 0,
-    }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: chips, reason: `Casino: cash-out ${chips} ⟡` }),
+    }),
+    db.ledger(user.id, chips, `Casino: cash-out ${chips} ⟡`),
   ])
 
   revalidatePath('/tavern')
@@ -168,5 +145,5 @@ export async function markDenGuideSeen(): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-  await createAdminClient().from('profiles').update({ has_seen_den_guide: true }).eq('id', user.id)
+  await casinoData(createAdminClient()).updateProfile(user.id, { has_seen_den_guide: true })
 }

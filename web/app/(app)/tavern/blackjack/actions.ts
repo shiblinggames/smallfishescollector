@@ -9,6 +9,7 @@ import {
   splitRefusal, splitTable, settleTable, nextStreaks, afterRound, casinoDayStart,
   type Phase, type ServerHand, type ServerState,
 } from '@/lib/casinoRules'
+import { casinoData } from '@/lib/data/casinoData'
 import { BJ_MIN_BET, BJ_MAX_BET, denCapFromXp } from '../constants'
 import { isPremiumActive } from '@/lib/premium'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
@@ -90,21 +91,13 @@ export type ActionResult =
 // cash-out live in ../casino/actions now; this file only plays hands.
 
 async function getDailyBuyInTotal(userId: string): Promise<number> {
-  const admin = createAdminClient()
-  const today = casinoDayStart()
-  const { data } = await admin
-    .from('casino_buy_ins')
-    .select('amount')
-    .eq('user_id', userId)
-    .gte('created_at', today)
-  return (data ?? []).reduce((sum, r) => sum + (r.amount as number), 0)
+  return casinoData(createAdminClient()).boughtInSince(userId, casinoDayStart())
 }
 
 /** Effective shared Den daily cap for this player — Captains climb it with their
  *  combined Fishing+Nav level; non-Captains sit at the flat 2,000 ⟡/day cap. */
 async function getDenCap(userId: string): Promise<number> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('fishing_xp, expedition_xp, is_premium, premium_expires_at').eq('id', userId).single()
+  const data = await casinoData(createAdminClient()).profile(userId, 'fishing_xp, expedition_xp, is_premium, premium_expires_at')
   return denCapFromXp((data?.fishing_xp as number | null) ?? 0, (data?.expedition_xp as number | null) ?? 0, isPremiumActive(data))
 }
 
@@ -209,25 +202,20 @@ async function finalizeSettlement(
   // Close the hand FIRST, and only if it is still open. Two stands (or a
   // stand racing a hit) fired together both reach here; only the one whose
   // update comes back with a row gets paid.
-  const { data: closed } = await admin.from('blackjack_hands').update({
-    status: 'settled',
+  const db = casinoData(admin)
+  if (!(await db.settleHand(userId, handId, {
     state: null,            // free the active-state JSON
     result: resultJson,
     net_delta: netDelta,
     settled_at: new Date().toISOString(),
-  }).eq('id', handId).eq('user_id', userId).eq('status', 'active').select('id')
-  if (!closed || closed.length === 0) return null
+  }))) return null
 
   // Wagers were already taken from chips at action time; the return lands in place.
   const newChips = totalReturned > 0
     ? await grant(admin, userId, 'casino_chips', totalReturned)
     : await getChips(userId)
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, casino_session_buy_ins, blackjack_session_net, blackjack_win_streak, blackjack_dealer_bj_streak')
-    .eq('id', userId)
-    .single()
+  const profile = await db.profile(userId, 'doubloons, casino_session_buy_ins, blackjack_session_net, blackjack_win_streak, blackjack_dealer_bj_streak')
   // The shared purse hitting 0 ends the casino session (afterRound), and the
   // badge streaks move (nextStreaks): both lib/casinoRules.
   const { busted, sessionNet: newSessionNet, sessionBuyIns: newSessionBuyIns } = afterRound(
@@ -253,13 +241,13 @@ async function finalizeSettlement(
   // Hand-level settle updates CHIPS only; doubloons move on cash-out.
   // No doubloon_transactions row here — chip movement is internal to
   // the table session and would otherwise bloat the ledger.
-  await admin.from('profiles').update({
+  await db.updateProfile(userId, {
     casino_session_buy_ins: newSessionBuyIns,
     blackjack_session_net: newSessionNet,
     blackjack_win_streak: newWinStreak,
     blackjack_dealer_bj_streak: newDealerBjStreak,
     ...(busted ? { roulette_session_net: 0, slots_session_net: 0 } : {}),
-  }).eq('id', userId)
+  })
   void reason
 
   // Badge hooks (best-effort): 5-win streak and the dealer's back-to-back naturals.
@@ -289,13 +277,7 @@ async function finalizeSettlement(
 
 /** Load the active hand (or null) for the user. */
 async function loadActiveHand(userId: string): Promise<{ id: number; state: ServerState; initial_wager: number; total_wagered: number } | null> {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('blackjack_hands')
-    .select('id, state, initial_wager, total_wagered')
-    .eq('user_id', userId)
-    .eq('status', 'active')
-    .maybeSingle()
+  const data = await casinoData(createAdminClient()).activeHand(userId)
   if (!data || !data.state) return null
   return {
     id: data.id as number,
@@ -306,16 +288,14 @@ async function loadActiveHand(userId: string): Promise<{ id: number; state: Serv
 }
 
 async function persistActiveHand(handId: number, state: ServerState, totalWagered: number): Promise<void> {
-  const admin = createAdminClient()
-  await admin.from('blackjack_hands').update({ state, total_wagered: totalWagered }).eq('id', handId).eq('status', 'active')
+  await casinoData(createAdminClient()).saveHand(handId, state, totalWagered)
 }
 
 /** Read the player's chip balance (the SHARED casino purse — one
  *  balance across blackjack/roulette/slots). Doubloons are the
  *  off-table currency and don't move during hands. */
 async function getChips(userId: string): Promise<number> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('casino_chips').eq('id', userId).single()
+  const data = await casinoData(createAdminClient()).profile(userId, 'casino_chips')
   return (data?.casino_chips as number | null) ?? 0
 }
 
@@ -326,8 +306,7 @@ function settledOrError(result: SettleResult | null): ActionResult {
 }
 
 async function getDoubloons(userId: string): Promise<number> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('doubloons').eq('id', userId).single()
+  const data = await casinoData(createAdminClient()).profile(userId, 'doubloons')
   return (data?.doubloons as number | null) ?? 0
 }
 
@@ -336,10 +315,7 @@ async function getDoubloons(userId: string): Promise<number> {
  *  net. The header tally shows the NET — chips alone can't tell you how
  *  blackjack went when the same purse also played roulette/slots. */
 async function getSessionView(userId: string): Promise<{ sessionBuyIns: number; sessionNet: number }> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('profiles')
-    .select('casino_session_buy_ins, blackjack_session_net')
-    .eq('id', userId).single()
+  const data = await casinoData(createAdminClient()).profile(userId, 'casino_session_buy_ins, blackjack_session_net')
   return {
     sessionBuyIns: (data?.casino_session_buy_ins as number | null) ?? 0,
     sessionNet: (data?.blackjack_session_net as number | null) ?? 0,
@@ -379,16 +355,11 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
   const state = dealTable(wager)
 
   // Insert the hand row
-  const { data: row } = await admin
-    .from('blackjack_hands')
-    .insert({ user_id: user.id, initial_wager: wager, total_wagered: wager, status: 'active', state })
-    .select('id')
-    .single()
-  if (!row) {
+  const handId = await casinoData(admin).openHand(user.id, wager, state)
+  if (handId == null) {
     await grant(admin, user.id, 'casino_chips', wager)
     return { error: 'Failed to create hand' }
   }
-  const handId = row.id as number
 
   revalidatePath('/tavern')
 

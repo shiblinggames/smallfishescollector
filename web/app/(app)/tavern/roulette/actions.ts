@@ -20,6 +20,7 @@ import {
 import { isPremiumActive } from '@/lib/premium'
 import { spend, grant } from '@/lib/wallet'
 import { betSlipRefusal, afterRound, casinoDayStart } from '@/lib/casinoRules'
+import { casinoData } from '@/lib/data/casinoData'
 import type { RouletteState, SpinResult, RecentSpin } from './types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -27,14 +28,7 @@ import type { RouletteState, SpinResult, RecentSpin } from './types'
 // Today's buy-ins into the SHARED casino wallet (one cap across all
 // three games — casino_buy_ins is the only source).
 async function getDailyBuyInTotal(userId: string): Promise<number> {
-  const admin = createAdminClient()
-  const today = casinoDayStart()
-  const { data } = await admin
-    .from('casino_buy_ins')
-    .select('amount')
-    .eq('user_id', userId)
-    .gte('created_at', today)
-  return (data ?? []).reduce((sum: number, r: any) => sum + (r.amount as number), 0)
+  return casinoData(createAdminClient()).boughtInSince(userId, casinoDayStart())
 }
 
 // ── Snapshot: what the page server-renders ───────────────────────────
@@ -49,21 +43,14 @@ export async function getRouletteState(): Promise<RouletteState> {
       recentSpins: [],
     }
   }
-  const admin = createAdminClient()
-  const [{ data: profile }, dailyBoughtIn, { data: recentRows }] = await Promise.all([
-    admin.from('profiles')
-      .select('doubloons, casino_chips, casino_session_buy_ins, roulette_session_net, fishing_xp, expedition_xp, is_premium, premium_expires_at')
-      .eq('id', user.id)
-      .single(),
+  const db = casinoData(createAdminClient())
+  const [profile, dailyBoughtIn, recentRows] = await Promise.all([
+    db.profile(user.id, 'doubloons, casino_chips, casino_session_buy_ins, roulette_session_net, fishing_xp, expedition_xp, is_premium, premium_expires_at'),
     getDailyBuyInTotal(user.id),
-    admin.from('roulette_spins')
-      .select('id, winning_number, net_chips, total_wagered, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20),
+    db.recentRouletteSpins(user.id, 20),
   ])
 
-  const recentSpins: RecentSpin[] = ((recentRows ?? []) as any[]).map(r => ({
+  const recentSpins: RecentSpin[] = (recentRows as any[]).map(r => ({
     id: r.id,
     winningNumber: r.winning_number,
     net: r.net_chips,
@@ -102,11 +89,8 @@ export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { erro
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('casino_chips, casino_session_buy_ins, roulette_session_net, doubloons')
-    .eq('id', user.id)
-    .single()
+  const db = casinoData(admin)
+  const profile = await db.profile(user.id, 'casino_chips, casino_session_buy_ins, roulette_session_net, doubloons')
   if (!profile) return { error: 'Profile not found' }
 
   // The wager leaves the purse in place first. That is the guard: two spins
@@ -127,12 +111,11 @@ export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { erro
     chipsAfter, (profile.roulette_session_net as number | null) ?? 0, settlement.net, (profile.casino_session_buy_ins as number | null) ?? 0)
 
   await Promise.all([
-    admin.from('profiles').update({
+    db.updateProfile(user.id, {
       roulette_session_net: newSessionNet,
       ...(busted ? { casino_session_buy_ins: 0, blackjack_session_net: 0, slots_session_net: 0 } : {}),
-    }).eq('id', user.id),
-    admin.from('roulette_spins').insert({
-      user_id: user.id,
+    }),
+    db.logRouletteSpin(user.id, {
       bets: bets as unknown as object,
       winning_number: winningNumber,
       total_wagered: settlement.totalWagered,

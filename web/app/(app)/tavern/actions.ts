@@ -8,6 +8,7 @@ import { spend, grant } from '@/lib/wallet'
 import { SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT } from './constants'
 import type { SlotSymbolId } from './constants'
 import { rollSlots, afterRound } from '@/lib/casinoRules'
+import { casinoData } from '@/lib/data/casinoData'
 
 // Crown & Anchor was retired 2026-06-06 — replaced by Blackjack
 // (app/(app)/tavern/blackjack/actions.ts). The dice_rolls table stays
@@ -45,11 +46,8 @@ export interface SlotsJackpotState {
 
 export async function getSlotsJackpot(): Promise<SlotsJackpotState> {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('slots_jackpot')
-    .select('pot, last_winner_name, last_win_amount, last_won_at')
-    .eq('id', 1)
-    .single()
+  // Read through the request's own client, as it always was.
+  const data = await casinoData(supabase).slotsPot()
   return {
     pot: data?.pot ?? 15000,
     lastWinnerName: data?.last_winner_name ?? null,
@@ -74,8 +72,7 @@ export async function getSlotStats(): Promise<SlotStats> {
   // Aggregate in the DB — a plain SELECT is capped at PostgREST's default 1000
   // rows, which made the panel stick at 1000 spins with a wrong net for anyone
   // who'd spun more than that.
-  const { data } = await admin.rpc('get_slot_stats', { uid: user.id })
-  const row = (Array.isArray(data) ? data[0] : data) as { spins: number; net: number; biggest_win: number } | null | undefined
+  const row = await casinoData(admin).slotStats(user.id)
   return {
     spins: Number(row?.spins ?? 0),
     net: Number(row?.net ?? 0),
@@ -98,11 +95,8 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   // (casino_buy_ins) — chips on the table churn freely, so the old
   // per-spin daily-wager check is gone.
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('casino_chips, casino_session_buy_ins, slots_session_net, username, is_admin, slots_force_next')
-    .eq('id', user.id)
-    .single()
+  const db = casinoData(admin)
+  const profile = await db.profile(user.id, 'casino_chips, casino_session_buy_ins, slots_session_net, username, is_admin, slots_force_next')
   if (!profile) return { error: 'Profile not found' }
   // The wager leaves the purse in place before the roll. That is the guard:
   // two spins fired together cannot both bet the same chips.
@@ -122,21 +116,14 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   // Every spin feeds the global pot before any claim — your own
   // contribution is in the pot you might win this very spin.
   const feed = Math.ceil(wager * SLOTS_JACKPOT_FEED_PCT)
-  const { data: fedPot } = await admin.rpc('slots_feed_jackpot', { p_amount: feed })
-  let pot = typeof fedPot === 'number' ? fedPot : 15000
+  let pot = (await db.feedPot(feed)) ?? 15000
 
   const winnerName = (profile as { username?: string | null }).username ?? 'A sailor'
   async function claimJackpot(): Promise<number> {
-    const { data } = await admin.rpc('slots_claim_jackpot', {
-      p_user_id: user!.id,
-      p_winner_name: winnerName,
-      p_wager: wager,
-      p_max_bet: SLOTS_MAX_BET,
-    })
-    const row = Array.isArray(data) ? data[0] : data
-    if (!row) return 0
-    pot = row.new_pot as number
-    return row.share as number
+    const won = await db.claimPot(user!.id, winnerName, wager, SLOTS_MAX_BET)
+    if (!won) return 0
+    pot = won.newPot
+    return won.share
   }
 
   const outcome = roll.outcome
@@ -163,13 +150,13 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
     newChips, (profile.slots_session_net as number | null) ?? 0, net, (profile.casino_session_buy_ins as number | null) ?? 0)
 
   await Promise.all([
-    admin.from('profiles').update({
+    db.updateProfile(user.id, {
       slots_session_net: newSessionNet,
       // Consume the one-time forced-spin override so it only fires once.
       ...(isForced ? { slots_force_next: null } : {}),
       ...(busted ? { casino_session_buy_ins: 0, blackjack_session_net: 0, roulette_session_net: 0 } : {}),
-    }).eq('id', user.id),
-    admin.from('slot_spins').insert({ user_id: user.id, wager, reels, outcome, payout }),
+    }),
+    db.logSlotSpin(user.id, { wager, reels, outcome, payout }),
   ])
 
   // Catfish Jackpot badge — winning the global pot (natural or via a bonus roll).
