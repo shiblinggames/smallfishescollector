@@ -645,10 +645,16 @@ In order. Each step is worth doing even if the port never happens.
    condition kept. Actions call `db.claimCast(...)` rather than a table query. An offline build
    supplies the same interface over a local save. Shared helpers keep their homes:
    `lib/wallet` (balances, owned lists), `lib/badgeGrant`, `lib/anomaly`.
-   - Fishing, first slice: `lib/data/fishingData.ts`. `castLine`, `reelIn` and the bestiary
-     helpers are converted; the rest of `fishing/actions.ts` (55 queries) is next.
-     Verified live on catman: 9 casts took exactly 9 worms, and 3 landings logged 3 species
-     and filled the hold 2 to 106 (two doubles and a x100 jackpot, new and existing rows).
+   - **Fishing: DONE 2026-09-28.** `lib/data/fishingData.ts`; `fishing/actions.ts` no longer
+     names a table. The one-shot conditional writes became named operations with the
+     guarantee in their contract: `claimCast`, `claimCrateCast`, `claimPendingReroll`,
+     `flagOn` (zone rewards, special items), `moveLevelWatermark` (level rewards),
+     `raiseHoldTier` (a floor), `takeFromHold` (the wormhole's guard against a sale in
+     between) and `resolveShiny`. An offline store has to honour each of these as stated.
+     Verified live on catman, twice. After the first slice, 9 casts took exactly 9 worms, and 3
+     landings logged 3 species and filled the hold 2 to 106 (two doubles and a x100 jackpot,
+     new and existing rows). After the whole file, 8 casts took 8 worms, and 3 landings logged
+     3 and put 6 in the hold. Trophies, prestige and the shops were not driven live.
 7. **The `GameApi` seam on the client.** Components call `api.castLine()` instead of importing
    the server action directly. On the web the implementation is the server action, so this is
    a rename, not a behaviour change.
