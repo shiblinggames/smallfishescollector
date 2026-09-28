@@ -639,6 +639,16 @@ In order. Each step is worth doing even if the port never happens.
 6. **A data-access layer.** Per-system read and write functions replace the scattered
    `admin.from('profiles')` calls, so a local store can later stand in for Supabase behind the
    same functions.
+   **STARTED 2026-09-28.** The shape: one `lib/data/<system>Data.ts` per system, holding an
+   interface of NAMED operations ("take one bait", "claim this cast", "add to the hold")
+   plus its Supabase implementation, with the old queries moved verbatim and every one-shot
+   condition kept. Actions call `db.claimCast(...)` rather than a table query. An offline build
+   supplies the same interface over a local save. Shared helpers keep their homes:
+   `lib/wallet` (balances, owned lists), `lib/badgeGrant`, `lib/anomaly`.
+   - Fishing, first slice: `lib/data/fishingData.ts`. `castLine`, `reelIn` and the bestiary
+     helpers are converted; the rest of `fishing/actions.ts` (55 queries) is next.
+     Verified live on catman: 9 casts took exactly 9 worms, and 3 landings logged 3 species
+     and filled the hold 2 to 106 (two doubles and a x100 jackpot, new and existing rows).
 7. **The `GameApi` seam on the client.** Components call `api.castLine()` instead of importing
    the server action directly. On the web the implementation is the server action, so this is
    a rename, not a behaviour change.
