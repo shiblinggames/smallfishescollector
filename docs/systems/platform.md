@@ -318,3 +318,11 @@ every press while it waited, and never re-reading when the chart's pre-read lack
 unclosable invisible wall until refresh). It now re-reads once, shows "Reading the charts is
 taking a while" with Try again / Close after 6s, and every failure has a Close. `bossCardState`
 reports an empty map (the auth check hiccupped) as an error instead of an answer.
+
+## The live schema lives in the repo (2026-09-28)
+`web/supabase/live/` is a snapshot of the production database as rebuild-ordered SQL: tables,
+constraints, functions with their grants, views, indexes, triggers, policies and pg_cron jobs.
+About 25 of the RPCs existed only in the database before this. **After any schema change, re-run
+`npx tsx scripts/snapshot-schema.mts` from web/ and commit the diff.** It reads through
+`admin_schema_snapshot()` (service role only) and redacts bearer tokens on write. See the
+README there.

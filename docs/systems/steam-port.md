@@ -421,6 +421,8 @@ In order. Each step is worth doing even if the port never happens.
      new one gets a TypeScript twin.
    - The RPCs that exist only in the live database get checked into repo SQL, so the schema
      can be rebuilt from the repo. That is worth doing for disaster recovery on its own.
+   - **DONE 2026-09-28:** `web/supabase/live/`, written by `scripts/snapshot-schema.mts`
+     (see platform.md). Re-run it after every schema change.
 2. **Seeded randomness and an injected clock.**
    - One `lib/rng.ts`, using the mulberry32 generator already in three places.
    - It is passed into every roll module: `crewGen`, `crateLoot`, `voyageRoll`, `fishSize`,
