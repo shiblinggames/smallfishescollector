@@ -539,6 +539,29 @@ In order. Each step is worth doing even if the port never happens.
      - the hall's payouts.
 
      Verified live: a fresh free board rolled for catman (one Rare, two Commons).
+   - **Voyages and trawls: DONE 2026-09-28.** The event roll was already pure
+     (`lib/voyageEvents`), and so was the trawl haul (`fishing/trawls/constants`).
+
+     `lib/voyageRules.ts` covers:
+     - `planVoyage`: the route gates, the crew minimum, the effect-lifted crew, the event
+       roll, the doubloon bonus, and the duration with Swift Sails;
+     - `voyagePayout`: Navigation and crew XP by route and outcome, bait, the special items
+       (only once), and the survivors;
+     - `voyageBack` and `voyageCrewCap`.
+
+     `lib/trawlRules.ts` covers:
+     - the trawler's Savvy and Fortune;
+     - the deploy gates, in their order (the Ancient Deep's campaign gate is still worked
+       out in the action, since it reads the database);
+     - the return time;
+     - the haul's species.
+
+     `scripts/check-voyage-rules.mts` checks:
+     - determinism and the gates;
+     - no loss on Coastal or with Safe Passage (the Shroud does lose hands);
+     - Swift Sails at exactly 15% off;
+     - the payouts by outcome, the xp bonus, lost hands unpaid, and specials only once;
+     - the timing, and the trawl refusals in order.
 6. **A data-access layer.** Per-system read and write functions replace the scattered
    `admin.from('profiles')` calls, so a local store can later stand in for Supabase behind the
    same functions.
