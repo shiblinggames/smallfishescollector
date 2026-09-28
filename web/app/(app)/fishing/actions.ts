@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
 import { hotspotAt, hotspotEffect } from '@/lib/seaHotspots'
-import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect, jackpotChanceForZone, rodWaitMult, lockedInState } from '@/lib/rods'
+import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect, lockedInState } from '@/lib/rods'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
@@ -24,7 +24,7 @@ import { getPet, petSlot, PET_SLOT_COLUMN } from '@/lib/pets'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
 import { hasPrestigedAllZones } from '@/lib/collection'
-import { vigilFor, isReleased, vigilTotal, vigilComplete, vigilHuntChance, ancientCatchXP, vigilPaidAfter, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
+import { vigilFor, vigilTotal, vigilComplete, ancientCatchXP, vigilPaidAfter, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
@@ -49,87 +49,12 @@ export type FishSpecies = {
   length_max_in?: number | null
 }
 
-import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_CRATE_TIERS, zoneCrateChance } from './zoneData'
+import { ZONE_MIN_LEVEL } from './zoneData'
 import { rngNext } from '@/lib/rng'
+import { rollCast, tierWeightedPick, activeEventOf as getActiveEvent, CRATE_FISH_ID, type PendingCast } from '@/lib/fishingRules'
 
-/**
- * HOW LONG THE BITE TAKES. The zone sets a band and the cast rolls inside it.
- *
- * IT TOOK A `catchScore` AND THAT WAS THE BUG IN IT. The wait was interpolated
- * across the band by the fish's own score, and score climbs with rarity in
- * every zone, so the delay told you what was coming: a Shallows legendary
- * averaged 7.4s against a common's 3.2s. You knew roughly what you had before
- * the needle appeared, which takes the reveal off the dial and off the card and
- * gives it to a progress bar.
- *
- * Uniform inside the band now. Nothing here knows which fish was picked, and
- * the picking is untouched — the rarity table still decides that, on its own.
- */
-function fishWaitMs(habitat: string, baitType: string, fishingLevel: number, renownWaitMult = 1, rodMult = 1): number {
-  const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [13000, 21000]
-  const base = zMin + rngNext() * (zMax - zMin)
-  const baitMult = getBait(baitType).waitMult
-  const levelMult = 1 - ((fishingLevel - 1) / 99) * 0.33
-  // No upper cap — the zone band and the multipliers need to land where they
-  // land. The cap was a legacy sanity rail from before the Ancient Deep had a
-  // band measured in minutes; it squashed every worm-baited cast out there to a
-  // flat 60s and erased the bait choice the player had just made. The 3s floor
-  // stays as a guard against negative waits from stacked buffs.
-  return Math.max(3000, Math.round(base * baitMult * levelMult * renownWaitMult * rodMult))
-}
-
-// Two-stage fish selection:
-//   Stage 1 — roll rarity tier using zone-specific fixed rates (commons always dominant)
-//   Stage 2 — pick uniformly among fish of that tier in this zone
-// Adding more fish of a rarity increases variety, not that rarity's probability.
-// Tiers absent from a zone are excluded and the remaining rates normalise automatically.
-
-function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat: string, rarityBonus: number): T {
-  const baseRates = ZONE_RARITY_RATES[habitat] ?? ZONE_RARITY_RATES.shallows
-
-  // Group fish by rarity tier
-  const groups = new Map<number, T[]>()
-  for (const item of items) {
-    const g = groups.get(item.bite_rarity) ?? []
-    g.push(item)
-    groups.set(item.bite_rarity, g)
-  }
-
-  // Apply rod rarity bias: higher tiers get boosted proportionally
-  const tiers = [...groups.keys()]
-  const adjustedRates: Record<number, number> = {}
-  for (const r of tiers) {
-    adjustedRates[r] = (baseRates[r] ?? 0) * (1 + rarityBonus * (r - 1))
-  }
-
-  const totalWeight = tiers.reduce((s, r) => s + adjustedRates[r], 0)
-  if (totalWeight === 0) return items[Math.floor(rngNext() * items.length)]
-
-  let rand = rngNext() * totalWeight
-  let selectedTier = tiers[0]
-  for (const r of tiers) {
-    rand -= adjustedRates[r]
-    if (rand <= 0) { selectedTier = r; break }
-  }
-
-  const pool = groups.get(selectedTier)!
-  return pool[Math.floor(rngNext() * pool.length)]
-}
-
-// ── Server-side event validation ─────────────────────────────────────────────
-
-const EVENT_DURATION_MS = 120_000
-// There used to be an exported activateEvent here that let any caller start
-// the zone event of its choosing. Nothing in the game called it, so it went
-// (2026-09-25 exploit audit). Events still read from profiles.active_event.
-
-function getActiveEvent(raw: unknown): { type: string } | null {
-  if (!raw || typeof raw !== 'object') return null
-  const e = raw as { type?: string; started_at?: string }
-  if (!e.type || !e.started_at) return null
-  if (Date.now() - new Date(e.started_at).getTime() > EVENT_DURATION_MS) return null
-  return { type: e.type }
-}
+// fishWaitMs, tierWeightedPick, rollCrateTier and the event reader live in
+// lib/fishingRules now (Phase B, 2026-09-28), with the cast roll itself.
 
 // CrateTier + CrateLoot + the loot roller now live in @/lib/crateLoot (imported
 // above). Do NOT re-export them from here: this is a 'use server' file, and a
@@ -137,24 +62,8 @@ function getActiveEvent(raw: unknown): { type: string } | null {
 // module — which broke castLine / reelIn / the trawl actions. Anything needing
 // these types imports them straight from @/lib/crateLoot.
 
-// Server-rolled outcome of a cast, persisted to profiles.pending_cast and
-// consumed one-shot by reelIn / reelCrate. The client can pass whatever it
-// likes to those actions; the server binds to THESE values instead.
-type PendingCast = {
-  fishId: number          // the rolled species id (CRATE_FISH_ID === -1 for a crate)
-  habitat: string
-  baitType: string
-  crateTier?: CrateTier    // present only for crate casts
-  jackpotMult: number      // server-rolled YOLO jackpot (1 = none)
-  doubleCatch: boolean     // server-rolled double catch
-  catchQty?: number        // Locked-In Rod guaranteed haul (3 at streak 5+); overrides double
-  castAt: number
-  /** The EXACT payload this cast handed the client. Stored so an interrupted
-   *  cast can be replayed byte-for-byte instead of re-derived from current gear
-   *  (which would let a player swap rods mid-abandon to improve a live roll).
-   *  Optional: tokens written before this shipped simply cannot be resumed. */
-  shot?: CastShot
-}
+// PendingCast (the server-rolled cast token) and CastShot (its client payload)
+// are in lib/fishingRules.
 
 /** One regular with an open request for the species just landed. */
 export type WaitingFolk = { folkId: string; short: string; fishName: string }
@@ -182,33 +91,6 @@ async function folkWaitingOn(admin: ReturnType<typeof createAdminClient>, userId
     }
     return out
   } catch { return [] }
-}
-
-/** castLine's client payload, minus baitRemaining (which is read live). */
-type CastShot = {
-  fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number
-  crateTier?: CrateTier; instantBite?: boolean; jackpotMult?: number
-  doubleCatch?: boolean; catchQty?: number; lockedStage?: number
-  /** THE LONG VIGIL: the rank this hooked giant is being fought FOR (current
-   *  rank + 1). Absent unless a released ancient is on the line. Drives the
-   *  client's boss-fight scaling, and rides in the shot so a resumed cast
-   *  replays the same difficulty. */
-  vigilRank?: number
-}
-
-function rollCrateTier(habitat: string): CrateTier {
-  const dist = ZONE_CRATE_TIERS[habitat] ?? ZONE_CRATE_TIERS.shallows
-  // Walks whatever tiers the zone's table actually lists, rather than the four
-  // it used to name inline. That is what lets the Ancient Deep hold exactly one
-  // tier and everywhere else hold four, with no branch here.
-  const entries = Object.entries(dist) as [CrateTier, number][]
-  const total = entries.reduce((s, [, w]) => s + w, 0)
-  let r = rngNext() * total
-  for (const [tier, w] of entries) {
-    r -= w
-    if (r < 0) return tier
-  }
-  return entries[entries.length - 1]?.[0] ?? 'wooden'
 }
 
 export async function castLine(
@@ -347,148 +229,63 @@ export async function castLine(
     return { ...live.shot, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
   }
 
-  if (!candidates || candidates.length === 0) return { error: 'No fish found in this zone' }
-
-  // Ancient Deep pool filter:
-  //   1. Already-caught trophies always filter out (one-and-done).
-  //   2. With regular bait, ALL trophies filter out — the 12 regulars
-  //      bite on worms etc., but the 6 prehistoric trophies will only
-  //      surface for a Luminous or Golden Lure. Sell_value === 0 is
-  //      the trophy discriminator (matches the trophy/inventory split
-  //      in the catch handler below).
   // TEST ACCOUNT hook: kingkong always hooks an uncaught Ancient trophy in the
   // Ancient Deep, on ANY bait, so the boss reels + Finn cutscenes can be exercised
   // without the RNG grind. Scoped to this one id so it can never touch a real
-  // player. The Megalodon gate below still applies, so the giants come in order.
+  // player. The Megalodon gate still applies, so the giants come in order.
   const ALWAYS_ANCIENT_TROPHY = user.id === 'a67c8905-45a9-4a71-9720-f6396187fde6'
-  // Set inside the ancient_deep branch below; read again when the shot is built.
-  let vigilState: ReturnType<typeof vigilFor> = {}
-
-  let pool = candidates
-  if (habitat === 'ancient_deep') {
-    const caught = new Set<number>((profile.ancient_catches as number[] | null) ?? [])
-    // THE LONG VIGIL: a giant you have RELEASED is back in the water and can be
-    // hooked again. ancient_catches still lists it (that array is append-only —
-    // the finale gate and the ancient_ones badge read it), so "on the wall" is
-    // caught AND not released.
-    const vigil = vigilFor(profile.ancient_vigil, profile.ancient_catches as number[] | null)
-    vigilState = vigil
-    const isLure = baitType === 'luminous' || baitType === 'golden'
-    // Megalodon (143) is the final-final boss of fishing: it never surfaces until
-    // the other five giants (144-148) are all on the wall. Enforced HERE, server-
-    // side, so it holds no matter what a client claims.
-    const MEGALODON_ID = 143
-    const MEGALODON_PREREQS = [144, 145, 146, 147, 148]
-    const megalodonLocked = !MEGALODON_PREREQS.every(id => caught.has(id))
-    pool = candidates.filter(f => {
-      if (caught.has(f.id) && !isReleased(vigil, f.id)) return false
-      if (!isLure && !ALWAYS_ANCIENT_TROPHY && (f.sell_value ?? 0) === 0) return false
-      if (f.id === MEGALODON_ID && megalodonLocked) return false
-      return true
-    })
-    if (pool.length === 0) return { error: 'You have caught every Ancient Deep species available with this bait!' }
-  }
 
   const rod = getEffectiveRod(profile.rod_tier ?? 0, profile.completionist_effects as number[] | null)
 
-  // A PERFECT STREAK IS NO LONGER BOUND TO A ZONE.
-  //
-  // It used to break the moment you cast in different water, so a streak could
-  // not be farmed cheaply in the Shallows and cashed in a hard zone. That was a
-  // fair worry when fishing meant picking one zone from a menu and staying in
-  // it. It is the wrong rule for a sea you SAIL: the ocean hub lays the zones
-  // out as one continuous shelf you cross, and a streak that dies for crossing
-  // a boundary punishes the exact thing the chart is built to encourage.
-  //
-  // The streak is yours wherever you fish now. It still breaks on a miss, a
-  // snag and an abandoned cast — the things that are actually about skill.
+  // A PERFECT STREAK IS NO LONGER BOUND TO A ZONE: it is yours wherever you
+  // fish, and still breaks on a miss, a snag and an abandoned cast.
   const prevStreak = (profile as { current_perfect_streak?: number }).current_perfect_streak ?? 0
-
   // Locked-In Rod: this cast's power scales with the streak the player has BUILT.
-  // If the previous cast was abandoned (catch_pending) OR the zone changed, the
-  // streak is reset to 0 below — so this cast sees 0 too. Cheat-proof: the streak
-  // is the server's own current_perfect_streak, never a client value.
+  // An abandoned previous cast (catch_pending) resets the streak below, so this
+  // cast sees 0 too. The streak is the server's own, never a client value.
   const castStreak = profile.catch_pending ? 0 : prevStreak
-  const locked = lockedInState(rod, castStreak)
-  // THE ANGLER'S PATIENCE. Its strength is its CHARGE, not a fixed bonus: it
-  // levels on NAVIGATION xp while seated, so a fresh one barely helps and a
-  // maxed one is transformative. Identity when it is not seated.
-  const patience = eyeFromProfile(profile)
-  const patienceWaitMult = patience.waitMult
 
-  // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×).
-  // Crates COUNT toward the perfect streak now. They always ran the same aim
-  // minigame with the same perfect/miss judgement as a fish; they were simply
-  // excluded from the streak on both sides, which made a crate a free pause in
-  // an otherwise unforgiving run.
-  //
-  // The Ancient Deep used to be the one zone with no crates at all. It now has
-  // its own rate (see ANCIENT_CRATE_CHANCE) because its bites take 45-120
-  // seconds, so sharing the shallows' 2% would make a chest an hour-plus event.
-  // The gear multipliers still apply, so a Treasure Rod is worth bringing down
-  // here too.
-  // Renown PROVIDENCE joins the rod and the Angler's Patience as a third
-  // multiplier on the same roll. Server-side, like every other renown effect:
-  // the client is never told the crate rate, so it cannot be talked up.
-  // A stale token from a DIFFERENT zone cannot be replayed -- its species does
-  // not live in these waters. So the species rerolls, but the crate decision is
-  // INHERITED: otherwise abandoning and hopping zones would reroll the chest
-  // check, which is the whole prize. Inheriting cuts both ways, so a chest you
-  // walked away from is still a chest when you come back.
-  const stale = (live?.shot && live.habitat !== habitat) ? live : null
-  // ── THE FIRST ONE IS ALWAYS A FISH ──────────────────────────────────
-  //
-  // A captain with no fishing XP has never landed anything, so this cast is
-  // their first — and the tour is standing over it with a card that says "stop
-  // the needle in the green to land it" and then "there's your first, it sits
-  // in the hold until you sell it". A 2% chest instead would answer neither,
-  // and would send them to the market with an empty hold and an instruction
-  // that cannot be followed.
-  //
-  // Not a difficulty concession. A chest runs the same aim minigame; the point
-  // is that the ONE catch the tutorial narrates has to be the thing the
-  // tutorial is narrating. Everything after it rolls exactly as it always did.
-  const firstEver = (profile.fishing_xp ?? 0) === 0
-  const isCrate = firstEver
-    ? false
-    : stale
-      ? stale.fishId === CRATE_FISH_ID
-      : rngNext() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult * renownFishing.crateChanceMult * hs.crateChanceMult
+  // ── THE ROLL ─────────────────────────────────────────────────────────────
+  // Everything about what this cast IS lives in lib/fishingRules (rollCast):
+  // the Ancient Deep pool, crate or fish, which fish, the wait, Lightspeed,
+  // jackpot or double, the Locked-In haul and the Vigil rank. It is pure, so
+  // it runs before any write: a cast refused there (every giant caught on this
+  // bait) costs nothing.
+  const roll = rollCast({
+    habitat, baitType,
+    candidates: candidates ?? [],
+    fishingLevel,
+    // THE FIRST ONE IS ALWAYS A FISH, and the commonest one: a captain with no
+    // fishing XP is on the tour's first catch.
+    firstEver: (profile.fishing_xp ?? 0) === 0,
+    ancientCatches: (profile.ancient_catches as number[] | null) ?? [],
+    ancientVigil: profile.ancient_vigil,
+    rod,
+    locked: lockedInState(rod, castStreak),
+    // THE ANGLER'S PATIENCE: its strength is its CHARGE (levels on navigation
+    // xp while seated). Identity when it is not seated.
+    patience: eyeFromProfile(profile),
+    renown: renownFishing,
+    hotspot: hs,
+    eventRarityBonus,
+    // A stale token from a DIFFERENT zone cannot be replayed (its species does
+    // not live here), but its crate decision is inherited.
+    stale: (live?.shot && live.habitat !== habitat) ? live : null,
+    alwaysAncientTrophy: ALWAYS_ANCIENT_TROPHY,
+  })
+  if ('error' in roll) return { error: roll.error }
 
-  // Remember this bait so the fishing UI auto-selects it on next open
-  // (FishingGame.tsx seeds selectedBait from profile.last_used_bait). Also mark
-  // a REAL-fish catch as in-flight: if one was ALREADY pending, the previous
-  // cast was abandoned (player left mid-catch to dodge a hard fish), which
-  // breaks the perfect streak just like a miss — no cheesing it by bailing on
-  // fish you don't like. Fire-and-forget — the multi-second gap before reelIn
-  // means it always commits first; a failure mustn't block the cast result.
-  // catch_pending covers crates too now. It is what punishes an ABANDONED cast,
-  // and it is also what catches a crate MISS: a fumbled crate never calls back
-  // to the server, so the flag stays set and the next cast zeroes the streak
-  // through the same path an abandoned fish takes.
+  // Remember this bait so the fishing UI auto-selects it on next open, and mark
+  // the cast in flight. If one was ALREADY pending, the previous cast was
+  // abandoned, which breaks the perfect streak just like a miss. catch_pending
+  // also catches a crate MISS: a fumbled crate never calls back, so the flag
+  // stays set and the next cast zeroes the streak through the same path.
   const castUpdate: Record<string, unknown> = { last_used_bait: baitType, catch_pending: true }
   if (profile.catch_pending) castUpdate.current_perfect_streak = 0
   void admin.from('profiles').update(castUpdate).eq('id', user.id).then(() => {}, () => {})
 
-  // Lifetime "Lines Cast" career stat — bump once per committed cast (covers
-  // both the crate and normal paths below). Fire-and-forget.
+  // Lifetime "Lines Cast" career stat — bump once per committed cast.
   void admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_casts', n: 1 }).then(() => {}, () => {})
-
-  if (isCrate) {
-    if (!noBait && baitRow) {
-      await admin.from('bait_inventory').update({ quantity: baitRow.quantity - 1 }).eq('user_id', user.id).eq('bait_type', baitType)
-      void admin.rpc('bump_profile_json_counter', { uid: user.id, col: 'bait_used', key: baitType, n: 1 }).then(() => {}, () => {})
-    }
-    const crateWait = { shallows: 4000, open_waters: 7000, deep: 11000, abyss: 16000 }[habitat] ?? 6000
-    const crateTier = rollCrateTier(habitat)
-    // Persist the server-rolled crate token; reelCrate binds to THIS tier and
-    // clears it one-shot, so the client can't name its own tier or open a crate
-    // it never cast for. Awaited so it commits before the client can call back.
-    const crateShot: CastShot = { fishId: CRATE_FISH_ID, catchDifficulty: 1, biteRarity: 1, waitMs: crateWait, crateTier }
-    const crateToken: PendingCast = { fishId: CRATE_FISH_ID, habitat, baitType, crateTier, jackpotMult: 1, doubleCatch: false, castAt: Date.now(), shot: crateShot }
-    await admin.from('profiles').update({ pending_cast: crateToken }).eq('id', user.id)
-    return { ...crateShot, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
-  }
 
   if (!noBait && baitRow) {
     await admin
@@ -499,134 +296,13 @@ export async function castLine(
     void admin.rpc('bump_profile_json_counter', { uid: user.id, col: 'bait_used', key: baitType, n: 1 }).then(() => {}, () => {})
   }
 
-  // Fish selection. In Ancient Deep the TROPHY (tier-5) roll is an EXPLICIT flat
-  // chance set by the lure — Luminous 15%, Golden 20% — so the two premium lures
-  // are meaningfully different (they used to be identical, both a flat 10% via
-  // the shared tier table). Rod + event rarity bonuses still amplify it, so
-  // special rods keep helping. Non-lure casts never reach the trophy pool (it's
-  // filtered out above), so baseTrophyChance is 0 for them and this is lure-only.
-  let fish: (typeof pool)[number]
-  if (habitat === 'ancient_deep') {
-    const trophyPool  = pool.filter(f => (f.sell_value ?? 0) === 0)
-    const regularPool = pool.filter(f => (f.sell_value ?? 0) > 0)
-    // TWO DIFFERENT HUNTS share this pool. A giant you have never landed is the
-    // original story gate and keeps its shipped rate. One you RELEASED runs the
-    // Vigil's own, much tighter roll (see vigilHuntChance). Post-finale the two
-    // sets never overlap -- you cannot reach Finn without all six -- but they
-    // are split explicitly rather than assumed.
-    const everCaught = new Set<number>((profile.ancient_catches as number[] | null) ?? [])
-    const firstHunt = trophyPool.filter(f => !everCaught.has(f.id))
-    const released  = trophyPool.filter(f => everCaught.has(f.id))
-    const rarityBonus = rod.rarityBonus + eventRarityBonus + locked.rarityBonus
-    const baseTrophyChance = baitType === 'golden' ? 0.20 : baitType === 'luminous' ? 0.15 : 0
-    const trophyChance = Math.min(0.95, baseTrophyChance * (1 + rarityBonus * 4))
-    // Each released giant rolls on ITS OWN rank, so two out means two chances
-    // (the water is genuinely busier) and the wariest stays hardest to raise.
-    const onLure = baitType === 'luminous' || baitType === 'golden'
-    const vigilHit = onLure
-      ? released.find(f => rngNext() < vigilHuntChance(
-          Math.min(VIGIL_MAX_RANK, (vigilState[String(f.id)]?.rank ?? 1) + 1),
-          rarityBonus,
-          baitType === 'golden' ? 'golden' : 'luminous',
-        ))
-      : undefined
-    /**
-     * WHICH GIANT SURFACES, and it is no longer a coin toss.
-     *
-     * The first hunt used to pick at RANDOM from whichever giants you had not
-     * landed, with only the test flag forcing a readable order. That was fine
-     * while the six were an unordered set to collect.
-     *
-     * They are a sequence now. Finn hands them out one at a time, by name, and
-     * a job that says "go and raise the Dunkleosteus" is broken if the water
-     * can answer with the Mosasaurus instead. So the canonical order in
-     * ANCIENT_IDS (144, 145, 146, 147, 148, and Megalodon last) is what the
-     * water actually does: the next uncaught giant in that list is the one that
-     * rises. Partial collections just resume from wherever they are.
-     *
-     * The Megalodon gate above is untouched and still independent: it is
-     * filtered out of the pool entirely until the other five are on the wall,
-     * so this ordering cannot be the only thing holding it back.
-     */
-    const nextInOrder = ANCIENT_IDS
-      .map(id => firstHunt.find(f => f.id === id))
-      .find((f): f is (typeof firstHunt)[number] => !!f)
-    if (ALWAYS_ANCIENT_TROPHY && trophyPool.length > 0) {
-      // Test account: skip the roll entirely and hand over the next one due.
-      fish = nextInOrder ?? [...trophyPool].sort((a, b) => a.id - b.id)[0]
-    } else if (vigilHit) {
-      fish = vigilHit
-    } else if (nextInOrder && rngNext() < trophyChance) {
-      fish = nextInOrder
-    } else if (regularPool.length > 0) {
-      fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + hs.rarityBonus)
-    } else {
-      // Regulars somehow exhausted — hand back a trophy so the cast still lands.
-      fish = trophyPool[Math.floor(rngNext() * trophyPool.length)]
-    }
-  } else if (firstEver) {
-    // THE COMMONEST THING IN THIS WATER, chosen rather than rolled.
-    //
-    // `bite_rarity` is a TIER, and LOW IS COMMON: ZONE_RARITY_RATES gives the
-    // Shallows 55% at tier 1 and 1% at tier 5. Sorting the other way — which is
-    // what I did first — hands every new captain a one-percent Arapaima worth
-    // 360 as their ordinary first fish, and then the market chapter opens with
-    // a windfall the game has no way to repeat.
-    //
-    // Picked from the data rather than pinned to an id: a species can be
-    // retired or rebalanced, and a hardcoded fish that no longer lives in the
-    // Shallows would break the one cast that has to work.
-    fish = [...pool].sort((a, b) =>
-      (a.bite_rarity - b.bite_rarity) || (a.catch_difficulty - b.catch_difficulty))[0]
-  } else {
-    fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + hs.rarityBonus)
-  }
-  // Locked-In quickens bites at streak 3+ (−20%) / 10+ (−35%); take the faster of
-  // the rod's base speed and the streak stage.
-  // NOT GIVEN THE FISH. See fishWaitMs: the wait used to be derived from what
-  // was on the line and therefore announced it. It is a roll on the zone now.
-  let waitMs = fishWaitMs(habitat, baitType, fishingLevel, renownWaitMult, Math.min(rodWaitMult(rod), locked.waitMult) * patienceWaitMult * hs.waitMult)
+  // Persist the server-rolled token: reelIn / reelCrate bind to THIS (the fish,
+  // the crate tier, the haul) and clear it one-shot, so the client can never
+  // name its own. Awaited so it commits before the client can call back.
+  await admin.from('profiles').update({ pending_cast: roll.token }).eq('id', user.id)
 
-  // Lightsaber Rod — "Lightspeed": a chance the bite is near-instant. This is
-  // the only rod stat that actually changes the bite wait (biteIntervalMs is
-  // display-only), so the fast-bite fantasy is real, not cosmetic. The flag
-  // drives the red blade-flash cue client-side so the player feels it land.
-  let instantBite = false
-  if ((rod.instantBiteChance ?? 0) > 0 && rngNext() < rod.instantBiteChance!) {
-    waitMs = Math.min(waitMs, 700)
-    instantBite = true
-  }
-
-  // Roll the haul multipliers SERVER-SIDE at cast time (mirrors what the client
-  // used to roll at reel time), and lock them into the token. reelIn binds to
-  // these — a client can no longer pass its own jackpot/double. Ancient trophies
-  // (sell_value 0) never multiply; ancient regulars only double with an
-  // always-double rod. Jackpot and double never stack (jackpot wins).
-  const isAncientTrophyRoll = habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0
-  const canDoubleHere = habitat !== 'ancient_deep' || (rod.doubleCatchChance ?? 0) >= 1
-  const zoneJackpotChance = isAncientTrophyRoll ? 0 : jackpotChanceForZone(rod, habitat)
-  // No jackpot and no double on the first one either. Both are lovely and both
-  // arrive with their own celebration on top of the tour's, and two overlays
-  // explaining different things at once is how a first minute gets lost.
-  const jackpotHit = !firstEver && zoneJackpotChance > 0 && rngNext() < zoneJackpotChance
-  const rolledJackpotMult = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
-  const rolledDoubleCatch = !firstEver && !jackpotHit && !isAncientTrophyRoll && canDoubleHere
-    && (rod.doubleCatchChance ?? 0) > 0 && rngNext() < (rod.doubleCatchChance ?? 0)
-
-  const lockedQty = locked.catchQty > 1 ? locked.catchQty : undefined
-  // A RELEASED giant fights for its next rank. vigilFor seeds rank 1 from
-  // ancient_catches, so `+ 1` is the rank being attempted.
-  const vigilAttempt = habitat === 'ancient_deep' && isReleased(vigilState, fish.id)
-    ? Math.min(VIGIL_MAX_RANK, (vigilState[String(fish.id)]?.rank ?? 1) + 1)
-    : undefined
-  const shot: CastShot = { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, instantBite, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, lockedStage: locked.stage, vigilRank: vigilAttempt }
-  const token: PendingCast = { fishId: fish.id, habitat, baitType, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, castAt: Date.now(), shot }
-  await admin.from('profiles').update({ pending_cast: token }).eq('id', user.id)
-
-  return { ...shot, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
+  return { ...roll.shot, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
 }
-
-const CRATE_FISH_ID = -1
 
 const PERFECT_BAIT_SAVE_CHANCE = 0.5
 
