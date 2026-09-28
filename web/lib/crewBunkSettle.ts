@@ -10,10 +10,9 @@ import type { createAdminClient } from './supabase/admin'
 import { getLevelFromXP } from './expeditionLevel'
 import { clampHallTier } from './crewHall'
 import { grantXPPairs, type CrewXPGrant } from './crewXPGrant'
-import { bunkCount, bunkRatePerHour, hallBunksOpen, canBunk, isLeviathanSlot, stintDone, stintXP, storesCapHours } from './crewBunks'
-import { rollTrait, encodeTraitId, type CrewRarity } from './crewGen'
-import { netTraitStats, traitLabel } from './crewEffects'
+import { bunkCount, bunkRatePerHour, hallBunksOpen, stintDone, storesCapHours } from './crewBunks'
 import { clockNow } from './clock'
+import { finishedStints, stintPayouts, leviathanOffer, leviathanBunk, type BunkRow, type TraitUpgrade } from './crewRules'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -31,34 +30,10 @@ type Admin = ReturnType<typeof createAdminClient>
  * The result is `max(current, rolled)` per stat, which can only go up or stay
  * put. The reveal reports it rather than asking about it.
  */
-export type TraitUpgrade = {
-  crewId: number
-  before: { power: number; dodge: number; fortune: number }
-  after: { power: number; dodge: number; fortune: number }
-  beforeLabel: string
-  afterLabel: string
-  /** Which stats actually moved, for the reveal to highlight. */
-  gained: { power: boolean; dodge: boolean; fortune: boolean }
-  /** True once the roll is an OFFER awaiting an answer rather than something
-   *  already written. Always true for Leviathan re-cuts now; the field exists
-   *  so the reveal can say "keep or replace" instead of "here is your trait". */
-  pending?: boolean
-}
-
-/** A drawn trait of 0/0/0 encodes to null, which is indistinguishable from "no
- *  offer". Park this sentinel instead so an offer of nothing is still an offer
- *  the captain has to answer. Decoded back to a neutral line on resolve. */
-export const NEUTRAL_OFFER = 's:0,0,0'
-
-export type BunkRow = {
-  id: number
-  crew_id: number
-  since: string
-  rate: number | null
-  cap: number | null
-  /** 0-5. Slot 5 is the Leviathan bunk. */
-  slot: number | null
-}
+// TraitUpgrade, NEUTRAL_OFFER, BunkRow and bunkTerms live in lib/crewRules
+// (Phase B); re-exported so existing imports keep working.
+export { NEUTRAL_OFFER, bunkTerms } from './crewRules'
+export type { TraitUpgrade, BunkRow } from './crewRules'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -98,13 +73,6 @@ export async function loadBunks(admin: Admin, userId: string): Promise<BunkRow[]
   }))
 }
 
-/** The terms this bunk actually runs on: what was agreed, or the live values
- *  for a row that predates the columns. One helper so display, locking and
- *  payout can never disagree about a given bunk. */
-export function bunkTerms(row: BunkRow, liveRate: number, liveCap: number) {
-  return { rate: row.rate ?? liveRate, cap: row.cap ?? liveCap }
-}
-
 /**
  * Pay out every FINISHED stint and free those bunks.
  *
@@ -142,11 +110,8 @@ export async function settleBunks(
   if (rows.length === 0) return EMPTY
   const nowMs = clockNow()
 
-  // Each row on its own terms, not the hall's current ones.
-  const done = rows.filter(r => {
-    const t = bunkTerms(r, rate, capHours)
-    return stintDone(r.since, nowMs, t.cap)
-  })
+  // Each row on its own terms, not the hall's current ones (lib/crewRules).
+  const done = finishedStints(rows, rate, capHours, nowMs)
   if (done.length === 0) return EMPTY
 
   // A hand who hit the level ceiling mid-stint still gets their bunk back; they
@@ -166,12 +131,7 @@ export async function settleBunks(
   }))
 
   const claimed = won.filter((r): r is BunkRow => r !== null)
-  const pairs = claimed
-    .filter(r => canBunk(xpById.get(r.crew_id) ?? 0))
-    .map(r => {
-      const t = bunkTerms(r, rate, capHours)
-      return { id: r.crew_id, xp: stintXP(t.rate, t.cap) }
-    })
+  const pairs = stintPayouts(claimed, xpById, rate, capHours)
   const grants = await grantXPPairs(admin, userId, pairs)
   const upgrades = await recutLeviathanTraits(admin, userId, claimed)
   return { grants, freed: claimed.map(r => r.crew_id), upgrades }
@@ -201,7 +161,7 @@ async function recutLeviathanTraits(
   userId: string,
   claimed: BunkRow[],
 ): Promise<TraitUpgrade[]> {
-  const eligible = claimed.filter(r => isLeviathanSlot(r.slot))
+  const eligible = claimed.filter(leviathanBunk)
   if (eligible.length === 0) return []
 
   const { data: crew } = await admin
@@ -209,31 +169,15 @@ async function recutLeviathanTraits(
 
   const out: TraitUpgrade[] = []
   for (const c of ((crew ?? []) as any[])) {
-    if (c.pending_trait) continue          // an unanswered offer is not replaced
-    const before = netTraitStats((c.effects ?? []) as string[])
-    const rolled = rollTrait((c.rarity ?? 1) as CrewRarity, true)
-    const id = encodeTraitId(rolled)
-
-    // A neutral draw ('Unremarkable') encodes to null. Park the literal string
-    // so an offer of "nothing" is still an offer the captain can refuse, rather
-    // than a null that reads as "no offer outstanding".
-    const parked = id ?? NEUTRAL_OFFER
+    // The roll and the reveal are lib/crewRules leviathanOffer (null when an
+    // unanswered offer is already open: it is not replaced).
+    const offer = leviathanOffer(c)
+    if (!offer) continue
     const { data: written } = await admin
-      .from('user_crew').update({ pending_trait: parked })
+      .from('user_crew').update({ pending_trait: offer.parked })
       .eq('id', c.id).eq('user_id', userId).is('pending_trait', null).select('id')
     if (!(written ?? []).length) continue
-
-    out.push({
-      crewId: c.id, before, after: rolled,
-      gained: {
-        power:   rolled.power   > before.power,
-        dodge:   rolled.dodge   > before.dodge,
-        fortune: rolled.fortune > before.fortune,
-      },
-      beforeLabel: traitLabel(before) || 'No trait',
-      afterLabel:  traitLabel(rolled) || 'No trait',
-      pending: true,
-    })
+    out.push(offer.upgrade)
   }
   return out
 }

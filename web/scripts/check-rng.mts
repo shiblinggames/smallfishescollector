@@ -30,7 +30,7 @@ const RNG_FILES = [
   ...['gauntlet', 'voyageEvents', 'crewGen', 'crateLoot', 'pets', 'voyageRoll', 'tides', 'shiny', 'roulette',
     'raidAffixes', 'gauntletMerchant', 'gauntletContracts', 'fishSize', 'finn', 'blackjack', 'seaFolk',
     'repairKits', 'raidRegistry', 'raidMap', 'raidLoot', 'gauntletOffer', 'gauntletMarks', 'drawPack',
-    'crewTraits', 'seaPortal', 'fishingRules', 'sellRules'].map(n => `lib/${n}.ts`),
+    'crewTraits', 'seaPortal', 'fishingRules', 'sellRules', 'crewRules'].map(n => `lib/${n}.ts`),
   ...['crew/actions.ts', 'expeditions/bountyActions.ts', 'expeditions/raidMapActions.ts', 'fishing/actions.ts',
     'fishing/dailyChallengeActions.ts', 'fishing/trawls/actions.ts', 'fishing/trawls/constants.ts',
     'raids/gauntlet/actions.ts', 'sea/finnActions.ts', 'sea/folkActions.ts', 'sea/traderActions.ts',

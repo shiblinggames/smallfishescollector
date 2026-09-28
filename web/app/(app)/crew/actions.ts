@@ -16,13 +16,11 @@ import {
   FREE_WEIGHTS, GEM_WEIGHTS, DAILY_RECRUITS, type CrewRarity,
 } from '@/lib/crewGen'
 import { clampHallTier, nextHallTier, hallUpgradeBlocker, type CrewHallTierNum } from '@/lib/crewHall'
-import { bunkContext, loadBunks } from '@/lib/crewBunkSettle'
 import { bunkRatePerHour, hallBunksOpen, stintDone, storesCapHours } from '@/lib/crewBunks'
 import { crewLevelFromXP } from '@/lib/crewLevel'
-import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } from '@/lib/crewSkins'
+import { getCrewSkin, resolveCrewFilename, type EquippedCrewSkins } from '@/lib/crewSkins'
 import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
-import { isLegendaryLocked } from '@/lib/legendaryUnlocks'
-import { rngNext } from '@/lib/rng'
+import { cardPools, rollRecruitBoard, pickBloodSkin, type CardRow } from '@/lib/crewRules'
 import { cardArt } from '@/lib/artUrl'
 
 const REROLL_COST = 100
@@ -158,13 +156,12 @@ export type CrewActionResult = { state: CrewState } | { error: string }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type CardMeta = { name: string; filename: string; slug: string; power: number; dodge: number; fortune: number }
+type CardMeta = import('@/lib/crewRules').CardMeta
 
 function utcDate(): string {
   return new Date().toISOString().slice(0, 10) // YYYY-MM-DD in UTC
 }
 
-type CardRow = { id: number; name: string; filename: string; slug: string; power: number; dodge: number; fortune: number }
 // The `cards` catalog is static game data (no runtime writes — only changes on
 // deploy), yet loadCards is called several times PER request (getCrewState,
 // applyAssignment ×N in crewTheDeck, recruit, reroll…). Cache the raw read at
@@ -180,14 +177,7 @@ async function loadCards(admin: ReturnType<typeof createAdminClient>) {
     const { data } = await admin.from('cards').select('id, name, filename, slug, power, dodge, fortune')
     _cardCatalog = (data ?? []) as CardRow[]
   }
-  const byGroup: Record<CrewRarity, number[]> = { 1: [], 2: [], 3: [], 4: [] }
-  const meta = new Map<number, CardMeta>()
-  for (const c of _cardCatalog) {
-    meta.set(c.id, { name: c.name, filename: c.filename, slug: c.slug, power: c.power, dodge: c.dodge, fortune: c.fortune })
-    const g = groupForSlug(c.slug)
-    if (g) byGroup[g].push(c.id)
-  }
-  return { byGroup, meta }
+  return cardPools(_cardCatalog)
 }
 
 /** Roll N candidate rows ready for insert into daily_recruits. startXp is
@@ -215,38 +205,15 @@ function generateBoardRows(
    *  what is reachable and this only decides among what already is. */
   legendarySlug: string | null = null,
 ) {
-  // Campaign gate: a locked legendary (Mako/Dole/Laz/Mira before its chapter
-  // node is cleared) is dropped from the group-4 pool for THIS player. Catfish
-  // + Doby Mick are never gated, so group 4 is never empty — new players can
-  // still roll the two originals. If every legendary happened to be locked, the
-  // empty-group fallback below drops the roll to Epic.
-  const group4 = byGroup[4].filter(id => !isLegendaryLocked(meta.get(id)?.slug ?? '', legendaryUnlocks))
-  const poolFor = (r: CrewRarity) => (r === 4 ? group4 : byGroup[r])
-  const rows: any[] = []
-  for (let slot = 0; slot < size; slot++) {
-    let rarity = guaranteeLegendary && slot === 0 ? (4 as CrewRarity) : rollRarity(weights)
-    // Fall back to a populated group if the rolled one is empty (defensive).
-    while (poolFor(rarity).length === 0 && rarity > 1) rarity = (rarity - 1) as CrewRarity
-    const pool = poolFor(rarity)
-    if (pool.length === 0) continue
-    // The pinned legendary, if this is the guaranteed slot and it is genuinely
-    // in the pool. `pool` is already gate-filtered, so a hit here means the
-    // player could have rolled them anyway.
-    const pinned = guaranteeLegendary && slot === 0 && rarity === 4 && legendarySlug
-      ? pool.find(id => (meta.get(id)?.slug ?? '').toLowerCase() === legendarySlug.toLowerCase())
-      : undefined
-    const cardId = pinned ?? pool[Math.floor(rngNext() * pool.length)]
-    const m = meta.get(cardId)
-    const profile = { power: m?.power ?? 1, dodge: m?.dodge ?? 1, fortune: m?.fortune ?? 1 }
-    const c = rollCrew(cardId, rarity, profile)
-    rows.push({
+  // The roll (campaign gate, empty-group fallback, the one-shot gifted
+  // legendary) is lib/crewRules rollRecruitBoard; this stamps the rows.
+  return rollRecruitBoard({ size, weights, byGroup, meta, legendaryUnlocks, guaranteeLegendary, legendarySlug })
+    .map((c, slot) => ({
       user_id: userId, slot, source,
       card_id: c.cardId, rarity: c.rarity,
       power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects,
       start_xp: startXp,
-    })
-  }
-  return rows
+    }))
 }
 
 function toCandidate(r: any, meta: Map<number, CardMeta>): BoardCandidate {
@@ -575,13 +542,9 @@ export async function gambleBloodSkin(): Promise<{ skinId: string; state: NonNul
   const bloodGems = ((prof as any).blood_gems as number | null) ?? 0
   if (bloodGems < BLOOD_SKIN_GAMBLE_COST) return { error: 'Not enough Blood Gems' }
 
-  const ownedArr = ((prof as any).owned_crew_skins as string[] | null) ?? []
-  const owned = new Set(ownedArr)
-  // Pool = non-legendary (group ≠ 4) skins not yet owned.
-  const pool = CREW_SKINS.filter(s => groupForSlug(s.slug) !== 4 && !owned.has(s.id))
-  if (pool.length === 0) return { error: 'You already own every non-legendary skin.' }
-
-  const skin = pool[Math.floor(rngNext() * pool.length)]
+  // One non-legendary skin not yet owned: lib/crewRules pickBloodSkin.
+  const skin = pickBloodSkin(((prof as any).owned_crew_skins as string[] | null) ?? [])
+  if (!skin) return { error: 'You already own every non-legendary skin.' }
 
   // Blood Gems leave in place first (the guard against a double-tap), then
   // the skin lands once. If a twin request already added this same skin,
