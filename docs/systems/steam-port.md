@@ -746,8 +746,22 @@ In order. Each step is worth doing even if the port never happens.
    real clock rather than `clockNow`; `reelCrate` is not in the core yet (the crate loot grant
    still takes the Supabase client); offline there is nobody to rank against, so the top-three
    nudge answers nobody.
-   **Next: stage 2**, the same save persisted to SQLite (a new dependency, Kong's call on which),
-   then stage 3, the shell (Tauri, needs the Rust toolchain installed).
+   **STAGE 2 DONE 2026-09-28: the save is ONE JSON FILE** (Kong chose it over SQLite: the save
+   is already one document, it is small, it needs no dependency, and it is the Stardew model
+   Steam Cloud syncs; SQLite can come later behind the same interface if saves grow).
+   - `lib/data/local/saveFile.ts` (pure): a format name and version; a file that is not a
+     save, or is from a newer game, is refused; older versions upgrade in order (MIGRATIONS);
+     it stores player state only, re-attaching the species from content on load; web tables
+     the offline core does not model yet are CARRIED verbatim so nothing is lost.
+   - `SaveStorage` is where the text lives: `nodeSaveStorage` (tests, tools) writes
+     atomically (temp file, flush, rename); the shell will supply one over Tauri's file system.
+   - `fromWebExport` turns a web account's export (`scripts/player-save`) into a local save.
+   - The check now quits at cast 40, reloads from a ~3.5 KB file into a new store, and must
+     end exactly where an unbroken session does; an interrupted write leaves the old save
+     whole; catman's REAL converted export (146 species, 21 rods, 22 tables carried) fished 20
+     casts offline, landing all 20.
+   **Next: stage 3, the shell** (Tauri plus a static export of the client, needs the Rust
+   toolchain installed; Kong's OK before installing).
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):
