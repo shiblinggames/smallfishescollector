@@ -700,6 +700,18 @@ In order. Each step is worth doing even if the port never happens.
      Verified live on catman: four slot pulls took the purse 95 to 20 (four stakes, one
      two-hook refund), the session net fell exactly 75, the community pot rose exactly 12
      (four feeds of 3), and all four spins were logged.
+   - **Raids: DONE 2026-09-28. EVERY PHASE B SYSTEM NOW HAS A DATA LAYER.** `lib/data/raidData.ts`
+     (`lib/runToken` kept as thin wrappers over it); raid clears, kills, loot, the cleared set,
+     player stats, the campaign map, the forge and Accelerator, the Ultimate build, the berth
+     and armory, spoils and repair kits no longer name a table. `CaptainData` gained
+     `updateProfileIf`: a declarative guard list (`is null`, `eq`, `not null`, `contains`)
+     that every one-shot purchase, build and node clear uses, and that a local store turns
+     into a WHERE. Contract: the run token pays each round, clears, opens its crate and is
+     consumed once each, and refuses an expired token.
+     Verified against production directly through the store: catman's cleared raids, the
+     raid records, and the store's own fastest-clear (dkmuppy on the Throne, 2,018,018 ms)
+     agree with the database's aggregate; a guard that does not hold writes nothing, one that
+     holds writes, and the profile was left unchanged.
 7. **The `GameApi` seam on the client.** Components call `api.castLine()` instead of importing
    the server action directly. On the web the implementation is the server action, so this is
    a rename, not a behaviour change.
