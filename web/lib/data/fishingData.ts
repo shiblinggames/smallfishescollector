@@ -80,8 +80,6 @@ export interface FishingData extends CaptainData {
   folkWanting(uid: string, fishId: number): Promise<string[]>
   /** Claim a one-winner contest. True only for the first claimant ever. */
   claimContest(contestId: string, uid: string, prizeCode: string): Promise<boolean>
-  /** Mail one captain. */
-  mailTo(uid: string, m: { subject: string; body: string; sender: string }): Promise<void>
 
   // ── More of the captain ──
   /** Turn a boolean column on, only where it is still off. True only for the
@@ -251,9 +249,6 @@ export function fishingData(admin: Db): FishingData {
     async claimContest(contestId, uid, prizeCode) {
       const { data } = await admin.from('contests').insert({ contest_id: contestId, winner_user_id: uid, prize_code: prizeCode }).select('contest_id').maybeSingle()
       return !!data
-    },
-    async mailTo(uid, m) {
-      await admin.from('mail_messages').insert({ subject: m.subject, body: m.body, sender_label: m.sender, target_user_id: uid })
     },
     async flagOn(uid, col) {
       const { data } = await admin.from('profiles').update({ [col]: true }).eq('id', uid).or(`${col}.is.null,${col}.eq.false`).select('id')

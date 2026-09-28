@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { raidData } from '@/lib/data/raidData'
 import { SPOILS_PRICE } from '@/lib/shipBerth'
 import { spend, grant } from '@/lib/wallet'
 
@@ -27,17 +28,15 @@ async function loadSpoils() {
   if (!user) return { error: 'Not signed in.' as const }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles')
-    .select('doubloons, finn_spoil_free, finn_spoil_paid')
-    .eq('id', user.id).single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'doubloons, finn_spoil_free, finn_spoil_paid')
   if (!profile) return { error: 'No profile.' as const }
 
   // The whole feature hangs off having actually beaten him. Checked here rather
   // than trusted from the client, since both actions grant permanent unlocks.
-  const { data: cleared } = await admin.from('raid_completions')
-    .select('id').eq('user_id', user.id).eq('raid_id', 'the_sunken_hand').limit(1).maybeSingle()
+  const cleared = await db.hasCleared(user.id, 'the_sunken_hand')
 
-  return { user, admin, profile, cleared: !!cleared }
+  return { user, admin, db, profile, cleared: !!cleared }
 }
 
 /** Mark the spoils node itself as cleared.
@@ -48,13 +47,11 @@ async function loadSpoils() {
  *  chrome no matter what you took off the wreck. Same persistence every other
  *  interactive node uses (milestones, story reads, the berth). */
 async function markSpoilsNodeCleared(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  const { data: row } = await admin.from('profiles')
-    .select('raid_node_progress').eq('id', userId).single()
+  const db = raidData(admin)
+  const row = await db.profile(userId, 'raid_node_progress')
   const prog = (row?.raid_node_progress as { cleared?: string[] } | null) ?? {}
   if ((prog.cleared ?? []).includes('spoils_of_the_hand')) return
-  await admin.from('profiles')
-    .update({ raid_node_progress: { ...prog, cleared: [...new Set([...(prog.cleared ?? []), 'spoils_of_the_hand'])] } })
-    .eq('id', userId)
+  await db.updateProfile(userId, { raid_node_progress: { ...prog, cleared: [...new Set([...(prog.cleared ?? []), 'spoils_of_the_hand'])] } })
 }
 
 /** Take one side FREE. Only ever succeeds once. */
@@ -62,19 +59,14 @@ export async function chooseSpoil(side: unknown): Promise<{ ok: boolean; error?:
   if (!isSide(side)) return { ok: false, error: 'Unknown spoil.' }
   const ctx = await loadSpoils()
   if ('error' in ctx) return { ok: false, error: ctx.error }
-  const { user, admin, profile, cleared } = ctx
+  const { user, admin, db, profile, cleared } = ctx
 
   if (!cleared) return { ok: false, error: 'Put him down first.' }
   if (profile.finn_spoil_free) return { ok: false, error: 'You already took one off his wreck.' }
 
   // Conditional write on the column still being null guards a double-tap
   // handing out both sides for nothing.
-  const { data: updated } = await admin.from('profiles')
-    .update({ finn_spoil_free: side })
-    .eq('id', user.id)
-    .is('finn_spoil_free', null)
-    .select('finn_spoil_free')
-    .maybeSingle()
+  const updated = await db.updateProfileIf(user.id, { finn_spoil_free: side }, [{ col: 'finn_spoil_free', is: null }])
   if (!updated) return { ok: false, error: 'You already took one off his wreck.' }
   await markSpoilsNodeCleared(admin, user.id)
   return { ok: true }
@@ -85,7 +77,7 @@ export async function buySpoil(side: unknown): Promise<{ ok: boolean; error?: st
   if (!isSide(side)) return { ok: false, error: 'Unknown spoil.' }
   const ctx = await loadSpoils()
   if ('error' in ctx) return { ok: false, error: ctx.error }
-  const { user, admin, profile, cleared } = ctx
+  const { user, admin, db, profile, cleared } = ctx
 
   if (!cleared) return { ok: false, error: 'Put him down first.' }
   if (!profile.finn_spoil_free) return { ok: false, error: 'Take your free pick first.' }
@@ -97,12 +89,7 @@ export async function buySpoil(side: unknown): Promise<{ ok: boolean; error?: st
   if (newDoubloons == null) {
     return { ok: false, error: `You need ${SPOILS_PRICE.toLocaleString()} doubloons.` }
   }
-  const { data: updated } = await admin.from('profiles')
-    .update({ finn_spoil_paid: side })
-    .eq('id', user.id)
-    .is('finn_spoil_paid', null)
-    .select('finn_spoil_paid')
-    .maybeSingle()
+  const updated = await db.updateProfileIf(user.id, { finn_spoil_paid: side }, [{ col: 'finn_spoil_paid', is: null }])
   if (!updated) {
     await grant(admin, user.id, 'doubloons', SPOILS_PRICE)
     return { ok: false, error: 'You already bought the other.' }
@@ -120,16 +107,15 @@ export async function equipSecondSpecial(itemId: unknown): Promise<{ ok: boolean
   if (!user) return { ok: false, error: 'Not signed in.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles')
-    .select('finn_spoil_free, finn_spoil_paid, has_anglers_patience')
-    .eq('id', user.id).single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'finn_spoil_free, finn_spoil_paid, has_anglers_patience')
   if (!profile) return { ok: false, error: 'No profile.' }
 
   const hasSlot = profile.finn_spoil_free === 'fishing' || profile.finn_spoil_paid === 'fishing'
   if (!hasSlot) return { ok: false, error: 'You have not opened that slot.' }
 
   if (itemId === null) {
-    await admin.from('profiles').update({ equipped_special_2: null }).eq('id', user.id)
+    await db.updateProfile(user.id, { equipped_special_2: null })
     return { ok: true }
   }
   // The slot takes exactly ONE item, by design. This is the enforcement point:
@@ -137,6 +123,6 @@ export async function equipSecondSpecial(itemId: unknown): Promise<{ ok: boolean
   if (itemId !== 'anglers_patience') return { ok: false, error: 'Only his eye seats in that slot.' }
   if (profile.has_anglers_patience !== true) return { ok: false, error: "You do not carry The Primeval Eye." }
 
-  await admin.from('profiles').update({ equipped_special_2: 'anglers_patience' }).eq('id', user.id)
+  await db.updateProfile(user.id, { equipped_special_2: 'anglers_patience' })
   return { ok: true }
 }

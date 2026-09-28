@@ -8,6 +8,7 @@
 // cron is needed (mirrors the pending-sales on-read settlement pattern).
 
 import type { createAdminClient } from '@/lib/supabase/admin'
+import { raidData } from './data/raidData'
 import { parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
 import { clockNow } from './clock'
 
@@ -23,8 +24,6 @@ export async function settleUltimateBuild(
   const build = parseAugmentBuild(buildRaw)
   if (!build) return { active, build: null }
   if (!isBuildComplete(build, clockNow())) return { active, build }
-  await admin.from('profiles')
-    .update({ manowar_augment: build.id, manowar_augment_build: null })
-    .eq('id', userId)
+  await raidData(admin).updateProfile(userId, { manowar_augment: build.id, manowar_augment_build: null })
   return { active: build.id, build: null }
 }

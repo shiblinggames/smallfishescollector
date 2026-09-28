@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { raidData } from '@/lib/data/raidData'
 import { nextRepairKit } from '@/lib/repairKits'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { spend, grant, arrayAdd } from '@/lib/wallet'
@@ -24,11 +25,8 @@ export async function buyRepairKit(): Promise<KitResult | { error: string }> {
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, owned_repair_kits, expedition_xp')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'doubloons, owned_repair_kits, expedition_xp')
   if (!profile) return { error: 'Profile not found' }
 
   const owned = (profile.owned_repair_kits as string[] | null) ?? ['basic_repair_kit']
@@ -53,8 +51,8 @@ export async function buyRepairKit(): Promise<KitResult | { error: string }> {
     return { error: 'Could not complete the purchase.' }
   }
   await Promise.all([
-    admin.from('profiles').update({ equipped_repair_kit: next.id }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -next.cost, reason: `Bought ${next.name}` }),
+    db.updateProfile(user.id, { equipped_repair_kit: next.id }),
+    db.ledger(user.id, -next.cost, `Bought ${next.name}`),
   ])
 
   return { ok: true, equippedRepairKit: next.id, ownedRepairKits: newOwned, doubloons: newDoubloons }

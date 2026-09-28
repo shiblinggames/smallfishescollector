@@ -57,8 +57,6 @@ export interface SellData extends CaptainData {
   claimDeal(uid: string, row: { trader_key: string; sea_day: number; kind: string; detail: object }): Promise<'ok' | 'taken' | 'failed'>
   /** Give a claim back (the deal fell through, nothing was charged). */
   releaseDeal(uid: string, traderKey: string): Promise<void>
-  /** Take coin only if the purse covers it; the new balance, or null. */
-  deductDoubloons(uid: string, amount: number): Promise<number | null>
 
   // ── Rods ──
   ownsRod(uid: string, tier: number): Promise<boolean>
@@ -138,12 +136,6 @@ export function sellData(admin: Db): SellData {
     },
     async releaseDeal(uid, traderKey) {
       await admin.from('sea_trader_deals').delete().eq('user_id', uid).eq('trader_key', traderKey)
-    },
-    async deductDoubloons(uid, amount) {
-      // deduct_doubloons checks the balance in its own WHERE and RETURNS the new
-      // balance, or NULL (without raising) when it will not cover.
-      const { data, error } = await admin.rpc('deduct_doubloons', { uid, amount })
-      return error || data == null ? null : Number(data)
     },
 
     async ownsRod(uid, tier) {

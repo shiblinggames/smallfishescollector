@@ -1,6 +1,7 @@
 'use server'
 
 import { clockNow } from '@/lib/clock'
+import { raidData } from '@/lib/data/raidData'
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -47,10 +48,8 @@ export async function getCollectionForCrew(): Promise<Array<{
   if (!user) return []
 
   const admin = createAdminClient()
-  const { data } = await admin
-    .from('user_collection')
-    .select('id, card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier, power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune))')
-    .eq('user_id', user.id)
+  const db = raidData(admin)
+  const data = await raidData(admin).collection(user.id, 'id, card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier, power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune))')
 
   if (!data) return []
 
@@ -99,20 +98,13 @@ export async function saveCrew(variantIds: number[]): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
+  const db = raidData(admin)
 
   // Resolve each variant to its card name so we can dedup by name. Two
   // variants of the same character (e.g. standard + foil) must never both
   // sit in the crew loadout — they're the same person.
   const unique = Array.from(new Set(variantIds))
-  const { data: variants } = await admin
-    .from('card_variants')
-    .select('id, cards(name)')
-    .in('id', unique)
-  type VRow = { id: number; cards: { name: string } | null }
-  const nameByVariant = new Map<number, string>()
-  for (const row of ((variants ?? []) as unknown as VRow[])) {
-    if (row.cards?.name) nameByVariant.set(row.id, row.cards.name)
-  }
+  const nameByVariant = await raidData(admin).variantNames(unique)
 
   const seenNames = new Set<string>()
   const cleaned: number[] = []
@@ -123,7 +115,7 @@ export async function saveCrew(variantIds: number[]): Promise<void> {
     cleaned.push(vid)
   }
 
-  await admin.from('profiles').update({ saved_crew: cleaned }).eq('id', user.id)
+  await db.updateProfile(user.id, { saved_crew: cleaned })
 }
 
 // ── Raid item / ship skin equip ───────────────────────────────────────────────
@@ -133,10 +125,11 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
+  const db = raidData(admin)
   // Pull ship_tier so the slot cap scales with hull size (see
   // raidItemSlotsForTier in lib/expeditions). A Sloop captain gets 1
   // slot; a Man-o-War captain gets 4.
-  const { data: profile } = await admin.from('profiles').select('raid_items, ship_tier, ship_classes, has_armory_expansion').eq('id', user.id).single()
+  const profile = await db.profile(user.id, 'raid_items, ship_tier, ship_classes, has_armory_expansion')
   const owned = (profile?.raid_items as string[] | null) ?? []
   // Hull cap + the Ch4 Expanded Armory refit's extra mount (the purchased flag),
   // plus any legacy class-pick itemSlots. MUST match the ShipHero UI + the
@@ -158,7 +151,7 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   // ingredients) + capped to the hull's slots. dedupe runs before the slice so a
   // conflicting pair can't waste a slot apiece.
   const valid = [...dedupeRaidItems(normal).slice(0, slots), ...mounted]
-  await admin.from('profiles').update({ equipped_raid_items: valid }).eq('id', user.id)
+  await db.updateProfile(user.id, { equipped_raid_items: valid })
 }
 
 /** Forge a raid item from a recipe (FORGE_RECIPES) by sacrificing its
@@ -173,11 +166,8 @@ export async function forgeRaidItem(resultId: string): Promise<{ ok: true; raidI
   if (!recipe) return { error: 'Unknown recipe' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('raid_items, equipped_raid_items, gauntlet_upgrades, dons_gauntlet_upgrades, forge_recipes_learned')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'raid_items, equipped_raid_items, gauntlet_upgrades, dons_gauntlet_upgrades, forge_recipes_learned')
   // The Forge is a major Gauntlet (Fathom) unlock — server-enforce it. Tier-3
   // (Abyssal) recipes ride Don's separate unlock instead; account-scope perks
   // apply from EITHER Locker, so both checks read the union.
@@ -201,7 +191,7 @@ export async function forgeRaidItem(resultId: string): Promise<{ ok: true; raidI
   // from the equipped loadout (they no longer exist).
   const newOwned = [...owned.filter(id => !recipe.components.includes(id)), recipe.result]
   const equipped = ((profile?.equipped_raid_items as string[] | null) ?? []).filter(id => !recipe.components.includes(id))
-  await admin.from('profiles').update({ raid_items: newOwned, equipped_raid_items: equipped }).eq('id', user.id)
+  await db.updateProfile(user.id, { raid_items: newOwned, equipped_raid_items: equipped })
   return { ok: true, raidItems: newOwned }
 }
 
@@ -216,11 +206,8 @@ export async function learnForgeRecipe(resultId: string): Promise<{ ok: true; fa
   if (!recipe) return { error: 'Unknown recipe' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('gauntlet_upgrades, dons_gauntlet_upgrades, forge_recipes_learned, raid_items')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_upgrades, dons_gauntlet_upgrades, forge_recipes_learned, raid_items')
   const learnUpgrades = [
     ...((profile?.gauntlet_upgrades as string[] | null) ?? []),
     ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
@@ -256,11 +243,8 @@ export async function startAbyssalConversion(epicId: string): Promise<
   if (!legendaryId) return { error: 'That item can’t be transmuted.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('raid_items, equipped_raid_items, gauntlet_upgrades, dons_gauntlet_upgrades, abyssal_conversion')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'raid_items, equipped_raid_items, gauntlet_upgrades, dons_gauntlet_upgrades, abyssal_conversion')
   if (!profile) return { error: 'Profile not found.' }
 
   const upgrades = [
@@ -290,20 +274,13 @@ export async function startAbyssalConversion(epicId: string): Promise<
   // Guard the write on the slot STILL being null (and the epic still held) so
   // a fast double-tap (or two tabs) can't charge two conversions; the loser
   // gets its gems back.
-  const { data: updated } = await admin
-    .from('profiles')
-    .update({ abyssal_conversion: conversion, raid_items: newOwned, equipped_raid_items: equipped })
-    .eq('id', user.id)
-    .is('abyssal_conversion', null)
-    .contains('raid_items', [epicId])
-    .select('id')
-    .maybeSingle()
+  const updated = await db.updateProfileIf(user.id, { abyssal_conversion: conversion, raid_items: newOwned, equipped_raid_items: equipped }, [{ col: 'abyssal_conversion', is: null }, { col: 'raid_items', contains: [epicId] }])
   if (!updated) {
     await grant(admin, user.id, 'gems', ABYSSAL_ACCEL_GEM_COST)
     return { error: 'The Accelerator is already running. Claim it first.' }
   }
 
-  await admin.from('gem_transactions').insert({ user_id: user.id, amount: -ABYSSAL_ACCEL_GEM_COST, reason: 'Charged the Abyssal Accelerator' })
+  await db.ledger(user.id, -ABYSSAL_ACCEL_GEM_COST, 'Charged the Abyssal Accelerator', 'gems')
   return { ok: true, conversion, gems: newGems, raidItems: newOwned }
 }
 
@@ -318,11 +295,8 @@ export async function claimAbyssalConversion(): Promise<
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('raid_items, abyssal_conversion')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'raid_items, abyssal_conversion')
   const conversion = parseAbyssalConversion(profile?.abyssal_conversion)
   if (!conversion) return { error: 'Nothing to claim.' }
   if (!isConversionReady(conversion, clockNow())) return { error: 'It’s still transmuting.' }
@@ -332,13 +306,7 @@ export async function claimAbyssalConversion(): Promise<
 
   // Clear the slot first (conditional, so a double-claim finds it empty), then
   // add the legendary in place rather than writing back a stale copy of the hold.
-  const { data: updated } = await admin
-    .from('profiles')
-    .update({ abyssal_conversion: null })
-    .eq('id', user.id)
-    .not('abyssal_conversion', 'is', null)
-    .select('id')
-    .maybeSingle()
+  const updated = await db.updateProfileIf(user.id, { abyssal_conversion: null }, [{ col: 'abyssal_conversion', notNull: true }])
   if (!updated) return { error: 'Already claimed.' }
   await arrayAdd(admin, user.id, 'raid_items', conversion.legendaryId)
 
@@ -352,7 +320,8 @@ export async function markForgeIntroSeen(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
-  await admin.from('profiles').update({ has_seen_forge_intro: true }).eq('id', user.id)
+  const db = raidData(admin)
+  await db.updateProfile(user.id, { has_seen_forge_intro: true })
 }
 
 export async function equipShipSkin(skinId: string | null): Promise<void> {
@@ -360,23 +329,22 @@ export async function equipShipSkin(skinId: string | null): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
+  const db = raidData(admin)
   if (skinId !== null) {
-    const { data: profile } = await admin.from('profiles').select('ship_skins, ship_tier').eq('id', user.id).single()
+    const profile = await db.profile(user.id, 'ship_skins, ship_tier')
     const owned = (profile?.ship_skins as string[] | null) ?? []
     if (!owned.includes(skinId)) return
     // Tier-gated skins (e.g. Man-o-War-only) can't be equipped on a smaller hull.
     const skin = getShipSkin(skinId)
     if (skin && !canEquipShipSkin(skin, (profile?.ship_tier as number | null) ?? 0)) return
   }
-  await admin.from('profiles').update({ equipped_ship_skin: skinId }).eq('id', user.id)
+  await db.updateProfile(user.id, { equipped_ship_skin: skinId })
 }
 
 /** Has the player cleared Chapter 3 (beaten the Quartermaster)? That's the raid
  *  that reveals the ultimate schematics and unlocks the whole build flow. */
 async function hasClearedChapter3(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<boolean> {
-  const { data } = await admin.from('raid_completions')
-    .select('id').eq('user_id', userId).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle()
-  return !!data
+  return raidData(admin).hasCleared(userId, 'the_quartermaster')
 }
 
 /** The live ultimate state, settling any matured build on read. Returns the
@@ -388,8 +356,8 @@ export async function getUltimateState(): Promise<{ active: string | null; build
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { active: null, build: null, schematics: false }
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles')
-    .select('manowar_augment, manowar_augment_build, manowar_schematics').eq('id', user.id).single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'manowar_augment, manowar_augment_build, manowar_schematics')
   const settled = await settleUltimateBuild(admin, user.id,
     (profile?.manowar_augment as string | null) ?? null,
     profile?.manowar_augment_build ?? null)
@@ -407,8 +375,8 @@ export async function startUltimateBuild(id: string): Promise<{ ok: boolean; err
   if (!augment) return { ok: false, error: 'Unknown weapon.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles')
-    .select('ship_tier, expedition_xp, manowar_augment, manowar_augment_build, gauntlet_upgrades').eq('id', user.id).single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'ship_tier, expedition_xp, manowar_augment, manowar_augment_build, gauntlet_upgrades')
   if (!profile) return { ok: false, error: 'No profile.' }
 
   // The ultimate is a once-and-for-all choice. If one is already forged, no rebuild.
@@ -437,21 +405,13 @@ export async function startUltimateBuild(id: string): Promise<{ ok: boolean; err
   const completesAt = new Date(clockNow() + ULTIMATE_BUILD_MS).toISOString()
   const build: ShipAugmentBuild = { id: augment.id, completesAt }
   // Conditional write: only start if no build is in flight (guards a double-tap).
-  const { data: updated } = await admin.from('profiles')
-    .update({ manowar_augment_build: build })
-    .eq('id', user.id)
-    .is('manowar_augment_build', null)
-    .is('manowar_augment', null)
-    .select('manowar_augment_build')
-    .maybeSingle()
+  const updated = await db.updateProfileIf(user.id, { manowar_augment_build: build }, [{ col: 'manowar_augment_build', is: null }, { col: 'manowar_augment', is: null }])
   if (!updated) {
     await grant(admin, user.id, 'doubloons', AUGMENT_COST)
     return { ok: false, error: 'A weapon is already being built.' }
   }
 
-  await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: -AUGMENT_COST, reason: `Ultimate weapon build: ${augment.name}`,
-  })
+  await db.ledger(user.id, -AUGMENT_COST, `Ultimate weapon build: ${augment.name}`)
   return { ok: true, doubloons: newDoubloons, completesAt }
 }
 
@@ -465,8 +425,8 @@ export async function swapUltimateBuild(id: string): Promise<{ ok: boolean; erro
   if (!augment) return { ok: false, error: 'Unknown weapon.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles')
-    .select('manowar_augment, manowar_augment_build').eq('id', user.id).single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'manowar_augment, manowar_augment_build')
   const existing = parseAugmentBuild(profile?.manowar_augment_build ?? null)
   if (!existing || isBuildComplete(existing, clockNow())) {
     return { ok: false, error: 'No build in progress.' }
@@ -478,7 +438,7 @@ export async function swapUltimateBuild(id: string): Promise<{ ok: boolean; erro
   }
   // Keep the same clock — you're re-tasking the shipwrights, not restarting.
   const build: ShipAugmentBuild = { id: augment.id, completesAt: existing.completesAt, ...(existing.retool ? { retool: true } : {}) }
-  await admin.from('profiles').update({ manowar_augment_build: build }).eq('id', user.id)
+  await db.updateProfile(user.id, { manowar_augment_build: build })
   return { ok: true }
 }
 
@@ -494,8 +454,8 @@ export async function startUltimateRetool(id: string): Promise<{ ok: boolean; er
   if (!augment) return { ok: false, error: 'Unknown weapon.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles')
-    .select('manowar_augment, manowar_augment_build, manowar_schematics').eq('id', user.id).single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'manowar_augment, manowar_augment_build, manowar_schematics')
   if (!profile) return { ok: false, error: 'No profile.' }
 
   if (!profile.manowar_augment) return { ok: false, error: 'Forge your first ultimate before retooling.' }
@@ -512,20 +472,13 @@ export async function startUltimateRetool(id: string): Promise<{ ok: boolean; er
   const completesAt = new Date(clockNow() + ULTIMATE_BUILD_MS).toISOString()
   const build: ShipAugmentBuild = { id: augment.id, completesAt, retool: true }
   // Conditional write guards a double-tap, same as the first build.
-  const { data: updated } = await admin.from('profiles')
-    .update({ manowar_augment_build: build })
-    .eq('id', user.id)
-    .is('manowar_augment_build', null)
-    .select('manowar_augment_build')
-    .maybeSingle()
+  const updated = await db.updateProfileIf(user.id, { manowar_augment_build: build }, [{ col: 'manowar_augment_build', is: null }])
   if (!updated) {
     await grant(admin, user.id, 'doubloons', RETOOL_COST)
     return { ok: false, error: 'The shipwrights are already at work.' }
   }
 
-  await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: -RETOOL_COST, reason: `Ultimate retool: ${augment.name}`,
-  })
+  await db.ledger(user.id, -RETOOL_COST, `Ultimate retool: ${augment.name}`)
   return { ok: true, doubloons: newDoubloons, completesAt }
 }
 
@@ -538,8 +491,8 @@ export async function buyUltimateSchematics(): Promise<{ ok: boolean; error?: st
   if (!user) return { ok: false, error: 'Not signed in.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles')
-    .select('manowar_augment, manowar_augment_build, manowar_schematics').eq('id', user.id).single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'manowar_augment, manowar_augment_build, manowar_schematics')
   if (!profile) return { ok: false, error: 'No profile.' }
 
   if (!profile.manowar_augment) return { ok: false, error: 'Forge your first ultimate before buying the Full Schematics.' }
@@ -552,24 +505,17 @@ export async function buyUltimateSchematics(): Promise<{ ok: boolean; error?: st
   const pending = parseAugmentBuild(profile.manowar_augment_build ?? null)
   const active = pending?.retool ? pending.id : (profile.manowar_augment as string)
   // Conditional write (schematics still false) guards a double-tap.
-  const { data: updated } = await admin.from('profiles')
-    .update({
+  const updated = await db.updateProfileIf(user.id, {
       manowar_schematics: true,
       manowar_augment: active,
       ...(pending?.retool ? { manowar_augment_build: null } : {}),
-    })
-    .eq('id', user.id)
-    .eq('manowar_schematics', false)
-    .select('manowar_schematics')
-    .maybeSingle()
+    }, [{ col: 'manowar_schematics', eq: false }])
   if (!updated) {
     await grant(admin, user.id, 'doubloons', SCHEMATICS_COST)
     return { ok: false, error: 'You already own the Full Schematics.' }
   }
 
-  await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: -SCHEMATICS_COST, reason: 'Ultimate weapon: the Full Schematics',
-  })
+  await db.ledger(user.id, -SCHEMATICS_COST, 'Ultimate weapon: the Full Schematics')
   return { ok: true, doubloons: newDoubloons, active }
 }
 
@@ -582,17 +528,15 @@ export async function switchUltimate(id: string): Promise<{ ok: boolean; error?:
   if (!augment) return { ok: false, error: 'Unknown weapon.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles')
-    .select('manowar_augment, manowar_schematics').eq('id', user.id).single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'manowar_augment, manowar_schematics')
   if (!profile) return { ok: false, error: 'No profile.' }
   if (!profile.manowar_augment) return { ok: false, error: 'Forge your first ultimate before switching.' }
   if (profile.manowar_schematics !== true) return { ok: false, error: 'Switching freely takes the Full Schematics.' }
   if (profile.manowar_augment === augment.id) return { ok: true, active: augment.id }
 
   // Any stale build is moot for a schematics owner — clear it as we switch.
-  await admin.from('profiles')
-    .update({ manowar_augment: augment.id, manowar_augment_build: null })
-    .eq('id', user.id)
+  await db.updateProfile(user.id, { manowar_augment: augment.id, manowar_augment_build: null })
   return { ok: true, active: augment.id }
 }
 
@@ -605,33 +549,25 @@ export async function buySixthBerth(): Promise<{ ok: boolean; error?: string; do
   if (!user) return { ok: false, error: 'Not signed in.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles')
-    .select('has_sixth_berth').eq('id', user.id).single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'has_sixth_berth')
   if (!profile) return { ok: false, error: 'No profile.' }
   if (profile.has_sixth_berth === true) return { ok: false, error: 'Your ship already has its sixth crew slot.' }
 
   // Gate: the berth reveals only once Sal Brackwater (Raid 7) is beaten.
-  const { data: cleared } = await admin.from('raid_completions')
-    .select('id').eq('user_id', user.id).eq('raid_id', 'the_blockade').limit(1).maybeSingle()
+  const cleared = await db.hasCleared(user.id, 'the_blockade')
   if (!cleared) return { ok: false, error: 'Beat Sal Brackwater before you can add a crew slot.' }
 
   const newDoubloons = await spend(admin, user.id, 'doubloons', SIXTH_BERTH_COST)
   if (newDoubloons == null) return { ok: false, error: `You need ${SIXTH_BERTH_COST.toLocaleString()} doubloons.` }
   // Conditional write (still false) guards a double-tap.
-  const { data: updated } = await admin.from('profiles')
-    .update({ has_sixth_berth: true })
-    .eq('id', user.id)
-    .eq('has_sixth_berth', false)
-    .select('has_sixth_berth')
-    .maybeSingle()
+  const updated = await db.updateProfileIf(user.id, { has_sixth_berth: true }, [{ col: 'has_sixth_berth', eq: false }])
   if (!updated) {
     await grant(admin, user.id, 'doubloons', SIXTH_BERTH_COST)
     return { ok: false, error: 'Your ship already carries the sixth berth.' }
   }
 
-  await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: -SIXTH_BERTH_COST, reason: 'The Sixth Berth (Man-o-War crew slot)',
-  })
+  await db.ledger(user.id, -SIXTH_BERTH_COST, 'The Sixth Berth (Man-o-War crew slot)')
   return { ok: true, doubloons: newDoubloons }
 }
 
@@ -644,33 +580,25 @@ export async function buyArmoryExpansion(): Promise<{ ok: boolean; error?: strin
   if (!user) return { ok: false, error: 'Not signed in.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles')
-    .select('has_armory_expansion').eq('id', user.id).single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'has_armory_expansion')
   if (!profile) return { ok: false, error: 'No profile.' }
   if (profile.has_armory_expansion === true) return { ok: false, error: 'Your deck already carries the extra mount.' }
 
   // Gate: the refit reveals only once Don Finleone (Raid 8) is beaten.
-  const { data: cleared } = await admin.from('raid_completions')
-    .select('id').eq('user_id', user.id).eq('raid_id', 'the_throne').limit(1).maybeSingle()
+  const cleared = await db.hasCleared(user.id, 'the_throne')
   if (!cleared) return { ok: false, error: 'Take the throne before the shipwright will cut you a new mount.' }
 
   const newDoubloons = await spend(admin, user.id, 'doubloons', ARMORY_EXPANSION_COST)
   if (newDoubloons == null) return { ok: false, error: `You need ${ARMORY_EXPANSION_COST.toLocaleString()} doubloons.` }
   // Conditional write (still false) guards a double-tap.
-  const { data: updated } = await admin.from('profiles')
-    .update({ has_armory_expansion: true })
-    .eq('id', user.id)
-    .eq('has_armory_expansion', false)
-    .select('has_armory_expansion')
-    .maybeSingle()
+  const updated = await db.updateProfileIf(user.id, { has_armory_expansion: true }, [{ col: 'has_armory_expansion', eq: false }])
   if (!updated) {
     await grant(admin, user.id, 'doubloons', ARMORY_EXPANSION_COST)
     return { ok: false, error: 'Your deck already carries the extra mount.' }
   }
 
-  await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: -ARMORY_EXPANSION_COST, reason: 'The Expanded Armory (extra raid-item mount)',
-  })
+  await db.ledger(user.id, -ARMORY_EXPANSION_COST, 'The Expanded Armory (extra raid-item mount)')
   return { ok: true, doubloons: newDoubloons }
 }
 
@@ -680,7 +608,8 @@ export async function markUltimateUnlockSeen(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
-  await admin.from('profiles').update({ seen_ultimate_unlock: true }).eq('id', user.id)
+  const db = raidData(admin)
+  await db.updateProfile(user.id, { seen_ultimate_unlock: true })
 }
 
 /** Mark the first-time Manage Ship (loadout drawer) guide as seen. */
@@ -688,5 +617,5 @@ export async function markShipGuideSeen(): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-  await createAdminClient().from('profiles').update({ has_seen_ship_guide: true }).eq('id', user.id)
+  await raidData(createAdminClient()).updateProfile(user.id, { has_seen_ship_guide: true })
 }

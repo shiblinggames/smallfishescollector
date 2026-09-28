@@ -3,6 +3,7 @@
 import { inCaptainsWater } from '@/lib/captainWater'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { raidData } from '@/lib/data/raidData'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { RAID_MAP, computeRaidMap, type RaidNodeView } from '@/lib/raidMap'
 import { GAUNTLET_LIVE, GAUNTLET_UNLOCK_NODE } from '@/lib/gauntlet'
@@ -41,17 +42,14 @@ async function commitNodeClear(
   readProgress: unknown,
   patch: Record<string, unknown>,
 ): Promise<boolean> {
-  const base = admin.from('profiles').update(patch).eq('id', userId)
-  const guarded = readProgress == null
-    ? base.is('raid_node_progress', null)
-    : base.eq('raid_node_progress', JSON.stringify(readProgress))
-  const { data } = await guarded.select('id')
-  return (data ?? []).length > 0
+  return raidData(admin).updateProfileIf(userId, patch, [readProgress == null
+    ? { col: 'raid_node_progress', is: null }
+    : { col: 'raid_node_progress', eq: JSON.stringify(readProgress) }])
 }
 
 /** Nav XP in place. */
 async function addNavXp(admin: Admin, userId: string, n: number): Promise<void> {
-  if (n > 0) await admin.rpc('bump_profile_stat', { uid: userId, col: 'expedition_xp', n })
+  if (n > 0) await raidData(admin).bumpStat(userId, 'expedition_xp', n)
 }
 
 /** Per-raid social records surfaced in the raid node sheet so players see
@@ -73,9 +71,9 @@ async function loadRaidRecords(
   // Aggregated in SQL (raid_records): fastest non-admin clear + username, distinct
   // non-admin clearer count, and the caller's own best — instead of pulling the
   // whole raid_completions table + a profiles.in() and joining/aggregating in JS.
-  const { data } = await admin.rpc('raid_records', { uid: userId })
+  const data = await raidData(admin).raidRecords(userId)
   const result: Record<string, RaidRecords> = {}
-  for (const row of (data ?? []) as Array<{ raid_id: string; fastest_username: string | null; fastest_ms: number | null; total_clearers: number | null; your_best_ms: number | null }>) {
+  for (const row of data as Array<{ raid_id: string; fastest_username: string | null; fastest_ms: number | null; total_clearers: number | null; your_best_ms: number | null }>) {
     result[row.raid_id] = {
       // No non-admin fastest (only the admin/QA player cleared) → the JS version's
       // "—" / 0 placeholder.
@@ -94,11 +92,8 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
   if (!user) return { views: [], doubloons: 0, spoilFree: null, spoilPaid: null, navLevel: 1, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [], seenUltimateUnlock: false, raidNodeChoices: {}, musterParty: [] }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('finn_spoil_free, finn_spoil_paid, doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks, seen_ultimate_unlock, is_admin, ancient_catches, is_premium, premium_expires_at')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'finn_spoil_free, finn_spoil_paid, doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks, seen_ultimate_unlock, is_admin, ancient_catches, is_premium, premium_expires_at')
 
   const doubloons = profile?.doubloons ?? 0
   const navLevel = getLevelFromXP(profile?.expedition_xp ?? 0)
@@ -133,20 +128,14 @@ export async function markChapterUnlockSeen(
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('seen_chapter_unlocks')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'seen_chapter_unlocks')
   if (!profile) return { error: 'Profile not found' }
 
   const seen = (profile.seen_chapter_unlocks as string[] | null) ?? []
   if (seen.includes(chapterId)) return { ok: true } // idempotent
 
-  await admin
-    .from('profiles')
-    .update({ seen_chapter_unlocks: [...seen, chapterId] })
-    .eq('id', user.id)
+  await db.updateProfile(user.id, { seen_chapter_unlocks: [...seen, chapterId] })
   return { ok: true }
 }
 
@@ -161,11 +150,8 @@ export async function claimMilestoneNode(
   if (!node || node.type !== 'milestone' || !node.milestone) return { error: 'Invalid node' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
   if (!profile) return { error: 'Profile not found' }
   if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
@@ -214,11 +200,8 @@ export async function markStoryNodeRead(
   if (!node || (node.type !== 'story' && node.type !== 'berth')) return { error: 'Invalid node' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('has_completed_practice_raid, raid_node_progress, is_admin, legendary_unlocks')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'has_completed_practice_raid, raid_node_progress, is_admin, legendary_unlocks')
   if (!profile) return { error: 'Profile not found' }
   if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
@@ -235,7 +218,7 @@ export async function markStoryNodeRead(
   const patch: Record<string, unknown> = { raid_node_progress: { ...prog, cleared: newCleared } }
   const unlockedLegendary = await applyLegendaryGate(admin, nodeId, (profile.legendary_unlocks as string[] | null) ?? [], patch)
 
-  await admin.from('profiles').update(patch).eq('id', user.id)
+  await db.updateProfile(user.id, patch)
 
   return unlockedLegendary ? { ok: true, unlockedLegendary } : { ok: true }
 }
@@ -254,7 +237,7 @@ async function applyLegendaryGate(
   const gateSlug = GATE_NODE_TO_LEGENDARY[nodeId]
   if (!gateSlug || priorUnlocks.some(u => u.toLowerCase() === gateSlug)) return undefined
   updates.legendary_unlocks = [...priorUnlocks, gateSlug]
-  const { data: card } = await admin.from('cards').select('name, filename').eq('slug', slugToCardKey(gateSlug)).maybeSingle()
+  const card = await raidData(admin).cardByKey(slugToCardKey(gateSlug))
   return {
     slug: gateSlug,
     name: (card as any)?.name ?? gateSlug,
@@ -278,11 +261,8 @@ export async function solvePuzzleNode(
   if (!node || node.type !== 'puzzle' || !node.puzzle) return { error: 'Invalid node' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
   if (!profile) return { error: 'Profile not found' }
   if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
@@ -328,11 +308,8 @@ export async function claimQuartermasterChoice(
   if (!node.choice.items.includes(itemId)) return { error: 'Invalid choice' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('has_completed_practice_raid, raid_node_progress, raid_items, expedition_xp, is_admin')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'has_completed_practice_raid, raid_node_progress, raid_items, expedition_xp, is_admin')
   if (!profile) return { error: 'Profile not found' }
   if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
@@ -360,11 +337,7 @@ export async function claimQuartermasterChoice(
  *  check answers each hand can actually produce. Loaded from the same place the raid
  *  itself loads its crew, so what the clerk counts is exactly who sails. */
 async function loadMusterParty(admin: Admin, userId: string): Promise<MusterCrew[]> {
-  const { data: p } = await admin
-    .from('profiles')
-    .select('ship_tier, ship_classes, has_sixth_berth')
-    .eq('id', userId)
-    .single()
+  const p = await raidData(admin).profile(userId, 'ship_tier, ship_classes, has_sixth_berth')
   if (!p) return []
   const ship = EXPEDITION_SHIP_STATS[(p.ship_tier as number | null) ?? 0]
   if (!ship) return []
@@ -387,11 +360,8 @@ export async function standForMuster(nodeId: string): Promise<{ ok: true } | { e
   if (!node || node.type !== 'muster' || !node.muster) return { error: 'Invalid node' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp')
   if (!profile) return { error: 'Profile not found' }
   if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
@@ -412,10 +382,7 @@ export async function standForMuster(nodeId: string): Promise<{ ok: true } | { e
 
   const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
   const next = [...new Set([...(prog.cleared ?? []), nodeId])]
-  await admin
-    .from('profiles')
-    .update({ raid_node_progress: { ...prog, cleared: next } })
-    .eq('id', user.id)
+  await db.updateProfile(user.id, { raid_node_progress: { ...prog, cleared: next } })
   return { ok: true }
 }
 
@@ -441,11 +408,8 @@ export async function pickRaidEventChoice(
   if (!choice) return { error: 'Invalid choice' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
   if (!profile) return { error: 'Profile not found' }
   if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
@@ -488,11 +452,7 @@ export async function pickRaidEventChoice(
   // Ledger row for doubloon-bearing outcomes. Kept best-effort — a
   // failed insert shouldn't block the choice itself from settling.
   if (choice.outcome.type === 'doubloons') {
-    await admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: choice.outcome.amount,
-      reason: `Raid event: ${node.label} (${choice.label})`,
-    }).then(() => {}, () => {})
+    await db.ledger(user.id, choice.outcome.amount, `Raid event: ${node.label} (${choice.label})`).then(() => {}, () => {})
   }
 
   return { ok: true, newDoubloons, newExpeditionXp }
@@ -516,11 +476,8 @@ export async function pickForkRoute(
   if (!node.fork.routes.some(r => r.id === routeId)) return { error: 'Invalid route' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
   if (!profile) return { error: 'Profile not found' }
   if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
@@ -573,11 +530,8 @@ export async function rollDiceNode(
   if (!option) return { error: 'Invalid option' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
   if (!profile) return { error: 'Profile not found' }
   const cleared = await buildClearedSet(admin, user.id, profile)
   const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
@@ -615,7 +569,7 @@ export async function rollDiceNode(
     if (left != null) {
       newDoubloons = left
     } else {
-      const { data: now } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+      const now = await db.profile(user.id, 'doubloons')
       const have = Number(now?.doubloons ?? 0)
       const taken = await spend(admin, user.id, 'doubloons', have)
       newDoubloons = taken ?? 0
@@ -625,11 +579,7 @@ export async function rollDiceNode(
   await addNavXp(admin, user.id, navXpDelta)
 
   if (doubloonsDelta !== 0) {
-    await admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: doubloonsDelta,
-      reason: `Raid: ${node.label} (${option.label}, ${success ? 'won' : 'lost'})`,
-    }).then(() => {}, () => {})
+    await db.ledger(user.id, doubloonsDelta, `Raid: ${node.label} (${option.label}, ${success ? 'won' : 'lost'})`).then(() => {}, () => {})
   }
 
   return { roll, bonus, total, dc: option.dc, success, doubloonsDelta, navXpDelta, newDoubloons, newExpeditionXp }
@@ -678,11 +628,8 @@ export async function resolveDpsCheck(
   if (node.comingSoon) return { error: 'Coming soon' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
   if (!profile) return { error: 'Profile not found' }
   const cleared = await buildClearedSet(admin, user.id, profile)
   const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
@@ -715,9 +662,7 @@ export async function resolveDpsCheck(
     }
     const delta = -cost
     if (delta !== 0) {
-      await admin.from('doubloon_transactions').insert({
-        user_id: uid, amount: delta, reason: `Raid: ${nodeLabel} (${tag})`,
-      }).then(() => {}, () => {})
+      await db.ledger(uid, delta, `Raid: ${nodeLabel} (${tag})`).then(() => {}, () => {})
     }
     return { newDoubloons, delta }
   }
@@ -781,11 +726,8 @@ export async function claimScoutDebt(
   if (node.comingSoon) return { error: 'Coming soon' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin, legendary_unlocks')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin, legendary_unlocks')
   if (!profile) return { error: 'Profile not found' }
   if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
@@ -821,11 +763,7 @@ export async function claimScoutDebt(
   await addNavXp(admin, user.id, navXpDelta)
 
   if (doubloonsDelta !== 0) {
-    await admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: doubloonsDelta,
-      reason: `Raid: ${node.label}`,
-    }).then(() => {}, () => {})
+    await db.ledger(user.id, doubloonsDelta, `Raid: ${node.label}`).then(() => {}, () => {})
   }
 
   return { met, doubloonsDelta, navXpDelta, newDoubloons, newExpeditionXp, unlockedLegendary }
@@ -853,11 +791,8 @@ export async function pickShipClass(
   if (!(classId in SHIP_CLASSES)) return { error: 'Invalid class' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('has_completed_practice_raid, raid_node_progress, ship_classes, is_admin')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'has_completed_practice_raid, raid_node_progress, ship_classes, is_admin')
   if (!profile) return { error: 'Profile not found' }
   if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
@@ -885,24 +820,20 @@ export async function pickShipClass(
   const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
 
-  await admin
-    .from('profiles')
-    .update({
+  await db.updateProfile(user.id, {
       ship_classes: newPicks,
       raid_node_progress: { ...prog, cleared: newCleared },
     })
-    .eq('id', user.id)
 
   // Clearing the Chapter 2 class node = Chapter 2 done. Once the Gauntlet is
   // live, that's the unlock — let the player know it just opened. Gated on
   // GAUNTLET_LIVE so this never fires while the Gauntlet is still admin-only.
   if (GAUNTLET_LIVE && nodeId === GAUNTLET_UNLOCK_NODE) {
     try {
-      await admin.from('mail_messages').insert({
+      await db.mailTo(user.id, {
         subject: 'The Locker Opens: Davy Jones Gauntlet Unlocked',
         body: "You closed out Chapter 2. Word travels fast down in the dark, and something has taken notice.\n\nThe Davy Jones Gauntlet is open to you now. Descend as deep as you dare, fighting ship after ship while one pot swells with every kill. Cash out and it's all yours. Sink before you do and it goes to the deep with you.\n\nGo as deep as you can and you'll tear loose rewards that follow you topside. Find it under Expeditions.\n\n— Davy Jones",
-        sender_label: 'Davy Jones',
-        target_user_id: user.id,
+        sender: 'Davy Jones',
       })
     } catch { /* best-effort */ }
   }
@@ -932,17 +863,13 @@ export async function refitShipClasses(
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('ship_classes, ship_refits_used, doubloons')
-    .eq('id', user.id)
-    .single()
+  const db = raidData(admin)
+  const profile = await db.profile(user.id, 'ship_classes, ship_refits_used, doubloons')
   if (!profile) return { error: 'Profile not found' }
 
   // The don has to be in the ground. Read off raid_completions, the same source
   // every other Chapter IV reveal on the ship screen uses.
-  const { data: throne } = await admin.from('raid_completions')
-    .select('raid_id').eq('user_id', user.id).eq('raid_id', 'the_throne').maybeSingle()
+  const throne = await db.hasCleared(user.id, 'the_throne')
   if (!throne) return { error: 'The don is still sitting on his throne.' }
 
   const picks = (profile.ship_classes as Record<string, string> | null) ?? {}
@@ -964,26 +891,17 @@ export async function refitShipClasses(
     // Atomic, balance-guarded debit BEFORE the write, the same order the tackle
     // shop uses: a refit that cannot be paid for must not land, and two taps
     // must not both settle against one balance.
-    const { data: left } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: cost })
+    const left = await db.deductDoubloons(user.id, cost)
     if (left == null) return { error: `A refit costs ${cost.toLocaleString()} ⟡.` }
     spent = left as number
-    await admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: -cost,
-      reason: 'Ship refit: re-cut your class picks',
-    })
+    await db.ledger(user.id, -cost, 'Ship refit: re-cut your class picks')
   }
 
   // Conditional on the count still being what was priced, so a refit that raced
   // another cannot be paid for once and taken twice. If this loses, the debit
   // above is refunded.
-  const { data: written } = await admin
-    .from('profiles')
-    .update({ ship_classes: next, ship_refits_used: used + 1 })
-    .eq('id', user.id)
-    .eq('ship_refits_used', used)
-    .select('id')
-  if (!(written ?? []).length) {
+  // Only from the refit count that was read: a twin that got there first wins.
+  if (!(await db.updateProfileIf(user.id, { ship_classes: next, ship_refits_used: used + 1 }, [{ col: 'ship_refits_used', eq: used }]))) {
     // The race was lost after the debit landed: hand it straight back.
     if (cost > 0) await grant(admin, user.id, 'doubloons', cost)
     return { error: 'That refit was already taken. Reload and try again.' }

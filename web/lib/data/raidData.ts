@@ -49,6 +49,17 @@ export interface RaidData extends CaptainData {
   recordRaidHit(uid: string, dmg: number): Promise<void>
   /** Wear this hull skin only if nothing is worn. */
   wearFirstSkin(uid: string, skin: string): Promise<void>
+
+  // ── The campaign map ──
+  /** Per-raid records for the node sheets (fastest, clearers, your best). */
+  raidRecords(uid: string): Promise<Row[]>
+  /** A crew card's name and art by its key, or null. */
+  cardByKey(key: string): Promise<{ name: string; filename: string } | null>
+
+  // ── The legacy card collection (the old crew picker) ──
+  collection(uid: string, select: string): Promise<Row[] | null>
+  /** Card name per variant id. */
+  variantNames(ids: number[]): Promise<Map<number, string>>
 }
 
 /** RaidData over Supabase. */
@@ -137,6 +148,26 @@ export function raidData(admin: Db): RaidData {
     },
     async wearFirstSkin(uid, skin) {
       await admin.from('profiles').update({ equipped_ship_skin: skin }).eq('id', uid).is('equipped_ship_skin', null)
+    },
+
+    async raidRecords(uid) {
+      // One aggregate in the store rather than the whole clears table in JS.
+      const { data } = await admin.rpc('raid_records', { uid })
+      return (data ?? []) as Row[]
+    },
+    async cardByKey(key) {
+      const { data } = await admin.from('cards').select('name, filename').eq('slug', key).maybeSingle()
+      return (data as { name: string; filename: string } | null) ?? null
+    },
+
+    async collection(uid, select) {
+      const { data } = await admin.from('user_collection').select(select).eq('user_id', uid)
+      return (data as Row[] | null) ?? null
+    },
+    async variantNames(ids) {
+      const { data } = await admin.from('card_variants').select('id, cards(name)').in('id', ids)
+      type VRow = { id: number; cards: { name: string } | null }
+      return new Map(((data ?? []) as unknown as VRow[]).map(v => [v.id, v.cards?.name ?? '']))
     },
   }
 }
