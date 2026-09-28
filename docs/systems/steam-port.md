@@ -566,6 +566,31 @@ In order. Each step is worth doing even if the port never happens.
      Verified live on catman: an Inner Sea voyage sailed at 1h 19m with 410 ⟡ (the card said
      1h 19m and 253-422). Revealed, it paid exactly the triumph's 375 Nav XP, 410 ⟡ and 3 ◆.
      A trawl was not sent live, since sending needs the ship at the Trawl Docks.
+   - **Gauntlet: DONE 2026-09-28.** The run itself was already pure (`lib/gauntlet`,
+     `gauntletOffer`, `gauntletTerms`). What moved is the SETTLEMENT that lived inline in
+     `raids/gauntlet/actions`. `lib/gauntletRules.ts` covers:
+     - the run clock, the four-second depth floor, and `settleDepths` (the Veteran's Start
+       bound on the combat depth);
+     - `runFathoms` (the Fence tab);
+     - `cashOutHaul`: the chest, the chase drops in their FIXED roll order (a seeded replay
+       depends on that order), Blood Gems, doubloons, Nav XP, gems, Fathoms and crew XP;
+     - `recordClaim`, the cooldown, the shrine's coin and the Don's feats.
+
+     Still inline: the hardcore runs-per-day count uses the UTC date (`new Date()`). It
+     belongs with the calendar-to-session restock decision above, not with this move.
+
+     `scripts/check-gauntlet-rules.mts` checks:
+     - the depth clamps and determinism;
+     - no hardcore chase or Blood Gems on a normal run, and no Davy cannon on the Don's;
+     - nothing owned dropping twice;
+     - the pot ceiling, pay stopping at the reward cap while the record keeps going;
+     - the offer honoured only at its own depth;
+     - Pressure moving Blood Gems and nothing else;
+     - records, the cooldown, the gap cap and the shrine's even odds.
+
+     Live: catman's gauntlet page loads on the new code with DESCEND open and no server
+     errors. No cash-out has been played since; the first real run after 2026-09-28 is the
+     live proof (compare its `gauntlet_runs` row against the reward screen).
 6. **A data-access layer.** Per-system read and write functions replace the scattered
    `admin.from('profiles')` calls, so a local store can later stand in for Supabase behind the
    same functions.
