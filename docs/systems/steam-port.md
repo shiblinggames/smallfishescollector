@@ -486,6 +486,24 @@ In order. Each step is worth doing even if the port never happens.
 
    Each one becomes a pure command with tests, and the action applies the result through the
    existing wallet and RPCs. No behaviour change. This step is the bulk of the work.
+   - **Fishing: DONE 2026-09-28.** `lib/fishingRules.ts` holds three functions:
+     - `rollCast`: the Ancient Deep pool, crate or fish, the species, the wait, Lightspeed,
+       jackpot or double, the Locked-In haul and the Vigil rank.
+     - `landFish`: the bait save, shiny, the haul clamped to the hold, the XP and its three
+       reported parts, the streak and its record ceiling, the Sigil, the Wormhole, size, and
+       the deep's omen.
+     - `landAncient`: giant XP, Vigil ranks, and the capstone pet.
+
+     `castLine` and `reelIn` keep auth, the token claim, the reads, the writes and the badges.
+
+     `scripts/check-fishing-rules.mts` (in `npm run check`) runs them against
+     `content/fish_species.json` under seeds. It covers determinism, the first cast, the
+     giants and the Megalodon gate, stale crates, the zone odds and waits, and the landings
+     (the XP parts summing, shiny, the hold clamp, haul priority, the record ceiling and the
+     Vigil).
+
+     Verified live on catman: 8 casts, 2 landed, one of them a ×100 jackpot. Still inline
+     for now: `reelCrate`, `rerollWormhole`, prestige and zone rewards.
 6. **A data-access layer.** Per-system read and write functions replace the scattered
    `admin.from('profiles')` calls, so a local store can later stand in for Supabase behind the
    same functions.
