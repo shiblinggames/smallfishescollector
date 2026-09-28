@@ -100,6 +100,50 @@ export interface FishingData {
   claimContest(contestId: string, uid: string, prizeCode: string): Promise<boolean>
   /** Mail one captain. */
   mailTo(uid: string, m: { subject: string; body: string; sender: string }): Promise<void>
+
+  // ── More of the captain ──
+  /** Turn a boolean column on, only where it is still off. True only for the
+   *  request that turned it on (the one-time claims and purchases). */
+  flagOn(uid: string, col: string): Promise<boolean>
+  /** Move the fishing-level reward watermark from `from` (as read) to `to`.
+   *  True only for the request that moved it: that is the claim. */
+  moveLevelWatermark(uid: string, from: number | null, to: number): Promise<boolean>
+  /** Raise the hold tier to at least `tier`; never lowers one bought meanwhile. */
+  raiseHoldTier(uid: string, tier: number): Promise<void>
+  /** How many captains have more of `field` than `value` (the leaderboard nudge). */
+  countAbove(field: string, value: number): Promise<number | null>
+  /** Rod tiers owned. */
+  rodTiers(uid: string): Promise<number[]>
+  /** A ledger line for coin (or gems) that moved. */
+  ledger(uid: string, amount: number, reason: string, currency?: 'doubloons' | 'gems'): Promise<void>
+  /** Spend a CRATE cast (only the token; the streak write clears the rest). */
+  claimCrateCast(uid: string, castAt: number): Promise<boolean>
+
+  // ── More of the hold and the log ──
+  /** Take `qty` of a species out of the hold, only if the stack still reads
+   *  what was seen (a sale landing in between makes this refuse, not dupe). */
+  takeFromHold(uid: string, fishId: number, qty: number): Promise<boolean>
+  /** The hold with each species' row, stacks of at least one. */
+  holdWithSpecies(uid: string): Promise<Row[]>
+  /** Ids of every species in a habitat. */
+  speciesIdsIn(habitat: string): Promise<number[]>
+  /** How many of these species are logged this cycle. */
+  loggedCount(uid: string, fishIds: number[]): Promise<number>
+  /** Which of these species are mounted golden. */
+  goldenIds(uid: string, fishIds: number[]): Promise<number[]>
+  /** Clear these species from this cycle's log (a prestige; the career log stays). */
+  clearLog(uid: string, fishIds: number[]): Promise<void>
+  /** Mount a species golden on the wall. */
+  setGolden(uid: string, fishId: number): Promise<void>
+
+  // ── Golden trophies ──
+  /** The oldest golden fish still waiting on a sell-or-mount choice. */
+  oldestHeldShiny(uid: string): Promise<{ id: number; fish_id: number; size_in: number | null; name: string | null } | null>
+  /** One trophy of this captain's, with its species' name and value. */
+  shiny(uid: string, shinyId: number): Promise<{ id: number; status: string; fish_id: number; fish_species: { name: string; sell_value: number } | null } | null>
+  /** Resolve a held trophy (sold or mounted), only while it is still held.
+   *  `failed` is a write error; `claimed` is whether this call resolved it. */
+  resolveShiny(shinyId: number, patch: Row): Promise<{ failed: boolean; claimed: boolean }>
 }
 
 /** FishingData over Supabase, with the service-role client. */
@@ -250,6 +294,83 @@ export function fishingData(admin: Admin): FishingData {
     },
     async mailTo(uid, m) {
       await admin.from('mail_messages').insert({ subject: m.subject, body: m.body, sender_label: m.sender, target_user_id: uid })
+    },
+    async flagOn(uid, col) {
+      const { data } = await admin.from('profiles').update({ [col]: true }).eq('id', uid).or(`${col}.is.null,${col}.eq.false`).select('id')
+      return !!data && data.length > 0
+    },
+    async moveLevelWatermark(uid, from, to) {
+      const { data } = await admin.from('profiles').update({ claimed_fishing_levels: to }).eq('id', uid)
+        .or(from == null ? 'claimed_fishing_levels.is.null' : `claimed_fishing_levels.eq.${from}`).select('id')
+      return !!data && data.length > 0
+    },
+    async raiseHoldTier(uid, tier) {
+      await admin.from('profiles').update({ fish_hold_tier: tier }).eq('id', uid).or(`fish_hold_tier.is.null,fish_hold_tier.lt.${tier}`)
+    },
+    async countAbove(field, value) {
+      const { count } = await admin.from('profiles').select('*', { count: 'exact', head: true }).gt(field, value)
+      return count
+    },
+    async rodTiers(uid) {
+      const { data } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', uid)
+      return ((data ?? []) as { rod_tier: number }[]).map(r => r.rod_tier)
+    },
+    async ledger(uid, amount, reason, currency = 'doubloons') {
+      await admin.from(currency === 'gems' ? 'gem_transactions' : 'doubloon_transactions').insert({ user_id: uid, amount, reason })
+    },
+    async claimCrateCast(uid, castAt) {
+      const { data } = await admin.from('profiles').update({ pending_cast: null }).eq('id', uid)
+        .eq('pending_cast->>castAt', String(castAt)).select('id').maybeSingle()
+      return !!data
+    },
+
+    async takeFromHold(uid, fishId, qty) {
+      const { data: row } = await admin.from('fish_inventory').select('quantity').eq('user_id', uid).eq('fish_id', fishId).maybeSingle()
+      if (!row || row.quantity < qty) return false
+      const left = row.quantity - qty
+      const { data } = left === 0
+        ? await admin.from('fish_inventory').delete().eq('user_id', uid).eq('fish_id', fishId).eq('quantity', row.quantity).select('fish_id')
+        : await admin.from('fish_inventory').update({ quantity: left }).eq('user_id', uid).eq('fish_id', fishId).eq('quantity', row.quantity).select('fish_id')
+      return !!data && data.length > 0
+    },
+    async holdWithSpecies(uid) {
+      const { data } = await admin.from('fish_inventory').select('fish_id, quantity, fish_species(*)').eq('user_id', uid).gt('quantity', 0)
+      return (data ?? []) as Row[]
+    },
+    async speciesIdsIn(habitat) {
+      const { data } = await admin.from('fish_species').select('id').eq('habitat', habitat)
+      return ((data ?? []) as { id: number }[]).map(f => f.id)
+    },
+    async loggedCount(uid, fishIds) {
+      const { count } = await admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', uid).in('fish_id', fishIds)
+      return count ?? 0
+    },
+    async goldenIds(uid, fishIds) {
+      const { data } = await admin.from('fish_collection').select('fish_id').eq('user_id', uid).in('fish_id', fishIds).eq('is_golden', true)
+      return ((data ?? []) as { fish_id: number }[]).map(r => r.fish_id)
+    },
+    async clearLog(uid, fishIds) {
+      if (fishIds.length > 0) await admin.from('fish_collection').delete().eq('user_id', uid).in('fish_id', fishIds)
+    },
+    async setGolden(uid, fishId) {
+      await admin.from('fish_collection').update({ is_golden: true }).eq('user_id', uid).eq('fish_id', fishId)
+    },
+
+    async oldestHeldShiny(uid) {
+      const { data } = await admin.from('shiny_catches').select('id, fish_id, size_in, fish_species(name)')
+        .eq('user_id', uid).eq('status', 'hold')
+        // OLDEST FIRST: a backlog is worked through in the order it was caught.
+        .order('caught_at', { ascending: true }).limit(1).maybeSingle()
+      const r = data as unknown as { id: number; fish_id: number; size_in: number | null; fish_species: { name: string } | null } | null
+      return r ? { id: r.id, fish_id: r.fish_id, size_in: r.size_in, name: r.fish_species?.name ?? null } : null
+    },
+    async shiny(uid, shinyId) {
+      const { data } = await admin.from('shiny_catches').select('id, status, fish_id, fish_species(name, sell_value)').eq('id', shinyId).eq('user_id', uid).single()
+      return (data as unknown as { id: number; status: string; fish_id: number; fish_species: { name: string; sell_value: number } | null } | null) ?? null
+    },
+    async resolveShiny(shinyId, patch) {
+      const { data, error } = await admin.from('shiny_catches').update(patch).eq('id', shinyId).eq('status', 'hold').select('id')
+      return { failed: !!error, claimed: !!data && data.length > 0 }
     },
   }
 }
