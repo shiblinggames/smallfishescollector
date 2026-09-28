@@ -23,6 +23,7 @@ import {
   THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE,
   THE_BLOCKADE_CHALLENGE, THE_THRONE_CHALLENGE, THE_SUNKEN_HAND_CHALLENGE,
 } from './raidChallenge'
+import { rngNext } from './rng'
 
 export const ALL_RAIDS: BossRaidConfig[] = [
   REEF_SKIRMISH,
@@ -78,7 +79,7 @@ export function rollRaidCurrency(raidId: string): string | null {
   const rows = raidCurrencyRows(raidId)
   const total = rows.reduce((s, r) => s + r.weight, 0)
   if (total <= 0) return null
-  let r = Math.random() * total
+  let r = rngNext() * total
   for (const row of rows) { r -= row.weight; if (r <= 0) return row.id }
   return rows[rows.length - 1].id
 }

@@ -30,6 +30,7 @@
 
 import type { RaidLootItem } from './bossRaids'
 import { isUniqueLoot } from './bossRaids'
+import { rngNext } from './rng'
 
 /**
  * Rarity to a 1-5 "chest tier", driving how hard the open-burst detonates and
@@ -164,7 +165,7 @@ export function rollCrate(
   legendaryMult = 1,
   fortuneMult = 1,
   challenge = false,
-  rng: () => number = Math.random,
+  rng: () => number = rngNext,
 ): CrateRoll {
   const totalWeight = loot.reduce((s, l) => s + l.weight, 0)
 

@@ -9,6 +9,7 @@
 
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
+import { clockNow } from './clock'
 
 /** If the build clock has passed, promote the build id into manowar_augment (the
  *  active slot) and clear the build column. Idempotent + safe to call from any read
@@ -21,7 +22,7 @@ export async function settleUltimateBuild(
 ): Promise<{ active: string | null; build: ShipAugmentBuild | null }> {
   const build = parseAugmentBuild(buildRaw)
   if (!build) return { active, build: null }
-  if (!isBuildComplete(build, Date.now())) return { active, build }
+  if (!isBuildComplete(build, clockNow())) return { active, build }
   await admin.from('profiles')
     .update({ manowar_augment: build.id, manowar_augment_build: null })
     .eq('id', userId)

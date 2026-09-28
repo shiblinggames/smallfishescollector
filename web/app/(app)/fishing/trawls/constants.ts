@@ -9,6 +9,8 @@
 // rolls a tight ±15%. One trawl per zone; up to 4 concurrent slots gated by
 // BOTH fishing + Nav level.
 
+import { rngNext } from '@/lib/rng'
+
 export type TrawlZoneKey = 'shallows' | 'open_waters' | 'deep' | 'abyss' | 'ancient_deep'
 
 export interface TrawlZone {
@@ -135,7 +137,7 @@ export const TRAWL_MULT_MAX = 1.2
 /** Continuous haul multiplier in [0.8, 1.2]. Center-weighted (average of two
  *  uniform rolls → triangular, so most hauls sit near 1.0 and the extremes are
  *  rare), nudged upward by the crew's Fortune. */
-export function rollHaulMult(fortune: number, rng: () => number = Math.random): number {
+export function rollHaulMult(fortune: number, rng: () => number = rngNext): number {
   const base = (rng() + rng()) / 2                              // triangular, peak 0.5
   const fortuneShift = (Math.min(40, fortune) / 40) * 0.15 - 0.05  // -0.05 weak → +0.10 maxed
   const t = Math.max(0, Math.min(1, base + fortuneShift))
@@ -216,7 +218,7 @@ export const TRAWL_EVENTS: Record<BumperTier, string[]> = {
 }
 
 /** Pick a random flavour event for a haul's band. */
-export function pickTrawlEvent(tier: BumperTier, rng: () => number = Math.random): string {
+export function pickTrawlEvent(tier: BumperTier, rng: () => number = rngNext): string {
   const pool = TRAWL_EVENTS[tier]
   return pool[Math.floor(rng() * pool.length)] ?? ''
 }
@@ -233,7 +235,7 @@ export function expectedTrawlHaul(zoneKey: TrawlZoneKey, savvy: number, fortune:
 /** Actual rolled haul (independent ±15% rolls for XP vs doubloons). Server rolls
  *  with Math.random at collect; tests can pass a deterministic rng. */
 export function rollTrawlHaul(
-  zoneKey: TrawlZoneKey, savvy: number, fortune: number, rng: () => number = Math.random,
+  zoneKey: TrawlZoneKey, savvy: number, fortune: number, rng: () => number = rngNext,
 ): TrawlHaul {
   const exp = expectedTrawlHaul(zoneKey, savvy, fortune)
   // One continuous luck multiplier for the whole haul (xp + doubloons move

@@ -36,6 +36,7 @@ import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { raidDamageProfile } from '@/lib/expeditions'
 import { flagAnomaly } from '@/lib/anomaly'
 import { grant, spend, arrayAdd } from '@/lib/wallet'
+import { rngNext } from '@/lib/rng'
 
 // Golden Gauntlet Hull — a rare Man-o-War-only cosmetic that drops only from the
 // top chest tier (Davy Jones' Locker, chest tier 5 / depth 18+). Tunable here.
@@ -369,7 +370,7 @@ export async function wagerGauntletFathoms(stake: number): Promise<
   const staked = Math.min(Math.max(1, Math.floor(stake || 0)), SHRINE_WAGER_CAP, balance)
   if (staked < 1) return { error: 'No Fathoms to wager.' }
 
-  const won = Math.random() < 0.5
+  const won = rngNext() < 0.5
   // In place. A loss is a spend, and a spend that cannot be covered (the purse
   // moved since the read) is refused rather than floored at zero.
   const newFathoms = won
@@ -1034,20 +1035,20 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // recovered component can be equipped but never turned into a second Grand.
   if (!isDon) {
     for (const cannon of DAVY_FORGE.components) {
-      if (!ownedItems.includes(cannon) && Math.random() < dropChance) droppedItems.push(cannon)
+      if (!ownedItems.includes(cannon) && rngNext() < dropChance) droppedItems.push(cannon)
     }
   }
   // Don's Gauntlet item chase — its own two items, same any-chest curve.
   if (isDon) {
     for (const itemId of DONS_GAUNTLET_ITEM_IDS) {
-      if (!ownedItems.includes(itemId) && Math.random() < dropChance) droppedItems.push(itemId)
+      if (!ownedItems.includes(itemId) && rngNext() < dropChance) droppedItems.push(itemId)
     }
   }
   // Davy's Blood Cannon — HARDCORE-only chase (the first lifesteal item), from
   // the deeper hardcore chests. Stops only while you HOLD it: fusing it into the
   // Bloodletter or the Reaver's Cannon consumes it, so it becomes farmable again
   // rather than leaving the slot permanently empty.
-  if (!isDon && hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && Math.random() < chestDrop(chestCannonDropChance(cd))) {
+  if (!isDon && hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && rngNext() < chestDrop(chestCannonDropChance(cd))) {
     droppedItems.push(BLOOD_CANNON_ITEM_ID)
   }
 
@@ -1064,7 +1065,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const normalHullId  = isDon ? GALAXY_HULL_SKIN_ID : GOLD_HULL_SKIN_ID
   const normalHullTier = isDon ? GALAXY_HULL_CHEST_TIER : GOLD_HULL_CHEST_TIER
   let droppedSkinId: string | null = null
-  if (chest.tier >= normalHullTier && !ownedSkins.includes(normalHullId) && Math.random() < chestDrop(chestSkinDropChance(cd))) {
+  if (chest.tier >= normalHullTier && !ownedSkins.includes(normalHullId) && rngNext() < chestDrop(chestSkinDropChance(cd))) {
     droppedSkinId = normalHullId
   }
   // The SECOND Man-o-War hull. Davy's = Bad Blood Hull (HARDCORE-only). Don's =
@@ -1075,14 +1076,14 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Don's Ghost Hull is the rarer of its two hulls — half the normal skin rate.
   const secondHullChance = chestSkinDropChance(cd) * (isDon ? GHOST_HULL_DROP_MULT : 1)
   let droppedHcSkinId: string | null = null
-  if ((!secondHullNeedsHc || hc) && chest.tier >= secondHullTier && !ownedSkins.includes(secondHullId) && Math.random() < chestDrop(secondHullChance)) {
+  if ((!secondHullNeedsHc || hc) && chest.tier >= secondHullTier && !ownedSkins.includes(secondHullId) && rngNext() < chestDrop(secondHullChance)) {
     droppedHcSkinId = secondHullId
   }
   // Pitch Black Hull — the PRESSURE-exclusive drop (Davy's only). Needs hardcore,
   // a heavy board AND a deep bank, all on this one run: pressureSkinDropChance
   // returns a hard 0 below either gate, so no shallow sign-and-bank can ever roll it.
   let droppedPressureSkinId: string | null = null
-  if (!isDon && hc && !ownedSkins.includes(PRESSURE_SKIN_ID) && Math.random() < chestDrop(pressureSkinDropChance(runPressure, payDepth))) {
+  if (!isDon && hc && !ownedSkins.includes(PRESSURE_SKIN_ID) && rngNext() < chestDrop(pressureSkinDropChance(runPressure, payDepth))) {
     droppedPressureSkinId = PRESSURE_SKIN_ID
   }
   // Hardcore Drowned Fleet skins — granted the first time you cash out past a
@@ -1110,7 +1111,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     ...((profile.gauntlet_upgrades as string[] | null) ?? []),
     ...((profile.dons_gauntlet_upgrades as string[] | null) ?? []),
   ]
-  const baseBloodGems   = hc ? bloodGemsForDepth(payDepth, Math.random()) : 0
+  const baseBloodGems   = hc ? bloodGemsForDepth(payDepth, rngNext()) : 0
   const earnedBloodGems = Math.round(baseBloodGems * gemMult * donsBloodGemMult(accountUpgrades))
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}

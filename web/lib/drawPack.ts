@@ -1,9 +1,10 @@
 import type { CardVariant, DrawnCard, BorderStyle, ArtEffect } from './types'
 import { FISH_GROUPS as GROUPS } from './fishGroups'
+import { rngNext } from './rng'
 
 const MYTHIC_NAMED = ['Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom']
 
-function rand() { return Math.random() }
+function rand() { return rngNext() }
 
 function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(rand() * arr.length)]

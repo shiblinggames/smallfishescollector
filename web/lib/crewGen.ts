@@ -12,6 +12,7 @@
 import { drawDeepTrait } from './crewTraits'
 import { FISH_GROUPS } from './fishGroups'
 import { effectPoolForRarity } from './crewEffects'
+import { rngNext } from './rng'
 
 export type CrewRarity = 1 | 2 | 3 | 4
 
@@ -77,7 +78,7 @@ const STAT_BUDGET: Record<CrewRarity, [number, number]> = {
 }
 
 function randInt(min: number, max: number): number {
-  return min + Math.floor(Math.random() * (max - min + 1))
+  return min + Math.floor(rngNext() * (max - min + 1))
 }
 
 /** Group (1-4) for a card slug, or null if it isn't a crew fish. Slugs in the
@@ -91,7 +92,7 @@ export function groupForSlug(slug: string): CrewRarity | null {
 /** Weighted rarity roll. weights index 0-3 == rarity 1-4. */
 export function rollRarity(weights: readonly [number, number, number, number]): CrewRarity {
   const total = weights[0] + weights[1] + weights[2] + weights[3]
-  let r = Math.random() * total
+  let r = rngNext() * total
   for (let i = 0; i < 4; i++) {
     if (r < weights[i]) return (i + 1) as CrewRarity
     r -= weights[i]
@@ -115,7 +116,7 @@ export function rollStats(
   // Distribute by the fish's profile (strong affinity) with ±15% jitter. A small
   // floor stops a near-zero base stat from being mathematically impossible.
   const prof = [profile.power, profile.dodge, profile.fortune].map(v => Math.max(0.5, v))
-  const w = prof.map(v => v * (0.85 + Math.random() * 0.3))
+  const w = prof.map(v => v * (0.85 + rngNext() * 0.3))
   const sumW = w[0] + w[1] + w[2]
 
   let assigned = 0
@@ -170,7 +171,7 @@ function rollMagnitude(rarity: CrewRarity): number {
   const w: readonly number[] = MAG_WEIGHTS[rarity]
   let total = 0
   for (const n of w) total += n
-  let r = Math.random() * total
+  let r = rngNext() * total
   for (let i = 0; i < w.length; i++) {
     if (r < w[i]) return i
     r -= w[i]
@@ -210,7 +211,7 @@ export function rollTrait(rarity: CrewRarity, deep = false): RolledTrait {
   // The recruit board keeps the weighted roll. Rarity still shapes what shows
   // up on a board, and a bought crew still tops out at 3 -- a 4 remains
   // something only the top hall can produce.
-  const sign = () => (Math.random() < 0.5 ? -1 : 1)
+  const sign = () => (rngNext() < 0.5 ? -1 : 1)
   return {
     power:   rollMagnitude(rarity) * sign(),
     dodge:   rollMagnitude(rarity) * sign(),

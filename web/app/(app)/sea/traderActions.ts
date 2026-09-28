@@ -30,6 +30,7 @@ import { decodeXfog, encodeXfog, xfogSet } from '@/lib/seaExploreExp'
 import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
 import { grant } from '@/lib/wallet'
+import { rngNext } from '@/lib/rng'
 
 export type DealResult =
   | { ok: true; spent?: number; earned?: number; baitType?: string; qty?: number; doubloons: number }
@@ -368,7 +369,7 @@ export async function wagerForRunnerRod(traderKey: string): Promise<
     return { error: `He wants ${trader.stake.toLocaleString()} on the table and you have not got it.` }
   }
 
-  const won = Math.random() < trader.odds
+  const won = rngNext() < trader.odds
 
   if (won) {
     // The insert can still lose a race against another grant of the same rod.

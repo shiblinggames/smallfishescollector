@@ -31,6 +31,8 @@
 // BURN_TICK_PCT as the player's burn) or freeze them solid (lose their next
 // turn). Handled in RaidCombat via playerBurnRef / playerFrozenRef.
 
+import { rngNext } from './rng'
+
 export type AffixId =
   | 'ledger'
   | 'ironclad'
@@ -243,7 +245,7 @@ export const ELITE_DMG_MULT = 1.25
 
 /** Pick a random affix from the pool. */
 export function rollAffix(): AffixId {
-  return ALL_AFFIX_IDS[Math.floor(Math.random() * ALL_AFFIX_IDS.length)]
+  return ALL_AFFIX_IDS[Math.floor(rngNext() * ALL_AFFIX_IDS.length)]
 }
 
 /** Roll an affix DISTINCT from `first` (for double-affix elites). */
@@ -276,7 +278,7 @@ export function rollEliteSlots(sequenceLength: number, eliteCount = 2): number[]
   const pool = Array.from({ length: sequenceLength }, (_, i) => i)
   const out: number[] = []
   for (let i = 0; i < target; i++) {
-    const idx = Math.floor(Math.random() * pool.length)
+    const idx = Math.floor(rngNext() * pool.length)
     out.push(pool.splice(idx, 1)[0])
   }
   return out.sort((a, b) => a - b)

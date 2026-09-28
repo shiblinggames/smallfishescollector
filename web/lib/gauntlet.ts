@@ -33,6 +33,7 @@ import { type TideEffect } from './tides'
 import { type ChosenMark } from './gauntletMarks'
 import { NO_TERM_EFFECTS, type TermEffects, PRESSURE_SKIN_ID, pressureSkinDropChance } from './gauntletTerms'
 import { CHEST_ODDS_CAP } from './gauntletOffer'
+import { rngNext } from './rng'
 
 // ── Economy ────────────────────────────────────────────────────────────────
 // Per-round pot contribution = POT_BASE + POT_GROWTH * min(depth, POT_FLATTEN).
@@ -518,7 +519,7 @@ const BOSS_CONFIGS = [
 ]
 const BOSS_POOL: BroadsideEnemy[] = BOSS_CONFIGS.map(c => c.enemies[c.bossId])
 
-function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
+function pick<T>(arr: T[]): T { return arr[Math.floor(rngNext() * arr.length)] }
 
 // Every ship in the Locker is a drowned thing — reused raid enemies are
 // renamed + (in combat) washed cold so the bestiary reads as the Locker's, not
@@ -994,7 +995,7 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
         BOSS_CHANCE_CAP,
         BOSS_CHANCE_BASE + (depth - FIRST_BOSS_EARLIEST) * BOSS_CHANCE_GROWTH,
       )
-      isBoss = Math.random() < chance
+      isBoss = rngNext() < chance
     }
   }
 
@@ -1012,7 +1013,7 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
 
   // The Closer mini-boss — its own low roll (Don's Gauntlet). A tough named ship
   // with a single revive, but NOT a full boss (mob-tier pot, no ability refresh).
-  if (variant === 'don' && !isBoss && depth >= CLOSER_MIN_DEPTH && !state.prevWasBoss && Math.random() < CLOSER_CHANCE) {
+  if (variant === 'don' && !isBoss && depth >= CLOSER_MIN_DEPTH && !state.prevWasBoss && rngNext() < CLOSER_CHANCE) {
     return { enemy: buildCloser(depth), isBoss: false, isElite: false, potContribution: paying ? roundContribution(rewardDepth, false, variant) : 0, depth }
   }
 
@@ -1050,14 +1051,14 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
     Math.min(0.95, ELITE_CHANCE_CAP * terms.eliteChanceMult),
     (ELITE_CHANCE_BASE + depth * ELITE_CHANCE_GROWTH) * terms.eliteChanceMult,
   )
-  if (Math.random() < eliteChance) {
+  if (rngNext() < eliteChance) {
     isElite = true
     const firstId = rollAffix()
     affix = AFFIXES[firstId]
     // Pair the affix if the depth band says so OR a Term forces it from the start.
     const pairs = depth > DEEP_BEND_START
       || terms.affixPairFromStart
-      || (depth >= DUAL_AFFIX_MIN_DEPTH && Math.random() < DUAL_AFFIX_CHANCE)
+      || (depth >= DUAL_AFFIX_MIN_DEPTH && rngNext() < DUAL_AFFIX_CHANCE)
     if (pairs) {
       const secondId = rollSecondAffix(firstId)
       affix = mergeAffixes(affix, AFFIXES[secondId])
@@ -1067,9 +1068,9 @@ export function generateFight(state: GauntletRollState, skipOffset = 0, terms: T
         depth > DEEP_BEND_START ? TRIPLE_AFFIX_CHANCE : 0,
         terms.tripleAffixChance,
       )
-      if (tripleChance > 0 && Math.random() < tripleChance) {
+      if (tripleChance > 0 && rngNext() < tripleChance) {
         const pool = ALL_AFFIX_IDS.filter(id => id !== firstId && id !== secondId)
-        affix = mergeAffixes(affix, AFFIXES[pool[Math.floor(Math.random() * pool.length)]])
+        affix = mergeAffixes(affix, AFFIXES[pool[Math.floor(rngNext() * pool.length)]])
       }
     }
     enemy = {
@@ -1123,7 +1124,7 @@ export const REPRIEVE_CHANCE = 0.55
  *  there's nothing to cleanse, so it's never a dead card. */
 export function drawReprieve(ctx: { curseCount: number } = { curseCount: 0 }): Reprieve {
   const pool = REPRIEVES.filter(r => r.kind !== 'cleanse' || ctx.curseCount > 0)
-  return pool[Math.floor(Math.random() * pool.length)]
+  return pool[Math.floor(rngNext() * pool.length)]
 }
 
 // ── Cash-out chest ───────────────────────────────────────────────────────────
@@ -1820,7 +1821,7 @@ export function drawCurse(curseTiers: Record<string, number>, depth: number, sta
     .map(c => ({ c, next: (curseTiers[c.id] ?? 0) + 1 }))
     .filter(x => x.next <= x.c.tiers.length && (x.next === 1 || depth >= CURSE_TIER2_DEPTH))
   if (eligible.length > 0) {
-    const drawn = eligible[Math.floor(Math.random() * eligible.length)]
+    const drawn = eligible[Math.floor(rngNext() * eligible.length)]
     const c = drawn.c
     // Loose Tongue II (a signed Term): a fresh curse lands straight at its
     // nastier tier instead of building up to it.
@@ -2197,7 +2198,7 @@ export function drawBoons(n: number, owned: Record<string, number> = {}, luckMul
   const out: BoonOffer[] = []
   for (let i = 0; i < n && avail.length > 0; i++) {
     const totalW = avail.reduce((a, x) => a + weightFor(x.fam), 0)
-    let r = Math.random() * totalW
+    let r = rngNext() * totalW
     let idx = 0
     for (; idx < avail.length - 1; idx++) {
       r -= weightFor(avail[idx].fam)
@@ -2220,7 +2221,7 @@ export function pickBloodOathBoon(variant: GauntletVariant = 'davy'): string | n
   const pool = GAUNTLET_BOONS.filter(fam =>
     inGauntletPool(fam.gauntlet, variant) && boonRarity(fam) !== 'legendary' && !MEGA_GATED.has(fam.id))
   if (pool.length === 0) return null
-  return pool[Math.floor(Math.random() * pool.length)].id
+  return pool[Math.floor(rngNext() * pool.length)].id
 }
 
 /** Resolve the active TideEffect for each boon the player currently holds —
@@ -2775,10 +2776,10 @@ export function drawConfluenceOffer(owned: Record<string, number>, taken: string
   const fresh = pool.filter(c => !offered.has(c.id))   // never-surfaced yet = pity priority
   // The pity (a never-surfaced synergy is guaranteed) still applies at full
   // offerMult; a reduced offerMult scales it back like any other draw.
-  if (fresh.length > 0 && offerMult < 1 && Math.random() >= offerMult) return null
-  if (fresh.length === 0 && Math.random() >= CONFLUENCE_OFFER_CHANCE * offerMult) return null
+  if (fresh.length > 0 && offerMult < 1 && rngNext() >= offerMult) return null
+  if (fresh.length === 0 && rngNext() >= CONFLUENCE_OFFER_CHANCE * offerMult) return null
   const chooseFrom = fresh.length > 0 ? fresh : pool
-  const c = chooseFrom[Math.floor(Math.random() * chooseFrom.length)]
+  const c = chooseFrom[Math.floor(rngNext() * chooseFrom.length)]
   const level = confluenceLevel(c, owned)
   const halfName = (id: string) => GAUNTLET_BOONS.find(b => b.id === id)?.name ?? id
   return {
@@ -2970,10 +2971,10 @@ export function drawConvergenceOffer(owned: Record<string, number>, taken: strin
   const pool = eligibleConvergences(owned, taken, takenConv, variant)
   if (pool.length === 0) return null
   const fresh = pool.filter(cv => !offered.has(cv.id))
-  if (fresh.length > 0 && offerMult < 1 && Math.random() >= offerMult) return null
-  if (fresh.length === 0 && Math.random() >= CONVERGENCE_OFFER_CHANCE * offerMult) return null
+  if (fresh.length > 0 && offerMult < 1 && rngNext() >= offerMult) return null
+  if (fresh.length === 0 && rngNext() >= CONVERGENCE_OFFER_CHANCE * offerMult) return null
   const chooseFrom = fresh.length > 0 ? fresh : pool
-  const cv = chooseFrom[Math.floor(Math.random() * chooseFrom.length)]
+  const cv = chooseFrom[Math.floor(rngNext() * chooseFrom.length)]
   const level = convergenceLevel(cv, owned, taken)
   const confName = (id: string) => CONFLUENCES.find(c => c.id === id)?.name ?? id
   return {

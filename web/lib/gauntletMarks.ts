@@ -11,6 +11,7 @@
 // every other category compounds.
 
 import type { TideEffect } from './tides'
+import { rngNext } from './rng'
 
 export type MarkType = 'shark' | 'whale'
 
@@ -73,7 +74,7 @@ function rollBuffs(cats: MarkCategory[], rng: () => number): MarkBuff[] {
 }
 
 /** The two Marks the Don offers on a fall — pick one. Built once so preview = commit. */
-export function rollMarkOffer(rng: () => number = Math.random): { shark: MarkBuff[]; whale: MarkBuff[] } {
+export function rollMarkOffer(rng: () => number = rngNext): { shark: MarkBuff[]; whale: MarkBuff[] } {
   return { shark: rollBuffs(SHARK_CATS, rng), whale: rollBuffs(WHALE_CATS, rng) }
 }
 

@@ -32,6 +32,8 @@
 // in other games is built to punish absence.
 
 /** Ids are stable and stored in `sea_rapport.folk_id`. Never renumber. */
+import { rngNext } from './rng'
+
 export type FolkId =
   | 'meg' | 'pell' | 'marlow' | 'fitch' | 'nance' | 'yoon'
   | 'brill' | 'turbot' | 'ream'
@@ -1671,7 +1673,7 @@ export function nextLine(folk: Folk, tier: FolkTier, seen: readonly string[]): {
   const pool = poolFor(folk, tier)
   const seenSet = new Set(seen)
   const idx = pool.findIndex((_, i) => !seenSet.has(`${folk.id}:${tier}:${i}`))
-  const at = idx >= 0 ? idx : Math.floor(Math.random() * pool.length)
+  const at = idx >= 0 ? idx : Math.floor(rngNext() * pool.length)
   return { line: pool[at], key: `${folk.id}:${tier}:${at}` }
 }
 

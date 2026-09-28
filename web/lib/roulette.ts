@@ -19,6 +19,8 @@
 // hierarchy is real (shallows fish in the first dozen, deep fish in the
 // third).
 
+import { rngNext } from './rng'
+
 export type BetType =
   | 'straight'    // 1 number   — 35:1
   | 'split'       // 2 adjacent — 17:1
@@ -215,7 +217,7 @@ export function settleSpin(bets: Bet[], winningNumber: number): SpinSettlement {
  *  Math.random is fine for a tavern minigame; the daily wager cap is
  *  the real economic guardrail. */
 export function rollWinningNumber(): number {
-  return Math.floor(Math.random() * 37)
+  return Math.floor(rngNext() * 37)
 }
 
 // ── Fish-to-number canonical mapping ──────────────────────────────────

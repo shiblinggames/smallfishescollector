@@ -14,6 +14,7 @@ import {
 } from '@/lib/bounties'
 import { hardcoreUnlocked } from '@/lib/gauntlet'
 import { grant, arrayAdd } from '@/lib/wallet'
+import { rngNext } from '@/lib/rng'
 
 // The measuring layer for BOUNTIES.
 //
@@ -538,7 +539,7 @@ export async function rerollBounty(bountyId: string): Promise<RerollResult> {
     && !(b.family && onBoard.some(o => o.family === b.family))
     && canOffer(b, cleared, ranGauntlet, hcOpen))
   if (pool.length === 0) return { error: 'Nothing else to offer' }
-  const replacement = pool[Math.floor(Math.random() * pool.length)]
+  const replacement = pool[Math.floor(rngNext() * pool.length)]
   ids[i] = replacement.id
 
   // A counter bounty needs its own baseline taken NOW, or the swap would hand

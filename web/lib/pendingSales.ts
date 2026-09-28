@@ -7,6 +7,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { grant } from '@/lib/wallet'
+import { clockNow } from './clock'
 
 // Settles all matured pending sales for a user. Returns total newly credited.
 // Safe to call from any profile-reading path (server components, server actions).
@@ -15,7 +16,7 @@ export async function settlePendingSales(
   admin?: SupabaseClient,
 ): Promise<number> {
   const db = admin ?? createAdminClient()
-  const nowIso = new Date().toISOString()
+  const nowIso = new Date(clockNow()).toISOString()
 
   // Delete first and pay from the rows that actually came back, so two
   // settles racing each other cannot both pay the same row.

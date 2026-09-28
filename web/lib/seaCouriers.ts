@@ -33,6 +33,7 @@
 // over a full window and asserts none of them touches stone.
 import { BAYS, entryOf, fromBay, type Bay } from '@/app/(app)/sea/raidWaters'
 import { HUB } from '@/app/(app)/sea/raidWaters'
+import { clockNow } from './clock'
 
 /**
  * ── A LANE'S TIMING COMES FROM ITS LENGTH ───────────────────────────────────
@@ -261,7 +262,7 @@ export function courierSlots(): { key: string; bay: string; tier: number }[] {
  * Every courier on the water right now. Derived: hand it the clock and it
  * hands back positions, with no reference to who is asking.
  */
-export function couriersAt(now: number = Date.now()): Courier[] {
+export function couriersAt(now: number = clockNow()): Courier[] {
   const out: Courier[] = []
   for (let li = 0; li < LANES.length; li++) {
     const lane = LANES[li]
@@ -325,7 +326,7 @@ export function couriersAt(now: number = Date.now()): Courier[] {
 }
 
 /** The couriers worth drawing for a camera at (x, y) with this half-extent. */
-export function couriersAround(x: number, y: number, halfW: number, halfH: number, now: number = Date.now()): Courier[] {
+export function couriersAround(x: number, y: number, halfW: number, halfH: number, now: number = clockNow()): Courier[] {
   const pad = 700
   return couriersAt(now).filter(c =>
     Math.abs(c.x - x) < halfW + pad && Math.abs(c.y - y) < halfH + pad)

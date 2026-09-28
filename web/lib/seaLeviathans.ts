@@ -26,6 +26,7 @@
 // same water, and a reload puts them back where they were.
 
 import { EXP_ORIGIN, EXP_EDGE, RAID_EDGE } from '@/app/(app)/sea/chart'
+import { clockNow } from './clock'
 
 /**
  * How long a set holds before the deep turns over. Nine minutes: not the
@@ -81,7 +82,7 @@ const unit = (h: number) => (h % 100000) / 100000
 
 /** Which window we are in. Epoch ms, and the guard is the one the squalls
  *  learned the hard way — see squallWindow. */
-export function leviathanWindow(now: number = Date.now()): number {
+export function leviathanWindow(now: number = clockNow()): number {
   if (process.env.NODE_ENV !== 'production' && now < 1e12) {
     throw new Error(
       `leviathanWindow needs epoch ms, got ${now}. This is almost certainly a `
@@ -91,7 +92,7 @@ export function leviathanWindow(now: number = Date.now()): number {
 }
 
 /** The shapes under the expedition sea this window. */
-export function leviathansAt(now: number = Date.now()): Leviathan[] {
+export function leviathansAt(now: number = clockNow()): Leviathan[] {
   const win = leviathanWindow(now)
   const out: Leviathan[] = []
   for (let i = 0; i < LEVIATHAN_COUNT; i++) {
@@ -145,7 +146,7 @@ export function leviathansAt(now: number = Date.now()): Leviathan[] {
 
 /** Where one is now, and which way it is pointing. Penned into the raid water
  *  the way a tempest is, so nothing swims off the surveyed sea. */
-export function leviathanPos(l: Leviathan, now: number = Date.now()):
+export function leviathanPos(l: Leviathan, now: number = clockNow()):
 { x: number; y: number; rot: number } {
   const into = (now - (l.endsAt - LEVIATHAN_WINDOW_MS)) / 1000
   let x = l.x + l.vx * into
@@ -169,7 +170,7 @@ export function leviathanPos(l: Leviathan, now: number = Date.now()):
  * because a shadow that blinks on is a sprite and a shadow that swells is an
  * animal.
  */
-export function leviathanRise(l: Leviathan, now: number = Date.now()): number {
+export function leviathanRise(l: Leviathan, now: number = clockNow()): number {
   const t = ((now / 1000) / l.period + l.phase) % 1
   // Up between 0.26 and 0.66 of the cycle, easing at both ends: a little over
   // a third of its life at or near the surface, and the rest of it gone.

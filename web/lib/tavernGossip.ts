@@ -45,6 +45,8 @@
 //
 // 6. NO EM DASHES. House rule, enforced by scripts/check-copy.
 
+import { clockNow } from './clock'
+
 export type Overheard = {
   /** One fragment, or a snatch of back and forth. Two voices at most: three is
    *  a scene, and a scene is something you watch rather than overhear. */
@@ -507,7 +509,7 @@ function rng(seed: number): () => number {
  * exactly `count` an hour: with eighty one lines that is twenty seven hours
  * before anybody hears a repeat, and every line gets said once first.
  */
-export function overheardFor(seed: string, now: number = Date.now(), count = 3): Heard[] {
+export function overheardFor(seed: string, now: number = clockNow(), count = 3): Heard[] {
   const deck = [...GOSSIP]
   const r = rng(hash(seed))
   for (let i = deck.length - 1; i > 0; i--) {

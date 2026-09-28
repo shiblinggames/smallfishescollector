@@ -50,6 +50,7 @@ export type FishSpecies = {
 }
 
 import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_CRATE_TIERS, zoneCrateChance } from './zoneData'
+import { rngNext } from '@/lib/rng'
 
 /**
  * HOW LONG THE BITE TAKES. The zone sets a band and the cast rolls inside it.
@@ -66,7 +67,7 @@ import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_CRATE_TIERS, zo
  */
 function fishWaitMs(habitat: string, baitType: string, fishingLevel: number, renownWaitMult = 1, rodMult = 1): number {
   const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [13000, 21000]
-  const base = zMin + Math.random() * (zMax - zMin)
+  const base = zMin + rngNext() * (zMax - zMin)
   const baitMult = getBait(baitType).waitMult
   const levelMult = 1 - ((fishingLevel - 1) / 99) * 0.33
   // No upper cap — the zone band and the multipliers need to land where they
@@ -102,9 +103,9 @@ function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat
   }
 
   const totalWeight = tiers.reduce((s, r) => s + adjustedRates[r], 0)
-  if (totalWeight === 0) return items[Math.floor(Math.random() * items.length)]
+  if (totalWeight === 0) return items[Math.floor(rngNext() * items.length)]
 
-  let rand = Math.random() * totalWeight
+  let rand = rngNext() * totalWeight
   let selectedTier = tiers[0]
   for (const r of tiers) {
     rand -= adjustedRates[r]
@@ -112,7 +113,7 @@ function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat
   }
 
   const pool = groups.get(selectedTier)!
-  return pool[Math.floor(Math.random() * pool.length)]
+  return pool[Math.floor(rngNext() * pool.length)]
 }
 
 // ── Server-side event validation ─────────────────────────────────────────────
@@ -202,7 +203,7 @@ function rollCrateTier(habitat: string): CrateTier {
   // tier and everywhere else hold four, with no branch here.
   const entries = Object.entries(dist) as [CrateTier, number][]
   const total = entries.reduce((s, [, w]) => s + w, 0)
-  let r = Math.random() * total
+  let r = rngNext() * total
   for (const [tier, w] of entries) {
     r -= w
     if (r < 0) return tier
@@ -452,7 +453,7 @@ export async function castLine(
     ? false
     : stale
       ? stale.fishId === CRATE_FISH_ID
-      : Math.random() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult * renownFishing.crateChanceMult * hs.crateChanceMult
+      : rngNext() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult * renownFishing.crateChanceMult * hs.crateChanceMult
 
   // Remember this bait so the fishing UI auto-selects it on next open
   // (FishingGame.tsx seeds selectedBait from profile.last_used_bait). Also mark
@@ -523,7 +524,7 @@ export async function castLine(
     // (the water is genuinely busier) and the wariest stays hardest to raise.
     const onLure = baitType === 'luminous' || baitType === 'golden'
     const vigilHit = onLure
-      ? released.find(f => Math.random() < vigilHuntChance(
+      ? released.find(f => rngNext() < vigilHuntChance(
           Math.min(VIGIL_MAX_RANK, (vigilState[String(f.id)]?.rank ?? 1) + 1),
           rarityBonus,
           baitType === 'golden' ? 'golden' : 'luminous',
@@ -555,13 +556,13 @@ export async function castLine(
       fish = nextInOrder ?? [...trophyPool].sort((a, b) => a.id - b.id)[0]
     } else if (vigilHit) {
       fish = vigilHit
-    } else if (nextInOrder && Math.random() < trophyChance) {
+    } else if (nextInOrder && rngNext() < trophyChance) {
       fish = nextInOrder
     } else if (regularPool.length > 0) {
       fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + hs.rarityBonus)
     } else {
       // Regulars somehow exhausted — hand back a trophy so the cast still lands.
-      fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
+      fish = trophyPool[Math.floor(rngNext() * trophyPool.length)]
     }
   } else if (firstEver) {
     // THE COMMONEST THING IN THIS WATER, chosen rather than rolled.
@@ -591,7 +592,7 @@ export async function castLine(
   // display-only), so the fast-bite fantasy is real, not cosmetic. The flag
   // drives the red blade-flash cue client-side so the player feels it land.
   let instantBite = false
-  if ((rod.instantBiteChance ?? 0) > 0 && Math.random() < rod.instantBiteChance!) {
+  if ((rod.instantBiteChance ?? 0) > 0 && rngNext() < rod.instantBiteChance!) {
     waitMs = Math.min(waitMs, 700)
     instantBite = true
   }
@@ -607,10 +608,10 @@ export async function castLine(
   // No jackpot and no double on the first one either. Both are lovely and both
   // arrive with their own celebration on top of the tour's, and two overlays
   // explaining different things at once is how a first minute gets lost.
-  const jackpotHit = !firstEver && zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
+  const jackpotHit = !firstEver && zoneJackpotChance > 0 && rngNext() < zoneJackpotChance
   const rolledJackpotMult = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
   const rolledDoubleCatch = !firstEver && !jackpotHit && !isAncientTrophyRoll && canDoubleHere
-    && (rod.doubleCatchChance ?? 0) > 0 && Math.random() < (rod.doubleCatchChance ?? 0)
+    && (rod.doubleCatchChance ?? 0) > 0 && rngNext() < (rod.doubleCatchChance ?? 0)
 
   const lockedQty = locked.catchQty > 1 ? locked.catchQty : undefined
   // A RELEASED giant fights for its next rank. vigilFor seeds rank 1 from
@@ -1169,7 +1170,7 @@ export async function reelIn(
   }
 
   // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
-  let baitSaved = result === 'perfect' && Math.random() < PERFECT_BAIT_SAVE_CHANCE
+  let baitSaved = result === 'perfect' && rngNext() < PERFECT_BAIT_SAVE_CHANCE
   // OWNING IT IS NOT CARRYING IT. This read has_phantom_hook alone, so the 25%
   // bait save applied to anyone who had ever bought the thing — which makes the
   // special slot free for this one item and only this one. Every sibling gates
@@ -1177,7 +1178,7 @@ export async function reelIn(
   // the Eye checks equipped_special_2 inside eyeFromProfile. Slot 1 only,
   // because equipSecondSpecial refuses anything but the Eye in slot 2.
   const phantomSeated = profile.has_phantom_hook && profile.equipped_special === 'phantom_hook'
-  if (!baitSaved && phantomSeated) baitSaved = Math.random() < 0.25
+  if (!baitSaved && phantomSeated) baitSaved = rngNext() < 0.25
   // THE PRIMEVAL EYE, tier 6: a perfect catch never costs bait. Absolute, so it
   // overrides both rolls above rather than adding another chance on top.
   if (!baitSaved && eye.perfectBaitSave && result === 'perfect') baitSaved = true
@@ -1570,7 +1571,7 @@ export async function reelIn(
   const deepStirs = fish.habitat === 'ancient_deep'
     && baitType !== 'luminous' && baitType !== 'golden'
     && (((profile.ancient_catches as number[] | null) ?? []).length < 6)
-    && Math.random() < 0.14
+    && rngNext() < 0.14
 
   // Who asked for this. After the inventory write, so "in your hold" is true
   // by the time anybody reads it.

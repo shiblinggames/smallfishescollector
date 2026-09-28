@@ -23,6 +23,7 @@ import {
 import { mawCharge } from '@/lib/finnItems'
 import { storesCapHours, stintDone } from '@/lib/crewBunks'
 import { grant } from '@/lib/wallet'
+import { rngNext } from '@/lib/rng'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -248,7 +249,7 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
   const names = ((pool ?? []) as { name: string }[]).map(r => r.name)
   const fish: string[] = []
   for (let i = 0; i < 3 && names.length > 0; i++) {
-    fish.push(names.splice(Math.floor(Math.random() * names.length), 1)[0])
+    fish.push(names.splice(Math.floor(rngNext() * names.length), 1)[0])
   }
 
   // A trawl can cross a fishing-level color threshold (Forest @ 50, Ice @ 75),

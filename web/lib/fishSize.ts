@@ -11,6 +11,8 @@
 //   small   25%  — percentile 0.20 – 0.50
 //   tiny    10%  — percentile 0.00 – 0.20
 
+import { rngNext } from './rng'
+
 export type FishSizeTier = 'tiny' | 'small' | 'average' | 'large' | 'trophy'
 
 export interface FishSizeRoll {
@@ -52,7 +54,7 @@ export function rollFishSize(minIn: number, maxIn: number): FishSizeRoll {
     return { lengthIn: Math.max(1, minIn || 1), tier: 'average', percentile: 0.5 }
   }
 
-  const r = Math.random()
+  const r = rngNext()
   let tier: FishSizeTier
   let pLo: number
   let pHi: number
@@ -63,7 +65,7 @@ export function rollFishSize(minIn: number, maxIn: number): FishSizeRoll {
   else               { tier = 'trophy';  pLo = 0.97; pHi = 1.00 }
 
   const span = maxIn - minIn
-  const p = pLo + Math.random() * (pHi - pLo)
+  const p = pLo + rngNext() * (pHi - pLo)
 
   // The stored LENGTH has to be readable back as the tier the player was just shown.
   // fish_personal_bests keeps only a length, so the collection derives the tier from it

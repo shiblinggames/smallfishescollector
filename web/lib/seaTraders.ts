@@ -48,6 +48,7 @@ const MAINLAND_DOORSTEP =
   (PLACES.find(p => p.id === 'mainland')?.r ?? 250) + 420 + 120
 import { NORTH_WALL, OUTER_EDGE, PLACES, YOON } from '@/app/(app)/sea/chart'
 import { clearOfSolids, BOAT_CLEAR } from '@/lib/seaSolid'
+import { clockNow } from './clock'
 
 /** The furthest a trader's patrol can carry them from their anchor. Must match
  *  the `driftR` roll in traderAt, and it is the margin the outer-edge guard
@@ -194,7 +195,7 @@ function stream(seed: number) {
 /** Days since epoch, UTC. The whole sea turns over on the same tick for
  *  everyone, which is what stops "wait for midnight in my timezone" being a
  *  strategy. */
-export function seaDay(now: number = Date.now()): number {
+export function seaDay(now: number = clockNow()): number {
   return Math.floor(now / 86400000)
 }
 
@@ -878,7 +879,7 @@ function runnerAt(cx: number, cy: number, nightIndex: number): Trader | null {
 
 /** Every cell whose trader could be on screen, plus a ring of margin so one
  *  never pops into existence at the edge of the viewport. */
-export function tradersAround(x: number, y: number, radius: number, day: number, now: number = Date.now()): Trader[] {
+export function tradersAround(x: number, y: number, radius: number, day: number, now: number = clockNow()): Trader[] {
   const out: Trader[] = []
   const clock = seaClock(now)
   const c0x = Math.floor((x - radius) / CELL)
@@ -950,7 +951,7 @@ export function yoonTrader(): Trader {
   }
 }
 
-export function traderFromKey(key: string, now: number = Date.now()): Trader | null {
+export function traderFromKey(key: string, now: number = clockNow()): Trader | null {
   // HIM FIRST, and without a clock. A runner's key carries the night it belongs
   // to and expires with it; Yoon is always there, so his key never goes stale.
   if (key === YOON.key) return yoonTrader()

@@ -11,6 +11,8 @@
 // applied client-side in run state (like the shrine / reprieve), mirroring the
 // gauntlet's existing trust model.
 
+import { rngNext } from './rng'
+
 export type MerchantItemKind = 'heal' | 'cleanse' | 'charges' | 'boon' | 'crew'
 
 export interface MerchantItem {
@@ -52,7 +54,7 @@ export function rollMerchantStock(hasCurse: boolean): MerchantItemKind[] {
   if (hasCurse) extras.push('cleanse')
   // Fisher–Yates on a copy, take two.
   for (let i = extras.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(rngNext() * (i + 1))
     ;[extras[i], extras[j]] = [extras[j], extras[i]]
   }
   return ['heal', ...extras.slice(0, 2)]

@@ -16,6 +16,8 @@
 /** Odds denominator. A perfect catch rolls 1-in-N for shiny.
  *  Tuned generous vs traditional Pokémon (1/8192) because perfect-only
  *  gating already makes the effective rate much sparser. */
+import { rngNext } from './rng'
+
 export const SHINY_ODDS = 1000
 
 /** Sell value multiplier on shiny variants. */
@@ -86,7 +88,7 @@ export function rollShiny(opts: {
   // and the gold/red 'Ancient' card treatment is the prize there.
   if (opts.sellValue === 0) return false
   // Base prob is 1/SHINY_ODDS; the golden boost scales it up multiplicatively.
-  return Math.random() * SHINY_ODDS < (opts.oddsMult ?? 1)
+  return rngNext() * SHINY_ODDS < (opts.oddsMult ?? 1)
 }
 
 /** Sell value with the shiny multiplier applied. Pure helper. */
@@ -117,6 +119,6 @@ export const SHINY_MESSAGES: readonly string[] = [
 
 /** Picks a random shiny message and substitutes the species name. */
 export function pickShinyMessage(fishName: string): string {
-  const tpl = SHINY_MESSAGES[Math.floor(Math.random() * SHINY_MESSAGES.length)]
+  const tpl = SHINY_MESSAGES[Math.floor(rngNext() * SHINY_MESSAGES.length)]
   return tpl.replace(/\{fish\}/g, fishName)
 }

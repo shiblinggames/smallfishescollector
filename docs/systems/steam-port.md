@@ -430,6 +430,14 @@ In order. Each step is worth doing even if the port never happens.
    - The server keeps drawing a fresh seed every time, so odds and behaviour are identical.
    - This unlocks deterministic tests, seeded replays for verified leaderboards, and the
      offline casino and trivia design.
+   - **DONE 2026-09-28:** `lib/rng.ts` (`rngNext`, `withRng`, `mulberry32`, `seedOf`) and
+     `lib/clock.ts` (`clockNow`, `withClock`). 25 rules modules and 14 server-action files
+     roll through `rngNext`, and 17 time-keyed modules read through `clockNow`. Defaults are
+     `Math.random` / `Date.now`, so behaviour is unchanged. The override lives on
+     `globalThis`, so every loaded copy of the module shares it. SYNC ONLY: never await inside
+     `withRng`. `scripts/check-rng.mts` (part of `npm run check`) blocks direct
+     `Math.random` / `Date.now()` in those files and proves the same seed gives the same rolls.
+     Visuals (particles, audio, camera) keep `Math.random` on purpose.
 3. **Content into the repo.**
    - Fish species, cards, card variants and crew become versioned JSON in the repo, and the
      database is seeded from it. A database-only copy has no history anyway.

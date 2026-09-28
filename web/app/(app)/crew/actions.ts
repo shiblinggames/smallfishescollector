@@ -22,6 +22,7 @@ import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } from '@/lib/crewSkins'
 import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
 import { isLegendaryLocked } from '@/lib/legendaryUnlocks'
+import { rngNext } from '@/lib/rng'
 
 const REROLL_COST = 100
 
@@ -233,7 +234,7 @@ function generateBoardRows(
     const pinned = guaranteeLegendary && slot === 0 && rarity === 4 && legendarySlug
       ? pool.find(id => (meta.get(id)?.slug ?? '').toLowerCase() === legendarySlug.toLowerCase())
       : undefined
-    const cardId = pinned ?? pool[Math.floor(Math.random() * pool.length)]
+    const cardId = pinned ?? pool[Math.floor(rngNext() * pool.length)]
     const m = meta.get(cardId)
     const profile = { power: m?.power ?? 1, dodge: m?.dodge ?? 1, fortune: m?.fortune ?? 1 }
     const c = rollCrew(cardId, rarity, profile)
@@ -579,7 +580,7 @@ export async function gambleBloodSkin(): Promise<{ skinId: string; state: NonNul
   const pool = CREW_SKINS.filter(s => groupForSlug(s.slug) !== 4 && !owned.has(s.id))
   if (pool.length === 0) return { error: 'You already own every non-legendary skin.' }
 
-  const skin = pool[Math.floor(Math.random() * pool.length)]
+  const skin = pool[Math.floor(rngNext() * pool.length)]
 
   // Blood Gems leave in place first (the guard against a double-tap), then
   // the skin lands once. If a twin request already added this same skin,

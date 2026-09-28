@@ -17,6 +17,7 @@ import { aggregateShipClasses } from '@/lib/shipClasses'
 import { GATE_NODE_TO_LEGENDARY, slugToCardKey, type UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { eyeCharge } from '@/lib/finnItems'
 import { grant, spend, walletAdd, arrayAdd } from '@/lib/wallet'
+import { rngNext } from '@/lib/rng'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -593,7 +594,7 @@ export async function rollDiceNode(
   }
 
   const bonus = Math.min(node.dice.maxBonus, Math.floor(navLevel / node.dice.bonusPerLevels))
-  const roll = 1 + Math.floor(Math.random() * 20)
+  const roll = 1 + Math.floor(rngNext() * 20)
   const total = roll + bonus
   const success = total >= option.dc
   const outcome = success ? option.win : option.miss
@@ -648,10 +649,10 @@ export async function rollDiceNode(
 function rollDpsShot(res: 'critical' | 'hit' | 'graze' | 'miss', shipMinDamage: number, totalPower: number, damagePct: number): number {
   if (res === 'miss') return 0
   const { hitMin, powerMax, critMax } = raidDamageProfile(totalPower, shipMinDamage, damagePct)
-  if (res === 'critical') { const min = shipMinDamage * 2; return Math.floor(Math.random() * (critMax - min + 1)) + min }
-  if (res === 'hit') return Math.floor(Math.random() * (powerMax - hitMin + 1)) + hitMin
+  if (res === 'critical') { const min = shipMinDamage * 2; return Math.floor(rngNext() * (critMax - min + 1)) + min }
+  if (res === 'hit') return Math.floor(rngNext() * (powerMax - hitMin + 1)) + hitMin
   const grazeMax = Math.max(1, Math.ceil(powerMax * 0.4))
-  return Math.floor(Math.random() * grazeMax) + 1
+  return Math.floor(rngNext() * grazeMax) + 1
 }
 
 // Preview for the DPS check — the player's non-crit hit range, gear/class

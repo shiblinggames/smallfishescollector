@@ -39,6 +39,7 @@
 // not a thing anyone could ever say to anyone else.
 
 import { PLACES } from '@/app/(app)/sea/chart'
+import { clockNow } from './clock'
 
 /**
  * Cell size for the bottle grid, in world pixels.
@@ -111,7 +112,7 @@ function hash(a: number, b: number): number {
  * asserts the one thing that tells them apart: epoch is past 1e12 and has been
  * since 2001, and no page has been open for thirty years.
  */
-export function bottleWindow(now: number = Date.now()): number {
+export function bottleWindow(now: number = clockNow()): number {
   if (process.env.NODE_ENV !== 'production' && now < 1e12) {
     throw new Error(
       `bottleWindow needs epoch ms, got ${now}. This is almost certainly a `
@@ -161,7 +162,7 @@ export function bottlePos(b: Bottle, nowSec: number): { x: number; y: number } {
 }
 
 /** Every bottle whose cell is near a point. Cheap: nine cells at most. */
-export function bottlesAround(x: number, y: number, radius: number, now: number = Date.now()): Bottle[] {
+export function bottlesAround(x: number, y: number, radius: number, now: number = clockNow()): Bottle[] {
   const win = bottleWindow(now)
   const out: Bottle[] = []
   const c0 = Math.floor((x - radius) / BOTTLE_CELL), c1 = Math.floor((x + radius) / BOTTLE_CELL)
@@ -176,7 +177,7 @@ export function bottlesAround(x: number, y: number, radius: number, now: number 
 }
 
 /** Re-derive one bottle from its key, for the server. Null if it never existed. */
-export function bottleFromKey(key: string, now: number = Date.now()): Bottle | null {
+export function bottleFromKey(key: string, now: number = clockNow()): Bottle | null {
   const [cxs, cys, wins] = key.split(':')
   const cx = Number(cxs), cy = Number(cys), win = Number(wins)
   if (!Number.isInteger(cx) || !Number.isInteger(cy) || !Number.isInteger(win)) return null

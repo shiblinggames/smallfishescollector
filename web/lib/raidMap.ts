@@ -21,6 +21,7 @@ import { ALL_RAIDS } from '@/lib/raidRegistry'
 import { RAID_ITEMS } from '@/lib/raidItems'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { getRaidItem } from '@/lib/raidItems'
+import { rngNext } from './rng'
 
 // Legendary-crew card art, reused as a StoryScene bust so the chapter guides
 // (Mako/Dole/Laz/Mira) can appear in cutscenes. Card art now; swap to
@@ -3347,7 +3348,7 @@ export function pickShowcaseBoss(views: RaidNodeView[]): ShowcaseBoss {
     && !v.node.label.startsWith('Challenge:'))
 
   const chosen = beaten.length > 0
-    ? beaten[Math.floor(Math.random() * beaten.length)]
+    ? beaten[Math.floor(rngNext() * beaten.length)]
     : null
 
   if (chosen) {

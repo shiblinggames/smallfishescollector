@@ -1,5 +1,7 @@
+import { clockNow } from './clock'
+
 export function getWeekStart(): string {
-  const now = new Date()
+  const now = new Date(clockNow())
   const day = now.getUTCDay() // 0 = Sunday
   const daysToMonday = day === 0 ? -6 : 1 - day
   const monday = new Date(now)
@@ -9,6 +11,6 @@ export function getWeekStart(): string {
 }
 
 export function daysUntilReset(): number {
-  const day = new Date().getUTCDay()
+  const day = new Date(clockNow()).getUTCDay()
   return (8 - day) % 7 || 7
 }

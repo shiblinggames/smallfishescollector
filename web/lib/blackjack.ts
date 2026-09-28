@@ -19,6 +19,8 @@
 //     half the original wager; pays 2:1 if dealer has natural BJ.
 //   - Eight-deck shoe, reshuffled every hand (no card counting carry).
 
+import { rngNext } from './rng'
+
 export type Rank = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'T' | 'J' | 'Q' | 'K'
 export type Suit = 'H' | 'D' | 'C' | 'S'
 
@@ -50,7 +52,7 @@ export function newShoe(): Card[] {
   // tavern minigame (not anti-cheat-critical; daily cap is the real
   // economic guardrail).
   for (let i = shoe.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(rngNext() * (i + 1))
     ;[shoe[i], shoe[j]] = [shoe[j], shoe[i]]
   }
   return shoe

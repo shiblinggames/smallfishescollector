@@ -30,6 +30,8 @@
 /** Discrete effect kinds. Each carries the data needed to apply it.
  *  Some are run-scoped, some are one-fight, some are one-shot tokens.
  *  Scope is baked into the kind name or noted in a `scope` field.   */
+import { rngNext } from './rng'
+
 export type TideEffect =
   // ── Broad outgoing damage ────────────────────────────────────────
   /** Multiplier on EVERY outgoing damage roll (fire AND volley). */
@@ -965,7 +967,7 @@ export const PRE_BOSS_REPRIEVE: TideEvent = {
 function shuffleTides(arr: TideEvent[]): TideEvent[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(rngNext() * (i + 1))
     ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
@@ -981,7 +983,7 @@ export function drawTides(n: number, maxTier: number): TideEvent[] {
   const t1 = shuffleTides(TIDE_POOL.filter(t => t.tier === 1 && t.tier <= maxTier))
   const t2 = shuffleTides(TIDE_POOL.filter(t => t.tier >= 2 && t.tier <= maxTier))
   const picks: TideEvent[] = []
-  if (t2.length > 0 && Math.random() < 0.55) picks.push(t2[0])   // at most ONE tier-2
+  if (t2.length > 0 && rngNext() < 0.55) picks.push(t2[0])   // at most ONE tier-2
   for (const e of t1) { if (picks.length >= n) break; picks.push(e) }
   // Defensive top-up if the tier-1 pool somehow can't fill the slots.
   if (picks.length < n) for (const e of t2.slice(1)) { if (picks.length >= n) break; picks.push(e) }

@@ -47,6 +47,7 @@ import {
   findNextBeat, pickRandomLine,
   type FinnSceneLine,
 } from '@/lib/finn'
+import { rngNext } from '@/lib/rng'
 
 /**
  * THE JOB AS STORED, with the counters it will be judged against.
@@ -502,7 +503,7 @@ export async function speakToFinn(atIndex: number): Promise<FinnTalk | null> {
     // explanation is indistinguishable from a campaign that has ended, and
     // this one has eighteen rungs and a finale on the far side of it.
     lines = [pendingFinnQuest(row.finn_quests_done ?? [])!.gated]
-  } else if (revealed && Math.random() < FINN_EPILOGUE_LORE_CHANCE) {
+  } else if (revealed && rngNext() < FINN_EPILOGUE_LORE_CHANCE) {
     lines = [pickRandomLine(FINN_EPILOGUE_LORE_LINES)]
   } else {
     lines = [pickRandomLine(idlePool)]
@@ -528,4 +529,5 @@ export async function speakToFinn(atIndex: number): Promise<FinnTalk | null> {
     encounters: newEncounters, seenBeats: newSeen, revealed,
     at: { x: h.x, y: h.y, bandName: h.bandName },
   }
-}
+}
+

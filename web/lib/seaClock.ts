@@ -38,6 +38,8 @@
 // migrate, and a rare trader cannot be conjured by a client claiming it is dark.
 
 /** One full turn of the sea's day, in milliseconds. */
+import { clockNow } from './clock'
+
 export const CYCLE_MS = 48 * 60 * 1000
 
 /** How much of the cycle is night. A third — long enough to sail out and find
@@ -77,7 +79,7 @@ export type SeaClock = {
   nightIndex: number
 }
 
-export function seaClock(now: number = Date.now()): SeaClock {
+export function seaClock(now: number = clockNow()): SeaClock {
   const t = (now % CYCLE_MS) / CYCLE_MS
 
   // Laid out so night sits in the middle of the cycle rather than across the
@@ -143,7 +145,7 @@ export const PHASE_LABEL: Record<SeaPhase, string> = {
  * long it has left ("Dark water · first light in 6m"), so the cycle reads as a
  * clock you can plan by rather than a colour. Same boundaries seaClock draws.
  */
-export function nextPhase(now: number = Date.now()): { phase: SeaPhase; ms: number } {
+export function nextPhase(now: number = clockNow()): { phase: SeaPhase; ms: number } {
   const nightStart = 0.5 - NIGHT_FRACTION / 2
   const nightEnd = 0.5 + NIGHT_FRACTION / 2
   const FADE = 0.09
@@ -177,7 +179,7 @@ export function nextPhase(now: number = Date.now()): { phase: SeaPhase; ms: numb
  */
 export const SUN_BASE = -Math.PI * 0.75
 const SUN_SWING = (45 * Math.PI) / 180
-export function sunAt(now: number = Date.now()): { angle: number; len: number; up: boolean } {
+export function sunAt(now: number = clockNow()): { angle: number; len: number; up: boolean } {
   const nightStart = 0.5 - NIGHT_FRACTION / 2
   const nightEnd = 0.5 + NIGHT_FRACTION / 2
   const t = (now % CYCLE_MS) / CYCLE_MS
@@ -191,7 +193,7 @@ export function sunAt(now: number = Date.now()): { angle: number; len: number; u
 
 /** Milliseconds until the next night begins. Used to tell a player when to come
  *  back rather than leaving them to work it out. */
-export function msToNight(now: number = Date.now()): number {
+export function msToNight(now: number = clockNow()): number {
   const nightStart = 0.5 - NIGHT_FRACTION / 2
   const t = (now % CYCLE_MS) / CYCLE_MS
   const delta = t < nightStart ? nightStart - t : 1 - t + nightStart

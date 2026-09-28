@@ -52,6 +52,7 @@
 
 import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, YOON, HAIL_RANGE } from '@/app/(app)/sea/chart'
 import { ISLES, ashoreRange } from '@/lib/seaIsles'
+import { clockNow } from './clock'
 
 /**
  * How close you have to be to hail him.
@@ -361,7 +362,7 @@ const FINN_LAP = 96
  * The count still rides in the key: that is an agreement check between client
  * and server about WHICH meeting this is, and it is still a moving number.
  */
-export function finnHaunt(encounters: number, _fishingLevel: number, nowSec = Date.now() / 1000): FinnHaunt {
+export function finnHaunt(encounters: number, _fishingLevel: number, nowSec = clockNow() / 1000): FinnHaunt {
   const n = Math.max(0, Math.min(100_000, Math.floor(encounters)))
   // The same ellipse the regulars swing on: round in x, flattened in y,
   // because this chart is seen at an angle and a true circle would read as a

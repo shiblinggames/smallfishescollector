@@ -6,6 +6,8 @@
 // FORTUNE_HEAL_SCALE)]`, so the kit sets the floor + base ceiling and
 // Fortune luck-scales the ceiling.
 
+import { rngNext } from './rng'
+
 export interface RepairKitDef {
   id: string
   /** Upgrade-ladder position. Kits must be bought in tier order. */
@@ -134,5 +136,5 @@ export function repairKitRange(kit: RepairKitDef, totalFortune: number): { min: 
 /** Roll a single heal value from a kit + Fortune. Inclusive range. */
 export function rollRepairKitHeal(kit: RepairKitDef, totalFortune: number): number {
   const { min, max } = repairKitRange(kit, totalFortune)
-  return min + Math.floor(Math.random() * (max - min + 1))
+  return min + Math.floor(rngNext() * (max - min + 1))
 }

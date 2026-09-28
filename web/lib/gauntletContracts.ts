@@ -14,6 +14,7 @@
 // curses already use.
 
 import { roundContribution } from './gauntlet'
+import { rngNext } from './rng'
 
 export type ContractStake = 1 | 2 | 3   // small job / real work / the big score
 
@@ -139,7 +140,7 @@ export const CONTRACT_MIN_DEPTH = 4
 
 /** Roll whether the Don offers a job at this depth, and which. Returns null for
  *  no offer. RNG injectable for determinism where a caller needs it. */
-export function rollContractOffer(depth: number, rng: () => number = Math.random): ContractKind | null {
+export function rollContractOffer(depth: number, rng: () => number = rngNext): ContractKind | null {
   if (depth < CONTRACT_MIN_DEPTH) return null
   if (rng() >= CONTRACT_OFFER_CHANCE) return null
   return ALL_CONTRACT_KINDS[Math.floor(rng() * ALL_CONTRACT_KINDS.length)]
@@ -191,7 +192,7 @@ function plunderPenalty(stake: ContractStake, depth: number): number {
 }
 
 /** Build the offer for a chosen job + stake at the current depth. */
-export function buildContractOffer(kind: ContractKind, stake: ContractStake, depth: number, rng: () => number = Math.random): ContractOffer {
+export function buildContractOffer(kind: ContractKind, stake: ContractStake, depth: number, rng: () => number = rngNext): ContractOffer {
   const param = CONTRACTS[kind].param(stake, depth)
   // Reward — mostly Fathoms; the big score can hand you a free boon, and a
   // clean job sometimes patches you up.

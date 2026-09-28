@@ -10,6 +10,8 @@
  * instead of inlining the (is_premium && expires_at && expires_at > now)
  * pattern. Keeps the logic in one place if we change the rules again.
  */
+import { clockNow } from './clock'
+
 export interface PremiumProfileRow {
   is_premium?: boolean | null
   premium_expires_at?: string | null
@@ -19,5 +21,5 @@ export function isPremiumActive(profile: PremiumProfileRow | null | undefined): 
   if (!profile?.is_premium) return false
   // Null/undefined expires_at = lifetime membership.
   if (!profile.premium_expires_at) return true
-  return new Date(profile.premium_expires_at) > new Date()
+  return new Date(profile.premium_expires_at) > new Date(clockNow())
 }

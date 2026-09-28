@@ -19,6 +19,8 @@
 // it never gets to decide that one happened, what kind it is, or what it pays.
 
 /** What Davy is willing to sweeten. The three levers a cash-out actually has. */
+import { rngNext } from './rng'
+
 export type OfferKind = 'coin' | 'fathoms' | 'chest'
 
 export interface DavyOffer {
@@ -149,7 +151,7 @@ export function rollOffer(opts: {
   rand?: () => number
 }): OfferState {
   const { prev, depth, hpPct, chestWorthOffering } = opts
-  const rand = opts.rand ?? Math.random
+  const rand = opts.rand ?? rngNext
 
   // ONE ROLL PER DEPTH, AND THE ANSWER STANDS. Everything below is a fresh
   // random decision, and this function also PERSISTS what it returns — so a

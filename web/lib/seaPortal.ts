@@ -13,6 +13,7 @@
 import { ISLES } from './seaIsles'
 import { PLACES } from '@/app/(app)/sea/chart'
 import { clearOfSolids, BOAT_CLEAR } from './seaSolid'
+import { rngNext } from './rng'
 
 /**
  * Where the well lies. OFF THE HOMESTEAD'S OWN BEACH, which is what it is for.
@@ -228,8 +229,8 @@ export function warpPoint(tier: PortalTier): { x: number; y: number } {
   for (let i = 0; i < 12; i++) {
     // ±55° around due south (screen-down is +y, so due south is +90° in
     // standard atan2 terms; sampled directly as an offset from it).
-    const theta = (Math.PI / 2) + (Math.random() * 2 - 1) * (55 * Math.PI / 180)
-    const r = band.inner + pad + Math.random() * (band.outer - band.inner - pad * 2)
+    const theta = (Math.PI / 2) + (rngNext() * 2 - 1) * (55 * Math.PI / 180)
+    const r = band.inner + pad + rngNext() * (band.outer - band.inner - pad * 2)
     const x = Math.cos(theta) * r
     const y = Math.sin(theta) * r
     if (y < 400) continue // never the harbour approaches

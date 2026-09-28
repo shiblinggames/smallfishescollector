@@ -16,6 +16,7 @@ import {
 } from '@/lib/seaFolk'
 import { RODS } from '@/lib/rods'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
+import { rngNext } from '@/lib/rng'
 
 /** UTC date string, the same convention lib/dailyChallenges and lib/bounties
  *  use, so every daily thing in the game turns over together. */
@@ -204,7 +205,7 @@ export async function talkToFolk(folkId: string): Promise<FolkTalk | { error: st
 /** One line out of a pool. Never empty: every pool ships with at least one, and
  *  a folk whose lines are still being written has exactly one. */
 function pickLine(pool: string[]): string {
-  return pool[Math.floor(Math.random() * pool.length)] ?? pool[0] ?? ''
+  return pool[Math.floor(rngNext() * pool.length)] ?? pool[0] ?? ''
 }
 
 /**

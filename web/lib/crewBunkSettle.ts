@@ -13,6 +13,7 @@ import { grantXPPairs, type CrewXPGrant } from './crewXPGrant'
 import { bunkCount, bunkRatePerHour, hallBunksOpen, canBunk, isLeviathanSlot, stintDone, stintXP, storesCapHours } from './crewBunks'
 import { rollTrait, encodeTraitId, type CrewRarity } from './crewGen'
 import { netTraitStats, traitLabel } from './crewEffects'
+import { clockNow } from './clock'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -139,7 +140,7 @@ export async function settleBunks(
 ): Promise<BunkSettlement> {
   const EMPTY: BunkSettlement = { grants: [], freed: [], upgrades: [] }
   if (rows.length === 0) return EMPTY
-  const nowMs = Date.now()
+  const nowMs = clockNow()
 
   // Each row on its own terms, not the hall's current ones.
   const done = rows.filter(r => {
@@ -259,7 +260,7 @@ export async function releaseBunk(admin: Admin, userId: string, crewId: number):
 /** Crew ids whose stint is STILL RUNNING. Hard-locked: no reassigning, no
  *  dismissing, no pulling them out early. */
 export async function lockedBunkCrewIds(admin: Admin, userId: string, liveCap: number): Promise<number[]> {
-  const nowMs = Date.now()
+  const nowMs = clockNow()
   const rows = await loadBunks(admin, userId)
   return rows
     .filter(r => !stintDone(r.since, nowMs, r.cap ?? liveCap))

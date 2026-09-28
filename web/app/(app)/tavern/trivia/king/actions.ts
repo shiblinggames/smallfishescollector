@@ -28,6 +28,7 @@ import {
   type KingRevealResult,
   type AnswerKingResult,
 } from '../constants'
+import { rngNext } from '@/lib/rng'
 
 interface AttemptRow {
   rung: number
@@ -309,7 +310,7 @@ export async function spendKingFiftyFifty(): Promise<{ removed: number[] } | { e
   // Strike two of the three wrong options at random.
   const q = ladder[a.rung]
   const wrong = [0, 1, 2, 3].filter(i => i !== q.correct_index)
-  wrong.splice(Math.floor(Math.random() * wrong.length), 1)
+  wrong.splice(Math.floor(rngNext() * wrong.length), 1)
   const removed = wrong.sort((x, y) => x - y)
 
   // Spent once, guarded on it still being unspent on this rung. Using the

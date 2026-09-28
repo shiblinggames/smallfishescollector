@@ -1,3 +1,5 @@
+import { clockNow } from './clock'
+
 export type DailyChallengeType = 'catch_any' | 'catch_zone' | 'land_perfects' | 'catch_rarity' | 'earn_value'
 
 export interface DailyChallenge {
@@ -224,7 +226,7 @@ export async function getEffectiveDailyChallenges(
 }
 
 export function getTodayUTC(): string {
-  return new Date().toISOString().slice(0, 10)
+  return new Date(clockNow()).toISOString().slice(0, 10)
 }
 
 export function challengeIncrement(

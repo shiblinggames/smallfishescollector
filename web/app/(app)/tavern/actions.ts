@@ -7,6 +7,7 @@ import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { spend, grant } from '@/lib/wallet'
 import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT, SLOT_BONUS_MULT } from './constants'
 import type { SlotSymbolId } from './constants'
+import { rngNext } from '@/lib/rng'
 
 // Crown & Anchor was retired 2026-06-06 — replaced by Blackjack
 // (app/(app)/tavern/blackjack/actions.ts). The dice_rolls table stays
@@ -59,7 +60,7 @@ export async function getSlotsJackpot(): Promise<SlotsJackpotState> {
 
 function slotWeightedRandom(): SlotSymbolId {
   const total = SLOT_SYMBOLS_LIST.reduce((s, sym) => s + sym.weight, 0)
-  let r = Math.random() * total
+  let r = rngNext() * total
   for (const sym of SLOT_SYMBOLS_LIST) {
     r -= sym.weight
     if (r <= 0) return sym.id
@@ -74,7 +75,7 @@ function slotRollReels(): SlotSymbolId[] {
 // ── Bonus round: its own richer pool (base fish + Jellyfish WILD, no hook) ──
 function slotBonusWeightedRandom(): SlotSymbolId {
   const total = SLOT_SYMBOLS_LIST.reduce((s, sym) => s + sym.bonusWeight, 0)
-  let r = Math.random() * total
+  let r = rngNext() * total
   for (const sym of SLOT_SYMBOLS_LIST) {
     r -= sym.bonusWeight
     if (r <= 0) return sym.id

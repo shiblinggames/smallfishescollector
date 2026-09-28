@@ -41,6 +41,7 @@
 
 import { OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE } from '@/app/(app)/sea/chart'
 import { BAYS, BAY_MOOD, bayCentre } from '@/app/(app)/sea/raidWaters'
+import { clockNow } from './clock'
 
 /** How long a set of squalls stands before the weather turns. */
 export const SQUALL_WINDOW_MS = 14 * 60_000
@@ -101,7 +102,7 @@ const unit = (h: number) => (h % 100000) / 100000
  * Epoch has been past 1e12 since 2001 and no page has been open for thirty
  * years, which is the one thing that tells them apart.
  */
-export function squallWindow(now: number = Date.now()): number {
+export function squallWindow(now: number = clockNow()): number {
   if (process.env.NODE_ENV !== 'production' && now < 1e12) {
     throw new Error(
       `squallWindow needs epoch ms, got ${now}. This is almost certainly a `
@@ -118,7 +119,7 @@ export function squallWindow(now: number = Date.now()): number {
  * a car park. This is for the open sea, which is also the only part of the
  * chart big enough for a storm to be somewhere you go.
  */
-export function squallsAt(now: number = Date.now()): Squall[] {
+export function squallsAt(now: number = clockNow()): Squall[] {
   // One answer per window. The hull asks every frame (squallAt), and it was
   // rehashing and rebuilding three arrays each time for a list that changes
   // once every fourteen minutes. Read-only: callers must not mutate it.
@@ -270,7 +271,7 @@ function tempestsAt(now: number): Squall[] {
  * it has no edge of its own to check the wall against, and it is drifting at
  * three pixels a second.
  */
-export function squallPos(s: Squall, now: number = Date.now()): { x: number; y: number } {
+export function squallPos(s: Squall, now: number = clockNow()): { x: number; y: number } {
   const into = (now - (s.endsAt - SQUALL_WINDOW_MS)) / 1000
   let x = s.x + s.vx * into
   let y = s.y + s.vy * into
@@ -314,7 +315,7 @@ export function squallPos(s: Squall, now: number = Date.now()): { x: number; y: 
  * thickening around you over a few seconds, and a hard edge would be a wall of
  * water with a doorway in it.
  */
-export function squallAt(x: number, y: number, now: number = Date.now()): { squall: Squall; deep: number } | null {
+export function squallAt(x: number, y: number, now: number = clockNow()): { squall: Squall; deep: number } | null {
   let best: { squall: Squall; deep: number } | null = null
   for (const s of squallsAt(now)) {
     const at = squallPos(s, now)

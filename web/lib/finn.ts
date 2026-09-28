@@ -13,6 +13,8 @@
 // beats and the first-trophy beat let the mask slip a little. The full
 // reveal (he IS the Finndicate) is deferred to the end-game cross-game merge.
 
+import { rngNext } from './rng'
+
 export const FINN_NAME = 'Finn'
 
 // Visuals — uses the existing CharacterAvatar component so we don't need
@@ -619,7 +621,7 @@ export const FINN_EPILOGUE_LORE_LINES: string[] = [
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export function pickRandomLine(pool: readonly string[]): string {
-  return pool[Math.floor(Math.random() * pool.length)] ?? ''
+  return pool[Math.floor(rngNext() * pool.length)] ?? ''
 }
 
 /**

@@ -7,6 +7,7 @@ import { getEffectiveDailyChallenges, getTodayUTC, DAILY_SWEEP_GEMS, type DailyC
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
 import { grant } from '@/lib/wallet'
+import { rngNext } from '@/lib/rng'
 
 /** Tier weights for the Master challenge's crate.
  *
@@ -25,7 +26,7 @@ const MASTER_CRATE_WEIGHTS: [CrateTier, number][] = [
 
 function rollMasterCrateTier(): CrateTier {
   const total = MASTER_CRATE_WEIGHTS.reduce((sum, [, w]) => sum + w, 0)
-  let roll = Math.random() * total
+  let roll = rngNext() * total
   for (const [tier, weight] of MASTER_CRATE_WEIGHTS) {
     roll -= weight
     if (roll < 0) return tier

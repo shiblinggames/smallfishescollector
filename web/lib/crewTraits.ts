@@ -30,6 +30,8 @@
 // with, every bought crew still tops out at 3, and nothing about existing
 // balance moves. A 4 remains something only the top hall can produce.
 
+import { rngNext } from './rng'
+
 export interface CrewTraitDef {
   /** Its own name, shown wherever the trait is. Unique per stat line. */
   name: string
@@ -120,5 +122,5 @@ export function traitDefFor(t: { power: number; dodge: number; fortune: number }
 
 /** Draw one trait, uniformly. The whole roll. */
 export function drawDeepTrait(): CrewTraitDef {
-  return CREW_TRAITS[Math.floor(Math.random() * CREW_TRAITS.length)]
+  return CREW_TRAITS[Math.floor(rngNext() * CREW_TRAITS.length)]
 }

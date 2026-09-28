@@ -16,6 +16,8 @@
 // Not 'use server': a 'use server' module silently drops every non-async
 // export, which would take the entire catalogue with it.
 
+import { clockNow } from './clock'
+
 export type BountyTier = 'easy' | 'medium' | 'hard' | 'elite'
 
 /** How a bounty is counted. Each of these maps to something the game ALREADY
@@ -457,5 +459,5 @@ export function rollBounties(
 /** UTC day, matching the fishing dailies exactly so both boards turn over on
  *  the same tick and nobody sees one reset without the other. */
 export function bountyToday(): string {
-  return new Date().toISOString().slice(0, 10)
+  return new Date(clockNow()).toISOString().slice(0, 10)
 }

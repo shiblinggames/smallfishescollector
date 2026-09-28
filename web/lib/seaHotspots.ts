@@ -24,6 +24,7 @@
 // what a mid-tier rod already does, and none of them touch payouts.
 
 import { PLACES } from '@/app/(app)/sea/chart'
+import { clockNow } from './clock'
 
 /** How long a set of hotspots stands before they all move. */
 export const HOTSPOT_WINDOW_MS = 10 * 60_000
@@ -160,7 +161,7 @@ function bands() {
  * band for the same reason: a window where all three sat in the Ancient Deep
  * would be no window at all for most of the roster.
  */
-export function hotspotsAt(now: number = Date.now()): Hotspot[] {
+export function hotspotsAt(now: number = clockNow()): Hotspot[] {
   const win = Math.floor(now / HOTSPOT_WINDOW_MS)
   const endsAt = (win + 1) * HOTSPOT_WINDOW_MS
   const zones = bands()
@@ -212,7 +213,7 @@ export function hotspotsAt(now: number = Date.now()): Hotspot[] {
 }
 
 /** Which hotspot, if any, covers this point. */
-export function hotspotAt(x: number, y: number, now: number = Date.now()): Hotspot | null {
+export function hotspotAt(x: number, y: number, now: number = clockNow()): Hotspot | null {
   for (const h of hotspotsAt(now)) {
     if (Math.hypot(x - h.x, y - h.y) <= h.r) return h
   }

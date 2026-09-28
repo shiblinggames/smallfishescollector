@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { CRATE_PET_CHANCE, rollPet } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
 import { arrayAdd, grant } from '@/lib/wallet'
+import { rngNext } from './rng'
 
 // Crate loot tables + the shared roller. Kept OUT of the fishing 'use server'
 // actions file on purpose: this is a plain module, so grantCrateLoot is NOT a
@@ -147,7 +148,7 @@ export async function grantCrateLoot(
   // that is the rarest moment in fishing paying nothing at all. A dupe now falls
   // through to the normal roll and rides along on it for the reveal.
   let dupePet: DupePet | undefined
-  if (Math.random() < CRATE_PET_CHANCE[tier]) {
+  if (rngNext() < CRATE_PET_CHANCE[tier]) {
     const pet = rollPet()
     // Added in place, never by writing back the list read above: a concurrent
     // grant would otherwise be wiped. false means it landed aboard meanwhile,
@@ -187,12 +188,12 @@ export async function grantCrateLoot(
     { outcome: 'cosmetic',  weight: cosmeticWeight },
   ]
   const total = pool.reduce((s, o) => s + o.weight, 0)
-  let rand = Math.random() * total
+  let rand = rngNext() * total
   let outcome: Outcome = 'doubloons'
   for (const o of pool) { rand -= o.weight; if (rand <= 0) { outcome = o.outcome; break } }
 
   if (outcome === 'cosmetic') {
-    const picked = unownedCosmetics[Math.floor(Math.random() * unownedCosmetics.length)]
+    const picked = unownedCosmetics[Math.floor(rngNext() * unownedCosmetics.length)]
     if (picked.kind === 'skin') {
       await arrayAdd(admin, userId, 'unlocked_character_colors', picked.id)
       return pay({ type: 'skin', skinId: picked.id, skinName: picked.name })
@@ -207,7 +208,7 @@ export async function grantCrateLoot(
 
   if (outcome === 'doubloons') {
     const [min, max] = CRATE_DOUBLOON_RANGE[tier]
-    const amount = Math.floor(min + Math.random() * (max - min + 1))
+    const amount = Math.floor(min + rngNext() * (max - min + 1))
     // Paid in place, so a sale landing at the same moment is not overwritten.
     const newDoubloons = await grant(admin, userId, 'doubloons', amount)
     // The new total rides along (KAN-61): the purse was paid on the server
@@ -219,7 +220,7 @@ export async function grantCrateLoot(
   // Bait — weighted random pick from this tier's pool
   const baitPool = CRATE_BAIT_POOLS[tier]
   const totalBaitWeight = baitPool.reduce((s, b) => s + b.weight, 0)
-  let baitRand = Math.random() * totalBaitWeight
+  let baitRand = rngNext() * totalBaitWeight
   let picked = baitPool[0]
   for (const b of baitPool) { baitRand -= b.weight; if (baitRand <= 0) { picked = b; break } }
   const qty = CRATE_BAIT_QTY[tier]

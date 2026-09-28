@@ -13,6 +13,8 @@
 // Pet ids stay stable across releases. Persisted to
 // profiles.unlocked_pets (text[]) + profiles.equipped_pet (text).
 
+import { rngNext } from './rng'
+
 export type PetSpecies = 'parrot' | 'monkey' | 'seal' | 'lizard' | 'raccoon' | 'crab' | 'plesiosaur'
 
 export interface PetDef {
@@ -234,7 +236,7 @@ export function rollPet(): PetDef {
   // the weight table is here so adding e.g. 'cat' later is one entry.
   const speciesEntries = Object.entries(PET_SPECIES_WEIGHTS) as Array<[PetSpecies, number]>
   const totalSpeciesWeight = speciesEntries.reduce((s, [, w]) => s + w, 0)
-  let speciesRoll = Math.random() * totalSpeciesWeight
+  let speciesRoll = rngNext() * totalSpeciesWeight
   let species: PetSpecies = 'parrot'
   for (const [s, w] of speciesEntries) {
     speciesRoll -= w
@@ -244,7 +246,7 @@ export function rollPet(): PetDef {
   // Variant roll within the species pool, weighted.
   const pool = PETS.filter(p => p.species === species && !p.earnedOnly)
   const totalWeight = pool.reduce((s, p) => s + p.weight, 0)
-  let variantRoll = Math.random() * totalWeight
+  let variantRoll = rngNext() * totalWeight
   for (const p of pool) {
     variantRoll -= p.weight
     if (variantRoll <= 0) return p

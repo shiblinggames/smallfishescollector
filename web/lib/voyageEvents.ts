@@ -194,6 +194,7 @@ export { ROUTE_CONFIGS, effectiveCrewLossChance } from './voyageRoutes'
 import type { VoyageRoute, VoyageEvent, VoyageEventType } from './voyageRoutes'
 import { ROUTE_CONFIGS, effectiveCrewLossChance } from './voyageRoutes'
 import { rollVoyageLoot } from './voyageRoll'
+import { rngNext } from './rng'
 
 export interface VoyageResult {
   events: VoyageEvent[]
@@ -207,11 +208,11 @@ export interface VoyageResult {
 }
 
 function rand(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min
+  return Math.floor(rngNext() * (max - min + 1)) + min
 }
 
 function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]
+  return arr[Math.floor(rngNext() * arr.length)]
 }
 
 // Per-event chance for a discovery/encounter to drop SOME lure
@@ -240,8 +241,8 @@ const GOLDEN_SHARE = 0.30
 
 function rollLureDrop(route: VoyageRoute): 'luminous' | 'golden' | null {
   const p = LURE_RATE_PER_EVENT[route]
-  if (Math.random() >= p) return null
-  return Math.random() < GOLDEN_SHARE ? 'golden' : 'luminous'
+  if (rngNext() >= p) return null
+  return rngNext() < GOLDEN_SHARE ? 'golden' : 'luminous'
 }
 
 // ── The voyage stat curves, in ONE place ────────────────────────────────────
@@ -296,8 +297,8 @@ export function generateVoyageEvents(
   const crewLost: number[] = []
   if (!noCrewRisk && crew.length > 1) {
     const chance = effectiveCrewLossChance(route, fortune)
-    if (Math.random() < chance) {
-      const victim = crew[1 + Math.floor(Math.random() * (crew.length - 1))]
+    if (rngNext() < chance) {
+      const victim = crew[1 + Math.floor(rngNext() * (crew.length - 1))]
       if (victim?.variantId != null) crewLost.push(victim.variantId)
     }
   }
@@ -317,12 +318,12 @@ export function generateVoyageEvents(
   // voyage actually went, so the story and the payout never contradict.
   const lost = crewLost.length > 0
   const pool =
-    lost                      ? (Math.random() < 0.5 ? ENCOUNTER_CREW_LOSS : DANGER_CREW_LOSS)
-    : loot.outcome === 'triumph' ? (Math.random() < 0.5 ? DISCOVERY_SUCCESS : ENCOUNTER_CRUSH)
-    : loot.outcome === 'setback' ? (Math.random() < 0.5 ? DANGER_SETBACK : WEATHER_FAIL)
+    lost                      ? (rngNext() < 0.5 ? ENCOUNTER_CREW_LOSS : DANGER_CREW_LOSS)
+    : loot.outcome === 'triumph' ? (rngNext() < 0.5 ? DISCOVERY_SUCCESS : ENCOUNTER_CRUSH)
+    : loot.outcome === 'setback' ? (rngNext() < 0.5 ? DANGER_SETBACK : WEATHER_FAIL)
     :                              (crew.length > 1 ? PEACEFUL_CREW : PEACEFUL_SOLO)
 
-  const template = pool[Math.floor(Math.random() * pool.length)]
+  const template = pool[Math.floor(rngNext() * pool.length)]
   const type: VoyageEventType =
     lost ? 'danger' : loot.outcome === 'triumph' ? 'discovery' : loot.outcome === 'setback' ? 'danger' : 'peaceful'
 

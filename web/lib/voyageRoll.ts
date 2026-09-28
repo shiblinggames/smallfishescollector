@@ -19,6 +19,7 @@
 // Everything a voyage pays is `route base x outcome x fortune x a small roll`.
 
 import { ROUTE_CONFIGS, type VoyageRoute } from './voyageRoutes'
+import { rngNext } from './rng'
 
 export type VoyageOutcome = 'triumph' | 'success' | 'setback'
 
@@ -183,7 +184,7 @@ export function meanOutcomeMult(power: number, route: VoyageRoute): number {
   return c.triumph * OUTCOME_MULT.triumph + success * OUTCOME_MULT.success + c.setback * OUTCOME_MULT.setback
 }
 
-export function rollOutcome(power: number, route: VoyageRoute, rng: () => number = Math.random): VoyageOutcome {
+export function rollOutcome(power: number, route: VoyageRoute, rng: () => number = rngNext): VoyageOutcome {
   const { triumph, setback } = outcomeChances(power, route)
   const r = rng()
   if (r < triumph) return 'triumph'
@@ -232,7 +233,7 @@ export function rollVoyageLoot(
   route: VoyageRoute,
   power: number,
   fortune: number,
-  rng: () => number = Math.random,
+  rng: () => number = rngNext,
 ): VoyageLoot {
   const base = ROUTE_PAYOUTS[route]
   const outcome = rollOutcome(power, route, rng)

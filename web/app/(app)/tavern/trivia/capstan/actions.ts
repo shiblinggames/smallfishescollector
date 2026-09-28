@@ -30,6 +30,7 @@ import {
   type CapstanLetterResult,
   type CapstanSolveResult,
 } from '../constants'
+import { rngNext } from '@/lib/rng'
 
 interface CapstanRun {
   /** EVERY letter tried, hit or miss. Misses live here too so the board can grey
@@ -162,7 +163,7 @@ export async function spinCapstan(index: number): Promise<CapstanSpinResult | { 
   const pool = CAPSTAN_WHEEL
     .map((w, i) => ({ w, i }))
     .filter(({ w }) => !spent || typeof w === 'number')
-  const pick = pool[Math.floor(Math.random() * pool.length)]
+  const pick = pool[Math.floor(rngNext() * pool.length)]
   const wedgeIndex = pick.i
   const wedge = pick.w
 
