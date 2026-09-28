@@ -728,6 +728,26 @@ In order. Each step is worth doing even if the port never happens.
    Verified live on catman: 8 casts through `api.fishing` took 8 worms, and 2 landings logged
    and put 4 in the hold.
 
+   **STEP 8 SPIKE, STAGE 1 DONE 2026-09-28: the cast and the reel run offline.**
+   - `lib/core/fishing.ts` holds `castLine` and `reelIn` with nothing of the web: the store
+     (`FishingData`) and the captain's id are arguments, and the shared helpers they used
+     (wallet, badges, anomaly flags, the day's challenge override) became store operations.
+     The server actions are now thin wrappers: check the session, pass the Supabase store.
+   - `lib/data/local/fishingLocal.ts` implements `FishingData` over a plain save object,
+     honouring every one-shot contract.
+   - `installRng` / `installClock` install the save's seeded dice and a clock process-wide,
+     for the one-player offline process only (never on the web server).
+   - `scripts/check-offline-fishing.mts` (in `npm run check`) walks the core's import tree
+     (no Supabase, no Next, no server action on it), fishes 80 casts on a local save checking
+     bait, hold, log, XP and the one-shot claims after every one, and replays the seed to the
+     identical save.
+   - Web verified live after the change: 9 casts, 9 worms, 3 landings including a x100.
+   **Found by the spike (to fix, none blocking):** the core stamps a few timestamps with the
+   real clock rather than `clockNow`; `reelCrate` is not in the core yet (the crate loot grant
+   still takes the Supabase client); offline there is nobody to rank against, so the top-three
+   nudge answers nobody.
+   **Next: stage 2**, the same save persisted to SQLite (a new dependency, Kong's call on which),
+   then stage 3, the shell (Tauri, needs the Rust toolchain installed).
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):
