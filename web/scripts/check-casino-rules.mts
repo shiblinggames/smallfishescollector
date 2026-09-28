@@ -116,7 +116,7 @@ const fixed = (player: string[], dealer: string[], shoe: string[] = []): ServerS
   ins.phase = 'insuranceOffered'
   answerInsurance(ins, 50)
   const insSettle = settleTable(ins, 150)
-  if (ins.phase !== 'settled' || !ins.insuranceTaken || !insSettle.insurance.win) fail('insurance against a dealer natural did not settle and pay')
+  if ((ins.phase as string) !== 'settled' || !ins.insuranceTaken || !insSettle.insurance.win) fail('insurance against a dealer natural did not settle and pay')
 }
 withRng(mulberry32(119), () => {
   for (let k = 0; k < 20_000; k++) {
