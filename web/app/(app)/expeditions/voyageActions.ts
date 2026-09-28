@@ -4,21 +4,14 @@ import { getCurrentUser } from '@/lib/userData'
 import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
-import { classSlotBonuses } from '@/lib/shipClasses'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
-import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/voyageEvents'
-import { ROUTE_CONFIGS, COMING_SOON_ROUTES } from '@/lib/voyageRoutes'
+import type { VoyageEvent, VoyageRoute } from '@/lib/voyageEvents'
+import { planVoyage, voyagePayout, voyageBack, voyageCrewCap } from '@/lib/voyageRules'
+import { BASE_VOYAGE_MS } from '@/lib/voyage'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
-import type { CrewCard } from '@/lib/expeditions'
-import { ROUTE_PAYOUTS, OUTCOME_MULT } from '@/lib/voyageRoll'
-import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
-import { resolveDeployedCrew, slotMult} from '@/lib/crewResolve'
 import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
 import { grantXPToCrewIds, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
-import { BASE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/voyage'
 import { eyeCharge } from '@/lib/finnItems'
 import { grant, arrayAdd } from '@/lib/wallet'
 
@@ -75,11 +68,6 @@ export async function getDailyVoyageState(): Promise<{
   return { todayVoyage: activeVoyage, readyVoyage }
 }
 
-// CREW_TRAITS (flavor) only has common/rare/legendary tiers; map crew group to one.
-function traitTier(group: number): string {
-  return group <= 1 ? 'Common' : group === 2 ? 'Rare' : 'Legendary'
-}
-
 /** user_crew ids currently out on a trawl — they're locked from voyages
  *  (loadDeployedParty drops them server-side), so the panel uses this to stop
  *  counting them and to explain why a slotted crew can't sail. */
@@ -132,68 +120,18 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   if (!profile) return { error: 'Profile not found' }
 
   const shipTier = profile.ship_tier ?? 0
-  // Per-route ship gate. Coastal (open to every hull) carries no crew-loss risk;
-  // the deeper routes do, and need at least a Sloop. See lib/voyageRoutes.
-  const routeCfg = ROUTE_CONFIGS[route]
-  if (!routeCfg) return { error: 'Unknown route' }
-  if (COMING_SOON_ROUTES.has(route)) {
-    return { error: 'This route isn\'t ready to sail yet. Coming soon.' }
-  }
-  if (shipTier < routeCfg.minShipTier) {
-    return { error: 'Requires a Sloop or better for this route' }
-  }
-  const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
-
-  // Deployed party from the new crew roster (voyage track), resolved with
-  // effects. Voyage and raid each have an independent slot column now.
-  // Expanded Quarters (Ch4 augment) berths one more — ship-wide, so it counts
-  // on voyages too.
-  const berthSlots = (profile as { has_sixth_berth?: boolean }).has_sixth_berth === true ? 1 : 0
-  const crewSlotCap = shipStats.crewSlots + classSlotBonuses(profile.ship_classes as Record<string, string> | null).crewSlots + berthSlots
+  // Deployed party from the crew roster (voyage track). The Expanded Quarters
+  // berth is ship-wide, so it counts on voyages too.
+  const crewSlotCap = voyageCrewCap(shipTier, profile.ship_classes as Record<string, string> | null, (profile as { has_sixth_berth?: boolean }).has_sixth_berth === true)
   const party = await loadDeployedParty(admin, user.id, crewSlotCap, 'voyage')
-  // The Inner Sea (coastal) is the safe intro route — any boat can sail it with
-  // a single crew member aboard. Deeper routes still need a party of two.
-  const minCrew = route === 'coastal' ? 1 : 2
-  if (party.length < minCrew) {
-    return { error: minCrew === 1 ? 'You need at least one crew member aboard' : 'A voyage requires at least two crew members' }
-  }
-  const resolved = resolveDeployedCrew(party)
-
-  // Voyage crew effects: scorePct lifts the whole crew's effective stats (so
-  // rolls + payouts improve), doubloonPct/xpPct scale the rewards.
-  const scoreMult = 1 + resolved.voyage.scorePct / 100
-
-  // Build the engine's crew array (captain first), with effect-adjusted stats.
-  // variantId carries the user_crew id so crew loss tracks the right instance.
-  const crew: CrewCard[] = resolved.perCrew.map(pc => {
-    const row = party.find(p => p.id === pc.id)!
-    return {
-      collectionId: pc.id,
-      cardId: pc.id,
-      variantId: pc.id,
-      name: row.name,            // nickname (drives narratives)
-      slug: '',
-      filename: row.filename,
-      rarity: traitTier(row.rarity),
-      traitName: row.catalogName, // species name (drives CREW_TRAITS flavor)
-      power: Math.round(pc.power * scoreMult),
-      dodge: Math.round(pc.dodge * scoreMult),
-      fortune: Math.round(pc.fortune * scoreMult),
-    }
+  // Route gates, crew minimum, the event roll, the doubloon bonus and the
+  // duration are lib/voyageRules planVoyage.
+  const plan = planVoyage({
+    route, shipTier, party,
+    expeditionXP: profile.expedition_xp ?? 0,
+    gauntletUpgrades: (profile.gauntlet_upgrades as string[] | null) ?? [],
   })
-
-  // Davy Jones Gauntlet Locker Upgrades that touch voyages.
-  const gauntletUpgrades = (profile.gauntlet_upgrades as string[] | null) ?? []
-  const safeVoyages = hasSafeVoyages(gauntletUpgrades)  // Safe Passage — no crew loss
-  const result = generateVoyageEvents(crew, shipTier, route, safeVoyages)
-  const totalDoubloons = Math.round(result.totalDoubloons * (1 + resolved.voyage.doubloonPct / 100))
-
-  const expeditionLevel = getLevelFromXP(profile.expedition_xp ?? 0)
-  // slotMult, not an inline 0.8: this is the same captain weighting raids use,
-  // and a copy here would silently diverge the moment it is retuned.
-  const totalNav = crew.reduce((s, c, i) => s + Math.round(c.dodge * slotMult(i)), 0)
-  // Swift Sails (Locker Upgrade) shortens the wait.
-  const duration_ms = Math.round(computeVoyageDurationMs(expeditionLevel, totalNav, route) * gauntletVoyageSpeedMult(gauntletUpgrades))
+  if ('error' in plan) return { error: plan.error }
   const crewIds = party.map(p => p.id)
 
   const { data: voyage, error } = await admin
@@ -205,15 +143,15 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
       ship_tier: shipTier,
       route,
       status: 'pending',
-      events: result.events,
-      total_doubloons: totalDoubloons,
-      total_gems: result.totalGems,
-      crew_lost: result.crewLost, // user_crew ids of any losses
-      duration_ms,
-      xp_bonus_pct: resolved.voyage.xpPct,
-      tide_turner_drop: result.tideTurnerDrop,
-      phantom_hook_drop: result.phantomHookDrop,
-      perfected_sigil_drop: result.perfectedSigilDrop,
+      events: plan.events,
+      total_doubloons: plan.totalDoubloons,
+      total_gems: plan.totalGems,
+      crew_lost: plan.crewLost, // user_crew ids of any losses
+      duration_ms: plan.durationMs,
+      xp_bonus_pct: plan.xpBonusPct,
+      tide_turner_drop: plan.tideTurnerDrop,
+      phantom_hook_drop: plan.phantomHookDrop,
+      perfected_sigil_drop: plan.perfectedSigilDrop,
     })
     .select('*')
     .single()
@@ -252,9 +190,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   if (!voyageRow) return { error: 'Voyage not found' }
   if (voyageRow.status === 'revealed') return { error: 'Already revealed' }
-  const sentAt = new Date(voyageRow.created_at as string).getTime()
-  const voyageDurationMs = (voyageRow.duration_ms as number | null) ?? BASE_VOYAGE_MS
-  if (Date.now() < sentAt + voyageDurationMs) return { error: 'Your crew has not returned yet' }
+  if (!voyageBack(voyageRow.created_at as string, voyageRow.duration_ms as number | null)) return { error: 'Your crew has not returned yet' }
 
   const voyage = voyageRow as DailyVoyage
 
@@ -278,29 +214,32 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   if (!profile) return { error: 'Profile not found' }
 
-  // Nav XP comes from the ROUTE and how the voyage went, not from summing an
-  // event list. The old voyageXP() added up six events' worth; with one event
-  // it would have quietly paid about a sixth. ROUTE_PAYOUTS carries the intended
-  // per-voyage figure directly, and the single event's outcome scales it.
-  const voyageEvent = (voyage.events as { outcome?: string; booty?: boolean; jackpot?: boolean }[])?.[0]
+  // What the voyage pays (Nav XP and crew XP by route and outcome, bait, the
+  // special items, survivors) is lib/voyageRules voyagePayout.
+  const pay = voyagePayout({
+    route: voyage.route,
+    events: voyage.events as { outcome?: string; booty?: boolean; jackpot?: boolean; baitDrop?: string | null }[],
+    xpBonusPct: voyage.xp_bonus_pct,
+    crewIds: voyage.crew_variant_ids as number[],
+    crewLost: voyage.crew_lost,
+    tideTurnerDrop: voyage.tide_turner_drop,
+    phantomHookDrop: voyage.phantom_hook_drop,
+    perfectedSigilDrop: voyage.perfected_sigil_drop,
+  }, {
+    expeditionXP: profile.expedition_xp ?? 0,
+    tideTurner: !!profile.has_tide_turner,
+    phantomHook: !!profile.has_phantom_hook,
+    perfectedSigil: !!profile.has_perfected_sigil,
+  })
+  const { xpEarned, crewXpEarned, earnedBait, newTideTurner, newPhantomHook, newPerfectedSigil, survivorIds } = pay
+  const { from: oldExpeditionLevel, to: newExpeditionLevel, newXP: newExpeditionXP } = pay.levels
 
   // Lifetime Massive Booty count, for the badge. Fire and forget: a failed
   // counter must never cost the player the haul they just earned.
-  if (voyageEvent?.booty || voyageEvent?.jackpot) {
+  if (pay.booty) {
     void admin.rpc('bump_profile_stat', { uid: user.id, col: 'voyage_booty_hauls', n: 1 })
       .then(() => {}, () => {})
   }
-  const outcomeMult = voyageEvent?.outcome === 'success' ? OUTCOME_MULT.triumph
-                    : voyageEvent?.outcome === 'failure' ? OUTCOME_MULT.setback
-                    : OUTCOME_MULT.success
-  const baseXp = Math.round(
-    (ROUTE_PAYOUTS[voyage.route as VoyageRoute]?.xp ?? 650) * outcomeMult,
-  )
-  const xpEarned = Math.round(baseXp * (1 + ((voyage.xp_bonus_pct as number | null) ?? 0) / 100))
-  const oldExpeditionXP = profile.expedition_xp ?? 0
-  const newExpeditionXP = oldExpeditionXP + xpEarned
-  const oldExpeditionLevel = getLevelFromXP(oldExpeditionXP)
-  const newExpeditionLevel = getLevelFromXP(newExpeditionXP)
 
   // Resolve crew names/rarities BEFORE any lost crew get deleted, for the log.
   /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -319,16 +258,6 @@ export async function revealVoyageResults(voyageId: number): Promise<
     }
   }).filter((c): c is VoyageCrewMember => c !== null)
 
-  // Collect bait drops
-  const baitDropMap = new Map<string, number>()
-  for (const e of voyage.events as { baitDrop?: string | null }[]) {
-    if (e.baitDrop) baitDropMap.set(e.baitDrop, (baitDropMap.get(e.baitDrop) ?? 0) + 1)
-  }
-  const earnedBait = Array.from(baitDropMap.entries()).map(([type, qty]) => ({ type, qty }))
-
-  const newTideTurner = !!(voyage.tide_turner_drop && !profile.has_tide_turner)
-  const newPhantomHook = !!(voyage.phantom_hook_drop && !profile.has_phantom_hook)
-  const newPerfectedSigil = !!(voyage.perfected_sigil_drop && !profile.has_perfected_sigil)
   // A voyage is Navigation XP, so it charges The Primeval Eye like a raid kill.
   const reelCharge = eyeCharge(profile as Parameters<typeof eyeCharge>[0], xpEarned)
   // Balances move in place (lib/wallet) and Nav XP through bump_profile_stat;
@@ -362,21 +291,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
   // This voyage was already flipped to 'revealed' above, so the count includes it.
   if ((completedVoyages ?? 0) >= 100) await grantBadgeDirect(user.id, 'fleet_admiral')
 
-  // Crew XP is a per-route figure (ROUTE_PAYOUTS.crewXp), tuned so the RATE is
-  // flat at roughly 200 an hour whatever route was sailed. It cannot be a share
-  // of Nav XP: Nav per hour climbs sixfold from Coastal to Shroud, so any fixed
-  // percentage makes deep routes the best place to train hands, and the Crew
-  // Hall is meant to be that place.
-  //
-  // Still scales with the outcome, as it always has: a voyage that went well
-  // teaches more than one that did not. Lost crew earn nothing (the soft-delete
-  // that follows skips them anyway, since grant_crew_xp_to_ids gates on
-  // died_at IS NULL, belt and braces).
-  const crewXpEarned = Math.round(
-    (ROUTE_PAYOUTS[voyage.route as VoyageRoute]?.crewXp ?? 450) * outcomeMult,
-  )
-  const survivorIds = (voyage.crew_variant_ids as number[]).filter(id => !voyage.crew_lost.includes(id))
-
+  // Lost crew earn nothing (grant_crew_xp_to_ids also gates on died_at IS NULL).
   const [newDoubloons, newGems, , , crewXP] = await Promise.all([
     grant(admin, user.id, 'doubloons', voyage.total_doubloons),
     grant(admin, user.id, 'gems', voyage.total_gems),

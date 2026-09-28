@@ -12,9 +12,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getLevelFromXP as fishingLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
-import { applyLevelBonuses, crewLevelFromXP } from '@/lib/crewLevel'
-import { netTraitStats } from '@/lib/crewEffects'
-import { crewDisplayName } from '@/lib/crewGen'
 import {
   TRAWL_ZONES, TRAWL_ZONE_BY_KEY, trawlDurationMs,
   unlockedTrawlSlots, nextTrawlSlot, rollTrawlHaul, expectedTrawlHaul,
@@ -23,39 +20,18 @@ import {
 import { mawCharge } from '@/lib/finnItems'
 import { storesCapHours, stintDone } from '@/lib/crewBunks'
 import { grant } from '@/lib/wallet'
-import { rngNext } from '@/lib/rng'
+import { clockNow } from '@/lib/clock'
+import { trawlCrewView, trawlDeployRefusal, trawlBack, sampleHaulFish, type TrawlCrewRow } from '@/lib/trawlRules'
 
 type Admin = ReturnType<typeof createAdminClient>
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-interface CrewRow {
-  id: number
-  power: number
-  dodge: number
-  fortune: number
-  xp: number | null
-  effects: string[] | null
-  nickname: string | null
-  cards: { name?: string | null; filename?: string | null; slug?: string | null } | null
-}
+type CrewRow = TrawlCrewRow
 
 const CREW_COLS = 'id, power, dodge, fortune, xp, effects, nickname, raid_slot, cards(name, filename, slug)'
 
-function crewView(row: CrewRow): TrawlCrewView {
-  const xp = row.xp ?? 0
-  const base = { power: row.power, dodge: row.dodge, fortune: row.fortune }
-  const leveled = xp > 0 ? applyLevelBonuses(base, xp) : base
-  const t = netTraitStats((row.effects ?? []) as string[])
-  return {
-    id: row.id,
-    name: (row.nickname as string | null) ?? crewDisplayName(row.cards?.slug ?? '', row.cards?.name ?? 'Crew'),
-    filename: (row.cards?.filename ?? '') as string,
-    savvy: Math.max(1, Math.round(leveled.dodge + t.dodge)),
-    fortune: Math.max(1, Math.round(leveled.fortune + t.fortune)),
-    level: crewLevelFromXP(xp),
-    inRaidParty: (row as { raid_slot?: number | null }).raid_slot != null,
-  }
-}
+// A hand's trawling stats: lib/trawlRules trawlCrewView.
+const crewView = trawlCrewView
 
 const isZone = (z: string): z is TrawlZoneKey => z in TRAWL_ZONE_BY_KEY
 
@@ -84,7 +60,7 @@ async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState
   const crewById = new Map<number, CrewRow>(((crewRows ?? []) as any[]).map(r => [r.id, r as CrewRow]))
   const trawls = (trawlRows ?? []) as { zone: TrawlZoneKey; crew_id: number; ends_at: string }[]
   const atSea = new Set(trawls.map(t => t.crew_id))
-  const now = Date.now()
+  const now = clockNow()
 
   const trawlByZone = new Map<TrawlZoneKey, ActiveTrawlView>()
   for (const t of trawls) {
@@ -160,39 +136,35 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
 
   const fishingLevel = fishingLevelFromXP((profile?.fishing_xp as number | null) ?? 0)
   const navLevel = navLevelFromXP((profile?.expedition_xp as number | null) ?? 0)
-  const z = TRAWL_ZONE_BY_KEY[zone]
-  if (fishingLevel < z.minLevel) return { error: `Reach Fishing Level ${z.minLevel} to trawl the ${z.label}` }
   // Ancient Deep carries the campaign gate too (Chapter 3 / the Quartermaster),
   // or the grandfather flag — otherwise trawls would be a passive XP hole around it.
-  if (zone === 'ancient_deep' && (profile as { has_ancient_deep_access?: boolean } | null)?.has_ancient_deep_access !== true) {
+  // Checked only once the level gate passes, as before.
+  let ancientRefusal: string | null = null
+  if (zone === 'ancient_deep' && fishingLevel >= TRAWL_ZONE_BY_KEY[zone].minLevel
+      && (profile as { has_ancient_deep_access?: boolean } | null)?.has_ancient_deep_access !== true) {
     const { data: ch3 } = await admin.from('raid_completions')
       .select('id').eq('user_id', user.id).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle()
-    if (!ch3) return { error: 'Clear Chapter 3 (defeat the Quartermaster) to trawl the Ancient Deep.' }
     // Captain's water, same as the cast; the flag is the grandfather.
-    if (!inCaptainsWater(profile as CaptainWaterRow | null)) return { error: CAPTAIN_WATER_SAYS.ancient }
+    ancientRefusal = !ch3 ? 'Clear Chapter 3 (defeat the Quartermaster) to trawl the Ancient Deep.'
+      : !inCaptainsWater(profile as CaptainWaterRow | null) ? CAPTAIN_WATER_SAYS.ancient : null
   }
 
-  const active = (trawlRows ?? []) as { zone: string; crew_id: number }[]
-  if (active.length >= unlockedTrawlSlots(fishingLevel, navLevel)) return { error: 'No free trawl slot' }
-  if (active.some(t => t.zone === zone)) return { error: `You're already trawling the ${z.label}` }
-  if (active.some(t => t.crew_id === crewId)) return { error: 'That crew is already at sea' }
-  if (!crewRow || (crewRow as any).died_at) return { error: 'Crew not available' }
-  if (pendingVoyage) return { error: 'That crew is away on a voyage' }
-
-  // BUNK LOCK. Without this a hand could be sent trawling straight out of a
-  // running stint: the bunk row survives (nothing here clears it), the update
-  // below frees their party slot, and they end up serving a trawl and a stint
-  // at the same time and collecting both. Mirrors assertCanReassign in
-  // crew/actions.ts, which refuses the same move on the party tracks.
-  const bunk = bunkRow as { since: string; cap_hours: number | null } | null
-  if (bunk && !stintDone(bunk.since, Date.now(),
-      bunk.cap_hours ?? storesCapHours((profile as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1))) {
-    return { error: 'That crew is training in the hall. Their stint has to finish first.' }
-  }
+  // The level, slot, one-per-zone, one-per-hand, voyage and BUNK LOCK gates
+  // (a hand mid-stint cannot be sent trawling and collect both; mirrors
+  // assertCanReassign in crew/actions.ts) are lib/trawlRules trawlDeployRefusal.
+  const refusal = trawlDeployRefusal({
+    zone, crewId, fishingLevel, navLevel, ancientRefusal,
+    active: (trawlRows ?? []) as { zone: string; crew_id: number }[],
+    crewAlive: !!crewRow && !(crewRow as any).died_at,
+    onVoyage: !!pendingVoyage,
+    bunk: bunkRow as { since: string; cap_hours: number | null } | null,
+    storesLevel: (profile as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1,
+  })
+  if (refusal) return { error: refusal }
 
   const { error } = await admin.from('trawls').insert({
     user_id: user.id, zone, crew_id: crewId,
-    ends_at: new Date(Date.now() + trawlDurationMs(zone)).toISOString(),
+    ends_at: new Date(clockNow() + trawlDurationMs(zone)).toISOString(),
   })
   if (error) return { error: 'Could not send the trawl' }
 
@@ -225,7 +197,7 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
   const { data: trawl } = await admin
     .from('trawls').select('id, crew_id, ends_at').eq('user_id', user.id).eq('zone', zone).maybeSingle()
   if (!trawl) return { error: 'No trawl to collect there' }
-  if (new Date((trawl as any).ends_at).getTime() > Date.now()) return { error: 'Your crew has not returned yet' }
+  if (!trawlBack((trawl as any).ends_at)) return { error: 'Your crew has not returned yet' }
 
   // The delete IS the claim. Two collects fired together both read the row
   // above; only the one whose delete hands it back gets paid.
@@ -246,11 +218,7 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
   const newFishingXP = oldXP + haul.xp
 
   // Sample a few species names for the haul reveal.
-  const names = ((pool ?? []) as { name: string }[]).map(r => r.name)
-  const fish: string[] = []
-  for (let i = 0; i < 3 && names.length > 0; i++) {
-    fish.push(names.splice(Math.floor(rngNext() * names.length), 1)[0])
-  }
+  const fish = sampleHaulFish(((pool ?? []) as { name: string }[]).map(r => r.name))
 
   // A trawl can cross a fishing-level color threshold (Forest @ 50, Ice @ 75),
   // but we DON'T grant it here — the color shows unlocked live via the earned
