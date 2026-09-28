@@ -760,8 +760,29 @@ In order. Each step is worth doing even if the port never happens.
      end exactly where an unbroken session does; an interrupted write leaves the old save
      whole; catman's REAL converted export (146 species, 21 rods, 22 tables carried) fished 20
      casts offline, landing all 20.
-   **Next: stage 3, the shell** (Tauri plus a static export of the client, needs the Rust
-   toolchain installed; Kong's OK before installing).
+   **STAGE 3, THE SHELL, IN PROGRESS 2026-09-28.** `desktop/` at the repo root (not a second
+   game):
+   - A Vite + React front end, NOT a static export of the Next app (that would drag every server
+     page in). Its `@` resolves into `web/`, so the core, the local store, the save file, the
+     rules, the content and the REAL dial (`components/FishingDial` DialSVG) are the website's
+     own files; React is deduped so the dial shares the app's copy.
+   - The seam in action: `@/lib/gameApi` is aliased to `desktop/src/localGameApi.ts`, which
+     answers `api.fishing.castLine` and `reelIn` from the core and the save (the rest answer
+     that they are not offline yet). The screen imports `api` exactly as the website does.
+   - `desktop/src/saveStorage.ts`: the save in the app's data folder through Tauri's fs plugin
+     (temp file, then rename), or localStorage in a plain browser.
+   - `desktop/src-tauri`: Tauri 2, identifier com.shiblinggames.seasthebooty, the fs plugin
+     registered, the window allowed its own data folder and nothing else on disk, the game's icon.
+   - The front end builds (472 modules, 600 KB, mostly content). Verified in a browser with the
+     network CUT: casts through the real core, a Bluegill landed (+6 XP, new species), and after a
+     reload the save came back exactly (277 XP, 55 worms, 1 in the hold).
+   - Rust 1.98.1 installed (rustup, user-level). **Blocked on the MSVC C++ Build Tools**: the
+     installer needs an admin prompt that was declined or unanswered twice (exit 1602), so Kong
+     installs it; then `cd desktop && npx tauri dev` opens the window and `npx tauri build`
+     makes the installer.
+   - Probe note: a fast needle cannot be timed with puppeteer's keyboard (the per-frame dial
+     re-render delays input by hundreds of ms); the probe dispatches the keydown from inside the
+     page at the moment the needle is in the band.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):
