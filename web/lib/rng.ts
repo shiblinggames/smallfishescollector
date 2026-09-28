@@ -66,3 +66,14 @@ export function seedOf(text: string): number {
   }
   return h >>> 0
 }
+
+/**
+ * INSTALL a generator process-wide (null restores Math.random). For the
+ * OFFLINE build and tools only: one player in one process, where the save's
+ * own seeded generator should drive every roll, across awaits. NEVER on the web
+ * server, whose one process serves many requests at once (withRng is the
+ * scoped, sync-only form for that world).
+ */
+export function installRng(rng: Rng | null): void {
+  holder[SLOT] = rng ?? undefined
+}

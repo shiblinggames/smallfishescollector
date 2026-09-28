@@ -26,3 +26,12 @@ export function withClock<T>(ms: number | (() => number), fn: () => T): T {
   holder[SLOT] = typeof ms === 'number' ? () => ms : ms
   try { return fn() } finally { holder[SLOT] = prev }
 }
+
+/**
+ * INSTALL a clock process-wide (null restores Date.now). Offline build and
+ * tools only, for the same reason as installRng: one player, one process, so a
+ * scripted clock can run across awaits. NEVER on the web server.
+ */
+export function installClock(now: (() => number) | null): void {
+  holder[SLOT] = now ?? undefined
+}

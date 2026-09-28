@@ -15,8 +15,13 @@
 // home: balances and owned lists (lib/wallet), badges (lib/badgeGrant),
 // anomaly flags (lib/anomaly), the daily challenge set (lib/dailyChallenges).
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { captainData, type CaptainData, type Db, type Row } from './common'
 import type { PendingCast } from '@/lib/fishingRules'
+import type { ChallengeOverride } from '@/lib/dailyChallenges'
+import { grant, arrayAdd } from '@/lib/wallet'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { flagAnomaly } from '@/lib/anomaly'
 
 /** A species row as the reel reads it (the whole row, typed where it is used). */
 export type SpeciesRow = Row & { id: number; name: string; habitat: string; catch_difficulty: number; catch_score: number; bite_rarity: number; sell_value: number; length_min_in?: number | null; length_max_in?: number | null }
@@ -24,6 +29,18 @@ export type CastCandidateRow = { id: number; catch_difficulty: number; catch_sco
 export type DailyRow = { p1: number | null; p2: number | null; p3: number | null; p4: number | null; claimed_1: boolean | null; claimed_2: boolean | null; claimed_3: boolean | null; claimed_4: boolean | null; fishing_level_snapshot: number | null }
 
 export interface FishingData extends CaptainData {
+  // ── What the cast and the reel share with every system ──
+  /** Add to a balance in place (never written back from a stale read); the new balance. */
+  grant(uid: string, col: 'doubloons' | 'gems', n: number): Promise<number>
+  /** Add one value to an owned list, once. True if it was not there before. */
+  addToList(uid: string, col: 'unlocked_pets' | 'unlocked_character_colors', value: string): Promise<boolean>
+  /** Award a badge (no-op if already held). */
+  grantBadge(uid: string, badgeId: string): Promise<void>
+  /** Note something implausible for review. Never blocks play. */
+  flagAnomaly(uid: string, kind: string, severity: number, detail: Record<string, unknown>): Promise<void>
+  /** An admin's pinned challenge set for a day, or null. */
+  challengeOverride(date: string): Promise<ChallengeOverride | null>
+
   // ── The cast ──
   /** The live cast token, or null. */
   pendingCast(uid: string): Promise<PendingCast | null>
@@ -128,6 +145,23 @@ export interface FishingData extends CaptainData {
 export function fishingData(admin: Db): FishingData {
   return {
     ...captainData(admin),
+
+    async grant(uid, col, n) {
+      return grant(admin as any, uid, col, n)
+    },
+    async addToList(uid, col, value) {
+      return arrayAdd(admin as any, uid, col, value)
+    },
+    async grantBadge(uid, badgeId) {
+      await grantBadgeDirect(uid, badgeId)
+    },
+    async flagAnomaly(uid, kind, severity, detail) {
+      await flagAnomaly(admin as any, uid, kind, severity, detail)
+    },
+    async challengeOverride(date) {
+      const { data } = await admin.from('challenge_overrides').select('tier1, tier2, tier3').eq('date', date).maybeSingle()
+      return (data as ChallengeOverride | null) ?? null
+    },
 
     async pendingCast(uid) {
       const { data } = await admin.from('profiles').select('pending_cast').eq('id', uid).single()

@@ -213,12 +213,20 @@ export async function getEffectiveDailyChallenges(
     .select('tier1, tier2, tier3')
     .eq('date', date)
     .maybeSingle()
-  // An override pins the three coin challenges only. The Master slot keeps
-  // coming from the pool, so pinning an event day cannot accidentally hand
-  // out a crate or silently delete the fourth challenge from under a
-  // high-level player mid-day.
-  if (data) {
-    const set = [data.tier1, data.tier2, data.tier3]
+  return dailyChallengesWithOverride(date, data ?? null, fishingLevel)
+}
+
+export type ChallengeOverride = { tier1: DailyChallenge; tier2: DailyChallenge; tier3: DailyChallenge }
+
+/** The day's set given its admin override (or none). Pure, so the offline core
+ *  can ask its own store for the override and choose exactly as the web does.
+ *  An override pins the three coin challenges only. The Master slot keeps
+ *  coming from the pool, so pinning an event day cannot accidentally hand out a
+ *  crate or silently delete the fourth challenge from under a high-level
+ *  player mid-day. */
+export function dailyChallengesWithOverride(date: string, override: ChallengeOverride | null, fishingLevel: number): DailyChallenge[] {
+  if (override) {
+    const set = [override.tier1, override.tier2, override.tier3]
     if (fishingLevel >= MASTER_MIN_LEVEL) set.push(pickEligible(date, 4, TIER4, fishingLevel))
     return set
   }
