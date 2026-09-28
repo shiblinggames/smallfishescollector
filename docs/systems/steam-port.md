@@ -611,6 +611,31 @@ In order. Each step is worth doing even if the port never happens.
 
      Verified live on catman: four slot pulls. A catfish pair paid 3x, sardine pairs came up
      near misses, and the purse moved 120 to 95, exactly the four stakes less the one win.
+   - **Raids: DONE 2026-09-28. PHASE B IS COMPLETE.** Combat runs on the client and its
+     maths were already pure (`raidDamageProfile`, `rollCrate`, the `lib/bossRaids` configs).
+     `lib/raidRules.ts` covers what the server decides:
+     - a kill's reward from the config, with class and Renown scaling;
+     - the crate: uniques, the coin clamp, the currency row, and item coin;
+     - the clear records;
+     - the map's node gate, the dice throw, and the damage check's preview and shot.
+
+     The forge and Ultimate timers now read the seam clock.
+
+     `scripts/check-raid-rules.mts` walks EVERY raid and every dice and damage node. It
+     checks:
+     - each round pays its own line, and the Helmsman scales gold only;
+     - owned uniques never drop again, and a gem row pays no coin;
+     - the coin claim clamps, and admin clears never take the record;
+     - the d20 is fair, and no purse goes below zero.
+
+     **Found by the check, NOT fixed (a display change, needs Kong's call):** the
+     damage-check sheet UNDERSTATES the odds. It needs a roll of `ceil(threshold / mult)`,
+     while the shot passes on `round(roll x mult) >= threshold`. `coffers_fork` shows 29%
+     and really passes about 32%. The check holds it as "never overstates" until the sheet
+     is aligned.
+
+     Not live-tested: every changed path fires only inside a fight or at a map node, so the
+     first raid anyone plays after the deploy is the proof.
 6. **A data-access layer.** Per-system read and write functions replace the scattered
    `admin.from('profiles')` calls, so a local store can later stand in for Supabase behind the
    same functions.
