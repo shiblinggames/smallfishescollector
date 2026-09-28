@@ -33,6 +33,7 @@ import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { raidDamageProfile } from '@/lib/expeditions'
 import { flagAnomaly } from '@/lib/anomaly'
 import { grant, spend, arrayAdd } from '@/lib/wallet'
+import { gauntletData } from '@/lib/data/gauntletData'
 import { clockNow } from '@/lib/clock'
 import { tickActiveMs, settleDepths, runFathoms, cashOutHaul, recordClaim, donFeats, gauntletCooldown, shrineWon } from '@/lib/gauntletRules'
 
@@ -58,6 +59,7 @@ export async function recordGauntletHit(dmg: number): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
+  const db = gauntletData(admin)
   const raw = Math.floor(dmg)
 
   // ── HELD AGAINST THE LOADOUT, LIKE recordRaidHit ─────────────────────────
@@ -68,7 +70,7 @@ export async function recordGauntletHit(dmg: number): Promise<void> {
   // with every depth: an honest depth-98 run has landed 8x its captain's raid
   // best. At depth 100 the ceiling is 77x the base crit, far above any real
   // hit on record, while a forged number from a fresh run is still bounded.
-  const { data: prof } = await admin.from('profiles').select('gauntlet_max_hit, gauntlet_run_open, gauntlet_run_state').eq('id', user.id).single()
+  const prof = await db.profile(user.id, 'gauntlet_max_hit, gauntlet_run_open, gauntlet_run_state')
   if (prof?.gauntlet_run_open !== true) {
     await flagAnomaly(admin, user.id, 'no_run:recordGauntletHit', 2, { hit: raw })
     return
@@ -84,7 +86,7 @@ export async function recordGauntletHit(dmg: number): Promise<void> {
   }
   const h = Math.floor(Math.min(raw, clampCeiling))
 
-  await admin.rpc('bump_gauntlet_hit', { uid: user.id, dmg: h })
+  await db.recordHit(user.id, h)
   // The Gauntlet has its own damage ladder, on its own scale: raid hits top out
   // around 760 and a deep descent reaches thousands, so one shared number would
   // be a wall in one place and a formality in the other.
@@ -93,8 +95,7 @@ export async function recordGauntletHit(dmg: number): Promise<void> {
   // Conditional on the stored best still being lower, so two hits racing
   // cannot write the smaller one last.
   if (h > ((prof?.gauntlet_max_hit as number | null) ?? 0)) {
-    await admin.from('profiles').update({ gauntlet_max_hit: h }).eq('id', user.id)
-      .or(`gauntlet_max_hit.is.null,gauntlet_max_hit.lt.${h}`)
+    await db.raiseMaxHit(user.id, h)
   }
 }
 
@@ -128,13 +129,10 @@ export async function getGauntletUpgradeState(variant: GauntletVariant = 'davy')
   if (!user) return { deepest: 0, fathoms: 0, owned: [], ownedAll: [], off: [], hasAutoCatcher: false, hasAutoCaster: false, tributeReady: false }
   const isDon = variant === 'don'
   const admin = createAdminClient()
-  const { data } = await admin
-    .from('profiles')
-    // Fathoms are the ONE shared purse; the deepest gate + owned/off sets are
-    // per-variant (Don's has its own bespoke tree in dons_gauntlet_upgrades).
-    .select('gauntlet_deepest, dons_gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, has_auto_catcher, has_auto_caster, dons_stipend_claimed_at')
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  // Fathoms are the ONE shared purse; the deepest gate + owned/off sets are
+  // per-variant (Don's has its own bespoke tree in dons_gauntlet_upgrades).
+  const data = await db.profile(user.id, 'gauntlet_deepest, dons_gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, has_auto_catcher, has_auto_caster, dons_stipend_claimed_at')
   const davyOwned = (data?.gauntlet_upgrades as string[] | null) ?? []
   const donOwned = (data?.dons_gauntlet_upgrades as string[] | null) ?? []
   const ownedAll = [...davyOwned, ...donOwned]
@@ -167,11 +165,8 @@ export async function claimDailyTribute(): Promise<{ ok: true; fathoms: number }
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in.' }
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('gauntlet_upgrades, dons_gauntlet_upgrades, dons_stipend_claimed_at')
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_upgrades, dons_gauntlet_upgrades, dons_stipend_claimed_at')
   if (!profile) return { error: 'Profile not found.' }
   const ownedAll = [
     ...((profile.gauntlet_upgrades as string[] | null) ?? []),
@@ -185,13 +180,7 @@ export async function claimDailyTribute(): Promise<{ ok: true; fathoms: number }
   // one of them moves the stamp, and only that one is paid.
   const now = new Date()
   const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString()
-  const { data: stamped } = await admin
-    .from('profiles')
-    .update({ dons_stipend_claimed_at: now.toISOString() })
-    .eq('id', user.id)
-    .or(`dons_stipend_claimed_at.is.null,dons_stipend_claimed_at.lt."${midnight}"`)
-    .select('id')
-  if (!stamped || stamped.length === 0) return { error: 'You’ve already collected today’s tribute. Back tomorrow.' }
+  if (!(await db.claimTribute(user.id, now.toISOString(), midnight))) return { error: 'You’ve already collected today’s tribute. Back tomorrow.' }
   const fathoms = await grant(admin, user.id, 'gauntlet_fathoms', DONS_DAILY_TRIBUTE_AMOUNT)
   return { ok: true, fathoms }
 }
@@ -214,11 +203,8 @@ export async function setGauntletUpgradeActive(id: string, active: boolean, vari
   const offCol = isDon ? 'dons_gauntlet_upgrades_off' : 'gauntlet_upgrades_off'
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select(`${ownedCol}, ${offCol}`)
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, `${ownedCol}, ${offCol}`)
   if (!profile) return { error: 'Profile not found.' }
 
   const owned = ((profile as Record<string, unknown>)[ownedCol] as string[] | null) ?? []
@@ -228,7 +214,7 @@ export async function setGauntletUpgradeActive(id: string, active: boolean, vari
   const nextOff = active ? off.filter(x => x !== id) : (off.includes(id) ? off : [...off, id])
   // Keep the set clean: never store ids the player no longer owns / can't toggle.
   const cleanOff = nextOff.filter(x => owned.includes(x) && isToggleableUpgrade(x))
-  await admin.from('profiles').update({ [offCol]: cleanOff }).eq('id', user.id)
+  await db.updateProfile(user.id, { [offCol]: cleanOff })
   return { ok: true, off: cleanOff }
 }
 
@@ -253,11 +239,8 @@ export async function claimGauntletUpgrade(id: string, variant: GauntletVariant 
   const otherOwnedCol = isDon ? 'gauntlet_upgrades' : 'dons_gauntlet_upgrades'
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select(`${depthCol}, gauntlet_fathoms, ${ownedCol}, ${otherOwnedCol}`)
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, `${depthCol}, gauntlet_fathoms, ${ownedCol}, ${otherOwnedCol}`)
   if (!profile) return { error: 'Profile not found.' }
 
   const owned = ((profile as Record<string, unknown>)[ownedCol] as string[] | null) ?? []
@@ -298,11 +281,8 @@ export async function wagerGauntletFathoms(stake: number): Promise<
   if (!user) return { error: 'Not signed in.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('gauntlet_fathoms, gauntlet_run_open')
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_fathoms, gauntlet_run_open')
   if (!profile) return { error: 'Profile not found.' }
   if (!profile.gauntlet_run_open) return { error: 'No run in progress.' }
 
@@ -338,11 +318,8 @@ export async function buyMerchantItem(itemId: string): Promise<
   if (!user) return { error: 'Not signed in.' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('gauntlet_run_open')
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_run_open')
   if (!profile) return { error: 'Profile not found.' }
   if (!profile.gauntlet_run_open) return { error: 'No run in progress.' }
 
@@ -361,12 +338,12 @@ export async function markConfluencesSeen(ids: string[]): Promise<{ ok: boolean 
   if (valid.length === 0) return { ok: true }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles').select('gauntlet_confluences_seen').eq('id', user.id).single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_confluences_seen')
   const seen = (profile?.gauntlet_confluences_seen as string[] | null) ?? []
   const next = Array.from(new Set([...seen, ...valid]))
   if (next.length !== seen.length) {
-    await admin.from('profiles').update({ gauntlet_confluences_seen: next }).eq('id', user.id)
+    await db.updateProfile(user.id, { gauntlet_confluences_seen: next })
   }
   return { ok: true }
 }
@@ -386,31 +363,19 @@ export async function getGauntletLeaderboard(variant: GauntletVariant = 'davy'):
   const isDon = variant === 'don'
 
   const admin = createAdminClient()
+  const db = gauntletData(admin)
   // #1 deepest CASHED-OUT descent (the leaderboard views exclude deaths +
   // admins), same depth → FIRST-TO-DEPTH → fastest ordering as the board
   // (leaderboard/actions fetchGauntlet — keep in sync). One query per ledger.
-  const topQuery = (view: string) => admin
-    .from(view)
-    .select('username, score')
-    .order('score', { ascending: false })
-    .order('created_at', { ascending: true })
-    .order('time_ms', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-  const [{ data: top }, hc] = await Promise.all([
-    topQuery(isDon ? 'leaderboard_dons_gauntlet' : 'leaderboard_gauntlet'),
-    topQuery(hcCols(variant).ledger),
+  const [top, hcTop] = await Promise.all([
+    db.ledgerTop(isDon ? 'leaderboard_dons_gauntlet' : 'leaderboard_gauntlet'),
+    db.ledgerTop(hcCols(variant).ledger),
   ])
-  const hcTop = hc?.data ?? null
 
   let mine = 0
   let hardcoreMine = 0
   if (user) {
-    const { data: me } = await admin
-      .from('profiles')
-      .select('gauntlet_deepest, gauntlet_hc_deepest, dons_gauntlet_deepest, dons_gauntlet_hc_deepest')
-      .eq('id', user.id)
-      .single()
+    const me = await db.profile(user.id, 'gauntlet_deepest, gauntlet_hc_deepest, dons_gauntlet_deepest, dons_gauntlet_hc_deepest')
     mine = ((isDon ? me?.dons_gauntlet_deepest : me?.gauntlet_deepest) as number | null) ?? 0
     hardcoreMine = (me?.[hcCols(variant).deepest] as number | null) ?? 0
   }
@@ -439,14 +404,7 @@ export async function getGauntletLeaderboard(variant: GauntletVariant = 'davy'):
  *  hardcore on the jsonb meant the two disagreed: the descent let you in and its
  *  hardcore said you had never met the man. One source, the same one. */
 async function throneCleared(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<boolean> {
-  const { data } = await admin
-    .from('raid_completions')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('raid_id', 'the_throne')
-    .limit(1)
-    .maybeSingle()
-  return !!data
+  return gauntletData(admin).hasCleared(userId, 'the_throne')
 }
 
 export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; hcDeepestRun: GauntletRunSnapshot | null; lastRun: GauntletRunSnapshot | null; hcLastRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; resumePaused: boolean; hardcoreUnlocked: boolean; hardcoreCaptainLocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean; runTerms: SignedTerms | null }> {
@@ -456,11 +414,8 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
 
   const isDon = variant === 'don'
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('is_premium, premium_expires_at, gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, gauntlet_last_run, gauntlet_hc_last_run, dons_gauntlet_last_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_deepest_run, dons_gauntlet_hc_deepest, dons_gauntlet_hc_deepest_run, dons_gauntlet_hc_last_run, dons_gauntlet_hc_last_run_at, dons_gauntlet_hc_runs_today')
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'is_premium, premium_expires_at, gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, gauntlet_hc_deepest_run, gauntlet_last_run, gauntlet_hc_last_run, dons_gauntlet_last_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress, gauntlet_run_terms, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_deepest_run, dons_gauntlet_hc_deepest, dons_gauntlet_hc_deepest_run, dons_gauntlet_hc_last_run, dons_gauntlet_hc_last_run_at, dons_gauntlet_hc_runs_today')
   // "One run at a time": a resume only belongs to THIS gauntlet if the open run's
   // variant matches (a paused Davy run must not surface on the Don's screen).
   const openVariant = ((profile?.gauntlet_run_variant as GauntletVariant | null) ?? 'davy')
@@ -487,7 +442,7 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
   // run is unrecoverable, so the next look at the lobby lowers the flag.
   // A paused run always has a state, so this can never touch one.
   if (profile?.gauntlet_run_open === true && !runState) {
-    await admin.from('profiles').update({ gauntlet_run_open: false, gauntlet_run_paused: false }).eq('id', user.id)
+    await db.updateProfile(user.id, { gauntlet_run_open: false, gauntlet_run_paused: false })
   }
   const canResume = profile?.gauntlet_run_open === true && openVariant === variant && !!runState && (runPaused || resumesUsed < 1)
   const resumeState = canResume ? runState : null
@@ -558,12 +513,12 @@ export async function checkpointGauntletRun(state: GauntletRunState): Promise<{ 
   if (!user) return { ok: false }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles').select('gauntlet_run_open, gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_variant, gauntlet_run_hardcore').eq('id', user.id).single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_run_open, gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_variant, gauntlet_run_hardcore')
   if (profile?.gauntlet_run_open !== true) return { ok: false }
 
   const clock = tickActiveMs((profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at)
-  await admin.from('profiles').update({ gauntlet_run_state: state, ...clock }).eq('id', user.id)
+  await db.updateProfile(user.id, { gauntlet_run_state: state, ...clock })
 
   // PER-DEPTH SPLIT. A breather opens exactly once per depth, right after that
   // depth fell, so the clock we just wrote IS the time to reach it — no separate
@@ -576,17 +531,11 @@ export async function checkpointGauntletRun(state: GauntletRunState): Promise<{ 
   if (depth < 1 || depth > MAX_GAUNTLET_DEPTH) return { ok: true }
   const ms = clock.gauntlet_run_active_ms
 
-  const { data: rec } = await admin.rpc('record_gauntlet_depth_best', {
-    uid: user.id,
-    v: ((profile as any).gauntlet_run_variant as GauntletVariant | null) ?? 'davy',
-    hc: (profile as any).gauntlet_run_hardcore === true,
-    d: depth,
-    ms,
-  })
-  const row = Array.isArray(rec) ? rec[0] : rec
-  if (!row) return { ok: true }
-  const prevMs = row.prev_ms == null ? null : Number(row.prev_ms)
-  return { ok: true, split: { depth, ms, prevMs, isRecord: row.is_record === true } }
+  const rec = await db.recordDepthBest(user.id,
+    ((profile as any).gauntlet_run_variant as GauntletVariant | null) ?? 'davy',
+    (profile as any).gauntlet_run_hardcore === true, depth, ms)
+  if (!rec) return { ok: true }
+  return { ok: true, split: { depth, ms, prevMs: rec.prevMs, isRecord: rec.isRecord } }
 }
 
 /** DELIBERATE pause — the player hit "Pause & step away" at a breather. Saves the
@@ -598,15 +547,15 @@ export async function pauseGauntletRun(state: GauntletRunState): Promise<{ ok: b
   if (!user) return { ok: false }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles').select('gauntlet_run_open, gauntlet_run_active_ms, gauntlet_run_tick_at').eq('id', user.id).single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_run_open, gauntlet_run_active_ms, gauntlet_run_tick_at')
   if (profile?.gauntlet_run_open !== true) return { ok: false }
 
   // Stops the clock. A deliberate break is exactly the time this must not count.
-  await admin.from('profiles').update({
+  await db.updateProfile(user.id, {
     gauntlet_run_state: state, gauntlet_run_paused: true,
     ...tickActiveMs((profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at, { stop: true }),
-  }).eq('id', user.id)
+  })
   return { ok: true }
 }
 
@@ -619,13 +568,11 @@ export async function resumeGauntletRun(): Promise<{ ok: false } | { ok: true; s
   if (!user) return { ok: false }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    // gauntlet_run_offer rides along: a live Davy's Offer lives in its OWN column
-    // (not the run-state checkpoint), so a resume that only restored the state
-    // dropped it — the offer vanished on any leave-and-resume. Hand it back.
-    .select('gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_run_offer')
-    .eq('id', user.id).single()
+  const db = gauntletData(admin)
+  // gauntlet_run_offer rides along: a live Davy's Offer lives in its OWN column
+  // (not the run-state checkpoint), so a resume that only restored the state
+  // dropped it — the offer vanished on any leave-and-resume. Hand it back.
+  const profile = await db.profile(user.id, 'gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_run_paused, gauntlet_run_offer')
 
   const state = (profile?.gauntlet_run_state as GauntletRunState | null) ?? null
   if (profile?.gauntlet_run_open !== true || !state) return { ok: false }
@@ -636,14 +583,14 @@ export async function resumeGauntletRun(): Promise<{ ok: false } | { ok: true; s
     // Deliberate pause: unlimited, no crash budget spent. Clear the flag — the run
     // is live again (a later disconnect from here is a normal crash resume).
     // Picking it back up restarts the clock. The time away is simply not in it.
-    await admin.from('profiles').update({ gauntlet_run_paused: false, gauntlet_run_tick_at: new Date().toISOString() }).eq('id', user.id)
+    await db.updateProfile(user.id, { gauntlet_run_paused: false, gauntlet_run_tick_at: new Date().toISOString() })
     return { ok: true, state, offer }
   }
 
   // Crash resume: one per run, server-owned counter (ignores any client value).
   const used = (profile?.gauntlet_resumes_used as number | null) ?? 0
   if (used >= 1) return { ok: false }
-  await admin.from('profiles').update({ gauntlet_resumes_used: used + 1, gauntlet_run_tick_at: new Date().toISOString() }).eq('id', user.id)
+  await db.updateProfile(user.id, { gauntlet_resumes_used: used + 1, gauntlet_run_tick_at: new Date().toISOString() })
   return { ok: true, state, offer }
 }
 
@@ -659,11 +606,8 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
   if (!user) return { started: false, reason: 'cooldown', deepest: 0 }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin, raid_node_progress, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, gauntlet_run_open, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_hc_last_run_at, dons_gauntlet_hc_runs_today, is_premium, premium_expires_at, gauntlet_hc_deepest, dons_gauntlet_hc_deepest')
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_last_run_at, gauntlet_deepest, is_admin, raid_node_progress, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, gauntlet_run_open, gauntlet_run_variant, dons_gauntlet_deepest, dons_gauntlet_hc_last_run_at, dons_gauntlet_hc_runs_today, is_premium, premium_expires_at, gauntlet_hc_deepest, dons_gauntlet_hc_deepest')
 
   const isDon = variant === 'don'
   const HC = hcCols(variant)
@@ -733,25 +677,16 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
     hcRunsToday = runsToday + 1
     // The squad = the living raid party. Snapshot their ids; these are the crew
     // that drown on death/abandon (resolveGauntletDeath reads gauntlet_hc_squad).
-    const { data: squadRows } = await admin
-      .from('user_crew')
-      .select('id')
-      .eq('user_id', user.id)
-      .not('raid_slot', 'is', null)
-      .is('died_at', null)
-    const squad = (squadRows ?? []).map(r => r.id as number)
+    const squad = (await db.party(user.id, 'raid')).map(r => r.id as number)
     if (squad.length === 0) return { started: false, reason: 'no_squad', deepest }
     // The squad column stays SHARED on purpose: only one run is ever open, so
     // only one squad is ever at risk. The date and the counter are per-descent.
     hcFields = { gauntlet_run_hardcore: true, gauntlet_hc_squad: squad, [HC.lastRunAt]: new Date().toISOString(), [HC.runsToday]: hcRunsToday, gauntlet_run_terms: signedTerms }
   }
 
-  await admin
-    .from('profiles')
-    // A fresh run zeroes the clock and starts it. Everything else here already
-    // resets per run; the timer joins them rather than carrying over.
-    .update({ gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true, gauntlet_run_variant: variant, gauntlet_run_state: null, gauntlet_resumes_used: 0, gauntlet_run_paused: false, gauntlet_run_offer: null, gauntlet_run_active_ms: 0, gauntlet_run_tick_at: new Date().toISOString(), ...hcFields })
-    .eq('id', user.id)
+  // A fresh run zeroes the clock and starts it. Everything else here already
+  // resets per run; the timer joins them rather than carrying over.
+  await db.updateProfile(user.id, { gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true, gauntlet_run_variant: variant, gauntlet_run_state: null, gauntlet_resumes_used: 0, gauntlet_run_paused: false, gauntlet_run_offer: null, gauntlet_run_active_ms: 0, gauntlet_run_tick_at: new Date().toISOString(), ...hcFields })
 
   return { started: true, deepest }
 }
@@ -770,11 +705,8 @@ export async function rollDavyOffer(hpPct: number): Promise<{ offer: DavyOffer |
   if (!user) return { offer: null }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('gauntlet_run_open, gauntlet_run_state, gauntlet_run_offer, gauntlet_run_hardcore, gauntlet_run_terms, gauntlet_run_variant, raid_items, ship_skins')
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_run_open, gauntlet_run_state, gauntlet_run_offer, gauntlet_run_hardcore, gauntlet_run_terms, gauntlet_run_variant, raid_items, ship_skins')
 
   if (!profile || profile.gauntlet_run_open !== true) return { offer: null }
 
@@ -814,7 +746,7 @@ export async function rollDavyOffer(hpPct: number): Promise<{ offer: DavyOffer |
     chestWorthOffering,
   })
 
-  await admin.from('profiles').update({ gauntlet_run_offer: next }).eq('id', user.id)
+  await db.updateProfile(user.id, { gauntlet_run_offer: next })
   return { offer: next.live }
 }
 
@@ -866,11 +798,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   if (!user) return { ok: false }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_best_depth, dons_gauntlet_best_depth_ms, dons_gauntlet_deepest_run, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, dons_gauntlet_hc_deepest, dons_gauntlet_hc_best_depth, dons_gauntlet_hc_best_depth_ms, dons_gauntlet_hc_best_pressure, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer, gauntlet_run_state, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_best_depth, dons_gauntlet_best_depth_ms, dons_gauntlet_deepest_run, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, dons_gauntlet_hc_deepest, dons_gauntlet_hc_best_depth, dons_gauntlet_hc_best_depth_ms, dons_gauntlet_hc_best_pressure, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer, gauntlet_run_state, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
 
   if (!profile || profile.gauntlet_run_open !== true) return { ok: false }
 
@@ -914,8 +843,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // below, once the close has gone through, so a doubled request logs once.
   if (rd <= 0) {
     // Nothing cleared — just close the run (once).
-    const { data: closed } = await admin.from('profiles').update({ gauntlet_run_open: false }).eq('id', user.id).eq('gauntlet_run_open', true).select('id')
-    if (closed && closed.length > 0) void logBountyEvent(user.id, hc ? 'gauntlet_hc_depth' : 'gauntlet_depth', cd)
+    if (await db.closeRun(user.id, { gauntlet_run_open: false })) void logBountyEvent(user.id, hc ? 'gauntlet_hc_depth' : 'gauntlet_depth', cd)
     return { ok: false }
   }
 
@@ -1033,7 +961,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // the lifetime counters then move IN PLACE (lib/wallet, bump_profile_stat),
   // and owned things are added once (arrayAdd), so nothing written here can
   // undo a purchase or a forge that landed while the run was being settled.
-  const { data: closed } = await admin.from('profiles').update({
+  const closed = await db.closeRun(user.id, {
       ...(reelCharge !== null ? { anglers_patience_xp: reelCharge } : {}),
       gauntlet_run_open: false,
       gauntlet_run_state: null,
@@ -1050,15 +978,14 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       // same figure, so the log and the profile cannot disagree.
       ...runClock,
       ...recordFields,
-    }).eq('id', user.id).eq('gauntlet_run_open', true).select('id')
-  if (!closed || closed.length === 0) return { ok: false }
+    })
+  if (!closed) return { ok: false }
 
   // BOUNTIES. How deep a single run got is a moment, not a total, so one row
   // per finished run; logged here, after the close, so a run logs once.
   void logBountyEvent(user.id, hc ? 'gauntlet_hc_depth' : 'gauntlet_depth', cd)
 
-  const bump = (col: string, n: number) =>
-    n > 0 ? admin.rpc('bump_profile_stat', { uid: user.id, col, n }) : null
+  const bump = (col: string, n: number) => (n > 0 ? db.bumpStat(user.id, col, n) : null)
   const [newDoubloons, newGems, newFathoms, newBloodGems, , , crewXP] = await Promise.all([
     grant(admin, user.id, 'doubloons', bankedDoubloons),
     grant(admin, user.id, 'gems', gems),
@@ -1075,20 +1002,13 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       ...droppedItems.map(id => arrayAdd(admin, user.id, 'raid_items', id)),
       ...grantSkins.map(id => arrayAdd(admin, user.id, 'ship_skins', id)),
     ]),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: bankedDoubloons,
-      reason: `${hc ? 'Hardcore ' : ''}${isDon ? "Don's" : 'Davy Jones'} Gauntlet: depth ${cd}`,
-    }),
+    db.ledger(user.id, bankedDoubloons, `${hc ? 'Hardcore ' : ''}${isDon ? "Don's" : 'Davy Jones'} Gauntlet: depth ${cd}`),
     // Crew XP is DECOUPLED from the player's Nav XP onto a raid-calibrated scale.
     // Hardcore survivors earn a bonus for bringing the squad home alive.
     grantXPToAssignedCrew(admin, user.id, haul.crewXp),
     // LAST in the array on purpose: crewXP is destructured positionally above,
     // so anything inserted mid-list silently hands it the wrong result.
-    admin.from('gauntlet_runs').insert({
-      user_id: user.id, variant, hardcore: hc, depth: cd,
-      duration_ms: runClock.gauntlet_run_active_ms, outcome: 'cashed',
-    }),
+    db.logRun(user.id, { variant, hardcore: hc, depth: cd, duration_ms: runClock.gauntlet_run_active_ms, outcome: 'cashed' }),
   ])
 
   // Davy's Terms feats. Awaited (never fire-and-forget) so the write lands before
@@ -1160,11 +1080,8 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   if (!user) return { ok: false, deepest: 0, earnedFathoms: 0, newFathoms: 0, hardcore: false, fallenCount: 0 }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_deepest_died, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_deepest_died, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, gauntlet_run_hardcore, gauntlet_hc_squad, gauntlet_hc_deepest_died, dons_gauntlet_hc_deepest_died')
-    .eq('id', user.id)
-    .single()
+  const db = gauntletData(admin)
+  const profile = await db.profile(user.id, 'gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_deepest_died, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_deepest_died, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, gauntlet_run_hardcore, gauntlet_hc_squad, gauntlet_hc_deepest_died, dons_gauntlet_hc_deepest_died')
 
   const isDon = ((profile?.gauntlet_run_variant as GauntletVariant | null) ?? 'davy') === 'don'
   const prevDeepest = ((isDon ? profile?.dons_gauntlet_deepest : profile?.gauntlet_deepest) as number | null) ?? 0
@@ -1209,9 +1126,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // Conditional on the run still being open, so two deaths reported together
   // (or a death racing a cash-out) settle the run once: the loser is told the
   // run is already closed and pays nothing, drowns nobody, logs nothing.
-  const { data: closed } = await admin
-    .from('profiles')
-    .update({
+  const closed = await db.closeRun(user.id, {
       gauntlet_run_open: false,
       gauntlet_run_state: null,
       gauntlet_resumes_used: 0,
@@ -1221,10 +1136,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
       ...deathClock,
       ...deathFields,
     })
-    .eq('id', user.id)
-    .eq('gauntlet_run_open', true)
-    .select('id')
-  if (!closed || closed.length === 0) {
+  if (!closed) {
     return { ok: false, deepest: prevDeepest, earnedFathoms: 0, newFathoms: (profile.gauntlet_fathoms as number | null) ?? 0, hardcore: false, fallenCount: 0 }
   }
 
@@ -1238,19 +1150,11 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // clear their slots so they leave the roster. Mirrors the voyage death write.
   let fallenCount = 0
   if (hardcore && squad.length > 0) {
-    const { data: killed } = await admin
-      .from('user_crew')
-      .update({ died_at: new Date().toISOString(), died_hardcore_depth: cd, raid_slot: null, voyage_slot: null })
-      .eq('user_id', user.id)
-      .in('id', squad)
-      .is('died_at', null)
-      .select('id')
-    fallenCount = (killed ?? []).length
+    fallenCount = await db.drownSquad(user.id, squad, cd, new Date().toISOString())
   }
 
   // Fathoms and the lifetime counters move in place.
-  const bump = (col: string, n: number) =>
-    n > 0 ? admin.rpc('bump_profile_stat', { uid: user.id, col, n }) : null
+  const bump = (col: string, n: number) => (n > 0 ? db.bumpStat(user.id, col, n) : null)
   const [newFathoms] = await Promise.all([
     grant(admin, user.id, 'gauntlet_fathoms', earnedFathoms),
     bump('gauntlet_runs_completed', 1),
@@ -1259,10 +1163,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
 
   // A death is a finished run too, and the one that matters most for pacing:
   // logging only cash-outs would measure the runs that went well.
-  await admin.from('gauntlet_runs').insert({
-    user_id: user.id, variant: isDon ? 'don' : 'davy', hardcore,
-    depth: cd, duration_ms: deathClock.gauntlet_run_active_ms, outcome: 'died',
-  })
+  await db.logRun(user.id, { variant: isDon ? 'don' : 'davy', hardcore, depth: cd, duration_ms: deathClock.gauntlet_run_active_ms, outcome: 'died' })
 
   return { ok: true, deepest: prevDeepest, earnedFathoms, newFathoms, hardcore, fallenCount }
 }
@@ -1284,10 +1185,11 @@ export async function buyBaitWithFathoms(baitType: string): Promise<
   if (bait.type !== baitType || cost <= 0 || bundle <= 0) return { error: 'That lure is not for sale here.' }
 
   const admin = createAdminClient()
+  const db = gauntletData(admin)
   // The spend is the guard, before the lures are handed over.
   const newFathoms = await spend(admin, user.id, 'gauntlet_fathoms', cost)
   if (newFathoms == null) return { error: 'Not enough Fathoms.' }
-  await admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: baitType, p_qty: bundle })
+  await db.addBait(user.id, baitType, bundle)
   return { ok: true, fathoms: newFathoms, added: bundle, baitType }
 }
 
@@ -1299,6 +1201,7 @@ export async function markGauntletIntroSeen(variant: GauntletVariant = 'davy'): 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
+  const db = gauntletData(admin)
   const col = variant === 'don' ? 'has_seen_dons_gauntlet_intro' : 'has_seen_gauntlet_intro'
-  await admin.from('profiles').update({ [col]: true }).eq('id', user.id)
+  await db.updateProfile(user.id, { [col]: true })
 }
