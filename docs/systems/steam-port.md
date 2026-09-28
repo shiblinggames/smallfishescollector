@@ -664,6 +664,16 @@ In order. Each step is worth doing even if the port never happens.
      claim reports `taken`; the coin deduction returns null when the purse is short.
      Verified live on catman: Sell all on 112 fish paid exactly the 2,156 the price table
      gives, with the hold emptied, the lifetime stat and the ledger line matching.
+   - **Crew: DONE 2026-09-28.** `lib/data/crewData.ts`; the Crew Hall, its bunks, promotions,
+     the chart's crew hub, and the shared helpers every system calls (`loadDeployedParty`,
+     crew XP, bunk settlement) no longer name a table. Seats are addressed by TRACK
+     ('voyage' | 'raid'), never by column. Its contract: the board's date moves only from
+     the date read; a candidate is claimed only while unclaimed; the legendary gift is
+     spent only if still set; a tier steps only from the tier read; a bunk is claimed only
+     at the `since` read, and XP pays only for bunks removed; an open trait offer is never
+     overwritten and is answered once.
+     Verified live on catman: a voyage sailed with exactly the five seated hands in seat
+     order, and its reveal paid each of them exactly the route's 230 crew XP.
 7. **The `GameApi` seam on the client.** Components call `api.castLine()` instead of importing
    the server action directly. On the web the implementation is the server action, so this is
    a rename, not a behaviour change.
