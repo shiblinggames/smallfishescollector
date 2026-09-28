@@ -15,31 +15,15 @@
 // home: balances and owned lists (lib/wallet), badges (lib/badgeGrant),
 // anomaly flags (lib/anomaly), the daily challenge set (lib/dailyChallenges).
 
-import type { createAdminClient } from '@/lib/supabase/admin'
+import { captainData, type CaptainData, type Db, type Row } from './common'
 import type { PendingCast } from '@/lib/fishingRules'
-
-type Admin = ReturnType<typeof createAdminClient>
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type Row = Record<string, any>
 
 /** A species row as the reel reads it (the whole row, typed where it is used). */
 export type SpeciesRow = Row & { id: number; name: string; habitat: string; catch_difficulty: number; catch_score: number; bite_rarity: number; sell_value: number; length_min_in?: number | null; length_max_in?: number | null }
 export type CastCandidateRow = { id: number; catch_difficulty: number; catch_score: number; bite_rarity: number; sell_value: number }
 export type DailyRow = { p1: number | null; p2: number | null; p3: number | null; p4: number | null; claimed_1: boolean | null; claimed_2: boolean | null; claimed_3: boolean | null; claimed_4: boolean | null; fishing_level_snapshot: number | null }
 
-export interface FishingData {
-  // ── The captain ──
-  /** The profile columns named (a comma list), or null. */
-  profile(uid: string, cols: string): Promise<Row | null>
-  /** Write these profile fields. */
-  updateProfile(uid: string, patch: Row): Promise<void>
-  /** Add n to a lifetime counter column. */
-  bumpStat(uid: string, col: string, n: number): Promise<void>
-  /** Add n to one key of a JSON counter column. */
-  bumpJsonCounter(uid: string, col: string, key: string, n: number): Promise<void>
-  /** Has this captain ever cleared the raid? */
-  hasCleared(uid: string, raidId: string): Promise<boolean>
-
+export interface FishingData extends CaptainData {
   // ── The cast ──
   /** The live cast token, or null. */
   pendingCast(uid: string): Promise<PendingCast | null>
@@ -55,8 +39,6 @@ export interface FishingData {
   /** Set the bait count; with `ifWas`, only if it still reads that (a snag
    *  racing a cast must not double-charge). */
   setBaitCount(uid: string, bait: string, qty: number, ifWas?: number): Promise<void>
-  /** Add bait in place (a saved bait coming back). */
-  addBait(uid: string, bait: string, qty: number): Promise<void>
 
   // ── The water ──
   /** Every species that lives in this habitat, with what the roll reads. */
@@ -114,8 +96,6 @@ export interface FishingData {
   countAbove(field: string, value: number): Promise<number | null>
   /** Rod tiers owned. */
   rodTiers(uid: string): Promise<number[]>
-  /** A ledger line for coin (or gems) that moved. */
-  ledger(uid: string, amount: number, reason: string, currency?: 'doubloons' | 'gems'): Promise<void>
   /** Spend a CRATE cast (only the token; the streak write clears the rest). */
   claimCrateCast(uid: string, castAt: number): Promise<boolean>
 
@@ -147,26 +127,9 @@ export interface FishingData {
 }
 
 /** FishingData over Supabase, with the service-role client. */
-export function fishingData(admin: Admin): FishingData {
+export function fishingData(admin: Db): FishingData {
   return {
-    async profile(uid, cols) {
-      const { data } = await admin.from('profiles').select(cols).eq('id', uid).single()
-      return (data as Row | null) ?? null
-    },
-    async updateProfile(uid, patch) {
-      await admin.from('profiles').update(patch).eq('id', uid)
-    },
-    async bumpStat(uid, col, n) {
-      await admin.rpc('bump_profile_stat', { uid, col, n })
-    },
-    async bumpJsonCounter(uid, col, key, n) {
-      await admin.rpc('bump_profile_json_counter', { uid, col, key, n })
-    },
-    async hasCleared(uid, raidId) {
-      const { data } = await admin.from('raid_completions')
-        .select('id').eq('user_id', uid).eq('raid_id', raidId).limit(1).maybeSingle()
-      return !!data
-    },
+    ...captainData(admin),
 
     async pendingCast(uid) {
       const { data } = await admin.from('profiles').select('pending_cast').eq('id', uid).single()
@@ -197,9 +160,6 @@ export function fishingData(admin: Admin): FishingData {
       let q = admin.from('bait_inventory').update({ quantity: qty }).eq('user_id', uid).eq('bait_type', bait)
       if (ifWas !== undefined) q = q.eq('quantity', ifWas)
       await q
-    },
-    async addBait(uid, bait, qty) {
-      await admin.rpc('upsert_bait', { p_user_id: uid, p_bait_type: bait, p_qty: qty })
     },
 
     async candidates(habitat) {
@@ -314,9 +274,6 @@ export function fishingData(admin: Admin): FishingData {
     async rodTiers(uid) {
       const { data } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', uid)
       return ((data ?? []) as { rod_tier: number }[]).map(r => r.rod_tier)
-    },
-    async ledger(uid, amount, reason, currency = 'doubloons') {
-      await admin.from(currency === 'gems' ? 'gem_transactions' : 'doubloon_transactions').insert({ user_id: uid, amount, reason })
     },
     async claimCrateCast(uid, castAt) {
       const { data } = await admin.from('profiles').update({ pending_cast: null }).eq('id', uid)

@@ -31,6 +31,7 @@ import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
 import { grant } from '@/lib/wallet'
 import { holdAtRate, runnerCutWon } from '@/lib/sellRules'
+import { sellData, type SellData, type HoldStack } from '@/lib/data/sellData'
 
 export type DealResult =
   | { ok: true; spent?: number; earned?: number; baitType?: string; qty?: number; doubloons: number }
@@ -41,12 +42,8 @@ export async function dealtToday(): Promise<string[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
-  const { data } = await supabase
-    .from('sea_trader_deals')
-    .select('trader_key')
-    .eq('user_id', user.id)
-    .eq('sea_day', seaDay())
-  return (data ?? []).map(r => r.trader_key as string)
+  // Read through the request's own client (row security), as it always was.
+  return sellData(supabase).dealtKeys(user.id, seaDay())
 }
 
 export async function strikeDeal(traderKey: string): Promise<DealResult> {
@@ -67,18 +64,13 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
   }
 
   const admin = createAdminClient()
+  const db = sellData(admin)
 
-  const { count } = await admin
-    .from('sea_trader_deals')
-    .select('trader_key', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('sea_day', today)
-  if ((count ?? 0) >= DEALS_PER_DAY) {
+  if ((await db.dealsToday(user.id, today)) >= DEALS_PER_DAY) {
     return { error: `Word travels. Nobody else out here will deal with you today.` }
   }
 
-  const { data: profile } = await admin
-    .from('profiles').select('doubloons').eq('id', user.id).single()
+  const profile = await db.profile(user.id, 'doubloons')
   const doubloons = Number(profile?.doubloons ?? 0)
 
   // ── CLAIM FIRST, PAY SECOND ─────────────────────────────────────────────
@@ -100,21 +92,11 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
     }
   }
 
-  const { error: claimErr } = await admin
-    .from('sea_trader_deals')
-    .insert({
-      user_id: user.id,
-      trader_key: traderKey,
-      sea_day: today,
-      kind: trader.kind,
-      detail,
-    })
-  if (claimErr) {
-    // 23505 is the primary key. Anything else is a real failure and must not be
-    // reported as "already done", or a broken write looks like a completed one.
-    if (claimErr.code === '23505') return { error: 'You have already dealt with them.' }
-    return { error: 'The deal fell through.' }
-  }
+  // 'taken' is the primary key refusing a second claim; anything else is a real
+  // failure and must not be reported as "already done".
+  const claim = await db.claimDeal(user.id, { trader_key: traderKey, sea_day: today, kind: trader.kind, detail })
+  if (claim === 'taken') return { error: 'You have already dealt with them.' }
+  if (claim === 'failed') return { error: 'The deal fell through.' }
 
   if (trader.deal === 'bait') {
     const bait = getBait(trader.baitType)
@@ -128,23 +110,16 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
     // `error` here would have been checking something that never fires, and the
     // bait would have been granted for free. The atomic check is the return
     // value; the read above is only there to word the message nicely.
-    const { data: newBalance, error: spendErr } = await admin.rpc('deduct_doubloons', {
-      uid: user.id, amount: trader.cost,
-    })
-    if (spendErr || newBalance == null) {
+    const newBalance = await db.deductDoubloons(user.id, trader.cost)
+    if (newBalance == null) {
       // Give the claim back. A captain who was charged nothing must not lose
       // the trader as well.
-      await admin.from('sea_trader_deals')
-        .delete().eq('user_id', user.id).eq('trader_key', traderKey)
+      await db.releaseDeal(user.id, traderKey)
       return { error: 'You have not got the coin.' }
     }
 
-    await admin.rpc('upsert_bait', {
-      p_user_id: user.id, p_bait_type: trader.baitType, p_qty: trader.qty,
-    })
-    await admin.from('doubloon_transactions').insert({
-      user_id: user.id, amount: -trader.cost, reason: `Bought ${trader.qty} ${bait.name} from ${trader.name}`,
-    })
+    await db.addBait(user.id, trader.baitType, trader.qty)
+    await db.ledger(user.id, -trader.cost, `Bought ${trader.qty} ${bait.name} from ${trader.name}`)
 
     return {
       ok: true, spent: trader.cost, baitType: trader.baitType, qty: trader.qty,
@@ -155,49 +130,36 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
   }
 
   // ── THE SALTER buys the hold outright ───────────────────────────────────
-  const { data: hold } = await admin
-    .from('fish_inventory')
-    .select('fish_id, quantity')
-    .eq('user_id', user.id)
-  const rows = (hold ?? []) as { fish_id: number; quantity: number }[]
+  const rows = await db.holdStacks(user.id)
   if (!rows.length) {
-    await admin.from('sea_trader_deals')
-      .delete().eq('user_id', user.id).eq('trader_key', traderKey)
+    await db.releaseDeal(user.id, traderKey)
     return { error: 'Your hold is empty. Nothing to sell.' }
   }
 
   // Prices come from the market, server side. The rate is the only thing the
   // trader contributes, and that came out of the hash.
-  const ids = [...new Set(rows.map(r => r.fish_id))]
-  const { data: species } = await admin
-    .from('fish_species').select('id, sell_value').in('id', ids)
-  const value = new Map((species ?? []).map(f => [f.id as number, Number(f.sell_value ?? 0)]))
+  const value = await db.speciesValues([...new Set(rows.map(r => r.fish_id))])
 
   const rate = trader.deal === 'buy' ? trader.rate : 0
   const earned = holdAtRate(rows.map(r => ({ sellValue: value.get(r.fish_id) ?? 0, quantity: r.quantity })), rate)
   if (earned <= 0) {
-    await admin.from('sea_trader_deals')
-      .delete().eq('user_id', user.id).eq('trader_key', traderKey)
+    await db.releaseDeal(user.id, traderKey)
     return { error: 'Nothing in your hold is worth his salt.' }
   }
 
   // Pay for what the delete actually took, not for what was read above. Two
   // Salters fired together both read the same hold; only one of them gets the
   // rows back from the delete, and the other is paid for nothing.
-  const { data: taken, error: delErr } = await admin
-    .from('fish_inventory').delete().eq('user_id', user.id).select('fish_id, quantity')
-  const sold = await holdValue(admin, (taken ?? []) as { fish_id: number; quantity: number }[], rate)
-  if (delErr || sold <= 0) {
-    await admin.from('sea_trader_deals')
-      .delete().eq('user_id', user.id).eq('trader_key', traderKey)
+  const taken = await db.takeWholeHold(user.id)
+  const sold = await holdValue(db, taken.rows, rate)
+  if (taken.failed || sold <= 0) {
+    await db.releaseDeal(user.id, traderKey)
     return { error: 'Your hold is empty. Nothing to sell.' }
   }
 
   // The balance the wallet landed on, returned by the same statement that paid.
   const newBalance = await grant(admin, user.id, 'doubloons', sold)
-  await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: sold, reason: `Sold the hold to ${trader.name} at sea`,
-  })
+  await db.ledger(user.id, sold, `Sold the hold to ${trader.name} at sea`)
 
   return { ok: true, earned: sold, doubloons: newBalance }
 }
@@ -205,15 +167,12 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
 /** What a set of inventory rows is worth at `rate`, priced server side off the
  *  species table. Floored once over the whole lot, as both hold sales do. */
 async function holdValue(
-  admin: ReturnType<typeof createAdminClient>,
-  rows: { fish_id: number; quantity: number }[],
+  db: SellData,
+  rows: HoldStack[],
   rate: number,
 ): Promise<number> {
   if (!rows.length) return 0
-  const ids = [...new Set(rows.map(r => r.fish_id))]
-  const { data: species } = await admin
-    .from('fish_species').select('id, sell_value').in('id', ids)
-  const value = new Map((species ?? []).map(f => [f.id as number, Number(f.sell_value ?? 0)]))
+  const value = await db.speciesValues([...new Set(rows.map(r => r.fish_id))])
   return holdAtRate(rows.map(r => ({ sellValue: value.get(r.fish_id) ?? 0, quantity: r.quantity })), rate)
 }
 
@@ -243,19 +202,13 @@ export async function sellToResident(zoneId: string): Promise<
   const rate = res.rate
 
   const admin = createAdminClient()
-  const { data: hold } = await admin
-    .from('fish_inventory')
-    .select('fish_id, quantity')
-    .eq('user_id', user.id)
-  const rows = (hold ?? []) as { fish_id: number; quantity: number }[]
+  const db = sellData(admin)
+  const rows = await db.holdStacks(user.id)
   if (!rows.length) return { error: 'Your hold is empty.' }
 
   // Prices come from the species table, server side. The rate is the only thing
   // the buyer contributes and it came off the chart, not off the request.
-  const ids = [...new Set(rows.map(r => r.fish_id))]
-  const { data: species } = await admin
-    .from('fish_species').select('id, sell_value').in('id', ids)
-  const value = new Map((species ?? []).map(f => [f.id as number, Number(f.sell_value ?? 0)]))
+  const value = await db.speciesValues([...new Set(rows.map(r => r.fish_id))])
 
   const earned = holdAtRate(rows.map(r => ({ sellValue: value.get(r.fish_id) ?? 0, quantity: r.quantity })), rate)
   if (earned <= 0) return { error: 'Nothing in your hold is worth anything to them.' }
@@ -268,17 +221,13 @@ export async function sellToResident(zoneId: string): Promise<
   // And pay for the rows the delete handed back, not the ones read above: N
   // sales fired together all read the same hold, but only one delete gets the
   // rows, so only one of them is paid.
-  const { data: taken, error: delErr } = await admin
-    .from('fish_inventory').delete().eq('user_id', user.id).select('fish_id, quantity')
-  if (delErr) return { error: 'The sale fell through.' }
-  const sold = await holdValue(admin, (taken ?? []) as { fish_id: number; quantity: number }[], rate)
+  const taken = await db.takeWholeHold(user.id)
+  if (taken.failed) return { error: 'The sale fell through.' }
+  const sold = await holdValue(db, taken.rows, rate)
   if (sold <= 0) return { error: 'Your hold is empty.' }
 
   const newBalance = await grant(admin, user.id, 'doubloons', sold)
-  await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: sold,
-    reason: `Sold the hold to ${res.name} in ${zone.name}`,
-  })
+  await db.ledger(user.id, sold, `Sold the hold to ${res.name} in ${zone.name}`)
 
   return { ok: true, earned: sold, rate, doubloons: newBalance }
 }
@@ -326,40 +275,30 @@ export async function wagerForRunnerRod(traderKey: string): Promise<
   const rod = RODS.find(r => r.tier === trader.rodTier)
   if (!rod) return { error: 'The deal fell through.' }
 
-  const admin = createAdminClient()
+  const db = sellData(createAdminClient())
   const today = seaDay()
 
   // Say so before taking a stake. You cannot own the rod twice, and somebody
   // who already has it staking a hundred thousand on winning it again is the
   // worst possible way to find that out.
-  const { data: had } = await admin
-    .from('rod_inventory').select('rod_tier')
-    .eq('user_id', user.id).eq('rod_tier', trader.rodTier).maybeSingle()
-  if (had) return { error: `You already carry the ${rod.name}.` }
+  if (await db.ownsRod(user.id, trader.rodTier)) return { error: `You already carry the ${rod.name}.` }
 
   // ONE CUT A DAY, and the row is the lock rather than a count that could be
   // read twice. Keyed on the sea day rather than the trader, deliberately: a
   // second runner on the same night is still the same night's cut.
-  const { error: claimErr } = await admin.from('sea_trader_deals').insert({
-    user_id: user.id, trader_key: `yolo:${today}`, sea_day: today, kind: 'runner',
+  const claim = await db.claimDeal(user.id, {
+    trader_key: `yolo:${today}`, sea_day: today, kind: 'runner',
     detail: { deal: 'wager', rodTier: trader.rodTier, stake: trader.stake },
   })
-  if (claimErr) {
-    if (claimErr.code === '23505') {
-      return { error: 'You have had your cut tonight. He will deal again tomorrow.' }
-    }
-    return { error: 'The deal fell through.' }
-  }
+  if (claim === 'taken') return { error: 'You have had your cut tonight. He will deal again tomorrow.' }
+  if (claim === 'failed') return { error: 'The deal fell through.' }
 
   // The RESULT is the guard, not the error: deduct_doubloons checks the balance
   // inside its own WHERE and returns NULL rather than raising. If it will not
   // cover, the day's cut goes back - nobody loses a turn for being short.
-  const { data: newBalance, error: spendErr } = await admin.rpc('deduct_doubloons', {
-    uid: user.id, amount: trader.stake,
-  })
-  if (spendErr || newBalance == null) {
-    await admin.from('sea_trader_deals')
-      .delete().eq('user_id', user.id).eq('trader_key', `yolo:${today}`)
+  const newBalance = await db.deductDoubloons(user.id, trader.stake)
+  if (newBalance == null) {
+    await db.releaseDeal(user.id, `yolo:${today}`)
     return { error: `He wants ${trader.stake.toLocaleString()} on the table and you have not got it.` }
   }
 
@@ -370,13 +309,8 @@ export async function wagerForRunnerRod(traderKey: string): Promise<
     // If it does the captain keeps the stake as a loss rather than paying for
     // something they already own - which is the same outcome the dice give nine
     // times in ten, and cannot be told apart from it.
-    const { error: grantErr } = await admin.from('rod_inventory')
-      .insert({ user_id: user.id, rod_tier: trader.rodTier })
-    if (!grantErr) {
-      await admin.from('doubloon_transactions').insert({
-        user_id: user.id, amount: -trader.stake,
-        reason: `Won the ${rod.name} off a blockade runner`,
-      })
+    if (await db.grantRod(user.id, trader.rodTier)) {
+      await db.ledger(user.id, -trader.stake, `Won the ${rod.name} off a blockade runner`)
       return {
         ok: true, won: true, rodTier: trader.rodTier, rodName: rod.name,
         stake: trader.stake, doubloons: Number(newBalance),
@@ -384,10 +318,7 @@ export async function wagerForRunnerRod(traderKey: string): Promise<
     }
   }
 
-  await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: -trader.stake,
-    reason: `Staked on the ${rod.name} with a blockade runner`,
-  })
+  await db.ledger(user.id, -trader.stake, `Staked on the ${rod.name} with a blockade runner`)
   return {
     ok: true, won: false, rodTier: trader.rodTier, rodName: rod.name,
     stake: trader.stake, doubloons: Number(newBalance),
@@ -459,11 +390,10 @@ export async function saveSeaPosition(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { helm: 'mine' }
   if (!Number.isFinite(x) || !Number.isFinite(y)) return { helm: 'mine' }
-  const admin = createAdminClient()
+  const db = sellData(createAdminClient())
 
   if (helm && !helm.claim) {
-    const { data: row } = await admin.from('profiles')
-      .select('sea_session, sea_seen_at').eq('id', user.id).single()
+    const row = await db.profile(user.id, 'sea_session, sea_seen_at')
     const other = row?.sea_session && row.sea_session !== helm.session
     const fresh = row?.sea_seen_at && (Date.now() - Date.parse(String(row.sea_seen_at))) < HELM_FRESH_MS
     if (other && fresh) return { helm: 'elsewhere' }
@@ -493,8 +423,7 @@ export async function saveSeaPosition(
   // That is the whole reason this is a bitfield and not a list: a list would
   // need dedup and ordering and could lose entries; a bitfield cannot.
   if (seen.length || seenExp.length) {
-    const { data: row } = await admin
-      .from('profiles').select('sea_explored, sea_explored_exp').eq('id', user.id).single()
+    const row = await db.profile(user.id, 'sea_explored, sea_explored_exp')
     if (seen.length) {
       const bits = decodeFog(row?.sea_explored as string | null)
       for (const i of seen) fogSet(bits, i)
@@ -510,7 +439,7 @@ export async function saveSeaPosition(
     }
   }
 
-  await admin.from('profiles').update(patch).eq('id', user.id)
+  await db.updateProfile(user.id, patch)
   return { helm: 'mine' }
 }
 
@@ -528,7 +457,5 @@ export async function runnerRodOwned(rodTier: number): Promise<boolean> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
-  const { data } = await createAdminClient()
-    .from('rod_inventory').select('rod_tier').eq('user_id', user.id).eq('rod_tier', rodTier).maybeSingle()
-  return !!data
+  return sellData(createAdminClient()).ownsRod(user.id, rodTier)
 }

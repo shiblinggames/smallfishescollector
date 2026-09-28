@@ -6,6 +6,7 @@ import { isPremiumActive } from '@/lib/premium'
 import { settlePendingSales } from '@/lib/pendingSales'
 import { grant } from '@/lib/wallet'
 import { marketSale, marketPriceEach } from '@/lib/sellRules'
+import { sellData } from '@/lib/data/sellData'
 
 export type PendingSale = {
   id: string
@@ -27,16 +28,13 @@ export async function getPendingSales(): Promise<{
   const admin = createAdminClient()
   const justSettled = await settlePendingSales(user.id, admin)
 
-  const [{ data }, { data: profile }] = await Promise.all([
-    admin
-      .from('pending_sales')
-      .select('id, amount, fish_count, reason, settles_at')
-      .eq('user_id', user.id)
-      .order('settles_at', { ascending: true }),
-    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
+  const db = sellData(admin)
+  const [data, profile] = await Promise.all([
+    db.pendingSales(user.id),
+    db.profile(user.id, 'doubloons'),
   ])
 
-  const pending: PendingSale[] = (data ?? []).map(r => ({
+  const pending: PendingSale[] = data.map(r => ({
     id: r.id as string,
     amount: r.amount as number,
     fishCount: r.fish_count as number,
@@ -87,25 +85,15 @@ export async function sellEntireHold(): Promise<
   // balance, so the number handed back is the one the player will see.
   await settlePendingSales(user.id, admin)
 
-  const [inventoryRes, marketRes, { data: profile }] = await Promise.all([
-    admin.from('fish_inventory')
-      .select('fish_id, quantity, fish_species(sell_value)')
-      .eq('user_id', user.id)
-      .gt('quantity', 0),
-    admin.from('fish_market').select('fish_id, multiplier'),
-    admin.from('profiles').select('doubloons, is_premium, premium_expires_at').eq('id', user.id).single(),
+  const db = sellData(admin)
+  const [inventory, multiplierMap, profile] = await Promise.all([
+    db.pricedHold(user.id),
+    db.marketMultipliers(),
+    db.profile(user.id, 'doubloons, is_premium, premium_expires_at'),
   ])
 
   if (!profile) return { error: 'Profile not found' }
-
-  type InvRow = { fish_id: number; quantity: number; fish_species: { sell_value: number } | null }
-  const inventory = (inventoryRes.data ?? []) as unknown as InvRow[]
   if (inventory.length === 0) return { error: 'The hold is empty' }
-
-  const multiplierMap = new Map<number, number>()
-  for (const row of marketRes.data ?? []) {
-    multiplierMap.set(row.fish_id, Number(row.multiplier))
-  }
 
   // NO CUT: the non-Captain fee went on 2026-09-16 for everybody. The price
   // itself is lib/sellRules marketSale.
@@ -113,19 +101,12 @@ export async function sellEntireHold(): Promise<
   // Empty each stack only if it still holds what was read, and pay only for
   // the stacks that emptied. Two sells fired together cannot both be paid for
   // the same fish: the second one's update matches nothing.
-  const cleared = await Promise.all(inventory.map(async item => {
-    const { data } = await admin.from('fish_inventory')
-      .update({ quantity: 0 })
-      .eq('user_id', user.id)
-      .eq('fish_id', item.fish_id)
-      .eq('quantity', item.quantity)
-      .select('fish_id')
-    return data && data.length > 0 ? item : null
-  }))
+  const cleared = await Promise.all(inventory.map(async item =>
+    (await db.emptyStack(user.id, item.fish_id, item.quantity)) ? item : null))
 
   const { earned: totalEarned, fishSold: totalFishSold } = marketSale(
-    cleared.filter((x): x is InvRow => !!x).map(item => ({
-      sellValue: item.fish_species?.sell_value ?? 0,
+    cleared.filter((x): x is NonNullable<typeof x> => !!x).map(item => ({
+      sellValue: item.sell_value,
       multiplier: multiplierMap.get(item.fish_id) ?? 1.0,
       quantity: item.quantity,
     })))
@@ -133,11 +114,8 @@ export async function sellEntireHold(): Promise<
 
   const [newDoubloons] = await Promise.all([
     grant(admin, user.id, 'doubloons', totalEarned),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id, amount: totalEarned,
-      reason: `Sold ${totalFishSold} fish (market)`,
-    }),
-    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_doubloons', n: totalEarned }),
+    db.ledger(user.id, totalEarned, `Sold ${totalFishSold} fish (market)`),
+    db.bumpStat(user.id, 'fish_sold_doubloons', totalEarned),
   ])
 
   return { earned: totalEarned, fishSold: totalFishSold, doubloons: newDoubloons }
@@ -156,33 +134,28 @@ export async function marketSellFish(
   const admin = createAdminClient()
   await settlePendingSales(user.id, admin)
 
-  const [{ data: invRow }, { data: fish }, { data: profile }, { data: market }] = await Promise.all([
-    admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single(),
-    admin.from('fish_species').select('sell_value').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, is_premium, premium_expires_at').eq('id', user.id).single(),
-    admin.from('fish_market').select('multiplier').eq('fish_id', fishId).single(),
+  const db = sellData(admin)
+  const [held, sellValue, profile, multiplier] = await Promise.all([
+    db.stackQty(user.id, fishId),
+    db.speciesValue(fishId),
+    db.profile(user.id, 'doubloons, is_premium, premium_expires_at'),
+    db.marketMultiplier(fishId),
   ])
 
-  if (!invRow || !fish || !profile) return { error: 'Data not found' }
-  if (invRow.quantity < quantity) return { error: 'Not enough fish' }
+  if (held == null || sellValue == null || !profile) return { error: 'Data not found' }
+  if (held < quantity) return { error: 'Not enough fish' }
 
   // NO CUT. See the note on the other sell path.
-  const earned = marketPriceEach(fish.sell_value, Number(market?.multiplier ?? 1.0)) * quantity
+  const earned = marketPriceEach(sellValue, multiplier ?? 1.0) * quantity
 
   // Take the fish first, and only if the stack still holds what was read. A
   // twin request that got there first leaves this update matching nothing.
-  const { data: taken } = await admin.from('fish_inventory')
-    .update({ quantity: invRow.quantity - quantity })
-    .eq('user_id', user.id).eq('fish_id', fishId).eq('quantity', invRow.quantity)
-    .select('fish_id')
-  if (!taken || taken.length === 0) return { error: 'Not enough fish' }
+  if (!(await db.takeStack(user.id, fishId, held - quantity, held))) return { error: 'Not enough fish' }
 
   const [newDoubloons] = await Promise.all([
     grant(admin, user.id, 'doubloons', earned),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id, amount: earned, reason: 'Sold fish (market)',
-    }),
-    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_doubloons', n: earned }),
+    db.ledger(user.id, earned, 'Sold fish (market)'),
+    db.bumpStat(user.id, 'fish_sold_doubloons', earned),
   ])
 
   return { earned, doubloons: newDoubloons }
