@@ -14,6 +14,8 @@ import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
 import { grantXPToCrewIds, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { eyeCharge } from '@/lib/finnItems'
 import { grant, arrayAdd } from '@/lib/wallet'
+import { voyageData } from '@/lib/data/voyageData'
+import { clockNow } from '@/lib/clock'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -50,16 +52,8 @@ export async function getDailyVoyageState(): Promise<{
   const user = await getCurrentUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('daily_voyages')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  const rows = (data ?? []) as DailyVoyage[]
-  const now = Date.now()
+  const rows = (await voyageData(createAdminClient()).recentVoyages(user.id, 10)) as DailyVoyage[]
+  const now = clockNow()
   const pending = rows.filter(r => r.status === 'pending')
 
   const activeVoyage = pending.find(r => new Date(r.created_at).getTime() + ((r as DailyVoyage).duration_ms ?? BASE_VOYAGE_MS) > now) ?? null
@@ -75,9 +69,7 @@ export async function getTrawlingCrewIds(): Promise<number[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
-  const admin = createAdminClient()
-  const { data } = await admin.from('trawls').select('crew_id').eq('user_id', user.id)
-  return ((data ?? []) as { crew_id: number }[]).map(r => r.crew_id)
+  return voyageData(createAdminClient()).trawling(user.id)
 }
 
 export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
@@ -88,34 +80,17 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
+  const db = voyageData(admin)
 
   try {
   // Block if a voyage is already pending (at sea or ready to reveal)
-  const { data: existing } = await admin
-    .from('daily_voyages')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('status', 'pending')
-    .maybeSingle()
-
-  if (existing) return { error: 'Your crew is already at sea' }
+  if (await db.voyageOut(user.id)) return { error: 'Your crew is already at sea' }
 
   // Block if a raid is in progress
-  const { data: activeRaid } = await admin
-    .from('expeditions')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .maybeSingle()
-
-  if (activeRaid) return { error: 'Finish your raid before sending a voyage' }
+  if (await db.raidInProgress(user.id)) return { error: 'Finish your raid before sending a voyage' }
 
   // Load profile for ship tier and expedition level
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('ship_tier, expedition_xp, gauntlet_upgrades, ship_classes, has_sixth_berth')
-    .eq('id', user.id)
-    .single()
+  const profile = await db.profile(user.id, 'ship_tier, expedition_xp, gauntlet_upgrades, ship_classes, has_sixth_berth')
 
   if (!profile) return { error: 'Profile not found' }
 
@@ -134,10 +109,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   if ('error' in plan) return { error: plan.error }
   const crewIds = party.map(p => p.id)
 
-  const { data: voyage, error } = await admin
-    .from('daily_voyages')
-    .insert({
-      user_id: user.id,
+  const launched = await db.launchVoyage(user.id, {
       voyage_date: today(),
       crew_variant_ids: crewIds, // now holds user_crew ids
       ship_tier: shipTier,
@@ -152,17 +124,14 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
       tide_turner_drop: plan.tideTurnerDrop,
       phantom_hook_drop: plan.phantomHookDrop,
       perfected_sigil_drop: plan.perfectedSigilDrop,
-    })
-    .select('*')
-    .single()
+  })
 
   // ONE SHIP AT SEA. The read above is only the friendly early answer: two sends
-  // fired together both pass it. The partial unique index
-  // daily_voyages_one_pending (migrate_exploit_fixes_raids.sql) refuses the
-  // second insert, and that refusal is the same answer as the read's.
-  if (error?.code === '23505') return { error: 'Your crew is already at sea' }
-  if (error || !voyage) return { error: 'Failed to send voyage' }
-  return { ok: true, voyage: voyage as DailyVoyage }
+  // fired together both pass it, and the store refuses the second launch
+  // ('taken'), which is the same answer as the read's.
+  if ('taken' in launched) return { error: 'Your crew is already at sea' }
+  if ('failed' in launched) return { error: 'Failed to send voyage' }
+  return { ok: true, voyage: launched.voyage as DailyVoyage }
   } catch (e) {
     // Any unexpected throw (crew resolution, the voyage engine, a DB hiccup)
     // becomes a clean error instead of a rejected promise — otherwise the
@@ -180,13 +149,9 @@ export async function revealVoyageResults(voyageId: number): Promise<
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
+  const db = voyageData(admin)
 
-  const { data: voyageRow } = await admin
-    .from('daily_voyages')
-    .select('*')
-    .eq('id', voyageId)
-    .eq('user_id', user.id)
-    .single()
+  const voyageRow = await db.voyage(user.id, voyageId)
 
   if (!voyageRow) return { error: 'Voyage not found' }
   if (voyageRow.status === 'revealed') return { error: 'Already revealed' }
@@ -197,20 +162,9 @@ export async function revealVoyageResults(voyageId: number): Promise<
   // THE FLIP COMES FIRST. Two reveals fired together both read 'pending' above
   // and both paid the haul. Only the request whose conditional update actually
   // moves the row to 'revealed' goes on to pay; the other finds it gone.
-  const { data: flipped } = await admin
-    .from('daily_voyages')
-    .update({ status: 'revealed' })
-    .eq('id', voyageId)
-    .eq('user_id', user.id)
-    .neq('status', 'revealed')
-    .select('id')
-  if (!flipped || flipped.length === 0) return { error: 'Already revealed' }
+  if (!(await db.markRevealed(user.id, voyageId))) return { error: 'Already revealed' }
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, gems, expedition_xp, has_tide_turner, has_phantom_hook, has_perfected_sigil, unlocked_character_colors, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
-    .eq('id', user.id)
-    .single()
+  const profile = await db.profile(user.id, 'doubloons, gems, expedition_xp, has_tide_turner, has_phantom_hook, has_perfected_sigil, unlocked_character_colors, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
 
   if (!profile) return { error: 'Profile not found' }
 
@@ -237,19 +191,14 @@ export async function revealVoyageResults(voyageId: number): Promise<
   // Lifetime Massive Booty count, for the badge. Fire and forget: a failed
   // counter must never cost the player the haul they just earned.
   if (pay.booty) {
-    void admin.rpc('bump_profile_stat', { uid: user.id, col: 'voyage_booty_hauls', n: 1 })
-      .then(() => {}, () => {})
+    void db.bumpStat(user.id, 'voyage_booty_hauls', 1).catch(() => {})
   }
 
   // Resolve crew names/rarities BEFORE any lost crew get deleted, for the log.
   /* eslint-disable @typescript-eslint/no-explicit-any */
-  const { data: crewRows } = await admin
-    .from('user_crew')
-    .select('id, rarity, nickname, cards(name, slug)')
-    .eq('user_id', user.id)
-    .in('id', voyage.crew_variant_ids)
+  const crewRows = await db.crewByIds(voyage.crew_variant_ids, 'id, rarity, nickname, cards(name, slug)', user.id)
   const crewMeta: VoyageCrewMember[] = (voyage.crew_variant_ids).map(id => {
-    const row = ((crewRows ?? []) as any[]).find(r => r.id === id)
+    const row = (crewRows as any[]).find(r => r.id === id)
     if (!row) return null
     return {
       variantId: id,
@@ -283,21 +232,16 @@ export async function revealVoyageResults(voyageId: number): Promise<
     }
   }
 
-  const { count: completedVoyages } = await admin
-    .from('daily_voyages')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('status', 'revealed')
   // This voyage was already flipped to 'revealed' above, so the count includes it.
-  if ((completedVoyages ?? 0) >= 100) await grantBadgeDirect(user.id, 'fleet_admiral')
+  if ((await db.revealedCount(user.id)) >= 100) await grantBadgeDirect(user.id, 'fleet_admiral')
 
   // Lost crew earn nothing (grant_crew_xp_to_ids also gates on died_at IS NULL).
   const [newDoubloons, newGems, , , crewXP] = await Promise.all([
     grant(admin, user.id, 'doubloons', voyage.total_doubloons),
     grant(admin, user.id, 'gems', voyage.total_gems),
     Promise.all([
-      Object.keys(profileUpdate).length > 0 ? admin.from('profiles').update(profileUpdate).eq('id', user.id) : null,
-      xpEarned > 0 ? admin.rpc('bump_profile_stat', { uid: user.id, col: 'expedition_xp', n: xpEarned }) : null,
+      Object.keys(profileUpdate).length > 0 ? db.updateProfile(user.id, profileUpdate) : null,
+      xpEarned > 0 ? db.bumpStat(user.id, 'expedition_xp', xpEarned) : null,
     ]),
     // Soft-delete: lost crew get died_at + died_on_voyage_id stamped
     // instead of being deleted, so the Crew Hall Graveyard tab can
@@ -305,19 +249,10 @@ export async function revealVoyageResults(voyageId: number): Promise<
     // Every live-roster read (recruit, voyage assign, raid loadout,
     // public profile) filters `WHERE died_at IS NULL` to keep fallen
     // crew out of active UI.
-    voyage.crew_lost.length > 0
-      ? admin.from('user_crew')
-          .update({ died_at: new Date().toISOString(), died_on_voyage_id: voyageId, voyage_slot: null, raid_slot: null })
-          .eq('user_id', user.id)
-          .in('id', voyage.crew_lost)
-      : Promise.resolve(null),
+    db.markFallen(user.id, voyage.crew_lost, voyageId, new Date().toISOString()),
     grantXPToCrewIds(admin, user.id, survivorIds, crewXpEarned),
-    ...(voyage.total_doubloons > 0
-      ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: voyage.total_doubloons, reason: 'Daily crew voyage' })]
-      : []),
-    ...earnedBait.map(({ type, qty }) =>
-      admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: type, p_qty: qty })
-    ),
+    ...(voyage.total_doubloons > 0 ? [db.ledger(user.id, voyage.total_doubloons, 'Daily crew voyage')] : []),
+    ...earnedBait.map(({ type, qty }) => db.addBait(user.id, type, qty)),
   ])
 
   // Schedule captain's log generation after response is sent. Crew names were
@@ -348,13 +283,5 @@ export async function fetchVoyageCaptainsLog(voyageId: number): Promise<{ log: s
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('daily_voyages')
-    .select('captains_log')
-    .eq('id', voyageId)
-    .eq('user_id', user.id)
-    .single()
-
-  return { log: (data?.captains_log as string | null) ?? null }
+  return { log: await voyageData(createAdminClient()).captainsLog(user.id, voyageId) }
 }

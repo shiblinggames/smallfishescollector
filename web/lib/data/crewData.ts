@@ -65,8 +65,12 @@ export interface CrewData extends CaptainData {
   addCrew(uid: string, fields: Row): Promise<void>
   /** One hand's columns; `liveOnly` skips the fallen. */
   crew(uid: string, crewId: number, cols: string, liveOnly?: boolean): Promise<Row | null>
-  /** Several hands' columns, by id (any captain's; ids are the key). */
-  crewByIds(ids: number[], cols: string): Promise<Row[]>
+  /** Several hands' columns, by id; with `uid`, only that captain's. */
+  crewByIds(ids: number[], cols: string, uid?: string): Promise<Row[]>
+  /** Every living hand's columns (no order). */
+  livingCrew(uid: string, cols: string): Promise<Row[]>
+  /** Mark these hands fallen on a voyage (kept for the graveyard, unseated). */
+  markFallen(uid: string, ids: number[], voyageId: number, at: string): Promise<void>
   /** Write fields on one hand. False on a write error. */
   updateCrew(uid: string, crewId: number, patch: Row): Promise<boolean>
   /** Let a living hand go. */
@@ -184,10 +188,20 @@ export function crewData(admin: Db): CrewData {
       const { data } = await q.maybeSingle()
       return (data as Row | null) ?? null
     },
-    async crewByIds(ids, cols) {
+    async crewByIds(ids, cols, uid) {
       if (!ids.length) return []
-      const { data } = await admin.from('user_crew').select(cols).in('id', ids)
+      let q = admin.from('user_crew').select(cols)
+      if (uid !== undefined) q = q.eq('user_id', uid)
+      const { data } = await q.in('id', ids)
       return (data ?? []) as Row[]
+    },
+    async livingCrew(uid, cols) {
+      const { data } = await admin.from('user_crew').select(cols).eq('user_id', uid).is('died_at', null)
+      return (data ?? []) as Row[]
+    },
+    async markFallen(uid, ids, voyageId, at) {
+      if (!ids.length) return
+      await admin.from('user_crew').update({ died_at: at, died_on_voyage_id: voyageId, voyage_slot: null, raid_slot: null }).eq('user_id', uid).in('id', ids)
     },
     async updateCrew(uid, crewId, patch) {
       const { error } = await admin.from('user_crew').update(patch).eq('id', crewId).eq('user_id', uid)

@@ -21,6 +21,7 @@ import { mawCharge } from '@/lib/finnItems'
 import { storesCapHours, stintDone } from '@/lib/crewBunks'
 import { grant } from '@/lib/wallet'
 import { clockNow } from '@/lib/clock'
+import { trawlData } from '@/lib/data/voyageData'
 import { trawlCrewView, trawlDeployRefusal, trawlBack, sampleHaulFish, type TrawlCrewRow } from '@/lib/trawlRules'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -37,28 +38,27 @@ const isZone = (z: string): z is TrawlZoneKey => z in TRAWL_ZONE_BY_KEY
 
 // Build the full client state from the player's profile + roster + active trawls.
 async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState> {
-  const [{ data: profile }, { data: trawlRows }, { data: crewRows }, { data: pendingVoyage }, { data: ch3Row }, { data: bunkRows }] = await Promise.all([
-    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access, equipped_raid_items, borrowed_jaw_xp, finn_spoil_free, finn_spoil_paid, crew_stores_level, is_premium, premium_expires_at, is_admin').eq('id', userId).single(),
-    admin.from('trawls').select('zone, crew_id, ends_at').eq('user_id', userId),
-    admin.from('user_crew').select(CREW_COLS).eq('user_id', userId).is('died_at', null),
+  const db = trawlData(admin)
+  const [profile, trawlRows, crewRows, voyageCrew, ch3, bunkRows] = await Promise.all([
+    db.profile(userId, 'fishing_xp, expedition_xp, has_ancient_deep_access, equipped_raid_items, borrowed_jaw_xp, finn_spoil_free, finn_spoil_paid, crew_stores_level, is_premium, premium_expires_at, is_admin'),
+    db.trawlsOut(userId),
+    db.livingCrew(userId, CREW_COLS),
     // Crew on a pending voyage are also unavailable — exclude from the picker.
-    admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', userId).eq('status', 'pending').maybeSingle(),
+    db.voyageAtSea(userId),
     // Ancient Deep trawls carry the same Chapter 3 gate as fishing it directly.
-    admin.from('raid_completions').select('id').eq('user_id', userId).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle(),
-    // IN THIS BATCH, not after it. Read via lockedBunkCrewIds at first, which
-    // awaits its own query, so every trawl screen and every claim paid a whole
-    // extra serial round trip for one small list.
-    admin.from('crew_hall_bunks').select('crew_id, since, cap_hours').eq('user_id', userId),
+    db.hasCleared(userId, 'the_quartermaster'),
+    // IN THIS BATCH, not after it: one small list, no extra serial round trip.
+    db.bunks(userId),
   ])
-  const ancientDeepUnlocked = (profile as { has_ancient_deep_access?: boolean } | null)?.has_ancient_deep_access === true || !!ch3Row
-  const onVoyage = new Set<number>(((pendingVoyage as { crew_variant_ids?: number[] } | null)?.crew_variant_ids ?? []))
+  const ancientDeepUnlocked = (profile as { has_ancient_deep_access?: boolean } | null)?.has_ancient_deep_access === true || ch3
+  const onVoyage = new Set<number>(voyageCrew ?? [])
 
   const fishingLevel = fishingLevelFromXP((profile?.fishing_xp as number | null) ?? 0)
   const navLevel = navLevelFromXP((profile?.expedition_xp as number | null) ?? 0)
   const unlockedSlots = unlockedTrawlSlots(fishingLevel, navLevel)
 
-  const crewById = new Map<number, CrewRow>(((crewRows ?? []) as any[]).map(r => [r.id, r as CrewRow]))
-  const trawls = (trawlRows ?? []) as { zone: TrawlZoneKey; crew_id: number; ends_at: string }[]
+  const crewById = new Map<number, CrewRow>((crewRows as any[]).map(r => [r.id, r as CrewRow]))
+  const trawls = trawlRows as { zone: TrawlZoneKey; crew_id: number; ends_at: string }[]
   const atSea = new Set(trawls.map(t => t.crew_id))
   const now = clockNow()
 
@@ -82,11 +82,11 @@ async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState
   // same as one already at sea. They were showing up here as free, and sending
   // one left them holding a bunk AND a trawl at once.
   const liveCap = storesCapHours((profile as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1)
-  const inBunk = new Set(((bunkRows ?? []) as { crew_id: number; since: string; cap_hours: number | null }[])
+  const inBunk = new Set(bunkRows
     .filter(r => !stintDone(r.since, now, r.cap_hours ?? liveCap))
     .map(r => r.crew_id))
 
-  const freeCrew: TrawlCrewView[] = ((crewRows ?? []) as any[])
+  const freeCrew: TrawlCrewView[] = (crewRows as any[])
     .filter(r => !atSea.has(r.id) && !onVoyage.has(r.id) && !inBunk.has(r.id))
     .map(r => crewView(r as CrewRow))
     .sort((a, b) => b.savvy + b.fortune - (a.savvy + a.fortune))
@@ -123,15 +123,14 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
   if (!isZone(zone)) return { error: 'Unknown zone' }
 
   const admin = createAdminClient()
-  const [{ data: profile }, { data: trawlRows }, { data: crewRow }, { data: pendingVoyage }, { data: bunkRow }] = await Promise.all([
-    admin.from('profiles').select('fishing_xp, expedition_xp, has_ancient_deep_access, crew_stores_level').eq('id', user.id).single(),
-    admin.from('trawls').select('zone, crew_id').eq('user_id', user.id),
-    admin.from('user_crew').select('id, died_at').eq('id', crewId).eq('user_id', user.id).maybeSingle(),
-    admin.from('daily_voyages').select('id').eq('user_id', user.id).eq('status', 'pending').contains('crew_variant_ids', [crewId]).maybeSingle(),
-    // Just THIS crew's bunk, in the same batch. The guard below only asks about
-    // one hand, so loading the whole hall and doing it serially was two costs
-    // for no reason.
-    admin.from('crew_hall_bunks').select('since, cap_hours').eq('user_id', user.id).eq('crew_id', crewId).maybeSingle(),
+  const db = trawlData(admin)
+  const [profile, trawlRows, crewRow, pendingVoyage, bunkRow] = await Promise.all([
+    db.profile(user.id, 'fishing_xp, expedition_xp, has_ancient_deep_access, crew_stores_level'),
+    db.trawlsOut(user.id),
+    db.crew(user.id, crewId, 'id, died_at', false),
+    db.onVoyage(user.id, crewId),
+    // Just THIS crew's bunk, in the same batch.
+    db.bunkOf(user.id, crewId),
   ])
 
   const fishingLevel = fishingLevelFromXP((profile?.fishing_xp as number | null) ?? 0)
@@ -142,8 +141,7 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
   let ancientRefusal: string | null = null
   if (zone === 'ancient_deep' && fishingLevel >= TRAWL_ZONE_BY_KEY[zone].minLevel
       && (profile as { has_ancient_deep_access?: boolean } | null)?.has_ancient_deep_access !== true) {
-    const { data: ch3 } = await admin.from('raid_completions')
-      .select('id').eq('user_id', user.id).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle()
+    const ch3 = await db.hasCleared(user.id, 'the_quartermaster')
     // Captain's water, same as the cast; the flag is the grandfather.
     ancientRefusal = !ch3 ? 'Clear Chapter 3 (defeat the Quartermaster) to trawl the Ancient Deep.'
       : !inCaptainsWater(profile as CaptainWaterRow | null) ? CAPTAIN_WATER_SAYS.ancient : null
@@ -154,24 +152,22 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
   // assertCanReassign in crew/actions.ts) are lib/trawlRules trawlDeployRefusal.
   const refusal = trawlDeployRefusal({
     zone, crewId, fishingLevel, navLevel, ancientRefusal,
-    active: (trawlRows ?? []) as { zone: string; crew_id: number }[],
+    active: trawlRows,
     crewAlive: !!crewRow && !(crewRow as any).died_at,
-    onVoyage: !!pendingVoyage,
+    onVoyage: pendingVoyage,
     bunk: bunkRow as { since: string; cap_hours: number | null } | null,
     storesLevel: (profile as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1,
   })
   if (refusal) return { error: refusal }
 
-  const { error } = await admin.from('trawls').insert({
-    user_id: user.id, zone, crew_id: crewId,
-    ends_at: new Date(clockNow() + trawlDurationMs(zone)).toISOString(),
-  })
-  if (error) return { error: 'Could not send the trawl' }
+  if (!(await db.sendTrawl(user.id, zone, crewId, new Date(clockNow() + trawlDurationMs(zone)).toISOString()))) {
+    return { error: 'Could not send the trawl' }
+  }
 
   // Free their standing voyage/raid slot so they aren't stranded in a party
   // spot while at sea (and don't linger in the bench). The slot reopens for
   // someone else; the trawl row is what reserves them now.
-  await admin.from('user_crew').update({ voyage_slot: null, raid_slot: null }).eq('id', crewId).eq('user_id', user.id)
+  await db.updateCrew(user.id, crewId, { voyage_slot: null, raid_slot: null })
 
   // NO revalidatePath HERE, deliberately.
   //
@@ -194,22 +190,21 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
   if (!isZone(zone)) return { error: 'Unknown zone' }
 
   const admin = createAdminClient()
-  const { data: trawl } = await admin
-    .from('trawls').select('id, crew_id, ends_at').eq('user_id', user.id).eq('zone', zone).maybeSingle()
+  const db = trawlData(admin)
+  const trawl = await db.trawlIn(user.id, zone)
   if (!trawl) return { error: 'No trawl to collect there' }
   if (!trawlBack((trawl as any).ends_at)) return { error: 'Your crew has not returned yet' }
 
   // The delete IS the claim. Two collects fired together both read the row
   // above; only the one whose delete hands it back gets paid.
-  const { data: claimed } = await admin
-    .from('trawls').delete().eq('id', (trawl as any).id).select('id')
-  if (!claimed || claimed.length === 0) return { error: 'No trawl to collect there' }
+  if (!(await db.claimTrawl(trawl.id))) return { error: 'No trawl to collect there' }
 
-  const [{ data: crewRow }, { data: profile }, { data: pool }] = await Promise.all([
-    admin.from('user_crew').select(CREW_COLS).eq('id', (trawl as any).crew_id).maybeSingle(),
-    admin.from('profiles').select('fishing_xp, doubloons, unlocked_character_colors').eq('id', user.id).single(),
-    admin.from('fish_species').select('name').eq('habitat', zone).limit(40),
+  const [crewRows, profile, pool] = await Promise.all([
+    db.crewByIds([trawl.crew_id], CREW_COLS),
+    db.profile(user.id, 'fishing_xp, doubloons, unlocked_character_colors'),
+    db.speciesNamesIn(zone, 40),
   ])
+  const crewRow = crewRows[0] ?? null
 
   const crew = crewRow ? crewView(crewRow as CrewRow) : { name: 'Your crew', savvy: 5, fortune: 5 } as TrawlCrewView
   const haul = rollTrawlHaul(zone, crew.savvy, crew.fortune)
@@ -218,7 +213,7 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
   const newFishingXP = oldXP + haul.xp
 
   // Sample a few species names for the haul reveal.
-  const fish = sampleHaulFish(((pool ?? []) as { name: string }[]).map(r => r.name))
+  const fish = sampleHaulFish(pool)
 
   // A trawl can cross a fishing-level color threshold (Forest @ 50, Ice @ 75),
   // but we DON'T grant it here — the color shows unlocked live via the earned
@@ -233,18 +228,14 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
   const [newDoubloons] = await Promise.all([
     grant(admin, user.id, 'doubloons', haul.doubloons),
     Promise.all([
-      admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_xp', n: haul.xp }),
-      ...(jawCharge !== null
-        ? [admin.rpc('bump_profile_stat', { uid: user.id, col: 'borrowed_jaw_xp', n: haul.xp })]
-        : []),
-      ...(haul.doubloons > 0
-        ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: haul.doubloons, reason: `Crew trawl: ${z.label}` })]
-        : []),
+      db.bumpStat(user.id, 'fishing_xp', haul.xp),
+      ...(jawCharge !== null ? [db.bumpStat(user.id, 'borrowed_jaw_xp', haul.xp)] : []),
+      ...(haul.doubloons > 0 ? [db.ledger(user.id, haul.doubloons, `Crew trawl: ${z.label}`)] : []),
     ]),
   ])
 
   // Lifetime trawl counter — powers First Haul / Steady Nets / Deep Trawler.
-  void admin.rpc('bump_profile_stat', { uid: user.id, col: 'trawls_collected', n: 1 }).then(() => {}, () => {})
+  void db.bumpStat(user.id, 'trawls_collected', 1).catch(() => {})
 
   return {
     zone,
