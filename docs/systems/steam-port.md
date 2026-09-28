@@ -655,6 +655,15 @@ In order. Each step is worth doing even if the port never happens.
      landings logged 3 species and filled the hold 2 to 106 (two doubles and a x100 jackpot,
      new and existing rows). After the whole file, 8 casts took 8 worms, and 3 landings logged
      3 and put 6 in the hold. Trophies, prestige and the shops were not driven live.
+   - **Shared: `lib/data/common.ts`** holds `CaptainData` (the profile row, counters, the
+     ledger, raid clears, bait), which every system's interface extends.
+   - **Selling: DONE 2026-09-28.** `lib/data/sellData.ts`; the market and the sea traders (the
+     salter, residents, the blockade runner, and the chart's position save that lives beside
+     them) no longer name a table. Its contract: stacks are taken only if they still read
+     what was seen; the whole-hold sale pays for exactly the rows removed; a deal key's second
+     claim reports `taken`; the coin deduction returns null when the purse is short.
+     Verified live on catman: Sell all on 112 fish paid exactly the 2,156 the price table
+     gives, with the hold emptied, the lifetime stat and the ledger line matching.
 7. **The `GameApi` seam on the client.** Components call `api.castLine()` instead of importing
    the server action directly. On the web the implementation is the server action, so this is
    a rename, not a behaviour change.
