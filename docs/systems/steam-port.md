@@ -683,6 +683,15 @@ In order. Each step is worth doing even if the port never happens.
      3 gems with 288 crew XP to each of the five hands; a finished Shallows trawl (planted by
      hand, since sending needs the Docks) collected from the day board with its XP, coin,
      ledger line and counter all landing and its row gone.
+   - **Gauntlet: DONE 2026-09-28.** `lib/data/gauntletData.ts` over `CrewData` (the hardcore
+     squad is crew); the gauntlet actions no longer name a table. Contract: `closeRun` closes
+     an OPEN run once, and only the closer pays, drowns a squad or logs the run; the Don's
+     tribute stamps once per UTC day; the best hit only ever rises; a squad drowning touches
+     only the living and reports how many.
+     Verified live: catman's gauntlet page reads the same through the store as before (deepest
+     82, the ledger tops, DESCEND open, no server errors). A cash-out was NOT driven live,
+     since it needs a played dive and would spend catman's daily run; the first real finish
+     after 2026-09-28 is the proof.
 7. **The `GameApi` seam on the client.** Components call `api.castLine()` instead of importing
    the server action directly. On the web the implementation is the server action, so this is
    a rename, not a behaviour change.
