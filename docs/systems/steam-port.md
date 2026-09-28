@@ -519,6 +519,26 @@ In order. Each step is worth doing even if the port never happens.
 
      Verified live on catman. A jackpot filled the hold exactly to capacity (208 to 250),
      then the market's Sell all paid exactly the listed 4,228.
+   - **Crew: DONE 2026-09-28.** `lib/crewRules.ts` covers:
+     - the card pools;
+     - the recruit board roll, including the campaign gate, the empty-group fallback and the
+       one-shot gifted legendary;
+     - the Blood Gem skin pick;
+     - finished stints and stint payouts (the level ceiling is freed but not paid);
+     - the Leviathan trait offer.
+
+     `crew/actions` and `lib/crewBunkSettle` use it. `crewBunkSettle` re-exports `BunkRow`,
+     `TraitUpgrade`, `NEUTRAL_OFFER` and `bunkTerms` for the old imports.
+
+     `scripts/check-crew-rules.mts` checks the following against `content/cards.json`:
+     - no legendary on a free board;
+     - no gated legendary before its chapter;
+     - the gift pinned to slot 0;
+     - the GEM weights over 60,000 faces;
+     - the gamble never paying a legendary or an owned skin;
+     - the hall's payouts.
+
+     Verified live: a fresh free board rolled for catman (one Rare, two Commons).
 6. **A data-access layer.** Per-system read and write functions replace the scattered
    `admin.from('profiles')` calls, so a local store can later stand in for Supabase behind the
    same functions.
