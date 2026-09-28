@@ -502,8 +502,23 @@ In order. Each step is worth doing even if the port never happens.
      (the XP parts summing, shiny, the hold clamp, haul priority, the record ceiling and the
      Vigil).
 
-     Verified live on catman: 8 casts, 2 landed, one of them a ×100 jackpot. Still inline
-     for now: `reelCrate`, `rerollWormhole`, prestige and zone rewards.
+     Verified live on catman: 8 casts, 2 landed, one of them a ×100 jackpot.
+
+     **Then the rest of fishing.** Moved into `lib/fishingRules`: the bite floor
+     (`reelTooEarly`), `crateStreak`, `wormholeExit`, `rollCatchSize` and `prestigeStep`.
+     `lib/crateLoot` is split into a pure `rollCrateLoot` and `grantCrateLoot`, which the
+     crate reel, the weekly crate and the Master challenge share. The only rule left in
+     `claimZoneReward` is the already-pure `zoneRewardDoubloons`.
+   - **Selling: DONE 2026-09-28.** `lib/sellRules.ts`:
+     - the market price, floored PER FISH;
+     - sea buyers, floored ONCE over the hold;
+     - the runner's cut.
+
+     The market and trader actions use it. `scripts/check-sell-rules.mts` covers the floors,
+     the 78-86% resident band (rising with depth, below the market) and the runner's odds.
+
+     Verified live on catman. A jackpot filled the hold exactly to capacity (208 to 250),
+     then the market's Sell all paid exactly the listed 4,228.
 6. **A data-access layer.** Per-system read and write functions replace the scattered
    `admin.from('profiles')` calls, so a local store can later stand in for Supabase behind the
    same functions.
