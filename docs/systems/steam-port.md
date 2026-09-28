@@ -674,6 +674,15 @@ In order. Each step is worth doing even if the port never happens.
      overwritten and is answered once.
      Verified live on catman: a voyage sailed with exactly the five seated hands in seat
      order, and its reveal paid each of them exactly the route's 230 crew XP.
+   - **Voyages and trawls: DONE 2026-09-28.** `lib/data/voyageData.ts` holds `VoyageData` and
+     `TrawlData`, both over `CrewData`; `voyageActions` and the trawl actions no longer name a
+     table. Contract: a second voyage launch while one is out reports `taken`; the reveal
+     flips once and only the flipper pays; a trawl is collected once and only the collector
+     is paid.
+     Verified live on catman: a triumph voyage launched and revealed paying exactly 422 and
+     3 gems with 288 crew XP to each of the five hands; a finished Shallows trawl (planted by
+     hand, since sending needs the Docks) collected from the day board with its XP, coin,
+     ledger line and counter all landing and its row gone.
 7. **The `GameApi` seam on the client.** Components call `api.castLine()` instead of importing
    the server action directly. On the web the implementation is the server action, so this is
    a rename, not a behaviour change.
