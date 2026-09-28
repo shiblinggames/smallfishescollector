@@ -306,7 +306,7 @@ export function DialSVG({
         <circle cx={CX} cy={CY} r={INNER_R - 2} fill="url(#innerGrad)" />
         {/* Reel-in ripple */}
         {rippleKey > 0 && (
-          <motion.circle key={rippleKey} cx={CX} cy={CY}
+          <motion.circle key={rippleKey} cx={CX} cy={CY} r={8}
             fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1"
             initial={{ r: 8, strokeOpacity: 0.18 }}
             animate={{ r: INNER_R * 0.55, strokeOpacity: 0 }}
