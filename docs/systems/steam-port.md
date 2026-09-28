@@ -460,6 +460,21 @@ In order. Each step is worth doing even if the port never happens.
    - Add a server export to JSON, and an import.
    - It's useful now for account backups, beta-wipe tooling and admin fixes, and later it
      becomes the Steam claim and the cloud-save format.
+   - **DONE 2026-09-28:** `lib/playerSave.ts` defines the format.
+     - **What it holds:** the profile row, `SAVE_TABLES` (32 tables in parent-first order) and,
+       on request, `HISTORY_TABLES` (22 ledgers and logs, never restored). Shared and social
+       rows and anti-cheat tokens are left out on purpose.
+     - **The tool:** `scripts/player-save.mts`.
+       - `export <user> [--history]` writes to `web/saves/`, which is git-ignored.
+       - `restore <file>` is a dry run by default. With `--apply` it writes an undo file first,
+         then replaces the account.
+     - **Under it:** the service-role-only database functions `admin_export_player_rows` and
+       `admin_import_player_rows`. Each is ONE transaction, and ids are kept
+       (`overriding system value`).
+     - **Proven** with a full round trip on catman: 1,078 rows, 0 differences.
+     - **Same account only for now.** Restoring onto another account needs id remapping (crew
+       ids live in bunks, trawls and `saved_crew`), and that is the Steam-claim work.
+     - **A new table that holds a player's stuff goes in `SAVE_TABLES`.**
 5. **Lift the inline rules out of the actions**, one system at a time, core loop first:
    1. fishing (`castLine`, `reelIn`, `reelCrate`);
    2. selling;

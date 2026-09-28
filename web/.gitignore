@@ -72,6 +72,8 @@ scripts/*
 !scripts/content-sync.mts
 # One-off, kept for the record: how the bucket art came into public/.
 !scripts/pull-bucket-art.mts
+# Player save export / restore (lib/playerSave).
+!scripts/player-save.mts
 
 # Badge slicer source sheets (dev-only input for slice-badges.mjs; sliced output in public/badges/ is committed)
 # Badge SOURCE sheets. Multi-badge plates that slice-badges.mjs cuts into
@@ -99,3 +101,6 @@ public/badgebatch*.png
 # they stay local the way the badge plates do.
 art/raw/
 art/backup/
+
+# Player save exports (scripts/player-save.mts): a player's full state. Never commit.
+saves/
