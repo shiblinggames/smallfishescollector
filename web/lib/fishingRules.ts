@@ -628,3 +628,79 @@ export function landFish(i: FishLandingInput): FishLanding {
     updates, anomaly: rec.anomaly, levels: { from, to }, badges,
   }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// ── THE REST OF A CAST: timing, crates, the Wormhole, prestige ─────────────
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * THE BITE FLOOR. The token pins WHAT was on the line; this pins WHEN. The
+ * client never shows a bite before max(760ms, the rolled wait), so a reel (or
+ * a crate opened) sooner than that came from a script replaying cast and reel
+ * back to back. Every clock is the server's: castAt was written by castLine.
+ */
+export function biteFloorMs(token: Pick<PendingCast, 'shot'>): number {
+  return token.shot?.instantBite ? 760 : Math.max(760, Number(token.shot?.waitMs ?? 0))
+}
+
+/** Did this reel arrive before the bite could have happened? */
+export function reelTooEarly(token: Pick<PendingCast, 'shot' | 'castAt'>): { early: boolean; elapsed: number; floor: number } {
+  const floor = biteFloorMs(token)
+  const elapsed = clockNow() - Number(token.castAt ?? 0)
+  return { early: elapsed < floor, elapsed, floor }
+}
+
+/**
+ * A CRATE MOVES THE STREAK, and nothing else: a perfect reel adds one,
+ * anything less resets it. total_perfects, the shiny rolls and the Finn
+ * perfect challenge are about landing FISH well, and a crate is not a fish.
+ */
+export function crateStreak(p: Pick<LandingProfile, 'current_perfect_streak' | 'highest_perfect_streak'>, result: LandingResult, habitat: string): { streak: number; updates: Record<string, unknown>; anomaly: boolean } {
+  const streak = result === 'perfect' ? (p.current_perfect_streak ?? 0) + 1 : 0
+  const rec = streakRecord(streak, p.highest_perfect_streak ?? 0, habitat)
+  return { streak, updates: { current_perfect_streak: streak, catch_pending: false, ...rec.updates }, anomaly: rec.anomaly }
+}
+
+/**
+ * WHERE THE WORMHOLE COMES OUT: a DIFFERENT fish from the same water, picked on
+ * the zone's normal rarity odds with the rod's own bias (better or worse). The
+ * original is excluded so a reroll always lands somewhere else. Null when the
+ * water holds nothing else. The size is rolled like any catch.
+ */
+export function wormholeExit<T extends CastCandidate>(candidates: T[], origId: number, habitat: string, rod: RodDef): T | null {
+  const pool = candidates.filter(f => f.id !== origId)
+  if (pool.length === 0) return null
+  return tierWeightedPick(pool, habitat, rod.rarityBonus)
+}
+
+/** A catch's size, or none when the species has no range. */
+export function rollCatchSize(fish: Pick<LandingFish, 'length_min_in' | 'length_max_in'>): { sizeIn: number; sizeTier?: FishSizeTier; sizeMin: number | null; sizeMax: number | null } {
+  const sizeMin = fish.length_min_in == null ? null : Number(fish.length_min_in)
+  const sizeMax = fish.length_max_in == null ? null : Number(fish.length_max_in)
+  if (sizeMin == null || sizeMax == null) return { sizeIn: 0, sizeMin, sizeMax }
+  const roll = rollFishSize(sizeMin, sizeMax)
+  return { sizeIn: roll.lengthIn, sizeTier: roll.tier, sizeMin, sizeMax }
+}
+
+/** The four waters that prestige (the Ancient Deep does not). */
+export const PRESTIGE_ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
+
+/**
+ * ONE PRESTIGE. Below the cap it is a level; AT the cap (PRESTIGE_MAX) a wipe
+ * no longer raises the level and instead adds a permanent GOLDEN BOOST to this
+ * water. Either way the cycle's catch log resets (goldens kept) and the
+ * completion reward re-opens; the caller does those writes.
+ */
+export function prestigeStep(levels: Record<string, number>, goldenBoosts: Record<string, number>, zone: string, max: number): {
+  atMax: boolean; newLevel: number; newLevels: Record<string, number>
+  newGoldenBoost: number; newGoldenBoosts: Record<string, number>; allZonesPrestiged: boolean
+} {
+  const cur = levels[zone] ?? 0
+  const atMax = cur >= max
+  const newLevel = atMax ? max : cur + 1
+  const newLevels = { ...levels, [zone]: newLevel }
+  const newGoldenBoost = (goldenBoosts[zone] ?? 0) + (atMax ? 1 : 0)
+  const newGoldenBoosts = atMax ? { ...goldenBoosts, [zone]: newGoldenBoost } : goldenBoosts
+  const allZonesPrestiged = PRESTIGE_ZONES.every(z => (newLevels[z] ?? 0) >= 1)
+  return { atMax, newLevel, newLevels, newGoldenBoost, newGoldenBoosts, allZonesPrestiged }
+}

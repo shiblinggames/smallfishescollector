@@ -16,11 +16,12 @@
 import fs from 'fs'
 import path from 'path'
 import { withRng, mulberry32 } from '../lib/rng'
-import { rollCast, landFish, landAncient, CRATE_FISH_ID, type CastRollInput, type CastCandidate, type FishLandingInput, type LandingFish } from '../lib/fishingRules'
+import { rollCast, landFish, landAncient, wormholeExit, prestigeStep, biteFloorMs, crateStreak, CRATE_FISH_ID, type CastRollInput, type CastCandidate, type FishLandingInput, type LandingFish } from '../lib/fishingRules'
 import { getEffectiveRod, lockedInState } from '../lib/rods'
 import { NO_HOTSPOT } from '../lib/seaHotspots'
 import { ZONE_RARITY_RATES, ZONE_WAIT_BASE, zoneCrateChance } from '../app/(app)/fishing/zoneData'
 import { getBait } from '../lib/bait'
+import { rollCrateLoot } from '../lib/crateLoot'
 
 const worm = getBait('worm').waitMult
 
@@ -183,5 +184,56 @@ for (const h of ['shallows', 'open_waters', 'deep', 'abyss']) {
   if (!first.isNewTrophy || !(first.updates.ancient_catches as number[]).includes(146)) fail('a new giant was not added to the wall')
 }
 
-console.log(`\n  Fishing rules: determinism, first cast, the giants, stale crates, odds, waits and landings ${failed ? `${failed} FAILED` : 'ok'}.`)
+// ── crates, the Wormhole, prestige, timing ──────────────────────────────────
+{
+  // The crate's outcomes land on their weights; an owned cosmetic never drops;
+  // with every cosmetic owned, the cosmetic share folds into doubloons.
+  const none: { skins: string[]; boats: string[]; hats: string[] } = { skins: [], boats: [], hats: [] }
+  const all = { skins: ['mint', 'lavender', 'storm'], boats: ['charcoal', 'offwhite'], hats: ['black', 'gray', 'golden', 'cheetah', 'fuego', 'spotted'] }
+  const tally = (tier: Parameters<typeof rollCrateLoot>[0], owned: typeof none) => {
+    const t = { doubloons: 0, bait: 0, cosmetic: 0 }
+    withRng(mulberry32(41), () => { for (let k = 0; k < 40_000; k++) t[rollCrateLoot(tier, owned).outcome.kind]++ })
+    return t
+  }
+  const g = tally('gold', none)
+  // gold: doubloons 55 / bait 35 / cosmetic 10
+  if (Math.abs(g.doubloons / 40_000 - 0.55) > 0.012 || Math.abs(g.cosmetic / 40_000 - 0.10) > 0.008) fail(`gold crate outcomes off: ${JSON.stringify(g)}`)
+  const ga = tally('gold', all)
+  if (ga.cosmetic !== 0 || Math.abs(ga.doubloons / 40_000 - 0.65) > 0.012) fail(`an all-owned gold crate did not fold cosmetics into doubloons: ${JSON.stringify(ga)}`)
+  withRng(mulberry32(43), () => {
+    for (let k = 0; k < 5000; k++) {
+      const r = rollCrateLoot('ancient', { skins: ['mint'], boats: [], hats: ['golden'] })
+      if (r.outcome.kind === 'cosmetic' && (r.outcome.entry.id === 'mint' || r.outcome.entry.id === 'golden')) { fail('a crate dropped a cosmetic already owned'); break }
+      if (r.outcome.kind === 'bait' && r.outcome.qty !== 30) { fail('an ancient crate paid the wrong bait count'); break }
+    }
+  })
+
+  // The Wormhole never comes out where it went in.
+  const pool = inZone('deep')
+  withRng(mulberry32(47), () => {
+    for (let k = 0; k < 3000; k++) {
+      const orig = pool[k % pool.length].id
+      const out = wormholeExit(pool, orig, 'deep', rod)
+      if (!out || out.id === orig) { fail('the wormhole landed on the fish it was sent from'); break }
+    }
+  })
+  if (wormholeExit([pool[0]], pool[0].id, 'deep', rod) !== null) fail('a one-fish water still produced a wormhole exit')
+
+  // Prestige: a level to the cap, then golden boosts; all four waters noticed.
+  let lv: Record<string, number> = {}, gb: Record<string, number> = {}
+  for (let k = 0; k < 7; k++) { const r = prestigeStep(lv, gb, 'deep', 5); lv = r.newLevels; gb = r.newGoldenBoosts }
+  if (lv.deep !== 5 || gb.deep !== 2) fail(`seven prestiges gave level ${lv.deep} and golden ${gb.deep}, not 5 and 2`)
+  const four = prestigeStep({ shallows: 1, open_waters: 2, deep: 1 }, {}, 'abyss', 5)
+  if (!four.allZonesPrestiged) fail('prestiging the last water did not count all four')
+  if (prestigeStep({ shallows: 1 }, {}, 'deep', 5).allZonesPrestiged) fail('two waters counted as all four')
+
+  // The bite floor and the crate streak.
+  if (biteFloorMs({ shot: { fishId: 1, catchDifficulty: 1, biteRarity: 1, waitMs: 5000, instantBite: true } }) !== 760) fail('an instant bite did not use the 760ms floor')
+  if (biteFloorMs({ shot: { fishId: 1, catchDifficulty: 1, biteRarity: 1, waitMs: 5000 } }) !== 5000) fail('the bite floor did not follow the rolled wait')
+  const cs = crateStreak({ current_perfect_streak: 3, highest_perfect_streak: 3 }, 'perfect', 'deep')
+  if (cs.streak !== 4 || cs.updates.highest_perfect_streak !== 4) fail('a perfect crate did not extend the streak and its record')
+  if (crateStreak({ current_perfect_streak: 9 }, 'catch', 'deep').streak !== 0) fail('a plain crate kept the streak')
+}
+
+console.log(`\n  Fishing rules: determinism, first cast, the giants, stale crates, odds, waits, landings, crates, the Wormhole and prestige ${failed ? `${failed} FAILED` : 'ok'}.`)
 if (failed) process.exit(1)

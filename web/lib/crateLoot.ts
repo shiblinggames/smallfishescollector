@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { CRATE_PET_CHANCE, rollPet } from '@/lib/pets'
+import { CRATE_PET_CHANCE, rollPet, type PetDef } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
 import { arrayAdd, grant } from '@/lib/wallet'
 import { rngNext } from './rng'
@@ -101,86 +101,38 @@ const CRATE_COSMETIC_POOL = [
   { kind: 'hat'  as const, id: 'spotted',   name: 'Spotted',   imageUrl: '/hat_spotted_rest.png'   },
 ]
 
+/** What a crate rolled, before anything is granted. */
+export type CrateRoll = {
+  /** The pet the pet roll hit (the roll is blind to what you own), or null. */
+  pet: PetDef | null
+  outcome:
+    | { kind: 'cosmetic'; entry: (typeof CRATE_COSMETIC_POOL)[number] }
+    | { kind: 'doubloons'; amount: number }
+    | { kind: 'bait'; baitType: string; qty: number }
+}
+
 /**
- * Roll a crate of `tier` and grant its reward to `userId`, returning the loot.
- * ALWAYS pays out exactly one reward (pet / cosmetic / doubloons / bait) — never
- * an empty result — so a gated caller (fishing crate token, weekly stamp) can
- * rely on getting something back. The caller owns the anti-forgery / rate gate;
- * this function only rolls + writes the grant.
+ * ── THE CRATE'S DICE, WITH NO DATABASE IN THEM (Phase B, 2026-09-28) ────────
+ *
+ * The pet roll first (blind to what you own: duplicates are what keep the full
+ * set hard, and filtering would renormalise the rare golds upward), then the
+ * ordinary outcome: doubloons, bait, or a crate cosmetic you do not own yet (a
+ * cosmetic slot with nothing left to give folds into doubloons). The ordinary
+ * outcome is always rolled, because a DUPLICATE pet must not eat the crate: it
+ * rides along on the ordinary payout instead. grantCrateLoot applies this.
  */
-export async function grantCrateLoot(
-  admin: SupabaseClient,
-  userId: string,
-  tier: CrateTier,
-): Promise<CrateLoot> {
-  const { data: profile } = await admin.from('profiles')
-    .select('unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets')
-    .eq('id', userId).single()
-
-  // ── THE CRATES-OPENED COUNTER IS NOT BUMPED HERE ────────────────────────
-  //
-  // `fishing_crates_opened` is what every crate badge reads, from Beginner's
-  // Luck at one to Salvage Rights at a thousand, and this roller is shared by
-  // three callers: the crate you reel up mid-cast, the weekly free crate in
-  // the Daily Haul, and the Master daily challenge's payout. Bumped here, all
-  // three fed those badges, so a captain who had never seen a crate on the
-  // line unlocked Beginner's Luck by claiming a handout on their first Monday.
-  //
-  // A crate badge is about FISHING ONE UP. So the counter belongs to the
-  // caller that did: see reelCrate in fishing/actions. This function rolls the
-  // loot and grants it, and says nothing about how the crate was come by.
-
-  const unlockedSkins = (profile?.unlocked_character_colors as string[] | null) ?? []
-  const unlockedBoats = (profile?.unlocked_boats as string[] | null) ?? []
-  const unlockedHats  = (profile?.unlocked_hats  as string[] | null) ?? []
-  const unlockedPets  = (profile?.unlocked_pets  as string[] | null) ?? []
-
-  // ── Pet roll — OVERRIDE the normal outcome on hit ─────────────────
-  // Rolled FIRST and exclusively, so the rare moment owns the screen instead of
-  // fighting a doubloons/bait/cosmetic result. Rates in lib/pets.CRATE_PET_CHANCE.
-  // The roll is DELIBERATELY blind to what you already own. Duplicates are what
-  // keep the full 19-pet set hard, and filtering the pool would renormalise the
-  // six 1.2% golds upward every time you closed out a common one.
-  //
-  // What a duplicate must NOT do is eat the crate. The pet roll overrides the
-  // normal outcome, so a dupe used to resolve to an empty screen: no pet, and no
-  // doubloons, bait or cosmetic either. At 1-in-333 casts in the Ancient Deep
-  // that is the rarest moment in fishing paying nothing at all. A dupe now falls
-  // through to the normal roll and rides along on it for the reveal.
-  let dupePet: DupePet | undefined
-  if (rngNext() < CRATE_PET_CHANCE[tier]) {
-    const pet = rollPet()
-    // Added in place, never by writing back the list read above: a concurrent
-    // grant would otherwise be wiped. false means it landed aboard meanwhile,
-    // which is a dupe like any other.
-    if (!unlockedPets.includes(pet.id) && await arrayAdd(admin, userId, 'unlocked_pets', pet.id)) {
-      // Auto-equip the first pet so it lands in the loadout without an extra tap.
-      await admin.from('profiles').update({ equipped_pet: pet.id }).eq('id', userId).is('equipped_pet', null)
-      return {
-        type: 'pet',
-        petId: pet.id, petName: pet.name,
-        petImageUrl: pet.restImageUrl,
-        petAccent: pet.accentColor,
-      }
-    }
-    dupePet = { petId: pet.id, petName: pet.name, petImageUrl: pet.restImageUrl, petAccent: pet.accentColor }
-  }
-
-  /** Tag whatever the crate actually paid with the pet it passed over. */
-  const pay = <T extends CrateLoot>(loot: T): T => (dupePet ? { ...loot, dupePet } : loot)
+export function rollCrateLoot(tier: CrateTier, owned: { skins: string[]; boats: string[]; hats: string[] }): CrateRoll {
+  const pet = rngNext() < CRATE_PET_CHANCE[tier] ? rollPet() : null
 
   const isOwned = (entry: typeof CRATE_COSMETIC_POOL[number]) => {
-    if (entry.kind === 'skin') return unlockedSkins.includes(entry.id)
-    if (entry.kind === 'boat') return unlockedBoats.includes(entry.id)
-    return unlockedHats.includes(entry.id)
+    if (entry.kind === 'skin') return owned.skins.includes(entry.id)
+    if (entry.kind === 'boat') return owned.boats.includes(entry.id)
+    return owned.hats.includes(entry.id)
   }
-
   const weights = CRATE_OUTCOME_WEIGHTS[tier]
   const unownedCosmetics = CRATE_COSMETIC_POOL.filter(c => !isOwned(c))
-  // If cosmetic outcome can't actually pay out (everything owned), fold its weight into doubloons.
   const cosmeticWeight = unownedCosmetics.length > 0 ? weights.cosmetic : 0
   const doubloonWeight = weights.doubloons + (unownedCosmetics.length > 0 ? 0 : weights.cosmetic)
-
   type Outcome = 'doubloons' | 'bait' | 'cosmetic'
   const pool: { outcome: Outcome; weight: number }[] = [
     { outcome: 'doubloons', weight: doubloonWeight },
@@ -193,7 +145,64 @@ export async function grantCrateLoot(
   for (const o of pool) { rand -= o.weight; if (rand <= 0) { outcome = o.outcome; break } }
 
   if (outcome === 'cosmetic') {
-    const picked = unownedCosmetics[Math.floor(rngNext() * unownedCosmetics.length)]
+    return { pet, outcome: { kind: 'cosmetic', entry: unownedCosmetics[Math.floor(rngNext() * unownedCosmetics.length)] } }
+  }
+  if (outcome === 'doubloons') {
+    const [min, max] = CRATE_DOUBLOON_RANGE[tier]
+    return { pet, outcome: { kind: 'doubloons', amount: Math.floor(min + rngNext() * (max - min + 1)) } }
+  }
+  const baitPool = CRATE_BAIT_POOLS[tier]
+  const totalBaitWeight = baitPool.reduce((s, b) => s + b.weight, 0)
+  let baitRand = rngNext() * totalBaitWeight
+  let picked = baitPool[0]
+  for (const b of baitPool) { baitRand -= b.weight; if (baitRand <= 0) { picked = b; break } }
+  return { pet, outcome: { kind: 'bait', baitType: picked.type, qty: CRATE_BAIT_QTY[tier] } }
+}
+
+/**
+ * Roll a crate of `tier` and grant its reward to `userId`, returning the loot.
+ * ALWAYS pays out exactly one reward (pet / cosmetic / doubloons / bait) — never
+ * an empty result — so a gated caller (fishing crate token, weekly stamp) can
+ * rely on getting something back. The caller owns the anti-forgery / rate gate;
+ * this function rolls (rollCrateLoot) and writes the grant.
+ *
+ * THE CRATES-OPENED COUNTER IS NOT BUMPED HERE: this roller is shared by the
+ * crate reeled up mid-cast, the weekly free crate and the Master challenge's
+ * payout, and the crate badges are about FISHING ONE UP. reelCrate bumps it.
+ */
+export async function grantCrateLoot(
+  admin: SupabaseClient,
+  userId: string,
+  tier: CrateTier,
+): Promise<CrateLoot> {
+  const { data: profile } = await admin.from('profiles')
+    .select('unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets')
+    .eq('id', userId).single()
+  const unlockedPets = (profile?.unlocked_pets as string[] | null) ?? []
+  const roll = rollCrateLoot(tier, {
+    skins: (profile?.unlocked_character_colors as string[] | null) ?? [],
+    boats: (profile?.unlocked_boats as string[] | null) ?? [],
+    hats: (profile?.unlocked_hats as string[] | null) ?? [],
+  })
+
+  // A NEW pet owns the screen. Added in place, never by writing back the list
+  // read above: false means it landed aboard meanwhile, a dupe like any other.
+  let dupePet: DupePet | undefined
+  if (roll.pet) {
+    const pet = roll.pet
+    if (!unlockedPets.includes(pet.id) && await arrayAdd(admin, userId, 'unlocked_pets', pet.id)) {
+      // Auto-equip the first pet so it lands in the loadout without an extra tap.
+      await admin.from('profiles').update({ equipped_pet: pet.id }).eq('id', userId).is('equipped_pet', null)
+      return { type: 'pet', petId: pet.id, petName: pet.name, petImageUrl: pet.restImageUrl, petAccent: pet.accentColor }
+    }
+    dupePet = { petId: pet.id, petName: pet.name, petImageUrl: pet.restImageUrl, petAccent: pet.accentColor }
+  }
+  /** Tag whatever the crate actually paid with the pet it passed over. */
+  const pay = <T extends CrateLoot>(loot: T): T => (dupePet ? { ...loot, dupePet } : loot)
+
+  const o = roll.outcome
+  if (o.kind === 'cosmetic') {
+    const picked = o.entry
     if (picked.kind === 'skin') {
       await arrayAdd(admin, userId, 'unlocked_character_colors', picked.id)
       return pay({ type: 'skin', skinId: picked.id, skinName: picked.name })
@@ -205,26 +214,12 @@ export async function grantCrateLoot(
     await arrayAdd(admin, userId, 'unlocked_hats', picked.id)
     return pay({ type: 'hat', hatId: picked.id, hatName: picked.name, hatImageUrl: picked.imageUrl })
   }
-
-  if (outcome === 'doubloons') {
-    const [min, max] = CRATE_DOUBLOON_RANGE[tier]
-    const amount = Math.floor(min + rngNext() * (max - min + 1))
+  if (o.kind === 'doubloons') {
     // Paid in place, so a sale landing at the same moment is not overwritten.
-    const newDoubloons = await grant(admin, userId, 'doubloons', amount)
-    // The new total rides along (KAN-61): the purse was paid on the server
-    // and nothing on the sea was told, so the counter sat where it was until
-    // a reload.
-    return pay({ type: 'doubloons', amount, newDoubloons })
+    // The new total rides along (KAN-61) so the purse on the sea moves.
+    const newDoubloons = await grant(admin, userId, 'doubloons', o.amount)
+    return pay({ type: 'doubloons', amount: o.amount, newDoubloons })
   }
-
-  // Bait — weighted random pick from this tier's pool
-  const baitPool = CRATE_BAIT_POOLS[tier]
-  const totalBaitWeight = baitPool.reduce((s, b) => s + b.weight, 0)
-  let baitRand = rngNext() * totalBaitWeight
-  let picked = baitPool[0]
-  for (const b of baitPool) { baitRand -= b.weight; if (baitRand <= 0) { picked = b; break } }
-  const qty = CRATE_BAIT_QTY[tier]
-  await admin.rpc('upsert_bait', { p_user_id: userId, p_bait_type: picked.type, p_qty: qty })
-  const baitName = getBait(picked.type).name
-  return pay({ type: 'bait', baitType: picked.type, baitName, quantity: qty })
+  await admin.rpc('upsert_bait', { p_user_id: userId, p_bait_type: o.baitType, p_qty: o.qty })
+  return pay({ type: 'bait', baitType: o.baitType, baitName: getBait(o.baitType).name, quantity: o.qty })
 }

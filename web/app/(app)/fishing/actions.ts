@@ -14,19 +14,18 @@ import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
-import { streakMult, STREAK_RECORD_CEILING } from '@/lib/perfectStreak'
+import { getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { fishingColorsToGrant } from '@/lib/characters'
 import { getLineForSpeciesCount } from '@/lib/lines'
 import { getSpecialItem, SPECIAL_OWNED_COLUMN } from '@/lib/specialItems'
 import { getPet, petSlot, PET_SLOT_COLUMN } from '@/lib/pets'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
-import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
+import { zoneRewardDoubloons, PRESTIGE_MAX } from '@/lib/zoneRewards'
 import { hasPrestigedAllZones } from '@/lib/collection'
-import { vigilFor, vigilTotal, vigilComplete, ancientCatchXP, vigilPaidAfter, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
-import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
-import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
+import { vigilFor, vigilTotal, vigilComplete, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
+import { type FishSizeTier } from '@/lib/fishSize'
+import { SHINY_SELL_MULT } from '@/lib/shiny'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
 import { arrayAdd, grant, spend } from '@/lib/wallet'
 
@@ -50,8 +49,7 @@ export type FishSpecies = {
 }
 
 import { ZONE_MIN_LEVEL } from './zoneData'
-import { rngNext } from '@/lib/rng'
-import { rollCast, landFish, landAncient, tierWeightedPick, activeEventOf as getActiveEvent, CRATE_FISH_ID, type PendingCast } from '@/lib/fishingRules'
+import { rollCast, landFish, landAncient, reelTooEarly, crateStreak, wormholeExit, rollCatchSize, prestigeStep, activeEventOf as getActiveEvent, CRATE_FISH_ID, type PendingCast } from '@/lib/fishingRules'
 
 // fishWaitMs, tierWeightedPick, rollCrateTier and the event reader live in
 // lib/fishingRules now (Phase B, 2026-09-28), with the cast roll itself.
@@ -623,11 +621,9 @@ export async function reelIn(
   // REFUSED WITHOUT SPENDING THE CAST. The claim is further down; this returns
   // before it, so the line is still out and reeling again is the answer. A
   // scripted caller gets a refusal, and a real player can never be here.
-  const biteFloorMs = token.shot?.instantBite
-    ? 760
-    : Math.max(760, Number(token.shot?.waitMs ?? 0))
-  if (Date.now() - Number(token.castAt ?? 0) < biteFloorMs) {
-    console.warn('[reelIn] reel before the bite', { userId: user.id, elapsed: Date.now() - Number(token.castAt ?? 0), biteFloorMs })
+  const early = reelTooEarly(token)
+  if (early.early) {
+    console.warn('[reelIn] reel before the bite', { userId: user.id, elapsed: early.elapsed, biteFloorMs: early.floor })
     return { error: 'Nothing has bitten yet. The line is still out.' }
   }
 
@@ -1061,11 +1057,9 @@ export async function rerollWormhole(): Promise<
   // A wormhole sends you somewhere ELSE — exclude the original so the reroll
   // always lands on a different fish. Trophies (sell_value 0) never apply here
   // since ancient_deep is ineligible for the wormhole.
-  const pool = (candidates ?? []).filter(f => f.id !== origId)
-  if (pool.length === 0) return abortWithCredit('The wormhole found nothing new.')
-
   const rod = getEffectiveRod(profile?.rod_tier ?? 0, profile?.completionist_effects as number[] | null)
-  const picked = tierWeightedPick(pool, habitat, rod.rarityBonus)
+  const picked = wormholeExit(candidates ?? [], origId, habitat, rod)
+  if (!picked) return abortWithCredit('The wormhole found nothing new.')
   const { data: newFish } = await admin.from('fish_species').select('*').eq('id', picked.id).single()
   if (!newFish) return abortWithCredit('The wormhole collapsed.')
 
@@ -1107,16 +1101,10 @@ export async function rerollWormhole(): Promise<
   }
 
   // Size + PB for the new fish (mirrors the catch path; ancients excluded).
-  const sizeMinIn = newFish.length_min_in == null ? null : Number(newFish.length_min_in)
-  const sizeMaxIn = newFish.length_max_in == null ? null : Number(newFish.length_max_in)
-  let sizeIn = 0
-  let sizeTier: FishSizeTier | undefined
+  const { sizeIn, sizeTier, sizeMin: sizeMinIn, sizeMax: sizeMaxIn } = rollCatchSize(newFish)
   let isPB = false
   let previousBest: number | null = null
   if (sizeMinIn != null && sizeMaxIn != null) {
-    const roll = rollFishSize(sizeMinIn, sizeMaxIn)
-    sizeIn = roll.lengthIn
-    sizeTier = roll.tier
     const { data: pbRow } = await admin.from('fish_personal_bests').select('best_length_in').eq('user_id', user.id).eq('fish_id', newFish.id).maybeSingle()
     previousBest = pbRow ? Number(pbRow.best_length_in) : null
     isPB = previousBest == null || sizeIn > previousBest
@@ -1163,11 +1151,9 @@ export async function reelCrate(_zone: string, _tier: CrateTier = 'wooden', resu
   // THE SAME BITE FLOOR reelIn applies, for the same reason: a crate opened
   // sooner than it could have surfaced came from a script, not the dial.
   // Refused before the claim, so an honest line is never spent by it.
-  const biteFloorMs = crateToken.shot?.instantBite
-    ? 760
-    : Math.max(760, Number(crateToken.shot?.waitMs ?? 0))
-  if (Date.now() - Number(crateToken.castAt ?? 0) < biteFloorMs) {
-    console.warn('[reelCrate] reel before the bite', { userId: user.id, elapsed: Date.now() - Number(crateToken.castAt ?? 0), biteFloorMs })
+  const early = reelTooEarly(crateToken)
+  if (early.early) {
+    console.warn('[reelCrate] reel before the bite', { userId: user.id, elapsed: early.elapsed, biteFloorMs: early.floor })
     return { error: 'Nothing has bitten yet. The line is still out.' }
   }
 
@@ -1192,16 +1178,9 @@ export async function reelCrate(_zone: string, _tier: CrateTier = 'wooden', resu
   // Deliberately NOT bumped here: total_perfects, the shiny rolls and the Finn
   // perfect challenge. Those are about landing FISH well, and a crate is not a
   // fish. This moves the streak and nothing else.
-  const streak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
-  const streakUpdate: Record<string, unknown> = { current_perfect_streak: streak, catch_pending: false }
-  // Ceiling-guarded like the fish paths; see STREAK_RECORD_CEILING.
-  if (streak > STREAK_RECORD_CEILING) {
-    await flagAnomaly(admin, user.id, 'implausible:perfectStreak', 3, { claimed: streak })
-  } else if (streak > (profile.highest_perfect_streak ?? 0)) {
-    streakUpdate.highest_perfect_streak = streak
-    streakUpdate.highest_streak_set_at = new Date().toISOString()
-    streakUpdate.best_streak_zone = crateToken.habitat
-  }
+  // The rule is lib/fishingRules crateStreak; ceiling-guarded like the fish paths.
+  const { streak, updates: streakUpdate, anomaly } = crateStreak(profile, result, crateToken.habitat)
+  if (anomaly) await flagAnomaly(admin, user.id, 'implausible:perfectStreak', 3, { claimed: streak })
   await admin.from('profiles').update(streakUpdate).eq('id', user.id)
 
   // ── THE CRATE THE BADGES COUNT ──────────────────────────────────────────
@@ -1443,18 +1422,12 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
     .eq('user_id', user.id).in('fish_id', zoneIds)
   if ((caughtCount ?? 0) < zoneIds.length) return { error: 'Zone not complete' }
 
-  const currentLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
-  const curLevel = currentLevels[zone] ?? 0
-  // Prestige caps at 5 ("Max Prestige"). At the cap a wipe no longer raises the
-  // level — instead it grants a permanent GOLDEN BOOST to this zone (higher
-  // golden/shiny odds here). Below the cap it's a normal level-up. Either way
-  // the catch log resets (goldens preserved) and the completion reward re-opens.
-  const atMax = curLevel >= PRESTIGE_MAX
-  const newLevel = atMax ? PRESTIGE_MAX : curLevel + 1
-  const newLevels = { ...currentLevels, [zone]: newLevel }
-  const goldenBoosts = (profile.zone_golden_boost as Record<string, number> | null) ?? {}
-  const newGoldenBoost = (goldenBoosts[zone] ?? 0) + (atMax ? 1 : 0)
-  const newGoldenBoosts = atMax ? { ...goldenBoosts, [zone]: newGoldenBoost } : goldenBoosts
+  // Prestige caps at 5 ("Max Prestige"); at the cap a wipe grants a permanent
+  // GOLDEN BOOST instead. The rule is lib/fishingRules prestigeStep.
+  const { atMax, newLevel, newLevels, newGoldenBoost, newGoldenBoosts, allZonesPrestiged } = prestigeStep(
+    (profile.prestige_levels as Record<string, number> | null) ?? {},
+    (profile.zone_golden_boost as Record<string, number> | null) ?? {},
+    zone, PRESTIGE_MAX)
 
   // Sand used to unlock here at Prestige 3. Since the 2026-09-25 standard it is
   // a Fishing 25 reward (lib/characters), granted on the catch path.
@@ -1462,8 +1435,6 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
   const profileUpdate: Record<string, unknown> = { prestige_levels: newLevels, [rewardCol]: false }
   if (atMax) profileUpdate.zone_golden_boost = newGoldenBoosts
 
-  const allZones = ['shallows', 'open_waters', 'deep', 'abyss']
-  const allZonesPrestiged = allZones.every(z => (newLevels[z] ?? 0) >= 1)
 
   // NOTE: this only clears the CYCLE log. fish_lifetime is untouched, so the
   // Almanac's career numbers survive every prestige. Do not "tidy" this by
