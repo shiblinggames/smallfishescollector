@@ -692,6 +692,14 @@ In order. Each step is worth doing even if the port never happens.
      82, the ledger tops, DESCEND open, no server errors). A cash-out was NOT driven live,
      since it needs a played dive and would spend catman's daily run; the first real finish
      after 2026-09-28 is the proof.
+   - **Casino: DONE 2026-09-28.** `lib/data/casinoData.ts`; slots, blackjack, roulette and the
+     chip purse no longer name a table. Contract: a blackjack hand settles once and only the
+     settler is paid; the table saves only while the hand is active; the cash-out moves every
+     chip in one step; the community pot's share and new size come from one atomic claim
+     (offline, the pot is a local one).
+     Verified live on catman: four slot pulls took the purse 95 to 20 (four stakes, one
+     two-hook refund), the session net fell exactly 75, the community pot rose exactly 12
+     (four feeds of 3), and all four spins were logged.
 7. **The `GameApi` seam on the client.** Components call `api.castLine()` instead of importing
    the server action directly. On the web the implementation is the server action, so this is
    a rename, not a behaviour change.
