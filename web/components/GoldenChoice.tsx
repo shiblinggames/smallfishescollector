@@ -43,6 +43,7 @@
 // unreadable for the same reason every other panel on this chart carries a
 // solid base. This one has a real backdrop and a real floor.
 
+import { api } from '@/lib/gameApi'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
@@ -50,7 +51,6 @@ import { useEffect } from 'react'
 import { FishImg } from '@/components/CatchResultCard'
 import { SHINY_FISH_FILTER } from '@/lib/shiny'
 import { vibrate } from '@/lib/haptics'
-import { sellGoldenTrophy, mountGoldenTrophy } from '@/app/(app)/fishing/actions'
 
 const GOLD = '#f0c040'
 
@@ -81,14 +81,14 @@ export default function GoldenChoice({ held, onDone }: {
     vibrate([0, 18, 40, 26])
     try {
       if (which === 'sell') {
-        const r = await sellGoldenTrophy(held.id).catch(() => ({ error: 'It slipped away.' }))
+        const r = await api.fishing.sellGoldenTrophy(held.id).catch(() => ({ error: 'It slipped away.' }))
         if ('error' in r) { setNote(r.error); setBusy(false); return }
         // The header reads its balance once at render and never asks again
         // unless it is told. Same event every other earning path fires.
         try { window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.doubloons })) } catch { /* noop */ }
         onDone('sold')
       } else {
-        const r = await mountGoldenTrophy(held.id).catch(() => ({ error: 'It slipped away.' }))
+        const r = await api.fishing.mountGoldenTrophy(held.id).catch(() => ({ error: 'It slipped away.' }))
         if ('error' in r) { setNote(r.error); setBusy(false); return }
         onDone('mounted')
       }

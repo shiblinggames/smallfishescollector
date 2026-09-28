@@ -29,7 +29,8 @@
 // drift. Those are situational and belong to the full screen, and the map does
 // not offer the Ancient Deep as a quick cast.
 
-import type { WaitingFolk } from '@/app/(app)/fishing/actions'
+import { api } from '@/lib/gameApi'
+import type { WaitingFolk } from '@/lib/gameApi'
 import { AUTO_RECAST_MS, AUTO_CRATE_TOTAL_MS } from '@/lib/autoFishing'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -69,7 +70,7 @@ import { buildFishZones, ZONE_DIFFICULTY, FISH_DIFFICULTY_SPEED, type ZoneDef } 
 import { applyAncientPalette } from '@/lib/ancientDial'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
-import { castLine, reelIn, reelCrate, useTideTurnerSkip, rerollWormhole, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from '../fishing/actions'
+import { type FishSpecies } from '@/lib/gameApi'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { levelCatchBonus } from '@/lib/fishingLevel'
 import { vibrate } from '@/lib/haptics'
@@ -82,7 +83,6 @@ import { getHook } from '@/lib/hooks'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { holdContents } from '../fishing/holdActions'
-import { setAutoFishing } from '../fishing/actions'
 import { markFinnRevealSeen } from '@/app/(app)/fishing/finnActions'
 import { finnAncientBeat, type FinnAncientBeat } from '@/lib/finn'
 import { ANCIENT_IDS } from '@/lib/ancientVigil'
@@ -1157,7 +1157,7 @@ export default function FishingHere({
     // sound arriving after the line.
     sfxRef.current = setTimeout(() => playCast2Sfx(), 600)
     poseRef.current = setTimeout(() => onPose('wait'), 650)
-    castLine(bait, zone, at.current ? { x: at.current.x, y: at.current.y } : undefined).then(res => {
+    api.fishing.castLine(bait, zone, at.current ? { x: at.current.x, y: at.current.y } : undefined).then(res => {
       if ('error' in res) { setErr(res.error); setPhase('idle'); onPose('rest'); return }
       onBaitSpent(res.baitRemaining)
       // The server decides how long the fish takes to come. Honoured rather
@@ -1356,7 +1356,7 @@ export default function FishingHere({
         held.then(() => { setCaught({ kind: 'miss', result: result === 'penalty' ? 'penalty' : 'miss' }); setPhase('result') })
         return
       }
-      reelCrate(zone, tier, result as 'perfect' | 'catch').then(async loot => {
+      api.fishing.reelCrate(zone, tier, result as 'perfect' | 'catch').then(async loot => {
         await held
         if ('error' in loot) { setErr(loot.error); setPhase('idle'); return }
         setCaught({ kind: 'crate', tier, loot })
@@ -1379,7 +1379,7 @@ export default function FishingHere({
       return
     }
 
-    reelIn(hooked.fishId, result, bait).then(async res => {
+    api.fishing.reelIn(hooked.fishId, result, bait).then(async res => {
       await held
       if ('error' in res) { setErr(res.error); setPhase('idle'); setHooked(null); return }
       if ('caught' in res && res.caught) {
@@ -1636,7 +1636,7 @@ export default function FishingHere({
     if (skipping || phase !== 'hooked' || skipsLeft <= 0) return
     setSkipping(true)
     spinRef.current?.cancel()
-    const res = await useTideTurnerSkip().catch(() => ({ error: 'The tide would not turn.' }))
+    const res = await api.fishing.tideTurnerSkip().catch(() => ({ error: 'The tide would not turn.' }))
     setSkipping(false)
     if ('error' in res) { setErr(res.error); return }
     // Throwing one back does NOT break the streak — that is the entire item.
@@ -1881,7 +1881,7 @@ export default function FishingHere({
                   const next = !v
                   // Remembered for next time. Nothing waits on it: a failed
                   // write costs one tap next session and nothing else.
-                  void setAutoFishing(next).catch(() => {})
+                  void api.fishing.setAutoFishing(next).catch(() => {})
                   return next
                 })
               }}
@@ -2332,7 +2332,7 @@ export default function FishingHere({
                 <button disabled={busyChoice}
                   onClick={async e => {
                     e.stopPropagation(); setBusyChoice(true)
-                    const r = await rerollWormhole().catch(() => ({ error: 'The wormhole closed.' }))
+                    const r = await api.fishing.rerollWormhole().catch(() => ({ error: 'The wormhole closed.' }))
                     setBusyChoice(false)
                     setWormhole(false)
                     if ('error' in r) { setChoiceNote(r.error); return }

@@ -1,5 +1,6 @@
 'use client'
 
+import { api } from '@/lib/gameApi'
 import dynamic from 'next/dynamic'
 import { flyPayout } from '@/lib/coinFly'
 // Davy Jones Gauntlet host. Owns the push-your-luck meta-loop (depth, pot,
@@ -59,7 +60,6 @@ import { FATHOM_BAITS } from '@/lib/bait'
 import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletStartAnchorSaves, gauntletFathomsMult, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
-import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects, DAVY_FORGE } from '@/lib/raidItems'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate, hapticTap, hapticCommit } from '@/lib/haptics'
@@ -8099,7 +8099,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
     if (special) {
       // Special items (Auto Catcher) are bought via buySpecialItem, which sets
       // its own profile column — refetch to pick up the new owned + Fathoms.
-      const res = await buySpecialItem(id)
+      const res = await api.fishing.buySpecialItem(id)
       setClaiming(null)
       if ('error' in res) { setErr(res.error); return }
       vibrate([0, 30, 50, 40])

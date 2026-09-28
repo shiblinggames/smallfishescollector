@@ -17,6 +17,7 @@
 // animates on its own timer, because that is how a scene ends up feeling like
 // several things happening near each other.
 
+import { api } from '@/lib/gameApi'
 import { releaseCurtain } from '@/lib/arrivalHold'
 import { openMembership } from '@/components/MembershipModal'
 import { currentAt, kelpAt, CURRENT_PUSH, KELP_KEEP } from '@/lib/seaFlow'
@@ -106,7 +107,6 @@ import { getBountyBoard } from '../expeditions/bountyActions'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import LevelRewardsGrant, { type Granted } from './LevelRewardsGrant'
-import { claimFishingLevelRewards } from '../fishing/actions'
 // A LEAF, not SeaMap's own exports. The cast button is this same control in its
 // other role and needs these numbers — and FishingHere importing back from here
 // is a cycle that killed the page on load. See app/(app)/sea/helm.ts.
@@ -213,7 +213,6 @@ function folkRodSlug(folkId: string): string | null {
 import SeaLandfallHint from './SeaLandfallHint'
 import SeaCue from './SeaCue'
 import { pendingPacts, hasAcceptedPact } from './pactActions'
-import { heldGolden } from '../fishing/actions'
 import { seaBoot, type SeaBoot } from './bootActions'
 import { coastClip, coastline } from '@/lib/islandShape'
 import { plateFor } from '@/lib/islandPlates'
@@ -2194,7 +2193,7 @@ export default function SeaMap({
   const [levelGrant, setLevelGrant] = useState<{ granted: Granted; from: number; to: number } | null>(null)
   /** Resolves to whether a card went up. */
   const collectLevelRewards = useCallback((): Promise<boolean> => {
-    return claimFishingLevelRewards().then(res => {
+    return api.fishing.claimFishingLevelRewards().then(res => {
       // ON THE SPAN, NOT THE PAYOUT. Most levels pay nothing and every one of
       // them is still a level; the action moves its watermark either way now,
       // so this fires once per level and never again for the same one.
@@ -12880,7 +12879,7 @@ hullRef={hullRefFor(t.key)} />
           waiting works through them one at a time. */}
       <GoldenChoice held={golden} onDone={() => {
         setGolden(null)
-        void heldGolden().then(h => { if (h) setGolden(h) }).catch(() => {})
+        void api.fishing.heldGolden().then(h => { if (h) setGolden(h) }).catch(() => {})
       }} />
 
       {/* THE CONFIRM UNDER THE ARCH IS GONE. It asked "sail through to

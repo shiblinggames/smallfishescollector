@@ -16,7 +16,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import type { FishSpecies } from '@/app/(app)/fishing/actions'
+import type { FishSpecies } from '@/lib/gameApi'
 import { vigilNumeral } from '@/lib/ancientVigil'
 import { formatFishLength, tierShowsPill, TIER_COLOR, TIER_LABEL, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, pickShinyMessage } from '@/lib/shiny'

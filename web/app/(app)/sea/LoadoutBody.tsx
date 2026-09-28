@@ -24,6 +24,7 @@
 // same argument that retired quick-sell, and a till in the middle of the ocean
 // would undo it from the other end. See sea/loadoutActions.
 
+import { api } from '@/lib/gameApi'
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PreviewStage from '@/components/PreviewStage'
@@ -37,7 +38,6 @@ import { BOATS } from '@/lib/boats'
 import { PETS } from '@/lib/pets'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { loadoutGear, type LoadoutGear } from './loadoutActions'
-import { equipHat, equipBoat, equipPet } from '@/app/(app)/fishing/actions'
 import { updateCharacterColor } from '@/app/(app)/u/actions'
 
 const GOLD = '#f0c040'
@@ -170,9 +170,9 @@ export default function LoadoutBody({
     // change that is already on screen — underneath a live renderer. See the
     // note on equipBoat in fishing/actions.
     const quiet = { quiet: true }
-    if (slot === 'hat') { onLookChange({ hatId: value }); await equipHat(value, quiet).catch(() => {}) }
-    else if (slot === 'boat') { onLookChange({ boatId: value }); await equipBoat(value, quiet).catch(() => {}) }
-    else if (slot === 'pet') { onLookChange({ petId: value }); await equipPet(value, 'stern', quiet).catch(() => {}) }
+    if (slot === 'hat') { onLookChange({ hatId: value }); await api.fishing.equipHat(value, quiet).catch(() => {}) }
+    else if (slot === 'boat') { onLookChange({ boatId: value }); await api.fishing.equipBoat(value, quiet).catch(() => {}) }
+    else if (slot === 'pet') { onLookChange({ petId: value }); await api.fishing.equipPet(value, 'stern', quiet).catch(() => {}) }
     else if (slot === 'skin' && value) { onLookChange({ characterColor: value }); await updateCharacterColor(value, quiet).catch(() => {}) }
     setBusy(false)
     // The wide menu stays on its tab: it is a list you browse, not a picker

@@ -15,6 +15,7 @@
 // right; a second copy here would be two copies of the fishing economy drifting
 // apart. The handlers below are the same server actions the fishing page calls.
 
+import { api } from '@/lib/gameApi'
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -44,11 +45,6 @@ import {
 } from '@/lib/shipyard'
 import { buyHullTier, buyLanternTier, buyHandlingTier, buyAccelTier, equipRod as equipRodAction } from './actions'
 import { upgradeFishHold } from '../fishing/holdActions'
-import {
-  equipBoat, buyBoat, equipHat, buyHat, equipPet,
-  equipSpecialItem, buySpecialItem, setCompletionistEffects,
-  setShowWaitTimer as persistShowWaitTimer,
-} from '../fishing/actions'
 import { equipSecondSpecial } from '../expeditions/spoilsActions'
 import { purchaseRod, sellRod, buyReel } from '@/app/(app)/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/(app)/hooks/actions'
@@ -674,7 +670,7 @@ export default function ShipyardClient(p: {
             onCompletionistEffectsChange={async (tiers) => {
               const prev = effects
               setEffects(tiers)
-              const res = await setCompletionistEffects(tiers)
+              const res = await api.fishing.setCompletionistEffects(tiers)
               if ('error' in res) { setEffects(prev); return { error: res.error } }
               setEffects(res.completionistEffects)
               // After any committed forge the free first forge is spent.
@@ -751,10 +747,10 @@ export default function ShipyardClient(p: {
             }}
             equippedBoat={boat}
             unlockedBoats={boats}
-            onEquipBoat={(id) => { setBoat(id); void equipBoat(id) }}
+            onEquipBoat={(id) => { setBoat(id); void api.fishing.equipBoat(id) }}
             onBuyBoat={(id) => {
               void (async () => {
-                const res = await buyBoat(id)
+                const res = await api.fishing.buyBoat(id)
                 if ('error' in res) { setErr(res.error); return }
                 setBoats(prev => (prev.includes(id) ? prev : [...prev, id]))
                 setBoat(id)
@@ -764,10 +760,10 @@ export default function ShipyardClient(p: {
             }}
             equippedHat={hat}
             unlockedHats={hats}
-            onEquipHat={(id) => { setHat(id); void equipHat(id) }}
+            onEquipHat={(id) => { setHat(id); void api.fishing.equipHat(id) }}
             onBuyHat={(id) => {
               void (async () => {
-                const res = await buyHat(id)
+                const res = await api.fishing.buyHat(id)
                 if ('error' in res) { setErr(res.error); return }
                 setHats(prev => (prev.includes(id) ? prev : [...prev, id]))
                 setHat(id); bank(res.doubloons)
@@ -783,13 +779,13 @@ export default function ShipyardClient(p: {
               // stern slot; the bow pet is cleared by tapping it.
               if (petSlot(getPet(id)) === 'bow') {
                 const next = petBow === id ? null : id
-                setPetBow(next); void equipPet(next, 'bow')
+                setPetBow(next); void api.fishing.equipPet(next, 'bow')
                 return
               }
-              setPet(id); void equipPet(id, 'stern')
+              setPet(id); void api.fishing.equipPet(id, 'stern')
             }}
             equippedSpecial={special}
-            onEquipSpecial={(itemId) => { setSpecial(itemId); void equipSpecialItem(itemId) }}
+            onEquipSpecial={(itemId) => { setSpecial(itemId); void api.fishing.equipSpecialItem(itemId) }}
             equippedSpecial2={special2}
             onEquipSpecial2={(id) => {
               // Optimistic, then reconciled: the server is the authority on
@@ -799,7 +795,7 @@ export default function ShipyardClient(p: {
               void equipSecondSpecial(id).then(res => { if (!res.ok) setSpecial2(prev) })
             }}
             onBuySpecialItem={async (itemId) => {
-              const res = await buySpecialItem(itemId)
+              const res = await api.fishing.buySpecialItem(itemId)
               if ('error' in res) { setErr(res.error); return }
               // Only the base Auto Caster is doubloon-bought here; its upgrade
               // is a Fathoms purchase in the Gauntlet's Locker.
@@ -820,7 +816,7 @@ export default function ShipyardClient(p: {
             fishingLevel={p.fishingLevel}
             isPremium={p.isPremium}
             showWaitTimer={waitTimer}
-            onToggleShowWaitTimer={(next) => { setWaitTimer(next); void persistShowWaitTimer(next) }}
+            onToggleShowWaitTimer={(next) => { setWaitTimer(next); void api.fishing.setShowWaitTimer(next) }}
             // Nothing to close: this is a page, not a drawer. The pickers close
             // themselves; only the drawer's own dismiss ever used this.
             onClose={() => {}}
