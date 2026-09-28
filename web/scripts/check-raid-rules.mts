@@ -10,7 +10,7 @@
 //   - the clear records (an admin never takes the global one);
 //   - the map gates, the dice (the bonus cap, a purse never below zero, a fair
 //     d20), and the damage check (the shot lands in range, the preview's odds
-//     never overstate the shot's).
+//     are the shot's odds).
 //
 //   npx tsx scripts/check-raid-rules.mts
 
@@ -107,13 +107,9 @@ withRng(mulberry32(131), () => {
       if (s.breakdown.roll < pv.rangeMin || s.breakdown.roll > pv.rangeMax) { fail(`${n.id}: a shot landed outside its range`); break }
       if (s.passed) passes++
     }
-    // KNOWN, 2026-09-28: the preview needs base >= ceil(threshold / mult) while
-    // the shot passes on round(base * mult) >= threshold, so rounding lets a
-    // slightly lower roll through and the sheet UNDERSTATES the odds by a few
-    // points (coffers_fork: shows 29%, passes ~32%). Held here as "never
-    // overstates, within five points" until the display is aligned.
+    // The sheet's odds are the shot's odds (both round roll x mult the same way).
     const real = passes / N * 100
-    if (real < pv.passChance - 2 || real > pv.passChance + 5) fail(`${n.id}: the preview said ${pv.passChance}% and the shot passed ${real.toFixed(1)}%`)
+    if (Math.abs(real - pv.passChance) > 1.5) fail(`${n.id}: the preview said ${pv.passChance}% and the shot passed ${real.toFixed(1)}%`)
   }
 })
 

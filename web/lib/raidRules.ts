@@ -153,12 +153,15 @@ function shotBasis(stats: ShotStats) {
 }
 
 /** The odds shown on the node before the shot: how much of the hit range
- *  clears the threshold once multiplied, as a whole percent. */
+ *  clears the threshold once multiplied, as a whole percent. Counted with the
+ *  SAME rounding the shot uses (round(roll x mult) >= threshold); it used to
+ *  need roll >= ceil(threshold / mult), which understated the odds by a few
+ *  points (coffers_fork showed 29% and passed about 32%). Fixed 2026-09-28. */
 export function dpsPreview(stats: ShotStats, threshold: number) {
   const { rangeMin, rangeMax, mult } = shotBasis(stats)
-  const needRoll = Math.ceil(threshold / mult)
   const total = rangeMax - rangeMin + 1
-  const passing = Math.max(0, rangeMax - Math.max(rangeMin, needRoll) + 1)
+  let passing = 0
+  for (let roll = rangeMin; roll <= rangeMax; roll++) if (Math.round(roll * mult) >= threshold) passing++
   const passChance = total > 0 ? Math.max(0, Math.min(100, Math.round((passing / total) * 100))) : 0
   return { rangeMin, rangeMax, mult, passChance }
 }

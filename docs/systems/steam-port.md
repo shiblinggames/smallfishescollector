@@ -628,11 +628,11 @@ In order. Each step is worth doing even if the port never happens.
      - the coin claim clamps, and admin clears never take the record;
      - the d20 is fair, and no purse goes below zero.
 
-     **Found by the check, NOT fixed (a display change, needs Kong's call):** the
-     damage-check sheet UNDERSTATES the odds. It needs a roll of `ceil(threshold / mult)`,
-     while the shot passes on `round(roll x mult) >= threshold`. `coffers_fork` shows 29%
-     and really passes about 32%. The check holds it as "never overstates" until the sheet
-     is aligned.
+     **Found by the check, fixed 2026-09-28 on Kong's OK:** the damage-check sheet
+     UNDERSTATED the odds. It needed a roll of `ceil(threshold / mult)` while the shot passes
+     on `round(roll x mult) >= threshold` (`coffers_fork` showed 29% and passed about 32%).
+     `dpsPreview` now counts rolls with the shot's own rounding, and the check holds the two
+     within 1.5 points.
 
      Not live-tested: every changed path fires only inside a fight or at a map node, so the
      first raid anyone plays after the deploy is the proof.
