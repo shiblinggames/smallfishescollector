@@ -591,6 +591,26 @@ In order. Each step is worth doing even if the port never happens.
      Live: catman's gauntlet page loads on the new code with DESCEND open and no server
      errors. No cash-out has been played since; the first real run after 2026-09-28 is the
      live proof (compare its `gauntlet_runs` row against the reward screen).
+   - **Casino: DONE 2026-09-28.** The card maths (`lib/blackjack`) and the wheel
+     (`lib/roulette`) were already pure. `lib/casinoRules.ts` covers:
+     - the purse: the buy-in rule, and the session bust-out all three games share;
+     - `rollSlots`: the reels, the bonus round with the wild, and the pay table. The shared
+       community pot is still claimed by the action, since a pot many players feed is a
+       database thing (offline it becomes a local pot);
+     - the roulette slip and its per-zone cap;
+     - the blackjack table: deal, insurance, hit, stand, double, split, the orphan stand, the
+       settlement and the badge streaks.
+
+     `scripts/check-casino-rules.mts` checks:
+     - determinism;
+     - the forced triples, and the pot (an admin never takes it);
+     - the wild never completing a catfish line;
+     - the base-game return (87.4% before the pot; the 10% feed returns through it, near the
+       ~96.8% total the constants state);
+     - the zone cap, the purse, and every blackjack house rule.
+
+     Verified live on catman: four slot pulls. A catfish pair paid 3x, sardine pairs came up
+     near misses, and the purse moved 120 to 95, exactly the four stakes less the one win.
 6. **A data-access layer.** Per-system read and write functions replace the scattered
    `admin.from('profiles')` calls, so a local store can later stand in for Supabase behind the
    same functions.
