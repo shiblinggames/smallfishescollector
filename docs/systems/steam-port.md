@@ -715,6 +715,19 @@ In order. Each step is worth doing even if the port never happens.
 7. **The `GameApi` seam on the client.** Components call `api.castLine()` instead of importing
    the server action directly. On the web the implementation is the server action, so this is
    a rename, not a behaviour change.
+   **STARTED 2026-09-28, fishing first.** `lib/gameApi` exports one `api` object. Its
+   `FishingApi` interface is typed straight off the server actions (`typeof castLine`...), so a
+   second implementation cannot drift from the first without the compiler saying so. The web
+   implementation IS the server actions. The fishing screen, loadout, chart, shipyard, golden
+   choice and the gauntlet's special-item buy now call `api.fishing.*` (24 call sites); no
+   component imports the fishing actions any more (`bootActions` is server code and keeps
+   calling directly). The Tide Turner is `api.fishing.tideTurnerSkip`, not `useTideTurnerSkip`,
+   so the hooks lint does not mistake it for a hook.
+   The swap for Steam is a build-time alias of `lib/gameApi`'s implementation module; not built
+   yet, that is the step 8 spike.
+   Verified live on catman: 8 casts through `api.fishing` took 8 worms, and 2 landings logged
+   and put 4 in the hold.
+
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):
