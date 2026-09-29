@@ -5,18 +5,22 @@
 // implementation (a module alias at build time) with one that runs the game
 // core against the local save, and no component changes.
 //
-// Systems join as they are converted. Fishing first, because it is the offline
-// spike's target (docs/systems/steam-port.md, step 8).
+// Systems join as they are converted: fishing (the offline spike's target,
+// docs/systems/steam-port.md step 8), then selling.
 
 import { webFishingApi, type FishingApi } from './fishing'
+import { webSellingApi, type SellingApi } from './selling'
 
 export interface GameApi {
   fishing: FishingApi
+  selling: SellingApi
 }
 
 export const api: GameApi = {
   fishing: webFishingApi,
+  selling: webSellingApi,
 }
 
 export type { FishingApi } from './fishing'
 export type { FishSpecies, WaitingFolk } from './fishing'
+export type { SellingApi, PendingSale, DealResult } from './selling'

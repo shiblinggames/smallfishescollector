@@ -16,7 +16,7 @@ import { motion } from 'framer-motion'
 import { getBait } from '@/lib/bait'
 import { vibrate } from '@/lib/haptics'
 import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
-import { strikeDeal, sellToResident, wagerForRunnerRod, runnerRodOwned } from './traderActions'
+import { api } from '@/lib/gameApi'
 import { RODS } from '@/lib/rods'
 import { folkById, folkRoleFor, type FolkTier } from '@/lib/seaFolk'
 import { folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod, type Rapport } from './folkActions'
@@ -187,7 +187,7 @@ export default function TraderPanel({
   useEffect(() => {
     if (trader.deal !== 'wager') { setRodOwned(false); return }
     let live = true
-    void runnerRodOwned(trader.rodTier).then(v => { if (live) setRodOwned(v) }).catch(() => { if (live) setRodOwned(false) })
+    void api.selling.runnerRodOwned(trader.rodTier).then(v => { if (live) setRodOwned(v) }).catch(() => { if (live) setRodOwned(false) })
     return () => { live = false }
   }, [trader])
 
@@ -200,7 +200,7 @@ export default function TraderPanel({
     if (busy || trader.deal !== 'wager') return
     setBusy(true); setErr(''); vibrate(14)
     try {
-      const res = await wagerForRunnerRod(trader.key)
+      const res = await api.selling.wagerForRunnerRod(trader.key)
       if ('error' in res) { setErr(res.error); setBusy(false); return }
       announce(res.doubloons)
       setCut({ won: res.won, rodName: res.rodName })
@@ -219,7 +219,7 @@ export default function TraderPanel({
     if (busy || trader.deal !== 'resident') return
     setBusy(true); setErr(''); vibrate(14)
     try {
-      const res = await sellToResident(trader.zoneId)
+      const res = await api.selling.sellToResident(trader.zoneId)
       if ('error' in res) { setErr(res.error); setBusy(false); return }
       announce(res.doubloons)
       onHoldEmptied()
@@ -237,7 +237,7 @@ export default function TraderPanel({
     setErr('')
     vibrate(14)
     try {
-      const res = await strikeDeal(trader.key)
+      const res = await api.selling.strikeDeal(trader.key)
       if ('error' in res) { setErr(res.error); setBusy(false); return }
       announce(res.doubloons)
       if (res.earned != null) onHoldEmptied()

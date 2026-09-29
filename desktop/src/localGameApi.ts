@@ -8,11 +8,14 @@
 // Every fishing call runs offline: the cast and the reel, the crate, the
 // wormhole, the Tide Turner, the golden choice and the level rewards
 // (lib/core/fishing), and the loadout (lib/core/loadout). Other systems are not
-// on this API yet.
+// on this API yet. Selling runs offline too (lib/core/selling), with the
+// captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
+import * as selling from '@/lib/core/selling'
+import { localSellData } from '@/lib/data/local/sellLocal'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
 import { installRng, mulberry32, seedOf } from '@/lib/rng'
@@ -20,7 +23,7 @@ import type { SpeciesRow } from '@/lib/data/fishingData'
 import speciesJson from '@/content/fish_species.json'
 import { XP_TABLE } from '@/lib/fishingLevel'
 
-export type { FishSpecies, WaitingFolk } from '../../web/lib/gameApi/index'
+export type { FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult } from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
 
@@ -38,7 +41,7 @@ function starterSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 60 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {},
+    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null,
   }
 }
 
@@ -90,4 +93,25 @@ const fishing: FishingApi = {
   setCompletionistEffects: (tiers) => run((db, uid) => loadout.setCompletionistEffects(db, uid, tiers)),
 }
 
-export const api: GameApi = { fishing }
+/** The same, over the selling store. */
+async function runSell<T>(fn: (db: ReturnType<typeof localSellData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage } = need()
+  const r = await fn(localSellData(save), save.uid)
+  await writeSave(storage, save)
+  return r
+}
+
+const sellingApi: SellingApi = {
+  // Nothing is ever owed from the web's retired delayed lane offline.
+  getPendingSales: () => runSell(async (db, uid) => ({ ...(await selling.pendingSales(db, uid)), justSettled: 0 })),
+  sellEntireHold: () => runSell((db, uid) => selling.sellEntireHold(db, uid)),
+  marketSellFish: (fishId, quantity) => runSell((db, uid) => selling.marketSellFish(db, uid, fishId, quantity)),
+  dealtToday: () => runSell((db, uid) => selling.dealtToday(db, uid)),
+  strikeDeal: (key) => runSell((db, uid) => selling.strikeDeal(db, uid, key)),
+  sellToResident: (zoneId) => runSell((db, uid) => selling.sellToResident(db, uid, zoneId)),
+  wagerForRunnerRod: (key) => runSell((db, uid) => selling.wagerForRunnerRod(db, uid, key)),
+  runnerRodOwned: (tier) => runSell((db, uid) => selling.runnerRodOwned(db, uid, tier)),
+  saveSeaPosition: (x, y, seen, seenExp, side, helm) => runSell((db, uid) => selling.saveSeaPosition(db, uid, x, y, seen, seenExp, side, helm)),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi }

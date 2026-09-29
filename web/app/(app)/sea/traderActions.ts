@@ -1,41 +1,15 @@
 'use server'
 
-// THE SALT ROAD — striking a deal.
-//
-// The client sends a trader KEY and nothing else. Not a price, not a quantity,
-// not what they are selling. All of that is re-derived here from the key, by
-// the same pure function the map drew them with, so the worst a forged request
-// can do is name a trader who does not exist and get turned away.
-//
-// Two guards, and they are different guards for different problems:
-//
-//   ONCE PER TRADER — a primary key on (user_id, trader_key). The insert is the
-//   claim. Two taps landing together cannot both succeed, because the second
-//   one violates the key rather than reading a stale row and deciding it is
-//   fine. This is the mail/bounty pattern, not the collectTrawl pattern.
-//
-//   SIX PER DAY — the real bound on the whole feature. The map is client-side,
-//   so the server has no idea where the boat is and cannot check that you
-//   actually sailed to anyone. Rather than pretend otherwise, the cap makes it
-//   not matter: skipping the sailing gets you the best few deals of the day
-//   instead of the nearest few, which against a day's fishing is a rounding
-//   error.
+// THE SALT ROAD, the resident buyers, the blockade runner and the boat's place
+// on the chart. The rules and the claim-first locks run in lib/core/selling;
+// these check the session and hand the core the Supabase store.
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { traderFromKey, seaDay, DEALS_PER_DAY } from '@/lib/seaTraders'
-import { PLACES, RESIDENTS } from '@/app/(app)/sea/chart'
-import { decodeFog, encodeFog, fogSet } from '@/lib/seaExplore'
-import { decodeXfog, encodeXfog, xfogSet } from '@/lib/seaExploreExp'
-import { getBait } from '@/lib/bait'
-import { RODS } from '@/lib/rods'
-import { grant } from '@/lib/wallet'
-import { holdAtRate, runnerCutWon } from '@/lib/sellRules'
-import { sellData, type SellData, type HoldStack } from '@/lib/data/sellData'
+import { sellData } from '@/lib/data/sellData'
+import * as core from '@/lib/core/selling'
 
-export type DealResult =
-  | { ok: true; spent?: number; earned?: number; baitType?: string; qty?: number; doubloons: number }
-  | { error: string }
+export type DealResult = import('@/lib/core/selling').DealResult
 
 /** Read on the page so the cap survives a reload. */
 export async function dealtToday(): Promise<string[]> {
@@ -43,223 +17,28 @@ export async function dealtToday(): Promise<string[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
   // Read through the request's own client (row security), as it always was.
-  return sellData(supabase).dealtKeys(user.id, seaDay())
+  return core.dealtToday(sellData(supabase), user.id)
 }
 
+/** Deal with a wandering trader: the client sends the key, nothing else. */
 export async function strikeDeal(traderKey: string): Promise<DealResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  // THE TRADER IS REBUILT, NOT RECEIVED. traderFromKey re-hashes the cell and
-  // the day and only returns someone if the key it produces matches the key it
-  // was given, so a made-up key cannot conjure a made-up price.
-  const trader = traderFromKey(traderKey)
-  if (!trader) return { error: 'There is nobody there.' }
-
-  const today = seaDay()
-  // A key from another day is a stale tab, not an attack. Say so plainly.
-  if (!traderKey.startsWith(`${today}:`)) {
-    return { error: 'They sailed on. The sea has different people in it today.' }
-  }
-
-  const admin = createAdminClient()
-  const db = sellData(admin)
-
-  if ((await db.dealsToday(user.id, today)) >= DEALS_PER_DAY) {
-    return { error: `Word travels. Nobody else out here will deal with you today.` }
-  }
-
-  const profile = await db.profile(user.id, 'doubloons')
-  const doubloons = Number(profile?.doubloons ?? 0)
-
-  // ── CLAIM FIRST, PAY SECOND ─────────────────────────────────────────────
-  // The insert IS the lock. Everything below it happens exactly once because
-  // only one caller can have got past this line.
-  // The union has more arms than this action handles — talkers want nothing and
-  // residents have their own uncapped path — so narrow explicitly rather than
-  // letting an `else` quietly stand for "must be a salter".
-  if (trader.deal !== 'bait' && trader.deal !== 'buy') {
-    return { error: 'They have nothing to trade.' }
-  }
-  const detail = trader.deal === 'bait'
-    ? { deal: 'bait', baitType: trader.baitType, qty: trader.qty, cost: trader.cost }
-    : { deal: 'buy', rate: trader.rate }
-
-  if (trader.deal === 'bait') {
-    if (doubloons < trader.cost) {
-      return { error: `${trader.name} wants ${trader.cost.toLocaleString()} and you have not got it.` }
-    }
-  }
-
-  // 'taken' is the primary key refusing a second claim; anything else is a real
-  // failure and must not be reported as "already done".
-  const claim = await db.claimDeal(user.id, { trader_key: traderKey, sea_day: today, kind: trader.kind, detail })
-  if (claim === 'taken') return { error: 'You have already dealt with them.' }
-  if (claim === 'failed') return { error: 'The deal fell through.' }
-
-  if (trader.deal === 'bait') {
-    const bait = getBait(trader.baitType)
-    if (!bait) return { error: 'The deal fell through.' }
-
-    // THE ARGUMENTS ARE (uid, amount), and the RESULT is the guard.
-    //
-    // deduct_doubloons does the balance check inside its own WHERE clause and
-    // RETURNS the new balance — so when you cannot afford it, it updates no
-    // rows and hands back NULL without raising anything at all. Checking
-    // `error` here would have been checking something that never fires, and the
-    // bait would have been granted for free. The atomic check is the return
-    // value; the read above is only there to word the message nicely.
-    const newBalance = await db.deductDoubloons(user.id, trader.cost)
-    if (newBalance == null) {
-      // Give the claim back. A captain who was charged nothing must not lose
-      // the trader as well.
-      await db.releaseDeal(user.id, traderKey)
-      return { error: 'You have not got the coin.' }
-    }
-
-    await db.addBait(user.id, trader.baitType, trader.qty)
-    await db.ledger(user.id, -trader.cost, `Bought ${trader.qty} ${bait.name} from ${trader.name}`)
-
-    return {
-      ok: true, spent: trader.cost, baitType: trader.baitType, qty: trader.qty,
-      // The balance the DB actually landed on, not the one this request
-      // predicted before it started.
-      doubloons: Number(newBalance),
-    }
-  }
-
-  // ── THE SALTER buys the hold outright ───────────────────────────────────
-  const rows = await db.holdStacks(user.id)
-  if (!rows.length) {
-    await db.releaseDeal(user.id, traderKey)
-    return { error: 'Your hold is empty. Nothing to sell.' }
-  }
-
-  // Prices come from the market, server side. The rate is the only thing the
-  // trader contributes, and that came out of the hash.
-  const value = await db.speciesValues([...new Set(rows.map(r => r.fish_id))])
-
-  const rate = trader.deal === 'buy' ? trader.rate : 0
-  const earned = holdAtRate(rows.map(r => ({ sellValue: value.get(r.fish_id) ?? 0, quantity: r.quantity })), rate)
-  if (earned <= 0) {
-    await db.releaseDeal(user.id, traderKey)
-    return { error: 'Nothing in your hold is worth his salt.' }
-  }
-
-  // Pay for what the delete actually took, not for what was read above. Two
-  // Salters fired together both read the same hold; only one of them gets the
-  // rows back from the delete, and the other is paid for nothing.
-  const taken = await db.takeWholeHold(user.id)
-  const sold = await holdValue(db, taken.rows, rate)
-  if (taken.failed || sold <= 0) {
-    await db.releaseDeal(user.id, traderKey)
-    return { error: 'Your hold is empty. Nothing to sell.' }
-  }
-
-  // The balance the wallet landed on, returned by the same statement that paid.
-  const newBalance = await grant(admin, user.id, 'doubloons', sold)
-  await db.ledger(user.id, sold, `Sold the hold to ${trader.name} at sea`)
-
-  return { ok: true, earned: sold, doubloons: newBalance }
+  return core.strikeDeal(sellData(createAdminClient()), user.id, traderKey)
 }
 
-/** What a set of inventory rows is worth at `rate`, priced server side off the
- *  species table. Floored once over the whole lot, as both hold sales do. */
-async function holdValue(
-  db: SellData,
-  rows: HoldStack[],
-  rate: number,
-): Promise<number> {
-  if (!rows.length) return 0
-  const value = await db.speciesValues([...new Set(rows.map(r => r.fish_id))])
-  return holdAtRate(rows.map(r => ({ sellValue: value.get(r.fish_id) ?? 0, quantity: r.quantity })), rate)
-}
-
-/**
- * SELL THE HOLD TO A ZONE'S RESIDENT BUYER.
- *
- * Deliberately NOT the wandering-trader path, and deliberately NOT capped. The
- * six-a-day limit exists because a wanderer's discount is a reward you could
- * otherwise farm by skipping the sailing. This is not a reward — it is the same
- * conversion the 65% quick sell already does without limit, at a better rate,
- * in exchange for having sailed out here at all. Capping it would only ever
- * strand somebody with a full hold and nowhere to put it.
- *
- * The rate comes off the chart, server side. The client sends a zone id and
- * nothing else.
- */
+/** Sell the hold to a zone's resident buyer; uncapped (lib/core/selling). */
 export async function sellToResident(zoneId: string): Promise<
   { ok: true; earned: number; doubloons: number; rate: number } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const zone = PLACES.find(p => p.id === zoneId && p.kind === 'water')
-  const res = RESIDENTS.find(r => r.zoneId === zoneId)
-  if (!zone || !res) return { error: 'There is nobody buying here.' }
-  const rate = res.rate
-
-  const admin = createAdminClient()
-  const db = sellData(admin)
-  const rows = await db.holdStacks(user.id)
-  if (!rows.length) return { error: 'Your hold is empty.' }
-
-  // Prices come from the species table, server side. The rate is the only thing
-  // the buyer contributes and it came off the chart, not off the request.
-  const value = await db.speciesValues([...new Set(rows.map(r => r.fish_id))])
-
-  const earned = holdAtRate(rows.map(r => ({ sellValue: value.get(r.fish_id) ?? 0, quantity: r.quantity })), rate)
-  if (earned <= 0) return { error: 'Nothing in your hold is worth anything to them.' }
-
-  // CLEAR THE HOLD FIRST. If the grant failed after the delete the player would
-  // lose the fish for nothing; if the delete fails after the grant they would
-  // be paid for a hold they still have, which is worse. Deleting first and
-  // checking the result means the only failure left is being paid late.
-  //
-  // And pay for the rows the delete handed back, not the ones read above: N
-  // sales fired together all read the same hold, but only one delete gets the
-  // rows, so only one of them is paid.
-  const taken = await db.takeWholeHold(user.id)
-  if (taken.failed) return { error: 'The sale fell through.' }
-  const sold = await holdValue(db, taken.rows, rate)
-  if (sold <= 0) return { error: 'Your hold is empty.' }
-
-  const newBalance = await grant(admin, user.id, 'doubloons', sold)
-  await db.ledger(user.id, sold, `Sold the hold to ${res.name} in ${zone.name}`)
-
-  return { ok: true, earned: sold, rate, doubloons: newBalance }
+  return core.sellToResident(sellData(createAdminClient()), user.id, zoneId)
 }
 
-/**
- * ── CUT THE DECK FOR THE YOLO ROD ───────────────────────────────────────────
- *
- * The blockade runner does not sell. He deals: one stake, one cut, one time in
- * ten you row home with the rod, and either way he will not deal with you again
- * until tomorrow.
- *
- * WHY IT IS NOT A PRICE. The YOLO Rod is a long-odds roll on every cast, and it
- * used to be the one rod you could simply buy if you had sailed far enough on
- * the right night. Ten stakes is what it cost on the shelf, so the arithmetic
- * has not moved - the average captain still pays a million for it - but the
- * money now behaves the way the rod does. Somebody gets it for a hundred
- * thousand and tells that story for a year.
- *
- * THE THREE LOCKS, and each one is a different thing being protected:
- *
- * 1. THE KEY carries the night it belongs to, so an offer saved from an earlier
- *    cycle rebuilds to nothing. That is the encounter.
- * 2. THE DAY ROW is `yolo:<sea day>` in sea_trader_deals, whose primary key is
- *    (user_id, trader_key) - so the insert IS the once-a-day lock, and two taps
- *    in the same second cannot both get a cut. That is the pacing.
- * 3. THE ROLL happens here and nowhere else. A client that decides its own odds
- *    is not a gamble, it is a button.
- *
- * NOT AGAINST THE DAILY DEAL CAP. It has a harder limit of its own, and burning
- * one of six ordinary trades on a coin flip would make somebody choose between
- * the rod and their day's selling.
- */
+/** Cut the deck with the blockade runner for his rod, once a night. */
 export async function wagerForRunnerRod(traderKey: string): Promise<
   { ok: true; won: boolean; rodTier: number; rodName: string; stake: number; doubloons: number }
   | { error: string }
@@ -267,83 +46,10 @@ export async function wagerForRunnerRod(traderKey: string): Promise<
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const trader = traderFromKey(traderKey)
-  if (!trader || trader.deal !== 'wager') {
-    return { error: 'They have gone. The dark does not keep anyone in one place.' }
-  }
-  const rod = RODS.find(r => r.tier === trader.rodTier)
-  if (!rod) return { error: 'The deal fell through.' }
-
-  const db = sellData(createAdminClient())
-  const today = seaDay()
-
-  // Say so before taking a stake. You cannot own the rod twice, and somebody
-  // who already has it staking a hundred thousand on winning it again is the
-  // worst possible way to find that out.
-  if (await db.ownsRod(user.id, trader.rodTier)) return { error: `You already carry the ${rod.name}.` }
-
-  // ONE CUT A DAY, and the row is the lock rather than a count that could be
-  // read twice. Keyed on the sea day rather than the trader, deliberately: a
-  // second runner on the same night is still the same night's cut.
-  const claim = await db.claimDeal(user.id, {
-    trader_key: `yolo:${today}`, sea_day: today, kind: 'runner',
-    detail: { deal: 'wager', rodTier: trader.rodTier, stake: trader.stake },
-  })
-  if (claim === 'taken') return { error: 'You have had your cut tonight. He will deal again tomorrow.' }
-  if (claim === 'failed') return { error: 'The deal fell through.' }
-
-  // The RESULT is the guard, not the error: deduct_doubloons checks the balance
-  // inside its own WHERE and returns NULL rather than raising. If it will not
-  // cover, the day's cut goes back - nobody loses a turn for being short.
-  const newBalance = await db.deductDoubloons(user.id, trader.stake)
-  if (newBalance == null) {
-    await db.releaseDeal(user.id, `yolo:${today}`)
-    return { error: `He wants ${trader.stake.toLocaleString()} on the table and you have not got it.` }
-  }
-
-  const won = runnerCutWon(trader.odds)
-
-  if (won) {
-    // The insert can still lose a race against another grant of the same rod.
-    // If it does the captain keeps the stake as a loss rather than paying for
-    // something they already own - which is the same outcome the dice give nine
-    // times in ten, and cannot be told apart from it.
-    if (await db.grantRod(user.id, trader.rodTier)) {
-      await db.ledger(user.id, -trader.stake, `Won the ${rod.name} off a blockade runner`)
-      return {
-        ok: true, won: true, rodTier: trader.rodTier, rodName: rod.name,
-        stake: trader.stake, doubloons: Number(newBalance),
-      }
-    }
-  }
-
-  await db.ledger(user.id, -trader.stake, `Staked on the ${rod.name} with a blockade runner`)
-  return {
-    ok: true, won: false, rodTier: trader.rodTier, rodName: rod.name,
-    stake: trader.stake, doubloons: Number(newBalance),
-  }
+  return core.wagerForRunnerRod(sellData(createAdminClient()), user.id, traderKey)
 }
 
-
-/**
- * WHERE THE BOAT IS, remembered across a navigation.
- *
- * /sea used to drop you at HOME every time you opened it, which quietly made
- * the sail home optional: fill the hold in the Ancient Deep, tap the nav to the
- * market, sell at full price, and you reappear at the Mainland — exactly where
- * the trip home would have put you, for nothing. Leaving the page no longer
- * moves the boat.
- *
- * Deliberately NOT validated against anything. A forged position buys you
- * nothing: the only thing it changes is where your own boat starts, and there
- * is nothing on this chart you can reach by starting somewhere that you could
- * not reach by sailing there. The sell lanes are all guarded on their own terms
- * — the residents by rate, the wanderers by the daily deal cap — so position is
- * a convenience, not a permission.
- *
- * Clamped only to keep a NaN or an Infinity out of a numeric column.
- */
+/** Where the boat is, remembered across a navigation (lib/core/selling). */
 export async function saveSeaPosition(
   x: number, y: number,
   /** Fog cells uncovered since the last flush. Merged with OR — see below. */
@@ -389,73 +95,13 @@ export async function saveSeaPosition(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { helm: 'mine' }
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return { helm: 'mine' }
-  const db = sellData(createAdminClient())
-
-  if (helm && !helm.claim) {
-    const row = await db.profile(user.id, 'sea_session, sea_seen_at')
-    const other = row?.sea_session && row.sea_session !== helm.session
-    const fresh = row?.sea_seen_at && (Date.now() - Date.parse(String(row.sea_seen_at))) < HELM_FRESH_MS
-    if (other && fresh) return { helm: 'elsewhere' }
-  }
-
-  const patch: Record<string, unknown> = {
-    sea_x: Math.max(-1e6, Math.min(1e6, x)),
-    sea_y: Math.max(-1e6, Math.min(1e6, y)),
-    // WHEN, not just where. A position with no timestamp could be from thirty
-    // seconds ago or from last March, and the compass cannot honestly point a
-    // friend at a boat without knowing which. This is the only writer.
-    sea_seen_at: new Date().toISOString(),
-    // Never trusted from the client as anything but one of three words: this
-    // decides which wall a captain wakes up behind.
-    sea_side: side === 'anchorage' || side === 'moored' || side === 'open' ? side : 'fishing',
-  }
-  if (helm) patch.sea_session = helm.session
-
-  // ── THE FOG ───────────────────────────────────────────────────────────
-  //
-  // Read, OR, write. Not read-modify-write in the dangerous sense: OR is
-  // idempotent and commutative, so two tabs racing, or a flush that arrives
-  // out of order, can only ever ADD cells. The worst a lost update can do is
-  // leave a patch of sea foggy that the player has already sailed — and they
-  // will sail it again, because they cannot see what is in it.
-  //
-  // That is the whole reason this is a bitfield and not a list: a list would
-  // need dedup and ordering and could lose entries; a bitfield cannot.
-  if (seen.length || seenExp.length) {
-    const row = await db.profile(user.id, 'sea_explored, sea_explored_exp')
-    if (seen.length) {
-      const bits = decodeFog(row?.sea_explored as string | null)
-      for (const i of seen) fogSet(bits, i)
-      patch.sea_explored = encodeFog(bits)
-    }
-    // The campaign's own mask, on its own column and its own grid. Same OR, same
-    // reasoning: the worst a lost update can do is leave water foggy that has
-    // already been sailed, and it will be sailed again.
-    if (seenExp.length) {
-      const bits = decodeXfog(row?.sea_explored_exp as string | null)
-      for (const i of seenExp) xfogSet(bits, i)
-      patch.sea_explored_exp = encodeXfog(bits)
-    }
-  }
-
-  await db.updateProfile(user.id, patch)
-  return { helm: 'mine' }
+  return core.saveSeaPosition(sellData(createAdminClient()), user.id, x, y, seen, seenExp, side, helm)
 }
 
-/** How long another chart's last heartbeat counts as "still sailing". The
- *  chart saves every few seconds while moving; half a minute is well past a
- *  dropped connection and well short of a tab somebody actually left open. */
-const HELM_FRESH_MS = 30_000
-
-/**
- * Does this captain already carry the runner's rod? (KAN-25.) The wager
- * refuses the stake for an owned rod, but the panel had no way to know that
- * before the press, so it offered a bet nobody could take.
- */
+/** Does this captain already carry the runner's rod? (KAN-25.) */
 export async function runnerRodOwned(rodTier: number): Promise<boolean> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
-  return sellData(createAdminClient()).ownsRod(user.id, rodTier)
+  return core.runnerRodOwned(sellData(createAdminClient()), user.id, rodTier)
 }

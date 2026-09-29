@@ -20,12 +20,12 @@
 // yet are CARRIED in the file untouched, so converting a real account loses
 // nothing and later stages can pick them up.
 
-import type { LocalSave } from './fishingLocal'
+import type { LocalSave } from './save'
 import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 1
+export const LOCAL_SAVE_VERSION = 2
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -44,8 +44,12 @@ export interface SaveStorage {
   write(text: string): Promise<void>
 }
 
-/** Upgrades from version N to N+1, applied in order on load. Empty at v1. */
-const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {}
+/** Upgrades from version N to N+1, applied in order on load. */
+const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
+  // v2 (2026-09-29): selling. Deals struck at sea, and the captain's own market
+  // (null until first read, then caught up from the clock).
+  1: f => ({ ...f, version: 2, save: { ...f.save, deals: [], market: null } }),
+}
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -83,7 +87,7 @@ export type WebExport = { format: string; version: number; userId: string; usern
 
 /** The tables the local fishing save models; everything else is carried. */
 const MODELLED = new Set(['bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
-  'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport'])
+  'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport', 'sea_trader_deals'])
 
 export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: LocalSave; carried: Record<string, Row[]> } {
   const t = (name: string) => exp.tables[name] ?? []
@@ -106,6 +110,9 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
     ledger: [], anomalies: [], mail: [],
     rapport: t('sea_rapport').map(r => ({ folk_id: String(r.folk_id), want_fish_id: r.want_fish_id == null ? null : Number(r.want_fish_id) })),
     contests: {}, overrides: {},
+    deals: t('sea_trader_deals').map(r => ({ trader_key: String(r.trader_key), sea_day: Number(r.sea_day), kind: String(r.kind), detail: (r.detail ?? {}) as object })),
+    // The web's market is shared by everybody; a converted save starts its own.
+    market: null,
   }
   const carried = Object.fromEntries(Object.entries(exp.tables).filter(([name]) => !MODELLED.has(name)))
   return { save, carried }

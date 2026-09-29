@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ShopHeader from '@/components/ShopHeader'
 import LeaderboardModal from '@/components/LeaderboardModal'
-import { marketSellFish, sellEntireHold } from './actions'
+import { api } from '@/lib/gameApi'
 import type { MarketFishEntry, MarketState } from './page'
 import { MOOD_CONFIG } from '@/lib/fishMarket'
 import BoardClient from './BoardClient'
@@ -781,7 +781,7 @@ export default function MarketClient({
     // Not a transition: nothing about this should be deferred behind other
     // renders. The row is already gone; this is the bookkeeping.
     void (async () => {
-      const res = await marketSellFish(fishId, qty).catch(() => ({ error: 'The sale did not go through.' } as const))
+      const res = await api.selling.marketSellFish(fishId, qty).catch(() => ({ error: 'The sale did not go through.' } as const))
       setSelling(null)
       if ('error' in res) {
         showToast(res.error)
@@ -833,7 +833,7 @@ export default function MarketClient({
     // is nothing left to defer. The hold is already empty on screen; this is
     // the bookkeeping.
     void (async () => {
-      const res = await sellEntireHold().catch(() => ({ error: 'The sale did not go through.' } as const))
+      const res = await api.selling.sellEntireHold().catch(() => ({ error: 'The sale did not go through.' } as const))
       setLiquidating(false)
       if ('error' in res) {
         showToast(res.error)

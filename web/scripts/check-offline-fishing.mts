@@ -105,7 +105,7 @@ function freshSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 200 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1, 2, 3], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {},
+    clears: [], rods: [0, 1, 2, 3], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null,
   }
 }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getPendingSales, type PendingSale } from '@/app/(app)/tavern/market/actions'
+import { api } from '@/lib/gameApi'
 import PendingSaleSettledToast from './PendingSaleSettledToast'
 
 export default function PendingSalesWatcher() {
@@ -13,7 +13,7 @@ export default function PendingSalesWatcher() {
     if (inFlightRef.current) return
     inFlightRef.current = true
     try {
-      const result = await getPendingSales()
+      const result = await api.selling.getPendingSales()
       window.dispatchEvent(new CustomEvent('pending-sales-changed', { detail: result.pending }))
       if (result.justSettled > 0) {
         setToastAmount(result.justSettled)

@@ -2,108 +2,29 @@
 //
 // FishingData implemented over a plain object: no network, no database. This is
 // what the offline build hands lib/core/fishing instead of the Supabase store.
-// The save is in memory here; the spike's next stage persists the same shape
-// to SQLite.
+// The save's shape and the operations every system shares are in ./save; the
+// file on disk is ./saveFile.
 //
 // Every one-shot contract in lib/data/fishingData holds here too, and the spike
 // checks them: a cast is claimed once and only at its castAt, a reroll is
 // settled once, a stack is taken only while it reads what was seen, a flag is
 // turned on once, a guard that does not hold writes nothing.
 
-import type { FishingData, SpeciesRow, CastCandidateRow, DailyRow } from '../fishingData'
-import type { ChallengeOverride } from '@/lib/dailyChallenges'
-import type { ProfileGuard, Row } from '../common'
+import type { FishingData, CastCandidateRow, DailyRow } from '../fishingData'
 import type { PendingCast } from '@/lib/fishingRules'
-import { badgePoints } from '@/lib/badges'
+import { localCaptain, type LocalSave } from './save'
 
-export type LocalSave = {
-  uid: string
-  profile: Row
-  species: SpeciesRow[]
-  bait: Record<string, number>
-  hold: Record<number, number>
-  collection: Record<number, { catch_count: number; is_golden: boolean | null; last_caught_at?: string }>
-  lifetime: Record<number, { n: number; last: string }>
-  bests: Record<number, { len: number; at: string }>
-  shinies: { id: number; fish_id: number; size_in: number | null; status: string; caught_at: string; [k: string]: unknown }[]
-  daily: Record<string, DailyRow>
-  clears: string[]
-  rods: number[]
-  ledger: { amount: number; reason: string; currency: 'doubloons' | 'gems' }[]
-  anomalies: { kind: string; severity: number; detail: Record<string, unknown> }[]
-  mail: { subject: string; body: string; sender: string }[]
-  rapport: { folk_id: string; want_fish_id: number | null }[]
-  contests: Record<string, string>
-  overrides: Record<string, ChallengeOverride>
-}
+export type { LocalSave } from './save'
 
-const cols = (list: string) => list.split(',').map(c => c.trim()).filter(Boolean)
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
-
-function guardHolds(profile: Row, g: ProfileGuard): boolean {
-  const v = profile[g.col]
-  if ('is' in g) return v == null
-  if ('notNull' in g) return v != null
-  if ('contains' in g) return Array.isArray(v) && g.contains.every(x => v.includes(x))
-  // eq: a JSON string compared against a JSON value is compared as JSON.
-  return typeof g.eq === 'string' && v != null && typeof v === 'object' ? JSON.stringify(v) === g.eq : v === g.eq
-}
 
 /** FishingData over one captain's local save. */
 export function localFishingData(save: LocalSave): FishingData {
-  const me = (uid: string) => {
-    if (uid !== save.uid) throw new Error(`local save belongs to ${save.uid}, not ${uid}`)
-    return save.profile
-  }
+  const captain = localCaptain(save)
+  const { me } = captain
   return {
-    // ── The captain ──
-    async profile(uid, list) {
-      const prof = me(uid)
-      return Object.fromEntries(cols(list).map(c => [c, prof[c] ?? null]))
-    },
-    async updateProfile(uid, patch) { Object.assign(me(uid), structuredClone(patch)) },
-    async bumpStat(uid, col, n) { const prof = me(uid); prof[col] = Number(prof[col] ?? 0) + n },
-    async bumpJsonCounter(uid, col, key, n) {
-      const prof = me(uid); const o = { ...(prof[col] ?? {}) }; o[key] = Number(o[key] ?? 0) + n; prof[col] = o
-    },
-    async ledger(uid, amount, reason, currency = 'doubloons') { me(uid); save.ledger.push({ amount, reason, currency }) },
-    async hasCleared(uid, raidId) { me(uid); return save.clears.includes(raidId) },
-    async addBait(uid, bait, qty) { me(uid); save.bait[bait] = (save.bait[bait] ?? 0) + qty },
-    async updateProfileIf(uid, patch, when) {
-      const prof = me(uid)
-      if (!when.every(g => guardHolds(prof, g))) return false
-      Object.assign(prof, structuredClone(patch)); return true
-    },
-    async deductDoubloons(uid, amount) {
-      const prof = me(uid); const have = Number(prof.doubloons ?? 0)
-      if (have < amount) return null
-      prof.doubloons = have - amount; return prof.doubloons as number
-    },
-    async mailTo(uid, m) { me(uid); save.mail.push(m) },
-
-    // ── Shared helpers ──
-    async grant(uid, col, n) {
-      const prof = me(uid); prof[col] = Number(prof[col] ?? 0) + Math.max(0, Math.trunc(Number(n) || 0)); return prof[col] as number
-    },
-    async spend(uid, col, n) {
-      const prof = me(uid); const have = Number(prof[col] ?? 0)
-      if (!Number.isInteger(n) || n < 0 || have < n) return null
-      prof[col] = have - n; return prof[col] as number
-    },
-    async achievementPoints(uid) {
-      // Offline, the badges the captain holds are the whole record.
-      return ((me(uid).unlocked_badges ?? []) as string[]).reduce((n, id) => n + badgePoints(id), 0)
-    },
-    async addToList(uid, col, value) {
-      const prof = me(uid); const list: string[] = prof[col] ?? []
-      if (list.includes(value)) return false
-      prof[col] = [...list, value]; return true
-    },
-    async grantBadge(uid, badgeId) {
-      const prof = me(uid); const list: string[] = prof.unlocked_badges ?? []
-      if (!list.includes(badgeId)) prof.unlocked_badges = [...list, badgeId]
-    },
-    async flagAnomaly(uid, kind, severity, detail) { me(uid); save.anomalies.push({ kind, severity, detail }) },
+    // ── The captain, the wallet, owned lists, badges (./save) ──
+    ...captain,
     async challengeOverride(date) { return save.overrides[date] ?? null },
 
     // ── The cast ──

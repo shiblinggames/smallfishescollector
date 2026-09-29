@@ -811,6 +811,28 @@ In order. Each step is worth doing even if the port never happens.
    (`npm run typecheck`) checks the shell with one React for both trees.
    NOT on the API yet (still direct server-action imports): quickBuyWorms, claimZoneReward,
    prestigeZone, releaseAncient, the tour flags, checkLeaderboardPosition, syncFishHold.
+   **SELLING OFFLINE, 2026-09-29.** `lib/core/selling`: the market (whole hold, per species),
+   the resident buyers, the wandering traders (claim, daily cap), the blockade runner, and
+   `saveSeaPosition` (it lived in the trader actions and uses the same store). The actions are
+   thin wrappers; the market ones still settle the retired delayed lane first (web-only table,
+   never written offline). `api.selling` carries them; the sea chart, the trader panel, the
+   market screen and the pending-sales watcher call it.
+   - THE MARKET OFFLINE is the captain's own. On the web it is shared and the hourly cron
+     `update_fish_market()` moves it; `lib/marketRules` is that SQL ported line for line (moods
+     at the same odds and 2 to 5 hours, drift 8% to par, rarity volatility, clamp 0.40..2.50,
+     cents, 24-deep history). The local store catches it up by the whole hours since it last
+     ticked, capped at 48 (the drift has erased anything older).
+   - `lib/data/local/save.ts` now holds the save's shape and `localCaptain` (CaptainData plus the
+     wallet, lists, badges), spread by every local store. The SAVE FILE IS VERSION 2 (deals,
+     market); a v1 file upgrades on load. Deals older than a week are pruned (their keys carry
+     their day and can never be claimed again).
+   - `scripts/check-offline-selling.mts` (in `npm run check`): the import trees, 5,000 market
+     ticks and the mood odds against the SQL's, the catch-up, every lane and its guard, and the
+     v1 to v2 upgrade. Verified against production as catman (one fish sold, one peddler deal,
+     the chart position round-tripped and restored).
+   - Found on the way: `update_fish_market()` was executable by anon and authenticated. It ran
+     with the caller's rights and RLS has no update policy on the market tables, so a client
+     call changed nothing, but it was revoked (2026-09-29) to match every other cron function.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):

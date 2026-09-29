@@ -50,7 +50,6 @@ function liveRenown(s: RenownState | null, skill: RenownSkill, xp: number): Reno
 }
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
-import { saveSeaPosition as persistSeaPosition } from './traderActions'
 import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, GATE_SIGN_Y, inGate, EXP_ORIGIN, FORGE_RUNGS, EXP_EDGE, SEA_GATE, SEA_GATE_HALF, inSeaGate, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
 import { getShip, SHIP_CAPTAIN_SLOT, SHIP_CREW_FACE, MIN_SHIP_TIER } from '@/lib/ships'
 import { getSetting, SEA_SETTINGS_EVENT } from '@/lib/seaSettings'
@@ -4142,7 +4141,7 @@ export default function SeaMap({
       const exp = [...xfogPending.current]
       xfogPending.current.clear()
       const take = claim || !helmClaimed.current
-      const res = await persistSeaPosition(x, y, fog, exp, sideNow(), { session: helmId.current, claim: take })
+      const res = await api.selling.saveSeaPosition(x, y, fog, exp, sideNow(), { session: helmId.current, claim: take })
       if (res.helm === 'elsewhere') {
         // Put the campaign's cells back: they were not written.
         for (const i of exp) xfogPending.current.add(i)

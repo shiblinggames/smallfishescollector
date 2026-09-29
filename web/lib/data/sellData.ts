@@ -14,13 +14,18 @@
 //   - deductDoubloons returns null when the purse will not cover it, and that
 //     null is the guard.
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { captainData, type CaptainData, type Db } from './common'
+import { grant } from '@/lib/wallet'
 
 export type HoldStack = { fish_id: number; quantity: number }
 export type PricedStack = HoldStack & { sell_value: number }
 export type PendingSaleRow = { id: string; amount: number; fish_count: number; reason: string; settles_at: string }
 
 export interface SellData extends CaptainData {
+  /** Pay coin in place (never written back from a stale read); the new balance. */
+  grant(uid: string, col: 'doubloons', n: number): Promise<number>
+
   // ── The hold ──
   /** Every stack in the hold (including empties). */
   holdStacks(uid: string): Promise<HoldStack[]>
@@ -68,6 +73,10 @@ export interface SellData extends CaptainData {
 export function sellData(admin: Db): SellData {
   return {
     ...captainData(admin),
+
+    async grant(uid, col, n) {
+      return grant(admin as any, uid, col, n)
+    },
 
     async holdStacks(uid) {
       const { data } = await admin.from('fish_inventory').select('fish_id, quantity').eq('user_id', uid)

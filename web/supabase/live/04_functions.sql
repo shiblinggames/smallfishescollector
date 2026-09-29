@@ -1618,9 +1618,6 @@ END;
 $function$
 ;
 revoke all on function public.update_fish_market() from public, anon, authenticated;
-grant execute on function public.update_fish_market() to anon;
-grant execute on function public.update_fish_market() to authenticated;
-grant execute on function public.update_fish_market() to public;
 grant execute on function public.update_fish_market() to service_role;
 
 CREATE OR REPLACE FUNCTION public.upsert_bait(p_user_id uuid, p_bait_type text, p_qty integer)
