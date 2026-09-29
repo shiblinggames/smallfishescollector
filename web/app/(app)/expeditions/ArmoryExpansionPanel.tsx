@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { buyArmoryExpansion } from './actions'
+import { api } from '@/lib/gameApi'
 import { ARMORY_EXPANSION_COST } from '@/lib/shipBerth'
 import { vibrate } from '@/lib/haptics'
 
@@ -42,7 +42,7 @@ export default function ArmoryExpansionPanel({
   async function buy() {
     if (busy || installed) return
     setBusy(true); setErr(null)
-    const res = await buyArmoryExpansion()
+    const res = await api.ship.buyArmoryExpansion()
     setBusy(false)
     if (!res.ok) { setErr(res.error ?? 'Could not bolt on the mount.'); return }
     // Flip it OURSELVES so the celebration is instant, not waiting on the prop.

@@ -24,7 +24,6 @@ import { SHIP_SKINS, shipSkinImage, shipSkinFilter, skinsFitHull, MANOWAR_SHIP_T
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { api } from '@/lib/gameApi'
-import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen, markShipGuideSeen, startAbyssalConversion, claimAbyssalConversion } from './actions'
 import UltimateBuildPanel from './UltimateBuildPanel'
 import SixthBerthPanel from './SixthBerthPanel'
 import ArmoryExpansionPanel from './ArmoryExpansionPanel'
@@ -1103,7 +1102,7 @@ export default function ShipHero({
     setEquippedSkin(skinId)
     onSkinChange?.(skinId)
     startTransition(async () => {
-      await equipShipSkin(skinId)
+      await api.ship.equipShipSkin(skinId)
       // The hero sprite up here is local state and updates instantly. The STORY MAP's
       // Captain's-Choice nodes are not: page.tsx derives playerShipImage from
       // profile.equipped_ship_skin and threads it into RaidsSection, so without this
@@ -1149,7 +1148,7 @@ export default function ShipHero({
     // router.refresh() re-runs the server components so the prep modal's
     // ready-check (server-rendered from profile.equipped_raid_items)
     // reflects the new state too.
-    startTransition(async () => { await saveEquippedRaidItems(next); refreshAll() })
+    startTransition(async () => { await api.ship.saveEquippedRaidItems(next); refreshAll() })
   }
 
   // Generic raid-item forge (FORGE_RECIPES). `forging` / `forgeArmed` hold the
@@ -1197,7 +1196,7 @@ export default function ShipHero({
     setLearning(resultId)
     vibrate(12)
     startTransition(async () => {
-      const res = await learnForgeRecipe(resultId)
+      const res = await api.ship.learnForgeRecipe(resultId)
       setLearning(null)
       if ('error' in res) return
       setLearnedRecipes(res.learned)
@@ -1219,7 +1218,7 @@ export default function ShipHero({
     if (loadoutTab === 'forge' && forgeUnlocked && !seenForgeIntro) {
       setShowForgeIntro(true)
       setSeenForgeIntro(true)
-      void markForgeIntroSeen().catch(() => {})
+      void api.ship.markForgeIntroSeen().catch(() => {})
     }
   }, [loadoutTab, forgeUnlocked, seenForgeIntro])
 
@@ -1240,7 +1239,7 @@ export default function ShipHero({
     if (loadoutOpen && !hasSeenShipGuide && !shipGuideFiredRef.current) {
       shipGuideFiredRef.current = true
       setShipGuideStep(0)
-      void markShipGuideSeen().catch(() => {})
+      void api.ship.markShipGuideSeen().catch(() => {})
     }
   }, [loadoutOpen, hasSeenShipGuide])
   useEffect(() => { if (!loadoutOpen) setShipGuideStep(null) }, [loadoutOpen])
@@ -1273,7 +1272,7 @@ export default function ShipHero({
       vibrate(16)   // confirm tick; the clash haptic + SFX fire in the animation
     }
     startTransition(async () => {
-      const res = await forgeRaidItem(resultId)
+      const res = await api.ship.forgeRaidItem(resultId)
       setForging(null)
       if ('error' in res) { setForgeFx(null); return }
       setForgeReady(true)
@@ -1287,7 +1286,7 @@ export default function ShipHero({
     setConverting(true)
     vibrate([0, 14, 40, 22])
     startTransition(async () => {
-      const res = await startAbyssalConversion(epicId)
+      const res = await api.ship.startAbyssalConversion(epicId)
       setConverting(false)
       if ('error' in res) return
       setConversion(res.conversion)
@@ -1305,7 +1304,7 @@ export default function ShipHero({
     const epicImg = getRaidItem(conversion.epicId)?.image ?? null
     const legendary = getRaidItem(conversion.legendaryId)
     startTransition(async () => {
-      const res = await claimAbyssalConversion()
+      const res = await api.ship.claimAbyssalConversion()
       setClaimingConv(false)
       if ('error' in res) return
       setConversion(null)

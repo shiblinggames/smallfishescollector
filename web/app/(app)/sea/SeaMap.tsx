@@ -81,7 +81,6 @@ import {
   type Bay, type Encounter, type Cache, type Beat,
 } from './raidWaters'
 import { RAID_MAP, RAID_CHAPTERS, chapterForNode, computeRaidMap, type RaidNode, type RaidChapter } from '@/lib/raidMap'
-import { markUltimateUnlockSeen } from '@/app/(app)/expeditions/actions'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
@@ -13186,12 +13185,12 @@ hullRef={hullRefFor(t.key)} />
         <UltimateUnlockOverlay
           onBuild={() => {
             setSeenUltimate(true)
-            markUltimateUnlockSeen().catch(() => {})
+            api.ship.markUltimateUnlockSeen().catch(() => {})
             setShipSheet('ship')
           }}
           onLater={() => {
             setSeenUltimate(true)
-            markUltimateUnlockSeen().catch(() => {})
+            api.ship.markUltimateUnlockSeen().catch(() => {})
           }} />
       )}
 

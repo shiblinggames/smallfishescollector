@@ -7,7 +7,8 @@
 //
 // Systems join as they are converted: fishing (the offline spike's target,
 // docs/systems/steam-port.md step 8), then selling, the crew, voyages and
-// trawls, the gauntlets, the Den, raids and the campaign map.
+// trawls, the gauntlets, the Den, raids and the campaign map, the ship and the
+// Shipyard.
 
 import { webFishingApi, type FishingApi } from './fishing'
 import { webSellingApi, type SellingApi } from './selling'
@@ -16,6 +17,7 @@ import { webVoyagesApi, type VoyagesApi } from './voyages'
 import { webGauntletApi, type GauntletApi } from './gauntlet'
 import { webCasinoApi, type CasinoApi } from './casino'
 import { webRaidsApi, type RaidsApi } from './raids'
+import { webShipApi, type ShipApi } from './ship'
 
 export interface GameApi {
   fishing: FishingApi
@@ -25,6 +27,7 @@ export interface GameApi {
   gauntlet: GauntletApi
   casino: CasinoApi
   raids: RaidsApi
+  ship: ShipApi
 }
 
 export const api: GameApi = {
@@ -35,12 +38,14 @@ export const api: GameApi = {
   gauntlet: webGauntletApi,
   casino: webCasinoApi,
   raids: webRaidsApi,
+  ship: webShipApi,
 }
 
 export type { FishingApi } from './fishing'
 export type { FishSpecies, WaitingFolk } from './fishing'
 export type { SellingApi, PendingSale, DealResult } from './selling'
 export type { GauntletApi } from './gauntlet'
+export type { ShipApi } from './ship'
 export type { CasinoApi } from './casino'
 export type { RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide } from './raids'
 export type { VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew } from './voyages'

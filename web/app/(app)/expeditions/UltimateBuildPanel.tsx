@@ -17,7 +17,7 @@ import { createPortal } from 'react-dom'
 import { useRefreshAll } from '@/lib/sheetRefresh'
 import { motion, AnimatePresence } from 'framer-motion'
 import UltimatePreview from './UltimatePreview'
-import { startUltimateBuild, swapUltimateBuild, startUltimateRetool, buyUltimateSchematics, switchUltimate } from './actions'
+import { api } from '@/lib/gameApi'
 import {
   SHIP_AUGMENTS, getShipAugment, AUGMENT_COST, RETOOL_COST, SCHEMATICS_COST, MEGA_CHARGE_COST, ULTIMATE_BUILD_MS,
   ULTIMATE_STORY, ultimateGateStatus, allUltimateGatesMet, type ShipAugmentId,
@@ -73,7 +73,7 @@ export default function UltimateBuildPanel({
   async function start(id: ShipAugmentId) {
     if (busy) return
     setBusy(true); setErr(null)
-    const res = await startUltimateBuild(id)
+    const res = await api.ship.startUltimateBuild(id)
     setBusy(false)
     if (!res.ok || !res.completesAt) { setErr(res.error ?? 'Could not start the build.'); return }
     setBuild({ id, completesAt: res.completesAt })
@@ -91,14 +91,14 @@ export default function UltimateBuildPanel({
     if (busy || !build || build.id === id) return
     const prev = build
     setBuild({ ...build, id })         // optimistic
-    const res = await swapUltimateBuild(id)
+    const res = await api.ship.swapUltimateBuild(id)
     if (!res.ok) { setBuild(prev); setErr(res.error ?? 'Could not change the build.') }
   }
 
   async function startRetool(id: ShipAugmentId) {
     if (busy) return
     setBusy(true); setErr(null)
-    const res = await startUltimateRetool(id)
+    const res = await api.ship.startUltimateRetool(id)
     setBusy(false)
     if (!res.ok || !res.completesAt) { setErr(res.error ?? 'Could not start the retool.'); return }
     setBuild({ id, completesAt: res.completesAt, retool: true })
@@ -115,7 +115,7 @@ export default function UltimateBuildPanel({
   async function buySchem() {
     if (busy) return
     setBusy(true); setErr(null)
-    const res = await buyUltimateSchematics()
+    const res = await api.ship.buyUltimateSchematics()
     setBusy(false)
     if (!res.ok) { setErr(res.error ?? 'Could not buy the schematics.'); return }
     setSchemOwned(true); setCelebrate(true); setConfirmSchem(false)
@@ -137,7 +137,7 @@ export default function UltimateBuildPanel({
     const prev = active
     setActive(id); setArmKey(k => k + 1); setSel(null); setErr(null)
     vibrate([0, 20])
-    const res = await switchUltimate(id)
+    const res = await api.ship.switchUltimate(id)
     if (!res.ok) { setActive(prev); setErr(res.error ?? 'Could not switch weapons.') }
   }
 

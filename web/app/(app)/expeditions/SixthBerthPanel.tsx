@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { buySixthBerth } from './actions'
+import { api } from '@/lib/gameApi'
 import { SIXTH_BERTH_COST } from '@/lib/shipBerth'
 import { vibrate } from '@/lib/haptics'
 
@@ -42,7 +42,7 @@ export default function SixthBerthPanel({
   async function buy() {
     if (busy || installed) return
     setBusy(true); setErr(null)
-    const res = await buySixthBerth()
+    const res = await api.ship.buySixthBerth()
     setBusy(false)
     if (!res.ok) { setErr(res.error ?? 'Could not add the crew slot.'); return }
     // Flip it OURSELVES. Waiting on the server prop was the whole bug.

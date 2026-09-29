@@ -927,9 +927,31 @@ In order. Each step is worth doing even if the port never happens.
    - `scripts/check-offline-raids.mts` (in `npm run check`) walks the WHOLE campaign offline:
      all 64 nodes, raids cleared through the token path, each node once. Production probe as
      catman (reads, refusals that flag nothing, one token minted and spent).
-   - NOT YET: the ship screen's own actions (`expeditions/actions`: the forge, the Abyssal
-     Accelerator, the ultimate build, the berth and armory, ship skins, the saved loadout) are
-     the next stage.
+   **THE SHIP AND THE SHIPYARD OFFLINE, 2026-09-29.** `lib/core/ship`: the raid loadout, the
+   Forge (learn for Fathoms, forge from parts), the Abyssal Accelerator (charge, claim), the
+   ultimate (build, free re-pick, settle on read, retool, the Full Schematics, the free switch),
+   the Sixth Berth, the Expanded Armory, hull skins, the one-time guides, the Shipyard's four
+   ladders and the rod you fish with. `expeditions/actions` and `shipyard/actions` are thin
+   wrappers (the Shipyard's `revalidatePath('/sea')` stays in the web wrapper); `api.ship`
+   carries them to ShipHero, the berth, armory and ultimate panels, the sea chart's ultimate
+   celebration and the Shipyard.
+   - `lib/data/shipData`: RaidData plus the rods carried. `lib/data/local/shipLocal` spreads the
+     raid store. No new tables.
+   - THE SHIPYARD'S FITTED-TIER WRITE is now `updateProfileIf` on the tier just re-read, which
+     is how a store says a write did not land; a refit that does not land hands the coin back
+     (the old code read the Postgres error for the same purpose). Two taps racing: the second
+     now refunds instead of landing one rung higher.
+   - SAVE FILE v8: no new tables; the ship's profile columns get the database's column defaults
+     where a save never had them (`SHIP_PROFILE_DEFAULTS`, a fresh copy per save). Without this a
+     new offline captain's `has_sixth_berth` read as missing, not `false`, and every guarded
+     purchase refunded itself.
+   - `scripts/check-offline-ship.mts` (in `npm run check`); production probe as catman (reads and
+     refusals only, each spending call made only where the profile shows it must refuse; the
+     profile was byte-identical after).
+   - The legacy card-collection crew picker (`getCollectionForCrew`, `saveCrew`) moved to the
+     core too but is not on the API: no screen calls it.
+   - NOT YET: bounties, the Parlor, the Chart Room, contests, mail, daily challenges and the
+     other small systems.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):

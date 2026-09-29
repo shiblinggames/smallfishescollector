@@ -43,7 +43,6 @@ import {
   nextAccelCost, MAX_ACCEL_TIER,
   hullMetresPerSec, turnDegreesPerSec, secondsToTopSpeed,
 } from '@/lib/shipyard'
-import { buyHullTier, buyLanternTier, buyHandlingTier, buyAccelTier, equipRod as equipRodAction } from './actions'
 import { upgradeFishHold } from '../fishing/holdActions'
 import { purchaseRod, sellRod, buyReel } from '@/app/(app)/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/(app)/hooks/actions'
@@ -267,7 +266,7 @@ export default function ShipyardClient(p: {
   async function pickRod(tier: number) {
     if (busy || tier === equipped) return
     setBusy('rod'); setErr('')
-    const r = await equipRodAction(tier).catch(() => ({ error: 'Could not equip that.' }))
+    const r = await api.ship.equipRod(tier).catch(() => ({ error: 'Could not equip that.' }))
     setBusy('')
     if ('error' in r) { setErr(r.error); return }
     vibrate(10)
@@ -279,19 +278,19 @@ export default function ShipyardClient(p: {
     setBusy(what); setErr('')
     try {
       if (what === 'hull') {
-        const r = await buyHullTier()
+        const r = await api.ship.buyHullTier()
         if ('error' in r) setErr(r.error)
         else { bank(r.doubloons); setHull(t => t + 1); vibrate([0, 30, 40, 60]) }
       } else if (what === 'handling') {
-        const r = await buyHandlingTier()
+        const r = await api.ship.buyHandlingTier()
         if ('error' in r) setErr(r.error)
         else { bank(r.doubloons); setHandling(t => t + 1); vibrate([0, 30, 40, 60]) }
       } else if (what === 'lantern') {
-        const r = await buyLanternTier()
+        const r = await api.ship.buyLanternTier()
         if ('error' in r) setErr(r.error)
         else { bank(r.doubloons); setLantern(t => t + 1); vibrate([0, 30, 40, 60]) }
       } else if (what === 'accel') {
-        const r = await buyAccelTier()
+        const r = await api.ship.buyAccelTier()
         if ('error' in r) setErr(r.error)
         else { bank(r.doubloons); setAccel(t => t + 1); vibrate([0, 30, 40, 60]) }
       } else {

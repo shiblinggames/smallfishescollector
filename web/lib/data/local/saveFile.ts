@@ -20,12 +20,12 @@
 // yet are CARRIED in the file untouched, so converting a real account loses
 // nothing and later stages can pick them up.
 
-import { freshCasino, type LocalSave } from './save'
+import { freshCasino, SHIP_PROFILE_DEFAULTS, type LocalSave } from './save'
 import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 7
+export const LOCAL_SAVE_VERSION = 8
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -67,6 +67,9 @@ const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
   // v7 (2026-09-29): raids. Run tokens, and clears with their times (the clears
   // already on record keep their raid, with no time).
   6: f => ({ ...f, version: 7, save: { ...f.save, raidTokens: [], raidClears: (f.save.clears ?? []).map(raid_id => ({ raid_id, ms: null, at: '' })) } }),
+  // v8 (2026-09-29): the ship. No new tables; the ship's profile columns get
+  // the web's defaults where a save never had them.
+  7: f => ({ ...f, version: 8, save: { ...f.save, profile: { ...structuredClone(SHIP_PROFILE_DEFAULTS), ...f.save.profile } } }),
 }
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
@@ -114,7 +117,7 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
   const t = (name: string) => exp.tables[name] ?? []
   const save: LocalSave = {
     uid: exp.userId,
-    profile: { ...exp.profile },
+    profile: { ...structuredClone(SHIP_PROFILE_DEFAULTS), ...exp.profile },
     species,
     bait: Object.fromEntries(t('bait_inventory').map(r => [r.bait_type, Number(r.quantity)])),
     hold: Object.fromEntries(t('fish_inventory').filter(r => Number(r.quantity) > 0).map(r => [Number(r.fish_id), Number(r.quantity)])),

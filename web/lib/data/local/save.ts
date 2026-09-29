@@ -90,6 +90,19 @@ export type LocalCasino = {
   pot: { pot: number; seed: number; last_winner_name: string | null; last_win_amount: number | null; last_won_at: string | null }
 }
 
+/** The ship's profile columns at the web's column defaults. A save that never
+ *  had them (a new captain, or one from before v8) gets these, so a guarded
+ *  purchase reads `false`, not a missing column. */
+export const SHIP_PROFILE_DEFAULTS = {
+  ship_tier: 2, raid_items: [], equipped_raid_items: [], ship_skins: [], equipped_ship_skin: null,
+  forge_recipes_learned: [], abyssal_conversion: null, gauntlet_fathoms: 0,
+  gauntlet_upgrades: [], dons_gauntlet_upgrades: [],
+  manowar_augment: null, manowar_augment_build: null, manowar_schematics: false,
+  has_sixth_berth: false, has_armory_expansion: false,
+  hull_speed_tier: 0, hull_handling_tier: 0, hull_accel_tier: 0, lantern_tier: 0,
+  has_seen_forge_intro: false, seen_ultimate_unlock: false, has_seen_ship_guide: false,
+}
+
 /** A Den nobody has visited: no buy-ins, no hand, the pot at its seed. */
 export function freshCasino(): LocalCasino {
   return {

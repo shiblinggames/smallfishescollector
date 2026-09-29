@@ -11,7 +11,7 @@
 // on this API yet. Selling runs offline too (lib/core/selling), with the
 // captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi, ShipApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
 import * as selling from '@/lib/core/selling'
@@ -27,8 +27,10 @@ import { localCasinoData } from '@/lib/data/local/casinoLocal'
 import * as raidCore from '@/lib/core/raids'
 import * as mapCore from '@/lib/core/raidMap'
 import { localRaidData } from '@/lib/data/local/raidLocal'
+import * as shipCore from '@/lib/core/ship'
+import { localShipData } from '@/lib/data/local/shipLocal'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
-import { freshCasino } from '@/lib/data/local/save'
+import { freshCasino, SHIP_PROFILE_DEFAULTS } from '@/lib/data/local/save'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
 import type { Row } from '@/lib/data/common'
 import { installRng, mulberry32, seedOf } from '@/lib/rng'
@@ -40,7 +42,7 @@ export type {
   FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
   CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
   VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew, GauntletApi, CasinoApi,
-  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide,
+  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide, ShipApi,
 } from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
@@ -53,6 +55,7 @@ function starterSave(): LocalSave {
   return {
     uid: 'local-captain',
     profile: {
+      ...structuredClone(SHIP_PROFILE_DEFAULTS),
       fishing_xp: XP_TABLE[4], doubloons: 500, gems: 0, rod_tier: 1, hook_tier: 0, line_tier: 0, fish_hold_tier: 1,
       ancient_catches: [], current_perfect_streak: 0, highest_perfect_streak: 0, total_perfects: 0, zone_perfects: {},
       lifetime_species: [], prestige_levels: {}, zone_golden_boost: {}, unlocked_pets: [], unlocked_character_colors: [],
@@ -291,4 +294,37 @@ const raidsApi: RaidsApi = {
   markRaidTutorialSeen: () => runRaid((db, uid) => raidCore.markRaidTutorialSeen(db, uid)),
 }
 
-export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi }
+/** The same, over the ship's store. */
+async function runShip<T>(fn: (db: ReturnType<typeof localShipData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage, carried } = need()
+  const r = await fn(localShipData(save), save.uid)
+  await writeSave(storage, save, carried)
+  return r
+}
+
+const shipApi: ShipApi = {
+  saveEquippedRaidItems: (ids) => runShip((db, uid) => shipCore.saveEquippedRaidItems(db, uid, ids)),
+  forgeRaidItem: (id) => runShip((db, uid) => shipCore.forgeRaidItem(db, uid, id)),
+  learnForgeRecipe: (id) => runShip((db, uid) => shipCore.learnForgeRecipe(db, uid, id)),
+  startAbyssalConversion: (id) => runShip((db, uid) => shipCore.startAbyssalConversion(db, uid, id)),
+  claimAbyssalConversion: () => runShip((db, uid) => shipCore.claimAbyssalConversion(db, uid)),
+  markForgeIntroSeen: () => runShip((db, uid) => shipCore.markForgeIntroSeen(db, uid)),
+  equipShipSkin: (id) => runShip((db, uid) => shipCore.equipShipSkin(db, uid, id)),
+  getUltimateState: () => runShip((db, uid) => shipCore.getUltimateState(db, uid)),
+  startUltimateBuild: (id) => runShip((db, uid) => shipCore.startUltimateBuild(db, uid, id)),
+  swapUltimateBuild: (id) => runShip((db, uid) => shipCore.swapUltimateBuild(db, uid, id)),
+  startUltimateRetool: (id) => runShip((db, uid) => shipCore.startUltimateRetool(db, uid, id)),
+  buyUltimateSchematics: () => runShip((db, uid) => shipCore.buyUltimateSchematics(db, uid)),
+  switchUltimate: (id) => runShip((db, uid) => shipCore.switchUltimate(db, uid, id)),
+  buySixthBerth: () => runShip((db, uid) => shipCore.buySixthBerth(db, uid)),
+  buyArmoryExpansion: () => runShip((db, uid) => shipCore.buyArmoryExpansion(db, uid)),
+  markUltimateUnlockSeen: () => runShip((db, uid) => shipCore.markUltimateUnlockSeen(db, uid)),
+  markShipGuideSeen: () => runShip((db, uid) => shipCore.markShipGuideSeen(db, uid)),
+  buyHullTier: () => runShip((db, uid) => shipCore.buyShipyardTier(db, uid, 'hull_speed_tier')),
+  buyHandlingTier: () => runShip((db, uid) => shipCore.buyShipyardTier(db, uid, 'hull_handling_tier')),
+  buyLanternTier: () => runShip((db, uid) => shipCore.buyShipyardTier(db, uid, 'lantern_tier')),
+  buyAccelTier: () => runShip((db, uid) => shipCore.buyShipyardTier(db, uid, 'hull_accel_tier')),
+  equipRod: (tier) => runShip((db, uid) => shipCore.equipRod(db, uid, tier)),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi }
