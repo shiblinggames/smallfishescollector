@@ -12,7 +12,7 @@
 // written today still opens after the format grows.
 //
 // This module is pure: it turns saves into text and back. Where the text lives
-// (a file on disk through Node, or Tauri's file system) is a SaveStorage, so the
+// (a file on disk through Node, or the Electron shell's main process) is a SaveStorage, so the
 // same code serves the spike's tests and the shell.
 //
 // fromWebExport turns a web account's export (scripts/player-save, the

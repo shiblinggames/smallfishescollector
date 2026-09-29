@@ -3,25 +3,50 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "description": "Steam prep, step 8 spike: the game's real fishing core, offline, in a desktop shell.",
+  "description": "Steam prep: the game, offline, in an Electron shell. The front end is the website's own files.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "tauri": "tauri"
-  },
-  "dependencies": {
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-fs": "^2",
-    "framer-motion": "^12",
-    "react": "^19",
-    "react-dom": "^19"
+    "app": "vite build && node electron/start.mjs",
+    "app:dev": "node electron/dev.mjs",
+    "dist": "vite build && electron-builder --win",
+    "dist:dir": "vite build && electron-builder --win --dir"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "framer-motion": "^12",
+    "react": "^19",
+    "react-dom": "^19",
     "typescript": "^5",
     "vite": "^7"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.shiblinggames.seasthebooty",
+    "productName": "Seas the Booty",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "electron/main.cjs",
+      "electron/preload.cjs",
+      "build/icon.png"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "icon": "build/icon.icns"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

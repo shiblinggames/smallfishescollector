@@ -85,7 +85,7 @@ gains nothing from early testing, and slows the loop if done early. The networki
 it replaces something that only just started working, and there is no reason to touch it twice.
 
 **The risk is drift.** "We will port when it is done" runs forever. Two guards: write down what
-content complete actually means, and spend about a week on a SHELL SPIKE soon — Tauri plus
+content complete actually means, and spend about a week on a SHELL SPIKE soon (done: Electron, step 8 stage 3) plus
 Steamworks bindings, one window, auth working, nothing else. Not to adopt it; to prove the path
 and surface the surprises while they are still free.
 
@@ -378,7 +378,7 @@ session, load the save slice, run the command with a server seed, write the diff
 Behaviour and security stay exactly as they are.
 
 **Steam runs the same core on the player's machine.**
-- It runs against a local save: an SQLite file in a native shell (Tauri), synced by Steam
+- It runs against a local save: a JSON save file in the Electron shell, synced by Steam
   Cloud.
 - Offline is then the normal case, not a special mode.
 - The client calls one `GameApi` interface with two implementations: "call the server action"
@@ -754,14 +754,18 @@ In order. Each step is worth doing even if the port never happens.
      it stores player state only, re-attaching the species from content on load; web tables
      the offline core does not model yet are CARRIED verbatim so nothing is lost.
    - `SaveStorage` is where the text lives: `nodeSaveStorage` (tests, tools) writes
-     atomically (temp file, flush, rename); the shell will supply one over Tauri's file system.
+     atomically (temp file, flush, rename); the shell supplies one through Electron's main process.
    - `fromWebExport` turns a web account's export (`scripts/player-save`) into a local save.
    - The check now quits at cast 40, reloads from a ~3.5 KB file into a new store, and must
      end exactly where an unbroken session does; an interrupted write leaves the old save
      whole; catman's REAL converted export (146 species, 21 rods, 22 tables carried) fished 20
      casts offline, landing all 20.
-   **STAGE 3, THE SHELL, IN PROGRESS 2026-09-28.** `desktop/` at the repo root (not a second
-   game):
+   **STAGE 3, THE SHELL, DONE 2026-09-28 (Electron).** `desktop/` at the repo root (not a second
+   game). Tauri was tried first and dropped the same day: it needs Rust plus the MSVC build
+   tools, and its webview differs per OS. Electron ships one Chromium everywhere, has
+   steamworks.js for Steam, and is the path Vampire Survivors, Cookie Clicker and CrossCode took.
+   The decision on 2026-09-28: WRAP, do not rewrite. A native (Godot) rewrite was weighed and
+   set aside; revisit only for consoles or if Steam sales justify it.
    - A Vite + React front end, NOT a static export of the Next app (that would drag every server
      page in). Its `@` resolves into `web/`, so the core, the local store, the save file, the
      rules, the content and the REAL dial (`components/FishingDial` DialSVG) are the website's
@@ -769,24 +773,32 @@ In order. Each step is worth doing even if the port never happens.
    - The seam in action: `@/lib/gameApi` is aliased to `desktop/src/localGameApi.ts`, which
      answers `api.fishing.castLine` and `reelIn` from the core and the save (the rest answer
      that they are not offline yet). The screen imports `api` exactly as the website does.
-   - `desktop/src/saveStorage.ts`: the save in the app's data folder through Tauri's fs plugin
-     (temp file, then rename), or localStorage in a plain browser.
-   - `desktop/src-tauri`: Tauri 2, identifier com.shiblinggames.seasthebooty, the fs plugin
-     registered, the window allowed its own data folder and nothing else on disk, the game's icon.
-   - The front end builds (472 modules, 600 KB, mostly content). Verified in a browser with the
-     network CUT: casts through the real core, a Bluegill landed (+6 XP, new species), and after a
-     reload the save came back exactly (277 XP, 55 worms, 1 in the hold).
-   - Rust 1.98.1 installed (rustup, user-level). **Blocked on the MSVC C++ Build Tools**: the
-     installer needs an admin prompt that was declined or unanswered twice (exit 1602), so Kong
-     installs it; then `cd desktop && npx tauri dev` opens the window and `npx tauri build`
-     makes the installer.
+   - `desktop/electron/main.cjs`: serves `dist/` over a private `app://game/` scheme (not
+     file://), owns the save (`captain.json` in the app data folder, written atomically: temp,
+     fsync, rename), and locks the page down (context isolation, sandbox, no Node, no navigation
+     away, outside links open in the browser). `preload.cjs` exposes ONLY `window.stbSave`
+     (where, read, write). `desktop/src/saveStorage.ts` uses it, or localStorage in a plain
+     browser.
+   - Commands (in `desktop/`): `npm run app` builds and opens the window; `npm run app:dev` is
+     the Vite dev server with hot reload inside the window; `npm run dist` makes the Windows
+     installer (NSIS) and `npm run dist:dir` an unpacked build in `release/`.
+   - TRAP: VS Code's terminals export `ELECTRON_RUN_AS_NODE=1`, which starts Electron as plain
+     Node (`protocol` is undefined). Even an EMPTY value counts; the launchers
+     (`electron/start.mjs`, `dev.mjs`) delete the variable.
+   - Everything the page needs is bundled, so the package's `dependencies` must stay EMPTY
+     (all devDependencies): otherwise electron-builder ships node_modules (it did: 17 MB asar,
+     now 720 KB). The unpacked build is ~370 MB, nearly all Electron's own Chromium.
+   - Verified in the REAL window (puppeteer over the remote debugging port): the page has
+     `stbSave` and no `require`/`process`, zero requests outside app://, casts through the core,
+     two Bluegill landed (283 XP, 1 species), and a relaunch came back from the file exactly
+     (283 XP, 54 worms, 2 in the hold) with no temp file left. The packaged exe opens the game.
    - Probe note: a fast needle cannot be timed with puppeteer's keyboard (the per-frame dial
      re-render delays input by hundreds of ms); the probe dispatches the keydown from inside the
      page at the moment the needle is in the band.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):
-- Tauri plus SQLite and a static export of the client.
+- Electron (Tauri tried and dropped, see stage 3) plus a JSON save and a Vite front end over `web/`.
 - `GameApi` pointed at the local core for ONE system (fishing), running with the network off.
 - The point is to prove the path and surface the surprises while they are cheap.
 

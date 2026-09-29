@@ -22,7 +22,9 @@ export default defineConfig({
     // ../web has its own node_modules; the dial must share this app's React.
     dedupe: ['react', 'react-dom', 'framer-motion'],
   },
-  // Tauri serves the built files; the dev server is what `tauri dev` opens.
+  // The shell loads the built files over app://, so every path must be relative.
+  base: './',
+  // `npm run app:dev` opens the window on this dev server.
   server: { port: 5173, strictPort: true },
   clearScreen: false,
   build: { target: 'es2022', outDir: 'dist', emptyOutDir: true },

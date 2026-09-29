@@ -1,5 +1,5 @@
 // A save file on disk, through Node (the spike's tests and tools). The shell
-// supplies its own SaveStorage over Tauri's file system; this one is kept out of
+// supplies its own SaveStorage over Electron's main process; this one is kept out of
 // the core's import tree on purpose.
 //
 // The write is atomic: the text goes to a sibling temp file, is flushed, and
