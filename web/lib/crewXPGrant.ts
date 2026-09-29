@@ -8,7 +8,7 @@
 // callsites can fire them unconditionally.
 
 import type { createAdminClient } from './supabase/admin'
-import { crewData } from './data/crewData'
+import { crewData, type CrewData } from './data/crewData'
 import { crewLevelFromXP } from './crewLevel'
 import { crewDisplayName } from './crewGen'
 
@@ -25,10 +25,10 @@ export interface CrewXPGrant {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-async function resolveNames(admin: Admin, ids: number[]): Promise<Map<number, string>> {
+async function resolveNames(db: CrewData, ids: number[]): Promise<Map<number, string>> {
   if (ids.length === 0) return new Map()
   const out = new Map<number, string>()
-  for (const row of await crewData(admin).crewByIds(ids, 'id, nickname, cards(name, slug)')) {
+  for (const row of await db.crewByIds(ids, 'id, nickname, cards(name, slug)')) {
     const nickname = (row.nickname as string | null) ?? null
     out.set(row.id, nickname ?? crewDisplayName(row.cards?.slug ?? '', row.cards?.name ?? 'Crew'))
   }
@@ -54,10 +54,14 @@ function shape(rows: any[], names: Map<number, string>): CrewXPGrant[] {
  *  raids + practice: every deployed crew gets the same kill XP the player
  *  earned. Returns one row per crew member with old/new level for the UI. */
 export async function grantXPToAssignedCrew(admin: Admin, userId: string, xp: number): Promise<CrewXPGrant[]> {
+  return grantXPToSeatedVia(crewData(admin), userId, xp)
+}
+/** grantXPToAssignedCrew against any crew store (the web's, or the offline save). */
+export async function grantXPToSeatedVia(db: CrewData, userId: string, xp: number): Promise<CrewXPGrant[]> {
   if (xp <= 0) return []
-  const rows = await crewData(admin).grantXpToSeated(userId, xp) as any[]
+  const rows = await db.grantXpToSeated(userId, xp) as any[]
   if (rows.length === 0) return []
-  const names = await resolveNames(admin, rows.map(r => Number(r.id)))
+  const names = await resolveNames(db, rows.map(r => Number(r.id)))
   return shape(rows, names)
 }
 
@@ -65,10 +69,14 @@ export async function grantXPToAssignedCrew(admin: Admin, userId: string, xp: nu
  *  award the full voyage XP payout to survivors (crew_variant_ids minus
  *  crew_lost). */
 export async function grantXPToCrewIds(admin: Admin, userId: string, crewIds: number[], xp: number): Promise<CrewXPGrant[]> {
+  return grantXPToIdsVia(crewData(admin), userId, crewIds, xp)
+}
+/** grantXPToCrewIds against any crew store. */
+export async function grantXPToIdsVia(db: CrewData, userId: string, crewIds: number[], xp: number): Promise<CrewXPGrant[]> {
   if (xp <= 0 || crewIds.length === 0) return []
-  const rows = await crewData(admin).grantXpToIds(userId, crewIds, xp) as any[]
+  const rows = await db.grantXpToIds(userId, crewIds, xp) as any[]
   if (rows.length === 0) return []
-  const names = await resolveNames(admin, rows.map(r => Number(r.id)))
+  const names = await resolveNames(db, rows.map(r => Number(r.id)))
   return shape(rows, names)
 }
 
@@ -77,14 +85,14 @@ export async function grantXPToCrewIds(admin: Admin, userId: string, crewIds: nu
  *  kill) but wrong for the hall's bunks: every bunk has its own `since`, so a
  *  single claim owes each crew a different number. */
 export async function grantXPPairs(
-  admin: Admin,
+  db: CrewData,
   userId: string,
   pairs: { id: number; xp: number }[],
 ): Promise<CrewXPGrant[]> {
   const live = pairs.filter(p => p.xp > 0)
   if (live.length === 0) return []
-  const rows = await crewData(admin).grantXpPairs(userId, live) as any[]
+  const rows = await db.grantXpPairs(userId, live) as any[]
   if (rows.length === 0) return []
-  const names = await resolveNames(admin, rows.map(r => Number(r.id)))
+  const names = await resolveNames(db, rows.map(r => Number(r.id)))
   return shape(rows, names)
 }

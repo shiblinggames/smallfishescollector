@@ -2,20 +2,19 @@
 // crew/actions.ts (which evicts a bunked crew when they are assigned to a party
 // or dismissed).
 //
-// PLAIN MODULE on purpose. These take an admin client, so they must not live in
-// a 'use server' file: every async export there becomes a client-callable
-// endpoint, and an admin client cannot cross that boundary anyway.
+// PLAIN MODULE on purpose, and store-agnostic: every helper takes the crew
+// store (CrewData), so the web hands it the Supabase one and the offline build
+// the local save's. It must not live in a 'use server' file: every async export
+// there becomes a client-callable endpoint.
 
-import type { createAdminClient } from './supabase/admin'
 import { getLevelFromXP } from './expeditionLevel'
 import { clampHallTier } from './crewHall'
 import { grantXPPairs, type CrewXPGrant } from './crewXPGrant'
 import { bunkCount, bunkRatePerHour, hallBunksOpen, stintDone, storesCapHours } from './crewBunks'
 import { clockNow } from './clock'
-import { crewData } from './data/crewData'
+import type { CrewData } from './data/crewData'
 import { finishedStints, stintPayouts, leviathanOffer, leviathanBunk, type BunkRow, type TraitUpgrade } from './crewRules'
 
-type Admin = ReturnType<typeof createAdminClient>
 
 /**
  * What the deep did to a hand's trait, per stat, APPLIED.
@@ -39,8 +38,8 @@ export type { TraitUpgrade, BunkRow } from './crewRules'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /** Training rate and bunk capacity for this player, read once. */
-export async function bunkContext(admin: Admin, userId: string) {
-  const prof = await crewData(admin).profile(userId, 'expedition_xp, crew_hall_tier, crew_drill_level, crew_stores_level, doubloons, is_admin')
+export async function bunkContext(db: CrewData, userId: string) {
+  const prof = await db.profile(userId, 'expedition_xp, crew_hall_tier, crew_drill_level, crew_stores_level, doubloons, is_admin')
   const navLevel = getLevelFromXP((prof as any)?.expedition_xp ?? 0)
   const drillLevel = (prof as any)?.crew_drill_level ?? 1
   const storesLevel = (prof as any)?.crew_stores_level ?? 1
@@ -61,8 +60,8 @@ export async function bunkContext(admin: Admin, userId: string) {
 }
 
 /** Every bunk this player holds. */
-export async function loadBunks(admin: Admin, userId: string): Promise<BunkRow[]> {
-  return (await crewData(admin).bunks(userId)).map(r => ({
+export async function loadBunks(db: CrewData, userId: string): Promise<BunkRow[]> {
+  return (await db.bunks(userId)).map(r => ({
     id: r.id, crew_id: r.crew_id, since: r.since,
     rate: r.rate_per_hour ?? null, cap: r.cap_hours ?? null, slot: r.slot ?? null,
   }))
@@ -95,7 +94,7 @@ export type BunkSettlement = {
 }
 
 export async function settleBunks(
-  admin: Admin,
+  db: CrewData,
   userId: string,
   rows: BunkRow[],
   rate: number,
@@ -111,7 +110,6 @@ export async function settleBunks(
 
   // A hand who hit the level ceiling mid-stint still gets their bunk back; they
   // just have nothing left to learn, so the grant is skipped for them.
-  const db = crewData(admin)
   const xpRows = await db.crewByIds(done.map(r => r.crew_id), 'id, xp')
   const xpById = new Map<number, number>((xpRows as any[]).map(r => [Number(r.id), r.xp ?? 0]))
 
@@ -120,8 +118,8 @@ export async function settleBunks(
 
   const claimed = won.filter((r): r is BunkRow => r !== null)
   const pairs = stintPayouts(claimed, xpById, rate, capHours)
-  const grants = await grantXPPairs(admin, userId, pairs)
-  const upgrades = await recutLeviathanTraits(admin, userId, claimed)
+  const grants = await grantXPPairs(db, userId, pairs)
+  const upgrades = await recutLeviathanTraits(db, userId, claimed)
   return { grants, freed: claimed.map(r => r.crew_id), upgrades }
 }
 
@@ -145,14 +143,13 @@ export async function settleBunks(
  * stints cannot stack, and the older offer is the one that was earned first.
  */
 async function recutLeviathanTraits(
-  admin: Admin,
+  db: CrewData,
   userId: string,
   claimed: BunkRow[],
 ): Promise<TraitUpgrade[]> {
   const eligible = claimed.filter(leviathanBunk)
   if (eligible.length === 0) return []
 
-  const db = crewData(admin)
   const crew = await db.crewByIds(eligible.map(r => r.crew_id), 'id, rarity, effects, pending_trait')
 
   const out: TraitUpgrade[] = []
@@ -172,23 +169,23 @@ async function recutLeviathanTraits(
  * running — there is no early exit, so this can never yank a hand out and is
  * safe to call speculatively.
  */
-export async function releaseBunk(admin: Admin, userId: string, crewId: number): Promise<BunkSettlement> {
-  const data = await crewData(admin).bunkOf(userId, crewId)
+export async function releaseBunk(db: CrewData, userId: string, crewId: number): Promise<BunkSettlement> {
+  const data = await db.bunkOf(userId, crewId)
   if (!data) return { grants: [], freed: [], upgrades: [] }
-  const ctx = await bunkContext(admin, userId)
+  const ctx = await bunkContext(db, userId)
   const row: BunkRow = {
     id: (data as any).id, crew_id: (data as any).crew_id, since: (data as any).since,
     rate: (data as any).rate_per_hour ?? null, cap: (data as any).cap_hours ?? null,
     slot: (data as any).slot ?? null,
   }
-  return settleBunks(admin, userId, [row], ctx.rate, ctx.capHours)
+  return settleBunks(db, userId, [row], ctx.rate, ctx.capHours)
 }
 
 /** Crew ids whose stint is STILL RUNNING. Hard-locked: no reassigning, no
  *  dismissing, no pulling them out early. */
-export async function lockedBunkCrewIds(admin: Admin, userId: string, liveCap: number): Promise<number[]> {
+export async function lockedBunkCrewIds(db: CrewData, userId: string, liveCap: number): Promise<number[]> {
   const nowMs = clockNow()
-  const rows = await loadBunks(admin, userId)
+  const rows = await loadBunks(db, userId)
   return rows
     .filter(r => !stintDone(r.since, nowMs, r.cap ?? liveCap))
     .map(r => r.crew_id)

@@ -34,7 +34,8 @@ import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
-import { getCrewState, type CrewState } from '@/app/(app)/crew/actions'
+import type { CrewState } from '@/app/(app)/crew/actions'
+import { api } from '@/lib/gameApi'
 
 const CrewClient = dynamic(() => import('@/app/(app)/crew/CrewClient'), { ssr: false })
 
@@ -55,7 +56,7 @@ export default function HallSheet({ open, onClose }: {
     // Dropped first: the hall used to mount on the last visit's read and
     // show a collected stint as still waiting (and fail when pressed).
     setState(null)
-    getCrewState().then(r => {
+    api.crew.getCrewState().then(r => {
       if (!live) return
       if (!r) setErr('The hall did not answer. Try again.')
       else setState(r)

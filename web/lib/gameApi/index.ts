@@ -6,21 +6,25 @@
 // core against the local save, and no component changes.
 //
 // Systems join as they are converted: fishing (the offline spike's target,
-// docs/systems/steam-port.md step 8), then selling.
+// docs/systems/steam-port.md step 8), then selling, then the crew.
 
 import { webFishingApi, type FishingApi } from './fishing'
 import { webSellingApi, type SellingApi } from './selling'
+import { webCrewApi, type CrewApi } from './crew'
 
 export interface GameApi {
   fishing: FishingApi
   selling: SellingApi
+  crew: CrewApi
 }
 
 export const api: GameApi = {
   fishing: webFishingApi,
   selling: webSellingApi,
+  crew: webCrewApi,
 }
 
 export type { FishingApi } from './fishing'
 export type { FishSpecies, WaitingFolk } from './fishing'
 export type { SellingApi, PendingSale, DealResult } from './selling'
+export type { CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult } from './crew'

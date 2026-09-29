@@ -18,7 +18,9 @@
 // Tracks are named ('voyage' | 'raid'), never columns, so a local store is free
 // to lay seats out however it likes.
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { captainData, type CaptainData, type Db, type Row } from './common'
+import { spend, grant, arrayAdd } from '@/lib/wallet'
 import type { CardRow } from '@/lib/crewRules'
 
 export type Track = 'voyage' | 'raid'
@@ -31,7 +33,17 @@ const BUNK_COLS = 'id, crew_id, since, rate_per_hour, cap_hours, slot'
 export type BunkDbRow = { id: number; crew_id: number; since: string; rate_per_hour: number | null; cap_hours: number | null; slot: number | null }
 export type XpGrantRow = { id: number; old_xp: number | null; new_xp: number | null }
 
+export type CrewPurse = 'doubloons' | 'gems' | 'blood_gems'
+
 export interface CrewData extends CaptainData {
+  // ── The purse and owned lists (in place; the result is the guard) ──
+  /** Take from a balance only if it covers it: the new balance, or null. */
+  spend(uid: string, col: CrewPurse, n: number): Promise<number | null>
+  /** Pay into a balance; the new balance. */
+  grant(uid: string, col: CrewPurse, n: number): Promise<number>
+  /** Add a value to an owned list once. True if it was not there before. */
+  addToList(uid: string, col: string, value: string): Promise<boolean>
+
   // ── The catalogue ──
   /** Every crew species card. Static game data. */
   cardCatalog(): Promise<CardRow[]>
@@ -120,6 +132,10 @@ export interface CrewData extends CaptainData {
 export function crewData(admin: Db): CrewData {
   return {
     ...captainData(admin),
+
+    spend: (uid, col, n) => spend(admin as any, uid, col, n),
+    grant: (uid, col, n) => grant(admin as any, uid, col, n),
+    addToList: (uid, col, value) => arrayAdd(admin as any, uid, col, value),
 
     async cardCatalog() {
       const { data } = await admin.from('cards').select('id, name, filename, slug, power, dodge, fortune')

@@ -833,6 +833,28 @@ In order. Each step is worth doing even if the port never happens.
    - Found on the way: `update_fish_market()` was executable by anon and authenticated. It ran
      with the caller's rights and RLS has no update policy on the market tables, so a client
      call changed nothing, but it was revoked (2026-09-29) to match every other cron function.
+   **THE CREW OFFLINE, 2026-09-29.** `lib/core/crew`: the board (free once a day, the paid and
+   blood-charged rerolls, the gifted legendary, the blood skin gamble), recruiting, the roster,
+   seats on both tracks, clear/bench/promote/rename/dismiss, crew the deck, the graveyard, the
+   hall upgrade, bunks and the Leviathan re-cut, drills and stores, crew skins, promotions. The
+   crew, bunk and promotion actions are thin wrappers (`revalidatePath('/sea')` stays in the
+   hall and ladder ones); `api.crew` carries them to the Crew Hall, the ship screen, the crew
+   panel and the hall sheet.
+   - `lib/crewBunkSettle` and `lib/crewXPGrant` now take the crew STORE, not the admin client
+     (`grantXPToSeatedVia` / `grantXPToIdsVia`; the admin-taking `grantXPToAssignedCrew` /
+     `grantXPToCrewIds` remain as wrappers for voyages, raids and the gauntlet until those move).
+     CrewData gained `spend`, `grant`, `addToList`. `stampBadges` moved to the pure
+     `lib/badgeStamps` (badgeGrant re-exports it); the local `grantBadge` now dates badges too.
+   - `lib/data/local/crewLocal`: the card catalogue from `content/cards.json`; the
+     `grant_crew_xp_*` SQL as arithmetic; the web table's unique keys on bunks. SAVE FILE v3
+     (crew with the fallen, recruits, bunks, one `nextId` counter; a v2 file upgrades and gets
+     the hall's web defaults). A web export's crew convert with `nextId` past every web id.
+   - NOT YET OFFLINE: voyages and trawls, so offline no hand is ever at sea or on a trawl, the
+     graveyard cannot name the route, and `crewHub` (it reads both) stays web-only for now.
+   - `scripts/check-offline-crew.mts` (in `npm run check`) and a production probe as catman
+     (reads, a seat and a skin round-tripped and restored).
+   - The desktop now carries a save's unmodelled web tables through every write (it dropped
+     them before, so a converted account would have lost them on the first autosave).
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):

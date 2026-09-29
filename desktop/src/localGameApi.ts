@@ -11,24 +11,31 @@
 // on this API yet. Selling runs offline too (lib/core/selling), with the
 // captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi, SellingApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi, CrewApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
 import * as selling from '@/lib/core/selling'
 import { localSellData } from '@/lib/data/local/sellLocal'
+import * as crewCore from '@/lib/core/crew'
+import { localCrewData } from '@/lib/data/local/crewLocal'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
+import type { Row } from '@/lib/data/common'
 import { installRng, mulberry32, seedOf } from '@/lib/rng'
 import type { SpeciesRow } from '@/lib/data/fishingData'
 import speciesJson from '@/content/fish_species.json'
 import { XP_TABLE } from '@/lib/fishingLevel'
 
-export type { FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult } from '../../web/lib/gameApi/index'
+export type {
+  FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
+  CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
+} from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
 
-/** The session: one captain, one save, one store. */
-let session: { save: LocalSave; storage: SaveStorage } | null = null
+/** The session: one captain, one save, one store, and the web tables the
+ *  offline game does not model yet, carried untouched so no write loses them. */
+let session: { save: LocalSave; storage: SaveStorage; carried: Record<string, Row[]> } | null = null
 
 function starterSave(): LocalSave {
   return {
@@ -38,10 +45,11 @@ function starterSave(): LocalSave {
       ancient_catches: [], current_perfect_streak: 0, highest_perfect_streak: 0, total_perfects: 0, zone_perfects: {},
       lifetime_species: [], prestige_levels: {}, zone_golden_boost: {}, unlocked_pets: [], unlocked_character_colors: [],
       unlocked_badges: [], equipped_raid_items: [], catch_pending: false, pending_cast: null, pending_reroll: null,
+      crew_hall_tier: 1, crew_drill_level: 1, crew_stores_level: 1, crew_next_roll_legendary: false,
     },
     species: SPECIES,
     bait: { worm: 60 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null,
+    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1,
   }
 }
 
@@ -49,7 +57,7 @@ function starterSave(): LocalSave {
 export async function openSave(storage: SaveStorage): Promise<LocalSave> {
   const loaded = await loadSave(storage, SPECIES)
   const save = loaded?.save ?? starterSave()
-  session = { save, storage }
+  session = { save, storage, carried: loaded?.carried ?? {} }
   installRng(mulberry32(seedOf(`${save.uid}:${Date.now()}`)))
   if (!loaded) await writeSave(storage, save)
   return save
@@ -59,13 +67,13 @@ export function currentSave(): LocalSave | null { return session?.save ?? null }
 
 function need() {
   if (!session) throw new Error('no save open')
-  return { db: localFishingData(session.save), save: session.save, storage: session.storage }
+  return { db: localFishingData(session.save), save: session.save, storage: session.storage, carried: session.carried }
 }
 /** Run one call against the save, then autosave: anything may have changed the game. */
 async function run<T>(fn: (db: ReturnType<typeof need>['db'], uid: string) => Promise<T>): Promise<T> {
-  const { db, save, storage } = need()
+  const { db, save, storage, carried } = need()
   const r = await fn(db, save.uid)
-  await writeSave(storage, save)
+  await writeSave(storage, save, carried)
   return r
 }
 
@@ -95,9 +103,9 @@ const fishing: FishingApi = {
 
 /** The same, over the selling store. */
 async function runSell<T>(fn: (db: ReturnType<typeof localSellData>, uid: string) => Promise<T>): Promise<T> {
-  const { save, storage } = need()
+  const { save, storage, carried } = need()
   const r = await fn(localSellData(save), save.uid)
-  await writeSave(storage, save)
+  await writeSave(storage, save, carried)
   return r
 }
 
@@ -114,4 +122,39 @@ const sellingApi: SellingApi = {
   saveSeaPosition: (x, y, seen, seenExp, side, helm) => runSell((db, uid) => selling.saveSeaPosition(db, uid, x, y, seen, seenExp, side, helm)),
 }
 
-export const api: GameApi = { fishing, selling: sellingApi }
+/** The same, over the crew store. */
+async function runCrew<T>(fn: (db: ReturnType<typeof localCrewData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage, carried } = need()
+  const r = await fn(localCrewData(save), save.uid)
+  await writeSave(storage, save, carried)
+  return r
+}
+
+const crewApi: CrewApi = {
+  getCrewState: () => runCrew((db, uid) => crewCore.getCrewState(db, uid)),
+  getCrewRoster: () => runCrew((db, uid) => crewCore.getCrewRoster(db, uid)),
+  getCrewGraveyard: () => runCrew((db, uid) => crewCore.getCrewGraveyard(db, uid)),
+  todaysRecruits: () => runCrew((db, uid) => crewCore.todaysRecruits(db, uid)),
+  rerollBoard: (tier) => runCrew((db, uid) => crewCore.rerollBoard(db, uid, tier)),
+  recruitCrew: (id) => runCrew((db, uid) => crewCore.recruitCrew(db, uid, id)),
+  gambleBloodSkin: () => runCrew((db, uid) => crewCore.gambleBloodSkin(db, uid)),
+  dismissCrew: (id) => runCrew((db, uid) => crewCore.dismissCrew(db, uid, id)),
+  assignToVoyage: (id, slot) => runCrew((db, uid) => crewCore.assignToVoyage(db, uid, id, slot)),
+  assignToRaid: (id, slot) => runCrew((db, uid) => crewCore.assignToRaid(db, uid, id, slot)),
+  clearParty: (track) => runCrew((db, uid) => crewCore.clearParty(db, uid, track)),
+  benchCrew: (id) => runCrew((db, uid) => crewCore.benchCrew(db, uid, id)),
+  renameCrew: (id, name) => runCrew((db, uid) => crewCore.renameCrew(db, uid, id, name)),
+  promoteToCaptain: (id) => runCrew((db, uid) => crewCore.promoteToCaptain(db, uid, id)),
+  crewTheDeck: (pull) => runCrew((db, uid) => crewCore.crewTheDeck(db, uid, pull)),
+  upgradeCrewHall: () => runCrew((db, uid) => crewCore.upgradeCrewHall(db, uid)),
+  bunkCrew: (id, slot, hours) => runCrew((db, uid) => crewCore.bunkCrew(db, uid, id, slot, hours)),
+  collectBunk: (id) => runCrew((db, uid) => crewCore.collectBunk(db, uid, id)),
+  resolveTraitOffer: (id, accept) => runCrew((db, uid) => crewCore.resolveTraitOffer(db, uid, id, accept)),
+  buyDrill: () => runCrew((db, uid) => crewCore.buyHallUpgrade(db, uid, 'drill')),
+  buyStores: () => runCrew((db, uid) => crewCore.buyHallUpgrade(db, uid, 'stores')),
+  buyCrewSkin: (id) => runCrew((db, uid) => crewCore.buyCrewSkin(db, uid, id)),
+  equipCrewSkin: (slug, id) => runCrew((db, uid) => crewCore.equipCrewSkin(db, uid, slug, id)),
+  markCrewGuideSeen: () => runCrew((db, uid) => crewCore.markCrewGuideSeen(db, uid)),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi }

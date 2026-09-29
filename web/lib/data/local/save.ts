@@ -13,6 +13,7 @@ import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { ChallengeOverride } from '@/lib/dailyChallenges'
 import type { MarketState } from '@/lib/marketRules'
 import { badgePoints } from '@/lib/badges'
+import { stampBadges } from '@/lib/badgeStamps'
 
 export type LocalSave = {
   uid: string
@@ -40,6 +41,26 @@ export type LocalSave = {
    *  offline it is caught up by the hours that passed (lib/marketRules). Null
    *  until the market is first read. */
   market: MarketState | null
+  // ── Save v3 (crew) ──
+  /** Every hand ever signed, the fallen included (they are the graveyard). */
+  crew: LocalCrewRow[]
+  /** Today's recruit board. */
+  recruits: LocalRecruitRow[]
+  /** The Crew Hall's bunks, each on the terms it was taken on. */
+  bunks: { id: number; crew_id: number; since: string; rate_per_hour: number | null; cap_hours: number | null; slot: number | null }[]
+  /** The next id for a hand, a board row or a bunk (one counter for all). */
+  nextId: number
+}
+
+export type LocalCrewRow = {
+  id: number; card_id: number; rarity: number; power: number; dodge: number; fortune: number
+  effects: string[]; pending_trait: string | null; voyage_slot: number | null; raid_slot: number | null
+  xp: number; nickname: string | null; recruited_at: string
+  died_at: string | null; died_on_voyage_id: number | null; died_hardcore_depth: number | null
+}
+export type LocalRecruitRow = {
+  id: number; slot: number; source: 'free' | 'gem'; card_id: number; rarity: number
+  power: number; dodge: number; fortune: number; effects: string[]; recruited: boolean; start_xp: number
 }
 
 const cols = (list: string) => list.split(',').map(c => c.trim()).filter(Boolean)
@@ -111,7 +132,10 @@ export function localCaptain(save: LocalSave): LocalCaptain {
     },
     async grantBadge(uid, badgeId) {
       const prof = me(uid); const list: string[] = prof.unlocked_badges ?? []
-      if (!list.includes(badgeId)) prof.unlocked_badges = [...list, badgeId]
+      if (list.includes(badgeId)) return
+      // Stamped like the web's grantBadgeDirect, so the Logbook can date it.
+      prof.unlocked_badges = [...list, badgeId]
+      prof.badge_unlocked_at = stampBadges(prof.badge_unlocked_at, [badgeId])
     },
     async flagAnomaly(uid, kind, severity, detail) { me(uid); save.anomalies.push({ kind, severity, detail }) },
     async achievementPoints(uid) {

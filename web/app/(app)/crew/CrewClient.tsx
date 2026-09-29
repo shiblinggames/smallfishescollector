@@ -6,12 +6,8 @@ import CloseButton from '@/components/CloseButton'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
-  assignToVoyage, assignToRaid, benchCrew, clearParty, promoteToCaptain, renameCrew,
-  upgradeCrewHall, buyCrewSkin, equipCrewSkin, gambleBloodSkin, markCrewGuideSeen,
-  type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
-} from './actions'
+import type { CrewState, BoardCandidate, CrewMember, CrewActionResult, FallenCrew } from './actions'
+import { api } from '@/lib/gameApi'
 import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW_SKINS } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
@@ -22,7 +18,6 @@ import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost,
 import { crewAssignment } from '@/lib/crewAssignment'
 import { CREW_PANEL_BG, CREW_PANEL_BORDER } from '@/lib/crewPanel'
 import HallBunks from './HallBunks'
-import { bunkCrew, collectBunk, buyDrill, buyStores, resolveTraitOffer } from './bunkActions'
 import TraitOffer from './TraitOffer'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, decodeTraitStats, isDivineTrait, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
@@ -1014,7 +1009,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     setRenameSaving(true)
     setRenameErr(null)
     try {
-      const res = await renameCrew(crewId, clean)
+      const res = await api.crew.renameCrew(crewId, clean)
       if ('error' in res) { setRenameErr(res.error); return }
       setState(res.state)
       // Pull the freshly-renamed crew row back into the detail modal so
@@ -1143,7 +1138,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
   /** Bunk claims and unbunks return { state, grants }, so they cannot go
    *  through `run` (which only knows { state } | { error }). Both surface what
    *  was paid; both are safe to call when nothing is owed. */
-  function runBunkClaim(action: () => Promise<Awaited<ReturnType<typeof collectBunk>>>) {
+  function runBunkClaim(action: () => Promise<Awaited<ReturnType<typeof api.crew.collectBunk>>>) {
     if (pending) return
     setErr(null)
     startTransition(async () => {
@@ -1200,7 +1195,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     if (pending) return
     setErr(null)
     startTransition(async () => {
-      const res = await resolveTraitOffer(crewId, accept)
+      const res = await api.crew.resolveTraitOffer(crewId, accept)
       if ('error' in res) { setErr(res.error); return }
       setState(res.state)
       setBunkReveal(null)
@@ -1224,7 +1219,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     // the press, so a paid upgrade is not silence followed by a surprise.
     hapticTap()
     startTransition(async () => {
-      const res = await (kind === 'drill' ? buyDrill() : buyStores())
+      const res = await (kind === 'drill' ? api.crew.buyDrill() : api.crew.buyStores())
       setLadderConfirm(null)
       if ('error' in res) { setErr(res.error); return }
       setState(res.state)
@@ -1255,7 +1250,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     hapticTap()
     setHallBusy(true)
     startTransition(async () => {
-      const res = await upgradeCrewHall()
+      const res = await api.crew.upgradeCrewHall()
       if ('error' in res) {
         setErr(res.error)
         setHallUpgradeOpen(false)
@@ -1418,7 +1413,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
   const flashCrewTab = crewGuideStep != null ? (CREW_GUIDE[crewGuideStep]?.tab ?? null) : null
   function finishCrewGuide() {
     setCrewGuideStep(null)
-    void markCrewGuideSeen().catch(() => {})
+    void api.crew.markCrewGuideSeen().catch(() => {})
   }
   // "How the Blood Market works" help modal.
   const [showBloodHelp, setShowBloodHelp] = useState(false)
@@ -1447,7 +1442,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
   useEffect(() => {
     if (activeTab !== 'graveyard' || graveyard !== null || graveyardLoading) return
     setGraveyardLoading(true)
-    getCrewGraveyard()
+    api.crew.getCrewGraveyard()
       .then(rows => setGraveyard(rows))
       .finally(() => setGraveyardLoading(false))
   }, [activeTab, graveyard, graveyardLoading])
@@ -1559,7 +1554,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     setErr(null)
     setClearingTrack(track)
     startTransition(async () => {
-      const res = await clearParty(track)
+      const res = await api.crew.clearParty(track)
       if ('error' in res) setErr(res.error)
       else { setState(res.state); window.dispatchEvent(new Event('crew-changed')) }
       setClearingTrack(null)
@@ -1580,7 +1575,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     setErr(null)
     setState(s => ({ ...s, roster: s.roster.filter(c => c.id !== id) }))
     startTransition(async () => {
-      const res = await dismissCrew(id)
+      const res = await api.crew.dismissCrew(id)
       if ('error' in res) { setErr(res.error); setState(s => ({ ...s, roster: snapshot })) }
       else setState(res.state)
     })
@@ -1624,7 +1619,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     // is right: a hand is aboard or the board says why not.
     window.dispatchEvent(new Event('crew-recruited'))
     startTransition(async () => {
-      const res = await recruitCrew(id)
+      const res = await api.crew.recruitCrew(id)
       if ('error' in res) { setErr(res.error); setState(s => ({ ...s, board: snapshot })) }
       else {
         setState(res.state)
@@ -1645,7 +1640,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     // The blood-charged reroll is fired from the recruit board itself now, so
     // there is nowhere to jump to: the new candidates flip in under your thumb.
     startTransition(async () => {
-      const res = await rerollBoard(bloodTierId)
+      const res = await api.crew.rerollBoard(bloodTierId)
       if ('error' in res) setErr(res.error)
       else {
         setState(res.state)
@@ -1668,7 +1663,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
     setSkinGamble({ phase: 'rolling' })
     setBusyId('gamble')
     startTransition(async () => {
-      const res = await gambleBloodSkin()
+      const res = await api.crew.gambleBloodSkin()
       if ('error' in res) { setErr(res.error); setSkinGamble(null); setBusyId(null); return }
       setState(res.state)
       window.dispatchEvent(new CustomEvent('blood-gems-changed', { detail: res.state.bloodGems }))
@@ -2102,8 +2097,8 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
               accent={hall.accent}
               pending={pending}
               pop={pop?.what === 'drill' || pop?.what === 'stores' ? pop.what : null}
-              onBunk={(id, slot, hours) => run(() => bunkCrew(id, slot, hours), id)}
-              onCollectOne={id => runBunkClaim(() => collectBunk(id))}
+              onBunk={(id, slot, hours) => run(() => api.crew.bunkCrew(id, slot, hours), id)}
+              onCollectOne={id => runBunkClaim(() => api.crew.collectBunk(id))}
               onBuyDrill={() => setLadderConfirm('drill')}
               onBuyStores={() => setLadderConfirm('stores')}
             />
@@ -2361,7 +2356,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                 }),
               }))
               setAssignSeat(null)
-              run(() => (track === 'raid' ? assignToRaid(m.id, slot) : assignToVoyage(m.id, slot)), m.id, undefined,
+              run(() => (track === 'raid' ? api.crew.assignToRaid(m.id, slot) : api.crew.assignToVoyage(m.id, slot)), m.id, undefined,
                 () => setState(s => ({ ...s, roster: snapshot })))
             }}
             onClose={() => setAssignSeat(null)}
@@ -3977,7 +3972,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                                 // skin → tapping equips it straight away. No buttons,
                                 // no shifting UI.
                                 if (!isOwned) { setSkinBuyConfirm(t.id as string); return }
-                                if (!isEquipped) runSkinAction(`equip:${t.id ?? 'base'}`, () => equipCrewSkin(dm.slug, t.id))
+                                if (!isEquipped) runSkinAction(`equip:${t.id ?? 'base'}`, () => api.crew.equipCrewSkin(dm.slug, t.id))
                               }}
                               style={{
                                 position: 'relative', padding: 0, borderRadius: 10, overflow: 'visible', cursor: 'pointer',
@@ -4117,9 +4112,9 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     }[confirmAct]
                     const go = () => {
                       if (confirmAct === 'swap') { close(); if (track && seat !== null) setAssignSeat({ track, slot: seat }); return }
-                      if (confirmAct === 'promote') return run(() => promoteToCaptain(m.id), m.id, close)
-                      if (confirmAct === 'remove')  return run(() => benchCrew(m.id), m.id, close)
-                      return run(() => dismissCrew(m.id), m.id, close)
+                      if (confirmAct === 'promote') return run(() => api.crew.promoteToCaptain(m.id), m.id, close)
+                      if (confirmAct === 'remove')  return run(() => api.crew.benchCrew(m.id), m.id, close)
+                      return run(() => api.crew.dismissCrew(m.id), m.id, close)
                     }
                     return (
                       <div style={{
@@ -4418,7 +4413,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                       Cancel
                     </button>
                     <button type="button" disabled={!!skinBusy || !canAfford}
-                      onClick={() => { if (skinBusy || !canAfford) return; const id = skin.id; setSkinBuyConfirm(null); runSkinAction(`buy:${id}`, () => buyCrewSkin(id)) }}
+                      onClick={() => { if (skinBusy || !canAfford) return; const id = skin.id; setSkinBuyConfirm(null); runSkinAction(`buy:${id}`, () => api.crew.buyCrewSkin(id)) }}
                       className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1.4, padding: '0.6rem', borderRadius: 11, fontSize: '0.62rem', background: canAfford ? `${c}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? c + '77' : 'rgba(255,255,255,0.12)'}`, color: canAfford ? '#fff' : 'rgba(255,255,255,0.4)', cursor: canAfford ? 'pointer' : 'default', opacity: skinBusy ? 0.5 : 1 }}>
                       {skinBusy ? '…' : canAfford ? `Unlock · ${skin.gemCost.toLocaleString()} ◆` : `Need ${(skin.gemCost - state.gems).toLocaleString()} ◆`}
                     </button>
@@ -4477,13 +4472,13 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     {skin.blurb && <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 5, lineHeight: 1.45 }}>{skin.blurb}</p>}
                     <div style={{ marginTop: 13 }}>
                       {equipped ? (
-                        <button type="button" disabled={!!skinBusy} onClick={() => runSkinAction(`equip:none:${skin.slug}`, () => equipCrewSkin(skin.slug, null))}
+                        <button type="button" disabled={!!skinBusy} onClick={() => runSkinAction(`equip:none:${skin.slug}`, () => api.crew.equipCrewSkin(skin.slug, null))}
                           className="font-karla font-700 uppercase tracking-[0.08em] w-full"
                           style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.64rem', background: `${c}22`, border: `1px solid ${c}77`, color: '#fff', cursor: 'pointer', opacity: skinBusy ? 0.5 : 1 }}>
                           {skinBusy ? '…' : '✓ Equipped · press to remove'}
                         </button>
                       ) : owned && ownsCrew ? (
-                        <button type="button" disabled={!!skinBusy} onClick={() => runSkinAction(`equip:${skin.id}`, () => equipCrewSkin(skin.slug, skin.id))}
+                        <button type="button" disabled={!!skinBusy} onClick={() => runSkinAction(`equip:${skin.id}`, () => api.crew.equipCrewSkin(skin.slug, skin.id))}
                           className="font-karla font-700 uppercase tracking-[0.08em] w-full"
                           style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.66rem', background: `${c}2a`, border: `1px solid ${c}88`, color: '#fff', cursor: 'pointer', opacity: skinBusy ? 0.5 : 1 }}>
                           {skinBusy ? '…' : 'Equip'}
@@ -4496,7 +4491,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                       ) : ownsCrew ? (
                         <>
                           <button type="button" disabled={!!skinBusy || !canAfford}
-                            onClick={() => { if (skinBusy || !canAfford) return; const id = skin.id; runSkinAction(`buy:${id}`, () => buyCrewSkin(id)) }}
+                            onClick={() => { if (skinBusy || !canAfford) return; const id = skin.id; runSkinAction(`buy:${id}`, () => api.crew.buyCrewSkin(id)) }}
                             className="font-karla font-700 uppercase tracking-[0.08em] w-full"
                             style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.66rem', background: canAfford ? `${c}2a` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? c + '88' : 'rgba(255,255,255,0.12)'}`, color: canAfford ? '#fff' : 'rgba(255,255,255,0.42)', cursor: canAfford ? 'pointer' : 'default', opacity: skinBusy ? 0.5 : 1 }}>
                             {skinBusy ? '…' : canAfford ? `Buy · ${skin.gemCost.toLocaleString()} ◆` : `Need ${(skin.gemCost - state.gems).toLocaleString()} more ◆`}

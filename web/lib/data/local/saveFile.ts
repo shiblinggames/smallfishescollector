@@ -25,7 +25,7 @@ import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 2
+export const LOCAL_SAVE_VERSION = 3
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -49,6 +49,15 @@ const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
   // v2 (2026-09-29): selling. Deals struck at sea, and the captain's own market
   // (null until first read, then caught up from the clock).
   1: f => ({ ...f, version: 2, save: { ...f.save, deals: [], market: null } }),
+  // v3 (2026-09-29): the crew. The hands (the fallen too), the recruit board,
+  // the bunks and one id counter; the hall's tiers get the web's defaults.
+  2: f => ({
+    ...f, version: 3,
+    save: {
+      ...f.save, crew: [], recruits: [], bunks: [], nextId: 1,
+      profile: { crew_hall_tier: 1, crew_drill_level: 1, crew_stores_level: 1, crew_next_roll_legendary: false, ...f.save.profile },
+    },
+  }),
 }
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
@@ -87,7 +96,8 @@ export type WebExport = { format: string; version: number; userId: string; usern
 
 /** The tables the local fishing save models; everything else is carried. */
 const MODELLED = new Set(['bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
-  'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport', 'sea_trader_deals'])
+  'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport', 'sea_trader_deals',
+  'user_crew', 'daily_recruits', 'crew_hall_bunks'])
 
 export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: LocalSave; carried: Record<string, Row[]> } {
   const t = (name: string) => exp.tables[name] ?? []
@@ -113,6 +123,26 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
     deals: t('sea_trader_deals').map(r => ({ trader_key: String(r.trader_key), sea_day: Number(r.sea_day), kind: String(r.kind), detail: (r.detail ?? {}) as object })),
     // The web's market is shared by everybody; a converted save starts its own.
     market: null,
+    crew: t('user_crew').map(r => ({
+      id: Number(r.id), card_id: Number(r.card_id), rarity: Number(r.rarity), power: Number(r.power), dodge: Number(r.dodge),
+      fortune: Number(r.fortune), effects: (r.effects ?? []) as string[], pending_trait: (r.pending_trait as string | null) ?? null,
+      voyage_slot: r.voyage_slot == null ? null : Number(r.voyage_slot), raid_slot: r.raid_slot == null ? null : Number(r.raid_slot),
+      xp: Number(r.xp ?? 0), nickname: (r.nickname as string | null) ?? null, recruited_at: String(r.recruited_at ?? ''),
+      died_at: (r.died_at as string | null) ?? null, died_on_voyage_id: r.died_on_voyage_id == null ? null : Number(r.died_on_voyage_id),
+      died_hardcore_depth: r.died_hardcore_depth == null ? null : Number(r.died_hardcore_depth),
+    })),
+    recruits: t('daily_recruits').map(r => ({
+      id: Number(r.id), slot: Number(r.slot), source: r.source === 'gem' ? 'gem' as const : 'free' as const, card_id: Number(r.card_id),
+      rarity: Number(r.rarity), power: Number(r.power), dodge: Number(r.dodge), fortune: Number(r.fortune),
+      effects: (r.effects ?? []) as string[], recruited: r.recruited === true, start_xp: Number(r.start_xp ?? 0),
+    })),
+    bunks: t('crew_hall_bunks').map(r => ({
+      id: Number(r.id), crew_id: Number(r.crew_id), since: String(r.since),
+      rate_per_hour: r.rate_per_hour == null ? null : Number(r.rate_per_hour),
+      cap_hours: r.cap_hours == null ? null : Number(r.cap_hours), slot: r.slot == null ? null : Number(r.slot),
+    })),
+    // Past every id the web handed out, so a new hand can never collide with an old one.
+    nextId: 1 + Math.max(0, ...['user_crew', 'daily_recruits', 'crew_hall_bunks'].flatMap(n => t(n).map(r => Number(r.id) || 0))),
   }
   const carried = Object.fromEntries(Object.entries(exp.tables).filter(([name]) => !MODELLED.has(name)))
   return { save, carried }

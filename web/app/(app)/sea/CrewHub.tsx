@@ -53,8 +53,8 @@ import CloseButton from '@/components/CloseButton'
 import RoomCard, { AssignLoop, CrewFan, CrewWedge, Showcase } from '@/components/RoomCard'
 import { vibrate } from '@/lib/haptics'
 import { crewHub, type CrewHubState, type HubCrew } from './crewHubActions'
-import { getCrewState } from '@/app/(app)/crew/actions'
 import type { CrewState } from '@/app/(app)/crew/actions'
+import { api } from '@/lib/gameApi'
 import { CREW_SKINS } from '@/lib/crewSkins'
 import { cardArt } from '@/lib/artUrl'
 
@@ -200,7 +200,7 @@ export default function CrewHub({
       if ('error' in r) setErr(r.error)
       else setState(r)
     }, () => { if (live) setErr('Could not reach the hall.') })
-    getCrewState().then(r => {
+    api.crew.getCrewState().then(r => {
       if (!live) return
       if (!r) setHallErr('Could not reach the hall.')
       else setHall(r)
@@ -218,7 +218,7 @@ export default function CrewHub({
     if (!open) return
     let live = true
     crewHub().then(r => { if (live && !('error' in r)) setState(r) }, () => {})
-    getCrewState().then(r => { if (live && r) setHall(r) }, () => {})
+    api.crew.getCrewState().then(r => { if (live && r) setHall(r) }, () => {})
     return () => { live = false }
   }, [open])
 
@@ -253,7 +253,7 @@ export default function CrewHub({
     if (!open) return
     const again = () => {
       crewHub().then(r => { if (!('error' in r)) setState(r) }, () => {})
-      getCrewState().then(r => { if (r) setHall(r) }, () => {})
+      api.crew.getCrewState().then(r => { if (r) setHall(r) }, () => {})
     }
     window.addEventListener('crew-changed', again)
     return () => window.removeEventListener('crew-changed', again)
