@@ -8,7 +8,7 @@
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { buyInCasino, cashOutCasino } from './actions'
+import { api } from '@/lib/gameApi'
 import type { CasinoWallet, CasinoSessionNets, DenLeaderboards } from './types'
 import { CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX, DEN_CAP_MAX } from '../constants'
 import BlackjackHubCard from '../BlackjackHubCard'
@@ -22,7 +22,6 @@ import RoomIntro from '@/components/RoomIntro'
 import ResetCountdown from '@/components/ResetCountdown'
 import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
 import { GUIDES } from '@/lib/onboardingScenes'
-import { markDenGuideSeen } from './actions'
 
 const GOLD = '#f0c040'
 
@@ -93,7 +92,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
     if (!canBuyIn) return
     setError(null)
     startTransition(async () => {
-      const r = await buyInCasino(buyInAmount)
+      const r = await api.casino.buyInCasino(buyInAmount)
       if ('error' in r) { setError(r.error); return }
       setChips(r.newChips)
       setDoubloons(r.newDoubloons)
@@ -109,7 +108,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
     if (chips <= 0 || isPending) return
     setError(null)
     startTransition(async () => {
-      const r = await cashOutCasino()
+      const r = await api.casino.cashOutCasino()
       if ('error' in r) { setError(r.error); return }
       setChips(0)
       setDoubloons(r.newDoubloons)
@@ -425,7 +424,7 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards, hasSeenGui
       <LobbyGuide
         show={!hasSeenGuide}
         steps={DEN_GUIDE}
-        onSeen={() => { void markDenGuideSeen().catch(() => {}) }}
+        onSeen={() => { void api.casino.markDenGuideSeen().catch(() => {}) }}
       />
     </div>
   )

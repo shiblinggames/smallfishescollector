@@ -892,6 +892,21 @@ In order. Each step is worth doing even if the port never happens.
      updated. Not repaired (needs Kong's call).
    - `scripts/check-offline-gauntlet.mts` (in `npm run check`); production probe as catman (reads
      and refusals only).
+   **THE DEN OFFLINE, 2026-09-29.** `lib/core/casino`: the shared chip purse (buy-in against
+   the day's cap, cash-out), Fish Slots and the community pot, Fish Roulette and Blackjack
+   (every move, the settlement, orphan hands). The four tavern action files are thin wrappers
+   (`revalidatePath` stays in the slots, purse and deal wrappers); `api.casino` carries them to
+   the blackjack table, roulette, the slot machine and the Den lobby. CasinoData gained
+   `spend`, `grant` and `grantBadge`. Blackjack's mid-hand view now reads the profile once
+   instead of five separate reads (same values).
+   - `lib/data/local/casinoLocal`: `casino_cash_out`, `slots_feed_jackpot`,
+     `slots_claim_jackpot` (share = pot x wager / max bet, floored; never below the seed) and
+     `get_slot_stats` (running totals) as arithmetic. THE COMMUNITY POT offline is the
+     captain's own, seeded at 15,000 like the web's. SAVE FILE v6 (`casino`: recent buy-ins, the
+     open hand, the last twenty roulette spins, slots totals, the pot).
+   - `scripts/check-offline-casino.mts` (in `npm run check`): 400 spins, 300 roulette spins and
+     500 blackjack hands, each proving every chip is where the nets say; production probe as
+     catman (reads and refusals only).
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):

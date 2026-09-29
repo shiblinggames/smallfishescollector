@@ -62,6 +62,29 @@ export type LocalSave = {
   gauntletRuns: { variant: string; hardcore: boolean; depth: number; duration_ms: number; outcome: string; at: string }[]
   /** Moments a bounty may count (a run's depth, a big hit), the last few hundred. */
   bountyEvents: { kind: string; value: number; at: string }[]
+  // ── Save v6 (the Den) ──
+  casino: LocalCasino
+}
+
+export type LocalCasino = {
+  /** Buy-ins of the last couple of days (the daily cap counts today's). */
+  buyIns: { amount: number; at: string }[]
+  /** The open blackjack hand, if any. */
+  hand: { id: number; state: unknown; initial_wager: number; total_wagered: number } | null
+  /** The last twenty roulette spins. */
+  rouletteSpins: Record<string, unknown>[]
+  /** Slots, as running totals. */
+  slots: { spins: number; net: number; biggest_win: number }
+  /** The captain's own community pot. */
+  pot: { pot: number; seed: number; last_winner_name: string | null; last_win_amount: number | null; last_won_at: string | null }
+}
+
+/** A Den nobody has visited: no buy-ins, no hand, the pot at its seed. */
+export function freshCasino(): LocalCasino {
+  return {
+    buyIns: [], hand: null, rouletteSpins: [], slots: { spins: 0, net: 0, biggest_win: 0 },
+    pot: { pot: 15000, seed: 15000, last_winner_name: null, last_win_amount: null, last_won_at: null },
+  }
 }
 
 export type LocalVoyageRow = {

@@ -11,7 +11,7 @@
 // on this API yet. Selling runs offline too (lib/core/selling), with the
 // captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
 import * as selling from '@/lib/core/selling'
@@ -22,7 +22,10 @@ import * as voyageCore from '@/lib/core/voyages'
 import { localVoyageData } from '@/lib/data/local/voyageLocal'
 import * as gauntletCore from '@/lib/core/gauntlet'
 import { localGauntletData } from '@/lib/data/local/gauntletLocal'
+import * as casinoCore from '@/lib/core/casino'
+import { localCasinoData } from '@/lib/data/local/casinoLocal'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
+import { freshCasino } from '@/lib/data/local/save'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
 import type { Row } from '@/lib/data/common'
 import { installRng, mulberry32, seedOf } from '@/lib/rng'
@@ -33,7 +36,7 @@ import { XP_TABLE } from '@/lib/fishingLevel'
 export type {
   FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
   CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
-  VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew, GauntletApi,
+  VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew, GauntletApi, CasinoApi,
 } from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
@@ -54,7 +57,7 @@ function starterSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 60 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [],
+    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(),
   }
 }
 
@@ -214,4 +217,33 @@ const gauntletApi: GauntletApi = {
   buyBaitWithFathoms: (type) => runGauntlet((db, uid) => gauntletCore.buyBaitWithFathoms(db, uid, type)),
 }
 
-export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi }
+/** The same, over the Den's store. */
+async function runDen<T>(fn: (db: ReturnType<typeof localCasinoData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage, carried } = need()
+  const r = await fn(localCasinoData(save), save.uid)
+  await writeSave(storage, save, carried)
+  return r
+}
+
+const casinoApi: CasinoApi = {
+  getCasinoState: () => runDen((db, uid) => casinoCore.getCasinoState(db, uid)),
+  buyInCasino: (amount) => runDen((db, uid) => casinoCore.buyInCasino(db, uid, amount)),
+  cashOutCasino: () => runDen((db, uid) => casinoCore.cashOutCasino(db, uid)),
+  markDenGuideSeen: () => runDen((db, uid) => casinoCore.markDenGuideSeen(db, uid)),
+  getSlotsJackpot: () => runDen((db) => casinoCore.getSlotsJackpot(db)),
+  getSlotStats: () => runDen((db, uid) => casinoCore.getSlotStats(db, uid)),
+  spinSlots: (wager) => runDen((db, uid) => casinoCore.spinSlots(db, uid, wager)),
+  getRouletteState: () => runDen((db, uid) => casinoCore.getRouletteState(db, uid)),
+  placeBetsAndSpin: (bets) => runDen((db, uid) => casinoCore.placeBetsAndSpin(db, uid, bets)),
+  getDailyWagered: () => runDen((db, uid) => casinoCore.getDailyWagered(db, uid)),
+  dealBlackjack: (wager) => runDen((db, uid) => casinoCore.dealBlackjack(db, uid, wager)),
+  acceptInsurance: () => runDen((db, uid) => casinoCore.acceptInsurance(db, uid)),
+  declineInsurance: () => runDen((db, uid) => casinoCore.declineInsurance(db, uid)),
+  hit: () => runDen((db, uid) => casinoCore.hit(db, uid)),
+  stand: () => runDen((db, uid) => casinoCore.stand(db, uid)),
+  doubleDown: () => runDen((db, uid) => casinoCore.doubleDown(db, uid)),
+  split: () => runDen((db, uid) => casinoCore.split(db, uid)),
+  resumeHand: () => runDen((db, uid) => casinoCore.resumeHand(db, uid)),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi }

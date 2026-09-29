@@ -7,13 +7,14 @@
 //
 // Systems join as they are converted: fishing (the offline spike's target,
 // docs/systems/steam-port.md step 8), then selling, the crew, voyages and
-// trawls, the gauntlets.
+// trawls, the gauntlets, the Den.
 
 import { webFishingApi, type FishingApi } from './fishing'
 import { webSellingApi, type SellingApi } from './selling'
 import { webCrewApi, type CrewApi } from './crew'
 import { webVoyagesApi, type VoyagesApi } from './voyages'
 import { webGauntletApi, type GauntletApi } from './gauntlet'
+import { webCasinoApi, type CasinoApi } from './casino'
 
 export interface GameApi {
   fishing: FishingApi
@@ -21,6 +22,7 @@ export interface GameApi {
   crew: CrewApi
   voyages: VoyagesApi
   gauntlet: GauntletApi
+  casino: CasinoApi
 }
 
 export const api: GameApi = {
@@ -29,11 +31,13 @@ export const api: GameApi = {
   crew: webCrewApi,
   voyages: webVoyagesApi,
   gauntlet: webGauntletApi,
+  casino: webCasinoApi,
 }
 
 export type { FishingApi } from './fishing'
 export type { FishSpecies, WaitingFolk } from './fishing'
 export type { SellingApi, PendingSale, DealResult } from './selling'
 export type { GauntletApi } from './gauntlet'
+export type { CasinoApi } from './casino'
 export type { VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew } from './voyages'
 export type { CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult } from './crew'

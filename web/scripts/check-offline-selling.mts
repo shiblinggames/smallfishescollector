@@ -25,6 +25,7 @@ import { localSellData } from '../lib/data/local/sellLocal'
 import type { LocalSave } from '../lib/data/local/save'
 import { deserializeSave, serializeSave, LOCAL_SAVE_FORMAT } from '../lib/data/local/saveFile'
 import type { SpeciesRow } from '../lib/data/fishingData'
+import { freshCasino } from '../lib/data/local/save'
 import { installRng, mulberry32, withRng } from '../lib/rng'
 import { installClock } from '../lib/clock'
 import { tickMarket, freshMarket, catchUpMarket, rollMood, MAX_CATCH_UP_TICKS, type MarketState } from '../lib/marketRules'
@@ -138,7 +139,7 @@ function freshSave(): LocalSave {
     profile: { doubloons: 1000, gems: 0, sea_x: 0, sea_y: 0, sea_side: 'fishing', sea_explored: null, sea_explored_exp: null, sea_session: null, sea_seen_at: null },
     species: SPECIES,
     bait: {}, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [],
+    clears: [], rods: [0], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(),
   }
 }
 const cheap = SPECIES.filter(s => s.sell_value > 0 && s.habitat === 'shallows').slice(0, 3)

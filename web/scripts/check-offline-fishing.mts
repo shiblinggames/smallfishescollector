@@ -37,6 +37,7 @@ import { serializeSave, deserializeSave, loadSave, writeSave, fromWebExport, LOC
 import { nodeSaveStorage } from '../lib/data/local/nodeSaveStorage'
 import os from 'os'
 import type { SpeciesRow } from '../lib/data/fishingData'
+import { freshCasino } from '../lib/data/local/save'
 import { installRng, mulberry32 } from '../lib/rng'
 import { installClock } from '../lib/clock'
 import { XP_TABLE, getLevelFromXP } from '../lib/fishingLevel'
@@ -105,7 +106,7 @@ function freshSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 200 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1, 2, 3], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [],
+    clears: [], rods: [0, 1, 2, 3], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(),
   }
 }
 

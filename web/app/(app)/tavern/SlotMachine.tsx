@@ -3,9 +3,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import DetentSlider from '@/components/DetentSlider'
-import { spinSlots } from './actions'
 import type { SlotSpinResult, SlotStats, SlotsJackpotState } from './actions'
-import { buyInCasino, cashOutCasino } from './casino/actions'
+import { api } from '@/lib/gameApi'
 import DenNav from './casino/DenNav'
 import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX } from './constants'
 import type { SlotSymbolId } from './constants'
@@ -385,7 +384,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
     if (!canBuyIn) return
     setError(null)
     setWalletBusy(true)
-    const r = await buyInCasino(buyInAmount)
+    const r = await api.casino.buyInCasino(buyInAmount)
     setWalletBusy(false)
     if ('error' in r) { setError(r.error); return }
     setChips(r.newChips)
@@ -399,7 +398,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
     if (walletBusy || spinning || chips <= 0) return
     setError(null)
     setWalletBusy(true)
-    const r = await cashOutCasino()
+    const r = await api.casino.cashOutCasino()
     setWalletBusy(false)
     if ('error' in r) { setError(r.error); return }
     setChips(0)
@@ -485,7 +484,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
     setSpinning(true)
     setMainRolling([true, true, true])
 
-    const result = await spinSlots(wager)
+    const result = await api.casino.spinSlots(wager)
 
     if ('error' in result) {
       setSpinning(false)

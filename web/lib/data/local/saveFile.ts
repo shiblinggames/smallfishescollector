@@ -20,12 +20,12 @@
 // yet are CARRIED in the file untouched, so converting a real account loses
 // nothing and later stages can pick them up.
 
-import type { LocalSave } from './save'
+import { freshCasino, type LocalSave } from './save'
 import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 5
+export const LOCAL_SAVE_VERSION = 6
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -62,6 +62,8 @@ const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
   3: f => ({ ...f, version: 4, save: { ...f.save, voyages: [], trawls: [] } }),
   // v5 (2026-09-29): the gauntlets' per-depth times, run log and bounty moments.
   4: f => ({ ...f, version: 5, save: { ...f.save, depthBests: {}, gauntletRuns: [], bountyEvents: [] } }),
+  // v6 (2026-09-29): the Den (buy-ins, the open hand, spins, the captain's pot).
+  5: f => ({ ...f, version: 6, save: { ...f.save, casino: freshCasino() } }),
 }
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
@@ -102,7 +104,7 @@ export type WebExport = { format: string; version: number; userId: string; usern
 const MODELLED = new Set(['bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
   'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport', 'sea_trader_deals',
   'user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls',
-  'gauntlet_depth_bests', 'gauntlet_runs', 'bounty_events'])
+  'gauntlet_depth_bests', 'gauntlet_runs', 'bounty_events', 'casino_buy_ins', 'blackjack_hands', 'roulette_spins', 'slot_spins'])
 
 export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: LocalSave; carried: Record<string, Row[]> } {
   const t = (name: string) => exp.tables[name] ?? []
@@ -165,8 +167,21 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
     })).sort((a, b) => a.at.localeCompare(b.at)).slice(-200),
     bountyEvents: t('bounty_events').map(r => ({ kind: String(r.kind), value: Number(r.value), at: String(r.created_at ?? '') }))
       .sort((a, b) => a.at.localeCompare(b.at)).slice(-500),
+    casino: {
+      ...freshCasino(),
+      buyIns: t('casino_buy_ins').map(r => ({ amount: Number(r.amount), at: String(r.created_at ?? '') })),
+      hand: (() => {
+        const h = t('blackjack_hands').find(r => r.status === 'active' && r.state)
+        return h ? { id: Number(h.id), state: h.state, initial_wager: Number(h.initial_wager), total_wagered: Number(h.total_wagered) } : null
+      })(),
+      rouletteSpins: t('roulette_spins').sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))).slice(-20).map(r => ({ ...r })),
+      slots: t('slot_spins').reduce<{ spins: number; net: number; biggest_win: number }>((acc, r) => {
+        const net = Number(r.payout ?? 0) - Number(r.wager ?? 0)
+        return { spins: acc.spins + 1, net: acc.net + net, biggest_win: Math.max(acc.biggest_win, net) }
+      }, { spins: 0, net: 0, biggest_win: 0 }),
+    },
     // Past every id the web handed out, so a new row can never collide with an old one.
-    nextId: 1 + Math.max(0, ...['user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls'].flatMap(n => t(n).map(r => Number(r.id) || 0))),
+    nextId: 1 + Math.max(0, ...['user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls', 'blackjack_hands', 'roulette_spins'].flatMap(n => t(n).map(r => Number(r.id) || 0))),
   }
   const carried = Object.fromEntries(Object.entries(exp.tables).filter(([name]) => !MODELLED.has(name)))
   return { save, carried }

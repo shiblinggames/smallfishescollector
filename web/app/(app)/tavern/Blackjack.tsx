@@ -3,12 +3,8 @@
 import { forwardRef, useEffect, useRef, useState, useTransition, type CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BJ_BET_PRESETS, BJ_MAX_BET, BJ_MIN_BET, CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX, CASINO_BUY_IN_MIN } from './constants'
-import {
-  dealBlackjack, hit, stand, doubleDown, split,
-  acceptInsurance, declineInsurance,
-  type ClientState, type SettleResult, type Phase, type CardOrBack,
-} from './blackjack/actions'
-import { buyInCasino, cashOutCasino } from './casino/actions'
+import type { ClientState, SettleResult, Phase, CardOrBack } from './blackjack/actions'
+import { api } from '@/lib/gameApi'
 import DenNav from './casino/DenNav'
 import { vibrate } from '@/lib/haptics'
 import { handValue, type Card, type Rank } from '@/lib/blackjack'
@@ -1035,7 +1031,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     // active.totalWagered effect runs.
     setPotAmount(wager)
     pendingFreshDealRef.current = true   // read by applyActionResult on response
-    fireAction(() => dealBlackjack(wager))
+    fireAction(() => api.casino.dealBlackjack(wager))
   }
 
   function nextHand() {
@@ -1059,7 +1055,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     if (!canBuyIn) return
     setError(null)
     startTransition(async () => {
-      const r = await buyInCasino(buyInAmount)
+      const r = await api.casino.buyInCasino(buyInAmount)
       if ('error' in r) { setError(r.error); return }
       setChips(r.newChips)
       setDoubloons(r.newDoubloons)
@@ -1075,7 +1071,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     if (chips <= 0 || isPending) return
     setError(null)
     startTransition(async () => {
-      const r = await cashOutCasino()
+      const r = await api.casino.cashOutCasino()
       if ('error' in r) { setError(r.error); return }
       setChips(0)
       setDoubloons(r.newDoubloons)
@@ -1430,13 +1426,13 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', minHeight: 60 }}>
           {!dealing && state.hands.some(h => !h.busted && !h.stood) && (
             <>
-              <ActionButton label="Hit"   onClick={() => fireAction(hit)}        disabled={!state.canHit || isPending} />
-              <ActionButton label="Stand" onClick={() => fireAction(stand)}      disabled={!state.canStand || isPending} />
+              <ActionButton label="Hit"   onClick={() => fireAction(api.casino.hit)}        disabled={!state.canHit || isPending} />
+              <ActionButton label="Stand" onClick={() => fireAction(api.casino.stand)}      disabled={!state.canStand || isPending} />
               {state.canDouble && (
-                <ActionButton label="Double" chip={`${activeHand?.wager} ⟡`} onClick={() => fireAction(doubleDown)} disabled={isPending} />
+                <ActionButton label="Double" chip={`${activeHand?.wager} ⟡`} onClick={() => fireAction(api.casino.doubleDown)} disabled={isPending} />
               )}
               {state.canSplit && (
-                <ActionButton label="Split"  chip={`${state.hands[0].wager} ⟡`} onClick={() => fireAction(split)} disabled={isPending} />
+                <ActionButton label="Split"  chip={`${state.hands[0].wager} ⟡`} onClick={() => fireAction(api.casino.split)} disabled={isPending} />
               )}
             </>
           )}
@@ -1989,7 +1985,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 <motion.button
                   type="button"
                   disabled={isPending || doubloons < Math.floor(active.hands[0].wager / 2)}
-                  onClick={() => fireAction(acceptInsurance)}
+                  onClick={() => fireAction(api.casino.acceptInsurance)}
                   whileTap={!isPending ? { y: 3, scale: 0.94, borderColor: 'rgba(240,214,149,1)' } : undefined}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   className="font-cinzel font-700 uppercase tracking-[0.06em]"
@@ -2009,7 +2005,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 <motion.button
                   type="button"
                   disabled={isPending}
-                  onClick={() => fireAction(declineInsurance)}
+                  onClick={() => fireAction(api.casino.declineInsurance)}
                   whileTap={!isPending ? { y: 3, scale: 0.94, borderColor: 'rgba(255,255,255,0.5)' } : undefined}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   className="font-cinzel font-700 uppercase tracking-[0.06em]"

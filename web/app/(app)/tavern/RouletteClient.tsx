@@ -19,8 +19,7 @@ import {
   RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET, RL_BET_PRESETS,
   CASINO_BUY_IN_PRESETS,
 } from './constants'
-import { placeBetsAndSpin } from './roulette/actions'
-import { buyInCasino, cashOutCasino } from './casino/actions'
+import { api } from '@/lib/gameApi'
 import DenNav from './casino/DenNav'
 import type { RouletteState, SpinResult } from './roulette/types'
 import RouletteWheel, { DECEL_MS, type WheelPhase } from './RouletteWheel'
@@ -100,7 +99,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
   function handleBuyIn(amount: number) {
     setError(null)
     startTransition(async () => {
-      const res = await buyInCasino(amount)
+      const res = await api.casino.buyInCasino(amount)
       if ('error' in res) { setError(res.error); return }
       setChips(res.newChips)
       setDoubloons(res.newDoubloons)
@@ -116,7 +115,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
   function handleCashOut() {
     setError(null)
     startTransition(async () => {
-      const res = await cashOutCasino()
+      const res = await api.casino.cashOutCasino()
       if ('error' in res) { setError(res.error); return }
       setChips(0)
       setDoubloons(res.newDoubloons)
@@ -188,7 +187,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
     setWinningNumber(null)
     setLastResult(null)
     startTransition(async () => {
-      const res = await placeBetsAndSpin(bets)
+      const res = await api.casino.placeBetsAndSpin(bets)
       if ('error' in res) { setError(res.error); setPhase('bet'); return }
 
       // Server done — start the decel by setting winningNumber. The

@@ -12,11 +12,22 @@
 //   - claimPot takes the community jackpot atomically: the share and the new
 //     pot come from the same step (offline, the pot is simply a local one).
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { captainData, type CaptainData, type Db, type Row } from './common'
+import { spend, grant } from '@/lib/wallet'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 
 export type PotRow = { pot: number | null; last_winner_name: string | null; last_win_amount: number | null; last_won_at: string | null }
 
 export interface CasinoData extends CaptainData {
+  // ── The purses (in place; the result is the guard) ──
+  /** Take chips or doubloons only if they cover it: the new balance, or null. */
+  spend(uid: string, col: 'casino_chips' | 'doubloons', n: number): Promise<number | null>
+  /** Pay chips or doubloons; the new balance. */
+  grant(uid: string, col: 'casino_chips' | 'doubloons', n: number): Promise<number>
+  /** Award a badge (no-op if already held). */
+  grantBadge(uid: string, badgeId: string): Promise<void>
+
   // ── The purse's day ──
   /** Doubloons bought in since `sinceDate` (the day's shared cap counts these). */
   boughtInSince(uid: string, sinceDate: string): Promise<number>
@@ -52,6 +63,10 @@ export interface CasinoData extends CaptainData {
 export function casinoData(admin: Db): CasinoData {
   return {
     ...captainData(admin),
+
+    spend: (uid, col, n) => spend(admin as any, uid, col, n),
+    grant: (uid, col, n) => grant(admin as any, uid, col, n),
+    async grantBadge(uid, badgeId) { await grantBadgeDirect(uid, badgeId) },
 
     async boughtInSince(uid, sinceDate) {
       const { data } = await admin.from('casino_buy_ins').select('amount').eq('user_id', uid).gte('created_at', sinceDate)

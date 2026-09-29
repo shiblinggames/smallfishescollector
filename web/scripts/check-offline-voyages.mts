@@ -25,6 +25,7 @@ import { localVoyageData } from '../lib/data/local/voyageLocal'
 import type { LocalSave } from '../lib/data/local/save'
 import { deserializeSave, serializeSave, fromWebExport, LOCAL_SAVE_FORMAT } from '../lib/data/local/saveFile'
 import type { SpeciesRow } from '../lib/data/fishingData'
+import { freshCasino } from '../lib/data/local/save'
 import { installRng, mulberry32 } from '../lib/rng'
 import { installClock } from '../lib/clock'
 import { XP_TABLE as NAV_XP } from '../lib/expeditionLevel'
@@ -89,7 +90,7 @@ function freshSave(over: Record<string, unknown> = {}): LocalSave {
     species: SPECIES,
     bait: {}, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
     clears: [], rods: [0], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {},
-    deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [],
+    deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(),
   }
 }
 function sign(s: LocalSave, cardId: number, seat: { voyage?: number; raid?: number } = {}, xp = 0) {
