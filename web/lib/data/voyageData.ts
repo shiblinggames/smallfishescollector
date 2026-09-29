@@ -12,6 +12,7 @@
 
 import { crewData, type CrewData } from './crewData'
 import type { Db, Row } from './common'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
 
 export interface VoyageData extends CrewData {
   /** The captain's most recent voyages, newest first. */
@@ -30,6 +31,10 @@ export interface VoyageData extends CrewData {
   revealedCount(uid: string): Promise<number>
   /** The voyage's written log, or null. */
   captainsLog(uid: string, voyageId: number): Promise<string | null>
+  /** The most recent revealed voyages, newest first, for the board's history. */
+  revealedVoyages(uid: string, limit: number): Promise<Row[]>
+  /** Award a badge (no-op if already held). */
+  grantBadge(uid: string, badgeId: string): Promise<void>
 }
 
 export interface TrawlData extends CrewData {
@@ -89,7 +94,24 @@ export function voyageData(admin: Db): VoyageData {
       const { data } = await admin.from('daily_voyages').select('captains_log').eq('id', voyageId).eq('user_id', uid).single()
       return (data?.captains_log as string | null) ?? null
     },
+    async revealedVoyages(uid, limit) {
+      const { data } = await admin.from('daily_voyages')
+        .select('id, route, total_doubloons, total_gems, crew_lost, created_at, captains_log, events, tide_turner_drop, phantom_hook_drop')
+        .eq('user_id', uid).eq('status', 'revealed').order('created_at', { ascending: false }).limit(limit)
+      return (data ?? []) as Row[]
+    },
+    async grantBadge(uid, badgeId) {
+      await grantBadgeDirect(uid, badgeId)
+    },
   }
+}
+
+/** Voyages and trawls together: what the crew's roll call (crewHub) reads. */
+export type SeaCrewData = VoyageData & TrawlData
+
+/** Both over Supabase, as one store. */
+export function seaCrewData(admin: Db): SeaCrewData {
+  return { ...voyageData(admin), ...trawlData(admin) }
 }
 
 /** TrawlData over Supabase. */

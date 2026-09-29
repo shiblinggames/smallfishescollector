@@ -855,6 +855,24 @@ In order. Each step is worth doing even if the port never happens.
      (reads, a seat and a skin round-tripped and restored).
    - The desktop now carries a save's unmodelled web tables through every write (it dropped
      them before, so a converted account would have lost them on the first autosave).
+   **VOYAGES AND TRAWLS OFFLINE, 2026-09-29.** `lib/core/voyages`: the daily voyage (state,
+   send, reveal, the board), trawls (the docks, send, collect) and `crewHub`, the crew's roll
+   call. The voyage, trawl, voyage-board and crew-hub actions are thin wrappers; `api.voyages`
+   carries them to the voyage panel, the trawl indicator, the chart, the crew panel and the
+   Charterhouse board.
+   - THE CAPTAIN'S LOG stays web-only: it is an AI call. `revealVoyageResults` in the core
+     returns `{ result, log }`; the web action schedules `generateAndSaveVoyageLog(log)` with
+     `after()`, the desktop drops it, so an offline voyage simply has no log.
+   - `loadDeployedPartyVia(store)` (the admin `loadDeployedParty` wraps it for raids and the
+     sea page). VoyageData gained `revealedVoyages` and `grantBadge`; `seaCrewData(admin)` is
+     voyages and trawls as one store for the roll call.
+   - `lib/data/local/voyageLocal` (one store for both, spreading the crew's): one ship at sea,
+     a reveal flips once, one trawl per zone and per hand, a trawl claimed once. The crew store
+     now reads the save's voyages and trawls, so the at-sea and trawl locks hold offline and
+     the graveyard names the route. SAVE FILE v4 (voyages, trawls); a v3 file upgrades.
+   - `scripts/check-offline-voyages.mts` (in `npm run check`), including a voyage that loses a
+     hand; a production probe as catman (reads and refusals only: a send or reveal would move
+     real rewards).
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):

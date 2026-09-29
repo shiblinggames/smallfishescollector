@@ -105,7 +105,7 @@ function freshSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 200 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1, 2, 3], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1,
+    clears: [], rods: [0, 1, 2, 3], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [],
   }
 }
 
@@ -233,13 +233,13 @@ try {
       fish_lifetime: [{ fish_id: 1, catches: 9, last_caught_at: '2026-09-01T00:00:00Z' }],
       fish_personal_bests: [{ fish_id: 1, best_length_in: 7.5, caught_at: '2026-09-01T00:00:00Z' }],
       raid_completions: [{ raid_id: 'the_throne' }], rod_inventory: [{ rod_tier: 0 }, { rod_tier: 4 }],
-      user_crew: [{ id: 5 }, { id: 6 }], daily_voyages: [{ id: 9 }],
+      user_crew: [{ id: 5 }, { id: 6 }], expeditions: [{ id: 9 }],
     },
   }
   const { save, carried } = fromWebExport(exp, SPECIES)
   if (save.bait.worm !== 12 || save.hold[1] !== 3 || 2 in save.hold || save.collection[1]?.is_golden !== true || save.bests[1]?.len !== 7.5
       || !save.clears.includes('the_throne') || save.rods.join() !== '0,4' || save.profile.doubloons !== 77) fail('a web export did not convert faithfully')
-  if (save.crew.length !== 2 || 'user_crew' in carried || carried.daily_voyages?.length !== 1 || 'bait_inventory' in carried) fail('tables the offline core does not model were not carried (or modelled ones were)')
+  if (save.crew.length !== 2 || 'user_crew' in carried || carried.expeditions?.length !== 1 || 'bait_inventory' in carried) fail('tables the offline core does not model were not carried (or modelled ones were)')
 }
 const realExport = path.join(ROOT, 'saves', 'catman-for-offline.json')
 if (fs.existsSync(realExport)) {

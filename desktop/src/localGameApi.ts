@@ -11,13 +11,15 @@
 // on this API yet. Selling runs offline too (lib/core/selling), with the
 // captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi, SellingApi, CrewApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
 import * as selling from '@/lib/core/selling'
 import { localSellData } from '@/lib/data/local/sellLocal'
 import * as crewCore from '@/lib/core/crew'
 import { localCrewData } from '@/lib/data/local/crewLocal'
+import * as voyageCore from '@/lib/core/voyages'
+import { localVoyageData } from '@/lib/data/local/voyageLocal'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
 import type { Row } from '@/lib/data/common'
@@ -29,6 +31,7 @@ import { XP_TABLE } from '@/lib/fishingLevel'
 export type {
   FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
   CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
+  VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew,
 } from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
@@ -49,7 +52,7 @@ function starterSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 60 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1,
+    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [],
   }
 }
 
@@ -157,4 +160,26 @@ const crewApi: CrewApi = {
   markCrewGuideSeen: () => runCrew((db, uid) => crewCore.markCrewGuideSeen(db, uid)),
 }
 
-export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi }
+/** The same, over the voyage-and-trawl store. */
+async function runSea<T>(fn: (db: ReturnType<typeof localVoyageData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage, carried } = need()
+  const r = await fn(localVoyageData(save), save.uid)
+  await writeSave(storage, save, carried)
+  return r
+}
+
+const voyagesApi: VoyagesApi = {
+  getDailyVoyageState: () => runSea((db, uid) => voyageCore.getDailyVoyageState(db, uid)),
+  getTrawlingCrewIds: () => runSea((db, uid) => voyageCore.getTrawlingCrewIds(db, uid)),
+  sendDailyVoyage: (route) => runSea((db, uid) => voyageCore.sendDailyVoyage(db, uid, route)),
+  // Offline there is no Captain's Log to write, so only the result comes back.
+  revealVoyageResults: (id) => runSea(async (db, uid) => (await voyageCore.revealVoyageResults(db, uid, id)).result),
+  fetchVoyageCaptainsLog: (id) => runSea((db, uid) => voyageCore.fetchVoyageCaptainsLog(db, uid, id)),
+  voyageBoard: () => runSea((db, uid) => voyageCore.voyageBoard(db, uid)),
+  getTrawlState: () => runSea((db, uid) => voyageCore.getTrawlState(db, uid)),
+  deployTrawl: (zone, crewId) => runSea((db, uid) => voyageCore.deployTrawl(db, uid, zone, crewId)),
+  collectTrawl: (zone) => runSea((db, uid) => voyageCore.collectTrawl(db, uid, zone)),
+  crewHub: () => runSea((db, uid) => voyageCore.crewHub(db, uid)),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi }

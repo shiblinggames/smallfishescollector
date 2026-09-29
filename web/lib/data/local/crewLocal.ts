@@ -10,8 +10,8 @@
 //
 // The card catalogue is game content (content/cards.json), not save data.
 //
-// NOT MODELLED YET: voyages and trawls (their stage comes next). Until then no
-// hand is ever at sea or out on a trawl offline, so those locks never hold.
+// A hand at sea is one on the pending voyage, a hand on a trawl is one with a
+// trawl row; both come from the save (lib/data/local/voyageLocal writes them).
 
 import type { CrewData, Track, BunkDbRow, XpGrantRow } from '../crewData'
 import type { CardRow } from '@/lib/crewRules'
@@ -89,8 +89,11 @@ export function localCrewData(save: LocalSave): CrewData {
     },
     async graveyard(uid) {
       me(uid)
-      // The voyage a hand fell on is not modelled offline yet, so its route is unknown.
-      return save.crew.filter(c => c.died_at != null).sort((a, b) => b.died_at!.localeCompare(a.died_at!)).map(c => ({ ...c, voyage: null }))
+      // With the route of the voyage they fell on, as the web's join gives it.
+      return save.crew.filter(c => c.died_at != null).sort((a, b) => b.died_at!.localeCompare(a.died_at!)).map(c => {
+        const v = save.voyages.find(x => x.id === c.died_on_voyage_id)
+        return { ...c, voyage: v ? { route: v.route } : null }
+      })
     },
     async liveCount(uid, cardId) { me(uid); return live().filter(c => cardId === undefined || c.card_id === cardId).length },
     async addCrew(uid, f) {
@@ -139,10 +142,14 @@ export function localCrewData(save: LocalSave): CrewData {
     async clearTrack(uid, track) { me(uid); const col = seatCol(track); for (const c of save.crew) c[col] = null },
     async captainOf(uid, track) { me(uid); const col = seatCol(track); return live().find(c => c[col] === 0)?.id ?? null },
 
-    // ── What holds a hand in place: voyages and trawls are the next stage ──
-    async voyageAtSea(uid) { me(uid); return null },
-    async trawling(uid) { me(uid); return [] },
-    async onTrawl(uid) { me(uid); return false },
+    // ── What holds a hand in place ──
+    async voyageAtSea(uid) {
+      me(uid)
+      const v = save.voyages.find(x => x.status === 'pending')
+      return v ? [...v.crew_variant_ids] : null
+    },
+    async trawling(uid) { me(uid); return save.trawls.map(t => t.crew_id) },
+    async onTrawl(uid, crewId) { me(uid); return save.trawls.some(t => t.crew_id === crewId) },
 
     // ── The hall's bunks ──
     async bunks(uid) { me(uid); return save.bunks.map(b => ({ ...b })) as BunkDbRow[] },

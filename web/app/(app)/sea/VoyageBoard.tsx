@@ -42,7 +42,8 @@
 
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { voyageBoard, type VoyageBoard as Board } from './voyageBoardActions'
+import type { VoyageBoard as Board } from './voyageBoardActions'
+import { api } from '@/lib/gameApi'
 
 const DailyVoyagePanel = dynamic(() => import('@/app/(app)/expeditions/DailyVoyagePanel'), { ssr: false })
 
@@ -70,7 +71,7 @@ export default function VoyageBoardBody({ onBack, onClose, icon, title, narrow =
   const [log, setLog] = useState(false)
   useEffect(() => {
     let alive = true
-    void voyageBoard().then(res => {
+    void api.voyages.voyageBoard().then(res => {
       if (!alive) return
       if ('error' in res) setError(res.error)
       else setBoard(res)

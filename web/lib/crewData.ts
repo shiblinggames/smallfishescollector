@@ -8,7 +8,7 @@ import type { createAdminClient } from './supabase/admin'
 import type { DeployedCrew } from './crewResolve'
 import { crewDisplayName } from './crewGen'
 import { resolveCrewFilename, type EquippedCrewSkins } from './crewSkins'
-import { crewData } from './data/crewData'
+import { crewData, type CrewData } from './data/crewData'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -29,7 +29,16 @@ export async function loadDeployedParty(
   crewSlots: number,
   track: AssignmentTrack,
 ): Promise<DeployedCrewRow[]> {
-  const db = crewData(admin)
+  return loadDeployedPartyVia(crewData(admin), userId, crewSlots, track)
+}
+
+/** loadDeployedParty against any crew store (the web's, or the offline save). */
+export async function loadDeployedPartyVia(
+  db: CrewData,
+  userId: string,
+  crewSlots: number,
+  track: AssignmentTrack,
+): Promise<DeployedCrewRow[]> {
   // Live-roster only — fallen crew (died_at IS NOT NULL) are kept on
   // the row for the Crew Hall Graveyard tab but never deployed.
   // Crew currently "at sea" on a Trawl are reserved (hard-locked for the

@@ -25,7 +25,7 @@ import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 3
+export const LOCAL_SAVE_VERSION = 4
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -58,6 +58,8 @@ const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
       profile: { crew_hall_tier: 1, crew_drill_level: 1, crew_stores_level: 1, crew_next_roll_legendary: false, ...f.save.profile },
     },
   }),
+  // v4 (2026-09-29): voyages and trawls.
+  3: f => ({ ...f, version: 4, save: { ...f.save, voyages: [], trawls: [] } }),
 }
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
@@ -97,7 +99,7 @@ export type WebExport = { format: string; version: number; userId: string; usern
 /** The tables the local fishing save models; everything else is carried. */
 const MODELLED = new Set(['bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
   'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport', 'sea_trader_deals',
-  'user_crew', 'daily_recruits', 'crew_hall_bunks'])
+  'user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls'])
 
 export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: LocalSave; carried: Record<string, Row[]> } {
   const t = (name: string) => exp.tables[name] ?? []
@@ -141,8 +143,18 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
       rate_per_hour: r.rate_per_hour == null ? null : Number(r.rate_per_hour),
       cap_hours: r.cap_hours == null ? null : Number(r.cap_hours), slot: r.slot == null ? null : Number(r.slot),
     })),
-    // Past every id the web handed out, so a new hand can never collide with an old one.
-    nextId: 1 + Math.max(0, ...['user_crew', 'daily_recruits', 'crew_hall_bunks'].flatMap(n => t(n).map(r => Number(r.id) || 0))),
+    voyages: t('daily_voyages').map(r => ({
+      id: Number(r.id), voyage_date: String(r.voyage_date ?? ''), crew_variant_ids: ((r.crew_variant_ids ?? []) as unknown[]).map(Number),
+      ship_tier: Number(r.ship_tier ?? 0), route: String(r.route), status: r.status === 'revealed' ? 'revealed' as const : 'pending' as const,
+      events: (r.events ?? []) as unknown[], total_doubloons: Number(r.total_doubloons ?? 0), total_gems: Number(r.total_gems ?? 0),
+      crew_lost: ((r.crew_lost ?? []) as unknown[]).map(Number), created_at: String(r.created_at),
+      captains_log: (r.captains_log as string | null) ?? null, log_generated_at: (r.log_generated_at as string | null) ?? null,
+      duration_ms: r.duration_ms == null ? null : Number(r.duration_ms), xp_bonus_pct: r.xp_bonus_pct == null ? null : Number(r.xp_bonus_pct),
+      tide_turner_drop: r.tide_turner_drop === true, phantom_hook_drop: r.phantom_hook_drop === true, perfected_sigil_drop: r.perfected_sigil_drop === true,
+    })).sort((a, b) => a.created_at.localeCompare(b.created_at)),
+    trawls: t('trawls').map(r => ({ id: Number(r.id), zone: String(r.zone), crew_id: Number(r.crew_id), ends_at: String(r.ends_at) })),
+    // Past every id the web handed out, so a new row can never collide with an old one.
+    nextId: 1 + Math.max(0, ...['user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls'].flatMap(n => t(n).map(r => Number(r.id) || 0))),
   }
   const carried = Object.fromEntries(Object.entries(exp.tables).filter(([name]) => !MODELLED.has(name)))
   return { save, carried }

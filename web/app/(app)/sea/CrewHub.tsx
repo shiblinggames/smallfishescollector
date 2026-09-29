@@ -52,7 +52,7 @@ import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
 import RoomCard, { AssignLoop, CrewFan, CrewWedge, Showcase } from '@/components/RoomCard'
 import { vibrate } from '@/lib/haptics'
-import { crewHub, type CrewHubState, type HubCrew } from './crewHubActions'
+import type { CrewHubState, HubCrew } from './crewHubActions'
 import type { CrewState } from '@/app/(app)/crew/actions'
 import { api } from '@/lib/gameApi'
 import { CREW_SKINS } from '@/lib/crewSkins'
@@ -195,7 +195,7 @@ export default function CrewHub({
   useEffect(() => {
     let live = true
     setErr(null); setHallErr(null)
-    crewHub().then(r => {
+    api.voyages.crewHub().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)
       else setState(r)
@@ -217,7 +217,7 @@ export default function CrewHub({
   useEffect(() => {
     if (!open) return
     let live = true
-    crewHub().then(r => { if (live && !('error' in r)) setState(r) }, () => {})
+    api.voyages.crewHub().then(r => { if (live && !('error' in r)) setState(r) }, () => {})
     api.crew.getCrewState().then(r => { if (live && r) setHall(r) }, () => {})
     return () => { live = false }
   }, [open])
@@ -252,7 +252,7 @@ export default function CrewHub({
   useEffect(() => {
     if (!open) return
     const again = () => {
-      crewHub().then(r => { if (!('error' in r)) setState(r) }, () => {})
+      api.voyages.crewHub().then(r => { if (!('error' in r)) setState(r) }, () => {})
       api.crew.getCrewState().then(r => { if (r) setHall(r) }, () => {})
     }
     window.addEventListener('crew-changed', again)

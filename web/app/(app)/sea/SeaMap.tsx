@@ -116,7 +116,6 @@ import { squallAt } from '@/lib/seaWeather'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import { folkState, type Rapport } from './folkActions'
 import CrewPanel from './CrewPanel'
-import { crewHub } from './crewHubActions'
 import { folkById, type FolkId } from '@/lib/seaFolk'
 import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
@@ -281,7 +280,6 @@ import { openSeaPresence, BEAT_MS, POSE_CODE, POSE_FRAME, type SeaPresence } fro
 import type { Frame } from './skiffArt'
 import { finnHaunt, FINN_REACH, FINN_LOOK, FINN_MOORING } from '@/lib/seaFinn'
 import { swellAt, swellHeel } from './seaSwell'
-import { getTrawlState } from '../fishing/trawls/actions'
 /**
  * WHERE FINN IS, RIGHT NOW.
  *
@@ -3480,7 +3478,7 @@ export default function SeaMap({
   useEffect(() => {
     let dead = false
     const pull = () => {
-      void getTrawlState().then(st => {
+      void api.voyages.getTrawlState().then(st => {
         if (dead || 'error' in st) return
         setTrawls(st.zones
           .filter(z => z.trawl?.endsAt)
@@ -5640,7 +5638,7 @@ export default function SeaMap({
   const [hallReady, setHallReady] = useState(false)
   const crewPolled = useRef(false)
   const pollCrew = useCallback(() => {
-    void crewHub().then(
+    void api.voyages.crewHub().then(
       r => {
         if ('error' in r) return
         setCrewWaiting(r.recruitsWaiting > 0)

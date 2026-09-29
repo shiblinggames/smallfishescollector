@@ -50,6 +50,18 @@ export type LocalSave = {
   bunks: { id: number; crew_id: number; since: string; rate_per_hour: number | null; cap_hours: number | null; slot: number | null }[]
   /** The next id for a hand, a board row or a bunk (one counter for all). */
   nextId: number
+  // ── Save v4 (voyages and trawls) ──
+  /** Every daily voyage sent, newest last. The fallen point at theirs. */
+  voyages: LocalVoyageRow[]
+  /** The trawls out: one per zone, one per hand. */
+  trawls: { id: number; zone: string; crew_id: number; ends_at: string }[]
+}
+
+export type LocalVoyageRow = {
+  id: number; voyage_date: string; crew_variant_ids: number[]; ship_tier: number; route: string
+  status: 'pending' | 'revealed'; events: unknown[]; total_doubloons: number; total_gems: number; crew_lost: number[]
+  created_at: string; captains_log: string | null; log_generated_at: string | null; duration_ms: number | null
+  xp_bonus_pct: number | null; tide_turner_drop: boolean; phantom_hook_drop: boolean; perfected_sigil_drop: boolean
 }
 
 export type LocalCrewRow = {

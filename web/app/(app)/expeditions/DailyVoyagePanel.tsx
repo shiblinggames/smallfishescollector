@@ -17,7 +17,8 @@ import { expectedVoyageLoot, outcomeChances, fortuneScale, meanOutcomeMult, OUTC
 import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
-import { sendDailyVoyage, revealVoyageResults, getTrawlingCrewIds, type DailyVoyage } from './voyageActions'
+import type { DailyVoyage } from './voyageActions'
+import { api } from '@/lib/gameApi'
 import { getLevelFromXP, ROUTE_BASE_XP, VOYAGE_XP_MULT } from '@/lib/expeditionLevel'
 import { BASE_VOYAGE_MS, ROUTE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/voyage'
 import VoyageHistory, { type VoyageHistoryEntry } from './VoyageHistory'
@@ -541,7 +542,7 @@ export default function DailyVoyagePanel({
   const [trawlingIds, setTrawlingIds] = useState<number[]>([])
   useEffect(() => {
     let alive = true
-    const load = () => { getTrawlingCrewIds().then(ids => { if (alive) setTrawlingIds(ids) }).catch(() => {}) }
+    const load = () => { api.voyages.getTrawlingCrewIds().then(ids => { if (alive) setTrawlingIds(ids) }).catch(() => {}) }
     load()
     window.addEventListener('crew-changed', load)
     return () => { alive = false; window.removeEventListener('crew-changed', load) }
@@ -604,7 +605,7 @@ export default function DailyVoyagePanel({
     setError(null)
     startTransition(async () => {
       try {
-        const res = await sendDailyVoyage(route)
+        const res = await api.voyages.sendDailyVoyage(route)
         if ('error' in res) { setError(res.error); return }
         setActiveVoyage(res.voyage)
         setConfirmRoute(null)
@@ -640,7 +641,7 @@ export default function DailyVoyagePanel({
     setError(null)
     startTransition(async () => {
       try {
-      const res = await revealVoyageResults(activeVoyage.id)
+      const res = await api.voyages.revealVoyageResults(activeVoyage.id)
       if ('error' in res) { setError(res.error); return }
       paidRef.current = { doubloons: res.earnedDoubloons, gems: res.earnedGems }
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))

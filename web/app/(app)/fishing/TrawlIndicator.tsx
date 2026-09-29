@@ -11,7 +11,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ctaPill, CTA_TEXT } from '@/lib/uiTokens'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue, useDragControls } from 'framer-motion'
-import { getTrawlState, deployTrawl, collectTrawl } from './trawls/actions'
+import { api } from '@/lib/gameApi'
 import {
   TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration, trawlDurationMs, TRAWL_BUMPERS, pickTrawlEvent,
   type TrawlState, type TrawlZoneKey, type ActiveTrawlView, type TrawlCrewView, type CollectTrawlResult,
@@ -326,7 +326,7 @@ export default function TrawlIndicator({
   }, [dragX, dragY])
 
   const refresh = useCallback(async () => {
-    const r = await getTrawlState()
+    const r = await api.voyages.getTrawlState()
     if (!('error' in r)) setState(r)
   }, [])
   useEffect(() => { void refresh() }, [refresh])
@@ -506,7 +506,7 @@ export default function TrawlIndicator({
     }
 
     setBusy(true); setSendingId(crewId)
-    const r = await deployTrawl(zone, crewId)
+    const r = await api.voyages.deployTrawl(zone, crewId)
     setBusy(false); setSendingId(null)
     if ('error' in r) {
       // Put it back exactly as it was. Nothing was persisted, so the snapshot
@@ -528,7 +528,7 @@ export default function TrawlIndicator({
     // comes back, which left the press feeling dead for the whole round-trip —
     // the same "immediate thunk" doDeploy already does on send.
     setBusy(true); setCollectingZone(zone); haptic(10)
-    const r = await collectTrawl(zone)
+    const r = await api.voyages.collectTrawl(zone)
     setBusy(false); setCollectingZone(null)
     if ('error' in r) return
     // Bigger hauls land with a heavier haptic + more coins flung to the purse.
