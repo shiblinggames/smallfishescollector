@@ -795,6 +795,22 @@ In order. Each step is worth doing even if the port never happens.
    - Probe note: a fast needle cannot be timed with puppeteer's keyboard (the per-frame dial
      re-render delays input by hundreds of ms); the probe dispatches the keydown from inside the
      page at the moment the needle is in the band.
+   **ALL OF FISHING OFFLINE, 2026-09-28.** Every `api.fishing` call now runs in the core:
+   `lib/core/fishing` gained the crate, the wormhole, the Tide Turner, the golden choice
+   (held, sell, mount) and the level rewards; `lib/core/loadout` holds boats, bandanas, pets,
+   the special slot, the Completionist forge and the two preferences. The actions are thin
+   wrappers (session, then the core with the Supabase store; `revalidatePath('/sea')` stays in
+   the action, as the one web-only step). The crate grant is shared through
+   `lib/crateLoot` `grantCrateLootTo(store)` (the weekly and Master crates still call
+   `grantCrateLoot(admin)`, which adapts the client). FishingData gained `spend`, any owned
+   list in `addToList`, and `achievementPoints` (offline: the badges held). The core's
+   timestamps now come from `clockNow`. check-offline-fishing section 5 exercises each call and
+   its one-shot guard; verified against production as catman through the real store (a
+   wooden crate opened once, a golden sold once, the rest round-tripped and restored). The
+   desktop's `localGameApi` answers every fishing call, and `desktop/tsconfig.json`
+   (`npm run typecheck`) checks the shell with one React for both trees.
+   NOT on the API yet (still direct server-action imports): quickBuyWorms, claimZoneReward,
+   prestigeZone, releaseAncient, the tour flags, checkLeaderboardPosition, syncFishHold.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):

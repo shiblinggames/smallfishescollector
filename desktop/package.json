@@ -10,7 +10,8 @@
     "app": "vite build && node electron/start.mjs",
     "app:dev": "node electron/dev.mjs",
     "dist": "vite build && electron-builder --win",
-    "dist:dir": "vite build && electron-builder --win --dir"
+    "dist:dir": "vite build && electron-builder --win --dir",
+    "typecheck": "tsc --noEmit -p ."
   },
   "devDependencies": {
     "@types/react": "^19",

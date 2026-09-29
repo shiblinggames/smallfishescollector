@@ -14,6 +14,7 @@ import type { FishingData, SpeciesRow, CastCandidateRow, DailyRow } from '../fis
 import type { ChallengeOverride } from '@/lib/dailyChallenges'
 import type { ProfileGuard, Row } from '../common'
 import type { PendingCast } from '@/lib/fishingRules'
+import { badgePoints } from '@/lib/badges'
 
 export type LocalSave = {
   uid: string
@@ -83,6 +84,15 @@ export function localFishingData(save: LocalSave): FishingData {
     // ── Shared helpers ──
     async grant(uid, col, n) {
       const prof = me(uid); prof[col] = Number(prof[col] ?? 0) + Math.max(0, Math.trunc(Number(n) || 0)); return prof[col] as number
+    },
+    async spend(uid, col, n) {
+      const prof = me(uid); const have = Number(prof[col] ?? 0)
+      if (!Number.isInteger(n) || n < 0 || have < n) return null
+      prof[col] = have - n; return prof[col] as number
+    },
+    async achievementPoints(uid) {
+      // Offline, the badges the captain holds are the whole record.
+      return ((me(uid).unlocked_badges ?? []) as string[]).reduce((n, id) => n + badgePoints(id), 0)
     },
     async addToList(uid, col, value) {
       const prof = me(uid); const list: string[] = prof[col] ?? []

@@ -5,11 +5,14 @@
 // real fishing core (lib/core/fishing) running against the local save. The
 // interface is the website's own FishingApi, so the two cannot drift.
 //
-// Only the cast and the reel run offline so far (the spike's scope); everything
-// else answers "not offline yet" rather than pretending.
+// Every fishing call runs offline: the cast and the reel, the crate, the
+// wormhole, the Tide Turner, the golden choice and the level rewards
+// (lib/core/fishing), and the loadout (lib/core/loadout). Other systems are not
+// on this API yet.
 
 import type { GameApi, FishingApi } from '../../web/lib/gameApi/index'
-import { castLine, reelIn } from '@/lib/core/fishing'
+import * as core from '@/lib/core/fishing'
+import * as loadout from '@/lib/core/loadout'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
 import { installRng, mulberry32, seedOf } from '@/lib/rng'
@@ -55,32 +58,36 @@ function need() {
   if (!session) throw new Error('no save open')
   return { db: localFishingData(session.save), save: session.save, storage: session.storage }
 }
-// Autosave after anything that changed the game.
-async function persist() { if (session) await writeSave(session.storage, session.save) }
-
-const notYet = (async () => ({ error: 'Not available offline yet.' })) as never
+/** Run one call against the save, then autosave: anything may have changed the game. */
+async function run<T>(fn: (db: ReturnType<typeof need>['db'], uid: string) => Promise<T>): Promise<T> {
+  const { db, save, storage } = need()
+  const r = await fn(db, save.uid)
+  await writeSave(storage, save)
+  return r
+}
 
 const fishing: FishingApi = {
-  castLine: (async (baitType: string, habitat: string, at?: { x: number; y: number }) => {
-    const { db, save } = need()
-    const r = await castLine(db, save.uid, baitType, habitat, at)
-    await persist()
-    return r
-  }) as FishingApi['castLine'],
-  reelIn: (async (fishId: number, result: 'perfect' | 'catch' | 'miss' | 'penalty', baitType: string, doubleCatch = false, streak = 0, jackpot = 1) => {
-    const { db, save } = need()
-    const r = await reelIn(db, save.uid, fishId, result, baitType, doubleCatch, streak, jackpot)
-    await persist()
-    return r
-  }) as FishingApi['reelIn'],
-  reelCrate: notYet, tideTurnerSkip: notYet, rerollWormhole: notYet,
-  heldGolden: (async () => null) as FishingApi['heldGolden'],
-  sellGoldenTrophy: notYet, mountGoldenTrophy: notYet,
-  setAutoFishing: (async () => {}) as FishingApi['setAutoFishing'],
-  setShowWaitTimer: (async () => {}) as FishingApi['setShowWaitTimer'],
-  claimFishingLevelRewards: notYet,
-  equipBoat: notYet, buyBoat: notYet, equipHat: notYet, buyHat: notYet, equipPet: notYet,
-  equipSpecialItem: notYet, buySpecialItem: notYet, setCompletionistEffects: notYet,
+  castLine: (baitType, habitat, at) => run((db, uid) => core.castLine(db, uid, baitType, habitat, at)),
+  reelIn: (fishId, result, baitType, doubleCatch = false, streak = 0, jackpot = 1) =>
+    run((db, uid) => core.reelIn(db, uid, fishId, result, baitType, doubleCatch, streak, jackpot)),
+  reelCrate: (_zone, _tier, result = 'catch') => run((db, uid) => core.reelCrate(db, uid, result)),
+  tideTurnerSkip: () => run((db, uid) => core.tideTurnerSkip(db, uid)),
+  rerollWormhole: () => run((db, uid) => core.rerollWormhole(db, uid)),
+  heldGolden: () => run((db, uid) => core.heldGolden(db, uid)),
+  sellGoldenTrophy: (shinyId) => run((db, uid) => core.sellGoldenTrophy(db, uid, shinyId)),
+  mountGoldenTrophy: (shinyId) => run((db, uid) => core.mountGoldenTrophy(db, uid, shinyId)),
+  setAutoFishing: (value) => run((db, uid) => loadout.setAutoFishing(db, uid, value)),
+  setShowWaitTimer: (value) => run((db, uid) => loadout.setShowWaitTimer(db, uid, value)),
+  claimFishingLevelRewards: () => run((db, uid) => core.claimFishingLevelRewards(db, uid)),
+  // The chart re-renders from the save itself here, so `quiet` has nothing to skip.
+  equipBoat: (boatId) => run((db, uid) => loadout.equipBoat(db, uid, boatId)),
+  buyBoat: (boatId) => run((db, uid) => loadout.buyBoat(db, uid, boatId)),
+  equipHat: (hatId) => run((db, uid) => loadout.equipHat(db, uid, hatId)),
+  buyHat: (hatId) => run((db, uid) => loadout.buyHat(db, uid, hatId)),
+  equipPet: (petId, slot = 'stern') => run((db, uid) => loadout.equipPet(db, uid, petId, slot)),
+  equipSpecialItem: (itemId) => run((db, uid) => loadout.equipSpecialItem(db, uid, itemId)),
+  buySpecialItem: (itemId) => run((db, uid) => loadout.buySpecialItem(db, uid, itemId)),
+  setCompletionistEffects: (tiers) => run((db, uid) => loadout.setCompletionistEffects(db, uid, tiers)),
 }
 
 export const api: GameApi = { fishing }

@@ -19,7 +19,7 @@
 import { captainData, type CaptainData, type Db, type Row } from './common'
 import type { PendingCast } from '@/lib/fishingRules'
 import type { ChallengeOverride } from '@/lib/dailyChallenges'
-import { grant, arrayAdd } from '@/lib/wallet'
+import { grant, spend, arrayAdd } from '@/lib/wallet'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { flagAnomaly } from '@/lib/anomaly'
 
@@ -31,9 +31,16 @@ export type DailyRow = { p1: number | null; p2: number | null; p3: number | null
 export interface FishingData extends CaptainData {
   // ── What the cast and the reel share with every system ──
   /** Add to a balance in place (never written back from a stale read); the new balance. */
-  grant(uid: string, col: 'doubloons' | 'gems', n: number): Promise<number>
-  /** Add one value to an owned list, once. True if it was not there before. */
-  addToList(uid: string, col: 'unlocked_pets' | 'unlocked_character_colors', value: string): Promise<boolean>
+  grant(uid: string, col: 'doubloons' | 'gems' | 'gauntlet_fathoms', n: number): Promise<number>
+  /** Take from a balance in place, only if it covers it: the new balance, or
+   *  null (nothing taken). The result is the guard: two spends fired together
+   *  cannot both pay with one balance. */
+  spend(uid: string, col: 'doubloons' | 'gems' | 'gauntlet_fathoms', n: number): Promise<number | null>
+  /** Add one value to an owned list (pets, colors, boats, hats, badges), once.
+   *  True if it was not there before. */
+  addToList(uid: string, col: string, value: string): Promise<boolean>
+  /** The captain's achievement points (the gate on a few boats). */
+  achievementPoints(uid: string): Promise<number>
   /** Award a badge (no-op if already held). */
   grantBadge(uid: string, badgeId: string): Promise<void>
   /** Note something implausible for review. Never blocks play. */
@@ -149,8 +156,16 @@ export function fishingData(admin: Db): FishingData {
     async grant(uid, col, n) {
       return grant(admin as any, uid, col, n)
     },
+    async spend(uid, col, n) {
+      return spend(admin as any, uid, col, n)
+    },
     async addToList(uid, col, value) {
       return arrayAdd(admin as any, uid, col, value)
+    },
+    async achievementPoints(uid) {
+      // Imported when asked: the live board pulls in Next's cache, which only
+      // the web store should ever load.
+      return (await import('@/lib/achievementPoints')).getUserAchievementPoints(uid)
     },
     async grantBadge(uid, badgeId) {
       await grantBadgeDirect(uid, badgeId)

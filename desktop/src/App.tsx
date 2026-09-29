@@ -9,6 +9,7 @@ import { api } from '@/lib/gameApi'
 import { DialSVG } from '@/components/FishingDial'
 import { buildFishZones, type ZoneDef } from '@/app/(app)/fishing/depths'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import type { CrateLoot } from '@/lib/crateLoot'
 import { openSave, currentSave } from './localGameApi'
 import { saveStorage } from './saveStorage'
 
@@ -22,6 +23,17 @@ function zoneAt(zones: ZoneDef[], angle: number): ZoneDef['type'] {
     if (inside) return z.type
   }
   return 'miss'
+}
+
+function crateSays(loot: CrateLoot): string {
+  switch (loot.type) {
+    case 'doubloons': return `${loot.amount.toLocaleString()} ⟡`
+    case 'bait': return `${loot.quantity} ${loot.baitName}`
+    case 'pet': return `${loot.petName} came aboard`
+    case 'skin': return `the ${loot.skinName} colors`
+    case 'boat': return `the ${loot.boatName}`
+    case 'hat': return `the ${loot.hatName} bandana`
+  }
 }
 
 export default function App() {
@@ -54,10 +66,13 @@ export default function App() {
     setShot(r)
     bump(n => n + 1)
     if (r.fishId === -1) {
-      // Crates are not offline yet: let it drift by, which clears the cast.
-      await api.fishing.reelIn(r.fishId, 'miss', 'worm')
-      say('A crate drifts past. Crates are not offline yet.')
-      setPhase('idle')
+      // A crate: haul it up once it surfaces and open it.
+      setTimeout(async () => {
+        const loot = await api.fishing.reelCrate('shallows', r.crateTier ?? 'wooden', 'catch')
+        say('error' in loot ? loot.error : `A ${r.crateTier ?? 'wooden'} crate: ${crateSays(loot)}`)
+        bump(n => n + 1)
+        setPhase('idle')
+      }, Math.max(800, r.waitMs))
       return
     }
     setTimeout(() => {

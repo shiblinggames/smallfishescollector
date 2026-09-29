@@ -1,45 +1,28 @@
 'use server'
 
-import { inCaptainsWater, CAPTAIN_WATER_SAYS } from '@/lib/captainWater'
-import { folkById } from '@/lib/seaFolk'
-import { eyeFromProfile } from '@/lib/finnItems'
-import { flagAnomaly } from '@/lib/anomaly'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getBait } from '@/lib/bait'
-import { hotspotAt, hotspotEffect } from '@/lib/seaHotspots'
-import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect, lockedInState } from '@/lib/rods'
-import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
-import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { getLevelFromXP } from '@/lib/fishingLevel'
-import { fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
-import { fishingColorsToGrant } from '@/lib/characters'
-import { getLineForSpeciesCount } from '@/lib/lines'
-import { getSpecialItem, SPECIAL_OWNED_COLUMN } from '@/lib/specialItems'
-import { getPet, petSlot, PET_SLOT_COLUMN } from '@/lib/pets'
-import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons, PRESTIGE_MAX } from '@/lib/zoneRewards'
-import { hasPrestigedAllZones } from '@/lib/collection'
-import { vigilFor, vigilTotal, vigilComplete, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
+import { vigilFor, VIGIL_MAX_RANK, ANCIENT_IDS } from '@/lib/ancientVigil'
 import { type FishSizeTier } from '@/lib/fishSize'
-import { SHINY_SELL_MULT } from '@/lib/shiny'
-import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
-import { arrayAdd, grant, spend } from '@/lib/wallet'
+import { type CrateTier, type CrateLoot } from '@/lib/crateLoot'
+import { grant, spend } from '@/lib/wallet'
+import { prestigeStep } from '@/lib/fishingRules'
 import { fishingData } from '@/lib/data/fishingData'
 import * as core from '@/lib/core/fishing'
-import { logCatchToBestiary, creditNewSpecies, settleDeferredSpeciesCredit } from '@/lib/core/fishing'
-
-function today() {
-  return new Date().toISOString().split('T')[0]
-}
+import * as loadout from '@/lib/core/loadout'
+import { settleDeferredSpeciesCredit } from '@/lib/core/fishing'
 
 export type FishSpecies = import('@/lib/core/fishing').FishSpecies
 
-import { ZONE_MIN_LEVEL } from './zoneData'
-import { rollCast, landFish, landAncient, reelTooEarly, crateStreak, wormholeExit, rollCatchSize, prestigeStep, activeEventOf as getActiveEvent, CRATE_FISH_ID, type PendingCast } from '@/lib/fishingRules'
+// The cast, the reel, the crate, the wormhole, the Tide Turner, the golden
+// choice and the level rewards run in lib/core/fishing; the loadout (boats,
+// bandanas, pets, specials, the forge, the preferences) in lib/core/loadout.
+// These actions check the session and hand the core the Supabase store; the
+// offline build hands it a local save instead.
 
 // fishWaitMs, tierWeightedPick, rollCrateTier and the event reader live in
 // lib/fishingRules now (Phase B, 2026-09-28), with the cast roll itself.
@@ -56,8 +39,6 @@ import { rollCast, landFish, landAncient, reelTooEarly, crateStreak, wormholeExi
 /** One regular with an open request for the species just landed (lib/core/fishing). */
 export type WaitingFolk = import('@/lib/core/fishing').WaitingFolk
 
-// The cast and the reel run in lib/core/fishing; these check the session and
-// hand it the Supabase store.
 export async function castLine(
   baitType: string,
   habitat: string,
@@ -213,11 +194,7 @@ export async function reelIn(
   return core.reelIn(fishingData(createAdminClient()), user.id, fishId, result, baitType, doubleCatch, _streakBonus, jackpotMultiplier)
 }
 
-/** Galaxy Rod — "Wormhole" reroll. Consumes the single-use pending_reroll set
- *  by reelIn and replaces the just-caught fish in the player's hold with a
- *  DIFFERENT random fish from the same zone (weighted by normal rarity odds via
- *  the Galaxy Rod's rarity bias — can be better OR worse). One-shot per catch:
- *  pending_reroll is cleared whether or not a better fish surfaces. */
+/** Galaxy Rod — the Wormhole reroll (lib/core/fishing). */
 export async function rerollWormhole(): Promise<
   | { ok: true; fish: FishSpecies; qty: number; isNewSpecies: boolean; sizeIn: number; sizeMin?: number; sizeMax?: number; sizeTier?: FishSizeTier; isPB: boolean; previousBest: number | null }
   | { error: string }
@@ -225,157 +202,16 @@ export async function rerollWormhole(): Promise<
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-  const db = fishingData(createAdminClient())
-
-  const profile = await db.profile(user.id, 'rod_tier, completionist_effects, pending_reroll, lifetime_species, line_tier, prestige_levels')
-  const pending = (profile?.pending_reroll ?? null) as { fishId: number; qty: number; habitat: string } | null
-  if (!pending) return { error: 'No catch to reroll.' }
-
-  // Claim the token ATOMICALLY so this is strictly one-shot. A plain update
-  // here let a double-tap through: both calls read the same `pending` and both
-  // reached the grant below. The conditional update means exactly one caller
-  // ever sees a row back.
-  if (!(await db.claimPendingReroll(user.id))) return { error: 'No catch to reroll.' }
-
-  const { fishId: origId, qty, habitat } = pending
-
-  // reelIn deferred this catch's bestiary credit to whichever settles the
-  // token, and that is now us. So every bail-out below has to log the fish the
-  // player actually landed on the way out — otherwise a failed reroll would
-  // quietly erase the catch from their log. Only the success path skips it,
-  // because there the original stopped being what they landed.
-  const abortWithCredit = async (error: string): Promise<{ error: string }> => {
-    const wasNew = await logCatchToBestiary(db, user.id, origId)
-    if (wasNew) await creditNewSpecies(db, user.id, origId, profile)
-    return { error }
-  }
-
-  // Pick where the wormhole comes out FIRST. This is all read-only, so the
-  // failure paths below bail before the player's hold has been touched.
-  const candidates = await db.candidates(habitat)
-  // A wormhole sends you somewhere ELSE — exclude the original so the reroll
-  // always lands on a different fish. Trophies (sell_value 0) never apply here
-  // since ancient_deep is ineligible for the wormhole.
-  const rod = getEffectiveRod(profile?.rod_tier ?? 0, profile?.completionist_effects as number[] | null)
-  const picked = wormholeExit(candidates, origId, habitat, rod)
-  if (!picked) return abortWithCredit('The wormhole found nothing new.')
-  const newFish = await db.species(picked.id)
-  if (!newFish) return abortWithCredit('The wormhole collapsed.')
-
-  // ── CONSUME THE ORIGINAL, THEN GRANT ───────────────────────────────────────
-  // A wormhole swaps one stack for another; it does not conjure a second one.
-  // Selling the catch and THEN opening the wormhole used to skip the removal
-  // (missing row, or Math.max clamping at 0) while the grant still ran — a
-  // clean duplication faucet, worst on a ×100 jackpot haul. So the removal
-  // happens BEFORE the grant, and it doubles as the guard: the write carries
-  // the quantity it read, so a sale landing in between matches zero rows and
-  // the reroll refuses instead of minting fish.
-  const HOLD_GONE = () => abortWithCredit('That catch is already out of your hold. The wormhole needs something to send.')
-  if (!(await db.takeFromHold(user.id, origId, qty))) return HOLD_GONE()
-  await db.addToHold(user.id, newFish.id, qty, await db.holdQty(user.id, newFish.id))
-
-  // Bestiary — this fish is what the cast actually landed, so it takes the
-  // credit reelIn deferred. Counts the CAST, not the fish, matching reelIn: a
-  // rerolled ×100 haul is one catch of the species, not a hundred.
-  const isNewSpecies = await logCatchToBestiary(db, user.id, newFish.id)
-
-  // A species landed through the wormhole counts exactly as one landed on the
-  // line: lifetime set, line tier and the Full Collection badge all move.
-  if (isNewSpecies) {
-    await creditNewSpecies(db, user.id, newFish.id, profile)
-  }
-
-  // Size + PB for the new fish (mirrors the catch path; ancients excluded).
-  const { sizeIn, sizeTier, sizeMin: sizeMinIn, sizeMax: sizeMaxIn } = rollCatchSize(newFish)
-  let isPB = false
-  let previousBest: number | null = null
-  if (sizeMinIn != null && sizeMaxIn != null) {
-    previousBest = await db.personalBest(user.id, newFish.id)
-    isPB = previousBest == null || sizeIn > previousBest
-    if (isPB) await db.setPersonalBest(user.id, newFish.id, sizeIn, new Date().toISOString())
-  }
-
-  return {
-    ok: true,
-    fish: newFish as FishSpecies,
-    qty,
-    isNewSpecies,
-    sizeIn,
-    sizeMin: sizeMinIn ?? undefined,
-    sizeMax: sizeMaxIn ?? undefined,
-    sizeTier,
-    isPB,
-    previousBest,
-  }
+  return core.rerollWormhole(fishingData(createAdminClient()), user.id)
 }
 
-/** Opens the crate AND moves the perfect streak, which is why it needs the reel
- *  result. Returns the server's streak so the client syncs to it rather than
- *  guessing: the streak is server-authoritative everywhere else and a crate is
- *  no different. */
+/** Opens the crate and moves the perfect streak (lib/core/fishing). The tier
+ *  argument is ignored: the cast token decides it. */
 export async function reelCrate(_zone: string, _tier: CrateTier = 'wooden', result: 'perfect' | 'catch' = 'catch'): Promise<(CrateLoot & { perfectStreak?: number }) | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-  const admin = createAdminClient()
-  const db = fishingData(admin)
-
-  const profile = await db.profile(user.id, 'pending_cast, current_perfect_streak, highest_perfect_streak')
-
-  // Bind to the server-rolled crate token (anti-forgery). castLine chose the
-  // tier and stored it; claim it one-shot via the atomic null-ing. The client's
-  // `tier` argument is IGNORED, and a call with no live crate cast opens nothing
-  // — closing the "loop reelCrate('diamond') with no cast" doubloon faucet.
-  const crateToken = profile?.pending_cast as PendingCast | null
-  if (!profile || !crateToken || crateToken.fishId !== CRATE_FISH_ID || !crateToken.crateTier) {
-    return { error: 'No crate to open.' }
-  }
-
-  // THE SAME BITE FLOOR reelIn applies, for the same reason: a crate opened
-  // sooner than it could have surfaced came from a script, not the dial.
-  // Refused before the claim, so an honest line is never spent by it.
-  const early = reelTooEarly(crateToken)
-  if (early.early) {
-    console.warn('[reelCrate] reel before the bite', { userId: user.id, elapsed: early.elapsed, biteFloorMs: early.floor })
-    return { error: 'Nothing has bitten yet. The line is still out.' }
-  }
-
-  // One-shot, and matched to THIS token's castAt so a newer cast landing in
-  // between cannot be spent in its place.
-  if (!(await db.claimCrateCast(user.id, crateToken.castAt))) return { error: 'No crate to open.' }
-
-  // ── The streak ────────────────────────────────────────────────────────────
-  // Same rule a fish gets: a perfect reel adds one, anything less resets to
-  // zero. Server-authoritative, off the server's own current_perfect_streak,
-  // never a client value. catch_pending clears here because the cast resolved;
-  // a MISSED crate never reaches this function, so its flag stays set and the
-  // next cast zeroes the streak exactly as an abandoned fish does.
-  //
-  // Deliberately NOT bumped here: total_perfects, the shiny rolls and the Finn
-  // perfect challenge. Those are about landing FISH well, and a crate is not a
-  // fish. This moves the streak and nothing else.
-  // The rule is lib/fishingRules crateStreak; ceiling-guarded like the fish paths.
-  const { streak, updates: streakUpdate, anomaly } = crateStreak(profile, result, crateToken.habitat)
-  if (anomaly) await flagAnomaly(admin, user.id, 'implausible:perfectStreak', 3, { claimed: streak })
-  await db.updateProfile(user.id, streakUpdate)
-
-  // ── THE CRATE THE BADGES COUNT ──────────────────────────────────────────
-  //
-  // Both tallies are bumped HERE rather than inside the shared roller, and
-  // that is the whole point: this is the one path where a crate came up on
-  // the line. The weekly free crate and the Master challenge's payout roll
-  // through the same loot table and must not feed the crate badges, which are
-  // about fishing one up. See the note in crateLoot.
-  //
-  // The lifetime total the badges read, then the per-tier tally the Almanac
-  // shows. Fire-and-forget: a lost counter is a counter, and a crate opening
-  // must not stall behind one.
-  void db.bumpStat(user.id, 'fishing_crates_opened', 1).catch(() => {})
-  void db.bumpJsonCounter(user.id, 'crate_opens', crateToken.crateTier, 1).catch(() => {})
-
-  // Token validated — hand off to the shared roller (grants + returns the loot).
-  const loot = await grantCrateLoot(admin, user.id, crateToken.crateTier)
-  return 'error' in loot ? loot : { ...loot, perfectStreak: streak }
+  return core.reelCrate(fishingData(createAdminClient()), user.id, result)
 }
 
 const QUICK_BUY_WORMS_QTY  = 10
@@ -450,31 +286,21 @@ export async function markFirstCatchCelebrationSeen(): Promise<void> {
   await fishingData(createAdminClient()).updateProfile(user.id, { has_seen_first_catch_celebration: true })
 }
 
-/** Toggle for the cast→bite count-up shown in the waiting pill.
- *  Stored on profiles so it syncs across devices. Toggled from the
- *  Preferences row in the Gear modal. */
-/**
- * REMEMBER WHETHER THE MACHINE IS RUNNING.
- *
- * The auto toggle was client state seeded to `true`, so every time the rod came
- * out the Auto Caster started casting and had to be switched off again. A
- * toggle that forgets is a toggle you operate twice.
- *
- * Fire and forget on purpose: this is a preference, and a failed write costs a
- * captain one tap next session rather than anything they can lose.
- */
+/** Remember whether the Auto Caster is running (lib/core/loadout). */
 export async function setAutoFishing(value: boolean): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-  await fishingData(createAdminClient()).updateProfile(user.id, { auto_fishing_on: value })
+  await loadout.setAutoFishing(fishingData(createAdminClient()), user.id, value)
 }
 
+/** Toggle for the cast→bite count-up shown in the waiting pill. Stored on the
+ *  profile so it syncs across devices. */
 export async function setShowWaitTimer(value: boolean): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-  await fishingData(createAdminClient()).updateProfile(user.id, { show_wait_timer: value })
+  await loadout.setShowWaitTimer(fishingData(createAdminClient()), user.id, value)
 }
 
 export async function checkLeaderboardPosition(
@@ -628,115 +454,24 @@ export async function useTideTurnerSkip(): Promise<{ ok: true; skipsLeft: number
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const db = fishingData(admin)
-  const profile = await db.profile(user.id, 'has_tide_turner, equipped_special, tide_turner_used, tide_turner_date')
-
-  if (!profile) return { error: 'Profile not found' }
-  if (!profile.has_tide_turner) return { error: 'No Tide Turner' }
-  // AND IT HAS TO BE IN THE SLOT. This checked ownership only, so the server
-  // would honour a skip from an unequipped Tide Turner — the fishing screen
-  // simply never offered the button, which made a UI rule look like a guard.
-  // The sea offered it, and that is how the gap surfaced.
-  if (profile.equipped_special !== 'tide_turner') return { error: 'Your Tide Turner is not equipped' }
-
-  const todayStr = today()
-  const usedToday = profile.tide_turner_date === todayStr ? (profile.tide_turner_used ?? 0) : 0
-  if (usedToday >= 3) return { error: 'No skips remaining today' }
-
-  const newUsed = usedToday + 1
-  // RELEASE the hooked fish as a SANCTIONED skip: clear the pending catch so the
-  // next cast doesn't trip castLine's anti-bail reset (a lingering catch_pending
-  // zeroes current_perfect_streak on the following cast). Crucially we do NOT
-  // touch current_perfect_streak here — skipping a fish WITHOUT breaking the
-  // streak is the Tide Turner's entire purpose.
-  await db.updateProfile(user.id, { tide_turner_used: newUsed, tide_turner_date: todayStr, catch_pending: false, pending_cast: null })
-  return { ok: true, skipsLeft: 3 - newUsed }
+  return core.tideTurnerSkip(fishingData(createAdminClient()), user.id)
 }
 
 export async function buySpecialItem(itemId: string): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const columnMap: Record<string, string> = {
-    auto_caster: 'has_auto_caster',
-    auto_catcher: 'has_auto_catcher',
-  }
-  const column = columnMap[itemId]
-  if (!column) return { error: 'Unknown item' }
-
-  const def = getSpecialItem(itemId)
-  // For sale if it has a price in either currency.
-  const usesFathoms = typeof def?.costFathoms === 'number'
-  if (!def || (!def.shopCost && !usesFathoms)) return { error: 'Not for sale' }
-
-  const admin = createAdminClient()
-  const db = fishingData(admin)
-  const profile = await db.profile(user.id, 'doubloons, gauntlet_fathoms, has_auto_caster, has_auto_catcher, gauntlet_deepest')
-  if (!profile) return { error: 'Profile not found' }
-  const owned: Record<string, boolean> = {
-    has_auto_caster: !!profile.has_auto_caster,
-    has_auto_catcher: !!profile.has_auto_catcher,
-  }
-  if (owned[column]) return { error: 'Already owned' }
-  // Prerequisite item (e.g. Auto Catcher needs the Auto Caster first).
-  if (def.requiresItem && !owned[columnMap[def.requiresItem]]) {
-    return { error: 'Requires the Auto Caster first' }
-  }
-  // Gauntlet-depth unlock gate.
-  if (def.requiresGauntletDepth && ((profile.gauntlet_deepest as number | null) ?? 0) < def.requiresGauntletDepth) {
-    return { error: `Reach depth ${def.requiresGauntletDepth} in Davy Jones' Gauntlet first` }
-  }
-
-  // Spend first, in place; the result is the guard. Then flip the item on only
-  // where it is still off, and give the charge back if a concurrent twin
-  // already flipped it.
-  const col = usesFathoms ? 'gauntlet_fathoms' : 'doubloons'
-  const cost = usesFathoms ? def.costFathoms! : def.shopCost!
-  const after = await spend(admin, user.id, col, cost)
-  if (after === null) return { error: usesFathoms ? 'Not enough Fathoms' : 'Not enough doubloons' }
-  if (!(await db.flagOn(user.id, column))) {
-    await grant(admin, user.id, col, cost)
-    return { error: 'Already owned' }
-  }
-  return { ok: true }
+  return loadout.buySpecialItem(fishingData(createAdminClient()), user.id, itemId)
 }
 
 export async function equipSpecialItem(itemId: string | null): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-
-  // This wrote whatever it was handed. No ownership check, no slot check: the
-  // only thing standing between a crafted request and The Primeval Eye seated
-  // in slot one was that the button did not exist. Hiding the row fixes the
-  // spoiler; it does not fix the hole behind it.
-  if (itemId !== null) {
-    const def = getSpecialItem(itemId)
-    if (!def) return { error: 'No such item' }
-    // The Sunken Hand's spoils fit the SECOND slot and nothing else. Seating one
-    // here would hand a finale reward to anyone who never sailed the coda.
-    if (def.finaleSlotOnly) return { error: 'That one does not fit this slot' }
-    const profile = await fishingData(admin).profile(user.id, SPECIAL_OWNED_COLUMN[def.id])
-    if ((profile as Record<string, unknown> | null)?.[SPECIAL_OWNED_COLUMN[def.id]] !== true) {
-      return { error: 'You do not own that' }
-    }
-  }
-
-  // THE CHART IS A CACHED PAGE, and this changed what stands on it.
-  //
-  // /sea renders on the server from the profile, and the shipyard returns to it
-  // with router.back() — which restores the CACHED entry rather than asking for
-  // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
-  // away and still be in the old one. It did not read as a stale render; it read
-  // as the equip having silently failed.
-  revalidatePath('/sea')
-  await fishingData(admin).updateProfile(user.id, { equipped_special: itemId })
-  return { ok: true }
+  const r = await loadout.equipSpecialItem(fishingData(createAdminClient()), user.id, itemId)
+  // THE CHART IS A CACHED PAGE, and this changed what stands on it (see equipBoat).
+  if ('ok' in r) revalidatePath('/sea')
+  return r
 }
 
 /** THE LONG VIGIL — release a mounted giant back into the Ancient Deep.
@@ -802,35 +537,7 @@ export async function equipBoat(boatId: string | null, opts?: { quiet?: boolean 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  if (boatId !== null) {
-    const profile = await fishingData(admin).profile(user.id, 'unlocked_boats, fishing_xp, expedition_xp')
-    let unlocked = (profile?.unlocked_boats as string[] | null) ?? []
-    if (!unlocked.includes(boatId)) {
-      // Self-heal an EARNED boat the player hasn't stored yet (a level or an
-      // achievement gate, mirrors updateCharacterColor). Anything else is
-      // genuinely locked.
-      const { BOAT_MAP } = await import('@/lib/boats')
-      const { gateMet } = await import('@/lib/cosmeticGates')
-      const def = BOAT_MAP[boatId]
-      if (def?.gate) {
-        const { getLevelFromXP: navLv } = await import('@/lib/expeditionLevel')
-        const ap = def.gate.kind === 'ap'
-          ? await (await import('@/lib/achievementPoints')).getUserAchievementPoints(user.id)
-          : null
-        if (gateMet(def.gate, {
-          fishingLevel: getLevelFromXP(Number(profile?.fishing_xp ?? 0)),
-          navLevel: navLv(Number(profile?.expedition_xp ?? 0)),
-          ap,
-        })) {
-          await arrayAdd(admin, user.id, 'unlocked_boats', boatId)
-          unlocked = [...unlocked, boatId]
-        }
-      }
-      if (!unlocked.includes(boatId)) return { error: 'Boat not unlocked' }
-    }
-  }
+  const r = await loadout.equipBoat(fishingData(createAdminClient()), user.id, boatId)
   // THE CHART IS A CACHED PAGE, and this changed what stands on it.
   //
   // /sea renders on the server from the profile, and the shipyard returns to it
@@ -838,182 +545,53 @@ export async function equipBoat(boatId: string | null, opts?: { quiet?: boolean 
   // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
   // away and still be in the old one. It did not read as a stale render; it read
   // as the equip having silently failed.
-  if (!opts?.quiet) revalidatePath('/sea')
-  await fishingData(admin).updateProfile(user.id, { equipped_boat: boatId })
-  return { ok: true }
+  if ('ok' in r && !opts?.quiet) revalidatePath('/sea')
+  return r
 }
 
 export async function buyBoat(boatId: string): Promise<{ ok: true; doubloons?: number; gems?: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const { BOAT_MAP } = await import('@/lib/boats')
-  const def = BOAT_MAP[boatId]
-  if (!def) return { error: 'Unknown boat' }
-  if (def.crateOnly) return { error: 'This boat is only found in crates' }
-  if (def.gate) return { error: 'This boat is earned, not bought' }
-
-  const admin = createAdminClient()
-  const useGems = typeof def.gemPrice === 'number' && def.gemPrice > 0
-  const price = useGems ? def.gemPrice! : def.cost
-  const db = fishingData(admin)
-  const profile = await db.profile(user.id, 'doubloons, gems, unlocked_boats')
-  if (!profile) return { error: 'Profile not found' }
-  const unlocked = (profile.unlocked_boats as string[] | null) ?? []
-  if (unlocked.includes(boatId)) return { error: 'Already owned' }
-  // Spend first, in place; the result is the guard. Then add the boat once,
-  // and give the charge back if a concurrent twin already added it.
-  const col = useGems ? 'gems' : 'doubloons'
-  const newBalance = await spend(admin, user.id, col, price)
-  if (newBalance === null) return { error: useGems ? 'Not enough gems' : 'Not enough doubloons' }
-  if (!(await arrayAdd(admin, user.id, 'unlocked_boats', boatId))) {
-    await grant(admin, user.id, col, price)
-    return { error: 'Already owned' }
-  }
-
-  await db.updateProfile(user.id, { equipped_boat: boatId })
-  await db.ledger(user.id, -price, `Bought ${def.name} boat`, useGems ? 'gems' : 'doubloons')
-  return useGems ? { ok: true, gems: newBalance } : { ok: true, doubloons: newBalance }
+  return loadout.buyBoat(fishingData(createAdminClient()), user.id, boatId)
 }
 
 export async function equipHat(hatId: string | null, opts?: { quiet?: boolean }): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  if (hatId !== null) {
-    const profile = await fishingData(admin).profile(user.id, 'unlocked_hats')
-    const unlocked = (profile?.unlocked_hats as string[] | null) ?? []
-    if (!unlocked.includes(hatId)) return { error: 'Hat not unlocked' }
-  }
-  // THE CHART IS A CACHED PAGE, and this changed what stands on it.
-  //
-  // /sea renders on the server from the profile, and the shipyard returns to it
-  // with router.back() — which restores the CACHED entry rather than asking for
-  // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
-  // away and still be in the old one. It did not read as a stale render; it read
-  // as the equip having silently failed.
-  if (!opts?.quiet) revalidatePath('/sea')   // see equipBoat
-  await fishingData(admin).updateProfile(user.id, { equipped_hat: hatId })
-  return { ok: true }
+  const r = await loadout.equipHat(fishingData(createAdminClient()), user.id, hatId)
+  if ('ok' in r && !opts?.quiet) revalidatePath('/sea')   // see equipBoat
+  return r
 }
 
-/** Equip / unequip a pet. Ownership is checked against unlocked_pets, so a
- *  crafted id cannot seat a pet you never found.
- *
- *  TWO SLOTS, routed by the PET, not by the caller. Stern pets (everything
- *  that faces the back of the boat) go in equipped_pet; front-facing pets go
- *  in equipped_pet_bow. The client never names a slot — it passes an id and
- *  the pet's own `bow` flag decides — so the two can never end up holding
- *  each other's kind, and a future front-facing pet needs no changes here.
- *
- *  Unequip (null) needs a slot, since there is nothing to read a flag off:
- *  `slot` defaults to stern, which is every pet that existed before the bow. */
+/** Equip / unequip a pet; the pet picks its own slot (lib/core/loadout). */
 export async function equipPet(petId: string | null, slot: 'stern' | 'bow' = 'stern', opts?: { quiet?: boolean }): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  let column: string = PET_SLOT_COLUMN[slot]
-  if (petId !== null) {
-    const profile = await fishingData(admin).profile(user.id, 'unlocked_pets')
-    const unlocked = (profile?.unlocked_pets as string[] | null) ?? []
-    if (!unlocked.includes(petId)) return { error: 'Pet not unlocked' }
-    const def = getPet(petId)
-    if (!def) return { error: 'No such pet' }
-    // The pet picks its own slot. A bow pet seated in the stern column would
-    // draw two pets back to back in the same spot.
-    const own = petSlot(def)
-    if (!own) return { error: 'No such pet' }
-    column = PET_SLOT_COLUMN[own]
-  }
+  const r = await loadout.equipPet(fishingData(createAdminClient()), user.id, petId, slot)
   // Same reason as the boat: the pet rides on the chart's sprite.
-  if (!opts?.quiet) revalidatePath('/sea')   // see equipBoat
-  await fishingData(admin).updateProfile(user.id, { [column]: petId })
-  return { ok: true }
+  if ('ok' in r && !opts?.quiet) revalidatePath('/sea')   // see equipBoat
+  return r
 }
 
 export async function buyHat(hatId: string): Promise<{ ok: true; doubloons: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const { HAT_MAP } = await import('@/lib/hats')
-  const def = HAT_MAP[hatId]
-  if (!def) return { error: 'Unknown hat' }
-  if (def.crateOnly) return { error: 'This hat is only found in crates' }
-
-  const admin = createAdminClient()
-  const db = fishingData(admin)
-  const profile = await db.profile(user.id, 'doubloons, unlocked_hats')
-  if (!profile) return { error: 'Profile not found' }
-  const unlocked = (profile.unlocked_hats as string[] | null) ?? []
-  if (unlocked.includes(hatId)) return { error: 'Already owned' }
-  // Spend first, in place; the result is the guard. Then add the hat once,
-  // and give the charge back if a concurrent twin already added it.
-  const newDoubloons = await spend(admin, user.id, 'doubloons', def.cost)
-  if (newDoubloons === null) return { error: 'Not enough doubloons' }
-  if (!(await arrayAdd(admin, user.id, 'unlocked_hats', hatId))) {
-    await grant(admin, user.id, 'doubloons', def.cost)
-    return { error: 'Already owned' }
-  }
-  await db.updateProfile(user.id, { equipped_hat: hatId })
-  await db.ledger(user.id, -def.cost, `Bought ${def.name} bandana`)
-  return { ok: true, doubloons: newDoubloons }
+  return loadout.buyHat(fishingData(createAdminClient()), user.id, hatId)
 }
 
-// ── Golden trophy: on-the-spot Sell or Mount choice ─────────────────
-// A shiny catch lands as a row in shiny_catches with status='hold'.
-// The forced-choice modal in the catch result calls one of these to
-// resolve it — both transition the row to a terminal status (sold or
-// mounted) so the trophy can never be re-resolved. The choice is
-// final per-trophy by design: the moment is meant to land with
-// weight, not be deferred into a hold list.
+// ── Golden trophy: the Sell or Mount choice (lib/core/fishing) ──────────────
 
-/**
- * ── A GOLDEN STILL WAITING TO BE ANSWERED ───────────────────────────────────
- *
- * A shiny is written into `shiny_catches` at status 'hold' the moment it is
- * caught, and it stays there until you sell it or mount it. The choice lived
- * INSIDE the catch card, so dismissing the card — a tap anywhere, a refresh, a
- * navigation, closing the tab — left the row on hold with nothing anywhere in
- * the app able to reach it again. The fish was never lost; it was stranded, and
- * from the deck the two are the same thing.
- *
- * It was not a rare accident either. When this was written there were FORTY
- * held rows against seventeen ever resolved, across nine captains, the oldest
- * from June: seventy percent of every golden ever caught. Not one had ever been
- * mounted, by anybody.
- *
- * So the choice is now recoverable rather than a moment you have to catch. This
- * returns whatever is still on hold, the chart asks on load, and the modal
- * cannot be dismissed without answering it. A stranded golden comes back the
- * next time its captain opens the sea.
- */
+/** The oldest golden still waiting on a sell-or-mount answer, so a stranded
+ *  one comes back the next time its captain opens the sea. */
 export async function heldGolden(): Promise<{ id: number; name: string; fishId: number; sizeIn: number; alreadyMounted: boolean } | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
-
-  const db = fishingData(createAdminClient())
-  const held = await db.oldestHeldShiny(user.id)
-  if (!held) return null
-
-  // Whether this species is already on the wall, which is what decides if
-  // Mount is even offered. Read here rather than trusted from the catch, since
-  // a held row can be days old and the wall may have changed since.
-  const existing = await db.collectionRow(user.id, held.fish_id)
-
-  return {
-    id: held.id,
-    name: held.name ?? 'A golden fish',
-    fishId: held.fish_id,
-    sizeIn: Number(held.size_in ?? 0),
-    alreadyMounted: existing?.is_golden === true,
-  }
+  return core.heldGolden(fishingData(createAdminClient()), user.id)
 }
 
 export async function sellGoldenTrophy(
@@ -1022,45 +600,7 @@ export async function sellGoldenTrophy(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const db = fishingData(admin)
-  const trophy = await db.shiny(user.id, shinyId)
-  if (!trophy) return { error: 'Trophy not found' }
-  if (trophy.status !== 'hold') return { error: 'Trophy already resolved' }
-  if (!trophy.fish_species) return { error: 'Species not found' }
-
-  const profile = await db.profile(user.id, 'doubloons, fishing_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
-  const renownSellMult = fishingRenownEffects(profile?.fishing_renown_alloc as RenownAlloc | null).sellMult * eyeFromProfile(profile).sellMult
-  const earned = Math.floor((trophy.fish_species.sell_value ?? 0) * SHINY_SELL_MULT * renownSellMult)
-  if (earned <= 0) return { error: 'Trophy has no value' }
-
-  // ── CLAIM THE ROW BEFORE PAYING FOR IT ────────────────────────────────────
-  //
-  // The status check above is a read, and a read is not a claim: two taps that
-  // both read 'hold' before either writes would both pay out for one fish. The
-  // window is small and the modal's busy flag usually covers it, which is
-  // exactly the kind of "usually" that produces one baffling ledger entry a
-  // year.
-  //
-  // `.eq('status', 'hold')` makes the update itself the claim — Postgres will
-  // only match the row once — and `.select()` reports whether this call was the
-  // one that got it. No row back means somebody else resolved it first, so this
-  // caller pays nothing.
-  //
-  // And it runs BEFORE the doubloons rather than alongside them, for the same
-  // reason mounting does: a write whose failure is not allowed to matter is a
-  // write nobody checks, and this file has already paid for that lesson once.
-  const sold = await db.resolveShiny(shinyId, { status: 'sold', sold_at: new Date().toISOString(), sold_for: earned })
-  if (sold.failed) return { error: 'Could not sell that one. Try again.' }
-  if (!sold.claimed) return { error: 'Trophy already resolved' }
-
-  // Paid in place, so a sale elsewhere landing meanwhile is not written over.
-  const [newDoubloons] = await Promise.all([
-    grant(admin, user.id, 'doubloons', earned),
-    db.ledger(user.id, earned, `Sold golden ${trophy.fish_species.name}`),
-  ])
-  return { earned, doubloons: newDoubloons }
+  return core.sellGoldenTrophy(fishingData(createAdminClient()), user.id, shinyId)
 }
 
 export async function mountGoldenTrophy(
@@ -1069,202 +609,26 @@ export async function mountGoldenTrophy(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const db = fishingData(createAdminClient())
-  const row = await db.shiny(user.id, shinyId)
-  if (!row) return { error: 'Trophy not found' }
-  if (row.status !== 'hold') return { error: 'Trophy already resolved' }
-
-  // Block remount: each species can only be golden once. Front-end already
-  // disables the Mount button when alreadyMounted is true; this is the
-  // server-side safety net.
-  const existing = await db.collectionRow(user.id, row.fish_id)
-  if (existing?.is_golden) return { error: 'Already mounted' }
-
-  // ── THE STATUS FIRST, AND ITS ERROR CHECKED ───────────────────────────────
-  //
-  // These two used to run together in a Promise.all with neither result read.
-  // supabase-js hands errors back in the result object instead of throwing, so
-  // a rejected write is indistinguishable from a successful one unless someone
-  // looks — and for three months nobody did. `status: 'mounted'` violated the
-  // table's CHECK on every single mount ever made, while the is_golden write
-  // beside it succeeded. The fish went on the wall, the plate appeared, and the
-  // row sat on 'hold' as though the choice had never been made.
-  //
-  // So: sequential, status first, and it is the gate. The status is what marks
-  // this trophy resolved, which is what stops it being offered up and sold a
-  // second time. If it cannot be written, nothing else should happen either —
-  // an unmarked row with is_golden set is precisely the state that took a
-  // migration to clean up.
-  const mounted = await db.resolveShiny(shinyId, { status: 'mounted', sold_at: new Date().toISOString() })
-  if (mounted.failed) return { error: 'Could not mount that one. Try again.' }
-
-  // fish_collection row always exists by this point (the catch action upserts
-  // it before reaching the shiny resolve), so we update rather than upsert.
-  await db.setGolden(user.id, row.fish_id)
-  return { ok: true, fishId: row.fish_id }
+  return core.mountGoldenTrophy(fishingData(createAdminClient()), user.id, shinyId)
 }
 
-// ── Completionist Rod forge ───────────────────────────────────────────────────
-// Set which (up to 3) owned rods' unique effects are folded into the
-// Completionist. Reconfigurable, non-destructive — the donor rods stay in the
-// inventory. Server-validated so a tampered client can't inject effects from
-// rods it doesn't own or that have no unique effect. The resolved stats are
-// derived from this on every cast/reel via getEffectiveRod, so this is the
-// single source the gameplay paths trust.
+/** The Completionist forge: which owned rods' effects it carries (lib/core/loadout). */
 export async function setCompletionistEffects(
   tiers: number[],
 ): Promise<{ completionistEffects: number[]; firstForge: boolean; charged: boolean; newDoubloons: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-  const admin = createAdminClient()
-
-  const db = fishingData(admin)
-  const [ownedTiers, prof] = await Promise.all([
-    db.rodTiers(user.id),
-    db.profile(user.id, 'has_seen_forge_flourish, completionist_effects, doubloons, unlocked_badges'),
-  ])
-  const owned = new Set(ownedTiers)
-  if (!owned.has(COMPLETIONIST_TIER)) return { error: "You haven't earned the Completionist Rod yet." }
-
-  // Dedupe, drop the Completionist itself, validate ownership + that each rod
-  // actually has an effect, then cap at the slot limit.
-  const clean: number[] = []
-  for (const t of Array.from(new Set((tiers ?? []).filter(t => Number.isInteger(t))))) {
-    if (clean.length >= COMPLETIONIST_MAX_EFFECTS) break
-    if (t === COMPLETIONIST_TIER) continue
-    if (!owned.has(t)) return { error: 'You can only forge in rods you own.' }
-    if (!rodHasUniqueEffect(getRod(t))) return { error: 'That rod has no unique effect to forge.' }
-    clean.push(t)
-  }
-
-  const doubloons = prof?.doubloons ?? 0
-  const current = (prof?.completionist_effects as number[] | null) ?? []
-  const currentSet = new Set(current)
-  const changed = clean.length !== current.length || clean.some(t => !currentSet.has(t))
-  // First-forge flourish fires the first time an actual effect lands (not on an
-  // empty loadout / clear). One-time via the has_seen_forge_flourish flag.
-  const firstForge = clean.length > 0 && !prof?.has_seen_forge_flourish
-  // Charge for a re-forge: a real change to a non-empty loadout AFTER the free
-  // first forge. Using the flag (not "is current empty") stops a clear-then-
-  // rebuild from dodging the fee.
-  const mustPay = changed && clean.length > 0 && !!prof?.has_seen_forge_flourish
-  // The fee comes off in place, and the result is the guard.
-  let newDoubloons = doubloons
-  if (mustPay) {
-    const after = await spend(admin, user.id, 'doubloons', REFORGE_COST)
-    if (after === null) return { error: `Re-forging costs ${REFORGE_COST.toLocaleString()} doubloons.` }
-    newDoubloons = after
-  }
-  const update: Record<string, unknown> = { completionist_effects: clean }
-  if (firstForge) update.has_seen_forge_flourish = true
-
-  await db.updateProfile(user.id, update)
-
-  // "Reforged" badge — pay the re-forge fee to swap into a fresh FULL loadout.
-  // Hook-granted (a paid re-forge isn't recoverable from the final state, which
-  // just reads as 3 effects — same as a free first forge). Added in place.
-  const badges = (prof?.unlocked_badges as string[] | null) ?? []
-  if (mustPay && clean.length >= COMPLETIONIST_MAX_EFFECTS && !badges.includes('reforged')) {
-    await arrayAdd(admin, user.id, 'unlocked_badges', 'reforged')
-  }
-  return { completionistEffects: clean, firstForge, charged: mustPay, newDoubloons }
+  return loadout.setCompletionistEffects(fishingData(createAdminClient()), user.id, tiers)
 }
 
 
-// ── FISHING LEVEL REWARDS ────────────────────────────────────────────────────
-// Pay out every level the captain has earned but not yet been paid for.
-//
-// STATE-BASED, deliberately. The obvious implementation is "grant on the level-up",
-// but fishing XP arrives from TRAWLS too, which resolve while the player is nowhere
-// near the fishing screen. A crossing-based grant would silently drop those levels on
-// the floor. So this reconciles the level they ARE against the level they have been
-// PAID for, which makes it idempotent: call it twice and the second call pays nothing.
-export async function claimFishingLevelRewards(): Promise<{
-  granted: { level: number; reward: LevelReward }[]
-  /** The levels this call covered: everything in (from, to]. `to > from` is a
-   *  level earned whether or not it paid anything, and the chart shows the
-   *  card on that, not on `granted` -- most levels pay nothing and every one
-   *  of them is still a level. */
-  from: number
-  to: number
-  newDoubloons: number
-  newGems: number
-  newHoldTier: number
-}> {
+/** Pay every fishing level earned but not yet paid for; idempotent (lib/core/fishing). */
+export async function claimFishingLevelRewards(): Promise<core.LevelRewardsClaim> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const empty = { granted: [], from: 0, to: 0, newDoubloons: 0, newGems: 0, newHoldTier: 0 }
-  if (!user) return empty
-
-  const admin = createAdminClient()
-  const db = fishingData(admin)
-  const profile = await db.profile(user.id, 'fishing_xp, claimed_fishing_levels, doubloons, gems, fish_hold_tier')
-  if (!profile) return empty
-
-  const level   = getLevelFromXP((profile.fishing_xp as number | null) ?? 0)
-  const claimed = (profile.claimed_fishing_levels as number | null) ?? 1
-  const owed    = rewardsOwed(claimed, level)
-  if (owed.length === 0) {
-    // NOTHING TO PAY, BUT PERHAPS SOMETHING TO SAY. Only fifteen levels carry
-    // coin, and this used to return here without moving the watermark, so a
-    // level that paid nothing was never a level the chart heard about: no
-    // card, no notice, the number on the disc simply different next time you
-    // looked. The watermark moves regardless now, and the chart is told the
-    // span, so every level gets its moment and no level gets it twice.
-    if (level > claimed) {
-      await db.updateProfile(user.id, { claimed_fishing_levels: level })
-    }
-    return {
-      granted: [],
-      from: claimed,
-      to: Math.max(claimed, level),
-      newDoubloons: profile.doubloons ?? 0,
-      newGems: profile.gems ?? 0,
-      newHoldTier: (profile.fish_hold_tier as number | null) ?? 0,
-    }
-  }
-
-  let doubloonsOwed = 0
-  let gemsOwed      = 0
-  let holdTier  = (profile.fish_hold_tier as number | null) ?? 0
-  const bait: Record<string, number> = {}
-
-  for (const { reward } of owed) {
-    doubloonsOwed += reward.doubloons ?? 0
-    gemsOwed      += reward.gems ?? 0
-    // A FLOOR, never a bump: a captain who already bought a better hold keeps it and
-    // the reward is simply already satisfied. See LevelReward.holdFloor.
-    if (reward.holdFloor != null) holdTier = Math.max(holdTier, reward.holdFloor)
-    for (const [type, qty] of Object.entries(reward.bait ?? {})) {
-      // Never hand over a bait type that does not exist — a typo in the table would
-      // otherwise write a junk row the shop cannot render.
-      if (getBait(type)) bait[type] = (bait[type] ?? 0) + qty
-    }
-  }
-  holdTier = Math.min(holdTier, FISH_HOLD_TIERS.length - 1)
-
-  // MOVE THE WATERMARK FIRST, and only from the value read above. That update
-  // is the claim: two calls fired together both read the same watermark, and
-  // only one of them gets the row back, so the levels are paid once.
-  // Paid up to here; a re-call grants nothing.
-  if (!(await db.moveLevelWatermark(user.id, profile.claimed_fishing_levels == null ? null : claimed, level))) {
-    return { ...empty, from: claimed, to: claimed }
-  }
-
-  // Paid in place. The hold is a floor, so it only ever raises a lower tier
-  // and never writes over one bought meanwhile.
-  const [doubloons, gems] = await Promise.all([
-    grant(admin, user.id, 'doubloons', doubloonsOwed),
-    grant(admin, user.id, 'gems', gemsOwed),
-    db.raiseHoldTier(user.id, holdTier),
-    Promise.all(Object.entries(bait).map(([type, qty]) => db.addBait(user.id, type, qty))),
-    db.ledger(user.id, owed.reduce((a, o) => a + (o.reward.doubloons ?? 0), 0),
-      `Fishing level reward (Lv ${owed[0].level}${owed.length > 1 ? `-${level}` : ''})`),
-  ])
-
-  return { granted: owed, from: claimed, to: level, newDoubloons: doubloons, newGems: gems, newHoldTier: holdTier }
+  if (!user) return core.NO_LEVEL_REWARDS
+  return core.claimFishingLevelRewards(fishingData(createAdminClient()), user.id)
 }
 
 /**

@@ -1,0 +1,30 @@
+{
+  // Type-checks the shell (npm run typecheck). `@` resolves into ../web exactly
+  // as vite.config.ts does, with the one swap: the Game API is the local one.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "types": ["node"],
+    "paths": {
+      "@/lib/gameApi": ["./src/localGameApi.ts"],
+      // One React for both trees, as vite.config.ts dedupes it at runtime.
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/*": ["./node_modules/@types/react-dom/*"],
+      "framer-motion": ["./node_modules/framer-motion"],
+      "@/*": ["../web/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

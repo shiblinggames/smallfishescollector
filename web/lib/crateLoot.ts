@@ -160,6 +160,42 @@ export function rollCrateLoot(tier: CrateTier, owned: { skins: string[]; boats: 
 }
 
 /**
+ * What granting a crate needs from the game's store: read the owned lists, add
+ * to one once, set the pet slot only while it is empty, pay coin, add bait.
+ * FishingData satisfies it; the web's service-role client is adapted below.
+ * Kept this small on purpose, so the roller never pulls a whole store (or the
+ * server) into the offline build.
+ */
+export interface CrateGrantStore {
+  profile(uid: string, cols: string): Promise<Record<string, unknown> | null>
+  addToList(uid: string, col: string, value: string): Promise<boolean>
+  updateProfileIf(uid: string, patch: Record<string, unknown>, when: { col: string; is: null }[]): Promise<boolean>
+  grant(uid: string, col: 'doubloons', n: number): Promise<number>
+  addBait(uid: string, bait: string, qty: number): Promise<void>
+}
+
+/** The service-role client as a CrateGrantStore (the web's callers). */
+function adminCrateStore(admin: SupabaseClient): CrateGrantStore {
+  return {
+    async profile(uid, cols) {
+      const { data } = await admin.from('profiles').select(cols).eq('id', uid).single()
+      return (data as Record<string, unknown> | null) ?? null
+    },
+    addToList: (uid, col, value) => arrayAdd(admin, uid, col, value),
+    async updateProfileIf(uid, patch, when) {
+      let q = admin.from('profiles').update(patch).eq('id', uid)
+      for (const g of when) q = q.is(g.col, null)
+      const { data } = await q.select('id')
+      return !!data && data.length > 0
+    },
+    grant: (uid, col, n) => grant(admin, uid, col, n),
+    async addBait(uid, bait, qty) {
+      await admin.rpc('upsert_bait', { p_user_id: uid, p_bait_type: bait, p_qty: qty })
+    },
+  }
+}
+
+/**
  * Roll a crate of `tier` and grant its reward to `userId`, returning the loot.
  * ALWAYS pays out exactly one reward (pet / cosmetic / doubloons / bait) — never
  * an empty result — so a gated caller (fishing crate token, weekly stamp) can
@@ -175,9 +211,16 @@ export async function grantCrateLoot(
   userId: string,
   tier: CrateTier,
 ): Promise<CrateLoot> {
-  const { data: profile } = await admin.from('profiles')
-    .select('unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets')
-    .eq('id', userId).single()
+  return grantCrateLootTo(adminCrateStore(admin), userId, tier)
+}
+
+/** grantCrateLoot against any store: the web's, or the offline save. */
+export async function grantCrateLootTo(
+  db: CrateGrantStore,
+  userId: string,
+  tier: CrateTier,
+): Promise<CrateLoot> {
+  const profile = await db.profile(userId, 'unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets')
   const unlockedPets = (profile?.unlocked_pets as string[] | null) ?? []
   const roll = rollCrateLoot(tier, {
     skins: (profile?.unlocked_character_colors as string[] | null) ?? [],
@@ -190,9 +233,9 @@ export async function grantCrateLoot(
   let dupePet: DupePet | undefined
   if (roll.pet) {
     const pet = roll.pet
-    if (!unlockedPets.includes(pet.id) && await arrayAdd(admin, userId, 'unlocked_pets', pet.id)) {
+    if (!unlockedPets.includes(pet.id) && await db.addToList(userId, 'unlocked_pets', pet.id)) {
       // Auto-equip the first pet so it lands in the loadout without an extra tap.
-      await admin.from('profiles').update({ equipped_pet: pet.id }).eq('id', userId).is('equipped_pet', null)
+      await db.updateProfileIf(userId, { equipped_pet: pet.id }, [{ col: 'equipped_pet', is: null }])
       return { type: 'pet', petId: pet.id, petName: pet.name, petImageUrl: pet.restImageUrl, petAccent: pet.accentColor }
     }
     dupePet = { petId: pet.id, petName: pet.name, petImageUrl: pet.restImageUrl, petAccent: pet.accentColor }
@@ -204,22 +247,22 @@ export async function grantCrateLoot(
   if (o.kind === 'cosmetic') {
     const picked = o.entry
     if (picked.kind === 'skin') {
-      await arrayAdd(admin, userId, 'unlocked_character_colors', picked.id)
+      await db.addToList(userId, 'unlocked_character_colors', picked.id)
       return pay({ type: 'skin', skinId: picked.id, skinName: picked.name })
     }
     if (picked.kind === 'boat') {
-      await arrayAdd(admin, userId, 'unlocked_boats', picked.id)
+      await db.addToList(userId, 'unlocked_boats', picked.id)
       return pay({ type: 'boat', boatId: picked.id, boatName: picked.name, boatImageUrl: picked.imageUrl })
     }
-    await arrayAdd(admin, userId, 'unlocked_hats', picked.id)
+    await db.addToList(userId, 'unlocked_hats', picked.id)
     return pay({ type: 'hat', hatId: picked.id, hatName: picked.name, hatImageUrl: picked.imageUrl })
   }
   if (o.kind === 'doubloons') {
     // Paid in place, so a sale landing at the same moment is not overwritten.
     // The new total rides along (KAN-61) so the purse on the sea moves.
-    const newDoubloons = await grant(admin, userId, 'doubloons', o.amount)
+    const newDoubloons = await db.grant(userId, 'doubloons', o.amount)
     return pay({ type: 'doubloons', amount: o.amount, newDoubloons })
   }
-  await admin.rpc('upsert_bait', { p_user_id: userId, p_bait_type: o.baitType, p_qty: o.qty })
+  await db.addBait(userId, o.baitType, o.qty)
   return pay({ type: 'bait', baitType: o.baitType, baitName: getBait(o.baitType).name, quantity: o.qty })
 }

@@ -15,13 +15,23 @@
 //      unbroken session does. A write interrupted mid-way leaves the old save
 //      whole; a file that is not a save, or is from a newer game, is refused;
 //      a web export converts into a local save (catman's real one too, when
-//      saves/catman-for-offline.json is present) and can be fished offline.
+//      saves/catman-for-offline.json is present) and can be fished offline;
+//   5. the rest of fishing offline: crates (opened in the sessions above too),
+//      the wormhole, the Tide Turner, the golden choice, the level rewards and
+//      the loadout shops, each checked for what it moved and for its one-shot
+//      guard.
 //
 //   npx tsx scripts/check-offline-fishing.mts
 
 import fs from 'fs'
 import path from 'path'
-import { castLine, reelIn } from '../lib/core/fishing'
+import { castLine, reelIn, reelCrate, rerollWormhole, tideTurnerSkip, heldGolden, sellGoldenTrophy, mountGoldenTrophy, claimFishingLevelRewards } from '../lib/core/fishing'
+import { buyHat, buyBoat, equipHat, equipBoat, equipPet, equipSpecialItem, buySpecialItem, setAutoFishing, setShowWaitTimer, setCompletionistEffects } from '../lib/core/loadout'
+import { HATS } from '../lib/hats'
+import { BOATS } from '../lib/boats'
+import { PETS, petSlot, PET_SLOT_COLUMN } from '../lib/pets'
+import { SPECIAL_ITEMS } from '../lib/specialItems'
+import { RODS, COMPLETIONIST_TIER, REFORGE_COST, rodHasUniqueEffect } from '../lib/rods'
 import { localFishingData, type LocalSave } from '../lib/data/local/fishingLocal'
 import { serializeSave, deserializeSave, loadSave, writeSave, fromWebExport, LOCAL_SAVE_FORMAT, type WebExport } from '../lib/data/local/saveFile'
 import { nodeSaveStorage } from '../lib/data/local/nodeSaveStorage'
@@ -70,7 +80,7 @@ function walk(entry: string) {
   }
   return { files: seen.size, bad }
 }
-for (const entry of ['lib/core/fishing.ts', 'lib/data/local/fishingLocal.ts', 'lib/data/local/saveFile.ts']) {
+for (const entry of ['lib/core/fishing.ts', 'lib/core/loadout.ts', 'lib/data/local/fishingLocal.ts', 'lib/data/local/saveFile.ts']) {
   const { files, bad } = walk(path.join(ROOT, entry))
   if (bad.length) for (const b of bad) fail(`${entry} reaches the server: ${b}`)
   else console.log(`  ${entry}: ${files} modules, none of them the server`)
@@ -131,7 +141,8 @@ async function session(seed: number, casts: number, checks: boolean, restart?: {
 
       if (shot.fishId === CRATE_FISH_ID) {
         crates++
-        await reelIn(db, UID, shot.fishId, 'miss', 'worm')   // a crate is opened by reelCrate; here it is let go
+        const loot = await reelCrate(db, UID, k % 2 ? 'perfect' : 'catch')
+        if ('error' in loot) fail(`crate on cast ${k} would not open: ${loot.error}`)
         continue
       }
       const result = k % 4 === 3 ? 'miss' : k % 4 === 0 ? 'perfect' : 'catch'
@@ -256,5 +267,176 @@ if (fs.existsSync(realExport)) {
   console.log('  (saves/catman-for-offline.json not present: the real-export check is skipped)')
 }
 
-console.log(`\n  Offline fishing spike: no server on the path, casts and reels on a local save, one-shot claims, determinism, the save file and the web export ${failed ? `${failed} FAILED` : 'ok'}.`)
+// ── 5. The rest of fishing, offline ──
+// The crate, the wormhole, the Tide Turner, the golden choice, the level
+// rewards and the loadout, each on a fresh local save, each checked for what it
+// moved AND for its one-shot guard: the second call pays nothing.
+{
+  const fresh = () => { const s = freshSave(); return { s, db: localFishingData(s), p: s.profile } }
+  let now = Date.parse('2026-09-28T12:00:00.000Z')
+  installRng(mulberry32(7)); installClock(() => now)
+  try {
+    // The crate: cast until one surfaces, open it once.
+    {
+      const { s, db, p } = fresh()
+      let opened = 0
+      for (let k = 0; k < 400 && opened < 3; k++) {
+        const shot = await castLine(db, UID, 'worm', 'shallows')
+        if ('error' in shot) { fail(`crate hunt cast refused: ${shot.error}`); break }
+        now += shot.waitMs + 1500
+        if (shot.fishId !== CRATE_FISH_ID) { await reelIn(db, UID, shot.fishId, 'miss', 'worm'); continue }
+        const before = JSON.stringify({ d: p.doubloons, b: s.bait, c: p.unlocked_character_colors, bo: p.unlocked_boats, h: p.unlocked_hats, pe: p.unlocked_pets })
+        const streak0 = Number(p.current_perfect_streak ?? 0)
+        const loot = await reelCrate(db, UID, 'perfect')
+        if ('error' in loot) { fail(`a live crate would not open: ${loot.error}`); break }
+        opened++
+        const after = JSON.stringify({ d: p.doubloons, b: s.bait, c: p.unlocked_character_colors, bo: p.unlocked_boats, h: p.unlocked_hats, pe: p.unlocked_pets })
+        if (after === before && !loot.dupePet) fail(`a ${loot.type} crate paid nothing`)
+        if (loot.perfectStreak !== streak0 + 1 || p.current_perfect_streak !== streak0 + 1) fail('a perfect crate did not move the streak by one')
+        if (!('error' in (await reelCrate(db, UID, 'perfect')))) fail('a crate opened twice')
+      }
+      if (opened === 0) fail('no crate surfaced in 400 casts, so the crate went untested')
+      if (Number(p.fishing_crates_opened ?? 0) !== opened) fail(`crates opened ${opened}, the counter says ${p.fishing_crates_opened}`)
+      if (!('error' in (await reelCrate(db, UID, 'catch')))) fail('a crate opened with no cast out')
+      console.log(`  crates: ${opened} opened offline, each paid once and moved the streak`)
+    }
+
+    // The wormhole: a live reroll swaps the stack; a spent or sold one refuses.
+    {
+      const { s, db, p } = fresh()
+      p.rod_tier = 3
+      s.hold = { 1: 4 }
+      p.pending_reroll = { fishId: 1, qty: 4, habitat: 'shallows' }
+      const r = await rerollWormhole(db, UID)
+      if ('error' in r) fail(`a live wormhole refused: ${r.error}`)
+      else {
+        if (s.hold[1] !== undefined || s.hold[r.fish.id] !== 4) fail('the wormhole did not swap the stack one for one')
+        if (!(r.fish.id in s.collection)) fail('the wormhole fish was not logged')
+      }
+      if (!('error' in (await rerollWormhole(db, UID)))) fail('a wormhole rerolled twice')
+      // Sold before the reroll: refused, and the original still gets its log credit.
+      const t = fresh()
+      t.s.hold = {}
+      t.p.pending_reroll = { fishId: 2, qty: 1, habitat: 'shallows' }
+      const gone = await rerollWormhole(t.db, UID)
+      if (!('error' in gone) || Object.keys(t.s.hold).length !== 0) fail('a wormhole minted fish for a catch already sold')
+      if (!(2 in t.s.collection)) fail('a refused wormhole erased the catch from the log')
+    }
+
+    // The Tide Turner: equipped only, three a day, a new day resets.
+    {
+      const { db, p } = fresh()
+      p.has_tide_turner = true
+      if (!('error' in (await tideTurnerSkip(db, UID)))) fail('an unequipped Tide Turner skipped')
+      p.equipped_special = 'tide_turner'
+      p.current_perfect_streak = 5
+      const left = []
+      for (let k = 0; k < 3; k++) { const r = await tideTurnerSkip(db, UID); left.push('error' in r ? -1 : r.skipsLeft) }
+      if (left.join() !== '2,1,0') fail(`skips left read ${left.join()}, not 2,1,0`)
+      if (!('error' in (await tideTurnerSkip(db, UID)))) fail('a fourth skip in a day was allowed')
+      if (p.current_perfect_streak !== 5) fail('a Tide Turner skip broke the streak')
+      now += 24 * 3600_000
+      if ('error' in (await tideTurnerSkip(db, UID))) fail('the skips did not come back the next day')
+    }
+
+    // The golden choice: held until answered, sold once, mounted once per species.
+    {
+      const { s, db, p } = fresh()
+      s.collection[1] = { catch_count: 1, is_golden: null }
+      const a = (await db.addShiny(UID, 1, 5.5))!
+      const b = (await db.addShiny(UID, 1, 6.1))!
+      const held = await heldGolden(db, UID)
+      if (held?.id !== a || held.alreadyMounted) fail('the oldest golden was not the one offered')
+      const d0 = Number(p.doubloons)
+      const sold = await sellGoldenTrophy(db, UID, a)
+      if ('error' in sold || Number(p.doubloons) !== d0 + sold.earned || sold.earned <= 0) fail('a golden sale did not pay what it said')
+      if (!('error' in (await sellGoldenTrophy(db, UID, a)))) fail('a golden sold twice')
+      if ((await heldGolden(db, UID))?.id !== b) fail('the next golden did not come up after the first was answered')
+      if ('error' in (await mountGoldenTrophy(db, UID, b)) || s.collection[1].is_golden !== true) fail('a golden did not mount')
+      const c = (await db.addShiny(UID, 1, 7))!
+      if (!('error' in (await mountGoldenTrophy(db, UID, c)))) fail('a species was mounted golden twice')
+      if ((await heldGolden(db, UID))?.alreadyMounted !== true) fail('a held golden of a mounted species offered the mount')
+    }
+
+    // The level rewards: paid once, the watermark is the claim.
+    {
+      const { s, db, p } = fresh()
+      p.claimed_fishing_levels = 1; p.fish_hold_tier = 0
+      const d0 = Number(p.doubloons), g0 = Number(p.gems), w0 = s.bait.worm
+      const r = await claimFishingLevelRewards(db, UID)
+      const paidD = r.granted.reduce((n, x) => n + (x.reward.doubloons ?? 0), 0)
+      const paidG = r.granted.reduce((n, x) => n + (x.reward.gems ?? 0), 0)
+      const lv = getLevelFromXP(Number(p.fishing_xp))
+      if (r.from !== 1 || r.to !== lv || p.claimed_fishing_levels !== lv) fail(`the level claim covered ${r.from}..${r.to}, not 1..${lv}`)
+      if (Number(p.doubloons) !== d0 + paidD || Number(p.gems) !== g0 + paidG) fail('the level rewards paid something other than what they listed')
+      if (paidD + paidG === 0 && s.bait.worm === w0) fail('twenty-odd levels paid nothing, so the payout went untested')
+      const again = await claimFishingLevelRewards(db, UID)
+      if (again.granted.length !== 0 || Number(p.doubloons) !== d0 + paidD) fail('the level rewards paid twice')
+    }
+
+    // The shops: the spend is the guard, owned things are not sold twice.
+    {
+      const { s, db, p } = fresh()
+      const hat = HATS.find(h => !h.crateOnly && h.cost > 0)!
+      const boat = BOATS.find(b => !b.crateOnly && !b.gate && !(b.gemPrice && b.gemPrice > 0) && b.cost > 0)!
+      p.doubloons = hat.cost - 1
+      if (!('error' in (await buyHat(db, UID, hat.id))) || p.doubloons !== hat.cost - 1 || (p.unlocked_hats ?? []).length) fail('a hat was sold on credit')
+      p.doubloons = hat.cost + boat.cost
+      if ('error' in (await buyHat(db, UID, hat.id)) || p.equipped_hat !== hat.id || p.doubloons !== boat.cost) fail('a hat was not bought and worn at its price')
+      if (!('error' in (await buyHat(db, UID, hat.id))) || p.doubloons !== boat.cost) fail('an owned hat was sold again')
+      if ('error' in (await buyBoat(db, UID, boat.id)) || p.equipped_boat !== boat.id || p.doubloons !== 0) fail('a boat was not bought and sailed at its price')
+      if (s.ledger.filter(l => l.amount < 0).length !== 2) fail('the purchases were not both on the ledger')
+      if (!('error' in (await equipHat(db, UID, 'not_a_hat')))) fail('an unowned hat was worn')
+      if ('error' in (await equipHat(db, UID, null)) || p.equipped_hat !== null) fail('a hat would not come off')
+
+      // An earned boat heals itself into the fleet once its gate is met.
+      const earned = BOATS.find(b => b.gate?.kind === 'fishing' && b.gate.level <= 20)
+      if (earned) {
+        if ('error' in (await equipBoat(db, UID, earned.id)) || !(p.unlocked_boats as string[]).includes(earned.id)) fail('an earned boat did not heal into the fleet')
+      }
+      const locked = BOATS.find(b => b.gate?.kind === 'fishing' && b.gate.level > 20)
+      if (locked && !('error' in (await equipBoat(db, UID, locked.id)))) fail('a boat above the captain\'s level was sailed')
+
+      // Pets: owned only, and the pet picks its own slot.
+      const pet = PETS[0]
+      if (!('error' in (await equipPet(db, UID, pet.id)))) fail('an unowned pet was seated')
+      p.unlocked_pets = [pet.id]
+      if ('error' in (await equipPet(db, UID, pet.id, 'bow')) || p[PET_SLOT_COLUMN[petSlot(pet)!]] !== pet.id) fail('a pet did not take its own slot')
+
+      // The special slot: owned only; the Auto Caster costs what it says, once.
+      if (!('error' in (await equipSpecialItem(db, UID, 'tide_turner')))) fail('an unowned special was equipped')
+      const caster = SPECIAL_ITEMS.find(i => i.id === 'auto_caster')!
+      const col = typeof caster.costFathoms === 'number' ? 'gauntlet_fathoms' : 'doubloons'
+      const cost = typeof caster.costFathoms === 'number' ? caster.costFathoms : caster.shopCost!
+      p.gauntlet_deepest = 999
+      p[col] = cost
+      if ('error' in (await buySpecialItem(db, UID, 'auto_caster')) || p.has_auto_caster !== true || p[col] !== 0) fail('the Auto Caster was not bought at its price')
+      p[col] = cost
+      if (!('error' in (await buySpecialItem(db, UID, 'auto_caster'))) || p[col] !== cost) fail('the Auto Caster was sold twice')
+      await setAutoFishing(db, UID, false); await setShowWaitTimer(db, UID, true)
+      if (p.auto_fishing_on !== false || p.show_wait_timer !== true) fail('the fishing preferences did not stick')
+    }
+
+    // The Completionist forge: first forge free, a re-forge charged, never on credit.
+    {
+      const { s, db, p } = fresh()
+      const effectRods = RODS.filter(r => r.tier !== COMPLETIONIST_TIER && rodHasUniqueEffect(r)).slice(0, 4).map(r => r.tier)
+      s.rods = [COMPLETIONIST_TIER, ...effectRods]
+      p.doubloons = 0
+      const first = await setCompletionistEffects(db, UID, effectRods.slice(0, 3))
+      if ('error' in first || !first.firstForge || first.charged) fail('the first forge was not free')
+      if (!('error' in (await setCompletionistEffects(db, UID, effectRods.slice(1, 4))))) fail('a re-forge went through on credit')
+      p.doubloons = REFORGE_COST
+      const re = await setCompletionistEffects(db, UID, effectRods.slice(1, 4))
+      if ('error' in re || !re.charged || p.doubloons !== 0) fail('a re-forge was not charged its cost')
+      if (!(p.unlocked_badges as string[]).includes('reforged')) fail('a full paid re-forge did not earn Reforged')
+      if (!('error' in (await setCompletionistEffects(db, UID, [99])))) fail('an unowned rod was forged in')
+    }
+    console.log('  the rest of fishing: wormhole, Tide Turner, golden sell and mount, level rewards, hats, boats, pets, specials, the forge: each paid once, guards held')
+  } finally {
+    installRng(null); installClock(null)
+  }
+}
+
+console.log(`\n  Offline fishing spike: no server on the path, casts and reels on a local save, one-shot claims, determinism, the save file, the web export and the rest of fishing ${failed ? `${failed} FAILED` : 'ok'}.`)
 if (failed) process.exit(1)
