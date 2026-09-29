@@ -11,7 +11,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { RaidDice, RaidDiceOption } from '@/lib/raidMap'
-import { rollDiceNode } from './raidMapActions'
+import { api } from '@/lib/gameApi'
 import { vibrate } from '@/lib/haptics'
 
 const GOLD = '#e8c879'
@@ -25,7 +25,7 @@ function successPct(dc: number, bonus: number): number {
   return Math.round((winningFaces / 20) * 100)
 }
 
-type RollResult = Awaited<ReturnType<typeof rollDiceNode>>
+type RollResult = Awaited<ReturnType<typeof api.raids.rollDiceNode>>
 
 export default function DiceRollNode({
   nodeId, dice, doubloons, navLevel, onResolved,
@@ -57,7 +57,7 @@ export default function DiceRollNode({
     // Spin the face while the server settles the real roll.
     tickRef.current = setInterval(() => setFace(1 + Math.floor(Math.random() * 20)), 70)
 
-    const res = await rollDiceNode(nodeId, opt.id)
+    const res = await api.raids.rollDiceNode(nodeId, opt.id)
     if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null }
 
     if ('error' in res) {

@@ -22,7 +22,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import StoryScene from '@/app/(app)/expeditions/StoryScene'
-import { markStoryNodeRead, claimMilestoneNode, claimScoutDebt } from '@/app/(app)/expeditions/raidMapActions'
+import { api } from '@/lib/gameApi'
 import { SCENE_BACKDROPS, type RaidNode } from '@/lib/raidMap'
 import { nodeSheet } from './nodeSheetActions'
 import { vibrate } from '@/lib/haptics'
@@ -77,9 +77,9 @@ export default function SeaStory({ node, cleared, intro = false, onDone, onClear
       // read turned "Pull the thread" into a full-page "That did not go
       // through" with the scene gone from under it. Caught here, it is a
       // line under the plate and the button is still there to press again.
-      let res: Awaited<ReturnType<typeof claimScoutDebt>> | Awaited<ReturnType<typeof markStoryNodeRead>>
+      let res: Awaited<ReturnType<typeof api.raids.claimScoutDebt>> | Awaited<ReturnType<typeof api.raids.markStoryNodeRead>>
       try {
-        res = node.payoff ? await claimScoutDebt(node.id) : await markStoryNodeRead(node.id)
+        res = node.payoff ? await api.raids.claimScoutDebt(node.id) : await api.raids.markStoryNodeRead(node.id)
       } catch {
         setErr('The sea did not answer. Try again in a moment.')
         return
@@ -139,8 +139,8 @@ export default function SeaStory({ node, cleared, intro = false, onDone, onClear
           ? <SceneToll cost={toll} accent={node.sceneAccent}
               onPay={() => new Promise<void>((resolve, reject) => {
                 startTransition(async () => {
-                  let res: Awaited<ReturnType<typeof claimMilestoneNode>>
-                  try { res = await claimMilestoneNode(node.id) }
+                  let res: Awaited<ReturnType<typeof api.raids.claimMilestoneNode>>
+                  try { res = await api.raids.claimMilestoneNode(node.id) }
                   catch { reject(new Error('The sea did not answer. Try again in a moment.')); return }
                   if (res && 'error' in res) { reject(new Error(res.error)); return }
                   // The purse changed under the header on every other surface.

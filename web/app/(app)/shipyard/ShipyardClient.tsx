@@ -45,7 +45,6 @@ import {
 } from '@/lib/shipyard'
 import { buyHullTier, buyLanternTier, buyHandlingTier, buyAccelTier, equipRod as equipRodAction } from './actions'
 import { upgradeFishHold } from '../fishing/holdActions'
-import { equipSecondSpecial } from '../expeditions/spoilsActions'
 import { purchaseRod, sellRod, buyReel } from '@/app/(app)/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/(app)/hooks/actions'
 import { updateCharacterColor, purchaseCharacterColor } from '@/app/(app)/u/actions'
@@ -792,7 +791,7 @@ export default function ShipyardClient(p: {
               // whether the slot is open and what may sit in it.
               const prev = special2
               setSpecial2(id)
-              void equipSecondSpecial(id).then(res => { if (!res.ok) setSpecial2(prev) })
+              void api.raids.equipSecondSpecial(id).then(res => { if (!res.ok) setSpecial2(prev) })
             }}
             onBuySpecialItem={async (itemId) => {
               const res = await api.fishing.buySpecialItem(itemId)

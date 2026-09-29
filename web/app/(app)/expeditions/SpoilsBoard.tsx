@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
 import { SPOILS_PRICE } from '@/lib/shipBerth'
-import { chooseSpoil, buySpoil, type SpoilSide } from './spoilsActions'
+import type { SpoilSide } from './spoilsActions'
+import { api } from '@/lib/gameApi'
 
 /** THE SPOILS OF THE SUNKEN HAND.
  *
@@ -187,7 +188,7 @@ export default function SpoilsBoard({ freeSide, paidSide, doubloons, onDone }: {
                   {isArmed ? (
                     <div style={{ display: 'flex', gap: 8 }}>
                       <motion.button whileTap={{ scale: 0.96 }} disabled={busy}
-                        onClick={() => run(() => picking ? chooseSpoil(s.id) : buySpoil(s.id), s.id)}
+                        onClick={() => run(() => picking ? api.raids.chooseSpoil(s.id) : api.raids.buySpoil(s.id), s.id)}
                         className="font-cinzel font-700 uppercase tracking-[0.1em]"
                         style={{
                           flex: 1, height: 40, borderRadius: 11, cursor: 'pointer', border: 'none',

@@ -23,7 +23,6 @@ import { SHIPS, MAX_SHIP_TIER, getShip, nextShip as nextHull, shipTierByName } f
 import { SHIP_SKINS, shipSkinImage, shipSkinFilter, skinsFitHull, MANOWAR_SHIP_TIER } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
-import { buyRepairKit } from './repairKitActions'
 import { api } from '@/lib/gameApi'
 import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen, markShipGuideSeen, startAbyssalConversion, claimAbyssalConversion } from './actions'
 import UltimateBuildPanel from './UltimateBuildPanel'
@@ -811,7 +810,7 @@ export default function ShipHero({
   async function doBuyKit() {
     setKitBusy(true); setKitErr(null)
     try {
-      const res = await buyRepairKit()
+      const res = await api.raids.buyRepairKit()
       if ('error' in res) { setKitErr(res.error); return }
       setKitEquipped(res.equippedRepairKit); setKitsOwned(res.ownedRepairKits)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))

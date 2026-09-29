@@ -14,11 +14,21 @@
 // In a single-player offline build the token still earns its keep: it is the
 // record of what a run was, and a replayed request is still a replayed request.
 
-import { captainData, type CaptainData, type Db, type Row } from './common'
+import type { Db, Row } from './common'
+import { crewData, type CrewData } from './crewData'
+import { flagAnomaly } from '@/lib/anomaly'
+import { logBountyEvent } from '@/lib/bountyEvents'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export interface RaidData extends CaptainData {
+// Extends the crew's store: a raid reads the party and the loadout
+// (lib/raidLoadout), and pays crew XP.
+export interface RaidData extends CrewData {
+  /** Note something implausible for review. Never blocks play. */
+  flagAnomaly(uid: string, kind: string, severity: number, detail: Record<string, unknown>): Promise<void>
+  /** One moment a bounty may count (a big hit). Never blocks play. */
+  logBountyEvent(uid: string, kind: string, value: number): Promise<void>
+
   // ── The run token ──
   /** Mint a token for a run of `kind`; its id, or null. */
   issueRunToken(uid: string, kind: string, meta?: Record<string, unknown>): Promise<string | null>
@@ -66,7 +76,14 @@ export interface RaidData extends CaptainData {
 export function raidData(admin: Db): RaidData {
   const nowIso = () => new Date().toISOString()
   return {
-    ...captainData(admin),
+    ...crewData(admin),
+
+    async flagAnomaly(uid, kind, severity, detail) {
+      await flagAnomaly(admin as never, uid, kind, severity, detail)
+    },
+    async logBountyEvent(uid, kind, value) {
+      await logBountyEvent(uid, kind, value)
+    },
 
     async issueRunToken(uid, kind, meta = {}) {
       try {

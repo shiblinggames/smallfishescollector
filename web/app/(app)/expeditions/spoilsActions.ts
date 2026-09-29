@@ -1,128 +1,37 @@
 'use server'
 
+// THE SPOILS OF THE SUNKEN HAND: one side free for beating Finn, the other for
+// SPOILS_PRICE, and the Primeval Eye's own slot (lib/core/raidMap).
+
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { raidData } from '@/lib/data/raidData'
-import { SPOILS_PRICE } from '@/lib/shipBerth'
-import { spend, grant } from '@/lib/wallet'
+import * as core from '@/lib/core/raidMap'
 
-/** THE SPOILS OF THE SUNKEN HAND.
- *
- *  Beating Finn opens ONE of two permanent slots for free; the other can be
- *  bought later for SPOILS_PRICE. Each slot accepts exactly one item, and that
- *  item only ever drops from him, so neither side is a general expansion.
- *
- *    'fishing' -> a SECOND fishing special slot   (The Primeval Eye)
- *    'nav'     -> an extra raid item mount        (The Primeval Maw)
- *
- *  The two are stored as separate columns (free / paid) rather than a pair of
- *  booleans, precisely so the free pick can never be spent twice.
- */
-export type SpoilSide = 'fishing' | 'nav'
+export type SpoilSide = import('@/lib/core/raidMap').SpoilSide
 
-const isSide = (v: unknown): v is SpoilSide => v === 'fishing' || v === 'nav'
+const db = () => raidData(createAdminClient())
 
-async function loadSpoils() {
+async function me(): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not signed in.' as const }
-
-  const admin = createAdminClient()
-  const db = raidData(admin)
-  const profile = await db.profile(user.id, 'doubloons, finn_spoil_free, finn_spoil_paid')
-  if (!profile) return { error: 'No profile.' as const }
-
-  // The whole feature hangs off having actually beaten him. Checked here rather
-  // than trusted from the client, since both actions grant permanent unlocks.
-  const cleared = await db.hasCleared(user.id, 'the_sunken_hand')
-
-  return { user, admin, db, profile, cleared: !!cleared }
-}
-
-/** Mark the spoils node itself as cleared.
- *
- *  Without this the node sat unfinished on the map forever: computeRaidMap
- *  reads raid_node_progress.cleared, and choosing a spoil wrote only the
- *  finn_spoil_* column — so the last node of the campaign kept its unclaimed
- *  chrome no matter what you took off the wreck. Same persistence every other
- *  interactive node uses (milestones, story reads, the berth). */
-async function markSpoilsNodeCleared(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  const db = raidData(admin)
-  const row = await db.profile(userId, 'raid_node_progress')
-  const prog = (row?.raid_node_progress as { cleared?: string[] } | null) ?? {}
-  if ((prog.cleared ?? []).includes('spoils_of_the_hand')) return
-  await db.updateProfile(userId, { raid_node_progress: { ...prog, cleared: [...new Set([...(prog.cleared ?? []), 'spoils_of_the_hand'])] } })
+  return user?.id ?? null
 }
 
 /** Take one side FREE. Only ever succeeds once. */
 export async function chooseSpoil(side: unknown): Promise<{ ok: boolean; error?: string }> {
-  if (!isSide(side)) return { ok: false, error: 'Unknown spoil.' }
-  const ctx = await loadSpoils()
-  if ('error' in ctx) return { ok: false, error: ctx.error }
-  const { user, admin, db, profile, cleared } = ctx
-
-  if (!cleared) return { ok: false, error: 'Put him down first.' }
-  if (profile.finn_spoil_free) return { ok: false, error: 'You already took one off his wreck.' }
-
-  // Conditional write on the column still being null guards a double-tap
-  // handing out both sides for nothing.
-  const updated = await db.updateProfileIf(user.id, { finn_spoil_free: side }, [{ col: 'finn_spoil_free', is: null }])
-  if (!updated) return { ok: false, error: 'You already took one off his wreck.' }
-  await markSpoilsNodeCleared(admin, user.id)
-  return { ok: true }
+  const uid = await me()
+  return uid ? core.chooseSpoil(db(), uid, side) : { ok: false, error: 'Not signed in.' }
 }
 
-/** Buy the OTHER side. Must differ from the free pick, and costs SPOILS_PRICE. */
+/** Buy the OTHER side. */
 export async function buySpoil(side: unknown): Promise<{ ok: boolean; error?: string; doubloons?: number }> {
-  if (!isSide(side)) return { ok: false, error: 'Unknown spoil.' }
-  const ctx = await loadSpoils()
-  if ('error' in ctx) return { ok: false, error: ctx.error }
-  const { user, admin, db, profile, cleared } = ctx
-
-  if (!cleared) return { ok: false, error: 'Put him down first.' }
-  if (!profile.finn_spoil_free) return { ok: false, error: 'Take your free pick first.' }
-  if (profile.finn_spoil_free === side) return { ok: false, error: 'You already carry that one.' }
-  if (profile.finn_spoil_paid) return { ok: false, error: 'You already bought the other.' }
-
-  // The spend is the guard; a twin that bought first gets this one refunded.
-  const newDoubloons = await spend(admin, user.id, 'doubloons', SPOILS_PRICE)
-  if (newDoubloons == null) {
-    return { ok: false, error: `You need ${SPOILS_PRICE.toLocaleString()} doubloons.` }
-  }
-  const updated = await db.updateProfileIf(user.id, { finn_spoil_paid: side }, [{ col: 'finn_spoil_paid', is: null }])
-  if (!updated) {
-    await grant(admin, user.id, 'doubloons', SPOILS_PRICE)
-    return { ok: false, error: 'You already bought the other.' }
-  }
-  await markSpoilsNodeCleared(admin, user.id)
-  return { ok: true, doubloons: newDoubloons }
+  const uid = await me()
+  return uid ? core.buySpoil(db(), uid, side) : { ok: false, error: 'Not signed in.' }
 }
 
-/** Seat (or clear) The Primeval Eye in the SECOND fishing special slot.
- *  Validated server-side: the slot must be unlocked, the item must be owned,
- *  and nothing else is allowed in there. */
+/** Seat (or clear) The Primeval Eye in the second fishing special slot. */
 export async function equipSecondSpecial(itemId: unknown): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { ok: false, error: 'Not signed in.' }
-
-  const admin = createAdminClient()
-  const db = raidData(admin)
-  const profile = await db.profile(user.id, 'finn_spoil_free, finn_spoil_paid, has_anglers_patience')
-  if (!profile) return { ok: false, error: 'No profile.' }
-
-  const hasSlot = profile.finn_spoil_free === 'fishing' || profile.finn_spoil_paid === 'fishing'
-  if (!hasSlot) return { ok: false, error: 'You have not opened that slot.' }
-
-  if (itemId === null) {
-    await db.updateProfile(user.id, { equipped_special_2: null })
-    return { ok: true }
-  }
-  // The slot takes exactly ONE item, by design. This is the enforcement point:
-  // without it the column is advisory and any special could be seated here.
-  if (itemId !== 'anglers_patience') return { ok: false, error: 'Only his eye seats in that slot.' }
-  if (profile.has_anglers_patience !== true) return { ok: false, error: "You do not carry The Primeval Eye." }
-
-  await db.updateProfile(user.id, { equipped_special_2: 'anglers_patience' })
-  return { ok: true }
+  const uid = await me()
+  return uid ? core.equipSecondSpecial(db(), uid, itemId) : { ok: false, error: 'Not signed in.' }
 }

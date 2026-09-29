@@ -6,7 +6,9 @@
 // kind of thing we are trying to stop doing.)
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { raidData } from './data/raidData'
-import { RAID_MAP } from '@/lib/raidMap'
+import { buildClearedSetVia } from './raidCleared'
+
+export { buildClearedSetVia } from './raidCleared'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -21,17 +23,5 @@ export async function buildClearedSet(
   userId: string,
   profile: { has_completed_practice_raid?: boolean | null; raid_node_progress?: unknown },
 ): Promise<Set<string>> {
-  const cleared = new Set<string>()
-  if (profile.has_completed_practice_raid) cleared.add('skirmish')
-
-  const doneRaidIds = new Set(await raidData(admin).clearedRaidIds(userId))
-  for (const node of RAID_MAP) {
-    if (node.type === 'raid' && node.raidId && doneRaidIds.has(node.raidId)) {
-      cleared.add(node.id)
-    }
-  }
-
-  const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
-  for (const id of prog.cleared ?? []) cleared.add(id)
-  return cleared
+  return buildClearedSetVia(raidData(admin), userId, profile)
 }

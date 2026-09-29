@@ -907,6 +907,29 @@ In order. Each step is worth doing even if the port never happens.
    - `scripts/check-offline-casino.mts` (in `npm run check`): 400 spins, 300 roulette spins and
      500 blackjack hands, each proving every chip is where the nets say; production probe as
      catman (reads and refusals only).
+   **RAIDS AND THE CAMPAIGN MAP OFFLINE, 2026-09-29.** `lib/core/raids`: the run token,
+   each round's kill pay, the clear, the crate, the biggest hit, repair kits, the three raid
+   tutorials. `lib/core/raidMap`: the map view and every node type (milestones, story reads and
+   legendary gates, puzzles, the Quartermaster's pick, the muster, events, forks, dice, the DPS
+   gate, the scout's debt, class picks), the refit, and the Sunken Hand's spoils. Eight action
+   files are thin wrappers; `api.raids` carries them to RaidGame, RaidCombat, the practice raid,
+   the dice/DPS/refit/spoils panels, the ship screen's repair kit, the sea's story and node
+   sheets, the chart and the shipyard.
+   - RaidData now extends CrewData (the party, the loadout, crew XP) plus `flagAnomaly` and
+     `logBountyEvent`. Store-agnostic helpers: `lib/raidCleared.buildClearedSetVia` (the web's
+     `lib/raidProgress.buildClearedSet` wraps it); `lib/ultimateBuild` loads the Supabase store
+     only inside its web wrapper, so the loadout loader stays server-free.
+   - `lib/data/local/raidLocal`: the run token keeps every one-shot the web's `run_tokens` row
+     has (`claim_run_token_round`, `bump_run_token_kill`, the clear, the loot, the spend) and its
+     six-hour life; offline the records (`raid_records`, the fastest clear) are the captain's
+     own. SAVE FILE v7 (run tokens of the last week; clears with their times, `clears` kept as
+     the list); a v6 file keeps its clears, untimed.
+   - `scripts/check-offline-raids.mts` (in `npm run check`) walks the WHOLE campaign offline:
+     all 64 nodes, raids cleared through the token path, each node once. Production probe as
+     catman (reads, refusals that flag nothing, one token minted and spent).
+   - NOT YET: the ship screen's own actions (`expeditions/actions`: the forge, the Abyssal
+     Accelerator, the ultimate build, the berth and armory, ship skins, the saved loadout) are
+     the next stage.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):

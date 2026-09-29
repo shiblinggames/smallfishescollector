@@ -1,384 +1,64 @@
 'use server'
 
-import { inCaptainsWater } from '@/lib/captainWater'
+// A raid run's server actions: the token, the clear, the skirmish, the biggest
+// hit, the crate. The rules and the token's one-shot guards run in
+// lib/core/raids; these check the session and hand the core the Supabase store.
+//
+// RaidCrewMember, RaidPlayerStats and the loadout loader live in lib/raidLoadout
+// (lib/raidPlayerStats wraps it for the web). As an export of this 'use server'
+// file the loader was a public endpoint that read any captain's loadout.
+//
+// NO REPAIR BILL: sinking in a raid used to owe a tier-scaled fee. The world is
+// the penalty now: going down puts you back at the Gunwharf with the whole sail
+// to make again, and no paywall stands between a captain and the fight they lost.
+
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { raidDamageProfile } from '@/lib/expeditions'
-import { getLevelFromXP } from '@/lib/expeditionLevel'
-import { computeRaidMap } from '@/lib/raidMap'
-import { buildClearedSet } from '@/lib/raidProgress'
-import { getRaidConfigById, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
-import { flagAnomaly } from '@/lib/anomaly'
-import { issueRunToken, markRunCleared, markRunLooted } from '@/lib/runToken'
-import { logBountyEvent } from '@/lib/bountyEvents'
-import { RAID_DAMAGE_MIN } from '@/lib/bounties'
-import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
-import { grant, arrayAdd } from '@/lib/wallet'
-import { rollRaidCrate, clearTimes, MIN_PLAUSIBLE_CLEAR_MS } from '@/lib/raidRules'
 import { raidData } from '@/lib/data/raidData'
+import * as core from '@/lib/core/raids'
 
-// RaidCrewMember, RaidPlayerStats and getRaidPlayerStats live in
-// lib/raidPlayerStats.ts. As an export of this 'use server' file the loader was
-// a public endpoint that read any captain's loadout by user id.
+export type RaidClearTimes = import('@/lib/core/raids').RaidClearTimes
+export type RaidLootResult = import('@/lib/core/raids').RaidLootResult
 
-// ── NO REPAIR BILL ──────────────────────────────────────────────────────────
-//
-// Sinking in a raid used to owe a tier-scaled doubloon fee, and until it was
-// paid every raid route redirected you to /expeditions and every boss card
-// refused. `reportRaidSink` and `repairShip` lived here; both are gone, and so
-// is the `raid_repair_owed` column's last reader.
-//
-// THE WORLD IS THE PENALTY NOW. The campaign is not a menu of raids any more,
-// it is water you sail: a boss is eight thousand pixels out through a strait,
-// and going down puts you back at the Gunwharf with all of that to sail again.
-// That costs the one thing a doubloon fee never did — the trip — and it does it
-// without a paywall between a captain and the fight they just lost, which is
-// the exact moment a game should be asking them to try again rather than to
-// go and grind.
+const db = () => raidData(createAdminClient())
 
-/** Clear-time summary returned by recordRaidClear for the victory screen. */
-export interface RaidClearTimes {
-  yourBestMs: number
-  /** Fastest non-admin clear of this raid (null if none). */
-  globalBestMs: number | null
-  globalBestUsername: string
-  isPersonalBest: boolean
-  isGlobalBest: boolean
-}
-
-/** Record a raid clear the MOMENT the boss dies — independent of the
- *  loot-claim flow. Previously the raid_completions insert was bundled
- *  inside claimRaidLoot(); any failure (network blip, player closing
- *  the tab on the victory screen, etc.) silently dropped the clear and
- *  the next story node stayed locked. Fire-and-forget for the guarded
- *  fallback callers; the boss-death caller captures the returned times to
- *  show "this run vs your best vs global best" on the victory screen.
- *  Previous bests are read BEFORE the insert so a new record can be flagged. */
-/** Mint a run token at raid START. Every reward call of the run (awardRaidKill,
- *  recordRaidClear, claimRaidLoot) REQUIRES it: kills pay once per round of the
- *  token's own raid, the clear banks once, and the crate opens once after the
- *  clear. The raidId is baked in here so nothing on the request path can swap
- *  the raid. Returns { token: null } on any problem; the client awaits this at
- *  its first reward call rather than racing it. */
-export async function startRaidRun(raidId: string): Promise<{ token: string | null }> {
+async function me(): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { token: null }
-  const config = getRaidConfigById(raidId)
-  if (!config) return { token: null }
-  const admin = createAdminClient()
-  const maxKills = config.sequence.length * 3 + 15
-  const token = await issueRunToken(admin, user.id, 'raid', { raidId, maxKills })
-  return { token }
+  return user?.id ?? null
 }
 
-/**
- * Record a clear. TOKEN-BOUND, which it was not.
- *
- * The doc on startRaidRun above says both reward calls "reference it so a run's
- * rewards are bounded to its real mob count and its clear can't be replayed".
- * awardRaidKill does. This one never took a token at all, so it inserted a
- * raid_completions row for whatever raidId and time it was handed, as many times
- * as it was called.
- *
- * That row is not cosmetic. It is the cleared set the raid map unlocks nodes
- * from, the meter every raid bounty counts, and the speed record. Forging it
- * meant unlocking the campaign, completing orders and taking the global record
- * without fighting anything. Reported by a tester who replayed exactly this
- * endpoint.
- *
- * The token is consumed here, so a run yields ONE clear. A replay finds it spent
- * and is refused. The raidId is checked against the token's own meta, so a token
- * minted for an easy raid cannot bank a clear of a hard one.
- *
- * REQUIRED now. The tolerant no-token path was the gap a forged clear walked
- * through; every client sends the token, so a call without one is refused and
- * flagged.
- */
+/** Mint a run token at raid START; every reward call of the run requires it. */
+export async function startRaidRun(raidId: string): Promise<{ token: string | null }> {
+  const uid = await me()
+  return uid ? core.startRaidRun(db(), uid, raidId) : { token: null }
+}
+
+/** Record a clear the moment the boss dies (token-bound, once per run). */
 export async function recordRaidClear(raidId: string, elapsedMs: number, token?: string | null): Promise<RaidClearTimes | null> {
   if (!raidId || !Number.isFinite(elapsedMs) || elapsedMs <= 0) return null
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  const admin = createAdminClient()
-
-  // A clear cannot be faster than the shortest honest fight. Anything under this
-  // is a forged time reaching for the global record, not a good run.
-  if (elapsedMs < MIN_PLAUSIBLE_CLEAR_MS) {
-    await flagAnomaly(admin, user.id, 'implausible:raidClearTime', 3, { raidId, elapsedMs })
-    return null
-  }
-
-  if (!token) {
-    await flagAnomaly(admin, user.id, 'run_token:recordRaidClear_missing', 3, { raidId, elapsedMs })
-    return null
-  }
-  // The raid must match the token's BEFORE the clear is banked, or a token
-  // minted for an easy raid could spend its one clear on a hard one.
-  const db = raidData(admin)
-  const tokenRaid = ((await db.runTokenMeta(user.id, 'raid', token)) as { raidId?: string } | null)?.raidId
-  if (!tokenRaid || tokenRaid !== raidId) {
-    await flagAnomaly(admin, user.id, 'mismatch:recordRaidClear', 3, { raidId, tokenRaid: tokenRaid ?? null })
-    return null
-  }
-  // markRunCleared, NOT consumeRunToken: the boss-kill award fires after this
-  // and needs the token still open (claim_run_token_round requires
-  // consumed_at IS NULL). Consuming here would take every honest player's
-  // boss XP and gold along with the replay.
-  const spent = await markRunCleared(admin, user.id, 'raid', token)
-  if (!spent) {
-    await flagAnomaly(admin, user.id, 'replay:recordRaidClear', 3, { raidId, elapsedMs })
-    return null
-  }
-
-  const ms = Math.floor(elapsedMs)
-
-  // Who am I (username + admin flag — admins don't count toward the global record).
-  const me = await db.profile(user.id, 'username, is_admin')
-  const myName = (me?.username as string | null) ?? ''
-  const iAmAdmin = me?.is_admin === true
-
-  // Previous bests BEFORE inserting this run. The global one is the fastest
-  // NON-admin clear.
-  const [prevMyBest, prevGlobal] = await Promise.all([db.myBestClear(user.id, raidId), db.fastestClear(raidId)])
-
-  // Insert this run.
-  await db.addClear(user.id, raidId, ms)
-
-  // The records (an admin's clear never takes the global one): lib/raidRules clearTimes.
-  return clearTimes(ms, prevMyBest, prevGlobal, { username: myName, isAdmin: iAmAdmin })
+  const uid = await me()
+  return uid ? core.recordRaidClear(db(), uid, raidId, elapsedMs, token) : null
 }
 
-/**
- * Record the Reef Skirmish clear.
- *
- * The skirmish runs on the raid screen but is not a raid (see
- * BossRaidConfig.skirmish), and its clear must not go into raid_completions:
- * that table is the raid records board, the raid bounty meters and the "clear
- * any raid in under a minute" badge, and one common Reef Raider -- repeatable,
- * over in a handful of turns -- would walk through all three. It also sits
- * under a 20-second plausibility floor that an honest skirmish can duck under.
- *
- * has_completed_practice_raid is the flag buildClearedSet has always read the
- * 'skirmish' node off, so writing it opens the next campaign node exactly the
- * way every other node opens. Idempotent, grants nothing, and the same flag the
- * old practice raid set -- anyone who cleared that keeps their node.
- */
+/** Record the Reef Skirmish clear (opens the next node; not a raid clear). */
 export async function recordSkirmishClear(): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  const admin = createAdminClient()
-  await raidData(admin).updateProfile(user.id, { has_completed_practice_raid: true })
+  const uid = await me()
+  if (uid) await core.recordSkirmishClear(db(), uid)
 }
 
-/** Record a single hit the player landed, keeping profiles.highest_raid_damage
- *  as the all-time max. Fired per new run-best from RaidGame (win OR loss), so
- *  "Biggest Hit" reflects the largest blow ever dealt, not just on clears.
- *  Atomic via the bump_raid_damage() greatest() update — safe under races. */
+/** Record a hit for Biggest Hit (held to the loadout) and the damage bounties. */
 export async function recordRaidHit(dmg: number): Promise<void> {
   if (!Number.isFinite(dmg) || dmg <= 0) return
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  const admin = createAdminClient()
-  const hit = Math.floor(dmg)
-
-  // A DAMAGE BOUNTY is a "did you do it today" question, and highest_raid_damage
-  // cannot answer it: it is a high-water mark, so a captain whose record already
-  // stands at 700 would never register a 300 again. It gets its own event row.
-  //
-  // Logged from the same clamp the record uses, so a forged number cannot buy
-  // gems. Below the smallest damage bounty this costs nothing at all, which is
-  // every ordinary shot in the game (the median raid best is 36).
-  if (hit >= RAID_DAMAGE_MIN) {
-    const s = await getRaidPlayerStats(user.id)
-    const { critMax } = raidDamageProfile(s.totalPower, s.shipMinDamage, s.raidMods?.damagePct ?? 0)
-    let ceil = critMax * (s.classDamageMult || 1)
-    if (s.manowarAugment) ceil *= s.manowarAugment.megaMult
-    void logBountyEvent(user.id, 'raid_hit', Math.min(hit, Math.max(500, Math.ceil(ceil)) * 7))
-  }
-
-  // Cheap backstop first: only a NEW personal best does any work (bump_raid_damage
-  // is a greatest() no-op otherwise), so legit hits never pay for the stats read.
-  const db = raidData(admin)
-  const prof = await db.profile(user.id, 'highest_raid_damage')
-  if (hit <= Number(prof?.highest_raid_damage ?? 0)) return
-
-  // "Biggest Hit" is client-reported (combat is client-side), so cap it to what
-  // THIS player's loadout could actually crit for. Recompute the real damage
-  // profile server-side and allow generous headroom for barrage sub-hits, mid-raid
-  // tide/affix damage buffs, and Fallout burn — a legit spike is never shaved, but
-  // a forged 300k on a build that tops out in the low thousands gets clamped. Badge
-  // gates top out at 500, well under any real raider's ceiling.
-  const stats = await getRaidPlayerStats(user.id)
-  const { critMax } = raidDamageProfile(stats.totalPower, stats.shipMinDamage, stats.raidMods?.damagePct ?? 0)
-  let ceiling = critMax * (stats.classDamageMult || 1)
-  if (stats.manowarAugment) ceiling *= stats.manowarAugment.megaMult
-  const base = Math.max(500, Math.ceil(ceiling))
-
-  // FLAG and CLAMP are decoupled so a legit stacked hit is never clipped. The
-  // reported hit can carry transient in-run buffs the base profile can't see —
-  // damage tides (~1.16-1.25 each) stacking with a mega crit and a frozen-brittle
-  // double can plausibly reach ~5x base. So:
-  //  - flag at 3x   → tells us about anything suspicious (sev 2, might be a real
-  //                   big stack; sev 3 once it's past the clamp = can't be real);
-  //  - clamp at 7x  → safely above the max legit stack, so a genuine peak is never
-  //                   cut, while an absurd forgery is still bounded.
-  // "Biggest Hit" is vanity (no economy/gating; badges cap at 500), so we err hard
-  // toward never clipping a real brag and rely on the flag to catch cheats.
-  const flagLine     = base * 3
-  const clampCeiling = base * 7
-  if (hit > flagLine) {
-    await flagAnomaly(admin, user.id, 'cap_trip:recordRaidHit', hit > clampCeiling ? 3 : 2,
-      { hit, flagLine, clampCeiling, totalPower: stats.totalPower, hasUltimate: !!stats.manowarAugment })
-  }
-
-  await db.recordRaidHit(user.id, Math.min(hit, clampCeiling))
+  const uid = await me()
+  if (uid) await core.recordRaidHit(db(), uid, dmg)
 }
 
-/** What a crate paid, for the reveal. */
-export interface RaidLootResult {
-  newShipSkins: string[]; newDoubloonTotal: number; newRaidItems: string[]
-  /** The currency row the SERVER drew, so the reveal can land the reel on the
-   *  thing that was actually paid instead of a row the client picked alone. */
-  currencyId: string | null
-  gemsGranted: number
-  crateDoubloons: number
-  /** The unique ids the SERVER rolled into this crate. The reveal shows these,
-   *  not the client's own preview roll. */
-  itemIds: string[]
-}
-
-function noLoot(): RaidLootResult {
-  return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [], currencyId: null, gemsGranted: 0, crateDoubloons: 0, itemIds: [] }
-}
-
-/**
- * Open the crate of a CLEARED raid run. One crate per real clear.
- *
- * ── WHAT CHANGED (2026-09-25 audit) ─────────────────────────────────────────
- * This took a raidId and a list of unique ids and paid them, as often as it
- * was called, from nothing more than a reachable map node. A forger could name
- * every unique in a raid's table and farm it without fighting.
- *
- * Now it takes the run TOKEN. The token must have been cleared by
- * recordRaidClear (the boss really died on this run, past the time floor) and
- * not yet looted; stamping looted_at is the one-shot. The raid comes off the
- * token, and the uniques are ROLLED HERE from that raid's table with the same
- * rollCrate, owned set, Fortune and Kingpin's Cut the client's preview uses, so
- * the odds are exactly the ones the combat sheet shows.
- *
- * The coin figure still arrives from the client (tides add to it mid-run where
- * the server cannot see) and is clamped to MAX_CRATE_BASE_DOUBLOONS, now once
- * per real clear rather than once per request.
- */
+/** Open the crate of a CLEARED run, once. */
 export async function claimRaidLoot(
   baseDoubloons: number,
   token: string | null | undefined,
 ): Promise<RaidLootResult> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return noLoot()
-  const admin = createAdminClient()
-
-  if (!token) {
-    await flagAnomaly(admin, user.id, 'run_token:claimRaidLoot_missing', 3, {})
-    return noLoot()
-  }
-  const db = raidData(admin)
-  const raidId = ((await db.runTokenMeta(user.id, 'raid', token)) as { raidId?: string } | null)?.raidId ?? ''
-  const config = getRaidConfigById(raidId)
-  // A skirmish has no crate (BossRaidConfig.skirmish), so it has nothing to open.
-  if (!config || config.skirmish) return noLoot()
-
-  const profile = await db.profile(user.id, 'doubloons, equipped_ship_skin, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp, ancient_catches, is_premium, premium_expires_at')
-  if (!profile) return noLoot()
-
-  // REACHABLE? You may only open a crate from a raid whose map node is actually
-  // open to you. This is the check that protects the Quartermaster's Ghost: his
-  // six Cache items gate forge recipes. The ancients count rides along so a
-  // requiresAncients node (One Last Ride) is unreachable here too.
-  const cleared = await buildClearedSet(admin, user.id, profile)
-  const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
-  const ancientsCaught = ((profile.ancient_catches as number[] | null) ?? []).length
-  const nodeView = computeRaidMap(cleared, profile.doubloons ?? 0, navLevel, profile.is_admin === true, ancientsCaught, { captain: inCaptainsWater(profile) })
-    .find(v => v.node.raidId === raidId)
-  if (!nodeView || nodeView.status === 'locked') return noLoot()
-
-  // ONE CRATE PER CLEAR. Stamped before anything is rolled or paid; a replay,
-  // a concurrent twin, or a token whose boss never died gets nothing.
-  if (!(await markRunLooted(admin, user.id, 'raid', token))) {
-    await flagAnomaly(admin, user.id, 'replay:claimRaidLoot', 3, { raidId })
-    return noLoot()
-  }
-
-  // THE CRATE, rolled here with the inputs the combat sheet's preview uses
-  // (owned uniques drop out, Fortune and Kingpin's Cut lift the odds), the coin
-  // clamped to MAX_CRATE_BASE_DOUBLOONS and class-scaled, and the currency row
-  // drawn: a gem row pays gems INSTEAD of the coin. lib/raidRules rollRaidCrate.
-  const crate = rollRaidCrate({
-    raidId, config, stats: await getRaidPlayerStats(user.id), baseDoubloons,
-    shipClasses: (profile?.ship_classes as Record<string, string> | null) ?? {},
-  })
-  const { itemIds, currencyId, currencyGems, crateDoubloons } = crate
-  if (crate.capTripped) {
-    await flagAnomaly(admin, user.id, 'cap_trip:claimRaidLoot_doubloons',
-      crate.claimedBase > MAX_CRATE_BASE_DOUBLOONS * 5 ? 3 : 2,
-      { raidId, claimed: crate.claimedBase, ceiling: MAX_CRATE_BASE_DOUBLOONS })
-  }
-
-  const doubloons = crateDoubloons + crate.itemDoubloons
-  const gems      = currencyGems + crate.itemGems
-  const newShipSkins: string[] = []
-  const newRaidItems: string[] = []
-  let grantedSpecial: string | null = null   // a has_* column to flip, if a special item dropped
-  let equippedSpecial2: string | null = null // Finn's fishing spoil seats itself on drop
-  let seatJaw = false
-
-  for (const id of itemIds) {
-    const g = ITEM_GRANTS[id]
-    if (!g) continue
-    // Owned things are added once, in place: a concurrent forge or purchase
-    // writing the same array is never overwritten by a stale copy.
-    if (g.shipSkin && await arrayAdd(admin, user.id, 'ship_skins', g.shipSkin)) newShipSkins.push(g.shipSkin)
-    if (g.raidItem && await arrayAdd(admin, user.id, 'raid_items', g.raidItem)) {
-      newRaidItems.push(g.raidItem)
-      // Finn's spoils SEAT THEMSELVES. They only charge while equipped, and
-      // they fit nowhere but their own dedicated slot, so leaving one in the
-      // hold does nothing for anybody. Straight onto the ship.
-      if (g.raidItem === 'borrowed_jaw') seatJaw = true
-    }
-    // Special (fishing) items are stored one boolean column per item, the same
-    // convention as has_tide_turner. Without this branch The Primeval Eye
-    // would roll, be reported as looted, and grant absolutely nothing.
-    if (g.specialItem === 'anglers_patience') {
-      grantedSpecial = 'has_anglers_patience'
-      equippedSpecial2 = 'anglers_patience'
-    }
-  }
-
-  // raid_completions row is inserted by recordRaidClear() the moment the boss
-  // dies (see RaidGame handleEnemyDefeated). Keeping the clear independent of
-  // the loot grant means a failed loot persist doesn't strand the player on a
-  // still-locked next node.
-  const [newDoubloonTotal] = await Promise.all([
-    grant(admin, user.id, 'doubloons', doubloons),
-    gems > 0 ? grant(admin, user.id, 'gems', gems) : null,
-    seatJaw ? arrayAdd(admin, user.id, 'equipped_raid_items', 'borrowed_jaw') : null,
-    grantedSpecial ? db.updateProfile(user.id, { [grantedSpecial]: true, ...(equippedSpecial2 ? { equipped_special_2: equippedSpecial2 } : {}) }) : null,
-    // A first skin wears itself, only if nothing is worn (conditional, so a
-    // skin equipped meanwhile is never replaced).
-    newShipSkins.length > 0 && !profile.equipped_ship_skin ? db.wearFirstSkin(user.id, newShipSkins[0]) : null,
-  ])
-
-  return {
-    newShipSkins,
-    newDoubloonTotal,
-    newRaidItems,
-    currencyId,
-    gemsGranted: currencyGems,
-    crateDoubloons,
-    itemIds,
-  }
+  const uid = await me()
+  return uid ? core.claimRaidLoot(db(), uid, baseDoubloons, token) : core.noLoot()
 }

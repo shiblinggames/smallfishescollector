@@ -81,7 +81,6 @@ import {
   type Bay, type Encounter, type Cache, type Beat,
 } from './raidWaters'
 import { RAID_MAP, RAID_CHAPTERS, chapterForNode, computeRaidMap, type RaidNode, type RaidChapter } from '@/lib/raidMap'
-import { markChapterUnlockSeen } from '@/app/(app)/expeditions/raidMapActions'
 import { markUltimateUnlockSeen } from '@/app/(app)/expeditions/actions'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
@@ -13175,7 +13174,7 @@ hullRef={hullRefFor(t.key)} />
             const id = celebratingChapter.id
             setSeenChapters(prev => [...prev, id])
             setCelebratingChapter(null)
-            markChapterUnlockSeen(id).catch(() => {})
+            api.raids.markChapterUnlockSeen(id).catch(() => {})
           }} />
       )}
 

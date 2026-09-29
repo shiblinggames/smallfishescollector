@@ -8,7 +8,6 @@
 // cron is needed (mirrors the pending-sales on-read settlement pattern).
 
 import type { createAdminClient } from '@/lib/supabase/admin'
-import { raidData } from './data/raidData'
 import { parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
 import { clockNow } from './clock'
 
@@ -21,6 +20,10 @@ export async function settleUltimateBuild(
   active: string | null,
   buildRaw: unknown,
 ): Promise<{ active: string | null; build: ShipAugmentBuild | null }> {
+  // The Supabase store is loaded here and only here, so the store-agnostic
+  // settleUltimateBuildVia below (which the offline loadout uses) never pulls
+  // the server into the offline build.
+  const { raidData } = await import('./data/raidData')
   return settleUltimateBuildVia(raidData(admin), userId, active, buildRaw)
 }
 

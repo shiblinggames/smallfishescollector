@@ -26,7 +26,7 @@ import {
   offeredShipClasses, offeredShipClassIds, getShipClass, aggregateShipClasses,
   shipRefitCost, SHIP_REFIT_COST, SHIP_CLASS_CHAPTER_ORDER, type ShipClassDef, type ShipClassId,
 } from '@/lib/shipClasses'
-import { refitShipClasses } from './raidMapActions'
+import { api } from '@/lib/gameApi'
 
 const ACCENT = '#c084fc'
 
@@ -144,7 +144,7 @@ export default function ShipRefitPanel({ picks, refitsUsed, doubloons, onClose }
 
   function commit() {
     setErr(''); setBusy(true)
-    refitShipClasses(chosen).then(res => {
+    api.raids.refitShipClasses(chosen).then(res => {
       setBusy(false)
       if ('error' in res) { setErr(res.error); return }
       vibrate([22, 50, 22, 50, 40])

@@ -64,6 +64,17 @@ export type LocalSave = {
   bountyEvents: { kind: string; value: number; at: string }[]
   // ── Save v6 (the Den) ──
   casino: LocalCasino
+  // ── Save v7 (raids) ──
+  /** Run tokens of the last week (what bounds a raid's rewards). */
+  raidTokens: LocalRunToken[]
+  /** Every raid clear with its time; `clears` stays the list of raids cleared. */
+  raidClears: { raid_id: string; ms: number | null; at: string }[]
+}
+
+export type LocalRunToken = {
+  id: string; kind: string; meta: Record<string, unknown> | null; kills: number
+  issued_at: string; consumed_at: string | null; expires_at: string
+  cleared_at: string | null; paid_rounds: number[]; looted_at: string | null
 }
 
 export type LocalCasino = {

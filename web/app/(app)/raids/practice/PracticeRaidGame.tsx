@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { awardPracticeKill, startPracticeRun } from './practiceActions'
 import { PRACTICE_KILL_REWARDS } from '@/lib/practiceRewards'
-import { markRaidTutorialSeen } from '../tutorialActions'
+import { api } from '@/lib/gameApi'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import { getShipSkin, shipSkinFilter } from '@/lib/shipSkins'
@@ -527,7 +527,7 @@ export default function PracticeRaidGame({
     setTourStep(0)
     // Persist so the tour doesn't reappear next session. (Previously the
     // local-only flag meant new fishing players saw it every load.)
-    startTransition(() => { void markRaidTutorialSeen() })
+    startTransition(() => { void api.raids.markRaidTutorialSeen() })
   }
 
   // Turn-based: no "OPEN FIRE" gate; auto-enter combat on mount.

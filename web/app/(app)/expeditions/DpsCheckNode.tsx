@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { RaidDpsCheck } from '@/lib/raidMap'
-import { resolveDpsCheck, getDpsCheckPreview } from './raidMapActions'
+import { api } from '@/lib/gameApi'
 import { vibrate } from '@/lib/haptics'
 
 const GOLD = '#e8c879'
@@ -16,8 +16,8 @@ const GREEN = '#4ade80'
 const RED = '#f87171'
 const ORANGE = '#fb923c'
 
-type ShotResult = Extract<Awaited<ReturnType<typeof resolveDpsCheck>>, { outcome: 'passed' | 'failed' }>
-type Preview = Extract<Awaited<ReturnType<typeof getDpsCheckPreview>>, { passChance: number }>
+type ShotResult = Extract<Awaited<ReturnType<typeof api.raids.resolveDpsCheck>>, { outcome: 'passed' | 'failed' }>
+type Preview = Extract<Awaited<ReturnType<typeof api.raids.getDpsCheckPreview>>, { passChance: number }>
 
 // Color + label for a pass chance, matching the dice node's risk pills.
 function oddsTier(pct: number): { label: string; color: string } {
@@ -56,7 +56,7 @@ export default function DpsCheckNode({
   const timersRef = useRef<number[]>([])
 
   useEffect(() => {
-    getDpsCheckPreview(nodeId).then(p => { if (!('error' in p)) setPreview(p) }).catch(() => {})
+    api.raids.getDpsCheckPreview(nodeId).then(p => { if (!('error' in p)) setPreview(p) }).catch(() => {})
     return () => { timersRef.current.forEach(clearTimeout) }
   }, [nodeId])
 
@@ -75,7 +75,7 @@ export default function DpsCheckNode({
     const spin = () => { if (!spinning) return; setRollDisplay(rnd()); timersRef.current.push(window.setTimeout(spin, 55)) }
     spin()
 
-    const res = await resolveDpsCheck(nodeId, 'shot')
+    const res = await api.raids.resolveDpsCheck(nodeId, 'shot')
     spinning = false
     if ('error' in res) { setPending(false); setErr(res.error); setPhase('choose'); return }
     if (res.outcome === 'paid') { onResolved(); return } // shouldn't happen for a shot
@@ -109,7 +109,7 @@ export default function DpsCheckNode({
     if (pending) return
     setErr(null)
     setPending(true)
-    const res = await resolveDpsCheck(nodeId, 'pay')
+    const res = await api.raids.resolveDpsCheck(nodeId, 'pay')
     setPending(false)
     if ('error' in res) { setErr(res.error); return }
     onActed?.()

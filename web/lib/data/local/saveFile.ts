@@ -25,7 +25,7 @@ import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 6
+export const LOCAL_SAVE_VERSION = 7
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -64,6 +64,9 @@ const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
   4: f => ({ ...f, version: 5, save: { ...f.save, depthBests: {}, gauntletRuns: [], bountyEvents: [] } }),
   // v6 (2026-09-29): the Den (buy-ins, the open hand, spins, the captain's pot).
   5: f => ({ ...f, version: 6, save: { ...f.save, casino: freshCasino() } }),
+  // v7 (2026-09-29): raids. Run tokens, and clears with their times (the clears
+  // already on record keep their raid, with no time).
+  6: f => ({ ...f, version: 7, save: { ...f.save, raidTokens: [], raidClears: (f.save.clears ?? []).map(raid_id => ({ raid_id, ms: null, at: '' })) } }),
 }
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
@@ -104,7 +107,8 @@ export type WebExport = { format: string; version: number; userId: string; usern
 const MODELLED = new Set(['bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
   'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport', 'sea_trader_deals',
   'user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls',
-  'gauntlet_depth_bests', 'gauntlet_runs', 'bounty_events', 'casino_buy_ins', 'blackjack_hands', 'roulette_spins', 'slot_spins'])
+  'gauntlet_depth_bests', 'gauntlet_runs', 'bounty_events', 'casino_buy_ins', 'blackjack_hands', 'roulette_spins', 'slot_spins',
+  'run_tokens'])
 
 export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: LocalSave; carried: Record<string, Row[]> } {
   const t = (name: string) => exp.tables[name] ?? []
@@ -122,7 +126,10 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
     bests: Object.fromEntries(t('fish_personal_bests').map(r => [Number(r.fish_id), { len: Number(r.best_length_in), at: String(r.caught_at ?? '') }])),
     shinies: t('shiny_catches').map(r => ({ ...r, id: Number(r.id), fish_id: Number(r.fish_id), size_in: r.size_in == null ? null : Number(r.size_in), status: String(r.status), caught_at: String(r.caught_at) })),
     daily: Object.fromEntries(t('daily_challenge_progress').map(r => [String(r.date), r as unknown as DailyRow])),
-    clears: t('raid_completions').map(r => String(r.raid_id)),
+    clears: [...new Set(t('raid_completions').map(r => String(r.raid_id)))],
+    raidClears: t('raid_completions').map(r => ({ raid_id: String(r.raid_id), ms: r.elapsed_ms == null ? null : Number(r.elapsed_ms), at: String(r.completed_at ?? '') })),
+    // Tokens are a run's short-lived receipt: a converted save starts with none.
+    raidTokens: [],
     rods: t('rod_inventory').map(r => Number(r.rod_tier)),
     ledger: [], anomalies: [], mail: [],
     rapport: t('sea_rapport').map(r => ({ folk_id: String(r.folk_id), want_fish_id: r.want_fish_id == null ? null : Number(r.want_fish_id) })),

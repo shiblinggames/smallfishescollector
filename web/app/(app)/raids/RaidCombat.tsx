@@ -67,8 +67,7 @@ import { BroadsideEnemy, EnemyAction, RARITY_COLOR, type AimAttackId, type BossM
 import { raidDamageProfile, fortuneLootMult, type RaidMods } from '@/lib/expeditions'
 import type { CrateItemChance } from '@/lib/raidLoot'
 import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
-import { getCheckTutorialSeen, markCheckTutorialSeen } from './checkTutorialActions'
-import { getSkirmishTourSeen, markSkirmishTourSeen } from './skirmishTourActions'
+import { api } from '@/lib/gameApi'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 
@@ -2413,7 +2412,7 @@ export default function RaidCombat({
   useEffect(() => {
     if (!isBoss) { setCheckTutorialSeen(true); return }   // only bosses carry checks
     let alive = true
-    getCheckTutorialSeen()
+    api.raids.getCheckTutorialSeen()
       .then(v => { if (alive) setCheckTutorialSeen(v) })
       .catch(() => { if (alive) setCheckTutorialSeen(true) })
     return () => { alive = false }
@@ -2427,7 +2426,7 @@ export default function RaidCombat({
   function dismissCheckTutorial() {
     setShowCheckTutorial(false)
     setCheckTutorialSeen(true)
-    void markCheckTutorialSeen().catch(() => {})
+    void api.raids.markCheckTutorialSeen().catch(() => {})
   }
 
   // ── The skirmish's guided intro ──────────────────────────────────────
@@ -2447,7 +2446,7 @@ export default function RaidCombat({
   useEffect(() => {
     if (!skirmishTour) { setTutChecking(false); return }
     let alive = true
-    getSkirmishTourSeen()
+    api.raids.getSkirmishTourSeen()
       .then(seen => {
         if (!alive) return
         if (seen) { setTutChecking(false); return }
@@ -2615,7 +2614,7 @@ export default function RaidCombat({
   }, [tutBeat, subPhase, turn, tutWaitTurn])
   // SEEN WHEN IT ENDS: the last Aye or the x.
   useEffect(() => {
-    if (tutStep >= SKIRMISH_TUTOR.length) void markSkirmishTourSeen().catch(() => {})
+    if (tutStep >= SKIRMISH_TUTOR.length) void api.raids.markSkirmishTourSeen().catch(() => {})
   }, [tutStep])
   /** The one action the tutor allows this turn, if it is holding one. */
   const tutOnly = tutBeat && tutWaitTurn == null ? tutBeat.only ?? null : null

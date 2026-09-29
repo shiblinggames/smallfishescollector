@@ -11,7 +11,7 @@
 // on this API yet. Selling runs offline too (lib/core/selling), with the
 // captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
 import * as selling from '@/lib/core/selling'
@@ -24,6 +24,9 @@ import * as gauntletCore from '@/lib/core/gauntlet'
 import { localGauntletData } from '@/lib/data/local/gauntletLocal'
 import * as casinoCore from '@/lib/core/casino'
 import { localCasinoData } from '@/lib/data/local/casinoLocal'
+import * as raidCore from '@/lib/core/raids'
+import * as mapCore from '@/lib/core/raidMap'
+import { localRaidData } from '@/lib/data/local/raidLocal'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
 import { freshCasino } from '@/lib/data/local/save'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
@@ -37,6 +40,7 @@ export type {
   FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
   CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
   VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew, GauntletApi, CasinoApi,
+  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide,
 } from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
@@ -57,7 +61,7 @@ function starterSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 60 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(),
+    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [],
   }
 }
 
@@ -246,4 +250,45 @@ const casinoApi: CasinoApi = {
   resumeHand: () => runDen((db, uid) => casinoCore.resumeHand(db, uid)),
 }
 
-export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi }
+/** The same, over the raid store. */
+async function runRaid<T>(fn: (db: ReturnType<typeof localRaidData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage, carried } = need()
+  const r = await fn(localRaidData(save), save.uid)
+  await writeSave(storage, save, carried)
+  return r
+}
+
+const raidsApi: RaidsApi = {
+  startRaidRun: (raidId) => runRaid((db, uid) => raidCore.startRaidRun(db, uid, raidId)),
+  awardRaidKill: (round, token) => runRaid((db, uid) => raidCore.awardRaidKill(db, uid, round, token)),
+  recordRaidClear: (raidId, ms, token) => runRaid((db, uid) => raidCore.recordRaidClear(db, uid, raidId, ms, token)),
+  recordSkirmishClear: () => runRaid((db, uid) => raidCore.recordSkirmishClear(db, uid)),
+  recordRaidHit: (dmg) => runRaid((db, uid) => raidCore.recordRaidHit(db, uid, dmg)),
+  claimRaidLoot: (base, token) => runRaid((db, uid) => raidCore.claimRaidLoot(db, uid, base, token)),
+  getRaidMapView: () => runRaid((db, uid) => mapCore.getRaidMapView(db, uid)),
+  markChapterUnlockSeen: (id) => runRaid((db, uid) => mapCore.markChapterUnlockSeen(db, uid, id)),
+  claimMilestoneNode: (id) => runRaid((db, uid) => mapCore.claimMilestoneNode(db, uid, id)),
+  markStoryNodeRead: (id) => runRaid((db, uid) => mapCore.markStoryNodeRead(db, uid, id)),
+  solvePuzzleNode: (id) => runRaid((db, uid) => mapCore.solvePuzzleNode(db, uid, id)),
+  claimQuartermasterChoice: (id, item) => runRaid((db, uid) => mapCore.claimQuartermasterChoice(db, uid, id, item)),
+  standForMuster: (id) => runRaid((db, uid) => mapCore.standForMuster(db, uid, id)),
+  pickRaidEventChoice: (id, choice) => runRaid((db, uid) => mapCore.pickRaidEventChoice(db, uid, id, choice)),
+  pickForkRoute: (id, route) => runRaid((db, uid) => mapCore.pickForkRoute(db, uid, id, route)),
+  rollDiceNode: (id, option) => runRaid((db, uid) => mapCore.rollDiceNode(db, uid, id, option)),
+  getDpsCheckPreview: (id) => runRaid((db, uid) => mapCore.getDpsCheckPreview(db, uid, id)),
+  resolveDpsCheck: (id, action) => runRaid((db, uid) => mapCore.resolveDpsCheck(db, uid, id, action)),
+  claimScoutDebt: (id) => runRaid((db, uid) => mapCore.claimScoutDebt(db, uid, id)),
+  pickShipClass: (id, cls) => runRaid((db, uid) => mapCore.pickShipClass(db, uid, id, cls)),
+  refitShipClasses: (next) => runRaid((db, uid) => mapCore.refitShipClasses(db, uid, next)),
+  chooseSpoil: (side) => runRaid((db, uid) => mapCore.chooseSpoil(db, uid, side)),
+  buySpoil: (side) => runRaid((db, uid) => mapCore.buySpoil(db, uid, side)),
+  equipSecondSpecial: (item) => runRaid((db, uid) => mapCore.equipSecondSpecial(db, uid, item)),
+  buyRepairKit: () => runRaid((db, uid) => raidCore.buyRepairKit(db, uid)),
+  getCheckTutorialSeen: () => runRaid((db, uid) => raidCore.getCheckTutorialSeen(db, uid)),
+  markCheckTutorialSeen: () => runRaid((db, uid) => raidCore.markCheckTutorialSeen(db, uid)),
+  getSkirmishTourSeen: () => runRaid((db, uid) => raidCore.getSkirmishTourSeen(db, uid)),
+  markSkirmishTourSeen: () => runRaid((db, uid) => raidCore.markSkirmishTourSeen(db, uid)),
+  markRaidTutorialSeen: () => runRaid((db, uid) => raidCore.markRaidTutorialSeen(db, uid)),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi }

@@ -7,8 +7,8 @@ import CloseButton from '@/components/CloseButton'
 import type { DialAimBonus } from '@/lib/dialAim'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimRaidLoot, recordRaidHit, recordRaidClear, recordSkirmishClear, startRaidRun, type RaidClearTimes } from './actions'
-import { awardRaidKill } from './raidXPActions'
+import type { RaidClearTimes } from './actions'
+import { api } from '@/lib/gameApi'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
@@ -813,7 +813,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
   // per run (it adds doubloons every call); lootResultRef holds the result so
   // the Collect button can fire the purse-update event from it.
   const lootGrantedRef        = useRef(false)
-  const lootResultRef         = useRef<Awaited<ReturnType<typeof claimRaidLoot>> | null>(null)
+  const lootResultRef         = useRef<Awaited<ReturnType<typeof api.raids.claimRaidLoot>> | null>(null)
   const dodgePrimedRef        = useRef(false)
   const dodgeCooldownRef      = useRef(false)
   const actionLockedRef       = useRef(false)
@@ -894,7 +894,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
 
     // Mint this run's server token. Not awaited here (it resolves well before
     // the first kill); the reward calls await the promise instead.
-    runTokenPRef.current = startRaidRun(config.raidId).then(r => r.token).catch(() => null)
+    runTokenPRef.current = api.raids.startRaidRun(config.raidId).then(r => r.token).catch(() => null)
 
     phaseRef.current = 'playing'
     setPhase('playing')
@@ -1452,8 +1452,8 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
           // buildClearedSet has always read the skirmish node off, so the
           // node opens the way every other node opens.
           const record = config.skirmish
-            ? recordSkirmishClear().then(() => null)
-            : recordRaidClear(config.raidId, clearElapsedMs, runToken)
+            ? api.raids.recordSkirmishClear().then(() => null)
+            : api.raids.recordRaidClear(config.raidId, clearElapsedMs, runToken)
           clearDone = record
             .then(t => { if (t) setClearTimes(t) })
             .catch(() => {
@@ -1475,7 +1475,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
           // AFTER the clear lands: the crate only opens on a token the server
           // has already marked cleared.
           clearDone
-            .then(() => claimRaidLoot(total, runToken))
+            .then(() => api.raids.claimRaidLoot(total, runToken))
             .then(res => {
               lootResultRef.current = res
               // THE REEL FOLLOWS THE SERVER. Both halves of the crate are drawn
@@ -1506,7 +1506,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
         const bonus = raidCompletionBonusXp(config)
         try {
           const before = navXPRef.current
-          const res = await awardRaidKill(killedRound, runToken)
+          const res = await api.raids.awardRaidKill(killedRound, runToken)
           mergeCrewXPGrants(res.crewXP)
           const killTotal = res.newExpeditionXP - bonus
           const oldLevel = getLevelFromXP(before)
@@ -1643,8 +1643,8 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
       restGate()
     }
 
-    let res: Awaited<ReturnType<typeof awardRaidKill>> | null = null
-    try { res = await awardRaidKill(killedRound, await runTokenPRef.current) } catch { /* save failed */ }
+    let res: Awaited<ReturnType<typeof api.raids.awardRaidKill>> | null = null
+    try { res = await api.raids.awardRaidKill(killedRound, await runTokenPRef.current) } catch { /* save failed */ }
     if (!res) { setTimeout(advanceToNext, 400); return }
     mergeCrewXPGrants(res.crewXP)
 
@@ -1683,7 +1683,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
     const from = e?.currentTarget?.getBoundingClientRect()
     setIsClaiming(true)
     try {
-      const res = await awardRaidKill(winRoundRef.current, await runTokenPRef.current)
+      const res = await api.raids.awardRaidKill(winRoundRef.current, await runTokenPRef.current)
       mergeCrewXPGrants(res.crewXP)
       const oldLevel = getLevelFromXP(navXPRef.current)
       const newLevel = getLevelFromXP(res.newExpeditionXP)
@@ -1962,7 +1962,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
                 killReward={reward ? { gold: reward.gold, xp: reward.xp } : undefined}
                 onEnemyDefeated={handleEnemyDefeated}
                 onPlayerDefeated={handlePlayerDefeated}
-                onPlayerHit={(d) => { if (d > maxHitRef.current) { maxHitRef.current = d; recordRaidHit(d).catch(() => {}) } }}
+                onPlayerHit={(d) => { if (d > maxHitRef.current) { maxHitRef.current = d; api.raids.recordRaidHit(d).catch(() => {}) } }}
                 onDamageTaken={() => { featTookDamageRef.current = true }}
                 onShotResolved={(isCrit) => { if (!isCrit) featMissedCritRef.current = true }}
                 onNoShotKill={() => { unlockBadge('not_a_shot_fired').catch(() => {}); window.dispatchEvent(new Event('badges-may-have-changed')) }}
@@ -2275,8 +2275,8 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
               if (!clearRecordedRef.current) {
                 clearRecordedRef.current = true
                 const retry = config.skirmish
-                  ? recordSkirmishClear()
-                  : recordRaidClear(config.raidId, elapsedMs, runToken)
+                  ? api.raids.recordSkirmishClear()
+                  : api.raids.recordRaidClear(config.raidId, elapsedMs, runToken)
                 // Awaited: the crate below only opens on a cleared token.
                 try { await retry } catch { clearRecordedRef.current = false }
               }
@@ -2292,7 +2292,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
                 lootGrantedRef.current = true
                 try {
                   const res = await Promise.race([
-                    claimRaidLoot(lootAmount, runToken),
+                    api.raids.claimRaidLoot(lootAmount, runToken),
                     new Promise<null>(resolve => setTimeout(() => resolve(null), 4000)),
                   ])
                   if (res) lootResultRef.current = res

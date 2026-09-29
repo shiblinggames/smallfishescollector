@@ -45,10 +45,7 @@ import dynamic from 'next/dynamic'
 import PopupShell from '@/components/PopupShell'
 import { getRaidItem } from '@/lib/raidItems'
 import { getShipClass, offeredShipClasses } from '@/lib/shipClasses'
-import {
-  claimMilestoneNode, claimQuartermasterChoice, pickShipClass,
-  solvePuzzleNode, pickRaidEventChoice, standForMuster, markStoryNodeRead,
-} from '@/app/(app)/expeditions/raidMapActions'
+import { api } from '@/lib/gameApi'
 import { musterReport } from '@/lib/crewMuster'
 import type { RaidNode } from '@/lib/raidMap'
 import { nodeSheet, type NodeSheetState } from './nodeSheetActions'
@@ -145,7 +142,7 @@ export default function SeaNodeSheet({ node, cleared, onClose, onCleared, onRepe
   function solvePuzzle() {
     setErr(null)
     startTransition(async () => {
-      const res = await solvePuzzleNode(node.id)
+      const res = await api.raids.solvePuzzleNode(node.id)
       if (res && 'error' in res) { setErr(res.error); return }
       setSolved(true)
       onCleared?.(node.id)
@@ -212,19 +209,19 @@ export default function SeaNodeSheet({ node, cleared, onClose, onCleared, onRepe
 
               {state && node.type === 'milestone' && node.milestone && (
                 <Toll node={node} state={state} cleared={cleared} pending={pending}
-                  onPay={() => run(() => claimMilestoneNode(node.id))} />
+                  onPay={() => run(() => api.raids.claimMilestoneNode(node.id))} />
               )}
 
               {state && node.choice && (
                 <Cache node={node} state={state} cleared={cleared} pending={pending}
                   armed={armed} onArm={setArmed}
-                  onTake={id => run(() => claimQuartermasterChoice(node.id, id))} />
+                  onTake={id => run(() => api.raids.claimQuartermasterChoice(node.id, id))} />
               )}
 
               {state && node.classPick && (
                 <Choice node={node} state={state} pending={pending}
                   armed={armed} onArm={setArmed}
-                  onPick={id => run(() => pickShipClass(node.id, id))} />
+                  onPick={id => run(() => api.raids.pickShipClass(node.id, id))} />
               )}
 
               {/* ── A LOCK, A CHART, A BEAM ─────────────────────────────
@@ -294,7 +291,7 @@ export default function SeaNodeSheet({ node, cleared, onClose, onCleared, onRepe
               {state && node.event && (
                 <EventPicker node={node} picked={state.choices[node.id] ?? null}
                   cleared={cleared} pending={pending}
-                  onPick={id => run(() => pickRaidEventChoice(node.id, id))} />
+                  onPick={id => run(() => api.raids.pickRaidEventChoice(node.id, id))} />
               )}
 
               {/* ── AN INSPECTION TO STAND ──────────────────────────────
@@ -311,7 +308,7 @@ export default function SeaNodeSheet({ node, cleared, onClose, onCleared, onRepe
                   Bank needs is the list and the verb. */}
               {state && node.muster && (
                 <Muster node={node} state={state} cleared={cleared} pending={pending}
-                  onStand={() => run(() => standForMuster(node.id))} />
+                  onStand={() => run(() => api.raids.standForMuster(node.id))} />
               )}
 
               {/* ── TERMS, AND WHERE THE REFIT IS BOUGHT ────────────────
@@ -327,7 +324,7 @@ export default function SeaNodeSheet({ node, cleared, onClose, onCleared, onRepe
                   onHear={() => {
                     setErr(null)
                     startTransition(async () => {
-                      const res = await markStoryNodeRead(node.id)
+                      const res = await api.raids.markStoryNodeRead(node.id)
                       if (res && 'error' in res) { setErr(res.error); return }
                       setHeard(true)
                       onCleared?.(node.id)
