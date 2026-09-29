@@ -11,7 +11,7 @@
 // on this API yet. Selling runs offline too (lib/core/selling), with the
 // captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
 import * as selling from '@/lib/core/selling'
@@ -20,6 +20,8 @@ import * as crewCore from '@/lib/core/crew'
 import { localCrewData } from '@/lib/data/local/crewLocal'
 import * as voyageCore from '@/lib/core/voyages'
 import { localVoyageData } from '@/lib/data/local/voyageLocal'
+import * as gauntletCore from '@/lib/core/gauntlet'
+import { localGauntletData } from '@/lib/data/local/gauntletLocal'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
 import type { Row } from '@/lib/data/common'
@@ -31,7 +33,7 @@ import { XP_TABLE } from '@/lib/fishingLevel'
 export type {
   FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
   CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
-  VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew,
+  VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew, GauntletApi,
 } from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
@@ -52,7 +54,7 @@ function starterSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 60 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [],
+    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [],
   }
 }
 
@@ -182,4 +184,34 @@ const voyagesApi: VoyagesApi = {
   crewHub: () => runSea((db, uid) => voyageCore.crewHub(db, uid)),
 }
 
-export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi }
+/** The same, over the gauntlet store. */
+async function runGauntlet<T>(fn: (db: ReturnType<typeof localGauntletData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage, carried } = need()
+  const r = await fn(localGauntletData(save), save.uid)
+  await writeSave(storage, save, carried)
+  return r
+}
+
+const gauntletApi: GauntletApi = {
+  getGauntletDailyState: (variant) => runGauntlet((db, uid) => gauntletCore.getGauntletDailyState(db, uid, variant)),
+  getGauntletLeaderboard: (variant) => runGauntlet((db, uid) => gauntletCore.getGauntletLeaderboard(db, uid, variant)),
+  markGauntletIntroSeen: (variant) => runGauntlet((db, uid) => gauntletCore.markGauntletIntroSeen(db, uid, variant)),
+  startGauntletRun: (hardcore, terms, variant) => runGauntlet((db, uid) => gauntletCore.startGauntletRun(db, uid, hardcore, terms, variant)),
+  checkpointGauntletRun: (state) => runGauntlet((db, uid) => gauntletCore.checkpointGauntletRun(db, uid, state)),
+  pauseGauntletRun: (state) => runGauntlet((db, uid) => gauntletCore.pauseGauntletRun(db, uid, state)),
+  resumeGauntletRun: () => runGauntlet((db, uid) => gauntletCore.resumeGauntletRun(db, uid)),
+  rollDavyOffer: (hpPct) => runGauntlet((db, uid) => gauntletCore.rollDavyOffer(db, uid, hpPct)),
+  recordGauntletHit: (dmg) => runGauntlet((db, uid) => gauntletCore.recordGauntletHit(db, uid, dmg)),
+  wagerGauntletFathoms: (stake) => runGauntlet((db, uid) => gauntletCore.wagerGauntletFathoms(db, uid, stake)),
+  buyMerchantItem: (id) => runGauntlet((db, uid) => gauntletCore.buyMerchantItem(db, uid, id)),
+  markConfluencesSeen: (ids) => runGauntlet((db, uid) => gauntletCore.markConfluencesSeen(db, uid, ids)),
+  cashOutGauntlet: (rd, cd, pot, snap, take) => runGauntlet((db, uid) => gauntletCore.cashOutGauntlet(db, uid, rd, cd, pot, snap, take)),
+  resolveGauntletDeath: (rd, cd, snap) => runGauntlet((db, uid) => gauntletCore.resolveGauntletDeath(db, uid, rd, cd, snap)),
+  getGauntletUpgradeState: (variant) => runGauntlet((db, uid) => gauntletCore.getGauntletUpgradeState(db, uid, variant)),
+  claimGauntletUpgrade: (id, variant) => runGauntlet((db, uid) => gauntletCore.claimGauntletUpgrade(db, uid, id, variant)),
+  setGauntletUpgradeActive: (id, active, variant) => runGauntlet((db, uid) => gauntletCore.setGauntletUpgradeActive(db, uid, id, active, variant)),
+  claimDailyTribute: () => runGauntlet((db, uid) => gauntletCore.claimDailyTribute(db, uid)),
+  buyBaitWithFathoms: (type) => runGauntlet((db, uid) => gauntletCore.buyBaitWithFathoms(db, uid, type)),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi }

@@ -138,7 +138,7 @@ function freshSave(): LocalSave {
     profile: { doubloons: 1000, gems: 0, sea_x: 0, sea_y: 0, sea_side: 'fishing', sea_explored: null, sea_explored_exp: null, sea_session: null, sea_seen_at: null },
     species: SPECIES,
     bait: {}, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [],
+    clears: [], rods: [0], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [],
   }
 }
 const cheap = SPECIES.filter(s => s.sell_value > 0 && s.habitat === 'shallows').slice(0, 3)

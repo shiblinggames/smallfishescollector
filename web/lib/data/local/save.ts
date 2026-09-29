@@ -55,6 +55,13 @@ export type LocalSave = {
   voyages: LocalVoyageRow[]
   /** The trawls out: one per zone, one per hand. */
   trawls: { id: number; zone: string; crew_id: number; ends_at: string }[]
+  // ── Save v5 (the gauntlets) ──
+  /** Fastest time to each depth, keyed `variant:hardcore(0|1):depth`. */
+  depthBests: Record<string, { ms: number; at: string }>
+  /** Finished runs, for pacing (the last few hundred). */
+  gauntletRuns: { variant: string; hardcore: boolean; depth: number; duration_ms: number; outcome: string; at: string }[]
+  /** Moments a bounty may count (a run's depth, a big hit), the last few hundred. */
+  bountyEvents: { kind: string; value: number; at: string }[]
 }
 
 export type LocalVoyageRow = {

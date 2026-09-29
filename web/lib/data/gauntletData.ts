@@ -15,6 +15,9 @@
 
 import { crewData, type CrewData } from './crewData'
 import type { Db, Row } from './common'
+import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { flagAnomaly } from '@/lib/anomaly'
+import { logBountyEvent } from '@/lib/bountyEvents'
 import type { GauntletVariant } from '@/lib/gauntlet'
 
 export interface GauntletData extends CrewData {
@@ -34,6 +37,12 @@ export interface GauntletData extends CrewData {
   drownSquad(uid: string, ids: number[], depth: number, at: string): Promise<number>
   /** One finished run, for pacing. */
   logRun(uid: string, run: { variant: GauntletVariant; hardcore: boolean; depth: number; duration_ms: number; outcome: 'cashed' | 'died' }): Promise<void>
+  /** One moment a bounty may count (a run's depth, a big hit). Never blocks play. */
+  logBountyEvent(uid: string, kind: string, value: number): Promise<void>
+  /** Award a badge (no-op if already held). */
+  grantBadge(uid: string, badgeId: string): Promise<void>
+  /** Note something implausible for review. Never blocks play. */
+  flagAnomaly(uid: string, kind: string, severity: number, detail: Record<string, unknown>): Promise<void>
 }
 
 /** GauntletData over Supabase. */
@@ -78,6 +87,15 @@ export function gauntletData(admin: Db): GauntletData {
     },
     async logRun(uid, run) {
       await admin.from('gauntlet_runs').insert({ user_id: uid, ...run })
+    },
+    async logBountyEvent(uid, kind, value) {
+      await logBountyEvent(uid, kind, value)
+    },
+    async grantBadge(uid, badgeId) {
+      await grantBadgeDirect(uid, badgeId)
+    },
+    async flagAnomaly(uid, kind, severity, detail) {
+      await flagAnomaly(admin as never, uid, kind, severity, detail)
     },
   }
 }

@@ -873,6 +873,25 @@ In order. Each step is worth doing even if the port never happens.
    - `scripts/check-offline-voyages.mts` (in `npm run check`), including a voyage that loses a
      hand; a production probe as catman (reads and refusals only: a send or reveal would move
      real rewards).
+   **THE GAUNTLETS OFFLINE, 2026-09-29.** `lib/core/gauntlet`: Davy's and the Don's lobby,
+   start, checkpoints and per-depth times, pause and resume, Davy's Offer, the cash-out and
+   the death (hardcore squads drown), the Locker, the tribute, the Shrine's coin, the Fence,
+   the leaderboard node. The actions are thin wrappers; `api.gauntlet` carries them to
+   GauntletGame. GauntletData gained `logBountyEvent`, `grantBadge`, `flagAnomaly`; crew
+   purses include `gauntlet_fathoms`.
+   - The raid loadout loader moved to the store-agnostic `lib/raidLoadout`
+     (`getRaidPlayerStatsVia(store)`); `lib/raidPlayerStats.getRaidPlayerStats(userId)` wraps it
+     for the web and re-exports the types. `settleUltimateBuildVia(store)` likewise.
+   - `lib/data/local/gauntletLocal`: `bump_gauntlet_hit` and `record_gauntlet_depth_best` as
+     arithmetic; offline the ledger is the captain's own best cashed-out run. SAVE FILE v5
+     (per-depth times, run log, bounty moments; the last few hundred of each).
+   - FIXED ON THE WAY: a hardcore cash-out's faster same-depth time and its best-Pressure check
+     read Davy's hardcore columns on a Don's run; they now use `hcCols(variant)`. Two players had
+     40 Don's hardcore cash-outs under the old code, so their Davy hardcore best time may have
+     been overwritten by a Don's time, and their Don's best time / Pressure may not have been
+     updated. Not repaired (needs Kong's call).
+   - `scripts/check-offline-gauntlet.mts` (in `npm run check`); production probe as catman (reads
+     and refusals only).
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):

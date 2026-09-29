@@ -25,7 +25,7 @@ import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 4
+export const LOCAL_SAVE_VERSION = 5
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -60,6 +60,8 @@ const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
   }),
   // v4 (2026-09-29): voyages and trawls.
   3: f => ({ ...f, version: 4, save: { ...f.save, voyages: [], trawls: [] } }),
+  // v5 (2026-09-29): the gauntlets' per-depth times, run log and bounty moments.
+  4: f => ({ ...f, version: 5, save: { ...f.save, depthBests: {}, gauntletRuns: [], bountyEvents: [] } }),
 }
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
@@ -99,7 +101,8 @@ export type WebExport = { format: string; version: number; userId: string; usern
 /** The tables the local fishing save models; everything else is carried. */
 const MODELLED = new Set(['bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
   'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport', 'sea_trader_deals',
-  'user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls'])
+  'user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls',
+  'gauntlet_depth_bests', 'gauntlet_runs', 'bounty_events'])
 
 export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: LocalSave; carried: Record<string, Row[]> } {
   const t = (name: string) => exp.tables[name] ?? []
@@ -153,6 +156,15 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
       tide_turner_drop: r.tide_turner_drop === true, phantom_hook_drop: r.phantom_hook_drop === true, perfected_sigil_drop: r.perfected_sigil_drop === true,
     })).sort((a, b) => a.created_at.localeCompare(b.created_at)),
     trawls: t('trawls').map(r => ({ id: Number(r.id), zone: String(r.zone), crew_id: Number(r.crew_id), ends_at: String(r.ends_at) })),
+    depthBests: Object.fromEntries(t('gauntlet_depth_bests').map(r => [
+      `${String(r.variant)}:${r.hardcore === true ? 1 : 0}:${Number(r.depth)}`, { ms: Number(r.best_ms), at: String(r.achieved_at ?? '') },
+    ])),
+    gauntletRuns: t('gauntlet_runs').map(r => ({
+      variant: String(r.variant), hardcore: r.hardcore === true, depth: Number(r.depth), duration_ms: Number(r.duration_ms ?? 0),
+      outcome: String(r.outcome), at: String(r.created_at ?? ''),
+    })).sort((a, b) => a.at.localeCompare(b.at)).slice(-200),
+    bountyEvents: t('bounty_events').map(r => ({ kind: String(r.kind), value: Number(r.value), at: String(r.created_at ?? '') }))
+      .sort((a, b) => a.at.localeCompare(b.at)).slice(-500),
     // Past every id the web handed out, so a new row can never collide with an old one.
     nextId: 1 + Math.max(0, ...['user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls'].flatMap(n => t(n).map(r => Number(r.id) || 0))),
   }

@@ -33,7 +33,7 @@ const BUNK_COLS = 'id, crew_id, since, rate_per_hour, cap_hours, slot'
 export type BunkDbRow = { id: number; crew_id: number; since: string; rate_per_hour: number | null; cap_hours: number | null; slot: number | null }
 export type XpGrantRow = { id: number; old_xp: number | null; new_xp: number | null }
 
-export type CrewPurse = 'doubloons' | 'gems' | 'blood_gems'
+export type CrewPurse = 'doubloons' | 'gems' | 'blood_gems' | 'gauntlet_fathoms'
 
 export interface CrewData extends CaptainData {
   // ── The purse and owned lists (in place; the result is the guard) ──

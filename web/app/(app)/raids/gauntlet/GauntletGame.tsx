@@ -50,7 +50,6 @@ import PopupShell from '@/components/PopupShell'
 import { CTA_BG } from '@/lib/uiTokens'
 import { GAUNTLET_TERMS, TERM_GROUP_META, termsTitle, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer, buyMerchantItem, claimDailyTribute } from './actions'
 import { rollContractOffer, buildContractOffer, checkContract, CONTRACTS, STAKE_LABEL, describeReward, describePenalty, type ContractKind, type ContractOffer, type ContractStake, type ContractFightFacts } from '@/lib/gauntletContracts'
 import { rollMarkOffer, markEffects, describeBuff, MARK_META, type ChosenMark, type MarkBuff, type MarkType } from '@/lib/gauntletMarks'
 import { MERCHANT_ITEMS, rollMerchantStock, type MerchantItemKind } from '@/lib/gauntletMerchant'
@@ -79,7 +78,7 @@ const RaidCombat = dynamic(() => import('../RaidCombat'), { ssr: false })
 
 type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'merchant' | 'contract' | 'contract_result' | 'don_fallen' | 'mark_choice' | 'between' | 'reward' | 'dead'
 
-type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
+type CashResult = Awaited<ReturnType<typeof api.gauntlet.cashOutGauntlet>>
 
 /**
  * ── DESKTOP-FIRST ────────────────────────────────────────────────────────
@@ -1325,7 +1324,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   function dismissIntro() {
     setIntroOpen(false)
-    if (!props.hasSeenIntro) markGauntletIntroSeen(props.variant).catch(() => {})
+    if (!props.hasSeenIntro) api.gauntlet.markGauntletIntroSeen(props.variant).catch(() => {})
   }
 
   /** Tear down the pre-dive surfaces. Called only once the run's fate is known,
@@ -1338,7 +1337,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   function begin(hardcore = false) {
     if (starting) return
     setStarting(true)
-    startGauntletRun(hardcore, hardcore ? signedTermsRef.current : undefined, props.variant).then(res => {
+    api.gauntlet.startGauntletRun(hardcore, hardcore ? signedTermsRef.current : undefined, props.variant).then(res => {
       if (!res.started) {
         setStarting(false)
         closePreDive()
@@ -1680,14 +1679,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     void (async () => {
       // The checkpoint hands back this depth's split (it already holds the clock
       // and the depth, so the ghost costs no extra round trip).
-      const { split } = await checkpointGauntletRun(buildCheckpoint()).catch(() => ({ split: undefined }))
+      const { split } = await api.gauntlet.checkpointGauntletRun(buildCheckpoint()).catch(() => ({ split: undefined }))
       // KEEP THE FIRST split for a depth. A pause-and-resume re-enters this
       // breather and checkpoints again, and that second call measures a later
       // clock against the record the first call just set — so it would report
       // "off your best" against your own time from moments earlier.
       setDepthSplit(prev => (split ? (prev && prev.depth === split.depth ? prev : split) : null))
       const hpPct = playerHPRef.current / Math.max(1, hpMax)
-      const { offer: o } = await rollDavyOffer(hpPct).catch(() => ({ offer: null }))
+      const { offer: o } = await api.gauntlet.rollDavyOffer(hpPct).catch(() => ({ offer: null }))
       setOffer(o)
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2065,7 +2064,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     setShrineFlipping(true)
     vibrate([0, 18])
     const [res] = await Promise.all([
-      wagerGauntletFathoms(shrineStake),
+      api.gauntlet.wagerGauntletFathoms(shrineStake),
       new Promise(r => setTimeout(r, 1050)),  // minimum spin time, parallel to the call
     ])
     if ('error' in res) { setShrineFlipping(false); return }
@@ -2161,7 +2160,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // (the card is filtered out of stock too, this is belt-and-braces).
     if (id === 'cleanse' && Object.keys(curseTiersRef.current).length === 0) return
     setMerchantBuying(id)
-    const res = await buyMerchantItem(id)
+    const res = await api.gauntlet.buyMerchantItem(id)
     if ('error' in res) { setMerchantBuying(null); return }
     // Run up the tab (settled against the earned grant at cash-out); the banked
     // purse is untouched until then.
@@ -2283,7 +2282,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       const discovered = !seenConfluences.includes(c.id)
       if (discovered) {
         setSeenConfluences(prev => (prev.includes(c.id) ? prev : [...prev, c.id]))
-        markConfluencesSeen([c.id]).catch(() => {})
+        api.gauntlet.markConfluencesSeen([c.id]).catch(() => {})
       }
       setConfluenceBanner({ name: c.name, desc: confluenceDescAt(c, offer.level), level: offer.level, isNew: true, discovered, image: c.image, key: Date.now() })
       vibrate([0, 45, 40, 80, 40, 130])
@@ -2476,7 +2475,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   function doResume() {
     if (resuming || !props.resumeState) return
     setResuming(true)
-    resumeGauntletRun().then(res => {
+    api.gauntlet.resumeGauntletRun().then(res => {
       if (res.ok) {
         applyCheckpoint(res.state)
         setOffer(res.offer) // restore a live Davy's Offer so it survives leave-and-resume
@@ -2489,7 +2488,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   function doPause() {
     if (pausing) return
     setPausing(true)
-    pauseGauntletRun(buildCheckpoint())
+    api.gauntlet.pauseGauntletRun(buildCheckpoint())
       .then(() => setPhase('paused'))
       .finally(() => setPausing(false))
   }
@@ -2510,7 +2509,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     setCurseTiers(s.curseTiers); curseTiersRef.current = s.curseTiers
     setConfluencesTaken(s.confluencesTaken ?? [])
     setConvergencesTaken(s.convergencesTaken ?? [])
-    resolveGauntletDeath(cleared, cleared > 0 ? cleared + skipOffset : 0)
+    api.gauntlet.resolveGauntletDeath(cleared, cleared > 0 ? cleared + skipOffset : 0)
       .then(res => { if (res?.ok) setDeathFathoms(res.earnedFathoms) })
       .finally(() => { setResuming(false); setPhase('dead') })
   }
@@ -2518,7 +2517,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   function handlePlayerDefeated() {
     if (resolving) return
     setResolving(true)
-    resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0, buildRunSnapshot()).then(res => {
+    api.gauntlet.resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0, buildRunSnapshot()).then(res => {
       if (res?.ok) setDeathFathoms(res.earnedFathoms)
     }).finally(() => {
       setResolving(false)
@@ -2593,7 +2592,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   function cashOut(takeOffer = false) {
     if (resolving) return
     setResolving(true)
-    cashOutGauntlet(rollStateRef.current.cleared, rollStateRef.current.cleared + skipOffset, potRef.current, buildRunSnapshot(), takeOffer).then(res => {
+    api.gauntlet.cashOutGauntlet(rollStateRef.current.cleared, rollStateRef.current.cleared + skipOffset, potRef.current, buildRunSnapshot(), takeOffer).then(res => {
       setResolving(false)
       setReward(res)
       if (res.ok) setBloodGemsNow(res.newBloodGems)
@@ -2616,7 +2615,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         setConfirmLeave(false)
         const go = pendingNavRef.current ?? (() => router.push('/sea'))
         pendingNavRef.current = null
-        resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0, buildRunSnapshot()).finally(go)
+        api.gauntlet.resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0, buildRunSnapshot()).finally(go)
       }}
     />
   ) : null
@@ -5863,7 +5862,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             runDepth={fight.depth}
             initialCharges={carriedChargesRef.current}
             onPlayerDefeated={handlePlayerDefeated}
-            onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
+            onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; api.gauntlet.recordGauntletHit(d).catch(() => {}) } }}
             onStat={(d) => addRunStats(runStatsRef.current, d)}
             // No escape mid-fight in Hardcore — abandoning is death, so the ←
             // leave button is withheld entirely (undefined onLeave → no button).
@@ -8072,7 +8071,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
   const [toggling, setToggling] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
-  useEffect(() => { getGauntletUpgradeState(variant).then(setState) }, [variant])
+  useEffect(() => { api.gauntlet.getGauntletUpgradeState(variant).then(setState) }, [variant])
 
   // Flip an owned Run Upgrade on/off. Optimistic — the switch moves instantly,
   // then the server-authoritative off-set is written back (and pushed to the
@@ -8082,11 +8081,11 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
     setToggling(id); setErr(null)
     setState(s => (s ? { ...s, off: active ? s.off.filter(x => x !== id) : [...new Set([...s.off, id])] } : s))
     vibrate([0, 18])
-    const res = await setGauntletUpgradeActive(id, active, variant)
+    const res = await api.gauntlet.setGauntletUpgradeActive(id, active, variant)
     setToggling(null)
     if ('error' in res) {
       setErr(res.error)
-      const fresh = await getGauntletUpgradeState(variant); setState(fresh); onToggled?.(fresh.off)
+      const fresh = await api.gauntlet.getGauntletUpgradeState(variant); setState(fresh); onToggled?.(fresh.off)
       return
     }
     setState(s => (s ? { ...s, off: res.off } : s))
@@ -8103,9 +8102,9 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
       setClaiming(null)
       if ('error' in res) { setErr(res.error); return }
       vibrate([0, 30, 50, 40])
-      const fresh = await getGauntletUpgradeState(variant); setState(fresh)
+      const fresh = await api.gauntlet.getGauntletUpgradeState(variant); setState(fresh)
     } else {
-      const res = await claimGauntletUpgrade(id, variant)
+      const res = await api.gauntlet.claimGauntletUpgrade(id, variant)
       setClaiming(null)
       if ('error' in res) { setErr(res.error); return }
       setState(s => (s ? { ...s, fathoms: res.fathoms, owned: res.owned } : s))
@@ -8120,7 +8119,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
   async function claimTribute() {
     if (claimingTribute) return
     setClaimingTribute(true); setErr(null)
-    const res = await claimDailyTribute()
+    const res = await api.gauntlet.claimDailyTribute()
     setClaimingTribute(false)
     if ('error' in res) { setErr(res.error); return }
     setState(s => (s ? { ...s, fathoms: res.fathoms, tributeReady: false } : s))
@@ -8132,7 +8131,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
   async function buyLure(baitType: string) {
     if (claiming) return
     setClaiming('lure:' + baitType); setErr(null)
-    const res = await buyBaitWithFathoms(baitType)
+    const res = await api.gauntlet.buyBaitWithFathoms(baitType)
     setClaiming(null)
     if ('error' in res) { setErr(res.error); return }
     setState(s => (s ? { ...s, fathoms: res.fathoms } : s))

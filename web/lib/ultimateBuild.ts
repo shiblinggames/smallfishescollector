@@ -21,9 +21,19 @@ export async function settleUltimateBuild(
   active: string | null,
   buildRaw: unknown,
 ): Promise<{ active: string | null; build: ShipAugmentBuild | null }> {
+  return settleUltimateBuildVia(raidData(admin), userId, active, buildRaw)
+}
+
+/** settleUltimateBuild against any store that can write the profile. */
+export async function settleUltimateBuildVia(
+  db: { updateProfile(uid: string, patch: Record<string, unknown>): Promise<void> },
+  userId: string,
+  active: string | null,
+  buildRaw: unknown,
+): Promise<{ active: string | null; build: ShipAugmentBuild | null }> {
   const build = parseAugmentBuild(buildRaw)
   if (!build) return { active, build: null }
   if (!isBuildComplete(build, clockNow())) return { active, build }
-  await raidData(admin).updateProfile(userId, { manowar_augment: build.id, manowar_augment_build: null })
+  await db.updateProfile(userId, { manowar_augment: build.id, manowar_augment_build: null })
   return { active: build.id, build: null }
 }
