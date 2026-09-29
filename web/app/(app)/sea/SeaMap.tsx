@@ -100,8 +100,6 @@ import FishingHere, { type FishingMods, type FishCarry } from './FishingHere'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { getHook } from '@/lib/hooks'
-import { getBountyBoard } from '../expeditions/bountyActions'
-import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import LevelRewardsGrant, { type Granted } from './LevelRewardsGrant'
 // A LEAF, not SeaMap's own exports. The cast button is this same control in its
@@ -5753,7 +5751,7 @@ export default function SeaMap({
   const [rungNews, setRungNews] = useState<
     { chapter: number; title: string; boss: string; orders: number; gems: number; first: boolean } | null>(null)
   const pollBounties = useCallback(() => {
-    void getBountyBoard().then(
+    void api.dailies.getBountyBoard().then(
       b => {
         setBountyReady(b.unlocked && b.bounties.some(x => !x.claimed && x.progress >= x.target))
         if (b.news) setRungNews(b.news)
@@ -5823,7 +5821,7 @@ export default function SeaMap({
    * sail. See `waitingAt`.
    */
   const readOrders = useCallback(() => {
-    void getDailyChallenge().then(setOrders).catch(() => { /* the icon just stays quiet */ })
+    void api.dailies.getDailyChallenge().then(setOrders).catch(() => { /* the icon just stays quiet */ })
   }, [])
   useEffect(() => {
     void getBoot().then(b => { if (b?.orders) setOrders(b.orders); else readOrders() })

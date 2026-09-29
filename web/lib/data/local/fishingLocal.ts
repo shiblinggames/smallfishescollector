@@ -10,6 +10,7 @@
 // settled once, a stack is taken only while it reads what was seen, a flag is
 // turned on once, a guard that does not hold writes nothing.
 
+import { clockNow } from '@/lib/clock'
 import type { FishingData, CastCandidateRow, DailyRow } from '../fishingData'
 import type { PendingCast } from '@/lib/fishingRules'
 import { localCaptain, type LocalSave } from './save'
@@ -133,7 +134,9 @@ export function localFishingData(save: LocalSave): FishingData {
     async claimContest(contestId, uid) {
       me(uid)
       if (contestId in save.contests) return false
-      save.contests[contestId] = uid; return true
+      save.contests[contestId] = uid
+      save.contestsWonAt[contestId] = new Date(clockNow()).toISOString()
+      return true
     },
 
     // ── The rest of the captain ──

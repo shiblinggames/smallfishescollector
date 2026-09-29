@@ -95,10 +95,10 @@ import dynamic from 'next/dynamic'
 import TrawlIndicator from '../fishing/TrawlIndicator'
 
 const VoyageBoardBody = dynamic(() => import('./VoyageBoard'), { ssr: false })
-import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import { vibrate } from '@/lib/haptics'
 import { seaClock, nextPhase, PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
+import { api } from '@/lib/gameApi'
 
 const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'
@@ -436,7 +436,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
   const showOrders = useCallback(() => {
     setView('orders')
     setOpen(true)
-    void getDailyChallenge().then(s => { if (s) onOrdersRef.current(s) }).catch(() => {})
+    void api.dailies.getDailyChallenge().then(s => { if (s) onOrdersRef.current(s) }).catch(() => {})
   }, [])
   /** Step in on the bounties. The panel reads its own board. */
   const showBounties = useCallback(() => {

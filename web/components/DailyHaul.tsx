@@ -19,11 +19,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { claimDailyBonus, claimDailyBait, claimWeeklyCrate } from '@/app/actions/dailyBonus'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import CrateOpening, { crateArt, type CrateTierId, type CrateLootView } from '@/components/CrateOpening'
 import ResetCountdown from '@/components/ResetCountdown'
 import { flyPayout } from '@/lib/coinFly'
+import { api } from '@/lib/gameApi'
 
 const GEM = '#a78bfa'
 const BAIT = '#4ade80'
@@ -32,7 +32,7 @@ const GOLD = '#f0c040'
 // Spin timing, tile sizing and the reveal all live in CrateOpening now.
 const SPIN_MS = 2300
 
-type CrateClaim = Extract<Awaited<ReturnType<typeof claimWeeklyCrate>>, { claimed: true }>
+type CrateClaim = Extract<Awaited<ReturnType<typeof api.dailies.claimWeeklyCrate>>, { claimed: true }>
 type Loot = CrateClaim['loot']
 type GoodLoot = Exclude<Loot, { error: string }>
 type CratePhase = 'idle' | 'rolling' | 'revealed'
@@ -81,7 +81,7 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
     setGemsClaimed(true)
     flyPayout(from, { gems: gemAmount })
     onClaimed?.(baitClaimed && crateClaimed)
-    const r = await claimDailyBonus().catch(() => ({ claimed: false as const, gems: undefined }))
+    const r = await api.dailies.claimDailyBonus().catch(() => ({ claimed: false as const, gems: undefined }))
     if (r.claimed) {
       if (r.gems !== undefined) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.gems }))
     } else {
@@ -98,7 +98,7 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
     // first voyage's bait beat is waiting on exactly this.
     window.dispatchEvent(new CustomEvent('bait-changed', { detail: { baitType, added: DAILY_BAIT_QTY } }))
     onClaimed?.(gemsClaimed && crateClaimed)
-    const r = await claimDailyBait().catch(() => ({ claimed: false as const }))
+    const r = await api.dailies.claimDailyBait().catch(() => ({ claimed: false as const }))
     if (!r.claimed) {
       setBaitClaimed(false)
       window.dispatchEvent(new CustomEvent('bait-changed', { detail: { baitType, added: -DAILY_BAIT_QTY } }))
@@ -108,7 +108,7 @@ export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0,
   async function claimCrate() {
     if (crateClaimed || loading || cratePhase !== 'idle') return
     setLoading('crate')
-    const r = await claimWeeklyCrate()
+    const r = await api.dailies.claimWeeklyCrate()
     setLoading(null)
     if (!r.claimed) return
     setCrateClaimed(true)

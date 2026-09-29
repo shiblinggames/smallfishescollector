@@ -10,7 +10,9 @@
 
 import type { CaptainData, ProfileGuard, Row } from '../common'
 import type { SpeciesRow, DailyRow } from '../fishingData'
+import type { BountyRow } from '../dailyData'
 import type { ChallengeOverride } from '@/lib/dailyChallenges'
+import { clockNow } from '@/lib/clock'
 import type { MarketState } from '@/lib/marketRules'
 import { badgePoints } from '@/lib/badges'
 import { stampBadges } from '@/lib/badgeStamps'
@@ -30,7 +32,7 @@ export type LocalSave = {
   rods: number[]
   ledger: { amount: number; reason: string; currency: 'doubloons' | 'gems' }[]
   anomalies: { kind: string; severity: number; detail: Record<string, unknown> }[]
-  mail: { subject: string; body: string; sender: string }[]
+  mail: LocalMail[]
   rapport: { folk_id: string; want_fish_id: number | null }[]
   contests: Record<string, string>
   overrides: Record<string, ChallengeOverride>
@@ -69,6 +71,20 @@ export type LocalSave = {
   raidTokens: LocalRunToken[]
   /** Every raid clear with its time; `clears` stays the list of raids cleared. */
   raidClears: { raid_id: string; ms: number | null; at: string }[]
+  // ── Save v9 (the daily loop) ──
+  /** Today's bounty board as filed, or null before the first. */
+  bounty: BountyRow | null
+  /** The boards handed out before it, newest last (the last sixty). */
+  bountyHistory: BountyRow[]
+  /** When each contest this captain won was won. */
+  contestsWonAt: Record<string, string>
+}
+
+/** A letter in the captain's own mailbox. Offline the game is the only sender. */
+export type LocalMail = {
+  id: string; subject: string; body: string; sender: string; created_at: string
+  attachment_doubloons: number; attachment_gems: number
+  read_at: string | null; claimed_at: string | null
 }
 
 export type LocalRunToken = {
@@ -101,6 +117,15 @@ export const SHIP_PROFILE_DEFAULTS = {
   has_sixth_berth: false, has_armory_expansion: false,
   hull_speed_tier: 0, hull_handling_tier: 0, hull_accel_tier: 0, lantern_tier: 0,
   has_seen_forge_intro: false, seen_ultimate_unlock: false, has_seen_ship_guide: false,
+}
+
+/** The daily loop's profile columns at the web's column defaults (v9). */
+export const DAILY_PROFILE_DEFAULTS = {
+  bounty_rung_seen: 0, bounty_points: 0, bounty_milestones_claimed: 0, bounties_claimed: 0,
+  bounty_gems_earned: 0, bounty_boards_cleared: 0, bounty_elites_claimed: 0,
+  daily_challenge_sweeps: 0, daily_master_cleared: 0, has_seen_contests: false,
+  last_daily_claim: null, last_worm_claim: null, last_crate_claim_week: null,
+  is_premium: false, premium_expires_at: null,
 }
 
 /** A Den nobody has visited: no buy-ins, no hand, the pot at its seed. */
@@ -161,6 +186,7 @@ export function localCaptain(save: LocalSave): LocalCaptain {
     me,
     async profile(uid, list) {
       const prof = me(uid)
+      if (list.trim() === '*') return structuredClone(prof)
       return Object.fromEntries(cols(list).map(c => [c, prof[c] ?? null]))
     },
     async updateProfile(uid, patch) { Object.assign(me(uid), structuredClone(patch)) },
@@ -181,7 +207,13 @@ export function localCaptain(save: LocalSave): LocalCaptain {
       if (have < amount) return null
       prof.doubloons = have - amount; return prof.doubloons as number
     },
-    async mailTo(uid, m) { me(uid); save.mail.push(m) },
+    async mailTo(uid, m) {
+      me(uid)
+      save.mail.push({
+        id: `local-mail-${save.nextId++}`, subject: m.subject, body: m.body, sender: m.sender,
+        created_at: new Date(clockNow()).toISOString(), attachment_doubloons: 0, attachment_gems: 0, read_at: null, claimed_at: null,
+      })
+    },
 
     async grant(uid, col, n) {
       const prof = me(uid); prof[col] = Number(prof[col] ?? 0) + Math.max(0, Math.trunc(Number(n) || 0)); return prof[col] as number

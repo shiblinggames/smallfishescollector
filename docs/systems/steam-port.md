@@ -950,8 +950,33 @@ In order. Each step is worth doing even if the port never happens.
      profile was byte-identical after).
    - The legacy card-collection crew picker (`getCollectionForCrew`, `saveCrew`) moved to the
      core too but is not on the API: no screen calls it.
-   - NOT YET: bounties, the Parlor, the Chart Room, contests, mail, daily challenges and the
-     other small systems.
+   **THE DAILY LOOP OFFLINE, 2026-09-29.** `lib/core/bounties` (the board, its meters, a
+   claim, the one swap, the points ladder, the rung announcement) and `lib/core/dailies` (the
+   daily challenges and the sweep, the Daily Haul's gems, bait and weekly crate, the disc's
+   state, the mailbox, the contests). `bountyActions`, `dailyChallengeActions`,
+   `actions/dailyBonus`, `actions/mail` and `tavern/contests/actions` are thin wrappers;
+   `api.dailies` carries them to the bounty panel and rung celebration, the chart, the Daily
+   Orders, the Daily Haul, the mail inbox, the Nav pip and the contests page.
+   - `lib/data/dailyData`: RaidData plus the challenge rows and their guarded flags, a stamp
+     that lands once per day or week (`stampIfNew`), the bounty board (claim slot, swap, the
+     logs its meters read), the mailbox and the contests view.
+   - `lib/data/local/dailyLocal`: the meters read the save's own logs (raid clears with times,
+     revealed voyages, bounty events, profile counters). Offline the mailbox is the captain's
+     own (the game is the only sender) and the contests show this captain against the goal.
+     Local `profile('*')` now returns the whole row (the bounty meters read any counter).
+   - The swap now reports a write that did not land (it used to answer success).
+   - SAVE FILE v9: the bounty board and its history (sixty boards), when each contest was won,
+     the mail as full letters (id, read, claimed, attachments), and the loop's profile columns
+     at the database's defaults (`DAILY_PROFILE_DEFAULTS`).
+   - `scripts/check-offline-dailies.mts` (in `npm run check`): every rung's board, each order
+     finished from the logs its meter reads and paid once; checked to fail when a claim guard
+     is broken. Production probe as catman (reads and refusals, profile unchanged).
+   - The sea's boot and day aggregators (`sea/bootActions`, `sea/dayActions`) still call the
+     web actions server-side; they convert with the sea stage.
+   - NOT YET: the Parlor, the Chart Room, the sea's own actions (folk, pacts, digs, isles,
+     tours, Finn, the smuggler), the tackle shop, the hold and almanac, badges and renown.
+     Online-only by nature and staying on the web: social, leaderboards, public profiles,
+     membership (Stripe), admin and dev tools, the honeypot.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):

@@ -23,11 +23,12 @@ import { useState, useEffect, useTransition, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import ResetCountdown from '@/components/ResetCountdown'
-import { getBountyBoard, claimBounty, rerollBounty, claimBountyMilestone, type BountyBoard, type BountyView } from './bountyActions'
 import { BOUNTY_POINTS, BOUNTY_MILESTONES } from '@/lib/bounties'
 import { rankForPoints, nextRank, rankGained, type BountyRank } from '@/lib/bountyRanks'
 import { hapticReward } from '@/lib/haptics'
 import { flyPayout } from '@/lib/coinFly'
+import { api } from '@/lib/gameApi'
+import type { BountyBoard, BountyView } from '@/lib/gameApi'
 
 // Solid dark notices, light ink, the way every other panel in this game reads.
 //
@@ -646,7 +647,7 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
   const [, startTransition] = useTransition()
 
   const load = useCallback(() => {
-    getBountyBoard().then(b => {
+    api.dailies.getBountyBoard().then(b => {
       setBoard(b)
       onGems?.(b.gems)
     })
@@ -686,7 +687,7 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
 
   function handleClaim(b: BountyView, from?: Element) {
     setBusy(b.id)
-    claimBounty(b.id).then(res => {
+    api.dailies.claimBounty(b.id).then(res => {
       setBusy(null)
       if ('error' in res) { setToast(res.error); return }
       hapticReward()
@@ -707,7 +708,7 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
 
   function handleMilestone(from?: Element) {
     setBusy('__ms')
-    claimBountyMilestone().then(res => {
+    api.dailies.claimBountyMilestone().then(res => {
       setBusy(null)
       if ('error' in res) { setToast(res.error); return }
       hapticReward()
@@ -732,7 +733,7 @@ export default function BountiesPanel({ onGems, onClose, embedded = false }: {
     setSwapping(null)
     setBusy(b.id)
     startTransition(() => {
-      rerollBounty(b.id).then(res => {
+      api.dailies.rerollBounty(b.id).then(res => {
         setBusy(null)
         if ('error' in res) { setToast(res.error); return }
         load()

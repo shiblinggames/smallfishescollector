@@ -20,12 +20,12 @@
 // yet are CARRIED in the file untouched, so converting a real account loses
 // nothing and later stages can pick them up.
 
-import { freshCasino, SHIP_PROFILE_DEFAULTS, type LocalSave } from './save'
+import { freshCasino, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, type LocalSave, type LocalMail } from './save'
 import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 8
+export const LOCAL_SAVE_VERSION = 9
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -70,6 +70,20 @@ const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
   // v8 (2026-09-29): the ship. No new tables; the ship's profile columns get
   // the web's defaults where a save never had them.
   7: f => ({ ...f, version: 8, save: { ...f.save, profile: { ...structuredClone(SHIP_PROFILE_DEFAULTS), ...f.save.profile } } }),
+  // v9 (2026-09-29): the daily loop. The bounty board and its history, when
+  // contests were won, the mail as full letters (read and claim state, an id),
+  // and the loop's profile columns at the web's defaults.
+  8: f => ({
+    ...f, version: 9,
+    save: {
+      ...f.save, bounty: null, bountyHistory: [], contestsWonAt: {},
+      mail: (f.save.mail as unknown as { subject: string; body: string; sender: string }[]).map((m, i): LocalMail => ({
+        id: `local-mail-v8-${i}`, subject: m.subject, body: m.body, sender: m.sender, created_at: f.savedAt || new Date(0).toISOString(),
+        attachment_doubloons: 0, attachment_gems: 0, read_at: null, claimed_at: null,
+      })),
+      profile: { ...structuredClone(DAILY_PROFILE_DEFAULTS), ...f.save.profile },
+    },
+  }),
 }
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
@@ -107,7 +121,7 @@ export async function writeSave(storage: SaveStorage, save: LocalSave, carried: 
 export type WebExport = { format: string; version: number; userId: string; username: string | null; profile: Row; tables: Record<string, Row[]> }
 
 /** The tables the local fishing save models; everything else is carried. */
-const MODELLED = new Set(['bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
+const MODELLED = new Set(['bounty_progress', 'bounty_board_history', 'bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
   'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport', 'sea_trader_deals',
   'user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls',
   'gauntlet_depth_bests', 'gauntlet_runs', 'bounty_events', 'casino_buy_ins', 'blackjack_hands', 'roulette_spins', 'slot_spins',
@@ -117,7 +131,7 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
   const t = (name: string) => exp.tables[name] ?? []
   const save: LocalSave = {
     uid: exp.userId,
-    profile: { ...structuredClone(SHIP_PROFILE_DEFAULTS), ...exp.profile },
+    profile: { ...structuredClone(SHIP_PROFILE_DEFAULTS), ...structuredClone(DAILY_PROFILE_DEFAULTS), ...exp.profile },
     species,
     bait: Object.fromEntries(t('bait_inventory').map(r => [r.bait_type, Number(r.quantity)])),
     hold: Object.fromEntries(t('fish_inventory').filter(r => Number(r.quantity) > 0).map(r => [Number(r.fish_id), Number(r.quantity)])),
@@ -133,6 +147,18 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
     raidClears: t('raid_completions').map(r => ({ raid_id: String(r.raid_id), ms: r.elapsed_ms == null ? null : Number(r.elapsed_ms), at: String(r.completed_at ?? '') })),
     // Tokens are a run's short-lived receipt: a converted save starts with none.
     raidTokens: [],
+    bounty: (() => {
+      const b = t('bounty_progress')[0]
+      return b ? {
+        date: String(b.date), bounty_ids: (b.bounty_ids ?? []) as string[], baselines: (b.baselines ?? {}) as Record<string, number>,
+        claimed: (b.claimed ?? []) as boolean[], assigned_at: String(b.assigned_at ?? ''), reroll_used: b.reroll_used === true,
+      } : null
+    })(),
+    bountyHistory: t('bounty_board_history').map(b => ({
+      date: String(b.date), bounty_ids: (b.bounty_ids ?? []) as string[], baselines: {},
+      claimed: (b.claimed ?? []) as boolean[], assigned_at: '', reroll_used: b.reroll_used === true,
+    })).sort((a, b) => a.date.localeCompare(b.date)).slice(-60),
+    contestsWonAt: {},
     rods: t('rod_inventory').map(r => Number(r.rod_tier)),
     ledger: [], anomalies: [], mail: [],
     rapport: t('sea_rapport').map(r => ({ folk_id: String(r.folk_id), want_fish_id: r.want_fish_id == null ? null : Number(r.want_fish_id) })),

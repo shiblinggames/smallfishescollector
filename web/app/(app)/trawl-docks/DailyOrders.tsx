@@ -16,10 +16,10 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { claimDailyReward, claimDailySweep } from '../fishing/dailyChallengeActions'
 import { DAILY_SWEEP_GEMS, type DailyChallengeState } from '@/lib/dailyChallenges'
 import { vibrate } from '@/lib/haptics'
 import { flyCoinsToPurse, flyPayout } from '@/lib/coinFly'
+import { api } from '@/lib/gameApi'
 
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
@@ -103,7 +103,7 @@ export default function DailyOrders({ initial, canClaim = true, onChange, embedd
     const c = state?.challenges[i]
     setBusy(i); setErr(''); vibrate(10)
     startTransition(async () => {
-      const res = await claimDailyReward(i as 0 | 1 | 2 | 3)
+      const res = await api.dailies.claimDailyReward(i as 0 | 1 | 2 | 3)
       setBusy(null)
       if ('error' in res) { setErr(res.error); return }
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
@@ -139,7 +139,7 @@ export default function DailyOrders({ initial, canClaim = true, onChange, embedd
     if (busy !== null) return
     setBusy('sweep'); setErr(''); vibrate(10)
     startTransition(async () => {
-      const res = await claimDailySweep()
+      const res = await api.dailies.claimDailySweep()
       setBusy(null)
       if ('error' in res) { setErr(res.error); return }
       vibrate([0, 25, 45, 35, 20, 60])

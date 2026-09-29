@@ -7,13 +7,13 @@ import { useRouter, usePathname } from 'next/navigation'
 import AnnouncementBanner from './AnnouncementBanner'
 import CharacterAvatar from './CharacterAvatar'
 import MailInbox from './MailInbox'
-import { getMailUnreadCount } from '@/app/actions/mail'
 import { BADGE_MAP } from '@/lib/badges'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { signOutHere } from '@/lib/signOut'
 import { motion, AnimatePresence } from 'framer-motion'
 import TickingNumber from './TickingNumber'
+import { api } from '@/lib/gameApi'
 
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
@@ -152,7 +152,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
         // inline client query counted EVERY active row — including mail targeted
         // to other users and broadcasts sent before this player joined — so the
         // pip showed mail the inbox correctly hides ("badge but nothing there").
-        getMailUnreadCount(),
+        api.dailies.getMailUnreadCount(),
       ]).then(([{ data: profile }, { data: voyages }, mailUnreadCount]) => {
         const cc = (profile?.character_color as string | null) ?? null
         const hat = (profile?.equipped_hat as string | null) ?? null

@@ -106,7 +106,7 @@ function freshSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 200 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1, 2, 3], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [],
+    clears: [], rods: [0, 1, 2, 3], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {},
   }
 }
 

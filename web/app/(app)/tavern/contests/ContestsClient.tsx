@@ -6,11 +6,11 @@ import { motion } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import RankMedallion from '@/components/RankMedallion'
 import { IconTrophy, IconCrate } from '@/components/GameIcons'
+import { api } from '@/lib/gameApi'
 import {
   CONTESTS, formatContestScore,
   type ContestDef, type ContestView, type ContestStanding,
 } from '@/lib/contests'
-import { markContestsSeen } from './actions'
 
 const MEDAL_COLORS = ['#f0c040', '#c8c8c8', '#cd8c4a']
 const LIVE = '#34d399'
@@ -26,7 +26,7 @@ export default function ContestsClient({ views }: { views: Record<string, Contes
   const completed = CONTESTS.filter(c => isDecided(c, views[c.id]))
 
   // Opening the page clears the "new" pulse on the tavern tile (fire-and-forget).
-  useEffect(() => { void markContestsSeen() }, [])
+  useEffect(() => { void api.dailies.markContestsSeen() }, [])
 
   return (
     <div>

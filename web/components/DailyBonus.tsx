@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { claimDailyBonus } from '@/app/actions/dailyBonus'
+import { api } from '@/lib/gameApi'
 
 const DAILY_BONUS = 50
 
@@ -9,7 +9,7 @@ export default function DailyBonus() {
   const [show, setShow] = useState(false)
 
   useEffect(() => {
-    claimDailyBonus().then(({ claimed }) => {
+    api.dailies.claimDailyBonus().then(({ claimed }) => {
       if (claimed) setShow(true)
     })
   }, [])

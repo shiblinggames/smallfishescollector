@@ -18,7 +18,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { markBountyRungSeen } from './bountyActions'
+import { api } from '@/lib/gameApi'
 
 const GEM = '◆'
 const ACCENT = '#c084fc'
@@ -40,7 +40,7 @@ export default function BountyRungUnlock({ chapter, title, boss, orders, gems, f
   // Marked seen on ARRIVAL, not on dismissal. A captain who closes the app on
   // this screen has still been told, and re-announcing it tomorrow would read
   // as the game losing track rather than as a courtesy.
-  useEffect(() => { void markBountyRungSeen(chapter) }, [chapter])
+  useEffect(() => { void api.dailies.markBountyRungSeen(chapter) }, [chapter])
 
   useEffect(() => {
     const prev = document.body.style.overflow

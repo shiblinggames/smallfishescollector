@@ -11,7 +11,7 @@
 // on this API yet. Selling runs offline too (lib/core/selling), with the
 // captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi, ShipApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi, ShipApi, DailiesApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
 import * as selling from '@/lib/core/selling'
@@ -29,8 +29,11 @@ import * as mapCore from '@/lib/core/raidMap'
 import { localRaidData } from '@/lib/data/local/raidLocal'
 import * as shipCore from '@/lib/core/ship'
 import { localShipData } from '@/lib/data/local/shipLocal'
+import * as bountyCore from '@/lib/core/bounties'
+import * as dailyCore from '@/lib/core/dailies'
+import { localDailyData } from '@/lib/data/local/dailyLocal'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
-import { freshCasino, SHIP_PROFILE_DEFAULTS } from '@/lib/data/local/save'
+import { freshCasino, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS } from '@/lib/data/local/save'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
 import type { Row } from '@/lib/data/common'
 import { installRng, mulberry32, seedOf } from '@/lib/rng'
@@ -42,7 +45,7 @@ export type {
   FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
   CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
   VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew, GauntletApi, CasinoApi,
-  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide, ShipApi,
+  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide, ShipApi, DailiesApi, BountyBoard, BountyView,
 } from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
@@ -56,6 +59,7 @@ function starterSave(): LocalSave {
     uid: 'local-captain',
     profile: {
       ...structuredClone(SHIP_PROFILE_DEFAULTS),
+      ...structuredClone(DAILY_PROFILE_DEFAULTS),
       fishing_xp: XP_TABLE[4], doubloons: 500, gems: 0, rod_tier: 1, hook_tier: 0, line_tier: 0, fish_hold_tier: 1,
       ancient_catches: [], current_perfect_streak: 0, highest_perfect_streak: 0, total_perfects: 0, zone_perfects: {},
       lifetime_species: [], prestige_levels: {}, zone_golden_boost: {}, unlocked_pets: [], unlocked_character_colors: [],
@@ -64,7 +68,7 @@ function starterSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 60 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [],
+    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {},
   }
 }
 
@@ -327,4 +331,36 @@ const shipApi: ShipApi = {
   equipRod: (tier) => runShip((db, uid) => shipCore.equipRod(db, uid, tier)),
 }
 
-export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi }
+/** The same, over the daily loop's store. Offline every letter is the
+ *  captain's own, so the account's join time is not needed. */
+async function runDaily<T>(fn: (db: ReturnType<typeof localDailyData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage, carried } = need()
+  const r = await fn(localDailyData(save), save.uid)
+  await writeSave(storage, save, carried)
+  return r
+}
+const NO_JOIN = new Date(0).toISOString()
+
+const dailiesApi: DailiesApi = {
+  getBountyBoard: () => runDaily((db, uid) => bountyCore.getBountyBoard(db, uid)),
+  claimBounty: (id) => runDaily((db, uid) => bountyCore.claimBounty(db, uid, id)),
+  claimBountyMilestone: () => runDaily((db, uid) => bountyCore.claimBountyMilestone(db, uid)),
+  rerollBounty: (id) => runDaily((db, uid) => bountyCore.rerollBounty(db, uid, id)),
+  markBountyRungSeen: (chapter) => runDaily((db, uid) => bountyCore.markBountyRungSeen(db, uid, chapter)),
+  getDailyChallenge: () => runDaily((db, uid) => dailyCore.getDailyChallenge(db, uid)),
+  claimDailyReward: (index) => runDaily((db, uid) => dailyCore.claimDailyReward(db, uid, index)),
+  claimDailySweep: () => runDaily((db, uid) => dailyCore.claimDailySweep(db, uid)),
+  claimDailyBonus: () => runDaily((db, uid) => dailyCore.claimDailyBonus(db, uid)),
+  claimDailyBait: () => runDaily((db, uid) => dailyCore.claimDailyBait(db, uid)),
+  claimWeeklyCrate: () => runDaily((db, uid) => dailyCore.claimWeeklyCrate(db, uid)),
+  bonusState: () => runDaily((db, uid) => dailyCore.bonusState(db, uid)),
+  getInbox: () => runDaily((db, uid) => dailyCore.getInbox(db, uid, NO_JOIN)),
+  getMailUnreadCount: () => runDaily((db, uid) => dailyCore.getMailUnreadCount(db, uid, NO_JOIN)),
+  markMailRead: (id) => runDaily((db, uid) => dailyCore.markMailRead(db, uid, id)),
+  markAllMailRead: () => runDaily((db, uid) => dailyCore.markAllMailRead(db, uid, NO_JOIN)),
+  claimMailAttachment: (id) => runDaily((db, uid) => dailyCore.claimMailAttachment(db, uid, id)),
+  markContestsSeen: () => runDaily((db, uid) => dailyCore.markContestsSeen(db, uid)),
+  getContestsView: () => runDaily((db, uid) => dailyCore.getContestsView(db, uid)),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi, dailies: dailiesApi }

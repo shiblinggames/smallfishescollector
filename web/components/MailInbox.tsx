@@ -16,16 +16,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  getInbox,
-  markMailRead,
-  markAllMailRead,
-  claimMailAttachment,
-} from '@/app/actions/mail'
 import type { MailMessage } from '@/lib/mailTypes'
 import SwipeAction from '@/components/SwipeAction'
 import { flyCoinsToPurse, flyGemsToPurse } from '@/lib/coinFly'
 import { hapticReward } from '@/lib/haptics'
+import { api } from '@/lib/gameApi'
 
 const ACCENT = '#f0c040'         // gold, parchment-y "letter from the captain"
 const ACCENT_DIM = '#caa540'
@@ -124,7 +119,7 @@ export default function MailInbox({ initialUnreadCount, size = 36 }: {
   async function openInbox() {
     setOpen(true)
     if (!inbox) setLoading(true)
-    const result = await getInbox()
+    const result = await api.dailies.getInbox()
     setInbox(result.messages)
     setUnread(result.unreadCount)
     setLoading(false)
@@ -141,7 +136,7 @@ export default function MailInbox({ initialUnreadCount, size = 36 }: {
         m.id === msg.id ? { ...m, readAt: new Date().toISOString() } : m
       ) ?? null)
       setUnread(n => Math.max(0, n - 1))
-      void markMailRead(msg.id)
+      void api.dailies.markMailRead(msg.id)
     }
   }
 
@@ -153,7 +148,7 @@ export default function MailInbox({ initialUnreadCount, size = 36 }: {
     setInbox(prev => prev?.map(m =>
       m.id === msg.id ? { ...m, claimedAt: new Date().toISOString() } : m
     ) ?? null)
-    const result = await claimMailAttachment(msg.id)
+    const result = await api.dailies.claimMailAttachment(msg.id)
     setClaimingId(null)
     if (!result.ok) {
       setInbox(prev => prev?.map(m =>
@@ -184,7 +179,7 @@ export default function MailInbox({ initialUnreadCount, size = 36 }: {
     const now = new Date().toISOString()
     setInbox(prev => prev?.map(m => ({ ...m, readAt: m.readAt ?? now })) ?? null)
     setUnread(0)
-    void markAllMailRead()
+    void api.dailies.markAllMailRead()
   }
 
   return (
