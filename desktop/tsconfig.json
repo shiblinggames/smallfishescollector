@@ -17,6 +17,13 @@
     "types": ["node"],
     "paths": {
       "@/lib/gameApi": ["./src/localGameApi.ts"],
+      // The same stand-ins vite.config.ts swaps in, so the screens are checked
+      // against what the shell actually gives them.
+      "@/lib/supabase/client": ["./src/shims/supabaseClient.ts"],
+      "next/navigation": ["./src/shims/navigation.tsx"],
+      "next/link": ["./src/shims/link.tsx"],
+      "next/dynamic": ["./src/shims/dynamic.tsx"],
+      "next/image": ["./src/shims/image.tsx"],
       // One React for both trees, as vite.config.ts dedupes it at runtime.
       "react": ["./node_modules/@types/react"],
       "react/*": ["./node_modules/@types/react/*"],

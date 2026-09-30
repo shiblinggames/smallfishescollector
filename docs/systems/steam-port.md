@@ -477,7 +477,15 @@ its system's doc.
      - NOT AT LAUNCH: homestead visits, trading and gifting.
    - RETIRED on Steam: contests and the Pirate King ladder (races between players), along
      with the leaderboards.
-5. Still to come: what "content complete" means, the real
+5. **Quick ones (2026-09-30):**
+   - STORE ART is parked until nearer launch: whether to commission the capsule, key art and
+     trailer. The AI disclosure is required either way.
+   - The physical-pack CLAIM CODES (`/claim`, 100 gems a pack) are RETIRED.
+   - The Don's-hardcore cash-out repair is CLOSED as won't fix: the beta resets and nothing
+     carries over.
+   - The CASINO CHECK resolves itself: with no purchased currency, chips only ever come from
+     earned doubloons.
+6. Still to come: what "content complete" means, the real
    screens in the desktop window, controller support, store art and the AI disclosure, the
    casino check.
 
@@ -1167,6 +1175,45 @@ In order. Each step is worth doing even if the port never happens.
      WINDOW still shows the spike's small fishing screen (`desktop/src/App.tsx`), not the
      game's screens. Mounting the real screens in the shell is its own stage. They are Next
      pages whose data is loaded on the server, so each one needs its loading moved onto `api`.
+   **THE REAL SCREENS IN THE SHELL, STAGE 1: THE SEA CHART (2026-09-30).** The desktop
+   window now runs the game's own screens instead of the spike.
+   - STAND-INS FOR NEXT (`desktop/src/shims`, swapped in by `vite.config.ts` and
+     `tsconfig.json`, so the screens are type-checked against them):
+     - `next/navigation` works over the window's own history. `router.refresh()` re-runs
+       the screen's loader without remounting, as a refreshed server page does.
+     - `next/link`, `next/dynamic` (React.lazy) and `next/image` (a plain img).
+     - `@/lib/supabase/client` is a quiet stand-in that answers every query with nothing.
+       The Nav, the live profile feed and the presence layer reach for it; offline they
+       sit still.
+   - THE FRAME (`desktop/src/Shell.tsx`) plays both web layouts: first-run setup and the
+     welcome, the Nav, the preloader, the coach, the unlock banner, crew promotion, the
+     doubloon guide and AppChrome's watchers. Left out: the Stripe checkouts, the session
+     watcher, the honeypot and analytics.
+   - SCREENS (`desktop/src/screens.tsx`): a path, a LOADER that builds the page's props
+     from the save, and the page's client component. Only `/sea` so far; any other path
+     shows "not aboard yet" with the way home.
+   - THE SEA PAGE'S PROPS are shaped in `lib/core/seaPage` (`seaMapProps`) from pieces, like
+     the ship screen. The web's `/sea` page keeps its one parallel batch of reads (with the
+     cached species) and hands them over; the desktop reads the same pieces from the save
+     (`seaPageProps` in `localGameApi`).
+   - `electron/main.cjs` answers any extensionless path with index.html, so a screen's URL
+     survives a reload. Save writes are queued and coalesced: parallel autosaves raced
+     through one temp file and lost the rename.
+   - Fonts ship as local files (@fontsource: Cinzel, Karla, Pirata One). The web's
+     `public/` folder (152 MB of art and sound) is served and packaged as is.
+   - PIXI UNDER app:// (`desktop/src/pixiPaths.ts`): Pixi only counted http(s) as a web
+     address and resolved '/sea/x.webp' to app://sea/x.webp. Its check now counts app://.
+   - `desktop/src/localGameApi` re-exports EVERY type the web's Game API does
+     (`export type *`), since the real screens import many more than the spike did.
+   - Checked: `npx tsc` in desktop covers the whole chart tree. The dev window and the
+     packaged exe both load the chart with no errors, and first-run setup and the welcome
+     go through to it.
+   - NEXT: the rooms the chart sends you to (`/tavern`, `/tavern/market`,
+     `/marketplace/tackle-shop`, `/home`, `/shipyard`, the gauntlets, the Parlor, the Den,
+     the Chart Room), each a loader plus its client component. `lib/fishMarket` and
+     `lib/blackjackFishArt` reach the server from a client file and need splitting first.
+     The Nav's chips read the database directly and need the API. The starter save is
+     still the spike's (Lv 5, 500 doubloons) and should match a fresh web account.
    **THE STEAMWORKS LAYER, 2026-09-29.** `steamworks.js` 0.4.0 in the desktop shell.
    - `desktop/electron/steam.cjs` (main process): starts Steam, relaunches a packaged build
      through Steam if it was opened outside it, switches on the overlay, and answers three

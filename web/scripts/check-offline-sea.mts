@@ -74,7 +74,7 @@ function resolve(from: string, spec: string): string | null {
   for (const ext of ['.ts', '.tsx', '/index.ts', '/index.tsx', '']) if (fs.existsSync(base + ext) && fs.statSync(base + ext).isFile()) return base + ext
   return null
 }
-for (const entry of ['lib/core/sea.ts', 'lib/core/seaSheets.ts', 'lib/data/local/seaLocal.ts']) {
+for (const entry of ['lib/core/sea.ts', 'lib/core/seaSheets.ts', 'lib/core/seaPage.ts', 'lib/data/local/seaLocal.ts']) {
   const seen = new Set<string>(); const bad: string[] = []; const stack = [path.join(ROOT, entry)]
   while (stack.length) {
     const f = stack.pop()!

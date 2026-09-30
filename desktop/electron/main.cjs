@@ -47,14 +47,37 @@ ipcMain.handle('save:read', async () => {
   }
 })
 
-ipcMain.handle('save:write', async (_e, text) => {
-  if (typeof text !== 'string') throw new Error('a save is text')
+// ONE WRITE AT A TIME, AND ONLY THE NEWEST. The screens fire several game calls
+// at once, each ending in an autosave; two writes racing through the same temp
+// file lost the rename. So writes queue behind the one in flight, and a write
+// that is still waiting when a newer one arrives is skipped: every save is the
+// whole game, so the newest one is the only one worth the disk.
+let latest = null
+let inFlight = null
+async function writeAtomic(text) {
   const file = saveFile()
   await fs.promises.mkdir(path.dirname(file), { recursive: true })
   const tmp = `${file}.tmp`
   const h = await fs.promises.open(tmp, 'w')
   try { await h.writeFile(text, 'utf8'); await h.sync() } finally { await h.close() }
   await fs.promises.rename(tmp, file)
+}
+async function drain() {
+  while (latest !== null) {
+    const text = latest
+    latest = null
+    await writeAtomic(text)
+  }
+}
+
+ipcMain.handle('save:write', async (_e, text) => {
+  if (typeof text !== 'string') throw new Error('a save is text')
+  latest = text
+  // Every caller waits until a write at least as new as theirs is on disk.
+  while (inFlight) await inFlight
+  if (latest === null) return
+  inFlight = drain().finally(() => { inFlight = null })
+  await inFlight
 })
 
 function createWindow() {
@@ -81,14 +104,18 @@ function createWindow() {
   win.webContents.on('will-navigate', (e, url) => {
     if (!url.startsWith('app://game/') && !(DEV_URL && url.startsWith(DEV_URL))) e.preventDefault()
   })
-  void win.loadURL(DEV_URL ?? 'app://game/index.html')
+  void win.loadURL(DEV_URL ? `${DEV_URL.replace(/\/$/, '')}/sea` : 'app://game/sea')
 }
 
 app.whenReady().then(() => {
   // app://game/<path> serves ../dist/<path>, and nothing outside it.
+  // A path with no file extension is a SCREEN (app://game/tavern/market), not a
+  // file, and gets index.html: the shell's router reads the URL, so a reload or
+  // a `window.location` the game sets lands on the right screen.
   protocol.handle('app', (req) => {
     const { pathname } = new URL(req.url)
-    const file = path.normalize(path.join(DIST, decodeURIComponent(pathname)))
+    const screen = !path.extname(pathname)
+    const file = screen ? path.join(DIST, 'index.html') : path.normalize(path.join(DIST, decodeURIComponent(pathname)))
     if (!file.startsWith(DIST + path.sep)) return new Response('not found', { status: 404 })
     return net.fetch(pathToFileURL(file).toString())
   })

@@ -1,0 +1,16 @@
+/* The shell's styles ARE the website's (web/app/globals.css, Tailwind 4). The
+   web gets its three typefaces from next/font as CSS variables on <html>; the
+   shell ships the same faces as local files (@fontsource, in ./fonts.ts) and
+   sets the same variables here, a notch more specific than :root so the theme's
+   own declarations cannot shadow them. Tailwind is told where the web's classes
+   live, since those files sit outside this project. */
+@import "../../web/app/globals.css";
+@source "../../web/app";
+@source "../../web/components";
+@source "../../web/lib";
+
+html:root {
+  --font-cinzel: 'Cinzel';
+  --font-karla: 'Karla';
+  --font-pirata: 'Pirata One';
+}

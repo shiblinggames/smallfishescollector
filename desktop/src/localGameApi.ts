@@ -57,13 +57,14 @@ import type { SpeciesRow } from '@/lib/data/fishingData'
 import speciesJson from '@/content/fish_species.json'
 import { XP_TABLE } from '@/lib/fishingLevel'
 import { syncAchievements, setActivity } from './steam'
+import { seaMapProps, raidSeatsFor, type SeaPageQuery } from '@/lib/core/seaPage'
+import { buildClearedSetVia } from '@/lib/raidCleared'
+import { loadDeployedPartyVia } from '@/lib/crewData'
+import type { CachedSpecies } from '@/lib/fishSpecies'
 
-export type {
-  FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
-  CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
-  VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew, GauntletApi, CasinoApi,
-  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide, ShipApi, DailiesApi, BountyBoard, BountyView, ParlorApi, ChartRoomApi, SeaApi, HarbourApi, ProgressApi, OnlineApi,
-} from '../../web/lib/gameApi/index'
+// Every type the web's Game API exports, so a screen that imports one from
+// `@/lib/gameApi` gets the same one here (this file's own `api` is the value).
+export type * from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
 
@@ -621,3 +622,49 @@ const onlineApi: OnlineApi = {
 }
 
 export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi, dailies: dailiesApi, parlor: parlorApi, chartRoom: chartRoomApi, sea: seaApi, harbour: harbourApi, progress: progressApi, online: onlineApi }
+
+
+/**
+ * THE SEA CHART'S PROPS, from the save (lib/core/seaPage). The web's /sea page
+ * reads the same pieces from Supabase in one batch; here they come from the
+ * local stores, and the same builder shapes them, so the chart is handed the
+ * same thing on both. Reads only: nothing is written.
+ */
+export async function seaPageProps(q: SeaPageQuery = {}) {
+  const { save } = need()
+  const uid = save.uid
+  const profile: Row = { ...save.profile, id: uid }
+  const sea = localSeaData(save), progress = localProgressData(save)
+  const [clearedNodes, party, dealt, discovered, digs, homestead, renown, renownNav, trawlState] = await Promise.all([
+    buildClearedSetVia(localRaidData(save), uid, profile),
+    loadDeployedPartyVia(localCrewData(save), uid, raidSeatsFor(profile), 'raid'),
+    selling.dealtToday(localSellData(save), uid),
+    seaCore.getDiscoveries(sea, uid),
+    seaCore.getDigState(sea, uid),
+    homesteadCore.getHomestead(progress, uid),
+    progressCore.getRenownState(progress, uid, 'fishing'),
+    progressCore.getRenownState(progress, uid, 'nav'),
+    voyageCore.getTrawlState(localVoyageData(save), uid),
+  ])
+  // The web's species come from its cached catalogue, ordered by rarity.
+  const species = save.species
+    .map(f => ({
+      id: f.id, name: f.name, scientific_name: f.scientific_name ?? null, fun_fact: f.fun_fact ?? null,
+      habitat: f.habitat, bite_rarity: f.bite_rarity, sell_value: f.sell_value, catch_difficulty: f.catch_difficulty,
+      length_min_in: f.length_min_in, length_max_in: f.length_max_in,
+    }) as unknown as CachedSpecies)
+    .sort((a, b) => Number(a.bite_rarity) - Number(b.bite_rarity))
+  return seaMapProps({
+    uid, profile, clearedNodes, species,
+    collection: Object.entries(save.collection).map(([id, c]) => ({ fish_id: Number(id), is_golden: c.is_golden })),
+    bests: Object.entries(save.bests).map(([id, b]) => ({ fish_id: Number(id), best_length_in: b.len })),
+    party,
+    bait: Object.entries(save.bait).map(([bait_type, quantity]) => ({ bait_type, quantity })),
+    dealt, discovered, digs, homestead, renown, renownNav, trawlState,
+    finaleCleared: save.clears.includes('the_sunken_hand'),
+    holdCount: Object.values(save.hold).reduce((n, q) => n + q, 0),
+    // Offline there is nobody else on the water.
+    hasPact: false,
+    rodTiers: [...save.rods],
+  }, q)
+}
