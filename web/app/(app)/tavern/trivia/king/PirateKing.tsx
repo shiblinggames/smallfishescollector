@@ -9,7 +9,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { flyPayout } from '@/lib/coinFly'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { answerKingRung, startKingRung, spendKingFiftyFifty, walkKingAway } from './actions'
+import { api } from '@/lib/gameApi'
 import { ParlorHost, CrownIcon, PARLOR, ParlorPointsTicker } from '../ParlorArt'
 import {
   PIRATE_KING_PRIZES,
@@ -99,7 +99,7 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
     setChosen(idx >= 0 ? idx : null)
     setDeadline(null)   // stop the clock the instant we commit
     startTransition(async () => {
-      const r = await answerKingRung(rung, idx)
+      const r = await api.parlor.answerKingRung(rung, idx)
       if ('error' in r) { setError(r.error); setChosen(null); return }
       setResult(r)
       setStatus(r.status)
@@ -125,7 +125,7 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
     if (isPending || status !== 'active') return
     setError(null)
     startTransition(async () => {
-      const r = await startKingRung()
+      const r = await api.parlor.startKingRung()
       if ('error' in r) { setError(r.error); return }
       setChosen(null)
       setResult(null)
@@ -147,7 +147,7 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
     if (fiftyUsed || isPending || resolved || status !== 'active') return
     setError(null)
     startTransition(async () => {
-      const r = await spendKingFiftyFifty()
+      const r = await api.parlor.spendKingFiftyFifty()
       if ('error' in r) { setError(r.error); return }
       setFiftyUsed(true)
       setCurrent(prev => prev ? { ...prev, removed: r.removed } : prev)
@@ -160,7 +160,7 @@ export default function PirateKing({ initial, parlorPoints }: { initial: PirateK
     const from = e?.currentTarget?.getBoundingClientRect()
     setError(null)
     startTransition(async () => {
-      const r = await walkKingAway()
+      const r = await api.parlor.walkKingAway()
       if ('error' in r) { setError(r.error); setWalkConfirm(false); return }
       setStatus('walked')
       setDoubloonsAwarded(r.doubloonsAwarded)

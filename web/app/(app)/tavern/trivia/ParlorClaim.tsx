@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom'
 import { useState, useCallback, useEffect } from 'react'
 import { GEM_GLYPH } from '@/lib/uiTokens'
 import { CrownIcon } from './ParlorArt'
-import { claimParlorRank } from './actions'
+import { api } from '@/lib/gameApi'
 import { nextClaimableParlorRank, claimableParlorRanks } from './constants'
 import { flyPayout } from '@/lib/coinFly'
 
@@ -43,7 +43,7 @@ export default function ParlorClaim({ points, claimedGems }: { points: number; c
     if (claiming) return
     setClaiming(true)
     vibrate([0, 25, 35, 70])
-    const res = await claimParlorRank()
+    const res = await api.parlor.claimParlorRank()
     if ('ok' in res && res.ok) {
       setPaid({ gems: res.gemsWon })
       vibrate([0, 30, 45, 90, 45, 160])

@@ -973,8 +973,25 @@ In order. Each step is worth doing even if the port never happens.
      is broken. Production probe as catman (reads and refusals, profile unchanged).
    - The sea's boot and day aggregators (`sea/bootActions`, `sea/dayActions`) still call the
      web actions server-side; they convert with the sea stage.
-   - NOT YET: the Parlor, the Chart Room, the sea's own actions (folk, pacts, digs, isles,
-     tours, Finn, the smuggler), the tackle shop, the hold and almanac, badges and renown.
+   **THE PARLOR OFFLINE, 2026-09-29.** `lib/core/parlor`: the Captain's Board, Spin the
+   Capstan, the Pirate King and the rank claims. The four trivia action files are thin wrappers;
+   `api.parlor` carries them to the board, the capstan, the King, the rank claim and the lobby.
+   - THE QUESTIONS OFFLINE come from a shipped bank, `content/trivia.json`, because the web's
+     come from Claude each week. `scripts/export-trivia-bank.mts` refreshes it from production
+     (every week that passes the generators' shape checks, no question repeated across weeks);
+     `lib/triviaBank` hands each week one entry of each list in turn. First export: 18 boards,
+     14 ladders, 11 capstan sets, so the offline Parlor repeats after about three months unless
+     the bank is refreshed before a build. The bank is imported only by the local store, and the
+     website's browser bundles were checked to hold none of it.
+   - `lib/data/triviaData`: DailyData plus badges, the week's questions (the generators on the
+     web, the bank offline) and each game's attempt row, moved only from the exact state read.
+   - SAVE FILE v10: each game's attempt per week (twelve weeks kept) and the Parlor's profile
+     columns at the database's defaults (`PARLOR_PROFILE_DEFAULTS`).
+   - `scripts/check-offline-parlor.mts` (in `npm run check`); checked to fail when a payout or
+     any of the three race guards is broken. Production probe as catman (reads and refusals,
+     the profile and the week's rows unchanged).
+   - NOT YET: the Chart Room, the sea's own actions (folk, pacts, digs, isles, tours, Finn, the
+     smuggler), the tackle shop, the hold and almanac, badges and renown.
      Online-only by nature and staying on the web: social, leaderboards, public profiles,
      membership (Stripe), admin and dev tools, the honeypot.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.

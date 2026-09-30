@@ -38,6 +38,14 @@ Both live in `capstan/actions.ts` and both are server-side. Neither is a display
   duplicate guard could not see it: the same miss could be called repeatedly, each time
   costing a spin and a strike. Applies to bought vowels too, so a wasted fee is paid once.
 
+## Offline (the desktop build)
+
+The games' rules live in `web/lib/core/parlor.ts`; the action files are thin wrappers. The
+desktop build cannot call Claude, so it plays the weeks already written from
+`web/content/trivia.json`, one of each per week in turn (`lib/triviaBank`). Refresh the bank
+with `npx tsx scripts/export-trivia-bank.mts` before a desktop build. The bank carries the
+answers: it is imported only by the offline store and must never reach a web page.
+
 ## Connects to
 
 - [tavern.md](tavern.md) — its front door. [economy-membership.md](economy-membership.md)

@@ -95,7 +95,7 @@ function freshSave(over: Record<string, unknown> = {}): LocalSave {
     bait: {}, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
     clears: [], rods: [0], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {},
     deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [],
-    depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {},
+    depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} },
   }
 }
 function sign(s: LocalSave, cardId: number, raid: number | null) {

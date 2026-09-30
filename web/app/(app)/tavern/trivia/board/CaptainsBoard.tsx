@@ -11,7 +11,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { answerCaptainsTile, playCaptainsCard } from './actions'
+import { api } from '@/lib/gameApi'
 import { ParlorHost, PARLOR, ParlorPointsTicker } from '../ParlorArt'
 import {
   TRIVIA_CATEGORIES,
@@ -85,7 +85,7 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
     if (isPending) return
     setError(null)
     startTransition(async () => {
-      const r = await playCaptainsCard(key)
+      const r = await api.parlor.playCaptainsCard(key)
       if ('error' in r) { setError(r.error); setPendingPlay(null); return }
       setTiles(r.tiles)
       setPlayedToday(r.playedToday)
@@ -117,7 +117,7 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
     setChosen(idx >= 0 ? idx : null)
     setDeadline(null)   // stop the clock the instant we commit
     startTransition(async () => {
-      const r = await answerCaptainsTile(openTile.key, idx)
+      const r = await api.parlor.answerCaptainsTile(openTile.key, idx)
       if ('error' in r) { setError(r.error); setChosen(null); return }
       setResult(r)
       setDoubloonsAwarded(r.totalAwarded)

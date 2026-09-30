@@ -1,350 +1,56 @@
 'use server'
 
-// Pirate King — server-authoritative play. The full ladder (with
-// answers) only ever lives server-side; clients get the current
-// question stripped, every answer is judged here, and the 50/50's
-// removed options are persisted so a reload can't re-roll them.
-// One run per WEEK, keyed by the Monday week-start; pays doubloons.
-// Types live in ../constants ('use server' files silently drop
-// non-async exports at build).
+// Pirate King: server-authoritative play. The full ladder (with answers) only
+// ever lives server-side; clients get the current question stripped and every
+// answer is judged in lib/core/parlor. One run per WEEK; pays doubloons. Each
+// action checks the session and hands the core the Supabase store.
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { grantBadgeDirect } from '@/lib/badgeGrant'
-import { grant } from '@/lib/wallet'
-import { getThisWeeksLadder, type GeneratedRung } from './generate'
-import {
-  PIRATE_KING_PRIZES,
-  PIRATE_KING_RUNGS,
-  KING_RUNG_POINTS,
-  KING_CROWN_POINTS,
-  parlorRank,
-  kingHavenValue,
-  kingWeekStr,
-  triviaTimedOut,
-  type PirateKingState,
-  type PirateKingStatus,
-  type KingQuestionClient,
-  type KingRevealResult,
-  type AnswerKingResult,
-} from '../constants'
-import { rngNext } from '@/lib/rng'
+import { triviaData } from '@/lib/data/triviaData'
+import * as core from '@/lib/core/parlor'
+import type { PirateKingState, KingRevealResult, AnswerKingResult } from '../constants'
 
-interface AttemptRow {
-  rung: number
-  status: PirateKingStatus
-  fifty: { rung: number; removed: number[] } | null
-  doubloons_awarded: number
-  /** When the current rung was revealed (ISO), or null if not revealed yet — the
-   *  answer-timer clock. */
-  current_started_at: string | null
+async function me(): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.id ?? null
 }
+const db = () => triviaData(createAdminClient())
+const NOT_SIGNED_IN = { error: 'Not authenticated' }
 
-const ATTEMPT_COLS = 'rung, status, fifty, doubloons_awarded, current_started_at'
-
-function stripQuestion(q: GeneratedRung, rung: number, fifty: AttemptRow['fifty']): KingQuestionClient {
-  return {
-    question: q.question,
-    options: q.options,
-    removed: fifty && fifty.rung === rung ? fifty.removed : [],
-  }
-}
-
-/** Pays doubloons and returns the new wallet total (null if nothing
- *  was paid) so the client can tick the Nav header. */
-async function payOut(userId: string, amount: number, reason: string): Promise<number | null> {
-  if (amount <= 0) return null
-  const admin = createAdminClient()
-  const newTotal = await grant(admin, userId, 'doubloons', amount)
-  await admin.from('doubloon_transactions').insert({ user_id: userId, amount, reason })
-  return newTotal
-}
-
-/** Move the run from the state we read to the next one, and only if it is
- *  still in the state we read. true = this request made the move; false = a
- *  twin request (a double tap, or a crafted race) got there first and this
- *  one must not pay or reveal anything. A run with no row yet is inserted,
- *  and the primary key makes a concurrent insert lose the same way. */
-async function advanceRun(
-  userId: string,
-  week: string,
-  from: AttemptRow | null,
-  patch: Record<string, unknown>,
-): Promise<boolean> {
-  const admin = createAdminClient()
-  if (!from) {
-    const { error } = await admin.from('trivia_ladder_attempts').insert({
-      user_id: userId, date: week, rung: 0, status: 'active', fifty: null, doubloons_awarded: 0, current_started_at: null,
-      ...patch,
-    })
-    return !error
-  }
-  let q = admin.from('trivia_ladder_attempts').update(patch)
-    .eq('user_id', userId).eq('date', week)
-    .eq('rung', from.rung).eq('status', from.status)
-  q = from.current_started_at === null ? q.is('current_started_at', null) : q.eq('current_started_at', from.current_started_at)
-  q = from.fifty === null ? q.is('fifty', null) : q.not('fifty', 'is', null)
-  const { data } = await q.select('user_id')
-  return !!data && data.length > 0
-}
-
-/** Grants gems (the crown bonus) and returns the new gem total, null if none.
- *  Sequential after payOut so the two profile writes never clobber each other. */
 export async function getPirateKingState(): Promise<PirateKingState | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const admin = createAdminClient()
-  const week = kingWeekStr()
-
-  const [ladder, { data: attempt }] = await Promise.all([
-    getThisWeeksLadder(),
-    admin.from('trivia_ladder_attempts')
-      .select(ATTEMPT_COLS)
-      .eq('user_id', user.id).eq('date', week)
-      .single(),
-  ])
-  if (!ladder) return { error: 'No ladder available right now. Try again in a moment.' }
-
-  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0, current_started_at: null }
-
-  // The current rung's question is only handed back once it's been REVEALED (its
-  // clock is running / this is a mid-question refresh). If not revealed yet, the
-  // client shows the reveal prompt — startKingRung serves it and starts the timer.
-  const revealed = a.status === 'active' && a.current_started_at !== null
-  return {
-    date: week,
-    status: a.status,
-    rung: a.rung,
-    doubloonsAwarded: a.doubloons_awarded,
-    fiftyUsed: a.fifty !== null,
-    current: revealed ? stripQuestion(ladder[a.rung], a.rung, a.fifty) : null,
-    startedAt: revealed ? a.current_started_at : null,
-    serverNow: new Date().toISOString(),
-  }
+  const uid = await me()
+  if (!uid) return NOT_SIGNED_IN
+  return core.getPirateKingState(db(), uid)
 }
 
-/** Reveal the current rung's question and start its answer clock. Idempotent: a
- *  reload during a revealed question returns the same startedAt (the clock never
- *  resets, so you can't stall on a lookup). */
+/** Reveal the current rung's question and start its answer clock (idempotent). */
 export async function startKingRung(): Promise<KingRevealResult | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const admin = createAdminClient()
-  const week = kingWeekStr()
-
-  const [ladder, { data: attempt }] = await Promise.all([
-    getThisWeeksLadder(),
-    admin.from('trivia_ladder_attempts').select(ATTEMPT_COLS).eq('user_id', user.id).eq('date', week).single(),
-  ])
-  if (!ladder) return { error: 'No ladder available' }
-
-  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0, current_started_at: null }
-  if (a.status !== 'active') return { error: 'The run is over for this week' }
-
-  // Only stamp on the FIRST reveal of this rung; a reload keeps the original clock.
-  // Guarded, and it writes ONLY the stamp: a whole-row write from a stale read
-  // could put a busted run back to active after its answer was revealed.
-  const startedAt = a.current_started_at ?? new Date().toISOString()
-  if (a.current_started_at === null) {
-    const moved = await advanceRun(user.id, week, attempt as AttemptRow | null, { current_started_at: startedAt })
-    if (!moved) return { error: 'Out of step with the ladder' }
-  }
-
-  return {
-    current: stripQuestion(ladder[a.rung], a.rung, a.fifty),
-    startedAt,
-    serverNow: new Date().toISOString(),
-  }
+  const uid = await me()
+  if (!uid) return NOT_SIGNED_IN
+  return core.startKingRung(db(), uid)
 }
 
 export async function answerKingRung(
   rung: number,
   chosenIndex: number
 ): Promise<AnswerKingResult | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-  // -1 is the client's "timed out, no answer" sentinel; 0-3 is a real pick.
-  if (typeof chosenIndex !== 'number' || chosenIndex < -1 || chosenIndex > 3) {
-    return { error: 'Invalid answer' }
-  }
-
-  const admin = createAdminClient()
-  const week = kingWeekStr()
-
-  const [ladder, { data: attempt }, { data: prof }] = await Promise.all([
-    getThisWeeksLadder(),
-    admin.from('trivia_ladder_attempts')
-      .select(ATTEMPT_COLS)
-      .eq('user_id', user.id).eq('date', week)
-      .single(),
-    admin.from('profiles').select('parlor_streak, parlor_best_streak, parlor_rank_gems_awarded, parlor_points').eq('id', user.id).single(),
-  ])
-  if (!ladder) return { error: 'No ladder available' }
-
-  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0, current_started_at: null }
-  if (a.status !== 'active') return { error: 'The run is over for this week' }
-  // Stale client / double submit guard: the answer must target the
-  // rung the server says is current.
-  if (rung !== a.rung) return { error: 'Out of step with the ladder' }
-  // The 50/50 already struck this option.
-  if (a.fifty && a.fifty.rung === rung && a.fifty.removed.includes(chosenIndex)) {
-    return { error: 'That option was struck by the 50/50' }
-  }
-
-  // Answer timer: the clock started when the rung was revealed (current_started_at).
-  // A late answer or the -1 timeout sentinel is a miss. A MISSING stamp is
-  // grandfathered (a run mid-question at deploy) — safe, since the question can't be
-  // fetched without startKingRung stamping the clock, so this can't skip the timer.
-  const timedOut = chosenIndex === -1 || (a.current_started_at != null && triviaTimedOut(a.current_started_at, Date.now()))
-  const q = ladder[rung]
-  const correct = !timedOut && chosenIndex === q.correct_index
-
-  let status: PirateKingStatus
-  let newRung: number
-  let won = 0
-  if (correct) {
-    newRung = rung + 1
-    status = newRung === PIRATE_KING_RUNGS ? 'crowned' : 'active'
-    if (status === 'crowned') won = PIRATE_KING_PRIZES[PIRATE_KING_RUNGS - 1]
-  } else {
-    newRung = rung
-    status = 'busted'
-    won = kingHavenValue(rung)
-  }
-
-  // Parlor streak (shared with the Board): a right answer extends it, a bust
-  // breaks it. Points accumulate toward the shared rank; the gems for a reached
-  // rank are COLLECTED later in the lobby (claimParlorRank), not paid here.
-  const prevStreak = (prof?.parlor_streak as number | null) ?? 0
-  const prevBest = (prof?.parlor_best_streak as number | null) ?? 0
-  const currentStreak = correct ? prevStreak + 1 : 0
-  const brokeStreak = correct ? 0 : prevStreak
-  const bestStreak = Math.max(prevBest, currentStreak)
-  // Parlor POINTS drive the rank (accumulate, never reset): each correct rung
-  // scores, and crowning the ladder adds a bonus. A wrong answer scores nothing.
-  const prevPoints = (prof?.parlor_points as number | null) ?? 0
-  const pointsEarned = correct ? KING_RUNG_POINTS + (status === 'crowned' ? KING_CROWN_POINTS : 0) : 0
-  const newPoints = prevPoints + pointsEarned
-  const rankedUp = parlorRank(prevPoints).rank.title !== parlorRank(newPoints).rank.title
-
-  // Gems are NOT paid here any more — reaching a rank makes it CLAIMABLE in the
-  // Parlor lobby (see claimParlorRank). Rungs only bank points now.
-  const gemsWon = 0
-  const newGems: number | null = null
-
-  // The rung moves FIRST, and only from the exact state we judged against.
-  // Two answers fired together (one per option, say) both reach here; only
-  // the one that lands the move is paid or scored.
-  const moved = await advanceRun(user.id, week, attempt as AttemptRow | null, {
-    rung: newRung,
-    status,
-    doubloons_awarded: status === 'active' ? 0 : won,
-    gems_awarded: gemsWon,
-    // The climbed-to rung is NOT revealed yet — its clock starts on startKingRung.
-    current_started_at: null,
-  })
-  if (!moved) return { error: 'Out of step with the ladder' }
-
-  let newDoubloons: number | null = null
-  if (status === 'crowned') {
-    newDoubloons = await payOut(user.id, won, `Pirate King: crowned, all ${PIRATE_KING_RUNGS} questions`)
-  } else if (status === 'busted' && won > 0) {
-    newDoubloons = await payOut(user.id, won, `Pirate King: fell to the haven at ${won} ⟡`)
-  }
-
-  // Persist the shared streak + points (column-only write).
-  await admin.from('profiles').update({ parlor_streak: currentStreak, parlor_best_streak: bestStreak, parlor_points: newPoints }).eq('id', user.id)
-
-  // Badge hooks (best-effort): the crown, and the rung-7 stepping stone.
-  if (status === 'crowned') { try { await grantBadgeDirect(user.id, 'crowned') } catch { /* best-effort */ } }
-  if (newRung >= 7) { try { await grantBadgeDirect(user.id, 'throne_in_sight') } catch { /* best-effort */ } }
-
-  return {
-    correct,
-    timedOut,
-    correctIndex: q.correct_index,
-    explanation: q.explanation,
-    status,
-    rung: newRung,
-    doubloonsAwarded: status === 'active' ? 0 : won,
-    newDoubloons,
-    gemsWon,
-    newGems,
-    currentStreak,
-    brokeStreak,
-    bestStreak,
-    pointsEarned,
-    newPoints,
-    rankedUp,
-  }
+  const uid = await me()
+  if (!uid) return NOT_SIGNED_IN
+  return core.answerKingRung(db(), uid, rung, chosenIndex)
 }
 
 // Named spend*, not use*: a use-prefixed export trips the React
 // rules-of-hooks lint when called inside a transition callback.
 export async function spendKingFiftyFifty(): Promise<{ removed: number[] } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const admin = createAdminClient()
-  const week = kingWeekStr()
-
-  const [ladder, { data: attempt }] = await Promise.all([
-    getThisWeeksLadder(),
-    admin.from('trivia_ladder_attempts')
-      .select(ATTEMPT_COLS)
-      .eq('user_id', user.id).eq('date', week)
-      .single(),
-  ])
-  if (!ladder) return { error: 'No ladder available' }
-
-  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0, current_started_at: null }
-  if (a.status !== 'active') return { error: 'The run is over for this week' }
-  if (a.fifty) return { error: 'The 50/50 is already spent' }
-
-  // Strike two of the three wrong options at random.
-  const q = ladder[a.rung]
-  const wrong = [0, 1, 2, 3].filter(i => i !== q.correct_index)
-  wrong.splice(Math.floor(rngNext() * wrong.length), 1)
-  const removed = wrong.sort((x, y) => x - y)
-
-  // Spent once, guarded on it still being unspent on this rung. Using the
-  // lifeline does NOT reset the clock — you're still on this question.
-  const moved = await advanceRun(user.id, week, attempt as AttemptRow | null, { fifty: { rung: a.rung, removed } })
-  if (!moved) return { error: 'The 50/50 is already spent' }
-
-  return { removed }
+  const uid = await me()
+  if (!uid) return NOT_SIGNED_IN
+  return core.spendKingFiftyFifty(db(), uid)
 }
 
 export async function walkKingAway(): Promise<{ status: 'walked'; doubloonsAwarded: number; newDoubloons: number | null } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const admin = createAdminClient()
-  const week = kingWeekStr()
-
-  const { data: attempt } = await admin.from('trivia_ladder_attempts')
-    .select(ATTEMPT_COLS)
-    .eq('user_id', user.id).eq('date', week)
-    .single()
-
-  const a = attempt as AttemptRow | null
-  if (!a || a.status !== 'active') return { error: 'No run to walk away from' }
-  if (a.rung < 1) return { error: 'Answer at least one question first' }
-
-  const won = PIRATE_KING_PRIZES[a.rung - 1]
-
-  // Walk FIRST, guarded on the run still being where we read it; pay only if
-  // this request is the one that ended it.
-  const moved = await advanceRun(user.id, week, a, { status: 'walked', doubloons_awarded: won, current_started_at: null })
-  if (!moved) return { error: 'No run to walk away from' }
-  const newDoubloons = await payOut(user.id, won, `Pirate King: walked at rung ${a.rung} with ${won} ⟡`)
-
-  return { status: 'walked', doubloonsAwarded: won, newDoubloons }
+  const uid = await me()
+  if (!uid) return NOT_SIGNED_IN
+  return core.walkKingAway(db(), uid)
 }

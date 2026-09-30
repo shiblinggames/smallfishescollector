@@ -10,7 +10,7 @@ import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import BackButton from '@/components/BackButton'
 import { ParlorHost, PARLOR, ParlorPointsTicker } from '../ParlorArt'
-import { spinCapstan, callConsonant, buyVowel, solveCapstan } from './actions'
+import { api } from '@/lib/gameApi'
 import {
   CAPSTAN_WHEEL,
   CAPSTAN_VOWEL_COST,
@@ -181,7 +181,7 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
   const [isPending, startTransition] = useTransition()
   const [wheelRot, setWheelRot] = useState(0)
   const [spinning, setSpinning] = useState(false)
-  const pendingSpin = useRef<Awaited<ReturnType<typeof spinCapstan>> | null>(null)
+  const pendingSpin = useRef<Awaited<ReturnType<typeof api.parlor.spinCapstan>> | null>(null)
   const [toast, setToast] = useState<{ kind: 'good' | 'bad' | 'info'; text: string } | null>(null)
   const [showVowels, setShowVowels] = useState(false)
   const [showSolve, setShowSolve] = useState(false)
@@ -198,7 +198,7 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
     setError(null)
     setSpinning(true)
     startTransition(async () => {
-      const r = await spinCapstan(puzzle.index)
+      const r = await api.parlor.spinCapstan(puzzle.index)
       if ('error' in r) { setError(r.error); setSpinning(false); return }
       pendingSpin.current = r
       const target = r.wedgeIndex * PER   // wedge i is centered at i*PER (drawn from top, clockwise)
@@ -224,7 +224,7 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
     if (isPending || spinning) return
     setError(null)
     startTransition(async () => {
-      const r = await callConsonant(puzzle.index, letter)
+      const r = await api.parlor.callConsonant(puzzle.index, letter)
       if ('error' in r) { setError(r.error); return }
       onUpdate(r.puzzle)
       if (r.count > 0) { vibrate(30); flash('good', `${r.count} × ${letter}, +${r.gained.toLocaleString()} ⟡ to the bank.`) }
@@ -236,7 +236,7 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
     if (isPending) return
     setError(null)
     startTransition(async () => {
-      const r = await buyVowel(puzzle.index, letter)
+      const r = await api.parlor.buyVowel(puzzle.index, letter)
       if ('error' in r) { setError(r.error); return }
       setShowVowels(false)
       onUpdate(r.puzzle)
@@ -249,7 +249,7 @@ function PuzzlePlay({ puzzle, onBack, onUpdate, onPoints, onDoubloons }: {
     if (isPending || !guess.trim()) return
     setError(null)
     startTransition(async () => {
-      const r = await solveCapstan(puzzle.index, guess)
+      const r = await api.parlor.solveCapstan(puzzle.index, guess)
       if ('error' in r) { setError(r.error); return }
       onUpdate(r.puzzle)
       setShowSolve(false)

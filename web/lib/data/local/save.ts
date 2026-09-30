@@ -11,6 +11,7 @@
 import type { CaptainData, ProfileGuard, Row } from '../common'
 import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { BountyRow } from '../dailyData'
+import type { BoardAttemptRow, CapstanRuns, LadderAttemptRow } from '../triviaData'
 import type { ChallengeOverride } from '@/lib/dailyChallenges'
 import { clockNow } from '@/lib/clock'
 import type { MarketState } from '@/lib/marketRules'
@@ -78,6 +79,9 @@ export type LocalSave = {
   bountyHistory: BountyRow[]
   /** When each contest this captain won was won. */
   contestsWonAt: Record<string, string>
+  // ── Save v10 (the Parlor) ──
+  /** Each game's attempt per week (the Monday), the last twelve weeks kept. */
+  trivia: LocalTrivia
 }
 
 /** A letter in the captain's own mailbox. Offline the game is the only sender. */
@@ -127,6 +131,18 @@ export const DAILY_PROFILE_DEFAULTS = {
   last_daily_claim: null, last_worm_claim: null, last_crate_claim_week: null,
   is_premium: false, premium_expires_at: null,
 }
+
+/** The Parlor's profile columns at the web's column defaults (v10). */
+export const PARLOR_PROFILE_DEFAULTS = {
+  parlor_points: 0, parlor_streak: 0, parlor_best_streak: 0, parlor_rank_gems_awarded: 0, has_seen_parlor_guide: false,
+}
+
+export type LocalTrivia = {
+  board: Record<string, BoardAttemptRow>
+  capstan: Record<string, { runs: CapstanRuns; doubloons_awarded: number }>
+  ladder: Record<string, LadderAttemptRow>
+}
+export const freshTrivia = (): LocalTrivia => ({ board: {}, capstan: {}, ladder: {} })
 
 /** A Den nobody has visited: no buy-ins, no hand, the pot at its seed. */
 export function freshCasino(): LocalCasino {

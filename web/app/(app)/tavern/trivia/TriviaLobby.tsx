@@ -15,7 +15,7 @@ import CapstanCard from './CapstanCard'
 import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, type PirateKingStatus } from './constants'
 import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
 import { GUIDES } from '@/lib/onboardingScenes'
-import { markParlorGuideSeen } from './actions'
+import { api } from '@/lib/gameApi'
 
 const GOLD = '#f0c040'
 
@@ -197,7 +197,7 @@ export default function TriviaLobby({ boardPlayedToday, boardPlayedThisWeek, dou
         show={!hasSeenGuide}
         steps={PARLOR_GUIDE}
         accent="#a78bfa"
-        onSeen={() => { void markParlorGuideSeen().catch(() => {}) }}
+        onSeen={() => { void api.parlor.markParlorGuideSeen().catch(() => {}) }}
       />
     </div>
   )
