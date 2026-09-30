@@ -586,6 +586,65 @@ its system's doc.
          and rank; pay goes to the purse, and rank rewards are the captain's.
        - THE CHART ROOM: PERSONAL PUZZLES, SHARED WORLD CHART. Every captain's puzzle points
          push the Charter's one World Chart.
+       - FOUNDING, JOINING, LEAVING:
+         - CHARTER CAPTAINS LIVE INSIDE THE CHARTER'S WORLD, as Stardew keeps farmhands in
+           the host's farm. They are saved on the founder's machine and played only when the
+           founder hosts. So sealing holds by construction (a Charter captain cannot reach a
+           solo game), and a handover moves the world and every captain together.
+         - FOUNDING: "Found a Charter" from the title screen. Name it, choose normal or
+           hardcore (fixed from then on), and make your Charter captain (Steam name by
+           default). The founder hosts a harbour lobby, friends join by Steam invite and
+           make their captains (up to 4 berths), and the founder presses SET SAIL.
+         - THE ROSTER LOCKS AT SET SAIL: nobody joins afterwards, as in Old School RuneScape's
+           Group Ironman.
+         - LEAVING: a member who stops playing keeps their berth, and their captain waits
+           for them. The founder can release a berth, which shrinks the crew (a locked roster
+           cannot refill it).
+         - HANDOVER: the founder can pass the whole Charter to another member, who hosts from
+           then on.
+       - HARDCORE CHARTER:
+         - A LIFE is spent when a captain's SHIP IS SUNK: losing a raid fight, or going down in
+           a gauntlet dive. Crew lost on voyages do not count; they are already a permanent
+           loss of their own.
+         - LIVES: one per member plus one, so four captains get five.
+         - AT ZERO THE CHARTER SINKS: the world and every Charter captain are gone for good.
+           True permadeath.
+         - REWARD: a hardcore badge and a crimson Charter flag while it holds.
+         - Notes: Steam achievements survive the sinking, since they live on each player's
+           Steam account. A founder could restore a copied save; on a local game that cannot
+           be prevented, and it only affects that crew.
+         - Suggested, not decided: a MEMORIAL on the title screen for a sunk Charter (its name,
+           crew, how far it got, where it went down).
+       - CO-OP COMBAT:
+         - THE HOST'S GAME RUNS THE FIGHT. Every Charter captain lives in the host's world, so
+           the host rolls the dice and writes everyone's rewards; the others' games show the
+           fight and send their aim presses. No disagreement between machines to settle.
+         - A SHARED FIRING PHASE: each round every captain fires at once on their own aim bar
+           (a short timer, about 20 seconds), then the boss acts.
+         - CREW EFFECTS AND ITEMS NEED A MULTIPLAYER PASS, so heals, shields and boosts can
+           reach a crewmate's ship. (Volleys, and a boss that telegraphs its target, were
+           suggested but not chosen.)
+         - SUNK MID-FIGHT: out for the rest of it, and NO REWARDS from that fight even if the
+           crew wins. In a hardcore Charter it spends a life.
+         - GAUNTLETS: the crew DIVES TOGETHER, with a shared run, shared boons and a joint
+           cash-out decision. To be designed in detail.
+     - THE ITEM SYSTEM (Kong, 2026-09-30; applies to solo captains too):
+       - EVERYTHING OWNED IS ONE OF FOUR KINDS:
+         - STACKS: counts of identical things (bait, fish, forge materials, raid components).
+         - UNLOCKS: owned once, forever (cosmetics, badges, forge recipes, the six special
+           items).
+         - ONE-OF-A-KIND ITEMS: each with its own details (crew members, goldens with their
+           length, forged gear if it gains charges or rolls).
+         - UPGRADES: a level, not an item (reel, hook, line, hull tiers, the hold, the Crew
+           Hall). Never held or given.
+         Equipment slots point at owned things.
+       - RAID ITEMS ALLOW DUPLICATES: a raider can farm a spare for a crewmate, and the forge
+         can take two copies. The drop odds (which favour items you do not own) need a review.
+       - A COSMETIC IN THE CHEST IS A TOKEN: the captain who takes it unlocks it. An unlocked
+         cosmetic stays with its owner.
+       - THE CREW CHEST HOLDS raid items, forge materials, rods and cosmetic tokens. Not bait,
+         fish, crew members or upgrades.
+     - OPEN SMALL ONE: whose badges hang in the homestead gallery.
        - A Charter captain is a SEPARATE character, sealed to its Charter's world.
        - So today's single save splits into a CAPTAIN file and a WORLD file.
      - THE INVENTORY SURVEY (2026-09-30) found everything a player owns stored six ways:
