@@ -1250,7 +1250,19 @@ In order. Each step is worth doing even if the port never happens.
    - RAID FIGHT PAGES ARE NOT NEEDED (Kong): all 19 campaign fights open inline on the chart
      (checked against `lib/raidRegistry`), so `/raids/krust` and the rest are dead fallbacks.
      The desktop has none; the web still carries them, harmlessly.
-   - NOT YET: the Nav's chips read the database directly and need the API. The starter save is still the spike's (Lv 5,
+   - THE STARTER SAVE IS A FRESH WEB ACCOUNT (2026-09-30). `content/profile_defaults.json` is
+     the `profiles` row at its column defaults, all 312 columns, parsed from the schema
+     snapshot by `lib/profileDefaults`. It gets the set_default_username name and the sign-up
+     trigger's 25 worms, and no rods beyond the Bamboo. One Steam difference: the captain
+     starts as a Captain (the purchase is the membership).
+     - WHEN `profiles` CHANGES: re-run `scripts/snapshot-schema.mts`, then
+       `scripts/export-profile-defaults.mts`. `check-profile-defaults` (in `npm run check`)
+       fails until the file matches the snapshot.
+   - THE NAV READS THE SAVE OFFLINE. Its per-screen read (the avatar's look, the purse,
+     badges waiting to be claimed, voyages out) moved into `lib/navState`. The web keeps the
+     browser-client read, with no server round trip per click. The desktop swaps the module
+     for `desktop/src/shims/navState.ts`, like the database client. Checked: selling in the
+     market moved the Nav's purse at once. The starter save is still the spike's (Lv 5,
      500 doubloons) and should match a fresh web account (and on Steam, be a Captain).
    **THE STEAMWORKS LAYER, 2026-09-29.** `steamworks.js` 0.4.0 in the desktop shell.
    - `desktop/electron/steam.cjs` (main process): starts Steam, relaunches a packaged build

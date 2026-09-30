@@ -25,6 +25,7 @@ export default defineConfig({
     alias: [
       { find: /^@\/lib\/gameApi$/, replacement: path.resolve(__dirname, 'src/localGameApi.ts') },
       { find: /^@\/lib\/supabase\/client$/, replacement: path.join(SHIM, 'supabaseClient.ts') },
+      { find: /^@\/lib\/navState$/, replacement: path.join(SHIM, 'navState.ts') },
       { find: /^next\/navigation$/, replacement: path.join(SHIM, 'navigation.tsx') },
       { find: /^next\/link$/, replacement: path.join(SHIM, 'link.tsx') },
       { find: /^next\/dynamic$/, replacement: path.join(SHIM, 'dynamic.tsx') },

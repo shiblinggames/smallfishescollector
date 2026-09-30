@@ -49,13 +49,13 @@ import * as sheetsCore from '@/lib/core/seaSheets'
 import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
 import { clockNow } from '@/lib/clock'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
-import { freshCasino, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, CHARTING_PROFILE_DEFAULTS, SEA_PROFILE_DEFAULTS } from '@/lib/data/local/save'
+import { freshCasino } from '@/lib/data/local/save'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
 import type { Row } from '@/lib/data/common'
 import { installRng, mulberry32, seedOf } from '@/lib/rng'
 import type { SpeciesRow } from '@/lib/data/fishingData'
 import speciesJson from '@/content/fish_species.json'
-import { XP_TABLE } from '@/lib/fishingLevel'
+import profileDefaultsJson from '@/content/profile_defaults.json'
 import { syncAchievements, setActivity } from './steam'
 import { seaMapProps, raidSeatsFor, type SeaPageQuery } from '@/lib/core/seaPage'
 import { marketPageProps as shapeMarket } from '@/lib/core/marketPage'
@@ -75,29 +75,34 @@ import type { CachedSpecies } from '@/lib/fishSpecies'
 export type * from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
+const PROFILE_DEFAULTS = profileDefaultsJson as Row
 
 /** The session: one captain, one save, one store, and the web tables the
  *  offline game does not model yet, carried untouched so no write loses them. */
 let session: { save: LocalSave; storage: SaveStorage; carried: Record<string, Row[]> } | null = null
 
+/**
+ * A NEW CAPTAIN: exactly what a new web account is (the profiles row at its
+ * column defaults, content/profile_defaults.json, which check-profile-defaults
+ * holds to the schema; set_default_username's name; the sign-up trigger's 25
+ * worms), with one difference decided for Steam (2026-09-30): buying the game
+ * makes you a Captain.
+ */
 function starterSave(): LocalSave {
+  const uid = 'local-captain'
   return {
-    uid: 'local-captain',
+    uid,
     profile: {
-      ...structuredClone(SHIP_PROFILE_DEFAULTS),
-      ...structuredClone(DAILY_PROFILE_DEFAULTS),
-      ...structuredClone(PARLOR_PROFILE_DEFAULTS),
-      ...structuredClone(CHARTING_PROFILE_DEFAULTS),
-      ...structuredClone(SEA_PROFILE_DEFAULTS),
-      fishing_xp: XP_TABLE[4], doubloons: 500, gems: 0, rod_tier: 1, hook_tier: 0, line_tier: 0, fish_hold_tier: 1,
-      ancient_catches: [], current_perfect_streak: 0, highest_perfect_streak: 0, total_perfects: 0, zone_perfects: {},
-      lifetime_species: [], prestige_levels: {}, zone_golden_boost: {}, unlocked_pets: [], unlocked_character_colors: [],
-      unlocked_badges: [], equipped_raid_items: [], catch_pending: false, pending_cast: null, pending_reroll: null,
-      crew_hall_tier: 1, crew_drill_level: 1, crew_stores_level: 1, crew_next_roll_legendary: false,
+      ...structuredClone(PROFILE_DEFAULTS),
+      id: uid,
+      username: 'crew_' + uid.replace(/-/g, '').slice(0, 5),
+      created_at: new Date(clockNow()).toISOString(),
+      is_premium: true,
+      premium_expires_at: null,
     },
     species: SPECIES,
-    bait: { worm: 60 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
+    bait: { worm: 25 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
+    clears: [], rods: [], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
   }
 }
 

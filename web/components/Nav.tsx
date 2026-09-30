@@ -9,7 +9,7 @@ import CharacterAvatar from './CharacterAvatar'
 import MailInbox from './MailInbox'
 import { BADGE_MAP } from '@/lib/badges'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { readNavState } from '@/lib/navState'
 import { signOutHere } from '@/lib/signOut'
 import { motion, AnimatePresence } from 'framer-motion'
 import TickingNumber from './TickingNumber'
@@ -136,25 +136,23 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     const now = Date.now()
     if (!opts?.force && now - lastBadgeFetchRef.current < NAV_REFRESH_MIN_MS) return
     lastBadgeFetchRef.current = now
-    const supabase = createClient()
     // getSession() reads the locally-cached session — no auth-server
     // roundtrip like getUser(). The id here only scopes SELECTs that RLS
     // enforces anyway, so the unverified read is safe and shaves
     // ~100-150ms off how long the avatar/badges sit ghosted on mount.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const user = session?.user
-      if (!user) return
-      setIsSignedIn(true)
-      Promise.all([
-        supabase.from('profiles').select('character_color, equipped_hat, avatar_bg_color, avatar_border_color, is_admin, doubloons, gems, unlocked_badges, claimed_badge_rewards').eq('id', user.id).single(),
-        supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
+    // (lib/navState; the desktop build reads the save instead.)
+    Promise.all([
+        readNavState(),
         // Unread mail via the SERVER helper so the pip respects the SAME
         // visibility as the inbox (targeting + join-date + evergreen). The old
         // inline client query counted EVERY active row — including mail targeted
         // to other users and broadcasts sent before this player joined — so the
         // pip showed mail the inbox correctly hides ("badge but nothing there").
         api.dailies.getMailUnreadCount(),
-      ]).then(([{ data: profile }, { data: voyages }, mailUnreadCount]) => {
+      ]).then(([nav, mailUnreadCount]) => {
+        if (!nav) return
+        setIsSignedIn(true)
+        const { profile, pendingVoyages: voyages } = nav
         const cc = (profile?.character_color as string | null) ?? null
         const hat = (profile?.equipped_hat as string | null) ?? null
         const bg = (profile?.avatar_bg_color as string | null) ?? null
@@ -202,7 +200,6 @@ export default function Nav({ doubloons, gems, canSail = false }: {
         setClaimableBadges(claimable)
         writeNavCache('badge_claims', claimable > 0 ? String(claimable) : null)
       }).catch(() => {})
-    })
   }, [])
 
   // Nav persists across client-side navigations (PageTransition has no
