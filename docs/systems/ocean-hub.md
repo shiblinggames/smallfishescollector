@@ -547,6 +547,10 @@ reroll button all share and where there was never room for it.
 
 Everything comes back the instant you stow.
 
+**ON STEAM (decided 2026-09-30, not built):** presence moves to Steam's networking. You
+invite friends to your sea, and joining is the consent (it replaces follows and pacts).
+Fishing together gets a shared bonus. See steam-port.md "Working it through".
+
 ## Seeing each other (presence)
 
 Mutual crew — you both pressed Follow — appear on the water as their real boat, with a

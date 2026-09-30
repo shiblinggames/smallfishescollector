@@ -454,7 +454,30 @@ its system's doc.
    - LEADERBOARDS: Kong, 2026-09-30: "When we fully migrate to Steam, leaderboards will no
      longer exist." So the direction is now a FULL MIGRATION: the web retires at some point.
      This overrides "the web version is not retiring" above, and no date is set.
-3. Still to come: existing web players' saves, what "content complete" means, the real
+3. **Existing web players:** FRESH START, NO GIFT. Kong: "Web is beta. Nothing gets carried
+   over. They all know this." Nothing is imported and gem balances simply end. So:
+   - phase 2 (identity, the Steam claim) is not needed;
+   - the web-to-desktop import (`fromWebExport`) is a testing tool only;
+   - the pending Don's-hardcore data repair only matters for the beta.
+4. **Content complete, for the Steam launch:**
+   - STORY: the campaign rewrite (nodes 32 to 58) must be finished. Chapter 4, the finale's
+     dial combat and the Ancient Deep giants are already complete.
+   - MULTIPLAYER AT LAUNCH (Kong), over Steam's networking (peer to peer, Valve's relay, no
+     server of ours). Each player keeps their own save and earns full rewards in it; nothing
+     is split or traded, so local saves cannot be duplicated through it.
+     - JOINING: invite to your sea. You open your sea to friends and invite them through the
+       Steam overlay, or they join from "Join Game". Joining is the consent: Steam friends
+       replace follows, and accepting replaces the pact.
+     - AT LAUNCH: seeing each other sail (today's web presence: live boats, arrows,
+       arrivals), and FISHING TOGETHER. Being near each other gives a shared bonus while
+       each captain casts their own dial; the bonus is to design.
+     - CO-OP COMBAT: Kong wants it and it needs real design thinking first. Raids as a pair
+       means one game runs the fight and the other follows. The gauntlet is harder still
+       (shared boons, cash-out, permadeath on a disconnect). Not committed to launch.
+     - NOT AT LAUNCH: homestead visits, trading and gifting.
+   - RETIRED on Steam: contests and the Pirate King ladder (races between players), along
+     with the leaderboards.
+5. Still to come: what "content complete" means, the real
    screens in the desktop window, controller support, store art and the AI disclosure, the
    casino check.
 
