@@ -23,6 +23,7 @@ func _init() -> void:
 	_daily()
 	_fishing(species, "res://tests/parity/fishing.json", "fishing")
 	_fishing(species, "res://tests/parity/fishing_rest.json", "the rest of fishing and the loadout")
+	_fishing(species, "res://tests/parity/shop.json", "selling and the tackle shop")
 	print("")
 	if failed > 0:
 		print("  %d FAILED" % failed)
@@ -199,6 +200,16 @@ func _call(db: CaptainStore, uid: String, save: Dictionary, op: String, a: Array
 		"setCompletionistEffects": return Loadout.set_completionist_effects(db, uid, a[0])
 		"updateCharacterColor": return Loadout.update_character_color(db, uid, a[0])
 		"equipTackleRod": return Loadout.equip_tackle_rod(db, uid, float(a[0]))
+		"marketSellFish": return Selling.market_sell_fish(db, uid, float(a[0]), float(a[1]))
+		"sellEntireHold": return Selling.sell_entire_hold(db, uid)
+		"sellToResident": return Selling.sell_to_resident(db, uid, a[0])
+		"buyBait": return Harbour.buy_bait(db, uid, a[0], float(a[1]))
+		"purchaseRod": return Harbour.purchase_rod(db, uid, float(a[0]))
+		"sellRod": return Harbour.sell_rod(db, uid, float(a[0]))
+		"buyReel": return Harbour.buy_reel(db, uid)
+		"buyHook": return Harbour.buy_hook(db, uid)
+		"upgradeFishHold": return Harbour.upgrade_fish_hold(db, uid)
+		"claimCompletionistRod": return Harbour.claim_completionist_rod(db, uid)
 		# The session's own setup between calls, replayed so both sides play the same save.
 		"patchProfile":
 			db.update_profile(uid, a[0])

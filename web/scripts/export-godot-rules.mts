@@ -34,6 +34,12 @@ import { FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY } from '../app/(app)/fishing/dep
 import { starterSave } from '../lib/data/local/starter'
 import { FINN_ANCIENT_BEATS, FINN_AVATAR } from '../lib/finn'
 import { VIGIL_DIAL } from '../lib/ancientVigil'
+import { fishingGearLevelReq } from '../lib/gearGating'
+import { isCaptainRod, ROD_SELL_RATE } from '../lib/rods'
+import { RESIDENTS } from '../app/(app)/sea/chart'
+import { TIER_AT } from '../lib/seaFolk'
+import { ISLES } from '../lib/seaIsles'
+import { COMPLETIONIST_LEVEL } from '../lib/completionist'
 import { rewardForLevel, LEVEL_REWARD_MAX } from '../lib/levelRewards'
 import { SPECIAL_ITEMS, SPECIAL_OWNED_COLUMN } from '../lib/specialItems'
 import { BOATS } from '../lib/boats'
@@ -74,7 +80,7 @@ const rules = {
   folk: Object.fromEntries(FOLK.map(f => [f.id, { short: f.short, favourites: f.favourites.map(x => ({ id: x.id, name: x.name })) }])),
   // The dial (app/(app)/fishing/depths): needle speed by difficulty, and each
   // water's catch-zone multiplier.
-  reels: REELS.map(r => ({ tier: r.tier, name: r.name, needleSpeedMultiplier: r.needleSpeedMultiplier, imageUrl: r.imageUrl ?? null })),
+  reels: REELS.map(r => ({ tier: r.tier, name: r.name, needleSpeedMultiplier: r.needleSpeedMultiplier, imageUrl: r.imageUrl ?? null, cost: r.cost, levelReq: fishingGearLevelReq(r), description: r.description ?? '' })),
   dial: { fishDifficultySpeed: FISH_DIFFICULTY_SPEED, zoneDifficulty: ZONE_DIFFICULTY },
   // A new captain's save (lib/data/local/starter) with the id, name and date
   // left for the game to fill in, and no species (content, attached on load).
@@ -86,7 +92,7 @@ const rules = {
   boats: BOATS.map(b => ({ id: b.id, name: b.name, cost: b.cost, gemPrice: b.gemPrice ?? null, crateOnly: b.crateOnly ?? false, gate: b.gate ?? null, restImageUrl: b.restImageUrl, castImageUrl: b.castImageUrl, positions: b.positions })),
   hats: HATS.map(h => ({ id: h.id, name: h.name, cost: h.cost, crateOnly: h.crateOnly ?? false, restImageUrl: h.restImageUrl, castImageUrl: h.castImageUrl, positions: h.positions })),
   // The look on the boat (app/(app)/sea/seaCaptain.ts and skiffArt.ts draw it).
-  hooks: HOOKS.map(h => ({ tier: h.tier, name: h.name, imageUrl: h.imageUrl ?? null })),
+  hooks: HOOKS.map(h => ({ tier: h.tier, name: h.name, imageUrl: h.imageUrl ?? null, cost: h.cost, levelReq: fishingGearLevelReq(h), description: h.description ?? '' })),
   characterColors: CHARACTER_COLORS.map(c => ({ id: c.id, name: c.name, free: c.free ?? false, gate: c.gate ?? null })),
   petOverlays: PET_OVERLAYS,
   badgePoints: Object.fromEntries(BADGES.map(b => [b.id, badgePoints(b.id)])),
@@ -101,6 +107,11 @@ const rules = {
   vigilDial: VIGIL_DIAL,
   finnAncientBeats: FINN_ANCIENT_BEATS,
   finnAvatar: FINN_AVATAR,
+  // The tackle shop and selling (lib/core/harbour, lib/core/selling).
+  rodShop: Object.fromEntries(RODS.map(r => [r.tier, { levelReq: fishingGearLevelReq(r), captainRod: isCaptainRod(r) }])),
+  rodSellRate: ROD_SELL_RATE,
+  residents: RESIDENTS,
+  completionistNeeds: { level: COMPLETIONIST_LEVEL, folk: FOLK.map(f => f.id), maxRapport: TIER_AT[4], isles: ISLES.map(i => i.id) },
   starter: (() => { const { species: _s, ...rest } = starterSave('__uid__', [], 0); return rest })(),
 }
 

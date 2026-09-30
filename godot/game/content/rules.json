@@ -2259,55 +2259,82 @@
    "tier": 0,
    "name": "Basic Reel",
    "needleSpeedMultiplier": 1,
-   "imageUrl": "/reel_basic.png"
+   "imageUrl": "/reel_basic.png",
+   "cost": 0,
+   "levelReq": 1,
+   "description": "Gets the job done. The needle moves fast though."
   },
   {
    "tier": 1,
    "name": "Spinning Reel",
    "needleSpeedMultiplier": 0.94,
-   "imageUrl": "/reel_spinning.png"
+   "imageUrl": "/reel_spinning.png",
+   "cost": 1500,
+   "levelReq": 4,
+   "description": "Smoother drag. A little more time to react."
   },
   {
    "tier": 2,
    "name": "Baitcasting Reel",
    "needleSpeedMultiplier": 0.88,
-   "imageUrl": "/reel_baitcasting.png"
+   "imageUrl": "/reel_baitcasting.png",
+   "cost": 3000,
+   "levelReq": 9,
+   "description": "Precision drag control. The needle slows noticeably."
   },
   {
    "tier": 3,
    "name": "Saltwater Reel",
    "needleSpeedMultiplier": 0.82,
-   "imageUrl": "/reel_saltwater.png"
+   "imageUrl": "/reel_saltwater.png",
+   "cost": 6000,
+   "levelReq": 15,
+   "description": "Built for the open sea. Solid drag, steady needle."
   },
   {
    "tier": 4,
    "name": "Precision Reel",
    "needleSpeedMultiplier": 0.75,
-   "imageUrl": "/reel_precision.png"
+   "imageUrl": "/reel_precision.png",
+   "cost": 12000,
+   "levelReq": 22,
+   "description": "Tournament-grade. You feel every twitch of the line."
   },
   {
    "tier": 5,
    "name": "Tournament Reel",
    "needleSpeedMultiplier": 0.69,
-   "imageUrl": "/reel_tournament.png"
+   "imageUrl": "/reel_tournament.png",
+   "cost": 22000,
+   "levelReq": 30,
+   "description": "Competition-spec drag. The needle moves like it has something to prove."
   },
   {
    "tier": 6,
    "name": "Deep Sea Reel",
    "needleSpeedMultiplier": 0.62,
-   "imageUrl": "/reel_deepsea.png"
+   "imageUrl": "/reel_deepsea.png",
+   "cost": 40000,
+   "levelReq": 40,
+   "description": "Engineered for the deep. The needle barely hurries."
   },
   {
    "tier": 7,
    "name": "Kraken's Grip",
    "needleSpeedMultiplier": 0.56,
-   "imageUrl": "/reel_kraken.png"
+   "imageUrl": "/reel_kraken.png",
+   "cost": 70000,
+   "levelReq": 52,
+   "description": "Forged to hold something ancient. The needle drifts, almost lazy."
   },
   {
    "tier": 8,
    "name": "Tidecaller's Reel",
    "needleSpeedMultiplier": 0.5,
-   "imageUrl": "/reel_tidecaller.png"
+   "imageUrl": "/reel_tidecaller.png",
+   "cost": 150000,
+   "levelReq": 66,
+   "description": "Time itself seems to slow when you reel. Almost unfair."
   }
  ],
  "dial": {
@@ -3640,47 +3667,74 @@
   {
    "tier": 0,
    "name": "Copper Hook",
-   "imageUrl": "/hook_copper.png"
+   "imageUrl": "/hook_copper.png",
+   "cost": 0,
+   "levelReq": 1,
+   "description": "A simple copper hook. Reliable enough to land your first catch."
   },
   {
    "tier": 1,
    "name": "Bronze Hook",
-   "imageUrl": "/hook_bronze.png"
+   "imageUrl": "/hook_bronze.png",
+   "cost": 1500,
+   "levelReq": 6,
+   "description": "Forged bronze. A touch sturdier than copper."
   },
   {
    "tier": 2,
    "name": "Iron Hook",
-   "imageUrl": "/hook_iron.png"
+   "imageUrl": "/hook_iron.png",
+   "cost": 3000,
+   "levelReq": 11,
+   "description": "Solid iron. A noticeably wider catch window."
   },
   {
    "tier": 3,
    "name": "Steel Hook",
-   "imageUrl": "/hook_steel.png"
+   "imageUrl": "/hook_steel.png",
+   "cost": 6000,
+   "levelReq": 18,
+   "description": "Tempered steel. Reliable in any depth."
   },
   {
    "tier": 4,
    "name": "Silver Hook",
-   "imageUrl": "/hook_silver.png"
+   "imageUrl": "/hook_silver.png",
+   "cost": 12000,
+   "levelReq": 26,
+   "description": "Polished silver. Catches the light — and the fish."
   },
   {
    "tier": 5,
    "name": "Gold Hook",
-   "imageUrl": "/hook_gold.png"
+   "imageUrl": "/hook_gold.png",
+   "cost": 22000,
+   "levelReq": 34,
+   "description": "Polished gold. Fish can't resist the shine."
   },
   {
    "tier": 6,
    "name": "Enchanted Hook",
-   "imageUrl": "/hook_enchanted.png"
+   "imageUrl": "/hook_enchanted.png",
+   "cost": 40000,
+   "levelReq": 44,
+   "description": "Glows faintly. Something stirs in the deep."
   },
   {
    "tier": 7,
    "name": "Abyssal Hook",
-   "imageUrl": "/hook_abyssal.png"
+   "imageUrl": "/hook_abyssal.png",
+   "cost": 70000,
+   "levelReq": 56,
+   "description": "Drawn from the dark. The catch window is remarkably wide."
   },
   {
    "tier": 8,
    "name": "Legendary Hook",
-   "imageUrl": "/hook_legendary.png"
+   "imageUrl": "/hook_legendary.png",
+   "cost": 150000,
+   "levelReq": 70,
+   "description": "Said to have been lost at sea — and returned."
   }
  ],
  "characterColors": [
@@ -4524,6 +4578,179 @@
   "bgColor": "#1a1408",
   "borderColor": "#c8a060",
   "mirrored": true
+ },
+ "rodShop": {
+  "0": {
+   "levelReq": 1,
+   "captainRod": false
+  },
+  "1": {
+   "levelReq": 3,
+   "captainRod": false
+  },
+  "2": {
+   "levelReq": 7,
+   "captainRod": false
+  },
+  "3": {
+   "levelReq": 12,
+   "captainRod": false
+  },
+  "4": {
+   "levelReq": 16,
+   "captainRod": false
+  },
+  "5": {
+   "levelReq": 20,
+   "captainRod": false
+  },
+  "6": {
+   "levelReq": 28,
+   "captainRod": false
+  },
+  "7": {
+   "levelReq": 32,
+   "captainRod": false
+  },
+  "8": {
+   "levelReq": 42,
+   "captainRod": false
+  },
+  "9": {
+   "levelReq": 48,
+   "captainRod": false
+  },
+  "10": {
+   "levelReq": 60,
+   "captainRod": true
+  },
+  "11": {
+   "levelReq": 37,
+   "captainRod": false
+  },
+  "12": {
+   "levelReq": 24,
+   "captainRod": false
+  },
+  "13": {
+   "levelReq": 54,
+   "captainRod": false
+  },
+  "14": {
+   "levelReq": 1,
+   "captainRod": false
+  },
+  "15": {
+   "levelReq": 80,
+   "captainRod": true
+  },
+  "16": {
+   "levelReq": 64,
+   "captainRod": true
+  },
+  "17": {
+   "levelReq": 68,
+   "captainRod": true
+  },
+  "18": {
+   "levelReq": 72,
+   "captainRod": true
+  },
+  "19": {
+   "levelReq": 76,
+   "captainRod": true
+  },
+  "20": {
+   "levelReq": 75,
+   "captainRod": true
+  }
+ },
+ "rodSellRate": 0.65,
+ "residents": [
+  {
+   "zoneId": "shallows",
+   "name": "Sandy Sole",
+   "line": "Weighed and paid, right here. You will do better ashore if you fancy the row.",
+   "x": 2900,
+   "y": 1400,
+   "rate": 0.78
+  },
+  {
+   "zoneId": "open_waters",
+   "name": "Nell Pollack",
+   "line": "Coin for the hold. No questions, no conversation. That is the arrangement.",
+   "x": -2600,
+   "y": 4600,
+   "rate": 0.8
+  },
+  {
+   "zoneId": "deep",
+   "name": "Hattie Ling",
+   "line": "Long way out, better rate. That is the only reason anybody finds me.",
+   "x": -4200,
+   "y": 6900,
+   "rate": 0.82
+  },
+  {
+   "zoneId": "abyss",
+   "name": "Sim Dory",
+   "line": "Dark water pays. Hold out, coin in, and mind how you go back up.",
+   "x": 4200,
+   "y": 11800,
+   "rate": 0.84
+  },
+  {
+   "zoneId": "ancient_deep",
+   "name": "Bess Skate",
+   "line": "Furthest scale on the chart. Whatever you have got, I will take it.",
+   "x": -2000,
+   "y": 17500,
+   "rate": 0.86
+  }
+ ],
+ "completionistNeeds": {
+  "level": 100,
+  "folk": [
+   "meg",
+   "pell",
+   "marlow",
+   "fitch",
+   "nance",
+   "yoon",
+   "brill",
+   "turbot",
+   "ream"
+  ],
+  "maxRapport": 70,
+  "isles": [
+   "shallows-0",
+   "shallows-1",
+   "shallows-2",
+   "open_waters-0",
+   "open_waters-1",
+   "open_waters-2",
+   "open_waters-3",
+   "open_waters-4",
+   "open_waters-5",
+   "deep-0",
+   "deep-1",
+   "deep-2",
+   "deep-3",
+   "deep-4",
+   "deep-5",
+   "abyss-0",
+   "abyss-1",
+   "abyss-2",
+   "abyss-3",
+   "abyss-4",
+   "abyss-5",
+   "ancient_deep-0",
+   "ancient_deep-1",
+   "ancient_deep-2",
+   "ancient_deep-3",
+   "ancient_deep-4",
+   "ancient_deep-5"
+  ]
  },
  "starter": {
   "uid": "__uid__",

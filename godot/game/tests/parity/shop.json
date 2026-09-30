@@ -1,0 +1,3818 @@
+{
+ "sessions": [
+  {
+   "name": "the market",
+   "seed": 31,
+   "start": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0031\",\"profile\":{\"id\":\"captain-00parity0031\",\"username\":\"crew_y0031\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":500,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":2,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":3,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":89971,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":0,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":null,\"showcase_crew_ids\":[],\"lifetime_recruits\":0,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":false,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":600},\"hold\":{},\"collection\":{},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{},\"ledger\":[],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":null,\"crew\":[],\"recruits\":[],\"bunks\":[],\"nextId\":1,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}",
+   "ops": [
+    {
+     "op": "sellEntireHold",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 2,
+     "result": {
+      "error": "The hold is empty"
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "hold": {
+        "1": 5,
+        "2": 3,
+        "7": 12,
+        "60": 2
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790769600000,
+     "args": [
+      1,
+      2
+     ],
+     "rolls": 0,
+     "result": {
+      "earned": 20,
+      "doubloons": 520
+     }
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790769600000,
+     "args": [
+      1,
+      3
+     ],
+     "rolls": 0,
+     "result": {
+      "earned": 30,
+      "doubloons": 550
+     }
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790769600000,
+     "args": [
+      1,
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Data not found"
+     }
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790769600000,
+     "args": [
+      2,
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Invalid quantity"
+     }
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790769600000,
+     "args": [
+      2,
+      1.5
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Invalid quantity"
+     }
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790769600000,
+     "args": [
+      999,
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Data not found"
+     }
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790769600000,
+     "args": [
+      3,
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Data not found"
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790773200000,
+     "args": [
+      {
+       "hold": {
+        "1": 2,
+        "7": 1,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790773200000,
+     "args": [],
+     "rolls": 456,
+     "result": {
+      "earned": 417,
+      "fishSold": 7,
+      "doubloons": 967
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790780400000,
+     "args": [
+      {
+       "hold": {
+        "1": 3,
+        "7": 2,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790780400000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 912,
+     "result": {
+      "earned": 20,
+      "doubloons": 987
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790780400000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 397,
+      "fishSold": 8,
+      "doubloons": 1384
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790787600000,
+     "args": [
+      {
+       "hold": {
+        "1": 4,
+        "7": 3,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790787600000,
+     "args": [],
+     "rolls": 914,
+     "result": {
+      "earned": 426,
+      "fishSold": 11,
+      "doubloons": 1810
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790791200000,
+     "args": [
+      {
+       "hold": {
+        "1": 5,
+        "7": 4,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790791200000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 456,
+     "result": {
+      "earned": 20,
+      "doubloons": 1830
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790791200000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 387,
+      "fishSold": 12,
+      "doubloons": 2217
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790798400000,
+     "args": [
+      {
+       "hold": {
+        "1": 6,
+        "7": 1,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790798400000,
+     "args": [],
+     "rolls": 912,
+     "result": {
+      "earned": 374,
+      "fishSold": 11,
+      "doubloons": 2591
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790805600000,
+     "args": [
+      {
+       "hold": {
+        "1": 7,
+        "7": 2,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790805600000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 915,
+     "result": {
+      "earned": 21,
+      "doubloons": 2612
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790805600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 380,
+      "fishSold": 12,
+      "doubloons": 2992
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790809200000,
+     "args": [
+      {
+       "hold": {
+        "1": 8,
+        "7": 3,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790809200000,
+     "args": [],
+     "rolls": 456,
+     "result": {
+      "earned": 447,
+      "fishSold": 15,
+      "doubloons": 3439
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790816400000,
+     "args": [
+      {
+       "hold": {
+        "1": 9,
+        "7": 4,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790816400000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 914,
+     "result": {
+      "earned": 22,
+      "doubloons": 3461
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790816400000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 414,
+      "fishSold": 16,
+      "doubloons": 3875
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790823600000,
+     "args": [
+      {
+       "hold": {
+        "1": 10,
+        "7": 1,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790823600000,
+     "args": [],
+     "rolls": 915,
+     "result": {
+      "earned": 426,
+      "fishSold": 15,
+      "doubloons": 4301
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790827200000,
+     "args": [
+      {
+       "hold": {
+        "1": 11,
+        "7": 2,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790827200000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 456,
+     "result": {
+      "earned": 18,
+      "doubloons": 4319
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790827200000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 456,
+      "fishSold": 16,
+      "doubloons": 4775
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790834400000,
+     "args": [
+      {
+       "hold": {
+        "1": 12,
+        "7": 3,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790834400000,
+     "args": [],
+     "rolls": 914,
+     "result": {
+      "earned": 507,
+      "fishSold": 19,
+      "doubloons": 5282
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790841600000,
+     "args": [
+      {
+       "hold": {
+        "1": 13,
+        "7": 4,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790841600000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 914,
+     "result": {
+      "earned": 17,
+      "doubloons": 5299
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790841600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 514,
+      "fishSold": 20,
+      "doubloons": 5813
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790845200000,
+     "args": [
+      {
+       "hold": {
+        "1": 14,
+        "7": 1,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790845200000,
+     "args": [],
+     "rolls": 456,
+     "result": {
+      "earned": 455,
+      "fishSold": 19,
+      "doubloons": 6268
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790852400000,
+     "args": [
+      {
+       "hold": {
+        "1": 15,
+        "7": 2,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790852400000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 912,
+     "result": {
+      "earned": 19,
+      "doubloons": 6287
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790852400000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 432,
+      "fishSold": 20,
+      "doubloons": 6719
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790859600000,
+     "args": [
+      {
+       "hold": {
+        "1": 16,
+        "7": 3,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790859600000,
+     "args": [],
+     "rolls": 914,
+     "result": {
+      "earned": 512,
+      "fishSold": 23,
+      "doubloons": 7231
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790863200000,
+     "args": [
+      {
+       "hold": {
+        "1": 17,
+        "7": 4,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790863200000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 456,
+     "result": {
+      "earned": 18,
+      "doubloons": 7249
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790863200000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 541,
+      "fishSold": 24,
+      "doubloons": 7790
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790870400000,
+     "args": [
+      {
+       "hold": {
+        "1": 18,
+        "7": 1,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790870400000,
+     "args": [],
+     "rolls": 912,
+     "result": {
+      "earned": 518,
+      "fishSold": 23,
+      "doubloons": 8308
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790877600000,
+     "args": [
+      {
+       "hold": {
+        "1": 19,
+        "7": 2,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790877600000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 915,
+     "result": {
+      "earned": 18,
+      "doubloons": 8326
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790877600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 477,
+      "fishSold": 24,
+      "doubloons": 8803
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790881200000,
+     "args": [
+      {
+       "hold": {
+        "1": 20,
+        "7": 3,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790881200000,
+     "args": [],
+     "rolls": 458,
+     "result": {
+      "earned": 499,
+      "fishSold": 27,
+      "doubloons": 9302
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790888400000,
+     "args": [
+      {
+       "hold": {
+        "1": 21,
+        "7": 4,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790888400000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 912,
+     "result": {
+      "earned": 17,
+      "doubloons": 9319
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790888400000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 500,
+      "fishSold": 28,
+      "doubloons": 9819
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790895600000,
+     "args": [
+      {
+       "hold": {
+        "1": 22,
+        "7": 1,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790895600000,
+     "args": [],
+     "rolls": 914,
+     "result": {
+      "earned": 497,
+      "fishSold": 27,
+      "doubloons": 10316
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790899200000,
+     "args": [
+      {
+       "hold": {
+        "1": 23,
+        "7": 2,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790899200000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 459,
+     "result": {
+      "earned": 19,
+      "doubloons": 10335
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790899200000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 447,
+      "fishSold": 28,
+      "doubloons": 10782
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790906400000,
+     "args": [
+      {
+       "hold": {
+        "1": 24,
+        "7": 3,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790906400000,
+     "args": [],
+     "rolls": 912,
+     "result": {
+      "earned": 502,
+      "fishSold": 31,
+      "doubloons": 11284
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790913600000,
+     "args": [
+      {
+       "hold": {
+        "1": 25,
+        "7": 4,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790913600000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 914,
+     "result": {
+      "earned": 18,
+      "doubloons": 11302
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790913600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 485,
+      "fishSold": 32,
+      "doubloons": 11787
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790917200000,
+     "args": [
+      {
+       "hold": {
+        "1": 26,
+        "7": 1,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790917200000,
+     "args": [],
+     "rolls": 456,
+     "result": {
+      "earned": 478,
+      "fishSold": 31,
+      "doubloons": 12265
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790924400000,
+     "args": [
+      {
+       "hold": {
+        "1": 27,
+        "7": 2,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790924400000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 912,
+     "result": {
+      "earned": 18,
+      "doubloons": 12283
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790924400000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 510,
+      "fishSold": 32,
+      "doubloons": 12793
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790931600000,
+     "args": [
+      {
+       "hold": {
+        "1": 28,
+        "7": 3,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790931600000,
+     "args": [],
+     "rolls": 914,
+     "result": {
+      "earned": 622,
+      "fishSold": 35,
+      "doubloons": 13415
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790935200000,
+     "args": [
+      {
+       "hold": {
+        "1": 29,
+        "7": 4,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790935200000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 456,
+     "result": {
+      "earned": 19,
+      "doubloons": 13434
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790935200000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 635,
+      "fishSold": 36,
+      "doubloons": 14069
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790942400000,
+     "args": [
+      {
+       "hold": {
+        "1": 30,
+        "7": 1,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790942400000,
+     "args": [],
+     "rolls": 914,
+     "result": {
+      "earned": 631,
+      "fishSold": 35,
+      "doubloons": 14700
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790949600000,
+     "args": [
+      {
+       "hold": {
+        "1": 31,
+        "7": 2,
+        "12": 3,
+        "30": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "marketSellFish",
+     "now": 1790949600000,
+     "args": [
+      7,
+      1
+     ],
+     "rolls": 912,
+     "result": {
+      "earned": 21,
+      "doubloons": 14721
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1790949600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "earned": 635,
+      "fishSold": 36,
+      "doubloons": 15356
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1791309600000,
+     "args": [
+      {
+       "hold": {
+        "1": 4,
+        "9": 9
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1791309600000,
+     "args": [],
+     "rolls": 21920,
+     "result": {
+      "earned": 391,
+      "fishSold": 13,
+      "doubloons": 15747
+     }
+    },
+    {
+     "op": "sellEntireHold",
+     "now": 1791309600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "The hold is empty"
+     }
+    }
+   ],
+   "end": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0031\",\"profile\":{\"id\":\"captain-00parity0031\",\"username\":\"crew_y0031\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":15747,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":2,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":3,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":89971,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":0,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":null,\"showcase_crew_ids\":[],\"lifetime_recruits\":0,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":false,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":15247,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":600},\"hold\":{},\"collection\":{},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{},\"ledger\":[{\"amount\":20,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":30,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":417,\"reason\":\"Sold 7 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":20,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":397,\"reason\":\"Sold 8 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":426,\"reason\":\"Sold 11 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":20,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":387,\"reason\":\"Sold 12 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":374,\"reason\":\"Sold 11 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":21,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":380,\"reason\":\"Sold 12 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":447,\"reason\":\"Sold 15 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":22,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":414,\"reason\":\"Sold 16 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":426,\"reason\":\"Sold 15 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":18,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":456,\"reason\":\"Sold 16 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":507,\"reason\":\"Sold 19 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":17,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":514,\"reason\":\"Sold 20 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":455,\"reason\":\"Sold 19 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":19,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":432,\"reason\":\"Sold 20 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":512,\"reason\":\"Sold 23 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":18,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":541,\"reason\":\"Sold 24 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":518,\"reason\":\"Sold 23 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":18,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":477,\"reason\":\"Sold 24 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":499,\"reason\":\"Sold 27 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":17,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":500,\"reason\":\"Sold 28 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":497,\"reason\":\"Sold 27 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":19,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":447,\"reason\":\"Sold 28 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":502,\"reason\":\"Sold 31 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":18,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":485,\"reason\":\"Sold 32 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":478,\"reason\":\"Sold 31 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":18,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":510,\"reason\":\"Sold 32 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":622,\"reason\":\"Sold 35 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":19,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":635,\"reason\":\"Sold 36 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":631,\"reason\":\"Sold 35 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":21,\"reason\":\"Sold fish (market)\",\"currency\":\"doubloons\"},{\"amount\":635,\"reason\":\"Sold 36 fish (market)\",\"currency\":\"doubloons\"},{\"amount\":391,\"reason\":\"Sold 13 fish (market)\",\"currency\":\"doubloons\"}],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":{\"mood\":\"calm\",\"bias\":0,\"moodExpiresAt\":1791324000000,\"lastTickAt\":1791309600000,\"fish\":{\"1\":{\"m\":1.08,\"prev\":1.09,\"history\":[1.08,1.04,1,1,0.99,0.96,0.93,0.91,0.94,0.95,0.96,0.98,1.04,1.03,1.07,1.15,1.17,1.19,1.16,1.13,1.1,1.09,1.08,1.09]},\"2\":{\"m\":0.95,\"prev\":0.94,\"history\":[1.15,1.08,1,0.97,0.98,0.97,0.94,0.96,0.95,0.93,0.95,0.99,0.99,0.98,0.95,0.97,0.93,0.94,0.92,0.9,0.91,0.92,0.93,0.94]},\"3\":{\"m\":0.91,\"prev\":0.88,\"history\":[1.08,1.01,1,1,0.97,0.95,0.96,0.98,1,0.97,0.99,0.96,0.94,0.99,1,1.04,0.99,0.97,0.92,0.86,0.9,0.9,0.88,0.88]},\"4\":{\"m\":0.83,\"prev\":0.8,\"history\":[1.13,1.09,1.05,1.03,1.06,1.06,1.05,1.07,1.05,1.02,1.03,1.02,1.07,1.08,1.05,0.99,0.92,0.9,0.85,0.84,0.84,0.83,0.83,0.8]},\"5\":{\"m\":0.89,\"prev\":0.86,\"history\":[1,0.98,0.92,0.88,0.89,0.84,0.85,0.82,0.85,0.85,0.85,0.85,0.76,0.75,0.65,0.72,0.81,0.81,0.81,0.87,0.84,0.88,0.85,0.86]},\"6\":{\"m\":0.81,\"prev\":0.79,\"history\":[1.12,1.11,1.04,1.01,0.99,0.98,0.94,0.92,0.89,0.86,0.91,0.89,1.01,0.92,0.91,0.94,0.85,0.79,0.74,0.76,0.75,0.77,0.78,0.79]},\"7\":{\"m\":0.84,\"prev\":0.83,\"history\":[1.14,1.17,1.15,1.15,1.1,1.07,1.03,1.03,1.03,1.04,1.04,1.01,0.9,0.78,0.71,0.72,0.74,0.71,0.77,0.75,0.79,0.8,0.82,0.83]},\"8\":{\"m\":0.74,\"prev\":0.77,\"history\":[0.9,0.88,0.86,0.85,0.84,0.78,0.8,0.78,0.79,0.77,0.8,0.76,0.76,0.75,0.65,0.64,0.72,0.69,0.62,0.68,0.72,0.81,0.81,0.77]},\"9\":{\"m\":0.88,\"prev\":0.88,\"history\":[0.96,1,0.95,0.95,0.93,0.96,0.93,0.93,0.94,0.95,0.99,1.05,0.94,0.92,1.01,1.15,1.04,1.03,0.89,0.81,0.87,0.83,0.75,0.88]},\"10\":{\"m\":1.13,\"prev\":1.13,\"history\":[1.28,1.25,1.16,1.17,1.18,1.19,1.13,1.2,1.17,1.15,1.08,1.08,1,1.19,1.26,1.4,1.33,1.17,1.21,1.2,1.19,1.15,1.13,1.13]},\"11\":{\"m\":0.85,\"prev\":0.81,\"history\":[1.09,1,0.93,0.93,0.92,0.87,0.87,0.87,0.85,0.88,0.83,0.81,0.81,0.79,0.73,0.78,0.69,0.74,0.76,0.74,0.73,0.8,0.74,0.81]},\"12\":{\"m\":0.93,\"prev\":0.96,\"history\":[1.07,1.09,1.01,1.04,1.13,1.05,0.99,1.01,1.15,1.1,1.04,1.03,0.97,1.15,0.84,0.7,0.89,1.06,0.87,0.86,0.94,0.83,0.82,0.96]},\"13\":{\"m\":0.93,\"prev\":0.9,\"history\":[1.02,0.99,0.98,1.01,0.98,0.96,0.94,0.97,0.97,0.97,1,1.03,0.98,0.93,0.89,0.85,0.9,0.88,0.88,0.93,0.94,0.91,0.88,0.9]},\"14\":{\"m\":0.98,\"prev\":0.97,\"history\":[1.03,0.97,0.91,0.89,0.89,0.88,0.89,0.89,0.9,0.94,0.96,0.95,1,1.02,0.98,0.96,0.96,0.95,0.98,1,0.99,0.96,0.95,0.97]},\"15\":{\"m\":0.93,\"prev\":0.95,\"history\":[1.11,1.04,1.04,1.05,1.05,1.05,1.01,1.01,0.98,0.97,1,1.02,1.03,0.92,0.92,0.93,0.94,0.99,0.98,1.01,1.06,1.04,1,0.95]},\"16\":{\"m\":0.86,\"prev\":0.83,\"history\":[1.07,1,0.93,0.96,0.96,0.89,0.9,0.95,0.95,1.01,1.02,1.03,1.03,0.98,0.91,0.94,0.94,0.87,0.81,0.94,0.91,0.87,0.84,0.83]},\"17\":{\"m\":0.84,\"prev\":0.83,\"history\":[1.05,1.02,0.99,0.99,0.98,0.99,1.04,1.01,0.96,0.96,0.98,0.99,1,0.99,0.86,0.89,0.87,0.86,0.78,0.8,0.84,0.87,0.83,0.83]},\"18\":{\"m\":0.79,\"prev\":0.8,\"history\":[0.88,0.86,0.82,0.82,0.87,0.91,0.94,0.88,0.96,0.99,1.03,1.06,1.06,0.99,1.08,0.91,0.93,0.91,0.8,0.88,0.86,0.81,0.77,0.8]},\"19\":{\"m\":1.08,\"prev\":1.03,\"history\":[1.24,1.25,1.19,1.09,1.06,1.07,1.05,1.03,1.01,1.05,1.1,1.05,1.11,1.08,0.99,0.89,0.79,0.89,1.01,1,0.96,0.93,0.97,1.03]},\"20\":{\"m\":0.93,\"prev\":0.88,\"history\":[1.06,0.98,0.98,1.04,1.01,1.01,1.03,0.98,1.02,1.02,1.01,1.1,1.13,1.13,1.12,0.99,0.96,0.81,0.94,0.91,0.82,0.83,0.83,0.88]},\"21\":{\"m\":0.98,\"prev\":1,\"history\":[0.98,0.93,0.94,0.9,0.88,0.86,0.82,0.76,0.82,0.79,0.8,0.9,0.75,0.74,0.84,1.01,1.08,1.15,1.12,1.04,1,0.99,1.01,1]},\"22\":{\"m\":0.66,\"prev\":0.64,\"history\":[0.97,0.97,0.87,0.88,0.86,0.83,0.77,0.79,0.83,0.89,0.85,0.87,0.86,0.77,0.72,0.63,0.63,0.61,0.54,0.52,0.58,0.55,0.51,0.64]},\"23\":{\"m\":0.73,\"prev\":0.76,\"history\":[1.06,1.05,1.06,1.11,1.01,0.98,1,1.01,0.91,0.92,0.89,0.86,0.87,0.86,0.73,0.71,0.67,0.56,0.59,0.74,0.72,0.76,0.72,0.76]},\"24\":{\"m\":1,\"prev\":0.93,\"history\":[0.73,0.73,0.77,0.81,0.84,0.89,0.84,0.81,0.84,0.81,0.77,0.8,0.72,0.57,0.65,0.53,0.66,0.76,0.8,0.88,0.86,0.89,0.92,0.93]},\"25\":{\"m\":0.86,\"prev\":0.8,\"history\":[1.09,0.98,0.92,0.86,0.89,0.9,0.94,0.94,0.97,0.93,0.97,1,0.93,0.94,0.82,0.83,0.91,0.91,0.81,0.81,0.87,0.89,0.81,0.8]},\"26\":{\"m\":0.97,\"prev\":1.05,\"history\":[1.27,1.23,1.18,1.14,1.05,1.18,1.24,1.34,1.26,1.32,1.34,1.34,1.27,1.33,1.35,1.12,1.03,0.93,1.18,1.31,1.2,1.12,1.13,1.05]},\"27\":{\"m\":0.79,\"prev\":0.78,\"history\":[1.05,1.06,1.02,0.97,0.97,0.91,0.94,0.96,0.97,1.01,1.04,1,0.91,0.88,0.9,0.83,0.88,0.85,0.79,0.79,0.79,0.73,0.74,0.78]},\"28\":{\"m\":0.64,\"prev\":0.65,\"history\":[1.14,1.1,1.03,1.01,1.04,1.06,1.04,1.04,1.08,1.11,1.1,1.07,1.03,0.97,0.79,0.69,0.69,0.68,0.64,0.64,0.61,0.63,0.62,0.65]},\"29\":{\"m\":0.74,\"prev\":0.7,\"history\":[1.02,1.04,0.94,0.88,0.87,0.83,0.77,0.8,0.8,0.86,0.89,0.89,0.94,0.93,0.84,0.79,0.7,0.71,0.79,0.67,0.65,0.65,0.67,0.7]},\"30\":{\"m\":0.74,\"prev\":0.72,\"history\":[1.15,1.1,1.02,1.02,0.97,0.92,0.91,0.87,0.87,0.87,0.91,0.94,1.04,0.94,0.95,1.03,0.9,0.86,0.86,0.87,0.81,0.78,0.73,0.72]},\"31\":{\"m\":0.83,\"prev\":0.86,\"history\":[0.87,0.85,0.92,0.86,0.84,0.85,0.9,0.88,0.9,0.95,0.97,0.89,0.72,0.79,0.68,0.75,0.65,0.6,0.74,0.67,0.79,0.8,0.8,0.86]},\"32\":{\"m\":1.18,\"prev\":1.09,\"history\":[0.91,0.85,0.85,0.82,0.81,0.73,0.74,0.71,0.74,0.67,0.69,0.68,0.77,0.69,0.88,0.88,0.99,0.88,0.99,0.95,1,1.09,1.05,1.09]},\"33\":{\"m\":0.73,\"prev\":0.75,\"history\":[1.07,1.01,0.94,0.95,0.9,0.91,0.91,0.85,0.91,0.93,0.93,0.88,0.83,0.9,0.84,0.73,0.85,0.85,0.73,0.66,0.64,0.64,0.68,0.75]},\"34\":{\"m\":0.52,\"prev\":0.56,\"history\":[0.89,0.87,0.78,0.76,0.71,0.66,0.58,0.55,0.52,0.55,0.56,0.6,0.55,0.55,0.44,0.51,0.5,0.52,0.53,0.56,0.57,0.6,0.61,0.56]},\"36\":{\"m\":0.46,\"prev\":0.48,\"history\":[1.16,1.22,1.22,1.09,1.04,1.05,1.02,1.07,1.06,1.01,1,1.05,0.87,0.83,0.76,0.68,0.84,0.68,0.58,0.54,0.54,0.54,0.56,0.48]},\"37\":{\"m\":0.89,\"prev\":0.91,\"history\":[0.86,0.89,0.86,0.88,0.87,1.01,0.95,1.08,1.08,1.21,1.14,1.17,1.03,1.3,1.34,1.25,0.91,1.07,0.87,1,1.1,1.09,1.08,0.91]},\"38\":{\"m\":0.88,\"prev\":0.83,\"history\":[1.75,1.69,1.52,1.53,1.51,1.52,1.51,1.52,1.5,1.55,1.67,1.58,1.5,1.25,0.88,0.86,0.91,1.02,0.86,0.88,1,1.04,1.03,0.83]},\"39\":{\"m\":0.82,\"prev\":0.81,\"history\":[1.13,1.01,1,0.94,0.99,1.05,1.08,1.19,1.27,1.31,1.14,1.24,1.22,1.05,0.98,1.03,1.24,1.21,1.02,0.96,0.92,0.86,0.82,0.81]},\"40\":{\"m\":0.96,\"prev\":0.8,\"history\":[1.21,1.22,1.24,1.23,1.11,1.01,1.02,1.07,0.98,1.01,1.12,1.13,1.2,1.18,1.07,0.8,0.72,0.95,0.93,1.07,0.99,0.94,0.88,0.8]},\"41\":{\"m\":0.75,\"prev\":0.75,\"history\":[0.9,0.85,0.9,1,0.93,0.93,0.88,0.9,1.02,0.99,1,0.93,0.87,0.73,0.69,0.78,0.78,0.94,0.92,0.76,0.64,0.64,0.72,0.75]},\"42\":{\"m\":1.07,\"prev\":1.01,\"history\":[1.02,1.02,0.95,1.04,1.01,1.12,1.23,1.14,1.11,1,1.11,1.22,1.37,1.25,1.31,1.23,1.1,0.94,0.91,0.88,0.97,0.89,0.9,1.01]},\"43\":{\"m\":1.12,\"prev\":1.12,\"history\":[1.43,1.41,1.37,1.19,1.07,1.18,1.08,1.2,1.3,1.34,1.34,1.38,1.25,1.06,1,1,1.03,1.01,1.27,1.32,1.3,1.25,1.16,1.12]},\"44\":{\"m\":1.06,\"prev\":1.05,\"history\":[1.21,1.11,1.18,1.2,1.12,1.02,0.98,1.05,0.99,0.87,0.95,0.91,1.03,0.96,0.86,0.73,0.95,1.13,1.12,1.1,1.12,1.1,1.1,1.05]},\"45\":{\"m\":0.82,\"prev\":0.77,\"history\":[1.09,1.13,1.22,1.21,1.3,1.09,1.22,1.16,1.14,1,1.06,1.14,1.29,1.31,1.16,1.26,0.93,1.02,1.16,0.74,0.84,0.6,0.8,0.77]},\"46\":{\"m\":0.55,\"prev\":0.59,\"history\":[1.02,0.76,0.7,0.76,0.82,0.69,0.51,0.54,0.63,0.7,0.7,0.64,0.64,0.75,0.83,0.61,0.54,0.49,0.44,0.4,0.4,0.52,0.61,0.59]},\"47\":{\"m\":1.1,\"prev\":1.01,\"history\":[1.24,1.25,1.32,1.29,1.27,1.3,1.18,1.04,1.1,1.1,1.2,1.04,1.06,1.34,1.27,1.18,1.32,1.46,1.43,0.98,0.91,1,0.94,1.01]},\"48\":{\"m\":0.96,\"prev\":1.1,\"history\":[0.99,0.99,0.81,0.88,0.95,0.83,0.95,1,0.97,1.15,1.05,0.99,0.97,0.8,0.92,1.17,1.07,1.32,1.38,1.4,1.37,1.28,1.19,1.1]},\"49\":{\"m\":0.51,\"prev\":0.4,\"history\":[0.96,1.07,1.1,1.02,0.92,0.8,0.74,0.75,0.69,0.75,0.63,0.55,0.66,0.49,0.4,0.4,0.4,0.66,0.55,0.61,0.48,0.4,0.4,0.4]},\"50\":{\"m\":0.78,\"prev\":0.95,\"history\":[0.57,0.42,0.44,0.42,0.63,0.81,0.74,0.74,0.77,0.89,0.8,0.62,0.54,0.64,0.52,0.44,0.48,0.69,0.4,0.5,0.69,0.61,0.76,0.95]},\"51\":{\"m\":0.86,\"prev\":0.83,\"history\":[1.04,1.01,1.02,1.01,0.98,0.98,0.96,0.95,0.94,0.93,0.93,0.91,0.89,0.87,0.79,0.82,0.79,0.77,0.79,0.81,0.83,0.84,0.85,0.83]},\"52\":{\"m\":0.88,\"prev\":0.87,\"history\":[1.09,1.04,1,1.02,0.98,0.99,0.97,0.94,1,1,0.97,0.94,0.9,0.86,0.91,0.86,0.87,0.85,0.88,0.87,0.84,0.82,0.83,0.87]},\"53\":{\"m\":1.02,\"prev\":1.01,\"history\":[1.07,1.03,1.02,1.05,1.01,0.97,1.01,0.98,1,0.98,0.96,0.95,0.93,0.89,0.9,0.86,0.9,0.93,0.95,1,0.99,0.98,0.98,1.01]},\"54\":{\"m\":0.8,\"prev\":0.78,\"history\":[1.03,1.01,0.94,0.91,0.87,0.87,0.88,0.88,0.87,0.89,0.85,0.88,0.85,0.91,0.9,0.92,0.88,0.8,0.78,0.75,0.78,0.77,0.77,0.78]},\"55\":{\"m\":0.73,\"prev\":0.72,\"history\":[1.12,1.1,1.07,0.99,0.97,0.94,0.94,0.94,0.98,0.99,1.03,1.06,1.01,0.97,1.03,0.97,0.99,0.85,0.78,0.76,0.74,0.77,0.71,0.72]},\"56\":{\"m\":1.06,\"prev\":1.02,\"history\":[1.04,1.08,1.06,1.03,1.03,1.06,1,0.96,0.98,1.04,1.05,1.02,1,1.02,0.97,1,1.11,1.09,1.16,1.18,1.14,1.08,1.07,1.02]},\"57\":{\"m\":0.68,\"prev\":0.65,\"history\":[1.15,1.07,1,0.9,0.85,0.8,0.81,0.91,0.98,0.96,0.99,0.95,1.09,0.91,0.71,0.66,0.77,0.84,0.78,0.73,0.71,0.74,0.66,0.65]},\"58\":{\"m\":0.95,\"prev\":0.84,\"history\":[1.26,1.28,1.23,1.26,1.2,1.19,1.12,1.04,1.03,1.09,1.06,1,0.98,0.91,0.85,1,0.87,0.95,0.96,1.02,0.94,0.93,0.91,0.84]},\"59\":{\"m\":1.36,\"prev\":1.39,\"history\":[0.62,0.7,0.74,0.76,0.87,0.79,0.73,0.78,0.68,0.61,0.69,0.69,0.89,1.01,1.09,0.98,1.18,1.4,1.31,1.33,1.42,1.37,1.39,1.39]},\"60\":{\"m\":0.49,\"prev\":0.4,\"history\":[1.33,1.44,1.41,1.14,1.25,1.31,1.32,1.28,1.37,1.32,1.34,1.25,1.13,1.36,1.39,1.31,1.12,1.35,1,0.59,0.47,0.45,0.4,0.4]},\"61\":{\"m\":0.49,\"prev\":0.5,\"history\":[1.48,1.32,1.2,1.14,1.2,1.3,1.32,1.32,1.17,1.25,1.18,1.02,1.05,0.78,0.46,0.4,0.4,0.4,0.4,0.45,0.55,0.52,0.55,0.5]},\"62\":{\"m\":0.91,\"prev\":0.8,\"history\":[1,0.95,1.09,1.05,1.03,1.02,1.08,1.04,1.07,1,0.96,0.85,1.03,1.05,1.2,1.25,1.19,0.9,0.84,0.87,0.71,0.8,0.82,0.8]},\"63\":{\"m\":0.58,\"prev\":0.64,\"history\":[1.12,1.01,0.94,0.99,1.03,0.93,0.88,0.95,1.1,1.16,1.17,1.13,0.85,0.71,0.54,0.4,0.4,0.41,0.4,0.75,0.81,0.73,0.57,0.64]},\"64\":{\"m\":1.38,\"prev\":1.3,\"history\":[1.1,1.07,1.05,1.06,0.86,0.74,0.84,0.87,0.84,1.01,0.84,0.82,0.54,0.46,0.4,0.87,0.79,1.23,1.22,1.31,1.26,1.3,1.39,1.3]},\"65\":{\"m\":0.59,\"prev\":0.47,\"history\":[0.79,0.76,0.75,0.82,0.92,0.93,0.89,0.84,0.86,0.92,0.86,0.9,0.91,0.84,0.87,0.87,0.59,0.76,0.65,0.61,0.59,0.58,0.59,0.47]},\"66\":{\"m\":1.21,\"prev\":1.32,\"history\":[0.79,0.68,0.68,0.77,0.86,0.83,0.86,0.82,0.86,0.97,0.93,0.92,0.97,0.75,0.7,0.56,0.64,0.81,1.11,1.15,1.23,1.18,1.25,1.32]},\"67\":{\"m\":1.37,\"prev\":1.57,\"history\":[1.02,1.16,1.08,0.94,1.08,0.82,0.81,0.83,0.78,0.81,0.94,0.93,1.16,0.84,1.27,1.45,1.35,1.63,1.61,1.59,1.46,1.59,1.61,1.57]},\"68\":{\"m\":0.88,\"prev\":0.75,\"history\":[0.9,0.81,0.64,0.83,0.65,0.57,0.64,0.64,0.58,0.46,0.64,0.72,0.72,0.57,0.73,0.52,0.46,0.4,0.4,0.69,0.5,0.6,0.81,0.75]},\"69\":{\"m\":0.99,\"prev\":0.95,\"history\":[1.02,1,0.94,0.94,0.95,0.98,0.99,0.99,0.98,1,1.02,1.01,0.98,0.97,0.92,0.93,0.96,0.94,0.92,0.87,0.87,0.88,0.89,0.95]},\"70\":{\"m\":0.94,\"prev\":0.95,\"history\":[1.25,1.21,1.17,1.12,1.11,1.12,1.13,1.03,1.07,1.06,1.03,1.07,1.03,1.03,1.03,1.04,1.03,0.97,0.92,0.95,1.01,0.94,0.93,0.95]},\"71\":{\"m\":0.75,\"prev\":0.72,\"history\":[1.04,1,1.04,1,0.99,0.95,0.96,0.99,0.99,0.96,0.95,0.97,0.93,0.81,0.68,0.75,0.83,0.75,0.71,0.75,0.7,0.68,0.68,0.72]},\"72\":{\"m\":1.01,\"prev\":1.03,\"history\":[1.05,1.03,1.05,1.04,1.02,1.01,1.04,1.04,0.97,1,1,1.03,0.99,1.01,1.04,1.01,0.97,0.98,1.04,1.02,0.99,0.97,1,1.03]},\"73\":{\"m\":1.02,\"prev\":1.01,\"history\":[1.06,1.05,1.08,1.05,1.06,1.04,1.02,1.04,1.08,1.06,1.1,1.08,1,1.03,1.01,1.08,1.11,1.08,1.14,1.05,1.03,0.97,0.95,1.01]},\"74\":{\"m\":0.85,\"prev\":0.87,\"history\":[0.85,0.91,0.96,0.93,0.91,0.86,0.9,0.89,0.87,0.86,0.88,0.86,0.89,0.87,0.93,0.88,0.91,0.96,0.99,0.96,0.9,0.84,0.87,0.87]},\"75\":{\"m\":0.89,\"prev\":0.89,\"history\":[1.01,0.93,0.97,0.99,1,1.05,1.07,1.01,1,1,1.02,1.02,1.05,0.96,0.98,0.87,0.79,0.89,0.78,0.78,0.82,0.84,0.82,0.89]},\"76\":{\"m\":0.98,\"prev\":0.96,\"history\":[1.2,1.19,1.24,1.19,1.19,1.1,1.08,1.07,1.04,1,0.99,1.02,0.97,0.97,0.93,0.88,0.83,0.88,0.96,0.98,1,0.95,0.94,0.96]},\"77\":{\"m\":0.95,\"prev\":0.94,\"history\":[0.88,0.89,0.87,0.82,0.81,0.86,0.84,0.81,0.84,0.86,0.8,0.82,0.78,0.73,0.67,0.75,0.78,0.75,0.79,0.82,0.82,0.88,0.89,0.94]},\"78\":{\"m\":0.89,\"prev\":0.89,\"history\":[1.1,1.06,1.07,1.05,1.02,1.02,1.01,0.99,0.96,1.01,1.06,1.04,0.88,0.85,0.91,0.84,0.87,0.83,0.83,0.85,0.86,0.86,0.85,0.89]},\"79\":{\"m\":0.83,\"prev\":0.78,\"history\":[1.15,1.08,1.04,1.04,1.01,1.04,1.02,0.96,0.91,0.94,0.87,0.86,0.8,0.72,0.69,0.73,0.66,0.65,0.72,0.71,0.75,0.74,0.74,0.78]},\"80\":{\"m\":0.9,\"prev\":0.92,\"history\":[0.92,0.89,0.86,0.86,0.86,0.87,0.89,0.9,0.89,0.89,0.91,0.95,0.95,0.94,0.91,0.9,0.96,0.97,0.84,0.84,0.86,0.86,0.88,0.92]},\"81\":{\"m\":1,\"prev\":0.96,\"history\":[0.86,0.9,0.92,0.92,0.9,0.91,0.94,0.96,0.97,0.97,0.94,0.94,0.88,0.95,0.93,0.9,0.88,0.8,0.85,0.85,0.85,0.89,0.92,0.96]},\"82\":{\"m\":0.83,\"prev\":0.82,\"history\":[1.09,1.05,1.01,0.94,0.93,0.9,0.92,0.87,0.91,0.95,0.94,0.88,1.08,0.91,0.84,0.7,0.65,0.75,0.74,0.78,0.74,0.8,0.79,0.82]},\"83\":{\"m\":0.98,\"prev\":1.01,\"history\":[0.78,0.78,0.79,0.85,0.88,0.88,0.91,0.9,0.96,0.94,0.97,0.94,1.03,0.97,1,1.07,0.94,0.86,1.08,1.15,1.12,1.09,1.05,1.01]},\"84\":{\"m\":0.87,\"prev\":0.84,\"history\":[0.89,0.87,0.94,1.01,0.99,1.01,1.02,0.97,0.98,1.04,1.01,1,0.84,0.97,0.97,0.9,0.95,0.89,0.85,0.76,0.79,0.82,0.84,0.84]},\"85\":{\"m\":0.99,\"prev\":1.03,\"history\":[1.26,1.15,1.13,1.13,1.19,1.17,1.13,1.08,1.04,1,0.99,0.97,0.81,0.88,0.92,0.91,0.89,0.98,0.97,1.15,1.14,1.08,1.04,1.03]},\"86\":{\"m\":0.99,\"prev\":0.98,\"history\":[1.17,1.04,1.09,1.09,1.09,1.02,1.07,0.99,0.91,0.9,0.95,0.97,0.99,0.96,0.93,0.98,1.02,0.87,0.9,1.04,1.03,1.02,0.95,0.98]},\"87\":{\"m\":1,\"prev\":1.02,\"history\":[1.14,1.1,1.14,1.12,1.09,1.12,1.17,1.14,1.12,1.1,1.1,1.1,1.11,1.02,1.09,1.07,0.99,1.02,1.05,1.12,1.09,1.1,1.02,1.02]},\"88\":{\"m\":0.82,\"prev\":0.88,\"history\":[0.98,1,0.98,0.97,0.98,1,0.98,0.96,1.03,0.98,1.08,1.07,0.9,0.98,0.85,0.92,0.86,0.72,0.87,0.69,0.71,0.75,0.77,0.88]},\"89\":{\"m\":0.95,\"prev\":1,\"history\":[1.01,0.94,0.86,0.83,0.79,0.76,0.76,0.76,0.74,0.72,0.76,0.79,0.71,0.65,0.58,0.61,0.62,0.78,0.96,0.97,0.95,0.95,0.94,1]},\"90\":{\"m\":0.94,\"prev\":0.9,\"history\":[1.34,1.24,1.17,1.16,1.07,1.01,0.96,0.97,1.04,1.08,1.03,1.01,0.9,0.89,1,1.02,1.09,1.02,0.94,1.04,1.01,0.98,0.96,0.9]},\"91\":{\"m\":0.74,\"prev\":0.82,\"history\":[1.21,1.19,1.14,1.15,1.1,1.14,1.15,1.14,1.12,1.12,1.12,1.12,1.08,1.1,1.14,1.02,1.07,1.05,0.96,0.95,0.94,0.86,0.86,0.82]},\"92\":{\"m\":1.09,\"prev\":1.05,\"history\":[1.16,1.03,1.01,1.04,1.02,1.04,0.99,0.98,0.94,0.9,0.97,1.02,0.98,1.05,1.03,1.04,1,1.16,1.24,1.13,1.04,1.01,1.04,1.05]},\"93\":{\"m\":0.89,\"prev\":0.81,\"history\":[0.86,0.81,0.9,0.93,0.92,0.89,0.79,0.75,0.76,0.75,0.82,0.84,0.85,0.96,1.01,0.9,0.77,0.84,0.8,0.86,0.85,0.85,0.84,0.81]},\"94\":{\"m\":0.8,\"prev\":0.82,\"history\":[0.87,0.9,1.06,1.1,1.2,1.02,0.9,0.89,1.07,1,0.96,0.93,0.9,0.64,0.83,0.99,1.04,0.86,0.64,0.56,0.56,0.61,0.69,0.82]},\"95\":{\"m\":0.81,\"prev\":0.69,\"history\":[0.69,0.69,0.61,0.56,0.59,0.64,0.66,0.71,0.74,0.67,0.69,0.75,0.88,0.79,0.72,0.62,0.73,0.8,0.51,0.53,0.62,0.63,0.71,0.69]},\"98\":{\"m\":0.83,\"prev\":0.83,\"history\":[0.97,0.95,0.96,0.94,0.95,0.93,0.91,0.89,0.91,0.93,0.95,0.96,0.9,0.95,0.92,0.86,0.82,0.77,0.78,0.85,0.84,0.82,0.82,0.83]},\"99\":{\"m\":0.87,\"prev\":0.86,\"history\":[1.04,1.04,1.04,1.01,0.98,0.95,0.94,0.95,0.96,0.94,0.95,0.97,0.94,0.88,0.76,0.8,0.79,0.79,0.81,0.83,0.87,0.87,0.86,0.86]},\"100\":{\"m\":0.96,\"prev\":0.95,\"history\":[1.1,1.12,1.05,1.05,1.02,1.01,0.97,0.97,0.99,0.97,0.97,0.98,0.93,0.95,0.98,0.98,0.94,0.95,0.96,0.99,0.99,0.96,0.96,0.95]},\"101\":{\"m\":0.89,\"prev\":0.92,\"history\":[0.91,0.88,0.9,0.84,0.85,0.81,0.85,0.85,0.88,0.89,0.87,0.87,0.99,1.01,1.03,0.97,1.06,1.07,1.09,1.06,0.98,1,0.97,0.92]},\"102\":{\"m\":0.83,\"prev\":0.78,\"history\":[1.05,1.01,1.02,1.01,0.98,0.95,0.92,0.91,0.9,0.92,0.96,0.98,0.97,0.99,1.06,1.06,0.93,0.87,0.74,0.71,0.74,0.76,0.78,0.78]},\"103\":{\"m\":0.74,\"prev\":0.72,\"history\":[1.04,1.06,1.07,1.06,1,1,0.99,0.99,0.94,0.92,0.93,0.94,0.82,0.83,0.9,0.76,0.76,0.75,0.79,0.77,0.71,0.69,0.68,0.72]},\"104\":{\"m\":0.7,\"prev\":0.69,\"history\":[1.02,0.99,0.97,0.96,0.91,0.9,0.9,0.86,0.85,0.82,0.81,0.78,0.68,0.61,0.54,0.49,0.53,0.66,0.63,0.62,0.65,0.63,0.65,0.69]},\"105\":{\"m\":0.7,\"prev\":0.72,\"history\":[0.98,0.97,1.01,1.06,0.99,0.96,0.97,0.97,0.96,0.98,0.95,0.95,0.91,0.81,0.82,0.85,0.78,0.72,0.74,0.65,0.66,0.69,0.7,0.72]},\"106\":{\"m\":0.9,\"prev\":0.82,\"history\":[1.04,1,0.94,0.91,0.9,0.91,0.9,0.87,0.93,0.93,0.96,0.95,0.86,0.95,0.81,0.71,0.71,0.62,0.55,0.65,0.67,0.71,0.77,0.82]},\"107\":{\"m\":0.9,\"prev\":0.88,\"history\":[1.08,1.03,1.03,1.03,1.07,0.99,0.99,0.98,1.05,1.02,1.02,0.96,0.97,0.88,0.88,0.89,0.81,0.83,0.86,0.8,0.82,0.81,0.8,0.88]},\"108\":{\"m\":0.93,\"prev\":0.95,\"history\":[1.05,1.02,1.02,1.05,1.06,1.04,1,1.05,1.13,1.1,1.12,1.07,0.99,1.02,0.91,0.85,0.86,0.85,0.86,0.87,0.88,0.84,0.89,0.95]},\"109\":{\"m\":0.85,\"prev\":0.79,\"history\":[0.94,0.93,0.91,0.84,0.85,0.87,0.88,0.92,0.93,0.95,0.96,0.96,1,0.99,0.96,0.97,0.88,0.86,0.91,0.77,0.73,0.75,0.78,0.79]},\"110\":{\"m\":0.56,\"prev\":0.53,\"history\":[0.84,0.72,0.62,0.55,0.54,0.52,0.6,0.6,0.64,0.64,0.72,0.73,0.66,0.61,0.55,0.63,0.55,0.63,0.52,0.42,0.5,0.62,0.57,0.53]},\"111\":{\"m\":0.75,\"prev\":0.71,\"history\":[0.98,0.95,0.92,0.89,0.83,0.86,0.88,0.84,0.89,0.92,0.91,0.88,0.95,0.94,0.88,0.75,0.62,0.76,0.75,0.62,0.64,0.72,0.75,0.71]},\"112\":{\"m\":0.62,\"prev\":0.63,\"history\":[0.98,0.96,0.87,0.86,0.86,0.89,0.81,0.77,0.79,0.82,0.86,0.81,0.81,0.84,0.67,0.61,0.64,0.77,0.57,0.51,0.5,0.5,0.56,0.63]},\"113\":{\"m\":1.04,\"prev\":1.02,\"history\":[0.83,0.84,0.7,0.71,0.73,0.8,0.84,0.86,0.88,0.8,0.81,0.8,0.91,0.79,0.93,1.05,1.05,1.08,1.06,1,0.98,1.01,1.01,1.02]},\"114\":{\"m\":0.6,\"prev\":0.61,\"history\":[0.91,0.92,0.9,0.83,0.85,0.87,0.84,0.81,0.81,0.76,0.8,0.9,0.97,1.02,0.87,0.78,0.8,0.79,0.64,0.57,0.63,0.64,0.6,0.61]},\"115\":{\"m\":0.8,\"prev\":0.8,\"history\":[0.96,0.94,0.85,0.82,0.8,0.81,0.71,0.81,0.83,0.79,0.78,0.75,0.93,0.9,0.84,0.71,0.68,0.69,0.77,0.76,0.8,0.82,0.84,0.8]},\"116\":{\"m\":1.12,\"prev\":1.16,\"history\":[0.9,0.85,0.75,0.69,0.72,0.8,0.76,0.75,0.76,0.81,0.85,0.97,1.13,1.03,1.07,0.9,1.07,1.21,1.34,1.31,1.26,1.25,1.18,1.16]},\"117\":{\"m\":0.89,\"prev\":0.85,\"history\":[0.91,0.97,1.05,1.03,1,0.95,0.93,0.97,0.99,0.97,1.02,1.03,1.13,1.16,1.19,1.17,1.1,1,0.84,0.85,0.85,0.79,0.81,0.85]},\"118\":{\"m\":0.57,\"prev\":0.59,\"history\":[1.06,1.03,0.97,0.96,0.93,0.95,0.87,0.83,0.81,0.77,0.78,0.78,0.75,0.86,1.02,0.81,0.67,0.66,0.44,0.44,0.49,0.51,0.51,0.59]},\"119\":{\"m\":0.84,\"prev\":0.81,\"history\":[1.16,1.17,1.22,1.19,1.16,1.14,1.05,1.08,1.11,1.22,1.24,1.26,1.39,1.27,1.26,1.31,1.08,0.99,0.89,0.84,0.79,0.77,0.73,0.81]},\"120\":{\"m\":0.78,\"prev\":0.76,\"history\":[1.2,1.15,1.04,1.1,1.1,1.07,1.16,1.22,1.08,1.12,1.1,1.12,1.13,0.97,0.72,0.59,0.67,0.53,0.59,0.71,0.79,0.7,0.78,0.76]},\"121\":{\"m\":0.52,\"prev\":0.58,\"history\":[0.69,0.79,0.94,0.97,1.06,0.95,1.03,0.86,0.85,0.75,0.75,0.88,1.21,1.18,0.91,0.69,0.69,0.91,0.56,0.44,0.4,0.4,0.48,0.58]},\"122\":{\"m\":1.11,\"prev\":1.08,\"history\":[1.09,0.99,1.05,1.16,0.96,0.88,0.94,0.96,1.14,1.19,1.21,1.19,1.17,1.13,1.28,1.25,1.14,1.13,1.22,1.25,1.25,1.26,1.16,1.08]},\"123\":{\"m\":1.26,\"prev\":1.36,\"history\":[1,1,1,1,1,0.91,0.89,1.13,1.18,1.32,1.3,1.15,1.26,1.37,1.59,1.89,2.11,1.92,1.74,1.77,1.61,1.62,1.49,1.36]},\"124\":{\"m\":1.39,\"prev\":1.35,\"history\":[0.87,0.86,0.9,0.89,1.04,1.02,1.01,0.9,0.95,0.75,0.75,0.72,0.77,1.05,1.26,0.98,1.03,0.78,0.93,1.16,1.17,1.25,1.22,1.35]},\"125\":{\"m\":0.86,\"prev\":0.86,\"history\":[1.03,1,0.93,0.94,0.93,0.93,0.92,0.89,0.93,0.92,0.91,0.95,0.92,0.91,0.95,0.94,0.92,0.85,0.81,0.8,0.83,0.83,0.83,0.86]},\"126\":{\"m\":0.91,\"prev\":0.89,\"history\":[1.09,0.94,0.91,0.85,0.85,0.86,0.88,0.85,0.77,0.72,0.7,0.77,0.65,0.57,0.5,0.46,0.53,0.5,0.52,0.72,0.73,0.82,0.85,0.89]},\"127\":{\"m\":1.03,\"prev\":0.98,\"history\":[1.04,0.95,0.9,0.9,0.89,0.83,0.81,0.76,0.91,0.96,1,0.98,0.85,1.09,1.16,1.4,1.36,1.2,1.08,1.15,1.12,1.12,1.06,0.98]},\"128\":{\"m\":0.76,\"prev\":0.75,\"history\":[0.89,0.93,0.85,0.76,0.83,0.89,0.81,0.78,0.72,0.86,0.81,0.77,0.81,0.56,0.46,0.4,0.4,0.46,0.6,0.68,0.66,0.72,0.68,0.75]},\"129\":{\"m\":1.12,\"prev\":1.11,\"history\":[1.04,1.11,0.99,1,1,0.91,0.87,0.88,0.88,0.8,0.88,0.96,1.1,0.93,0.87,0.78,0.72,0.71,0.87,1.12,1.17,1.06,1,1.11]},\"130\":{\"m\":1.01,\"prev\":0.9,\"history\":[1.25,1.24,1.17,1.12,1.1,1.05,1.11,1.16,1.12,1.24,1.29,1.17,1.04,1.19,1.16,1.09,0.98,1.11,0.86,0.98,0.84,0.94,0.91,0.9]},\"131\":{\"m\":0.56,\"prev\":0.73,\"history\":[1.36,1.3,1.35,1.34,1.36,1.3,1.18,1.17,1.12,1.08,1.1,1.24,1.24,1.17,0.91,0.92,0.64,0.67,0.81,0.67,0.57,0.6,0.72,0.73]},\"132\":{\"m\":1.31,\"prev\":1.31,\"history\":[1.05,1.23,1.22,1.32,1.19,1.09,1.17,1.05,1.12,1.1,0.92,0.93,1.09,1.07,1.47,1.36,1.38,1.53,1.62,1.41,1.28,1.25,1.2,1.31]},\"133\":{\"m\":1.02,\"prev\":1.13,\"history\":[0.75,0.64,0.76,0.72,0.85,0.73,0.71,0.64,0.73,0.83,0.88,0.88,0.93,1.11,1.45,1.29,1.11,1.06,1.19,1.25,1.34,1.23,1.25,1.13]},\"134\":{\"m\":1.05,\"prev\":1.3,\"history\":[0.95,0.99,0.98,1.02,0.95,1,1.02,1.1,1.02,0.96,1,1.09,1.08,0.92,0.96,0.9,0.99,0.86,1.28,1.27,1.24,1.29,1.15,1.3]},\"140\":{\"m\":0.79,\"prev\":0.75,\"history\":[0.96,0.94,0.9,0.93,0.96,0.96,0.94,0.91,0.94,0.95,0.94,0.96,0.95,0.92,0.89,0.84,0.79,0.77,0.75,0.71,0.73,0.73,0.73,0.75]},\"141\":{\"m\":0.9,\"prev\":0.85,\"history\":[1,0.99,0.96,0.91,0.9,0.9,0.88,0.9,0.89,0.87,0.89,0.89,0.85,0.86,0.83,0.87,0.91,0.9,0.86,0.82,0.84,0.86,0.84,0.85]},\"142\":{\"m\":0.88,\"prev\":0.89,\"history\":[1,0.98,0.95,0.94,0.93,0.93,0.92,0.93,0.93,0.93,0.95,0.98,0.93,0.99,1.02,1.04,1.01,0.96,0.95,0.89,0.9,0.91,0.91,0.89]},\"143\":{\"m\":0.52,\"prev\":0.58,\"history\":[1.39,1.42,1.31,1.3,1.25,1.28,1.37,1.32,1.14,1.21,1.12,1.17,0.97,1.01,1.23,1.27,1.21,1.02,0.77,0.5,0.64,0.56,0.56,0.58]},\"144\":{\"m\":0.89,\"prev\":0.75,\"history\":[0.97,0.88,0.82,0.92,0.88,0.76,0.76,0.86,0.75,0.72,0.8,0.79,0.86,0.9,0.88,0.84,0.97,0.68,0.42,0.4,0.56,0.59,0.68,0.75]},\"145\":{\"m\":1.16,\"prev\":1.24,\"history\":[1.34,1.14,1.01,1.07,1.23,1.17,0.92,0.87,0.95,0.87,0.68,0.79,0.9,1.07,0.9,0.96,1.12,1.05,1.15,1.07,1.14,1.12,1.13,1.24]},\"146\":{\"m\":0.76,\"prev\":0.93,\"history\":[0.83,0.78,0.87,0.91,1.07,1,1.02,0.93,0.91,0.93,0.84,0.78,0.96,0.91,0.59,0.61,0.46,0.64,0.4,0.4,0.47,0.59,0.77,0.93]},\"147\":{\"m\":0.64,\"prev\":0.6,\"history\":[0.76,0.67,0.66,0.64,0.73,0.64,0.59,0.69,0.72,0.78,0.77,0.77,1.01,0.99,0.67,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.44,0.6]},\"148\":{\"m\":1.32,\"prev\":1.25,\"history\":[1.21,1.19,1.23,1.29,1.18,1.3,1.08,1.14,1.21,1.14,1.18,1.16,1.02,1.25,1.08,1.11,1.53,1.64,1.79,1.57,1.53,1.41,1.41,1.25]},\"149\":{\"m\":1.1,\"prev\":1.06,\"history\":[1.07,1.08,1.02,1.01,1.01,0.96,0.9,0.85,0.88,0.84,0.8,0.83,0.88,1.02,1.02,1.07,1.08,1.01,0.98,0.92,0.88,0.94,0.96,1.06]},\"150\":{\"m\":0.88,\"prev\":0.84,\"history\":[1.16,1.15,1.15,1.18,1.12,1.13,1.09,1.07,1,0.99,0.97,0.96,0.82,0.81,0.89,0.9,0.86,0.78,0.74,0.76,0.78,0.78,0.82,0.84]},\"151\":{\"m\":0.85,\"prev\":0.74,\"history\":[1.02,0.95,1.04,1.13,1.07,1,0.94,1,1.12,1.1,1.04,1.06,0.88,0.89,0.74,0.71,0.6,0.59,0.58,0.54,0.57,0.66,0.69,0.74]},\"152\":{\"m\":0.46,\"prev\":0.47,\"history\":[1.35,1.33,1.31,1.26,1.19,1.23,1.35,1.22,1.08,1.12,1.13,1.16,1.08,0.9,0.76,0.74,0.71,0.53,0.67,0.58,0.52,0.51,0.51,0.47]},\"153\":{\"m\":0.73,\"prev\":0.62,\"history\":[0.86,0.95,0.92,0.79,0.76,0.67,0.75,0.7,0.71,0.74,0.87,0.93,0.82,0.73,0.45,0.47,0.56,0.58,0.65,0.56,0.47,0.45,0.52,0.62]},\"154\":{\"m\":0.6,\"prev\":0.58,\"history\":[0.96,0.8,0.84,0.87,0.9,0.89,0.78,0.78,0.84,0.82,0.8,0.82,0.96,0.9,0.99,0.85,0.75,0.69,0.5,0.43,0.4,0.45,0.41,0.58]},\"155\":{\"m\":0.87,\"prev\":0.85,\"history\":[1.2,1.14,1.06,0.99,0.94,1.02,0.94,1.01,0.96,0.98,1.03,0.99,0.92,1.03,1.05,1.05,0.97,0.98,0.76,0.79,0.87,0.89,0.84,0.85]},\"156\":{\"m\":0.93,\"prev\":0.93,\"history\":[0.89,0.89,0.95,0.93,0.85,0.75,0.75,0.73,0.76,0.77,0.79,0.79,0.76,0.73,0.83,0.96,1.04,0.86,0.85,0.82,0.79,0.84,0.9,0.93]},\"157\":{\"m\":1.18,\"prev\":1.14,\"history\":[1.01,1.02,0.99,0.94,0.95,0.99,0.94,0.9,0.88,0.94,1,1.09,1.22,1.3,1.24,1.16,1.17,1.14,1.19,1.23,1.14,1.15,1.12,1.14]},\"158\":{\"m\":0.71,\"prev\":0.68,\"history\":[0.76,0.75,0.96,0.98,0.94,0.95,1.05,0.95,0.8,0.76,0.73,0.8,0.77,0.83,0.93,0.72,0.74,0.51,0.64,0.71,0.6,0.59,0.7,0.68]},\"159\":{\"m\":0.8,\"prev\":0.8,\"history\":[1.45,1.31,1.22,1.09,1.16,1.12,1.03,1.02,0.97,1.08,1.1,1.13,0.83,0.57,0.67,0.61,0.66,0.72,0.54,0.8,0.81,0.74,0.87,0.8]},\"160\":{\"m\":0.84,\"prev\":0.74,\"history\":[1.02,1.05,1.04,1.1,1.06,1.14,1.16,1.15,1.08,1.05,1.03,1.13,1.39,1.08,0.86,0.99,0.82,0.93,0.73,0.65,0.71,0.72,0.77,0.74]}}},\"crew\":[],\"recruits\":[],\"bunks\":[],\"nextId\":1,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}"
+  },
+  {
+   "name": "the buyers out in each water",
+   "seed": 32,
+   "start": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0032\",\"profile\":{\"id\":\"captain-00parity0032\",\"username\":\"crew_y0032\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":20000,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":2,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":3,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":1076979,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":0,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":null,\"showcase_crew_ids\":[],\"lifetime_recruits\":0,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":true,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":600},\"hold\":{},\"collection\":{},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{},\"ledger\":[],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":null,\"crew\":[],\"recruits\":[],\"bunks\":[],\"nextId\":1,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}",
+   "ops": [
+    {
+     "op": "sellToResident",
+     "now": 1790769600000,
+     "args": [
+      "shallows"
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Your hold is empty."
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "hold": {
+        "1": 4,
+        "20": 3,
+        "45": 7,
+        "70": 2,
+        "100": 5
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellToResident",
+     "now": 1790769600000,
+     "args": [
+      "shallows"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "earned": 6310,
+      "rate": 0.78,
+      "doubloons": 26310
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "hold": {
+        "1": 4,
+        "20": 3,
+        "45": 7,
+        "70": 2,
+        "100": 5
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellToResident",
+     "now": 1790769600000,
+     "args": [
+      "open_waters"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "earned": 6472,
+      "rate": 0.8,
+      "doubloons": 32782
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "hold": {
+        "1": 4,
+        "20": 3,
+        "45": 7,
+        "70": 2,
+        "100": 5
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellToResident",
+     "now": 1790769600000,
+     "args": [
+      "deep"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "earned": 6633,
+      "rate": 0.82,
+      "doubloons": 39415
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "hold": {
+        "1": 4,
+        "20": 3,
+        "45": 7,
+        "70": 2,
+        "100": 5
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellToResident",
+     "now": 1790769600000,
+     "args": [
+      "abyss"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "earned": 6795,
+      "rate": 0.84,
+      "doubloons": 46210
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "hold": {
+        "1": 4,
+        "20": 3,
+        "45": 7,
+        "70": 2,
+        "100": 5
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellToResident",
+     "now": 1790769600000,
+     "args": [
+      "ancient_deep"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "earned": 6957,
+      "rate": 0.86,
+      "doubloons": 53167
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "hold": {
+        "1": 4,
+        "20": 3,
+        "45": 7,
+        "70": 2,
+        "100": 5
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellToResident",
+     "now": 1790769600000,
+     "args": [
+      "the_moon"
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "There is nobody buying here."
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "hold": {
+        "143": 1
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "sellToResident",
+     "now": 1790769600000,
+     "args": [
+      "ancient_deep"
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Nothing in your hold is worth anything to them."
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769600000,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 7,
+      "catchDifficulty": 2,
+      "biteRarity": 2,
+      "waitMs": 8337,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 599
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769609837,
+     "args": [
+      7,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 7,
+       "bite_rarity": 2,
+       "catch_difficulty": 2,
+       "catch_score": 22,
+       "description": "A spirited fish born in freshwater that can adapt to the sea.",
+       "diet_type": "carnivore",
+       "fish_group": "salmon & trout",
+       "fotd_eligible": true,
+       "fotd_family": null,
+       "fun_fact": "When rainbow trout migrate to the ocean and return, they are called steelhead, technically the same species.",
+       "habitat": "shallows",
+       "habitat_type": "freshwater",
+       "is_edible": true,
+       "length_max_in": 32,
+       "length_min_in": 16,
+       "name": "Rainbow Trout",
+       "region": "Cold Water",
+       "scientific_name": "Oncorhynchus mykiss",
+       "sell_value": 20,
+       "size_category": "medium",
+       "sort_order": 70,
+       "water_type": "Freshwater"
+      },
+      "baitSaved": false,
+      "isNewSpecies": true,
+      "deepStirs": false,
+      "xpGained": 12,
+      "newXP": 1076991,
+      "dailyProgress": [
+       1,
+       0,
+       20,
+       0
+      ],
+      "unlockedSkinId": "ice",
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 12,
+      "xpStreak": 0,
+      "sizeIn": 26.4,
+      "sizeMin": 16,
+      "sizeMax": 32,
+      "sizeTier": "average",
+      "isPB": true,
+      "previousBest": null,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769613837,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 2,
+     "result": {
+      "fishId": -1,
+      "catchDifficulty": 1,
+      "biteRarity": 1,
+      "waitMs": 4000,
+      "crateTier": "wooden",
+      "baitRemaining": 598
+     }
+    },
+    {
+     "op": "reelCrate",
+     "now": 1790769619337,
+     "args": [
+      "catch"
+     ],
+     "rolls": 3,
+     "result": {
+      "type": "bait",
+      "baitType": "worm",
+      "baitName": "Worms",
+      "quantity": 5,
+      "perfectStreak": 0
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769623337,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 3,
+      "catchDifficulty": 1,
+      "biteRarity": 1,
+      "waitMs": 7183,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 602
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769632020,
+     "args": [
+      3,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 3,
+       "bite_rarity": 1,
+       "catch_difficulty": 1,
+       "catch_score": 8,
+       "description": "A popular panfish with distinctive vertical stripes.",
+       "diet_type": "carnivore",
+       "fish_group": "bass & perch",
+       "fotd_eligible": false,
+       "fotd_family": null,
+       "fun_fact": "Their eggs are laid in long accordion-like ribbons that can stretch over two metres.",
+       "habitat": "shallows",
+       "habitat_type": "freshwater",
+       "is_edible": null,
+       "length_max_in": 16,
+       "length_min_in": 8,
+       "name": "Yellow Perch",
+       "region": null,
+       "scientific_name": "Perca flavescens",
+       "sell_value": 10,
+       "size_category": "small",
+       "sort_order": 30,
+       "water_type": null
+      },
+      "baitSaved": false,
+      "isNewSpecies": true,
+      "deepStirs": false,
+      "xpGained": 6,
+      "newXP": 1076997,
+      "dailyProgress": [
+       1,
+       0,
+       30,
+       0
+      ],
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 6,
+      "xpStreak": 0,
+      "sizeIn": 10.2,
+      "sizeMin": 8,
+      "sizeMax": 16,
+      "sizeTier": "small",
+      "isPB": true,
+      "previousBest": null,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769636020,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 72,
+      "catchDifficulty": 2,
+      "biteRarity": 2,
+      "waitMs": 6684,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 601
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769644204,
+     "args": [
+      72,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 72,
+       "bite_rarity": 2,
+       "catch_difficulty": 2,
+       "catch_score": 22,
+       "description": null,
+       "diet_type": "carnivore",
+       "fish_group": "salmon & trout",
+       "fotd_eligible": true,
+       "fotd_family": "trout",
+       "fun_fact": "Brook Trout are actually char, not true trout, and are so sensitive to pollution they serve as a benchmark; if they're thriving, the water is genuinely clean.",
+       "habitat": "shallows",
+       "habitat_type": "freshwater",
+       "is_edible": true,
+       "length_max_in": 16,
+       "length_min_in": 8,
+       "name": "Brook Trout",
+       "region": "Cold Water",
+       "scientific_name": "Salvelinus fontinalis",
+       "sell_value": 20,
+       "size_category": "small",
+       "sort_order": 0,
+       "water_type": "Freshwater"
+      },
+      "baitSaved": false,
+      "isNewSpecies": true,
+      "deepStirs": false,
+      "xpGained": 12,
+      "newXP": 1077009,
+      "dailyProgress": [
+       2,
+       0,
+       50,
+       0
+      ],
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 12,
+      "xpStreak": 0,
+      "sizeIn": 12.5,
+      "sizeMin": 8,
+      "sizeMax": 16,
+      "sizeTier": "average",
+      "isPB": true,
+      "previousBest": null,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769648204,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 11,
+      "catchDifficulty": 3,
+      "biteRarity": 3,
+      "waitMs": 6300,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 600
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769656004,
+     "args": [
+      11,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 11,
+       "bite_rarity": 3,
+       "catch_difficulty": 3,
+       "catch_score": 32,
+       "description": "An apex freshwater predator with a mouthful of razor teeth.",
+       "diet_type": "carnivore",
+       "fish_group": "other",
+       "fotd_eligible": true,
+       "fotd_family": null,
+       "fun_fact": "Can swallow prey up to half its own body size in a single strike.",
+       "habitat": "shallows",
+       "habitat_type": "freshwater",
+       "is_edible": true,
+       "length_max_in": 60,
+       "length_min_in": 32,
+       "name": "Northern Pike",
+       "region": "Cold Water",
+       "scientific_name": "Esox lucius",
+       "sell_value": 50,
+       "size_category": "large",
+       "sort_order": 110,
+       "water_type": "Freshwater"
+      },
+      "baitSaved": false,
+      "isNewSpecies": true,
+      "deepStirs": false,
+      "xpGained": 22,
+      "newXP": 1077031,
+      "dailyProgress": [
+       3,
+       0,
+       100,
+       0
+      ],
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 22,
+      "xpStreak": 0,
+      "sizeIn": 54.8,
+      "sizeMin": 32,
+      "sizeMax": 60,
+      "sizeTier": "average",
+      "isPB": true,
+      "previousBest": null,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769660004,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 10,
+      "catchDifficulty": 3,
+      "biteRarity": 3,
+      "waitMs": 6917,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 599
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769668421,
+     "args": [
+      10,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 10,
+       "bite_rarity": 3,
+       "catch_difficulty": 3,
+       "catch_score": 35,
+       "description": "A cunning, selective trout known for frustrating anglers.",
+       "diet_type": "carnivore",
+       "fish_group": "salmon & trout",
+       "fotd_eligible": true,
+       "fotd_family": "trout",
+       "fun_fact": "Has been introduced to every continent except Antarctica, making it one of the most widely spread freshwater fish on Earth.",
+       "habitat": "shallows",
+       "habitat_type": "freshwater",
+       "is_edible": true,
+       "length_max_in": 32,
+       "length_min_in": 16,
+       "name": "Brown Trout",
+       "region": "Cold Water",
+       "scientific_name": "Salmo trutta",
+       "sell_value": 50,
+       "size_category": "medium",
+       "sort_order": 100,
+       "water_type": "Freshwater"
+      },
+      "baitSaved": false,
+      "isNewSpecies": true,
+      "deepStirs": false,
+      "xpGained": 22,
+      "newXP": 1077053,
+      "dailyProgress": [
+       3,
+       0,
+       150,
+       0
+      ],
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 22,
+      "xpStreak": 0,
+      "sizeIn": 31.3,
+      "sizeMin": 16,
+      "sizeMax": 32,
+      "sizeTier": "large",
+      "isPB": true,
+      "previousBest": null,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769672421,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 88,
+      "catchDifficulty": 3,
+      "biteRarity": 3,
+      "waitMs": 5590,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 598
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769679511,
+     "args": [
+      88,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 88,
+       "bite_rarity": 3,
+       "catch_difficulty": 3,
+       "catch_score": 42,
+       "description": null,
+       "diet_type": "carnivore",
+       "fish_group": "eel",
+       "fotd_eligible": false,
+       "fotd_family": null,
+       "fun_fact": "No European Eel has ever been observed spawning; they travel 4,000 miles to the Sargasso Sea to reproduce and die, a journey that remains one of nature's greatest unsolved mysteries.",
+       "habitat": "shallows",
+       "habitat_type": "both",
+       "is_edible": null,
+       "length_max_in": 32,
+       "length_min_in": 16,
+       "name": "European Eel",
+       "region": null,
+       "scientific_name": "Anguilla anguilla",
+       "sell_value": 50,
+       "size_category": "medium",
+       "sort_order": 0,
+       "water_type": null
+      },
+      "baitSaved": false,
+      "isNewSpecies": true,
+      "deepStirs": false,
+      "xpGained": 22,
+      "newXP": 1077075,
+      "dailyProgress": [
+       3,
+       0,
+       200,
+       0
+      ],
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 22,
+      "xpStreak": 0,
+      "sizeIn": 16.7,
+      "sizeMin": 16,
+      "sizeMax": 32,
+      "sizeTier": "tiny",
+      "isPB": true,
+      "previousBest": null,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769683511,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 73,
+      "catchDifficulty": 2,
+      "biteRarity": 2,
+      "waitMs": 5665,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 597
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769690676,
+     "args": [
+      73,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 73,
+       "bite_rarity": 2,
+       "catch_difficulty": 2,
+       "catch_score": 20,
+       "description": null,
+       "diet_type": "carnivore",
+       "fish_group": "catfish",
+       "fotd_eligible": false,
+       "fotd_family": null,
+       "fun_fact": "Flathead Catfish are solitary ambush predators that prefer live prey, lying motionless on riverbeds for hours waiting for a fish to swim within striking range.",
+       "habitat": "shallows",
+       "habitat_type": "freshwater",
+       "is_edible": null,
+       "length_max_in": 60,
+       "length_min_in": 32,
+       "name": "Flathead Catfish",
+       "region": null,
+       "scientific_name": "Pylodictis olivaris",
+       "sell_value": 20,
+       "size_category": "large",
+       "sort_order": 0,
+       "water_type": null
+      },
+      "baitSaved": false,
+      "isNewSpecies": true,
+      "deepStirs": false,
+      "xpGained": 12,
+      "newXP": 1077087,
+      "dailyProgress": [
+       3,
+       0,
+       220,
+       0
+      ],
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 12,
+      "xpStreak": 0,
+      "sizeIn": 52.4,
+      "sizeMin": 32,
+      "sizeMax": 60,
+      "sizeTier": "average",
+      "isPB": true,
+      "previousBest": null,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769694676,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 73,
+      "catchDifficulty": 2,
+      "biteRarity": 2,
+      "waitMs": 7200,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 596
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769703376,
+     "args": [
+      73,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 73,
+       "bite_rarity": 2,
+       "catch_difficulty": 2,
+       "catch_score": 20,
+       "description": null,
+       "diet_type": "carnivore",
+       "fish_group": "catfish",
+       "fotd_eligible": false,
+       "fotd_family": null,
+       "fun_fact": "Flathead Catfish are solitary ambush predators that prefer live prey, lying motionless on riverbeds for hours waiting for a fish to swim within striking range.",
+       "habitat": "shallows",
+       "habitat_type": "freshwater",
+       "is_edible": null,
+       "length_max_in": 60,
+       "length_min_in": 32,
+       "name": "Flathead Catfish",
+       "region": null,
+       "scientific_name": "Pylodictis olivaris",
+       "sell_value": 20,
+       "size_category": "large",
+       "sort_order": 0,
+       "water_type": null
+      },
+      "baitSaved": false,
+      "isNewSpecies": false,
+      "deepStirs": false,
+      "xpGained": 12,
+      "newXP": 1077099,
+      "dailyProgress": [
+       3,
+       0,
+       240,
+       0
+      ],
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 12,
+      "xpStreak": 0,
+      "sizeIn": 42.4,
+      "sizeMin": 32,
+      "sizeMax": 60,
+      "sizeTier": "small",
+      "isPB": false,
+      "previousBest": 52.4,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769707376,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 62,
+      "catchDifficulty": 3,
+      "biteRarity": 4,
+      "waitMs": 6063,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 595
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769714939,
+     "args": [
+      62,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 62,
+       "bite_rarity": 4,
+       "catch_difficulty": 3,
+       "catch_score": 40,
+       "description": "A massive, silver-scaled fish known for explosive leaps when hooked.",
+       "diet_type": "carnivore",
+       "fish_group": "other",
+       "fotd_eligible": true,
+       "fotd_family": null,
+       "fun_fact": "Tarpon can breathe air directly by gulping it at the surface, an ancient adaptation that lets them survive in oxygen-poor shallows.",
+       "habitat": "shallows",
+       "habitat_type": "saltwater",
+       "is_edible": false,
+       "length_max_in": 60,
+       "length_min_in": 32,
+       "name": "Tarpon",
+       "region": "Tropical",
+       "scientific_name": "Megalops atlanticus",
+       "sell_value": 88,
+       "size_category": "large",
+       "sort_order": 0,
+       "water_type": "Ocean"
+      },
+      "baitSaved": false,
+      "isNewSpecies": true,
+      "deepStirs": false,
+      "xpGained": 22,
+      "newXP": 1077121,
+      "dailyProgress": [
+       3,
+       0,
+       328,
+       0
+      ],
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 22,
+      "xpStreak": 0,
+      "sizeIn": 47,
+      "sizeMin": 32,
+      "sizeMax": 60,
+      "sizeTier": "average",
+      "isPB": true,
+      "previousBest": null,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769718939,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 6,
+      "catchDifficulty": 1,
+      "biteRarity": 2,
+      "waitMs": 6907,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 594
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769727346,
+     "args": [
+      6,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 6,
+       "bite_rarity": 2,
+       "catch_difficulty": 1,
+       "catch_score": 14,
+       "description": "A schooling panfish prized for its mild, flaky meat.",
+       "diet_type": "carnivore",
+       "fish_group": "bass & perch",
+       "fotd_eligible": false,
+       "fotd_family": null,
+       "fun_fact": "Its name comes from the Canadian French word crapet, used for various sunfish species.",
+       "habitat": "shallows",
+       "habitat_type": "freshwater",
+       "is_edible": null,
+       "length_max_in": 16,
+       "length_min_in": 8,
+       "name": "Crappie",
+       "region": null,
+       "scientific_name": "Pomoxis nigromaculatus",
+       "sell_value": 15,
+       "size_category": "small",
+       "sort_order": 60,
+       "water_type": null
+      },
+      "baitSaved": false,
+      "isNewSpecies": true,
+      "deepStirs": false,
+      "xpGained": 6,
+      "newXP": 1077127,
+      "dailyProgress": [
+       3,
+       0,
+       343,
+       0
+      ],
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 6,
+      "xpStreak": 0,
+      "sizeIn": 13.6,
+      "sizeMin": 8,
+      "sizeMax": 16,
+      "sizeTier": "average",
+      "isPB": true,
+      "previousBest": null,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "castLine",
+     "now": 1790769731346,
+     "args": [
+      "worm",
+      "shallows"
+     ],
+     "rolls": 4,
+     "result": {
+      "fishId": 3,
+      "catchDifficulty": 1,
+      "biteRarity": 1,
+      "waitMs": 6142,
+      "instantBite": false,
+      "jackpotMult": 1,
+      "doubleCatch": false,
+      "lockedStage": 0,
+      "baitRemaining": 593
+     }
+    },
+    {
+     "op": "reelIn",
+     "now": 1790769738988,
+     "args": [
+      3,
+      "catch",
+      "worm"
+     ],
+     "rolls": 2,
+     "result": {
+      "caught": true,
+      "fish": {
+       "id": 3,
+       "bite_rarity": 1,
+       "catch_difficulty": 1,
+       "catch_score": 8,
+       "description": "A popular panfish with distinctive vertical stripes.",
+       "diet_type": "carnivore",
+       "fish_group": "bass & perch",
+       "fotd_eligible": false,
+       "fotd_family": null,
+       "fun_fact": "Their eggs are laid in long accordion-like ribbons that can stretch over two metres.",
+       "habitat": "shallows",
+       "habitat_type": "freshwater",
+       "is_edible": null,
+       "length_max_in": 16,
+       "length_min_in": 8,
+       "name": "Yellow Perch",
+       "region": null,
+       "scientific_name": "Perca flavescens",
+       "sell_value": 10,
+       "size_category": "small",
+       "sort_order": 30,
+       "water_type": null
+      },
+      "baitSaved": false,
+      "isNewSpecies": false,
+      "deepStirs": false,
+      "xpGained": 6,
+      "newXP": 1077133,
+      "dailyProgress": [
+       3,
+       0,
+       353,
+       0
+      ],
+      "perfectStreak": 0,
+      "streakBonusXP": 0,
+      "xpCatch": 6,
+      "xpStreak": 0,
+      "sizeIn": 13.8,
+      "sizeMin": 8,
+      "sizeMax": 16,
+      "sizeTier": "average",
+      "isPB": true,
+      "previousBest": 10.2,
+      "isShiny": false,
+      "alreadyMounted": false,
+      "sigilBonus": 0,
+      "wormhole": false,
+      "catchQty": 1
+     }
+    },
+    {
+     "op": "sellToResident",
+     "now": 1790769742988,
+     "args": [
+      "shallows"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "earned": 275,
+      "rate": 0.78,
+      "doubloons": 53442
+     }
+    }
+   ],
+   "end": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0032\",\"profile\":{\"id\":\"captain-00parity0032\",\"username\":\"crew_y0032\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":53442,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":2,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":12,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":3,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":1077133,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":0,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[\"sand\",\"forest\",\"ice\"],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":\"worm\",\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":1,\"last_free_recruit_date\":null,\"showcase_crew_ids\":[],\"lifetime_recruits\":0,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":true,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[7,3,72,11,10,88,73,62,6],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{\"wooden\":1},\"bait_used\":{\"worm\":12},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":593},\"hold\":{},\"collection\":{\"3\":{\"catch_count\":2,\"is_golden\":null,\"last_caught_at\":\"2026-09-30T12:02:18.988Z\"},\"6\":{\"catch_count\":1,\"is_golden\":null},\"7\":{\"catch_count\":1,\"is_golden\":null},\"10\":{\"catch_count\":1,\"is_golden\":null},\"11\":{\"catch_count\":1,\"is_golden\":null},\"62\":{\"catch_count\":1,\"is_golden\":null},\"72\":{\"catch_count\":1,\"is_golden\":null},\"73\":{\"catch_count\":2,\"is_golden\":null,\"last_caught_at\":\"2026-09-30T12:01:43.376Z\"},\"88\":{\"catch_count\":1,\"is_golden\":null}},\"lifetime\":{\"3\":{\"n\":2,\"last\":\"2026-09-30T12:02:18.988Z\",\"first\":\"2026-09-30T12:00:32.020Z\"},\"6\":{\"n\":1,\"last\":\"2026-09-30T12:02:07.346Z\",\"first\":\"2026-09-30T12:02:07.346Z\"},\"7\":{\"n\":1,\"last\":\"2026-09-30T12:00:09.837Z\",\"first\":\"2026-09-30T12:00:09.837Z\"},\"10\":{\"n\":1,\"last\":\"2026-09-30T12:01:08.421Z\",\"first\":\"2026-09-30T12:01:08.421Z\"},\"11\":{\"n\":1,\"last\":\"2026-09-30T12:00:56.004Z\",\"first\":\"2026-09-30T12:00:56.004Z\"},\"62\":{\"n\":1,\"last\":\"2026-09-30T12:01:54.939Z\",\"first\":\"2026-09-30T12:01:54.939Z\"},\"72\":{\"n\":1,\"last\":\"2026-09-30T12:00:44.204Z\",\"first\":\"2026-09-30T12:00:44.204Z\"},\"73\":{\"n\":2,\"last\":\"2026-09-30T12:01:43.376Z\",\"first\":\"2026-09-30T12:01:30.676Z\"},\"88\":{\"n\":1,\"last\":\"2026-09-30T12:01:19.511Z\",\"first\":\"2026-09-30T12:01:19.511Z\"}},\"bests\":{\"3\":{\"len\":13.8,\"at\":\"2026-09-30T12:02:18.988Z\"},\"6\":{\"len\":13.6,\"at\":\"2026-09-30T12:02:07.346Z\"},\"7\":{\"len\":26.4,\"at\":\"2026-09-30T12:00:09.837Z\"},\"10\":{\"len\":31.3,\"at\":\"2026-09-30T12:01:08.421Z\"},\"11\":{\"len\":54.8,\"at\":\"2026-09-30T12:00:56.004Z\"},\"62\":{\"len\":47,\"at\":\"2026-09-30T12:01:54.939Z\"},\"72\":{\"len\":12.5,\"at\":\"2026-09-30T12:00:44.204Z\"},\"73\":{\"len\":52.4,\"at\":\"2026-09-30T12:01:30.676Z\"},\"88\":{\"len\":16.7,\"at\":\"2026-09-30T12:01:19.511Z\"}},\"shinies\":[],\"daily\":{\"2026-09-30\":{\"claimed_1\":null,\"claimed_2\":null,\"claimed_3\":null,\"claimed_4\":null,\"p4\":0,\"p1\":3,\"p2\":0,\"p3\":353,\"fishing_level_snapshot\":90}},\"clears\":[],\"rodItems\":{},\"ledger\":[{\"amount\":6310,\"reason\":\"Sold the hold to Sandy Sole in The Shallows\",\"currency\":\"doubloons\"},{\"amount\":6472,\"reason\":\"Sold the hold to Nell Pollack in Open Waters\",\"currency\":\"doubloons\"},{\"amount\":6633,\"reason\":\"Sold the hold to Hattie Ling in The Deep\",\"currency\":\"doubloons\"},{\"amount\":6795,\"reason\":\"Sold the hold to Sim Dory in The Abyss\",\"currency\":\"doubloons\"},{\"amount\":6957,\"reason\":\"Sold the hold to Bess Skate in The Ancient Deep\",\"currency\":\"doubloons\"},{\"amount\":275,\"reason\":\"Sold the hold to Sandy Sole in The Shallows\",\"currency\":\"doubloons\"}],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":null,\"crew\":[],\"recruits\":[],\"bunks\":[],\"nextId\":1,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}"
+  },
+  {
+   "name": "the tackle shop",
+   "seed": 33,
+   "start": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0033\",\"profile\":{\"id\":\"captain-00parity0033\",\"username\":\"crew_y0033\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":9000,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":false,\"premium_expires_at\":null,\"ship_tier\":2,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":0,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":1335,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":0,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":null,\"showcase_crew_ids\":[],\"lifetime_recruits\":0,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":false,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":600},\"hold\":{},\"collection\":{},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{},\"ledger\":[],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":null,\"crew\":[],\"recruits\":[],\"bunks\":[],\"nextId\":1,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}",
+   "ops": [
+    {
+     "op": "buyBait",
+     "now": 1790769600000,
+     "args": [
+      "worm",
+      10
+     ],
+     "rolls": 0,
+     "result": {
+      "doubloons": 8900,
+      "newQty": 610
+     }
+    },
+    {
+     "op": "buyBait",
+     "now": 1790769600000,
+     "args": [
+      "minnow",
+      5
+     ],
+     "rolls": 0,
+     "result": {
+      "doubloons": 8750,
+      "newQty": 5
+     }
+    },
+    {
+     "op": "buyBait",
+     "now": 1790769600000,
+     "args": [
+      "luminous",
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Not for sale"
+     }
+    },
+    {
+     "op": "buyBait",
+     "now": 1790769600000,
+     "args": [
+      "nonsense",
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Not for sale"
+     }
+    },
+    {
+     "op": "buyBait",
+     "now": 1790769600000,
+     "args": [
+      "worm",
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Invalid quantity"
+     }
+    },
+    {
+     "op": "buyBait",
+     "now": 1790769600000,
+     "args": [
+      "worm",
+      2.5
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Invalid quantity"
+     }
+    },
+    {
+     "op": "buyBait",
+     "now": 1790769600000,
+     "args": [
+      "chum",
+      1000
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Need 100,000 ⟡"
+     }
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "doubloons": 7250,
+      "ownedRods": [
+       1
+      ]
+     }
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "doubloons": 5750,
+      "ownedRods": [
+       1
+      ]
+     }
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      3
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Need 8,000 ⟡"
+     }
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      4
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Reach Fishing Lv 16 to buy the Telescoping Rod"
+     }
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "This rod cannot be purchased"
+     }
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      14
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "This rod cannot be purchased"
+     }
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      99
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Invalid rod"
+     }
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      19
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "No chandler ashore carries that. You will have to find one who does."
+     }
+    },
+    {
+     "op": "equipTackleRod",
+     "now": 1790769600000,
+     "args": [
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "rodTier": 1
+     }
+    },
+    {
+     "op": "sellRod",
+     "now": 1790769600000,
+     "args": [
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "doubloons": 6725,
+      "ownedRods": [
+       1
+      ],
+      "refund": 975,
+      "rodTier": 1
+     }
+    },
+    {
+     "op": "sellRod",
+     "now": 1790769600000,
+     "args": [
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "doubloons": 7700,
+      "ownedRods": [],
+      "refund": 975,
+      "rodTier": 0
+     }
+    },
+    {
+     "op": "sellRod",
+     "now": 1790769600000,
+     "args": [
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "You don't own this rod"
+     }
+    },
+    {
+     "op": "sellRod",
+     "now": 1790769600000,
+     "args": [
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "This rod cannot be sold"
+     }
+    },
+    {
+     "op": "sellRod",
+     "now": 1790769600000,
+     "args": [
+      99
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Invalid rod"
+     }
+    },
+    {
+     "op": "equipTackleRod",
+     "now": 1790769600000,
+     "args": [
+      3
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Rod not owned"
+     }
+    },
+    {
+     "op": "sellRod",
+     "now": 1790769600000,
+     "args": [
+      3
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "You don't own this rod"
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "reelTier": 1,
+      "doubloons": 6200
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "hookTier": 1,
+      "doubloons": 4700
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "reelTier": 2,
+      "doubloons": 1700
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Not enough doubloons"
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Reach Fishing Lv 15 to buy the Saltwater Reel"
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Not enough doubloons"
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Reach Fishing Lv 15 to buy the Saltwater Reel"
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Not enough doubloons"
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Reach Fishing Lv 15 to buy the Saltwater Reel"
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Not enough doubloons"
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Reach Fishing Lv 15 to buy the Saltwater Reel"
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Not enough doubloons"
+     }
+    },
+    {
+     "op": "upgradeFishHold",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Fish hold is already at max tier"
+     }
+    },
+    {
+     "op": "upgradeFishHold",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Fish hold is already at max tier"
+     }
+    },
+    {
+     "op": "upgradeFishHold",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Fish hold is already at max tier"
+     }
+    },
+    {
+     "op": "upgradeFishHold",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Fish hold is already at max tier"
+     }
+    },
+    {
+     "op": "upgradeFishHold",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Fish hold is already at max tier"
+     }
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "doubloons": 3000000,
+       "fishing_xp": 2263770,
+       "fish_hold_tier": 7
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      15
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "No chandler ashore carries that. You will have to find one who does."
+     }
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "is_premium": true
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      15
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "No chandler ashore carries that. You will have to find one who does."
+     }
+    },
+    {
+     "op": "purchaseRod",
+     "now": 1790769600000,
+     "args": [
+      18
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "No chandler ashore carries that. You will have to find one who does."
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "reelTier": 3,
+      "doubloons": 2994000
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "hookTier": 2,
+      "doubloons": 2991000
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "reelTier": 4,
+      "doubloons": 2979000
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "hookTier": 3,
+      "doubloons": 2973000
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "reelTier": 5,
+      "doubloons": 2951000
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "hookTier": 4,
+      "doubloons": 2939000
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "reelTier": 6,
+      "doubloons": 2899000
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "hookTier": 5,
+      "doubloons": 2877000
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "reelTier": 7,
+      "doubloons": 2807000
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "hookTier": 6,
+      "doubloons": 2767000
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "reelTier": 8,
+      "doubloons": 2617000
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "hookTier": 7,
+      "doubloons": 2547000
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Already at max tier"
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "hookTier": 8,
+      "doubloons": 2397000
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Already at max tier"
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Already at max tier"
+     }
+    },
+    {
+     "op": "buyReel",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Already at max tier"
+     }
+    },
+    {
+     "op": "buyHook",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Already at max tier"
+     }
+    },
+    {
+     "op": "upgradeFishHold",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "newTier": 8,
+      "doubloons": 1797000
+     }
+    },
+    {
+     "op": "upgradeFishHold",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Fish hold is already at max tier"
+     }
+    },
+    {
+     "op": "claimCompletionistRod",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Need level 100 (you're level 99)"
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "collection": {
+        "1": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "2": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "3": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "4": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "5": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "6": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "7": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "8": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "9": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "10": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "11": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "12": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "13": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "14": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "15": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "16": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "17": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "18": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "19": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "20": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "21": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "22": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "23": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "24": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "25": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "26": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "27": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "28": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "29": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "30": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "31": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "32": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "33": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "34": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "36": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "37": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "38": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "39": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "40": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "41": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "42": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "43": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "44": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "45": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "46": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "47": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "48": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "49": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "50": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "51": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "52": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "53": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "54": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "55": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "56": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "57": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "58": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "59": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "60": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "61": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "62": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "63": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "64": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "65": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "66": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "67": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "68": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "69": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "70": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "71": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "72": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "73": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "74": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "75": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "76": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "77": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "78": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "79": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "80": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "81": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "82": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "83": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "84": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "85": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "86": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "87": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "88": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "89": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "90": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "91": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "92": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "93": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "94": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "95": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "98": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "99": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "100": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "101": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "102": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "103": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "104": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "105": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "106": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "107": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "108": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "109": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "110": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "111": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "112": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "113": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "114": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "115": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "116": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "117": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "118": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "119": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "120": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "121": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "122": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "123": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "124": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "125": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "126": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "127": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "128": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "129": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "130": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "131": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "132": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "133": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "134": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "140": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "141": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "142": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "143": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "144": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "145": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "146": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "147": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "148": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "149": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "150": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "151": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "152": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "153": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "154": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "155": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "156": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "157": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "158": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "159": {
+         "catch_count": 1,
+         "is_golden": null
+        },
+        "160": {
+         "catch_count": 1,
+         "is_golden": null
+        }
+       }
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "claimCompletionistRod",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Need level 100 (you're level 99)"
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "rapport": [
+        {
+         "folk_id": "meg",
+         "points": 99999,
+         "seen_lines": [],
+         "last_chat_on": null,
+         "gifts_given": 0,
+         "want_fish_id": null,
+         "want_asked_at": null
+        },
+        {
+         "folk_id": "pell",
+         "points": 99999,
+         "seen_lines": [],
+         "last_chat_on": null,
+         "gifts_given": 0,
+         "want_fish_id": null,
+         "want_asked_at": null
+        },
+        {
+         "folk_id": "marlow",
+         "points": 99999,
+         "seen_lines": [],
+         "last_chat_on": null,
+         "gifts_given": 0,
+         "want_fish_id": null,
+         "want_asked_at": null
+        },
+        {
+         "folk_id": "fitch",
+         "points": 99999,
+         "seen_lines": [],
+         "last_chat_on": null,
+         "gifts_given": 0,
+         "want_fish_id": null,
+         "want_asked_at": null
+        },
+        {
+         "folk_id": "nance",
+         "points": 99999,
+         "seen_lines": [],
+         "last_chat_on": null,
+         "gifts_given": 0,
+         "want_fish_id": null,
+         "want_asked_at": null
+        },
+        {
+         "folk_id": "yoon",
+         "points": 99999,
+         "seen_lines": [],
+         "last_chat_on": null,
+         "gifts_given": 0,
+         "want_fish_id": null,
+         "want_asked_at": null
+        },
+        {
+         "folk_id": "brill",
+         "points": 99999,
+         "seen_lines": [],
+         "last_chat_on": null,
+         "gifts_given": 0,
+         "want_fish_id": null,
+         "want_asked_at": null
+        },
+        {
+         "folk_id": "turbot",
+         "points": 99999,
+         "seen_lines": [],
+         "last_chat_on": null,
+         "gifts_given": 0,
+         "want_fish_id": null,
+         "want_asked_at": null
+        },
+        {
+         "folk_id": "ream",
+         "points": 99999,
+         "seen_lines": [],
+         "last_chat_on": null,
+         "gifts_given": 0,
+         "want_fish_id": null,
+         "want_asked_at": null
+        }
+       ],
+       "discoveries": [
+        "shallows-0",
+        "shallows-1",
+        "shallows-2",
+        "open_waters-0",
+        "open_waters-1",
+        "open_waters-2",
+        "open_waters-3",
+        "open_waters-4",
+        "open_waters-5",
+        "deep-0",
+        "deep-1",
+        "deep-2",
+        "deep-3",
+        "deep-4",
+        "deep-5",
+        "abyss-0",
+        "abyss-1",
+        "abyss-2",
+        "abyss-3",
+        "abyss-4",
+        "abyss-5",
+        "ancient_deep-0",
+        "ancient_deep-1",
+        "ancient_deep-2",
+        "ancient_deep-3",
+        "ancient_deep-4",
+        "ancient_deep-5"
+       ]
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "claimCompletionistRod",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Need level 100 (you're level 99)"
+     }
+    },
+    {
+     "op": "claimCompletionistRod",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "Need level 100 (you're level 99)"
+     }
+    }
+   ],
+   "end": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0033\",\"profile\":{\"id\":\"captain-00parity0033\",\"username\":\"crew_y0033\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":1797000,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":8,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":2,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":0,\"reel_tier\":8,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":2263770,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":0,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":null,\"showcase_crew_ids\":[],\"lifetime_recruits\":0,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":false,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":610,\"minnow\":5},\"hold\":{},\"collection\":{\"1\":{\"catch_count\":1,\"is_golden\":null},\"2\":{\"catch_count\":1,\"is_golden\":null},\"3\":{\"catch_count\":1,\"is_golden\":null},\"4\":{\"catch_count\":1,\"is_golden\":null},\"5\":{\"catch_count\":1,\"is_golden\":null},\"6\":{\"catch_count\":1,\"is_golden\":null},\"7\":{\"catch_count\":1,\"is_golden\":null},\"8\":{\"catch_count\":1,\"is_golden\":null},\"9\":{\"catch_count\":1,\"is_golden\":null},\"10\":{\"catch_count\":1,\"is_golden\":null},\"11\":{\"catch_count\":1,\"is_golden\":null},\"12\":{\"catch_count\":1,\"is_golden\":null},\"13\":{\"catch_count\":1,\"is_golden\":null},\"14\":{\"catch_count\":1,\"is_golden\":null},\"15\":{\"catch_count\":1,\"is_golden\":null},\"16\":{\"catch_count\":1,\"is_golden\":null},\"17\":{\"catch_count\":1,\"is_golden\":null},\"18\":{\"catch_count\":1,\"is_golden\":null},\"19\":{\"catch_count\":1,\"is_golden\":null},\"20\":{\"catch_count\":1,\"is_golden\":null},\"21\":{\"catch_count\":1,\"is_golden\":null},\"22\":{\"catch_count\":1,\"is_golden\":null},\"23\":{\"catch_count\":1,\"is_golden\":null},\"24\":{\"catch_count\":1,\"is_golden\":null},\"25\":{\"catch_count\":1,\"is_golden\":null},\"26\":{\"catch_count\":1,\"is_golden\":null},\"27\":{\"catch_count\":1,\"is_golden\":null},\"28\":{\"catch_count\":1,\"is_golden\":null},\"29\":{\"catch_count\":1,\"is_golden\":null},\"30\":{\"catch_count\":1,\"is_golden\":null},\"31\":{\"catch_count\":1,\"is_golden\":null},\"32\":{\"catch_count\":1,\"is_golden\":null},\"33\":{\"catch_count\":1,\"is_golden\":null},\"34\":{\"catch_count\":1,\"is_golden\":null},\"36\":{\"catch_count\":1,\"is_golden\":null},\"37\":{\"catch_count\":1,\"is_golden\":null},\"38\":{\"catch_count\":1,\"is_golden\":null},\"39\":{\"catch_count\":1,\"is_golden\":null},\"40\":{\"catch_count\":1,\"is_golden\":null},\"41\":{\"catch_count\":1,\"is_golden\":null},\"42\":{\"catch_count\":1,\"is_golden\":null},\"43\":{\"catch_count\":1,\"is_golden\":null},\"44\":{\"catch_count\":1,\"is_golden\":null},\"45\":{\"catch_count\":1,\"is_golden\":null},\"46\":{\"catch_count\":1,\"is_golden\":null},\"47\":{\"catch_count\":1,\"is_golden\":null},\"48\":{\"catch_count\":1,\"is_golden\":null},\"49\":{\"catch_count\":1,\"is_golden\":null},\"50\":{\"catch_count\":1,\"is_golden\":null},\"51\":{\"catch_count\":1,\"is_golden\":null},\"52\":{\"catch_count\":1,\"is_golden\":null},\"53\":{\"catch_count\":1,\"is_golden\":null},\"54\":{\"catch_count\":1,\"is_golden\":null},\"55\":{\"catch_count\":1,\"is_golden\":null},\"56\":{\"catch_count\":1,\"is_golden\":null},\"57\":{\"catch_count\":1,\"is_golden\":null},\"58\":{\"catch_count\":1,\"is_golden\":null},\"59\":{\"catch_count\":1,\"is_golden\":null},\"60\":{\"catch_count\":1,\"is_golden\":null},\"61\":{\"catch_count\":1,\"is_golden\":null},\"62\":{\"catch_count\":1,\"is_golden\":null},\"63\":{\"catch_count\":1,\"is_golden\":null},\"64\":{\"catch_count\":1,\"is_golden\":null},\"65\":{\"catch_count\":1,\"is_golden\":null},\"66\":{\"catch_count\":1,\"is_golden\":null},\"67\":{\"catch_count\":1,\"is_golden\":null},\"68\":{\"catch_count\":1,\"is_golden\":null},\"69\":{\"catch_count\":1,\"is_golden\":null},\"70\":{\"catch_count\":1,\"is_golden\":null},\"71\":{\"catch_count\":1,\"is_golden\":null},\"72\":{\"catch_count\":1,\"is_golden\":null},\"73\":{\"catch_count\":1,\"is_golden\":null},\"74\":{\"catch_count\":1,\"is_golden\":null},\"75\":{\"catch_count\":1,\"is_golden\":null},\"76\":{\"catch_count\":1,\"is_golden\":null},\"77\":{\"catch_count\":1,\"is_golden\":null},\"78\":{\"catch_count\":1,\"is_golden\":null},\"79\":{\"catch_count\":1,\"is_golden\":null},\"80\":{\"catch_count\":1,\"is_golden\":null},\"81\":{\"catch_count\":1,\"is_golden\":null},\"82\":{\"catch_count\":1,\"is_golden\":null},\"83\":{\"catch_count\":1,\"is_golden\":null},\"84\":{\"catch_count\":1,\"is_golden\":null},\"85\":{\"catch_count\":1,\"is_golden\":null},\"86\":{\"catch_count\":1,\"is_golden\":null},\"87\":{\"catch_count\":1,\"is_golden\":null},\"88\":{\"catch_count\":1,\"is_golden\":null},\"89\":{\"catch_count\":1,\"is_golden\":null},\"90\":{\"catch_count\":1,\"is_golden\":null},\"91\":{\"catch_count\":1,\"is_golden\":null},\"92\":{\"catch_count\":1,\"is_golden\":null},\"93\":{\"catch_count\":1,\"is_golden\":null},\"94\":{\"catch_count\":1,\"is_golden\":null},\"95\":{\"catch_count\":1,\"is_golden\":null},\"98\":{\"catch_count\":1,\"is_golden\":null},\"99\":{\"catch_count\":1,\"is_golden\":null},\"100\":{\"catch_count\":1,\"is_golden\":null},\"101\":{\"catch_count\":1,\"is_golden\":null},\"102\":{\"catch_count\":1,\"is_golden\":null},\"103\":{\"catch_count\":1,\"is_golden\":null},\"104\":{\"catch_count\":1,\"is_golden\":null},\"105\":{\"catch_count\":1,\"is_golden\":null},\"106\":{\"catch_count\":1,\"is_golden\":null},\"107\":{\"catch_count\":1,\"is_golden\":null},\"108\":{\"catch_count\":1,\"is_golden\":null},\"109\":{\"catch_count\":1,\"is_golden\":null},\"110\":{\"catch_count\":1,\"is_golden\":null},\"111\":{\"catch_count\":1,\"is_golden\":null},\"112\":{\"catch_count\":1,\"is_golden\":null},\"113\":{\"catch_count\":1,\"is_golden\":null},\"114\":{\"catch_count\":1,\"is_golden\":null},\"115\":{\"catch_count\":1,\"is_golden\":null},\"116\":{\"catch_count\":1,\"is_golden\":null},\"117\":{\"catch_count\":1,\"is_golden\":null},\"118\":{\"catch_count\":1,\"is_golden\":null},\"119\":{\"catch_count\":1,\"is_golden\":null},\"120\":{\"catch_count\":1,\"is_golden\":null},\"121\":{\"catch_count\":1,\"is_golden\":null},\"122\":{\"catch_count\":1,\"is_golden\":null},\"123\":{\"catch_count\":1,\"is_golden\":null},\"124\":{\"catch_count\":1,\"is_golden\":null},\"125\":{\"catch_count\":1,\"is_golden\":null},\"126\":{\"catch_count\":1,\"is_golden\":null},\"127\":{\"catch_count\":1,\"is_golden\":null},\"128\":{\"catch_count\":1,\"is_golden\":null},\"129\":{\"catch_count\":1,\"is_golden\":null},\"130\":{\"catch_count\":1,\"is_golden\":null},\"131\":{\"catch_count\":1,\"is_golden\":null},\"132\":{\"catch_count\":1,\"is_golden\":null},\"133\":{\"catch_count\":1,\"is_golden\":null},\"134\":{\"catch_count\":1,\"is_golden\":null},\"140\":{\"catch_count\":1,\"is_golden\":null},\"141\":{\"catch_count\":1,\"is_golden\":null},\"142\":{\"catch_count\":1,\"is_golden\":null},\"143\":{\"catch_count\":1,\"is_golden\":null},\"144\":{\"catch_count\":1,\"is_golden\":null},\"145\":{\"catch_count\":1,\"is_golden\":null},\"146\":{\"catch_count\":1,\"is_golden\":null},\"147\":{\"catch_count\":1,\"is_golden\":null},\"148\":{\"catch_count\":1,\"is_golden\":null},\"149\":{\"catch_count\":1,\"is_golden\":null},\"150\":{\"catch_count\":1,\"is_golden\":null},\"151\":{\"catch_count\":1,\"is_golden\":null},\"152\":{\"catch_count\":1,\"is_golden\":null},\"153\":{\"catch_count\":1,\"is_golden\":null},\"154\":{\"catch_count\":1,\"is_golden\":null},\"155\":{\"catch_count\":1,\"is_golden\":null},\"156\":{\"catch_count\":1,\"is_golden\":null},\"157\":{\"catch_count\":1,\"is_golden\":null},\"158\":{\"catch_count\":1,\"is_golden\":null},\"159\":{\"catch_count\":1,\"is_golden\":null},\"160\":{\"catch_count\":1,\"is_golden\":null}},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{},\"ledger\":[{\"amount\":-100,\"reason\":\"Bought 10× Worms\",\"currency\":\"doubloons\"},{\"amount\":-150,\"reason\":\"Bought 5× Minnow\",\"currency\":\"doubloons\"},{\"amount\":-1500,\"reason\":\"Bought Driftwood Staff\",\"currency\":\"doubloons\"},{\"amount\":-1500,\"reason\":\"Bought Driftwood Staff\",\"currency\":\"doubloons\"},{\"amount\":975,\"reason\":\"Sold Driftwood Staff\",\"currency\":\"doubloons\"},{\"amount\":975,\"reason\":\"Sold Driftwood Staff\",\"currency\":\"doubloons\"},{\"amount\":-1500,\"reason\":\"Bought Spinning Reel\",\"currency\":\"doubloons\"},{\"amount\":-1500,\"reason\":\"Bought Bronze Hook\",\"currency\":\"doubloons\"},{\"amount\":-3000,\"reason\":\"Bought Baitcasting Reel\",\"currency\":\"doubloons\"},{\"amount\":-6000,\"reason\":\"Bought Saltwater Reel\",\"currency\":\"doubloons\"},{\"amount\":-3000,\"reason\":\"Bought Iron Hook\",\"currency\":\"doubloons\"},{\"amount\":-12000,\"reason\":\"Bought Precision Reel\",\"currency\":\"doubloons\"},{\"amount\":-6000,\"reason\":\"Bought Steel Hook\",\"currency\":\"doubloons\"},{\"amount\":-22000,\"reason\":\"Bought Tournament Reel\",\"currency\":\"doubloons\"},{\"amount\":-12000,\"reason\":\"Bought Silver Hook\",\"currency\":\"doubloons\"},{\"amount\":-40000,\"reason\":\"Bought Deep Sea Reel\",\"currency\":\"doubloons\"},{\"amount\":-22000,\"reason\":\"Bought Gold Hook\",\"currency\":\"doubloons\"},{\"amount\":-70000,\"reason\":\"Bought Kraken's Grip\",\"currency\":\"doubloons\"},{\"amount\":-40000,\"reason\":\"Bought Enchanted Hook\",\"currency\":\"doubloons\"},{\"amount\":-150000,\"reason\":\"Bought Tidecaller's Reel\",\"currency\":\"doubloons\"},{\"amount\":-70000,\"reason\":\"Bought Abyssal Hook\",\"currency\":\"doubloons\"},{\"amount\":-150000,\"reason\":\"Bought Legendary Hook\",\"currency\":\"doubloons\"},{\"amount\":-600000,\"reason\":\"Upgraded fish hold to Kraken Hold\",\"currency\":\"doubloons\"}],\"anomalies\":[],\"mail\":[],\"rapport\":[{\"folk_id\":\"meg\",\"points\":99999,\"seen_lines\":[],\"last_chat_on\":null,\"gifts_given\":0,\"want_fish_id\":null,\"want_asked_at\":null},{\"folk_id\":\"pell\",\"points\":99999,\"seen_lines\":[],\"last_chat_on\":null,\"gifts_given\":0,\"want_fish_id\":null,\"want_asked_at\":null},{\"folk_id\":\"marlow\",\"points\":99999,\"seen_lines\":[],\"last_chat_on\":null,\"gifts_given\":0,\"want_fish_id\":null,\"want_asked_at\":null},{\"folk_id\":\"fitch\",\"points\":99999,\"seen_lines\":[],\"last_chat_on\":null,\"gifts_given\":0,\"want_fish_id\":null,\"want_asked_at\":null},{\"folk_id\":\"nance\",\"points\":99999,\"seen_lines\":[],\"last_chat_on\":null,\"gifts_given\":0,\"want_fish_id\":null,\"want_asked_at\":null},{\"folk_id\":\"yoon\",\"points\":99999,\"seen_lines\":[],\"last_chat_on\":null,\"gifts_given\":0,\"want_fish_id\":null,\"want_asked_at\":null},{\"folk_id\":\"brill\",\"points\":99999,\"seen_lines\":[],\"last_chat_on\":null,\"gifts_given\":0,\"want_fish_id\":null,\"want_asked_at\":null},{\"folk_id\":\"turbot\",\"points\":99999,\"seen_lines\":[],\"last_chat_on\":null,\"gifts_given\":0,\"want_fish_id\":null,\"want_asked_at\":null},{\"folk_id\":\"ream\",\"points\":99999,\"seen_lines\":[],\"last_chat_on\":null,\"gifts_given\":0,\"want_fish_id\":null,\"want_asked_at\":null}],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":null,\"crew\":[],\"recruits\":[],\"bunks\":[],\"nextId\":1,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[\"shallows-0\",\"shallows-1\",\"shallows-2\",\"open_waters-0\",\"open_waters-1\",\"open_waters-2\",\"open_waters-3\",\"open_waters-4\",\"open_waters-5\",\"deep-0\",\"deep-1\",\"deep-2\",\"deep-3\",\"deep-4\",\"deep-5\",\"abyss-0\",\"abyss-1\",\"abyss-2\",\"abyss-3\",\"abyss-4\",\"abyss-5\",\"ancient_deep-0\",\"ancient_deep-1\",\"ancient_deep-2\",\"ancient_deep-3\",\"ancient_deep-4\",\"ancient_deep-5\"],\"homestead\":null},\"carried\":{}}"
+  }
+ ]
+}

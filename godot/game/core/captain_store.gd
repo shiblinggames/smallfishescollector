@@ -513,3 +513,87 @@ func take_from_hold(uid: String, fish_id: float, qty: float) -> bool:
 	else:
 		hold[k] = float(have) - qty
 	return true
+
+
+# ── Selling and the tackle shop (sellLocal.ts, harbourLocal.ts, inventoryLocal) ──
+
+func deduct_doubloons(uid: String, amount: float) -> Variant:
+	var prof: Dictionary = me(uid)
+	var have: float = Js.num(prof.get("doubloons"))
+	if have < amount:
+		return null
+	prof["doubloons"] = have - amount
+	return prof["doubloons"]
+
+
+## The hold as stacks, in the order JavaScript lists an id-keyed object.
+func hold_stacks(uid: String) -> Array:
+	me(uid)
+	var out: Array = []
+	for id: float in Js.ids(save["hold"]):
+		out.append({ "fish_id": id, "quantity": float(save["hold"][Js.key(id)]) })
+	return out
+
+
+func take_stack(uid: String, fish_id: float, qty: float, if_was: float) -> bool:
+	me(uid)
+	var k: String = Js.key(fish_id)
+	if not (save["hold"] as Dictionary).has(k) or float(save["hold"][k]) != if_was:
+		return false
+	if qty == 0.0:
+		(save["hold"] as Dictionary).erase(k)
+	else:
+		save["hold"][k] = qty
+	return true
+
+
+func empty_stack(uid: String, fish_id: float, if_was: float) -> bool:
+	me(uid)
+	var k: String = Js.key(fish_id)
+	if not (save["hold"] as Dictionary).has(k) or float(save["hold"][k]) != if_was:
+		return false
+	(save["hold"] as Dictionary).erase(k)
+	return true
+
+
+func take_whole_hold(uid: String) -> Array:
+	var rows: Array = hold_stacks(uid)
+	save["hold"] = {}
+	return rows
+
+
+func species_value(fish_id: float) -> Variant:
+	var f: Variant = species(fish_id)
+	return null if f == null else (f as Dictionary).get("sell_value")
+
+
+## Copies of a rod held (the Bamboo is always one).
+func rod_held(uid: String, id: String) -> float:
+	me(uid)
+	if id == "bamboo":
+		return 1.0
+	return Js.num(Js.obj(save.get("rodItems")).get(id))
+
+
+func rod_give(uid: String, id: String) -> bool:
+	me(uid)
+	if id == "bamboo" or Rules.rod_by_id(id).is_empty():
+		return false
+	var items: Dictionary = Js.obj(save.get("rodItems")).duplicate()
+	items[id] = Js.num(items.get(id)) + 1.0
+	save["rodItems"] = items
+	return true
+
+
+func rod_take(uid: String, id: String) -> bool:
+	me(uid)
+	var had: float = rod_held(uid, id)
+	if id == "bamboo" or had < 1.0:
+		return false
+	var items: Dictionary = Js.obj(save.get("rodItems")).duplicate()
+	if had == 1.0:
+		items.erase(id)
+	else:
+		items[id] = had - 1.0
+	save["rodItems"] = items
+	return true

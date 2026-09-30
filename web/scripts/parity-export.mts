@@ -26,7 +26,12 @@ import { castLine, reelIn, reelCrate, rerollWormhole, tideTurnerSkip, heldGolden
 import { setAutoFishing, setShowWaitTimer, buySpecialItem, equipSpecialItem, buyHat, equipHat, buyBoat, equipBoat, equipPet, setCompletionistEffects } from '../lib/core/loadout'
 import { BADGES } from '../lib/badges'
 import { updateCharacterColor } from '../lib/core/profile'
-import { equipTackleRod } from '../lib/core/harbour'
+import { equipTackleRod, buyBait, purchaseRod, sellRod, buyReel, buyHook, upgradeFishHold, claimCompletionistRod } from '../lib/core/harbour'
+import { marketSellFish, sellEntireHold, sellToResident } from '../lib/core/selling'
+import { localSellData } from '../lib/data/local/sellLocal'
+import { localHarbourData } from '../lib/data/local/harbourLocal'
+import { FOLK } from '../lib/seaFolk'
+import { ISLES } from '../lib/seaIsles'
 import { localFishingData, type LocalSave } from '../lib/data/local/fishingLocal'
 import { serializeSave } from '../lib/data/local/saveFile'
 import { starterSave } from '../lib/data/local/starter'
@@ -461,6 +466,75 @@ const rest = [
 ]
 write('fishing_rest.json', { sessions: rest })
 console.log(`  ${rest.length} scripted sessions, ${rest.reduce((n, s) => n + s.ops.length, 0)} calls`)
+
+// ── Selling and the tackle shop ──
+//
+// Scripted like the rest: the market's stacks and whole holds across days of
+// moods (and a long absence past the 48-hour catch-up), the buyers out in
+// each water, and everything the tackle shop sells, refusals included.
+const shop = [
+  await scripted('the market', 31, captainWith(31, 60, 3, { doubloons: 500 }), async x => {
+    const sell = localSellData(x.save)
+    const hold = (h: Record<number, number>) => x.patchSave({ hold: h })
+    const one = (id: number, q: number) => x.call('marketSellFish', [id, q], () => marketSellFish(sell, x.uid, id, q))
+    const all = () => x.call('sellEntireHold', [], () => sellEntireHold(sell, x.uid))
+    await all()
+    await hold({ 1: 5, 2: 3, 7: 12, 60: 2 })
+    await one(1, 2); await one(1, 3); await one(1, 1); await one(2, 0); await one(2, 1.5); await one(999, 1); await one(3, 1)
+    for (let h = 0; h < 30; h++) {
+      x.advance(3_600_000 * (h % 3 === 0 ? 1 : 2))
+      await hold({ 1: 2 + h, 7: 1 + (h % 4), 12: 3, 30: 1 })
+      if (h % 2) await one(7, 1)
+      await all()
+    }
+    x.advance(3_600_000 * 100)
+    await hold({ 1: 4, 9: 9 })
+    await all()
+    await all()
+  }),
+  await scripted('the buyers out in each water', 32, captainWith(32, 90, 3, { has_ancient_deep_access: true }), async x => {
+    const sell = localSellData(x.save)
+    const res = (z: string) => x.call('sellToResident', [z], () => sellToResident(sell, x.uid, z))
+    await res('shallows')
+    for (const z of ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep', 'the_moon']) {
+      await x.patchSave({ hold: { 1: 4, 20: 3, 45: 7, 70: 2, 100: 5 } })
+      await res(z)
+    }
+    await x.patchSave({ hold: { 143: 1 } })
+    await res('ancient_deep')
+    for (let k = 0; k < 12; k++) await x.fish('worm', 'shallows', 'catch')
+    await res('shallows')
+  }),
+  await scripted('the tackle shop', 33, captainWith(33, 14, 0, { doubloons: 9000, is_premium: false }), async x => {
+    const harb = localHarbourData(x.save)
+    const c = (op: string, args: unknown[], run: () => Promise<unknown>) => x.call(op, args, run)
+    const bait = (t: string, q: number) => c('buyBait', [t, q], () => buyBait(harb, x.uid, t, q))
+    const buy = (t: number) => c('purchaseRod', [t], () => purchaseRod(harb, x.uid, t))
+    const sellR = (t: number) => c('sellRod', [t], () => sellRod(harb, x.uid, t))
+    const reel = () => c('buyReel', [], () => buyReel(harb, x.uid))
+    const hook = () => c('buyHook', [], () => buyHook(harb, x.uid))
+    const holdUp = () => c('upgradeFishHold', [], () => upgradeFishHold(harb, x.uid))
+    const comp = () => c('claimCompletionistRod', [], () => claimCompletionistRod(harb, x.uid))
+    const equip = (t: number) => c('equipTackleRod', [t], () => equipTackleRod(harb, x.uid, t))
+    await bait('worm', 10); await bait('minnow', 5); await bait('luminous', 1); await bait('nonsense', 1); await bait('worm', 0); await bait('worm', 2.5); await bait('chum', 1000)
+    await buy(1); await buy(1); await buy(3); await buy(4); await buy(0); await buy(14); await buy(99); await buy(19)
+    await equip(1); await sellR(1); await sellR(1); await sellR(1); await sellR(0); await sellR(99)
+    await equip(3); await sellR(3)
+    for (let k = 0; k < 6; k++) { await reel(); await hook() }
+    for (let k = 0; k < 5; k++) await holdUp()
+    await x.patchProfile({ doubloons: 3_000_000, fishing_xp: XP_TABLE[98], fish_hold_tier: 7 })
+    await buy(15); await x.patchProfile({ is_premium: true }); await buy(15); await buy(18)
+    for (let k = 0; k < 9; k++) { await reel(); await hook() }
+    await holdUp(); await holdUp()
+    await comp()
+    await x.patchSave({ collection: Object.fromEntries(SPECIES.map(s => [s.id, { catch_count: 1, is_golden: null }])) })
+    await comp()
+    await x.patchSave({ rapport: FOLK.map(f => ({ folk_id: f.id, points: 99999, seen_lines: [], last_chat_on: null, gifts_given: 0, want_fish_id: null, want_asked_at: null })), discoveries: ISLES.map(i => i.id) })
+    await comp(); await comp()
+  }),
+]
+write('shop.json', { sessions: shop })
+console.log(`  ${shop.length} shop sessions, ${shop.reduce((n, s) => n + s.ops.length, 0)} calls`)
 
 // ── Save files ──
 write('save.json', {
