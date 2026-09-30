@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import RouletteClient from '../RouletteClient'
+import RouletteView from './RouletteView'
 import { getRouletteState } from './actions'
 
 export default async function RoulettePage() {
@@ -10,11 +10,5 @@ export default async function RoulettePage() {
 
   const state = await getRouletteState()
 
-  return (
-    <main className="min-h-screen pb-24 sm:pb-0">
-      <div className="px-4 pt-6 pb-12">
-        <RouletteClient initial={state} />
-      </div>
-    </main>
-  )
+  return <RouletteView initial={state} />
 }

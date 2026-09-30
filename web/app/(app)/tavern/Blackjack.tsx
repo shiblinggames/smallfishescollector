@@ -8,7 +8,7 @@ import { api } from '@/lib/gameApi'
 import DenNav from './casino/DenNav'
 import { vibrate } from '@/lib/haptics'
 import { handValue, type Card, type Rank } from '@/lib/blackjack'
-import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArt'
+import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArtPool'
 import WagerCircle from './WagerCircle'
 import { useAnimatedNumber } from './useAnimatedNumber'
 

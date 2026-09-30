@@ -66,10 +66,14 @@ export function useLocationState(): { pathname: string; search: string; refresh:
   return { pathname, search, refresh }
 }
 
+/** Thrown by redirect(), so a screen loader stops where it is; the screen
+ *  host (../Shell) knows it for a move, not a failure. */
+export class Redirected extends Error {}
+
 /** Server-side on the web; in the shell a loader may call it to move on. */
 export function redirect(href: string): never {
   go(href, true)
-  throw new Error(`redirect to ${href}`)
+  throw new Redirected(`redirect to ${href}`)
 }
 
 export function notFound(): never {

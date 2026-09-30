@@ -60,6 +60,8 @@ import { syncAchievements, setActivity } from './steam'
 import { seaMapProps, raidSeatsFor, type SeaPageQuery } from '@/lib/core/seaPage'
 import { marketPageProps as shapeMarket } from '@/lib/core/marketPage'
 import { currentMarket } from '@/lib/data/local/sellLocal'
+import { parlorLobbyProps as shapeParlorLobby } from '@/lib/core/lobbies'
+import { fishArtPoolFrom } from '@/lib/blackjackFishArtPool'
 import { buildClearedSetVia } from '@/lib/raidCleared'
 import { loadDeployedPartyVia } from '@/lib/crewData'
 import type { CachedSpecies } from '@/lib/fishSpecies'
@@ -695,4 +697,31 @@ export async function marketPageProps() {
     collectionIds: Object.keys(save.collection).map(Number),
     openContracts: 0,
   }, clockNow())
+}
+
+/** THE PARLOR'S LOBBY, from the save (lib/core/lobbies). This week's attempts
+ *  come from the trivia store, keyed by the Pirate King's week as on the web.
+ *  Nobody else is on the Parlor's standings offline. */
+export async function parlorLobbyProps() {
+  const { save } = need()
+  const db = localTriviaData(save)
+  const now = new Date(clockNow())
+  const week = kingWeekStr(now)
+  const [board, king, capstan] = await Promise.all([
+    db.boardAttempt(save.uid, week), db.ladderAttempt(save.uid, week), db.capstanAttempt(save.uid, week),
+  ])
+  return shapeParlorLobby({
+    profile: save.profile,
+    board: board ? { answers: board.answers, doubloons_awarded: Number(board.doubloons_awarded ?? 0) } : null,
+    king: king ? { rung: king.rung, status: king.status, doubloons_awarded: Number(king.doubloons_awarded ?? 0) } : null,
+    capstan: capstan ? { runs: capstan.runs } : null,
+    topParlor: [],
+    today: now.toISOString().slice(0, 10),
+  })
+}
+
+/** Blackjack's card art, from the save's own species (lib/blackjackFishArtPool). */
+export function fishArtPool() {
+  const { save } = need()
+  return fishArtPoolFrom(save.species.map(f => ({ name: f.name, bite_rarity: f.bite_rarity, habitat: f.habitat })))
 }

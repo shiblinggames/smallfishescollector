@@ -10,7 +10,11 @@
 // refreshed server page hands the same component new props.
 
 import { lazy, type ComponentType } from 'react'
-import { api, seaPageProps, marketPageProps, currentSave } from './localGameApi'
+import { redirect } from './shims/navigation'
+import { isPremiumActive } from '@/lib/premium'
+import { storyLogData } from '@/app/(app)/achievements/storyLogData'
+import { api, seaPageProps, marketPageProps, parlorLobbyProps, fishArtPool, currentSave } from './localGameApi'
+import { chartRoomLobbyProps } from '@/lib/core/lobbies'
 
 export type Screen = {
   /** Build the screen's props from the save. `q` is the URL's query. */
@@ -22,6 +26,18 @@ const screen = (load: () => Promise<{ default: unknown }>) => lazy(load as () =>
 const SeaMap = screen(() => import('@/app/(app)/sea/SeaMap'))
 const MarketClient = screen(() => import('@/app/(app)/tavern/market/MarketClient'))
 const Tavern = screen(() => import('./rooms/Tavern'))
+const ShipyardClient = screen(() => import('@/app/(app)/shipyard/ShipyardClient'))
+const TrawlDocksClient = screen(() => import('@/app/(app)/trawl-docks/TrawlDocksClient'))
+const SlotsView = screen(() => import('@/app/(app)/tavern/SlotsView'))
+const RouletteView = screen(() => import('@/app/(app)/tavern/roulette/RouletteView'))
+const WorldChartClient = screen(() => import('@/app/(app)/charting/world-chart/WorldChartClient'))
+const CaptainsLogView = screen(() => import('@/app/(app)/achievements/CaptainsLogView'))
+// The puzzles sit in the same frames their web pages use.
+const Charting = screen(() => import('./rooms/Puzzles').then(m => ({ default: m.Charting })))
+const ChartRoomPuzzle = screen(() => import('./rooms/Puzzles').then(m => ({ default: m.ChartRoomPuzzle })))
+const ParlorGame = screen(() => import('./rooms/Puzzles').then(m => ({ default: m.ParlorGame })))
+const Lobby = screen(() => import('./rooms/Lobbies'))
+const BlackjackView = screen(() => import('@/app/(app)/tavern/blackjack/BlackjackView'))
 
 export const SCREENS: Record<string, Screen> = {
   '/sea': {
@@ -29,6 +45,80 @@ export const SCREENS: Record<string, Screen> = {
     Component: SeaMap,
   },
   '/tavern/market': { load: async () => marketPageProps(), Component: MarketClient },
+  '/shipyard': {
+    load: async () => { const state = await api.harbour.shipyardState(); if ('error' in state) redirect('/sea'); return state },
+    Component: ShipyardClient,
+  },
+  '/trawl-docks': { load: async () => ({ daily: await api.dailies.getDailyChallenge() }), Component: TrawlDocksClient },
+  '/tavern/slots': {
+    load: async () => {
+      const [wallet, stats, jackpot] = await Promise.all([api.casino.getCasinoState(), api.casino.getSlotStats(), api.casino.getSlotsJackpot()])
+      return { wallet, stats, jackpot }
+    },
+    Component: SlotsView,
+  },
+  '/tavern/roulette': { load: async () => ({ initial: await api.casino.getRouletteState() }), Component: RouletteView },
+  '/charting': { load: async () => ({ game: 'match', state: await api.chartRoom.getMatchState() }), Component: Charting },
+  '/charting/minefield': { load: async () => ({ game: 'minefield', state: await api.chartRoom.getMinefieldState() }), Component: Charting },
+  '/charting/world-chart': { load: async () => api.chartRoom.getWorldChartState(), Component: WorldChartClient },
+  '/tavern/chart-room/hold': { load: async () => ({ game: 'hold', state: await api.chartRoom.getHoldState() }), Component: ChartRoomPuzzle },
+  '/tavern/chart-room/rigging': {
+    // A Captain's puzzle, as on the web: anyone else goes back to the Chart Room.
+    load: async () => {
+      if (!isPremiumActive(currentSave()!.profile)) redirect('/tavern/chart-room')
+      return { game: 'rigging', state: await api.chartRoom.getRiggingState() }
+    },
+    Component: ChartRoomPuzzle,
+  },
+  '/tavern/chart-room': {
+    load: async () => {
+      const [hold, match, minefield, rigging] = await Promise.all([
+        api.chartRoom.getHoldState(), api.chartRoom.getMatchState(), api.chartRoom.getMinefieldState(), api.chartRoom.getRiggingState(),
+      ])
+      return { room: 'chart-room', props: chartRoomLobbyProps({ profile: currentSave()!.profile, hold, match, minefield, rigging, topCharters: [] }) }
+    },
+    Component: Lobby,
+  },
+  '/tavern/casino': {
+    load: async () => {
+      const [wallet, jackpot] = await Promise.all([api.casino.getCasinoState(), api.casino.getSlotsJackpot()])
+      return { room: 'casino', props: {
+        initial: wallet, jackpotPot: jackpot.pot,
+        // Other captains' winnings: none offline (the leaderboards retire on Steam).
+        denBoards: { overall: [], blackjack: [], roulette: [], slots: [] },
+        hasSeenGuide: (currentSave()!.profile.has_seen_den_guide as boolean | null) ?? false,
+      } }
+    },
+    Component: Lobby,
+  },
+  '/tavern/trivia': { load: async () => ({ room: 'parlor', props: await parlorLobbyProps() }), Component: Lobby },
+  '/tavern/trivia/board': {
+    load: async () => ({ game: 'board', state: await api.parlor.getCaptainsBoardState(), parlorPoints: Number(currentSave()!.profile.parlor_points ?? 0) }),
+    Component: ParlorGame,
+  },
+  '/tavern/trivia/capstan': {
+    // A Captain's game, as on the web.
+    load: async () => {
+      if (!isPremiumActive(currentSave()!.profile)) redirect('/tavern/trivia')
+      return { game: 'capstan', state: await api.parlor.getCapstanState(), parlorPoints: Number(currentSave()!.profile.parlor_points ?? 0) }
+    },
+    Component: ParlorGame,
+  },
+  '/tavern/trivia/king': {
+    load: async () => ({ game: 'king', state: await api.parlor.getPirateKingState(), parlorPoints: Number(currentSave()!.profile.parlor_points ?? 0) }),
+    Component: ParlorGame,
+  },
+  '/tavern/blackjack': {
+    load: async () => {
+      const [dailyWagered, resumed] = await Promise.all([api.casino.getDailyWagered(), api.casino.resumeHand()])
+      return { profile: currentSave()!.profile, dailyWagered, resumed, fishArtPool: fishArtPool() }
+    },
+    Component: BlackjackView,
+  },
+  '/achievements': {
+    load: async () => ({ storyData: storyLogData(currentSave()!.profile, await api.raids.getRaidMapView()) }),
+    Component: CaptainsLogView,
+  },
   '/tavern': { load: async () => ({ seed: currentSave()!.uid, rap: await api.sea.folkState() }), Component: Tavern },
 }
 

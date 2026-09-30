@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getSlotStats, getSlotsJackpot } from '../actions'
 import { getCasinoState } from '../casino/actions'
-import SlotMachine from '../SlotMachine'
+import SlotsView from '../SlotsView'
 
 export default async function SlotsPage() {
   const supabase = await createClient()
@@ -18,21 +18,5 @@ export default async function SlotsPage() {
     getSlotsJackpot(),
   ])
 
-  return (
-    <>
-      <main className="min-h-screen px-4 sm:px-8 py-8">
-        <div className="max-w-sm sm:max-w-3xl mx-auto">
-          <SlotMachine
-            chips={wallet.chips}
-            doubloons={wallet.doubloons}
-            sessionBuyIns={wallet.sessionBuyIns}
-            sessionNet={wallet.sessionNets.slots}
-            dailyRemaining={wallet.dailyRemaining}
-            initialStats={stats}
-            initialJackpot={jackpot}
-          />
-        </div>
-      </main>
-    </>
-  )
+  return <SlotsView wallet={wallet} stats={stats} jackpot={jackpot} />
 }

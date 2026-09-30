@@ -15,7 +15,7 @@
 // the moment the screen asks for a refresh, as on the web.
 
 import { Suspense, useEffect, useState, type ComponentType } from 'react'
-import { useLocationState, useRouter } from './shims/navigation'
+import { useLocationState, useRouter, Redirected } from './shims/navigation'
 import { openSave, currentSave } from './localGameApi'
 import { saveStorage } from './saveStorage'
 import { SCREENS, HOME } from './screens'
@@ -110,7 +110,7 @@ function ScreenHost() {
     let live = true
     screen.load(new URLSearchParams(search))
       .then(props => { if (live) { setLoaded({ path: pathname, props }); setError(null) } })
-      .catch(e => { if (live) setError(e instanceof Error ? e.message : String(e)) })
+      .catch(e => { if (live && !(e instanceof Redirected)) setError(e instanceof Error ? e.message : String(e)) })
     return () => { live = false }
   }, [screen, pathname, search, refresh])
 

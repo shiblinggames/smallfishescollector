@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import GameFrame from '@/components/GameFrame'
 import { getCurrentUser } from '@/lib/userData'
 import { getHoldState } from './actions'
 import QuartermastersHold from './QuartermastersHold'
@@ -10,18 +11,8 @@ export default async function QuartermastersHoldPage() {
   const state = await getHoldState()
 
   return (
-    <main className="min-h-screen pb-24 sm:pb-0">
-      <div className="px-4 pt-6 pb-12">
-        {'error' in state ? (
-          <div style={{ maxWidth: 'var(--game-col)', margin: '0 auto', paddingTop: '3rem', textAlign: 'center' }}>
-            <p className="font-karla" style={{ fontSize: '0.85rem', color: '#6a6764' }}>
-              {state.error}
-            </p>
-          </div>
-        ) : (
-          <QuartermastersHold initial={state} />
-        )}
-      </div>
-    </main>
+    <GameFrame error={'error' in state ? state.error : undefined}>
+      {!('error' in state) && <QuartermastersHold initial={state} />}
+    </GameFrame>
   )
 }
