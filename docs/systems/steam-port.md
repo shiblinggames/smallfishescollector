@@ -53,6 +53,40 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the rest of lib/core/fishing (wormhole reroll, Tide Turner, goldens, level rewards,
   Almanac). A TS bug found on the way: the local store stamped a shiny with the real
   clock, fixed.
+- THE CHARTER SLICE, BUILT (2026-09-30): two ships on one sea, as a Charter.
+  - THE TITLE SCREEN (`game/title.gd`): your captains (portrait, level, purse, last played;
+    Play, Retire asked once, a new captain named with the Steam name offered) and the
+    Charters (host one you founded; found one, normal or hardcore, fixed at founding; join a
+    friend's). Retiring moves the file to `retired/`, as the desktop shell did. `Main` moves
+    between the title, the harbor and the sea.
+  - THE CHARTER'S FILE (`game/charter.gd`): `charters/<id>.json` on the founder's machine,
+    with up to four berths, each holding that member's Charter captain as a whole save. Set
+    Sail locks the roster (`refusal()` turns newcomers away).
+  - THE CREW'S LINE (`game/crew_net.gd`): the founder's game runs every action. A crewmate's
+    `Session.act(op, args)` goes to the founder by its TS name, runs through `RulesApi` on
+    their captain there, is written into the Charter file, and comes back with the save,
+    which the crewmate's copy adopts in place. Every screen now calls the rules through
+    `session.act` (solo, it runs at once). Transport: a Steam friends-only lobby with
+    GodotSteam's peer when Steam is up (invite through the overlay, Join Game,
+    `+connect_lobby` on launch); otherwise the local network on port 24650. The Steam path
+    is written to GodotSteam 4.22.1's API and NOT YET TESTED: it needs an App ID (or 480) and
+    two Steam accounts.
+  - THE HARBOR LOBBY (`game/harbour_lobby.gd`): four berths filling as friends join, Invite
+    friends on Steam or this machine's address on the network, Set Sail (two captains at
+    least) for the founder, "Waiting for the founder" for the crew.
+  - ON THE SEA: each ship sends where it is ten times a second. Crewmates' ships
+    (`game/shipmate.gd`) are drawn in their look with a teal name plate, glide between
+    updates, and show as a named mark on the screen's edge when off it. Arrivals and
+    departures are toasted. The HUD has a Captains (or Leave the Charter) button.
+  - `node tools/play.mjs --pair` opens two windows as two players. `tests/smoke_charter.gd`
+    runs two headless copies (host and crew): join, Set Sail, each sees the other named, the
+    crewmate fishes for real on the founder's clock and buys bait, a refusal comes back as a
+    refusal, the Charter file holds it all, and leaving is seen.
+  NOT YET, the next pass: the Charter's shared rules (one purse with the crew ledger, one
+  Almanac, one market, the crew chest), so each Charter captain still has their own. Also
+  not yet: the nearby fishing bonus (to design), hardcore lives (they need sinking, which
+  needs raids), the founder handing the Charter over, releasing a berth, and a first-run
+  setup beyond the name (the web's SetupModal).
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

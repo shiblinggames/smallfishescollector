@@ -442,7 +442,7 @@ func _bait() -> void:
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			if not can:
 				btn.add_theme_stylebox_override("normal", Room.box(Color(0.05, 0.06, 0.08, 0.95), Color(1, 1, 1, 0.1), 10, 0))
-			btn.pressed.connect(func() -> void: _do(key, func() -> Dictionary: return Harbour.buy_bait(session.store, session.uid, b["type"], q)))
+			btn.pressed.connect(func() -> void: _do(key, "buyBait", [b["type"], float(q)]))
 			row.add_child(btn)
 
 
@@ -466,7 +466,7 @@ func _ladder_list(kind: String) -> void:
 		col.add_child(b)
 		if next:
 			b.pressed.connect(func() -> void:
-				_do("tier", func() -> Dictionary: return Harbour.buy_hook(session.store, session.uid) if kind == "hook" else Harbour.buy_reel(session.store, session.uid)))
+				_do("tier", "buyHook" if kind == "hook" else "buyReel", []))
 		else:
 			b.focus_mode = Control.FOCUS_NONE
 		var h: HBoxContainer = _fill_row(b, 14)
@@ -678,11 +678,7 @@ func _rod_row(rod: Dictionary, owned: bool) -> void:
 		elif _dbl() >= float(rod["cost"]):
 			btn = Room.tinted("…" if busy else "Buy · %s ⟡" % Js.thousands(float(rod["cost"])), GOLD, 13, 36)
 			btn.pressed.connect(func() -> void:
-				_do("rod%s" % Js.key(tier), func() -> Dictionary:
-					var r: Dictionary = Harbour.purchase_rod(session.store, session.uid, tier)
-					if not r.has("error"):
-						Loadout.equip_tackle_rod(session.store, session.uid, tier)
-					return r))
+				_do("rod%s" % Js.key(tier), "purchaseRod", [tier], ["equipTackleRod", [tier]]))
 		else:
 			btn = Room.tinted("Need %s ⟡" % Js.thousands(float(rod["cost"]) - _dbl()), Color("#9a958c"), 13, 36)
 			btn.disabled = true
@@ -692,7 +688,7 @@ func _rod_row(rod: Dictionary, owned: bool) -> void:
 		if not equipped:
 			var eq: Button = Room.tinted("…" if busy else "Equip", Color("#f0ede8"), 13, 36)
 			eq.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			eq.pressed.connect(func() -> void: _do("rod%s" % Js.key(tier), func() -> Dictionary: return Loadout.equip_tackle_rod(session.store, session.uid, tier)))
+			eq.pressed.connect(func() -> void: _do("rod%s" % Js.key(tier), "equipTackleRod", [tier]))
 			row.add_child(eq)
 		if float(rod["cost"]) > 0.0:
 			var refund: float = floor(float(rod["cost"]) * float(Rules.data()["rodSellRate"]))
@@ -705,7 +701,7 @@ func _rod_row(rod: Dictionary, owned: bool) -> void:
 					rebuild()
 					return
 				_sell_confirm = -1.0
-				_do("rod%s" % Js.key(tier), func() -> Dictionary: return Harbour.sell_rod(session.store, session.uid, tier)))
+				_do("rod%s" % Js.key(tier), "sellRod", [tier]))
 			row.add_child(sell)
 	var pad2: Control = Control.new()
 	pad2.custom_minimum_size = Vector2(0, 6)
@@ -745,7 +741,7 @@ func _completionist_card(owned: Dictionary) -> void:
 		if not active:
 			var eq: Button = Room.tinted("Equip", Color("#f0ede8"), 13, 36)
 			eq.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			eq.pressed.connect(func() -> void: _do("rod14", func() -> Dictionary: return Loadout.equip_tackle_rod(session.store, session.uid, COMPLETIONIST_TIER)))
+			eq.pressed.connect(func() -> void: _do("rod14", "equipTackleRod", [COMPLETIONIST_TIER]))
 			row.add_child(eq)
 		else:
 			var inuse: Label = Room.text(row, "IN USE", 12, Color("#5fd9bd"))
@@ -775,7 +771,7 @@ func _claim() -> void:
 	if _busy != "":
 		return
 	_busy = "claim"
-	var r: Dictionary = Harbour.claim_completionist_rod(session.store, session.uid)
+	var r: Dictionary = await session.act("claimCompletionistRod")
 	_busy = ""
 	if r.has("error"):
 		_error = r["error"]
@@ -807,23 +803,29 @@ func _view_completionist() -> void:
 			eq.text = "Equip"
 			eq.pressed.connect(func() -> void:
 				sh.close()
-				_do("rod14", func() -> Dictionary: return Loadout.equip_tackle_rod(session.store, session.uid, COMPLETIONIST_TIER)))
+				_do("rod14", "equipTackleRod", [COMPLETIONIST_TIER]))
 			sh.body.add_child(eq))
 	add_child(sh)
 
 
 # ── Doing things ───────────────────────────────────────────────────────────────
 
-## Run one purchase: tap on the press, the refusal above the section or the
-## commit bump and a fresh page when it lands.
-func _do(key: String, run: Callable) -> void:
+## Run one purchase (a rules call by name, and one to follow it if it lands,
+## as buying a rod puts it in hand): tap on the press, the refusal above the
+## section or the commit bump and a fresh page when it lands.
+func _do(key: String, op: String, args: Array, then: Array = []) -> void:
 	if _busy != "":
 		return
 	_error = ""
 	Rumble.tap(10)
 	_busy = key
-	var r: Dictionary = run.call()
+	rebuild()
+	var r: Dictionary = await session.act(op, args)
+	if not r.has("error") and not then.is_empty():
+		await session.act(then[0], then[1])
 	_busy = ""
+	if not is_inside_tree():
+		return
 	if r.has("error"):
 		_error = r["error"]
 	else:

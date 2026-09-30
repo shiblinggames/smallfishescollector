@@ -14,6 +14,15 @@ extends Node2D
 ##   the HUD.
 
 var session: Session
+## In a Charter, the crew's line (null when sailing alone), and the crewmates'
+## ships on this sea by their key.
+var net: CrewNet = null
+var _mates: Dictionary = {}
+var _crew_marks: CrewMarks
+var _look_t: float = 0.0
+var _last_look: Dictionary = {}
+## Leaving the sea: back to the captains (or out of the Charter).
+signal left
 var _water: ShaderMaterial
 var _world: Node2D
 var _boat: Boat
@@ -111,6 +120,8 @@ func _ready() -> void:
 	add_child(_room_layer)
 	_mark = BuyerMark.new()
 	hud_layer.add_child(_mark)
+	_crew_marks = CrewMarks.new()
+	hud_layer.add_child(_crew_marks)
 	var sound: Sound = Sound.new()
 	add_child(sound)
 	_hud = FishingHud.new()
@@ -119,7 +130,19 @@ func _ready() -> void:
 	_hud.fishing_changed.connect(func(active: bool) -> void:
 		_boat.locked = active
 		_boat.set_pose("wait" if active else "rest"))
+	_hud.leave_label = "Leave the Charter" if net != null else "Captains"
+	_hud.leave.connect(func() -> void: left.emit())
 	hud_layer.add_child(_hud)
+	if net != null:
+		net.mate_boat.connect(_on_mate_boat)
+		net.mate_look.connect(_on_mate_look)
+		net.mate_left.connect(func(k: String) -> void:
+			if _mates.has(k):
+				var gone: Shipmate = _mates[k]
+				_hud.toast("%s has left port" % gone.mate_name)
+				gone.queue_free()
+				_mates.erase(k))
+		_send_look()
 
 
 func _process(delta: float) -> void:
@@ -156,6 +179,20 @@ func _process(delta: float) -> void:
 	for b: Buyer in _buyers:
 		b.lift = lift
 	_reach(cam_world)
+	if net != null:
+		_look_t += delta
+		if _look_t > 1.0:
+			_look_t = 0.0
+			var look: Dictionary = Skipper.look_of(session.profile())
+			if look != _last_look:
+				_send_look()
+		net.send_boat(delta, { "x": _boat.position.x, "y": _boat.position.y, "vx": _boat.velocity.x, "vy": _boat.velocity.y, "pose": _boat.skipper.frame, "facing": _boat.facing() })
+		var marks: Array = []
+		for k: String in _mates:
+			var m: Shipmate = _mates[k]
+			m.lift = lift
+			marks.append([m.mate_name, Vector2(m.position.x - cam_world.x, (m.position.y - cam_world.y) * Chart.GROUND) * _camera.zoom.x])
+		_crew_marks.marks = marks
 
 	_hud.set_water(Chart.water_at(cam_world))
 	_hud.set_clock(SeaClock.PHASE_LABEL[clock["phase"]])
@@ -168,9 +205,12 @@ func _process(delta: float) -> void:
 		_save_t = 0.0
 		var p: Dictionary = session.profile()
 		if Js.num(p.get("sea_x")) != round(_boat.position.x) or Js.num(p.get("sea_y")) != round(_boat.position.y):
-			p["sea_x"] = round(_boat.position.x)
-			p["sea_y"] = round(_boat.position.y)
-			session.persist()
+			if session.remote != null:
+				session.act("setSeaPos", [round(_boat.position.x), round(_boat.position.y)])
+			else:
+				p["sea_x"] = round(_boat.position.x)
+				p["sea_y"] = round(_boat.position.y)
+				session.persist()
 
 
 ## What is in reach of the boat: the berth first, then a buyer in hail range.
@@ -197,6 +237,39 @@ func _reach(at: Vector2) -> void:
 	_mark.target = null if band_buyer == null else Vector2(band_buyer.position.x - at.x, (band_buyer.position.y - at.y) * Chart.GROUND) * _camera.zoom.x
 
 
+# ── The crew ───────────────────────────────────────────────────────────────────
+
+func _mate(k: String) -> Shipmate:
+	if not _mates.has(k):
+		var m: Shipmate = Shipmate.new()
+		_world.add_child(m)
+		_mates[k] = m
+	return _mates[k]
+
+
+func _on_mate_boat(k: String, st: Dictionary) -> void:
+	if k == net.key:
+		return
+	_mate(k).state(st)
+
+
+func _on_mate_look(k: String, mate_name: String, look: Dictionary) -> void:
+	if k == net.key:
+		return
+	var m: Shipmate = _mate(k)
+	var fresh: bool = m.mate_name == ""
+	m.set_mate_name(mate_name)
+	m.set_look(look)
+	if fresh:
+		_hud.toast("%s is on the water" % mate_name)
+
+
+func _send_look() -> void:
+	if net != null:
+		_last_look = Skipper.look_of(session.profile())
+		net.send_look(Skipper.look_of(session.profile()), session.captain_name())
+
+
 func _go_ashore() -> void:
 	Rumble.buzz([18, 40, 24])
 	Sound.bell()
@@ -211,6 +284,7 @@ func _enter_room(door: String) -> void:
 	room.session = session
 	room.closed.connect(func() -> void:
 		_boat.set_look(Skipper.look_of(session.profile()))
+		_send_look()
 		_hud.refresh())
 	_hud.hold_for(room)
 	_room_layer.add_child(room)
@@ -265,3 +339,38 @@ class BuyerMark:
 		draw_arc(at, 17.0, 0.0, TAU, 40, Color(1.0, 0.81, 0.54, 0.6), 1.5, true)
 		var f: Font = UiTheme.title_font()
 		draw_string(f, at + Vector2(-5, 8), "!", HORIZONTAL_ALIGNMENT_CENTER, 10, 22, Color("#ffd986"))
+
+
+## Where each crewmate is when they are off the screen: a teal mark on the
+## edge with their name, pointing their way.
+class CrewMarks:
+	extends Control
+	## [name, offset from the screen's centre in pixels] per crewmate.
+	var marks: Array = []
+
+	func _ready() -> void:
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		var f: Font = UiTheme.title_font()
+		for m: Array in marks:
+			var off: Vector2 = m[1]
+			var half: Vector2 = size / 2.0 - Vector2(70, 110)
+			if absf(off.x) < half.x + 40.0 and absf(off.y) < half.y + 60.0:
+				continue
+			var k: float = minf(half.x / maxf(0.001, absf(off.x)), half.y / maxf(0.001, absf(off.y)))
+			var at: Vector2 = size / 2.0 + off * k
+			var dir: Vector2 = off.normalized()
+			var tip: Vector2 = at + dir * 16.0
+			var side: Vector2 = dir.orthogonal() * 8.0
+			draw_colored_polygon(PackedVector2Array([tip, at + side, at - side]), Color("#5eead4"))
+			var label: String = str(m[0])
+			var w: float = f.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+			var box: Rect2 = Rect2(at - dir * 26.0 - Vector2(w / 2.0 + 8.0, 11.0), Vector2(w + 16.0, 22.0))
+			draw_rect(box, Color(0.024, 0.047, 0.07, 0.86))
+			draw_rect(box, Color(0.37, 0.92, 0.83, 0.45), false, 1.0)
+			draw_string(f, box.position + Vector2(8, 16), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#dff7f2"))

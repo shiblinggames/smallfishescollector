@@ -231,21 +231,20 @@ func _try_on(slot: String, o: Array) -> void:
 
 
 func _choose(slot: String, id: Variant) -> void:
-	var db: CaptainStore = session.store
 	var r: Dictionary = {}
 	match slot:
 		"rod":
 			if line_out:
 				return
-			r = Loadout.equip_tackle_rod(db, session.uid, float(id))
+			r = await session.act("equipTackleRod", [float(id)])
 		"skin":
-			r = Loadout.update_character_color(db, session.uid, id)
+			r = await session.act("updateCharacterColor", [id])
 		"hat":
-			r = Loadout.equip_hat(db, session.uid, id)
+			r = await session.act("equipHat", [id])
 		"boat":
-			r = Loadout.equip_boat(db, session.uid, id)
+			r = await session.act("equipBoat", [id])
 		"pet":
-			r = Loadout.equip_pet(db, session.uid, id, "stern")
+			r = await session.act("equipPet", [id, "stern"])
 	session.persist()
 	_error.text = r.get("error", "")
 	changed.emit()

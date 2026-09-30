@@ -11,6 +11,12 @@ var save: Dictionary
 var carried: Dictionary
 var store: CaptainStore
 var uid: String
+## In a Charter: a crewmate's session is REMOTE, its actions run on the
+## founder's game (CrewNet.request) and its save is a copy the founder sends
+## back after each one. The founder's own session writes the Charter's file
+## instead of a captain's (writer).
+var remote: CrewNet = null
+var writer: Callable = Callable()
 
 
 func _init(s: Dictionary, c: Dictionary) -> void:
@@ -34,7 +40,41 @@ static func open_latest() -> Session:
 	return s
 
 
+## Every action on the captain goes through here, by its TS name (RulesApi):
+## solo and on the founder's game it runs at once; a crewmate's is sent to the
+## founder and awaited. Always `await session.act(...)`.
+func act(op: String, args: Array = []) -> Variant:
+	if remote != null:
+		return await remote.request(op, args)
+	return RulesApi.run(store, uid, op, args)
+
+
+## A crewmate's copy of their save, replaced by the one the founder sends back.
+## Updated in place, so the store and every screen holding the save or the
+## profile keep pointing at the live one.
+func adopt(text: String) -> void:
+	var loaded: Dictionary = SaveFile.deserialize(text, save["species"])
+	if loaded.has("error"):
+		push_error("the founder sent a save that would not open: %s" % loaded["error"])
+		return
+	var fresh: Dictionary = loaded["save"]
+	for k: Variant in save.keys():
+		if not fresh.has(k):
+			save.erase(k)
+	for k: Variant in fresh:
+		if save.get(k) is Dictionary and fresh[k] is Dictionary:
+			(save[k] as Dictionary).clear()
+			(save[k] as Dictionary).merge(fresh[k])
+		else:
+			save[k] = fresh[k]
+
+
 func persist() -> void:
+	if remote != null:
+		return
+	if writer.is_valid():
+		writer.call()
+		return
 	var err: Error = Captains.write(save, carried)
 	if err != OK:
 		push_error("the save did not write: %s" % error_string(err))

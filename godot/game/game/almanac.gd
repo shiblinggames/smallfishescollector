@@ -306,7 +306,7 @@ func _prestige_line(z: Array, zc: Color, cycle_done: bool) -> void:
 		var b: Button = Button.new()
 		b.text = "Claim %s ⟡" % Js.thousands(reward)
 		b.pressed.connect(func() -> void:
-			var r: Dictionary = Fishing.claim_zone_reward(session.store, session.uid, z[0])
+			var r: Dictionary = await session.act("claimZoneReward", [z[0]])
 			session.persist()
 			if r.has("error"):
 				b.text = r["error"]
@@ -329,7 +329,7 @@ func _confirm_prestige(z: Array, lvl: int, boost: int) -> void:
 		body = "Your %s log is wiped. Your golden trophies stay. In return, a permanent +%d%% XP on every catch here%s Chart it again and it pays again." % [
 			z[1], (lvl + 1) * 10, ". This is the last one: Max Prestige." if lvl + 1 >= 5 else ", up to +50% at Max Prestige."]
 	_ask("Wipe for gold" if at_max else "Prestige %d" % (lvl + 1), body, "Yes, wipe for gold" if at_max else "Yes, prestige", "Not yet", func() -> void:
-		var r: Dictionary = Fishing.prestige_zone(session.store, session.uid, z[0])
+		var r: Dictionary = await session.act("prestigeZone", [z[0]])
 		session.persist()
 		_reload()
 		if r.has("error"):
@@ -735,7 +735,7 @@ func _release(id: float, name: String, rank: int) -> void:
 		state["last"] = step
 		if float(state["p"]) >= 1.0:
 			state["done"] = true
-			var r: Dictionary = Fishing.release_ancient(session.store, session.uid, id)
+			var r: Dictionary = await session.act("releaseAncient", [id])
 			session.persist()
 			hold.visible = false
 			leave.visible = false

@@ -9,8 +9,10 @@ decision are in `docs/systems/steam-port.md`). Typed GDScript, Steam through God
 2. `node tools/setup.mjs` copies the content in from `web/content` and fetches GodotSteam
    (pinned version and checksum) into `addons/godotsteam`, which is not committed.
 3. `node tools/parity.mjs` must pass before anything is committed.
-4. `node tools/play.mjs` plays it (`--editor` opens the editor). Saves go to
-   `%APPDATA%/Seas the Booty/captains/`, in the web's local save format.
+4. `node tools/play.mjs` plays it (`--editor` opens the editor; `--pair` opens two windows as
+   two players, to sail a Charter over the local network). Saves go to
+   `%APPDATA%/Seas the Booty/captains/` in the web's local save format, and Charters to
+   `charters/` beside it.
 
 ## The rules come from the web
 
@@ -62,6 +64,9 @@ The TypeScript rules in `web/lib` are the SPEC. The port does not reinterpret th
 - `content/` copies of `web/content` files (committed; kept in step by `tools/setup.mjs`), and
   `rules.json` (written by the web's rules export)
 - `art/` pictures and fonts copied from `web/public` by `tools/setup.mjs` (NOT committed)
-- `tests/` the parity runner and its cases; `smoke_fishing.gd` fishes a dozen casts through the
-  real HUD headless (it plays on the latest captain, so move saves aside first)
+- `tests/` the parity runner and its cases, and the smoke runs, each on scratch saves:
+  `smoke_fishing.gd` (casts and the Ancient Deep through the real HUD), `smoke_docking.gd`
+  (ashore, the Market, the Tackle Shop, a buyer), `smoke_charter.gd` (run twice at once,
+  `-- --role=host --as=anna` then `-- --role=crew --as=ben`: a Charter over the local
+  network); `shot.gd` takes a picture of a screen
 - `tools/` setup and the end-to-end parity run

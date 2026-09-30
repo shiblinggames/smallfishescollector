@@ -2,6 +2,8 @@
 //
 //   node tools/play.mjs            set up (content, art, GodotSteam), then play
 //   node tools/play.mjs --editor   open the project in the Godot editor instead
+//   node tools/play.mjs --pair     two windows, as two players (a Charter on
+//                                  one machine, over the local network)
 //
 // Godot is found from GODOT, else the winget install, else `godot` on PATH.
 
@@ -27,5 +29,12 @@ function godot() {
 execFileSync(process.execPath, [path.join(HERE, 'tools', 'setup.mjs')], { stdio: 'inherit' })
 const gd = godot()
 execFileSync(gd, ['--headless', '--path', HERE, '--import'], { stdio: 'ignore', timeout: 300000 })
-const args = process.argv.includes('--editor') ? ['--editor', '--path', HERE] : ['--path', HERE]
-spawn(gd, args, { detached: true, stdio: 'ignore' }).unref()
+if (process.argv.includes('--pair')) {
+  // Two players on one machine: each is someone else (--as), in its own window.
+  for (const [who, x] of [['founder', 40], ['crewmate', 980]]) {
+    spawn(gd, ['--path', HERE, '--resolution', '900x620', '--position', `${x},60`, '--', `--as=${who}`], { detached: true, stdio: 'ignore' }).unref()
+  }
+} else {
+  const args = process.argv.includes('--editor') ? ['--editor', '--path', HERE] : ['--path', HERE]
+  spawn(gd, args, { detached: true, stdio: 'ignore' }).unref()
+}

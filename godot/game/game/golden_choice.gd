@@ -106,7 +106,7 @@ func _answer(how: String) -> void:
 	_busy = true
 	Rumble.buzz(Rumble.GOLDEN)
 	var id: float = float(golden["id"])
-	var r: Dictionary = Fishing.sell_golden_trophy(session.store, session.uid, id) if how == "sell" else Fishing.mount_golden_trophy(session.store, session.uid, id)
+	var r: Dictionary = await session.act("sellGoldenTrophy" if how == "sell" else "mountGoldenTrophy", [id])
 	session.persist()
 	_busy = false
 	if r.has("error"):

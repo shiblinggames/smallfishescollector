@@ -15,16 +15,36 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
 	var base: float = floor(Time.get_unix_time_from_system() * 1000.0 / cycle) * cycle
 	var at: float = base + cycle * (0.5 if night else 0.1)
 	Clock.install(func() -> float: return at)
+	Main.straight_to_sea = what != "title"
+	if what == "title":
+		Captains.dir_override = "user://shot_title_captains"
+		Charter.dir_override = "user://shot_title_charters"
+		if Captains.list().is_empty():
+			Captains.make("Anna")
+			var ben: Session = Captains.make("Ben_the_Bold")
+			ben.profile()["fishing_xp"] = 52000.0
+			ben.profile()["doubloons"] = 184200.0
+			ben.profile()["character_color"] = "blue"
+			ben.profile()["equipped_hat"] = "golden"
+			ben.persist()
+			Charter.found("The Salt Ledger", true, SteamLayer.player_key(), "Anna")
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
+	if what == "title":
+		for f: int in 40:
+			await process_frame
+		root.get_texture().get_image().save_png(out)
+		print("  saved ", out)
+		quit()
+		return
 	var sea: Sea = main.get_child(main.get_child_count() - 1)
 	sea._boat.position = Vector2(-120, 2300)
 	var hud: FishingHud = sea._hud
@@ -71,6 +91,17 @@ func _init() -> void:
 	match what:
 		"dock":
 			pass
+		"crew":
+			sea._boat.position = Vector2(-150, 2300)
+			var m: Shipmate = sea._mate("local-ben")
+			m.set_mate_name("Ben_the_Bold")
+			m.set_look({ "color": "blue", "hat": "golden", "boat": "fire", "rodSlug": "rod_galaxy", "hook": "/hook_gold.png" })
+			m.state({ "x": 180.0, "y": 2330.0, "vx": 0.0, "vy": 0.0, "pose": "wait", "facing": 1.0 })
+			var far: Shipmate = sea._mate("local-cleo")
+			far.set_mate_name("Cleo")
+			far.set_look({ "color": "pink" })
+			far.state({ "x": 2400.0, "y": 1800.0, "pose": "rest" })
+			sea.net = (main as Main).net
 		"ashore":
 			sea._go_ashore()
 		"market":

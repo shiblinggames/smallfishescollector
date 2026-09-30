@@ -127,7 +127,7 @@ func _do_sell() -> void:
 		return
 	_busy = true
 	_sell.text = "…"
-	var r: Dictionary = Selling.sell_to_resident(session.store, session.uid, info["zoneId"])
+	var r: Dictionary = await session.act("sellToResident", [info["zoneId"]])
 	_busy = false
 	_sell.text = "Sell the hold"
 	_result.visible = true

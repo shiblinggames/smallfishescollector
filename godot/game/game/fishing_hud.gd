@@ -24,6 +24,8 @@ extends Control
 ## no fishing to be had.
 
 signal fishing_changed(active: bool)
+## The captain asks to leave the sea (for the captains, or out of a Charter).
+signal leave
 
 const HOLD_S: float = 0.62
 const HOLD_PERFECT_S: float = 0.9
@@ -34,6 +36,7 @@ const TEAL: Color = Color("#67d4e8")
 
 var session: Session
 var boat: Boat
+var leave_label: String = "Captains"
 var water: Dictionary = {}
 var phase: String = "idle"
 
@@ -81,6 +84,8 @@ var _toast: Label
 var _toast_t: float = 0.0
 var _modal: Control
 var _level_seen: int = 0
+## An action is out with the rules (in a Charter, with the founder's game).
+var _asking: bool = false
 ## What is in reach, and the pill that offers it.
 var _reach_text: String = ""
 var _reach_act: Callable = Callable()
@@ -115,6 +120,16 @@ func _ready() -> void:
 	_clock = _label(tr, "", 14, DIM)
 	for l: Label in [_where, _blurb, _clock]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var out: Button = Room.back_pill(leave_label)
+	out.text = leave_label.to_upper() + "  ›"
+	out.size_flags_horizontal = Control.SIZE_SHRINK_END
+	out.focus_mode = Control.FOCUS_NONE
+	out.pressed.connect(func() -> void:
+		if phase == "idle" or phase == "result":
+			leave.emit()
+		else:
+			toast("Bring the line in first"))
+	tr.add_child(out)
 
 	_bait = str(Js.nz(session.profile().get("last_used_bait"), "worm"))
 	var bottom: HBoxContainer = HBoxContainer.new()
@@ -508,7 +523,7 @@ func _update_auto() -> void:
 
 func _toggle_auto() -> void:
 	_auto_on = not _auto_on
-	Loadout.set_auto_fishing(session.store, session.uid, _auto_on)
+	await session.act("setAutoFishing", [_auto_on])
 	session.persist()
 	_update_auto()
 
@@ -536,11 +551,13 @@ func _act() -> void:
 # ── The loop ───────────────────────────────────────────────────────────────────
 
 func cast() -> void:
-	if _modal != null or (phase != "idle" and phase != "result") or _action.disabled:
+	if _modal != null or _asking or (phase != "idle" and phase != "result") or _action.disabled:
 		return
 	_close_card()
 	_cast_zone = water["id"]
-	var res: Dictionary = Fishing.cast_line(session.store, session.uid, _bait, _cast_zone)
+	_asking = true
+	var res: Dictionary = await session.act("castLine", [_bait, _cast_zone])
+	_asking = false
 	session.persist()
 	if res.has("error"):
 		toast(res["error"])
@@ -712,7 +729,13 @@ func _next_phase(result: String) -> void:
 func _skip() -> void:
 	if phase != "hooked":
 		return
-	var r: Dictionary = Fishing.tide_turner_skip(session.store, session.uid)
+	if _asking:
+		return
+	_asking = true
+	var r: Dictionary = await session.act("tideTurnerSkip")
+	_asking = false
+	if phase != "hooked":
+		return
 	session.persist()
 	if r.has("error"):
 		toast(r["error"])
@@ -765,9 +788,9 @@ func _on_struck(raw: String, _angle: float) -> void:
 	var crate: bool = float(_shot["fishId"]) == FishingRules.CRATE_FISH_ID
 	var r: Dictionary = {}
 	if crate and landed:
-		r = Fishing.reel_crate(session.store, session.uid, result)
+		r = await session.act("reelCrate", [result])
 	elif not crate:
-		r = Fishing.reel_in(session.store, session.uid, float(_shot["fishId"]), result, _bait)
+		r = await session.act("reelIn", [float(_shot["fishId"]), result, _bait])
 	session.persist()
 	_dial.visible = false
 	_set_phase("result")
@@ -810,7 +833,7 @@ func _wire(card: ResultCard) -> void:
 		_close_card()
 		_set_phase("idle"))
 	card.wormhole.connect(func() -> void:
-		var w: Dictionary = Fishing.reroll_wormhole(session.store, session.uid)
+		var w: Dictionary = await session.act("rerollWormhole")
 		session.persist()
 		card.set_note(w["error"] if w.has("error") else "Rerolled into %s" % (w["fish"] as Dictionary)["name"])
 		refresh())
@@ -922,7 +945,7 @@ func _ceremony(r: Dictionary) -> void:
 ## about any golden still waiting. One at a time.
 func _after_catch(from_catch: bool) -> void:
 	if session.level() > _level_seen or not from_catch:
-		var claim: Dictionary = Fishing.claim_fishing_level_rewards(session.store, session.uid)
+		var claim: Dictionary = await session.act("claimFishingLevelRewards")
 		session.persist()
 		_level_seen = session.level()
 		if float(claim["to"]) > float(claim["from"]):
@@ -933,7 +956,7 @@ func _after_catch(from_catch: bool) -> void:
 			await lu.closed
 			_modal = null
 			refresh()
-	var held: Variant = Fishing.held_golden(session.store, session.uid)
+	var held: Variant = await session.act("heldGolden")
 	while held != null:
 		var g: GoldenChoice = GoldenChoice.new()
 		g.session = session
@@ -943,7 +966,7 @@ func _after_catch(from_catch: bool) -> void:
 		await g.answered
 		_modal = null
 		refresh()
-		held = Fishing.held_golden(session.store, session.uid)
+		held = await session.act("heldGolden")
 
 
 func _process(delta: float) -> void:

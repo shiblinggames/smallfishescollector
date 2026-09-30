@@ -37,6 +37,14 @@ func _init() -> void:
 	_mode = Prefs.get_value("market_color_mode", "normal")
 
 
+func _ready() -> void:
+	super._ready()
+	if session.remote != null:
+		await session.act("marketRefresh")
+		if is_inside_tree():
+			rebuild()
+
+
 func _backdrop() -> void:
 	var bg: ColorRect = ColorRect.new()
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -78,7 +86,8 @@ class Ledger:
 ## the multiplier now and at the last tick, its history, and how many are
 ## aboard. `logged` marks the species in the collection (the browse list).
 func _entries() -> Array:
-	var state: Dictionary = Market.current(session.save)
+	# A crewmate's market is the founder's: read the copy it sent, never roll.
+	var state: Dictionary = session.save["market"] if session.remote != null and session.save.get("market") != null else Market.current(session.save)
 	var fish: Dictionary = state["fish"]
 	var held: Dictionary = {}
 	for s: Dictionary in session.store.hold_stacks(session.uid):
@@ -294,7 +303,7 @@ func _sell_all() -> void:
 	if _busy:
 		return
 	_busy = true
-	var r: Dictionary = Selling.sell_entire_hold(session.store, session.uid)
+	var r: Dictionary = await session.act("sellEntireHold")
 	_busy = false
 	_confirm_all = false
 	_after_sale(r, "The sale did not go through.")
@@ -304,7 +313,7 @@ func _sell(id: float, qty: float) -> void:
 	if _busy:
 		return
 	_busy = true
-	var r: Dictionary = Selling.market_sell_fish(session.store, session.uid, id, qty)
+	var r: Dictionary = await session.act("marketSellFish", [id, qty])
 	_busy = false
 	_after_sale(r, "The sale did not go through.")
 

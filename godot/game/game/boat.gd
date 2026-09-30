@@ -98,6 +98,10 @@ func steer(input: Vector2, delta: float) -> void:
 	_spray.position = -back * 70.0
 
 
+func facing() -> float:
+	return _facing
+
+
 func set_pose(pose: String) -> void:
 	skipper.set_frame(pose)
 

@@ -16,6 +16,7 @@ func _init() -> void:
 	Captains.dir_override = "user://smoke_captains"
 	for f: String in DirAccess.get_files_at(Captains.dir_override) if DirAccess.dir_exists_absolute(Captains.dir_override) else PackedStringArray():
 		DirAccess.remove_absolute("%s/%s" % [Captains.dir_override, f])
+	Main.straight_to_sea = true
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
@@ -72,7 +73,7 @@ func _init() -> void:
 		var kind: String = "CrateMoment" if hud._card is CrateMoment else "ResultCard"
 		seen[kind] = int(seen.get(kind, 0)) + 1
 		if hud._card is CrateMoment:
-			await (hud._card as CrateMoment).done
+			await _crate_done(hud._card as CrateMoment)
 		for f: int in 20:
 			await process_frame
 	await _clear_modals(hud, seen)
@@ -117,7 +118,7 @@ func _init() -> void:
 					hud._dial.strike()
 			await process_frame
 		if hud._card is CrateMoment:
-			await (hud._card as CrateMoment).done
+			await _crate_done(hud._card as CrateMoment)
 		var kind: String = "Ancient card" if hud._card != null else "none"
 		seen[kind] = int(seen.get(kind, 0)) + 1
 		for f: int in 10:
@@ -129,6 +130,18 @@ func _init() -> void:
 	print("  streak now %d, level %d, hold %s" % [hud._streak(), sea.session.level(), hud._hold.text])
 	print("  smoke %s" % ("FAILED" if bad > 0 else "ok"))
 	quit(1 if bad > 0 else 0)
+
+
+## Wait out a crate's moment, but never forever: if it already finished (or
+## was closed) before this started listening, its done signal will not come.
+func _crate_done(c: CrateMoment) -> void:
+	var over: Array = [false]
+	c.done.connect(func() -> void: over[0] = true)
+	var until: int = Time.get_ticks_msec() + 15000
+	while Time.get_ticks_msec() < until:
+		if over[0] or not is_instance_valid(c) or c.is_queued_for_deletion():
+			return
+		await process_frame
 
 
 ## Close a level-up and answer goldens, as a player would.
