@@ -4673,7 +4673,16 @@
    "line": "Weighed and paid, right here. You will do better ashore if you fancy the row.",
    "x": 2900,
    "y": 1400,
-   "rate": 0.78
+   "rate": 0.78,
+   "driftRate": 0.08975979010256552,
+   "driftPhase": 5.375,
+   "look": {
+    "color": "blue",
+    "boat": "mahogany",
+    "hat": "midnight",
+    "rodSlug": "rod_navigators",
+    "hook": "/hook_iron.png"
+   }
   },
   {
    "zoneId": "open_waters",
@@ -4681,7 +4690,16 @@
    "line": "Coin for the hold. No questions, no conversation. That is the arrangement.",
    "x": -2600,
    "y": 4600,
-   "rate": 0.8
+   "rate": 0.8,
+   "driftRate": 0.09519977738150888,
+   "driftPhase": 3.875,
+   "look": {
+    "color": "blue",
+    "boat": "taupe",
+    "hat": "midnight",
+    "rodSlug": "rod_fiberglass",
+    "hook": "/hook_iron.png"
+   }
   },
   {
    "zoneId": "deep",
@@ -4689,7 +4707,16 @@
    "line": "Long way out, better rate. That is the only reason anybody finds me.",
    "x": -4200,
    "y": 6900,
-   "rate": 0.82
+   "rate": 0.82,
+   "driftRate": 0.08377580409572781,
+   "driftPhase": 3.1875,
+   "look": {
+    "color": "pink",
+    "boat": "mahogany",
+    "hat": "offwhite",
+    "rodSlug": "rod_driftwood",
+    "hook": "/hook_steel.png"
+   }
   },
   {
    "zoneId": "abyss",
@@ -4697,7 +4724,16 @@
    "line": "Dark water pays. Hold out, coin in, and mind how you go back up.",
    "x": 4200,
    "y": 11800,
-   "rate": 0.84
+   "rate": 0.84,
+   "driftRate": 0.06477510625958337,
+   "driftPhase": 4.5625,
+   "look": {
+    "color": "gray",
+    "boat": "desert",
+    "hat": "olive",
+    "rodSlug": "rod_reefguard",
+    "hook": "/hook_bronze.png"
+   }
   },
   {
    "zoneId": "ancient_deep",
@@ -4705,9 +4741,55 @@
    "line": "Furthest scale on the chart. Whatever you have got, I will take it.",
    "x": -2000,
    "y": 17500,
-   "rate": 0.86
+   "rate": 0.86,
+   "driftRate": 0.09519977738150888,
+   "driftPhase": 2.625,
+   "look": {
+    "color": "blue",
+    "boat": "taupe",
+    "hat": "midnight",
+    "rodSlug": "rod_fiberglass",
+    "hook": "/hook_iron.png"
+   }
   }
  ],
+ "marketMoods": {
+  "calm": {
+   "label": "Calm Market",
+   "color": "#38bdf8",
+   "desc": "Flat water. Prices barely breathe."
+  },
+  "storm": {
+   "label": "Storm",
+   "color": "#f59e0b",
+   "desc": "The board jumps with the swell. Could break either way."
+  },
+  "kraken": {
+   "label": "Kraken",
+   "color": "#ef4444",
+   "desc": "Something big is under the hull. Sell brave or sell nothing."
+  },
+  "tide_rising": {
+   "label": "Tide Rising",
+   "color": "#4ade80",
+   "desc": "The tide lifts every price with it. Holding pays."
+  },
+  "bounty_season": {
+   "label": "Bounty Season",
+   "color": "#f0c040",
+   "desc": "Buyers flush with coin. Rare fish are climbing fast."
+  },
+  "low_tide": {
+   "label": "Low Tide",
+   "color": "#94a3b8",
+   "desc": "Buyers are tight-fisted today. Hold if you can stomach it."
+  },
+  "cursed_waters": {
+   "label": "Cursed Waters",
+   "color": "#c084fc",
+   "desc": "Bad water. Every price is sinking and picking up speed."
+  }
+ },
  "completionistNeeds": {
   "level": 100,
   "folk": [

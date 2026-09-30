@@ -53,6 +53,42 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the rest of lib/core/fishing (wormhole reroll, Tide Turner, goldens, level rewards,
   Almanac). A TS bug found on the way: the local store stamped a shiny with the real
   clock, fixed.
+- DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
+  `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
+  in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the
+  Completionist), with 198 parity calls. The screens, to a spec read off SeaMap, seaBerth,
+  ashoreDoors, MarketClient, TackleShopClient and TraderPanel:
+  - The Mainland at its real size (r 500; the Godot chart had 340, which is also what
+    docs/systems/ocean-hub.md still says, and it is stale), its plate anchored 42% down, the
+    painted town standing on it, the shore at r x 0.72 + 55.
+  - The berth (`game/berth.gd`): the pool, the rim and the 14 approach lamps with the chase,
+    lit as you enter; HOME is inside it, so a new session opens on the dock prompt.
+  - "Go ashore at The Mainland" as a pill over the menus with its key. E or the pad's Y
+    presses whatever is in reach; Space does too where there is no fishing.
+  - The picker, "Where to?", with its six doors. The Market and the Tackle Shop work; the
+    Tavern, the Parlor, the Den and the Chart Room say NOT BUILT YET.
+  - The Market's Hold side (`game/market_room.gd`): Simple and Advanced (remembered on the
+    machine), the mood, the Sea Index, the countdown, vs Normal and Recent, hold value and
+    sparkline, Sell all asked twice, a Sell per stack, the trade sheet, movers, and the
+    price list.
+  - The Tackle Shop (`game/tackle_room.gd`): the landing with Ready to Buy and the category
+    states; bait; the hook and reel ladders; lines; the rod wall with its filters, Buy
+    (equips), Equip and Sell asked twice; the Completionist card, its view and its claim
+    reveal.
+  - The buyer moored in each water (`game/buyer.gd`, `game/buyer_panel.gd`), dressed in the
+    look SeaMap hashes off the water's id (exported with the rules), drifting on a short
+    beat. "Hail" (then "Speak to") within 260; the whole hold at their rate. While you are in
+    a water, a "!" on the screen's edge points to its buyer.
+  - The harbour bell and the chest fanfare are synthesised as the web makes them.
+  - `tests/smoke_docking.gd` plays it all on a scratch captain.
+
+  NOT YET:
+  - The Exchange side of the Market and its pending sales.
+  - The market tutorial's coach lines.
+  - The membership modal. A Captain's rod says "Captain only" and stays shut.
+  - The other ports on the chart (the Shipyard, where the hold upgrade is sold; the
+    Homestead; the Tally House; the Trawl Harbor).
+  - The wandering traders and the regulars.
 - FISHING PASS 3, BUILT (2026-09-30): the captain drawn on the boat as the web draws them
   (character color, hat, boat, rod, reel, pets, hook, at the web's percentages per pose; the
   bow pet rides on the water here too); the rod's menus (Loadout with a try-on preview and

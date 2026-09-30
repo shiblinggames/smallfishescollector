@@ -81,6 +81,12 @@ static func key(id: Variant) -> String:
 	return str(int(float(id)))
 
 
+## String(n) for a number: whole numbers without a decimal point.
+static func text(v: Variant) -> String:
+	var n: float = num(v)
+	return str(int(n)) if n == floor(n) and absf(n) < 1e15 else str(n)
+
+
 static func ids(obj: Dictionary) -> Array:
 	var out: Array = []
 	for k: Variant in obj:

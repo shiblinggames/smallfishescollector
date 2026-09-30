@@ -100,6 +100,9 @@ the answer to "where am I" is one number: `Math.hypot(x, y)`.
 
 ### The Mainland is the biggest thing on the chart
 
+(It has since grown: chart.ts has `r: 500`, and that is the live value. The reasoning below
+was written at 340.)
+
 `r: 340`, against 210 for the Harbour and 200 for the Shipyard — 2.6× their area. Landed on
 from both directions: 250 made it the same size as the two single-purpose ports and it read
 as one stop of three; 440 filled the screen off the dock and read as a coastline rather than

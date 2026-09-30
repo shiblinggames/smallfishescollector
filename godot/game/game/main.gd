@@ -12,6 +12,7 @@ func _ready() -> void:
 	_bind("sail_right", [KEY_D, KEY_RIGHT], [], JOY_AXIS_LEFT_X, 1.0)
 	_bind("fish_act", [KEY_SPACE, KEY_ENTER], [JOY_BUTTON_A], -1, 0.0)
 	_bind("fish_back", [KEY_ESCAPE], [JOY_BUTTON_B], -1, 0.0)
+	_bind("reach", [KEY_E], [JOY_BUTTON_Y], -1, 0.0)
 	var sea: Sea = Sea.new()
 	sea.session = Session.open_latest()
 	add_child(sea)

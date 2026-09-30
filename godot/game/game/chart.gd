@@ -9,7 +9,43 @@ extends RefCounted
 
 const GROUND: float = 0.58
 const HOME: Vector2 = Vector2(260, 560)
-const MAINLAND_R: float = 340.0
+## The Mainland (chart.ts PLACES 'mainland'): r 500, its painted plate 2r wide
+## with the island's centre 42% of the way down it, and one painted town
+## standing on it, its feet 47% across and 77% down the island's box.
+const MAINLAND_R: float = 500.0
+const PLATE_WATER: float = 0.42
+const TOWN_FEET: Vector2 = Vector2(47.0, 77.0)
+const TOWN_SCALE: float = 0.86
+## The hull stops at r x SHORE + HULL from an island's centre (SeaMap.tsx).
+const SHORE: float = 0.72
+const HULL: float = 55.0
+## The Mainland's berth (berthOf with its override): where you tie up. HOME
+## sits inside it, so a fresh session opens with the dock prompt up.
+const BERTH_AT: Vector2 = Vector2(425, 400)
+const BERTH_R: float = 440.0
+## How near a boat must be to hail someone on the water.
+const HAIL_RANGE: float = 260.0
+
+
+static func in_berth(p: Vector2) -> bool:
+	return p.distance_to(BERTH_AT) < BERTH_R
+
+
+## The buyer out in each water (chart.ts RESIDENTS): where they moor, their
+## rate, their line and their look, from the rules.
+static func residents() -> Array:
+	return Rules.data()["residents"]
+
+
+## roamR x 0.6: how far a buyer drifts from their mooring, kept clear of the
+## band's edges.
+static func drift_r(at: Vector2, zone_id: String) -> float:
+	for w: Dictionary in WATERS:
+		if w["id"] == zone_id:
+			var r: float = at.length()
+			var slack: float = minf(r - float(w["inner"]), float(w["outer"]) - r)
+			return clampf(slack - 180.0, 140.0, 520.0) * 0.6
+	return 240.0 * 0.6
 
 ## The five waters, inside out. `sea` is the palette: deep, middle, lit.
 const WATERS: Array[Dictionary] = [

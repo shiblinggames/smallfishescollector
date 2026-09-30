@@ -81,7 +81,7 @@ func steer(input: Vector2, delta: float) -> void:
 	velocity = velocity.lerp(want, 1.0 - exp(-ACCEL_K * delta))
 	var next: Vector2 = position + velocity * delta
 	# The Mainland's shore stops the hull.
-	var shore: float = Chart.MAINLAND_R * 0.82 + 40.0
+	var shore: float = Chart.MAINLAND_R * Chart.SHORE + Chart.HULL
 	if next.length() < shore:
 		next = next.normalized() * shore
 		velocity = Vector2.ZERO

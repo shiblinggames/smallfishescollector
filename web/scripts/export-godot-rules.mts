@@ -37,6 +37,8 @@ import { VIGIL_DIAL } from '../lib/ancientVigil'
 import { fishingGearLevelReq } from '../lib/gearGating'
 import { isCaptainRod, ROD_SELL_RATE } from '../lib/rods'
 import { RESIDENTS } from '../app/(app)/sea/chart'
+import { plainRodFor, plainHookFor } from '../lib/seaTraders'
+import { MOOD_CONFIG } from '../lib/marketMood'
 import { TIER_AT } from '../lib/seaFolk'
 import { ISLES } from '../lib/seaIsles'
 import { COMPLETIONIST_LEVEL } from '../lib/completionist'
@@ -110,7 +112,24 @@ const rules = {
   // The tackle shop and selling (lib/core/harbour, lib/core/selling).
   rodShop: Object.fromEntries(RODS.map(r => [r.tier, { levelReq: fishingGearLevelReq(r), captainRod: isCaptainRod(r) }])),
   rodSellRate: ROD_SELL_RATE,
-  residents: RESIDENTS,
+  // Each water's buyer, with the look and the drift SeaMap gives them (hashed
+  // off the water's id, so the same person every time).
+  residents: RESIDENTS.map(r => {
+    const seed = r.zoneId.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
+    return {
+      ...r,
+      driftRate: (Math.PI * 2) / (64 + (seed % 40)),
+      driftPhase: (seed % 100) / 16,
+      look: {
+        color: ['default', 'gray', 'blue', 'pink'][seed % 4],
+        boat: ['oak', 'mahogany', 'taupe', 'desert', 'charcoal'][seed % 5],
+        hat: ['brown', 'olive', 'midnight', 'offwhite'][seed % 4],
+        rodSlug: plainRodFor(seed),
+        hook: plainHookFor(seed),
+      },
+    }
+  }),
+  marketMoods: Object.fromEntries(Object.entries(MOOD_CONFIG).map(([k, v]) => [k, { label: v.label, color: v.color, desc: v.desc }])),
   completionistNeeds: { level: COMPLETIONIST_LEVEL, folk: FOLK.map(f => f.id), maxRapport: TIER_AT[4], isles: ISLES.map(i => i.id) },
   starter: (() => { const { species: _s, ...rest } = starterSave('__uid__', [], 0); return rest })(),
 }

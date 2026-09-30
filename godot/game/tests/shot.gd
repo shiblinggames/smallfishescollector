@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -54,7 +54,42 @@ func _init() -> void:
 		save["clears"] = ["the_sunken_hand"]
 		save["rodItems"] = { "galaxy": 1.0, "twinstrike": 1.0 }
 		hud.refresh()
+	if what in ["dock", "ashore", "market", "tackle", "rods", "shelf", "buyer"]:
+		var save: Dictionary = sea.session.save
+		for id: int in [1, 2, 3, 4, 5, 7, 9, 12, 16, 20, 31, 40]:
+			save["collection"][str(id)] = { "catch_count": 3.0, "is_golden": null }
+		save["hold"] = { "1": 6.0, "4": 3.0, "9": 2.0, "20": 5.0, "31": 1.0 }
+		p["doubloons"] = 48250.0
+		p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[33])
+		p["rod_tier"] = 3.0
+		save["rodItems"] = { "driftwood": 1.0, "fiberglass": 1.0 }
+		# A day of market so the board has history.
+		save["market"] = Market.fresh(at - 30.0 * Market.HOUR)
+		Market.current(save)
+		sea._boat.position = Chart.HOME
+		hud.refresh()
 	match what:
+		"dock":
+			pass
+		"ashore":
+			sea._go_ashore()
+		"market":
+			Prefs.set_value("market_advanced", true)
+			sea._enter_room("market")
+		"tackle", "rods", "shelf":
+			sea._enter_room("tackle")
+			await process_frame
+			var room: TackleRoom = sea._room_layer.get_child(0)
+			if what == "rods":
+				room._open("rod")
+			if what == "shelf":
+				room._open("bait")
+		"buyer":
+			var b: Buyer = sea._buyers[0]
+			sea._boat.position = b.position + Vector2(-60, 200)
+			for f: int in 3:
+				await process_frame
+			sea._hail(b)
 		"boss":
 			sea._boat.position = Vector2(0, 19000)
 			p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[89])

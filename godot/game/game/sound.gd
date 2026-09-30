@@ -114,3 +114,75 @@ static func music_for(phase: String) -> void:
 	if old.playing:
 		tw.tween_property(old, "volume_db", -80.0, FADE_S)
 		tw.chain().tween_callback(old.stop)
+
+
+# ── Made, not recorded ─────────────────────────────────────────────────────────
+#
+# The web builds two sounds out of oscillators rather than files: the harbour
+# bell when you tie up (lib/seaAmbience playHarbourBell) and the chest's
+# fanfare (lib/fishingMusic playChestSfx). The same partials and envelopes are
+# rendered here once into a sample and played like any other effect.
+
+const RATE: int = 22050
+static var _made: Dictionary = {}
+
+
+## voices: [freq_hz, start_s, peak, attack_s, decay_s (to silence), wave]
+static func _render(voices: Array, seconds: float) -> AudioStreamWAV:
+	var n: int = int(seconds * RATE)
+	var buf: PackedFloat32Array = PackedFloat32Array()
+	buf.resize(n)
+	for v: Array in voices:
+		var f: float = v[0]
+		var start: float = v[1]
+		var peak: float = v[2]
+		var attack: float = v[3]
+		var decay: float = v[4]
+		var tri: bool = v[5] == "triangle"
+		var i0: int = int(start * RATE)
+		var i1: int = mini(n, int((start + decay + 0.05) * RATE))
+		for i: int in range(i0, i1):
+			var t: float = float(i - i0) / RATE
+			# Linear up to the peak, then exponential down to 0.0001 at decay.
+			var env: float = peak * t / attack if t < attack else peak * pow(0.0001 / peak, (t - attack) / maxf(0.001, decay - attack))
+			var ph: float = fmod(f * t, 1.0)
+			var w: float = (4.0 * absf(ph - 0.5) - 1.0) if tri else sin(TAU * ph)
+			buf[i] += w * env
+	var bytes: PackedByteArray = PackedByteArray()
+	bytes.resize(n * 2)
+	for i: int in n:
+		bytes.encode_s16(i * 2, int(clampf(buf[i], -1.0, 1.0) * 32000.0))
+	var s: AudioStreamWAV = AudioStreamWAV.new()
+	s.format = AudioStreamWAV.FORMAT_16_BITS
+	s.mix_rate = RATE
+	s.data = bytes
+	return s
+
+
+static func _play_made(key: String, make: Callable, gain: float) -> void:
+	if _me == null:
+		return
+	if not _made.has(key):
+		_made[key] = make.call()
+	for p: AudioStreamPlayer in _me._sfx:
+		if not p.playing:
+			p.stream = _made[key]
+			p.volume_db = linear_to_db(gain)
+			p.play()
+			return
+
+
+## The harbour bell: 660Hz with two inharmonic partials, ringing out.
+static func bell() -> void:
+	_play_made("bell", func() -> AudioStreamWAV:
+		return _render([[660.0, 0.0, 0.16, 0.008, 2.6, "sine"], [660.0 * 2.76, 0.0, 0.07, 0.008, 1.6, "sine"], [660.0 * 5.4, 0.0, 0.035, 0.008, 0.9, "sine"]], 2.7), 1.6)
+
+
+## The chest: a lid thunk, then C5 E5 G5 C6 (and E6 when grand) rising.
+static func chest(grand: bool = false) -> void:
+	_play_made("chest%s" % grand, func() -> AudioStreamWAV:
+		var v: Array = [[160.0, 0.0, 0.3, 0.012, 0.2, "triangle"]]
+		var notes: Array = [523.25, 659.25, 783.99, 1046.5, 1318.5] if grand else [523.25, 659.25, 783.99, 1046.5]
+		for i: int in notes.size():
+			v.append([notes[i], 0.06 + i * 0.075, maxf(0.05, 0.24 - i * 0.018), 0.014, 0.55, "triangle" if i == notes.size() - 1 else "sine"])
+		return _render(v, 1.1), 1.4)

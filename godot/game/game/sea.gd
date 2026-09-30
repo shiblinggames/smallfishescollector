@@ -21,6 +21,13 @@ var _camera: Camera2D
 var _night: CanvasModulate
 var _town_light: PointLight2D
 var _hud: FishingHud
+var _hud_layer: CanvasLayer
+var _room_layer: CanvasLayer
+var _berth: Berth
+var _buyers: Array[Buyer] = []
+var _mark: BuyerMark
+## Buyers dealt with this session: "Hail" becomes "Speak to".
+var _dealt: Dictionary = {}
 var _save_t: float = 0.0
 ## Music starts on the first key or press, as on the web.
 var _music_started: bool = false
@@ -40,18 +47,45 @@ func _ready() -> void:
 
 	_world = Node2D.new()
 	_world.scale = Vector2(1.0, Chart.GROUND)
+	_world.y_sort_enabled = true
 	add_child(_world)
 
+	# The Mainland's plate, 2r wide, its island's centre 42% of the way down,
+	# painted in perspective so it stands un-squashed; the town on it, feet
+	# first, and the berth on the water beside it.
 	var mainland: Sprite2D = Sprite2D.new()
 	mainland.texture = load("res://art/sea/port-mainland.webp")
 	var s: float = Chart.MAINLAND_R * 2.0 / float(mainland.texture.get_width())
 	mainland.scale = Vector2(s, s / Chart.GROUND)
+	mainland.position = Vector2(0, (0.5 - Chart.PLATE_WATER) * mainland.texture.get_height() * s / Chart.GROUND)
+	mainland.z_index = -2
 	_world.add_child(mainland)
+	var d: float = Chart.MAINLAND_R * 2.0
+	var town: Sprite2D = Sprite2D.new()
+	town.texture = Skipper.tex("sea/mainland-town.png")
+	if town.texture != null:
+		var ts: float = d * Chart.TOWN_SCALE / float(town.texture.get_width())
+		town.scale = Vector2(ts, ts / Chart.GROUND)
+		town.offset = Vector2(0, -town.texture.get_height() / 2.0)
+		town.position = Vector2(-Chart.MAINLAND_R + Chart.TOWN_FEET.x / 100.0 * d, -Chart.MAINLAND_R + Chart.TOWN_FEET.y / 100.0 * d)
+		_world.add_child(town)
+	_berth = Berth.new()
+	_berth.r = Chart.BERTH_R
+	_berth.position = Chart.BERTH_AT
+	_berth.bearing = Chart.BERTH_AT.angle()
+	_berth.z_index = -1
+	_world.add_child(_berth)
+	for info: Dictionary in Chart.residents():
+		var b: Buyer = Buyer.new()
+		b.info = info
+		_world.add_child(b)
+		_buyers.append(b)
 	_town_light = PointLight2D.new()
 	_town_light.texture = Glow.radial(256, Color(1.0, 0.8, 0.5), true)
 	_town_light.texture_scale = 4.0
 	_town_light.color = Color(1.0, 0.78, 0.5)
 	_town_light.energy = 0.0
+	_town_light.position = Vector2(-30, 120)
 	_world.add_child(_town_light)
 
 	_boat = Boat.new()
@@ -71,6 +105,12 @@ func _ready() -> void:
 	var hud_layer: CanvasLayer = CanvasLayer.new()
 	hud_layer.layer = 10
 	add_child(hud_layer)
+	_hud_layer = hud_layer
+	_room_layer = CanvasLayer.new()
+	_room_layer.layer = 20
+	add_child(_room_layer)
+	_mark = BuyerMark.new()
+	hud_layer.add_child(_mark)
 	var sound: Sound = Sound.new()
 	add_child(sound)
 	_hud = FishingHud.new()
@@ -83,7 +123,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	var input: Vector2 = Input.get_vector("sail_left", "sail_right", "sail_up", "sail_down")
+	var input: Vector2 = Vector2.ZERO if _hud.busy() else Input.get_vector("sail_left", "sail_right", "sail_up", "sail_down")
 	_boat.steer(input, delta)
 	var cam_world: Vector2 = _boat.position
 	_camera.position = Vector2(cam_world.x, cam_world.y * Chart.GROUND)
@@ -109,6 +149,13 @@ func _process(delta: float) -> void:
 	_night.color = Color.WHITE.lerp(Color(0.42, 0.48, 0.66), dark)
 	_boat.lantern.energy = dark * 1.1
 	_town_light.energy = dark * 1.4
+	# Light and lettering are not dimmed by the night: undo it for them.
+	var lift: Color = Color(1.0 / _night.color.r, 1.0 / _night.color.g, 1.0 / _night.color.b)
+	_berth.darkness = dark
+	_berth.modulate = lift
+	for b: Buyer in _buyers:
+		b.lift = lift
+	_reach(cam_world)
 
 	_hud.set_water(Chart.water_at(cam_world))
 	_hud.set_clock(SeaClock.PHASE_LABEL[clock["phase"]])
@@ -126,6 +173,60 @@ func _process(delta: float) -> void:
 			session.persist()
 
 
+## What is in reach of the boat: the berth first, then a buyer in hail range.
+## The HUD shows it and presses it.
+func _reach(at: Vector2) -> void:
+	var w: Dictionary = Chart.water_at(at)
+	var band_buyer: Buyer = null
+	for b: Buyer in _buyers:
+		if not w.is_empty() and b.info["zoneId"] == w["id"]:
+			band_buyer = b
+	if Chart.in_berth(at):
+		_berth.inside = true
+		_hud.set_reach("Go ashore at The Mainland", _go_ashore)
+		_mark.target = null
+		return
+	_berth.inside = false
+	for b: Buyer in _buyers:
+		if b.near(at):
+			_hud.set_reach(("Speak to %s" if _dealt.has(b.info["zoneId"]) else "Hail %s") % b.info["name"], _hail.bind(b))
+			_mark.target = null
+			return
+	_hud.set_reach("", Callable())
+	# The compass mark: while you are in a water, where its buyer is.
+	_mark.target = null if band_buyer == null else Vector2(band_buyer.position.x - at.x, (band_buyer.position.y - at.y) * Chart.GROUND) * _camera.zoom.x
+
+
+func _go_ashore() -> void:
+	Rumble.buzz([18, 40, 24])
+	Sound.bell()
+	var a: Ashore = Ashore.new()
+	a.chose.connect(_enter_room)
+	_hud.hold_for(a)
+	_hud_layer.add_child(a)
+
+
+func _enter_room(door: String) -> void:
+	var room: Room = MarketRoom.new() if door == "market" else TackleRoom.new()
+	room.session = session
+	room.closed.connect(func() -> void:
+		_boat.set_look(Skipper.look_of(session.profile()))
+		_hud.refresh())
+	_hud.hold_for(room)
+	_room_layer.add_child(room)
+
+
+func _hail(b: Buyer) -> void:
+	Rumble.tap(12)
+	var p: BuyerPanel = BuyerPanel.new()
+	p.session = session
+	p.info = b.info
+	p.closed.connect(func() -> void: _dealt[b.info["zoneId"]] = true)
+	p.sold.connect(func() -> void: _hud.refresh())
+	_hud.hold_for(p)
+	_hud_layer.add_child(p)
+
+
 func _input(event: InputEvent) -> void:
 	if not _music_started and (event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton) and event.is_pressed():
 		_music_started = true
@@ -135,3 +236,32 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		var gp: Vector2 = get_global_mouse_position()
 		_boat.target = Vector2(gp.x, gp.y / Chart.GROUND)
+
+
+## The compass mark (SeaMap.tsx): while you are in a water and its buyer is
+## off the screen, a "!" on the screen's edge in their direction.
+class BuyerMark:
+	extends Control
+	## The buyer's offset from the screen's centre, in screen pixels, or null.
+	var target: Variant = null
+
+	func _ready() -> void:
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		if target == null:
+			return
+		var off: Vector2 = target
+		var half: Vector2 = size / 2.0 - Vector2(48, 90)
+		if absf(off.x) < half.x and absf(off.y) < half.y:
+			return
+		var k: float = minf(half.x / maxf(0.001, absf(off.x)), half.y / maxf(0.001, absf(off.y)))
+		var at: Vector2 = size / 2.0 + off * k
+		draw_circle(at, 17.0, Color(0.024, 0.047, 0.07, 0.86))
+		draw_arc(at, 17.0, 0.0, TAU, 40, Color(1.0, 0.81, 0.54, 0.6), 1.5, true)
+		var f: Font = UiTheme.title_font()
+		draw_string(f, at + Vector2(-5, 8), "!", HORIZONTAL_ALIGNMENT_CENTER, 10, 22, Color("#ffd986"))

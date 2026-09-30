@@ -19,7 +19,9 @@ extends Control
 ##
 ## Controls: Space, Enter or the pad's A to cast and to reel in; Escape or B
 ## to walk away (the line stays out and resumes on the next cast here) or to
-## close the card.
+## close the card. What is in reach (the berth, a buyer) shows as a pill over
+## the menus: E or the pad's Y presses it, and so does Space where there is
+## no fishing to be had.
 
 signal fishing_changed(active: bool)
 
@@ -79,6 +81,11 @@ var _toast: Label
 var _toast_t: float = 0.0
 var _modal: Control
 var _level_seen: int = 0
+## What is in reach, and the pill that offers it.
+var _reach_text: String = ""
+var _reach_act: Callable = Callable()
+var _reach_btn: Button
+var _reach_l: Label
 
 
 func _ready() -> void:
@@ -161,6 +168,43 @@ func _ready() -> void:
 	_tide.visible = false
 	_tide.pressed.connect(_skip)
 	add_child(_tide)
+
+	_reach_btn = Button.new()
+	var rs: StyleBoxFlat = StyleBoxFlat.new()
+	rs.bg_color = Color(0.04, 0.078, 0.11, 0.86)
+	rs.border_color = Color(0.7, 0.84, 0.91, 0.45)
+	rs.set_border_width_all(1)
+	rs.set_corner_radius_all(999)
+	var rh: StyleBoxFlat = rs.duplicate()
+	rh.border_color = Color(1.0, 0.85, 0.53, 0.8)
+	_reach_btn.add_theme_stylebox_override("normal", rs)
+	_reach_btn.add_theme_stylebox_override("hover", rh)
+	_reach_btn.add_theme_stylebox_override("pressed", rh)
+	_reach_btn.focus_mode = Control.FOCUS_NONE
+	_reach_btn.visible = false
+	_reach_btn.pressed.connect(_press_reach)
+	add_child(_reach_btn)
+	_reach_l = Label.new()
+	_reach_l.add_theme_font_override("font", UiTheme.title_font())
+	_reach_l.add_theme_font_size_override("font_size", 17)
+	_reach_l.add_theme_color_override("font_color", Color("#f2ead8"))
+	_reach_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reach_btn.add_child(_reach_l)
+	var key: Label = Label.new()
+	key.name = "Key"
+	key.text = "E"
+	key.add_theme_font_size_override("font_size", 12)
+	key.add_theme_color_override("font_color", Color("#cfe3ee"))
+	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	key.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var ks: StyleBoxFlat = StyleBoxFlat.new()
+	ks.bg_color = Color(1, 1, 1, 0.08)
+	ks.border_color = Color(1, 1, 1, 0.3)
+	ks.set_border_width_all(1)
+	ks.set_corner_radius_all(5)
+	key.add_theme_stylebox_override("normal", ks)
+	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reach_btn.add_child(key)
 
 	_toast = _label(self, "", 18, GOLD, true)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -338,6 +382,58 @@ func _update_action() -> void:
 					_blocked.text = "Out of bait. There are peddlers out here, and the shop ashore."
 	_action.add_theme_color_override("font_color", TEAL if teal else GOLD)
 	_action.add_theme_color_override("font_hover_color", TEAL.lightened(0.2) if teal else GOLD.lightened(0.2))
+
+
+# ── What is in reach ──────────────────────────────────────────────────────────
+
+## The sea says what the boat can reach ("" for nothing) and what pressing it
+## does. A new label pops the pill in again, as the web keys it by its text.
+func set_reach(text: String, act: Callable) -> void:
+	_reach_act = act
+	var show: bool = text != "" and _modal == null and (phase == "idle" or phase == "result")
+	if text == _reach_text and _reach_btn.visible == show:
+		return
+	_reach_text = text
+	_reach_btn.visible = show
+	if not show:
+		return
+	_reach_l.text = text
+	var w: float = UiTheme.title_font().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+	var full: float = w + 22.0 + 10.0 + 26.0 + 22.0
+	_place(_reach_btn, Vector2(0.5, 1.0), Vector2(-full / 2.0, -160), Vector2(full, 44))
+	_reach_l.position = Vector2(22, 10)
+	var key: Label = _reach_btn.get_node("Key")
+	key.position = Vector2(22 + w + 10, 10)
+	key.size = Vector2(26, 24)
+	_reach_btn.pivot_offset = Vector2(full / 2.0, 22)
+	_reach_btn.modulate.a = 0.0
+	_reach_btn.scale = Vector2.ONE * 0.94
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(_reach_btn, "modulate:a", 1.0, 0.16)
+	tw.tween_property(_reach_btn, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _press_reach() -> void:
+	if _modal != null or not _reach_btn.visible or not _reach_act.is_valid():
+		return
+	_reach_act.call()
+
+
+## A panel or room from the sea (ashore, a buyer, the Market) holds the HUD
+## still until it closes.
+func hold_for(c: Control) -> void:
+	_modal = c
+	_reach_btn.visible = false
+	c.tree_exited.connect(func() -> void:
+		if _modal == c:
+			_modal = null
+		_reach_text = ""
+		refresh())
+
+
+## Whether anything is open over the sea, so the boat holds still.
+func busy() -> bool:
+	return _modal != null
 
 
 func _open_sheet(s: Sheet) -> void:
@@ -880,6 +976,10 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _modal != null:
+		return
+	if event.is_action_pressed("reach") or (event.is_action_pressed("fish_act") and water.is_empty() and _reach_btn.visible):
+		_press_reach()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("fish_act"):
 		if phase == "idle" or phase == "result":

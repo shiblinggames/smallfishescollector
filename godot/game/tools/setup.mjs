@@ -43,6 +43,9 @@ const ART = [
   '*crateclosed.png', '*crateopen.png', 'smallpile.png', 'hat_*_rest.png', 'boat_*_rest.png',
   'worms.png', 'minnow.png', 'nightcrawler.png', 'chum.png', 'anglersformula.png', 'luminouslure.png', 'goldenlure.png',
   'parrot_*.png', 'monkey_*.png', 'seal_*.png', 'lizard_*.png', 'raccoon_*.png', 'crab_*.png', 'plesiosaur_baby.png',
+  // Docking: the Mainland's town, the doors ashore, the Tackle Shop's backdrop and the lines.
+  'sea/mainland-town.png', 'sea/tavern.png', 'sea/market.png', 'sea/tackle.png', 'sea/parlor.png', 'sea/den.png', 'sea/charting.png',
+  'tackle-shop-page-bg.jpg', 'monofilament.png', 'braidedline.png', 'copolymer.png', 'fluorocarbon.png', 'titaniumwire.png', 'deepsealine.png',
   // Sound: the cast, the line hitting the water, the perfect, the dial's tick, and the day, dusk and night music.
   'fishingcast.mp3', 'fishingcast2.mp3', 'fishingperfect.mp3', 'fishingdial.ogg',
   'fishingsoundtrack.ogg', 'fishingsoundtrackopen.ogg', 'fishingsoundtrackdeep.ogg',
