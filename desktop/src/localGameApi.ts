@@ -56,6 +56,7 @@ import { installRng, mulberry32, seedOf } from '@/lib/rng'
 import type { SpeciesRow } from '@/lib/data/fishingData'
 import speciesJson from '@/content/fish_species.json'
 import { XP_TABLE } from '@/lib/fishingLevel'
+import { syncAchievements, setActivity } from './steam'
 
 export type {
   FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
@@ -95,7 +96,12 @@ function starterSave(): LocalSave {
 export async function openSave(storage: SaveStorage): Promise<LocalSave> {
   const loaded = await loadSave(storage, SPECIES)
   const save = loaded?.save ?? starterSave()
-  session = { save, storage, carried: loaded?.carried ?? {} }
+  // Every autosave also tells Steam about any badge it has not heard of yet
+  // (./steam); the first one catches up everything already earned.
+  const watched: SaveStorage = { read: () => storage.read(), write: async (text) => { await storage.write(text); syncAchievements(save) } }
+  session = { save, storage: watched, carried: loaded?.carried ?? {} }
+  syncAchievements(save)
+  setActivity('menu')
   installRng(mulberry32(seedOf(`${save.uid}:${Date.now()}`)))
   if (!loaded) await writeSave(storage, save)
   return save
@@ -116,7 +122,7 @@ async function run<T>(fn: (db: ReturnType<typeof need>['db'], uid: string) => Pr
 }
 
 const fishing: FishingApi = {
-  castLine: (baitType, habitat, at) => run((db, uid) => core.castLine(db, uid, baitType, habitat, at)),
+  castLine: (baitType, habitat, at) => (setActivity('fishing', habitat), run((db, uid) => core.castLine(db, uid, baitType, habitat, at))),
   reelIn: (fishId, result, baitType, doubleCatch = false, streak = 0, jackpot = 1) =>
     run((db, uid) => core.reelIn(db, uid, fishId, result, baitType, doubleCatch, streak, jackpot)),
   reelCrate: (_zone, _tier, result = 'catch') => run((db, uid) => core.reelCrate(db, uid, result)),
@@ -232,7 +238,7 @@ const gauntletApi: GauntletApi = {
   getGauntletDailyState: (variant) => runGauntlet((db, uid) => gauntletCore.getGauntletDailyState(db, uid, variant)),
   getGauntletLeaderboard: (variant) => runGauntlet((db, uid) => gauntletCore.getGauntletLeaderboard(db, uid, variant)),
   markGauntletIntroSeen: (variant) => runGauntlet((db, uid) => gauntletCore.markGauntletIntroSeen(db, uid, variant)),
-  startGauntletRun: (hardcore, terms, variant) => runGauntlet((db, uid) => gauntletCore.startGauntletRun(db, uid, hardcore, terms, variant)),
+  startGauntletRun: (hardcore, terms, variant) => (setActivity('gauntlet'), runGauntlet((db, uid) => gauntletCore.startGauntletRun(db, uid, hardcore, terms, variant))),
   checkpointGauntletRun: (state) => runGauntlet((db, uid) => gauntletCore.checkpointGauntletRun(db, uid, state)),
   pauseGauntletRun: (state) => runGauntlet((db, uid) => gauntletCore.pauseGauntletRun(db, uid, state)),
   resumeGauntletRun: () => runGauntlet((db, uid) => gauntletCore.resumeGauntletRun(db, uid)),
@@ -259,7 +265,7 @@ async function runDen<T>(fn: (db: ReturnType<typeof localCasinoData>, uid: strin
 }
 
 const casinoApi: CasinoApi = {
-  getCasinoState: () => runDen((db, uid) => casinoCore.getCasinoState(db, uid)),
+  getCasinoState: () => (setActivity('den'), runDen((db, uid) => casinoCore.getCasinoState(db, uid))),
   buyInCasino: (amount) => runDen((db, uid) => casinoCore.buyInCasino(db, uid, amount)),
   cashOutCasino: () => runDen((db, uid) => casinoCore.cashOutCasino(db, uid)),
   markDenGuideSeen: () => runDen((db, uid) => casinoCore.markDenGuideSeen(db, uid)),
@@ -288,7 +294,7 @@ async function runRaid<T>(fn: (db: ReturnType<typeof localRaidData>, uid: string
 }
 
 const raidsApi: RaidsApi = {
-  startRaidRun: (raidId) => runRaid((db, uid) => raidCore.startRaidRun(db, uid, raidId)),
+  startRaidRun: (raidId) => (setActivity('raid'), runRaid((db, uid) => raidCore.startRaidRun(db, uid, raidId))),
   awardRaidKill: (round, token) => runRaid((db, uid) => raidCore.awardRaidKill(db, uid, round, token)),
   recordRaidClear: (raidId, ms, token) => runRaid((db, uid) => raidCore.recordRaidClear(db, uid, raidId, ms, token)),
   recordSkirmishClear: () => runRaid((db, uid) => raidCore.recordSkirmishClear(db, uid)),

@@ -36,7 +36,8 @@
       "dist/**",
       "electron/main.cjs",
       "electron/preload.cjs",
-      "build/icon.png"
+      "build/icon.png",
+      "electron/steam.cjs"
     ],
     "win": {
       "target": "nsis",
@@ -48,6 +49,13 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
-  }
+    },
+    "asarUnpack": [
+      "node_modules/steamworks.js/dist/**"
+    ]
+  },
+  "dependencies": {
+    "steamworks.js": "^0.4.0"
+  },
+  "steamAppId": null
 }

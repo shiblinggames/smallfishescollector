@@ -76,6 +76,8 @@ scripts/*
 !scripts/player-save.mts
 # The Parlor's offline question bank (content/trivia.json) cannot be refreshed without it.
 !scripts/export-trivia-bank.mts
+# The Steam achievement list and icons (desktop/steam/) cannot be rebuilt without it.
+!scripts/steam-achievements.mts
 
 # Badge slicer source sheets (dev-only input for slice-badges.mjs; sliced output in public/badges/ is committed)
 # Badge SOURCE sheets. Multi-badge plates that slice-badges.mjs cuts into

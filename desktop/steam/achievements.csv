@@ -1,0 +1,244 @@
+api_name,display_name,description,difficulty,icon,icon_locked
+prestige_i,Prestige I,Reach Prestige in any fishing zone,rookie,prestige_i.jpg,prestige_i_locked.jpg
+trophy_catch,Trophy Catch,Land a Trophy-tier fish,veteran,trophy_catch.jpg,trophy_catch_locked.jpg
+unbroken,Unbroken,Land 10 perfect catches in a row,seasoned,unbroken.jpg,unbroken_locked.jpg
+relentless,Relentless,Land 15 perfect catches in a row,veteran,relentless.jpg,relentless_locked.jpg
+untouchable,Untouchable,Land 20 perfect catches in a row,master,untouchable.jpg,untouchable_locked.jpg
+dead_eye,Dead-Eye,"Land 1,000 perfect catches all-time",veteran,dead_eye.jpg,dead_eye_locked.jpg
+master_angler,Master Angler,Reach Fishing Level 100,master,master_angler.jpg,master_angler_locked.jpg
+zone_legend,Zone Legend,Reach Prestige in all 4 fishing zones,veteran,zone_legend.jpg,zone_legend_locked.jpg
+prestige_stars,Prestige Stars,Earn all 20 prestige stars (5 per zone),grandmaster,prestige_stars.jpg,prestige_stars_locked.jpg
+two_for_the_pot,Two for the Pot,Reel in a double catch,rookie,two_for_the_pot.jpg,two_for_the_pot_locked.jpg
+saltlung,Saltlung,"Cast your line 1,000 times",seasoned,saltlung.jpg,saltlung_locked.jpg
+crate_digger,Crate Digger,Open 50 supply crates,seasoned,crate_digger.jpg,crate_digger_locked.jpg
+half_the_sea,Half the Sea,Catch 50 fish species,rookie,half_the_sea.jpg,half_the_sea_locked.jpg
+ancient_ones,Ancient Ones,Catch all 6 Ancient Deep trophies,master,ancient_ones.jpg,ancient_ones_locked.jpg
+full_collection,Full Collection,Catch every fish species in the game,master,full_collection.jpg,full_collection_locked.jpg
+completionist_rod,The Completionist,Claim the Completionist Rod,grandmaster,completionist_rod.jpg,completionist_rod_locked.jpg
+fully_rigged,Fully Rigged,Forge all 3 effects into the Completionist Rod,veteran,fully_rigged.jpg,fully_rigged_locked.jpg
+reforged,Reforged,Pay to re-forge the Completionist Rod into a fresh 3-effect loadout,seasoned,reforged.jpg,reforged_locked.jpg
+growing_crew,Growing Crew,Recruit 25 crew,rookie,growing_crew.jpg,growing_crew_locked.jpg
+theres_a_grave,There's a Grave?,Lose a crew member for the first time,rookie,theres_a_grave.jpg,theres_a_grave_locked.jpg
+crewmaster,Crewmaster,Reach the top Crew Hall tier,veteran,crewmaster.jpg,crewmaster_locked.jpg
+full_muster,Full Muster,Recruit 100 crew,veteran,full_muster.jpg,full_muster_locked.jpg
+legendary_recruit,Legendary Recruit,Recruit a legendary crew,seasoned,legendary_recruit.jpg,legendary_recruit_locked.jpg
+old_salt,Old Salt,Level a crew to 100,master,old_salt.jpg,old_salt_locked.jpg
+leviathan_hall,Leviathan Hall,Build the Crew Hall to its final tier,veteran,leviathan_hall.jpg,leviathan_hall_locked.jpg
+fully_outfitted,Fully Outfitted,Max both Drills and Stores,veteran,fully_outfitted.jpg,fully_outfitted_locked.jpg
+deep_cut,Deep Cut,Carry a stat only the Leviathan bunk can roll,seasoned,deep_cut.jpg,deep_cut_locked.jpg
+full_complement,Full Complement,Level 10 crew to 100,master,full_complement.jpg,full_complement_locked.jpg
+divine_hand,Divine Hand,Land a Divine trait on a crew,master,divine_hand.jpg,divine_hand_locked.jpg
+six_divine,Choir of the Deep,Hold six crew with Divine traits at once,grandmaster,six_divine.jpg,six_divine_locked.jpg
+navigator,Wayfinder,Reach Navigation Level 50,seasoned,navigator.jpg,navigator_locked.jpg
+fleet_admiral,Fleet Admiral,Complete 100 voyages,seasoned,fleet_admiral.jpg,fleet_admiral_locked.jpg
+master_navigator,Master Navigator,Reach Navigation Level 100,master,master_navigator.jpg,master_navigator_locked.jpg
+corsairs_bane,Corsair's Bane,Defeat Barnacle Pete in challenge mode,seasoned,corsairs_bane.jpg,corsairs_bane_locked.jpg
+ghost_ship,Krust's Crutch,Defeat Captain Krust in challenge mode,seasoned,ghost_ship.jpg,ghost_ship_locked.jpg
+cartographers_fall,The Cartographer's Fall,Defeat the Cartographer in challenge mode,seasoned,cartographers_fall.jpg,cartographers_fall_locked.jpg
+toll_paid,Toll Paid,Defeat Tollmaster Spet in challenge mode,seasoned,toll_paid.jpg,toll_paid_locked.jpg
+swift_reckoning,Swift Reckoning,Clear Corsair's Reckoning in under 1:30,veteran,swift_reckoning.jpg,swift_reckoning_locked.jpg
+opening_salvo,Opening Salvo,Land a single raid hit for 50 or more,rookie,opening_salvo.jpg,opening_salvo_locked.jpg
+hard_hitter,Hard Hitter,Land a single raid hit for 100 or more,seasoned,hard_hitter.jpg,hard_hitter_locked.jpg
+heavy_broadside,Heavy Broadside,Land a single raid hit for 250 or more,veteran,heavy_broadside.jpg,heavy_broadside_locked.jpg
+finndicates_bane,Finndicate's Bane,Clear all four raids in challenge mode,veteran,finndicates_bane.jpg,finndicates_bane_locked.jpg
+into_the_deep,Into the Deep,Descend to depth 5 in the Gauntlet,seasoned,into_the_deep.jpg,into_the_deep_locked.jpg
+fathomless,Fathomless,Bank 500 Fathoms all-time,veteran,fathomless.jpg,fathomless_locked.jpg
+davy_jones,Davy Jones' Locker,Descend to depth 10 in the Gauntlet,veteran,davy_jones.jpg,davy_jones_locked.jpg
+landfall,Landfall,Chart your first World Chart landmark,rookie,landfall.jpg,landfall_locked.jpg
+quartermaster,Quartermaster,Bank 40 charting points,rookie,quartermaster.jpg,quartermaster_locked.jpg
+den_magnate,Chartwright,Bank 80 charting points,seasoned,den_magnate.jpg,den_magnate_locked.jpg
+uncharted_no_more,Uncharted No More,Chart seven World Chart landmarks,seasoned,uncharted_no_more.jpg,uncharted_no_more_locked.jpg
+fully_laden,Fully Laden,Solve a Man-o-War hold (the hardest sudoku),seasoned,fully_laden.jpg,fully_laden_locked.jpg
+the_long_watch,The Long Watch,Bank 500 charting points,master,the_long_watch.jpg,the_long_watch_locked.jpg
+clean_manifest,Clean Manifest,Stow all four holds in a single week,veteran,clean_manifest.jpg,clean_manifest_locked.jpg
+master_cartographer,Master Cartographer,Chart the entire World Chart (all 13 landmarks),grandmaster,master_cartographer.jpg,master_cartographer_locked.jpg
+catfish_jackpot,Catfish Jackpot,Win the slots Catfish Jackpot,seasoned,catfish_jackpot.jpg,catfish_jackpot_locked.jpg
+baby_steps,Baby Steps,"Hold 100,000 doubloons at once",rookie,baby_steps.jpg,baby_steps_locked.jpg
+deep_pockets,Deep Pockets,"Hold 1,000,000 doubloons at once",veteran,deep_pockets.jpg,deep_pockets_locked.jpg
+bilge_baron,Bilge Baron,"Hold 2,500,000 doubloons at once",master,bilge_baron.jpg,bilge_baron_locked.jpg
+got_away,The One That Got Away,Lose 50 fish to snapped lines,rookie,got_away.jpg,got_away_locked.jpg
+reel_lucky,Reel Lucky,Hit a fishing jackpot,veteran,reel_lucky.jpg,reel_lucky_locked.jpg
+two_fisted,Two-Fisted,Land 100 double catches,seasoned,two_fisted.jpg,two_fisted_locked.jpg
+sure_shot,Sure Shot,Land 250 perfect catches all-time,seasoned,sure_shot.jpg,sure_shot_locked.jpg
+salted_through,Salted Through,"Cast your line 10,000 times",master,salted_through.jpg,salted_through_locked.jpg
+maiden_voyage,Maiden Voyage,Complete your first voyage,rookie,maiden_voyage.jpg,maiden_voyage_locked.jpg
+old_sea_dog,Old Sea Dog,Complete 50 voyages,seasoned,old_sea_dog.jpg,old_sea_dog_locked.jpg
+hundred_fins,A Hundred Fins,Catch 100 fish species,veteran,hundred_fins.jpg,hundred_fins_locked.jpg
+three_legends,The Three Legends,Own 3 legendary crew at once,veteran,three_legends.jpg,three_legends_locked.jpg
+captains_colors,Captain's Colors,Become a Captain,rookie,captains_colors.jpg,captains_colors_locked.jpg
+crowned,Crowned,Make it all the way up the Pirate King ladder,master,crowned.jpg,crowned_locked.jpg
+throne_in_sight,Throne in Sight,Reach rung 7 of the Pirate King ladder,seasoned,throne_in_sight.jpg,throne_in_sight_locked.jpg
+clean_sweep,Clean Sweep,"Clear a Captain's Board, every answer correct",veteran,clean_sweep.jpg,clean_sweep_locked.jpg
+parlor_hot_hand,Hot Hand,Answer 5 Parlor questions in a row,seasoned,parlor_hot_hand.jpg,parlor_hot_hand_locked.jpg
+parlor_sharpshooter,Sharpshooter,Answer 10 Parlor questions in a row,veteran,parlor_sharpshooter.jpg,parlor_sharpshooter_locked.jpg
+parlor_flawless,Flawless,Answer 20 Parlor questions in a row,master,parlor_flawless.jpg,parlor_flawless_locked.jpg
+parlor_cardsharp,Cardsharp,Reach the Cardsharp rank in the Parlor,seasoned,parlor_cardsharp.jpg,parlor_cardsharp_locked.jpg
+parlor_kingpin,Kingpin,Reach the Kingpin rank in the Parlor,veteran,parlor_kingpin.jpg,parlor_kingpin_locked.jpg
+parlor_legend,Parlor Legend,Reach the top Parlor rank,grandmaster,parlor_legend.jpg,parlor_legend_locked.jpg
+friend_at_sea,A Friend at Sea,Earn your first fishing pet,rookie,friend_at_sea.jpg,friend_at_sea_locked.jpg
+unstoppable,Unstoppable,Win 5 blackjack hands in a row,veteran,unstoppable.jpg,unstoppable_locked.jpg
+stacked_deck,Stacked Deck,Watch the dealer pull blackjack two hands running,seasoned,stacked_deck.jpg,stacked_deck_locked.jpg
+called_it,Called It,Win a straight-up single-number roulette bet,seasoned,called_it.jpg,called_it_locked.jpg
+ship_of_the_line,Ship of the Line,Own the Man-o-War,veteran,ship_of_the_line.jpg,ship_of_the_line_locked.jpg
+first_haul,First Haul,Collect your first trawl,rookie,first_haul.jpg,first_haul_locked.jpg
+steady_nets,Steady Nets,Collect 25 trawls,seasoned,steady_nets.jpg,steady_nets_locked.jpg
+deep_trawler,Deep Trawler,Collect 100 trawls,veteran,deep_trawler.jpg,deep_trawler_locked.jpg
+wet_behind_ears,Wet Behind the Ears,Reach Fishing Level 25,rookie,wet_behind_ears.jpg,wet_behind_ears_locked.jpg
+beginners_luck,Beginner's Luck,Fish up and open your first supply crate,rookie,beginners_luck.jpg,beginners_luck_locked.jpg
+struck_gold,Struck Gold,Catch your first golden fish,rookie,struck_gold.jpg,struck_gold_locked.jpg
+old_hand,Old Hand,Reach Fishing Level 50,seasoned,old_hand.jpg,old_hand_locked.jpg
+crate_expectations,Crate Expectations,Open 250 supply crates,seasoned,crate_expectations.jpg,crate_expectations_locked.jpg
+a_real_keeper,A Real Keeper,Land 10 Trophy-size catches,seasoned,a_real_keeper.jpg,a_real_keeper_locked.jpg
+full_stringer,Full Stringer,Keep 3 fishing pets at once,seasoned,full_stringer.jpg,full_stringer_locked.jpg
+one_upped,The Hand on the Rod,Finish the first chapter of Finn's jobs,seasoned,one_upped.jpg,one_upped_locked.jpg
+fresh_coat,Fresh Coat,Own a boat skin,seasoned,fresh_coat.jpg,fresh_coat_locked.jpg
+twice_the_haul,Twice the Haul,Land 500 double catches,veteran,twice_the_haul.jpg,twice_the_haul_locked.jpg
+menagerie,The Menagerie,Keep 5 fishing pets at once,veteran,menagerie.jpg,menagerie_locked.jpg
+fishmonger,Fishmonger,"Sell 250,000 doubloons of fish",veteran,fishmonger.jpg,fishmonger_locked.jpg
+net_positive,Net Positive,Collect 500 trawls,veteran,net_positive.jpg,net_positive_locked.jpg
+crack_shot,Crack Shot,"Land 2,500 perfect catches all-time",master,crack_shot.jpg,crack_shot_locked.jpg
+wreck_diver,Wreck Diver,Open 500 supply crates,master,wreck_diver.jpg,wreck_diver_locked.jpg
+salvage_rights,Salvage Rights,"Open 1,000 supply crates",grandmaster,salvage_rights.jpg,salvage_rights_locked.jpg
+high_water_mark,High Water Mark,Reach Max Prestige in any fishing zone,master,high_water_mark.jpg,high_water_mark_locked.jpg
+fish_baron,Fish Baron,"Sell 1,000,000 doubloons of fish",master,fish_baron.jpg,fish_baron_locked.jpg
+hoard_of_gold,Hoard of Gold,Catch 10 golden fish,master,hoard_of_gold.jpg,hoard_of_gold_locked.jpg
+finns_rival,The Long Sail,Finish three chapters of Finn's jobs,master,finns_rival.jpg,finns_rival_locked.jpg
+in_the_flow,In the Flow,Land 30 perfect catches in a row,grandmaster,in_the_flow.jpg,in_the_flow_locked.jpg
+eagle_eyed,Eagle-Eyed,"Land 5,000 perfect catches all-time",grandmaster,eagle_eyed.jpg,eagle_eyed_locked.jpg
+el_dorado,El Dorado,Catch 25 golden fish,grandmaster,el_dorado.jpg,el_dorado_locked.jpg
+the_better_angler,The Better Angler,Finish every job Finn sets you,grandmaster,the_better_angler.jpg,the_better_angler_locked.jpg
+full_drydock,Full Drydock,Own every boat skin,grandmaster,full_drydock.jpg,full_drydock_locked.jpg
+first_descent,First Descent,Cash out a Gauntlet run,rookie,first_descent.jpg,first_descent_locked.jpg
+abyssward,Abyssward,Reach depth 20 in the Gauntlet,seasoned,abyssward.jpg,abyssward_locked.jpg
+forge_worthy,Forge-Worthy,Reach depth 35 in the Gauntlet,veteran,forge_worthy.jpg,forge_worthy_locked.jpg
+davys_doorstep,Davy's Doorstep,Reach depth 60 in the Gauntlet,master,davys_doorstep.jpg,davys_doorstep_locked.jpg
+well_provisioned,Well-Provisioned,Claim your first Gauntlet upgrade,rookie,well_provisioned.jpg,well_provisioned_locked.jpg
+locker_raider,Locker Raider,Claim 6 Gauntlet upgrades,seasoned,locker_raider.jpg,locker_raider_locked.jpg
+forge_awakened,The Forge Awakens,Unlock the Forge from the Gauntlet,veteran,forge_awakened.jpg,forge_awakened_locked.jpg
+master_of_the_locker,Master of the Locker,Own every Gauntlet upgrade,master,master_of_the_locker.jpg,master_of_the_locker_locked.jpg
+push_your_luck,Push Your Luck,Complete 10 Gauntlet runs,rookie,push_your_luck.jpg,push_your_luck_locked.jpg
+again_and_again,Again and Again,Complete 50 Gauntlet runs,seasoned,again_and_again.jpg,again_and_again_locked.jpg
+fathom_hoarder,Fathom Hoarder,"Earn 1,000 Fathoms all-time",veteran,fathom_hoarder.jpg,fathom_hoarder_locked.jpg
+one_shot,One Shot,"Land a single Gauntlet hit for 2,000 or more",veteran,one_shot.jpg,one_shot_locked.jpg
+greeds_price,Greed's Price,Die deeper than your best cash-out,seasoned,greeds_price.jpg,greeds_price_locked.jpg
+storm_reader,Storm Reader,Discover your first confluence,rookie,storm_reader.jpg,storm_reader_locked.jpg
+deep_cartographer,Deep Cartographer,Discover every confluence,master,deep_cartographer.jpg,deep_cartographer_locked.jpg
+drowned_ledger,The Drowned Ledger,Cash out a Hardcore Gauntlet run,rookie,drowned_ledger.jpg,drowned_ledger_locked.jpg
+the_unsinkable,The Unsinkable,Reach depth 15 in the Hardcore Gauntlet,seasoned,the_unsinkable.jpg,the_unsinkable_locked.jpg
+locker_bound,Locker-Bound,Reach depth 25 in the Hardcore Gauntlet,veteran,locker_bound.jpg,locker_bound_locked.jpg
+the_deep_end,The Deep End,Reach depth 50 in the Hardcore Gauntlet,master,the_deep_end.jpg,the_deep_end_locked.jpg
+ferrymans_toll,The Ferryman's Toll,Lose a squad to the Locker in Hardcore,seasoned,ferrymans_toll.jpg,ferrymans_toll_locked.jpg
+ink_and_salt,Ink and Salt,Cash out from depth 10 with 5+ Pressure,rookie,ink_and_salt.jpg,ink_and_salt_locked.jpg
+the_weight,The Weight,Cash out from depth 20 with 15+ Pressure,seasoned,the_weight.jpg,the_weight_locked.jpg
+crushing_depth,Crushing Depth,Cash out from depth 30 with 25+ Pressure,veteran,crushing_depth.jpg,crushing_depth_locked.jpg
+not_a_drop,Not a Drop,Cash out from depth 20 under Iron Rations II,veteran,not_a_drop.jpg,not_a_drop_locked.jpg
+paid_in_full,Paid in Full,Cash out from depth 35 with 40+ Pressure,master,paid_in_full.jpg,paid_in_full_locked.jpg
+for_glory_alone,For Glory Alone,Cash out from depth 15 with every term signed,grandmaster,for_glory_alone.jpg,for_glory_alone_locked.jpg
+blood_charged,Blood-Charged,Boost a recruit reroll with Blood Gems,rookie,blood_charged.jpg,blood_charged_locked.jpg
+blood_rich,Blood-Rich,Earn 500 Blood Gems all-time,seasoned,blood_rich.jpg,blood_rich_locked.jpg
+bloodhoard,Bloodhoard,"Earn 2,000 Blood Gems all-time",veteran,bloodhoard.jpg,bloodhoard_locked.jpg
+crimson_fortune,Crimson Fortune,Win a crew skin from the blood gamble,seasoned,crimson_fortune.jpg,crimson_fortune_locked.jpg
+weapon_of_legend,Weapon of Legend,Build your Man-o-War ultimate,veteran,weapon_of_legend.jpg,weapon_of_legend_locked.jpg
+first_fusion,First Fusion,Forge your first item,seasoned,first_fusion.jpg,first_fusion_locked.jpg
+ruse_undone,Ruse Undone,Defeat Admiral Ruse in challenge mode,seasoned,ruse_undone.jpg,ruse_undone_locked.jpg
+account_settled,Account Settled,Defeat the Quartermaster in challenge mode,seasoned,account_settled.jpg,account_settled_locked.jpg
+grand_forgemaster,Grand Forgemaster,Learn every forge recipe,grandmaster,grand_forgemaster.jpg,grand_forgemaster_locked.jpg
+mark_of_mastery,Mark of Mastery,Reach a Mark III ship class,veteran,mark_of_mastery.jpg,mark_of_mastery_locked.jpg
+quick_draw,Quick Draw,Clear any raid in under 1:00,veteran,quick_draw.jpg,quick_draw_locked.jpg
+complete_captain,The Complete Captain,Reach Navigation 100 and Fishing 100,grandmaster,complete_captain.jpg,complete_captain_locked.jpg
+six_legends,The Avengers,Own all 5 base legendary crew,master,six_legends.jpg,six_legends_locked.jpg
+colors_raised,Colors Raised,Own your first crew skin,rookie,colors_raised.jpg,colors_raised_locked.jpg
+the_chase,The Chase,Own a chase skin,veteran,the_chase.jpg,the_chase_locked.jpg
+fashionista,Fashionista,Have a skin equipped on 5 crew at once,veteran,fashionista.jpg,fashionista_locked.jpg
+full_wardrobe,Full Wardrobe,Own all four skins for one legendary crew,master,full_wardrobe.jpg,full_wardrobe_locked.jpg
+dressed_to_the_nines,Dressed to the Nines,Own 10 crew skins,master,dressed_to_the_nines.jpg,dressed_to_the_nines_locked.jpg
+trophy_hunter,Trophy Hunter,Land 25 Trophy-size catches,master,trophy_hunter.jpg,trophy_hunter_locked.jpg
+overkill,Overkill,Land a single raid hit for 500 or more,veteran,overkill.jpg,overkill_locked.jpg
+all_hands_legends,"All Hands, All Legends",Raid in the Man-o-War with 5 Level 100 legendary crew,grandmaster,all_hands_legends.jpg,all_hands_legends_locked.jpg
+iron_ruse,Iron Ruse,Beat the Admiral Ruse raid taking no damage,master,iron_ruse.jpg,iron_ruse_locked.jpg
+not_a_shot_fired,Not a Shot Fired,Sink a boss without a shot or a crew ability,veteran,not_a_shot_fired.jpg,not_a_shot_fired_locked.jpg
+tight_quarters,Tight Quarters,Beat the Quartermaster raid using no crew abilities,master,tight_quarters.jpg,tight_quarters_locked.jpg
+dead_reckoning,Dead Reckoning,Clear the Cartographer raid missing no critical hits,master,dead_reckoning.jpg,dead_reckoning_locked.jpg
+blockade_broken,Blockade Broken,Defeat Sal Brackwater in challenge mode,veteran,blockade_broken.jpg,blockade_broken_locked.jpg
+don_drowned,The Don Is Drowned,Defeat Don Finleone in challenge mode,veteran,don_drowned.jpg,don_drowned_locked.jpg
+the_sunken_hand,The Sunken Hand,Clear all 8 raids in challenge mode,master,the_sunken_hand.jpg,the_sunken_hand_locked.jpg
+six_aboard,Six Aboard,Add the Sixth Berth to your ship,seasoned,six_aboard.jpg,six_aboard_locked.jpg
+expanded_armory,Expanded Armory,Bolt the Expanded Armory onto your deck,seasoned,expanded_armory.jpg,expanded_armory_locked.jpg
+full_tackle_box,Full Tackle Box,Own every rod money can buy,master,full_tackle_box.jpg,full_tackle_box_locked.jpg
+dons_descent,The Green Beckons,Cash out a Don's Gauntlet run,seasoned,dons_descent.jpg,dons_descent_locked.jpg
+dons_doorstep,The Don's Doorstep,Descend to depth 50 in Don's Gauntlet,master,dons_doorstep.jpg,dons_doorstep_locked.jpg
+dons_reckoning,The Don's Reckoning,Descend to depth 75 in Don's Gauntlet,grandmaster,dons_reckoning.jpg,dons_reckoning_locked.jpg
+dons_ghost_hull_won,Ghost of the Court,Earn the Don's Ghost Hull from Don's Gauntlet,veteran,dons_ghost_hull_won.jpg,dons_ghost_hull_won_locked.jpg
+first_convergence,The Convergence,Forge a convergence in Don's Gauntlet,master,first_convergence.jpg,first_convergence_locked.jpg
+one_true_shot,One True Shot,"Land a single Gauntlet hit for 4,000+",veteran,one_true_shot.jpg,one_true_shot_locked.jpg
+abyssal_smith,The Abyssal Forge,Forge your first tier-3 Abyssal item,master,abyssal_smith.jpg,abyssal_smith_locked.jpg
+abyssal_master,Abyssal Master,Forge every Abyssal item,grandmaster,abyssal_master.jpg,abyssal_master_locked.jpg
+ghost_armory,The Ghost Armory,Own all three Don's Gauntlet items,veteran,ghost_armory.jpg,ghost_armory_locked.jpg
+ultimate_only,The Long Reload,Reach depth 10 in Don's Gauntlet firing only your Mega,master,ultimate_only.jpg,ultimate_only_locked.jpg
+weight_of_green,The Weight of the Green,Bank from depth 30 in Don's Gauntlet carrying 5+ curses,master,weight_of_green.jpg,weight_of_green_locked.jpg
+untouched,Untouched,Bank a Don's Gauntlet run from depth 5 without taking a hit,veteran,untouched.jpg,untouched_locked.jpg
+one_last_ride,One Last Ride,Clear The Sunken Hand,master,one_last_ride.jpg,one_last_ride_locked.jpg
+cut_off_at_the_wrist,Cut Off at the Wrist,Clear The Sunken Hand on Challenge,master,cut_off_at_the_wrist.jpg,cut_off_at_the_wrist_locked.jpg
+the_long_quiet,The Long Quiet,See the Sunken Hand through to its end,seasoned,the_long_quiet.jpg,the_long_quiet_locked.jpg
+ancient_tackle,Ancient Tackle,Earn your first Ancient-rarity item,veteran,ancient_tackle.jpg,ancient_tackle_locked.jpg
+salvors_claim,Salvor's Claim,Open a berth from the wreck,seasoned,salvors_claim.jpg,salvors_claim_locked.jpg
+both_hands,Both Hands,Open both berths from the wreck,master,both_hands.jpg,both_hands_locked.jpg
+something_old,Something Old,Carry your first Primeval spoil,veteran,something_old.jpg,something_old_locked.jpg
+both_in_hand,Both in Hand,Own both Primeval spoils,master,both_in_hand.jpg,both_in_hand_locked.jpg
+first_contract,Paper Captain,Open your first contract on the Exchange,rookie,first_contract.jpg,first_contract_locked.jpg
+first_settle,Read the Water,Have a contract settle in your favor,seasoned,first_settle.jpg,first_settle_locked.jpg
+cut_losses,Out Before the Bell,Sell a contract early rather than ride it out,seasoned,cut_losses.jpg,cut_losses_locked.jpg
+worthless,Not a Doubloon,Watch a contract expire worthless,seasoned,worthless.jpg,worthless_locked.jpg
+big_score,The Whole Berth,"Clear 200,000 doubloons profit on a single contract",veteran,big_score.jpg,big_score_locked.jpg
+market_maker,Market Maker,Turn a profit on 100 contracts,master,market_maker.jpg,market_maker_locked.jpg
+first_bounty,Took the Job,Claim your first bounty,rookie,first_bounty.jpg,first_bounty_locked.jpg
+full_board,Board Cleared,Claim every order posted in one day,seasoned,full_board.jpg,full_board_locked.jpg
+elite_order,The Hard Way,Claim an Elite bounty,veteran,elite_order.jpg,elite_order_locked.jpg
+fifty_orders,Known at the Docks,Claim 50 bounties,veteran,fifty_orders.jpg,fifty_orders_locked.jpg
+seven_boards,Every Morning,Clear the whole board on 7 days,master,seven_boards.jpg,seven_boards_locked.jpg
+bounty_hoard,Harbormaster's Favorite,"Earn 5,000 gems from bounties",master,bounty_hoard.jpg,bounty_hoard_locked.jpg
+waking_it,Waking It,Take a Primeval spoil to Tier III,veteran,waking_it.jpg,waking_it_locked.jpg
+fully_attuned,Fully Attuned,Take a Primeval spoil to Tier VI,grandmaster,fully_attuned.jpg,fully_attuned_locked.jpg
+the_sixth_mount,The Sixth Mount,Sail with all six item slots filled,veteran,the_sixth_mount.jpg,the_sixth_mount_locked.jpg
+colours_of_the_hand,Colors of the Hand,Own all three hulls off The Sunken Hand,master,colours_of_the_hand.jpg,colours_of_the_hand_locked.jpg
+three_for_three,Three for Three,"Clear all three daily challenges, 7 times",seasoned,three_for_three.jpg,three_for_three_locked.jpg
+standing_watch,Standing Watch,"Clear all three daily challenges, 30 times",veteran,standing_watch.jpg,standing_watch_locked.jpg
+old_reliable,Old Reliable,"Clear all three daily challenges, 100 times",master,old_reliable.jpg,old_reliable_locked.jpg
+massive_booty,Massive Booty,Land a Massive Booty on a voyage,veteran,massive_booty.jpg,massive_booty_locked.jpg
+the_fourth_task,The Fourth Task,Clear 25 Master daily challenges,master,the_fourth_task.jpg,the_fourth_task_locked.jpg
+back_to_the_dark,Back to the Dark,Release an Ancient back into the deep,veteran,back_to_the_dark.jpg,back_to_the_dark_locked.jpg
+twice_landed,Twice Landed,Raise an Ancient to Vigil Rank II,veteran,twice_landed.jpg,twice_landed_locked.jpg
+six_abreast,Six Abreast,Every Ancient at Vigil Rank III or better,master,six_abreast.jpg,six_abreast_locked.jpg
+struck_in_gold,Struck in Gold,Take an Ancient to Vigil Rank V,master,struck_in_gold.jpg,struck_in_gold_locked.jpg
+deep_remembers,The Deep Remembers,Reach 20 total Vigil,master,deep_remembers.jpg,deep_remembers_locked.jpg
+the_long_vigil,The Long Vigil,Master all six Ancients at Rank V,grandmaster,the_long_vigil.jpg,the_long_vigil_locked.jpg
+known_face,Known Face,Become a known face to one of the regulars,rookie,known_face.jpg,known_face_locked.jpg
+whole_road,The Whole Road,Meet all nine regulars out on the water,seasoned,whole_road.jpg,whole_road_locked.jpg
+you_remembered,You Remembered,Bring a regular the one fish they actually want,seasoned,you_remembered.jpg,you_remembered_locked.jpg
+bearing_gifts,Bearing Gifts,Hand over 25 gifts,seasoned,bearing_gifts.jpg,bearing_gifts_locked.jpg
+good_company,Good Company,Be good company to five regulars,seasoned,good_company.jpg,good_company_locked.jpg
+trusted_three,Trusted Three,Be trusted by three regulars,veteran,trusted_three.jpg,trusted_three_locked.jpg
+open_hand,Open Hand,Hand over 100 gifts,veteran,open_hand.jpg,open_hand_locked.jpg
+thick_as_thieves,Thick as Thieves,Reach the top standing with a regular,veteran,thick_as_thieves.jpg,thick_as_thieves_locked.jpg
+salt_of_the_earth,Salt of the Earth,Reach the top standing with all nine regulars,grandmaster,salt_of_the_earth.jpg,salt_of_the_earth_locked.jpg
+roof_of_your_own,A Roof of Your Own,Build the cottage on your island,rookie,roof_of_your_own.jpg,roof_of_your_own_locked.jpg
+name_on_the_chart,Name on the Chart,Give your homestead a name of your own,rookie,name_on_the_chart.jpg,name_on_the_chart_locked.jpg
+the_longhouse,The Longhouse,Build the longhouse,seasoned,the_longhouse.jpg,the_longhouse_locked.jpg
+furnished,Furnished,Own 10 furnishings,seasoned,furnished.jpg,furnished_locked.jpg
+gallery_hung,Gallery Hung,Hang six badges in your gallery,seasoned,gallery_hung.jpg,gallery_hung_locked.jpg
+the_great_hall,The Great Hall,Build the great hall,veteran,the_great_hall.jpg,the_great_hall_locked.jpg
+the_estate,The Estate,"Build the Estate, the last rung of the house",master,the_estate.jpg,the_estate_locked.jpg
+every_comfort,Every Comfort,Own every furnishing there is,master,every_comfort.jpg,every_comfort_locked.jpg
+first_ashore,First Ashore,Go ashore on your first isle,rookie,first_ashore.jpg,first_ashore_locked.jpg
+beachcomber,Beachcomber,Land on 10 isles,seasoned,beachcomber.jpg,beachcomber_locked.jpg
+others_came_before,Others Came Before,Read all nine notes left on the rocks,veteran,others_came_before.jpg,others_came_before_locked.jpg
+far_rocks,The Far Rocks,Land on 20 isles,veteran,far_rocks.jpg,far_rocks_locked.jpg
+every_last_rock,Every Last Rock,Land on all 27 isles,master,every_last_rock.jpg,every_last_rock_locked.jpg
+wake_behind_you,Wake Behind You,Chart a quarter of the fishing sea,rookie,wake_behind_you.jpg,wake_behind_you_locked.jpg
+home_waters,Home Waters,Chart three fifths of the fishing sea,seasoned,home_waters.jpg,home_waters_locked.jpg
+into_the_fog,Into the Fog,Chart half the campaign water,seasoned,into_the_fog.jpg,into_the_fog_locked.jpg
+no_blank_spaces,No Blank Spaces,Chart nine tenths of the fishing sea,master,no_blank_spaces.jpg,no_blank_spaces_locked.jpg
+fog_burned_off,The Fog Burned Off,Chart nine tenths of the campaign water,master,fog_burned_off.jpg,fog_burned_off_locked.jpg
+first_spade,First Spade,Dig up your first buried cache,rookie,first_spade.jpg,first_spade_locked.jpg
+six_feet_down,Six Feet Down,Dig up 6 buried caches,seasoned,six_feet_down.jpg,six_feet_down_locked.jpg
+salted_away,Salted Away,Dig up all 12 buried caches,veteran,salted_away.jpg,salted_away_locked.jpg

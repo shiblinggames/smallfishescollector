@@ -11,11 +11,14 @@
 //    web/lib/data/local/nodeSaveStorage gives the tests.
 // 3. Keeps the page locked down: no Node in the page, context isolation, the
 //    sandbox, and no navigation or new windows away from the game.
+// 4. Talks to Steam (./steam.cjs): achievements, rich presence and the overlay,
+//    each a quiet no-op when there is no Steam.
 
 const { app, BrowserWindow, ipcMain, protocol, net, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const { pathToFileURL } = require('url')
+const steam = require('./steam.cjs')
 
 const DIST = path.join(__dirname, '..', 'dist')
 const DEV_URL = process.env.STB_DEV_URL
@@ -25,7 +28,15 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
 ])
 
-function saveFile() { return path.join(app.getPath('userData'), SAVE_NAME) }
+// Steam first: a packaged build started outside Steam is handed back to it.
+if (!steam.prepare(app)) app.exit(0)
+steam.register(ipcMain)
+
+// THE SAVE'S FOLDER IS PINNED, not taken from the package name: Steam Auto-Cloud
+// is configured against this exact path (docs/systems/steam-port.md), and every
+// player's save lives in it, so renaming the package must never move it.
+const SAVE_DIR = 'seas-the-booty-desktop'
+function saveFile() { return path.join(app.getPath('appData'), SAVE_DIR, SAVE_NAME) }
 
 ipcMain.handle('save:where', () => saveFile())
 

@@ -1,3 +1,5 @@
 node_modules/
 dist/
 release/
+# Rebuilt by web/scripts/steam-achievements.mts
+steam/achievement-icons/

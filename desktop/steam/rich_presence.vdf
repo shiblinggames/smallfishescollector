@@ -1,0 +1,13 @@
+"lang"
+{
+	"Language"	"english"
+	"Tokens"
+	{
+		"#Status_Menu"	"In port"
+		"#Status_Fishing"	"Fishing"
+		"#Status_FishingZone"	"Fishing the %zone%"
+		"#Status_Raid"	"On a raid"
+		"#Status_Gauntlet"	"Running the gauntlet"
+		"#Status_Den"	"At the tables in the Den"
+	}
+}

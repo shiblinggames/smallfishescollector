@@ -187,7 +187,7 @@ verification is worth targeting on purpose rather than hoping for.
 
 ### 5. Steam features
 
-Achievements mapped off `lib/badges.ts` (close to one for one), rich presence, invites. Cloud
+Achievements mapped off `lib/badges.ts` (one for one, the API name is the badge id; BUILT 2026-09-29, see step 8 below), rich presence, invites. Cloud
 saves are a no-op: the save is already the database.
 
 ### 6. Multiplayer onto Steam networking
@@ -1094,8 +1094,44 @@ In order. Each step is worth doing even if the port never happens.
      the three tour flags, `checkLeaderboardPosition` and `syncFishHold`.
    - `scripts/check-offline-progress.mts` (in `npm run check`) covers all of it, including the
      Almanac. Production probe as catman (reads and refusals, nothing moved).
-   - NEXT: the desktop plays every system offline. The remaining work is the phases above
-     (money, identity, the shell, input, Steam features).
+   - CORRECTION: what runs offline is every system's RULES and the whole `api`. The desktop
+     WINDOW still shows the spike's small fishing screen (`desktop/src/App.tsx`), not the
+     game's screens. Mounting the real screens in the shell is its own stage. They are Next
+     pages whose data is loaded on the server, so each one needs its loading moved onto `api`.
+   **THE STEAMWORKS LAYER, 2026-09-29.** `steamworks.js` 0.4.0 in the desktop shell.
+   - `desktop/electron/steam.cjs` (main process): starts Steam, relaunches a packaged build
+     through Steam if it was opened outside it, switches on the overlay, and answers three
+     calls from the page (`window.stbSteam`): status, unlock, presence. With no App ID or no
+     Steam running, every call does nothing and the game plays the same.
+   - THE APP ID is `steamAppId` in `desktop/package.json`, null until the store page exists.
+     `STB_STEAM_APPID=480` runs against Valve's public test app (Spacewar) for a quick check.
+     That proves the bridge and the overlay, but 480's achievements are Valve's, and Steam will
+     show you as playing Spacewar while it runs.
+   - ACHIEVEMENTS: the Steam API name IS the badge id, so there is no mapping table. Every save
+     write sends any badge in `unlocked_badges` that Steam has not been told about
+     (`desktop/src/steam.ts`). The first write after opening sends them all, so an imported web
+     save or badges earned while Steam was closed catch up on their own.
+   - RICH PRESENCE: in port, fishing (with the zone), on a raid, running the gauntlet, at the
+     tables in the Den. The text is `desktop/steam/rich_presence.vdf`.
+   - OVERLAY COST: turning on the overlay makes Electron draw the GPU in-process and repaint
+     every frame. That only happens when Steam is actually running. Watch frame rate there.
+   - THE SAVE FOLDER IS PINNED in `electron/main.cjs` to `%APPDATA%\seas-the-booty-desktop`
+     (the name the dev and packaged builds already used), so renaming the package cannot move
+     every player's save.
+   **Partner-site setup, once there is an App ID** (no code, all on partner.steamgames.com):
+   1. Put the App ID in `desktop/package.json` `steamAppId`.
+   2. Achievements: `npx tsx scripts/steam-achievements.mts` (in `web/`) writes
+      `desktop/steam/achievements.csv` (243 rows: API name, name, description) and
+      `desktop/steam/achievement-icons/` (earned and greyed JPGs, git-ignored, 256px; change
+      `ICON` there if the partner page asks for another size). Steamworks has no bulk upload,
+      so these are entered by hand. Decide which story badges should be HIDDEN (spoilers); the
+      list does not guess.
+   3. Rich presence: upload `desktop/steam/rich_presence.vdf` as the English localization.
+   4. Steam Cloud, Auto-Cloud: quota about 50 MB, 10 files. Root `WinAppDataRoaming`,
+      subdirectory `seas-the-booty-desktop`, pattern `captain.json`, not recursive. Add the
+      same for `MacAppSupport` and `LinuxXdgConfigHome` if those builds ship. Never include
+      `captain.json.tmp`.
+   - NOT YET: Steam Input (controller) and the Deck, and the real screens in the shell.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):
