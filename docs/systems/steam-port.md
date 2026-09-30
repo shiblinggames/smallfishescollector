@@ -1,5 +1,22 @@
 # The Steam port — PARKED IDEA, NOT A PLAN
 
+**2026-09-30, KONG: THE STEAM GAME IS REBUILT IN GODOT.** This reverses the 2026-09-28 "wrap in
+Electron" decision (stage 3 below). The reason: multiplayer is now at launch (Charters, co-op
+raids, crew dives), none of the screens were built for more than one captain, and with the game
+desktop-only a real engine is the better home. What carries over: the rules and cores in
+`web/lib` (the SPEC for the port, with their checks), the content JSON, the art in
+`web/public`, and every design decision on this page. The Electron shell (`desktop/`) is no
+longer the product; it stays as a reference for how the offline game behaves until the Godot
+build passes it. Weighed and accepted: the rewrite is months before multiplayer starts (about
+155k lines of screens and 69k of rules at the time).
+- LANGUAGE: GDScript with static typing; Steam through GodotSteam (its multiplayer peer too).
+- FIRST SLICE: the sea chart and fishing, solo and matching the rules, then a second captain
+  joining over a Steam lobby and sailing the same sea. Co-op raids after the co-op combat
+  design sitting.
+- PARITY: the TS cores generate test cases (a save plus seeded rolls in, the save out) and
+  the Godot build must replay them exactly; a system is ported when it matches.
+- THE WEB BETA: stays up, FEATURE-FROZEN, bug fixes only. New features go into Godot.
+
 **Status: parked 2026-09-10, the same day it was written. THE GAME STAYS WEB-BASED.**
 **2026-09-28: Kong asked to PREP a possible Steam migration with offline play, up to the whole
 game offline. Still no switch decided. See "Offline-capable port: the preparation plan" at the
@@ -1066,7 +1083,8 @@ In order. Each step is worth doing even if the port never happens.
    tools, and its webview differs per OS. Electron ships one Chromium everywhere, has
    steamworks.js for Steam, and is the path Vampire Survivors, Cookie Clicker and CrossCode took.
    The decision on 2026-09-28: WRAP, do not rewrite. A native (Godot) rewrite was weighed and
-   set aside; revisit only for consoles or if Steam sales justify it.
+   set aside; revisit only for consoles or if Steam sales justify it. REVERSED 2026-09-30:
+   Kong chose Godot once multiplayer was at launch (see the top of this page).
    - A Vite + React front end, NOT a static export of the Next app (that would drag every server
      page in). Its `@` resolves into `web/`, so the core, the local store, the save file, the
      rules, the content and the REAL dial (`components/FishingDial` DialSVG) are the website's
