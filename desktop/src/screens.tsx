@@ -144,8 +144,10 @@ export const SCREENS: Record<string, Screen> = {
   '/expeditions/items': { load: async () => redirect('/sea?open=loadout'), Component: OnlineOnly },
   '/expeditions/ship': { load: async () => redirect('/sea?open=ship'), Component: OnlineOnly },
   // ── Between players: the online game's ──
-  '/leaderboard': { load: async () => ({ which: 'leaderboard' }), Component: OnlineOnly },
-  '/tavern/contests': { load: async () => ({ which: 'contests' }), Component: OnlineOnly },
+  // No leaderboards and no contests on Steam at all: anything still pointing
+  // at them lands on the chart.
+  '/leaderboard': { load: async () => redirect('/sea'), Component: OnlineOnly },
+  '/tavern/contests': { load: async () => redirect('/sea'), Component: OnlineOnly },
   '/social': { load: async () => ({ which: 'social' }), Component: OnlineOnly },
   '/u': { load: async () => ({ which: 'captain' }), Component: OnlineOnly },
   '/profile': { load: async () => profilePageProps(), Component: Profile },

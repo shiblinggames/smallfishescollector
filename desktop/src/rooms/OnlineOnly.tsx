@@ -1,14 +1,13 @@
 // THE ROOMS THAT ARE ABOUT OTHER CAPTAINS (Steam prep, 2026-09-30). The
-// leaderboards, contests, the follow list and other captains' profiles are
-// between players, and they stay with the online game (the leaderboards and
-// contests retire on Steam). Offline the shell says so plainly and shows the
-// way back, instead of a room with nobody in it.
+// follow list and other captains' profiles are between players and stay with
+// the online game until sailing together moves onto Steam friends. Offline the
+// shell says so plainly and shows the way back, instead of a room with nobody
+// in it. (The leaderboards and contests do not exist on Steam at all; their
+// paths redirect to the chart, see ../screens.)
 
 import RoomHeader from '@/components/RoomHeader'
 
 const SAYS: Record<string, { title: string; line: string }> = {
-  leaderboard: { title: 'The Leaderboards', line: 'The leaderboards belong to the online game. Out here the only captain to beat is you.' },
-  contests: { title: 'Contests', line: 'Contests are races between captains, and they stay with the online game.' },
   social: { title: 'Your Crew', line: 'Other captains sail the online game. Nobody else is on this sea.' },
   captain: { title: 'Another Captain', line: 'Other captains sail the online game. Nobody else is on this sea.' },
 }

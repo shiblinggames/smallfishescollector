@@ -38,8 +38,9 @@ export default defineConfig({
   // index.html, so a screen's URL survives a reload.
   base: '/',
   publicDir: path.join(WEB, 'public'),
-  // The screens read NEXT_PUBLIC_* settings; offline none of them apply.
-  define: { 'process.env': JSON.stringify({ NODE_ENV: process.env.NODE_ENV ?? 'production' }) },
+  // The screens read NEXT_PUBLIC_* settings; offline none of them apply, except
+  // the one that says which build this is (web/lib/platform IS_DESKTOP).
+  define: { 'process.env': JSON.stringify({ NODE_ENV: process.env.NODE_ENV ?? 'production', NEXT_PUBLIC_PLATFORM: 'desktop' }) },
   // `npm run app:dev` opens the window on this dev server.
   server: { port: 5173, strictPort: true },
   clearScreen: false,

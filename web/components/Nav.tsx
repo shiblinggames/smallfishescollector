@@ -14,6 +14,7 @@ import { signOutHere } from '@/lib/signOut'
 import { motion, AnimatePresence } from 'framer-motion'
 import TickingNumber from './TickingNumber'
 import { api } from '@/lib/gameApi'
+import { IS_DESKTOP } from '@/lib/platform'
 
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
@@ -397,7 +398,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
             always stay on screen. whitespace-nowrap keeps any two-word tab
             from folding into two lines mid-scroll. */}
         <div className="hidden sm:flex flex-1 min-w-0 overflow-x-auto scrollbar-hide whitespace-nowrap ml-6 gap-1 text-[0.74rem] font-karla font-600 uppercase tracking-[0.1em]">
-          {[...links, ...desktopOnlyLinks, ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin', badge: null }] : [])].map(({ href, label, badge }) => (
+          {[...links.filter(l => !(IS_DESKTOP && l.href === '/leaderboard')), ...desktopOnlyLinks, ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin', badge: null }] : [])].map(({ href, label, badge }) => (
             <Link key={href} href={href}
               className={`py-1.5 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#a0a09a] hover:text-[#f0ede8]'}`}>
               {label}

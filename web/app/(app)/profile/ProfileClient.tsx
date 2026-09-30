@@ -28,6 +28,7 @@ import PopupShell from '@/components/PopupShell'
 import PreviewStage from '@/components/PreviewStage'
 import { fishImageUrl } from '@/lib/fishArt'
 import { api } from '@/lib/gameApi'
+import { IS_DESKTOP } from '@/lib/platform'
 
 interface Props {
   email: string
@@ -524,6 +525,8 @@ export default function ProfileClient({
               >
                 Friends ↗
               </Link>
+              {/* No leaderboards on Steam. */}
+              {!IS_DESKTOP && (
               <Link
                 href="/leaderboard"
                 className="font-karla font-700 uppercase tracking-[0.1em]"
@@ -536,6 +539,7 @@ export default function ProfileClient({
               >
                 Leaderboard ↗
               </Link>
+              )}
             </div>
           </>
         )}

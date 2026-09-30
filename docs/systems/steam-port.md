@@ -1242,9 +1242,15 @@ In order. Each step is worth doing even if the port never happens.
      web.
    - Checked: every room opened in the real window with no errors, and the gauntlets were
      also opened on an unlocked copy of the save.
-   - NOT YET: the raid fight routes (`/raids/krust` and the rest) are only a fallback, since
-     fights open inline on the chart. The Nav still links the Leaderboard, and its chips read
-     the database directly; they need the API. The starter save is still the spike's (Lv 5,
+   - NO LEADERBOARDS ON STEAM, AT ALL (Kong, 2026-09-30): `web/lib/platform` `IS_DESKTOP` (set
+     only by the desktop's Vite config) hides every way in. That covers the Nav tab, the phone
+     tab bar, the profile's link, the gauntlets' Records mooring and the Exchange's Ranks.
+     `/leaderboard` and `/tavern/contests` redirect to the chart. On the web the flag is always
+     false. Use it only for what Steam decisively does not have; the rules never branch on it.
+   - RAID FIGHT PAGES ARE NOT NEEDED (Kong): all 19 campaign fights open inline on the chart
+     (checked against `lib/raidRegistry`), so `/raids/krust` and the rest are dead fallbacks.
+     The desktop has none; the web still carries them, harmlessly.
+   - NOT YET: the Nav's chips read the database directly and need the API. The starter save is still the spike's (Lv 5,
      500 doubloons) and should match a fresh web account (and on Steam, be a Captain).
    **THE STEAMWORKS LAYER, 2026-09-29.** `steamworks.js` 0.4.0 in the desktop shell.
    - `desktop/electron/steam.cjs` (main process): starts Steam, relaunches a packaged build

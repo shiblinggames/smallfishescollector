@@ -65,6 +65,7 @@ import { lockBodyScroll } from '@/lib/bodyScrollLock'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
+import { IS_DESKTOP } from '@/lib/platform'
 
 // ── THE COMBAT SCREEN IS ITS OWN CHUNK ─────────────────────────────────────
 // RaidCombat is the biggest file in the game, and nothing draws it until a
@@ -3020,7 +3021,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       // barnacled, the Don's gilded and lamplit. public/slip-*.webp.
       { id: 'run', label: 'Run Upgrades', ox: -0.34, oy: 0.14, color: 0xc4a0e8, art: `/slip-${isDonG ? 'don' : 'davy'}-run.webp` },
       { id: 'shore', label: 'Permanent Upgrades', ox: 0.34, oy: 0.14, color: 0xf0c040, art: `/slip-${isDonG ? 'don' : 'davy'}-shore.webp` },
-      { id: 'records', label: 'The Records', ox: -0.27, oy: 0.37, color: 0x9ab8c8, art: `/slip-${isDonG ? 'don' : 'davy'}-records.webp` },
+      // No Records on Steam: the leaderboards do not exist there.
+      ...(IS_DESKTOP ? [] : [{ id: 'records', label: 'The Records', ox: -0.27, oy: 0.37, color: 0x9ab8c8, art: `/slip-${isDonG ? 'don' : 'davy'}-records.webp` }]),
       // THE WAY OUT, AS A PLACE. There was no exit from this water at all:
       // you arrived by sailing into a maelstrom and the only way back was the
       // browser's own back button, which is not a thing this game asks you to

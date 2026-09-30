@@ -16,6 +16,7 @@ import { hapticReward } from '@/lib/haptics'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import { SEA_ACCENT, SELL_STEP } from '@/lib/seaOnboarding'
+import { IS_DESKTOP } from '@/lib/platform'
 
 // ── Palette ──────────────────────────────────────────────────────────────
 const UP = '#4ade80'
@@ -943,7 +944,8 @@ export default function MarketClient({
              It sat above the board before, taking a row of its own and pushing
              the market down. Only on the Exchange side: the Hold sells fish and
              has no ladder to be on. */
-          badge={side === 'exchange' ? (
+          // No ranks on Steam: the leaderboards do not exist there.
+          badge={side === 'exchange' && !IS_DESKTOP ? (
             <LeaderboardModal
               boards={['exchangeWeek', 'exchangeNet']}
               title="Top Traders"

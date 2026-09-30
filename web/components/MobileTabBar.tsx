@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { hapticTap } from '@/lib/haptics'
 import { BADGE_MAP } from '@/lib/badges'
+import { IS_DESKTOP } from '@/lib/platform'
 
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
@@ -240,7 +241,7 @@ export default function MobileTabBar() {
         WebkitTransform: 'translateZ(0)',
       }}
     >
-      {LINKS.map(({ href, label, icon }) => {
+      {LINKS.filter(l => !(IS_DESKTOP && l.href === '/leaderboard')).map(({ href, label, icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
         // A CREW IS BACK. The dot was on the Expeditions tab, because that
         // is where a voyage used to be claimed; it is claimed at the
