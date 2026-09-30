@@ -83,7 +83,6 @@ import { getHook } from '@/lib/hooks'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { holdContents } from '../fishing/holdActions'
-import { markFinnRevealSeen } from '@/app/(app)/fishing/finnActions'
 import { finnAncientBeat, type FinnAncientBeat } from '@/lib/finn'
 import { ANCIENT_IDS } from '@/lib/ancientVigil'
 
@@ -1520,7 +1519,7 @@ export default function FishingHere({
           // The first trophy also stands in for his old reveal — flipping
           // finn_revealed here is what stops the chart's FINN_REVEAL_BEAT
           // firing later as though the mask had not already slipped.
-          if (countAfter === 1) void markFinnRevealSeen()
+          if (countAfter === 1) void api.sea.markFinnRevealSeen()
           setSlain({
             fish: fishNow, count: countAfter, total,
             isMegalodon: fishNow.id === MEGALODON_ID,

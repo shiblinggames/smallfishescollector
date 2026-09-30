@@ -30,7 +30,7 @@ import {
   FINN_NAME, FINN_AVATAR, FINN_ASKS, FINN_STANDING_NAME, FINN_STANDING_AT,
   finnStanding, finnStandingTier, finnToNext,
 } from '@/lib/finn'
-import type { FinnSeaState, FinnQuestView } from './finnActions'
+import type { FinnSeaState, FinnQuestView } from '@/lib/gameApi'
 
 const GOLD = '#c8a060'
 

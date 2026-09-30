@@ -1009,8 +1009,25 @@ In order. Each step is worth doing even if the port never happens.
      real engines (an honest Treasure Match run played swap by swap), every store guard tested
      directly; checked to fail when a guard or a payout is broken. Production probe as catman
      (reads and refusals, none that flag; the profile and the week's rows unchanged).
-   - NOT YET: the sea's own actions (folk, pacts, digs, isles, tours, Finn, the smuggler, and
-     the boot and day aggregators), the tackle shop, the hold and almanac, badges and renown.
+   **THE SEA'S OWN OFFLINE (first half), 2026-09-29.** `lib/core/sea`: the nine regulars (a
+   visit a day, a job asked, a fish delivered, a friend's rod), Finn (his meetings, jobs measured
+   as deltas, the hand-in, the reveal, including `fishing/finnActions.markFinnRevealSeen`),
+   bottles and digs, going ashore, the portal's ladder, the free recall, and Kip's question.
+   Eight action files are thin wrappers; `api.sea` carries them to the chart, the folk and trader
+   panels, Finn's sheet, Kip and the fishing screen's reveal.
+   - `lib/data/seaData`: DailyData plus badges, rods and one operation per guarded write (a day's
+     chat, a settled job, the last fish, a once-ever rod, unique bearings and isles, a dig, the
+     recall's cutoff), each web query copied verbatim.
+   - `lib/data/local/seaLocal`: Finn's catch counts come from the save's lifetime log and species
+     list; "landed since the ask" from the catch log's last-caught stamp.
+   - SAVE FILE v12: the regulars' FULL rows (a v11 save kept only who wanted which fish, so its
+     points start from nothing), bearings and digs, isles been ashore at, the homestead, and the
+     sea's profile columns at the database's defaults (`SEA_PROFILE_DEFAULTS`).
+   - `scripts/check-offline-sea.mts` (in `npm run check`); checked to fail when any of seven
+     store guards is broken. Production probe as catman (reads and refusals, nothing moved).
+   - NOT YET: pacts (between players, so they stay online), the tours, the node and raid sheets,
+     the loadout and boss card reads, the boot and day loaders; then the tackle shop, the hold and
+     almanac, badges and renown.
      Online-only by nature and staying on the web: social, leaderboards, public profiles,
      membership (Stripe), admin and dev tools, the honeypot.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.

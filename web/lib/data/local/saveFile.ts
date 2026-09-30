@@ -22,12 +22,12 @@
 
 import type { BoardAttemptRow, CapstanRuns, LadderAttemptRow } from '../triviaData'
 import type { HoldAttemptRow } from '../chartData'
-import { freshCasino, freshTrivia, freshCharting, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, CHARTING_PROFILE_DEFAULTS, type LocalSave, type LocalMail } from './save'
+import { freshCasino, freshTrivia, freshCharting, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, CHARTING_PROFILE_DEFAULTS, SEA_PROFILE_DEFAULTS, type LocalSave, type LocalMail } from './save'
 import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 11
+export const LOCAL_SAVE_VERSION = 12
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -92,6 +92,22 @@ const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
   // v11 (2026-09-29): the Chart Room. The boards the save builds itself, each
   // puzzle's attempt per week, and the room's profile columns at the web's defaults.
   10: f => ({ ...f, version: 11, save: { ...f.save, charting: freshCharting(), profile: { ...structuredClone(CHARTING_PROFILE_DEFAULTS), ...f.save.profile } } }),
+  // v12 (2026-09-29): the sea. The regulars' full rows (a v11 save kept only who
+  // wanted which fish; the rest starts from nothing), bearings and digs, the
+  // isles been ashore at, the homestead, and the sea's profile columns at the
+  // web's defaults.
+  11: f => ({
+    ...f, version: 12,
+    save: {
+      ...f.save,
+      rapport: ((f.save.rapport ?? []) as { folk_id: string; want_fish_id: number | null }[]).map(r => ({
+        folk_id: r.folk_id, points: 0, seen_lines: [], last_chat_on: null, gifts_given: 0,
+        want_fish_id: r.want_fish_id, want_asked_at: r.want_fish_id == null ? null : (f.savedAt || new Date(0).toISOString()),
+      })),
+      digs: [], discoveries: [], homestead: null,
+      profile: { ...structuredClone(SEA_PROFILE_DEFAULTS), ...f.save.profile },
+    },
+  }),
 }
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
@@ -129,7 +145,7 @@ export async function writeSave(storage: SaveStorage, save: LocalSave, carried: 
 export type WebExport = { format: string; version: number; userId: string; username: string | null; profile: Row; tables: Record<string, Row[]> }
 
 /** The tables the local fishing save models; everything else is carried. */
-const MODELLED = new Set(['treasure_match_attempts', 'minefield_attempts', 'rigging_attempts', 'sudoku_attempts', 'trivia_board_attempts', 'trivia_capstan_attempts', 'trivia_ladder_attempts', 'bounty_progress', 'bounty_board_history', 'bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
+const MODELLED = new Set(['sea_digs', 'sea_discoveries', 'homesteads', 'treasure_match_attempts', 'minefield_attempts', 'rigging_attempts', 'sudoku_attempts', 'trivia_board_attempts', 'trivia_capstan_attempts', 'trivia_ladder_attempts', 'bounty_progress', 'bounty_board_history', 'bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
   'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport', 'sea_trader_deals',
   'user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls',
   'gauntlet_depth_bests', 'gauntlet_runs', 'bounty_events', 'casino_buy_ins', 'blackjack_hands', 'roulette_spins', 'slot_spins',
@@ -139,7 +155,7 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
   const t = (name: string) => exp.tables[name] ?? []
   const save: LocalSave = {
     uid: exp.userId,
-    profile: { ...structuredClone(SHIP_PROFILE_DEFAULTS), ...structuredClone(DAILY_PROFILE_DEFAULTS), ...structuredClone(PARLOR_PROFILE_DEFAULTS), ...structuredClone(CHARTING_PROFILE_DEFAULTS), ...exp.profile },
+    profile: { ...structuredClone(SHIP_PROFILE_DEFAULTS), ...structuredClone(DAILY_PROFILE_DEFAULTS), ...structuredClone(PARLOR_PROFILE_DEFAULTS), ...structuredClone(CHARTING_PROFILE_DEFAULTS), ...structuredClone(SEA_PROFILE_DEFAULTS), ...exp.profile },
     species,
     bait: Object.fromEntries(t('bait_inventory').map(r => [r.bait_type, Number(r.quantity)])),
     hold: Object.fromEntries(t('fish_inventory').filter(r => Number(r.quantity) > 0).map(r => [Number(r.fish_id), Number(r.quantity)])),
@@ -200,7 +216,14 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
     },
     rods: t('rod_inventory').map(r => Number(r.rod_tier)),
     ledger: [], anomalies: [], mail: [],
-    rapport: t('sea_rapport').map(r => ({ folk_id: String(r.folk_id), want_fish_id: r.want_fish_id == null ? null : Number(r.want_fish_id) })),
+    rapport: t('sea_rapport').map(r => ({
+      folk_id: String(r.folk_id), points: Number(r.points ?? 0), seen_lines: (r.seen_lines ?? []) as string[],
+      last_chat_on: (r.last_chat_on as string | null) ?? null, gifts_given: Number(r.gifts_given ?? 0),
+      want_fish_id: r.want_fish_id == null ? null : Number(r.want_fish_id), want_asked_at: (r.want_asked_at as string | null) ?? null,
+    })),
+    digs: t('sea_digs').map(r => ({ site_id: String(r.site_id), dug_at: (r.dug_at as string | null) ?? null })),
+    discoveries: t('sea_discoveries').map(r => String(r.isle_id)),
+    homestead: (() => { const h = t('homesteads')[0]; if (!h) return null; const { user_id: _u, ...rest } = h; void _u; return rest })(),
     contests: {}, overrides: {},
     deals: t('sea_trader_deals').map(r => ({ trader_key: String(r.trader_key), sea_day: Number(r.sea_day), kind: String(r.kind), detail: (r.detail ?? {}) as object })),
     // The web's market is shared by everybody; a converted save starts its own.

@@ -33,7 +33,7 @@ import PopupShell from '@/components/PopupShell'
 import { openMembership, PERKS } from '@/components/MembershipModal'
 import { vibrate } from '@/lib/haptics'
 import { KIP, KIP_INTRO, KIP_TERMS, KIP_AGAIN, KIP_ALREADY } from '@/lib/seaSmuggler'
-import { smugglerStanding } from './smugglerActions'
+import { api } from '@/lib/gameApi'
 
 /** His colour. Cold and low-contrast on purpose: he is a man actively trying
  *  not to be looked at. The offer itself is gold, like every other place in
@@ -81,7 +81,7 @@ export default function SmugglerTalk({ open, onClose }: {
     setStep(0)
     try { setMet(window.localStorage.getItem(MET_KEY) === 'true') } catch { setMet(false) }
     let alive = true
-    void smugglerStanding()
+    void api.sea.smugglerStanding()
       .then(r => { if (alive) setCaptain(r.isCaptain) })
       .catch(() => { if (alive) setCaptain(false) })
     return () => { alive = false }

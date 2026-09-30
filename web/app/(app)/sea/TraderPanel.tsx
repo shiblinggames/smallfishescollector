@@ -19,8 +19,8 @@ import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
 import { api } from '@/lib/gameApi'
 import { RODS } from '@/lib/rods'
 import { folkById, folkRoleFor, type FolkTier } from '@/lib/seaFolk'
-import { folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod, type Rapport } from './folkActions'
 import FolkScene, { type SceneGain } from './FolkScene'
+import type { Rapport } from '@/lib/gameApi'
 
 export default function TraderPanel({
   trader, alreadyDealt, dealsLeft, onDealt, onHoldEmptied, onHoldTaken, onClose,
@@ -92,7 +92,7 @@ export default function TraderPanel({
     if (busy || !folk) return
     setBusy(true); setRodErr(null)
     try {
-      const res = await buyFolkRod(folk.id)
+      const res = await api.sea.buyFolkRod(folk.id)
       if ('error' in res) setRodErr(res.error)
       else {
         vibrate([0, 30, 60, 90]); setRodBought(res.rodName)
@@ -107,7 +107,7 @@ export default function TraderPanel({
   useEffect(() => {
     if (!folk) return
     let alive = true
-    void folkState().then(rows => {
+    void api.sea.folkState().then(rows => {
       if (alive) setRap(rows.find(r => r.folkId === folk.id) ?? null)
     })
     return () => { alive = false }
@@ -117,7 +117,7 @@ export default function TraderPanel({
     if (busy || !folk) return
     setBusy(true); setErr(''); vibrate(10)
     try {
-      const res = await talkToFolk(folk.id)
+      const res = await api.sea.talkToFolk(folk.id)
       if ('error' in res) { setErr(res.error) }
       else {
         setSpoke(v => ({ text: res.line, nonce: (v?.nonce ?? 0) + 1 }))
@@ -134,7 +134,7 @@ export default function TraderPanel({
     if (busy || !folk) return
     setBusy(true); setErr('')
     try {
-      const res = await askForFavourite(folk.id)
+      const res = await api.sea.askForFavourite(folk.id)
       if ('error' in res) { setErr(res.error) }
       else {
         setSpoke(v => ({ text: res.line, nonce: (v?.nonce ?? 0) + 1 }))
@@ -155,7 +155,7 @@ export default function TraderPanel({
     if (busy || !folk) return
     setBusy(true); setErr(''); vibrate(12)
     try {
-      const res = await deliverToFolk(folk.id)
+      const res = await api.sea.deliverToFolk(folk.id)
       if ('error' in res) { setErr(res.error) }
       else {
         setSpoke(v => ({ text: res.line, nonce: (v?.nonce ?? 0) + 1 }))

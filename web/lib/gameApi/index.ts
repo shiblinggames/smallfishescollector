@@ -9,7 +9,8 @@
 // docs/systems/steam-port.md step 8), then selling, the crew, voyages and
 // trawls, the gauntlets, the Den, raids and the campaign map, the ship and the
 // Shipyard, and the daily loop (bounties, challenges, the Daily Haul, mail,
-// contests), the Parlor and the Chart Room.
+// contests), the Parlor, the Chart Room and the sea's own (the regulars, Finn,
+// digs, isles, the portal, the recall).
 
 import { webFishingApi, type FishingApi } from './fishing'
 import { webSellingApi, type SellingApi } from './selling'
@@ -22,6 +23,7 @@ import { webShipApi, type ShipApi } from './ship'
 import { webDailiesApi, type DailiesApi } from './dailies'
 import { webParlorApi, type ParlorApi } from './parlor'
 import { webChartRoomApi, type ChartRoomApi } from './chartRoom'
+import { webSeaApi, type SeaApi } from './sea'
 
 export interface GameApi {
   fishing: FishingApi
@@ -35,6 +37,7 @@ export interface GameApi {
   dailies: DailiesApi
   parlor: ParlorApi
   chartRoom: ChartRoomApi
+  sea: SeaApi
 }
 
 export const api: GameApi = {
@@ -49,6 +52,7 @@ export const api: GameApi = {
   dailies: webDailiesApi,
   parlor: webParlorApi,
   chartRoom: webChartRoomApi,
+  sea: webSeaApi,
 }
 
 export type { FishingApi } from './fishing'
@@ -59,6 +63,7 @@ export type { ShipApi } from './ship'
 export type { DailiesApi, BountyBoard, BountyView } from './dailies'
 export type { ParlorApi } from './parlor'
 export type { ChartRoomApi } from './chartRoom'
+export type { SeaApi, Rapport, FolkTalk, FolkAsk, FolkGift, FinnSeaState, FinnTalk, FinnQuestView, BottleResult, DigResult, DigState, AshoreResult } from './sea'
 export type { CasinoApi } from './casino'
 export type { RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide } from './raids'
 export type { VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew } from './voyages'

@@ -36,10 +36,9 @@ import { PersonCard, UnknownCard, type Portrait } from '@/components/SaltRoadCar
 import { getCharacterSprites } from '@/lib/characters'
 import { HATS } from '@/lib/hats'
 import { FOLK, TIER_NAME, TIER_AT, toNextTier, favouritesKnown, tierFor, folkRoleFor, isMaxRapport, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
-import { folkState, type Rapport } from './folkActions'
-import { finnState } from './finnActions'
 import { finnChapters, finnWaitingOn, type FinnChapterView } from '@/lib/finnQuests'
-import type { FinnSeaState } from './finnActions'
+import { api } from '@/lib/gameApi'
+import type { Rapport, FinnSeaState } from '@/lib/gameApi'
 
 const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'
@@ -514,7 +513,7 @@ export default function FolkPanel({ open, onClose, finn: finnProp, initial = nul
   useEffect(() => {
     if (!open) return
     let alive = true
-    void finnState().then(f => { if (alive && f) setFinnLive(f) })
+    void api.sea.finnState().then(f => { if (alive && f) setFinnLive(f) })
     return () => { alive = false }
   }, [open])
 
@@ -537,7 +536,7 @@ export default function FolkPanel({ open, onClose, finn: finnProp, initial = nul
   useEffect(() => {
     if (!open) return
     let alive = true
-    void folkState().then(rows => { if (alive) setRap(rows) })
+    void api.sea.folkState().then(rows => { if (alive) setRap(rows) })
     return () => { alive = false }
   }, [open])
 

@@ -56,12 +56,10 @@ import { getSetting, SEA_SETTINGS_EVENT } from '@/lib/seaSettings'
 import { shipSkinSeaImage, shipSkinSeaScale } from '@/lib/shipSkins'
 import { ASHORE_ROWS } from './ashoreDoors'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
-import { goAshore, type AshoreResult } from './isleActions'
 import { SUBMERGE } from './submerge'
 import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS, HULL_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
 import { PORTAL, PORTAL_TIERS, ANCHOR_PORTAL, ANCHOR_ACCENT, CROSS_TO, hasPortalStone, hasStoneFor, inPortal, inAnchorPortal, warpPoint } from '@/lib/seaPortal'
-import { buyPortalTier } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
@@ -83,7 +81,6 @@ import {
 import { RAID_MAP, RAID_CHAPTERS, chapterForNode, computeRaidMap, type RaidNode, type RaidChapter } from '@/lib/raidMap'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
-import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getFishHold } from '@/lib/fishHold'
 import { getCharacterSprites } from '@/lib/characters'
@@ -110,7 +107,6 @@ import { sunAt, seaClock } from '@/lib/seaClock'
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { squallAt } from '@/lib/seaWeather'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
-import { folkState, type Rapport } from './folkActions'
 import CrewPanel from './CrewPanel'
 import { folkById, type FolkId } from '@/lib/seaFolk'
 import { RODS } from '@/lib/rods'
@@ -211,7 +207,6 @@ import { seaBoot, type SeaBoot } from './bootActions'
 import { coastClip, coastline } from '@/lib/islandShape'
 import { plateFor } from '@/lib/islandPlates'
 import { RECALL_MS, RECALL_TO, type RecallSide } from '@/lib/seaRecall'
-import { spendRecall } from './recallActions'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
 import { GROUND, islandLift, liftAt, liftAtPoint, bakeIsland, requestGround } from './islandArt'
@@ -287,7 +282,6 @@ import { swellAt, swellHeel } from './seaSwell'
  * check is the encounter count, not a coordinate. */
 const finnNow = () => finnHaunt(0, 0)
 import { KIP } from '@/lib/seaSmuggler'
-import { finnState, speakToFinn, turnInFinnQuest, type FinnSeaState } from './finnActions'
 import { FINN_NAME, findNextBeat, type FinnSceneLine } from '@/lib/finn'
 
 // THE SEA'S OWN. `fishing/FinnEncounter` is still mounted by the retired
@@ -386,6 +380,7 @@ const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
 const SeaDay = dynamic(() => import('./SeaDay'), { ssr: false })
 import type { DayKind } from './SeaDay'
 import { cardArt } from '@/lib/artUrl'
+import type { AshoreResult, BottleResult, DigResult, DigState, Rapport, FinnSeaState } from '@/lib/gameApi'
 // Kip, who trades in what he knows about the harbour. See seaSmuggler.
 const SmugglerTalk = dynamic(() => import('./SmugglerTalk'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
@@ -3696,7 +3691,7 @@ export default function SeaMap({
         await saveSeaPosition(pos.current.x, pos.current.y, [...fogPending.current])
         fogPending.current.clear()
       } catch { /* the claim answers for itself */ }
-      const result = await openBottle(b.key)
+      const result = await api.sea.openBottle(b.key)
       setTaken(prev => new Set(prev).add(b.key))
       if (result.ok && result.kind === 'bearing') {
         // The X goes on the minimap immediately. Waiting for a refetch to show
@@ -3735,7 +3730,7 @@ export default function SeaMap({
         await saveSeaPosition(pos.current.x, pos.current.y, [...fogPending.current])
         fogPending.current.clear()
       } catch { /* the claim answers for itself */ }
-      const result = await digHere(site.id)
+      const result = await api.sea.digHere(site.id)
       if (result.ok) {
         setDug(prev => new Set(prev).add(site.id))
         // ONTO THE PURSE IN THE NAV, NOW. The card says what came up; the two
@@ -3782,7 +3777,7 @@ export default function SeaMap({
         await saveSeaPosition(pos.current.x, pos.current.y, [...fogPending.current])
         fogPending.current.clear()
       } catch { /* fall through and let the claim answer for itself */ }
-      const result = await goAshore(isle.id)
+      const result = await api.sea.goAshore(isle.id)
       if (result.ok) {
         setFound(prev => new Set(prev).add(isle.id))
         // Onto the purse in the nav, now. See the dig above.
@@ -4307,7 +4302,7 @@ export default function SeaMap({
     if (left > 0) { setRecallNote(`Recall ready in ${Math.ceil(left / 60_000)}m`); return }
     setRecallBusy(true)
     try {
-      const r = await spendRecall(side)
+      const r = await api.sea.spendRecall(side)
       if (r.ok) {
         setRecallAt(a => ({ ...a, [side]: r.at }))
         setRecallNow(Date.now())
@@ -4361,7 +4356,7 @@ export default function SeaMap({
     setPortalBusy(true)
     setPortalErr(null)
     try {
-      const res = await buyPortalTier()
+      const res = await api.sea.buyPortalTier()
       if ('error' in res) setPortalErr(res.error)
       else {
         setPortalTier(res.tier)
@@ -4635,7 +4630,7 @@ export default function SeaMap({
       if (!alive) return
       // The boot's copy, or, if that one reader failed, a read of its own.
       if (b && b.finn) setFinn(b.finn)
-      else void finnState().then(f => { if (alive) setFinn(f) })
+      else void api.sea.finnState().then(f => { if (alive) setFinn(f) })
     })
     return () => { alive = false }
   }, [getBoot])
@@ -4658,7 +4653,7 @@ export default function SeaMap({
     if (!cur || finnBusy) return
     setFinnBusy(true)
     try {
-      const talk = await speakToFinn(cur.encounters)
+      const talk = await api.sea.speakToFinn(cur.encounters)
       if (!talk) return
       setFinn(prev => (prev ? {
         ...prev,
@@ -4674,7 +4669,7 @@ export default function SeaMap({
         nonce: (v?.nonce ?? 0) + 1,
       }))
       // The job he may have just set, and any progress on it.
-      void finnState().then(f => { if (f) setFinn(f) })
+      void api.sea.finnState().then(f => { if (f) setFinn(f) })
     } finally {
       setFinnBusy(false)
     }
@@ -4689,7 +4684,7 @@ export default function SeaMap({
     if (finnBusy) return
     setFinnBusy(true)
     try {
-      const res = await turnInFinnQuest()
+      const res = await api.sea.turnInFinnQuest()
       if (!res || 'error' in res) {
         if (res && 'error' in res) {
           setFinnLines(v => ({ lines: [res.error], nonce: (v?.nonce ?? 0) + 1 }))
@@ -4713,7 +4708,7 @@ export default function SeaMap({
         setXpLive(res.newFishingXP)
         setXpFlash(true)
       }
-      const f = await finnState()
+      const f = await api.sea.finnState()
       if (f) setFinn(f)
     } finally {
       setFinnBusy(false)
@@ -4746,7 +4741,7 @@ export default function SeaMap({
     if (finnPollRef.current) return
     finnPollRef.current = setTimeout(() => {
       finnPollRef.current = null
-      void finnState().then(f => { if (f) setFinn(f) })
+      void api.sea.finnState().then(f => { if (f) setFinn(f) })
     }, 1200)
   }, [])
   useEffect(() => () => { if (finnPollRef.current) clearTimeout(finnPollRef.current) }, [])
@@ -5684,7 +5679,7 @@ export default function SeaMap({
     setWordFolk(new Set(rows.filter(r => r.points > 0 && !r.chattedToday).map(r => r.folkId)))
   }, [])
   const refreshMet = useCallback(() => {
-    void folkState().then(applyFolk).catch(() => {})
+    void api.sea.folkState().then(applyFolk).catch(() => {})
   }, [applyFolk])
   useEffect(() => {
     void getBoot().then(b => { if (b?.folk) applyFolk(b.folk); else refreshMet() })
@@ -9934,7 +9929,7 @@ export default function SeaMap({
         // ── FINN, OFF THE SAME CLOCK AS HIS OWN NAME PLATE ────────────
         //
         // This used to read `finnRef.current.at`, which is a SERVER snapshot
-        // carried on FinnSeaState and refreshed only when finnState() runs.
+        // carried on FinnSeaState and refreshed only when api.sea.finnState() runs.
         // Everything else about him — the plate under him, his hail range, the
         // compass bearing to him — comes from `finnNow()`, the live ellipse he
         // laps in ninety-six seconds.

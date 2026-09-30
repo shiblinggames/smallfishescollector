@@ -11,7 +11,7 @@
 // on this API yet. Selling runs offline too (lib/core/selling), with the
 // captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi, ShipApi, DailiesApi, ParlorApi, ChartRoomApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi, ShipApi, DailiesApi, ParlorApi, ChartRoomApi, SeaApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
 import * as selling from '@/lib/core/selling'
@@ -36,8 +36,10 @@ import * as parlorCore from '@/lib/core/parlor'
 import { localTriviaData } from '@/lib/data/local/triviaLocal'
 import * as chartCore from '@/lib/core/chartRoom'
 import { localChartData } from '@/lib/data/local/chartLocal'
+import * as seaCore from '@/lib/core/sea'
+import { localSeaData } from '@/lib/data/local/seaLocal'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
-import { freshCasino, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, CHARTING_PROFILE_DEFAULTS } from '@/lib/data/local/save'
+import { freshCasino, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, CHARTING_PROFILE_DEFAULTS, SEA_PROFILE_DEFAULTS } from '@/lib/data/local/save'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
 import type { Row } from '@/lib/data/common'
 import { installRng, mulberry32, seedOf } from '@/lib/rng'
@@ -49,7 +51,7 @@ export type {
   FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
   CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
   VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew, GauntletApi, CasinoApi,
-  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide, ShipApi, DailiesApi, BountyBoard, BountyView, ParlorApi, ChartRoomApi,
+  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide, ShipApi, DailiesApi, BountyBoard, BountyView, ParlorApi, ChartRoomApi, SeaApi,
 } from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
@@ -66,6 +68,7 @@ function starterSave(): LocalSave {
       ...structuredClone(DAILY_PROFILE_DEFAULTS),
       ...structuredClone(PARLOR_PROFILE_DEFAULTS),
       ...structuredClone(CHARTING_PROFILE_DEFAULTS),
+      ...structuredClone(SEA_PROFILE_DEFAULTS),
       fishing_xp: XP_TABLE[4], doubloons: 500, gems: 0, rod_tier: 1, hook_tier: 0, line_tier: 0, fish_hold_tier: 1,
       ancient_catches: [], current_perfect_streak: 0, highest_perfect_streak: 0, total_perfects: 0, zone_perfects: {},
       lifetime_species: [], prestige_levels: {}, zone_golden_boost: {}, unlocked_pets: [], unlocked_character_colors: [],
@@ -74,7 +77,7 @@ function starterSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 60 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} },
+    clears: [], rods: [0, 1], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
   }
 }
 
@@ -421,4 +424,32 @@ const chartRoomApi: ChartRoomApi = {
   claimLandmark: (id) => runChart((db, uid) => chartCore.claimLandmark(db, uid, id)),
 }
 
-export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi, dailies: dailiesApi, parlor: parlorApi, chartRoom: chartRoomApi }
+/** The same, over the sea's store. */
+async function runSeaOwn<T>(fn: (db: ReturnType<typeof localSeaData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage, carried } = need()
+  const r = await fn(localSeaData(save), save.uid)
+  await writeSave(storage, save, carried)
+  return r
+}
+
+const seaApi: SeaApi = {
+  folkState: () => runSeaOwn((db, uid) => seaCore.folkState(db, uid)),
+  talkToFolk: (id) => runSeaOwn((db, uid) => seaCore.talkToFolk(db, uid, id)),
+  askForFavourite: (id) => runSeaOwn((db, uid) => seaCore.askForFavourite(db, uid, id)),
+  deliverToFolk: (id) => runSeaOwn((db, uid) => seaCore.deliverToFolk(db, uid, id)),
+  buyFolkRod: (id) => runSeaOwn((db, uid) => seaCore.buyFolkRod(db, uid, id)),
+  finnState: () => runSeaOwn((db, uid) => seaCore.finnState(db, uid)),
+  turnInFinnQuest: () => runSeaOwn((db, uid) => seaCore.turnInFinnQuest(db, uid)),
+  speakToFinn: (at) => runSeaOwn((db, uid) => seaCore.speakToFinn(db, uid, at)),
+  markFinnRevealSeen: () => runSeaOwn((db, uid) => seaCore.markFinnRevealSeen(db, uid)),
+  getDigState: () => runSeaOwn((db, uid) => seaCore.getDigState(db, uid)),
+  openBottle: (key) => runSeaOwn((db, uid) => seaCore.openBottle(db, uid, key)),
+  digHere: (id) => runSeaOwn((db, uid) => seaCore.digHere(db, uid, id)),
+  getDiscoveries: () => runSeaOwn((db, uid) => seaCore.getDiscoveries(db, uid)),
+  goAshore: (id) => runSeaOwn((db, uid) => seaCore.goAshore(db, uid, id)),
+  buyPortalTier: () => runSeaOwn((db, uid) => seaCore.buyPortalTier(db, uid)),
+  spendRecall: (side) => runSeaOwn((db, uid) => seaCore.spendRecall(db, uid, side)),
+  smugglerStanding: () => runSeaOwn((db, uid) => seaCore.smugglerStanding(db, uid)),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi, dailies: dailiesApi, parlor: parlorApi, chartRoom: chartRoomApi, sea: seaApi }

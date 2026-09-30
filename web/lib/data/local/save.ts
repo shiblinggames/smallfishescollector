@@ -13,6 +13,7 @@ import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { BountyRow } from '../dailyData'
 import type { BoardAttemptRow, CapstanRuns, LadderAttemptRow } from '../triviaData'
 import type { MatchAttemptRow, MinefieldAttemptRow, RiggingAttemptRow, HoldAttemptRow } from '../chartData'
+import type { RapportRow } from '../seaData'
 import type { MatchConfig, MinefieldLayout, SudokuSet, RiggingLayout } from '@/lib/chartBoards'
 import type { ChallengeOverride } from '@/lib/dailyChallenges'
 import { clockNow } from '@/lib/clock'
@@ -36,7 +37,8 @@ export type LocalSave = {
   ledger: { amount: number; reason: string; currency: 'doubloons' | 'gems' }[]
   anomalies: { kind: string; severity: number; detail: Record<string, unknown> }[]
   mail: LocalMail[]
-  rapport: { folk_id: string; want_fish_id: number | null }[]
+  /** The regulars, one row each once spoken to (the full row since v12). */
+  rapport: RapportRow[]
   contests: Record<string, string>
   overrides: Record<string, ChallengeOverride>
   // ── Save v2 (selling) ──
@@ -88,6 +90,13 @@ export type LocalSave = {
   /** The weekly boards this save built, and each puzzle's attempt per week
    *  (the Monday), the last twelve weeks kept. */
   charting: LocalCharting
+  // ── Save v12 (the sea) ──
+  /** Bearings held (a row per site) and when each was dug. */
+  digs: { site_id: string; dug_at: string | null }[]
+  /** Every isle been ashore at. */
+  discoveries: string[]
+  /** The homestead as the web keeps it (its owned furnishings among it), or null. */
+  homestead: Row | null
 }
 
 /** A letter in the captain's own mailbox. Offline the game is the only sender. */
@@ -171,6 +180,13 @@ export const freshCharting = (): LocalCharting => ({
   boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} },
   match: {}, minefield: {}, rigging: {}, hold: {},
 })
+
+/** The sea's profile columns at the web's column defaults (v12). */
+export const SEA_PROFILE_DEFAULTS = {
+  finn_encounters: 0, finn_seen_beats: [] as string[], finn_revealed: false, finn_quest: null, finn_quests_done: [] as string[],
+  finn_last_outcome: null, portal_tier: 1, portal_components_spent: 0, last_recall_fish_at: null, last_recall_exp_at: null,
+  sea_x: null, sea_y: null, current_perfect_streak: 0, total_perfects: 0, zone_perfects: {} as Record<string, number>,
+}
 
 /** A Den nobody has visited: no buy-ins, no hand, the pot at its seed. */
 export function freshCasino(): LocalCasino {
