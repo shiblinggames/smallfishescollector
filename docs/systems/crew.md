@@ -3,6 +3,12 @@
 Recruit, level, assign, train, and (rarely) bury sea-creature crew. The connective tissue
 between fishing (trawls), voyages, raids, and gauntlets.
 
+
+**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong): the free-recruit board stops
+being "3 a real day, unrecruited wiped". It reloads on its own every few sea days (count to
+set), and CREW REROLLS become an item that can drop from the new expedition crates (see
+voyages.md). The 100-gem reroll goes with gems. See steam-port.md "Working it through".
+
 ## Where it lives now: the panel, not the page
 
 **`/crew` is a redirect.** The Crew Management page — five tabs, its own column, its own

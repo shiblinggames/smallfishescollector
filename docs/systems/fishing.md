@@ -17,6 +17,11 @@
 The first of the two core loops (with expeditions). Everything else in the game feeds off
 it or gates behind its level. Player-paced, evergreen: no timers that punish absence.
 
+
+**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong): the Tide Turner gives 3 skips per
+SEA DAY (48 minutes), not 3 a real day. It was held to 3 a real day for the leaderboard,
+which is going away. See steam-port.md "Working it through".
+
 ## Shape of the loop
 
 Zone select → cast → catch dial → reel in → result → market. The dial is the skill core:

@@ -3,6 +3,11 @@
 Nightly trivia with two tiers: the Captain's Board (daily play) and the Pirate King
 ladder (the prestige climb). Questions are generated nightly, not hand-authored.
 
+
+**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong): the Captain's Board deals 1 card
+per 10 SEA DAYS (8 real hours) and holds up to 3, so an unplayed card waits instead of being
+forfeited. On Steam everyone is a Captain. See steam-port.md "Working it through".
+
 ## Files
 
 - `web/app/(app)/tavern/trivia/` — lobby, board, capstan, king ladder, `actions.ts`,

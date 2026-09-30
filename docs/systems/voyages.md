@@ -4,6 +4,17 @@ Daily passive exploration: assign a voyage party, pick a route, collect the resu
 Half of the Expeditions score (with raids). Deliberately simple — the depth lives in crew
 composition, not in the voyage itself.
 
+
+**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong; see steam-port.md "Working it
+through"):
+- Voyage lengths are measured in SEA DAYS (48 minutes each, `lib/seaClock`), shown as "your
+  crew sails for 6 days". Coastal 2, Open 4, Deep 6, Triangle 8, Shroud 11 sea days, close to
+  today's hours. Crew speed still shortens them.
+- Gems leave voyages. In their place a voyage has a CHANCE to bring back a new EXPEDITION
+  CRATE, rarer on short routes. It holds crew and ship cosmetics (crew skins, hulls, sails and
+  flags), with doubloons and bait as the common rolls. The chance and the table are still to
+  set.
+
 ## Files
 
 - Core resolution: `web/lib/voyage.ts`, `web/lib/voyageRoll.ts`

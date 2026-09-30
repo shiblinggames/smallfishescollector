@@ -3,6 +3,15 @@
 Push-your-luck roguelike towers built on the raid combat engine. One run a day; each depth
 raises stakes; cash out or press on. The main repeatable endgame.
 
+
+**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong): The Don's Tribute
+(`dg_daily_tribute`, 10 Fathoms per real day) is REMOVED, with no refunds. HARDCORE STAYS,
+with Blood Gems. The boosted reroll is dropped. The skin gamble becomes SKIN VOUCHERS:
+bought with Blood Gems, redeemed for a random crew skin from every skin (legendaries rare),
+with a duplicate refunding part of the Blood Gems. Vouchers also drop very rarely from
+crates. Davy's Terms keep multiplying Blood Gems. Hardcore runs become 1 per 10 SEA DAYS, holding
+up to 3 (was 3 a real day). See steam-port.md "Working it through".
+
 ## Files
 
 - **`web/lib/gauntlet.ts`** — depths, offers, upgrades, the run state model. The other

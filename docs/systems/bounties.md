@@ -4,6 +4,16 @@ Daily gem-paying hunt targets, one rung unlocked per campaign chapter, topped by
 elite bounty (the Don). This is the game's competitive-flavored ladder — it REPLACED
 ship PvP (removed 2026-08) and inherits its role; don't rebuild PvP alongside it.
 
+
+**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong; see steam-port.md "Working it
+through"):
+- THE BOARD RESETS ON COMPLETION, not daily: finish it and a new one comes up, so it can be
+  farmed and nothing expires.
+- Gems leave bounties. An order pays DOUBLOONS by tier plus bounty points.
+- The milestone ladder becomes a LONGER COSMETIC TRACK (skins, hulls, specials at the rungs,
+  to a capstone). The current one was paced for one board a day, about three months to the
+  Corsair Hull, and farmable boards would run it out fast.
+
 ## Files
 
 - Board + payouts: `web/lib/bounties.ts`

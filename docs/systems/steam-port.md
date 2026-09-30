@@ -410,7 +410,53 @@ Behaviour and security stay exactly as they are.
      tavern notes).
 4. **The calendar.** A device clock can be set to anything, so offline play needs the
    restock-through-play rhythm drafted above in place of UTC daily resets.
-5. **Money.** Unchanged from phase 1: premium buy-once, no in-game purchases on Steam.
+5. **Money. DECIDED 2026-09-30:** buying the game on Steam makes you a Captain, and there
+   is no store in the Steam build. Gems are removed from BOTH builds: cosmetics become earned
+   and utilities cost doubloons. See economy-membership.md, "Gems are being retired". The web
+   keeps Captain ($9.99, one-time) as its only purchase.
+
+### Working it through with Kong (started 2026-09-30)
+
+Decisions made together, one at a time. None of it is built yet; each one is also written into
+its system's doc.
+1. **Money:** buying the game on Steam = Captain; gems are removed from both builds; cosmetics
+   are earned and utilities cost doubloons (economy-membership.md).
+2. **The calendar:** Animal Crossing runs on the real clock and leaves clock-changing alone.
+   The clock trick is accepted: it only affects the player who does it. So some things reset
+   WITH PLAY and the rest REFRESH ON A CLOCK:
+   - RESET ON COMPLETION: the bounty board and the daily challenges (bounties.md,
+     progression.md).
+   - SEA DAYS: voyages are measured in sea days, and may bring back an expedition crate
+     (voyages.md).
+   - REMOVED: the Daily Haul.
+   - SEA DAYS: the Tide Turner gives 3 skips per sea day (it was held to 3 a real day for the
+     leaderboard, which is going away). The Parlor's Captain's Board deals 1 card per 10 sea
+     days (8 real hours) and holds 3, so an unplayed card is never lost.
+   - RECRUITS: the board reloads on its own every few sea days (count to set), and CREW
+     REROLLS become an item that can drop from expedition crates. This is Darkest Dungeon's
+     Stagecoach, adapted: our expeditions aren't its dungeons, so a clock does the reloading.
+   - DON'S TRIBUTE IS REMOVED (the Locker perk that paid 10 Fathoms a real day). No refunds
+     for the 220 Fathoms paid (Kong).
+   - OPEN on recruits: the reload count (10 sea days matches today); whether a reload refills
+     only empty seats or replaces the whole group; rerolls from crates only, or also for
+     doubloons.
+   - HARDCORE GAUNTLET STAYS, and so do Blood Gems, with a new use:
+     - The boosted reroll is DROPPED.
+     - The 250-Blood-Gem skin gamble becomes SKIN VOUCHERS. Blood Gems buy them, you hold
+       them, and redeeming one rolls a random crew skin from EVERY skin, the legendary chase
+       skins included at rare odds.
+     - A duplicate refunds part of the Blood Gem cost.
+     - Vouchers can also drop, very rarely, from crates.
+     - Davy's Terms keep multiplying Blood Gems.
+     - HARDCORE RUNS: 1 per 10 sea days (8 real hours, today's rate), and unused runs wait,
+       up to 3.
+     - OPEN: the voucher price, the odds, the refund share, and which crates.
+   - LEADERBOARDS: Kong, 2026-09-30: "When we fully migrate to Steam, leaderboards will no
+     longer exist." So the direction is now a FULL MIGRATION: the web retires at some point.
+     This overrides "the web version is not retiring" above, and no date is set.
+3. Still to come: existing web players' saves, what "content complete" means, the real
+   screens in the desktop window, controller support, store art and the AI disclosure, the
+   casino check.
 
 ### What can start now on the web (changes nothing a player sees)
 

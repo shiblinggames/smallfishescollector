@@ -4,6 +4,35 @@ The two currencies, their ledgers, the paid tier, and mail — the pipes money m
 through. The design pillar over all of it: **evergreen and player-paced; never
 pay-to-win, never FOMO**. Captain membership sells convenience and cosmetics, not power.
 
+## GEMS ARE BEING RETIRED (decided 2026-09-30, not built yet)
+
+Kong, working through the Steam prep: remove gems altogether, on the web AND on Steam. One
+economy, nothing to sell but the game itself.
+- **Steam:** buying the game makes you a Captain. There is no store in the Steam build.
+- **Web:** Captain ($9.99, one-time) is the only purchase. The gem packs and the Purser go.
+- **What gems bought becomes:**
+  - COSMETICS ARE EARNED, not bought: the 75 crew skins, avatar specials, gem-priced
+    character colours and the two gem hulls (Fire, Jet Black). Each is tied to something you
+    do, and the rewards that used to pay gems hand them out directly.
+  - UTILITIES COST DOUBLOONS: the recruit reroll, the Renown respec, the Accelerator charge.
+- **What paid gems becomes:**
+  - The one-off rewards (badges, World Chart landmarks, isles, digs, Parlor ranks, bounty
+    milestones, fishing levels, the welcome gift) grant cosmetics.
+  - The daily gem income (the Daily Haul's gem card, the member pack, the challenge sweep,
+    and gems from bounties, voyages, gauntlet chests and raid crates) pays doubloons or bait.
+- Blood Gems and Fathoms are separate earned currencies and stay.
+- STILL TO WORK OUT WITH KONG:
+  - which feat unlocks which skin;
+  - the doubloon prices of the three utilities;
+  - what existing gem balances become;
+  - the physical-pack claim codes (they grant gems);
+  - what Captain's daily perks become.
+
+The inventory the decision was made from (2026-09-30):
+- **Sinks, about 123,750 ◆ one-off:** skins 113,750, specials 6,000, colours 2,250,
+  hulls 1,750; plus the repeatables, respec 2,000, reroll 100 and Accelerator 100.
+- **Sources:** about 22,500 ◆ one-off, and roughly 75 to 350 ◆ a day depending on progress.
+
 ## Currencies
 
 - Doubloons (⟡, gold) — earned everywhere, spent on gear/crew/ship. Gems (◆, purple) —

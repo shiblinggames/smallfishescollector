@@ -3,6 +3,15 @@
 The XP spines everything gates on: Fishing level, Navigation level, Renown past the cap,
 fishing Prestige, and the daily challenge cadence.
 
+
+**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong; see steam-port.md "Working it
+through"):
+- DAILY CHALLENGES RESET ON COMPLETION: sweep the three and a new board comes up. Each pays
+  proper doubloons (today 60 to 90), and a swept board opens a FISHING CRATE in place of the
+  10 gems.
+- THE DAILY HAUL IS REMOVED (its gem card goes with gems; its bait and weekly crate go too,
+  unless something else picks them up).
+
 ## Files
 
 - Curves: `web/lib/fishingLevel.ts`, `web/lib/navigation.ts`; rewards
