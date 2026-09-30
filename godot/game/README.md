@@ -35,10 +35,25 @@ The TypeScript rules in `web/lib` are the SPEC. The port does not reinterpret th
   with `JsJson.stringify` so it stays byte-compatible with the web's local save.
 - Content the port reads is listed in `tools/setup.mjs`; `--check` fails when a copy drifts
   from `web/content`.
+- **Tables are exported, logic is ported.** `web/scripts/export-godot-rules.mts` writes the
+  rules' tables (rods, bait, zones, holds, lines, pets, crates, the daily pools) to
+  `content/rules.json`; where a rule is a pure function over a small domain its answers are
+  exported as a lookup instead (the colors a level earns, catch XP). Small constants are
+  ported inline, each naming its TS source.
+- **JavaScript's behaviours live in `core/js.gd`**: `Math.round` (halves go up, even
+  negative ones), `??`, truthiness, `toISOString`, number object keys (`Js.key`), and
+  `Object.keys` order for id-keyed objects (`Js.ids`, ascending). Use them; do not re-derive.
+- **A TS result's `undefined` key is left OUT of the Godot dictionary; a `null` stays in.**
+  JSON drops the one and keeps the other, and the parity cases compare key sets.
+- The cases can set things mid-session (`patchProfile`, `patchSave`), recorded as calls so
+  both sides fish the same save.
 
 ## Layout
 
-- `core/` the rules and their foundations (dice, clock, JSON, save file)
+- `core/` the rules and their foundations: dice, clock, JSON, save file, `js.gd`, `rules.gd`
+  (tables and small helpers), `fishing_rules.gd`, `fishing.gd` (cast, reel, crate),
+  `captain_store.gd` (the save as the cores read and write it), `vigil.gd`, `daily.gd`,
+  `crate_loot.gd`
 - `content/` copies of `web/content` files (committed; kept in step by `tools/setup.mjs`)
 - `tests/` the parity runner and its cases
 - `tools/` setup and the end-to-end parity run

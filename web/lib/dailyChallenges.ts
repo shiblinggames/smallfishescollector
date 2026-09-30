@@ -126,6 +126,8 @@ const TIER4: DailyChallenge[] = [
 /** Every challenge in every tier, flat. Exists so scripts/check-copy.mts can
  *  hold these labels to the same house rules as every other systems string. */
 export const ALL_DAILY_CHALLENGES: DailyChallenge[] = [...TIER1, ...TIER2, ...TIER3, ...TIER4]
+/** The four pools in order, for the Godot port's rules export (scripts/export-godot-rules). */
+export const DAILY_TIERS: DailyChallenge[][] = [TIER1, TIER2, TIER3, TIER4]
 
 function dateHash(date: string, salt: number): number {
   let h = (salt * 2654435761) >>> 0

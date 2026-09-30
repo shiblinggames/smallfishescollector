@@ -25,6 +25,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   `tests/parity.gd` replays them; `node tools/parity.mjs` runs it all. GodotSteam 4.22.1 is
   fetched by `tools/setup.mjs` (pinned, checksummed, not committed) and loads. Porting rules
   are in `godot/game/README.md`. Fishing is PENDING until stage 1 ports the cast and reel.
+- STAGE 1, THE RULES, BUILT (2026-09-30): the cast, the reel and the crate
+  (`core/fishing.gd` over `core/captain_store.gd`) replay 1,903 TS calls in 10 sessions
+  exactly (results, rolls per call, the save at the end): every special rod (YOLO jackpots,
+  Twin Strike, Locked-In to stage 3, Galaxy wormholes, Lightsaber, Treasure, a three-effect
+  Completionist), the Ancient Deep with the Vigil hunt and rank-up and the first-catch
+  letter, goldens, snags, resumed casts and zone hops, bloom and red tide, the Primeval Eye
+  and the Borrowed Jaw, the Sigil and the Phantom Hook, full holds and level gates, crates
+  with pets and cosmetics, four dailies; plus 2,000 day-and-level daily picks. Tables come
+  from `web/scripts/export-godot-rules.mts`. Not ported yet: hotspots (need the chart), and
+  the rest of lib/core/fishing (wormhole reroll, Tide Turner, goldens, level rewards,
+  Almanac). A TS bug found on the way: the local store stamped a shiny with the real
+  clock, fixed.
 
 **Status: parked 2026-09-10, the same day it was written. THE GAME STAYS WEB-BASED.**
 **2026-09-28: Kong asked to PREP a possible Steam migration with offline play, up to the whole

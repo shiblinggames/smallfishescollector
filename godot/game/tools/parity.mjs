@@ -3,7 +3,8 @@
 //   node tools/parity.mjs
 //
 // 1. the content copies must match web/ (setup.mjs --check);
-// 2. the TypeScript rules write fresh cases (web/scripts/parity-export.mts);
+// 2. the TypeScript writes the rules' tables (web/scripts/export-godot-rules.mts)
+//    and fresh cases (web/scripts/parity-export.mts);
 // 3. Godot imports the project (so class_name scripts resolve) and replays
 //    them (tests/parity.gd). Exits non-zero if any step fails.
 //
@@ -33,6 +34,7 @@ const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, stdio: 'inherit',
 
 try {
   run(process.execPath, [path.join(HERE, 'tools', 'setup.mjs'), '--check'], HERE)
+  run('npx', ['tsx', 'scripts/export-godot-rules.mts'], WEB)
   run('npx', ['tsx', 'scripts/parity-export.mts'], WEB)
   const gd = godot()
   execFileSync(gd, ['--headless', '--path', HERE, '--import'], { stdio: 'ignore', timeout: 300000 })

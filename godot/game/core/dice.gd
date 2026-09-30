@@ -18,6 +18,9 @@ const U32: int = 0xFFFFFFFF
 const TWO_32: float = 4294967296.0
 
 static var _installed: Mulberry32 = null
+## Rolls taken from the installed generator since the last reset (the parity
+## cases record rolls per call, so a drift points at the call that drifted).
+static var rolls: int = 0
 
 
 ## mulberry32: small, fast, seedable, and the web's generator.
@@ -49,6 +52,7 @@ static func imul(a: int, b: int) -> int:
 static func next() -> float:
 	if _installed == null:
 		return randf()
+	rolls += 1
 	return _installed.next()
 
 

@@ -1,0 +1,2236 @@
+{
+ "rods": [
+  {
+   "id": "bamboo",
+   "tier": 0,
+   "name": "Bamboo Rod",
+   "cost": 0,
+   "minLevel": 1,
+   "description": "A simple bamboo pole. Gets the job done.",
+   "color": "#a07858",
+   "rarityBonus": 0,
+   "biteIntervalMs": 3800,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_bamboo"
+  },
+  {
+   "id": "driftwood",
+   "tier": 1,
+   "name": "Driftwood Staff",
+   "cost": 1500,
+   "minLevel": 3,
+   "description": "Heavy and slow, but the wide tip gives you a more forgiving catch window.",
+   "color": "#b8956a",
+   "rarityBonus": 0,
+   "biteIntervalMs": 4500,
+   "catchZoneBonus": 8,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_driftwood"
+  },
+  {
+   "id": "fiberglass",
+   "tier": 2,
+   "name": "Fiberglass Rod",
+   "cost": 2500,
+   "minLevel": 7,
+   "description": "Lighter than bamboo with a wider tip. Gives you a more forgiving catch window.",
+   "color": "#9ca3af",
+   "rarityBonus": 0,
+   "biteIntervalMs": 3800,
+   "catchZoneBonus": 10,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_fiberglass"
+  },
+  {
+   "id": "reefguard",
+   "tier": 3,
+   "name": "Reef Guard",
+   "cost": 8000,
+   "minLevel": 12,
+   "description": "Responsive and fast. Bites come a little quicker than the baseline.",
+   "color": "#34d399",
+   "rarityBonus": 0,
+   "biteIntervalMs": 3230,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_reefguard"
+  },
+  {
+   "id": "telescoping",
+   "tier": 4,
+   "name": "Telescoping Rod",
+   "cost": 8000,
+   "minLevel": 16,
+   "description": "Extends deep. Something about the length draws rarer fish to the surface.",
+   "color": "#60a5fa",
+   "rarityBonus": 0.1,
+   "biteIntervalMs": 3800,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_telescoping"
+  },
+  {
+   "id": "moonwood",
+   "tier": 5,
+   "name": "Moonwood Staff",
+   "cost": 14000,
+   "minLevel": 20,
+   "description": "Carved from driftwood blessed by a full moon. Quicker bites and a wider catch window.",
+   "color": "#a78bfa",
+   "rarityBonus": 0,
+   "biteIntervalMs": 3420,
+   "catchZoneBonus": 10,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_moonwood",
+   "glow": true,
+   "glowType": "moon"
+  },
+  {
+   "id": "graphite",
+   "tier": 6,
+   "name": "Graphite Rod",
+   "cost": 22000,
+   "minLevel": 28,
+   "description": "Lightweight and stiff. Noticeably quicker bites.",
+   "color": "#64748b",
+   "rarityBonus": 0,
+   "biteIntervalMs": 2850,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_graphite"
+  },
+  {
+   "id": "navigators",
+   "tier": 7,
+   "name": "Navigator's Rod",
+   "cost": 35000,
+   "minLevel": 32,
+   "description": "A well-balanced deep-sea rod. Good speed and a wider catch zone.",
+   "color": "#38bdf8",
+   "rarityBonus": 0,
+   "biteIntervalMs": 2800,
+   "catchZoneBonus": 8,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_navigators"
+  },
+  {
+   "id": "carbon",
+   "tier": 8,
+   "name": "Carbon Rod",
+   "cost": 60000,
+   "minLevel": 42,
+   "description": "Precision-engineered for quick, snappy bites.",
+   "color": "#4ade80",
+   "rarityBonus": 0,
+   "biteIntervalMs": 2470,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_carbon",
+   "glow": true,
+   "glowType": "tech"
+  },
+  {
+   "id": "deepdiver",
+   "tier": 9,
+   "name": "Deep Diver",
+   "cost": 90000,
+   "minLevel": 48,
+   "description": "Built for the abyss. Fast bites and a wide catch window.",
+   "color": "#22d3ee",
+   "rarityBonus": 0,
+   "biteIntervalMs": 2356,
+   "catchZoneBonus": 13,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_deepdiver"
+  },
+  {
+   "id": "legendary",
+   "tier": 10,
+   "name": "Legendary Rod",
+   "cost": 200000,
+   "minLevel": 60,
+   "description": "Forged from the mast of a sunken galleon. Faster bites, and the rarest fish cannot resist.",
+   "color": "#ff6b35",
+   "rarityBonus": 0.8,
+   "biteIntervalMs": 2280,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_legendary",
+   "glow": true,
+   "glowType": "fire"
+  },
+  {
+   "id": "twinstrike",
+   "tier": 11,
+   "name": "Twin-Strike",
+   "cost": 45000,
+   "minLevel": 37,
+   "description": "Two hooks on one line. When luck strikes, they both bite.",
+   "color": "#fbbf24",
+   "rarityBonus": 0,
+   "biteIntervalMs": 3200,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0.25,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_twinstrike"
+  },
+  {
+   "id": "secondwind",
+   "tier": 12,
+   "name": "Second Wind",
+   "cost": 28000,
+   "minLevel": 24,
+   "description": "Stubborn rod. When you miss, sometimes it refuses to let go.",
+   "color": "#fb923c",
+   "rarityBonus": 0,
+   "biteIntervalMs": 3200,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0.25,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_secondwind"
+  },
+  {
+   "id": "millionaires",
+   "tier": 13,
+   "name": "Millionaire's Rod",
+   "cost": 175000,
+   "minLevel": 54,
+   "description": "Hand-rolled in gold leaf. Every catch brings two.",
+   "color": "#f0c040",
+   "rarityBonus": 0,
+   "biteIntervalMs": 3000,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 1,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "slug": "rod_millionaires",
+   "glow": true,
+   "glowType": "sparkle"
+  },
+  {
+   "id": "yolo",
+   "tier": 15,
+   "name": "YOLO Rod",
+   "cost": 1000000,
+   "minLevel": 80,
+   "traderOnly": true,
+   "description": "Roll the dice every cast for a 100-fish haul — and the odds climb the shallower you fish. The rest of the time? Just a regular catch.",
+   "color": "#60d9ff",
+   "rarityBonus": 0,
+   "biteIntervalMs": 2850,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "jackpotChance": 0.1,
+   "jackpotMultiplier": 100,
+   "slug": "rod_yolo",
+   "glow": true,
+   "glowType": "electric"
+  },
+  {
+   "id": "completionist",
+   "tier": 14,
+   "name": "Completionist Rod",
+   "cost": 0,
+   "earnedOnly": true,
+   "description": "Forged from the soul of every species in the sea. A master's tool on its own, and a vessel besides: fit up to three rods you own into it to carry their gifts, and re-forge whenever you like.",
+   "slug": "rod_completionist",
+   "glow": true,
+   "glowType": "prismatic",
+   "color": "#e8c84a",
+   "rarityBonus": 0,
+   "biteIntervalMs": 2000,
+   "catchZoneBonus": 16,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": true,
+   "perfectZoneBonus": 0
+  },
+  {
+   "id": "treasure",
+   "tier": 16,
+   "name": "Treasure Rod",
+   "cost": 200000,
+   "minLevel": 64,
+   "description": "Lures the deep’s lost hoards — doubles your chance of hooking a crate.",
+   "color": "#e8b54a",
+   "rarityBonus": 0,
+   "biteIntervalMs": 3000,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "crateChanceMult": 2,
+   "slug": "rod_treasure",
+   "glow": true,
+   "glowType": "sparkle"
+  },
+  {
+   "id": "perfect",
+   "tier": 17,
+   "name": "Perfect Rod",
+   "cost": 200000,
+   "minLevel": 68,
+   "description": "Rewards flawless form — perfect catches grant double XP, and it scales with your streak.",
+   "color": "#bfe3ff",
+   "rarityBonus": 0,
+   "biteIntervalMs": 3000,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "perfectXpMult": 2,
+   "slug": "rod_perfect",
+   "glow": true,
+   "glowType": "moon"
+  },
+  {
+   "id": "galaxy",
+   "tier": 18,
+   "name": "Galaxy Rod",
+   "cost": 300000,
+   "minLevel": 72,
+   "traderOnly": true,
+   "description": "Spun from cosmic thread. After any catch, open a wormhole and reroll it into a different fish from the same waters — fortune or folly, you take what surfaces.",
+   "color": "#a78bfa",
+   "rarityBonus": 0,
+   "biteIntervalMs": 2660,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "wormhole": true,
+   "soldByFolk": true,
+   "slug": "rod_galaxy",
+   "glow": true,
+   "glowType": "galaxy"
+  },
+  {
+   "id": "lightsaber",
+   "tier": 19,
+   "name": "Lightsaber Rod",
+   "cost": 300000,
+   "minLevel": 76,
+   "traderOnly": true,
+   "description": "A blade of pure energy. Fish are drawn to the light — most casts bite almost the instant your line touches the water.",
+   "color": "#ff3b47",
+   "rarityBonus": 0,
+   "biteIntervalMs": 2470,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "instantBiteChance": 0.35,
+   "soldByFolk": true,
+   "slug": "rod_lightsaber",
+   "glow": true,
+   "glowType": "saber"
+  },
+  {
+   "id": "yoons",
+   "tier": 20,
+   "name": "Yoon's Locked-In Rod",
+   "cost": 350000,
+   "minLevel": 75,
+   "description": "Rewards a hot hand. Chain perfect catches to LOCK IN: 3 in a row quickens your bites, 5 lands a triple haul on every catch, and 10 quickens them further into a rare-fish frenzy. Hold the streak to keep it all — one miss and you start over.",
+   "color": "#c084fc",
+   "rarityBonus": 0,
+   "biteIntervalMs": 3000,
+   "catchZoneBonus": 0,
+   "doubleCatchChance": 0,
+   "retryOnMissChance": 0,
+   "snagImmune": false,
+   "perfectZoneBonus": 0,
+   "lockedIn": true,
+   "traderOnly": true,
+   "slug": "rod_yoons",
+   "glow": true,
+   "glowType": "lockedin"
+  }
+ ],
+ "lockedIn": {
+  "speedStreak": 3,
+  "speedWaitMult": 0.8,
+  "tripleStreak": 5,
+  "tripleQty": 3,
+  "frenzyStreak": 10,
+  "frenzyWaitMult": 0.65,
+  "frenzyRarityBonus": 1
+ },
+ "zoneJackpotChance": {
+  "shallows": 0.203,
+  "open_waters": 0.155,
+  "deep": 0.103,
+  "abyss": 0.05,
+  "ancient_deep": 0.015
+ },
+ "completionist": {
+  "tier": 14,
+  "maxEffects": 3
+ },
+ "baits": [
+  {
+   "type": "worm",
+   "name": "Worms",
+   "description": "Reliable all-purpose bait. Claim 20 free from your Daily Bonus.",
+   "color": "#a07858",
+   "imageUrl": "/worms.png",
+   "waitMult": 1,
+   "catchZoneBonus": 0,
+   "acquisition": [
+    "shop",
+    "daily"
+   ],
+   "shopCost": 10,
+   "bundleSize": 10
+  },
+  {
+   "type": "minnow",
+   "name": "Minnow",
+   "description": "Fish bite 10% faster.",
+   "color": "#60a5fa",
+   "imageUrl": "/minnow.png",
+   "waitMult": 0.9,
+   "catchZoneBonus": 0,
+   "acquisition": [
+    "shop"
+   ],
+   "shopCost": 30,
+   "bundleSize": 10
+  },
+  {
+   "type": "night_crawler",
+   "name": "Night Crawler",
+   "description": "Fish bite 15% faster. Widens your catch zone by 4° — a bigger catch zone means more room to land the needle.",
+   "color": "#a78bfa",
+   "imageUrl": "/nightcrawler.png",
+   "waitMult": 0.85,
+   "catchZoneBonus": 4,
+   "acquisition": [
+    "shop"
+   ],
+   "shopCost": 50,
+   "bundleSize": 10
+  },
+  {
+   "type": "chum",
+   "name": "Chum",
+   "description": "Fish bite 25% faster.",
+   "color": "#f0c040",
+   "imageUrl": "/chum.png",
+   "waitMult": 0.75,
+   "catchZoneBonus": 0,
+   "acquisition": [
+    "shop"
+   ],
+   "shopCost": 100,
+   "bundleSize": 10
+  },
+  {
+   "type": "anglers_formula",
+   "name": "Angler's Formula",
+   "description": "Fish bite 35% faster. Widens your catch zone by 8° — a bigger catch zone means more room to land the needle.",
+   "color": "#fb923c",
+   "imageUrl": "/anglersformula.png",
+   "waitMult": 0.65,
+   "catchZoneBonus": 8,
+   "acquisition": [
+    "shop"
+   ],
+   "shopCost": 180,
+   "bundleSize": 10
+  },
+  {
+   "type": "luminous",
+   "name": "Luminous Lure",
+   "description": "Fish bite 40% faster and the catch zone widens by 10°. Earned from expeditions and bounties, or bought with Fathoms in the Locker. Something ancient stirs when it glows.",
+   "color": "#4ade80",
+   "imageUrl": "/luminouslure.png",
+   "waitMult": 0.6,
+   "catchZoneBonus": 10,
+   "acquisition": [
+    "expedition",
+    "bounty",
+    "fathoms"
+   ],
+   "shopCost": 0,
+   "bundleSize": 1,
+   "fathomCost": 12,
+   "fathomBundle": 5,
+   "hint": "Something ancient stirs when it glows."
+  },
+  {
+   "type": "golden",
+   "name": "Golden Lure",
+   "description": "Fish bite 45% faster. Widens your catch zone by 10°. The finest lure in existence — a rare drop, or bought with Fathoms in the Locker. The oldest things in the deep rise for its shine.",
+   "color": "#fde68a",
+   "imageUrl": "/goldenlure.png",
+   "waitMult": 0.55,
+   "catchZoneBonus": 10,
+   "acquisition": [
+    "rare",
+    "fathoms"
+   ],
+   "shopCost": 0,
+   "bundleSize": 1,
+   "fathomCost": 20,
+   "fathomBundle": 5,
+   "hint": "The oldest things in the deep rise for its shine."
+  }
+ ],
+ "zones": {
+  "rarityRates": {
+   "shallows": {
+    "1": 55,
+    "2": 25,
+    "3": 12,
+    "4": 7,
+    "5": 1
+   },
+   "open_waters": {
+    "1": 53,
+    "2": 26,
+    "3": 14,
+    "4": 6,
+    "5": 1
+   },
+   "deep": {
+    "1": 50,
+    "2": 28,
+    "3": 15,
+    "4": 6,
+    "5": 1
+   },
+   "abyss": {
+    "1": 46,
+    "2": 26,
+    "3": 18,
+    "4": 8,
+    "5": 2
+   },
+   "ancient_deep": {
+    "3": 50,
+    "4": 40,
+    "5": 10
+   }
+  },
+  "minLevel": {
+   "shallows": 1,
+   "open_waters": 15,
+   "deep": 30,
+   "abyss": 50,
+   "ancient_deep": 75
+  },
+  "waitBase": {
+   "shallows": [
+    8000,
+    13000
+   ],
+   "open_waters": [
+    13000,
+    21000
+   ],
+   "deep": [
+    21000,
+    33000
+   ],
+   "abyss": [
+    30000,
+    46000
+   ],
+   "ancient_deep": [
+    80000,
+    120000
+   ]
+  },
+  "crateTiers": {
+   "shallows": {
+    "wooden": 80,
+    "metal": 10,
+    "gold": 7,
+    "diamond": 3
+   },
+   "open_waters": {
+    "wooden": 60,
+    "metal": 20,
+    "gold": 12,
+    "diamond": 8
+   },
+   "deep": {
+    "wooden": 35,
+    "metal": 30,
+    "gold": 20,
+    "diamond": 15
+   },
+   "abyss": {
+    "wooden": 15,
+    "metal": 25,
+    "gold": 35,
+    "diamond": 25
+   },
+   "ancient_deep": {
+    "ancient": 100
+   }
+  },
+  "baseCrateChance": 0.02,
+  "ancientCrateChance": 0.03
+ },
+ "fishHoldTiers": [
+  {
+   "tier": 0,
+   "name": "Small Crate",
+   "capacity": 15,
+   "cost": 0
+  },
+  {
+   "tier": 1,
+   "name": "Medium Crate",
+   "capacity": 25,
+   "cost": 500
+  },
+  {
+   "tier": 2,
+   "name": "Large Crate",
+   "capacity": 40,
+   "cost": 2000
+  },
+  {
+   "tier": 3,
+   "name": "Cargo Hold",
+   "capacity": 70,
+   "cost": 8000
+  },
+  {
+   "tier": 4,
+   "name": "Deep Hold",
+   "capacity": 120,
+   "cost": 20000
+  },
+  {
+   "tier": 5,
+   "name": "Grand Hold",
+   "capacity": 180,
+   "cost": 50000
+  },
+  {
+   "tier": 6,
+   "name": "Titan Hold",
+   "capacity": 250,
+   "cost": 100000
+  },
+  {
+   "tier": 7,
+   "name": "Leviathan Hold",
+   "capacity": 350,
+   "cost": 250000
+  },
+  {
+   "tier": 8,
+   "name": "Kraken Hold",
+   "capacity": 500,
+   "cost": 600000
+  }
+ ],
+ "lines": [
+  {
+   "tier": 0,
+   "name": "Monofilament",
+   "description": "Standard line. Snags happen.",
+   "color": "#a07858",
+   "imageUrl": "/monofilament.png",
+   "penaltyMultiplier": 1,
+   "unlockAt": 0
+  },
+  {
+   "tier": 1,
+   "name": "Braided Line",
+   "description": "Stronger weave. Fewer snags.",
+   "color": "#60a5fa",
+   "imageUrl": "/braidedline.png",
+   "penaltyMultiplier": 0.82,
+   "unlockAt": 20
+  },
+  {
+   "tier": 2,
+   "name": "Copolymer",
+   "description": "Blended nylon. More give, less break.",
+   "color": "#34d399",
+   "imageUrl": "/copolymer.png",
+   "penaltyMultiplier": 0.67,
+   "unlockAt": 40
+  },
+  {
+   "tier": 3,
+   "name": "Fluorocarbon",
+   "description": "Nearly invisible underwater. Very snag-resistant.",
+   "color": "#4ade80",
+   "imageUrl": "/fluorocarbon.png",
+   "penaltyMultiplier": 0.54,
+   "unlockAt": 60
+  },
+  {
+   "tier": 4,
+   "name": "Titanium Wire",
+   "description": "Near-zero stretch. Cuts through current like nothing.",
+   "color": "#94a3b8",
+   "imageUrl": "/titaniumwire.png",
+   "penaltyMultiplier": 0.42,
+   "unlockAt": 80
+  },
+  {
+   "tier": 5,
+   "name": "Deep Sea Line",
+   "description": "Built for the abyss. Almost nothing breaks it.",
+   "color": "#a78bfa",
+   "imageUrl": "/deepsealine.png",
+   "penaltyMultiplier": 0.3,
+   "unlockAt": 100
+  }
+ ],
+ "finn": {
+  "thresholds": [
+   0,
+   60000,
+   180000,
+   400000,
+   800000,
+   1400000
+  ],
+  "anglersPatience": [
+   {
+    "level": 1,
+    "unlock": "+15% doubloons from selling fish",
+    "sellMult": 1.15
+   },
+   {
+    "level": 2,
+    "unlock": "+12% fishing XP",
+    "sellMult": 1.15,
+    "fishingXpMult": 1.12
+   },
+   {
+    "level": 3,
+    "unlock": "Bites arrive 10% sooner",
+    "sellMult": 1.15,
+    "fishingXpMult": 1.12,
+    "waitMult": 0.9
+   },
+   {
+    "level": 4,
+    "unlock": "Double the chance of hooking a crate",
+    "sellMult": 1.15,
+    "fishingXpMult": 1.12,
+    "waitMult": 0.9,
+    "crateChanceMult": 2
+   },
+   {
+    "level": 5,
+    "unlock": "1.8x golden fish odds",
+    "sellMult": 1.15,
+    "fishingXpMult": 1.12,
+    "waitMult": 0.9,
+    "crateChanceMult": 2,
+    "goldenOddsMult": 1.8
+   },
+   {
+    "level": 6,
+    "unlock": "Perfect catches never consume bait",
+    "sellMult": 1.15,
+    "fishingXpMult": 1.12,
+    "waitMult": 0.9,
+    "crateChanceMult": 2,
+    "goldenOddsMult": 1.8,
+    "perfectBaitSave": true
+   }
+  ]
+ },
+ "renownFishingPerPoint": {
+  "bounty": 0.015,
+  "wisdom": 0.02,
+  "patience": 0.004,
+  "providence": 0.05
+ },
+ "fishingColorsByLevel": {
+  "1": [],
+  "2": [],
+  "3": [],
+  "4": [],
+  "5": [],
+  "6": [],
+  "7": [],
+  "8": [],
+  "9": [],
+  "10": [],
+  "11": [],
+  "12": [],
+  "13": [],
+  "14": [],
+  "15": [],
+  "16": [],
+  "17": [],
+  "18": [],
+  "19": [],
+  "20": [],
+  "21": [],
+  "22": [],
+  "23": [],
+  "24": [],
+  "25": [
+   "sand"
+  ],
+  "26": [
+   "sand"
+  ],
+  "27": [
+   "sand"
+  ],
+  "28": [
+   "sand"
+  ],
+  "29": [
+   "sand"
+  ],
+  "30": [
+   "sand"
+  ],
+  "31": [
+   "sand"
+  ],
+  "32": [
+   "sand"
+  ],
+  "33": [
+   "sand"
+  ],
+  "34": [
+   "sand"
+  ],
+  "35": [
+   "sand"
+  ],
+  "36": [
+   "sand"
+  ],
+  "37": [
+   "sand"
+  ],
+  "38": [
+   "sand"
+  ],
+  "39": [
+   "sand"
+  ],
+  "40": [
+   "sand"
+  ],
+  "41": [
+   "sand"
+  ],
+  "42": [
+   "sand"
+  ],
+  "43": [
+   "sand"
+  ],
+  "44": [
+   "sand"
+  ],
+  "45": [
+   "sand"
+  ],
+  "46": [
+   "sand"
+  ],
+  "47": [
+   "sand"
+  ],
+  "48": [
+   "sand"
+  ],
+  "49": [
+   "sand"
+  ],
+  "50": [
+   "sand",
+   "forest"
+  ],
+  "51": [
+   "sand",
+   "forest"
+  ],
+  "52": [
+   "sand",
+   "forest"
+  ],
+  "53": [
+   "sand",
+   "forest"
+  ],
+  "54": [
+   "sand",
+   "forest"
+  ],
+  "55": [
+   "sand",
+   "forest"
+  ],
+  "56": [
+   "sand",
+   "forest"
+  ],
+  "57": [
+   "sand",
+   "forest"
+  ],
+  "58": [
+   "sand",
+   "forest"
+  ],
+  "59": [
+   "sand",
+   "forest"
+  ],
+  "60": [
+   "sand",
+   "forest"
+  ],
+  "61": [
+   "sand",
+   "forest"
+  ],
+  "62": [
+   "sand",
+   "forest"
+  ],
+  "63": [
+   "sand",
+   "forest"
+  ],
+  "64": [
+   "sand",
+   "forest"
+  ],
+  "65": [
+   "sand",
+   "forest"
+  ],
+  "66": [
+   "sand",
+   "forest"
+  ],
+  "67": [
+   "sand",
+   "forest"
+  ],
+  "68": [
+   "sand",
+   "forest"
+  ],
+  "69": [
+   "sand",
+   "forest"
+  ],
+  "70": [
+   "sand",
+   "forest"
+  ],
+  "71": [
+   "sand",
+   "forest"
+  ],
+  "72": [
+   "sand",
+   "forest"
+  ],
+  "73": [
+   "sand",
+   "forest"
+  ],
+  "74": [
+   "sand",
+   "forest"
+  ],
+  "75": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "76": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "77": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "78": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "79": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "80": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "81": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "82": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "83": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "84": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "85": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "86": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "87": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "88": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "89": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "90": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "91": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "92": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "93": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "94": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "95": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "96": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "97": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "98": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "99": [
+   "sand",
+   "forest",
+   "ice"
+  ],
+  "100": [
+   "sand",
+   "forest",
+   "ice",
+   "crystal"
+  ]
+ },
+ "xpTable": [
+  0,
+  60,
+  125,
+  195,
+  271,
+  354,
+  444,
+  542,
+  648,
+  764,
+  890,
+  1026,
+  1174,
+  1335,
+  1510,
+  1700,
+  1906,
+  2130,
+  2373,
+  2637,
+  2924,
+  3236,
+  3575,
+  3943,
+  4343,
+  4777,
+  5248,
+  5760,
+  6316,
+  6920,
+  7576,
+  8288,
+  9062,
+  9902,
+  10815,
+  11806,
+  12882,
+  14051,
+  15321,
+  16700,
+  18198,
+  19824,
+  21590,
+  23508,
+  25591,
+  27853,
+  30310,
+  32978,
+  35876,
+  39023,
+  42441,
+  46153,
+  50184,
+  54562,
+  59316,
+  64479,
+  70086,
+  76176,
+  82789,
+  89971,
+  97771,
+  106242,
+  115441,
+  125431,
+  136281,
+  148064,
+  160860,
+  174756,
+  189848,
+  206238,
+  224037,
+  243367,
+  264359,
+  287157,
+  311915,
+  338802,
+  368002,
+  399713,
+  434151,
+  471551,
+  512167,
+  556277,
+  604180,
+  656203,
+  712700,
+  774055,
+  840687,
+  913049,
+  991635,
+  1076979,
+  1169663,
+  1270318,
+  1379629,
+  1498341,
+  1627262,
+  1767270,
+  1919319,
+  2084444,
+  2263770,
+  2458518
+ ],
+ "catchXp": {
+  "shallows": [
+   [
+    6,
+    7
+   ],
+   [
+    12,
+    14
+   ],
+   [
+    22,
+    26
+   ],
+   [
+    36,
+    43
+   ],
+   [
+    56,
+    67
+   ]
+  ],
+  "open_waters": [
+   [
+    17,
+    20
+   ],
+   [
+    33,
+    40
+   ],
+   [
+    61,
+    73
+   ],
+   [
+    99,
+    119
+   ],
+   [
+    154,
+    185
+   ]
+  ],
+  "deep": [
+   [
+    38,
+    45
+   ],
+   [
+    75,
+    90
+   ],
+   [
+    138,
+    165
+   ],
+   [
+    225,
+    270
+   ],
+   [
+    350,
+    420
+   ]
+  ],
+  "abyss": [
+   [
+    78,
+    94
+   ],
+   [
+    156,
+    187
+   ],
+   [
+    286,
+    343
+   ],
+   [
+    468,
+    562
+   ],
+   [
+    728,
+    874
+   ]
+  ],
+  "ancient_deep": [
+   [
+    225,
+    270
+   ],
+   [
+    450,
+    540
+   ],
+   [
+    825,
+    990
+   ],
+   [
+    1350,
+    1620
+   ],
+   [
+    2100,
+    2520
+   ]
+  ]
+ },
+ "daily": {
+  "tiers": [
+   [
+    {
+     "type": "catch_any",
+     "target": 10,
+     "reward": 75,
+     "label": "Catch 10 fish"
+    },
+    {
+     "type": "catch_any",
+     "target": 15,
+     "reward": 75,
+     "label": "Catch 15 fish"
+    },
+    {
+     "type": "catch_zone",
+     "target": 8,
+     "zone": "shallows",
+     "reward": 60,
+     "label": "Catch 8 fish in the Shallows"
+    },
+    {
+     "type": "catch_zone",
+     "target": 12,
+     "zone": "shallows",
+     "reward": 65,
+     "label": "Catch 12 fish in the Shallows"
+    },
+    {
+     "type": "catch_zone",
+     "target": 5,
+     "zone": "open_waters",
+     "reward": 70,
+     "label": "Catch 5 fish in Open Waters"
+    },
+    {
+     "type": "land_perfects",
+     "target": 3,
+     "reward": 80,
+     "label": "Land 3 perfect catches"
+    },
+    {
+     "type": "land_perfects",
+     "target": 5,
+     "reward": 90,
+     "label": "Land 5 perfect catches"
+    },
+    {
+     "type": "land_perfects",
+     "target": 7,
+     "reward": 90,
+     "label": "Land 7 perfect catches"
+    },
+    {
+     "type": "catch_rarity",
+     "target": 1,
+     "minRarity": 2,
+     "reward": 65,
+     "label": "Catch an Uncommon or better fish"
+    },
+    {
+     "type": "catch_rarity",
+     "target": 3,
+     "minRarity": 2,
+     "reward": 70,
+     "label": "Catch 3 Uncommon or better fish"
+    },
+    {
+     "type": "catch_rarity",
+     "target": 1,
+     "minRarity": 3,
+     "reward": 75,
+     "label": "Catch a Rare or better fish"
+    },
+    {
+     "type": "earn_value",
+     "target": 300,
+     "reward": 70,
+     "label": "Catch fish worth 300 ⟡ total"
+    },
+    {
+     "type": "earn_value",
+     "target": 500,
+     "reward": 75,
+     "label": "Catch fish worth 500 ⟡ total"
+    },
+    {
+     "type": "earn_value",
+     "target": 800,
+     "reward": 80,
+     "label": "Catch fish worth 800 ⟡ total"
+    }
+   ],
+   [
+    {
+     "type": "catch_any",
+     "target": 20,
+     "reward": 160,
+     "label": "Catch 20 fish"
+    },
+    {
+     "type": "catch_any",
+     "target": 25,
+     "reward": 175,
+     "label": "Catch 25 fish"
+    },
+    {
+     "type": "catch_any",
+     "target": 30,
+     "reward": 180,
+     "label": "Catch 30 fish"
+    },
+    {
+     "type": "catch_zone",
+     "target": 8,
+     "zone": "open_waters",
+     "reward": 150,
+     "label": "Catch 8 fish in Open Waters"
+    },
+    {
+     "type": "catch_zone",
+     "target": 12,
+     "zone": "open_waters",
+     "reward": 165,
+     "label": "Catch 12 fish in Open Waters"
+    },
+    {
+     "type": "catch_zone",
+     "target": 5,
+     "zone": "deep",
+     "reward": 165,
+     "label": "Catch 5 fish in the Deep"
+    },
+    {
+     "type": "catch_zone",
+     "target": 8,
+     "zone": "deep",
+     "reward": 180,
+     "label": "Catch 8 fish in the Deep"
+    },
+    {
+     "type": "land_perfects",
+     "target": 10,
+     "reward": 200,
+     "label": "Land 10 perfect catches"
+    },
+    {
+     "type": "land_perfects",
+     "target": 15,
+     "reward": 200,
+     "label": "Land 15 perfect catches"
+    },
+    {
+     "type": "catch_rarity",
+     "target": 2,
+     "minRarity": 3,
+     "reward": 160,
+     "label": "Catch 2 Rare or better fish"
+    },
+    {
+     "type": "catch_rarity",
+     "target": 1,
+     "minRarity": 4,
+     "reward": 175,
+     "label": "Catch an Epic or better fish"
+    },
+    {
+     "type": "earn_value",
+     "target": 2000,
+     "reward": 175,
+     "label": "Catch fish worth 2,000 ⟡ total"
+    },
+    {
+     "type": "earn_value",
+     "target": 3500,
+     "reward": 185,
+     "label": "Catch fish worth 3,500 ⟡ total"
+    }
+   ],
+   [
+    {
+     "type": "catch_any",
+     "target": 40,
+     "reward": 325,
+     "label": "Catch 40 fish"
+    },
+    {
+     "type": "catch_any",
+     "target": 50,
+     "reward": 325,
+     "label": "Catch 50 fish"
+    },
+    {
+     "type": "catch_zone",
+     "target": 3,
+     "zone": "abyss",
+     "reward": 350,
+     "label": "Catch 3 fish in the Abyss"
+    },
+    {
+     "type": "catch_zone",
+     "target": 5,
+     "zone": "abyss",
+     "reward": 375,
+     "label": "Catch 5 fish in the Abyss"
+    },
+    {
+     "type": "catch_zone",
+     "target": 8,
+     "zone": "abyss",
+     "reward": 375,
+     "label": "Catch 8 fish in the Abyss"
+    },
+    {
+     "type": "land_perfects",
+     "target": 20,
+     "reward": 350,
+     "label": "Land 20 perfect catches"
+    },
+    {
+     "type": "land_perfects",
+     "target": 30,
+     "reward": 360,
+     "label": "Land 30 perfect catches"
+    },
+    {
+     "type": "catch_rarity",
+     "target": 1,
+     "minRarity": 5,
+     "reward": 375,
+     "label": "Catch a Legendary fish"
+    },
+    {
+     "type": "catch_rarity",
+     "target": 2,
+     "minRarity": 4,
+     "reward": 350,
+     "label": "Catch 2 Epic or better fish"
+    },
+    {
+     "type": "catch_rarity",
+     "target": 3,
+     "minRarity": 4,
+     "reward": 360,
+     "label": "Catch 3 Epic or better fish"
+    },
+    {
+     "type": "earn_value",
+     "target": 6000,
+     "reward": 350,
+     "label": "Catch fish worth 6,000 ⟡ total"
+    }
+   ],
+   [
+    {
+     "type": "catch_any",
+     "target": 120,
+     "reward": 0,
+     "crateReward": true,
+     "label": "Catch 120 fish"
+    },
+    {
+     "type": "catch_any",
+     "target": 150,
+     "reward": 0,
+     "crateReward": true,
+     "label": "Catch 150 fish"
+    },
+    {
+     "type": "catch_zone",
+     "target": 10,
+     "zone": "ancient_deep",
+     "reward": 0,
+     "crateReward": true,
+     "label": "Catch 10 fish in the Ancient Deep"
+    },
+    {
+     "type": "catch_zone",
+     "target": 15,
+     "zone": "ancient_deep",
+     "reward": 0,
+     "crateReward": true,
+     "label": "Catch 15 fish in the Ancient Deep"
+    },
+    {
+     "type": "catch_zone",
+     "target": 25,
+     "zone": "abyss",
+     "reward": 0,
+     "crateReward": true,
+     "label": "Catch 25 fish in the Abyss"
+    },
+    {
+     "type": "catch_zone",
+     "target": 35,
+     "zone": "abyss",
+     "reward": 0,
+     "crateReward": true,
+     "label": "Catch 35 fish in the Abyss"
+    },
+    {
+     "type": "land_perfects",
+     "target": 60,
+     "reward": 0,
+     "crateReward": true,
+     "label": "Land 60 perfect catches"
+    },
+    {
+     "type": "land_perfects",
+     "target": 80,
+     "reward": 0,
+     "crateReward": true,
+     "label": "Land 80 perfect catches"
+    },
+    {
+     "type": "catch_rarity",
+     "target": 2,
+     "minRarity": 5,
+     "reward": 0,
+     "crateReward": true,
+     "label": "Catch 2 Legendary fish"
+    },
+    {
+     "type": "catch_rarity",
+     "target": 12,
+     "minRarity": 4,
+     "reward": 0,
+     "crateReward": true,
+     "label": "Catch 12 Epic or better fish"
+    },
+    {
+     "type": "earn_value",
+     "target": 40000,
+     "reward": 0,
+     "crateReward": true,
+     "label": "Catch fish worth 40,000 ⟡ total"
+    },
+    {
+     "type": "earn_value",
+     "target": 60000,
+     "reward": 0,
+     "crateReward": true,
+     "label": "Catch fish worth 60,000 ⟡ total"
+    }
+   ]
+  ],
+  "masterMinLevel": 75
+ },
+ "crate": {
+  "doubloonRange": {
+   "wooden": [
+    100,
+    400
+   ],
+   "metal": [
+    250,
+    1000
+   ],
+   "gold": [
+    500,
+    2000
+   ],
+   "diamond": [
+    1000,
+    4000
+   ],
+   "ancient": [
+    2500,
+    8000
+   ]
+  },
+  "baitPools": {
+   "wooden": [
+    {
+     "type": "worm",
+     "weight": 50
+    },
+    {
+     "type": "minnow",
+     "weight": 30
+    },
+    {
+     "type": "night_crawler",
+     "weight": 20
+    }
+   ],
+   "metal": [
+    {
+     "type": "chum",
+     "weight": 40
+    },
+    {
+     "type": "anglers_formula",
+     "weight": 30
+    },
+    {
+     "type": "night_crawler",
+     "weight": 20
+    },
+    {
+     "type": "minnow",
+     "weight": 10
+    }
+   ],
+   "gold": [
+    {
+     "type": "chum",
+     "weight": 50
+    },
+    {
+     "type": "anglers_formula",
+     "weight": 35
+    },
+    {
+     "type": "night_crawler",
+     "weight": 15
+    }
+   ],
+   "diamond": [
+    {
+     "type": "chum",
+     "weight": 60
+    },
+    {
+     "type": "anglers_formula",
+     "weight": 40
+    }
+   ],
+   "ancient": [
+    {
+     "type": "chum",
+     "weight": 45
+    },
+    {
+     "type": "anglers_formula",
+     "weight": 55
+    }
+   ]
+  },
+  "baitQty": {
+   "wooden": 5,
+   "metal": 10,
+   "gold": 15,
+   "diamond": 20,
+   "ancient": 30
+  },
+  "outcomeWeights": {
+   "wooden": {
+    "doubloons": 50,
+    "bait": 50,
+    "cosmetic": 0
+   },
+   "metal": {
+    "doubloons": 50,
+    "bait": 50,
+    "cosmetic": 0
+   },
+   "gold": {
+    "doubloons": 55,
+    "bait": 35,
+    "cosmetic": 10
+   },
+   "diamond": {
+    "doubloons": 25,
+    "bait": 60,
+    "cosmetic": 15
+   },
+   "ancient": {
+    "doubloons": 20,
+    "bait": 55,
+    "cosmetic": 25
+   }
+  },
+  "cosmeticPool": [
+   {
+    "kind": "skin",
+    "id": "mint",
+    "name": "Mint"
+   },
+   {
+    "kind": "skin",
+    "id": "lavender",
+    "name": "Lavender"
+   },
+   {
+    "kind": "skin",
+    "id": "storm",
+    "name": "Storm"
+   },
+   {
+    "kind": "boat",
+    "id": "charcoal",
+    "name": "Charcoal",
+    "imageUrl": "/boat_charcoal_rest.png"
+   },
+   {
+    "kind": "boat",
+    "id": "offwhite",
+    "name": "Offwhite",
+    "imageUrl": "/boat_offwhite_rest.png"
+   },
+   {
+    "kind": "hat",
+    "id": "black",
+    "name": "Black",
+    "imageUrl": "/hat_black_rest.png"
+   },
+   {
+    "kind": "hat",
+    "id": "gray",
+    "name": "Gray",
+    "imageUrl": "/hat_gray_rest.png"
+   },
+   {
+    "kind": "hat",
+    "id": "golden",
+    "name": "Golden",
+    "imageUrl": "/hat_golden_rest.png"
+   },
+   {
+    "kind": "hat",
+    "id": "cheetah",
+    "name": "Cheetah",
+    "imageUrl": "/hat_cheetah_rest.png"
+   },
+   {
+    "kind": "hat",
+    "id": "fuego",
+    "name": "Fuego",
+    "imageUrl": "/hat_fuego_rest.png"
+   },
+   {
+    "kind": "hat",
+    "id": "spotted",
+    "name": "Spotted",
+    "imageUrl": "/hat_spotted_rest.png"
+   }
+  ],
+  "petChance": {
+   "wooden": 0.005,
+   "metal": 0.01,
+   "gold": 0.02,
+   "diamond": 0.04,
+   "ancient": 0.1
+  }
+ },
+ "pets": [
+  {
+   "id": "parrot_red",
+   "species": "parrot",
+   "name": "Red Parrot",
+   "weight": 43,
+   "restImageUrl": "/parrot_red.png",
+   "accentColor": "#ef4444",
+   "earnedOnly": false
+  },
+  {
+   "id": "parrot_blue",
+   "species": "parrot",
+   "name": "Blue Parrot",
+   "weight": 27,
+   "restImageUrl": "/parrot_blue.png",
+   "accentColor": "#60a5fa",
+   "earnedOnly": false
+  },
+  {
+   "id": "parrot_green",
+   "species": "parrot",
+   "name": "Green Parrot",
+   "weight": 15,
+   "restImageUrl": "/parrot_green.png",
+   "accentColor": "#4ade80",
+   "earnedOnly": false
+  },
+  {
+   "id": "parrot_charcoal",
+   "species": "parrot",
+   "name": "Charcoal Parrot",
+   "weight": 9,
+   "restImageUrl": "/parrot_charcoal.png",
+   "accentColor": "#94a3b8",
+   "earnedOnly": false
+  },
+  {
+   "id": "parrot_sand",
+   "species": "parrot",
+   "name": "Sand Parrot",
+   "weight": 3,
+   "restImageUrl": "/parrot_sand.png",
+   "accentColor": "#e8c97a",
+   "earnedOnly": false
+  },
+  {
+   "id": "parrot_gold",
+   "species": "parrot",
+   "name": "Gold Parrot",
+   "weight": 3,
+   "restImageUrl": "/parrot_gold.png",
+   "accentColor": "#f0c040",
+   "earnedOnly": false
+  },
+  {
+   "id": "monkey_brown",
+   "species": "monkey",
+   "name": "Brown Monkey",
+   "weight": 90,
+   "restImageUrl": "/monkey_brown.png",
+   "accentColor": "#a78a6a",
+   "earnedOnly": false
+  },
+  {
+   "id": "monkey_golden",
+   "species": "monkey",
+   "name": "Golden Monkey",
+   "weight": 10,
+   "restImageUrl": "/monkey_golden.png",
+   "accentColor": "#f0c040",
+   "earnedOnly": false
+  },
+  {
+   "id": "seal_brown",
+   "species": "seal",
+   "name": "Brown Seal",
+   "weight": 60,
+   "restImageUrl": "/seal_brown.png",
+   "accentColor": "#a78a6a",
+   "earnedOnly": false
+  },
+  {
+   "id": "seal_gray",
+   "species": "seal",
+   "name": "Gray Seal",
+   "weight": 30,
+   "restImageUrl": "/seal_gray.png",
+   "accentColor": "#94a3b8",
+   "earnedOnly": false
+  },
+  {
+   "id": "seal_gold",
+   "species": "seal",
+   "name": "Gold Seal",
+   "weight": 10,
+   "restImageUrl": "/seal_gold.png",
+   "accentColor": "#f0c040",
+   "earnedOnly": false
+  },
+  {
+   "id": "lizard_green",
+   "species": "lizard",
+   "name": "Green Lizard",
+   "weight": 60,
+   "restImageUrl": "/lizard_green.png",
+   "accentColor": "#6cbf5a",
+   "earnedOnly": false
+  },
+  {
+   "id": "lizard_indigo",
+   "species": "lizard",
+   "name": "Indigo Lizard",
+   "weight": 30,
+   "restImageUrl": "/lizard_indigo.png",
+   "accentColor": "#7b6fb0",
+   "earnedOnly": false
+  },
+  {
+   "id": "lizard_white",
+   "species": "lizard",
+   "name": "White Lizard",
+   "weight": 10,
+   "restImageUrl": "/lizard_white.png",
+   "accentColor": "#dfe3e8",
+   "earnedOnly": false
+  },
+  {
+   "id": "raccoon_beige",
+   "species": "raccoon",
+   "name": "Beige Raccoon",
+   "weight": 65,
+   "restImageUrl": "/raccoon_beige.png",
+   "accentColor": "#a89076",
+   "earnedOnly": false
+  },
+  {
+   "id": "raccoon_black",
+   "species": "raccoon",
+   "name": "Black Raccoon",
+   "weight": 35,
+   "restImageUrl": "/raccoon_black.png",
+   "accentColor": "#767c85",
+   "earnedOnly": false
+  },
+  {
+   "id": "crab_orange",
+   "species": "crab",
+   "name": "Orange Crab",
+   "weight": 60,
+   "restImageUrl": "/crab_orange.png",
+   "accentColor": "#c85a28",
+   "earnedOnly": false
+  },
+  {
+   "id": "crab_blue",
+   "species": "crab",
+   "name": "Blue Crab",
+   "weight": 30,
+   "restImageUrl": "/crab_blue.png",
+   "accentColor": "#5878a8",
+   "earnedOnly": false
+  },
+  {
+   "id": "crab_gold",
+   "species": "crab",
+   "name": "Gold Crab",
+   "weight": 10,
+   "restImageUrl": "/crab_gold.png",
+   "accentColor": "#f0c040",
+   "earnedOnly": false
+  },
+  {
+   "id": "plesiosaur_baby",
+   "species": "plesiosaur",
+   "name": "Baby Plesiosaurus",
+   "weight": 1,
+   "restImageUrl": "/plesiosaur_baby.png",
+   "accentColor": "#e0455a",
+   "earnedOnly": true
+  }
+ ],
+ "petSpeciesWeights": {
+  "parrot": 40,
+  "monkey": 12,
+  "seal": 12,
+  "lizard": 12,
+  "raccoon": 12,
+  "crab": 12
+ },
+ "folk": {
+  "meg": {
+   "short": "Meg",
+   "favourites": [
+    {
+     "id": 8,
+     "name": "Largemouth Bass"
+    },
+    {
+     "id": 3,
+     "name": "Yellow Perch"
+    },
+    {
+     "id": 59,
+     "name": "Alligator Gar"
+    }
+   ]
+  },
+  "pell": {
+   "short": "Matty",
+   "favourites": [
+    {
+     "id": 60,
+     "name": "Atlantic Bluefin Tuna"
+    },
+    {
+     "id": 133,
+     "name": "Black Marlin"
+    },
+    {
+     "id": 105,
+     "name": "Pufferfish"
+    }
+   ]
+  },
+  "marlow": {
+   "short": "Marlow",
+   "favourites": [
+    {
+     "id": 38,
+     "name": "Blue Marlin"
+    },
+    {
+     "id": 134,
+     "name": "Greenland Shark"
+    },
+    {
+     "id": 125,
+     "name": "Atlantic Halibut"
+    }
+   ]
+  },
+  "fitch": {
+   "short": "Fitch",
+   "favourites": [
+    {
+     "id": 41,
+     "name": "Anglerfish"
+    },
+    {
+     "id": 56,
+     "name": "Firefly Squid"
+    },
+    {
+     "id": 47,
+     "name": "Barreleye"
+    }
+   ]
+  },
+  "nance": {
+   "short": "Nance",
+   "favourites": [
+    {
+     "id": 50,
+     "name": "Coelacanth"
+    },
+    {
+     "id": 149,
+     "name": "Chambered Nautilus"
+    },
+    {
+     "id": 150,
+     "name": "Ghost Shark"
+    }
+   ]
+  },
+  "yoon": {
+   "short": "Yoon",
+   "favourites": [
+    {
+     "id": 49,
+     "name": "Oarfish"
+    },
+    {
+     "id": 152,
+     "name": "Snipe Eel"
+    },
+    {
+     "id": 63,
+     "name": "Giant Trevally"
+    }
+   ]
+  },
+  "brill": {
+   "short": "Dennis",
+   "favourites": [
+    {
+     "id": 12,
+     "name": "Muskellunge"
+    },
+    {
+     "id": 132,
+     "name": "Goliath Tigerfish"
+    },
+    {
+     "id": 90,
+     "name": "Seahorse"
+    }
+   ]
+  },
+  "turbot": {
+   "short": "Cass",
+   "favourites": [
+    {
+     "id": 21,
+     "name": "Cobia"
+    },
+    {
+     "id": 24,
+     "name": "Barracuda"
+    },
+    {
+     "id": 80,
+     "name": "Stingray"
+    }
+   ]
+  },
+  "ream": {
+   "short": "Rue",
+   "favourites": [
+    {
+     "id": 27,
+     "name": "Atlantic Cod"
+    },
+    {
+     "id": 51,
+     "name": "Lanternfish"
+    },
+    {
+     "id": 82,
+     "name": "Atlantic Salmon"
+    }
+   ]
+  }
+ }
+}

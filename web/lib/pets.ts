@@ -220,7 +220,7 @@ export function getPetOverlay(species: PetSpecies, frame: 'rest' | 'wait' | 'cas
  *  is unreachable by construction, and adding it back becomes a type error. */
 type RollablePetSpecies = Exclude<PetSpecies, 'plesiosaur'>
 
-const PET_SPECIES_WEIGHTS: Record<RollablePetSpecies, number> = {
+export const PET_SPECIES_WEIGHTS: Record<RollablePetSpecies, number> = {
   parrot: 40,
   monkey: 12,
   seal: 12,

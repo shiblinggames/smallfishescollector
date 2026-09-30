@@ -100,7 +100,7 @@ export function localFishingData(save: LocalSave): FishingData {
     async setPersonalBest(uid, fishId, sizeIn, at) { me(uid); save.bests[fishId] = { len: sizeIn, at } },
     async addShiny(uid, fishId, sizeIn) {
       me(uid); const id = (save.shinies.at(-1)?.id ?? 0) + 1
-      save.shinies.push({ id, fish_id: fishId, size_in: sizeIn, status: 'hold', caught_at: new Date().toISOString() }); return id
+      save.shinies.push({ id, fish_id: fishId, size_in: sizeIn, status: 'hold', caught_at: new Date(clockNow()).toISOString() }); return id
     },
     async oldestHeldShiny(uid) {
       me(uid); const s = save.shinies.filter(x => x.status === 'hold').sort((a, b) => a.caught_at.localeCompare(b.caught_at))[0]

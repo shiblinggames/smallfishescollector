@@ -20,6 +20,7 @@ func _init() -> void:
 	var species: Array = _json("res://content/fish_species.json")
 	_dice()
 	_saves(species)
+	_daily()
 	_fishing(species)
 	print("")
 	if failed > 0:
@@ -93,14 +94,85 @@ func _saves(species: Array) -> void:
 	print("  saves: %d read and written back as the same data (%d byte for byte); a newer or foreign file refused" % [saves.size(), exact])
 
 
+func _daily() -> void:
+	var cases: Dictionary = _json("res://tests/parity/daily.json")
+	var n: int = 0
+	for day: Dictionary in cases["days"]:
+		var picks: Dictionary = day["picks"]
+		for level: Variant in picks:
+			var got: Array = []
+			for c: Dictionary in Daily.challenges(day["date"], float(str(level).to_int())):
+				got.append(c["label"])
+			var d: String = JsJson.diff(got, picks[level])
+			if d != "":
+				_fail("daily: %s at level %s differs at %s" % [day["date"], level, d])
+				return
+			n += 1
+	print("  daily: %d days-and-levels deal the same challenges" % n)
+
+
+## Replay each session through the ported cast and reel: the same start save,
+## the same seed, the clock each call ran at. Every call's result and roll
+## count must match, and the save must end the same. A session stops at its
+## first difference, which is the one worth reading.
 func _fishing(species: Array) -> void:
 	var cases: Dictionary = _json("res://tests/parity/fishing.json")
-	var calls: int = 0
-	for s: Dictionary in cases["sessions"]:
-		for key: String in ["start", "end"]:
-			if SaveFile.deserialize(str(s[key]), species).has("error"):
-				_fail("fishing %s: the %s save would not open" % [s["name"], key])
-		calls += (s["ops"] as Array).size()
-	# Stage 1 replays these through the ported cast and reel.
-	pending += calls
-	print("  fishing: PENDING, %d calls in %d sessions wait on the cast and reel port" % [calls, (cases["sessions"] as Array).size()])
+	var matched: int = 0
+	var sessions: Array = cases["sessions"]
+	for s: Dictionary in sessions:
+		var loaded: Dictionary = SaveFile.deserialize(str(s["start"]), species)
+		if loaded.has("error"):
+			_fail("fishing %s: the start save would not open" % s["name"])
+			continue
+		var save: Dictionary = loaded["save"]
+		var db: CaptainStore = CaptainStore.new(save)
+		var uid: String = save["uid"]
+		var now: Array = [0.0]
+		Dice.install(Dice.Mulberry32.new(int(s["seed"])))
+		Clock.install(func() -> float: return now[0])
+		var ok: bool = true
+		var ops: Array = s["ops"]
+		for n: int in ops.size():
+			var op: Dictionary = ops[n]
+			var args: Array = op["args"]
+			now[0] = float(op["now"])
+			Dice.rolls = 0
+			var got: Dictionary
+			match op["op"]:
+				"castLine":
+					got = Fishing.cast_line(db, uid, args[0], args[1])
+				"reelIn":
+					got = Fishing.reel_in(db, uid, float(args[0]), args[1], args[2])
+				"reelCrate":
+					got = Fishing.reel_crate(db, uid, args[0])
+				# The session's own setup between casts (a flag set, the hold
+				# emptied), replayed so both sides fish the same save.
+				"patchProfile":
+					db.update_profile(uid, args[0])
+				"patchSave":
+					var patch: Dictionary = (args[0] as Dictionary).duplicate(true)
+					for k: Variant in patch:
+						save[k] = patch[k]
+				_:
+					_fail("fishing %s: call %d is %s, which is not ported" % [s["name"], n, op["op"]])
+					ok = false
+					break
+			var normalized: Variant = null if got.is_empty() and op["op"].begins_with("patch") else JsJson.parse(JsJson.stringify(got))
+			var d: String = JsJson.diff(normalized, op["result"])
+			if d != "":
+				_fail("fishing %s: call %d (%s) differs at %s" % [s["name"], n, op["op"], d.replace("$", "result")])
+				ok = false
+				break
+			if Dice.rolls != int(op["rolls"]):
+				_fail("fishing %s: call %d (%s) took %d rolls, the TS took %d" % [s["name"], n, op["op"], Dice.rolls, int(op["rolls"])])
+				ok = false
+				break
+			matched += 1
+		Dice.install(null)
+		Clock.install(Callable())
+		if not ok:
+			continue
+		var end_d: String = JsJson.diff(JsJson.parse(SaveFile.serialize(save, {}, "x")).get("save"), (JsJson.parse(str(s["end"])) as Dictionary).get("save"))
+		if end_d != "":
+			_fail("fishing %s: every call matched but the save ends differently at %s" % [s["name"], end_d.replace("$", "save")])
+	print("  fishing: %d calls in %d sessions replayed" % [matched, sessions.size()])

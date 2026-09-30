@@ -102,6 +102,13 @@ const CRATE_COSMETIC_POOL = [
 ]
 
 /** What a crate rolled, before anything is granted. */
+/** Every crate table in one place, for the Godot port's rules export
+ *  (scripts/export-godot-rules). */
+export const CRATE_TABLES = {
+  doubloonRange: CRATE_DOUBLOON_RANGE, baitPools: CRATE_BAIT_POOLS, baitQty: CRATE_BAIT_QTY,
+  outcomeWeights: CRATE_OUTCOME_WEIGHTS, cosmeticPool: CRATE_COSMETIC_POOL,
+}
+
 export type CrateRoll = {
   /** The pet the pet roll hit (the roll is blind to what you own), or null. */
   pet: PetDef | null
