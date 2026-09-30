@@ -475,6 +475,42 @@ its system's doc.
        means one game runs the fight and the other follows. The gauntlet is harder still
        (shared boons, cash-out, permadeath on a disconnect). Not committed to launch.
      - NOT AT LAUNCH: homestead visits, trading and gifting.
+     - THE MODEL (Kong, 2026-09-30): TERRARIA'S, with Animal Crossing's manners for the
+       homestead.
+       - Up to 4 captains in a sea, joined by invite.
+       - GUESTS SAIL IN THE HOST'S WORLD. They go anywhere the host can, including water they
+         have not unlocked, and join the host's fights.
+       - Everything a guest catches or earns (fish, doubloons, XP, loot, crew XP) goes into
+         THEIR OWN save.
+       - The host's world progress stays the host's: campaign nodes, fog, isles, digs, the
+         regulars, Finn. Clearing a friend's raid does not clear it in your campaign.
+       - The homestead is visited, not changed: you can look around and leave something, and
+         only the owner changes it.
+       - Talking is pings and emotes, with Steam's own chat and voice. No in-game free text.
+       - Fishing together has a nearby bonus and shared moments.
+       - OPEN: whether loot from a friend's later chapters is scaled.
+       - Kong passed on the shared-world feature list (crew-sized catches, a sea beast, scout
+         and angler, fleet voyages, drafting). What he wants instead is GROUP IRONMAN.
+     - THE CHARTER (Kong, 2026-09-30): a Group Ironman mode, modelled on Old School
+       RuneScape's.
+       - Founded at a new game by 2 to 4 friends. The Charter is its OWN WORLD: one campaign,
+         one fog, one homestead and one CREW CHEST, all shared by the crew.
+       - Each member has their own captain (ship, crew, gear, levels), SEALED to the Charter.
+         Nothing comes in from a solo game and nothing goes out; everything the crew owns,
+         the crew earned. Specialising pays (one fishes and sells, one raids for gear) and
+         the chest joins them up.
+       - HARDCORE CHARTER: the crew shares a pool of lives (proposed: one per member plus a
+         spare). A sunk ship or a lost raid spends one. When they run out the Charter plays
+         on and loses its hardcore flag for good.
+       - SOLO PLAY IS ALLOWED, MERGED ON RETURN. The world travels with the crew: whoever
+         holds the newest copy hosts, everyone leaves a session with the latest, any member
+         can sail it alone, and when the crew meets again what each did is merged.
+       - STILL TO DESIGN:
+         - which state is the CHARTER's and which is each CAPTAIN's (per system);
+         - the merge rule for each piece of Charter state;
+         - the crew chest's rules for solo withdrawals;
+         - the hardcore numbers;
+         - how a Charter is founded, joined, and what happens when a member leaves.
    - RETIRED on Steam: contests and the Pirate King ladder (races between players), along
      with the leaderboards.
 5. **Quick ones (2026-09-30):**
