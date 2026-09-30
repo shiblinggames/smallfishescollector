@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { MINEFIELD_COLS, MINEFIELD_ROWS, MINEFIELD_MINES, minefieldWeekStr } from './minefieldConstants'
-import { generateBoard } from './minefield'
+import { minefieldWeekStr } from './minefieldConstants'
+import { buildMinefieldLayout, type MinefieldLayout } from '@/lib/chartBoards'
 
 // The Minefield weekly board generator — one fresh board a week,
 // generated ALGORITHMICALLY (no Claude) via the pure engine in
@@ -10,18 +10,8 @@ import { generateBoard } from './minefield'
 // layout.mines is SERVER-ONLY and must never reach a client. layout.opening
 // is the guaranteed-safe region auto-revealed for every player.
 
-export interface MinefieldLayout {
-  cols: number
-  rows: number
-  mineCount: number
-  mines: number[]    // SERVER-ONLY
-  opening: number[]
-}
-
-function buildLayout(): MinefieldLayout {
-  const { mines, opening } = generateBoard(MINEFIELD_COLS, MINEFIELD_ROWS, MINEFIELD_MINES)
-  return { cols: MINEFIELD_COLS, rows: MINEFIELD_ROWS, mineCount: MINEFIELD_MINES, mines, opening }
-}
+// Built by lib/chartBoards, which the offline store shares.
+export type { MinefieldLayout } from '@/lib/chartBoards'
 
 export async function getThisWeeksMinefield(): Promise<MinefieldLayout | null> {
   const admin = createAdminClient()
@@ -36,10 +26,7 @@ export async function getThisWeeksMinefield(): Promise<MinefieldLayout | null> {
   if (cached) return cached.layout as MinefieldLayout
 
   try {
-    const layout = buildLayout()
-    if (layout.mines.length !== MINEFIELD_MINES || layout.opening.length === 0) {
-      throw new Error('Bad board')
-    }
+    const layout = buildMinefieldLayout()   // throws on a bad board
     await admin.from('minefield_boards').insert({ week, layout })
     return layout
   } catch (err) {

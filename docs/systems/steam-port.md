@@ -990,8 +990,27 @@ In order. Each step is worth doing even if the port never happens.
    - `scripts/check-offline-parlor.mts` (in `npm run check`); checked to fail when a payout or
      any of the three race guards is broken. Production probe as catman (reads and refusals,
      the profile and the week's rows unchanged).
-   - NOT YET: the Chart Room, the sea's own actions (folk, pacts, digs, isles, tours, Finn, the
-     smuggler), the tackle shop, the hold and almanac, badges and renown.
+   **THE CHART ROOM OFFLINE, 2026-09-29.** `lib/core/chartRoom`: Treasure Match (the run
+   replayed from its swaps), the Minefield, the Quartermaster's Hold, Lay the Rigging, the World
+   Chart's landmark claims and the room's guide. Six action files are thin wrappers;
+   `api.chartRoom` carries them to the four puzzles, the World Chart and the lobby.
+   - ALL FOUR BOARDS ARE BUILT BY CODE (no Claude), so offline the save builds its own each week
+     and keeps it: `lib/chartBoards` is now the one builder, called by the web's cached
+     generators and by the local store alike. The Minefield, Hold and Rigging engines rolled
+     `Math.random`; they now roll `rngNext` (unchanged on the web, seedable offline) and
+     `check-rng` guards them.
+   - `lib/data/chartData`: DailyData plus badges, the week's boards and one operation per
+     guarded write, each web query copied verbatim.
+   - SAVE FILE v11: the boards the save built and each puzzle's attempt per week (twelve weeks),
+     and the room's profile columns at the database's defaults (`CHARTING_PROFILE_DEFAULTS`). A
+     web export keeps what was banked or solved and drops half-done grids, since they point at
+     cells of the web's board, which the save never had.
+   - `scripts/check-offline-chartroom.mts` (in `npm run check`): each puzzle solved through the
+     real engines (an honest Treasure Match run played swap by swap), every store guard tested
+     directly; checked to fail when a guard or a payout is broken. Production probe as catman
+     (reads and refusals, none that flag; the profile and the week's rows unchanged).
+   - NOT YET: the sea's own actions (folk, pacts, digs, isles, tours, Finn, the smuggler, and
+     the boot and day aggregators), the tackle shop, the hold and almanac, badges and renown.
      Online-only by nature and staying on the web: social, leaderboards, public profiles,
      membership (Stripe), admin and dev tools, the honeypot.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.

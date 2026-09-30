@@ -12,7 +12,7 @@ import { vibrate as haptic } from '@/lib/haptics'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { submitMatch } from './actions'
+import { api } from '@/lib/gameApi'
 import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent, WILD } from './treasureMatch'
 import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, WILD_DROP_CHANCE, pointsForScore, nextMatchTier, type MatchState } from './constants'
 import ChartingNav from '@/components/ChartingNav'
@@ -206,7 +206,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   // Run ended (out of moves, or hit the top tier). Server tiers the best
   // score and banks the delta; we surface the result overlay.
   async function endRun(finalScore: number, perfect: boolean) {
-    const r = await submitMatch(movesLogRef.current)
+    const r = await api.chartRoom.submitMatch(movesLogRef.current)
     if ('error' in r) {
       setResult({ score: finalScore, best: Math.max(finalScore, bestRef.current), tier: pointsForScore(Math.max(finalScore, bestRef.current)), pointsWon: 0, maxed: perfect })
       return

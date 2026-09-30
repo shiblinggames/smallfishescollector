@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import ChartingNav from '@/components/ChartingNav'
 import { motion, AnimatePresence } from 'framer-motion'
-import { revealCell, toggleFlag } from './minefieldActions'
+import { api } from '@/lib/gameApi'
 import { neighborsOf } from './minefield'
 import { type MinefieldState } from './minefieldConstants'
 import { vibrate as haptic } from '@/lib/haptics'
@@ -106,7 +106,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
     if (busy.current) return 'skip'
     busy.current = true
     try {
-      const r = await revealCell(i)
+      const r = await api.chartRoom.revealCell(i)
       if ('error' in r) { setMessage(r.error); return 'skip' }
       setBusts(r.busts)
       setStatus(r.status)
@@ -139,7 +139,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
       if (next.has(i)) next.delete(i); else next.add(i)
       return next
     })
-    void toggleFlag(i)
+    void api.chartRoom.toggleFlag(i)
   }, [cleared, adjMap])
 
   // Chord — tap a revealed sounding whose flagged neighbours match its number

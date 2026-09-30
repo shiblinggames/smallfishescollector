@@ -1,11 +1,14 @@
-// Pure sudoku engine for The Quartermaster's Hold — zero imports so it
-// stays trivially testable in isolation (no Next/Supabase coupling).
+// Pure sudoku engine for The Quartermaster's Hold: its one import is the
+// game's dice (lib/rng, itself pure), so it stays trivially testable in
+// isolation (no Next/Supabase coupling) and the offline build can seed it.
 // generate.ts wraps these with the daily cache; constants.ts owns the
 // difficulty → clue-count mapping.
 //
 // Boards are number[] of length 81, row-major, 0 = empty. The public
 // surface returns 81-char strings ('.' = empty) to match the storage
 // encoding.
+
+import { rngNext } from '@/lib/rng'
 
 const SIZE = 9
 
@@ -18,7 +21,7 @@ function boxIndex(idx: number): number {
 function shuffled<T>(arr: T[]): T[] {
   const a = arr.slice()
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(rngNext() * (i + 1))
     ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a

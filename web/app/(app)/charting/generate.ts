@@ -1,7 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import {
-  MATCH_COLS, MATCH_ROWS, MATCH_TYPES, MATCH_TARGET, MATCH_MOVES, matchWeekStr,
-} from './constants'
+import { matchWeekStr } from './constants'
+import { buildMatchConfig, type MatchConfig } from '@/lib/chartBoards'
 
 // Treasure Match weekly board generator — one seeded board a week,
 // cached in treasure_match_boards. The seed makes the board + drop order
@@ -9,14 +8,8 @@ import {
 // Claude. Same cache-fetch / generate-on-miss / fall-back-to-latest
 // shape as the other Chart Room puzzles.
 
-export interface MatchConfig {
-  seed: number
-  cols: number
-  rows: number
-  types: number
-  target: number
-  moves: number
-}
+// Built by lib/chartBoards, which the offline store shares.
+export type { MatchConfig } from '@/lib/chartBoards'
 
 export async function getThisWeeksMatch(): Promise<MatchConfig | null> {
   const admin = createAdminClient()
@@ -31,14 +24,7 @@ export async function getThisWeeksMatch(): Promise<MatchConfig | null> {
   if (cached) return cached.config as MatchConfig
 
   try {
-    const config: MatchConfig = {
-      seed: Math.floor(Math.random() * 0x7fffffff),
-      cols: MATCH_COLS,
-      rows: MATCH_ROWS,
-      types: MATCH_TYPES,
-      target: MATCH_TARGET,
-      moves: MATCH_MOVES,
-    }
+    const config: MatchConfig = buildMatchConfig()
     await admin.from('treasure_match_boards').insert({ week, config })
     return config
   } catch (err) {

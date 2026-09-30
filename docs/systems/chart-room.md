@@ -28,6 +28,13 @@ which advance the World Chart — a long-arc landmark map paying escalating gems
 - New puzzle types need a solvability verifier script like the existing three; a weekly
   puzzle that generates unsolvable is a support fire.
 
+## Offline (the desktop build)
+
+The puzzles' rules live in `web/lib/core/chartRoom.ts`; the action files are thin wrappers.
+Every board is built by `web/lib/chartBoards.ts`, which the web's cached generators and the
+offline save share, so a new puzzle type adds its builder there. The engines roll through
+`lib/rng` (never `Math.random`), and `check-rng` holds them to it.
+
 ## Connects to
 
 - [tavern.md](tavern.md) — entry point. [economy-membership.md](economy-membership.md)

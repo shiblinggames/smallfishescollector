@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { HOLD_DIFFICULTIES, HOLD_META, holdWeekStr, type HoldDifficulty } from './constants'
-import { generatePuzzle, type SudokuPuzzle } from './sudoku'
+import { holdWeekStr } from './constants'
+import { buildSudokuSet, hasAllDifficulties, type SudokuSet } from '@/lib/chartBoards'
 
 // The Hold generator — FOUR fresh sudoku a week (Skiff / Galleon /
 // Dreadnought / Man-o-War), generated ALGORITHMICALLY (no Claude) via the
@@ -12,23 +12,8 @@ import { generatePuzzle, type SudokuPuzzle } from './sudoku'
 // solution is stored alongside the givens but is SERVER-ONLY; the
 // client payload (see actions.getHoldState) ever only carries givens.
 
-export type { SudokuPuzzle } from './sudoku'
-export type SudokuSet = Record<HoldDifficulty, SudokuPuzzle>
-
-function generateSet(): SudokuSet {
-  return Object.fromEntries(
-    HOLD_DIFFICULTIES.map(d => [d, generatePuzzle(HOLD_META[d].givens)]),
-  ) as SudokuSet
-}
-
-/** A cached row is stale if it predates a difficulty (e.g. the week the
- *  4th hold was added), so it must be regenerated to include all four. */
-function hasAllDifficulties(set: unknown): set is SudokuSet {
-  return !!set && HOLD_DIFFICULTIES.every(d => {
-    const p = (set as Record<string, unknown>)[d] as { givens?: string } | undefined
-    return typeof p?.givens === 'string'
-  })
-}
+// Built by lib/chartBoards, which the offline store shares.
+export type { SudokuPuzzle, SudokuSet } from '@/lib/chartBoards'
 
 export async function getThisWeeksSudoku(): Promise<SudokuSet | null> {
   const admin = createAdminClient()
@@ -43,13 +28,7 @@ export async function getThisWeeksSudoku(): Promise<SudokuSet | null> {
   if (cached && hasAllDifficulties(cached.puzzles)) return cached.puzzles as SudokuSet
 
   try {
-    const puzzles = generateSet()
-    for (const d of HOLD_DIFFICULTIES) {
-      const p = puzzles[d]
-      if (!p || p.givens.length !== 81 || p.solution.length !== 81) {
-        throw new Error(`Bad puzzle for ${d}`)
-      }
-    }
+    const puzzles = buildSudokuSet()   // throws on a bad puzzle
     // upsert (not insert) so a stale current-week row is overwritten with the
     // full four-difficulty set.
     await admin.from('daily_sudoku').upsert({ date: week, puzzles })

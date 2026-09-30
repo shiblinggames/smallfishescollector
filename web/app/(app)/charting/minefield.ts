@@ -1,9 +1,12 @@
-// Pure minesweeper engine for The Minefield — zero imports so it stays
-// trivially testable in isolation (no Next/Supabase coupling). generate.ts
+// Pure minesweeper engine for The Minefield: its one import is the game's
+// dice (lib/rng, itself pure), so it stays trivially testable in isolation
+// (no Next/Supabase coupling) and the offline build can seed it. generate.ts
 // wraps generateBoard with the weekly cache; actions.ts drives reveals.
 //
 // Tiles are a flat index 0..cols*rows-1, row-major. The mine layout is
 // produced here and lives server-side only; the client never receives it.
+
+import { rngNext } from '@/lib/rng'
 
 export function neighborsOf(i: number, cols: number, rows: number): number[] {
   const r = Math.floor(i / cols)
@@ -69,13 +72,13 @@ export function generateBoard(cols: number, rows: number, mineCount: number): Ge
   const total = cols * rows
   const minOpening = Math.max(6, Math.floor(total * 0.06))
   for (let attempt = 0; attempt < 200; attempt++) {
-    const seed = Math.floor(Math.random() * total)
+    const seed = Math.floor(rngNext() * total)
     const forbidden = new Set<number>([seed, ...neighborsOf(seed, cols, rows)])
     const candidates: number[] = []
     for (let i = 0; i < total; i++) if (!forbidden.has(i)) candidates.push(i)
     // Fisher–Yates partial shuffle to pick mineCount distinct mines.
     for (let i = candidates.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
+      const j = Math.floor(rngNext() * (i + 1))
       ;[candidates[i], candidates[j]] = [candidates[j], candidates[i]]
     }
     const mines = new Set(candidates.slice(0, mineCount))

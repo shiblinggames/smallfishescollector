@@ -21,12 +21,13 @@
 // nothing and later stages can pick them up.
 
 import type { BoardAttemptRow, CapstanRuns, LadderAttemptRow } from '../triviaData'
-import { freshCasino, freshTrivia, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, type LocalSave, type LocalMail } from './save'
+import type { HoldAttemptRow } from '../chartData'
+import { freshCasino, freshTrivia, freshCharting, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, CHARTING_PROFILE_DEFAULTS, type LocalSave, type LocalMail } from './save'
 import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 10
+export const LOCAL_SAVE_VERSION = 11
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -88,6 +89,9 @@ const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
   // v10 (2026-09-29): the Parlor. Each game's attempt per week, and the Parlor's
   // profile columns at the web's defaults.
   9: f => ({ ...f, version: 10, save: { ...f.save, trivia: freshTrivia(), profile: { ...structuredClone(PARLOR_PROFILE_DEFAULTS), ...f.save.profile } } }),
+  // v11 (2026-09-29): the Chart Room. The boards the save builds itself, each
+  // puzzle's attempt per week, and the room's profile columns at the web's defaults.
+  10: f => ({ ...f, version: 11, save: { ...f.save, charting: freshCharting(), profile: { ...structuredClone(CHARTING_PROFILE_DEFAULTS), ...f.save.profile } } }),
 }
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
@@ -125,7 +129,7 @@ export async function writeSave(storage: SaveStorage, save: LocalSave, carried: 
 export type WebExport = { format: string; version: number; userId: string; username: string | null; profile: Row; tables: Record<string, Row[]> }
 
 /** The tables the local fishing save models; everything else is carried. */
-const MODELLED = new Set(['trivia_board_attempts', 'trivia_capstan_attempts', 'trivia_ladder_attempts', 'bounty_progress', 'bounty_board_history', 'bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
+const MODELLED = new Set(['treasure_match_attempts', 'minefield_attempts', 'rigging_attempts', 'sudoku_attempts', 'trivia_board_attempts', 'trivia_capstan_attempts', 'trivia_ladder_attempts', 'bounty_progress', 'bounty_board_history', 'bait_inventory', 'fish_inventory', 'fish_collection', 'fish_lifetime', 'fish_personal_bests',
   'shiny_catches', 'daily_challenge_progress', 'raid_completions', 'rod_inventory', 'sea_rapport', 'sea_trader_deals',
   'user_crew', 'daily_recruits', 'crew_hall_bunks', 'daily_voyages', 'trawls',
   'gauntlet_depth_bests', 'gauntlet_runs', 'bounty_events', 'casino_buy_ins', 'blackjack_hands', 'roulette_spins', 'slot_spins',
@@ -135,7 +139,7 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
   const t = (name: string) => exp.tables[name] ?? []
   const save: LocalSave = {
     uid: exp.userId,
-    profile: { ...structuredClone(SHIP_PROFILE_DEFAULTS), ...structuredClone(DAILY_PROFILE_DEFAULTS), ...structuredClone(PARLOR_PROFILE_DEFAULTS), ...exp.profile },
+    profile: { ...structuredClone(SHIP_PROFILE_DEFAULTS), ...structuredClone(DAILY_PROFILE_DEFAULTS), ...structuredClone(PARLOR_PROFILE_DEFAULTS), ...structuredClone(CHARTING_PROFILE_DEFAULTS), ...exp.profile },
     species,
     bait: Object.fromEntries(t('bait_inventory').map(r => [r.bait_type, Number(r.quantity)])),
     hold: Object.fromEntries(t('fish_inventory').filter(r => Number(r.quantity) > 0).map(r => [Number(r.fish_id), Number(r.quantity)])),
@@ -163,6 +167,25 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
       claimed: (b.claimed ?? []) as boolean[], assigned_at: '', reroll_used: b.reroll_used === true,
     })).sort((a, b) => a.date.localeCompare(b.date)).slice(-60),
     contestsWonAt: {},
+    // THE CHART ROOM'S BOARDS ARE THE SAVE'S OWN offline (it builds its own each
+    // week), so an attempt imported from the web's board keeps only what was
+    // banked or solved: a half-done grid would point at cells of a board this
+    // save never had. A cleared or banked week stays banked, so it is never paid twice.
+    charting: {
+      ...freshCharting(),
+      match: Object.fromEntries(t('treasure_match_attempts').map(r => [String(r.week), {
+        status: r.status === 'cleared' ? 'cleared' as const : 'active' as const, best_score: Number(r.best_score ?? 0), points_awarded: Number(r.points_awarded ?? 0),
+      }])),
+      minefield: Object.fromEntries(t('minefield_attempts').filter(r => Number(r.points_awarded ?? 0) > 0).map(r => [String(r.week), {
+        revealed: [], flagged: [], status: 'cleared' as const, points_awarded: Number(r.points_awarded), busts: Number(r.busts ?? 0),
+      }])),
+      rigging: Object.fromEntries(t('rigging_attempts').filter(r => Number(r.points_awarded ?? 0) > 0 || r.status === 'cleared').map(r => [String(r.week), {
+        paths: {}, status: 'cleared' as const, points_awarded: Number(r.points_awarded ?? 0),
+      }])),
+      hold: Object.fromEntries(t('sudoku_attempts').map(r => [String(r.date), {
+        progress: {}, solved: (r.solved ?? {}) as HoldAttemptRow['solved'], doubloons_awarded: Number(r.doubloons_awarded ?? 0), updated_at: 'imported',
+      }])),
+    },
     trivia: {
       board: Object.fromEntries(t('trivia_board_attempts').map(r => [String(r.date), {
         answers: (r.answers ?? {}) as BoardAttemptRow['answers'], doubloons_awarded: Number(r.doubloons_awarded ?? 0), gems_awarded: Number(r.gems_awarded ?? 0),

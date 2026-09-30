@@ -1,147 +1,39 @@
 'use server'
 
-// Lay the Rigging — server-authoritative. The board is solvable by
-// construction; the player draws ropes client-side and the full solve is
-// validated here (isSolved) before any points are banked. First clear of
-// the week banks RIGGING_POINTS puzzle points toward the World Chart.
-// Types live in ./constants ('use server' strips non-async exports).
+// Lay the Rigging: server-authoritative. The board is solvable by
+// construction; the full solve is validated in lib/core/chartRoom before any
+// points are banked. Each action checks the session and hands the core the
+// Supabase store.
 
 import { getCurrentUser } from '@/lib/userData'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getThisWeeksRigging } from './generate'
-import { isSolved } from './rigging'
-import {
-  RIGGING_POINTS, riggingWeekStr,
-  type RiggingState, type SubmitRiggingResult,
-} from './constants'
+import { chartData } from '@/lib/data/chartData'
+import * as core from '@/lib/core/chartRoom'
+import type { RiggingState, SubmitRiggingResult } from './constants'
 
-interface AttemptRow {
-  paths: Record<number, number[]>
-  status: 'active' | 'cleared'
-  points_awarded: number
-}
-
-const ATTEMPT_COLS = 'paths, status, points_awarded'
-
-async function loadAttempt(userId: string, week: string): Promise<AttemptRow> {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('rigging_attempts')
-    .select(ATTEMPT_COLS)
-    .eq('user_id', userId).eq('week', week)
-    .single()
-  return (data as AttemptRow | null) ?? { paths: {}, status: 'active', points_awarded: 0 }
-}
-
-async function loadPuzzlePoints(userId: string): Promise<number> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('puzzle_points').eq('id', userId).single()
-  return (data?.puzzle_points as number | null) ?? 0
+async function me(): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.id ?? null
 }
 
 export async function getRiggingState(): Promise<RiggingState | { error: string }> {
-
   // ONE verification per request, shared. See lib/userData.
   const user = await getCurrentUser()
   if (!user) return { error: 'Not authenticated' }
-
-  const week = riggingWeekStr()
-  const [layout, attempt, points] = await Promise.all([
-    getThisWeeksRigging(),
-    loadAttempt(user.id, week),
-    loadPuzzlePoints(user.id),
-  ])
-  if (!layout) return { error: 'No rigging to lay this week. Try again in a moment.' }
-
-  return {
-    week,
-    cols: layout.cols,
-    rows: layout.rows,
-    pairs: layout.pairs,
-    paths: attempt.paths ?? {},
-    status: attempt.status,
-    pointsAwarded: attempt.points_awarded,
-    reward: RIGGING_POINTS,
-    puzzlePoints: points,
-  }
+  return core.getRiggingState(chartData(createAdminClient()), user.id)
 }
 
 /** Persist in-flight ropes so the player can resume (debounced client). */
 export async function saveRiggingPaths(paths: Record<number, number[]>): Promise<{ ok: true } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-  if (typeof paths !== 'object' || paths === null) return { error: 'Invalid paths' }
-
-  const week = riggingWeekStr()
-  const attempt = await loadAttempt(user.id, week)
-  if (attempt.status === 'cleared') return { ok: true }
-
-  await writeActive(user.id, week, paths)
-  return { ok: true }
-}
-
-/** Save in-flight ropes on a board that is still ACTIVE. Never a whole-row
- *  upsert: a save that raced a clear used to write status 'active' and
- *  points 0 back over it, and the board could then be banked again. */
-async function writeActive(userId: string, week: string, paths: Record<number, number[]>): Promise<void> {
-  const admin = createAdminClient()
-  const updated_at = new Date().toISOString()
-  const { data } = await admin.from('rigging_attempts')
-    .update({ paths, updated_at })
-    .eq('user_id', userId).eq('week', week).eq('status', 'active')
-    .select('user_id')
-  if (data && data.length > 0) return
-  // No row yet: create it. A row that exists but is cleared makes this a no-op.
-  await admin.from('rigging_attempts').upsert(
-    { user_id: userId, week, paths, status: 'active', points_awarded: 0, updated_at },
-    { onConflict: 'user_id,week', ignoreDuplicates: true },
-  )
+  const uid = await me()
+  if (!uid) return { error: 'Not authenticated' }
+  return core.saveRiggingPaths(chartData(createAdminClient()), uid, paths)
 }
 
 export async function submitRigging(paths: Record<number, number[]>): Promise<SubmitRiggingResult | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const week = riggingWeekStr()
-  const [layout, attempt, oldPoints] = await Promise.all([
-    getThisWeeksRigging(),
-    loadAttempt(user.id, week),
-    loadPuzzlePoints(user.id),
-  ])
-  if (!layout) return { error: 'No board this week' }
-
-  const solved = isSolved(layout.cols, layout.rows, layout.pairs, paths)
-  const admin = createAdminClient()
-
-  if (!solved) {
-    // Persist progress, no award.
-    if (attempt.status !== 'cleared') await writeActive(user.id, week, paths)
-    return { solved: false, pointsWon: 0, newPuzzlePoints: null }
-  }
-
-  // Already banked this week? No double pay.
-  if (attempt.points_awarded > 0 || attempt.status === 'cleared') {
-    return { solved: true, pointsWon: 0, newPuzzlePoints: null }
-  }
-
-  // Clear it FIRST, and only from the unbanked state. Two submits fired
-  // together both reach here; only the one whose write lands banks points.
-  await writeActive(user.id, week, paths)
-  const { data: cleared } = await admin.from('rigging_attempts')
-    .update({ paths, status: 'cleared', points_awarded: RIGGING_POINTS, updated_at: new Date().toISOString() })
-    .eq('user_id', user.id).eq('week', week).eq('status', 'active').eq('points_awarded', 0)
-    .select('user_id')
-  if (!cleared || cleared.length === 0) return { solved: true, pointsWon: 0, newPuzzlePoints: null }
-
-  const newPuzzlePoints = oldPoints + RIGGING_POINTS
-  await admin.from('profiles').update({ puzzle_points: newPuzzlePoints }).eq('id', user.id)
-
-  return {
-    solved: true,
-    pointsWon: RIGGING_POINTS,
-    newPuzzlePoints,
-  }
+  const uid = await me()
+  if (!uid) return { error: 'Not authenticated' }
+  return core.submitRigging(chartData(createAdminClient()), uid, paths)
 }

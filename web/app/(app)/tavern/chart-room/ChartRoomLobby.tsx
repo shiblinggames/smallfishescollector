@@ -14,7 +14,7 @@ import ChartingNav from '@/components/ChartingNav'
 import RoomIntro from '@/components/RoomIntro'
 import LobbyGuide, { type LobbyGuideStep } from '@/components/LobbyGuide'
 import { GUIDES } from '@/lib/onboardingScenes'
-import { markChartingGuideSeen } from './actions'
+import { api } from '@/lib/gameApi'
 
 const MEDAL = ['#f0c040', '#c9d2dc', '#cd7f32'] // gold · silver · bronze
 
@@ -77,7 +77,7 @@ export default function ChartRoomLobby({ holdSolved, holdDoubloonsToday, matchSt
       <LobbyGuide
         show={!hasSeenGuide}
         steps={CHARTING_GUIDE}
-        onSeen={() => { void markChartingGuideSeen().catch(() => {}) }}
+        onSeen={() => { void api.chartRoom.markChartingGuideSeen().catch(() => {}) }}
       />
     </div>
   )

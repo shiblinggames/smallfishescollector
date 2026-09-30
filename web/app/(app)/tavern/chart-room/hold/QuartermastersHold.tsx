@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { createPortal } from 'react-dom'
 import ChartingNav from '@/components/ChartingNav'
 import { motion, AnimatePresence } from 'framer-motion'
-import { saveHoldProgress, tallyHold, submitHold } from './actions'
+import { api } from '@/lib/gameApi'
 import {
   HOLD_DIFFICULTIES, HOLD_META, HOLD_SIZE, holdPayout,
   type HoldDifficulty, type HoldState, type HoldPuzzleClient,
@@ -166,7 +166,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
   // Autosave (debounced) — keyed to the hold on the bench.
   useEffect(() => {
     if (solved) return
-    const t = setTimeout(() => { void saveHoldProgress(selected, boardStr, notesStr) }, 800)
+    const t = setTimeout(() => { void api.chartRoom.saveHoldProgress(selected, boardStr, notesStr) }, 800)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardStr, notesStr, selected, solved])
@@ -233,7 +233,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
     if (isPending || solved) return
     setMessage(null)
     startTransition(async () => {
-      const r = await tallyHold(selected, boardStr)
+      const r = await api.chartRoom.tallyHold(selected, boardStr)
       if ('error' in r) { setMessage(r.error); return }
       setWrong(r.wrong)
       setHintsMap(prev => ({ ...prev, [selected]: r.hintsUsed }))
@@ -246,7 +246,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
     if (isPending || solved || !isFull) return
     setMessage(null)
     startTransition(async () => {
-      const r = await submitHold(selected, boardStr)
+      const r = await api.chartRoom.submitHold(selected, boardStr)
       if ('error' in r) { setMessage(r.error); return }
       if (!r.correct) {
         setWrong(r.wrong ?? null)

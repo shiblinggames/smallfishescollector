@@ -34,7 +34,8 @@ const RNG_FILES = [
   ...['crew/actions.ts', 'expeditions/bountyActions.ts', 'expeditions/raidMapActions.ts', 'fishing/actions.ts',
     'fishing/dailyChallengeActions.ts', 'fishing/trawls/actions.ts', 'fishing/trawls/constants.ts',
     'raids/gauntlet/actions.ts', 'sea/finnActions.ts', 'sea/folkActions.ts', 'sea/traderActions.ts',
-    'tavern/actions.ts', 'tavern/trivia/capstan/actions.ts', 'tavern/trivia/king/actions.ts'].map(n => `app/(app)/${n}`),
+    'tavern/actions.ts', 'tavern/trivia/capstan/actions.ts', 'tavern/trivia/king/actions.ts',
+    'charting/minefield.ts', 'tavern/chart-room/hold/sudoku.ts', 'tavern/chart-room/rigging/rigging.ts'].map(n => `app/(app)/${n}`),
 ]
 const CLOCK_FILES = ['seaClock', 'seaTraders', 'weekStart', 'seaHotspots', 'seaCouriers', 'crewBunks',
   'crewBunkSettle', 'dailyChallenges', 'bounties', 'seaWeather', 'seaLeviathans', 'seaBottles', 'seaFinn',

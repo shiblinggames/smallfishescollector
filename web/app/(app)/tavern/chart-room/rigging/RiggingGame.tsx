@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { createPortal } from 'react-dom'
 import ChartingNav from '@/components/ChartingNav'
 import { motion, AnimatePresence } from 'framer-motion'
-import { saveRiggingPaths, submitRigging } from './actions'
+import { api } from '@/lib/gameApi'
 import { isSolved, neighborsOf } from './rigging'
 import { RIGGING_PALETTE, type RiggingState } from './constants'
 import { vibrate as haptic } from '@/lib/haptics'
@@ -147,7 +147,7 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
     if (isSolved(cols, rows, pairs, current)) {
       haptic([12, 40, 12, 40, 20])
       startTransition(async () => {
-        const r = await submitRigging(current)
+        const r = await api.chartRoom.submitRigging(current)
         if ('error' in r) return
         if (r.solved) {
           setStatus('cleared')
@@ -162,14 +162,14 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
       return
     }
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => { void saveRiggingPaths(current) }, 600)
+    saveTimer.current = setTimeout(() => { void api.chartRoom.saveRiggingPaths(current) }, 600)
   }
 
   function resetAll() {
     if (cleared) return
     commit({}); setActiveBoth(null); haptic(10)
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => { void saveRiggingPaths({}) }, 400)
+    saveTimer.current = setTimeout(() => { void api.chartRoom.saveRiggingPaths({}) }, 400)
   }
 
   const boardW = `min(96vw, ${cols * 46}px)`

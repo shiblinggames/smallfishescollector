@@ -9,7 +9,7 @@
 // docs/systems/steam-port.md step 8), then selling, the crew, voyages and
 // trawls, the gauntlets, the Den, raids and the campaign map, the ship and the
 // Shipyard, and the daily loop (bounties, challenges, the Daily Haul, mail,
-// contests), and the Parlor.
+// contests), the Parlor and the Chart Room.
 
 import { webFishingApi, type FishingApi } from './fishing'
 import { webSellingApi, type SellingApi } from './selling'
@@ -21,6 +21,7 @@ import { webRaidsApi, type RaidsApi } from './raids'
 import { webShipApi, type ShipApi } from './ship'
 import { webDailiesApi, type DailiesApi } from './dailies'
 import { webParlorApi, type ParlorApi } from './parlor'
+import { webChartRoomApi, type ChartRoomApi } from './chartRoom'
 
 export interface GameApi {
   fishing: FishingApi
@@ -33,6 +34,7 @@ export interface GameApi {
   ship: ShipApi
   dailies: DailiesApi
   parlor: ParlorApi
+  chartRoom: ChartRoomApi
 }
 
 export const api: GameApi = {
@@ -46,6 +48,7 @@ export const api: GameApi = {
   ship: webShipApi,
   dailies: webDailiesApi,
   parlor: webParlorApi,
+  chartRoom: webChartRoomApi,
 }
 
 export type { FishingApi } from './fishing'
@@ -55,6 +58,7 @@ export type { GauntletApi } from './gauntlet'
 export type { ShipApi } from './ship'
 export type { DailiesApi, BountyBoard, BountyView } from './dailies'
 export type { ParlorApi } from './parlor'
+export type { ChartRoomApi } from './chartRoom'
 export type { CasinoApi } from './casino'
 export type { RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide } from './raids'
 export type { VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew } from './voyages'

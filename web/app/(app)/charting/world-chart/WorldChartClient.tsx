@@ -16,7 +16,7 @@ import {
   WORLD_CHART_FULL_POINTS, WORLD_CHART_GRAND_TOTAL,
   type LandmarkView,
 } from '@/lib/worldChart'
-import { claimLandmark } from '../worldChartActions'
+import { api } from '@/lib/gameApi'
 import { flyPayout } from '@/lib/coinFly'
 
 const GOLD = '#f0c040'
@@ -66,7 +66,7 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
     if (claimingId != null) return
     setClaimingId(lm.id)
     vibrate([0, 30, 40, 90])
-    const res = await claimLandmark(lm.id)
+    const res = await api.chartRoom.claimLandmark(lm.id)
     if ('ok' in res && res.ok) {
       setPaid({ gems: res.awarded - res.bonus, bonus: res.bonus, completed: res.completed })
       vibrate(res.completed ? [0, 40, 60, 120, 60, 200] : [0, 20, 30, 60, 30, 140])

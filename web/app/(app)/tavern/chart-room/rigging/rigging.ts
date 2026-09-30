@@ -1,5 +1,6 @@
-// Pure engine for Lay the Rigging (Flow / connect-the-pairs) — zero
-// imports so it stays trivially testable. generate.ts wraps it with the
+// Pure engine for Lay the Rigging (Flow / connect-the-pairs): its one
+// import is the game's dice (lib/rng, itself pure), so it stays trivially
+// testable and the offline build can seed it. generate.ts wraps it with the
 // weekly cache; actions.ts validates solves with isSolved().
 //
 // A board is solvable BY CONSTRUCTION: we build one random Hamiltonian
@@ -9,6 +10,8 @@
 // are stored/sent — never the solution.
 //
 // Cells are flat indices 0..cols*rows-1, row-major.
+
+import { rngNext } from '@/lib/rng'
 
 export function neighborsOf(i: number, cols: number, rows: number): number[] {
   const r = Math.floor(i / cols)
@@ -42,10 +45,10 @@ function backbite(path: number[], cols: number, rows: number, iterations: number
   path.forEach((cell, idx) => pos.set(cell, idx))
   const n = path.length
   for (let it = 0; it < iterations; it++) {
-    const atTail = Math.floor(Math.random() * 2) === 0
+    const atTail = Math.floor(rngNext() * 2) === 0
     const endCell = atTail ? path[n - 1] : path[0]
     const nbrs = neighborsOf(endCell, cols, rows)
-    const v = nbrs[Math.floor(Math.random() * nbrs.length)]
+    const v = nbrs[Math.floor(rngNext() * nbrs.length)]
     const j = pos.get(v)!
     if (atTail) {
       // reverse path[j+1 .. n-1]
@@ -75,7 +78,7 @@ function cutLengths(total: number, parts: number): number[] {
   const lengths = new Array(parts).fill(2)
   let remaining = total - 2 * parts
   while (remaining > 0) {
-    lengths[Math.floor(Math.random() * parts)]++
+    lengths[Math.floor(rngNext() * parts)]++
     remaining--
   }
   return lengths

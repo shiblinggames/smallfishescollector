@@ -12,6 +12,8 @@ import type { CaptainData, ProfileGuard, Row } from '../common'
 import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { BountyRow } from '../dailyData'
 import type { BoardAttemptRow, CapstanRuns, LadderAttemptRow } from '../triviaData'
+import type { MatchAttemptRow, MinefieldAttemptRow, RiggingAttemptRow, HoldAttemptRow } from '../chartData'
+import type { MatchConfig, MinefieldLayout, SudokuSet, RiggingLayout } from '@/lib/chartBoards'
 import type { ChallengeOverride } from '@/lib/dailyChallenges'
 import { clockNow } from '@/lib/clock'
 import type { MarketState } from '@/lib/marketRules'
@@ -82,6 +84,10 @@ export type LocalSave = {
   // ── Save v10 (the Parlor) ──
   /** Each game's attempt per week (the Monday), the last twelve weeks kept. */
   trivia: LocalTrivia
+  // ── Save v11 (the Chart Room) ──
+  /** The weekly boards this save built, and each puzzle's attempt per week
+   *  (the Monday), the last twelve weeks kept. */
+  charting: LocalCharting
 }
 
 /** A letter in the captain's own mailbox. Offline the game is the only sender. */
@@ -143,6 +149,28 @@ export type LocalTrivia = {
   ladder: Record<string, LadderAttemptRow>
 }
 export const freshTrivia = (): LocalTrivia => ({ board: {}, capstan: {}, ladder: {} })
+
+/** The Chart Room's profile columns at the web's column defaults (v11). */
+export const CHARTING_PROFILE_DEFAULTS = {
+  puzzle_points: 0, charting_landmarks_claimed: [] as number[], has_seen_charting_guide: false,
+}
+
+export type LocalCharting = {
+  boards: {
+    match: Record<string, MatchConfig>
+    minefield: Record<string, MinefieldLayout>
+    sudoku: Record<string, SudokuSet>
+    rigging: Record<string, RiggingLayout>
+  }
+  match: Record<string, MatchAttemptRow>
+  minefield: Record<string, MinefieldAttemptRow>
+  rigging: Record<string, RiggingAttemptRow>
+  hold: Record<string, HoldAttemptRow>
+}
+export const freshCharting = (): LocalCharting => ({
+  boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} },
+  match: {}, minefield: {}, rigging: {}, hold: {},
+})
 
 /** A Den nobody has visited: no buy-ins, no hand, the pot at its seed. */
 export function freshCasino(): LocalCasino {
