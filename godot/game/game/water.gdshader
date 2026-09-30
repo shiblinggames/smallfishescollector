@@ -20,9 +20,9 @@ render_mode unshaded;
 uniform vec2 u_cam = vec2(0.0);
 uniform float u_zoom = 1.0;
 uniform vec2 u_res = vec2(1600.0, 900.0);
-uniform vec3 u_shallow : source_color;
-uniform vec3 u_mid : source_color;
-uniform vec3 u_deep : source_color;
+uniform vec3 u_shallow;
+uniform vec3 u_mid;
+uniform vec3 u_deep;
 uniform float u_dark = 0.0;
 uniform float u_warm = 0.0;
 uniform vec2 u_light = vec2(-0.7, -0.7);
@@ -38,8 +38,14 @@ vec2 along_wind(vec2 p, float k) {
 	return vec2(dot(p, WIND), dot(p, vec2(-WIND.y, WIND.x)) * k);
 }
 
+// NOT THE WEB'S sin() HASH. fract(sin(x) * 43758) leans on sin being exact
+// for large x, and GPUs are not: on a desktop card through Vulkan it broke the
+// sea into hard angular blocks. This one (Dave Hoskins' hash12) is fract and
+// dot only, the same everywhere.
 float hash(vec2 p) {
-	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
 }
 
 float vnoise(vec2 p) {

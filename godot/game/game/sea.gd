@@ -46,7 +46,7 @@ func _ready() -> void:
 	mainland.scale = Vector2(s, s / Chart.GROUND)
 	_world.add_child(mainland)
 	_town_light = PointLight2D.new()
-	_town_light.texture = Glow.radial(256, Color(1.0, 0.8, 0.5))
+	_town_light.texture = Glow.radial(256, Color(1.0, 0.8, 0.5), true)
 	_town_light.texture_scale = 4.0
 	_town_light.color = Color(1.0, 0.78, 0.5)
 	_town_light.energy = 0.0

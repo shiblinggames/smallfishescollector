@@ -36,7 +36,7 @@ func _ready() -> void:
 	add_child(_spray)
 	add_child(_sprite)
 	lantern = PointLight2D.new()
-	lantern.texture = Glow.radial(256, Color(1.0, 0.78, 0.45))
+	lantern.texture = Glow.radial(256, Color(1.0, 0.78, 0.45), true)
 	lantern.texture_scale = 2.2
 	lantern.color = Color(1.0, 0.8, 0.55)
 	lantern.energy = 0.0

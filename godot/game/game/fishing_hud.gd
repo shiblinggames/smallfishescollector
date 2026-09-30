@@ -48,7 +48,7 @@ var _toast_t: float = 0.0
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	theme = UiTheme.make()
 
@@ -72,9 +72,8 @@ func _ready() -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 
 	var bottom: HBoxContainer = HBoxContainer.new()
-	bottom.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	bottom.position = Vector2(-190, -84)
-	bottom.custom_minimum_size = Vector2(380, 56)
+	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
+	_place(bottom, Vector2(0.5, 1.0), Vector2(-240, -84), Vector2(480, 56))
 	bottom.add_theme_constant_override("separation", 12)
 	add_child(bottom)
 	_bait_pick = OptionButton.new()
@@ -88,21 +87,15 @@ func _ready() -> void:
 	bottom.add_child(_cast)
 
 	_status = _label(self, "", 22, INK, true)
-	_status.set_anchors_preset(Control.PRESET_CENTER)
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status.position = Vector2(-300, 150)
-	_status.custom_minimum_size = Vector2(600, 30)
+	_place(_status, Vector2(0.5, 0.5), Vector2(-10, 150), Vector2(600, 32))
 	_hint = _label(self, "", 15, DIM)
-	_hint.set_anchors_preset(Control.PRESET_CENTER)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hint.position = Vector2(-300, 186)
-	_hint.custom_minimum_size = Vector2(600, 24)
+	_place(_hint, Vector2(0.5, 0.5), Vector2(-10, 188), Vector2(600, 24))
 
 	_dial = Dial.new()
-	_dial.custom_minimum_size = Vector2(300, 300)
-	_dial.size = Vector2(300, 300)
-	_dial.set_anchors_preset(Control.PRESET_CENTER)
-	_dial.position = Vector2(-150, -200)
+	# Beside the boat (which is always at the middle of the screen), not over it.
+	_place(_dial, Vector2(0.5, 0.5), Vector2(140, -170), Vector2(300, 300))
 	_dial.visible = false
 	_dial.mouse_filter = Control.MOUSE_FILTER_STOP
 	_dial.gui_input.connect(func(e: InputEvent) -> void:
@@ -112,18 +105,28 @@ func _ready() -> void:
 	add_child(_dial)
 
 	_toast = _label(self, "", 18, GOLD, true)
-	_toast.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_toast.position = Vector2(-300, 90)
-	_toast.custom_minimum_size = Vector2(600, 28)
+	_place(_toast, Vector2(0.5, 0.0), Vector2(-300, 90), Vector2(600, 30))
 	refresh()
+
+
+## Pin a control to a point of the screen (anchor, 0..1 each way) at an offset
+## from it, with a size. `position` would be measured from the top-left of the
+## screen whatever the anchor; offsets are measured from the anchor.
+static func _place(c: Control, anchor: Vector2, offset: Vector2, size_px: Vector2) -> void:
+	c.anchor_left = anchor.x
+	c.anchor_right = anchor.x
+	c.anchor_top = anchor.y
+	c.anchor_bottom = anchor.y
+	c.offset_left = offset.x
+	c.offset_top = offset.y
+	c.offset_right = offset.x + size_px.x
+	c.offset_bottom = offset.y + size_px.y
 
 
 func _box(at: Vector2, right: bool) -> VBoxContainer:
 	var b: VBoxContainer = VBoxContainer.new()
-	b.set_anchors_preset(Control.PRESET_TOP_RIGHT if right else Control.PRESET_TOP_LEFT)
-	b.position = at + (Vector2(-360, 0) if right else Vector2.ZERO)
-	b.custom_minimum_size = Vector2(360, 0)
+	_place(b, Vector2(1.0 if right else 0.0, 0.0), at + (Vector2(-360, 0) if right else Vector2.ZERO), Vector2(360, 120))
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(b)
 	return b
@@ -372,9 +375,7 @@ func _show_card(card: Dictionary) -> void:
 	_close_card()
 	_card = PanelContainer.new()
 	_card.add_theme_stylebox_override("panel", UiTheme.card())
-	_card.set_anchors_preset(Control.PRESET_CENTER)
-	_card.custom_minimum_size = Vector2(420, 0)
-	_card.position = Vector2(-210, -260)
+	_place(_card, Vector2(0.5, 0.5), Vector2(-220, -250), Vector2(440, 0))
 	add_child(_card)
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
