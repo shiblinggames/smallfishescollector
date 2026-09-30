@@ -22,7 +22,8 @@ import {
   renownStats, formatRenownTotal, RENOWN_RESPEC_GEM_COST,
   type RenownSkill, type RenownStat, type RenownAlloc,
 } from '@/lib/renown'
-import { commitRenown, respecRenown, buyRenownRespec, getRenownState, type RenownState } from '@/app/(app)/actions/renown'
+import { api } from '@/lib/gameApi'
+import type { RenownState } from '@/lib/gameApi'
 
 interface Props {
   open: boolean
@@ -69,7 +70,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
     let live = true
     // Handed back up too, so the dot and the chip on the chart agree with
     // what the board reads even when nothing is spent.
-    getRenownState(skill).then(fresh => { if (live && fresh) { setState(fresh); onChangeRef.current?.(fresh) } })
+    api.progress.getRenownState(skill).then(fresh => { if (live && fresh) { setState(fresh); onChangeRef.current?.(fresh) } })
     return () => { live = false }
   }, [open, skill])
 
@@ -110,7 +111,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
     setBusy(true)
     setErr(null)
     try {
-      const res = await commitRenown(skill, draft)
+      const res = await api.progress.commitRenown(skill, draft)
       if (res && 'error' in res) { setErr(res.error) }
       else if (res) { setState(res); setDraft({}); onChange?.(res); vibrate([10, 30, 14]) }
     } finally {
@@ -128,7 +129,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
     if (busy) return
     setBusy(true); setErr(null)
     try {
-      const res = await respecRenown(skill)
+      const res = await api.progress.respecRenown(skill)
       if (res && 'error' in res) setErr(res.error)
       else if (res) { setState(res); setDraft({}); setConfirm(null); onChange?.(res); vibrate([14, 40, 18]) }
     } finally { setBusy(false) }
@@ -138,7 +139,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
     if (busy) return
     setBusy(true); setErr(null)
     try {
-      const res = await buyRenownRespec(skill)
+      const res = await api.progress.buyRenownRespec(skill)
       if (res && 'error' in res) setErr(res.error)
       else if (res) { setState(res); setConfirm(null); onChange?.(res); vibrate([10, 30, 14]) }
     } finally { setBusy(false) }

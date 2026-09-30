@@ -37,7 +37,6 @@ import { HATS } from '@/lib/hats'
 import { BOATS } from '@/lib/boats'
 import { PETS } from '@/lib/pets'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
-import { updateCharacterColor } from '@/app/(app)/u/actions'
 import type { LoadoutGear } from '@/lib/gameApi'
 
 const GOLD = '#f0c040'
@@ -173,7 +172,7 @@ export default function LoadoutBody({
     if (slot === 'hat') { onLookChange({ hatId: value }); await api.fishing.equipHat(value, quiet).catch(() => {}) }
     else if (slot === 'boat') { onLookChange({ boatId: value }); await api.fishing.equipBoat(value, quiet).catch(() => {}) }
     else if (slot === 'pet') { onLookChange({ petId: value }); await api.fishing.equipPet(value, 'stern', quiet).catch(() => {}) }
-    else if (slot === 'skin' && value) { onLookChange({ characterColor: value }); await updateCharacterColor(value, quiet).catch(() => {}) }
+    else if (slot === 'skin' && value) { onLookChange({ characterColor: value }); await api.progress.updateCharacterColor(value, quiet).catch(() => {}) }
     setBusy(false)
     // The wide menu stays on its tab: it is a list you browse, not a picker
     // you dismiss.

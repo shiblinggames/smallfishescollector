@@ -43,8 +43,6 @@ import {
   nextAccelCost, MAX_ACCEL_TIER,
   hullMetresPerSec, turnDegreesPerSec, secondsToTopSpeed,
 } from '@/lib/shipyard'
-import { updateCharacterColor, purchaseCharacterColor } from '@/app/(app)/u/actions'
-import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 
 /** The intro's harbour with its dinghy painted out: the water the boat sits on. */
 const YARD_WATER = '/welcome-harbour-open.webp'
@@ -705,13 +703,13 @@ export default function ShipyardClient(p: {
             }}
             characterColor={color}
             unlockedCharacterColors={colors}
-            onUpdateColor={(colorId) => { setColor(colorId); void updateCharacterColor(colorId) }}
+            onUpdateColor={(colorId) => { setColor(colorId); void api.progress.updateCharacterColor(colorId) }}
             onBuyColor={async (colorId) => {
-              const res = await purchaseCharacterColor(colorId)
+              const res = await api.progress.purchaseCharacterColor(colorId)
               if ('error' in res) return { error: res.error }
               setColors(res.unlockedColors); bank(res.doubloons); bankGems(res.gems)
               setColor(colorId)               // wear it right away
-              await updateCharacterColor(colorId)
+              await api.progress.updateCharacterColor(colorId)
               return { ok: true as const }
             }}
             equippedBadges={badges}
@@ -722,22 +720,22 @@ export default function ShipyardClient(p: {
               if (slot !== undefined) {
                 if (cur[slot] === id) {
                   setBadges(cur.map((b, i) => (i === slot ? '' : b)))
-                  void unequipBadge(slot)
+                  void api.progress.unequipBadge(slot)
                 } else {
                   setBadges(cur.map((b, i) => (i === slot ? id : b === id ? '' : b)))
-                  void equipBadge(id, slot)
+                  void api.progress.equipBadge(id, slot)
                 }
                 return
               }
               const at = cur.indexOf(id)
               if (at >= 0) {
                 setBadges(cur.map((b, i) => (i === at ? '' : b)))
-                void unequipBadge(at as 0 | 1 | 2)
+                void api.progress.unequipBadge(at as 0 | 1 | 2)
               } else {
                 const empty = cur.findIndex(b => !b)
                 const target = (empty >= 0 ? empty : 0) as 0 | 1 | 2
                 setBadges(cur.map((b, i) => (i === target ? id : b)))
-                void equipBadge(id, target)
+                void api.progress.equipBadge(id, target)
               }
             }}
             equippedBoat={boat}

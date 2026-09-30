@@ -11,8 +11,8 @@ import { useState, useEffect, type ReactNode } from 'react'
 import SkillLevelHero from '@/components/SkillLevelHero'
 import RenownPanel from '@/components/RenownPanel'
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
-import type { RenownState } from '@/app/(app)/actions/renown'
 import { getXPProgress } from '@/lib/fishingLevel'
+import type { RenownState } from '@/lib/gameApi'
 
 export default function FishingLevelBar({
   fishingXP,

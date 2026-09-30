@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { searchUsers } from '@/app/(app)/u/actions'
 import Link from 'next/link'
+import { api } from '@/lib/gameApi'
 
 const LAST_QUERY_KEY = 'sf-last-crew-search'
 
@@ -29,7 +29,7 @@ export default function FriendSearch() {
     setSearched(true)
     setLastQuery(query.trim())
     localStorage.setItem(LAST_QUERY_KEY, query.trim())
-    const data = await searchUsers(query.trim())
+    const data = await api.progress.searchUsers(query.trim())
     setResults(data)
     setLoading(false)
   }

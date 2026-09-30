@@ -3,14 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { zoneRewardDoubloons, PRESTIGE_MAX } from '@/lib/zoneRewards'
-import { vigilFor, VIGIL_MAX_RANK, ANCIENT_IDS } from '@/lib/ancientVigil'
 import { type FishSizeTier } from '@/lib/fishSize'
 import { type CrateTier, type CrateLoot } from '@/lib/crateLoot'
-import { grant, spend } from '@/lib/wallet'
-import { prestigeStep } from '@/lib/fishingRules'
+import { spend } from '@/lib/wallet'
 import { fishingData } from '@/lib/data/fishingData'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
@@ -323,131 +319,18 @@ export async function checkLeaderboardPosition(
   return null
 }
 
-const ZONE_REWARD_COL: Record<string, string> = {
-  shallows:    'zone_shallows_rewarded',
-  open_waters: 'zone_open_waters_rewarded',
-  deep:        'zone_deep_rewarded',
-  abyss:       'zone_abyss_rewarded',
-}
-
 export async function claimZoneReward(zone: string): Promise<{ doubloons: number; earned: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  const rewardCol = ZONE_REWARD_COL[zone]
-  if (!rewardCol) return { error: 'Invalid zone' }
-
-  const admin = createAdminClient()
-
-  const db = fishingData(admin)
-  const zoneIds = await db.speciesIdsIn(zone)
-  const [profile, caughtCount] = await Promise.all([
-    db.profile(user.id, 'doubloons, prestige_levels, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded'),
-    db.loggedCount(user.id, zoneIds),
-  ])
-
-  if (!profile) return { error: 'Profile not found' }
-  const alreadyClaimed = {
-    shallows:    profile.zone_shallows_rewarded,
-    open_waters: profile.zone_open_waters_rewarded,
-    deep:        profile.zone_deep_rewarded,
-    abyss:       profile.zone_abyss_rewarded,
-  }
-  if (alreadyClaimed[zone as keyof typeof alreadyClaimed]) return { error: 'Already claimed' }
-
-  const totalInZone = zoneIds.length
-  if (caughtCount < totalInZone || totalInZone === 0) return { error: 'Zone not complete' }
-
-  const prestigeLevel = ((profile.prestige_levels as Record<string, number> | null) ?? {})[zone] ?? 0
-  const earned = zoneRewardDoubloons(zone, prestigeLevel)
-  if (!earned) return { error: 'Invalid zone' }
-
-  // Flip the claim flag FIRST, only where it is still unclaimed, and pay only
-  // if this request is the one that flipped it.
-  if (!(await db.flagOn(user.id, rewardCol))) return { error: 'Already claimed' }
-
-  const [newDoubloons] = await Promise.all([
-    grant(admin, user.id, 'doubloons', earned),
-    db.ledger(user.id, earned, `Zone completion: ${zone}`),
-  ])
-
-  return { doubloons: newDoubloons, earned }
+  return core.claimZoneReward(fishingData(createAdminClient()), user.id, zone)
 }
 
 export async function prestigeZone(zone: string): Promise<{ prestigeLevel: number; goldenBoost?: number; unlockedSkinId?: string } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  // Ancient Deep doesn't prestige. The 6 trophies are one-and-done so
-  // 'complete the collection again for another reward' doesn't apply;
-  // the 12 regulars + trophies together aren't the same kind of
-  // collection-clear arc the other zones are. Reject the call so a
-  // manipulated client can't trigger it past the hidden UI button.
-  if (zone === 'ancient_deep') return { error: 'Ancient Deep does not prestige' }
-
-  const rewardCol = ZONE_REWARD_COL[zone]
-  if (!rewardCol) return { error: 'Invalid zone' }
-
-  const admin = createAdminClient()
-
-  const db = fishingData(admin)
-  const zoneIds = await db.speciesIdsIn(zone)
-  if (zoneIds.length === 0) return { error: 'Invalid zone' }
-
-  const profile = await db.profile(user.id, 'prestige_levels, zone_golden_boost, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, unlocked_character_colors')
-  if (!profile) return { error: 'Profile not found' }
-  const rewardClaimed: Record<string, boolean | null> = {
-    shallows:    profile.zone_shallows_rewarded,
-    open_waters: profile.zone_open_waters_rewarded,
-    deep:        profile.zone_deep_rewarded,
-    abyss:       profile.zone_abyss_rewarded,
-  }
-  if (!rewardClaimed[zone]) return { error: 'Claim completion reward first' }
-
-  if ((await db.loggedCount(user.id, zoneIds)) < zoneIds.length) return { error: 'Zone not complete' }
-
-  // Prestige caps at 5 ("Max Prestige"); at the cap a wipe grants a permanent
-  // GOLDEN BOOST instead. The rule is lib/fishingRules prestigeStep.
-  const { atMax, newLevel, newLevels, newGoldenBoost, newGoldenBoosts, allZonesPrestiged } = prestigeStep(
-    (profile.prestige_levels as Record<string, number> | null) ?? {},
-    (profile.zone_golden_boost as Record<string, number> | null) ?? {},
-    zone, PRESTIGE_MAX)
-
-  // Sand used to unlock here at Prestige 3. Since the 2026-09-25 standard it is
-  // a Fishing 25 reward (lib/characters), granted on the catch path.
-  const prestigeUnlockedSkin: string | undefined = undefined
-  const profileUpdate: Record<string, unknown> = { prestige_levels: newLevels, [rewardCol]: false }
-  if (atMax) profileUpdate.zone_golden_boost = newGoldenBoosts
-
-
-  // NOTE: this only clears the CYCLE log. fish_lifetime is untouched, so the
-  // Almanac's career numbers survive every prestige. Do not "tidy" this by
-  // deleting there too.
-  //
-  // Preserve GOLDEN mounts: a prestige resets the catch log so you re-collect
-  // the regular species, but golden fish are permanent trophies (the is_golden
-  // flag drives the whole golden display, and the shiny_catches row it pairs
-  // with isn't surfaced anywhere else). Deleting those rows silently wiped the
-  // trophy. So delete only the NON-golden rows; golden species stay caught +
-  // golden across every prestige cycle. Fetch golden ids explicitly so it works
-  // regardless of whether non-golden rows store is_golden as false or null.
-  const goldenIds = new Set(await db.goldenIds(user.id, zoneIds))
-  const idsToClear = zoneIds.filter(id => !goldenIds.has(id))
-
-  await Promise.all([
-    db.clearLog(user.id, idsToClear),
-    db.updateProfile(user.id, profileUpdate),
-    grantBadgeDirect(user.id, 'prestige_i'),
-    // All four zones prestiged = every non-ancient species was landed to get here,
-    // so Full Collection is earned even if prior wipes emptied the live log.
-    ...(allZonesPrestiged ? [grantBadgeDirect(user.id, 'zone_legend'), grantBadgeDirect(user.id, 'full_collection')] : []),
-  ])
-
-  return atMax
-    ? { prestigeLevel: PRESTIGE_MAX, goldenBoost: newGoldenBoost }
-    : { prestigeLevel: newLevel, unlockedSkinId: prestigeUnlockedSkin }
+  return core.prestigeZone(fishingData(createAdminClient()), user.id, zone)
 }
 
 export async function useTideTurnerSkip(): Promise<{ ok: true; skipsLeft: number } | { error: string }> {
@@ -474,45 +357,14 @@ export async function equipSpecialItem(itemId: string | null): Promise<{ ok: tru
   return r
 }
 
-/** THE LONG VIGIL — release a mounted giant back into the Ancient Deep.
- *
- *  Gated on clearing the finale, and that gate is self-enforcing: One Last Ride
- *  carries `requiresAncients: 6`, so anyone who has beaten Finn necessarily had
- *  all six on the wall. There is no path to a partial wall with a release.
- *
- *  Deliberately does NOT touch ancient_catches. That array gates the finale,
- *  feeds the ancient_ones badge and drives the almanac's everCaught — releasing
- *  a giant must never un-gate a captain's own endgame. "On the wall" is
- *  ancient_catches AND not released; the vigil column owns the second half.
- */
+/** THE LONG VIGIL: release a mounted giant (lib/core/fishing). */
 export async function releaseAncient(fishId: number): Promise<
   { ok: true; vigil: Record<string, { rank: number; released: boolean }> } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-  if (!ANCIENT_IDS.includes(fishId as (typeof ANCIENT_IDS)[number])) return { error: 'That is not an Ancient' }
-
-  const admin = createAdminClient()
-  const db = fishingData(admin)
-  const profile = await db.profile(user.id, 'ancient_catches, ancient_vigil')
-  if (!profile) return { error: 'Profile not found' }
-
-  if (!(await db.hasCleared(user.id, 'the_sunken_hand'))) return { error: 'The deep does not answer to you yet.' }
-
-  const vigil = vigilFor(profile.ancient_vigil, profile.ancient_catches as number[] | null)
-  const key = String(fishId)
-  const entry = vigil[key]
-  if (!entry) return { error: 'You have never landed that one' }
-  if (entry.released) return { error: 'That one is already out there' }
-  if (entry.rank >= VIGIL_MAX_RANK) return { error: 'That one is already mastered' }
-
-  vigil[key] = { rank: entry.rank, released: true }
-  await db.updateProfile(user.id, { ancient_vigil: vigil })
-  // Hooked rather than derived: once you land it again the released flag
-  // clears, so "has ever given one back" is not recoverable from state.
-  try { await grantBadgeDirect(user.id, 'back_to_the_dark') } catch { /* best-effort */ }
-  return { ok: true, vigil }
+  return core.releaseAncient(fishingData(createAdminClient()), user.id, fishId)
 }
 
 /**

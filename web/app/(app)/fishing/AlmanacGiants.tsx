@@ -22,7 +22,7 @@ import {
   vigilTotal, vigilNumeral, vigilChanges,
 } from '@/lib/ancientVigil'
 import AncientRelease from './AncientRelease'
-import { releaseAncient } from './actions'
+import { api } from '@/lib/gameApi'
 
 const ANCIENT = '#c084fc'
 
@@ -235,7 +235,7 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
           fishId={releasing.id}
           rank={vigil[String(releasing.id)]?.rank ?? 1}
           onConfirm={async () => {
-            const res = await releaseAncient(releasing.id)
+            const res = await api.fishing.releaseAncient(releasing.id)
             if ('ok' in res) setLocalReleased(prev => [...prev, releasing.id])
           }}
           onClose={() => { setReleasing(null); setOpenId(null) }}

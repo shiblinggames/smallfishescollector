@@ -26,8 +26,8 @@ import {
   builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, houseTier, offers, homesteadName,
   type Homestead, type FurnitureSlot,
 } from '@/lib/homestead'
-import { build, furnish, renameHomestead } from './actions'
 import RoomView from './RoomView'
+import { api } from '@/lib/gameApi'
 
 // TWO TABS, DOWN FROM FOUR. "The stones" went with the duplicate portal and the
 // gallery moved indoors — it is a room where things hang on walls, which is a
@@ -83,7 +83,7 @@ export default function HomeClient({
 
   const doBuild = useCallback(() => {
     startBusy(async () => {
-      const r = await build()
+      const r = await api.progress.build()
       setConfirm(null)
       if (!r.ok) { say(r.error); return }
       setHome(r.homestead)
@@ -98,7 +98,7 @@ export default function HomeClient({
 
   const doFurnish = useCallback((id: string) => {
     startBusy(async () => {
-      const r = await furnish(id)
+      const r = await api.progress.furnish(id)
       setConfirm(null)
       if (!r.ok) { say(r.error); return }
       setHome(r.homestead)
@@ -378,7 +378,7 @@ export default function HomeClient({
             busy={busy}
             onCancel={() => setNaming(false)}
             onSave={n => startBusy(async () => {
-              const r = await renameHomestead(n)
+              const r = await api.progress.renameHomestead(n)
               if (!r.ok) { say(r.error); return }
               setHome(r.homestead)
               setNaming(false)

@@ -11,7 +11,7 @@
 // on this API yet. Selling runs offline too (lib/core/selling), with the
 // captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi, ShipApi, DailiesApi, ParlorApi, ChartRoomApi, SeaApi, HarbourApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi, ShipApi, DailiesApi, ParlorApi, ChartRoomApi, SeaApi, HarbourApi, ProgressApi, OnlineApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
 import * as selling from '@/lib/core/selling'
@@ -40,6 +40,11 @@ import * as seaCore from '@/lib/core/sea'
 import { localSeaData } from '@/lib/data/local/seaLocal'
 import * as harbourCore from '@/lib/core/harbour'
 import { localHarbourData } from '@/lib/data/local/harbourLocal'
+import * as progressCore from '@/lib/core/progress'
+import * as homesteadCore from '@/lib/core/homestead'
+import * as profileCore from '@/lib/core/profile'
+import { localProgressData } from '@/lib/data/local/progressLocal'
+import { isPremiumActive } from '@/lib/premium'
 import * as sheetsCore from '@/lib/core/seaSheets'
 import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
 import { clockNow } from '@/lib/clock'
@@ -56,7 +61,7 @@ export type {
   FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
   CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
   VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew, GauntletApi, CasinoApi,
-  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide, ShipApi, DailiesApi, BountyBoard, BountyView, ParlorApi, ChartRoomApi, SeaApi, HarbourApi,
+  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide, ShipApi, DailiesApi, BountyBoard, BountyView, ParlorApi, ChartRoomApi, SeaApi, HarbourApi, ProgressApi, OnlineApi,
 } from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
@@ -132,6 +137,9 @@ const fishing: FishingApi = {
   equipSpecialItem: (itemId) => run((db, uid) => loadout.equipSpecialItem(db, uid, itemId)),
   buySpecialItem: (itemId) => run((db, uid) => loadout.buySpecialItem(db, uid, itemId)),
   setCompletionistEffects: (tiers) => run((db, uid) => loadout.setCompletionistEffects(db, uid, tiers)),
+  claimZoneReward: (zone) => run((db, uid) => core.claimZoneReward(db, uid, zone)),
+  prestigeZone: (zone) => run((db, uid) => core.prestigeZone(db, uid, zone)),
+  releaseAncient: (fishId) => run((db, uid) => core.releaseAncient(db, uid, fishId)),
 }
 
 /** The same, over the selling store. */
@@ -534,4 +542,76 @@ const harbourApi: HarbourApi = {
   markAlmanacViewed: () => runHarbour((db, uid) => harbourCore.markAlmanacViewed(db, uid)),
 }
 
-export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi, dailies: dailiesApi, parlor: parlorApi, chartRoom: chartRoomApi, sea: seaApi, harbour: harbourApi }
+/** The same, over progression's store. */
+async function runProgress<T>(fn: (db: ReturnType<typeof localProgressData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage, carried } = need()
+  const r = await fn(localProgressData(save), save.uid)
+  await writeSave(storage, save, carried)
+  return r
+}
+
+const progressApi: ProgressApi = {
+  getRenownState: (skill) => runProgress((db, uid) => progressCore.getRenownState(db, uid, skill)),
+  markRenownIntroSeen: (skill) => runProgress((db, uid) => progressCore.markRenownIntroSeen(db, uid, skill)),
+  allocateRenown: (skill, stat) => runProgress((db, uid) => progressCore.allocateRenown(db, uid, skill, stat)),
+  commitRenown: (skill, delta) => runProgress((db, uid) => progressCore.commitRenown(db, uid, skill, delta)),
+  respecRenown: (skill) => runProgress((db, uid) => progressCore.respecRenown(db, uid, skill)),
+  buyRenownRespec: (skill) => runProgress((db, uid) => progressCore.buyRenownRespec(db, uid, skill)),
+  reconcileBadges: () => runProgress((db, uid) => progressCore.reconcileBadges(db, uid)),
+  claimBadgeReward: (id) => runProgress((db, uid) => progressCore.claimBadgeReward(db, uid, id)),
+  claimAllBadgeRewards: () => runProgress((db, uid) => progressCore.claimAllBadgeRewards(db, uid)),
+  getUnlockedBadges: () => runProgress((db, uid) => progressCore.getUnlockedBadges(db, uid)),
+  unlockBadge: (id) => runProgress((db, uid) => progressCore.unlockBadge(db, uid, id)),
+  equipBadge: (id, slot) => runProgress((db, uid) => progressCore.equipBadge(db, uid, id, slot)),
+  unequipBadge: (slot) => runProgress((db, uid) => progressCore.unequipBadge(db, uid, slot)),
+  checkUnlocks: () => runProgress((db, uid) => progressCore.checkUnlocks(db, uid)),
+  markSetupSeen: () => runProgress((db, uid) => progressCore.markSetupSeen(db, uid)),
+  claimWelcomePack: () => runProgress((db, uid) => progressCore.claimWelcomePack(db, uid)),
+  getHomestead: () => runProgress((db, uid) => homesteadCore.getHomestead(db, uid)),
+  build: () => runProgress((db, uid) => homesteadCore.build(db, uid)),
+  renameHomestead: (name) => runProgress((db, uid) => homesteadCore.renameHomestead(db, uid, name)),
+  furnish: (id) => runProgress((db, uid) => homesteadCore.furnish(db, uid, id)),
+  pinBadges: (ids) => runProgress((db, uid) => homesteadCore.pinBadges(db, uid, ids)),
+  updateUsername: (name) => runProgress((db, uid) => profileCore.updateUsername(db, uid, name)),
+  checkUsername: (name) => runProgress((db) => profileCore.checkUsername(db, name)),
+  updateShowcaseCrew: (ids) => runProgress((db, uid) => profileCore.updateShowcaseCrew(db, uid, ids)),
+  purchaseCharacterColor: (id) => runProgress((db, uid) => profileCore.purchaseCharacterColor(db, uid, id)),
+  updateCharacterColor: (id) => runProgress((db, uid) => profileCore.updateCharacterColor(db, uid, id)),
+  persistEarnedSkins: (ids) => runProgress((db, uid) => profileCore.persistEarnedSkins(db, uid, ids)),
+  persistEarnedBoats: (ids) => runProgress((db, uid) => profileCore.persistEarnedBoats(db, uid, ids)),
+  updateAvatarColors: (input) => runProgress((db, uid) => profileCore.updateAvatarColors(db, uid, input)),
+  updateProfileBg: (bg) => runProgress((db, uid) => profileCore.updateProfileBg(db, uid, bg)),
+  purchaseAvatarSpecial: (id) => runProgress((db, uid) => profileCore.purchaseAvatarSpecial(db, uid, id)),
+  searchUsers: (q) => runProgress((db) => profileCore.searchUsers(db, q)),
+}
+
+// ── THE ONLINE-ONLY CALLS, ANSWERED HONESTLY ──
+// Nobody else sails this sea and there is no checkout in the game, so each of
+// these says so (or reads the save) rather than failing.
+const ONLINE_ONLY = 'That needs the internet: it is shared with every other captain.'
+const ON_THE_WEBSITE = 'Memberships and gems are bought on seasthebooty.com.'
+const onlineApi: OnlineApi = {
+  getLeaderboardBoards: async () => ({ error: 'The leaderboards rank every captain, so they need the internet.' }),
+  getCrew: async () => [],
+  addCrewMember: async () => ({ error: ONLINE_ONLY }),
+  getNewFollowers: async () => [],
+  removeCrewMember: async () => ({ error: ONLINE_ONLY }),
+  visitableHomesteads: async () => [],
+  homesteadOf: async () => null,
+  friendsAtSea: async () => [],
+  getBoard: async () => ({ moodBias: 0, introSeen: true, open: false, closedReason: 'The Exchange trades with every captain, so it needs the internet.', doubloons: Number(need().save.profile.doubloons ?? 0), indexes: [], bets: [], unseen: 0 }),
+  openBet: async () => ({ error: ONLINE_ONLY }),
+  markBetsSeen: async () => {},
+  sellBet: async () => ({ error: ONLINE_ONLY }),
+  markIntroSeen: async () => {},
+  createEmbeddedCheckout: async () => ({ error: ON_THE_WEBSITE }),
+  createHostedCheckout: async () => ({ error: ON_THE_WEBSITE }),
+  checkMembership: async () => ({ isMember: isPremiumActive(need().save.profile as Parameters<typeof isPremiumActive>[0]) }),
+  createGemCheckout: async () => ({ error: ON_THE_WEBSITE }),
+  createGemHostedCheckout: async () => ({ error: ON_THE_WEBSITE }),
+  currentGems: async () => ({ gems: Number(need().save.profile.gems ?? 0) }),
+  pingActivity: async () => {},
+  claimFoundersChest: async () => ({ error: 'Nothing here.' }),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi, dailies: dailiesApi, parlor: parlorApi, chartRoom: chartRoomApi, sea: seaApi, harbour: harbourApi, progress: progressApi, online: onlineApi }

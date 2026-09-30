@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { reconcileBadges } from '@/app/(app)/achievements/badgeActions'
 import BadgeUnlockedCelebration from './BadgeUnlockedCelebration'
+import { api } from '@/lib/gameApi'
 
 const TRIGGER_EVENTS = [
   'doubloons-changed',
@@ -32,7 +32,7 @@ export default function BadgeWatcher() {
     inFlightRef.current = true
     lastRunRef.current = Date.now()
     try {
-      const list = await reconcileBadges()
+      const list = await api.progress.reconcileBadges()
       if (seenRef.current === null) {
         // First pass = baseline: grant anything already earned silently (those
         // were completed before this session), no celebration spam on load.

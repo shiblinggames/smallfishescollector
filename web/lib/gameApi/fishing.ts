@@ -18,6 +18,7 @@ import {
   setAutoFishing, setShowWaitTimer, claimFishingLevelRewards,
   equipBoat, buyBoat, equipHat, buyHat, equipPet,
   equipSpecialItem, buySpecialItem, setCompletionistEffects,
+  claimZoneReward, prestigeZone, releaseAncient,
 } from '@/app/(app)/fishing/actions'
 
 export type { FishSpecies, WaitingFolk } from '@/app/(app)/fishing/actions'
@@ -47,6 +48,11 @@ export interface FishingApi {
   equipSpecialItem: typeof equipSpecialItem
   buySpecialItem: typeof buySpecialItem
   setCompletionistEffects: typeof setCompletionistEffects
+  // ── The Almanac ──
+  claimZoneReward: typeof claimZoneReward
+  prestigeZone: typeof prestigeZone
+  /** The Long Vigil: give a mounted giant back to the deep. */
+  releaseAncient: typeof releaseAncient
 }
 
 /** The web implementation: each call is the server action. */
@@ -56,4 +62,5 @@ export const webFishingApi: FishingApi = {
   setAutoFishing, setShowWaitTimer, claimFishingLevelRewards,
   equipBoat, buyBoat, equipHat, buyHat, equipPet,
   equipSpecialItem, buySpecialItem, setCompletionistEffects,
+  claimZoneReward, prestigeZone, releaseAncient,
 }

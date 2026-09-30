@@ -8,8 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { DIFFICULTY_META, BADGE_POINTS, type BadgeDifficulty } from '@/lib/badges'
 import { vibrate } from '@/lib/haptics'
 import { flyGemsToPurse } from '@/lib/coinFly'
-import { claimBadgeReward, claimAllBadgeRewards } from './badgeActions'
 import BadgeTimeline from './BadgeTimeline'
+import { api } from '@/lib/gameApi'
 
 export interface JourneyGoal {
   id: string
@@ -162,7 +162,7 @@ export default function AchievementsClient({ groups }: Props) {
     if (busy) return
     setBusy(id)
     startTransition(async () => {
-      const r = await claimBadgeReward(id)
+      const r = await api.progress.claimBadgeReward(id)
       setBusy(null)
       if ('error' in r) return
       setClaimedIds(prev => new Set(prev).add(id))
@@ -182,7 +182,7 @@ export default function AchievementsClient({ groups }: Props) {
     if (busy || claimable.length === 0) return
     setBusy('all')
     startTransition(async () => {
-      const r = await claimAllBadgeRewards()
+      const r = await api.progress.claimAllBadgeRewards()
       setBusy(null)
       if ('error' in r) return
       setClaimedIds(new Set(r.claimed))

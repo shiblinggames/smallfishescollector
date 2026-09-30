@@ -8,13 +8,11 @@ import { CrewPortrait } from '@/components/CrewShowcase'
 import { RarestCatchesByZone, FeaturedCrew, RaidArsenal, GoldenMounts, SpecialTackle, type GoldenMount } from '@/components/ProfileShowcase'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { updateUsername, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/(app)/u/actions'
 import { PROFILE_BACKGROUNDS, getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile, CoinAmount } from '@/components/ProfileStats'
 import type { CareerStats } from '@/lib/careerStats'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, specialUnlockHint, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
-import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 import { hapticTap } from '@/lib/haptics'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -29,6 +27,7 @@ import { SPECIAL_ITEMS, effectiveSpecialDef, type SpecialItemId } from '@/lib/sp
 import PopupShell from '@/components/PopupShell'
 import PreviewStage from '@/components/PreviewStage'
 import { fishImageUrl } from '@/lib/fishArt'
+import { api } from '@/lib/gameApi'
 
 interface Props {
   email: string
@@ -220,11 +219,11 @@ export default function ProfileClient({
   // value plus the current other one so a single-field tap persists both.
   function saveAvatarBg(hex: string) {
     setAvatarBg(hex)
-    void updateAvatarColors({ bgColor: hex, borderColor: avatarBorder })
+    void api.progress.updateAvatarColors({ bgColor: hex, borderColor: avatarBorder })
   }
   function saveAvatarBorder(hex: string) {
     setAvatarBorder(hex)
-    void updateAvatarColors({ bgColor: avatarBg, borderColor: hex })
+    void api.progress.updateAvatarColors({ bgColor: avatarBg, borderColor: hex })
   }
   // Which group the "Profile Look" modal is showing — splits the old long
   // scroll into tabs: character / avatar (bg+border) / page background.
@@ -276,7 +275,7 @@ export default function ProfileClient({
     }
     setProfileBg(id)
     setProfileBgSaving(true)
-    const res = await updateProfileBg(id)
+    const res = await api.progress.updateProfileBg(id)
     setProfileBgSaving(false)
     if (res?.error) { setProfileBg(profileBg); flashLockMsg(res.error) }
   }
@@ -331,7 +330,7 @@ export default function ProfileClient({
     e.preventDefault()
     setUsernameError('')
     startTransition(async () => {
-      const result = await updateUsername(usernameInput)
+      const result = await api.progress.updateUsername(usernameInput)
       if (result.error) {
         setUsernameError(result.error)
       } else {
@@ -355,7 +354,7 @@ export default function ProfileClient({
       if (padded[targetSlot] === badgeId) {
         const next = [...padded]; next[targetSlot] = ''
         setEquippedBadges(next)
-        await unequipBadge(targetSlot)
+        await api.progress.unequipBadge(targetSlot)
       } else {
         const next = padded.map((b, i) => {
           if (i === targetSlot) return badgeId
@@ -363,19 +362,19 @@ export default function ProfileClient({
           return b
         })
         setEquippedBadges(next)
-        await equipBadge(badgeId, targetSlot)
+        await api.progress.equipBadge(badgeId, targetSlot)
       }
       setSelectedBadgeSlot(null)
     } else if (currentSlot !== -1) {
       const next = [...padded]; next[currentSlot] = ''
       setEquippedBadges(next)
-      await unequipBadge(currentSlot as 0 | 1 | 2)
+      await api.progress.unequipBadge(currentSlot as 0 | 1 | 2)
     } else {
       const emptySlot = padded.findIndex(b => !b)
       const slot = (emptySlot === -1 ? 0 : emptySlot) as 0 | 1 | 2
       const next = [...padded]; next[slot] = badgeId
       setEquippedBadges(next)
-      await equipBadge(badgeId, slot)
+      await api.progress.equipBadge(badgeId, slot)
     }
     setBadgeSaving(false)
   }
@@ -1370,7 +1369,7 @@ export default function ProfileClient({
               {equipped ? (
                 <div className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color: '#4ade80', padding: '0.7rem', borderRadius: 12, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.35)' }}>✓ Equipped</div>
               ) : owned ? (
-                <button onClick={async () => { setColorSaving(true); setCharacterColor(c.id); setSkinDetail(null); await updateCharacterColor(c.id); setColorSaving(false) }} className="font-cinzel font-700" style={{ width: '100%', padding: '0.72rem', borderRadius: 12, fontSize: '0.9rem', cursor: 'pointer', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff' }}>Equip</button>
+                <button onClick={async () => { setColorSaving(true); setCharacterColor(c.id); setSkinDetail(null); await api.progress.updateCharacterColor(c.id); setColorSaving(false) }} className="font-cinzel font-700" style={{ width: '100%', padding: '0.72rem', borderRadius: 12, fontSize: '0.9rem', cursor: 'pointer', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff' }}>Equip</button>
               ) : purchasable ? (
                 <button onClick={() => { setSkinDetail(null); setPurchaseError(null); setPurchasePrompt({ kind: 'skin', id: c.id, name: c.name, price: price!, currency: c.gemPrice ? 'gems' : 'doubloons' }) }} className="font-cinzel font-700" style={{ width: '100%', padding: '0.72rem', borderRadius: 12, fontSize: '0.9rem', cursor: 'pointer', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff' }}>Buy for {price!.toLocaleString()} {glyph}</button>
               ) : (
@@ -1462,7 +1461,7 @@ export default function ProfileClient({
                   setPurchasing(true)
                   setPurchaseError(null)
                   if (purchasePrompt.kind === 'skin') {
-                    const result = await purchaseCharacterColor(purchasePrompt.id)
+                    const result = await api.progress.purchaseCharacterColor(purchasePrompt.id)
                     setPurchasing(false)
                     if ('error' in result) { setPurchaseError(result.error); return }
                     setUnlockedColors(result.unlockedColors)
@@ -1474,7 +1473,7 @@ export default function ProfileClient({
                       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.doubloons }))
                     }
                   } else {
-                    const result = await purchaseAvatarSpecial(purchasePrompt.id)
+                    const result = await api.progress.purchaseAvatarSpecial(purchasePrompt.id)
                     setPurchasing(false)
                     if ('error' in result) { setPurchaseError(result.error); return }
                     setUnlockedSpecials(result.unlockedSpecials)

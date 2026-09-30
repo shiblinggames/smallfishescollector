@@ -38,7 +38,6 @@ import {
   decodeXfog, xfogHas, xfogCentre, xfogOpen, xfogCover, xfogNear, xfogSet, seedXfog, inExpWater,
   XFOG_CELL, XFOG_W, XFOG_H, XFOG_X0, XFOG_Y0, XFOG_CELLS,
 } from '@/lib/seaExploreExp'
-import type { RenownState } from '@/app/(app)/actions/renown'
 import { renownLevel, type RenownSkill } from '@/lib/renown'
 
 /** A renown state brought up to the XP in hand: the level only ever rises
@@ -80,7 +79,6 @@ import {
 } from './raidWaters'
 import { RAID_MAP, RAID_CHAPTERS, chapterForNode, computeRaidMap, type RaidNode, type RaidChapter } from '@/lib/raidMap'
 import { getRaidConfigById } from '@/lib/raidRegistry'
-import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getFishHold } from '@/lib/fishHold'
 import { getCharacterSprites } from '@/lib/characters'
@@ -378,6 +376,7 @@ import type { DayKind } from './SeaDay'
 import { cardArt } from '@/lib/artUrl'
 import type { AshoreResult, BottleResult, DigResult, DigState, Rapport, FinnSeaState } from '@/lib/gameApi'
 import type { SeaBoot, BossCardState, RaidSheetState } from '@/lib/gameApi'
+import type { RenownState, FriendAtSea, Visitable } from '@/lib/gameApi'
 // Kip, who trades in what he knows about the harbour. See seaSmuggler.
 const SmugglerTalk = dynamic(() => import('./SmugglerTalk'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
@@ -7746,7 +7745,7 @@ export default function SeaMap({
           sinceAsk = 0
           void api.sea.pendingPacts().then(n => { if (alive) setPendingAsk(n) }, () => {})
         }
-        void friendsAtSea().then(f => {
+        void api.online.friendsAtSea().then(f => {
           if (!alive) return
           setFriends(f)
 
@@ -8119,7 +8118,7 @@ export default function SeaMap({
   useEffect(() => {
     void getBoot().then(b => {
       if (b?.guests) setGuests(b.guests)
-      else void visitableHomesteads().then(setGuests, () => {})
+      else void api.online.visitableHomesteads().then(setGuests, () => {})
     })
   }, [getBoot])
 
@@ -12199,7 +12198,7 @@ hullRef={hullRefFor(t.key)} />
           // The server checks the friendship again here. The list this came
           // from could be minutes old, and an unfollow has to shut the door
           // now rather than at the next page load.
-          const v = await homesteadOf(name)
+          const v = await api.online.homesteadOf(name)
           if (v) { vibrate(12); setVisiting({ username: v.username, homestead: v.homestead }) }
         }}
       />

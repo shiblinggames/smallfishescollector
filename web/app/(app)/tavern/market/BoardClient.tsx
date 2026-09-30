@@ -23,9 +23,9 @@ import {
   chainFor, driftOver, unitPresets, contractValue, breakEvenFor, profitChance, lotSize, scheduledIn, fmtPrice,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
-import { getBoard, openBet, sellBet, markBetsSeen, markIntroSeen } from './boardActions'
 import ExchangeIntro from './ExchangeIntro'
-import type { Board, BoardIndex, BoardBet } from './boardActions'
+import { api } from '@/lib/gameApi'
+import type { Board, BoardIndex, BoardBet } from '@/lib/gameApi'
 
 const UP = '#4ade80'
 const DOWN = '#f87171'
@@ -94,7 +94,7 @@ export default function BoardClient({ onDoubloons, onOpenContracts }: {
   const [, startTransition] = useTransition()
 
   const load = useCallback(() => {
-    getBoard().then(b => {
+    api.online.getBoard().then(b => {
       setBoard(b)
       if (b.open) { onDoubloons?.(b.doubloons); purseChanged(b.doubloons) }
       // Off the SAME response the board renders, so the door and the list under
@@ -112,7 +112,7 @@ export default function BoardClient({ onDoubloons, onOpenContracts }: {
   // Looking at your results is what clears the markers.
   useEffect(() => {
     if (tab !== 'bets' || !board?.unseen) return
-    startTransition(() => { void markBetsSeen() })
+    startTransition(() => { void api.online.markBetsSeen() })
     setBoard(b => b ? { ...b, unseen: 0, bets: b.bets.map(x => ({ ...x, seen: true })) } : b)
   }, [tab, board?.unseen])
 
@@ -189,7 +189,7 @@ export default function BoardClient({ onDoubloons, onOpenContracts }: {
             const first = guide === 'new'
             setGuide(null)
             if (first) {
-              void markIntroSeen()
+              void api.online.markIntroSeen()
               setBoard(b => b ? { ...b, introSeen: true } : b)
             }
           }}
@@ -658,7 +658,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   function submit() {
     if (!chosen) return
     setErr(''); setBusy(true)
-    openBet(index.id, dir, term, chosen.distancePct, chosenUnits).then(res => {
+    api.online.openBet(index.id, dir, term, chosen.distancePct, chosenUnits).then(res => {
       setBusy(false)
       if ('error' in res) { setErr(res.error); return }
       vibrate([0, 14, 30, 22])
@@ -969,7 +969,7 @@ function BetSheet({ bet, index, onClose, onSold }: {
 
   function sell() {
     setErr(''); setBusy(true)
-    sellBet(bet.id).then(res => {
+    api.online.sellBet(bet.id).then(res => {
       setBusy(false)
       if ('error' in res) { setErr(res.error); return }
       vibrate([0, 14, 30, 22])

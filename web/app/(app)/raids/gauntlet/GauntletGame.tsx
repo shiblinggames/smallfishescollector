@@ -53,7 +53,6 @@ import GauntletTermsPanel from './GauntletTermsPanel'
 import { rollContractOffer, buildContractOffer, checkContract, CONTRACTS, STAKE_LABEL, describeReward, describePenalty, type ContractKind, type ContractOffer, type ContractStake, type ContractFightFacts } from '@/lib/gauntletContracts'
 import { rollMarkOffer, markEffects, describeBuff, MARK_META, type ChosenMark, type MarkBuff, type MarkType } from '@/lib/gauntletMarks'
 import { MERCHANT_ITEMS, rollMerchantStock, type MerchantItemKind } from '@/lib/gauntletMerchant'
-import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { offerCoinMult, offerChestMult, offerCopy, offerTakenLine, type DavyOffer } from '@/lib/gauntletOffer'
 import { FATHOM_BAITS } from '@/lib/bait'
 import { upgradesForVariant, getGauntletUpgrade, upgradeTierInfo, romanTier, COMING_SOON_UPGRADES, activeGauntletUpgrades, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls, gauntletBoonFilters, gauntletSynergyOfferMult, gauntletHasBloodOath, gauntletStartAnchorSaves, gauntletFathomsMult, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
@@ -2270,7 +2269,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
       }
       // "The Convergence" badge — forging any convergence (a Don's-only meta synergy).
-      if (props.variant === 'don') unlockBadge('first_convergence').catch(() => {})
+      if (props.variant === 'don') api.progress.unlockBadge('first_convergence').catch(() => {})
       // The draft clears INSIDE the veil — see setPhase.
       setPhase('between', () => { setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null) })
       return

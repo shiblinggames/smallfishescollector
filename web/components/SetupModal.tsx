@@ -3,8 +3,6 @@
 import { useState, useTransition } from 'react'
 import { vibrate } from '@/lib/haptics'
 import { motion, AnimatePresence } from 'framer-motion'
-import { updateUsername, updateCharacterColor, updateAvatarColors } from '@/app/(app)/u/actions'
-import { markSetupSeen } from '@/app/actions/firstRun'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { AVATAR_PALETTE, NONE_VALUE } from '@/lib/avatarColors'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -13,6 +11,7 @@ import { GUIDES } from '@/lib/onboardingScenes'
 import PopupShell from '@/components/PopupShell'
 import { useRouter } from 'next/navigation'
 import { holdCurtain } from '@/lib/arrivalHold'
+import { api } from '@/lib/gameApi'
 
 // ONE CARD, THREE STEPS. It used to be three separately sized cards and the
 // panel resized under a captain as they filled it in. One card now, and the
@@ -98,7 +97,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
     if (!val) { setUsernameError('Every captain needs a name.'); return }
     setUsernameError('')
     startUsernameTx(async () => {
-      const res = await updateUsername(val)
+      const res = await api.progress.updateUsername(val)
       if ('error' in res && res.error) { setUsernameError(res.error); return }
       setStep('color')
     })
@@ -108,7 +107,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
     // Save the color choice and advance to the avatar step. If they picked
     // the same color we already have, skip the network call.
     startColorTx(async () => {
-      if (selectedColor !== currentColor) await updateCharacterColor(selectedColor)
+      if (selectedColor !== currentColor) await api.progress.updateCharacterColor(selectedColor)
       setStep('avatar')
     })
   }
@@ -119,8 +118,8 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
       // Two writes to the same row, in parallel rather than one after the
       // other: the press used to wait out two round trips in series.
       await Promise.all([
-        updateAvatarColors({ bgColor: avatarBg, borderColor: avatarBorder }),
-        markSetupSeen(),
+        api.progress.updateAvatarColors({ bgColor: avatarBg, borderColor: avatarBorder }),
+        api.progress.markSetupSeen(),
       ])
       setDone(true)
       // When there is no welcome to play this IS the end of setup, and the sea

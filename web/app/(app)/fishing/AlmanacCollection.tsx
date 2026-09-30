@@ -20,7 +20,7 @@ import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
 import { RARITY_LABEL, RARITY_COLOR, fishArt, isGiant, shortDate } from '@/lib/almanac'
 import { tierForLength, TIER_LABEL, TIER_COLOR, formatFishLength } from '@/lib/fishSize'
 import { PRESTIGE_MAX, goldenBoostPct, zoneRewardDoubloons } from '@/lib/zoneRewards'
-import { claimZoneReward, prestigeZone } from './actions'
+import { api } from '@/lib/gameApi'
 import type { AlmanacData, AlmanacEntry } from './almanacActions'
 import { flyPayout } from '@/lib/coinFly'
 
@@ -93,7 +93,7 @@ export default function AlmanacCollection({ data, onChanged }: {
   const claim = async (zone: string, from?: Element, amount?: number) => {
     if (busy) return
     setBusy(zone)
-    const res = await claimZoneReward(zone).catch(() => null)
+    const res = await api.fishing.claimZoneReward(zone).catch(() => null)
     if (res && !('error' in res)) {
       setClaimed(prev => ({ ...prev, [zone]: true }))
       // Into the purse in the nav, now. Same event every payout fires.
@@ -105,7 +105,7 @@ export default function AlmanacCollection({ data, onChanged }: {
   const prestige = async (zone: string) => {
     if (busy) return
     setBusy(zone); setConfirm(null)
-    const res = await prestigeZone(zone).catch(() => null)
+    const res = await api.fishing.prestigeZone(zone).catch(() => null)
     if (res && !('error' in res)) {
       setClaimed(prev => ({ ...prev, [zone]: false }))
       // The rod keeps its own idea of what is logged, for the NEW pill on a

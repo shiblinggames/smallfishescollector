@@ -66,7 +66,7 @@ import { PLACES } from './chart'
 import { SHIPS } from '@/lib/ships'
 import { navLevelReqForShip } from '@/lib/gearGating'
 import { RAID_MAP } from '@/lib/raidMap'
-import type { RenownState } from '@/app/(app)/actions/renown'
+import type { RenownState } from '@/lib/gameApi'
 
 const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'

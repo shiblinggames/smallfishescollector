@@ -34,9 +34,9 @@ import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
 import { CheckoutBoundary, STRIPE_ON, getStripe } from '@/components/MembershipModal'
-import { createGemCheckout, createGemHostedCheckout, currentGems } from '@/app/actions/gems'
 import { GEM_PACKS, packPrice, gemsPerDollar, type GemPack } from '@/lib/gemPacks'
 import { vibrate } from '@/lib/haptics'
+import { api } from '@/lib/gameApi'
 
 const GEM = '#a78bfa'
 const GOLD = '#f0c040'
@@ -60,7 +60,7 @@ export default function GemStoreModal() {
     const onOpen = () => {
       setStep('packs'); setPack(null); setPaid(null); setError(null); setLoading(false); setClientSecret(null)
       setOpen(true)
-      void currentGems().then(r => setStartBalance(r.gems)).catch(() => setStartBalance(null))
+      void api.online.currentGems().then(r => setStartBalance(r.gems)).catch(() => setStartBalance(null))
     }
     window.addEventListener('open-gem-store', onOpen)
     return () => window.removeEventListener('open-gem-store', onOpen)
@@ -93,7 +93,7 @@ export default function GemStoreModal() {
     const poll = async () => {
       tries++
       try {
-        const { gems } = await currentGems()
+        const { gems } = await api.online.currentGems()
         const moved = from === null ? tries > 2 : gems > from
         if (moved || tries > 15) {
           setPaid(from === null ? 0 : Math.max(0, gems - from))
@@ -110,7 +110,7 @@ export default function GemStoreModal() {
   const goHosted = useCallback(async (p: GemPack) => {
     setLoading(true); setError(null)
     try {
-      const r = await createGemHostedCheckout(p.id)
+      const r = await api.online.createGemHostedCheckout(p.id)
       if ('error' in r) { setError(r.error); setLoading(false); return }
       window.location.href = r.url
     } catch (e) {
@@ -125,7 +125,7 @@ export default function GemStoreModal() {
       // Warm Stripe.js while the session is created. See getStripe.
       void getStripe()
       try {
-        const r = await createGemCheckout(p.id)
+        const r = await api.online.createGemCheckout(p.id)
         if (!('error' in r)) { setClientSecret(r.clientSecret); setStep('pay'); setLoading(false); return }
         if (/sign in|not for sale/i.test(r.error)) { setError(r.error); setLoading(false); return }
       } catch { /* fall through to hosted */ }

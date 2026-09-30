@@ -8,8 +8,9 @@ import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LeaderboardSection, BOARD_META, groupBoards, type BoardKey } from '@/app/(app)/leaderboard/boardUI'
-import { getLeaderboardBoards, type LeaderboardBoardsResult } from '@/app/(app)/leaderboard/actions'
 import BoardPicker from '@/app/(app)/leaderboard/BoardPicker'
+import { api } from '@/lib/gameApi'
+import type { LeaderboardBoardsResult } from '@/lib/gameApi'
 
 export default function LeaderboardModal({
   boards,
@@ -46,7 +47,7 @@ export default function LeaderboardModal({
     if (data || pending) return
     setErr(null)
     startTransition(async () => {
-      const res = await getLeaderboardBoards(boards)
+      const res = await api.online.getLeaderboardBoards(boards)
       if ('error' in res) { setErr(res.error); return }
       setData(res)
     })

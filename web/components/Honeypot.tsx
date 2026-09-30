@@ -5,11 +5,11 @@
 // the game dispatches `stb:founders`. Renders nothing.
 
 import { useEffect } from 'react'
-import { claimFoundersChest } from '@/app/actions/honeypot'
+import { api } from '@/lib/gameApi'
 
 export default function Honeypot() {
   useEffect(() => {
-    const on = () => { void claimFoundersChest() }
+    const on = () => { void api.online.claimFoundersChest() }
     window.addEventListener('stb:founders', on)
     return () => window.removeEventListener('stb:founders', on)
   }, [])

@@ -7,9 +7,9 @@ import StepTourModal, { type TourStep } from '@/components/StepTourModal'
 import GuideScene from '@/components/GuideScene'
 import { GUIDES } from '@/lib/onboardingScenes'
 import type { SceneLine } from '@/lib/raidMap'
-import { claimWelcomePack } from '@/app/actions/firstRun'
 import { useRouter } from 'next/navigation'
 import { holdCurtain } from '@/lib/arrivalHold'
+import { api } from '@/lib/gameApi'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -88,7 +88,7 @@ export default function WelcomeModal() {
     // rather than after an ease-in's dead first hundred milliseconds.
     vibrate(12)
     startTransition(async () => {
-      await Promise.all([claimWelcomePack(), new Promise(r => setTimeout(r, 380))])
+      await Promise.all([api.progress.claimWelcomePack(), new Promise(r => setTimeout(r, 380))])
       // STRAIGHT TO THE WATER, AND A REAL LOAD OF IT. The sea page shows a dark
       // field rather than a chart while a captain is still being set up, so
       // the chart has to be built now, from a profile that now has a name, a

@@ -25,7 +25,7 @@ import { useRouter } from 'next/navigation'
 // 2026-09-23 audit). The pure entry does nothing until loadStripe is called.
 import { loadStripe } from '@stripe/stripe-js/pure'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
-import { createEmbeddedCheckout, createHostedCheckout, checkMembership } from '@/app/actions/membership'
+import { api } from '@/lib/gameApi'
 
 const GOLD = '#f0c040'
 const PUBLISHABLE = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
@@ -119,7 +119,7 @@ export default function MembershipModal() {
     const poll = async () => {
       tries++
       try {
-        const { isMember } = await checkMembership()
+        const { isMember } = await api.online.checkMembership()
         if (isMember || tries > 15) { router.refresh(); return }
       } catch { /* keep polling */ }
       window.setTimeout(poll, 1000)
@@ -131,7 +131,7 @@ export default function MembershipModal() {
   const goHosted = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const r = await createHostedCheckout()
+      const r = await api.online.createHostedCheckout()
       if ('error' in r) { setError(r.error); setLoading(false); return }
       window.location.href = r.url
     } catch (e) {
@@ -148,7 +148,7 @@ export default function MembershipModal() {
       // not waiting on it afterwards.
       void getStripe()
       try {
-        const r = await createEmbeddedCheckout()
+        const r = await api.online.createEmbeddedCheckout()
         if (!('error' in r)) { setClientSecret(r.clientSecret); setStep('pay'); setLoading(false); return }
         // Hard errors get shown; anything else falls through to hosted.
         if (/already a Captain|sign in/i.test(r.error)) { setError(r.error); setLoading(false); return }

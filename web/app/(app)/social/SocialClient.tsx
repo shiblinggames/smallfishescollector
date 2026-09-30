@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import Link from 'next/link'
-import { searchUsers } from '@/app/(app)/u/actions'
-import { addCrewMember, removeCrewMember, type CrewMember } from './actions'
+import type { SocialCrewMember as CrewMember } from '@/lib/gameApi'
 import { getLevelFromXP as getFishingLevel } from '@/lib/fishingLevel'
 import { getLevelFromXP as getNavLevel } from '@/lib/expeditionLevel'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import CrewSummarySheet from './CrewSummarySheet'
+import { api } from '@/lib/gameApi'
 
 interface SearchResult {
   username: string
@@ -84,7 +84,7 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
     }
     const id = setTimeout(async () => {
       setSearching(true)
-      const data = await searchUsers(trimmed)
+      const data = await api.progress.searchUsers(trimmed)
       setResults(data)
       setSearched(true)
       setSearching(false)
@@ -95,7 +95,7 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
   function handleAdd(member: CrewMember) {
     setLoadingUsername(member.username)
     startTransition(async () => {
-      await addCrewMember(member.username)
+      await api.online.addCrewMember(member.username)
       setCrew(prev => [...prev, member])
       setAddedSet(prev => new Set(prev).add(member.username.toLowerCase()))
       setLoadingUsername(null)
@@ -115,7 +115,7 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
   function handleRemove(u: string) {
     setLoadingUsername(u)
     startTransition(async () => {
-      await removeCrewMember(u)
+      await api.online.removeCrewMember(u)
       setCrew(prev => prev.filter(m => m.username.toLowerCase() !== u.toLowerCase()))
       setLoadingUsername(null)
       // Close the sheet the removal was fired from — leaving it open on someone
@@ -253,7 +253,7 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
                 <button
                   onClick={() => {
                     startTransition(async () => {
-                      await addCrewMember(f.username)
+                      await api.online.addCrewMember(f.username)
                       setCrew(prev => [...prev, f])
                       setNewFollowers(prev => prev.filter(n => n.username !== f.username))
                     })

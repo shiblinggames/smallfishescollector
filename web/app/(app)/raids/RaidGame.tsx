@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { RaidClearTimes } from './actions'
 import { api } from '@/lib/gameApi'
-import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL, navLevelBonuses } from '@/lib/expeditionLevel'
@@ -1409,7 +1408,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
           : config.raidId === 'captain_krust_challenge'    ? 'ghost_ship'
           : null
         if (challengeBadgeId) {
-          try { await unlockBadge(challengeBadgeId) } catch { /* badge unlock is best-effort */ }
+          try { await api.progress.unlockBadge(challengeBadgeId) } catch { /* badge unlock is best-effort */ }
         }
         // Challenge-run feat badges — read the raid-long telemetry refs at the
         // kill and grant HERE (awaited, before the doubloons-changed dispatch
@@ -1429,7 +1428,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
           if (config.raidId.startsWith('the_quartermaster') && !featUsedAbilityRef.current) featBadges.push('tight_quarters')
           if (config.raidId.startsWith('cartographer') && !featMissedCritRef.current) featBadges.push('dead_reckoning')
           for (const id of featBadges) {
-            try { await unlockBadge(id) } catch { /* best-effort */ }
+            try { await api.progress.unlockBadge(id) } catch { /* best-effort */ }
           }
         }
         // Persist the raid_completions row NOW (boss is dead) — not
@@ -1965,7 +1964,7 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
                 onPlayerHit={(d) => { if (d > maxHitRef.current) { maxHitRef.current = d; api.raids.recordRaidHit(d).catch(() => {}) } }}
                 onDamageTaken={() => { featTookDamageRef.current = true }}
                 onShotResolved={(isCrit) => { if (!isCrit) featMissedCritRef.current = true }}
-                onNoShotKill={() => { unlockBadge('not_a_shot_fired').catch(() => {}); window.dispatchEvent(new Event('badges-may-have-changed')) }}
+                onNoShotKill={() => { api.progress.unlockBadge('not_a_shot_fired').catch(() => {}); window.dispatchEvent(new Event('badges-may-have-changed')) }}
                 anchorSaveAvailable={anchorSavesLeftRef.current > 0}
                 onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
                 onLeave={grantFlee(() => leaveRaid())}

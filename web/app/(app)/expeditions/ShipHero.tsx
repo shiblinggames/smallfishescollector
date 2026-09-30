@@ -54,7 +54,6 @@ const ForgeBoard = dynamic(() => import('./ForgeBoard'), {
 import LoadoutSummary from './LoadoutSummary'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
-import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renown'
 import RenownPanel from '@/components/RenownPanel'
 import SkillLevelHero from '@/components/SkillLevelHero'
 import GuideCoach from '@/components/GuideCoach'
@@ -62,6 +61,7 @@ import { GUIDES } from '@/lib/onboardingScenes'
 import RenownIntroOverlay from '@/components/RenownIntroOverlay'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { cardArt } from '@/lib/artUrl'
+import type { RenownState } from '@/lib/gameApi'
 
 
 type RosterCrew = {
@@ -3066,7 +3066,7 @@ export default function ShipHero({
         skill="nav"
         onDismiss={() => {
           setNavRenownIntro(false)
-          markRenownIntroSeen('nav').catch(() => {})
+          api.progress.markRenownIntroSeen('nav').catch(() => {})
         }}
       />
 

@@ -4,7 +4,6 @@ import VaultOfAncients from '@/components/VaultOfAncients'
 import type { VigilState } from '@/lib/ancientVigil'
 import { useState, useEffect, useTransition, useRef } from 'react'
 import { type ShowcaseCrew } from '@/components/CrewShowcase'
-import { addCrewMember, removeCrewMember } from '@/app/(app)/social/actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 import { getHook, hookGlowClass } from '@/lib/hooks'
@@ -26,6 +25,7 @@ import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile, CoinAmount } from '@/components/ProfileStats'
 import { RarestCatchesByZone, FeaturedCrew, RaidArsenal, GoldenMounts, SpecialTackle, type GoldenMount } from '@/components/ProfileShowcase'
 import type { CareerStats } from '@/lib/careerStats'
+import { api } from '@/lib/gameApi'
 
 export interface VoyageEntry {
   id: number
@@ -188,7 +188,7 @@ export default function ProfileClient({ username, ancientsCaught, ancientVigil, 
       setJustAdded(false)
     }
     startCrewTransition(async () => {
-      const res = wasIn ? await removeCrewMember(username) : await addCrewMember(username)
+      const res = wasIn ? await api.online.removeCrewMember(username) : await api.online.addCrewMember(username)
       if (res?.error) {
         // Roll back the optimistic flip on failure.
         setInCrew(wasIn)

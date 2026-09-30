@@ -1063,12 +1063,39 @@ In order. Each step is worth doing even if the port never happens.
    - `scripts/check-offline-harbour.mts` (in `npm run check`); checked to fail when a rod guard,
      the sell rate or the trader rule is broken. Production probe as catman (reads and refusals,
      nothing moved).
-   - NOT YET: the homestead and visits, badges and renown, the level unlocks and first-run
-     rewards, the leaderboards, the profile pages; then the online-only list (social, public
-     profiles, membership and gem checkout, the Exchange board, admin and dev tools, the
-     honeypot) is decided rather than ported.
-     Online-only by nature and staying on the web: social, leaderboards, public profiles,
-     membership (Stripe), admin and dev tools, the honeypot.
+   **THE REST OFFLINE, 2026-09-29.** Every screen now reaches the game through `api`; no client
+   component imports a server action except the admin screens.
+   - `lib/core/progress`: Renown (state, allocate, commit, respec and its token), badges
+     (reconcile from the store's `badgeSignals`, rewards, the raid feats the client may unlock,
+     wearing), the unlock banner's `checkUnlocks`, the setup flag, the welcome gift and the
+     member's daily pack. The gift and the pack are now written guarded, then paid in place (they
+     used to write a gem total read earlier). Respec had the same stale read and is fixed the same
+     way. On the web `api.progress.checkUnlocks` still fetches `/api/unlocks`.
+   - `lib/core/homestead`: build, rename, furnish, pin, with the house guarded on the tier it
+     was priced against. `lib/core/profile`: the username, the showcase, skins, avatar colours and
+     specials, the backdrop, the user search.
+   - The Almanac's zone reward, prestige and the Long Vigil's release moved into
+     `lib/core/fishing` (`api.fishing`). Prestige is now written guarded on the reward flag, so
+     two taps on one completion cannot both count.
+   - `lib/data/local/progressLocal` reads the badge signals from the save's own records. Offline
+     every well-formed name is free and a search finds nobody.
+   - `api.online` holds the calls between players or through a payment provider. On the web
+     each one is the server action. The desktop answers each one honestly instead of failing:
+     - the leaderboards return an error saying they need the internet;
+     - following and visits have nobody to follow or visit;
+     - the Exchange is a closed Board;
+     - checkout says it is bought on seasthebooty.com;
+     - membership and gems are read from the save;
+     - the activity ping does nothing;
+     - the honeypot says 'Nothing here.' and flags nobody.
+   - Web-only, not in `api`: admin and dev tools, the practice skirmish, `bootActions` (the
+     desktop composes its boot from the local API) and the dead `shipBonus`. Also left alone are
+     seven exported fishing actions with no caller: `settlePendingCatchCredit`, `quickBuyWorms`,
+     the three tour flags, `checkLeaderboardPosition` and `syncFishHold`.
+   - `scripts/check-offline-progress.mts` (in `npm run check`) covers all of it, including the
+     Almanac. Production probe as catman (reads and refusals, nothing moved).
+   - NEXT: the desktop plays every system offline. The remaining work is the phases above
+     (money, identity, the shell, input, Steam features).
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
 **Then the spike** (phase 3's week, updated):
