@@ -80,6 +80,8 @@ scripts/*
 !scripts/steam-achievements.mts
 # The desktop's starter profile (content/profile_defaults.json) cannot be refreshed without it.
 !scripts/export-profile-defaults.mts
+# The Godot port's parity cases (godot/game/tests/parity) cannot be regenerated without it.
+!scripts/parity-export.mts
 
 # Badge slicer source sheets (dev-only input for slice-badges.mjs; sliced output in public/badges/ is committed)
 # Badge SOURCE sheets. Multi-badge plates that slice-badges.mjs cuts into

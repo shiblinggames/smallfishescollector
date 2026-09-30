@@ -49,13 +49,12 @@ import * as sheetsCore from '@/lib/core/seaSheets'
 import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
 import { clockNow } from '@/lib/clock'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
-import { freshCasino } from '@/lib/data/local/save'
+import { starterSave } from '@/lib/data/local/starter'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
 import type { Row } from '@/lib/data/common'
 import { installRng, mulberry32, seedOf } from '@/lib/rng'
 import type { SpeciesRow } from '@/lib/data/fishingData'
 import speciesJson from '@/content/fish_species.json'
-import profileDefaultsJson from '@/content/profile_defaults.json'
 import { syncAchievements, setActivity } from './steam'
 import { seaMapProps, raidSeatsFor, type SeaPageQuery } from '@/lib/core/seaPage'
 import { marketPageProps as shapeMarket } from '@/lib/core/marketPage'
@@ -76,41 +75,16 @@ import type { CachedSpecies } from '@/lib/fishSpecies'
 export type * from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
-const PROFILE_DEFAULTS = profileDefaultsJson as Row
 
 /** The session: the captain in play (chosen on the captain select), their save, their store, and the web tables the
  *  offline game does not model yet, carried untouched so no write loses them. */
 let session: { save: LocalSave; storage: SaveStorage; carried: Record<string, Row[]> } | null = null
 
-/**
- * A NEW CAPTAIN: exactly what a new web account is (the profiles row at its
- * column defaults, content/profile_defaults.json, which check-profile-defaults
- * holds to the schema; set_default_username's name; the sign-up trigger's 25
- * worms), with one difference decided for Steam (2026-09-30): buying the game
- * makes you a Captain.
- */
-function starterSave(uid: string): LocalSave {
-  return {
-    uid,
-    profile: {
-      ...structuredClone(PROFILE_DEFAULTS),
-      id: uid,
-      username: 'crew_' + uid.replace(/-/g, '').slice(-5),
-      created_at: new Date(clockNow()).toISOString(),
-      is_premium: true,
-      premium_expires_at: null,
-    },
-    species: SPECIES,
-    bait: { worm: 25 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rodItems: {}, ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
-  }
-}
-
 /** Open the captain's save, or start a new captain under this id when there is
  *  none. The save's own seed drives every roll. */
 export async function openSave(storage: SaveStorage, uid: string): Promise<LocalSave> {
   const loaded = await loadSave(storage, SPECIES)
-  const save = loaded?.save ?? starterSave(uid)
+  const save = loaded?.save ?? starterSave(uid, SPECIES, clockNow())
   // Every autosave also tells Steam about any badge it has not heard of yet
   // (./steam); the first one catches up everything already earned.
   const watched: SaveStorage = { read: () => storage.read(), write: async (text) => { await storage.write(text); syncAchievements(save) } }

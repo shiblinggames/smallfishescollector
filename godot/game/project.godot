@@ -1,0 +1,22 @@
+; Seas the Booty, the Steam game (Godot port, started 2026-09-30).
+; See README.md here and docs/systems/steam-port.md.
+
+config_version=5
+
+[application]
+
+config/name="Seas the Booty"
+config/features=PackedStringArray("4.7")
+
+[debug]
+
+gdscript/warnings/untyped_declaration=2
+gdscript/warnings/unsafe_call_argument=1
+gdscript/warnings/exclude_addons=true
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"

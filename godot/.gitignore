@@ -1,3 +1,10 @@
 # Godot's per-machine import cache and class registry. Regenerated on first
 # open; committing it just creates conflicts between machines.
 sea/.godot/
+
+# The Steam game (godot/game, 2026-09-30): the same cache, GodotSteam's
+# binaries (fetched by tools/setup.mjs, never committed) and export output.
+game/.godot/
+game/addons/godotsteam/
+game/build/
+*.tmp

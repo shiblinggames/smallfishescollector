@@ -16,6 +16,15 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
 - PARITY: the TS cores generate test cases (a save plus seeded rolls in, the save out) and
   the Godot build must replay them exactly; a system is ported when it matches.
 - THE WEB BETA: stays up, FEATURE-FROZEN, bug fixes only. New features go into Godot.
+- STAGE 0 BUILT (2026-09-30): the project is `godot/game/` (Godot 4.7.2; `godot/sea/` is
+  the parked August 3D prototype, left alone). `core/dice.gd` (mulberry32 and seedOf, exact),
+  `core/clock.gd`, `core/js_json.gd` (numbers as JS doubles, written as JSON.stringify does),
+  `core/save_file.gd` (the v13 local save format, read and written byte for byte).
+  `web/scripts/parity-export.mts` writes the cases (dice, saves, three fishing sessions of 433
+  calls from `lib/data/local/starter.ts`'s new captain, now shared with the desktop shell);
+  `tests/parity.gd` replays them; `node tools/parity.mjs` runs it all. GodotSteam 4.22.1 is
+  fetched by `tools/setup.mjs` (pinned, checksummed, not committed) and loads. Porting rules
+  are in `godot/game/README.md`. Fishing is PENDING until stage 1 ports the cast and reel.
 
 **Status: parked 2026-09-10, the same day it was written. THE GAME STAYS WEB-BASED.**
 **2026-09-28: Kong asked to PREP a possible Steam migration with offline play, up to the whole
