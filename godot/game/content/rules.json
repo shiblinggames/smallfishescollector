@@ -2258,47 +2258,56 @@
   {
    "tier": 0,
    "name": "Basic Reel",
-   "needleSpeedMultiplier": 1
+   "needleSpeedMultiplier": 1,
+   "imageUrl": "/reel_basic.png"
   },
   {
    "tier": 1,
    "name": "Spinning Reel",
-   "needleSpeedMultiplier": 0.94
+   "needleSpeedMultiplier": 0.94,
+   "imageUrl": "/reel_spinning.png"
   },
   {
    "tier": 2,
    "name": "Baitcasting Reel",
-   "needleSpeedMultiplier": 0.88
+   "needleSpeedMultiplier": 0.88,
+   "imageUrl": "/reel_baitcasting.png"
   },
   {
    "tier": 3,
    "name": "Saltwater Reel",
-   "needleSpeedMultiplier": 0.82
+   "needleSpeedMultiplier": 0.82,
+   "imageUrl": "/reel_saltwater.png"
   },
   {
    "tier": 4,
    "name": "Precision Reel",
-   "needleSpeedMultiplier": 0.75
+   "needleSpeedMultiplier": 0.75,
+   "imageUrl": "/reel_precision.png"
   },
   {
    "tier": 5,
    "name": "Tournament Reel",
-   "needleSpeedMultiplier": 0.69
+   "needleSpeedMultiplier": 0.69,
+   "imageUrl": "/reel_tournament.png"
   },
   {
    "tier": 6,
    "name": "Deep Sea Reel",
-   "needleSpeedMultiplier": 0.62
+   "needleSpeedMultiplier": 0.62,
+   "imageUrl": "/reel_deepsea.png"
   },
   {
    "tier": 7,
    "name": "Kraken's Grip",
-   "needleSpeedMultiplier": 0.56
+   "needleSpeedMultiplier": 0.56,
+   "imageUrl": "/reel_kraken.png"
   },
   {
    "tier": 8,
    "name": "Tidecaller's Reel",
-   "needleSpeedMultiplier": 0.5
+   "needleSpeedMultiplier": 0.5,
+   "imageUrl": "/reel_tidecaller.png"
   }
  ],
  "dial": {
@@ -2691,7 +2700,29 @@
    "cost": 5000,
    "gemPrice": null,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_oak_rest.png",
+   "castImageUrl": "/boat_oak_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "cherry",
@@ -2699,7 +2730,29 @@
    "cost": 5000,
    "gemPrice": null,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_cherry_rest.png",
+   "castImageUrl": "/boat_cherry_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "desert",
@@ -2707,7 +2760,29 @@
    "cost": 5000,
    "gemPrice": null,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_desert_rest.png",
+   "castImageUrl": "/boat_desert_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "mahogany",
@@ -2715,7 +2790,29 @@
    "cost": 5000,
    "gemPrice": null,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_mahogany_rest.png",
+   "castImageUrl": "/boat_mahogany_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "pistachio",
@@ -2723,7 +2820,29 @@
    "cost": 5000,
    "gemPrice": null,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_pistachio_rest.png",
+   "castImageUrl": "/boat_pistachio_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "taupe",
@@ -2731,7 +2850,29 @@
    "cost": 5000,
    "gemPrice": null,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_taupe_rest.png",
+   "castImageUrl": "/boat_taupe_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "charcoal",
@@ -2739,7 +2880,29 @@
    "cost": 0,
    "gemPrice": null,
    "crateOnly": true,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_charcoal_rest.png",
+   "castImageUrl": "/boat_charcoal_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "golden",
@@ -2747,7 +2910,29 @@
    "cost": 100000,
    "gemPrice": null,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_golden_rest.png",
+   "castImageUrl": "/boat_golden_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "offwhite",
@@ -2755,7 +2940,29 @@
    "cost": 0,
    "gemPrice": null,
    "crateOnly": true,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_offwhite_rest.png",
+   "castImageUrl": "/boat_offwhite_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "periwinkle",
@@ -2763,7 +2970,29 @@
    "cost": 5000,
    "gemPrice": null,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_periwinkle_rest.png",
+   "castImageUrl": "/boat_periwinkle_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "ethereal",
@@ -2771,7 +3000,29 @@
    "cost": 750000,
    "gemPrice": null,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_ethereal_rest.png",
+   "castImageUrl": "/boat_ethereal_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "fire",
@@ -2779,7 +3030,29 @@
    "cost": 0,
    "gemPrice": 1000,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_fire_rest.png",
+   "castImageUrl": "/boat_fire_cast.png",
+   "positions": {
+    "rest": {
+     "top": 73.5,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 69.5,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 72.8,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "ice",
@@ -2790,6 +3063,28 @@
    "gate": {
     "kind": "fishing",
     "level": 75
+   },
+   "restImageUrl": "/boat_ice_rest.png",
+   "castImageUrl": "/boat_ice_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
    }
   },
   {
@@ -2798,7 +3093,29 @@
    "cost": 0,
    "gemPrice": 750,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_jetblack_rest.png",
+   "castImageUrl": "/boat_jetblack_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "chromium",
@@ -2806,7 +3123,29 @@
    "cost": 1500000,
    "gemPrice": null,
    "crateOnly": false,
-   "gate": null
+   "gate": null,
+   "restImageUrl": "/boat_chromium_rest.png",
+   "castImageUrl": "/boat_chromium_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "celestial",
@@ -2817,6 +3156,28 @@
    "gate": {
     "kind": "ap",
     "share": 0.75
+   },
+   "restImageUrl": "/boat_celestial_rest.png",
+   "castImageUrl": "/boat_celestial_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
    }
   },
   {
@@ -2828,6 +3189,28 @@
    "gate": {
     "kind": "ap",
     "share": 0.5
+   },
+   "restImageUrl": "/boat_abyssal_rest.png",
+   "castImageUrl": "/boat_abyssal_cast.png",
+   "positions": {
+    "rest": {
+     "top": 77,
+     "left": 31,
+     "width": 55,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 73,
+     "left": 38,
+     "width": 55,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 77,
+     "left": 37,
+     "width": 55,
+     "rotate": 0
+    }
    }
   }
  ],
@@ -2836,93 +3219,767 @@
    "id": "blue",
    "name": "Blue",
    "cost": 2000,
-   "crateOnly": false
+   "crateOnly": false,
+   "restImageUrl": "/hatblue_rest.png",
+   "castImageUrl": "/hatblue_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "black",
    "name": "Black",
    "cost": 0,
-   "crateOnly": true
+   "crateOnly": true,
+   "restImageUrl": "/hat_black_rest.png",
+   "castImageUrl": "/hat_black_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "brown",
    "name": "Brown",
    "cost": 2000,
-   "crateOnly": false
+   "crateOnly": false,
+   "restImageUrl": "/hat_brown_rest.png",
+   "castImageUrl": "/hat_brown_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "gray",
    "name": "Gray",
    "cost": 0,
-   "crateOnly": true
+   "crateOnly": true,
+   "restImageUrl": "/hat_gray_rest.png",
+   "castImageUrl": "/hat_gray_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "green",
    "name": "Green",
    "cost": 2000,
-   "crateOnly": false
+   "crateOnly": false,
+   "restImageUrl": "/hat_green_rest.png",
+   "castImageUrl": "/hat_green_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "purple",
    "name": "Purple",
    "cost": 2000,
-   "crateOnly": false
+   "crateOnly": false,
+   "restImageUrl": "/hat_purple_rest.png",
+   "castImageUrl": "/hat_purple_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "yellow",
    "name": "Yellow",
    "cost": 2000,
-   "crateOnly": false
+   "crateOnly": false,
+   "restImageUrl": "/hat_yellow_rest.png",
+   "castImageUrl": "/hat_yellow_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "midnight",
    "name": "Midnight",
    "cost": 20000,
-   "crateOnly": false
+   "crateOnly": false,
+   "restImageUrl": "/hat_midnight_rest.png",
+   "castImageUrl": "/hat_midnight_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "olive",
    "name": "Olive",
    "cost": 20000,
-   "crateOnly": false
+   "crateOnly": false,
+   "restImageUrl": "/hat_olive_rest.png",
+   "castImageUrl": "/hat_olive_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "sky",
    "name": "Sky",
    "cost": 20000,
-   "crateOnly": false
+   "crateOnly": false,
+   "restImageUrl": "/hat_sky_rest.png",
+   "castImageUrl": "/hat_sky_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "offwhite",
    "name": "Off-White",
    "cost": 20000,
-   "crateOnly": false
+   "crateOnly": false,
+   "restImageUrl": "/hat_offwhite_rest.png",
+   "castImageUrl": "/hat_offwhite_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "golden",
    "name": "Golden",
    "cost": 0,
-   "crateOnly": true
+   "crateOnly": true,
+   "restImageUrl": "/hat_golden_rest.png",
+   "castImageUrl": "/hat_golden_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "cheetah",
    "name": "Cheetah",
    "cost": 0,
-   "crateOnly": true
+   "crateOnly": true,
+   "restImageUrl": "/hat_cheetah_rest.png",
+   "castImageUrl": "/hat_cheetah_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "fuego",
    "name": "Fuego",
    "cost": 0,
-   "crateOnly": true
+   "crateOnly": true,
+   "restImageUrl": "/hat_fuego_rest.png",
+   "castImageUrl": "/hat_fuego_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   },
   {
    "id": "spotted",
    "name": "Spotted",
    "cost": 0,
-   "crateOnly": true
+   "crateOnly": true,
+   "restImageUrl": "/hat_spotted_rest.png",
+   "castImageUrl": "/hat_spotted_cast.png",
+   "positions": {
+    "rest": {
+     "top": 53,
+     "left": 57.1,
+     "width": 21.8,
+     "rotate": 0
+    },
+    "wait": {
+     "top": 49.1,
+     "left": 64.6,
+     "width": 21.6,
+     "rotate": 0
+    },
+    "cast": {
+     "top": 53,
+     "left": 63.8,
+     "width": 21.5,
+     "rotate": 0
+    }
+   }
   }
  ],
+ "hooks": [
+  {
+   "tier": 0,
+   "name": "Copper Hook",
+   "imageUrl": "/hook_copper.png"
+  },
+  {
+   "tier": 1,
+   "name": "Bronze Hook",
+   "imageUrl": "/hook_bronze.png"
+  },
+  {
+   "tier": 2,
+   "name": "Iron Hook",
+   "imageUrl": "/hook_iron.png"
+  },
+  {
+   "tier": 3,
+   "name": "Steel Hook",
+   "imageUrl": "/hook_steel.png"
+  },
+  {
+   "tier": 4,
+   "name": "Silver Hook",
+   "imageUrl": "/hook_silver.png"
+  },
+  {
+   "tier": 5,
+   "name": "Gold Hook",
+   "imageUrl": "/hook_gold.png"
+  },
+  {
+   "tier": 6,
+   "name": "Enchanted Hook",
+   "imageUrl": "/hook_enchanted.png"
+  },
+  {
+   "tier": 7,
+   "name": "Abyssal Hook",
+   "imageUrl": "/hook_abyssal.png"
+  },
+  {
+   "tier": 8,
+   "name": "Legendary Hook",
+   "imageUrl": "/hook_legendary.png"
+  }
+ ],
+ "characterColors": [
+  {
+   "id": "default",
+   "name": "Green",
+   "free": true,
+   "gate": null
+  },
+  {
+   "id": "gray",
+   "name": "Gray",
+   "free": true,
+   "gate": null
+  },
+  {
+   "id": "blue",
+   "name": "Blue",
+   "free": true,
+   "gate": null
+  },
+  {
+   "id": "pink",
+   "name": "Pink",
+   "free": true,
+   "gate": null
+  },
+  {
+   "id": "sand",
+   "name": "Sand",
+   "free": false,
+   "gate": {
+    "kind": "fishing",
+    "level": 25
+   }
+  },
+  {
+   "id": "sky",
+   "name": "Sky",
+   "free": false,
+   "gate": {
+    "kind": "nav",
+    "level": 50
+   }
+  },
+  {
+   "id": "golden",
+   "name": "Golden",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "forest",
+   "name": "Forest",
+   "free": false,
+   "gate": {
+    "kind": "fishing",
+    "level": 50
+   }
+  },
+  {
+   "id": "mint",
+   "name": "Mint",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "autumn",
+   "name": "Autumn",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "ruby",
+   "name": "Ruby",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "ice",
+   "name": "Ice",
+   "free": false,
+   "gate": {
+    "kind": "fishing",
+    "level": 75
+   }
+  },
+  {
+   "id": "lavender",
+   "name": "Lavender",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "storm",
+   "name": "Storm",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "galaxy",
+   "name": "Galaxy",
+   "free": false,
+   "gate": {
+    "kind": "nav",
+    "level": 100
+   }
+  },
+  {
+   "id": "crystal",
+   "name": "Crystal",
+   "free": false,
+   "gate": {
+    "kind": "fishing",
+    "level": 100
+   }
+  },
+  {
+   "id": "ethereal",
+   "name": "Ethereal",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "lava",
+   "name": "Lava",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "gilded",
+   "name": "Gilded",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "frozen",
+   "name": "Frozen",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "spectral",
+   "name": "Spectral",
+   "free": false,
+   "gate": null
+  },
+  {
+   "id": "abyssal",
+   "name": "Abyssal",
+   "free": false,
+   "gate": {
+    "kind": "ap",
+    "share": 0.5
+   }
+  }
+ ],
+ "petOverlays": {
+  "parrot": {
+   "rest": {
+    "top": 63.6,
+    "left": 62.6,
+    "width": 41.4,
+    "rotate": 0
+   },
+   "wait": {
+    "top": 59.7,
+    "left": 69.5,
+    "width": 41.4,
+    "rotate": 0
+   },
+   "cast": {
+    "top": 63.6,
+    "left": 68.3,
+    "width": 41.4,
+    "rotate": 0
+   }
+  },
+  "monkey": {
+   "rest": {
+    "top": 65.5,
+    "left": 62,
+    "width": 41.4,
+    "rotate": 0
+   },
+   "wait": {
+    "top": 61.7,
+    "left": 68.9,
+    "width": 41.4,
+    "rotate": 0
+   },
+   "cast": {
+    "top": 65.5,
+    "left": 67.7,
+    "width": 41.4,
+    "rotate": 0
+   }
+  },
+  "seal": {
+   "rest": {
+    "top": 63.2,
+    "left": 56.9,
+    "width": 41.4,
+    "rotate": 0
+   },
+   "wait": {
+    "top": 59.3,
+    "left": 63.5,
+    "width": 41.4,
+    "rotate": 0
+   },
+   "cast": {
+    "top": 62.7,
+    "left": 62.4,
+    "width": 41.4,
+    "rotate": 0
+   }
+  },
+  "lizard": {
+   "rest": {
+    "top": 68.6,
+    "left": 68.1,
+    "width": 29,
+    "rotate": -1
+   },
+   "wait": {
+    "top": 64.4,
+    "left": 75.1,
+    "width": 29,
+    "rotate": -1
+   },
+   "cast": {
+    "top": 68.6,
+    "left": 74.3,
+    "width": 29,
+    "rotate": -1
+   }
+  },
+  "raccoon": {
+   "rest": {
+    "top": 59.8,
+    "left": 59.3,
+    "width": 43.2,
+    "rotate": 0
+   },
+   "wait": {
+    "top": 55.9,
+    "left": 66.4,
+    "width": 43.2,
+    "rotate": 0
+   },
+   "cast": {
+    "top": 59.8,
+    "left": 64.8,
+    "width": 43.2,
+    "rotate": 0
+   }
+  },
+  "crab": {
+   "rest": {
+    "top": 70.2,
+    "left": 69.5,
+    "width": 25,
+    "rotate": 0
+   },
+   "wait": {
+    "top": 66.3,
+    "left": 76.7,
+    "width": 25,
+    "rotate": 0
+   },
+   "cast": {
+    "top": 70.2,
+    "left": 75.1,
+    "width": 25,
+    "rotate": 0
+   }
+  },
+  "plesiosaur": {
+   "rest": {
+    "top": 65.3,
+    "left": 20.8,
+    "width": 35.8,
+    "rotate": 6.5
+   },
+   "wait": {
+    "top": 61.4,
+    "left": 28.3,
+    "width": 35.8,
+    "rotate": 6.5
+   },
+   "cast": {
+    "top": 65.3,
+    "left": 27.5,
+    "width": 35.8,
+    "rotate": 6.5
+   }
+  }
+ },
  "badgePoints": {
   "prestige_i": 1,
   "trophy_catch": 3,

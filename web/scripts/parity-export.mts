@@ -25,6 +25,8 @@ import path from 'path'
 import { castLine, reelIn, reelCrate, rerollWormhole, tideTurnerSkip, heldGolden, sellGoldenTrophy, mountGoldenTrophy, claimFishingLevelRewards, claimZoneReward, prestigeZone, releaseAncient } from '../lib/core/fishing'
 import { setAutoFishing, setShowWaitTimer, buySpecialItem, equipSpecialItem, buyHat, equipHat, buyBoat, equipBoat, equipPet, setCompletionistEffects } from '../lib/core/loadout'
 import { BADGES } from '../lib/badges'
+import { updateCharacterColor } from '../lib/core/profile'
+import { equipTackleRod } from '../lib/core/harbour'
 import { localFishingData, type LocalSave } from '../lib/data/local/fishingLocal'
 import { serializeSave } from '../lib/data/local/saveFile'
 import { starterSave } from '../lib/data/local/starter'
@@ -447,6 +449,14 @@ const rest = [
     await c('setCompletionistEffects', [11, 16, 19, 15]); await c('setCompletionistEffects', [16, 19, 15])
     await x.patchProfile({ doubloons: 100 }); await c('setCompletionistEffects', [11])
     await c('setCompletionistEffects', [14, 1.5]); await c('setCompletionistEffects', [])
+    // A color: free, not owned, earned by level (Fishing 25 for sand at 80), by
+    // nav level (not reached), by achievement points, and nonsense.
+    const cc = (id: string) => x.call('updateCharacterColor', [id], () => updateCharacterColor(x.db as never, x.uid, id))
+    await cc('gray'); await cc('mint'); await cc('sand'); await cc('sky'); await cc('abyssal'); await cc('nonsense')
+    await x.patchProfile({ unlocked_character_colors: ['mint'] }); await cc('mint')
+    // A rod in hand: the Bamboo always, one held, one not, nonsense.
+    const rod = (t: number) => x.call('equipTackleRod', [t], () => equipTackleRod(x.db as never, x.uid, t))
+    await rod(0); await rod(15); await rod(18); await rod(99)
   }),
 ]
 write('fishing_rest.json', { sessions: rest })

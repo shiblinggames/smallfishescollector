@@ -18,23 +18,21 @@ const SPRITE_W: float = 210.0
 var velocity: Vector2 = Vector2.ZERO
 var target: Variant = null
 var locked: bool = false
-var _sprite: Sprite2D
+var skipper: Skipper
+var _facing: float = -1.0
 var _wake: GPUParticles2D
 var _spray: GPUParticles2D
 var lantern: PointLight2D
 
 
 func _ready() -> void:
-	_sprite = Sprite2D.new()
-	_sprite.texture = load("res://art/fishing_rest.png")
-	var s: float = SPRITE_W / float(_sprite.texture.get_width())
-	_sprite.scale = Vector2(s, s / Chart.GROUND)
-	_sprite.offset = Vector2(0, -110)
+	skipper = Skipper.new()
+	skipper.scale = Vector2(1.0, 1.0 / Chart.GROUND)
 	_wake = _particles(70, 1.8, Color(0.92, 0.97, 1.0, 0.34), 26.0, 10.0)
 	_spray = _particles(24, 0.6, Color(1.0, 1.0, 1.0, 0.5), 60.0, 6.0)
 	add_child(_wake)
 	add_child(_spray)
-	add_child(_sprite)
+	add_child(skipper)
 	lantern = PointLight2D.new()
 	lantern.texture = Glow.radial(256, Color(1.0, 0.78, 0.45), true)
 	lantern.texture_scale = 2.2
@@ -89,8 +87,9 @@ func steer(input: Vector2, delta: float) -> void:
 		velocity = Vector2.ZERO
 	position = next
 	var speed: float = velocity.length()
-	if speed > 20.0:
-		_sprite.flip_h = velocity.x > 0.0
+	if speed > 20.0 and absf(velocity.x) > 8.0:
+		_facing = 1.0 if velocity.x > 0.0 else -1.0
+		skipper.scale.x = -_facing
 	_wake.emitting = speed > 40.0
 	_spray.emitting = speed > MAX_SPEED * 0.7
 	var back: Vector2 = -velocity.normalized() if speed > 1.0 else Vector2.ZERO
@@ -100,14 +99,18 @@ func steer(input: Vector2, delta: float) -> void:
 
 
 func set_pose(pose: String) -> void:
-	_sprite.texture = load("res://art/fishing_%s.png" % pose)
+	skipper.set_frame(pose)
+
+
+func set_look(look: Dictionary) -> void:
+	skipper.set_look(look)
 
 
 ## THE CATCH SPLASH in front of the bow (app/(app)/sea/seaSplash.ts): droplets
 ## thrown up and falling back, a ring spreading on the water; bigger, and
 ## part gold, on a perfect.
 func splash(perfect: bool) -> void:
-	var facing: float = 1.0 if _sprite.flip_h else -1.0
+	var facing: float = _facing
 	var at: Vector2 = Vector2(facing * 150.0, 70.0)
 	var p: GPUParticles2D = GPUParticles2D.new()
 	p.one_shot = true

@@ -25,7 +25,9 @@ import { fishingColorsToGrant } from '../lib/characters'
 import { XP_TABLE, catchXP } from '../lib/fishingLevel'
 import { DAILY_TIERS, MASTER_MIN_LEVEL } from '../lib/dailyChallenges'
 import { CRATE_TABLES } from '../lib/crateLoot'
-import { PETS, PET_SPECIES_WEIGHTS, CRATE_PET_CHANCE } from '../lib/pets'
+import { PETS, PET_SPECIES_WEIGHTS, CRATE_PET_CHANCE, PET_OVERLAYS } from '../lib/pets'
+import { HOOKS } from '../lib/hooks'
+import { CHARACTER_COLORS } from '../lib/characters'
 import { FOLK } from '../lib/seaFolk'
 import { REELS } from '../lib/reels'
 import { FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY } from '../app/(app)/fishing/depths'
@@ -70,7 +72,7 @@ const rules = {
   folk: Object.fromEntries(FOLK.map(f => [f.id, { short: f.short, favourites: f.favourites.map(x => ({ id: x.id, name: x.name })) }])),
   // The dial (app/(app)/fishing/depths): needle speed by difficulty, and each
   // water's catch-zone multiplier.
-  reels: REELS.map(r => ({ tier: r.tier, name: r.name, needleSpeedMultiplier: r.needleSpeedMultiplier })),
+  reels: REELS.map(r => ({ tier: r.tier, name: r.name, needleSpeedMultiplier: r.needleSpeedMultiplier, imageUrl: r.imageUrl ?? null })),
   dial: { fishDifficultySpeed: FISH_DIFFICULTY_SPEED, zoneDifficulty: ZONE_DIFFICULTY },
   // A new captain's save (lib/data/local/starter) with the id, name and date
   // left for the game to fill in, and no species (content, attached on load).
@@ -79,8 +81,12 @@ const rules = {
   levelRewardMax: LEVEL_REWARD_MAX,
   specialItems: SPECIAL_ITEMS.map(d => ({ id: d.id, name: d.name, shopCost: d.shopCost ?? null, costFathoms: d.costFathoms ?? null, requiresItem: d.requiresItem ?? null, requiresGauntletDepth: d.requiresGauntletDepth ?? null, finaleSlotOnly: d.finaleSlotOnly ?? false })),
   specialOwnedColumn: SPECIAL_OWNED_COLUMN,
-  boats: BOATS.map(b => ({ id: b.id, name: b.name, cost: b.cost, gemPrice: b.gemPrice ?? null, crateOnly: b.crateOnly ?? false, gate: b.gate ?? null })),
-  hats: HATS.map(h => ({ id: h.id, name: h.name, cost: h.cost, crateOnly: h.crateOnly ?? false })),
+  boats: BOATS.map(b => ({ id: b.id, name: b.name, cost: b.cost, gemPrice: b.gemPrice ?? null, crateOnly: b.crateOnly ?? false, gate: b.gate ?? null, restImageUrl: b.restImageUrl, castImageUrl: b.castImageUrl, positions: b.positions })),
+  hats: HATS.map(h => ({ id: h.id, name: h.name, cost: h.cost, crateOnly: h.crateOnly ?? false, restImageUrl: h.restImageUrl, castImageUrl: h.castImageUrl, positions: h.positions })),
+  // The look on the boat (app/(app)/sea/seaCaptain.ts and skiffArt.ts draw it).
+  hooks: HOOKS.map(h => ({ tier: h.tier, name: h.name, imageUrl: h.imageUrl ?? null })),
+  characterColors: CHARACTER_COLORS.map(c => ({ id: c.id, name: c.name, free: c.free ?? false, gate: c.gate ?? null })),
+  petOverlays: PET_OVERLAYS,
   badgePoints: Object.fromEntries(BADGES.map(b => [b.id, badgePoints(b.id)])),
   apPool: AP_POOL,
   navXpTable: NAV_XP_TABLE,

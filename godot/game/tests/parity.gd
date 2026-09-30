@@ -197,6 +197,8 @@ func _call(db: CaptainStore, uid: String, save: Dictionary, op: String, a: Array
 		"equipBoat": return Loadout.equip_boat(db, uid, a[0])
 		"equipPet": return Loadout.equip_pet(db, uid, a[0], a[1] if a.size() > 1 else "stern")
 		"setCompletionistEffects": return Loadout.set_completionist_effects(db, uid, a[0])
+		"updateCharacterColor": return Loadout.update_character_color(db, uid, a[0])
+		"equipTackleRod": return Loadout.equip_tackle_rod(db, uid, float(a[0]))
 		# The session's own setup between calls, replayed so both sides play the same save.
 		"patchProfile":
 			db.update_profile(uid, a[0])

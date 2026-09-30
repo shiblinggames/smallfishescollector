@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -38,7 +38,42 @@ func _init() -> void:
 	hud._mods = hud._tackle()
 	for f: int in 20:
 		await process_frame
+	if what in ["loadout", "hold", "almanac", "giants"]:
+		# A captain with something to show: catches, clothes, pets and giants.
+		var save: Dictionary = sea.session.save
+		for id: int in [1, 2, 3, 4, 5, 7, 9, 12, 16, 20]:
+			save["collection"][str(id)] = { "catch_count": 3.0, "is_golden": id == 4 }
+			save["lifetime"][str(id)] = { "n": 5.0 + id, "last": "2026-09-30T10:00:00.000Z", "first": "2026-09-29T10:00:00.000Z" }
+			save["hold"][str(id)] = 2.0
+		save["bests"]["4"] = { "len": 8.8, "at": "2026-09-30T10:00:00.000Z" }
+		p["unlocked_hats"] = ["golden", "blue"]
+		p["unlocked_boats"] = ["fire", "oak"]
+		p["unlocked_pets"] = ["parrot_red", "crab_blue"]
+		p["ancient_catches"] = [144.0, 145.0, 146.0, 147.0]
+		p["ancient_vigil"] = { "144": { "rank": 3.0, "released": false }, "145": { "rank": 5.0, "released": false }, "146": { "rank": 1.0, "released": true } }
+		save["clears"] = ["the_sunken_hand"]
+		save["rodItems"] = { "galaxy": 1.0, "twinstrike": 1.0 }
+		hud.refresh()
 	match what:
+		"loadout":
+			hud._open_loadout()
+		"hold":
+			hud._open_hold()
+		"almanac":
+			hud._open_log()
+		"giants":
+			hud._open_log()
+			await process_frame
+			var a: Almanac = main.get_child(main.get_child_count() - 1)._hud.get_parent().get_child(-1)
+			a._room = "Giants"
+			a._draw_tabs()
+			a._draw_room()
+		"look":
+			for k: String in ["character_color", "equipped_hat", "equipped_boat", "equipped_pet", "equipped_pet_bow"]:
+				p[k] = { "character_color": "ruby", "equipped_hat": "golden", "equipped_boat": "fire", "equipped_pet": "parrot_red", "equipped_pet_bow": "plesiosaur_baby" }[k]
+			p["rod_tier"] = 18.0
+			sea._boat.set_look(Skipper.look_of(p))
+			sea._camera.zoom = Vector2(2.2, 2.2)
 		"dial":
 			hud._bite()
 		"card":

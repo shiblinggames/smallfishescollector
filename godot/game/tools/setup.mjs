@@ -32,7 +32,11 @@ const CONTENT = ['fish_species.json', 'profile_defaults.json']
 /** Files or folders under web/public, copied to art/ at the same path. A name
  *  with a * matches any run of characters within its folder. */
 const ART = [
-  'fishing_rest.png', 'fishing_cast.png', 'fishing_wait.png', 'fishing_*_rest.png', 'fish', 'sea/port-mainland.webp',
+  'fishing_rest.png', 'fishing_cast.png', 'fishing_wait.png', 'fishing_*.png', 'fish', 'sea/port-mainland.webp',
+  // The look on the boat: every hat, boat, rod, reel and hook sprite, and the loadout's backdrop.
+  'hat*_rest.png', 'hat*_cast.png', 'boat_*_cast.png', 'rod_*.png', 'reel_*.png', 'hook_*.png', 'autocaster.png', 'welcome-harbour-open.webp',
+  // The Almanac.
+  'almanac-paper.jpg', 'ancient.jpg',
   // The crate moment, the golden choice, loot and level-up art.
   '*crateclosed.png', '*crateopen.png', 'smallpile.png', 'hat_*_rest.png', 'boat_*_rest.png',
   'worms.png', 'minnow.png', 'nightcrawler.png', 'chum.png', 'anglersformula.png', 'luminouslure.png', 'goldenlure.png',

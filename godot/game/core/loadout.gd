@@ -222,3 +222,43 @@ static func set_completionist_effects(db: CaptainStore, uid: String, tiers: Arra
 	if must_pay and clean.size() >= int(comp["maxEffects"]) and not Js.includes(Js.list(p.get("unlocked_badges")), "reforged"):
 		db.add_to_list(uid, "unlocked_badges", "reforged")
 	return { "completionistEffects": clean, "firstForge": first_forge, "charged": must_pay, "newDoubloons": new_doubloons }
+
+
+## updateCharacterColor (lib/core/profile): a free color, one already owned,
+## or one earned by a level or achievement-point gate (owned from then on).
+static func update_character_color(db: CaptainStore, uid: String, color_id: String) -> Dictionary:
+	var color: Dictionary = {}
+	for c: Dictionary in Rules.data()["characterColors"]:
+		if c["id"] == color_id:
+			color = c
+	if color.is_empty():
+		return { "error": "Invalid color" }
+	if not color["free"]:
+		var p: Dictionary = db.profile(uid, "unlocked_character_colors, fishing_xp, expedition_xp, prestige_levels")
+		var unlocked: Array = Js.list(p.get("unlocked_character_colors"))
+		if not Js.includes(unlocked, color_id):
+			var gate: Variant = color.get("gate")
+			var earned: bool = false
+			if gate != null and (gate as Dictionary)["kind"] != "ap":
+				earned = _gate_met(gate, Rules.level_from_xp(Js.num(p.get("fishing_xp"))), nav_level_from_xp(Js.num(p.get("expedition_xp"))), null)
+			if not earned and gate != null and (gate as Dictionary)["kind"] == "ap":
+				earned = _gate_met(gate, 0, 0, db.achievement_points(uid))
+			if not earned:
+				return { "error": "Color not unlocked" }
+			db.add_to_list(uid, "unlocked_character_colors", color_id)
+	db.update_profile(uid, { "character_color": color_id })
+	return {}
+
+
+## equipTackleRod (lib/core/harbour): put an owned rod in hand, by tier.
+static func equip_tackle_rod(db: CaptainStore, uid: String, rod_tier: float) -> Dictionary:
+	var rod: Dictionary = {}
+	for r: Dictionary in Rules.data()["rods"]:
+		if float(r["tier"]) == rod_tier:
+			rod = r
+	if rod.is_empty():
+		return { "error": "Invalid rod" }
+	if rod["id"] != "bamboo" and not Js.includes(db.held_rod_tiers(uid), rod_tier):
+		return { "error": "Rod not owned" }
+	db.update_profile(uid, { "rod_tier": rod_tier })
+	return { "rodTier": rod_tier }

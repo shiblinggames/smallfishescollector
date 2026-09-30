@@ -58,6 +58,7 @@ func _ready() -> void:
 	var at: Variant = session.profile().get("sea_x")
 	_boat.position = Vector2(Js.num(at), Js.num(session.profile().get("sea_y"))) if at != null else Chart.HOME
 	_world.add_child(_boat)
+	_boat.set_look(Skipper.look_of(session.profile()))
 
 	_night = CanvasModulate.new()
 	add_child(_night)

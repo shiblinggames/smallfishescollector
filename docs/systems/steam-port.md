@@ -16,6 +16,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
 - PARITY: the TS cores generate test cases (a save plus seeded rolls in, the save out) and
   the Godot build must replay them exactly; a system is ported when it matches.
 - THE WEB BETA: stays up, FEATURE-FROZEN, bug fixes only. New features go into Godot.
+- THE ANCIENT DEEP FIGHT COMES BACK (Kong, 2026-09-30): the web sea resolves every fish,
+  the giants included, in one tap (the multi-phase reel lived in the deleted
+  app/(app)/fishing/FishingGame.tsx, in git at 7e1891b9^), so a Vigil rank needed one
+  perfect tap and the Vigil's scaling (extra phases, a tighter window, a faster needle) drove
+  nothing. The Godot build brings the fight back as the old screen had it: every Ancient
+  Deep fish is multi-phase (the six giants 3 phases, Megalodon 4, each with its mechanic, plus
+  the Vigil's extra phases; the twelve regulars 2 phases with theirs), a miss lets it go, and
+  only the final phase's result goes to the reel.
 - GODOT VISUALS (Kong, 2026-09-30): the painted house style stays; NO 3D lighting or 3D sea
   (the August prototype's lesson). Adopted: water shaders over the painted plates (flow,
   ripple, shore foam, glints, per-zone currents), 2D night lighting (a CanvasModulate tint

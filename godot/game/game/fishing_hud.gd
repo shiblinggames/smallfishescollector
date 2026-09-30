@@ -49,9 +49,20 @@ var _purse: Label
 var _where: Label
 var _blurb: Label
 var _clock: Label
-var _bait_pick: OptionButton
 var _action: Button
+## The rod's four menus; _hold is the Hold button's count, where fish land.
+var _m_loadout: Button
+var _m_bait: Button
+var _m_log: Button
+var _m_hold: Button
 var _hold: Label
+var _bait_val: Label
+var _loadout_val: Label
+var _log_val: Label
+var _auto: Button
+var _auto_on: bool = false
+var _auto_t: float = -1.0
+var _catch_t: float = 0.0
 var _blocked: Label
 var _status: Label
 var _dots: Label
@@ -75,6 +86,16 @@ func _ready() -> void:
 	_xp = XpBar.new()
 	tl.add_child(_xp)
 	_purse = _label(tl, "", 17, GOLD, true)
+	_auto = Button.new()
+	_auto.custom_minimum_size = Vector2(0, 30)
+	_auto.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_auto.add_theme_font_size_override("font_size", 12)
+	_auto.icon = Skipper.tex("autocaster.png")
+	_auto.expand_icon = false
+	_auto.add_theme_constant_override("icon_max_width", 16)
+	_auto.pressed.connect(_toggle_auto)
+	tl.add_child(_auto)
+	_auto_on = session.profile().get("auto_fishing_on") == true
 
 	var tr: VBoxContainer = _box(Vector2(-20, 16), true, 360)
 	_where = _label(tr, "", 20, INK, true)
@@ -83,25 +104,28 @@ func _ready() -> void:
 	for l: Label in [_where, _blurb, _clock]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 
+	_bait = str(Js.nz(session.profile().get("last_used_bait"), "worm"))
 	var bottom: HBoxContainer = HBoxContainer.new()
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 12)
-	_place(bottom, Vector2(0.5, 1.0), Vector2(-320, -86), Vector2(640, 58))
+	bottom.add_theme_constant_override("separation", 10)
+	_place(bottom, Vector2(0.5, 1.0), Vector2(-450, -86), Vector2(900, 58))
 	add_child(bottom)
-	_hold = _label(bottom, "", 15, DIM, true)
-	_hold.custom_minimum_size = Vector2(110, 0)
-	_hold.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_hold.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_bait_pick = OptionButton.new()
-	_bait_pick.custom_minimum_size = Vector2(190, 52)
-	_bait_pick.item_selected.connect(func(i: int) -> void:
-		_bait = _bait_pick.get_item_metadata(i)
-		Rumble.tap(10))
-	bottom.add_child(_bait_pick)
+	var lv: Array = _menu(bottom, "Loadout", _open_loadout)
+	_m_loadout = lv[0]
+	_loadout_val = lv[1]
+	var bv: Array = _menu(bottom, "Bait", _open_bait)
+	_m_bait = bv[0]
+	_bait_val = bv[1]
 	_action = Button.new()
-	_action.custom_minimum_size = Vector2(190, 56)
+	_action.custom_minimum_size = Vector2(190, 58)
 	_action.pressed.connect(_act)
 	bottom.add_child(_action)
+	var gv: Array = _menu(bottom, "Log", _open_log)
+	_m_log = gv[0]
+	_log_val = gv[1]
+	var hv: Array = _menu(bottom, "Hold", _open_hold)
+	_m_hold = hv[0]
+	_hold = hv[1]
 	_blocked = _label(self, "", 14, Color("#f8a2a2"))
 	_blocked.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_blocked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -155,6 +179,28 @@ static func _place(c: Control, anchor: Vector2, offset: Vector2, size_px: Vector
 	c.offset_top = offset.y
 	c.offset_right = offset.x + size_px.x
 	c.offset_bottom = offset.y + size_px.y
+
+
+## A menu button: its name small above, its value below.
+func _menu(parent: Control, key: String, on_press: Callable) -> Array:
+	var b: Button = Button.new()
+	b.custom_minimum_size = Vector2(150, 58)
+	b.pressed.connect(func() -> void:
+		Rumble.tap(8)
+		on_press.call())
+	parent.add_child(b)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 0)
+	b.add_child(col)
+	var k: Label = _label(col, key.to_upper(), 11, Color(0.75, 0.83, 0.89, 0.5))
+	k.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var v: Label = _label(col, "", 15, Color("#dfeaf2"), true)
+	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.clip_text = true
+	return [b, v]
 
 
 func _box(at: Vector2, right: bool, w: float) -> VBoxContainer:
@@ -214,18 +260,25 @@ func refresh() -> void:
 	_xp.set_values(lvl, frac, left, LevelUp.reward_label(next) if not next.is_empty() else "", next.get("milestone", false), _streak())
 	_dial.streak = _streak()
 	_purse.text = "%s ⟡" % _thousands(Js.num(p.get("doubloons")))
-	var keep: String = _bait
-	_bait_pick.clear()
-	var i: int = 0
-	for b: Array in session.baits():
-		_bait_pick.add_item("%s  %d" % [b[1], int(b[2])])
-		_bait_pick.set_item_metadata(i, b[0])
-		if b[0] == keep:
-			_bait_pick.select(i)
-		i += 1
-	if _bait_pick.item_count > 0 and _bait_pick.selected >= 0:
-		_bait = _bait_pick.get_item_metadata(_bait_pick.selected)
-	_hold.text = "Hold %d/%d" % [int(session.store.hold_count(session.uid)), int(Rules.fish_hold(Js.num(p.get("fish_hold_tier")))["capacity"])]
+	# The bait on the line: the one chosen while any is left, else the first held.
+	var held: Array = session.baits()
+	var have: bool = false
+	for b: Array in held:
+		if b[0] == _bait:
+			have = true
+			_bait_val.text = "%s  %d" % [b[1], int(b[2])]
+	if not have and held.size() > 0:
+		_bait = held[0][0]
+		_bait_val.text = "%s  %d" % [held[0][1], int(held[0][2])]
+	elif held.is_empty():
+		_bait_val.text = "None"
+	var cap: int = int(Rules.fish_hold(Js.num(p.get("fish_hold_tier")))["capacity"])
+	var count: int = int(session.store.hold_count(session.uid))
+	_hold.text = "%d/%d" % [count, cap]
+	_hold.add_theme_color_override("font_color", Color("#f87171") if count >= cap else Color("#dfeaf2"))
+	_loadout_val.text = String(Rules.rod(Js.num(p.get("rod_tier")))["name"])
+	_log_val.text = "Catches"
+	_update_auto()
 	_update_action()
 
 
@@ -273,13 +326,90 @@ func _update_action() -> void:
 					_action.text = "Hold Full"
 					_blocked.add_theme_color_override("font_color", Color("#f8a2a2"))
 					_blocked.text = "Your hold is full. Sell it to the buyer in this water, or sail it home to the market."
-				elif _bait_pick.item_count == 0:
+				elif session.baits().is_empty():
 					_action.disabled = true
 					_action.text = "No Bait"
 					_blocked.add_theme_color_override("font_color", Color("#e8c98a"))
 					_blocked.text = "Out of bait. There are peddlers out here, and the shop ashore."
 	_action.add_theme_color_override("font_color", TEAL if teal else GOLD)
 	_action.add_theme_color_override("font_hover_color", TEAL.lightened(0.2) if teal else GOLD.lightened(0.2))
+
+
+func _open_sheet(s: Sheet) -> void:
+	_modal = s
+	s.closed.connect(func() -> void:
+		_modal = null
+		refresh())
+	add_child(s)
+
+
+func _open_bait() -> void:
+	if phase != "idle" and phase != "result":
+		return
+	_open_sheet(Menus.bait_sheet(session, _bait, func(t: String) -> void:
+		_bait = t
+		Rumble.tap(10)
+		refresh()))
+
+
+func _open_hold() -> void:
+	_open_sheet(Menus.hold_sheet(session))
+
+
+func _open_loadout() -> void:
+	_open_sheet(Menus.loadout_sheet(session, phase != "idle" and phase != "result", func() -> void:
+		boat.set_look(Skipper.look_of(session.profile()))
+		refresh()))
+
+
+func _open_log() -> void:
+	var a: Almanac = Almanac.new()
+	a.session = session
+	_modal = a
+	a.closed.connect(func() -> void:
+		_modal = null
+		refresh())
+	get_parent().add_child(a)
+
+
+# ── The Auto Caster and Auto Catcher ───────────────────────────────────────────
+#
+# The special slot holds the Auto Caster (or the Auto Catcher, which needs it):
+# tier 1 recasts on its own 1.7s after a result (3.3s after a crate), tier 2
+# also reels in a fish up to its rarity 0.42s into the bite, on the catch zone
+# and never the perfect. It stops for no bait, a full hold or a golden to
+# answer. The switch is remembered on the profile.
+
+func _auto_tier() -> int:
+	var p: Dictionary = session.profile()
+	var slot: Variant = p.get("equipped_special")
+	if (slot != "auto_caster" and slot != "auto_catcher") or not Js.truthy(p.get("has_auto_caster")):
+		return 0
+	return 2 if Js.truthy(p.get("has_auto_catcher")) else 1
+
+
+func _auto_max_rarity() -> int:
+	var u: Array = Js.list(session.profile().get("gauntlet_upgrades"))
+	if Js.includes(u, "dg_master_catcher"):
+		return 4
+	if Js.includes(u, "tireless_catcher"):
+		return 3
+	return 2
+
+
+func _update_auto() -> void:
+	var tier: int = _auto_tier()
+	_auto.visible = tier > 0
+	_auto.text = "%s · %s" % ["AUTO CATCHER" if tier == 2 else "AUTO CASTER", "ON" if _auto_on else "OFF"]
+	_auto.modulate = Color.WHITE if _auto_on else Color(1, 1, 1, 0.55)
+	_auto.add_theme_color_override("font_color", Color("#f0ede8") if _auto_on else Color("#9a9488"))
+
+
+func _toggle_auto() -> void:
+	_auto_on = not _auto_on
+	Loadout.set_auto_fishing(session.store, session.uid, _auto_on)
+	session.persist()
+	_update_auto()
 
 
 func toast(text: String) -> void:
@@ -454,6 +584,7 @@ func _on_struck(raw: String, _angle: float) -> void:
 		_note_card("Snagged" if result == "penalty" else "It got away",
 			"The line fouled and took a bait with it." if result == "penalty" else "The line went slack. Cast again.")
 	refresh()
+	_auto_t = (3.3 if crate else 1.7) if (_auto_on and _auto_tier() > 0) else -1.0
 	if session.level() > before_level or r.get("isShiny") == true:
 		_after_catch(true)
 
@@ -594,6 +725,17 @@ func _process(delta: float) -> void:
 				_timer.text = "%.1fs" % _since_cast
 		if _wait_left <= 0.0:
 			_bite()
+	if phase == "hooked" and _auto_on and _auto_tier() == 2 and float(_shot["fishId"]) != FishingRules.CRATE_FISH_ID \
+			and float(Js.nz(_shot.get("biteRarity"), 1.0)) <= _auto_max_rarity():
+		_catch_t += delta
+		if _catch_t >= 0.42 and _dial.zone_at(_dial.angle) == "catch":
+			_dial.strike()
+	else:
+		_catch_t = 0.0
+	if _auto_t >= 0.0:
+		_auto_t -= delta
+		if _auto_t < 0.0 and phase == "result" and _modal == null and _auto_on and not _action.disabled:
+			cast()
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		_toast.modulate.a = clampf(_toast_t / 0.6, 0.0, 1.0)
