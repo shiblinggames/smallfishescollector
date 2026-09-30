@@ -11,7 +11,7 @@
 import { BADGES } from '../lib/badges'
 import fs from 'fs'
 
-const src = fs.readFileSync('app/(app)/badges/page.tsx', 'utf8')
+const src = fs.readFileSync('lib/core/badgesPage.ts', 'utf8')
 // Ignore commented-out rows (parked PvP badges live there).
 const live = src.split('\n').filter(l => !l.trim().startsWith('//')).join('\n')
 const listed = new Set([...live.matchAll(/badgeGoal\('([a-z0-9_]+)'/g)].map(m => m[1]))
@@ -20,7 +20,7 @@ const missing = BADGES.filter(b => !listed.has(b.id))
 if (missing.length) {
   console.log(`\nBadge goals: ${missing.length} badge(s) missing from /badges\n`)
   for (const b of missing) console.log(`   ${b.id}  (${b.difficulty})  ${b.description}`)
-  console.log('\nAdd a badgeGoal(...) row for each in app/(app)/badges/page.tsx\n')
+  console.log('\nAdd a badgeGoal(...) row for each in lib/core/badgesPage.ts\n')
   process.exit(1)
 }
 console.log(`\nBadge goals: ok (all ${BADGES.length} badges listed on /badges)`)

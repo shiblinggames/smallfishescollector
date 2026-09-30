@@ -6,7 +6,7 @@ badge will: show on the Badges page with live progress, self-grant via reconcile
 pay its doubloon reward on claim, and count toward the Achievement Points leaderboard.
 
 > Quick mental model: **register it** (lib/badges) → **make it earnable** (one of three
-> wiring types) → **show it** (badges/page) → **draw it** (slicer + a sheet) → **ship it**
+> wiring types) → **show it** (lib/core/badgesPage) → **draw it** (slicer + a sheet) → **ship it**
 > (tsc → commit → push).
 
 ---
@@ -108,7 +108,10 @@ automatically — that's fine.
 
 ---
 
-## 4. Show it on the Badges page — `app/(app)/badges/page.tsx`
+## 4. Show it on the Badges page — `lib/core/badgesPage.ts`
+
+The goals moved out of the page on 2026-09-30 so the desktop build works them out the same way;
+`app/(app)/badges/page.tsx` is now only the loader.
 
 Derive the value (if not already), then add a `badgeGoal(...)` row to the right group (or add a
 new group object). The helper signature:
@@ -188,7 +191,7 @@ Consider a broadcast mail for a sizable batch (get copy approval first — see t
 | Derivable conditions (shared by reconcile + leaderboard) | [`lib/badgeConditions.ts`](lib/badgeConditions.ts) |
 | Per-user grant on Badges-page visit | [`app/(app)/achievements/badgeActions.ts`](app/(app)/achievements/badgeActions.ts) → `reconcileBadges`, `unlockBadge`, claim RPCs |
 | Achievement Points leaderboard (all-player live compute) | [`lib/achievementPoints.ts`](lib/achievementPoints.ts) |
-| Badges page (groups, rows, hero, filters) | [`app/(app)/badges/page.tsx`](app/(app)/badges/page.tsx) + `app/(app)/achievements/AchievementsClient.tsx` |
+| Badges page (groups, rows, hero, filters) | [`lib/core/badgesPage.ts`](lib/core/badgesPage.ts) (the page is only its loader) + `app/(app)/achievements/AchievementsClient.tsx` |
 | Earned-badge popup | `components/BadgeWatcher.tsx` + `BadgeUnlockedCelebration.tsx` |
 | Art slicer + PLAN | [`slice-badges.mjs`](slice-badges.mjs) |
 

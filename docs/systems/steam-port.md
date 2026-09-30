@@ -1208,12 +1208,44 @@ In order. Each step is worth doing even if the port never happens.
    - Checked: `npx tsc` in desktop covers the whole chart tree. The dev window and the
      packaged exe both load the chart with no errors, and first-run setup and the welcome
      go through to it.
-   - NEXT: the rooms the chart sends you to (`/tavern`, `/tavern/market`,
-     `/marketplace/tackle-shop`, `/home`, `/shipyard`, the gauntlets, the Parlor, the Den,
-     the Chart Room), each a loader plus its client component. `lib/fishMarket` and
-     `lib/blackjackFishArt` reach the server from a client file and need splitting first.
-     The Nav's chips read the database directly and need the API. The starter save is
-     still the spike's (Lv 5, 500 doubloons) and should match a fresh web account.
+   **STAGE 2: THE ROOMS (2026-09-30).** Every room a player reaches now opens in the shell:
+   - the market and the tavern;
+   - the tackle shop, the shipyard, today's orders and the homestead;
+   - both gauntlets;
+   - the Den: lobby, slots, roulette, blackjack;
+   - the Chart Room: lobby, the Hold, the Rigging, Treasure Match, the Minefield, the World
+     Chart;
+   - the Parlor: lobby, the Board, the Capstan, the Pirate King;
+   - badges, the Captain's Log and the profile.
+
+   How they were brought over:
+   - THE PATTERN: a web page that did more than hand props over is split. The page keeps
+     its reads (and its caches); what it builds from them goes into a shared builder:
+     `lib/core/marketPage`, `lobbies` (Chart Room and Parlor), `gauntletPage`, `badgesPage`,
+     plus `homePageProps` and `profilePageProps`. Any page markup becomes a view the desktop
+     reuses: ChartingFrame, GameFrame, SlotsView, RouletteView, BlackjackView,
+     CaptainsLogView, TackleShopView, BadgesView. The tackle shop's page is one core
+     function (`tackleShopProps`) that both builds run on their own store.
+   - BADGES: the ~600-line goal computation moved verbatim into `lib/core/badgesPage`, fed
+     from the store's `badgeSignals` (the same reads the page made). Its two self-healing
+     writes are store operations. Global rarity is about other captains, so the web reads
+     it and offline it is empty. `check-badge-goals` and `BADGES.md` point at the new file.
+   - SPLIT FOR THE CLIENT: `MOOD_CONFIG` moved to `lib/marketMood`, and blackjack's fish art
+     to `lib/blackjackFishArtPool`. Both had been pulling a server read into a client
+     component.
+   - The tavern composes its parts in the shell (`desktop/src/rooms/Tavern.tsx`). The
+     leaderboard ticker, contests and the support card retire on Steam; the crew digest
+     waits for Steam friends. `SaltRoadDigestView` is split from its server read.
+   - ONLINE-ONLY rooms say so plainly (`rooms/OnlineOnly.tsx`): the leaderboards, contests,
+     your crew and other captains' pages. Retired routes redirect as on the web.
+   - Captain-only rooms (the Rigging, the Capstan) redirect a non-Captain exactly as on the
+     web.
+   - Checked: every room opened in the real window with no errors, and the gauntlets were
+     also opened on an unlocked copy of the save.
+   - NOT YET: the raid fight routes (`/raids/krust` and the rest) are only a fallback, since
+     fights open inline on the chart. The Nav still links the Leaderboard, and its chips read
+     the database directly; they need the API. The starter save is still the spike's (Lv 5,
+     500 doubloons) and should match a fresh web account (and on Steam, be a Captain).
    **THE STEAMWORKS LAYER, 2026-09-29.** `steamworks.js` 0.4.0 in the desktop shell.
    - `desktop/electron/steam.cjs` (main process): starts Steam, relaunches a packaged build
      through Steam if it was opened outside it, switches on the overlay, and answers three

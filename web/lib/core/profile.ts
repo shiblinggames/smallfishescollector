@@ -22,6 +22,13 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 import type { ProgressData } from '@/lib/data/progressData'
+import { vigilFor } from '@/lib/ancientVigil'
+import { ownedSpecialIds } from '@/lib/specialItems'
+import { getShip } from '@/lib/ships'
+import { earnedSpecials } from '@/lib/avatarColors'
+import type { CareerStats, CareerAggregates } from '@/lib/careerStats'
+import type { CrewMember } from '@/lib/core/crew'
+import type { Row } from '@/lib/data/common'
 
 const USERNAME_RE = /^[a-z0-9_]{3,20}$/
 const premium = (p: unknown) => isPremiumActive(p as Parameters<typeof isPremiumActive>[0])
@@ -227,4 +234,94 @@ export async function purchaseAvatarSpecial(db: ProgressData, uid: string, speci
 export async function searchUsers(db: ProgressData, query: string): Promise<{ username: string }[]> {
   if (!query || query.length < 2) return []
   return (await db.searchUsernames(query.toLowerCase())).map(username => ({ username }))
+}
+
+// ── THE PROFILE PAGE (2026-09-30) ──
+// What /profile hands ProfileClient, from pieces like the sea chart: the web
+// page reads them from Supabase (the career aggregates from career_stats), the
+// desktop from the save. Moved out of the page.
+
+type SpeciesFacts = { id: number; name: string; bite_rarity: number; habitat?: string; sell_value?: number }
+
+export type ProfilePagePieces = {
+  email: string
+  profile: Row | null
+  crewRoster: CrewMember[]
+  /** Every species logged, with whether it is mounted golden. */
+  collection: { is_golden: boolean | null; species: SpeciesFacts | null }[]
+  species: { id: number; name: string }[]
+  career: Partial<CareerAggregates>
+  achievementPoints: number
+}
+
+export function profilePageProps(p: ProfilePagePieces) {
+  const profile = p.profile
+  const rarestFish = p.collection.map(r => r.species).filter((f): f is SpeciesFacts => !!f)
+  const goldenMounts = p.collection
+    .filter(r => r.is_golden === true && r.species)
+    .map(r => r.species as SpeciesFacts)
+    .sort((a, b) => (b.bite_rarity ?? 0) - (a.bite_rarity ?? 0))
+  const ancientIdSet = new Set((profile?.ancient_catches as number[] | null) ?? [])
+  const ancientTrophies = p.species.filter(f => ancientIdSet.has(f.id))
+  const career: CareerStats = {
+    fishingCasts: Number(profile?.fishing_casts ?? 0),
+    perfects: Number(profile?.total_perfects ?? 0),
+    fishSold: p.career.fishSold ?? 0,
+    raidsCompleted: p.career.raidsCompleted ?? 0,
+    voyageLoot: p.career.voyageLoot ?? 0,
+    highestRaidDamage: Number(profile?.highest_raid_damage ?? 0),
+    prestigeTotal: Object.values((profile?.prestige_levels as Record<string, number> | null) ?? {}).reduce((a, b) => a + (Number(b) || 0), 0),
+  }
+  const ship = getShip(Number(profile?.ship_tier ?? 0))
+  const level = getLevelFromXP(Number(profile?.fishing_xp ?? 0))
+  const expeditionLevel = navLevelFromXP(Number(profile?.expedition_xp ?? 0))
+  const storedColors = (profile?.unlocked_character_colors as string[] | null) ?? []
+  const prestigeLevels = (profile?.prestige_levels as Record<string, number> | null) ?? {}
+  const unlockedColors = [
+    ...CHARACTER_COLORS.filter(c => c.free).map(c => c.id),
+    ...storedColors,
+    ...earnedLevelColors({ fishingLevel: level, navLevel: expeditionLevel, maxPrestige: Math.max(0, ...Object.values(prestigeLevels)) }, storedColors),
+    ...earnedAchievementColors(p.achievementPoints, storedColors),
+  ]
+  const storedSpecials = (profile?.unlocked_avatar_specials as string[] | null) ?? []
+  return {
+    email: p.email,
+    username: (profile?.username as string | null) ?? '',
+    usernameChanged: (profile?.username_changed as boolean | null) ?? false,
+    crewRoster: p.crewRoster,
+    isPremium: isPremiumActive(profile),
+    level,
+    expeditionLevel,
+    career,
+    shipTier: Number(profile?.ship_tier ?? 0),
+    shipName: ship.name,
+    shipColor: ship.color,
+    customShipName: (profile?.ship_name as string | null) ?? null,
+    equippedShipSkin: (profile?.equipped_ship_skin as string | null) ?? null,
+    rodTier: Number(profile?.rod_tier ?? 0),
+    reelTier: Number(profile?.reel_tier ?? 0),
+    hookTier: Number(profile?.hook_tier ?? 0),
+    equippedSpecialId: (profile?.equipped_special as string | null) ?? null,
+    ownedSpecialIds: ownedSpecialIds(profile as Record<string, unknown> | null),
+    equippedSpecial2Id: (profile?.equipped_special_2 as string | null) ?? null,
+    rarestFish,
+    prestigeLevels,
+    goldenMounts,
+    raidItemIds: (profile?.raid_items as string[] | null) ?? [],
+    ancientTrophies,
+    ancientVigil: vigilFor(profile?.ancient_vigil, (profile?.ancient_catches as number[] | null) ?? null),
+    characterColor: (profile?.character_color as string | null) ?? 'default',
+    unlockedColors,
+    doubloons: Number(profile?.doubloons ?? 0),
+    gems: Number(profile?.gems ?? 0),
+    equippedBadges: (profile?.equipped_badges as string[] | null) ?? [],
+    equippedBoat: (profile?.equipped_boat as string | null) ?? null,
+    equippedHat: (profile?.equipped_hat as string | null) ?? null,
+    equippedPet: (profile?.equipped_pet as string | null) ?? null,
+    unlockedBadges: (profile?.unlocked_badges as string[] | null) ?? [],
+    avatarBgColor: (profile?.avatar_bg_color as string | null) ?? null,
+    avatarBorderColor: (profile?.avatar_border_color as string | null) ?? null,
+    unlockedAvatarSpecials: [...storedSpecials, ...earnedSpecials({ fishingLevel: level, navLevel: expeditionLevel, ap: p.achievementPoints }, storedSpecials)],
+    initialProfileBg: (profile?.profile_bg as string | null) ?? null,
+  }
 }

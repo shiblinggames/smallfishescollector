@@ -18,7 +18,7 @@ import { Suspense, useEffect, useState, type ComponentType } from 'react'
 import { useLocationState, useRouter, Redirected } from './shims/navigation'
 import { openSave, currentSave } from './localGameApi'
 import { saveStorage } from './saveStorage'
-import { SCREENS, HOME } from './screens'
+import { screenFor, HOME } from './screens'
 import { isFirstRun } from '@/lib/core/seaPage'
 import { canSail } from '@/lib/seaAccess'
 import { isPremiumActive } from '@/lib/premium'
@@ -100,7 +100,7 @@ function Frame() {
 /** The screen the URL names, with its loader's props. */
 function ScreenHost() {
   const { pathname, search, refresh } = useLocationState()
-  const screen = SCREENS[pathname]
+  const screen = screenFor(pathname)
   const [loaded, setLoaded] = useState<{ path: string; props: Record<string, unknown> } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const profile = currentSave()!.profile

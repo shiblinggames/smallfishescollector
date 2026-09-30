@@ -64,6 +64,8 @@ import { parlorLobbyProps as shapeParlorLobby } from '@/lib/core/lobbies'
 import { fishArtPoolFrom } from '@/lib/blackjackFishArtPool'
 import { gauntletPageProps as shapeGauntlet } from '@/lib/core/gauntletPage'
 import { getRaidPlayerStatsVia } from '@/lib/raidLoadout'
+import { badgesPage } from '@/lib/core/badgesPage'
+import { localCaptain } from '@/lib/data/local/save'
 import { buildClearedSetVia } from '@/lib/raidCleared'
 import { loadDeployedPartyVia } from '@/lib/crewData'
 import type { CachedSpecies } from '@/lib/fishSpecies'
@@ -767,4 +769,42 @@ export async function gauntletPageProps(variant: 'davy' | 'don') {
     gauntletApi.getGauntletLeaderboard(variant),
   ])
   return shapeGauntlet({ variant, profile: save.profile, stats, daily, leaderboard, throneCleared: save.clears.includes('the_throne') })
+}
+
+/** THE BADGES PAGE (lib/core/badgesPage, the same function the web page runs),
+ *  from the save. It may grant badges on the way (the reconcile and the
+ *  page's self-healing), so it saves after. Global rarity is about other
+ *  captains, so offline there is none. */
+export async function badgesPageModel() {
+  const { save, storage, carried } = need()
+  const r = await badgesPage(localProgressData(save), save.uid, [])
+  await writeSave(storage, save, carried)
+  return r
+}
+
+/** THE PROFILE'S PROPS (lib/core/profile profilePageProps), from the save.
+ *  The career aggregates are career_stats' three sums, taken from the save's
+ *  own records; there is no account, so no email. */
+export async function profilePageProps() {
+  const { save } = need()
+  const byId = new Map(save.species.map(f => [f.id, f]))
+  const [crewRoster, achievementPoints] = await Promise.all([
+    crewApi.getCrewRoster(), localCaptain(save).achievementPoints(save.uid),
+  ])
+  return profileCore.profilePageProps({
+    email: '',
+    profile: save.profile,
+    crewRoster,
+    collection: Object.entries(save.collection).map(([id, c]) => {
+      const f = byId.get(Number(id))
+      return { is_golden: c.is_golden, species: f ? { id: f.id, name: f.name, bite_rarity: f.bite_rarity, habitat: f.habitat, sell_value: f.sell_value } : null }
+    }),
+    species: save.species.map(f => ({ id: f.id, name: f.name })),
+    career: {
+      fishSold: Number(save.profile.fish_sold_doubloons ?? 0),
+      voyageLoot: save.voyages.filter(v => v.status === 'revealed').reduce((n, v) => n + Number(v.total_doubloons ?? 0), 0),
+      raidsCompleted: save.raidClears.length,
+    },
+    achievementPoints,
+  })
 }

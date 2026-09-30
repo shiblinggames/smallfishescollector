@@ -13,7 +13,7 @@ import { lazy, type ComponentType } from 'react'
 import { redirect } from './shims/navigation'
 import { isPremiumActive } from '@/lib/premium'
 import { storyLogData } from '@/app/(app)/achievements/storyLogData'
-import { api, seaPageProps, marketPageProps, parlorLobbyProps, fishArtPool, tackleShopProps, homePageProps, gauntletPageProps, currentSave } from './localGameApi'
+import { api, seaPageProps, marketPageProps, parlorLobbyProps, fishArtPool, tackleShopProps, homePageProps, gauntletPageProps, badgesPageModel, profilePageProps, currentSave } from './localGameApi'
 import { chartRoomLobbyProps } from '@/lib/core/lobbies'
 
 export type Screen = {
@@ -41,6 +41,9 @@ const BlackjackView = screen(() => import('@/app/(app)/tavern/blackjack/Blackjac
 const TackleShopView = screen(() => import('@/app/(app)/marketplace/tackle-shop/TackleShopView'))
 const HomeClient = screen(() => import('@/app/(app)/home/HomeClient'))
 const Gauntlet = screen(() => import('./rooms/Gauntlet'))
+const BadgesView = screen(() => import('@/app/(app)/badges/BadgesView'))
+const Profile = screen(() => import('./rooms/Profile'))
+const OnlineOnly = screen(() => import('./rooms/OnlineOnly'))
 
 export const SCREENS: Record<string, Screen> = {
   '/sea': {
@@ -130,11 +133,33 @@ export const SCREENS: Record<string, Screen> = {
     load: async () => { const page = await gauntletPageProps('don'); if (page.redirect) redirect(page.redirect); return page.props! },
     Component: Gauntlet,
   },
+  // ── Retired routes, sent where the web sends them ──
+  '/crew': { load: async () => redirect('/sea?open=crew'), Component: OnlineOnly },
+  '/packs': { load: async () => redirect('/sea?open=crew'), Component: OnlineOnly },
+  '/expeditions': {
+    load: async (q) => { const boss = q.get('boss'); return redirect(boss ? `/sea?boss=${encodeURIComponent(boss)}` : '/sea') },
+    Component: OnlineOnly,
+  },
+  '/expeditions/forge': { load: async () => redirect('/sea?open=forge'), Component: OnlineOnly },
+  '/expeditions/items': { load: async () => redirect('/sea?open=loadout'), Component: OnlineOnly },
+  '/expeditions/ship': { load: async () => redirect('/sea?open=ship'), Component: OnlineOnly },
+  // ── Between players: the online game's ──
+  '/leaderboard': { load: async () => ({ which: 'leaderboard' }), Component: OnlineOnly },
+  '/tavern/contests': { load: async () => ({ which: 'contests' }), Component: OnlineOnly },
+  '/social': { load: async () => ({ which: 'social' }), Component: OnlineOnly },
+  '/u': { load: async () => ({ which: 'captain' }), Component: OnlineOnly },
+  '/profile': { load: async () => profilePageProps(), Component: Profile },
+  '/badges': { load: async () => badgesPageModel(), Component: BadgesView },
   '/achievements': {
     load: async () => ({ storyData: storyLogData(currentSave()!.profile, await api.raids.getRaidMapView()) }),
     Component: CaptainsLogView,
   },
   '/tavern': { load: async () => ({ seed: currentSave()!.uid, rap: await api.sea.folkState() }), Component: Tavern },
+}
+
+/** The screen for a path: exact, or another captain's page under /u/. */
+export function screenFor(pathname: string): Screen | undefined {
+  return SCREENS[pathname] ?? (pathname.startsWith('/u/') ? SCREENS['/u'] : undefined)
 }
 
 /** Where the shell opens, and where anything retired lands (the web sends
