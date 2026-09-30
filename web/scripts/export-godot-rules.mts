@@ -27,6 +27,9 @@ import { DAILY_TIERS, MASTER_MIN_LEVEL } from '../lib/dailyChallenges'
 import { CRATE_TABLES } from '../lib/crateLoot'
 import { PETS, PET_SPECIES_WEIGHTS, CRATE_PET_CHANCE } from '../lib/pets'
 import { FOLK } from '../lib/seaFolk'
+import { REELS } from '../lib/reels'
+import { FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY } from '../app/(app)/fishing/depths'
+import { starterSave } from '../lib/data/local/starter'
 
 const OUT = path.join(process.cwd(), '..', 'godot', 'game', 'content', 'rules.json')
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep']
@@ -56,6 +59,13 @@ const rules = {
   petSpeciesWeights: PET_SPECIES_WEIGHTS,
   // Who asks for which fish, for "who was waiting on this one".
   folk: Object.fromEntries(FOLK.map(f => [f.id, { short: f.short, favourites: f.favourites.map(x => ({ id: x.id, name: x.name })) }])),
+  // The dial (app/(app)/fishing/depths): needle speed by difficulty, and each
+  // water's catch-zone multiplier.
+  reels: REELS.map(r => ({ tier: r.tier, name: r.name, needleSpeedMultiplier: r.needleSpeedMultiplier })),
+  dial: { fishDifficultySpeed: FISH_DIFFICULTY_SPEED, zoneDifficulty: ZONE_DIFFICULTY },
+  // A new captain's save (lib/data/local/starter) with the id, name and date
+  // left for the game to fill in, and no species (content, attached on load).
+  starter: (() => { const { species: _s, ...rest } = starterSave('__uid__', [], 0); return rest })(),
 }
 
 fs.writeFileSync(OUT, JSON.stringify(rules, null, 1) + '\n')

@@ -7,6 +7,10 @@ config_version=5
 
 config/name="Seas the Booty"
 config/features=PackedStringArray("4.7")
+run/main_scene="res://main.tscn"
+; The saves live in %APPDATA%/Seas the Booty (Steam Auto-Cloud syncs its captains/).
+config/use_custom_user_dir=true
+config/custom_user_dir_name="Seas the Booty"
 
 [debug]
 

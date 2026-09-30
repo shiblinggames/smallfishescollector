@@ -16,6 +16,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
 - PARITY: the TS cores generate test cases (a save plus seeded rolls in, the save out) and
   the Godot build must replay them exactly; a system is ported when it matches.
 - THE WEB BETA: stays up, FEATURE-FROZEN, bug fixes only. New features go into Godot.
+- GODOT VISUALS (Kong, 2026-09-30): the painted house style stays; NO 3D lighting or 3D sea
+  (the August prototype's lesson). Adopted: water shaders over the painted plates (flow,
+  ripple, shore foam, glints, per-zone currents), 2D night lighting (a CanvasModulate tint
+  plus soft Light2D glows from lanterns, the lighthouse, windows; no shading on the art),
+  GPU particles (subtle and local), and shader glows on art (goldens, Vigil frames) in place
+  of CSS filter stacks. Used as a matter of course: Camera2D (no screen shake), AnimationPlayer
+  for staged moments, native parallax, one UI Theme, controller focus from the start, audio
+  buses, GodotSteam's multiplayer peer.
 - STAGE 0 BUILT (2026-09-30): the project is `godot/game/` (Godot 4.7.2; the parked August 3D
   prototype `godot/sea/` was deleted the same day at Kong's word, in git history). `core/dice.gd` (mulberry32 and seedOf, exact),
   `core/clock.gd`, `core/js_json.gd` (numbers as JS doubles, written as JSON.stringify does),
@@ -37,6 +45,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the rest of lib/core/fishing (wormhole reroll, Tide Turner, goldens, level rewards,
   Almanac). A TS bug found on the way: the local store stamped a shiny with the real
   clock, fixed.
+- STAGE 1, THE FIRST SCREEN, BUILT (2026-09-30): `node godot/game/tools/play.mjs` plays it.
+  The chart (the five bands off the Mainland, sailed by click, keys or a stick), the water
+  (the web's shader ported, plus a flow current and a lantern pool on the water at night),
+  night on the solid world (CanvasModulate plus the boat's lantern and the town's glow),
+  wake and bow-spray particles, and the fishing loop: cast, the bite, the dial (buildFishZones
+  and the reel's needle speed; the needle freezes exactly where it is drawn), Second Wind,
+  snag immunity, the catch card arriving in order with fish art (gilded by shader on a
+  golden), crates, misses. Saves in `%APPDATA%/Seas the Booty/captains/` in the web's
+  format (the TS opens them). NOT YET: the captain select and first-run setup, docking and
+  the rooms, the regulars and traders, hotspots, the Ancient Deep's multi-phase fights, the
+  wormhole reroll and golden choice, sound, the sheets (hold, gear, Almanac).
 
 **Status: parked 2026-09-10, the same day it was written. THE GAME STAYS WEB-BASED.**
 **2026-09-28: Kong asked to PREP a possible Steam migration with offline play, up to the whole

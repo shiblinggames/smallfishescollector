@@ -9,6 +9,8 @@ decision are in `docs/systems/steam-port.md`). Typed GDScript, Steam through God
 2. `node tools/setup.mjs` copies the content in from `web/content` and fetches GodotSteam
    (pinned version and checksum) into `addons/godotsteam`, which is not committed.
 3. `node tools/parity.mjs` must pass before anything is committed.
+4. `node tools/play.mjs` plays it (`--editor` opens the editor). Saves go to
+   `%APPDATA%/Seas the Booty/captains/`, in the web's local save format.
 
 ## The rules come from the web
 
@@ -54,6 +56,12 @@ The TypeScript rules in `web/lib` are the SPEC. The port does not reinterpret th
   (tables and small helpers), `fishing_rules.gd`, `fishing.gd` (cast, reel, crate),
   `captain_store.gd` (the save as the cores read and write it), `vigil.gd`, `daily.gd`,
   `crate_loot.gd`
-- `content/` copies of `web/content` files (committed; kept in step by `tools/setup.mjs`)
-- `tests/` the parity runner and its cases
+- `game/` the playable game: `main.gd` (controls, captain), `sea.gd` (the chart: water, world,
+  night, camera), `water.gdshader`, `boat.gd`, `fishing_hud.gd` (the loop and the card), `dial.gd`,
+  `golden.gdshader`, `ui_theme.gd`, `chart.gd`, `sea_clock.gd`, `session.gd`, `captains.gd`
+- `content/` copies of `web/content` files (committed; kept in step by `tools/setup.mjs`), and
+  `rules.json` (written by the web's rules export)
+- `art/` pictures and fonts copied from `web/public` by `tools/setup.mjs` (NOT committed)
+- `tests/` the parity runner and its cases; `smoke_fishing.gd` fishes a dozen casts through the
+  real HUD headless (it plays on the latest captain, so move saves aside first)
 - `tools/` setup and the end-to-end parity run

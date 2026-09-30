@@ -7,7 +7,12 @@
 //    source of truth while the port runs). Godot cannot read outside its
 //    project, so the files it needs are copied into content/ and committed,
 //    and --check fails when a copy has drifted from web/.
-// 2. GODOTSTEAM. The GDExtension build (Godot 4.4+), pinned by version and
+// 2. ART. The pictures live in web/public (the web is still their home), and
+//    they are big (the fish alone are 22 MB), so they are COPIED into art/ and
+//    not committed a second time. ART names what the port draws so far; add a
+//    path as a screen needs it. The fonts come from the desktop shell's
+//    @fontsource packages.
+// 3. GODOTSTEAM. The GDExtension build (Godot 4.4+), pinned by version and
 //    checksum and unpacked into addons/godotsteam. Its binaries are not
 //    committed (godot/.gitignore); this fetches them on a new machine.
 
@@ -23,6 +28,11 @@ const WEB = path.join(HERE, '..', '..', 'web')
 
 /** The web content the port reads so far. Add a file here as a system is ported. */
 const CONTENT = ['fish_species.json', 'profile_defaults.json']
+
+/** Files or folders under web/public, copied to art/ at the same path. */
+const ART = ['fishing_rest.png', 'fishing_cast.png', 'fishing_wait.png', 'fish', 'sea/port-mainland.webp']
+/** Fonts: [package, file] under desktop/node_modules/@fontsource, to art/fonts. */
+const FONTS = [['cinzel', 'cinzel-latin-700-normal.woff2'], ['karla', 'karla-latin-400-normal.woff2'], ['karla', 'karla-latin-700-normal.woff2']]
 
 const GODOTSTEAM = {
   version: '4.22.1',
@@ -49,6 +59,28 @@ if (check) {
   console.log(bad ? `  ${bad} content file(s) drifted` : `  content: ${CONTENT.length} files match web/`)
   process.exit(bad ? 1 : 0)
 }
+
+let copied = 0
+const copyIfChanged = (from, to) => {
+  const src = fs.readFileSync(from)
+  if (fs.existsSync(to) && src.equals(fs.readFileSync(to))) return
+  fs.mkdirSync(path.dirname(to), { recursive: true })
+  fs.writeFileSync(to, src)
+  copied++
+}
+for (const rel of ART) {
+  const from = path.join(WEB, 'public', rel)
+  if (fs.statSync(from).isDirectory()) {
+    for (const f of fs.readdirSync(from)) if (fs.statSync(path.join(from, f)).isFile()) copyIfChanged(path.join(from, f), path.join(HERE, 'art', rel, f))
+  } else copyIfChanged(from, path.join(HERE, 'art', rel))
+}
+const FONTSRC = path.join(HERE, '..', '..', 'desktop', 'node_modules', '@fontsource')
+for (const [pkg, file] of FONTS) {
+  const from = path.join(FONTSRC, pkg, 'files', file)
+  if (fs.existsSync(from)) copyIfChanged(from, path.join(HERE, 'art', 'fonts', file))
+  else console.log(`  font missing: ${pkg}/${file} (run npm install in desktop/)`)
+}
+console.log(copied ? `  art: ${copied} file(s) copied from web/public` : '  art: up to date')
 
 const addon = path.join(HERE, 'addons', 'godotsteam')
 const stamp = path.join(addon, '.version')

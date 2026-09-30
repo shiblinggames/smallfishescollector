@@ -4,5 +4,7 @@
 # tools/setup.mjs, never committed) and export output.
 game/.godot/
 game/addons/godotsteam/
+# Art copied from web/public by tools/setup.mjs (never committed twice).
+game/art/
 game/build/
 *.tmp
