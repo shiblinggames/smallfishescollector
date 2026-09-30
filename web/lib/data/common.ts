@@ -6,6 +6,7 @@
 // an offline store implements these once.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { webInventory, type InventoryOps } from './inventory'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type Row = Record<string, any>
@@ -23,7 +24,9 @@ export type ProfileGuard =
   | { col: string; notNull: true }
   | { col: string; contains: unknown[] }
 
-export interface CaptainData {
+/** Every captain store also answers the inventory's four questions
+ *  (lib/data/inventory). */
+export interface CaptainData extends InventoryOps {
   /** The profile columns named (a comma list), or null. */
   profile(uid: string, cols: string): Promise<Row | null>
   /** Write these profile fields. */
@@ -49,6 +52,7 @@ export interface CaptainData {
 
 export function captainData(admin: Db): CaptainData {
   return {
+    ...webInventory(admin),
     async profile(uid, cols) {
       const { data } = await admin.from('profiles').select(cols).eq('id', uid).single()
       return (data as Row | null) ?? null

@@ -20,6 +20,7 @@ import { clockNow } from '@/lib/clock'
 import type { MarketState } from '@/lib/marketRules'
 import { badgePoints } from '@/lib/badges'
 import { stampBadges } from '@/lib/badgeStamps'
+import { localInventory } from './inventoryLocal'
 
 export type LocalSave = {
   uid: string
@@ -245,6 +246,7 @@ export function localCaptain(save: LocalSave): LocalCaptain {
     return save.profile
   }
   return {
+    ...localInventory(save),
     me,
     async profile(uid, list) {
       const prof = me(uid)
