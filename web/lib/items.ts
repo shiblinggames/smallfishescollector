@@ -63,7 +63,7 @@ export const CATEGORIES: Record<ItemCategory, CategoryDef> = {
   pet:            { kind: 'unlock',   chest: 'token', label: 'Pets' },
   boat:           { kind: 'unlock',   chest: 'token', label: 'Boats' },
   hat:            { kind: 'unlock',   chest: 'token', label: 'Bandanas' },
-  color:          { kind: 'unlock',   chest: 'token', label: 'Colours' },
+  color:          { kind: 'unlock',   chest: 'token', label: 'Colors' },
   avatar_special: { kind: 'unlock',   chest: 'token', label: 'Avatar specials' },
   crew_skin:      { kind: 'unlock',   chest: 'token', label: 'Crew skins' },
   ship_skin:      { kind: 'unlock',   chest: 'token', label: 'Ship skins' },
