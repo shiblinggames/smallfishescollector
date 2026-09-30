@@ -18,10 +18,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { vibrate } from '@/lib/haptics'
-import {
-  pactState, requestPact, acceptPact, endPact, endPactWith,
-  type PactState, type PactPerson,
-} from '@/app/(app)/sea/pactActions'
+import { api } from '@/lib/gameApi'
+import type { PactState, PactPerson } from '@/lib/gameApi'
 
 const GREEN = 'rgba(150,206,172,0.85)'
 
@@ -101,7 +99,7 @@ export default function PactBoard({ atSea, onChanged, active = true }: {
   const [state, setState] = useState<PactState | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const load = useCallback(() => { void pactState().then(setState) }, [])
+  const load = useCallback(() => { void api.sea.pactState().then(setState) }, [])
   useEffect(() => { if (active) load() }, [active, load])
 
   const act = async (fn: () => Promise<unknown>) => {
@@ -147,8 +145,8 @@ export default function PactBoard({ atSea, onChanged, active = true }: {
               {state.asking.map(p => (
                 <Row key={p.id} person={p} atSea={atSea.has(p.username)}>
                   <div style={{ display: 'flex', gap: 5 }}>
-                    <Btn tone="go" onClick={() => act(() => acceptPact(p.pactId))}>Accept</Btn>
-                    <Btn onClick={() => act(() => endPact(p.pactId))}>No</Btn>
+                    <Btn tone="go" onClick={() => act(() => api.sea.acceptPact(p.pactId))}>Accept</Btn>
+                    <Btn onClick={() => act(() => api.sea.endPact(p.pactId))}>No</Btn>
                   </div>
                 </Row>
               ))}
@@ -165,7 +163,7 @@ export default function PactBoard({ atSea, onChanged, active = true }: {
           )}
           {state.sailing.map(p => (
             <Row key={p.id} person={p} atSea={atSea.has(p.username)}>
-              <Btn onClick={() => act(() => endPactWith(p.id))}>Part ways</Btn>
+              <Btn onClick={() => act(() => api.sea.endPactWith(p.id))}>Part ways</Btn>
             </Row>
           ))}
 
@@ -176,7 +174,7 @@ export default function PactBoard({ atSea, onChanged, active = true }: {
               }}>Waiting on an answer</p>
               {state.asked.map(p => (
                 <Row key={p.id} person={p}>
-                  <Btn onClick={() => act(() => endPact(p.pactId))}>Withdraw</Btn>
+                  <Btn onClick={() => act(() => api.sea.endPact(p.pactId))}>Withdraw</Btn>
                 </Row>
               ))}
             </>
@@ -189,7 +187,7 @@ export default function PactBoard({ atSea, onChanged, active = true }: {
               }}>Your crew</p>
               {state.couldAsk.map(p => (
                 <Row key={p.id} person={p}>
-                  <Btn tone="go" onClick={() => act(() => requestPact(p.id))}>Ask</Btn>
+                  <Btn tone="go" onClick={() => act(() => api.sea.requestPact(p.id))}>Ask</Btn>
                 </Row>
               ))}
             </>

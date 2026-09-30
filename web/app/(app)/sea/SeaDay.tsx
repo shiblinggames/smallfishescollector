@@ -87,7 +87,6 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import ResetCountdown from '@/components/ResetCountdown'
-import { dayState, type DayState } from './dayActions'
 import DailyOrders from '../trawl-docks/DailyOrders'
 import BountiesPanel from '../expeditions/BountiesPanel'
 import DailyHaul from '@/components/DailyHaul'
@@ -99,6 +98,7 @@ import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import { vibrate } from '@/lib/haptics'
 import { seaClock, nextPhase, PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
 import { api } from '@/lib/gameApi'
+import type { DayState } from '@/lib/gameApi'
 
 const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'
@@ -486,7 +486,7 @@ export default function SeaDay({ size, top, right, hidden, caughtTick, onOpen, s
 
   const load = useCallback((src?: () => Promise<DayState | null>) => {
     let alive = true
-    const read = src ? src().then(s => s ?? dayState()) : dayState()
+    const read = src ? src().then(s => s ?? api.sea.dayState()) : api.sea.dayState()
     void read.then(s => {
       if (!alive || !s) return
       setState(s)

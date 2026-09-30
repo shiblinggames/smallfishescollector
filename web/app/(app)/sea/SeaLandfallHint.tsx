@@ -26,7 +26,7 @@ import { useEffect, useState, startTransition } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import { SEA_ACCENT } from '@/lib/seaOnboarding'
-import { markSeaHintSeen } from './tourActions'
+import { api } from '@/lib/gameApi'
 
 /** Keyed by the place id in chart.ts. Anywhere not listed simply has no hint,
  *  which is how the Mainland stays quiet — its buildings speak for themselves. */
@@ -96,7 +96,7 @@ export default function SeaLandfallHint({
     if (shown.has(nearId)) return
     shown.add(nearId)
     setShowing(nearId)
-    startTransition(() => { void markSeaHintSeen(nearId) })
+    startTransition(() => { void api.sea.markSeaHintSeen(nearId) })
   }, [nearId, seen])
 
   // AND IT GOES WHEN YOU DO. Sailing off is an answer — the captain has decided

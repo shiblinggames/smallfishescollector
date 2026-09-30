@@ -1025,9 +1025,26 @@ In order. Each step is worth doing even if the port never happens.
      sea's profile columns at the database's defaults (`SEA_PROFILE_DEFAULTS`).
    - `scripts/check-offline-sea.mts` (in `npm run check`); checked to fail when any of seven
      store guards is broken. Production probe as catman (reads and refusals, nothing moved).
-   - NOT YET: pacts (between players, so they stay online), the tours, the node and raid sheets,
-     the loadout and boss card reads, the boot and day loaders; then the tackle shop, the hold and
-     almanac, badges and renown.
+   **THE SEA'S OWN OFFLINE (second half), 2026-09-29.** `lib/core/seaSheets`: the two tours'
+   latches and steps (only ever forwards), the loadout sheet, the raid sheet, a campaign node's
+   sheet and the boss card (both off the map's own read), and the Day board. Six action files
+   are thin wrappers (the tour's `/sea` revalidation stays in the web wrapper); `api.sea` now also
+   carries the tours, the sheets, the Day board, the arrival read (`seaBoot`) and pacts to the
+   chart, the tour cards, the market, the loadout, the sheets and the pact board.
+   - THE DAY BOARD TAKES ITS READERS AS INPUTS (`DaySources`): the web hands it each system's
+     action, the desktop each system's local API, so the board can never disagree with the sheet
+     it opens. The once-a-day full-day credit is a store operation (`creditFullDay`).
+   - `seaBoot` offline is composed in the desktop's API from the same readers. PACTS STAY ONLINE:
+     they are between players, so offline there is nobody to ask (no pacts, no one's homestead to
+     visit); the local API says so rather than failing.
+   - `lib/dayList` now reads `DayState` from the core.
+   - The sea check covers the tours, the sheets, the boss card and the Day board's once-a-day
+     credit (checked to fail when that guard is broken). Production probe as catman (reads, tour
+     writes sent behind the stored step, nothing moved). The loadout's achievement points sit
+     behind Next's request cache, so a probe outside the app stands in 0 for that one read.
+   - NOT YET: the tackle shop, the fish hold and almanac, the homestead and visits, badges and
+     renown, the leaderboards, the profile pages; then the online-only list (social, public
+     profiles, membership, admin and dev tools, the honeypot) is decided rather than ported.
      Online-only by nature and staying on the web: social, leaderboards, public profiles,
      membership (Stripe), admin and dev tools, the honeypot.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.

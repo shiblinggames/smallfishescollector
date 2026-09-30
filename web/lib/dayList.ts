@@ -1,7 +1,7 @@
 // TODAY'S LIST: which dailies are on it and which are done. Plain module
 // (not 'use server', which strips non-async exports) so the board and the
-// server read the one answer. See DayState.list in sea/dayActions.
-import type { DayState } from '@/app/(app)/sea/dayActions'
+// server read the one answer. See DayState.list in lib/core/seaSheets.
+import type { DayState } from '@/lib/core/seaSheets'
 
 export type ListKind = 'haul' | 'orders' | 'bounties' | 'parlor' | 'recruits'
 

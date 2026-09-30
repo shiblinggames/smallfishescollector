@@ -2,65 +2,19 @@
 
 // ── WHAT THE BOSS CARD NEEDS, FOR A CAPTAIN WHO SAILED UP TO ONE ────────────
 //
-// The card that opens before a fight — the boss, the drops, the records, and
-// the choice between a normal run and the challenge — is `BossFightModal`, and
-// it already exists on /expeditions. The sea does not get its own copy of it;
-// it gets the same component and therefore needs the same inputs.
-//
-// `getRaidMapView` is where nearly all of it comes from, and using it rather
-// than assembling a smaller payload by hand is the point: it is what the node
-// map itself reads, so the card at sea cannot drift from the card on the page.
-// Everything else on this list is a column on the profile.
+// The card is BossFightModal, the same component /expeditions uses, so it takes
+// the same inputs from the node map's own read. The read lives in
+// lib/core/seaSheets.
 
 import { getCurrentUser } from '@/lib/userData'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getRaidMapView, type RaidRecords } from '@/app/(app)/expeditions/raidMapActions'
-import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
-import { ownedSpecialIds, SPECIAL_OWNED_COLUMN } from '@/lib/specialItems'
-import type { RaidNodeView } from '@/lib/raidMap'
+import { seaData } from '@/lib/data/seaData'
+import { bossCardState as cardCore, type BossCardState } from '@/lib/core/seaSheets'
 
-export type BossCardState = {
-  views: RaidNodeView[]
-  raidRecords: Record<string, RaidRecords>
-  ownedRaidItems: string[]
-  ownedShipSkins: string[]
-  ownedSpecialItems: string[]
-  totalFortune: number
-  clearedNodeIds: string[]
-}
+export type { BossCardState } from '@/lib/core/seaSheets'
 
 export async function bossCardState(): Promise<BossCardState | { error: string }> {
   const user = await getCurrentUser()
   if (!user) return { error: 'Not signed in.' }
-
-  const admin = createAdminClient()
-  const [map, stats, profileRes] = await Promise.all([
-    getRaidMapView(),
-    getRaidPlayerStats(user.id),
-    // The specials are one boolean column EACH (has_tide_turner, ...), not a
-    // `special_items` array: that column has never existed, and selecting it
-    // failed the whole read, so the card saw no items and no skins either.
-    admin.from('profiles')
-      .select(`raid_items, ship_skins, ${Object.values(SPECIAL_OWNED_COLUMN).join(', ')}`)
-      .eq('id', user.id)
-      .single(),
-  ])
-  const profile = profileRes.data as Record<string, unknown> | null
-  // AN EMPTY MAP IS A FAILED READ, not an answer. getRaidMapView returns no
-  // views when it cannot see the captain (a hiccup at the auth check), and
-  // the card took that as "this boss is not on your charts" and sat there
-  // invisibly. Say it failed, so the card offers Try again.
-  if (map.views.length === 0) return { error: 'The charts would not open. Try again.' }
-
-  return {
-    views: map.views,
-    raidRecords: map.raidRecords,
-    ownedRaidItems: (profile?.raid_items as string[] | null) ?? [],
-    ownedShipSkins: (profile?.ship_skins as string[] | null) ?? [],
-    ownedSpecialItems: ownedSpecialIds(profile),
-    totalFortune: stats.totalFortune,
-    // The card masks a boss it has no business naming yet, and it decides that
-    // from what you have cleared rather than from the node's own status.
-    clearedNodeIds: map.views.filter(v => v.status === 'cleared').map(v => v.node.id),
-  }
+  return cardCore(seaData(createAdminClient()), user.id)
 }

@@ -2,157 +2,84 @@
 
 // LATCHES FOR THE SEA'S TEACHING.
 //
-// Profile columns, never localStorage — the house rule, and the reason is that
-// a tour which replays after a reinstall, or on the captain's other device,
-// reads as a bug rather than as help.
+// Profile columns, never localStorage: a tour that replays after a reinstall,
+// or on the captain's other device, reads as a bug rather than as help. The
+// rules live in lib/core/seaSheets; each action checks the session and hands
+// the core the Supabase store.
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { seaData } from '@/lib/data/seaData'
+import * as core from '@/lib/core/seaSheets'
+
+async function me(): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.id ?? null
+}
+const db = () => seaData(createAdminClient())
 
 /**
  * THE CHART HAS TO BE TOLD THE STEP MOVED.
  *
  * /sea reads `sea_tour_step` on the server and hands it to the tour as its
  * resume point. The market advances that step and the captain comes back with
- * the browser's Back — which serves the CACHED payload of /sea, carrying the
- * step as it was when they first loaded it.
- *
- * The symptom is a tour that goes backwards: sell the catch, sail out, and be
- * asked to head south to the Shallows and fish again, because the page still
- * believes they are on beat one. Every write here invalidates the chart for the
- * same reason the fishing actions already do.
+ * the browser's Back, which serves the CACHED payload of /sea carrying the step
+ * as it was. The symptom is a tour that goes backwards, so every write to the
+ * first voyage's tour invalidates the chart.
  */
 function chartChanged() {
   revalidatePath('/sea')
 }
 
-/**
- * ── SKIP THE LOT (Kong, 2026-09-27) ────────────────────────────────────────
- *
- * Older captains who predate the first voyage were being walked through it
- * from the dock, and a tour that waits on "sell a fish at the market" can
- * leave somebody who already knows the game stuck on a beat. Every tour card
- * now offers this: both walkthroughs, the first voyage and the anchorage's,
- * latched shut at once. One way: nothing reopens them.
- */
+/** Skip the lot (Kong, 2026-09-27): both walkthroughs latched shut at once. */
 export async function skipTutorials(): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  await createAdminClient()
-    .from('profiles').update({ has_seen_sea_tour: true, has_seen_gate_tour: true }).eq('id', user.id)
+  const uid = await me()
+  if (!uid) return
+  await core.skipTutorials(db(), uid)
   chartChanged()
 }
 
 /** Shut the arrival walkthrough for good. */
 export async function markSeaTourSeen(): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  await createAdminClient()
-    .from('profiles').update({ has_seen_sea_tour: true }).eq('id', user.id)
+  const uid = await me()
+  if (!uid) return
+  await core.markSeaTourSeen(db(), uid)
   chartChanged()
 }
 
-/**
- * WHERE THE FIRST VOYAGE HAS GOT TO.
- *
- * The tour leaves the chart: it walks a new captain to the Mainland, ashore,
- * and into the Market to sell their first fish. That is a different route, so
- * the component driving it unmounts halfway through and a step held in state
- * would drop them at the door they were sent through.
- *
- * Only ever forwards. Two surfaces write this — the chart and the market — and
- * a stale render on either could otherwise walk the tour backwards into a beat
- * the captain has already done.
- */
+/** Where the first voyage has got to. Only ever forwards. */
 export async function setSeaTourStep(step: number): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  const n = Math.max(0, Math.min(99, Math.floor(step)))
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('profiles').select('sea_tour_step').eq('id', user.id).single()
-  if ((data?.sea_tour_step ?? 0) >= n) return
-  await admin.from('profiles').update({ sea_tour_step: n }).eq('id', user.id)
-  chartChanged()
+  const uid = await me()
+  if (!uid) return
+  if (await core.setSeaTourStep(db(), uid, step)) chartChanged()
 }
 
-/**
- * THE STEP, STRAIGHT FROM THE DATABASE.
- *
- * Belt and braces for the resume point. The page's copy of it can be stale —
- * a cached payload on a Back navigation is exactly how the tour was caught
- * walking backwards — and this is the value that cannot be. Asked for ONCE on
- * mount and only while a voyage is actually running, so a captain who has
- * finished the tour never pays for it.
- */
+/** The step, straight from the database (the page's copy can be stale). */
 export async function getSeaTourStep(): Promise<number> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return 0
-  const { data } = await createAdminClient()
-    .from('profiles').select('sea_tour_step').eq('id', user.id).single()
-  return Number(data?.sea_tour_step ?? 0)
+  const uid = await me()
+  if (!uid) return 0
+  return core.getSeaTourStep(db(), uid)
 }
 
-/**
- * Remember that a port's first-landfall line has been shown.
- *
- * Read-then-append rather than a set union, because Postgres arrays have no
- * upsert-a-member and the cost of losing a race here is that one captain sees
- * one hint twice. Guarding that with a transaction would be more machinery than
- * the failure deserves.
- */
+/** Remember that a port's first-landfall line has been shown. */
 export async function markSeaHintSeen(portId: string): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  const id = (portId ?? '').trim()
-  if (!id) return
-
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('profiles').select('sea_hints_seen').eq('id', user.id).single()
-  const seen = ((data?.sea_hints_seen as string[] | null) ?? [])
-  if (seen.includes(id)) return
-  await admin.from('profiles')
-    .update({ sea_hints_seen: [...seen, id] }).eq('id', user.id)
+  const uid = await me()
+  if (!uid) return
+  await core.markSeaHintSeen(db(), uid, portId)
 }
 
-/**
- * ── AND THE SAME TWO, FOR THE ANCHORAGE'S TOUR ──────────────────────────────
- *
- * Its own latch and its own step rather than more values in the first voyage's,
- * because they are two tours fired at two different moments: one at signup, one
- * the first time a captain crosses the reef, which may be a week apart. Sharing
- * a step counter would mean a captain part-way through the first voyage could
- * not start the second, and finishing either would shut both.
- *
- * No `revalidatePath` on these. The first voyage needs it because it LEAVES the
- * chart — it walks a captain into the market to sell a fish, and comes back to
- * a cached payload carrying a stale step. This one never leaves the water, so
- * its step is only ever read on a genuine load.
- */
+/** The anchorage's tour. No revalidation: it never leaves the water. */
 export async function markGateTourSeen(): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  await createAdminClient()
-    .from('profiles').update({ has_seen_gate_tour: true }).eq('id', user.id)
+  const uid = await me()
+  if (!uid) return
+  await core.markGateTourSeen(db(), uid)
 }
 
 /** Only ever forwards, same as the first voyage's. */
 export async function setGateTourStep(step: number): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  const n = Math.max(0, Math.min(99, Math.floor(step)))
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('profiles').select('gate_tour_step').eq('id', user.id).single()
-  if ((data?.gate_tour_step ?? 0) >= n) return
-  await admin.from('profiles').update({ gate_tour_step: n }).eq('id', user.id)
+  const uid = await me()
+  if (!uid) return
+  await core.setGateTourStep(db(), uid, step)
 }

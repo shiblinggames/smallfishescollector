@@ -35,6 +35,7 @@ import GuideCoach from '@/components/GuideCoach'
 import { GATE_TOUR, GATE_FORCED_THROUGH, SEA_ACCENT } from '@/lib/seaOnboarding'
 import { NORTH_WALL, PLACES, SEA_GATE } from './chart'
 import { WARGATE } from './raidWaters'
+import { api } from '@/lib/gameApi'
 /** Halfway from the Sea Gate to the wargate: where the pennant beat comes up. */
 const GATE_TOUR_ON_Y = (SEA_GATE.y + WARGATE.y) / 2
 /** And the ring drawn there: sailing into it answers the beat too. */
@@ -49,7 +50,6 @@ const GATE_TOUR_Y = NORTH_WALL - 1100
  *  because it is a ring of light a captain sails TOWARDS: the line should
  *  arrive while it is filling the screen, not at the moment of crossing. */
 const GATE_HAIL = 1100
-import { markGateTourSeen, setGateTourStep, skipTutorials } from './tourActions'
 
 export default function SeaGateTour({
   hasSeen, startAt, inAnchorage, fighting, cam, goal, crewOpen, crewSection, recruits,
@@ -284,8 +284,8 @@ export default function SeaGateTour({
       // Fire and forget on both. The worst a lost write costs is one beat
       // repeated; blocking a tap on a round trip costs every captain a stutter
       // to prevent it.
-      if (to >= GATE_TOUR.length) void markGateTourSeen()
-      else void setGateTourStep(to)
+      if (to >= GATE_TOUR.length) void api.sea.markGateTourSeen()
+      else void api.sea.setGateTourStep(to)
       return to
     })
   }, [])
@@ -478,7 +478,7 @@ export default function SeaGateTour({
       anchor={waypoint?.target ?? b.target}
       onNext={waiting ? undefined : next}
       nextLabel={step === GATE_TOUR.length - 1 ? 'Aye' : undefined}
-      onSkip={() => { void skipTutorials(); setStep(GATE_TOUR.length) }}
+      onSkip={() => { void api.sea.skipTutorials(); setStep(GATE_TOUR.length) }}
       z={inPanel ? 120 : undefined}
     />
   )

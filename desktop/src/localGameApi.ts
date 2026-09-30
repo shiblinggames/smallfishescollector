@@ -38,6 +38,9 @@ import * as chartCore from '@/lib/core/chartRoom'
 import { localChartData } from '@/lib/data/local/chartLocal'
 import * as seaCore from '@/lib/core/sea'
 import { localSeaData } from '@/lib/data/local/seaLocal'
+import * as sheetsCore from '@/lib/core/seaSheets'
+import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
+import { clockNow } from '@/lib/clock'
 import { localFishingData, type LocalSave } from '@/lib/data/local/fishingLocal'
 import { freshCasino, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, CHARTING_PROFILE_DEFAULTS, SEA_PROFILE_DEFAULTS } from '@/lib/data/local/save'
 import { loadSave, writeSave, type SaveStorage } from '@/lib/data/local/saveFile'
@@ -450,6 +453,57 @@ const seaApi: SeaApi = {
   buyPortalTier: () => runSeaOwn((db, uid) => seaCore.buyPortalTier(db, uid)),
   spendRecall: (side) => runSeaOwn((db, uid) => seaCore.spendRecall(db, uid, side)),
   smugglerStanding: () => runSeaOwn((db, uid) => seaCore.smugglerStanding(db, uid)),
+  // ── The tours ──
+  skipTutorials: () => runSeaOwn((db, uid) => sheetsCore.skipTutorials(db, uid)),
+  markSeaTourSeen: () => runSeaOwn((db, uid) => sheetsCore.markSeaTourSeen(db, uid)),
+  setSeaTourStep: async (step) => { await runSeaOwn((db, uid) => sheetsCore.setSeaTourStep(db, uid, step)) },
+  getSeaTourStep: () => runSeaOwn((db, uid) => sheetsCore.getSeaTourStep(db, uid)),
+  markSeaHintSeen: (port) => runSeaOwn((db, uid) => sheetsCore.markSeaHintSeen(db, uid, port)),
+  markGateTourSeen: () => runSeaOwn((db, uid) => sheetsCore.markGateTourSeen(db, uid)),
+  setGateTourStep: (step) => runSeaOwn((db, uid) => sheetsCore.setGateTourStep(db, uid, step)),
+  // ── The sheets and the boards ──
+  loadoutGear: () => runSeaOwn((db, uid) => sheetsCore.loadoutGear(db, uid)),
+  raidSheetState: () => runSeaOwn((db, uid) => sheetsCore.raidSheetState(db, uid)),
+  nodeSheet: () => runSeaOwn((db, uid) => sheetsCore.nodeSheet(db, uid)),
+  bossCardState: () => runSeaOwn((db, uid) => sheetsCore.bossCardState(db, uid)),
+  // The Day board reads each system through this same API, as the web's reads
+  // each system through its own action.
+  dayState: () => runSeaOwn((db, uid) => {
+    const save = need().save
+    const week = kingWeekStr(new Date(clockNow()))
+    return sheetsCore.dayState(db, uid, {
+      profile: async () => structuredClone(save.profile),
+      orders: () => dailiesApi.getDailyChallenge(),
+      voyage: () => voyagesApi.getDailyVoyageState() as never,
+      trawls: () => voyagesApi.getTrawlState() as never,
+      bounties: () => dailiesApi.getBountyBoard(),
+      hold: () => chartRoomApi.getHoldState(),
+      match: () => chartRoomApi.getMatchState(),
+      minefield: () => chartRoomApi.getMinefieldState(),
+      rigging: () => chartRoomApi.getRiggingState(),
+      parlorWeek: async () => ({ answers: save.trivia.board[week]?.answers ?? {}, ladderStatus: save.trivia.ladder[week]?.status }),
+      haul: () => dailiesApi.bonusState(),
+      recruits: () => crewApi.todaysRecruits(),
+    })
+  }),
+  // The arrival read: the same readers the web's seaBoot runs at once. Nobody
+  // else is on this sea, so no pacts and no one's homestead to visit.
+  seaBoot: async () => {
+    const safe = async <T,>(f: () => Promise<T>): Promise<T | null> => { try { return await f() } catch { return null } }
+    const [golden, finn, folk, orders, day] = await Promise.all([
+      safe(() => fishing.heldGolden()), safe(() => seaApi.finnState()), safe(() => seaApi.folkState()),
+      safe(() => dailiesApi.getDailyChallenge()), safe(() => seaApi.dayState()),
+    ])
+    return { golden, finn, folk, orders, pacts: 0, guests: [], day }
+  },
+  // ── Pacts: between players, so offline there is nobody to sail with ──
+  pactState: async () => ({ youCanSail: false, sailing: [], asking: [], asked: [], couldAsk: [] }),
+  requestPact: async () => ({ ok: false, error: 'Nobody else sails this sea.' }),
+  acceptPact: async () => ({ ok: false, error: 'Nobody else sails this sea.' }),
+  endPact: async () => ({ ok: false }),
+  endPactWith: async () => ({ ok: false }),
+  hasAcceptedPact: async () => false,
+  pendingPacts: async () => 0,
 }
 
 export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi, dailies: dailiesApi, parlor: parlorApi, chartRoom: chartRoomApi, sea: seaApi }

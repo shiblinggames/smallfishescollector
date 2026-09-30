@@ -16,7 +16,6 @@ import { hapticReward } from '@/lib/haptics'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import { SEA_ACCENT, SELL_STEP } from '@/lib/seaOnboarding'
-import { setSeaTourStep, skipTutorials } from '@/app/(app)/sea/tourActions'
 
 // ── Palette ──────────────────────────────────────────────────────────────
 const UP = '#4ade80'
@@ -596,7 +595,7 @@ export default function MarketClient({
   useEffect(() => {
     if (tourAt === 'sell' && portfolio.length === 0) {
       setTourAt('out')
-      void setSeaTourStep(SELL_STEP + 1)
+      void api.sea.setSeaTourStep(SELL_STEP + 1)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tourAt, portfolio.length])
@@ -627,7 +626,7 @@ export default function MarketClient({
   const sellBeatDone = useCallback(() => {
     setTourAt(now => {
       if (now !== 'sell') return now
-      void setSeaTourStep(SELL_STEP + 1)
+      void api.sea.setSeaTourStep(SELL_STEP + 1)
       return 'out'
     })
   }, [])
@@ -897,7 +896,7 @@ export default function MarketClient({
         : 'Everything you caught is here. *Sell all* takes the lot in one go.'}
       accent={SEA_ACCENT}
       placement="bottom"
-      onSkip={() => { void skipTutorials(); setTourAt(null) }}
+      onSkip={() => { void api.sea.skipTutorials(); setTourAt(null) }}
     />
     <GuideCoach
       show={tourAt === 'out'}
@@ -911,7 +910,7 @@ export default function MarketClient({
       accent={SEA_ACCENT}
       placement="bottom"
       onClose={() => setTourAt(null)}
-      onSkip={() => { void skipTutorials(); setTourAt(null) }}
+      onSkip={() => { void api.sea.skipTutorials(); setTourAt(null) }}
     />
     <main className="min-h-screen pb-24 sm:pb-0">
       {/* THE HARBOURMASTER'S BOARD.

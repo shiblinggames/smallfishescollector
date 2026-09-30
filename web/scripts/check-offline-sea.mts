@@ -23,6 +23,15 @@ import fs from 'fs'
 import path from 'path'
 import * as sea from '../lib/core/sea'
 import { localSeaData } from '../lib/data/local/seaLocal'
+import * as sheets from '../lib/core/seaSheets'
+import type { DaySources } from '../lib/core/seaSheets'
+import * as dailies from '../lib/core/dailies'
+import * as bounties from '../lib/core/bounties'
+import * as chartCore from '../lib/core/chartRoom'
+import * as crewCore from '../lib/core/crew'
+import { localDailyData } from '../lib/data/local/dailyLocal'
+import { localChartData } from '../lib/data/local/chartLocal'
+import { localCrewData } from '../lib/data/local/crewLocal'
 import {
   freshCasino, freshCharting, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, CHARTING_PROFILE_DEFAULTS, SEA_PROFILE_DEFAULTS,
   type LocalSave,
@@ -65,7 +74,7 @@ function resolve(from: string, spec: string): string | null {
   for (const ext of ['.ts', '.tsx', '/index.ts', '/index.tsx', '']) if (fs.existsSync(base + ext) && fs.statSync(base + ext).isFile()) return base + ext
   return null
 }
-for (const entry of ['lib/core/sea.ts', 'lib/data/local/seaLocal.ts']) {
+for (const entry of ['lib/core/sea.ts', 'lib/core/seaSheets.ts', 'lib/data/local/seaLocal.ts']) {
   const seen = new Set<string>(); const bad: string[] = []; const stack = [path.join(ROOT, entry)]
   while (stack.length) {
     const f = stack.pop()!
@@ -315,6 +324,60 @@ try {
     if (await db.settleWant(UID, 'pell', 8, { points: 9, gifts_given: 1 }) || !(await db.settleWant(UID, 'pell', 7, { points: 9, gifts_given: 1 })) || await db.settleWant(UID, 'pell', 7, { points: 12, gifts_given: 2 })) fail('a job settled for the wrong fish, or twice')
     if (!(await db.addRod(UID, 50)) || await db.addRod(UID, 50)) fail('a rod was added twice')
     console.log('  the store: a day\'s chat, a job and a rod each claimed once')
+  }
+
+  // ── The tours, the sheets, the boss card, the Day board ──
+  {
+    now = T0
+    const s = freshSave({ ship_tier: 6, expedition_xp: 0, character_color: 'default', rod_tier: 0 }); const db = localSeaData(s)
+    if (!(await sheets.setSeaTourStep(db, UID, 3)) || await sheets.setSeaTourStep(db, UID, 2) || (await sheets.getSeaTourStep(db, UID)) !== 3) fail('the tour step went backwards')
+    await sheets.setGateTourStep(db, UID, 4); await sheets.setGateTourStep(db, UID, 1)
+    if (s.profile.gate_tour_step !== 4) fail('the anchorage step went backwards')
+    await sheets.markSeaHintSeen(db, UID, 'mainland'); await sheets.markSeaHintSeen(db, UID, 'mainland'); await sheets.markSeaHintSeen(db, UID, '  ')
+    if (JSON.stringify(s.profile.sea_hints_seen) !== '["mainland"]') fail('a landfall hint was kept twice (or a blank one kept)')
+    await sheets.skipTutorials(db, UID)
+    if (s.profile.has_seen_sea_tour !== true || s.profile.has_seen_gate_tour !== true) fail('skipping did not shut both tours')
+    const gear = await sheets.loadoutGear(db, UID)
+    if (!gear || !gear.rods.includes(0) || gear.equipped.color !== 'default') fail('the loadout sheet did not read')
+    const raidSheet = await sheets.raidSheetState(db, UID)
+    if ('error' in raidSheet || raidSheet.expeditionXP !== 0) fail('the raid sheet did not read')
+    const node = await sheets.nodeSheet(db, UID)
+    if ('error' in node || node.navLevel < 1) fail('the node sheet did not read')
+    const boss = await sheets.bossCardState(db, UID)
+    if ('error' in boss || !boss.views.length) fail('the boss card did not read the map')
+
+    // The Day board, from the save's own readers.
+    const dd = localDailyData(s), cd = localChartData(s), cr = localCrewData(s)
+    const real: DaySources = {
+      profile: async () => structuredClone(s.profile),
+      orders: () => dailies.getDailyChallenge(dd, UID),
+      voyage: async () => null, trawls: async () => null,
+      bounties: () => bounties.getBountyBoard(dd, UID),
+      hold: () => chartCore.getHoldState(cd, UID), match: () => chartCore.getMatchState(cd, UID),
+      minefield: () => chartCore.getMinefieldState(cd, UID), rigging: () => chartCore.getRiggingState(cd, UID),
+      parlorWeek: async () => ({ answers: {}, ladderStatus: undefined }),
+      haul: () => dailies.bonusState(dd, UID), recruits: () => crewCore.todaysRecruits(cr, UID),
+    }
+    const day = await sheets.dayState(db, UID, real)
+    if (!day || !day.orders || !day.chart || day.chart.total !== 4 || !day.haul || day.list.justCounted) fail('the Day board did not read the save\'s own systems')
+    // A done list, faked, to test the once-a-day credit.
+    const done: DaySources = {
+      ...real,
+      orders: async () => ({ date: '', challenges: [{ target: 1 }], progress: [1], claimed: [true], sweepClaimed: true } as never),
+      bounties: async () => ({ unlocked: false, remaining: 0, bounties: [] }),
+      parlorWeek: async () => ({ answers: { a: { day: iso().slice(0, 10) } }, ladderStatus: undefined }),
+      haul: async () => ({ isPremium: false, gemsClaimed: true, baitClaimed: true, crateClaimed: true }),
+      recruits: async () => null,
+    }
+    const d1 = await sheets.dayState(db, UID, done)
+    const d2 = await sheets.dayState(db, UID, done)
+    if (!d1?.list.justCounted || d1.list.fullDays !== 1 || d2?.list.justCounted || d2?.list.fullDays !== 1) fail('a full day was not credited exactly once')
+    now += DAY
+    const d3 = await sheets.dayState(db, UID, done)
+    if (!d3?.list.justCounted || d3.list.fullDays !== 2) fail('the next full day was not credited')
+    // The store's own guard (the core checks `countedToday` first, so only a race reaches it).
+    if ((await db.creditFullDay(UID, iso().slice(0, 10), 99)) !== null || s.profile.full_days !== 2) fail('a full day was credited twice by the store')
+    console.log('  the tours only go forwards, the sheets and the boss card read, the Day board reads the save and credits a full day once')
   }
 } finally {
   installRng(null); installClock(null)

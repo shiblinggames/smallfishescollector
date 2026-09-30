@@ -38,7 +38,7 @@ import { useEffect, useRef, useState, startTransition } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import { SEA_ACCENT } from '@/lib/seaOnboarding'
-import { markSeaHintSeen } from './tourActions'
+import { api } from '@/lib/gameApi'
 
 /** Every cue, in the order they are offered when more than one is true. The
  *  order IS a priority: the first true one wins the slot. */
@@ -127,7 +127,7 @@ export default function SeaCue({ seen, live, quiet }: {
     if (!next) return
     shown.add(`cue:${next.id}`)
     setShowing(next.id)
-    startTransition(() => { void markSeaHintSeen(`cue:${next.id}`) })
+    startTransition(() => { void api.sea.markSeaHintSeen(`cue:${next.id}`) })
   }, [live, quiet, showing, seen])
 
   // A tour starting mid-cue takes the screen back. The cue is spent either way

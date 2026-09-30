@@ -26,8 +26,9 @@
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
-import { bossCardState, type BossCardState } from './bossCardActions'
 import type { RaidNodeView } from '@/lib/raidMap'
+import { api } from '@/lib/gameApi'
+import type { BossCardState } from '@/lib/gameApi'
 
 const BossFightModal = dynamic(
   () => import('@/app/(app)/expeditions/BossFightModal').then(m => m.BossFightModal),
@@ -71,7 +72,7 @@ export default function BossCardSheet({ nodeId, preloaded, onEnter, onClose }: {
     setErr(null)
     setSlow(false)
     const t = setTimeout(() => { if (live) setSlow(true) }, 6000)
-    bossCardState().then(r => {
+    api.sea.bossCardState().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)
       else setFetched(r)

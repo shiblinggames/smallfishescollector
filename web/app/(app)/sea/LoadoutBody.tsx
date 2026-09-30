@@ -37,8 +37,8 @@ import { HATS } from '@/lib/hats'
 import { BOATS } from '@/lib/boats'
 import { PETS } from '@/lib/pets'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
-import { loadoutGear, type LoadoutGear } from './loadoutActions'
 import { updateCharacterColor } from '@/app/(app)/u/actions'
+import type { LoadoutGear } from '@/lib/gameApi'
 
 const GOLD = '#f0c040'
 /** The intro's harbour with its dinghy painted out: the wide loadout's water. */
@@ -102,7 +102,7 @@ export default function LoadoutBody({
   useEffect(() => {
     if (slot === null || gear) return
     let alive = true
-    void loadoutGear().then(g => { if (alive) setGear(g) }).catch(() => {})
+    void api.sea.loadoutGear().then(g => { if (alive) setGear(g) }).catch(() => {})
     return () => { alive = false }
   }, [slot, gear])
 

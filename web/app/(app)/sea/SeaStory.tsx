@@ -24,7 +24,6 @@ import { motion } from 'framer-motion'
 import StoryScene from '@/app/(app)/expeditions/StoryScene'
 import { api } from '@/lib/gameApi'
 import { SCENE_BACKDROPS, type RaidNode } from '@/lib/raidMap'
-import { nodeSheet } from './nodeSheetActions'
 import { vibrate } from '@/lib/haptics'
 import { flyPayout } from '@/lib/coinFly'
 
@@ -204,7 +203,7 @@ function SceneToll({ cost, accent, onPay, onWalk }: {
   // longer exists.
   useEffect(() => {
     let live = true
-    nodeSheet().then(r => {
+    api.sea.nodeSheet().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)
       else setPurse(r.doubloons)

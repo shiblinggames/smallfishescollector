@@ -39,7 +39,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { FIRST_VOYAGE, SEA_ACCENT } from '@/lib/seaOnboarding'
 import { PLACES, TOUR_SPOT, berthOf } from './chart'
-import { getSeaTourStep, markSeaTourSeen, setSeaTourStep, skipTutorials } from './tourActions'
+import { api } from '@/lib/gameApi'
 
 /**
  * WHERE A BEAT IS POINTING.
@@ -160,7 +160,7 @@ export default function SeaFirstVoyage({
   useEffect(() => {
     if (hasSeen) return
     let dead = false
-    void getSeaTourStep().then(live => {
+    void api.sea.getSeaTourStep().then(live => {
       if (dead) return
       setStep(now => (live > now ? live : now))
     }).catch(() => {})
@@ -206,13 +206,13 @@ export default function SeaFirstVoyage({
     setStep(n => {
       const to = n + 1
       if (to >= FIRST_VOYAGE.length) {
-        if (!wrote.current) { wrote.current = true; void markSeaTourSeen() }
+        if (!wrote.current) { wrote.current = true; void api.sea.markSeaTourSeen() }
       } else {
         // Written on every advance, because the very next beat may be the one
         // that sends them off the chart. Fire and forget: the worst a lost
         // write costs is one beat repeated, and blocking the tour on a round
         // trip would cost every captain a stutter to prevent it.
-        void setSeaTourStep(to)
+        void api.sea.setSeaTourStep(to)
       }
       return to
     })
@@ -431,7 +431,7 @@ export default function SeaFirstVoyage({
       nextLabel={step === FIRST_VOYAGE.length - 1 ? 'Aye' : undefined}
       // SKIP THE LOT: this voyage and the anchorage's, latched for good. The
       // step jumps to the end, which is what releases the tour's holds.
-      onSkip={() => { wrote.current = true; void skipTutorials(); setStep(FIRST_VOYAGE.length) }}
+      onSkip={() => { wrote.current = true; void api.sea.skipTutorials(); setStep(FIRST_VOYAGE.length) }}
       // ABOVE THE SHEET while the instruction is about something inside one.
       // The Daily Haul opens in a PopupShell at 111 and this card sits at 70,
       // so the line saying "claim your worms" would vanish behind the scrim

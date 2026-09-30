@@ -17,6 +17,7 @@
 import type { Db, Row } from './common'
 import { dailyData, type DailyData } from './dailyData'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
+import { getUserAchievementPoints } from '@/lib/achievementPoints'
 
 export type RapportRow = {
   folk_id: string
@@ -35,6 +36,11 @@ export interface SeaData extends DailyData {
   grantBadge(uid: string, badgeId: string): Promise<void>
   /** Every rod tier this captain owns. */
   rodTiers(uid: string): Promise<number[]>
+  /** The captain's achievement points (some cosmetics unlock on them). */
+  achievementPoints(uid: string): Promise<number>
+  /** Credit a whole day's list done, once per UTC day: lands only while the
+   *  last full day is before `today`. The new tally, or null if already credited. */
+  creditFullDay(uid: string, today: string, tally: number): Promise<number | null>
 
   // ── The regulars ──
   rapportRows(uid: string): Promise<RapportRow[]>
@@ -91,6 +97,15 @@ export function seaData(admin: Db): SeaData {
     async rodTiers(uid) {
       const { data } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', uid)
       return ((data ?? []) as { rod_tier: number }[]).map(r => r.rod_tier)
+    },
+    achievementPoints: (uid) => getUserAchievementPoints(uid),
+    async creditFullDay(uid, today, tally) {
+      const { data: moved } = await admin.from('profiles')
+        .update({ full_days: tally, last_full_day: today })
+        .eq('id', uid)
+        .or(`last_full_day.is.null,last_full_day.lt.${today}`)
+        .select('full_days')
+      return moved && moved.length > 0 ? Number((moved[0] as { full_days: number }).full_days) : null
     },
 
     async rapportRows(uid) {

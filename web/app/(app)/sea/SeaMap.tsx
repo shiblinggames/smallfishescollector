@@ -202,8 +202,6 @@ function folkRodSlug(folkId: string): string | null {
 }
 import SeaLandfallHint from './SeaLandfallHint'
 import SeaCue from './SeaCue'
-import { pendingPacts, hasAcceptedPact } from './pactActions'
-import { seaBoot, type SeaBoot } from './bootActions'
 import { coastClip, coastline } from '@/lib/islandShape'
 import { plateFor } from '@/lib/islandPlates'
 import { RECALL_MS, RECALL_TO, type RecallSide } from '@/lib/seaRecall'
@@ -368,8 +366,6 @@ const WargateSheet = dynamic(() => import('./WargateSheet'), { ssr: false })
 // The two channels a fight on the water runs on: where the hulls are, and what
 // is happening to them. Types only, so the fight is not pulled into this bundle.
 import type { ShipAnchor, ShipFx } from '@/app/(app)/raids/RaidCombat'
-import { bossCardState, type BossCardState } from './bossCardActions'
-import { raidSheetState, type RaidSheetState } from './raidSheetActions'
 /** The portal's chart. Only fetched once somebody actually steps into one. */
 const PortalMap = dynamic(() => import('./PortalMap'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
@@ -381,6 +377,7 @@ const SeaDay = dynamic(() => import('./SeaDay'), { ssr: false })
 import type { DayKind } from './SeaDay'
 import { cardArt } from '@/lib/artUrl'
 import type { AshoreResult, BottleResult, DigResult, DigState, Rapport, FinnSeaState } from '@/lib/gameApi'
+import type { SeaBoot, BossCardState, RaidSheetState } from '@/lib/gameApi'
 // Kip, who trades in what he knows about the harbour. See seaSmuggler.
 const SmugglerTalk = dynamic(() => import('./SmugglerTalk'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
@@ -2101,7 +2098,7 @@ export default function SeaMap({
    * effect runs first starts it and the rest share it.
    */
   const bootRef = useRef<Promise<SeaBoot | null> | null>(null)
-  const getBoot = useCallback(() => (bootRef.current ??= seaBoot().catch(() => null)), [])
+  const getBoot = useCallback(() => (bootRef.current ??= api.sea.seaBoot().catch(() => null)), [])
   /**
    * ── THE LEVEL, LIVE ──────────────────────────────────────────────────────
    *
@@ -5865,7 +5862,7 @@ export default function SeaMap({
       // The arrival count is the baseline for the ask notice, not news.
       const seed = (n: number) => { askSeenRef.current = n; setPendingAsk(n) }
       if (b && b.pacts != null) seed(b.pacts)
-      else void pendingPacts().then(seed, () => {})
+      else void api.sea.pendingPacts().then(seed, () => {})
     })
   }, [getBoot])
   /** The poll, callable on demand — see the crew panel's onChanged. */
@@ -6678,7 +6675,7 @@ export default function SeaMap({
     // Both halves of the wait, started together: the code and the answer.
     void import('./BossCardSheet')
     void import('@/app/(app)/expeditions/BossFightModal')
-    bossCardState().then(
+    api.sea.bossCardState().then(
       r => { if (!('error' in r) && kitReadKey.current === key) setBossData(r) },
       // A FAILURE IS NOT WORTH SAYING HERE. Nothing has been asked for yet; the
       // sheet does its own read when it opens and reports properly then.
@@ -6693,7 +6690,7 @@ export default function SeaMap({
     // arrival. Read on approach with the card, so Enter has nothing left to do
     // but show.
     void import('./RaidSheet')
-    raidSheetState().then(
+    api.sea.raidSheetState().then(
       r => { if (!('error' in r) && kitReadKey.current === key) setRaidData(r) },
       () => {},
     )
@@ -7747,7 +7744,7 @@ export default function SeaMap({
       if (document.visibilityState !== 'hidden') {
         if (++sinceAsk >= 3) {
           sinceAsk = 0
-          void pendingPacts().then(n => { if (alive) setPendingAsk(n) }, () => {})
+          void api.sea.pendingPacts().then(n => { if (alive) setPendingAsk(n) }, () => {})
         }
         void friendsAtSea().then(f => {
           if (!alive) return
@@ -13285,10 +13282,10 @@ hullRef={hullRefFor(t.key)} />
         open={crewOpen}
         onClose={() => {
           setCrewOpen(false)
-          void pendingPacts().then(setPendingAsk, () => {})
+          void api.sea.pendingPacts().then(setPendingAsk, () => {})
           // A pact may have just been made or ended in there, and it decides
           // how often this chart asks who is out. One query, on a panel close.
-          void hasAcceptedPact().then(v => { pactedRef.current = v }, () => {})
+          void api.sea.hasAcceptedPact().then(v => { pactedRef.current = v }, () => {})
         }}
         atSea={new Set(friends.map(f => f.username))}
         // A PACT CHANGED — ask the sea again NOW rather than at the next tick.

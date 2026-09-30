@@ -48,7 +48,7 @@ import { getShipClass, offeredShipClasses } from '@/lib/shipClasses'
 import { api } from '@/lib/gameApi'
 import { musterReport } from '@/lib/crewMuster'
 import type { RaidNode } from '@/lib/raidMap'
-import { nodeSheet, type NodeSheetState } from './nodeSheetActions'
+import type { NodeSheetState } from '@/lib/gameApi'
 
 // The boards themselves, straight off the campaign map. Dynamic because a
 // captain opens ONE of these at a stop and most stops are none of them —
@@ -115,7 +115,7 @@ export default function SeaNodeSheet({ node, cleared, onClose, onCleared, onRepe
 
   useEffect(() => {
     let live = true
-    nodeSheet().then(r => {
+    api.sea.nodeSheet().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)
       else setState(r)

@@ -28,6 +28,14 @@ export function localSeaData(save: LocalSave): SeaData {
     ...daily,
     grantBadge: captain.grantBadge,
     async rodTiers(uid) { me(uid); return [...save.rods] },
+    achievementPoints: captain.achievementPoints,
+    async creditFullDay(uid, today, tally) {
+      const prof = me(uid)
+      const last = prof.last_full_day as string | null | undefined
+      if (last != null && !(last < today)) return null
+      prof.full_days = tally; prof.last_full_day = today
+      return tally
+    },
 
     // ── The regulars ──
     async rapportRows(uid) { me(uid); return structuredClone(save.rapport) },

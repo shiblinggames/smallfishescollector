@@ -34,7 +34,8 @@ import { createPortal } from 'react-dom'
 import RaidGame from '@/app/(app)/raids/RaidGame'
 import type { ShipAnchor, ShipFx, FightFx } from '@/app/(app)/raids/RaidCombat'
 import { getRaidConfigById } from '@/lib/raidRegistry'
-import { raidSheetState, type RaidSheetState } from './raidSheetActions'
+import { api } from '@/lib/gameApi'
+import type { RaidSheetState } from '@/lib/gameApi'
 
 const LEAVE_MS = 460
 
@@ -86,7 +87,7 @@ export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFigh
     if (!raidId || preloaded) return
     let live = true
     setErr(null)
-    raidSheetState().then(r => {
+    api.sea.raidSheetState().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)
       else setFetched(r)
