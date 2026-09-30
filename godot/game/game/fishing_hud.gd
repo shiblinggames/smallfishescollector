@@ -59,6 +59,11 @@ var _hold: Label
 var _bait_val: Label
 var _loadout_val: Label
 var _log_val: Label
+## The Ancient Deep's fight in progress (BossFight), or {} for an ordinary
+## fish: its name, mechanic, config, stage, the window's shrink and the
+## needle's multiplier, and whether it is one of the six giants.
+var _boss: Dictionary = {}
+var _boss_sweep: float = 0.0
 var _auto: Button
 var _auto_on: bool = false
 var _auto_t: float = -1.0
@@ -493,15 +498,63 @@ func _skips_left() -> int:
 	return int(3.0 - used)
 
 
-func _bite() -> void:
+## The zones for this bite: the web's buildFishZones, then, in a fight, the
+## mechanic's mods (a breathing shrink narrows the green by its breath too)
+## and a giant's palette.
+func _zones(breath: float = 0.0) -> Array:
 	var diff: float = float(_shot["catchDifficulty"])
 	var zd: Dictionary = (Rules.data()["dial"]["zoneDifficulty"] as Dictionary).get(_cast_zone, {})
 	var zones: Array = Dial.build_zones(diff, _mods["hook"], _mods["line"], float(zd.get("catchMultiplier", 1.0)),
-		floor(float(_mods["level"]) * 0.2) + float(_mods["baitCatch"]) + float(_mods["rodCatch"]), float(_mods["rodPerfect"]) + 1.0)
+		floor(float(_mods["level"]) * 0.2) + float(_mods["baitCatch"]) + float(_mods["rodCatch"]) - breath, float(_mods["rodPerfect"]) + 1.0)
+	if _boss.is_empty():
+		return zones
+	var shrink: float = breath if _boss["mechanic"] == "shrink" else float(_boss["shrink"])
+	zones = BossFight.apply_mods(zones, _boss["mechanic"], shrink)
+	if _boss["giant"]:
+		zones = BossFight.palette(zones, _shot.get("vigilRank"))
+	return zones
+
+
+func _start_fight() -> void:
+	_boss = {}
+	if _cast_zone != "ancient_deep" or float(_shot["fishId"]) == FishingRules.CRATE_FISH_ID:
+		return
+	var fish: Dictionary = session.store.species(float(_shot["fishId"]))
+	var base: Dictionary = BossFight.base_config(fish["name"])
+	var mechanic: String = BossFight.WILDCARD[randi() % BossFight.WILDCARD.size()] if base.get("wildcard", false) else base["mechanic"]
+	var cfg: Dictionary = BossFight.config(fish["name"], mechanic, _shot.get("vigilRank"))
+	_boss = {
+		"name": fish["name"], "mechanic": mechanic, "cfg": cfg, "stage": 1,
+		"shrink": float(cfg.get("perfectShrinkStart", 0.0)), "mult": 1.0,
+		"giant": Js.num(fish.get("sell_value")) == 0.0,
+	}
+
+
+func _fight_hud() -> void:
+	var n: int = int(_boss["cfg"]["phases"])
+	var rank: Variant = _shot.get("vigilRank")
+	var pips: String = ""
+	for i: int in n:
+		pips += "● " if i < int(_boss["stage"]) else "○ "
+	_status.text = ("Rank %s  ·  " % ["", "I", "II", "III", "IV", "V"][int(rank)] if rank != null else "") + "Stage %d/%d" % [int(_boss["stage"]), n]
+	_dots.text = pips.strip_edges()
+	_timer.text = ""
+
+
+func _bite() -> void:
+	var diff: float = float(_shot["catchDifficulty"])
+	_start_fight()
+	var zones: Array = _zones()
 	var speeds: Array = Rules.data()["dial"]["fishDifficultySpeed"]
 	var sp: Dictionary = speeds[clampi(int(diff) - 1, 0, 4)]
 	var sweep: float = (float(sp["speedMin"]) + randf() * (float(sp["speedMax"]) - float(sp["speedMin"]))) * float(_mods["reel"])
 	_dial.streak = _streak()
+	_dial.mechanic = "" if _boss.is_empty() else String(_boss["mechanic"])
+	_dial.rebuild = _zones if not _boss.is_empty() and _boss["mechanic"] == "shrink" else Callable()
+	_dial.blackout_chance = 0.0 if _boss.is_empty() or _boss["cfg"].get("noBlackout", false) else 0.12 * diff / 5.0
+	_dial.ancient_aura = not _boss.is_empty() and _boss["giant"]
+	_dial.stage = 1
+	_boss_sweep = sweep
 	_dial.begin(zones, sweep)
 	_dial.visible = true
 	_dial.modulate.a = 0.0
@@ -513,11 +566,50 @@ func _bite() -> void:
 	_dots.text = ""
 	_timer.text = ""
 	_status.text = ""
+	if not _boss.is_empty():
+		toast("Ancient Encounter  ·  %d stages required" % int(_boss["cfg"]["phases"]))
+		_fight_hud()
+		Fx.pill(self, "Miss once and it escapes. Stay sharp.", Vector2(size.x / 2.0, 170.0), Color("#fca5a5"), Color(0.08, 0.016, 0.016, 0.92), Color(0.94, 0.27, 0.27, 0.6), 2.2)
 	var skips: int = _skips_left()
 	_tide.visible = skips > 0
 	_tide.text = "Tide Turner · Skip · %d left" % skips
 	Rumble.buzz(Rumble.BITE)
 	Sound.dial_start(diff)
+	_set_phase("hooked")
+
+
+## A phase held: say so for 1.1s, then the next, harder (a closing window and a
+## faster needle on a curve, a quicker needle on the ramps, a new mechanic for
+## a wildcard), on a new place on the ring.
+func _next_phase(result: String) -> void:
+	var cfg: Dictionary = _boss["cfg"]
+	if result == "perfect":
+		Sound.perfect()
+		Rumble.buzz(Rumble.PERFECT)
+	else:
+		Sound.line_in()
+		Rumble.tap(6)
+	_set_phase("reeling")
+	var n: int = int(cfg["phases"])
+	_status.text = "Stage %d/%d" % [int(_boss["stage"]), n]
+	await get_tree().create_timer(1.1).timeout
+	_boss["stage"] = int(_boss["stage"]) + 1
+	if cfg.has("perfectShrinkStep"):
+		_boss["shrink"] = float(_boss["shrink"]) + float(cfg["perfectShrinkStep"])
+		if cfg.has("speedStepMult"):
+			_boss["mult"] = minf(float(_boss["mult"]) * float(cfg["speedStepMult"]), 4.0)
+	elif _boss["mechanic"] == "accelerate" or _boss["mechanic"] == "surge":
+		_boss["mult"] = minf(float(_boss["mult"]) * 1.4, 4.0)
+	if cfg.get("wildcard", false):
+		var nxt: String = BossFight.WILDCARD[randi() % BossFight.WILDCARD.size()]
+		_boss["mechanic"] = nxt
+		_boss["shrink"] = 0.0
+		_boss["mult"] = 1.5 if (nxt == "accelerate" or nxt == "surge") else 1.0
+		_dial.mechanic = nxt
+		_dial.rebuild = _zones if nxt == "shrink" else Callable()
+	_dial.stage = int(_boss["stage"])
+	_dial.next_phase(_zones(), _boss_sweep * float(_boss["mult"]))
+	_fight_hud()
 	_set_phase("hooked")
 
 
@@ -548,6 +640,15 @@ func _on_struck(raw: String, _angle: float) -> void:
 		Fx.pill(self, "Second Wind", Vector2(size.x / 2.0 + 290.0, size.y / 2.0 - 200.0), Color("#99f6e4"), Color(0.08, 0.3, 0.3, 0.8), Color(0.37, 0.92, 0.83, 0.7), 1.2)
 		_dial.respin()
 		return
+	if not _boss.is_empty() and landed and int(_boss["stage"]) < int(_boss["cfg"]["phases"]):
+		await _next_phase(result)
+		return
+	if not _boss.is_empty():
+		_status.text = ""
+		_dots.text = ""
+	_boss = {}
+	_dial.mechanic = ""
+	_dial.ancient_aura = false
 	Sound.dial_stop()
 	_tide.visible = false
 	boat.set_pose("rest")
@@ -585,6 +686,9 @@ func _on_struck(raw: String, _angle: float) -> void:
 			"The line fouled and took a bait with it." if result == "penalty" else "The line went slack. Cast again.")
 	refresh()
 	_auto_t = (3.3 if crate else 1.7) if (_auto_on and _auto_tier() > 0) else -1.0
+	var giant: bool = r.get("caught") == true and (r["fish"] as Dictionary)["habitat"] == "ancient_deep" and Js.num((r["fish"] as Dictionary).get("sell_value")) == 0.0
+	if giant:
+		await _ceremony(r)
 	if session.level() > before_level or r.get("isShiny") == true:
 		_after_catch(true)
 
@@ -619,6 +723,9 @@ func _wire(card: ResultCard) -> void:
 func _fish_card(r: Dictionary, perfect: bool) -> void:
 	var card: ResultCard = ResultCard.new()
 	_mount_card(card)
+	# The web never passed the count, so its card read "Ancient 0 of 6"; it is
+	# the wall as it stands.
+	r["ancientCount"] = float(Js.list(session.profile().get("ancient_catches")).size())
 	card.show_fish(r, perfect, _shot)
 	_wire(card)
 	# The XP rises off the boat; the fish flies to the hold.
@@ -683,6 +790,36 @@ func _fly_to_hold(fish: Dictionary, qty: float) -> void:
 		var knock: Tween = create_tween()
 		knock.tween_property(_hold, "scale", Vector2(1.14, 1.14), 0.12).set_trans(Tween.TRANS_BACK)
 		knock.tween_property(_hold, "scale", Vector2.ONE, 0.22))
+
+
+## A giant landed: the first time, the slain cinematic and then Finn's words;
+## a rank climbed, the rank-up; all six mastered, the capstone.
+func _ceremony(r: Dictionary) -> void:
+	var fish: Dictionary = r["fish"]
+	var scenes: Array = []
+	if r.get("isNewSpecies") == true:
+		var count: int = Js.list(session.profile().get("ancient_catches")).size()
+		scenes.append(["slain", { "id": fish["id"], "name": fish["name"], "count": count, "total": 6 }])
+		var beat: Variant = (Rules.data()["finnAncientBeats"] as Dictionary).get(Js.key(fish["id"]))
+		if beat != null:
+			scenes.append(["finn", { "beat": beat }])
+	if r.get("vigilRankUp") != null:
+		scenes.append(["rank_up", { "name": fish["name"], "from": (r["vigilRankUp"] as Dictionary)["from"], "to": (r["vigilRankUp"] as Dictionary)["to"] }])
+	if r.get("vigilPetGranted") == true:
+		scenes.append(["capstone", { "species": func(id: float) -> Variant: return session.store.species(id) }])
+	for sc: Array in scenes:
+		if sc[0] == "rank_up" or sc[0] == "capstone":
+			await get_tree().create_timer(1.5).timeout
+		var a: AncientScenes = AncientScenes.new()
+		a.kind = sc[0]
+		a.data = sc[1]
+		_modal = a
+		add_child(a)
+		await a.done
+		_modal = null
+	refresh()
+	if r.get("vigilPetGranted") == true:
+		boat.set_look(Skipper.look_of(session.profile()))
 
 
 ## After a catch (and on opening the sea): celebrate levels crossed, then ask
@@ -759,6 +896,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			_timer.text = ""
 			Sound.dial_stop()
 			boat.set_pose("rest")
+			_boss = {}
+			_dial.mechanic = ""
+			_dial.ancient_aura = false
 			toast("You walked away. The line is still out.")
 			_set_phase("idle")
 		elif phase == "result":

@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -38,7 +38,7 @@ func _init() -> void:
 	hud._mods = hud._tackle()
 	for f: int in 20:
 		await process_frame
-	if what in ["loadout", "hold", "almanac", "giants"]:
+	if what in ["loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup"]:
 		# A captain with something to show: catches, clothes, pets and giants.
 		var save: Dictionary = sea.session.save
 		for id: int in [1, 2, 3, 4, 5, 7, 9, 12, 16, 20]:
@@ -55,6 +55,18 @@ func _init() -> void:
 		save["rodItems"] = { "galaxy": 1.0, "twinstrike": 1.0 }
 		hud.refresh()
 	match what:
+		"boss":
+			sea._boat.position = Vector2(0, 19000)
+			p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[89])
+			hud._cast_zone = "ancient_deep"
+			hud._shot = { "fishId": 147.0, "catchDifficulty": 5.0, "biteRarity": 5.0, "waitMs": 9000.0, "vigilRank": 3.0 }
+			hud._mods = hud._tackle()
+			hud._bite()
+		"slain", "finn", "rankup":
+			var a: AncientScenes = AncientScenes.new()
+			a.kind = { "slain": "slain", "finn": "finn", "rankup": "rank_up" }[what]
+			a.data = { "id": 146.0, "name": "Mosasaurus", "count": 3, "total": 6, "beat": (Rules.data()["finnAncientBeats"] as Dictionary)["146"], "from": 2.0, "to": 3.0 }
+			hud.add_child(a)
 		"loadout":
 			hud._open_loadout()
 		"hold":
@@ -93,7 +105,7 @@ func _init() -> void:
 			var lu: LevelUp = LevelUp.new()
 			lu.claim = { "from": 4.0, "to": 6.0, "granted": [{ "level": 5.0, "reward": (Rules.data()["levelRewards"] as Dictionary)["5"] }, { "level": 6.0, "reward": (Rules.data()["levelRewards"] as Dictionary)["6"] }] }
 			hud.add_child(lu)
-	var wait: int = 150 if what == "crate" else (160 if what == "card" else 50)
+	var wait: int = 150 if what == "crate" else (160 if what in ["card", "finn", "rankup", "slain"] else 50)
 	for f: int in wait:
 		await process_frame
 	var img: Image = root.get_texture().get_image()

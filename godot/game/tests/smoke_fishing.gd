@@ -76,6 +76,54 @@ func _init() -> void:
 		for f: int in 20:
 			await process_frame
 	await _clear_modals(hud, seen)
+	# The Ancient Deep: a captain with lures fights through every phase, aiming
+	# at the catch zone (the perfect every third cast), and sits through the
+	# ceremony when a giant lands.
+	var p: Dictionary = sea.session.profile()
+	p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[89])
+	p["has_ancient_deep_access"] = true
+	p["fish_hold_tier"] = 8.0
+	hud._level_seen = sea.session.level()
+	sea.session.save["bait"]["luminous"] = 60.0
+	sea.session.save["bait"]["golden"] = 60.0
+	sea._boat.position = Vector2(0, 19000)
+	hud._bait = "golden"
+	for f: int in 3:
+		await process_frame
+	hud.refresh()
+	var phases: int = 0
+	for i: int in 16:
+		await _clear_modals(hud, seen)
+		hud._bait = "golden" if i % 2 == 0 else "luminous"
+		hud.cast()
+		if hud.phase != "waiting":
+			print("  ancient cast %d did not go out (%s: %s)" % [i, hud.phase, hud._action.text])
+			bad += 1
+			break
+		hud._wait_left = 0.0
+		ahead[0] = float(ahead[0]) + float(hud._shot["waitMs"]) + 1000.0
+		var guard: int = 0
+		while (hud.phase == "waiting" or hud.phase == "hooked" or hud.phase == "reeling") and guard < 20000:
+			guard += 1
+			if hud.phase == "hooked":
+				var want: Array = ["perfect"] if i % 3 == 0 else ["catch", "perfect"]
+				var n: int = 0
+				while hud.phase == "hooked" and not (hud._dial.zone_at(hud._dial.angle) in want) and n < 4000:
+					await process_frame
+					n += 1
+				if hud.phase == "hooked":
+					if not hud._boss.is_empty():
+						phases += 1
+					hud._dial.strike()
+			await process_frame
+		if hud._card is CrateMoment:
+			await (hud._card as CrateMoment).done
+		var kind: String = "Ancient card" if hud._card != null else "none"
+		seen[kind] = int(seen.get(kind, 0)) + 1
+		for f: int in 10:
+			await process_frame
+	await _clear_modals(hud, seen)
+	print("  ancient: %d phases struck; giants on the wall %s" % [phases, p.get("ancient_catches")])
 	Clock.install(Callable())
 	print("  40 casts; seen: %s" % [seen])
 	print("  streak now %d, level %d, hold %s" % [hud._streak(), sea.session.level(), hud._hold.text])
@@ -94,6 +142,11 @@ func _clear_modals(hud: FishingHud, seen: Dictionary) -> void:
 			for f: int in 45:
 				await process_frame
 			(m as LevelUp)._close()
+		elif m is AncientScenes:
+			seen["scene:" + (m as AncientScenes).kind] = int(seen.get("scene:" + (m as AncientScenes).kind, 0)) + 1
+			for f: int in 40:
+				await process_frame
+			(m as AncientScenes)._finish()
 		elif m is GoldenChoice:
 			seen["GoldenChoice"] = int(seen.get("GoldenChoice", 0)) + 1
 			(m as GoldenChoice)._answer("mount" if int(seen["GoldenChoice"]) % 2 == 1 else "sell")

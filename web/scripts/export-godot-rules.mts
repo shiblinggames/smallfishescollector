@@ -32,6 +32,8 @@ import { FOLK } from '../lib/seaFolk'
 import { REELS } from '../lib/reels'
 import { FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY } from '../app/(app)/fishing/depths'
 import { starterSave } from '../lib/data/local/starter'
+import { FINN_ANCIENT_BEATS, FINN_AVATAR } from '../lib/finn'
+import { VIGIL_DIAL } from '../lib/ancientVigil'
 import { rewardForLevel, LEVEL_REWARD_MAX } from '../lib/levelRewards'
 import { SPECIAL_ITEMS, SPECIAL_OWNED_COLUMN } from '../lib/specialItems'
 import { BOATS } from '../lib/boats'
@@ -94,6 +96,11 @@ const rules = {
   shinyMessages: SHINY_MESSAGES,
   zoneRewardBase: ZONE_REWARD_BASE,
   prestigeMax: PRESTIGE_MAX,
+  // The Ancient Deep: the giants' dial colors by Vigil rank, and Finn's words
+  // when each giant first comes up (lib/finn FINN_ANCIENT_BEATS).
+  vigilDial: VIGIL_DIAL,
+  finnAncientBeats: FINN_ANCIENT_BEATS,
+  finnAvatar: FINN_AVATAR,
   starter: (() => { const { species: _s, ...rest } = starterSave('__uid__', [], 0); return rest })(),
 }
 

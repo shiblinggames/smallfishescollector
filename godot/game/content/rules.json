@@ -4348,6 +4348,183 @@
   "abyss": 50000
  },
  "prestigeMax": 5,
+ "vigilDial": {
+  "1": {
+   "catch": "#22d3ee",
+   "perfect": "#fde68a",
+   "penalty": "#fb5f7a",
+   "miss": "#4b3a63"
+  },
+  "2": {
+   "catch": "#93c5fd",
+   "perfect": "#f1f5f9",
+   "penalty": "#fb5f7a",
+   "miss": "#2b3648"
+  },
+  "3": {
+   "catch": "#34d399",
+   "perfect": "#ecfccb",
+   "penalty": "#fb5f7a",
+   "miss": "#173c37"
+  },
+  "4": {
+   "catch": "#a78bfa",
+   "perfect": "#fce7f3",
+   "penalty": "#fb5f7a",
+   "miss": "#3a1220"
+  },
+  "5": {
+   "catch": "#fcd34d",
+   "perfect": "#fffbeb",
+   "penalty": "#fb5f7a",
+   "miss": "#3d2a08"
+  }
+ },
+ "finnAncientBeats": {
+  "143": {
+   "accent": "#7d9aa8",
+   "ctaLabel": "Back to the water",
+   "lines": [
+    {
+     "text": "...*Megalodon.*",
+     "pause": 700
+    },
+    {
+     "text": "The last one. The one all the others were only ever leading up to.",
+     "pause": 300
+    },
+    {
+     "text": "All six. In a single pair of hands."
+    },
+    {
+     "text": "Do you have any notion what you have just finished building?",
+     "pause": 350
+    },
+    {
+     "text": "Years I stood at that black water, and it would not open for me. Not one inch. And you...",
+     "pause": 500
+    },
+    {
+     "text": "You were exactly what it was waiting for. Exactly what *I* was waiting for.",
+     "pause": 200,
+     "fx": "flash"
+    },
+    {
+     "text": "...",
+     "pause": 700
+    },
+    {
+     "text": "Never mind. Old rivals get sentimental.",
+     "pause": 300
+    },
+    {
+     "text": "Go on. Enjoy your wall of monsters."
+    }
+   ]
+  },
+  "144": {
+   "accent": "#c8a060",
+   "lines": [
+    {
+     "text": "The long-neck. *Plesiosaurus.* I have watched that thing take a rig and swim off like it felt nothing.",
+     "pause": 300
+    },
+    {
+     "text": "It let you land it. Sat in your hands like it decided to."
+    },
+    {
+     "text": "The deep does not just decide. Not for most of us.",
+     "pause": 400
+    },
+    {
+     "text": "Hm. Go on, then."
+    }
+   ]
+  },
+  "145": {
+   "accent": "#c8a060",
+   "lines": [
+    {
+     "text": "*Dunkleosteus.* A jaw like a ship's prow, older than the first keel that ever cut this water.",
+     "pause": 300
+    },
+    {
+     "text": "I hooked it once. It took my line and left me the story. That is all it has ever left anyone."
+    },
+    {
+     "text": "It handed you the whole fish. I would sit a while with why.",
+     "pause": 400
+    },
+    {
+     "text": "...or do not. Just keep pulling them up."
+    }
+   ]
+  },
+  "146": {
+   "accent": "#c8a060",
+   "lines": [
+    {
+     "text": "*Mosasaurus.* The sea-dragon every old chart drew a hard border around.",
+     "pause": 250
+    },
+    {
+     "text": "Turns out that border was the only honest ink on the page."
+    },
+    {
+     "text": "Every soul who chased these is a name cut in stone now. Every one but you.",
+     "pause": 400
+    },
+    {
+     "text": "That was never luck. Luck drowned a long way back. You are something the water wants."
+    }
+   ]
+  },
+  "147": {
+   "accent": "#c8a060",
+   "lines": [
+    {
+     "text": "The *Basilosaurus.* It swam this water before there was a single soul alive to fear it.",
+     "pause": 300
+    },
+    {
+     "text": "I have wanted to look one of these in the eye my whole life. Never once got the chance."
+    },
+    {
+     "text": "And here it lies on your deck, dripping like a market cod.",
+     "pause": 400
+    },
+    {
+     "text": "Sits wrong, does it not. ...Good. It ought to."
+    }
+   ]
+  },
+  "148": {
+   "accent": "#c8a060",
+   "lines": [
+    {
+     "text": "*Shastasaurus.* The largest thing that ever drew breath in salt water, and it is on your hook.",
+     "pause": 300
+    },
+    {
+     "text": "The others all swore these were stories. Easier than admitting they were out of reach."
+    },
+    {
+     "text": "They were never out of yours. The deep keeps handing you what it kept from me.",
+     "pause": 450
+    },
+    {
+     "text": "...from everyone. So keep pulling, captain. I mean to see just how far those hands of yours can reach."
+    }
+   ]
+  }
+ },
+ "finnAvatar": {
+  "characterColor": "ruby",
+  "equippedHat": null,
+  "bgColor": "#1a1408",
+  "borderColor": "#c8a060",
+  "mirrored": true
+ },
  "starter": {
   "uid": "__uid__",
   "profile": {

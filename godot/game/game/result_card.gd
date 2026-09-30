@@ -179,6 +179,8 @@ func show_fish(r: Dictionary, perfect: bool, shot: Dictionary) -> void:
 		notes.append("New species. Logged.")
 	if r.get("baitSaved") == true:
 		notes.append("The bait survived.")
+	if ancient and r.get("isNewSpecies") == true:
+		notes.append("Ancient %d of 6 revealed." % int(r.get("ancientCount", 0)))
 	if r.get("vigilRankUp") != null:
 		var up: Dictionary = r["vigilRankUp"]
 		notes.append("Vigil %s. Rank %d to %d." % [["", "I", "II", "III", "IV", "V"][int(up["to"])], int(up["from"]), int(up["to"])])

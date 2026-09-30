@@ -38,6 +38,19 @@ var spinning: bool = false
 var frozen_on: String = ""
 var streak: int = 0
 
+## THE ANCIENT DEEP'S FIGHT (see BossFight): the mechanic moving the ring or
+## the window, the rebuild the breathing shrink needs each frame, the chance of
+## a blackout per tick, the giant's aura, and the stage for the breath's depth.
+var mechanic: String = ""
+var rebuild: Callable = Callable()
+var blackout_chance: float = 0.0
+var ancient_aura: bool = false
+var stage: int = 1
+var _gyre_base: float = 0.0
+var _mech_t: float = 0.0
+var _tick_left: float = 0.0
+var _dark: float = 0.0
+
 var _t: float = 0.0
 var _snap: float = 0.0
 var _burst: float = 0.0
@@ -178,6 +191,23 @@ func begin(new_zones: Array, new_sweep: float) -> void:
 	angle = randf() * 360.0
 	frozen_on = ""
 	spinning = true
+	_gyre_base = zone_rot
+	_mech_t = 0.0
+	_dark = 0.0
+	queue_redraw()
+
+
+## The next phase of a fight: new zones, a new place on the ring, the needle
+## back at the start, spinning again.
+func next_phase(new_zones: Array, new_sweep: float) -> void:
+	zones = new_zones
+	sweep = new_sweep
+	zone_rot = floor(randf() * 360.0)
+	_gyre_base = zone_rot
+	_mech_t = 0.0
+	angle = 270.0
+	frozen_on = ""
+	spinning = true
 	queue_redraw()
 
 
@@ -214,6 +244,31 @@ func respin() -> void:
 	queue_redraw()
 
 
+func _mechanics(delta: float) -> void:
+	_mech_t += delta
+	match mechanic:
+		"drift", "surge":
+			zone_rot = fposmod(zone_rot + 80.0 * delta, 360.0)
+		"gyre":
+			zone_rot = fposmod(_gyre_base + 46.0 * sin(_mech_t / 1.5 * TAU), 360.0)
+		"shrink":
+			# The breath: open at the crest, tightest at the trough, deeper and
+			# quicker each phase.
+			if rebuild.is_valid():
+				var amp: float = 12.0 + stage * 3.0
+				var period: float = maxf(0.65, 1.5 - stage * 0.25)
+				zones = rebuild.call(amp * (0.5 - 0.5 * cos(_mech_t / period * TAU)))
+	# The Ancient Deep's ticks (every 150 to 350ms): a blackout now and then,
+	# and the randomize snap.
+	_tick_left -= delta
+	if _tick_left <= 0.0:
+		_tick_left = randf_range(0.15, 0.35)
+		if blackout_chance > 0.0 and _dark <= 0.0 and randf() < blackout_chance:
+			_dark = randf_range(0.5, 1.1)
+		if mechanic == "randomize" and randf() < 0.4:
+			zone_rot = floor(randf() * 360.0)
+
+
 ## The streak's fire: how hard the embers burn (DialFx's curve).
 static func fire_intensity(s: int) -> float:
 	if s < 2:
@@ -225,6 +280,8 @@ func _process(delta: float) -> void:
 	_t += delta
 	if spinning:
 		angle = fposmod(angle + sweep * delta, 360.0)
+		_mechanics(delta)
+	_dark = maxf(0.0, _dark - delta) if _dark > 0.0 else 0.0
 	_snap = maxf(0.0, _snap - delta / 0.7)
 	_burst = maxf(0.0, _burst - delta / 0.45)
 	var i: float = fire_intensity(streak)
@@ -262,6 +319,14 @@ func _draw() -> void:
 			var pulse2: float = 0.5 + 0.5 * sin(_t * TAU / 1.4)
 			draw_arc(c, 105.0 * k, 0.0, TAU, 96, Color("#f97316", lerpf(0.1, 0.28, pulse2)), 10.0 * k, true)
 
+	# A giant's aura: a void that breathes, a cold rim, and the violet ring.
+	if ancient_aura:
+		var b1: float = sin(_t * 0.9)
+		var b2: float = sin(_t * 1.37 + 1.1)
+		draw_circle(c, r_out * (1.9 + b1 * 0.26) * 0.62, Color("#7c3aed", (0.16 + b1 * 0.13) * 0.5))
+		draw_circle(c, r_out * (1.28 + b2 * 0.07), Color("#67e8f9", (0.1 + b2 * 0.1) * 0.35))
+		draw_arc(c, r_out + 11.0 * k, 0.0, TAU, 96, Color("#7c3aed", 0.24), 12.0 * k, true)
+		draw_arc(c, r_out + 4.0 * k, 0.0, TAU, 96, Color("#67e8f9", 0.6), 1.5 * k, true)
 	# The plate.
 	draw_circle(c, r_out + 6.0 * k, Color(0.03, 0.06, 0.09, 0.94))
 	draw_arc(c, r_out + 6.0 * k, 0.0, TAU, 96, Color(0.94, 0.75, 0.25, 0.30), 1.5, true)
@@ -280,7 +345,7 @@ func _draw() -> void:
 		var a1: float = float(z[1]) + zone_rot - 0.5
 		if a1 <= a0:
 			continue
-		var col: Color = COLORS[z[2]]
+		var col: Color = Color(z[3]) if z.size() > 3 else COLORS[z[2]]
 		col.a = 1.0 if n == under_i else DIM[z[2]]
 		if z[2] == "perfect" and _burst > 0.0:
 			col = Color(GOLD, maxf(col.a, 0.85 * _burst))
@@ -303,6 +368,8 @@ func _draw() -> void:
 
 	# The needle: the colour of what it is over.
 	var needle: Color = COLORS.get(under, Color.WHITE) if under != "miss" else Color(1, 1, 1, 0.55)
+	if under_i >= 0 and (zones[under_i] as Array).size() > 3 and under != "miss":
+		needle = Color(zones[under_i][3])
 	if under == "perfect" or _burst > 0.0:
 		needle = GOLD
 	var tip: Vector2 = c + Vector2.from_angle(_ang(angle)) * (r_in - 8.0 * k)
@@ -321,6 +388,8 @@ func _draw() -> void:
 	elif _snap > 0.0:
 		draw_arc(c, (8.0 + 28.0 * snap_t) * k, 0.0, TAU, 48, Color(1, 1, 1, 0.18 * _snap), 1.5, true)
 	draw_circle(c, 6.0 * k * hub_scale, Color("#f0c040"))
+	if _dark > 0.0:
+		draw_circle(c, r_out + 8.0 * k, Color(0.01, 0.01, 0.02, 0.91))
 
 
 ## Keyframes evenly spaced over 0..1, eased linearly between.

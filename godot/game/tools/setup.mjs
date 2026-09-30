@@ -37,6 +37,8 @@ const ART = [
   'hat*_rest.png', 'hat*_cast.png', 'boat_*_cast.png', 'rod_*.png', 'reel_*.png', 'hook_*.png', 'autocaster.png', 'welcome-harbour-open.webp',
   // The Almanac.
   'almanac-paper.jpg', 'ancient.jpg',
+  // The Ancient Deep's scenes.
+  'scenes/last-fathom.jpg', 'finn_portrait.png',
   // The crate moment, the golden choice, loot and level-up art.
   '*crateclosed.png', '*crateopen.png', 'smallpile.png', 'hat_*_rest.png', 'boat_*_rest.png',
   'worms.png', 'minnow.png', 'nightcrawler.png', 'chum.png', 'anglersformula.png', 'luminouslure.png', 'goldenlure.png',

@@ -53,6 +53,20 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the rest of lib/core/fishing (wormhole reroll, Tide Turner, goldens, level rewards,
   Almanac). A TS bug found on the way: the local store stamped a shiny with the real
   clock, fixed.
+- FISHING PASS 3, BUILT (2026-09-30): the captain drawn on the boat as the web draws them
+  (character color, hat, boat, rod, reel, pets, hook, at the web's percentages per pose; the
+  bow pet rides on the water here too); the rod's menus (Loadout with a try-on preview and
+  the five slots, Bait, Hold, Log); the Almanac (Collection by water with payouts and
+  prestige and nine views, species pages, Goldens, the Giants' Vigil wall and hold-to-release,
+  Pets with odds, Stats); the Auto Caster and Auto Catcher; changing color and the rod in hand
+  ported with parity; and the Ancient Deep's fight brought back from the deleted screen
+  (game/boss_fight.gd: every mechanic, the Vigil's scaling, blackouts, the giants' palette and
+  aura; a miss lets it go, only the last phase is sent) with its ceremony (the slain
+  cinematic, Finn's words, the rank-up, the capstone). Two web bugs not carried over: the sea's
+  card read "Ancient 0 of 6" (the count was never passed), and Second Wind on a fight's miss
+  now retries the same phase (the old screen reset the fight into a strange half-state).
+  FISHING IS COMPLETE in Godot apart from what lives elsewhere: hotspots and regulars (the
+  chart), selling and the tackle shop (docking), trawls (crew).
 - FISHING PASS 2, THE LOOP'S FEEL, BUILT (2026-09-30), to a spec read off the web
   (FishingHere, CatchResultCard, CrateOpening, GoldenChoice, FishingXPBar, DialFx,
   LevelUpCelebration, HoldFlight, fishingMusic, haptics): the cast timeline (sound and pose at
