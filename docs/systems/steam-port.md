@@ -45,6 +45,22 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the rest of lib/core/fishing (wormhole reroll, Tide Turner, goldens, level rewards,
   Almanac). A TS bug found on the way: the local store stamped a shiny with the real
   clock, fixed.
+- FISHING PASS 2, THE LOOP'S FEEL, BUILT (2026-09-30), to a spec read off the web
+  (FishingHere, CatchResultCard, CrateOpening, GoldenChoice, FishingXPBar, DialFx,
+  LevelUpCelebration, HoldFlight, fishingMusic, haptics): the cast timeline (sound and pose at
+  0, the line in the water at 600ms, the wait pose at 650ms, the waiting dots and timer from
+  1.5s, the Instant Bite pill); the dial's lit wedges, perfect and snag marks, snap, perfect
+  burst and the streak's fire (rings from two perfects, embers growing with the run); the
+  full-screen perfect; the splash at the bow; the XP rising off the boat; the fish flying to
+  the hold; the catch card arriving in order with its tally (Sell, XP, Double / Haul /
+  Jackpot, Perfect, Streak) and a punch by rarity; the crate moment (the strip, the burst,
+  the rare reveal); the golden choice (cannot be dismissed, asked again on opening); the
+  level-up with its rewards; the Tide Turner and wormhole buttons; Second Wind; the XP bar
+  with the streak; the hold count; the web's sounds and day/dusk/night music; the web's
+  haptics as controller rumble. As on the web: no Locked-In display, no callouts for jackpots
+  (they are card cells), no price on the golden choice, no crate sound. NOT YET: the Auto
+  Caster and Auto Catcher, skins, hats, boats and pets drawn on the boat, and the Ancient
+  Deep's fights (pass 3 with the menus).
 - FISHING PASS 1, THE REST OF THE RULES, BUILT (2026-09-30): every function in
   lib/core/fishing and lib/core/loadout is ported (`core/fishing.gd`, `core/loadout.gd`): the
   wormhole reroll, the Tide Turner (still 3 a real day, as the web; the sea-day rhythm is the

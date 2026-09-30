@@ -22,6 +22,8 @@ var _night: CanvasModulate
 var _town_light: PointLight2D
 var _hud: FishingHud
 var _save_t: float = 0.0
+## Music starts on the first key or press, as on the web.
+var _music_started: bool = false
 
 
 func _ready() -> void:
@@ -68,8 +70,11 @@ func _ready() -> void:
 	var hud_layer: CanvasLayer = CanvasLayer.new()
 	hud_layer.layer = 10
 	add_child(hud_layer)
+	var sound: Sound = Sound.new()
+	add_child(sound)
 	_hud = FishingHud.new()
 	_hud.session = session
+	_hud.boat = _boat
 	_hud.fishing_changed.connect(func(active: bool) -> void:
 		_boat.locked = active
 		_boat.set_pose("wait" if active else "rest"))
@@ -106,6 +111,8 @@ func _process(delta: float) -> void:
 
 	_hud.set_water(Chart.water_at(cam_world))
 	_hud.set_clock(SeaClock.PHASE_LABEL[clock["phase"]])
+	if _music_started:
+		Sound.music_for(clock["phase"])
 
 	# Remember where the boat is, now and then, so a captain comes back to it.
 	_save_t += delta
@@ -116,6 +123,11 @@ func _process(delta: float) -> void:
 			p["sea_x"] = round(_boat.position.x)
 			p["sea_y"] = round(_boat.position.y)
 			session.persist()
+
+
+func _input(event: InputEvent) -> void:
+	if not _music_started and (event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton) and event.is_pressed():
+		_music_started = true
 
 
 func _unhandled_input(event: InputEvent) -> void:

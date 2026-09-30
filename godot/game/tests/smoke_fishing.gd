@@ -1,53 +1,65 @@
 extends SceneTree
-## A SMOKE RUN OF THE FISHING LOOP (Godot port, stage 1).
+## A SMOKE RUN OF THE FISHING LOOP (Godot port).
 ##
-## Opens the real game, puts the boat in the Shallows and fishes a dozen casts
-## through the HUD (the bite wait skipped), so every path from the cast to the
-## card runs at least once without anyone at the keyboard. It checks the loop
-## does not break; the rules themselves are held by tests/parity.gd.
+## Opens the real game on a fresh captain (saved in a scratch folder, so no
+## real captain is touched), puts the boat in the Shallows and fishes through
+## the HUD with the bite wait skipped and the game clock pushed past each
+## bite: half the strikes land wherever the needle is, half wait for the catch
+## zone; a stretch of casts is forced golden; level-ups are closed and goldens
+## answered (sold and mounted in turn). It checks the loop never breaks; the
+## rules themselves are held by tests/parity.gd.
 ##
 ##   godot --headless --path godot/game -s tests/smoke_fishing.gd
-##
-## It plays on the most recent captain, or starts one; run it on a machine
-## whose saves do not matter, or move them aside first.
 
 
 func _init() -> void:
+	Captains.dir_override = "user://smoke_captains"
+	for f: String in DirAccess.get_files_at(Captains.dir_override) if DirAccess.dir_exists_absolute(Captains.dir_override) else PackedStringArray():
+		DirAccess.remove_absolute("%s/%s" % [Captains.dir_override, f])
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
-	var sea: Sea = main.get_child(0)
-	sea.session.save["bait"]["worm"] = 40.0
+	var sea: Sea = main.get_child(main.get_child_count() - 1)
+	sea.session.save["bait"]["worm"] = 80.0
 	sea._boat.position = Vector2(0, 2600)
 	for f: int in 3:
 		await process_frame
 	var hud: FishingHud = sea._hud
 	hud.refresh()
-	# The game clock, pushed past each bite instead of waiting it out.
 	var ahead: Array = [0.0]
 	Clock.install(func() -> float: return Time.get_unix_time_from_system() * 1000.0 + float(ahead[0]))
-	var cards: Dictionary = {}
+	var seen: Dictionary = {}
 	var bad: int = 0
-	for i: int in 12:
+	for i: int in 40:
+		if i == 12:
+			sea.session.profile()["force_shiny_always"] = true
+		if i == 16:
+			sea.session.profile()["force_shiny_always"] = false
+		await _clear_modals(hud, seen)
+		if i % 10 == 9:
+			sea.session.save["hold"] = {}
+			hud.refresh()
 		hud.cast()
 		if hud.phase != "waiting":
-			print("  cast %d did not go out (phase %s, cast button: %s)" % [i, hud.phase, hud._cast.text])
+			print("  cast %d did not go out (phase %s, button: %s)" % [i, hud.phase, hud._action.text])
 			bad += 1
 			break
 		hud._wait_left = 0.0
 		ahead[0] = float(ahead[0]) + float(hud._shot["waitMs"]) + 1000.0
 		var n: int = 0
-		while hud.phase == "waiting" and n < 60:
+		while hud.phase == "waiting" and n < 120:
 			await process_frame
 			n += 1
-		# Half the casts strike wherever the needle is; the rest wait for it to
-		# be over the catch zone, so the catch and crate cards run too.
-		for f: int in randi_range(1, 30):
+		for f: int in randi_range(1, 20):
 			await process_frame
 		n = 0
 		while i % 2 == 0 and not (hud._dial.zone_at(hud._dial.angle) in ["catch", "perfect"]) and n < 2000:
 			await process_frame
 			n += 1
+		if i % 4 == 0:
+			while hud._dial.zone_at(hud._dial.angle) != "perfect" and n < 4000:
+				await process_frame
+				n += 1
 		hud._dial.strike()
 		n = 0
 		while hud.phase == "reeling" and n < 600:
@@ -57,11 +69,33 @@ func _init() -> void:
 			print("  cast %d ended in phase %s with no card" % [i, hud.phase])
 			bad += 1
 			continue
-		var kind: String = (hud._card.get_child(0).get_child(0) as Label).text if hud._card.get_child(0).get_child_count() > 0 else "?"
-		cards[kind] = int(cards.get(kind, 0)) + 1
-		hud._close_card()
-		hud._set_phase("idle")
+		var kind: String = "CrateMoment" if hud._card is CrateMoment else "ResultCard"
+		seen[kind] = int(seen.get(kind, 0)) + 1
+		if hud._card is CrateMoment:
+			await (hud._card as CrateMoment).done
+		for f: int in 20:
+			await process_frame
+	await _clear_modals(hud, seen)
 	Clock.install(Callable())
-	print("  %d casts, cards: %s" % [12, cards])
+	print("  40 casts; seen: %s" % [seen])
+	print("  streak now %d, level %d, hold %s" % [hud._streak(), sea.session.level(), hud._hold.text])
 	print("  smoke %s" % ("FAILED" if bad > 0 else "ok"))
 	quit(1 if bad > 0 else 0)
+
+
+## Close a level-up and answer goldens, as a player would.
+func _clear_modals(hud: FishingHud, seen: Dictionary) -> void:
+	var guard: int = 0
+	while hud._modal != null and guard < 20:
+		guard += 1
+		var m: Control = hud._modal
+		if m is LevelUp:
+			seen["LevelUp"] = int(seen.get("LevelUp", 0)) + 1
+			for f: int in 45:
+				await process_frame
+			(m as LevelUp)._close()
+		elif m is GoldenChoice:
+			seen["GoldenChoice"] = int(seen.get("GoldenChoice", 0)) + 1
+			(m as GoldenChoice)._answer("mount" if int(seen["GoldenChoice"]) % 2 == 1 else "sell")
+		for f: int in 3:
+			await process_frame

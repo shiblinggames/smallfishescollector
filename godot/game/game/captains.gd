@@ -9,6 +9,12 @@ extends RefCounted
 ## then the game opens the most recently played captain, or starts one.
 
 const DIR: String = "user://captains"
+## Where the saves go; tests point it at a scratch folder.
+static var dir_override: String = ""
+
+
+static func _dir() -> String:
+	return dir_override if dir_override != "" else DIR
 
 
 static func _species() -> Array:
@@ -16,14 +22,14 @@ static func _species() -> Array:
 
 
 static func _path(id: String) -> String:
-	return "%s/%s.json" % [DIR, id]
+	return "%s/%s.json" % [_dir(), id]
 
 
 ## Every captain id here, the most recently written first.
 static func list() -> Array:
-	DirAccess.make_dir_recursive_absolute(DIR)
+	DirAccess.make_dir_recursive_absolute(_dir())
 	var out: Array = []
-	for f: String in DirAccess.get_files_at(DIR):
+	for f: String in DirAccess.get_files_at(_dir()):
 		if f.ends_with(".json"):
 			out.append(f.get_basename())
 	out.sort_custom(func(a: String, b: String) -> bool:
@@ -53,7 +59,7 @@ static func create(id: String) -> Dictionary:
 
 
 static func write(save: Dictionary, carried: Dictionary) -> Error:
-	DirAccess.make_dir_recursive_absolute(DIR)
+	DirAccess.make_dir_recursive_absolute(_dir())
 	var text: String = SaveFile.serialize(save, carried, Js.iso(Clock.now_ms()))
 	return SaveFile.write_file(ProjectSettings.globalize_path(_path(save["uid"])), text)
 

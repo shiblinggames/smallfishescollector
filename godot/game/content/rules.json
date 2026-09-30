@@ -3272,6 +3272,18 @@
   2458518
  ],
  "shinySellMult": 10,
+ "shinyMessages": [
+  "A golden {fish}. The kind of catch sailors carve into the hull.",
+  "{fish} of gold under your hand. Captain, this is one in a thousand.",
+  "Sailors tell tales of gold-scaled ones. Tonight you've held one.",
+  "A gilded {fish} — the sea's own coin. Mount it, or part with it for a king's haul.",
+  "Gold-scaled and impossible. Even the old captains only saw one of these.",
+  "A {fish} drawn up in solid gold. The dockside won't believe you without proof.",
+  "Worth more than a hold of common haul, and rarer than the stories about it.",
+  "The crew has gone quiet. None of them have ever seen a golden one before.",
+  "A golden {fish}. Every captain hopes for this once in a career.",
+  "The deep turned a {fish} to gold tonight, and gave it to you."
+ ],
  "zoneRewardBase": {
   "shallows": 5000,
   "open_waters": 10000,

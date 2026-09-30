@@ -101,3 +101,62 @@ func steer(input: Vector2, delta: float) -> void:
 
 func set_pose(pose: String) -> void:
 	_sprite.texture = load("res://art/fishing_%s.png" % pose)
+
+
+## THE CATCH SPLASH in front of the bow (app/(app)/sea/seaSplash.ts): droplets
+## thrown up and falling back, a ring spreading on the water; bigger, and
+## part gold, on a perfect.
+func splash(perfect: bool) -> void:
+	var facing: float = 1.0 if _sprite.flip_h else -1.0
+	var at: Vector2 = Vector2(facing * 150.0, 70.0)
+	var p: GPUParticles2D = GPUParticles2D.new()
+	p.one_shot = true
+	p.explosiveness = 1.0
+	p.amount = 34 if perfect else 22
+	p.lifetime = 0.78
+	p.local_coords = false
+	p.texture = Glow.radial(16, Color.WHITE)
+	var m: ParticleProcessMaterial = ParticleProcessMaterial.new()
+	m.direction = Vector3(0, -1, 0)
+	m.spread = 55.0
+	m.initial_velocity_min = 160.0 * (1.25 if perfect else 1.0)
+	m.initial_velocity_max = 320.0 * (1.25 if perfect else 1.0)
+	m.gravity = Vector3(0, 620.0 / Chart.GROUND, 0)
+	m.scale_min = 0.25
+	m.scale_max = 0.5
+	m.lifetime_randomness = 0.45
+	var g: Gradient = Gradient.new()
+	g.set_color(0, Color("#fde68a") if perfect else Color(0.9, 0.97, 1.0))
+	g.set_color(1, Color(0.9, 0.97, 1.0, 0.0))
+	var ramp: GradientTexture1D = GradientTexture1D.new()
+	ramp.gradient = g
+	m.color_ramp = ramp
+	p.process_material = m
+	p.position = at
+	add_child(p)
+	p.emitting = true
+	var ring: Ripple = Ripple.new()
+	ring.position = at
+	ring.grow = 150.0 if perfect else 110.0
+	ring.life = 0.7 if perfect else 0.52
+	add_child(ring)
+	get_tree().create_timer(1.2).timeout.connect(p.queue_free)
+
+
+## A ring spreading on the water (drawn on the squashed plane, so an ellipse).
+class Ripple:
+	extends Node2D
+	var grow: float = 110.0
+	var life: float = 0.52
+	var t: float = 0.0
+
+	func _process(delta: float) -> void:
+		t += delta
+		if t >= life:
+			queue_free()
+			return
+		queue_redraw()
+
+	func _draw() -> void:
+		var age: float = t / life
+		draw_arc(Vector2.ZERO, 26.0 + age * grow, 0.0, TAU, 64, Color(1, 1, 1, (1.0 - age) * 0.5), 3.0, true)

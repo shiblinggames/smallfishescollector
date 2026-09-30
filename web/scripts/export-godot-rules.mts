@@ -37,7 +37,7 @@ import { HATS } from '../lib/hats'
 import { BADGES, badgePoints } from '../lib/badges'
 import { AP_POOL } from '../lib/cosmeticGates'
 import { XP_TABLE as NAV_XP_TABLE } from '../lib/expeditionLevel'
-import { SHINY_SELL_MULT } from '../lib/shiny'
+import { SHINY_SELL_MULT, SHINY_MESSAGES } from '../lib/shiny'
 import { ZONE_REWARD_BASE, PRESTIGE_MAX } from '../lib/zoneRewards'
 
 const OUT = path.join(process.cwd(), '..', 'godot', 'game', 'content', 'rules.json')
@@ -85,6 +85,7 @@ const rules = {
   apPool: AP_POOL,
   navXpTable: NAV_XP_TABLE,
   shinySellMult: SHINY_SELL_MULT,
+  shinyMessages: SHINY_MESSAGES,
   zoneRewardBase: ZONE_REWARD_BASE,
   prestigeMax: PRESTIGE_MAX,
   starter: (() => { const { species: _s, ...rest } = starterSave('__uid__', [], 0); return rest })(),

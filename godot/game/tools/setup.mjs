@@ -29,8 +29,18 @@ const WEB = path.join(HERE, '..', '..', 'web')
 /** The web content the port reads so far. Add a file here as a system is ported. */
 const CONTENT = ['fish_species.json', 'profile_defaults.json']
 
-/** Files or folders under web/public, copied to art/ at the same path. */
-const ART = ['fishing_rest.png', 'fishing_cast.png', 'fishing_wait.png', 'fish', 'sea/port-mainland.webp']
+/** Files or folders under web/public, copied to art/ at the same path. A name
+ *  with a * matches any run of characters within its folder. */
+const ART = [
+  'fishing_rest.png', 'fishing_cast.png', 'fishing_wait.png', 'fishing_*_rest.png', 'fish', 'sea/port-mainland.webp',
+  // The crate moment, the golden choice, loot and level-up art.
+  '*crateclosed.png', '*crateopen.png', 'smallpile.png', 'hat_*_rest.png', 'boat_*_rest.png',
+  'worms.png', 'minnow.png', 'nightcrawler.png', 'chum.png', 'anglersformula.png', 'luminouslure.png', 'goldenlure.png',
+  'parrot_*.png', 'monkey_*.png', 'seal_*.png', 'lizard_*.png', 'raccoon_*.png', 'crab_*.png', 'plesiosaur_baby.png',
+  // Sound: the cast, the line hitting the water, the perfect, the dial's tick, and the day, dusk and night music.
+  'fishingcast.mp3', 'fishingcast2.mp3', 'fishingperfect.mp3', 'fishingdial.ogg',
+  'fishingsoundtrack.ogg', 'fishingsoundtrackopen.ogg', 'fishingsoundtrackdeep.ogg',
+]
 /** Fonts: [package, file] under desktop/node_modules/@fontsource, to art/fonts. */
 const FONTS = [['cinzel', 'cinzel-latin-700-normal.woff2'], ['karla', 'karla-latin-400-normal.woff2'], ['karla', 'karla-latin-700-normal.woff2']]
 
@@ -69,6 +79,13 @@ const copyIfChanged = (from, to) => {
   copied++
 }
 for (const rel of ART) {
+  if (rel.includes('*')) {
+    const dir = path.dirname(rel)
+    const re = new RegExp('^' + path.basename(rel).split('*').map(p => p.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$')
+    const src = path.join(WEB, 'public', dir)
+    for (const f of fs.readdirSync(src)) if (re.test(f) && fs.statSync(path.join(src, f)).isFile()) copyIfChanged(path.join(src, f), path.join(HERE, 'art', dir, f))
+    continue
+  }
   const from = path.join(WEB, 'public', rel)
   if (fs.statSync(from).isDirectory()) {
     for (const f of fs.readdirSync(from)) if (fs.statSync(path.join(from, f)).isFile()) copyIfChanged(path.join(from, f), path.join(HERE, 'art', rel, f))
