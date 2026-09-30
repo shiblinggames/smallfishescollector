@@ -4,11 +4,10 @@
 //    private app:// scheme rather than file://, so module scripts and fetches
 //    behave exactly as they do on a web origin. In development (STB_DEV_URL set)
 //    it opens the Vite dev server instead.
-// 2. Owns the save file. The page never touches the disk: it asks through the
-//    preload's two calls (read, write), and this process reads or writes ONE
-//    file, captain.json in the app's data folder. The write is atomic (a temp
-//    file, flushed, then renamed over the save), the same guarantee
-//    web/lib/data/local/nodeSaveStorage gives the tests.
+// 2. Owns the saves, one file per captain (./captains.cjs). The page never
+//    touches the disk: it asks through the preload by captain id. Writes are
+//    atomic (a temp file, flushed, then renamed over the save), the same
+//    guarantee web/lib/data/local/nodeSaveStorage gives the tests.
 // 3. Keeps the page locked down: no Node in the page, context isolation, the
 //    sandbox, and no navigation or new windows away from the game.
 // 4. Talks to Steam (./steam.cjs): achievements, rich presence and the overlay,
@@ -22,7 +21,6 @@ const steam = require('./steam.cjs')
 
 const DIST = path.join(__dirname, '..', 'dist')
 const DEV_URL = process.env.STB_DEV_URL
-const SAVE_NAME = 'captain.json'
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
@@ -34,51 +32,11 @@ steam.register(ipcMain)
 
 // THE SAVE'S FOLDER IS PINNED, not taken from the package name: Steam Auto-Cloud
 // is configured against this exact path (docs/systems/steam-port.md), and every
-// player's save lives in it, so renaming the package must never move it.
+// player's saves live in it, so renaming the package must never move it. Each
+// captain is one file in it (./captains.cjs).
 const SAVE_DIR = 'seas-the-booty-desktop'
-function saveFile() { return path.join(app.getPath('appData'), SAVE_DIR, SAVE_NAME) }
-
-ipcMain.handle('save:where', () => saveFile())
-
-ipcMain.handle('save:read', async () => {
-  try { return await fs.promises.readFile(saveFile(), 'utf8') } catch (e) {
-    if (e.code === 'ENOENT') return null
-    throw e
-  }
-})
-
-// ONE WRITE AT A TIME, AND ONLY THE NEWEST. The screens fire several game calls
-// at once, each ending in an autosave; two writes racing through the same temp
-// file lost the rename. So writes queue behind the one in flight, and a write
-// that is still waiting when a newer one arrives is skipped: every save is the
-// whole game, so the newest one is the only one worth the disk.
-let latest = null
-let inFlight = null
-async function writeAtomic(text) {
-  const file = saveFile()
-  await fs.promises.mkdir(path.dirname(file), { recursive: true })
-  const tmp = `${file}.tmp`
-  const h = await fs.promises.open(tmp, 'w')
-  try { await h.writeFile(text, 'utf8'); await h.sync() } finally { await h.close() }
-  await fs.promises.rename(tmp, file)
-}
-async function drain() {
-  while (latest !== null) {
-    const text = latest
-    latest = null
-    await writeAtomic(text)
-  }
-}
-
-ipcMain.handle('save:write', async (_e, text) => {
-  if (typeof text !== 'string') throw new Error('a save is text')
-  latest = text
-  // Every caller waits until a write at least as new as theirs is on disk.
-  while (inFlight) await inFlight
-  if (latest === null) return
-  inFlight = drain().finally(() => { inFlight = null })
-  await inFlight
-})
+const captains = require('./captains.cjs').create(app, SAVE_DIR)
+captains.register(ipcMain)
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -107,7 +65,9 @@ function createWindow() {
   void win.loadURL(DEV_URL ? `${DEV_URL.replace(/\/$/, '')}/sea` : 'app://game/sea')
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // The one-save layout of the first builds moves into captains/ before anything reads.
+  await captains.migrate().catch(e => console.error('captain migration failed', e))
   // app://game/<path> serves ../dist/<path>, and nothing outside it.
   // A path with no file extension is a SCREEN (app://game/tavern/market), not a
   // file, and gets index.html: the shell's router reads the URL, so a reload or

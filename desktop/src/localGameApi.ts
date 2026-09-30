@@ -78,7 +78,7 @@ export type * from '../../web/lib/gameApi/index'
 const SPECIES = speciesJson as unknown as SpeciesRow[]
 const PROFILE_DEFAULTS = profileDefaultsJson as Row
 
-/** The session: one captain, one save, one store, and the web tables the
+/** The session: the captain in play (chosen on the captain select), their save, their store, and the web tables the
  *  offline game does not model yet, carried untouched so no write loses them. */
 let session: { save: LocalSave; storage: SaveStorage; carried: Record<string, Row[]> } | null = null
 
@@ -89,14 +89,13 @@ let session: { save: LocalSave; storage: SaveStorage; carried: Record<string, Ro
  * worms), with one difference decided for Steam (2026-09-30): buying the game
  * makes you a Captain.
  */
-function starterSave(): LocalSave {
-  const uid = 'local-captain'
+function starterSave(uid: string): LocalSave {
   return {
     uid,
     profile: {
       ...structuredClone(PROFILE_DEFAULTS),
       id: uid,
-      username: 'crew_' + uid.replace(/-/g, '').slice(0, 5),
+      username: 'crew_' + uid.replace(/-/g, '').slice(-5),
       created_at: new Date(clockNow()).toISOString(),
       is_premium: true,
       premium_expires_at: null,
@@ -107,10 +106,11 @@ function starterSave(): LocalSave {
   }
 }
 
-/** Open (or start) the captain's save. The save's own seed drives every roll. */
-export async function openSave(storage: SaveStorage): Promise<LocalSave> {
+/** Open the captain's save, or start a new captain under this id when there is
+ *  none. The save's own seed drives every roll. */
+export async function openSave(storage: SaveStorage, uid: string): Promise<LocalSave> {
   const loaded = await loadSave(storage, SPECIES)
-  const save = loaded?.save ?? starterSave()
+  const save = loaded?.save ?? starterSave(uid)
   // Every autosave also tells Steam about any badge it has not heard of yet
   // (./steam); the first one catches up everything already earned.
   const watched: SaveStorage = { read: () => storage.read(), write: async (text) => { await storage.write(text); syncAchievements(save) } }

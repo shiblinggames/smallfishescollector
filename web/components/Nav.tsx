@@ -289,6 +289,8 @@ export default function Nav({ doubloons, gems, canSail = false }: {
   useEffect(() => { setMenuOpen(false) }, [pathname])
 
   async function signOut() {
+    // The Steam build has no account to leave: the door is the captain select.
+    if (IS_DESKTOP) { router.push('/captains'); return }
     // Marks the leave as deliberate so SessionWatch does not meet them at the
     // door with "you signed in on another device".
     await signOutHere()
@@ -334,6 +336,8 @@ export default function Nav({ doubloons, gems, canSail = false }: {
   // row that already had to learn to scroll sideways.
   const desktopOnlyLinks = [
     { href: '/badges', label: 'Badges', badge: claimableBadges || null },
+    // The Steam build keeps several captains; this goes back to the select.
+    ...(IS_DESKTOP ? [{ href: '/captains', label: 'Captains', badge: null }] : []),
   ]
 
   // Desktop top-bar inline links. Canonical order: fishing, the seas,
@@ -725,7 +729,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
                     color: 'rgba(239,68,68,0.72)',
                     letterSpacing: '0.02em',
                   }}>
-                    Sign Out
+                    {IS_DESKTOP ? 'Captains' : 'Sign Out'}
                   </span>
                 </button>
               </div>

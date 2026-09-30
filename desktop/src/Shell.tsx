@@ -18,6 +18,8 @@ import { Suspense, useEffect, useState, type ComponentType } from 'react'
 import { useLocationState, useRouter, Redirected } from './shims/navigation'
 import { openSave, currentSave } from './localGameApi'
 import { saveStorage } from './saveStorage'
+import CaptainSelect, { chosenCaptain } from './CaptainSelect'
+import { steamStatus } from './steam'
 import { screenFor, HOME } from './screens'
 import { isFirstRun } from '@/lib/core/seaPage'
 import { canSail } from '@/lib/seaAccess'
@@ -39,20 +41,35 @@ import KeyboardAdvance from '@/components/KeyboardAdvance'
 
 const DARK = <div aria-hidden style={{ position: 'fixed', inset: 0, background: '#0b1a24' }} />
 
+/** The captain select until a captain is chosen for this window, then the
+ *  game. /captains goes back to the select (the Nav's Captains link). */
 export default function Shell() {
-  const [ready, setReady] = useState(false)
+  const { pathname } = useLocationState()
+  const [captain] = useState(chosenCaptain)
+  const [ready, setReady] = useState<{ name?: string } | null>(null)
   useEffect(() => {
+    if (!captain) return
     void (async () => {
-      const { storage } = await saveStorage()
-      await openSave(storage)
-      setReady(true)
+      const { storage } = await saveStorage(captain)
+      await openSave(storage, captain)
+      setReady({ name: await steamName() })
     })()
-  }, [])
+  }, [captain])
+  if (!captain || pathname === '/captains') return <CaptainSelect />
   if (!ready) return DARK
-  return <Frame />
+  return <Frame suggestedName={ready.name} />
 }
 
-function Frame() {
+/** The player's Steam name as a username the game accepts (3 to 20 letters,
+ *  numbers, underscores), offered in the setup's name box. Read before the
+ *  frame mounts: the box takes its first value once. */
+async function steamName(): Promise<string | undefined> {
+  const s = await steamStatus()
+  const clean = ('name' in s ? s.name ?? '' : '').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').slice(0, 20)
+  return clean.length >= 3 ? clean : undefined
+}
+
+function Frame({ suggestedName }: { suggestedName?: string }) {
   const { pathname } = useLocationState()
   const router = useRouter()
   const profile = currentSave()!.profile
@@ -76,6 +93,7 @@ function Frame() {
             showWelcomeAfter={!profile.has_seen_welcome}
             hasUsername={!!profile.username_changed}
             isPremium={isPremiumActive(profile)}
+            suggestedName={suggestedName}
           />
         : !profile.has_seen_welcome
           ? <WelcomeModal />

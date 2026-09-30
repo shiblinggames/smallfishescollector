@@ -59,14 +59,17 @@ interface Props {
   showWelcomeAfter: boolean
   hasUsername: boolean
   isPremium: boolean
+  /** A name to start the box with. The desktop build offers the player's
+   *  Steam name; the web offers nothing. */
+  suggestedName?: string
 }
 
-export default function SetupModal({ currentColor, unlockedColors, showWelcomeAfter, hasUsername, isPremium }: Props) {
+export default function SetupModal({ currentColor, unlockedColors, showWelcomeAfter, hasUsername, isPremium, suggestedName }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<Step>(hasUsername ? 'color' : 'username')
   const [done, setDone] = useState(false)
 
-  const [usernameInput, setUsernameInput] = useState('')
+  const [usernameInput, setUsernameInput] = useState(suggestedName ?? '')
   const [usernameError, setUsernameError] = useState('')
   const [usernamePending, startUsernameTx] = useTransition()
 

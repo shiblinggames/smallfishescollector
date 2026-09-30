@@ -527,6 +527,22 @@ its system's doc.
        - Each normal captain has a HOME SEA (their own campaign, fog and homestead, like a
          Stardew farm per save), played alone.
        - In a Charter, the ALMANAC (catch log, bests, prestige) is SHARED by the crew.
+       - BUILT (2026-09-30), the captain select, normal captains only (Charters come with the
+         networking):
+         - Each captain is one file, `captains/<id>.json` in the save folder; the id is the
+           save's uid (`captain-` plus 12 hex for new ones). `desktop/electron/captains.cjs`
+           owns the files: list, read, write (atomic, one at a time per captain, newest
+           kept), retire. The old single `captain.json` moves in on first start.
+         - RETIRE moves the file to `retired/<id>-<stamp>.json`. Nothing is ever deleted; a
+           slip is undone by moving the file back by hand.
+         - `desktop/src/CaptainSelect.tsx` is the title screen: each captain's avatar, name,
+           levels, purse and last played, Play, Retire (asks once), New Captain. It opens on
+           launch and at `/captains` (the Nav's Captains link on desktop; the Nav menu's Sign
+           Out reads Captains and goes there).
+         - Choosing a captain RELOADS the window with the id held in sessionStorage, so no
+           screen or Steam state from one captain reaches the next.
+         - The Steam name, cut to what a username allows, is offered in the setup's name box
+           (`SetupModal` `suggestedName`); the web offers nothing.
      - THE CHARTER, WALKED THROUGH SYSTEM BY SYSTEM (Kong, 2026-09-30):
        - CAMPAIGN: SHARED MAP, PERSONAL CREDIT.
          - When anyone clears a node, the Charter's map advances and the water opens for
@@ -1059,10 +1075,11 @@ In order. Each step is worth doing even if the port never happens.
      answers `api.fishing.castLine` and `reelIn` from the core and the save (the rest answer
      that they are not offline yet). The screen imports `api` exactly as the website does.
    - `desktop/electron/main.cjs`: serves `dist/` over a private `app://game/` scheme (not
-     file://), owns the save (`captain.json` in the app data folder, written atomically: temp,
+     file://), owns the saves (one per captain, `captains/<id>.json` in the app data folder since the
+     captain select, written atomically: temp,
      fsync, rename), and locks the page down (context isolation, sandbox, no Node, no navigation
      away, outside links open in the browser). `preload.cjs` exposes ONLY `window.stbSave`
-     (where, read, write). `desktop/src/saveStorage.ts` uses it, or localStorage in a plain
+     (list, retire, and where, read, write by captain id) and `window.stbSteam`. `desktop/src/saveStorage.ts` uses it, or localStorage in a plain
      browser.
    - Commands (in `desktop/`): `npm run app` builds and opens the window; `npm run app:dev` is
      the Vite dev server with hot reload inside the window; `npm run dist` makes the Windows
@@ -1501,10 +1518,11 @@ In order. Each step is worth doing even if the port never happens.
       so these are entered by hand. Decide which story badges should be HIDDEN (spoilers); the
       list does not guess.
    3. Rich presence: upload `desktop/steam/rich_presence.vdf` as the English localization.
-   4. Steam Cloud, Auto-Cloud: quota about 50 MB, 10 files. Root `WinAppDataRoaming`,
-      subdirectory `seas-the-booty-desktop`, pattern `captain.json`, not recursive. Add the
-      same for `MacAppSupport` and `LinuxXdgConfigHome` if those builds ship. Never include
-      `captain.json.tmp`.
+   4. Steam Cloud, Auto-Cloud: quota about 100 MB, 50 files (a new save is about 13 KB; raise
+      the file count if players keep more captains). Root `WinAppDataRoaming`, subdirectory
+      `seas-the-booty-desktop/captains`, pattern `*.json`, not recursive. Add the same for
+      `MacAppSupport` and `LinuxXdgConfigHome` if those builds ship. Never include `*.tmp`
+      or `retired/` (retired captains stay on the machine).
    - NOT YET: Steam Input (controller) and the Deck, and the real screens in the shell.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.
 
