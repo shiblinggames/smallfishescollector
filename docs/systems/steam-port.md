@@ -45,6 +45,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the rest of lib/core/fishing (wormhole reroll, Tide Turner, goldens, level rewards,
   Almanac). A TS bug found on the way: the local store stamped a shiny with the real
   clock, fixed.
+- FISHING PASS 1, THE REST OF THE RULES, BUILT (2026-09-30): every function in
+  lib/core/fishing and lib/core/loadout is ported (`core/fishing.gd`, `core/loadout.gd`): the
+  wormhole reroll, the Tide Turner (still 3 a real day, as the web; the sea-day rhythm is the
+  economy build's), goldens held, sold and mounted, fishing level rewards, zone completion
+  and prestige to the cap and past it, the Vigil release, the Auto Caster switches, special
+  items, hats, boats (level and achievement-point gates), pets in both slots, and the
+  Completionist forge. `tests/parity/fishing_rest.json`: 6 scripted sessions, 570 calls,
+  every branch and refusal, all matching. Fishing pass 2 is the loop's feel on screen, pass
+  3 the rod's menus, the Almanac and the Ancient Deep fights. The tackle shop's bait, rods
+  and hold (lib/core/harbour) come with docking.
 - STAGE 1, THE FIRST SCREEN, BUILT (2026-09-30): `node godot/game/tools/play.mjs` plays it.
   The chart (the five bands off the Mainland, sailed by click, keys or a stick), the water
   (the web's shader ported, plus a flow current and a lantern pool on the water at night),

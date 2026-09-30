@@ -14,7 +14,7 @@
 
 import fs from 'fs'
 import path from 'path'
-import { RODS, LOCKED_IN, ZONE_JACKPOT_CHANCE, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS } from '../lib/rods'
+import { RODS, LOCKED_IN, ZONE_JACKPOT_CHANCE, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST } from '../lib/rods'
 import { BAITS } from '../lib/bait'
 import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_CRATE_TIERS, BASE_CRATE_CHANCE, ANCIENT_CRATE_CHANCE } from '../app/(app)/fishing/zoneData'
 import { FISH_HOLD_TIERS } from '../lib/fishHold'
@@ -30,6 +30,15 @@ import { FOLK } from '../lib/seaFolk'
 import { REELS } from '../lib/reels'
 import { FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY } from '../app/(app)/fishing/depths'
 import { starterSave } from '../lib/data/local/starter'
+import { rewardForLevel, LEVEL_REWARD_MAX } from '../lib/levelRewards'
+import { SPECIAL_ITEMS, SPECIAL_OWNED_COLUMN } from '../lib/specialItems'
+import { BOATS } from '../lib/boats'
+import { HATS } from '../lib/hats'
+import { BADGES, badgePoints } from '../lib/badges'
+import { AP_POOL } from '../lib/cosmeticGates'
+import { XP_TABLE as NAV_XP_TABLE } from '../lib/expeditionLevel'
+import { SHINY_SELL_MULT } from '../lib/shiny'
+import { ZONE_REWARD_BASE, PRESTIGE_MAX } from '../lib/zoneRewards'
 
 const OUT = path.join(process.cwd(), '..', 'godot', 'game', 'content', 'rules.json')
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep']
@@ -38,7 +47,7 @@ const rules = {
   rods: RODS,
   lockedIn: LOCKED_IN,
   zoneJackpotChance: ZONE_JACKPOT_CHANCE,
-  completionist: { tier: COMPLETIONIST_TIER, maxEffects: COMPLETIONIST_MAX_EFFECTS },
+  completionist: { tier: COMPLETIONIST_TIER, maxEffects: COMPLETIONIST_MAX_EFFECTS, reforgeCost: REFORGE_COST },
   baits: BAITS,
   zones: {
     rarityRates: ZONE_RARITY_RATES, minLevel: ZONE_MIN_LEVEL, waitBase: ZONE_WAIT_BASE,
@@ -55,7 +64,7 @@ const rules = {
   catchXp: Object.fromEntries(ZONES.map(z => [z, [1, 2, 3, 4, 5].map(d => [catchXP(d, z, false), catchXP(d, z, true)])])),
   daily: { tiers: DAILY_TIERS, masterMinLevel: MASTER_MIN_LEVEL },
   crate: { ...CRATE_TABLES, petChance: CRATE_PET_CHANCE },
-  pets: PETS.map(p => ({ id: p.id, species: p.species, name: p.name, weight: p.weight, restImageUrl: p.restImageUrl, accentColor: p.accentColor, earnedOnly: p.earnedOnly ?? false })),
+  pets: PETS.map(p => ({ id: p.id, species: p.species, name: p.name, weight: p.weight, restImageUrl: p.restImageUrl, accentColor: p.accentColor, earnedOnly: p.earnedOnly ?? false, bow: p.bow ?? false })),
   petSpeciesWeights: PET_SPECIES_WEIGHTS,
   // Who asks for which fish, for "who was waiting on this one".
   folk: Object.fromEntries(FOLK.map(f => [f.id, { short: f.short, favourites: f.favourites.map(x => ({ id: x.id, name: x.name })) }])),
@@ -65,6 +74,19 @@ const rules = {
   dial: { fishDifficultySpeed: FISH_DIFFICULTY_SPEED, zoneDifficulty: ZONE_DIFFICULTY },
   // A new captain's save (lib/data/local/starter) with the id, name and date
   // left for the game to fill in, and no species (content, attached on load).
+  // The rest of fishing and the loadout (lib/core/fishing, lib/core/loadout).
+  levelRewards: Object.fromEntries(Array.from({ length: LEVEL_REWARD_MAX }, (_, i) => [i + 1, rewardForLevel(i + 1)]).filter(([, r]) => r)),
+  levelRewardMax: LEVEL_REWARD_MAX,
+  specialItems: SPECIAL_ITEMS.map(d => ({ id: d.id, name: d.name, shopCost: d.shopCost ?? null, costFathoms: d.costFathoms ?? null, requiresItem: d.requiresItem ?? null, requiresGauntletDepth: d.requiresGauntletDepth ?? null, finaleSlotOnly: d.finaleSlotOnly ?? false })),
+  specialOwnedColumn: SPECIAL_OWNED_COLUMN,
+  boats: BOATS.map(b => ({ id: b.id, name: b.name, cost: b.cost, gemPrice: b.gemPrice ?? null, crateOnly: b.crateOnly ?? false, gate: b.gate ?? null })),
+  hats: HATS.map(h => ({ id: h.id, name: h.name, cost: h.cost, crateOnly: h.crateOnly ?? false })),
+  badgePoints: Object.fromEntries(BADGES.map(b => [b.id, badgePoints(b.id)])),
+  apPool: AP_POOL,
+  navXpTable: NAV_XP_TABLE,
+  shinySellMult: SHINY_SELL_MULT,
+  zoneRewardBase: ZONE_REWARD_BASE,
+  prestigeMax: PRESTIGE_MAX,
   starter: (() => { const { species: _s, ...rest } = starterSave('__uid__', [], 0); return rest })(),
 }
 

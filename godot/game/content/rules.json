@@ -411,7 +411,8 @@
  },
  "completionist": {
   "tier": 14,
-  "maxEffects": 3
+  "maxEffects": 3,
+  "reforgeCost": 50000
  },
  "baits": [
   {
@@ -1896,7 +1897,8 @@
    "weight": 43,
    "restImageUrl": "/parrot_red.png",
    "accentColor": "#ef4444",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "parrot_blue",
@@ -1905,7 +1907,8 @@
    "weight": 27,
    "restImageUrl": "/parrot_blue.png",
    "accentColor": "#60a5fa",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "parrot_green",
@@ -1914,7 +1917,8 @@
    "weight": 15,
    "restImageUrl": "/parrot_green.png",
    "accentColor": "#4ade80",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "parrot_charcoal",
@@ -1923,7 +1927,8 @@
    "weight": 9,
    "restImageUrl": "/parrot_charcoal.png",
    "accentColor": "#94a3b8",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "parrot_sand",
@@ -1932,7 +1937,8 @@
    "weight": 3,
    "restImageUrl": "/parrot_sand.png",
    "accentColor": "#e8c97a",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "parrot_gold",
@@ -1941,7 +1947,8 @@
    "weight": 3,
    "restImageUrl": "/parrot_gold.png",
    "accentColor": "#f0c040",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "monkey_brown",
@@ -1950,7 +1957,8 @@
    "weight": 90,
    "restImageUrl": "/monkey_brown.png",
    "accentColor": "#a78a6a",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "monkey_golden",
@@ -1959,7 +1967,8 @@
    "weight": 10,
    "restImageUrl": "/monkey_golden.png",
    "accentColor": "#f0c040",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "seal_brown",
@@ -1968,7 +1977,8 @@
    "weight": 60,
    "restImageUrl": "/seal_brown.png",
    "accentColor": "#a78a6a",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "seal_gray",
@@ -1977,7 +1987,8 @@
    "weight": 30,
    "restImageUrl": "/seal_gray.png",
    "accentColor": "#94a3b8",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "seal_gold",
@@ -1986,7 +1997,8 @@
    "weight": 10,
    "restImageUrl": "/seal_gold.png",
    "accentColor": "#f0c040",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "lizard_green",
@@ -1995,7 +2007,8 @@
    "weight": 60,
    "restImageUrl": "/lizard_green.png",
    "accentColor": "#6cbf5a",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "lizard_indigo",
@@ -2004,7 +2017,8 @@
    "weight": 30,
    "restImageUrl": "/lizard_indigo.png",
    "accentColor": "#7b6fb0",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "lizard_white",
@@ -2013,7 +2027,8 @@
    "weight": 10,
    "restImageUrl": "/lizard_white.png",
    "accentColor": "#dfe3e8",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "raccoon_beige",
@@ -2022,7 +2037,8 @@
    "weight": 65,
    "restImageUrl": "/raccoon_beige.png",
    "accentColor": "#a89076",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "raccoon_black",
@@ -2031,7 +2047,8 @@
    "weight": 35,
    "restImageUrl": "/raccoon_black.png",
    "accentColor": "#767c85",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "crab_orange",
@@ -2040,7 +2057,8 @@
    "weight": 60,
    "restImageUrl": "/crab_orange.png",
    "accentColor": "#c85a28",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "crab_blue",
@@ -2049,7 +2067,8 @@
    "weight": 30,
    "restImageUrl": "/crab_blue.png",
    "accentColor": "#5878a8",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "crab_gold",
@@ -2058,7 +2077,8 @@
    "weight": 10,
    "restImageUrl": "/crab_gold.png",
    "accentColor": "#f0c040",
-   "earnedOnly": false
+   "earnedOnly": false,
+   "bow": false
   },
   {
    "id": "plesiosaur_baby",
@@ -2067,7 +2087,8 @@
    "weight": 1,
    "restImageUrl": "/plesiosaur_baby.png",
    "accentColor": "#e0455a",
-   "earnedOnly": true
+   "earnedOnly": true,
+   "bow": true
   }
  ],
  "petSpeciesWeights": {
@@ -2346,6 +2367,918 @@
    }
   }
  },
+ "levelRewards": {
+  "2": {
+   "doubloons": 90,
+   "milestone": false,
+   "bait": {
+    "worm": 5
+   }
+  },
+  "3": {
+   "doubloons": 100,
+   "milestone": false,
+   "bait": {
+    "minnow": 3
+   }
+  },
+  "4": {
+   "doubloons": 110,
+   "milestone": false
+  },
+  "5": {
+   "doubloons": 360,
+   "milestone": true,
+   "gems": 15,
+   "bait": {
+    "minnow": 5
+   }
+  },
+  "6": {
+   "doubloons": 130,
+   "milestone": false,
+   "bait": {
+    "worm": 8
+   }
+  },
+  "7": {
+   "doubloons": 140,
+   "milestone": false
+  },
+  "8": {
+   "doubloons": 150,
+   "milestone": false,
+   "bait": {
+    "night_crawler": 3
+   }
+  },
+  "9": {
+   "doubloons": 160,
+   "milestone": false
+  },
+  "10": {
+   "doubloons": 510,
+   "milestone": true,
+   "gems": 25,
+   "holdFloor": 1
+  },
+  "11": {
+   "doubloons": 180,
+   "milestone": false,
+   "bait": {
+    "minnow": 6
+   }
+  },
+  "12": {
+   "doubloons": 190,
+   "milestone": false
+  },
+  "13": {
+   "doubloons": 200,
+   "milestone": false,
+   "bait": {
+    "night_crawler": 5
+   }
+  },
+  "14": {
+   "doubloons": 210,
+   "milestone": false
+  },
+  "15": {
+   "doubloons": 660,
+   "milestone": true,
+   "gems": 40,
+   "bait": {
+    "chum": 5
+   }
+  },
+  "16": {
+   "doubloons": 230,
+   "milestone": false,
+   "bait": {
+    "worm": 12
+   }
+  },
+  "17": {
+   "doubloons": 240,
+   "milestone": false
+  },
+  "18": {
+   "doubloons": 250,
+   "milestone": false,
+   "bait": {
+    "chum": 4
+   }
+  },
+  "19": {
+   "doubloons": 260,
+   "milestone": false
+  },
+  "20": {
+   "doubloons": 810,
+   "milestone": true,
+   "gems": 55,
+   "holdFloor": 2
+  },
+  "21": {
+   "doubloons": 280,
+   "milestone": false,
+   "bait": {
+    "night_crawler": 8
+   }
+  },
+  "22": {
+   "doubloons": 290,
+   "milestone": false
+  },
+  "23": {
+   "doubloons": 300,
+   "milestone": false,
+   "bait": {
+    "chum": 6
+   }
+  },
+  "24": {
+   "doubloons": 310,
+   "milestone": false
+  },
+  "25": {
+   "doubloons": 960,
+   "milestone": true,
+   "gems": 75,
+   "bait": {
+    "anglers_formula": 3
+   }
+  },
+  "26": {
+   "doubloons": 330,
+   "milestone": false
+  },
+  "27": {
+   "doubloons": 340,
+   "milestone": false
+  },
+  "28": {
+   "doubloons": 350,
+   "milestone": false
+  },
+  "29": {
+   "doubloons": 360,
+   "milestone": false
+  },
+  "30": {
+   "doubloons": 1110,
+   "milestone": true,
+   "gems": 95
+  },
+  "31": {
+   "doubloons": 380,
+   "milestone": false
+  },
+  "32": {
+   "doubloons": 390,
+   "milestone": false
+  },
+  "33": {
+   "doubloons": 400,
+   "milestone": false
+  },
+  "34": {
+   "doubloons": 410,
+   "milestone": false
+  },
+  "35": {
+   "doubloons": 1260,
+   "milestone": true,
+   "gems": 115
+  },
+  "36": {
+   "doubloons": 430,
+   "milestone": false
+  },
+  "37": {
+   "doubloons": 440,
+   "milestone": false
+  },
+  "38": {
+   "doubloons": 450,
+   "milestone": false
+  },
+  "39": {
+   "doubloons": 460,
+   "milestone": false
+  },
+  "40": {
+   "doubloons": 1410,
+   "milestone": true,
+   "gems": 140
+  },
+  "41": {
+   "doubloons": 480,
+   "milestone": false
+  },
+  "42": {
+   "doubloons": 490,
+   "milestone": false
+  },
+  "43": {
+   "doubloons": 500,
+   "milestone": false
+  },
+  "44": {
+   "doubloons": 510,
+   "milestone": false
+  },
+  "45": {
+   "doubloons": 1560,
+   "milestone": true,
+   "gems": 165
+  },
+  "46": {
+   "doubloons": 530,
+   "milestone": false
+  },
+  "47": {
+   "doubloons": 540,
+   "milestone": false
+  },
+  "48": {
+   "doubloons": 550,
+   "milestone": false
+  },
+  "49": {
+   "doubloons": 560,
+   "milestone": false
+  },
+  "50": {
+   "doubloons": 1710,
+   "milestone": true,
+   "gems": 275,
+   "bait": {
+    "anglers_formula": 10
+   }
+  }
+ },
+ "levelRewardMax": 50,
+ "specialItems": [
+  {
+   "id": "anglers_patience",
+   "name": "The Primeval Eye",
+   "shopCost": null,
+   "costFathoms": null,
+   "requiresItem": null,
+   "requiresGauntletDepth": null,
+   "finaleSlotOnly": true
+  },
+  {
+   "id": "tide_turner",
+   "name": "Tide Turner",
+   "shopCost": null,
+   "costFathoms": null,
+   "requiresItem": null,
+   "requiresGauntletDepth": null,
+   "finaleSlotOnly": false
+  },
+  {
+   "id": "phantom_hook",
+   "name": "Phantom Hook",
+   "shopCost": null,
+   "costFathoms": null,
+   "requiresItem": null,
+   "requiresGauntletDepth": null,
+   "finaleSlotOnly": false
+  },
+  {
+   "id": "auto_caster",
+   "name": "Auto Caster",
+   "shopCost": 5000,
+   "costFathoms": null,
+   "requiresItem": null,
+   "requiresGauntletDepth": null,
+   "finaleSlotOnly": false
+  },
+  {
+   "id": "auto_catcher",
+   "name": "Auto Catcher",
+   "shopCost": null,
+   "costFathoms": 30,
+   "requiresItem": "auto_caster",
+   "requiresGauntletDepth": 5,
+   "finaleSlotOnly": false
+  },
+  {
+   "id": "perfected_sigil",
+   "name": "Perfected Sigil",
+   "shopCost": null,
+   "costFathoms": null,
+   "requiresItem": null,
+   "requiresGauntletDepth": null,
+   "finaleSlotOnly": false
+  }
+ ],
+ "specialOwnedColumn": {
+  "tide_turner": "has_tide_turner",
+  "phantom_hook": "has_phantom_hook",
+  "auto_caster": "has_auto_caster",
+  "auto_catcher": "has_auto_catcher",
+  "perfected_sigil": "has_perfected_sigil",
+  "anglers_patience": "has_anglers_patience"
+ },
+ "boats": [
+  {
+   "id": "oak",
+   "name": "Oak",
+   "cost": 5000,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "cherry",
+   "name": "Cherry",
+   "cost": 5000,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "desert",
+   "name": "Desert",
+   "cost": 5000,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "mahogany",
+   "name": "Mahogany",
+   "cost": 5000,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "pistachio",
+   "name": "Pistachio",
+   "cost": 5000,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "taupe",
+   "name": "Taupe",
+   "cost": 5000,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "charcoal",
+   "name": "Charcoal",
+   "cost": 0,
+   "gemPrice": null,
+   "crateOnly": true,
+   "gate": null
+  },
+  {
+   "id": "golden",
+   "name": "Golden",
+   "cost": 100000,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "offwhite",
+   "name": "Offwhite",
+   "cost": 0,
+   "gemPrice": null,
+   "crateOnly": true,
+   "gate": null
+  },
+  {
+   "id": "periwinkle",
+   "name": "Periwinkle",
+   "cost": 5000,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "ethereal",
+   "name": "Ethereal",
+   "cost": 750000,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "fire",
+   "name": "Fire",
+   "cost": 0,
+   "gemPrice": 1000,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "ice",
+   "name": "Ice",
+   "cost": 0,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": {
+    "kind": "fishing",
+    "level": 75
+   }
+  },
+  {
+   "id": "jetblack",
+   "name": "Jet Black",
+   "cost": 0,
+   "gemPrice": 750,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "chromium",
+   "name": "Chromium",
+   "cost": 1500000,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": null
+  },
+  {
+   "id": "celestial",
+   "name": "Celestial",
+   "cost": 0,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": {
+    "kind": "ap",
+    "share": 0.75
+   }
+  },
+  {
+   "id": "abyssal",
+   "name": "Abyssal",
+   "cost": 0,
+   "gemPrice": null,
+   "crateOnly": false,
+   "gate": {
+    "kind": "ap",
+    "share": 0.5
+   }
+  }
+ ],
+ "hats": [
+  {
+   "id": "blue",
+   "name": "Blue",
+   "cost": 2000,
+   "crateOnly": false
+  },
+  {
+   "id": "black",
+   "name": "Black",
+   "cost": 0,
+   "crateOnly": true
+  },
+  {
+   "id": "brown",
+   "name": "Brown",
+   "cost": 2000,
+   "crateOnly": false
+  },
+  {
+   "id": "gray",
+   "name": "Gray",
+   "cost": 0,
+   "crateOnly": true
+  },
+  {
+   "id": "green",
+   "name": "Green",
+   "cost": 2000,
+   "crateOnly": false
+  },
+  {
+   "id": "purple",
+   "name": "Purple",
+   "cost": 2000,
+   "crateOnly": false
+  },
+  {
+   "id": "yellow",
+   "name": "Yellow",
+   "cost": 2000,
+   "crateOnly": false
+  },
+  {
+   "id": "midnight",
+   "name": "Midnight",
+   "cost": 20000,
+   "crateOnly": false
+  },
+  {
+   "id": "olive",
+   "name": "Olive",
+   "cost": 20000,
+   "crateOnly": false
+  },
+  {
+   "id": "sky",
+   "name": "Sky",
+   "cost": 20000,
+   "crateOnly": false
+  },
+  {
+   "id": "offwhite",
+   "name": "Off-White",
+   "cost": 20000,
+   "crateOnly": false
+  },
+  {
+   "id": "golden",
+   "name": "Golden",
+   "cost": 0,
+   "crateOnly": true
+  },
+  {
+   "id": "cheetah",
+   "name": "Cheetah",
+   "cost": 0,
+   "crateOnly": true
+  },
+  {
+   "id": "fuego",
+   "name": "Fuego",
+   "cost": 0,
+   "crateOnly": true
+  },
+  {
+   "id": "spotted",
+   "name": "Spotted",
+   "cost": 0,
+   "crateOnly": true
+  }
+ ],
+ "badgePoints": {
+  "prestige_i": 1,
+  "trophy_catch": 3,
+  "unbroken": 2,
+  "relentless": 3,
+  "untouchable": 4,
+  "dead_eye": 3,
+  "master_angler": 4,
+  "zone_legend": 3,
+  "prestige_stars": 5,
+  "two_for_the_pot": 1,
+  "saltlung": 2,
+  "crate_digger": 2,
+  "half_the_sea": 1,
+  "ancient_ones": 4,
+  "full_collection": 4,
+  "completionist_rod": 5,
+  "fully_rigged": 3,
+  "reforged": 2,
+  "growing_crew": 1,
+  "theres_a_grave": 1,
+  "crewmaster": 3,
+  "full_muster": 3,
+  "legendary_recruit": 2,
+  "old_salt": 4,
+  "leviathan_hall": 3,
+  "fully_outfitted": 3,
+  "deep_cut": 2,
+  "full_complement": 4,
+  "divine_hand": 4,
+  "six_divine": 5,
+  "navigator": 2,
+  "fleet_admiral": 2,
+  "master_navigator": 4,
+  "corsairs_bane": 2,
+  "ghost_ship": 2,
+  "cartographers_fall": 2,
+  "toll_paid": 2,
+  "swift_reckoning": 3,
+  "opening_salvo": 1,
+  "hard_hitter": 2,
+  "heavy_broadside": 3,
+  "finndicates_bane": 3,
+  "into_the_deep": 2,
+  "fathomless": 3,
+  "davy_jones": 3,
+  "landfall": 1,
+  "quartermaster": 1,
+  "den_magnate": 2,
+  "uncharted_no_more": 2,
+  "fully_laden": 2,
+  "the_long_watch": 4,
+  "clean_manifest": 3,
+  "master_cartographer": 5,
+  "catfish_jackpot": 2,
+  "baby_steps": 1,
+  "deep_pockets": 3,
+  "bilge_baron": 4,
+  "got_away": 1,
+  "reel_lucky": 3,
+  "two_fisted": 2,
+  "sure_shot": 2,
+  "salted_through": 4,
+  "maiden_voyage": 1,
+  "old_sea_dog": 2,
+  "hundred_fins": 3,
+  "three_legends": 3,
+  "captains_colors": 1,
+  "crowned": 4,
+  "throne_in_sight": 2,
+  "clean_sweep": 3,
+  "parlor_hot_hand": 2,
+  "parlor_sharpshooter": 3,
+  "parlor_flawless": 4,
+  "parlor_cardsharp": 2,
+  "parlor_kingpin": 3,
+  "parlor_legend": 5,
+  "friend_at_sea": 1,
+  "unstoppable": 3,
+  "stacked_deck": 2,
+  "called_it": 2,
+  "ship_of_the_line": 3,
+  "first_haul": 1,
+  "steady_nets": 2,
+  "deep_trawler": 3,
+  "wet_behind_ears": 1,
+  "beginners_luck": 1,
+  "struck_gold": 1,
+  "old_hand": 2,
+  "crate_expectations": 2,
+  "a_real_keeper": 2,
+  "full_stringer": 2,
+  "one_upped": 2,
+  "fresh_coat": 2,
+  "twice_the_haul": 3,
+  "menagerie": 3,
+  "fishmonger": 3,
+  "net_positive": 3,
+  "crack_shot": 4,
+  "wreck_diver": 4,
+  "salvage_rights": 5,
+  "high_water_mark": 4,
+  "fish_baron": 4,
+  "hoard_of_gold": 4,
+  "finns_rival": 4,
+  "in_the_flow": 5,
+  "eagle_eyed": 5,
+  "el_dorado": 5,
+  "the_better_angler": 5,
+  "full_drydock": 5,
+  "first_descent": 1,
+  "abyssward": 2,
+  "forge_worthy": 3,
+  "davys_doorstep": 4,
+  "well_provisioned": 1,
+  "locker_raider": 2,
+  "forge_awakened": 3,
+  "master_of_the_locker": 4,
+  "push_your_luck": 1,
+  "again_and_again": 2,
+  "fathom_hoarder": 3,
+  "one_shot": 3,
+  "greeds_price": 2,
+  "storm_reader": 1,
+  "deep_cartographer": 4,
+  "drowned_ledger": 1,
+  "the_unsinkable": 2,
+  "locker_bound": 3,
+  "the_deep_end": 4,
+  "ferrymans_toll": 2,
+  "ink_and_salt": 1,
+  "the_weight": 2,
+  "crushing_depth": 3,
+  "not_a_drop": 3,
+  "paid_in_full": 4,
+  "for_glory_alone": 5,
+  "blood_charged": 1,
+  "blood_rich": 2,
+  "bloodhoard": 3,
+  "crimson_fortune": 2,
+  "weapon_of_legend": 3,
+  "first_fusion": 2,
+  "ruse_undone": 2,
+  "account_settled": 2,
+  "grand_forgemaster": 5,
+  "mark_of_mastery": 3,
+  "quick_draw": 3,
+  "complete_captain": 5,
+  "six_legends": 4,
+  "colors_raised": 1,
+  "the_chase": 3,
+  "fashionista": 3,
+  "full_wardrobe": 4,
+  "dressed_to_the_nines": 4,
+  "trophy_hunter": 4,
+  "overkill": 3,
+  "all_hands_legends": 5,
+  "iron_ruse": 4,
+  "not_a_shot_fired": 3,
+  "tight_quarters": 4,
+  "dead_reckoning": 4,
+  "blockade_broken": 3,
+  "don_drowned": 3,
+  "the_sunken_hand": 4,
+  "six_aboard": 2,
+  "expanded_armory": 2,
+  "full_tackle_box": 4,
+  "dons_descent": 2,
+  "dons_doorstep": 4,
+  "dons_reckoning": 5,
+  "dons_ghost_hull_won": 3,
+  "first_convergence": 4,
+  "one_true_shot": 3,
+  "abyssal_smith": 4,
+  "abyssal_master": 5,
+  "ghost_armory": 3,
+  "ultimate_only": 4,
+  "weight_of_green": 4,
+  "untouched": 3,
+  "one_last_ride": 4,
+  "cut_off_at_the_wrist": 4,
+  "the_long_quiet": 2,
+  "ancient_tackle": 3,
+  "salvors_claim": 2,
+  "both_hands": 4,
+  "something_old": 3,
+  "both_in_hand": 4,
+  "first_contract": 1,
+  "first_settle": 2,
+  "cut_losses": 2,
+  "worthless": 2,
+  "big_score": 3,
+  "market_maker": 4,
+  "first_bounty": 1,
+  "full_board": 2,
+  "elite_order": 3,
+  "fifty_orders": 3,
+  "seven_boards": 4,
+  "bounty_hoard": 4,
+  "waking_it": 3,
+  "fully_attuned": 5,
+  "the_sixth_mount": 3,
+  "colours_of_the_hand": 4,
+  "three_for_three": 2,
+  "standing_watch": 3,
+  "old_reliable": 4,
+  "massive_booty": 3,
+  "the_fourth_task": 4,
+  "back_to_the_dark": 3,
+  "twice_landed": 3,
+  "six_abreast": 4,
+  "struck_in_gold": 4,
+  "deep_remembers": 4,
+  "the_long_vigil": 5,
+  "known_face": 1,
+  "whole_road": 2,
+  "you_remembered": 2,
+  "bearing_gifts": 2,
+  "good_company": 2,
+  "trusted_three": 3,
+  "open_hand": 3,
+  "thick_as_thieves": 3,
+  "salt_of_the_earth": 5,
+  "roof_of_your_own": 1,
+  "name_on_the_chart": 1,
+  "the_longhouse": 2,
+  "furnished": 2,
+  "gallery_hung": 2,
+  "the_great_hall": 3,
+  "the_estate": 4,
+  "every_comfort": 4,
+  "first_ashore": 1,
+  "beachcomber": 2,
+  "others_came_before": 3,
+  "far_rocks": 3,
+  "every_last_rock": 4,
+  "wake_behind_you": 1,
+  "home_waters": 2,
+  "into_the_fog": 2,
+  "no_blank_spaces": 4,
+  "fog_burned_off": 4,
+  "first_spade": 1,
+  "six_feet_down": 2,
+  "salted_away": 3
+ },
+ "apPool": 693,
+ "navXpTable": [
+  0,
+  60,
+  125,
+  195,
+  271,
+  354,
+  444,
+  542,
+  648,
+  764,
+  890,
+  1026,
+  1174,
+  1335,
+  1510,
+  1700,
+  1906,
+  2130,
+  2373,
+  2637,
+  2924,
+  3236,
+  3575,
+  3943,
+  4343,
+  4777,
+  5248,
+  5760,
+  6316,
+  6920,
+  7576,
+  8288,
+  9062,
+  9902,
+  10815,
+  11806,
+  12882,
+  14051,
+  15321,
+  16700,
+  18198,
+  19824,
+  21590,
+  23508,
+  25591,
+  27853,
+  30310,
+  32978,
+  35876,
+  39023,
+  42441,
+  46153,
+  50184,
+  54562,
+  59316,
+  64479,
+  70086,
+  76176,
+  82789,
+  89971,
+  97771,
+  106242,
+  115441,
+  125431,
+  136281,
+  148064,
+  160860,
+  174756,
+  189848,
+  206238,
+  224037,
+  243367,
+  264359,
+  287157,
+  311915,
+  338802,
+  368002,
+  399713,
+  434151,
+  471551,
+  512167,
+  556277,
+  604180,
+  656203,
+  712700,
+  774055,
+  840687,
+  913049,
+  991635,
+  1076979,
+  1169663,
+  1270318,
+  1379629,
+  1498341,
+  1627262,
+  1767270,
+  1919319,
+  2084444,
+  2263770,
+  2458518
+ ],
+ "shinySellMult": 10,
+ "zoneRewardBase": {
+  "shallows": 5000,
+  "open_waters": 10000,
+  "deep": 25000,
+  "abyss": 50000
+ },
+ "prestigeMax": 5,
  "starter": {
   "uid": "__uid__",
   "profile": {

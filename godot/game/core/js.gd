@@ -120,3 +120,13 @@ static func list(v: Variant) -> Array:
 ## An object, or {} when the value is null or not one (the TS's `?? {}`).
 static func obj(v: Variant) -> Dictionary:
 	return v if typeof(v) == TYPE_DICTIONARY else {}
+
+
+## n.toLocaleString() for a whole number in en-US: 50000 -> "50,000".
+static func thousands(n: float) -> String:
+	var s: String = str(int(absf(n)))
+	var out: String = ""
+	while s.length() > 3:
+		out = "," + s.right(3) + out
+		s = s.left(s.length() - 3)
+	return ("-" if n < 0 else "") + s + out

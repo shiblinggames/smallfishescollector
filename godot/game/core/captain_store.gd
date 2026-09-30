@@ -321,3 +321,195 @@ func folk_wanting(uid: String, fish_id: float) -> Array:
 		if r.get("want_fish_id") != null and float(r["want_fish_id"]) == fish_id:
 			out.append(r["folk_id"])
 	return out
+
+
+# ── The rest of fishing and the loadout ────────────────────────────────────────
+
+func ledger(uid: String, amount: float, reason: String, currency: String = "doubloons") -> void:
+	me(uid)
+	(save["ledger"] as Array).append({ "amount": amount, "reason": reason, "currency": currency })
+
+
+## Take n from a column, or null (and nothing taken) when short.
+func spend(uid: String, col: String, n: float) -> Variant:
+	var prof: Dictionary = me(uid)
+	var have: float = Js.num(prof.get(col))
+	if n != floor(n) or n < 0 or have < n:
+		return null
+	prof[col] = have - n
+	return prof[col]
+
+
+## Set a flag, only if it was not already set; whether this call set it.
+func flag_on(uid: String, col: String) -> bool:
+	var prof: Dictionary = me(uid)
+	if prof.get(col) == true:
+		return false
+	prof[col] = true
+	return true
+
+
+## updateProfileIf: patch the profile only while every guard holds. A guard is
+## { col, is: null } / { col, notNull } / { col, contains: [...] } / { col, eq }.
+func update_profile_if(uid: String, patch: Dictionary, guards: Array) -> bool:
+	var prof: Dictionary = me(uid)
+	for g: Dictionary in guards:
+		var v: Variant = prof.get(g["col"])
+		if g.has("is"):
+			if v != null:
+				return false
+		elif g.has("notNull"):
+			if v == null:
+				return false
+		elif g.has("contains"):
+			if typeof(v) != TYPE_ARRAY:
+				return false
+			for x: Variant in g["contains"]:
+				if not Js.includes(v, x):
+					return false
+		else:
+			var eq: Variant = g["eq"]
+			if typeof(eq) == TYPE_STRING and v != null and (typeof(v) == TYPE_DICTIONARY or typeof(v) == TYPE_ARRAY):
+				if JsJson.stringify(v) != eq:
+					return false
+			elif not _strict_eq(v, eq):
+				return false
+	update_profile(uid, patch)
+	return true
+
+
+func move_level_watermark(uid: String, from: Variant, to: float) -> bool:
+	var prof: Dictionary = me(uid)
+	if JsJson.stringify(prof.get("claimed_fishing_levels")) != JsJson.stringify(from):
+		return false
+	prof["claimed_fishing_levels"] = to
+	return true
+
+
+func raise_hold_tier(uid: String, tier: float) -> void:
+	var prof: Dictionary = me(uid)
+	if prof.get("fish_hold_tier") == null or float(prof["fish_hold_tier"]) < tier:
+		prof["fish_hold_tier"] = tier
+
+
+func species_ids_in(habitat: String) -> Array:
+	var out: Array = []
+	for f: Dictionary in save["species"]:
+		if f["habitat"] == habitat:
+			out.append(f["id"])
+	return out
+
+
+func logged_count(uid: String, ids: Array) -> int:
+	me(uid)
+	var n: int = 0
+	for id: Variant in ids:
+		if (save["collection"] as Dictionary).has(Js.key(id)):
+			n += 1
+	return n
+
+
+func golden_ids(uid: String, ids: Array) -> Array:
+	me(uid)
+	var out: Array = []
+	for id: Variant in ids:
+		var r: Variant = (save["collection"] as Dictionary).get(Js.key(id))
+		if r != null and (r as Dictionary).get("is_golden") == true:
+			out.append(id)
+	return out
+
+
+func clear_log(uid: String, ids: Array) -> void:
+	me(uid)
+	for id: Variant in ids:
+		(save["collection"] as Dictionary).erase(Js.key(id))
+
+
+func set_golden(uid: String, fish_id: float) -> void:
+	me(uid)
+	var r: Variant = (save["collection"] as Dictionary).get(Js.key(fish_id))
+	if r != null:
+		(r as Dictionary)["is_golden"] = true
+
+
+func oldest_held_shiny(uid: String) -> Variant:
+	me(uid)
+	var held: Array = []
+	for s: Dictionary in save["shinies"]:
+		if s["status"] == "hold":
+			held.append(s)
+	if held.is_empty():
+		return null
+	# A stable sort on caught_at, as the TS's (localeCompare on ISO strings).
+	var best: Dictionary = held[0]
+	for s: Dictionary in held:
+		if str(s["caught_at"]) < str(best["caught_at"]):
+			best = s
+	var f: Variant = species(float(best["fish_id"]))
+	return { "id": best["id"], "fish_id": best["fish_id"], "size_in": best.get("size_in"), "name": (f as Dictionary)["name"] if f != null else null }
+
+
+func shiny(uid: String, shiny_id: float) -> Variant:
+	me(uid)
+	for s: Dictionary in save["shinies"]:
+		if float(s["id"]) == shiny_id:
+			var f: Variant = species(float(s["fish_id"]))
+			return { "id": s["id"], "status": s["status"], "fish_id": s["fish_id"], "fish_species": { "name": (f as Dictionary)["name"], "sell_value": (f as Dictionary).get("sell_value") } if f != null else null }
+	return null
+
+
+## Resolve a held golden: { failed, claimed }, claimed only if it was on hold.
+func resolve_shiny(shiny_id: float, patch: Dictionary) -> Dictionary:
+	for s: Dictionary in save["shinies"]:
+		if float(s["id"]) == shiny_id:
+			if s["status"] != "hold":
+				return { "failed": false, "claimed": false }
+			for k: Variant in patch:
+				s[k] = patch[k]
+			return { "failed": false, "claimed": true }
+	return { "failed": false, "claimed": false }
+
+
+func achievement_points(uid: String) -> float:
+	var pts: Dictionary = Rules.data()["badgePoints"]
+	var n: float = 0.0
+	for id: Variant in Js.list(me(uid).get("unlocked_badges")):
+		n += float(pts.get(id, 0.0))
+	return n
+
+
+## heldRodTiers: the tiers of the rods held, beyond the Bamboo.
+func held_rod_tiers(uid: String) -> Array:
+	me(uid)
+	var out: Array = []
+	var items: Dictionary = Js.obj(save.get("rodItems"))
+	for id: Variant in items:
+		if float(items[id]) <= 0 or id == "bamboo":
+			continue
+		var r: Dictionary = Rules.rod_by_id(id)
+		if not r.is_empty():
+			out.append(float(r["tier"]))
+	return out
+
+
+## JavaScript's === for the scalar values a guard compares (numbers by value).
+static func _strict_eq(a: Variant, b: Variant) -> bool:
+	var na: bool = typeof(a) == TYPE_INT or typeof(a) == TYPE_FLOAT
+	var nb: bool = typeof(b) == TYPE_INT or typeof(b) == TYPE_FLOAT
+	if na and nb:
+		return float(a) == float(b)
+	return typeof(a) == typeof(b) and a == b
+
+
+func take_from_hold(uid: String, fish_id: float, qty: float) -> bool:
+	me(uid)
+	var hold: Dictionary = save["hold"]
+	var k: String = Js.key(fish_id)
+	var have: Variant = hold.get(k)
+	if have == null or float(have) < qty:
+		return false
+	if float(have) - qty == 0.0:
+		hold.erase(k)
+	else:
+		hold[k] = float(have) - qty
+	return true

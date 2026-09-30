@@ -384,3 +384,255 @@ static func reel_crate(db: CaptainStore, uid: String, result: String) -> Diction
 		return loot
 	loot["perfectStreak"] = cs["streak"]
 	return loot
+
+
+# ── The rest of the cast (lib/core/fishing.ts, after reelCrate) ────────────────
+
+## The Galaxy Rod's wormhole: swap the catch just landed for a different fish
+## from the same water. One-shot; a failure still logs the original catch.
+static func reroll_wormhole(db: CaptainStore, uid: String) -> Dictionary:
+	var profile: Dictionary = db.profile(uid, "rod_tier, completionist_effects, pending_reroll, lifetime_species, line_tier, prestige_levels")
+	var pending: Variant = profile.get("pending_reroll")
+	if pending == null:
+		return { "error": "No catch to reroll." }
+	if not db.claim_pending_reroll(uid):
+		return { "error": "No catch to reroll." }
+	var orig: float = float((pending as Dictionary)["fishId"])
+	var qty: float = float((pending as Dictionary)["qty"])
+	var habitat: String = (pending as Dictionary)["habitat"]
+	var abort: Callable = func(error: String) -> Dictionary:
+		if log_catch_to_bestiary(db, uid, orig):
+			credit_new_species(db, uid, orig, profile)
+		return { "error": error }
+
+	var rod: Dictionary = Rules.effective_rod(Js.num(profile.get("rod_tier")), profile.get("completionist_effects"))
+	var picked: Variant = FishingRules.wormhole_exit(db.candidates(habitat), orig, habitat, rod)
+	if picked == null:
+		return abort.call("The wormhole found nothing new.")
+	var new_fish_v: Variant = db.species(float((picked as Dictionary)["id"]))
+	if new_fish_v == null:
+		return abort.call("The wormhole collapsed.")
+	var new_fish: Dictionary = new_fish_v
+	if not db.take_from_hold(uid, orig, qty):
+		return abort.call("That catch is already out of your hold. The wormhole needs something to send.")
+	db.add_to_hold(uid, float(new_fish["id"]), qty, db.hold_qty(uid, float(new_fish["id"])))
+	var is_new: bool = log_catch_to_bestiary(db, uid, float(new_fish["id"]))
+	if is_new:
+		credit_new_species(db, uid, float(new_fish["id"]), profile)
+	var size: Dictionary = FishingRules.roll_catch_size(new_fish)
+	var is_pb: bool = false
+	var previous: Variant = null
+	if size["sizeMin"] != null and size["sizeMax"] != null:
+		previous = db.personal_best(uid, float(new_fish["id"]))
+		is_pb = previous == null or float(size["sizeIn"]) > float(previous)
+		if is_pb:
+			db.set_personal_best(uid, float(new_fish["id"]), size["sizeIn"], _now_iso())
+	var out: Dictionary = { "ok": true, "fish": new_fish, "qty": qty, "isNewSpecies": is_new, "sizeIn": size["sizeIn"], "isPB": is_pb, "previousBest": previous }
+	if size["sizeMin"] != null:
+		out["sizeMin"] = size["sizeMin"]
+	if size["sizeMax"] != null:
+		out["sizeMax"] = size["sizeMax"]
+	if size.has("sizeTier"):
+		out["sizeTier"] = size["sizeTier"]
+	return out
+
+
+## The Tide Turner: skip the fish on the line without breaking the streak.
+static func tide_turner_skip(db: CaptainStore, uid: String) -> Dictionary:
+	var p: Dictionary = db.profile(uid, "has_tide_turner, equipped_special, tide_turner_used, tide_turner_date")
+	if not Js.truthy(p.get("has_tide_turner")):
+		return { "error": "No Tide Turner" }
+	if p.get("equipped_special") != "tide_turner":
+		return { "error": "Your Tide Turner is not equipped" }
+	var today: String = _now_iso().split("T")[0]
+	var used: float = Js.num(p.get("tide_turner_used")) if p.get("tide_turner_date") == today else 0.0
+	if used >= 3:
+		return { "error": "No skips remaining today" }
+	db.update_profile(uid, { "tide_turner_used": used + 1.0, "tide_turner_date": today, "catch_pending": false, "pending_cast": null })
+	return { "ok": true, "skipsLeft": 3.0 - (used + 1.0) }
+
+
+## A golden still waiting to be sold or mounted, or null.
+static func held_golden(db: CaptainStore, uid: String) -> Variant:
+	var held: Variant = db.oldest_held_shiny(uid)
+	if held == null:
+		return null
+	var h: Dictionary = held
+	var existing: Variant = db.collection_row(uid, float(h["fish_id"]))
+	return {
+		"id": h["id"], "name": Js.nz(h.get("name"), "A golden fish"), "fishId": h["fish_id"],
+		"sizeIn": Js.num(h.get("size_in")), "alreadyMounted": existing != null and (existing as Dictionary).get("is_golden") == true,
+	}
+
+
+static func sell_golden_trophy(db: CaptainStore, uid: String, shiny_id: float) -> Dictionary:
+	var trophy_v: Variant = db.shiny(uid, shiny_id)
+	if trophy_v == null:
+		return { "error": "Trophy not found" }
+	var trophy: Dictionary = trophy_v
+	if trophy["status"] != "hold":
+		return { "error": "Trophy already resolved" }
+	if trophy["fish_species"] == null:
+		return { "error": "Species not found" }
+	var p: Dictionary = db.profile(uid, "doubloons, fishing_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid")
+	var mult: float = float(Rules.fishing_renown(p.get("fishing_renown_alloc"))["sellMult"]) * float(Rules.eye_from_profile(p)["sellMult"])
+	var species: Dictionary = trophy["fish_species"]
+	var earned: float = floor(Js.num(species.get("sell_value")) * float(Rules.data()["shinySellMult"]) * mult)
+	if earned <= 0:
+		return { "error": "Trophy has no value" }
+	var sold: Dictionary = db.resolve_shiny(shiny_id, { "status": "sold", "sold_at": _now_iso(), "sold_for": earned })
+	if sold["failed"]:
+		return { "error": "Could not sell that one. Try again." }
+	if not sold["claimed"]:
+		return { "error": "Trophy already resolved" }
+	var now: float = db.grant(uid, "doubloons", earned)
+	db.ledger(uid, earned, "Sold golden %s" % species["name"])
+	return { "earned": earned, "doubloons": now }
+
+
+static func mount_golden_trophy(db: CaptainStore, uid: String, shiny_id: float) -> Dictionary:
+	var row_v: Variant = db.shiny(uid, shiny_id)
+	if row_v == null:
+		return { "error": "Trophy not found" }
+	var row: Dictionary = row_v
+	if row["status"] != "hold":
+		return { "error": "Trophy already resolved" }
+	var existing: Variant = db.collection_row(uid, float(row["fish_id"]))
+	if existing != null and Js.truthy((existing as Dictionary).get("is_golden")):
+		return { "error": "Already mounted" }
+	var mounted: Dictionary = db.resolve_shiny(shiny_id, { "status": "mounted", "sold_at": _now_iso() })
+	if mounted["failed"]:
+		return { "error": "Could not mount that one. Try again." }
+	db.set_golden(uid, float(row["fish_id"]))
+	return { "ok": true, "fishId": row["fish_id"] }
+
+
+## Pay every fishing level earned but not yet paid for. State-based, so a
+## level reached through a trawl is paid the next time this runs.
+static func claim_fishing_level_rewards(db: CaptainStore, uid: String) -> Dictionary:
+	var p: Dictionary = db.profile(uid, "fishing_xp, claimed_fishing_levels, doubloons, gems, fish_hold_tier")
+	var level: int = Rules.level_from_xp(Js.num(p.get("fishing_xp")))
+	var claimed: float = float(Js.nz(p.get("claimed_fishing_levels"), 1.0))
+	var table: Dictionary = Rules.data()["levelRewards"]
+	var owed: Array = []
+	for l: int in range(maxi(2, int(claimed) + 1), mini(level, int(Rules.data()["levelRewardMax"])) + 1):
+		if table.has(str(l)):
+			owed.append({ "level": float(l), "reward": table[str(l)] })
+	if owed.is_empty():
+		if level > claimed:
+			db.update_profile(uid, { "claimed_fishing_levels": float(level) })
+		return {
+			"granted": [], "from": claimed, "to": maxf(claimed, level),
+			"newDoubloons": Js.num(p.get("doubloons")), "newGems": Js.num(p.get("gems")), "newHoldTier": Js.num(p.get("fish_hold_tier")),
+		}
+	var doubloons: float = 0.0
+	var gems: float = 0.0
+	var hold_tier: float = Js.num(p.get("fish_hold_tier"))
+	var bait: Dictionary = {}
+	for o: Dictionary in owed:
+		var r: Dictionary = o["reward"]
+		doubloons += Js.num(r.get("doubloons"))
+		gems += Js.num(r.get("gems"))
+		if r.get("holdFloor") != null:
+			hold_tier = maxf(hold_tier, float(r["holdFloor"]))
+		for type: Variant in Js.obj(r.get("bait")):
+			bait[type] = Js.num(bait.get(type)) + float((r["bait"] as Dictionary)[type])
+	hold_tier = minf(hold_tier, float((Rules.data()["fishHoldTiers"] as Array).size() - 1))
+	if not db.move_level_watermark(uid, null if p.get("claimed_fishing_levels") == null else claimed, level):
+		return { "granted": [], "from": claimed, "to": claimed, "newDoubloons": 0.0, "newGems": 0.0, "newHoldTier": 0.0 }
+	var new_d: float = db.grant(uid, "doubloons", doubloons)
+	var new_g: float = db.grant(uid, "gems", gems)
+	db.raise_hold_tier(uid, hold_tier)
+	for type: Variant in bait:
+		db.add_bait(uid, type, bait[type])
+	var first: int = int((owed[0] as Dictionary)["level"])
+	db.ledger(uid, doubloons, "Fishing level reward (Lv %d%s)" % [first, ("-%d" % level) if owed.size() > 1 else ""])
+	return { "granted": owed, "from": claimed, "to": float(level), "newDoubloons": new_d, "newGems": new_g, "newHoldTier": hold_tier }
+
+
+const ZONE_REWARD_COL: Dictionary = {
+	"shallows": "zone_shallows_rewarded", "open_waters": "zone_open_waters_rewarded",
+	"deep": "zone_deep_rewarded", "abyss": "zone_abyss_rewarded",
+}
+
+
+## The one-time payout for logging every species in a zone.
+static func claim_zone_reward(db: CaptainStore, uid: String, zone: String) -> Dictionary:
+	var col: String = ZONE_REWARD_COL.get(zone, "")
+	if col == "":
+		return { "error": "Invalid zone" }
+	var ids: Array = db.species_ids_in(zone)
+	var p: Dictionary = db.profile(uid, "doubloons, prestige_levels, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded")
+	var caught: int = db.logged_count(uid, ids)
+	if Js.truthy(p.get(col)):
+		return { "error": "Already claimed" }
+	if caught < ids.size() or ids.is_empty():
+		return { "error": "Zone not complete" }
+	var earned: float = FishingRules.zone_reward_doubloons(zone, Js.num(Js.obj(p.get("prestige_levels")).get(zone)))
+	if earned == 0.0:
+		return { "error": "Invalid zone" }
+	if not db.flag_on(uid, col):
+		return { "error": "Already claimed" }
+	var now: float = db.grant(uid, "doubloons", earned)
+	db.ledger(uid, earned, "Zone completion: %s" % zone)
+	return { "doubloons": now, "earned": earned }
+
+
+## Wipe a completed zone's cycle log for the next prestige (or, at the cap, a
+## permanent golden boost).
+static func prestige_zone(db: CaptainStore, uid: String, zone: String) -> Dictionary:
+	if zone == "ancient_deep":
+		return { "error": "Ancient Deep does not prestige" }
+	var col: String = ZONE_REWARD_COL.get(zone, "")
+	if col == "":
+		return { "error": "Invalid zone" }
+	var ids: Array = db.species_ids_in(zone)
+	if ids.is_empty():
+		return { "error": "Invalid zone" }
+	var p: Dictionary = db.profile(uid, "prestige_levels, zone_golden_boost, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, unlocked_character_colors")
+	if not Js.truthy(p.get(col)):
+		return { "error": "Claim completion reward first" }
+	if db.logged_count(uid, ids) < ids.size():
+		return { "error": "Zone not complete" }
+	var max_level: float = float(Rules.data()["prestigeMax"])
+	var step: Dictionary = FishingRules.prestige_step(Js.obj(p.get("prestige_levels")), Js.obj(p.get("zone_golden_boost")), zone, max_level)
+	var patch: Dictionary = { "prestige_levels": step["newLevels"], col: false }
+	if step["atMax"]:
+		patch["zone_golden_boost"] = step["newGoldenBoosts"]
+	if not db.update_profile_if(uid, patch, [{ "col": col, "eq": true }]):
+		return { "error": "Claim completion reward first" }
+	var goldens: Array = db.golden_ids(uid, ids)
+	var clear: Array = []
+	for id: Variant in ids:
+		if not Js.includes(goldens, id):
+			clear.append(id)
+	db.clear_log(uid, clear)
+	db.grant_badge(uid, "prestige_i")
+	if step["allZonesPrestiged"]:
+		db.grant_badge(uid, "zone_legend")
+		db.grant_badge(uid, "full_collection")
+	if step["atMax"]:
+		return { "prestigeLevel": max_level, "goldenBoost": step["newGoldenBoost"] }
+	return { "prestigeLevel": step["newLevel"] }
+
+
+## THE LONG VIGIL: release a mounted giant back into the Ancient Deep.
+static func release_ancient(db: CaptainStore, uid: String, fish_id: float) -> Dictionary:
+	if not Vigil.ANCIENT_IDS.has(fish_id):
+		return { "error": "That is not an Ancient" }
+	var p: Dictionary = db.profile(uid, "ancient_catches, ancient_vigil")
+	if not db.has_cleared(uid, "the_sunken_hand"):
+		return { "error": "The deep does not answer to you yet." }
+	var vigil: Dictionary = Vigil.state_for(p.get("ancient_vigil"), p.get("ancient_catches"))
+	var key: String = Js.key(fish_id)
+	var entry: Variant = vigil.get(key)
+	if entry == null:
+		return { "error": "You have never landed that one" }
+	if (entry as Dictionary)["released"] == true:
+		return { "error": "That one is already out there" }
+	if float((entry as Dictionary)["rank"]) >= Vigil.MAX_RANK:
+		return { "error": "That one is already mastered" }
+	vigil[key] = { "rank": (entry as Dictionary)["rank"], "released": true }
+	db.update_profile(uid, { "ancient_vigil": vigil })
+	db.grant_badge(uid, "back_to_the_dark")
+	return { "ok": true, "vigil": vigil }

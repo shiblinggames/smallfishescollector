@@ -176,12 +176,7 @@ func refresh() -> void:
 
 
 static func _thousands(n: float) -> String:
-	var s: String = str(int(n))
-	var out: String = ""
-	while s.length() > 3:
-		out = "," + s.right(3) + out
-		s = s.left(s.length() - 3)
-	return s + out
+	return Js.thousands(n)
 
 
 func set_water(w: Dictionary) -> void:

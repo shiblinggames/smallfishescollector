@@ -10,6 +10,7 @@
 //   dice.json     mulberry32 sequences and seedOf hashes (the dice every roll
 //                 goes through; a roll out of step breaks everything after it)
 //   save.json     save files the Godot build must read and write back unchanged
+//   fishing_rest.json  scripted sessions for the rest of fishing and the loadout
 //   fishing.json  whole fishing sessions: the save at the start, every call
 //                 with its clock, arguments, result and how many rolls it used,
 //                 and the save at the end
@@ -21,7 +22,9 @@
 
 import fs from 'fs'
 import path from 'path'
-import { castLine, reelIn, reelCrate } from '../lib/core/fishing'
+import { castLine, reelIn, reelCrate, rerollWormhole, tideTurnerSkip, heldGolden, sellGoldenTrophy, mountGoldenTrophy, claimFishingLevelRewards, claimZoneReward, prestigeZone, releaseAncient } from '../lib/core/fishing'
+import { setAutoFishing, setShowWaitTimer, buySpecialItem, equipSpecialItem, buyHat, equipHat, buyBoat, equipBoat, equipPet, setCompletionistEffects } from '../lib/core/loadout'
+import { BADGES } from '../lib/badges'
 import { localFishingData, type LocalSave } from '../lib/data/local/fishingLocal'
 import { serializeSave } from '../lib/data/local/saveFile'
 import { starterSave } from '../lib/data/local/starter'
@@ -223,6 +226,231 @@ const sessions = [
   await session('a hold that fills', 17, captainWith(9, 20, 11, { fish_hold_tier: 0 }), 40, k => ({ how: 'perfect', before: k === 30 ? EMPTY_HOLD : undefined })),
 ]
 write('fishing.json', { sessions })
+
+// ── The rest of fishing and the loadout ──
+//
+// Scripted sessions: each walks one family of calls through every branch the
+// TS has, refusals included, with casts in between where they matter. Written
+// to fishing_rest.json in the same shape as fishing.json.
+
+type Script = {
+  db: ReturnType<typeof localFishingData>; uid: string; save: LocalSave
+  call(op: string, args: unknown[], run: () => Promise<unknown>): Promise<any>
+  patchProfile(p: Record<string, unknown>): Promise<void>
+  patchSave(p: Record<string, unknown>): Promise<void>
+  /** Cast, wait out the bite, reel with `how`; crates open. The reel's result. */
+  fish(bait: string, zone: string, how: 'perfect' | 'catch' | 'miss'): Promise<any>
+  /** Cast and wait out the bite, and stop there (the line is out). */
+  castOnly(bait: string, zone: string): Promise<any>
+  advance(ms: number): void
+}
+
+async function scripted(name: string, seed: number, start: LocalSave, play: (x: Script) => Promise<void>) {
+  const save = start
+  const startText = serializeSave(save, {}, SAVED_AT)
+  const db = localFishingData(save)
+  const uid = save.uid
+  let now = START
+  const dice = countingDice(seed)
+  installRng(dice.rng)
+  installClock(() => now)
+  const ops: Op[] = []
+  const call = async (op: string, args: unknown[], run: () => Promise<unknown>) => {
+    dice.take()
+    const result = JSON.parse(JSON.stringify((await run()) ?? null))
+    ops.push({ op, now, args, rolls: dice.take(), result })
+    return result
+  }
+  const castOnly = async (bait: string, zone: string) => {
+    const shot = await call('castLine', [bait, zone], () => castLine(db, uid, bait, zone))
+    if (!('error' in shot)) now += shot.waitMs + 1500
+    return shot
+  }
+  const x: Script = {
+    db, uid, save, call,
+    async patchProfile(p) { await call('patchProfile', [p], async () => { Object.assign(save.profile, structuredClone(p)) }) },
+    async patchSave(p) { await call('patchSave', [p], async () => { Object.assign(save, structuredClone(p)) }) },
+    castOnly,
+    async fish(bait, zone, how) {
+      const shot = await castOnly(bait, zone)
+      if ('error' in shot) { now += 60_000; return shot }
+      const r = shot.fishId === CRATE_FISH_ID
+        ? await call('reelCrate', [how === 'miss' ? 'catch' : how], () => reelCrate(db, uid, how === 'miss' ? 'catch' : how))
+        : await call('reelIn', [shot.fishId, how, bait], () => reelIn(db, uid, shot.fishId, how, bait))
+      now += 4000
+      return r
+    },
+    advance(ms) { now += ms },
+  }
+  try { await play(x) } finally { installRng(null); installClock(null) }
+  return { name, seed, start: startText, ops, end: serializeSave(save, {}, SAVED_AT) }
+}
+
+const DAY = 86_400_000
+const idsIn = (zone: string) => SPECIES.filter(s => s.habitat === zone).map(s => s.id)
+const loggedAll = (zone: string, extra: Record<number, unknown> = {}) =>
+  Object.fromEntries(idsIn(zone).map(id => [id, { catch_count: 1, is_golden: null, ...(extra[id] ?? {}) }]))
+
+const rest = [
+  // Level rewards: claimed after every cast while a new captain climbs, then a
+  // jump of many levels at once (with no watermark yet), a repeat that pays
+  // nothing, and a jump past the last paying level.
+  await scripted('level rewards', 21, captainWith(21, 1, 0, {}, { worm: 60 }), async x => {
+    for (let k = 0; k < 30; k++) {
+      await x.fish('worm', 'shallows', k % 3 === 2 ? 'catch' : 'perfect')
+      await x.call('claimFishingLevelRewards', [], () => claimFishingLevelRewards(x.db, x.uid))
+    }
+    await x.patchProfile({ fishing_xp: XP_TABLE[48], claimed_fishing_levels: null })
+    await x.call('claimFishingLevelRewards', [], () => claimFishingLevelRewards(x.db, x.uid))
+    await x.call('claimFishingLevelRewards', [], () => claimFishingLevelRewards(x.db, x.uid))
+    await x.patchProfile({ fishing_xp: XP_TABLE[64], fish_hold_tier: 0 })
+    await x.call('claimFishingLevelRewards', [], () => claimFishingLevelRewards(x.db, x.uid))
+    await x.patchProfile({ fishing_xp: XP_TABLE[99] })
+    await x.call('claimFishingLevelRewards', [], () => claimFishingLevelRewards(x.db, x.uid))
+  }),
+  // Goldens and the Tide Turner: every perfect is a golden, sold or mounted
+  // in turn (mounting the same species twice refused, resolving twice
+  // refused); three skips a day, a fourth refused, a new day, and the
+  // refusals for an unequipped or missing Tide Turner.
+  await scripted('goldens and the Tide Turner', 22, captainWith(22, 30, 3, {
+    force_shiny_always: true, has_tide_turner: true, equipped_special: 'tide_turner', fishing_renown_alloc: { bounty: 6 },
+  }), async x => {
+    await x.call('heldGolden', [], () => heldGolden(x.db, x.uid))
+    for (let k = 0; k < 24; k++) {
+      if (k % 4 === 0) {
+        const shot = await x.castOnly('worm', 'shallows')
+        if (!('error' in shot)) await x.call('tideTurnerSkip', [], () => tideTurnerSkip(x.db, x.uid))
+        continue
+      }
+      const r = await x.fish('worm', 'open_waters', 'perfect')
+      if (!r.caught || !r.isShiny) continue
+      const held = await x.call('heldGolden', [], () => heldGolden(x.db, x.uid))
+      if (!held) continue
+      if (k % 3 === 0) {
+        await x.call('mountGoldenTrophy', [held.id], () => mountGoldenTrophy(x.db, x.uid, held.id))
+        await x.call('mountGoldenTrophy', [held.id], () => mountGoldenTrophy(x.db, x.uid, held.id))
+      } else {
+        await x.call('sellGoldenTrophy', [held.id], () => sellGoldenTrophy(x.db, x.uid, held.id))
+        await x.call('sellGoldenTrophy', [held.id], () => sellGoldenTrophy(x.db, x.uid, held.id))
+      }
+      if (k === 9) x.advance(DAY)
+    }
+    // A golden left on hold, found again, then one mounted where the species
+    // is already on the wall.
+    const a = await x.fish('worm', 'open_waters', 'perfect')
+    const b = await x.fish('worm', 'open_waters', 'perfect')
+    let held = await x.call('heldGolden', [], () => heldGolden(x.db, x.uid))
+    if (held) await x.call('mountGoldenTrophy', [held.id], () => mountGoldenTrophy(x.db, x.uid, held.id))
+    held = await x.call('heldGolden', [], () => heldGolden(x.db, x.uid))
+    if (held) await x.call('mountGoldenTrophy', [held.id], () => mountGoldenTrophy(x.db, x.uid, held.id))
+    void a; void b
+    await x.call('sellGoldenTrophy', [9999], () => sellGoldenTrophy(x.db, x.uid, 9999))
+    await x.call('mountGoldenTrophy', [9999], () => mountGoldenTrophy(x.db, x.uid, 9999))
+    for (let k = 0; k < 4; k++) {
+      const shot = await x.castOnly('worm', 'shallows')
+      if (!('error' in shot)) await x.call('tideTurnerSkip', [], () => tideTurnerSkip(x.db, x.uid))
+    }
+    await x.patchProfile({ equipped_special: null })
+    await x.call('tideTurnerSkip', [], () => tideTurnerSkip(x.db, x.uid))
+    await x.patchProfile({ has_tide_turner: false })
+    await x.call('tideTurnerSkip', [], () => tideTurnerSkip(x.db, x.uid))
+  }),
+  // The wormhole: rerolled, declined by casting again (the credit settles),
+  // and rerolled after the catch has left the hold (refused, still credited).
+  await scripted('the wormhole', 23, captainWith(23, 80, 18), async x => {
+    await x.call('rerollWormhole', [], () => rerollWormhole(x.db, x.uid))
+    for (let k = 0; k < 45; k++) {
+      const r = await x.fish('worm', k % 2 ? 'open_waters' : 'deep', k % 4 === 3 ? 'miss' : 'catch')
+      if (!r.wormhole) continue
+      if (k % 3 === 0) await x.call('rerollWormhole', [], () => rerollWormhole(x.db, x.uid))
+      else if (k % 3 === 2) {
+        await x.patchSave({ hold: {} })
+        await x.call('rerollWormhole', [], () => rerollWormhole(x.db, x.uid))
+      }
+      if (k % 10 === 9) await x.patchSave({ hold: {} })
+    }
+  }),
+  // The Almanac: a zone logged whole, claimed, claimed again, prestiged,
+  // prestiged without a claim, claimed before it is whole again, and on up
+  // past the cap to golden boosts; goldens survive a wipe; all four waters
+  // prestiged; the Ancient Deep and nonsense refused.
+  await scripted('the Almanac', 24, captainWith(24, 60, 10), async x => {
+    await x.call('claimZoneReward', ['shallows'], () => claimZoneReward(x.db, x.uid, 'shallows'))
+    const golden = idsIn('shallows')[0]
+    for (let round = 0; round < 7; round++) {
+      await x.patchSave({ collection: loggedAll('shallows', { [golden]: { is_golden: true } }) })
+      await x.call('prestigeZone', ['shallows'], () => prestigeZone(x.db, x.uid, 'shallows'))
+      await x.call('claimZoneReward', ['shallows'], () => claimZoneReward(x.db, x.uid, 'shallows'))
+      await x.call('claimZoneReward', ['shallows'], () => claimZoneReward(x.db, x.uid, 'shallows'))
+      await x.call('prestigeZone', ['shallows'], () => prestigeZone(x.db, x.uid, 'shallows'))
+      await x.call('claimZoneReward', ['shallows'], () => claimZoneReward(x.db, x.uid, 'shallows'))
+    }
+    for (const zone of ['open_waters', 'deep', 'abyss']) {
+      await x.patchSave({ collection: { ...x.save.collection, ...loggedAll(zone) } })
+      await x.call('claimZoneReward', [zone], () => claimZoneReward(x.db, x.uid, zone))
+      await x.call('prestigeZone', [zone], () => prestigeZone(x.db, x.uid, zone))
+    }
+    await x.call('prestigeZone', ['ancient_deep'], () => prestigeZone(x.db, x.uid, 'ancient_deep'))
+    await x.call('claimZoneReward', ['ancient_deep'], () => claimZoneReward(x.db, x.uid, 'ancient_deep'))
+    await x.call('prestigeZone', ['the_moon'], () => prestigeZone(x.db, x.uid, 'the_moon'))
+    for (let k = 0; k < 10; k++) await x.fish('worm', 'shallows', 'perfect')
+  }),
+  // The Long Vigil's release: before the finale is cleared, then after; a
+  // giant released twice, one never landed, one mastered, and a fish that is
+  // not a giant; then the released one hunted on a lure.
+  await scripted('the Vigil release', 25, captainWith(25, 95, 10, {
+    has_ancient_deep_access: true, ancient_catches: [144, 145, 146, 147], ancient_vigil: { '146': { rank: 5, released: false } },
+  }, { luminous: 120, golden: 80 }), async x => {
+    await x.call('releaseAncient', [144], () => releaseAncient(x.db, x.uid, 144))
+    await x.patchSave({ clears: ['the_sunken_hand'] })
+    await x.call('releaseAncient', [144], () => releaseAncient(x.db, x.uid, 144))
+    await x.call('releaseAncient', [144], () => releaseAncient(x.db, x.uid, 144))
+    await x.call('releaseAncient', [148], () => releaseAncient(x.db, x.uid, 148))
+    await x.call('releaseAncient', [146], () => releaseAncient(x.db, x.uid, 146))
+    await x.call('releaseAncient', [12], () => releaseAncient(x.db, x.uid, 12))
+    await x.call('releaseAncient', [145], () => releaseAncient(x.db, x.uid, 145))
+    for (let k = 0; k < 40; k++) await x.fish(k % 2 ? 'golden' : 'luminous', 'ancient_deep', 'perfect')
+  }),
+  // The loadout: the Auto Caster switches; the specials bought (the Catcher
+  // before the Caster, short of coin and Fathoms, then both) and equipped
+  // (owned, not owned, the finale's own slot, nothing); hats and boats bought
+  // (crate-only, earned, gem-priced, short, twice) and worn, including boats
+  // earned by level and by achievement points; pets in both slots; and the
+  // Completionist forged free, re-forged for coin, short, and refused rods.
+  await scripted('the loadout', 26, captainWith(26, 80, 0, { doubloons: 6000, gems: 800, gauntlet_fathoms: 10, gauntlet_deepest: 3 }), async x => {
+    const L = { setAutoFishing, setShowWaitTimer, buySpecialItem, equipSpecialItem, buyHat, equipHat, buyBoat, equipBoat, equipPet, setCompletionistEffects }
+    const c = (op: keyof typeof L, ...args: unknown[]) =>
+      x.call(op, args, () => (L[op] as (...a: unknown[]) => Promise<unknown>)(x.db, x.uid, ...args))
+    await c('setAutoFishing', true); await c('setAutoFishing', false); await c('setShowWaitTimer', false)
+    await c('buySpecialItem', 'auto_catcher'); await c('buySpecialItem', 'nonsense'); await c('buySpecialItem', 'tide_turner')
+    await c('buySpecialItem', 'auto_caster'); await c('buySpecialItem', 'auto_caster')
+    await c('buySpecialItem', 'auto_catcher')
+    await x.patchProfile({ gauntlet_deepest: 9 }); await c('buySpecialItem', 'auto_catcher')
+    await x.patchProfile({ gauntlet_fathoms: 40 }); await c('buySpecialItem', 'auto_catcher'); await c('buySpecialItem', 'auto_catcher')
+    await c('equipSpecialItem', 'auto_caster'); await c('equipSpecialItem', 'phantom_hook'); await c('equipSpecialItem', 'anglers_patience')
+    await c('equipSpecialItem', 'nonsense'); await c('equipSpecialItem', null)
+    await x.patchProfile({ doubloons: 30000 })
+    await c('buyHat', 'blue'); await c('buyHat', 'blue'); await c('buyHat', 'golden'); await c('buyHat', 'nonsense'); await c('buyHat', 'midnight')
+    await c('equipHat', 'blue'); await c('equipHat', 'sky'); await c('equipHat', null)
+    await c('buyBoat', 'oak'); await c('buyBoat', 'oak'); await c('buyBoat', 'charcoal'); await c('buyBoat', 'ice'); await c('buyBoat', 'nonsense')
+    await c('buyBoat', 'fire'); await c('buyBoat', 'jetblack'); await c('buyBoat', 'golden')
+    await c('equipBoat', 'oak'); await c('equipBoat', 'cherry'); await c('equipBoat', 'ice'); await c('equipBoat', 'celestial')
+    await x.patchProfile({ unlocked_badges: BADGES.map(b => b.id).slice(0, 180) })
+    await c('equipBoat', 'abyssal'); await c('equipBoat', 'celestial'); await c('equipBoat', null)
+    await x.patchProfile({ unlocked_pets: ['parrot_red', 'plesiosaur_baby'] })
+    await c('equipPet', 'parrot_red'); await c('equipPet', 'plesiosaur_baby'); await c('equipPet', 'seal_gold')
+    await c('equipPet', null, 'bow'); await c('equipPet', null)
+    await c('setCompletionistEffects', [11])
+    await x.patchSave({ rodItems: { completionist: 1, twinstrike: 1, treasure: 1, lightsaber: 1, yolo: 1, reefguard: 1 } })
+    await c('setCompletionistEffects', [11, 11, 16]); await c('setCompletionistEffects', [11, 16])
+    await c('setCompletionistEffects', [3]); await c('setCompletionistEffects', [10])
+    await c('setCompletionistEffects', [11, 16, 19, 15]); await c('setCompletionistEffects', [16, 19, 15])
+    await x.patchProfile({ doubloons: 100 }); await c('setCompletionistEffects', [11])
+    await c('setCompletionistEffects', [14, 1.5]); await c('setCompletionistEffects', [])
+  }),
+]
+write('fishing_rest.json', { sessions: rest })
+console.log(`  ${rest.length} scripted sessions, ${rest.reduce((n, s) => n + s.ops.length, 0)} calls`)
 
 // ── Save files ──
 write('save.json', {

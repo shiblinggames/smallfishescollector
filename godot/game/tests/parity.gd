@@ -21,7 +21,8 @@ func _init() -> void:
 	_dice()
 	_saves(species)
 	_daily()
-	_fishing(species)
+	_fishing(species, "res://tests/parity/fishing.json", "fishing")
+	_fishing(species, "res://tests/parity/fishing_rest.json", "the rest of fishing and the loadout")
 	print("")
 	if failed > 0:
 		print("  %d FAILED" % failed)
@@ -115,8 +116,8 @@ func _daily() -> void:
 ## the same seed, the clock each call ran at. Every call's result and roll
 ## count must match, and the save must end the same. A session stops at its
 ## first difference, which is the one worth reading.
-func _fishing(species: Array) -> void:
-	var cases: Dictionary = _json("res://tests/parity/fishing.json")
+func _fishing(species: Array, file: String, title: String) -> void:
+	var cases: Dictionary = _json(file)
 	var matched: int = 0
 	var sessions: Array = cases["sessions"]
 	for s: Dictionary in sessions:
@@ -138,33 +139,21 @@ func _fishing(species: Array) -> void:
 			now[0] = float(op["now"])
 			Dice.rolls = 0
 			var got: Dictionary
-			match op["op"]:
-				"castLine":
-					got = Fishing.cast_line(db, uid, args[0], args[1])
-				"reelIn":
-					got = Fishing.reel_in(db, uid, float(args[0]), args[1], args[2])
-				"reelCrate":
-					got = Fishing.reel_crate(db, uid, args[0])
-				# The session's own setup between casts (a flag set, the hold
-				# emptied), replayed so both sides fish the same save.
-				"patchProfile":
-					db.update_profile(uid, args[0])
-				"patchSave":
-					var patch: Dictionary = (args[0] as Dictionary).duplicate(true)
-					for k: Variant in patch:
-						save[k] = patch[k]
-				_:
-					_fail("fishing %s: call %d is %s, which is not ported" % [s["name"], n, op["op"]])
-					ok = false
-					break
-			var normalized: Variant = null if got.is_empty() and op["op"].begins_with("patch") else JsJson.parse(JsJson.stringify(got))
+			var called: Variant = _call(db, uid, save, op["op"], args)
+			if typeof(called) == TYPE_STRING and called == "not ported":
+				_fail("%s %s: call %d is %s, which is not ported" % [title, s["name"], n, op["op"]])
+				ok = false
+				break
+			got = called if typeof(called) == TYPE_DICTIONARY else {}
+			var result_null: bool = called == null
+			var normalized: Variant = null if result_null else JsJson.parse(JsJson.stringify(called))
 			var d: String = JsJson.diff(normalized, op["result"])
 			if d != "":
-				_fail("fishing %s: call %d (%s) differs at %s" % [s["name"], n, op["op"], d.replace("$", "result")])
+				_fail("%s %s: call %d (%s) differs at %s" % [title, s["name"], n, op["op"], d.replace("$", "result")])
 				ok = false
 				break
 			if Dice.rolls != int(op["rolls"]):
-				_fail("fishing %s: call %d (%s) took %d rolls, the TS took %d" % [s["name"], n, op["op"], Dice.rolls, int(op["rolls"])])
+				_fail("%s %s: call %d (%s) took %d rolls, the TS took %d" % [title, s["name"], n, op["op"], Dice.rolls, int(op["rolls"])])
 				ok = false
 				break
 			matched += 1
@@ -175,4 +164,46 @@ func _fishing(species: Array) -> void:
 		var end_d: String = JsJson.diff(JsJson.parse(SaveFile.serialize(save, {}, "x")).get("save"), (JsJson.parse(str(s["end"])) as Dictionary).get("save"))
 		if end_d != "":
 			_fail("fishing %s: every call matched but the save ends differently at %s" % [s["name"], end_d.replace("$", "save")])
-	print("  fishing: %d calls in %d sessions replayed" % [matched, sessions.size()])
+	print("  %s: %d calls in %d sessions replayed" % [title, matched, sessions.size()])
+
+
+## One recorded call, run through the port. Returns the result (a dictionary,
+## or null where the TS returned nothing), or "not ported".
+func _call(db: CaptainStore, uid: String, save: Dictionary, op: String, a: Array) -> Variant:
+	match op:
+		"castLine": return Fishing.cast_line(db, uid, a[0], a[1])
+		"reelIn": return Fishing.reel_in(db, uid, float(a[0]), a[1], a[2])
+		"reelCrate": return Fishing.reel_crate(db, uid, a[0])
+		"rerollWormhole": return Fishing.reroll_wormhole(db, uid)
+		"tideTurnerSkip": return Fishing.tide_turner_skip(db, uid)
+		"heldGolden": return Fishing.held_golden(db, uid)
+		"sellGoldenTrophy": return Fishing.sell_golden_trophy(db, uid, float(a[0]))
+		"mountGoldenTrophy": return Fishing.mount_golden_trophy(db, uid, float(a[0]))
+		"claimFishingLevelRewards": return Fishing.claim_fishing_level_rewards(db, uid)
+		"claimZoneReward": return Fishing.claim_zone_reward(db, uid, a[0])
+		"prestigeZone": return Fishing.prestige_zone(db, uid, a[0])
+		"releaseAncient": return Fishing.release_ancient(db, uid, float(a[0]))
+		"setAutoFishing":
+			Loadout.set_auto_fishing(db, uid, a[0])
+			return null
+		"setShowWaitTimer":
+			Loadout.set_show_wait_timer(db, uid, a[0])
+			return null
+		"buySpecialItem": return Loadout.buy_special_item(db, uid, a[0])
+		"equipSpecialItem": return Loadout.equip_special_item(db, uid, a[0])
+		"buyHat": return Loadout.buy_hat(db, uid, a[0])
+		"equipHat": return Loadout.equip_hat(db, uid, a[0])
+		"buyBoat": return Loadout.buy_boat(db, uid, a[0])
+		"equipBoat": return Loadout.equip_boat(db, uid, a[0])
+		"equipPet": return Loadout.equip_pet(db, uid, a[0], a[1] if a.size() > 1 else "stern")
+		"setCompletionistEffects": return Loadout.set_completionist_effects(db, uid, a[0])
+		# The session's own setup between calls, replayed so both sides play the same save.
+		"patchProfile":
+			db.update_profile(uid, a[0])
+			return null
+		"patchSave":
+			var patch: Dictionary = (a[0] as Dictionary).duplicate(true)
+			for k: Variant in patch:
+				save[k] = patch[k]
+			return null
+	return "not ported"

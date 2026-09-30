@@ -451,3 +451,52 @@ static func crate_streak(p: Dictionary, result: String, habitat: String) -> Dict
 	var updates: Dictionary = { "current_perfect_streak": streak, "catch_pending": false }
 	updates.merge(rec["updates"], true)
 	return { "streak": streak, "updates": updates, "anomaly": rec["anomaly"] }
+
+
+# ── The wormhole, a catch's size, prestige ─────────────────────────────────────
+
+## wormholeExit: a DIFFERENT fish from the same water, on the rod's bias.
+static func wormhole_exit(candidates: Array, orig_id: float, habitat: String, rod: Dictionary) -> Variant:
+	var pool: Array = []
+	for f: Dictionary in candidates:
+		if float(f["id"]) != orig_id:
+			pool.append(f)
+	if pool.is_empty():
+		return null
+	return tier_weighted_pick(pool, habitat, float(rod["rarityBonus"]))
+
+
+## rollCatchSize: { sizeIn, sizeTier?, sizeMin, sizeMax } (no tier without a range).
+static func roll_catch_size(fish: Dictionary) -> Dictionary:
+	var lo: Variant = null if fish.get("length_min_in") == null else Js.num(fish["length_min_in"])
+	var hi: Variant = null if fish.get("length_max_in") == null else Js.num(fish["length_max_in"])
+	if lo == null or hi == null:
+		return { "sizeIn": 0.0, "sizeMin": lo, "sizeMax": hi }
+	var roll: Dictionary = Rules.roll_fish_size(lo, hi)
+	return { "sizeIn": roll["lengthIn"], "sizeTier": roll["tier"], "sizeMin": lo, "sizeMax": hi }
+
+
+## prestigeStep: one prestige, or at the cap a golden boost instead.
+static func prestige_step(levels: Dictionary, boosts: Dictionary, zone: String, max_level: float) -> Dictionary:
+	var cur: float = Js.num(levels.get(zone))
+	var at_max: bool = cur >= max_level
+	var new_level: float = max_level if at_max else cur + 1.0
+	var new_levels: Dictionary = levels.duplicate()
+	new_levels[zone] = new_level
+	var new_boost: float = Js.num(boosts.get(zone)) + (1.0 if at_max else 0.0)
+	var new_boosts: Dictionary = boosts
+	if at_max:
+		new_boosts = boosts.duplicate()
+		new_boosts[zone] = new_boost
+	var all_done: bool = true
+	for z: String in Rules.PRESTIGE_ZONES:
+		if Js.num(new_levels.get(z)) < 1:
+			all_done = false
+	return { "atMax": at_max, "newLevel": new_level, "newLevels": new_levels, "newGoldenBoost": new_boost, "newGoldenBoosts": new_boosts, "allZonesPrestiged": all_done }
+
+
+## zoneRewardDoubloons: a zone's completion payout at its prestige level.
+static func zone_reward_doubloons(zone: String, prestige: float) -> float:
+	var base: float = float((Rules.data()["zoneRewardBase"] as Dictionary).get(zone, 0.0))
+	var tier: float = minf(maxf(prestige, 0.0), 5.0)
+	return Js.round(base * (1.0 + 0.2 * tier))
