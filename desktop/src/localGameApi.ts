@@ -58,6 +58,8 @@ import speciesJson from '@/content/fish_species.json'
 import { XP_TABLE } from '@/lib/fishingLevel'
 import { syncAchievements, setActivity } from './steam'
 import { seaMapProps, raidSeatsFor, type SeaPageQuery } from '@/lib/core/seaPage'
+import { marketPageProps as shapeMarket } from '@/lib/core/marketPage'
+import { currentMarket } from '@/lib/data/local/sellLocal'
 import { buildClearedSetVia } from '@/lib/raidCleared'
 import { loadDeployedPartyVia } from '@/lib/crewData'
 import type { CachedSpecies } from '@/lib/fishSpecies'
@@ -667,4 +669,30 @@ export async function seaPageProps(q: SeaPageQuery = {}) {
     hasPact: false,
     rodTiers: [...save.rods],
   }, q)
+}
+
+/**
+ * THE MARKET'S PROPS, from the save (lib/core/marketPage). Offline the market
+ * is the captain's own, caught up by the hours that passed (lib/marketRules);
+ * it ticks on the hour, so the next change is the hour after the last tick.
+ * The Exchange is online only, so no contract is ever running here.
+ */
+export async function marketPageProps() {
+  const { save } = need()
+  const market = currentMarket(save)
+  const byId = new Map(save.species.map(f => [f.id, f]))
+  return shapeMarket({
+    profile: save.profile,
+    market: Object.entries(market.fish).map(([id, m]) => {
+      const f = byId.get(Number(id))
+      return {
+        fish_id: Number(id), multiplier: m.m, prev_multiplier: m.prev, history: m.history,
+        fish_species: f ? { id: f.id, name: f.name, habitat: f.habitat, bite_rarity: f.bite_rarity, sell_value: f.sell_value } : null,
+      }
+    }),
+    inventory: Object.entries(save.hold).filter(([, q]) => q > 0).map(([id, quantity]) => ({ fish_id: Number(id), quantity })),
+    state: { mood: market.mood, next_update_at: new Date(market.lastTickAt + 3_600_000).toISOString() },
+    collectionIds: Object.keys(save.collection).map(Number),
+    openContracts: 0,
+  }, clockNow())
 }

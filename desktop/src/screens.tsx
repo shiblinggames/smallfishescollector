@@ -10,7 +10,7 @@
 // refreshed server page hands the same component new props.
 
 import { lazy, type ComponentType } from 'react'
-import { seaPageProps } from './localGameApi'
+import { api, seaPageProps, marketPageProps, currentSave } from './localGameApi'
 
 export type Screen = {
   /** Build the screen's props from the save. `q` is the URL's query. */
@@ -18,13 +18,18 @@ export type Screen = {
   Component: ComponentType<Record<string, unknown>>
 }
 
-const SeaMap = lazy(() => import('@/app/(app)/sea/SeaMap')) as unknown as ComponentType<Record<string, unknown>>
+const screen = (load: () => Promise<{ default: unknown }>) => lazy(load as () => Promise<{ default: ComponentType<Record<string, unknown>> }>)
+const SeaMap = screen(() => import('@/app/(app)/sea/SeaMap'))
+const MarketClient = screen(() => import('@/app/(app)/tavern/market/MarketClient'))
+const Tavern = screen(() => import('./rooms/Tavern'))
 
 export const SCREENS: Record<string, Screen> = {
   '/sea': {
     load: async (q) => seaPageProps({ open: q.get('open') ?? undefined, card: q.get('card') ?? undefined, boss: q.get('boss') ?? undefined }),
     Component: SeaMap,
   },
+  '/tavern/market': { load: async () => marketPageProps(), Component: MarketClient },
+  '/tavern': { load: async () => ({ seed: currentSave()!.uid, rap: await api.sea.folkState() }), Component: Tavern },
 }
 
 /** Where the shell opens, and where anything retired lands (the web sends

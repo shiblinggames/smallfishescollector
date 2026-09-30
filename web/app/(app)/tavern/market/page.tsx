@@ -2,27 +2,12 @@ import { getCurrentProfile } from '@/lib/userData'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import MarketClient from './MarketClient'
-import { isPremiumActive } from '@/lib/premium'
 import { getCachedFishMarketFull } from '@/lib/fishMarket'
-import { getLevelFromXP } from '@/lib/fishingLevel'
-import { EXCHANGE_FISHING_LEVEL } from '@/lib/fishExchange'
+import { marketPageProps, exchangeOpenFor } from '@/lib/core/marketPage'
 
-export type MarketFishEntry = {
-  fish_id: number
-  name: string
-  habitat: string
-  bite_rarity: number
-  sell_value: number
-  quantity: number
-  multiplier: number
-  prev_multiplier: number
-  history: number[]
-}
-
-export type MarketState = {
-  mood: 'calm' | 'storm' | 'kraken'
-  next_update_at: string
-}
+// The types and the shaping live in lib/core/marketPage, shared with the
+// desktop build, which reads the same pieces from the save.
+export type { MarketFishEntry, MarketState } from '@/lib/core/marketPage'
 
 export default async function MarketPage() {
   // THE PROFILE THE SHELL ALREADY FETCHED. The layout reads the current
@@ -36,22 +21,6 @@ export default async function MarketPage() {
 
   const admin = createAdminClient()
 
-  // Decided up front so the contract count can ride in the batch below.
-  const exchangeOpen = getLevelFromXP(Number(profile.fishing_xp ?? 0)) >= EXCHANGE_FISHING_LEVEL
-
-  type MarketRow = {
-    fish_id: number
-    multiplier: number
-    prev_multiplier: number
-    history: number[]
-    fish_species: { id: number; name: string; habitat: string; bite_rarity: number; sell_value: number } | null
-  }
-
-  type InvRow = {
-    fish_id: number
-    quantity: number
-  }
-
   const [market, inventoryRes, stateRes, collectionRes, betsRes] = await Promise.all([
     // Shared market snapshot from the cross-request cache (lib/fishMarket).
     getCachedFishMarketFull(),
@@ -64,70 +33,25 @@ export default async function MarketPage() {
     // How many contracts are running, for the Exchange door's own sub-line.
     // Head-only count, only for captains who can trade at all, and IN the
     // batch: it used to be a sixth query after the other five had landed.
-    exchangeOpen
+    exchangeOpenFor(profile)
       ? admin.from('exchange_bets').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'open')
       : Promise.resolve({ count: 0 as number | null }),
   ])
-  const openContracts = betsRes.count ?? 0
 
-  const inventoryMap = new Map<number, number>()
-  for (const row of (inventoryRes.data ?? []) as InvRow[]) {
-    inventoryMap.set(row.fish_id, row.quantity)
-  }
-
-  const discoveredIds = new Set((collectionRes.data ?? []).map(r => r.fish_id))
-
-  const allMarket: MarketFishEntry[] = market
-    .filter(r => r.fish_species != null)
-    .map(r => ({
-      fish_id: r.fish_id,
-      name: r.fish_species!.name,
-      habitat: r.fish_species!.habitat,
-      bite_rarity: r.fish_species!.bite_rarity,
-      sell_value: r.fish_species!.sell_value,
-      quantity: inventoryMap.get(r.fish_id) ?? 0,
-      multiplier: Number(r.multiplier),
-      prev_multiplier: Number(r.prev_multiplier),
-      history: (r.history as number[]) ?? [],
-    }))
-    .sort((a, b) => b.sell_value * b.multiplier - a.sell_value * a.multiplier)
-
-  const portfolio = allMarket.filter(e => e.quantity > 0)
-  const discovered = allMarket.filter(e => discoveredIds.has(e.fish_id))
-
-  const state: MarketState = {
-    mood: (stateRes.data?.mood ?? 'calm') as MarketState['mood'],
-    next_update_at: stateRes.data?.next_update_at ?? new Date(Date.now() + 3600000).toISOString(),
-  }
-
-  // The Exchange announcement is worth nothing if it waits behind a tab the
-  // captain has no reason to press. Decided here so the page can OPEN on the
-  // Exchange the one time there is news, then never again.
-  const exchangeUnveil = exchangeOpen && profile.has_seen_exchange_intro !== true
-
+  // MarketIntroModal LIVED HERE. The sea's first voyage walks a new captain
+  // into this room and Kat talks them through the sale, so this opened ON TOP
+  // of that — two tutorials for one counter, one of them a modal covering the
+  // other one's pointing finger. The walkthrough teaches it in context and
+  // this did not, so this is the one that goes. `has_seen_market_intro` stays
+  // a column; nothing reads it.
   return (
-    <>
-      {/* MarketIntroModal LIVED HERE. The sea's first voyage walks a new
-          captain into this room and Kat talks them through the sale, so this
-          opened ON TOP of that — two tutorials for one counter, one of them
-          a modal covering the other one's pointing finger. The walkthrough
-          teaches it in context and this did not, so this is the one that
-          goes. `has_seen_market_intro` stays a column; nothing reads it. */}
-      <MarketClient
-        portfolio={portfolio}
-        allMarket={discovered}
-        marketState={state}
-        doubloons={profile?.doubloons ?? 0}
-        isPremium={isPremiumActive(profile)}
-        exchangeUnveil={exchangeUnveil}
-        exchangeOpen={exchangeOpen}
-        openContracts={openContracts ?? 0}
-        // Null unless a first voyage is actually in progress: a captain who has
-        // been shown around already gets no coaching in here.
-        tourStep={profile?.has_seen_sea_tour === true
-          ? null
-          : Number(profile?.sea_tour_step ?? 0)}
-      />
-    </>
+    <MarketClient {...marketPageProps({
+      profile,
+      market,
+      inventory: (inventoryRes.data ?? []) as { fish_id: number; quantity: number }[],
+      state: stateRes.data ?? null,
+      collectionIds: (collectionRes.data ?? []).map(r => r.fish_id as number),
+      openContracts: betsRes.count ?? 0,
+    }, Date.now())} />
   )
 }
