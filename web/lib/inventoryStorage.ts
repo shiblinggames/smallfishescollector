@@ -14,7 +14,8 @@ export type Storage =
   | { type: 'bait' }
   /** fish_inventory (fish_id, quantity) / save.hold */
   | { type: 'hold' }
-  /** rod_inventory (rod_tier) rows / save.rods; the Bamboo is always held */
+  /** rods by ID, held as copies: rod_inventory (rod_tier, quantity) on the web,
+   *  translated through the rod's tier / save.rodItems; the Bamboo is always held */
   | { type: 'rods' }
   /** a profiles array column of ids, each owned once */
   | { type: 'list'; col: string }
@@ -71,4 +72,4 @@ export function storageFor(category: ItemCategory, id: string): Storage {
 }
 
 /** The Bamboo: every captain's, never given or taken. */
-export const STARTER_ROD_TIER = 0
+export { STARTER_ROD_ID } from '@/lib/rods'

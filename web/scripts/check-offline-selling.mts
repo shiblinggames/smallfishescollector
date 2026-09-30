@@ -34,6 +34,11 @@ import { tradersAround, seaDay, DEALS_PER_DAY, RUNNER_STAKE } from '../lib/seaTr
 import { seaClock } from '../lib/seaClock'
 import { RESIDENTS } from '../app/(app)/sea/chart'
 import { decodeFog } from '../lib/seaExplore'
+import { rodIdForTier } from '../lib/rods'
+
+/** Copies of the rod stored under this tier (rods are held by id since v13). */
+const rodHeld = (save: LocalSave, tier: number): number => save.rodItems[rodIdForTier(tier) ?? ''] ?? 0
+
 
 let failed = 0
 const fail = (m: string) => { failed++; console.log('  FAIL ' + m) }
@@ -139,7 +144,7 @@ function freshSave(): LocalSave {
     profile: { doubloons: 1000, gems: 0, sea_x: 0, sea_y: 0, sea_side: 'fishing', sea_explored: null, sea_explored_exp: null, sea_session: null, sea_seen_at: null },
     species: SPECIES,
     bait: {}, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
+    clears: [], rodItems: {}, ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
   }
 }
 const cheap = SPECIES.filter(s => s.sell_value > 0 && s.habitat === 'shallows').slice(0, 3)
@@ -230,9 +235,9 @@ try {
       if (!('error' in (await sell.wagerForRunnerRod(db, UID, w.key))) || s.deals.length) fail('the runner took a stake that was not there, or kept the night')
       s.profile.doubloons = RUNNER_STAKE * 3
       const r = await sell.wagerForRunnerRod(db, UID, w.key)
-      if ('error' in r || s.profile.doubloons !== RUNNER_STAKE * 2 || (r.won !== s.rods.includes(w.rodTier))) fail('the runner\'s cut did not take the stake, or the rod did not follow the result')
+      if ('error' in r || s.profile.doubloons !== RUNNER_STAKE * 2 || (r.won !== (rodHeld(s, w.rodTier) > 0))) fail('the runner\'s cut did not take the stake, or the rod did not follow the result')
       if (!('error' in (await sell.wagerForRunnerRod(db, UID, w.key))) || s.profile.doubloons !== RUNNER_STAKE * 2) fail('the runner dealt twice in a night')
-      const t = freshSave(); t.rods.push(w.rodTier); t.profile.doubloons = RUNNER_STAKE
+      const t = freshSave(); t.rodItems[rodIdForTier(w.rodTier)!] = 1; t.profile.doubloons = RUNNER_STAKE
       if (!('error' in (await sell.wagerForRunnerRod(localSellData(t), UID, w.key))) || t.profile.doubloons !== RUNNER_STAKE) fail('the runner took a stake on a rod already owned')
       if (!(await sell.runnerRodOwned(localSellData(t), UID, w.rodTier))) fail('runnerRodOwned missed an owned rod')
       now = T0

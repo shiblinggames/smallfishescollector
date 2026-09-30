@@ -8,8 +8,7 @@
 // catch logs.
 //
 // The one-shot guards are the contract, and an offline store must keep them:
-//   - takeRod removes a rod once (a sale pays only for the removal that landed);
-//   - addRod is the lock on buying a rod (owned once);
+//   - rods are items now: the inventory (CaptainData give/take) holds them as copies;
 //   - every tier (hook, reel, hold, ship) rises only from the tier read, through
 //     updateProfileIf.
 
@@ -19,8 +18,6 @@ import { seaData, type SeaData } from './seaData'
 export interface HarbourData extends SeaData {
   /** Every bait held, with its count. */
   baitRows(uid: string): Promise<{ bait_type: string; quantity: number }[]>
-  /** Remove a rod once; true if this call removed it. */
-  takeRod(uid: string, tier: number): Promise<boolean>
   /** Every fish in the hold with a count above zero. */
   holdRows(uid: string): Promise<{ fish_id: number; quantity: number }[]>
   /** Every species in the book's order, with its Almanac columns. Static game data. */
@@ -39,12 +36,6 @@ export function harbourData(admin: Db): HarbourData {
     async baitRows(uid) {
       const { data } = await admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', uid)
       return (data ?? []) as { bait_type: string; quantity: number }[]
-    },
-    async takeRod(uid, tier) {
-      // Two sells fired together both pass an ownership read; only one delete
-      // hands the row back.
-      const { data } = await admin.from('rod_inventory').delete().eq('user_id', uid).eq('rod_tier', tier).select('rod_tier')
-      return !!data && data.length > 0
     },
     async holdRows(uid) {
       const { data } = await admin.from('fish_inventory').select('fish_id, quantity').eq('user_id', uid)

@@ -388,7 +388,7 @@ export async function wagerForRunnerRod(db: SellData, uid: string, traderKey: st
   // Say so before taking a stake. You cannot own the rod twice, and somebody
   // who already has it staking a hundred thousand on winning it again is the
   // worst possible way to find that out.
-  if (await db.ownsRod(uid, trader.rodTier)) return { error: `You already carry the ${rod.name}.` }
+  if ((await db.held(uid, 'rod', rod.id)) > 0) return { error: `You already carry the ${rod.name}.` }
 
   // ONE CUT A DAY, and the row is the lock rather than a count that could be
   // read twice. Keyed on the sea day rather than the trader, deliberately: a
@@ -416,7 +416,7 @@ export async function wagerForRunnerRod(db: SellData, uid: string, traderKey: st
     // If it does the captain keeps the stake as a loss rather than paying for
     // something they already own - which is the same outcome the dice give nine
     // times in ten, and cannot be told apart from it.
-    if (await db.grantRod(uid, trader.rodTier)) {
+    if (await db.give(uid, 'rod', rod.id)) {
       await db.ledger(uid, -trader.stake, `Won the ${rod.name} off a blockade runner`)
       return {
         ok: true, won: true, rodTier: trader.rodTier, rodName: rod.name,
@@ -438,7 +438,8 @@ export async function wagerForRunnerRod(db: SellData, uid: string, traderKey: st
  * before the press, so it offered a bet nobody could take.
  */
 export async function runnerRodOwned(db: SellData, uid: string, rodTier: number): Promise<boolean> {
-  return db.ownsRod(uid, rodTier)
+  const id = RODS.find(r => r.tier === rodTier)?.id
+  return id ? (await db.held(uid, 'rod', id)) > 0 : false
 }
 
 /** Which water the boat is in, and which hull (see saveSeaPosition). */

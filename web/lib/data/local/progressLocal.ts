@@ -13,6 +13,7 @@ import type { ProgressData, HomesteadDbRow } from '../progressData'
 import { localHarbourData } from './harbourLocal'
 import { localCaptain, type LocalSave } from './save'
 import cardsJson from '@/content/cards.json'
+import { rodTierForId } from '@/lib/rods'
 
 const SLUG_BY_CARD = new Map((cardsJson as unknown as { id: number; slug: string }[]).map(c => [c.id, c.slug]))
 
@@ -43,7 +44,7 @@ export function localProgressData(save: LocalSave): ProgressData {
         crew: save.crew.map(c => ({ xp: c.xp, died_at: c.died_at, effects: c.effects ?? null, slug: SLUG_BY_CARD.get(c.card_id) ?? null })),
         voyageCount: save.voyages.filter(v => v.status === 'revealed').length,
         collectionCount: Object.keys(save.collection).length,
-        rodTiers: [...save.rods],
+        rodTiers: Object.keys(save.rodItems).map(id => rodTierForId(id)).filter((t): t is number => t != null),
         goldenCount: save.shinies.length,
         exchange: [],
         rapport: save.rapport.map(r => ({ points: r.points, gifts_given: r.gifts_given })),

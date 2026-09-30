@@ -9,7 +9,8 @@ import type { LocalSave } from './save'
 import type { InventoryOps } from '../inventory'
 import { wholeCount, refuseUpgradeOrInstance } from '../inventory'
 import { CATEGORIES } from '@/lib/items'
-import { storageFor, STARTER_ROD_TIER } from '@/lib/inventoryStorage'
+import { storageFor, STARTER_ROD_ID } from '@/lib/inventoryStorage'
+import { getRodById } from '@/lib/rods'
 
 export function localInventory(save: LocalSave): InventoryOps {
   const me = (uid: string) => {
@@ -25,7 +26,7 @@ export function localInventory(save: LocalSave): InventoryOps {
       switch (s.type) {
         case 'bait': return Number(save.bait[id] ?? 0)
         case 'hold': return Number(save.hold[Number(id)] ?? 0)
-        case 'rods': return Number(id) === STARTER_ROD_TIER || save.rods.includes(Number(id)) ? 1 : 0
+        case 'rods': return id === STARTER_ROD_ID ? 1 : Number(save.rodItems[id] ?? 0)
         case 'list': return ((prof[s.col] as string[] | null) ?? []).includes(id) ? 1 : 0
         case 'counted': return ((prof[s.col] as string[] | null) ?? []).filter(x => x === id).length
         case 'homestead': return homeOwned().includes(id) ? 1 : 0
@@ -43,7 +44,7 @@ export function localInventory(save: LocalSave): InventoryOps {
       const s = storageFor(category, '')
       if (s.type === 'bait') for (const [k, q] of Object.entries(save.bait)) { if (q > 0) out.set(k, q) }
       else if (s.type === 'hold') for (const [k, q] of Object.entries(save.hold)) { if (q > 0) out.set(k, q) }
-      else if (s.type === 'rods') { out.set(String(STARTER_ROD_TIER), 1); for (const t of save.rods) out.set(String(t), 1) }
+      else if (s.type === 'rods') { out.set(STARTER_ROD_ID, 1); for (const [rid, q] of Object.entries(save.rodItems)) { if (q > 0) out.set(rid, q) } }
       else if (s.type === 'list' || s.type === 'counted') for (const id of ((prof[s.col] as string[] | null) ?? [])) out.set(id, (out.get(id) ?? 0) + 1)
       else if (s.type === 'homestead') for (const id of homeOwned()) out.set(id, 1)
       return out
@@ -61,9 +62,9 @@ export function localInventory(save: LocalSave): InventoryOps {
         return true
       }
       if (s.type === 'rods') {
-        const t = Number(id)
-        if (t === STARTER_ROD_TIER || save.rods.includes(t)) return false
-        save.rods = [...save.rods, t]
+        const count = wholeCount(n)
+        if (count == null || id === STARTER_ROD_ID || !getRodById(id)) return false
+        save.rodItems = { ...save.rodItems, [id]: Number(save.rodItems[id] ?? 0) + count }
         return true
       }
       if (s.type === 'list') {
@@ -106,9 +107,12 @@ export function localInventory(save: LocalSave): InventoryOps {
         return true
       }
       if (s.type === 'rods') {
-        const t = Number(id)
-        if (t === STARTER_ROD_TIER || !save.rods.includes(t)) return false
-        save.rods = save.rods.filter(x => x !== t)
+        const count = wholeCount(n)
+        const had = Number(save.rodItems[id] ?? 0)
+        if (count == null || id === STARTER_ROD_ID || had < count) return false
+        const next = { ...save.rodItems }
+        if (had === count) delete next[id]; else next[id] = had - count
+        save.rodItems = next
         return true
       }
       if (s.type === 'list') {

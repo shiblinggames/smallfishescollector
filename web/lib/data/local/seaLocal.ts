@@ -27,7 +27,6 @@ export function localSeaData(save: LocalSave): SeaData {
   return {
     ...daily,
     grantBadge: captain.grantBadge,
-    async rodTiers(uid) { me(uid); return [...save.rods] },
     achievementPoints: captain.achievementPoints,
     async creditFullDay(uid, today, tally) {
       const prof = me(uid)
@@ -91,13 +90,6 @@ export function localSeaData(save: LocalSave): SeaData {
       else save.hold[fishId] = have - 1
       return true
     },
-    async addRod(uid, tier) {
-      me(uid)
-      if (save.rods.includes(tier)) return false
-      save.rods.push(tier)
-      return true
-    },
-    async removeRod(uid, tier) { me(uid); save.rods = save.rods.filter(t => t !== tier) },
 
     // ── Finn ──
     async lifetimeCatches(uid) { me(uid); return caught() },

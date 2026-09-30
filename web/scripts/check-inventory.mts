@@ -4,7 +4,8 @@
 // cores will lean on cannot quietly break:
 //   - stacks (bait, fish) add, and a take is refused past what is held;
 //   - raid items are held as copies: give adds, take removes, never past zero;
-//   - unlocks (rods, lists, special flags, furnishings) are owned once: a
+//   - rods are held by id as copies; the Bamboo is always held and never moves;
+//   - unlocks (lists, special flags, furnishings) are owned once: a
 //     second give is refused, a take of something not held is refused;
 //   - the Bamboo is always held and never given or taken;
 //   - upgrades are read against the level and never given or taken;
@@ -28,7 +29,7 @@ const defaults = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'content', 
 function freshSave(): LocalSave {
   return {
     uid: UID, profile: { ...defaults, reel_tier: 2 },
-    bait: { worm: 25 }, hold: {}, rods: [], homestead: { house: 1, name: null, furniture: {}, owned: [], pinned: [] },
+    bait: { worm: 25 }, hold: {}, rodItems: {}, homestead: { house: 1, name: null, furniture: {}, owned: [], pinned: [] },
   } as unknown as LocalSave
 }
 
@@ -43,11 +44,13 @@ if (await inv.give(UID, 'bait', 'worm', 0) || await inv.give(UID, 'bait', 'worm'
 await inv.give(UID, 'fish', '12', 3)
 if ((await inv.held(UID, 'fish', '12')) !== 3 || (await inv.heldAll(UID, 'fish')).get('12') !== 3) fail('fish did not stack, or heldAll disagrees')
 
-// Unlocks: rods.
-if ((await inv.held(UID, 'rod', '0')) !== 1) fail('the Bamboo is not held')
-if (await inv.give(UID, 'rod', '0') || await inv.take(UID, 'rod', '0')) fail('the Bamboo was given or taken')
-if (!(await inv.give(UID, 'rod', '4')) || await inv.give(UID, 'rod', '4')) fail('a rod was not owned once')
-if (!(await inv.take(UID, 'rod', '4')) || await inv.take(UID, 'rod', '4')) fail('a rod was taken twice')
+// Rods: items by id, held as copies; the Bamboo always held, never moved.
+if ((await inv.held(UID, 'rod', 'bamboo')) !== 1) fail('the Bamboo is not held')
+if (await inv.give(UID, 'rod', 'bamboo') || await inv.take(UID, 'rod', 'bamboo')) fail('the Bamboo was given or taken')
+if (await inv.give(UID, 'rod', 'no_such_rod')) fail('a rod that does not exist was given')
+if (!(await inv.give(UID, 'rod', 'telescoping')) || !(await inv.give(UID, 'rod', 'telescoping')) || (await inv.held(UID, 'rod', 'telescoping')) !== 2) fail('rod copies did not stack')
+if ((await inv.heldAll(UID, 'rod')).get('telescoping') !== 2) fail('heldAll disagrees for rods')
+if (!(await inv.take(UID, 'rod', 'telescoping', 2)) || await inv.take(UID, 'rod', 'telescoping')) fail('a rod was taken past what was held')
 
 // Unlocks: a profile list, a flag, a furnishing.
 const petId = ITEMS.find(i => i.category === 'pet')!.id

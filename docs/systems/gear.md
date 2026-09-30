@@ -3,6 +3,28 @@
 Rods, hooks, reels, lines, ships, fish hold, bait. Bought in the marketplace (tackle shop
 + shipyard), each tier a straight upgrade. Gear is the doubloon sink for the fishing loop.
 
+
+**RODS ARE ITEMS (Kong, 2026-09-30; stage 4a/4b BUILT the same day):**
+- Every rod has a name ID (`RodDef.id`: bamboo, driftwood, ... yoons), taken from its art
+  slug. `tier` stays only as the web's storage key and for old data; `getRodById`,
+  `rodIdForTier`, `rodTierForId` translate.
+- Rods are HELD AS COPIES through the inventory (`db.held/give/take(uid, 'rod', id)`). On the
+  web `rod_inventory` gained a `quantity` (every old row is one copy) and the service-role
+  functions `rod_give` / `rod_take`; a row exists only while a copy is held. The desktop save
+  (v13) keeps `rodItems: { id: copies }`.
+- The per-store rod operations (rodTiers, addRod, removeRod, takeRod, ownsRod, grantRod) are
+  GONE. Code keyed on tiers uses `heldRodTiers(db, uid)`: the tiers held beyond the Bamboo,
+  which is what rod_inventory's rows always meant.
+- THE TACKLE SHOP sells another copy of a rod you own, and selling back sells ONE copy. The rod
+  in hand returns to the Bamboo only when the last copy goes.
+- A REGULAR'S ROD and THE RUNNER'S ROD stay once each: they are a friend's rod and a night's
+  wager, not stock.
+- The Bamboo is always held and never sold, given or taken. The Completionist is one of a
+  kind (claimed once, never in a chest); its forged effects still live on the profile.
+- Fixed on the way: equipping from the tackle shop looked the rod up by list POSITION, not
+  tier (rods 14 and 15 are out of order), so position 14 was the YOLO Rod.
+- NEXT (4c): the screens and the game API still speak in tiers.
+
 ## Where the definitions live
 
 One lib file per gear type, each exporting the full tier ladder with prices and effects:

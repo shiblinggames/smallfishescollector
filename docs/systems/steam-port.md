@@ -655,6 +655,8 @@ its system's doc.
          - Rods do NOT drop as loot, for now.
          - The web beta keeps its columns, and its store translates ids to the old tier
            numbers; the desktop save gets the clean shape.
+         - BUILT (4a/4b, 2026-09-30): ids, copies on both builds, every rod system on the
+           inventory. See gear.md. 4c (screens and the API off tiers) is next.
        - A COSMETIC IN THE CHEST IS A TOKEN: the captain who takes it unlocks it. An unlocked
          cosmetic stays with its owner.
        - THE CREW CHEST HOLDS raid items, forge materials, rods and cosmetic tokens. Not bait,

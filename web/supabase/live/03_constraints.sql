@@ -179,6 +179,7 @@ alter table public.rigging_attempts add constraint rigging_attempts_pkey PRIMARY
 alter table public.rigging_attempts add constraint rigging_attempts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 alter table public.rigging_boards add constraint rigging_boards_pkey PRIMARY KEY (week);
 alter table public.rod_inventory add constraint rod_inventory_pkey PRIMARY KEY (user_id, rod_tier);
+alter table public.rod_inventory add constraint rod_inventory_quantity_check CHECK ((quantity >= 1));
 alter table public.rod_inventory add constraint rod_inventory_user_id_fkey FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE;
 alter table public.roulette_buy_ins add constraint roulette_buy_ins_pkey PRIMARY KEY (id);
 alter table public.roulette_buy_ins add constraint roulette_buy_ins_amount_check CHECK ((amount > 0));

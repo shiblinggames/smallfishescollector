@@ -30,6 +30,7 @@ import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import type { RecruitFace } from '@/lib/core/crew'
 import type { SeaData } from '@/lib/data/seaData'
 import { distinctIds } from '@/lib/listCounts'
+import { heldRodTiers } from '@/lib/data/inventory'
 
 // ══ THE TOURS ═════════════════════════════════════════════════════════════════
 //
@@ -103,7 +104,7 @@ export type LoadoutGear = {
 export async function loadoutGear(db: SeaData, uid: string): Promise<LoadoutGear | null> {
   const [profile, rodRows, achievementPoints] = await Promise.all([
     db.profile(uid, 'rod_tier, character_color, equipped_boat, equipped_hat, equipped_pet, fishing_xp, expedition_xp, prestige_levels, unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets'),
-    db.rodTiers(uid),
+    heldRodTiers(db, uid),
     db.achievementPoints(uid),
   ])
   if (!profile) return null

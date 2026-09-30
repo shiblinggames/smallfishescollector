@@ -251,17 +251,14 @@ export async function buyFolkRod(db: SeaData, uid: string, folkId: FolkId): Prom
   const standing = await db.rapportRow(uid, folk.id)
   if (tierFor(standing?.points ?? 0) < 4) return { error: `${folk.short} is not going to part with that for you yet.` }
 
-  // Say so BEFORE taking the money. You cannot own a rod twice.
-  if ((await db.rodTiers(uid)).includes(folk.rodTier)) return { error: `You already carry the ${rod.name}.` }
-
-  if (!(await db.addRod(uid, folk.rodTier))) return { error: `You already carry the ${rod.name}.` }
+  // Say so BEFORE taking the money. A regular parts with their rod once: it is
+  // a friend's rod, not stock, so a second copy is not theirs to sell.
+  if ((await db.held(uid, 'rod', rod.id)) > 0) return { error: `You already carry the ${rod.name}.` }
 
   // The RESULT is the guard: null when the purse will not cover it.
   const newBalance = await db.deductDoubloons(uid, rod.cost)
-  if (newBalance == null) {
-    await db.removeRod(uid, folk.rodTier)
-    return { error: `They want ${rod.cost.toLocaleString()} and you have not got it.` }
-  }
+  if (newBalance == null) return { error: `They want ${rod.cost.toLocaleString()} and you have not got it.` }
+  await db.give(uid, 'rod', rod.id)
 
   await db.ledger(uid, -rod.cost, `Bought the ${rod.name} from ${folk.short} at sea`)
   return { ok: true, rodTier: folk.rodTier, rodName: rod.name, spent: rod.cost, doubloons: Number(newBalance) }

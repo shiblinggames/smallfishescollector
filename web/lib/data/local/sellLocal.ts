@@ -90,11 +90,5 @@ export function localSellData(save: LocalSave): SellData {
     async releaseDeal(uid, traderKey) { me(uid); save.deals = save.deals.filter(d => d.trader_key !== traderKey) },
 
     // ── Rods ──
-    async ownsRod(uid, tier) { me(uid); return save.rods.includes(tier) },
-    async grantRod(uid, tier) {
-      me(uid)
-      if (save.rods.includes(tier)) return false
-      save.rods.push(tier); return true
-    },
   }
 }

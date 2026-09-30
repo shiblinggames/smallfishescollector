@@ -31,7 +31,7 @@ import { HATS } from '../lib/hats'
 import { BOATS } from '../lib/boats'
 import { PETS, petSlot, PET_SLOT_COLUMN } from '../lib/pets'
 import { SPECIAL_ITEMS } from '../lib/specialItems'
-import { RODS, COMPLETIONIST_TIER, REFORGE_COST, rodHasUniqueEffect } from '../lib/rods'
+import { RODS, COMPLETIONIST_TIER, REFORGE_COST, rodHasUniqueEffect, rodIdForTier } from '../lib/rods'
 import { localFishingData, type LocalSave } from '../lib/data/local/fishingLocal'
 import { serializeSave, deserializeSave, loadSave, writeSave, fromWebExport, LOCAL_SAVE_FORMAT, type WebExport } from '../lib/data/local/saveFile'
 import { nodeSaveStorage } from '../lib/data/local/nodeSaveStorage'
@@ -106,7 +106,7 @@ function freshSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 200 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0, 1, 2, 3], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
+    clears: [], rodItems: { driftwood: 1, fiberglass: 1, reefguard: 1 }, ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
   }
 }
 
@@ -239,7 +239,7 @@ try {
   }
   const { save, carried } = fromWebExport(exp, SPECIES)
   if (save.bait.worm !== 12 || save.hold[1] !== 3 || 2 in save.hold || save.collection[1]?.is_golden !== true || save.bests[1]?.len !== 7.5
-      || !save.clears.includes('the_throne') || save.rods.join() !== '0,4' || save.profile.doubloons !== 77) fail('a web export did not convert faithfully')
+      || !save.clears.includes('the_throne') || JSON.stringify(save.rodItems) !== JSON.stringify({ telescoping: 1 }) || save.profile.doubloons !== 77) fail('a web export did not convert faithfully')
   if (save.crew.length !== 2 || 'user_crew' in carried || carried.expeditions?.length !== 1 || 'bait_inventory' in carried) fail('tables the offline core does not model were not carried (or modelled ones were)')
 }
 const realExport = path.join(ROOT, 'saves', 'catman-for-offline.json')
@@ -262,7 +262,7 @@ if (fs.existsSync(realExport)) {
       if ('caught' in r && r.caught) landed++
     }
   } finally { installRng(null); installClock(null) }
-  console.log(`  catman's real export, converted: ${Object.keys(save.collection).length} species logged, ${save.rods.length} rods, ${Object.keys(carried).length} tables carried; 20 offline casts landed ${landed}, fishing XP ${xp0.toLocaleString()} -> ${Number(save.profile.fishing_xp).toLocaleString()}`)
+  console.log(`  catman's real export, converted: ${Object.keys(save.collection).length} species logged, ${Object.keys(save.rodItems).length} rods, ${Object.keys(carried).length} tables carried; 20 offline casts landed ${landed}, fishing XP ${xp0.toLocaleString()} -> ${Number(save.profile.fishing_xp).toLocaleString()}`)
   if (landed === 0) fail("catman's converted save landed nothing offline")
 } else {
   console.log('  (saves/catman-for-offline.json not present: the real-export check is skipped)')
@@ -422,7 +422,7 @@ if (fs.existsSync(realExport)) {
     {
       const { s, db, p } = fresh()
       const effectRods = RODS.filter(r => r.tier !== COMPLETIONIST_TIER && rodHasUniqueEffect(r)).slice(0, 4).map(r => r.tier)
-      s.rods = [COMPLETIONIST_TIER, ...effectRods]
+      s.rodItems = Object.fromEntries([COMPLETIONIST_TIER, ...effectRods].map(t => [rodIdForTier(t)!, 1]))
       p.doubloons = 0
       const first = await setCompletionistEffects(db, UID, effectRods.slice(0, 3))
       if ('error' in first || !first.firstForge || first.charged) fail('the first forge was not free')

@@ -9,7 +9,6 @@
 //   - claimChat claims a regular's day only if today's chat has not happened;
 //   - settleWant settles a job only while it is still that fish;
 //   - takeOneFish takes the last fish only once;
-//   - addRod is the lock on a regular's rod (a rod is owned once);
 //   - addDigBearing and addDiscovery are unique per site and isle; claimDig
 //     digs a site once;
 //   - stampRecall lands only when the last recall is older than its cycle.
@@ -34,8 +33,6 @@ export type InsertOutcome = 'ok' | 'dup' | 'error'
 
 export interface SeaData extends DailyData {
   grantBadge(uid: string, badgeId: string): Promise<void>
-  /** Every rod tier this captain owns. */
-  rodTiers(uid: string): Promise<number[]>
   /** The captain's achievement points (some cosmetics unlock on them). */
   achievementPoints(uid: string): Promise<number>
   /** Credit a whole day's list done, once per UTC day: lands only while the
@@ -61,9 +58,6 @@ export interface SeaData extends DailyData {
   lastCaught(uid: string, fishIds: number[]): Promise<Map<number, string>>
   /** Take one fish from the hold, only if the count is still what was read. */
   takeOneFish(uid: string, fishId: number): Promise<boolean>
-  /** Add a rod; false if it is already carried (the lock on a once-ever rod). */
-  addRod(uid: string, tier: number): Promise<boolean>
-  removeRod(uid: string, tier: number): Promise<void>
 
   // ── Finn ──
   /** Lifetime fish landed, all species. */
@@ -94,10 +88,6 @@ export function seaData(admin: Db): SeaData {
   return {
     ...dailyData(admin),
     async grantBadge(uid, badgeId) { await grantBadgeDirect(uid, badgeId) },
-    async rodTiers(uid) {
-      const { data } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', uid)
-      return ((data ?? []) as { rod_tier: number }[]).map(r => r.rod_tier)
-    },
     achievementPoints: (uid) => getUserAchievementPoints(uid),
     async creditFullDay(uid, today, tally) {
       const { data: moved } = await admin.from('profiles')
@@ -166,14 +156,6 @@ export function seaData(admin: Db): SeaData {
       }
       const { data: cut } = await admin.from('fish_inventory').update({ quantity: have - 1 }).eq('user_id', uid).eq('fish_id', fishId).eq('quantity', have).select('fish_id')
       return !!cut && cut.length > 0
-    },
-    async addRod(uid, tier) {
-      // Keyed on (user_id, rod_tier): the insert IS the lock.
-      const { error } = await admin.from('rod_inventory').insert({ user_id: uid, rod_tier: tier })
-      return !error
-    },
-    async removeRod(uid, tier) {
-      await admin.from('rod_inventory').delete().eq('user_id', uid).eq('rod_tier', tier)
     },
 
     async lifetimeCatches(uid) {

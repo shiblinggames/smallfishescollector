@@ -23,6 +23,7 @@ import fs from 'fs'
 import path from 'path'
 import * as harbour from '../lib/core/harbour'
 import { localHarbourData } from '../lib/data/local/harbourLocal'
+import { serializeSave, deserializeSave, fromWebExport, LOCAL_SAVE_FORMAT } from '../lib/data/local/saveFile'
 import {
   freshCasino, freshCharting, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, CHARTING_PROFILE_DEFAULTS, SEA_PROFILE_DEFAULTS,
   type LocalSave,
@@ -33,13 +34,17 @@ import { installClock } from '../lib/clock'
 import { XP_TABLE } from '../lib/fishingLevel'
 import { XP_TABLE as NAV_XP } from '../lib/expeditionLevel'
 import { BAITS } from '../lib/bait'
-import { RODS, ROD_SELL_RATE, isCaptainRod } from '../lib/rods'
+import { RODS, ROD_SELL_RATE, isCaptainRod, rodIdForTier } from '../lib/rods'
 import { REELS } from '../lib/reels'
 import { HOOKS } from '../lib/hooks'
 import { FISH_HOLD_TIERS } from '../lib/fishHold'
 import { nextShip, MIN_SHIP_TIER } from '../lib/ships'
 import { FOLK } from '../lib/seaFolk'
 import { ISLES } from '../lib/seaIsles'
+
+/** Copies of the rod stored under this tier (rods are held by id since v13). */
+const rodHeld = (save: LocalSave, tier: number): number => save.rodItems[rodIdForTier(tier) ?? ''] ?? 0
+
 
 let failed = 0
 const fail = (m: string) => { failed++; console.log('  FAIL ' + m) }
@@ -96,7 +101,7 @@ function freshSave(over: Record<string, unknown> = {}): LocalSave {
     },
     species: SPECIES,
     bait: {}, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {},
+    clears: [], rodItems: {}, ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {},
     deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [],
     depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [],
     bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: freshCharting(),
@@ -123,30 +128,35 @@ try {
     const shopRod = RODS.find(r => r.cost > 0 && !r.earnedOnly && !r.traderOnly && !isCaptainRod(r))!
     const d1 = Number(s.profile.doubloons)
     const bought = await harbour.purchaseRod(db, UID, shopRod.tier)
-    if (isErr(bought) || !s.rods.includes(shopRod.tier) || s.profile.doubloons !== d1 - shopRod.cost) fail('a rod did not sell for its price')
-    if (!isErr(await harbour.purchaseRod(db, UID, shopRod.tier)) || s.profile.doubloons !== d1 - shopRod.cost) fail('a rod sold twice')
+    if (isErr(bought) || !rodHeld(s, shopRod.tier) || s.profile.doubloons !== d1 - shopRod.cost) fail('a rod did not sell for its price')
+    // Rods are items held as copies (Kong, 2026-09-30): a second one sells too.
+    if (isErr(await harbour.purchaseRod(db, UID, shopRod.tier)) || rodHeld(s, shopRod.tier) !== 2 || s.profile.doubloons !== d1 - shopRod.cost * 2) fail('a second copy of a rod did not sell for its price')
     for (const bad of [RODS.find(r => r.earnedOnly), RODS.find(r => r.traderOnly), RODS.find(r => r.cost === 0)].filter(Boolean)) {
       if (!isErr(await harbour.purchaseRod(db, UID, bad!.tier))) fail(`the ${bad!.name} sold ashore`)
     }
     // Every trader's rod is also a Captain's rod, so the trader rule is tested
     // on a Captain, who would otherwise be allowed it.
     const cap = freshSave({ is_premium: true }); const trader = RODS.find(r => r.traderOnly)
-    if (trader && (!isErr(await harbour.purchaseRod(localHarbourData(cap), UID, trader.tier)) || cap.rods.includes(trader.tier))) fail(`the ${trader.name} sold ashore to a Captain`)
+    if (trader && (!isErr(await harbour.purchaseRod(localHarbourData(cap), UID, trader.tier)) || rodHeld(cap, trader.tier) > 0)) fail(`the ${trader.name} sold ashore to a Captain`)
     const captainRod = RODS.find(r => isCaptainRod(r) && r.cost > 0 && !r.traderOnly)
     if (captainRod && !isErr(await harbour.purchaseRod(db, UID, captainRod.tier))) fail('a Captain\'s rod sold to a deckhand')
     const low = freshSave({ fishing_xp: 0 })
     const gated = RODS.find(r => r.cost > 0 && !r.earnedOnly && !r.traderOnly && !isCaptainRod(r) && r.tier > shopRod.tier)
     if (gated && !isErr(await harbour.purchaseRod(localHarbourData(low), UID, gated.tier))) fail('a rod sold under its level')
     const poor = freshSave({ doubloons: 0 })
-    if (!isErr(await harbour.purchaseRod(localHarbourData(poor), UID, shopRod.tier)) || poor.rods.includes(shopRod.tier)) fail('a rod sold on credit')
+    if (!isErr(await harbour.purchaseRod(localHarbourData(poor), UID, shopRod.tier)) || rodHeld(poor, shopRod.tier) > 0) fail('a rod sold on credit')
 
-    // In hand, then sold: the Bamboo goes back in hand.
+    // In hand, then sold copy by copy: while a copy is left it stays in hand;
+    // selling the last one puts the Bamboo back.
     if (isErr(await harbour.equipTackleRod(db, UID, shopRod.tier)) || s.profile.rod_tier !== shopRod.tier) fail('the bought rod did not go in hand')
     if (!isErr(await harbour.equipTackleRod(db, UID, gated?.tier ?? 99))) fail('a rod not owned went in hand')
     const d2 = Number(s.profile.doubloons)
+    const refund = Math.floor(shopRod.cost * ROD_SELL_RATE)
     const sold = await harbour.sellRod(db, UID, shopRod.tier)
-    if (isErr(sold) || s.rods.includes(shopRod.tier) || s.profile.doubloons !== d2 + Math.floor(shopRod.cost * ROD_SELL_RATE) || s.profile.rod_tier !== 0) fail('a sale did not refund its rate and put the Bamboo in hand')
-    if (!isErr(await harbour.sellRod(db, UID, shopRod.tier))) fail('a rod sold back twice')
+    if (isErr(sold) || rodHeld(s, shopRod.tier) !== 1 || s.profile.doubloons !== d2 + refund || s.profile.rod_tier !== shopRod.tier) fail('selling one of two copies did not refund one and keep the rod in hand')
+    const last = await harbour.sellRod(db, UID, shopRod.tier)
+    if (isErr(last) || rodHeld(s, shopRod.tier) !== 0 || s.profile.doubloons !== d2 + refund * 2 || s.profile.rod_tier !== 0) fail('selling the last copy did not refund it and put the Bamboo in hand')
+    if (!isErr(await harbour.sellRod(db, UID, shopRod.tier))) fail('a rod was sold back past the copies held')
     if (!isErr(await harbour.sellRod(db, UID, 0))) fail('the free Bamboo was sold')
 
     // The Completionist: refused short of the record, granted on the whole of it.
@@ -159,9 +169,9 @@ try {
     full.rapport = FOLK.map(f => ({ folk_id: f.id, points: 9999, seen_lines: [], last_chat_on: null, gifts_given: 0, want_fish_id: null, want_asked_at: null }))
     full.discoveries = ISLES.map(i => i.id)
     const c = await harbour.claimCompletionistRod(localHarbourData(full), UID)
-    if (isErr(c) || !full.rods.includes(14) || !(full.profile.unlocked_badges as string[]).includes('completionist_rod')) fail(`the Completionist was refused on a full record${isErr(c) ? `: ${(c as { error: string }).error}` : ''}`)
+    if (isErr(c) || !rodHeld(full, 14) || !(full.profile.unlocked_badges as string[]).includes('completionist_rod')) fail(`the Completionist was refused on a full record${isErr(c) ? `: ${(c as { error: string }).error}` : ''}`)
     if (!isErr(await harbour.claimCompletionistRod(localHarbourData(full), UID))) fail('the Completionist was claimed twice')
-    console.log(`  the tackle shop: bait, a rod bought and sold back once (${Math.round(ROD_SELL_RATE * 100)}%), the forbidden rods refused, the Completionist on a full record`)
+    console.log(`  the tackle shop: bait, a rod bought twice and sold back copy by copy (${Math.round(ROD_SELL_RATE * 100)}%), the forbidden rods refused, the Completionist on a full record`)
   }
 
   // ── 3. The ladders ──
@@ -249,9 +259,28 @@ try {
   // ── 6. The store's own guards ──
   {
     const s = freshSave(); const db = localHarbourData(s)
-    if (!(await db.addRod(UID, 40)) || await db.addRod(UID, 40)) fail('a rod was added twice')
-    if (!(await db.takeRod(UID, 40)) || await db.takeRod(UID, 40)) fail('a rod was taken twice')
-    console.log('  the store: a rod added once and taken once')
+    // Rods are items held as copies: two given, two taken, a third refused.
+    if (!(await db.give(UID, 'rod', 'graphite')) || !(await db.give(UID, 'rod', 'graphite')) || (await db.held(UID, 'rod', 'graphite')) !== 2) fail('rod copies did not stack')
+    if (!(await db.take(UID, 'rod', 'graphite')) || !(await db.take(UID, 'rod', 'graphite')) || await db.take(UID, 'rod', 'graphite')) fail('a rod was taken past what was held')
+    if (await db.take(UID, 'rod', 'bamboo') || (await db.held(UID, 'rod', 'bamboo')) !== 1) fail('the Bamboo was taken')
+    console.log('  the store: rod copies given and taken, never past zero, the Bamboo never')
+  }
+  // ── 7. The save file: rods as items (v13) ──
+  {
+    // A v12 save listed rod TIERS; it upgrades to copies per rod id, the Bamboo
+    // left out (it is every captain's).
+    const v13 = JSON.parse(serializeSave(freshSave()))
+    const { rodItems: _r, ...rest } = v13.save
+    void _r
+    const up = deserializeSave(JSON.stringify({ format: LOCAL_SAVE_FORMAT, version: 12, savedAt: '', save: { ...rest, rods: [0, 4, 14] }, carried: {} }), SPECIES).save
+    if (JSON.stringify(up.rodItems) !== JSON.stringify({ telescoping: 1, completionist: 1 }) || 'rods' in up) fail('a version 12 save did not upgrade its rods to copies by id')
+    // A web export's rod rows carry their copies.
+    const { save } = fromWebExport({
+      format: 'x', version: 1, userId: 'w', username: null, profile: {},
+      tables: { rod_inventory: [{ rod_tier: 6, quantity: 2 }, { rod_tier: 0, quantity: 1 }] },
+    } as never, SPECIES)
+    if (JSON.stringify(save.rodItems) !== JSON.stringify({ graphite: 2 })) fail('a web export did not bring its rod copies')
+    console.log('  the save file: a v12 rod list upgrades to copies by id, and a web export brings its copies')
   }
 } finally {
   installRng(null); installClock(null)

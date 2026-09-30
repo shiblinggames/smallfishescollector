@@ -50,7 +50,8 @@ for (const r of FORGE_RECIPES) {
 for (const m of BOUNTY_MILESTONES) if (m.shipSkinId) need('ship_skin', m.shipSkinId, `the bounty ladder at ${m.points}`)
 
 // 3. The chest rules.
-if (ITEM_BY_KEY.get('rod:0')?.chest !== false) fail('the Bamboo (rod 0) may go in the chest')
+if (ITEM_BY_KEY.get('rod:bamboo')?.chest !== false) fail('the Bamboo may go in the chest')
+if (ITEM_BY_KEY.get('rod:completionist')?.chest !== false) fail('the Completionist (one of a kind) may go in the chest')
 for (const i of ITEMS) {
   const c = CATEGORIES[i.category]
   if ((c.kind === 'upgrade' || c.kind === 'instance') && i.chest) fail(`${i.key} is an ${c.kind} and may go in the chest`)

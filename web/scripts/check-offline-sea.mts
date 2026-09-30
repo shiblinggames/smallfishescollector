@@ -42,7 +42,7 @@ import { installRng, mulberry32 } from '../lib/rng'
 import { installClock } from '../lib/clock'
 import { XP_TABLE } from '../lib/fishingLevel'
 import { FOLK, TIER_AT, CHAT_POINTS, GIFT_FAVOURITE_POINTS, favouriteFor, tierFor } from '../lib/seaFolk'
-import { RODS } from '../lib/rods'
+import { RODS, rodIdForTier } from '../lib/rods'
 import { FINN_QUESTS } from '../lib/finnQuests'
 import { bottlesAround, bottlePos, carriesBearing } from '../lib/seaBottles'
 import { DIG_SITES } from '../lib/seaDigs'
@@ -50,6 +50,10 @@ import { ISLES, ISLE_FURNISHING } from '../lib/seaIsles'
 import { PORTAL_TIERS, hasStoneFor } from '../lib/seaPortal'
 import { RECALL_MS } from '../lib/seaRecall'
 import { PLACES } from '../app/(app)/sea/chart'
+
+/** Copies of the rod stored under this tier (rods are held by id since v13). */
+const rodHeld = (save: LocalSave, tier: number): number => save.rodItems[rodIdForTier(tier) ?? ''] ?? 0
+
 
 let failed = 0
 const fail = (m: string) => { failed++; console.log('  FAIL ' + m) }
@@ -106,7 +110,7 @@ function freshSave(over: Record<string, unknown> = {}): LocalSave {
     },
     species: SPECIES,
     bait: {}, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {},
+    clears: [], rodItems: {}, ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {},
     deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [],
     depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [],
     bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: freshCharting(),
@@ -170,9 +174,9 @@ try {
       if (!isErr(await sea.buyFolkRod(bdb, UID, seller.id))) fail('a rod sold to a stranger')
       b.rapport.push({ folk_id: seller.id, points: TIER_AT[4], seen_lines: [], last_chat_on: null, gifts_given: 0, want_fish_id: null, want_asked_at: null })
       const poor = freshSave({ doubloons: 0 }); poor.rapport = structuredClone(b.rapport)
-      if (!isErr(await sea.buyFolkRod(localSeaData(poor), UID, seller.id)) || poor.rods.includes(seller.rodTier!)) fail('a rod sold on credit (or kept after the charge failed)')
+      if (!isErr(await sea.buyFolkRod(localSeaData(poor), UID, seller.id)) || rodHeld(poor, seller.rodTier!) > 0) fail('a rod sold on credit (or kept after the charge failed)')
       const bought = await sea.buyFolkRod(bdb, UID, seller.id)
-      if (isErr(bought) || !b.rods.includes(seller.rodTier!) || b.profile.doubloons !== 0) fail('a friend\'s rod did not sell for its price')
+      if (isErr(bought) || !rodHeld(b, seller.rodTier!) || b.profile.doubloons !== 0) fail('a friend\'s rod did not sell for its price')
       if (!isErr(await sea.buyFolkRod(bdb, UID, seller.id))) fail('a rod sold twice')
     }
     console.log(`  the regulars: a visit a day, a job for a fish landed since the ask, handed back on an empty hold, the tiers, a friend's rod once`)
@@ -322,8 +326,7 @@ try {
     if (!(await db.claimChat(UID, 'pell', '2026-09-29', { points: 1, seen_lines: [] })) || await db.claimChat(UID, 'pell', '2026-09-29', { points: 2, seen_lines: [] })) fail('a day\'s chat was claimed twice')
     await db.setWant(UID, 'pell', { want_fish_id: 7, want_asked_at: iso(), seen_lines: [] })
     if (await db.settleWant(UID, 'pell', 8, { points: 9, gifts_given: 1 }) || !(await db.settleWant(UID, 'pell', 7, { points: 9, gifts_given: 1 })) || await db.settleWant(UID, 'pell', 7, { points: 12, gifts_given: 2 })) fail('a job settled for the wrong fish, or twice')
-    if (!(await db.addRod(UID, 50)) || await db.addRod(UID, 50)) fail('a rod was added twice')
-    console.log('  the store: a day\'s chat, a job and a rod each claimed once')
+    console.log('  the store: a day\'s chat and a job each claimed once')
   }
 
   // ── The tours, the sheets, the boss card, the Day board ──

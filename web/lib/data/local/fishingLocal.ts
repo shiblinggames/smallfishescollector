@@ -152,6 +152,5 @@ export function localFishingData(save: LocalSave): FishingData {
     },
     async raiseHoldTier(uid, tier) { const prof = me(uid); if (prof.fish_hold_tier == null || prof.fish_hold_tier < tier) prof.fish_hold_tier = tier },
     async countAbove() { return 0 },           // single player: nobody else to rank against
-    async rodTiers(uid) { me(uid); return [...save.rods] },
   }
 }

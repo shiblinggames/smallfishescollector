@@ -623,7 +623,7 @@ export async function equipRod(db: ShipData, uid: string, tier: number): Promise
   if (!rod) return { error: 'No such rod.' }
 
   if (rod.cost !== 0 || rod.earnedOnly || rod.traderOnly) {
-    if (!(await db.rodTiers(uid)).includes(tier)) return { error: 'You do not carry that rod.' }
+    if ((await db.held(uid, 'rod', rod.id)) === 0) return { error: 'You do not carry that rod.' }
   }
 
   await db.updateProfile(uid, { rod_tier: tier })

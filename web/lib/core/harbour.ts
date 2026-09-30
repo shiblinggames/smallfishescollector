@@ -39,6 +39,7 @@ import { getCrewRoster, type CrewMember } from '@/lib/core/crew'
 import { stintDone, storesCapHours } from '@/lib/crewBunks'
 import type { HarbourData } from '@/lib/data/harbourData'
 import { distinctIds } from '@/lib/listCounts'
+import { heldRodTiers } from '@/lib/data/inventory'
 
 const nowIso = () => new Date(clockNow()).toISOString()
 
@@ -83,9 +84,10 @@ export async function purchaseRod(db: HarbourData, uid: string, rodTier: number)
   // hidden row is a UI decision and this is a rule.
   if (rod.traderOnly) return { error: 'No chandler ashore carries that. You will have to find one who does.' }
 
-  const [profile, rods] = await Promise.all([db.profile(uid, 'doubloons, fishing_xp, is_premium, premium_expires_at'), db.rodTiers(uid)])
+  // Copies are allowed (rods are items, Kong 2026-09-30): owning one already is
+  // no bar to buying another.
+  const profile = await db.profile(uid, 'doubloons, fishing_xp, is_premium, premium_expires_at')
   if (!profile) return { error: 'Profile not found' }
-  if (rods.includes(rodTier)) return { error: 'Already owned' }
   if (isCaptainRod(rod) && !isPremiumActive(profile as Parameters<typeof isPremiumActive>[0])) return { error: `The ${rod.name} is a Captain's rod. Become a Captain to wield it.` }
   const levelReq = fishingGearLevelReq(rod)
   if (getLevelFromXP(Number(profile.fishing_xp ?? 0)) < levelReq) return { error: `Reach Fishing Lv ${levelReq} to buy the ${rod.name}` }
@@ -95,14 +97,9 @@ export async function purchaseRod(db: HarbourData, uid: string, rodTier: number)
   const newDoubloons = await db.deductDoubloons(uid, rod.cost)
   if (newDoubloons == null) return { error: `Need ${rod.cost.toLocaleString()} ⟡` }
 
-  // A concurrent twin can land the same rod first; this call's charge then
-  // goes back rather than paying twice.
-  if (!(await db.addRod(uid, rodTier))) {
-    await db.grant(uid, 'doubloons', rod.cost)
-    return { error: 'Already owned' }
-  }
+  await db.give(uid, 'rod', rod.id)
   await db.ledger(uid, -rod.cost, `Bought ${rod.name}`)
-  return { doubloons: newDoubloons, ownedRods: await db.rodTiers(uid) }
+  return { doubloons: newDoubloons, ownedRods: await heldRodTiers(db, uid) }
 }
 
 /** Sell a rod back for ROD_SELL_RATE of its price. Selling the rod in hand
@@ -113,16 +110,15 @@ export async function sellRod(db: HarbourData, uid: string, rodTier: number): Pr
   // Free and earned rods cost nothing to obtain, so there is nothing to refund.
   if (rod.cost === 0 || rod.earnedOnly) return { error: 'This rod cannot be sold' }
 
-  const [profile, rods] = await Promise.all([db.profile(uid, 'doubloons, rod_tier'), db.rodTiers(uid)])
+  const profile = await db.profile(uid, 'doubloons, rod_tier')
   if (!profile) return { error: 'Profile not found' }
-  if (!rods.includes(rodTier)) return { error: "You don't own this rod" }
-
-  const wasEquipped = profile.rod_tier === rodTier
-  const newRodTier = wasEquipped ? 0 : Number(profile.rod_tier)
   const refund = Math.floor(rod.cost * ROD_SELL_RATE)
 
-  // REMOVE THE ROD FIRST, and pay only if this call removed it.
-  if (!(await db.takeRod(uid, rodTier))) return { error: "You don't own this rod" }
+  // REMOVE ONE COPY FIRST, and pay only if this call removed it.
+  if (!(await db.take(uid, 'rod', rod.id))) return { error: "You don't own this rod" }
+  // The rod in hand goes back to the Bamboo only when no copy of it is left.
+  const wasEquipped = profile.rod_tier === rodTier && (await db.held(uid, 'rod', rod.id)) === 0
+  const newRodTier = wasEquipped ? 0 : Number(profile.rod_tier)
 
   const [newDoubloons] = await Promise.all([
     db.grant(uid, 'doubloons', refund),
@@ -130,24 +126,25 @@ export async function sellRod(db: HarbourData, uid: string, rodTier: number): Pr
     wasEquipped ? db.updateProfileIf(uid, { rod_tier: 0 }, [{ col: 'rod_tier', eq: rodTier }]) : null,
     db.ledger(uid, refund, `Sold ${rod.name}`),
   ])
-  return { doubloons: newDoubloons, ownedRods: await db.rodTiers(uid), refund, rodTier: newRodTier }
+  return { doubloons: newDoubloons, ownedRods: await heldRodTiers(db, uid), refund, rodTier: newRodTier }
 }
 
 /** The Completionist: the fishing half's capstone rod, claimed once the whole
  *  of it is done (the log, the people and the map). lib/completionist is both
  *  the gate and the shop's bars, so the two cannot disagree. */
 export async function claimCompletionistRod(db: HarbourData, uid: string): Promise<{ ownedRods: number[] } | { error: string }> {
-  const COMPLETIONIST_TIER = 14
-  const [profile, rods, liveIds, species, rapport, isles] = await Promise.all([
+  const COMPLETIONIST_ID = 'completionist'
+  const [profile, held, liveIds, species, rapport, isles] = await Promise.all([
     db.profile(uid, 'fishing_xp, ancient_catches, lifetime_species, prestige_levels'),
-    db.rodTiers(uid),
+    db.held(uid, 'rod', COMPLETIONIST_ID),
     db.collectionIds(uid),
     db.speciesList(),
     db.rapportRows(uid),
     db.discoveries(uid),
   ])
   if (!profile) return { error: 'Profile not found' }
-  if (rods.includes(COMPLETIONIST_TIER)) return { error: 'Already owned' }
+  // One of a kind: the Completionist is claimed once.
+  if (held > 0) return { error: 'Already owned' }
 
   const progress = completionistProgress({
     level: getLevelFromXP(Number(profile.fishing_xp ?? 0)),
@@ -161,18 +158,19 @@ export async function claimCompletionistRod(db: HarbourData, uid: string): Promi
   })
   if (!progress.eligible) return { error: completionistBlocker(progress) ?? 'Not yet' }
 
-  await db.addRod(uid, COMPLETIONIST_TIER)
+  await db.give(uid, 'rod', COMPLETIONIST_ID)
   // The Completionist badge, granted at the moment of claim (rod ownership is
   // not a profile column, so it cannot be derived).
   await db.grantBadge(uid, 'completionist_rod')
-  return { ownedRods: await db.rodTiers(uid) }
+  return { ownedRods: await heldRodTiers(db, uid) }
 }
 
 /** Put a rod in hand from the tackle shop. The Bamboo (tier 0) is always yours. */
 export async function equipTackleRod(db: HarbourData, uid: string, rodTier: number): Promise<{ rodTier: number } | { error: string }> {
-  const rod = RODS[rodTier]
+  // By tier, not by position in the list (the list is not in tier order).
+  const rod = RODS.find(r => r.tier === rodTier)
   if (!rod) return { error: 'Invalid rod' }
-  if (rodTier !== 0 && !(await db.rodTiers(uid)).includes(rodTier)) return { error: 'Rod not owned' }
+  if ((await db.held(uid, 'rod', rod.id)) === 0) return { error: 'Rod not owned' }
   await db.updateProfile(uid, { rod_tier: rodTier })
   return { rodTier }
 }
@@ -546,7 +544,7 @@ export async function shipyardState(db: HarbourData, uid: string): Promise<Shipy
   // ONE RULE FOR ALL FOUR SEA ROUTES. See lib/seaAccess.
   if (!canSail(profile as Parameters<typeof canSail>[0])) return { error: 'Not yet.' }
 
-  const [rodRows, baitRows, achievementPoints] = await Promise.all([db.rodTiers(uid), db.baitRows(uid), db.achievementPoints(uid)])
+  const [rodRows, baitRows, achievementPoints] = await Promise.all([heldRodTiers(db, uid), db.baitRows(uid), db.achievementPoints(uid)])
 
   // Free rods never appear in the rod store: everybody has them. Add them back
   // or a new captain sees an empty rack and no way to fill it.
@@ -709,7 +707,7 @@ export async function shipHeroPieces(db: HarbourData, uid: string): Promise<Ship
 
 export async function tackleShopProps(db: HarbourData, uid: string) {
   const [profile, bait, rods, liveIds, species, rapport, isles] = await Promise.all([
-    db.profile(uid, '*'), db.baitRows(uid), db.rodTiers(uid), db.collectionIds(uid),
+    db.profile(uid, '*'), db.baitRows(uid), heldRodTiers(db, uid), db.collectionIds(uid),
     db.speciesList(), db.rapportRows(uid), db.discoveries(uid),
   ])
   const completionist = completionistProgress({

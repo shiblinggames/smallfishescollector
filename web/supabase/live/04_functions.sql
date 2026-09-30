@@ -1243,6 +1243,42 @@ grant execute on function public.refresh_casino_leaderboards() to authenticated;
 grant execute on function public.refresh_casino_leaderboards() to public;
 grant execute on function public.refresh_casino_leaderboards() to service_role;
 
+CREATE OR REPLACE FUNCTION public.rod_give(uid uuid, tier integer, n integer)
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  insert into public.rod_inventory (user_id, rod_tier, quantity)
+  values (uid, tier, greatest(n, 1))
+  on conflict (user_id, rod_tier)
+  do update set quantity = rod_inventory.quantity + greatest(excluded.quantity, 1);
+$function$
+;
+revoke all on function public.rod_give(uid uuid, tier integer, n integer) from public, anon, authenticated;
+grant execute on function public.rod_give(uid uuid, tier integer, n integer) to service_role;
+
+CREATE OR REPLACE FUNCTION public.rod_take(uid uuid, tier integer)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare n int;
+begin
+  update public.rod_inventory set quantity = quantity - 1
+   where user_id = uid and rod_tier = tier and quantity > 1;
+  get diagnostics n = row_count;
+  if n > 0 then return true; end if;
+  delete from public.rod_inventory where user_id = uid and rod_tier = tier and quantity = 1;
+  get diagnostics n = row_count;
+  return n > 0;
+end
+$function$
+;
+revoke all on function public.rod_take(uid uuid, tier integer) from public, anon, authenticated;
+grant execute on function public.rod_take(uid uuid, tier integer) to service_role;
+
 CREATE OR REPLACE FUNCTION public.set_default_username()
  RETURNS trigger
  LANGUAGE plpgsql

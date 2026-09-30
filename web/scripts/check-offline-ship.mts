@@ -95,7 +95,7 @@ function freshSave(over: Record<string, unknown> = {}): LocalSave {
     },
     species: SPECIES,
     bait: {}, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [0], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {},
+    clears: [], rodItems: {}, ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {},
     deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [],
     depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
   }
@@ -275,7 +275,7 @@ try {
 
     const paid = RODS.find(x => x.cost !== 0 && !x.earnedOnly && !x.traderOnly)!
     if (!('error' in await ship.equipRod(db, UID, paid.tier))) fail('a rod not carried was equipped')
-    s.rods = [0, paid.tier]
+    s.rodItems = { [paid.id]: 1 }
     if ('error' in await ship.equipRod(db, UID, paid.tier) || s.profile.rod_tier !== paid.tier) fail('a carried rod was not equipped')
     if (!('error' in await ship.equipRod(db, UID, 999))) fail('a made-up rod was equipped')
     console.log(`  skins (owned and fitting), guides, the Shipyard's four ladders to the top (a failed fit refunded), rods`)

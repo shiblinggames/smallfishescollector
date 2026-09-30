@@ -13,9 +13,5 @@ import type { LocalSave } from './save'
 export function localShipData(save: LocalSave): ShipData {
   return {
     ...localRaidData(save),
-    async rodTiers(uid) {
-      if (uid !== save.uid) throw new Error(`local save belongs to ${save.uid}, not ${uid}`)
-      return [...save.rods]
-    },
   }
 }

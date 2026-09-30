@@ -116,8 +116,6 @@ export interface FishingData extends CaptainData {
   raiseHoldTier(uid: string, tier: number): Promise<void>
   /** How many captains have more of `field` than `value` (the leaderboard nudge). */
   countAbove(field: string, value: number): Promise<number | null>
-  /** Rod tiers owned. */
-  rodTiers(uid: string): Promise<number[]>
   /** Spend a CRATE cast (only the token; the streak write clears the rest). */
   claimCrateCast(uid: string, castAt: number): Promise<boolean>
 
@@ -314,10 +312,6 @@ export function fishingData(admin: Db): FishingData {
     async countAbove(field, value) {
       const { count } = await admin.from('profiles').select('*', { count: 'exact', head: true }).gt(field, value)
       return count
-    },
-    async rodTiers(uid) {
-      const { data } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', uid)
-      return ((data ?? []) as { rod_tier: number }[]).map(r => r.rod_tier)
     },
     async claimCrateCast(uid, castAt) {
       const { data } = await admin.from('profiles').update({ pending_cast: null }).eq('id', uid)

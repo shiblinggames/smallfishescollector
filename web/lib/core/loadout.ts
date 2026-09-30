@@ -16,6 +16,7 @@ import { BOAT_MAP } from '@/lib/boats'
 import { HAT_MAP } from '@/lib/hats'
 import { gateMet } from '@/lib/cosmeticGates'
 import type { FishingData } from '@/lib/data/fishingData'
+import { heldRodTiers } from '@/lib/data/inventory'
 
 /**
  * REMEMBER WHETHER THE MACHINE IS RUNNING.
@@ -224,7 +225,7 @@ export async function setCompletionistEffects(
   tiers: number[],
 ): Promise<{ completionistEffects: number[]; firstForge: boolean; charged: boolean; newDoubloons: number } | { error: string }> {
   const [ownedTiers, prof] = await Promise.all([
-    db.rodTiers(uid),
+    heldRodTiers(db, uid),
     db.profile(uid, 'has_seen_forge_flourish, completionist_effects, doubloons, unlocked_badges'),
   ])
   const owned = new Set(ownedTiers)

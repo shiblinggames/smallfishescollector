@@ -1,6 +1,9 @@
 import { fishingLevelReqForCost } from './gearGating'
 
 export interface RodDef {
+  /** The rod's own id (the item system, 2026-09-30): a name, not a number.
+   *  `tier` is kept as the web's storage key and for ordering old data. */
+  id: string
   tier: number
   name: string
   cost: number
@@ -83,77 +86,77 @@ export function rodGlowClass(rod: RodDef): string | undefined {
 
 export const RODS: RodDef[] = [
   {
-    tier: 0, name: 'Bamboo Rod', cost: 0, minLevel: 1,
+    id: 'bamboo', tier: 0, name: 'Bamboo Rod', cost: 0, minLevel: 1,
     description: 'A simple bamboo pole. Gets the job done.',
     color: '#a07858', rarityBonus: 0, biteIntervalMs: 3800, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_bamboo',
   },
   {
-    tier: 1, name: 'Driftwood Staff', cost: 1500, minLevel: 3,
+    id: 'driftwood', tier: 1, name: 'Driftwood Staff', cost: 1500, minLevel: 3,
     description: 'Heavy and slow, but the wide tip gives you a more forgiving catch window.',
     color: '#b8956a', rarityBonus: 0, biteIntervalMs: 4500, catchZoneBonus: 8,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_driftwood',
   },
   {
-    tier: 2, name: 'Fiberglass Rod', cost: 2500, minLevel: 7,
+    id: 'fiberglass', tier: 2, name: 'Fiberglass Rod', cost: 2500, minLevel: 7,
     description: 'Lighter than bamboo with a wider tip. Gives you a more forgiving catch window.',
     color: '#9ca3af', rarityBonus: 0, biteIntervalMs: 3800, catchZoneBonus: 10,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_fiberglass',
   },
   {
-    tier: 3, name: 'Reef Guard', cost: 8000, minLevel: 12,
+    id: 'reefguard', tier: 3, name: 'Reef Guard', cost: 8000, minLevel: 12,
     description: 'Responsive and fast. Bites come a little quicker than the baseline.',
     color: '#34d399', rarityBonus: 0, biteIntervalMs: 3230, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_reefguard',
   },
   {
-    tier: 4, name: 'Telescoping Rod', cost: 8000, minLevel: 16,
+    id: 'telescoping', tier: 4, name: 'Telescoping Rod', cost: 8000, minLevel: 16,
     description: 'Extends deep. Something about the length draws rarer fish to the surface.',
     color: '#60a5fa', rarityBonus: 0.10, biteIntervalMs: 3800, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_telescoping',
   },
   {
-    tier: 5, name: 'Moonwood Staff', cost: 14000, minLevel: 20,
+    id: 'moonwood', tier: 5, name: 'Moonwood Staff', cost: 14000, minLevel: 20,
     description: 'Carved from driftwood blessed by a full moon. Quicker bites and a wider catch window.',
     color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 3420, catchZoneBonus: 10,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_moonwood', glow: true, glowType: 'moon',
   },
   {
-    tier: 6, name: 'Graphite Rod', cost: 22000, minLevel: 28,
+    id: 'graphite', tier: 6, name: 'Graphite Rod', cost: 22000, minLevel: 28,
     description: 'Lightweight and stiff. Noticeably quicker bites.',
     color: '#64748b', rarityBonus: 0, biteIntervalMs: 2850, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_graphite',
   },
   {
-    tier: 7, name: "Navigator's Rod", cost: 35000, minLevel: 32,
+    id: 'navigators', tier: 7, name: "Navigator's Rod", cost: 35000, minLevel: 32,
     description: 'A well-balanced deep-sea rod. Good speed and a wider catch zone.',
     color: '#38bdf8', rarityBonus: 0, biteIntervalMs: 2800, catchZoneBonus: 8,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_navigators',
   },
   {
-    tier: 8, name: 'Carbon Rod', cost: 60000, minLevel: 42,
+    id: 'carbon', tier: 8, name: 'Carbon Rod', cost: 60000, minLevel: 42,
     description: 'Precision-engineered for quick, snappy bites.',
     color: '#4ade80', rarityBonus: 0, biteIntervalMs: 2470, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_carbon', glow: true, glowType: 'tech',
   },
   {
-    tier: 9, name: 'Deep Diver', cost: 90000, minLevel: 48,
+    id: 'deepdiver', tier: 9, name: 'Deep Diver', cost: 90000, minLevel: 48,
     description: 'Built for the abyss. Fast bites and a wide catch window.',
     color: '#22d3ee', rarityBonus: 0, biteIntervalMs: 2356, catchZoneBonus: 13,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_deepdiver',
   },
   {
-    tier: 10, name: 'Legendary Rod', cost: 200000, minLevel: 60,
+    id: 'legendary', tier: 10, name: 'Legendary Rod', cost: 200000, minLevel: 60,
     description: 'Forged from the mast of a sunken galleon. Faster bites, and the rarest fish cannot resist.',
     // rarityBonus 1.50 → 0.80 (2026-07-23): at 1.50 this was the ONLY rod that
     // shifted the rarity curve (tier-5 ×7 weight), and since prestige is gated on
@@ -166,28 +169,28 @@ export const RODS: RodDef[] = [
     slug: 'rod_legendary', glow: true, glowType: 'fire',
   },
   {
-    tier: 11, name: 'Twin-Strike', cost: 45000, minLevel: 37,
+    id: 'twinstrike', tier: 11, name: 'Twin-Strike', cost: 45000, minLevel: 37,
     description: 'Two hooks on one line. When luck strikes, they both bite.',
     color: '#fbbf24', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 0,
     doubleCatchChance: 0.25, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_twinstrike',
   },
   {
-    tier: 12, name: 'Second Wind', cost: 28000, minLevel: 24,
+    id: 'secondwind', tier: 12, name: 'Second Wind', cost: 28000, minLevel: 24,
     description: "Stubborn rod. When you miss, sometimes it refuses to let go.",
     color: '#fb923c', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0.25, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_secondwind',
   },
   {
-    tier: 13, name: "Millionaire's Rod", cost: 175000, minLevel: 54,
+    id: 'millionaires', tier: 13, name: "Millionaire's Rod", cost: 175000, minLevel: 54,
     description: 'Hand-rolled in gold leaf. Every catch brings two.',
     color: '#f0c040', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 1.0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_millionaires', glow: true, glowType: 'sparkle',
   },
   {
-    tier: 15, name: 'YOLO Rod', cost: 1000000, minLevel: 80, traderOnly: true,
+    id: 'yolo', tier: 15, name: 'YOLO Rod', cost: 1000000, minLevel: 80, traderOnly: true,
     description: 'Roll the dice every cast for a 100-fish haul — and the odds climb the shallower you fish. The rest of the time? Just a regular catch.',
     color: '#60d9ff', rarityBonus: 0, biteIntervalMs: 2850, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
@@ -195,7 +198,7 @@ export const RODS: RodDef[] = [
     slug: 'rod_yolo', glow: true, glowType: 'electric',
   },
   {
-    tier: 14, name: 'Completionist Rod', cost: 0, earnedOnly: true,
+    id: 'completionist', tier: 14, name: 'Completionist Rod', cost: 0, earnedOnly: true,
     description: "Forged from the soul of every species in the sea. A master's tool on its own, and a vessel besides: fit up to three rods you own into it to carry their gifts, and re-forge whenever you like.",
     // Base "master tool" — fast bites, a wide window, snag-immune, no gimmick
     // procs. The unique effects come from the rods socketed into it (see
@@ -206,7 +209,7 @@ export const RODS: RodDef[] = [
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: true, perfectZoneBonus: 0,
   },
   {
-    tier: 16, name: 'Treasure Rod', cost: 200000, minLevel: 64,
+    id: 'treasure', tier: 16, name: 'Treasure Rod', cost: 200000, minLevel: 64,
     description: 'Lures the deep’s lost hoards — doubles your chance of hooking a crate.',
     color: '#e8b54a', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
@@ -214,7 +217,7 @@ export const RODS: RodDef[] = [
     slug: 'rod_treasure', glow: true, glowType: 'sparkle',
   },
   {
-    tier: 17, name: 'Perfect Rod', cost: 200000, minLevel: 68,
+    id: 'perfect', tier: 17, name: 'Perfect Rod', cost: 200000, minLevel: 68,
     description: 'Rewards flawless form — perfect catches grant double XP, and it scales with your streak.',
     color: '#bfe3ff', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
@@ -222,7 +225,7 @@ export const RODS: RodDef[] = [
     slug: 'rod_perfect', glow: true, glowType: 'moon',
   },
   {
-    tier: 18, name: 'Galaxy Rod', cost: 300000, minLevel: 72, traderOnly: true,
+    id: 'galaxy', tier: 18, name: 'Galaxy Rod', cost: 300000, minLevel: 72, traderOnly: true,
     description: 'Spun from cosmic thread. After any catch, open a wormhole and reroll it into a different fish from the same waters — fortune or folly, you take what surfaces.',
     color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 2660, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
@@ -230,7 +233,7 @@ export const RODS: RodDef[] = [
     slug: 'rod_galaxy', glow: true, glowType: 'galaxy',
   },
   {
-    tier: 19, name: 'Lightsaber Rod', cost: 300000, minLevel: 76, traderOnly: true,
+    id: 'lightsaber', tier: 19, name: 'Lightsaber Rod', cost: 300000, minLevel: 76, traderOnly: true,
     description: 'A blade of pure energy. Fish are drawn to the light — most casts bite almost the instant your line touches the water.',
     color: '#ff3b47', rarityBonus: 0, biteIntervalMs: 2470, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
@@ -238,7 +241,7 @@ export const RODS: RodDef[] = [
     slug: 'rod_lightsaber', glow: true, glowType: 'saber',
   },
   {
-    tier: 20, name: "Yoon's Locked-In Rod", cost: 350000, minLevel: 75,
+    id: 'yoons', tier: 20, name: "Yoon's Locked-In Rod", cost: 350000, minLevel: 75,
     description: 'Rewards a hot hand. Chain perfect catches to LOCK IN: 3 in a row quickens your bites, 5 lands a triple haul on every catch, and 10 quickens them further into a rare-fish frenzy. Hold the streak to keep it all — one miss and you start over.',
     // Baseline is a plain, capable rod; ALL of the power comes from the streak
     // stages (lockedInState), applied server-side off current_perfect_streak.
@@ -323,6 +326,29 @@ export function ownedRodTiers(purchased: number[], equippedTier: number): number
   // any path other than a purchase would otherwise vanish from your own loadout.
   owned.add(Number(equippedTier))
   return [...owned].sort((a, b) => b - a)
+}
+
+/** The Bamboo: every captain's, never sold, given or taken. */
+export const STARTER_ROD_ID = 'bamboo'
+
+const ROD_BY_ID = new Map<string, RodDef>()
+const ROD_BY_TIER = new Map<number, RodDef>()
+
+/** A rod by its id (the item system's key), or undefined. */
+export function getRodById(id: string): RodDef | undefined {
+  if (ROD_BY_ID.size === 0) for (const r of RODS) { ROD_BY_ID.set(r.id, r); ROD_BY_TIER.set(r.tier, r) }
+  return ROD_BY_ID.get(id)
+}
+
+/** The id of the rod stored under this tier (the web's storage key). */
+export function rodIdForTier(tier: number): string | undefined {
+  if (ROD_BY_TIER.size === 0) getRodById('')
+  return ROD_BY_TIER.get(Number(tier))?.id
+}
+
+/** The tier the web stores this rod under. */
+export function rodTierForId(id: string): number | undefined {
+  return getRodById(id)?.tier
 }
 
 export function getRod(tier: number): RodDef {

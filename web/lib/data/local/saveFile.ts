@@ -25,9 +25,10 @@ import type { HoldAttemptRow } from '../chartData'
 import { freshCasino, freshTrivia, freshCharting, SHIP_PROFILE_DEFAULTS, DAILY_PROFILE_DEFAULTS, PARLOR_PROFILE_DEFAULTS, CHARTING_PROFILE_DEFAULTS, SEA_PROFILE_DEFAULTS, type LocalSave, type LocalMail } from './save'
 import type { SpeciesRow, DailyRow } from '../fishingData'
 import type { Row } from '../common'
+import { rodIdForTier, STARTER_ROD_ID } from '@/lib/rods'
 
 export const LOCAL_SAVE_FORMAT = 'seasthebooty-local-save'
-export const LOCAL_SAVE_VERSION = 12
+export const LOCAL_SAVE_VERSION = 13
 
 export type SaveFile = {
   format: typeof LOCAL_SAVE_FORMAT
@@ -108,6 +109,25 @@ const MIGRATIONS: Record<number, (f: SaveFile) => SaveFile> = {
       profile: { ...structuredClone(SEA_PROFILE_DEFAULTS), ...f.save.profile },
     },
   }),
+  // v13 (2026-09-30): rods are items. The list of rod tiers becomes copies held
+  // per rod id, one each (a tier list could not hold two); the Bamboo is every
+  // captain's and is not listed.
+  12: f => {
+    const { rods, ...rest } = f.save as typeof f.save & { rods?: number[] }
+    return { ...f, version: 13, save: { ...rest, rodItems: rodItemsFrom((rods ?? []).map(tier => ({ tier, quantity: 1 }))) } }
+  },
+}
+
+/** Copies held per rod id, from (tier, quantity) rows; unknown tiers and the
+ *  Bamboo are left out. */
+function rodItemsFrom(rows: { tier: number; quantity: number }[]): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const r of rows) {
+    const id = rodIdForTier(r.tier)
+    if (!id || id === STARTER_ROD_ID) continue
+    out[id] = (out[id] ?? 0) + Math.max(1, Math.trunc(r.quantity || 1))
+  }
+  return out
 }
 
 export function serializeSave(save: LocalSave, carried: Record<string, Row[]> = {}, savedAt = new Date().toISOString()): string {
@@ -214,7 +234,7 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
         doubloons_awarded: Number(r.doubloons_awarded ?? 0), current_started_at: (r.current_started_at as string | null) ?? null,
       }])),
     },
-    rods: t('rod_inventory').map(r => Number(r.rod_tier)),
+    rodItems: rodItemsFrom(t('rod_inventory').map(r => ({ tier: Number(r.rod_tier), quantity: Number(r.quantity ?? 1) }))),
     ledger: [], anomalies: [], mail: [],
     rapport: t('sea_rapport').map(r => ({
       folk_id: String(r.folk_id), points: Number(r.points ?? 0), seen_lines: (r.seen_lines ?? []) as string[],

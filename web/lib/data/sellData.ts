@@ -62,11 +62,7 @@ export interface SellData extends CaptainData {
   claimDeal(uid: string, row: { trader_key: string; sea_day: number; kind: string; detail: object }): Promise<'ok' | 'taken' | 'failed'>
   /** Give a claim back (the deal fell through, nothing was charged). */
   releaseDeal(uid: string, traderKey: string): Promise<void>
-
-  // ── Rods ──
-  ownsRod(uid: string, tier: number): Promise<boolean>
-  /** Give a rod; false if it could not be given (already owned, a race). */
-  grantRod(uid: string, tier: number): Promise<boolean>
+  // Rods are items: the inventory (CaptainData held/give/take) holds them.
 }
 
 /** SellData over Supabase. */
@@ -145,15 +141,6 @@ export function sellData(admin: Db): SellData {
     },
     async releaseDeal(uid, traderKey) {
       await admin.from('sea_trader_deals').delete().eq('user_id', uid).eq('trader_key', traderKey)
-    },
-
-    async ownsRod(uid, tier) {
-      const { data } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', uid).eq('rod_tier', tier).maybeSingle()
-      return !!data
-    },
-    async grantRod(uid, tier) {
-      const { error } = await admin.from('rod_inventory').insert({ user_id: uid, rod_tier: tier })
-      return !error
     },
   }
 }

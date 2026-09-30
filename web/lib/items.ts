@@ -21,7 +21,7 @@
 // changes. Every thing has a KEY, `<category>:<id>`, unique across the game.
 // scripts/check-items.mts holds it complete and the keys unique.
 
-import { RODS } from '@/lib/rods'
+import { RODS, STARTER_ROD_ID } from '@/lib/rods'
 import { BAITS } from '@/lib/bait'
 import { REELS } from '@/lib/reels'
 import { HOOKS } from '@/lib/hooks'
@@ -90,9 +90,6 @@ export type ItemDef = {
   chest: ChestRule
 }
 
-/** Rod tier 0, the Bamboo, is every captain's own and never changes hands. */
-const STARTER_ROD = 0
-
 function def(category: ItemCategory, id: string | number, name: string, image?: string | null, chest?: ChestRule): ItemDef {
   const c = CATEGORIES[category]
   return { key: `${category}:${id}`, category, id: String(id), name, image: image ?? null, kind: c.kind, chest: chest ?? c.chest }
@@ -102,7 +99,9 @@ type SpeciesRow = { id: number; name: string }
 
 function build(): ItemDef[] {
   return [
-    ...RODS.map(r => def('rod', r.tier, r.name, null, r.tier === STARTER_ROD ? false : undefined)),
+    // Rods by their own id; the Bamboo never moves, and the Completionist is one
+    // of a kind (its forged effects are its own), so neither goes in the chest.
+    ...RODS.map(r => def('rod', r.id, r.name, null, r.id === STARTER_ROD_ID || r.earnedOnly ? false : undefined)),
     ...BAITS.map(b => def('bait', b.type, b.name, b.imageUrl)),
     ...(speciesJson as unknown as SpeciesRow[]).map(f => def('fish', f.id, f.name)),
     ...RAID_ITEMS.map(i => def('raid_item', i.id, i.name, i.image)),

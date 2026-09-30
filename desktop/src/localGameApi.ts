@@ -65,6 +65,7 @@ import { fishArtPoolFrom } from '@/lib/blackjackFishArtPool'
 import { gauntletPageProps as shapeGauntlet } from '@/lib/core/gauntletPage'
 import { getRaidPlayerStatsVia } from '@/lib/raidLoadout'
 import { badgesPage } from '@/lib/core/badgesPage'
+import { heldRodTiers } from '@/lib/data/inventory'
 import { localCaptain } from '@/lib/data/local/save'
 import { buildClearedSetVia } from '@/lib/raidCleared'
 import { loadDeployedPartyVia } from '@/lib/crewData'
@@ -102,7 +103,7 @@ function starterSave(): LocalSave {
     },
     species: SPECIES,
     bait: { worm: 25 }, hold: {}, collection: {}, lifetime: {}, bests: {}, shinies: [], daily: {},
-    clears: [], rods: [], ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
+    clears: [], rodItems: {}, ledger: [], anomalies: [], mail: [], rapport: [], contests: {}, overrides: {}, deals: [], market: null, crew: [], recruits: [], bunks: [], nextId: 1, voyages: [], trawls: [], depthBests: {}, gauntletRuns: [], bountyEvents: [], casino: freshCasino(), raidTokens: [], raidClears: [], bounty: null, bountyHistory: [], contestsWonAt: {}, trivia: { board: {}, capstan: {}, ladder: {} }, charting: { boards: { match: {}, minefield: {}, sudoku: {}, rigging: {} }, match: {}, minefield: {}, rigging: {}, hold: {} }, digs: [], discoveries: [], homestead: null,
   }
 }
 
@@ -678,7 +679,7 @@ export async function seaPageProps(q: SeaPageQuery = {}) {
     holdCount: Object.values(save.hold).reduce((n, q) => n + q, 0),
     // Offline there is nobody else on the water.
     hasPact: false,
-    rodTiers: [...save.rods],
+    rodTiers: await heldRodTiers(localFishingData(save), save.uid),
   }, q)
 }
 

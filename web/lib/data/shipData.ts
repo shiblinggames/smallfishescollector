@@ -12,17 +12,11 @@ import type { Db } from './common'
 import { raidData, type RaidData } from './raidData'
 
 export interface ShipData extends RaidData {
-  /** Every rod tier this captain owns. */
-  rodTiers(uid: string): Promise<number[]>
 }
 
 /** ShipData over Supabase. */
 export function shipData(admin: Db): ShipData {
   return {
     ...raidData(admin),
-    async rodTiers(uid) {
-      const { data } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', uid)
-      return ((data ?? []) as { rod_tier: number }[]).map(r => r.rod_tier)
-    },
   }
 }

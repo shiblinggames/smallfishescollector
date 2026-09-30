@@ -19,7 +19,8 @@
 
 import type { Db } from './common'
 import { CATEGORIES, type ItemCategory } from '@/lib/items'
-import { storageFor, STARTER_ROD_TIER } from '@/lib/inventoryStorage'
+import { storageFor, STARTER_ROD_ID } from '@/lib/inventoryStorage'
+import { rodTierForId, rodIdForTier } from '@/lib/rods'
 import { arrayAdd } from '@/lib/wallet'
 
 export interface InventoryOps {
@@ -68,9 +69,11 @@ export function webInventory(admin: Db): InventoryOps {
           return Number((data as { quantity: number } | null)?.quantity ?? 0)
         }
         case 'rods': {
-          if (Number(id) === STARTER_ROD_TIER) return 1
-          const { data } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', uid).eq('rod_tier', Number(id)).limit(1)
-          return (data ?? []).length > 0 ? 1 : 0
+          if (id === STARTER_ROD_ID) return 1
+          const tier = rodTierForId(id)
+          if (tier == null) return 0
+          const { data } = await admin.from('rod_inventory').select('quantity').eq('user_id', uid).eq('rod_tier', tier).maybeSingle()
+          return Number((data as { quantity: number } | null)?.quantity ?? 0)
         }
         case 'list': return (await listOf(uid, s.col)).includes(id) ? 1 : 0
         case 'counted': return (await listOf(uid, s.col)).filter(x => x === id).length
@@ -99,9 +102,12 @@ export function webInventory(admin: Db): InventoryOps {
         const { data } = await admin.from('fish_inventory').select('fish_id, quantity').eq('user_id', uid)
         for (const r of (data ?? []) as { fish_id: number; quantity: number }[]) if (r.quantity > 0) out.set(String(r.fish_id), r.quantity)
       } else if (s.type === 'rods') {
-        out.set(String(STARTER_ROD_TIER), 1)
-        const { data } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', uid)
-        for (const r of (data ?? []) as { rod_tier: number }[]) out.set(String(r.rod_tier), 1)
+        out.set(STARTER_ROD_ID, 1)
+        const { data } = await admin.from('rod_inventory').select('rod_tier, quantity').eq('user_id', uid)
+        for (const r of (data ?? []) as { rod_tier: number; quantity: number }[]) {
+          const rid = rodIdForTier(r.rod_tier)
+          if (rid && rid !== STARTER_ROD_ID) out.set(rid, Number(r.quantity ?? 1))
+        }
       } else if (s.type === 'list' || s.type === 'counted') {
         for (const id of await listOf(uid, s.col)) out.set(id, (out.get(id) ?? 0) + 1)
       } else if (s.type === 'homestead') {
@@ -139,10 +145,12 @@ export function webInventory(admin: Db): InventoryOps {
         return false
       }
       if (s.type === 'rods') {
-        if (Number(id) === STARTER_ROD_TIER) return false
-        // Keyed on (user_id, rod_tier): the insert IS the lock.
-        const { error } = await admin.from('rod_inventory').insert({ user_id: uid, rod_tier: Number(id) })
-        return !error
+        const count = wholeCount(n)
+        const tier = rodTierForId(id)
+        if (count == null || tier == null || id === STARTER_ROD_ID) return false
+        const { error } = await admin.rpc('rod_give', { uid, tier, n: count })
+        if (error) throw new Error(`rod_give: ${error.message}`)
+        return true
       }
       if (s.type === 'list') return arrayAdd(admin, uid, s.col, id)
       if (s.type === 'counted') {
@@ -186,9 +194,19 @@ export function webInventory(admin: Db): InventoryOps {
         return (done ?? []).length > 0
       }
       if (s.type === 'rods') {
-        if (Number(id) === STARTER_ROD_TIER) return false
-        const { data } = await admin.from('rod_inventory').delete().eq('user_id', uid).eq('rod_tier', Number(id)).select('rod_tier')
-        return (data ?? []).length > 0
+        const count = wholeCount(n)
+        const tier = rodTierForId(id)
+        if (count == null || tier == null || id === STARTER_ROD_ID) return false
+        // Copy by copy, all or nothing, as for raid items.
+        for (let k = 0; k < count; k++) {
+          const { data, error } = await admin.rpc('rod_take', { uid, tier })
+          if (error) throw new Error(`rod_take: ${error.message}`)
+          if (!data) {
+            if (k > 0) await admin.rpc('rod_give', { uid, tier, n: k })
+            return false
+          }
+        }
+        return true
       }
       if (s.type === 'list') {
         const list = await listOf(uid, s.col)
@@ -230,4 +248,17 @@ export function webInventory(admin: Db): InventoryOps {
     },
   }
   return ops
+}
+
+/**
+ * The rod tiers held beyond the Bamboo: what rod_inventory's rows always meant,
+ * for code still keyed on tiers (the rack, badges, the screens). Rods are held
+ * by id now; this maps them back.
+ */
+export async function heldRodTiers(db: Pick<InventoryOps, 'heldAll'>, uid: string): Promise<number[]> {
+  const all = await db.heldAll(uid, 'rod')
+  return [...all.keys()]
+    .filter(id => id !== STARTER_ROD_ID)
+    .map(id => rodTierForId(id))
+    .filter((t): t is number => t != null)
 }

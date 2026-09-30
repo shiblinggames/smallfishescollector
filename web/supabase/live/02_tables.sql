@@ -984,7 +984,8 @@ create table if not exists public.rigging_boards (
 create table if not exists public.rod_inventory (
   user_id uuid not null,
   rod_tier integer not null,
-  purchased_at timestamp with time zone default now()
+  purchased_at timestamp with time zone default now(),
+  quantity integer default 1 not null
 );
 
 create table if not exists public.roulette_buy_ins (

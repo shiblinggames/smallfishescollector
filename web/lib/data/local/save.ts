@@ -36,7 +36,9 @@ export type LocalSave = {
   shinies: { id: number; fish_id: number; size_in: number | null; status: string; caught_at: string; [k: string]: unknown }[]
   daily: Record<string, DailyRow>
   clears: string[]
-  rods: number[]
+  /** Rods held, by rod id, as copies (v13; the Bamboo is every captain's and
+   *  is not listed). */
+  rodItems: Record<string, number>
   ledger: { amount: number; reason: string; currency: 'doubloons' | 'gems' }[]
   anomalies: { kind: string; severity: number; detail: Record<string, unknown> }[]
   mail: LocalMail[]

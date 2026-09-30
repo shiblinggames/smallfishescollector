@@ -23,12 +23,6 @@ export function localHarbourData(save: LocalSave): HarbourData {
       me(uid)
       return Object.entries(save.bait).map(([bait_type, quantity]) => ({ bait_type, quantity: Number(quantity) }))
     },
-    async takeRod(uid, tier) {
-      me(uid)
-      if (!save.rods.includes(tier)) return false
-      save.rods = save.rods.filter(t => t !== tier)
-      return true
-    },
     async holdRows(uid) {
       me(uid)
       return Object.entries(save.hold).map(([id, q]) => ({ fish_id: Number(id), quantity: Number(q) }))
