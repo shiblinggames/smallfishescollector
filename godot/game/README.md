@@ -2,7 +2,6 @@
 
 The game rebuilt in Godot 4 for Steam (decided 2026-09-30; the why and every design
 decision are in `docs/systems/steam-port.md`). Typed GDScript, Steam through GodotSteam.
-Not to be confused with `../sea/`, the parked 3D sea prototype from August.
 
 ## Setting up a machine
 

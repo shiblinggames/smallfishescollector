@@ -16,7 +16,7 @@ Shared: `web/lib/seaTraders.ts` (NPCs), `web/lib/seaClock.ts` (day/night).
 
 ## Why it is painted 2D and not an engine
 
-A Godot build was prototyped and parked (`godot/sea/`). The house style is hand-painted,
+A Godot build was prototyped and parked (`godot/sea/`, deleted 2026-09-30; in git history). The house style is hand-painted,
 and every plate the chart needs already exists in `/public` — an engine would have meant
 approximating a look the repo already owns outright. The parked project's web export used
 to live at `public/sea/`, which is now the chart's building art; the old `.gitignore` rule

@@ -1,9 +1,7 @@
-# Godot's per-machine import cache and class registry. Regenerated on first
-# open; committing it just creates conflicts between machines.
-sea/.godot/
-
-# The Steam game (godot/game, 2026-09-30): the same cache, GodotSteam's
-# binaries (fetched by tools/setup.mjs, never committed) and export output.
+# The Steam game (godot/game, 2026-09-30). Godot's per-machine import cache
+# and class registry (regenerated on first open; committing it only makes
+# conflicts between machines), GodotSteam's binaries (fetched by
+# tools/setup.mjs, never committed) and export output.
 game/.godot/
 game/addons/godotsteam/
 game/build/

@@ -16,8 +16,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
 - PARITY: the TS cores generate test cases (a save plus seeded rolls in, the save out) and
   the Godot build must replay them exactly; a system is ported when it matches.
 - THE WEB BETA: stays up, FEATURE-FROZEN, bug fixes only. New features go into Godot.
-- STAGE 0 BUILT (2026-09-30): the project is `godot/game/` (Godot 4.7.2; `godot/sea/` is
-  the parked August 3D prototype, left alone). `core/dice.gd` (mulberry32 and seedOf, exact),
+- STAGE 0 BUILT (2026-09-30): the project is `godot/game/` (Godot 4.7.2; the parked August 3D
+  prototype `godot/sea/` was deleted the same day at Kong's word, in git history). `core/dice.gd` (mulberry32 and seedOf, exact),
   `core/clock.gd`, `core/js_json.gd` (numbers as JS doubles, written as JSON.stringify does),
   `core/save_file.gd` (the v13 local save format, read and written byte for byte).
   `web/scripts/parity-export.mts` writes the cases (dice, saves, three fishing sessions of 433
