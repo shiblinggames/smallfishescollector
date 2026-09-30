@@ -475,8 +475,13 @@ its system's doc.
        means one game runs the fight and the other follows. The gauntlet is harder still
        (shared boons, cash-out, permadeath on a disconnect). Not committed to launch.
      - NOT AT LAUNCH: homestead visits, trading and gifting.
-     - THE MODEL (Kong, 2026-09-30): TERRARIA'S, with Animal Crossing's manners for the
-       homestead.
+     - MULTIPLAYER IS ONLY CHARTERS (Kong, 2026-09-30, replacing the guest-visiting rules
+       just below). Solo captains are strictly single-player, each in their own world, and
+       nobody else sails in it. Everything multiplayer is a Charter, with Charter captains
+       that only ever play in that Charter's shared world. The Terraria-style guest rules
+       below are kept only as a record of what was considered.
+     - THE MODEL (Kong, 2026-09-30, SUPERSEDED for solo captains by "only Charters" above):
+       TERRARIA'S, with Animal Crossing's manners for the homestead.
        - Up to 4 captains in a sea, joined by invite.
        - GUESTS SAIL IN THE HOST'S WORLD. They go anywhere the host can, including water they
          have not unlocked, and join the host's fights.
@@ -502,15 +507,102 @@ its system's doc.
        - HARDCORE CHARTER: the crew shares a pool of lives (proposed: one per member plus a
          spare). A sunk ship or a lost raid spends one. When they run out the Charter plays
          on and loses its hardcore flag for good.
-       - SOLO PLAY IS ALLOWED, MERGED ON RETURN. The world travels with the crew: whoever
-         holds the newest copy hosts, everyone leaves a session with the latest, any member
-         can sail it alone, and when the crew meets again what each did is merged.
+       - THE TERRARIA WAY (Kong, 2026-09-30, replacing an earlier "solo play, merged on
+         return"):
+         - The Charter's world lives on ONE computer, the founder's. The crew plays it when
+           the founder hosts, and nobody plays it while the founder is away.
+         - So there is one copy, no merging, and chests work exactly like Terraria's: anyone
+           can add or take, one person at a time.
+         - The founder can hand the world to another member.
+         - Why: without a server, solo play meant a copy on every machine and a merge, and the
+           chest would have needed rules against two captains taking the same thing apart.
+       - THE CREW CHEST holds doubloons, raid items and forge materials, and maybe rods.
+         Kong: "we may need to revisit how we do our whole inventory system" (next sitting).
+       - THE REGULARS AND FINN are each captain's own: everyone builds their own rapport and
+         meets Finn themselves. The campaign is the Charter's.
+     - CAPTAINS AND WORLDS (Kong, 2026-09-30):
+       - No accounts on Steam: no sign-in, no Google, no linking. You are your Steam account.
+       - A CAPTAIN SELECT screen, with as many captains as you like. A new captain's name
+         defaults to their Steam name and can be changed in setup.
+       - Each normal captain has a HOME SEA (their own campaign, fog and homestead, like a
+         Stardew farm per save), played alone.
+       - In a Charter, the ALMANAC (catch log, bests, prestige) is SHARED by the crew.
+     - THE CHARTER, WALKED THROUGH SYSTEM BY SYSTEM (Kong, 2026-09-30):
+       - CAMPAIGN: SHARED MAP, PERSONAL CREDIT.
+         - When anyone clears a node, the Charter's map advances and the water opens for
+           the whole crew.
+         - First-clear loot, the chapter-end ship class choice, legendary crew unlocks and
+           bounty rungs go only to captains who TOOK PART.
+         - Cleared nodes stay re-fightable, so a captain who missed one earns their credit
+           later.
+         - Story beats play once for those present; the Captain's Log replays them.
+       - XP: FULL to every captain in the fight; nothing is split.
+       - LOOT: PERSONAL ROLLS, each captain's own crate into their own save. What they do not
+         need can go in the crew chest.
+       - FIGHTS: every captain present joins with their own ship and crew. The boss grows
+         tougher per extra captain, and a captain can take a Charter raid alone at normal
+         difficulty. (The Charter only runs while its founder hosts, so "alone" means the
+         founder solo, or one captain fighting while the others are elsewhere in the
+         session.) Co-op combat itself (turns, targeting) is its own sitting.
+       - EXPLORATION: ALL SHARED.
+         - The fog lifts for the whole crew wherever anyone sails, and the fog badges count
+           the Charter's shared map.
+         - One landing claims an isle for the Charter, and one dig claims a site.
+         - The caches go into the CREW CHEST.
+         - Any captain's bearing (from their own regulars) marks a site on the shared chart.
+         - One portal for the Charter, raised by anyone.
+         - OPEN: isle caches pay cosmetics under the new economy, so the chest may need to hold
+           cosmetics for a captain to take.
+       - HOMESTEAD: ONE SHARED BASE, as a Terraria base is. Any captain builds, furnishes and
+         arranges it; it all belongs to the crew. (Open detail: whose badges hang in the
+         gallery.) PARKED for later: captain's quarters, a personal room per captain.
+       - THE SEA'S MARKET: one market for the Charter (it is part of the world).
+       - THE ALMANAC: ONE SHARED BOOK.
+         - A species is logged once anyone lands it.
+         - One personal best per species, with the holder's name.
+         - Zone completion rewards pay once, into the crew chest.
+         - A GOLDEN is logged with the CATCHER'S NAME on it: the credit is theirs, the book
+           is the crew's.
+         - PRESTIGE is a CREW VOTE (any captain proposes; everyone present agrees), and its
+           boosts apply to the whole crew.
+         - The FINALE opens for every captain once the crew's wall holds all six ancients.
+       - THE PURSE: DOUBLOONS ARE THE CHARTER'S.
+         - Every coin a captain earns (sales, loot coin, rewards) goes into ONE SHARED PURSE,
+           which every captain spends from.
+         - A CREW LEDGER everyone can read shows who earned what and who spent what.
+         - Fathoms and Blood Gems stay each captain's own, since they buy that captain's
+           Locker upgrades.
+         - ITEMS (raid gear, rods, bait, fish) go into each captain's own inventory and can
+           pass through the crew chest. The chest therefore holds items, not coin.
+       - CREW: each captain recruits and levels their own. The CREW HALL (hall, drills,
+         stores) is the Charter's, upgraded by anyone from the purse.
+       - GAUNTLETS: personal Lockers from each captain's own Fathoms. Raid items move through
+         the chest.
+       - BOUNTIES: ONE SHARED CREW BOARD. Any captain's actions count; finished orders pay
+         the purse; the bounty ladder's cosmetics go to EVERY captain when the crew reaches a
+         rung.
+       - DAILY CHALLENGES: ONE SHARED BOARD the crew completes together, paying the purse.
+       - THE PARLOR: PERSONAL. Each captain has their own Board, Capstan, Pirate King, streak
+         and rank; pay goes to the purse, and rank rewards are the captain's.
+       - THE CHART ROOM: PERSONAL PUZZLES, SHARED WORLD CHART. Every captain's puzzle points
+         push the Charter's one World Chart.
+       - A Charter captain is a SEPARATE character, sealed to its Charter's world.
+       - So today's single save splits into a CAPTAIN file and a WORLD file.
+     - THE INVENTORY SURVEY (2026-09-30) found everything a player owns stored six ways:
+       - own tables (rods, bait, fish);
+       - lists on the profile (most unlocks, and raid items, which cannot be held twice
+         although the forge consumes them);
+       - one true/false column per special item;
+       - structured data columns (crew skins, homestead);
+       - plain numbers (reels, hooks, lines, the hull);
+       - a list that is really a ladder (repair kits).
+       Also: some unlocks are only saved when first equipped, and there are about a dozen dead
+       columns and card-era leftovers. The captain/world split and one item system are one
+       job: split first, then the item model.
        - STILL TO DESIGN:
-         - which state is the CHARTER's and which is each CAPTAIN's (per system);
-         - the merge rule for each piece of Charter state;
-         - the crew chest's rules for solo withdrawals;
+         - which state is the WORLD's and which is the CAPTAIN's, per system;
          - the hardcore numbers;
-         - how a Charter is founded, joined, and what happens when a member leaves.
+         - how a Charter is founded and joined, and what happens when a member leaves.
    - RETIRED on Steam: contests and the Pirate King ladder (races between players), along
      with the leaderboards.
 5. **Quick ones (2026-09-30):**
