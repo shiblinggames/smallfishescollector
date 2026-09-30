@@ -62,6 +62,8 @@ import { marketPageProps as shapeMarket } from '@/lib/core/marketPage'
 import { currentMarket } from '@/lib/data/local/sellLocal'
 import { parlorLobbyProps as shapeParlorLobby } from '@/lib/core/lobbies'
 import { fishArtPoolFrom } from '@/lib/blackjackFishArtPool'
+import { gauntletPageProps as shapeGauntlet } from '@/lib/core/gauntletPage'
+import { getRaidPlayerStatsVia } from '@/lib/raidLoadout'
 import { buildClearedSetVia } from '@/lib/raidCleared'
 import { loadDeployedPartyVia } from '@/lib/crewData'
 import type { CachedSpecies } from '@/lib/fishSpecies'
@@ -724,4 +726,45 @@ export async function parlorLobbyProps() {
 export function fishArtPool() {
   const { save } = need()
   return fishArtPoolFrom(save.species.map(f => ({ name: f.name, bite_rarity: f.bite_rarity, habitat: f.habitat })))
+}
+
+/** THE TACKLE SHOP'S PROPS (lib/core/harbour tackleShopProps, the same
+ *  function the web page runs), from the save. */
+export async function tackleShopProps() {
+  const { save } = need()
+  return harbourCore.tackleShopProps(localHarbourData(save), save.uid)
+}
+
+/** THE HOMESTEAD'S PROPS (lib/core/homestead homePageProps), from the save.
+ *  Offline there is nobody to visit, so it is always the captain's own. */
+export async function homePageProps() {
+  const { save } = need()
+  const p = save.profile
+  return homesteadCore.homePageProps({
+    homestead: await homesteadCore.getHomestead(localProgressData(save), save.uid),
+    own: {
+      doubloons: Number(p.doubloons ?? 0),
+      unlocked_badges: (p.unlocked_badges as string[] | null) ?? [],
+      badge_unlocked_at: (p.badge_unlocked_at as Record<string, string | null> | null) ?? {},
+    },
+    owner: {
+      pets: (p.unlocked_pets as string[] | null) ?? [],
+      logged: Object.keys(save.collection).map(Number),
+      ancients: ((p.ancient_catches as number[] | null) ?? []).map(Number),
+    },
+    species: save.species.map(f => ({ id: f.id, name: f.name, habitat: f.habitat, sell_value: f.sell_value })),
+    visit: null,
+  })
+}
+
+/** A GAUNTLET'S PROPS (lib/core/gauntletPage), from the save, or where its
+ *  shut door sends the captain. */
+export async function gauntletPageProps(variant: 'davy' | 'don') {
+  const { save } = need()
+  const [stats, daily, leaderboard] = await Promise.all([
+    getRaidPlayerStatsVia(localCrewData(save), save.uid),
+    gauntletApi.getGauntletDailyState(variant),
+    gauntletApi.getGauntletLeaderboard(variant),
+  ])
+  return shapeGauntlet({ variant, profile: save.profile, stats, daily, leaderboard, throneCleared: save.clears.includes('the_throne') })
 }

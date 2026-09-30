@@ -13,7 +13,7 @@ import { lazy, type ComponentType } from 'react'
 import { redirect } from './shims/navigation'
 import { isPremiumActive } from '@/lib/premium'
 import { storyLogData } from '@/app/(app)/achievements/storyLogData'
-import { api, seaPageProps, marketPageProps, parlorLobbyProps, fishArtPool, currentSave } from './localGameApi'
+import { api, seaPageProps, marketPageProps, parlorLobbyProps, fishArtPool, tackleShopProps, homePageProps, gauntletPageProps, currentSave } from './localGameApi'
 import { chartRoomLobbyProps } from '@/lib/core/lobbies'
 
 export type Screen = {
@@ -38,6 +38,9 @@ const ChartRoomPuzzle = screen(() => import('./rooms/Puzzles').then(m => ({ defa
 const ParlorGame = screen(() => import('./rooms/Puzzles').then(m => ({ default: m.ParlorGame })))
 const Lobby = screen(() => import('./rooms/Lobbies'))
 const BlackjackView = screen(() => import('@/app/(app)/tavern/blackjack/BlackjackView'))
+const TackleShopView = screen(() => import('@/app/(app)/marketplace/tackle-shop/TackleShopView'))
+const HomeClient = screen(() => import('@/app/(app)/home/HomeClient'))
+const Gauntlet = screen(() => import('./rooms/Gauntlet'))
 
 export const SCREENS: Record<string, Screen> = {
   '/sea': {
@@ -114,6 +117,18 @@ export const SCREENS: Record<string, Screen> = {
       return { profile: currentSave()!.profile, dailyWagered, resumed, fishArtPool: fishArtPool() }
     },
     Component: BlackjackView,
+  },
+  '/marketplace/tackle-shop': { load: async () => tackleShopProps(), Component: TackleShopView },
+  // The web's /hooks is the tackle shop now.
+  '/hooks': { load: async () => redirect('/marketplace/tackle-shop'), Component: TackleShopView },
+  '/home': { load: async () => homePageProps(), Component: HomeClient },
+  '/raids/gauntlet': {
+    load: async () => { const page = await gauntletPageProps('davy'); if (page.redirect) redirect(page.redirect); return page.props! },
+    Component: Gauntlet,
+  },
+  '/raids/dons-gauntlet': {
+    load: async () => { const page = await gauntletPageProps('don'); if (page.redirect) redirect(page.redirect); return page.props! },
+    Component: Gauntlet,
   },
   '/achievements': {
     load: async () => ({ storyData: storyLogData(currentSave()!.profile, await api.raids.getRaidMapView()) }),

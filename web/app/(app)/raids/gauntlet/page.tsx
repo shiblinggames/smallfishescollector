@@ -3,14 +3,13 @@
 // only on cash-out. The cooldown gate + payout are server-authoritative (see
 // actions.ts); the fight engine is the shared RaidCombat, hosted by GauntletGame.
 
-import { inCaptainsWater } from '@/lib/captainWater'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import GauntletGame from './GauntletGame'
 import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { getGauntletDailyState, getGauntletLeaderboard } from './actions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
+import { gauntletPageProps } from '@/lib/core/gauntletPage'
 
 export default async function GauntletPage() {
   const user = await getCurrentUser()
@@ -26,15 +25,8 @@ export default async function GauntletPage() {
   ])
 
   // Locked until GAUNTLET_LIVE flips (then: cleared Chapter 2). Admins always.
-  const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
-  if (!gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes })) redirect('/sea')
-
-  // Show the switcher only if Don's Gauntlet is ALSO unlocked for this player.
-  const donsUnlocked = donsGauntletUnlocked({
-    isAdmin: profile?.is_admin, throneCleared: !!throneRes.data,
-    captain: inCaptainsWater(profile), donsDeepest: Number(profile?.dons_gauntlet_deepest ?? 0),
-  })
-
+  const page = gauntletPageProps({ variant: 'davy', profile, stats, daily, leaderboard, throneCleared: !!throneRes.data })
+  if (page.redirect) redirect(page.redirect)
 
   return (
     <main className="min-h-screen pt-6">
@@ -43,58 +35,7 @@ export default async function GauntletPage() {
           plus tab-bar clearance on the in-run ones. The shell's pb-12 stacked
           48px on top of that and left a dead strip under the home page. */}
       <div className="page-col">
-        <GauntletGame
-          otherGauntletUnlocked={donsUnlocked}
-          shipImageUrl={stats.shipImageUrl}
-          shipName={stats.shipName}
-          username={stats.username}
-          playerHPMax={stats.playerHPMax}
-          shipMinDamage={stats.shipMinDamage}
-          shipSpeed={stats.shipSpeed}
-          totalPower={stats.totalPower}
-          totalDodge={stats.totalDodge}
-          totalFortune={stats.totalFortune}
-          crewMembers={stats.crewMembers}
-          equippedShipSkin={stats.equippedShipSkin}
-          equippedItems={stats.equippedRaidItems}
-          ownedRaidItems={stats.ownedRaidItems}
-          ownedShipSkins={stats.shipSkins}
-          classDamageMult={stats.classDamageMult}
-          classDoubloonMult={stats.classDoubloonMult}
-          shipClasses={stats.shipClasses}
-          equippedRepairKit={stats.equippedRepairKit}
-          playerCharacterColor={stats.characterColor}
-          playerEquippedHat={stats.equippedHat}
-          playerAvatarBg={stats.avatarBgColor}
-          playerAvatarBorder={stats.avatarBorderColor}
-          raidMods={stats.raidMods}
-          bonusChargeSlots={stats.bonusChargeSlots}
-            manowarAugment={stats.manowarAugment}
-          gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
-          gauntletUpgradesOff={(profile?.gauntlet_upgrades_off as string[] | null) ?? []}
-          confluencesSeen={(profile?.gauntlet_confluences_seen as string[] | null) ?? []}
-          deepest={daily.deepest}
-          deepestRun={daily.deepestRun}
-          hcDeepestRun={daily.hcDeepestRun}
-          lastRun={daily.lastRun}
-          hcLastRun={daily.hcLastRun}
-          fathoms={daily.fathoms}
-          available={daily.available}
-          nextAt={daily.nextAt}
-          resumeState={daily.resumeState}
-          resumePaused={daily.resumePaused}
-          hasSeenIntro={profile?.has_seen_gauntlet_intro === true}
-          topDescender={leaderboard.top}
-          hardcoreUnlocked={daily.hardcoreUnlocked}
-          hardcoreCaptainLocked={daily.hardcoreCaptainLocked}
-          hardcoreLive={daily.hardcoreLive}
-          hcDeepest={daily.hcDeepest}
-          hcRunsLeft={daily.hcRunsLeft}
-          hardcoreTop={leaderboard.hardcoreTop}
-          runHardcore={daily.runHardcore}
-          runTerms={daily.runTerms}
-          bloodGems={(profile?.blood_gems as number | null) ?? 0}
-        />
+        <GauntletGame {...page.props} />
       </div>
     </main>
   )

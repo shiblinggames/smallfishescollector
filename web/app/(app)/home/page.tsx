@@ -6,7 +6,7 @@
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCachedFishSpecies } from '@/lib/fishSpecies'
-import { fishImageUrl } from '@/lib/fishArt'
+import { homePageProps } from '@/lib/core/homestead'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { canSail } from '@/lib/seaAccess'
 import { getHomestead } from './actions'
@@ -59,44 +59,21 @@ export default async function HomePage({ searchParams }: {
     getCachedFishSpecies(),
   ])
 
-  const logged = new Set((logRows ?? []).map(r => Number(r.fish_id)))
-
-  /**
-   * ── THE SIX GIANTS, FROM THE RECORD THAT ACTUALLY HOLDS THEM ──────────────
-   *
-   * This read `fish_collection` and the trophy room was therefore ALWAYS empty,
-   * for everybody, since the day it shipped. An Ancient never goes in there: the
-   * catch path routes it straight to `profiles.ancient_catches` and skips the
-   * hold, the collection and the bounty entirely — reelIn says so in a comment,
-   * a few hundred lines above the code that does it.
-   *
-   * So there are two records of "which giants have you landed" and this wall was
-   * reading the one that is never written. `ancient_catches` is the real one: it
-   * is what gates the finale, it is append-only, and it survives a prestige,
-   * which is right for a trophy — a wall you have to re-earn is not a wall.
-   *
-   * The species table is still what turns an id into a name and a picture; the
-   * discriminator stays as a guard so a sellable ancient_deep fish can never
-   * find its way onto the wall if the ids are ever renumbered.
-   */
-  const landed = new Set(((ancientRow?.ancient_catches as number[] | null) ?? []).map(Number))
-  const giants = species
-    .filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0 && landed.has(f.id))
-    .map(f => ({ name: f.name, art: fishImageUrl(f.name) }))
-
-  // A VISIT SHOWS THEIRS, not yours: their island, their room, their badges.
-  // The doubloons stay YOURS and are simply never spent — nothing on the page
-  // offers to spend them while `guest` is set.
   return (
-    <HomeClient
-      pets={(petRows?.unlocked_pets as string[] | null) ?? []}
-      species={{ logged: logged.size, total: species.length }}
-      giants={giants}
-      homestead={visit ? visit.homestead : homestead}
-      guest={visit?.username ?? null}
-      doubloons={Number(row?.doubloons ?? 0)}
-      unlocked={visit ? visit.unlocked : ((row?.unlocked_badges as string[] | null) ?? [])}
-      stamps={visit ? visit.stamps : ((row?.badge_unlocked_at as Record<string, string | null> | null) ?? {})}
-    />
+    <HomeClient {...homePageProps({
+      homestead,
+      own: {
+        doubloons: Number(row?.doubloons ?? 0),
+        unlocked_badges: (row?.unlocked_badges as string[] | null) ?? [],
+        badge_unlocked_at: (row?.badge_unlocked_at as Record<string, string | null> | null) ?? {},
+      },
+      owner: {
+        pets: (petRows?.unlocked_pets as string[] | null) ?? [],
+        logged: (logRows ?? []).map(r => Number(r.fish_id)),
+        ancients: ((ancientRow?.ancient_catches as number[] | null) ?? []).map(Number),
+      },
+      species,
+      visit: visit ? { username: visit.username, homestead: visit.homestead, unlocked: visit.unlocked, stamps: visit.stamps } : null,
+    })} />
   )
 }

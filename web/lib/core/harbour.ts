@@ -700,3 +700,37 @@ export async function shipHeroPieces(db: HarbourData, uid: string): Promise<Ship
     throneCleared: clear.has('the_throne'),
   }
 }
+
+// ── THE TACKLE SHOP'S PAGE (2026-09-30) ──
+// What /marketplace/tackle-shop hands TackleShopClient, read through the store
+// so the web page and the desktop build are the same function. Moved out of the
+// page; the reads are the ones it made directly.
+
+export async function tackleShopProps(db: HarbourData, uid: string) {
+  const [profile, bait, rods, liveIds, species, rapport, isles] = await Promise.all([
+    db.profile(uid, '*'), db.baitRows(uid), db.rodTiers(uid), db.collectionIds(uid),
+    db.speciesList(), db.rapportRows(uid), db.discoveries(uid),
+  ])
+  const completionist = completionistProgress({
+    level: getLevelFromXP(Number(profile?.fishing_xp ?? 0)),
+    allSpecies: species.map(s => ({ id: s.id as number, habitat: s.habitat as string })),
+    lifetime: profile?.lifetime_species as number[] | null,
+    liveIds,
+    ancientCatches: profile?.ancient_catches as number[] | null,
+    prestige: profile?.prestige_levels as Record<string, number> | null,
+    rapport: rapport.map(r => ({ folk_id: r.folk_id, points: r.points })),
+    isles: isles.map(isle_id => ({ isle_id })),
+  })
+  return {
+    hookTier: Number(profile?.hook_tier ?? 0),
+    equippedRod: Number(profile?.rod_tier ?? 0),
+    ownedRods: rods.length > 0 ? rods : [0],
+    reelTier: Number(profile?.reel_tier ?? 0),
+    lineTier: Number(profile?.line_tier ?? 0),
+    doubloons: Number(profile?.doubloons ?? 0),
+    baitInventory: bait,
+    fishingXP: Number(profile?.fishing_xp ?? 0),
+    isPremium: isPremiumActive(profile),
+    completionist,
+  }
+}

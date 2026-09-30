@@ -25,6 +25,7 @@ import {
 } from '@/lib/homestead'
 import { ISLES } from '@/lib/seaIsles'
 import type { ProgressData, HomesteadDbRow } from '@/lib/data/progressData'
+import { fishImageUrl } from '@/lib/fishArt'
 
 export type BuildResult =
   | { ok: true; homestead: Homestead; spent: number; built: string }
@@ -150,4 +151,40 @@ export async function pinBadges(db: ProgressData, uid: string, ids: string[]): P
   // Only what changed, never a stale copy of the whole row.
   await db.updateHomestead(uid, { pinned, updated_at: nowIso() })
   return { ok: true }
+}
+
+// ── THE HOMESTEAD'S PAGE (2026-09-30) ──
+// What /home hands HomeClient, from pieces (like the sea chart): the web page
+// reads them from Supabase, including a friend's island when visiting; the
+// desktop reads the captain's own from the save. Moved out of the page.
+
+export type HomePagePieces = {
+  homestead: Homestead
+  /** The viewer's own purse and badges. */
+  own: { doubloons: number; unlocked_badges: string[]; badge_unlocked_at: Record<string, string | null> }
+  /** The island's owner (the viewer, or the captain being visited). */
+  owner: { pets: string[]; logged: number[]; ancients: number[] }
+  species: { id: number; name: string; habitat: string; sell_value: number | null }[]
+  /** Set when visiting somebody else's island. */
+  visit: { username: string; homestead: Homestead; unlocked: string[]; stamps: Record<string, string | null> } | null
+}
+
+export function homePageProps(p: HomePagePieces) {
+  const logged = new Set(p.owner.logged.map(Number))
+  const landed = new Set(p.owner.ancients.map(Number))
+  // The giants on the wall: the Ancient Deep's trophies (worth nothing at
+  // market), the ones this island's owner has landed.
+  const giants = p.species
+    .filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0 && landed.has(f.id))
+    .map(f => ({ name: f.name, art: fishImageUrl(f.name) }))
+  return {
+    pets: p.owner.pets,
+    species: { logged: logged.size, total: p.species.length },
+    giants,
+    homestead: p.visit ? p.visit.homestead : p.homestead,
+    guest: p.visit?.username ?? null,
+    doubloons: p.own.doubloons,
+    unlocked: p.visit ? p.visit.unlocked : p.own.unlocked_badges,
+    stamps: p.visit ? p.visit.stamps : p.own.badge_unlocked_at,
+  }
 }

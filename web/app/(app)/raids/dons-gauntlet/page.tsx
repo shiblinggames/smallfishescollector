@@ -4,14 +4,13 @@
 // slice 0 uses the classic Davy pool/curve/rewards as a stub — later slices add
 // the Ch3+4 enemy pool, the steeper curve, the rewards, boons/curses, and theme.
 
-import { inCaptainsWater } from '@/lib/captainWater'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import GauntletGame from '../gauntlet/GauntletGame'
 import { getRaidPlayerStats } from '@/lib/raidPlayerStats'
 import { getGauntletDailyState, getGauntletLeaderboard } from '../gauntlet/actions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { donsGauntletUnlocked, gauntletUnlocked } from '@/lib/gauntlet'
+import { gauntletPageProps } from '@/lib/core/gauntletPage'
 
 export default async function DonsGauntletPage() {
   const user = await getCurrentUser()
@@ -30,14 +29,8 @@ export default async function DonsGauntletPage() {
   // else only once DONS_GAUNTLET_LIVE flips.
   // AND ON CAPTAIN'S WATER: see lib/captainWater. A descent already on record
   // keeps the door open for whoever was down here before it went up.
-  if (!donsGauntletUnlocked({
-    isAdmin: profile?.is_admin, throneCleared: !!throneRes.data,
-    captain: inCaptainsWater(profile), donsDeepest: Number(profile?.dons_gauntlet_deepest ?? 0),
-  })) redirect('/sea')
-
-  // Show the switcher only if Davy's Gauntlet is ALSO unlocked (cleared Ch2).
-  const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
-  const davyUnlocked = gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes })
+  const page = gauntletPageProps({ variant: 'don', profile, stats, daily, leaderboard, throneCleared: !!throneRes.data })
+  if (page.redirect) redirect(page.redirect)
 
   return (
     <main className="min-h-screen pt-6">
@@ -46,67 +39,7 @@ export default async function DonsGauntletPage() {
           plus tab-bar clearance on the in-run ones. The shell's pb-12 stacked
           48px on top of that and left a dead strip under the home page. */}
       <div className="page-col">
-        <GauntletGame
-          variant="don"
-          otherGauntletUnlocked={davyUnlocked}
-          shipImageUrl={stats.shipImageUrl}
-          shipName={stats.shipName}
-          username={stats.username}
-          playerHPMax={stats.playerHPMax}
-          shipMinDamage={stats.shipMinDamage}
-          shipSpeed={stats.shipSpeed}
-          totalPower={stats.totalPower}
-          totalDodge={stats.totalDodge}
-          totalFortune={stats.totalFortune}
-          crewMembers={stats.crewMembers}
-          equippedShipSkin={stats.equippedShipSkin}
-          equippedItems={stats.equippedRaidItems}
-          ownedRaidItems={stats.ownedRaidItems}
-          ownedShipSkins={stats.shipSkins}
-          classDamageMult={stats.classDamageMult}
-          classDoubloonMult={stats.classDoubloonMult}
-          shipClasses={stats.shipClasses}
-          equippedRepairKit={stats.equippedRepairKit}
-          playerCharacterColor={stats.characterColor}
-          playerEquippedHat={stats.equippedHat}
-          playerAvatarBg={stats.avatarBgColor}
-          playerAvatarBorder={stats.avatarBorderColor}
-          raidMods={stats.raidMods}
-          bonusChargeSlots={stats.bonusChargeSlots}
-          manowarAugment={stats.manowarAugment}
-          // Don's has its OWN upgrade tree (empty until the upgrades slice); the
-          // synergy-discovery codex + the Fathoms purse stay shared.
-          gauntletUpgrades={(profile?.dons_gauntlet_upgrades as string[] | null) ?? []}
-          gauntletUpgradesOff={(profile?.dons_gauntlet_upgrades_off as string[] | null) ?? []}
-          confluencesSeen={(profile?.gauntlet_confluences_seen as string[] | null) ?? []}
-          deepest={daily.deepest}
-          deepestRun={daily.deepestRun}
-          hcDeepestRun={daily.hcDeepestRun}
-          lastRun={daily.lastRun}
-          hcLastRun={daily.hcLastRun}
-          fathoms={daily.fathoms}
-          available={daily.available}
-          nextAt={daily.nextAt}
-          resumeState={daily.resumeState}
-          resumePaused={daily.resumePaused}
-          // Don's Gauntlet has its OWN how-it-works modal (Don art + copy that
-          // teases the new layers), tracked by its own flag so it auto-opens
-          // once here independently of whether Davy's was ever seen.
-          hasSeenIntro={profile?.has_seen_dons_gauntlet_intro === true}
-          topDescender={leaderboard.top}
-          // Don's Hardcore, live. Its own everything: unlock (the Throne plus
-          // depth in HIS water), its own three runs a day, its own deepest and
-          // its own Drowned Ledger. Davy's budget is untouched by spending these.
-          hardcoreUnlocked={daily.hardcoreUnlocked}
-          hardcoreCaptainLocked={daily.hardcoreCaptainLocked}
-          hardcoreLive={daily.hardcoreLive}
-          hcDeepest={daily.hcDeepest}
-          hcRunsLeft={daily.hcRunsLeft}
-          hardcoreTop={leaderboard.hardcoreTop}
-          runHardcore={daily.runHardcore}
-          runTerms={daily.runTerms}
-          bloodGems={(profile?.blood_gems as number | null) ?? 0}
-        />
+        <GauntletGame {...page.props} />
       </div>
     </main>
   )
