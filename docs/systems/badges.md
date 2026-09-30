@@ -4,6 +4,11 @@ Badges are SKILL TIERS (rookie → seasoned → veteran → master), not rarity.
 add-a-badge runbook lives in **`web/BADGES.md`** — follow it end to end; this doc holds
 the rationale and the traps around it.
 
+
+**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong): badges will pay in ACHIEVEMENT POINTS
+ONLY. The Claim button and the per-badge doubloon and gem rewards go; AP milestones unlock
+cosmetics, and Steam achievements mirror the badges. See steam-port.md "Working it through".
+
 ## Files
 
 - Registry + tier meta: `web/lib/badges.ts` (rewards/points derive from tier — never set

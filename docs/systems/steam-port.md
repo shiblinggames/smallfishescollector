@@ -644,7 +644,11 @@ its system's doc.
          cosmetic stays with its owner.
        - THE CREW CHEST HOLDS raid items, forge materials, rods and cosmetic tokens. Not bait,
          fish, crew members or upgrades.
-     - OPEN SMALL ONE: whose badges hang in the homestead gallery.
+     - THE GALLERY: each Charter captain pins their own badges on their own row.
+     - BADGES PAY IN ACHIEVEMENT POINTS ONLY (Kong, 2026-09-30; solo too). The Claim button and
+       the per-badge doubloons and gems go. Badges earn AP, AP milestones unlock cosmetics
+       (extending the colours and boats AP already unlocks), and Steam achievements mirror the
+       badges. So a badge stays personal even in a Charter.
        - A Charter captain is a SEPARATE character, sealed to its Charter's world.
        - So today's single save splits into a CAPTAIN file and a WORLD file.
      - THE INVENTORY SURVEY (2026-09-30) found everything a player owns stored six ways:
