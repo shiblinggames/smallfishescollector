@@ -10,7 +10,8 @@
 // trawls, the gauntlets, the Den, raids and the campaign map, the ship and the
 // Shipyard, and the daily loop (bounties, challenges, the Daily Haul, mail,
 // contests), the Parlor, the Chart Room and the sea's own (the regulars, Finn,
-// digs, isles, the portal, the recall).
+// digs, isles, the portal, the recall), and the harbour (the shops ashore and
+// the gear reads).
 
 import { webFishingApi, type FishingApi } from './fishing'
 import { webSellingApi, type SellingApi } from './selling'
@@ -24,6 +25,7 @@ import { webDailiesApi, type DailiesApi } from './dailies'
 import { webParlorApi, type ParlorApi } from './parlor'
 import { webChartRoomApi, type ChartRoomApi } from './chartRoom'
 import { webSeaApi, type SeaApi } from './sea'
+import { webHarbourApi, type HarbourApi } from './harbour'
 
 export interface GameApi {
   fishing: FishingApi
@@ -38,6 +40,7 @@ export interface GameApi {
   parlor: ParlorApi
   chartRoom: ChartRoomApi
   sea: SeaApi
+  harbour: HarbourApi
 }
 
 export const api: GameApi = {
@@ -53,6 +56,7 @@ export const api: GameApi = {
   parlor: webParlorApi,
   chartRoom: webChartRoomApi,
   sea: webSeaApi,
+  harbour: webHarbourApi,
 }
 
 export type { FishingApi } from './fishing'
@@ -63,6 +67,7 @@ export type { ShipApi } from './ship'
 export type { DailiesApi, BountyBoard, BountyView } from './dailies'
 export type { ParlorApi } from './parlor'
 export type { ChartRoomApi } from './chartRoom'
+export type { HarbourApi, AlmanacEntry, GoldenCatch, AlmanacStats, AlmanacData, ShipyardState } from './harbour'
 export type { LoadoutGear, RaidSheetState, NodeSheetState, BossCardState, DayState, SeaBoot, PactState, PactPerson } from './sea'
 export type { SeaApi, Rapport, FolkTalk, FolkAsk, FolkGift, FinnSeaState, FinnTalk, FinnQuestView, BottleResult, DigResult, DigState, AshoreResult } from './sea'
 export type { CasinoApi } from './casino'

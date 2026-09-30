@@ -1,82 +1,34 @@
 'use server'
 
+// THE SHIPYARD'S HULLS: buying the next one and naming her. Each action checks
+// the session and hands lib/core/harbour the Supabase store; the price, the Nav
+// gate and the spend-first guard live there.
+
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { nextShip, MIN_SHIP_TIER } from '@/lib/ships'
-import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
-import { navLevelReqForShip } from '@/lib/gearGating'
 import { revalidatePath } from 'next/cache'
-import { spend, grant } from '@/lib/wallet'
+import { harbourData } from '@/lib/data/harbourData'
+import * as core from '@/lib/core/harbour'
 
-export async function buyShip(): Promise<{ shipTier: number; doubloons: number } | { error: string }> {
+async function me(): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
+  return user?.id ?? null
+}
 
-  const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('ship_tier, doubloons, expedition_xp')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile) return { error: 'Profile not found' }
-
-  // FLOORED AT THE SLOOP. The Rowboat and Dinghy came off the ladder and most
-  // captains were still stored at tier 0, so without this the first purchase
-  // would sell them a rung that no longer exists.
-  const currentTier = Math.max(MIN_SHIP_TIER, profile.ship_tier ?? MIN_SHIP_TIER)
-  const nextTier = currentTier + 1
-
-  // AGAINST THE TOP TIER, never SHIPS.length. Those agreed until the ladder
-  // lost its bottom two rungs; length is 5 now and the top tier is 6, so the
-  // old test told a Brigantine captain they were finished and refused to sell
-  // them the two hulls above.
-  const next = nextShip(currentTier)
-  if (!next) return { error: 'Already at max tier' }
-
-  const cost = next.cost
-  const navLevel = navLevelFromXP(profile.expedition_xp ?? 0)
-  const navReq = navLevelReqForShip(cost)
-  if (navLevel < navReq) return { error: `Reach Nav Lv ${navReq} to buy the ${next.name}` }
-  // The spend is the guard, in place. The hull then moves up only from the
-  // tier this request priced, so two taps cannot buy one rung twice; the loser
-  // is refunded.
-  const newDoubloons = await spend(admin, user.id, 'doubloons', cost)
-  if (newDoubloons == null) return { error: 'Not enough doubloons' }
-  const tierGuard = admin.from('profiles').update({ ship_tier: nextTier }).eq('id', user.id)
-  const { data: moved } = await (profile.ship_tier == null
-    ? tierGuard.is('ship_tier', null)
-    : tierGuard.eq('ship_tier', profile.ship_tier)
-  ).select('id')
-  if (!moved || moved.length === 0) {
-    await grant(admin, user.id, 'doubloons', cost)
-    return { error: 'That ship is already yours. Reload and try again.' }
-  }
-
-  await Promise.all([
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: -cost,
-      reason: `Bought ${next.name}`,
-    }),
-  ])
-
-  revalidatePath('/marketplace/shipyard')
-  return { shipTier: nextTier, doubloons: newDoubloons }
+export async function buyShip(): Promise<{ shipTier: number; doubloons: number } | { error: string }> {
+  const uid = await me()
+  if (!uid) return { error: 'Unauthorized' }
+  const res = await core.buyShip(harbourData(createAdminClient()), uid)
+  if (!('error' in res)) revalidatePath('/marketplace/shipyard')
+  return res
 }
 
 export async function renameShip(name: string): Promise<{ ok: true } | { error: string }> {
-  const trimmed = name.trim().slice(0, 32)
-  if (!trimmed) return { error: 'Name cannot be empty' }
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  await admin.from('profiles').update({ ship_name: trimmed }).eq('id', user.id)
-
-  revalidatePath('/marketplace/shipyard')
-  return { ok: true }
+  if (!name.trim()) return { error: 'Name cannot be empty' }
+  const uid = await me()
+  if (!uid) return { error: 'Unauthorized' }
+  const res = await core.renameShip(harbourData(createAdminClient()), uid, name)
+  if (!('error' in res)) revalidatePath('/marketplace/shipyard')
+  return res
 }

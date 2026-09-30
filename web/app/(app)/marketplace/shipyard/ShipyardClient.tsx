@@ -3,12 +3,12 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { SHIPS, getShip, MAX_SHIP_TIER } from '@/lib/ships'
-import { buyShip, renameShip } from '@/app/shipyard/actions'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
 import { navLevelReqForShip } from '@/lib/gearGating'
 import ShopHeader from '@/components/ShopHeader'
 import ShopBuyButton from '@/components/ShopBuyButton'
 import ShopStatusPill from '@/components/ShopStatusPill'
+import { api } from '@/lib/gameApi'
 
 export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons, navLevel, shipName: initialShipName }: { shipTier: number; doubloons: number; navLevel: number; shipName: string | null }) {
   const router = useRouter()
@@ -28,7 +28,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
     setError(null)
     setBuying(tier)
     startTransition(async () => {
-      const result = await buyShip()
+      const result = await api.harbour.buyShip()
       setBuying(null)
       if ('error' in result) {
         setError(result.error)
@@ -44,7 +44,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
     const trimmed = nameInput.trim().slice(0, 32)
     if (!trimmed) { setEditingName(false); return }
     startTransition(async () => {
-      const result = await renameShip(trimmed)
+      const result = await api.harbour.renameShip(trimmed)
       if (!('error' in result)) setShipName(trimmed)
     })
     setEditingName(false)

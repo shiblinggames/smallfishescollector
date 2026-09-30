@@ -1042,9 +1042,31 @@ In order. Each step is worth doing even if the port never happens.
      credit (checked to fail when that guard is broken). Production probe as catman (reads, tour
      writes sent behind the stored step, nothing moved). The loadout's achievement points sit
      behind Next's request cache, so a probe outside the app stands in 0 for that one read.
-   - NOT YET: the tackle shop, the fish hold and almanac, the homestead and visits, badges and
-     renown, the leaderboards, the profile pages; then the online-only list (social, public
-     profiles, membership, admin and dev tools, the honeypot) is decided rather than ported.
+   **THE HARBOUR OFFLINE, 2026-09-29.** `lib/core/harbour`: the tackle shop (bait, rods bought
+   and sold back, reels, the Completionist, the rod in hand), the hook bench, the fish hold (its
+   upgrade and its contents), the Shipyard's hulls and name, the Angler's Almanac, the Shipyard's
+   state and the ship screen's props. Seven action files are thin wrappers (their page
+   revalidations stay on the web); `api.harbour` carries them to the tackle shop, both Shipyard
+   screens, the ship screen and its sheet, the Almanac and the fishing screen's hold.
+   - The tackle shop's `equipRod` is `api.harbour.equipTackleRod` (the Shipyard's is
+     `api.ship.equipRod`).
+   - THE SHIP SCREEN'S PROPS ARE SHAPED IN THE CORE FROM PIECES (`shipHeroProps`): on the web
+     the pieces are the per-request caches the hub page shares with the ship screen
+     (`expeditions/hubData`), so the roster is still fetched once; the desktop reads them from its
+     stores (`shipHeroPieces`).
+   - FIXED ON THE WAY: `buyBait` looked the bait up with `getBait`, which falls back to worms, so a
+     made-up bait name was sold at the worm price and stocked under that name. It now needs an
+     exact match. Production held no such rows (checked 2026-09-29).
+   - The save's lifetime log now keeps each species' first-caught date (optional; older saves have
+     none), for the Almanac's dates and NEW marks. No version bump.
+   - The practice skirmish (`raids/practice`) is admin-only on the web and stays there.
+   - `scripts/check-offline-harbour.mts` (in `npm run check`); checked to fail when a rod guard,
+     the sell rate or the trader rule is broken. Production probe as catman (reads and refusals,
+     nothing moved).
+   - NOT YET: the homestead and visits, badges and renown, the level unlocks and first-run
+     rewards, the leaderboards, the profile pages; then the online-only list (social, public
+     profiles, membership and gem checkout, the Exchange board, admin and dev tools, the
+     honeypot) is decided rather than ported.
      Online-only by nature and staying on the web: social, leaderboards, public profiles,
      membership (Stripe), admin and dev tools, the honeypot.
 8. **Restock through play** (drafted above), when Kong is ready to make that design call.

@@ -18,8 +18,9 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { shipyardState, type ShipyardState } from '@/app/(app)/shipyard/shipyardState'
 import ShipyardClient from '@/app/(app)/shipyard/ShipyardClient'
+import { api } from '@/lib/gameApi'
+import type { ShipyardState } from '@/lib/gameApi'
 
 export default function ShipyardSheet({ open, onClose }: {
   open: boolean
@@ -38,7 +39,7 @@ export default function ShipyardSheet({ open, onClose }: {
     // Dropped first: ShipyardClient seeds its tiers and purse once, so the
     // last visit's read put back tiers you had since bought.
     setState(null)
-    shipyardState().then(r => {
+    api.harbour.shipyardState().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)
       else setState(r)

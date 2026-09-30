@@ -82,7 +82,6 @@ import { streakMult, STREAK_XP_CAP } from '@/lib/perfectStreak'
 import { getHook } from '@/lib/hooks'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
-import { holdContents } from '../fishing/holdActions'
 import { finnAncientBeat, type FinnAncientBeat } from '@/lib/finn'
 import { ANCIENT_IDS } from '@/lib/ancientVigil'
 
@@ -2707,7 +2706,7 @@ export default function FishingHere({
           onClick={e => {
             e.stopPropagation(); vibrate(8)
             setHoldRows(null); setHoldOpen(true)
-            void holdContents().then(r => { if ('ok' in r) setHoldRows(r.rows); else setHoldRows([]) }).catch(() => setHoldRows([]))
+            void api.harbour.holdContents().then(r => { if ('ok' in r) setHoldRows(r.rows); else setHoldRows([]) }).catch(() => setHoldRows([]))
           }}
           // THE BARREL TAKES THE WEIGHT. Keyed on the count it is SHOWING, so
           // the knock lands on the frame the fish arrives rather than on the

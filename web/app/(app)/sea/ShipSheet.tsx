@@ -43,7 +43,6 @@ import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
 import { vibrate } from '@/lib/haptics'
 import ShipHero from '@/app/(app)/expeditions/ShipHero'
-import { getShipHeroProps } from '@/app/(app)/expeditions/shipHeroData'
 import { shipTierByName, nextShip as nextHull, SHIPS } from '@/lib/ships'
 import { SHIP_SKINS, shipSkinAt } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
@@ -51,9 +50,9 @@ import { getRepairKit } from '@/lib/repairKits'
 import { SHIP_CLASS_LINES, getShipClass, type ShipClassId } from '@/lib/shipClasses'
 import { getShipAugment } from '@/lib/shipAugments'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
-import { buyShip } from '@/app/shipyard/actions'
+import { api } from '@/lib/gameApi'
 
-type Props = Awaited<ReturnType<typeof getShipHeroProps>>
+type Props = Awaited<ReturnType<typeof api.harbour.getShipHeroProps>>
 
 const GOLD = '#f0c040'
 /** Her own water, not the fishing harbour (Kong: a different background from
@@ -121,7 +120,7 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
     if (!open) return
     let live = true
     setErr(null)
-    getShipHeroProps().then(r => { if (live) setState(r) },
+    api.harbour.getShipHeroProps().then(r => { if (live) setState(r) },
       () => { if (live) setErr('The wharf did not answer. Try again.') })
     return () => { live = false }
   }, [open])
@@ -129,7 +128,7 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
   /** What ShipHero's reconciles reach: the page's refresh cannot touch this
    *  sheet's own read, so it is re-read here. See lib/sheetRefresh. */
   const reread = useCallback(() => {
-    getShipHeroProps().then(r => setState(r), () => {})
+    api.harbour.getShipHeroProps().then(r => setState(r), () => {})
   }, [])
 
   // Back to the plates every time it shuts.
@@ -387,11 +386,11 @@ export default function ShipSheet({ open, focus, onClose, onOpenBoss }: {
                                       if (!canBuy || buying) return
                                       vibrate(12)
                                       startBuy(async () => {
-                                        const res = await buyShip()
+                                        const res = await api.harbour.buyShip()
                                         if ('error' in res) { setBuyErr(res.error); return }
                                         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
                                         setArmed(false)
-                                        const fresh = await getShipHeroProps()
+                                        const fresh = await api.harbour.getShipHeroProps()
                                         setState(fresh)
                                         router.refresh()
                                       })

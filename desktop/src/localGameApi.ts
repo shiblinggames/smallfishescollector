@@ -11,7 +11,7 @@
 // on this API yet. Selling runs offline too (lib/core/selling), with the
 // captain's own market caught up from the clock.
 
-import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi, ShipApi, DailiesApi, ParlorApi, ChartRoomApi, SeaApi } from '../../web/lib/gameApi/index'
+import type { GameApi, FishingApi, SellingApi, CrewApi, VoyagesApi, GauntletApi, CasinoApi, RaidsApi, ShipApi, DailiesApi, ParlorApi, ChartRoomApi, SeaApi, HarbourApi } from '../../web/lib/gameApi/index'
 import * as core from '@/lib/core/fishing'
 import * as loadout from '@/lib/core/loadout'
 import * as selling from '@/lib/core/selling'
@@ -38,6 +38,8 @@ import * as chartCore from '@/lib/core/chartRoom'
 import { localChartData } from '@/lib/data/local/chartLocal'
 import * as seaCore from '@/lib/core/sea'
 import { localSeaData } from '@/lib/data/local/seaLocal'
+import * as harbourCore from '@/lib/core/harbour'
+import { localHarbourData } from '@/lib/data/local/harbourLocal'
 import * as sheetsCore from '@/lib/core/seaSheets'
 import { kingWeekStr } from '@/app/(app)/tavern/trivia/constants'
 import { clockNow } from '@/lib/clock'
@@ -54,7 +56,7 @@ export type {
   FishSpecies, WaitingFolk, FishingApi, SellingApi, PendingSale, DealResult,
   CrewApi, CrewState, CrewMember, BoardCandidate, CrewActionResult, FallenCrew, RecruitFace, BunkClaimResult,
   VoyagesApi, DailyVoyage, VoyageBoard, CrewHubState, HubCrew, GauntletApi, CasinoApi,
-  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide, ShipApi, DailiesApi, BountyBoard, BountyView, ParlorApi, ChartRoomApi, SeaApi,
+  RaidsApi, RaidClearTimes, RaidLootResult, RaidRecords, SpoilSide, ShipApi, DailiesApi, BountyBoard, BountyView, ParlorApi, ChartRoomApi, SeaApi, HarbourApi,
 } from '../../web/lib/gameApi/index'
 
 const SPECIES = speciesJson as unknown as SpeciesRow[]
@@ -506,4 +508,30 @@ const seaApi: SeaApi = {
   pendingPacts: async () => 0,
 }
 
-export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi, dailies: dailiesApi, parlor: parlorApi, chartRoom: chartRoomApi, sea: seaApi }
+/** The same, over the harbour's store. */
+async function runHarbour<T>(fn: (db: ReturnType<typeof localHarbourData>, uid: string) => Promise<T>): Promise<T> {
+  const { save, storage, carried } = need()
+  const r = await fn(localHarbourData(save), save.uid)
+  await writeSave(storage, save, carried)
+  return r
+}
+
+const harbourApi: HarbourApi = {
+  buyBait: (type, qty) => runHarbour((db, uid) => harbourCore.buyBait(db, uid, type, qty)),
+  purchaseRod: (tier) => runHarbour((db, uid) => harbourCore.purchaseRod(db, uid, tier)),
+  sellRod: (tier) => runHarbour((db, uid) => harbourCore.sellRod(db, uid, tier)),
+  claimCompletionistRod: () => runHarbour((db, uid) => harbourCore.claimCompletionistRod(db, uid)),
+  equipTackleRod: (tier) => runHarbour((db, uid) => harbourCore.equipTackleRod(db, uid, tier)),
+  buyReel: () => runHarbour((db, uid) => harbourCore.buyReel(db, uid)),
+  buyHook: () => runHarbour((db, uid) => harbourCore.buyHook(db, uid)),
+  upgradeFishHold: () => runHarbour((db, uid) => harbourCore.upgradeFishHold(db, uid)),
+  holdContents: () => runHarbour((db, uid) => harbourCore.holdContents(db, uid)),
+  buyShip: () => runHarbour((db, uid) => harbourCore.buyShip(db, uid)),
+  renameShip: (name) => runHarbour((db, uid) => harbourCore.renameShip(db, uid, name)),
+  shipyardState: () => runHarbour((db, uid) => harbourCore.shipyardState(db, uid)),
+  getShipHeroProps: () => runHarbour(async (db, uid) => harbourCore.shipHeroProps(db, await harbourCore.shipHeroPieces(db, uid))),
+  getAlmanacData: () => runHarbour((db, uid) => harbourCore.getAlmanacData(db, uid)),
+  markAlmanacViewed: () => runHarbour((db, uid) => harbourCore.markAlmanacViewed(db, uid)),
+}
+
+export const api: GameApi = { fishing, selling: sellingApi, crew: crewApi, voyages: voyagesApi, gauntlet: gauntletApi, casino: casinoApi, raids: raidsApi, ship: shipApi, dailies: dailiesApi, parlor: parlorApi, chartRoom: chartRoomApi, sea: seaApi, harbour: harbourApi }

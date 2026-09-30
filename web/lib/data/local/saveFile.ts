@@ -163,7 +163,7 @@ export function fromWebExport(exp: WebExport, species: SpeciesRow[]): { save: Lo
       catch_count: Number(r.catch_count), is_golden: (r.is_golden as boolean | null) ?? null,
       ...(r.last_caught_at ? { last_caught_at: String(r.last_caught_at) } : {}),
     }])),
-    lifetime: Object.fromEntries(t('fish_lifetime').map(r => [Number(r.fish_id), { n: Number(r.catches), last: String(r.last_caught_at ?? '') }])),
+    lifetime: Object.fromEntries(t('fish_lifetime').map(r => [Number(r.fish_id), { n: Number(r.catches), last: String(r.last_caught_at ?? ''), ...(r.first_caught_at ? { first: String(r.first_caught_at) } : {}) }])),
     bests: Object.fromEntries(t('fish_personal_bests').map(r => [Number(r.fish_id), { len: Number(r.best_length_in), at: String(r.caught_at ?? '') }])),
     shinies: t('shiny_catches').map(r => ({ ...r, id: Number(r.id), fish_id: Number(r.fish_id), size_in: r.size_in == null ? null : Number(r.size_in), status: String(r.status), caught_at: String(r.caught_at) })),
     daily: Object.fromEntries(t('daily_challenge_progress').map(r => [String(r.date), r as unknown as DailyRow])),

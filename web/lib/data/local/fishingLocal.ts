@@ -95,7 +95,7 @@ export function localFishingData(save: LocalSave): FishingData {
     async goldenIds(uid, ids) { me(uid); return ids.filter(id => save.collection[id]?.is_golden === true) },
     async clearLog(uid, ids) { me(uid); for (const id of ids) delete save.collection[id] },
     async setGolden(uid, fishId) { me(uid); if (save.collection[fishId]) save.collection[fishId].is_golden = true },
-    async bumpLifetime(uid, fishId, at) { me(uid); const r = save.lifetime[fishId]; save.lifetime[fishId] = { n: (r?.n ?? 0) + 1, last: at } },
+    async bumpLifetime(uid, fishId, at) { me(uid); const r = save.lifetime[fishId]; save.lifetime[fishId] = { n: (r?.n ?? 0) + 1, last: at, first: r ? r.first : at } },
     async personalBest(uid, fishId) { me(uid); return save.bests[fishId]?.len ?? null },
     async setPersonalBest(uid, fishId, sizeIn, at) { me(uid); save.bests[fishId] = { len: sizeIn, at } },
     async addShiny(uid, fishId, sizeIn) {

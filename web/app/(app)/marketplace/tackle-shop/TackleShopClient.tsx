@@ -12,14 +12,13 @@ import { REELS } from '@/lib/reels'
 import { LINES } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { motion } from 'framer-motion'
-import { buyHook } from '@/app/(app)/hooks/actions'
-import { buyBait, purchaseRod, sellRod, equipRod, buyReel, claimCompletionistRod } from './actions'
 import { getLevelFromXP, getXPProgress, MAX_LEVEL } from '@/lib/fishingLevel'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import ShopHeader from '@/components/ShopHeader'
 import ShopStatusPill from '@/components/ShopStatusPill'
 import { vibrate, hapticTap, hapticCommit } from '@/lib/haptics'
 import { playChestSfx } from '@/lib/fishingMusic'
+import { api } from '@/lib/gameApi'
 
 
 
@@ -170,7 +169,7 @@ export default function TackleShopClient({
     setError(null)
     hapticTap()
     startTransition(async () => {
-      const result = await buyHook()
+      const result = await api.harbour.buyHook()
       if ('error' in result) { setError(result.error) }
       else { hapticCommit(); setHookTier(result.hookTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
     })
@@ -181,7 +180,7 @@ export default function TackleShopClient({
     hapticTap()
     setBuyingRod(rodTier)
     startTransition(async () => {
-      const result = await purchaseRod(rodTier)
+      const result = await api.harbour.purchaseRod(rodTier)
       setBuyingRod(null)
       if ('error' in result) { setError(result.error) }
       else {
@@ -215,7 +214,7 @@ export default function TackleShopClient({
     setSellConfirm(null)
     setSellingRod(rodTier)
     startTransition(async () => {
-      const result = await sellRod(rodTier)
+      const result = await api.harbour.sellRod(rodTier)
       setSellingRod(null)
       if ('error' in result) { setError(result.error); return }
       hapticCommit()
@@ -231,7 +230,7 @@ export default function TackleShopClient({
     hapticTap()
     setEquippingRod(rodTier)
     startTransition(async () => {
-      const result = await equipRod(rodTier)
+      const result = await api.harbour.equipTackleRod(rodTier)
       setEquippingRod(null)
       if ('error' in result) { setError(result.error) }
       else { hapticCommit(); setEquippedRod(result.rodTier) }
@@ -242,7 +241,7 @@ export default function TackleShopClient({
     setError(null)
     hapticTap()
     startTransition(async () => {
-      const result = await buyReel()
+      const result = await api.harbour.buyReel()
       if ('error' in result) { setError(result.error) }
       else { hapticCommit(); setReelTier(result.reelTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
     })
@@ -252,7 +251,7 @@ export default function TackleShopClient({
     setError(null)
     setIsClaiming(true)
     startTransition(async () => {
-      const result = await claimCompletionistRod()
+      const result = await api.harbour.claimCompletionistRod()
       setIsClaiming(false)
       if ('error' in result) { setError(result.error) }
       else {
@@ -270,7 +269,7 @@ export default function TackleShopClient({
     hapticTap()
     setBuyingBait(`${baitType}-${qty}`)
     startTransition(async () => {
-      const result = await buyBait(baitType, qty)
+      const result = await api.harbour.buyBait(baitType, qty)
       setBuyingBait(null)
       if ('error' in result) { setError(result.error) }
       else {

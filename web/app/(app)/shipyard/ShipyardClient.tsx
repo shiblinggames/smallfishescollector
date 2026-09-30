@@ -43,9 +43,6 @@ import {
   nextAccelCost, MAX_ACCEL_TIER,
   hullMetresPerSec, turnDegreesPerSec, secondsToTopSpeed,
 } from '@/lib/shipyard'
-import { upgradeFishHold } from '../fishing/holdActions'
-import { purchaseRod, sellRod, buyReel } from '@/app/(app)/marketplace/tackle-shop/actions'
-import { buyHook } from '@/app/(app)/hooks/actions'
 import { updateCharacterColor, purchaseCharacterColor } from '@/app/(app)/u/actions'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 
@@ -294,7 +291,7 @@ export default function ShipyardClient(p: {
         if ('error' in r) setErr(r.error)
         else { bank(r.doubloons); setAccel(t => t + 1); vibrate([0, 30, 40, 60]) }
       } else {
-        const r = await upgradeFishHold()
+        const r = await api.harbour.upgradeFishHold()
         if ('error' in r) setErr(r.error)
         else {
           bank(r.doubloons); setHold(r.newTier); setCap(getFishHold(r.newTier).capacity)
@@ -680,12 +677,12 @@ export default function ShipyardClient(p: {
             hookTier={hookTier}
             lineTier={p.lineTier}
             onBuyReel={async () => {
-              const res = await buyReel()
+              const res = await api.harbour.buyReel()
               if ('error' in res) { setErr(res.error); return }
               setReelTier(res.reelTier); bank(res.doubloons)
             }}
             onBuyHook={async () => {
-              const res = await buyHook()
+              const res = await api.harbour.buyHook()
               if ('error' in res) { setErr(res.error); return }
               setHookTier(res.hookTier); bank(res.doubloons)
             }}
@@ -693,7 +690,7 @@ export default function ShipyardClient(p: {
             reelHasAffordable={!!nextReel && doubloons >= nextReel.cost}
             hookHasAffordable={!!nextHook && doubloons >= nextHook.cost}
             onBuyRod={async (tier) => {
-              const res = await purchaseRod(tier)
+              const res = await api.harbour.purchaseRod(tier)
               if ('error' in res) { setErr(res.error); return }
               setOwnedRods(res.ownedRods); bank(res.doubloons)
               await pickRod(tier)
@@ -702,7 +699,7 @@ export default function ShipyardClient(p: {
               // The server allows selling the EQUIPPED rod and auto-equips
               // Bamboo when it does, returning the tier it landed on — mirror
               // that rather than assuming the equipped rod is unchanged.
-              const res = await sellRod(tier)
+              const res = await api.harbour.sellRod(tier)
               if ('error' in res) { setErr(res.error); return }
               setOwnedRods(res.ownedRods); setEquipped(res.rodTier); bank(res.doubloons)
             }}

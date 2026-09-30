@@ -17,7 +17,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { getAlmanacData, markAlmanacViewed, type AlmanacData } from './almanacActions'
 import AlmanacCollection from './AlmanacCollection'
 import AlmanacGoldens from './AlmanacGoldens'
 import AlmanacGiants from './AlmanacGiants'
@@ -25,6 +24,8 @@ import AlmanacPets from './AlmanacPets'
 import AlmanacRecord from './AlmanacRecord'
 import { PETS } from '@/lib/pets'
 import { isGiant } from '@/lib/almanac'
+import { api } from '@/lib/gameApi'
+import type { AlmanacData } from '@/lib/gameApi'
 
 const ACCENT = '#a78bfa'
 
@@ -85,7 +86,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
   const gen = useRef(0)
   const reload = useCallback(() => {
     const my = ++gen.current
-    getAlmanacData().then(res => {
+    api.harbour.getAlmanacData().then(res => {
       if (my !== gen.current) return
       if ('error' in res) setError(res.error)
       else { setData(res); setError('') }
@@ -95,7 +96,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
 
   // Closing is reading. The NEW marks come down on the next open.
   const close = useCallback(() => {
-    if (data) void markAlmanacViewed().catch(() => {})
+    if (data) void api.harbour.markAlmanacViewed().catch(() => {})
     onClose()
   }, [data, onClose])
 

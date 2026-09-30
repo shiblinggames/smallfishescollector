@@ -28,7 +28,9 @@ export type LocalSave = {
   bait: Record<string, number>
   hold: Record<number, number>
   collection: Record<number, { catch_count: number; is_golden: boolean | null; last_caught_at?: string }>
-  lifetime: Record<number, { n: number; last: string }>
+  /** Lifetime catches per species; `first` (the Almanac's first-caught date)
+   *  is kept from 2026-09-29, so older saves have none. */
+  lifetime: Record<number, { n: number; last: string; first?: string }>
   bests: Record<number, { len: number; at: string }>
   shinies: { id: number; fish_id: number; size_in: number | null; status: string; caught_at: string; [k: string]: unknown }[]
   daily: Record<string, DailyRow>

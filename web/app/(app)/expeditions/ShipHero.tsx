@@ -52,7 +52,6 @@ const ForgeBoard = dynamic(() => import('./ForgeBoard'), {
   ),
 })
 import LoadoutSummary from './LoadoutSummary'
-import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
 import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renown'
@@ -1023,7 +1022,7 @@ export default function ShipHero({
     if (!trimmed) { setEditingName(false); return }
     setShipName(trimmed)
     setEditingName(false)
-    startTransition(async () => { await renameShip(trimmed) })
+    startTransition(async () => { await api.harbour.renameShip(trimmed) })
   }
 
   // A crew instance can only sit in one slot; ids already deployed elsewhere
@@ -3127,7 +3126,7 @@ export default function ShipHero({
               setUpgradeBusy(true)
               setUpgradeError(null)
               try {
-                const res = await buyShip()
+                const res = await api.harbour.buyShip()
                 if ('error' in res) {
                   setUpgradeError(res.error)
                 } else {
