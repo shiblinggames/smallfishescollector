@@ -3,7 +3,7 @@
 // lib/data/inventory's four questions, answered from one captain's save, with
 // the same storage map (lib/inventoryStorage) and the same rules: stacks
 // count, unlocks are owned once, upgrades are read and never given or taken,
-// the Bamboo is always held. Raid items stay owned-once until stage 3.
+// the Bamboo is always held. Raid items are held as copies (stage 3).
 
 import type { LocalSave } from './save'
 import type { InventoryOps } from '../inventory'
@@ -27,6 +27,7 @@ export function localInventory(save: LocalSave): InventoryOps {
         case 'hold': return Number(save.hold[Number(id)] ?? 0)
         case 'rods': return Number(id) === STARTER_ROD_TIER || save.rods.includes(Number(id)) ? 1 : 0
         case 'list': return ((prof[s.col] as string[] | null) ?? []).includes(id) ? 1 : 0
+        case 'counted': return ((prof[s.col] as string[] | null) ?? []).filter(x => x === id).length
         case 'homestead': return homeOwned().includes(id) ? 1 : 0
         case 'flag': return prof[s.col] === true ? 1 : 0
         case 'tier': return Number(prof[s.col] ?? 0) >= Number(id) ? 1 : 0
@@ -43,7 +44,7 @@ export function localInventory(save: LocalSave): InventoryOps {
       if (s.type === 'bait') for (const [k, q] of Object.entries(save.bait)) { if (q > 0) out.set(k, q) }
       else if (s.type === 'hold') for (const [k, q] of Object.entries(save.hold)) { if (q > 0) out.set(k, q) }
       else if (s.type === 'rods') { out.set(String(STARTER_ROD_TIER), 1); for (const t of save.rods) out.set(String(t), 1) }
-      else if (s.type === 'list') for (const id of ((prof[s.col] as string[] | null) ?? [])) out.set(id, (out.get(id) ?? 0) + 1)
+      else if (s.type === 'list' || s.type === 'counted') for (const id of ((prof[s.col] as string[] | null) ?? [])) out.set(id, (out.get(id) ?? 0) + 1)
       else if (s.type === 'homestead') for (const id of homeOwned()) out.set(id, 1)
       return out
     },
@@ -69,6 +70,12 @@ export function localInventory(save: LocalSave): InventoryOps {
         const list = (prof[s.col] as string[] | null) ?? []
         if (list.includes(id)) return false
         prof[s.col] = [...list, id]
+        return true
+      }
+      if (s.type === 'counted') {
+        const count = wholeCount(n)
+        if (count == null) return false
+        prof[s.col] = [...((prof[s.col] as string[] | null) ?? []), ...Array(count).fill(id)]
         return true
       }
       if (s.type === 'flag') {
@@ -109,6 +116,15 @@ export function localInventory(save: LocalSave): InventoryOps {
         const at = list.indexOf(id)
         if (at < 0) return false
         prof[s.col] = [...list.slice(0, at), ...list.slice(at + 1)]
+        return true
+      }
+      if (s.type === 'counted') {
+        const count = wholeCount(n)
+        if (count == null) return false
+        const list = [...((prof[s.col] as string[] | null) ?? [])]
+        if (list.filter(x => x === id).length < count) return false
+        for (let k = 0; k < count; k++) list.splice(list.indexOf(id), 1)
+        prof[s.col] = list
         return true
       }
       if (s.type === 'flag') {

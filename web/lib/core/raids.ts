@@ -270,10 +270,10 @@ export async function claimRaidLoot(db: RaidData, uid: string, baseDoubloons: nu
   for (const id of itemIds) {
     const g = ITEM_GRANTS[id]
     if (!g) continue
-    // Owned things are added once, in place: a concurrent forge or purchase
-    // writing the same array is never overwritten by a stale copy.
+    // Unlocks are added once and gear as one more copy, both in place, so a
+    // concurrent forge or purchase is never overwritten by a stale copy.
     if (g.shipSkin && await db.addToList(uid, 'ship_skins', g.shipSkin)) newShipSkins.push(g.shipSkin)
-    if (g.raidItem && await db.addToList(uid, 'raid_items', g.raidItem)) {
+    if (g.raidItem && await db.give(uid, 'raid_item', g.raidItem)) {
       newRaidItems.push(g.raidItem)
       // Finn's spoils SEAT THEMSELVES. They only charge while equipped, and
       // they fit nowhere but their own dedicated slot, so leaving one in the

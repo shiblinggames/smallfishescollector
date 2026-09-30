@@ -62,11 +62,13 @@ export function makeLiveChance(
   // is a boolean column rather than a raid_items entry -- so checking only
   // raid_items meant a player carrying the Eye still saw it listed as
   // unclaimed on his card, with a live drop rate, forever.
+  // Only an owned UNLOCK (a ship skin, a special item) is done with: gear rolls
+  // at its fixed rate whatever you hold, since copies are allowed.
   const dropOwned = (d: RaidNodeDrop): boolean =>
-    (!!d.id && (ownedRaidItems.includes(d.id) || ownedSpecialItems.includes(d.id)))
+    (!!d.id && ownedSpecialItems.includes(d.id))
     || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
   const lootOwned = (l: { id: string; shipSkinId?: string }): boolean =>
-    ownedRaidItems.includes(l.id) || ownedSpecialItems.includes(l.id)
+    ownedSpecialItems.includes(l.id)
     || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
   const liveChance = (d: RaidNodeDrop): string | undefined => {
     if (!cfg || !d.id) return undefined

@@ -29,6 +29,7 @@ import type { MusterCrew } from '@/lib/crewMuster'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import type { RecruitFace } from '@/lib/core/crew'
 import type { SeaData } from '@/lib/data/seaData'
+import { distinctIds } from '@/lib/listCounts'
 
 // ══ THE TOURS ═════════════════════════════════════════════════════════════════
 //
@@ -170,7 +171,7 @@ export async function nodeSheet(db: SeaData, uid: string): Promise<NodeSheetStat
   return {
     doubloons: view.doubloons,
     shipClasses: view.shipClasses,
-    ownedItems: (prof.raid_items as string[] | null) ?? [],
+    ownedItems: distinctIds((prof.raid_items as string[] | null) ?? []),
     navLevel: view.navLevel,
     musterParty: view.musterParty,
     choices: view.raidNodeChoices,
@@ -206,7 +207,7 @@ export async function bossCardState(db: SeaData, uid: string): Promise<BossCardS
   return {
     views: map.views,
     raidRecords: map.raidRecords,
-    ownedRaidItems: (profile?.raid_items as string[] | null) ?? [],
+    ownedRaidItems: distinctIds((profile?.raid_items as string[] | null) ?? []),
     ownedShipSkins: (profile?.ship_skins as string[] | null) ?? [],
     ownedSpecialItems: ownedSpecialIds(profile),
     totalFortune: stats.totalFortune,

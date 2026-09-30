@@ -41,6 +41,7 @@ import { raidDamageProfile } from '@/lib/expeditions'
 import { clockNow } from '@/lib/clock'
 import { tickActiveMs, settleDepths, runFathoms, cashOutHaul, recordClaim, donFeats, gauntletCooldown, shrineWon } from '@/lib/gauntletRules'
 import type { GauntletData } from '@/lib/data/gauntletData'
+import { distinctIds } from '@/lib/listCounts'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -652,7 +653,7 @@ export async function rollDavyOffer(db: GauntletData, uid: string, hpPct: number
     depth,
     hardcore: hc,
     pressure: hc ? termPressure(terms) : 0,
-    ownedItems: (profile.raid_items as string[] | null) ?? [],
+    ownedItems: distinctIds((profile.raid_items as string[] | null) ?? []),
     ownedSkins: (profile.ship_skins as string[] | null) ?? [],
     davyForge: DAVY_FORGE,
     variant,
@@ -786,7 +787,7 @@ export async function cashOutGauntlet(db: GauntletData, uid: string, rewardDepth
     offerState: (profile.gauntlet_run_offer as OfferState | null) ?? null,
     takeOffer,
     terms: runTerms,
-    ownedItems: (profile.raid_items as string[] | null) ?? [],
+    ownedItems: distinctIds((profile.raid_items as string[] | null) ?? []),
     ownedSkins: (profile.ship_skins as string[] | null) ?? [],
     totalFortune: (await getRaidPlayerStatsVia(db, uid)).totalFortune,
     shipClasses: (profile.ship_classes as Record<string, string> | null) ?? {},
@@ -920,7 +921,8 @@ export async function cashOutGauntlet(db: GauntletData, uid: string, rewardDepth
       // Lifetime counters for the achievement badges (a cash-out ends a run).
       bump('gauntlet_runs_completed', 1),
       bump('gauntlet_fathoms_earned', earnedFathoms),
-      ...droppedItems.map(id => db.addToList(uid, 'raid_items', id)),
+      // Copies are allowed (Kong, 2026-09-30): each drop is one more.
+      ...droppedItems.map(id => db.give(uid, 'raid_item', id)),
       ...grantSkins.map(id => db.addToList(uid, 'ship_skins', id)),
     ]),
     db.ledger(uid, bankedDoubloons, `${hc ? 'Hardcore ' : ''}${isDon ? "Don's" : 'Davy Jones'} Gauntlet: depth ${cd}`),

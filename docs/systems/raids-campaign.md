@@ -2,6 +2,22 @@
 
 Turn-based ship combat along a chaptered node chain. The other half of Expeditions.
 
+
+**RAID ITEMS ARE HELD AS COPIES, WITH FIXED DROP RATES (Kong, 2026-09-30; BUILT the same
+day, the item system's stage 3):**
+- A captain can hold several copies of a piece of gear. `profiles.raid_items` may repeat; the
+  database adds and takes ONE copy through `raid_item_push` and `raid_item_take`
+  (service-role only). Code goes through the inventory (`db.give` / `db.take`, category
+  `raid_item`), never `addToList`.
+- GEAR ROLLS AT ITS OWN FIXED RATE whatever you hold, in raid crates and gauntlet chests
+  alike. An owned UNLOCK (a ship skin, a special item) still drops out, since a second copy of
+  an unlock is nothing. The boss card and the fight screen show the same odds.
+- THE FORGE can make the same thing again, using ONE copy of each component. THE ACCELERATOR
+  takes ONE copy of the epic and no longer refuses a captain who holds the legendary. A
+  mounted item comes off the loadout only when no copy is left.
+- Screens get owned lists with copies removed (`lib/listCounts` distinctIds); raid stats also
+  carry `raidItemCounts` for a "x2" when a screen wants one.
+
 ## Two surfaces, one campaign
 
 `/expeditions` has the node map (`RaidsSection`); `/sea` has the water the same nodes are

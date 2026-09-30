@@ -3,6 +3,7 @@
 // lib/data/local/inventoryLocal through every kind of storage, so a rule the
 // cores will lean on cannot quietly break:
 //   - stacks (bait, fish) add, and a take is refused past what is held;
+//   - raid items are held as copies: give adds, take removes, never past zero;
 //   - unlocks (rods, lists, special flags, furnishings) are owned once: a
 //     second give is refused, a take of something not held is refused;
 //   - the Bamboo is always held and never given or taken;
@@ -56,9 +57,12 @@ if (!(await inv.take(UID, 'pet', petId)) || await inv.take(UID, 'pet', petId)) f
 if (!(await inv.give(UID, 'special', 'tide_turner')) || await inv.give(UID, 'special', 'tide_turner') || s.profile.has_tide_turner !== true) fail('a special item was not owned once')
 const furnishing = ITEMS.find(i => i.category === 'furnishing')!.id
 if (!(await inv.give(UID, 'furnishing', furnishing)) || await inv.give(UID, 'furnishing', furnishing)) fail('a furnishing was not owned once')
-// Raid items stay owned once until stage 3.
+// Raid items are held as COPIES (stage 3).
 const raidItem = ITEMS.find(i => i.category === 'raid_item')!.id
-if (!(await inv.give(UID, 'raid_item', raidItem)) || await inv.give(UID, 'raid_item', raidItem)) fail('a raid item was held twice before stage 3')
+if (!(await inv.give(UID, 'raid_item', raidItem)) || !(await inv.give(UID, 'raid_item', raidItem, 2)) || (await inv.held(UID, 'raid_item', raidItem)) !== 3) fail('raid items did not stack as copies')
+if ((await inv.heldAll(UID, 'raid_item')).get(raidItem) !== 3) fail('heldAll disagrees for raid items')
+if (await inv.take(UID, 'raid_item', raidItem, 4) || (await inv.held(UID, 'raid_item', raidItem)) !== 3) fail('more copies were taken than held, or a refused take changed the count')
+if (!(await inv.take(UID, 'raid_item', raidItem, 2)) || (await inv.held(UID, 'raid_item', raidItem)) !== 1) fail('two copies were not taken')
 
 // Upgrades: read against the level, never given or taken.
 if ((await inv.held(UID, 'reel', '2')) !== 1 || (await inv.held(UID, 'reel', '3')) !== 0) fail('an upgrade was not read against its level')

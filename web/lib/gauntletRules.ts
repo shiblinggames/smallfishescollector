@@ -175,20 +175,20 @@ export function cashOutHaul(i: CashOutInput): CashOutHaul {
   const chestDrop = (c: number) => Math.min(CHEST_ODDS_CAP, c * offerChest * fortuneOdds)
   const dropChance = chestDrop(chestCannonDropChance(cd))
   const droppedItems: string[] = []
-  // Purely "do you hold this one": the forge consumes both components, so a
-  // forged captain can roll them again (re-forging is blocked by the forge).
+  // Gear rolls at its own fixed rate whatever you already hold: a captain can
+  // hold copies (Kong, 2026-09-30), for a crewmate or a second forge.
   if (!isDon) {
     for (const cannon of DAVY_FORGE.components) {
-      if (!i.ownedItems.includes(cannon) && rngNext() < dropChance) droppedItems.push(cannon)
+      if (rngNext() < dropChance) droppedItems.push(cannon)
     }
   }
   if (isDon) {
     for (const itemId of DONS_GAUNTLET_ITEM_IDS) {
-      if (!i.ownedItems.includes(itemId) && rngNext() < dropChance) droppedItems.push(itemId)
+      if (rngNext() < dropChance) droppedItems.push(itemId)
     }
   }
-  // The Blood Cannon: hardcore-only, from the deeper chests, while not held.
-  if (!isDon && hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !i.ownedItems.includes(BLOOD_CANNON_ITEM_ID) && rngNext() < chestDrop(chestCannonDropChance(cd))) {
+  // The Blood Cannon: hardcore-only, from the deeper chests.
+  if (!isDon && hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && rngNext() < chestDrop(chestCannonDropChance(cd))) {
     droppedItems.push(BLOOD_CANNON_ITEM_ID)
   }
 

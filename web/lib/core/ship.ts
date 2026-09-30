@@ -40,6 +40,7 @@ import {
   nextLanternCost, MAX_LANTERN_TIER,
 } from '@/lib/shipyard'
 import type { ShipData } from '@/lib/data/shipData'
+import { distinctIds, idCounts } from '@/lib/listCounts'
 
 // ── The legacy crew picker (the old card collection) ─────────────────────────
 
@@ -176,17 +177,32 @@ export async function forgeRaidItem(db: ShipData, uid: string, resultId: string)
   }
   // Recipe must be learned first (learnForgeRecipe spends the Fathoms).
   const learned = (profile?.forge_recipes_learned as string[] | null) ?? []
-  if (!learned.includes(recipe.result)) return { error: 'You haven\'t learned this recipe yet.' }
-  const owned = (profile?.raid_items as string[] | null) ?? []
-  if (owned.includes(recipe.result)) return { error: 'Already forged.' }
-  if (!recipe.components.every(id => owned.includes(id))) return { error: 'You don\'t own every component yet.' }
+  if (!learned.includes(recipe.result)) return { error: "You haven't learned this recipe yet." }
+  // Copies are allowed (Kong, 2026-09-30): forging the same thing twice is fine,
+  // and it uses up ONE copy of each component.
+  const need = idCounts(recipe.components)
+  const have = idCounts((profile?.raid_items as string[] | null) ?? [])
+  if (!Object.entries(need).every(([id, n]) => (have[id] ?? 0) >= n)) return { error: "You don't own every component yet." }
 
-  // Sacrifice the components, mint the result, and drop the consumed components
-  // from the equipped loadout (they no longer exist).
-  const newOwned = [...owned.filter(id => !recipe.components.includes(id)), recipe.result]
-  const equipped = ((profile?.equipped_raid_items as string[] | null) ?? []).filter(id => !recipe.components.includes(id))
-  await db.updateProfile(uid, { raid_items: newOwned, equipped_raid_items: equipped })
-  return { ok: true, raidItems: newOwned }
+  // Take the components first, each guarded (the take is the claim); if any is
+  // refused, the ones already taken go back and nothing is forged.
+  const taken: string[] = []
+  for (const id of recipe.components) {
+    if (!(await db.take(uid, 'raid_item', id))) {
+      for (const back of taken) await db.give(uid, 'raid_item', back)
+      return { error: "You don't own every component yet." }
+    }
+    taken.push(id)
+  }
+  await db.give(uid, 'raid_item', recipe.result)
+
+  // A component no longer held at all comes off the loadout; one still held (a
+  // spare copy) stays mounted.
+  const after = await db.profile(uid, 'raid_items, equipped_raid_items')
+  const held = new Set((after?.raid_items as string[] | null) ?? [])
+  const equipped = ((after?.equipped_raid_items as string[] | null) ?? []).filter(id => held.has(id))
+  await db.updateProfile(uid, { equipped_raid_items: equipped })
+  return { ok: true, raidItems: distinctIds((after?.raid_items as string[] | null) ?? []) }
 }
 
 /** Learn a forge recipe by paying its Fathom cost (the repeatable meta sink).
@@ -243,26 +259,35 @@ export async function startAbyssalConversion(db: ShipData, uid: string, epicId: 
   }
   const owned = (profile.raid_items as string[] | null) ?? []
   if (!owned.includes(epicId)) return { error: 'You don’t own that item.' }
-  if (owned.includes(legendaryId)) return { error: 'You already own the legendary version.' }
+  // Copies are allowed (Kong, 2026-09-30), so holding the legendary already is no
+  // reason to refuse another.
   const conversion: AbyssalConversion = {
     epicId, legendaryId,
     completesAt: new Date(clockNow() + ABYSSAL_ACCEL_MS).toISOString(),
   }
-  const newOwned = owned.filter(id => id !== epicId)
-  const equipped = ((profile.equipped_raid_items as string[] | null) ?? []).filter(id => id !== epicId)
 
   // The gems first: the spend is the guard.
   const newGems = await db.spend(uid, 'gems', ABYSSAL_ACCEL_GEM_COST)
   if (newGems == null) return { error: `Not enough gems. Charging costs ${ABYSSAL_ACCEL_GEM_COST}.` }
 
-  // Guard the write on the slot STILL being null (and the epic still held) so
-  // a fast double-tap (or two tabs) can't charge two conversions; the loser
-  // gets its gems back.
-  const updated = await db.updateProfileIf(uid, { abyssal_conversion: conversion, raid_items: newOwned, equipped_raid_items: equipped }, [{ col: 'abyssal_conversion', is: null }, { col: 'raid_items', contains: [epicId] }])
-  if (!updated) {
+  // Guard the slot on STILL being empty, so a double-tap (or two tabs) cannot
+  // charge two conversions; the loser gets its gems back.
+  if (!(await db.updateProfileIf(uid, { abyssal_conversion: conversion }, [{ col: 'abyssal_conversion', is: null }]))) {
     await db.grant(uid, 'gems', ABYSSAL_ACCEL_GEM_COST)
     return { error: 'The Accelerator is already running. Claim it first.' }
   }
+  // Then take ONE copy of the epic (it used to take every copy). Refused (it went
+  // elsewhere meanwhile): the slot empties and the gems go back.
+  if (!(await db.take(uid, 'raid_item', epicId))) {
+    await db.updateProfile(uid, { abyssal_conversion: null })
+    await db.grant(uid, 'gems', ABYSSAL_ACCEL_GEM_COST)
+    return { error: 'You don’t own that item.' }
+  }
+  // The epic comes off the loadout only if no copy is left.
+  const after = await db.profile(uid, 'raid_items, equipped_raid_items')
+  const held = new Set((after?.raid_items as string[] | null) ?? [])
+  const newOwned = distinctIds((after?.raid_items as string[] | null) ?? [])
+  await db.updateProfile(uid, { equipped_raid_items: ((after?.equipped_raid_items as string[] | null) ?? []).filter(id => held.has(id)) })
 
   await db.ledger(uid, -ABYSSAL_ACCEL_GEM_COST, 'Charged the Abyssal Accelerator', 'gems')
   return { ok: true, conversion, gems: newGems, raidItems: newOwned }
@@ -279,14 +304,13 @@ export async function claimAbyssalConversion(db: ShipData, uid: string): Promise
   if (!conversion) return { error: 'Nothing to claim.' }
   if (!isConversionReady(conversion, clockNow())) return { error: 'It’s still transmuting.' }
 
-  const owned = (profile?.raid_items as string[] | null) ?? []
-  const newOwned = owned.includes(conversion.legendaryId) ? owned : [...owned, conversion.legendaryId]
+  const newOwned = distinctIds([...((profile?.raid_items as string[] | null) ?? []), conversion.legendaryId])
 
   // Clear the slot first (conditional, so a double-claim finds it empty), then
   // add the legendary in place rather than writing back a stale copy of the hold.
   const updated = await db.updateProfileIf(uid, { abyssal_conversion: null }, [{ col: 'abyssal_conversion', notNull: true }])
   if (!updated) return { error: 'Already claimed.' }
-  await db.addToList(uid, 'raid_items', conversion.legendaryId)
+  await db.give(uid, 'raid_item', conversion.legendaryId)
 
   return { ok: true, legendaryId: conversion.legendaryId, raidItems: newOwned }
 }

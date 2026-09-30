@@ -59,7 +59,10 @@ export type RaidCrate = {
 
 /**
  * ONE CRATE. The uniques are rolled from the raid's own table with the same
- * inputs the combat sheet's preview uses: what is owned drops out, crew
+ * inputs the combat sheet's preview uses: GEAR rolls at its own fixed rate
+ * whatever you already hold (duplicates are allowed, Kong 2026-09-30), while
+ * an owned UNLOCK (a ship skin, a special item) still drops out, since a
+ * second copy of an unlock is nothing; crew
  * Fortune lifts item odds (capped 2x), Kingpin's Cut lifts legendaries. The
  * coin arrives from the client (tides add to it where the server cannot see)
  * and is clamped to MAX_CRATE_BASE_DOUBLOONS, then class-scaled. The currency
@@ -69,11 +72,11 @@ export type RaidCrate = {
 export function rollRaidCrate(i: {
   raidId: string
   config: BossRaidConfig
-  stats: Pick<RaidPlayerStats, 'shipSkins' | 'ownedRaidItems' | 'ownedSpecialItems' | 'legendaryLootMult' | 'totalFortune'>
+  stats: Pick<RaidPlayerStats, 'shipSkins' | 'ownedSpecialItems' | 'legendaryLootMult' | 'totalFortune'>
   baseDoubloons: number
   shipClasses: Record<string, string> | null
 }): RaidCrate {
-  const owned = new Set<string>([...i.stats.shipSkins, ...i.stats.ownedRaidItems, ...i.stats.ownedSpecialItems])
+  const owned = new Set<string>([...i.stats.shipSkins, ...i.stats.ownedSpecialItems])
   const crate = rollCrate(i.config.loot, owned, i.config.uniqueShare, i.stats.legendaryLootMult, fortuneLootMult(i.stats.totalFortune), isChallengeRaid(i.raidId))
   const itemIds = crate.itemIdxs.map(k => i.config.loot[k].id)
 

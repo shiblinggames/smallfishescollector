@@ -13,8 +13,9 @@
 //            here (a level is bought through its own system)
 // Crew and goldens are one-of-a-kind rows with systems of their own.
 //
-// Raid items keep today's rule until stage 3: owned once (the list is
-// deduplicated), so held is 0 or 1 and give refuses a second copy.
+// Raid items are held as COPIES (stage 3): held counts them, give adds copies
+// and take removes copies, each one a single-row update in the database
+// (raid_item_push / raid_item_take, service-role only).
 
 import type { Db } from './common'
 import { CATEGORIES, type ItemCategory } from '@/lib/items'
@@ -72,6 +73,7 @@ export function webInventory(admin: Db): InventoryOps {
           return (data ?? []).length > 0 ? 1 : 0
         }
         case 'list': return (await listOf(uid, s.col)).includes(id) ? 1 : 0
+        case 'counted': return (await listOf(uid, s.col)).filter(x => x === id).length
         case 'homestead': return (await homeOwned(uid)).includes(id) ? 1 : 0
         case 'flag': {
           const { data } = await admin.from('profiles').select(s.col).eq('id', uid).single()
@@ -100,7 +102,7 @@ export function webInventory(admin: Db): InventoryOps {
         out.set(String(STARTER_ROD_TIER), 1)
         const { data } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', uid)
         for (const r of (data ?? []) as { rod_tier: number }[]) out.set(String(r.rod_tier), 1)
-      } else if (s.type === 'list') {
+      } else if (s.type === 'list' || s.type === 'counted') {
         for (const id of await listOf(uid, s.col)) out.set(id, (out.get(id) ?? 0) + 1)
       } else if (s.type === 'homestead') {
         for (const id of await homeOwned(uid)) out.set(id, 1)
@@ -143,6 +145,15 @@ export function webInventory(admin: Db): InventoryOps {
         return !error
       }
       if (s.type === 'list') return arrayAdd(admin, uid, s.col, id)
+      if (s.type === 'counted') {
+        const count = wholeCount(n)
+        if (count == null) return false
+        for (let k = 0; k < count; k++) {
+          const { error } = await admin.rpc('raid_item_push', { uid, item: id })
+          if (error) throw new Error(`raid_item_push: ${error.message}`)
+        }
+        return true
+      }
       if (s.type === 'flag') {
         const { data } = await admin.from('profiles').update({ [s.col]: true }).eq('id', uid).or(`${s.col}.is.null,${s.col}.eq.false`).select('id')
         return (data ?? []).length > 0
@@ -189,6 +200,21 @@ export function webInventory(admin: Db): InventoryOps {
         // stage 3 gives lists atomic add and remove in the database.)
         const { data } = await admin.from('profiles').update({ [s.col]: next }).eq('id', uid).contains(s.col, [id]).select('id')
         return (data ?? []).length > 0
+      }
+      if (s.type === 'counted') {
+        const count = wholeCount(n)
+        if (count == null) return false
+        // Copy by copy; if one is refused partway (another take got there
+        // first), the copies already taken go back, so it is all or nothing.
+        for (let k = 0; k < count; k++) {
+          const { data, error } = await admin.rpc('raid_item_take', { uid, item: id })
+          if (error) throw new Error(`raid_item_take: ${error.message}`)
+          if (!data) {
+            for (let j = 0; j < k; j++) await admin.rpc('raid_item_push', { uid, item: id })
+            return false
+          }
+        }
+        return true
       }
       if (s.type === 'flag') {
         const { data } = await admin.from('profiles').update({ [s.col]: false }).eq('id', uid).eq(s.col, true).select('id')

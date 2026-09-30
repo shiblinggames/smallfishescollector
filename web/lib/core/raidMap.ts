@@ -271,7 +271,7 @@ export async function claimQuartermasterChoice(db: RaidData, uid: string, nodeId
   // One pick: only the one whose clear lands gets its item.
   const ok = await commitNodeClear(db, uid, profile.raid_node_progress, { raid_node_progress: { ...prog, cleared: newCleared } })
   if (!ok) return { error: 'Already chosen' }
-  await db.addToList(uid, 'raid_items', itemId)
+  await db.give(uid, 'raid_item', itemId)
 
   return { ok: true }
 }

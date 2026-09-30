@@ -57,16 +57,21 @@ const hcOnly = [BLOOD_CANNON_ITEM_ID, BLOOD_HULL_SKIN_ID, PRESSURE_SKIN_ID]
 const heavy = Object.fromEntries(GAUNTLET_TERMS.map(t => [t.id, t.tiers.length]))
 withRng(mulberry32(93), () => {
   let davyCannons = 0
+  let ownedGearAgain = 0
   for (let k = 0; k < 4000; k++) {
     const n = haul({ rd: 70, cd: 70, terms: heavy })
     if ([...n.droppedItems, ...n.grantSkins].some(id => hcOnly.includes(id)) || n.earnedBloodGems !== 0) { fail('a normal run paid a hardcore chase or Blood Gems'); break }
     davyCannons += n.droppedItems.length
     const d = haul({ variant: 'don', rd: 70, cd: 70 })
     if (d.droppedItems.some(id => (DAVY_FORGE.components as readonly string[]).includes(id))) { fail("a Don's run dropped Davy's cannon"); break }
+    // An owned SKIN (an unlock) never drops again. Owned GEAR does, at its own
+    // fixed rate: copies are allowed (Kong, 2026-09-30).
     const owned = haul({ hc: true, rd: 70, cd: 70, ownedItems: [...DAVY_FORGE.components, BLOOD_CANNON_ITEM_ID, ...DONS_GAUNTLET_ITEM_IDS], ownedSkins: [...hcOnly, GOLD_HULL_SKIN_ID, GALAXY_HULL_SKIN_ID] })
-    if (owned.droppedItems.length || owned.droppedSkinId || owned.droppedHcSkinId || owned.droppedPressureSkinId) { fail('something already owned dropped again'); break }
+    if (owned.droppedSkinId || owned.droppedHcSkinId || owned.droppedPressureSkinId) { fail('a skin already owned dropped again'); break }
+    ownedGearAgain += owned.droppedItems.length
   }
   if (davyCannons === 0) fail("Davy's cannons never dropped in 4000 deep runs, so the chase check tests nothing")
+  if (ownedGearAgain === 0) fail('owned gear never dropped again, though its rate should not depend on holding it')
 })
 
 // Pot, the pay cap, the offer.

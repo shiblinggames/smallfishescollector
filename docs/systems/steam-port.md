@@ -638,8 +638,23 @@ its system's doc.
          - UPGRADES: a level, not an item (reel, hook, line, hull tiers, the hold, the Crew
            Hall). Never held or given.
          Equipment slots point at owned things.
-       - RAID ITEMS ALLOW DUPLICATES: a raider can farm a spare for a crewmate, and the forge
-         can take two copies. The drop odds (which favour items you do not own) need a review.
+       - RAID ITEMS ALLOW DUPLICATES, AND EVERY ITEM HAS A FIXED DROP RATE (Kong, 2026-09-30;
+         BUILT as stage 3, see raids-campaign.md):
+         - A captain can hold several copies of a piece of gear.
+         - What you own no longer drops out of a crate: every unique rolls at its own
+           unchanging rate. Today an owned item leaves the table, which makes completing a
+           boss's set fast; that goes.
+       - RODS ARE ITEMS (Kong, 2026-09-30):
+         - Each rod has a name id instead of a "tier" number (the numbers stopped meaning an
+           order long ago), with its stats, price, level gate and where it is sold.
+         - Held as copies like other gear, duplicates allowed; selling back sells one copy.
+         - The equipped rod is a slot pointing at one you own.
+         - The Bamboo is a real, unsellable item every captain starts with.
+         - The Completionist Rod is a ONE-OF-A-KIND item carrying its own forged effects
+           (today they live on the profile).
+         - Rods do NOT drop as loot, for now.
+         - The web beta keeps its columns, and its store translates ids to the old tier
+           numbers; the desktop save gets the clean shape.
        - A COSMETIC IN THE CHEST IS A TOKEN: the captain who takes it unlocks it. An unlocked
          cosmetic stays with its owner.
        - THE CREW CHEST HOLDS raid items, forge materials, rods and cosmetic tokens. Not bait,

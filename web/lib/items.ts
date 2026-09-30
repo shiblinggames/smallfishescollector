@@ -143,3 +143,8 @@ export function getItem(category: ItemCategory, id: string | number): ItemDef | 
 export function chestRule(category: ItemCategory, id: string | number): ChestRule {
   return getItem(category, id)?.chest ?? CATEGORIES[category].chest
 }
+
+
+// Counting a list of copies lives in lib/listCounts (tiny, so importing it does
+// not load the whole catalogue).
+export { distinctIds, idCounts } from '@/lib/listCounts'

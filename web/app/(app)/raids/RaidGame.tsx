@@ -465,9 +465,10 @@ export default function RaidGame({ onLeave, onSunk, onEnemyPhase, overSea = fals
   // skins and owned raid items both drop out of the eligible pool. The
   // pool always includes the currency slots, so there's always something
   // to roll into even if the player has every unique.
+  // The UNLOCKS already held drop out of the crate. Gear does not: it rolls at
+  // its own fixed rate whatever you hold (copies are allowed).
   const ownedUniqueIds    = new Set<string>([
     ...shipSkins,
-    ...ownedRaidItems,
     // Fishing SPECIALS live one boolean column each, not in raid_items, so
     // without this Finn's table can roll a second Primeval Eye at a player who
     // already carries one -- a 2.5% ancient drop spent on nothing.

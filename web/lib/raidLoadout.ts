@@ -21,6 +21,7 @@ import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult, donsLegendary
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuildVia } from '@/lib/ultimateBuild'
 import { cardArt } from '@/lib/artUrl'
+import { distinctIds, idCounts } from '@/lib/listCounts'
 
 
 
@@ -69,7 +70,10 @@ export interface RaidPlayerStats {
   /** All raid items the player owns (equipped or not). Used to exclude
    *  already-owned items from the boss loot roll so duplicates re-roll
    *  into something new. */
+  /** Raid items held, once each (for screens that draw one card per item). */
   ownedRaidItems: string[]
+  /** How many copies of each raid item are held. */
+  raidItemCounts: Record<string, number>
   /** Fishing SPECIALS the player owns, which live one boolean column each
    *  rather than in raid_items. Finn's table drops one (The Primeval Eye), so
    *  without this the exclusion above cannot see it and he can hand out a
@@ -232,7 +236,8 @@ export async function getRaidPlayerStatsVia(db: CrewData, userId: string): Promi
     equippedShipSkin:     (profile?.equipped_ship_skin as string | null) ?? null,
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
     equippedRaidItems:    chargedItems,
-    ownedRaidItems:       (profile?.raid_items as string[] | null) ?? [],
+    ownedRaidItems:       distinctIds((profile?.raid_items as string[] | null) ?? []),
+    raidItemCounts:       idCounts((profile?.raid_items as string[] | null) ?? []),
     ownedSpecialItems:    ownedSpecialIds(profile as unknown as Record<string, unknown>),
     classDamageMult:      classEffects.damageMult * navRenown.damageMult,
     legendaryLootMult:    donsLegendaryLootMult(accountUpgrades),

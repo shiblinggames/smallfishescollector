@@ -38,6 +38,7 @@ import { parseAbyssalConversion } from '@/lib/abyssalAccelerator'
 import { getCrewRoster, type CrewMember } from '@/lib/core/crew'
 import { stintDone, storesCapHours } from '@/lib/crewBunks'
 import type { HarbourData } from '@/lib/data/harbourData'
+import { distinctIds } from '@/lib/listCounts'
 
 const nowIso = () => new Date(clockNow()).toISOString()
 
@@ -646,7 +647,7 @@ export async function shipHeroProps(db: HarbourData, pieces: ShipHeroPieces) {
     trawlingCrewIds,
     bunkLockedCrewIds,
     readyBunks,
-    ownedRaidItems: (profile?.raid_items as string[] | null) ?? [],
+    ownedRaidItems: distinctIds((profile?.raid_items as string[] | null) ?? []),
     borrowedJawXp: Number(profile?.borrowed_jaw_xp ?? 0),
     equippedRaidItems: (profile?.equipped_raid_items as string[] | null) ?? [],
     equippedRepairKit: (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',

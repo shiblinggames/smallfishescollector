@@ -133,7 +133,7 @@ function baseChance(
   if (l.chance != null) return l.chance
   // 2. A raid's OWN uniqueShare. More specific than a global rarity default, so
   //    it outranks one: a table that declares "this crate pays an item X% of the
-  //    time, split across what you still need" has made a decision about itself
+  //    time, split across what is in the table" has made a decision about itself
   //    that a per-rarity fallback should not overrule. This is what keeps the
   //    Quartermaster's six-item cache paying like one boss rather than six.
   if (uniqueShare != null && uniqueShare > 0 && missingCount > 0) {
@@ -150,8 +150,10 @@ function baseChance(
 /**
  * Roll one crate.
  *
- * `excludedIds` are uniques the player already owns; they are skipped entirely,
- * so a crate never pays a duplicate.
+ * `excludedIds` are the UNLOCKS the player already owns (ship skins, special
+ * items), skipped entirely since a second copy of an unlock is nothing. Gear is
+ * never excluded: it rolls at its own fixed rate whatever the captain already
+ * holds (Kong, 2026-09-30), so the odds no longer shift as a set fills.
  *
  * `legendaryMult` is Kingpin's Cut (Don's account perk) and lifts legendary and
  * ancient rows only. `fortuneMult` is crew Fortune and lifts every unique. Both
@@ -190,7 +192,7 @@ export function rollCrate(
 
   // A uniqueShare raid is ONE two-stage roll, which is what the field's own doc
   // on BossRaidConfig has always described: `uniqueShare` of the time you get one
-  // of the uniques you are missing, picked among them by weight, otherwise
+  // of the uniques in the table (owned unlocks drop out), picked by weight, otherwise
   // currency.
   //
   // It was implemented as N INDEPENDENT rolls at share/N instead, which is a

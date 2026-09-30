@@ -134,7 +134,18 @@ try {
     const items = s.profile.raid_items as string[]
     if (isErr(forged) || !items.includes(recipe.result) || recipe.components.some(c => items.includes(c))) fail('the forge did not trade its components for the result')
     if ((s.profile.equipped_raid_items as string[]).some(c => recipe.components.includes(c))) fail('a consumed component stayed equipped')
-    if (!isErr(await ship.forgeRaidItem(db, UID, recipe.result))) fail('an item forged twice')
+    if (!isErr(await ship.forgeRaidItem(db, UID, recipe.result))) fail('an item forged without its components')
+    // COPIES (Kong, 2026-09-30): with the parts again, the same thing forges a
+    // second time, using ONE copy of each; a spare copy that is mounted stays.
+    const spare = recipe.components[0]
+    s.profile.raid_items = [...(s.profile.raid_items as string[]), ...recipe.components, spare]
+    s.profile.equipped_raid_items = [spare]
+    const again = await ship.forgeRaidItem(db, UID, recipe.result)
+    const after = s.profile.raid_items as string[]
+    if (isErr(again) || after.filter(x => x === recipe.result).length !== 2) fail('the same item did not forge a second time')
+    if (after.filter(x => x === spare).length !== 1) fail('the forge did not use exactly one copy of a component')
+    if (!(s.profile.equipped_raid_items as string[]).includes(spare)) fail('a mounted spare came off when only one copy was used')
+    if ('raidItems' in again && again.raidItems.length !== new Set(after).size) fail('the forge handed the screen a list with copies in it')
     const abyssal = FORGE_RECIPES.find(r => r.tier === 3)
     if (abyssal) {
       s.profile.forge_recipes_learned = [...(s.profile.forge_recipes_learned as string[]), abyssal.result]
@@ -142,7 +153,7 @@ try {
       if (!isErr(await ship.forgeRaidItem(db, UID, abyssal.result))) fail('an Abyssal recipe forged without the Abyssal Forge')
     }
     if (!isErr(await ship.forgeRaidItem(db, UID, 'not_a_recipe'))) fail('a made-up recipe forged')
-    console.log(`  the Forge: locked, learned once for ${recipe.fathomCost} Fathoms, ${recipe.result} forged once from its parts`)
+    console.log(`  the Forge: locked, learned once for ${recipe.fathomCost} Fathoms, ${recipe.result} forged from its parts and again from a second set, one copy each`)
   }
 
   // ── 4. The Abyssal Accelerator ──
@@ -163,7 +174,14 @@ try {
     const claim = await ship.claimAbyssalConversion(db, UID)
     if (isErr(claim) || !(s.profile.raid_items as string[]).includes(legendary) || s.profile.abyssal_conversion != null) fail('the finished conversion did not hand over the legendary')
     if (!isErr(await ship.claimAbyssalConversion(db, UID))) fail('a conversion was claimed twice')
-    console.log(`  the Accelerator: locked, ${epic} charged once for ${ABYSSAL_ACCEL_GEM_COST} gems, ${legendary} claimed once after 24h`)
+    // COPIES: holding the legendary is no bar, and charging takes ONE epic; a
+    // mounted second copy stays mounted.
+    s.profile.raid_items = [legendary, epic, epic]
+    s.profile.equipped_raid_items = [epic]
+    const second = await ship.startAbyssalConversion(db, UID, epic)
+    if (isErr(second) || (s.profile.raid_items as string[]).filter(x => x === epic).length !== 1) fail('a charge did not take exactly one copy of the epic (or refused a captain holding the legendary)')
+    if (!(s.profile.equipped_raid_items as string[]).includes(epic)) fail('a mounted second copy came off when one was charged')
+    console.log(`  the Accelerator: locked, ${epic} charged once for ${ABYSSAL_ACCEL_GEM_COST} gems, ${legendary} claimed once after 24h, a second charge takes one copy`)
   }
 
   // ── 5. The ultimate ──

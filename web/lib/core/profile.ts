@@ -29,6 +29,7 @@ import { earnedSpecials } from '@/lib/avatarColors'
 import type { CareerStats, CareerAggregates } from '@/lib/careerStats'
 import type { CrewMember } from '@/lib/core/crew'
 import type { Row } from '@/lib/data/common'
+import { distinctIds } from '@/lib/listCounts'
 
 const USERNAME_RE = /^[a-z0-9_]{3,20}$/
 const premium = (p: unknown) => isPremiumActive(p as Parameters<typeof isPremiumActive>[0])
@@ -307,7 +308,7 @@ export function profilePageProps(p: ProfilePagePieces) {
     rarestFish,
     prestigeLevels,
     goldenMounts,
-    raidItemIds: (profile?.raid_items as string[] | null) ?? [],
+    raidItemIds: distinctIds((profile?.raid_items as string[] | null) ?? []),
     ancientTrophies,
     ancientVigil: vigilFor(profile?.ancient_vigil, (profile?.ancient_catches as number[] | null) ?? null),
     characterColor: (profile?.character_color as string | null) ?? 'default',

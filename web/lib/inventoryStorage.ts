@@ -4,8 +4,7 @@
 // inventory; the desktop's over the save, lib/data/local/inventoryLocal), so
 // the two cannot disagree about where a rod or a pet lives. The catalogue
 // (lib/items) says what a thing IS; this says where it is STORED today, in the
-// six ways the survey found. Stage 3 moves raid items onto a list that may
-// hold duplicates; nothing else here changes when it does.
+// six ways the survey found, plus raid items' list of copies (stage 3).
 
 import { SPECIAL_OWNED_COLUMN, type SpecialItemId } from '@/lib/specialItems'
 import type { ItemCategory } from '@/lib/items'
@@ -19,6 +18,8 @@ export type Storage =
   | { type: 'rods' }
   /** a profiles array column of ids, each owned once */
   | { type: 'list'; col: string }
+  /** a profiles array column that may hold COPIES (raid items, since stage 3) */
+  | { type: 'counted'; col: string }
   /** one boolean profiles column per id */
   | { type: 'flag'; col: string }
   /** a profiles level column: held when the level reaches the id */
@@ -27,7 +28,6 @@ export type Storage =
   | { type: 'homestead' }
 
 const LIST: Partial<Record<ItemCategory, string>> = {
-  raid_item: 'raid_items',
   forge_recipe: 'forge_recipes_learned',
   pet: 'unlocked_pets',
   boat: 'unlocked_boats',
@@ -55,6 +55,9 @@ export function storageFor(category: ItemCategory, id: string): Storage {
   if (category === 'fish') return { type: 'hold' }
   if (category === 'rod') return { type: 'rods' }
   if (category === 'furnishing') return { type: 'homestead' }
+  // Held as copies since stage 3 (Kong, 2026-09-30): a captain can hold several
+  // of a piece of gear.
+  if (category === 'raid_item') return { type: 'counted', col: 'raid_items' }
   if (category === 'special') {
     const col = SPECIAL_OWNED_COLUMN[id as SpecialItemId]
     if (!col) throw new Error(`no such special item: ${id}`)

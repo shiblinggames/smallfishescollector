@@ -1082,6 +1082,42 @@ end $function$
 revoke all on function public.profile_array_add(uid uuid, col text, val text) from public, anon, authenticated;
 grant execute on function public.profile_array_add(uid uuid, col text, val text) to service_role;
 
+CREATE OR REPLACE FUNCTION public.raid_item_push(uid uuid, item text)
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  update public.profiles
+     set raid_items = array_append(coalesce(raid_items, '{}'), item)
+   where id = uid;
+$function$
+;
+revoke all on function public.raid_item_push(uid uuid, item text) from public, anon, authenticated;
+grant execute on function public.raid_item_push(uid uuid, item text) to service_role;
+
+CREATE OR REPLACE FUNCTION public.raid_item_take(uid uuid, item text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare n int;
+begin
+  update public.profiles
+     set raid_items =
+           raid_items[1 : array_position(raid_items, item) - 1]
+        || raid_items[array_position(raid_items, item) + 1 : coalesce(array_upper(raid_items, 1), 0)]
+   where id = uid
+     and item = any(coalesce(raid_items, '{}'));
+  get diagnostics n = row_count;
+  return n > 0;
+end
+$function$
+;
+revoke all on function public.raid_item_take(uid uuid, item text) from public, anon, authenticated;
+grant execute on function public.raid_item_take(uid uuid, item text) to service_role;
+
 CREATE OR REPLACE FUNCTION public.raid_progress_board()
  RETURNS TABLE(user_id uuid, username text, score integer, last_at timestamp with time zone)
  LANGUAGE sql
