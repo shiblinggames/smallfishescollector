@@ -28,6 +28,22 @@ const HOOK: Dictionary = { "rest": [39.5, -10.5, 204.5, 0.0], "wait": [39.5, -10
 var look: Dictionary = {}
 var frame: String = "rest"
 var box_scale: float = 1.0
+## ON THE WATER (seaCaptain.ts): a soft shadow under the hull, her whole
+## picture thrown back by the water (mirrored about the waterline, foreshortened
+## to 55%, faint, and shearing slowly so it reads as water and not as a second
+## boat), and the sea coming up the bottom of the hull. Off for previews.
+var water: bool = false
+const LIE: float = 0.55
+const MIRROR_ALPHA: float = 0.26
+const MIRROR_SHEAR: float = 0.021
+const MIRROR_RATE: float = 0.78
+const SINK: float = 0.04
+static var _bands: Dictionary = {}
+static var _shadow_mat: ShaderMaterial
+static var _mirror_mat: ShaderMaterial
+var _mirror: Node2D
+var _wob: float = 0.0
+var _phase: float = randf() * 6.28
 
 
 static func tex(url: Variant) -> Texture2D:
@@ -90,9 +106,10 @@ func _build() -> void:
 	var hat: Dictionary = _find("hats", look.get("hat"))
 	if not hat.is_empty():
 		_part(tex(hat["castImageUrl"] if frame == "cast" else hat["restImageUrl"]), origin, _pos(hat["positions"][frame]), w, h, false)
+	_hull_sprite = null
 	var boat: Dictionary = _find("boats", look.get("boat"))
 	if not boat.is_empty():
-		_part(tex(boat["castImageUrl"] if frame == "cast" else boat["restImageUrl"]), origin, _pos(boat["positions"][frame]), w, h, false)
+		_hull_sprite = _part(tex(boat["castImageUrl"] if frame == "cast" else boat["restImageUrl"]), origin, _pos(boat["positions"][frame]), w, h, false)
 	if look.get("rodSlug") != null:
 		_part(tex("%s_%s.png" % [look["rodSlug"], frame]), origin, ROD[frame], w, h, true)
 	if look.get("reel") != null:
@@ -104,6 +121,99 @@ func _build() -> void:
 			_part(tex(pet["restImageUrl"]), origin, _pos(o), w, h, false)
 	if look.get("hook") != null and frame != "wait":
 		_part(tex(look["hook"]), origin, HOOK[frame], w, h, false)
+	if water:
+		_water_fx(origin, h, _hull_sprite)
+
+
+var _hull_sprite: Sprite2D
+
+
+func _water_fx(origin: Vector2, h: float, hull: Sprite2D) -> void:
+	var parts: Array = get_children().filter(func(c: Node) -> bool: return c is Sprite2D and not c.is_queued_for_deletion())
+	if hull == null and not parts.is_empty():
+		hull = parts[0]
+	if parts.is_empty():
+		return
+	# Where the water is: the lowest PAINTED row of the hull (the sheets keep a
+	# margin under it, and mirroring about the box's edge threw the picture
+	# loose of the boat), a little up it.
+	var hh: float = hull.texture.get_height() * absf(hull.scale.y)
+	var top_y: float = hull.position.y - hh / 2.0 if hull.centered else hull.position.y + hull.offset.y * absf(hull.scale.y)
+	var waterline: float = top_y + hh * (_band(hull.texture).y - SINK)
+	# The shadow, under everything.
+	if hull != null:
+		if _shadow_mat == null:
+			_shadow_mat = ShaderMaterial.new()
+			_shadow_mat.shader = load("res://game/fx/hull_shadow.gdshader")
+		var sh: Sprite2D = _twin(hull)
+		sh.material = _shadow_mat
+		sh.position.y += 8.0
+		add_child(sh)
+		move_child(sh, 0)
+	# The reflection: a twin of every part, in a box flipped about the
+	# waterline. A child at y lands at P - LIE * y; it should land at
+	# water + (water - y) * LIE, so P is water * (1 + LIE).
+	var group: CanvasGroup = CanvasGroup.new()
+	group.fit_margin = 12.0
+	if _mirror_mat == null:
+		_mirror_mat = ShaderMaterial.new()
+		_mirror_mat.shader = load("res://game/fx/hull_mirror.gdshader")
+	group.material = _mirror_mat
+	_mirror = group
+	_mirror.position = Vector2(0, waterline * (1.0 + LIE))
+	_mirror.scale = Vector2(1.0, -LIE)
+	for c: Sprite2D in parts:
+		_mirror.add_child(_twin(c))
+	add_child(_mirror)
+	move_child(_mirror, 1 if hull != null else 0)
+	# The water up her side, over the hull and cut from its own shape.
+	if hull != null:
+		var band: Vector2 = _band(hull.texture)
+		var soak: Sprite2D = _twin(hull)
+		var m: ShaderMaterial = ShaderMaterial.new()
+		m.shader = load("res://game/fx/hull_soak.gdshader")
+		m.set_shader_parameter("top", band.x)
+		m.set_shader_parameter("bot", band.y)
+		soak.material = m
+		add_child(soak)
+
+
+func _twin(c: Sprite2D) -> Sprite2D:
+	var t: Sprite2D = Sprite2D.new()
+	t.texture = c.texture
+	t.centered = c.centered
+	t.offset = c.offset
+	t.position = c.position
+	t.scale = c.scale
+	t.rotation = c.rotation
+	t.flip_h = c.flip_h
+	t.visible = c.visible
+	return t
+
+
+## The painted rows of a picture, as a fraction of its height (top, bottom),
+## measured once.
+static func _band(t: Texture2D) -> Vector2:
+	var key: String = t.resource_path
+	if _bands.has(key):
+		return _bands[key]
+	var out: Vector2 = Vector2(0.0, 1.0)
+	var img: Image = t.get_image()
+	if img != null:
+		if img.is_compressed():
+			img.decompress()
+		var r: Rect2i = img.get_used_rect()
+		if r.size.y > 0:
+			out = Vector2(float(r.position.y) / img.get_height(), float(r.end.y) / img.get_height())
+	_bands[key] = out
+	return out
+
+
+func _process(delta: float) -> void:
+	if _mirror == null or not is_instance_valid(_mirror):
+		return
+	_wob += delta
+	_mirror.skew = sin(_wob * MIRROR_RATE + _phase) * MIRROR_SHEAR + sin(_wob * MIRROR_RATE * 1.63 + _phase * 2.1) * MIRROR_SHEAR * 0.45
 
 
 static func _pos(o: Dictionary) -> Array:
@@ -111,9 +221,9 @@ static func _pos(o: Dictionary) -> Array:
 
 
 ## One layer: top%, left%, width% of the box, turned by rotate degrees.
-func _part(t: Texture2D, origin: Vector2, p: Array, w: float, h: float, pivot_bottom_right: bool) -> void:
+func _part(t: Texture2D, origin: Vector2, p: Array, w: float, h: float, pivot_bottom_right: bool) -> Sprite2D:
 	if t == null:
-		return
+		return null
 	var pw: float = w * float(p[2]) / 100.0
 	var ph: float = pw * float(t.get_height()) / float(t.get_width())
 	var top_left: Vector2 = origin + Vector2(w * float(p[1]) / 100.0, h * float(p[0]) / 100.0)
@@ -128,3 +238,4 @@ func _part(t: Texture2D, origin: Vector2, p: Array, w: float, h: float, pivot_bo
 	else:
 		s.position = top_left + Vector2(pw, ph) / 2.0
 	add_child(s)
+	return s

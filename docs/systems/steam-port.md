@@ -151,6 +151,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   - In a Charter the portal's rung is the crew's (stones come from the shared discoveries),
     and each captain has their own recall.
   THE REST OF THE SEA IS DONE except the minimap/fog drawing and the expedition side.
+  WAKE AND WATERLINE (2026-10-01, Kong: "the wake and trail are not right, no reflections"):
+  - `game/wake.gd` ports seaWake.ts for every hull on the chart, in one layer under the boats:
+    streak pairs laid at the cutwater every 32ms that open into a V, churn behind the bow,
+    bow spray past 45% speed, and rings from under the keel at rest. The old particle spray
+    is gone.
+  - `Skipper.water` adds seaCaptain.ts's waterline: a soft shadow, the water coming up the
+    hull (`fx/hull_soak.gdshader`), and the reflection.
+  - The reflection goes PAST the web (Kong: "the web app is just the baseline; use what Godot
+    offers"). The mirrored boat is drawn into a CanvasGroup, so it fades as one image (the
+    web's per-sprite alpha let parts show through each other). `fx/hull_mirror.gdshader` then
+    ripples it with the water, pulls it toward the sea's colour, and dissolves it with
+    distance. It is mirrored about the lowest PAINTED row of the hull, not the sheet's edge.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

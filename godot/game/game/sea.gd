@@ -40,6 +40,7 @@ var _water: ShaderMaterial
 var _world: Node2D
 var _boat: Boat
 var _camera: Camera2D
+var _wake: Wake
 ## THE WHEEL ZOOM (SeaMap.tsx): 0.55 to 1.6 of the chart's own scale, eased,
 ## and remembered on this machine (a number tuned on one screen is wrong on
 ## another, so it is not in the save).
@@ -131,6 +132,9 @@ func _ready() -> void:
 	_town_light.position = Vector2(-30, 120)
 	_world.add_child(_town_light)
 
+	_wake = Wake.new()
+	_wake.z_index = -1
+	_world.add_child(_wake)
 	_boat = Boat.new()
 	var at: Variant = session.profile().get("sea_x")
 	_boat.position = Vector2(Js.num(at), Js.num(session.profile().get("sea_y"))) if at != null else Chart.HOME
@@ -223,6 +227,18 @@ func _process(delta: float) -> void:
 	for b: Buyer in _buyers:
 		b.lift = lift
 	_wanderers(now, clock, lift)
+	# Every hull's wake, laid on the water.
+	var contacts: Array = [_boat.wake_contact()]
+	for list: Dictionary in [_regulars, _strangers]:
+		for k: String in list:
+			var w: Wanderer = list[k]
+			contacts.append(Boat.contact_for(k, w.position, w.skipper))
+	for b: Buyer in _buyers:
+		contacts.append(Boat.contact_for("buyer:" + str(b.info["zoneId"]), b.position, b.skipper))
+	for k: String in _mates:
+		var m: Shipmate = _mates[k]
+		contacts.append(Boat.contact_for("mate:" + k, m.position, m.skipper))
+	_wake.lay(contacts)
 	_portal.lift = lift
 	_recall_t += delta
 	if _recall_t > 1.0:

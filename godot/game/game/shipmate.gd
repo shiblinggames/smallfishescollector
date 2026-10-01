@@ -20,6 +20,7 @@ var _placed: bool = false
 
 func _ready() -> void:
 	skipper = Skipper.new()
+	skipper.water = true
 	skipper.scale = Vector2(1.0, 1.0 / Chart.GROUND)
 	add_child(skipper)
 	var holder: Node2D = Node2D.new()

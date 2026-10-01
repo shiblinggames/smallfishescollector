@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -205,6 +205,17 @@ func _init() -> void:
 				var sh: PortalSheet = sea._hud_layer.get_child(sea._hud_layer.get_child_count() - 1)
 				sh._sel = Portal.tier_def(4)
 				sh._draw()
+		"wake", "still":
+			sea._boat.position = Vector2(-1500, 2600)
+			if what == "wake":
+				sea._boat.heading = 0.3
+				sea._boat.target = Vector2(2500, 3800)
+				for f: int in 70:
+					await process_frame
+			else:
+				sea._zoom_to = 1.6
+				for f: int in 200:
+					await process_frame
 		"boss":
 			sea._boat.position = Vector2(0, 19000)
 			p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[89])

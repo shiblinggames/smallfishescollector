@@ -14,8 +14,8 @@ extends Node2D
 ## top speed SPEED x hull x boat speed; turn TURN x rudder x boat agility;
 ## pick-up ACCEL x rig x boat agility.
 ##
-## The wake and the bow spray are GPU particles left on the water behind it
-## (subtle, local); the lantern is a 2D light that comes up with the dark.
+## Her wake is laid by the sea's Wake layer (game/wake.gd) from `wake_contact`;
+## the lantern is a 2D light that comes up with the dark.
 
 const SPEED: float = 300.0
 const ACCEL: float = 2.6
@@ -48,18 +48,13 @@ var target: Variant = null
 var locked: bool = false
 var skipper: Skipper
 var _facing: float = -1.0
-var _wake: GPUParticles2D
-var _spray: GPUParticles2D
 var lantern: PointLight2D
 
 
 func _ready() -> void:
 	skipper = Skipper.new()
+	skipper.water = true
 	skipper.scale = Vector2(1.0, 1.0 / Chart.GROUND)
-	_wake = _particles(70, 1.8, Color(0.92, 0.97, 1.0, 0.34), 26.0, 10.0)
-	_spray = _particles(24, 0.6, Color(1.0, 1.0, 1.0, 0.5), 60.0, 6.0)
-	add_child(_wake)
-	add_child(_spray)
 	add_child(skipper)
 	lantern = PointLight2D.new()
 	lantern.texture = Glow.radial(256, Color(1.0, 0.78, 0.45), true)
@@ -68,30 +63,6 @@ func _ready() -> void:
 	lantern.energy = 0.0
 	lantern.position = Vector2(-20, -60)
 	add_child(lantern)
-
-
-func _particles(amount: int, life: float, col: Color, speed: float, px: float) -> GPUParticles2D:
-	var p: GPUParticles2D = GPUParticles2D.new()
-	p.amount = amount
-	p.lifetime = life
-	p.local_coords = false
-	p.emitting = false
-	p.texture = Glow.radial(32, Color.WHITE)
-	var m: ParticleProcessMaterial = ParticleProcessMaterial.new()
-	m.gravity = Vector3.ZERO
-	m.initial_velocity_min = speed * 0.4
-	m.initial_velocity_max = speed
-	m.spread = 60.0
-	m.scale_min = px / 32.0
-	m.scale_max = px / 16.0
-	var fade: Gradient = Gradient.new()
-	fade.set_color(0, col)
-	fade.set_color(1, Color(col, 0.0))
-	var ramp: GradientTexture1D = GradientTexture1D.new()
-	ramp.gradient = fade
-	m.color_ramp = ramp
-	p.process_material = m
-	return p
 
 
 ## The Shipyard's refits and the boat's trim, from a profile.
@@ -166,12 +137,35 @@ func steer(input: Vector2, delta: float) -> void:
 	if speed > 20.0 and absf(velocity.x) > 8.0:
 		_facing = 1.0 if velocity.x > 0.0 else -1.0
 		skipper.scale.x = -_facing
-	_wake.emitting = speed > 40.0
-	_spray.emitting = speed > SPEED * hull * boat_speed * 0.85
-	var back: Vector2 = -velocity.normalized() if speed > 1.0 else Vector2.ZERO
-	(_wake.process_material as ParticleProcessMaterial).direction = Vector3(back.x, back.y, 0)
-	(_spray.process_material as ParticleProcessMaterial).direction = Vector3(-back.x, -back.y, 0)
-	_spray.position = -back * 70.0
+
+
+## Where her wake starts (SeaMap.tsx): the cutwater, 40px toward the bow and
+## 21px down the sprite, and under the keel (34px down) for the rings at rest.
+## Force is the share of her speed, nothing under 26px/s.
+const BOW_X: float = (0.308 - 0.5) * SPRITE_W
+const BOW_DOWN: float = (0.599 - 0.5) * SPRITE_W
+const KEEL_Y: float = 34.0
+
+
+func wake_contact() -> Dictionary:
+	var speed: float = velocity.length()
+	var web_facing: float = signf(skipper.scale.x)
+	return {
+		"id": "me", "x": position.x + web_facing * BOW_X - 1.0, "y": position.y + BOW_DOWN / Chart.GROUND,
+		"cx": position.x - 1.0, "cy": position.y + KEEL_Y / Chart.GROUND,
+		"ang": atan2(velocity.y, velocity.x) if speed > 1.0 else heading,
+		"force": minf(1.0, speed / (SPEED * 0.9)) if speed > 26.0 else 0.0, "scale": 1.0,
+	}
+
+
+## The same for anyone else on the water, from where they are and which way
+## they face; the wake reads their speed and heading off their movement.
+static func contact_for(id: String, at: Vector2, sk: Skipper) -> Dictionary:
+	var f: float = signf(sk.scale.x) if sk != null else 1.0
+	return {
+		"id": id, "x": at.x + f * BOW_X - 1.0, "y": at.y + BOW_DOWN / Chart.GROUND,
+		"cx": at.x - 1.0, "cy": at.y + KEEL_Y / Chart.GROUND, "scale": 1.0,
+	}
 
 
 func facing() -> float:

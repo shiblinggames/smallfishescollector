@@ -34,6 +34,7 @@ var _facing: float = 1.0
 
 func _ready() -> void:
 	skipper = Skipper.new()
+	skipper.water = true
 	skipper.scale = Vector2(1.0, 1.0 / Chart.GROUND)
 	add_child(skipper)
 	var l: Dictionary = info.get("look", {})
