@@ -18,10 +18,12 @@ const COL_W: float = 980.0
 var session: Session
 var title: String = ""
 var back_label: String = "The Sea"
+## The room's colour: the title's glow, its eyebrows and selections.
+var accent: Color = Kit.GOLD
 var col: VBoxContainer
 var header_badge: Control = null
 var _scroll: ScrollContainer
-var _toast: PanelContainer
+var _toast: Pane
 var _toast_l: Label
 var _toast_t: float = 0.0
 
@@ -48,19 +50,8 @@ func _ready() -> void:
 	col.add_theme_constant_override("separation", 10)
 	margin.add_child(col)
 
-	_toast = PanelContainer.new()
-	var ts: StyleBoxFlat = StyleBoxFlat.new()
-	ts.bg_color = Color("#1c2030")
-	ts.set_corner_radius_all(999)
-	ts.content_margin_left = 18
-	ts.content_margin_right = 18
-	ts.content_margin_top = 8
-	ts.content_margin_bottom = 8
-	_toast.add_theme_stylebox_override("panel", ts)
-	_toast_l = Label.new()
-	_toast_l.add_theme_font_override("font", UiTheme.title_font())
-	_toast_l.add_theme_color_override("font_color", GOLD)
-	_toast.add_child(_toast_l)
+	_toast = Pane.new({ "radius": 999, "fill": [Color("#1c2030")], "border": [1, Color(1, 1, 1, 0.1)], "shadow": [Color(0, 0, 0, 0.5), 16, Vector2(0, 4)], "pad": [18, 8, 18, 9] })
+	_toast_l = Kit.text(_toast, "", "value", GOLD)
 	_toast.anchor_left = 0.5
 	_toast.anchor_right = 0.5
 	_toast.anchor_top = 1.0
@@ -101,19 +92,14 @@ func _header() -> void:
 	col.add_child(row)
 	var left: HBoxContainer = HBoxContainer.new()
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.size_flags_stretch_ratio = 1.0
 	row.add_child(left)
-	var pill: Button = Room.back_pill(back_label)
+	var pill: Button = Kit.back_pill(back_label)
 	pill.pressed.connect(_back)
 	left.add_child(pill)
-	var t: Label = Label.new()
-	t.text = title
-	t.add_theme_font_override("font", UiTheme.title_font())
-	t.add_theme_font_size_override("font_size", 24)
-	t.add_theme_color_override("font_color", INK)
+	var t: Label = Kit.text(row, title, "title", INK)
+	Kit.glow(t, accent)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(t)
 	var right: HBoxContainer = HBoxContainer.new()
 	right.alignment = BoxContainer.ALIGNMENT_END
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -162,35 +148,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		_back()
 
 
-# ── Pieces ─────────────────────────────────────────────────────────────────────
+# ── Pieces (on the style kit) ─────────────────────────────────────────────────
 
-## BackPill: a dark gold-edged pill with a chevron and the place it goes back to.
+## THE back pill (Kit).
 static func back_pill(label: String) -> Button:
-	var b: Button = Button.new()
-	b.text = "‹  " + label.to_upper()
-	b.tooltip_text = "Back to %s" % label
-	b.add_theme_font_size_override("font_size", 12)
-	b.add_theme_color_override("font_color", Color("#e3d8bc"))
-	b.add_theme_color_override("font_hover_color", Color("#f4ecd8"))
-	var s: StyleBoxFlat = StyleBoxFlat.new()
-	s.bg_color = Color(0.13, 0.1, 0.05, 0.92)
-	s.border_color = Color(0.77, 0.66, 0.42, 0.5)
-	s.set_border_width_all(1)
-	s.set_corner_radius_all(999)
-	s.content_margin_left = 14
-	s.content_margin_right = 16
-	s.content_margin_top = 6
-	s.content_margin_bottom = 6
-	var h: StyleBoxFlat = s.duplicate()
-	h.bg_color = Color(0.2, 0.15, 0.08, 0.95)
-	b.add_theme_stylebox_override("normal", s)
-	b.add_theme_stylebox_override("hover", h)
-	b.add_theme_stylebox_override("pressed", h)
-	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	return b
+	return Kit.back_pill(label)
 
 
+## A flat style, for the few places that set a stylebox directly. Panels made
+## with panel() become Kit panes from it.
 static func box(bg: Color, border: Color, radius: int = 14, pad: int = 14, border_w: int = 1) -> StyleBoxFlat:
 	var s: StyleBoxFlat = StyleBoxFlat.new()
 	s.bg_color = bg
@@ -201,63 +167,34 @@ static func box(bg: Color, border: Color, radius: int = 14, pad: int = 14, borde
 	return s
 
 
+## A panel: a Kit pane from a flat style's colours, radius and padding.
 static func panel(parent: Control, style: StyleBoxFlat) -> PanelContainer:
-	var p: PanelContainer = PanelContainer.new()
-	p.add_theme_stylebox_override("panel", style)
-	parent.add_child(p)
-	return p
+	var spec: Dictionary = {
+		"radius": style.corner_radius_top_left, "fill": [style.bg_color],
+		"pad": [style.content_margin_left, style.content_margin_top, style.content_margin_right, style.content_margin_bottom],
+	}
+	if style.border_width_left > 0 and style.border_color.a > 0.0:
+		spec["border"] = [style.border_width_left, style.border_color]
+	return Kit.pane(parent, spec)
 
 
 static func text(parent: Control, t: String, px: int, c: Color, title_font: bool = false, wrap: bool = false) -> Label:
 	return Sheet.text(parent, t, px, c, title_font, wrap)
 
 
-## A small rounded chip of text.
-static func chip(parent: Control, t: String, fg: Color, bg: Color, border: Color, px: int = 11) -> PanelContainer:
-	var s: StyleBoxFlat = box(bg, border, 999, 0)
-	s.content_margin_left = 8
-	s.content_margin_right = 8
-	s.content_margin_top = 2
-	s.content_margin_bottom = 3
-	var p: PanelContainer = panel(parent, s)
-	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var l: Label = Label.new()
-	l.text = t
-	l.add_theme_font_size_override("font_size", px)
-	l.add_theme_color_override("font_color", fg)
-	p.add_child(l)
-	return p
+## THE chip (Kit), in the foreground colour; a faint background reads as quiet.
+static func chip(parent: Control, t: String, fg: Color, bg: Color, _border: Color, _px: int = 11) -> PanelContainer:
+	return Kit.chip(parent, t, fg, bg.a < 0.08 and fg.a < 0.9)
 
 
-## A small upper-case heading.
-static func heading(parent: Control, t: String, c: Color = Color(0.75, 0.83, 0.89, 0.6), px: int = 12) -> Label:
-	var l: Label = text(parent, t.to_upper(), px, c)
-	return l
+## A small upper-case heading: the kit's eyebrow.
+static func heading(parent: Control, t: String, c: Color = Color(0.75, 0.83, 0.89, 0.6), _px: int = 12) -> Label:
+	return Kit.text(parent, t, "eyebrow", c)
 
 
-## A flat button in one colour: text and border tinted, a faint fill.
-static func tinted(t: String, c: Color, px: int = 14, h: float = 38.0) -> Button:
-	var b: Button = Button.new()
-	b.text = t
-	b.custom_minimum_size = Vector2(0, h)
-	b.add_theme_font_size_override("font_size", px)
-	b.add_theme_color_override("font_color", c)
-	b.add_theme_color_override("font_hover_color", c.lightened(0.25))
-	b.add_theme_color_override("font_disabled_color", Color(c, 0.45))
-	var s: StyleBoxFlat = box(Color(c, 0.10), Color(c, 0.45), 10, 0)
-	s.content_margin_left = 14
-	s.content_margin_right = 14
-	var hv: StyleBoxFlat = s.duplicate()
-	hv.bg_color = Color(c, 0.2)
-	var dis: StyleBoxFlat = s.duplicate()
-	dis.bg_color = Color(c, 0.04)
-	dis.border_color = Color(c, 0.18)
-	b.add_theme_stylebox_override("normal", s)
-	b.add_theme_stylebox_override("hover", hv)
-	b.add_theme_stylebox_override("pressed", hv)
-	b.add_theme_stylebox_override("disabled", dis)
-	return b
+## A button in one colour: the kit's accent button (small under 44 tall).
+static func tinted(t: String, c: Color, _px: int = 14, h: float = 38.0) -> Button:
+	return Kit.button(t, "accent", "large" if h >= 44.0 else "small", c)
 
 
 ## An image, fitted inside a box of this size, centred.
@@ -274,20 +211,9 @@ static func picture(parent: Control, url: Variant, size_px: Vector2, grey: bool 
 	return r
 
 
-## A thin progress bar in one colour.
-static func bar(parent: Control, frac: float, c: Color, h: float = 6.0) -> ProgressBar:
-	var b: ProgressBar = ProgressBar.new()
-	b.show_percentage = false
-	b.custom_minimum_size = Vector2(0, h)
-	b.max_value = 1.0
-	b.step = 0.0
-	b.value = clampf(frac, 0.0, 1.0)
-	var bg: StyleBoxFlat = box(Color(0.07, 0.08, 0.1, 0.92), Color(0, 0, 0, 0), 999, 0, 0)
-	var fill: StyleBoxFlat = box(c, Color(0, 0, 0, 0), 999, 0, 0)
-	b.add_theme_stylebox_override("background", bg)
-	b.add_theme_stylebox_override("fill", fill)
-	parent.add_child(b)
-	return b
+## THE progress bar (Kit); 3 tall or less is the mini.
+static func bar(parent: Control, frac: float, c: Color, h: float = 6.0) -> Control:
+	return Kit.bar(parent, frac, c, h <= 3.0)
 
 
 ## Every child of a grid laid into rows of `n`, each cell sharing the width.

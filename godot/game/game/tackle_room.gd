@@ -265,7 +265,7 @@ func _badge() -> Control:
 		var table: Array = Rules.data()["xpTable"]
 		var lo: float = float(table[_lvl() - 1])
 		var hi: float = float(table[_lvl()])
-		var bar: ProgressBar = Room.bar(v, (Js.num(_p().get("fishing_xp")) - lo) / maxf(1.0, hi - lo), Color("#5eead4"), 3.0)
+		var bar: Control = Room.bar(v, (Js.num(_p().get("fishing_xp")) - lo) / maxf(1.0, hi - lo), Color("#5eead4"), 3.0)
 		bar.custom_minimum_size = Vector2(44, 3)
 		bar.size_flags_horizontal = Control.SIZE_SHRINK_END
 	return p
@@ -321,7 +321,7 @@ func _landing() -> void:
 	var g: Label = Room.text(pulse, "GEAR  %d / %d" % [owned, total], 13, Color("#b9b2a6"))
 	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	Room.text(pulse, "%s ⟡" % Js.thousands(_dbl()), 13, Color("#e0b45a"))
-	var pb: ProgressBar = Room.bar(col, float(owned) / maxf(1.0, total), Color("#e0b45a"))
+	var pb: Control = Room.bar(col, float(owned) / maxf(1.0, total), Color("#e0b45a"))
 	pb.custom_minimum_size = Vector2(0, 6)
 
 	var ready: Array = []

@@ -53,6 +53,41 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the rest of lib/core/fishing (wormhole reroll, Tide Turner, goldens, level rewards,
   Almanac). A TS bug found on the way: the local store stamped a shiny with the real
   clock, fixed.
+- THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
+  first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
+  game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel
+  the way CSS does (rounded rect, gradients at any angle up to 4 stops, a radial wash, sheen,
+  inner glow, border, accent top edge, soft shadow); `game/pane.gd` is the container that
+  carries it, `Pane.PaneButton` a button on one. Every Cinzel and Karla weight the web uses is
+  copied in, with letter-spacing done by FontVariation. `tests/kit_gallery.gd` shows every piece.
+  THE STANDARDS, chosen where the web did one role several ways (from a survey of 20 screens):
+  - ONE ink ramp, warm: `#f4ecd8` / `#d8d2c6` / `#9a9488` / `#6a6764` / `#4a4845` (the web had
+    three: violet, cool blue, warm grey). Each ROOM keeps an accent: the Almanac violet, the
+    shops gold, the sea warm sand; it tints eyebrows, selections and borders.
+  - Rarity: the catch card's palette (`#94a3b8 #4ade80 #60a5fa #c084fc #f59e0b`); the
+    market's near-copy is retired.
+  - Type roles: display, title, heading, name, number (Cinzel); eyebrow (Karla 700, 0.16em; was
+    ten trackings from 0.09 to 0.28em), eyebrow_hero (0.24em, ceremonies only), label, body,
+    small, note, value, button, chip.
+  - ONE modal shell (radius 18, opaque `#0a1016`, accent hairline, deep shadow; was five
+    recipes), one card for the one-lit-thing moments (radius 16), one scrim (0.7, or 0.9 for a
+    moment that blocks; was six alphas).
+  - Buttons: primary (solid gold, the one thing to do), accent (a wash of the room's colour),
+    secondary, danger; two sizes, two radii (12 and 9; was six).
+  - ONE close button (a 30px circle with a drawn X; was five sizes) and ONE back pill (the
+    bronze leather one).
+  - Chips: radius 999 everywhere, one recipe (ShopStatusPill's); status pills
+    active/owned/next/locked.
+  - Progress bars: 7 tall (3 for the mini), faint track, the colour brightening along it,
+    0.7s ease.
+  - Stat rows: one size (the web had three for the same role).
+  - Motion: three moves (a modal rising in, art popping in, a stagger), plus a press squeeze.
+  KEPT from the web as the good parts: the Almanac's paper and washes, its chapter rules that
+  double as progress, frameless specimens on a halo and floor shadow, silhouettes; the catch
+  card's one lit surface; tileSurface (state on the top rim, a sheen); the back pill; the
+  Mainland doors; the market's lantern and ledger ground.
+  DONE so far: the kit, every sheet (Sheet), the room shell and its helpers (Room), and the
+  Almanac. The rest of the screens follow.
 - THE CHARTER SLICE, BUILT (2026-09-30): two ships on one sea, as a Charter.
   - THE TITLE SCREEN (`game/title.gd`): your captains (portrait, level, purse, last played;
     Play, Retire asked once, a new captain named with the Steam name offered) and the

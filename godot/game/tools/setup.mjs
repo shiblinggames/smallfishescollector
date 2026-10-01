@@ -51,7 +51,10 @@ const ART = [
   'fishingsoundtrack.ogg', 'fishingsoundtrackopen.ogg', 'fishingsoundtrackdeep.ogg',
 ]
 /** Fonts: [package, file] under desktop/node_modules/@fontsource, to art/fonts. */
-const FONTS = [['cinzel', 'cinzel-latin-700-normal.woff2'], ['karla', 'karla-latin-400-normal.woff2'], ['karla', 'karla-latin-700-normal.woff2']]
+const FONTS = [
+  ...[600, 700, 800, 900].map(w => ['cinzel', `cinzel-latin-${w}-normal.woff2`]),
+  ...[300, 400, 500, 600, 700, 800].map(w => ['karla', `karla-latin-${w}-normal.woff2`]),
+]
 
 const GODOTSTEAM = {
   version: '4.22.1',
