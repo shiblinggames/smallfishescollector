@@ -295,7 +295,7 @@ func facing() -> float:
 func set_pose(pose: String) -> void:
 	if pose == "wait" and skipper.frame != "wait" and field != null:
 		# The line lands: a ring where it went in.
-		field.ring(hook_at(), 150.0, 1.7, 0.9)
+		field.ring(hook_at(), 100.0, 1.6, 0.8)
 		_bob_t = 0.0
 		cast_landed.emit(hook_at())
 	skipper.set_frame(pose)
@@ -317,12 +317,12 @@ func _process(delta: float) -> void:
 		_line_t -= delta
 		if _line_t <= 0.0:
 			_line_t = 0.85
-			field.ring(hook_at(), 34.0, 1.5, 0.22)
+			field.ring(hook_at(), 16.0, 1.4, 0.18)
 	if field != null and skipper.frame == "wait":
 		_bob_t -= delta
 		if _bob_t <= 0.0:
 			_bob_t = randf_range(1.3, 2.4)
-			field.ring(hook_at(), 70.0, 1.3, 0.45)
+			field.ring(hook_at(), 30.0, 1.2, 0.35)
 
 
 func set_look(look: Dictionary) -> void:

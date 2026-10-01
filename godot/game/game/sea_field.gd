@@ -205,7 +205,9 @@ func step(delta: float, cam_pos: Vector2, zoom: float, screen: Vector2, contacts
 			_hide(rm, i)
 			continue
 		var age: float = float(r[2]) / float(r[3])
-		var k: float = 30.0 + float(r[4]) * (1.0 - pow(1.0 - age, 2.0))
+		# A ring starts in proportion to how far it will run (a fixed 30 made
+		# the small ones, the line's and the bobber's, far too big).
+		var k: float = float(r[4]) * (0.2 + 0.8 * (1.0 - pow(1.0 - age, 2.0)))
 		rm.set_instance_transform_2d(i, Transform2D(0.0, Vector2(k * 2.0, k * 2.0), 0.0, Vector2(float(r[0]), float(r[1]))))
 		rm.set_instance_color(i, Color(1, 1, 1, float(r[5]) * pow(1.0 - age, 1.5)))
 

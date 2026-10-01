@@ -65,7 +65,7 @@ func _ready() -> void:
 		_:
 			Sound.reel_clicks(length_s * 0.85)
 	if boat.field != null:
-		boat.field.ring(_at, 120.0, 1.2, 0.7)
+		boat.field.ring(_at, 70.0, 1.1, 0.6)
 
 
 func _global(world: Vector2) -> Vector2:
@@ -115,7 +115,7 @@ func _process(delta: float) -> void:
 			_boil_t -= delta
 			if _boil_t <= 0.0 and boat.field != null and _leaper == null:
 				_boil_t = 0.08
-				boat.field.ring(fish, 34.0 + 18.0 * e, 0.7, 0.45 + 0.25 * e)
+				boat.field.ring(fish, 18.0 + 12.0 * e, 0.6, 0.4 + 0.2 * e)
 			_nod(sin(_t * 16.0) * 0.03 * (1.0 - e) - 0.04 * (1.0 - e))
 			if result == "perfect" and k > 0.55 and _leaper == null:
 				_leap(fish)
