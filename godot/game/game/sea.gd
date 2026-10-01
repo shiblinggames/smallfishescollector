@@ -19,6 +19,16 @@ var session: Session
 var net: CrewNet = null
 var _mates: Dictionary = {}
 var _crew_marks: CrewMarks
+## The isles, the digs' tells, and the bottles drifting near (by key), with
+## the bottles fished out this session; the fog cells seen and not yet saved.
+var _isles: Dictionary = {}
+var _digs: Dictionary = {}
+var _bottles: Dictionary = {}
+var _taken: Dictionary = {}
+var _bottle_t: float = 99.0
+var _bottle_win: int = -1
+var _fog: PackedByteArray = PackedByteArray()
+var _fog_new: Array = []
 ## The hotspots standing now, by key, and when they were last derived.
 var _spots: Dictionary = {}
 var _spot_t: float = 99.0
@@ -68,6 +78,19 @@ func _ready() -> void:
 	# stands on it, feet first; and its berth on the water.
 	for port: Dictionary in Chart.ports():
 		_draw_port(port)
+	for i: Dictionary in Rules.data()["isles"]:
+		var n: SeaFinds.IsleNode = SeaFinds.IsleNode.new()
+		n.isle = i
+		n.found = Js.includes(session.save.get("discoveries", []), i["id"])
+		_world.add_child(n)
+		_isles[i["id"]] = n
+	for d: Dictionary in Rules.data()["digSites"]:
+		var h: SeaFinds.DigHint = SeaFinds.DigHint.new()
+		h.site = d
+		h.z_index = -1
+		_world.add_child(h)
+		_digs[d["id"]] = h
+	_fog = Explore.fog_decode(session.profile().get("sea_explored"))
 	for info: Dictionary in Chart.residents():
 		var b: Buyer = Buyer.new()
 		b.info = info
@@ -169,6 +192,7 @@ func _process(delta: float) -> void:
 		b.lift = lift
 	_reach(cam_world)
 	_hotspots(delta, now)
+	_finds(delta, now, lift)
 	if net != null:
 		_look_t += delta
 		if _look_t > 1.0:
@@ -190,17 +214,18 @@ func _process(delta: float) -> void:
 		Sound.music_for(clock["phase"])
 
 	# Remember where the boat is, now and then, so a captain comes back to it.
+	# The fog: the cells around the boat, as they are first seen.
+	if _boat.position.y > Explore.NORTH_WALL:
+		for i: int in Explore.fog_reveal(_boat.position.x, _boat.position.y):
+			if not Explore.fog_has(_fog, i):
+				Explore.fog_set(_fog, i)
+				_fog_new.append(i)
 	_save_t += delta
-	if _save_t > 5.0 and _boat.velocity.length() < 5.0:
+	if _save_t > 5.0 and (_boat.velocity.length() < 5.0 or not _fog_new.is_empty()):
 		_save_t = 0.0
 		var p: Dictionary = session.profile()
-		if Js.num(p.get("sea_x")) != round(_boat.position.x) or Js.num(p.get("sea_y")) != round(_boat.position.y):
-			if session.remote != null:
-				session.act("setSeaPos", [round(_boat.position.x), round(_boat.position.y)])
-			else:
-				p["sea_x"] = round(_boat.position.x)
-				p["sea_y"] = round(_boat.position.y)
-				session.persist()
+		if not _fog_new.is_empty() or Js.num(p.get("sea_x")) != round(_boat.position.x) or Js.num(p.get("sea_y")) != round(_boat.position.y):
+			_flush_position()
 
 
 ## What is in reach of the boat: the berth first, then a buyer in hail range.
@@ -212,6 +237,12 @@ func _reach(at: Vector2) -> void:
 		if not w.is_empty() and b.info["zoneId"] == w["id"]:
 			band_buyer = b
 	var docked: Dictionary = Chart.berth_at(at)
+	if docked.is_empty():
+		var found: Variant = _find_in_reach(at)
+		if found != null:
+			_hud.set_reach(found[0], found[1])
+			_mark.target = null
+			return
 	for bid: String in _berths:
 		(_berths[bid] as Berth).inside = bid == docked.get("id")
 	if not docked.is_empty():
@@ -328,6 +359,147 @@ func _hotspots(delta: float, now: float) -> void:
 		if _boat.position.distance_to(Vector2(float(h["x"]), float(h["y"]))) <= float(h["r"]):
 			inside = h
 	_hud.set_spot(inside)
+
+
+## Where the boat is and what it has seen, saved (before any claim, too: the
+## rules check the saved position).
+func _flush_position() -> void:
+	var seen: Array = _fog_new.duplicate()
+	_fog_new.clear()
+	await session.act("saveSeaPosition", [round(_boat.position.x), round(_boat.position.y), seen])
+	session.persist()
+
+
+## The isles, the digs' tells and the bottles: what to draw, and how close.
+func _finds(delta: float, now: float, lift: Color) -> void:
+	var at: Vector2 = _boat.position
+	var near_isle: Dictionary = Explore.isle_near(at.x, at.y)
+	var found: Array = session.save.get("discoveries", [])
+	for id: String in _isles:
+		var n: SeaFinds.IsleNode = _isles[id]
+		var was: bool = n.found
+		var was_near: bool = n.near
+		n.found = Js.includes(found, id)
+		n.near = near_isle.get("id") == id
+		n.lift = lift
+		if n.found != was or n.near != was_near:
+			n.refresh()
+	for id: String in _digs:
+		var h: SeaFinds.DigHint = _digs[id]
+		var d: float = at.distance_to(h.position)
+		h.strength = clampf((Explore.DIG_HINT_RANGE - d) / 480.0, 0.0, 1.0) if not _dug(id) else 0.0
+	_bottle_t += delta
+	var win: int = Explore.bottle_window(now)
+	if _bottle_t > 10.0 or win != _bottle_win:
+		_bottle_t = 0.0
+		_bottle_win = win
+		var want: Dictionary = {}
+		for b: Dictionary in Explore.bottles_around(at.x, at.y, 5200.0, now):
+			if not _taken.has(b["key"]):
+				want[b["key"]] = b
+		for k: String in _bottles.keys():
+			if not want.has(k):
+				(_bottles[k] as Node).queue_free()
+				_bottles.erase(k)
+		for k: String in want:
+			if not _bottles.has(k):
+				var bn: SeaFinds.BottleNode = SeaFinds.BottleNode.new()
+				bn.bottle = want[k]
+				_world.add_child(bn)
+				_bottles[k] = bn
+
+
+func _dug(site_id: String) -> bool:
+	for r: Dictionary in session.save.get("digs", []):
+		if r["site_id"] == site_id and r.get("dug_at") != null:
+			return true
+	return false
+
+
+## The nearest thing to do out here: an isle to land on, a site to dig, a
+## bottle to fish out. [label, action] or null.
+func _find_in_reach(at: Vector2) -> Variant:
+	var isle: Dictionary = Explore.isle_near(at.x, at.y)
+	if not isle.is_empty():
+		var been: bool = Js.includes(session.save.get("discoveries", []), isle["id"])
+		return [("Look again at %s" if been else "Go ashore at %s") % isle["name"], _land.bind(isle)]
+	var site: Dictionary = Explore.dig_at(at.x, at.y)
+	if not site.is_empty() and not _dug(site["id"]):
+		return ["Dig here", _dig.bind(site)]
+	for k: String in _bottles:
+		var bn: SeaFinds.BottleNode = _bottles[k]
+		if at.distance_to(bn.position) < Explore.BOTTLE_REACH:
+			return ["Take the bottle", _bottle.bind(bn.bottle)]
+	return null
+
+
+func _land(isle: Dictionary) -> void:
+	Rumble.buzz([18, 40, 24])
+	await _flush_position()
+	var r: Variant = await session.act("goAshore", [isle["id"]])
+	session.persist()
+	if not r is Dictionary or not (r as Dictionary).get("ok", false):
+		_hud.toast(str((r as Dictionary).get("error", "The sea took that one. Try again.")) if r is Dictionary else "The sea took that one. Try again.")
+		return
+	var res: Dictionary = r
+	var note: Variant = res.get("note")
+	var lines: Array = []
+	if note != null:
+		lines.append([str(note["title"]), "heading"])
+		lines.append([str(note["body"]), "note"])
+	if res.get("already", false):
+		_show_find(SeaFinds.panel(_room_layer, "sea/isle-note.png" if note != null else "sea/isle-chest-open.png", "Been ashore before", res["name"], lines if not lines.is_empty() else ["Nothing left here but the view."], []))
+		return
+	var haul: Array = []
+	if Js.num(res.get("doubloons")) > 0:
+		haul.append([res["doubloons"], "doubloons"])
+	if Js.num(res.get("gems")) > 0:
+		haul.append([res["gems"], "gems"])
+	if res.get("salvage") != null:
+		lines.append(["Salvaged: %s. Nobody sells one. It is waiting at the Homestead." % res["salvage"]["name"], "body"])
+	if res.get("stone") != null:
+		lines.append(["A portal stone for %s. The Homestead portal will remember the road." % res["stone"]["name"], "body"])
+	Sound.chest(not haul.is_empty())
+	_show_find(SeaFinds.panel(_room_layer, "sea/isle-note.png" if note != null else "sea/isle-chest-open.png", "Ashore", res["name"], lines, haul))
+	_hud.refresh()
+
+
+func _dig(site: Dictionary) -> void:
+	Rumble.buzz([0, 40, 30, 60])
+	await _flush_position()
+	var r: Variant = await session.act("digHere", [site["id"]])
+	session.persist()
+	if not r is Dictionary or not (r as Dictionary).get("ok", false):
+		_hud.toast(str((r as Dictionary).get("error", "The spade turned nothing up. Try again.")) if r is Dictionary else "The spade turned nothing up. Try again.")
+		return
+	Sound.chest(true)
+	_show_find(SeaFinds.panel(_room_layer, "sea/dig-box.png", "Dug up", r["name"], [[str(r["found"]), "note"]], [[r["doubloons"], "doubloons"], [r["gems"], "gems"]]))
+	_hud.refresh()
+
+
+func _bottle(b: Dictionary) -> void:
+	Rumble.tap(14)
+	await _flush_position()
+	var r: Variant = await session.act("openBottle", [b["key"]])
+	session.persist()
+	_taken[b["key"]] = true
+	if _bottles.has(b["key"]):
+		(_bottles[b["key"]] as Node).queue_free()
+		_bottles.erase(b["key"])
+	if not r is Dictionary or not (r as Dictionary).get("ok", false):
+		_hud.toast(str((r as Dictionary).get("error", "It slipped out of your hands. Try that one again.")) if r is Dictionary else "It slipped out of your hands. Try that one again.")
+		return
+	var lines: Array = [[str(r["text"]), "note"]]
+	var title: String = "A note in a bottle"
+	if r.get("kind") == "bearing":
+		title = "A bearing: %s" % r["name"]
+		lines.append([str(r["bearing"]), "body_strong"])
+		lines.append(["Something is buried there. Sail over it and dig.", "small"])
+	_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "Fished out of the water", title, lines, []))
+
+
+func _show_find(p: Control) -> void:
+	_hud.hold_for(p)
 
 
 func _draw_port(port: Dictionary) -> void:

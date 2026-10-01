@@ -35,11 +35,12 @@ signal shared_changed(actor_key: String)
 
 const DIR: String = "user://charters"
 const BERTHS: int = 4
-const SHARED_SAVE: Array[String] = ["collection", "lifetime", "bests", "market"]
+const SHARED_SAVE: Array[String] = ["collection", "lifetime", "bests", "market", "discoveries", "digs", "homestead"]
 const SHARED_PROFILE: Array[String] = [
 	"doubloons", "prestige_levels", "zone_golden_boost",
 	"zone_shallows_rewarded", "zone_open_waters_rewarded", "zone_deep_rewarded", "zone_abyss_rewarded",
 	"ancient_catches", "ancient_vigil", "lifetime_species", "lifetime_species_count",
+	"sea_explored",
 ]
 const LEDGER_KEEP: int = 400
 static var dir_override: String = ""

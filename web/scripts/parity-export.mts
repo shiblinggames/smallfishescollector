@@ -41,6 +41,12 @@ import type { SpeciesRow } from '../lib/data/fishingData'
 import { installRng, mulberry32, seedOf, type Rng } from '../lib/rng'
 import { installClock, clockNow } from '../lib/clock'
 import { hotspotsAt } from '../lib/seaHotspots'
+import { goAshore, digHere, openBottle, getDigState } from '../lib/core/sea'
+import { saveSeaPosition } from '../lib/core/selling'
+import { localSeaData } from '../lib/data/local/seaLocal'
+import { bottlesAround, bottlePos } from '../lib/seaBottles'
+import { fogReveal } from '../lib/seaExplore'
+import { DIG_SITES } from '../lib/seaDigs'
 import { XP_TABLE } from '../lib/fishingLevel'
 import { getDailyChallenges } from '../lib/dailyChallenges'
 import { CRATE_FISH_ID } from '../lib/fishingRules'
@@ -571,7 +577,57 @@ shop.push(await scripted('casting in hotspots', 35, captainWith(35, 99, 5, { has
     x.advance(600_000)
   }
 }))
+// Exploring: sailing to every isle and dig site (the position saved, the fog
+// revealed), landing, digging and fishing bottles out, with every refusal: too
+// far, too low a level, twice, a stale bottle.
+shop.push(await scripted('exploring', 36, captainWith(36, 40, 2, {}), async x => {
+  const sea = localSeaData(x.save)
+  const sell = localSellData(x.save)
+  const pos = (px: number, py: number) => x.call('saveSeaPosition', [px, py, fogReveal(px, py)], () => saveSeaPosition(sell, x.uid, px, py, fogReveal(px, py)))
+  const land = (id: string) => x.call('goAshore', [id], () => goAshore(sea, x.uid, id))
+  const dig = (id: string) => x.call('digHere', [id], () => digHere(sea, x.uid, id))
+  const bottle = (k: string) => x.call('openBottle', [k], () => openBottle(sea, x.uid, k))
+  await land('nowhere'); await dig('nowhere'); await bottle('1:2:3'); await bottle('nonsense')
+  for (const i of ISLES) {
+    await pos(i.x + i.r + 100, i.y)
+    await land(i.id); await land(i.id)
+    x.advance(30_000)
+  }
+  await pos(0, 0); await land('shallows-1')
+  for (const d of DIG_SITES) {
+    await pos(d.x + 60, d.y)
+    await dig(d.id); await dig(d.id)
+    x.advance(30_000)
+  }
+  await x.patchProfile({ fishing_xp: XP_TABLE[98] })
+  for (const i of ISLES) { await pos(i.x, i.y); await land(i.id) }
+  for (const d of DIG_SITES.slice(0, 6)) { await pos(d.x, d.y); await dig(d.id) }
+  await x.patchSave({ digs: [] })
+  for (let k = 0; k < 40; k++) {
+    const site = DIG_SITES[k % DIG_SITES.length]
+    const near = bottlesAround(site.x, site.y, 5200, clockNow())
+    for (const b of near.slice(0, 3)) {
+      const at = bottlePos(b, clockNow() / 1000)
+      await pos(at.x, at.y)
+      await bottle(b.key)
+      await pos(at.x + 2000, at.y)
+      await bottle(b.key)
+    }
+    x.advance(700_000)
+  }
+  await x.call('getDigState', [], () => getDigState(sea, x.uid))
+}))
 write('shop.json', { sessions: shop })
+{
+  const cases: { now: number; x: number; y: number; bottles: unknown[] }[] = []
+  for (let k = 0; k < 400; k++) {
+    const now = START + k * 1_337_000
+    const x = -20000 + (k * 7919) % 40000, y = (k * 104729) % 22000
+    cases.push({ now, x, y, bottles: bottlesAround(x, y, 5200, now).map(b => ({ ...b, pos: bottlePos(b, now / 1000) })) })
+  }
+  write('bottles.json', { cases })
+  console.log('  400 bottle moments')
+}
 // The patches themselves, at 2,000 moments across a few weeks.
 {
   const at: number[] = []

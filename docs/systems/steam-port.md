@@ -80,7 +80,27 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   `game/hotspot_patch.gd` draws each as a breathing pool and rim in its kind's colour; the
   HUD's badge names the one you are in (family, tier dots, name, effect, minutes left). In a
   Charter everyone sees the same patches (they come from the clock).
-  NEXT, in order: isles, digs, bottles and the fog; the regulars and the traders;
+  STAGE 3, EXPLORING (2026-10-01): `core/explore.gd` ports goAshore, digHere, openBottle,
+  getDigState, the fog part of saveSeaPosition, and lib/seaBottles and lib/seaExplore, with
+  JavaScript's arithmetic where it matters. Bottles hash with doubles past 2^53, so `to_u32` is
+  the spec's ToInt32, and positions stay in doubles because Godot's Vector2 is 32-bit. Parity:
+  1,287 bottles at 400 moments, and a 612-call session landing on all 27 isles, digging all
+  12 sites and fishing out bottles, every refusal included. (Godot's JSON reader rounds a
+  17-digit number in its last place; the bottle check allows that and nothing more.)
+  ON THE CHART (`game/sea_finds.gd`):
+  - The 27 isles on their plates, with a chest, an open chest or a note post. Their name and
+    band show when near, with a tick once landed, and their shores stop the hull.
+  - "Go ashore at" or "Look again at" pays once, with the salvaged furnishing and the portal
+    stone when the chest holds one.
+  - The water looks odd over a dig site (faint rings that brighten as you close in), and
+    "Dig here" pays when you are over one.
+  - Bottles drift on their eleven-minute windows. "Take the bottle" reads the note, and a
+    third carry a bearing.
+  - The fog lifts three cells square around the boat and is saved with the position (which
+    every claim now flushes first, as the rules check it).
+  The fog is not drawn on the main chart, as on the web: the minimap (not yet ported) is
+  where it shows. In a Charter the isles, digs, homestead and fog are the crew's.
+  NEXT, in order: the regulars and the traders;
   the portal and recall. Specs for all of them were read off the web on 2026-10-01.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the

@@ -55,6 +55,11 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 		"claimCompletionistRod": return Harbour.claim_completionist_rod(db, uid)
 		"buyShipyardTier": return Shipyard.buy_tier(db, uid, a[0])
 		"equipRod": return Shipyard.equip_rod(db, uid, float(a[0]))
+		"goAshore": return Explore.go_ashore(db, uid, a[0])
+		"digHere": return Explore.dig_here(db, uid, a[0])
+		"openBottle": return Explore.open_bottle(db, uid, a[0])
+		"getDigState": return Explore.get_dig_state(db, uid)
+		"saveSeaPosition": return Explore.save_sea_position(db, uid, float(a[0]), float(a[1]), a[2] if a.size() > 2 else [])
 		"setSeaPos":
 			db.update_profile(uid, { "sea_x": float(a[0]), "sea_y": float(a[1]) })
 			return null

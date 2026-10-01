@@ -22,6 +22,7 @@ func _init() -> void:
 	_saves(species)
 	_daily()
 	_hotspots()
+	_bottles()
 	_fishing(species, "res://tests/parity/fishing.json", "fishing")
 	_fishing(species, "res://tests/parity/fishing_rest.json", "the rest of fishing and the loadout")
 	_fishing(species, "res://tests/parity/shop.json", "selling and the tackle shop")
@@ -124,6 +125,35 @@ func _hotspots() -> void:
 			return
 		n += 1
 	print("  hotspots: %d moments stand the same patches" % n)
+
+
+static func _near(a: float, b: float) -> bool:
+	return absf(a - b) <= 1e-9 * maxf(1.0, absf(b))
+
+
+func _bottles() -> void:
+	var cases: Dictionary = _json("res://tests/parity/bottles.json")
+	var n: int = 0
+	for c: Dictionary in cases["cases"]:
+		var got: Array = Explore.bottles_around(float(c["x"]), float(c["y"]), 5200.0, float(c["now"]))
+		var want: Array = c["bottles"]
+		if got.size() != want.size():
+			_fail("bottles at %s: %d drifting, the TS has %d" % [str(c["now"]), got.size(), want.size()])
+			return
+		for k: int in got.size():
+			var g: Dictionary = got[k]
+			var w: Dictionary = want[k]
+			# Godot's JSON reader rounds a 17-digit number in its last place, so
+			# the coordinates are compared to that, not bit for bit.
+			if g["key"] != w["key"] or not _near(float(g["x"]), float(w["x"])) or not _near(float(g["y"]), float(w["y"])) or float(g["seed"]) != float(w["seed"]):
+				_fail("bottle %s differs: %s against %s" % [w["key"], str(g), str(w)])
+				return
+			var pos: Dictionary = Explore.bottle_pos(g, float(c["now"]) / 1000.0)
+			if absf(float(pos["x"]) - float(w["pos"]["x"])) > 1e-6 or absf(float(pos["y"]) - float(w["pos"]["y"])) > 1e-6:
+				_fail("bottle %s drifts to %s, the TS to %s" % [w["key"], str(pos), str(w["pos"])])
+				return
+			n += 1
+	print("  bottles: %d bottles in %d moments float in the same places" % [n, cases["cases"].size()])
 
 
 ## Replay each session through the ported cast and reel: the same start save,

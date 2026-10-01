@@ -165,6 +165,30 @@ func _init() -> void:
 	await process_frame
 	check(hud._reach_text.begins_with("Speak to "), "after dealing it is Speak to (%s)" % hud._reach_text)
 
+	# Exploring: an isle, a dig, a bottle.
+	var isle: Dictionary = (Rules.data()["isles"] as Array)[0]
+	sea._boat.position = Vector2(float(isle["x"]), float(isle["y"]) + float(isle["r"]) + 120.0)
+	var purse0: float = Js.num(p.get("doubloons"))
+	await sea._land(isle)
+	check(Js.includes(s.save["discoveries"], isle["id"]) and Js.num(p.get("doubloons")) > purse0, "landing on an isle pays and is remembered")
+	for c: Node in sea._room_layer.get_children():
+		c.queue_free()
+	await process_frame
+	var site: Dictionary = (Rules.data()["digSites"] as Array)[0]
+	sea._boat.position = Vector2(float(site["x"]), float(site["y"]))
+	await sea._dig(site)
+	check(sea._dug(site["id"]), "a dig is dug")
+	for c: Node in sea._room_layer.get_children():
+		c.queue_free()
+	await process_frame
+	var bottles: Array = Explore.bottles_around(0, 3000, 6000, Clock.now_ms())
+	if not bottles.is_empty():
+		var at: Dictionary = Explore.bottle_pos(bottles[0], Clock.now_ms() / 1000.0)
+		sea._boat.position = Vector2(float(at["x"]), float(at["y"]))
+		await sea._bottle(bottles[0])
+		check(sea._taken.has(bottles[0]["key"]), "a bottle is fished out")
+	check(Explore.fog_progress(Explore.fog_decode(p.get("sea_explored"))) > 0.0, "the fog is lifting where the boat has been")
+
 	print("  docking smoke: %s" % ("ok" if bad == 0 else "%d failed" % bad))
 	quit(0 if bad == 0 else 1)
 

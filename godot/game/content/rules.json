@@ -5141,6 +5141,716 @@
    }
   }
  ],
+ "isles": [
+  {
+   "id": "shallows-0",
+   "name": "Cormorant Rock",
+   "band": "shallows",
+   "x": 3080,
+   "y": 496,
+   "r": 131,
+   "kind": "cache",
+   "gems": 35,
+   "doubloons": 700,
+   "plate": {
+    "art": "/sea/isle-plate-1.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.534
+   }
+  },
+  {
+   "id": "shallows-1",
+   "name": "Gannet Bank",
+   "band": "shallows",
+   "x": -988,
+   "y": 2877,
+   "r": 137,
+   "kind": "note",
+   "note": {
+    "title": "A chart scrap, weighted with a stone",
+    "body": "Fish are worth more the further out you catch them. The lanes price by how far you hauled it, not by what it is, so a common thing from the deep can beat a rare thing from the shallows."
+   },
+   "plate": {
+    "art": "/sea/isle-shallows.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.652
+   }
+  },
+  {
+   "id": "shallows-2",
+   "name": "Low Kelp",
+   "band": "shallows",
+   "x": -1938,
+   "y": 784,
+   "r": 130,
+   "kind": "note",
+   "note": {
+    "title": "A note nailed to the post",
+    "body": "The water goes in rings and each ring wants a better captain than the last. Open Waters asks Fishing 15, the Deep asks 30, the Abyss asks 50 and the Ancient Deep asks 75. Nothing out there is hidden. It is only far."
+   },
+   "plate": {
+    "art": "/sea/isle-shallows.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.652
+   }
+  },
+  {
+   "id": "open_waters-0",
+   "name": "Brine Knuckle",
+   "band": "open_waters",
+   "x": 5738,
+   "y": 1842,
+   "r": 168,
+   "kind": "cache",
+   "gems": 45,
+   "doubloons": 950,
+   "plate": {
+    "art": "/sea/isle-open.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.557
+   }
+  },
+  {
+   "id": "open_waters-1",
+   "name": "Halfmast Rock",
+   "band": "open_waters",
+   "x": 4788,
+   "y": 4031,
+   "r": 152,
+   "kind": "cache",
+   "gems": 50,
+   "doubloons": 1050,
+   "plate": {
+    "art": "/sea/isle-open.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.557
+   }
+  },
+  {
+   "id": "open_waters-2",
+   "name": "Pale Shoal",
+   "band": "open_waters",
+   "x": 2132,
+   "y": 5930,
+   "r": 150,
+   "kind": "cache",
+   "gems": 55,
+   "doubloons": 1150,
+   "plate": {
+    "art": "/sea/isle-open.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.557
+   }
+  },
+  {
+   "id": "open_waters-3",
+   "name": "The Kettle",
+   "band": "open_waters",
+   "x": -835,
+   "y": 6138,
+   "r": 169,
+   "kind": "cache",
+   "gems": 60,
+   "doubloons": 1250,
+   "plate": {
+    "art": "/sea/isle-open.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.557
+   }
+  },
+  {
+   "id": "open_waters-4",
+   "name": "Spar Spit",
+   "band": "open_waters",
+   "x": -3631,
+   "y": 2582,
+   "r": 156,
+   "kind": "note",
+   "note": {
+    "title": "A page torn from a logbook",
+    "body": "The shoals that shimmer are worth steering for. Three of them sit on this sea at any time, each one helping with something different, and they pick up and move about every ten minutes. Sail into one and it will tell you what it is doing for you."
+   },
+   "plate": {
+    "art": "/sea/isle-open.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.557
+   }
+  },
+  {
+   "id": "open_waters-5",
+   "name": "Old Anchorage",
+   "band": "open_waters",
+   "x": -5651,
+   "y": 1460,
+   "r": 157,
+   "kind": "note",
+   "note": {
+    "title": "A bottle, corked with wax",
+    "body": "Watch the light. This sea runs a full turn from dawn back to dawn in about three quarters of an hour, and the mark up in the corner tells you where in it you are. Some out here only trade after dark."
+   },
+   "plate": {
+    "art": "/sea/isle-open.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.557
+   }
+  },
+  {
+   "id": "deep-0",
+   "name": "Blackfin Rise",
+   "band": "deep",
+   "x": 9927,
+   "y": 1395,
+   "r": 175,
+   "kind": "cache",
+   "gems": 70,
+   "doubloons": 1600,
+   "plate": {
+    "art": "/sea/isle-deep.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.56
+   }
+  },
+  {
+   "id": "deep-1",
+   "name": "The Cradle",
+   "band": "deep",
+   "x": 6489,
+   "y": 6338,
+   "r": 179,
+   "kind": "cache",
+   "gems": 80,
+   "doubloons": 1800,
+   "plate": {
+    "art": "/sea/isle-deep.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.56
+   }
+  },
+  {
+   "id": "deep-2",
+   "name": "Saltbone Isle",
+   "band": "deep",
+   "x": 967,
+   "y": 9319,
+   "r": 181,
+   "kind": "cache",
+   "gems": 85,
+   "doubloons": 2000,
+   "plate": {
+    "art": "/sea/isle-deep.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.56
+   }
+  },
+  {
+   "id": "deep-3",
+   "name": "Thirty Fathom Rock",
+   "band": "deep",
+   "x": -3240,
+   "y": 9437,
+   "r": 157,
+   "kind": "cache",
+   "gems": 95,
+   "doubloons": 2200,
+   "plate": {
+    "art": "/sea/isle-deep.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.56
+   }
+  },
+  {
+   "id": "deep-4",
+   "name": "The Quiet Shelf",
+   "band": "deep",
+   "x": -5974,
+   "y": 5532,
+   "r": 155,
+   "kind": "note",
+   "note": {
+    "title": "A note in a tin, still dry",
+    "body": "If the haul out here is wearing you down, it is the boat and not you. The Shipyard sells hull, and hull is the difference between a crossing you dread and one you do not think about. Stock rides at three hundred. It does not have to."
+   },
+   "plate": {
+    "art": "/sea/isle-deep.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.56
+   }
+  },
+  {
+   "id": "deep-5",
+   "name": "Wreckwood",
+   "band": "deep",
+   "x": -9518,
+   "y": 1163,
+   "r": 170,
+   "kind": "note",
+   "note": {
+    "title": "The last page of the Wreckwood log",
+    "body": "Day fifty one. We have eaten the bait and the cook has stopped pretending otherwise. He says the water here is older than the water at home and I have given up arguing.\n\nWhoever finds this: the fishing is better nearer the shelf. Do not take our heading."
+   },
+   "plate": {
+    "art": "/sea/isle-deep.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.56
+   }
+  },
+  {
+   "id": "abyss-0",
+   "name": "The Black Tooth",
+   "band": "abyss",
+   "x": 12931,
+   "y": 1689,
+   "r": 178,
+   "kind": "cache",
+   "gems": 105,
+   "doubloons": 2600,
+   "plate": {
+    "art": "/sea/isle-abyss.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.561
+   }
+  },
+  {
+   "id": "abyss-1",
+   "name": "Coldwater Cay",
+   "band": "abyss",
+   "x": 10474,
+   "y": 8925,
+   "r": 164,
+   "kind": "cache",
+   "gems": 115,
+   "doubloons": 2900,
+   "plate": {
+    "art": "/sea/isle-abyss.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.561
+   }
+  },
+  {
+   "id": "abyss-2",
+   "name": "The Drowned Step",
+   "band": "abyss",
+   "x": 5784,
+   "y": 13078,
+   "r": 192,
+   "kind": "cache",
+   "gems": 125,
+   "doubloons": 3200,
+   "plate": {
+    "art": "/sea/isle-abyss.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.561
+   }
+  },
+  {
+   "id": "abyss-3",
+   "name": "Lantern Rock",
+   "band": "abyss",
+   "x": -1606,
+   "y": 14323,
+   "r": 171,
+   "kind": "cache",
+   "gems": 135,
+   "doubloons": 3500,
+   "plate": {
+    "art": "/sea/isle-abyss.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.561
+   }
+  },
+  {
+   "id": "abyss-4",
+   "name": "Deadwater",
+   "band": "abyss",
+   "x": -12157,
+   "y": 8522,
+   "r": 191,
+   "kind": "note",
+   "note": {
+    "title": "Scratched into the post itself",
+    "body": "We put in here to wait out the dark and the dark did not end. Counted eleven turns of it. On the ninth the youngest asked whether we had sailed past the morning and none of us had an answer worth giving her.\n\nWe are going on. The hold is empty and going back is further than going on."
+   },
+   "plate": {
+    "art": "/sea/isle-abyss.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.561
+   }
+  },
+  {
+   "id": "abyss-5",
+   "name": "Farthing Rock",
+   "band": "abyss",
+   "x": -14141,
+   "y": 5095,
+   "r": 191,
+   "kind": "note",
+   "note": {
+    "title": "A bundle of pages, tied with line",
+    "body": "The Farthing went down four lengths off this rock in water so still you could read by it. No squall. No reason. She simply stopped being a boat.\n\nWe pulled six of her crew out and left with them. If you are anchored here reading this, do not anchor here."
+   },
+   "plate": {
+    "art": "/sea/isle-abyss.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.561
+   }
+  },
+  {
+   "id": "ancient_deep-0",
+   "name": "The First Stone",
+   "band": "ancient_deep",
+   "x": 18859,
+   "y": 8860,
+   "r": 176,
+   "kind": "cache",
+   "gems": 175,
+   "doubloons": 4600,
+   "plate": {
+    "art": "/sea/isle-ancient.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.603
+   }
+  },
+  {
+   "id": "ancient_deep-1",
+   "name": "The Old Shell",
+   "band": "ancient_deep",
+   "x": 12203,
+   "y": 13851,
+   "r": 199,
+   "kind": "cache",
+   "gems": 185,
+   "doubloons": 4800,
+   "plate": {
+    "art": "/sea/isle-ancient.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.603
+   }
+  },
+  {
+   "id": "ancient_deep-2",
+   "name": "Worldsend Rock",
+   "band": "ancient_deep",
+   "x": 6602,
+   "y": 16175,
+   "r": 189,
+   "kind": "cache",
+   "gems": 190,
+   "doubloons": 5000,
+   "plate": {
+    "art": "/sea/isle-ancient.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.603
+   }
+  },
+  {
+   "id": "ancient_deep-3",
+   "name": "Stillwater Isle",
+   "band": "ancient_deep",
+   "x": -5984,
+   "y": 20420,
+   "r": 178,
+   "kind": "cache",
+   "gems": 195,
+   "doubloons": 5100,
+   "plate": {
+    "art": "/sea/isle-ancient.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.603
+   }
+  },
+  {
+   "id": "ancient_deep-4",
+   "name": "Nobody’s Rock",
+   "band": "ancient_deep",
+   "x": -11564,
+   "y": 14089,
+   "r": 182,
+   "kind": "cache",
+   "gems": 200,
+   "doubloons": 5100,
+   "plate": {
+    "art": "/sea/isle-ancient.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.603
+   }
+  },
+  {
+   "id": "ancient_deep-5",
+   "name": "The Far Sounding",
+   "band": "ancient_deep",
+   "x": -19106,
+   "y": 7132,
+   "r": 190,
+   "kind": "note",
+   "note": {
+    "title": "One line, cut deep",
+    "body": "We were nineteen days past the last rock anybody had named and we named this one anyway, because a thing with a name is a thing you can come back to.\n\nWe did not come back to it. Somebody should."
+   },
+   "plate": {
+    "art": "/sea/isle-ancient.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.603
+   }
+  }
+ ],
+ "isleFurnishing": {
+  "abyss-1": {
+   "id": "cornerl-anchor",
+   "name": "An anchor off something older"
+  },
+  "abyss-2": {
+   "id": "floor-abyssal",
+   "name": "An abyssal weave"
+  },
+  "ancient_deep-0": {
+   "id": "hearth-firestone",
+   "name": "An abyssal firestone"
+  },
+  "ancient_deep-2": {
+   "id": "mount-giant",
+   "name": "An Ancient Deep giant"
+  },
+  "ancient_deep-4": {
+   "id": "corner-orrery",
+   "name": "A tide orrery"
+  }
+ },
+ "digSites": [
+  {
+   "id": "shallows-dig-0",
+   "name": "The Cook’s Share",
+   "band": "shallows",
+   "x": 2402,
+   "y": 1945,
+   "gems": 50,
+   "doubloons": 1200,
+   "found": "A ship’s cook buried this the day before he was paid off, and was never paid off.",
+   "bearing": "240m east of the Mainland, and 195m out."
+  },
+  {
+   "id": "open_waters-dig-0",
+   "name": "The Second Purse",
+   "band": "open_waters",
+   "x": 3367,
+   "y": 4961,
+   "gems": 70,
+   "doubloons": 1700,
+   "found": "Whoever put this here had a first purse somewhere else, and did not trust the same water twice.",
+   "bearing": "337m east of the Mainland, and 496m out."
+  },
+  {
+   "id": "open_waters-dig-1",
+   "name": "Bellow’s Cache",
+   "band": "open_waters",
+   "x": -3509,
+   "y": 4930,
+   "gems": 80,
+   "doubloons": 1900,
+   "found": "Wrapped in three coats against the wet. Two of the coats worked.",
+   "bearing": "351m west of the Mainland, and 493m out."
+  },
+  {
+   "id": "deep-dig-0",
+   "name": "The Quartermaster’s Error",
+   "band": "deep",
+   "x": 8746,
+   "y": 2439,
+   "gems": 100,
+   "doubloons": 2300,
+   "found": "Buried a full league from where the ledger says it was buried. The ledger has been wrong for years.",
+   "bearing": "875m east of the Mainland, and 244m out."
+  },
+  {
+   "id": "deep-dig-1",
+   "name": "The Long Count",
+   "band": "deep",
+   "x": 3261,
+   "y": 9290,
+   "gems": 110,
+   "doubloons": 2500,
+   "found": "Somebody counted this out coin by coin before they sank it. The tally is still in the box and it is short.",
+   "bearing": "326m east of the Mainland, and 929m out."
+  },
+  {
+   "id": "deep-dig-2",
+   "name": "Two Fathom Hollow",
+   "band": "deep",
+   "x": -9088,
+   "y": 3308,
+   "gems": 120,
+   "doubloons": 2700,
+   "found": "Dug at low water by a crew who meant to come back at the next one.",
+   "bearing": "909m west of the Mainland, and 331m out."
+  },
+  {
+   "id": "abyss-dig-0",
+   "name": "The Widow’s Portion",
+   "band": "abyss",
+   "x": 11656,
+   "y": 7102,
+   "gems": 140,
+   "doubloons": 3100,
+   "found": "Set aside for somebody ashore, by somebody who did not get ashore.",
+   "bearing": "1,166m east of the Mainland, and 710m out."
+  },
+  {
+   "id": "abyss-dig-1",
+   "name": "The Deep Consignment",
+   "band": "abyss",
+   "x": 1018,
+   "y": 14961,
+   "gems": 150,
+   "doubloons": 3300,
+   "found": "Sunk here on purpose and marked on nothing. Whoever hid it was hiding it from their own crew.",
+   "bearing": "102m east of the Mainland, and 1,496m out."
+  },
+  {
+   "id": "abyss-dig-2",
+   "name": "Coldhand’s Keeping",
+   "band": "abyss",
+   "x": -14963,
+   "y": 2728,
+   "gems": 160,
+   "doubloons": 3500,
+   "found": "Still tied the way it was tied going down. Nobody has been back to this water since.",
+   "bearing": "1,496m west of the Mainland, and 273m out."
+  },
+  {
+   "id": "ancient_deep-dig-0",
+   "name": "The Last Wage",
+   "band": "ancient_deep",
+   "x": 17166,
+   "y": 5281,
+   "gems": 200,
+   "doubloons": 4100,
+   "found": "A whole crew’s pay, buried where none of them could reach it, by the one who could.",
+   "bearing": "1,717m east of the Mainland, and 528m out."
+  },
+  {
+   "id": "ancient_deep-dig-1",
+   "name": "The Old Deposit",
+   "band": "ancient_deep",
+   "x": 4740,
+   "y": 17319,
+   "gems": 205,
+   "doubloons": 4300,
+   "found": "Down so long the box has taken the shape of the seabed around it.",
+   "bearing": "474m east of the Mainland, and 1,732m out."
+  },
+  {
+   "id": "ancient_deep-dig-2",
+   "name": "The Far Keeping",
+   "band": "ancient_deep",
+   "x": -15790,
+   "y": 9418,
+   "gems": 215,
+   "doubloons": 4400,
+   "found": "The furthest thing anybody ever bothered to bury. They did not bother to mark it either.",
+   "bearing": "1,579m west of the Mainland, and 942m out."
+  }
+ ],
+ "portalTiers": [
+  {
+   "tier": 1,
+   "band": "shallows",
+   "name": "The Shallows",
+   "cost": 0,
+   "to": {
+    "x": 0,
+    "y": 2600
+   },
+   "accent": "#7fc8de"
+  },
+  {
+   "tier": 2,
+   "band": "open_waters",
+   "name": "Open Waters",
+   "cost": 8000,
+   "to": {
+    "x": 0,
+    "y": 5350
+   },
+   "accent": "#5aa8cc"
+  },
+  {
+   "tier": 3,
+   "band": "deep",
+   "name": "The Deep",
+   "cost": 40000,
+   "to": {
+    "x": 0,
+    "y": 8900
+   },
+   "accent": "#4a7fb8"
+  },
+  {
+   "tier": 4,
+   "band": "abyss",
+   "name": "The Abyss",
+   "cost": 120000,
+   "to": {
+    "x": 0,
+    "y": 13450
+   },
+   "accent": "#6a5acd"
+  },
+  {
+   "tier": 5,
+   "band": "ancient_deep",
+   "name": "The Ancient Deep",
+   "cost": 300000,
+   "to": {
+    "x": 0,
+    "y": 19300
+   },
+   "accent": "#8b4a8b"
+  }
+ ],
+ "bottleFragments": [
+  "Third week without sight of land. The bosun has started naming the waves. We let him, because the alternative is silence.",
+  "To whoever finds this: the water east of here is colder than it has any business being, and the fish know it before you do.",
+  "We are out of salt, out of rope and nearly out of argument. Turning for home at first light, which the mate says was also true yesterday.",
+  "Caught something last night that we put straight back. Nobody has said what it was and nobody is going to.",
+  "The captain has been sounding the same patch for six days. She will not say what she is listening for.",
+  "If you are reading this we did not make it back, and I would rather you had the paper than the sea did.",
+  "Ran the whole night on a wind that came from nowhere and went nowhere. Made forty leagues and could not tell you which way.",
+  "The lamp went out at the worst hour and we sat in the dark and were, for a while, extremely honest with one another.",
+  "Note for the next crew: she pulls to port under full sail and there is no fixing it, only knowing it.",
+  "We buried a friend at the deep edge today. The water there does not take things down so much as accept them.",
+  "Nine days of flat calm. I have read this ship’s entire library, which is one book, four times.",
+  "Saw a light out past the last band and put about hard. Some things you leave for a braver season.",
+  "The cook swears the current runs backwards past the shelf. He is right, and none of us will admit it to his face.",
+  "Half the hold is water and the other half is fish, and at this point I could not tell you which is winning.",
+  "Whoever left the last bottle: we found it, we read it, and it helped. Passing the favor on.",
+  "Made port with nothing to show and every one of us still aboard. Some voyages you count that as the catch."
+ ],
  "marketMoods": {
   "calm": {
    "label": "Calm Market",

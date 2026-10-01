@@ -55,9 +55,10 @@ static func dock_label(p: Dictionary) -> String:
 	return DOCK_LABEL.get(p["id"], "Go ashore at %s" % p["name"])
 
 
-## Push a point out of every island's shore (the hull's collision).
+## Push a point out of every island's shore (the hull's collision): the ports
+## and the fishing isles.
 static func off_shore(at: Vector2) -> Dictionary:
-	for p: Dictionary in ports():
+	for p: Dictionary in ports() + (Rules.data()["isles"] as Array):
 		var c: Vector2 = Vector2(float(p["x"]), float(p["y"]))
 		var shore: float = float(p["r"]) * SHORE + HULL
 		var d: Vector2 = at - c

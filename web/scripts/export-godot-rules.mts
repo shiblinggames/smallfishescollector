@@ -38,6 +38,11 @@ import { fishingGearLevelReq } from '../lib/gearGating'
 import { isCaptainRod, ROD_SELL_RATE } from '../lib/rods'
 import { RESIDENTS, PLACES, berthOf } from '../app/(app)/sea/chart'
 import { PLATES } from '../lib/islandPlates'
+import { ISLE_FURNISHING } from '../lib/seaIsles'
+import { DIG_SITES, bearingText } from '../lib/seaDigs'
+import { PORTAL_TIERS } from '../lib/seaPortal'
+import { FRAGMENTS } from '../lib/seaBottles'
+import { FURNISHING_BY_ID } from '../lib/homestead'
 import { plainRodFor, plainHookFor } from '../lib/seaTraders'
 import { MOOD_CONFIG } from '../lib/marketMood'
 import { HULL_COSTS, HULL_SPEED, HANDLING_SPEED, HANDLING_COSTS, ACCEL_RATE, ACCEL_COSTS, LANTERN_GLOW, LANTERN_COSTS, BASE_SPEED_PX, BASE_TURN_RAD, BASE_ACCEL } from '../lib/shipyard'
@@ -147,6 +152,14 @@ const rules = {
     buildings: (p.buildings ?? []).filter(b => b.art).map(b => ({ art: b.art, x: b.x, y: b.y, scale: b.scale ?? 1 })),
     berth: berthOf(p),
   })),
+  // Exploration (lib/seaIsles, seaDigs, seaPortal, seaBottles): the isles with
+  // what they pay, the furnishings in five of their chests, the dig sites with
+  // their bearings, the portal's tiers (for the stones), the bottles' notes.
+  isles: ISLES.map(i => ({ ...i, plate: PLATES[i.id] ?? null })),
+  isleFurnishing: Object.fromEntries(Object.entries(ISLE_FURNISHING).map(([isle, fid]) => [isle, { id: fid, name: FURNISHING_BY_ID[fid]?.item.name ?? null }])),
+  digSites: DIG_SITES.map(d => ({ ...d, bearing: bearingText(d) })),
+  portalTiers: PORTAL_TIERS,
+  bottleFragments: FRAGMENTS,
   marketMoods: Object.fromEntries(Object.entries(MOOD_CONFIG).map(([k, v]) => [k, { label: v.label, color: v.color, desc: v.desc }])),
   completionistNeeds: { level: COMPLETIONIST_LEVEL, folk: FOLK.map(f => f.id), maxRapport: TIER_AT[4], isles: ISLES.map(i => i.id) },
   starter: (() => { const { species: _s, ...rest } = starterSave('__uid__', [], 0); return rest })(),
