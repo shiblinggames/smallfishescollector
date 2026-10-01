@@ -380,6 +380,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   CrateMoment survives only as the tiers, art and loot wording. THE CAST BUTTON is a
   watercolour seal (fx/seal.gdshader): torn paper, a ring of the action's pigment pooled
   at its edges, inked hairlines, the word inked on the face, a wet ring on a press.
+  SUPERSEDED the same day (Kong did not like the seal either): CAST AND REEL IN ARE
+  LETTERING ON THE WATER (game/dial_button.gd, still DialButton): the word in Cinzel under
+  the boat (sea-light to cast, warm gold to reel, dim when it cannot be pressed), a small
+  SPACE key beside it, a soft stroke of light under it that swells on hover and flashes
+  on a press; hidden while waiting (the waiting cues say it). The reach pill moved down
+  to just above the bottom row. fx/seal.gdshader is gone.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

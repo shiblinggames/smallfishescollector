@@ -208,7 +208,8 @@ func _ready() -> void:
 	# needle until the click came back up.
 	_action.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
 	_action.pressed.connect(_act)
-	_place(_action, Vector2(0.5, 1.0), Vector2(-56, -72 - 12 - 112), Vector2(112, 112))
+	# Lettered on the water under the boat (below the waiting cues).
+	_place(_action, Vector2(0.5, 0.5), Vector2(-220, 124), Vector2(440, 52))
 	add_child(_action)
 	var gv: Array = _menu(bottom, "Log", _open_log)
 	_m_log = gv[0]
@@ -219,7 +220,7 @@ func _ready() -> void:
 	_blocked = Kit.lift(Kit.text(self, "", "small", Color("#f8a2a2")))
 	_blocked.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_blocked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_place(_blocked, Vector2(0.5, 1.0), Vector2(-300, -72 - 12 - 112 - 34), Vector2(600, 28))
+	_place(_blocked, Vector2(0.5, 0.5), Vector2(-300, 178), Vector2(600, 28))
 
 	_status = Kit.lift(Kit.text(self, "", "heading", INK))
 	_status.add_theme_font_size_override("font_size", 21)
@@ -573,7 +574,7 @@ func _update_action() -> void:
 	_action.accent = TEAL if teal else GOLD
 	_action.set_lit(not _action.disabled)
 	# No fishing here: the button steps aside (the reach pill takes its place).
-	_action.visible = not water.is_empty() or (phase != "idle" and phase != "result")
+	_action.visible = (not water.is_empty() or (phase != "idle" and phase != "result")) and _action.text != "…"
 
 
 # ── What is in reach ──────────────────────────────────────────────────────────
@@ -592,7 +593,8 @@ func set_reach(text: String, act: Callable) -> void:
 	_reach_l.text = text
 	var w: float = Kit.font("cinzel", 700).get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
 	var full: float = w + 22.0 + 10.0 + 26.0 + 22.0
-	var above: float = -72.0 - 12.0 - 112.0 - 16.0 - 44.0 if not water.is_empty() else -72.0 - 12.0 - 70.0
+	# Just above the bottom row: Cast is lettered under the boat now.
+	var above: float = -72.0 - 12.0 - 56.0
 	_place(_reach_btn, Vector2(0.5, 1.0), Vector2(-full / 2.0, above), Vector2(full, 44))
 	_reach_l.position = Vector2(22, 10)
 	var key: Label = _reach_btn.get_node("Key")
