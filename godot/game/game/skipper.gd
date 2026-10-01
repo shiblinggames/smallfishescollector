@@ -28,6 +28,9 @@ const HOOK: Dictionary = { "rest": [39.5, -10.5, 204.5, 0.0], "wait": [39.5, -10
 var look: Dictionary = {}
 var frame: String = "rest"
 var box_scale: float = 1.0
+## How far this pose was moved to keep the hull where the rest pose has it.
+var pose_shift: Vector2 = Vector2.ZERO
+static var _marks: Dictionary = {}
 ## ON THE WATER (seaCaptain.ts): a soft shadow under the hull, her whole
 ## picture thrown back by the water (mirrored about the waterline, foreshortened
 ## to 55%, faint, and shearing slowly so it reads as water and not as a second
@@ -103,6 +106,24 @@ func _build() -> void:
 	var w: float = W * box_scale
 	var h: float = H * box_scale
 	var origin: Vector2 = Vector2(-w / 2.0 - 0.08 * w, -h / 2.0 - 0.26 * h)
+	# HOLD THE HULL STILL BETWEEN POSES (Godot over the web baseline): the
+	# wait and cast sheets draw the boat 60-odd px right of the rest sheet
+	# (and wait 32 px higher), so the whole boat jumped when she cast. Each
+	# pose is moved by its own measured hull shift, and the parts placed on it
+	# move with it.
+	pose_shift = Vector2.ZERO
+	if frame != "rest":
+		var color0: String = look.get("color", "default")
+		var known0: bool = false
+		for c: Dictionary in Rules.data()["characterColors"]:
+			if c["id"] == color0:
+				known0 = true
+		var stem: String = "fishing_%s.png" if (color0 == "default" or not known0) else "fishing_" + color0 + "_%s.png"
+		var a: Vector2 = _hull_mark(tex(stem % "rest"))
+		var b: Vector2 = _hull_mark(tex(stem % frame))
+		if a != Vector2.INF and b != Vector2.INF:
+			pose_shift = Vector2((a.x - b.x) * w, (a.y - b.y) * h)
+	origin += pose_shift
 	# The character, in their color (an unknown color is the default).
 	var color: String = look.get("color", "default")
 	var known: bool = false
@@ -199,6 +220,37 @@ func _twin(c: Sprite2D) -> Sprite2D:
 	t.flip_h = c.flip_h
 	t.visible = c.visible
 	return t
+
+
+## Where a captain sheet's hull is (the middle of its brown span, and its
+## lowest row), as fractions of the sheet; measured once.
+static func _hull_mark(t: Texture2D) -> Vector2:
+	if t == null:
+		return Vector2.INF
+	var key: String = t.resource_path
+	if _marks.has(key):
+		return _marks[key]
+	var img: Image = t.get_image()
+	var out: Vector2 = Vector2.INF
+	if img != null:
+		if img.is_compressed():
+			img.decompress()
+		var small: Image = img.duplicate()
+		small.resize(img.get_width() / 3, img.get_height() / 3, Image.INTERPOLATE_NEAREST)
+		var lo: int = small.get_width()
+		var hi: int = -1
+		var bot: int = 0
+		for y: int in range(int(small.get_height() * 0.7), small.get_height()):
+			for x: int in small.get_width():
+				var c: Color = small.get_pixel(x, y)
+				if c.a > 0.78 and c.r > c.g and c.g >= c.b and c.r - c.b > 0.16:
+					lo = mini(lo, x)
+					hi = maxi(hi, x)
+					bot = maxi(bot, y)
+		if hi >= 0:
+			out = Vector2((lo + hi) / 2.0 / small.get_width(), float(bot) / small.get_height())
+	_marks[key] = out
+	return out
 
 
 ## The painted rows of a picture, as a fraction of its height (top, bottom),

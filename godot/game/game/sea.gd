@@ -164,6 +164,7 @@ func _ready() -> void:
 	_town_light.position = Vector2(-30, 120)
 	_world.add_child(_town_light)
 
+	_world.add_child(SeaFlow.new())
 	_wake = Wake.new()
 	_wake.z_index = -1
 	_world.add_child(_wake)
@@ -191,6 +192,10 @@ func _ready() -> void:
 	_boat = Boat.new()
 	_boat.field = _field
 	_boat.cast_landed.connect(_life.scatter)
+	_boat.cue_changed.connect(func(c: Dictionary) -> void: _hud.set_cues(c))
+	_boat.surged.connect(func() -> void:
+		_field.ring(_boat.position, 130.0, 1.1, 0.7)
+		Rumble.buzz([0, 16, 40, 22]))
 	var at: Variant = session.profile().get("sea_x")
 	_boat.position = Vector2(Js.num(at), Js.num(session.profile().get("sea_y"))) if at != null else Chart.HOME
 	_world.add_child(_boat)
@@ -268,6 +273,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var input: Vector2 = Vector2.ZERO if _hud.busy() else Input.get_vector("sail_left", "sail_right", "sail_up", "sail_down")
+	# The currents, the kelp and the sails rest while the rod is out or a panel
+	# is up (the web's hush).
+	_boat.hush = _hud.busy() or not (_hud.phase == "idle" or _hud.phase == "result")
 	_boat.steer(input, delta)
 	var cam_world: Vector2 = _boat.position
 	_camera.position = Vector2(cam_world.x, cam_world.y * Chart.GROUND)

@@ -47,6 +47,20 @@ var _sway_heading: float = PI / 2.0
 var storm: float = 0.0
 
 var velocity: Vector2 = Vector2.ZERO
+## THE WATER UNDER HER (lib/seaFlow, SeaMap.tsx): the lane she is riding,
+## the kelp's hold on her, and what to tell the captain about it (the HUD's
+## cue chips). hush: the rod is out or a panel is up, so none of it applies.
+var hush: bool = false
+var cue: Dictionary = { "current": "", "full": false, "kelp": false }
+signal cue_changed(cue: Dictionary)
+## She caught a lane or her sails filled: a splash, a buzz.
+signal surged
+var _lane: String = ""
+var _in_lane: bool = false
+var _kelp_keep: float = 1.0
+var _cue_t: float = 0.0
+## Godot: streaks of water rushing past her at full sail or riding a lane.
+var _rush: GPUParticles2D
 var target: Variant = null
 var locked: bool = false
 var skipper: Skipper
@@ -63,6 +77,32 @@ func _ready() -> void:
 	skipper = Skipper.new()
 	skipper.water = true
 	skipper.scale = Vector2(1.0, 1.0 / Chart.GROUND)
+	_rush = GPUParticles2D.new()
+	_rush.amount = 46
+	_rush.lifetime = 0.55
+	_rush.local_coords = false
+	_rush.texture = SquallFx._streak()
+	_rush.amount_ratio = 0.0
+	_rush.z_index = -1
+	var rm: ParticleProcessMaterial = ParticleProcessMaterial.new()
+	rm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	rm.emission_box_extents = Vector3(170, 120, 0)
+	rm.gravity = Vector3.ZERO
+	rm.spread = 4.0
+	rm.initial_velocity_min = 320.0
+	rm.initial_velocity_max = 460.0
+	rm.particle_flag_align_y = true
+	rm.scale_min = 0.5
+	rm.scale_max = 1.0
+	var rg: Gradient = Gradient.new()
+	rg.set_color(0, Color(0.9, 0.97, 1.0, 0.0))
+	rg.add_point(0.3, Color(0.9, 0.97, 1.0, 0.28))
+	rg.set_color(rg.get_point_count() - 1, Color(0.9, 0.97, 1.0, 0.0))
+	var rt: GradientTexture1D = GradientTexture1D.new()
+	rt.gradient = rg
+	rm.color_ramp = rt
+	_rush.process_material = rm
+	add_child(_rush)
 	add_child(skipper)
 	lantern = PointLight2D.new()
 	lantern.texture = Glow.radial(256, Color(1.0, 0.78, 0.45), true)
@@ -94,7 +134,7 @@ func steer(input: Vector2, delta: float) -> void:
 		if input.length() > 0.1:
 			target = null
 			order = input.angle()
-			want = top * minf(1.0, input.length()) * _sail_mom
+			want = top * minf(1.0, input.length()) * _sail_mom * _kelp_keep
 		elif target != null:
 			var to: Vector2 = (target as Vector2) - position
 			var d: float = to.length()
@@ -103,7 +143,7 @@ func steer(input: Vector2, delta: float) -> void:
 			else:
 				order = to.angle()
 				var t: float = clampf((d - ARRIVE) / (SLOW - ARRIVE), 0.0, 1.0)
-				want = top * t * t * (3.0 - 2.0 * t) * _sail_mom
+				want = top * t * t * (3.0 - 2.0 * t) * _sail_mom * _kelp_keep
 	# The bow comes round toward the order, faster from a standstill.
 	var spd: float = velocity.length()
 	if order != null:
@@ -121,19 +161,9 @@ func steer(input: Vector2, delta: float) -> void:
 	fwd += (want * align - fwd) * kf
 	lat *= exp(-GRIP * delta)
 	velocity = h * fwd + n * lat
-	# Full sail: a long straight run at speed fills her out a little more.
-	var turning: float = absf(wrapf(heading - _last_heading, -PI, PI)) / maxf(delta, 0.0001)
-	_last_heading = heading
-	if fwd > 0.75 * top and turning < 0.5:
-		_straight_t += delta
-	else:
-		_straight_t = maxf(0.0, _straight_t - delta * 4.0)
-	if _straight_t > (2.0 if _full else FULL_SAIL_AFTER):
-		_full = true
-	elif _straight_t <= 0.0:
-		_full = false
-	_sail_mom = move_toward(_sail_mom, FULL_SAIL if _full else 1.0, delta * 3.0 * (FULL_SAIL - 1.0))
 	var next: Vector2 = position + velocity * delta
+	_flow(delta, top, input.length() > 0.1)
+	next += _flow_push
 	# Every island's shore stops the hull.
 	var off: Dictionary = Chart.off_shore(next)
 	if off["hit"]:
@@ -151,6 +181,12 @@ func steer(input: Vector2, delta: float) -> void:
 	var heel: float = clampf(turn_rate * way * 4.0, -7.0, 7.0) * signf(velocity.x if absf(velocity.x) > 1.0 else 1.0)
 	var pitch: float = -signf(velocity.x) * way * 2.8 if absf(velocity.x) > 8.0 else 0.0
 	skipper.sway(delta, rough, heel, pitch)
+	var rk: float = rush()
+	_rush.amount_ratio = rk
+	_rush.emitting = rk > 0.01
+	if speed > 1.0:
+		var back: Vector2 = -velocity.normalized()
+		(_rush.process_material as ParticleProcessMaterial).direction = Vector3(back.x, back.y, 0)
 	lantern.texture_scale = 0.9 + 3.6 * lantern_glow
 	if speed > 20.0 and absf(velocity.x) > 8.0:
 		_facing = 1.0 if velocity.x > 0.0 else -1.0
@@ -186,6 +222,71 @@ static func contact_for(id: String, at: Vector2, sk: Skipper) -> Dictionary:
 	}
 
 
+var _flow_push: Vector2 = Vector2.ZERO
+
+
+## The current, the kelp and the sails (SeaMap.tsx's frame loop, as the web
+## runs it): the lane carries her along it at up to 55% of base speed (and the
+## spot she was told to sail to with her, when she is nearly there); the kelp
+## holds her to 60%; a clean straight run at speed fills her sails to 1.15.
+func _flow(delta: float, top: float, steering: bool) -> void:
+	_flow_push = Vector2.ZERO
+	var way: String = ""
+	var full: bool = false
+	if not hush:
+		var cur: Dictionary = SeaFlow.current_at(position.x, position.y, _lane)
+		_lane = cur["id"]
+		var k: float = float(cur["k"])
+		var u: Vector2 = cur["u"]
+		if k > 0.0:
+			var push: float = float(SeaFlow.flow()["push"]) * SPEED * k * delta
+			_flow_push = u * push
+			if not steering and target != null and ((target as Vector2) - position).length() < SLOW:
+				target = (target as Vector2) + u * push
+		var lane_now: bool = k > (0.25 if _in_lane else 0.35)
+		if lane_now and not _in_lane:
+			surged.emit()
+		_in_lane = lane_now
+		if lane_now:
+			var sp: float = velocity.length()
+			var dot: float = velocity.dot(u) / sp if sp > 20.0 else 1.0
+			var prev: String = cue["current"]
+			way = "with" if dot > (0.35 if prev == "with" else 0.55) else ("against" if dot < (-0.35 if prev == "against" else -0.55) else "across")
+		var keep_to: float = 1.0 - (1.0 - float(SeaFlow.flow()["keep"])) * SeaFlow.kelp_at(position.x, position.y)
+		_kelp_keep += (keep_to - _kelp_keep) * (1.0 - exp(-4.0 * delta))
+		var turn: float = wrapf(heading - _last_heading, -PI, PI)
+		_last_heading = heading
+		var fast: bool = velocity.length() > top * 0.75 * _kelp_keep
+		if fast and absf(turn) / maxf(delta, 0.0001) < 0.5:
+			_straight_t += delta
+		else:
+			_straight_t = maxf(0.0, _straight_t - delta * 4.0)
+		full = _straight_t > (FULL_SAIL_AFTER - 0.5 if _full else FULL_SAIL_AFTER)
+		if full and not _full:
+			surged.emit()
+		_full = full
+		_sail_mom += ((FULL_SAIL if full else 1.0) - _sail_mom) * (1.0 - exp(-3.0 * delta))
+	else:
+		_kelp_keep += (1.0 - _kelp_keep) * (1.0 - exp(-4.0 * delta))
+		_sail_mom += (1.0 - _sail_mom) * (1.0 - exp(-3.0 * delta))
+		_straight_t = 0.0
+		_full = false
+		_in_lane = false
+		_lane = ""
+	var kelp_now: bool = _kelp_keep < 0.9
+	_cue_t += delta
+	if (cue["current"] != way or cue["full"] != full or cue["kelp"] != kelp_now) and _cue_t > 0.3:
+		_cue_t = 0.0
+		cue = { "current": way, "full": full, "kelp": kelp_now }
+		cue_changed.emit(cue)
+
+
+## How hard the water is rushing past her: full sail, riding a lane.
+func rush() -> float:
+	var riding: bool = cue["current"] == "with" and velocity.length() > SPEED * hull * boat_speed * 0.3
+	return 1.0 if (cue["full"] and riding) else (0.6 if cue["full"] else (0.3 if riding else 0.0))
+
+
 func facing() -> float:
 	return _facing
 
@@ -202,8 +303,8 @@ func set_pose(pose: String) -> void:
 ## Where the line meets the water while she waits (the sheet's painted ring:
 ## 155 x 760 of the 900 x 800 sheet), on the plane.
 func hook_at() -> Vector2:
-	var x: float = -105.0 - 16.8 + 155.0 / 900.0 * 210.0
-	var y: float = -93.3 - 48.5 + 760.0 / 800.0 * 186.7
+	var x: float = -105.0 - 16.8 + 155.0 / 900.0 * 210.0 + skipper.pose_shift.x
+	var y: float = -93.3 - 48.5 + 760.0 / 800.0 * 186.7 + skipper.pose_shift.y
 	return position + Vector2(x * signf(skipper.scale.x), y / Chart.GROUND)
 
 

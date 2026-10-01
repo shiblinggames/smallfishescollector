@@ -49,6 +49,7 @@ import { SOLIDS, BOAT_CLEAR } from '../lib/seaSolid'
 import { RUNNER_RODS } from '../lib/rods'
 import { NORTH_WALL, OUTER_EDGE } from '../app/(app)/sea/chart'
 import { MOOD_CONFIG } from '../lib/marketMood'
+import { CURRENTS, KELP, CURRENT_PUSH, KELP_KEEP } from '../lib/seaFlow'
 import { HULL_COSTS, HULL_SPEED, HANDLING_SPEED, HANDLING_COSTS, ACCEL_RATE, ACCEL_COSTS, LANTERN_GLOW, LANTERN_COSTS, BASE_SPEED_PX, BASE_TURN_RAD, BASE_ACCEL } from '../lib/shipyard'
 import { TIER_AT } from '../lib/seaFolk'
 import { ISLES } from '../lib/seaIsles'
@@ -205,6 +206,12 @@ const rules = {
     stock: STOCK, runnerLines: RUNNER_LINES, boats: BOAT_IDS, hats: HAT_IDS, colors: CHAR_COLORS, hooks: HOOK_ART,
     rods: ROD_SLUGS, runnerRods: RUNNER_RODS.map(r => ({ tier: r.tier, slug: r.slug ?? null })),
     runnerStake: RUNNER_STAKE, runnerOdds: RUNNER_ODDS, dealsPerDay: DEALS_PER_DAY, kindLabel: KIND_LABEL,
+  },
+  // THE CURRENTS AND THE KELP (lib/seaFlow): the lanes' points as the TS
+  // builds them, the beds as it places them; the port reads, never re-derives.
+  flow: {
+    currents: CURRENTS.map(l => ({ id: l.id, half: l.half, pts: l.pts.map(p => [p.x, p.y]) })),
+    kelp: KELP, push: CURRENT_PUSH, keep: KELP_KEEP,
   },
   marketMoods: Object.fromEntries(Object.entries(MOOD_CONFIG).map(([k, v]) => [k, { label: v.label, color: v.color, desc: v.desc }])),
   completionistNeeds: { level: COMPLETIONIST_LEVEL, folk: FOLK.map(f => f.id), maxRapport: TIER_AT[4], isles: ISLES.map(i => i.id) },

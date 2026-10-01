@@ -99,10 +99,11 @@ static func _ring_tex() -> Texture2D:
 		for x: int in 256:
 			var d: float = Vector2(x + 0.5 - 128.0, y + 0.5 - 128.0).length() / 128.0
 			var a: float = 0.0
-			if d >= 0.74 and d < 0.86:
-				a = (d - 0.74) / 0.12
-			elif d >= 0.86 and d < 0.97:
-				a = 1.0 - (d - 0.86) / 0.11
+			# A soft swell, not a drawn line: rises slowly, falls fast.
+			if d >= 0.55 and d < 0.86:
+				a = pow((d - 0.55) / 0.31, 1.6)
+			elif d >= 0.86 and d < 0.98:
+				a = 1.0 - (d - 0.86) / 0.12
 			img.set_pixel(x, y, Color(1, 1, 1, a))
 	return ImageTexture.create_from_image(img)
 
@@ -144,14 +145,18 @@ func _emit(s: Dictionary, force: float, side: float, churn: bool, bow: bool) -> 
 	m[12] = cols[randi() % cols.size()]
 
 
+## At rest the water laps along her: each ring starts somewhere along the
+## hull (not one point), a little bigger or smaller, stretched to her length
+## (Godot over the web's single concentric ring).
 func _ring(s: Dictionary) -> void:
 	var r: Array = _r[_ring_next]
 	_ring_next = (_ring_next + 1) % RING_CAP
-	r[0] = float(s.get("cx", s["x"]))
-	r[1] = float(s.get("cy", s["y"]))
+	var sc: float = float(s.get("scale", 1.0))
+	r[0] = float(s.get("cx", s["x"])) + randf_range(-55.0, 55.0) * sc
+	r[1] = float(s.get("cy", s["y"])) + randf_range(-6.0, 6.0) * sc
 	r[2] = 0.0
-	r[3] = RING_LIFE
-	r[4] = float(s.get("scale", 1.0))
+	r[3] = RING_LIFE * randf_range(0.75, 1.15)
+	r[4] = sc * randf_range(0.7, 1.1)
 
 
 func _process(delta: float) -> void:
@@ -194,8 +199,9 @@ func _process(delta: float) -> void:
 		else:
 			st["since"] = 0.0
 			st["ring"] = float(st["ring"]) + d
-			if float(st["ring"]) >= RING_EVERY:
+			if float(st["ring"]) >= float(st.get("ring_at", RING_EVERY)):
 				st["ring"] = 0.0
+				st["ring_at"] = RING_EVERY * randf_range(0.45, 1.15)
 				_ring(s)
 	for id: String in _seen.keys():
 		if not alive.has(id):
@@ -212,8 +218,8 @@ func _process(delta: float) -> void:
 			continue
 		var age: float = float(r[2]) / float(r[3])
 		var k: float = (0.42 + (2.2 - 0.42) * age) * float(r[4])
-		var a: float = minf(1.0, age / 0.14) * pow(1.0 - age, 1.4) * 0.34
-		rm.set_instance_transform_2d(i, Transform2D(0.0, Vector2(104.0 * k, 30.0 / Chart.GROUND * k), 0.0, Vector2(float(r[0]), float(r[1]))))
+		var a: float = minf(1.0, age / 0.14) * pow(1.0 - age, 1.6) * 0.16
+		rm.set_instance_transform_2d(i, Transform2D(0.0, Vector2(104.0 * k * 1.45, 30.0 / Chart.GROUND * k), 0.0, Vector2(float(r[0]), float(r[1]))))
 		rm.set_instance_color(i, Color(STYLE["colors"][0], a))
 
 	var mm: MultiMesh = _marks.multimesh

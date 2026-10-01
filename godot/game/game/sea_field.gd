@@ -63,7 +63,7 @@ func share_wake(w: Wake) -> void:
 		mi.multimesh = src.multimesh
 		mi.texture = _blob_tex() if src == w._marks else src.texture
 		# The wake draws its foam faint; as height it wants to be felt.
-		mi.material = _gain(5.0 if src == w._marks else 2.5)
+		mi.material = _gain(5.0 if src == w._marks else 4.5)
 		_world.add_child(mi)
 
 

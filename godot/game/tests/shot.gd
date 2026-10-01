@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -216,6 +216,22 @@ func _init() -> void:
 					sea._boat.position = sp if what == "squall" else sp + Vector2(float(found[0]["r"]) * 0.95, 0)
 					break
 			for f: int in 160:
+				await process_frame
+		"current":
+			var lane: Dictionary = (Rules.data()["flow"]["currents"] as Array)[0]
+			var a0: Array = lane["pts"][12]
+			var a1: Array = lane["pts"][22]
+			sea._boat.position = Vector2(float(a0[0]), float(a0[1]))
+			var dir: Vector2 = (Vector2(float(a1[0]), float(a1[1])) - sea._boat.position).normalized()
+			sea._boat.heading = dir.angle()
+			sea._boat.target = Vector2(float(a1[0]), float(a1[1]))
+			for f: int in 240:
+				await process_frame
+		"kelp":
+			var bed: Dictionary = (Rules.data()["flow"]["kelp"] as Array)[3]
+			sea._boat.position = Vector2(float(bed["x"]) - float(bed["r"]) * 0.3, float(bed["y"]))
+			sea._zoom_to = 1.0
+			for f: int in 60:
 				await process_frame
 		"cloud":
 			sea._boat.position = Vector2(-1500, 2600)

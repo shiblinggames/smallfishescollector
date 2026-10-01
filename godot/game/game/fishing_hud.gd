@@ -100,6 +100,9 @@ var _asking: bool = false
 var _reach_text: String = ""
 var _reach_act: Callable = Callable()
 var _reach_btn: Pane.PaneButton
+## WHAT THE WATER IS DOING TO HER (SeaMap.tsx's SeaCueChip): riding, against
+## or crossing a current, full sail, in the kelp. Under the water's name.
+var _cues: HBoxContainer
 var _reach_l: Label
 
 
@@ -226,6 +229,15 @@ func _ready() -> void:
 	_tide.pressed.connect(_skip)
 	add_child(_tide)
 
+	_cues = HBoxContainer.new()
+	_cues.alignment = BoxContainer.ALIGNMENT_CENTER
+	_cues.add_theme_constant_override("separation", 8)
+	_cues.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cues.anchor_left = 0.0
+	_cues.anchor_right = 1.0
+	_cues.offset_top = 156.0
+	_cues.offset_bottom = 186.0
+	add_child(_cues)
 	_reach_btn = Pane.PaneButton.new(
 		{ "radius": 999, "fill": [Color(0.04, 0.078, 0.11, 0.88)], "border": [1, Color(0.7, 0.84, 0.91, 0.45)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 4)], "pad": 0 },
 		{ "radius": 999, "fill": [Color(0.06, 0.1, 0.14, 0.92)], "border": [1, Color(1.0, 0.85, 0.53, 0.8)], "shadow": [Color(1.0, 0.8, 0.45, 0.18), 18, Vector2(0, 4)], "pad": 0 })
@@ -432,6 +444,27 @@ func set_spot(h: Dictionary) -> void:
 	if not h.is_empty():
 		var left: int = maxi(0, int((float(h["endsAt"]) - Clock.now_ms()) / 1000.0))
 		_spot_left.text = ("%dm left" % ceili(left / 60.0)) if left >= 60 else ("%ds" % left)
+
+
+func set_cues(c: Dictionary) -> void:
+	for n: Node in _cues.get_children():
+		n.queue_free()
+	var cur: String = c.get("current", "")
+	if cur != "":
+		_cue_chip("Riding the current" if cur == "with" else ("Against the current" if cur == "against" else "Crossing a current"),
+			Color("#8fe0f0") if cur == "with" else (Color("#f0a58f") if cur == "against" else Color("#c9d6e0")))
+	if c.get("full", false):
+		_cue_chip("Full sail", Color("#f0d58a"))
+	if c.get("kelp", false):
+		_cue_chip("In the kelp", Color("#a8c483"))
+
+
+func _cue_chip(text: String, col: Color) -> void:
+	var p: Pane = Kit.pane(_cues, { "radius": 999, "fill": [Color(0.024, 0.047, 0.07, 0.72)], "border": [1, Kit.a(col, 0.4)], "shadow": [Kit.a(col, 0.13), 14], "pad": [11, 4, 11, 5] })
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l: Label = Kit.lift(Kit.text(p, text, "chip", col))
+	l.add_theme_font_size_override("font_size", 11)
+	p.ready.connect(func() -> void: Kit.pop(p))
 
 
 func set_clock(label: String) -> void:
