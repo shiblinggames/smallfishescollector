@@ -18,8 +18,8 @@ const PTS: Dictionary = {
 	"wait": [Vector2(158, 439), Vector2(153, 753)],
 	"cast": [Vector2(531, 104), Vector2(147, 173)],
 }
-const INK: Color = Color(0.86, 0.88, 0.9, 0.78)
-const WIDTH: float = 1.2
+const INK: Color = Color(0.58, 0.61, 0.63, 0.6)
+const WIDTH: float = 0.75
 
 var skipper: Skipper
 
