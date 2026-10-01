@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -191,6 +191,20 @@ func _init() -> void:
 					sc._line.finish()
 			else:
 				sea._regulars["folk:meg"].done = false
+		"portal", "portalsheet", "deadportal":
+			if what != "deadportal":
+				sea.session.save["discoveries"] = ["shallows-0", "open_waters-0", "deep-0"]
+				p["portal_tier"] = 3.0
+			sea._portal_state()
+			sea._boat.position = Vector2(float(Portal.AT["x"]) - 80.0, float(Portal.AT["y"]) + 60.0)
+			for f: int in 3:
+				await process_frame
+			if what == "portalsheet":
+				sea._open_portal()
+				await process_frame
+				var sh: PortalSheet = sea._hud_layer.get_child(sea._hud_layer.get_child_count() - 1)
+				sh._sel = Portal.tier_def(4)
+				sh._draw()
 		"boss":
 			sea._boat.position = Vector2(0, 19000)
 			p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[89])

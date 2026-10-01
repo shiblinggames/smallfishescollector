@@ -63,6 +63,8 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 		"strikeDeal": return Traders.strike_deal(db, uid, a[0])
 		"wagerForRunnerRod": return Traders.wager(db, uid, a[0])
 		"dealtToday": return Traders.dealt_today(db, uid)
+		"buyPortalTier": return Portal.buy_tier(db, uid)
+		"spendRecall": return Portal.spend_recall(db, uid, a[0])
 		"goAshore": return Explore.go_ashore(db, uid, a[0])
 		"digHere": return Explore.dig_here(db, uid, a[0])
 		"openBottle": return Explore.open_bottle(db, uid, a[0])

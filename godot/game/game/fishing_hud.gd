@@ -26,6 +26,8 @@ extends Control
 signal fishing_changed(active: bool)
 ## The captain asks to leave the sea (for the captains, or out of a Charter).
 signal leave
+## The recall pill was pressed (the sea asks the rules and takes her home).
+signal recall_pressed
 
 const HOLD_S: float = 0.62
 const HOLD_PERFECT_S: float = 0.9
@@ -61,6 +63,7 @@ var _ledger_btn: Button
 var _where: Label
 var _blurb: Label
 var _clock: Label
+var _recall: Button
 var _action: DialButton
 ## The rod's four menus; _hold is the Hold button's count, where fish land.
 var _m_loadout: Button
@@ -147,6 +150,16 @@ func _ready() -> void:
 	clock_row.alignment = BoxContainer.ALIGNMENT_END
 	clock_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tr.add_child(clock_row)
+	# THE FREE RECALL HOME, on the clock's row: ready, or the minutes left.
+	_recall = Kit.button("Recall home", "secondary", "small")
+	_recall.focus_mode = Control.FOCUS_NONE
+	_recall.tooltip_text = "Home to the Homestead Portal, free once a sea day"
+	_recall.pressed.connect(func() -> void:
+		if phase == "idle" or phase == "result":
+			recall_pressed.emit()
+		else:
+			toast("Bring the line in first"))
+	clock_row.add_child(_recall)
 	var clock_pill: Pane = Kit.pane(clock_row, { "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.72)], "border": [1, Color(0.7, 0.83, 0.89, 0.22)], "pad": [10, 3, 10, 4] })
 	clock_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_clock = Kit.text(clock_pill, "", "label", Color(0.82, 0.88, 0.93, 0.85))
@@ -423,6 +436,14 @@ func set_spot(h: Dictionary) -> void:
 
 func set_clock(label: String) -> void:
 	_clock.text = label
+
+
+## The recall's state: ready (0), or the milliseconds until it is.
+func set_recall(left_ms: float) -> void:
+	var t: String = "Recall home" if left_ms <= 0.0 else "Recall in %dm" % int(ceil(left_ms / 60000.0))
+	if _recall.text != t.to_upper():
+		_recall.text = t.to_upper()
+		_recall.modulate.a = 1.0 if left_ms <= 0.0 else 0.6
 
 
 ## The one button: Cast, Reel In, Cast Again, or why it cannot.

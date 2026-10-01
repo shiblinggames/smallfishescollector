@@ -62,6 +62,12 @@ var _trader_cell: String = ""
 var _dealt_keys: Array = []
 var _dealt_day: int = -1
 var _hailing: String = ""
+## The Homestead Portal, whether its offer is live (out of the mouth once since
+## the last passage), and the recall's last redraw.
+var _portal: PortalWell
+var _portal_armed: bool = true
+var _recall_t: float = 99.0
+var _warping: bool = false
 var _save_t: float = 0.0
 ## Music starts on the first key or press, as on the web.
 var _music_started: bool = false
@@ -108,6 +114,9 @@ func _ready() -> void:
 		_world.add_child(b)
 		_buyers.append(b)
 	_moor_regulars()
+	_portal = PortalWell.new()
+	_world.add_child(_portal)
+	_portal_state()
 	_town_light = PointLight2D.new()
 	_town_light.texture = Glow.radial(256, Color(1.0, 0.8, 0.5), true)
 	_town_light.texture_scale = 4.0
@@ -153,6 +162,7 @@ func _ready() -> void:
 		_boat.set_pose("wait" if active else "rest"))
 	_hud.leave_label = "Leave the Charter" if net != null else "Captains"
 	_hud.leave.connect(func() -> void: left.emit())
+	_hud.recall_pressed.connect(_press_recall)
 	hud_layer.add_child(_hud)
 	if net != null:
 		net.mate_boat.connect(_on_mate_boat)
@@ -203,6 +213,15 @@ func _process(delta: float) -> void:
 	for b: Buyer in _buyers:
 		b.lift = lift
 	_wanderers(now, clock, lift)
+	_portal.lift = lift
+	_recall_t += delta
+	if _recall_t > 1.0:
+		_recall_t = 0.0
+		_hud.set_recall(Portal.recall_left_ms(session.profile(), "fishing"))
+		# A stone opened (or a crewmate built a rung): the well catches up.
+		var live: bool = Portal.has_stone_for(1, session.save.get("discoveries", [])) or Js.num(session.profile().get("portal_tier")) > 1.0
+		if live != _portal.live or int(Js.num(Js.nz(session.profile().get("portal_tier"), 1.0))) != _portal.tier:
+			_portal_state()
 	_reach(cam_world)
 	_hotspots(delta, now)
 	_finds(delta, now, lift)
@@ -260,6 +279,16 @@ func _reach(at: Vector2) -> void:
 		(_berths[bid] as Berth).inside = bid == docked.get("id")
 	if not docked.is_empty():
 		_hud.set_reach(Chart.dock_label(docked), _dock.bind(docked["id"]))
+		_mark.target = null
+		return
+	# The portal's mouth: it offers, once you have been out of it since the
+	# last passage, and never takes you by itself.
+	var in_mouth: bool = Portal.inside(at.x, at.y)
+	if not in_mouth:
+		_portal_armed = true
+	_portal.gather = in_mouth
+	if in_mouth and _portal_armed and not _warping:
+		_hud.set_reach("Step through the portal", _open_portal)
 		_mark.target = null
 		return
 	for b: Buyer in _buyers:
@@ -689,6 +718,113 @@ func _hail_wanderer(w: Wanderer) -> void:
 	p.closed.connect(func() -> void: _hailing = "")
 	_hud.hold_for(p)
 	_hud_layer.add_child(p)
+
+
+# ── The portal and the recall ──────────────────────────────────────────────────
+
+## The well's rung and whether it is live (a stone opened, or a rung above the
+## first: a built portal is never dead water).
+func _portal_state() -> void:
+	var t: Variant = session.profile().get("portal_tier")
+	_portal.tier = 1 if t == null else int(Js.num(t))
+	_portal.live = Portal.has_stone_for(1, session.save.get("discoveries", [])) or _portal.tier > 1
+	_portal.refresh()
+
+
+func _open_portal() -> void:
+	Rumble.buzz([12, 50, 18])
+	# Course and way both die here: stepping into something, not past it.
+	_boat.velocity = Vector2.ZERO
+	_boat.target = null
+	var sh: PortalSheet = PortalSheet.new()
+	sh.session = session
+	sh.sail.connect(_warp)
+	sh.built.connect(func() -> void:
+		_portal_state()
+		_hud.refresh())
+	_hud.hold_for(sh)
+	_hud_layer.add_child(sh)
+
+
+## THE PASSAGE: the light comes up, she moves under it, it clears, and the
+## water she lands in rings out from where she broke it. Portal and recall both.
+func _warp(x: float, y: float, accent: Color) -> void:
+	if _warping:
+		return
+	_warping = true
+	_portal_armed = false
+	Rumble.buzz([14, 60, 22, 60, 30])
+	Sound.bell()
+	var veil: ColorRect = ColorRect.new()
+	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	veil.color = Color(accent.lerp(Color.WHITE, 0.55), 0.0)
+	veil.mouse_filter = Control.MOUSE_FILTER_STOP
+	_room_layer.add_child(veil)
+	var tw: Tween = create_tween()
+	tw.tween_property(veil, "color:a", 1.0, 0.48).set_ease(Tween.EASE_IN)
+	await tw.finished
+	_boat.position = Vector2(x, y)
+	_boat.velocity = Vector2.ZERO
+	_boat.target = null
+	_camera.position = Vector2(x, y * Chart.GROUND)
+	_camera.reset_smoothing()
+	var ring: Surfacing = Surfacing.new()
+	ring.color = accent
+	ring.position = Vector2(x, y)
+	_world.add_child(ring)
+	_trader_cell = ""
+	var out: Tween = create_tween()
+	out.tween_property(veil, "color:a", 0.0, 0.48).set_ease(Tween.EASE_OUT)
+	await out.finished
+	veil.queue_free()
+	_warping = false
+	_flush_position()
+
+
+## The free recall home, once a sea day: the rules stamp it, then the passage.
+func _press_recall() -> void:
+	if _warping or _hud.busy():
+		return
+	var to: Dictionary = Portal.HOME_TO
+	if _boat.position.distance_to(Vector2(float(to["x"]), float(to["y"]))) < 900.0:
+		_hud.toast("You are already home")
+		return
+	var left: float = Portal.recall_left_ms(session.profile(), "fishing")
+	if left > 0.0:
+		_hud.toast("Recall ready in %dm" % int(ceil(left / 60000.0)))
+		return
+	var r: Variant = await session.act("spendRecall", ["fishing"])
+	if r is Dictionary and r.get("ok", false):
+		session.persist()
+		_recall_t = 99.0
+		_warp(float(to["x"]), float(to["y"]), Color(str(to["accent"])))
+	elif r is Dictionary and r.get("readyAt") != null:
+		_hud.toast("Recall ready in %dm" % maxi(1, int(ceil((Js.parse_ms(r["readyAt"]) - Clock.now_ms()) / 60000.0))))
+	else:
+		_hud.toast("The recall did not go through")
+
+
+## Where she came up: light under the hull, then the swell running out.
+class Surfacing:
+	extends Node2D
+	var color: Color = Color.WHITE
+	var _t: float = 0.0
+
+	func _process(delta: float) -> void:
+		_t += delta
+		if _t > 1.4:
+			queue_free()
+		queue_redraw()
+
+	func _draw() -> void:
+		var glow: float = clampf(1.0 - _t / 0.6, 0.0, 1.0)
+		draw_circle(Vector2.ZERO, 120.0, Color(color, 0.35 * glow))
+		for k: int in 2:
+			var u: float = clampf((_t - 0.19 - k * 0.2) / 1.0, 0.0, 1.0)
+			if u <= 0.0 or u >= 1.0:
+				continue
+			var e: float = 1.0 - pow(1.0 - u, 3.0)
+			draw_arc(Vector2.ZERO, 60.0 + e * 340.0, 0.0, TAU, 96, Color(color.lightened(0.3), 0.6 * (1.0 - e)), 4.0, true)
 
 
 func _hail(b: Buyer) -> void:

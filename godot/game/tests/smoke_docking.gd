@@ -253,6 +253,33 @@ func _init() -> void:
 		await process_frame
 		check(hud._reach_text == "Speak to %s" % t["name"], "after a deal it is Speak to (%s)" % hud._reach_text)
 
+	# The portal: stepped into, a rung built, sailed through; then the recall
+	# home, and refused the second time.
+	p["doubloons"] = 60000.0
+	s.save["discoveries"] = ["shallows-0", "open_waters-0"]
+	sea._boat.position = Vector2(float(Portal.AT["x"]), float(Portal.AT["y"]))
+	sea._recall_t = 99.0
+	for f: int in 3:
+		await process_frame
+	check(hud._reach_text == "Step through the portal", "the portal offers itself (%s)" % hud._reach_text)
+	check(sea._portal.live, "a stone wakes the portal")
+	hud._press_reach()
+	await process_frame
+	var ps: PortalSheet = _find(sea, PortalSheet)
+	check(ps != null, "stepping through opens Where to?")
+	ps._sel = Portal.tier_def(2)
+	await ps._build()
+	check(Js.num(p.get("portal_tier")) == 2.0, "the next rung is built (%s)" % ps._err.text)
+	ps._go(Portal.tier_def(2))
+	await create_timer(1.3).timeout
+	check(sea._boat.position.distance_to(Vector2(0, 5350)) < 5.0 and not sea._warping, "the portal sails her to Open Waters (%s)" % str(sea._boat.position))
+	await sea._press_recall()
+	await create_timer(1.3).timeout
+	check(sea._boat.position.distance_to(Vector2(float(Portal.HOME_TO["x"]), float(Portal.HOME_TO["y"]))) < 5.0, "the recall takes her home")
+	sea._boat.position = Vector2(0, 3000)
+	await sea._press_recall()
+	check(hud._toast.text.begins_with("Recall ready in"), "a second recall waits (%s)" % hud._toast.text)
+
 	print("  docking smoke: %s" % ("ok" if bad == 0 else "%d failed" % bad))
 	quit(0 if bad == 0 else 1)
 

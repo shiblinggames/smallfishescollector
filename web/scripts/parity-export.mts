@@ -41,7 +41,7 @@ import type { SpeciesRow } from '../lib/data/fishingData'
 import { installRng, mulberry32, seedOf, type Rng } from '../lib/rng'
 import { installClock, clockNow } from '../lib/clock'
 import { hotspotsAt } from '../lib/seaHotspots'
-import { goAshore, digHere, openBottle, getDigState, folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod } from '../lib/core/sea'
+import { goAshore, digHere, openBottle, getDigState, folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod, buyPortalTier, spendRecall } from '../lib/core/sea'
 import { saveSeaPosition, strikeDeal, wagerForRunnerRod, dealtToday } from '../lib/core/selling'
 import { tradersAround, seaDay } from '../lib/seaTraders'
 import { seaClock, CYCLE_MS } from '../lib/seaClock'
@@ -703,6 +703,32 @@ shop.push(await scripted('the wanderers', 38, captainWith(38, 99, 5, { doubloons
     for (const r of runners.slice(0, 2)) { await bet(r.key); await deal(r.key) }
     await dealt()
     x.advance(CYCLE_MS / 2 + (k % 3) * 9_000_000)
+  }
+}))
+// The portal and the recall: every rung bought in turn (refused without the
+// stone, then without the money), past the top, and the recall on both sides
+// across its 48 minutes.
+shop.push(await scripted('the portal and the recall', 39, captainWith(39, 99, 5, { doubloons: 5_000 }), async x => {
+  const sea = localSeaData(x.save)
+  const c = (op: string, args: unknown[], run: () => Promise<unknown>) => x.call(op, args, run)
+  const buy = () => c('buyPortalTier', [], () => buyPortalTier(sea, x.uid))
+  const recall = (side: string) => c('spendRecall', [side], () => spendRecall(sea, x.uid, side as never))
+  await buy()
+  const caches = ISLES.filter(i => i.kind === 'cache')
+  for (const band of ['open_waters', 'deep', 'abyss', 'ancient_deep']) {
+    await x.patchSave({ discoveries: [...(x.save.discoveries as string[]), caches.find(i => i.band === band)!.id] })
+    await buy()
+    await x.patchProfile({ doubloons: 1_000_000 })
+    await buy(); await buy()
+    await x.patchProfile({ doubloons: 5_000 })
+  }
+  await x.patchProfile({ portal_tier: 2 })
+  await x.patchSave({ discoveries: [] })
+  await buy()
+  await recall('fishing'); await recall('fishing'); await recall('expedition'); await recall('nowhere')
+  for (const step of [10, 37, 2, 1, 47, 3]) {
+    x.advance(step * 60_000)
+    await recall('fishing'); await recall('expedition')
   }
 }))
 write('shop.json', { sessions: shop })

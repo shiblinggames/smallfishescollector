@@ -40,7 +40,7 @@ const SHARED_PROFILE: Array[String] = [
 	"doubloons", "prestige_levels", "zone_golden_boost",
 	"zone_shallows_rewarded", "zone_open_waters_rewarded", "zone_deep_rewarded", "zone_abyss_rewarded",
 	"ancient_catches", "ancient_vigil", "lifetime_species", "lifetime_species_count",
-	"sea_explored",
+	"sea_explored", "portal_tier",
 ]
 const LEDGER_KEEP: int = 400
 static var dir_override: String = ""

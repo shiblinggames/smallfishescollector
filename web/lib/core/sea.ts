@@ -752,8 +752,8 @@ export async function buyPortalTier(db: SeaData, uid: string): Promise<{ ok: tru
 
   if (!hasStoneFor(next.tier, discovered)) {
     return {
-      error: `No stone for ${next.name} yet. There is one in a chest out in ${next.name} — `
-        + 'sail it the long way first, then the portal will remember the road.',
+      error: `No stone for ${next.name} yet. There is one in a chest out in ${next.name}. `
+        + 'Sail it the long way first, then the portal will remember the road.',
     }
   }
   if (Number(profile.doubloons ?? 0) < next.cost) return { error: `That stage costs ${next.cost.toLocaleString()} ⟡.` }

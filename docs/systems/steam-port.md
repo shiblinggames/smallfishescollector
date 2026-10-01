@@ -130,7 +130,27 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     3. "Once a night" is once per UTC day.
     4. "You have already had a word with" uses the full name where every other line uses the
        short one.
-  NEXT: the portal and recall. Specs were read off the web on 2026-10-01.
+  STAGE 5, THE PORTAL AND THE RECALL (2026-10-01): `core/portal.gd` ports lib/seaPortal,
+  lib/seaRecall, buyPortalTier and spendRecall. Parity: a 44-call session buying every rung
+  (refused without the stone, then without the money, then past the top) and the recall on
+  both sides across its 48 minutes. The web's "No stone" refusal had an em-dash; fixed on both
+  sides.
+  - On the chart, `game/portal_well.gd` is the well off the Homestead. It turns in the colour
+    of the furthest water it reaches and gathers when the boat sits in its mouth. It is still,
+    grey "dead water" until a stone is opened, and its board says where the stone is.
+  - Sitting in the mouth offers "Step through the portal". It never takes you by itself, and
+    after a passage it only offers again once you have sailed out of the mouth.
+  - `game/portal_sheet.gd` is "Where to?". The waters it reaches sail at a press, the next is
+    priced and says whether the stone is in hand, and the crossing to the Anchorage shows
+    locked (the expedition side is not ported).
+  - The passage (portal and recall alike) brings the light up, moves her under it, clears it,
+    and rings the water out where she surfaces.
+  - The RECALL is a pill on the HUD's clock row, "Recall home" or "Recall in Nm". It goes to
+    the portal's mouth, once a sea day/night cycle. The web keeps it on the minimap, which is
+    not ported; it can move there when the minimap is.
+  - In a Charter the portal's rung is the crew's (stones come from the shared discoveries),
+    and each captain has their own recall.
+  THE REST OF THE SEA IS DONE except the minimap/fog drawing and the expedition side.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

@@ -87410,6 +87410,508 @@
     }
    ],
    "end": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0038\",\"profile\":{\"id\":\"captain-00parity0038\",\"username\":\"crew_y0038\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":1700000,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":2,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":5,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":2263770,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":0,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":null,\"showcase_crew_ids\":[],\"lifetime_recruits\":0,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":true,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":820,\"chum\":240,\"anglers_formula\":480,\"minnow\":340,\"night_crawler\":160},\"hold\":{\"1\":32,\"20\":2,\"45\":4,\"100\":1},\"collection\":{},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{\"yoons\":1},\"ledger\":[{\"amount\":-115,\"reason\":\"Bought 20 Worms from Barnacle Garrick\",\"currency\":\"doubloons\"},{\"amount\":-1620,\"reason\":\"Bought 30 Chum from Patched Drassel\",\"currency\":\"doubloons\"},{\"amount\":-3160,\"reason\":\"Bought 30 Angler's Formula from Bent Drassel\",\"currency\":\"doubloons\"},{\"amount\":-315,\"reason\":\"Bought 20 Minnow from Half Fennick\",\"currency\":\"doubloons\"},{\"amount\":-3095,\"reason\":\"Bought 30 Angler's Formula from Quiet Thole\",\"currency\":\"doubloons\"},{\"amount\":1118,\"reason\":\"Sold the hold to Hollow Ketch at sea\",\"currency\":\"doubloons\"},{\"amount\":-330,\"reason\":\"Bought 20 Minnow from Salt Thole\",\"currency\":\"doubloons\"},{\"amount\":1118,\"reason\":\"Sold the hold to Squint Murrow at sea\",\"currency\":\"doubloons\"},{\"amount\":1928,\"reason\":\"Sold the hold to Old Crayle at sea\",\"currency\":\"doubloons\"},{\"amount\":-525,\"reason\":\"Bought 20 Night Crawler from Bent Bilge\",\"currency\":\"doubloons\"},{\"amount\":-3230,\"reason\":\"Bought 30 Angler's Formula from Quiet Wick\",\"currency\":\"doubloons\"},{\"amount\":2886,\"reason\":\"Sold the hold to Salt Drassel at sea\",\"currency\":\"doubloons\"},{\"amount\":-410,\"reason\":\"Bought 20 Minnow from Squint Wick\",\"currency\":\"doubloons\"},{\"amount\":-375,\"reason\":\"Bought 20 Minnow from Squint Garrick\",\"currency\":\"doubloons\"},{\"amount\":194,\"reason\":\"Sold the hold to Salt Ketch at sea\",\"currency\":\"doubloons\"},{\"amount\":192,\"reason\":\"Sold the hold to Half Thole at sea\",\"currency\":\"doubloons\"},{\"amount\":-135,\"reason\":\"Bought 20 Worms from Lucky Drassel\",\"currency\":\"doubloons\"},{\"amount\":1161,\"reason\":\"Sold the hold to Old Thole at sea\",\"currency\":\"doubloons\"},{\"amount\":-550,\"reason\":\"Bought 20 Night Crawler from Wry Thole\",\"currency\":\"doubloons\"},{\"amount\":1161,\"reason\":\"Sold the hold to Bent Ketch at sea\",\"currency\":\"doubloons\"},{\"amount\":1161,\"reason\":\"Sold the hold to Half Rud at sea\",\"currency\":\"doubloons\"},{\"amount\":1968,\"reason\":\"Sold the hold to Patched Drassel at sea\",\"currency\":\"doubloons\"},{\"amount\":1992,\"reason\":\"Sold the hold to Patched Drassel at sea\",\"currency\":\"doubloons\"},{\"amount\":-2040,\"reason\":\"Bought 30 Chum from Wry Dunnage\",\"currency\":\"doubloons\"},{\"amount\":-120,\"reason\":\"Bought 20 Worms from Lucky Murrow\",\"currency\":\"doubloons\"},{\"amount\":2115,\"reason\":\"Sold the hold to Patched Fennick at sea\",\"currency\":\"doubloons\"},{\"amount\":4024,\"reason\":\"Sold the hold to Quiet Ketch at sea\",\"currency\":\"doubloons\"},{\"amount\":-2990,\"reason\":\"Bought 30 Angler's Formula from Salt Drassel\",\"currency\":\"doubloons\"},{\"amount\":4024,\"reason\":\"Sold the hold to Salt Fennick at sea\",\"currency\":\"doubloons\"},{\"amount\":-360,\"reason\":\"Bought 20 Minnow from Tallow Wick\",\"currency\":\"doubloons\"},{\"amount\":-105,\"reason\":\"Bought 20 Worms from Old Rud\",\"currency\":\"doubloons\"},{\"amount\":229,\"reason\":\"Sold the hold to Squint Drassel at sea\",\"currency\":\"doubloons\"},{\"amount\":-1845,\"reason\":\"Bought 30 Chum from Bent Sorrel\",\"currency\":\"doubloons\"},{\"amount\":-380,\"reason\":\"Bought 20 Minnow from Quiet Crayle\",\"currency\":\"doubloons\"},{\"amount\":-375,\"reason\":\"Bought 20 Minnow from Quiet Crayle\",\"currency\":\"doubloons\"},{\"amount\":-125,\"reason\":\"Bought 20 Worms from Barnacle Hessel\",\"currency\":\"doubloons\"},{\"amount\":-2995,\"reason\":\"Bought 30 Angler's Formula from Salt Crayle\",\"currency\":\"doubloons\"},{\"amount\":-630,\"reason\":\"Bought 20 Night Crawler from Old Sorrel\",\"currency\":\"doubloons\"},{\"amount\":-545,\"reason\":\"Bought 20 Night Crawler from Wry Drassel\",\"currency\":\"doubloons\"},{\"amount\":-555,\"reason\":\"Bought 20 Night Crawler from Quiet Sorrel\",\"currency\":\"doubloons\"},{\"amount\":4067,\"reason\":\"Sold the hold to Lucky Rud at sea\",\"currency\":\"doubloons\"},{\"amount\":-3390,\"reason\":\"Bought 30 Angler's Formula from Hollow Wick\",\"currency\":\"doubloons\"},{\"amount\":-565,\"reason\":\"Bought 20 Night Crawler from Barnacle Thole\",\"currency\":\"doubloons\"},{\"amount\":-105,\"reason\":\"Bought 20 Worms from Grey Hessel\",\"currency\":\"doubloons\"},{\"amount\":-420,\"reason\":\"Bought 20 Minnow from Old Skerry\",\"currency\":\"doubloons\"},{\"amount\":272,\"reason\":\"Sold the hold to Crooked Garrick at sea\",\"currency\":\"doubloons\"},{\"amount\":-3110,\"reason\":\"Bought 30 Angler's Formula from Crooked Ketch\",\"currency\":\"doubloons\"},{\"amount\":-420,\"reason\":\"Bought 20 Minnow from Quiet Murrow\",\"currency\":\"doubloons\"},{\"amount\":2048,\"reason\":\"Sold the hold to Tallow Murrow at sea\",\"currency\":\"doubloons\"},{\"amount\":-2105,\"reason\":\"Bought 30 Chum from Half Thole\",\"currency\":\"doubloons\"},{\"amount\":-115,\"reason\":\"Bought 20 Worms from Lucky Dunnage\",\"currency\":\"doubloons\"},{\"amount\":-140,\"reason\":\"Bought 20 Worms from Half Murrow\",\"currency\":\"doubloons\"},{\"amount\":-3555,\"reason\":\"Bought 30 Angler's Formula from Grey Thole\",\"currency\":\"doubloons\"},{\"amount\":3967,\"reason\":\"Sold the hold to Half Fennick at sea\",\"currency\":\"doubloons\"},{\"amount\":-320,\"reason\":\"Bought 20 Minnow from Quiet Murrow\",\"currency\":\"doubloons\"},{\"amount\":4110,\"reason\":\"Sold the hold to Tallow Rud at sea\",\"currency\":\"doubloons\"},{\"amount\":4110,\"reason\":\"Sold the hold to Lucky Ketch at sea\",\"currency\":\"doubloons\"},{\"amount\":-3045,\"reason\":\"Bought 30 Angler's Formula from Crooked Bilge\",\"currency\":\"doubloons\"},{\"amount\":-115,\"reason\":\"Bought 20 Worms from Quiet Sorrel\",\"currency\":\"doubloons\"},{\"amount\":-3155,\"reason\":\"Bought 30 Angler's Formula from Half Murrow\",\"currency\":\"doubloons\"},{\"amount\":1290,\"reason\":\"Sold the hold to Tallow Bilge at sea\",\"currency\":\"doubloons\"},{\"amount\":-2885,\"reason\":\"Bought 30 Angler's Formula from Quiet Hessel\",\"currency\":\"doubloons\"},{\"amount\":-595,\"reason\":\"Bought 20 Night Crawler from Half Fennick\",\"currency\":\"doubloons\"},{\"amount\":2061,\"reason\":\"Sold the hold to Patched Hessel at sea\",\"currency\":\"doubloons\"},{\"amount\":2192,\"reason\":\"Sold the hold to Tallow Wick at sea\",\"currency\":\"doubloons\"},{\"amount\":-3225,\"reason\":\"Bought 30 Angler's Formula from Half Skerry\",\"currency\":\"doubloons\"},{\"amount\":-330,\"reason\":\"Bought 20 Minnow from Old Sorrel\",\"currency\":\"doubloons\"},{\"amount\":-335,\"reason\":\"Bought 20 Minnow from Wry Sorrel\",\"currency\":\"doubloons\"},{\"amount\":-390,\"reason\":\"Bought 20 Minnow from Half Crayle\",\"currency\":\"doubloons\"},{\"amount\":-380,\"reason\":\"Bought 20 Minnow from Tallow Ketch\",\"currency\":\"doubloons\"},{\"amount\":-1940,\"reason\":\"Bought 30 Chum from Grey Bilge\",\"currency\":\"doubloons\"},{\"amount\":-1870,\"reason\":\"Bought 30 Chum from Lucky Sorrel\",\"currency\":\"doubloons\"},{\"amount\":356,\"reason\":\"Sold the hold to Wry Fennick at sea\",\"currency\":\"doubloons\"},{\"amount\":374,\"reason\":\"Sold the hold to Lucky Bilge at sea\",\"currency\":\"doubloons\"},{\"amount\":-590,\"reason\":\"Bought 20 Night Crawler from Patched Hessel\",\"currency\":\"doubloons\"},{\"amount\":-2820,\"reason\":\"Bought 30 Angler's Formula from Tallow Crayle\",\"currency\":\"doubloons\"},{\"amount\":-120,\"reason\":\"Bought 20 Worms from Bent Skerry\",\"currency\":\"doubloons\"},{\"amount\":1333,\"reason\":\"Sold the hold to Lucky Thole at sea\",\"currency\":\"doubloons\"},{\"amount\":-105,\"reason\":\"Bought 20 Worms from Quiet Drassel\",\"currency\":\"doubloons\"},{\"amount\":1333,\"reason\":\"Sold the hold to Salt Crayle at sea\",\"currency\":\"doubloons\"},{\"amount\":2287,\"reason\":\"Sold the hold to Crooked Dunnage at sea\",\"currency\":\"doubloons\"},{\"amount\":2154,\"reason\":\"Sold the hold to Tallow Rud at sea\",\"currency\":\"doubloons\"},{\"amount\":-1970,\"reason\":\"Bought 30 Chum from Barnacle Crayle\",\"currency\":\"doubloons\"},{\"amount\":-2915,\"reason\":\"Bought 30 Angler's Formula from Patched Bilge\",\"currency\":\"doubloons\"},{\"amount\":-1970,\"reason\":\"Bought 30 Chum from Barnacle Fennick\",\"currency\":\"doubloons\"},{\"amount\":-355,\"reason\":\"Bought 20 Minnow from Half Skerry\",\"currency\":\"doubloons\"},{\"amount\":-2945,\"reason\":\"Bought 30 Angler's Formula from Old Hessel\",\"currency\":\"doubloons\"},{\"amount\":-340,\"reason\":\"Bought 20 Minnow from Grey Garrick\",\"currency\":\"doubloons\"},{\"amount\":4050,\"reason\":\"Sold the hold to Lucky Dunnage at sea\",\"currency\":\"doubloons\"},{\"amount\":-405,\"reason\":\"Bought 20 Minnow from Lucky Bilge\",\"currency\":\"doubloons\"},{\"amount\":-3310,\"reason\":\"Bought 30 Angler's Formula from Lucky Wick\",\"currency\":\"doubloons\"},{\"amount\":-100000,\"reason\":\"Staked on the YOLO Rod with a blockade runner\",\"currency\":\"doubloons\"},{\"amount\":-100000,\"reason\":\"Staked on the YOLO Rod with a blockade runner\",\"currency\":\"doubloons\"},{\"amount\":-100000,\"reason\":\"Won the Yoon's Locked-In Rod off a blockade runner\",\"currency\":\"doubloons\"},{\"amount\":-100000,\"reason\":\"Staked on the YOLO Rod with a blockade runner\",\"currency\":\"doubloons\"},{\"amount\":-100000,\"reason\":\"Staked on the YOLO Rod with a blockade runner\",\"currency\":\"doubloons\"},{\"amount\":-100000,\"reason\":\"Staked on the YOLO Rod with a blockade runner\",\"currency\":\"doubloons\"}],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[{\"trader_key\":\"20755:-5:4\",\"sea_day\":20755,\"kind\":\"tinker\",\"detail\":{\"deal\":\"bait\",\"baitType\":\"anglers_formula\",\"qty\":30,\"cost\":2915}},{\"trader_key\":\"20755:-3:2\",\"sea_day\":20755,\"kind\":\"tinker\",\"detail\":{\"deal\":\"bait\",\"baitType\":\"chum\",\"qty\":30,\"cost\":1970}},{\"trader_key\":\"20756:-9:2\",\"sea_day\":20756,\"kind\":\"peddler\",\"detail\":{\"deal\":\"bait\",\"baitType\":\"minnow\",\"qty\":20,\"cost\":355}},{\"trader_key\":\"20756:-7:1\",\"sea_day\":20756,\"kind\":\"tinker\",\"detail\":{\"deal\":\"bait\",\"baitType\":\"anglers_formula\",\"qty\":30,\"cost\":2945}},{\"trader_key\":\"20756:-6:0\",\"sea_day\":20756,\"kind\":\"peddler\",\"detail\":{\"deal\":\"bait\",\"baitType\":\"minnow\",\"qty\":20,\"cost\":340}},{\"trader_key\":\"20756:-4:0\",\"sea_day\":20756,\"kind\":\"salter\",\"detail\":{\"deal\":\"buy\",\"rate\":0.83}},{\"trader_key\":\"20756:-4:1\",\"sea_day\":20756,\"kind\":\"peddler\",\"detail\":{\"deal\":\"bait\",\"baitType\":\"minnow\",\"qty\":20,\"cost\":405}},{\"trader_key\":\"20756:-1:2\",\"sea_day\":20756,\"kind\":\"tinker\",\"detail\":{\"deal\":\"bait\",\"baitType\":\"anglers_formula\",\"qty\":30,\"cost\":3310}},{\"trader_key\":\"yolo:20757\",\"sea_day\":20757,\"kind\":\"runner\",\"detail\":{\"deal\":\"wager\",\"rodTier\":15,\"stake\":100000}},{\"trader_key\":\"yolo:20758\",\"sea_day\":20758,\"kind\":\"runner\",\"detail\":{\"deal\":\"wager\",\"rodTier\":15,\"stake\":100000}},{\"trader_key\":\"yolo:20759\",\"sea_day\":20759,\"kind\":\"runner\",\"detail\":{\"deal\":\"wager\",\"rodTier\":20,\"stake\":100000}},{\"trader_key\":\"yolo:20760\",\"sea_day\":20760,\"kind\":\"runner\",\"detail\":{\"deal\":\"wager\",\"rodTier\":15,\"stake\":100000}},{\"trader_key\":\"yolo:20761\",\"sea_day\":20761,\"kind\":\"runner\",\"detail\":{\"deal\":\"wager\",\"rodTier\":15,\"stake\":100000}},{\"trader_key\":\"yolo:20762\",\"sea_day\":20762,\"kind\":\"runner\",\"detail\":{\"deal\":\"wager\",\"rodTier\":15,\"stake\":100000}}],\"market\":null,\"crew\":[],\"recruits\":[],\"bunks\":[],\"nextId\":1,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}"
+  },
+  {
+   "name": "the portal and the recall",
+   "seed": 39,
+   "start": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0039\",\"profile\":{\"id\":\"captain-00parity0039\",\"username\":\"crew_y0039\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":5000,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":2,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":5,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":2263770,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":0,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":null,\"showcase_crew_ids\":[],\"lifetime_recruits\":0,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":false,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":600},\"hold\":{},\"collection\":{},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{},\"ledger\":[],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":null,\"crew\":[],\"recruits\":[],\"bunks\":[],\"nextId\":1,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}",
+   "ops": [
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "No stone for Open Waters yet. There is one in a chest out in Open Waters. Sail it the long way first, then the portal will remember the road."
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "discoveries": [
+        "open_waters-0"
+       ]
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "That stage costs 8,000 ⟡."
+     }
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "doubloons": 1000000
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "tier": 2,
+      "doubloons": 992000
+     }
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "No stone for The Deep yet. There is one in a chest out in The Deep. Sail it the long way first, then the portal will remember the road."
+     }
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "doubloons": 5000
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "discoveries": [
+        "open_waters-0",
+        "deep-0"
+       ]
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "That stage costs 40,000 ⟡."
+     }
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "doubloons": 1000000
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "tier": 3,
+      "doubloons": 960000
+     }
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "No stone for The Abyss yet. There is one in a chest out in The Abyss. Sail it the long way first, then the portal will remember the road."
+     }
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "doubloons": 5000
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "discoveries": [
+        "open_waters-0",
+        "deep-0",
+        "abyss-0"
+       ]
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "That stage costs 120,000 ⟡."
+     }
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "doubloons": 1000000
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "tier": 4,
+      "doubloons": 880000
+     }
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "No stone for The Ancient Deep yet. There is one in a chest out in The Ancient Deep. Sail it the long way first, then the portal will remember the road."
+     }
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "doubloons": 5000
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "discoveries": [
+        "open_waters-0",
+        "deep-0",
+        "abyss-0",
+        "ancient_deep-0"
+       ]
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "That stage costs 300,000 ⟡."
+     }
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "doubloons": 1000000
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "tier": 5,
+      "doubloons": 700000
+     }
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "The portal already reaches the Ancient Deep."
+     }
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "doubloons": 5000
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "patchProfile",
+     "now": 1790769600000,
+     "args": [
+      {
+       "portal_tier": 2
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "patchSave",
+     "now": 1790769600000,
+     "args": [
+      {
+       "discoveries": []
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "buyPortalTier",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "error": "No stone for The Deep yet. There is one in a chest out in The Deep. Sail it the long way first, then the portal will remember the road."
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790769600000,
+     "args": [
+      "fishing"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "at": "2026-09-30T12:00:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790769600000,
+     "args": [
+      "fishing"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": false,
+      "readyAt": "2026-09-30T12:48:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790769600000,
+     "args": [
+      "expedition"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "at": "2026-09-30T12:00:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790769600000,
+     "args": [
+      "nowhere"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": false,
+      "readyAt": null
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790770200000,
+     "args": [
+      "fishing"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": false,
+      "readyAt": "2026-09-30T12:48:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790770200000,
+     "args": [
+      "expedition"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": false,
+      "readyAt": "2026-09-30T12:48:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790772420000,
+     "args": [
+      "fishing"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": false,
+      "readyAt": "2026-09-30T12:48:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790772420000,
+     "args": [
+      "expedition"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": false,
+      "readyAt": "2026-09-30T12:48:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790772540000,
+     "args": [
+      "fishing"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "at": "2026-09-30T12:49:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790772540000,
+     "args": [
+      "expedition"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "at": "2026-09-30T12:49:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790772600000,
+     "args": [
+      "fishing"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": false,
+      "readyAt": "2026-09-30T13:37:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790772600000,
+     "args": [
+      "expedition"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": false,
+      "readyAt": "2026-09-30T13:37:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790775420000,
+     "args": [
+      "fishing"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": false,
+      "readyAt": "2026-09-30T13:37:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790775420000,
+     "args": [
+      "expedition"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": false,
+      "readyAt": "2026-09-30T13:37:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790775600000,
+     "args": [
+      "fishing"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "at": "2026-09-30T13:40:00.000Z"
+     }
+    },
+    {
+     "op": "spendRecall",
+     "now": 1790775600000,
+     "args": [
+      "expedition"
+     ],
+     "rolls": 0,
+     "result": {
+      "ok": true,
+      "at": "2026-09-30T13:40:00.000Z"
+     }
+    }
+   ],
+   "end": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0039\",\"profile\":{\"id\":\"captain-00parity0039\",\"username\":\"crew_y0039\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":5000,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":2,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":5,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":2263770,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":0,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":null,\"showcase_crew_ids\":[],\"lifetime_recruits\":0,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":false,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":2,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":\"2026-09-30T13:40:00.000Z\",\"last_recall_exp_at\":\"2026-09-30T13:40:00.000Z\",\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":600},\"hold\":{},\"collection\":{},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{},\"ledger\":[{\"amount\":-8000,\"reason\":\"Homestead Portal: Open Waters\",\"currency\":\"doubloons\"},{\"amount\":-40000,\"reason\":\"Homestead Portal: The Deep\",\"currency\":\"doubloons\"},{\"amount\":-120000,\"reason\":\"Homestead Portal: The Abyss\",\"currency\":\"doubloons\"},{\"amount\":-300000,\"reason\":\"Homestead Portal: The Ancient Deep\",\"currency\":\"doubloons\"}],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":null,\"crew\":[],\"recruits\":[],\"bunks\":[],\"nextId\":1,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}"
   }
  ]
 }
