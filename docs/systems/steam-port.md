@@ -169,6 +169,51 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     bottom 30%, inside the hull's width, which keeps the fishing line and the ring where it
     enters the water). The web's art is untouched; hashes in art/.derippled.json mean it only
     reruns when the web's art changes.
+  THE SEA PAST THE WEB (2026-10-01, Kong: "do it all, I wanna see what's possible"). Nine
+  stages, each its own commit. Visual only: no rule or number changed, and the squalls
+  are a rules-exact port (parity: 2,360 squalls in 2,000 moments).
+  1. REACTIVE WATER (`game/sea_field.gd`). An off-screen SubViewport of height: the Wake's
+     own MultiMeshes, a push under every hull, and rings for casts, bobbers and splashes.
+     The water shader reads its slope for light and shade, foam, glints and a bent swell,
+     and at night the stirred water glows.
+  2. SHORES (`game/shore.gd`). Each island plate is traced from a coarse copy of its alpha
+     (so palms and spars drop out) into a LightOccluder2D. Godot's 2D distance field then
+     gives the water lighter shallows and broken foam lapping in toward each beach.
+  3. LIGHT. `tools/setup.mjs` makes normal maps from the land's paintings; `game/lit.gd`
+     pairs them (with specular off, since land is not glossy). A DirectionalLight2D sun
+     follows the sea clock: white by day, low and warm at dusk, blue at night. Island
+     shadows on the water are raymarched toward the sun through the distance field. The
+     world sits at 0.88 by day so the sun has room to model it.
+  4. GLOW AND GRADE. A WorldEnvironment (post stops at layer 0, so the HUD is never
+     touched) blooms what is nearly white and grades each water by band. HDR 2D was TRIED
+     AND DROPPED: it moves the whole canvas into linear colour, and every painting and
+     shader here is sRGB.
+  5. BOATS IN THE SEA. `Skipper.sway()` adds bob and roll (rougher further out and in a
+     squall), a heel into turns and the bow lifting under way, pivoted on the waterline.
+     The reflection counter-rotates.
+  6. NIGHT. Every lamp throws a rippling column down the water: hers, each wanderer's own
+     lantern, the town, the berths, the portal. Stars glint. The web's blooms
+     (lib/seaBlooms) mottle their waters, and deep motes drift up in the Abyss and the
+     Ancient Deep.
+  7. WEATHER (`core/weather.gd` + `game/squall_fx.gd`). The fishing sea's squalls, ported
+     exactly. Under one the water goes slate, choppy and rain-pocked, rain drives across,
+     the light greys and hulls pitch. The heaviest squalls throw lightning that lights
+     the whole sea (the web only paled the storm's shadow, and only in the north).
+  8. SOUND (`game/sea_sound.gd`), all synthesised on audio buses:
+     - hull hiss with way, swell, wind further out, and rain
+     - positional surf at every island, gulls from the shore or the nearest flock
+     - a creak on a hard turn, and thunder after lightning
+     - a low-pass that closes in at night, in deep water and while a panel is up
+     The web's version was admin-only and its recordings were never made.
+  9. LIFE AND SKY (`game/sea_life.gd`, `game/sea_sky.gd`). The web's shoals (density map,
+     hotspot pull, bow-wash bolting, scatter on a cast), drift flecks, gulls over shoal
+     and flotsam hotspots with shadows and alarm, clouds with parallax and shadows on the
+     water, and the horizon haze. Godot additions:
+     - shoals look beneath the surface (dark in shallow water, pale in deep)
+     - gulls cry
+     - clouds take the hour's light
+  Not yet: the minimap (its fog), the settings gear (a sound mute too), leviathans and
+  north weather (with the expedition sea).
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

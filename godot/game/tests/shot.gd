@@ -233,6 +233,7 @@ func _init() -> void:
 		"wake", "still":
 			sea._boat.position = Vector2(-1500, 2600)
 			if what == "wake":
+				sea._sky._next = 0.0
 				sea._boat.heading = 0.3
 				sea._boat.target = Vector2(2500, 3800)
 				for f: int in 110:

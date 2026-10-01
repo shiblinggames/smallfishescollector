@@ -47,6 +47,8 @@ var _field: SeaField
 var _motes: GPUParticles2D
 var _squall: SquallFx
 var _sound: SeaSound
+var _life: SeaLife
+var _sky: SeaSky
 var _snd_heading: float = 0.0
 ## How far into a squall the view is, eased (dims the scene, roughs the hulls).
 var _storm: float = 0.0
@@ -169,6 +171,11 @@ func _ready() -> void:
 	add_child(_squall)
 	_sound = SeaSound.new()
 	add_child(_sound)
+	_life = SeaLife.new()
+	_world.add_child(_life)
+	_sky = SeaSky.new()
+	add_child(_sky)
+	_sky.attach(_world)
 	_squall.struck.connect(_sound.thunder)
 	for port: Dictionary in Chart.ports():
 		_sound.add_surf(_world, Vector2(float(port["x"]), float(port["y"])), float(port["r"]))
@@ -183,6 +190,7 @@ func _ready() -> void:
 	_water.set_shader_parameter("u_field_on", 1.0)
 	_boat = Boat.new()
 	_boat.field = _field
+	_boat.cast_landed.connect(_life.scatter)
 	var at: Variant = session.profile().get("sea_x")
 	_boat.position = Vector2(Js.num(at), Js.num(session.profile().get("sea_y"))) if at != null else Chart.HOME
 	_world.add_child(_boat)
@@ -309,6 +317,9 @@ func _process(delta: float) -> void:
 		b.lift = lift
 	_wanderers(now, clock, lift)
 	_night_water(dark, cam_world)
+	var half: Vector2 = Vector2(vp.x / 2.0 / _camera.zoom.x, vp.y / 2.0 / _camera.zoom.x / Chart.GROUND)
+	_life.step(delta, cam_world, half, _boat.position, _boat.velocity.length(), dark, clock["warmth"], now)
+	_sky.step(delta, cam_world, _camera.zoom.x, vp, dark, clock["warmth"], stops[2])
 	_weather(delta, now, cam_world)
 	# Every hull's wake, laid on the water.
 	var contacts: Array = [_boat.wake_contact()]
@@ -645,6 +656,9 @@ func _weather(delta: float, now: float, at: Vector2) -> void:
 		if l > land:
 			land = l
 			shore = c
+	if _life.flock_at != Vector2.INF and _life.flock_at.distance_to(at) < 1600.0:
+		land = maxf(land, clampf(1.0 - _life.flock_at.distance_to(at) / 1600.0, 0.0, 1.0))
+		shore = _life.flock_at
 	var shore_canvas: Vector2 = _world.get_global_transform() * shore
 	_sound.step(delta, spd, turn, depth, land, _squall.rain, SeaClock.at(now)["darkness"], _hud.busy(), shore_canvas)
 

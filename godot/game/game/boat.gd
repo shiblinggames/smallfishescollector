@@ -54,6 +54,8 @@ var _facing: float = -1.0
 var lantern: PointLight2D
 ## The sea's disturbance (set by the sea): casts, bobbers and splashes ring it.
 var field: SeaField
+## The line went in here (the shoals scatter from it).
+signal cast_landed(at: Vector2)
 var _bob_t: float = 0.0
 
 
@@ -193,6 +195,7 @@ func set_pose(pose: String) -> void:
 		# The line lands: a ring where it went in.
 		field.ring(hook_at(), 150.0, 1.7, 0.9)
 		_bob_t = 0.0
+		cast_landed.emit(hook_at())
 	skipper.set_frame(pose)
 
 
