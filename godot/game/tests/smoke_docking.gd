@@ -189,6 +189,70 @@ func _init() -> void:
 		check(sea._taken.has(bottles[0]["key"]), "a bottle is fished out")
 	check(Explore.fog_progress(Explore.fog_decode(p.get("sea_explored"))) > 0.0, "the fog is lifting where the boat has been")
 
+	# A regular: hailed, spoken to (the day's word, then asked what they are
+	# after), and the panel closed.
+	for c: Node in sea._room_layer.get_children():
+		c.queue_free()
+	var meg: Wanderer = sea._regulars["folk:meg"]
+	sea._boat.position = meg.position + Vector2(0, 100)
+	await process_frame
+	await process_frame
+	check(hud._reach_text == "Hail %s" % meg.info["name"], "a regular in range can be hailed (%s)" % hud._reach_text)
+	hud._press_reach()
+	for f: int in 4:
+		await process_frame
+	var tp: TraderPanel = _find(sea, TraderPanel)
+	check(tp != null, "hailing a regular opens the trader panel")
+	await tp._open_scene()
+	await process_frame
+	var scene: FolkScene = _find(tp, FolkScene)
+	check(scene != null, "Speak to opens the conversation")
+	scene._line.finish()
+	await scene._chat()
+	check(scene.rap.get("chattedToday", false) and Js.num(scene.rap.get("points")) == 1.0, "the day's word moves the rapport")
+	scene._line.finish()
+	await scene._ask()
+	check(scene.rap.get("want") != null, "asking names a fish (%s)" % str(scene.rap.get("want")))
+	scene.close()
+	tp.close()
+	await process_frame
+
+	# Strangers: a bundle of bait bought under the shop, and a salter taking
+	# the hold.
+	var now: float = Clock.now_ms()
+	var day: int = Traders.sea_day(now)
+	for deal: String in ["bait", "buy"]:
+		var t: Dictionary = {}
+		for x: Dictionary in Traders.around(0, 6000, 14000, day, now):
+			if x["deal"] == deal:
+				t = x
+				break
+		if t.is_empty():
+			print("  (no %s out today to try)" % deal)
+			continue
+		var at: Dictionary = Folk.drift_pos(float(t["x"]), float(t["y"]), float(t["driftR"]), float(t["driftRate"]), float(t["driftPhase"]), Clock.now_ms() / 1000.0)
+		sea._boat.position = Vector2(float(at["x"]), float(at["y"]) + 80.0)
+		s.save["hold"] = { "3": 5.0, "4": 2.0 }
+		await process_frame
+		await process_frame
+		check(sea._strangers.has(t["key"]), "the %s is on the water near the boat" % t["kind"])
+		check(hud._reach_text == "Hail %s" % t["name"], "a stranger in range can be hailed (%s)" % hud._reach_text)
+		hud._press_reach()
+		await process_frame
+		tp = _find(sea, TraderPanel)
+		check(tp != null, "hailing a stranger opens the trader panel")
+		var bait0: float = Js.num((s.save["bait"] as Dictionary).get(t.get("baitType", "")))
+		await tp._strike()
+		if deal == "bait":
+			check(Js.num((s.save["bait"] as Dictionary).get(t["baitType"])) == bait0 + float(t["qty"]), "the bait is aboard (%s)" % tp._note.text)
+		else:
+			check(s.store.hold_count(s.uid) == 0.0, "the salter takes the hold (%s)" % tp._note.text)
+		check(sea._dealt_keys.has(t["key"]) and (sea._strangers[t["key"]] as Wanderer).done, "the deal is counted and the plate greys")
+		tp.close()
+		await process_frame
+		await process_frame
+		check(hud._reach_text == "Speak to %s" % t["name"], "after a deal it is Speak to (%s)" % hud._reach_text)
+
 	print("  docking smoke: %s" % ("ok" if bad == 0 else "%d failed" % bad))
 	quit(0 if bad == 0 else 1)
 

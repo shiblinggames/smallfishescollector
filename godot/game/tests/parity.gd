@@ -23,6 +23,7 @@ func _init() -> void:
 	_daily()
 	_hotspots()
 	_bottles()
+	_traders()
 	_fishing(species, "res://tests/parity/fishing.json", "fishing")
 	_fishing(species, "res://tests/parity/fishing_rest.json", "the rest of fishing and the loadout")
 	_fishing(species, "res://tests/parity/shop.json", "selling and the tackle shop")
@@ -154,6 +155,34 @@ func _bottles() -> void:
 				return
 			n += 1
 	print("  bottles: %d bottles in %d moments float in the same places" % [n, cases["cases"].size()])
+
+
+func _traders() -> void:
+	var cases: Dictionary = _json("res://tests/parity/traders.json")
+	var n: int = 0
+	for c: Dictionary in cases["cases"]:
+		var now: float = float(c["now"])
+		var got: Array = Traders.around(float(c["x"]), float(c["y"]), 5200.0, Traders.sea_day(now), now)
+		var want: Array = c["traders"]
+		if got.size() != want.size():
+			_fail("traders at %s: %d out, the TS has %d" % [str(c["now"]), got.size(), want.size()])
+			return
+		# The floats to the reader's last place (see _bottles); the rest exactly.
+		for k: int in got.size():
+			var g: Dictionary = JsJson.parse(JsJson.stringify(got[k]))
+			var w: Dictionary = (want[k] as Dictionary).duplicate()
+			for f: String in ["x", "y", "driftR", "driftRate", "driftPhase"]:
+				if not _near(float(g[f]), float(w[f])):
+					_fail("trader %s: %s is %s, the TS %s" % [w["key"], f, str(g[f]), str(w[f])])
+					return
+				g.erase(f)
+				w.erase(f)
+			var d: String = JsJson.diff(g, w)
+			if d != "":
+				_fail("trader %s differs at %s" % [w["key"], d])
+				return
+		n += got.size()
+	print("  traders: %d wanderers in %d moments are the same people" % [n, cases["cases"].size()])
 
 
 ## Replay each session through the ported cast and reel: the same start save,

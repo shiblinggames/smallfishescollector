@@ -51,6 +51,17 @@ var _buyers: Array[Buyer] = []
 var _mark: BuyerMark
 ## Buyers dealt with this session: "Hail" becomes "Speak to".
 var _dealt: Dictionary = {}
+## Everyone else on the water, by key: the nine regulars and Yoon (always
+## there), and the strangers in the cells round the boat (and, at night, the
+## blockade runners), refreshed as the boat crosses a cell or the light turns.
+var _regulars: Dictionary = {}
+var _strangers: Dictionary = {}
+var _trader_cell: String = ""
+## The wanderers dealt with today (the plate greys, the cap counts them), and
+## the sea day that list is for.
+var _dealt_keys: Array = []
+var _dealt_day: int = -1
+var _hailing: String = ""
 var _save_t: float = 0.0
 ## Music starts on the first key or press, as on the web.
 var _music_started: bool = false
@@ -96,6 +107,7 @@ func _ready() -> void:
 		b.info = info
 		_world.add_child(b)
 		_buyers.append(b)
+	_moor_regulars()
 	_town_light = PointLight2D.new()
 	_town_light.texture = Glow.radial(256, Color(1.0, 0.8, 0.5), true)
 	_town_light.texture_scale = 4.0
@@ -190,6 +202,7 @@ func _process(delta: float) -> void:
 		bt.modulate = lift
 	for b: Buyer in _buyers:
 		b.lift = lift
+	_wanderers(now, clock, lift)
 	_reach(cam_world)
 	_hotspots(delta, now)
 	_finds(delta, now, lift)
@@ -254,6 +267,13 @@ func _reach(at: Vector2) -> void:
 			_hud.set_reach(("Speak to %s" if _dealt.has(b.info["zoneId"]) else "Hail %s") % b.info["name"], _hail.bind(b))
 			_mark.target = null
 			return
+	for list: Dictionary in [_regulars, _strangers]:
+		for k: String in list:
+			var wn: Wanderer = list[k]
+			if wn.near(at):
+				_hud.set_reach(("Speak to %s" if _dealt_keys.has(k) else "Hail %s") % wn.info["name"], _hail_wanderer.bind(wn))
+				_mark.target = null
+				return
 	_hud.set_reach("", Callable())
 	# The compass mark: while you are in a water, where its buyer is.
 	_mark.target = null if band_buyer == null else Vector2(band_buyer.position.x - at.x, (band_buyer.position.y - at.y) * Chart.GROUND) * _camera.zoom.x
@@ -578,6 +598,97 @@ func _enter_room(door: String) -> void:
 		_hud.refresh())
 	_hud.hold_for(room)
 	_room_layer.add_child(room)
+
+
+# ── The regulars and the wanderers ─────────────────────────────────────────────
+
+## The nine regulars and Yoon, where the chart moors them: each regular works
+## their own water (all the slack it leaves them, in legs with a sit between);
+## Yoon barely moves.
+func _moor_regulars() -> void:
+	for m: Dictionary in Rules.data()["regulars"]["moorings"]:
+		var f: Dictionary = Folk.by_id(str(m["folkId"]))
+		var info: Dictionary
+		if m["folkId"] == "yoon":
+			info = Traders.yoon()
+		else:
+			info = {
+				"key": "folk:%s" % m["folkId"], "kind": "talker", "folkId": m["folkId"], "name": m["name"],
+				"x": m["x"], "y": m["y"], "line": m["line"],
+				"driftR": Chart.drift_r(Vector2(float(m["x"]), float(m["y"])), m["zoneId"]) / 0.6,
+				"driftRate": m["driftRate"], "driftPhase": m["driftPhase"], "look": m["look"],
+				"deal": "talk", "topic": "chat", "mood": "One of the regulars", "lines": [m["line"]],
+			}
+		var w: Wanderer = Wanderer.new()
+		w.info = info
+		w.role = str(f.get("role", "One of the regulars"))
+		if not f.is_empty():
+			w.accent = Color(str(f["accent"]))
+		_world.add_child(w)
+		_regulars[info["key"]] = w
+
+
+## The strangers round the boat: re-derived when the boat crosses a cell or
+## night comes and goes (the runners), and the day's dealt list when the sea
+## day turns.
+func _wanderers(now: float, clock: Dictionary, lift: Color) -> void:
+	var day: int = Traders.sea_day(now)
+	if day != _dealt_day:
+		_dealt_day = day
+		_load_dealt()
+	var at: Vector2 = _boat.position
+	var cell: float = float(Rules.data()["traders"]["cell"])
+	var night: bool = clock["phase"] == "night" or clock["phase"] == "dusk"
+	var ck: String = "%d:%d|%s|%d" % [int(floor(at.x / cell)), int(floor(at.y / cell)), night, day]
+	if ck != _trader_cell:
+		_trader_cell = ck
+		var want: Dictionary = {}
+		for t: Dictionary in Traders.around(at.x, at.y, 2400.0, day, now):
+			want[t["key"]] = t
+		for k: String in _strangers.keys():
+			if not want.has(k) and k != _hailing:
+				(_strangers[k] as Node).queue_free()
+				_strangers.erase(k)
+		var labels: Dictionary = Rules.data()["traders"]["kindLabel"]
+		for k: String in want:
+			if _strangers.has(k):
+				continue
+			var w: Wanderer = Wanderer.new()
+			w.info = want[k]
+			w.role = str(labels.get(want[k]["kind"], ""))
+			w.done = _dealt_keys.has(k)
+			_world.add_child(w)
+			_strangers[k] = w
+	for list: Dictionary in [_regulars, _strangers]:
+		for k: String in list:
+			(list[k] as Wanderer).lift = lift
+
+
+func _load_dealt() -> void:
+	var r: Variant = await session.act("dealtToday", [])
+	_dealt_keys = r if r is Array else []
+	for k: String in _strangers:
+		(_strangers[k] as Wanderer).done = _dealt_keys.has(k)
+
+
+func _hail_wanderer(w: Wanderer) -> void:
+	Rumble.tap(12)
+	var key: String = w.info["key"]
+	_hailing = key
+	var p: TraderPanel = TraderPanel.new()
+	p.session = session
+	p.trader = w.info
+	p.already_dealt = _dealt_keys.has(key)
+	p.deals_left = int(Rules.data()["traders"]["dealsPerDay"]) - _dealt_keys.size()
+	p.dealt.connect(func(k: String) -> void:
+		if not _dealt_keys.has(k):
+			_dealt_keys.append(k)
+		if is_instance_valid(w):
+			w.done = true)
+	p.changed.connect(func() -> void: _hud.refresh())
+	p.closed.connect(func() -> void: _hailing = "")
+	_hud.hold_for(p)
+	_hud_layer.add_child(p)
 
 
 func _hail(b: Buyer) -> void:

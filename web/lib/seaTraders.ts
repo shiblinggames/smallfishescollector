@@ -44,7 +44,7 @@ import type { FolkId } from '@/lib/seaFolk'
 
 /** The Mainland's mooring ring plus a boat length, so the nearest wanderer is
  *  always outside the water the harbour prompt owns. */
-const MAINLAND_DOORSTEP =
+export const MAINLAND_DOORSTEP =
   (PLACES.find(p => p.id === 'mainland')?.r ?? 250) + 420 + 120
 import { NORTH_WALL, OUTER_EDGE, PLACES, YOON } from '@/app/(app)/sea/chart'
 import { clearOfSolids, BOAT_CLEAR } from '@/lib/seaSolid'
@@ -53,7 +53,7 @@ import { clockNow } from './clock'
 /** The furthest a trader's patrol can carry them from their anchor. Must match
  *  the `driftR` roll in traderAt, and it is the margin the outer-edge guard
  *  keeps so a drifting trader never wanders out of reach. */
-const MAX_DRIFT = 90 + 190
+export const MAX_DRIFT = 90 + 190
 
 /** World pixels per cell. One trader at most per cell, so this also sets how
  *  close together two of them can ever be.
@@ -226,7 +226,7 @@ function occupancy(depth: number): number {
   return 0.07 + 0.28 * Math.sin(Math.PI * depth)
 }
 
-const NAMES_FIRST = [
+export const NAMES_FIRST = [
   'Old', 'Salt', 'Bent', 'Wry', 'Quiet', 'Lucky', 'Patched', 'Barnacle',
   'Half', 'Crooked', 'Squint', 'Grey', 'Tallow', 'Hollow',
 ]
@@ -238,7 +238,7 @@ const NAMES_FIRST = [
 // rolled buyer could sail up calling herself Grey Nance while your friend Nance
 // was moored two waters south. Replaced rather than deleted, so the pool keeps
 // its size and its register.
-const NAMES_LAST = [
+export const NAMES_LAST = [
   'Dunnage', 'Bilge', 'Ketch', 'Crayle', 'Murrow', 'Skerry', 'Fennick',
   'Sorrel', 'Rud', 'Hessel', 'Thole', 'Garrick', 'Wick', 'Drassel',
 ]
@@ -249,7 +249,7 @@ const NAMES_LAST = [
 type TradeKind = 'peddler' | 'salter' | 'tinker'
 type WanderKind = Exclude<TraderKind, 'resident'>
 
-const LINES: Record<TradeKind, string[]> = {
+export const LINES: Record<TradeKind, string[]> = {
   peddler: [
     'Shop prices are a shore thing. Out here I set them.',
     'Bought too much, rowed too far. Your luck, not mine.',
@@ -414,7 +414,7 @@ export const PERSONAS: { mood: string; lines: string[] }[] = [
   },
 ]
 
-const HINTS = [
+export const HINTS = [
   "Chum's wasted in the shallows. Save it for water that's got something worth calling up.",
   "A perfect reel pays more than a good one, and the second perfect in a row pays more again. Nobody tells you that.",
   "Every stretch of water out here wants a different level off you. If it won't bite, you're early, not unlucky.",
@@ -461,7 +461,7 @@ const HINTS = [
   "A bigger hold is more time on the water. That's the entire argument for it.",
 ]
 
-const STORIES = [
+export const STORIES = [
   "There were six of them, they say. Big as ships and older than ships. Five accounted for.",
   "My father worked the Deep forty years and never went past it. Said the water changes temper out there.",
   "Ask about the Sunken Hand in a tavern and watch who leaves.",
@@ -475,7 +475,7 @@ const STORIES = [
 /** Bait a kind will carry, worst to best. The tinker deals only in the top of
  *  the shop's range, which is the reward for the sail rather than a new item
  *  nobody could get otherwise — nothing out here is exclusive. */
-const STOCK: Record<TradeKind, string[]> = {
+export const STOCK: Record<TradeKind, string[]> = {
   peddler: ['worm', 'minnow', 'night_crawler'],
   salter: [],
   tinker: ['chum', 'anglers_formula'],
@@ -805,7 +805,7 @@ const ANCIENT = PLACES.find(p => p.id === 'ancient_deep')
 const ANCIENT_INNER = ANCIENT?.inner ?? 16000
 const ANCIENT_OUTER = ANCIENT?.outer ?? OUTER_EDGE
 
-const RUNNER_LINES = [
+export const RUNNER_LINES = [
   "I have got one rod and no price on it. I have got a stake, and I have got a deck.",
   "Shops ashore won't touch what I carry. That's rather the point of me.",
   "Nine captains out of ten row home lighter. I tell them all that and they all sit down anyway.",
@@ -1027,17 +1027,17 @@ export const KIND_LABEL: Record<TraderKind, string> = {
 // being harmless the moment hulls got auras: the reasoning above applies to
 // every one of them, and a worm salesman trailing embers is the same bug as a
 // worm salesman in an Ethereal hull.
-const BOAT_IDS = BOATS.filter(b => !b.glow && !b.crateOnly && !AURA_HULL_IDS.has(b.id))
+export const BOAT_IDS = BOATS.filter(b => !b.glow && !b.crateOnly && !AURA_HULL_IDS.has(b.id))
   .map(b => b.id)
-const HAT_IDS = HATS.filter(h => !h.crateOnly).map(h => h.id)
-const CHAR_COLORS = CHARACTER_COLORS.filter(c => c.free).map(c => c.id)
+export const HAT_IDS = HATS.filter(h => !h.crateOnly).map(h => h.id)
+export const CHAR_COLORS = CHARACTER_COLORS.filter(c => c.free).map(c => c.id)
 /** Every hook with art and NO glow, filtered off the real table so a new plain
  *  hook joins the pool the day it ships and one that gains a glow leaves. */
-const HOOK_ART = HOOKS.filter(h => !h.glow && !h.glowType && h.imageUrl).map(h => h.imageUrl as string)
+export const HOOK_ART = HOOKS.filter(h => !h.glow && !h.glowType && h.imageUrl).map(h => h.imageUrl as string)
 /** Every rod with per-frame sprites and NO glow. Filtered off the real table
  *  rather than listed here, so a new plain rod joins the pool the day it ships
  *  and a rod that gains a glow leaves it. */
-const ROD_SLUGS = RODS
+export const ROD_SLUGS = RODS
   .filter(r => !r.glow && !r.glowType && r.slug && !r.imageUrl)
   .map(r => r.slug as string)
 

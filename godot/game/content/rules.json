@@ -5851,6 +5851,2379 @@
   "Whoever left the last bottle: we found it, we read it, and it helped. Passing the favor on.",
   "Made port with nothing to show and every one of us still aboard. Some voyages you count that as the catch."
  ],
+ "regulars": {
+  "folk": [
+   {
+    "id": "meg",
+    "name": "Meg Corrin",
+    "short": "Meg",
+    "zoneId": "shallows",
+    "buys": false,
+    "greeting": "Mind the rail. It is wet, and it is always wet.",
+    "face": {
+     "characterColor": "sand",
+     "hat": "brown",
+     "bg": "#1a1408",
+     "ring": "#c8a060",
+     "mirrored": true
+    },
+    "role": "Someone to know",
+    "accent": "#d8b070",
+    "blurb": "Kept the Shallows scale for thirty years. Watches who turns into somebody.",
+    "lines": [
+     [
+      "Bring it here and I'll weigh it here. Ashore they'll give you more, and a long haul home to collect it.",
+      "You'll want the scale where you can see it. Everyone does, first few times.",
+      "Shallow water, honest work. Nothing out here is trying to trick you."
+     ],
+     [
+      "Back again. Good. The ones who come back are the ones who last.",
+      "I know your boat now. I hear it before I see it, which is more than I can say for most.",
+      "You've stopped looking at the scale. That took you no time at all.",
+      "Bring me a largemouth bass one of these days. My mother weighed the first one I ever landed and told me it was small. It was not."
+     ],
+     [
+      "Sit a minute. The water is not going anywhere and neither is the price.",
+      "I have weighed for captains who never learned my name. You asked in your third week.",
+      "There is a way of holding a rod that says how long somebody has been at it. Yours has changed.",
+      "You are here more than some of the boats that live here. I have started leaving the good scale out."
+     ],
+     [
+      "My mother weighed on this same water. Different scale. Same argument with every hand who brought her a thin catch.",
+      "I could work the deep. Better rates down there, and everyone who takes them comes back quieter. I like being loud.",
+      "You want to know why I stay shallow? Because everyone starts here. I get to see who they turn into.",
+      "I have weighed for three captains who went past the shelf and did not come back. I know all their names and all their boats.",
+      "The harbor thinks the Shallows are the easy water. The Shallows are the water that decides whether you carry on."
+     ],
+     [
+      "There are four captains I would trust with my scale. You are one, and two of the others are dead.",
+      "When you first came out here you counted the coin twice. You have not counted it in front of me for a year.",
+      "Whatever it is you are chasing out in the deep, come back and tell me about it. Somebody should be keeping the account.",
+      "You could stop coming here. Your hold is worth more out deep and we both know it. You come anyway.",
+      "I am going to be honest with you, which I am not, usually. I look forward to it. Do not make a thing of it."
+     ]
+    ],
+    "afterMax": [
+     "You are late. I am not asking why. I am noting it, because I note everything.",
+     "Somebody asked me who my best captain was. I said I did not keep a list. I do keep a list.",
+     "Sit a minute. The scale is not going anywhere and neither, apparently, are you.",
+     "I have started weighing yours last. It is the only part of the day I am in no hurry for.",
+     "We are past the part where I explain myself to you. That is restful. You have no idea.",
+     "A hand came out last week and told me the Shallows were a waste of a morning. I weighed his catch and I did not correct him. You would have.",
+     "I have a bad knee now. I am telling you because you would notice by the end of the season and I would rather say it first.",
+     "Somebody new is working the east side. Green as anything. Go and be rude to them so they carry on.",
+     "There is a mug on this boat that is yours. I did not decide that. It simply happened and now it is a rule.",
+     "Thirty years and the water still comes over the rail in the same place. There is a great deal to be said for that.",
+     "Do not bring me the big one. Bring me the ordinary one and tell me about the day. I get the big ones from everybody.",
+     "I told my mother about you, which took some doing, as she has been dead eleven years. She would have weighed you and said you were small. She said that about everything."
+    ],
+    "tierUp": [
+     "You keep turning up. All right. Meg. That is what I go by, and now you know it.",
+     "Pull alongside properly next time. You are not a queue, you are a regular.",
+     "I will tell you something I do not tell the harbor: I set my rate by the captain, not the catch. Yours has been the good one for a while.",
+     "You are one of mine now. That is not a discount, it is better than one."
+    ],
+    "favourites": [
+     {
+      "id": 8,
+      "name": "Largemouth Bass",
+      "ask": "A largemouth bass. My mother weighed the first one I ever landed and told me it was small. It was not. Go and settle that for me.",
+      "brought": [
+       "Now that is a fish. I will not weigh this one, I will keep it.",
+       "Largemouth. You went and found one on purpose, did you. Thirty years and people still manage it.",
+       "That is the one. I will not thank you twice, so hear it properly the once: thank you."
+      ]
+     },
+     {
+      "id": 3,
+      "name": "Yellow Perch",
+      "ask": "Yellow perch. Do not pull that face. Every captain out here wants to hand me the big one and not one of them has ever brought me supper.",
+      "brought": [
+       "Perch. Small, plain, and exactly what I asked for. You listen. That is rarer out here than the gar is.",
+       "There. That is a proper fish and I will be hearing nothing else about it.",
+       "Straight off the deck and still cold. That is the right way to hand somebody a fish."
+      ]
+     },
+     {
+      "id": 59,
+      "name": "Alligator Gar",
+      "ask": "A gar. An alligator gar. I have weighed exactly one in thirty years and I never got a proper look at it, because the hand holding it would not stop talking. Bring me another and I will take my time.",
+      "brought": [
+       "Look at the length of it. I am taking my time with this one, and you can sit there while I do.",
+       "Two. In thirty years. And the second one is yours. I am writing the date down, and I do not write dates down.",
+       "That is a very old shape of fish. Something about it makes the Shallows feel less settled than I like to pretend they are."
+      ]
+     }
+    ]
+   },
+   {
+    "id": "pell",
+    "name": "Matty",
+    "short": "Matty",
+    "zoneId": "open_waters",
+    "buys": false,
+    "greeting": "Yoooooo whaddup whaddup. Dude have you checked the fish earnings reports?",
+    "face": {
+     "characterColor": "blue",
+     "hat": "black",
+     "bg": "#0b1420",
+     "ring": "#4fc3f7",
+     "mirrored": true
+    },
+    "role": "Someone to know",
+    "accent": "#4fc3f7",
+    "blurb": "Cashed out of tech, bought a boat, and has a position in everything, including you.",
+    "lines": [
+     [
+      "Bruh I'm not catching anything today. Ripperoni.",
+      "Yooooo. Dude. You're the first boat I've seen all day.",
+      "Bruh, I'm not making any money out here.",
+      "Middle of the ocean and still can't catch anything. This rod is a piece of crap.",
+      "Yooooo. Nice boat dude. I'm just chillin'.",
+      "Bruh, the fish here are rigged. I've been at it for two hours. This is rigged.",
+      "Moshi moshi. Bruh. Please tell me you're having better luck than me."
+     ],
+     [
+      "Yooooo, you came back. Welcome back to the open waters dude. This is like the index fund of oceans. Boring, but it compounds.",
+      "Okay so I used to work in data. They called me the data God. I swear I'm not being modest, that was my actual title. Now my portfolio is fish. LOL. I'm doing great.",
+      "Watch the shipping lanes. Where the freight goes, the fish go, and where the fish go is basically insider information. Forreal.",
+      "A bluefin. Bruh. One of those sold for three million at an auction once. Three million. For a fish. If you ever land one, bring it here and let me just look at it.",
+      "Yooooo, are you playing the next earnings? Dude, I don't even know which fish index. Any of them. I just need to know if you're playing it.",
+      "Ripperoni to my reel, by the way. Wow what a piece of crap. Bruh, it lasted a week."
+     ],
+     [
+      "Dude, don't tell anyone, but I've got it figured out at the Den. I'm the blackjack god now.",
+      "I'm up, by the way. Technically. I'm mostly down, but like I'm up today.",
+      "We gotta both make it out of this rat - I mean fish race. We can't be working our whole lives.",
+      "Yooooo. Good seeing you again dude. Ready to make some money?",
+      "Moshi moshi! Dude, perfect timing. I was about thirty seconds from doing something stupid at the Den."
+     ],
+     [
+      "Okay. Real talk. I didn't quit. Bruh, I got laid off. The boat was the severance. I told everyone it was a sabbatical.",
+      "I had this one stock, dude. I diamondhanded that baby. Shoulda sold. Ripperoni.",
+      "I miss playing at the Den all the time. My wife always gets on me.",
+      "Dude, my recommendation is to always YOLO. Until you have kids. But before that, always YOLO.",
+      "Need some life advice? I got you bro. You just gotta win the lottery. Then you're set.",
+      "Some captain at the Den was whining about variance all night. Baboobeeboo. Dude, that IS the game. That's what you signed up for."
+     ],
+     [
+      "Dude. I set a stop-loss on myself. One more year out here, then I go back and get a real job. If I blow through it, you're allowed to say something. Please let me hit it big out here!",
+      "I catch myself doing the math on the Catfish Jackpot at, like, three in the morning. Bruh. If you ever see my boat by the Den after dark, come get me. I'm serious. It's rigged but I'll still play it.",
+      "Life is hard but at least I know I'm just one big trade away from retiring. Admittedly I've said this every year for 10 years.",
+      "My mom thinks I'm an investing genius. Let's let her keep thinking that.",
+      "I don't wanna go back to work. If I'm still working here 5 years from now please slap me.",
+      "Okay so I complain a lot out here. I'm aware. Next time I start up about the rod just hit me with a baboobeeboo and I'll shut up."
+     ]
+    ],
+    "afterMax": [
+     "Feels good to be making some gains.",
+     "Don't tell my wife but I went to the Den again last night. I didn't lose money. But I didn't win money either.",
+     "Did you see the price of the Shallow fishes this week? I shoulda held.",
+     "How much fish you catching these days? I see you out here all the time now. You might be the fishing god.",
+     "Every time I see you I get the itch to play options again. I can't do it though. I got kids now.",
+     "Moshi moshi. Same boat, same spot, same bad decisions. LOL."
+    ],
+    "tierUp": [
+     "Yooooo. Whaddup big dawg.",
+     "Yeah lemme add you to the group chat. We used to talk about cool things. But now we just talk about kids.",
+     "Alright I'll give you some more advice on stocks. Buy low. Sell high.",
+     "Bro. Seems like just a few days ago we met but now we're friends forever on the open waters. See you in Valhalla!"
+    ],
+    "favourites": [
+     {
+      "id": 60,
+      "name": "Atlantic Bluefin Tuna",
+      "ask": "Yooooo. Okay. A bluefin. One of those sold for three million at an auction once. Three million. For a fish. Bring me one and let me just look at it, dude.",
+      "brought": [
+       "YOOOOO. Dude. What. That's a bluefin. That's crazy.",
+       "dude. you didn't have to. appreciate it man",
+       "this is almost as nice as hitting a 10 bagger",
+       "I can't believe you got me one of these. you're the goat."
+      ]
+     },
+     {
+      "id": 133,
+      "name": "Black Marlin",
+      "ask": "Bruh. Get me a black marlin. Fastest fish in the whole ocean. That's a growth stock. That's all upside and no theta. Go.",
+      "brought": [
+       "Yooooo. That's the fastest fish in the ocean and you just had it in a bucket. LOL.",
+       "dude. you didn't have to. appreciate it man",
+       "Okay so if I could put money on you I already would have. Ima say that once and then never again."
+      ]
+     },
+     {
+      "id": 105,
+      "name": "Pufferfish",
+      "ask": "Okay this is gonna sound dumb. Get me a pufferfish. Dude, it blows up and then it goes back down. That's a bubble. That's the entire market in one fish and I want one on my boat.",
+      "brought": [
+       "LOL. Look at it. That's every position I've ever held, dude. That's perfect.",
+       "Bruh. It's doing the thing. It's inflating. Greatest gift anyone has ever given me.",
+       "Thanks dude."
+      ]
+     }
+    ]
+   },
+   {
+    "id": "marlow",
+    "name": "Old Marlow",
+    "short": "Marlow",
+    "zoneId": "deep",
+    "buys": false,
+    "greeting": "You found me. Everybody does, eventually.",
+    "face": {
+     "characterColor": "gray",
+     "hat": "black",
+     "bg": "#101418",
+     "ring": "#a8b4c0",
+     "mirrored": true
+    },
+    "role": "Someone to know",
+    "accent": "#b0bcc8",
+    "blurb": "Sits still in deep water and lets everybody else do the sailing.",
+    "lines": [
+     [
+      "Long way back to the dock from here. I've made a living out of exactly that.",
+      "I am not the best price on this sea. I am the best price you can reach without a two hour sail, which is a different thing and worth more.",
+      "Everyone finds me eventually. Usually with a full hold and a tired arm."
+     ],
+     [
+      "You worked out the sums, then. Most do, around the fourth trip.",
+      "I like a captain who knows they are being charged for convenience and pays anyway. That is not being fooled, that is arithmetic.",
+      "The deep is not dangerous. It is just far. Far is what people are actually afraid of.",
+      "A blue marlin, since you have not asked. Yes. I have heard the joke about my name. I have heard it several thousand times and it was never funny."
+     ],
+     [
+      "I will tell you my trick. There is no trick. I sit still and everybody else does the sailing.",
+      "Three of the wrecks in this band still have holds in them. Two are picked clean. I will not tell you which two.",
+      "You have started arriving here without checking your chart. That is the water letting you in.",
+      "You never haggle. Do you know how unusual that is out here. I have thought about it more than you have."
+     ],
+     [
+      "I bought a hold off a captain forty years ago and paid her badly. She never came back. I have thought about it more than she did.",
+      "The rate I give climbs the deeper you go, and I want you to know I did not set that out of kindness. It is what the sail is worth.",
+      "There is a shelf south of here where the sound changes. Take a run out one day and just listen. That is all, just listen.",
+      "I keep a list of the captains who have worked this band. It is long, and most of the names are on it only once.",
+      "The thing about a fair price is that it has to be fair to somebody. Ask me sometime which one of us I have in mind."
+     ],
+     [
+      "You could go round me. Sail the whole way home and keep the difference. You do not, and we both know it is not the coin.",
+      "I have no crew, no hall and no name ashore. I have the deep and I have the captains who come out to it. You are the best of them.",
+      "When I stop being out here, and there will be a day, take the wreck at the eastern edge. I have left something in it that is yours.",
+      "I have been out here so long the water is more of a home than the harbor was, and I was born in the harbor.",
+      "You keep sailing out to an old buyer who charges you for the privilege. I stopped working out why and started being glad."
+     ]
+    ],
+    "afterMax": [
+     "You are early. The water is flat. There is no reason for either of us to hurry, so we will not.",
+     "I told you about the wreck at the eastern edge. I have not moved what is in it. I want that understood.",
+     "Some days I do not weigh anything at all. Those are not the bad days. I used to think they were.",
+     "You have started sounding like somebody who lives out here. I am not sure that is a kindness.",
+     "Forty years of this and the sea still does something new every month. Stay long enough and it will show you.",
+     "I have started leaving the lamp lit past dark. Not for anybody in particular. It simply seems to be the thing to do now.",
+     "Your name is on my list twice. Nobody is on it twice. I have not decided whether to fix it.",
+     "A captain came out yesterday and haggled me down eight percent. I let her. She reminded me of you, years back.",
+     "The joke about my name. Go on. Once. I will decide afterwards whether we are still friends.",
+     "There is nothing new to tell you today, and I notice neither of us has left.",
+     "I used to think sitting still was a trade. It was a decision. Thirty years to see the difference.",
+     "If I am short with you one day it will be the weather in my hands and nothing you have done. I want that on the record before it happens."
+    ],
+    "tierUp": [
+     "Marlow. Old Marlow if you like, everyone else does, and I stopped minding it a long time ago.",
+     "You are one of my regulars now. There are six. Two of them are terrible.",
+     "I do not usually talk while I weigh. With you I have noticed I do.",
+     "You have my trust, which is worth nothing, and my company, which out here is worth a great deal more."
+    ],
+    "favourites": [
+     {
+      "id": 38,
+      "name": "Blue Marlin",
+      "ask": "A blue marlin, since you have asked, and yes, I have heard the joke about my name. Several thousand times, and it was never funny. Bring me one anyway.",
+      "brought": [
+       "Well now. I have not held one of these in years. I am not going to weigh it and you cannot make me.",
+       "A marlin. On my deck. I have nothing prepared to say about that, and I am usually prepared.",
+       "You will have heard I do not go after these any more. You will notice I never said I stopped wanting one."
+      ]
+     },
+     {
+      "id": 134,
+      "name": "Greenland Shark",
+      "ask": "Find me a Greenland shark. They live four hundred years, which means there are some down there that were already old when this harbor was a beach. I would like to sit in the same room as one and think about that.",
+      "brought": [
+       "Four hundred years. It has outlasted every argument I have ever had about a price. Set it down gently.",
+       "I am going to sit with this a while. You do not have to stay. You never do have to, and you always do.",
+       "Somewhere down there is one of these that will still be swimming when the pair of us are a story. That is a comfort and I could not tell you why."
+      ]
+     },
+     {
+      "id": 125,
+      "name": "Atlantic Halibut",
+      "ask": "Halibut. Atlantic, if you can manage it. It lies flat on the bottom and lets the sea bring it whatever the sea is having. You will not find a fish out here that works more like I do.",
+      "brought": [
+       "There it is. My whole trade, in a fish. I sit still and everybody else does the sailing.",
+       "Set it down there. And sit down yourself, you have been standing since you tied up.",
+       "Generous. I will eat well and think better of you than I already do."
+      ]
+     }
+    ]
+   },
+   {
+    "id": "fitch",
+    "name": "Quiet Fitch",
+    "short": "Fitch",
+    "zoneId": "abyss",
+    "buys": false,
+    "greeting": "Mm.",
+    "face": {
+     "characterColor": "storm",
+     "hat": "midnight",
+     "bg": "#080c14",
+     "ring": "#6878a0",
+     "mirrored": true
+    },
+    "role": "Someone to know",
+    "accent": "#8090b8",
+    "blurb": "Lives in the dark water. Says very little about anything.",
+    "rodTier": 18,
+    "lines": [
+     [
+      "Not many bring me anything this deep. I pay for that, not for the fish.",
+      "You came a long way. Sit.",
+      "It is dark. That is the whole of it."
+     ],
+     [
+      "You again.",
+      "Most stop coming after the first trip. You did not.",
+      "Nothing has changed out here. I find that restful. You might not yet.",
+      "Anglerfish. It carries its own light down here. I could not tell you why that gets me, and it does."
+     ],
+     [
+      "I have been counting how many times you have come. It is more than anyone.",
+      "There is a sound down here at the turn of the night. I am not going to describe it. Wait for it.",
+      "You do not fill the quiet. Do you know how rare that is.",
+      "Two of us, not talking. It is the best part of my week and I know how that sounds."
+     ],
+     [
+      "I came out here to stop hearing things. It worked, mostly.",
+      "One question a visit. Ask.",
+      "Something followed my boat for two nights, three winters back. It kept a distance. I let it.",
+      "I hear better down here. That is not a good thing.",
+      "Sit. No, do not say anything. Just sit."
+     ],
+     [
+      "I will talk to you. I do not do that. Take it as it is meant.",
+      "There is a light down there that is not a fish. Do not chase it, and do not tell the harbor I said so.",
+      "If I am ever not here, do not look for me. Go up and stay up. That is the only favor I will ever ask.",
+      "There was somebody before you. He talked constantly. I miss him and I would never have told him so.",
+      "You are the only one who has never asked me why I am down here. I would tell you, if you did."
+     ]
+    ],
+    "afterMax": [
+     "You came back. That is the whole conversation, really. The rest is manners.",
+     "I would tell you now. You still have not asked. I have decided that is the point.",
+     "Nothing down there has changed. That is the most alarming thing I can tell you about it.",
+     "I talked to somebody else last week. Briefly. I did not care for it.",
+     "Go up. I know you know. I will say it every time regardless.",
+     "Mm. Yes. That was the whole thought and I stand by it.",
+     "The light was closer last month. It is further now. I am telling you, not asking you.",
+     "I said one question a visit. That was years ago. The rule has quietly ended and I am not announcing it.",
+     "You brought a lamp. You did not need a lamp. I noticed and I liked it.",
+     "There is a word for what this is. I have never used it out loud and I am not starting now.",
+     "Do not come down in the dark of the year. I will still be here in the spring. Probably.",
+     "Sit. Yes. Like that."
+    ],
+    "tierUp": [
+     "Fitch.",
+     "You can stay a while. If you want.",
+     "I have started expecting you. That is new for me.",
+     "You are the one I would tell, if there were ever anything worth telling."
+    ],
+    "favourites": [
+     {
+      "id": 41,
+      "name": "Anglerfish",
+      "ask": "Anglerfish. It carries its own light down here. I could not tell you why that gets me. It does.",
+      "brought": [
+       "Ah. You brought it up alive. Good.",
+       "Its light still works. Most of them come up dark.",
+       "Mm. That is the one. You knew that."
+      ]
+     },
+     {
+      "id": 56,
+      "name": "Firefly Squid",
+      "ask": "Firefly squid. A whole hand of them goes up at once down there, and then it is dark again. Bring me one. I want to see it close.",
+      "brought": [
+       "Mm. Still lit. Hold it a moment before I do.",
+       "There. Small, and doing the whole thing on its own.",
+       "Thank you. Truly."
+      ]
+     },
+     {
+      "id": 47,
+      "name": "Barreleye",
+      "ask": "Barreleye. Its head is clear and its eyes point up through it. Down there, and it is looking up. I have thought about that more than is reasonable.",
+      "brought": [
+       "Looking up. Still. Even now. Mm.",
+       "I have wanted to hold one of these for eleven years and I never said so out loud until you asked.",
+       "Mm. Good."
+      ]
+     }
+    ]
+   },
+   {
+    "id": "nance",
+    "name": "Grey Nance",
+    "short": "Nance",
+    "zoneId": "ancient_deep",
+    "buys": false,
+    "greeting": "You are a long way out.",
+    "face": {
+     "characterColor": "ice",
+     "hat": "offwhite",
+     "bg": "#0a1018",
+     "ring": "#9ec4d8",
+     "mirrored": true
+    },
+    "role": "Someone to know",
+    "accent": "#9ec4d8",
+    "blurb": "Keeps the count of who goes down to the oldest water and comes back up.",
+    "rodTier": 19,
+    "lines": [
+     [
+      "You went down there and came back up. Whatever's in your hold, I'll take it and ask nothing.",
+      "I do not ask what you saw. Nobody who has been down there wants the question.",
+      "You are further out than most captains ever get. I hope somebody has told you that."
+     ],
+     [
+      "Twice now. The water down here does not usually get a second visit.",
+      "You have the look already. It comes on quicker than people expect.",
+      "I pay the best rate on this sea and I still think you are underpaid.",
+      "A coelacanth, if you ever raise one. It should have been gone sixty million years and nobody told it. I find that steadying."
+     ],
+     [
+      "This water is older than the harbor, older than the reef, older than whatever put the reef there.",
+      "There are things on my scale I have never named. I weigh them, I pay for them, I do not write them down.",
+      "You keep coming back up. That is the part I am proud of, and I have no right to be proud of it.",
+      "You came back up again. I keep a count of that for everyone. Yours is the number I check first."
+     ],
+     [
+      "I had a captain before you. Sailed this same band for eleven years. Then one week she did not come up.",
+      "The ancients are not fish. I will not be arguing about it, I am only telling you what I have weighed.",
+      "When you land one of the old ones, bring it to me before you tell anybody. Not for the coin. I want to see it.",
+      "I have weighed things that were still warm from a place with no sun. I have never worked out how.",
+      "Do not take a full hold and a tired arm down there together. That is how it gets you, and it is never the storm."
+     ],
+     [
+      "You have brought me things nobody has brought me. That is the whole of my life's work and you did it in a season.",
+      "The deep does not take the careless. That is a comfortable lie and I have told it for years. It takes whoever it likes.",
+      "Come up. Always come up. If I have taught you one thing out here let it be the one that is not about fish.",
+      "I am old. Somebody has to keep weighing out here and it will not be me for much longer.",
+      "I hope you are chasing it and it is not chasing you. I have seen it the other way round and I did not care for it."
+     ]
+    ],
+    "afterMax": [
+     "You still come up when I say it. Most stop humouring an old woman eventually.",
+     "I have written some of it down. Not for the harbor. For whoever is out here after me.",
+     "Bring me nothing today. Sit there. That is a thing you are allowed to do.",
+     "I told you the deep takes whoever it likes. It has not taken you. I am not calling that luck out loud.",
+     "You will be the old one out here one day. Start noticing what you would want to pass on.",
+     "The count is at four hundred and nine. Yours is still the number I check first.",
+     "I dreamt of the oldest water again. In the dream it was warm. I do not know what to do with that.",
+     "There is a page in my book with your name at the top and nothing under it yet. Fill it slowly.",
+     "You have started saying come up to other captains. It came back to me last week from somebody who has never met me.",
+     "My hands are worse this year. The scale does not mind. I do.",
+     "I have stopped asking the sea for anything. It seems to be going better.",
+     "When they find my boat empty, the count goes to you. It is a book and a pencil and forty years. Do not lose the pencil."
+    ],
+    "tierUp": [
+     "Nance. Grey Nance to the harbor, just Nance to whoever comes back twice.",
+     "You are welcome at my boat, and out here that sentence means something.",
+     "I trust you with this water. There is nobody else I would say that to.",
+     "You are the one who comes back. Of everyone I have weighed for, you are the one who comes back."
+    ],
+    "favourites": [
+     {
+      "id": 50,
+      "name": "Coelacanth",
+      "ask": "A coelacanth, if you can raise one. It should have been gone sixty million years and nobody told it. I find that steadying.",
+      "brought": [
+       "You brought this to me first. Ahead of the harbor, ahead of the coin. I will not forget it.",
+       "Sixty-six million years it managed without any of us, and you carried it up here in a wet sack. For me.",
+       "I keep a count of who goes down and comes back. I am going to need a second list."
+      ]
+     },
+     {
+      "id": 149,
+      "name": "Chambered Nautilus",
+      "ask": "Bring me a nautilus. The chambered one. It has not changed its mind about anything in five hundred million years and I would like to ask it how.",
+      "brought": [
+       "Every chamber is a year it decided to keep going. I keep a book that does the same job and mine is shorter.",
+       "Look at the shape of it. Nothing arrives at a shape like that by hurrying.",
+       "This goes on the ice and your name goes in the book. Both of them keep."
+      ]
+     },
+     {
+      "id": 150,
+      "name": "Ghost Shark",
+      "ask": "A ghost shark. Not a shark, whatever the harbor calls it. That line was old before there were trees. Go carefully, and come up.",
+      "brought": [
+       "Older than the trees. Older than the reef. You went down and got it and you came back up, which is the part I actually care about.",
+       "I have weighed two of these in forty years and I wrote down neither. I am writing this one down.",
+       "Thank you. It is a long way to carry a gift."
+      ]
+     }
+    ]
+   },
+   {
+    "id": "yoon",
+    "name": "Yoon",
+    "short": "Yoon",
+    "zoneId": "ancient_deep",
+    "buys": false,
+    "greeting": "Ayo. Sheeeeesh, look who it is.",
+    "face": {
+     "characterColor": "golden",
+     "hat": "black",
+     "bg": "#141008",
+     "ring": "#f0c040",
+     "mirrored": true
+    },
+    "role": "Someone to know",
+    "accent": "#f0c040",
+    "blurb": "Carries one rod that no shop will stock, and an opinion on whether you deserve it.",
+    "rodTier": 20,
+    "lines": [
+     [
+      "You've got the streak for it or you don't. Rod won't teach you that. It just stops wasting it.",
+      "I'm not out here to sell. I'm out here in case somebody turns up who should have it.",
+      "Sheeeeesh. Another one this far out. Gyattt. Aight then.",
+      "Bruhhh, you sailed all the way out here for a chat? Aight. Respect, lowkey.",
+      "Don't touch the rod. Gyattt, I'm kidding. Kinda. Don't touch it."
+     ],
+     [
+      "Gyattt. You came back and you didn't even bring the coin. That's way more interesting.",
+      "The rod's not the hard part. The hard part's the hand.",
+      "Gyattt, you want it already? Betty johnson. Come back when the hand's ready.",
+      "Oarfish. Twenty feet of ribbon out of the black. Bruhhh. Bring me one of those and I will actually stop working for the afternoon.",
+      "Sheeeeesh, that hull's seen some things. Good. A clean boat is a boat that hasn't fished.",
+      "Lowkey I count how many casts people waste before they settle. You're at, like, two. Gyattt."
+     ],
+     [
+      "I made it. Not the tier, the rod. The one on my boat. Made it, then I stopped making.",
+      "A perfect cast isn't luck twenty times. It's one thing you learned, done twenty times. Gyattt, when you say it out loud.",
+      "You were so locked in on that last run. I watched the whole thing. Gyattt. Don't let it get to your head.",
+      "Bruhhh, that hold is heavy. You've been out here since the light came up, huh."
+     ],
+     [
+      "There were three of us making rods out here. Other two sell in the harbor now. They're good, no shade.",
+      "Gyattt. I stayed out because a rod should go to the captain it fits, and you can't tell that through a shop window.",
+      "Bring me a bad run some time. Lowkey I'd rather watch how you fish when it's going wrong.",
+      "Locked in isn't trying harder. It's the part where you stop trying and it just goes.",
+      "Bruhhh, you have way too much dip on your chip with that setup. Half of it is not doing anything for you. Strip it back.",
+      "Bruhhh, that is a lot of line out. You're fishing way deeper than you were last season."
+     ],
+     [
+      "You've got the hand. I've thought so for a while and I'm not saying it to be nice.",
+      "Gyattt. When you buy the rod, and you will, know it was never a test. I just had to be sure it'd get used.",
+      "After this there's no better rod. There's only better fishing. That's the good news and nobody ever hears it that way.",
+      "You're locked in more days than you're not now. Gyattt. That took what, a season?",
+      "Everything's gucci out here when you're fishing like this. Gyattt. Don't tell the harbor I said gucci."
+     ]
+    ],
+    "afterMax": [
+     "You're locked in permanently at this point. Gyattt. It stopped being a streak and started being how you fish.",
+     "The rod's just a rod now, isn't it. Told you. Nobody believes that part until after.",
+     "Everything's gucci. Genuinely. I've got nothing left to teach you and I'm not even annoyed about it.",
+     "Sheeeeesh. I watched you land one from here and I still don't know how you read that water.",
+     "Come out here sometimes when you don't need anything. That's the whole ask. Betty Johnson."
+    ],
+    "tierUp": [
+     "Yoon. Might as well have the name if you're gonna keep mooring here.",
+     "You stopped asking for a discount. Gucci. There was never gonna be one.",
+     "Gyattt. I'll talk about the making with you. Betty johnson. I don't do that with buyers.",
+     "Rod's yours whenever you've got the coin, and it was yours the day you stopped asking the price. Sheeeeesh. Took you long enough."
+    ],
+    "favourites": [
+     {
+      "id": 49,
+      "name": "Oarfish",
+      "ask": "Oarfish. Twenty feet of ribbon out of the black. Bruhhh. Bring me one of those and I will actually stop working for the afternoon.",
+      "brought": [
+       "Gyattt. You hauled this all the way out here for me? Sit down. I'm gonna tell you how it's caught properly.",
+       "this way too much dip on my chip brotha. ty. ty.",
+       "you are doing way too much, but i am thankful",
+       "bet."
+      ]
+     },
+     {
+      "id": 152,
+      "name": "Snipe Eel",
+      "ask": "Aight. Snipe eel. Gyattt, the thing is basically all mouth and a shoelace. I wanna see what a hand has to do to land one without snapping it.",
+      "brought": [
+       "Gyattt. Not a mark on it. You know what that takes? I know what that takes.",
+       "Sheeeeesh. That's a soft hand. That's the whole thing I've been telling you about, right there.",
+       "bet."
+      ]
+     },
+     {
+      "id": 63,
+      "name": "Giant Trevally",
+      "ask": "Go back to the shallows and get me a giant trevally. Yeah. The shallows. Gyattt, everybody skips that water the second they can, and a GT will still take the rod off you. Humbling. Go.",
+      "brought": [
+       "Sheeeeesh. Went back to the easy water and it wasn't easy, huh. Locked in.",
+       "Gyattt. Rod's in one piece too. Gucci.",
+       "this way too much dip on my chip brotha. ty. ty."
+      ]
+     }
+    ]
+   },
+   {
+    "id": "brill",
+    "name": "Dennis",
+    "short": "Dennis",
+    "zoneId": "shallows",
+    "buys": false,
+    "greeting": "Oh, hey! Hey. Hi. Sorry, I was mid-thought, I'm always mid-thought. Hi.",
+    "face": {
+     "characterColor": "default",
+     "hat": "olive",
+     "bg": "#0e140c",
+     "ring": "#a3c46a",
+     "mirrored": true
+    },
+    "role": "Someone to know",
+    "accent": "#a3c46a",
+    "blurb": "Talks for a living, fishes for fun, and owns more than he lets on.",
+    "lines": [
+     [
+      "Okay so you're probably wondering why a guy with a boat like this is anchored in the nicest spot in the Shallows. Long story. The short version doesn't make sense without the long version. Hi, by the way.",
+      "This is my third rod. The first two are fine. I just, you know, wanted to see the patch notes on this one. That's a joke. Nobody out here gets my jokes. You might. You've got the look.",
+      "Back on the expeditions we'd sit in the dark for six hours waiting for nothing to happen, and I thought, I could do this for fun. Turns out I was right. That's fishing. That's the whole pitch.",
+      "I named the boat after a save file. Long story. Actually it's a short story, the boat's called Slot Three, because the first two saves are, you know, gone. Anyway. Hi.",
+      "You know what nobody tells you about fishing? The loading screens are gorgeous. That's a joke about the water. Sorry. I do a lot of those."
+     ],
+     [
+      "You came back! People don't, usually. I talk a lot. I know I talk a lot. I've been told by professionals. Anyway, sit, or don't, I'll talk either way.",
+      "Muskellunge. The fish of ten thousand casts. Ten thousand. That's a drop rate, that's a grind, that's the kind of number I respect. I've done about nine hundred. I'm keeping a tally. Of course I'm keeping a tally.",
+      "Back on the expeditions I had a bosun who said a plan is just a list of things that won't happen. I think about him every time I cast. Every single time. Sorry, I'm getting into it. I get into it.",
+      "This water's basically the tutorial zone and I'm fine with that. Some of the best games I've played, I never left the first area. That's not sad. Okay, it's a little sad. It's also true though.",
+      "Back on the expeditions I got very good at one thing, which was eating an entire meal in four minutes, and it has never once come up since. Until now. I'm telling you now.",
+      "I have three rods, a spare reel, a spare spare reel and a first-aid kit that could restock a small clinic. People say over-prepared. I say I've read the patch notes on weather."
+     ],
+     [
+      "Okay, real question, and I've been building up to this for like a week: do you ever get to the deep water and just feel like you skipped a cutscene? Like the game thinks you know something you don't? Just me? Okay. It's just me.",
+      "Back on the expeditions we did a night crossing with a chart that was, and I want to be precise here, upside down. For four hours. I was the one holding it. I've told that story maybe two hundred times and it has never once made me look good, which is why it's a good story.",
+      "I don't need a bigger boat. I could get one. That's not a brag, that's just true, and I'd rather it not be a thing. Money's the boring stat. Nobody puts money on a character sheet.",
+      "You fish like you're speedrunning. Efficient. No wasted casts. I fish like I'm doing every side quest, and honestly I'm having a great time. Both are valid. That's the nicest thing I'll say today."
+     ],
+     [
+      "Okay so the money. I don't hide it, I just don't lead with it, which people say is the same thing and it's not. I bought the harbor's tab once. Nobody knows it was me. Now you know. Please be cool.",
+      "Back on the expeditions the thing nobody tells you is how much of it is waiting. Waiting, and then a very short amount of something, and then waiting about the something. Fishing's the same shape. Life's the same shape. I think about this a lot.",
+      "I keep a spreadsheet of every fish I've caught. Weight, spot, weather, what I was thinking about. The last column's the important one. You're in it more than you'd expect. In a normal way. I'm being normal.",
+      "You can tell me if I'm being a lot. Everybody else just sort of drifts away mid-sentence and I finish the sentence to the water. The water's a great listener. Terrible at follow-up questions.",
+      "Somebody green pulled alongside me and asked how to reel, and I gave them a forty-minute answer, and they stayed for all of it. I've never been so happy in my life. Anyway, that's my week."
+     ],
+     [
+      "I'm going to say something and then never say it again, because that's the rule with things like this: you're the only person out here who's ever heard the whole story and not looked at their watch. I noticed. I always notice.",
+      "Back on the expeditions I had a friend who'd sit through all my stories and then say and? and it drove me insane and it was the best thing anyone's ever done for me. You do the and? thing. You don't even know you're doing it.",
+      "The money's going somewhere, by the way. It's not going in a bigger boat. It's going into something for people who are where I was two seasons ago. Don't ask me what yet. I'm still writing the design doc.",
+      "Some day I'm going to get the muskellunge and I'm going to be so annoying about it. You'll be the first person I tell. You'll be the first person I tell most things, actually. That's just where we are now.",
+      "I talk a lot because when I stop, it's quiet, and quiet is where I go back to being a guy in the dark waiting for nothing to happen. You make the quiet okay. That's the shortest thing I've ever said and I mean all of it."
+     ]
+    ],
+    "afterMax": [
+     "Still talking. Still noticing you don't look at your watch. Still not over it.",
+     "Cast number four thousand and something on the muskellunge. The tally's in the log. It's under your name, for some reason.",
+     "The thing for the new captains is happening. Slowly. Design docs are long. Mine's longer.",
+     "Back on the expeditions I never once got a story to a satisfying ending. Out here I've got you, and endings are easier.",
+     "The boat's still ugly. The engine's new. Nobody's noticed. You will. You notice things."
+    ],
+    "tierUp": [
+     "Dennis! You asked. People usually just let me talk until I say it by accident.",
+     "Okay, so we're friends now, and I want to be upfront that friends of mine get the long versions of things. All of them. You've been warned. This is the warning.",
+     "I'm going to tell you stuff I don't tell the harbor. Not because it's secret. Because the harbor walks off. You don't walk off.",
+     "You're on the short list. It's a short list. Honestly it's you and a bosun who doesn't know he's on it."
+    ],
+    "favourites": [
+     {
+      "id": 12,
+      "name": "Muskellunge",
+      "ask": "Muskellunge. The fish of ten thousand casts. Ten thousand. That's a drop rate, that's a grind, that's the kind of number I respect. I'm at about nine hundred. I'm keeping a tally. Of course I'm keeping a tally. Anyway. No pressure. Enormous pressure.",
+      "brought": [
+       "No. No way. You did not. Ten thousand casts and you just, you just brought one over? I need to sit down. I'm going to be talking about this for a year. Longer. You've made a huge mistake and I love you for it.",
+       "wow. wow. you got another one for me? i haven't even had enough time to get over the last one!",
+       "im honestly shocked at how quickly you're able to get these over to me. you must be one of the greatest fishers on the sea.",
+       "how are you catching these?? i've spent years out on these seas and I can barely get any. but here you are just pulling these out of thin air. If I could invest in you I would!"
+      ]
+     },
+     {
+      "id": 132,
+      "name": "Goliath Tigerfish",
+      "ask": "Okay so. Goliath tigerfish. Go and look at what its teeth do and then come back and tell me that isn't a boss fight. It's a boss fight. It has a health bar. It has phases. I want one and I want to be very normal about it, which I won't be.",
+      "brought": [
+       "It has the teeth. It actually has the teeth. I'm looking at the teeth. Sorry. Give me a minute. I'm looking at the teeth.",
+       "You beat the boss and then you brought me the drop. Do you know what that is? That's a raid. We did a raid. I'm logging this under raid.",
+       "Oh, that's a good one. That's a really good one. I'm going to log it and then I'm going to tell you a story about it, fair warning."
+      ]
+     },
+     {
+      "id": 90,
+      "name": "Seahorse",
+      "ask": "Seahorse. And before you say anything, yes, it's tiny, and yes, I want one, because the males carry the eggs, which nobody ever leads with, and it is objectively the best fact in this entire ocean. That's the ask. That's the whole ask. Sorry. I get into it.",
+      "brought": [
+       "Look at him. That's a dad. That's a working dad. I am going to be insufferable about this all week.",
+       "It's so small. It's so small and I care about it so much. This is the correct emotional response and I will not be taking notes from anyone.",
+       "For me? Thank you. Genuinely. Nobody brings me things, I'm usually the one bringing things. This is nice. This is a nice change."
+      ]
+     }
+    ]
+   },
+   {
+    "id": "turbot",
+    "name": "Cass Turbot",
+    "short": "Cass",
+    "zoneId": "open_waters",
+    "buys": false,
+    "greeting": "Mind where you drop that anchor.",
+    "face": {
+     "characterColor": "forest",
+     "hat": "olive",
+     "bg": "#0c1410",
+     "ring": "#88b09c",
+     "mirrored": true
+    },
+    "role": "Someone to know",
+    "accent": "#88b09c",
+    "blurb": "Dives the wrecks and comes up with stories, some of them true.",
+    "lines": [
+     [
+      "Do not anchor here. I am working underneath you.",
+      "Three wrecks in this band. I have been in all three and I only talk about two.",
+      "Everything down there belonged to somebody. I try to remember that about twice a year."
+     ],
+     [
+      "You did not anchor. Good. You listen, which is more than the last four did.",
+      "The middle wreck has a bell still hanging in it. I have never rung it and I am not going to.",
+      "People think salvage is treasure. Salvage is mostly rope. Beautiful rope, sometimes.",
+      "Cobia, if you are ever holding one. They hang about wreckage, so I see more of them than most, and I have never once got tired of it."
+     ],
+     [
+      "I will tell you about the second wreck. Not today. But I will.",
+      "There is a rule down there. You take what has come loose. What is still fixed belongs to the boat.",
+      "You get a feeling in a hold that went down fast. I cannot explain it better than that and I have tried for years.",
+      "I have been down twice today. The water is being agreeable, which always worries me."
+     ],
+     [
+      "The second wreck has a door that was shut from the inside. I have looked at it eleven times.",
+      "My sister dives the deep band. We have not spoken in six years and I still check her mooring is empty every morning.",
+      "If I ever come up saying I saw nothing down there, get me to the harbor. That is not a joke.",
+      "You learn to tell how fast a boat went down by the way the doors sit. I wish I did not know that.",
+      "Never dive alone. I say it to everyone, and then I do it every single day."
+     ],
+     [
+      "I opened the door. Two summers ago. I am not going to tell you what was behind it, but I will tell you I closed it again.",
+      "You are the only captain who has never asked me what I have found. That is exactly why I would tell you.",
+      "Come down with me one day. You will hate it and then you will want to go again. Everyone does.",
+      "My sister taught me the doors. It is the last useful thing she said to me and I use it every week.",
+      "If you ever find my boat empty and my line still tied off, cut it. Do not follow it down. Promise me."
+     ]
+    ],
+    "afterMax": [
+     "The door is still shut. I go past it. I do not stop. That took two years to manage.",
+     "You never did ask what I found. I have got so used to that I would be thrown if you did.",
+     "My line is tied off the same way every time now. If you ever see it different, that is the signal.",
+     "I went down with somebody last month. First time since my sister. It was fine. It was strange and it was fine.",
+     "You are on the short list of people who would come looking. I have never had a short list before.",
+     "I rang the bell. Once, in daylight, with the line tied off and a hand on it. Nothing happened and I have been better since.",
+     "My sister's mooring was full on Tuesday. I sailed past it twice and did not stop. Ask me again in a year.",
+     "I have a length of rope aboard off the middle wreck. It is the best rope I have ever handled. That is the whole story.",
+     "You anchored properly again. I have not had to say it in a year and I still nearly say it.",
+     "Everything down there belonged to somebody. I remember that more than twice a year now. I blame you.",
+     "There is a fourth wreck. I found it in the spring. I have not been in and I am not ready to say why.",
+     "If you do come down with me, wear the old gloves and not the good ones. It is the only advice I have that is worth anything."
+    ],
+    "tierUp": [
+     "Cass. Turbot if you are being formal, and nobody out here is being formal.",
+     "You can moor near me. Near, not over. I will show you where.",
+     "I have started saving the good stories for you, which is a bad habit and I am not stopping.",
+     "There are two of us who know what is behind that door now. Sleep well."
+    ],
+    "favourites": [
+     {
+      "id": 21,
+      "name": "Cobia",
+      "ask": "Cobia, if you are offering. They hang about wreckage, so I see more of them than most, and I have never once got tired of it.",
+      "brought": [
+       "Out of the current, that one. You had to work for it. I can see you had to work for it.",
+       "Cobia. They hang about the wrecks like they are paying rent down there. Did you have to shoo it off something of mine?",
+       "I have come up empty from better water than that. Do not repeat that anywhere."
+      ]
+     },
+     {
+      "id": 24,
+      "name": "Barracuda",
+      "ask": "A barracuda. One hung off my shoulder in the middle wreck for forty minutes once, just watching, and then it left. I have wanted a proper look at one ever since and I am not going back down after it.",
+      "brought": [
+       "There you are. Forty minutes it watched me and I never once got to look back. I am looking now.",
+       "Held the same way it hangs in the water. Still. All teeth and patience, this lot.",
+       "Right. That is dinner, and I did not have to hold my breath for it."
+      ]
+     },
+     {
+      "id": 80,
+      "name": "Stingray",
+      "ask": "Stingray. They settle into the silt in a hold that went down flat, and you do not see them until you have already put a hand down. Bring me one and let me be cross with it in daylight.",
+      "brought": [
+       "In daylight. On a deck. Not under my hand in the dark. Much better.",
+       "The silt sits on them like a blanket down there. Nothing in a wreck wants to be found, and that one is the worst of them.",
+       "Fresh food out here is worth more than salvage. I am not exaggerating."
+      ]
+     }
+    ]
+   },
+   {
+    "id": "ream",
+    "name": "Rue Bream",
+    "short": "Rue",
+    "zoneId": "deep",
+    "buys": false,
+    "greeting": "News, or are you just passing?",
+    "face": {
+     "characterColor": "lavender",
+     "hat": "purple",
+     "bg": "#12101c",
+     "ring": "#b0a0d0",
+     "mirrored": true
+    },
+    "role": "Someone to know",
+    "accent": "#b0a0d0",
+    "blurb": "Carries news between the regulars and remembers all of it.",
+    "lines": [
+     [
+      "I carry word between the boats out here. No, there is no charge. That surprises everyone.",
+      "You are new to me. I will remember you now, that is how this works.",
+      "Meg is well. You did not ask. I am telling you anyway."
+     ],
+     [
+      "Marlow asked after you. He would deny it, so do not bring it up.",
+      "I know where everybody is. Not because it is my business. Because nobody else keeps track.",
+      "Matty called you his best position. I do not know what it means. I have written the date down.",
+      "A cod. Plain Atlantic cod. Everything else out here is somebody's trophy and a cod is just supper, which is the entire point of it."
+     ],
+     [
+      "You want to know who is out here and where. Sit down, this takes a while, and it is the only thing I am good at.",
+      "Fitch has not spoken to anyone but me in four months. Now he has spoken to you. I noticed.",
+      "There is a young one in the Shallows telling everybody he knows you. He is not lying, is he.",
+      "Do you want the news or the true news. They are different lengths."
+     ],
+     [
+      "I carried word for a captain once and I carried it too slowly. She was gone by the time it reached her.",
+      "That is why I do not charge. Somebody has to be quick about it and mean it.",
+      "Nance is the only one out here I cannot read. Twenty years and I have got nothing.",
+      "Dennis asks after you every time, and every time it takes forty minutes. I have started sailing off mid-sentence. He finishes them to the water.",
+      "Nobody ever asks me to carry anything to Fitch. I go anyway, about once a month."
+     ],
+     [
+      "You have the whole road now. Every one of them talks to you and I am the only other one who can say that.",
+      "Cass has a sister in the deep band. Neither of them has asked me to carry anything. Both of them have wanted to.",
+      "When I am too old for the run, somebody has to keep the account of who is out here. I have been thinking it should be you.",
+      "I have carried word for forty years and never once for myself. I would not know who to send it to.",
+      "Yoon told me to tell you something once. Then he changed his mind. I have wondered ever since and so should you."
+     ]
+    ],
+    "afterMax": [
+     "No word for you today. That is rarer than you would think and I thought you should hear it from me.",
+     "Cass asked after you. Did not ask me to say so. I am saying so.",
+     "I have started telling people what you are like out here. I hope that is all right. It is all good.",
+     "Forty years and I have finally worked out who I would send word to. Took a while.",
+     "Yoon changed his mind again about that message. I have stopped waiting. You should too, probably.",
+     "Meg has a mug on her boat with your name on it. She will deny it. She showed it to me.",
+     "Nothing to carry today. I sailed out here anyway. Work that one out, because I have not.",
+     "I am teaching a young one the run. She is quicker than me and worse at the listening. That is the hard half.",
+     "Fitch spoke twice last month. Twice. I have written the dates down and I will not be taking questions.",
+     "Marlow says he has no regulars. He has six and he can name them in order. I have heard him do it.",
+     "You are the first in forty years to ask what the news costs me. A sail and a bad back, since you keep asking.",
+     "I said somebody should keep the account when I am done. I have stopped saying should."
+    ],
+    "tierUp": [
+     "Rue. Rue Bream. Now you are on my list, which is a real list and it is quite short.",
+     "I will carry word for you. Anywhere on this sea, no charge, you only have to ask.",
+     "You get the real news now, not the harbor version.",
+     "You are the last name on the list and the only one who ever asked how I was."
+    ],
+    "favourites": [
+     {
+      "id": 27,
+      "name": "Atlantic Cod",
+      "ask": "A cod. Plain Atlantic cod. Everything else out here is somebody's trophy and a cod is just supper, which is the entire point of it.",
+      "brought": [
+       "You remembered. I mentioned this once, months ago, and you remembered.",
+       "Cod. Plain as anything, and not one person has ever brought me one. That is rather the whole of me, is it not.",
+       "I carry what everybody says and nobody asks what I would want. You asked, once. Here it is."
+      ]
+     },
+     {
+      "id": 51,
+      "name": "Lanternfish",
+      "ask": "Lanternfish. There are more of them in this sea than anything else with a spine, and not one captain out here could name one. I have a certain sympathy. Bring me one.",
+      "brought": [
+       "The most of anything in the whole sea, and nobody has ever handed one to a person on purpose before. Until now.",
+       "It carries a light and nobody looks. I will not be drawing the comparison out loud. I have drawn it.",
+       "Something for me, for once. I will not make a thing of it. I will mention it, but I will not make a thing of it."
+      ]
+     },
+     {
+      "id": 82,
+      "name": "Atlantic Salmon",
+      "ask": "An Atlantic salmon. It goes out, it carries itself the whole way back, and it never once gets the road wrong. I have been doing that for forty years with worse navigation.",
+      "brought": [
+       "All that way and it still knew the road. Forty years, and I still check my chart twice.",
+       "There is nothing out here better at carrying something home. Present company included, and I am being generous to myself.",
+       "A gift for the messenger. That does not happen. Thank you."
+      ]
+     }
+    ]
+   }
+  ],
+  "asks": {
+   "meg": [
+    [
+     {
+      "you": "What do you pay?",
+      "they": "Less than ashore. More than the row home costs you. Work it out."
+     },
+     {
+      "you": "Busy today?",
+      "they": "Three boats before you. Two of them tried to argue with the scale."
+     }
+    ],
+    [
+     {
+      "you": "Do you ever go out deep?",
+      "they": "Never had a reason. Everything I need comes past me eventually."
+     },
+     {
+      "you": "How long have you been at this?",
+      "they": "Long enough that the good scale is older than most of the captains using it."
+     }
+    ],
+    [
+     {
+      "you": "Who taught you the trade?",
+      "they": "My mother. Same water, worse scale, twice the temper."
+     },
+     {
+      "you": "Any advice?",
+      "they": "Come back with a full hold or come back empty. Just come back."
+     }
+    ],
+    [
+     {
+      "you": "Do you get lonely out here?",
+      "they": "There is a difference between alone and lonely. I have only ever been the first one."
+     },
+     {
+      "you": "What happened to the ones who stopped coming?",
+      "they": "Some got rich. Some got frightened. Two I do not talk about."
+     }
+    ],
+    [
+     {
+      "you": "Would you ever leave the Shallows?",
+      "they": "And go where. This is the water. Everything after it is only further away."
+     },
+     {
+      "you": "What do you make of me?",
+      "they": "You turned into somebody. I have watched it happen twice before and it never gets old."
+     }
+    ]
+   ],
+   "pell": [
+    [
+     {
+      "you": "What are you doing out here?",
+      "they": "Dude I'm trying to retire. Once my fish stocks take off ima retire."
+     },
+     {
+      "you": "Do you fish?",
+      "they": "LOL I own a rod bro. These waters are rigged tho."
+     },
+     {
+      "you": "You okay out here?",
+      "they": "No wife, no kids. Can't complain."
+     },
+     {
+      "you": "What is with the phone?",
+      "they": "Just checking for new boats bro. My wife made me sell my last one. It was a lot more sporty I swear. Now I have this family boat."
+     },
+     {
+      "you": "Do you ever sleep?",
+      "they": "I'm guessing you don't have kids."
+     }
+    ],
+    [
+     {
+      "you": "So you worked in fishing technology?",
+      "they": "Data. I was the data God. Dude, that was my title, people called me that in meetings. I made the best dashboards."
+     },
+     {
+      "you": "Why are you in Open Waters?",
+      "they": "I used to YOLO out in the abyss but I'm a family man now."
+     },
+     {
+      "you": "Tell me about the fish stock market.",
+      "they": "Okay. Yooooo. Okay. So a stock is a piece of a company, that part's boring. The fun part is options, and options are all about the Greeks. Ask me about the Greeks."
+     },
+     {
+      "you": "What are the Greeks?",
+      "they": "Dude. Okay. Delta, gamma, theta, vega, rho. Delta is how much the option moves when the stock moves a dollar. Gamma is how fast delta changes. Theta is what you lose every day just for holding it. Vega is how much it cares about volatility. Rho is interest rates and nobody cares. Bruh, that's the whole religion."
+     },
+     {
+      "you": "Are you playing the next earnings?",
+      "they": "Always dude. I don't even know which company yet. Are YOU playing it? That's the real question."
+     }
+    ],
+    [
+     {
+      "you": "Are you up or down?",
+      "they": "Bro, I'm always down. I'm still the data God though."
+     },
+     {
+      "you": "Do you actually like it out here?",
+      "they": "I like that nobody's pinging me all the time. And no crying babies all day long."
+     },
+     {
+      "you": "How are you really doing?",
+      "they": "Dude, I'm fine. I'm totally *voice crack* ...",
+      "then": {
+       "you": "...",
+       "they": "... Okay. That didn't happen. Bruh. Anyway. Yooooo, earnings are next week, are you playing it? LOL. Moving on."
+      }
+     },
+     {
+      "you": "Explain delta properly.",
+      "they": "Okay so delta runs from zero to one on a call, negative one to zero on a put. A fifty delta call moves about fifty cents per dollar the stock moves, and it's roughly the market's guess at the odds it finishes in the money. Dude, deep in the money it acts like stock, way out of the money it's a lottery ticket. Bruh, that's delta."
+     },
+     {
+      "you": "What is theta?",
+      "they": "Theta is the rent. Dude, every day you hold an option you pay a little, and it speeds up as expiry gets close, like the last week is brutal. Buyers pay theta, sellers collect it. Bruh, most people out here are buyers and they don't know they're the rent."
+     }
+    ],
+    [
+     {
+      "you": "What happened with the job?",
+      "they": "Reorg? Lack of funds? Idk. Big ripperoni."
+     },
+     {
+      "you": "What was the stock?",
+      "they": "I don't even remember. I own so much stock. But all of them are worthless."
+     },
+     {
+      "you": "What is the deal with earnings?",
+      "they": "Okay so before earnings, implied volatility gets pumped, the options get expensive, everybody's pricing the move. Then the number drops and IV crushes, like collapses, and your call can be right on direction and still lose because you paid for the fear. Dude, the price of the straddle divided by the stock price is roughly the move the market expects. If you don't think it beats that, you don't play it. Bruh, I play it anyway."
+     }
+    ],
+    [
+     {
+      "you": "Are you going back?",
+      "they": "Bro i have no clue. I don't want to. But it's not looking good for me."
+     },
+     {
+      "you": "What would you do differently?",
+      "they": "I should've invested in the Ancient Deep at a young, young age. Who knew that those fish prices would go insane..."
+     },
+     {
+      "you": "Would you consider me a close friend?",
+      "they": "Yeah, dude. You're, like, the best *voice crack* ...",
+      "then": {
+       "you": "...",
+       "they": "... Bruh. You heard that?"
+      }
+     },
+     {
+      "you": "What is gamma, really?",
+      "they": "Gamma is how much delta moves when the stock moves a dollar, so it's the thing that makes a position feel alive. Highest at the money right before expiry, dude, that's where an option flips from nothing to everything on a small move. Sellers are short gamma and it's the thing that eats them. Bruh, the data God has been eaten. Ripperoni."
+     }
+    ]
+   ],
+   "marlow": [
+    [
+     {
+      "you": "Why so far out?",
+      "they": "Because you came anyway. That is the whole business model."
+     },
+     {
+      "you": "Is the rate fixed?",
+      "they": "Fixed by the distance you just sailed. I only read it out."
+     }
+    ],
+    [
+     {
+      "you": "Do you ever go ashore?",
+      "they": "Not in nine years. The harbor and I agreed to stop pretending."
+     },
+     {
+      "you": "What is out past here?",
+      "they": "Darker water and better prices. Both get worse the further you go."
+     }
+    ],
+    [
+     {
+      "you": "You mentioned wrecks.",
+      "they": "Three. Two picked clean. I said I would not tell you which two and I meant it."
+     },
+     {
+      "you": "Do you fish yourself?",
+      "they": "I did. I was terrible. It is why I am very good at buying."
+     }
+    ],
+    [
+     {
+      "you": "Who was the captain you paid badly?",
+      "they": "Her name was Tarn. She took it without a word, which was worse than shouting."
+     },
+     {
+      "you": "Do you regret it?",
+      "they": "Every time somebody new pulls alongside. That is what a regret is for."
+     }
+    ],
+    [
+     {
+      "you": "What is in the eastern wreck?",
+      "they": "Something I have been keeping for whoever came out here often enough to deserve it. Do not go looking yet."
+     },
+     {
+      "you": "Will you ever stop?",
+      "they": "Out here you do not stop. You stop being out here one day and somebody notices a week later."
+     }
+    ]
+   ],
+   "fitch": [
+    [
+     {
+      "you": "Cold down here.",
+      "they": "Yes."
+     },
+     {
+      "you": "Do you talk much?",
+      "they": "No."
+     }
+    ],
+    [
+     {
+      "you": "How deep does it go?",
+      "they": "Further than the chart says. Do not."
+     },
+     {
+      "you": "Do you sleep out here?",
+      "they": "When it is quiet. It is always quiet."
+     }
+    ],
+    [
+     {
+      "you": "What is the sound you mentioned?",
+      "they": "You will know it. Everybody says the same thing afterwards and I will not spoil that."
+     },
+     {
+      "you": "Are you all right out here?",
+      "they": "That is the first time anybody has asked me. Yes."
+     }
+    ],
+    [
+     {
+      "you": "Why the dark water?",
+      "they": "Ask me again when you have earned it."
+     },
+     {
+      "you": "What followed your boat?",
+      "they": "Something patient. That is all you are getting."
+     }
+    ],
+    [
+     {
+      "you": "So why the dark water?",
+      "they": "Up there I could hear everybody at once. Down here it is one thing at a time."
+     },
+     {
+      "you": "Would you ever come up?",
+      "they": "For the right reason. Nobody has had one yet."
+     },
+     {
+      "you": "Tell me about the rod.",
+      "they": "It is wound from the same dark that is over your head right now. Land a fish on it and you may fold the water once and bring up a different one from these depths instead. Better or worse. It does not promise you better."
+     },
+     {
+      "you": "Why would I want to undo a catch?",
+      "they": "You would not, most times. You will know the time. It comes once a trip and you will feel it before you decide."
+     }
+    ]
+   ],
+   "nance": [
+    [
+     {
+      "you": "You buy anything?",
+      "they": "Anything that comes up from down there. I stopped being surprised a long time ago."
+     },
+     {
+      "you": "Not many boats out here.",
+      "they": "Three this month. You are the third."
+     }
+    ],
+    [
+     {
+      "you": "Strangest thing you have weighed?",
+      "they": "I do not have a word for it. That is what makes it the strangest."
+     },
+     {
+      "you": "Is it safe?",
+      "they": "No. Go carefully and come up often."
+     }
+    ],
+    [
+     {
+      "you": "How old is this water?",
+      "they": "Older than everything you sailed past to get here. The reef included."
+     },
+     {
+      "you": "Do you ever go down?",
+      "they": "I weigh. Other people go down. That division has kept me alive."
+     }
+    ],
+    [
+     {
+      "you": "Tell me about the captain before me.",
+      "they": "Eleven years on this band. Never late, never careless. It did not matter in the end."
+     },
+     {
+      "you": "What do you think the ancients are?",
+      "they": "Not fish. I have said so for twenty years and nobody has argued with me twice."
+     }
+    ],
+    [
+     {
+      "you": "Are you afraid of it?",
+      "they": "Every day. That is why I am still here and the brave ones are not."
+     },
+     {
+      "you": "What should I do differently?",
+      "they": "Nothing. Keep coming up. That is the whole of it and it is harder than it sounds."
+     },
+     {
+      "you": "Tell me about the rod.",
+      "they": "It is a blade, and it is lit. Down here that is not decoration. The fish come to it, and they come fast - most casts take before your line has finished falling."
+     },
+     {
+      "you": "Why give it to me?",
+      "they": "Because you keep coming back up. That is the entire test and almost nobody passes it."
+     }
+    ]
+   ],
+   "yoon": [
+    [
+     {
+      "you": "Is the rod for sale?",
+      "they": "Technically. Practically? Nah. Not yet."
+     },
+     {
+      "you": "What tier is it?",
+      "they": "Twenty. Sheeeeesh, right? Doesn't matter though."
+     },
+     {
+      "you": "Why so far out?",
+      "they": "Nobody sails this far for a rod they don't need. Gyattt, that's the filter."
+     },
+     {
+      "you": "What are you fishing for?",
+      "they": "Nothing right now. Watching. Sheeeeesh, you can learn a lot watching."
+     },
+     {
+      "you": "Nice boat.",
+      "they": "Bruhhh. It's a workbench with a sail. But thanks. Gucci."
+     }
+    ],
+    [
+     {
+      "you": "What makes it different?",
+      "they": "It doesn't waste a streak. That's it. That's the whole thing."
+     },
+     {
+      "you": "How much?",
+      "they": "You'll know when you stop asking. Gyattt, everybody asks."
+     },
+     {
+      "you": "Do you ever fish for fun?",
+      "they": "Every day. Making rods is the work part. Gyattt, fishing's the reason."
+     },
+     {
+      "you": "What is the worst rod you have made?",
+      "they": "The first one. Snapped on a bluegill. Betty johnson. I kept the pieces."
+     },
+     {
+      "you": "Do you get lonely out here?",
+      "they": "Lowkey? Sometimes. Then somebody like you shows up and I remember why I'm out here. Aight, don't make it weird."
+     }
+    ],
+    [
+     {
+      "you": "How did you learn to make them?",
+      "they": "Badly. For like six years. Then it clicked and I still couldn't tell you what changed."
+     },
+     {
+      "you": "What does locked in mean to you?",
+      "they": "When you stop counting and you're just doing it. Gyattt, it's hard to explain."
+     },
+     {
+      "you": "What do you make of my rig?",
+      "they": "Bruhhh. Too much dip on your chip. Half that setup is doing nothing and you are carrying it anyway."
+     },
+     {
+      "you": "What do you listen to out here?",
+      "they": "The water. Gyattt, I know how that sounds. Also the water."
+     }
+    ],
+    [
+     {
+      "you": "Why not sell in the harbor?",
+      "they": "Because then anybody with coin gets it. That's not it. That was never it."
+     },
+     {
+      "you": "Do you miss making them?",
+      "they": "Lowkey, yeah. But I said one rod and I meant one rod."
+     },
+     {
+      "you": "Am I overthinking this?",
+      "they": "Bruhhh. Constantly. That is most of what is between you and the next one."
+     }
+    ],
+    [
+     {
+      "you": "What happens after I buy it?",
+      "they": "You fish. That's it. Gyattt, everybody thinks there's a next thing."
+     },
+     {
+      "you": "Was I ever close to failing?",
+      "they": "Nah. Not once. You were locked in way earlier than you think."
+     },
+     {
+      "you": "Tell me about the rod. Properly.",
+      "they": "It reads your streak and it grows with it. Perfect after perfect and the thing keeps getting stronger in your hands. Sheeeeesh."
+     },
+     {
+      "you": "And when I miss?",
+      "they": "It drops back to nothing. All of it, one miss. That is not a punishment, bruhhh, that is the rod being honest about what you were doing."
+     }
+    ]
+   ],
+   "brill": [
+    [
+     {
+      "you": "What is with the boat?",
+      "they": "Ugly, right? The engine's new. I'd rather the boat looked like this than the other way round. Long story."
+     },
+     {
+      "you": "Were you really on the expeditions?",
+      "they": "Six years. I have stories. I have SO many stories. Sit down or don't, they're coming either way. Oh we can only sit. They must've run out of budget for animating anything else."
+     },
+     {
+      "you": "Do you come here often?",
+      "they": "Every day. Same spot. I like to think of it as my spawn point. Sorry. Games. I'll try to keep it under control. I'll probably forget, but I'll try!"
+     },
+     {
+      "you": "What are you reading?",
+      "they": "A manual for a reel I don't own. It's fascinating. It's genuinely fascinating. Did you know that reels were invented 300-400 AD? That's old. I'm not old though."
+     },
+     {
+      "you": "How is the fishing?",
+      "they": "Slow, which is fine, slow is the point, if I wanted fast I'd have stayed on the expeditions. That's a joke. It was mostly slow there too."
+     }
+    ],
+    [
+     {
+      "you": "What do you play?",
+      "they": "Everything. Too much. I once played a fishing game for three hundred hours and then bought a boat, so, you know. Draw your own conclusions."
+     },
+     {
+      "you": "Why the Shallows?",
+      "they": "It's the starting zone. All the best stories happen in the starting zone. At least that's what I tell myself."
+     },
+     {
+      "you": "Did you like the expeditions?",
+      "they": "Parts. The people, the stories, the being useful. Not the getting up. I still can't get up. Fishing lets you sit down. That's ninety percent of why."
+     },
+     {
+      "you": "What was the three hundred hour game?",
+      "they": "A fishing game. I know. I know. I'm aware of the irony and I've made peace with it and then I bought a boat."
+     },
+     {
+      "you": "Do you have family out here?",
+      "they": "No. Just the boat and, I guess, whoever stops. So, you, currently. Sorry, that got heavy. It doesn't have to be heavy."
+     }
+    ],
+    [
+     {
+      "you": "What were the expeditions actually like?",
+      "they": "Waiting. Ninety percent waiting. Then a very short amount of something. Then waiting about the something."
+     },
+     {
+      "you": "Do you ever stop talking?",
+      "they": "Once. In a dentist's chair. It was the worst twenty minutes of my life."
+     },
+     {
+      "you": "Any tips for a beginner?",
+      "they": "Oh, I have a forty-minute answer. Sit down. The short version is: cast where the water looks bored. The long version has diagrams."
+     }
+    ],
+    [
+     {
+      "you": "You seem to do all right for yourself.",
+      "they": "Do I? Good. That's the plan. Doing all right without it being a thing. I've spent more effort on that than on the fishing."
+     },
+     {
+      "you": "What is the spreadsheet for?",
+      "they": "Patterns. And, honestly, so I have something to reread when it's quiet. The last column's the important one."
+     }
+    ],
+    [
+     {
+      "you": "What is the thing you are building?",
+      "they": "A place for green captains to ask forty-minute questions and get forty-minute answers. It has a name. I'm not ready to say the name."
+     },
+     {
+      "you": "Tell me a story.",
+      "they": "Okay. Okay okay okay. Which decade? I'm kidding. Sort of. Sit down."
+     }
+    ]
+   ],
+   "turbot": [
+    [
+     {
+      "you": "What is down there?",
+      "they": "Three boats that did not come back up. Mind where you put that anchor."
+     },
+     {
+      "you": "Does salvage pay?",
+      "they": "It pays in rope. Occasionally it pays in better rope."
+     }
+    ],
+    [
+     {
+      "you": "How deep do you go?",
+      "they": "Not deep. Long. There is a difference and the long ones are worse."
+     },
+     {
+      "you": "Ever find anything good?",
+      "they": "Define good. I found a kettle last month and I have never been happier."
+     }
+    ],
+    [
+     {
+      "you": "Tell me about the bell.",
+      "they": "Still hanging. I have never rung it. I am not going to and neither are you."
+     },
+     {
+      "you": "Do you get frightened down there?",
+      "they": "Only on the way up. On the way down you are working."
+     }
+    ],
+    [
+     {
+      "you": "What is behind the door?",
+      "they": "Ask me when you have earned it. I am not being coy, I am being careful."
+     },
+     {
+      "you": "You mentioned a sister.",
+      "they": "She dives the deep band. Six years. Neither of us will be the one to send word first."
+     }
+    ],
+    [
+     {
+      "you": "Why did you close the door again?",
+      "they": "Because it had been shut on purpose, and I am not the one who gets to undo that."
+     },
+     {
+      "you": "Send her word. I will carry it.",
+      "they": "You would, as well. Give me a season. I am nearly there."
+     }
+    ]
+   ],
+   "ream": [
+    [
+     {
+      "you": "You carry messages?",
+      "they": "Anywhere on this sea. No charge. Yes, really."
+     },
+     {
+      "you": "Who is out here?",
+      "they": "More than you would think. Fewer than there were."
+     }
+    ],
+    [
+     {
+      "you": "What is the news?",
+      "they": "Meg is well, Matty is up if you use his numbers, Marlow is being Marlow. Nothing has changed in years."
+     },
+     {
+      "you": "Why free?",
+      "they": "Ask me when we know each other better. It is not a happy answer."
+     }
+    ],
+    [
+     {
+      "you": "Does anybody send word to Fitch?",
+      "they": "No. That is exactly why I go."
+     },
+     {
+      "you": "What do they say about me?",
+      "they": "That you stop. Out here that is practically a reputation."
+     }
+    ],
+    [
+     {
+      "you": "So why free?",
+      "they": "I carried word too slowly once. She was gone by the time it got there. That is the whole answer."
+     },
+     {
+      "you": "Who was she?",
+      "they": "A captain. That is all I will say, and it is more than I have said to anybody."
+     }
+    ],
+    [
+     {
+      "you": "Who keeps the account when you stop?",
+      "they": "I was rather hoping you had been listening when I brought that up."
+     },
+     {
+      "you": "What did Yoon nearly tell me?",
+      "they": "He said, and I quote, tell them they are locked in. Then he said forget it. So there you are."
+     }
+    ]
+   ]
+  },
+  "moorings": [
+   {
+    "folkId": "brill",
+    "zoneId": "shallows",
+    "name": "Dennis",
+    "line": "You are a real captain. Sorry. That was out loud.",
+    "x": -1900,
+    "y": 2400,
+    "driftRate": 0.09519977738150888,
+    "driftPhase": 3.6,
+    "roam": true,
+    "look": {
+     "color": "gray",
+     "boat": "charcoal",
+     "hat": "brown",
+     "rodSlug": "rod_telescoping",
+     "hook": "/hook_iron.png"
+    }
+   },
+   {
+    "folkId": "turbot",
+    "zoneId": "open_waters",
+    "name": "Cass",
+    "line": "Do not anchor here. I am working underneath you.",
+    "x": 2073,
+    "y": 4476,
+    "driftRate": 0.06613879270715355,
+    "driftPhase": 5.666666666666667,
+    "roam": true,
+    "look": {
+     "color": "pink",
+     "boat": "taupe",
+     "hat": "offwhite",
+     "rodSlug": "rod_graphite",
+     "hook": "/hook_bronze.png"
+    }
+   },
+   {
+    "folkId": "ream",
+    "zoneId": "deep",
+    "name": "Rue",
+    "line": "I carry word between the boats out here. No, there is no charge. That surprises everyone.",
+    "x": 3900,
+    "y": 8300,
+    "driftRate": 0.07306029426953008,
+    "driftPhase": 5.466666666666667,
+    "roam": true,
+    "look": {
+     "color": "gray",
+     "boat": "desert",
+     "hat": "brown",
+     "rodSlug": "rod_fiberglass",
+     "hook": "/hook_iron.png"
+    }
+   },
+   {
+    "folkId": "meg",
+    "zoneId": "shallows",
+    "name": "Meg",
+    "line": "I kept the scale on this water for thirty years. Sit down anyway.",
+    "x": 1416,
+    "y": 2181,
+    "driftRate": 0.08267349088394192,
+    "driftPhase": 5.6,
+    "roam": true,
+    "look": {
+     "color": "blue",
+     "boat": "charcoal",
+     "hat": "olive",
+     "rodSlug": "rod_telescoping",
+     "hook": "/hook_copper.png"
+    }
+   },
+   {
+    "folkId": "pell",
+    "zoneId": "open_waters",
+    "name": "Matty",
+    "line": "Fish don't keep and neither does my patience. Say something.",
+    "x": 559,
+    "y": 5321,
+    "driftRate": 0.06829549246934333,
+    "driftPhase": 2.6666666666666665,
+    "roam": true,
+    "look": {
+     "color": "blue",
+     "boat": "taupe",
+     "hat": "olive",
+     "rodSlug": "rod_bamboo",
+     "hook": "/hook_copper.png"
+    }
+   },
+   {
+    "folkId": "marlow",
+    "zoneId": "deep",
+    "name": "Marlow",
+    "line": "Long way back to the dock from here. I've made a living out of exactly that.",
+    "x": -1545,
+    "y": 8765,
+    "driftRate": 0.06100179909883093,
+    "driftPhase": 1.4,
+    "roam": true,
+    "look": {
+     "color": "pink",
+     "boat": "oak",
+     "hat": "offwhite",
+     "rodSlug": "rod_driftwood",
+     "hook": "/hook_bronze.png"
+    }
+   },
+   {
+    "folkId": "fitch",
+    "zoneId": "abyss",
+    "name": "Fitch",
+    "line": "Not many come this deep. Sit.",
+    "x": -5896,
+    "y": 12089,
+    "driftRate": 0.08607103160519981,
+    "driftPhase": 0.4666666666666667,
+    "roam": true,
+    "look": {
+     "color": "default",
+     "boat": "desert",
+     "hat": "midnight",
+     "rodSlug": "rod_galaxy",
+     "hook": "/hook_steel.png"
+    }
+   },
+   {
+    "folkId": "nance",
+    "zoneId": "ancient_deep",
+    "name": "Nance",
+    "line": "You went down there and came back up. That is the part worth talking about.",
+    "x": -14343,
+    "y": 12914,
+    "driftRate": 0.09239978392911156,
+    "driftPhase": 5.2,
+    "roam": true,
+    "look": {
+     "color": "gray",
+     "boat": "mahogany",
+     "hat": "brown",
+     "rodSlug": "rod_lightsaber",
+     "hook": "/hook_iron.png"
+    }
+   },
+   {
+    "folkId": "yoon",
+    "zoneId": "ancient_deep",
+    "name": "Yoon",
+    "line": "You've the streak for it, or you haven't. Rod won't teach you that. It just stops wasting it.",
+    "x": 13820,
+    "y": 9880,
+    "driftR": 26,
+    "driftRate": 0.06544984694978735,
+    "driftPhase": 1.7,
+    "roam": false,
+    "look": {
+     "color": "default",
+     "boat": "charcoal",
+     "hat": "midnight",
+     "rodSlug": "rod_yoons",
+     "hook": null
+    }
+   }
+  ]
+ },
+ "traders": {
+  "cell": 1500,
+  "doorstep": 1040,
+  "maxDrift": 280,
+  "northWall": -1500,
+  "outerEdge": 22600,
+  "boatClear": 60,
+  "solids": [
+   [
+    0,
+    0,
+    500
+   ],
+   [
+    1500,
+    -200,
+    460
+   ],
+   [
+    -1150,
+    -780,
+    265
+   ],
+   [
+    -900,
+    -4400,
+    460
+   ],
+   [
+    -2150,
+    -4400,
+    280
+   ],
+   [
+    620,
+    -4400,
+    280
+   ],
+   [
+    -898,
+    -5715,
+    340
+   ],
+   [
+    898,
+    -5715,
+    340
+   ],
+   [
+    -2050,
+    -820,
+    210
+   ],
+   [
+    700,
+    -900,
+    265
+   ],
+   [
+    3080,
+    496,
+    131
+   ],
+   [
+    -988,
+    2877,
+    137
+   ],
+   [
+    -1938,
+    784,
+    130
+   ],
+   [
+    5738,
+    1842,
+    168
+   ],
+   [
+    4788,
+    4031,
+    152
+   ],
+   [
+    2132,
+    5930,
+    150
+   ],
+   [
+    -835,
+    6138,
+    169
+   ],
+   [
+    -3631,
+    2582,
+    156
+   ],
+   [
+    -5651,
+    1460,
+    157
+   ],
+   [
+    9927,
+    1395,
+    175
+   ],
+   [
+    6489,
+    6338,
+    179
+   ],
+   [
+    967,
+    9319,
+    181
+   ],
+   [
+    -3240,
+    9437,
+    157
+   ],
+   [
+    -5974,
+    5532,
+    155
+   ],
+   [
+    -9518,
+    1163,
+    170
+   ],
+   [
+    12931,
+    1689,
+    178
+   ],
+   [
+    10474,
+    8925,
+    164
+   ],
+   [
+    5784,
+    13078,
+    192
+   ],
+   [
+    -1606,
+    14323,
+    171
+   ],
+   [
+    -12157,
+    8522,
+    191
+   ],
+   [
+    -14141,
+    5095,
+    191
+   ],
+   [
+    18859,
+    8860,
+    176
+   ],
+   [
+    12203,
+    13851,
+    199
+   ],
+   [
+    6602,
+    16175,
+    189
+   ],
+   [
+    -5984,
+    20420,
+    178
+   ],
+   [
+    -11564,
+    14089,
+    182
+   ],
+   [
+    -19106,
+    7132,
+    190
+   ],
+   [
+    -2380,
+    -770,
+    124
+   ],
+   [
+    -2282,
+    -670,
+    112
+   ],
+   [
+    -2478,
+    -658,
+    104
+   ],
+   [
+    2472,
+    1249,
+    130
+   ],
+   [
+    1003,
+    2620,
+    210
+   ],
+   [
+    397,
+    2082,
+    120
+   ],
+   [
+    -625,
+    1793,
+    190
+   ],
+   [
+    -2466,
+    2056,
+    130
+   ],
+   [
+    4282,
+    1354,
+    190
+   ],
+   [
+    4002,
+    3221,
+    117
+   ],
+   [
+    1553,
+    4276,
+    280
+   ],
+   [
+    -2183,
+    5235,
+    120
+   ],
+   [
+    -3850,
+    3714,
+    200
+   ],
+   [
+    -4955,
+    3446,
+    300
+   ],
+   [
+    6724,
+    3748,
+    330
+   ],
+   [
+    5913,
+    7457,
+    120
+   ],
+   [
+    2884,
+    7715,
+    300
+   ],
+   [
+    -1816,
+    9425,
+    300
+   ],
+   [
+    -3984,
+    7299,
+    130
+   ],
+   [
+    -7216,
+    7113,
+    320
+   ],
+   [
+    -7509,
+    3960,
+    209
+   ],
+   [
+    12336,
+    5038,
+    350
+   ],
+   [
+    9759,
+    10682,
+    360
+   ],
+   [
+    4725,
+    12320,
+    300
+   ],
+   [
+    1010,
+    12521,
+    320
+   ],
+   [
+    -3642,
+    12420,
+    340
+   ],
+   [
+    -7585,
+    9424,
+    310
+   ],
+   [
+    -9967,
+    9418,
+    330
+   ],
+   [
+    -11330,
+    3934,
+    350
+   ],
+   [
+    19543,
+    4937,
+    320
+   ],
+   [
+    14517,
+    10809,
+    400
+   ],
+   [
+    9890,
+    16479,
+    280
+   ],
+   [
+    9004,
+    18786,
+    360
+   ],
+   [
+    164,
+    18391,
+    300
+   ],
+   [
+    -7802,
+    19179,
+    380
+   ],
+   [
+    -9475,
+    17115,
+    340
+   ],
+   [
+    -15852,
+    10811,
+    370
+   ],
+   [
+    -17571,
+    8736,
+    310
+   ]
+  ],
+  "namesFirst": [
+   "Old",
+   "Salt",
+   "Bent",
+   "Wry",
+   "Quiet",
+   "Lucky",
+   "Patched",
+   "Barnacle",
+   "Half",
+   "Crooked",
+   "Squint",
+   "Grey",
+   "Tallow",
+   "Hollow"
+  ],
+  "namesLast": [
+   "Dunnage",
+   "Bilge",
+   "Ketch",
+   "Crayle",
+   "Murrow",
+   "Skerry",
+   "Fennick",
+   "Sorrel",
+   "Rud",
+   "Hessel",
+   "Thole",
+   "Garrick",
+   "Wick",
+   "Drassel"
+  ],
+  "lines": {
+   "peddler": [
+    "Shop prices are a shore thing. Out here I set them.",
+    "Bought too much, rowed too far. Your luck, not mine.",
+    "It is all worms in the end. Some of it is better worms.",
+    "I do not haggle and I do not wait. Yes or no."
+   ],
+   "salter": [
+    "I have salt and barrels and no patience. What is in the hold?",
+    "Sell to me and it is done. Sell ashore and it is done Thursday.",
+    "Every fish you carry is a fish slowing you down.",
+    "I pay better than the quick lads on the dock. Not by much. But better."
+   ],
+   "tinker": [
+    "Nobody comes out this far to buy worms. Good. I do not sell worms.",
+    "You are a long way from the beach. So am I. Let us both make it pay.",
+    "The dark is good for trade. Nobody follows you into it.",
+    "I have been out here longer than is sensible. I have the stock to show it."
+   ]
+  },
+  "personas": [
+   {
+    "mood": "In no hurry to be modest",
+    "lines": [
+     "I have been further out than this. Much further. Ask anyone who was there.",
+     "Landed one once that took three of us and most of an afternoon.",
+     "Every mark on this hull has a story and a good number of them are true.",
+     "I could sail this stretch with my eyes shut. I have not. But I could.",
+     "You are looking at the second finest captain in these waters. The finest is modest about it.",
+     "They say the far water is dangerous. It was dangerous. I have been."
+    ]
+   },
+   {
+    "mood": "Watching the water",
+    "lines": [
+     "It was flat like this the morning the Margate went down. Flat exactly like this.",
+     "I check the hull twice before I leave and twice more when I am back.",
+     "Did you hear that? No? Good. Neither did I. Probably.",
+     "I keep a second rope. And a third. You can laugh, I have heard laughing before.",
+     "Everyone says it is fine out here. Everyone said that last season as well.",
+     "I do not go past the shelf. Nobody raised me brave, they raised me old."
+    ]
+   },
+   {
+    "mood": "A long way from the dock",
+    "lines": [
+     "Three weeks out. My youngest will have grown and I will not know the face.",
+     "The tavern does a stew on the cold nights. I think about it more than is healthy.",
+     "You get used to the quiet. That is the part nobody warns you about.",
+     "I could turn for home. I say that at the start of every week.",
+     "There is a bunk ashore with my name on it and a mattress that remembers the shape of me.",
+     "Say something else. Anything. I am not fussy at this point."
+    ]
+   },
+   {
+    "mood": "Full of opinions",
+    "lines": [
+     "Boats these days. All paint and no timber.",
+     "In my day you went and found the fish. Now you wait for them and complain about waiting.",
+     "I have no complaints. I have observations. There are a great many of them.",
+     "Everybody out here is in a hurry and not one of them is getting anywhere sooner.",
+     "They have gone and changed the market again. They are always changing the market.",
+     "Nothing wrong with the old way. Nothing wrong with it at all."
+    ]
+   },
+   {
+    "mood": "Somewhere else entirely",
+    "lines": [
+     "One day I am going to sail until the chart runs out and see what happens next.",
+     "I like the hour the light goes. Everything looks like it might be something else.",
+     "If I had a bigger boat I do not think I would fish at all. I would just go.",
+     "There is water past the water. There has to be.",
+     "I gave names to all the rocks on my usual run. None of the names took.",
+     "Some nights the whole sea holds still and you can believe it is listening."
+    ]
+   },
+   {
+    "mood": "Has heard things",
+    "lines": [
+     "Two boats went out together last week and one came back. They are not saying which.",
+     "You did not hear it from me, but somebody has been buying charts. All of them.",
+     "The Harbormaster has a new coat. Where does a Harbormaster come by a coat like that.",
+     "Everyone is very interested in the deep water lately. Everyone.",
+     "I do not repeat things. I say them once, to everybody.",
+     "There is a name going round that nobody says twice. I will not be the second one."
+    ]
+   },
+   {
+    "mood": "Still learning the water",
+    "lines": [
+     "Second week. I have stopped being sick, which they tell me was the hard part.",
+     "I keep tying the knot wrong. It holds anyway. I have stopped asking why.",
+     "Everybody out here seems to know everybody. I am working on it.",
+     "I caught something yesterday and I do not know what it was. I put it back.",
+     "They said I would love it or be gone inside a month. I am still deciding.",
+     "How do you all know where you are? Everything looks the same to me out here."
+    ]
+   },
+   {
+    "mood": "Been out a while",
+    "lines": [
+     "I have not spoken to a soul in eleven days. You are doing very well so far.",
+     "The gulls have names now. I gave them the names. None of them objected.",
+     "What day is it. No. Do not tell me. I have come to like not knowing.",
+     "I talk to the boat. The boat is a marvelous listener and has never once interrupted.",
+     "You are the third real thing I have seen this week and the other two were weather.",
+     "I sang the whole way out. There was nobody to stop me and I checked."
+    ]
+   }
+  ],
+  "hints": [
+   "Chum's wasted in the shallows. Save it for water that's got something worth calling up.",
+   "A perfect reel pays more than a good one, and the second perfect in a row pays more again. Nobody tells you that.",
+   "Every stretch of water out here wants a different level off you. If it won't bite, you're early, not unlucky.",
+   "Your reel decides how fast the dial runs. Cheap reel, fast needle, and a hard fish is a coin toss.",
+   "The bigger your hold the longer you can stay out. That's the whole of it.",
+   "Sell to a buyer out here and you take less. Sail it home and the market pays every coin of it, on the spot.",
+   "A snag costs you bait on top of the fish. Some rods don't care. Worth knowing which.",
+   "If you're chasing size, keep casting the same water. Every species has a monster in it somewhere.",
+   "Every hook you buy widens the catch zone. Three degrees a tier. Doesn't sound like much until you've stacked five.",
+   "Bail on a fish you've already hooked and the streak dies with it. Stow the rod between casts and it keeps.",
+   "The Tide Turner lets you put a hooked fish back without the streak noticing. Comes off voyages, not out of a shop.",
+   "There's a hook out there that saves your bait a quarter of the time. Voyage reward. Worth the trip.",
+   "There's a rig that casts for you and opens what it finds. Ashore, in the tackle shop, for five thousand.",
+   "The Twin-Strike lands two at once, one cast in four.",
+   "There's a rod that lands two every single time. Costs what you'd expect.",
+   "The YOLO. One cast in ten it comes up with a hundred fish on it. The other nine it's a stick.",
+   "A telescoping rod pulls the rare ones up where you can reach them.",
+   "Quick sell if you must. The market ashore pays every coin, and the only thing it costs you is the sail home.",
+   "Finish every fish in a stretch of water and there's a purse waiting for it. Once only.",
+   "Prestige a stretch and everything you land there earns better. Five times over, if you've the patience.",
+   "Prestige the same water again and the completion purse grows with it.",
+   "Idle crew will trawl a zone for you while you're elsewhere. They come back with coin and knowledge both.",
+   "On a trawl it's Savvy that brings back the learning and Fortune that brings back the coin. Pick to suit.",
+   "You can have a trawl running in every water you've opened. All of them at once, all of them while you sleep.",
+   "Crates come up wooden, metal, gold and diamond. Something older comes up in the Ancient Deep.",
+   "The Ancient Deep's giants never see the inside of a hold. Straight to the wall.",
+   "Every fish you land gets measured. Your biggest of each is kept whether you ask or not.",
+   "Trivia in the Parlor of an evening pays in coin. Easiest gold on the island.",
+   "Solve the chart room's puzzles and the world chart opens a piece at a time. Gems under every landmark.",
+   "The Den takes chips at three tables and they all draw on the one purse.",
+   "Three catfish on the slot and the whole jackpot's yours. I've seen it happen. Once.",
+   "Past a hundred, everything you learn turns into Renown, and Renown buys things that stay bought.",
+   "Raid gear can be fused into better raid gear. There's a forge for it.",
+   "Daily challenges reset with the sun. Keep up with them and they add up to real money.",
+   "Watch for a lad called Finn. He'll want to make it a contest.",
+   "A bigger hold is more time on the water. That's the entire argument for it."
+  ],
+  "stories": [
+   "There were six of them, they say. Big as ships and older than ships. Five accounted for.",
+   "My father worked the Deep forty years and never went past it. Said the water changes temper out there.",
+   "Ask about the Sunken Hand in a tavern and watch who leaves.",
+   "Someone's been buying up charts. All of them. Paying stupid money and asking no questions.",
+   "The carvings on those stones aren't writing. I've shown them to people who'd know.",
+   "A man I knew went out past the Abyss on a bet. Came back. Wouldn't fish again.",
+   "You'll hear it said the deep ones are dead. Landed isn't dead.",
+   "Whatever counts to six down there, don't answer it."
+  ],
+  "stock": {
+   "peddler": [
+    "worm",
+    "minnow",
+    "night_crawler"
+   ],
+   "salter": [],
+   "tinker": [
+    "chum",
+    "anglers_formula"
+   ]
+  },
+  "runnerLines": [
+   "I have got one rod and no price on it. I have got a stake, and I have got a deck.",
+   "Shops ashore won't touch what I carry. That's rather the point of me.",
+   "Nine captains out of ten row home lighter. I tell them all that and they all sit down anyway.",
+   "You came this far out into the black for a rod that gambles. Do not act surprised.",
+   "No paperwork, no chandler, no questions. Put your money on the table."
+  ],
+  "boats": [
+   "oak",
+   "cherry",
+   "desert",
+   "mahogany",
+   "pistachio",
+   "taupe",
+   "periwinkle"
+  ],
+  "hats": [
+   "blue",
+   "brown",
+   "green",
+   "purple",
+   "yellow",
+   "midnight",
+   "olive",
+   "sky",
+   "offwhite"
+  ],
+  "colors": [
+   "default",
+   "gray",
+   "blue",
+   "pink"
+  ],
+  "hooks": [
+   "/hook_copper.png",
+   "/hook_bronze.png",
+   "/hook_iron.png",
+   "/hook_steel.png"
+  ],
+  "rods": [
+   "rod_bamboo",
+   "rod_driftwood",
+   "rod_fiberglass",
+   "rod_reefguard",
+   "rod_telescoping",
+   "rod_graphite",
+   "rod_navigators",
+   "rod_deepdiver",
+   "rod_twinstrike",
+   "rod_secondwind"
+  ],
+  "runnerRods": [
+   {
+    "tier": 15,
+    "slug": "rod_yolo"
+   },
+   {
+    "tier": 20,
+    "slug": "rod_yoons"
+   }
+  ],
+  "runnerStake": 100000,
+  "runnerOdds": 0.1,
+  "dealsPerDay": 6,
+  "kindLabel": {
+   "peddler": "Bait peddler",
+   "salter": "Salter",
+   "tinker": "Deep tinker",
+   "resident": "Buyer",
+   "talker": "An old hand",
+   "runner": "Blockade runner"
+  }
+ },
  "marketMoods": {
   "calm": {
    "label": "Calm Market",

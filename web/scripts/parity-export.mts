@@ -41,8 +41,10 @@ import type { SpeciesRow } from '../lib/data/fishingData'
 import { installRng, mulberry32, seedOf, type Rng } from '../lib/rng'
 import { installClock, clockNow } from '../lib/clock'
 import { hotspotsAt } from '../lib/seaHotspots'
-import { goAshore, digHere, openBottle, getDigState } from '../lib/core/sea'
-import { saveSeaPosition } from '../lib/core/selling'
+import { goAshore, digHere, openBottle, getDigState, folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod } from '../lib/core/sea'
+import { saveSeaPosition, strikeDeal, wagerForRunnerRod, dealtToday } from '../lib/core/selling'
+import { tradersAround, seaDay } from '../lib/seaTraders'
+import { seaClock, CYCLE_MS } from '../lib/seaClock'
 import { localSeaData } from '../lib/data/local/seaLocal'
 import { bottlesAround, bottlePos } from '../lib/seaBottles'
 import { fogReveal } from '../lib/seaExplore'
@@ -617,6 +619,92 @@ shop.push(await scripted('exploring', 36, captainWith(36, 40, 2, {}), async x =>
   }
   await x.call('getDigState', [], () => getDigState(sea, x.uid))
 }))
+// The regulars: eighty days of a word with each, asking for and bringing their
+// favourites (one landed after they asked, one already in the hold, which does
+// not count), their rods at the top, and every refusal.
+shop.push(await scripted('the regulars', 37, captainWith(37, 99, 5, { doubloons: 2_000_000 }), async x => {
+  const sea = localSeaData(x.save)
+  const c = (op: string, args: unknown[], run: () => Promise<unknown>) => x.call(op, args, run)
+  const talk = (id: string) => c('talkToFolk', [id], () => talkToFolk(sea, x.uid, id))
+  const ask = (id: string) => c('askForFavourite', [id], () => askForFavourite(sea, x.uid, id))
+  const give = (id: string) => c('deliverToFolk', [id], () => deliverToFolk(sea, x.uid, id))
+  const rod = (id: string) => c('buyFolkRod', [id], () => buyFolkRod(sea, x.uid, id as never))
+  const st = () => c('folkState', [], () => folkState(sea, x.uid))
+  await talk('nobody'); await ask('nobody'); await give('nobody'); await rod('meg'); await rod('fitch')
+  const ids = FOLK.map(f => f.id)
+  for (let day = 0; day < 80; day++) {
+    for (const id of ids) {
+      await talk(id)
+      if (day % 3 === 0) await talk(id)
+      if (day % 5 === 1) {
+        const a = await ask(id) as { fishId?: number }
+        await give(id)
+        if (a.fishId != null) {
+          const fid = a.fishId
+          const col = { ...(x.save.collection as Record<string, unknown>) }
+          if (day % 10 === 1) {
+            // Already in the hold before they asked: does not count.
+            await x.patchSave({ hold: { ...(x.save.hold as Record<string, number>), [fid]: 1 } })
+            await give(id)
+          }
+          x.advance(60_000)
+          col[fid] = { catch_count: 1, is_golden: null, last_caught_at: new Date(clockNow()).toISOString() }
+          await x.patchSave({ collection: col, hold: { ...(x.save.hold as Record<string, number>), [fid]: 2 } })
+          await give(id); await give(id)
+        }
+      }
+    }
+    if (day % 7 === 6) await st()
+    if (day === 40 || day === 79) { await rod('fitch'); await rod('nance'); await rod('yoon'); await rod('fitch') }
+    x.advance(86_400_000)
+  }
+  await x.patchProfile({ doubloons: 10 })
+  await rod('yoon')
+  await st()
+}))
+// The wanderers: a month of deals with whoever is out (bait bought, holds
+// sold to salters, talkers who trade nothing), the cap of six, a key kept past
+// its day, and at night the blockade runner's cut for his rod.
+shop.push(await scripted('the wanderers', 38, captainWith(38, 99, 5, { doubloons: 300_000, has_ancient_deep_access: true }), async x => {
+  const sell = localSellData(x.save)
+  const c = (op: string, args: unknown[], run: () => Promise<unknown>) => x.call(op, args, run)
+  const deal = (k: string) => c('strikeDeal', [k], () => strikeDeal(sell, x.uid, k))
+  const bet = (k: string) => c('wagerForRunnerRod', [k], () => wagerForRunnerRod(sell, x.uid, k))
+  const dealt = () => c('dealtToday', [], () => dealtToday(sell, x.uid))
+  await deal('nonsense'); await deal('yoon'); await deal('1:2'); await deal('1:2:3'); await bet('yoon'); await bet('night:1:2:3'); await dealt()
+  let stale = ''
+  for (let d = 0; d < 30; d++) {
+    const day = seaDay(clockNow())
+    const out = tradersAround(Math.round(9000 * Math.cos(d)), Math.round(4000 + 6000 * Math.sin(d)), 6000, day, clockNow())
+    if (stale) await deal(stale)
+    if (d % 6 === 2) await x.patchProfile({ doubloons: 20 })
+    if (d % 6 === 3) await x.patchProfile({ doubloons: 300_000 })
+    let n = 0
+    for (const t of out) {
+      if (t.kind === 'runner') continue
+      if (d % 4 === 0) await x.patchSave({ hold: {} })
+      else await x.patchSave({ hold: { 1: 3 + d, 20: 2, 45: d % 5, 100: 1 } })
+      await deal(t.key)
+      if (n++ % 3 === 0) await deal(t.key)
+      if (n > 9) break
+    }
+    stale = out.find(t => t.kind !== 'runner' && t.kind !== 'talker')?.key ?? ''
+    await dealt()
+    x.advance(86_400_000 + 3_000_000)
+  }
+  // Nights, and the runner in the Ancient Deep.
+  await x.patchProfile({ doubloons: 2_000_000 })
+  for (let k = 0; k < 40; k++) {
+    let guard = 0
+    while (!seaClock(clockNow()).isNight && guard++ < 50) x.advance(CYCLE_MS / 12)
+    const runners = tradersAround(0, 0, 22600, seaDay(clockNow()), clockNow()).filter(t => t.kind === 'runner')
+    if (k === 20) await x.patchProfile({ doubloons: 50 })
+    if (k === 22) await x.patchProfile({ doubloons: 2_000_000 })
+    for (const r of runners.slice(0, 2)) { await bet(r.key); await deal(r.key) }
+    await dealt()
+    x.advance(CYCLE_MS / 2 + (k % 3) * 9_000_000)
+  }
+}))
 write('shop.json', { sessions: shop })
 {
   const cases: { now: number; x: number; y: number; bottles: unknown[] }[] = []
@@ -627,6 +715,17 @@ write('shop.json', { sessions: shop })
   }
   write('bottles.json', { cases })
   console.log('  400 bottle moments')
+}
+// The wanderers themselves, at 300 moments and places, by day and night.
+{
+  const cases: { now: number; x: number; y: number; traders: unknown[] }[] = []
+  for (let k = 0; k < 300; k++) {
+    const now = START + k * 7_919_000
+    const x = -20000 + (k * 7919) % 40000, y = -1000 + (k * 104729) % 23000
+    cases.push({ now, x, y, traders: tradersAround(x, y, 5200, seaDay(now), now) })
+  }
+  write('traders.json', { cases })
+  console.log(`  300 trader moments, ${cases.reduce((n, c) => n + c.traders.length, 0)} wanderers`)
 }
 // The patches themselves, at 2,000 moments across a few weeks.
 {

@@ -36,14 +36,18 @@ import { FINN_ANCIENT_BEATS, FINN_AVATAR } from '../lib/finn'
 import { VIGIL_DIAL } from '../lib/ancientVigil'
 import { fishingGearLevelReq } from '../lib/gearGating'
 import { isCaptainRod, ROD_SELL_RATE } from '../lib/rods'
-import { RESIDENTS, PLACES, berthOf } from '../app/(app)/sea/chart'
+import { RESIDENTS, PLACES, berthOf, SOCIALS, YOON } from '../app/(app)/sea/chart'
+import { ASKS } from '../lib/seaFolk'
 import { PLATES } from '../lib/islandPlates'
 import { ISLE_FURNISHING } from '../lib/seaIsles'
 import { DIG_SITES, bearingText } from '../lib/seaDigs'
 import { PORTAL_TIERS } from '../lib/seaPortal'
 import { FRAGMENTS } from '../lib/seaBottles'
 import { FURNISHING_BY_ID } from '../lib/homestead'
-import { plainRodFor, plainHookFor } from '../lib/seaTraders'
+import { plainRodFor, plainHookFor, yoonTrader, CELL, MAINLAND_DOORSTEP, MAX_DRIFT, NAMES_FIRST, NAMES_LAST, LINES as TRADER_LINES, PERSONAS, HINTS, STORIES, STOCK, RUNNER_LINES, BOAT_IDS, HAT_IDS, CHAR_COLORS, HOOK_ART, ROD_SLUGS, RUNNER_STAKE, RUNNER_ODDS, DEALS_PER_DAY, KIND_LABEL } from '../lib/seaTraders'
+import { SOLIDS, BOAT_CLEAR } from '../lib/seaSolid'
+import { RUNNER_RODS } from '../lib/rods'
+import { NORTH_WALL, OUTER_EDGE } from '../app/(app)/sea/chart'
 import { MOOD_CONFIG } from '../lib/marketMood'
 import { HULL_COSTS, HULL_SPEED, HANDLING_SPEED, HANDLING_COSTS, ACCEL_RATE, ACCEL_COSTS, LANTERN_GLOW, LANTERN_COSTS, BASE_SPEED_PX, BASE_TURN_RAD, BASE_ACCEL } from '../lib/shipyard'
 import { TIER_AT } from '../lib/seaFolk'
@@ -160,6 +164,48 @@ const rules = {
   digSites: DIG_SITES.map(d => ({ ...d, bearing: bearingText(d) })),
   portalTiers: PORTAL_TIERS,
   bottleFragments: FRAGMENTS,
+  // THE REGULARS (lib/seaFolk FOLK and ASKS; chart.ts SOCIALS and YOON): who
+  // they are and everything they say, and where each moors, with the look and
+  // drift SeaMap gives them (hashed off their id; Yoon's is fixed).
+  regulars: {
+    folk: FOLK,
+    asks: ASKS,
+    moorings: [
+      ...SOCIALS.map(r => {
+        const seed = r.folkId.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 11)
+        const f = FOLK.find(x => x.id === r.folkId)
+        const rod = f?.rodTier ? RODS.find(x => x.tier === f.rodTier)?.slug ?? null : null
+        return {
+          folkId: r.folkId, zoneId: r.zoneId, name: r.name, line: r.line, x: r.x, y: r.y,
+          driftRate: (Math.PI * 2) / (58 + (seed % 46)), driftPhase: (seed % 100) / 15, roam: true,
+          look: {
+            color: ['blue', 'pink', 'gray', 'default'][seed % 4],
+            boat: ['taupe', 'oak', 'desert', 'mahogany', 'charcoal'][seed % 5],
+            hat: ['olive', 'offwhite', 'brown', 'midnight'][seed % 4],
+            rodSlug: rod ?? plainRodFor(seed), hook: plainHookFor(seed),
+          },
+        }
+      }),
+      (() => {
+        const y = yoonTrader()
+        return {
+          folkId: 'yoon', zoneId: YOON.zoneId, name: YOON.name, line: YOON.line, x: YOON.x, y: YOON.y,
+          driftR: y.driftR, driftRate: y.driftRate, driftPhase: y.driftPhase, roam: false,
+          look: { color: y.look.characterColor, boat: y.look.boatId, hat: y.look.hatId, rodSlug: y.look.rodSlug, hook: y.look.hook },
+        }
+      })(),
+    ],
+  },
+  // THE WANDERING TRADERS (lib/seaTraders): the tables their generation draws
+  // from, and the solids they keep clear of (lib/seaSolid).
+  traders: {
+    cell: CELL, doorstep: MAINLAND_DOORSTEP, maxDrift: MAX_DRIFT, northWall: NORTH_WALL, outerEdge: OUTER_EDGE,
+    boatClear: BOAT_CLEAR, solids: SOLIDS.map(s => [s.x, s.y, s.r]),
+    namesFirst: NAMES_FIRST, namesLast: NAMES_LAST, lines: TRADER_LINES, personas: PERSONAS, hints: HINTS, stories: STORIES,
+    stock: STOCK, runnerLines: RUNNER_LINES, boats: BOAT_IDS, hats: HAT_IDS, colors: CHAR_COLORS, hooks: HOOK_ART,
+    rods: ROD_SLUGS, runnerRods: RUNNER_RODS.map(r => ({ tier: r.tier, slug: r.slug ?? null })),
+    runnerStake: RUNNER_STAKE, runnerOdds: RUNNER_ODDS, dealsPerDay: DEALS_PER_DAY, kindLabel: KIND_LABEL,
+  },
   marketMoods: Object.fromEntries(Object.entries(MOOD_CONFIG).map(([k, v]) => [k, { label: v.label, color: v.color, desc: v.desc }])),
   completionistNeeds: { level: COMPLETIONIST_LEVEL, folk: FOLK.map(f => f.id), maxRapport: TIER_AT[4], isles: ISLES.map(i => i.id) },
   starter: (() => { const { species: _s, ...rest } = starterSave('__uid__', [], 0); return rest })(),

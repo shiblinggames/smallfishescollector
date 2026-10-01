@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -148,6 +148,49 @@ func _init() -> void:
 			for f: int in 3:
 				await process_frame
 			sea._hail(b)
+		"wanderers", "peddler", "runner":
+			# Someone near the Shallows' edge with a bait bundle, or (at night,
+			# in the Ancient Deep) a blockade runner, hailed.
+			var now: float = Clock.now_ms()
+			var want: String = "wager" if what == "runner" else "bait"
+			var step: float = SeaClock.CYCLE_MS if want == "wager" else 600000.0
+			var t: Dictionary = {}
+			for k: int in 400:
+				for x: Dictionary in Traders.around(0, 6000 if want == "bait" else 18000, 9000 if want == "bait" else 6000, Traders.sea_day(now + k * step), now + k * step):
+					if x["deal"] == want:
+						t = x
+						break
+				if not t.is_empty():
+					var then: float = now + k * step
+					Clock.install(func() -> float: return then)
+					sea._trader_cell = ""
+					break
+			var dp: Dictionary = Folk.drift_pos(float(t["x"]), float(t["y"]), float(t["driftR"]), float(t["driftRate"]), float(t["driftPhase"]), Clock.now_ms() / 1000.0)
+			sea._boat.position = Vector2(float(dp["x"]) - 120.0, float(dp["y"]) + 160.0)
+			for f: int in 4:
+				await process_frame
+			if what != "wanderers":
+				sea._hail_wanderer(sea._strangers[t["key"]])
+		"regular", "talk", "crest":
+			var meg: Wanderer = sea._regulars["folk:meg"]
+			sea._boat.position = meg.position + Vector2(-60, 200)
+			for f: int in 3:
+				await process_frame
+			if what != "regular":
+				sea._hail_wanderer(meg)
+				for f: int in 3:
+					await process_frame
+				var tp: TraderPanel = sea._hud_layer.get_child(sea._hud_layer.get_child_count() - 1)
+				await tp._open_scene()
+				var sc: FolkScene = tp.get_child(tp.get_child_count() - 1)
+				if what == "crest":
+					sc._raise_crest(4, "I don't say this. I am saying it now. You're all right.")
+				else:
+					sc.rap["points"] = 9.0
+					sc._gain({ "points": 10.0, "tier": 1, "tierUp": null })
+					sc._line.finish()
+			else:
+				sea._regulars["folk:meg"].done = false
 		"boss":
 			sea._boat.position = Vector2(0, 19000)
 			p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[89])

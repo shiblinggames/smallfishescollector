@@ -100,8 +100,37 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     every claim now flushes first, as the rules check it).
   The fog is not drawn on the main chart, as on the web: the minimap (not yet ported) is
   where it shows. In a Charter the isles, digs, homestead and fog are the crew's.
-  NEXT, in order: the regulars and the traders;
-  the portal and recall. Specs for all of them were read off the web on 2026-10-01.
+  STAGE 4, THE REGULARS AND THE TRADERS (2026-10-01):
+  - Rules. `core/folk.gd` ports lib/seaFolk and the folk actions (rapport, the day's word, a
+    favourite asked for and brought, the two rods at full rapport, traderPos). `core/traders.gd`
+    ports lib/seaTraders (traderAt, runnerAt, tradersAround, traderFromKey, Yoon) and
+    strikeDeal, wagerForRunnerRod and dealtToday. Two JavaScript traps live in the hash: the
+    constants must be the hex literals, and `(c|0)` wraps the runner's seed (a night's index
+    times 7,919) to int32 before multiplying.
+  - Parity: 1,296 wanderers in 300 moments by day and night, a 1,854-call regulars session and a
+    732-call wanderers session (bait, salters, talkers, the cap of six, keys kept past their
+    day, and the runner's cut won, lost and refused).
+  - On the chart. `game/wanderer.gd` is anyone on the water: a hull working its beat by
+    traderPos, with a plate (their name, and their kind, or a regular's role in their accent;
+    "Traded today" greys it). Buyers now use it too, so they move from spot to spot and sit a
+    while like the web's residents. The nine regulars and Yoon are moored from the start;
+    strangers are re-derived as the boat crosses a cell or the light turns (runners at night).
+  - `game/trader_panel.gd` is the hail card: the offer stated plainly (bait under the shop's
+    price with the saving, the salter's rate, the runner's stake and odds), "N deals left
+    today", "Go on" through a talker's lines, and at full rapport the regular's rod.
+  - `game/folk_scene.gd` is the conversation: `game/avatar.gd` (the web's round portrait),
+    their lines typed out (`game/typed_line.gd`, the web's 22/80/190ms rhythm), the rapport bar
+    with the gain floating off it, the questions their tier opens, the favourite asked for
+    and brought, and the crest when a tier is crossed (three rings for the top).
+  - In a Charter, rapport and the deal cap are each captain's own; the purse the deal moves
+    is the crew's.
+  - Ported faithfully, worth Kong's call (the web does the same):
+    1. Yoon's Locked-In Rod is in the runner's pool, so it can be won off a runner.
+    2. The runner's cut counts toward the six-a-day cap.
+    3. "Once a night" is once per UTC day.
+    4. "You have already had a word with" uses the full name where every other line uses the
+       short one.
+  NEXT: the portal and recall. Specs were read off the web on 2026-10-01.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel
