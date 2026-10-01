@@ -40,6 +40,12 @@ var _water: ShaderMaterial
 var _world: Node2D
 var _boat: Boat
 var _camera: Camera2D
+## THE WHEEL ZOOM (SeaMap.tsx): 0.55 to 1.6 of the chart's own scale, eased,
+## and remembered on this machine (a number tuned on one screen is wrong on
+## another, so it is not in the save).
+const ZOOM_MIN: float = 0.55
+const ZOOM_MAX: float = 1.6
+var _zoom_to: float = 1.0
 var _night: CanvasModulate
 var _town_light: PointLight2D
 var _hud: FishingHud
@@ -138,6 +144,8 @@ func _ready() -> void:
 
 	_camera = Camera2D.new()
 	_camera.position_smoothing_enabled = false
+	_zoom_to = clampf(float(Prefs.get_value("sea_zoom", 1.0)), ZOOM_MIN, ZOOM_MAX)
+	_camera.zoom = Vector2(_zoom_to, _zoom_to)
 	add_child(_camera)
 	_camera.make_current()
 
@@ -189,6 +197,8 @@ func _process(delta: float) -> void:
 	var stops: Array[Color] = Chart.sea_at(cam_world, dark)
 	var vp: Vector2 = get_viewport_rect().size
 	_water.set_shader_parameter("u_cam", cam_world)
+	var z: float = lerpf(_camera.zoom.x, _zoom_to, 1.0 - exp(-delta * 12.0))
+	_camera.zoom = Vector2(z, z)
 	_water.set_shader_parameter("u_zoom", _camera.zoom.x)
 	_water.set_shader_parameter("u_res", vp)
 	_water.set_shader_parameter("u_deep", stops[0])
@@ -844,6 +854,27 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Zoom: the wheel, a trackpad pinch, or - and = on the keyboard.
+	var zf: float = 1.0
+	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+		var mb: InputEventMouseButton = event
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+			zf = 1.12
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			zf = 1.0 / 1.12
+	elif event is InputEventMagnifyGesture:
+		zf = (event as InputEventMagnifyGesture).factor
+	elif event is InputEventKey and (event as InputEventKey).pressed:
+		var k: Key = (event as InputEventKey).keycode
+		if k == KEY_EQUAL or k == KEY_KP_ADD:
+			zf = 1.12
+		elif k == KEY_MINUS or k == KEY_KP_SUBTRACT:
+			zf = 1.0 / 1.12
+	if zf != 1.0:
+		_zoom_to = clampf(_zoom_to * zf, ZOOM_MIN, ZOOM_MAX)
+		Prefs.set_value("sea_zoom", _zoom_to)
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		var gp: Vector2 = get_global_mouse_position()
 		_boat.target = Vector2(gp.x, gp.y / Chart.GROUND)

@@ -235,6 +235,7 @@ func _init() -> void:
 				p[k] = { "character_color": "ruby", "equipped_hat": "golden", "equipped_boat": "fire", "equipped_pet": "parrot_red", "equipped_pet_bow": "plesiosaur_baby" }[k]
 			p["rod_tier"] = 18.0
 			sea._boat.set_look(Skipper.look_of(p))
+			sea._zoom_to = 2.2
 			sea._camera.zoom = Vector2(2.2, 2.2)
 		"dial":
 			hud._bite()
