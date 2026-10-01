@@ -269,6 +269,23 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     pooling darker at their edges and granulating, the live zone the full pigment. An
     ochre rim with ink ticks, an indigo face blooming lighter at the centre, paper grain
     and brush-uneven edges. The needle is a stroke of ink with a tinted point.
+- THE WORLD CHART + GPS (2026-10-01; Kong: "a lot more feature rich", "set a track to a
+  location you click"). M, the pad's Back, or the HUD "Chart" pill opens `game/world_map.gd`
+  over the sea (which runs on under it). Paper (fx/chart_paper.gdshader) under the painted
+  land plates; the captain's real fog grid stamped soft at 4x and sampled through a warp
+  (fx/chart_fog.gdshader) so clearings take coastline shapes. Layers toggle as ink stamps:
+  ports, people (regulars, traders, runner), hotspots (name + minutes left), weather
+  (squalls), currents + kelp (only where charted), finds (bottles, dig sites), pins. A paper
+  sheet carries the per-water tally (charted %, isles, dug). Click a mark for a card (Set
+  course / Set course & sail / Drop a pin); click open water to set a course. Pins live in
+  Prefs "pins:<uid>". Find my boat, Recall home.
+  ROUTING: `game/sea_route.gd`, AStarGrid2D at 160 px over the sea; islands solid at their
+  shore + hull, kelp costs 2.5x, the rim solid; a port routes to its berth; the path is
+  line-of-sight smoothed (builds in ~13 ms). `game/course.gd` keeps the course: dashed line
+  and destination rings in the world, an edge pointer when off screen, a HUD chip with the
+  ETA, AUTOPILOT (steers to a point 320 ahead on the path; any helm input hands it back),
+  reroutes past 450 off the line ("Recalculating"), and toasts "Arrived" inside 220.
+  Rules untouched; the course is presentation and steering only.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

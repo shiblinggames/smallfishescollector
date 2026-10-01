@@ -47,6 +47,9 @@ var _field: SeaField
 var _motes: GPUParticles2D
 var _squall: SquallFx
 var _sound: SeaSound
+var _course: Course
+var _course_mark: Course.CourseMark
+var _course_t: float = 0.0
 var _life: SeaLife
 var _sky: SeaSky
 var _snd_heading: float = 0.0
@@ -196,6 +199,15 @@ func _ready() -> void:
 	_boat = Boat.new()
 	_boat.field = _field
 	_boat.cast_landed.connect(_life.scatter)
+	_course = Course.new()
+	_course.sea = self
+	_course.boat = _boat
+	add_child(_course)
+	var cl: Course.CourseLine = Course.CourseLine.new()
+	cl.course = _course
+	cl.z_index = -1
+	_world.add_child(cl)
+	_course.changed.connect(_course_chip)
 	_boat.cue_changed.connect(func(c: Dictionary) -> void: _hud.set_cues(c))
 	_boat.surged.connect(func() -> void:
 		_field.ring(_boat.position, 130.0, 1.1, 0.7)
@@ -261,7 +273,13 @@ func _ready() -> void:
 	_hud.leave_label = "Leave the Charter" if net != null else "Captains"
 	_hud.leave.connect(func() -> void: left.emit())
 	_hud.recall_pressed.connect(_press_recall)
+	_course.hud = _hud
+	_hud.chart_pressed.connect(_open_chart)
+	_hud.course_autopilot.connect(_course.toggle_autopilot)
+	_hud.course_clear.connect(_course.clear)
 	hud_layer.add_child(_hud)
+	_course_mark = Course.CourseMark.new()
+	hud_layer.add_child(_course_mark)
 	if net != null:
 		net.mate_boat.connect(_on_mate_boat)
 		net.mate_look.connect(_on_mate_look)
@@ -281,7 +299,19 @@ func _process(delta: float) -> void:
 	# is up (the web's hush).
 	_boat.hush = _hud.busy() or not (_hud.phase == "idle" or _hud.phase == "result")
 	_hold_steer()
+	if input.length() > 0.1:
+		_course.helm_taken()
 	_boat.steer(input, delta)
+	_course.step(delta)
+	_course_t += delta
+	if _course_t > 0.5:
+		_course_t = 0.0
+		_course_chip()
+	if _course_mark != null:
+		_course_mark.offset = null
+		if _course.active():
+			_course_mark.offset = Vector2(_course.dest.x - _boat.position.x, (_course.dest.y - _boat.position.y) * Chart.GROUND) * _camera.zoom.x
+			_course_mark.text = "%s  ·  %s" % [_course.label, Course.eta_text(_course.eta())]
 	var cam_world: Vector2 = _boat.position
 	_camera.position = Vector2(cam_world.x, cam_world.y * Chart.GROUND)
 
@@ -1148,6 +1178,34 @@ func _input(event: InputEvent) -> void:
 		_music_started = true
 
 
+## THE WORLD CHART, over everything; the sea runs on under it (the autopilot
+## keeps sailing).
+var _chart: WorldMap
+
+
+func _open_chart() -> void:
+	if _chart != null or _hud.busy():
+		return
+	var layer: CanvasLayer = CanvasLayer.new()
+	layer.layer = 30
+	add_child(layer)
+	_chart = WorldMap.new()
+	_chart.sea = self
+	_chart.closed.connect(func() -> void:
+		_chart = null
+		layer.queue_free())
+	layer.add_child(_chart)
+
+
+func _course_chip() -> void:
+	if _hud == null:
+		return
+	if not _course.active():
+		_hud.set_course({})
+		return
+	_hud.set_course({ "label": _course.label, "eta": Course.eta_text(_course.eta()), "autopilot": _course.autopilot })
+
+
 ## Holding the mouse down on the water: she keeps sailing toward the pointer
 ## (and on past it, so a held press never runs out under her).
 var _holding: bool = false
@@ -1177,6 +1235,10 @@ func _hold_steer() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("chart") and _chart == null:
+		get_viewport().set_input_as_handled()
+		_open_chart()
+		return
 	# Zoom: the wheel, a trackpad pinch, or - and = on the keyboard.
 	var zf: float = 1.0
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
@@ -1201,6 +1263,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		var gp: Vector2 = get_global_mouse_position()
 		_boat.target = Vector2(gp.x, gp.y / Chart.GROUND)
+		_course.helm_taken()
 		_holding = true
 		_held_t = 0.0
 

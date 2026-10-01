@@ -28,6 +28,8 @@ signal fishing_changed(active: bool)
 signal leave
 ## The recall pill was pressed (the sea asks the rules and takes her home).
 signal recall_pressed
+## The chart was asked for (its pill, or M).
+signal chart_pressed
 
 const HOLD_S: float = 0.62
 const HOLD_PERFECT_S: float = 0.9
@@ -103,6 +105,11 @@ var _reach_btn: Pane.PaneButton
 ## WHAT THE WATER IS DOING TO HER (SeaMap.tsx's SeaCueChip): riding, against
 ## or crossing a current, full sail, in the kelp. Under the water's name.
 var _cues: HBoxContainer
+## THE COURSE (game/course.gd): where she is headed, how long, and the
+## autopilot and clear buttons. Under the cues.
+var _course: HBoxContainer
+signal course_autopilot
+signal course_clear
 var _reach_l: Label
 
 
@@ -163,6 +170,12 @@ func _ready() -> void:
 		else:
 			toast("Bring the line in first"))
 	clock_row.add_child(_recall)
+	var chart: Button = Kit.button("Chart  M", "secondary", "small")
+	chart.focus_mode = Control.FOCUS_NONE
+	chart.tooltip_text = "The world chart: where everything is, and a course to anywhere"
+	chart.pressed.connect(func() -> void: chart_pressed.emit())
+	clock_row.add_child(chart)
+	clock_row.move_child(chart, 0)
 	var clock_pill: Pane = Kit.pane(clock_row, { "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.72)], "border": [1, Color(0.7, 0.83, 0.89, 0.22)], "pad": [10, 3, 10, 4] })
 	clock_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_clock = Kit.text(clock_pill, "", "label", Color(0.82, 0.88, 0.93, 0.85))
@@ -241,6 +254,14 @@ func _ready() -> void:
 	_cues.offset_top = 156.0
 	_cues.offset_bottom = 186.0
 	add_child(_cues)
+	_course = HBoxContainer.new()
+	_course.alignment = BoxContainer.ALIGNMENT_CENTER
+	_course.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_course.anchor_left = 0.0
+	_course.anchor_right = 1.0
+	_course.offset_top = 192.0
+	_course.offset_bottom = 230.0
+	add_child(_course)
 	_reach_btn = Pane.PaneButton.new(
 		{ "radius": 999, "fill": [Color(0.04, 0.078, 0.11, 0.88)], "border": [1, Color(0.7, 0.84, 0.91, 0.45)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 4)], "pad": 0 },
 		{ "radius": 999, "fill": [Color(0.06, 0.1, 0.14, 0.92)], "border": [1, Color(1.0, 0.85, 0.53, 0.8)], "shadow": [Color(1.0, 0.8, 0.45, 0.18), 18, Vector2(0, 4)], "pad": 0 })
@@ -447,6 +468,30 @@ func set_spot(h: Dictionary) -> void:
 	if not h.is_empty():
 		var left: int = maxi(0, int((float(h["endsAt"]) - Clock.now_ms()) / 1000.0))
 		_spot_left.text = ("%dm left" % ceili(left / 60.0)) if left >= 60 else ("%ds" % left)
+
+
+## The course chip: {label, eta, autopilot}, or {} for none.
+func set_course(info: Dictionary) -> void:
+	for n: Node in _course.get_children():
+		n.queue_free()
+	if info.is_empty():
+		return
+	var gold: Color = Color(1.0, 0.92, 0.72)
+	var p: Pane = Kit.pane(_course, { "radius": 999, "fill": [Color(0.024, 0.047, 0.07, 0.8)], "border": [1, Kit.a(gold, 0.4)], "shadow": [Kit.a(gold, 0.12), 14], "pad": [14, 4, 6, 4] })
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	p.add_child(row)
+	var words: Label = Kit.lift(Kit.text(row, "COURSE  ·  %s  ·  %s" % [info["label"], info["eta"]], "chip", gold))
+	words.add_theme_font_size_override("font_size", 11)
+	words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var ap: Button = Kit.button("Autopilot on" if info.get("autopilot", false) else "Autopilot", "accent" if info.get("autopilot", false) else "secondary", "small", gold)
+	ap.focus_mode = Control.FOCUS_NONE
+	ap.pressed.connect(func() -> void: course_autopilot.emit())
+	row.add_child(ap)
+	var x: Button = Kit.button("Clear", "secondary", "small")
+	x.focus_mode = Control.FOCUS_NONE
+	x.pressed.connect(func() -> void: course_clear.emit())
+	row.add_child(x)
 
 
 func set_cues(c: Dictionary) -> void:

@@ -1,0 +1,96 @@
+shader_type canvas_item;
+render_mode unshaded;
+// THE WORLD CHART'S PAPER AND SEA (game/world_map.gd): a sea chart painted
+// in watercolour on paper. Plan view, in world px: the waters as washes that
+// deepen from pale shallows to indigo, pooling darker where one water meets
+// the next, inked contour lines at each water's edge, a faint graticule, and
+// paper grain under everything. At night the paper sits in lamplight.
+
+uniform vec2 u_center = vec2(0.0, 9000.0);
+uniform float u_scale = 0.03;
+uniform vec2 u_res = vec2(1600.0, 900.0);
+uniform float u_dark = 0.0;
+uniform float u_outer = 22600.0;
+
+const float BANDS[6] = float[](1400.0, 3800.0, 6900.0, 10900.0, 16000.0, 22600.0);
+const vec3 PAPER = vec3(0.91, 0.86, 0.75);
+const vec3 INK = vec3(0.22, 0.18, 0.16);
+
+float hash(vec2 p) {
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
+}
+
+float vnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+float fbm(vec2 p) {
+	return vnoise(p) * 0.5 + vnoise(p * 2.03 + 3.1) * 0.27 + vnoise(p * 4.1 + 7.7) * 0.15 + vnoise(p * 8.3 + 1.3) * 0.08;
+}
+
+// The wash for a radius: pale aqua in the shallows to deep indigo at the rim.
+vec3 sea_wash(float r) {
+	float t = clamp((r - 1400.0) / (22600.0 - 1400.0), 0.0, 1.0);
+	vec3 a = vec3(0.56, 0.78, 0.76);
+	vec3 b = vec3(0.30, 0.55, 0.66);
+	vec3 c = vec3(0.18, 0.33, 0.50);
+	vec3 d = vec3(0.13, 0.18, 0.33);
+	if (t < 0.33) return mix(a, b, t / 0.33);
+	if (t < 0.66) return mix(b, c, (t - 0.33) / 0.33);
+	return mix(c, d, (t - 0.66) / 0.34);
+}
+
+void fragment() {
+	vec2 px = (UV - 0.5) * u_res;
+	vec2 w = u_center + px / u_scale;
+	// Paper grain in screen space (it is the paper, not the sea, that is
+	// grained), and a slow mottle in world space (the wash dried unevenly).
+	float grain = hash(floor(FRAGCOORD.xy * 0.75)) * 0.5 + fbm(FRAGCOORD.xy * 0.02) * 0.5;
+	float mottle = fbm(w * 0.00035);
+	vec3 paper = PAPER * (0.92 + grain * 0.1);
+	vec3 col = paper;
+
+	float r = length(w);
+	float north = length(w - vec2(0.0, -3000.0));
+	bool in_sea = r < u_outer || north < 3600.0;
+	// The edge of the known sea wobbles like a brushed line.
+	float edge_wob = (fbm(w * 0.0006) - 0.5) * 260.0;
+	float sea_in = 1.0 - smoothstep(u_outer - 120.0, u_outer + 120.0, r + edge_wob);
+	sea_in = max(sea_in, 1.0 - smoothstep(3500.0, 3700.0, north + edge_wob));
+	if (sea_in > 0.001) {
+		vec3 wash = sea_wash(r);
+		// Pigment pools darker at each water's edge.
+		float pool = 0.0;
+		for (int i = 0; i < 6; i++) {
+			float d = abs(r + edge_wob * 0.4 - BANDS[i]);
+			pool = max(pool, 1.0 - smoothstep(0.0, 260.0, d));
+		}
+		wash *= 0.86 + mottle * 0.22;
+		wash = mix(wash, wash * 0.72, pool * 0.6);
+		// Granulation.
+		wash *= 0.93 + grain * 0.1;
+		// Paper shows through a watercolour wash.
+		col = mix(paper, wash, 0.78 * sea_in);
+		// Inked contour lines at each water's edge.
+		for (int i = 0; i < 6; i++) {
+			float d = abs(r + edge_wob * 0.25 - BANDS[i]) * u_scale;
+			col = mix(col, INK, (1.0 - smoothstep(0.4, 1.3, d)) * 0.35);
+		}
+		// The graticule: faint inked lines every 2,000 px.
+		vec2 g = abs(fract(w / 2000.0 + 0.5) - 0.5) * 2000.0 * u_scale;
+		float grid = 1.0 - smoothstep(0.3, 0.9, min(g.x, g.y));
+		col = mix(col, INK, grid * 0.10 * sea_in);
+	}
+	// A darker margin round the sheet, like an old chart's edge.
+	vec2 q = UV - 0.5;
+	col *= 1.0 - smoothstep(0.35, 0.75, length(q * vec2(1.0, 1.3))) * 0.28;
+	// At night: the chart under a lamp.
+	vec3 lamp = col * vec3(0.55, 0.5, 0.48) + vec3(0.06, 0.04, 0.02) * (1.0 - length(q) * 1.5);
+	col = mix(col, lamp, u_dark * 0.55);
+	COLOR = vec4(col, 1.0);
+}

@@ -28,6 +28,7 @@ func _ready() -> void:
 	_bind("fish_act", [KEY_SPACE, KEY_ENTER], [JOY_BUTTON_A], -1, 0.0)
 	_bind("fish_back", [KEY_ESCAPE], [JOY_BUTTON_B], -1, 0.0)
 	_bind("reach", [KEY_E], [JOY_BUTTON_Y], -1, 0.0)
+	_bind("chart", [KEY_M], [JOY_BUTTON_BACK], -1, 0.0)
 	SteamLayer.start()
 	net = CrewNet.new()
 	net.name = "CrewNet"

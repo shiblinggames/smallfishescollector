@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -227,6 +227,29 @@ func _init() -> void:
 			sea._boat.target = Vector2(float(a1[0]), float(a1[1]))
 			for f: int in 240:
 				await process_frame
+		"chart", "chartzoom", "course":
+			sea._boat.position = Vector2(-1500, 2600)
+			sea._course.set_to(Vector2(9000, 9000), "Abyss edge", what == "course")
+			for f: int in 30:
+				await process_frame
+			if what != "course":
+				sea._open_chart()
+				await process_frame
+				if what == "chart":
+					sea._chart._scale_to = sea._chart._fit_scale() * 1.1
+					sea._chart._center = Vector2(0, 9500)
+				else:
+					sea._chart._scale_to = 0.07
+					sea._chart._center = Vector2(500, 1500)
+				for f: int in 40:
+					await process_frame
+				if what == "chartzoom":
+					var marks: Array = sea._chart._all_marks().filter(func(m: Dictionary) -> bool: return m["kind"] == "regular")
+					if not marks.is_empty():
+						sea._chart._open_card(marks[0])
+			else:
+				for f: int in 60:
+					await process_frame
 		"bottle":
 			var bs: Array = Explore.bottles_around(0, 3000, 6000, Clock.now_ms())
 			if not bs.is_empty():
