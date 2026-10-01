@@ -214,6 +214,27 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
      - clouds take the hour's light
   Not yet: the minimap (its fog), the settings gear (a sound mute too), leviathans and
   north weather (with the expedition sea).
+  FOLLOW-UPS (2026-10-01, Kong's playtest):
+  - Cloud shadows were black boxes (a plain multiply ignores alpha); fx/cloud_shadow.gdshader.
+  - The moon road and the drift glittered constantly; both calmed.
+  - "Dig here" from a boat became "Drop the grapple", with bubbles in place of drawn rings.
+  - THE WAKE is a V from the cutwater (the web's GPU wake set the streaks out at full width,
+    so it drew two parallel lines).
+  - THE STANDING RIPPLE laps along the hull at irregular times and sizes instead of one hard
+    ring from a point.
+  - THE POSE SHIFT: the wait and cast sheets draw the boat 60 px right of rest (wait 32 px
+    higher), so the boat jumped on every cast. Skipper measures each sheet's hull and offsets
+    the pose by it; the bobber's ring follows (Boat.hook_at).
+  - CURRENTS, KELP, FULL SAIL. The web's five lanes and eight beds come from the TS
+    (rules.json "flow"); game/sea_flow.gd ports currentAt and kelpAt and draws the lanes
+    (scrolling ripple strips) and beds. Boat._flow pushes, holds and fills the sails as
+    SeaMap does. The HUD carries the web's cue chips. Godot adds streaks of water rushing past
+    at full sail.
+  - THE DIAL (fx/dial.gdshader): a brass bezel with engraved ticks and rivets, a bevelled
+    track (the live zone lit, the perfect a moving sheen, the snag striped), a glass face with
+    a compass rose and light under it, and a comet trail behind the needle. A tapered brass
+    needle reaches into the track, under a domed hub. The logic and the lock-in are
+    unchanged.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

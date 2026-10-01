@@ -56,6 +56,12 @@ var _snap: float = 0.0
 var _burst: float = 0.0
 var _embers: GPUParticles2D
 var _burst_fx: GPUParticles2D
+## Godot over the web baseline (2026-10-01): the instrument itself is drawn by
+## fx/dial.gdshader (brass bezel, bevelled track, glass face, the needle's
+## trail) on _face; the fire and the giant's aura behind it on _back; the
+## needle, hub and glyphs by _draw on top.
+var _face: ColorRect
+var _back: Control
 
 
 ## buildFishZones: the arcs for one bite, in degrees clockwise from the top.
@@ -96,9 +102,23 @@ static func build_zones(difficulty: float, hook_tier: float, line_penalty: float
 
 
 func _ready() -> void:
+	_back = Control.new()
+	_back.show_behind_parent = true
+	_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_back.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_back.draw.connect(_draw_back)
+	add_child(_back)
 	_embers = _make_embers()
 	_burst_fx = _make_burst()
 	add_child(_embers)
+	_face = ColorRect.new()
+	_face.show_behind_parent = true
+	_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_face.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var m: ShaderMaterial = ShaderMaterial.new()
+	m.shader = load("res://game/fx/dial.gdshader")
+	_face.material = m
+	add_child(_face)
 	add_child(_burst_fx)
 	resized.connect(_place_fx)
 	_place_fx()
@@ -288,108 +308,159 @@ func _process(delta: float) -> void:
 	var rate: float = pow(i, 1.5) * 95.0
 	_embers.amount_ratio = clampf(rate * _embers.lifetime / float(_embers.amount), 0.0, 1.0)
 	_embers.emitting = i > 0.0 and visible
+	_feed_face()
 	queue_redraw()
+	_back.queue_redraw()
+
+
+## What the face shader needs, each frame.
+func _feed_face() -> void:
+	var m: ShaderMaterial = _face.material
+	m.set_shader_parameter("u_size", size)
+	m.set_shader_parameter("u_rot", zone_rot)
+	m.set_shader_parameter("u_angle", angle)
+	var under_i: int = _under_index()
+	var zs: Array[Vector4] = []
+	var cs: Array[Vector4] = []
+	for n: int in mini(16, zones.size()):
+		var z: Array = zones[n]
+		var kind: float = { "miss": 0.0, "catch": 1.0, "perfect": 2.0, "penalty": 3.0 }.get(z[2], 0.0)
+		zs.append(Vector4(float(z[0]), float(z[1]), kind, 1.0 if n == under_i else 0.0))
+		if z.size() > 3:
+			var c: Color = Color(z[3])
+			cs.append(Vector4(c.r, c.g, c.b, 1.0))
+		else:
+			cs.append(Vector4(0, 0, 0, 0))
+	while zs.size() < 16:
+		zs.append(Vector4(0, 0, 0, 0))
+		cs.append(Vector4(0, 0, 0, 0))
+	m.set_shader_parameter("u_zones", zs)
+	m.set_shader_parameter("u_cols", cs)
+	m.set_shader_parameter("u_n", mini(16, zones.size()))
+	m.set_shader_parameter("u_trail", clampf(sweep * 0.11, 8.0, 70.0) if spinning else 0.0)
+	m.set_shader_parameter("u_needle_col", _needle_color(under_i))
+	m.set_shader_parameter("u_burst", _burst)
+	m.set_shader_parameter("u_dark", clampf(_dark * 2.0, 0.0, 1.0))
+
+
+func _under_index() -> int:
+	var rot_at: float = fposmod(angle - zone_rot, 360.0)
+	for n: int in zones.size():
+		var z: Array = zones[n]
+		if rot_at >= float(z[0]) and rot_at < float(z[1]):
+			return n
+	return -1
+
+
+func _needle_color(under_i: int) -> Color:
+	var under: String = frozen_on if frozen_on != "" else zone_at(angle)
+	var needle: Color = COLORS.get(under, Color.WHITE) if under != "miss" else Color(0.85, 0.88, 0.92)
+	if under_i >= 0 and (zones[under_i] as Array).size() > 3 and under != "miss":
+		needle = Color(zones[under_i][3])
+	if under == "perfect" or _burst > 0.0:
+		needle = GOLD
+	return needle
 
 
 func _ang(deg: float) -> float:
 	return deg_to_rad(deg - 90.0)
 
 
-func _draw() -> void:
+## Behind the instrument: the streak's fire and a giant's aura.
+func _draw_back() -> void:
 	var k: float = _k()
 	var c: Vector2 = size / 2.0
 	var r_out: float = 96.0 * k
-	var r_in: float = 66.0 * k
-	var mid: float = (r_out + r_in) / 2.0
-	var width: float = r_out - r_in
-
-	# The streak's fire behind the plate: a wash, then the rings.
 	var i: float = fire_intensity(streak)
 	if i > 0.0:
 		var flicker: float = 0.9 + 0.05 * sin(7.3 * _t) + 0.05 * sin(11.7 * _t)
 		var wash: Color = Color("#ff7a2a") if i > 1.5 else Color("#ff9d3c")
-		draw_circle(c, r_out * (1.4 + 0.3 * i) * 0.62, Color(wash, minf(0.5, 0.17 * i) * 0.35 * flicker))
+		_back.draw_circle(c, r_out * (1.4 + 0.3 * i) * 0.62 + 14.0 * k, Color(wash, minf(0.5, 0.17 * i) * 0.35 * flicker))
 	var fire_level: int = 2 if streak >= 3 else (1 if streak == 2 else 0)
 	if fire_level > 0:
 		var pulse: float = 0.5 + 0.5 * sin(_t * TAU / 1.0)
 		var lo: float = 0.3 if fire_level == 2 else 0.25
 		var hi: float = 0.65 if fire_level == 2 else 0.55
-		draw_arc(c, 100.0 * k, 0.0, TAU, 96, Color("#fbbf24", lerpf(lo, hi, pulse)), (2.5 if fire_level == 2 else 2.0) * k, true)
+		_back.draw_arc(c, 111.0 * k, 0.0, TAU, 96, Color("#fbbf24", lerpf(lo, hi, pulse)), (2.5 if fire_level == 2 else 2.0) * k, true)
 		if fire_level == 2:
 			var pulse2: float = 0.5 + 0.5 * sin(_t * TAU / 1.4)
-			draw_arc(c, 105.0 * k, 0.0, TAU, 96, Color("#f97316", lerpf(0.1, 0.28, pulse2)), 10.0 * k, true)
-
-	# A giant's aura: a void that breathes, a cold rim, and the violet ring.
+			_back.draw_arc(c, 116.0 * k, 0.0, TAU, 96, Color("#f97316", lerpf(0.1, 0.28, pulse2)), 10.0 * k, true)
 	if ancient_aura:
 		var b1: float = sin(_t * 0.9)
 		var b2: float = sin(_t * 1.37 + 1.1)
-		draw_circle(c, r_out * (1.9 + b1 * 0.26) * 0.62, Color("#7c3aed", (0.16 + b1 * 0.13) * 0.5))
-		draw_circle(c, r_out * (1.28 + b2 * 0.07), Color("#67e8f9", (0.1 + b2 * 0.1) * 0.35))
-		draw_arc(c, r_out + 11.0 * k, 0.0, TAU, 96, Color("#7c3aed", 0.24), 12.0 * k, true)
-		draw_arc(c, r_out + 4.0 * k, 0.0, TAU, 96, Color("#67e8f9", 0.6), 1.5 * k, true)
-	# The plate.
-	draw_circle(c, r_out + 6.0 * k, Color(0.03, 0.06, 0.09, 0.94))
-	draw_arc(c, r_out + 6.0 * k, 0.0, TAU, 96, Color(0.94, 0.75, 0.25, 0.30), 1.5, true)
+		_back.draw_circle(c, r_out * (1.9 + b1 * 0.26) * 0.62 + 14.0 * k, Color("#7c3aed", (0.16 + b1 * 0.13) * 0.5))
+		_back.draw_circle(c, r_out * (1.28 + b2 * 0.07) + 12.0 * k, Color("#67e8f9", (0.1 + b2 * 0.1) * 0.35))
+		_back.draw_arc(c, r_out + 20.0 * k, 0.0, TAU, 96, Color("#7c3aed", 0.24), 12.0 * k, true)
+		_back.draw_arc(c, r_out + 13.0 * k, 0.0, TAU, 96, Color("#67e8f9", 0.6), 1.5 * k, true)
 
-	var under: String = frozen_on if frozen_on != "" else zone_at(angle)
-	var under_i: int = -1
-	var rot_at: float = fposmod(angle - zone_rot, 360.0)
-	for n: int in zones.size():
-		var z: Array = zones[n]
-		if rot_at >= float(z[0]) and rot_at < float(z[1]):
-			under_i = n
+
+func _draw() -> void:
+	var k: float = _k()
+	var c: Vector2 = size / 2.0
+	var r_out: float = 94.0 * k
+	var r_in: float = 64.0 * k
+	var mid: float = (r_out + r_in) / 2.0
+	var under_i: int = _under_index()
 	var font: Font = UiTheme.title_font()
 	for n: int in zones.size():
 		var z: Array = zones[n]
-		var a0: float = float(z[0]) + zone_rot + 0.5
-		var a1: float = float(z[1]) + zone_rot - 0.5
+		var a0: float = float(z[0]) + zone_rot
+		var a1: float = float(z[1]) + zone_rot
 		if a1 <= a0:
 			continue
-		var col: Color = Color(z[3]) if z.size() > 3 else COLORS[z[2]]
-		col.a = 1.0 if n == under_i else DIM[z[2]]
-		if z[2] == "perfect" and _burst > 0.0:
-			col = Color(GOLD, maxf(col.a, 0.85 * _burst))
-		draw_arc(c, mid, _ang(a0), _ang(a1), maxi(4, int((a1 - a0) / 3.0)), col, width, true)
-		var at: float = (a0 + a1) / 2.0
-		var dir: Vector2 = Vector2.from_angle(_ang(at))
+		var dir: Vector2 = Vector2.from_angle(_ang((a0 + a1) / 2.0))
 		if z[2] == "perfect":
-			# Brackets either side, and the star just outside the ring.
-			for edge: float in [a0 - 0.5, a1 + 0.5]:
+			for edge: float in [a0, a1]:
 				var e: Vector2 = Vector2.from_angle(_ang(edge))
-				draw_line(c + e * (r_in - 3.0 * k), c + e * (r_out + 3.0 * k), Color(GOLD, 0.9), 1.5, true)
-			_glyph(font, "✦", c + dir * (r_out + 13.0 * k), 14.0 * k, GOLD)
+				draw_line(c + e * (r_in - 2.0 * k), c + e * (r_out + 2.0 * k), Color(GOLD, 0.95), 1.6 * k, true)
+			_glyph(font, "✦", c + dir * (r_out + 21.0 * k), 15.0 * k, GOLD)
 		elif z[2] == "penalty":
-			_glyph(font, "✕", c + dir * mid, 12.0 * k, Color(1, 1, 1, 0.55))
+			_glyph(font, "✕", c + dir * mid, 12.0 * k, Color(1, 1, 1, 0.6 if n == under_i else 0.35))
 
 	# The burst ring on a perfect.
 	if _burst > 0.0:
 		var t: float = 1.0 - _burst
-		draw_arc(c, (100.0 + 18.0 * t) * k, 0.0, TAU, 96, Color(GOLD, 0.8 * _burst), 5.0 * k, true)
+		draw_arc(c, (100.0 + 22.0 * t) * k, 0.0, TAU, 96, Color(GOLD, 0.8 * _burst), 5.0 * k, true)
 
-	# The needle: the colour of what it is over.
-	var needle: Color = COLORS.get(under, Color.WHITE) if under != "miss" else Color(1, 1, 1, 0.55)
-	if under_i >= 0 and (zones[under_i] as Array).size() > 3 and under != "miss":
-		needle = Color(zones[under_i][3])
-	if under == "perfect" or _burst > 0.0:
-		needle = GOLD
-	var tip: Vector2 = c + Vector2.from_angle(_ang(angle)) * (r_in - 8.0 * k)
-	if under == "perfect" or _burst > 0.0:
-		draw_circle(tip, 11.0 * k, Color(GOLD, 0.35))
-	draw_line(c, tip, needle, (3.6 if _burst > 0.0 else 2.6) * k, true)
-	draw_circle(tip, (7.0 if _burst > 0.0 else 5.5) * k, needle)
+	# THE NEEDLE: a tapered brass blade reaching into the track, its point the
+	# colour of what it is over, a counterweight behind the hub, a shadow under.
+	var needle: Color = _needle_color(under_i)
+	var d: Vector2 = Vector2.from_angle(_ang(angle))
+	var nrm: Vector2 = d.orthogonal()
+	var tip: Vector2 = c + d * (88.0 * k)
+	var tail: Vector2 = c - d * (17.0 * k)
+	var blade: PackedVector2Array = PackedVector2Array([
+		tail + nrm * 2.6 * k, c + nrm * 4.4 * k, tip - d * 10.0 * k + nrm * 1.4 * k, tip,
+		tip - d * 10.0 * k - nrm * 1.4 * k, c - nrm * 4.4 * k, tail - nrm * 2.6 * k,
+	])
+	var shadow: PackedVector2Array = PackedVector2Array()
+	for v: Vector2 in blade:
+		shadow.append(v + Vector2(2.0, 3.0) * k)
+	draw_colored_polygon(shadow, Color(0, 0, 0, 0.4))
+	var brass: Color = Color(0.86, 0.7, 0.4)
+	var dark_brass: Color = Color(0.42, 0.29, 0.12)
+	draw_polygon(blade, PackedColorArray([dark_brass, brass, needle, needle.lightened(0.35), needle, brass.darkened(0.25), dark_brass]))
+	var outline: PackedVector2Array = blade.duplicate()
+	outline.append(blade[0])
+	draw_polyline(outline, Color(0.08, 0.05, 0.02, 0.7), 1.0, true)
+	if needle == GOLD or _burst > 0.0:
+		draw_circle(tip, 10.0 * k, Color(GOLD, 0.22))
+		draw_circle(tip, 5.0 * k, Color(1.0, 0.97, 0.82, 0.55))
 
-	# The hub, and its snap and ripple on a strike.
+	# THE HUB: a domed brass cap, and its snap and ripple on a strike.
 	var snap_t: float = 1.0 - _snap
 	var hub_scale: float = 1.0
-	if _snap > 0.0 and snap_t < 0.46:
-		var u: float = snap_t / 0.46
-		hub_scale = _keys([1.0, 1.8, 0.7, 1.15, 1.0], u)
-		draw_arc(c, (8.0 + 28.0 * snap_t) * k, 0.0, TAU, 48, Color(1, 1, 1, 0.18 * _snap), 1.5, true)
-	elif _snap > 0.0:
-		draw_arc(c, (8.0 + 28.0 * snap_t) * k, 0.0, TAU, 48, Color(1, 1, 1, 0.18 * _snap), 1.5, true)
-	draw_circle(c, 6.0 * k * hub_scale, Color("#f0c040"))
+	if _snap > 0.0:
+		if snap_t < 0.46:
+			hub_scale = _keys([1.0, 1.8, 0.7, 1.15, 1.0], snap_t / 0.46)
+		draw_arc(c, (10.0 + 30.0 * snap_t) * k, 0.0, TAU, 48, Color(1, 1, 1, 0.22 * _snap), 1.6 * k, true)
+	var hr: float = 8.5 * k * hub_scale
+	draw_circle(c + Vector2(1.5, 2.5) * k, hr, Color(0, 0, 0, 0.45))
+	draw_circle(c, hr, Color(0.38, 0.25, 0.1))
+	draw_circle(c, hr * 0.82, Color(0.84, 0.66, 0.34))
+	draw_circle(c - Vector2(1.8, 1.8) * k * hub_scale, hr * 0.42, Color(1.0, 0.93, 0.74, 0.85))
 	if _dark > 0.0:
-		draw_circle(c, r_out + 8.0 * k, Color(0.01, 0.01, 0.02, 0.91))
+		draw_circle(c, 110.0 * k, Color(0.01, 0.01, 0.02, 0.85))
 
 
 ## Keyframes evenly spaced over 0..1, eased linearly between.
