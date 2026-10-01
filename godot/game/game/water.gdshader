@@ -145,8 +145,9 @@ void fragment() {
 		float half_w = mix(0.10, 0.36, 1.0 - depth) * u_res.x * 0.5;
 		float lane = exp(-pow(across_l / max(1.0, half_w), 2.0));
 		float toward_moon = 0.5 + 0.5 * smoothstep(-0.9, 0.9, along_l / (u_res.x * 0.5));
-		float gl = vnoise(w * 7.0 + axis * 1.5 + vec2(TIME * 0.16, TIME * -0.09));
-		float glit = smoothstep(mix(0.985, 0.86, lane), 1.0, gl) * smoothstep(0.30, 0.80, d1);
+		// Fine flecks (the web's scale smeared into big shapes up close).
+		float gl = vnoise(w * 24.0 + axis * 1.5 + vec2(TIME * 0.5, TIME * -0.3)) * 0.6 + vnoise(w * 41.0 - vec2(TIME * 0.7, 0.0)) * 0.4;
+		float glit = smoothstep(mix(0.93, 0.74, lane), 0.98, gl) * smoothstep(0.30, 0.80, d1);
 		float road = lane * 0.030 + glit * 0.42 * lane;
 		col += road * toward_moon * vec3(0.80, 0.88, 1.0) * u_dark * u_swell * (1.0 - 0.88 * u_rush);
 	}
@@ -177,6 +178,7 @@ void fragment() {
 	// AT NIGHT THE STIRRED WATER GLOWS: plankton lighting up in the wake, round
 	// a cast, under a hull that moves.
 	col += vec3(0.36, 0.96, 0.85) * smoothstep(0.05, 0.7, fh) * u_dark * 0.55 * (0.7 + 0.3 * rag);
+	col += vec3(0.30, 0.85, 0.75) * smoothstep(0.5, 1.0, fh) * u_dark * 0.5;
 
 	// LANTERN: warm light pooled on the water around the boat, at night. The
 	// boat is always at the middle of the screen.

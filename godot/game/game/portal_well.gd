@@ -68,6 +68,8 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, r * 0.55, 0.0, TAU, 72, Color(0.6, 0.66, 0.7, 0.12), 2.0, true)
 		return
 	var c: Color = _accent()
+	# HDR: the arms burn past white and bloom (more when she sits in it).
+	var hot: float = 1.6 + _g * 1.2
 	var spin: float = _t * (0.35 + _g * 0.9)
 	draw_circle(Vector2.ZERO, r, Color(c, 0.10 + 0.08 * _g))
 	draw_circle(Vector2.ZERO, r * 0.45, Color(c, 0.12 + 0.18 * _g))
@@ -77,6 +79,8 @@ func _draw() -> void:
 		var a0: float = spin + k * TAU / 6.0
 		for s: int in 3:
 			var rr: float = r * (0.9 - s * 0.22)
-			draw_arc(Vector2.ZERO, rr, a0 + s * 0.5, a0 + s * 0.5 + 0.9, 24, Color(c.lightened(0.3), (0.32 - s * 0.08) * (0.7 + 0.5 * _g)), 3.0 - s * 0.6, true)
+			var arm: Color = c.lightened(0.3) * hot
+			arm.a = (0.32 - s * 0.08) * (0.7 + 0.5 * _g)
+			draw_arc(Vector2.ZERO, rr, a0 + s * 0.5, a0 + s * 0.5 + 0.9, 24, arm, 3.0 - s * 0.6, true)
 	var pulse: float = fmod(_t * 0.6, 1.0)
 	draw_arc(Vector2.ZERO, r * (1.0 - pulse * 0.7), 0.0, TAU, 96, Color(c.lightened(0.4), 0.25 * pulse * (0.4 + _g)), 2.0, true)

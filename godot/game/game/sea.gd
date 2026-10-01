@@ -53,6 +53,19 @@ var _night: CanvasModulate
 ## sea clock: high and white by day, low, warm and grazing at dusk and dawn,
 ## faint and blue at night. The land's normal maps take it from its side.
 var _sun: DirectionalLight2D
+## THE GRADE: glow on whatever burns past white, and each water's own colour
+## (bright and warm in the Shallows, colder and harder down through the Deep
+## and the Abyss, drained and green-black in the Ancient Deep). Post stops at
+## the world's layer, so the HUD is never graded.
+var _env: Environment
+const GRADES: Dictionary = {
+	"": [1.0, 1.0, 1.0, Color(1, 1, 1)],
+	"shallows": [1.03, 1.02, 1.10, Color(1.0, 1.0, 0.98)],
+	"open_waters": [1.0, 1.04, 1.04, Color(0.98, 1.0, 1.02)],
+	"deep": [0.97, 1.07, 0.96, Color(0.94, 0.98, 1.04)],
+	"abyss": [0.93, 1.10, 0.86, Color(0.9, 0.95, 1.06)],
+	"ancient_deep": [0.90, 1.14, 0.70, Color(0.86, 1.0, 0.94)],
+}
 var _town_light: PointLight2D
 var _hud: FishingHud
 var _hud_layer: CanvasLayer
@@ -156,6 +169,25 @@ func _ready() -> void:
 
 	_night = CanvasModulate.new()
 	add_child(_night)
+	var we: WorldEnvironment = WorldEnvironment.new()
+	_env = Environment.new()
+	_env.background_mode = Environment.BG_CANVAS
+	_env.background_canvas_max_layer = 0
+	_env.glow_enabled = true
+	# No HDR 2D (it moves the whole canvas into linear colour, and every
+	# painting and shader here was made for sRGB): the glow takes what is
+	# nearly white instead.
+	_env.glow_hdr_threshold = 0.9
+	_env.glow_hdr_scale = 2.0
+	_env.glow_intensity = 0.6
+	_env.glow_strength = 1.0
+	_env.glow_bloom = 0.0
+	_env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+	for lv: int in 7:
+		_env.set_glow_level(lv, 1.0 if lv in [1, 2, 3, 4] else 0.0)
+	_env.adjustment_enabled = true
+	we.environment = _env
+	add_child(we)
 	_sun = DirectionalLight2D.new()
 	_sun.blend_mode = Light2D.BLEND_MODE_ADD
 	add_child(_sun)
@@ -239,6 +271,7 @@ func _process(delta: float) -> void:
 	var sun_col: Color = Color(1.0, 0.97, 0.9).lerp(Color(1.0, 0.62, 0.32), warm)
 	_sun.color = sun_col.lerp(Color(0.55, 0.66, 1.0), dark)
 	_sun.energy = lerpf(0.22 + 0.12 * warm, 0.16, dark)
+	_grade(delta, cam_world, dark)
 	_boat.lantern.energy = dark * 1.1 * (0.5 + 0.5 * _boat.lantern_glow)
 	_town_light.energy = dark * 1.4
 	# Light and lettering are not dimmed by the night: undo it for them.
@@ -463,6 +496,18 @@ func _hotspots(delta: float, now: float) -> void:
 		if _boat.position.distance_to(Vector2(float(h["x"]), float(h["y"]))) <= float(h["r"]):
 			inside = h
 	_hud.set_spot(inside)
+
+
+## Ease the grade toward the water she is in.
+func _grade(delta: float, at: Vector2, dark: float) -> void:
+	var w: Dictionary = Chart.water_at(at)
+	var g: Array = GRADES.get(str(w.get("id", "")), GRADES[""])
+	var k: float = 1.0 - exp(-delta * 0.8)
+	_env.adjustment_brightness = lerpf(_env.adjustment_brightness, float(g[0]), k)
+	_env.adjustment_contrast = lerpf(_env.adjustment_contrast, float(g[1]), k)
+	_env.adjustment_saturation = lerpf(_env.adjustment_saturation, float(g[2]) * (1.0 - dark * 0.15), k)
+	# Night blooms more: the lights are what is left.
+	_env.glow_intensity = lerpf(_env.glow_intensity, 0.3 + dark * 0.6, k)
 
 
 ## Where the boat is and what it has seen, saved (before any claim, too: the
