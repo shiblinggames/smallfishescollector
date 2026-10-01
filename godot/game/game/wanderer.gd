@@ -93,8 +93,9 @@ func _place(first: bool = false) -> void:
 	skipper.scale.x = _facing
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	_place()
+	skipper.sway(delta, 1.0 + clampf((position.length() - 1400.0) / 21200.0, 0.0, 1.0) * 1.4)
 	_plate.modulate = lift
 	_plate.position = Vector2(-_plate.size.x / 2.0, 0)
 

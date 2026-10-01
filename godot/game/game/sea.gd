@@ -177,7 +177,7 @@ func _ready() -> void:
 	# No HDR 2D (it moves the whole canvas into linear colour, and every
 	# painting and shader here was made for sRGB): the glow takes what is
 	# nearly white instead.
-	_env.glow_hdr_threshold = 0.9
+	_env.glow_hdr_threshold = 0.94
 	_env.glow_hdr_scale = 2.0
 	_env.glow_intensity = 0.6
 	_env.glow_strength = 1.0
@@ -507,7 +507,7 @@ func _grade(delta: float, at: Vector2, dark: float) -> void:
 	_env.adjustment_contrast = lerpf(_env.adjustment_contrast, float(g[1]), k)
 	_env.adjustment_saturation = lerpf(_env.adjustment_saturation, float(g[2]) * (1.0 - dark * 0.15), k)
 	# Night blooms more: the lights are what is left.
-	_env.glow_intensity = lerpf(_env.glow_intensity, 0.3 + dark * 0.6, k)
+	_env.glow_intensity = lerpf(_env.glow_intensity, 0.12 + dark * 0.7, k)
 
 
 ## Where the boat is and what it has seen, saved (before any claim, too: the

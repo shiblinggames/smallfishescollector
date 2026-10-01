@@ -42,6 +42,14 @@ static var _bands: Dictionary = {}
 static var _shadow_mat: ShaderMaterial
 static var _mirror_mat: ShaderMaterial
 var _mirror: Node2D
+var _mirror_base: float = 0.0
+var _waterline: float = 30.0
+## HOW SHE SITS IN THE SEA (Godot over the web baseline): bob and roll on the
+## swell, a heel into turns, the bow lifting under way. Set by whoever sails
+## her (sway()); pivoted on the waterline.
+var _bob: float = 0.0
+var _rock: float = 0.0
+var _t: float = randf() * 100.0
 var _wob: float = 0.0
 var _phase: float = randf() * 6.28
 
@@ -160,7 +168,9 @@ func _water_fx(origin: Vector2, h: float, hull: Sprite2D) -> void:
 		_mirror_mat.shader = load("res://game/fx/hull_mirror.gdshader")
 	group.material = _mirror_mat
 	_mirror = group
-	_mirror.position = Vector2(0, waterline * (1.0 + LIE))
+	_waterline = waterline
+	_mirror_base = waterline * (1.0 + LIE)
+	_mirror.position = Vector2(0, _mirror_base)
 	_mirror.scale = Vector2(1.0, -LIE)
 	for c: Sprite2D in parts:
 		_mirror.add_child(_twin(c))
@@ -207,6 +217,26 @@ static func _band(t: Texture2D) -> Vector2:
 			out = Vector2(float(r.position.y) / img.get_height(), float(r.end.y) / img.get_height())
 	_bands[key] = out
 	return out
+
+
+## The swell and her way, applied about the waterline. rough scales the swell
+## (deeper water, a squall); heel and pitch are degrees (a turn, the bow lifting
+## under way), eased in.
+func sway(delta: float, rough: float, heel: float = 0.0, pitch: float = 0.0) -> void:
+	_t += delta
+	var bob: float = (sin(_t * 1.15 + _phase) * 2.6 + sin(_t * 0.67 + _phase * 1.7) * 1.8) * rough
+	var roll: float = (sin(_t * 0.92 + _phase * 0.6) * 1.4 + sin(_t * 1.61 + _phase) * 0.6) * rough
+	var k: float = 1.0 - exp(-delta * 3.0)
+	_bob = lerpf(_bob, bob, k)
+	_rock = lerpf(_rock, roll + heel + pitch, k)
+	var rot: float = deg_to_rad(_rock)
+	var pivot: Vector2 = Vector2(0, _waterline)
+	rotation = rot
+	position = Vector2(0, _bob) + pivot - pivot.rotated(rot)
+	if _mirror != null and is_instance_valid(_mirror):
+		# Water flips a lean, and keeps the picture mostly where it is.
+		_mirror.rotation = -2.0 * rot
+		_mirror.position.y = _mirror_base - _bob * 0.75
 
 
 func _process(delta: float) -> void:

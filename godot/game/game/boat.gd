@@ -42,6 +42,7 @@ var _straight_t: float = 0.0
 var _full: bool = false
 var _sail_mom: float = 1.0
 var _last_heading: float = PI / 2.0
+var _sway_heading: float = PI / 2.0
 
 var velocity: Vector2 = Vector2.ZERO
 var target: Variant = null
@@ -136,6 +137,16 @@ func steer(input: Vector2, delta: float) -> void:
 		velocity *= 0.2
 	position = next
 	var speed: float = velocity.length()
+	# How she sits: rougher further out, heeling into a turn (away from its
+	# centre), the bow lifting with way on.
+	var band: float = clampf((position.length() - 1400.0) / 21200.0, 0.0, 1.0)
+	var rough: float = 1.0 + band * 1.4
+	var turn_rate: float = wrapf(heading - _sway_heading, -PI, PI) / maxf(delta, 0.0001)
+	_sway_heading = heading
+	var way: float = clampf(speed / (SPEED * hull * boat_speed), 0.0, 1.0)
+	var heel: float = clampf(turn_rate * way * 4.0, -7.0, 7.0) * signf(velocity.x if absf(velocity.x) > 1.0 else 1.0)
+	var pitch: float = -signf(velocity.x) * way * 2.8 if absf(velocity.x) > 8.0 else 0.0
+	skipper.sway(delta, rough, heel, pitch)
 	lantern.texture_scale = 0.9 + 3.6 * lantern_glow
 	if speed > 20.0 and absf(velocity.x) > 8.0:
 		_facing = 1.0 if velocity.x > 0.0 else -1.0
