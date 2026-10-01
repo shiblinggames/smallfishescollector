@@ -22,6 +22,7 @@ import crypto from 'crypto'
 import os from 'os'
 import { execFileSync } from 'child_process'
 import { fileURLToPath } from 'url'
+import { createRequire } from 'module'
 
 const HERE = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const WEB = path.join(HERE, '..', '..', 'web')
@@ -86,8 +87,25 @@ if (check) {
 }
 
 let copied = 0
+// THE CAPTAIN SHEETS lose their painted ripple. Each fishing_<color>_<pose>
+// sheet has a pale smear of water painted under its plain hull, and the sheet
+// is drawn under every boat, so a static ripple sat on every hull; the port
+// draws its own water (the wake's rings, the reflection, the sea up the hull).
+// Translucent, non-brown pixels in the bottom 30%, inside the hull's width
+// (the fishing line hangs outside it and is kept). Remembered by the source's
+// hash so it only runs when the web's art changes.
+const SHEET = /^fishing_(.+_)?(rest|wait|cast)\.png$/
+const DERIPPLED = path.join(HERE, 'art', '.derippled.json')
+const derippled = fs.existsSync(DERIPPLED) ? JSON.parse(fs.readFileSync(DERIPPLED, 'utf8')) : {}
+const sheets = []
 const copyIfChanged = (from, to) => {
   const src = fs.readFileSync(from)
+  if (SHEET.test(path.basename(to))) {
+    const sha = crypto.createHash('sha256').update(src).digest('hex')
+    if (derippled[path.basename(to)] === sha && fs.existsSync(to)) return
+    sheets.push({ to, src, sha })
+    return
+  }
   if (fs.existsSync(to) && src.equals(fs.readFileSync(to))) return
   fs.mkdirSync(path.dirname(to), { recursive: true })
   fs.writeFileSync(to, src)
@@ -111,6 +129,30 @@ for (const [pkg, file] of FONTS) {
   const from = path.join(FONTSRC, pkg, 'files', file)
   if (fs.existsSync(from)) copyIfChanged(from, path.join(HERE, 'art', 'fonts', file))
   else console.log(`  font missing: ${pkg}/${file} (run npm install in desktop/)`)
+}
+if (sheets.length) {
+  const sharp = createRequire(path.join(WEB, 'package.json'))('sharp')
+  for (const { to, src, sha } of sheets) {
+    const { data, info } = await sharp(src).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+    const W = info.width, H = info.height, y0 = Math.floor(H * 0.7)
+    const brown = i => data[i] > data[i + 1] && data[i + 1] >= data[i + 2] && data[i] - data[i + 2] > 40
+    let lo = W, hi = -1
+    for (let y = y0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4
+      if (data[i + 3] >= 200 && brown(i)) { if (x < lo) lo = x; if (x > hi) hi = x }
+    }
+    if (hi >= 0) {
+      for (let y = y0; y < H; y++) for (let x = Math.max(0, lo - 50); x <= Math.min(W - 1, hi + 50); x++) {
+        const i = (y * W + x) * 4
+        if (data[i + 3] > 0 && data[i + 3] < 200 && !brown(i)) data[i + 3] = 0
+      }
+    }
+    fs.mkdirSync(path.dirname(to), { recursive: true })
+    await sharp(data, { raw: info }).png().toFile(to)
+    derippled[path.basename(to)] = sha
+    copied++
+  }
+  fs.writeFileSync(DERIPPLED, JSON.stringify(derippled, null, 1))
 }
 console.log(copied ? `  art: ${copied} file(s) copied from web/public` : '  art: up to date')
 

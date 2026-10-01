@@ -163,6 +163,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     web's per-sprite alpha let parts show through each other). `fx/hull_mirror.gdshader` then
     ripples it with the water, pulls it toward the sea's colour, and dissolves it with
     distance. It is mirrored about the lowest PAINTED row of the hull, not the sheet's edge.
+  - The captain sheets (`fishing_<color>_<pose>.png`) had a pale ripple painted under the
+    plain hull. The sheet is drawn under every boat, so a static ripple sat on every hull.
+    `tools/setup.mjs` erases it from the Godot copy (translucent, non-brown pixels in the
+    bottom 30%, inside the hull's width, which keeps the fishing line and the ring where it
+    enters the water). The web's art is untouched; hashes in art/.derippled.json mean it only
+    reruns when the web's art changes.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel
