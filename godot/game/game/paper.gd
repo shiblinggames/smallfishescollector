@@ -118,6 +118,8 @@ class Tile:
 	var label: String = ""
 	var corner: String = ""
 	var dim: bool = false
+	## Not collected: the art in grey pencil, the blot faint, the name faint.
+	var grey: bool = false
 	var _t: float = 0.0
 	var _hot: float = 0.0
 	var _pic: TextureRect
@@ -133,7 +135,7 @@ class Tile:
 		holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		holder.offset_bottom = -24
 		add_child(holder)
-		Paper.blot(holder, pigment, 0.9 if not dim else 0.4)
+		Paper.blot(holder, Color(0.5, 0.48, 0.45) if grey else pigment, 0.35 if grey else (0.9 if not dim else 0.4))
 		_pic = TextureRect.new()
 		_pic.texture = art
 		_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -147,8 +149,12 @@ class Tile:
 		_pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if dim:
 			_pic.modulate = Color(1, 1, 1, 0.55)
+		if grey:
+			var gm: ShaderMaterial = ShaderMaterial.new()
+			gm.shader = load("res://game/fx/greyed.gdshader")
+			_pic.material = gm
 		holder.add_child(_pic)
-		var n: Label = Paper.text(self, label, "small", Paper.RED if on else Paper.INK)
+		var n: Label = Paper.text(self, label, "small", Paper.RED if on else (Paper.INK_FAINT if grey else Paper.INK))
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		n.clip_text = true
 		n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS

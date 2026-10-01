@@ -384,12 +384,19 @@ func _init() -> void:
 				await process_frame
 		"crates", "crateopen":
 			p["crate_stash"] = { "gold": 2.0, "wooden": 3.0, "ancient": 1.0 }
+			p["unlocked_hats"] = ["gray", "spotted"]
+			p["unlocked_pets"] = ["parrot_red", "seal_brown", "crab_blue"]
 			hud._open_loadout()
 			for f: int in 30:
 				await process_frame
 			sea._locker._show_tab("crates")
 			for f: int in 30:
 				await process_frame
+			if what == "crates":
+				var sc: ScrollContainer = sea._locker._body.get_child(sea._locker._body.get_child_count() - 1)
+				sc.scroll_vertical = 400
+				for f: int in 5:
+					await process_frame
 			if what == "crateopen":
 				sea._locker._open_crate("gold")
 				await create_timer(float(OS.get_environment("CRATE_T")) if OS.get_environment("CRATE_T") != "" else 2.6).timeout

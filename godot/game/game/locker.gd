@@ -220,39 +220,220 @@ func _crate_count() -> int:
 	return n
 
 
-## The crates she has stowed, best first; open one and it surfaces beside her.
+## THE CRATES (Kong, 2026-10-01): every crate there is, with how many are
+## stowed, and the chosen one's whole drop table: what is always inside (the
+## doubloons and the bait, with their odds), every cosmetic it can hold (by
+## band) and every pet any crate can hold, the ones you have in colour with a
+## tick and the ones you lack in grey pencil, and how much of it you have
+## collected. Collect everything a crate can give and it is complete.
+var _crate_sel: String = ""
+const TIER_ORDER: Array = ["wooden", "metal", "gold", "diamond", "ancient"]
+const BAND_PIGMENT: Dictionary = { "common": Color(0.52, 0.5, 0.46), "uncommon": Color(0.3, 0.58, 0.36), "rare": Color(0.28, 0.46, 0.72), "epic": Color(0.55, 0.34, 0.7) }
+
+
 func _build_crates() -> void:
 	var stash: Dictionary = _stash()
-	Paper.text(_body, "Crates you have reeled up wait here until you open them. What is inside is decided when you open it.", "note", Paper.INK_SOFT, true)
-	var grid: GridContainer = GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 14)
-	grid.add_theme_constant_override("v_separation", 10)
-	_body.add_child(grid)
-	var any: bool = false
-	for tier: String in ["ancient", "diamond", "gold", "metal", "wooden"]:
-		var n: int = int(Js.num(stash.get(tier)))
-		if n <= 0:
-			continue
-		any = true
+	if _crate_sel == "":
+		_crate_sel = "wooden"
+		for t: String in TIER_ORDER:
+			if Js.num(stash.get(t)) > 0.0:
+				_crate_sel = t
+	# The crates, in a row.
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_body.add_child(row)
+	for tier: String in TIER_ORDER:
 		var t: Array = CrateMoment.TIERS[tier]
-		var cell: VBoxContainer = VBoxContainer.new()
-		cell.add_theme_constant_override("separation", 4)
-		grid.add_child(cell)
+		var n: int = int(Js.num(stash.get(tier)))
+		var got: Array = _crate_collection(tier)
 		var tile: Paper.Tile = Paper.Tile.new()
-		tile.label = t[0]
+		tile.on = tier == _crate_sel
+		tile.label = str(t[0]).replace(" Crate", "").replace(" Chest", "")
 		tile.art = CrateMoment._tex("%sclosed.png" % t[2])
 		tile.pigment = Color(t[1]).darkened(0.2)
-		tile.corner = "×%d" % n
-		tile.custom_minimum_size = Vector2(160, 150)
-		tile.pressed.connect(func() -> void: _open_crate(tier))
-		cell.add_child(tile)
-		var b: Pane.PaneButton = Paper.button("Open one", true)
+		tile.corner = ("×%d" % n) if n > 0 else ""
+		tile.custom_minimum_size = Vector2(100, 104)
+		tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tile.tooltip_text = "%s: %d of %d collected" % [t[0], got[0], got[1]]
+		tile.pressed.connect(func() -> void:
+			_crate_sel = tier
+			_show_tab("crates"))
+		row.add_child(tile)
+	Paper.rule(_body)
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_body.add_child(scroll)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 8)
+	scroll.add_child(col)
+	_crate_table(col, _crate_sel, int(Js.num(stash.get(_crate_sel))))
+
+
+## [collected, total] of what a crate can give that can be collected.
+func _crate_collection(tier: String) -> Array:
+	var have: int = 0
+	var total: int = 0
+	for e: Array in _crate_cosmetics(tier):
+		total += 1
+		if e[3]:
+			have += 1
+	for p: Array in _crate_pets():
+		total += 1
+		if p[3]:
+			have += 1
+	return [have, total]
+
+
+## The cosmetics a tier can hold: [entry, band, art, owned], best band first.
+func _crate_cosmetics(tier: String) -> Array:
+	var c: Dictionary = Rules.data()["crate"]
+	var bands: Dictionary = Js.obj(Js.obj(c.get("cosmeticBands")).get(tier))
+	var rarity: Dictionary = Js.obj(c.get("cosmeticRarity"))
+	var p: Dictionary = session.profile()
+	var out: Array = []
+	if float(Js.nz((c["outcomeWeights"][tier] as Dictionary).get("cosmetic"), 0.0)) <= 0.0:
+		return out
+	for e: Dictionary in c["cosmeticPool"]:
+		var band: String = str(rarity.get("%s:%s" % [e["kind"], e["id"]], "common"))
+		if not rarity.is_empty() and float(bands.get(band, 0.0)) <= 0.0:
+			continue
+		var owned: bool
+		var art: Texture2D
+		match e["kind"]:
+			"skin":
+				owned = Js.includes(Js.list(p.get("unlocked_character_colors")), e["id"])
+				var at: AtlasTexture = AtlasTexture.new()
+				at.atlas = Skipper.tex("fishing_%s_rest.png" % e["id"])
+				at.region = Rect2(150, 320, 640, 450)
+				art = at
+			"boat":
+				owned = Js.includes(Js.list(p.get("unlocked_boats")), e["id"])
+				art = Skipper.tex(e.get("imageUrl"))
+			_:
+				owned = Js.includes(Js.list(p.get("unlocked_hats")), e["id"])
+				art = Skipper.tex(e.get("imageUrl"))
+		out.append([e, band, art, owned])
+	var order: Array = ["epic", "rare", "uncommon", "common"]
+	out.sort_custom(func(a: Array, b: Array) -> bool: return order.find(a[1]) < order.find(b[1]))
+	return out
+
+
+## Every pet a crate can hold (any crate): [pet, species, art, owned].
+func _crate_pets() -> Array:
+	var owned: Array = Js.list(session.profile().get("unlocked_pets"))
+	var out: Array = []
+	for pt: Dictionary in Rules.data()["pets"]:
+		if pt["earnedOnly"]:
+			continue
+		out.append([pt, pt["species"], _trimmed(Skipper.tex(pt["restImageUrl"])), Js.includes(owned, pt["id"])])
+	return out
+
+
+static var _trims: Dictionary = {}
+
+
+## A picture cut to where it is painted (the pet sheets are mostly margin).
+static func _trimmed(t: Texture2D) -> Texture2D:
+	if t == null:
+		return null
+	if _trims.has(t.resource_path):
+		return _trims[t.resource_path]
+	var img: Image = t.get_image()
+	var out: Texture2D = t
+	if img != null:
+		if img.is_compressed():
+			img.decompress()
+		var r: Rect2i = img.get_used_rect()
+		if r.size.x > 0:
+			var at: AtlasTexture = AtlasTexture.new()
+			at.atlas = t
+			at.region = Rect2(r).grow(4.0)
+			out = at
+	_trims[t.resource_path] = out
+	return out
+
+
+func _crate_table(col: VBoxContainer, tier: String, stowed: int) -> void:
+	var c: Dictionary = Rules.data()["crate"]
+	var t: Array = CrateMoment.TIERS[tier]
+	var got: Array = _crate_collection(tier)
+	var head: HBoxContainer = HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	col.add_child(head)
+	var tv: VBoxContainer = VBoxContainer.new()
+	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tv.add_theme_constant_override("separation", 0)
+	head.add_child(tv)
+	Paper.text(tv, t[0], "title", Paper.INK)
+	var waters: Array = []
+	for h: String in ["shallows", "open_waters", "deep", "abyss", "ancient_deep"]:
+		if float(Js.nz((Rules.data()["zones"]["crateTiers"][h] as Dictionary).get(tier), 0.0)) > 0.0:
+			for w: Dictionary in Chart.WATERS:
+				if w["id"] == h:
+					waters.append(w["name"])
+	Paper.text(tv, ("Comes up in %s" % ", ".join(PackedStringArray(waters))) if not waters.is_empty() else "Does not come up anywhere", "note", Paper.INK_SOFT)
+	if got[0] >= got[1] and got[1] > 0:
+		var done_l: Label = Paper.text(head, "Complete", "title", Paper.RED)
+		done_l.rotation_degrees = -6.0
+	if stowed > 0:
+		var b: Pane.PaneButton = Paper.button("Open one  ·  %d stowed" % stowed, true)
+		b.custom_minimum_size = Vector2(0, 38)
 		b.disabled = _opening
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		b.pressed.connect(func() -> void: _open_crate(tier))
-		cell.add_child(b)
-	if not any:
-		Paper.text(_body, "No crates stowed. They come up on the line now and then; the deeper the water, the better they get.", "note", Paper.INK_SOFT, true)
+		head.add_child(b)
+	# Collected.
+	Paper.text(col, "Collected  %d of %d" % [got[0], got[1]], "value", Paper.INK)
+	Kit.bar(col, float(got[0]) / maxf(1.0, float(got[1])), Color(0.3, 0.55, 0.4))
+	# Always inside.
+	var w: Dictionary = c["outcomeWeights"][tier]
+	var tot: float = float(w["doubloons"]) + float(w["bait"]) + float(w["cosmetic"])
+	var r: Array = c["doubloonRange"][tier]
+	var baits: Array = []
+	for b: Dictionary in c["baitPools"][tier]:
+		baits.append(str(Rules.bait(b["type"]).get("name", b["type"])))
+	Paper.text(col, "Inside", "eyebrow", Paper.INK_SOFT)
+	Paper.stat(col, "Doubloons, %s to %s ⟡" % [Js.thousands(float(r[0])), Js.thousands(float(r[1]))], "%d%%" % int(round(100.0 * float(w["doubloons"]) / tot)))
+	Paper.stat(col, "%d bait: %s" % [int(c["baitQty"][tier]), ", ".join(PackedStringArray(baits))], "%d%%" % int(round(100.0 * float(w["bait"]) / tot)))
+	Paper.stat(col, "A cosmetic you do not have yet", ("%d%%" % int(round(100.0 * float(w["cosmetic"]) / tot))) if float(w["cosmetic"]) > 0.0 else "None")
+	Paper.stat(col, "A pet, as well as the rest", "%s%%" % str(snappedf(float(c["petChance"][tier]) * 100.0, 0.1)))
+	# What can be collected.
+	var cos: Array = _crate_cosmetics(tier)
+	if not cos.is_empty():
+		Paper.text(col, "Cosmetics it can hold", "eyebrow", Paper.INK_SOFT)
+		var g: GridContainer = GridContainer.new()
+		g.columns = 4
+		g.add_theme_constant_override("h_separation", 8)
+		g.add_theme_constant_override("v_separation", 6)
+		col.add_child(g)
+		for e: Array in cos:
+			var tile: Paper.Tile = Paper.Tile.new()
+			tile.label = str((e[0] as Dictionary)["name"])
+			tile.art = e[2]
+			tile.grey = not e[3]
+			tile.pigment = BAND_PIGMENT.get(e[1], Color(0.5, 0.5, 0.5))
+			tile.corner = "✓" if e[3] else str(e[1]).capitalize()
+			tile.custom_minimum_size = Vector2(124, 112)
+			tile.tooltip_text = "%s  ·  %s  ·  %s" % [(e[0] as Dictionary)["name"], str(e[1]).capitalize(), "collected" if e[3] else "not yet"]
+			g.add_child(tile)
+	Paper.text(col, "Pets any crate can hold", "eyebrow", Paper.INK_SOFT)
+	var pg: GridContainer = GridContainer.new()
+	pg.columns = 5
+	pg.add_theme_constant_override("h_separation", 6)
+	pg.add_theme_constant_override("v_separation", 6)
+	col.add_child(pg)
+	for pe: Array in _crate_pets():
+		var tile: Paper.Tile = Paper.Tile.new()
+		tile.label = str((pe[0] as Dictionary)["name"])
+		tile.art = pe[2]
+		tile.grey = not pe[3]
+		tile.pigment = Color(str((pe[0] as Dictionary).get("accentColor", "#7a9a8a"))).darkened(0.2)
+		tile.corner = "✓" if pe[3] else ""
+		tile.custom_minimum_size = Vector2(96, 96)
+		tile.tooltip_text = "%s  ·  %s" % [(pe[0] as Dictionary)["name"], "collected" if pe[3] else "not yet"]
+		pg.add_child(tile)
 
 
 func _open_crate(tier: String) -> void:

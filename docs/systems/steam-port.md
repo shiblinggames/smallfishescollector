@@ -393,6 +393,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   rare and epic). CrateLoot.roll uses the bands when they are present. Pet chances
   unchanged. The first proposal (chance climbing with depth) and a currents bonus were
   both declined.
+  THE CRATES TAB IS A COLLECTION (Kong): all five crates in a row (a count on the ones
+  stowed); the chosen one's drop table: where it comes up, what is always inside with its
+  odds (doubloons, bait, a cosmetic, a pet), every cosmetic its bands can give and every
+  pet any crate can give, owned in colour with a tick, the rest in grey pencil
+  (fx/greyed.gdshader; Paper.Tile.grey), "Collected n of m" with a bar, and a red
+  "Complete" when it is all yours. Pet pictures are cut to their painted area.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel
