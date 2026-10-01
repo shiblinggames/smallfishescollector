@@ -408,6 +408,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   CrateLoot.roll_pet_from draws from the tier's list weighted by each pet's share of the
   web's whole roll; petChance per tier is the web's; duplicates still happen. A crate's
   completion counts only its own pets and cosmetics.
+  DIAMOND AND ANCIENT PETS MADE RARER (Kong: too common once each crate had its own pets):
+  petChance diamond 1.5% and ancient 4% (the web's 4 / 10). Each diamond pet about 1 in
+  267 diamond crates, each ancient pet about 1 in 50 ancient chests (was 1 in ~100 and 20).
+  Cosmetic odds unchanged.
+  DIAMOND AND ANCIENT MADE RARER (Kong: "too common"): fewer items in those crates meant
+  each came out more often than in a gold one. Cosmetic 2% in both (was 4 / 5), bands
+  diamond uncommon 2 / rare 2 / epic 1 and ancient rare 2 / epic 1 (an epic half as likely
+  as anything else in its crate), pet 1.5% / 4% (was 4 / 10). Per item now: diamond
+  cosmetics 1 in 375, epics 1 in 750, pets 1 in ~267; ancient rares 1 in 225, epics 1 in
+  450, pets 1 in ~50.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel
