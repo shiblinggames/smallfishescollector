@@ -235,6 +235,22 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     a compass rose and light under it, and a comet trail behind the needle. A tapered brass
     needle reaches into the track, under a domed hub. The logic and the lock-in are
     unchanged.
+  SECOND PLAYTEST (2026-10-01):
+  - BOXES: cloud shadows and kelp used a multiply, whose neutral white the sea's
+    CanvasModulate greys, so their empty corners showed as boxes. Both are now plain
+    see-through darkening. Do not multiply anything in the World.
+  - THE FISH swim head first, bend as they swim (fx/fish_under.gdshader), and live
+    UNDER THE SURFACE. They draw into sea_field.gd's `under` SubViewport, which the water
+    shader lays beneath its own surface, refracted by the swell, with the light, glints,
+    foam and wake on top.
+  - Hold the mouse on the water and she keeps sailing toward the pointer (and on past it).
+  - THE MOORINGS are rebuilt (berth.gd). In place of the web's glowing pool, neon rim and
+    14 lamps: wooden pilings with rope and lanterns along the shore edge of the berth,
+    placed only on open water, and a line of cork floats round it. Lantern light runs down
+    the water at night, and inside the berth the lanterns and floats warm.
+  - Floating things get reflections (SeaFinds.reflect): bottles first.
+  - THE GLITTER: the drift flecks are off, the stirred-water glints are gone, and the web's
+    sun glints are broader and slower.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

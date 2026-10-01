@@ -188,6 +188,10 @@ func _ready() -> void:
 	add_child(_field)
 	_field.share_wake(_wake)
 	_water.set_shader_parameter("u_field", _field.texture())
+	_water.set_shader_parameter("u_under", _field.under.get_texture())
+	_life.sink_fish(_field.under_world)
+	for bid: String in _berths:
+		(_berths[bid] as Berth).field = _field
 	_water.set_shader_parameter("u_field_on", 1.0)
 	_boat = Boat.new()
 	_boat.field = _field
@@ -276,6 +280,7 @@ func _process(delta: float) -> void:
 	# The currents, the kelp and the sails rest while the rod is out or a panel
 	# is up (the web's hush).
 	_boat.hush = _hud.busy() or not (_hud.phase == "idle" or _hud.phase == "result")
+	_hold_steer()
 	_boat.steer(input, delta)
 	var cam_world: Vector2 = _boat.position
 	_camera.position = Vector2(cam_world.x, cam_world.y * Chart.GROUND)
@@ -320,7 +325,6 @@ func _process(delta: float) -> void:
 	for bid: String in _berths:
 		var bt: Berth = _berths[bid]
 		bt.darkness = dark
-		bt.modulate = lift
 	for b: Buyer in _buyers:
 		b.lift = lift
 	_wanderers(now, clock, lift)
@@ -612,7 +616,8 @@ func _night_water(dark: float, at: Vector2) -> void:
 	add_lamp.call(_boat.position + keel, 16.0 + 18.0 * _boat.lantern_glow, 0.30 + 0.25 * _boat.lantern_glow, Color(1.0, 0.72, 0.4))
 	add_lamp.call(_town_light.position + Vector2(0, 260), 46.0, 0.45, Color(1.0, 0.74, 0.45))
 	for bid: String in _berths:
-		add_lamp.call((_berths[bid] as Berth).position, 14.0, 0.16, Color(1.0, 0.8, 0.5))
+		for lp: Vector2 in (_berths[bid] as Berth).lamp_points():
+			add_lamp.call(lp, 12.0, 0.2, Color(1.0, 0.8, 0.5))
 	for list: Dictionary in [_regulars, _strangers]:
 		for k: String in list:
 			var w: Wanderer = list[k]
@@ -1125,6 +1130,25 @@ func _input(event: InputEvent) -> void:
 		_music_started = true
 
 
+## Holding the mouse down on the water: she keeps sailing toward the pointer
+## (and on past it, so a held press never runs out under her).
+var _holding: bool = false
+
+
+func _hold_steer() -> void:
+	if not _holding:
+		return
+	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or _hud.busy():
+		_holding = false
+		return
+	var gp: Vector2 = get_global_mouse_position()
+	var aim: Vector2 = Vector2(gp.x, gp.y / Chart.GROUND)
+	var to: Vector2 = aim - _boat.position
+	if to.length() < 220.0 and to.length() > 1.0:
+		aim = _boat.position + to.normalized() * 220.0
+	_boat.target = aim
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	# Zoom: the wheel, a trackpad pinch, or - and = on the keyboard.
 	var zf: float = 1.0
@@ -1150,6 +1174,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		var gp: Vector2 = get_global_mouse_position()
 		_boat.target = Vector2(gp.x, gp.y / Chart.GROUND)
+		_holding = true
 
 
 ## The compass mark (SeaMap.tsx): while you are in a water and its buyer is

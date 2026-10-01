@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -226,6 +226,14 @@ func _init() -> void:
 			sea._boat.heading = dir.angle()
 			sea._boat.target = Vector2(float(a1[0]), float(a1[1]))
 			for f: int in 240:
+				await process_frame
+		"bottle":
+			var bs: Array = Explore.bottles_around(0, 3000, 6000, Clock.now_ms())
+			if not bs.is_empty():
+				var bp: Dictionary = Explore.bottle_pos(bs[0], Clock.now_ms() / 1000.0)
+				sea._boat.position = Vector2(float(bp["x"]) - 220.0, float(bp["y"]) + 40.0)
+			sea._zoom_to = 1.5
+			for f: int in 90:
 				await process_frame
 		"kelp":
 			var bed: Dictionary = (Rules.data()["flow"]["kelp"] as Array)[3]

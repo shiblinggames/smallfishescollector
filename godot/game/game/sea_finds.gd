@@ -86,7 +86,11 @@ class BottleNode:
 			var sc: float = 46.0 / float(_spr.texture.get_width())
 			_spr.scale = Vector2(sc, sc / Chart.GROUND)
 		add_child(_spr)
+		if _spr.texture != null:
+			_mirror = SeaFinds.reflect(self, _spr, _spr.texture.get_height() * _spr.scale.y * 0.18)
 		_place()
+
+	var _mirror: Node2D
 
 	func _place() -> void:
 		var at: Dictionary = Explore.bottle_pos(bottle, Clock.now_ms() / 1000.0)
@@ -95,6 +99,8 @@ class BottleNode:
 	func _process(_delta: float) -> void:
 		_place()
 		_spr.rotation = sin(Clock.now_ms() / 700.0 + float(int(bottle["seed"]) % 100)) * 0.18
+		if _mirror != null:
+			(_mirror.get_child(0) as Sprite2D).rotation = -_spr.rotation
 
 
 ## A DIG's tell: the water looks odd over a buried site (a slow, faint swirl
@@ -120,6 +126,29 @@ class DigHint:
 	## reactive water (see Sea._finds): nothing is painted here any more.
 	func _draw() -> void:
 		pass
+
+
+## A REFLECTION for something floating (Godot over the web baseline): the
+## boats' own (a twin in a CanvasGroup, flipped about the waterline at 55%,
+## rippled and faded by fx/hull_mirror.gdshader). waterline is how far below
+## the sprite's centre the water meets it.
+static func reflect(owner: Node2D, spr: Sprite2D, waterline: float) -> Node2D:
+	var g: CanvasGroup = CanvasGroup.new()
+	g.fit_margin = 10.0
+	var m: ShaderMaterial = ShaderMaterial.new()
+	m.shader = load("res://game/fx/hull_mirror.gdshader")
+	g.material = m
+	g.position = Vector2(0, waterline * 1.55)
+	g.scale = Vector2(1.0, -0.55)
+	g.show_behind_parent = true
+	var t: Sprite2D = Sprite2D.new()
+	t.texture = spr.texture
+	t.scale = spr.scale
+	t.position = spr.position
+	g.add_child(t)
+	owner.add_child(g)
+	owner.move_child(g, 0)
+	return g
 
 
 ## WHAT YOU FOUND: one quiet panel for a landing, a dig, or a bottle.

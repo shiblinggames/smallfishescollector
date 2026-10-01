@@ -16,6 +16,11 @@ const BLOB_CAP: int = 96
 const RING_CAP: int = 96
 
 var viewport: SubViewport
+## WHAT IS UNDER THE SURFACE: the shoals are drawn here, and the water shader
+## lays this beneath its own surface (refracted by the swell, lit over).
+var under: SubViewport
+var under_world: Node2D
+var _under_cam: Camera2D
 var _cam: Camera2D
 var _world: Node2D
 var _blobs: MultiMeshInstance2D
@@ -45,6 +50,18 @@ func _ready() -> void:
 	_world = Node2D.new()
 	_world.scale = Vector2(1.0, Chart.GROUND)
 	viewport.add_child(_world)
+	under = SubViewport.new()
+	under.disable_3d = true
+	under.transparent_bg = true
+	under.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	under.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+	under.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR
+	add_child(under)
+	_under_cam = Camera2D.new()
+	under.add_child(_under_cam)
+	under_world = Node2D.new()
+	under_world.scale = Vector2(1.0, Chart.GROUND)
+	under.add_child(under_world)
 	_blobs = _layer(BLOB_CAP, _blob_tex())
 	_rings = _layer(RING_CAP, Wake._ring_tex())
 	_world.add_child(_blobs)
@@ -127,6 +144,10 @@ func step(delta: float, cam_pos: Vector2, zoom: float, screen: Vector2, contacts
 		viewport.size = size
 	_cam.position = cam_pos
 	_cam.zoom = Vector2(zoom, zoom) * (float(size.x) / screen.x)
+	if under.size != size:
+		under.size = size
+	_under_cam.position = cam_pos
+	_under_cam.zoom = _cam.zoom
 	var bm: MultiMesh = _blobs.multimesh
 	var n: int = 0
 	for c: Dictionary in contacts:

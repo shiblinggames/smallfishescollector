@@ -35,6 +35,9 @@ uniform float u_lantern = 0.0;
 uniform sampler2D u_field : filter_linear, repeat_disable;
 uniform vec2 u_field_px = vec2(0.00125, 0.0022);
 uniform float u_field_on = 0.0;
+// UNDER THE SURFACE (sea_field.gd's under layer): the shoals, laid beneath the
+// water's own surface and bent by it.
+uniform sampler2D u_under : filter_linear, repeat_disable;
 // THE SHORE (game/shore.gd): Godot's distance field to the islands' painted
 // plates, in screen pixels.
 uniform float u_shore_on = 1.0;
@@ -136,6 +139,13 @@ void fragment() {
 	storm *= smoothstep(0.15, 0.6, vnoise(world * 0.0012 + vec2(TIME * 0.01, 0.0)) * 0.5 + storm * 0.9);
 	swell *= 1.0 + storm * 1.6;
 
+	// What swims beneath: refracted by the swell and the stirred water, and
+	// dimmed by the water above it; the surface's light, glints and foam are
+	// all laid over it below.
+	vec2 refr = vec2(swell * 0.010, swell * 0.006) + fg * 0.02;
+	vec4 fish = texture(u_under, SCREEN_UV + refr);
+	col = mix(col, fish.rgb, clamp(fish.a * 1.15, 0.0, 0.92));
+
 	float shelf = smoothstep(u_shelf.x, u_shelf.y, length(world));
 	float shade = 1.0 + swell * 0.20 * u_swell * (1.0 - recede * 0.55);
 	shade *= 1.0 - shelf * 0.14;
@@ -179,9 +189,9 @@ void fragment() {
 	// Glints facing the sun.
 	if (u_dark < 0.98) {
 		vec2 gv = vec2(u_light.y, -u_light.x);
-		float sparkle = vnoise(w * 6.0 + gv * 2.0 + vec2(TIME * 0.10, TIME * 0.06));
-		float lo = mix(0.90, 0.74, u_warm);
-		sparkle = smoothstep(lo, 0.995, sparkle) * smoothstep(0.30, 0.75, d1);
+		float sparkle = vnoise(w * 3.2 + gv * 2.0 + vec2(TIME * 0.05, TIME * 0.03));
+		float lo = mix(0.86, 0.72, u_warm);
+		sparkle = smoothstep(lo, 1.0, sparkle) * smoothstep(0.30, 0.75, d1) * 0.7;
 		float sun_road = mix(1.0, 1.0 + horizon * 1.1, u_warm);
 		vec3 glint_col = mix(vec3(1.0), vec3(1.0, 0.62, 0.28), u_warm);
 		col += sparkle * glint_col * 0.060 * sun_road * u_swell * (1.0 - u_dark) * (1.0 - 0.88 * u_rush);
@@ -213,8 +223,6 @@ void fragment() {
 	// Foam where it is most stirred, and broken by the swell.
 	float froth = smoothstep(0.30, 0.95, fh) * (0.55 + 0.45 * smoothstep(0.3, 0.7, rag));
 	col += froth * vec3(0.90, 0.96, 1.0) * 0.16 * (1.0 - u_dark * 0.5);
-	// Glints come off the slopes of what she stirred, too.
-	col += smoothstep(0.02, 0.10, length(fg)) * smoothstep(0.6, 0.9, rag) * vec3(1.0, 0.97, 0.9) * 0.10 * (1.0 - u_dark);
 	// AT NIGHT THE STIRRED WATER GLOWS: plankton lighting up in the wake, round
 	// a cast, under a hull that moves.
 	col += vec3(0.36, 0.96, 0.85) * smoothstep(0.05, 0.7, fh) * u_dark * 0.55 * (0.7 + 0.3 * rag);

@@ -43,10 +43,16 @@ var flock_at: Vector2 = Vector2.INF
 
 func _ready() -> void:
 	_fish = _layer(260, _fish_tex(), false)
-	_fish.z_index = -3
+	# Bent as they swim (so the quad needs joints along it).
+	(_fish.multimesh.mesh as QuadMesh).subdivide_width = 8
+	var fm0: ShaderMaterial = ShaderMaterial.new()
+	fm0.shader = load("res://game/fx/fish_under.gdshader")
+	_fish.material = fm0
 	add_child(_fish)
 	_drift = _layer(140, _fleck_tex(), true)
 	_drift.z_index = -1
+	# Off (Kong 2026-10-01: they read as glitter); kept for a look that works.
+	_drift.visible = false
 	add_child(_drift)
 	_gulls = Gulls.new()
 	_gulls.z_index = 8
@@ -87,14 +93,16 @@ static func _fish_tex() -> Texture2D:
 	var img: Image = Image.create(64, 32, false, Image.FORMAT_RGBA8)
 	for y: int in 32:
 		for x: int in 64:
-			var dx: float = (x + 0.5 - 64.0 * 0.4) / (64.0 * 0.42)
+			# Head toward +x (the way the transform points them), tail behind.
+			var mx: float = 63.0 - x
+			var dx: float = (mx + 0.5 - 64.0 * 0.4) / (64.0 * 0.42)
 			var dy: float = (y + 0.5 - 16.0) / (64.0 * 0.42 * 0.44)
 			var d: float = sqrt(dx * dx + dy * dy)
 			var a: float = 0.0
 			if d < 1.0:
 				a = 1.0 - d * 0.45 if d < 0.55 else lerpf(0.75, 0.0, (d - 0.55) / 0.45)
 			# The tail: a triangle from 0.72 to 0.98 of the width.
-			var u: float = (x + 0.5) / 64.0
+			var u: float = (mx + 0.5) / 64.0
 			if u > 0.72 and u < 0.98:
 				var half: float = (u - 0.72) / 0.26 * 0.26
 				if absf((y + 0.5) / 32.0 - 0.5) < half:
@@ -160,6 +168,12 @@ func _dress(sc: Dictionary, base: int) -> void:
 		f["oy"] = (randf() - 0.5) * (k[3] as Vector2).y
 		f["amp"] = randf_range((k[4] as Vector2).x, (k[4] as Vector2).y)
 		f["size"] = (0.5 + randf() * 0.6) * float(k[0])
+
+
+## The shoals live under the surface: the sea moves them into its under-water
+## layer once it has one.
+func sink_fish(into: Node2D) -> void:
+	_fish.reparent(into, false)
 
 
 ## A cast landed here: every school near enough bolts away.
