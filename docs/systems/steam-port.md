@@ -360,6 +360,20 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   noise smeared along the lane (two phases; the way it runs averaged over a ring so bends
   are smooth), and lights a faint seam at its edges; SeaFlow carries 70 foam flecks per
   lane at the lane's pace, faster mid-stream.
+- CRATES ARE STOWED, OPENED WHEN YOU CHOOSE (2026-10-01, Kong). A RULES CHANGE, port only:
+  the HUD calls "stowCrate" (Fishing.stow_crate: reelCrate's claim and perfect streak, then
+  profile.crate_stash[tier] += 1, stat fishing_crates_caught) and the Locker's CRATES tab
+  calls "openCrate" (spend one, then reelCrate's own bumps and CrateLoot.grant, so the odds
+  are the web's, rolled at opening). reelCrate itself is untouched for the parity replay.
+  THE MOMENT (game/crate_surface.gd), on the water beside her, no strip of prizes: a reeled
+  crate breaks the surface (the waterline cut tweened up, spray, a ring) and is hauled
+  aboard; an opened one surfaces, strains at its lid (longer and harder by tier), and
+  bursts: a bloom in its colour, its own spray (wood splinters, metal sparks, gold glints,
+  diamond frost, the ancient chest's motes rising), a ring, and the prize rising on a paper
+  tag; a rare find gets the full-screen reveal on paper; then it settles back under.
+  CrateMoment survives only as the tiers, art and loot wording. THE CAST BUTTON is a
+  watercolour seal (fx/seal.gdshader): torn paper, a ring of the action's pigment pooled
+  at its edges, inked hairlines, the word inked on the face, a wet ring on a press.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

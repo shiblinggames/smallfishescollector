@@ -971,7 +971,7 @@ func _on_struck(raw: String, _angle: float) -> void:
 	var crate: bool = float(_shot["fishId"]) == FishingRules.CRATE_FISH_ID
 	var r: Dictionary = {}
 	if crate and landed:
-		r = await session.act("reelCrate", [result])
+		r = await session.act("stowCrate", [result])
 	elif not crate:
 		r = await session.act("reelIn", [float(_shot["fishId"]), result, _bait])
 	session.persist()
@@ -980,7 +980,7 @@ func _on_struck(raw: String, _angle: float) -> void:
 	if r.has("error"):
 		_note_card("The line went slack", r["error"])
 	elif crate and landed:
-		_crate_card(r)
+		_stow_card(r)
 	elif r.get("caught") == true:
 		_fish_card(r, result == "perfect")
 	else:
@@ -1045,6 +1045,25 @@ func _crate_card(loot: Dictionary) -> void:
 	_card = m
 	_place(m, Vector2(0.5, 0.5), Vector2(130, -200), Vector2(360, 0))
 	add_child(m)
+
+
+## A crate reeled up: it breaks the surface beside her and is hauled aboard
+## into the stash, to be opened from the Locker when she likes.
+func _stow_card(r: Dictionary) -> void:
+	var tier: String = str(r.get("stowed", "wooden"))
+	var t: Array = CrateMoment.TIERS.get(tier, CrateMoment.TIERS["wooden"])
+	var cs: CrateSurface = CrateSurface.new()
+	cs.tier = tier
+	cs.mode = "stow"
+	cs.boat = boat
+	boat.get_parent().add_child(cs)
+	var total: int = 0
+	for k: Variant in Js.obj(r.get("stash")):
+		total += int(Js.num(Js.obj(r.get("stash"))[k]))
+	var card: ResultCard = ResultCard.new()
+	_mount_card(card)
+	card.show_note("%s, stowed" % t[0], "It is in your stash with %d other%s. Open it from the Locker (I), Crates, whenever you like." % [total - 1, "" if total - 1 == 1 else "s"] if total > 1 else "It is in your stash. Open it from the Locker (I), Crates, whenever you like.")
+	_wire(card)
 
 
 func _note_card(title: String, body: String) -> void:

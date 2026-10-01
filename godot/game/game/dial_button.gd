@@ -1,18 +1,22 @@
 class_name DialButton
 extends Button
-## THE CAST BUTTON (Godot port of components/DialButton.tsx, on the style
-## kit): built like the dial above it, a domed glass face in a dark bezel, the
-## action's colour lighting its channel, its label and the glow around it, a
-## crescent of reflection across the top. Teal to cast, gold to reel in; dim
-## when it cannot.
+## THE CAST BUTTON (Godot port of components/DialButton.tsx). Since
+## 2026-10-01 a WATERCOLOUR SEAL (fx/seal.gdshader; Kong chose it over the
+## wooden disc): a round of torn paper with a ring of pigment in the action's
+## colour (sea-teal to cast, warm red-gold to reel), the word inked on its
+## face, dull when it cannot be pressed, and a ring of wet pigment running out
+## across it on a press.
 
 var accent: Color = Color("#67d4e8"):
 	set(c):
 		accent = c
 		_restyle()
 
-var _face: Pane
-var _shine: TextureRect
+var _face: ColorRect
+var _mat: ShaderMaterial
+var _since: float = 9.0
+var _hot: float = 0.0
+var _hovered: bool = false
 
 
 func _init(diameter: float = 112.0) -> void:
@@ -20,30 +24,38 @@ func _init(diameter: float = 112.0) -> void:
 	var empty: StyleBoxEmpty = StyleBoxEmpty.new()
 	for st: String in ["normal", "hover", "pressed", "disabled", "hover_pressed", "focus"]:
 		add_theme_stylebox_override(st, empty)
-	_face = Pane.new({})
+	_face = ColorRect.new()
 	_face.show_behind_parent = true
 	_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# A little larger than the button, for the seal's shadow.
+	_face.offset_left = -diameter * 0.07
+	_face.offset_top = -diameter * 0.07
+	_face.offset_right = diameter * 0.07
+	_face.offset_bottom = diameter * 0.07
+	_mat = ShaderMaterial.new()
+	_mat.shader = load("res://game/fx/seal.gdshader")
+	_mat.set_shader_parameter("paper", Kit.PAPER)
+	_mat.set_shader_parameter("ink", Kit.PAPER_INK)
+	_face.material = _mat
 	add_child(_face)
-	# The glass: a crescent of light across the upper third.
-	_shine = TextureRect.new()
-	_shine.texture = Glow.radial(128, Color.WHITE)
-	_shine.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_shine.anchor_left = 0.12
-	_shine.anchor_right = 0.88
-	_shine.anchor_top = -0.18
-	_shine.anchor_bottom = 0.34
-	_shine.modulate.a = 0.13
-	_shine.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_shine.show_behind_parent = true
-	add_child(_shine)
-	add_theme_font_override("font", Kit.tracked("karla", 700, 14, 0.18))
-	add_theme_font_size_override("font_size", 14)
-	add_theme_constant_override("line_spacing", 2)
+	add_theme_font_override("font", Kit.tracked("cinzel", 800, 15, 0.1))
+	add_theme_font_size_override("font_size", 15)
+	add_theme_constant_override("line_spacing", 0)
 	add_theme_constant_override("outline_size", 0)
 	autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	button_down.connect(func() -> void: _since = 0.0)
+	mouse_entered.connect(func() -> void: _hovered = true)
+	mouse_exited.connect(func() -> void: _hovered = false)
 	Kit.tap(self)
 	_restyle()
+
+
+func _process(delta: float) -> void:
+	_since += delta
+	_hot = lerpf(_hot, 1.0 if _hovered and not disabled else 0.0, 1.0 - exp(-delta * 10.0))
+	_mat.set_shader_parameter("press", _since)
+	_mat.set_shader_parameter("hover", _hot)
 
 
 func _notification(what: int) -> void:
@@ -57,24 +69,19 @@ func set_lit(on: bool) -> void:
 	_restyle()
 
 
+## The action's colour as pigment: its hue, laid on paper.
+func _pigment() -> Color:
+	return Color.from_hsv(accent.h, clampf(accent.s * 0.85, 0.35, 0.8), 0.58)
+
+
 func _restyle() -> void:
-	if _face == null:
+	if _mat == null:
 		return
 	var lit: bool = not disabled
-	var r: float = minf(size.x, size.y) / 2.0 if size.x > 0.0 else custom_minimum_size.x / 2.0
-	# Paper and wood (2026-10-01): a disc of stained wood, the action's
-	# colour pooled round its rim; greyed when it cannot.
-	_face.set_spec({
-		"radius": r, "fill": [Kit.WOOD_HI if lit else Kit.WOOD_HI.lerp(Color(0.5, 0.48, 0.45), 0.6), Kit.WOOD_LO if lit else Kit.WOOD_LO.lerp(Color(0.4, 0.38, 0.36), 0.6)],
-		"glow": [Color(1, 0.9, 0.7, 0.18), Vector2(0.5, 0.3), Vector2(0.6, 0.5)],
-		"inset": [Color(accent, 0.75 if lit else 0.15), 8],
-		"border": [3, Color(0.22, 0.13, 0.07, 0.9)],
-		"shadow": [Color(accent, 0.45) if lit else Color(0, 0, 0, 0.45), 24, Vector2(0, 5)],
-		"pad": 0, "keep": true, "grain": true,
-	})
-	var ink: Color = Kit.WOOD_INK if lit else Color(Kit.WOOD_INK, 0.55)
+	var pig: Color = _pigment()
+	_mat.set_shader_parameter("pigment", pig)
+	_mat.set_shader_parameter("lit", 1.0 if lit else 0.0)
+	var word: Color = Color.from_hsv(pig.h, minf(1.0, pig.s * 1.1), 0.3) if lit else Color(Kit.PAPER_INK, 0.45)
 	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color", "font_disabled_color"]:
-		add_theme_color_override(st, ink)
-	add_theme_color_override("font_shadow_color", Color(0.15, 0.08, 0.03, 0.6) if lit else Color(0, 0, 0, 0))
-	add_theme_constant_override("shadow_offset_y", 0)
-	add_theme_constant_override("shadow_outline_size", 8)
+		add_theme_color_override(st, word)
+	add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0))

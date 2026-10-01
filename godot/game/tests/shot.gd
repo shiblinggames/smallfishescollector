@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -374,6 +374,25 @@ func _init() -> void:
 			var fish: Dictionary = sea.session.store.species(4.0)
 			hud._set_phase("result")
 			hud._fish_card({ "caught": true, "fish": fish, "isNewSpecies": true, "xpGained": 42.0, "xpCatch": 20.0, "perfectBonusXP": 8.0, "xpStreak": 14.0, "perfectStreak": 9.0, "sizeIn": 7.4, "sizeMin": 2.0, "sizeMax": 9.0, "sizeTier": "large", "isPB": true, "previousBest": 6.1, "catchQty": 3.0, "baitSaved": true, "wormhole": true }, true)
+		"stow":
+			sea._zoom_to = 1.6
+			sea._camera.zoom = Vector2(1.6, 1.6)
+			hud._shot["crateTier"] = "gold"
+			hud._set_phase("result")
+			hud._stow_card({ "stowed": "gold", "stash": { "gold": 2.0, "wooden": 1.0 } })
+			for f: int in 45:
+				await process_frame
+		"crates", "crateopen":
+			p["crate_stash"] = { "gold": 2.0, "wooden": 3.0, "ancient": 1.0 }
+			hud._open_loadout()
+			for f: int in 30:
+				await process_frame
+			sea._locker._show_tab("crates")
+			for f: int in 30:
+				await process_frame
+			if what == "crateopen":
+				sea._locker._open_crate("gold")
+				await create_timer(float(OS.get_environment("CRATE_T")) if OS.get_environment("CRATE_T") != "" else 2.6).timeout
 		"crate":
 			hud._shot["crateTier"] = "gold"
 			hud._set_phase("result")

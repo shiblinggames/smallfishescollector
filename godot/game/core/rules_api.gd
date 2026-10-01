@@ -6,9 +6,10 @@ extends RefCounted
 ## through Session.act, and in a Charter the founder's game runs a crewmate's
 ## actions through it on that crewmate's captain.
 ##
-## A few names exist only for the port: "setSeaPos" (where the boat is moored)
-## and "marketRefresh" (catch the market up, so a crewmate's copy of it never
-## rolls dice of its own).
+## A few names exist only for the port: "setSeaPos" (where the boat is moored),
+## "marketRefresh" (catch the market up, so a crewmate's copy of it never
+## rolls dice of its own), and "stowCrate"/"openCrate" (a reeled crate goes
+## into the stash and is opened when the captain chooses).
 
 
 ## Run one call. Returns the result (a dictionary, or null where the TS returned
@@ -18,6 +19,8 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 		"castLine": return Fishing.cast_line(db, uid, a[0], a[1], a[2] if a.size() > 2 else null)
 		"reelIn": return Fishing.reel_in(db, uid, float(a[0]), a[1], a[2])
 		"reelCrate": return Fishing.reel_crate(db, uid, a[0])
+		"stowCrate": return Fishing.stow_crate(db, uid, a[0])
+		"openCrate": return Fishing.open_crate(db, uid, a[0])
 		"rerollWormhole": return Fishing.reroll_wormhole(db, uid)
 		"tideTurnerSkip": return Fishing.tide_turner_skip(db, uid)
 		"heldGolden": return Fishing.held_golden(db, uid)

@@ -388,6 +388,55 @@ static func reel_crate(db: CaptainStore, uid: String, result: String) -> Diction
 	return loot
 
 
+## STOWED, NOT OPENED (Kong, 2026-10-01; the port only, the web opens a crate
+## the moment it is reeled, and reelCrate above still does, for the parity
+## replay). The same claim on the cast and the same perfect streak, but the
+## crate goes into the captain's stash (profile "crate_stash": tier -> count)
+## to be opened when they choose (open_crate). What is inside is rolled when it
+## is opened, by the same rule, so nothing about the odds changes.
+static func stow_crate(db: CaptainStore, uid: String, result: String) -> Dictionary:
+	var profile: Dictionary = db.profile(uid, "pending_cast, current_perfect_streak, highest_perfect_streak, crate_stash")
+	var token_v: Variant = profile.get("pending_cast")
+	if token_v == null or float((token_v as Dictionary)["fishId"]) != FishingRules.CRATE_FISH_ID or not Js.truthy((token_v as Dictionary).get("crateTier")):
+		return { "error": "No crate to bring aboard." }
+	var token: Dictionary = token_v
+	var early: Dictionary = FishingRules.reel_too_early(token)
+	if early["early"]:
+		return { "error": "Nothing has bitten yet. The line is still out." }
+	if not db.claim_crate_cast(uid, float(token["castAt"])):
+		return { "error": "No crate to bring aboard." }
+	var cs: Dictionary = FishingRules.crate_streak(profile, result, token["habitat"])
+	if cs["anomaly"]:
+		db.flag_anomaly(uid, "implausible:perfectStreak", 3.0, { "claimed": cs["streak"] })
+	var stash: Dictionary = Js.obj(profile.get("crate_stash")).duplicate()
+	var tier: String = token["crateTier"]
+	stash[tier] = Js.num(stash.get(tier)) + 1.0
+	var updates: Dictionary = (cs["updates"] as Dictionary).duplicate()
+	updates["crate_stash"] = stash
+	db.update_profile(uid, updates)
+	db.bump_stat(uid, "fishing_crates_caught", 1.0)
+	return { "stowed": tier, "perfectStreak": cs["streak"], "stash": stash }
+
+
+## Open one crate from the stash: spend it, then the same roll reelCrate makes.
+static func open_crate(db: CaptainStore, uid: String, tier: String) -> Dictionary:
+	var stash: Dictionary = Js.obj(db.profile(uid, "crate_stash").get("crate_stash")).duplicate()
+	if Js.num(stash.get(tier)) < 1.0:
+		return { "error": "There is no crate like that in your stash." }
+	stash[tier] = Js.num(stash.get(tier)) - 1.0
+	if float(stash[tier]) <= 0.0:
+		stash.erase(tier)
+	db.update_profile(uid, { "crate_stash": stash })
+	db.bump_stat(uid, "fishing_crates_opened", 1.0)
+	db.bump_json_counter(uid, "crate_opens", tier, 1.0)
+	var loot: Dictionary = CrateLoot.grant(db, uid, tier)
+	if loot.has("error"):
+		return loot
+	loot["tier"] = tier
+	loot["stash"] = stash
+	return loot
+
+
 # ── The rest of the cast (lib/core/fishing.ts, after reelCrate) ────────────────
 
 ## The Galaxy Rod's wormhole: swap the catch just landed for a different fish

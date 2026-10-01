@@ -142,7 +142,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 	elif event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_TAB:
 		get_viewport().set_input_as_handled()
-		var order: Array = ["loadout", "hold", "log"]
+		var order: Array = ["loadout", "hold", "crates", "log"]
 		_show_tab(order[(order.find(tab) + 1) % order.size()])
 
 
@@ -163,7 +163,7 @@ func _show_tab(t: String) -> void:
 	tab = t
 	for c: Node in _tabs.get_children():
 		c.queue_free()
-	for o: Array in [["loadout", "Loadout"], ["hold", "Hold"], ["log", "Log"]]:
+	for o: Array in [["loadout", "Loadout"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["log", "Log"]]:
 		var b: Pane.PaneButton = Paper.button(o[1], o[0] == t)
 		b.custom_minimum_size = Vector2(110, 34)
 		b.pressed.connect(func() -> void: _show_tab(o[0]))
@@ -185,6 +185,8 @@ func _show_tab(t: String) -> void:
 		_build_loadout()
 	elif t == "hold":
 		_build_hold()
+	elif t == "crates":
+		_build_crates()
 	else:
 		_build_log()
 
@@ -200,6 +202,82 @@ func _widen(wide: bool) -> void:
 		return
 	var tw: Tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_panel, "offset_left", goal, 0.32)
+
+
+# ── Crates ─────────────────────────────────────────────────────────────────────
+
+var _opening: bool = false
+
+
+func _stash() -> Dictionary:
+	return Js.obj(session.profile().get("crate_stash"))
+
+
+func _crate_count() -> int:
+	var n: int = 0
+	for k: Variant in _stash():
+		n += int(Js.num(_stash()[k]))
+	return n
+
+
+## The crates she has stowed, best first; open one and it surfaces beside her.
+func _build_crates() -> void:
+	var stash: Dictionary = _stash()
+	Paper.text(_body, "Crates you have reeled up wait here until you open them. What is inside is decided when you open it.", "note", Paper.INK_SOFT, true)
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 10)
+	_body.add_child(grid)
+	var any: bool = false
+	for tier: String in ["ancient", "diamond", "gold", "metal", "wooden"]:
+		var n: int = int(Js.num(stash.get(tier)))
+		if n <= 0:
+			continue
+		any = true
+		var t: Array = CrateMoment.TIERS[tier]
+		var cell: VBoxContainer = VBoxContainer.new()
+		cell.add_theme_constant_override("separation", 4)
+		grid.add_child(cell)
+		var tile: Paper.Tile = Paper.Tile.new()
+		tile.label = t[0]
+		tile.art = CrateMoment._tex("%sclosed.png" % t[2])
+		tile.pigment = Color(t[1]).darkened(0.2)
+		tile.corner = "×%d" % n
+		tile.custom_minimum_size = Vector2(160, 150)
+		tile.pressed.connect(func() -> void: _open_crate(tier))
+		cell.add_child(tile)
+		var b: Pane.PaneButton = Paper.button("Open one", true)
+		b.disabled = _opening
+		b.pressed.connect(func() -> void: _open_crate(tier))
+		cell.add_child(b)
+	if not any:
+		Paper.text(_body, "No crates stowed. They come up on the line now and then; the deeper the water, the better they get.", "note", Paper.INK_SOFT, true)
+
+
+func _open_crate(tier: String) -> void:
+	if _opening:
+		return
+	_opening = true
+	var r: Dictionary = await session.act("openCrate", [tier])
+	session.persist()
+	if r.has("error"):
+		hud.toast(str(r["error"]))
+		_opening = false
+		return
+	var cs: CrateSurface = CrateSurface.new()
+	cs.tier = tier
+	cs.mode = "open"
+	cs.loot = r
+	cs.boat = sea._boat
+	cs.side = -1.0
+	sea._boat.get_parent().add_child(cs)
+	_show_tab("crates")
+	await cs.done
+	_opening = false
+	hud.refresh()
+	if is_inside_tree() and tab == "crates":
+		_show_tab("crates")
 
 
 # ── Log ────────────────────────────────────────────────────────────────────────

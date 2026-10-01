@@ -70,7 +70,7 @@ func _init() -> void:
 			print("  cast %d ended in phase %s with no card" % [i, hud.phase])
 			bad += 1
 			continue
-		var kind: String = "CrateMoment" if hud._card is CrateMoment else "ResultCard"
+		var kind: String = "Stowed crate" if float(hud._shot.get("fishId", 0.0)) == FishingRules.CRATE_FISH_ID else "ResultCard"
 		seen[kind] = int(seen.get(kind, 0)) + 1
 		if hud._card is CrateMoment:
 			await _crate_done(hud._card as CrateMoment)
