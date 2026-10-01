@@ -104,10 +104,10 @@ static func kelp_at(x: float, y: float) -> float:
 
 const LAYERS: Array = [
 	# texture, tile length, speed px/s, width (of half), alpha, tint, wobble
-	["body", 2400.0, 28.0, 0.9, 0.07, Color("#9fdce8"), 0.3],
-	["ripA", 1500.0, 60.0, 0.95, 0.17, Color("#eef8fa"), 1.7],
-	["ripB", 1100.0, 100.0, 0.7, 0.19, Color("#ffffff"), 3.1],
-	["ripC", 800.0, 150.0, 0.42, 0.15, Color("#ffffff"), 4.6],
+	["body", 2400.0, 28.0, 0.9, 0.0, Color("#9fdce8"), 0.3],
+	["ripA", 1500.0, 60.0, 0.95, 0.08, Color("#eef8fa"), 1.7],
+	["ripB", 1100.0, 100.0, 0.7, 0.09, Color("#ffffff"), 3.1],
+	["ripC", 800.0, 150.0, 0.42, 0.07, Color("#ffffff"), 4.6],
 ]
 
 var _lines: Array[Line2D] = []
@@ -252,7 +252,7 @@ func _run_flecks(delta: float) -> void:
 		var tp: float = taper(L, float(f[1]))
 		var sz: float = float(f[4])
 		_fleck_mm.set_instance_transform_2d(i, Transform2D(dir.angle(), Vector2(sz * 2.6, sz), 0.0, p))
-		_fleck_mm.set_instance_color(i, Color(0.92, 0.97, 1.0, 0.42 * tp * (1.0 - absf(side) * 0.5)))
+		_fleck_mm.set_instance_color(i, Color(0.92, 0.97, 1.0, 0.55 * tp * (1.0 - absf(side) * 0.5)))
 
 
 ## The body: a soft band, brighter in patches along it.

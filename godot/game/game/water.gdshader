@@ -280,13 +280,25 @@ void fragment() {
 			}
 			float w = abs(1.0 - 2.0 * ph0);
 			float streak = mix(n0, n1, w);
-			float body = smoothstep(0.0, 0.7, fs);
-			col = mix(col, col * vec3(0.84, 0.92, 1.0) + vec3(0.0, 0.025, 0.05), body * 0.5);
-			col += vec3(0.80, 0.93, 1.0) * smoothstep(0.5, 0.78, streak) * body * (0.16 - u_dark * 0.05);
-			// The lane's edge, where the moving water meets the still: a
-			// faint seam of light.
-			float seam = smoothstep(0.05, 0.18, fs) * (1.0 - smoothstep(0.18, 0.4, fs));
-			col += vec3(0.85, 0.95, 1.0) * seam * 0.07 * (0.6 + 0.4 * vnoise(world * 0.01 + vec2(TIME * 0.2, 0.0)));
+			// NOT A ROAD (Kong, 2026-10-01: they read as highway lanes). The
+			// edge wanders: the strength is broken by slow noise, so the
+			// current swells and narrows and frays out into the still water
+			// rather than stopping at a line. The tint is light; it is the
+			// moving streaks that say "current", and they gather in some
+			// stretches and thin in others.
+			vec2 fq = world * 0.0016 + vec2(TIME * 0.015, 0.0);
+			float fray = (vnoise(fq) * 0.6 + vnoise(fq * 2.1 + 3.7) * 0.4 - 0.5) * 0.9 + (vnoise(world * 0.006 - fd * TIME * 0.4) - 0.5) * 0.35;
+			float body = smoothstep(0.05, 0.85, fs + fray * (1.0 - fs * 0.6));
+			vec2 gq = world * 0.0008 - fd * TIME * 0.05;
+			float gather = 0.55 + 0.45 * smoothstep(0.3, 0.7, vnoise(gq) * 0.6 + vnoise(gq * 2.1 + 1.3) * 0.4);
+			col = mix(col, col * vec3(0.9, 0.96, 1.0) + vec3(0.0, 0.015, 0.03), body * 0.3);
+			col += vec3(0.80, 0.93, 1.0) * smoothstep(0.52, 0.8, streak) * body * gather * (0.15 - u_dark * 0.05);
+			// Where it frays: small eddies turning off the current, broken,
+			// not a seam.
+			float edge = smoothstep(0.02, 0.25, body) * (1.0 - smoothstep(0.25, 0.6, body));
+			vec2 er = world * 0.022 + fp * sin(TIME * 0.6 + dot(world, fd) * 0.004) * 0.6;
+			float eddy = smoothstep(0.68, 0.86, vnoise(er + fd * TIME * 0.5));
+			col += vec3(0.85, 0.95, 1.0) * edge * eddy * 0.07;
 		}
 	}
 

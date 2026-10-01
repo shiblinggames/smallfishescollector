@@ -360,6 +360,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   noise smeared along the lane (two phases; the way it runs averaged over a ring so bends
   are smooth), and lights a faint seam at its edges; SeaFlow carries 70 foam flecks per
   lane at the lane's pace, faster mid-stream.
+  NOT A ROAD (Kong: the currents read as highway lanes): the seam lines are gone; the edge
+  wanders (strength broken by slow noise, so a current swells, narrows and frays into the
+  still water), the flow map's lane varies in width and bends along its length, the tint
+  is lighter, the streaks gather and thin, small broken eddies turn off the fraying edge,
+  the old painted strips are at half strength (the body strip off), the flecks a touch
+  brighter.
 - CRATES ARE STOWED, OPENED WHEN YOU CHOOSE (2026-10-01, Kong). A RULES CHANGE, port only:
   the HUD calls "stowCrate" (Fishing.stow_crate: reelCrate's claim and perfect streak, then
   profile.crate_stash[tier] += 1, stat fishing_crates_caught) and the Locker's CRATES tab

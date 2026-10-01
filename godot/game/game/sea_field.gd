@@ -233,6 +233,14 @@ class FlowPainter:
 				var a: Vector2 = pts[maxi(0, i - 1)]
 				var b: Vector2 = pts[mini(n - 1, i + 1)]
 				tang.append((b - a).normalized())
+			# Width and centre along the lane, wandering.
+			var halves: PackedFloat32Array = PackedFloat32Array()
+			var mids: PackedVector2Array = PackedVector2Array()
+			for i: int in n:
+				var dd: float = dist[i]
+				var wv: float = 0.7 + 0.3 * sin(dd / 1900.0 + half * 0.01) * sin(dd / 830.0 + half * 0.02)
+				halves.append(half * wv)
+				mids.append(pts[i] + tang[i].orthogonal() * sin(dd / 1500.0 + half * 0.03) * half * 0.22)
 			for i: int in range(1, n):
 				var cols: Array = []
 				for j: int in [i - 1, i]:
@@ -243,6 +251,6 @@ class FlowPainter:
 				var ea: Color = Color(ca.r, ca.g, 0.0, 1.0)
 				var eb: Color = Color(cb.r, cb.g, 0.0, 1.0)
 				for side: float in [-1.0, 1.0]:
-					var na: Vector2 = tang[i - 1].orthogonal() * half * side
-					var nb: Vector2 = tang[i].orthogonal() * half * side
-					draw_polygon(PackedVector2Array([pts[i - 1], pts[i], pts[i] + nb, pts[i - 1] + na]), PackedColorArray([ca, cb, eb, ea]))
+					var na: Vector2 = tang[i - 1].orthogonal() * halves[i - 1] * side
+					var nb: Vector2 = tang[i].orthogonal() * halves[i] * side
+					draw_polygon(PackedVector2Array([mids[i - 1], mids[i], mids[i] + nb, mids[i - 1] + na]), PackedColorArray([ca, cb, eb, ea]))
