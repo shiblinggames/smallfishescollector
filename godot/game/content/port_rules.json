@@ -1,25 +1,136 @@
 {
   "_about": "THE PORT'S OWN RULES, laid over the web's tables (content/rules.json, which the export writes and the parity replay reads alone). Each block says why. Rules.data() merges this in for the game; Rules.web_only (the parity runner) leaves it out.",
-  "_crates": "Crate rebalance, 2026-10-01 (Kong). The web rolled crates at a flat 2% a cast everywhere, so the shallows, with the shortest waits, gave the most crates an hour and crate income was flat across the sea; a diamond paid little more than a gold; wooden and metal could never hold a cosmetic. Now the chance climbs with the water (about 3 crates an hour anywhere), the tiers climb with it (no diamonds in the shallows), and each tier is strictly better than the one below.",
+  "_crates": "Crate rebalance, 2026-10-01 (Kong, revised the same day). A crate stays a 1% chance on every cast in every water; depth decides WHICH crates can come up, and no water gives every tier (the shallows only wooden and metal, the abyss only gold and diamond). Each tier is strictly better than the one below. Cosmetics stay a small chance in every crate (1 to 5%); a better crate reaches RARER cosmetics, not more of them: each cosmetic in the web's pool has a band (cosmeticRarity), and each tier draws only from its bands (cosmeticBands).",
   "zones": {
-    "crateChanceByZone": { "shallows": 0.015, "open_waters": 0.02, "deep": 0.028, "abyss": 0.036, "ancient_deep": 0.04 },
+    "crateChanceByZone": {
+      "shallows": 0.01,
+      "open_waters": 0.01,
+      "deep": 0.01,
+      "abyss": 0.01,
+      "ancient_deep": 0.01
+    },
     "crateTiers": {
-      "shallows": { "wooden": 85, "metal": 13, "gold": 2, "diamond": 0 },
-      "open_waters": { "wooden": 60, "metal": 28, "gold": 10, "diamond": 2 },
-      "deep": { "wooden": 30, "metal": 35, "gold": 25, "diamond": 10 },
-      "abyss": { "wooden": 10, "metal": 30, "gold": 35, "diamond": 25 },
-      "ancient_deep": { "ancient": 100 }
+      "shallows": {
+        "wooden": 90,
+        "metal": 10,
+        "gold": 0,
+        "diamond": 0
+      },
+      "open_waters": {
+        "wooden": 60,
+        "metal": 32,
+        "gold": 8,
+        "diamond": 0
+      },
+      "deep": {
+        "wooden": 0,
+        "metal": 55,
+        "gold": 35,
+        "diamond": 10
+      },
+      "abyss": {
+        "wooden": 0,
+        "metal": 0,
+        "gold": 55,
+        "diamond": 45
+      },
+      "ancient_deep": {
+        "ancient": 100
+      }
     }
   },
   "crate": {
-    "doubloonRange": { "wooden": [100, 300], "metal": [300, 900], "gold": [800, 2000], "diamond": [2000, 5000], "ancient": [4000, 10000] },
-    "baitQty": { "wooden": 10, "metal": 10, "gold": 15, "diamond": 20, "ancient": 30 },
+    "doubloonRange": {
+      "wooden": [
+        100,
+        300
+      ],
+      "metal": [
+        300,
+        900
+      ],
+      "gold": [
+        800,
+        2000
+      ],
+      "diamond": [
+        2000,
+        5000
+      ],
+      "ancient": [
+        4000,
+        10000
+      ]
+    },
+    "baitQty": {
+      "wooden": 10,
+      "metal": 10,
+      "gold": 15,
+      "diamond": 20,
+      "ancient": 30
+    },
     "outcomeWeights": {
-      "wooden": { "doubloons": 60, "bait": 40, "cosmetic": 0 },
-      "metal": { "doubloons": 55, "bait": 40, "cosmetic": 5 },
-      "gold": { "doubloons": 50, "bait": 35, "cosmetic": 15 },
-      "diamond": { "doubloons": 50, "bait": 25, "cosmetic": 25 },
-      "ancient": { "doubloons": 40, "bait": 30, "cosmetic": 30 }
+      "wooden": {
+        "doubloons": 59,
+        "bait": 40,
+        "cosmetic": 1
+      },
+      "metal": {
+        "doubloons": 56,
+        "bait": 42,
+        "cosmetic": 2
+      },
+      "gold": {
+        "doubloons": 57,
+        "bait": 40,
+        "cosmetic": 3
+      },
+      "diamond": {
+        "doubloons": 56,
+        "bait": 40,
+        "cosmetic": 4
+      },
+      "ancient": {
+        "doubloons": 55,
+        "bait": 40,
+        "cosmetic": 5
+      }
+    },
+    "cosmeticRarity": {
+      "hat:black": "common",
+      "hat:gray": "common",
+      "hat:spotted": "uncommon",
+      "hat:cheetah": "uncommon",
+      "skin:mint": "uncommon",
+      "hat:fuego": "rare",
+      "skin:lavender": "rare",
+      "boat:offwhite": "rare",
+      "hat:golden": "epic",
+      "skin:storm": "epic",
+      "boat:charcoal": "epic"
+    },
+    "cosmeticBands": {
+      "wooden": {
+        "common": 1
+      },
+      "metal": {
+        "common": 3,
+        "uncommon": 1
+      },
+      "gold": {
+        "common": 1,
+        "uncommon": 3,
+        "rare": 1
+      },
+      "diamond": {
+        "uncommon": 1,
+        "rare": 3,
+        "epic": 1
+      },
+      "ancient": {
+        "rare": 1,
+        "epic": 2
+      }
     }
   }
 }

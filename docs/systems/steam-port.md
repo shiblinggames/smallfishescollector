@@ -378,13 +378,21 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules
   change there, with its reason, rather than editing rules.json (the export overwrites
-  that). FIRST USE, THE CRATE REBALANCE (Kong): the web's flat 2% a cast gave the most
-  crates an hour in the shallows and flat crate income across the sea. Now: chance by
-  water (zones.crateChanceByZone: 1.5 / 2 / 2.8 / 3.6 / 4%, about 3 crates an hour
-  anywhere), tiers that climb (no diamonds in the shallows), each tier strictly better
-  (doubloons 100-300 / 300-900 / 800-2000 / 2000-5000 / 4000-10000; wooden bait 10 not 5;
-  cosmetics 0 / 5 / 15 / 25 / 30%). Crate value an hour: 569 / 923 / 1655 / 2492 / 3980
-  (was ~950 everywhere). Pet chances unchanged. A currents bonus was offered and declined.
+  that). FIRST USE, THE CRATE REBALANCE (Kong, settled the same day after one revision):
+  a crate stays 1% a cast in EVERY water (zones.crateChanceByZone, all 0.01; so crates an
+  hour fall with depth as waits lengthen, and that is intended). Depth decides WHICH tiers
+  can come up, and no water gives them all: shallows wooden 90 / metal 10; open waters
+  wooden 60 / metal 32 / gold 8; deep metal 55 / gold 35 / diamond 10; abyss gold 55 /
+  diamond 45; ancient deep ancient. Each tier strictly better (doubloons 100-300 / 300-900 /
+  800-2000 / 2000-5000 / 4000-10000; wooden bait 10 not 5). COSMETICS STAY RARE in every
+  crate (1 / 2 / 3 / 4 / 5%); a better crate reaches RARER ones, not more: each item in the
+  web's pool has a band (crate.cosmeticRarity: common black and gray bandanas; uncommon
+  spotted, cheetah, Mint; rare fuego, Lavender, Offwhite boat; epic golden bandana, Storm,
+  Charcoal boat) and each tier draws only from its bands, weighted (crate.cosmeticBands:
+  wooden common; metal common+uncommon; gold up to rare; diamond uncommon to epic; ancient
+  rare and epic). CrateLoot.roll uses the bands when they are present. Pet chances
+  unchanged. The first proposal (chance climbing with depth) and a currents bonus were
+  both declined.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

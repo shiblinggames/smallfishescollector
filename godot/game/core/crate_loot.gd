@@ -36,10 +36,22 @@ static func roll(tier: String, owned: Dictionary) -> Dictionary:
 	var c: Dictionary = Rules.data()["crate"]
 	var pet: Variant = roll_pet() if Dice.next() < float((c["petChance"] as Dictionary)[tier]) else null
 	var unowned: Array = []
+	var band_w: Array = []
+	# The port's bands (content/port_rules.json): a crate draws only the
+	# cosmetics in its tier's bands, weighted by band. Without them, the web's
+	# even draw from the whole pool.
+	var bands: Dictionary = Js.obj(Js.obj(c.get("cosmeticBands")).get(tier))
+	var rarity: Dictionary = Js.obj(c.get("cosmeticRarity"))
 	for entry: Dictionary in c["cosmeticPool"]:
 		var list: Array = owned["skins"] if entry["kind"] == "skin" else (owned["boats"] if entry["kind"] == "boat" else owned["hats"])
-		if not Js.includes(list, entry["id"]):
+		if Js.includes(list, entry["id"]):
+			continue
+		var w: float = 1.0
+		if not rarity.is_empty():
+			w = float(bands.get(str(rarity.get("%s:%s" % [entry["kind"], entry["id"]], "")), 0.0))
+		if w > 0.0:
 			unowned.append(entry)
+			band_w.append(w)
 	var weights: Dictionary = (c["outcomeWeights"] as Dictionary)[tier]
 	var cosmetic_w: float = float(weights["cosmetic"]) if unowned.size() > 0 else 0.0
 	var doubloon_w: float = float(weights["doubloons"]) + (0.0 if unowned.size() > 0 else float(weights["cosmetic"]))
@@ -55,7 +67,17 @@ static func roll(tier: String, owned: Dictionary) -> Dictionary:
 			outcome = o[0]
 			break
 	if outcome == "cosmetic":
-		return { "pet": pet, "outcome": { "kind": "cosmetic", "entry": unowned[int(floor(Dice.next() * unowned.size()))] } }
+		if rarity.is_empty():
+			return { "pet": pet, "outcome": { "kind": "cosmetic", "entry": unowned[int(floor(Dice.next() * unowned.size()))] } }
+		var wt: float = 0.0
+		for w: float in band_w:
+			wt += w
+		var cr: float = Dice.next() * wt
+		for i: int in unowned.size():
+			cr -= float(band_w[i])
+			if cr <= 0.0:
+				return { "pet": pet, "outcome": { "kind": "cosmetic", "entry": unowned[i] } }
+		return { "pet": pet, "outcome": { "kind": "cosmetic", "entry": unowned.back() } }
 	if outcome == "doubloons":
 		var range_: Array = (c["doubloonRange"] as Dictionary)[tier]
 		var lo: float = float(range_[0])
