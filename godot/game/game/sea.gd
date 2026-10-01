@@ -42,6 +42,13 @@ var _boat: Boat
 var _camera: Camera2D
 var _wake: Wake
 var _field: SeaField
+## THE DEEP MOTES (seaLights.ts): sparks of light drifting up through the dark
+## in the Abyss and the Ancient Deep.
+var _motes: GPUParticles2D
+const BLOOMS: Array = [
+	[8269.0, 3010.0, 1100.0], [-732.0, 8368.0, 1100.0], [-5500.0, 6900.0, 1000.0],
+	[10739.0, 6200.0, 1400.0], [300.0, 14400.0, 1400.0], [-11085.0, 6400.0, 1400.0],
+]
 ## THE WHEEL ZOOM (SeaMap.tsx): 0.55 to 1.6 of the chart's own scale, eased,
 ## and remembered on this machine (a number tuned on one screen is wrong on
 ## another, so it is not in the save).
@@ -153,6 +160,8 @@ func _ready() -> void:
 	_wake = Wake.new()
 	_wake.z_index = -1
 	_world.add_child(_wake)
+	_motes = _mote_layer()
+	_world.add_child(_motes)
 	_field = SeaField.new()
 	add_child(_field)
 	_field.share_wake(_wake)
@@ -283,6 +292,7 @@ func _process(delta: float) -> void:
 	for b: Buyer in _buyers:
 		b.lift = lift
 	_wanderers(now, clock, lift)
+	_night_water(dark, cam_world)
 	# Every hull's wake, laid on the water.
 	var contacts: Array = [_boat.wake_contact()]
 	for list: Dictionary in [_regulars, _strangers]:
@@ -496,6 +506,93 @@ func _hotspots(delta: float, now: float) -> void:
 		if _boat.position.distance_to(Vector2(float(h["x"]), float(h["y"]))) <= float(h["r"]):
 			inside = h
 	_hud.set_spot(inside)
+
+
+func _mote_layer() -> GPUParticles2D:
+	var p: GPUParticles2D = GPUParticles2D.new()
+	p.amount = 190
+	p.lifetime = 14.0
+	p.preprocess = 14.0
+	p.local_coords = false
+	p.texture = Glow.radial(32, Color.WHITE)
+	var m: ParticleProcessMaterial = ParticleProcessMaterial.new()
+	m.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	m.emission_box_extents = Vector3(1100, 1100, 0)
+	m.gravity = Vector3.ZERO
+	m.direction = Vector3(0, -1, 0)
+	m.spread = 25.0
+	m.initial_velocity_min = 4.0
+	m.initial_velocity_max = 9.0
+	m.scale_min = 0.07
+	m.scale_max = 0.22
+	var g: Gradient = Gradient.new()
+	g.set_color(0, Color(0.37, 0.94, 0.82, 0.0))
+	g.add_point(0.3, Color(0.37, 0.94, 0.82, 0.75))
+	g.add_point(0.7, Color(0.37, 0.94, 0.82, 0.55))
+	g.set_color(g.get_point_count() - 1, Color(0.37, 0.94, 0.82, 0.0))
+	var ramp: GradientTexture1D = GradientTexture1D.new()
+	ramp.gradient = g
+	m.color_ramp = ramp
+	m.turbulence_enabled = true
+	m.turbulence_noise_strength = 0.6
+	m.turbulence_noise_scale = 4.0
+	p.process_material = m
+	var add: CanvasItemMaterial = CanvasItemMaterial.new()
+	add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	add.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	p.material = add
+	p.z_index = 4
+	return p
+
+
+## Lamps on the water, the blooms in view, the motes, the wanderers' lanterns.
+func _night_water(dark: float, at: Vector2) -> void:
+	var r: float = at.length()
+	var glow: float = 1.0 if r > 16000.0 else (0.6 if r > 10900.0 else 0.0)
+	_motes.position = at
+	_motes.amount_ratio = clampf(dark * glow, 0.0, 1.0)
+	_motes.emitting = dark * glow > 0.02
+	for list: Dictionary in [_regulars, _strangers]:
+		for k: String in list:
+			(list[k] as Wanderer).night = dark
+	for b: Buyer in _buyers:
+		b.night = dark
+	if dark < 0.05:
+		_water.set_shader_parameter("u_lamp_n", 0)
+		return
+	var xf: Transform2D = _world.get_global_transform_with_canvas()
+	var vp: Vector2 = get_viewport_rect().size
+	var lamps: Array[Vector4] = []
+	var cols: Array[Vector4] = []
+	var add_lamp: Callable = func(p: Vector2, wid: float, strength: float, c: Color) -> void:
+		if lamps.size() >= 16:
+			return
+		var s: Vector2 = xf * p
+		if s.x < -200.0 or s.x > vp.x + 200.0 or s.y < -300.0 or s.y > vp.y + 50.0:
+			return
+		lamps.append(Vector4(s.x / vp.x, s.y / vp.y, wid, strength))
+		cols.append(Vector4(c.r, c.g, c.b, 1.0))
+	var keel: Vector2 = Vector2(0, 34.0 / Chart.GROUND)
+	add_lamp.call(_boat.position + keel, 16.0 + 18.0 * _boat.lantern_glow, 0.30 + 0.25 * _boat.lantern_glow, Color(1.0, 0.72, 0.4))
+	add_lamp.call(_town_light.position + Vector2(0, 260), 46.0, 0.45, Color(1.0, 0.74, 0.45))
+	for bid: String in _berths:
+		add_lamp.call((_berths[bid] as Berth).position, 14.0, 0.16, Color(1.0, 0.8, 0.5))
+	for list: Dictionary in [_regulars, _strangers]:
+		for k: String in list:
+			var w: Wanderer = list[k]
+			add_lamp.call(w.position + keel, 12.0, 0.18, Color(1.0, 0.74, 0.45))
+	if _portal.live:
+		add_lamp.call(_portal.position + Vector2(0, 120), 60.0, 0.22, Color(str(Portal.tier_def(_portal.tier).get("accent", "#7fc8de"))))
+	_water.set_shader_parameter("u_lamps", lamps)
+	_water.set_shader_parameter("u_lamp_cols", cols)
+	_water.set_shader_parameter("u_lamp_n", lamps.size())
+	var blooms: Array[Vector4] = []
+	for b: Array in BLOOMS:
+		if blooms.size() < 4 and Vector2(float(b[0]), float(b[1])).distance_to(at) < float(b[2]) + 2600.0:
+			blooms.append(Vector4(b[0], b[1], b[2], 1.0))
+	while blooms.size() < 4:
+		blooms.append(Vector4(0, 0, 0, 0))
+	_water.set_shader_parameter("u_blooms", blooms)
 
 
 ## Ease the grade toward the water she is in.

@@ -38,6 +38,13 @@ uniform float u_field_on = 0.0;
 // THE SHORE (game/shore.gd): Godot's distance field to the islands' painted
 // plates, in screen pixels.
 uniform float u_shore_on = 1.0;
+// LAMPS reflected on the water at night: screen uv of the water under each
+// light (x, y), its width in px (z) and strength (w); and their colours.
+uniform vec4 u_lamps[16];
+uniform vec4 u_lamp_cols[16];
+uniform int u_lamp_n = 0;
+// BLOOMS (lib/seaBlooms.ts): bioluminescent water, (x, y, r, on) in world px.
+uniform vec4 u_blooms[4];
 
 const float GROUND = 0.58;
 const vec2 WIND = vec2(0.8231, 0.5679);
@@ -230,6 +237,49 @@ void fragment() {
 			float edge = exp(-pow(sd / 6.0, 2.0)) * smoothstep(0.3, 0.8, vnoise(world * 0.04 + vec2(TIME * 0.25, 0.0)));
 			col += (lap * 0.13 + edge * 0.22) * vec3(0.92, 0.97, 1.0) * (1.0 - u_dark * 0.55);
 			col += (lap + edge) * vec3(0.36, 0.96, 0.85) * u_dark * 0.12;
+		}
+	}
+
+	// NIGHT ON THE WATER.
+	if (u_dark > 0.05) {
+		// Every lamp throws a column down the water toward the viewer, broken
+		// into ripples by the swell and by whatever stirred it.
+		vec2 scr = SCREEN_UV * u_res;
+		for (int i = 0; i < 16; i++) {
+			if (i >= u_lamp_n) break;
+			vec4 L = u_lamps[i];
+			vec2 at = L.xy * u_res;
+			float dy = scr.y - at.y;
+			if (dy < -6.0 || dy > 260.0 * u_zoom) continue;
+			float wob = sin(dy * 0.21 / u_zoom - TIME * 2.6 + float(i)) * 3.0 + (fg.x * 900.0);
+			float wid = L.z * u_zoom * (0.55 + dy / (260.0 * u_zoom));
+			float across = exp(-pow((scr.x - at.x - wob) / max(wid, 1.0), 2.0));
+			float down = exp(-max(dy, 0.0) / (110.0 * u_zoom)) * smoothstep(-6.0, 4.0, dy);
+			float broken = 0.62 + 0.38 * sin(dy * 0.55 / u_zoom + TIME * 3.4 + swell * 9.0 + vnoise(vec2(dy * 0.05, TIME)) * 4.0);
+			col += u_lamp_cols[i].rgb * across * down * broken * L.w * u_dark;
+		}
+		// Stars, caught and lost on the swell.
+		vec2 sg = floor(scr / 9.0);
+		float sh = hash(sg + floor(u_cam / 900.0));
+		if (sh > 0.9965) {
+			vec2 c = (sg + 0.5) * 9.0;
+			float tw = 0.5 + 0.5 * sin(TIME * (2.0 + sh * 40.0) + sh * 90.0);
+			float dot_ = exp(-dot(scr - c, scr - c) / 2.2);
+			col += vec3(0.85, 0.9, 1.0) * dot_ * tw * u_dark * 0.55 * smoothstep(0.35, 0.7, d1);
+		}
+		// The blooms: patches of water that glow when it is dark.
+		for (int b = 0; b < 4; b++) {
+			vec4 B = u_blooms[b];
+			if (B.w < 0.5) continue;
+			float dd = length(world - B.xy);
+			if (dd > B.z) continue;
+			float kk = 1.0 - max(0.0, (dd - 0.33 * B.z) / (0.67 * B.z));
+			float e = kk * kk * (3.0 - 2.0 * kk);
+			float mottle = smoothstep(0.35, 0.85, vnoise(wa * 1.6 + vec2(TIME * 0.012, -TIME * 0.009)));
+			float breathe = 0.75 + 0.25 * sin(TIME * 0.35 + world.x * 0.0007);
+			col += e * mottle * breathe * vec3(0.22, 0.86, 0.72) * 0.14 * u_dark;
+			// Stirred water in a bloom burns brighter.
+			col += e * vec3(0.30, 1.0, 0.85) * smoothstep(0.05, 0.6, fh) * u_dark * 0.6;
 		}
 	}
 

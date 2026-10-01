@@ -24,6 +24,9 @@ var done: bool = false:
 			_paint()
 ## Undoes the night's dimming on the plate (the sea sets it).
 var lift: Color = Color.WHITE
+## How dark it is (the sea sets it): their lantern comes up with it.
+var night: float = 0.0
+var _lamp: PointLight2D
 var skipper: Skipper
 var _plate: PanelContainer
 var _name: Label
@@ -71,6 +74,13 @@ func _ready() -> void:
 	holder.add_child(_plate)
 	_paint()
 	_place(true)
+	_lamp = PointLight2D.new()
+	_lamp.texture = Glow.radial(128, Color(1.0, 0.78, 0.45), true)
+	_lamp.texture_scale = 1.6
+	_lamp.color = Color(1.0, 0.76, 0.48)
+	_lamp.energy = 0.0
+	_lamp.position = Vector2(-20, -60)
+	add_child(_lamp)
 
 
 func _paint() -> void:
@@ -95,6 +105,7 @@ func _place(first: bool = false) -> void:
 
 func _process(delta: float) -> void:
 	_place()
+	_lamp.energy = night * 0.75
 	skipper.sway(delta, 1.0 + clampf((position.length() - 1400.0) / 21200.0, 0.0, 1.0) * 1.4)
 	_plate.modulate = lift
 	_plate.position = Vector2(-_plate.size.x / 2.0, 0)
