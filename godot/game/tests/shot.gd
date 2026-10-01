@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -91,6 +91,12 @@ func _init() -> void:
 	match what:
 		"dock":
 			pass
+		"hotspot":
+			var hs: Dictionary = Hotspots.at_time(at)[0]
+			sea._boat.position = Vector2(float(hs["x"]) - float(hs["r"]) * 0.5, float(hs["y"]))
+			for f: int in 3:
+				await process_frame
+			sea._spot_t = 99.0
 		"shipyard":
 			p["hull_speed_tier"] = 2.0
 			sea._enter_room("shipyard")

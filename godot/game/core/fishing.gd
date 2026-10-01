@@ -7,9 +7,8 @@ extends RefCounted
 ## TS comments explain each rule; this port keeps the code in the same order so
 ## the two can be read side by side.
 ##
-## Not ported yet: a cast's position on the chart (hotspots; every cast is open
-## water until the sea screen), and the rest of lib/core/fishing (wormhole,
-## Tide Turner, goldens, level rewards, the Almanac).
+## A cast carries where the line went in, so its hotspot (Hotspots) is
+## re-derived here; without it, open water.
 
 
 static func _now_iso() -> String:
@@ -31,8 +30,11 @@ static func _folk_waiting_on(db: CaptainStore, uid: String, fish_id: float) -> A
 	return out
 
 
-static func cast_line(db: CaptainStore, uid: String, bait_type: String, habitat: String) -> Dictionary:
-	var hs: Dictionary = Rules.no_hotspot()
+## `at` is where the line went in ({x, y}), for hotspots; without it, open water.
+static func cast_line(db: CaptainStore, uid: String, bait_type: String, habitat: String, at: Variant = null) -> Dictionary:
+	# Which patch of water this is, if any: derived from the clock, never trusted.
+	var spot: Dictionary = Hotspots.at_point(float(at["x"]), float(at["y"]), Clock.now_ms()) if at is Dictionary else {}
+	var hs: Dictionary = Hotspots.effect(spot.get("kind"), int(spot.get("tier", 1)))
 	var profile: Dictionary = db.profile(uid, "rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, ancient_vigil, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels, is_premium, premium_expires_at, is_admin")
 
 	settle_deferred_species_credit(db, uid, profile)

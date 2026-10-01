@@ -71,7 +71,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     confirm; Your rig (the loadout). The rules (buyShipyardTier, equipRod) are ported with a
     40-call parity session. The rod rack is retired on the web too: every rod you own sails
     with you.
-  NEXT, in order: hotspots; isles, digs, bottles and the fog; the regulars and the traders;
+  STAGE 2, HOTSPOTS (2026-10-01): `core/hotspots.gd` ports lib/seaHotspots bit for bit (the
+  hash and xorshift stream in 32-bit arithmetic): three patches every ten minutes, one shoal,
+  trench and flotsam, each in its own band, tier 1 to 3, all derived from the clock. The cast
+  sends where the line went in and the rules re-derive the patch (shoal: wait x0.95/0.93/0.90;
+  trench: rarity bonus 0.15/0.45/1.1; flotsam: crates x1.6/2.2/3). Parity: 2,000 moments of
+  standing patches, and a session of 312 calls cast inside and just outside them.
+  `game/hotspot_patch.gd` draws each as a breathing pool and rim in its kind's colour; the
+  HUD's badge names the one you are in (family, tier dots, name, effect, minutes left). In a
+  Charter everyone sees the same patches (they come from the clock).
+  NEXT, in order: isles, digs, bottles and the fog; the regulars and the traders;
   the portal and recall. Specs for all of them were read off the web on 2026-10-01.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the

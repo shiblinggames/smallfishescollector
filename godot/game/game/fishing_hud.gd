@@ -51,6 +51,12 @@ var _gen: int = 0
 var _name: Label
 var _xp: XpBar
 var _purse: Label
+var _spot_badge: Pane
+var _spot_family: Label
+var _spot_name: Label
+var _spot_left: Label
+var _spot_effect: Label
+var _spot: Dictionary = {}
 var _ledger_btn: Button
 var _where: Label
 var _blurb: Label
@@ -234,6 +240,25 @@ func _ready() -> void:
 	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_reach_btn.add_child(key)
 
+	_spot_badge = Pane.new({ "radius": 14, "fill": [Color(0.016, 0.04, 0.07, 0.86)], "border": [1, Color(1, 1, 1, 0.14)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 4)], "pad": [14, 9, 14, 10] })
+	_spot_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_place(_spot_badge, Vector2(0.5, 0.0), Vector2(-180, 168), Vector2(360, 0))
+	_spot_badge.visible = false
+	add_child(_spot_badge)
+	var sv: VBoxContainer = VBoxContainer.new()
+	sv.add_theme_constant_override("separation", 2)
+	sv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spot_badge.add_child(sv)
+	_spot_family = Kit.text(sv, "", "eyebrow", GOLD)
+	var sh: HBoxContainer = HBoxContainer.new()
+	sh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sv.add_child(sh)
+	_spot_name = Kit.text(sh, "", "heading", INK)
+	_spot_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_spot_left = Kit.text(sh, "", "small", DIM)
+	_spot_left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_spot_effect = Kit.text(sv, "", "small", Kit.INK_2, true)
+
 	_toast = Kit.lift(Kit.text(self, "", "heading", GOLD))
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_place(_toast, Vector2(0.5, 0.0), Vector2(-300, 120), Vector2(600, 30))
@@ -372,6 +397,28 @@ func set_water(w: Dictionary) -> void:
 	if not w.is_empty():
 		toast(w["name"])
 	_update_action()
+
+
+## The hotspot the boat is in ({} for none): its badge, with its countdown.
+func set_spot(h: Dictionary) -> void:
+	if h.get("key") != _spot.get("key"):
+		_spot = h
+		if not h.is_empty():
+			var def: Dictionary = Hotspots.DEFS[h["kind"]]
+			var c: Color = Color(def["color"])
+			var tier: int = int(h["tier"])
+			_spot_family.text = "%s  ·  %s" % [def["family"], "●".repeat(tier) + "○".repeat(3 - tier)]
+			_spot_family.add_theme_color_override("font_color", c)
+			_spot_name.text = def["tiers"][tier - 1][0]
+			_spot_effect.text = def["tiers"][tier - 1][1]
+			var s: Dictionary = (_spot_badge.spec as Dictionary).duplicate()
+			s["border"] = [1, Color(c, 0.45)]
+			_spot_badge.set_spec(s)
+			toast(_spot_name.text)
+	_spot_badge.visible = not h.is_empty()
+	if not h.is_empty():
+		var left: int = maxi(0, int((float(h["endsAt"]) - Clock.now_ms()) / 1000.0))
+		_spot_left.text = ("%dm left" % ceili(left / 60.0)) if left >= 60 else ("%ds" % left)
 
 
 func set_clock(label: String) -> void:
@@ -577,7 +624,8 @@ func cast() -> void:
 	_close_card()
 	_cast_zone = water["id"]
 	_asking = true
-	var res: Dictionary = await session.act("castLine", [_bait, _cast_zone])
+	# Where the line goes in, so a hotspot here counts (re-derived by the rules).
+	var res: Dictionary = await session.act("castLine", [_bait, _cast_zone, { "x": boat.position.x, "y": boat.position.y }])
 	_asking = false
 	session.persist()
 	if res.has("error"):

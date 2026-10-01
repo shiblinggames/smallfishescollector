@@ -19,6 +19,9 @@ var session: Session
 var net: CrewNet = null
 var _mates: Dictionary = {}
 var _crew_marks: CrewMarks
+## The hotspots standing now, by key, and when they were last derived.
+var _spots: Dictionary = {}
+var _spot_t: float = 99.0
 var _look_t: float = 0.0
 var _last_look: Dictionary = {}
 ## Leaving the sea: back to the captains (or out of the Charter).
@@ -165,6 +168,7 @@ func _process(delta: float) -> void:
 	for b: Buyer in _buyers:
 		b.lift = lift
 	_reach(cam_world)
+	_hotspots(delta, now)
 	if net != null:
 		_look_t += delta
 		if _look_t > 1.0:
@@ -296,6 +300,34 @@ func _send_look() -> void:
 	if net != null:
 		_last_look = Skipper.look_of(session.profile())
 		net.send_look(Skipper.look_of(session.profile()), session.captain_name())
+
+
+## The hotspots: re-derived every 15 seconds (never while a fish is on), drawn
+## on the water, and the one the boat is in shown on the HUD.
+func _hotspots(delta: float, now: float) -> void:
+	_spot_t += delta
+	if _spot_t >= 15.0 and _hud.phase != "hooked":
+		_spot_t = 0.0
+		var standing: Dictionary = {}
+		for h: Dictionary in Hotspots.at_time(now):
+			standing[h["key"]] = h
+		for k: String in _spots.keys():
+			if not standing.has(k):
+				(_spots[k] as HotspotPatch).leave()
+				_spots.erase(k)
+		for k: String in standing:
+			if not _spots.has(k):
+				var p: HotspotPatch = HotspotPatch.new()
+				p.spot = standing[k]
+				p.z_index = -1
+				_world.add_child(p)
+				_spots[k] = p
+	var inside: Dictionary = {}
+	for k: String in _spots:
+		var h: Dictionary = (_spots[k] as HotspotPatch).spot
+		if _boat.position.distance_to(Vector2(float(h["x"]), float(h["y"]))) <= float(h["r"]):
+			inside = h
+	_hud.set_spot(inside)
 
 
 func _draw_port(port: Dictionary) -> void:

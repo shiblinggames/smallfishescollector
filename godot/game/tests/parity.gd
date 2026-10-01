@@ -21,6 +21,7 @@ func _init() -> void:
 	_dice()
 	_saves(species)
 	_daily()
+	_hotspots()
 	_fishing(species, "res://tests/parity/fishing.json", "fishing")
 	_fishing(species, "res://tests/parity/fishing_rest.json", "the rest of fishing and the loadout")
 	_fishing(species, "res://tests/parity/shop.json", "selling and the tackle shop")
@@ -111,6 +112,18 @@ func _daily() -> void:
 				return
 			n += 1
 	print("  daily: %d days-and-levels deal the same challenges" % n)
+
+
+func _hotspots() -> void:
+	var cases: Dictionary = _json("res://tests/parity/hotspots.json")
+	var n: int = 0
+	for c: Dictionary in cases["cases"]:
+		var d: String = JsJson.diff(JsJson.parse(JsJson.stringify(Hotspots.at_time(float(c["now"])))), c["spots"])
+		if d != "":
+			_fail("hotspots at %s differ at %s" % [str(c["now"]), d])
+			return
+		n += 1
+	print("  hotspots: %d moments stand the same patches" % n)
 
 
 ## Replay each session through the ported cast and reel: the same start save,

@@ -15,7 +15,7 @@ extends RefCounted
 ## nothing), or the string "not ported".
 static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 	match op:
-		"castLine": return Fishing.cast_line(db, uid, a[0], a[1])
+		"castLine": return Fishing.cast_line(db, uid, a[0], a[1], a[2] if a.size() > 2 else null)
 		"reelIn": return Fishing.reel_in(db, uid, float(a[0]), a[1], a[2])
 		"reelCrate": return Fishing.reel_crate(db, uid, a[0])
 		"rerollWormhole": return Fishing.reroll_wormhole(db, uid)

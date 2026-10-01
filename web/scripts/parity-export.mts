@@ -39,7 +39,8 @@ import { serializeSave } from '../lib/data/local/saveFile'
 import { starterSave } from '../lib/data/local/starter'
 import type { SpeciesRow } from '../lib/data/fishingData'
 import { installRng, mulberry32, seedOf, type Rng } from '../lib/rng'
-import { installClock } from '../lib/clock'
+import { installClock, clockNow } from '../lib/clock'
+import { hotspotsAt } from '../lib/seaHotspots'
 import { XP_TABLE } from '../lib/fishingLevel'
 import { getDailyChallenges } from '../lib/dailyChallenges'
 import { CRATE_FISH_ID } from '../lib/fishingRules'
@@ -549,7 +550,35 @@ shop.push(await scripted('the shipyard', 34, captainWith(34, 40, 1, { doubloons:
   await x.patchSave({ rodItems: { driftwood: 1 } })
   await equip(1)
 }))
+// Hotspots: casts inside each standing patch (one of each kind, through many
+// ten-minute windows), so their effect on the wait, the rarity and the crate
+// odds is checked against the TS; and casts just outside.
+shop.push(await scripted('casting in hotspots', 35, captainWith(35, 99, 5, { has_ancient_deep_access: true, fish_hold_tier: 8 }, { worm: 400, golden: 60 }), async x => {
+  for (let w = 0; w < 24; w++) {
+    for (const h of hotspotsAt(clockNow())) {
+      for (const at of [{ x: h.x, y: h.y }, { x: h.x + h.r + 5, y: h.y }]) {
+        const bait = h.zoneId === 'ancient_deep' ? 'golden' : 'worm'
+        const shot = await x.call('castLine', [bait, h.zoneId, at], () => castLine(x.db, x.uid, bait, h.zoneId, at))
+        if (shot && !('error' in shot)) {
+          x.advance(shot.waitMs + 1500)
+          if (shot.fishId === CRATE_FISH_ID) await x.call('reelCrate', ['catch'], () => reelCrate(x.db, x.uid, 'catch'))
+          else await x.call('reelIn', [shot.fishId, 'catch', bait], () => reelIn(x.db, x.uid, shot.fishId, 'catch', bait))
+        }
+        x.advance(4000)
+      }
+    }
+    await x.patchSave({ hold: {} })
+    x.advance(600_000)
+  }
+}))
 write('shop.json', { sessions: shop })
+// The patches themselves, at 2,000 moments across a few weeks.
+{
+  const at: number[] = []
+  for (let k = 0; k < 2000; k++) at.push(START + k * 977_000)
+  write('hotspots.json', { cases: at.map(t => ({ now: t, spots: hotspotsAt(t) })) })
+  console.log('  2000 hotspot moments')
+}
 console.log(`  ${shop.length} shop sessions, ${shop.reduce((n, s) => n + s.ops.length, 0)} calls`)
 
 // ── Save files ──
