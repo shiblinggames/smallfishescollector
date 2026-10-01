@@ -43,6 +43,8 @@ var _full: bool = false
 var _sail_mom: float = 1.0
 var _last_heading: float = PI / 2.0
 var _sway_heading: float = PI / 2.0
+## How deep in a squall she is (the sea sets it): the swell takes her harder.
+var storm: float = 0.0
 
 var velocity: Vector2 = Vector2.ZERO
 var target: Variant = null
@@ -140,7 +142,7 @@ func steer(input: Vector2, delta: float) -> void:
 	# How she sits: rougher further out, heeling into a turn (away from its
 	# centre), the bow lifting with way on.
 	var band: float = clampf((position.length() - 1400.0) / 21200.0, 0.0, 1.0)
-	var rough: float = 1.0 + band * 1.4
+	var rough: float = 1.0 + band * 1.4 + storm * 1.8
 	var turn_rate: float = wrapf(heading - _sway_heading, -PI, PI) / maxf(delta, 0.0001)
 	_sway_heading = heading
 	var way: float = clampf(speed / (SPEED * hull * boat_speed), 0.0, 1.0)

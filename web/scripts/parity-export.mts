@@ -41,6 +41,7 @@ import type { SpeciesRow } from '../lib/data/fishingData'
 import { installRng, mulberry32, seedOf, type Rng } from '../lib/rng'
 import { installClock, clockNow } from '../lib/clock'
 import { hotspotsAt } from '../lib/seaHotspots'
+import { squallsAt, squallPos } from '../lib/seaWeather'
 import { goAshore, digHere, openBottle, getDigState, folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod, buyPortalTier, spendRecall } from '../lib/core/sea'
 import { saveSeaPosition, strikeDeal, wagerForRunnerRod, dealtToday } from '../lib/core/selling'
 import { tradersAround, seaDay } from '../lib/seaTraders'
@@ -752,6 +753,18 @@ write('shop.json', { sessions: shop })
   }
   write('traders.json', { cases })
   console.log(`  300 trader moments, ${cases.reduce((n, c) => n + c.traders.length, 0)} wanderers`)
+}
+// The fishing sea's squalls (not the north's tempests or the bays'), where
+// each is at that moment, at 2,000 moments across a few weeks.
+{
+  const cases = []
+  for (let k = 0; k < 2000; k++) {
+    const now = START + k * 611_000
+    const s = squallsAt(now).filter(q => !q.big && /^\d/.test(q.key)).map(q => ({ ...q, at: squallPos(q, now) }))
+    cases.push({ now, squalls: s })
+  }
+  write('squalls.json', { cases })
+  console.log('  2000 squall moments')
 }
 // The patches themselves, at 2,000 moments across a few weeks.
 {

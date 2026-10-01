@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -205,6 +205,18 @@ func _init() -> void:
 				var sh: PortalSheet = sea._hud_layer.get_child(sea._hud_layer.get_child_count() - 1)
 				sh._sel = Portal.tier_def(4)
 				sh._draw()
+		"squall", "squalledge":
+			var t0: float = Clock.now_ms()
+			for k: int in 300:
+				var tk: float = t0 + k * Weather.WINDOW_MS
+				var found: Array = Weather.squalls(tk).filter(func(q: Dictionary) -> bool: return float(q["power"]) > 0.85)
+				if not found.is_empty():
+					Clock.install(func() -> float: return tk)
+					var sp: Vector2 = Weather.pos(found[0], tk)
+					sea._boat.position = sp if what == "squall" else sp + Vector2(float(found[0]["r"]) * 0.95, 0)
+					break
+			for f: int in 160:
+				await process_frame
 		"bloom":
 			p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[89])
 			sea._boat.position = Vector2(300, 14100)

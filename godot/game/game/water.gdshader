@@ -45,6 +45,10 @@ uniform vec4 u_lamp_cols[16];
 uniform int u_lamp_n = 0;
 // BLOOMS (lib/seaBlooms.ts): bioluminescent water, (x, y, r, on) in world px.
 uniform vec4 u_blooms[4];
+// SQUALLS (core/weather.gd): (x, y, r, power) in world px.
+uniform vec4 u_storms[2];
+// A lightning flash, 0 to 1.
+uniform float u_flash = 0.0;
 
 const float GROUND = 0.58;
 const vec2 WIND = vec2(0.8231, 0.5679);
@@ -119,6 +123,19 @@ void fragment() {
 	float fine = min(0.62, 0.16 * (1.0 - 0.85 * u_rush));
 	float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
 
+	// How deep in a squall this water is (lib/seaWeather squallAt).
+	float storm = 0.0;
+	for (int q = 0; q < 2; q++) {
+		vec4 S = u_storms[q];
+		if (S.z < 1.0) continue;
+		float sdist = length(world - S.xy);
+		float kq = 1.0 - max(0.0, (sdist - S.z * 0.35) / (S.z * 0.65));
+		storm = max(storm, clamp(kq, 0.0, 1.0) * S.w);
+	}
+	// The squall's ragged edge, so it reads as weather and not a circle.
+	storm *= smoothstep(0.15, 0.6, vnoise(world * 0.0012 + vec2(TIME * 0.01, 0.0)) * 0.5 + storm * 0.9);
+	swell *= 1.0 + storm * 1.6;
+
 	float shelf = smoothstep(u_shelf.x, u_shelf.y, length(world));
 	float shade = 1.0 + swell * 0.20 * u_swell * (1.0 - recede * 0.55);
 	shade *= 1.0 - shelf * 0.14;
@@ -176,6 +193,22 @@ void fragment() {
 	crest *= smoothstep(0.35, 0.75, rag);
 	float cap_amt = 0.09 * 0.6 * u_swell * (1.0 - u_dark * 0.55) * (1.0 - 0.55 * u_rush) * (1.0 - recede * 0.6);
 	col += crest * vec3(0.90, 0.96, 1.0) * cap_amt;
+
+	// SQUALL: the water goes slate and choppy, whipped white on the crests,
+	// and pocked by rain.
+	if (storm > 0.01) {
+		vec3 slate = vec3(dot(col, vec3(0.3, 0.5, 0.2))) * vec3(0.78, 0.86, 0.92);
+		col = mix(col, slate * 0.72, storm * 0.7);
+		col += crest * vec3(0.85, 0.92, 1.0) * storm * 0.18;
+		vec2 rc = world / 34.0;
+		vec2 cell = floor(rc);
+		float rh = hash(cell);
+		float ph = fract(TIME * (1.1 + rh) + rh * 7.0);
+		vec2 rp = (fract(rc) - 0.5 - (vec2(hash(cell + 3.1), hash(cell + 7.7)) - 0.5) * 0.6) * 34.0;
+		float ring = exp(-pow((length(vec2(rp.x, rp.y)) - ph * 9.0) / 1.4, 2.0)) * (1.0 - ph);
+		col += vec3(0.8, 0.88, 0.95) * ring * storm * 0.14 * step(0.62, rh);
+	}
+	col += vec3(0.75, 0.82, 1.0) * u_flash * 0.35;
 
 	// Foam where it is most stirred, and broken by the swell.
 	float froth = smoothstep(0.30, 0.95, fh) * (0.55 + 0.45 * smoothstep(0.3, 0.7, rag));

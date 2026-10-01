@@ -45,6 +45,9 @@ var _field: SeaField
 ## THE DEEP MOTES (seaLights.ts): sparks of light drifting up through the dark
 ## in the Abyss and the Ancient Deep.
 var _motes: GPUParticles2D
+var _squall: SquallFx
+## How far into a squall the view is, eased (dims the scene, roughs the hulls).
+var _storm: float = 0.0
 const BLOOMS: Array = [
 	[8269.0, 3010.0, 1100.0], [-732.0, 8368.0, 1100.0], [-5500.0, 6900.0, 1000.0],
 	[10739.0, 6200.0, 1400.0], [300.0, 14400.0, 1400.0], [-11085.0, 6400.0, 1400.0],
@@ -160,6 +163,8 @@ func _ready() -> void:
 	_wake = Wake.new()
 	_wake.z_index = -1
 	_world.add_child(_wake)
+	_squall = SquallFx.new()
+	add_child(_squall)
 	_motes = _mote_layer()
 	_world.add_child(_motes)
 	_field = SeaField.new()
@@ -273,6 +278,8 @@ func _process(delta: float) -> void:
 	# The world sits a little under full by day so the sun has room to model
 	# it: lit faces come up to full, the far sides stay soft.
 	_night.color = Color(0.88, 0.88, 0.88).lerp(Color(0.40, 0.46, 0.64), dark)
+	# Under a squall the light goes grey; a strike lights it all.
+	_night.color = _night.color.lerp(Color(0.6, 0.64, 0.7), _storm * 0.55).lerp(Color(1.0, 1.0, 1.0), _squall.flash * 0.6)
 	var warm: float = float(clock["warmth"])
 	var toward: Vector2 = Vector2.from_angle(SeaClock.sun_angle(now))
 	_sun.rotation = (-toward).angle() - PI / 2.0
@@ -293,6 +300,7 @@ func _process(delta: float) -> void:
 		b.lift = lift
 	_wanderers(now, clock, lift)
 	_night_water(dark, cam_world)
+	_weather(delta, now, cam_world)
 	# Every hull's wake, laid on the water.
 	var contacts: Array = [_boat.wake_contact()]
 	for list: Dictionary in [_regulars, _strangers]:
@@ -593,6 +601,25 @@ func _night_water(dark: float, at: Vector2) -> void:
 	while blooms.size() < 4:
 		blooms.append(Vector4(0, 0, 0, 0))
 	_water.set_shader_parameter("u_blooms", blooms)
+
+
+## The squalls: on the water, in the air, under the hulls.
+func _weather(delta: float, now: float, at: Vector2) -> void:
+	var storms: Array[Vector4] = []
+	var power: float = 0.0
+	for s: Dictionary in Weather.squalls(now):
+		var p: Vector2 = Weather.pos(s, now)
+		storms.append(Vector4(p.x, p.y, float(s["r"]), float(s["power"])))
+		if p.distance_to(at) < float(s["r"]):
+			power = maxf(power, float(s["power"]))
+	while storms.size() < 2:
+		storms.append(Vector4(0, 0, 0, 0))
+	_water.set_shader_parameter("u_storms", storms)
+	var deep: float = Weather.deep_at(at.x, at.y, now)
+	_storm = lerpf(_storm, deep, 1.0 - exp(-delta * 0.55))
+	_squall.step(delta, deep, power, get_viewport_rect().size)
+	_water.set_shader_parameter("u_flash", _squall.flash)
+	_boat.storm = _storm
 
 
 ## Ease the grade toward the water she is in.
