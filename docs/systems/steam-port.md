@@ -86,8 +86,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   double as progress, frameless specimens on a halo and floor shadow, silhouettes; the catch
   card's one lit surface; tileSurface (state on the top rim, a sheen); the back pill; the
   Mainland doors; the market's lantern and ledger ground.
-  DONE so far: the kit, every sheet (Sheet), the room shell and its helpers (Room), and the
-  Almanac. The rest of the screens follow.
+  DONE: the kit, every sheet (Sheet), the room shell and its helpers (Room), the Almanac, the
+  catch card, the crate, the golden choice, the level-up (soft rays), the fishing HUD, the
+  Market, the Tackle Shop, the picker ashore, the buyer, the loadout, the bait sheet, the
+  title screen and the harbor.
+  THE HUD TAKES THE WEB'S LAYOUT (it was better than the port's): a round, glass-faced cast
+  button (`game/dial_button.gd`, the web's DialButton: teal to cast, gold to reel in) over
+  four equal menus, the hour as a pill under the water's name. Where there is no fishing the
+  button steps aside and the reach pill takes its place.
+  Rules learned: a pane draws through its shader, so anything a pane draws itself (the catch
+  card's shockwave) goes on its own layer; clip_children only on a pane with no shadow.
+  NOT YET on the kit: the Ancient Deep's ceremonies and the Completionist reveal (their own
+  full-screen moments, part three).
 - THE CHARTER SLICE, BUILT (2026-09-30): two ships on one sea, as a Charter.
   - THE TITLE SCREEN (`game/title.gd`): your captains (portrait, level, purse, last played;
     Play, Retire asked once, a new captain named with the Steam name offered) and the

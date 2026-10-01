@@ -15,6 +15,10 @@ extends PanelContainer
 ##   border      [width px, color];  top  [width px, color]
 ##   shadow      [color, blur px, Vector2 offset]
 ##   pad         px, or [left, top, right, bottom]
+##
+## To round off what is inside a pane (art in a slab), set clip_children on a
+## pane WITHOUT a shadow: the clip is to everything the pane draws, and a
+## shadow would make it a dark box.
 
 const SHADER: Shader = preload("res://game/pane.gdshader")
 
@@ -129,6 +133,15 @@ class PaneButton:
 			empty.set_content_margin_all(float(pad))
 		for st: String in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
 			add_theme_stylebox_override(st, empty)
+		# The focus ring follows the button's own shape, so a controller always
+		# shows where it is without a pill drawn round a square.
+		var ring: StyleBoxFlat = StyleBoxFlat.new()
+		ring.draw_center = false
+		ring.border_color = Color("#f0c040")
+		ring.set_border_width_all(2)
+		ring.set_corner_radius_all(int(minf(float(n.get("radius", 12)), 999.0)) + 3)
+		ring.set_expand_margin_all(3)
+		add_theme_stylebox_override("focus", ring)
 		mouse_entered.connect(func() -> void: _bg.set_spec(hot))
 		mouse_exited.connect(func() -> void: _bg.set_spec(normal))
 		focus_entered.connect(func() -> void: _bg.set_spec(hot))

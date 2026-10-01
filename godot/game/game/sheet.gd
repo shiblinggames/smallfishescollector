@@ -95,7 +95,7 @@ static func text(parent: Control, t: String, px: int, col: Color, title_font: bo
 	l.text = t
 	l.add_theme_font_size_override("font_size", px)
 	l.add_theme_color_override("font_color", col)
-	l.add_theme_font_override("font", Kit.font("cinzel", 700) if title_font else Kit.font("karla", 400))
+	Kit.face(l, px, title_font)
 	if wrap:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size = Vector2(300, 0)

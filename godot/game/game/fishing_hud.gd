@@ -54,7 +54,7 @@ var _purse: Label
 var _where: Label
 var _blurb: Label
 var _clock: Label
-var _action: Button
+var _action: DialButton
 ## The rod's four menus; _hold is the Hold button's count, where fish land.
 var _m_loadout: Button
 var _m_bait: Button
@@ -89,7 +89,7 @@ var _asking: bool = false
 ## What is in reach, and the pill that offers it.
 var _reach_text: String = ""
 var _reach_act: Callable = Callable()
-var _reach_btn: Button
+var _reach_btn: Pane.PaneButton
 var _reach_l: Label
 
 
@@ -99,14 +99,16 @@ func _ready() -> void:
 	theme = UiTheme.make()
 
 	var tl: VBoxContainer = _box(Vector2(20, 14), false, 580)
-	_name = _label(tl, "", 22, INK, true)
+	tl.add_theme_constant_override("separation", 6)
+	_name = Kit.lift(Kit.text(tl, "", "title", INK))
 	_xp = XpBar.new()
 	tl.add_child(_xp)
-	_purse = _label(tl, "", 17, GOLD, true)
-	_auto = Button.new()
-	_auto.custom_minimum_size = Vector2(0, 30)
+	_purse = Kit.lift(Kit.text(tl, "", "number", GOLD))
+	_auto = Pane.PaneButton.new({ "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.72)], "border": [1, Color(0.7, 0.83, 0.89, 0.22)], "pad": [10, 4, 12, 4] }, { "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.86)], "border": [1, Color(0.7, 0.83, 0.89, 0.45)], "pad": [10, 4, 12, 4] })
+	_auto.custom_minimum_size = Vector2(0, 28)
 	_auto.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	_auto.add_theme_font_size_override("font_size", 12)
+	_auto.add_theme_font_override("font", Kit.tracked("karla", 700, 11, 0.12))
+	_auto.add_theme_font_size_override("font_size", 11)
 	_auto.icon = Skipper.tex("autocaster.png")
 	_auto.expand_icon = false
 	_auto.add_theme_constant_override("icon_max_width", 16)
@@ -115,13 +117,19 @@ func _ready() -> void:
 	_auto_on = session.profile().get("auto_fishing_on") == true
 
 	var tr: VBoxContainer = _box(Vector2(-20, 16), true, 360)
-	_where = _label(tr, "", 20, INK, true)
-	_blurb = _label(tr, "", 14, DIM)
-	_clock = _label(tr, "", 14, DIM)
-	for l: Label in [_where, _blurb, _clock]:
+	tr.add_theme_constant_override("separation", 4)
+	_where = Kit.lift(Kit.text(tr, "", "title", INK))
+	_blurb = Kit.lift(Kit.text(tr, "", "small", Kit.INK_2))
+	for l: Label in [_where, _blurb]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var out: Button = Room.back_pill(leave_label)
-	out.text = leave_label.to_upper() + "  ›"
+	var clock_row: HBoxContainer = HBoxContainer.new()
+	clock_row.alignment = BoxContainer.ALIGNMENT_END
+	clock_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tr.add_child(clock_row)
+	var clock_pill: Pane = Kit.pane(clock_row, { "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.72)], "border": [1, Color(0.7, 0.83, 0.89, 0.22)], "pad": [10, 3, 10, 4] })
+	clock_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_clock = Kit.text(clock_pill, "", "label", Color(0.82, 0.88, 0.93, 0.85))
+	var out: Button = Kit.back_pill(leave_label)
 	out.size_flags_horizontal = Control.SIZE_SHRINK_END
 	out.focus_mode = Control.FOCUS_NONE
 	out.pressed.connect(func() -> void:
@@ -134,8 +142,8 @@ func _ready() -> void:
 	_bait = str(Js.nz(session.profile().get("last_used_bait"), "worm"))
 	var bottom: HBoxContainer = HBoxContainer.new()
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 10)
-	_place(bottom, Vector2(0.5, 1.0), Vector2(-450, -86), Vector2(900, 58))
+	bottom.add_theme_constant_override("separation", 8)
+	_place(bottom, Vector2(0.5, 1.0), Vector2(-344, -72), Vector2(688, 54))
 	add_child(bottom)
 	var lv: Array = _menu(bottom, "Loadout", _open_loadout)
 	_m_loadout = lv[0]
@@ -143,28 +151,29 @@ func _ready() -> void:
 	var bv: Array = _menu(bottom, "Bait", _open_bait)
 	_m_bait = bv[0]
 	_bait_val = bv[1]
-	_action = Button.new()
-	_action.custom_minimum_size = Vector2(190, 58)
+	_action = DialButton.new(112.0)
 	_action.pressed.connect(_act)
-	bottom.add_child(_action)
+	_place(_action, Vector2(0.5, 1.0), Vector2(-56, -72 - 12 - 112), Vector2(112, 112))
+	add_child(_action)
 	var gv: Array = _menu(bottom, "Log", _open_log)
 	_m_log = gv[0]
 	_log_val = gv[1]
 	var hv: Array = _menu(bottom, "Hold", _open_hold)
 	_m_hold = hv[0]
 	_hold = hv[1]
-	_blocked = _label(self, "", 14, Color("#f8a2a2"))
+	_blocked = Kit.lift(Kit.text(self, "", "small", Color("#f8a2a2")))
 	_blocked.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_blocked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_place(_blocked, Vector2(0.5, 1.0), Vector2(-300, -118), Vector2(600, 28))
+	_place(_blocked, Vector2(0.5, 1.0), Vector2(-300, -72 - 12 - 112 - 34), Vector2(600, 28))
 
-	_status = _label(self, "", 22, INK, true)
+	_status = Kit.lift(Kit.text(self, "", "heading", INK))
+	_status.add_theme_font_size_override("font_size", 21)
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_place(_status, Vector2(0.5, 0.5), Vector2(-300, 110), Vector2(600, 32))
-	_dots = _label(self, "", 22, Color(0.78, 0.86, 0.91, 0.9), true)
+	_dots = Kit.lift(Kit.text(self, "", "heading", Color(0.78, 0.86, 0.91, 0.9)))
 	_dots.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_place(_dots, Vector2(0.5, 0.5), Vector2(-150, 80), Vector2(300, 30))
-	_timer = _label(self, "", 14, Color(0.75, 0.83, 0.89, 0.55))
+	_timer = Kit.lift(Kit.text(self, "", "small", Color(0.75, 0.83, 0.89, 0.6)))
 	_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_place(_timer, Vector2(0.5, 0.5), Vector2(-150, 146), Vector2(300, 22))
 
@@ -177,39 +186,28 @@ func _ready() -> void:
 			_dial.strike())
 	_dial.struck.connect(_on_struck)
 	add_child(_dial)
-	_tide = Button.new()
-	_tide.add_theme_color_override("font_color", Color("#cdbdf8"))
+	_tide = Kit.button("Tide Turner", "accent", "small", Color("#c9a7ff"))
 	_place(_tide, Vector2(0.5, 0.5), Vector2(150, 150), Vector2(280, 44))
 	_tide.visible = false
 	_tide.pressed.connect(_skip)
 	add_child(_tide)
 
-	_reach_btn = Button.new()
-	var rs: StyleBoxFlat = StyleBoxFlat.new()
-	rs.bg_color = Color(0.04, 0.078, 0.11, 0.86)
-	rs.border_color = Color(0.7, 0.84, 0.91, 0.45)
-	rs.set_border_width_all(1)
-	rs.set_corner_radius_all(999)
-	var rh: StyleBoxFlat = rs.duplicate()
-	rh.border_color = Color(1.0, 0.85, 0.53, 0.8)
-	_reach_btn.add_theme_stylebox_override("normal", rs)
-	_reach_btn.add_theme_stylebox_override("hover", rh)
-	_reach_btn.add_theme_stylebox_override("pressed", rh)
+	_reach_btn = Pane.PaneButton.new(
+		{ "radius": 999, "fill": [Color(0.04, 0.078, 0.11, 0.88)], "border": [1, Color(0.7, 0.84, 0.91, 0.45)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 4)], "pad": 0 },
+		{ "radius": 999, "fill": [Color(0.06, 0.1, 0.14, 0.92)], "border": [1, Color(1.0, 0.85, 0.53, 0.8)], "shadow": [Color(1.0, 0.8, 0.45, 0.18), 18, Vector2(0, 4)], "pad": 0 })
 	_reach_btn.focus_mode = Control.FOCUS_NONE
 	_reach_btn.visible = false
 	_reach_btn.pressed.connect(_press_reach)
 	add_child(_reach_btn)
 	_reach_l = Label.new()
-	_reach_l.add_theme_font_override("font", UiTheme.title_font())
-	_reach_l.add_theme_font_size_override("font_size", 17)
-	_reach_l.add_theme_color_override("font_color", Color("#f2ead8"))
+	Kit.style(_reach_l, "heading", Color("#f2ead8"))
 	_reach_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_reach_btn.add_child(_reach_l)
 	var key: Label = Label.new()
 	key.name = "Key"
 	key.text = "E"
-	key.add_theme_font_size_override("font_size", 12)
-	key.add_theme_color_override("font_color", Color("#cfe3ee"))
+	Kit.style(key, "chip", Color("#cfe3ee"))
+	key.add_theme_font_size_override("font_size", 11)
 	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	key.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	var ks: StyleBoxFlat = StyleBoxFlat.new()
@@ -221,7 +219,7 @@ func _ready() -> void:
 	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_reach_btn.add_child(key)
 
-	_toast = _label(self, "", 18, GOLD, true)
+	_toast = Kit.lift(Kit.text(self, "", "heading", GOLD))
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_place(_toast, Vector2(0.5, 0.0), Vector2(-300, 120), Vector2(600, 30))
 	_level_seen = session.level()
@@ -247,8 +245,12 @@ static func _place(c: Control, anchor: Vector2, offset: Vector2, size_px: Vector
 
 ## A menu button: its name small above, its value below.
 func _menu(parent: Control, key: String, on_press: Callable) -> Array:
-	var b: Button = Button.new()
-	b.custom_minimum_size = Vector2(150, 58)
+	var b: Pane.PaneButton = Pane.PaneButton.new(
+		{ "radius": 10, "fill": [Color(0.024, 0.055, 0.086, 0.86)], "border": [1, Color(1, 1, 1, 0.16)], "shadow": [Color(0, 0, 0, 0.35), 12, Vector2(0, 3)], "pad": 0 },
+		{ "radius": 10, "fill": [Color(0.04, 0.08, 0.12, 0.92)], "border": [1, Color(1, 1, 1, 0.3)], "shadow": [Color(0, 0, 0, 0.35), 12, Vector2(0, 3)], "pad": 0 })
+	b.custom_minimum_size = Vector2(0, 54)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Kit.tap(b)
 	b.pressed.connect(func() -> void:
 		Rumble.tap(8)
 		on_press.call())
@@ -259,9 +261,9 @@ func _menu(parent: Control, key: String, on_press: Callable) -> Array:
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_theme_constant_override("separation", 0)
 	b.add_child(col)
-	var k: Label = _label(col, key.to_upper(), 11, Color(0.75, 0.83, 0.89, 0.5))
+	var k: Label = Kit.text(col, key, "chip", Color(0.75, 0.83, 0.89, 0.5))
 	k.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var v: Label = _label(col, "", 15, Color("#dfeaf2"), true)
+	var v: Label = Kit.text(col, "", "value", Color("#dfeaf2"))
 	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.clip_text = true
 	return [b, v]
@@ -378,7 +380,7 @@ func _update_action() -> void:
 			_action.disabled = false
 			if water.is_empty():
 				_action.disabled = true
-				_action.text = "Sail south to fish"
+				_action.text = "Sail south"
 			else:
 				var need: float = float((Rules.data()["zones"]["minLevel"] as Dictionary).get(water["id"], 1.0))
 				var p: Dictionary = session.profile()
@@ -395,8 +397,11 @@ func _update_action() -> void:
 					_action.text = "No Bait"
 					_blocked.add_theme_color_override("font_color", Color("#e8c98a"))
 					_blocked.text = "Out of bait. There are peddlers out here, and the shop ashore."
-	_action.add_theme_color_override("font_color", TEAL if teal else GOLD)
-	_action.add_theme_color_override("font_hover_color", TEAL.lightened(0.2) if teal else GOLD.lightened(0.2))
+	_action.text = _action.text.to_upper()
+	_action.accent = TEAL if teal else GOLD
+	_action.set_lit(not _action.disabled)
+	# No fishing here: the button steps aside (the reach pill takes its place).
+	_action.visible = not water.is_empty() or (phase != "idle" and phase != "result")
 
 
 # ── What is in reach ──────────────────────────────────────────────────────────
@@ -413,9 +418,10 @@ func set_reach(text: String, act: Callable) -> void:
 	if not show:
 		return
 	_reach_l.text = text
-	var w: float = UiTheme.title_font().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+	var w: float = Kit.font("cinzel", 700).get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
 	var full: float = w + 22.0 + 10.0 + 26.0 + 22.0
-	_place(_reach_btn, Vector2(0.5, 1.0), Vector2(-full / 2.0, -160), Vector2(full, 44))
+	var above: float = -72.0 - 12.0 - 112.0 - 16.0 - 44.0 if not water.is_empty() else -72.0 - 12.0 - 70.0
+	_place(_reach_btn, Vector2(0.5, 1.0), Vector2(-full / 2.0, above), Vector2(full, 44))
 	_reach_l.position = Vector2(22, 10)
 	var key: Label = _reach_btn.get_node("Key")
 	key.position = Vector2(22 + w + 10, 10)
@@ -685,7 +691,7 @@ func _bite() -> void:
 		Fx.pill(self, "Miss once and it escapes. Stay sharp.", Vector2(size.x / 2.0, 170.0), Color("#fca5a5"), Color(0.08, 0.016, 0.016, 0.92), Color(0.94, 0.27, 0.27, 0.6), 2.2)
 	var skips: int = _skips_left()
 	_tide.visible = skips > 0
-	_tide.text = "Tide Turner · Skip · %d left" % skips
+	_tide.text = ("Tide Turner · Skip · %d left" % skips).to_upper()
 	Rumble.buzz(Rumble.BITE)
 	Sound.dial_start(diff)
 	_set_phase("hooked")

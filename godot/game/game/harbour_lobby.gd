@@ -55,8 +55,7 @@ func _ready() -> void:
 		else:
 			Room.text(v, "Crewmates join from their title screen at %s." % _address(), 13, Color("#9fb4c2"), false, true).custom_minimum_size = Vector2(0, 0)
 		Room.text(v, "Set Sail locks the crew for good: nobody joins afterwards. A crewmate who stops playing keeps their berth.", 12, Color("#9fb4c2"), false, true).custom_minimum_size = Vector2(0, 0)
-		_sail = Button.new()
-		_sail.text = "Set Sail"
+		_sail = Kit.button("Set Sail", "primary")
 		_sail.custom_minimum_size = Vector2(0, 50)
 		_sail.pressed.connect(func() -> void: set_sail.emit())
 		v.add_child(_sail)

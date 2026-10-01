@@ -115,9 +115,8 @@ func _captains(v: VBoxContainer) -> void:
 		var btns: VBoxContainer = VBoxContainer.new()
 		btns.alignment = BoxContainer.ALIGNMENT_CENTER
 		h.add_child(btns)
-		var go: Button = Button.new()
-		go.text = "Play"
-		go.custom_minimum_size = Vector2(110, 40)
+		var go: Button = Kit.button("Play", "accent", "large", Kit.GOLD)
+		go.custom_minimum_size = Vector2(110, 42)
 		go.pressed.connect(func() -> void: play.emit(id))
 		btns.add_child(go)
 		if _first == null:
@@ -138,9 +137,8 @@ func _captains(v: VBoxContainer) -> void:
 	row.add_theme_constant_override("separation", 8)
 	v.add_child(row)
 	var nm: LineEdit = _line(row, SteamLayer.suggested_name(), "Your captain's name")
-	var make: Button = Button.new()
-	make.text = "Set out"
-	make.custom_minimum_size = Vector2(120, 40)
+	var make: Button = Kit.button("Set out", "accent", "large", Kit.GOLD)
+	make.custom_minimum_size = Vector2(120, 42)
 	make.pressed.connect(func() -> void: new_captain.emit(nm.text))
 	row.add_child(make)
 	if _first == null:
@@ -186,9 +184,8 @@ func _charters(v: VBoxContainer) -> void:
 			Room.chip(top, "HARDCORE", Color("#f87171"), Color(0.97, 0.44, 0.44, 0.1), Color(0.97, 0.44, 0.44, 0.35), 10)
 		Room.text(info, "Crew: %s" % ", ".join(PackedStringArray(c["crew"])), 13, SUB, false, true).custom_minimum_size = Vector2(0, 0)
 		Room.text(info, "At sea" if c["sailed"] else "Still in harbor, crew not yet set", 12, TEAL if c["sailed"] else Color("#e0b45a"))
-		var open: Button = Button.new()
-		open.text = "Host"
-		open.custom_minimum_size = Vector2(110, 40)
+		var open: Button = Kit.button("Host", "accent", "large", TEAL)
+		open.custom_minimum_size = Vector2(110, 42)
 		open.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		open.disabled = c["founder"] != mine
 		open.tooltip_text = "" if c["founder"] == mine else "Only its founder can host it."
@@ -212,9 +209,8 @@ func _charters(v: VBoxContainer) -> void:
 	row.add_theme_constant_override("separation", 8)
 	v.add_child(row)
 	var cap: LineEdit = _line(row, SteamLayer.suggested_name(), "Your Charter captain's name")
-	var go: Button = Button.new()
-	go.text = "Found it"
-	go.custom_minimum_size = Vector2(120, 40)
+	var go: Button = Kit.button("Found it", "accent", "large", TEAL)
+	go.custom_minimum_size = Vector2(120, 42)
 	go.pressed.connect(func() -> void:
 		if cname.text.strip_edges() == "":
 			cname.placeholder_text = "Name the Charter first"
@@ -233,9 +229,8 @@ func _charters(v: VBoxContainer) -> void:
 		v.add_child(jr)
 		var addr: LineEdit = _line(jr, "127.0.0.1", "The founder's address")
 		var who: LineEdit = _line(jr, SteamLayer.suggested_name(), "Your captain's name")
-		var j: Button = Button.new()
-		j.text = "Join"
-		j.custom_minimum_size = Vector2(100, 40)
+		var j: Button = Kit.button("Join", "accent", "large", TEAL)
+		j.custom_minimum_size = Vector2(100, 42)
 		j.pressed.connect(func() -> void: join.emit(addr.text.strip_edges(), who.text))
 		jr.add_child(j)
 

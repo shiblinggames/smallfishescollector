@@ -391,8 +391,7 @@ func _bait() -> void:
 	var grid: GridContainer = Room.grid(col, 2, 10)
 	for b: Dictionary in Rules.data()["baits"]:
 		var accent: Color = Color(b["color"])
-		var p: PanelContainer = PanelContainer.new()
-		p.add_theme_stylebox_override("panel", _surface(accent, "owned"))
+		var p: Pane = Pane.new(Kit.tile(accent, "owned"))
 		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(p)
 		var v: VBoxContainer = VBoxContainer.new()
@@ -517,7 +516,7 @@ func _ladder_list(kind: String) -> void:
 
 
 func _status_pill(parent: Control, t: String, c: Color) -> void:
-	Room.chip(parent, t.to_upper(), c, Color(c, 0.1), Color(c, 0.3), 10)
+	Kit.chip(parent, t, c)
 
 
 # ── Lines ──────────────────────────────────────────────────────────────────────
@@ -530,8 +529,7 @@ func _lines() -> void:
 	for line: Dictionary in Rules.data()["lines"]:
 		var t: int = int(line["tier"]) if line.has("tier") else (Rules.data()["lines"] as Array).find(line)
 		var owned: bool = t <= lt
-		var p: PanelContainer = PanelContainer.new()
-		p.add_theme_stylebox_override("panel", _surface(Color(line.get("color", "#4ade80")), "active" if t == lt else ("owned" if owned else "locked")))
+		var p: Pane = Pane.new(Kit.tile(Color(line.get("color", "#4ade80")), "active" if t == lt else ("owned" if owned else "locked")))
 		col.add_child(p)
 		var h: HBoxContainer = HBoxContainer.new()
 		h.add_theme_constant_override("separation", 14)
@@ -625,18 +623,13 @@ func _rod_row(rod: Dictionary, owned: bool) -> void:
 	var tier: float = float(rod["tier"])
 	var equipped: bool = float(_tier("rod_tier")) == tier
 	var accent: Color = Color(rod.get("color", "#b8956a"))
-	var p: PanelContainer = PanelContainer.new()
-	var st: StyleBoxFlat = _surface(accent, "active" if equipped else ("owned" if owned else "locked"))
-	st.content_margin_left = 0
-	st.content_margin_top = 0
-	st.content_margin_bottom = 0
-	p.add_theme_stylebox_override("panel", st)
+	var p: Pane = Pane.new(Kit.tile(accent, "active" if equipped else ("owned" if owned else "locked"), [1, 1, 14, 1]))
 	col.add_child(p)
 	var h: HBoxContainer = HBoxContainer.new()
 	h.add_theme_constant_override("separation", 14)
 	p.add_child(h)
-	var art: PanelContainer = PanelContainer.new()
-	art.add_theme_stylebox_override("panel", Room.box(Color(accent, 0.07), Color(0, 0, 0, 0), 14, 6, 0))
+	# The art well: a darker pool the rod lies in.
+	var art: Pane = Pane.new({ "radius": 14, "fill": [Color(0.016, 0.024, 0.04, 0.5)], "glow": [Color(accent, 0.12), Vector2(0.5, 0.5), Vector2(0.7, 0.7)], "pad": 6 })
 	art.custom_minimum_size = Vector2(104, 0)
 	h.add_child(art)
 	Room.picture(art, "%s_thumb.png" % rod.get("slug", ""), Vector2(92, 92), not owned)
@@ -714,8 +707,7 @@ func _completionist_card(owned: Dictionary) -> void:
 	var have: bool = session.store.rod_held(session.uid, "completionist") > 0.0
 	var prog: Dictionary = _completionist()
 	var eligible: bool = prog["eligible"]
-	var p: PanelContainer = PanelContainer.new()
-	p.add_theme_stylebox_override("panel", _surface(c, "owned" if have else ("active" if eligible else "locked")))
+	var p: Pane = Pane.new(Kit.tile(c, "owned" if have else ("active" if eligible else "locked")))
 	col.add_child(p)
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
@@ -799,8 +791,7 @@ func _view_completionist() -> void:
 		if float(_tier("rod_tier")) == COMPLETIONIST_TIER:
 			sh.note("Currently equipped")
 		else:
-			var eq: Button = Button.new()
-			eq.text = "Equip"
+			var eq: Button = Kit.button("Equip", "accent", "large", Kit.GOLD)
 			eq.pressed.connect(func() -> void:
 				sh.close()
 				_do("rod14", "equipTackleRod", [COMPLETIONIST_TIER]))
@@ -836,49 +827,26 @@ func _do(key: String, op: String, args: Array, then: Array = []) -> void:
 
 # ── Surfaces ───────────────────────────────────────────────────────────────────
 
-## tileSurface: a dark body with a top edge in the item's colour, full when
-## active, softer when owned or ready, flat and dim when locked.
-func _surface(c: Color, kind: String) -> StyleBoxFlat:
-	var s: StyleBoxFlat = Room.box(Color(0.075, 0.08, 0.1, 0.96), Color(1, 1, 1, 0.06), 15, 14)
-	s.border_width_top = 2
-	match kind:
-		"active":
-			s.border_color = c
-			s.bg_color = Color(0.09, 0.1, 0.12, 0.97).lerp(c, 0.06)
-		"owned":
-			s.border_color = Color(c, 0.67)
-		"ready":
-			s.border_color = Color(0.94, 0.75, 0.25, 0.8)
-			s.set_border_width_all(1)
-			s.border_width_top = 2
-		_:
-			s.border_color = Color(1, 1, 1, 0.08)
-			s.bg_color = Color(0.06, 0.065, 0.08, 0.92)
-	return s
-
-
+## A tile you press: the kit's tile surface, brighter on hover.
 func _tile(c: Color, kind: String, h: float) -> Button:
-	var b: Button = Button.new()
+	var n: Dictionary = Kit.tile(c, kind, 0)
+	var hot: Dictionary = n.duplicate()
+	var fill: Array = n["fill"]
+	hot["fill"] = [Color(fill[0]).lightened(0.06), Color(fill[fill.size() - 1]).lightened(0.04)]
+	var b: Pane.PaneButton = Pane.PaneButton.new(n, hot)
 	b.custom_minimum_size = Vector2(0, h)
-	var s: StyleBoxFlat = _surface(c, kind)
-	var hv: StyleBoxFlat = s.duplicate()
-	hv.bg_color = s.bg_color.lightened(0.05)
-	b.add_theme_stylebox_override("normal", s)
-	b.add_theme_stylebox_override("hover", hv)
-	b.add_theme_stylebox_override("pressed", hv)
-	b.add_theme_stylebox_override("disabled", s)
+	Kit.tap(b)
 	return b
 
 
+## A gold-washed row (the Ready to Buy shelf).
 func _surface_button(bg: Color, border: Color, h: float) -> Button:
-	var b: Button = Button.new()
+	var n: Dictionary = { "radius": 14, "fill": [Color(bg, bg.a * 1.5), Color(bg, bg.a * 0.5)], "border": [1, border], "sheen": 0.04, "pad": 0 }
+	var hot: Dictionary = n.duplicate()
+	hot["fill"] = [Color(bg, bg.a * 2.4), Color(bg, bg.a)]
+	var b: Pane.PaneButton = Pane.PaneButton.new(n, hot)
 	b.custom_minimum_size = Vector2(0, h)
-	var s: StyleBoxFlat = Room.box(bg, border, 14, 0)
-	var hv: StyleBoxFlat = s.duplicate()
-	hv.bg_color = Color(bg, bg.a * 2.0)
-	b.add_theme_stylebox_override("normal", s)
-	b.add_theme_stylebox_override("hover", hv)
-	b.add_theme_stylebox_override("pressed", hv)
+	Kit.tap(b)
 	return b
 
 

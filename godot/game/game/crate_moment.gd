@@ -1,5 +1,5 @@
 class_name CrateMoment
-extends PanelContainer
+extends Pane
 ## THE CRATE MOMENT (Godot port of components/CrateOpening.tsx, fishing pass 2).
 ##
 ## The crate is already opened by the rules (reelCrate) when this starts; this
@@ -42,13 +42,7 @@ static func _tex(file: String) -> Texture2D:
 func _ready() -> void:
 	var t: Array = TIERS.get(tier, TIERS["wooden"])
 	var accent: Color = Color(t[1])
-	var s: StyleBoxFlat = StyleBoxFlat.new()
-	s.bg_color = Color("#080e15")
-	s.border_color = Color(accent, 0.33)
-	s.set_border_width_all(1)
-	s.set_corner_radius_all(16)
-	s.set_content_margin_all(18)
-	add_theme_stylebox_override("panel", s)
+	set_spec(Kit.card(accent, 18))
 	custom_minimum_size = Vector2(360, 0)
 	var col: VBoxContainer = VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -119,8 +113,7 @@ func _text(parent: Control, text: String, px: int, col: Color, title: bool) -> L
 	l.text = text
 	l.add_theme_font_size_override("font_size", px)
 	l.add_theme_color_override("font_color", col)
-	if title:
-		l.add_theme_font_override("font", UiTheme.title_font())
+	Kit.face(l, px, title)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(l)
@@ -197,8 +190,7 @@ func _tile(title: String, art: String, tint: Color) -> Control:
 	box.add_child(img)
 	var l: Label = Label.new()
 	l.text = title
-	l.add_theme_font_size_override("font_size", 11)
-	l.add_theme_color_override("font_color", tint)
+	Kit.style(l, "chip", tint)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.clip_text = true
 	box.add_child(l)
@@ -267,9 +259,8 @@ func _rare_reveal(view: Dictionary) -> void:
 	_text(col, view.get("why", ""), 15, Color(1, 1, 1, 0.65), false)
 	var center: CenterContainer = CenterContainer.new()
 	col.add_child(center)
-	var ok: Button = Button.new()
-	ok.text = "Nice"
-	ok.custom_minimum_size = Vector2(160, 48)
+	var ok: Button = Kit.button("Nice", "accent", "large", Color(view["tint"]))
+	ok.custom_minimum_size = Vector2(180, 48)
 	center.add_child(ok)
 	ok.grab_focus.call_deferred()
 	img.pivot_offset = Vector2(img.size.x / 2.0, 75)

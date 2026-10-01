@@ -164,12 +164,26 @@ func _show(slot: String) -> void:
 	for c: Node in _tabs.get_children():
 		c.queue_free()
 	for t: Array in TABS:
-		var b: Button = Button.new()
-		b.text = "%s\n%s" % [t[1], _name_for(t[0])]
-		b.custom_minimum_size = Vector2(110, 56)
-		b.add_theme_font_size_override("font_size", 13)
-		if t[0] == slot:
-			b.add_theme_color_override("font_color", Color("#67d4e8"))
+		var on: bool = t[0] == slot
+		var teal: Color = Color("#67d4e8")
+		var n: Dictionary = { "radius": 10, "fill": [Color(teal, 0.12) if on else Color(0.024, 0.055, 0.086, 0.86)], "border": [1, Color(teal, 0.5) if on else Color(1, 1, 1, 0.14)], "pad": 0 }
+		var hot: Dictionary = n.duplicate()
+		hot["border"] = [1, Color(teal, 0.7) if on else Color(1, 1, 1, 0.3)]
+		var b: Pane.PaneButton = Pane.PaneButton.new(n, hot)
+		b.custom_minimum_size = Vector2(112, 52)
+		var tv: VBoxContainer = VBoxContainer.new()
+		tv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tv.alignment = BoxContainer.ALIGNMENT_CENTER
+		tv.add_theme_constant_override("separation", 0)
+		tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(tv)
+		var k: Label = Kit.text(tv, t[1], "chip", Color(teal, 0.85) if on else Color(0.75, 0.83, 0.89, 0.55))
+		k.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var vl: Label = Kit.text(tv, _name_for(t[0]), "small", Kit.INK if on else Color("#dfeaf2"))
+		vl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vl.clip_text = true
+		vl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		Kit.tap(b)
 		b.pressed.connect(func() -> void: _show(t[0]))
 		_tabs.add_child(b)
 	_how.text = HOW_TO_GET[slot]
@@ -178,19 +192,31 @@ func _show(slot: String) -> void:
 		c.queue_free()
 	var worn: Variant = _worn(slot)
 	for o: Array in _options(slot):
-		var cell: Button = Button.new()
-		cell.custom_minimum_size = Vector2(112, 104)
-		cell.text = o[1]
-		cell.icon = Skipper.tex(o[2]) if o[2] != "" else null
-		cell.expand_icon = true
-		cell.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		cell.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-		cell.clip_text = true
-		cell.add_theme_font_size_override("font_size", 11)
 		var on: bool = (o[0] == null and worn == null) or (o[0] != null and worn != null and str(o[0]) == str(worn))
+		var cn: Dictionary = Kit.tile(Kit.GOLD if on else Color("#67d4e8"), "active" if on else "owned", 0)
+		var ch: Dictionary = cn.duplicate()
+		ch["border"] = [1, Color(1, 1, 1, 0.28)]
+		var cell: Pane.PaneButton = Pane.PaneButton.new(cn, ch)
+		cell.custom_minimum_size = Vector2(112, 108)
+		var cv: VBoxContainer = VBoxContainer.new()
+		cv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		cv.offset_left = 6
+		cv.offset_right = -6
+		cv.offset_top = 6
+		cv.offset_bottom = -6
+		cv.add_theme_constant_override("separation", 2)
+		cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell.add_child(cv)
+		if o[2] != "":
+			Kit.art(cv, o[2], Vector2(0, 66), Kit.GOLD if on else Color("#67d4e8"))
+		var cl: Label = Kit.text(cv, o[1], "small", Kit.GOLD if on else Kit.INK_2)
+		cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cl.clip_text = true
+		cl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		if on:
-			cell.add_theme_color_override("font_color", Color("#f0c040"))
-			cell.text = "%s · On" % o[1]
+			var tag: Label = Kit.text(cv, "On", "chip", Kit.GOLD)
+			tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		Kit.tap(cell)
 		cell.mouse_entered.connect(func() -> void: _try_on(slot, o))
 		cell.focus_entered.connect(func() -> void: _try_on(slot, o))
 		cell.mouse_exited.connect(func() -> void: _try_on(slot, []))

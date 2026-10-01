@@ -52,9 +52,9 @@ func _draw() -> void:
 	pill.set_border_width_all(1)
 	pill.set_corner_radius_all(20)
 	draw_style_box(pill, r)
-	var body: Font = get_theme_default_font()
-	var title: Font = UiTheme.title_font()
-	draw_string(body, Vector2(14, 24), "LV", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(c, 0.73))
+	var body: Font = Kit.font("karla", 700)
+	var title: Font = Kit.font("cinzel", 800)
+	draw_string(Kit.tracked("karla", 700, 9, 0.14), Vector2(14, 24), "LV", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(c, 0.73))
 	draw_string(title, Vector2(30, 27), str(level), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, c)
 	var track: Rect2 = Rect2(64, size.y / 2.0 - 3.5, 170, 7)
 	var tb: StyleBoxFlat = StyleBoxFlat.new()
@@ -62,12 +62,19 @@ func _draw() -> void:
 	tb.set_corner_radius_all(4)
 	draw_style_box(tb, track)
 	if _shown > 0.0:
+		# The fill brightens along its length (the kit's bar), with a glow.
+		var w: float = maxf(track.size.y, track.size.x * clampf(_shown, 0.0, 1.0))
+		var glow: StyleBoxFlat = StyleBoxFlat.new()
+		glow.bg_color = Color(c, 0.0)
+		glow.set_corner_radius_all(4)
+		glow.shadow_color = Color(c, 0.4)
+		glow.shadow_size = 6
+		draw_style_box(glow, Rect2(track.position, Vector2(w, track.size.y)))
 		var fb: StyleBoxFlat = StyleBoxFlat.new()
 		fb.bg_color = c
 		fb.set_corner_radius_all(4)
-		fb.shadow_color = Color(c, 0.44)
-		fb.shadow_size = 5
-		draw_style_box(fb, Rect2(track.position, Vector2(track.size.x * clampf(_shown, 0.0, 1.0), track.size.y)))
+		draw_style_box(fb, Rect2(track.position, Vector2(w, track.size.y)))
+		draw_polygon(PackedVector2Array([track.position + Vector2(3, 0), track.position + Vector2(w * 0.7, 0), track.position + Vector2(w * 0.7, track.size.y), track.position + Vector2(3, track.size.y)]), PackedColorArray([Color(0.02, 0.04, 0.07, 0.45), Color(0.02, 0.04, 0.07, 0.0), Color(0.02, 0.04, 0.07, 0.0), Color(0.02, 0.04, 0.07, 0.45)]))
 	var x: float = track.end.x + 10.0
 	if not top:
 		draw_string(body, Vector2(x, 25), "%s xp" % Js.thousands(to_go), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1, 1, 1, 0.65))

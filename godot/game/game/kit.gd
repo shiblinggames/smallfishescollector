@@ -126,6 +126,21 @@ static func text(parent: Node, t: String, role: String, col: Color = INK, wrap: 
 	return l
 
 
+## A label sized in pixels, put on the kit's faces: a short upper-case line is
+## an eyebrow (Karla 700, tracked); a title is Cinzel (800 when large); anything
+## else is Karla (600 when small). For screens that size type by hand.
+static func face(l: Label, px: int, title: bool) -> Label:
+	var t: String = l.text
+	var upper: bool = t.length() > 2 and t == t.to_upper() and t != t.to_lower()
+	if upper:
+		l.add_theme_font_override("font", tracked("karla", 700, px, 0.18))
+	elif title:
+		l.add_theme_font_override("font", font("cinzel", 800 if px >= 22 else 700))
+	else:
+		l.add_theme_font_override("font", font("karla", 600 if px <= 14 else 400))
+	return l
+
+
 ## A soft glow under a title (RoomHeader's text-shadow).
 static func glow(l: Label, c: Color) -> Label:
 	l.add_theme_color_override("font_shadow_color", Color(c.darkened(0.4), 0.22))
@@ -427,9 +442,16 @@ static func art(parent: Node, url: Variant, box: Vector2, halo: Color, silhouett
 	h.texture = Glow.radial(128, halo)
 	h.modulate.a = 0.0 if silhouette else 0.3
 	h.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	h.offset_left = -box.x * 0.08
-	h.offset_right = box.x * 0.08
+	# A round pool of light, sized by the box's height, whatever its width.
+	var hr: float = box.y * 0.62
+	h.anchor_left = 0.5
+	h.anchor_right = 0.5
+	h.anchor_top = 0.5
+	h.anchor_bottom = 0.5
+	h.offset_left = -hr
+	h.offset_right = hr
+	h.offset_top = -hr
+	h.offset_bottom = hr
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(h)
 	var floor_shadow: TextureRect = TextureRect.new()

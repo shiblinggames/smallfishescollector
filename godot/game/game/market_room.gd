@@ -269,11 +269,9 @@ func _hero(held: Array, total: float, count: float) -> void:
 		v.add_child(s)
 	Room.text(v, "%d fish  ·  %d species" % [int(count), held.size()], 13, SUB)
 	if not _confirm_all:
-		var b: Button = Button.new()
-		b.text = "Sell all %d fish   ·   %s ⟡" % [int(count), Js.thousands(total)]
+		var b: Button = Kit.button("Sell all %d fish   ·   %s ⟡" % [int(count), Js.thousands(total)], "primary")
 		b.custom_minimum_size = Vector2(0, 54)
 		b.add_theme_font_size_override("font_size", 18)
-		b.add_theme_color_override("font_color", GOLD)
 		b.pressed.connect(func() -> void:
 			_confirm_all = true
 			rebuild())
@@ -284,15 +282,13 @@ func _hero(held: Array, total: float, count: float) -> void:
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
 		v.add_child(row)
-		var keep: Button = Room.tinted("Keep fishing", Color("#cfcabf"), 15, 46)
+		var keep: Button = Kit.button("Keep fishing", "secondary")
 		keep.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		keep.pressed.connect(func() -> void:
 			_confirm_all = false
 			rebuild())
 		row.add_child(keep)
-		var go: Button = Button.new()
-		go.text = "Selling…" if _busy else "Sell  ·  %s ⟡" % Js.thousands(total)
-		go.custom_minimum_size = Vector2(0, 46)
+		var go: Button = Kit.button("Selling…" if _busy else "Sell  ·  %s ⟡" % Js.thousands(total), "primary")
 		go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		go.pressed.connect(_sell_all)
 		row.add_child(go)
@@ -341,8 +337,7 @@ func _holdings(held: Array) -> void:
 		a.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var b: Label = Room.text(v, "Sail out and catch something worth selling.", 14, SUB)
 		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		var go: Button = Button.new()
-		go.text = "Go Fishing"
+		var go: Button = Kit.button("Go Fishing", "accent", "large", Color("#67d4e8"))
 		go.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		go.pressed.connect(close)
 		v.add_child(go)
@@ -355,15 +350,12 @@ func _holdings(held: Array) -> void:
 func _holding_row(e: Dictionary) -> Control:
 	var price: float = each(e)
 	var stack: float = price * float(e["qty"])
-	var row: Button = Button.new()
+	var rs: Dictionary = Kit.row(0)
+	var rh: Dictionary = rs.duplicate()
+	rh["border"] = [1, Color(0.94, 0.75, 0.25, 0.35)]
+	var row: Pane.PaneButton = Pane.PaneButton.new(rs, rh)
 	row.custom_minimum_size = Vector2(0, 64)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var s: StyleBoxFlat = Room.box(Color(0.07, 0.08, 0.1, 0.95), Color(1, 1, 1, 0.07), 12, 0)
-	var hv: StyleBoxFlat = s.duplicate()
-	hv.border_color = Color(0.94, 0.75, 0.25, 0.35)
-	row.add_theme_stylebox_override("normal", s)
-	row.add_theme_stylebox_override("hover", hv)
-	row.add_theme_stylebox_override("pressed", hv)
 	row.pressed.connect(func() -> void: _trade(e))
 	var h: HBoxContainer = HBoxContainer.new()
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -453,7 +445,7 @@ func _trade(e: Dictionary) -> void:
 		q.value = float(e["qty"])
 		q.custom_minimum_size = Vector2(120, 0)
 		qrow.add_child(q)
-		var go: Button = Button.new()
+		var go: Button = Kit.button("Sell", "primary")
 		go.custom_minimum_size = Vector2(0, 50)
 		var label: Callable = func() -> void:
 			go.text = "Sell %d  ·  %s ⟡" % [int(q.value), Js.thousands(each(e) * q.value)]

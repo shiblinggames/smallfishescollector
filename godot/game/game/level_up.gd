@@ -84,8 +84,7 @@ func _text(parent: Control, text: String, px: int, col: Color, title: bool) -> L
 	l.text = text
 	l.add_theme_font_size_override("font_size", px)
 	l.add_theme_color_override("font_color", col)
-	if title:
-		l.add_theme_font_override("font", UiTheme.title_font())
+	Kit.face(l, px, title)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -97,22 +96,12 @@ func _chip(parent: Control, text: String) -> void:
 	var center: CenterContainer = CenterContainer.new()
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(center)
-	var p: PanelContainer = PanelContainer.new()
-	var s: StyleBoxFlat = StyleBoxFlat.new()
-	s.bg_color = Color(0.94, 0.75, 0.25, 0.12)
-	s.border_color = Color(0.94, 0.75, 0.25, 0.5)
-	s.set_border_width_all(1)
-	s.set_corner_radius_all(18)
-	s.content_margin_left = 16
-	s.content_margin_right = 16
-	s.content_margin_top = 6
-	s.content_margin_bottom = 6
-	p.add_theme_stylebox_override("panel", s)
+	var p: Pane = Pane.new({ "radius": 999, "fill": [Kit.a(Kit.GOLD, 0.12)], "border": [1, Kit.a(Kit.GOLD, 0.45)], "shadow": [Kit.a(Kit.GOLD, 0.12), 18], "pad": [16, 6, 16, 7] })
 	center.add_child(p)
 	var l: Label = Label.new()
 	l.text = text
+	Kit.style(l, "value", Color("#f7d774"))
 	l.add_theme_font_size_override("font_size", 16)
-	l.add_theme_color_override("font_color", Color("#f7d774"))
 	p.add_child(l)
 
 
@@ -126,9 +115,15 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.03, 0.06, 0.12, 0.94))
 	# The rays, turning slowly.
 	var turn: float = _t / 22.0 * TAU
+	# Each ray is brightest at the centre and fades out along its length and
+	# toward its edges, so the fan reads as light, not as wedges.
+	var gold: Color = Color(0.94, 0.75, 0.25)
 	for i: int in 12:
 		var a: float = turn + i * TAU / 12.0
-		draw_colored_polygon(PackedVector2Array([c, c + Vector2.from_angle(a - 0.1) * 520.0, c + Vector2.from_angle(a + 0.1) * 520.0]), Color(0.94, 0.75, 0.25, 0.05))
+		var mid: Vector2 = c + Vector2.from_angle(a) * 560.0
+		for side: float in [-1.0, 1.0]:
+			var edge: Vector2 = c + Vector2.from_angle(a + side * 0.11) * 560.0
+			draw_polygon(PackedVector2Array([c, mid, edge]), PackedColorArray([Color(gold, 0.10), Color(gold, 0.0), Color(gold, 0.0)]))
 	# The white flash, then three rings.
 	var f: float = clampf(_t / 0.5, 0.0, 1.0)
 	if f < 1.0:

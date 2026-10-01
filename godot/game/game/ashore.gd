@@ -24,7 +24,7 @@ const ROWS: Array = [
 ]
 const BUILT: Array[String] = ["market", "tackle"]
 
-var _card: PanelContainer
+var _card: Pane
 var _first: Button = null
 
 
@@ -32,9 +32,7 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.008, 0.03, 0.055, 0.62)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var shade: ColorRect = Kit.scrim(null)
 	shade.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
 			close())
@@ -43,8 +41,7 @@ func _ready() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
-	_card = PanelContainer.new()
-	_card.add_theme_stylebox_override("panel", Room.box(Color(0.04, 0.063, 0.086, 0.98), Color(0.7, 0.84, 0.91, 0.28), 18, 22))
+	_card = Pane.new(Kit.modal(Color(0.7, 0.84, 0.91), 22))
 	_card.custom_minimum_size = Vector2(minf(720.0, get_viewport_rect().size.x - 40.0), 0)
 	center.add_child(_card)
 	var col: VBoxContainer = VBoxContainer.new()
@@ -59,10 +56,7 @@ func _ready() -> void:
 	head.add_child(titles)
 	Room.text(titles, "ASHORE AT THE MAINLAND", 11, Color(0.75, 0.84, 0.89, 0.85))
 	Room.text(titles, "Where to?", 22, Color("#f4ecd8"), true)
-	var x: Button = Button.new()
-	x.text = "✕"
-	x.custom_minimum_size = Vector2(36, 36)
-	x.tooltip_text = "Close"
+	var x: Button = Kit.close_button()
 	x.pressed.connect(close)
 	head.add_child(x)
 
@@ -89,19 +83,14 @@ func _ready() -> void:
 func _door(d: Array) -> Button:
 	var accent: Color = Color(d[5])
 	var built: bool = BUILT.has(d[0])
-	var b: Button = Button.new()
+	var dn: Dictionary = Kit.door(accent, 0)
+	var dh: Dictionary = dn.duplicate()
+	dh["border"] = [1, Color(accent, 0.7)]
+	dh["shadow"] = [Color(accent, 0.18), 24]
+	var b: Pane.PaneButton = Pane.PaneButton.new(dn, dh)
 	b.custom_minimum_size = Vector2(0, 196)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var s: StyleBoxFlat = Room.box(Color("#06101a"), Color(accent, 0.36), 16, 0)
-	s.shadow_color = Color(accent, 0.08)
-	s.shadow_size = 12
-	var hv: StyleBoxFlat = s.duplicate()
-	hv.border_color = Color(accent, 0.7)
-	hv.bg_color = Color("#0a1824")
-	b.add_theme_stylebox_override("normal", s)
-	b.add_theme_stylebox_override("hover", hv)
-	b.add_theme_stylebox_override("pressed", hv)
-	b.add_theme_stylebox_override("disabled", s)
+	Kit.tap(b)
 	var inner: VBoxContainer = VBoxContainer.new()
 	inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	inner.offset_top = 12

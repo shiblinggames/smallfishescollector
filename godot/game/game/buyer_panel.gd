@@ -11,7 +11,7 @@ signal sold
 
 var session: Session
 var info: Dictionary = {}
-var _card: PanelContainer
+var _card: Pane
 var _result: Label
 var _sell: Button
 var _busy: bool = false
@@ -21,24 +21,13 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.008, 0.03, 0.055, 0.6)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var shade: ColorRect = Kit.scrim(null)
 	shade.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
 			close())
 	add_child(shade)
 
-	_card = PanelContainer.new()
-	var s: StyleBoxFlat = StyleBoxFlat.new()
-	s.bg_color = Color(0.04, 0.063, 0.086, 0.98)
-	s.border_color = Color(1.0, 0.81, 0.54, 0.32)
-	s.set_border_width_all(1)
-	s.set_corner_radius_all(18)
-	s.set_content_margin_all(22)
-	s.shadow_color = Color(0, 0, 0, 0.6)
-	s.shadow_size = 24
-	_card.add_theme_stylebox_override("panel", s)
+	_card = Pane.new(Kit.modal(Kit.SAND, 22))
 	_card.anchor_left = 0.5
 	_card.anchor_right = 0.5
 	_card.anchor_top = 1.0
@@ -61,22 +50,13 @@ func _ready() -> void:
 	head.add_child(titles)
 	Sheet.text(titles, "BUYER", 11, Color(1.0, 0.84, 0.59, 0.85))
 	Sheet.text(titles, info["name"], 25, Color("#f4ecd8"), true)
-	var x: Button = Button.new()
-	x.text = "✕"
-	x.custom_minimum_size = Vector2(36, 36)
+	var x: Button = Kit.close_button()
 	x.pressed.connect(close)
 	head.add_child(x)
 	var line: Label = Sheet.text(col, info["line"], 15, Color("#c9d6de"), false, true)
 	line.add_theme_font_override("font", _italic())
 
-	var offer: PanelContainer = PanelContainer.new()
-	var os: StyleBoxFlat = StyleBoxFlat.new()
-	os.bg_color = Color(1, 1, 1, 0.04)
-	os.border_color = Color(1, 1, 1, 0.1)
-	os.set_border_width_all(1)
-	os.set_corner_radius_all(12)
-	os.set_content_margin_all(14)
-	offer.add_theme_stylebox_override("panel", os)
+	var offer: Pane = Pane.new(Kit.inset(14))
 	col.add_child(offer)
 	var oc: VBoxContainer = VBoxContainer.new()
 	oc.add_theme_constant_override("separation", 3)
@@ -91,17 +71,12 @@ func _ready() -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	col.add_child(row)
-	_sell = Button.new()
-	_sell.text = "Sell the hold"
-	_sell.custom_minimum_size = Vector2(0, 48)
+	_sell = Kit.button("Sell the hold", "primary")
 	_sell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_sell.pressed.connect(_do_sell)
 	row.add_child(_sell)
-	var no: Button = Button.new()
-	no.text = "No thanks"
-	no.custom_minimum_size = Vector2(0, 48)
+	var no: Button = Kit.button("No thanks", "secondary")
 	no.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	no.add_theme_color_override("font_color", Color("#cfcabf"))
 	no.pressed.connect(close)
 	row.add_child(no)
 	_sell.grab_focus.call_deferred()

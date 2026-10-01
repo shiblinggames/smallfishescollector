@@ -13,16 +13,36 @@ static func bait_sheet(session: Session, current: String, on_pick: Callable) -> 
 	s.ready.connect(func() -> void:
 		for b: Array in session.baits():
 			var def: Dictionary = Rules.bait(b[0])
-			var row: Button = Button.new()
-			row.custom_minimum_size = Vector2(0, 56)
-			row.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			var on: bool = b[0] == current
+			var teal: Color = Color("#67d4e8")
+			var rs: Dictionary = Kit.row(0)
+			if on:
+				rs["fill"] = [Color(teal, 0.14)]
+				rs["border"] = [1, Color(teal, 0.55)]
+			var rh: Dictionary = rs.duplicate()
+			rh["border"] = [1, Color(teal, 0.7) if on else Color(1, 1, 1, 0.24)]
+			var row: Pane.PaneButton = Pane.PaneButton.new(rs, rh)
+			row.custom_minimum_size = Vector2(0, 58)
+			var h: HBoxContainer = HBoxContainer.new()
+			h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			h.offset_left = 12
+			h.offset_right = -14
+			h.add_theme_constant_override("separation", 12)
+			h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(h)
+			Kit.art(h, def.get("imageUrl"), Vector2(44, 44), Color(def.get("color", "#67d4e8")))
+			var nv: VBoxContainer = VBoxContainer.new()
+			nv.alignment = BoxContainer.ALIGNMENT_CENTER
+			nv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			nv.add_theme_constant_override("separation", 0)
+			nv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			h.add_child(nv)
+			Kit.text(nv, b[1], "name", teal if on else Kit.INK)
 			var bonus: float = Js.num(def.get("catchZoneBonus"))
-			row.text = "   %s   ·   %s   ·   %d" % [b[1], ("+%d° catch zone" % int(bonus)) if bonus > 0 else "No catch bonus", int(b[2])]
-			row.icon = Skipper.tex(def.get("imageUrl"))
-			row.expand_icon = false
-			row.add_theme_constant_override("icon_max_width", 28)
-			if b[0] == current:
-				row.add_theme_color_override("font_color", Color("#67d4e8"))
+			Kit.text(nv, ("+%d° catch zone" % int(bonus)) if bonus > 0 else "No catch bonus", "small", Kit.GOOD if bonus > 0 else Kit.DIM)
+			var count: Label = Kit.text(h, Js.thousands(float(b[2])), "number", Kit.INK_2)
+			count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			Kit.tap(row)
 			row.pressed.connect(func() -> void:
 				on_pick.call(b[0])
 				s.close())
@@ -39,16 +59,8 @@ static func hold_sheet(session: Session) -> Sheet:
 	s.title = "The hold"
 	s.blurb = "%d of %d aboard." % [int(count), int(cap)]
 	s.ready.connect(func() -> void:
-		var bar: ProgressBar = ProgressBar.new()
-		bar.show_percentage = false
-		bar.custom_minimum_size = Vector2(0, 8)
-		bar.value = 100.0 * count / maxf(1.0, cap)
-		var fill: StyleBoxFlat = StyleBoxFlat.new()
-		fill.set_corner_radius_all(4)
 		var frac: float = count / maxf(1.0, cap)
-		fill.bg_color = Color("#f87171") if frac >= 0.9 else (Color("#e8b463") if frac >= 0.75 else Color("#5fb0c8"))
-		bar.add_theme_stylebox_override("fill", fill)
-		s.body.add_child(bar)
+		Kit.bar(s.body, frac, Color("#f87171") if frac >= 0.9 else (Color("#e8b463") if frac >= 0.75 else Color("#5fb0c8")))
 		var rows: Array = []
 		var hold: Dictionary = session.save["hold"]
 		for k: Variant in hold:

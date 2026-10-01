@@ -20,23 +20,11 @@ var _busy: bool = false
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.012, 0.024, 0.04, 0.9)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(shade)
+	Kit.scrim(self, true)
 	var center: CenterContainer = CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
-	var card: PanelContainer = PanelContainer.new()
-	var s: StyleBoxFlat = StyleBoxFlat.new()
-	s.bg_color = Color("#0b0a06")
-	s.border_color = Color("#f0c04088")
-	s.set_border_width_all(1)
-	s.set_corner_radius_all(20)
-	s.set_content_margin_all(24)
-	s.shadow_color = Color(0.94, 0.75, 0.25, 0.13)
-	s.shadow_size = 40
-	card.add_theme_stylebox_override("panel", s)
+	var card: Pane = Pane.new({ "radius": 18, "fill": [Color("#0b0a06")], "border": [1, Kit.a(Kit.GOLD, 0.53)], "shadow": [Kit.a(Kit.GOLD, 0.16), 40], "glow": [Kit.a(Kit.GOLD, 0.10), Vector2(0.5, 0.25), Vector2(0.7, 0.5)], "pad": 24 })
 	card.custom_minimum_size = Vector2(420, 0)
 	center.add_child(card)
 	var col: VBoxContainer = VBoxContainer.new()
@@ -61,15 +49,13 @@ func _ready() -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	col.add_child(row)
-	var sell: Button = Button.new()
-	sell.text = "Sell"
+	var sell: Button = Kit.button("Sell", "secondary")
 	sell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sell.custom_minimum_size = Vector2(0, 48)
 	sell.pressed.connect(func() -> void: _answer("sell"))
 	row.add_child(sell)
 	if not mounted:
-		var mount: Button = Button.new()
-		mount.text = "Mount it"
+		var mount: Button = Kit.button("Mount it", "primary")
 		mount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mount.size_flags_stretch_ratio = 1.25
 		mount.custom_minimum_size = Vector2(0, 48)
@@ -92,8 +78,7 @@ func _text(parent: Control, text: String, px: int, col: Color, title: bool) -> L
 	l.text = text
 	l.add_theme_font_size_override("font_size", px)
 	l.add_theme_color_override("font_color", col)
-	if title:
-		l.add_theme_font_override("font", UiTheme.title_font())
+	Kit.face(l, px, title)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(l)
