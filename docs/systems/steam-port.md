@@ -96,8 +96,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   button steps aside and the reach pill takes its place.
   Rules learned: a pane draws through its shader, so anything a pane draws itself (the catch
   card's shockwave) goes on its own layer; clip_children only on a pane with no shadow.
-  NOT YET on the kit: the Ancient Deep's ceremonies and the Completionist reveal (their own
-  full-screen moments, part three).
+  The Ancient Deep's ceremonies and the Completionist reveal ride the kit's type through the
+  shared text helpers (Kit.face) and keep their own staging. Every screen is on the kit.
 - THE CHARTER SLICE, BUILT (2026-09-30): two ships on one sea, as a Charter.
   - THE TITLE SCREEN (`game/title.gd`): your captains (portrait, level, purse, last played;
     Play, Retire asked once, a new captain named with the Steam name offered) and the
