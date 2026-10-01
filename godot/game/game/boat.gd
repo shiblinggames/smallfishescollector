@@ -332,9 +332,9 @@ func set_look(look: Dictionary) -> void:
 ## THE CATCH SPLASH in front of the bow (app/(app)/sea/seaSplash.ts): droplets
 ## thrown up and falling back, a ring spreading on the water; bigger, and
 ## part gold, on a perfect.
-func splash(perfect: bool) -> void:
+func splash(perfect: bool, world_at: Variant = null) -> void:
 	var facing: float = _facing
-	var at: Vector2 = Vector2(facing * 150.0, 70.0)
+	var at: Vector2 = Vector2(facing * 150.0, 70.0) if world_at == null else (world_at as Vector2) - position
 	var p: GPUParticles2D = GPUParticles2D.new()
 	p.one_shot = true
 	p.explosiveness = 1.0

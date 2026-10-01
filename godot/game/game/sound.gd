@@ -8,7 +8,8 @@ extends Node
 ## loud), and the dial's tick looping while a fish is on (/fishingdial.ogg, a
 ## little faster for harder fish). Music follows the sea's hour, not the zone:
 ## day, dusk and dawn, night, crossfaded over three seconds at half volume.
-## Silent where the web is silent: the bite, a miss, a crate, a golden, a level.
+## Silent where the web is silent: the bite, a crate, a golden, a level. (A
+## miss and a snag have their own sounds since 2026-10-01: see the reel.)
 
 const MUSIC: Dictionary = { "day": "fishingsoundtrack.ogg", "dusk": "fishingsoundtrackopen.ogg", "dawn": "fishingsoundtrackopen.ogg", "night": "fishingsoundtrackdeep.ogg" }
 const MUSIC_DB: float = -6.0
@@ -170,6 +171,59 @@ static func _play_made(key: String, make: Callable, gain: float) -> void:
 			p.volume_db = linear_to_db(gain)
 			p.play()
 			return
+
+
+# ── The reel (2026-10-01, Kong: "make it feel really good"): every press
+# answers. A miss and a snag were silent in the web; now the line speaks.
+
+## A miss: the line goes slack, a soft low plip as it drops back.
+static func slack() -> void:
+	_play_made("slack", func() -> AudioStreamWAV:
+		return _render([[310.0, 0.0, 0.16, 0.006, 0.28, "sine"], [205.0, 0.03, 0.1, 0.01, 0.32, "sine"], [620.0, 0.0, 0.04, 0.004, 0.08, "sine"]], 0.45), 1.0)
+
+
+## A snag: the line parts, a sharp twang and a crack.
+static func snap() -> void:
+	_play_made("snap", func() -> AudioStreamWAV:
+		return _render([[1900.0, 0.0, 0.14, 0.001, 0.03, "triangle"], [176.0, 0.0, 0.2, 0.003, 0.45, "triangle"], [264.0, 0.004, 0.1, 0.003, 0.3, "sine"], [90.0, 0.0, 0.12, 0.004, 0.2, "sine"]], 0.6), 1.0)
+
+
+## The reel turning as the fish comes in: a run of ratchet clicks, quick then
+## slowing as it nears the boat. s is how long the run lasts.
+static func reel_clicks(s: float) -> void:
+	var key: String = "reel%d" % int(round(s * 10.0))
+	_play_made(key, func() -> AudioStreamWAV:
+		var v: Array = []
+		var t: float = 0.0
+		var gap: float = 0.032
+		while t < s:
+			v.append([2600.0, t, 0.07, 0.001, 0.018, "triangle"])
+			v.append([1300.0, t, 0.035, 0.001, 0.025, "sine"])
+			t += gap
+			gap *= 1.06
+		return _render(v, s + 0.1), 0.9)
+
+
+## THE PERFECT STREAK, heard: each perfect in a row rings a step higher up a
+## pentatonic scale (C D E G A, then on up), so a run climbs; at 5 and at 10 it
+## resolves into a short flourish. Played on the press, with the perfect.
+const STREAK_NOTES: Array = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.51, 1567.98, 1760.0]
+
+
+static func streak(n: int) -> void:
+	var i: int = clampi(n - 1, 0, STREAK_NOTES.size() - 1)
+	var f: float = STREAK_NOTES[i]
+	_play_made("streak%d" % i, func() -> AudioStreamWAV:
+		return _render([[f, 0.0, 0.14, 0.004, 0.9, "sine"], [f * 2.0, 0.0, 0.05, 0.004, 0.5, "sine"], [f * 3.01, 0.0, 0.02, 0.004, 0.25, "sine"]], 1.0), 1.0)
+	if n == 5 or n == 10:
+		var top: bool = n == 10
+		_play_made("flourish%s" % top, func() -> AudioStreamWAV:
+			var notes: Array = [1046.5, 1318.51, 1567.98, 2093.0, 2637.0] if top else [783.99, 987.77, 1174.66, 1567.98]
+			var v: Array = []
+			for k: int in notes.size():
+				v.append([notes[k], 0.12 + k * 0.07, 0.09, 0.004, 0.7, "sine"])
+				v.append([notes[k] * 2.0, 0.12 + k * 0.07, 0.03, 0.004, 0.35, "sine"])
+			return _render(v, 1.2), 1.0)
 
 
 ## The harbour bell: 660Hz with two inharmonic partials, ringing out.

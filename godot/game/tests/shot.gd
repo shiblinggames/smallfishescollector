@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -294,6 +294,18 @@ func _init() -> void:
 			sea._boat.target = Vector2(1400, 14300)
 			for f: int in 90:
 				await process_frame
+		"fight":
+			# Mid-fight: strike (FIGHT_R: perfect, catch, miss, penalty) and
+			# shoot FIGHT_T seconds in.
+			sea._boat.position = Vector2(-1500, 2600)
+			sea._zoom_to = 2.0
+			sea._camera.zoom = Vector2(2.0, 2.0)
+			sea._boat.set_pose("wait")
+			for f: int in 20:
+				await process_frame
+			var res: String = OS.get_environment("FIGHT_R") if OS.get_environment("FIGHT_R") != "" else "perfect"
+			hud._on_struck(res, 0.0)
+			await create_timer(float(OS.get_environment("FIGHT_T")) if OS.get_environment("FIGHT_T") != "" else 0.4).timeout
 		"waitrest":
 			# The same boat, waiting then reeled in: does the hull move?
 			sea._boat.position = Vector2(-1500, 2600)

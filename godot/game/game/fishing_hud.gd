@@ -955,9 +955,10 @@ func _on_struck(raw: String, _angle: float) -> void:
 	_dial.ancient_aura = false
 	Sound.dial_stop()
 	_tide.visible = false
-	boat.set_pose("rest")
 	if result == "perfect":
 		Sound.perfect()
+		# The streak, heard: a step higher for each perfect in a row.
+		Sound.streak(_streak() + 1)
 		Rumble.buzz(Rumble.PERFECT)
 		add_child(Fx.PerfectFlash.new())
 	elif landed:
@@ -965,10 +966,26 @@ func _on_struck(raw: String, _angle: float) -> void:
 		Rumble.tap(6)
 	else:
 		Rumble.tap(6)
-	if landed:
-		boat.splash(result == "perfect")
+	# THE FIGHT: the fish played in on the water through the hold, in place
+	# of a still pause (game/reel_fight.gd). A miss and a snag speak too.
+	var hold: float = HOLD_PERFECT_S if result == "perfect" else HOLD_S
+	var fight: ReelFight = ReelFight.new()
+	fight.boat = boat
+	fight.result = result
+	fight.length_s = hold
+	var crate_shot: bool = float(_shot["fishId"]) == FishingRules.CRATE_FISH_ID
+	fight.crate = crate_shot
+	if crate_shot:
+		fight.fish_art = CrateMoment._tex("%sclosed.png" % CrateMoment.TIERS.get(_shot.get("crateTier", "wooden"), CrateMoment.TIERS["wooden"])[2])
+	else:
+		var sp: Variant = session.store.species(float(_shot["fishId"]))
+		if sp != null:
+			fight.fish_art = Skipper.tex("fish/%s" % ResultCard.fish_art_path((sp as Dictionary)["name"]).get_file())
+	boat.get_parent().add_child(fight)
 	_set_phase("reeling")
-	await get_tree().create_timer(HOLD_PERFECT_S if result == "perfect" else HOLD_S).timeout
+	await get_tree().create_timer(hold).timeout
+	# The fight is over: the line comes in.
+	boat.set_pose("rest")
 	var before_level: int = session.level()
 	var crate: bool = float(_shot["fishId"]) == FishingRules.CRATE_FISH_ID
 	var r: Dictionary = {}

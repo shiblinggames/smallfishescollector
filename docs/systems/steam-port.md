@@ -386,6 +386,20 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   SPACE key beside it, a soft stroke of light under it that swells on hover and flashes
   on a press; hidden while waiting (the waiting cues say it). The reach pill moved down
   to just above the bottom row. fx/seal.gdshader is gone.
+- THE REEL, PASS ONE (2026-10-01; Kong: "make it feel really good, it's the core
+  mechanic"; items 1-3 of a nine-point plan, the rest offered for later: accuracy tick,
+  bobber anticipation, the dial nearer the line, zone-edge clicks, a 60-80ms strike hold,
+  low-latency display). THE FIGHT (game/reel_fight.gd) fills the old still hold
+  (HOLD_S 0.62 / HOLD_PERFECT_S 0.9, unchanged) where the line goes in: the boat keeps her
+  waiting pose until it ends (her line is painted in her sheet, so a drawn line would
+  double it), the fish's shadow thrashes and rises in the under-water layer with the
+  water boiling over it, the rod nods. Perfect: the fish (its own art) leaps out in an
+  arc and drops back, a splash each end. Catch: a splash. Miss: the shadow darts off.
+  Snag: the rod springs. EVERY PRESS ANSWERS: Sound.slack (miss), Sound.snap (snag),
+  Sound.reel_clicks (a ratchet run under a catch), all synthesized. THE STREAK, HEARD:
+  Sound.streak(n) on a perfect, a step up a pentatonic scale per perfect in a row, with
+  a flourish at 5 and 10, fired on the press with the perfect. Boat.splash takes a place.
+  The needle and its freeze are untouched (never backwards).
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules
