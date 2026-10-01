@@ -87,10 +87,17 @@ class BottleNode:
 			_spr.scale = Vector2(sc, sc / Chart.GROUND)
 		add_child(_spr)
 		if _spr.texture != null:
-			_mirror = SeaFinds.reflect(self, _spr, _spr.texture.get_height() * _spr.scale.y * 0.18)
+			# Afloat: the bottom third under the water, the water heaped round it.
+			var ph: float = float(int(bottle["seed"]) % 100)
+			_collar = Skipper.collar_of(_spr, 0.66, 0.14, ph)
+			add_child(_collar)
+			move_child(_collar, 0)
+			_spr.material = Skipper.afloat_mat("res://game/fx/waterline.gdshader", _spr, 0.66, 0.14, ph)
+			_mirror = SeaFinds.reflect(self, _spr, _spr.texture.get_height() * _spr.scale.y * 0.16)
 		_place()
 
 	var _mirror: Node2D
+	var _collar: Sprite2D
 
 	func _place() -> void:
 		var at: Dictionary = Explore.bottle_pos(bottle, Clock.now_ms() / 1000.0)
@@ -101,6 +108,8 @@ class BottleNode:
 		_spr.rotation = sin(Clock.now_ms() / 700.0 + float(int(bottle["seed"]) % 100)) * 0.18
 		if _mirror != null:
 			(_mirror.get_child(0) as Sprite2D).rotation = -_spr.rotation
+		if _collar != null:
+			_collar.rotation = _spr.rotation
 
 
 ## A DIG's tell: the water looks odd over a buried site (a slow, faint swirl

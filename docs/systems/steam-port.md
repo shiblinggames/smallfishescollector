@@ -286,6 +286,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   ETA, AUTOPILOT (steers to a point 320 ahead on the path; any helm input hands it back),
   reroutes past 450 off the line ("Recalculating"), and toasts "Arrived" inside 220.
   Rules untouched; the course is presentation and steering only.
+- AFLOAT, NOT ON TOP (2026-10-01; Kong: objects should look like they displace the water,
+  submerged slightly at the bottom). The web's soak plate (a tint ramp over the hull) is
+  retired. `fx/waterline.gdshader` goes on every upright part of a boat that reaches the
+  water (the base sheet too, since it paints a plain hull under the boat overlay) and on
+  bottles: below a lapping waterline the picture wavers, takes the sea's colour and fades
+  out by the keel; just above, the wood is wet and dark; at it, a faint bright lip.
+  `fx/water_collar.gdshader` on a twin behind the hull draws the water pushed aside: a
+  thin pale lens heaped at the waterline and a wider dark trough, both ellipses from the
+  hull's width measured once on the CPU (Skipper.span_at; sampling the picture along the
+  row in the shader stepped into bars), its region grown past the picture so the ring is
+  not clipped. Skipper.SINK 0.04 -> 0.055 (she sits a little deeper).
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

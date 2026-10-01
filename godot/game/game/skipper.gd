@@ -40,7 +40,7 @@ const LIE: float = 0.55
 const MIRROR_ALPHA: float = 0.26
 const MIRROR_SHEAR: float = 0.021
 const MIRROR_RATE: float = 0.78
-const SINK: float = 0.04
+const SINK: float = 0.055
 static var _bands: Dictionary = {}
 static var _shadow_mat: ShaderMaterial
 static var _mirror_mat: ShaderMaterial
@@ -197,16 +197,79 @@ func _water_fx(origin: Vector2, h: float, hull: Sprite2D) -> void:
 		_mirror.add_child(_twin(c))
 	add_child(_mirror)
 	move_child(_mirror, 1 if hull != null else 0)
-	# The water up her side, over the hull and cut from its own shape.
-	if hull != null:
-		var band: Vector2 = _band(hull.texture)
-		var soak: Sprite2D = _twin(hull)
-		var m: ShaderMaterial = ShaderMaterial.new()
-		m.shader = load("res://game/fx/hull_soak.gdshader")
-		m.set_shader_parameter("top", band.x)
-		m.set_shader_parameter("bot", band.y)
-		soak.material = m
-		add_child(soak)
+	# IN the water: every upright part that reaches below the waterline goes
+	# under it (the base sheet paints a plain hull under the boat overlay, so
+	# it goes too), and the water she pushes aside rings her at it.
+	var keel: float = top_y + hh * _band(hull.texture).y
+	for c: Sprite2D in parts:
+		if c.rotation != 0.0 or not c.centered:
+			continue
+		var ch: float = c.texture.get_height() * absf(c.scale.y)
+		var ctop: float = c.position.y - ch / 2.0
+		if ctop + ch <= waterline:
+			continue
+		c.material = afloat_mat("res://game/fx/waterline.gdshader", c, (waterline - ctop) / ch, (keel - waterline) / ch, _phase)
+	var collar: Sprite2D = collar_of(hull, (waterline - top_y) / hh, (keel - waterline) / hh, _phase)
+	add_child(collar)
+	move_child(collar, _mirror.get_index() + 1)
+
+
+## A material for something afloat (fx/waterline.gdshader on the thing,
+## fx/water_collar.gdshader on a twin behind it): cut and depth are fractions
+## of the picture's height (the water, and the keel below it).
+static func afloat_mat(shader: String, spr: Sprite2D, cut: float, depth: float, phase: float) -> ShaderMaterial:
+	var m: ShaderMaterial = ShaderMaterial.new()
+	m.shader = load(shader)
+	m.set_shader_parameter("cut", cut)
+	m.set_shader_parameter("depth", maxf(depth, 0.01))
+	m.set_shader_parameter("aspect", float(spr.texture.get_width()) * absf(spr.scale.x) / maxf(1.0, float(spr.texture.get_height()) * absf(spr.scale.y)))
+	m.set_shader_parameter("phase", phase)
+	return m
+
+
+## The water pushed aside round something afloat: a twin of it, its region
+## grown a quarter each way so the ring runs past the picture's edge.
+static func collar_of(spr: Sprite2D, cut: float, depth: float, phase: float) -> Sprite2D:
+	var c: Sprite2D = Sprite2D.new()
+	c.texture = spr.texture
+	c.scale = spr.scale
+	c.position = spr.position
+	c.rotation = spr.rotation
+	var sz: Vector2 = spr.texture.get_size()
+	c.region_enabled = true
+	c.region_rect = Rect2(-sz * 0.25, sz * 1.5)
+	var m: ShaderMaterial = afloat_mat("res://game/fx/water_collar.gdshader", spr, cut, depth, phase)
+	m.set_shader_parameter("span", span_at(spr.texture, cut - depth * 0.35))
+	c.material = m
+	return c
+
+
+static var _spans: Dictionary = {}
+
+
+## Where a picture is painted along one row (left, right, as fractions of its
+## width), measured once.
+static func span_at(t: Texture2D, row: float) -> Vector2:
+	var key: String = "%s@%.3f" % [t.resource_path, row]
+	if _spans.has(key):
+		return _spans[key]
+	var out: Vector2 = Vector2(0.3, 0.7)
+	var img: Image = t.get_image()
+	if img != null:
+		if img.is_compressed():
+			img.decompress()
+		var y: int = clampi(int(row * img.get_height()), 0, img.get_height() - 1)
+		var lo: int = -1
+		var hi: int = -1
+		for x: int in img.get_width():
+			if img.get_pixel(x, y).a > 0.5:
+				if lo < 0:
+					lo = x
+				hi = x
+		if hi > lo:
+			out = Vector2(float(lo) / img.get_width(), float(hi + 1) / img.get_width())
+	_spans[key] = out
+	return out
 
 
 func _twin(c: Sprite2D) -> Sprite2D:
