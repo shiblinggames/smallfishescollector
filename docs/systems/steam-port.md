@@ -251,6 +251,24 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   - Floating things get reflections (SeaFinds.reflect): bottles first.
   - THE GLITTER: the drift flecks are off, the stirred-water glints are gone, and the web's
     sun glints are broader and slower.
+  THIRD PLAYTEST (2026-10-01):
+  - THE GLITTER WAS THE FISH. Pale fish in deep water read as scattered sparkling dashes,
+    day and night (found by diffing two frames of open water). Fish are now shadows only:
+    the water darkens where one swims and never brightens.
+  - REEL IN fired on the button's release (a Godot button's default), so the needle ran on
+    until the click came back up. It now fires on the press (ACTION_MODE_BUTTON_PRESS);
+    the keyboard and a click on the dial were already immediate. The strike freezes the
+    angle drawn on screen.
+  - HOLD TO SAIL: let go after a hold (over 0.22 s) and she eases to a stop; a quick click
+    still sets a destination.
+  - MOORINGS (second rebuild): the drawn pilings and floats clashed with the painted world.
+    A mooring is now the WATER. The shader paints a calmer, lighter harbour patch with a
+    soft broken foam edge (u_berths), warming while she is inside. Berth.gd only holds where
+    and how lit.
+  - THE DIAL IN WATERCOLOUR (fx/dial.gdshader, restyled): pigment washes for the zones,
+    pooling darker at their edges and granulating, the live zone the full pigment. An
+    ochre rim with ink ticks, an indigo face blooming lighter at the centre, paper grain
+    and brush-uneven edges. The needle is a stroke of ink with a tinted point.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

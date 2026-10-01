@@ -333,6 +333,7 @@ func _process(delta: float) -> void:
 	_life.step(delta, cam_world, half, _boat.position, _boat.velocity.length(), dark, clock["warmth"], now)
 	_sky.step(delta, cam_world, _camera.zoom.x, vp, dark, clock["warmth"], stops[2])
 	_weather(delta, now, cam_world)
+	_feed_berths(cam_world)
 	# Every hull's wake, laid on the water.
 	var contacts: Array = [_boat.wake_contact()]
 	for list: Dictionary in [_regulars, _strangers]:
@@ -616,8 +617,7 @@ func _night_water(dark: float, at: Vector2) -> void:
 	add_lamp.call(_boat.position + keel, 16.0 + 18.0 * _boat.lantern_glow, 0.30 + 0.25 * _boat.lantern_glow, Color(1.0, 0.72, 0.4))
 	add_lamp.call(_town_light.position + Vector2(0, 260), 46.0, 0.45, Color(1.0, 0.74, 0.45))
 	for bid: String in _berths:
-		for lp: Vector2 in (_berths[bid] as Berth).lamp_points():
-			add_lamp.call(lp, 12.0, 0.2, Color(1.0, 0.8, 0.5))
+		pass
 	for list: Dictionary in [_regulars, _strangers]:
 		for k: String in list:
 			var w: Wanderer = list[k]
@@ -674,6 +674,24 @@ func _weather(delta: float, now: float, at: Vector2) -> void:
 		shore = _life.flock_at
 	var shore_canvas: Vector2 = _world.get_global_transform() * shore
 	_sound.step(delta, spd, turn, depth, land, _squall.rain, SeaClock.at(now)["darkness"], _hud.busy(), shore_canvas)
+
+
+## The moorings near the view, for the water to paint.
+func _feed_berths(at: Vector2) -> void:
+	var near: Array = []
+	for bid: String in _berths:
+		var b: Berth = _berths[bid]
+		near.append([b.position.distance_to(at), b])
+	near.sort_custom(func(x: Array, y: Array) -> bool: return float(x[0]) < float(y[0]))
+	var out: Array[Vector4] = []
+	for n: Array in near:
+		if out.size() >= 4:
+			break
+		var b: Berth = n[1]
+		out.append(Vector4(b.position.x, b.position.y, b.r, b.lit))
+	while out.size() < 4:
+		out.append(Vector4(0, 0, 0, 0))
+	_water.set_shader_parameter("u_berths", out)
 
 
 ## Ease the grade toward the water she is in.
@@ -1133,6 +1151,7 @@ func _input(event: InputEvent) -> void:
 ## Holding the mouse down on the water: she keeps sailing toward the pointer
 ## (and on past it, so a held press never runs out under her).
 var _holding: bool = false
+var _held_t: float = 0.0
 
 
 func _hold_steer() -> void:
@@ -1140,6 +1159,14 @@ func _hold_steer() -> void:
 		return
 	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or _hud.busy():
 		_holding = false
+		# A held press let go: she eases to a stop where she is. (A quick
+		# click keeps its destination.)
+		if _held_t > 0.22:
+			_boat.target = null
+		_held_t = 0.0
+		return
+	_held_t += get_process_delta_time()
+	if _held_t < 0.22:
 		return
 	var gp: Vector2 = get_global_mouse_position()
 	var aim: Vector2 = Vector2(gp.x, gp.y / Chart.GROUND)
@@ -1175,6 +1202,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var gp: Vector2 = get_global_mouse_position()
 		_boat.target = Vector2(gp.x, gp.y / Chart.GROUND)
 		_holding = true
+		_held_t = 0.0
 
 
 ## The compass mark (SeaMap.tsx): while you are in a water and its buyer is

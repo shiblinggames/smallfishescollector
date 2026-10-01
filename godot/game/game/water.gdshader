@@ -50,6 +50,8 @@ uniform int u_lamp_n = 0;
 uniform vec4 u_blooms[4];
 // SQUALLS (core/weather.gd): (x, y, r, power) in world px.
 uniform vec4 u_storms[2];
+// MOORINGS (game/berth.gd): (x, y, r, lit) in world px.
+uniform vec4 u_berths[4];
 // A lightning flash, 0 to 1.
 uniform float u_flash = 0.0;
 
@@ -144,7 +146,8 @@ void fragment() {
 	// all laid over it below.
 	vec2 refr = vec2(swell * 0.010, swell * 0.006) + fg * 0.02;
 	vec4 fish = texture(u_under, SCREEN_UV + refr);
-	col = mix(col, fish.rgb, clamp(fish.a * 1.15, 0.0, 0.92));
+	// A shadow in the water, never a highlight: pale fish read as glitter.
+	col *= 1.0 - clamp(fish.a, 0.0, 1.0) * 0.42;
 
 	float shelf = smoothstep(u_shelf.x, u_shelf.y, length(world));
 	float shade = 1.0 + swell * 0.20 * u_swell * (1.0 - recede * 0.55);
@@ -279,6 +282,24 @@ void fragment() {
 			col += (lap * 0.13 + edge * 0.22) * vec3(0.92, 0.97, 1.0) * (1.0 - u_dark * 0.55);
 			col += (lap + edge) * vec3(0.36, 0.96, 0.85) * u_dark * 0.12;
 		}
+	}
+
+	// MOORINGS: a calmer, lighter harbour patch with a soft foam edge, broken
+	// like the shores' lapping; it warms while she is in it.
+	for (int bi = 0; bi < 4; bi++) {
+		vec4 B = u_berths[bi];
+		if (B.z < 1.0) continue;
+		float bd = length(world - B.xy) / B.z;
+		if (bd > 1.25) continue;
+		float wob = (vnoise(world * 0.006 + vec2(float(bi) * 3.1, TIME * 0.03)) - 0.5) * 0.10;
+		float inside = 1.0 - smoothstep(0.82, 1.0, bd + wob);
+		col = mix(col, col * 1.10 + vec3(0.025, 0.06, 0.055) * (1.0 - u_dark * 0.6), inside * 0.45);
+		float edge = exp(-pow((bd + wob - 0.96) / 0.035, 2.0));
+		float broken = smoothstep(0.35, 0.75, vnoise(world * 0.014 + vec2(TIME * 0.05, float(bi))));
+		col += vec3(0.92, 0.96, 1.0) * edge * broken * 0.14 * (1.0 - u_dark * 0.5);
+		vec3 warm = vec3(1.0, 0.78, 0.48);
+		col += warm * (inside * 0.05 + edge * broken * 0.10) * B.w;
+		col += warm * inside * 0.04 * u_dark;
 	}
 
 	// NIGHT ON THE WATER.

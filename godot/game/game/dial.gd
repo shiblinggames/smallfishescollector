@@ -422,8 +422,8 @@ func _draw() -> void:
 		var t: float = 1.0 - _burst
 		draw_arc(c, (100.0 + 22.0 * t) * k, 0.0, TAU, 96, Color(GOLD, 0.8 * _burst), 5.0 * k, true)
 
-	# THE NEEDLE: a tapered brass blade reaching into the track, its point the
-	# colour of what it is over, a counterweight behind the hub, a shadow under.
+	# THE NEEDLE: a stroke of ink, tapering to a point that takes the colour
+	# of what it is over, with a soft shadow bled under it.
 	var needle: Color = _needle_color(under_i)
 	var d: Vector2 = Vector2.from_angle(_ang(angle))
 	var nrm: Vector2 = d.orthogonal()
@@ -436,16 +436,12 @@ func _draw() -> void:
 	var shadow: PackedVector2Array = PackedVector2Array()
 	for v: Vector2 in blade:
 		shadow.append(v + Vector2(2.0, 3.0) * k)
-	draw_colored_polygon(shadow, Color(0, 0, 0, 0.4))
-	var brass: Color = Color(0.86, 0.7, 0.4)
-	var dark_brass: Color = Color(0.42, 0.29, 0.12)
-	draw_polygon(blade, PackedColorArray([dark_brass, brass, needle, needle.lightened(0.35), needle, brass.darkened(0.25), dark_brass]))
-	var outline: PackedVector2Array = blade.duplicate()
-	outline.append(blade[0])
-	draw_polyline(outline, Color(0.08, 0.05, 0.02, 0.7), 1.0, true)
+	draw_colored_polygon(shadow, Color(0.02, 0.03, 0.05, 0.28))
+	var ink: Color = Color(0.17, 0.15, 0.19)
+	var wash: Color = needle.lerp(Color(0.93, 0.89, 0.8), 0.12)
+	draw_polygon(blade, PackedColorArray([ink, ink, wash.lerp(ink, 0.35), wash, wash.lerp(ink, 0.35), ink, ink]))
 	if needle == GOLD or _burst > 0.0:
-		draw_circle(tip, 10.0 * k, Color(GOLD, 0.22))
-		draw_circle(tip, 5.0 * k, Color(1.0, 0.97, 0.82, 0.55))
+		draw_circle(tip, 9.0 * k, Color(GOLD, 0.18))
 
 	# THE HUB: a domed brass cap, and its snap and ripple on a strike.
 	var snap_t: float = 1.0 - _snap
@@ -454,11 +450,10 @@ func _draw() -> void:
 		if snap_t < 0.46:
 			hub_scale = _keys([1.0, 1.8, 0.7, 1.15, 1.0], snap_t / 0.46)
 		draw_arc(c, (10.0 + 30.0 * snap_t) * k, 0.0, TAU, 48, Color(1, 1, 1, 0.22 * _snap), 1.6 * k, true)
-	var hr: float = 8.5 * k * hub_scale
-	draw_circle(c + Vector2(1.5, 2.5) * k, hr, Color(0, 0, 0, 0.45))
-	draw_circle(c, hr, Color(0.38, 0.25, 0.1))
-	draw_circle(c, hr * 0.82, Color(0.84, 0.66, 0.34))
-	draw_circle(c - Vector2(1.8, 1.8) * k * hub_scale, hr * 0.42, Color(1.0, 0.93, 0.74, 0.85))
+	var hr: float = 7.5 * k * hub_scale
+	draw_circle(c + Vector2(1.2, 2.0) * k, hr, Color(0.02, 0.03, 0.05, 0.3))
+	draw_circle(c, hr, Color(0.47, 0.33, 0.19))
+	draw_circle(c - Vector2(0.8, 0.8) * k, hr * 0.74, Color(0.82, 0.64, 0.38))
 	if _dark > 0.0:
 		draw_circle(c, 110.0 * k, Color(0.01, 0.01, 0.02, 0.85))
 

@@ -189,6 +189,9 @@ func _ready() -> void:
 	_m_bait = bv[0]
 	_bait_val = bv[1]
 	_action = DialButton.new(112.0)
+	# On the PRESS: a button fires on release by default, which held the
+	# needle until the click came back up.
+	_action.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
 	_action.pressed.connect(_act)
 	_place(_action, Vector2(0.5, 1.0), Vector2(-56, -72 - 12 - 112), Vector2(112, 112))
 	add_child(_action)
