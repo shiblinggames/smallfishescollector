@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -293,6 +293,39 @@ func _init() -> void:
 			sea._boat.heading = 0.0
 			sea._boat.target = Vector2(1400, 14300)
 			for f: int in 90:
+				await process_frame
+		"film":
+			# One whole cast, for a film (run with --write-movie and --fixed-fps):
+			# a moment still, the cast, a short wait, the bite, a perfect
+			# strike, the fight and the card.
+			sea._boat.position = Vector2(-1500, 2600)
+			sea._zoom_to = 2.4
+			sea._camera.zoom = Vector2(2.4, 2.4)
+			hud._close_card()
+			hud._set_phase("idle")
+			# The rules keep real time; jump their clock past the wait, as
+			# the smoke test does, so the film can cut the wait short.
+			var ahead: Array = [0.0]
+			Clock.install(func() -> float: return Time.get_unix_time_from_system() * 1000.0 + float(ahead[0]))
+			for f: int in 30:
+				await process_frame
+			hud.cast()
+			for f: int in 6:
+				await process_frame
+			ahead[0] = float(hud._shot["waitMs"]) + 1000.0
+			hud._wait_left = 1.6
+			var guard: int = 0
+			while hud.phase != "hooked" and guard < 900:
+				guard += 1
+				await process_frame
+			for f: int in 24:
+				await process_frame
+			guard = 0
+			while hud._dial.zone_at(hud._dial.angle) != "perfect" and guard < 900:
+				guard += 1
+				await process_frame
+			hud._dial.strike()
+			for f: int in 100:
 				await process_frame
 		"fight":
 			# Mid-fight: strike (FIGHT_R: perfect, catch, miss, penalty) and

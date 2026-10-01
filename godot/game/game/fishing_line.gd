@@ -52,13 +52,14 @@ func _draw() -> void:
 		"rest":
 			end += Vector2(sin(now * 1.3 + skipper._phase) * 2.2, 0.0)
 			_curve(tip, end, 3.0, 0.0, 0.0)
-			if skipper.look.get("hook") == null:
-				_hook(end)
+			_hook(end, _last_dir)
 		"cast":
 			# Flying out from the tip, whipping, and settling into its arc.
 			var u: float = clampf(t / 0.45, 0.0, 1.0)
 			var e: float = 1.0 - pow(1.0 - u, 3.0)
-			_curve(tip, tip.lerp(end, e), 10.0 * e, 9.0 * (1.0 - u), now * 26.0)
+			var at: Vector2 = tip.lerp(end, e)
+			_curve(tip, at, 10.0 * e, 9.0 * (1.0 - u), now * 26.0)
+			_hook(at, _last_dir)
 		_:
 			if skipper.line_target != null:
 				var to: Vector2 = to_local(skipper.line_target)
@@ -84,14 +85,44 @@ func _curve(a: Vector2, b: Vector2, sag: float, amp: float, phase: float) -> voi
 		p += side * sin(u * PI) * sin(u * 9.0 - phase) * amp
 		pts.append(p)
 	draw_polyline(pts, INK, WIDTH, true)
+	# Which way the line runs at its end, for the hook to hang along it.
+	_last_dir = (pts[n] - pts[n - 1]).normalized() if n > 0 else Vector2.DOWN
 
 
-## A small hook at the end of a hanging line (when none is worn).
-func _hook(at: Vector2) -> void:
+## The hook, on the end of the line, hanging along it. The worn hook's own art
+## (every tier's sheet has the hook in the same place: cut out here, at the
+## size the old placement drew it), or a small drawn one when none is worn.
+const HOOK_REGION: Rect2 = Rect2(244, 366, 37, 75)
+const HOOK_EYE: Vector2 = Vector2(18.5, 6.0)
+const HOOK_SCALE: float = 0.224
+static var _hooks: Dictionary = {}
+var _last_dir: Vector2 = Vector2.DOWN
+
+
+func _hook(at: Vector2, dir: Vector2) -> void:
+	var rot: float = dir.angle() - PI / 2.0
+	var url: Variant = skipper.look.get("hook")
+	if url != null:
+		if not _hooks.has(url):
+			var src: Texture2D = Skipper.tex(url)
+			var a: AtlasTexture = null
+			if src != null:
+				a = AtlasTexture.new()
+				a.atlas = src
+				a.region = HOOK_REGION
+			_hooks[url] = a
+		var tex: Texture2D = _hooks[url]
+		if tex != null:
+			draw_set_transform(at, rot, Vector2(HOOK_SCALE, HOOK_SCALE))
+			draw_texture(tex, -HOOK_EYE)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			return
 	var c: Color = Color(0.72, 0.75, 0.78, 0.9)
-	draw_line(at, at + Vector2(0, 5), c, 1.1, true)
-	draw_arc(at + Vector2(-2.2, 5), 2.2, 0.0, PI, 10, c, 1.1, true)
-	draw_line(at + Vector2(-4.4, 5), at + Vector2(-4.4, 3.4), c, 1.1, true)
+	draw_set_transform(at, rot, Vector2.ONE)
+	draw_line(Vector2.ZERO, Vector2(0, 5), c, 1.1, true)
+	draw_arc(Vector2(-2.2, 5), 2.2, 0.0, PI, 10, c, 1.1, true)
+	draw_line(Vector2(-4.4, 5), Vector2(-4.4, 3.4), c, 1.1, true)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## Snapped: the near half springs back to the tip, the far half falls away.

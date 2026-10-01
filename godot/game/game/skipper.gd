@@ -184,8 +184,8 @@ func _build() -> void:
 		if not pet.is_empty():
 			var o: Dictionary = (Rules.data()["petOverlays"] as Dictionary)[pet["species"]][frame]
 			_roles[key] = _part(tex(pet["restImageUrl"]), origin, _pos(o), w, h, false)
-	if look.get("hook") != null and frame != "wait":
-		_part(tex(look["hook"]), origin, HOOK[frame], w, h, false)
+	# The hook hangs on the end of the live line now (game/fishing_line.gd),
+	# so it moves with it; it is no longer placed here.
 	_roles["boat"] = _hull_sprite if _hull_sprite != null else _roles.get("skin")
 	if water:
 		_water_fx(origin, h, _hull_sprite)
