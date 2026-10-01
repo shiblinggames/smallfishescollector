@@ -49,6 +49,9 @@ var locked: bool = false
 var skipper: Skipper
 var _facing: float = -1.0
 var lantern: PointLight2D
+## The sea's disturbance (set by the sea): casts, bobbers and splashes ring it.
+var field: SeaField
+var _bob_t: float = 0.0
 
 
 func _ready() -> void:
@@ -173,7 +176,28 @@ func facing() -> float:
 
 
 func set_pose(pose: String) -> void:
+	if pose == "wait" and skipper.frame != "wait" and field != null:
+		# The line lands: a ring where it went in.
+		field.ring(hook_at(), 150.0, 1.7, 0.9)
+		_bob_t = 0.0
 	skipper.set_frame(pose)
+
+
+## Where the line meets the water while she waits (the sheet's painted ring:
+## 155 x 760 of the 900 x 800 sheet), on the plane.
+func hook_at() -> Vector2:
+	var x: float = -105.0 - 16.8 + 155.0 / 900.0 * 210.0
+	var y: float = -93.3 - 48.5 + 760.0 / 800.0 * 186.7
+	return position + Vector2(x * signf(skipper.scale.x), y / Chart.GROUND)
+
+
+func _process(delta: float) -> void:
+	# The bobber, twitching now and then while she waits.
+	if field != null and skipper.frame == "wait":
+		_bob_t -= delta
+		if _bob_t <= 0.0:
+			_bob_t = randf_range(1.3, 2.4)
+			field.ring(hook_at(), 70.0, 1.3, 0.45)
 
 
 func set_look(look: Dictionary) -> void:
@@ -212,6 +236,8 @@ func splash(perfect: bool) -> void:
 	p.position = at
 	add_child(p)
 	p.emitting = true
+	if field != null:
+		field.ring(position + at, 240.0 if perfect else 170.0, 1.9, 1.0)
 	var ring: Ripple = Ripple.new()
 	ring.position = at
 	ring.grow = 150.0 if perfect else 110.0

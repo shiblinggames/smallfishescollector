@@ -30,6 +30,11 @@ uniform float u_swell = 1.0;
 uniform float u_rush = 0.0;
 uniform vec2 u_shelf = vec2(1400.0, 22600.0);
 uniform float u_lantern = 0.0;
+// THE DISTURBANCE (game/sea_field.gd): height from every wake, hull, cast and
+// splash, at half the screen's resolution.
+uniform sampler2D u_field : filter_linear, repeat_disable;
+uniform vec2 u_field_px = vec2(0.00125, 0.0022);
+uniform float u_field_on = 0.0;
 
 const float GROUND = 0.58;
 const vec2 WIND = vec2(0.8231, 0.5679);
@@ -83,6 +88,18 @@ void fragment() {
 	float recede = depth * depth;
 	vec2 w = (world - u_cam) * (0.0016 * (1.0 + recede * 1.5)) + u_cam * 0.0016;
 
+	// DISTURBED: how stirred the water is here, and which way it slopes.
+	float fh = 0.0;
+	vec2 fg = vec2(0.0);
+	if (u_field_on > 0.5) {
+		fh = texture(u_field, SCREEN_UV).r;
+		fg = vec2(
+			texture(u_field, SCREEN_UV + vec2(u_field_px.x, 0.0)).r - texture(u_field, SCREEN_UV - vec2(u_field_px.x, 0.0)).r,
+			texture(u_field, SCREEN_UV + vec2(0.0, u_field_px.y)).r - texture(u_field, SCREEN_UV - vec2(0.0, u_field_px.y)).r);
+		// The swell itself is pushed around by it.
+		w += fg * 0.35;
+	}
+
 	// FLOW: a slow current, bent by a very coarse field, carries the swell.
 	vec2 wa = along_wind(w, 0.62);
 	float bend = vnoise(wa * 0.35 + vec2(TIME * 0.004, 0.0)) - 0.5;
@@ -97,6 +114,8 @@ void fragment() {
 	shade *= 1.0 - shelf * 0.14;
 	float facing = dot(normalize(vec2(swell, swell * 0.6) + vec2(0.0001)), normalize(u_light));
 	shade += facing * 0.035 * u_swell;
+	// The stirred water's slope catches the light on one side, shadows the other.
+	shade += dot(fg, normalize(u_light)) * 0.85 + fh * 0.05;
 	col *= shade;
 
 	// Caustics over the sandy shallows, by day.
@@ -146,6 +165,15 @@ void fragment() {
 	crest *= smoothstep(0.35, 0.75, rag);
 	float cap_amt = 0.09 * 0.6 * u_swell * (1.0 - u_dark * 0.55) * (1.0 - 0.55 * u_rush) * (1.0 - recede * 0.6);
 	col += crest * vec3(0.90, 0.96, 1.0) * cap_amt;
+
+	// Foam where it is most stirred, and broken by the swell.
+	float froth = smoothstep(0.30, 0.95, fh) * (0.55 + 0.45 * smoothstep(0.3, 0.7, rag));
+	col += froth * vec3(0.90, 0.96, 1.0) * 0.16 * (1.0 - u_dark * 0.5);
+	// Glints come off the slopes of what she stirred, too.
+	col += smoothstep(0.02, 0.10, length(fg)) * smoothstep(0.6, 0.9, rag) * vec3(1.0, 0.97, 0.9) * 0.10 * (1.0 - u_dark);
+	// AT NIGHT THE STIRRED WATER GLOWS: plankton lighting up in the wake, round
+	// a cast, under a hull that moves.
+	col += vec3(0.36, 0.96, 0.85) * smoothstep(0.05, 0.7, fh) * u_dark * 0.55 * (0.7 + 0.3 * rag);
 
 	// LANTERN: warm light pooled on the water around the boat, at night. The
 	// boat is always at the middle of the screen.

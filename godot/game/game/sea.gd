@@ -41,6 +41,7 @@ var _world: Node2D
 var _boat: Boat
 var _camera: Camera2D
 var _wake: Wake
+var _field: SeaField
 ## THE WHEEL ZOOM (SeaMap.tsx): 0.55 to 1.6 of the chart's own scale, eased,
 ## and remembered on this machine (a number tuned on one screen is wrong on
 ## another, so it is not in the save).
@@ -135,7 +136,13 @@ func _ready() -> void:
 	_wake = Wake.new()
 	_wake.z_index = -1
 	_world.add_child(_wake)
+	_field = SeaField.new()
+	add_child(_field)
+	_field.share_wake(_wake)
+	_water.set_shader_parameter("u_field", _field.texture())
+	_water.set_shader_parameter("u_field_on", 1.0)
 	_boat = Boat.new()
+	_boat.field = _field
 	var at: Variant = session.profile().get("sea_x")
 	_boat.position = Vector2(Js.num(at), Js.num(session.profile().get("sea_y"))) if at != null else Chart.HOME
 	_world.add_child(_boat)
@@ -239,6 +246,12 @@ func _process(delta: float) -> void:
 		var m: Shipmate = _mates[k]
 		contacts.append(Boat.contact_for("mate:" + k, m.position, m.skipper))
 	_wake.lay(contacts)
+	var speeds: Dictionary = {}
+	for id: String in _wake._seen:
+		speeds[id] = (_wake._seen[id] as Dictionary)["speed"]
+	speeds["me"] = _boat.velocity.length()
+	_field.step(delta, _camera.position, _camera.zoom.x, get_viewport_rect().size, contacts, speeds)
+	_water.set_shader_parameter("u_field_px", Vector2(1.0, 1.0) / Vector2(_field.viewport.size))
 	_portal.lift = lift
 	_recall_t += delta
 	if _recall_t > 1.0:
