@@ -278,13 +278,13 @@ func _ready() -> void:
 	var key: Label = Label.new()
 	key.name = "Key"
 	key.text = "E"
-	Kit.style(key, "chip", Color("#cfe3ee"))
+	Kit.style(key, "chip", Kit.PAPER_INK)
 	key.add_theme_font_size_override("font_size", 11)
 	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	key.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	var ks: StyleBoxFlat = StyleBoxFlat.new()
-	ks.bg_color = Color(1, 1, 1, 0.08)
-	ks.border_color = Color(1, 1, 1, 0.3)
+	ks.bg_color = Color(Kit.PAPER_INK, 0.06)
+	ks.border_color = Color(Kit.PAPER_INK, 0.4)
 	ks.set_border_width_all(1)
 	ks.set_corner_radius_all(5)
 	key.add_theme_stylebox_override("normal", ks)
@@ -432,7 +432,7 @@ func refresh() -> void:
 	var cap: int = int(Rules.fish_hold(Js.num(p.get("fish_hold_tier")))["capacity"])
 	var count: int = int(session.store.hold_count(session.uid))
 	_hold.text = "%d/%d" % [count, cap]
-	_hold.add_theme_color_override("font_color", Color("#f87171") if count >= cap else Color("#dfeaf2"))
+	_hold.add_theme_color_override("font_color", Color(0.7, 0.2, 0.15) if count >= cap else Kit.PAPER_INK)
 	_loadout_val.text = String(Rules.rod(Js.num(p.get("rod_tier")))["name"])
 	_log_val.text = "Catches"
 	_update_auto()
@@ -650,6 +650,11 @@ func set_bait(t: String) -> void:
 
 
 func _open_log() -> void:
+	locker_wanted.emit("log", "")
+
+
+## The Almanac on its own (no sea under it).
+func _open_almanac() -> void:
 	var a: Almanac = Almanac.new()
 	a.session = session
 	_modal = a

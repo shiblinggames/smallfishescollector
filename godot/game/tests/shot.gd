@@ -332,10 +332,13 @@ func _init() -> void:
 				await process_frame
 		"almanac":
 			hud._open_log()
+			for f: int in 40:
+				await process_frame
 		"giants":
 			hud._open_log()
-			await process_frame
-			var a: Almanac = main.get_child(main.get_child_count() - 1)._hud.get_parent().get_child(-1)
+			for f: int in 10:
+				await process_frame
+			var a: Almanac = sea._locker._almanac
 			a._room = "Giants"
 			a._draw_tabs()
 			a._draw_room()

@@ -44,11 +44,14 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var top: bool = level >= Rules.MAX_LEVEL
-	var c: Color = Color("#f0c040") if top else Color("#60a5fa")
+	var c: Color = Color(0.62, 0.45, 0.1) if top else Color(0.24, 0.42, 0.66)
 	var r: Rect2 = Rect2(Vector2.ZERO, size)
 	var pill: StyleBoxFlat = StyleBoxFlat.new()
-	pill.bg_color = Color(0.016, 0.04, 0.07, 0.72)
-	pill.border_color = Color(c, 0.16)
+	pill.bg_color = Color(Kit.PAPER, 0.96)
+	pill.border_color = Color(Kit.PAPER_INK, 0.4)
+	pill.shadow_color = Color(0, 0, 0, 0.25)
+	pill.shadow_size = 6
+	pill.shadow_offset = Vector2(0, 2)
 	pill.set_border_width_all(1)
 	pill.set_corner_radius_all(20)
 	draw_style_box(pill, r)
@@ -58,7 +61,7 @@ func _draw() -> void:
 	draw_string(title, Vector2(30, 27), str(level), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, c)
 	var track: Rect2 = Rect2(64, size.y / 2.0 - 3.5, 170, 7)
 	var tb: StyleBoxFlat = StyleBoxFlat.new()
-	tb.bg_color = Color(1, 1, 1, 0.08)
+	tb.bg_color = Color(Kit.PAPER_INK, 0.12)
 	tb.set_corner_radius_all(4)
 	draw_style_box(tb, track)
 	if _shown > 0.0:
@@ -67,23 +70,23 @@ func _draw() -> void:
 		var glow: StyleBoxFlat = StyleBoxFlat.new()
 		glow.bg_color = Color(c, 0.0)
 		glow.set_corner_radius_all(4)
-		glow.shadow_color = Color(c, 0.4)
+		glow.shadow_color = Color(c, 0.18)
 		glow.shadow_size = 6
 		draw_style_box(glow, Rect2(track.position, Vector2(w, track.size.y)))
 		var fb: StyleBoxFlat = StyleBoxFlat.new()
 		fb.bg_color = c
 		fb.set_corner_radius_all(4)
 		draw_style_box(fb, Rect2(track.position, Vector2(w, track.size.y)))
-		draw_polygon(PackedVector2Array([track.position + Vector2(3, 0), track.position + Vector2(w * 0.7, 0), track.position + Vector2(w * 0.7, track.size.y), track.position + Vector2(3, track.size.y)]), PackedColorArray([Color(0.02, 0.04, 0.07, 0.45), Color(0.02, 0.04, 0.07, 0.0), Color(0.02, 0.04, 0.07, 0.0), Color(0.02, 0.04, 0.07, 0.45)]))
+		draw_polygon(PackedVector2Array([track.position + Vector2(3, 0), track.position + Vector2(w * 0.7, 0), track.position + Vector2(w * 0.7, track.size.y), track.position + Vector2(3, track.size.y)]), PackedColorArray([Color(1, 1, 1, 0.25), Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.25)]))
 	var x: float = track.end.x + 10.0
 	if not top:
-		draw_string(body, Vector2(x, 25), "%s xp" % Js.thousands(to_go), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1, 1, 1, 0.65))
+		draw_string(body, Vector2(x, 25), "%s xp" % Js.thousands(to_go), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Kit.PAPER_INK_SOFT)
 		x += 62.0
 		if next_reward != "":
-			draw_string(body, Vector2(x, 25), ("★ " if milestone else "") + next_reward, HORIZONTAL_ALIGNMENT_LEFT, 200, 10, Color("#f0c040") if milestone else Color(1, 1, 1, 0.5))
+			draw_string(body, Vector2(x, 25), ("★ " if milestone else "") + next_reward, HORIZONTAL_ALIGNMENT_LEFT, 200, 10, Color(0.6, 0.42, 0.08) if milestone else Kit.PAPER_INK_SOFT)
 	# The streak, with its flame.
 	var on: bool = streak > 0
-	var fc: Color = Color(0.98, 0.57, 0.24, 0.9) if on else Color(0.84, 0.91, 0.94, 0.3)
+	var fc: Color = Color(0.85, 0.4, 0.12) if on else Color(Kit.PAPER_INK, 0.3)
 	var fx: float = size.x - 44.0
 	var fy: float = size.y / 2.0
 	draw_colored_polygon(PackedVector2Array([

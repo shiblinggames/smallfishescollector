@@ -49,6 +49,8 @@ var _note: Label
 var _hold_sort: String = "value"
 var _hold_detail: Label
 var _trying: Array = ["__"]
+var _panel: Control
+var _almanac: Almanac
 
 
 func _ready() -> void:
@@ -80,6 +82,7 @@ func _ready() -> void:
 	panel.offset_top = 22.0
 	panel.offset_bottom = -22.0
 	add_child(panel)
+	_panel = panel
 	var shadow: Pane = Kit.pane(panel, { "radius": 14, "fill": [Color(0, 0, 0, 0)], "shadow": [Color(0, 0, 0, 0.45), 26, Vector2(0, 8)], "pad": 0 })
 	shadow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shadow.offset_left = 10
@@ -117,11 +120,8 @@ func _ready() -> void:
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 10)
 	col.add_child(_body)
-	panel.position.x += 40.0
 	panel.modulate.a = 0.0
-	var tw: Tween = create_tween().set_parallel().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tw.tween_property(panel, "position:x", panel.position.x - 40.0, 0.35)
-	tw.tween_property(panel, "modulate:a", 1.0, 0.25)
+	create_tween().tween_property(panel, "modulate:a", 1.0, 0.25)
 	_show_tab(tab)
 
 
@@ -129,6 +129,8 @@ func close() -> void:
 	if is_queued_for_deletion():
 		return
 	sea.stage = null
+	if _almanac != null and is_instance_valid(_almanac):
+		_almanac.mark_read()
 	_wear(Skipper.look_of(session.profile()))
 	closed.emit()
 	queue_free()
@@ -140,7 +142,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 	elif event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_TAB:
 		get_viewport().set_input_as_handled()
-		_show_tab("hold" if tab == "loadout" else "loadout")
+		var order: Array = ["loadout", "hold", "log"]
+		_show_tab(order[(order.find(tab) + 1) % order.size()])
 
 
 func _process(_delta: float) -> void:
@@ -163,26 +166,54 @@ func _show_tab(t: String) -> void:
 	for o: Array in [["loadout", "Loadout"], ["hold", "Hold"], ["log", "Log"]]:
 		var b: Pane.PaneButton = Paper.button(o[1], o[0] == t)
 		b.custom_minimum_size = Vector2(110, 34)
-		b.pressed.connect(func() -> void:
-			if o[0] == "log":
-				close()
-				hud._open_log()
-			else:
-				_show_tab(o[0]))
+		b.pressed.connect(func() -> void: _show_tab(o[0]))
 		_tabs.add_child(b)
 	var hint: Label = Paper.text(_tabs, "Tab to switch", "note", Paper.INK_FAINT)
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if _almanac != null and is_instance_valid(_almanac) and t != "log":
+		_almanac.mark_read()
+	_almanac = null
 	for c: Node in _body.get_children():
 		c.queue_free()
 	_gauge = null
 	_callouts.visible = t == "loadout"
 	_card.visible = t == "loadout"
+	_widen(t == "log")
 	if t == "loadout":
 		_build_loadout()
-	else:
+	elif t == "hold":
 		_build_hold()
+	else:
+		_build_log()
+
+
+## The Log is a book: the sheet opens out to nearly the whole width, over
+## the boat; the other tabs fold it back.
+func _widen(wide: bool) -> void:
+	if _panel == null:
+		return
+	var vp: Vector2 = get_viewport_rect().size
+	var goal: float = -(vp.x - 44.0) if wide else -PANEL_W - 22.0
+	if is_equal_approx(_panel.offset_left, goal):
+		return
+	var tw: Tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_panel, "offset_left", goal, 0.32)
+
+
+# ── Log ────────────────────────────────────────────────────────────────────────
+
+func _build_log() -> void:
+	var vp: Vector2 = get_viewport_rect().size
+	_almanac = Almanac.new()
+	_almanac.session = session
+	_almanac.embedded = true
+	_almanac.book_w = vp.x - 44.0 - 22.0 - 68.0
+	_almanac.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_almanac.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_almanac.mouse_filter = Control.MOUSE_FILTER_PASS
+	_body.add_child(_almanac)
 
 
 # ── Loadout ────────────────────────────────────────────────────────────────────

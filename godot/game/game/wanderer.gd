@@ -54,14 +54,16 @@ func _ready() -> void:
 	add_child(holder)
 	_plate = PanelContainer.new()
 	_box = StyleBoxFlat.new()
-	_box.bg_color = Color(0.024, 0.047, 0.07, 0.86)
+	_box.bg_color = Color(Kit.PAPER, 0.95)
+	_box.shadow_color = Color(0, 0, 0, 0.3)
+	_box.shadow_offset = Vector2(0, 2)
 	_box.set_border_width_all(1)
 	_box.set_corner_radius_all(9)
 	_box.content_margin_left = 10
 	_box.content_margin_right = 10
 	_box.content_margin_top = 3
 	_box.content_margin_bottom = 4
-	_box.shadow_size = 0
+	_box.shadow_size = 5
 	_plate.add_theme_stylebox_override("panel", _box)
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 0)
@@ -84,10 +86,12 @@ func _ready() -> void:
 
 
 func _paint() -> void:
-	_name.add_theme_color_override("font_color", Color(0.71, 0.75, 0.78, 0.6) if done else Color("#e6eef4"))
+	_name.set_meta("lifted", true)
+	_kind.set_meta("lifted", true)
+	_name.add_theme_color_override("font_color", Color(Kit.PAPER_INK, 0.5) if done else Kit.PAPER_INK)
 	_kind.text = "Traded today" if done else role
-	_kind.add_theme_color_override("font_color", Color(0.63, 0.69, 0.73, 0.55) if done else accent)
-	_box.border_color = Color(0.59, 0.65, 0.7, 0.3) if done else Kit.a(accent, 0.48)
+	_kind.add_theme_color_override("font_color", Color(Kit.PAPER_INK_SOFT, 0.6) if done else Kit.ink(accent))
+	_box.border_color = Color(Kit.PAPER_INK, 0.25) if done else Color(Kit.ink(accent), 0.6)
 
 
 func _place(first: bool = false) -> void:

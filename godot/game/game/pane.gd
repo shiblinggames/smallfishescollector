@@ -35,8 +35,22 @@ func _init(s: Dictionary = {}) -> void:
 
 
 func set_spec(s: Dictionary) -> void:
+	s = Pane.paperize(s)
 	spec = s
 	Pane.apply(_mat, s)
+	if s.get("paper", false):
+		set_meta("paper", true)
+	elif s.get("keep", false) and s.has("grain"):
+		set_meta("paper", false)
+	elif has_meta("paper"):
+		remove_meta("paper")
+	# A button's own face speaks for the button (its words are its children).
+	var host: Node = get_parent()
+	if host is PaneButton and (host as PaneButton)._bg == self:
+		if has_meta("paper"):
+			host.set_meta("paper", get_meta("paper"))
+		elif host.has_meta("paper"):
+			host.remove_meta("paper")
 	var pad: Variant = s.get("pad", 14)
 	var box: StyleBoxEmpty = StyleBoxEmpty.new()
 	if pad is Array:
@@ -48,6 +62,30 @@ func set_spec(s: Dictionary) -> void:
 		box.set_content_margin_all(float(pad))
 	add_theme_stylebox_override("panel", box)
 	queue_redraw()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_ENTER_TREE and not spec.get("paper", false) and not spec.get("keep", false) and not spec.get("_force", false):
+		var top: float = 0.0
+		for f: Variant in spec.get("fill", []):
+			top = maxf(top, (f[0] if f is Array else f as Color).a)
+		if top >= 0.02 and Pane._in_room(self):
+			var s: Dictionary = spec.duplicate(true)
+			s["_force"] = true
+			set_spec(s)
+
+
+static func _in_room(n: Node) -> bool:
+	var p: Node = n.get_parent()
+	var hops: int = 0
+	while p != null and hops < 24:
+		if p.has_meta("paper_room"):
+			return true
+		if p is CanvasLayer:
+			return false
+		p = p.get_parent()
+		hops += 1
+	return false
 
 
 func _sized() -> void:
@@ -69,8 +107,53 @@ static func reach(s: Dictionary) -> float:
 	return float(sh[1]) * 1.4 + maxf(absf(off.x), absf(off.y)) + 2.0
 
 
+## PAPER (2026-10-01): a dark, solid fill is a panel, and panels are paper
+## now. Its stops become paper (a tinted stop, paper washed with that tint),
+## light hairlines become ink, shadows soften, sheens and inner glows go. A
+## spec with "keep" (a wash over art, the wood) is left alone.
+static func paperize(s: Dictionary) -> Dictionary:
+	if s.get("keep", false) or s.get("paper", false):
+		return s
+	var fill: Array = s.get("fill", [Color(0.05, 0.07, 0.09)])
+	var dark: bool = s.get("_force", false)
+	for f: Variant in fill:
+		var c: Color = f[0] if f is Array else f
+		if c.a > 0.5 and c.get_luminance() < 0.22:
+			dark = true
+	if not dark:
+		return s
+	var out: Dictionary = s.duplicate(true)
+	var stops: Array = []
+	for f: Variant in fill:
+		var c: Color = f[0] if f is Array else f
+		var pc: Color
+		if c.get_luminance() < 0.22:
+			pc = Kit.PAPER.darkened(clampf(0.1 - c.get_luminance(), 0.0, 0.06))
+		else:
+			pc = Kit.PAPER.lerp(Color(c, 1.0), clampf(c.a * 1.4, 0.0, 0.45))
+		pc.a = maxf(0.97, c.a) if c.a > 0.3 else 0.97
+		stops.append([pc, float(f[1])] if f is Array else pc)
+	out["fill"] = stops
+	for key: String in ["border", "top"]:
+		var b: Variant = out.get(key)
+		if b != null:
+			var bc: Color = b[1]
+			out[key] = [b[0], Color(Kit.PAPER_INK, clampf(bc.a * 2.4, 0.18, 0.55)) if bc.s < 0.25 else Color(Kit.ink(Color(bc, 1.0)), clampf(bc.a * 1.4, 0.35, 0.85))]
+	var sh: Variant = out.get("shadow")
+	if sh != null:
+		out["shadow"] = [Color(0, 0, 0, minf(0.3, Color(sh[0]).a * 0.5)), sh[1], sh[2] if (sh as Array).size() > 2 else Vector2.ZERO]
+	var g: Variant = out.get("glow")
+	if g != null:
+		out["glow"] = [Color(Kit.ink(Color(g[0], 1.0)), Color(g[0]).a * 0.5), g[1], g[2]]
+	out["sheen"] = 0.0
+	out.erase("inset")
+	out["paper"] = true
+	return out
+
+
 ## Set a shader material from a spec.
 static func apply(m: ShaderMaterial, s: Dictionary) -> void:
+	m.set_shader_parameter("paper", 1.0 if s.get("paper", false) else (0.6 if s.get("grain", false) else 0.0))
 	m.set_shader_parameter("radius", float(s.get("radius", 14.0)))
 	m.set_shader_parameter("angle", float(s.get("angle", 180.0)))
 	var fill: Array = s.get("fill", [Color(0.05, 0.07, 0.09)])
@@ -142,6 +225,8 @@ class PaneButton:
 		ring.set_corner_radius_all(int(minf(float(n.get("radius", 12)), 999.0)) + 3)
 		ring.set_expand_margin_all(3)
 		add_theme_stylebox_override("focus", ring)
+		if _bg.has_meta("paper"):
+			set_meta("paper", _bg.get_meta("paper"))
 		mouse_entered.connect(func() -> void: _bg.set_spec(hot))
 		mouse_exited.connect(func() -> void: _bg.set_spec(normal))
 		focus_entered.connect(func() -> void: _bg.set_spec(hot))

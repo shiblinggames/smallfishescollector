@@ -40,6 +40,9 @@ uniform vec4 border_color : source_color = vec4(0.0);
 uniform float top_border = 0.0;
 uniform vec4 top_color : source_color = vec4(0.0);
 
+// Paper (1) or wood grain (0.6): grain, fibres, a torn edge, a tea stain.
+uniform float paper = 0.0;
+
 uniform vec4 shadow : source_color = vec4(0.0);
 uniform float shadow_blur = 0.0;
 uniform vec2 shadow_offset = vec2(0.0);
@@ -48,6 +51,19 @@ varying vec2 local;
 
 void vertex() {
 	local = VERTEX;
+}
+
+float phash(vec2 p) {
+	vec3 q = fract(vec3(p.xyx) * 0.1031);
+	q += dot(q, q.yzx + 33.33);
+	return fract((q.x + q.y) * q.z);
+}
+
+float pnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(phash(i), phash(i + vec2(1.0, 0.0)), u.x), mix(phash(i + vec2(0.0, 1.0)), phash(i + vec2(1.0, 1.0)), u.x), u.y);
 }
 
 float box(vec2 p, vec2 b, float r) {
@@ -82,6 +98,10 @@ void fragment() {
 	vec2 c = local - half_size;
 	float r = min(radius, min(half_size.x, half_size.y));
 	float d = box(c, half_size, r);
+	if (paper > 0.9) {
+		// A torn edge: the outline wanders a pixel or two, in and out.
+		d += (pnoise(local * 0.11) - 0.5) * 2.6 + (pnoise(local * 0.5) - 0.5) * 0.9;
+	}
 	vec4 col = vec4(0.0);
 	if (shadow.a > 0.0) {
 		float ds = box(c - shadow_offset, half_size, r);
@@ -97,6 +117,17 @@ void fragment() {
 		if (glow.a > 0.0) {
 			vec2 g = (local / rect_size - glow_at) / glow_r;
 			fill = over(fill, vec4(glow.rgb, glow.a * (1.0 - smoothstep(0.0, 1.0, length(g)))));
+		}
+		if (paper > 0.9) {
+			float grain = phash(floor(local * 0.9)) * 0.5 + pnoise(local * 0.12) * 0.5;
+			float mottle = pnoise(local * 0.012);
+			fill.rgb *= (0.95 + grain * 0.07) * (0.98 + mottle * 0.04);
+			float stain = 1.0 - smoothstep(0.0, 18.0 + pnoise(local * 0.03) * 16.0, -d);
+			fill.rgb = mix(fill.rgb, fill.rgb * vec3(0.84, 0.75, 0.62), stain * 0.45);
+		} else if (paper > 0.5) {
+			// Wood: long grain along the plank.
+			float g = pnoise(vec2(local.x * 0.02, local.y * 0.5)) * 0.6 + pnoise(vec2(local.x * 0.06, local.y * 1.4)) * 0.4;
+			fill.rgb *= 0.88 + g * 0.2;
 		}
 		if (sheen > 0.0) {
 			fill = over(fill, vec4(1.0, 1.0, 1.0, sheen * (1.0 - smoothstep(0.0, 0.2, local.y / rect_size.y))));

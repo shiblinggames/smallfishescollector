@@ -62,17 +62,19 @@ func _restyle() -> void:
 		return
 	var lit: bool = not disabled
 	var r: float = minf(size.x, size.y) / 2.0 if size.x > 0.0 else custom_minimum_size.x / 2.0
+	# Paper and wood (2026-10-01): a disc of stained wood, the action's
+	# colour pooled round its rim; greyed when it cannot.
 	_face.set_spec({
-		"radius": r, "fill": [Color("#0d1a26"), Color("#050c14")],
-		"glow": [Color("#1e2d3e"), Vector2(0.5, 0.42), Vector2(0.62, 0.62)],
-		"inset": [Color(accent, 0.55 if lit else 0.2), 9],
-		"border": [4, Color(0, 0, 0, 0.78)],
-		"shadow": [Color(accent, 0.38) if lit else Color(0, 0, 0, 0.55), 26, Vector2(0, 6)],
-		"pad": 0,
+		"radius": r, "fill": [Kit.WOOD_HI if lit else Kit.WOOD_HI.lerp(Color(0.5, 0.48, 0.45), 0.6), Kit.WOOD_LO if lit else Kit.WOOD_LO.lerp(Color(0.4, 0.38, 0.36), 0.6)],
+		"glow": [Color(1, 0.9, 0.7, 0.18), Vector2(0.5, 0.3), Vector2(0.6, 0.5)],
+		"inset": [Color(accent, 0.75 if lit else 0.15), 8],
+		"border": [3, Color(0.22, 0.13, 0.07, 0.9)],
+		"shadow": [Color(accent, 0.45) if lit else Color(0, 0, 0, 0.45), 24, Vector2(0, 5)],
+		"pad": 0, "keep": true, "grain": true,
 	})
-	var ink: Color = Color("#f4f9ff") if lit else Color(accent, 0.47)
+	var ink: Color = Kit.WOOD_INK if lit else Color(Kit.WOOD_INK, 0.55)
 	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color", "font_disabled_color"]:
 		add_theme_color_override(st, ink)
-	add_theme_color_override("font_shadow_color", Color(accent, 0.6) if lit else Color(0, 0, 0, 0))
+	add_theme_color_override("font_shadow_color", Color(0.15, 0.08, 0.03, 0.6) if lit else Color(0, 0, 0, 0))
 	add_theme_constant_override("shadow_offset_y", 0)
 	add_theme_constant_override("shadow_outline_size", 8)

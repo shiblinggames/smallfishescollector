@@ -247,13 +247,7 @@ func _summaries() -> Dictionary:
 # ── The page ───────────────────────────────────────────────────────────────────
 
 func _badge() -> Control:
-	var p: PanelContainer = PanelContainer.new()
-	var s: StyleBoxFlat = Room.box(Color(0.37, 0.92, 0.83, 0.08), Color(0.37, 0.92, 0.83, 0.3), 10, 0)
-	s.content_margin_left = 10
-	s.content_margin_right = 10
-	s.content_margin_top = 4
-	s.content_margin_bottom = 6
-	p.add_theme_stylebox_override("panel", s)
+	var p: Pane = Kit.pane(null, { "radius": 10, "fill": [Kit.PAPER.lerp(Color(0.37, 0.92, 0.83), 0.15)], "border": [1, Color(Kit.ink(Color(0.37, 0.92, 0.83)), 0.5)], "shadow": [Color(0, 0, 0, 0.2), 6, Vector2(0, 2)], "pad": [10, 4, 10, 6], "paper": true })
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 1)
 	p.add_child(v)

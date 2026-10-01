@@ -47,56 +47,64 @@ var _content: VBoxContainer
 var _scroll: ScrollContainer
 var _overlay: Control
 var _book_w: float = 1240.0
+## IN THE LOCKER (2026-10-01): the Log tab is this book, laid on the Locker's
+## own sheet of paper. No frame, no header, no close of its own; it fills
+## what it is given, book_w wide.
+var embedded: bool = false
+var book_w: float = 0.0
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var base: ColorRect = ColorRect.new()
-	base.color = Color("#0a090d")
-	base.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(base)
-	# The book: as wide as reads well (1,240), the paper under a light wash.
-	_book_w = minf(1240.0, get_viewport_rect().size.x)
 	var book: Control = Control.new()
-	book.anchor_left = 0.5
-	book.anchor_right = 0.5
-	book.anchor_bottom = 1.0
-	book.offset_left = -_book_w / 2.0
-	book.offset_right = _book_w / 2.0
-	add_child(book)
-	var paper: TextureRect = TextureRect.new()
-	paper.texture = Skipper.tex("almanac-paper.jpg")
-	paper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	paper.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	paper.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	book.add_child(paper)
-	Kit.wash(book, [[Color(0.031, 0.027, 0.039, 0.42), 0.0], [Color(0.031, 0.027, 0.039, 0.52), 0.55], [Color(0.024, 0.02, 0.031, 0.62), 1.0]])
+	var x: Button = null
+	if embedded:
+		_book_w = book_w if book_w > 0.0 else size.x
+		book.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		book.set_meta("paper", true)
+		add_child(book)
+	else:
+		var base: ColorRect = ColorRect.new()
+		base.color = Color("#0a090d")
+		base.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(base)
+		# The book: as wide as reads well (1,240), on paper.
+		_book_w = minf(1240.0, get_viewport_rect().size.x)
+		book.anchor_left = 0.5
+		book.anchor_right = 0.5
+		book.anchor_bottom = 1.0
+		book.offset_left = -_book_w / 2.0
+		book.offset_right = _book_w / 2.0
+		book.set_meta("paper", true)
+		add_child(book)
+		Paper.sheet(book, 6.0)
 	var col: VBoxContainer = VBoxContainer.new()
 	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	col.add_theme_constant_override("separation", 0)
 	book.add_child(col)
 
-	# The header bar.
-	var bar: Pane = Kit.pane(col, { "radius": 0, "fill": [Color(0.039, 0.035, 0.051, 0.9), Color(0.039, 0.035, 0.051, 0.72)], "pad": [18, 12, 16, 12] })
-	var head: HBoxContainer = HBoxContainer.new()
-	bar.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	titles.add_theme_constant_override("separation", 0)
-	head.add_child(titles)
-	var crew_name: Variant = Js.obj(session.save.get("charter")).get("name")
-	Kit.text(titles, "Fishing" if crew_name == null else "%s · the crew's book" % crew_name, "eyebrow", Kit.a(ACCENT, 0.72))
-	Kit.text(titles, "The Angler's Almanac", "title", INK)
-	var x: Button = Kit.close_button()
-	x.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	x.pressed.connect(close)
-	head.add_child(x)
-	var line: ColorRect = ColorRect.new()
-	line.color = Kit.a(ACCENT, 0.18)
-	line.custom_minimum_size = Vector2(0, 1)
-	col.add_child(line)
+	if not embedded:
+		# The header bar.
+		var bar: Pane = Kit.pane(col, { "radius": 0, "fill": [Color(0.039, 0.035, 0.051, 0.9), Color(0.039, 0.035, 0.051, 0.72)], "pad": [18, 12, 16, 12] })
+		var head: HBoxContainer = HBoxContainer.new()
+		bar.add_child(head)
+		var titles: VBoxContainer = VBoxContainer.new()
+		titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		titles.add_theme_constant_override("separation", 0)
+		head.add_child(titles)
+		var crew_name: Variant = Js.obj(session.save.get("charter")).get("name")
+		Kit.text(titles, "Fishing" if crew_name == null else "%s · the crew's book" % crew_name, "eyebrow", Kit.a(ACCENT, 0.72))
+		Kit.text(titles, "The Angler's Almanac", "title", INK)
+		x = Kit.close_button()
+		x.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		x.pressed.connect(close)
+		head.add_child(x)
+		var line: ColorRect = ColorRect.new()
+		line.color = Color(Kit.PAPER_INK, 0.18)
+		line.custom_minimum_size = Vector2(0, 1)
+		col.add_child(line)
 
 	var body: HBoxContainer = HBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -109,7 +117,7 @@ func _ready() -> void:
 	_tabs.add_theme_constant_override("separation", 4)
 	rail.add_child(_tabs)
 	var rule: ColorRect = ColorRect.new()
-	rule.color = Color(1, 1, 1, 0.09)
+	rule.color = Color(Kit.PAPER_INK, 0.18)
 	rule.custom_minimum_size = Vector2(1, 0)
 	body.add_child(rule)
 	_scroll = ScrollContainer.new()
@@ -128,17 +136,25 @@ func _ready() -> void:
 	_content.add_theme_constant_override("separation", 10)
 	pad.add_child(_content)
 	_reload()
-	x.grab_focus.call_deferred()
+	if x != null:
+		x.grab_focus.call_deferred()
 
 
 func close() -> void:
-	session.act("markAlmanacViewed")
-	session.persist()
+	mark_read()
 	closed.emit()
 	queue_free()
 
 
+## Stamp the book as read (closing it, or leaving the Locker's Log tab).
+func mark_read() -> void:
+	session.act("markAlmanacViewed")
+	session.persist()
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if embedded and _overlay == null:
+		return
 	if event.is_action_pressed("fish_back"):
 		get_viewport().set_input_as_handled()
 		if _overlay != null:

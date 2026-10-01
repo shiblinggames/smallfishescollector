@@ -30,8 +30,11 @@ func _ready() -> void:
 	add_child(holder)
 	_plate = PanelContainer.new()
 	var s: StyleBoxFlat = StyleBoxFlat.new()
-	s.bg_color = Color(0.024, 0.047, 0.07, 0.86)
-	s.border_color = Color(0.37, 0.92, 0.83, 0.45)
+	s.bg_color = Color(Kit.PAPER, 0.95)
+	s.border_color = Color(Kit.ink(Color(0.37, 0.92, 0.83)), 0.6)
+	s.shadow_color = Color(0, 0, 0, 0.3)
+	s.shadow_size = 5
+	s.shadow_offset = Vector2(0, 2)
 	s.set_border_width_all(1)
 	s.set_corner_radius_all(10)
 	s.content_margin_left = 12
@@ -42,7 +45,7 @@ func _ready() -> void:
 	_name_l = Label.new()
 	_name_l.add_theme_font_override("font", UiTheme.title_font())
 	_name_l.add_theme_font_size_override("font_size", 15)
-	_name_l.add_theme_color_override("font_color", Color("#dff7f2"))
+	_name_l.add_theme_color_override("font_color", Kit.PAPER_INK)
 	_plate.add_child(_name_l)
 	holder.add_child(_plate)
 	set_mate_name(mate_name)

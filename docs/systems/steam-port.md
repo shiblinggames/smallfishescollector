@@ -315,6 +315,23 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   QUICK-SWAP WHEEL (`game/swap_wheel.gd`): hold Q / left shoulder between casts, bait and
   rods fan out round her, point and let go. Not changed: the HUD's own dark bottom row and
   chips, the Almanac, the rooms ashore (LoadoutView still serves the Shipyard).
+- EVERYTHING ON PAPER (2026-10-01; Kong: "build everything in the same paper style"). Done
+  at the root, not screen by screen: Pane.paperize turns any dark solid fill into paper
+  (tinted stops become tinted paper, light hairlines ink, shadows soft, sheens gone) and
+  pane.gdshader grains it, tears its edge and stains it (`paper`; wood grain for planks).
+  Words are inked when they LAND on paper: Kit.style/face hook every label, and on entering
+  the tree it takes Kit.ink(raw) if the nearest ancestor with a "paper" meta says paper
+  (light neutrals to the ink ramp, bright accents to their dark pigment); words on the
+  water or a dark backdrop keep their colour, and Kit.lift opts a label out. In a Room
+  (meta "paper_room") see-through tinted panes are forced to paper too. Kit.button:
+  secondary paper, accent tinted paper, danger red paper, PRIMARY a plank of stained wood
+  (as are the back pill and the Cast button). Text fields, scroll bars, tabs, the XP pill,
+  the name tags over folk and crewmates: paper. Specs marked "keep" (washes over art, wood)
+  are left alone. THE LOG IS IN THE LOCKER: Almanac.embedded drops its frame and header and
+  lays the book on the Locker's sheet, which widens to nearly full width for the Log tab
+  (Tab cycles Loadout, Hold, Log); leaving the tab stamps the book read. Left dark on
+  purpose: the giants' slabs (paintings of the deep), the level-up and other full-screen
+  moments over a scrim, the rooms' painted backdrops.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

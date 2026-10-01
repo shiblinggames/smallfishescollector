@@ -483,8 +483,7 @@ func _movers(logged: Array) -> void:
 		var e: Dictionary = m[1]
 		if e.is_empty():
 			continue
-		var p: PanelContainer = PanelContainer.new()
-		p.add_theme_stylebox_override("panel", Room.box(Color(0.07, 0.08, 0.1, 0.95), Color(m[2], 0.3), 12, 14))
+		var p: PanelContainer = Room.panel(null, Room.box(Color(0.07, 0.08, 0.1, 0.95), Color(m[2], 0.3), 12, 14))
 		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		g.add_child(p)
 		var v: VBoxContainer = VBoxContainer.new()

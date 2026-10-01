@@ -41,6 +41,60 @@ const DANGER_INK: Color = Color("#f0a0a0")
 const BASE: Color = Color("#0a1016")
 const BASE_DEEP: Color = Color("#080e15")
 
+## PAPER (Kong, 2026-10-01: every screen on painted paper and wood). Panels
+## are paper now (Pane turns a dark fill into paper, see Pane.paperize), and
+## words ON paper are inked: a light neutral becomes the ink ramp, a bright
+## accent its own dark pigment (Kit.ink). Words on the water or a dark
+## backdrop keep their light colour, so nothing a screen asks for is lost.
+const PAPER: Color = Color(0.945, 0.91, 0.83)
+const PAPER_INK: Color = Color(0.22, 0.17, 0.13)
+const PAPER_INK_SOFT: Color = Color(0.42, 0.35, 0.28)
+const WOOD_HI: Color = Color(0.6, 0.4, 0.22)
+const WOOD_LO: Color = Color(0.45, 0.28, 0.15)
+const WOOD_INK: Color = Color(0.98, 0.94, 0.85)
+
+
+## The colour a word takes on paper.
+static func ink(c: Color) -> Color:
+	var l: float = c.get_luminance()
+	if l < 0.5:
+		return c
+	if c.s < 0.28:
+		return Color(PAPER_INK if l >= 0.72 else PAPER_INK_SOFT, c.a)
+	return Color.from_hsv(c.h, minf(1.0, c.s * 1.15), c.v * 0.5, c.a)
+
+
+## Whether a control sits on paper: the nearest ancestor that says.
+static func on_paper(n: Node) -> bool:
+	var p: Node = n.get_parent()
+	var hops: int = 0
+	while p != null and hops < 24:
+		if p.has_meta("paper"):
+			return bool(p.get_meta("paper"))
+		if p is CanvasLayer or p is Viewport:
+			return false
+		p = p.get_parent()
+		hops += 1
+	return false
+
+
+## A label is inked when it lands on paper (and again if it is restyled).
+static func _hook(l: Label, col: Color) -> void:
+	l.set_meta("raw_ink", col)
+	if not l.has_meta("ink_hooked"):
+		l.set_meta("ink_hooked", true)
+		l.tree_entered.connect(func() -> void: Kit._settle(l))
+	if l.is_inside_tree():
+		_settle(l)
+
+
+static func _settle(l: Label) -> void:
+	if l.has_meta("lifted") or not l.has_meta("raw_ink"):
+		return
+	var raw: Color = l.get_meta("raw_ink")
+	l.add_theme_color_override("font_color", ink(raw) if on_paper(l) else raw)
+
+
 ## Rarity 1-5 (the catch card's palette; the market's near-copy is retired).
 const RARITY: Array[Color] = [Color("#94a3b8"), Color("#4ade80"), Color("#60a5fa"), Color("#c084fc"), Color("#f59e0b")]
 
@@ -109,6 +163,7 @@ static func style(l: Label, role: String, col: Color = INK) -> Label:
 	l.add_theme_font_size_override("font_size", r[2])
 	l.add_theme_color_override("font_color", col)
 	l.uppercase = r[4]
+	_hook(l, col)
 	return l
 
 
@@ -130,6 +185,8 @@ static func text(parent: Node, t: String, role: String, col: Color = INK, wrap: 
 ## an eyebrow (Karla 700, tracked); a title is Cinzel (800 when large); anything
 ## else is Karla (600 when small). For screens that size type by hand.
 static func face(l: Label, px: int, title: bool) -> Label:
+	if l.has_theme_color_override("font_color"):
+		_hook(l, l.get_theme_color("font_color"))
 	var t: String = l.text
 	var upper: bool = t.length() > 2 and t == t.to_upper() and t != t.to_lower()
 	if upper:
@@ -154,6 +211,9 @@ static func glow(l: Label, c: Color) -> Label:
 static func lift(l: Label) -> Label:
 	# Lettering on the water is not lit by the sun or the lanterns.
 	l.light_mask = 0
+	l.set_meta("lifted", true)
+	if l.has_meta("raw_ink"):
+		l.add_theme_color_override("font_color", l.get_meta("raw_ink"))
 	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.75))
 	l.add_theme_constant_override("shadow_offset_x", 0)
 	l.add_theme_constant_override("shadow_offset_y", 1)
@@ -238,27 +298,30 @@ static func button(t: String, kind: String = "secondary", size: String = "large"
 	var ink: Color
 	match kind:
 		"primary":
-			n = { "radius": r, "fill": [GOLD_HI, GOLD_LO], "border": [1, Color(1.0, 0.91, 0.67, 0.65)], "shadow": [Color(0.88, 0.66, 0.18, 0.28), 16, Vector2(0, 5)], "pad": pad }
+			# The one thing to do is a plank of stained wood.
+			n = { "radius": r, "fill": [WOOD_HI, WOOD_LO], "border": [1, Color(0.25, 0.15, 0.08, 0.8)], "shadow": [Color(0.2, 0.12, 0.05, 0.35), 12, Vector2(0, 4)], "pad": pad, "keep": true, "grain": true }
 			h = n.duplicate()
-			h["fill"] = [GOLD_HI.lightened(0.12), GOLD_LO.lightened(0.1)]
-			ink = GOLD_INK
+			h["fill"] = [WOOD_HI.lightened(0.1), WOOD_LO.lightened(0.08)]
+			ink = WOOD_INK
 		"accent":
-			n = { "radius": r, "fill": [Color(accent, 0.16), Color(accent, 0.09)], "border": [1, Color(accent, 0.45)], "pad": pad }
+			var tint: Color = PAPER.lerp(accent, 0.2)
+			n = { "radius": r, "fill": [tint, tint.darkened(0.04)], "border": [1, Color(ink(accent), 0.55)], "shadow": [Color(0, 0, 0, 0.14), 6, Vector2(0, 2)], "pad": pad, "paper": true }
 			h = n.duplicate()
-			h["fill"] = [Color(accent, 0.26), Color(accent, 0.15)]
-			h["border"] = [1, Color(accent, 0.7)]
-			ink = accent.lightened(0.25)
+			h["fill"] = [PAPER.lerp(accent, 0.32), PAPER.lerp(accent, 0.26)]
+			h["border"] = [1, Color(ink(accent), 0.85)]
+			ink = ink(accent).darkened(0.15)
 		"danger":
-			n = { "radius": r, "fill": [Color(0.94, 0.27, 0.27, 0.16)], "border": [1, Color(0.94, 0.27, 0.27, 0.5)], "pad": pad }
+			var red: Color = Color(0.7, 0.22, 0.18)
+			n = { "radius": r, "fill": [PAPER.lerp(red, 0.14)], "border": [1, Color(red, 0.6)], "shadow": [Color(0, 0, 0, 0.14), 6, Vector2(0, 2)], "pad": pad, "paper": true }
 			h = n.duplicate()
-			h["fill"] = [Color(0.94, 0.27, 0.27, 0.26)]
-			ink = DANGER_INK
+			h["fill"] = [PAPER.lerp(red, 0.24)]
+			ink = red.darkened(0.2)
 		_:
-			n = { "radius": r, "fill": [Color(1, 1, 1, 0.05)], "border": [1, Color(1, 1, 1, 0.16)], "pad": pad }
+			n = { "radius": r, "fill": [PAPER], "border": [1, Color(PAPER_INK, 0.45)], "shadow": [Color(0, 0, 0, 0.14), 6, Vector2(0, 2)], "pad": pad, "paper": true }
 			h = n.duplicate()
-			h["fill"] = [Color(1, 1, 1, 0.09)]
-			h["border"] = [1, Color(1, 1, 1, 0.28)]
-			ink = Color("#cfcabf")
+			h["fill"] = [PAPER.lightened(0.35)]
+			h["border"] = [1, Color(PAPER_INK, 0.75)]
+			ink = PAPER_INK
 	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
 	b.text = t
 	var role: Array = ROLES["button" if big else "button_small"]
@@ -289,8 +352,8 @@ static func tap(c: Control) -> void:
 
 ## THE close button: a 30px circle with a drawn X (was five sizes).
 static func close_button() -> Pane.PaneButton:
-	var n: Dictionary = { "radius": 15, "fill": [Color(1, 1, 1, 0.06)], "border": [1, Color(1, 1, 1, 0.16)], "pad": 0 }
-	var h: Dictionary = { "radius": 15, "fill": [Color(1, 1, 1, 0.12)], "border": [1, Color(1, 1, 1, 0.3)], "pad": 0 }
+	var n: Dictionary = { "radius": 15, "fill": [PAPER], "border": [1, Color(PAPER_INK, 0.45)], "shadow": [Color(0, 0, 0, 0.16), 5, Vector2(0, 2)], "pad": 0, "paper": true }
+	var h: Dictionary = { "radius": 15, "fill": [PAPER.lightened(0.35)], "border": [1, Color(PAPER_INK, 0.8)], "pad": 0, "paper": true }
 	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
 	b.custom_minimum_size = Vector2(30, 30)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -298,6 +361,7 @@ static func close_button() -> Pane.PaneButton:
 	b.tooltip_text = "Close"
 	var x: Glyph = Glyph.new()
 	x.kind = "x"
+	x.color = PAPER_INK
 	x.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	x.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(x)
@@ -307,7 +371,7 @@ static func close_button() -> Pane.PaneButton:
 
 ## THE back pill: bronze leather, a gold chevron, the place it goes back to.
 static func back_pill(label: String) -> Pane.PaneButton:
-	var n: Dictionary = { "radius": 999, "fill": [Color(0.157, 0.125, 0.067, 0.9), Color(0.078, 0.059, 0.031, 0.92)], "border": [1, Color(BRONZE, 0.5)], "shadow": [Color(0, 0, 0, 0.45), 9, Vector2(0, 2)], "sheen": 0.05, "pad": [26, 6, 13, 6] }
+	var n: Dictionary = { "radius": 999, "fill": [WOOD_HI, WOOD_LO], "border": [1, Color(0.25, 0.15, 0.08, 0.8)], "shadow": [Color(0, 0, 0, 0.35), 9, Vector2(0, 2)], "pad": [26, 6, 13, 6], "keep": true, "grain": true }
 	var h: Dictionary = n.duplicate()
 	h["border"] = [1, Color(BRONZE, 0.8)]
 	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
@@ -317,12 +381,12 @@ static func back_pill(label: String) -> Pane.PaneButton:
 	b.add_theme_font_override("font", tracked(r[0], r[1], r[2], r[3]))
 	b.add_theme_font_size_override("font_size", r[2])
 	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		b.add_theme_color_override(st, Color("#e3d8bc"))
+		b.add_theme_color_override(st, WOOD_INK)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var chev: Glyph = Glyph.new()
 	chev.kind = "back"
-	chev.color = GOLD
+	chev.color = WOOD_INK
 	chev.position = Vector2(9, 0)
 	chev.size = Vector2(12, 30)
 	chev.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -380,7 +444,7 @@ static func stat_row(parent: Node, label: String, value: String, tone: String = 
 	r.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if rule:
 		var line: ColorRect = ColorRect.new()
-		line.color = Color(1, 1, 1, 0.06)
+		line.color = Color(PAPER_INK, 0.12)
 		line.custom_minimum_size = Vector2(0, 1)
 		v.add_child(line)
 	return h
@@ -495,18 +559,18 @@ static func tabs(parent: Node, options: Array, current: Variant, accent: Color, 
 		var o: Array = options[i]
 		var on: bool = o[0] == current
 		var r: int = 9 if joined else 999
-		var n: Dictionary = { "radius": r, "fill": [Color(accent, 0.13) if on else Color(1, 1, 1, 0.05)], "border": [1, Color(accent, 0.4) if on else Color(1, 1, 1, 0.1)], "pad": [12, 5, 12, 6] }
+		var n: Dictionary = { "radius": r, "fill": [PAPER.lerp(accent, 0.22) if on else PAPER], "border": [1, Color(ink(accent), 0.6) if on else Color(PAPER_INK, 0.3)], "pad": [12, 5, 12, 6], "paper": true }
 		var hot: Dictionary = n.duplicate()
-		hot["fill"] = [Color(accent, 0.2) if on else Color(1, 1, 1, 0.09)]
+		hot["fill"] = [PAPER.lerp(accent, 0.3) if on else PAPER.lightened(0.35)]
 		var b: Pane.PaneButton = Pane.PaneButton.new(n, hot)
 		b.text = String(o[1])
 		var role: Array = ROLES["button_small"]
 		b.add_theme_font_override("font", tracked(role[0], role[1], role[2], role[3]))
 		b.add_theme_font_size_override("font_size", role[2])
 		b.text = b.text.to_upper()
-		var ink: Color = accent.lightened(0.35) if on else DIM
+		var tab_ink: Color = ink(accent).darkened(0.15) if on else PAPER_INK_SOFT
 		for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-			b.add_theme_color_override(st, ink)
+			b.add_theme_color_override(st, tab_ink)
 		b.pressed.connect(func() -> void: on_pick.call(o[0]))
 		tap(b)
 		h.add_child(b)
@@ -594,7 +658,7 @@ class Glyph:
 ## A gradient laid over art (the web's linear-gradient washes): stops of
 ## [color, at] along a CSS angle. Ignores the mouse.
 static func wash(parent: Node, stops: Array, angle: float = 180.0) -> Pane:
-	var p: Pane = Pane.new({ "radius": 0, "fill": stops, "angle": angle, "pad": 0 })
+	var p: Pane = Pane.new({ "radius": 0, "fill": stops, "angle": angle, "pad": 0, "keep": true })
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if parent != null:
@@ -620,7 +684,8 @@ class Bar:
 
 	func _draw() -> void:
 		var r: float = size.y / 2.0
-		_pill(Rect2(Vector2.ZERO, size), Color(1, 1, 1, 0.07), Color(1, 1, 1, 0.07))
+		var track: Color = Color(PAPER_INK, 0.12) if Kit.on_paper(self) else Color(1, 1, 1, 0.07)
+		_pill(Rect2(Vector2.ZERO, size), track, track)
 		if frac > 0.0:
 			_pill(Rect2(Vector2.ZERO, Vector2(maxf(size.y, size.x * frac), size.y)), Color(color, 0.53), color)
 		if size.y >= 6.0 and frac > 0.0:
