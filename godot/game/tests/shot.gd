@@ -15,15 +15,15 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
 	var base: float = floor(Time.get_unix_time_from_system() * 1000.0 / cycle) * cycle
 	var at: float = base + cycle * (0.5 if night else (0.30 if args.has("dusk") else 0.1))
 	Clock.install(func() -> float: return at)
-	Main.straight_to_sea = what != "title"
-	if what == "title":
+	Main.straight_to_sea = what != "title" and what != "titlenew"
+	if what == "title" or what == "titlenew":
 		Captains.dir_override = "user://shot_title_captains"
 		Charter.dir_override = "user://shot_title_charters"
 		if Captains.list().is_empty():
@@ -38,7 +38,13 @@ func _init() -> void:
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
-	if what == "title":
+	if what == "title" or what == "titlenew":
+		if what == "titlenew":
+			var tt: Title = main._screen
+			tt._making = true
+			tt._color = "pink"
+			tt._founding = true
+			tt._build()
 		for f: int in 40:
 			await process_frame
 		root.get_texture().get_image().save_png(out)

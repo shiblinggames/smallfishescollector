@@ -344,6 +344,22 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   waves scale by the picture's height against the sheet, `ref`); the collar's width is the
   longest solid run on its row, so the fishing line is not counted as hull. A click while
   the line is out no longer sets a heading (she sailed off to it after the catch).
+  FIFTH PLAYTEST (2026-10-01): THE TITLE SCREEN redrawn (title.gd): two sheets that do
+  not look alike, SAIL ALONE (plain parchment, one boat) and SAIL WITH FRIENDS (sea-dyed
+  parchment, a fleet); captain cards with portraits drawn without water on a sea wash;
+  a NEW CAPTAIN creator with the four free starting colours (Green, Gray, Blue, Pink, the
+  web's first-visit SetupModal) and a big live portrait (Captains.make(name, color));
+  Charter cards show each crewmate's portrait (berths now keep a "look") and open berths;
+  Found (with the same creator, Charter.found(..., color)) and Join fold open. Joining
+  still takes the default colour. The STATUS CUES are lettering on the water, not
+  chips. The LEVEL BAR is lettering too (the brass instrument was rejected): level in
+  Cinzel, a thin line of light with a breathing bead, what is left and the next reward.
+  THE CURRENTS, upgraded: SeaField renders a FLOW MAP (each lane one strip with shared
+  corners, rg = way it runs, b = strength; overlapping quads doubled into stripes) and
+  the water shader darkens and blues the channel, streams its surface with flow-mapped
+  noise smeared along the lane (two phases; the way it runs averaged over a ring so bends
+  are smooth), and lights a faint seam at its edges; SeaFlow carries 70 foam flecks per
+  lane at the lane's pace, faster mid-stream.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

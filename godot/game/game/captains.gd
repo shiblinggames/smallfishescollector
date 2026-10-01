@@ -94,10 +94,12 @@ static func retire(id: String) -> Error:
 
 
 ## A new captain, named (or with the default name), written and ready to play.
-static func make(captain_name: String) -> Session:
+static func make(captain_name: String, color: String = "default") -> Session:
 	var fresh: Dictionary = create(new_id())
 	var s: Session = Session.new(fresh["save"], fresh["carried"])
 	if captain_name.strip_edges() != "":
 		s.profile()["username"] = captain_name.strip_edges()
+	# One of the free starting colours (the web's first-visit setup).
+	s.profile()["character_color"] = color
 	s.persist()
 	return s

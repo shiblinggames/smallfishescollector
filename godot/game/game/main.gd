@@ -90,10 +90,10 @@ func title(note: String) -> void:
 			title("That captain's save would not open: %s" % loaded["error"])
 			return
 		_sea(Session.new(loaded["save"], loaded["carried"]), false))
-	t.new_captain.connect(func(n: String) -> void: _sea(Captains.make(n), false))
+	t.new_captain.connect(func(n: String, color: String) -> void: _sea(Captains.make(n, color), false))
 	t.host.connect(func(id: String) -> void: host(id))
-	t.found.connect(func(n: String, hardcore: bool, cap: String) -> void:
-		var c: Charter = Charter.found(n, hardcore, SteamLayer.player_key(), cap)
+	t.found.connect(func(n: String, hardcore: bool, cap: String, color: String) -> void:
+		var c: Charter = Charter.found(n, hardcore, SteamLayer.player_key(), cap, color)
 		host(c.id()))
 	t.join.connect(func(address: String, cap: String) -> void: join(address, cap))
 	_show(t)

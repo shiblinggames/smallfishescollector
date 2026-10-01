@@ -2,13 +2,14 @@ class_name XpBar
 extends Control
 ## THE FISHING XP BAR (Godot port of components/FishingXPBar.tsx, fishing pass 2).
 ##
-## AN INSTRUMENT, NOT A PANEL (Kong, 2026-10-01: not paper like the menus,
-## and not the old dark pill): a plank of stained wood trimmed in brass, the
-## level struck on a brass medallion, and the way to the next level as sea
-## water filling a glass vial, a bright meniscus on it and bubbles rising
-## (gold water at the top level). Then what is left to go and the next reward,
-## and the perfect streak by a flame, bright while it runs. The water eases to
-## its new level over 0.7s and starts again from empty on a new level.
+## LETTERING ON THE WATER (Kong, 2026-10-01: not paper, not the old dark
+## pill, and the wood-and-brass instrument was too much): no box at all. The
+## level in Cinzel over a soft shadow, then a thin line of light toward the
+## next level with a breathing bead where it has reached (gold at the top),
+## what is left to go and the next reward, and the perfect streak by a flame,
+## bright while it runs. It reads like the captain's name and purse above it.
+## The line eases to its new length over 0.7s and starts again from empty on
+## a new level.
 
 var level: int = 1
 var fill: float = 0.0
@@ -50,88 +51,70 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var top: bool = level >= Rules.MAX_LEVEL
-	var r: Rect2 = Rect2(Vector2.ZERO, size)
-	var brass: Color = Color(0.78, 0.62, 0.3)
-	var brass_hi: Color = Color(0.95, 0.82, 0.5)
-	var cream: Color = Color(0.96, 0.9, 0.78)
-	# The plank.
-	var plank: StyleBoxFlat = StyleBoxFlat.new()
-	plank.bg_color = Color(0.3, 0.19, 0.11, 0.96)
-	plank.border_color = Color(brass, 0.85)
-	plank.set_border_width_all(1)
-	plank.set_corner_radius_all(int(size.y / 2.0))
-	plank.shadow_color = Color(0, 0, 0, 0.35)
-	plank.shadow_size = 8
-	plank.shadow_offset = Vector2(0, 3)
-	draw_style_box(plank, r)
-	# Its grain: long, faint, uneven lines.
-	for k: int in 4:
-		var y: float = 9.0 + k * 7.5
-		var pts: PackedVector2Array = PackedVector2Array()
-		for i: int in 24:
-			var x: float = 20.0 + (size.x - 40.0) * i / 23.0
-			pts.append(Vector2(x, y + sin(x * 0.031 + k * 1.7) * 1.2 + sin(x * 0.11 + k) * 0.4))
-		draw_polyline(pts, Color(0.16, 0.09, 0.05, 0.35), 1.0, true)
-	# The medallion.
-	var mc: Vector2 = Vector2(size.y / 2.0, size.y / 2.0)
-	var mr: float = size.y / 2.0 - 2.0
-	draw_circle(mc + Vector2(0, 1.5), mr, Color(0, 0, 0, 0.35))
-	draw_circle(mc, mr, brass)
-	draw_circle(mc - Vector2(mr * 0.18, mr * 0.22), mr * 0.72, Color(brass_hi, 0.55))
-	draw_circle(mc, mr * 0.78, Color(brass.darkened(0.08), 0.9))
-	draw_arc(mc, mr, 0.0, TAU, 40, Color(0.4, 0.28, 0.1), 1.2, true)
+	var cream: Color = Color(0.97, 0.93, 0.85)
+	var shade: Color = Color(0, 0, 0, 0.55)
+	var glass: Color = Color(1.0, 0.82, 0.42) if top else Color(0.56, 0.9, 0.84)
 	var title: Font = Kit.font("cinzel", 800)
 	var body: Font = Kit.font("karla", 700)
+	var small: Font = Kit.tracked("karla", 700, 10, 0.16)
+	var cy: float = size.y / 2.0
+	# The level, lettered on the water.
+	_ink(small, Vector2(0, cy + 5), "LV", 10, Color(cream, 0.75), shade)
 	var ls: String = str(level)
-	var lfs: int = 15 if level < 100 else 12
-	var lw: float = title.get_string_size(ls, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs).x
-	draw_string(title, mc + Vector2(-lw / 2.0, lfs * 0.36), ls, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs, Color(0.25, 0.16, 0.06))
-	# The vial.
-	var tube: Rect2 = Rect2(size.y + 8.0, size.y / 2.0 - 7.0, 200.0, 14.0)
-	var glass: StyleBoxFlat = StyleBoxFlat.new()
-	glass.bg_color = Color(0.06, 0.12, 0.13, 0.85)
-	glass.border_color = Color(brass, 0.9)
-	glass.set_border_width_all(1)
-	glass.set_corner_radius_all(7)
-	draw_style_box(glass, tube)
-	var inner: Rect2 = tube.grow(-2.0)
-	var water: Color = Color(0.92, 0.7, 0.22) if top else Color(0.26, 0.68, 0.64)
+	_ink(title, Vector2(20, cy + 9), ls, 24, cream, shade)
+	var lw: float = title.get_string_size(ls, HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x
+	# A thin line of light: the way to the next level.
+	var x0: float = 20.0 + lw + 12.0
+	var w: float = 210.0
+	var track: Rect2 = Rect2(x0, cy - 2.0, w, 4.0)
+	_pill(track.grow(1.0), Color(0, 0, 0, 0.35))
+	_pill(track, Color(1, 1, 1, 0.16))
 	var f: float = 1.0 if top else clampf(_shown, 0.0, 1.0)
 	if f > 0.0:
-		var w: float = maxf(inner.size.y, inner.size.x * f)
-		var liquid: StyleBoxFlat = StyleBoxFlat.new()
-		liquid.bg_color = water
-		liquid.set_corner_radius_all(5)
-		draw_style_box(liquid, Rect2(inner.position, Vector2(w, inner.size.y)))
-		# Lighter near the top of the water, and the meniscus where it ends.
-		draw_rect(Rect2(inner.position + Vector2(3, 1), Vector2(maxf(0.0, w - 6.0), 2.0)), Color(1, 1, 1, 0.28))
-		var mx: float = inner.position.x + w - 1.5
-		draw_line(Vector2(mx, inner.position.y + 1.0), Vector2(mx, inner.end.y - 1.0), Color(1, 1, 1, 0.5), 1.5, true)
-		# Bubbles drifting up through it.
-		for b: int in 6:
-			var bx: float = inner.position.x + fposmod(b * 37.0 + _t * (6.0 + b * 1.3), maxf(1.0, w - 4.0)) + 2.0
-			var by: float = inner.end.y - fposmod(_t * (4.0 + b) + b * 3.1, inner.size.y)
-			draw_circle(Vector2(bx, by), 0.9 + (b % 3) * 0.35, Color(1, 1, 1, 0.35))
-	# The glass's own shine over everything in it.
-	draw_line(tube.position + Vector2(6, 3), Vector2(tube.end.x - 6, tube.position.y + 3), Color(1, 1, 1, 0.18), 1.0, true)
-	# Brass caps at the ends.
-	for cx: float in [tube.position.x, tube.end.x]:
-		draw_rect(Rect2(cx - 2.0, tube.position.y - 2.0, 4.0, tube.size.y + 4.0), brass)
-	var x: float = tube.end.x + 12.0
+		var fw: float = maxf(4.0, w * f)
+		for g: int in 3:
+			_pill(Rect2(track.position - Vector2(g + 1, g + 1), Vector2(fw + (g + 1) * 2.0, 4.0 + (g + 1) * 2.0)), Color(glass, 0.09))
+		_pill(Rect2(track.position, Vector2(fw, 4.0)), glass)
+		# A bead of light where it has reached, breathing.
+		var bead: Vector2 = Vector2(x0 + fw, cy)
+		draw_circle(bead, 4.5 + sin(_t * 2.4) * 0.6, Color(glass, 0.25))
+		draw_circle(bead, 2.4, Color(1, 1, 1, 0.95))
+	var x: float = x0 + w + 14.0
 	if not top:
-		draw_string(body, Vector2(x, 25), "%s xp" % Js.thousands(to_go), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, cream)
-		x += 62.0
+		var togo: String = "%s xp to go" % Js.thousands(to_go)
+		_ink(body, Vector2(x, cy + 4), togo, 11, Color(cream, 0.85), shade)
+		x += body.get_string_size(togo, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 14.0
 		if next_reward != "":
-			draw_string(body, Vector2(x, 25), ("★ " if milestone else "") + next_reward, HORIZONTAL_ALIGNMENT_LEFT, 200, 10, brass_hi if milestone else Color(cream, 0.65))
+			_ink(body, Vector2(x, cy + 4), ("★ " if milestone else "then ") + next_reward, 10, Color(1.0, 0.84, 0.5) if milestone else Color(cream, 0.6), shade, 220)
 	else:
-		draw_string(body, Vector2(x, 25), "Top of the ladder", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, brass_hi)
-	# The streak, with its flame.
+		_ink(body, Vector2(x, cy + 4), "Top of the ladder", 11, Color(1.0, 0.84, 0.5), shade)
+	# The streak, by its flame.
 	var on: bool = streak > 0
-	var fc: Color = Color(1.0, 0.6, 0.22) if on else Color(cream, 0.3)
-	var fx: float = size.x - 44.0
-	var fy: float = size.y / 2.0
-	draw_colored_polygon(PackedVector2Array([
-		Vector2(fx, fy - 7), Vector2(fx + 4.5, fy - 1), Vector2(fx + 3.5, fy + 5), Vector2(fx, fy + 7),
-		Vector2(fx - 3.5, fy + 5), Vector2(fx - 4.5, fy), Vector2(fx - 1.5, fy - 3),
-	]), fc)
-	draw_string(title, Vector2(fx + 9, fy + 5), str(streak), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, fc)
+	var fc: Color = Color(1.0, 0.62, 0.25) if on else Color(cream, 0.35)
+	var fx: float = size.x - 30.0
+	var fy: float = cy
+	var flame: PackedVector2Array = PackedVector2Array([
+		Vector2(fx, fy - 8), Vector2(fx + 5, fy - 1), Vector2(fx + 4, fy + 5), Vector2(fx, fy + 7),
+		Vector2(fx - 4, fy + 5), Vector2(fx - 5, fy), Vector2(fx - 1.5, fy - 3),
+	])
+	var sh: PackedVector2Array = PackedVector2Array()
+	for p: Vector2 in flame:
+		sh.append(p + Vector2(0, 1.5))
+	draw_colored_polygon(sh, shade)
+	draw_colored_polygon(flame, fc)
+	_ink(title, Vector2(fx + 9, fy + 5), str(streak), 13, fc, shade)
+
+
+## Lettering on the water: the words over their own soft shadow.
+func _ink(f: Font, at: Vector2, t: String, px: int, col: Color, shade: Color, max_w: float = -1.0) -> void:
+	for o: Vector2 in [Vector2(0, 1.5), Vector2(1, 1), Vector2(-1, 1)]:
+		draw_string(f, at + o, t, HORIZONTAL_ALIGNMENT_LEFT, max_w, px, Color(shade, shade.a * 0.6))
+	draw_string(f, at, t, HORIZONTAL_ALIGNMENT_LEFT, max_w, px, col)
+
+
+func _pill(r: Rect2, c: Color) -> void:
+	var sb: StyleBoxFlat = StyleBoxFlat.new()
+	sb.bg_color = c
+	sb.set_corner_radius_all(int(r.size.y / 2.0) + 1)
+	sb.anti_aliasing = true
+	draw_style_box(sb, r)

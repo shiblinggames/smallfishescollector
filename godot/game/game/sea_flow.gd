@@ -113,16 +113,21 @@ const LAYERS: Array = [
 var _lines: Array[Line2D] = []
 var _weed: Array = []
 var _t: float = 0.0
+## Flecks of foam carried down each lane (Godot over the web baseline,
+## 2026-10-01: the currents were hard to see): [lane, s, side, speed, size].
+const FLECKS_PER_LANE: int = 70
+const FLECK_SPEED: float = 150.0
+var _flecks: Array = []
+var _fleck_mm: MultiMesh
+static var _lanes_cache: Array = []
 
 
-func _ready() -> void:
-	z_index = -1
-	var tex: Dictionary = {
-		"body": _body_tex(), "ripA": _ripple_tex(71, 4, 7, 1.6), "ripB": _ripple_tex(113, 5, 5, 1.3), "ripC": _ripple_tex(197, 3, 4, 1.1),
-	}
-	var shader: Shader = load("res://game/fx/current_strip.gdshader")
+## Each current lane, densified to a point every ~200px (as the web does):
+## { pts, dist (along it), total, half }. Built once.
+static func lanes() -> Array:
+	if not _lanes_cache.is_empty():
+		return _lanes_cache
 	for lane: Dictionary in flow()["currents"]:
-		# Densify the lane to a point every ~200px, as the web does.
 		var pts: PackedVector2Array = PackedVector2Array()
 		var src: Array = lane["pts"]
 		pts.append(Vector2(float(src[0][0]), float(src[0][1])))
@@ -137,9 +142,41 @@ func _ready() -> void:
 		for i: int in range(1, pts.size()):
 			total += pts[i].distance_to(pts[i - 1])
 			dist.append(total)
+		_lanes_cache.append({ "pts": pts, "dist": dist, "total": total, "half": float(lane["half"]) })
+	return _lanes_cache
+
+
+## A point s along a lane, and the way the lane runs there.
+static func along(L: Dictionary, s: float) -> Array:
+	var pts: PackedVector2Array = L["pts"]
+	var dist: PackedFloat32Array = L["dist"]
+	var i: int = clampi(dist.bsearch(s), 1, pts.size() - 1)
+	var a: Vector2 = pts[i - 1]
+	var b: Vector2 = pts[i]
+	var seg: float = maxf(0.001, dist[i] - dist[i - 1])
+	return [a.lerp(b, clampf((s - dist[i - 1]) / seg, 0.0, 1.0)), (b - a).normalized()]
+
+
+## How far in from a lane's ends (0 at either end, 1 once well in).
+static func taper(L: Dictionary, s: float) -> float:
+	var f: float = s / maxf(1.0, float(L["total"]))
+	var e: float = clampf(minf(f / 0.18, (1.0 - f) / 0.18), 0.0, 1.0)
+	return e * e * (3.0 - 2.0 * e)
+
+
+func _ready() -> void:
+	z_index = -1
+	var tex: Dictionary = {
+		"body": _body_tex(), "ripA": _ripple_tex(71, 4, 7, 1.6), "ripB": _ripple_tex(113, 5, 5, 1.3), "ripC": _ripple_tex(197, 3, 4, 1.1),
+	}
+	var shader: Shader = load("res://game/fx/current_strip.gdshader")
+	for L: Dictionary in lanes():
+		var pts: PackedVector2Array = L["pts"]
+		var dist: PackedFloat32Array = L["dist"]
+		var total: float = L["total"]
 		for layer: Array in LAYERS:
 			var line: Line2D = Line2D.new()
-			var half: float = float(lane["half"])
+			var half: float = float(L["half"])
 			var wob: float = float(layer[6])
 			var curve: Curve = Curve.new()
 			var bent: PackedVector2Array = PackedVector2Array()
@@ -176,6 +213,46 @@ func _ready() -> void:
 			add_child(line)
 			_lines.append(line)
 	_lay_kelp()
+	_make_flecks()
+
+
+func _make_flecks() -> void:
+	_fleck_mm = MultiMesh.new()
+	_fleck_mm.transform_format = MultiMesh.TRANSFORM_2D
+	_fleck_mm.use_colors = true
+	var q: QuadMesh = QuadMesh.new()
+	q.size = Vector2(1, 1)
+	_fleck_mm.mesh = q
+	var ls: Array = lanes()
+	_fleck_mm.instance_count = ls.size() * FLECKS_PER_LANE
+	for li: int in ls.size():
+		for k: int in FLECKS_PER_LANE:
+			_flecks.append([li, randf() * float(ls[li]["total"]), randf_range(-0.75, 0.75), randf_range(0.75, 1.25), randf_range(5.0, 11.0)])
+	var mi: MultiMeshInstance2D = MultiMeshInstance2D.new()
+	mi.multimesh = _fleck_mm
+	mi.texture = Glow.radial(32, Color.WHITE)
+	add_child(mi)
+
+
+## The flecks ride the lanes: faster mid-stream than at its edges, fading in
+## and out at the ends, drawn long in the way they go.
+func _run_flecks(delta: float) -> void:
+	if _fleck_mm == null:
+		return
+	var ls: Array = lanes()
+	for i: int in _flecks.size():
+		var f: Array = _flecks[i]
+		var L: Dictionary = ls[int(f[0])]
+		var side: float = float(f[2])
+		var sp: float = FLECK_SPEED * float(f[3]) * (1.0 - side * side * 0.6)
+		f[1] = fposmod(float(f[1]) + sp * delta, float(L["total"]))
+		var at: Array = along(L, float(f[1]))
+		var dir: Vector2 = at[1]
+		var p: Vector2 = (at[0] as Vector2) + dir.orthogonal() * side * float(L["half"]) * 0.8
+		var tp: float = taper(L, float(f[1]))
+		var sz: float = float(f[4])
+		_fleck_mm.set_instance_transform_2d(i, Transform2D(dir.angle(), Vector2(sz * 2.6, sz), 0.0, p))
+		_fleck_mm.set_instance_color(i, Color(0.92, 0.97, 1.0, 0.42 * tp * (1.0 - absf(side) * 0.5)))
 
 
 ## The body: a soft band, brighter in patches along it.
@@ -291,6 +368,7 @@ func _weed_sprite(t: Texture2D, at: Vector2, w: float, anchor_y: float, tint: Co
 
 
 func _process(delta: float) -> void:
+	_run_flecks(delta)
 	_t += delta
 	for wd: Array in _weed:
 		var sp: Sprite2D = wd[0]

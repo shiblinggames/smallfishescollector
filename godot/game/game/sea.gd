@@ -198,6 +198,8 @@ func _ready() -> void:
 	_field.share_wake(_wake)
 	_water.set_shader_parameter("u_field", _field.texture())
 	_water.set_shader_parameter("u_under", _field.under.get_texture())
+	_water.set_shader_parameter("u_flow", _field.flow.get_texture())
+	_water.set_shader_parameter("u_flow_on", 1.0)
 	_life.sink_fish(_field.under_world)
 	for bid: String in _berths:
 		(_berths[bid] as Berth).field = _field

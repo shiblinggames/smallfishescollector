@@ -35,6 +35,10 @@ uniform float u_lantern = 0.0;
 uniform sampler2D u_field : filter_linear, repeat_disable;
 uniform vec2 u_field_px = vec2(0.00125, 0.0022);
 uniform float u_field_on = 0.0;
+// THE CURRENTS (game/sea_field.gd's flow map): rg the way the water runs, b
+// how strongly. The channel runs deeper and its surface streams along it.
+uniform sampler2D u_flow : filter_linear, repeat_disable;
+uniform float u_flow_on = 0.0;
 // UNDER THE SURFACE (sea_field.gd's under layer): the shoals, laid beneath the
 // water's own surface and bent by it.
 uniform sampler2D u_under : filter_linear, repeat_disable;
@@ -238,6 +242,52 @@ void fragment() {
 		float pool = exp(-dot(off, off) / (260.0 * 260.0));
 		float shimmer = 0.75 + 0.25 * vnoise(w * 9.0 + vec2(TIME * 0.3, -TIME * 0.2));
 		col += vec3(1.0, 0.72, 0.38) * pool * shimmer * 0.16 * u_lantern;
+	}
+
+	// THE CURRENTS: the water in a lane is a touch deeper and bluer, and its
+	// surface streams along the lane: long streaks, stretched the way it runs,
+	// carried by two-phase flow mapping so they never stretch out of shape.
+	if (u_flow_on > 0.5) {
+		vec4 fl = texture(u_flow, SCREEN_UV);
+		float fs = fl.b;
+		if (fs > 0.01) {
+			// The way it runs, averaged over a little ring, so where one
+			// stretch of lane meets the next the turn is smooth, not a step.
+			vec2 acc = (fl.rg * 2.0 - 1.0) * fl.b;
+			for (int r = 0; r < 8; r++) {
+				float an = float(r) * 0.785398;
+				vec4 o = texture(u_flow, SCREEN_UV + vec2(cos(an), sin(an)) * u_field_px * 14.0);
+				acc += (o.rg * 2.0 - 1.0) * o.b;
+			}
+			vec2 fd = normalize(acc + vec2(0.0001));
+			vec2 fp = vec2(-fd.y, fd.x);
+			float ph0 = fract(TIME * 0.12);
+			float ph1 = fract(TIME * 0.12 + 0.5);
+			float n0 = 0.0;
+			float n1 = 0.0;
+			for (int k = 0; k < 2; k++) {
+				float ph = k == 0 ? ph0 : ph1;
+				// Noise smeared along the flow (a short run of samples down
+				// the lane), so the streaks are long the way the water runs
+				// and never break where the lane bends.
+				vec2 q = world * 0.016 - fd * ph * 4.0 + float(k) * vec2(13.7, 5.9);
+				float n = 0.0;
+				for (int j = 0; j < 8; j++) {
+					n += vnoise(q + fd * float(j) * 0.55);
+				}
+				n = n / 8.0 * 0.85 + vnoise(q * 2.7 + 3.3) * 0.15;
+				if (k == 0) n0 = n; else n1 = n;
+			}
+			float w = abs(1.0 - 2.0 * ph0);
+			float streak = mix(n0, n1, w);
+			float body = smoothstep(0.0, 0.7, fs);
+			col = mix(col, col * vec3(0.84, 0.92, 1.0) + vec3(0.0, 0.025, 0.05), body * 0.5);
+			col += vec3(0.80, 0.93, 1.0) * smoothstep(0.5, 0.78, streak) * body * (0.16 - u_dark * 0.05);
+			// The lane's edge, where the moving water meets the still: a
+			// faint seam of light.
+			float seam = smoothstep(0.05, 0.18, fs) * (1.0 - smoothstep(0.18, 0.4, fs));
+			col += vec3(0.85, 0.95, 1.0) * seam * 0.07 * (0.6 + 0.4 * vnoise(world * 0.01 + vec2(TIME * 0.2, 0.0)));
+		}
 	}
 
 	// THE ISLANDS' SHADOWS on the water: marched from here toward the sun

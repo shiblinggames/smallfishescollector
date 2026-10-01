@@ -21,6 +21,11 @@ var viewport: SubViewport
 var under: SubViewport
 var under_world: Node2D
 var _under_cam: Camera2D
+## THE FLOW MAP (2026-10-01): the current lanes drawn as which way the water
+## runs (rg) and how strongly (b), so the water shader can stream its surface
+## along them. Follows the camera like the field.
+var flow: SubViewport
+var _flow_cam: Camera2D
 var _cam: Camera2D
 var _world: Node2D
 var _blobs: MultiMeshInstance2D
@@ -62,6 +67,26 @@ func _ready() -> void:
 	under_world = Node2D.new()
 	under_world.scale = Vector2(1.0, Chart.GROUND)
 	under.add_child(under_world)
+	flow = SubViewport.new()
+	flow.disable_3d = true
+	flow.transparent_bg = false
+	flow.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	flow.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+	flow.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR
+	add_child(flow)
+	var fbg: CanvasLayer = CanvasLayer.new()
+	fbg.layer = -1
+	flow.add_child(fbg)
+	var fblack: ColorRect = ColorRect.new()
+	fblack.color = Color.BLACK
+	fblack.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fbg.add_child(fblack)
+	_flow_cam = Camera2D.new()
+	flow.add_child(_flow_cam)
+	var fw: Node2D = Node2D.new()
+	fw.scale = Vector2(1.0, Chart.GROUND)
+	flow.add_child(fw)
+	fw.add_child(FlowPainter.new())
 	_blobs = _layer(BLOB_CAP, _blob_tex())
 	_rings = _layer(RING_CAP, Wake._ring_tex())
 	_world.add_child(_blobs)
@@ -148,6 +173,10 @@ func step(delta: float, cam_pos: Vector2, zoom: float, screen: Vector2, contacts
 		under.size = size
 	_under_cam.position = cam_pos
 	_under_cam.zoom = _cam.zoom
+	if flow.size != size:
+		flow.size = size
+	_flow_cam.position = cam_pos
+	_flow_cam.zoom = _cam.zoom
 	var bm: MultiMesh = _blobs.multimesh
 	var n: int = 0
 	for c: Dictionary in contacts:
@@ -183,3 +212,37 @@ func step(delta: float, cam_pos: Vector2, zoom: float, screen: Vector2, contacts
 
 func texture() -> Texture2D:
 	return viewport.get_texture()
+
+
+## The lanes, painted once, as one unbroken strip each: at every point the way
+## the lane runs there (the two stretches either side averaged, so the turn is
+## smooth) and its width out to both sides; neighbouring quads share their
+## corners, so nothing overlaps and nothing doubles. Full strength down the
+## middle (b), none at the edges.
+class FlowPainter:
+	extends Node2D
+
+	func _draw() -> void:
+		for L: Dictionary in SeaFlow.lanes():
+			var pts: PackedVector2Array = L["pts"]
+			var dist: PackedFloat32Array = L["dist"]
+			var half: float = float(L["half"])
+			var n: int = pts.size()
+			var tang: PackedVector2Array = PackedVector2Array()
+			for i: int in n:
+				var a: Vector2 = pts[maxi(0, i - 1)]
+				var b: Vector2 = pts[mini(n - 1, i + 1)]
+				tang.append((b - a).normalized())
+			for i: int in range(1, n):
+				var cols: Array = []
+				for j: int in [i - 1, i]:
+					var d: Vector2 = tang[j]
+					cols.append(Color(d.x * 0.5 + 0.5, d.y * 0.5 + 0.5, SeaFlow.taper(L, dist[j]), 1.0))
+				var ca: Color = cols[0]
+				var cb: Color = cols[1]
+				var ea: Color = Color(ca.r, ca.g, 0.0, 1.0)
+				var eb: Color = Color(cb.r, cb.g, 0.0, 1.0)
+				for side: float in [-1.0, 1.0]:
+					var na: Vector2 = tang[i - 1].orthogonal() * half * side
+					var nb: Vector2 = tang[i].orthogonal() * half * side
+					draw_polygon(PackedVector2Array([pts[i - 1], pts[i], pts[i] + nb, pts[i - 1] + na]), PackedColorArray([ca, cb, eb, ea]))

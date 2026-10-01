@@ -509,12 +509,18 @@ func set_cues(c: Dictionary) -> void:
 		_cue_chip("In the kelp", Color("#a8c483"))
 
 
+## A cue is lettering on the water, not a panel (Kong, 2026-10-01): the words
+## in their tint over a soft shadow, a small diamond between them.
 func _cue_chip(text: String, col: Color) -> void:
-	var p: Pane = Kit.pane(_cues, { "radius": 999, "fill": [Color(0.024, 0.047, 0.07, 0.72)], "border": [1, Kit.a(col, 0.4)], "shadow": [Kit.a(col, 0.13), 14], "pad": [11, 4, 11, 5] })
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l: Label = Kit.lift(Kit.text(p, text, "chip", col))
-	l.add_theme_font_size_override("font_size", 11)
-	p.ready.connect(func() -> void: Kit.pop(p))
+	if _cues.get_child_count() > 0:
+		var dot: Label = Kit.lift(Kit.text(_cues, "◆", "chip", Color(0.95, 0.92, 0.84, 0.45)))
+		dot.add_theme_font_size_override("font_size", 8)
+		dot.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var l: Label = Kit.lift(Kit.text(_cues, text, "eyebrow", col))
+	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_constant_override("shadow_outline_size", 6)
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	l.ready.connect(func() -> void: Kit.pop(l))
 
 
 func set_clock(label: String) -> void:

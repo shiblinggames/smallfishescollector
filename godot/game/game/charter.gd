@@ -71,21 +71,25 @@ static func list() -> Array:
 		var d: Variant = JsJson.parse(FileAccess.get_file_as_string("%s/%s" % [_dir(), f]))
 		if d is Dictionary:
 			var names: Array = []
+			var looks: Array = []
 			for b: Dictionary in (d as Dictionary).get("berths", []):
 				names.append(b.get("name", "?"))
-			out.append({ "id": d["id"], "name": d["name"], "hardcore": d.get("hardcore", false), "sailed": d.get("sailed", false), "crew": names, "founder": d.get("founder", ""), "at": FileAccess.get_modified_time(_path(d["id"])) })
+				looks.append(b.get("look", { "color": "default" }))
+			out.append({ "id": d["id"], "name": d["name"], "hardcore": d.get("hardcore", false), "sailed": d.get("sailed", false), "crew": names, "looks": looks, "founder": d.get("founder", ""), "at": FileAccess.get_modified_time(_path(d["id"])) })
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["at"]) > int(b["at"]))
 	return out
 
 
-static func found(charter_name: String, hardcore: bool, founder_key: String, captain_name: String) -> Charter:
+static func found(charter_name: String, hardcore: bool, founder_key: String, captain_name: String, color: String = "default") -> Charter:
 	var c: Charter = Charter.new()
 	c.data = {
 		"v": 1, "id": "charter-" + Crypto.new().generate_random_bytes(6).hex_encode(),
 		"name": charter_name, "hardcore": hardcore, "founded_at": Js.iso(Clock.now_ms()),
 		"founder": founder_key, "sailed": false, "berths": [],
 	}
-	c.add_member(founder_key, captain_name)
+	var s: Session = c.add_member(founder_key, captain_name)
+	if s != null:
+		s.profile()["character_color"] = color
 	c.write()
 	return c
 
@@ -324,6 +328,9 @@ func write() -> void:
 		if s != null:
 			b["captain"] = SaveFile.serialize(s.save, s.carried, Js.iso(Clock.now_ms()))
 			b["name"] = s.captain_name()
+			# How they look, for the title screen's crew row (no need to open
+			# every captain's save to draw a portrait).
+			b["look"] = Skipper.look_of(s.profile())
 	DirAccess.make_dir_recursive_absolute(_dir())
 	var err: Error = SaveFile.write_file(ProjectSettings.globalize_path(_path(id())), JsJson.stringify(data))
 	if err != OK:

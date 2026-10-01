@@ -2,28 +2,36 @@ class_name Title
 extends Control
 ## THE TITLE SCREEN (Godot port of desktop/src/CaptainSelect.tsx, with the
 ## Charters beside it; docs/systems/steam-port.md, "Captains and worlds").
+## Redrawn 2026-10-01 (Kong: "hard to tell Charters apart from captains;
+## everything can be more clear"): two sheets that do not look alike.
 ##
-## Left, YOUR CAPTAINS: each solo captain with their portrait, name, level,
-## purse and when last played; Play, and Retire (asks once). A new captain is
-## named here (the Steam name offered).
-## Right, CHARTERS: the Charters this machine founded, each opened to its crew
-## from here; Found a Charter (its name, normal or hardcore, fixed from then
-## on, and your Charter captain's name); and joining a friend's (on Steam, by
-## their invite or Join Game; on the local network, by the founder's address).
+## Left, SAIL ALONE: plain parchment, one boat for its mark. Each solo captain
+## as a card: their portrait on a wash of sea, name, level and purse, when they
+## last sailed; Play (the wood) and a quiet Retire (asks once). A new captain is
+## made in a card of its own: a name and one of the four starting colours (the
+## web's first-visit setup), shown on a big portrait as you pick.
+## Right, SAIL WITH FRIENDS: sea-dyed parchment, a little fleet for its mark.
+## Each Charter with its crew's portraits in a row, whether it is hardcore,
+## whether it has sailed, and Host (only its founder can). Found a Charter
+## and Join a friend's fold open from their own buttons.
 
 signal play(id: String)
-signal new_captain(captain_name: String)
+signal new_captain(captain_name: String, color: String)
 signal host(charter_id: String)
-signal found(charter_name: String, hardcore: bool, captain_name: String)
+signal found(charter_name: String, hardcore: bool, captain_name: String, color: String)
 signal join(address: String, captain_name: String)
 
-const INK: Color = Color("#f4ecd8")
-const SUB: Color = Color("#9fb4c2")
-const TEAL: Color = Color("#5eead4")
+const STARTING: Array = ["default", "gray", "blue", "pink"]
+const SEA_DYE: Color = Color(0.36, 0.6, 0.58)
 
 var note: String = ""
 var _retiring: String = ""
 var _hardcore: bool = false
+var _making: bool = false
+var _founding: bool = false
+var _joining: bool = false
+var _color: String = "default"
+var _name_draft: String = ""
 var _cols: HBoxContainer
 var _first: Control = null
 
@@ -37,10 +45,8 @@ func _ready() -> void:
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
-	var scrim: ColorRect = ColorRect.new()
-	scrim.color = Color(0.02, 0.035, 0.055, 0.72)
-	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(scrim)
+	# The harbour stays a harbour: a light veil, deeper toward the bottom.
+	Kit.wash(self, [[Color(0.02, 0.04, 0.06, 0.25), 0.0], [Color(0.02, 0.04, 0.06, 0.45), 0.5], [Color(0.02, 0.035, 0.05, 0.75), 1.0]])
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -49,20 +55,28 @@ func _ready() -> void:
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(center)
 	var margin: MarginContainer = MarginContainer.new()
-	margin.add_theme_constant_override("margin_top", 36)
+	margin.add_theme_constant_override("margin_top", 30)
 	margin.add_theme_constant_override("margin_bottom", 36)
 	center.add_child(margin)
 	var page: VBoxContainer = VBoxContainer.new()
-	page.custom_minimum_size = Vector2(minf(1120.0, get_viewport_rect().size.x - 48.0), 0)
-	page.add_theme_constant_override("separation", 14)
+	page.custom_minimum_size = Vector2(minf(1180.0, get_viewport_rect().size.x - 48.0), 0)
+	page.add_theme_constant_override("separation", 6)
 	margin.add_child(page)
-	var t: Label = Room.text(page, "Seas the Booty", 44, INK, true)
+	var t: Label = Kit.lift(Kit.text(page, "Seas the Booty", "display", Kit.INK))
+	t.add_theme_font_size_override("font_size", 52)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var sub: Label = Kit.text(page, "Fish the open sea, alone or with your crew", "body_strong", Color(0.96, 0.92, 0.84))
+	sub.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
+	sub.add_theme_constant_override("shadow_offset_y", 2)
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if note != "":
-		var n: Label = Room.text(page, note, 15, Color("#f8c28a"), false, true)
+		var n: Label = Kit.lift(Kit.text(page, note, "body_strong", Color("#f8c28a"), true))
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var gap: Control = Control.new()
+	gap.custom_minimum_size = Vector2(0, 14)
+	page.add_child(gap)
 	_cols = HBoxContainer.new()
-	_cols.add_theme_constant_override("separation", 20)
+	_cols.add_theme_constant_override("separation", 26)
 	page.add_child(_cols)
 	_build()
 
@@ -72,20 +86,35 @@ func _build() -> void:
 		_cols.remove_child(c)
 		c.queue_free()
 	_first = null
-	_captains(_column("Your Captains", "Each captain sails their own sea, alone."))
-	_charters(_column("Charters", "A shared world for 2 to 4 friends. Its captains live only there, and it sails while its founder hosts."))
+	_captains(_sheet("Sail alone", "Your Captains", "Each captain sails their own sea, at their own pace.", Kit.PAPER, "one"))
+	_charters(_sheet("Sail with friends", "Charters", "A shared world for 2 to 4 friends. Its captains live only there, and it sails while its founder hosts.", Kit.PAPER.lerp(SEA_DYE, 0.16), "fleet"))
 	if _first != null:
 		_first.grab_focus.call_deferred()
 
 
-func _column(heading: String, blurb: String) -> VBoxContainer:
-	var p: PanelContainer = Room.panel(_cols, Room.box(Color(0.04, 0.063, 0.086, 0.96), Color(0.7, 0.84, 0.91, 0.22), 18, 20))
+## A sheet: its eyebrow, its emblem, its title and what it is.
+func _sheet(eyebrow: String, heading: String, blurb: String, tint: Color, emblem: String) -> VBoxContainer:
+	var p: Pane = Kit.pane(_cols, { "radius": 16, "fill": [tint], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.45), 26, Vector2(0, 10)], "pad": [26, 22, 26, 24], "paper": true })
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	p.add_child(v)
-	Room.text(v, heading, 24, INK, true)
-	Room.text(v, blurb, 13, SUB, false, true).custom_minimum_size = Vector2(0, 0)
+	var head: HBoxContainer = HBoxContainer.new()
+	head.add_theme_constant_override("separation", 14)
+	v.add_child(head)
+	var mark: Emblem = Emblem.new()
+	mark.kind = emblem
+	mark.custom_minimum_size = Vector2(58, 48)
+	head.add_child(mark)
+	var tv: VBoxContainer = VBoxContainer.new()
+	tv.add_theme_constant_override("separation", 0)
+	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(tv)
+	Kit.text(tv, eyebrow, "eyebrow", Kit.ink(SEA_DYE) if emblem == "fleet" else Color(0.55, 0.3, 0.15))
+	Kit.text(tv, heading, "title", Kit.PAPER_INK).add_theme_font_size_override("font_size", 28)
+	Kit.text(v, blurb, "note", Kit.PAPER_INK_SOFT, true)
+	Paper.rule(v)
 	return v
 
 
@@ -94,35 +123,41 @@ func _column(heading: String, blurb: String) -> VBoxContainer:
 func _captains(v: VBoxContainer) -> void:
 	for id: String in Captains.list():
 		var c: Dictionary = Captains.summary(id)
-		var card: PanelContainer = Room.panel(v, Room.box(Color(0.06, 0.08, 0.1, 0.95), Color(1, 1, 1, 0.08), 14, 12))
+		var card: Pane = Kit.pane(v, { "radius": 12, "fill": [Kit.PAPER.lightened(0.05)], "border": [1, Color(Kit.PAPER_INK, 0.25)], "shadow": [Color(0, 0, 0, 0.18), 8, Vector2(0, 3)], "pad": [10, 10, 14, 10], "paper": true })
 		var h: HBoxContainer = HBoxContainer.new()
-		h.add_theme_constant_override("separation", 12)
+		h.add_theme_constant_override("separation", 14)
 		card.add_child(h)
-		var portrait: SubViewportContainer = _portrait(c.get("look", {}))
-		h.add_child(portrait)
+		var pic: Control = _portrait(c.get("look", {}), Vector2(118, 92))
+		pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(pic)
 		var info: VBoxContainer = VBoxContainer.new()
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		info.alignment = BoxContainer.ALIGNMENT_CENTER
 		info.add_theme_constant_override("separation", 2)
 		h.add_child(info)
 		if c.has("error"):
-			Room.text(info, id, 15, INK, true)
-			Room.text(info, "This save would not open.", 13, Color("#f87171"))
+			Kit.text(info, id, "heading", Kit.PAPER_INK)
+			Kit.text(info, "This save would not open.", "small", Color(0.66, 0.2, 0.15))
 			continue
-		Room.text(info, c["name"], 18, INK, true)
-		Room.text(info, "Fishing Lv %d   ·   %s ⟡" % [int(c["level"]), Js.thousands(float(c["doubloons"]))], 13, Color("#e0b45a"))
-		Room.text(info, "Last played %s" % Time.get_datetime_string_from_unix_time(int(c["at"]), true).left(16), 12, SUB)
+		Kit.text(info, c["name"], "heading", Kit.PAPER_INK).add_theme_font_size_override("font_size", 20)
+		var stats: HBoxContainer = HBoxContainer.new()
+		stats.add_theme_constant_override("separation", 10)
+		info.add_child(stats)
+		Kit.text(stats, "Fishing Lv %d" % int(c["level"]), "value", Kit.PAPER_INK)
+		Kit.text(stats, "%s ⟡" % Js.thousands(float(c["doubloons"])), "value", Color(0.55, 0.38, 0.06))
+		Kit.text(info, "Last sailed %s" % _ago(int(c["at"])), "note", Kit.PAPER_INK_SOFT)
 		var btns: VBoxContainer = VBoxContainer.new()
 		btns.alignment = BoxContainer.ALIGNMENT_CENTER
+		btns.add_theme_constant_override("separation", 4)
 		h.add_child(btns)
-		var go: Button = Kit.button("Play", "accent", "large", Kit.GOLD)
-		go.custom_minimum_size = Vector2(110, 42)
+		var go: Button = Kit.button("Play", "primary", "large")
+		go.custom_minimum_size = Vector2(118, 44)
 		go.pressed.connect(func() -> void: play.emit(id))
 		btns.add_child(go)
 		if _first == null:
 			_first = go
 		var asking: bool = _retiring == id
-		var ret: Button = Room.tinted("Retire for good?" if asking else "Retire", Color("#f87171") if asking else Color("#8a95a0"), 12, 30)
+		var ret: Button = Kit.button("Retire for good?" if asking else "Retire", "danger" if asking else "secondary", "small")
 		ret.pressed.connect(func() -> void:
 			if _retiring != id:
 				_retiring = id
@@ -132,107 +167,236 @@ func _captains(v: VBoxContainer) -> void:
 			Captains.retire(id)
 			_build())
 		btns.add_child(ret)
-	Room.heading(v, "New captain", Color(0.75, 0.83, 0.89, 0.6), 12)
+	if not _making:
+		var add: Button = Kit.button("+  New captain", "secondary", "large")
+		add.pressed.connect(func() -> void:
+			_making = true
+			_build())
+		v.add_child(add)
+		if _first == null:
+			_first = add
+		return
+	_creator(v, "New captain", "Set out", func(n: String) -> void: new_captain.emit(n, _color), func() -> void:
+		_making = false
+		_build())
+
+
+## Name and colour, with the captain shown as you choose.
+func _creator(v: VBoxContainer, heading: String, go_label: String, on_go: Callable, on_cancel: Callable) -> LineEdit:
+	var card: Pane = Kit.pane(v, { "radius": 12, "fill": [Kit.PAPER.lightened(0.05)], "border": [1, Color(Kit.PAPER_INK, 0.4)], "pad": 14, "paper": true })
 	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	v.add_child(row)
-	var nm: LineEdit = _line(row, SteamLayer.suggested_name(), "Your captain's name")
-	var make: Button = Kit.button("Set out", "accent", "large", Kit.GOLD)
-	make.custom_minimum_size = Vector2(120, 42)
-	make.pressed.connect(func() -> void: new_captain.emit(nm.text))
-	row.add_child(make)
-	if _first == null:
-		_first = nm
+	row.add_theme_constant_override("separation", 16)
+	card.add_child(row)
+	var big: Control = _portrait({ "color": _color }, Vector2(170, 132))
+	big.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(big)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 8)
+	row.add_child(col)
+	Kit.text(col, heading, "eyebrow", Color(0.55, 0.3, 0.15))
+	var nm: LineEdit = _line(col, _name_draft if _name_draft != "" else SteamLayer.suggested_name(), "Your captain's name")
+	nm.text_changed.connect(func(t: String) -> void: _name_draft = t)
+	Kit.text(col, "Their colours", "label", Kit.PAPER_INK_SOFT)
+	var sw: HBoxContainer = HBoxContainer.new()
+	sw.add_theme_constant_override("separation", 6)
+	col.add_child(sw)
+	for id: String in STARTING:
+		var name: String = id
+		for cc: Dictionary in Rules.data()["characterColors"]:
+			if cc["id"] == id:
+				name = cc["name"]
+		var t: Paper.Tile = Paper.Tile.new()
+		t.on = id == _color
+		t.label = name
+		# Just the captain and the boat, not the whole sheet round them.
+		var at: AtlasTexture = AtlasTexture.new()
+		at.atlas = Skipper.tex("fishing_rest.png" if id == "default" else "fishing_%s_rest.png" % id)
+		at.region = Rect2(150, 320, 640, 450)
+		t.art = at
+		t.pigment = SEA_DYE
+		t.custom_minimum_size = Vector2(78, 84)
+		t.pressed.connect(func() -> void:
+			_color = id
+			_name_draft = nm.text
+			_build())
+		sw.add_child(t)
+	Kit.text(col, "More colours are earned as you play.", "note", Kit.PAPER_INK_SOFT)
+	var acts: HBoxContainer = HBoxContainer.new()
+	acts.add_theme_constant_override("separation", 8)
+	col.add_child(acts)
+	var go: Button = Kit.button(go_label, "primary", "large")
+	go.custom_minimum_size = Vector2(140, 44)
+	go.pressed.connect(func() -> void: on_go.call(nm.text))
+	acts.add_child(go)
+	var back: Button = Kit.button("Cancel", "secondary", "small")
+	back.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	back.pressed.connect(on_cancel)
+	acts.add_child(back)
+	nm.grab_focus.call_deferred()
+	return nm
 
 
-## The captain as they look on their boat, small.
-func _portrait(look: Dictionary) -> SubViewportContainer:
+## The captain as they look on their boat, on a wash of sea. No water of
+## their own (the reflection and the waterline are the sea's, not a card's).
+func _portrait(look: Dictionary, box_px: Vector2) -> Control:
+	var holder: Control = Control.new()
+	holder.custom_minimum_size = box_px
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var wash: Control = Control.new()
+	wash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(wash)
+	Paper.blot(wash, SEA_DYE, 0.8)
 	var box: SubViewportContainer = SubViewportContainer.new()
-	box.custom_minimum_size = Vector2(96, 86)
+	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	box.stretch = true
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(box)
 	var vp: SubViewport = SubViewport.new()
 	vp.transparent_bg = true
-	vp.size = Vector2i(96, 86)
+	vp.size = Vector2i(box_px)
 	box.add_child(vp)
 	var sk: Skipper = Skipper.new()
-	sk.box_scale = 0.5
-	sk.position = Vector2(52, 50)
+	sk.water = false
+	sk.box_scale = box_px.y / 150.0
+	sk.position = Vector2(box_px.x * 0.56, box_px.y * 0.6)
 	sk.scale.x = -1.0
 	vp.add_child(sk)
 	sk.set_look(look)
-	return box
+	return holder
+
+
+func _ago(unix: int) -> String:
+	var days: int = int((Time.get_unix_time_from_system() - unix) / 86400.0)
+	if days <= 0:
+		return "today"
+	if days == 1:
+		return "yesterday"
+	if days < 30:
+		return "%d days ago" % days
+	return Time.get_datetime_string_from_unix_time(unix).left(10)
 
 
 # ── Charters ───────────────────────────────────────────────────────────────────
 
 func _charters(v: VBoxContainer) -> void:
 	var mine: String = SteamLayer.player_key()
-	for c: Dictionary in Charter.list():
-		var card: PanelContainer = Room.panel(v, Room.box(Color(0.05, 0.09, 0.1, 0.95), Color(0.37, 0.92, 0.83, 0.25), 14, 12))
-		var h: HBoxContainer = HBoxContainer.new()
-		h.add_theme_constant_override("separation", 12)
-		card.add_child(h)
-		var info: VBoxContainer = VBoxContainer.new()
-		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		info.add_theme_constant_override("separation", 2)
-		h.add_child(info)
+	var list: Array = Charter.list()
+	if list.is_empty():
+		Kit.text(v, "No Charters yet. Found one and your friends can join it.", "note", Kit.PAPER_INK_SOFT, true)
+	for c: Dictionary in list:
+		var card: Pane = Kit.pane(v, { "radius": 12, "fill": [Kit.PAPER.lerp(SEA_DYE, 0.1).lightened(0.04)], "border": [1, Color(Kit.ink(SEA_DYE), 0.45)], "shadow": [Color(0, 0, 0, 0.18), 8, Vector2(0, 3)], "pad": 12, "paper": true })
+		var col: VBoxContainer = VBoxContainer.new()
+		col.add_theme_constant_override("separation", 6)
+		card.add_child(col)
 		var top: HBoxContainer = HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
-		info.add_child(top)
-		Room.text(top, c["name"], 18, INK, true)
-		if c["hardcore"]:
-			Room.chip(top, "HARDCORE", Color("#f87171"), Color(0.97, 0.44, 0.44, 0.1), Color(0.97, 0.44, 0.44, 0.35), 10)
-		Room.text(info, "Crew: %s" % ", ".join(PackedStringArray(c["crew"])), 13, SUB, false, true).custom_minimum_size = Vector2(0, 0)
-		Room.text(info, "At sea" if c["sailed"] else "Still in harbor, crew not yet set", 12, TEAL if c["sailed"] else Color("#e0b45a"))
-		var open: Button = Kit.button("Host", "accent", "large", TEAL)
-		open.custom_minimum_size = Vector2(110, 42)
-		open.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		col.add_child(top)
+		Kit.text(top, c["name"], "heading", Kit.PAPER_INK).add_theme_font_size_override("font_size", 20)
+		Kit.chip(top, "Hardcore" if c["hardcore"] else "Normal", Color(0.66, 0.2, 0.15) if c["hardcore"] else Kit.ink(SEA_DYE))
+		var sp: Control = Control.new()
+		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		top.add_child(sp)
+		var open: Button = Kit.button("Host", "primary", "large")
+		open.custom_minimum_size = Vector2(110, 40)
 		open.disabled = c["founder"] != mine
 		open.tooltip_text = "" if c["founder"] == mine else "Only its founder can host it."
 		open.pressed.connect(func() -> void: host.emit(c["id"]))
-		h.add_child(open)
+		top.add_child(open)
+		var crew: HBoxContainer = HBoxContainer.new()
+		crew.add_theme_constant_override("separation", 8)
+		col.add_child(crew)
+		var names: Array = c["crew"]
+		var looks: Array = c.get("looks", [])
+		for i: int in names.size():
+			var m: VBoxContainer = VBoxContainer.new()
+			m.add_theme_constant_override("separation", 0)
+			crew.add_child(m)
+			m.add_child(_portrait(looks[i] if i < looks.size() else { "color": "default" }, Vector2(78, 60)))
+			var nl: Label = Kit.text(m, names[i], "small", Kit.PAPER_INK)
+			nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		for i: int in range(names.size(), Charter.BERTHS):
+			var e: VBoxContainer = VBoxContainer.new()
+			crew.add_child(e)
+			var slot: Pane = Kit.pane(e, { "radius": 30, "fill": [Color(Kit.PAPER_INK, 0.05)], "border": [1, Color(Kit.PAPER_INK, 0.18)], "pad": 0, "paper": true })
+			slot.custom_minimum_size = Vector2(60, 60)
+			var el: Label = Kit.text(e, "Open berth", "note", Kit.PAPER_INK_SOFT)
+			el.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		Kit.text(col, "At sea" if c["sailed"] else "In harbor, the crew still gathering", "note", Kit.ink(SEA_DYE) if c["sailed"] else Color(0.55, 0.38, 0.06))
+		if c["founder"] != mine:
+			Kit.text(col, "Only its founder can host it.", "note", Kit.PAPER_INK_SOFT)
+	var acts: HBoxContainer = HBoxContainer.new()
+	acts.add_theme_constant_override("separation", 8)
+	v.add_child(acts)
+	var fb: Button = Kit.button("+  Found a Charter", "accent" if _founding else "secondary", "large", SEA_DYE)
+	fb.pressed.connect(func() -> void:
+		_founding = not _founding
+		_joining = false
+		_build())
+	acts.add_child(fb)
+	var jb: Button = Kit.button("Join a friend's", "accent" if _joining else "secondary", "large", SEA_DYE)
+	jb.pressed.connect(func() -> void:
+		_joining = not _joining
+		_founding = false
+		_build())
+	acts.add_child(jb)
+	if _founding:
+		_found_form(v)
+	if _joining:
+		_join_form(v)
 
-	Room.heading(v, "Found a Charter", Color(0.75, 0.83, 0.89, 0.6), 12)
-	var cname: LineEdit = _line(v, "", "The Charter's name")
+
+func _found_form(v: VBoxContainer) -> void:
+	var card: Pane = Kit.pane(v, { "radius": 12, "fill": [Kit.PAPER.lerp(SEA_DYE, 0.08).lightened(0.05)], "border": [1, Color(Kit.PAPER_INK, 0.35)], "pad": 14, "paper": true })
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	card.add_child(col)
+	Kit.text(col, "Found a Charter", "eyebrow", Kit.ink(SEA_DYE))
+	var cname: LineEdit = _line(col, "", "The Charter's name")
 	var modes: HBoxContainer = HBoxContainer.new()
 	modes.add_theme_constant_override("separation", 6)
-	v.add_child(modes)
+	col.add_child(modes)
 	for m: Array in [[false, "Normal"], [true, "Hardcore"]]:
 		var on: bool = _hardcore == m[0]
-		var b: Button = Room.tinted(m[1], (Color("#f87171") if m[0] else TEAL) if on else Color("#8a95a0"), 13, 32)
+		var b: Button = Kit.button(m[1], "accent" if on else "secondary", "small", Color(0.75, 0.25, 0.2) if m[0] else SEA_DYE)
 		b.pressed.connect(func() -> void:
 			_hardcore = m[0]
 			_build())
 		modes.add_child(b)
-	Room.text(v, "Hardcore: the crew shares a pool of lives, one per captain and one spare. A sunk ship spends one. At none, the Charter is gone for good. Chosen now and never changed." if _hardcore else "Normal: sail as long as you like. Hardcore can only be chosen at founding.", 12, SUB, false, true).custom_minimum_size = Vector2(0, 0)
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	v.add_child(row)
-	var cap: LineEdit = _line(row, SteamLayer.suggested_name(), "Your Charter captain's name")
-	var go: Button = Kit.button("Found it", "accent", "large", TEAL)
-	go.custom_minimum_size = Vector2(120, 42)
-	go.pressed.connect(func() -> void:
+	Kit.text(col, "Hardcore: the crew shares a pool of lives, one per captain and one spare. A sunk ship spends one. At none, the Charter is gone for good. Chosen now and never changed." if _hardcore else "Normal: sail as long as you like. Hardcore can only be chosen at founding.", "note", Kit.PAPER_INK_SOFT, true)
+	var made: LineEdit = _creator(col, "Your Charter captain", "Found it", func(n: String) -> void:
 		if cname.text.strip_edges() == "":
 			cname.placeholder_text = "Name the Charter first"
 			cname.grab_focus()
 			return
-		found.emit(cname.text.strip_edges(), _hardcore, cap.text))
-	row.add_child(go)
+		found.emit(cname.text.strip_edges(), _hardcore, n, _color), func() -> void:
+		_founding = false
+		_build())
+	cname.grab_focus.call_deferred()
+	if made != null:
+		pass
 
-	Room.heading(v, "Join a friend's Charter", Color(0.75, 0.83, 0.89, 0.6), 12)
+
+func _join_form(v: VBoxContainer) -> void:
+	var card: Pane = Kit.pane(v, { "radius": 12, "fill": [Kit.PAPER.lerp(SEA_DYE, 0.08).lightened(0.05)], "border": [1, Color(Kit.PAPER_INK, 0.35)], "pad": 14, "paper": true })
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	card.add_child(col)
+	Kit.text(col, "Join a friend's Charter", "eyebrow", Kit.ink(SEA_DYE))
 	if SteamLayer.up:
-		Room.text(v, "Accept your friend's invite in Steam, or choose Join Game on their name in your friends list.", 13, SUB, false, true).custom_minimum_size = Vector2(0, 0)
-	else:
-		Room.text(v, "Steam is not running, so Charters sail over this network. Enter the founder's address.", 13, SUB, false, true).custom_minimum_size = Vector2(0, 0)
-		var jr: HBoxContainer = HBoxContainer.new()
-		jr.add_theme_constant_override("separation", 8)
-		v.add_child(jr)
-		var addr: LineEdit = _line(jr, "127.0.0.1", "The founder's address")
-		var who: LineEdit = _line(jr, SteamLayer.suggested_name(), "Your captain's name")
-		var j: Button = Kit.button("Join", "accent", "large", TEAL)
-		j.custom_minimum_size = Vector2(100, 42)
-		j.pressed.connect(func() -> void: join.emit(addr.text.strip_edges(), who.text))
-		jr.add_child(j)
+		Kit.text(col, "Accept your friend's invite in Steam, or choose Join Game on their name in your friends list.", "note", Kit.PAPER_INK_SOFT, true)
+		return
+	Kit.text(col, "Steam is not running, so Charters sail over this network. Enter the founder's address.", "note", Kit.PAPER_INK_SOFT, true)
+	var jr: HBoxContainer = HBoxContainer.new()
+	jr.add_theme_constant_override("separation", 8)
+	col.add_child(jr)
+	var addr: LineEdit = _line(jr, "127.0.0.1", "The founder's address")
+	var who: LineEdit = _line(jr, SteamLayer.suggested_name(), "Your captain's name")
+	var j: Button = Kit.button("Join", "primary", "large")
+	j.custom_minimum_size = Vector2(100, 42)
+	j.pressed.connect(func() -> void: join.emit(addr.text.strip_edges(), who.text))
+	jr.add_child(j)
 
 
 func _line(parent: Control, value: String, hint: String) -> LineEdit:
@@ -244,3 +408,25 @@ func _line(parent: Control, value: String, hint: String) -> LineEdit:
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(l)
 	return l
+
+
+## A sheet's mark, drawn in ink: one boat (alone) or three (a fleet).
+class Emblem:
+	extends Control
+
+	var kind: String = "one"
+
+	func _draw() -> void:
+		var ink: Color = Kit.PAPER_INK
+		var c: Vector2 = size / 2.0
+		var boats: Array = [[Vector2(0, 0), 1.0]] if kind == "one" else [[Vector2(-15, 4), 0.7], [Vector2(15, 4), 0.7], [Vector2(0, -2), 0.85]]
+		draw_circle(c, minf(size.x, size.y) / 2.0, Color(ink, 0.06))
+		for b: Array in boats:
+			var o: Vector2 = c + (b[0] as Vector2)
+			var k: float = b[1]
+			var hull: PackedVector2Array = PackedVector2Array([o + Vector2(-14, 6) * k, o + Vector2(14, 6) * k, o + Vector2(9, 13) * k, o + Vector2(-9, 13) * k])
+			draw_colored_polygon(hull, Color(0.45, 0.28, 0.15))
+			draw_line(o + Vector2(0, 6) * k, o + Vector2(0, -16) * k, ink, 1.5, true)
+			draw_colored_polygon(PackedVector2Array([o + Vector2(1, -15) * k, o + Vector2(12, 3) * k, o + Vector2(1, 3) * k]), Color(0.93, 0.88, 0.76))
+			draw_polyline(PackedVector2Array([o + Vector2(1, -15) * k, o + Vector2(12, 3) * k, o + Vector2(1, 3) * k, o + Vector2(1, -15) * k]), Color(ink, 0.6), 1.0, true)
+		draw_arc(c + Vector2(0, 16), 22.0, 0.2, PI - 0.2, 16, Color(SEA_DYE.darkened(0.3), 0.6), 1.5, true)
