@@ -49,6 +49,10 @@ const ZOOM_MIN: float = 0.55
 const ZOOM_MAX: float = 1.6
 var _zoom_to: float = 1.0
 var _night: CanvasModulate
+## THE SUN (and the moon), a DirectionalLight2D that crosses the sky with the
+## sea clock: high and white by day, low, warm and grazing at dusk and dawn,
+## faint and blue at night. The land's normal maps take it from its side.
+var _sun: DirectionalLight2D
 var _town_light: PointLight2D
 var _hud: FishingHud
 var _hud_layer: CanvasLayer
@@ -152,6 +156,9 @@ func _ready() -> void:
 
 	_night = CanvasModulate.new()
 	add_child(_night)
+	_sun = DirectionalLight2D.new()
+	_sun.blend_mode = Light2D.BLEND_MODE_ADD
+	add_child(_sun)
 
 	_camera = Camera2D.new()
 	_camera.position_smoothing_enabled = false
@@ -222,7 +229,16 @@ func _process(delta: float) -> void:
 	_water.set_shader_parameter("u_lantern", dark)
 
 	# Night on the solid world: dim and cool it, and let the lights pool.
-	_night.color = Color.WHITE.lerp(Color(0.42, 0.48, 0.66), dark)
+	# The world sits a little under full by day so the sun has room to model
+	# it: lit faces come up to full, the far sides stay soft.
+	_night.color = Color(0.88, 0.88, 0.88).lerp(Color(0.40, 0.46, 0.64), dark)
+	var warm: float = float(clock["warmth"])
+	var toward: Vector2 = Vector2.from_angle(SeaClock.sun_angle(now))
+	_sun.rotation = (-toward).angle() - PI / 2.0
+	_sun.height = lerpf(0.72, 0.22, warm)
+	var sun_col: Color = Color(1.0, 0.97, 0.9).lerp(Color(1.0, 0.62, 0.32), warm)
+	_sun.color = sun_col.lerp(Color(0.55, 0.66, 1.0), dark)
+	_sun.energy = lerpf(0.22 + 0.12 * warm, 0.16, dark)
 	_boat.lantern.energy = dark * 1.1 * (0.5 + 0.5 * _boat.lantern_glow)
 	_town_light.energy = dark * 1.4
 	# Light and lettering are not dimmed by the night: undo it for them.
@@ -597,7 +613,7 @@ func _draw_port(port: Dictionary) -> void:
 	var pl: Variant = port.get("plate")
 	if pl != null:
 		var plate: Sprite2D = Sprite2D.new()
-		plate.texture = Skipper.tex(String((pl as Dictionary)["art"]))
+		plate.texture = Lit.tex(String((pl as Dictionary)["art"]))
 		if plate.texture != null:
 			var w: float = d * float(pl.get("width", 1.0))
 			var sc: float = w / float(plate.texture.get_width())
@@ -609,7 +625,7 @@ func _draw_port(port: Dictionary) -> void:
 			Shore.trace(plate)
 	for bd: Dictionary in port["buildings"]:
 		var b: Sprite2D = Sprite2D.new()
-		b.texture = Skipper.tex(String(bd["art"]))
+		b.texture = Lit.tex(String(bd["art"]))
 		if b.texture == null:
 			continue
 		var bs: float = d * float(bd["scale"]) / float(b.texture.get_width())

@@ -187,6 +187,25 @@ void fragment() {
 		col += vec3(1.0, 0.72, 0.38) * pool * shimmer * 0.16 * u_lantern;
 	}
 
+	// THE ISLANDS' SHADOWS on the water: marched from here toward the sun
+	// through the distance field; long and soft when the sun is low.
+	if (u_shore_on > 0.5 && u_dark < 0.95) {
+		vec2 sp = screen_uv_to_sdf(SCREEN_UV);
+		vec2 dir = normalize(vec2(u_light.x, u_light.y * GROUND));
+		float reach = mix(70.0, 520.0, u_warm) * u_zoom;
+		float lit = 1.0;
+		float tt = 6.0;
+		for (int i = 0; i < 18; i++) {
+			float dd = texture_sdf(sp + dir * tt);
+			if (dd < 0.5) { lit = 0.0; break; }
+			lit = min(lit, 6.0 * dd / tt);
+			tt += max(dd, 5.0);
+			if (tt > reach) break;
+		}
+		float fade = 1.0 - smoothstep(reach * 0.4, reach, tt);
+		col *= mix(1.0, 0.70, (1.0 - clamp(lit, 0.0, 1.0)) * (1.0 - u_dark) * mix(0.55, 1.0, u_warm) * (lit < 0.5 ? 1.0 : fade));
+	}
+
 	// THE SHORE. Near land the water shoals: lighter and clearer over sand, and
 	// foam laps in toward the beach in bands that run up and fall back.
 	if (u_shore_on > 0.5) {
@@ -195,7 +214,7 @@ void fragment() {
 			float shoal = 1.0 - smoothstep(0.0, 260.0, sd);
 			col = mix(col, col * 1.18 + vec3(0.06, 0.13, 0.11), shoal * 0.55 * (1.0 - u_dark * 0.6));
 			// Sand showing through the last few yards.
-			col = mix(col, vec3(0.62, 0.66, 0.52) * (1.0 - u_dark * 0.75), (1.0 - smoothstep(0.0, 34.0, sd)) * 0.30);
+			col = mix(col, vec3(0.62, 0.66, 0.52) * (1.0 - u_dark * 0.75), (1.0 - smoothstep(0.0, 26.0, sd)) * 0.16);
 			float wob = vnoise(world * 0.012 + vec2(TIME * 0.05, 0.0)) * 18.0;
 			float lap = 0.0;
 			for (int k = 0; k < 3; k++) {
@@ -206,7 +225,7 @@ void fragment() {
 				float broken = smoothstep(0.35, 0.75, vnoise(world * 0.018 + vec2(float(k) * 7.3, TIME * 0.04)));
 				lap += band * sin(ph * 3.14159) * broken * (0.6 + 0.4 * rag);
 			}
-			float edge = exp(-pow(sd / 7.0, 2.0)) * (0.7 + 0.3 * vnoise(world * 0.05 + TIME * 0.3));
+			float edge = exp(-pow(sd / 6.0, 2.0)) * smoothstep(0.3, 0.8, vnoise(world * 0.04 + vec2(TIME * 0.25, 0.0)));
 			col += (lap * 0.13 + edge * 0.22) * vec3(0.92, 0.97, 1.0) * (1.0 - u_dark * 0.55);
 			col += (lap + edge) * vec3(0.36, 0.96, 0.85) * u_dark * 0.12;
 		}

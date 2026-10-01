@@ -152,6 +152,8 @@ static func glow(l: Label, c: Color) -> Label:
 
 ## Words over art: a dark shadow so they read on anything.
 static func lift(l: Label) -> Label:
+	# Lettering on the water is not lit by the sun or the lanterns.
+	l.light_mask = 0
 	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.75))
 	l.add_theme_constant_override("shadow_offset_x", 0)
 	l.add_theme_constant_override("shadow_offset_y", 1)

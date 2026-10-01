@@ -20,7 +20,7 @@ func _init() -> void:
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
 	var base: float = floor(Time.get_unix_time_from_system() * 1000.0 / cycle) * cycle
-	var at: float = base + cycle * (0.5 if night else 0.1)
+	var at: float = base + cycle * (0.5 if night else (0.30 if args.has("dusk") else 0.1))
 	Clock.install(func() -> float: return at)
 	Main.straight_to_sea = what != "title"
 	if what == "title":
@@ -273,6 +273,14 @@ func _init() -> void:
 			var lu: LevelUp = LevelUp.new()
 			lu.claim = { "from": 4.0, "to": 6.0, "granted": [{ "level": 5.0, "reward": (Rules.data()["levelRewards"] as Dictionary)["5"] }, { "level": 6.0, "reward": (Rules.data()["levelRewards"] as Dictionary)["6"] }] }
 			hud.add_child(lu)
+	if args.has("nosun") and main.get_child_count() > 0:
+		var sx: Node = main.get_child(main.get_child_count() - 1)
+		if sx is Sea:
+			(sx as Sea)._sun.visible = false
+	if args.has("noshore") and main.get_child_count() > 0:
+		var sy: Node = main.get_child(main.get_child_count() - 1)
+		if sy is Sea:
+			(sy as Sea)._water.set_shader_parameter("u_shore_on", 0.0)
 	var wait: int = 150 if what == "crate" else (160 if what in ["card", "finn", "rankup", "slain"] else 50)
 	for f: int in wait:
 		await process_frame

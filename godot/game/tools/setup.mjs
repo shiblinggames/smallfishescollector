@@ -154,6 +154,68 @@ if (sheets.length) {
   }
   fs.writeFileSync(DERIPPLED, JSON.stringify(derippled, null, 1))
 }
+// NORMAL MAPS for the land (Godot over the web baseline): each island plate
+// and building gets a <name>.n.png beside it, so the 2D lights (the sun as it
+// crosses the sky, the lanterns at night) shade the painting from the right
+// side. Built from the painting: its blurred brightness as fine relief, and its
+// blurred alpha as a rounded rim, through a Sobel. Remembered by hash.
+const LANDS = [
+  'sea/port-mainland.webp', 'sea/mainland-town.png', 'sea/port-home.webp', 'sea/port-tally-house.webp', 'sea/tally-house-v2.webp',
+  'sea/port-crew-hall.webp', 'crew/hall_1.png', 'crew/drill_1.png', 'crew/stores_1.png', 'sea/port-posting-house.webp',
+  'sea/posting-house-v3.webp', 'sea/port-forge.webp', 'forge/forge.png', 'sea/port-gunwharf.webp', 'sea/gunwharf-v3.webp',
+  'sea/port-charterhouse.webp', 'sea/charterhouse-v2.webp', 'sea/port-trawl-harbor.webp', 'sea/trawl-harbor-v3.webp',
+  'sea/port-shipyard.webp', 'sea/shipyard-v3.webp', 'sea/isle-plate-1.webp', 'sea/isle-shallows.webp', 'sea/isle-open.webp',
+  'sea/isle-deep.webp', 'sea/isle-abyss.webp', 'sea/isle-ancient.webp',
+]
+const NORMALS = path.join(HERE, 'art', '.normals.json')
+const normals = fs.existsSync(NORMALS) ? JSON.parse(fs.readFileSync(NORMALS, 'utf8')) : {}
+let made = 0
+for (const rel of LANDS) {
+  const from = path.join(WEB, 'public', rel)
+  if (!fs.existsSync(from)) continue
+  const src = fs.readFileSync(from)
+  const sha = crypto.createHash('sha256').update(src).digest('hex')
+  const to = path.join(HERE, 'art', rel.replace(/\.[a-z]+$/, '.n.png'))
+  if (normals[rel] === sha && fs.existsSync(to)) continue
+  const sharp = createRequire(path.join(WEB, 'package.json'))('sharp')
+  const { data, info } = await sharp(src).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  const W = info.width, H = info.height
+  const lum = new Float32Array(W * H), alp = new Float32Array(W * H)
+  for (let i = 0; i < W * H; i++) {
+    const a = data[i * 4 + 3] / 255
+    alp[i] = a
+    lum[i] = (0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]) / 255 * a
+  }
+  const blur = (f, r) => {
+    const t = new Float32Array(W * H), o = new Float32Array(W * H)
+    for (let y = 0; y < H; y++) { let acc = 0; for (let x = -r; x <= r; x++) acc += f[y * W + Math.min(W - 1, Math.max(0, x))]
+      for (let x = 0; x < W; x++) { t[y * W + x] = acc / (2 * r + 1); acc += f[y * W + Math.min(W - 1, x + r + 1)] - f[y * W + Math.max(0, x - r)] } }
+    for (let x = 0; x < W; x++) { let acc = 0; for (let y = -r; y <= r; y++) acc += t[Math.min(H - 1, Math.max(0, y)) * W + x]
+      for (let y = 0; y < H; y++) { o[y * W + x] = acc / (2 * r + 1); acc += t[Math.min(H - 1, y + r + 1) * W + x] - t[Math.max(0, y - r) * W + x] } }
+    return o
+  }
+  const k = Math.max(1, Math.round(W / 500))
+  const fine = blur(lum, k), rim = blur(alp, k * 6)
+  const h = new Float32Array(W * H)
+  for (let i = 0; i < W * H; i++) h[i] = fine[i] * 0.9 + rim[i] * 0.7
+  const out = Buffer.alloc(W * H * 4)
+  const S = 1.7 / k
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const at = (xx, yy) => h[Math.min(H - 1, Math.max(0, yy)) * W + Math.min(W - 1, Math.max(0, xx))]
+    const dx = (at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1))
+    const dy = (at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1))
+    let nx = -dx * S, ny = -dy * S, nz = 1
+    const l = Math.hypot(nx, ny, nz); nx /= l; ny /= l; nz /= l
+    const i = (y * W + x) * 4
+    out[i] = Math.round((nx * 0.5 + 0.5) * 255); out[i + 1] = Math.round((ny * 0.5 + 0.5) * 255); out[i + 2] = Math.round((nz * 0.5 + 0.5) * 255); out[i + 3] = 255
+  }
+  fs.mkdirSync(path.dirname(to), { recursive: true })
+  await sharp(out, { raw: { width: W, height: H, channels: 4 } }).png().toFile(to)
+  normals[rel] = sha
+  made++
+}
+if (made) fs.writeFileSync(NORMALS, JSON.stringify(normals, null, 1))
+if (made) console.log(`  normals: ${made} made`)
 console.log(copied ? `  art: ${copied} file(s) copied from web/public` : '  art: up to date')
 
 const addon = path.join(HERE, 'addons', 'godotsteam')

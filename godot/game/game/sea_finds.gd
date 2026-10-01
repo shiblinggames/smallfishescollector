@@ -25,7 +25,7 @@ class IsleNode:
 		var pl: Variant = isle.get("plate")
 		if pl != null:
 			var plate: Sprite2D = Sprite2D.new()
-			plate.texture = Skipper.tex(String((pl as Dictionary)["art"]))
+			plate.texture = Lit.tex(String((pl as Dictionary)["art"]))
 			if plate.texture != null:
 				var w: float = r * 2.0 * float(pl.get("width", 1.0))
 				var sc: float = w / float(plate.texture.get_width())
