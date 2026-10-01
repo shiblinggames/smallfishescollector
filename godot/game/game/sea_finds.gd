@@ -103,6 +103,7 @@ class DigHint:
 	extends Node2D
 	var site: Dictionary = {}
 	var strength: float = 0.0
+	var bubble_t: float = 0.0
 	var _t: float = 0.0
 
 	func _ready() -> void:
@@ -115,12 +116,10 @@ class DigHint:
 		_t += delta
 		queue_redraw()
 
+	## The tell itself is bubbles breaking the surface, drawn by the sea's
+	## reactive water (see Sea._finds): nothing is painted here any more.
 	func _draw() -> void:
-		if strength <= 0.0:
-			return
-		for k: int in 3:
-			var u: float = fmod(_t * 0.25 + k / 3.0, 1.0)
-			draw_arc(Vector2.ZERO, 60.0 + u * 240.0, 0.0, TAU, 64, Color(0.75, 0.92, 0.85, (1.0 - u) * 0.22 * strength), 3.0, true)
+		pass
 
 
 ## WHAT YOU FOUND: one quiet panel for a landing, a dig, or a bottle.

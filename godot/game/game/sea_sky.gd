@@ -61,9 +61,8 @@ func attach(world: Node2D) -> void:
 		sh.visible = false
 		sh.region_enabled = true
 		sh.texture = _sheet
-		sh.modulate = Color("#93a8bf")
-		var mul: CanvasItemMaterial = CanvasItemMaterial.new()
-		mul.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
+		var mul: ShaderMaterial = ShaderMaterial.new()
+		mul.shader = load("res://game/fx/cloud_shadow.gdshader")
 		sh.material = mul
 		sh.z_index = 3
 		world.add_child(sh)
@@ -132,5 +131,4 @@ func step(delta: float, cam: Vector2, zoom: float, screen: Vector2, dark: float,
 		sh.region_rect = fr
 		sh.position = Vector2(float(c["x"]) + w * 0.12, float(c["y"]) + w * 0.40)
 		sh.scale = Vector2(w / fr.size.x, w / fr.size.x)
-		# Multiplied: white leaves the water alone, the tint darkens it.
-		sh.modulate = Color(1, 1, 1).lerp(Color("#93a8bf"), 0.55 * fade * (1.0 - dark))
+		(sh.material as ShaderMaterial).set_shader_parameter("strength", 0.55 * fade * (1.0 - dark))

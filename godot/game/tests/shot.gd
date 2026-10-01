@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -217,6 +217,23 @@ func _init() -> void:
 					break
 			for f: int in 160:
 				await process_frame
+		"cloud":
+			sea._boat.position = Vector2(-1500, 2600)
+			sea._sky._next = 0.0
+			await process_frame
+			await process_frame
+			for c: Dictionary in sea._sky._clouds:
+				if c["on"]:
+					c["x"] = sea._boat.position.x - float(c["w"]) * 0.7
+					c["y"] = sea._boat.position.y - 260.0
+					c["age"] = 5.0
+			for f: int in 20:
+				await process_frame
+		"digsite":
+			var site: Dictionary = (Rules.data()["digSites"] as Array)[0]
+			sea._boat.position = Vector2(float(site["x"]) + 160.0, float(site["y"]) + 60.0)
+			for f: int in 90:
+				await process_frame
 		"bloom":
 			p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[89])
 			sea._boat.position = Vector2(300, 14100)
@@ -236,7 +253,7 @@ func _init() -> void:
 				sea._sky._next = 0.0
 				sea._boat.heading = 0.3
 				sea._boat.target = Vector2(2500, 3800)
-				for f: int in 110:
+				for f: int in 160:
 					await process_frame
 			else:
 				sea._zoom_to = 1.6

@@ -170,8 +170,8 @@ void fragment() {
 		float lane = exp(-pow(across_l / max(1.0, half_w), 2.0));
 		float toward_moon = 0.5 + 0.5 * smoothstep(-0.9, 0.9, along_l / (u_res.x * 0.5));
 		// Fine flecks (the web's scale smeared into big shapes up close).
-		float gl = vnoise(w * 24.0 + axis * 1.5 + vec2(TIME * 0.5, TIME * -0.3)) * 0.6 + vnoise(w * 41.0 - vec2(TIME * 0.7, 0.0)) * 0.4;
-		float glit = smoothstep(mix(0.93, 0.74, lane), 0.98, gl) * smoothstep(0.30, 0.80, d1);
+		float gl = vnoise(w * 13.0 + axis * 1.5 + vec2(TIME * 0.12, TIME * -0.07));
+		float glit = smoothstep(mix(0.985, 0.88, lane), 1.0, gl) * smoothstep(0.30, 0.80, d1);
 		float road = lane * 0.030 + glit * 0.42 * lane;
 		col += road * toward_moon * vec3(0.80, 0.88, 1.0) * u_dark * u_swell * (1.0 - 0.88 * u_rush);
 	}

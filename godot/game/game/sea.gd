@@ -702,6 +702,14 @@ func _finds(delta: float, now: float, lift: Color) -> void:
 		var h: SeaFinds.DigHint = _digs[id]
 		var d: float = at.distance_to(h.position)
 		h.strength = clampf((Explore.DIG_HINT_RANGE - d) / 480.0, 0.0, 1.0) if not _dug(id) else 0.0
+		# Something on the bottom: bubbles breaking the surface over it, more
+		# of them and stronger the closer she is.
+		if h.strength > 0.0:
+			h.bubble_t -= delta
+			if h.bubble_t <= 0.0:
+				h.bubble_t = randf_range(0.35, 1.1) / (0.4 + h.strength)
+				var off: Vector2 = Vector2(randf_range(-55.0, 55.0), randf_range(-35.0, 35.0))
+				_field.ring(h.position + off, randf_range(26.0, 58.0), 1.2, 0.25 + 0.4 * h.strength)
 	_bottle_t += delta
 	var win: int = Explore.bottle_window(now)
 	if _bottle_t > 10.0 or win != _bottle_win:
@@ -739,7 +747,7 @@ func _find_in_reach(at: Vector2) -> Variant:
 		return [("Look again at %s" if been else "Go ashore at %s") % isle["name"], _land.bind(isle)]
 	var site: Dictionary = Explore.dig_at(at.x, at.y)
 	if not site.is_empty() and not _dug(site["id"]):
-		return ["Dig here", _dig.bind(site)]
+		return ["Drop the grapple", _dig.bind(site)]
 	for k: String in _bottles:
 		var bn: SeaFinds.BottleNode = _bottles[k]
 		if at.distance_to(bn.position) < Explore.BOTTLE_REACH:
@@ -787,7 +795,7 @@ func _dig(site: Dictionary) -> void:
 		_hud.toast(str((r as Dictionary).get("error", "The spade turned nothing up. Try again.")) if r is Dictionary else "The spade turned nothing up. Try again.")
 		return
 	Sound.chest(true)
-	_show_find(SeaFinds.panel(_room_layer, "sea/dig-box.png", "Dug up", r["name"], [[str(r["found"]), "note"]], [[r["doubloons"], "doubloons"], [r["gems"], "gems"]]))
+	_show_find(SeaFinds.panel(_room_layer, "sea/dig-box.png", "Hauled up from the bottom", r["name"], [[str(r["found"]), "note"]], [[r["doubloons"], "doubloons"], [r["gems"], "gems"]]))
 	_hud.refresh()
 
 
@@ -808,7 +816,7 @@ func _bottle(b: Dictionary) -> void:
 	if r.get("kind") == "bearing":
 		title = "A bearing: %s" % r["name"]
 		lines.append([str(r["bearing"]), "body_strong"])
-		lines.append(["Something is buried there. Sail over it and dig.", "small"])
+		lines.append(["Something lies on the bottom there. Sail over it and drop the grapple.", "small"])
 	_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "Fished out of the water", title, lines, []))
 
 

@@ -231,6 +231,11 @@ func _process(delta: float) -> void:
 		var sc: float = float(m[5])
 		var ang: float = float(m[2]) + float(m[8]) * age
 		var out: float = 0.0 if bow else (14.0 * sc * age * float(m[9]) if churn else SPREAD * float(STYLE["spread"]) * sqrt(sc))
+		# A V FROM THE CUTWATER: each pair is laid at the bow and spreads as it
+		# ages, so the arms meet at her stem (the web's GPU wake set them out at
+		# full width at once, which drew two parallel lines).
+		if not bow and not churn:
+			out *= (1.0 - pow(1.0 - age, 2.2)) * (0.55 + 0.45 * float(m[4]))
 		var px: float = float(m[0]) + -sin(ang) * float(m[3]) * out
 		var py: float = float(m[1]) + cos(ang) * float(m[3]) * out
 		var fade: float = pow(1.0 - age, 2.4 if churn else (1.2 if bow else 1.7))

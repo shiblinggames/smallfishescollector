@@ -281,7 +281,8 @@ func step(delta: float, cam: Vector2, half: Vector2, boat: Vector2, boat_speed: 
 		var ang: float = atan2(float(fl["vy"]), float(fl["vx"])) if _cam_speed > 12.0 else 0.0
 		var sz: float = float(fl["size"])
 		dm.set_instance_transform_2d(i, Transform2D(ang, Vector2(sz * smear, sz), 0.0, Vector2(float(fl["x"]), float(fl["y"]))))
-		var a2: float = float(fl["base"]) * busy * (0.45 + 0.55 * sin(_t * float(fl["rate"]) + float(fl["phase"])))
+		# Faint and slow: foam turning over, not a glitter.
+		var a2: float = float(fl["base"]) * 0.45 * busy * (0.6 + 0.4 * sin(_t * float(fl["rate"]) * 0.35 + float(fl["phase"])))
 		dm.set_instance_color(i, Color(tint_night.r, tint_night.g, tint_night.b, a2))
 
 	# ── Gulls ──
