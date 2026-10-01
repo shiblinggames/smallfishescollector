@@ -400,6 +400,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Sound.streak(n) on a perfect, a step up a pentatonic scale per perfect in a row, with
   a flourish at 5 and 10, fired on the press with the perfect. Boat.splash takes a place.
   The needle and its freeze are untouched (never backwards).
+  THE LINE IS LIVE (same day). It was painted into every captain sheet; setup.mjs deripple
+  v4 keeps only each sheet's largest connected shape (the captain and hull; the line and
+  its hook were always a second, separate shape) and clears near-transparent dust.
+  game/fishing_line.gd (built by Skipper for any captain with a rod) draws it from the
+  rod tip in the captain's space, using tip/end points measured off the painted line
+  before it was cleared (identical on every colour's sheet): rest hangs and sways with a
+  small drawn hook when none is worn; cast flies out whipping over 0.45s; wait runs into
+  the water; in a fight it runs to Skipper.line_target (a global point), taut and humming,
+  or bows slack (line_slack), or snaps (line_snap_t). ReelFight now draws the fish in
+  toward the hull on the line again, and the leap carries the line up with it.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

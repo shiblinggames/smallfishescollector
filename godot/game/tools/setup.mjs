@@ -106,7 +106,7 @@ const copyIfChanged = (from, to) => {
   const src = fs.readFileSync(from)
   if (SHEET.test(path.basename(to))) {
     const sha = crypto.createHash('sha256').update(src).digest('hex')
-    if (derippled[path.basename(to)] === sha + ':v2' && fs.existsSync(to)) return
+    if (derippled[path.basename(to)] === sha + ':v4' && fs.existsSync(to)) return
     sheets.push({ to, src, sha })
     return
   }
@@ -159,9 +159,37 @@ if (sheets.length) {
         if (pale && (data[i + 3] < 230 || b > r + 12)) data[i + 3] = 0
       }
     }
+    // v3 (2026-10-01): the painted fishing line (and the hook on it) goes
+    // too. The game draws a live line from the rod's tip now (Skipper's
+    // FishingLine: it goes taut, follows the fish, snaps). On every sheet the
+    // captain and the hull are one connected shape and the line is another, so
+    // keep the largest shape and clear the rest.
+    {
+      const lab = new Int32Array(W * H)
+      let best = 0, bestN = 0, id = 0
+      const stack = []
+      for (let i0 = 0; i0 < W * H; i0++) {
+        if (lab[i0] || data[i0 * 4 + 3] <= 8) continue
+        id++
+        let n = 0
+        stack.push(i0); lab[i0] = id
+        while (stack.length) {
+          const i = stack.pop(); n++
+          const x = i % W, y = (i / W) | 0
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            const nx = x + dx, ny = y + dy
+            if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue
+            const j = ny * W + nx
+            if (!lab[j] && data[j * 4 + 3] > 8) { lab[j] = id; stack.push(j) }
+          }
+        }
+        if (n > bestN) { bestN = n; best = id }
+      }
+      for (let i = 0; i < W * H; i++) if ((lab[i] && lab[i] !== best) || data[i * 4 + 3] <= 8) data[i * 4 + 3] = 0
+    }
     fs.mkdirSync(path.dirname(to), { recursive: true })
     await sharp(data, { raw: info }).png().toFile(to)
-    derippled[path.basename(to)] = sha + ':v2'
+    derippled[path.basename(to)] = sha + ':v4'
     copied++
   }
   fs.writeFileSync(DERIPPLED, JSON.stringify(derippled, null, 1))

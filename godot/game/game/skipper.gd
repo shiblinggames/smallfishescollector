@@ -109,7 +109,21 @@ func set_frame(f: String) -> void:
 	if f == frame:
 		return
 	frame = f
+	frame_at = Time.get_ticks_msec() / 1000.0
+	if f != "wait":
+		line_target = null
+		line_slack = 0.0
+		line_snap_t = -1.0
 	_build()
+
+
+## THE LINE (game/fishing_line.gd): where it runs to in a fight (a global
+## point, or null for the pose's own), how slack it hangs (0 taut, 1 limp),
+## and when it snapped (seconds, or -1). Cleared when the pose changes.
+var line_target: Variant = null
+var line_slack: float = 0.0
+var line_snap_t: float = -1.0
+var frame_at: float = 0.0
 
 
 static func _find(list_key: String, id: Variant) -> Dictionary:
@@ -175,6 +189,11 @@ func _build() -> void:
 	_roles["boat"] = _hull_sprite if _hull_sprite != null else _roles.get("skin")
 	if water:
 		_water_fx(origin, h, _hull_sprite)
+	# The line, drawn live from the rod's tip (cleared from the sheets).
+	if look.get("rodSlug") != null:
+		var fl: FishingLine = FishingLine.new()
+		fl.skipper = self
+		add_child(fl)
 
 
 var _hull_sprite: Sprite2D
