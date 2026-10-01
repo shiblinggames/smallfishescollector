@@ -65,6 +65,12 @@ const BLOOMS: Array = [
 const ZOOM_MIN: float = 0.55
 const ZOOM_MAX: float = 1.6
 var _zoom_to: float = 1.0
+## THE STAGE (the Locker): the camera pushed in on her and set off to one
+## side, { "zoom": float, "shift": Vector2 screen px }; null for the sea's own
+## camera. The captain's zoom is not touched.
+var stage: Variant = null
+var _stage_k: float = 0.0
+var _stage_last: Dictionary = { "zoom": 1.0, "shift": Vector2.ZERO }
 var _night: CanvasModulate
 ## THE SUN (and the moon), a DirectionalLight2D that crosses the sky with the
 ## sea clock: high and white by day, low, warm and grazing at dusk and dawn,
@@ -275,6 +281,7 @@ func _ready() -> void:
 	_hud.recall_pressed.connect(_press_recall)
 	_course.hud = _hud
 	_hud.chart_pressed.connect(_open_chart)
+	_hud.locker_wanted.connect(_open_locker)
 	_hud.course_autopilot.connect(_course.toggle_autopilot)
 	_hud.course_clear.connect(_course.clear)
 	hud_layer.add_child(_hud)
@@ -314,6 +321,15 @@ func _process(delta: float) -> void:
 			_course_mark.text = "%s  ·  %s" % [_course.label, Course.eta_text(_course.eta())]
 	var cam_world: Vector2 = _boat.position
 	_camera.position = Vector2(cam_world.x, cam_world.y * Chart.GROUND)
+	if stage != null:
+		_stage_k = minf(1.0, _stage_k + delta * 2.2)
+	else:
+		_stage_k = maxf(0.0, _stage_k - delta * 2.8)
+	if _stage_k > 0.0:
+		var sk: float = _stage_k * _stage_k * (3.0 - 2.0 * _stage_k)
+		if stage != null:
+			_stage_last = stage
+		_camera.position += (_stage_last["shift"] as Vector2) / _camera.zoom.x * sk
 
 	var now: float = Clock.now_ms()
 	var clock: Dictionary = SeaClock.at(now)
@@ -321,7 +337,8 @@ func _process(delta: float) -> void:
 	var stops: Array[Color] = Chart.sea_at(cam_world, dark)
 	var vp: Vector2 = get_viewport_rect().size
 	_water.set_shader_parameter("u_cam", cam_world)
-	var z: float = lerpf(_camera.zoom.x, _zoom_to, 1.0 - exp(-delta * 12.0))
+	var zt: float = _zoom_to if stage == null else float(stage["zoom"])
+	var z: float = lerpf(_camera.zoom.x, zt, 1.0 - exp(-delta * (12.0 if stage == null and _stage_k <= 0.0 else 3.5)))
 	_camera.zoom = Vector2(z, z)
 	_water.set_shader_parameter("u_zoom", _camera.zoom.x)
 	_water.set_shader_parameter("u_res", vp)
@@ -1197,6 +1214,71 @@ func _open_chart() -> void:
 	layer.add_child(_chart)
 
 
+## THE LOCKER, over the sea with the camera pushed in on her; the HUD steps
+## aside while it is up.
+var _locker: Locker
+
+
+func _open_locker(tab: String, slot: String) -> void:
+	if _locker != null or _hud.busy() or _chart != null:
+		return
+	var layer: CanvasLayer = CanvasLayer.new()
+	layer.layer = 25
+	add_child(layer)
+	_locker = Locker.new()
+	_locker.sea = self
+	_locker.hud = _hud
+	_locker.tab = tab
+	if slot != "":
+		_locker.slot = slot
+	_hud_layer.visible = false
+	_locker.closed.connect(func() -> void:
+		_locker = null
+		_hud_layer.visible = true
+		layer.queue_free())
+	_hud.hold_for(_locker)
+	layer.add_child(_locker)
+
+
+## THE QUICK-SWAP WHEEL: bait and rods round her, while Q is held.
+var _wheel: SwapWheel
+
+
+func _open_wheel() -> void:
+	if _wheel != null or _hud.busy() or _chart != null or not (_hud.phase == "idle" or _hud.phase == "result"):
+		return
+	var p: Dictionary = session.profile()
+	var items: Array = []
+	for b: Array in session.baits():
+		var def: Dictionary = Rules.bait(b[0])
+		items.append(["bait", b[0], "%s  ×%s" % [b[1], Js.thousands(float(b[2]))], Skipper.tex(def.get("imageUrl")), Color(str(def.get("color", "#5f9fb0"))), b[0] == _hud._bait])
+	var worn: float = Js.num(p.get("rod_tier"))
+	for t: Variant in [0.0] + session.store.held_rod_tiers(session.uid):
+		var r: Dictionary = Rules.rod(float(t))
+		items.append(["rod", float(t), r["name"], Skipper.tex("%s_thumb.png" % r.get("slug", "")), Color(0.7, 0.55, 0.35), float(t) == worn])
+	if items.size() < 2:
+		_hud.toast("Nothing to swap to yet")
+		return
+	_wheel = SwapWheel.new()
+	_wheel.items = items
+	_wheel.centre = _boat.get_global_transform_with_canvas().origin
+	_wheel.picked.connect(func(kind: String, id: Variant) -> void:
+		if kind == "bait":
+			_hud.set_bait(str(id))
+		else:
+			var r: Dictionary = await session.act("equipTackleRod", [float(id)])
+			session.persist()
+			if r.get("error") != null:
+				_hud.toast(str(r["error"]))
+			_boat.set_look(Skipper.look_of(session.profile()))
+			_hud.refresh()
+		Rumble.tap(10)
+		if _boat.field != null:
+			_boat.field.ring(_boat.position, 120.0, 1.0, 0.5))
+	_hud.hold_for(_wheel)
+	_hud_layer.add_child(_wheel)
+
+
 func _course_chip() -> void:
 	if _hud == null:
 		return
@@ -1235,6 +1317,19 @@ func _hold_steer() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_released("swap") and _wheel != null:
+		get_viewport().set_input_as_handled()
+		_wheel.release()
+		_wheel = null
+		return
+	if event.is_action_pressed("swap") and not event.is_echo():
+		get_viewport().set_input_as_handled()
+		_open_wheel()
+		return
+	if event.is_action_pressed("locker") and _locker == null and _chart == null:
+		get_viewport().set_input_as_handled()
+		_open_locker("loadout", "")
+		return
 	if event.is_action_pressed("chart") and _chart == null:
 		get_viewport().set_input_as_handled()
 		_open_chart()

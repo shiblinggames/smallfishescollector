@@ -131,30 +131,53 @@ func _build() -> void:
 		if c["id"] == color:
 			known = true
 	var base: String = "fishing_%s.png" % frame if (color == "default" or not known) else "fishing_%s_%s.png" % [color, frame]
-	_part(tex(base), origin, [0.0, 0.0, 100.0, 0.0], w, h, false)
+	_roles = {}
+	_roles["skin"] = _part(tex(base), origin, [0.0, 0.0, 100.0, 0.0], w, h, false)
 	var hat: Dictionary = _find("hats", look.get("hat"))
 	if not hat.is_empty():
-		_part(tex(hat["castImageUrl"] if frame == "cast" else hat["restImageUrl"]), origin, _pos(hat["positions"][frame]), w, h, false)
+		_roles["hat"] = _part(tex(hat["castImageUrl"] if frame == "cast" else hat["restImageUrl"]), origin, _pos(hat["positions"][frame]), w, h, false)
 	_hull_sprite = null
 	var boat: Dictionary = _find("boats", look.get("boat"))
 	if not boat.is_empty():
 		_hull_sprite = _part(tex(boat["castImageUrl"] if frame == "cast" else boat["restImageUrl"]), origin, _pos(boat["positions"][frame]), w, h, false)
 	if look.get("rodSlug") != null:
-		_part(tex("%s_%s.png" % [look["rodSlug"], frame]), origin, ROD[frame], w, h, true)
+		_roles["rod"] = _part(tex("%s_%s.png" % [look["rodSlug"], frame]), origin, ROD[frame], w, h, true)
 	if look.get("reel") != null:
 		_part(tex(look["reel"]), origin, REEL[frame], w, h, false)
 	for key: String in ["pet", "petBow"]:
 		var pet: Dictionary = _find("pets", look.get(key))
 		if not pet.is_empty():
 			var o: Dictionary = (Rules.data()["petOverlays"] as Dictionary)[pet["species"]][frame]
-			_part(tex(pet["restImageUrl"]), origin, _pos(o), w, h, false)
+			_roles[key] = _part(tex(pet["restImageUrl"]), origin, _pos(o), w, h, false)
 	if look.get("hook") != null and frame != "wait":
 		_part(tex(look["hook"]), origin, HOOK[frame], w, h, false)
+	_roles["boat"] = _hull_sprite if _hull_sprite != null else _roles.get("skin")
 	if water:
 		_water_fx(origin, h, _hull_sprite)
 
 
 var _hull_sprite: Sprite2D
+## The parts by what they are (skin, hat, rod, boat, pet, petBow), for anyone
+## pointing at them (the Locker's callouts).
+var _roles: Dictionary = {}
+
+
+## Where a part is drawn, in this node's space: the middle of its picture
+## (the rod: two thirds of the way out to its tip). Vector2.INF when absent.
+func anchor(role: String) -> Vector2:
+	var s: Variant = _roles.get(role)
+	if s == null or not is_instance_valid(s):
+		return Vector2.INF
+	var sp: Sprite2D = s
+	var r: Rect2 = sp.get_rect()
+	var at: Vector2 = r.get_center()
+	if role == "rod":
+		at = r.position + r.size * Vector2(0.3, 0.3)
+	elif role == "skin":
+		at = r.get_center() + Vector2(r.size.x * 0.1, r.size.y * 0.16)
+	elif role == "boat" and sp == _roles.get("skin"):
+		at = r.get_center() + Vector2(0, r.size.y * 0.28)
+	return sp.transform * at
 
 
 func _water_fx(origin: Vector2, h: float, hull: Sprite2D) -> void:

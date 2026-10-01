@@ -30,6 +30,8 @@ signal leave
 signal recall_pressed
 ## The chart was asked for (its pill, or M).
 signal chart_pressed
+## The Locker was asked for, on a tab (and a slot).
+signal locker_wanted(tab: String, slot: String)
 
 const HOLD_S: float = 0.62
 const HOLD_PERFECT_S: float = 0.9
@@ -630,22 +632,21 @@ func _open_sheet(s: Sheet) -> void:
 
 
 func _open_bait() -> void:
-	if phase != "idle" and phase != "result":
-		return
-	_open_sheet(Menus.bait_sheet(session, _bait, func(t: String) -> void:
-		_bait = t
-		Rumble.tap(10)
-		refresh()))
+	locker_wanted.emit("loadout", "bait")
 
 
 func _open_hold() -> void:
-	_open_sheet(Menus.hold_sheet(session))
+	locker_wanted.emit("hold", "")
 
 
 func _open_loadout() -> void:
-	_open_sheet(Menus.loadout_sheet(session, phase != "idle" and phase != "result", func() -> void:
-		boat.set_look(Skipper.look_of(session.profile()))
-		refresh()))
+	locker_wanted.emit("loadout", "rod")
+
+
+## The bait on the line (the Locker's Bait slot).
+func set_bait(t: String) -> void:
+	_bait = t
+	refresh()
 
 
 func _open_log() -> void:

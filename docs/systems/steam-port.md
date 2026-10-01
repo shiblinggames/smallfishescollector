@@ -297,6 +297,24 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   hull's width measured once on the CPU (Skipper.span_at; sampling the picture along the
   row in the shader stepped into bars), its region grown past the picture so the ring is
   not clipped. Skipper.SINK 0.04 -> 0.055 (she sits a little deeper).
+- THE LOCKER + PAPER MENUS (2026-10-01; Kong: rethink the menus for Godot, improve the
+  inventory and loadouts; chose painted paper and wood, and OWNED GEAR ONLY, no silhouettes
+  of what you lack). `game/paper.gd` is the paper kit (fx/paper.gdshader: grain, fibres,
+  tea-stained deckled edge; a watercolour blot mode for art; Paper.button, Paper.Tile with
+  the worn item circled in red ink). `game/locker.gd` replaces the web's Loadout, Bait and
+  Hold sheets (Menus keeps only the crew purse): I / the pad's X, or the HUD's Loadout,
+  Bait and Hold buttons, which open it on that tab/slot. The camera pushes in on HER boat
+  and sets it left (Sea.stage, eased; the captain's own zoom untouched), the world dims
+  (fx/locker_veil.gdshader), the HUD steps aside. LOADOUT: slots Rod, Bait, Look, Hat, Boat,
+  Pet, also as paper tags inked to the part they change (Skipper.anchor); hover tries it
+  on the real boat (a ring on the water); press equips through the same actions. Rods and
+  bait show a small painted dial (Dial.build_zones for a difficulty-3 bite) with today's
+  catch-zone edges as ink ticks, and the stat deltas in green/red. HOLD: one pip per space
+  coloured by rarity, fish tiles, sort by value/rarity/name, Market total against this
+  water's buyer at their rate. LOG opens the Almanac. Tab switches tabs.
+  QUICK-SWAP WHEEL (`game/swap_wheel.gd`): hold Q / left shoulder between casts, bait and
+  rods fan out round her, point and let go. Not changed: the HUD's own dark bottom row and
+  chips, the Almanac, the rooms ashore (LoadoutView still serves the Shipyard).
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

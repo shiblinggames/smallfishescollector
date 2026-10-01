@@ -1,0 +1,801 @@
+class_name Locker
+extends Control
+## THE LOCKER (Kong, 2026-10-01: "rethink the menus now that we're in Godot;
+## improve the inventory and loadouts"). One screen for what she carries,
+## replacing the web's Loadout, Bait and Hold sheets, on paper.
+##
+## The sea does not go away: the camera pushes in on HER boat and sets it to
+## the left (Sea.stage), the world dims round it, and the right of the screen
+## is a sheet of paper. LOADOUT: the slots (Rod, Bait, Look, Hat, Boat, Pet),
+## each also a paper tag inked to the part it changes on the boat; what you
+## own as tiles on watercolour blots, the worn one circled in red; hover to
+## try it on the real boat, press to wear it. Rods and bait show what they
+## do to the dial against what you have now, on a small painted dial. HOLD:
+## one pip per space in the hold, coloured by what fills it; every fish
+## aboard as a tile; what it all fetches at the Market against this water's
+## buyer. LOG opens the Almanac. Equip only; nothing is bought here, and
+## nothing you do not own is listed. No rule is changed by this screen.
+
+signal closed
+
+const SLOTS: Array = [["rod", "Rod"], ["bait", "Bait"], ["skin", "Look"], ["hat", "Hat"], ["boat", "Boat"], ["pet", "Pet"]]
+const HOW_TO_GET: Dictionary = {
+	"rod": "New rods are sold at the Tackle Shop. Stronger ones unlock as your Fishing level climbs.",
+	"bait": "Bait is sold at the Tackle Shop, by the traders out on the water, and found in crates.",
+	"skin": "Looks are bought with doubloons or gems, earned by levels and achievements, or found in crates.",
+	"hat": "Hats are bought with doubloons. A few only come out of crates.",
+	"boat": "Boats are bought with doubloons or gems, earned by levels and achievements, or found in crates.",
+	"pet": "Pets come out of supply crates.",
+}
+const PANEL_W: float = 620.0
+
+var sea: Sea
+var hud: FishingHud
+var session: Session
+var tab: String = "loadout"
+var slot: String = "rod"
+
+var _body: VBoxContainer
+var _tabs: HBoxContainer
+var _veil: ColorRect
+var _callouts: Callouts
+var _card: Control
+var _card_eyebrow: Label
+var _card_title: Label
+var _card_body: Label
+var _gauge: ZoneGauge
+var _compare: VBoxContainer
+var _note: Label
+var _hold_sort: String = "value"
+var _hold_detail: Label
+var _trying: Array = ["__"]
+
+
+func _ready() -> void:
+	session = sea.session
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	theme = UiTheme.make()
+	var vp: Vector2 = get_viewport_rect().size
+	sea.stage = { "zoom": 2.3, "shift": Vector2((PANEL_W + 40.0) / 2.0, 30.0) }
+	# The world dims round her.
+	_veil = ColorRect.new()
+	_veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var vm: ShaderMaterial = ShaderMaterial.new()
+	vm.shader = load("res://game/fx/locker_veil.gdshader")
+	_veil.material = vm
+	add_child(_veil)
+	_callouts = Callouts.new()
+	_callouts.locker = self
+	add_child(_callouts)
+	_build_card()
+	# The sheet.
+	var panel: Control = Control.new()
+	panel.anchor_left = 1.0
+	panel.anchor_right = 1.0
+	panel.anchor_bottom = 1.0
+	panel.offset_left = -PANEL_W - 22.0
+	panel.offset_right = -22.0
+	panel.offset_top = 22.0
+	panel.offset_bottom = -22.0
+	add_child(panel)
+	var shadow: Pane = Kit.pane(panel, { "radius": 14, "fill": [Color(0, 0, 0, 0)], "shadow": [Color(0, 0, 0, 0.45), 26, Vector2(0, 8)], "pad": 0 })
+	shadow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shadow.offset_left = 10
+	shadow.offset_right = -10
+	shadow.offset_top = 10
+	shadow.offset_bottom = -10
+	Paper.sheet(panel, 8.0)
+	var margin: MarginContainer = MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side: String in ["left", "right"]:
+		margin.add_theme_constant_override("margin_" + side, 34)
+	margin.add_theme_constant_override("margin_top", 28)
+	margin.add_theme_constant_override("margin_bottom", 26)
+	panel.add_child(margin)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override("separation", 10)
+	margin.add_child(col)
+	var head: HBoxContainer = HBoxContainer.new()
+	col.add_child(head)
+	var titles: VBoxContainer = VBoxContainer.new()
+	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	titles.add_theme_constant_override("separation", 0)
+	head.add_child(titles)
+	Paper.text(titles, "The Locker", "display", Paper.INK)
+	Paper.text(titles, "What she carries, and what it does.", "note", Paper.INK_SOFT)
+	var x: Pane.PaneButton = Paper.button("Close  Esc")
+	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	x.pressed.connect(close)
+	head.add_child(x)
+	_tabs = HBoxContainer.new()
+	_tabs.add_theme_constant_override("separation", 6)
+	col.add_child(_tabs)
+	Paper.rule(col)
+	_body = VBoxContainer.new()
+	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_body.add_theme_constant_override("separation", 10)
+	col.add_child(_body)
+	panel.position.x += 40.0
+	panel.modulate.a = 0.0
+	var tw: Tween = create_tween().set_parallel().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(panel, "position:x", panel.position.x - 40.0, 0.35)
+	tw.tween_property(panel, "modulate:a", 1.0, 0.25)
+	_show_tab(tab)
+
+
+func close() -> void:
+	if is_queued_for_deletion():
+		return
+	sea.stage = null
+	_wear(Skipper.look_of(session.profile()))
+	closed.emit()
+	queue_free()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("fish_back") or event.is_action_pressed("locker"):
+		get_viewport().set_input_as_handled()
+		close()
+	elif event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_TAB:
+		get_viewport().set_input_as_handled()
+		_show_tab("hold" if tab == "loadout" else "loadout")
+
+
+func _process(_delta: float) -> void:
+	var at: Vector2 = sea._boat.get_global_transform_with_canvas().origin
+	var m: ShaderMaterial = _veil.material
+	m.set_shader_parameter("u_focus", at)
+	m.set_shader_parameter("u_res", get_viewport_rect().size)
+
+
+func line_out() -> bool:
+	return not (hud.phase == "idle" or hud.phase == "result")
+
+
+# ── Tabs ───────────────────────────────────────────────────────────────────────
+
+func _show_tab(t: String) -> void:
+	tab = t
+	for c: Node in _tabs.get_children():
+		c.queue_free()
+	for o: Array in [["loadout", "Loadout"], ["hold", "Hold"], ["log", "Log"]]:
+		var b: Pane.PaneButton = Paper.button(o[1], o[0] == t)
+		b.custom_minimum_size = Vector2(110, 34)
+		b.pressed.connect(func() -> void:
+			if o[0] == "log":
+				close()
+				hud._open_log()
+			else:
+				_show_tab(o[0]))
+		_tabs.add_child(b)
+	var hint: Label = Paper.text(_tabs, "Tab to switch", "note", Paper.INK_FAINT)
+	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	for c: Node in _body.get_children():
+		c.queue_free()
+	_gauge = null
+	_callouts.visible = t == "loadout"
+	_card.visible = t == "loadout"
+	if t == "loadout":
+		_build_loadout()
+	else:
+		_build_hold()
+
+
+# ── Loadout ────────────────────────────────────────────────────────────────────
+
+func _build_loadout() -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 5)
+	_body.add_child(row)
+	for s: Array in SLOTS:
+		var b: Pane.PaneButton = Paper.button(s[1], s[0] == slot)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.pressed.connect(func() -> void: pick_slot(s[0]))
+		row.add_child(b)
+	_note = Paper.text(_body, HOW_TO_GET[slot], "note", Paper.INK_SOFT, true)
+	if slot == "rod" and line_out():
+		_note.text = "Rods stay put while a line is in the water. Bring it in to change rods."
+		_note.add_theme_color_override("font_color", Paper.RED)
+	if slot == "bait" and line_out():
+		_note.text = "Bait goes on before the cast. Bring the line in to change it."
+		_note.add_theme_color_override("font_color", Paper.RED)
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_body.add_child(scroll)
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 4
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 8)
+	scroll.add_child(grid)
+	var worn: Variant = _worn(slot)
+	var opts: Array = _options(slot)
+	if opts.is_empty():
+		Paper.text(grid, "Nothing here yet.", "note", Paper.INK_SOFT)
+	for o: Array in opts:
+		var t: Paper.Tile = Paper.Tile.new()
+		t.on = (o[0] == null and worn == null) or (o[0] != null and worn != null and str(o[0]) == str(worn))
+		t.label = o[1]
+		t.art = Skipper.tex(o[2]) if o[2] != "" else null
+		t.pigment = o[3]
+		t.corner = o[4]
+		t.custom_minimum_size = Vector2(124, 124)
+		t.mouse_entered.connect(func() -> void: _try_on(o))
+		t.focus_entered.connect(func() -> void: _try_on(o))
+		t.mouse_exited.connect(func() -> void: _try_on([]))
+		t.pressed.connect(func() -> void: _choose(o[0]))
+		grid.add_child(t)
+	Paper.rule(_body)
+	_trying = ["__"]
+	_compare = VBoxContainer.new()
+	_compare.add_theme_constant_override("separation", 3)
+	_compare.custom_minimum_size = Vector2(0, 176)
+	_body.add_child(_compare)
+	_try_on([])
+
+
+func pick_slot(s: String) -> void:
+	slot = s
+	_show_tab("loadout")
+
+
+func _name_for(s: String) -> String:
+	var p: Dictionary = session.profile()
+	match s:
+		"rod":
+			return String(Rules.rod(Js.num(p.get("rod_tier")))["name"])
+		"bait":
+			return String(Rules.bait(hud._bait).get("name", "None"))
+		"hat":
+			return String(Skipper._find("hats", p.get("equipped_hat")).get("name", "None"))
+		"boat":
+			return String(Skipper._find("boats", p.get("equipped_boat")).get("name", "Default"))
+		"pet":
+			return String(Skipper._find("pets", p.get("equipped_pet")).get("name", "None"))
+		"skin":
+			for c: Dictionary in Rules.data()["characterColors"]:
+				if c["id"] == str(Js.nz(p.get("character_color"), "default")):
+					return c["name"]
+			return "Default"
+	return ""
+
+
+## What this captain owns for a slot: [id, name, art, pigment, corner note]
+## (null id = none).
+func _options(s: String) -> Array:
+	var p: Dictionary = session.profile()
+	var out: Array = []
+	var sea_blue: Color = Color(0.32, 0.5, 0.6)
+	match s:
+		"rod":
+			var tiers: Array = [0.0] + session.store.held_rod_tiers(session.uid)
+			for t: Variant in tiers:
+				var r: Dictionary = Rules.rod(float(t))
+				out.append([float(t), r["name"], "%s_thumb.png" % r.get("slug", ""), Paper.rarity(1.0 + minf(4.0, float(t) / 2.0)), ""])
+		"bait":
+			for b: Array in session.baits():
+				var def: Dictionary = Rules.bait(b[0])
+				out.append([b[0], b[1], str(def.get("imageUrl", "")), Color(str(def.get("color", "#5f9fb0"))).darkened(0.15), "×" + Js.thousands(float(b[2]))])
+		"skin":
+			var owned: Array = Js.list(p.get("unlocked_character_colors"))
+			for c: Dictionary in Rules.data()["characterColors"]:
+				if c["free"] or Js.includes(owned, c["id"]):
+					out.append([c["id"], c["name"], "fishing_rest.png" if c["id"] == "default" else "fishing_%s_rest.png" % c["id"], sea_blue, ""])
+		"hat":
+			out.append([null, "No hat", "", Paper.INK_FAINT, ""])
+			for id: Variant in Js.list(p.get("unlocked_hats")):
+				var h: Dictionary = Skipper._find("hats", id)
+				if not h.is_empty():
+					out.append([id, h["name"], h["restImageUrl"], Color(0.7, 0.48, 0.3), ""])
+		"boat":
+			for id: Variant in Js.list(p.get("unlocked_boats")):
+				var b: Dictionary = Skipper._find("boats", id)
+				if not b.is_empty():
+					out.append([id, b["name"], b["restImageUrl"], sea_blue, ""])
+		"pet":
+			out.append([null, "No pet", "", Paper.INK_FAINT, ""])
+			for id: Variant in Js.list(p.get("unlocked_pets")):
+				var pt: Dictionary = Skipper._find("pets", id)
+				if not pt.is_empty():
+					out.append([id, pt["name"], pt["restImageUrl"], Color(0.4, 0.58, 0.4), ""])
+	return out
+
+
+func _worn(s: String) -> Variant:
+	var p: Dictionary = session.profile()
+	match s:
+		"rod":
+			return Js.num(p.get("rod_tier"))
+		"bait":
+			return hud._bait
+		"skin":
+			return str(Js.nz(p.get("character_color"), "default"))
+		"hat":
+			return p.get("equipped_hat")
+		"boat":
+			return p.get("equipped_boat")
+		"pet":
+			return p.get("equipped_pet")
+	return null
+
+
+func _wear(look: Dictionary) -> void:
+	sea._boat.set_look(look)
+
+
+## The real boat wears the thing under the pointer; the card and the dial
+## say what it would change.
+func _try_on(o: Array) -> void:
+	if _trying == o:
+		return
+	_trying = o
+	var look: Dictionary = Skipper.look_of(session.profile())
+	var trying: bool = not o.is_empty()
+	if trying:
+		match slot:
+			"rod":
+				look["rodSlug"] = Rules.rod(float(o[0])).get("slug")
+			"skin":
+				look["color"] = o[0]
+			"hat":
+				look["hat"] = o[0]
+			"boat":
+				look["boat"] = o[0]
+			"pet":
+				look["pet"] = o[0]
+	if slot != "bait":
+		_wear(look)
+		if trying and sea._boat.field != null:
+			sea._boat.field.ring(sea._boat.position, 90.0, 0.9, 0.35)
+	_card_eyebrow.text = ("Trying on  ·  " if trying else "Wearing  ·  ") + _slot_name(slot)
+	_card_title.text = o[1] if trying else _name_for(slot)
+	_card_body.text = _blurb(slot, o)
+	_fill_compare(o)
+
+
+func _slot_name(s: String) -> String:
+	for x: Array in SLOTS:
+		if x[0] == s:
+			return x[1]
+	return s
+
+
+func _blurb(s: String, o: Array) -> String:
+	match s:
+		"rod":
+			var tier: float = float(o[0]) if not o.is_empty() else Js.num(session.profile().get("rod_tier"))
+			return str(Rules.rod(tier).get("description", ""))
+		"bait":
+			var id: String = str(o[0]) if not o.is_empty() else hud._bait
+			var bonus: float = Js.num(Rules.bait(id).get("catchZoneBonus"))
+			return ("Widens the catch zone by %d°. A wider catch zone is an easier reel; nothing else changes." % int(bonus)) if bonus > 0 else "Plain bait. No change to the catch zone."
+	return "A look, not a stat. It changes how you appear on the water and nothing about the catch."
+
+
+func _choose(id: Variant) -> void:
+	var r: Dictionary = {}
+	match slot:
+		"rod":
+			if line_out():
+				return
+			r = await session.act("equipTackleRod", [float(id)])
+		"bait":
+			if line_out():
+				return
+			hud.set_bait(str(id))
+			r = { "ok": true }
+		"skin":
+			r = await session.act("updateCharacterColor", [id])
+		"hat":
+			r = await session.act("equipHat", [id])
+		"boat":
+			r = await session.act("equipBoat", [id])
+		"pet":
+			r = await session.act("equipPet", [id, "stern"])
+	session.persist()
+	if r.get("error") != null:
+		hud.toast(str(r["error"]))
+	Rumble.tap(10)
+	if sea._boat.field != null:
+		sea._boat.field.ring(sea._boat.position, 150.0, 1.3, 0.7)
+	hud.refresh()
+	_trying = ["__"]
+	_show_tab("loadout")
+
+
+# ── What it does to the dial ───────────────────────────────────────────────────
+
+func _fill_compare(o: Array) -> void:
+	if _compare == null or not is_instance_valid(_compare):
+		return
+	for c: Node in _compare.get_children():
+		c.queue_free()
+	_gauge = null
+	if slot != "rod" and slot != "bait":
+		Paper.text(_compare, "On the dial", "eyebrow", Paper.INK_SOFT)
+		Paper.text(_compare, "Looks never touch the catch. Rods and bait do: pick one of those to see how.", "note", Paper.INK_SOFT, true)
+		_streak_line()
+		return
+	var p: Dictionary = session.profile()
+	var effects: Variant = p.get("completionist_effects")
+	var my_rod: Dictionary = Rules.effective_rod(Js.num(p.get("rod_tier")), effects)
+	var rod: Dictionary = my_rod
+	var bait_id: String = hud._bait
+	if not o.is_empty():
+		if slot == "rod":
+			rod = Rules.effective_rod(float(o[0]), effects)
+		else:
+			bait_id = str(o[0])
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	_compare.add_child(row)
+	_gauge = ZoneGauge.new()
+	_gauge.custom_minimum_size = Vector2(168, 168)
+	_gauge.now_zones = _zones_for(my_rod, hud._bait)
+	_gauge.zones = _zones_for(rod, bait_id)
+	row.add_child(_gauge)
+	var v: VBoxContainer = VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 2)
+	row.add_child(v)
+	Paper.text(v, "On the dial, for a middling bite", "eyebrow", Paper.INK_SOFT)
+	var my_bait: float = Js.num(Rules.bait(hud._bait).get("catchZoneBonus"))
+	var bait: float = Js.num(Rules.bait(bait_id).get("catchZoneBonus"))
+	_delta_row(v, "Catch zone, rod", Js.num(my_rod.get("catchZoneBonus")), Js.num(rod.get("catchZoneBonus")), "+%d°", true)
+	_delta_row(v, "Catch zone, bait", my_bait, bait, "+%d°", true)
+	_delta_row(v, "Perfect zone", Js.num(my_rod.get("perfectZoneBonus")), Js.num(rod.get("perfectZoneBonus")), "+%d°", true)
+	var r0: float = Js.num(my_rod.get("retryOnMissChance"))
+	var r1: float = Js.num(rod.get("retryOnMissChance"))
+	if r0 > 0 or r1 > 0:
+		_delta_row(v, "Second chance on a miss", r0 * 100.0, r1 * 100.0, "%d%%", true)
+	var x0: float = float(Js.nz(my_rod.get("perfectXpMult"), 1.0))
+	var x1: float = float(Js.nz(rod.get("perfectXpMult"), 1.0))
+	if x0 != 1.0 or x1 != 1.0:
+		_delta_row(v, "XP on a perfect", x0, x1, "×%.2f", true)
+	if my_rod.get("snagImmune") == true or rod.get("snagImmune") == true:
+		Paper.stat(v, "Snags", "Immune" if rod.get("snagImmune") == true else "Can snag", Paper.GREEN if rod.get("snagImmune") == true else Paper.RED)
+	_streak_line()
+
+
+func _delta_row(parent: Node, label: String, was: float, now: float, fmt: String, more_is_better: bool) -> void:
+	var tone: Color = Paper.INK
+	var txt: String = fmt % now
+	if now != was:
+		var better: bool = (now > was) == more_is_better
+		tone = Paper.GREEN if better else Paper.RED
+		txt = "%s  →  %s" % [fmt % was, fmt % now]
+	Paper.stat(parent, label, txt, tone)
+
+
+func _streak_line() -> void:
+	var n: int = int(Js.num(session.profile().get("current_perfect_streak")))
+	var lvl: int = session.level()
+	var t: String = ("Perfect streak running: %d, paying ×%.2f XP. It pays up to ×%.2f at 10." % [n, Rules.streak_mult(n, lvl), Rules.streak_mult(10, lvl)]) if n > 0 else ("No perfect streak running. Ten in a row pays ×%.2f XP at your level." % Rules.streak_mult(10, lvl))
+	Paper.text(_compare, t, "note", Paper.INK_SOFT, true)
+
+
+func _zones_for(rod: Dictionary, bait_id: String) -> Array:
+	var p: Dictionary = session.profile()
+	var lines: Array = Rules.data()["lines"]
+	var line: Dictionary = lines[clampi(int(Js.num(p.get("line_tier"))), 0, lines.size() - 1)]
+	var level_bonus: float = floor(float(session.level()) * 0.2) + Js.num(Rules.bait(bait_id).get("catchZoneBonus")) + Js.num(rod.get("catchZoneBonus"))
+	return Dial.build_zones(3.0, Js.num(p.get("hook_tier")), float(line["penaltyMultiplier"]), 1.0, level_bonus, Js.num(rod.get("perfectZoneBonus")) + 1.0)
+
+
+# ── The card under the boat ────────────────────────────────────────────────────
+
+func _build_card() -> void:
+	_card = Control.new()
+	_card.anchor_top = 1.0
+	_card.anchor_bottom = 1.0
+	_card.offset_left = 40.0
+	_card.offset_right = 470.0
+	_card.offset_top = -150.0
+	_card.offset_bottom = -30.0
+	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_card)
+	Paper.sheet(_card, 6.0, 0.6)
+	var m: MarginContainer = MarginContainer.new()
+	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side: String in ["left", "right", "top", "bottom"]:
+		m.add_theme_constant_override("margin_" + side, 18 if side != "top" else 14)
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card.add_child(m)
+	var v: VBoxContainer = VBoxContainer.new()
+	v.add_theme_constant_override("separation", 2)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	m.add_child(v)
+	_card_eyebrow = Paper.text(v, "", "eyebrow", Paper.RED)
+	_card_title = Paper.text(v, "", "title", Paper.INK)
+	_card_body = Paper.text(v, "", "note", Paper.INK_SOFT, true)
+
+
+# ── Hold ───────────────────────────────────────────────────────────────────────
+
+func _build_hold() -> void:
+	var p: Dictionary = session.profile()
+	var cap: int = int(Rules.fish_hold(Js.num(p.get("fish_hold_tier")))["capacity"])
+	var rows: Array = []
+	var hold: Dictionary = session.save["hold"]
+	for k: Variant in hold:
+		var f: Variant = session.store.species(float(str(k)))
+		if f == null or float(hold[k]) <= 0:
+			continue
+		var fd: Dictionary = f
+		rows.append({ "id": float(str(k)), "name": fd["name"], "qty": float(hold[k]), "each": Js.num(session.store.species_value(float(str(k)))), "rarity": Js.num(fd.get("bite_rarity")) })
+	var count: int = 0
+	for r: Dictionary in rows:
+		count += int(r["qty"])
+	var top: HBoxContainer = HBoxContainer.new()
+	_body.add_child(top)
+	var lt: Label = Paper.text(top, "%d of %d aboard" % [count, cap], "heading", Paper.INK)
+	lt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if count >= cap:
+		Paper.text(top, "Full. Sell before you cast again.", "small", Paper.RED)
+	# One pip per space, coloured by what fills it (rarest first).
+	var units: Array = []
+	var by_rarity: Array = rows.duplicate()
+	by_rarity.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["rarity"]) > float(b["rarity"]))
+	for r: Dictionary in by_rarity:
+		for i: int in int(r["qty"]):
+			units.append(Paper.rarity(float(r["rarity"])))
+	var pips: Pips = Pips.new()
+	pips.cap = cap
+	pips.units = units
+	_body.add_child(pips)
+	var sorts: HBoxContainer = HBoxContainer.new()
+	sorts.add_theme_constant_override("separation", 5)
+	_body.add_child(sorts)
+	Paper.text(sorts, "Sort", "label", Paper.INK_SOFT).vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	for o: Array in [["value", "Value"], ["rarity", "Rarity"], ["name", "Name"]]:
+		var b: Pane.PaneButton = Paper.button(o[1], o[0] == _hold_sort)
+		b.pressed.connect(func() -> void:
+			_hold_sort = o[0]
+			_show_tab("hold"))
+		sorts.add_child(b)
+	match _hold_sort:
+		"value":
+			rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["each"]) * float(a["qty"]) > float(b["each"]) * float(b["qty"]))
+		"rarity":
+			rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return [-float(a["rarity"]), a["name"]] < [-float(b["rarity"]), b["name"]])
+		_:
+			rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a["name"]) < String(b["name"]))
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_body.add_child(scroll)
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 8)
+	scroll.add_child(grid)
+	var zone: Dictionary = Chart.water_at(sea._boat.position)
+	var res: Dictionary = Selling.resident(str(zone.get("id", "")))
+	if rows.is_empty():
+		Paper.text(grid, "Empty. Every fish you catch goes in here until you sell it.", "note", Paper.INK_SOFT, true)
+	for r: Dictionary in rows:
+		var t: Paper.Tile = Paper.Tile.new()
+		t.label = r["name"]
+		t.art = Skipper.tex("fish/%s" % ResultCard.fish_art_path(r["name"]).get_file())
+		t.pigment = Paper.rarity(float(r["rarity"]))
+		t.corner = "×%d" % int(r["qty"])
+		t.custom_minimum_size = Vector2(124, 120)
+		t.mouse_entered.connect(func() -> void: _hold_detail.text = _fish_line(r, res))
+		t.focus_entered.connect(func() -> void: _hold_detail.text = _fish_line(r, res))
+		grid.add_child(t)
+	Paper.rule(_body)
+	_hold_detail = Paper.text(_body, "Point at a fish for what it fetches.", "note", Paper.INK_SOFT, true)
+	var total: float = 0.0
+	var at_rate: float = 0.0
+	for r: Dictionary in rows:
+		total += float(r["each"]) * float(r["qty"])
+	if not res.is_empty():
+		var stacks: Array = []
+		for r: Dictionary in rows:
+			stacks.append(float(r["each"]) * float(r["qty"]))
+		var sum: float = 0.0
+		for v: float in stacks:
+			sum += v
+		at_rate = floor(sum * float(res["rate"]))
+	var money: VBoxContainer = VBoxContainer.new()
+	money.add_theme_constant_override("separation", 2)
+	_body.add_child(money)
+	Paper.stat(money, "At the Market on the Mainland, full price", "%s ⟡" % Js.thousands(total), Paper.GREEN)
+	if res.is_empty():
+		Paper.stat(money, "Out here", "Nobody buys in this water", Paper.INK_SOFT)
+	else:
+		Paper.stat(money, "To %s here, %d%% of market" % [res["name"], int(Js.round(float(res["rate"]) * 100.0))], "%s ⟡" % Js.thousands(at_rate), Paper.INK)
+	var tiers: Array = Rules.data()["fishHoldTiers"]
+	var at: int = clampi(int(Js.num(p.get("fish_hold_tier"))), 0, tiers.size() - 1)
+	if at + 1 < tiers.size():
+		var nxt: Dictionary = tiers[at + 1]
+		Paper.text(_body, "The Shipyard sells the next size, %d fish, for ⟡ %s." % [int(nxt["capacity"]), Js.thousands(float(nxt["cost"]))], "note", Paper.INK_SOFT, true)
+
+
+func _fish_line(r: Dictionary, res: Dictionary) -> String:
+	var each: float = float(r["each"])
+	var t: String = "%s, %s.  ⟡ %s each at the Market, ⟡ %s for all %d" % [r["name"], Almanac.RARITY_NAMES[clampi(int(r["rarity"]) - 1, 0, 4)], Js.thousands(each), Js.thousands(each * float(r["qty"])), int(r["qty"])]
+	if not res.is_empty():
+		t += ";  about ⟡ %s each to %s." % [Js.thousands(floor(each * float(res["rate"]))), res["name"]]
+	else:
+		t += "."
+	return t
+
+
+# ── Pieces ─────────────────────────────────────────────────────────────────────
+
+## THE HOLD AS SPACES: one inked circle per space, filled with a dab of the
+## pigment of the fish in it (rarest first), empty ones left as rings.
+class Pips:
+	extends Control
+	var cap: int = 25
+	var units: Array = []
+	var _per_row: int = 25
+	var _d: float = 16.0
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		resized.connect(_fit)
+		_fit()
+
+	func _fit() -> void:
+		var w: float = maxf(200.0, size.x)
+		_d = clampf(w / float(maxi(cap, 1)) - 3.0, 7.0, 18.0)
+		_per_row = maxi(1, int(w / (_d + 3.0)))
+		var rows: int = int(ceil(float(cap) / _per_row))
+		custom_minimum_size = Vector2(0, rows * (_d + 3.0) + 2.0)
+		queue_redraw()
+
+	func _draw() -> void:
+		for i: int in cap:
+			var c: Vector2 = Vector2((i % _per_row) * (_d + 3.0) + _d / 2.0, (i / _per_row) * (_d + 3.0) + _d / 2.0 + 1.0)
+			var r: float = _d / 2.0
+			if i < units.size():
+				var col: Color = units[i]
+				draw_circle(c + Vector2(0.4, 0.3), r * (0.9 + 0.08 * sin(i * 2.3)), Color(col, 0.75))
+				draw_circle(c - Vector2(r * 0.25, r * 0.25), r * 0.35, Color(1, 1, 1, 0.18))
+			draw_arc(c, r, 0.0, TAU, 18, Color(Paper.INK, 0.45 if i < units.size() else 0.28), 1.0, true)
+
+
+## A SMALL PAINTED DIAL: the zones a middling bite would have with what you
+## are trying, as watercolour on the ring, and where your catch zone ends now
+## as two inked ticks, so a wider or narrower zone shows at a glance.
+class ZoneGauge:
+	extends Control
+	var zones: Array = []
+	var now_zones: Array = []
+	var _t: float = 0.0
+
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+
+	func _ang(deg: float) -> float:
+		return deg_to_rad(deg - 90.0)
+
+	func _catch_span(zs: Array) -> Vector2:
+		var lo: float = 999.0
+		var hi: float = -1.0
+		for z: Array in zs:
+			if z[2] == "catch" or z[2] == "perfect":
+				lo = minf(lo, float(z[0]))
+				hi = maxf(hi, float(z[1]))
+		return Vector2(lo, hi)
+
+	func _draw() -> void:
+		var c: Vector2 = size / 2.0
+		var r: float = minf(size.x, size.y) / 2.0 - 10.0
+		draw_circle(c, r + 8.0, Color(0.97, 0.94, 0.87, 0.9))
+		draw_arc(c, r + 8.0, 0.0, TAU, 64, Color(Paper.INK, 0.5), 1.5, true)
+		for z: Array in zones:
+			var col: Color = Color(0.85, 0.82, 0.74, 0.5)
+			match z[2]:
+				"catch":
+					col = Color(0.36, 0.62, 0.42, 0.85)
+				"perfect":
+					col = Color(0.88, 0.66, 0.2, 0.95)
+				"penalty":
+					col = Color(0.72, 0.3, 0.24, 0.55)
+			var a0: float = _ang(float(z[0]))
+			var a1: float = _ang(float(z[1]))
+			if a1 > a0:
+				draw_arc(c, r - 6.0, a0, a1, maxi(4, int((a1 - a0) * 20.0)), col, 12.0, true)
+		for k: int in 36:
+			var a: float = TAU * k / 36.0
+			draw_line(c + Vector2.from_angle(a) * (r + 3.0), c + Vector2.from_angle(a) * (r + (7.0 if k % 3 == 0 else 5.0)), Color(Paper.INK, 0.45), 1.0, true)
+		# Where your catch zone ends today.
+		var now: Vector2 = _catch_span(now_zones)
+		for d: float in [now.x, now.y]:
+			var a: float = _ang(d)
+			draw_line(c + Vector2.from_angle(a) * (r - 16.0), c + Vector2.from_angle(a) * (r + 6.0), Color(Paper.INK, 0.85), 2.0, true)
+		# A slow needle so it reads as a dial.
+		var na: float = _ang(fposmod(_t * 60.0, 360.0))
+		draw_line(c, c + Vector2.from_angle(na) * (r - 12.0), Color(Paper.INK, 0.8), 2.0, true)
+		draw_circle(c, 4.0, Paper.INK)
+		var span: Vector2 = _catch_span(zones)
+		var f: Font = Kit.font("cinzel", 700)
+		var s: String = "%d°" % int(span.y - span.x)
+		var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
+		draw_string(f, c + Vector2(-w / 2.0, 34.0), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Paper.INK)
+		var f2: Font = Kit.font("karla", 600)
+		var s2: String = "catch zone"
+		var w2: float = f2.get_string_size(s2, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+		draw_string(f2, c + Vector2(-w2 / 2.0, 48.0), s2, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Paper.INK_SOFT)
+
+
+## THE TAGS ON THE BOAT: one paper tag per slot, inked by a line to the part
+## it changes (the rod, the hook for bait, the captain for the look, the hat,
+## the hull, the pet). Press one to open that slot.
+class Callouts:
+	extends Control
+	var locker: Locker
+	var _tags: Dictionary = {}
+	const OUT: Dictionary = {
+		"rod": Vector2(-190, -150), "bait": Vector2(-200, 70), "skin": Vector2(-30, -250),
+		"hat": Vector2(170, -200), "boat": Vector2(10, 150), "pet": Vector2(230, -40),
+	}
+
+	func _ready() -> void:
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for s: Array in Locker.SLOTS:
+			var b: Pane.PaneButton = Paper.button("")
+			b.custom_minimum_size = Vector2(0, 30)
+			b.pressed.connect(func() -> void: locker.pick_slot(s[0]))
+			add_child(b)
+			_tags[s[0]] = b
+
+	func _point(s: String) -> Vector2:
+		var boat: Boat = locker.sea._boat
+		if s == "bait":
+			return boat.get_parent().get_global_transform_with_canvas() * boat.hook_at()
+		var a: Vector2 = boat.skipper.anchor(s)
+		if a == Vector2.INF and s == "hat":
+			# Where a hat would sit: over the captain's head.
+			a = boat.skipper.anchor("skin") + Vector2(0, -34)
+		if a == Vector2.INF and s == "pet":
+			a = boat.skipper.anchor("boat") + Vector2(70, -18)
+		if a == Vector2.INF:
+			a = boat.skipper.anchor("boat")
+		if a == Vector2.INF:
+			return boat.get_global_transform_with_canvas().origin
+		return boat.skipper.get_global_transform_with_canvas() * a
+
+	func _process(_delta: float) -> void:
+		if not visible:
+			return
+		var centre: Vector2 = locker.sea._boat.get_global_transform_with_canvas().origin
+		for s: Array in Locker.SLOTS:
+			var b: Pane.PaneButton = _tags[s[0]]
+			var label: String = "%s  ·  %s" % [s[1], locker._name_for(s[0])]
+			if b.text != label.to_upper():
+				b.text = label.to_upper()
+				b.size = b.get_combined_minimum_size()
+			var on: bool = locker.slot == s[0]
+			b.modulate = Color(1, 1, 1, 1.0 if on else 0.82)
+			var at: Vector2 = centre + OUT[s[0]] - b.size / 2.0
+			b.position = b.position.lerp(at, 0.25) if b.position != Vector2.ZERO else at
+		queue_redraw()
+
+	func _draw() -> void:
+		for s: Array in Locker.SLOTS:
+			var b: Pane.PaneButton = _tags[s[0]]
+			var p: Vector2 = _point(s[0])
+			var t: Vector2 = b.position + b.size / 2.0
+			# Leave the tag from its nearer side.
+			t.x = clampf(p.x, b.position.x + 6.0, b.position.x + b.size.x - 6.0)
+			t.y = b.position.y + (b.size.y if p.y > b.position.y + b.size.y else 0.0)
+			var on: bool = locker.slot == s[0]
+			var ink: Color = Color(Paper.RED if on else Color(0.95, 0.92, 0.84), 0.9 if on else 0.6)
+			var mid: Vector2 = (p + t) / 2.0 + (t - p).orthogonal().normalized() * 10.0
+			var pts: PackedVector2Array = PackedVector2Array()
+			for i: int in 13:
+				var k: float = i / 12.0
+				pts.append(p.lerp(mid, k).lerp(mid.lerp(t, k), k))
+			draw_polyline(pts, ink, 2.0 if on else 1.4, true)
+			draw_circle(p, 4.0 if on else 3.0, ink)

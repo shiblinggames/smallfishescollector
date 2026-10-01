@@ -225,22 +225,7 @@ func _draw_progress() -> void:
 
 ## A button in the chart's own hand: ink on paper.
 static func ink_button(text: String, on: bool = false) -> Pane.PaneButton:
-	var ink: Color = Color(0.24, 0.18, 0.13)
-	var n: Dictionary = { "radius": 9, "fill": [Color(0.55, 0.36, 0.2, 0.85) if on else Color(0.93, 0.88, 0.78, 0.92)], "border": [1, Color(ink, 0.55)], "shadow": [Color(0, 0, 0, 0.18), 6, Vector2(0, 2)], "pad": [12, 6, 12, 7] }
-	var hv: Dictionary = n.duplicate()
-	hv["fill"] = [Color(0.62, 0.42, 0.24, 0.9) if on else Color(0.97, 0.93, 0.85, 0.96)]
-	var b: Pane.PaneButton = Pane.PaneButton.new(n, hv)
-	b.text = text.to_upper()
-	b.add_theme_font_override("font", Kit.tracked("karla", 700, 11, 0.08))
-	b.add_theme_font_size_override("font_size", 11)
-	var c: Color = Color(0.98, 0.94, 0.86) if on else ink
-	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
-		b.add_theme_color_override(st, c)
-	b.add_theme_color_override("font_disabled_color", Color(c, 0.4))
-	b.custom_minimum_size = Vector2(0, 32)
-	b.focus_mode = Control.FOCUS_NONE
-	Kit.tap(b)
-	return b
+	return Paper.button(text, on)
 
 
 # ── Pins (kept per captain on this machine) ────────────────────────────────────

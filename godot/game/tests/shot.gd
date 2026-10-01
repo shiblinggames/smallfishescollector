@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -58,7 +58,7 @@ func _init() -> void:
 	hud._mods = hud._tackle()
 	for f: int in 20:
 		await process_frame
-	if what in ["loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup"]:
+	if what in ["loadout", "hold", "wheel", "almanac", "giants", "boss", "slain", "finn", "rankup"]:
 		# A captain with something to show: catches, clothes, pets and giants.
 		var save: Dictionary = sea.session.save
 		for id: int in [1, 2, 3, 4, 5, 7, 9, 12, 16, 20]:
@@ -320,8 +320,16 @@ func _init() -> void:
 			hud.add_child(a)
 		"loadout":
 			hud._open_loadout()
+			for f: int in 70:
+				await process_frame
 		"hold":
 			hud._open_hold()
+			for f: int in 70:
+				await process_frame
+		"wheel":
+			sea._open_wheel()
+			for f: int in 30:
+				await process_frame
 		"almanac":
 			hud._open_log()
 		"giants":
