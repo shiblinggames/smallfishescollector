@@ -40,7 +40,7 @@ const LIE: float = 0.55
 const MIRROR_ALPHA: float = 0.26
 const MIRROR_SHEAR: float = 0.021
 const MIRROR_RATE: float = 0.78
-const SINK: float = 0.055
+const SINK: float = 0.04
 static var _bands: Dictionary = {}
 static var _shadow_mat: ShaderMaterial
 static var _mirror_mat: ShaderMaterial
@@ -191,7 +191,10 @@ func _water_fx(origin: Vector2, h: float, hull: Sprite2D) -> void:
 	# loose of the boat), a little up it.
 	var hh: float = hull.texture.get_height() * absf(hull.scale.y)
 	var top_y: float = hull.position.y - hh / 2.0 if hull.centered else hull.position.y + hull.offset.y * absf(hull.scale.y)
-	var waterline: float = top_y + hh * (_band(hull.texture).y - SINK)
+	var keel_frac: float = _keel(hull)
+	# The same depth under the water for every hull, as a share of the
+	# captain's box (a boat overlay is a much shorter picture than the sheet).
+	var waterline: float = top_y + hh * keel_frac - SINK * h
 	# The shadow, under everything.
 	if hull != null:
 		if _shadow_mat == null:
@@ -223,7 +226,7 @@ func _water_fx(origin: Vector2, h: float, hull: Sprite2D) -> void:
 	# IN the water: every upright part that reaches below the waterline goes
 	# under it (the base sheet paints a plain hull under the boat overlay, so
 	# it goes too), and the water she pushes aside rings her at it.
-	var keel: float = top_y + hh * _band(hull.texture).y
+	var keel: float = top_y + hh * keel_frac
 	for c: Sprite2D in parts:
 		if c.rotation != 0.0 or not c.centered:
 			continue
@@ -337,6 +340,19 @@ static func _hull_mark(t: Texture2D) -> Vector2:
 			out = Vector2((lo + hi) / 2.0 / small.get_width(), float(bot) / small.get_height())
 	_marks[key] = out
 	return out
+
+
+## Where the keel is, as a fraction of the hull picture's height. The
+## captain's own sheets paint the line and the hook below the hull while she
+## waits, so on those it is the lowest row of the hull's brown, not of the
+## paint.
+func _keel(hull: Sprite2D) -> float:
+	var k: float = _band(hull.texture).y
+	if hull == _roles.get("skin"):
+		var m: Vector2 = _hull_mark(hull.texture)
+		if m != Vector2.INF:
+			k = minf(k, m.y + 3.0 / hull.texture.get_height())
+	return k
 
 
 ## The painted rows of a picture, as a fraction of its height (top, bottom),
