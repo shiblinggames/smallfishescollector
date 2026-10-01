@@ -122,7 +122,7 @@ func _options(slot: String) -> Array:
 			var owned: Array = Js.list(p.get("unlocked_character_colors"))
 			for c: Dictionary in Rules.data()["characterColors"]:
 				if c["free"] or Js.includes(owned, c["id"]):
-					out.append([c["id"], c["name"], "fishing_rest.png" if c["id"] == "default" else "fishing_%s_rest.png" % c["id"]])
+					out.append([c["id"], c["name"], "look:" + str(c["id"])])
 		"hat":
 			out.append([null, "No hat", ""])
 			for id: Variant in Js.list(p.get("unlocked_hats")):
@@ -208,7 +208,16 @@ func _show(slot: String) -> void:
 		cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cell.add_child(cv)
 		if o[2] != "":
-			Kit.art(cv, o[2], Vector2(0, 66), Kit.GOLD if on else Color("#67d4e8"))
+			if str(o[2]).begins_with("look:"):
+				var lr: TextureRect = TextureRect.new()
+				lr.texture = Skipper.look_art(str(o[2]).trim_prefix("look:"))
+				lr.custom_minimum_size = Vector2(0, 66)
+				lr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				lr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				lr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				cv.add_child(lr)
+			else:
+				Kit.art(cv, o[2], Vector2(0, 66), Kit.GOLD if on else Color("#67d4e8"))
 		var cl: Label = Kit.text(cv, o[1], "small", Kit.GOLD if on else Kit.INK_2)
 		cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		cl.clip_text = true

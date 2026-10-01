@@ -304,10 +304,7 @@ func _crate_cosmetics(tier: String) -> Array:
 		match e["kind"]:
 			"skin":
 				owned = Js.includes(Js.list(p.get("unlocked_character_colors")), e["id"])
-				var at: AtlasTexture = AtlasTexture.new()
-				at.atlas = Skipper.tex("fishing_%s_rest.png" % e["id"])
-				at.region = Rect2(150, 320, 640, 450)
-				art = at
+				art = Skipper.look_art(e["id"])
 			"boat":
 				owned = Js.includes(Js.list(p.get("unlocked_boats")), e["id"])
 				art = Skipper.tex(e.get("imageUrl"))
@@ -511,7 +508,7 @@ func _build_loadout() -> void:
 		var t: Paper.Tile = Paper.Tile.new()
 		t.on = (o[0] == null and worn == null) or (o[0] != null and worn != null and str(o[0]) == str(worn))
 		t.label = o[1]
-		t.art = Skipper.tex(o[2]) if o[2] != "" else null
+		t.art = (Skipper.look_art(str(o[2]).trim_prefix("look:")) if str(o[2]).begins_with("look:") else Skipper.tex(o[2])) if o[2] != "" else null
 		t.pigment = o[3]
 		t.corner = o[4]
 		t.custom_minimum_size = Vector2(124, 124)
@@ -575,7 +572,7 @@ func _options(s: String) -> Array:
 			var owned: Array = Js.list(p.get("unlocked_character_colors"))
 			for c: Dictionary in Rules.data()["characterColors"]:
 				if c["free"] or Js.includes(owned, c["id"]):
-					out.append([c["id"], c["name"], "fishing_rest.png" if c["id"] == "default" else "fishing_%s_rest.png" % c["id"], sea_blue, ""])
+					out.append([c["id"], c["name"], "look:" + str(c["id"]), sea_blue, ""])
 		"hat":
 			out.append([null, "No hat", "", Paper.INK_FAINT, ""])
 			for id: Variant in Js.list(p.get("unlocked_hats")):

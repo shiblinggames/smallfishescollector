@@ -394,7 +394,7 @@ func _init() -> void:
 				await process_frame
 			if what == "crates":
 				var sc: ScrollContainer = sea._locker._body.get_child(sea._locker._body.get_child_count() - 1)
-				sc.scroll_vertical = 400
+				sc.scroll_vertical = 0
 				for f: int in 5:
 					await process_frame
 			if what == "crateopen":

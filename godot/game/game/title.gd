@@ -209,11 +209,8 @@ func _creator(v: VBoxContainer, heading: String, go_label: String, on_go: Callab
 		var t: Paper.Tile = Paper.Tile.new()
 		t.on = id == _color
 		t.label = name
-		# Just the captain and the boat, not the whole sheet round them.
-		var at: AtlasTexture = AtlasTexture.new()
-		at.atlas = Skipper.tex("fishing_rest.png" if id == "default" else "fishing_%s_rest.png" % id)
-		at.region = Rect2(150, 320, 640, 450)
-		t.art = at
+		# Just the captain: a colour is a look, not a boat.
+		t.art = Skipper.look_art(id)
 		t.pigment = SEA_DYE
 		t.custom_minimum_size = Vector2(78, 84)
 		t.pressed.connect(func() -> void:

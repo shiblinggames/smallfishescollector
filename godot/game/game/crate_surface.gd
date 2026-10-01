@@ -245,7 +245,7 @@ func _tag() -> void:
 	tag.add_child(col)
 	if str(v.get("art", "")) != "":
 		var a: TextureRect = TextureRect.new()
-		a.texture = CrateMoment._tex(v["art"])
+		a.texture = Skipper.look_art(loot["skinId"]) if loot.get("type") == "skin" else CrateMoment._tex(v["art"])
 		a.custom_minimum_size = Vector2(150, 64)
 		a.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		a.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -303,7 +303,7 @@ func _rare_reveal() -> void:
 	var eb: Label = Kit.text(col, "Pet unlocked" if v.get("pet", false) else "Rare find", "eyebrow", Color(v["tint"]))
 	eb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var img: TextureRect = TextureRect.new()
-	img.texture = CrateMoment._tex(v["art"])
+	img.texture = Skipper.look_art(loot["skinId"]) if loot.get("type") == "skin" else CrateMoment._tex(v["art"])
 	img.custom_minimum_size = Vector2(0, 160)
 	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

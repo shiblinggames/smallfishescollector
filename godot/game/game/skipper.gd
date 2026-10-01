@@ -57,6 +57,27 @@ var _wob: float = 0.0
 var _phase: float = randf() * 6.28
 
 
+## A LOOK (a character colour) as a picture: just the captain, head and
+## shoulders, cut from their sheet, with no boat under them, so a look never
+## reads as a boat (Kong, 2026-10-01). Every sheet puts the captain in the
+## same place.
+static var _looks: Dictionary = {}
+
+
+static func look_art(color: Variant) -> Texture2D:
+	var id: String = str(Js.nz(color, "default"))
+	if _looks.has(id):
+		return _looks[id]
+	var sheet: Texture2D = tex("fishing_rest.png" if id == "default" else "fishing_%s_rest.png" % id)
+	if sheet == null:
+		return null
+	var at: AtlasTexture = AtlasTexture.new()
+	at.atlas = sheet
+	at.region = Rect2(415, 385, 340, 240)
+	_looks[id] = at
+	return at
+
+
 static func tex(url: Variant) -> Texture2D:
 	if url == null or String(url) == "":
 		return null
