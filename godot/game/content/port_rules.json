@@ -1,6 +1,6 @@
 {
   "_about": "THE PORT'S OWN RULES, laid over the web's tables (content/rules.json, which the export writes and the parity replay reads alone). Each block says why. Rules.data() merges this in for the game; Rules.web_only (the parity runner) leaves it out.",
-  "_crates": "Crate rebalance, 2026-10-01 (Kong, revised the same day). A crate stays a 1% chance on every cast in every water; depth decides WHICH crates can come up, and no water gives every tier (the shallows only wooden and metal, the abyss only gold and diamond). Each tier is strictly better than the one below. Cosmetics stay a small chance in every crate (1 to 5%); a better crate reaches RARER cosmetics, not more of them: each cosmetic in the web's pool has a band (cosmeticRarity), and each tier draws only from its bands (cosmeticBands).",
+  "_crates": "Crate rebalance, 2026-10-01 (Kong, revised the same day). A crate stays a 1% chance on every cast in every water; depth decides WHICH crates can come up, and no water gives every tier (the shallows only wooden and metal, the abyss only gold and diamond, the ancient deep diamond and the ancient chest half and half). Each tier is strictly better than the one below. Cosmetics stay a small chance in every crate (1 to 5%); a better crate reaches RARER cosmetics, not more of them: each cosmetic in the web's pool has a band (cosmeticRarity), and each tier draws only from its bands (cosmeticBands).",
   "zones": {
     "crateChanceByZone": {
       "shallows": 0.01,
@@ -35,7 +35,8 @@
         "diamond": 45
       },
       "ancient_deep": {
-        "ancient": 100
+        "diamond": 50,
+        "ancient": 50
       }
     }
   },

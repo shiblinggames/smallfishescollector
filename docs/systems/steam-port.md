@@ -412,6 +412,7 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   petChance diamond 1.5% and ancient 4% (the web's 4 / 10). Each diamond pet about 1 in
   267 diamond crates, each ancient pet about 1 in 50 ancient chests (was 1 in ~100 and 20).
   Cosmetic odds unchanged.
+  The ANCIENT DEEP drops diamond crates too (Kong): diamond 50 / ancient 50.
   DIAMOND AND ANCIENT MADE RARER (Kong: "too common"): fewer items in those crates meant
   each came out more often than in a gold one. Cosmetic 2% in both (was 4 / 5), bands
   diamond uncommon 2 / rare 2 / epic 1 and ancient rare 2 / epic 1 (an epic half as likely
