@@ -272,7 +272,8 @@ func _init() -> void:
 	check(Js.num(p.get("portal_tier")) == 2.0, "the next rung is built (%s)" % ps._err.text)
 	ps._go(Portal.tier_def(2))
 	await create_timer(1.3).timeout
-	check(sea._boat.position.distance_to(Vector2(0, 5350)) < 5.0 and not sea._warping, "the portal sails her to Open Waters (%s)" % str(sea._boat.position))
+	# (Open Waters' arrival sits in the ring current, which carries her a little.)
+	check(sea._boat.position.distance_to(Vector2(0, 5350)) < 300.0 and not sea._warping, "the portal sails her to Open Waters (%s)" % str(sea._boat.position))
 	await sea._press_recall()
 	await create_timer(1.3).timeout
 	check(sea._boat.position.distance_to(Vector2(float(Portal.HOME_TO["x"]), float(Portal.HOME_TO["y"]))) < 5.0, "the recall takes her home")
