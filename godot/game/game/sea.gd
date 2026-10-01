@@ -606,6 +606,7 @@ func _draw_port(port: Dictionary) -> void:
 			plate.position = c + Vector2(0, (0.5 - float(pl.get("water", 0.42))) * h / Chart.GROUND)
 			plate.z_index = -2
 			_world.add_child(plate)
+			Shore.trace(plate)
 	for bd: Dictionary in port["buildings"]:
 		var b: Sprite2D = Sprite2D.new()
 		b.texture = Skipper.tex(String(bd["art"]))

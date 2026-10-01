@@ -35,6 +35,9 @@ uniform float u_lantern = 0.0;
 uniform sampler2D u_field : filter_linear, repeat_disable;
 uniform vec2 u_field_px = vec2(0.00125, 0.0022);
 uniform float u_field_on = 0.0;
+// THE SHORE (game/shore.gd): Godot's distance field to the islands' painted
+// plates, in screen pixels.
+uniform float u_shore_on = 1.0;
 
 const float GROUND = 0.58;
 const vec2 WIND = vec2(0.8231, 0.5679);
@@ -182,6 +185,31 @@ void fragment() {
 		float pool = exp(-dot(off, off) / (260.0 * 260.0));
 		float shimmer = 0.75 + 0.25 * vnoise(w * 9.0 + vec2(TIME * 0.3, -TIME * 0.2));
 		col += vec3(1.0, 0.72, 0.38) * pool * shimmer * 0.16 * u_lantern;
+	}
+
+	// THE SHORE. Near land the water shoals: lighter and clearer over sand, and
+	// foam laps in toward the beach in bands that run up and fall back.
+	if (u_shore_on > 0.5) {
+		float sd = texture_sdf(screen_uv_to_sdf(SCREEN_UV)) / max(u_zoom, 0.01);
+		if (sd < 420.0) {
+			float shoal = 1.0 - smoothstep(0.0, 260.0, sd);
+			col = mix(col, col * 1.18 + vec3(0.06, 0.13, 0.11), shoal * 0.55 * (1.0 - u_dark * 0.6));
+			// Sand showing through the last few yards.
+			col = mix(col, vec3(0.62, 0.66, 0.52) * (1.0 - u_dark * 0.75), (1.0 - smoothstep(0.0, 34.0, sd)) * 0.30);
+			float wob = vnoise(world * 0.012 + vec2(TIME * 0.05, 0.0)) * 18.0;
+			float lap = 0.0;
+			for (int k = 0; k < 3; k++) {
+				float ph = fract(TIME * 0.11 + float(k) / 3.0);
+				float at = mix(70.0, 4.0, ph) + wob;
+				float band = exp(-pow((sd - at) / (4.0 + 6.0 * ph), 2.0));
+				// Broken along the shore, so it is foam and not a contour line.
+				float broken = smoothstep(0.35, 0.75, vnoise(world * 0.018 + vec2(float(k) * 7.3, TIME * 0.04)));
+				lap += band * sin(ph * 3.14159) * broken * (0.6 + 0.4 * rag);
+			}
+			float edge = exp(-pow(sd / 7.0, 2.0)) * (0.7 + 0.3 * vnoise(world * 0.05 + TIME * 0.3));
+			col += (lap * 0.13 + edge * 0.22) * vec3(0.92, 0.97, 1.0) * (1.0 - u_dark * 0.55);
+			col += (lap + edge) * vec3(0.36, 0.96, 0.85) * u_dark * 0.12;
+		}
 	}
 
 	// Dither away banding.

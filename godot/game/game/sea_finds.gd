@@ -33,6 +33,7 @@ class IsleNode:
 				plate.position = Vector2(0, (0.5 - float(pl.get("water", 0.42))) * plate.texture.get_height() * sc / Chart.GROUND)
 				plate.z_index = -2
 				add_child(plate)
+				Shore.trace(plate)
 		_prop = Sprite2D.new()
 		_prop.centered = true
 		add_child(_prop)
