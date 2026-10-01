@@ -46,6 +46,8 @@ var _field: SeaField
 ## in the Abyss and the Ancient Deep.
 var _motes: GPUParticles2D
 var _squall: SquallFx
+var _sound: SeaSound
+var _snd_heading: float = 0.0
 ## How far into a squall the view is, eased (dims the scene, roughs the hulls).
 var _storm: float = 0.0
 const BLOOMS: Array = [
@@ -165,6 +167,13 @@ func _ready() -> void:
 	_world.add_child(_wake)
 	_squall = SquallFx.new()
 	add_child(_squall)
+	_sound = SeaSound.new()
+	add_child(_sound)
+	_squall.struck.connect(_sound.thunder)
+	for port: Dictionary in Chart.ports():
+		_sound.add_surf(_world, Vector2(float(port["x"]), float(port["y"])), float(port["r"]))
+	for i: Dictionary in Rules.data()["isles"]:
+		_sound.add_surf(_world, Vector2(float(i["x"]), float(i["y"])), float(i["r"]))
 	_motes = _mote_layer()
 	_world.add_child(_motes)
 	_field = SeaField.new()
@@ -620,6 +629,24 @@ func _weather(delta: float, now: float, at: Vector2) -> void:
 	_squall.step(delta, deep, power, get_viewport_rect().size)
 	_water.set_shader_parameter("u_flash", _squall.flash)
 	_boat.storm = _storm
+	# The sea's sound: her way, a hard turn, how far out, the nearest shore.
+	var spd: float = clampf(_boat.velocity.length() / (300.0 * 1.4), 0.0, 1.0)
+	var turn: float = 0.0
+	if _boat.velocity.length() > 40.0:
+		turn = minf(1.0, absf(wrapf(_boat.heading - _snd_heading, -PI, PI)) / maxf(delta, 0.001) / 0.35 / 10.0)
+	_snd_heading = _boat.heading
+	var depth: float = clampf((at.y - 1400.0) / 21200.0, 0.0, 1.0)
+	var land: float = 0.0
+	var shore: Vector2 = at
+	for p: Dictionary in Chart.ports() + (Rules.data()["isles"] as Array):
+		var c: Vector2 = Vector2(float(p["x"]), float(p["y"]))
+		var edge: float = c.distance_to(at) - float(p["r"])
+		var l: float = clampf(1.0 - edge / 900.0, 0.0, 1.0)
+		if l > land:
+			land = l
+			shore = c
+	var shore_canvas: Vector2 = _world.get_global_transform() * shore
+	_sound.step(delta, spd, turn, depth, land, _squall.rain, SeaClock.at(now)["darkness"], _hud.busy(), shore_canvas)
 
 
 ## Ease the grade toward the water she is in.
