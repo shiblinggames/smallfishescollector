@@ -53,6 +53,8 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 		"buyHook": return Harbour.buy_hook(db, uid)
 		"upgradeFishHold": return Harbour.upgrade_fish_hold(db, uid)
 		"claimCompletionistRod": return Harbour.claim_completionist_rod(db, uid)
+		"buyShipyardTier": return Shipyard.buy_tier(db, uid, a[0])
+		"equipRod": return Shipyard.equip_rod(db, uid, float(a[0]))
 		"setSeaPos":
 			db.update_profile(uid, { "sea_x": float(a[0]), "sea_y": float(a[1]) })
 			return null

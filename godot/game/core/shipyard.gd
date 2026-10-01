@@ -1,0 +1,65 @@
+class_name Shipyard
+extends RefCounted
+## THE SHIPYARD'S REFITS, a port of buyShipyardTier and equipRod in
+## web/lib/core/ship.ts with the ladders of web/lib/shipyard.ts (exported as
+## rules.json "shipyard").
+##
+## Four ladders, one shape: the hull (top speed), the rudder (how fast the bow
+## comes round), the rig (how hard she picks up) and the lantern (how far it
+## lights the water at night). Each rung is bought in order; the price comes
+## from the table, never the request. The write is conditional on the tier just
+## read, and one that does not land gives the coin back.
+
+
+static func ladder(col: String) -> Dictionary:
+	return Js.obj((Rules.data()["shipyard"] as Dictionary).get(col))
+
+
+static func max_tier(col: String) -> int:
+	return (ladder(col)["costs"] as Array).size() - 1
+
+
+static func next_cost(col: String, tier: float) -> Variant:
+	var costs: Array = ladder(col)["costs"]
+	var t: int = int(tier) + 1
+	return null if t > costs.size() - 1 else float(costs[t])
+
+
+## What a rung does: the ladder's multiplier at this tier (clamped).
+static func effect(col: String, tier: float) -> float:
+	var e: Array = ladder(col)["effect"]
+	return float(e[clampi(int(tier), 0, e.size() - 1)])
+
+
+static func buy_tier(db: CaptainStore, uid: String, col: String) -> Dictionary:
+	var l: Dictionary = ladder(col)
+	var p: Dictionary = db.profile(uid, col)
+	var tier: float = Js.num(p.get(col))
+	if tier >= max_tier(col):
+		return { "error": l["full"] }
+	var price: Variant = next_cost(col, tier)
+	if price == null:
+		return { "error": l["full"] }
+	var bal: Variant = db.deduct_doubloons(uid, float(price))
+	if bal == null:
+		return { "error": "That refit costs %s and you have not got it." % Js.thousands(float(price)) }
+	db.ledger(uid, -float(price), "Shipyard: %s %d" % [l["label"], int(tier) + 1])
+	var after: Dictionary = db.profile(uid, col)
+	var seen: float = float(Js.nz(after.get(col), tier))
+	var fitted: bool = db.update_profile_if(uid, { col: minf(max_tier(col), seen + 1.0) }, [{ "col": col, "eq": Js.nz(after.get(col), 0.0) }])
+	if not fitted:
+		db.grant(uid, "doubloons", float(price))
+		db.ledger(uid, float(price), "Refunded: %s %d could not be fitted" % [l["label"], int(tier) + 1])
+		return { "error": "The yard could not fit that. Your coin is back in your purse." }
+	return { "ok": true, "doubloons": bal }
+
+
+static func equip_rod(db: CaptainStore, uid: String, tier: float) -> Dictionary:
+	var rod: Dictionary = Rules.rod(tier)
+	if rod.is_empty() or float(rod.get("tier", -1.0)) != tier:
+		return { "error": "No such rod." }
+	if float(rod["cost"]) != 0.0 or rod.get("earnedOnly") == true or rod.get("traderOnly") == true:
+		if db.rod_held(uid, rod["id"]) == 0.0:
+			return { "error": "You do not carry that rod." }
+	db.update_profile(uid, { "rod_tier": tier })
+	return { "ok": true }

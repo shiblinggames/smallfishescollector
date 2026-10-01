@@ -36,9 +36,11 @@ import { FINN_ANCIENT_BEATS, FINN_AVATAR } from '../lib/finn'
 import { VIGIL_DIAL } from '../lib/ancientVigil'
 import { fishingGearLevelReq } from '../lib/gearGating'
 import { isCaptainRod, ROD_SELL_RATE } from '../lib/rods'
-import { RESIDENTS } from '../app/(app)/sea/chart'
+import { RESIDENTS, PLACES, berthOf } from '../app/(app)/sea/chart'
+import { PLATES } from '../lib/islandPlates'
 import { plainRodFor, plainHookFor } from '../lib/seaTraders'
 import { MOOD_CONFIG } from '../lib/marketMood'
+import { HULL_COSTS, HULL_SPEED, HANDLING_SPEED, HANDLING_COSTS, ACCEL_RATE, ACCEL_COSTS, LANTERN_GLOW, LANTERN_COSTS, BASE_SPEED_PX, BASE_TURN_RAD, BASE_ACCEL } from '../lib/shipyard'
 import { TIER_AT } from '../lib/seaFolk'
 import { ISLES } from '../lib/seaIsles'
 import { COMPLETIONIST_LEVEL } from '../lib/completionist'
@@ -91,7 +93,7 @@ const rules = {
   levelRewardMax: LEVEL_REWARD_MAX,
   specialItems: SPECIAL_ITEMS.map(d => ({ id: d.id, name: d.name, shopCost: d.shopCost ?? null, costFathoms: d.costFathoms ?? null, requiresItem: d.requiresItem ?? null, requiresGauntletDepth: d.requiresGauntletDepth ?? null, finaleSlotOnly: d.finaleSlotOnly ?? false })),
   specialOwnedColumn: SPECIAL_OWNED_COLUMN,
-  boats: BOATS.map(b => ({ id: b.id, name: b.name, cost: b.cost, gemPrice: b.gemPrice ?? null, crateOnly: b.crateOnly ?? false, gate: b.gate ?? null, restImageUrl: b.restImageUrl, castImageUrl: b.castImageUrl, positions: b.positions })),
+  boats: BOATS.map(b => ({ id: b.id, name: b.name, cost: b.cost, gemPrice: b.gemPrice ?? null, crateOnly: b.crateOnly ?? false, gate: b.gate ?? null, restImageUrl: b.restImageUrl, castImageUrl: b.castImageUrl, positions: b.positions, grade: b.grade ?? 1, trim: b.trim ?? 0 })),
   hats: HATS.map(h => ({ id: h.id, name: h.name, cost: h.cost, crateOnly: h.crateOnly ?? false, restImageUrl: h.restImageUrl, castImageUrl: h.castImageUrl, positions: h.positions })),
   // The look on the boat (app/(app)/sea/seaCaptain.ts and skiffArt.ts draw it).
   hooks: HOOKS.map(h => ({ tier: h.tier, name: h.name, imageUrl: h.imageUrl ?? null, cost: h.cost, levelReq: fishingGearLevelReq(h), description: h.description ?? '' })),
@@ -129,6 +131,22 @@ const rules = {
       },
     }
   }),
+  // The Shipyard's four ladders (lib/shipyard): what each rung costs and does.
+  shipyard: {
+    hull_speed_tier: { costs: HULL_COSTS, effect: HULL_SPEED, label: 'hull tier', full: 'Your hull is as fine as it gets.' },
+    hull_handling_tier: { costs: HANDLING_COSTS, effect: HANDLING_SPEED, label: 'rudder', full: 'Her rudder is as fine as it gets.' },
+    lantern_tier: { costs: LANTERN_COSTS, effect: LANTERN_GLOW, label: 'lantern', full: 'Your lantern is as bright as they come.' },
+    hull_accel_tier: { costs: ACCEL_COSTS, effect: ACCEL_RATE, label: 'rig', full: 'Her rig is as fine as it gets.' },
+    base: { speedPx: BASE_SPEED_PX, turnRad: BASE_TURN_RAD, accel: BASE_ACCEL },
+  },
+  // The ports on the chart (chart.ts PLACES), each with its painted plate, what
+  // stands on it, its berth, and the label the dock prompt uses.
+  ports: PLACES.filter(p => p.kind === 'port').map(p => ({
+    id: p.id, name: p.name, blurb: p.blurb ?? '', x: p.x, y: p.y, r: p.r,
+    plate: PLATES[p.id] ?? null,
+    buildings: (p.buildings ?? []).filter(b => b.art).map(b => ({ art: b.art, x: b.x, y: b.y, scale: b.scale ?? 1 })),
+    berth: berthOf(p),
+  })),
   marketMoods: Object.fromEntries(Object.entries(MOOD_CONFIG).map(([k, v]) => [k, { label: v.label, color: v.color, desc: v.desc }])),
   completionistNeeds: { level: COMPLETIONIST_LEVEL, folk: FOLK.map(f => f.id), maxRapport: TIER_AT[4], isles: ISLES.map(i => i.id) },
   starter: (() => { const { species: _s, ...rest } = starterSave('__uid__', [], 0); return rest })(),

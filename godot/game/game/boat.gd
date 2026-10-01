@@ -4,16 +4,44 @@ extends Node2D
 ##
 ## Lives in the World node, which squashes the plane by Chart.GROUND; the
 ## sprite is counter-squashed because a boat stands up out of the water. Sail
-## by clicking where to go, or steer with the keys or a stick. Acceleration is
-## 1 - e^(-k dt), frame-rate independent, as on the web.
+## by clicking where to go, or steer with the keys or a stick.
+##
+## SAILING IS THE WEB'S (SeaMap.tsx): the boat has a HEADING. The bow comes
+## round toward where you point at the rudder's rate (faster from a standstill),
+## she picks up along the heading at the rig's rate, sideways drift bleeds off
+## (grip), and on a long straight run at speed she reaches full sail. The
+## Shipyard's ladders (hull, rudder, rig) and the boat's trim set the numbers:
+## top speed SPEED x hull x boat speed; turn TURN x rudder x boat agility;
+## pick-up ACCEL x rig x boat agility.
 ##
 ## The wake and the bow spray are GPU particles left on the water behind it
 ## (subtle, local); the lantern is a 2D light that comes up with the dark.
 
-const MAX_SPEED: float = 480.0
-const ACCEL_K: float = 3.2
-const ARRIVE: float = 24.0
+const SPEED: float = 300.0
+const ACCEL: float = 2.6
+const TURN: float = 2.4
+const GRIP: float = 6.0
+const FULL_SAIL: float = 1.15
+const FULL_SAIL_AFTER: float = 2.5
+const ARRIVE: float = 26.0
+const SLOW: float = 240.0
 const SPRITE_W: float = 210.0
+## The fastest any boat goes (the wake and spray scale against it).
+const MAX_SPEED: float = SPEED * 1.75 * 1.15
+
+## What she is fitted with (set_fit): hull, rudder and rig multipliers, and the
+## boat's own speed and agility from its grade and trim.
+var hull: float = 1.0
+var rudder: float = 1.0
+var rig: float = 1.0
+var boat_speed: float = 1.0
+var agility: float = 1.0
+var lantern_glow: float = 0.34
+var heading: float = PI / 2.0
+var _straight_t: float = 0.0
+var _full: bool = false
+var _sail_mom: float = 1.0
+var _last_heading: float = PI / 2.0
 
 var velocity: Vector2 = Vector2.ZERO
 var target: Variant = null
@@ -66,32 +94,80 @@ func _particles(amount: int, life: float, col: Color, speed: float, px: float) -
 	return p
 
 
+## The Shipyard's refits and the boat's trim, from a profile.
+func set_fit(p: Dictionary) -> void:
+	hull = Shipyard.effect("hull_speed_tier", Js.num(p.get("hull_speed_tier")))
+	rudder = Shipyard.effect("hull_handling_tier", Js.num(p.get("hull_handling_tier")))
+	rig = Shipyard.effect("hull_accel_tier", Js.num(p.get("hull_accel_tier")))
+	lantern_glow = Shipyard.effect("lantern_tier", Js.num(p.get("lantern_tier")))
+	var b: Dictionary = Skipper._find("boats", p.get("equipped_boat"))
+	var grade: float = float(b.get("grade", 1.0))
+	var trim: float = float(b.get("trim", 0.0))
+	boat_speed = grade * (1.0 + trim)
+	agility = grade * (1.0 - trim)
+
+
 func steer(input: Vector2, delta: float) -> void:
-	var want: Vector2 = Vector2.ZERO
+	var top: float = SPEED * hull * boat_speed
+	var order: Variant = null
+	var want: float = 0.0
 	if not locked:
 		if input.length() > 0.1:
 			target = null
-			want = input.normalized() * MAX_SPEED * minf(1.0, input.length())
+			order = input.angle()
+			want = top * minf(1.0, input.length()) * _sail_mom
 		elif target != null:
 			var to: Vector2 = (target as Vector2) - position
-			if to.length() < ARRIVE:
+			var d: float = to.length()
+			if d < ARRIVE:
 				target = null
 			else:
-				want = to.normalized() * MAX_SPEED * clampf(to.length() / 260.0, 0.25, 1.0)
-	velocity = velocity.lerp(want, 1.0 - exp(-ACCEL_K * delta))
+				order = to.angle()
+				var t: float = clampf((d - ARRIVE) / (SLOW - ARRIVE), 0.0, 1.0)
+				want = top * t * t * (3.0 - 2.0 * t) * _sail_mom
+	# The bow comes round toward the order, faster from a standstill.
+	var spd: float = velocity.length()
+	if order != null:
+		var stopped: float = 1.0 - minf(1.0, spd / (SPEED * 0.35))
+		var max_turn: float = TURN * rudder * agility * (1.0 + stopped * 2.5) * delta
+		heading += clampf(wrapf(float(order) - heading, -PI, PI), -max_turn, max_turn)
+	# Along the heading she picks up toward the speed she wants; across it the
+	# drift bleeds off.
+	var h: Vector2 = Vector2.from_angle(heading)
+	var n: Vector2 = h.orthogonal()
+	var fwd: float = velocity.dot(h)
+	var lat: float = velocity.dot(n)
+	var align: float = maxf(0.0, 0.5 + 0.5 * cos(heading - float(order))) if order != null else 0.0
+	var kf: float = 1.0 - exp(-ACCEL * rig * agility * delta)
+	fwd += (want * align - fwd) * kf
+	lat *= exp(-GRIP * delta)
+	velocity = h * fwd + n * lat
+	# Full sail: a long straight run at speed fills her out a little more.
+	var turning: float = absf(wrapf(heading - _last_heading, -PI, PI)) / maxf(delta, 0.0001)
+	_last_heading = heading
+	if fwd > 0.75 * top and turning < 0.5:
+		_straight_t += delta
+	else:
+		_straight_t = maxf(0.0, _straight_t - delta * 4.0)
+	if _straight_t > (2.0 if _full else FULL_SAIL_AFTER):
+		_full = true
+	elif _straight_t <= 0.0:
+		_full = false
+	_sail_mom = move_toward(_sail_mom, FULL_SAIL if _full else 1.0, delta * 3.0 * (FULL_SAIL - 1.0))
 	var next: Vector2 = position + velocity * delta
-	# The Mainland's shore stops the hull.
-	var shore: float = Chart.MAINLAND_R * Chart.SHORE + Chart.HULL
-	if next.length() < shore:
-		next = next.normalized() * shore
-		velocity = Vector2.ZERO
+	# Every island's shore stops the hull.
+	var off: Dictionary = Chart.off_shore(next)
+	if off["hit"]:
+		next = off["at"]
+		velocity *= 0.2
 	position = next
 	var speed: float = velocity.length()
+	lantern.texture_scale = 0.9 + 3.6 * lantern_glow
 	if speed > 20.0 and absf(velocity.x) > 8.0:
 		_facing = 1.0 if velocity.x > 0.0 else -1.0
 		skipper.scale.x = -_facing
 	_wake.emitting = speed > 40.0
-	_spray.emitting = speed > MAX_SPEED * 0.7
+	_spray.emitting = speed > SPEED * hull * boat_speed * 0.85
 	var back: Vector2 = -velocity.normalized() if speed > 1.0 else Vector2.ZERO
 	(_wake.process_material as ParticleProcessMaterial).direction = Vector3(back.x, back.y, 0)
 	(_spray.process_material as ParticleProcessMaterial).direction = Vector3(-back.x, -back.y, 0)

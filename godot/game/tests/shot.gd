@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -74,7 +74,7 @@ func _init() -> void:
 		save["clears"] = ["the_sunken_hand"]
 		save["rodItems"] = { "galaxy": 1.0, "twinstrike": 1.0 }
 		hud.refresh()
-	if what in ["dock", "ashore", "market", "tackle", "rods", "shelf", "buyer"]:
+	if what in ["dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "shipyard", "yardport"]:
 		var save: Dictionary = sea.session.save
 		for id: int in [1, 2, 3, 4, 5, 7, 9, 12, 16, 20, 31, 40]:
 			save["collection"][str(id)] = { "catch_count": 3.0, "is_golden": null }
@@ -91,6 +91,11 @@ func _init() -> void:
 	match what:
 		"dock":
 			pass
+		"shipyard":
+			p["hull_speed_tier"] = 2.0
+			sea._enter_room("shipyard")
+		"yardport":
+			sea._boat.position = Vector2(900, -620)
 		"purse":
 			sea.session.save["charter"] = { "name": "The Salt Ledger", "crew": ["Anna", "Ben"], "ledger": [
 				{ "by": "Anna", "amount": 100.0, "reason": "Brought 100 ⟡ aboard" }, { "by": "Ben", "amount": 100.0, "reason": "Brought 100 ⟡ aboard" },

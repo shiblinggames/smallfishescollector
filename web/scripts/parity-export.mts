@@ -30,6 +30,8 @@ import { equipTackleRod, buyBait, purchaseRod, sellRod, buyReel, buyHook, upgrad
 import { marketSellFish, sellEntireHold, sellToResident } from '../lib/core/selling'
 import { localSellData } from '../lib/data/local/sellLocal'
 import { localHarbourData } from '../lib/data/local/harbourLocal'
+import { buyShipyardTier, equipRod } from '../lib/core/ship'
+import { localShipData } from '../lib/data/local/shipLocal'
 import { FOLK } from '../lib/seaFolk'
 import { ISLES } from '../lib/seaIsles'
 import { localFishingData, type LocalSave } from '../lib/data/local/fishingLocal'
@@ -533,6 +535,20 @@ const shop = [
     await comp(); await comp()
   }),
 ]
+shop.push(await scripted('the shipyard', 34, captainWith(34, 40, 1, { doubloons: 30000 }), async x => {
+  const ship = localShipData(x.save)
+  const tier = (col: string) => x.call('buyShipyardTier', [col], () => buyShipyardTier(ship, x.uid, col as never))
+  const equip = (t: number) => x.call('equipRod', [t], () => equipRod(ship, x.uid, t))
+  // Short of coin first, then every ladder to the top and past it.
+  await tier('hull_speed_tier'); await tier('hull_speed_tier'); await tier('hull_speed_tier'); await tier('hull_speed_tier')
+  await x.patchProfile({ doubloons: 900000 })
+  for (const col of ['hull_speed_tier', 'hull_handling_tier', 'lantern_tier', 'hull_accel_tier']) {
+    for (let k = 0; k < 7; k++) await tier(col)
+  }
+  await equip(0); await equip(1); await equip(99); await equip(14); await equip(15)
+  await x.patchSave({ rodItems: { driftwood: 1 } })
+  await equip(1)
+}))
 write('shop.json', { sessions: shop })
 console.log(`  ${shop.length} shop sessions, ${shop.reduce((n, s) => n + s.ops.length, 0)} calls`)
 

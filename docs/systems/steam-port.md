@@ -53,6 +53,26 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the rest of lib/core/fishing (wormhole reroll, Tide Turner, goldens, level rewards,
   Almanac). A TS bug found on the way: the local store stamped a shiny with the real
   clock, fixed.
+- THE REST OF THE SEA, STAGE 1 (2026-10-01): the ports, sailing and the Shipyard.
+  - EVERY PORT IS ON THE CHART from the web's own placements (rules.json "ports", exported
+    from chart.ts PLACES with their plates, buildings and berths): the Mainland, the Shipyard,
+    the Homestead, the Tally House, the Trawl Harbor, and the anchorage's Crew Hall, Posting
+    House, Forge, Gunwharf and Charterhouse. Each has its berth and the web's dock label, and
+    every shore stops the hull. The Mainland and the Shipyard open; the rest say they are not
+    built yet.
+  - SAILING IS THE WEB'S HEADING MODEL (SeaMap.tsx): the bow comes round at the rudder's rate
+    (faster from a standstill), she picks up along her heading at the rig's rate, sideways
+    drift bleeds off, and a long straight run reaches full sail (x1.15). Top speed is 300 x
+    hull x the boat's speed; turn and pick-up take the boat's agility. Grade and trim are now
+    exported with the boats. The lantern's rung sets how far the boat's light reaches at
+    night.
+  - THE SHIPYARD (`game/shipyard_room.gd`, `core/shipyard.gd`): Refit your boat (Speed,
+    Turning, Pick-up, Hold, Lantern), each read in real units with the whole ladder and a
+    confirm; Your rig (the loadout). The rules (buyShipyardTier, equipRod) are ported with a
+    40-call parity session. The rod rack is retired on the web too: every rod you own sails
+    with you.
+  NEXT, in order: hotspots; isles, digs, bottles and the fog; the regulars and the traders;
+  the portal and recall. Specs for all of them were read off the web on 2026-10-01.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

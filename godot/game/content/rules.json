@@ -2749,7 +2749,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": 0.04
   },
   {
    "id": "cherry",
@@ -2779,7 +2781,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": -0.06
   },
   {
    "id": "desert",
@@ -2809,7 +2813,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": 0.12
   },
   {
    "id": "mahogany",
@@ -2839,7 +2845,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": 0.02
   },
   {
    "id": "pistachio",
@@ -2869,7 +2877,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": -0.12
   },
   {
    "id": "taupe",
@@ -2899,7 +2909,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": 0
   },
   {
    "id": "charcoal",
@@ -2929,7 +2941,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": -0.08
   },
   {
    "id": "golden",
@@ -2959,7 +2973,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1.03,
+   "trim": 0.06
   },
   {
    "id": "offwhite",
@@ -2989,7 +3005,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": 0.08
   },
   {
    "id": "periwinkle",
@@ -3019,7 +3037,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": -0.04
   },
   {
    "id": "ethereal",
@@ -3049,7 +3069,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1.05,
+   "trim": -0.1
   },
   {
    "id": "fire",
@@ -3079,7 +3101,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": 0
   },
   {
    "id": "ice",
@@ -3112,7 +3136,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": 0
   },
   {
    "id": "jetblack",
@@ -3142,7 +3168,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1,
+   "trim": 0
   },
   {
    "id": "chromium",
@@ -3172,7 +3200,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1.07,
+   "trim": 0.1
   },
   {
    "id": "celestial",
@@ -3205,7 +3235,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1.05,
+   "trim": -0.1
   },
   {
    "id": "abyssal",
@@ -3238,7 +3270,9 @@
      "width": 55,
      "rotate": 0
     }
-   }
+   },
+   "grade": 1.04,
+   "trim": 0.06
   }
  ],
  "hats": [
@@ -4750,6 +4784,360 @@
     "hat": "midnight",
     "rodSlug": "rod_fiberglass",
     "hook": "/hook_iron.png"
+   }
+  }
+ ],
+ "shipyard": {
+  "hull_speed_tier": {
+   "costs": [
+    0,
+    2000,
+    8000,
+    20000,
+    50000,
+    100000
+   ],
+   "effect": [
+    1,
+    1.12,
+    1.25,
+    1.4,
+    1.56,
+    1.75
+   ],
+   "label": "hull tier",
+   "full": "Your hull is as fine as it gets."
+  },
+  "hull_handling_tier": {
+   "costs": [
+    0,
+    8000,
+    20000,
+    50000
+   ],
+   "effect": [
+    1,
+    1.16,
+    1.34,
+    1.55
+   ],
+   "label": "rudder",
+   "full": "Her rudder is as fine as it gets."
+  },
+  "lantern_tier": {
+   "costs": [
+    0,
+    6000,
+    18000,
+    45000,
+    110000
+   ],
+   "effect": [
+    0.34,
+    0.5,
+    0.68,
+    0.84,
+    1
+   ],
+   "label": "lantern",
+   "full": "Your lantern is as bright as they come."
+  },
+  "hull_accel_tier": {
+   "costs": [
+    0,
+    8000,
+    20000,
+    50000
+   ],
+   "effect": [
+    1,
+    1.18,
+    1.4,
+    1.65
+   ],
+   "label": "rig",
+   "full": "Her rig is as fine as it gets."
+  },
+  "base": {
+   "speedPx": 300,
+   "turnRad": 2.4,
+   "accel": 2.6
+  }
+ },
+ "ports": [
+  {
+   "id": "mainland",
+   "name": "The Mainland",
+   "blurb": "Tavern, market and shops",
+   "x": 0,
+   "y": 0,
+   "r": 500,
+   "plate": {
+    "art": "/sea/port-mainland.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.676
+   },
+   "buildings": [
+    {
+     "art": "/sea/mainland-town.png",
+     "x": 47,
+     "y": 77,
+     "scale": 0.86
+    }
+   ],
+   "berth": {
+    "x": 425,
+    "y": 400,
+    "r": 440
+   }
+  },
+  {
+   "id": "home",
+   "name": "The Homestead",
+   "blurb": "Customize your home",
+   "x": 1500,
+   "y": -200,
+   "r": 460,
+   "plate": {
+    "art": "/sea/port-home.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.562
+   },
+   "buildings": [],
+   "berth": {
+    "x": 1891,
+    "y": 76,
+    "r": 405
+   }
+  },
+  {
+   "id": "trawl_docks",
+   "name": "The Tally House",
+   "blurb": "The day’s orders, and what they pay",
+   "x": -1150,
+   "y": -780,
+   "r": 265,
+   "plate": {
+    "art": "/sea/port-tally-house.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.596
+   },
+   "buildings": [
+    {
+     "art": "/sea/tally-house-v2.webp",
+     "x": 51,
+     "y": 58,
+     "scale": 0.38
+    }
+   ],
+   "berth": {
+    "x": -924.75,
+    "y": -621,
+    "r": 330
+   }
+  },
+  {
+   "id": "crew_hall",
+   "name": "The Crew Hall",
+   "blurb": "Your hall, your drills, your stores",
+   "x": -900,
+   "y": -4400,
+   "r": 460,
+   "plate": {
+    "art": "/sea/port-crew-hall.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.606
+   },
+   "buildings": [
+    {
+     "art": "/crew/hall_1.png",
+     "x": 53,
+     "y": 52,
+     "scale": 0.3
+    },
+    {
+     "art": "/crew/drill_1.png",
+     "x": 35,
+     "y": 57,
+     "scale": 0.12
+    },
+    {
+     "art": "/crew/stores_1.png",
+     "x": 70,
+     "y": 56,
+     "scale": 0.11
+    }
+   ],
+   "berth": {
+    "x": -509,
+    "y": -4124,
+    "r": 405
+   }
+  },
+  {
+   "id": "posting_house",
+   "name": "The Posting House",
+   "blurb": "The day’s hunts, and what they pay",
+   "x": -2150,
+   "y": -4400,
+   "r": 280,
+   "plate": {
+    "art": "/sea/port-posting-house.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.562
+   },
+   "buildings": [
+    {
+     "art": "/sea/posting-house-v3.webp",
+     "x": 57,
+     "y": 42,
+     "scale": 0.43
+    }
+   ],
+   "berth": {
+    "x": -1912,
+    "y": -4232,
+    "r": 330
+   }
+  },
+  {
+   "id": "forge_isle",
+   "name": "The Forge",
+   "blurb": "Two relics in, one out",
+   "x": 620,
+   "y": -4400,
+   "r": 280,
+   "plate": {
+    "art": "/sea/port-forge.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.671
+   },
+   "buildings": [
+    {
+     "art": "/forge/forge.png",
+     "x": 45,
+     "y": 43,
+     "scale": 0.3
+    }
+   ],
+   "berth": {
+    "x": 382,
+    "y": -4232,
+    "r": 330
+   }
+  },
+  {
+   "id": "gunwharf",
+   "name": "The Gunwharf",
+   "blurb": "Your ship, armed and berthed",
+   "x": -898,
+   "y": -5715,
+   "r": 340,
+   "plate": {
+    "art": "/sea/port-gunwharf.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.658
+   },
+   "buildings": [
+    {
+     "art": "/sea/gunwharf-v3.webp",
+     "x": 55,
+     "y": 50,
+     "scale": 0.53
+    }
+   ],
+   "berth": {
+    "x": -609,
+    "y": -5511,
+    "r": 330
+   }
+  },
+  {
+   "id": "charterhouse",
+   "name": "The Charterhouse",
+   "blurb": "Routes, crews and the day’s voyage",
+   "x": 898,
+   "y": -5715,
+   "r": 340,
+   "plate": {
+    "art": "/sea/port-charterhouse.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.642
+   },
+   "buildings": [
+    {
+     "art": "/sea/charterhouse-v2.webp",
+     "x": 51,
+     "y": 63,
+     "scale": 0.47
+    }
+   ],
+   "berth": {
+    "x": 609,
+    "y": -5511,
+    "r": 330
+   }
+  },
+  {
+   "id": "trawl_fleet",
+   "name": "The Trawl Harbor",
+   "blurb": "Send a crew, bring them in",
+   "x": -2050,
+   "y": -820,
+   "r": 210,
+   "plate": {
+    "art": "/sea/port-trawl-harbor.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.505
+   },
+   "buildings": [
+    {
+     "art": "/sea/trawl-harbor-v3.webp",
+     "x": 59,
+     "y": 53,
+     "scale": 0.44
+    }
+   ],
+   "berth": {
+    "x": -1871.5,
+    "y": -694,
+    "r": 330
+   }
+  },
+  {
+   "id": "shipyard",
+   "name": "The Shipyard",
+   "blurb": "Loadout, rack and upgrades",
+   "x": 700,
+   "y": -900,
+   "r": 265,
+   "plate": {
+    "art": "/sea/port-shipyard.webp",
+    "width": 1,
+    "water": 0.42,
+    "aspect": 0.604
+   },
+   "buildings": [
+    {
+     "art": "/sea/shipyard-v3.webp",
+     "x": 50,
+     "y": 81,
+     "scale": 0.74
+    }
+   ],
+   "berth": {
+    "x": 925.25,
+    "y": -741,
+    "r": 330
    }
   }
  ],

@@ -46,7 +46,7 @@ func _init() -> void:
 	check(hud._reach_btn.visible and hud._reach_text == "Go ashore at The Mainland", "the dock prompt is up (%s)" % hud._reach_text)
 	for f: int in 30:
 		await process_frame
-	check(sea._berth.lit > 0.5, "the berth lights up")
+	check((sea._berths["mainland"] as Berth).lit > 0.5, "the berth lights up")
 
 	# Ashore, then the Market.
 	hud._press_reach()
@@ -128,6 +128,23 @@ func _init() -> void:
 	shop._back()
 	await process_frame
 	check(not hud.busy(), "leaving the shop frees the HUD")
+
+	# The Shipyard: a refit, the hold, and the boat's fit follows.
+	sea._enter_room("shipyard")
+	await process_frame
+	var yard: ShipyardRoom = _find(sea, ShipyardRoom)
+	check(yard != null, "the Shipyard opens")
+	var hull_was: float = sea._boat.hull
+	await yard._buy(ShipyardRoom.LADDERS[0])
+	check(Js.num(p.get("hull_speed_tier")) == 1.0, "a hull refit is fitted (%s)" % yard._error)
+	await yard._buy(ShipyardRoom.LADDERS[3])
+	check(Js.num(p.get("fish_hold_tier")) == 1.0, "the hold is upgraded (%s)" % yard._error)
+	yard._tab = "rig"
+	yard.rebuild()
+	await process_frame
+	yard._back()
+	await process_frame
+	check(sea._boat.hull > hull_was, "the boat sails on her new hull")
 
 	# The Shallows' buyer.
 	var buyer: Buyer = sea._buyers[0]

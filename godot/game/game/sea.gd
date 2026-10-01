@@ -32,7 +32,8 @@ var _town_light: PointLight2D
 var _hud: FishingHud
 var _hud_layer: CanvasLayer
 var _room_layer: CanvasLayer
-var _berth: Berth
+## Each port's berth, by id.
+var _berths: Dictionary = {}
 var _buyers: Array[Buyer] = []
 var _mark: BuyerMark
 ## Buyers dealt with this session: "Hail" becomes "Speak to".
@@ -59,31 +60,11 @@ func _ready() -> void:
 	_world.y_sort_enabled = true
 	add_child(_world)
 
-	# The Mainland's plate, 2r wide, its island's centre 42% of the way down,
-	# painted in perspective so it stands un-squashed; the town on it, feet
-	# first, and the berth on the water beside it.
-	var mainland: Sprite2D = Sprite2D.new()
-	mainland.texture = load("res://art/sea/port-mainland.webp")
-	var s: float = Chart.MAINLAND_R * 2.0 / float(mainland.texture.get_width())
-	mainland.scale = Vector2(s, s / Chart.GROUND)
-	mainland.position = Vector2(0, (0.5 - Chart.PLATE_WATER) * mainland.texture.get_height() * s / Chart.GROUND)
-	mainland.z_index = -2
-	_world.add_child(mainland)
-	var d: float = Chart.MAINLAND_R * 2.0
-	var town: Sprite2D = Sprite2D.new()
-	town.texture = Skipper.tex("sea/mainland-town.png")
-	if town.texture != null:
-		var ts: float = d * Chart.TOWN_SCALE / float(town.texture.get_width())
-		town.scale = Vector2(ts, ts / Chart.GROUND)
-		town.offset = Vector2(0, -town.texture.get_height() / 2.0)
-		town.position = Vector2(-Chart.MAINLAND_R + Chart.TOWN_FEET.x / 100.0 * d, -Chart.MAINLAND_R + Chart.TOWN_FEET.y / 100.0 * d)
-		_world.add_child(town)
-	_berth = Berth.new()
-	_berth.r = Chart.BERTH_R
-	_berth.position = Chart.BERTH_AT
-	_berth.bearing = Chart.BERTH_AT.angle()
-	_berth.z_index = -1
-	_world.add_child(_berth)
+	# Every port: its plate, 2r x width wide, the island's centre `water` of
+	# the way down it, painted in perspective so it stands un-squashed; what
+	# stands on it, feet first; and its berth on the water.
+	for port: Dictionary in Chart.ports():
+		_draw_port(port)
 	for info: Dictionary in Chart.residents():
 		var b: Buyer = Buyer.new()
 		b.info = info
@@ -102,6 +83,8 @@ func _ready() -> void:
 	_boat.position = Vector2(Js.num(at), Js.num(session.profile().get("sea_y"))) if at != null else Chart.HOME
 	_world.add_child(_boat)
 	_boat.set_look(Skipper.look_of(session.profile()))
+	_boat.set_fit(session.profile())
+	session.changed.connect(func() -> void: _boat.set_fit(session.profile()))
 
 	_night = CanvasModulate.new()
 	add_child(_night)
@@ -171,12 +154,14 @@ func _process(delta: float) -> void:
 
 	# Night on the solid world: dim and cool it, and let the lights pool.
 	_night.color = Color.WHITE.lerp(Color(0.42, 0.48, 0.66), dark)
-	_boat.lantern.energy = dark * 1.1
+	_boat.lantern.energy = dark * 1.1 * (0.5 + 0.5 * _boat.lantern_glow)
 	_town_light.energy = dark * 1.4
 	# Light and lettering are not dimmed by the night: undo it for them.
 	var lift: Color = Color(1.0 / _night.color.r, 1.0 / _night.color.g, 1.0 / _night.color.b)
-	_berth.darkness = dark
-	_berth.modulate = lift
+	for bid: String in _berths:
+		var bt: Berth = _berths[bid]
+		bt.darkness = dark
+		bt.modulate = lift
 	for b: Buyer in _buyers:
 		b.lift = lift
 	_reach(cam_world)
@@ -222,12 +207,13 @@ func _reach(at: Vector2) -> void:
 	for b: Buyer in _buyers:
 		if not w.is_empty() and b.info["zoneId"] == w["id"]:
 			band_buyer = b
-	if Chart.in_berth(at):
-		_berth.inside = true
-		_hud.set_reach("Go ashore at The Mainland", _go_ashore)
+	var docked: Dictionary = Chart.berth_at(at)
+	for bid: String in _berths:
+		(_berths[bid] as Berth).inside = bid == docked.get("id")
+	if not docked.is_empty():
+		_hud.set_reach(Chart.dock_label(docked), _dock.bind(docked["id"]))
 		_mark.target = null
 		return
-	_berth.inside = false
 	for b: Buyer in _buyers:
 		if b.near(at):
 			_hud.set_reach(("Speak to %s" if _dealt.has(b.info["zoneId"]) else "Hail %s") % b.info["name"], _hail.bind(b))
@@ -312,6 +298,56 @@ func _send_look() -> void:
 		net.send_look(Skipper.look_of(session.profile()), session.captain_name())
 
 
+func _draw_port(port: Dictionary) -> void:
+	var c: Vector2 = Vector2(float(port["x"]), float(port["y"]))
+	var r: float = float(port["r"])
+	var d: float = r * 2.0
+	var pl: Variant = port.get("plate")
+	if pl != null:
+		var plate: Sprite2D = Sprite2D.new()
+		plate.texture = Skipper.tex(String((pl as Dictionary)["art"]))
+		if plate.texture != null:
+			var w: float = d * float(pl.get("width", 1.0))
+			var sc: float = w / float(plate.texture.get_width())
+			plate.scale = Vector2(sc, sc / Chart.GROUND)
+			var h: float = plate.texture.get_height() * sc
+			plate.position = c + Vector2(0, (0.5 - float(pl.get("water", 0.42))) * h / Chart.GROUND)
+			plate.z_index = -2
+			_world.add_child(plate)
+	for bd: Dictionary in port["buildings"]:
+		var b: Sprite2D = Sprite2D.new()
+		b.texture = Skipper.tex(String(bd["art"]))
+		if b.texture == null:
+			continue
+		var bs: float = d * float(bd["scale"]) / float(b.texture.get_width())
+		b.scale = Vector2(bs, bs / Chart.GROUND)
+		b.offset = Vector2(0, -b.texture.get_height() / 2.0)
+		b.position = c + Vector2(-r + float(bd["x"]) / 100.0 * d, -r + float(bd["y"]) / 100.0 * d)
+		_world.add_child(b)
+	var be: Dictionary = port["berth"]
+	var berth: Berth = Berth.new()
+	berth.r = float(be["r"])
+	berth.position = Vector2(float(be["x"]), float(be["y"]))
+	berth.bearing = (berth.position - c).angle()
+	berth.z_index = -1
+	_world.add_child(berth)
+	_berths[port["id"]] = berth
+
+
+## Tying up: the bell, then whatever the port opens.
+func _dock(id: String) -> void:
+	match id:
+		"mainland":
+			_go_ashore()
+		"shipyard":
+			Rumble.buzz([18, 40, 24])
+			Sound.bell()
+			_enter_room("shipyard")
+		_:
+			Rumble.tap(10)
+			_hud.toast("%s is not built yet in this build." % Chart.port(id).get("name", "That port"))
+
+
 func _go_ashore() -> void:
 	Rumble.buzz([18, 40, 24])
 	Sound.bell()
@@ -322,10 +358,18 @@ func _go_ashore() -> void:
 
 
 func _enter_room(door: String) -> void:
-	var room: Room = MarketRoom.new() if door == "market" else TackleRoom.new()
+	var room: Room
+	match door:
+		"market":
+			room = MarketRoom.new()
+		"shipyard":
+			room = ShipyardRoom.new()
+		_:
+			room = TackleRoom.new()
 	room.session = session
 	room.closed.connect(func() -> void:
 		_boat.set_look(Skipper.look_of(session.profile()))
+		_boat.set_fit(session.profile())
 		_send_look()
 		_hud.refresh())
 	_hud.hold_for(room)

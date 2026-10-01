@@ -9,26 +9,61 @@ extends RefCounted
 
 const GROUND: float = 0.58
 const HOME: Vector2 = Vector2(260, 560)
-## The Mainland (chart.ts PLACES 'mainland'): r 500, its painted plate 2r wide
-## with the island's centre 42% of the way down it, and one painted town
-## standing on it, its feet 47% across and 77% down the island's box.
+## The Mainland (chart.ts PLACES 'mainland'): r 500. Every port's plate, town
+## and berth come from the rules (ports(), exported from chart.ts).
 const MAINLAND_R: float = 500.0
-const PLATE_WATER: float = 0.42
-const TOWN_FEET: Vector2 = Vector2(47.0, 77.0)
-const TOWN_SCALE: float = 0.86
 ## The hull stops at r x SHORE + HULL from an island's centre (SeaMap.tsx).
 const SHORE: float = 0.72
 const HULL: float = 55.0
-## The Mainland's berth (berthOf with its override): where you tie up. HOME
-## sits inside it, so a fresh session opens with the dock prompt up.
-const BERTH_AT: Vector2 = Vector2(425, 400)
-const BERTH_R: float = 440.0
 ## How near a boat must be to hail someone on the water.
 const HAIL_RANGE: float = 260.0
+## What the dock prompt says at a port, where it is not "Go ashore at <name>".
+const DOCK_LABEL: Dictionary = {
+	"gunwharf": "See to your ship at the Gunwharf",
+	"charterhouse": "Read the voyage board",
+	"trawl_fleet": "Send a trawl out",
+}
 
 
-static func in_berth(p: Vector2) -> bool:
-	return p.distance_to(BERTH_AT) < BERTH_R
+## Every port on the chart: id, name, blurb, x, y, r, its plate (art, width,
+## water, aspect), its buildings (art, x%, y%, scale), and its berth (x, y, r).
+static func ports() -> Array:
+	return Rules.data()["ports"]
+
+
+static func port(id: String) -> Dictionary:
+	for p: Dictionary in ports():
+		if p["id"] == id:
+			return p
+	return {}
+
+
+## The port whose berth this point is in, or {}.
+static func berth_at(at: Vector2) -> Dictionary:
+	for p: Dictionary in ports():
+		var b: Dictionary = p["berth"]
+		if at.distance_to(Vector2(float(b["x"]), float(b["y"]))) < float(b["r"]):
+			return p
+	return {}
+
+
+static func in_berth(at: Vector2) -> bool:
+	return berth_at(at).get("id") == "mainland"
+
+
+static func dock_label(p: Dictionary) -> String:
+	return DOCK_LABEL.get(p["id"], "Go ashore at %s" % p["name"])
+
+
+## Push a point out of every island's shore (the hull's collision).
+static func off_shore(at: Vector2) -> Dictionary:
+	for p: Dictionary in ports():
+		var c: Vector2 = Vector2(float(p["x"]), float(p["y"]))
+		var shore: float = float(p["r"]) * SHORE + HULL
+		var d: Vector2 = at - c
+		if d.length() < shore:
+			return { "at": c + (d.normalized() if d.length() > 0.001 else Vector2.DOWN) * shore, "hit": true }
+	return { "at": at, "hit": false }
 
 
 ## The buyer out in each water (chart.ts RESIDENTS): where they moor, their
