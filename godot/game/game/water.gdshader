@@ -262,7 +262,15 @@ void fragment() {
 	// THE SHORE. Near land the water shoals: lighter and clearer over sand, and
 	// foam laps in toward the beach in bands that run up and fall back.
 	if (u_shore_on > 0.5) {
-		float sd = texture_sdf(screen_uv_to_sdf(SCREEN_UV)) / max(u_zoom, 0.01);
+		// Measured on the water's plane, not the screen: a step down the
+		// screen is 1/GROUND of a step on the plane, so the bands run thinner
+		// above and below an island than at its sides, as the boats' rings do.
+		vec2 ssp = screen_uv_to_sdf(SCREEN_UV);
+		float s0 = texture_sdf(ssp);
+		vec2 g = vec2(texture_sdf(ssp + vec2(2.0, 0.0)) - texture_sdf(ssp - vec2(2.0, 0.0)), texture_sdf(ssp + vec2(0.0, 2.0)) - texture_sdf(ssp - vec2(0.0, 2.0)));
+		float gl = length(g);
+		vec2 gn = gl > 0.0001 ? g / gl : vec2(1.0, 0.0);
+		float sd = s0 * length(vec2(gn.x, gn.y / GROUND)) / max(u_zoom, 0.01);
 		if (sd < 420.0) {
 			float shoal = 1.0 - smoothstep(0.0, 260.0, sd);
 			col = mix(col, col * 1.18 + vec3(0.06, 0.13, 0.11), shoal * 0.55 * (1.0 - u_dark * 0.6));

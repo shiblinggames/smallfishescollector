@@ -70,6 +70,7 @@ var lantern: PointLight2D
 var field: SeaField
 ## The line went in here (the shoals scatter from it).
 signal cast_landed(at: Vector2)
+var _line_t: float = 0.0
 var _bob_t: float = 0.0
 
 
@@ -310,6 +311,13 @@ func hook_at() -> Vector2:
 
 func _process(delta: float) -> void:
 	# The bobber, twitching now and then while she waits.
+	# Where the line goes in: small rings, steadily, on the sea's own
+	# perspective (the sheet's painted ripple is gone; it was flatter).
+	if field != null and skipper.frame == "wait":
+		_line_t -= delta
+		if _line_t <= 0.0:
+			_line_t = 0.85
+			field.ring(hook_at(), 34.0, 1.5, 0.22)
 	if field != null and skipper.frame == "wait":
 		_bob_t -= delta
 		if _bob_t <= 0.0:

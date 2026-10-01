@@ -332,6 +332,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (Tab cycles Loadout, Hold, Log); leaving the tab stamps the book read. Left dark on
   purpose: the giants' slabs (paintings of the deep), the level-up and other full-screen
   moments over a scrim, the rooms' painted backdrops.
+  FOURTH PLAYTEST (2026-10-01): SEA-WORN PARCHMENT, the paper's own tone (Kit.PAPER
+  0.83/0.77/0.65, deeper inks, hovers lift by 0.1 not 0.35; the chart's paper and fog
+  follow) because fresh paper glared. The LEVEL BAR is an instrument, not paper: a
+  stained plank trimmed in brass, the level on a brass medallion, XP as sea water in a
+  glass vial with a meniscus and bubbles (gold water at the top). PERSPECTIVE: the ripple
+  painted where the line meets the water is erased from the wait sheets (setup.mjs
+  deripple v2) and the sea's field rings make it, on the plane; the shore's foam bands are
+  measured on the plane (the SDF distance scaled by its gradient through 1/GROUND), so
+  they thin above and below an island. Every hull laps alike (the waterline and collar
+  waves scale by the picture's height against the sheet, `ref`); the collar's width is the
+  longest solid run on its row, so the fishing line is not counted as hull. A click while
+  the line is out no longer sets a heading (she sailed off to it after the catch).
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

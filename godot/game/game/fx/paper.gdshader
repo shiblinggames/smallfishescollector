@@ -6,7 +6,7 @@ shader_type canvas_item;
 // is a watercolour blot instead (behind an item's art): a pigment pool that
 // dries darker at its rim and granulates.
 uniform vec2 u_size = vec2(400.0, 300.0);
-uniform vec4 u_paper : source_color = vec4(0.93, 0.89, 0.80, 1.0);
+uniform vec4 u_paper : source_color = vec4(0.83, 0.77, 0.65, 1.0);
 uniform vec4 u_wash : source_color = vec4(0.0);
 uniform float u_deckle = 7.0;
 uniform float u_seed = 0.0;

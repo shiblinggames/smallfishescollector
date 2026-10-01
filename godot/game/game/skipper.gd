@@ -250,6 +250,7 @@ static func afloat_mat(shader: String, spr: Sprite2D, cut: float, depth: float, 
 	m.set_shader_parameter("depth", maxf(depth, 0.01))
 	m.set_shader_parameter("aspect", float(spr.texture.get_width()) * absf(spr.scale.x) / maxf(1.0, float(spr.texture.get_height()) * absf(spr.scale.y)))
 	m.set_shader_parameter("phase", phase)
+	m.set_shader_parameter("ref", float(spr.texture.get_height()) * absf(spr.scale.y) / H)
 	return m
 
 
@@ -285,13 +286,20 @@ static func span_at(t: Texture2D, row: float) -> Vector2:
 		if img.is_compressed():
 			img.decompress()
 		var y: int = clampi(int(row * img.get_height()), 0, img.get_height() - 1)
+		# The longest unbroken run: the fishing line on the same row is not
+		# the hull.
 		var lo: int = -1
 		var hi: int = -1
-		for x: int in img.get_width():
-			if img.get_pixel(x, y).a > 0.5:
-				if lo < 0:
-					lo = x
-				hi = x
+		var run_lo: int = -1
+		for x: int in img.get_width() + 1:
+			var solid: bool = x < img.get_width() and img.get_pixel(x, y).a > 0.5
+			if solid and run_lo < 0:
+				run_lo = x
+			elif not solid and run_lo >= 0:
+				if x - 1 - run_lo > hi - lo:
+					lo = run_lo
+					hi = x - 1
+				run_lo = -1
 		if hi > lo:
 			out = Vector2(float(lo) / img.get_width(), float(hi + 1) / img.get_width())
 	_spans[key] = out

@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -287,6 +287,19 @@ func _init() -> void:
 			sea._boat.heading = 0.0
 			sea._boat.target = Vector2(1400, 14300)
 			for f: int in 90:
+				await process_frame
+		"waitrest":
+			# The same boat, waiting then reeled in: does the hull move?
+			sea._boat.position = Vector2(-1500, 2600)
+			sea._zoom_to = 2.2
+			sea._camera.zoom = Vector2(2.2, 2.2)
+			sea._boat.set_pose("wait")
+			for f: int in 30:
+				await process_frame
+			var im: Image = root.get_viewport().get_texture().get_image()
+			im.save_png(OS.get_cmdline_user_args()[0].replace(".png", "_a.png"))
+			sea._boat.set_pose("rest")
+			for f: int in 2:
 				await process_frame
 		"waiting":
 			sea._boat.position = Vector2(-1500, 2600)

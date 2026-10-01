@@ -13,7 +13,7 @@ uniform float u_dark = 0.0;
 uniform float u_outer = 22600.0;
 
 const float BANDS[6] = float[](1400.0, 3800.0, 6900.0, 10900.0, 16000.0, 22600.0);
-const vec3 PAPER = vec3(0.91, 0.86, 0.75);
+const vec3 PAPER = vec3(0.83, 0.77, 0.65);
 const vec3 INK = vec3(0.22, 0.18, 0.16);
 
 float hash(vec2 p) {

@@ -94,6 +94,10 @@ let copied = 0
 // Translucent, non-brown pixels in the bottom 30%, inside the hull's width
 // (the fishing line hangs outside it and is kept). Remembered by the source's
 // hash so it only runs when the web's art changes.
+// v2 (2026-10-01): the ripple painted where the line meets the water goes too
+// (it was drawn flatter than the sea's perspective); the sea's own rings make
+// it now. Outside the hull, low down: pale, see-through or blue-leaning
+// pixels go, the grey line stays.
 const SHEET = /^fishing_(.+_)?(rest|wait|cast)\.png$/
 const DERIPPLED = path.join(HERE, 'art', '.derippled.json')
 const derippled = fs.existsSync(DERIPPLED) ? JSON.parse(fs.readFileSync(DERIPPLED, 'utf8')) : {}
@@ -102,7 +106,7 @@ const copyIfChanged = (from, to) => {
   const src = fs.readFileSync(from)
   if (SHEET.test(path.basename(to))) {
     const sha = crypto.createHash('sha256').update(src).digest('hex')
-    if (derippled[path.basename(to)] === sha && fs.existsSync(to)) return
+    if (derippled[path.basename(to)] === sha + ':v2' && fs.existsSync(to)) return
     sheets.push({ to, src, sha })
     return
   }
@@ -146,10 +150,18 @@ if (sheets.length) {
         const i = (y * W + x) * 4
         if (data[i + 3] > 0 && data[i + 3] < 200 && !brown(i)) data[i + 3] = 0
       }
+      for (let y = Math.floor(H * 0.75); y < H; y++) for (let x = 0; x < W; x++) {
+        if (x >= lo - 50 && x <= hi + 50) continue
+        const i = (y * W + x) * 4
+        if (!data[i + 3]) continue
+        const r = data[i], g = data[i + 1], b = data[i + 2]
+        const pale = (r + g + b) / 3 > 140
+        if (pale && (data[i + 3] < 230 || b > r + 12)) data[i + 3] = 0
+      }
     }
     fs.mkdirSync(path.dirname(to), { recursive: true })
     await sharp(data, { raw: info }).png().toFile(to)
-    derippled[path.basename(to)] = sha
+    derippled[path.basename(to)] = sha + ':v2'
     copied++
   }
   fs.writeFileSync(DERIPPLED, JSON.stringify(derippled, null, 1))

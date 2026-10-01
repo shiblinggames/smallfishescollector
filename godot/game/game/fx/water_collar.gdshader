@@ -13,6 +13,7 @@ uniform float cut = 0.9;
 uniform float depth = 0.05;
 uniform float aspect = 1.0;
 uniform float phase = 0.0;
+uniform float ref = 1.0;
 uniform float strength = 1.0;
 // Where the thing is at the water, left and right, as fractions of its width
 // (measured once on the CPU: Skipper.collar_of).
@@ -44,7 +45,7 @@ void fragment() {
 	float sink = smoothstep(0.0, 0.5, body2) * exp(-pow((dy - 0.4 * sh) / sh, 2.0));
 	// Not over the thing itself above the water (it hides it there anyway).
 	float own = texture(TEXTURE, clamp(UV, vec2(0.0), vec2(1.0))).a * step(UV.y, cut) * step(0.0, UV.x) * step(UV.x, 1.0) * step(0.0, UV.y);
-	float ripple = 0.8 + 0.2 * sin(UV.x * aspect * 26.0 - TIME * 2.2 + phase);
+	float ripple = 0.8 + 0.2 * sin(UV.x * aspect * ref * 26.0 - TIME * 2.2 + phase);
 	float a_lip = lip * ripple * (0.2 + 0.07 * breathe);
 	float a_sink = max(sink - lip, 0.0) * 0.28;
 	float a = (a_lip + a_sink) * (1.0 - own) * strength;

@@ -1356,6 +1356,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		# While the line is out a click is for the dial (Reel In), never a
+		# heading: it used to be kept, and she sailed off after the catch.
+		if _hud.busy() or not (_hud.phase == "idle" or _hud.phase == "result"):
+			return
 		var gp: Vector2 = get_global_mouse_position()
 		_boat.target = Vector2(gp.x, gp.y / Chart.GROUND)
 		_course.helm_taken()

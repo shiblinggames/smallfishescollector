@@ -11,6 +11,9 @@ uniform float cut = 0.9;
 uniform float depth = 0.05;
 uniform float aspect = 1.0;
 uniform float phase = 0.0;
+// This picture's height against the captain's sheet, so the lapping is the
+// same size on every hull (a boat overlay is a far shorter picture).
+uniform float ref = 1.0;
 uniform vec4 sea : source_color = vec4(0.17, 0.34, 0.39, 1.0);
 uniform vec4 foam : source_color = vec4(0.88, 0.94, 0.93, 1.0);
 
@@ -21,13 +24,13 @@ void vertex() {
 }
 
 void fragment() {
-	float x = UV.x * aspect;
+	float x = UV.x * aspect * ref;
 	float lap = (sin(x * 34.0 + TIME * 2.0 + phase) * 0.6 + sin(x * 67.0 - TIME * 2.7 + phase * 1.7) * 0.4) * depth * 0.16;
 	float below = UV.y - (cut + lap);
 	float sub = clamp(below / max(depth, 0.0001), 0.0, 1.0);
 	vec2 uv = UV;
 	// Under the surface the picture wavers sideways, more the deeper it is.
-	uv.x += sin(UV.y * 240.0 - TIME * 3.0 + phase) * 0.006 * sub / max(aspect, 0.2);
+	uv.x += sin(UV.y * ref * 240.0 - TIME * 3.0 + phase) * 0.006 * sub / max(aspect * ref, 0.05);
 	vec4 c = texture(TEXTURE, uv);
 	// Wet just above the water.
 	float wet = (1.0 - smoothstep(0.0, depth * 0.7, -below)) * step(below, 0.0);

@@ -49,7 +49,7 @@ static func make() -> Theme:
 	btn.set_corner_radius_all(26)
 	btn.set_content_margin_all(12)
 	var hover: StyleBoxFlat = btn.duplicate()
-	hover.bg_color = Kit.PAPER.lightened(0.35)
+	hover.bg_color = Kit.PAPER.lightened(0.1)
 	var pressed: StyleBoxFlat = btn.duplicate()
 	pressed.bg_color = Kit.PAPER.darkened(0.06)
 	var disabled: StyleBoxFlat = btn.duplicate()

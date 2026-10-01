@@ -556,7 +556,7 @@ func _draw_marks() -> void:
 		var note: String = "%s  ·  about %s" % [_hover["name"], Course.eta_text(secs)]
 		var w: float = small.get_string_size(note, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 		var box: Rect2 = Rect2(at2 + Vector2(16, -34), Vector2(w + 16, 22))
-		_marks.draw_rect(box, Color(0.95, 0.91, 0.82, 0.95))
+		_marks.draw_rect(box, Color(Kit.PAPER, 0.95))
 		_marks.draw_rect(box, Color(ink, 0.5), false, 1.0)
 		_marks.draw_string(small, box.position + Vector2(8, 16), note, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ink)
 
@@ -611,7 +611,7 @@ func _set_course(w: Vector2, name: String, sail: bool) -> void:
 func _open_card(m: Dictionary) -> void:
 	if _card != null:
 		_card.queue_free()
-	_card = Pane.new({ "radius": 14, "fill": [Color(0.95, 0.91, 0.82, 0.97)], "border": [1, Color(0.24, 0.18, 0.13, 0.5)], "shadow": [Color(0, 0, 0, 0.3), 18, Vector2(0, 6)], "pad": 18 })
+	_card = Pane.new({ "radius": 14, "fill": [Color(Kit.PAPER, 0.97)], "border": [1, Color(0.24, 0.18, 0.13, 0.5)], "shadow": [Color(0, 0, 0, 0.3), 18, Vector2(0, 6)], "pad": 18 })
 	_card.anchor_left = 1.0
 	_card.anchor_right = 1.0
 	_card.offset_left = -360

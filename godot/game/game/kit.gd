@@ -46,9 +46,12 @@ const BASE_DEEP: Color = Color("#080e15")
 ## words ON paper are inked: a light neutral becomes the ink ramp, a bright
 ## accent its own dark pigment (Kit.ink). Words on the water or a dark
 ## backdrop keep their light colour, so nothing a screen asks for is lost.
-const PAPER: Color = Color(0.945, 0.91, 0.83)
-const PAPER_INK: Color = Color(0.22, 0.17, 0.13)
-const PAPER_INK_SOFT: Color = Color(0.42, 0.35, 0.28)
+## SEA-WORN PARCHMENT (Kong, 2026-10-01: the first paper was too bright): a
+## warm, aged ground, deeper than fresh paper, so a sheet sits in the scene
+## instead of glaring over it. The inks are deepened to keep their contrast.
+const PAPER: Color = Color(0.83, 0.77, 0.65)
+const PAPER_INK: Color = Color(0.18, 0.13, 0.09)
+const PAPER_INK_SOFT: Color = Color(0.33, 0.26, 0.19)
 const WOOD_HI: Color = Color(0.6, 0.4, 0.22)
 const WOOD_LO: Color = Color(0.45, 0.28, 0.15)
 const WOOD_INK: Color = Color(0.98, 0.94, 0.85)
@@ -319,7 +322,7 @@ static func button(t: String, kind: String = "secondary", size: String = "large"
 		_:
 			n = { "radius": r, "fill": [PAPER], "border": [1, Color(PAPER_INK, 0.45)], "shadow": [Color(0, 0, 0, 0.14), 6, Vector2(0, 2)], "pad": pad, "paper": true }
 			h = n.duplicate()
-			h["fill"] = [PAPER.lightened(0.35)]
+			h["fill"] = [PAPER.lightened(0.1)]
 			h["border"] = [1, Color(PAPER_INK, 0.75)]
 			ink = PAPER_INK
 	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
@@ -353,7 +356,7 @@ static func tap(c: Control) -> void:
 ## THE close button: a 30px circle with a drawn X (was five sizes).
 static func close_button() -> Pane.PaneButton:
 	var n: Dictionary = { "radius": 15, "fill": [PAPER], "border": [1, Color(PAPER_INK, 0.45)], "shadow": [Color(0, 0, 0, 0.16), 5, Vector2(0, 2)], "pad": 0, "paper": true }
-	var h: Dictionary = { "radius": 15, "fill": [PAPER.lightened(0.35)], "border": [1, Color(PAPER_INK, 0.8)], "pad": 0, "paper": true }
+	var h: Dictionary = { "radius": 15, "fill": [PAPER.lightened(0.1)], "border": [1, Color(PAPER_INK, 0.8)], "pad": 0, "paper": true }
 	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
 	b.custom_minimum_size = Vector2(30, 30)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -561,7 +564,7 @@ static func tabs(parent: Node, options: Array, current: Variant, accent: Color, 
 		var r: int = 9 if joined else 999
 		var n: Dictionary = { "radius": r, "fill": [PAPER.lerp(accent, 0.22) if on else PAPER], "border": [1, Color(ink(accent), 0.6) if on else Color(PAPER_INK, 0.3)], "pad": [12, 5, 12, 6], "paper": true }
 		var hot: Dictionary = n.duplicate()
-		hot["fill"] = [PAPER.lerp(accent, 0.3) if on else PAPER.lightened(0.35)]
+		hot["fill"] = [PAPER.lerp(accent, 0.3) if on else PAPER.lightened(0.1)]
 		var b: Pane.PaneButton = Pane.PaneButton.new(n, hot)
 		b.text = String(o[1])
 		var role: Array = ROLES["button_small"]

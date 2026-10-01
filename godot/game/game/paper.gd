@@ -9,12 +9,12 @@ extends RefCounted
 ## red ink round the one you wear). Inks and pigments are named here so the
 ## screens cannot drift.
 
-const INK: Color = Color(0.22, 0.17, 0.13)
-const INK_SOFT: Color = Color(0.40, 0.33, 0.26)
-const INK_FAINT: Color = Color(0.55, 0.48, 0.40)
+const INK: Color = Kit.PAPER_INK
+const INK_SOFT: Color = Kit.PAPER_INK_SOFT
+const INK_FAINT: Color = Color(0.45, 0.38, 0.3)
 const RED: Color = Color(0.66, 0.2, 0.15)
 const GREEN: Color = Color(0.22, 0.48, 0.3)
-const PAPER: Color = Color(0.93, 0.89, 0.80)
+const PAPER: Color = Kit.PAPER
 const WOOD: Color = Color(0.42, 0.28, 0.17)
 ## The rarity pigments: the kit's rarity hues, as watercolour on paper.
 const RARITY: Array[Color] = [Color(0.52, 0.56, 0.6), Color(0.3, 0.6, 0.38), Color(0.28, 0.48, 0.74), Color(0.55, 0.36, 0.72), Color(0.84, 0.56, 0.16)]
@@ -63,9 +63,9 @@ static func text(parent: Node, t: String, role: String, col: Color = INK, wrap: 
 
 ## A button of paper (or, on, of stained wood) with inked capitals.
 static func button(label: String, on: bool = false) -> Pane.PaneButton:
-	var n: Dictionary = { "radius": 9, "fill": [Color(0.55, 0.36, 0.2, 0.9) if on else Color(0.95, 0.91, 0.82, 0.95)], "border": [1, Color(INK, 0.5)], "shadow": [Color(0, 0, 0, 0.16), 6, Vector2(0, 2)], "pad": [12, 6, 12, 7] }
+	var n: Dictionary = { "radius": 9, "fill": [Color(0.55, 0.36, 0.2, 0.9) if on else Color(Kit.PAPER, 0.97)], "border": [1, Color(INK, 0.5)], "shadow": [Color(0, 0, 0, 0.16), 6, Vector2(0, 2)], "pad": [12, 6, 12, 7] }
 	var hv: Dictionary = n.duplicate()
-	hv["fill"] = [Color(0.62, 0.42, 0.24, 0.95) if on else Color(0.99, 0.96, 0.89, 1.0)]
+	hv["fill"] = [Color(0.62, 0.42, 0.24, 0.95) if on else Kit.PAPER.lightened(0.1)]
 	hv["border"] = [1, Color(INK, 0.8)]
 	var b: Pane.PaneButton = Pane.PaneButton.new(n, hv)
 	b.text = label.to_upper()

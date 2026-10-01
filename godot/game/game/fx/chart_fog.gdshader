@@ -50,7 +50,7 @@ void fragment() {
 		float f = 1.0 - smoothstep(0.30, 0.58, seen + n * 0.42);
 		// The cloud: shaded billows of paper and grey wash.
 		float billow = fbm(w * 0.00028 + vec2(0.0, 3.0));
-		vec3 cloud = mix(vec3(0.90, 0.87, 0.80), vec3(0.70, 0.68, 0.64), smoothstep(0.35, 0.8, billow));
+		vec3 cloud = mix(vec3(0.80, 0.76, 0.68), vec3(0.62, 0.6, 0.56), smoothstep(0.35, 0.8, billow));
 		cloud *= 0.95 + hash(floor(FRAGCOORD.xy * 0.75)) * 0.07;
 		float rim = (1.0 - smoothstep(0.0, 0.16, abs(f - 0.5)));
 		cloud = mix(cloud, vec3(0.38, 0.32, 0.27), rim * 0.4);

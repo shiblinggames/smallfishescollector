@@ -721,7 +721,7 @@ class ZoneGauge:
 	func _draw() -> void:
 		var c: Vector2 = size / 2.0
 		var r: float = minf(size.x, size.y) / 2.0 - 10.0
-		draw_circle(c, r + 8.0, Color(0.97, 0.94, 0.87, 0.9))
+		draw_circle(c, r + 8.0, Color(Kit.PAPER.lightened(0.06), 0.95))
 		draw_arc(c, r + 8.0, 0.0, TAU, 64, Color(Paper.INK, 0.5), 1.5, true)
 		for z: Array in zones:
 			var col: Color = Color(0.85, 0.82, 0.74, 0.5)
