@@ -413,6 +413,9 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   267 diamond crates, each ancient pet about 1 in 50 ancient chests (was 1 in ~100 and 20).
   Cosmetic odds unchanged.
   The ANCIENT DEEP drops diamond crates too (Kong): diamond 50 / ancient 50.
+  PET CHANCE settled at 1% to 4% by tier (Kong): wooden 1, metal 1.5, gold 2, diamond 3,
+  ancient 4 (supersedes the 1.5 / 4 above). A RuneScape-casket redesign (several rolls a
+  crate, tier-exclusive unique tables) was planned and declined: keep it as it is.
   DIAMOND AND ANCIENT MADE RARER (Kong: "too common"): fewer items in those crates meant
   each came out more often than in a gold one. Cosmetic 2% in both (was 4 / 5), bands
   diamond uncommon 2 / rare 2 / epic 1 and ancient rare 2 / epic 1 (an epic half as likely

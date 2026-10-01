@@ -165,10 +165,13 @@
       ]
     },
     "petChance": {
-      "diamond": 0.015,
+      "wooden": 0.01,
+      "metal": 0.015,
+      "gold": 0.02,
+      "diamond": 0.03,
       "ancient": 0.04
     }
   },
   "_pets": "Each crate its own set (Kong, 2026-10-01): every pet belongs to exactly one crate tier, so a crate's collection is its own pets and its cosmetic bands, and the gold-coloured pets live in the deepest crates. The chance of a pet per crate (crate.petChance) is the web's; which pet is drawn from that crate's own list, each weighted by its share of the web's whole pet roll. Duplicates can still come up.",
-  "_rarity": "Diamond and ancient PETS made rarer (Kong, 2026-10-01: too common once each crate had its own pets; a gold parrot came out 1 in 20 ancient chests). A pet is now 1.5% of a diamond crate and 4% of an ancient chest, rather than the web's 4% and 10%. Cosmetics unchanged."
+  "_rarity": "Pet chance per crate, 1% to 4% by tier (Kong, 2026-10-01): wooden 1, metal 1.5, gold 2, diamond 3, ancient 4 (the web's 0.5 / 1 / 2 / 4 / 10). Cosmetics unchanged."
 }
