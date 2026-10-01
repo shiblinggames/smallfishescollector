@@ -399,6 +399,15 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   pet any crate can give, owned in colour with a tick, the rest in grey pencil
   (fx/greyed.gdshader; Paper.Tile.grey), "Collected n of m" with a bar, and a red
   "Complete" when it is all yours. Pet pictures are cut to their painted area.
+  EACH CRATE ITS OWN PETS (Kong chose this one part of a proposed revamp; no-duplicates, a
+  pity meter and completion rewards were offered and not taken): crate.petTiers in
+  port_rules.json puts every pet in exactly one tier (wooden: red parrot, brown monkey,
+  beige raccoon; metal: blue parrot, brown seal, green lizard, orange crab; gold: green and
+  charcoal parrots, black raccoon, gray seal, indigo lizard, blue crab; diamond: sand
+  parrot, white lizard, gold seal, gold crab; ancient: gold parrot, golden monkey).
+  CrateLoot.roll_pet_from draws from the tier's list weighted by each pet's share of the
+  web's whole roll; petChance per tier is the web's; duplicates still happen. A crate's
+  completion counts only its own pets and cosmetics.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

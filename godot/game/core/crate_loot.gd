@@ -4,6 +4,33 @@ extends RefCounted
 ## (Godot port, stage 1). The tables are in content/rules.json.
 
 
+## The port's own sets (content/port_rules.json, crate.petTiers): a crate of
+## this tier draws only its own pets, each weighted by its share of the web's
+## whole roll (species weight, then the pet's weight within its species).
+static func roll_pet_from(tier: String) -> Dictionary:
+	var ids: Array = Js.list(Js.obj(Rules.data()["crate"].get("petTiers")).get(tier))
+	var weights: Dictionary = Rules.data()["petSpeciesWeights"]
+	var species_total: Dictionary = {}
+	for p: Dictionary in Rules.data()["pets"]:
+		if not p["earnedOnly"]:
+			species_total[p["species"]] = float(species_total.get(p["species"], 0.0)) + float(p["weight"])
+	var pool: Array = []
+	var w: Array = []
+	var total: float = 0.0
+	for p: Dictionary in Rules.data()["pets"]:
+		if Js.includes(ids, p["id"]):
+			var share: float = float(weights.get(p["species"], 0.0)) * float(p["weight"]) / maxf(1.0, float(species_total.get(p["species"], 1.0)))
+			pool.append(p)
+			w.append(share)
+			total += share
+	var r: float = Dice.next() * total
+	for i: int in pool.size():
+		r -= float(w[i])
+		if r <= 0.0:
+			return pool[i]
+	return pool.back()
+
+
 static func roll_pet() -> Dictionary:
 	var weights: Dictionary = Rules.data()["petSpeciesWeights"]
 	var total: float = 0.0
@@ -34,7 +61,8 @@ static func roll_pet() -> Dictionary:
 ## rollCrateLoot: { pet, outcome } where outcome is a cosmetic, doubloons or bait.
 static func roll(tier: String, owned: Dictionary) -> Dictionary:
 	var c: Dictionary = Rules.data()["crate"]
-	var pet: Variant = roll_pet() if Dice.next() < float((c["petChance"] as Dictionary)[tier]) else null
+	var own_sets: bool = not Js.list(Js.obj(c.get("petTiers")).get(tier)).is_empty()
+	var pet: Variant = (roll_pet_from(tier) if own_sets else roll_pet()) if Dice.next() < float((c["petChance"] as Dictionary)[tier]) else null
 	var unowned: Array = []
 	var band_w: Array = []
 	# The port's bands (content/port_rules.json): a crate draws only the

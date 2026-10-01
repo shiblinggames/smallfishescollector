@@ -223,7 +223,7 @@ func _crate_count() -> int:
 ## THE CRATES (Kong, 2026-10-01): every crate there is, with how many are
 ## stowed, and the chosen one's whole drop table: what is always inside (the
 ## doubloons and the bait, with their odds), every cosmetic it can hold (by
-## band) and every pet any crate can hold, the ones you have in colour with a
+## band) and the pets in its own set, the ones you have in colour with a
 ## tick and the ones you lack in grey pencil, and how much of it you have
 ## collected. Collect everything a crate can give and it is complete.
 var _crate_sel: String = ""
@@ -279,7 +279,7 @@ func _crate_collection(tier: String) -> Array:
 		total += 1
 		if e[3]:
 			have += 1
-	for p: Array in _crate_pets():
+	for p: Array in _crate_pets(tier):
 		total += 1
 		if p[3]:
 			have += 1
@@ -317,12 +317,16 @@ func _crate_cosmetics(tier: String) -> Array:
 	return out
 
 
-## Every pet a crate can hold (any crate): [pet, species, art, owned].
-func _crate_pets() -> Array:
+## The pets a crate can hold (its own set, content/port_rules.json; every
+## crate-borne pet without one): [pet, species, art, owned].
+func _crate_pets(tier: String) -> Array:
 	var owned: Array = Js.list(session.profile().get("unlocked_pets"))
+	var own: Array = Js.list(Js.obj(Rules.data()["crate"].get("petTiers")).get(tier))
 	var out: Array = []
 	for pt: Dictionary in Rules.data()["pets"]:
 		if pt["earnedOnly"]:
+			continue
+		if not own.is_empty() and not Js.includes(own, pt["id"]):
 			continue
 		out.append([pt, pt["species"], _trimmed(Skipper.tex(pt["restImageUrl"])), Js.includes(owned, pt["id"])])
 	return out
@@ -415,13 +419,13 @@ func _crate_table(col: VBoxContainer, tier: String, stowed: int) -> void:
 			tile.custom_minimum_size = Vector2(124, 112)
 			tile.tooltip_text = "%s  ·  %s  ·  %s" % [(e[0] as Dictionary)["name"], str(e[1]).capitalize(), "collected" if e[3] else "not yet"]
 			g.add_child(tile)
-	Paper.text(col, "Pets any crate can hold", "eyebrow", Paper.INK_SOFT)
+	Paper.text(col, "Pets it can hold", "eyebrow", Paper.INK_SOFT)
 	var pg: GridContainer = GridContainer.new()
 	pg.columns = 5
 	pg.add_theme_constant_override("h_separation", 6)
 	pg.add_theme_constant_override("v_separation", 6)
 	col.add_child(pg)
-	for pe: Array in _crate_pets():
+	for pe: Array in _crate_pets(tier):
 		var tile: Paper.Tile = Paper.Tile.new()
 		tile.label = str((pe[0] as Dictionary)["name"])
 		tile.art = pe[2]
