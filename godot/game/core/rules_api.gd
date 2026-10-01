@@ -59,4 +59,7 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 		"marketRefresh":
 			Market.current(db.save)
 			return null
+		"markAlmanacViewed":
+			AlmanacData.mark_viewed(db, uid)
+			return null
 	return "not ported"

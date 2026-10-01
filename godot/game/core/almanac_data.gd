@@ -19,6 +19,7 @@ static func build(db: CaptainStore, uid: String) -> Dictionary:
 	var col: Dictionary = save["collection"]
 	var life: Dictionary = save["lifetime"]
 	var bests: Dictionary = save["bests"]
+	var crew: Dictionary = Js.obj(save.get("charter"))
 	var entries: Array = []
 	for s: Dictionary in save["species"]:
 		var k: String = Js.key(s["id"])
@@ -43,9 +44,12 @@ static func build(db: CaptainStore, uid: String) -> Dictionary:
 			"everCaught": Js.num(lifetime_n) > 0 or is_giant_caught or Js.num(prestige.get(s["habitat"])) > 0,
 			"everGolden": c.get("is_golden") == true,
 			"pbLength": b.get("len"), "pbAt": b.get("at"),
+			"pbBy": Js.obj(crew.get("bestBy")).get(k), "goldenBy": Js.obj(crew.get("goldenBy")).get(k),
 		})
 	var goldens: Array = []
-	var shinies: Array = (save["shinies"] as Array).duplicate()
+	# In a Charter the book is the crew's: every golden any of them landed,
+	# each with its catcher's name.
+	var shinies: Array = (Js.list(crew.get("goldens")) if not crew.is_empty() else (save["shinies"] as Array)).duplicate()
 	shinies.reverse()
 	for g: Dictionary in shinies:
 		var f: Variant = db.species(float(g["fish_id"]))
@@ -53,6 +57,7 @@ static func build(db: CaptainStore, uid: String) -> Dictionary:
 			"id": g["id"], "fishId": g["fish_id"], "name": (f as Dictionary)["name"] if f != null else "Unknown",
 			"habitat": (f as Dictionary)["habitat"] if f != null else "shallows",
 			"sizeIn": g.get("size_in"), "caughtAt": g.get("caught_at"), "status": g.get("status"), "soldFor": g.get("sold_for"),
+			"by": g.get("by"),
 		})
 	var unlocked: bool = db.has_cleared(uid, "the_sunken_hand")
 	var new_count: int = 0
@@ -64,6 +69,7 @@ static func build(db: CaptainStore, uid: String) -> Dictionary:
 		"ancientCatches": ancient, "vigil": Vigil.state_for(p.get("ancient_vigil"), ancient) if unlocked else {},
 		"vigilUnlocked": unlocked, "prestige": prestige, "goldenBoosts": Js.obj(p.get("zone_golden_boost")),
 		"newCount": new_count,
+		"crew": crew.get("name"),
 		"zoneRewardsClaimed": {
 			"shallows": p.get("zone_shallows_rewarded") == true, "open_waters": p.get("zone_open_waters_rewarded") == true,
 			"deep": p.get("zone_deep_rewarded") == true, "abyss": p.get("zone_abyss_rewarded") == true,

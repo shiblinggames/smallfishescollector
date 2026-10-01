@@ -51,6 +51,7 @@ var _gen: int = 0
 var _name: Label
 var _xp: XpBar
 var _purse: Label
+var _ledger_btn: Button
 var _where: Label
 var _blurb: Label
 var _clock: Label
@@ -103,7 +104,21 @@ func _ready() -> void:
 	_name = Kit.lift(Kit.text(tl, "", "title", INK))
 	_xp = XpBar.new()
 	tl.add_child(_xp)
-	_purse = Kit.lift(Kit.text(tl, "", "number", GOLD))
+	var purse_row: HBoxContainer = HBoxContainer.new()
+	purse_row.add_theme_constant_override("separation", 10)
+	purse_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tl.add_child(purse_row)
+	_purse = Kit.lift(Kit.text(purse_row, "", "number", GOLD))
+	# In a Charter the purse is the crew's: its ledger is a press away.
+	_ledger_btn = Kit.button("Crew purse", "accent", "small", GOLD)
+	_ledger_btn.focus_mode = Control.FOCUS_NONE
+	_ledger_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_ledger_btn.visible = session.save.has("charter")
+	_ledger_btn.pressed.connect(func() -> void: _open_sheet(Menus.purse_sheet(session)))
+	purse_row.add_child(_ledger_btn)
+	session.changed.connect(func() -> void:
+		if is_inside_tree():
+			refresh())
 	_auto = Pane.PaneButton.new({ "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.72)], "border": [1, Color(0.7, 0.83, 0.89, 0.22)], "pad": [10, 4, 12, 4] }, { "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.86)], "border": [1, Color(0.7, 0.83, 0.89, 0.45)], "pad": [10, 4, 12, 4] })
 	_auto.custom_minimum_size = Vector2(0, 28)
 	_auto.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN

@@ -127,8 +127,32 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     runs two headless copies (host and crew): join, Set Sail, each sees the other named, the
     crewmate fishes for real on the founder's clock and buys bait, a refusal comes back as a
     refusal, the Charter file holds it all, and leaving is seen.
-  NOT YET, the next pass: the Charter's shared rules (one purse with the crew ledger, one
-  Almanac, one market, the crew chest), so each Charter captain still has their own. Also
+  THE SHARED RULES, BUILT (2026-10-01), `game/charter.gd`:
+  - The Charter keeps the shared parts and LENDS them into a captain's save before each
+    action, TAKES them back after, and lends the result to every other captain. So the
+    ported rules run untouched, and parity is unchanged. A Charter captain's actions go
+    through `Charter.run`: `Session.act` on the founder's game, `CrewNet._req` for a
+    crewmate. After any action, every crewmate aboard is sent their save (`_sync`) and the
+    screens refresh (`Session.changed`).
+  - SHARED: the purse (doubloons), with a crew ledger naming who earned or spent what (the
+    HUD's Crew purse button opens it). Each captain who joins brings their starting purse
+    aboard.
+  - SHARED: the Almanac: the log, lifetime counts, bests (with the holder's name, "Crew
+    best · Ben"), goldens (every crewmate's, with the catcher's name), prestige and golden
+    boosts, the zone rewards (paid once, into the purse while there is no chest), the giants'
+    wall and the Vigil.
+  - SHARED: the sea's market.
+  - PERSONAL: levels, gear, the hold, bait, gems and Fathoms, each captain's regulars, and
+    the Almanac's "read" stamp.
+  - PRESTIGE IS A CREW VOTE: any captain proposes. Everyone else aboard is asked ("A crew
+    vote", Agree or Not now) and it goes ahead only if all agree. A "not now", a minute with
+    no answer, or a voter leaving stops it ("The crew said not yet.").
+  - `tests/smoke_charter.gd` checks the one purse, the ledger naming the crewmate, the
+    crewmate's catch in the founder's log, an agreed vote reaching the rules and a refused
+    one stopping, and the founder's spending reaching the crewmate's purse unprompted.
+  NOT YET: the crew chest (waits on the inventory sitting), and the SHARED DAILY BOARD (the
+  daily rules count each captain's own play against a snapshot, so sharing the board needs
+  its own pass). Also
   not yet: the nearby fishing bonus (to design), hardcore lives (they need sinking, which
   needs raids), the founder handing the Charter over, releasing a berth, and a first-run
   setup beyond the name (the web's SetupModal).

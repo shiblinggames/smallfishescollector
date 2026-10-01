@@ -34,6 +34,10 @@ signal lost(why: String)
 signal mate_boat(key: String, state: Dictionary)
 signal mate_look(key: String, mate_name: String, look: Dictionary)
 signal mate_left(key: String)
+## The crew is asked to agree to something (a prestige): its id, who asks,
+## and what it means. Answer with vote().
+signal proposed(id: int, by: String, text: String)
+signal _voted(id: int)
 signal _answered(n: int, result: Variant)
 
 const PORT: int = 24650
@@ -78,6 +82,9 @@ func host(c: Charter) -> Error:
 	_reset()
 	charter = c
 	hosting = true
+	if not c.shared_changed.is_connected(_on_shared_changed):
+		c.shared_changed.connect(_on_shared_changed)
+	c.voter = ask_crew
 	key = SteamLayer.player_key()
 	var s: Session = c.session_for(key)
 	captain_name = s.captain_name() if s != null else "Founder"
@@ -199,6 +206,9 @@ func _on_peer_disconnected(id: int) -> void:
 		return
 	var k: Variant = _members.get(id)
 	_members.erase(id)
+	for n: Variant in _votes:
+		if k != null and (_votes[n]["asked"] as Array).has(k):
+			_tally(int(n), str(k), false)
 	if k != null:
 		mate_left.emit(k)
 		_left.rpc(k)
@@ -322,7 +332,7 @@ func _req(n: int, op: String, args: Array) -> void:
 	if s == null:
 		_res.rpc_id(id, n, { "error": "You are not aboard this Charter." }, "")
 		return
-	var r: Variant = RulesApi.run(s.store, s.uid, op, args)
+	var r: Variant = await charter.run(s, op, args)
 	if r is String and r == "not ported":
 		r = { "error": "That is not in this build yet." }
 	s.persist()
@@ -339,6 +349,106 @@ func _res(n: int, result: Variant, captain: String) -> void:
 		if s != null:
 			s.adopt(captain)
 	_answered.emit(n, result)
+
+
+## The founder's game: the shared book or purse changed. Every crewmate aboard
+## except the one who acted (their answer carries it) is sent their save.
+func _on_shared_changed(actor_key: String) -> void:
+	if not hosting or multiplayer.multiplayer_peer == null:
+		return
+	for id: Variant in _members:
+		var k: String = _members[id]
+		if int(id) == 1 or k == actor_key:
+			continue
+		var s: Session = charter.session_for(k)
+		if s != null:
+			_sync.rpc_id(int(id), SaveFile.serialize(s.save, s.carried, Js.iso(Clock.now_ms())))
+
+
+@rpc("authority", "reliable")
+func _sync(captain: String) -> void:
+	if _mine != null:
+		_mine.adopt(captain)
+		_mine.changed.emit()
+
+
+# ── Crew votes ─────────────────────────────────────────────────────────────────
+
+var _votes: Dictionary = {}
+var _vote_next: int = 0
+
+
+## The founder's game asks everyone aboard but the proposer to agree. True if
+## all of them do (or nobody else is aboard); false at the first "not now", or
+## after a minute with no answer.
+func ask_crew(proposer_key: String, text: String) -> bool:
+	var asked: Array = []
+	for id: Variant in _members:
+		if _members[id] != proposer_key:
+			asked.append(_members[id])
+	if asked.is_empty():
+		return true
+	_vote_next += 1
+	var n: int = _vote_next
+	_votes[n] = { "asked": asked, "yes": [], "no": false, "done": false }
+	var by: String = ""
+	var ps: Session = charter.session_for(proposer_key)
+	if ps != null:
+		by = ps.captain_name()
+	for id: Variant in _members:
+		var k: String = _members[id]
+		if k == proposer_key:
+			continue
+		if int(id) == 1:
+			proposed.emit(n, by, text)
+		else:
+			_propose.rpc_id(int(id), n, by, text)
+	var timer: SceneTreeTimer = get_tree().create_timer(60.0)
+	timer.timeout.connect(func() -> void:
+		if _votes.has(n) and not _votes[n]["done"]:
+			_votes[n]["no"] = true
+			_votes[n]["done"] = true
+			_voted.emit(n))
+	while not _votes[n]["done"]:
+		var got: int = await _voted
+		if got == n:
+			break
+	var ok: bool = not _votes[n]["no"]
+	_votes.erase(n)
+	return ok
+
+
+@rpc("authority", "reliable")
+func _propose(n: int, by: String, text: String) -> void:
+	proposed.emit(n, by, text)
+
+
+## Answer a vote (from either side).
+func vote(n: int, yes: bool) -> void:
+	if hosting:
+		_tally(n, key, yes)
+	else:
+		_vote.rpc_id(1, n, yes)
+
+
+@rpc("any_peer", "reliable")
+func _vote(n: int, yes: bool) -> void:
+	if hosting:
+		_tally(n, str(_members.get(multiplayer.get_remote_sender_id(), "")), yes)
+
+
+func _tally(n: int, k: String, yes: bool) -> void:
+	if not _votes.has(n) or _votes[n]["done"]:
+		return
+	var v: Dictionary = _votes[n]
+	if not yes:
+		v["no"] = true
+		v["done"] = true
+	elif not (v["yes"] as Array).has(k):
+		(v["yes"] as Array).append(k)
+		v["done"] = (v["yes"] as Array).size() >= (v["asked"] as Array).size()
+	if v["done"]:
+		_voted.emit(n)
 
 
 ## The crewmate's own session, adopted into on each answer (set by the game).

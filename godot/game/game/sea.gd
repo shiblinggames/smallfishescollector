@@ -143,6 +143,7 @@ func _ready() -> void:
 				gone.queue_free()
 				_mates.erase(k))
 		_send_look()
+		net.proposed.connect(_on_proposed)
 
 
 func _process(delta: float) -> void:
@@ -262,6 +263,47 @@ func _on_mate_look(k: String, mate_name: String, look: Dictionary) -> void:
 	m.set_look(look)
 	if fresh:
 		_hud.toast("%s is on the water" % mate_name)
+
+
+## The crew is asked to agree to something: a small panel over the sea,
+## Agree or Not now.
+func _on_proposed(n: int, by: String, text: String) -> void:
+	var p: Control = Control.new()
+	p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	p.mouse_filter = Control.MOUSE_FILTER_STOP
+	p.theme = UiTheme.make()
+	Kit.scrim(p)
+	var center: CenterContainer = CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	p.add_child(center)
+	var card: Pane = Kit.pane(center, Kit.modal(Kit.GOLD, 22))
+	card.custom_minimum_size = Vector2(480, 0)
+	var v: VBoxContainer = VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	card.add_child(v)
+	Kit.text(v, "A crew vote", "eyebrow", Kit.a(Kit.GOLD, 0.8))
+	Kit.text(v, "%s asks the crew" % by, "title")
+	Kit.text(v, text, "body", Kit.INK_2, true)
+	Kit.text(v, "It goes ahead only if everyone aboard agrees.", "note", Kit.DIM, true)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	v.add_child(row)
+	var no: Button = Kit.button("Not now", "secondary")
+	no.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(no)
+	var yes: Button = Kit.button("Agree", "primary")
+	yes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(yes)
+	no.pressed.connect(func() -> void:
+		net.vote(n, false)
+		p.queue_free())
+	yes.pressed.connect(func() -> void:
+		net.vote(n, true)
+		p.queue_free())
+	_hud.hold_for(p)
+	_room_layer.add_child(p)
+	card.ready.connect(func() -> void: Kit.modal_in(card))
+	no.grab_focus.call_deferred()
 
 
 func _send_look() -> void:

@@ -17,6 +17,13 @@ var uid: String
 ## instead of a captain's (writer).
 var remote: CrewNet = null
 var writer: Callable = Callable()
+## On the founder's game, the Charter this captain sails in: their actions run
+## through it, so the purse, the book and the market are the crew's.
+var charter: Charter = null
+
+## The save changed from outside this captain's own screens (a crewmate's
+## catch filled the shared book, a sale filled the shared purse).
+signal changed
 
 
 func _init(s: Dictionary, c: Dictionary) -> void:
@@ -46,6 +53,8 @@ static func open_latest() -> Session:
 func act(op: String, args: Array = []) -> Variant:
 	if remote != null:
 		return await remote.request(op, args)
+	if charter != null:
+		return await charter.run(self, op, args)
 	return RulesApi.run(store, uid, op, args)
 
 

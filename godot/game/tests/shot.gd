@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -91,6 +91,15 @@ func _init() -> void:
 	match what:
 		"dock":
 			pass
+		"purse":
+			sea.session.save["charter"] = { "name": "The Salt Ledger", "crew": ["Anna", "Ben"], "ledger": [
+				{ "by": "Anna", "amount": 100.0, "reason": "Brought 100 ⟡ aboard" }, { "by": "Ben", "amount": 100.0, "reason": "Brought 100 ⟡ aboard" },
+				{ "by": "Ben", "amount": -100.0, "reason": "Bought 10× Worms" }, { "by": "Anna", "amount": 640.0, "reason": "Sold 17 fish (market)" },
+				{ "by": "Ben", "amount": 1500.0, "reason": "Claimed the Shallows' completion reward" } ] }
+			hud._open_sheet(Menus.purse_sheet(sea.session))
+		"vote":
+			sea.net = (main as Main).net
+			sea._on_proposed(1, "Ben", "Ben proposes Prestige 2 in The Shallows. The crew's log there is wiped; goldens stay. In return, +20% XP on every catch there for the whole crew.")
 		"crew":
 			sea._boat.position = Vector2(-150, 2300)
 			var m: Shipmate = sea._mate("local-ben")

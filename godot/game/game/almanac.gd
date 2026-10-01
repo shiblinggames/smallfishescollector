@@ -86,7 +86,8 @@ func _ready() -> void:
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	titles.add_theme_constant_override("separation", 0)
 	head.add_child(titles)
-	Kit.text(titles, "Fishing", "eyebrow", Kit.a(ACCENT, 0.72))
+	var crew_name: Variant = Js.obj(session.save.get("charter")).get("name")
+	Kit.text(titles, "Fishing" if crew_name == null else "%s · the crew's book" % crew_name, "eyebrow", Kit.a(ACCENT, 0.72))
 	Kit.text(titles, "The Angler's Almanac", "title", INK)
 	var x: Button = Kit.close_button()
 	x.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -131,7 +132,7 @@ func _ready() -> void:
 
 
 func close() -> void:
-	AlmanacData.mark_viewed(session.store, session.uid)
+	session.act("markAlmanacViewed")
 	session.persist()
 	closed.emit()
 	queue_free()
@@ -587,7 +588,7 @@ func _species(e: Dictionary) -> void:
 	nm.add_theme_font_override("font", Kit.font("cinzel", 800))
 	Kit.chip(top, RARITY_NAMES[clampi(int(e["rarity"]) - 1, 0, 4)], Kit.rarity(float(e["rarity"])))
 	if e["everGolden"]:
-		Kit.chip(top, "Golden taken", Kit.GOLD)
+		Kit.chip(top, "Golden taken" if e.get("goldenBy") == null else "Golden · %s" % e["goldenBy"], Kit.GOLD)
 	if e["scientificName"] != null:
 		var sci: Label = _t(v, e["scientificName"], "note", DIM)
 		sci.add_theme_font_override("font", Kit.italic())
@@ -610,7 +611,7 @@ func _species(e: Dictionary) -> void:
 		box.add_child(bv)
 		var bh: HBoxContainer = HBoxContainer.new()
 		bv.add_child(bh)
-		_t(bh, "Your best", "label", DIM).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_t(bh, "Your best" if e.get("pbBy") == null else "Crew best · %s" % e["pbBy"], "label", DIM).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_t(bh, "%s%s" % [FishingHud.length_text(float(e["pbLength"])), ("  ·  " + tier) if tier != "" else ""], "name", tc)
 		var span: float = float(e["lengthMax"]) - float(e["lengthMin"])
 		var pct: float = clampf((float(e["pbLength"]) - float(e["lengthMin"])) / span, 0.0, 1.0) if span > 0.0 else 1.0
@@ -791,7 +792,7 @@ func _goldens() -> void:
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var s: Label = _t(box, FishingHud.length_text(Js.num(g.get("sizeIn"))) if g.get("sizeIn") != null else "unmeasured", "small", Kit.GOLD)
 		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		var d: Label = _t(box, _date(g["caughtAt"]), "small", DIM)
+		var d: Label = _t(box, _date(g["caughtAt"]) + (("  ·  " + str(g["by"])) if g.get("by") != null else ""), "small", DIM)
 		d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		Kit.stagger(box, i)
 		i += 1
