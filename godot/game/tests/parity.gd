@@ -17,6 +17,8 @@ var pending: int = 0
 
 
 func _init() -> void:
+	# The TS is the spec: replay against the web's tables alone.
+	Rules.web_only = true
 	var species: Array = _json("res://content/fish_species.json")
 	_dice()
 	_saves(species)

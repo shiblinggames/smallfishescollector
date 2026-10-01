@@ -89,6 +89,10 @@ static func active_event_of(raw: Variant) -> Variant:
 
 static func zone_crate_chance(zone: String) -> float:
 	var z: Dictionary = Rules.data()["zones"]
+	# The port's chance by water (content/port_rules.json), else the web's.
+	var by: Variant = z.get("crateChanceByZone")
+	if by is Dictionary and (by as Dictionary).has(zone):
+		return float(by[zone])
 	return float(z["ancientCrateChance"]) if zone == "ancient_deep" else float(z["baseCrateChance"])
 
 

@@ -374,6 +374,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   CrateMoment survives only as the tiers, art and loot wording. THE CAST BUTTON is a
   watercolour seal (fx/seal.gdshader): torn paper, a ring of the action's pigment pooled
   at its edges, inked hairlines, the word inked on the face, a wet ring on a press.
+- THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
+  tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
+  Rules.web_only so it replays against the web's tables alone. Put a deliberate rules
+  change there, with its reason, rather than editing rules.json (the export overwrites
+  that). FIRST USE, THE CRATE REBALANCE (Kong): the web's flat 2% a cast gave the most
+  crates an hour in the shallows and flat crate income across the sea. Now: chance by
+  water (zones.crateChanceByZone: 1.5 / 2 / 2.8 / 3.6 / 4%, about 3 crates an hour
+  anywhere), tiers that climb (no diamonds in the shallows), each tier strictly better
+  (doubloons 100-300 / 300-900 / 800-2000 / 2000-5000 / 4000-10000; wooden bait 10 not 5;
+  cosmetics 0 / 5 / 15 / 25 / 30%). Crate value an hour: 569 / 923 / 1655 / 2492 / 3980
+  (was ~950 everywhere). Pet chances unchanged. A currents bonus was offered and declined.
 - THE STYLE KIT (Kong, 2026-09-30: "the web game isn't gospel; standardize or improve"). The
   first ported screens were flat boxes; the web's look is layered CSS. `game/kit.gd` is now the
   game's design system and every screen is moving onto it. `game/pane.gdshader` paints a panel

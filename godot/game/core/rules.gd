@@ -8,12 +8,29 @@ extends RefCounted
 ## of the small helpers in web/lib that read them; each names its source.
 
 static var _d: Dictionary = {}
+## The web's tables alone, without the port's own rules (content/port_rules.json)
+## laid over them: the parity runner sets this, since the TS is its spec.
+static var web_only: bool = false
 
 
 static func data() -> Dictionary:
 	if _d.is_empty():
 		_d = JsJson.parse(FileAccess.get_file_as_string("res://content/rules.json"))
+		if not web_only and FileAccess.file_exists("res://content/port_rules.json"):
+			_merge(_d, JsJson.parse(FileAccess.get_file_as_string("res://content/port_rules.json")))
 	return _d
+
+
+## Lay b over a: dictionaries merge key by key, anything else replaces; keys
+## starting "_" are notes, not rules.
+static func _merge(a: Dictionary, b: Dictionary) -> void:
+	for k: Variant in b:
+		if str(k).begins_with("_"):
+			continue
+		if a.get(k) is Dictionary and b[k] is Dictionary:
+			_merge(a[k], b[k])
+		else:
+			a[k] = b[k]
 
 
 # ── Levels (lib/fishingLevel) ──────────────────────────────────────────────────
