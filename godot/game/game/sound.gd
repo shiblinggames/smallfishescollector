@@ -176,6 +176,12 @@ static func _play_made(key: String, make: Callable, gain: float) -> void:
 # ── The reel (2026-10-01, Kong: "make it feel really good"): every press
 # answers. A miss and a snag were silent in the web; now the line speaks.
 
+## XP landing in the bar: a tiny glassy tick.
+static func xp_tick() -> void:
+	_play_made("xptick", func() -> AudioStreamWAV:
+		return _render([[1760.0, 0.0, 0.04, 0.002, 0.06, "sine"], [2637.0, 0.0, 0.015, 0.002, 0.04, "sine"]], 0.1), 0.6)
+
+
 ## A nibble at the bobber: a small, high plip.
 static func plip() -> void:
 	_play_made("plip", func() -> AudioStreamWAV:

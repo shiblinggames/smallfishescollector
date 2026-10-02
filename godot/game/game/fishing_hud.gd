@@ -1075,7 +1075,14 @@ func _fish_card(r: Dictionary, perfect: bool) -> void:
 	_wire(card)
 	# The XP rises off the boat; the fish flies to the hold.
 	var mid: Vector2 = Vector2(size.x / 2.0, size.y * 0.5 - 70.0)
-	Fx.rise(self, "+%s XP%s" % [_thousands(float(r["xpGained"])), "  PERFECT" if perfect else ""], mid, GOLD if perfect else Color("#4ade80"), 20)
+	# What made it: the streak's multiplier, shown when it is working.
+	var sm: float = Rules.streak_mult(float(_streak()), float(session.level()))
+	var why: String = ("  ×%.2f streak" % sm) if sm > 1.001 else ""
+	Fx.rise(self, "+%s XP%s%s" % [_thousands(float(r["xpGained"])), "  PERFECT" if perfect else "", why], mid, GOLD if perfect else Color("#4ade80"), 20)
+	# The XP flies from where the fish came up into the bar.
+	var rar: float = float(Js.nz((r["fish"] as Dictionary).get("bite_rarity"), 1.0))
+	var src: Vector2 = boat.get_parent().get_global_transform_with_canvas() * boat.hook_at()
+	_xp.gain(float(r["xpGained"]), src, 0.6 + rar * 0.35 + (0.8 if perfect else 0.0) + minf(1.0, float(_streak()) * 0.1))
 	if float(r.get("catchQty", 0.0)) > 0.0 and r.get("isShiny") != true:
 		_fly_to_hold(r["fish"], float(r["catchQty"]))
 
