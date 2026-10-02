@@ -129,45 +129,77 @@ var _ship_base_y: float = 0.0
 var on_ship: bool = false
 
 
-## The ship's reflection, and whether her picture is drawn bow-right (so it
+## The ship's rig (the hull, sunk at its waterline, and the water it pushes
+## aside), her reflection, and whether her picture is drawn bow-right (so it
 ## turns the other way to the fishing boat's bow-left convention).
-var _ship_mirror: Sprite2D
+var _ship_rig: Node2D
+var _ship_mirror: CanvasGroup
 var _ship_flip: bool = false
+var _ship_mirror_y: float = 0.0
+var _ship_phase: float = randf() * 6.28
+var _ship_wob: float = 0.0
 
 
 ## THE CHANGE OF BOAT (North): past the sign in the arch, the ship you own
 ## for expeditions; back through it, the fishing boat. Drawn as the web's
 ## Warship (SeaMap.tsx): the hull's sea art (lib/ships.ts seaImageUrl, or an
-## equipped ship skin's hull) in a 340-wide box, its keel on the water, and a
-## soft reflection under it. def: the rules' "ships" row; tex: the picture;
-## wide: how much wider a skin's padded plate is drawn.
+## equipped ship skin's hull) in a 340-wide box, its keel (seaKeel) on the
+## water. IN the water as the fishing boats are (Kong): the hull sinks below
+## its waterline through the same waterline shader, the same collar of
+## pushed-aside water rings it, and its reflection is the boats' own, a twin
+## mirrored about the waterline through the hull-mirror shader, lying down and
+## swaying. def: the rules' "ships" row; tex: the picture; wide: how much
+## wider a skin's padded plate is drawn.
 func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float = 1.0) -> void:
 	on_ship = on
-	if on and _ship == null:
-		_ship = Sprite2D.new()
-		add_child(_ship)
-		_ship_mirror = Sprite2D.new()
-		_ship_mirror.modulate.a = 0.26
-		add_child(_ship_mirror)
-		move_child(_ship_mirror, 0)
-	if _ship != null:
-		_ship.visible = on
-		_ship_mirror.visible = on
-		if on and tex != null:
-			_ship.texture = tex
-			_ship_mirror.texture = tex
-			_ship_flip = def.get("seaFlip", false) == true
-			var box: float = 340.0 * wide
-			var sc: float = box / float(tex.get_width())
-			_ship.scale = Vector2(sc, sc / Chart.GROUND)
-			# The keel (a share of the box's height) sits on the water here.
-			var keel: float = float(def.get("seaKeel", 0.75))
-			_ship_base_y = -box * (keel - 0.5) / Chart.GROUND
-			_ship.position = Vector2(0, _ship_base_y)
-			# Mirrored about the keel, lying down (0.55) and a little sunk.
-			_ship_mirror.scale = Vector2(sc, -sc * 0.55 / Chart.GROUND)
-			_ship_mirror.position = Vector2(0, (box * (keel - 0.5) * 0.55 - box * 0.02) / Chart.GROUND)
 	skipper.visible = not on
+	if _ship_rig != null:
+		_ship_rig.queue_free()
+		_ship_mirror.queue_free()
+		_ship_rig = null
+		_ship_mirror = null
+		_ship = null
+	if not on or tex == null:
+		return
+	_ship_flip = def.get("seaFlip", false) == true
+	var box: float = 340.0 * wide
+	var sc: float = box / float(tex.get_width())
+	var hull: Sprite2D = Sprite2D.new()
+	hull.texture = tex
+	hull.scale = Vector2(sc, sc / Chart.GROUND)
+	var h: float = tex.get_height() * hull.scale.y
+	# The keel on the water here (y 0), and the waterline a little up it, by
+	# the same share as the fishing boats sink (Skipper.SINK of the box).
+	var keel_frac: float = float(def.get("seaKeel", 0.75))
+	hull.position = Vector2(0, -h * (keel_frac - 0.5))
+	var top: float = hull.position.y - h / 2.0
+	var keel: float = top + h * keel_frac
+	var waterline: float = keel - Skipper.SINK * box / Chart.GROUND
+	var cut: float = (waterline - top) / h
+	var depth: float = (keel - waterline) / h
+	hull.material = Skipper.afloat_mat("res://game/fx/waterline.gdshader", hull, cut, depth, _ship_phase)
+	_ship_rig = Node2D.new()
+	add_child(_ship_rig)
+	_ship_rig.add_child(hull)
+	_ship_rig.add_child(Skipper.collar_of(hull, cut, depth, _ship_phase))
+	_ship = hull
+	# The reflection: a twin about the waterline, lying down, under the hull.
+	_ship_mirror = CanvasGroup.new()
+	_ship_mirror.fit_margin = 12.0
+	var mm: ShaderMaterial = ShaderMaterial.new()
+	mm.shader = load("res://game/fx/hull_mirror.gdshader")
+	_ship_mirror.material = mm
+	var twin: Sprite2D = Sprite2D.new()
+	twin.texture = tex
+	twin.scale = hull.scale
+	twin.position = hull.position
+	_ship_mirror.add_child(twin)
+	_ship_mirror_y = waterline * (1.0 + Skipper.LIE)
+	_ship_mirror.position = Vector2(0, _ship_mirror_y)
+	_ship_mirror.scale = Vector2(1.0, -Skipper.LIE)
+	add_child(_ship_mirror)
+	move_child(_ship_mirror, 0)
+	_ship_base_y = 0.0
 
 
 ## The Shipyard's refits and the boat's trim, from a profile.
@@ -259,15 +291,20 @@ func steer(input: Vector2, delta: float) -> void:
 	if speed > 20.0 and absf(velocity.x) > 8.0:
 		_facing = 1.0 if velocity.x > 0.0 else -1.0
 		skipper.scale.x = -_facing
-	if _ship != null:
+	if _ship_rig != null:
 		# Bow-left by convention (as the fishing boat), turned to her way; a
-		# little roll and heave, the reflection keeping time.
-		var fl: bool = (_facing > 0.0) != _ship_flip
-		_ship.flip_h = fl
-		_ship_mirror.flip_h = fl
-		_ship.rotation = sin(Time.get_ticks_msec() / 900.0) * 0.012 * rough
-		_ship_mirror.rotation = -_ship.rotation
-		_ship.position.y = _ship_base_y + sin(Time.get_ticks_msec() / 1300.0) * 3.0
+		# little roll and heave on the waterline, the reflection keeping time
+		# and swaying as the boats' does.
+		var fx: float = -1.0 if ((_facing > 0.0) != _ship_flip) else 1.0
+		var bob: float = sin(Time.get_ticks_msec() / 1300.0) * 3.0
+		_ship_rig.scale.x = fx
+		_ship_rig.rotation = sin(Time.get_ticks_msec() / 900.0) * 0.012 * rough
+		_ship_rig.position.y = bob
+		_ship_mirror.scale.x = fx
+		_ship_mirror.rotation = -_ship_rig.rotation
+		_ship_mirror.position.y = _ship_mirror_y - bob * 0.75
+		_ship_wob += delta
+		_ship_mirror.skew = sin(_ship_wob * Skipper.MIRROR_RATE + _ship_phase) * Skipper.MIRROR_SHEAR + sin(_ship_wob * Skipper.MIRROR_RATE * 1.63 + _ship_phase * 2.1) * Skipper.MIRROR_SHEAR * 0.45
 
 
 ## Where her wake starts (SeaMap.tsx): the cutwater, 40px toward the bow and
