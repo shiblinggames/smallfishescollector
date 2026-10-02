@@ -643,8 +643,11 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   ring follow the keel's own slope (Kong: "angled with the bottom of the boat"; the
   Brigantine's stern sits higher than its bow): Skipper.keel_tilt fits a line to the lowest
   painted pixel of each hull column (bowsprit and ends left out) and the waterline and
-  water_collar shaders take it as `tilt` (0 for the fishing boats). Measured: sloop 0.03,
-  schooner 0.04, brigantine and galleon 0.12, man-o-war -0.04. The northern islands (Crew Hall,
+  water_collar shaders take it as `tilt`. Measured: sloop 0.03, schooner 0.04, brigantine
+  and galleon 0.12, man-o-war -0.04. THE FISHING BOATS TOO (Kong: "even fishing boats are at a
+  slight angle"; about -0.03 on every sheet and overlay): Skipper._water_fx turns the hull's
+  slope into each part's own picture, so the cut is one line across the hull, the captain and
+  any overlay, and the collar tilts with it. NPC boats share it (they are Skippers). The northern islands (Crew Hall,
   Posting House, Forge, Gunwharf, Charterhouse) were already drawn; mooring now opens a paper
   sheet of what each will hold (North.COMING) until their rooms are ported. THE WORLD
   CHART centres on the crossing (WorldMap.WORLD_CENTRE, Kong: "the centre of the world is the

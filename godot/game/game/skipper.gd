@@ -359,15 +359,28 @@ func _water_fx(origin: Vector2, h: float, hull: Sprite2D) -> void:
 	# under it (the base sheet paints a plain hull under the boat overlay, so
 	# it goes too), and the water she pushes aside rings her at it.
 	var keel: float = top_y + hh * keel_frac
+	# The water follows the keel's own slope (Kong: "even the fishing boats sit
+	# at a slight angle"): measured on the hull's picture, as a slope on the
+	# boat (px per px), and carried into each part's own picture so the cut is
+	# one line across all of them.
+	var hr: Rect2 = hull.get_rect()
+	var hcx: float = (hull.transform * hr.get_center()).x
+	var hw: float = hr.size.x * absf(hull.scale.x)
+	var slope: float = keel_tilt(hull.texture) * hh / maxf(1.0, hw) * (-1.0 if hull.flip_h else 1.0)
 	for c: Sprite2D in parts:
 		if c.rotation != 0.0 or not c.centered:
 			continue
 		var ch: float = c.texture.get_height() * absf(c.scale.y)
+		var cw: float = c.texture.get_width() * absf(c.scale.x)
 		var ctop: float = c.position.y - ch / 2.0
-		if ctop + ch <= waterline:
+		var pcx: float = (c.transform * c.get_rect().get_center()).x
+		var wl: float = waterline + slope * (pcx - hcx)
+		if ctop + ch <= wl - absf(slope) * cw / 2.0:
 			continue
-		c.material = afloat_mat("res://game/fx/waterline.gdshader", c, (waterline - ctop) / ch, (keel - waterline) / ch, _phase)
+		c.material = afloat_mat("res://game/fx/waterline.gdshader", c, (wl - ctop) / ch, (keel - waterline) / ch, _phase)
+		(c.material as ShaderMaterial).set_shader_parameter("tilt", slope * cw / ch * (-1.0 if c.flip_h else 1.0))
 	var collar: Sprite2D = collar_of(hull, (waterline - top_y) / hh, (keel - waterline) / hh, _phase)
+	(collar.material as ShaderMaterial).set_shader_parameter("tilt", slope * hw / hh * (-1.0 if hull.flip_h else 1.0))
 	add_child(collar)
 	move_child(collar, _mirror.get_index() + 1)
 
