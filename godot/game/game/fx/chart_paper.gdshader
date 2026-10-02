@@ -73,15 +73,22 @@ void fragment() {
 	float south = smoothstep(u_wall - 60.0, u_wall + 60.0, w.y);
 	float fish_in = (1.0 - smoothstep(u_outer - 120.0, u_outer + 120.0, r + edge_wob)) * south;
 	float anch_in = (1.0 - smoothstep(u_anchor.z - 100.0, u_anchor.z + 100.0, north + edge_wob)) * (1.0 - south);
-	float sea_in = max(fish_in, anch_in);
-	// Beyond the anchorage, the campaign's water: not yet charted, a faint
-	// hatching on bare paper.
-	if (w.y < u_wall && anch_in < 0.5 && length(w - u_anchor.xy) < u_outer + 3000.0) {
-		float hatch = abs(fract((w.x + w.y) / 900.0) - 0.5);
-		col = mix(col, INK, (1.0 - smoothstep(0.02, 0.05, hatch)) * 0.07);
-	}
+	// ONE CIRCLE (Kong, 2026-10-02): cut through its middle by the reef at
+	// the crossing. The fishing sea is the south half; the north half, as
+	// wide, is the expedition side: the anchorage at its heart, and round it
+	// the campaign's water, a slate wash hatched over until it opens.
+	float cut_r = sqrt(max(u_outer * u_outer - u_wall * u_wall, 0.0));
+	float north_r = length(w - vec2(0.0, u_wall));
+	float exp_in = (1.0 - smoothstep(cut_r - 120.0, cut_r + 120.0, north_r + edge_wob)) * (1.0 - south);
+	float sea_in = max(max(fish_in, anch_in), exp_in);
 	if (sea_in > 0.001) {
-		vec3 wash = anch_in > fish_in ? vec3(0.52, 0.66, 0.62) : sea_wash(r);
+		vec3 wash = sea_wash(r);
+		if (anch_in > fish_in) {
+			wash = vec3(0.52, 0.66, 0.62);
+		} else if (exp_in > fish_in) {
+			vec3 deep = sea_wash(north_r);
+			wash = mix(deep, vec3(dot(deep, vec3(0.33))) * vec3(0.92, 0.96, 1.04), 0.45) * 0.9;
+		}
 		// Pigment pools darker at each water's edge.
 		float pool = 0.0;
 		for (int i = 0; i < 6; i++) {
@@ -99,6 +106,10 @@ void fragment() {
 			float d = (abs(r + edge_wob * 0.25 - band(i)) + (1.0 - fish_in) * 9999.0) * u_scale;
 			col = mix(col, INK, (1.0 - smoothstep(0.4, 1.3, d)) * 0.35);
 		}
+		// The campaign's water is not open yet: hatched over.
+		float closed = exp_in * (1.0 - smoothstep(0.3, 0.7, anch_in));
+		float hatch = abs(fract((w.x + w.y) / 900.0) - 0.5);
+		col = mix(col, INK, (1.0 - smoothstep(0.02, 0.05, hatch)) * 0.16 * closed);
 		// The graticule: faint inked lines every 2,000 px.
 		vec2 g = abs(fract(w / 2000.0 + 0.5) - 0.5) * 2000.0 * u_scale;
 		float grid = 1.0 - smoothstep(0.3, 0.9, min(g.x, g.y));
