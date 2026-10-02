@@ -425,6 +425,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   are in one place; the PERFECT FLASH blooms about the dial (Fx.PerfectFlash.at), not across
   the screen; HOLD_PERFECT_S 0.9 -> 1.15 so the leap lands before the card; the catch
   splash rings are smaller (field 160/115, ripple 105/80).
+- THE LEVEL-UP, REDRAWN (Kong: "I hate the way they look"): the web's navy wash, turning
+  rays and rings through the words are gone. The sea stays under a light dim; FISHING
+  LEVEL and the number lettered above her boat over a soft warm glow, counting up with a
+  plip per level, a stroke of light drawing out beneath and a few motes rising; what it
+  brought and any water opened on a paper slip below her boat; the cast lettering steps
+  aside while it shows.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

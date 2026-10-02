@@ -1179,6 +1179,8 @@ func _after_catch(from_catch: bool) -> void:
 			var lu: LevelUp = LevelUp.new()
 			lu.claim = claim
 			_modal = lu
+			# The cast lettering steps aside while the level is shown.
+			_action.visible = false
 			add_child(lu)
 			await lu.closed
 			_modal = null

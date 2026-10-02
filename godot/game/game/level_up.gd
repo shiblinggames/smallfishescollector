@@ -1,44 +1,109 @@
 class_name LevelUp
 extends Control
 ## THE FISHING LEVEL-UP (Godot port of LevelRewardsGrant / LevelUpCelebration,
-## fishing pass 2).
+## fishing pass 2). Redrawn 2026-10-01 (Kong: "I hate the way they look"; the
+## web's navy wash, turning rays and rings through the words are gone).
 ##
 ## Shown when claimFishingLevelRewards covered a level (to > from), which it
 ## does on opening the sea and after a catch that crossed one: most levels pay
-## nothing and every one of them is still a level. A white flash, three rings,
-## the number counting up from the old level, what was paid, and the waters
-## that opened. A press anywhere closes it.
+## nothing and every one of them is still a level. Now in the game's own
+## hand: the sea stays under a light dim; FISHING and the new level lettered
+## large over a soft warm glow, the number counting up from the old one, a
+## stroke of light drawing out beneath it and a few motes rising; then what
+## was paid, and the waters that opened, on a slip of paper that rises in
+## under it. A press closes it.
 
 signal closed
 
 var claim: Dictionary = {}
 var _t: float = 0.0
 var _num: Label
+var _slip: Control
+var _hint: Label
+var _motes: Array = []
+
+const CREAM: Color = Color(0.98, 0.94, 0.85)
+const WARM: Color = Color(1.0, 0.78, 0.38)
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	theme = UiTheme.make()
 	Rumble.buzz(Rumble.LEVEL_UP)
+	Sound.chest(true)
 	var from: int = int(claim["from"])
 	var to: int = int(claim["to"])
+	# The number above her boat, the slip below it, so she stays in sight.
 	var col: VBoxContainer = VBoxContainer.new()
-	col.alignment = BoxContainer.ALIGNMENT_CENTER
-	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	col.add_theme_constant_override("separation", 8)
+	col.alignment = BoxContainer.ALIGNMENT_END
+	col.anchor_right = 1.0
+	col.anchor_top = 0.5
+	col.anchor_bottom = 0.5
+	col.offset_top = -420
+	col.offset_bottom = -70
+	col.add_theme_constant_override("separation", 2)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(col)
-	_text(col, "Level Up!", 20, Color.WHITE, true)
-	_num = _text(col, str(from), 80, Color("#f0c040"), true)
-	_num.pivot_offset = Vector2(size.x / 2.0, 50)
-	_text(col, "FISHING", 12, Color(1, 1, 1, 0.6), true)
-	if to - from > 1:
-		_text(col, "%d levels earned" % (to - from), 15, Color(1, 1, 1, 0.7), false)
+	var eb: Label = _letter(col, "FISHING LEVEL", 15, Color(CREAM, 0.8), false)
+	eb.add_theme_font_override("font", Kit.tracked("karla", 700, 15, 0.32))
+	_num = _letter(col, str(from), 112, CREAM, true)
+	_num.add_theme_color_override("font_shadow_color", Color(WARM, 0.55))
+	_num.add_theme_constant_override("shadow_outline_size", 22)
+	_num.add_theme_constant_override("shadow_offset_y", 0)
+	# What it brought, on a slip of paper, under her boat.
+	var slip_row: CenterContainer = CenterContainer.new()
+	slip_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slip_row.anchor_right = 1.0
+	slip_row.anchor_top = 0.5
+	slip_row.anchor_bottom = 0.5
+	slip_row.offset_top = 80
+	slip_row.offset_bottom = 230
+	slip_row.use_top_left = false
+	add_child(slip_row)
+	_slip = _build_slip(slip_row, from, to)
+	_hint = _letter(self, "Press anywhere to continue", 13, Color(CREAM, 0.6), false)
+	_hint.anchor_top = 1.0
+	_hint.anchor_bottom = 1.0
+	_hint.anchor_right = 1.0
+	_hint.offset_top = -110
+	_hint.offset_bottom = -84
+	_hint.modulate.a = 0.0
+	# In: the number rises and brightens, counts up, the slip follows.
+	_num.modulate.a = 0.0
+	eb.modulate.a = 0.0
+	var tw: Tween = create_tween()
+	tw.set_parallel()
+	tw.tween_property(eb, "modulate:a", 1.0, 0.35).set_delay(0.1)
+	tw.tween_property(_num, "modulate:a", 1.0, 0.4).set_delay(0.15)
+	tw.chain().tween_interval(0.05)
+	var steps: int = maxi(1, to - from)
+	var per: float = clampf(0.9 / steps, 0.13, 0.42)
+	for n: int in range(from + 1, to + 1):
+		tw.chain().tween_callback(func() -> void:
+			_num.text = str(n)
+			_num.pivot_offset = _num.size / 2.0
+			_num.scale = Vector2(1.14, 1.14)
+			Sound.plip())
+		tw.chain().tween_property(_num, "scale", Vector2.ONE, per).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if _slip != null:
+		_slip.modulate.a = 0.0
+		_slip.position.y += 24.0
+		var sl: Tween = create_tween().set_parallel()
+		sl.tween_property(_slip, "modulate:a", 1.0, 0.4).set_delay(0.55)
+		sl.tween_property(_slip, "position:y", _slip.position.y - 24.0, 0.5).set_delay(0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	create_tween().tween_property(_hint, "modulate:a", 1.0, 0.5).set_delay(1.1)
+	for i: int in 14:
+		_motes.append([randf_range(-180.0, 180.0), randf_range(0.0, 1.0), randf_range(0.5, 1.2), randf_range(1.2, 2.6)])
+
+
+func _build_slip(parent: Control, from: int, to: int) -> Control:
+	var lines: Array = []
 	var granted: Array = claim.get("granted", [])
 	for g: Dictionary in granted:
 		var label: String = reward_label(g["reward"])
 		if label != "":
-			_chip(col, ("Lv %d · %s" % [int(g["level"]), label]) if granted.size() > 1 else label)
+			lines.append([("Level %d  ·  %s" % [int(g["level"]), label]) if granted.size() > 1 else label, "reward"])
 	var opened: Array[String] = []
 	var mins: Dictionary = Rules.data()["zones"]["minLevel"]
 	for w: Dictionary in Chart.WATERS:
@@ -46,20 +111,25 @@ func _ready() -> void:
 		if need > from and need <= to:
 			opened.append(w["name"])
 	if opened.size() > 0:
-		_text(col, ("New water open: " if opened.size() == 1 else "New waters open: ") + ", ".join(opened), 16, Color("#7dd3fc"), true)
+		lines.append([("New water open: " if opened.size() == 1 else "New waters open: ") + ", ".join(opened), "water"])
+	if lines.is_empty():
+		return null
+	var p: Pane = Kit.pane(parent, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.4), 18, Vector2(0, 6)], "pad": [26, 16, 26, 18], "paper": true })
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var v: VBoxContainer = VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(v)
+	var head: Label = Kit.text(v, "It brought" if to - from == 1 else "They brought", "eyebrow", Color(0.55, 0.3, 0.15))
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	for l: Array in lines:
+		var t: Label = Kit.text(v, l[0], "body_strong", Kit.ink(Color(0.36, 0.6, 0.58)) if l[1] == "water" else Kit.PAPER_INK)
+		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if to - from > 1:
-		_text(col, "These were waiting for you. Everything you earn is held until you are back at the chart.", 13, Color(1, 1, 1, 0.5), false)
-	_text(col, "press to continue", 12, Color(1, 1, 1, 0.4), false)
-	# The number counts up, a step at a time.
-	var steps: int = maxi(1, to - from)
-	var per: float = clampf(0.9 / steps, 0.13, 0.42)
-	var tw: Tween = create_tween()
-	tw.tween_interval(0.34)
-	for n: int in range(from + 1, to + 1):
-		tw.tween_callback(func() -> void:
-			_num.text = str(n)
-			_num.scale = Vector2(1.25, 1.25))
-		tw.tween_property(_num, "scale", Vector2.ONE, per).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		var n: Label = Kit.text(v, "These were waiting for you. Everything you earn is held until you are back at the chart.", "note", Kit.PAPER_INK_SOFT, true)
+		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		n.custom_minimum_size = Vector2(420, 0)
+	return p
 
 
 ## rewardLabel: "360 ⟡, 15 ◆ and 5 Minnow".
@@ -79,30 +149,20 @@ static func reward_label(r: Dictionary) -> String:
 	return ", ".join(parts.slice(0, parts.size() - 1)) + " and " + parts[parts.size() - 1]
 
 
-func _text(parent: Control, text: String, px: int, col: Color, title: bool) -> Label:
+## Lettering over the sea: the words over their own soft shadow.
+func _letter(parent: Control, text: String, px: int, col: Color, title: bool) -> Label:
 	var l: Label = Label.new()
 	l.text = text
+	l.add_theme_font_override("font", Kit.font("cinzel", 800) if title else Kit.font("karla", 600))
 	l.add_theme_font_size_override("font_size", px)
 	l.add_theme_color_override("font_color", col)
-	Kit.face(l, px, title)
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
+	l.add_theme_constant_override("shadow_outline_size", 8)
+	l.add_theme_constant_override("shadow_offset_y", 2)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(l)
 	return l
-
-
-func _chip(parent: Control, text: String) -> void:
-	var center: CenterContainer = CenterContainer.new()
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	parent.add_child(center)
-	var p: Pane = Pane.new({ "radius": 999, "fill": [Kit.a(Kit.GOLD, 0.12)], "border": [1, Kit.a(Kit.GOLD, 0.45)], "shadow": [Kit.a(Kit.GOLD, 0.12), 18], "pad": [16, 6, 16, 7] })
-	center.add_child(p)
-	var l: Label = Label.new()
-	l.text = text
-	Kit.style(l, "value", Color("#f7d774"))
-	l.add_theme_font_size_override("font_size", 16)
-	p.add_child(l)
 
 
 func _process(delta: float) -> void:
@@ -111,28 +171,29 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var c: Vector2 = size / 2.0
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.03, 0.06, 0.12, 0.94))
-	# The rays, turning slowly.
-	var turn: float = _t / 22.0 * TAU
-	# Each ray is brightest at the centre and fades out along its length and
-	# toward its edges, so the fan reads as light, not as wedges.
-	var gold: Color = Color(0.94, 0.75, 0.25)
-	for i: int in 12:
-		var a: float = turn + i * TAU / 12.0
-		var mid: Vector2 = c + Vector2.from_angle(a) * 560.0
-		for side: float in [-1.0, 1.0]:
-			var edge: Vector2 = c + Vector2.from_angle(a + side * 0.11) * 560.0
-			draw_polygon(PackedVector2Array([c, mid, edge]), PackedColorArray([Color(gold, 0.10), Color(gold, 0.0), Color(gold, 0.0)]))
-	# The white flash, then three rings.
-	var f: float = clampf(_t / 0.5, 0.0, 1.0)
-	if f < 1.0:
-		draw_circle(c, 55.0 * lerpf(0.4, 2.2, f), Color(1, 1, 1, 0.6 * (1.0 - f)))
-	for n: int in 3:
-		var u: float = clampf((_t - 0.12 * n) / 1.1, 0.0, 1.0)
-		if u > 0.0 and u < 1.0:
-			var col: Color = Color(0.38, 0.65, 0.98, 0.75) if n != 1 else Color(0.94, 0.75, 0.25, 0.6)
-			draw_arc(c, 55.0 * lerpf(1.0, [4.5, 3.9, 3.3][n], 1.0 - pow(1.0 - u, 3.0)), 0.0, TAU, 96, Color(col, col.a * (1.0 - u)), 2.0, true)
+	# The sea stays: a light dim, deeper at the edges.
+	var a: float = clampf(_t / 0.3, 0.0, 1.0)
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.04, 0.06, 0.42 * a))
+	if _num == null:
+		return
+	var c: Vector2 = _num.global_position - global_position + _num.size / 2.0
+	# A soft warm glow behind the number.
+	for k: int in 6:
+		draw_circle(c, 150.0 - k * 22.0, Color(WARM, 0.025 * a))
+	# A stroke of light drawing out beneath it.
+	var reach: float = 170.0 * clampf((_t - 0.3) / 0.6, 0.0, 1.0)
+	var y: float = c.y + _num.size.y * 0.42
+	var n: int = 30
+	for i: int in n:
+		var k0: float = float(i) / n
+		var k1: float = float(i + 1) / n
+		var fall: float = 1.0 - pow(absf((k0 + k1) - 1.0), 1.5)
+		draw_line(Vector2(c.x - reach + reach * 2.0 * k0, y), Vector2(c.x - reach + reach * 2.0 * k1, y), Color(WARM, 0.75 * fall * a), 2.0, true)
+	# A few motes rising from it.
+	for m: Array in _motes:
+		var life: float = fposmod(_t / float(m[3]) + float(m[1]), 1.0)
+		var p: Vector2 = Vector2(c.x + float(m[0]), y - life * 140.0)
+		draw_circle(p, float(m[2]), Color(WARM, (1.0 - life) * 0.6 * a))
 
 
 func _gui_input(event: InputEvent) -> void:
