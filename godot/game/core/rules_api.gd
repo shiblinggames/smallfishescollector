@@ -27,6 +27,7 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 		"sellGoldenTrophy": return Fishing.sell_golden_trophy(db, uid, float(a[0]))
 		"mountGoldenTrophy": return Fishing.mount_golden_trophy(db, uid, float(a[0]))
 		"claimFishingLevelRewards": return Fishing.claim_fishing_level_rewards(db, uid)
+		"levelFloors": return Shipyard.level_floors(db, uid)
 		"claimZoneReward": return Fishing.claim_zone_reward(db, uid, a[0])
 		"prestigeZone": return Fishing.prestige_zone(db, uid, a[0])
 		"releaseAncient": return Fishing.release_ancient(db, uid, float(a[0]))

@@ -212,6 +212,19 @@ func _refit(parent: Control) -> void:
 	_detail(parent)
 
 
+## The level that gives a tier for free (the port's rules): the fish hold by
+## Fishing level, the ship's sailing upgrades by Navigation level.
+func _free_at(l: Array, i: int) -> String:
+	if l[0] == "hold":
+		var lr: Dictionary = Rules.data()["levelRewards"]
+		for k: Variant in lr:
+			if (lr[k] as Dictionary).get("holdFloor") != null and int(lr[k]["holdFloor"]) == i:
+				return "Fishing %s" % str(k)
+		return ""
+	var nl: int = Shipyard.free_at(str(l[5]), float(i))
+	return ("Navigation %d" % nl) if nl > 0 else ""
+
+
 func _detail(parent: Control) -> void:
 	var l: Array = []
 	for x: Array in LADDERS:
@@ -246,7 +259,11 @@ func _detail(parent: Control) -> void:
 		mark.custom_minimum_size = Vector2(18, 0)
 		var name_l: Label = Kit.text(h, "Tier %d  ·  %s" % [i + 1, _value(_ladder, i)], "small", Kit.INK if i == t + 1 else Kit.INK_2)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		Kit.text(h, "Standard" if i == 0 else ("Owned" if i <= t else "%s ⟡" % Js.thousands(_cost(_ladder, i))), "value", Kit.GOOD if (i <= t and i > 0) else (Kit.GOLD if i > t else Kit.DIM))
+		var free: String = _free_at(l, i)
+		var price: String = "%s ⟡" % Js.thousands(_cost(_ladder, i))
+		if free != "":
+			price = "Free at %s  ·  or %s" % [free, price]
+		Kit.text(h, "Standard" if i == 0 else ("Owned" if i <= t else price), "value", Kit.GOOD if (i <= t and i > 0) else (Kit.GOLD if i > t else Kit.DIM))
 	if t >= mx:
 		Kit.text(v, "Fully upgraded", "heading", c)
 		return

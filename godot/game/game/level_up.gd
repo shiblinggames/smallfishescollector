@@ -136,6 +136,12 @@ static func gains(from: int, to: int) -> Array:
 			for cc: Dictionary in d["characterColors"]:
 				if cc["id"] == cid:
 					out.append(["Unlocked", "The %s look" % cc["name"]])
+	var tiers: Array = d["fishHoldTiers"]
+	for k: Variant in d["levelRewards"]:
+		var hf: Variant = (d["levelRewards"][k] as Dictionary).get("holdFloor")
+		if hf != null and int(k) > from and int(k) <= to:
+			var ht: Dictionary = tiers[clampi(int(hf), 0, tiers.size() - 1)]
+			out.append(["Stronger", "Your hold is now a %s, %d fish (free)" % [ht["name"], int(ht["capacity"])]])
 	var mm: int = int(Js.num(d["daily"].get("masterMinLevel")))
 	if mm > from and mm <= to:
 		out.append(["Unlocked", "A fourth daily challenge, the Master"])
@@ -184,9 +190,7 @@ static func reward_label(r: Dictionary) -> String:
 		parts.append("%d ◆" % int(r["gems"]))
 	for type: Variant in Js.obj(r.get("bait")):
 		parts.append("%d %s" % [int((r["bait"] as Dictionary)[type]), Rules.bait(type)["name"]])
-	if r.get("holdFloor") != null:
-		var tiers: Array = Rules.data()["fishHoldTiers"]
-		parts.append(String((tiers[clampi(int(r["holdFloor"]), 0, tiers.size() - 1)] as Dictionary)["name"]))
+	# (A hold raised is told under Stronger, by gains().)
 	if parts.size() <= 1:
 		return parts[0] if parts.size() == 1 else ""
 	return ", ".join(parts.slice(0, parts.size() - 1)) + " and " + parts[parts.size() - 1]

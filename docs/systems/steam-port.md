@@ -436,6 +436,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   FISHING in the fishing waters (with the streak flame and the next level reward),
   NAVIGATION north of the reef (expedition_xp on navXpTable, no flame), crossing over
   fades it out and in on the other skill. Nav bead and line in warm amber.
+- XP YOU CAN FEEL (Kong): XpBar.gain sends motes from the catch into the bar, which fills as
+  they land (ticks); near a level it warms, crossing one it runs to full and flashes; the
+  XP line names the streak multiplier; a "this trip" tally fades under the bar.
+- LEVELS GIVE UPGRADES AND UNLOCKS, NOT MONEY (Kong; port_rules.json "_levels"): no level
+  pays doubloons or gems (gems are being retired); the hold is raised free at Fishing 10,
+  20, 30, 45, 60 (levelRewardMax 100); navUpgrades raise the hull (Nav 10, 25), rudder (15)
+  and rig (20) free via the port-only "levelFloors" action, run after each level claim;
+  the lantern and the top tiers stay bought. The Shipyard marks free tiers ("Free at
+  Fishing 30 · or 8,000 ⟡"); the level-up slip lists Stronger / Unlocked / Earned
+  (LevelUp.gains: catch zone, streak ceiling, hold, waters, gear for sale, looks, Master).
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

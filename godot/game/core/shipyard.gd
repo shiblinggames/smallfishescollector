@@ -31,6 +31,46 @@ static func effect(col: String, tier: float) -> float:
 	return float(e[clampi(int(tier), 0, e.size() - 1)])
 
 
+## NAVIGATION RAISES THE SHIP (the port's rules, content/port_rules.json
+## navUpgrades): each Navigation level that carries an upgrade lifts that
+## column to at least its tier, free. State-based, so it is right whenever it
+## runs. Returns what it raised: [[column, tier, nav level], ...].
+static func level_floors(db: CaptainStore, uid: String) -> Array:
+	var ups: Dictionary = Js.obj(Rules.data().get("navUpgrades"))
+	if ups.is_empty():
+		return []
+	var cols: Array = ["expedition_xp"]
+	for lv: Variant in ups:
+		for c: Variant in ups[lv]:
+			if not cols.has(c):
+				cols.append(c)
+	var p: Dictionary = db.profile(uid, ", ".join(PackedStringArray(cols)))
+	var nav: int = Loadout.nav_level_from_xp(Js.num(p.get("expedition_xp")))
+	var patch: Dictionary = {}
+	var raised: Array = []
+	for lv: Variant in ups:
+		if nav < int(lv):
+			continue
+		for c: Variant in ups[lv]:
+			var t: float = float(ups[lv][c])
+			var have: float = maxf(Js.num(p.get(c)), Js.num(patch.get(c)))
+			if t > have:
+				patch[c] = t
+				raised.append([c, t, int(lv)])
+	if not patch.is_empty():
+		db.update_profile(uid, patch)
+	return raised
+
+
+## The Navigation level that gives a tier for free, or 0.
+static func free_at(col: String, tier: float) -> int:
+	var ups: Dictionary = Js.obj(Rules.data().get("navUpgrades"))
+	for lv: Variant in ups:
+		if float(Js.obj(ups[lv]).get(col, -1.0)) == tier:
+			return int(lv)
+	return 0
+
+
 static func buy_tier(db: CaptainStore, uid: String, col: String) -> Dictionary:
 	var l: Dictionary = ladder(col)
 	var p: Dictionary = db.profile(uid, col)

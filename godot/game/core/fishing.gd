@@ -597,7 +597,8 @@ static func claim_fishing_level_rewards(db: CaptainStore, uid: String) -> Dictio
 	for type: Variant in bait:
 		db.add_bait(uid, type, bait[type])
 	var first: int = int((owed[0] as Dictionary)["level"])
-	db.ledger(uid, doubloons, "Fishing level reward (Lv %d%s)" % [first, ("-%d" % level) if owed.size() > 1 else ""])
+	if doubloons > 0.0:
+		db.ledger(uid, doubloons, "Fishing level reward (Lv %d%s)" % [first, ("-%d" % level) if owed.size() > 1 else ""])
 	return { "granted": owed, "from": claimed, "to": float(level), "newDoubloons": new_d, "newGems": new_g, "newHoldTier": hold_tier }
 
 

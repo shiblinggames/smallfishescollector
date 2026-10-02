@@ -1198,6 +1198,11 @@ func _ceremony(r: Dictionary) -> void:
 func _after_catch(from_catch: bool) -> void:
 	if session.level() > _level_seen or not from_catch:
 		var claim: Dictionary = await session.act("claimFishingLevelRewards")
+		# Navigation levels raise the ship's upgrades for free (port rules).
+		var floors: Variant = await session.act("levelFloors")
+		if floors is Array and not (floors as Array).is_empty():
+			for f: Array in floors:
+				toast("Navigation %d: %s upgraded for free" % [int(f[2]), { "hull_speed_tier": "Hull", "hull_handling_tier": "Rudder", "hull_accel_tier": "Rig" }.get(f[0], f[0])])
 		session.persist()
 		_level_seen = session.level()
 		if float(claim["to"]) > float(claim["from"]):
