@@ -300,7 +300,11 @@ func step(delta: float, cam: Vector2, half: Vector2, boat: Vector2, boat_speed: 
 		dm.set_instance_color(i, Color(tint_night.r, tint_night.g, tint_night.b, a2))
 
 	# ── Gulls ──
-	(_gulls as Gulls).step(d, _t, cam, half, boat, spots, tint_night)
+	# A flock always wheels over the reef's arch, lifting as she nears it
+	# (the crossing, Kong 2026-10-02).
+	var gull_spots: Array = spots.duplicate()
+	gull_spots.append({ "kind": "shoal", "key": "arch", "x": North.GATE_X, "y": Explore.NORTH_WALL - 260.0, "r": 420.0 })
+	(_gulls as Gulls).step(d, _t, cam, half, boat, gull_spots, tint_night)
 	flock_at = (_gulls as Gulls).nearest
 
 

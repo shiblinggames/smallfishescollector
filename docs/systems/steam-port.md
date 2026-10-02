@@ -633,7 +633,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   The same seeds place them, so the layout is the web's; the picture at each spot is not. The
   arch is ONE picture over the passage (ARCH_WIDE 1,600, opening 0.26 to 0.83 of it), anchored
   at its near foot so a hull past that foot draws behind the span. NO SIGN on it (Kong: a
-  board with "The Anchorage" on it "shouldn't be there"). Every rock stands in the water as the boats do (fx/waterline with a calm
+  board with "The Anchorage" on it "shouldn't be there"). THE CROSSING (Kong: "really cool and satisfying"), by
+  position so turning back runs it backward (Sea._passage): the view eases out 10% through the
+  passage; the music (its own "Music" bus, a low-pass) muffles under the span and opens beyond
+  (Sound.muffle); the water's colour turns from the fishing sea's to ANCHORAGE_SEA across the
+  passage (Chart.sea_at); the span thins to 45% while the hull is behind it on screen; a gull
+  flock always wheels over the arch. At the change: spray off both beams (Boat._spray), a
+  ship's horn going north (Sound.horn) and the bell coming south, and the side's name lettered
+  in from wide spacing with an ink rule run out under it. Every rock stands in the water as the boats do (fx/waterline with a calm
   lap_amp 0.4, plus a collar; the arch has no collar and a sloped waterline, its far foot
   higher). The reef runs the chart's width at NORTH_WALL with one gap, the arch (GATE_X -900,
   half 430); the anchorage is the disc of 3,600 from (0, -3000), walled wherever north of the

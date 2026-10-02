@@ -350,7 +350,7 @@ func _process(delta: float) -> void:
 	var stops: Array[Color] = Chart.sea_at(cam_world, dark)
 	var vp: Vector2 = get_viewport_rect().size
 	_water.set_shader_parameter("u_cam", cam_world)
-	var zt: float = _zoom_to if stage == null else float(stage["zoom"])
+	var zt: float = (_zoom_to if stage == null else float(stage["zoom"])) * (1.0 - 0.1 * _pass_k)
 	var z: float = lerpf(_camera.zoom.x, zt, 1.0 - exp(-delta * (12.0 if stage == null and _stage_k <= 0.0 else 3.5)))
 	_camera.zoom = Vector2(z, z)
 	_water.set_shader_parameter("u_zoom", _camera.zoom.x)
@@ -409,6 +409,7 @@ func _process(delta: float) -> void:
 	_sky.step(delta, cam_world, _camera.zoom.x, vp, dark, warm, stops[2])
 	_weather(delta, now, cam_world)
 	_ship_side()
+	_passage(delta)
 	_feed_berths(cam_world)
 	# Every hull's wake, laid on the water.
 	var contacts: Array = [_boat.wake_contact()]
@@ -1063,6 +1064,8 @@ func _draw_north() -> void:
 			ring.offset = s.offset
 			holder.add_child(ring)
 		holder.add_child(s)
+		if arch:
+			_arch = s
 	for sign: Array in [["The Sea Gate", North.SEA_GATE + Vector2(0, 520.0)]]:
 		var holder: Node2D = Node2D.new()
 		holder.position = sign[1]
@@ -1075,6 +1078,33 @@ func _draw_north() -> void:
 		l.add_theme_constant_override("shadow_outline_size", 10)
 		holder.add_child(l)
 		l.position = Vector2(-l.get_minimum_size().x / 2.0, -30.0)
+
+
+## THROUGH THE ARCH (Kong, 2026-10-02: make the crossing feel great), by
+## where she is, not by a timer, so turning back runs it backward: the view
+## eases out as she enters the passage (the stone's scale), and under the span
+## the music closes in to a muffle and opens again beyond.
+var _pass_k: float = 0.0
+## The arch's picture: thinned while she is behind its span, so the stone
+## never hides her (she shows through it).
+var _arch: Sprite2D
+
+
+func _passage(delta: float) -> void:
+	var p: Vector2 = _boat.position
+	var lane: float = 1.0 - smoothstep(North.GATE_HALF + 150.0, North.GATE_HALF + 650.0, absf(p.x - North.GATE_X))
+	var dy: float = absf(p.y - (Explore.NORTH_WALL - 160.0))
+	var near: float = (1.0 - smoothstep(150.0, 900.0, dy)) * lane
+	_pass_k = lerpf(_pass_k, near, 1.0 - exp(-delta * 2.5))
+	var under: float = (1.0 - smoothstep(60.0, 420.0, dy)) * lane
+	Sound.muffle(under)
+	if _arch != null:
+		# The span covers, on screen, the water from about 660 to 1,430 north
+		# of its near foot (the picture stands 895 / Chart.GROUND tall).
+		var foot: float = Explore.NORTH_WALL + 60.0
+		var behind: float = smoothstep(560.0, 760.0, foot - p.y) * (1.0 - smoothstep(1330.0, 1530.0, foot - p.y))
+		behind *= 1.0 - smoothstep(North.ARCH_WIDE * 0.4, North.ARCH_WIDE * 0.55, absf(p.x - North.GATE_X))
+		_arch.modulate.a = lerpf(_arch.modulate.a, 1.0 - 0.55 * behind, 1.0 - exp(-delta * 6.0))
 
 
 ## THE CHANGE OF BOAT (North): past the sign in the arch, the ship.
@@ -1111,7 +1141,10 @@ func _ship_side() -> void:
 			if is_instance_valid(_boat):
 				_field.ring(_boat.position, 120.0 + 70.0 * k, 1.6 + 0.3 * k, 0.6 - 0.15 * k))
 	Rumble.buzz([0, 30, 30, 50])
-	Sound.bell()
+	if want:
+		Sound.horn()
+	else:
+		Sound.bell()
 	if want:
 		_hud.side_banner("The Anchorage", "Your %s is under you" % str(def.get("name", "ship")))
 	else:

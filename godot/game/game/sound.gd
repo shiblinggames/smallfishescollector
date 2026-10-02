@@ -33,8 +33,19 @@ func _ready() -> void:
 	_dial = AudioStreamPlayer.new()
 	_dial.volume_db = -4.0
 	add_child(_dial)
+	# The music on its own bus, through a low-pass that stays wide open
+	# except under the reef's arch (muffle).
+	if AudioServer.get_bus_index("Music") == -1:
+		AudioServer.add_bus()
+		var bi: int = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(bi, "Music")
+		AudioServer.set_bus_send(bi, "Master")
+		var lp: AudioEffectLowPassFilter = AudioEffectLowPassFilter.new()
+		lp.cutoff_hz = 20000.0
+		AudioServer.add_bus_effect(bi, lp)
 	for i: int in 2:
 		var m: AudioStreamPlayer = AudioStreamPlayer.new()
+		m.bus = "Music"
 		m.volume_db = -80.0
 		add_child(m)
 		_music.append(m)
@@ -236,6 +247,24 @@ static func streak(n: int) -> void:
 				v.append([notes[k], 0.12 + k * 0.07, 0.09, 0.004, 0.7, "sine"])
 				v.append([notes[k] * 2.0, 0.12 + k * 0.07, 0.03, 0.004, 0.35, "sine"])
 			return _render(v, 1.2), 1.0)
+
+
+## UNDER THE STONE: 0 is open air, 1 is right under the arch's span, where
+## the music closes in to a muffle and dips a little.
+static func muffle(k: float) -> void:
+	var bi: int = AudioServer.get_bus_index("Music")
+	if bi == -1:
+		return
+	var lp: AudioEffectLowPassFilter = AudioServer.get_bus_effect(bi, 0)
+	lp.cutoff_hz = 20000.0 * pow(650.0 / 20000.0, clampf(k, 0.0, 1.0))
+	AudioServer.set_bus_volume_db(bi, -3.0 * k)
+
+
+## A ship's horn, low and long, beating a little (two voices a hair apart):
+## the ship under you, crossing north.
+static func horn() -> void:
+	_play_made("horn", func() -> AudioStreamWAV:
+		return _render([[98.0, 0.0, 0.22, 0.28, 2.4, "triangle"], [98.7, 0.0, 0.16, 0.3, 2.3, "triangle"], [196.0, 0.02, 0.07, 0.3, 1.9, "sine"], [294.0, 0.04, 0.035, 0.3, 1.5, "sine"]], 2.6), 1.5)
 
 
 ## The harbour bell: 660Hz with two inharmonic partials, ringing out.

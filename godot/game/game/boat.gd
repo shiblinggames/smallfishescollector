@@ -170,6 +170,7 @@ func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float
 	_ship = null
 	if animate:
 		_bloom(Color(1.0, 0.8, 0.45) if on else Color(0.45, 0.82, 1.0))
+		_spray(on)
 		_swap_tw = create_tween().set_parallel()
 	# What she leaves: faded down into the water.
 	if on:
@@ -253,6 +254,44 @@ func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float
 
 
 ## A pool of light blooming under her and fading, for the crossing.
+## The sea thrown up either side as one hull goes down and the other comes
+## up: white water off the beam, arching and falling back.
+func _spray(big: bool) -> void:
+	for side: float in [-1.0, 1.0]:
+		var p: CPUParticles2D = CPUParticles2D.new()
+		p.one_shot = true
+		p.emitting = false
+		p.amount = 46 if big else 30
+		p.lifetime = 0.95
+		p.explosiveness = 0.85
+		p.texture = Glow.radial(32, Color(1, 1, 1), false)
+		p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+		p.emission_rect_extents = Vector2(120.0 if big else 70.0, 6.0)
+		p.position = Vector2(side * (60.0 if big else 30.0), -4.0)
+		p.direction = Vector2(side * 0.55, -1.0).normalized()
+		p.spread = 26.0
+		p.initial_velocity_min = 260.0 if big else 190.0
+		p.initial_velocity_max = 480.0 if big else 330.0
+		p.gravity = Vector2(0, 1500.0)
+		p.damping_min = 40.0
+		p.damping_max = 90.0
+		p.scale_amount_min = 0.35
+		p.scale_amount_max = 0.95
+		var ramp: Gradient = Gradient.new()
+		ramp.set_color(0, Color(1, 1, 1, 0.85))
+		ramp.set_color(1, Color(0.85, 0.95, 1.0, 0.0))
+		p.color_ramp = ramp
+		var sc: Curve = Curve.new()
+		sc.add_point(Vector2(0, 0.6))
+		sc.add_point(Vector2(0.3, 1.0))
+		sc.add_point(Vector2(1, 0.4))
+		p.scale_amount_curve = sc
+		p.z_index = 2
+		add_child(p)
+		p.emitting = true
+		p.finished.connect(p.queue_free)
+
+
 func _bloom(col: Color) -> void:
 	var l: PointLight2D = PointLight2D.new()
 	l.texture = Glow.radial(256, col, true)

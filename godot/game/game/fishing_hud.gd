@@ -501,6 +501,20 @@ func side_banner(title: String, line: String) -> void:
 	t.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 	t.add_theme_constant_override("shadow_outline_size", 14)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# The letters draw together from wide apart as it arrives.
+	var fv: FontVariation = FontVariation.new()
+	fv.base_font = t.get_theme_font("font")
+	fv.spacing_glyph = 16
+	t.add_theme_font_override("font", fv)
+	# An ink rule run out under it from the middle.
+	var mid: CenterContainer = CenterContainer.new()
+	mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(mid)
+	var rule: ColorRect = ColorRect.new()
+	rule.color = Color(0.98, 0.84, 0.55, 0.85)
+	rule.custom_minimum_size = Vector2(0, 2)
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mid.add_child(rule)
 	var l: Label = Kit.lift(Kit.text(v, line, "eyebrow", Color(0.98, 0.84, 0.55)))
 	l.add_theme_font_size_override("font_size", 14)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -510,6 +524,8 @@ func side_banner(title: String, line: String) -> void:
 	tw.set_parallel()
 	tw.tween_property(v, "modulate:a", 1.0, 0.45).set_delay(0.2)
 	tw.tween_property(v, "position:y", v.position.y - 14.0, 0.6).set_delay(0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_method(func(g: float) -> void: fv.spacing_glyph = int(round(g)), 16.0, 1.0, 1.1).set_delay(0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(rule, "custom_minimum_size:x", 300.0, 0.8).set_delay(0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.chain().tween_interval(1.6)
 	tw.chain().tween_property(v, "modulate:a", 0.0, 0.7)
 	tw.chain().tween_callback(v.queue_free)

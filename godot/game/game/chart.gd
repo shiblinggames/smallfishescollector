@@ -93,6 +93,8 @@ static var WATERS: Array[Dictionary] = [
 	{ "id": "ancient_deep", "name": "The Ancient Deep", "blurb": "Giants, and worse", "inner": 16000.0, "outer": 22600.0, "sea": ["#07101a", "#16202f", "#31363f"] },
 ]
 const OPEN_SEA: Array[String] = ["#0b1a24", "#1c3a48", "#4a6f7d"]
+## North of the reef: deeper and greener slate, the expedition side's water.
+const ANCHORAGE_SEA: Array[String] = ["#0a171b", "#1a3438", "#3f6262"]
 static var LAST_OUTER: float = 22600.0
 static var SHELF: Vector2 = Vector2(1400.0, 22600.0)
 static var _widened: bool = false
@@ -130,7 +132,11 @@ static func sea_at(p: Vector2, darkness: float) -> Array[Color]:
 	for k: int in 3:
 		acc.append(Color(OPEN_SEA[k]) * 0.18)
 	var r: float = minf(p.length(), LAST_OUTER)
-	var south: float = 1.0 if p.y > 0 else maxf(0.0, 1.0 + p.y / 700.0)
+	# The fishing sea's colours run right up to the reef; through the arch's
+	# passage they give way to the anchorage's own slate (the crossing).
+	var past: float = clampf((Explore.NORTH_WALL + 320.0 - p.y) / 640.0, 0.0, 1.0)
+	past = past * past * (3.0 - 2.0 * past)
+	var south: float = 1.0 - past
 	for w: Dictionary in WATERS:
 		var mid: float = (float(w["inner"]) + float(w["outer"])) / 2.0
 		var half: float = maxf(1.0, (float(w["outer"]) - float(w["inner"])) / 2.0)
@@ -143,7 +149,7 @@ static func sea_at(p: Vector2, darkness: float) -> Array[Color]:
 	var out: Array[Color] = []
 	var night: Color = Color8(6, 11, 22)
 	for k: int in 3:
-		var c: Color = acc[k] / w_sum
+		var c: Color = (acc[k] / w_sum).lerp(Color(ANCHORAGE_SEA[k]), past)
 		c.a = 1.0
 		out.append(c.lerp(night, darkness * 0.78))
 	return out
