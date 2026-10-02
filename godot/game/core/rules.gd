@@ -80,7 +80,24 @@ const STREAK_RECORD_CEILING: float = 45.0
 
 
 static func streak_level_scale(fishing_level: float) -> float:
-	return STREAK_LEVEL_FLOOR + (1.0 - STREAK_LEVEL_FLOOR) * (minf(maxf(fishing_level, 1.0), 100.0) / 100.0)
+	return STREAK_LEVEL_FLOOR + (1.0 - STREAK_LEVEL_FLOOR) * (minf(maxf(_milestone_level(fishing_level), 1.0), 100.0) / 100.0)
+
+
+## The level a stat reads (the port's rules: the last milestone reached, so
+## the gains come in steps; the web: the level itself).
+static func _milestone_level(fishing_level: float) -> float:
+	var m: float = Js.num(data().get("statMilestone"))
+	if m <= 0.0:
+		return fishing_level
+	return maxf(1.0, floor(fishing_level / m) * m)
+
+
+## The catch zone a level gives, in degrees (the web: one every five levels).
+static func level_catch_bonus(fishing_level: float) -> float:
+	var m: float = Js.num(data().get("statMilestone"))
+	if m <= 0.0:
+		return floor(fishing_level * 0.2)
+	return floor(fishing_level / m) * m * 0.2
 
 
 static func streak_mult(streak: float, fishing_level: float) -> float:

@@ -850,7 +850,7 @@ func _zones_for(rod: Dictionary, bait_id: String) -> Array:
 	var p: Dictionary = session.profile()
 	var lines: Array = Rules.data()["lines"]
 	var line: Dictionary = lines[clampi(int(Js.num(p.get("line_tier"))), 0, lines.size() - 1)]
-	var level_bonus: float = floor(float(session.level()) * 0.2) + Js.num(Rules.bait(bait_id).get("catchZoneBonus")) + Js.num(rod.get("catchZoneBonus"))
+	var level_bonus: float = Rules.level_catch_bonus(float(session.level())) + Js.num(Rules.bait(bait_id).get("catchZoneBonus")) + Js.num(rod.get("catchZoneBonus"))
 	return Dial.build_zones(3.0, Js.num(p.get("hook_tier")), float(line["penaltyMultiplier"]), 1.0, level_bonus, Js.num(rod.get("perfectZoneBonus")) + 1.0)
 
 

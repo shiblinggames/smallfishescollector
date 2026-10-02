@@ -969,7 +969,7 @@ func _zones(breath: float = 0.0) -> Array:
 	var diff: float = float(_shot["catchDifficulty"])
 	var zd: Dictionary = (Rules.data()["dial"]["zoneDifficulty"] as Dictionary).get(_cast_zone, {})
 	var zones: Array = Dial.build_zones(diff, _mods["hook"], _mods["line"], float(zd.get("catchMultiplier", 1.0)),
-		floor(float(_mods["level"]) * 0.2) + float(_mods["baitCatch"]) + float(_mods["rodCatch"]) - breath, float(_mods["rodPerfect"]) + 1.0)
+		Rules.level_catch_bonus(float(_mods["level"])) + float(_mods["baitCatch"]) + float(_mods["rodCatch"]) - breath, float(_mods["rodPerfect"]) + 1.0)
 	if _boss.is_empty():
 		return zones
 	var shrink: float = breath if _boss["mechanic"] == "shrink" else float(_boss["shrink"])

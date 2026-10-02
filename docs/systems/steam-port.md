@@ -498,6 +498,11 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the strike so the fight plays in view. ZOOM: Sea.ZOOM_DEFAULT 0.87 is the default and
   reads 100%. THE LINE IN THE FIGHT: the fish pulls at 6.5 Hz not 16, no hum, harder damping
   when held, and the hook is reeled up to where it hangs over 0.5 s before being let go.
+- STAT MILESTONES (Kong): port_rules statMilestone 10. Rules.level_catch_bonus gives the
+  catch zone in steps (+2 degrees at 10, 20 ... 100; the web's floor(level*0.2) otherwise)
+  and Rules.streak_level_scale reads the last milestone, so the full-streak ceiling steps
+  (x1.37 at 10 ... x1.80 at 100). Totals at 100 unchanged; a captain between milestones
+  holds the last one's value. The level-up's Stronger lines follow.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

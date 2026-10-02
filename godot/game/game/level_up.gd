@@ -106,9 +106,9 @@ func _ready() -> void:
 static func gains(from: int, to: int) -> Array:
 	var out: Array = []
 	var d: Dictionary = Rules.data()
-	var cz: int = int(floor(to * 0.2)) - int(floor(from * 0.2))
+	var cz: int = int(Rules.level_catch_bonus(to)) - int(Rules.level_catch_bonus(from))
 	if cz > 0:
-		out.append(["Stronger", "Catch zone +%d° (%d° from your level now)" % [cz, int(floor(to * 0.2))]])
+		out.append(["Stronger", "Catch zone +%d° (%d° from your level now)" % [cz, int(Rules.level_catch_bonus(to))]])
 	var s0: float = Rules.streak_mult(10.0, float(from))
 	var s1: float = Rules.streak_mult(10.0, float(to))
 	if "%.2f" % s1 != "%.2f" % s0:

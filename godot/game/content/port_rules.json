@@ -1155,5 +1155,7 @@
     "25": {
       "hull_speed_tier": 2
     }
-  }
+  },
+  "statMilestone": 10,
+  "_milestones": "Fishing's stat gains land at milestones (Kong, 2026-10-01): every 10 levels the catch zone grows 2 degrees and the perfect streak's ceiling takes one step, instead of a degree every 5 levels and a hair every level. The totals at 100 are the web's."
 }
