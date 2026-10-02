@@ -686,7 +686,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Map caskets 25% a Bill; Last Will caskets always a Bill and 10% a Proclamation; gold and
   diamond crates 3% a Bill; ancient crates 5% a Bill and 1% a Proclamation. The legendary
   campaign gate still applies (only Catfish and Doby Mick until the campaign is ported).
-  tests/notice_check.gd holds the rates over 20,000 boards each. The northern islands (Crew Hall,
+  tests/notice_check.gd holds the rates over 20,000 boards each.
+- TWO PAPERS (Kong, 2026-10-02: "everything in the anchorage and the expeditions should have a
+  darker paper theme, to separate the two"). Fishing's menus keep the day's tea-stained sheet.
+  The expedition side (the Crew Hall and everything north of the reef from here on) is the
+  NIGHT PAPER: a tarred chart, warm-black (Paper.NIGHT_PAPER), cream ink, brass for what is
+  chosen, dark buttons. A screen sets Paper.night while it builds and unsets it after; the
+  sheet, buttons, rules and stats read it, and its own text uses Paper.ink() / ink_soft() /
+  ink_faint() / red(). Rarity and class colours are lightened on it rather than darkened. The northern islands (Crew Hall,
   Posting House, Forge, Gunwharf, Charterhouse) were already drawn; mooring now opens a paper
   sheet of what each will hold (North.COMING) until their rooms are ported. THE WORLD
   CHART centres on the crossing (WorldMap.WORLD_CENTRE, Kong: "the centre of the world is the

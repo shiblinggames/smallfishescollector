@@ -19,7 +19,39 @@ const WOOD: Color = Color(0.42, 0.28, 0.17)
 ## The rarity pigments: the kit's rarity hues, as watercolour on paper.
 const RARITY: Array[Color] = [Color(0.52, 0.56, 0.6), Color(0.3, 0.6, 0.38), Color(0.28, 0.48, 0.74), Color(0.55, 0.36, 0.72), Color(0.84, 0.56, 0.16)]
 
+## THE NIGHT PAPER (Kong, 2026-10-02: "everything in the anchorage and the
+## expeditions should have a darker paper, to separate the two"). Fishing's
+## menus keep the day's tea-stained sheet; the expedition side (the Crew Hall,
+## the recruits, everything north of the reef) is a tarred chart: dark,
+## warm-black paper, cream ink, brass for what is chosen. A screen sets
+## Paper.night while it builds (and unsets it after); the sheet, the buttons,
+## the rules and the stats read it.
+static var night: bool = false
+const NIGHT_PAPER: Color = Color(0.19, 0.155, 0.13)
+const NIGHT_INK: Color = Color(0.94, 0.88, 0.77)
+const NIGHT_INK_SOFT: Color = Color(0.76, 0.69, 0.59)
+const NIGHT_INK_FAINT: Color = Color(0.56, 0.5, 0.43)
+const BRASS: Color = Color(0.86, 0.66, 0.34)
+const NIGHT_RED: Color = Color(0.93, 0.45, 0.33)
+
 static var _mat_cache: Shader
+
+
+## The inks for whichever paper is being built on.
+static func ink() -> Color:
+	return NIGHT_INK if night else INK
+
+
+static func ink_soft() -> Color:
+	return NIGHT_INK_SOFT if night else INK_SOFT
+
+
+static func ink_faint() -> Color:
+	return NIGHT_INK_FAINT if night else INK_FAINT
+
+
+static func red() -> Color:
+	return NIGHT_RED if night else RED
 
 
 static func rarity(r: float) -> Color:
@@ -34,6 +66,8 @@ static func _shader() -> Shader:
 
 ## A sheet of paper filling its parent (or sized by the caller).
 static func sheet(parent: Control, deckle: float = 7.0, stain: float = 1.0, tint: Color = PAPER) -> ColorRect:
+	if night and tint == PAPER:
+		tint = NIGHT_PAPER
 	var r: ColorRect = ColorRect.new()
 	r.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -63,15 +97,17 @@ static func text(parent: Node, t: String, role: String, col: Color = INK, wrap: 
 
 ## A button of paper (or, on, of stained wood) with inked capitals.
 static func button(label: String, on: bool = false) -> Pane.PaneButton:
-	var n: Dictionary = { "radius": 9, "fill": [Color(0.55, 0.36, 0.2, 0.9) if on else Color(Kit.PAPER, 0.97)], "border": [1, Color(INK, 0.5)], "shadow": [Color(0, 0, 0, 0.16), 6, Vector2(0, 2)], "pad": [12, 6, 12, 7] }
+	var face: Color = Color(0.27, 0.22, 0.18, 0.97) if night else Color(Kit.PAPER, 0.97)
+	var lit: Color = Color(0.62, 0.45, 0.22, 0.95) if night else Color(0.55, 0.36, 0.2, 0.9)
+	var n: Dictionary = { "radius": 9, "fill": [lit if on else face], "border": [1, Color(ink(), 0.4 if night else 0.5)], "shadow": [Color(0, 0, 0, 0.3 if night else 0.16), 6, Vector2(0, 2)], "pad": [12, 6, 12, 7] }
 	var hv: Dictionary = n.duplicate()
-	hv["fill"] = [Color(0.62, 0.42, 0.24, 0.95) if on else Kit.PAPER.lightened(0.1)]
-	hv["border"] = [1, Color(INK, 0.8)]
+	hv["fill"] = [(lit.lightened(0.1) if on else face.lightened(0.12)) if night else (Color(0.62, 0.42, 0.24, 0.95) if on else Kit.PAPER.lightened(0.1))]
+	hv["border"] = [1, Color(ink(), 0.8)]
 	var b: Pane.PaneButton = Pane.PaneButton.new(n, hv)
 	b.text = label.to_upper()
 	b.add_theme_font_override("font", Kit.tracked("karla", 700, 11, 0.08))
 	b.add_theme_font_size_override("font_size", 11)
-	var c: Color = Color(0.98, 0.94, 0.86) if on else INK
+	var c: Color = Color(0.98, 0.94, 0.86) if on else ink()
 	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		b.add_theme_color_override(st, c)
 	b.add_theme_color_override("font_disabled_color", Color(c, 0.4))
@@ -86,23 +122,26 @@ static func rule(parent: Control) -> Control:
 	var c: Control = Control.new()
 	c.custom_minimum_size = Vector2(0, 8)
 	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var line: Color = Color(ink(), 0.3)
 	c.draw.connect(func() -> void:
 		var w: float = c.size.x
 		var pts: PackedVector2Array = PackedVector2Array()
 		for i: int in 25:
 			var x: float = w * i / 24.0
 			pts.append(Vector2(x, 4.0 + sin(i * 1.7) * 0.5))
-		c.draw_polyline(pts, Color(INK, 0.3), 1.0, true))
+		c.draw_polyline(pts, line, 1.0, true))
 	parent.add_child(c)
 	return c
 
 
 ## A label and a value on one line, in ink.
 static func stat(parent: Node, label: String, value: String, tone: Color = INK) -> HBoxContainer:
+	if night and tone == INK:
+		tone = NIGHT_INK
 	var h: HBoxContainer = HBoxContainer.new()
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(h)
-	var l: Label = text(h, label, "small", INK_SOFT)
+	var l: Label = text(h, label, "small", ink_soft())
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text(h, value, "value", tone)
 	return h

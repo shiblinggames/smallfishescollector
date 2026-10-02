@@ -32,6 +32,8 @@ var _busy: bool = false
 
 
 func _ready() -> void:
+	# The expedition side's paper (Paper.night): dark, cream ink, brass.
+	Paper.night = true
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
@@ -68,8 +70,8 @@ func _ready() -> void:
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	titles.add_theme_constant_override("separation", 0)
 	head.add_child(titles)
-	Paper.text(titles, "The Crew Hall", "display", Paper.INK)
-	_head_note = Paper.text(titles, "", "note", Paper.INK_SOFT)
+	Paper.text(titles, "The Crew Hall", "display", Paper.ink())
+	_head_note = Paper.text(titles, "", "note", Paper.ink_soft())
 	var x: Pane.PaneButton = Paper.button("Close  Esc")
 	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	x.pressed.connect(close)
@@ -92,6 +94,7 @@ func _ready() -> void:
 	split.add_child(_detail)
 	sheet.modulate.a = 0.0
 	create_tween().tween_property(sheet, "modulate:a", 1.0, 0.2)
+	Paper.night = false
 	_load()
 
 
@@ -134,7 +137,7 @@ func _act(op: String, args: Array) -> Dictionary:
 
 func _note(text: String) -> void:
 	_head_note.text = text
-	_head_note.add_theme_color_override("font_color", Paper.RED)
+	_head_note.add_theme_color_override("font_color", Paper.NIGHT_RED)
 	var tw: Tween = create_tween()
 	tw.tween_interval(2.6)
 	tw.tween_callback(func() -> void:
@@ -150,6 +153,12 @@ func _head_line() -> void:
 # ── Rooms ──────────────────────────────────────────────────────────────────────
 
 func _draw_room() -> void:
+	Paper.night = true
+	_build_room()
+	Paper.night = false
+
+
+func _build_room() -> void:
 	_head_line()
 	for c: Node in _tabs.get_children():
 		c.queue_free()
@@ -176,7 +185,7 @@ func _draw_room() -> void:
 
 func _recruit_room() -> void:
 	var every: float = Js.num(Crew.port().get("boardEveryMs"))
-	Paper.text(_body, "Hands looking for a ship. Sign on whoever you want aboard; %s." % ("new hopefuls come in at sunrise each sea day" if every > 0.0 else "the board fills again each day"), "note", Paper.INK_SOFT, true)
+	Paper.text(_body, "Hands looking for a ship. Sign on whoever you want aboard; %s." % ("new hopefuls come in at sunrise each sea day" if every > 0.0 else "the board fills again each day"), "note", Paper.ink_soft(), true)
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 12)
@@ -194,8 +203,8 @@ func _notices_row() -> void:
 	if defs.is_empty():
 		return
 	Paper.rule(_body)
-	Paper.text(_body, "Post a notice", "eyebrow", Paper.INK_SOFT)
-	Paper.text(_body, "The board each sunrise is the Tavern Notice: mostly commons and rares, an Epic now and then, never a Legendary. A posted notice replaces the board standing with a fresh one at its own odds. Notices are found in treasure-hunt caskets and fishing crates.", "note", Paper.INK_SOFT, true)
+	Paper.text(_body, "Post a notice", "eyebrow", Paper.ink_soft())
+	Paper.text(_body, "The board each sunrise is the Tavern Notice: mostly commons and rares, an Epic now and then, never a Legendary. A posted notice replaces the board standing with a fresh one at its own odds. Notices are found in treasure-hunt caskets and fishing crates.", "note", Paper.ink_soft(), true)
 	var held: Dictionary = Js.obj(_state.get("notices"))
 	for id: Variant in defs:
 		var d: Dictionary = defs[id]
@@ -207,8 +216,8 @@ func _notices_row() -> void:
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.add_theme_constant_override("separation", 0)
 		row.add_child(v)
-		Paper.text(v, "%s  ·  %d held" % [d["name"], n], "body_strong", Paper.INK if n > 0 else Paper.INK_FAINT)
-		Paper.text(v, str(d["blurb"]), "small", Paper.INK_SOFT, true)
+		Paper.text(v, "%s  ·  %d held" % [d["name"], n], "body_strong", Paper.ink() if n > 0 else Paper.ink_faint())
+		Paper.text(v, str(d["blurb"]), "small", Paper.ink_soft(), true)
 		var b: Pane.PaneButton = Paper.button("Post it", n > 0)
 		b.disabled = n <= 0
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -228,7 +237,7 @@ func _notices_row() -> void:
 func _roster_room() -> void:
 	var roster: Array = Js.list(_state.get("roster"))
 	if roster.is_empty():
-		Paper.text(_body, "Nobody aboard yet. Sign someone on from the Recruit board.", "note", Paper.INK_SOFT, true)
+		Paper.text(_body, "Nobody aboard yet. Sign someone on from the Recruit board.", "note", Paper.ink_soft(), true)
 		return
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -259,9 +268,9 @@ func _hall_room() -> void:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 4)
 	row.add_child(v)
-	Paper.text(v, "Tier %d of 6" % tier, "eyebrow", Paper.INK_SOFT)
-	Paper.text(v, str(def["name"]), "title", Color(def["accent"]).darkened(0.45))
-	Paper.text(v, str(def["flavor"]), "note", Paper.INK_SOFT, true)
+	Paper.text(v, "Tier %d of 6" % tier, "eyebrow", Paper.ink_soft())
+	Paper.text(v, str(def["name"]), "title", Color(def["accent"]))
+	Paper.text(v, str(def["flavor"]), "note", Paper.ink_soft(), true)
 	var cap: Dictionary = Rules.data()["crew"]["capacity"]
 	Paper.stat(v, "Roster", "%d of %d" % [Js.list(_state.get("roster")).size(), int(Js.num(_state.get("capacity")))])
 	Paper.stat(v, "From the hall", "+%d" % ((tier - 1) * int(cap["perHallTier"])))
@@ -270,12 +279,12 @@ func _hall_room() -> void:
 	Paper.rule(_body)
 	var nxt: Dictionary = Crew.next_hall(tier)
 	if nxt.is_empty():
-		Paper.text(_body, "The hall is built as far as it goes.", "body_strong", Paper.INK)
+		Paper.text(_body, "The hall is built as far as it goes.", "body_strong", Paper.ink())
 		return
-	Paper.text(_body, "Next: %s" % nxt["name"], "heading", Paper.INK)
-	Paper.text(_body, str(nxt["flavor"]), "note", Paper.INK_SOFT, true)
+	Paper.text(_body, "Next: %s" % nxt["name"], "heading", Paper.ink())
+	Paper.text(_body, str(nxt["flavor"]), "note", Paper.ink_soft(), true)
 	var gate_name: String = "Fishing" if Crew.port().get("navFromFishing") == true else "Navigation"
-	Paper.text(_body, "+%d roster, a bunk more  ·  needs %s %d  ·  %s ⟡" % [int(cap["perHallTier"]), gate_name, int(nxt["minNav"]), Js.thousands(float(nxt["cost"]))], "body_strong", Paper.INK)
+	Paper.text(_body, "+%d roster, a bunk more  ·  needs %s %d  ·  %s ⟡" % [int(cap["perHallTier"]), gate_name, int(nxt["minNav"]), Js.thousands(float(nxt["cost"]))], "body_strong", Paper.ink())
 	var ok: bool = Js.num(_state.get("navLevel")) >= float(nxt["minNav"]) and Js.num(_state.get("doubloons")) >= float(nxt["cost"])
 	var b: Pane.PaneButton = Paper.button("Build the %s  ·  %s ⟡" % [nxt["name"], Js.thousands(float(nxt["cost"]))], true)
 	b.disabled = not ok
@@ -327,14 +336,14 @@ func _card(c: Dictionary, kind: String) -> Control:
 		var ring: Panel = Panel.new()
 		var sb: StyleBoxFlat = StyleBoxFlat.new()
 		sb.bg_color = Color(0, 0, 0, 0)
-		sb.border_color = Paper.RED
+		sb.border_color = Paper.red()
 		sb.set_border_width_all(2)
 		sb.set_corner_radius_all(10)
 		ring.add_theme_stylebox_override("panel", sb)
 		ring.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		holder.add_child(ring)
-	var name_l: Label = Paper.text(v, str(c.get("name", "")), "name", Paper.INK)
+	var name_l: Label = Paper.text(v, str(c.get("name", "")), "name", Paper.ink())
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_l.clip_text = true
 	var cls: Dictionary = Crew.class_of(str(c.get("slug", "")))
@@ -347,12 +356,12 @@ func _card(c: Dictionary, kind: String) -> Control:
 		bits.append(RARITY_NAMES[rar - 1])
 	if not cls.is_empty():
 		bits.append(str(cls["name"]))
-	var sub: Label = Paper.text(v, "  ·  ".join(PackedStringArray(bits)) if not (kind == "board" and c.get("recruited") == true) else "Aboard", "small", rc.darkened(0.35))
+	var sub: Label = Paper.text(v, "  ·  ".join(PackedStringArray(bits)) if not (kind == "board" and c.get("recruited") == true) else "Aboard", "small", rc.lightened(0.15))
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.clip_text = true
 	sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var tl: String = Crew.trait_label(Js.list(c.get("effects")))
-	var tr: Label = Paper.text(v, tl if tl != "" else " ", "small", Paper.INK_SOFT)
+	var tr: Label = Paper.text(v, tl if tl != "" else " ", "small", Paper.ink_soft())
 	tr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.pressed.connect(func() -> void:
 		_pick = c
@@ -369,7 +378,7 @@ func _draw_detail() -> void:
 		c.queue_free()
 	_detail.visible = room != "hall"
 	if _pick.is_empty():
-		Paper.text(_detail, "Press a card to see the hand.", "note", Paper.INK_FAINT, true)
+		Paper.text(_detail, "Press a card to see the hand.", "note", Paper.ink_faint(), true)
 		return
 	var c: Dictionary = _pick
 	var rar: int = clampi(int(Js.num(c.get("rarity"))), 1, 4)
@@ -384,12 +393,12 @@ func _draw_detail() -> void:
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	holder.add_child(pic)
-	Paper.text(_detail, str(c.get("name", "")), "title", Paper.INK)
+	Paper.text(_detail, str(c.get("name", "")), "title", Paper.ink())
 	var cls: Dictionary = Crew.class_of(str(c.get("slug", "")))
-	Paper.text(_detail, "%s%s" % [RARITY_NAMES[rar - 1], ("  ·  " + str(cls["name"])) if not cls.is_empty() else ""], "body_strong", rc.darkened(0.35))
+	Paper.text(_detail, "%s%s" % [RARITY_NAMES[rar - 1], ("  ·  " + str(cls["name"])) if not cls.is_empty() else ""], "body_strong", rc.lightened(0.15))
 	if _pick_kind == "roster":
 		var lv: int = Crew.level(Js.num(c.get("xp")))
-		Paper.text(_detail, "Level %d  ·  %s XP" % [lv, Js.thousands(Js.num(c.get("xp")))], "note", Paper.INK_SOFT)
+		Paper.text(_detail, "Level %d  ·  %s XP" % [lv, Js.thousands(Js.num(c.get("xp")))], "note", Paper.ink_soft())
 	var stats: HBoxContainer = HBoxContainer.new()
 	stats.add_theme_constant_override("separation", 18)
 	_detail.add_child(stats)
@@ -397,8 +406,8 @@ func _draw_detail() -> void:
 		var sv: VBoxContainer = VBoxContainer.new()
 		sv.add_theme_constant_override("separation", 0)
 		stats.add_child(sv)
-		Paper.text(sv, s[0], "eyebrow", Paper.INK_SOFT)
-		Paper.text(sv, str(int(Js.num(c.get(s[1])))), "heading", Paper.INK)
+		Paper.text(sv, s[0], "eyebrow", Paper.ink_soft())
+		Paper.text(sv, str(int(Js.num(c.get(s[1])))), "heading", Paper.ink())
 	var tl: String = Crew.trait_label(Js.list(c.get("effects")))
 	if tl != "":
 		var trip: String = ""
@@ -406,9 +415,9 @@ func _draw_detail() -> void:
 			if str(e).begins_with("s:"):
 				var parts: PackedStringArray = str(e).substr(2).split(",")
 				trip = "Power %+d, Dodge %+d, Fortune %+d" % [int(parts[0]), int(parts[1]), int(parts[2])]
-		Paper.text(_detail, "Trait: %s  (%s)" % [tl, trip], "small", Paper.INK, true)
+		Paper.text(_detail, "Trait: %s  (%s)" % [tl, trip], "small", Paper.ink(), true)
 	if not cls.is_empty():
-		Paper.text(_detail, str(cls["blurb"]), "note", Paper.INK_SOFT, true)
+		Paper.text(_detail, str(cls["blurb"]), "note", Paper.ink_soft(), true)
 		var lvl: int = Crew.level(Js.num(c.get("xp"))) if _pick_kind == "roster" else 1
 		var ms: Array = cls["milestones"]
 		var now_m: Dictionary = {}
@@ -420,7 +429,7 @@ func _draw_detail() -> void:
 	Paper.rule(_detail)
 	if _pick_kind == "board":
 		if c.get("recruited") == true:
-			Paper.text(_detail, "Already aboard.", "note", Paper.INK_SOFT)
+			Paper.text(_detail, "Already aboard.", "note", Paper.ink_soft())
 		else:
 			var sign: Pane.PaneButton = Paper.button("Sign on", true)
 			sign.pressed.connect(func() -> void:
@@ -439,6 +448,17 @@ func _draw_detail() -> void:
 			field.placeholder_text = "Give them a name (once)"
 			field.max_length = 30
 			field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var fsb: StyleBoxFlat = StyleBoxFlat.new()
+			fsb.bg_color = Color(0.13, 0.105, 0.09)
+			fsb.border_color = Color(Paper.NIGHT_INK, 0.35)
+			fsb.set_border_width_all(1)
+			fsb.set_corner_radius_all(6)
+			fsb.content_margin_left = 10
+			fsb.content_margin_right = 10
+			for st: String in ["normal", "focus"]:
+				field.add_theme_stylebox_override(st, fsb)
+			field.add_theme_color_override("font_color", Paper.NIGHT_INK)
+			field.add_theme_color_override("font_placeholder_color", Paper.NIGHT_INK_FAINT)
 			row.add_child(field)
 			var nb: Pane.PaneButton = Paper.button("Name")
 			nb.pressed.connect(func() -> void:
@@ -463,7 +483,7 @@ func _draw_detail() -> void:
 
 
 static func cls_color(cls: Dictionary) -> Color:
-	return Color(str(cls.get("color", "#555555"))).darkened(0.35)
+	return Color(str(cls.get("color", "#555555"))).lightened(0.1)
 
 
 ## SIGNING ON IS A MOMENT (the web's SignOnMoment): the name blooms up in
