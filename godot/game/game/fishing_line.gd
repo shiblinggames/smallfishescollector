@@ -60,6 +60,14 @@ func _ends() -> Dictionary:
 	match frame:
 		"rest":
 			var rest_end: Vector2 = to_global(_sheet(PTS["rest"][1]))
+			# Reeled up: the hook is drawn in to where it hangs over half a
+			# second, held all the way, and only then let go, so it does not
+			# fly about when the line comes out of the water.
+			if skipper.line_from != null and t < 0.5:
+				var k: float = t / 0.5
+				k = k * k * (3.0 - 2.0 * k)
+				var held_at: Vector2 = (skipper.line_from as Vector2).lerp(rest_end, k)
+				return { "tip": tip, "len": tip.distance_to(held_at) * 1.02, "held": held_at }
 			return { "tip": tip, "len": tip.distance_to(rest_end), "held": null }
 		"cast":
 			var water: Vector2 = to_global(skipper.sheet_point("wait", PTS["wait"][1]))
@@ -72,7 +80,7 @@ func _ends() -> Dictionary:
 		_:
 			if skipper.line_target != null:
 				var to: Vector2 = skipper.line_target
-				return { "tip": tip, "len": tip.distance_to(to) * (1.0 + 0.4 * skipper.line_slack), "held": to }
+				return { "tip": tip, "len": tip.distance_to(to) * (1.01 + 0.4 * skipper.line_slack), "held": to }
 			var end: Vector2 = to_global(_sheet(PTS["wait"][1]))
 			if skipper.line_dip_t >= 0.0:
 				var d: float = (now - skipper.line_dip_t) / 0.24
@@ -106,7 +114,7 @@ func _step(dt: float) -> void:
 	# Move: carry on as last frame (damped), and fall.
 	for n: int in range(1, NODES):
 		# Damped harder while the far end is held, so slack settles fast.
-		var v: Vector2 = (pts[n] - prev[n]) * (0.93 if e["held"] != null else 0.975)
+		var v: Vector2 = (pts[n] - prev[n]) * (0.86 if e["held"] != null else 0.96)
 		prev[n] = pts[n]
 		var weight: float = 2.2 if n == NODES - 1 else 1.0
 		pts[n] = pts[n] + v + g * weight * dt * dt
@@ -150,14 +158,8 @@ func _draw() -> void:
 	if pts.size() != NODES:
 		return
 	var local: PackedVector2Array = PackedVector2Array()
-	var taut: bool = skipper.line_target != null and skipper.line_slack < 0.1 and skipper.frame == "wait"
 	for n: int in NODES:
-		var q: Vector2 = to_local(pts[n])
-		if taut:
-			# Taut, it hums.
-			var u: float = float(n) / (NODES - 1)
-			q.y += sin(u * PI) * sin(now * 46.0) * 1.2
-		local.append(q)
+		local.append(to_local(pts[n]))
 	# On the water it is a hair; in a small portrait it has to be drawn
 	# thicker or it vanishes when the picture is shrunk.
 	draw_polyline(local, INK, WIDTH if skipper.water else 1.4 * maxf(1.0, skipper.box_scale), true)

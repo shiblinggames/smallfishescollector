@@ -99,11 +99,12 @@ func _process(delta: float) -> void:
 			# Drawn in: slow against the pull at first, then coming, twisting.
 			var e: float = k * k * (3.0 - 2.0 * k)
 			var side: Vector2 = (_to - _from_dir()).orthogonal().normalized()
-			var wob: Vector2 = side * sin(_t * 16.0) * 16.0 * (1.0 - e)
+			# It pulls side to side against the line, slowly enough to read.
+			var wob: Vector2 = side * sin(_t * 6.5) * 11.0 * (1.0 - e)
 			var fish: Vector2 = _at.lerp(_to, e * 0.85) + wob
 			if _leaper == null:
 				_shadow.position = fish
-				var dir: Vector2 = (_to - _at).normalized() + side * cos(_t * 16.0) * 0.6
+				var dir: Vector2 = (_to - _at).normalized() + side * cos(_t * 6.5) * 0.5
 				_shadow.flip_h = dir.x < 0.0
 				_shadow.rotation = (dir.angle() + PI if dir.x < 0.0 else dir.angle()) * 0.6
 				_shadow.scale = Vector2(_sc, _sc) * (0.8 + 0.3 * e)
@@ -116,7 +117,7 @@ func _process(delta: float) -> void:
 			if _boil_t <= 0.0 and boat.field != null and _leaper == null:
 				_boil_t = 0.08
 				boat.field.ring(fish, 18.0 + 12.0 * e, 0.6, 0.4 + 0.2 * e)
-			_nod(sin(_t * 16.0) * 0.03 * (1.0 - e) - 0.04 * (1.0 - e))
+			_nod(sin(_t * 6.5) * 0.02 * (1.0 - e) - 0.04 * (1.0 - e))
 			if result == "perfect" and k > 0.55 and _leaper == null:
 				_leap(fish)
 		"miss":

@@ -199,7 +199,7 @@ func _ready() -> void:
 	# ONE ROW (Kong, 2026-10-01): the bait on the line (a press puts on the
 	# next one; Q for the wheel), the Locker (gear, hold, crates, log: I), and
 	# the hold (a press opens it in the Locker).
-	_place(bottom, Vector2(0.5, 1.0), Vector2(-300, -72), Vector2(600, 54))
+	_place(bottom, Vector2(0.5, 1.0), Vector2(-380, -72), Vector2(760, 54))
 	add_child(bottom)
 	var bv: Array = _menu(bottom, "Bait", _toggle_bait_picker)
 	_m_bait = bv[0]
@@ -222,8 +222,23 @@ func _ready() -> void:
 	_action.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
 	_action.pressed.connect(_act)
 	# Lettered on the water under the boat (below the waiting cues).
-	_place(_action, Vector2(0.5, 0.5), Vector2(-220, 124), Vector2(440, 52))
+	_place(_action, Vector2(0.5, 0.5), Vector2(-220, 150), Vector2(440, 52))
 	add_child(_action)
+	var gv: Array = _menu(bottom, "Log", _open_log)
+	_m_log = gv[0]
+	_log_val = gv[1]
+	_log_val.text = "Catches"
+	_log_dot_c = Control.new()
+	_log_dot_c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_log_dot_c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_log_dot_c.draw.connect(func() -> void:
+		if _log_dot:
+			var p: Vector2 = Vector2(_log_dot_c.size.x - 14.0, 12.0)
+			var pulse: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 260.0)
+			_log_dot_c.draw_circle(p, 7.0 + pulse * 2.0, Color(0.85, 0.3, 0.2, 0.25))
+			_log_dot_c.draw_circle(p, 5.0, Color(0.85, 0.3, 0.2)))
+	_m_log.add_child(_log_dot_c)
+	_log_dot = int(AlmanacData.build(session.store, session.uid).get("newCount", 0)) > 0
 	var hv: Array = _menu(bottom, "Hold", _open_hold)
 	_m_hold = hv[0]
 	_hold = hv[1]
@@ -246,7 +261,7 @@ func _ready() -> void:
 	_dial = Dial.new()
 	# The dial sits beside where the line goes in (placed each frame in
 	# _process), so the needle, the strike and the fight are in one place.
-	_place(_dial, Vector2(0.0, 0.0), Vector2.ZERO, Vector2(270, 270))
+	_place(_dial, Vector2(0.0, 0.0), Vector2.ZERO, Vector2(320, 320))
 	_dial.visible = false
 	_dial.mouse_filter = Control.MOUSE_FILTER_STOP
 	_dial.gui_input.connect(func(e: InputEvent) -> void:
@@ -462,7 +477,7 @@ func refresh() -> void:
 	var count: int = int(session.store.hold_count(session.uid))
 	_hold.text = "%d/%d" % [count, cap]
 	_hold.add_theme_color_override("font_color", Color(0.7, 0.2, 0.15) if count >= cap else Kit.PAPER_INK)
-	_loadout_val.text = "Gear, crates, log"
+	_loadout_val.text = "Your loadout"
 	_update_auto()
 	_update_action()
 
@@ -769,7 +784,22 @@ func set_bait(t: String) -> void:
 
 
 func _open_log() -> void:
+	_log_dot = false
+	_paint_log_dot()
 	locker_wanted.emit("log", "")
+
+
+var _m_log: Button
+var _log_val: Label
+var _log_dot_c: Control
+## Something new in the Log: a species first caught, a personal best, a
+## trophy, a golden. Cleared when the Log is opened.
+var _log_dot: bool = false
+
+
+func _paint_log_dot() -> void:
+	if _log_dot_c != null:
+		_log_dot_c.queue_redraw()
 
 
 ## The Almanac on its own (no sea under it).
@@ -836,7 +866,7 @@ func show_zoom(z: float) -> void:
 		_zoom_l.add_theme_font_size_override("font_size", 15)
 		_zoom_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_place(_zoom_l, Vector2(1.0, 1.0), Vector2(-340, -110), Vector2(320, 26))
-	var pct: int = int(round(z * 100.0))
+	var pct: int = int(round(z / Sea.ZOOM_DEFAULT * 100.0))
 	_zoom_l.text = "Zoom %d%%%s" % [pct, "  (default)" if pct == 100 else "  ·  default 100%"]
 	_zoom_l.modulate.a = 1.0
 	_zoom_t = 1.6
@@ -976,6 +1006,7 @@ func _fight_hud() -> void:
 
 
 func _bite() -> void:
+	_focus_on(true)
 	# Clear the top line for the dial.
 	_toast_t = 0.0
 	_toast.modulate.a = 0.0
@@ -1123,6 +1154,14 @@ func _on_struck(raw: String, _angle: float) -> void:
 		if sp != null:
 			fight.fish_art = Skipper.tex("fish/%s" % ResultCard.fish_art_path((sp as Dictionary)["name"]).get_file())
 	boat.get_parent().add_child(fight)
+	# The dial has had its moment (the strike, the perfect's burst): it fades
+	# so the fight plays in the open, and the focus lifts with it.
+	var dtw: Tween = _dial.create_tween()
+	dtw.tween_interval(0.22)
+	dtw.tween_property(_dial, "modulate:a", 0.0, 0.2)
+	dtw.tween_callback(func() -> void:
+		_dial.visible = false
+		_dial.modulate.a = 1.0)
 	_set_phase("reeling")
 	await get_tree().create_timer(hold).timeout
 	# The fight is over: the line comes in.
@@ -1137,15 +1176,17 @@ func _on_struck(raw: String, _angle: float) -> void:
 	session.persist()
 	_dial.visible = false
 	_set_phase("result")
+	# NO CARD (Kong, 2026-10-01): the catch is a small note that floats up
+	# over her and fades while the fish flies to the hold; she can cast again
+	# at once. Only a wormhole (a choice to make) still brings the card.
 	if r.has("error"):
-		_note_card("The line went slack", r["error"])
+		toast(str(r["error"]))
 	elif crate and landed:
 		_stow_card(r)
 	elif r.get("caught") == true:
 		_fish_card(r, result == "perfect")
 	else:
-		_note_card("Snagged" if result == "penalty" else "It got away",
-			"The line fouled and took a bait with it." if result == "penalty" else "The line went slack. Cast again.")
+		toast("Snagged. The line fouled and took a bait." if result == "penalty" else "It got away. Cast again.")
 	refresh()
 	_auto_t = (3.3 if crate else 1.7) if (_auto_on and _auto_tier() > 0) else -1.0
 	var giant: bool = r.get("caught") == true and (r["fish"] as Dictionary)["habitat"] == "ancient_deep" and Js.num((r["fish"] as Dictionary).get("sell_value")) == 0.0
@@ -1183,13 +1224,20 @@ func _wire(card: ResultCard) -> void:
 
 
 func _fish_card(r: Dictionary, perfect: bool) -> void:
-	var card: ResultCard = ResultCard.new()
-	_mount_card(card)
 	# The web never passed the count, so its card read "Ancient 0 of 6"; it is
 	# the wall as it stands.
 	r["ancientCount"] = float(Js.list(session.profile().get("ancient_catches")).size())
-	card.show_fish(r, perfect, _shot)
-	_wire(card)
+	if r.get("wormhole") == true:
+		var card: ResultCard = ResultCard.new()
+		_mount_card(card)
+		card.show_fish(r, perfect, _shot)
+		_wire(card)
+	else:
+		_catch_note(r, perfect)
+	# The Log has something new to show.
+	if r.get("isNewSpecies") == true or r.get("isPB") == true or str(r.get("sizeTier", "")) == "trophy" or r.get("isShiny") == true:
+		_log_dot = true
+		_paint_log_dot()
 	# The XP rises off the boat; the fish flies to the hold.
 	var mid: Vector2 = Vector2(size.x / 2.0, size.y * 0.5 - 70.0)
 	# What made it: the streak's multiplier, shown when it is working.
@@ -1227,10 +1275,73 @@ func _stow_card(r: Dictionary) -> void:
 	var total: int = 0
 	for k: Variant in Js.obj(r.get("stash")):
 		total += int(Js.num(Js.obj(r.get("stash"))[k]))
-	var card: ResultCard = ResultCard.new()
-	_mount_card(card)
-	card.show_note("%s, stowed" % t[0], "It is in your stash with %d other%s. Open it from the Locker (I), Crates, whenever you like." % [total - 1, "" if total - 1 == 1 else "s"] if total > 1 else "It is in your stash. Open it from the Locker (I), Crates, whenever you like.")
-	_wire(card)
+	toast("%s stowed  ·  %d in your stash (Locker, Crates)" % [t[0], total])
+
+
+## THE CATCH, IN A NOTE: a small slip of paper rising over her with the
+## fish, its name, its size, and any news (a new species, a personal best, a
+## trophy, a golden); it holds a moment and fades. It takes no press.
+func _catch_note(r: Dictionary, perfect: bool) -> void:
+	var fish: Dictionary = r["fish"]
+	var rar: int = clampi(int(Js.num(fish.get("bite_rarity"))), 1, 5)
+	var news: Array = []
+	if r.get("isShiny") == true:
+		news.append(["Golden", Color(0.75, 0.55, 0.1)])
+	if r.get("isNewSpecies") == true:
+		news.append(["New species", Kit.ink(Kit.SKY)])
+	if r.get("isPB") == true and r.get("previousBest") != null:
+		news.append(["Personal best", Color(0.55, 0.3, 0.6)])
+	if str(r.get("sizeTier", "")) == "trophy":
+		news.append(["Trophy", Color(0.66, 0.2, 0.15)])
+	var note: Pane = Kit.pane(self, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(Paper.rarity(rar), 0.7)], "shadow": [Color(0, 0, 0, 0.35), 12, Vector2(0, 4)], "pad": [10, 6, 14, 6], "paper": true })
+	note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	note.add_child(row)
+	var art: TextureRect = TextureRect.new()
+	var path: String = ResultCard.fish_art_path(fish["name"])
+	art.texture = load(path) if ResourceLoader.exists(path) else null
+	art.custom_minimum_size = Vector2(54, 40)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if r.get("isShiny") == true:
+		var gm: ShaderMaterial = ShaderMaterial.new()
+		gm.shader = load("res://game/golden.gdshader")
+		art.material = gm
+	row.add_child(art)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(col)
+	var name_l: Label = Kit.text(col, fish["name"], "name", Kit.PAPER_INK)
+	name_l.add_theme_font_size_override("font_size", 16)
+	var bits: Array = [Almanac.RARITY_NAMES[rar - 1]]
+	if float(r.get("sizeIn", 0.0)) > 0.0:
+		bits.append("%.1f in" % float(r["sizeIn"]))
+	if float(r.get("catchQty", 1.0)) > 1.0:
+		bits.append("×%d" % int(r["catchQty"]))
+	if perfect:
+		bits.append("Perfect")
+	Kit.text(col, "  ·  ".join(PackedStringArray(bits)), "note", Paper.rarity(rar).darkened(0.25))
+	for n: Array in news:
+		Kit.text(col, "★ " + str(n[0]), "small", n[1])
+	await get_tree().process_frame
+	var at: Vector2 = boat.get_parent().get_global_transform_with_canvas() * boat.position
+	note.position = at + Vector2(-note.size.x / 2.0, -150.0 - note.size.y)
+	note.pivot_offset = note.size / 2.0
+	note.scale = Vector2(0.8, 0.8)
+	note.modulate.a = 0.0
+	var hold: float = 2.0 + 0.8 * news.size()
+	var tw: Tween = note.create_tween()
+	tw.set_parallel()
+	tw.tween_property(note, "modulate:a", 1.0, 0.18)
+	tw.tween_property(note, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(note, "position:y", note.position.y - 18.0, hold + 0.5).set_trans(Tween.TRANS_SINE)
+	tw.chain().tween_property(note, "modulate:a", 0.0, 0.5)
+	tw.chain().tween_callback(note.queue_free)
 
 
 func _note_card(title: String, body: String) -> void:
@@ -1357,13 +1468,35 @@ func _nibble() -> void:
 
 
 func _place_dial() -> void:
-	# Centred over her, above the boat and clear of the Reel In lettering
-	# under her.
+	# FOCUS (Kong, 2026-10-01): the dial in the middle of the screen, and
+	# everything else dimmed behind it while a fish is on.
 	var vp: Vector2 = get_viewport_rect().size
-	_dial.position = Vector2(vp.x / 2.0 - _dial.size.x / 2.0, maxf(70.0, vp.y / 2.0 - 235.0 - _dial.size.y / 2.0))
+	_dial.position = (vp - _dial.size) / 2.0 + Vector2(0, -30)
+
+
+var _focus: ColorRect
+
+
+func _focus_on(on: bool) -> void:
+	if _focus == null:
+		_focus = ColorRect.new()
+		_focus.color = Color(0.01, 0.03, 0.05, 0.0)
+		_focus.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_focus.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(_focus)
+	if on:
+		# Over everything but the dial and the Reel In lettering.
+		move_child(_focus, -1)
+		move_child(_dial, -1)
+		move_child(_action, -1)
 
 
 func _process(delta: float) -> void:
+	if _focus != null:
+		var want: float = 0.42 if _dial.visible else 0.0
+		_focus.color.a = lerpf(_focus.color.a, want, 1.0 - exp(-delta * (10.0 if want > 0.0 else 6.0)))
+	if _log_dot and _log_dot_c != null:
+		_log_dot_c.queue_redraw()
 	if _zoom_t > 0.0:
 		_zoom_t -= delta
 		_zoom_l.modulate.a = clampf(_zoom_t / 0.5, 0.0, 1.0)

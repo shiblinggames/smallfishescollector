@@ -66,7 +66,7 @@ func _init() -> void:
 		while hud.phase == "reeling" and n < 600:
 			await process_frame
 			n += 1
-		if hud.phase != "result" or hud._card == null:
+		if hud.phase != "result":
 			print("  cast %d ended in phase %s with no card" % [i, hud.phase])
 			bad += 1
 			continue

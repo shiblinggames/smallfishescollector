@@ -63,6 +63,8 @@ const BLOOMS: Array = [
 ## and remembered on this machine (a number tuned on one screen is wrong on
 ## another, so it is not in the save).
 const ZOOM_MIN: float = 0.55
+## The sea's own zoom, shown as 100% (Kong: what read 87% is the default).
+const ZOOM_DEFAULT: float = 0.87
 const ZOOM_MAX: float = 1.6
 var _zoom_to: float = 1.0
 ## THE STAGE (the Locker): the camera pushed in on her and set off to one
@@ -254,7 +256,7 @@ func _ready() -> void:
 
 	_camera = Camera2D.new()
 	_camera.position_smoothing_enabled = false
-	_zoom_to = clampf(float(Prefs.get_value("sea_zoom", 1.0)), ZOOM_MIN, ZOOM_MAX)
+	_zoom_to = clampf(float(Prefs.get_value("sea_zoom", ZOOM_DEFAULT)), ZOOM_MIN, ZOOM_MAX)
 	_camera.zoom = Vector2(_zoom_to, _zoom_to)
 	add_child(_camera)
 	_camera.make_current()

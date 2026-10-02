@@ -487,6 +487,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   shown as it changes ("Zoom 120% · default 100%", bottom right, fading); the title's
   PORTRAITS are drawn at 3x and shrunk (sharp) and framed so the hook hangs inside; the
   STREAK FLAME is a smooth three-layer teardrop that flickers, a faint ash outline at none.
+- NO CATCH CARD (Kong): a catch is a small paper note floating up over the boat (the fish,
+  name, rarity, size, Perfect, and news: golden, new species, personal best, trophy) that
+  fades while the fish flies to the hold; misses, snags and stowed crates are toasts. The
+  card remains only for a wormhole (a choice). Phase stays "result" (Cast Again at once).
+  The BOTTOM ROW is Bait, Locker ("Your loadout"), Log (a pulsing dot for a new species,
+  personal best, trophy or golden; also lit on opening if the Almanac has new entries,
+  cleared when the Log is opened), Hold. FOCUS: on a bite the dial sits centred (320 px)
+  and a veil dims the sea and HUD behind it (Reel In stays bright); it fades out 0.22 s after
+  the strike so the fight plays in view. ZOOM: Sea.ZOOM_DEFAULT 0.87 is the default and
+  reads 100%. THE LINE IN THE FIGHT: the fish pulls at 6.5 Hz not 16, no hum, harder damping
+  when held, and the hook is reeled up to where it hangs over 0.5 s before being let go.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules
