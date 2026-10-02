@@ -683,7 +683,12 @@ func _night_water(dark: float, at: Vector2) -> void:
 		lamps.append(Vector4(s.x / vp.x, s.y / vp.y, wid, strength))
 		cols.append(Vector4(c.r, c.g, c.b, 1.0))
 	var keel: Vector2 = Vector2(0, 34.0 / Chart.GROUND)
-	add_lamp.call(_boat.position + keel, 16.0 + 18.0 * _boat.lantern_glow, 0.30 + 0.25 * _boat.lantern_glow, Color(1.0, 0.72, 0.4))
+	# Her lantern is a beam ahead of the bow, not a reflection (water shader).
+	var bs: Vector2 = xf * (_boat.position + Vector2.from_angle(_boat.heading) * 30.0)
+	var bdir: Vector2 = xf.basis_xform(Vector2.from_angle(_boat.heading))
+	_water.set_shader_parameter("u_beam", Vector4(bs.x / vp.x, bs.y / vp.y, bdir.x, bdir.y))
+	_water.set_shader_parameter("u_beam_len", 280.0 + 520.0 * _boat.lantern_glow)
+	_water.set_shader_parameter("u_beam_k", 0.6 + 0.4 * _boat.lantern_glow)
 	add_lamp.call(_town_light.position + Vector2(0, 260), 46.0, 0.45, Color(1.0, 0.74, 0.45))
 	for bid: String in _berths:
 		pass

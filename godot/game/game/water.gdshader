@@ -67,6 +67,11 @@ uniform float u_front_w = 0.0;
 uniform vec4 u_berths[4];
 // A lightning flash, 0 to 1.
 uniform float u_flash = 0.0;
+// THE LANTERN'S BEAM on the water (sea.gd): where it starts on screen (0-1),
+// the way it points on screen, how far (px at zoom 1) and how strong.
+uniform vec4 u_beam = vec4(0.5, 0.5, 1.0, 0.0);
+uniform float u_beam_len = 400.0;
+uniform float u_beam_k = 0.0;
 
 const float GROUND = 0.58;
 const vec2 WIND = vec2(0.8231, 0.5679);
@@ -417,6 +422,23 @@ void fragment() {
 			// Only once it is properly dark: in the golden light a lamp's column
 			// read as the sun's.
 			col += u_lamp_cols[i].rgb * across * down * broken * L.w * u_dark * smoothstep(0.3, 0.75, u_dark);
+		}
+		// Her lantern's beam, thrown ahead of the bow onto the water and broken
+		// by the swell.
+		if (u_beam_k > 0.01) {
+			vec2 bo = u_beam.xy * u_res;
+			vec2 bd = normalize(u_beam.zw + vec2(0.0001));
+			vec2 bv = scr - bo;
+			float b_along = dot(bv, bd);
+			float b_across = abs(dot(bv, vec2(-bd.y, bd.x)));
+			float b_len = u_beam_len * u_zoom;
+			if (b_along > -20.0 && b_along < b_len * 1.2) {
+				float b_half = 10.0 * u_zoom + max(b_along, 0.0) * 0.42;
+				float cone = 1.0 - smoothstep(b_half * 0.35, b_half, b_across);
+				float fall = (1.0 - smoothstep(b_len * 0.2, b_len * 1.2, b_along)) * smoothstep(-20.0, 30.0 * u_zoom, b_along);
+				float rip = 0.72 + 0.28 * sin(b_along * 0.07 / u_zoom - TIME * 2.2 + swell * 8.0);
+				col += vec3(1.0, 0.76, 0.46) * cone * fall * rip * u_beam_k * 0.32 * u_dark;
+			}
 		}
 		// Stars, caught and lost on the swell.
 		vec2 sg = floor(scr / 9.0);

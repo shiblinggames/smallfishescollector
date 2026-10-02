@@ -112,11 +112,12 @@ func _ready() -> void:
 	add_child(_rush)
 	add_child(skipper)
 	lantern = PointLight2D.new()
-	lantern.texture = Glow.radial(256, Color(1.0, 0.78, 0.45), true)
+	# A beam, not a glow (Kong: "like a flashlight, pointing where you go").
+	lantern.texture = Glow.beam()
 	lantern.texture_scale = 2.2
 	lantern.color = Color(1.0, 0.8, 0.55)
 	lantern.energy = 0.0
-	lantern.position = Vector2(-20, -60)
+	lantern.position = Vector2(0, -20)
 	add_child(lantern)
 
 
@@ -196,7 +197,9 @@ func steer(input: Vector2, delta: float) -> void:
 	if speed > 1.0:
 		var back: Vector2 = -velocity.normalized()
 		(_rush.process_material as ParticleProcessMaterial).direction = Vector3(back.x, back.y, 0)
-	lantern.texture_scale = 0.9 + 3.6 * lantern_glow
+	lantern.texture_scale = 2.4 + 4.0 * lantern_glow
+	# Pointed the way the bow points.
+	lantern.rotation = heading
 	if speed > 20.0 and absf(velocity.x) > 8.0:
 		_facing = 1.0 if velocity.x > 0.0 else -1.0
 		skipper.scale.x = -_facing

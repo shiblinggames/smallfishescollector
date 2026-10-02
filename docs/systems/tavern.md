@@ -126,6 +126,10 @@ this purse — never its own balance, never doubloons directly.
 
 ## Per-game laws
 
+- **Godot port (2026-10-02):** no Crown & Anchor; the Den opens by Fishing level (Slots 1,
+  Roulette 10, Blackjack 20); the Catfish Jackpot is to become a fixed multiple, not a shared
+  pot. See steam-port.md "ROOMS BY FISHING LEVEL" and "FISH SLOTS, A MONEY SINK".
+
 - **Blackjack**: `leaderboard_blackjack` is a VIEW, not a table — don't insert into it.
   Fairness rules (shoe, shuffle, payout) documented in `BLACKJACK_FAIRNESS.md`.
 - **Crown & Anchor payout is `wager * (matches + 1)`** — returning the stake plus

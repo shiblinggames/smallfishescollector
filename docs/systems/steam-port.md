@@ -555,10 +555,29 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   port_rules marketTickMs 2,880,000 (a sea day) and marketTickOffsetMs 1,920,000 (sunrise);
   Market.tick_ms / daily / next_tick_after; each day's mood lasts the day. Under web_only it
   is still hourly. The Advanced board needs Fishing 50 (levelGates.feature.market_advanced).
-- ROOMS BY FISHING LEVEL (Kong, 2026-10-02, direction settled, NUMBERS PROPOSED, not yet
-  agreed; the rooms are not ported yet): Den games open by level, the chip purse's daily
-  buy-in grows with level, and the Parlor and Chart Room gate games or attempts by level.
-  Apply when those rooms are ported, through levelGates and the Levels guide.
+- ROOMS BY FISHING LEVEL (Kong, 2026-10-02, SETTLED; the rooms are not ported yet; apply
+  through levelGates and the Levels guide when they are):
+  - The Den: Fish Slots at 1 (the Catfish Jackpot is part of it), Roulette at 10, Blackjack
+    at 20. There is NO Crown & Anchor in the game.
+  - The chip purse's daily buy-in: 1,000 to start, +1,000 at 10, 20, 30 and 40 (5,000),
+    7,500 at 70, 10,000 at 100.
+  - The Parlor: the Captain's Board from 1, holding up to 3 cards, 4 at 30, 5 at 60; the
+    Pirate King ladder at 25.
+  - The Chart Room: one puzzle type opens at each of 1, 10, 20 and 30.
+- FISH SLOTS, A MONEY SINK (Kong, 2026-10-02: the community pot was built for an online MMO
+  where every bet fed it; "an always-available pot based on probability, more of a money sink
+  than something you make money from, but still fun"). PROPOSED, awaiting Kong's OK: the
+  Catfish Jackpot becomes a FIXED 300x the bet on three catfish (catfish weight 9 to 8,
+  about 1 spin in 1,950), no shared pot and no feed. Pays trimmed so the machine returns about
+  88.6%: triples sardine 3 / marlin 10 / great white 25 / whale 50, pairs marlin 1.25 / great
+  white 2.5 / whale 4 / catfish 2; the bonus round (three hooks, about 1 in 72, Jellyfish wild,
+  wins x1.5) and the two-hook refund stay. Still a win about 1 spin in 3. Worked with
+  scratch enumeration matching slots-rtp.mjs's rules.
+- THE LANTERN IS A BEAM (Kong, 2026-10-02: "like a flashlight, pointing where you're going"):
+  the boat's PointLight2D wears Glow.beam() (a cone, apex at the lamp) turned to her heading,
+  so it lights the land and boats ahead; on the water the shader throws a matching cone
+  (u_beam, u_beam_len, u_beam_k) instead of the old reflected column. Its reach grows with
+  the lantern tier. Other boats' and the town's lamps keep their reflections.
 - THE LOG OPENED IN 0.9 s (Kong: "a delay when you click Log"): the shelf loaded ~150
   full 1024 px fish paintings from disk, and closing let them go, so every open paid again.
   tools/setup.mjs now writes art/fish_thumbs (192 px); Skipper.fish_thumb / "fish_thumbs/"
