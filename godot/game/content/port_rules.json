@@ -1669,9 +1669,10 @@
       "Spookfish"
     ]
   },
-  "_crewPort": "THE CREW HALL (Kong, 2026-10-02): the free board reloads every 10 sea days (8 real hours; steam-port.md 'Working it through' asked for every few sea days), and the hall reads Fishing where the web reads Navigation until Navigation is earned in the port. core/crew.gd.",
+  "_crewPort": "THE CREW HALL (Kong, 2026-10-02): a fresh free board every SEA DAY (48 minutes), at sunrise (Kong: 'crew should refresh based on in-game days'); the hall reads Fishing where the web reads Navigation until Navigation is earned in the port. core/crew.gd.",
   "crewPort": {
-    "boardEveryMs": 28800000,
+    "boardEveryMs": 2880000,
+    "boardOffsetMs": 1920000,
     "navFromFishing": true
   }
 }

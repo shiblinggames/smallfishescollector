@@ -10,7 +10,7 @@ set), and CREW REROLLS become an item that can drop from the new expedition crat
 voyages.md). The 100-gem reroll goes with gems. See steam-port.md "Working it through".
 
 **THE GODOT PORT (2026-10-02)** has the recruit board, signing on, the roster and the hall's tiers
-(core/crew.gd, game/crew_hall.gd, parity-checked); the free board reloads every 10 sea days there.
+(core/crew.gd, game/crew_hall.gd, parity-checked); the free board refreshes every sea day, at sunrise, there.
 See steam-port.md "THE CREW HALL, SLICE 1".
 
 ## Where it lives now: the panel, not the page

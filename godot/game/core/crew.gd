@@ -12,8 +12,9 @@ extends RefCounted
 ## the Navigation level (the parity session takes the same cut).
 ##
 ## PORT RULES (port_rules "crewPort", never under the parity run):
-##   - boardEveryMs: the free board reloads every few sea days rather than once
-##     a real day (steam-port.md "Working it through", 2026-09-30);
+##   - boardEveryMs / boardOffsetMs: a fresh free board every sea day, at
+##     sunrise (Kong, 2026-10-02: "crew should refresh based on in-game days"),
+##     rather than once a real day;
 ##   - navFromFishing: the Navigation the hall reads (roster capacity, the
 ##     hall's gates) is the Fishing level until Navigation is earned in the
 ##     port (Kong, 2026-10-01: "focus on Fishing for now").
@@ -234,7 +235,9 @@ static func roll_board(size: int, weights: Array, unlocks: Array) -> Array:
 static func board_key(now: float) -> String:
 	var every: float = Js.num(port().get("boardEveryMs"))
 	if every > 0.0:
-		return "sea:%d" % int(floor(now / every))
+		# A fresh board each sea day, at sunrise (boardOffsetMs), as the
+		# market's prices change.
+		return "sea:%d" % int(floor((now - Js.num(port().get("boardOffsetMs"))) / every))
 	return Js.iso(now).left(10)
 
 

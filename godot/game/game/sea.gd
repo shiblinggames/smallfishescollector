@@ -431,6 +431,7 @@ func _process(delta: float) -> void:
 	if _recall_t > 1.0:
 		_recall_t = 0.0
 		_hud.set_recall(Portal.recall_left_ms(session.profile(), "fishing"))
+		_crew_morning(now)
 		_hud.set_stir(FishBias.stirring(session.save.get("species", []), str(Chart.water_at(_boat.position).get("id", "")), _boat.position, now) if not Chart.water_at(_boat.position).is_empty() else "")
 		# A stone opened (or a crewmate built a rung): the well catches up.
 		var live: bool = Portal.has_stone_for(1, session.save.get("discoveries", [])) or Js.num(session.profile().get("portal_tier")) > 1.0
@@ -1076,6 +1077,28 @@ func _ship_side() -> void:
 
 
 var _gate_note_t: float = -99.0
+var _crew_key: String = ""
+
+
+## SUNRISE AT THE CREW HALL (Kong, 2026-10-02): a fresh board of hopefuls comes
+## in each sea day; say so when it does, and on coming back to one not yet
+## looked at (the board is stamped when the hall is opened).
+func _crew_morning(now: float) -> void:
+	if Crew.port().is_empty():
+		return
+	var key: String = Crew.board_key(now)
+	if key == _crew_key:
+		return
+	var first: bool = _crew_key == ""
+	_crew_key = key
+	if str(session.profile().get("last_free_recruit_date", "")) == key:
+		return
+	if first and session.profile().get("last_free_recruit_date") == null and Crew.live(session.store).is_empty():
+		# A captain who has never been to the hall hears of it once they have.
+		return
+	_hud.notify("SUNRISE", "New hopefuls at the Crew Hall",
+		"A fresh board of hands is looking for a ship. Moor at the Crew Hall, north through the arch, to meet them.",
+		Skipper.tex("crew/hall_%d.png" % Crew.clamp_hall(session.profile().get("crew_hall_tier"))))
 
 
 func _held_at_gate() -> void:

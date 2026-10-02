@@ -1033,6 +1033,11 @@ func _drain_badges() -> void:
 var _badge_note: Control
 
 
+## A note in the same slip as an achievement's: eyebrow, title, line, picture.
+func notify(eyebrow: String, title: String, line: String, art: Texture2D = null) -> void:
+	_badge_q.append([eyebrow, title, line, art])
+
+
 func _badge_step(delta: float) -> void:
 	_badge_t -= delta
 	if _badge_t > 0.0 or _badge_q.is_empty():

@@ -666,13 +666,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   PARITY: tests/parity/crew.json, a scripted session of 97 calls (boards over 17 days,
   signing to a full roster, every hall tier and gate, names, dismissals and their refusals),
   each result cut to the port's crew state (board, roster, capacity, navLevel, hallTier,
-  doubloons). PORT RULES (crewPort): the free board reloads every 10 sea days (8 hours), and
+  doubloons). PORT RULES (crewPort): a fresh free board every sea day at sunrise (Kong), and
   the hall reads FISHING where the web reads Navigation (capacity, tier gates) until
   Navigation is earned in the port. game/crew_hall.gd is the hall on paper, opened by mooring
   at the Crew Hall: Recruit (the board, a card opens the hand, Sign on with its moment),
   Roster (one-time names, dismiss on a second press) and The Hall (tier, painting, roster
   space, the next tier). Card art is content (card-arts, 320 px card_thumbs). NEXT SLICES:
-  bunks and training, Drills/Stores, crew levels' stat ticks, promotions, seats. The northern islands (Crew Hall,
+  bunks and training, Drills/Stores, crew levels' stat ticks, promotions, seats. SUNRISE NOTICE
+  (Kong): each sea day's fresh board is announced in the HUD's note slip ("New hopefuls at
+  the Crew Hall"), and on coming back to a board not yet looked at (Sea._crew_morning; a
+  captain who has never had crew is not told until they have). The northern islands (Crew Hall,
   Posting House, Forge, Gunwharf, Charterhouse) were already drawn; mooring now opens a paper
   sheet of what each will hold (North.COMING) until their rooms are ported. THE WORLD
   CHART centres on the crossing (WorldMap.WORLD_CENTRE, Kong: "the centre of the world is the

@@ -176,7 +176,7 @@ func _draw_room() -> void:
 
 func _recruit_room() -> void:
 	var every: float = Js.num(Crew.port().get("boardEveryMs"))
-	Paper.text(_body, "Hands looking for a ship. Sign on whoever you want aboard; the board fills again %s." % ("every %d hours" % int(every / 3600000.0) if every > 0.0 else "each day"), "note", Paper.INK_SOFT, true)
+	Paper.text(_body, "Hands looking for a ship. Sign on whoever you want aboard; %s." % ("new hopefuls come in at sunrise each sea day" if every > 0.0 else "the board fills again each day"), "note", Paper.INK_SOFT, true)
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 12)
