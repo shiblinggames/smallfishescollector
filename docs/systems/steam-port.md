@@ -462,6 +462,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   15, the rig's 2nd at 20, free; levelGates.ship gates the bought tiers (hull 4th 45, 5th
   60, 6th 75; rudder 3rd 35, 4th 55; rig 3rd 40, 4th 60; lantern 2nd-5th at 10, 25, 45, 65),
   checked in Shipyard.buy_tier; the Shipyard shows "Fishing 45 · 20,000 ⟡" and locks.
+- THE FISHING HUD, TIDIED (Kong): the DIAL is centred over the boat (270 px, above her, clear
+  of the Reel In lettering; toasts move under the boat while it is up and the top line is
+  cleared on a bite) and its FACE IS DRAWN like the Locker's gauge (cream disc, ink rim and
+  ticks, clean zone bands, the zone under the needle full; fx/dial.gdshader no longer
+  shown). The BOTTOM ROW is three: Bait (press to put on the next bait held; Q for the
+  wheel), Locker (I: gear, hold, crates, log), Hold (opens it in the Locker). The LEVEL BAR
+  is larger and brighter over a soft dark pool.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

@@ -119,6 +119,9 @@ func _ready() -> void:
 	m.shader = load("res://game/fx/dial.gdshader")
 	_face.material = m
 	add_child(_face)
+	# The face is drawn (_draw_face), like the Locker's gauge (Kong: the
+	# watercolour face looked fake).
+	_face.visible = false
 	add_child(_burst_fx)
 	resized.connect(_place_fx)
 	_place_fx()
@@ -394,14 +397,51 @@ func _draw_back() -> void:
 		_back.draw_arc(c, r_out + 13.0 * k, 0.0, TAU, 96, Color("#67e8f9", 0.6), 1.5 * k, true)
 
 
+## THE FACE, drawn (2026-10-01; the Locker's gauge is the model): a cream
+## disc with an ink rim and ticks, the zones as clean bands of colour round
+## it, the one under the needle full and the rest softened.
+const FACE_COL: Dictionary = {
+	"miss": Color(0.78, 0.75, 0.68), "catch": Color(0.36, 0.62, 0.42), "perfect": Color(0.88, 0.66, 0.2), "penalty": Color(0.72, 0.3, 0.24),
+}
+
+
+func _draw_face(c: Vector2, k: float, under_i: int) -> void:
+	var r: float = 100.0 * k
+	var ink: Color = Color(0.2, 0.16, 0.13)
+	draw_circle(c + Vector2(0, 4) * k, r + 6.0 * k, Color(0, 0, 0, 0.3))
+	draw_circle(c, r + 6.0 * k, Color(0.96, 0.93, 0.86, 0.96))
+	draw_arc(c, r + 6.0 * k, 0.0, TAU, 96, Color(ink, 0.55), 1.6 * k, true)
+	draw_circle(c, 58.0 * k, Color(0.93, 0.9, 0.82))
+	var band_r: float = 78.0 * k
+	var band_w: float = 26.0 * k
+	draw_arc(c, band_r, 0.0, TAU, 128, Color(FACE_COL["miss"], 0.45), band_w, true)
+	for n: int in zones.size():
+		var z: Array = zones[n]
+		var a0: float = float(z[0]) + zone_rot
+		var a1: float = float(z[1]) + zone_rot
+		if a1 <= a0 or z[2] == "miss":
+			continue
+		var col: Color = Color(z[3]) if z.size() > 3 else FACE_COL.get(z[2], Color.GRAY)
+		var lit: bool = n == under_i
+		var segs: int = maxi(4, int((a1 - a0) / 3.0))
+		draw_arc(c, band_r, _ang(a0), _ang(a1), segs, Color(col, 1.0 if lit else 0.78), band_w, true)
+	for t: int in 36:
+		var a: float = TAU * t / 36.0
+		var u: Vector2 = Vector2.from_angle(a)
+		draw_line(c + u * (r + 1.0 * k), c + u * (r + (6.0 if t % 3 == 0 else 3.5) * k), Color(ink, 0.5), 1.0 * k, true)
+	draw_arc(c, band_r - band_w / 2.0, 0.0, TAU, 96, Color(ink, 0.25), 1.0 * k, true)
+	draw_arc(c, band_r + band_w / 2.0, 0.0, TAU, 96, Color(ink, 0.25), 1.0 * k, true)
+
+
 func _draw() -> void:
 	var k: float = _k()
 	var c: Vector2 = size / 2.0
-	var r_out: float = 94.0 * k
-	var r_in: float = 64.0 * k
+	var r_out: float = 91.0 * k
+	var r_in: float = 65.0 * k
 	var mid: float = (r_out + r_in) / 2.0
 	var under_i: int = _under_index()
 	var font: Font = UiTheme.title_font()
+	_draw_face(c, k, under_i)
 	for n: int in zones.size():
 		var z: Array = zones[n]
 		var a0: float = float(z[0]) + zone_rot
@@ -412,8 +452,8 @@ func _draw() -> void:
 		if z[2] == "perfect":
 			for edge: float in [a0, a1]:
 				var e: Vector2 = Vector2.from_angle(_ang(edge))
-				draw_line(c + e * (r_in - 2.0 * k), c + e * (r_out + 2.0 * k), Color(GOLD, 0.95), 1.6 * k, true)
-			_glyph(font, "✦", c + dir * (r_out + 21.0 * k), 15.0 * k, GOLD)
+				draw_line(c + e * (r_in - 2.0 * k), c + e * (r_out + 2.0 * k), Color(0.45, 0.3, 0.05, 0.9), 1.6 * k, true)
+			_glyph(font, "✦", c + dir * (r_out + 22.0 * k), 15.0 * k, Color(0.88, 0.66, 0.2))
 		elif z[2] == "penalty":
 			_glyph(font, "✕", c + dir * mid, 12.0 * k, Color(1, 1, 1, 0.6 if n == under_i else 0.35))
 
@@ -438,7 +478,7 @@ func _draw() -> void:
 		shadow.append(v + Vector2(2.0, 3.0) * k)
 	draw_colored_polygon(shadow, Color(0.02, 0.03, 0.05, 0.28))
 	var ink: Color = Color(0.17, 0.15, 0.19)
-	var wash: Color = needle.lerp(Color(0.93, 0.89, 0.8), 0.12)
+	var wash: Color = needle.darkened(0.3)
 	draw_polygon(blade, PackedColorArray([ink, ink, wash.lerp(ink, 0.35), wash, wash.lerp(ink, 0.35), ink, ink]))
 	if needle == GOLD or _burst > 0.0:
 		draw_circle(tip, 9.0 * k, Color(GOLD, 0.18))

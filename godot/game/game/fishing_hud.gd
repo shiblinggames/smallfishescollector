@@ -73,12 +73,10 @@ var _action: DialButton
 ## The rod's four menus; _hold is the Hold button's count, where fish land.
 var _m_loadout: Button
 var _m_bait: Button
-var _m_log: Button
 var _m_hold: Button
 var _hold: Label
 var _bait_val: Label
 var _loadout_val: Label
-var _log_val: Label
 ## The Ancient Deep's fight in progress (BossFight), or {} for an ordinary
 ## fish: its name, mechanic, config, stage, the window's shrink and the
 ## needle's multiplier, and whether it is one of the six giants.
@@ -198,14 +196,18 @@ func _ready() -> void:
 	var bottom: HBoxContainer = HBoxContainer.new()
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
 	bottom.add_theme_constant_override("separation", 8)
-	_place(bottom, Vector2(0.5, 1.0), Vector2(-344, -72), Vector2(688, 54))
+	# ONE ROW (Kong, 2026-10-01): the bait on the line (a press puts on the
+	# next one; Q for the wheel), the Locker (gear, hold, crates, log: I), and
+	# the hold (a press opens it in the Locker).
+	_place(bottom, Vector2(0.5, 1.0), Vector2(-300, -72), Vector2(600, 54))
 	add_child(bottom)
-	var lv: Array = _menu(bottom, "Loadout", _open_loadout)
-	_m_loadout = lv[0]
-	_loadout_val = lv[1]
-	var bv: Array = _menu(bottom, "Bait", _open_bait)
+	var bv: Array = _menu(bottom, "Bait  ·  press to switch", _cycle_bait)
 	_m_bait = bv[0]
 	_bait_val = bv[1]
+	_m_bait.tooltip_text = "Put on the next bait you hold (hold Q for the wheel)"
+	var lv: Array = _menu(bottom, "Locker  ·  I", _open_loadout)
+	_m_loadout = lv[0]
+	_loadout_val = lv[1]
 	_action = DialButton.new(112.0)
 	# On the PRESS: a button fires on release by default, which held the
 	# needle until the click came back up.
@@ -214,9 +216,6 @@ func _ready() -> void:
 	# Lettered on the water under the boat (below the waiting cues).
 	_place(_action, Vector2(0.5, 0.5), Vector2(-220, 124), Vector2(440, 52))
 	add_child(_action)
-	var gv: Array = _menu(bottom, "Log", _open_log)
-	_m_log = gv[0]
-	_log_val = gv[1]
 	var hv: Array = _menu(bottom, "Hold", _open_hold)
 	_m_hold = hv[0]
 	_hold = hv[1]
@@ -239,7 +238,7 @@ func _ready() -> void:
 	_dial = Dial.new()
 	# The dial sits beside where the line goes in (placed each frame in
 	# _process), so the needle, the strike and the fight are in one place.
-	_place(_dial, Vector2(0.0, 0.0), Vector2.ZERO, Vector2(300, 300))
+	_place(_dial, Vector2(0.0, 0.0), Vector2.ZERO, Vector2(270, 270))
 	_dial.visible = false
 	_dial.mouse_filter = Control.MOUSE_FILTER_STOP
 	_dial.gui_input.connect(func(e: InputEvent) -> void:
@@ -453,8 +452,7 @@ func refresh() -> void:
 	var count: int = int(session.store.hold_count(session.uid))
 	_hold.text = "%d/%d" % [count, cap]
 	_hold.add_theme_color_override("font_color", Color(0.7, 0.2, 0.15) if count >= cap else Kit.PAPER_INK)
-	_loadout_val.text = String(Rules.rod(Js.num(p.get("rod_tier")))["name"])
-	_log_val.text = "Catches"
+	_loadout_val.text = "Gear, crates, log"
 	_update_auto()
 	_update_action()
 
@@ -672,6 +670,25 @@ func _open_loadout() -> void:
 	locker_wanted.emit("loadout", "rod")
 
 
+## Put on the next bait held (the bottom row's Bait).
+func _cycle_bait() -> void:
+	if phase != "idle" and phase != "result":
+		toast("Bait goes on before the cast")
+		return
+	var held: Array = session.baits()
+	if held.size() < 2:
+		toast("No other bait aboard" if held.size() == 1 else "No bait aboard")
+		return
+	var i: int = 0
+	for n: int in held.size():
+		if held[n][0] == _bait:
+			i = n
+	var nxt: Array = held[(i + 1) % held.size()]
+	set_bait(nxt[0])
+	Rumble.tap(8)
+	toast("%s on the line" % nxt[1])
+
+
 ## The bait on the line (the Locker's Bait slot).
 func set_bait(t: String) -> void:
 	_bait = t
@@ -734,6 +751,11 @@ func _toggle_auto() -> void:
 
 
 func toast(text: String) -> void:
+	# Under the boat while the dial is up (it sits where toasts go).
+	if _dial != null and _dial.visible:
+		_place(_toast, Vector2(0.5, 0.5), Vector2(-300, 66), Vector2(600, 30))
+	else:
+		_place(_toast, Vector2(0.5, 0.0), Vector2(-300, 120), Vector2(600, 30))
 	_toast.text = text
 	_toast.modulate.a = 1.0
 	_toast_t = 2.4
@@ -862,6 +884,9 @@ func _fight_hud() -> void:
 
 
 func _bite() -> void:
+	# Clear the top line for the dial.
+	_toast_t = 0.0
+	_toast.modulate.a = 0.0
 	var diff: float = float(_shot["catchDifficulty"])
 	_start_fight()
 	var zones: Array = _zones()
@@ -1240,14 +1265,10 @@ func _nibble() -> void:
 
 
 func _place_dial() -> void:
-	if boat == null:
-		return
-	var hook: Vector2 = boat.get_parent().get_global_transform_with_canvas() * boat.hook_at()
+	# Centred over her, above the boat and clear of the Reel In lettering
+	# under her.
 	var vp: Vector2 = get_viewport_rect().size
-	var at: Vector2 = hook + Vector2(-_dial.size.x - 36.0, -_dial.size.y * 0.72)
-	at.x = clampf(at.x, 16.0, vp.x - _dial.size.x - 16.0)
-	at.y = clampf(at.y, 120.0, vp.y - _dial.size.y - 160.0)
-	_dial.position = at
+	_dial.position = Vector2(vp.x / 2.0 - _dial.size.x / 2.0, maxf(70.0, vp.y / 2.0 - 235.0 - _dial.size.y / 2.0))
 
 
 func _process(delta: float) -> void:

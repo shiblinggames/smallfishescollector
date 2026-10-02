@@ -149,7 +149,7 @@ func _draw() -> void:
 	var glass: Color = Color(1.0, 0.82, 0.42) if top else (Color(0.98, 0.78, 0.5) if nav else Color(0.56, 0.9, 0.84))
 	var title: Font = Kit.font("cinzel", 800)
 	var body: Font = Kit.font("karla", 700)
-	var small: Font = Kit.tracked("karla", 700, 10, 0.2)
+	var small: Font = Kit.tracked("karla", 800, 12, 0.2)
 	var cy: float = size.y / 2.0
 	var name: String = "NAVIGATION" if nav else "FISHING"
 	var ls: String = str(level)
@@ -158,21 +158,28 @@ func _draw() -> void:
 	if not top and next_reward != "":
 		rw = ("★ " if milestone else "then ") + next_reward
 	# Measure it all, so it sits centred whatever it says.
-	var w_name: float = small.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-	var w_num: float = title.get_string_size(ls, HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x
+	var w_name: float = small.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+	var w_num: float = title.get_string_size(ls, HORIZONTAL_ALIGNMENT_LEFT, -1, 28).x
 	var bar_w: float = 200.0
-	var w_togo: float = body.get_string_size(togo, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-	var w_rw: float = minf(220.0, body.get_string_size(rw, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x) if rw != "" else 0.0
+	var w_togo: float = body.get_string_size(togo, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+	var w_rw: float = minf(240.0, body.get_string_size(rw, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x) if rw != "" else 0.0
 	var w_flame: float = 34.0 if streak >= 0 else 0.0
 	var total: float = w_name + 8.0 + w_num + 12.0 + bar_w + 14.0 + w_togo + (14.0 + w_rw if rw != "" else 0.0) + (16.0 + w_flame if w_flame > 0.0 else 0.0)
 	var x: float = (size.x - total) / 2.0
-	_ink(small, Vector2(x, cy + 4), name, 10, Color(cream, 0.75), shade)
+	# A soft dark pool behind the words, so they read over any water.
+	for g: int in 8:
+		var grow: float = 4.0 + g * 6.0
+		var sb: StyleBoxFlat = StyleBoxFlat.new()
+		sb.bg_color = Color(0.01, 0.03, 0.05, 0.045)
+		sb.set_corner_radius_all(int(size.y / 2.0 + grow))
+		draw_style_box(sb, Rect2(Vector2(x - grow, cy - 14.0 - grow * 0.5), Vector2(total + grow * 2.0, 28.0 + grow)))
+	_ink(small, Vector2(x, cy + 5), name, 12, cream, shade)
 	x += w_name + 8.0
 	if _crossing > 0:
 		ls = str(level_from)
 	if _flash > 0.0:
 		draw_circle(Vector2(x + w_num / 2.0, cy), 26.0 * (1.0 + (1.0 - _flash) * 0.6), Color(glass, 0.35 * _flash))
-	_ink(title, Vector2(x, cy + 9), ls, 24, cream.lerp(Color(1, 0.9, 0.6), _flash), shade)
+	_ink(title, Vector2(x, cy + 10), ls, 28, cream.lerp(Color(1, 0.9, 0.6), _flash), shade)
 	x += w_num + 12.0
 	# A thin line of light: the way to the next level.
 	var track: Rect2 = Rect2(x, cy - 2.0, bar_w, 4.0)
@@ -214,10 +221,10 @@ func _draw() -> void:
 		var ttw: float = body.get_string_size(tt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
 		_ink(body, Vector2(size.x / 2.0 - ttw / 2.0, cy + 26), tt, 11, Color(line_c.lerp(cream, 0.4), 0.85 * ta), Color(0, 0, 0, 0.5 * ta))
 	x += bar_w + 14.0
-	_ink(body, Vector2(x, cy + 4), togo, 11, Color(1.0, 0.84, 0.5) if top else Color(cream, 0.85), shade)
+	_ink(body, Vector2(x, cy + 5), togo, 13, Color(1.0, 0.84, 0.5) if top else cream, shade)
 	x += w_togo + 14.0
 	if rw != "":
-		_ink(body, Vector2(x, cy + 4), rw, 10, Color(1.0, 0.84, 0.5) if milestone else Color(cream, 0.6), shade, 220)
+		_ink(body, Vector2(x, cy + 5), rw, 12, Color(1.0, 0.84, 0.5) if milestone else Color(cream, 0.85), shade, 240)
 		x += w_rw + 16.0
 	# The streak, by its flame (fishing only).
 	if streak >= 0:
