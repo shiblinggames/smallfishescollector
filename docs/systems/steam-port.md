@@ -496,7 +496,7 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   cleared when the Log is opened), Hold. FOCUS: on a bite the dial sits centred (320 px)
   and a veil dims the sea and HUD behind it (Reel In stays bright); it fades out 0.22 s after
   the strike so the fight plays in view. ZOOM: Sea.ZOOM_DEFAULT 0.87 is the default and
-  reads 100%. THE LINE IN THE FIGHT: the fish pulls at 6.5 Hz not 16, no hum, harder damping
+  reads 100% (moved 2026-10-02 to 0.55, Kong: the old 100% was too close; the range is now 0.35 to 1.6 and the remembered zoom is "sea_zoom_2"). THE LINE IN THE FIGHT: the fish pulls at 6.5 Hz not 16, no hum, harder damping
   when held, and the hook is reeled up to where it hangs over 0.5 s before being let go.
 - STAT MILESTONES (Kong): port_rules statMilestone 10. Rules.level_catch_bonus gives the
   catch zone in steps (+2 degrees at 10, 20 ... 100; the web's floor(level*0.2) otherwise)

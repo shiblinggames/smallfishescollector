@@ -59,12 +59,13 @@ const BLOOMS: Array = [
 	[8269.0, 3010.0, 1100.0], [-732.0, 8368.0, 1100.0], [-5500.0, 6900.0, 1000.0],
 	[10739.0, 6200.0, 1400.0], [300.0, 14400.0, 1400.0], [-11085.0, 6400.0, 1400.0],
 ]
-## THE WHEEL ZOOM (SeaMap.tsx): 0.55 to 1.6 of the chart's own scale, eased,
+## THE WHEEL ZOOM (SeaMap.tsx): 0.35 to 1.6 of the chart's own scale, eased,
 ## and remembered on this machine (a number tuned on one screen is wrong on
-## another, so it is not in the save).
-const ZOOM_MIN: float = 0.55
-## The sea's own zoom, shown as 100% (Kong: what read 87% is the default).
-const ZOOM_DEFAULT: float = 0.87
+## another, so it is not in the save; "sea_zoom_2", since the default moved).
+const ZOOM_MIN: float = 0.35
+## The sea's own zoom, shown as 100% (Kong, 2026-10-02: what read 63% is the
+## default; the old 100%, 0.87, was too close).
+const ZOOM_DEFAULT: float = 0.55
 const ZOOM_MAX: float = 1.6
 var _zoom_to: float = 1.0
 ## THE STAGE (the Locker): the camera pushed in on her and set off to one
@@ -263,7 +264,7 @@ func _ready() -> void:
 
 	_camera = Camera2D.new()
 	_camera.position_smoothing_enabled = false
-	_zoom_to = clampf(float(Prefs.get_value("sea_zoom", ZOOM_DEFAULT)), ZOOM_MIN, ZOOM_MAX)
+	_zoom_to = clampf(float(Prefs.get_value("sea_zoom_2", ZOOM_DEFAULT)), ZOOM_MIN, ZOOM_MAX)
 	_camera.zoom = Vector2(_zoom_to, _zoom_to)
 	add_child(_camera)
 	_camera.make_current()
@@ -1575,7 +1576,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			zf = 1.0 / 1.12
 	if zf != 1.0:
 		_zoom_to = clampf(_zoom_to * zf, ZOOM_MIN, ZOOM_MAX)
-		Prefs.set_value("sea_zoom", _zoom_to)
+		Prefs.set_value("sea_zoom_2", _zoom_to)
 		_hud.show_zoom(_zoom_to)
 		get_viewport().set_input_as_handled()
 		return
