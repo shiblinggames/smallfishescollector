@@ -303,6 +303,14 @@ func set_pose(pose: String) -> void:
 
 ## Where the line meets the water while she waits (the sheet's painted ring:
 ## 155 x 760 of the 900 x 800 sheet), on the plane.
+## A nibble: the bobber dips, a small ring, a soft plip.
+func nibble() -> void:
+	skipper.line_dip_t = skipper.line_clock
+	if field != null:
+		field.ring(hook_at(), 20.0, 0.8, 0.35)
+	Sound.plip()
+
+
 func hook_at() -> Vector2:
 	var x: float = -105.0 - 16.8 + 155.0 / 900.0 * 210.0 + skipper.pose_shift.x
 	var y: float = -93.3 - 48.5 + 760.0 / 800.0 * 186.7 + skipper.pose_shift.y
@@ -362,10 +370,10 @@ func splash(perfect: bool, world_at: Variant = null) -> void:
 	add_child(p)
 	p.emitting = true
 	if field != null:
-		field.ring(position + at, 240.0 if perfect else 170.0, 1.9, 1.0)
+		field.ring(position + at, 160.0 if perfect else 115.0, 1.7, 0.9)
 	var ring: Ripple = Ripple.new()
 	ring.position = at
-	ring.grow = 150.0 if perfect else 110.0
+	ring.grow = 105.0 if perfect else 80.0
 	ring.life = 0.7 if perfect else 0.52
 	add_child(ring)
 	get_tree().create_timer(1.2).timeout.connect(p.queue_free)

@@ -34,7 +34,8 @@ signal chart_pressed
 signal locker_wanted(tab: String, slot: String)
 
 const HOLD_S: float = 0.62
-const HOLD_PERFECT_S: float = 0.9
+## A perfect holds longer than a catch so the leap lands before the card.
+const HOLD_PERFECT_S: float = 1.15
 const INK: Color = Color("#f0ede8")
 const DIM: Color = Color("#a0a09a")
 const GOLD: Color = Color("#f0c040")
@@ -234,7 +235,9 @@ func _ready() -> void:
 	_place(_timer, Vector2(0.5, 0.5), Vector2(-150, 146), Vector2(300, 22))
 
 	_dial = Dial.new()
-	_place(_dial, Vector2(0.5, 0.5), Vector2(140, -170), Vector2(300, 300))
+	# The dial sits beside where the line goes in (placed each frame in
+	# _process), so the needle, the strike and the fight are in one place.
+	_place(_dial, Vector2(0.0, 0.0), Vector2.ZERO, Vector2(300, 300))
 	_dial.visible = false
 	_dial.mouse_filter = Control.MOUSE_FILTER_STOP
 	_dial.gui_input.connect(func(e: InputEvent) -> void:
@@ -735,6 +738,7 @@ func _act() -> void:
 # ── The loop ───────────────────────────────────────────────────────────────────
 
 func cast() -> void:
+	_nibbles = 0
 	if _modal != null or _asking or (phase != "idle" and phase != "result") or _action.disabled:
 		return
 	_close_card()
@@ -941,7 +945,7 @@ func _on_struck(raw: String, _angle: float) -> void:
 	var landed: bool = result == "perfect" or result == "catch"
 	if not landed and float(_mods["retry"]) > 0.0 and randf() < float(_mods["retry"]):
 		Rumble.buzz(Rumble.SECOND_WIND)
-		Fx.pill(self, "Second Wind", Vector2(size.x / 2.0 + 290.0, size.y / 2.0 - 200.0), Color("#99f6e4"), Color(0.08, 0.3, 0.3, 0.8), Color(0.37, 0.92, 0.83, 0.7), 1.2)
+		Fx.pill(self, "Second Wind", _dial.position + Vector2(_dial.size.x / 2.0, -24.0), Color("#99f6e4"), Color(0.08, 0.3, 0.3, 0.8), Color(0.37, 0.92, 0.83, 0.7), 1.2)
 		_dial.respin()
 		return
 	if not _boss.is_empty() and landed and int(_boss["stage"]) < int(_boss["cfg"]["phases"]):
@@ -960,7 +964,9 @@ func _on_struck(raw: String, _angle: float) -> void:
 		# The streak, heard: a step higher for each perfect in a row.
 		Sound.streak(_streak() + 1)
 		Rumble.buzz(Rumble.PERFECT)
-		add_child(Fx.PerfectFlash.new())
+		var pf: Fx.PerfectFlash = Fx.PerfectFlash.new()
+		pf.at = _dial.position + _dial.size / 2.0
+		add_child(pf)
 	elif landed:
 		Sound.line_in()
 		Rumble.tap(6)
@@ -1190,10 +1196,39 @@ func _after_catch(from_catch: bool) -> void:
 		held = await session.act("heldGolden")
 
 
+## THE BITE COMING: the bobber dips twice before the fish takes it, with a
+## soft plip each time, so the bite lands as a payoff and not a surprise.
+## (Only on a wait long enough to have them; the rules' wait is unchanged.)
+var _nibbles: int = 0
+
+
+func _nibble() -> void:
+	_nibbles += 1
+	boat.nibble()
+
+
+func _place_dial() -> void:
+	if boat == null:
+		return
+	var hook: Vector2 = boat.get_parent().get_global_transform_with_canvas() * boat.hook_at()
+	var vp: Vector2 = get_viewport_rect().size
+	var at: Vector2 = hook + Vector2(-_dial.size.x - 36.0, -_dial.size.y * 0.72)
+	at.x = clampf(at.x, 16.0, vp.x - _dial.size.x - 16.0)
+	at.y = clampf(at.y, 120.0, vp.y - _dial.size.y - 160.0)
+	_dial.position = at
+
+
 func _process(delta: float) -> void:
+	if _dial.visible:
+		_place_dial()
 	if phase == "waiting":
 		_wait_left -= delta
 		_since_cast += delta
+		if _since_cast + _wait_left > 1.8:
+			if _nibbles == 0 and _wait_left < 1.15:
+				_nibble()
+			elif _nibbles == 1 and _wait_left < 0.5:
+				_nibble()
 		if _since_cast >= 1.5:
 			var n: int = int(_since_cast / 0.22) % 3
 			_dots.text = ["●  ·  ·", "·  ●  ·", "·  ·  ●"][n]

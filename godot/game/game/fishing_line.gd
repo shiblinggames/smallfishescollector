@@ -89,6 +89,11 @@ func _draw() -> void:
 			else:
 				if from != null and ease_in < 1.0:
 					end = (from as Vector2).lerp(end, ease_in)
+				# A nibble: the end dips under and comes back up.
+				if skipper.line_dip_t >= 0.0:
+					var d: float = (now - skipper.line_dip_t) / 0.24
+					if d >= 0.0 and d < 1.0:
+						end.y += sin(d * PI) * 6.0
 				_curve(tip, end, 5.0, 0.0, 0.0)
 				_remember(end)
 

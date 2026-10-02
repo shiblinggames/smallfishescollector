@@ -129,6 +129,8 @@ var frame_at: float = 0.0
 ## The line's own clock: game time (process deltas), so its motion keeps pace
 ## with the game and not the wall.
 var line_clock: float = 0.0
+## When the bobber last dipped (a nibble before the bite), or -1.
+var line_dip_t: float = -1.0
 ## Where the line's end was last drawn (this node's space), and where it
 ## starts from in a new pose (eased from there to the pose's own end).
 var line_end_prev: Vector2 = Vector2.ZERO

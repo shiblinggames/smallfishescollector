@@ -313,7 +313,7 @@ func _init() -> void:
 			for f: int in 6:
 				await process_frame
 			ahead[0] = float(hud._shot["waitMs"]) + 1000.0
-			hud._wait_left = 1.6
+			hud._wait_left = 2.6
 			var guard: int = 0
 			while hud.phase != "hooked" and guard < 900:
 				guard += 1

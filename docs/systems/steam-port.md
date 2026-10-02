@@ -418,6 +418,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   exactly where the waiting line enters the water (Skipper.sheet_point("wait", ...) with
   shift_for, the hull-holding shift each pose gets), so cast and wait are one movement.
   The line runs on Skipper.line_clock (game time), not the wall clock.
+  THE REEL, PASS TWO (Kong: "fix all those"): the BOBBER NIBBLES twice before a bite
+  (~1.15s and ~0.5s out, on waits long enough; Boat.nibble: the line's end dips, a small
+  ring, Sound.plip) so the bite is a payoff; the DIAL sits beside where the line goes in
+  (placed each frame from boat.hook_at() on screen, clamped), so needle, strike and fight
+  are in one place; the PERFECT FLASH blooms about the dial (Fx.PerfectFlash.at), not across
+  the screen; HOLD_PERFECT_S 0.9 -> 1.15 so the leap lands before the card; the catch
+  splash rings are smaller (field 160/115, ripple 105/80).
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

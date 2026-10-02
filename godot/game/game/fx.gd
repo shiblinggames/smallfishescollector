@@ -71,6 +71,10 @@ static func pill(parent: Control, text: String, at: Vector2, fg: Color, bg: Colo
 class PerfectFlash:
 	extends Control
 	var t: float = 0.0
+	## Where it blooms (screen point; the dial's centre). Small and local
+	## since 2026-10-01: it fires on every perfect, so it is felt, not a wash
+	## over the whole sea.
+	var at: Vector2 = Vector2.INF
 	var _word: Label
 
 	func _ready() -> void:
@@ -84,11 +88,11 @@ class PerfectFlash:
 		_word.add_theme_color_override("font_shadow_color", Color(0.96, 0.62, 0.04, 0.9))
 		_word.add_theme_constant_override("shadow_outline_size", 14)
 		_word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_word.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		_word.offset_left = -200
-		_word.offset_right = 200
-		_word.offset_top = -150
-		_word.offset_bottom = -110
+		_word.add_theme_font_size_override("font_size", 28)
+		_word.add_theme_constant_override("shadow_outline_size", 10)
+		var c: Vector2 = at if at != Vector2.INF else get_viewport_rect().size / 2.0
+		_word.position = c + Vector2(-200, -150 - 40)
+		_word.size = Vector2(400, 40)
 		_word.pivot_offset = Vector2(200, 20)
 		_word.scale = Vector2(0.5, 0.5)
 		add_child(_word)
@@ -103,14 +107,15 @@ class PerfectFlash:
 		queue_redraw()
 
 	func _draw() -> void:
-		var c: Vector2 = size / 2.0
+		var c: Vector2 = at if at != Vector2.INF else size / 2.0
 		var fade: float = 1.0 - clampf((t - 0.9) / 0.5, 0.0, 1.0)
 		modulate.a = fade
-		draw_circle(c, size.y * 0.55, Color(0.96, 0.62, 0.04, 0.10 * fade))
-		draw_circle(c, size.y * 0.30, Color(0.96, 0.62, 0.04, 0.10 * fade))
+		# A soft warm glow about the dial, not across the screen.
+		for k: int in 3:
+			draw_circle(c, 170.0 - k * 30.0, Color(0.96, 0.62, 0.04, 0.035 * fade))
 		var u1: float = clampf(t / 0.7, 0.0, 1.0)
 		if u1 < 1.0:
-			draw_arc(c, 70.0 * lerpf(0.2, 3.2, 1.0 - pow(1.0 - u1, 3.0)), 0.0, TAU, 96, Color(0.96, 0.62, 0.04, 0.7 * (1.0 - u1)), 2.0, true)
+			draw_arc(c, 70.0 * lerpf(1.6, 2.6, 1.0 - pow(1.0 - u1, 3.0)), 0.0, TAU, 96, Color(0.96, 0.62, 0.04, 0.55 * (1.0 - u1)), 1.6, true)
 		var u2: float = clampf((t - 0.1) / 0.65, 0.0, 1.0)
 		if u2 > 0.0 and u2 < 1.0:
-			draw_arc(c, 70.0 * lerpf(0.2, 2.4, 1.0 - pow(1.0 - u2, 3.0)), 0.0, TAU, 96, Color(0.99, 0.9, 0.54, 0.5 * (1.0 - u2)), 1.0, true)
+			draw_arc(c, 70.0 * lerpf(1.5, 2.2, 1.0 - pow(1.0 - u2, 3.0)), 0.0, TAU, 96, Color(0.99, 0.9, 0.54, 0.4 * (1.0 - u2)), 1.0, true)
