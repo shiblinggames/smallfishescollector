@@ -249,7 +249,8 @@ static func _fill_free_board(db: CaptainStore, uid: String, prev: Variant) -> vo
 	if str(Js.nz(prof.get("last_free_recruit_date"), "")) != str(Js.nz(prev, "")):
 		return
 	prof["last_free_recruit_date"] = today
-	var rows: Array = roll_board(int(t()["dailyRecruits"]), t()["freeWeights"], Js.list(prof.get("legendary_unlocks")))
+	# The free board is the Tavern Notice (port rules: its own, leaner odds).
+	var rows: Array = roll_board(int(t()["dailyRecruits"]), port().get("freeWeights", t()["freeWeights"]), Js.list(prof.get("legendary_unlocks")))
 	var recs: Array = []
 	for slot: int in rows.size():
 		var r: Dictionary = rows[slot]
@@ -317,11 +318,72 @@ static func state(db: CaptainStore, uid: String) -> Dictionary:
 		"navLevel": float(nav),
 		"hallTier": float(clamp_hall(prof.get("crew_hall_tier"))),
 		"doubloons": Js.nz(prof.get("doubloons"), 0.0),
-	}
+	}.merged({ "notices": notices_held(prof) } if not port().is_empty() else {})
 
 
 static func _after(db: CaptainStore, uid: String) -> Dictionary:
 	return { "state": state(db, uid) }
+
+
+# ── Notices (port rules) ────────────────────────────────────────────────────
+#
+# NOTICES (Kong, 2026-10-02): the free board each sunrise is the Tavern
+# Notice; a HARBOR BILL and a CAPTAIN'S PROCLAMATION are items, found in
+# treasure-hunt caskets and fishing crates, that post a fresh board at better
+# odds (and the only boards a Legendary can be on). Posting one replaces the
+# board standing. Held in the profile's crew_notices ({ id: count }).
+
+static func notice_defs() -> Dictionary:
+	return Js.obj(port().get("notices"))
+
+
+static func notices_held(prof: Dictionary) -> Dictionary:
+	return Js.obj(prof.get("crew_notices"))
+
+
+static func grant_notice(db: CaptainStore, uid: String, id: String, n: float = 1.0) -> void:
+	var p: Dictionary = db.me(uid)
+	var held: Dictionary = notices_held(p).duplicate()
+	held[id] = Js.num(held.get(id)) + n
+	p["crew_notices"] = held
+
+
+## Roll a drop table ({ notice id: chance }) on the rules' dice: what was found.
+static func roll_drops(db: CaptainStore, uid: String, table: Variant) -> Dictionary:
+	var out: Dictionary = {}
+	var tb: Dictionary = Js.obj(table)
+	for id: Variant in tb:
+		if Dice.next() < float(tb[id]):
+			grant_notice(db, uid, str(id))
+			out[str(id)] = 1.0
+	return out
+
+
+## Post a notice: one spent, a fresh board of three at its odds.
+static func post_notice(db: CaptainStore, uid: String, id: String) -> Dictionary:
+	var def: Dictionary = Js.obj(notice_defs().get(id))
+	if def.is_empty():
+		return { "error": "There is no notice like that." }
+	var p: Dictionary = db.me(uid)
+	var held: Dictionary = notices_held(p).duplicate()
+	if Js.num(held.get(id)) < 1.0:
+		return { "error": "You have no %s to post." % def["name"] }
+	held[id] = Js.num(held.get(id)) - 1.0
+	if float(held[id]) <= 0.0:
+		held.erase(id)
+	p["crew_notices"] = held
+	# Today's free board will not come down over this one.
+	p["last_free_recruit_date"] = board_key(Clock.now_ms())
+	var rows: Array = roll_board(int(t()["dailyRecruits"]), def["weights"], Js.list(p.get("legendary_unlocks")))
+	var recs: Array = []
+	for slot: int in rows.size():
+		var r: Dictionary = rows[slot]
+		recs.append({ "id": db.next_id(), "slot": float(slot), "source": id, "card_id": r["cardId"], "rarity": r["rarity"],
+			"power": r["power"], "dodge": r["dodge"], "fortune": r["fortune"], "effects": r["effects"], "recruited": false, "start_xp": 0.0 })
+	db.save["recruits"] = recs
+	var res: Dictionary = _after(db, uid)
+	res["posted"] = id
+	return res
 
 
 ## recruitCrew: claim the candidate first; a full roster hands it back.

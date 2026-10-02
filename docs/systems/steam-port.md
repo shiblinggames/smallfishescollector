@@ -675,7 +675,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   bunks and training, Drills/Stores, crew levels' stat ticks, promotions, seats. SUNRISE NOTICE
   (Kong): each sea day's fresh board is announced in the HUD's note slip ("New hopefuls at
   the Crew Hall"), and on coming back to a board not yet looked at (Sea._crew_morning; a
-  captain who has never had crew is not told until they have). The northern islands (Crew Hall,
+  captain who has never had crew is not told until they have).
+- NOTICES (Kong, 2026-10-02): the free board each sunrise IS the Tavern Notice (port rules
+  crewPort.freeWeights 76 / 22.3 / 1.7 / 0: an Epic on 5% of boards, never a Legendary). Two
+  items post a fresh board in its place at their own odds (crewPort.notices, per face, three
+  faces): a HARBOR BILL (Epic on 15% of boards, a Legendary on 1 in 100) and a CAPTAIN'S
+  PROCLAMATION (Epic on 20%, a Legendary on about 1 in 34); Legendaries come only from them.
+  Held in the profile's crew_notices; Crew.post_notice spends one and stamps the day so the
+  free board does not come down over it. Drops (crewPort.noticeDrops): Ship's Letter and Torn
+  Map caskets 25% a Bill; Last Will caskets always a Bill and 10% a Proclamation; gold and
+  diamond crates 3% a Bill; ancient crates 5% a Bill and 1% a Proclamation. The legendary
+  campaign gate still applies (only Catfish and Doby Mick until the campaign is ported).
+  tests/notice_check.gd holds the rates over 20,000 boards each. The northern islands (Crew Hall,
   Posting House, Forge, Gunwharf, Charterhouse) were already drawn; mooring now opens a paper
   sheet of what each will hold (North.COMING) until their rooms are ported. THE WORLD
   CHART centres on the crossing (WorldMap.WORLD_CENTRE, Kong: "the centre of the world is the

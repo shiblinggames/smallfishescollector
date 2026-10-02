@@ -184,6 +184,45 @@ func _recruit_room() -> void:
 	_body.add_child(grid)
 	for c: Dictionary in Js.list(_state.get("board")):
 		grid.add_child(_card(c, "board"))
+	_notices_row()
+
+
+## POST A NOTICE (port rules, core/crew.gd): the notices held, each with its
+## odds in plain words and a button that posts a fresh board.
+func _notices_row() -> void:
+	var defs: Dictionary = Crew.notice_defs()
+	if defs.is_empty():
+		return
+	Paper.rule(_body)
+	Paper.text(_body, "Post a notice", "eyebrow", Paper.INK_SOFT)
+	Paper.text(_body, "The board each sunrise is the Tavern Notice: mostly commons and rares, an Epic now and then, never a Legendary. A posted notice replaces the board standing with a fresh one at its own odds. Notices are found in treasure-hunt caskets and fishing crates.", "note", Paper.INK_SOFT, true)
+	var held: Dictionary = Js.obj(_state.get("notices"))
+	for id: Variant in defs:
+		var d: Dictionary = defs[id]
+		var n: int = int(Js.num(held.get(id)))
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		_body.add_child(row)
+		var v: VBoxContainer = VBoxContainer.new()
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.add_theme_constant_override("separation", 0)
+		row.add_child(v)
+		Paper.text(v, "%s  ·  %d held" % [d["name"], n], "body_strong", Paper.INK if n > 0 else Paper.INK_FAINT)
+		Paper.text(v, str(d["blurb"]), "small", Paper.INK_SOFT, true)
+		var b: Pane.PaneButton = Paper.button("Post it", n > 0)
+		b.disabled = n <= 0
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		b.pressed.connect(func() -> void:
+			var r: Dictionary = await _act("postNotice", [id])
+			if r.has("state"):
+				Sound.chest(true)
+				Rumble.buzz([0, 30, 30, 60])
+				_pick = {}
+				for c: Dictionary in Js.list(_state.get("board")):
+					if float(c["rarity"]) >= 4.0:
+						_sign_on_moment("A Legendary answers!", Color("#f0c040"))
+			_draw_room())
+		row.add_child(b)
 
 
 func _roster_room() -> void:
@@ -443,7 +482,7 @@ func _sign_on_moment(name: String, col: Color) -> void:
 		var r: float = 40.0 + 260.0 * (1.0 - pow(1.0 - u, 3.0))
 		layer.draw_arc(c, r, 0.0, TAU, 64, Color(col, (1.0 - u) * 0.8), 6.0 * (1.0 - u) + 1.0, true)
 		layer.draw_circle(c, 120.0 * (1.0 - u * 0.4), Color(col, 0.15 * (1.0 - u))))
-	var l: Label = Kit.text(layer, "%s is aboard!" % name, "display", Color(0.98, 0.95, 0.88))
+	var l: Label = Kit.text(layer, name if name.ends_with("!") else "%s is aboard!" % name, "display", Color(0.98, 0.95, 0.88))
 	l.add_theme_font_size_override("font_size", 44)
 	l.add_theme_color_override("font_shadow_color", Color(col.darkened(0.5), 0.9))
 	l.add_theme_constant_override("shadow_outline_size", 14)

@@ -466,6 +466,7 @@ func _init() -> void:
 				for c: Dictionary in st["board"]:
 					RulesApi.run(sea.session.store, sea.session.uid, "recruitCrew", [c["id"]])
 				p["last_free_recruit_date"] = "old%d" % d
+			p["crew_notices"] = { "harbor_bill": 2.0 }
 			var ch: CrewHall = CrewHall.new()
 			ch.session = sea.session
 			ch.room = { "crewhall": "recruit", "crewroster": "roster", "crewhalltier": "hall" }[what]

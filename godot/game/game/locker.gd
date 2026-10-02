@@ -536,6 +536,9 @@ func _open_crate(tier: String) -> void:
 	_show_tab("crates")
 	await cs.done
 	_opening = false
+	# A notice for the Crew Hall in the crate (port rules, core/crew.gd).
+	for nt: Variant in Js.obj(r.get("notices")):
+		hud.notify("FOUND IN THE CRATE", "A %s" % Js.obj(Crew.notice_defs().get(nt)).get("name", nt), "Post it at the Crew Hall for a fresh board of hopefuls.", Skipper.tex("crew/hall_1.png"))
 	hud.refresh()
 	if is_inside_tree() and tab == "crates":
 		_show_tab("crates")

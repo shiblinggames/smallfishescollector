@@ -402,4 +402,6 @@ static func open_casket(db: CaptainStore, uid: String, tier: String) -> Dictiona
 					out["crates"][k] = Js.num((out["crates"] as Dictionary).get(k)) + 1.0
 					break
 		db.update_profile(uid, { "crate_stash": stash })
+	# Notices for the Crew Hall (port rules, core/crew.gd).
+	out["notices"] = Crew.roll_drops(db, uid, Js.obj(Js.obj(Crew.port().get("noticeDrops")).get("casket")).get(tier))
 	return out

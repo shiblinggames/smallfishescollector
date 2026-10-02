@@ -925,6 +925,8 @@ func _clue_search(tier: String) -> void:
 		var lines: Array = [["The %s's hunt is done. The casket held:" % Clues.TIER_NAME[tier], "note"]]
 		for b: Variant in Js.obj(res.get("bait")):
 			lines.append(["%d %s" % [int(res["bait"][b]), Rules.bait(str(b)).get("name", b)], "body_strong"])
+		for nt: Variant in Js.obj(res.get("notices")):
+			lines.append(["A %s, for the Crew Hall" % Js.obj(Crew.notice_defs().get(nt)).get("name", nt), "body_strong"])
 		for c: Variant in Js.obj(res.get("crates")):
 			var cname: String = str((CrateMoment.TIERS.get(c, [str(c).capitalize()]) as Array)[0])
 			var cn: int = int(res["crates"][c])
