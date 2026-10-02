@@ -431,6 +431,11 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   plip per level, a stroke of light drawing out beneath and a few motes rising; what it
   brought and any water opened on a paper slip below her boat; the cast lettering steps
   aside while it shows.
+- THE LEVEL BAR, CENTRED AND ALWAYS THERE (Kong): top centre of the screen, measured and
+  centred whatever it says. It follows the side of the reef (as the web's spine panel):
+  FISHING in the fishing waters (with the streak flame and the next level reward),
+  NAVIGATION north of the reef (expedition_xp on navXpTable, no flame), crossing over
+  fades it out and in on the other skill. Nav bead and line in warm amber.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

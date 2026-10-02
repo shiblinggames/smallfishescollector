@@ -124,8 +124,10 @@ func _ready() -> void:
 	var tl: VBoxContainer = _box(Vector2(20, 14), false, 580)
 	tl.add_theme_constant_override("separation", 6)
 	_name = Kit.lift(Kit.text(tl, "", "title", INK))
+	# The level bar: centred at the top, always there (game/xp_bar.gd).
 	_xp = XpBar.new()
-	tl.add_child(_xp)
+	_place(_xp, Vector2(0.5, 0.0), Vector2(-320, 12), Vector2(640, 40))
+	add_child(_xp)
 	var purse_row: HBoxContainer = HBoxContainer.new()
 	purse_row.add_theme_constant_override("separation", 10)
 	purse_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -418,7 +420,21 @@ func refresh() -> void:
 		frac = (xp - lo) / maxf(1.0, hi - lo)
 		left = hi - xp
 	var next: Dictionary = (Rules.data()["levelRewards"] as Dictionary).get(str(lvl + 1), {})
-	_xp.set_values(lvl, frac, left, LevelUp.reward_label(next) if not next.is_empty() else "", next.get("milestone", false), _streak())
+	if water.is_empty():
+		# North of the reef, in the harbour waters: the Navigation level.
+		var nxp: float = Js.num(p.get("expedition_xp"))
+		var nlv: int = Loadout.nav_level_from_xp(nxp)
+		var nt: Array = Rules.data()["navXpTable"]
+		var nfrac: float = 1.0
+		var nleft: float = 0.0
+		if nlv < 100:
+			var nlo: float = float(nt[nlv - 1])
+			var nhi: float = float(nt[nlv])
+			nfrac = (nxp - nlo) / maxf(1.0, nhi - nlo)
+			nleft = nhi - nxp
+		_xp.set_values(nlv, nfrac, nleft, "", false, -1, "nav")
+	else:
+		_xp.set_values(lvl, frac, left, LevelUp.reward_label(next) if not next.is_empty() else "", next.get("milestone", false), _streak(), "fishing")
 	_dial.streak = _streak()
 	_purse.text = "%s ⟡" % _thousands(Js.num(p.get("doubloons")))
 	# The bait on the line: the one chosen while any is left, else the first held.
@@ -452,6 +468,8 @@ func set_water(w: Dictionary) -> void:
 	if not w.is_empty():
 		toast(w["name"])
 	_update_action()
+	# The level bar follows the side of the reef she is on.
+	refresh()
 
 
 ## The hotspot the boat is in ({} for none): its badge, with its countdown.
