@@ -309,7 +309,7 @@
   },
   "_pets": "Each crate its own set (Kong, 2026-10-01): every pet belongs to exactly one crate tier, so a crate's collection is its own pets and its cosmetic bands, and the gold-coloured pets live in the deepest crates. The chance of a pet per crate (crate.petChance) is the web's; which pet is drawn from that crate's own list, each weighted by its share of the web's whole pet roll. Duplicates can still come up.",
   "_rarity": "Pet chance per crate, 1% to 4% by tier (Kong, 2026-10-01): wooden 1, metal 1.5, gold 2, diamond 3, ancient 4 (the web's 0.5 / 1 / 2 / 4 / 10). Cosmetics unchanged.",
-  "_levels": "Levels give upgrades and unlocks, not money (Kong, 2026-10-01). No level pays doubloons, and no level pays gems (gems are being retired from both builds). Fishing levels raise the fish hold for free (Medium at 10, Large at 20, Cargo at 30, Deep at 45, Grand at 60; Titan, Leviathan and Kraken stay bought), so levelRewardMax runs to 100. FISHING levels raise the sailing upgrades for free too (shipUpgrades: the hull's second tier at Fishing 10 and third at 25, the rudder's second at 15, the rig's second at 20), while Navigation has no way to grow in the port; the rest are bought, each behind a Fishing level (levelGates.ship). The small bait at levels is kept.",
+  "_levels": "Levels give upgrades and unlocks, not money (Kong, 2026-10-01). No level pays doubloons, and no level pays gems (gems are being retired from both builds). Fishing levels raise the fish hold for free (Medium at 10, Large at 20, Cargo at 30, Deep at 45, Grand at 60; Titan, Leviathan and Kraken stay bought), so levelRewardMax runs to 100. FISHING levels raise the sailing upgrades for free too (shipUpgrades: the hull's second tier at Fishing 10 and third at 25, the rudder's second at 15, the rig's second at 20), while Navigation has no way to grow in the port; the rest are bought, each behind a Fishing level (levelGates.ship). The small bait at levels is kept. Bait a level gives that is not yet unlocked at that level is given instead at the level that unlocks it (a 0 here clears the web's gift).",
   "levelRewards": {
     "2": {
       "doubloons": 0,
@@ -317,7 +317,10 @@
     },
     "3": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "minnow": 0
+      }
     },
     "4": {
       "doubloons": 0,
@@ -325,7 +328,10 @@
     },
     "5": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "minnow": 8
+      }
     },
     "6": {
       "doubloons": 0,
@@ -337,7 +343,10 @@
     },
     "8": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "night_crawler": 0
+      }
     },
     "9": {
       "doubloons": 0,
@@ -357,7 +366,10 @@
     },
     "13": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "night_crawler": 0
+      }
     },
     "14": {
       "doubloons": 0,
@@ -365,7 +377,11 @@
     },
     "15": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "chum": 0,
+        "night_crawler": 8
+      }
     },
     "16": {
       "doubloons": 0,
@@ -377,7 +393,10 @@
     },
     "18": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "chum": 0
+      }
     },
     "19": {
       "doubloons": 0,
@@ -397,7 +416,10 @@
     },
     "23": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "chum": 0
+      }
     },
     "24": {
       "doubloons": 0,
@@ -405,7 +427,10 @@
     },
     "25": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "anglers_formula": 0
+      }
     },
     "26": {
       "doubloons": 0,
@@ -426,7 +451,10 @@
     "30": {
       "doubloons": 0,
       "gems": 0,
-      "holdFloor": 3
+      "holdFloor": 3,
+      "bait": {
+        "chum": 15
+      }
     },
     "31": {
       "doubloons": 0,
@@ -487,7 +515,10 @@
     "45": {
       "doubloons": 0,
       "gems": 0,
-      "holdFloor": 4
+      "holdFloor": 4,
+      "bait": {
+        "anglers_formula": 3
+      }
     },
     "46": {
       "doubloons": 0,

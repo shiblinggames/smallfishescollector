@@ -266,7 +266,8 @@ static func reward_label(r: Dictionary) -> String:
 	if Js.num(r.get("gems")) > 0:
 		parts.append("%d ◆" % int(r["gems"]))
 	for type: Variant in Js.obj(r.get("bait")):
-		parts.append("%d %s" % [int((r["bait"] as Dictionary)[type]), Rules.bait(type)["name"]])
+		if int((r["bait"] as Dictionary)[type]) > 0:
+			parts.append("%d %s" % [int((r["bait"] as Dictionary)[type]), Rules.bait(type)["name"]])
 	# (A hold raised is told under Stronger, by gains().)
 	if parts.size() <= 1:
 		return parts[0] if parts.size() == 1 else ""
