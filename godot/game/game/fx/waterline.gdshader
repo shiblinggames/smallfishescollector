@@ -18,6 +18,8 @@ uniform float phase = 0.0;
 // This picture's height against the captain's sheet, so the lapping is the
 // same size on every hull (a boat overlay is a far shorter picture).
 uniform float ref = 1.0;
+// How hard the water laps at it (a rock's long face is calmer than a hull's).
+uniform float lap_amp = 1.0;
 uniform vec4 sea : source_color = vec4(0.17, 0.34, 0.39, 1.0);
 uniform vec4 foam : source_color = vec4(0.88, 0.94, 0.93, 1.0);
 
@@ -29,7 +31,7 @@ void vertex() {
 
 void fragment() {
 	float x = UV.x * aspect * ref;
-	float lap = (sin(x * 34.0 + TIME * 2.0 + phase) * 0.6 + sin(x * 67.0 - TIME * 2.7 + phase * 1.7) * 0.4) * depth * 0.16;
+	float lap = (sin(x * 34.0 + TIME * 2.0 + phase) * 0.6 + sin(x * 67.0 - TIME * 2.7 + phase * 1.7) * 0.4) * depth * 0.16 * lap_amp;
 	float below = UV.y - (cut + tilt * (UV.x - 0.5) + lap);
 	float sub = clamp(below / max(depth, 0.0001), 0.0, 1.0);
 	vec2 uv = UV;

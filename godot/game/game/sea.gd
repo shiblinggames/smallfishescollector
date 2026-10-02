@@ -1024,18 +1024,36 @@ func _show_find(p: Control) -> void:
 ## The reef and the anchorage's wall, rock by rock (North), and the names
 ## over the arch and the Sea Gate.
 func _draw_north() -> void:
+	# IN THE WATER, as the boats are (Kong: "the boulders don't look
+	# submerged"): the foot of each rock below a lapping waterline, and the
+	# water it pushes aside ringing it. Each its own material, since the
+	# shader's sizes follow the rock's.
 	for r: Array in North.rocks():
 		var t: Texture2D = Skipper.tex(r[0])
 		if t == null:
 			continue
+		var holder: Node2D = Node2D.new()
+		holder.position = Vector2(float(r[1]), float(r[2]))
+		_world.add_child(holder)
 		var s: Sprite2D = Sprite2D.new()
 		s.texture = t
 		var sc: float = float(r[3]) / float(t.get_width())
 		s.scale = Vector2(sc, sc / Chart.GROUND)
 		# Standing on the water: the picture's foot near its point.
 		s.offset = Vector2(0, -t.get_height() * 0.3)
-		s.position = Vector2(float(r[1]), float(r[2]))
-		_world.add_child(s)
+		# The painted foot, and the water a little up from it.
+		var band: Vector2 = Skipper._band(t)
+		var cut: float = band.y - 0.13
+		var depth: float = 0.12
+		var phase: float = randf() * 6.0
+		var m: ShaderMaterial = Skipper.afloat_mat("res://game/fx/waterline.gdshader", s, cut, depth, phase)
+		m.set_shader_parameter("lap_amp", 0.4)
+		s.material = m
+		# The ring sits behind the rock, from its own shape.
+		var ring: Sprite2D = Skipper.collar_of(s, cut, depth, phase)
+		ring.offset = s.offset
+		holder.add_child(ring)
+		holder.add_child(s)
 	for sign: Array in [["The Anchorage", Vector2(North.GATE_X, Explore.NORTH_WALL - 520.0)], ["The Sea Gate", North.SEA_GATE + Vector2(0, 520.0)]]:
 		var holder: Node2D = Node2D.new()
 		holder.position = sign[1]
