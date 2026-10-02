@@ -97,38 +97,81 @@ func _ready() -> void:
 		_motes.append([randf_range(-180.0, 180.0), randf_range(0.0, 1.0), randf_range(0.5, 1.2), randf_range(1.2, 2.6)])
 
 
+## EVERYTHING A LEVEL BRINGS (Kong, 2026-10-01: "show your stat increases and
+## what you unlock; tell you everything, or as much as it can"). For the
+## levels crossed: [section, line] pairs. Stronger: the catch zone (one
+## degree every five levels) and the perfect streak's ceiling. Unlocked: new
+## waters, rods, reels and hooks the shops will now sell you, colours earned,
+## the Master daily. Earned: what the level paid.
+static func gains(from: int, to: int) -> Array:
+	var out: Array = []
+	var d: Dictionary = Rules.data()
+	var cz: int = int(floor(to * 0.2)) - int(floor(from * 0.2))
+	if cz > 0:
+		out.append(["Stronger", "Catch zone +%d° (%d° from your level now)" % [cz, int(floor(to * 0.2))]])
+	var s0: float = Rules.streak_mult(10.0, float(from))
+	var s1: float = Rules.streak_mult(10.0, float(to))
+	if s1 > s0 + 0.0001:
+		out.append(["Stronger", "A full perfect streak pays ×%.2f XP (was ×%.2f)" % [s1, s0]])
+	var mins: Dictionary = d["zones"]["minLevel"]
+	for w: Dictionary in Chart.WATERS:
+		var need: int = int(mins.get(w["id"], 1))
+		if need > from and need <= to:
+			out.append(["Unlocked", "%s is open to you" % w["name"]])
+	var rods: Array = d["rods"]
+	for k: Variant in d["rodShop"]:
+		var lr: int = int(Js.num((d["rodShop"][k] as Dictionary).get("levelReq")))
+		if lr > from and lr <= to and int(k) < rods.size():
+			var captain: bool = (d["rodShop"][k] as Dictionary).get("captainRod") == true
+			out.append(["Unlocked", "%s at the Tackle Shop%s" % [rods[int(k)]["name"], " (Captain)" if captain else ""]])
+	for kind: Array in [["reels", "reel"], ["hooks", "hook"]]:
+		for g: Dictionary in d[kind[0]]:
+			var lr2: int = int(Js.num(g.get("levelReq")))
+			if lr2 > from and lr2 <= to:
+				out.append(["Unlocked", "%s at the Tackle Shop" % g["name"]])
+	var by: Dictionary = d["fishingColorsByLevel"]
+	var c0: Array = by.get(str(from), [])
+	for cid: Variant in by.get(str(to), []):
+		if not c0.has(cid):
+			for cc: Dictionary in d["characterColors"]:
+				if cc["id"] == cid:
+					out.append(["Unlocked", "The %s look" % cc["name"]])
+	var mm: int = int(Js.num(d["daily"].get("masterMinLevel")))
+	if mm > from and mm <= to:
+		out.append(["Unlocked", "A fourth daily challenge, the Master"])
+	return out
+
+
 func _build_slip(parent: Control, from: int, to: int) -> Control:
-	var lines: Array = []
+	var lines: Array = gains(from, to)
 	var granted: Array = claim.get("granted", [])
 	for g: Dictionary in granted:
 		var label: String = reward_label(g["reward"])
 		if label != "":
-			lines.append([("Level %d  ·  %s" % [int(g["level"]), label]) if granted.size() > 1 else label, "reward"])
-	var opened: Array[String] = []
-	var mins: Dictionary = Rules.data()["zones"]["minLevel"]
-	for w: Dictionary in Chart.WATERS:
-		var need: int = int(mins.get(w["id"], 1))
-		if need > from and need <= to:
-			opened.append(w["name"])
-	if opened.size() > 0:
-		lines.append([("New water open: " if opened.size() == 1 else "New waters open: ") + ", ".join(opened), "water"])
+			lines.append(["Earned", ("Level %d  ·  %s" % [int(g["level"]), label]) if granted.size() > 1 else label])
 	if lines.is_empty():
 		return null
-	var p: Pane = Kit.pane(parent, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.4), 18, Vector2(0, 6)], "pad": [26, 16, 26, 18], "paper": true })
+	var p: Pane = Kit.pane(parent, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.4), 18, Vector2(0, 6)], "pad": [28, 16, 28, 18], "paper": true })
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var v: VBoxContainer = VBoxContainer.new()
-	v.add_theme_constant_override("separation", 6)
+	v.add_theme_constant_override("separation", 4)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.custom_minimum_size = Vector2(380, 0)
 	p.add_child(v)
-	var head: Label = Kit.text(v, "It brought" if to - from == 1 else "They brought", "eyebrow", Color(0.55, 0.3, 0.15))
-	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var last: String = ""
 	for l: Array in lines:
-		var t: Label = Kit.text(v, l[0], "body_strong", Kit.ink(Color(0.36, 0.6, 0.58)) if l[1] == "water" else Kit.PAPER_INK)
+		if l[0] != last:
+			last = l[0]
+			var head: Label = Kit.text(v, l[0], "eyebrow", { "Stronger": Color(0.55, 0.3, 0.15), "Unlocked": Kit.ink(Color(0.36, 0.6, 0.58)), "Earned": Color(0.55, 0.42, 0.1) }[l[0]])
+			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			if v.get_child_count() > 1:
+				head.custom_minimum_size = Vector2(0, 22)
+				head.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		var t: Label = Kit.text(v, l[1], "body_strong", Kit.PAPER_INK)
 		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if to - from > 1:
 		var n: Label = Kit.text(v, "These were waiting for you. Everything you earn is held until you are back at the chart.", "note", Kit.PAPER_INK_SOFT, true)
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		n.custom_minimum_size = Vector2(420, 0)
 	return p
 
 

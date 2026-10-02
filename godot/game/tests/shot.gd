@@ -458,7 +458,7 @@ func _init() -> void:
 			var lu: LevelUp = LevelUp.new()
 			lu.claim = { "from": 4.0, "to": 6.0, "granted": [{ "level": 5.0, "reward": (Rules.data()["levelRewards"] as Dictionary)["5"] }, { "level": 6.0, "reward": (Rules.data()["levelRewards"] as Dictionary)["6"] }] }
 			if OS.get_environment("LV_ONE") != "":
-				lu.claim = { "from": 14.0, "to": 15.0, "granted": [{ "level": 15.0, "reward": (Rules.data()["levelRewards"] as Dictionary).get("15", {}) }] }
+				lu.claim = { "from": 19.0, "to": 20.0, "granted": [{ "level": 15.0, "reward": (Rules.data()["levelRewards"] as Dictionary).get("20", {}) }] }
 			hud._action.visible = false
 			hud.add_child(lu)
 			await create_timer(1.8).timeout
