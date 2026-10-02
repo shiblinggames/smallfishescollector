@@ -21,6 +21,9 @@ func _init() -> void:
 	var cycle: float = SeaClock.CYCLE_MS
 	var base: float = floor(Time.get_unix_time_from_system() * 1000.0 / cycle) * cycle
 	var at: float = base + cycle * (0.5 if night else (0.30 if args.has("dusk") else 0.1))
+	# SHOT_T: the moment in the sea's day (0 to 1; 0.667 is sunrise, 0 noon).
+	if OS.get_environment("SHOT_T") != "":
+		at = base + cycle * float(OS.get_environment("SHOT_T"))
 	Clock.install(func() -> float: return at)
 	Main.straight_to_sea = what != "title" and what != "titlenew"
 	if what == "title" or what == "titlenew":

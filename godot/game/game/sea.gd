@@ -227,6 +227,11 @@ func _ready() -> void:
 	_world.add_child(_boat)
 	_boat.set_look(Skipper.look_of(session.profile()))
 	_boat.set_fit(session.profile())
+	# The Log's shelf, loading in the background (game/skipper.gd).
+	var names: Array = []
+	for f: Dictionary in session.save.get("species", []):
+		names.append(f["name"])
+	Skipper.warm_fish_thumbs(names)
 	session.changed.connect(func() -> void: _boat.set_fit(session.profile()))
 
 	_night = CanvasModulate.new()
@@ -349,25 +354,38 @@ func _process(delta: float) -> void:
 	_water.set_shader_parameter("u_deep", stops[0])
 	_water.set_shader_parameter("u_mid", stops[1])
 	_water.set_shader_parameter("u_shallow", stops[2])
+	# The sun's (or the moon's) place in the sky: where the light comes from,
+	# how high, and how low and golden the sun is (SeaClock.sky).
+	var sky: Dictionary = SeaClock.sky(now)
+	var toward: Vector2 = sky["toward"]
+	var elev: float = sky["elev"]
+	var warm: float = maxf(float(clock["warmth"]), float(sky["low"]) * 0.55)
+	# Shadows: full by day, fading as the sun or moon nears the horizon (so
+	# the hand-over at dusk and dawn, sun to moon, is never seen), faint by
+	# moonlight.
+	var shadow_k: float = smoothstep(0.02, 0.2, elev) * (0.4 if sky["moon"] else 1.0)
 	_water.set_shader_parameter("u_dark", dark)
-	_water.set_shader_parameter("u_warm", clock["warmth"])
-	_water.set_shader_parameter("u_light", Vector2.from_angle(SeaClock.sun_angle(now)))
+	_water.set_shader_parameter("u_warm", warm)
+	_water.set_shader_parameter("u_light", toward)
+	_water.set_shader_parameter("u_sun_h", elev)
+	_water.set_shader_parameter("u_shadow", shadow_k)
+	Skipper.sun(-toward * lerpf(30.0, 5.0, elev), shadow_k)
 	_water.set_shader_parameter("u_rush", clampf(_boat.velocity.length() / Boat.MAX_SPEED, 0.0, 1.0) * 0.6)
 	_water.set_shader_parameter("u_lantern", dark)
 
 	# Night on the solid world: dim and cool it, and let the lights pool.
 	# The world sits a little under full by day so the sun has room to model
 	# it: lit faces come up to full, the far sides stay soft.
-	_night.color = Color(0.88, 0.88, 0.88).lerp(Color(0.40, 0.46, 0.64), dark)
+	# By day: brightest at noon, warmer and a touch dimmer as the sun lowers.
+	var day_col: Color = Color(0.9, 0.9, 0.9).lerp(Color(0.9, 0.82, 0.74), float(sky["low"]) * 0.8)
+	_night.color = day_col.lerp(Color(0.40, 0.46, 0.64), dark)
 	# Under a squall the light goes grey; a strike lights it all.
 	_night.color = _night.color.lerp(Color(0.6, 0.64, 0.7), _storm * 0.55).lerp(Color(0.84, 0.86, 0.88), _squall.fog * 0.5).lerp(Color(1.0, 1.0, 1.0), _squall.flash * 0.6)
-	var warm: float = float(clock["warmth"])
-	var toward: Vector2 = Vector2.from_angle(SeaClock.sun_angle(now))
 	_sun.rotation = (-toward).angle() - PI / 2.0
-	_sun.height = lerpf(0.72, 0.22, warm)
-	var sun_col: Color = Color(1.0, 0.97, 0.9).lerp(Color(1.0, 0.62, 0.32), warm)
+	_sun.height = lerpf(0.15, 0.85, elev)
+	var sun_col: Color = Color(1.0, 0.62, 0.32).lerp(Color(1.0, 0.97, 0.9), smoothstep(0.0, 0.55, elev))
 	_sun.color = sun_col.lerp(Color(0.55, 0.66, 1.0), dark)
-	_sun.energy = lerpf(0.22 + 0.12 * warm, 0.16, dark)
+	_sun.energy = lerpf(0.22 + 0.12 * float(sky["low"]), 0.06 + 0.12 * elev, dark)
 	_grade(delta, cam_world, dark)
 	_boat.lantern.energy = dark * 1.1 * (0.5 + 0.5 * _boat.lantern_glow)
 	_town_light.energy = dark * 1.4
@@ -382,7 +400,7 @@ func _process(delta: float) -> void:
 	_night_water(dark, cam_world)
 	var half: Vector2 = Vector2(vp.x / 2.0 / _camera.zoom.x, vp.y / 2.0 / _camera.zoom.x / Chart.GROUND)
 	_life.step(delta, cam_world, half, _boat.position, _boat.velocity.length(), dark, clock["warmth"], now)
-	_sky.step(delta, cam_world, _camera.zoom.x, vp, dark, clock["warmth"], stops[2])
+	_sky.step(delta, cam_world, _camera.zoom.x, vp, dark, warm, stops[2])
 	_weather(delta, now, cam_world)
 	_feed_berths(cam_world)
 	# Every hull's wake, laid on the water.
@@ -431,7 +449,7 @@ func _process(delta: float) -> void:
 		_crew_marks.marks = marks
 
 	_hud.set_water(Chart.water_at(cam_world))
-	_hud.set_clock(SeaClock.PHASE_LABEL[clock["phase"]])
+	_hud.set_clock(SeaClock.time_label(now), sky)
 	if _music_started:
 		Sound.music_for(clock["phase"])
 

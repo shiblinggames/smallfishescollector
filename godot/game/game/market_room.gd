@@ -106,7 +106,7 @@ func _entries() -> Array:
 			"logged": logged.has(id),
 		})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["value"] * a["m"] > b["value"] * b["m"])
-	_next_at = float(state["lastTickAt"]) + Market.HOUR
+	_next_at = Market.next_tick_after(float(state["lastTickAt"]))
 	return out
 
 
@@ -146,7 +146,13 @@ func _build() -> void:
 	var top: HBoxContainer = HBoxContainer.new()
 	top.alignment = BoxContainer.ALIGNMENT_END
 	col.add_child(top)
-	var adv: Button = Room.tinted("Advanced: %s" % ("On" if _advanced else "Off"), Color("#b9c6d0") if not _advanced else GOLD, 12, 30)
+	# The Advanced board comes at a Fishing level (port rules).
+	var adv_block: String = Rules.gate_block("feature", "market_advanced", Js.num(session.profile().get("fishing_xp")))
+	if adv_block != "":
+		_advanced = false
+	var adv: Button = Room.tinted(("Advanced: %s" % ("On" if _advanced else "Off")) if adv_block == "" else "Advanced  ·  %s" % adv_block, Color("#b9c6d0") if not _advanced else GOLD, 12, 30)
+	adv.disabled = adv_block != ""
+	adv.tooltip_text = "The board: the market's mood, the Sea Index, the day's movers, price history and every species you have logged."
 	adv.pressed.connect(func() -> void:
 		_advanced = not _advanced
 		Prefs.set_value("market_advanced", _advanced)
@@ -198,14 +204,14 @@ func _ticker(logged: Array) -> void:
 	var sp: Control = Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(sp)
-	Room.text(row, "NEXT UPDATE", 11, Color(0.75, 0.83, 0.89, 0.6))
+	Room.text(row, "NEW PRICES AT SUNRISE, IN" if Market.daily() else "NEXT UPDATE", 11, Color(0.75, 0.83, 0.89, 0.6))
 	_countdown = Room.text(row, "", 15, INK, true)
 	_tick_countdown()
 	Room.text(v, mood["desc"], 13, SUB, false, true)
 	var modes: HBoxContainer = HBoxContainer.new()
 	modes.add_theme_constant_override("separation", 6)
 	v.add_child(modes)
-	var ml: Label = Room.text(modes, "TICKER COLORS  ·  %s" % ("above normal price" if _mode == "normal" else "up since last tick"), 11, Color(0.75, 0.83, 0.89, 0.6))
+	var ml: Label = Room.text(modes, "TICKER COLORS  ·  %s" % ("above normal price" if _mode == "normal" else ("up since yesterday" if Market.daily() else "up since last tick")), 11, Color(0.75, 0.83, 0.89, 0.6))
 	ml.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for m: Array in [["normal", "vs Normal"], ["movement", "Recent"]]:
 		var on: bool = _mode == m[0]
@@ -248,7 +254,7 @@ func _hero(held: Array, total: float, count: float) -> void:
 			base += Market.price_each(float(e["value"]), ref) * float(e["qty"])
 		var d: float = total - base
 		var dp: float = d / maxf(1.0, base) * 100.0
-		Room.text(v, "%s%s ⟡ (%s)  %s" % ["+" if d >= 0 else "-", Js.thousands(absf(d)), pct_text(dp), "vs normal value" if _mode == "normal" else "vs last tick"], 13, UP if d >= 0 else DOWN)
+		Room.text(v, "%s%s ⟡ (%s)  %s" % ["+" if d >= 0 else "-", Js.thousands(absf(d)), pct_text(dp), "vs normal value" if _mode == "normal" else ("vs yesterday" if Market.daily() else "vs last tick")], 13, UP if d >= 0 else DOWN)
 		var line: Array = []
 		var n: int = 0
 		for e: Dictionary in held:
@@ -417,7 +423,7 @@ func _trade(e: Dictionary) -> void:
 		var pr: HBoxContainer = HBoxContainer.new()
 		sh.body.add_child(pr)
 		Room.text(pr, "%s ⟡" % Js.thousands(each(e)), 26, INK, true)
-		Room.text(pr, "  %s %s  %s" % ["▲" if sg[0] else "▼", pct_text(sg[1]), "vs normal" if _mode == "normal" else "vs last tick"], 14, UP if sg[0] else DOWN).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		Room.text(pr, "  %s %s  %s" % ["▲" if sg[0] else "▼", pct_text(sg[1]), "vs normal" if _mode == "normal" else ("vs yesterday" if Market.daily() else "vs last tick")], 14, UP if sg[0] else DOWN).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var sp: Spark = Spark.new()
 		var pts: Array = (e["history"] as Array).duplicate()
 		pts.append(e["m"])

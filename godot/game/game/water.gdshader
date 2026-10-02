@@ -26,6 +26,10 @@ uniform vec3 u_deep;
 uniform float u_dark = 0.0;
 uniform float u_warm = 0.0;
 uniform vec2 u_light = vec2(-0.7, -0.7);
+// How high the sun (or moon) stands, 0 on the horizon to 1 overhead, and how
+// strong its shadows are now (sea.gd, from SeaClock.sky).
+uniform float u_sun_h = 0.7;
+uniform float u_shadow = 1.0;
 uniform float u_swell = 1.0;
 uniform float u_rush = 0.0;
 uniform vec2 u_shelf = vec2(1400.0, 22600.0);
@@ -101,8 +105,11 @@ void fragment() {
 	else col = mix(u_deep, u_deep * 0.62, (t - 0.60) / 0.40);
 
 	// Golden hour: fire at the horizon end, gold around it, a little everywhere.
-	float horizon = 1.0 - smoothstep(0.0, 0.72, t);
-	float ember = 1.0 - smoothstep(0.0, 0.30, t);
+	// The fire sits on the sun's side of the sky: the east in the morning, the
+	// west at sunset.
+	float ts = clamp(length((uv - vec2(0.5 + u_light.x * 0.5, -0.10)) / vec2(1.30, 1.04)), 0.0, 1.0);
+	float horizon = 1.0 - smoothstep(0.0, 0.72, ts);
+	float ember = 1.0 - smoothstep(0.0, 0.30, ts);
 	vec3 gold = vec3(1.00, 0.56, 0.20);
 	vec3 fire = vec3(0.98, 0.26, 0.11);
 	vec3 warm_col = mix(gold, fire, ember * 0.85);
@@ -207,6 +214,20 @@ void fragment() {
 		float sun_road = mix(1.0, 1.0 + horizon * 1.1, u_warm);
 		vec3 glint_col = mix(vec3(1.0), vec3(1.0, 0.62, 0.28), u_warm);
 		col += sparkle * glint_col * 0.060 * sun_road * u_swell * (1.0 - u_dark) * (1.0 - 0.88 * u_rush);
+		// THE SUN'S ROAD: a band of glitter across the water toward where the
+		// sun stands, brightest when it is low (east at sunrise, west at sunset),
+		// as the moon has its own by night.
+		vec2 sl = vec2(px.x, px.y / GROUND);
+		vec2 sax = normalize(u_light);
+		float s_along = dot(sl, sax);
+		float s_across = abs(dot(sl, vec2(sax.y, -sax.x)));
+		float s_half = mix(0.10, 0.30, 1.0 - depth) * u_res.x * 0.5;
+		float s_lane = exp(-pow(s_across / max(1.0, s_half), 2.0));
+		float toward_sun = smoothstep(-0.4, 0.9, s_along / (u_res.x * 0.5));
+		float sg = vnoise(w * 11.0 + sax * 1.5 + vec2(TIME * 0.14, TIME * -0.09));
+		float s_glit = smoothstep(mix(0.97, 0.86, s_lane), 1.0, sg) * smoothstep(0.30, 0.80, d1);
+		float s_road = (s_lane * 0.025 + s_glit * 0.30 * s_lane) * toward_sun * mix(0.25, 1.0, 1.0 - u_sun_h);
+		col += s_road * glint_col * u_swell * (1.0 - u_dark) * (1.0 - 0.85 * u_rush);
 	}
 
 	// Whitecaps on the crests.
@@ -309,10 +330,10 @@ void fragment() {
 
 	// THE ISLANDS' SHADOWS on the water: marched from here toward the sun
 	// through the distance field; long and soft when the sun is low.
-	if (u_shore_on > 0.5 && u_dark < 0.95) {
+	if (u_shore_on > 0.5 && u_shadow > 0.01) {
 		vec2 sp = screen_uv_to_sdf(SCREEN_UV);
 		vec2 dir = normalize(vec2(u_light.x, u_light.y * GROUND));
-		float reach = mix(70.0, 520.0, u_warm) * u_zoom;
+		float reach = mix(300.0, 60.0, u_sun_h) * u_zoom;
 		float lit = 1.0;
 		float tt = 6.0;
 		for (int i = 0; i < 18; i++) {
@@ -322,8 +343,8 @@ void fragment() {
 			tt += max(dd, 5.0);
 			if (tt > reach) break;
 		}
-		float fade = 1.0 - smoothstep(reach * 0.4, reach, tt);
-		col *= mix(1.0, 0.70, (1.0 - clamp(lit, 0.0, 1.0)) * (1.0 - u_dark) * mix(0.55, 1.0, u_warm) * (lit < 0.5 ? 1.0 : fade));
+		float fade = 1.0 - smoothstep(reach * 0.35, reach, tt);
+		col *= mix(1.0, 0.70, (1.0 - clamp(lit, 0.0, 1.0)) * u_shadow * mix(1.0, 0.55, u_sun_h) * fade);
 	}
 
 	// THE SHORE. Near land the water shoals: lighter and clearer over sand, and
@@ -393,7 +414,9 @@ void fragment() {
 			float across = exp(-pow((scr.x - at.x - wob) / max(wid, 1.0), 2.0));
 			float down = exp(-max(dy, 0.0) / (110.0 * u_zoom)) * smoothstep(-6.0, 4.0, dy);
 			float broken = 0.62 + 0.38 * sin(dy * 0.55 / u_zoom + TIME * 3.4 + swell * 9.0 + vnoise(vec2(dy * 0.05, TIME)) * 4.0);
-			col += u_lamp_cols[i].rgb * across * down * broken * L.w * u_dark;
+			// Only once it is properly dark: in the golden light a lamp's column
+			// read as the sun's.
+			col += u_lamp_cols[i].rgb * across * down * broken * L.w * u_dark * smoothstep(0.3, 0.75, u_dark);
 		}
 		// Stars, caught and lost on the swell.
 		vec2 sg = floor(scr / 9.0);

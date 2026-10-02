@@ -619,6 +619,9 @@
         "3": 45,
         "4": 65
       }
+    },
+    "feature": {
+      "market_advanced": 50
     }
   },
   "boats": [
@@ -1276,5 +1279,8 @@
       "rate": 1.0,
       "text": "Quick Sell pays the full Market price."
     }
-  ]
+  ],
+  "_market": "THE MARKET DAY (Kong, 2026-10-02): prices change once a sea day (48 min), at sunrise (two thirds into the clock's cycle), each day with its own mood. The Advanced board needs Fishing 50 (levelGates.feature).",
+  "marketTickMs": 2880000,
+  "marketTickOffsetMs": 1920000
 }

@@ -184,7 +184,15 @@ func _ready() -> void:
 	clock_row.move_child(chart, 0)
 	var clock_pill: Pane = Kit.pane(clock_row, { "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.72)], "border": [1, Color(0.7, 0.83, 0.89, 0.22)], "pad": [10, 3, 10, 4] })
 	clock_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_clock = Kit.text(clock_pill, "", "label", Color(0.82, 0.88, 0.93, 0.85))
+	var clock_in: HBoxContainer = HBoxContainer.new()
+	clock_in.add_theme_constant_override("separation", 6)
+	clock_in.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clock_pill.add_child(clock_in)
+	_sky_arc = SkyArc.new()
+	clock_in.add_child(_sky_arc)
+	_clock = Kit.text(clock_in, "", "label", Color(0.82, 0.88, 0.93, 0.85))
+	_clock.custom_minimum_size = Vector2(62, 0)
+	_clock.tooltip_text = "The time at sea. A day is 48 minutes: 32 of daylight, 16 of night."
 	var out: Button = Kit.back_pill(leave_label)
 	out.size_flags_horizontal = Control.SIZE_SHRINK_END
 	out.focus_mode = Control.FOCUS_NONE
@@ -578,8 +586,41 @@ func _cue_chip(text: String, col: Color) -> void:
 	l.ready.connect(func() -> void: Kit.pop(l))
 
 
-func set_clock(label: String) -> void:
+func set_clock(label: String, sky: Dictionary = {}) -> void:
 	_clock.text = label
+	if not sky.is_empty() and _sky_arc != null:
+		_sky_arc.u = float(sky["u"])
+		_sky_arc.moon = sky["moon"] == true
+		_sky_arc.queue_redraw()
+
+
+var _sky_arc: SkyArc
+
+
+## THE SKY IN THE CLOCK: a small arc from east to west with the sun (gold) or
+## the moon (pale) where it stands in it now.
+class SkyArc:
+	extends Control
+	var u: float = 0.5
+	var moon: bool = false
+
+	func _ready() -> void:
+		custom_minimum_size = Vector2(28, 16)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var c: Vector2 = Vector2(size.x / 2.0, size.y - 2.0)
+		var r: float = minf(size.x / 2.0 - 2.0, size.y - 4.0)
+		draw_line(Vector2(0, c.y), Vector2(size.x, c.y), Color(0.82, 0.88, 0.93, 0.35), 1.0, true)
+		draw_arc(c, r, PI, TAU, 24, Color(0.82, 0.88, 0.93, 0.3), 1.0, true)
+		# East is on the right: it rises there and sets on the left.
+		var at: Vector2 = c + Vector2.from_angle(-PI * u) * r
+		if moon:
+			draw_circle(at, 3.6, Color(0.85, 0.9, 1.0))
+			draw_circle(at + Vector2(1.6, -0.8), 3.0, Color(0.1, 0.14, 0.2))
+		else:
+			draw_circle(at, 6.0, Color(1.0, 0.75, 0.3, 0.25))
+			draw_circle(at, 3.6, Color(1.0, 0.82, 0.38))
 
 
 ## The recall's state: ready (0), or the milliseconds until it is.
@@ -1310,8 +1351,7 @@ func _catch_note(r: Dictionary, perfect: bool) -> void:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	note.add_child(row)
 	var art: TextureRect = TextureRect.new()
-	var path: String = ResultCard.fish_art_path(fish["name"])
-	art.texture = load(path) if ResourceLoader.exists(path) else null
+	art.texture = Skipper.fish_thumb(fish["name"])
 	art.custom_minimum_size = Vector2(54, 40)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

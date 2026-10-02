@@ -159,6 +159,10 @@ static func gains(from: int, to: int) -> Array:
 			for sp: Dictionary in d["specialItems"]:
 				if sp["id"] == sk:
 					out.append(["Unlocked", "The %s" % sp["name"]])
+	for fk: Variant in Js.obj(lg.get("feature")):
+		var fl: int = int(lg["feature"][fk])
+		if fl > from and fl <= to:
+			out.append(["Unlocked", { "market_advanced": "The Market's Advanced board: moods, the Sea Index, movers and price history" }.get(fk, str(fk))])
 	var names: Dictionary = { "hull_speed_tier": "Hull speed", "hull_handling_tier": "Rudder", "hull_accel_tier": "Rig", "lantern_tier": "Lantern" }
 	var su: Dictionary = Js.obj(d.get("shipUpgrades"))
 	for lvk: Variant in su:

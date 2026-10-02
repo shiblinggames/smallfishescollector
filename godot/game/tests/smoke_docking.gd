@@ -194,6 +194,9 @@ func _init() -> void:
 	for c: Node in sea._room_layer.get_children():
 		c.queue_free()
 	var meg: Wanderer = sea._regulars["folk:meg"]
+	# A drifting bottle beside her would take the prompt: count them fished.
+	for b: Dictionary in Explore.bottles_around(meg.position.x, meg.position.y, 3000.0, Clock.now_ms()):
+		sea._taken[b["key"]] = true
 	sea._boat.position = meg.position + Vector2(0, 100)
 	await process_frame
 	await process_frame

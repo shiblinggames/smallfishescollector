@@ -258,6 +258,26 @@ if (made) fs.writeFileSync(NORMALS, JSON.stringify(normals, null, 1))
 if (made) console.log(`  normals: ${made} made`)
 console.log(copied ? `  art: ${copied} file(s) copied from web/public` : '  art: up to date')
 
+// FISH THUMBNAILS (2026-10-02): the paintings are 1024 px and the Almanac's
+// shelf shows ~150 of them at ~150 px; loading them all froze the game for
+// most of a second on every open. art/fish_thumbs holds each at 192 px (kept in
+// memory by Skipper.thumb); the full painting loads only for one fish's page.
+{
+  const sharp = createRequire(path.join(WEB, 'package.json'))('sharp')
+  const from = path.join(HERE, 'art', 'fish')
+  const to = path.join(HERE, 'art', 'fish_thumbs')
+  fs.mkdirSync(to, { recursive: true })
+  let thumbs = 0
+  for (const f of fs.readdirSync(from).filter(n => n.endsWith('.png'))) {
+    const src = path.join(from, f)
+    const dst = path.join(to, f)
+    if (fs.existsSync(dst) && fs.statSync(dst).mtimeMs >= fs.statSync(src).mtimeMs) continue
+    await sharp(src).resize(192, 192, { fit: 'inside' }).png().toFile(dst)
+    thumbs++
+  }
+  if (thumbs) console.log(`  fish thumbnails: ${thumbs} made`)
+}
+
 const addon = path.join(HERE, 'addons', 'godotsteam')
 const stamp = path.join(addon, '.version')
 if (fs.existsSync(stamp) && fs.readFileSync(stamp, 'utf8').trim() === GODOTSTEAM.version) {

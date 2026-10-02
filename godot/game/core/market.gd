@@ -14,8 +14,31 @@ const HOUR: float = 3600000.0
 const MAX_CATCH_UP_TICKS: int = 48
 
 
+## THE PORT'S MARKET DAY (Kong, 2026-10-02: "simplify the market; prices
+## change once a game day"): port_rules marketTickMs is one sea day (48
+## minutes) and marketTickOffsetMs puts the change at sunrise; each day rolls
+## a new mood that lasts the day. Without them (the web's tables) the market
+## ticks hourly and moods last 2 to 5 hours.
+static func tick_ms() -> float:
+	var t: float = Js.num(Rules.data().get("marketTickMs"))
+	return t if t > 0.0 else HOUR
+
+
+static func daily() -> bool:
+	return tick_ms() != HOUR
+
+
+## The first price change after this moment.
+static func next_tick_after(t: float) -> float:
+	var k: float = tick_ms()
+	var o: float = Js.num(Rules.data().get("marketTickOffsetMs")) if daily() else 0.0
+	return floor((t - o) / k) * k + o + k
+
+
 static func _hours(min_h: float) -> float:
-	return (min_h + floor(Dice.next() * 4.0)) * HOUR
+	var h: float = (min_h + floor(Dice.next() * 4.0)) * HOUR
+	# A market day's mood is the day's: it rolls again at the next change.
+	return tick_ms() * 0.5 if daily() else h
 
 
 static func roll_mood(now: float) -> Dictionary:
@@ -83,6 +106,8 @@ static func tick(state: Dictionary, species: Array, now: float) -> Dictionary:
 
 static func fresh(now: float) -> Dictionary:
 	var hour: float = floor(now / HOUR) * HOUR
+	if daily():
+		hour = next_tick_after(now) - tick_ms()
 	var out: Dictionary = roll_mood(hour)
 	out["lastTickAt"] = hour
 	out["fish"] = {}
@@ -90,6 +115,17 @@ static func fresh(now: float) -> Dictionary:
 
 
 static func catch_up(state: Dictionary, species: Array, now: float) -> Dictionary:
+	if daily():
+		# Each sunrise since the last change, at most the last 48.
+		var at: Array = []
+		var t: float = next_tick_after(float(state["lastTickAt"]))
+		while t <= now:
+			at.append(t)
+			t += tick_ms()
+		var st: Dictionary = state
+		for tt: float in at.slice(maxi(0, at.size() - MAX_CATCH_UP_TICKS)):
+			st = tick(st, species, tt)
+		return st
 	var due: int = int(floor((now - float(state["lastTickAt"])) / HOUR))
 	if due <= 0:
 		return state

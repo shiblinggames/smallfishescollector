@@ -44,6 +44,12 @@ const SINK: float = 0.04
 static var _bands: Dictionary = {}
 static var _shadow_mat: ShaderMaterial
 static var _mirror_mat: ShaderMaterial
+## Where the sun throws a hull's shadow, on the sea's plane (world units), and
+## how strong (Skipper.sun, from the Sea each frame).
+static var _sun_off: Vector2 = Vector2(0, 8)
+static var _sun_k: float = 1.0
+var _shadow: Sprite2D
+var _shadow_base: Vector2 = Vector2.ZERO
 var _mirror: Node2D
 var _mirror_base: float = 0.0
 var _waterline: float = 30.0
@@ -81,8 +87,49 @@ static func look_art(color: Variant) -> Texture2D:
 static func tex(url: Variant) -> Texture2D:
 	if url == null or String(url) == "":
 		return null
+	if String(url).begins_with("fish_thumbs/"):
+		return _thumb_tex(String(url))
 	var path: String = "res://art/%s" % String(url).trim_prefix("/")
 	return load(path) if ResourceLoader.exists(path) else null
+
+
+## The fish thumbnails (tools/setup.mjs, 192 px), held once loaded: a shelf
+## of every fish then costs nothing to open again. The painting itself when
+## there is no thumbnail.
+static var _thumbs: Dictionary = {}
+
+
+static var _warming: Dictionary = {}
+
+
+static func _thumb_tex(url: String) -> Texture2D:
+	if _thumbs.has(url):
+		return _thumbs[url]
+	var path: String = "res://art/%s" % url
+	var t: Texture2D
+	if _warming.has(path):
+		_warming.erase(path)
+		t = ResourceLoader.load_threaded_get(path)
+	else:
+		t = load(path) if ResourceLoader.exists(path) else tex(url.replace("fish_thumbs/", "fish/"))
+	_thumbs[url] = t
+	return t
+
+
+## Start loading every fish's thumbnail on worker threads (the Sea calls this
+## on opening), so the first Log is not a wait.
+static func warm_fish_thumbs(names: Array) -> void:
+	for n: Variant in names:
+		var path: String = "res://art/fish_thumbs/%s" % ResultCard.fish_art_path(str(n)).get_file()
+		if _warming.has(path) or _thumbs.has(path.trim_prefix("res://art/")) or not ResourceLoader.exists(path):
+			continue
+		if ResourceLoader.load_threaded_request(path) == OK:
+			_warming[path] = true
+
+
+## A fish's picture, small (for shelves, tiles and notes).
+static func fish_thumb(name: String) -> Texture2D:
+	return tex("fish_thumbs/%s" % ResultCard.fish_art_path(name).get_file())
 
 
 ## What a profile wears, as the web reads it (lib/core/seaPage.ts).
@@ -285,7 +332,9 @@ func _water_fx(origin: Vector2, h: float, hull: Sprite2D) -> void:
 			_shadow_mat.shader = load("res://game/fx/hull_shadow.gdshader")
 		var sh: Sprite2D = _twin(hull)
 		sh.material = _shadow_mat
-		sh.position.y += 8.0
+		sh.position.y += 4.0
+		_shadow = sh
+		_shadow_base = sh.position
 		add_child(sh)
 		move_child(sh, 0)
 	# The reflection: a twin of every part, in a box flipped about the
@@ -484,8 +533,19 @@ func sway(delta: float, rough: float, heel: float = 0.0, pitch: float = 0.0) -> 
 		_mirror.position.y = _mirror_base - _bob * 0.75
 
 
+## THE SUN ON THE HULLS: every hull's shadow falls away from the sun, long
+## when it is low, short at noon, faint by the moon (SeaClock.sky).
+static func sun(off: Vector2, strength: float) -> void:
+	_sun_off = off
+	_sun_k = strength
+	if _shadow_mat != null:
+		_shadow_mat.set_shader_parameter("strength", 0.30 * strength)
+
+
 func _process(delta: float) -> void:
 	line_clock += delta
+	if _shadow != null and is_instance_valid(_shadow) and water:
+		_shadow.position = _shadow_base + get_global_transform().basis_xform_inv(_sun_off)
 	if _mirror == null or not is_instance_valid(_mirror):
 		return
 	_wob += delta

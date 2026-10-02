@@ -61,7 +61,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
 	var vp: Vector2 = get_viewport_rect().size
-	sea.stage = { "zoom": 2.3, "shift": Vector2((PANEL_W + 40.0) / 2.0, 30.0) }
+	_stage(tab)
 	# The world dims round her.
 	_veil = ColorRect.new()
 	_veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -127,6 +127,13 @@ func _ready() -> void:
 	_show_tab(tab)
 
 
+## The camera pushes in on her boat beside the sheet; not for the Log, whose
+## book covers nearly the whole screen (Kong: the push in and back out read
+## as a strange zoom there).
+func _stage(t: String) -> void:
+	sea.stage = null if t == "log" else { "zoom": 2.3, "shift": Vector2((PANEL_W + 40.0) / 2.0, 30.0) }
+
+
 func close() -> void:
 	if is_queued_for_deletion():
 		return
@@ -163,6 +170,7 @@ func line_out() -> bool:
 
 func _show_tab(t: String) -> void:
 	tab = t
+	_stage(t)
 	for c: Node in _tabs.get_children():
 		c.queue_free()
 	for o: Array in [["loadout", "Loadout"], ["boat", "Boat"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["log", "Log"], ["levels", "Levels"]]:
@@ -1025,7 +1033,7 @@ func _build_hold() -> void:
 	for r: Dictionary in rows:
 		var t: Paper.Tile = Paper.Tile.new()
 		t.label = r["name"]
-		t.art = Skipper.tex("fish/%s" % ResultCard.fish_art_path(r["name"]).get_file())
+		t.art = Skipper.fish_thumb(r["name"])
 		t.pigment = Paper.rarity(float(r["rarity"]))
 		t.corner = "×%d" % int(r["qty"])
 		if eye and float(r["trend"]) != 0.0:
@@ -1085,7 +1093,7 @@ func _build_hold() -> void:
 
 func _fish_line(r: Dictionary, res: Dictionary) -> String:
 	var each: float = float(r["each"])
-	var t: String = "%s, %s.  ⟡ %s each at the Market%s, ⟡ %s for all %d" % [r["name"], Almanac.RARITY_NAMES[clampi(int(r["rarity"]) - 1, 0, 4)], Js.thousands(each), "" if float(r["trend"]) == 0.0 else (" (up this hour)" if float(r["trend"]) > 0.0 else " (down this hour)"), Js.thousands(each * float(r["qty"])), int(r["qty"])]
+	var t: String = "%s, %s.  ⟡ %s each at the Market%s, ⟡ %s for all %d" % [r["name"], Almanac.RARITY_NAMES[clampi(int(r["rarity"]) - 1, 0, 4)], Js.thousands(each), "" if float(r["trend"]) == 0.0 else ((" (up %s)" if float(r["trend"]) > 0.0 else " (down %s)") % ("today" if Market.daily() else "this hour")), Js.thousands(each * float(r["qty"])), int(r["qty"])]
 	if not res.is_empty():
 		t += ";  about ⟡ %s each to %s." % [Js.thousands(floor(float(r["base"]) * float(res["rate"]))), res["name"]]
 	else:

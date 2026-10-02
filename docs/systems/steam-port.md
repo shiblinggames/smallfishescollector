@@ -536,6 +536,37 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   bite, to be discussed. The water shader's cloud reads u_front (direction, lead and trail
   edges). The chart shades the front and lists it (Storm Glass), and draws the next two as
   dashed roads (Sky Reader); without Storm Glass it tells only the sky over you.
+- A REAL DAY (Kong, 2026-10-02): SeaClock.sky(now) puts the sun on a path, east at sunrise,
+  across the NORTHERN sky (the top of the screen, so noon shadows fall toward the viewer,
+  as the painted art is lit) to the west at sunset; the moon takes the same road at night,
+  lower (elev x0.75) and its shadows at 40%. It drives: the water's u_light (glints, moon
+  road, island shadows marched through the SDF, reach 300 to 60 by height), u_sun_h and
+  u_shadow; the DirectionalLight2D on the land's normal maps; every hull's shadow
+  (Skipper.sun, an offset away from the sun, 30 to 5 world px); the golden-hour glow, now on
+  the sun's side of the sky; the day's tint (warmer and dimmer as the sun lowers). Shadows
+  fade as the light nears the horizon, so the sun-to-moon hand-over at dusk and dawn is never
+  seen. The HUD's phase words became a sea time (sunrise 6 am, sunset 8 pm) with a small arc
+  showing the sun or moon. LOOK ONLY: SeaClock.at()'s night is unchanged, so night-only
+  traders, music and lanterns keep their timing. Boat REFLECTIONS stay straight below each
+  hull (a mirror follows the viewer, not the sun).
+  The lantern's column on the water only shows once it is properly dark (it read as the
+  sun's at dusk); the sun has its own glitter road toward where it stands, strongest low.
+- THE MARKET DAY (Kong, 2026-10-02: "simplify the market; prices change every game day"):
+  port_rules marketTickMs 2,880,000 (a sea day) and marketTickOffsetMs 1,920,000 (sunrise);
+  Market.tick_ms / daily / next_tick_after; each day's mood lasts the day. Under web_only it
+  is still hourly. The Advanced board needs Fishing 50 (levelGates.feature.market_advanced).
+- ROOMS BY FISHING LEVEL (Kong, 2026-10-02, direction settled, NUMBERS PROPOSED, not yet
+  agreed; the rooms are not ported yet): Den games open by level, the chip purse's daily
+  buy-in grows with level, and the Parlor and Chart Room gate games or attempts by level.
+  Apply when those rooms are ported, through levelGates and the Levels guide.
+- THE LOG OPENED IN 0.9 s (Kong: "a delay when you click Log"): the shelf loaded ~150
+  full 1024 px fish paintings from disk, and closing let them go, so every open paid again.
+  tools/setup.mjs now writes art/fish_thumbs (192 px); Skipper.fish_thumb / "fish_thumbs/"
+  urls hold them once loaded, and the Sea starts loading them on worker threads when it
+  opens (Skipper.warm_fish_thumbs). The Hold tiles and the catch note use them too. An open
+  is now ~70-90 ms. Full paintings load only for one fish's page. The Locker no longer
+  pushes the camera in on the Log tab (the book covers the screen; the push in and back out
+  read as a strange zoom).
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

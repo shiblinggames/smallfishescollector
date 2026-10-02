@@ -489,7 +489,7 @@ func _card(e: Dictionary) -> Control:
 	col.add_theme_constant_override("separation", 3)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(col)
-	var holder: Control = Kit.art(col, _art(e["name"]), Vector2(0, 78), Kit.rarity(float(e["rarity"])), not caught)
+	var holder: Control = Kit.art(col, _art(e["name"]).replace("fish/", "fish_thumbs/"), Vector2(0, 78), Kit.rarity(float(e["rarity"])), not caught)
 	if e["isNew"]:
 		var tag: Pane = Kit.chip(null, "New", Kit.UP)
 		tag.position = Vector2(4, 2)
