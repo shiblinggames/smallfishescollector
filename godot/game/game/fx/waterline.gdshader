@@ -8,6 +8,10 @@ shader_type canvas_item;
 // cut is where the water meets this picture, depth how far below that the
 // keel is, both as fractions of its height; aspect is its width / height.
 uniform float cut = 0.9;
+// The keel's slope: how much lower the waterline sits per picture-width to
+// the right, as a share of the picture's height (a hull drawn with its stern
+// riding higher than its bow; Skipper.keel_tilt measures it).
+uniform float tilt = 0.0;
 uniform float depth = 0.05;
 uniform float aspect = 1.0;
 uniform float phase = 0.0;
@@ -26,7 +30,7 @@ void vertex() {
 void fragment() {
 	float x = UV.x * aspect * ref;
 	float lap = (sin(x * 34.0 + TIME * 2.0 + phase) * 0.6 + sin(x * 67.0 - TIME * 2.7 + phase * 1.7) * 0.4) * depth * 0.16;
-	float below = UV.y - (cut + lap);
+	float below = UV.y - (cut + tilt * (UV.x - 0.5) + lap);
 	float sub = clamp(below / max(depth, 0.0001), 0.0, 1.0);
 	vec2 uv = UV;
 	// Under the surface the picture wavers sideways, more the deeper it is.

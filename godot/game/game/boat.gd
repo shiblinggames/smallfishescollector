@@ -177,11 +177,16 @@ func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float
 	var waterline: float = keel - Skipper.SINK * box / Chart.GROUND
 	var cut: float = (waterline - top) / h
 	var depth: float = (keel - waterline) / h
+	# Along the keel's own slope (a hull drawn stern-high sits so in the water).
+	var tilt: float = Skipper.keel_tilt(tex)
 	hull.material = Skipper.afloat_mat("res://game/fx/waterline.gdshader", hull, cut, depth, _ship_phase)
+	(hull.material as ShaderMaterial).set_shader_parameter("tilt", tilt)
 	_ship_rig = Node2D.new()
 	add_child(_ship_rig)
 	_ship_rig.add_child(hull)
-	_ship_rig.add_child(Skipper.collar_of(hull, cut, depth, _ship_phase))
+	var collar: Sprite2D = Skipper.collar_of(hull, cut, depth, _ship_phase)
+	(collar.material as ShaderMaterial).set_shader_parameter("tilt", tilt)
+	_ship_rig.add_child(collar)
 	_ship = hull
 	# The reflection: a twin about the waterline, lying down, under the hull.
 	_ship_mirror = CanvasGroup.new()

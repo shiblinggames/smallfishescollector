@@ -403,6 +403,59 @@ static func collar_of(spr: Sprite2D, cut: float, depth: float, phase: float) -> 
 	return c
 
 
+static var _tilts: Dictionary = {}
+
+
+## THE KEEL'S SLOPE in a picture (Kong: "the displacement should be angled
+## with the bottom of the boat"): the lowest painted row down each column of
+## the hull, fitted with a straight line across its middle, as the change in
+## height-fraction per width-fraction. Columns whose bottom is well above the
+## keel (a bowsprit, an overhanging stern, a rope) are left out. Measured once.
+static func keel_tilt(t: Texture2D) -> float:
+	var key: String = t.resource_path
+	if _tilts.has(key):
+		return _tilts[key]
+	var out: float = 0.0
+	var img: Image = t.get_image()
+	if img != null:
+		if img.is_compressed():
+			img.decompress()
+		var w: int = img.get_width()
+		var h: int = img.get_height()
+		var used: Rect2i = img.get_used_rect()
+		var bottoms: Array = []
+		for x: int in range(used.position.x, used.end.x, 2):
+			for y: int in range(used.end.y - 1, used.position.y, -1):
+				if img.get_pixel(x, y).a > 0.5:
+					bottoms.append(Vector2(float(x) / w, float(y) / h))
+					break
+		# Only the hull's own bottom: within a fifth of the picture of the lowest.
+		var low: float = 0.0
+		for b: Vector2 in bottoms:
+			low = maxf(low, b.y)
+		var pts: Array = bottoms.filter(func(b: Vector2) -> bool: return b.y > low - 0.12)
+		if pts.size() > 8:
+			# Its middle (the rounded bow and stern ends bend away).
+			var x0: float = (pts[0] as Vector2).x
+			var x1: float = (pts[pts.size() - 1] as Vector2).x
+			pts = pts.filter(func(b: Vector2) -> bool: return b.x > lerpf(x0, x1, 0.2) and b.x < lerpf(x0, x1, 0.8))
+			var n: float = pts.size()
+			var sx: float = 0.0
+			var sy: float = 0.0
+			var sxx: float = 0.0
+			var sxy: float = 0.0
+			for b: Vector2 in pts:
+				sx += b.x
+				sy += b.y
+				sxx += b.x * b.x
+				sxy += b.x * b.y
+			var den: float = n * sxx - sx * sx
+			if n > 4 and absf(den) > 0.000001:
+				out = clampf((n * sxy - sx * sy) / den, -0.4, 0.4)
+	_tilts[key] = out
+	return out
+
+
 static var _spans: Dictionary = {}
 
 

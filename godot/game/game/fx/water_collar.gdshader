@@ -10,6 +10,8 @@ shader_type canvas_item;
 // the picture's edge. Drawn as ellipses from the measured span, so it is
 // smooth (sampling the picture along the row stepped into bars).
 uniform float cut = 0.9;
+// The keel's slope, as fx/waterline.gdshader: the ring tilts with the hull.
+uniform float tilt = 0.0;
 uniform float depth = 0.05;
 uniform float aspect = 1.0;
 uniform float phase = 0.0;
@@ -31,7 +33,8 @@ void fragment() {
 	float breathe = sin(TIME * 1.6 + phase) * 0.5 + 0.5;
 	float hw = max(span.y - span.x, 0.001) * 0.5;
 	float cx = (span.x + span.y) * 0.5;
-	float dy = (UV.y - cut) / depth;
+	float cut_here = cut + tilt * (UV.x - 0.5);
+	float dy = (UV.y - cut_here) / depth;
 	// The lip: a thin lens heaped against her at the water, thickest
 	// amidships, running a little past bow and stern, thinner below.
 	float ex = (UV.x - cx) / (hw * (1.04 + 0.03 * breathe) + depth * 0.4 / max(aspect, 0.05));
@@ -44,7 +47,7 @@ void fragment() {
 	float sh = 0.5 + 1.5 * body2;
 	float sink = smoothstep(0.0, 0.5, body2) * exp(-pow((dy - 0.4 * sh) / sh, 2.0));
 	// Not over the thing itself above the water (it hides it there anyway).
-	float own = texture(TEXTURE, clamp(UV, vec2(0.0), vec2(1.0))).a * step(UV.y, cut) * step(0.0, UV.x) * step(UV.x, 1.0) * step(0.0, UV.y);
+	float own = texture(TEXTURE, clamp(UV, vec2(0.0), vec2(1.0))).a * step(UV.y, cut_here) * step(0.0, UV.x) * step(UV.x, 1.0) * step(0.0, UV.y);
 	float ripple = 0.8 + 0.2 * sin(UV.x * aspect * ref * 26.0 - TIME * 2.2 + phase);
 	float a_lip = lip * ripple * (0.2 + 0.07 * breathe);
 	float a_sink = max(sink - lip, 0.0) * 0.28;

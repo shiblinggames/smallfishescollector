@@ -639,7 +639,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   carries "ships" and "shipSkins". IN THE WATER like the fishing boats (Kong): Boat.set_ship sinks the hull
   below its waterline (Skipper.SINK of the box above the keel) through fx/waterline, rings it
   with Skipper.collar_of, and reflects it as the boats do (a twin about the waterline in a
-  CanvasGroup through fx/hull_mirror, lying down by Skipper.LIE and swaying). The northern islands (Crew Hall,
+  CanvasGroup through fx/hull_mirror, lying down by Skipper.LIE and swaying). The waterline and its
+  ring follow the keel's own slope (Kong: "angled with the bottom of the boat"; the
+  Brigantine's stern sits higher than its bow): Skipper.keel_tilt fits a line to the lowest
+  painted pixel of each hull column (bowsprit and ends left out) and the waterline and
+  water_collar shaders take it as `tilt` (0 for the fishing boats). Measured: sloop 0.03,
+  schooner 0.04, brigantine and galleon 0.12, man-o-war -0.04. The northern islands (Crew Hall,
   Posting House, Forge, Gunwharf, Charterhouse) were already drawn; mooring now opens a paper
   sheet of what each will hold (North.COMING) until their rooms are ported. THE WORLD
   CHART centres on the crossing (WorldMap.WORLD_CENTRE, Kong: "the centre of the world is the
