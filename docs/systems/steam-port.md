@@ -480,6 +480,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   LOCKER tags only the chosen slot, and has a BOAT tab (after Loadout): her hulls from crates
   to wear, and her fittings (reading, pips, how the next tier comes: free at Fishing N, or
   Fishing N then the price at the Shipyard). ShipyardRoom._value/_gain/_cost are static.
+  Then (Kong): the Locker has NO tags or lines on her at all; the line ties on at the hook's
+  EYE (HOOK_EYE 28.5,7, the hole at the top of the art) and is finer (0.55; thicker in
+  portraits, which shrink it); calmer water at rest (wake rest rings every 3.4s at 60%,
+  their height 2.4 not 4.5; the line's rings every 1.9s, the bobber's 2.6-4.6s); the ZOOM is
+  shown as it changes ("Zoom 120% · default 100%", bottom right, fading); the title's
+  PORTRAITS are drawn at 3x and shrunk (sharp) and framed so the hook hangs inside; the
+  STREAK FLAME is a smooth three-layer teardrop that flickers, a faint ash outline at none.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

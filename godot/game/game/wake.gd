@@ -20,7 +20,7 @@ const EVERY: float = 32.0
 const DENSITY: float = EVERY / 95.0
 const SPREAD: float = 62.0
 const UNDER_WAY: float = 26.0
-const RING_EVERY: float = 1.53
+const RING_EVERY: float = 3.4
 const RING_LIFE: float = 4.6
 const CAP: int = 690
 const RING_CAP: int = 240
@@ -220,7 +220,7 @@ func _process(delta: float) -> void:
 		var k: float = (0.42 + (2.2 - 0.42) * age) * float(r[4])
 		var a: float = minf(1.0, age / 0.14) * pow(1.0 - age, 1.6) * 0.16
 		rm.set_instance_transform_2d(i, Transform2D(0.0, Vector2(104.0 * k * 1.45, 30.0 / Chart.GROUND * k), 0.0, Vector2(float(r[0]), float(r[1]))))
-		rm.set_instance_color(i, Color(STYLE["colors"][0], a))
+		rm.set_instance_color(i, Color(STYLE["colors"][0], a * 0.6))
 
 	var mm: MultiMesh = _marks.multimesh
 	for i: int in CAP:

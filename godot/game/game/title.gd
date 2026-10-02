@@ -245,22 +245,30 @@ func _portrait(look: Dictionary, box_px: Vector2) -> Control:
 	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(wash)
 	Paper.blot(wash, SEA_DYE, 0.8)
-	var box: SubViewportContainer = SubViewportContainer.new()
-	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	box.stretch = true
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.add_child(box)
+	# Drawn at three times the size and shown shrunk (a big sheet drawn
+	# straight down to a hundred pixels came out soft and grainy).
+	const SS: float = 3.0
 	var vp: SubViewport = SubViewport.new()
 	vp.transparent_bg = true
-	vp.size = Vector2i(box_px)
-	box.add_child(vp)
+	vp.size = Vector2i(box_px * SS)
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	vp.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR
+	holder.add_child(vp)
 	var sk: Skipper = Skipper.new()
 	sk.water = false
-	sk.box_scale = box_px.y / 150.0
-	sk.position = Vector2(box_px.x * 0.56, box_px.y * 0.6)
+	sk.box_scale = box_px.y / 190.0 * SS
+	# Set to the left, so the rod and the hook on its line hang inside.
+	sk.position = Vector2(box_px.x * 0.4, box_px.y * 0.5) * SS
 	sk.scale.x = -1.0
 	vp.add_child(sk)
 	sk.set_look(look)
+	var pic: TextureRect = TextureRect.new()
+	pic.texture = vp.get_texture()
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_SCALE
+	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(pic)
 	return holder
 
 

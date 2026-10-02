@@ -180,7 +180,8 @@ func _show_tab(t: String) -> void:
 	for c: Node in _body.get_children():
 		c.queue_free()
 	_gauge = null
-	_callouts.visible = t == "loadout" or t == "boat"
+	# No tags or lines on her (Kong): the tiles say plainly what each thing is.
+	_callouts.visible = false
 	_card.visible = t == "loadout" or t == "boat"
 	_widen(t == "log")
 	if t == "boat":

@@ -19,7 +19,7 @@ const PTS: Dictionary = {
 	"cast": [Vector2(531, 104), Vector2(147, 173)],
 }
 const INK: Color = Color(0.58, 0.61, 0.63, 0.6)
-const WIDTH: float = 0.75
+const WIDTH: float = 0.55
 
 var skipper: Skipper
 
@@ -158,7 +158,9 @@ func _draw() -> void:
 			var u: float = float(n) / (NODES - 1)
 			q.y += sin(u * PI) * sin(now * 46.0) * 1.2
 		local.append(q)
-	draw_polyline(local, INK, WIDTH, true)
+	# On the water it is a hair; in a small portrait it has to be drawn
+	# thicker or it vanishes when the picture is shrunk.
+	draw_polyline(local, INK, WIDTH if skipper.water else 1.4 * maxf(1.0, skipper.box_scale), true)
 	_last_dir = (local[NODES - 1] - local[NODES - 2]).normalized()
 	# The hook: on show at rest and in flight; under the water otherwise.
 	if skipper.frame != "wait":
@@ -169,7 +171,8 @@ func _draw() -> void:
 ## (every tier's sheet has the hook in the same place: cut out here, at the
 ## size the old placement drew it), or a small drawn one when none is worn.
 const HOOK_REGION: Rect2 = Rect2(244, 366, 37, 75)
-const HOOK_EYE: Vector2 = Vector2(18.5, 6.0)
+## The eye: the hole at the top of the hook picture, where the line ties on.
+const HOOK_EYE: Vector2 = Vector2(28.5, 7.0)
 const HOOK_SCALE: float = 0.224
 static var _hooks: Dictionary = {}
 var _last_dir: Vector2 = Vector2.DOWN

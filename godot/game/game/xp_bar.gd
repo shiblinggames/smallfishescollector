@@ -232,16 +232,36 @@ func _draw() -> void:
 		var fc: Color = Color(1.0, 0.62, 0.25) if on else Color(cream, 0.35)
 		var fx: float = x + 6.0
 		var fy: float = cy
-		var flame: PackedVector2Array = PackedVector2Array([
-			Vector2(fx, fy - 8), Vector2(fx + 5, fy - 1), Vector2(fx + 4, fy + 5), Vector2(fx, fy + 7),
-			Vector2(fx - 4, fy + 5), Vector2(fx - 5, fy), Vector2(fx - 1.5, fy - 3),
-		])
-		var sh: PackedVector2Array = PackedVector2Array()
-		for p: Vector2 in flame:
-			sh.append(p + Vector2(0, 1.5))
-		draw_colored_polygon(sh, shade)
-		draw_colored_polygon(flame, fc)
-		_ink(title, Vector2(fx + 9, fy + 5), str(streak), 13, fc, shade)
+		_flame(Vector2(fx, fy + 6.0), 9.0, on)
+		_ink(title, Vector2(fx + 10, fy + 6), str(streak), 15, fc, shade)
+
+
+## THE STREAK'S FLAME: a smooth teardrop of fire in two layers (orange
+## round a yellow heart) whose tip sways and flickers, with a soft glow under
+## it while a streak runs; an outline of ash when there is none.
+func _flame(base: Vector2, h: float, lit: bool) -> void:
+	var sway: float = sin(_t * 7.0) * 0.12 + sin(_t * 11.3) * 0.06 if lit else 0.0
+	var stretch: float = 1.0 + (sin(_t * 9.0) * 0.06 if lit else 0.0)
+	var shape: Callable = func(scale_k: float) -> PackedVector2Array:
+		var pts: PackedVector2Array = PackedVector2Array()
+		for n: int in 25:
+			var a: float = TAU * n / 24.0
+			# A drop: round at the base, drawn up to a point that leans.
+			var u: float = (1.0 - cos(a)) / 2.0
+			var w: float = sin(a) * h * 0.52 * scale_k * pow(1.0 - u * 0.85, 0.9)
+			var y: float = -u * h * 1.6 * scale_k * stretch
+			pts.append(base + Vector2(w + y * sway * -0.6, y + h * 0.15 * scale_k))
+		return pts
+	if lit:
+		for g: int in 4:
+			draw_circle(base + Vector2(0, -h * 0.55), h * (0.7 + g * 0.3), Color(1.0, 0.55, 0.15, 0.035))
+		draw_colored_polygon(shape.call(1.0), Color(0.98, 0.45, 0.14))
+		draw_colored_polygon(shape.call(0.62), Color(1.0, 0.78, 0.25))
+		draw_colored_polygon(shape.call(0.3), Color(1.0, 0.96, 0.7))
+	else:
+		var o: PackedVector2Array = shape.call(1.0)
+		o.append(o[0])
+		draw_polyline(o, Color(0.97, 0.93, 0.85, 0.35), 1.2, true)
 
 
 ## Lettering on the water: the words over their own soft shadow.

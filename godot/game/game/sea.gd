@@ -1355,6 +1355,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if zf != 1.0:
 		_zoom_to = clampf(_zoom_to * zf, ZOOM_MIN, ZOOM_MAX)
 		Prefs.set_value("sea_zoom", _zoom_to)
+		_hud.show_zoom(_zoom_to)
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:

@@ -324,12 +324,12 @@ func _process(delta: float) -> void:
 	if field != null and skipper.frame == "wait":
 		_line_t -= delta
 		if _line_t <= 0.0:
-			_line_t = 0.85
-			field.ring(hook_at(), 16.0, 1.4, 0.18)
+			_line_t = 1.9
+			field.ring(hook_at(), 14.0, 1.3, 0.12)
 	if field != null and skipper.frame == "wait":
 		_bob_t -= delta
 		if _bob_t <= 0.0:
-			_bob_t = randf_range(1.3, 2.4)
+			_bob_t = randf_range(2.6, 4.6)
 			field.ring(hook_at(), 30.0, 1.2, 0.35)
 
 

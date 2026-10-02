@@ -823,6 +823,25 @@ func _toggle_auto() -> void:
 	_update_auto()
 
 
+## THE ZOOM, shown while it changes (Kong): the level as a percentage, the
+## default being 100%, on a small scale with the default marked; it fades a
+## moment after the last change.
+var _zoom_l: Label
+var _zoom_t: float = 0.0
+
+
+func show_zoom(z: float) -> void:
+	if _zoom_l == null:
+		_zoom_l = Kit.lift(Kit.text(self, "", "value", Color(0.97, 0.93, 0.85)))
+		_zoom_l.add_theme_font_size_override("font_size", 15)
+		_zoom_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_place(_zoom_l, Vector2(1.0, 1.0), Vector2(-340, -110), Vector2(320, 26))
+	var pct: int = int(round(z * 100.0))
+	_zoom_l.text = "Zoom %d%%%s" % [pct, "  (default)" if pct == 100 else "  ·  default 100%"]
+	_zoom_l.modulate.a = 1.0
+	_zoom_t = 1.6
+
+
 func toast(text: String) -> void:
 	# Under the boat while the dial is up (it sits where toasts go).
 	if _dial != null and _dial.visible:
@@ -1345,6 +1364,9 @@ func _place_dial() -> void:
 
 
 func _process(delta: float) -> void:
+	if _zoom_t > 0.0:
+		_zoom_t -= delta
+		_zoom_l.modulate.a = clampf(_zoom_t / 0.5, 0.0, 1.0)
 	if _dial.visible:
 		_place_dial()
 	if phase == "waiting":
